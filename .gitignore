@@ -1,0 +1,19 @@
+build/
+data/
+results*.tsv
+bench_*.log
+gmon*
+*.o
+
+tune/bin/
+tune/corpus/
+tune/log.tsv
+tune/run.log
+tune/best.json
+
+# Python binding
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store

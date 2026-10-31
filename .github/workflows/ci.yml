@@ -1,0 +1,57 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y liblzma-dev
+      - name: dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install xz
+      - name: build
+        run: make -j4 ARCH=
+      - name: tests (round trips in all modes, corruption fuzzing)
+        run: ./build/czntest
+      - name: shared library + Python binding round trip
+        run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y liblzma-dev
+      - name: build vendor libraries
+        run: make -j4 ARCH= build/libvendor.a
+      - name: address and undefined-behaviour sanitizers
+        run: |
+          gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
+            -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include \
+            tests/czntest.c src/czn.c build/libvendor.a -llzma -lpthread -lm -lstdc++ -o czntest_asan
+          ./czntest_asan
+        timeout-minutes: 240
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y liblzma-dev
+      - name: build vendor libraries
+        run: make -j4 ARCH= build/libvendor.a
+      - name: build and run fuzz targets under ASan/UBSan (bounded)
+        run: |
+          for t in fuzz_decompress fuzz_roundtrip; do
+            gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
+              -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 \
+              -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include \
+              fuzz/$t.c fuzz/run_local.c src/czn.c build/libvendor.a \
+              -llzma -lpthread -lm -lstdc++ -o $t
+            ASAN_OPTIONS=detect_leaks=0 ./$t 20000
+          done
+        timeout-minutes: 60

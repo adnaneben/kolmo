@@ -1,0 +1,289 @@
+/* round-trip, range-read and corruption tests for czn */
+#include "czn.h"
+int64_t tbl_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, uint8_t *dst);
+int tbl_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n);
+typedef struct { uint16_t y, a, b; uint8_t form; double k; } tformula;
+typedef struct { int n, gcol; tformula f[256]; } fset_t;
+int64_t tbl2_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, const fset_t *fs, uint8_t *dst);
+int tbl2_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n);
+void fset_discover_pub(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs);
+typedef struct { int type; int scale; const long long *num; const unsigned char *valid; const unsigned char *txt; unsigned *off, *len; } czcol;
+typedef struct { int k; long long nr; czcol *c; long long *numbuf; unsigned *offbuf; unsigned char *validbuf; } czcols;
+int tbl2_columns_pub(const uint8_t *in, int64_t tn, czcols *out);
+void tbl2_columns_free_pub(czcols *x);
+int parse_dec_pub(const uint8_t *p, uint32_t len, int64_t *m, int *sc);
+const int64_t *czn_p10_pub(void);
+int64_t log_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
+int log_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
+int64_t sci_encode_pub(const uint8_t *in, size_t n, int image, uint8_t *dst, size_t cap);
+int sci_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
+int64_t word_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
+int word_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+static uint64_t rs = 88172645463325252ull;
+static uint64_t rnd(void) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return rs; }
+static int fails = 0;
+static void check(const char *name, const uint8_t *s, size_t n, czn_mode m, uint32_t B, int T) {
+    czn_params p = {m, 0, T, B, 1}; size_t cap = czn_bound(n, &p); uint8_t *d = malloc(cap), *b = malloc(n + 1);
+    int64_t c = czn_compress(s, n, d, cap, &p);
+    if (c < 0) { printf("FAIL compress %s: %s\n", name, czn_strerror(c)); fails++; return; }
+    int64_t r = czn_decompress(d, c, b, n, T);
+    if (r != (int64_t)n || memcmp(b, s, n)) { printf("FAIL roundtrip %s mode %d T %d: %lld\n", name, m, T, (long long)r); fails++; }
+    for (int k = 0; k < 20 && n; k++) {                      /* range reads */
+        size_t off = rnd() % n, len = rnd() % (n - off + 1);
+        int64_t q = czn_read_range(d, c, off, len, b, T);
+        if (q != (int64_t)len || memcmp(b, s + off, len)) { printf("FAIL range %s off %zu len %zu\n", name, off, len); fails++; break; }
+    }
+    int silent = 0;
+    for (int k = 0; k < 300 && c > 0; k++) {                  /* corruption must never return wrong bytes silently */
+        uint8_t *e = malloc(c); memcpy(e, d, c); size_t at = rnd() % c; e[at] ^= 1 << (rnd() % 8);
+        size_t cl = (rnd() % 5 == 0) ? rnd() % c : (size_t)c;
+        int64_t q = czn_decompress(e, cl, b, n, T);
+        if (q == (int64_t)n && memcmp(b, s, n)) silent++;
+        free(e);
+    }
+    if (silent) { printf("FAIL %s: %d silent corruptions\n", name, silent); fails++; }
+    free(d); free(b);
+}
+int main(void) {
+    size_t N = 3 << 20;
+    uint8_t *csv = malloc(N), *bin = malloc(N), *rndb = malloc(N), *txt = malloc(N);
+    size_t p = 0; long t = 1700000000;                       /* CSV-like rows */
+    while (p + 100 < N) p += sprintf((char *)csv + p, "%ld,S-%d,%.2f,%.1f,%s\n", t += rnd() % 7, (int)(rnd() % 16), (rnd() % 4000) / 100.0, (rnd() % 9999) / 10.0, rnd() % 50 ? "OK" : "WARN");
+    size_t ncsv = p;
+    float v[4] = {100, 50, 20, 7};
+    for (size_t i = 0; i + 16 <= N; i += 16) for (int c = 0; c < 4; c++) { v[c] += ((int)(rnd() % 201) - 100) * 0.0001f; memcpy(bin + i + 4 * c, &v[c], 4); }
+    for (size_t i = 0; i < N; i++) rndb[i] = (uint8_t)rnd();
+    const char *w[] = {"the ", "data ", "compress ", "of ", "NEOM ", "architecture ", "and ", "\n"};
+    for (size_t i = 0; i < N;) { const char *x = w[rnd() % 8]; size_t l = strlen(x); if (i + l > N) break; memcpy(txt + i, x, l); i += l; }
+    struct { const char *n; uint8_t *s; size_t len; } in[] = {{"csv", csv, ncsv}, {"float32", bin, N}, {"random", rndb, N}, {"text", txt, N - 8},
+        {"empty", csv, 0}, {"tiny", csv, 7}, {"one-block-edge", csv, 1 << 16}};
+    for (size_t i = 0; i < sizeof in / sizeof *in; i++)
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check(in[i].n, in[i].s, in[i].len, (czn_mode)m, 1 << 18, T);
+    check("csv-default-block", csv, ncsv, CZN_FAST, 0, 2);
+    /* quoted CSV and short rows exercise the slow and exception paths */
+    {
+        size_t q = 0; uint8_t *qc = malloc(N);
+        while (q + 200 < N) q += sprintf((char *)qc + q, (rnd() % 9) ? "%d,\"name, %d\",%.3f,x\n" : "%d,short\n", (int)(rnd() % 1000), (int)(rnd() % 50), (rnd() % 100000) / 1000.0);
+        for (int m = 0; m < 5; m++) check("quoted-csv", qc, q, (czn_mode)m, 1 << 18, 2);
+        free(qc);
+    }
+    /* tables with derived columns (ratio, change, % change inside entity groups) and blanks: formula path */
+    size_t fq = 0; uint8_t *ft = malloc(N);
+    {
+        fq += sprintf((char *)ft, "country,year,pop,gdp,gdp_pc,gdp_chg,gdp_pct,note\n");
+        const char *cn[] = {"Aland", "Borduria", "Carpathia", "Doria", "Elbonia", "Freedonia"};
+        for (int c = 0; fq + 4096 < N; c = (c + 1) % 6) {
+            double pop = 1e5 + rnd() % 900000, gdp = 1e3 + rnd() % 90000, prev = -1;
+            for (int y = 1950; y < 2024 && fq + 300 < N; y++) {
+                pop *= 1 + (rnd() % 40) / 1000.0; gdp = (double)(long)(gdp * (1 + ((int)(rnd() % 80) - 30) / 1000.0) * 100) / 100;
+                int blank = rnd() % 7 == 0;
+                char g[32] = "", pc[32] = "", ch[32] = "", pt[32] = "";
+                if (!blank) { sprintf(g, "%.2f", gdp); sprintf(pc, "%.4f", gdp / pop * 1000); }
+                if (!blank && prev > 0) { sprintf(ch, "%.2f", gdp - prev); sprintf(pt, "%.3f", (gdp - prev) / prev * 100); }
+                fq += sprintf((char *)ft + fq, "%s,%d,%.0f,%s,%s,%s,%s,%s\n", cn[c], y, pop, g, pc, ch, pt, rnd() % 40 ? "" : "rev");
+                prev = blank ? -1 : gdp;
+            }
+        }
+        fset_t fs; fset_discover_pub(ft, fq, ',', 8, 1, 1, &fs);
+        printf("formula table: %d formulas found, group column %d\n", fs.n, fs.gcol);
+        if (fs.n < 2) { printf("FAIL formula discovery\n"); fails++; }
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("formula-table", ft, fq, (czn_mode)m, 1 << 18, T);
+        check("formula-table-1block", ft, fq, CZN_HC, 0, 1);
+        /* fuzz the v2 stream itself */
+        size_t len = 1 << 18; while (ft[len - 1] != '\n') len--;
+        uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
+        int64_t tn = tbl2_encode_pub(ft, len, ',', 8, 1, &fs, t);
+        if (tn <= 0 || tbl2_decode_pub(t, tn, ',', o, len) || memcmp(o, ft, len)) { printf("FAIL tbl2 roundtrip\n"); fails++; }
+        for (int it = 0; it < 4000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            size_t el = rnd() % 8 ? (size_t)tn : rnd() % tn;
+            tbl2_decode_pub(e, el, ',', o, len);
+        }
+        printf("table-codec v2 fuzz: 4000 corrupt streams decoded without crashing\n");
+        /* columnar decode: every cell matches the source value, and corrupt streams never crash */
+        if (tn > 0) {
+            czcols cols;
+            if (tbl2_columns_pub(t, tn, &cols) < 0) { printf("FAIL columnar decode rejected an aligned table\n"); fails++; }
+            else {
+                long cbad = 0; size_t ci = 0;
+                for (long long rr = 0; rr < cols.nr; rr++) for (int j = 0; j < cols.k; j++) {
+                    size_t f0 = ci; while (ci < len && ft[ci] != ',' && ft[ci] != '\n') ci++;
+                    unsigned flen = (unsigned)(ci - f0); czcol *c = &cols.c[j];
+                    if (c->type == 0) { if (c->len[rr] != flen || memcmp(c->txt + c->off[rr], ft + f0, flen)) cbad++; }
+                    else { int64_t m; int sc;
+                        if (parse_dec_pub(ft + f0, flen, &m, &sc)) { int64_t want = m * czn_p10_pub()[c->scale - sc];
+                            if (!c->valid[rr] || c->num[rr] != want) cbad++; }
+                        else if (c->valid[rr]) cbad++; }
+                    if (ci < len && ft[ci] == ',') ci++;
+                    if (j == cols.k - 1 && ci < len && ft[ci] == '\n') ci++;
+                }
+                if (cbad) { printf("FAIL columnar decode: %ld cell mismatches\n", cbad); fails++; }
+                else printf("columnar decode: %lld rows x %d cols, all cells correct\n", cols.nr, cols.k);
+                tbl2_columns_free_pub(&cols);
+            }
+            for (int it = 0; it < 4000; it++) {
+                memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+                for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+                czcols cc; if (tbl2_columns_pub(e, rnd() % 8 ? (int64_t)tn : rnd() % tn, &cc) >= 0) tbl2_columns_free_pub(&cc);
+            }
+            printf("columnar-codec fuzz: 4000 corrupt streams decoded without crashing\n");
+        }
+        free(t); free(o); free(e); free(ft);
+    }
+    /* logs: templates, skeleton columns (timestamps, IPs, padded ids), rare lines, no final newline */
+    {
+        size_t lq = 0; uint8_t *lg = malloc(N); long ts = 1700000000; int ms = 0;
+        const char *lv[] = {"INFO", "WARN", "ERROR"};
+        while (lq + 400 < N) {
+            ts += rnd() % 3; ms = (ms + (int)(rnd() % 997)) % 1000; int k = (int)(rnd() % 10);
+            if (k < 5) lq += sprintf((char *)lg + lq, "2024-01-%02ld %02ld:%02ld:%02ld,%03d %s dfs.DataNode: Receiving block blk_%lld src: /10.%d.%d.%d:%d dest: /10.0.0.%d:50010\n",
+                                     1 + (ts / 86400) % 28, (ts / 3600) % 24, (ts / 60) % 60, ts % 60, ms, lv[rnd() % 3], (long long)(rnd() % 9000000000000ll) - 4500000000000ll,
+                                     (int)(rnd() % 256), (int)(rnd() % 256), (int)(rnd() % 256), (int)(rnd() % 65536), (int)(rnd() % 256));
+            else if (k < 8) lq += sprintf((char *)lg + lq, "2024-01-%02ld %02ld:%02ld:%02ld,%03d INFO session 0x%06x closed  after %d ms\n",
+                                          1 + (ts / 86400) % 28, (ts / 3600) % 24, (ts / 60) % 60, ts % 60, ms, (unsigned)(rnd() % 0xFFFFFF), (int)(rnd() % 5000));
+            else if (k < 9) lq += sprintf((char *)lg + lq, "user%04d logged in from host-%c%c with \x01 marker %d\n", (int)(rnd() % 10000), 'a' + (int)(rnd() % 26), 'a' + (int)(rnd() % 26), (int)(rnd() % 7));
+            else { int w = 1 + (int)(rnd() % 12); for (int i = 0; i < w; i++) lq += sprintf((char *)lg + lq, "%s%c", (rnd() % 2) ? "x" : "free-text", i + 1 < w ? ' ' : '\n'); }
+        }
+        lq += sprintf((char *)lg + lq, "partial last line 42");
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("logs", lg, lq, (czn_mode)m, 1 << 18, T);
+        check("logs-1block", lg, lq, CZN_FAST, 0, 1);
+        size_t len = 1 << 18; uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
+        int64_t tn = log_encode_pub(lg, len, t, len + 65536);
+        if (tn <= 0 || log_decode_pub(t, tn, o, len) || memcmp(o, lg, len)) { printf("FAIL log codec roundtrip (%lld)\n", (long long)tn); fails++; }
+        else printf("log codec: %.2fx before entropy coding\n", (double)len / tn);
+        for (int it = 0; it < 4000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            size_t el = rnd() % 8 ? (size_t)tn : rnd() % tn;
+            log_decode_pub(e, el, o, len);
+        }
+        printf("log codec fuzz: 4000 corrupt streams decoded without crashing\n");
+        free(t); free(o); free(e); free(lg);
+    }
+    /* scientific binary: fixed records (header, quantised doubles incl. NaN/huge outliers, small ints, ids) and a
+     * 16-bit image (big-endian, odd offset) */
+    {
+        size_t P = 28, nrec = 200000, rn = 28 + nrec * P + 5; uint8_t *rec = malloc(rn);
+        for (size_t i = 0; i < 28; i++) rec[i] = (uint8_t)(i * 37 + 1);
+        double ra = 1.0;
+        for (size_t r = 0; r < nrec; r++) {
+            uint8_t *q = rec + 28 + r * P; ra += (double)(rnd() % 2000) * 4.84813681109536e-8;
+            double dec = ((double)(rnd() % 3000000) - 1500000) * 4.84813681109536e-9;
+            if (r == 777) dec = 0.0 / 0.0; if (r == 778) dec = 1e300;
+            uint16_t mag = (uint16_t)(rnd() % 1200), sp = (uint16_t)("ABFGKM"[rnd() % 6] << 8 | ('0' + rnd() % 10));
+            uint32_t id = (uint32_t)(r * 3 + rnd() % 3), fl = (uint32_t)(rnd() % 4);
+            memcpy(q, &ra, 8); memcpy(q + 8, &dec, 8); memcpy(q + 16, &mag, 2); memcpy(q + 18, &sp, 2); memcpy(q + 20, &id, 4); memcpy(q + 24, &fl, 4);
+        }
+        memcpy(rec + rn - 5, "tail!", 5);
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("records", rec, rn, (czn_mode)m, 1 << 20, T);
+        check("records-1block", rec, rn, CZN_HC, 0, 1);
+        size_t W = 1024, H = 1600, in_ = 1 + W * H * 2 + 3; uint8_t *im = malloc(in_); im[0] = 0x42;
+        for (size_t y = 0; y < H; y++) for (size_t x = 0; x < W; x++) {
+            int v = 2000 + (int)(800 * sin(x / 70.0) * cos(y / 90.0)) + (int)(rnd() % 9);
+            im[1 + 2 * (y * W + x)] = (uint8_t)(v >> 8); im[2 + 2 * (y * W + x)] = (uint8_t)v;
+        }
+        memcpy(im + in_ - 3, "end", 3);
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("image16", im, in_, (czn_mode)m, 1 << 20, T);
+        czn_params pp = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(in_, &pp); uint8_t *d = malloc(cap);
+        int64_t c1 = czn_compress(im, in_, d, cap, &pp); printf("image16 ratio %.2f, ", (double)in_ / c1);
+        int64_t c2 = czn_compress(rec, rn, d, cap > czn_bound(rn, &pp) ? cap : cap, &pp); (void)c2; free(d);
+        pp.mode = CZN_FAST; cap = czn_bound(rn, &pp); d = malloc(cap); c2 = czn_compress(rec, rn, d, cap, &pp); printf("records ratio %.2f\n", (double)rn / c2); free(d);
+        /* fuzz both decoders on their own streams */
+        uint8_t *t = malloc(rn * 3 + 65536), *o = malloc(rn + 64), *e = malloc(rn * 3 + 65536);
+        int64_t tn = sci_encode_pub(rec, rn, 0, t, rn * 3 + 65536);
+        if (tn <= 0 || sci_decode_pub(t, tn, o, rn) || memcmp(o, rec, rn)) { printf("FAIL records codec roundtrip (%lld)\n", (long long)tn); fails++; }
+        for (int it = 0; it < 3000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            sci_decode_pub(e, rnd() % 8 ? (size_t)tn : rnd() % tn, o, rn);
+        }
+        tn = sci_encode_pub(im, in_, 1, t, rn * 3 + 65536);
+        if (tn <= 0 || sci_decode_pub(t, tn, o, in_) || memcmp(o, im, in_)) { printf("FAIL image codec roundtrip (%lld)\n", (long long)tn); fails++; }
+        for (int it = 0; it < 3000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            sci_decode_pub(e, rnd() % 8 ? (size_t)tn : rnd() % tn, o, in_);
+        }
+        printf("records/image codec fuzz: 6000 corrupt streams decoded without crashing\n");
+        free(t); free(o); free(e); free(rec); free(im);
+    }
+    /* tar archive: members get their own plans (text, x86-like code, CSV, binary records); container v2 */
+    {
+        size_t cap = 24u << 20, q = 0; uint8_t *ar = calloc(cap, 1);
+        const char *names[] = {"notes.txt", "app.exe", "data.csv", "small.bin", "tail.txt"};
+        for (int mbr = 0; mbr < 5; mbr++) {
+            size_t sz = mbr == 3 ? 3000 : (mbr == 4 ? 777 : (size_t)(2u << 20) + (size_t)(rnd() % 100000));
+            uint8_t *h = ar + q; memset(h, 0, 512); strcpy((char *)h, names[mbr]); sprintf((char *)h + 124, "%011o", (unsigned)sz);
+            h[156] = '0'; memcpy(h + 257, "ustar", 5); q += 512;
+            uint8_t *d = ar + q;
+            for (size_t i = 0; i < sz;) {
+                if (mbr == 0 || mbr == 4) { const char *x = w[rnd() % 8]; size_t l = strlen(x); if (i + l > sz) l = sz - i; memcpy(d + i, x, l); i += l; }
+                else if (mbr == 1) { if (i + 5 <= sz && rnd() % 6 == 0) { d[i] = 0xE8; int32_t rel = (int32_t)(rnd() % 4096) * 16 - (int32_t)i; memcpy(d + i + 1, &rel, 4); i += 5; } else d[i++] = (uint8_t)(rnd() % 7 == 0 ? 0xE9 : 0x48 + rnd() % 8); }
+                else if (mbr == 2) { char line[64]; int l = sprintf(line, "%d,%d,%.2f\n", (int)(i / 20), (int)(rnd() % 100), (rnd() % 10000) / 100.0); if (i + l > sz) l = (int)(sz - i); memcpy(d + i, line, l); i += l; }
+                else d[i++] = (uint8_t)rnd();
+            }
+            q += (sz + 511) / 512 * 512;
+        }
+        q += 1024;
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("tar-archive", ar, q, (czn_mode)m, 1 << 20, T);
+        free(ar);
+    }
+    /* x86 transform: adversarial bytes (E8/E9 next to 00/FF) must round-trip through every mode */
+    {
+        size_t n2 = 3u << 20; uint8_t *x = malloc(n2);
+        for (size_t i = 0; i < n2; i++) { uint64_t r = rnd() % 5; x[i] = r == 0 ? 0xE8 : r == 1 ? 0xE9 : r == 2 ? 0xFF : r == 3 ? 0x00 : (uint8_t)rnd(); }
+        for (int m = 0; m < 5; m++) check("e8e9-adversarial", x, n2, (czn_mode)m, 1 << 20, 2);
+        free(x);
+    }
+    /* prose: word dictionary transform (capitalised words, long words, UTF-8, control bytes absent/present) */
+    {
+        size_t pn = 4u << 20, q = 0; uint8_t *pr = malloc(pn + 64);
+        const char *vocab[] = {"the", "The", "architecture", "Architecture", "NEOM", "data", "compression", "of", "and", "Riyadh",
+                               "supercalifragilisticexpialidocious", "caf\xc3\xa9", "Zebra", "zebra", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"};
+        while (q + 80 < pn) { const char *x = vocab[rnd() % 15]; size_t l = strlen(x); memcpy(pr + q, x, l); q += l; pr[q++] = (uint8_t)(rnd() % 9 ? ' ' : (rnd() % 2 ? ',' : '\n')); }
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("prose", pr, q, (czn_mode)m, 1 << 20, T);
+        check("prose-1block", pr, q, CZN_HC, 0, 1);
+        uint8_t *t = malloc(q + 65536), *o = malloc(q + 64), *e = malloc(q + 65536);
+        int64_t tn = word_encode_pub(pr, q, t, q + 65536);
+        if (tn <= 0 || word_decode_pub(t, tn, o, q) || memcmp(o, pr, q)) { printf("FAIL word codec roundtrip (%lld)\n", (long long)tn); fails++; }
+        else printf("word codec: %.2fx before entropy coding\n", (double)q / tn);
+        for (int it = 0; it < 3000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            word_decode_pub(e, rnd() % 8 ? (size_t)tn : rnd() % tn, o, q);
+        }
+        printf("word codec fuzz: 3000 corrupt streams decoded without crashing\n");
+        free(t); free(o); free(e); free(pr);
+    }
+    /* ultra (context mixing, best-of coder per block): small inputs, the CM decoder is slow */
+    {
+        size_t un = 300000; uint8_t *u = malloc(un);
+        for (size_t i = 0; i < un;) { const char *x = w[rnd() % 8]; size_t l = strlen(x); if (i + l > un) break; memcpy(u + i, x, l); i += l; }
+        check("ultra-text", u, un - 8, CZN_ULTRA, 1 << 17, 2);
+        check("ultra-csv", csv, 400000, CZN_ULTRA, 1 << 17, 1);
+        check("ultra-random", rndb, 200000, CZN_ULTRA, 1 << 17, 1);
+        free(u);
+    }
+    /* table codec fuzz: corrupt the transformed stream itself (bypasses the container CRC) */
+    {
+        int bad = 0; size_t len = 1 << 18; while (csv[len - 1] != '\n') len--;
+        uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
+        int64_t tn = tbl_encode_pub(csv, len, ',', 5, 1, t);
+        for (int it = 0; it < 3000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            size_t el = rnd() % 8 ? (size_t)tn : rnd() % tn;
+            tbl_decode_pub(e, el, ',', o, len);            /* must not crash; result is checked by CRC in real use */
+        }
+        free(t); free(o); free(e); if (bad) fails++;
+        printf("table-codec fuzz: 3000 corrupt streams decoded without crashing\n");
+    }
+    free(csv); free(bin); free(rndb); free(txt);
+    printf(fails ? "FAILED: %d\n" : "ALL PASSED\n", fails);
+    return fails != 0;
+}

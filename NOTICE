@@ -1,0 +1,8 @@
+czn — native core of the kolmo compressor. Copyright 2026 Adnane Aqartit and contributors. Apache-2.0.
+
+Third-party code vendored unmodified under vendor/:
+  zstd 1.5.7  (vendor/zstd)  BSD-3-Clause, Copyright (c) Meta Platforms, Inc. and affiliates
+  LZ4 1.10.0  (vendor/lz4)   BSD-2-Clause, Copyright (c) Yann Collet
+  brotli 1.1.0 (vendor/brotli: common, dec, enc, include) MIT, Copyright (c) the Brotli Authors
+  libbsc 3.4.0 (vendor/libbsc, including libsais) Apache-2.0, Copyright (c) 2009-2026 Ilya Grebnov
+Linked from the system: liblzma from XZ Utils (0BSD)
