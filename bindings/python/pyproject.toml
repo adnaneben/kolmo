@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kolmo"
+version = "1.0.0"
+description = "Structure-aware lossless compressor: best ratio across tables, logs and scientific data, with decode that scales across cores."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Adnane Aqartit and contributors" }]
+requires-python = ">=3.8"
+keywords = ["compression", "lossless", "columnar", "zstd", "simd"]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: System :: Archiving :: Compression",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Homepage = "https://github.com/adnaneben/kolmo"
+Repository = "https://github.com/adnaneben/kolmo"
+
+[tool.setuptools]
+py-modules = ["kolmo"]

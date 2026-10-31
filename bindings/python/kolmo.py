@@ -14,7 +14,7 @@ _MODES = {"rt": 0, "fast": 1, "eco": 2, "hc": 3, "max": 4, "ultra": 5}
 def _load():
     here = os.path.dirname(os.path.abspath(__file__))
     name = "libkolmo.dylib" if sys.platform == "darwin" else "libkolmo.so"
-    for p in (os.environ.get("KOLMO_LIB"), os.path.join(here, "..", "..", "build", name), name):
+    for p in (os.environ.get("KOLMO_LIB"), os.path.join(here, name), os.path.join(here, "..", "..", "build", name), name):
         if not p:
             continue
         try:

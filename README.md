@@ -10,7 +10,8 @@ It has six modes, from LZ4-speed `rt` to the context-mixing archive tier `ultra`
 Single core, in memory, best of repeated runs; every output decoded and compared byte for byte. Each cell is the
 compression ratio (original size / compressed size). Machine: 2-core Intel Xeon VM, 2.1 GHz, gcc 13, `-O3 -march=native`.
 The leaders were built from the same sources with the same flags (OpenZL: its own CLI, best profile, trained on the
-tables).
+tables). Full per-mode tables, speeds, and a one-command way to reproduce all of this on your own machine are in
+[`benchmark/BENCHMARKS.md`](benchmark/BENCHMARKS.md).
 
 | Data | kolmo fast | kolmo eco | kolmo hc | kolmo max | kolmo ultra | zstd -19 | brotli -11 | xz -9e | OpenZL |
 |---|---|---|---|---|---|---|---|---|---|
@@ -76,6 +77,16 @@ independent frames — each a normal container for one segment — so compress a
 compression peaks at ~114 MB of RAM; streaming at 4 MiB segments peaks at ~32 MB, and decompression
 at ~11 MB. `-d` detects a streamed file automatically. The library API is `czn_stream_compress` /
 `czn_stream_decompress` (file descriptors in and out).
+
+## Install
+
+```bash
+cargo add kolmo                 # Rust    (bindings/rust)
+pip install kolmo               # Python  (bindings/python; builds the native core)
+```
+
+Or build the CLI and library from source (below). The Rust and Python packages compile and
+bundle the native core, so they have no runtime dependency beyond `liblzma`.
 
 ## Build and use
 
