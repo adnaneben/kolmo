@@ -371,12 +371,17 @@ static void text_col_put(const uint8_t *in, const uint32_t *off, const uint32_t 
 static uint64_t num_resid(const ncol_t *c, int mode, const uint32_t *gid, const tformula *F, const double *fa, const double *fb,
                           const double *la, uint64_t *z) {
     uint64_t cost = 0; int64_t prev = 0;
+    int64_t pd4 = 0; uint32_t pg4 = 0; int hd4 = 0;                 /* mode 4 (grouped delta-of-delta) state */
     for (uint32_t i = 0; i < c->nnum; i++) {
         int64_t v = c->v[i], r;
         switch (mode) {
             case 0: r = v; break;
             case 1: r = (int64_t)((uint64_t)v - (uint64_t)prev); break;
             case 2: r = (i && gid[c->idx[i]] == gid[c->idx[i - 1]]) ? (int64_t)((uint64_t)v - (uint64_t)prev) : v; break;
+            case 4: { uint32_t g = gid[c->idx[i]]; int same = i && g == pg4;
+                      if (!same) { r = v; hd4 = 0; }
+                      else { int64_t d = (int64_t)((uint64_t)v - (uint64_t)prev); r = hd4 ? (int64_t)((uint64_t)d - (uint64_t)pd4) : d; pd4 = d; hd4 = 1; }
+                      pg4 = g; break; }
             default: { uint32_t row = c->idx[i]; int64_t pi;
                        r = fm_int(F->form, F->k, fa[row], fb ? fb[row] : 0, la ? la[row] : 0, c->S, &pi) ? (int64_t)((uint64_t)v - (uint64_t)pi) : v; }
         }
@@ -527,6 +532,8 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
         if (k0 < bc) { bc = k0; bm = 0; }
         if (gcol >= 0 && k2 < bc) { bc = k2; bm = 2; }
         int zready = 0;
+        uint64_t c4 = gcol >= 0 ? num_resid(&C[j], 4, gid, NULL, NULL, NULL, NULL, z) : (uint64_t)-1;   /* grouped delta-of-delta (only when grouped, like mode 2) */
+        if (gcol >= 0 && c4 < bc) { bc = c4; bm = 4; zt = zb; zb = z; z = zt; zready = 1; }
         int fid = fofy[j];
         if (fid >= 0) {
             const tformula *F = &FB[fid];
@@ -538,6 +545,7 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
             if (c < bc) { bc = c; bm = 3; zt = zb; zb = z; z = zt; zready = 1; }
         }
         if (!zready) num_resid(&C[j], bm, gid, NULL, NULL, NULL, NULL, zb);
+        if (bm == 4) atomic_store_explicit(&cz_used_dod, 1, memory_order_relaxed);
         num_col_put(in, o, l, &C[j], bm, bm == 3 ? fid : 0, zb, &out);
     }
     for (int j = 0; j < k; j++) { if (j != gcol) ncol_free(&C[j]); free(fv[j]); }
@@ -576,6 +584,16 @@ static int num_decode(Col2 *c, const uint32_t *gid, const tformula *F, const dou
             int64_t r = unzz(z[i]); uint32_t g = gid[ri[i]];
             int64_t v = (i && g == pg) ? (int64_t)((uint64_t)prev + (uint64_t)r) : r;
             prev = v; pg = g; vp[i] = v;
+        }
+        return 0;
+    }
+    if (c->mode == 4) {                                            /* grouped delta-of-delta */
+        int64_t prev = 0, pd = 0; uint32_t pg = 0; int hd = 0;
+        for (uint32_t i = 0; i < m; i++) {
+            int64_t r = unzz(z[i]); uint32_t g = gid[ri[i]]; int same = i && g == pg; int64_t v;
+            if (!same) { v = r; hd = 0; }
+            else { int64_t d = hd ? (int64_t)((uint64_t)r + (uint64_t)pd) : r; v = (int64_t)((uint64_t)prev + (uint64_t)d); pd = d; hd = 1; }
+            pg = g; prev = v; vp[i] = v;
         }
         return 0;
     }
@@ -651,6 +669,7 @@ static inline int compact_rows(const uint8_t *kd, int R, uint8_t *rows) {
 enum { TR = 128 };
 typedef struct {
     int type, mode, S, w, src, form, fa, fb, q, hasx; double k; uint32_t nnum, ni, xi, li; int64_t prev; uint32_t pg;
+    int64_t pd; int hd;                             /* mode 4 (grouped delta-of-delta) state, carried across chunks */
     uint8_t *rows;                                  /* chunk rows holding values (q of them) */
     const uint8_t *kind, *sd, *pl, *elen, *x, *lens, *longs, *p, *pe;
     int64_t *cv; double *fv; double fprev;          /* chunk values; source columns: row doubles, fv[-1] = previous row */
@@ -720,6 +739,15 @@ static int tbl2_stream(Col2 *C, int k, int64_t nr, const uint32_t *gid, const tf
                         cv[a] = v; pv = v; pg = g;
                     }
                     u->prev = pv; u->pg = pg;
+                } else if (u->mode == 4) {
+                    int64_t pv = u->prev, pd = u->pd; uint32_t pg = u->pg; int hd = u->hd;
+                    for (int a = 0; a < q; a++) {
+                        uint32_t g = gid[r0 + rows[a]]; int same = (i0 + a > 0) && g == pg; int64_t v;
+                        if (!same) { v = cv[a]; hd = 0; }
+                        else { int64_t d = hd ? (int64_t)((uint64_t)cv[a] + (uint64_t)pd) : cv[a]; v = (int64_t)((uint64_t)pv + (uint64_t)d); pd = d; hd = 1; }
+                        cv[a] = v; pv = v; pg = g;
+                    }
+                    u->prev = pv; u->pd = pd; u->pg = pg; u->hd = hd;
                 } else if (u->mode == 3) {
                     const double *fa = U[u->fa].fv, *fb = u->fb >= 0 ? U[u->fb].fv : NULL;
                     for (int a = 0; a < q; a++) {
@@ -866,7 +894,7 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
             if (size < 16) goto out;
             memcpy(&c->cnt, q, 4); memcpy(&c->nnum, q + 4, 4); memcpy(&c->nexc, q + 8, 4);
             c->S = q[12]; c->w = q[13]; c->mode = q[14]; c->fid = q[15]; q += 16;
-            if (c->S > 18 || c->w < 1 || c->w > 8 || c->mode > 3 || c->cnt > size || c->nnum > c->cnt || c->nexc > c->cnt) goto out;
+            if (c->S > 18 || c->w < 1 || c->w > 8 || c->mode > 4 || c->cnt > size || c->nnum > c->cnt || c->nexc > c->cnt) goto out;
             c->kind = q; q += c->cnt; c->sd = q; q += c->nnum; c->pl = q; q += (size_t)c->nnum * c->w;
             c->elen = q; q += 4ull * c->nexc; c->edata = q; c->dend = qe;
             if (q > qe) goto out;
@@ -932,7 +960,7 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
     for (int pass = 0; pass < 2; pass++)
         for (int j = 0; j < k; j++) {
             Col2 *c = &C[j]; if (c->type != 2 || (c->mode == 3) != pass) continue;
-            if ((c->mode == 2 || c->mode == 3) && !aligned) goto out;
+            if ((c->mode == 2 || c->mode == 3 || c->mode == 4) && !aligned) goto out;
 #ifdef CZN_PROF
             uint64_t tq0 = __rdtsc();
 #endif
@@ -1163,7 +1191,7 @@ static int tbl2_columns(const uint8_t *in, int64_t tn, czcols *out) {
             if (size < 16) goto out;
             memcpy(&c->cnt, q, 4); memcpy(&c->nnum, q + 4, 4); memcpy(&c->nexc, q + 8, 4);
             c->S = q[12]; c->w = q[13]; c->mode = q[14]; c->fid = q[15]; q += 16;
-            if (c->S > 18 || c->w < 1 || c->w > 8 || c->mode > 3 || c->cnt != (uint32_t)nr || c->nnum > c->cnt || c->nexc > c->cnt) goto out;
+            if (c->S > 18 || c->w < 1 || c->w > 8 || c->mode > 4 || c->cnt != (uint32_t)nr || c->nnum > c->cnt || c->nexc > c->cnt) goto out;
             c->kind = q; q += c->cnt; c->sd = q; q += c->nnum; c->pl = q; q += (size_t)c->nnum * c->w;
             c->elen = q; q += 4ull * c->nexc; c->edata = q; c->dend = qe;
             if (q > qe) goto out;

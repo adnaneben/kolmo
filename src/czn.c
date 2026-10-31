@@ -15,6 +15,7 @@
 #endif
 #include <stdint.h>
 unsigned long long czn_xxh3(const void *p, size_t n, unsigned long long seed);   /* vendor/xxhash/czn_xxh3.c */
+static _Atomic int cz_used_dod = 0;   /* set by the table encoder when a delta-of-delta column is emitted; bumps the container to v4 */
 #include "zstd.h"
 #include "lz4.h"
 #include "lz4hc.h"
@@ -1543,6 +1544,7 @@ static uint32_t segments(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se,
 
 int64_t czn_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const czn_params *p) {
     czn_params d = {CZN_FAST, 0, 0, 0, 1}; if (!p) p = &d;
+    atomic_store_explicit(&cz_used_dod, 0, memory_order_relaxed);   /* reset per call; table encoder sets it, then the version byte reflects it */
     uint32_t B = p->block ? p->block : (p->mode >= CZN_MAX ? (128u << 20) : p->mode >= CZN_ECO ? (16u << 20) : czn_fast_block(n));   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
     if (B < 4096) B = 4096;
     int codec, level; mode_codec(p, &codec, &level);
@@ -1597,7 +1599,7 @@ int64_t czn_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, con
     for (uint32_t g = 0; g < nseg; g++) { free(plans[g].fs); free(plans[g].rec); }
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     if (ret) return ret;
-    memcpy(dst, "CZN1", 4); dst[4] = 3; dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    memcpy(dst, "CZN1", 4); dst[4] = atomic_load_explicit(&cz_used_dod, memory_order_relaxed) ? 4 : 3; dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = czn_crc32c(0, dst, 28); hc = czn_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
     return (int64_t)w;
@@ -1607,7 +1609,7 @@ int64_t czn_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, con
 typedef struct { uint64_t orig; uint32_t nb; int ver, psum; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
 
 static int parse(const uint8_t *s, size_t n, parsed_t *P) {
-    if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > 3) return CZN_ERR_CORRUPT;
+    if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > 4) return CZN_ERR_CORRUPT;
     P->ver = s[4]; P->psum = P->ver >= 3 && (s[10] & 1);
     P->orig = get64(s + 12); P->nb = get32(s + 20);
     P->pl = (plan_t){s[6], s[7], s[8], s[9]};
