@@ -25,6 +25,13 @@ jobs:
         run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py
       - name: Rust binding round trip
         run: cargo test --manifest-path bindings/rust/Cargo.toml
+      - name: streaming round trip (multi-frame, bounded memory)
+        run: |
+          cat src/*.c src/*.inc README.md > s.in
+          for i in 1 2 3 4; do cat s.in s.in > s2.in && mv s2.in s.in; done
+          ./build/kolmo -m fast -S 2 s.in s.czs
+          ./build/kolmo -d s.czs s.out
+          cmp s.in s.out
   sanitizers:
     runs-on: ubuntu-latest
     steps:

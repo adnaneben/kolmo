@@ -37,6 +37,10 @@ int64_t czn_original_size(const uint8_t *src, size_t n);
 int64_t czn_decompress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads);
 /* random access: bytes [off, off+len) of the original, decoding only the blocks that overlap */
 int64_t czn_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len, uint8_t *dst, int threads);
+/* streaming / large inputs, bounded memory: file descriptors in and out (CZNS framed segments).
+ * seg_mib = 0 uses the default segment size. Both return total bytes written, or a negative error. */
+int64_t czn_stream_compress(int in_fd, int out_fd, const czn_params *p, uint32_t seg_mib);
+int64_t czn_stream_decompress(int in_fd, int out_fd, int threads);
 const char *czn_strerror(int64_t code);
 uint32_t czn_crc32c(uint32_t crc, const void *buf, size_t len);
 

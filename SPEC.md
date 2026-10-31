@@ -90,6 +90,22 @@ follow. CM output is bit-exact across compilers and CPUs (integer-only, `-ffp-co
   never returned as data.
 - **Portable.** For a given mode and input, the bytes are identical across Intel and Apple-silicon builds.
 
+## Stream format (`CZNS`) — large inputs
+
+For inputs processed in bounded memory (and over pipes), a stream wraps independent containers:
+
+```
+"CZNS"  ver(1 = 1)  reserved(3)  seg_bytes(u32 le)      # 12-byte stream header
+then, repeated:   len(u64 le)  frame[len]               # frame = one complete CZN1 container
+end:              0 (u64 le)                             # zero-length terminator
+```
+
+Each frame is a normal container (above) for one segment of the input (default 64 MiB), so encode and
+decode hold at most one segment plus its frame in memory. Segments are independent — compressed and
+decoded across cores like blocks — so very small segments cost a little ratio at their boundaries. A
+decoder distinguishes the two formats by the first four bytes (`CZN1` one-shot vs `CZNS` stream).
+Produced and consumed by `czn_stream_compress` / `czn_stream_decompress`.
+
 ## Transform sub-formats
 
 The byte layouts of the table, log, record, image and word transforms live with their code and are documented there,

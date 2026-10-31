@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #if defined(CZN_TRACE) || defined(CZN_PROF)
 #include <stdio.h>
 #endif
@@ -1749,3 +1750,5 @@ const char *czn_strerror(int64_t c) {
     }
     return c >= 0 ? "ok" : "unknown error";
 }
+
+#include "stream.inc"

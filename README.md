@@ -68,13 +68,23 @@ and decimal formatting (`tbl2_columns` / `exp/colbench.c`). An analytical reader
 otherwise decompress to CSV and re-parse reaches typed values about **3× faster**, and the columnar path is 1.2–1.4×
 faster than full row decode on its own. The default lossless round trip is unchanged.
 
+### Streaming (large inputs)
+
+For inputs too large to hold in memory, `-s` (or `-S <segMiB>`) compresses a stream of
+independent frames — each a normal container for one segment — so compress and decompress run in
+**bounded memory** (one segment, not the whole file) and work on pipes. On a 47 MB input, one-shot
+compression peaks at ~114 MB of RAM; streaming at 4 MiB segments peaks at ~32 MB, and decompression
+at ~11 MB. `-d` detects a streamed file automatically. The library API is `czn_stream_compress` /
+`czn_stream_decompress` (file descriptors in and out).
+
 ## Build and use
 
 ```bash
 make                                    # build/kolmo, build/czbench, build/czntest (Linux, macOS; gcc or clang)
 ./build/czntest                         # round trips in every mode, range reads, corruption fuzzing
 ./build/kolmo -m hc in.csv out.czn        # compress: -m rt|fast|eco|hc|max|ultra, -T threads, -B block MiB, -n no transforms
-./build/kolmo -d out.czn back.csv         # decompress
+./build/kolmo -d out.czn back.csv         # decompress (auto-detects one-shot vs streamed input)
+./build/kolmo -s huge.csv huge.czs        # streaming compress: bounded memory, any size (-S N for N-MiB segments)
 ./build/kolmo -r 1000000:4096 out.czn x   # read 4 KiB at offset 1,000,000 without decoding the rest
 ./build/czbench -X -o results.tsv file  # benchmark against LZ4, zstd, brotli and xz built from the same sources
 ```
