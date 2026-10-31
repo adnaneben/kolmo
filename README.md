@@ -90,7 +90,7 @@ overnight genetic search of the build-time settings (`tune/ga.py`).
 1.0. The container format (version 3) is frozen; versions 1 and 2 remain readable. Output is byte-identical across
 x86-64 and Apple silicon (verified: rt/fast/hc on tables, logs and scientific data hash the same on both). The decoder
 is fuzzed (OSS-Fuzz harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never returned as
-data. A shared library and Python binding are in `bindings/`; the format is documented in `SPEC.md`.
+data. A shared library and Python and Rust bindings are in `bindings/`; the format is documented in `SPEC.md`.
 
 ## Layout
 

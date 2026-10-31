@@ -23,6 +23,8 @@ jobs:
         run: ./build/czntest
       - name: shared library + Python binding round trip
         run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py
+      - name: Rust binding round trip
+        run: cargo test --manifest-path bindings/rust/Cargo.toml
   sanitizers:
     runs-on: ubuntu-latest
     steps:

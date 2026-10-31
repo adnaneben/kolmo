@@ -1,0 +1,17 @@
+[package]
+name = "kolmo"
+version = "1.0.0"
+edition = "2021"
+description = "Structure-aware lossless compressor: best ratio across tables, logs and scientific data, with decode that scales across cores."
+license = "Apache-2.0"
+repository = "https://github.com/adnaneben/kolmo"
+readme = "README.md"
+links = "kolmo"
+
+[features]
+# Build the native core without liblzma (the max/ultra modes then use the other coders).
+no-lzma = []
+
+[lib]
+name = "kolmo"
+path = "src/lib.rs"
