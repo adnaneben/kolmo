@@ -15,7 +15,7 @@ tables). Full per-mode tables, speeds, and a one-command way to reproduce all of
 
 | Data | kolmo fast | kolmo eco | kolmo hc | kolmo max | kolmo ultra | zstd -19 | brotli -11 | xz -9e | OpenZL |
 |---|---|---|---|---|---|---|---|---|---|
-| Tables: OWID CO2 + energy, 23.6 MB | 10.26 | 10.58 | 10.82 | 11.38 | 11.44 | 4.20 | 4.56 | 4.54 | 4.82 |
+| Tables: OWID CO2 + energy, 23.6 MB | 10.31 | 10.58 | 10.82 | 11.38 | 11.44 | 4.20 | 4.56 | 4.54 | 4.82 |
 | Logs: 16 Loghub logs, 4.5 MB | 14.10 | 15.79 | 16.27 | 17.67 | 22.42 | 13.48 | 14.50 | 14.67 | 9.84 |
 | Text: enwik8, 100 MB | 2.81 | 3.48 | 4.10 | 4.62 | 5.11 | 3.71 | 3.88 | 4.03 | 3.06 |
 | Scientific: star catalogue + X-ray, 15.7 MB | 2.64 | 2.69 | 2.68 | 2.71 | 2.76 | 1.55 | 1.70 | 1.76 | 2.56 |
@@ -36,7 +36,7 @@ leads decode on scientific and trades 1.2–2× decode speed on tables/logs for 
 
 | Data | Model |
 |---|---|
-| Tables (CSV/TSV) | Columns become typed streams. Numeric columns are exact decimals at a common scale, predicted per block by raw, delta, delta within an entity (e.g. country), **delta-of-delta** within an entity (second-order, for counters and steady trends), or a discovered **formula of other columns** (`y = k·a/b`, change and % change): 51 formulas on the OWID energy table. Quoted fields, short rows and odd values are lossless. |
+| Tables (CSV/TSV) | Columns become typed streams. Numeric columns are exact decimals at a common scale, predicted per block by raw, delta, delta within an entity (e.g. country), **delta-of-delta** and **third-order** within an entity (for counters and steady trends), or a discovered **formula of other columns** (`y = k·a/b`, change and % change): 51 formulas on the OWID energy table. Quoted fields, short rows and odd values are lossless. |
 | Logs | Lines are split into **templates and variables**; timestamps, IPs and IDs become integer columns ("skeleton" columns). |
 | Prose and markup | Frequent words become 2-byte codes from byte values the block never uses (eco and above); `hc` then uses zstd 22 with a 128 MiB window. |
 | Scientific binary | **Fixed records** (period found by self-similarity; fields of 1/2/4/8 bytes stored raw, as deltas, as dictionary tokens, or as multiples of a discovered quantum with exact bit corrections) and **16-bit images** (byte order, row stride and predictor found automatically). |
@@ -108,7 +108,7 @@ overnight genetic search of the build-time settings (`tune/ga.py`).
 
 ## Status
 
-1.x. The container is version 4 (a stream uses v4 only when the delta-of-delta predictor is selected, else v3); versions 1–3 remain readable, and an older decoder reports an error on a newer version rather than returning wrong data. Output is byte-identical across
+1.x. The container is version 5 (a stream uses v4/v5 only when the delta-of-delta or third-order predictor is selected, else v3); versions 1–3 remain readable, and an older decoder reports an error on a newer version rather than returning wrong data. Output is byte-identical across
 x86-64 and Apple silicon (verified: rt/fast/hc on tables, logs and scientific data hash the same on both). The decoder
 is fuzzed (OSS-Fuzz harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never returned as
 data. A shared library and Python and Rust bindings are in `bindings/`; the format is documented in `SPEC.md`.

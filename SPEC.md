@@ -1,6 +1,6 @@
 # kolmo container format
 
-This describes the `CZN1` container as written by this implementation. Version 4 is current; versions 1, 2 and 3
+This describes the `CZN1` container as written by this implementation. Version 5 is current; versions 1 to 4
 remain readable. The container framing below is stable and intended to be frozen at 1.0. The per-block *transform*
 sub-formats (tables, logs, scientific records, images, words) are not yet frozen and may change before 1.0; a decoder
 identifies them per block and this document specifies where that identification lives, not every transform's bytes.
@@ -22,7 +22,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1, 2, 3, or 4 (4 only when a table column uses the delta-of-delta predictor) |
+| 4 | 1 | version | 1 to 5 (4 or 5 only when a table column uses the delta-of-delta or third-order predictor) |
 | 5 | 1 | mode | the `czn_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–3 (plan is per block) |
 | 7 | 1 | a | plan parameter (v1) |
@@ -35,7 +35,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | 24 | 4 | block | nominal block size in bytes |
 | 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
 
-A reader rejects the file if the magic is wrong, the version is not 1–4, the index does not fit in the file, or the
+A reader rejects the file if the magic is wrong, the version is not 1–5, the index does not fit in the file, or the
 header+index CRC does not match.
 
 ## Block index — one 16-byte entry per block
