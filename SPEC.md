@@ -24,11 +24,11 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | 0 | 4 | magic | ASCII `CZN1` |
 | 4 | 1 | version | 1 to 5 (4 or 5 only when a table column uses the delta-of-delta or third-order predictor) |
 | 5 | 1 | mode | the `czn_mode` used (rt=0 … ultra=5); informational |
-| 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–3 (plan is per block) |
-| 7 | 1 | a | plan parameter (v1) |
-| 8 | 1 | b | plan parameter (v1) |
-| 9 | 1 | c | plan parameter (v1) |
-| 10 | 1 | flags | bit 0 (v3): block checksums cover the stored payload, not the decoded bytes (set in `rt`); other bits 0 |
+| 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
+| 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 8 | 1 | b | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 9 | 1 | c | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 10 | 1 | flags | bit 0 (v3+): block checksums cover the stored payload, not the decoded bytes (set in `rt`). bit 1 (v3+): the zstd-coded blocks were compressed with a dictionary, whose 32-bit id is in bytes 6–9; decoding requires the matching dictionary. Other bits 0 |
 | 11 | 1 | reserved | 0 |
 | 12 | 8 | orig | original (uncompressed) length in bytes |
 | 20 | 4 | nblocks | number of blocks |
@@ -36,7 +36,9 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
 
 A reader rejects the file if the magic is wrong, the version is not 1–5, the index does not fit in the file, or the
-header+index CRC does not match.
+header+index CRC does not match. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
+of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `CZN_ERR_DICT`; an older
+reader that predates the flag refuses the newer version rather than returning wrong data.
 
 ## Block index — one 16-byte entry per block
 

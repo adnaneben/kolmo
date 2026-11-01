@@ -30,6 +30,7 @@ typedef struct {
 #define CZN_ERR_DSTSIZE   (-3)
 #define CZN_ERR_ALLOC     (-4)
 #define CZN_ERR_CODEC     (-5)
+#define CZN_ERR_DICT      (-6)   /* input was compressed with a dictionary; a matching one must be supplied to decode */
 
 size_t  czn_bound(size_t n, const czn_params *p);
 int64_t czn_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const czn_params *p);
@@ -43,6 +44,26 @@ int64_t czn_stream_compress(int in_fd, int out_fd, const czn_params *p, uint32_t
 int64_t czn_stream_decompress(int in_fd, int out_fd, int threads);
 const char *czn_strerror(int64_t code);
 uint32_t czn_crc32c(uint32_t crc, const void *buf, size_t len);
+
+/* --- Dictionary support (small files) ------------------------------------------------------------
+ * For many small, similar inputs (records, log fragments, JSON blobs), a dictionary trained on a
+ * representative sample makes each file compress far better. Train once, then compress/decompress
+ * with the same dictionary. The dictionary is applied to the zstd-coded blocks (rt/fast/hc modes).
+ *
+ * czn_train_dict: build a dictionary of up to dict_cap bytes from `nsamples` concatenated samples
+ *   (samples laid end-to-end in `samples`, each length in `sizes`). Returns the dictionary length
+ *   written to `dict`, or a negative error. A few hundred samples and dict_cap ~100 KB are typical.
+ * czn_compress_dict / czn_decompress_dict: as czn_compress / czn_decompress, with a dictionary.
+ *   A file written with a dictionary records its id; decoding without the matching dictionary fails
+ *   with CZN_ERR_DICT rather than returning wrong data. These calls are not thread-safe with respect
+ *   to each other or to czn_compress/czn_decompress (the active dictionary is process-wide); serialise
+ *   calls or confine them to one thread. Internal block parallelism is unaffected. */
+int64_t czn_train_dict(const uint8_t *samples, const size_t *sizes, size_t nsamples,
+                       uint8_t *dict, size_t dict_cap);
+int64_t czn_compress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
+                          const czn_params *p, const void *dict, size_t dictlen);
+int64_t czn_decompress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads,
+                            const void *dict, size_t dictlen);
 
 #ifdef __cplusplus
 }

@@ -38,6 +38,9 @@ extern "C" {
     fn czn_decompress(src: *const u8, n: usize, dst: *mut u8, cap: usize, threads: c_int) -> i64;
     fn czn_read_range(src: *const u8, n: usize, off: u64, len: usize, dst: *mut u8, threads: c_int) -> i64;
     fn czn_strerror(code: i64) -> *const c_char;
+    fn czn_train_dict(samples: *const u8, sizes: *const usize, nsamples: usize, dict: *mut u8, dict_cap: usize) -> i64;
+    fn czn_compress_dict(src: *const u8, n: usize, dst: *mut u8, cap: usize, p: *const Params, dict: *const u8, dictlen: usize) -> i64;
+    fn czn_decompress_dict(src: *const u8, n: usize, dst: *mut u8, cap: usize, threads: c_int, dict: *const u8, dictlen: usize) -> i64;
 }
 
 /// An error returned by the native core (corrupt input, checksum mismatch, allocation, …).
@@ -99,6 +102,41 @@ pub fn read_range(blob: &[u8], off: u64, len: usize, threads: i32) -> Result<Vec
     Ok(out)
 }
 
+/// Train a dictionary from a set of small, similar samples (records, log lines, JSON blobs).
+/// `dict_cap` bounds the dictionary size (~112 KiB is typical). Use the result with
+/// [`compress_dict`] / [`decompress_dict`].
+pub fn train_dict(samples: &[&[u8]], dict_cap: usize) -> Result<Vec<u8>, Error> {
+    let mut blob = Vec::new();
+    let sizes: Vec<usize> = samples.iter().map(|s| { blob.extend_from_slice(s); s.len() }).collect();
+    let mut dict = vec![0u8; dict_cap.max(256)];
+    let n = unsafe { czn_train_dict(blob.as_ptr(), sizes.as_ptr(), sizes.len(), dict.as_mut_ptr(), dict.len()) };
+    if n < 0 { return Err(err(n)); }
+    dict.truncate(n as usize);
+    Ok(dict)
+}
+
+/// Compress `data` against a trained dictionary (see [`train_dict`]). The same dictionary must be
+/// supplied to [`decompress_dict`]; a blob written with a dictionary refuses to decode without it.
+pub fn compress_dict(data: &[u8], mode: Mode, threads: i32, dict: &[u8]) -> Result<Vec<u8>, Error> {
+    let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1 };
+    let cap = unsafe { czn_bound(data.len(), &p) };
+    let mut out = vec![0u8; cap.max(1)];
+    let n = unsafe { czn_compress_dict(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p, dict.as_ptr(), dict.len()) };
+    if n < 0 { return Err(err(n)); }
+    out.truncate(n as usize);
+    Ok(out)
+}
+
+/// Decompress a blob written by [`compress_dict`], supplying the same dictionary.
+pub fn decompress_dict(blob: &[u8], threads: i32, dict: &[u8]) -> Result<Vec<u8>, Error> {
+    let o = original_size(blob)?;
+    let mut out = vec![0u8; o.max(1)];
+    let got = unsafe { czn_decompress_dict(blob.as_ptr(), blob.len(), out.as_mut_ptr(), out.len(), threads as c_int, dict.as_ptr(), dict.len()) };
+    if got < 0 { return Err(err(got)); }
+    out.truncate(got as usize);
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -136,6 +174,23 @@ mod tests {
         for d in [&b""[..], &b"x"[..], &b"hello world"[..]] {
             let blob = compress(d, Mode::Fast, 1).unwrap();
             assert_eq!(decompress(&blob, 1).unwrap(), d);
+        }
+    }
+
+    #[test]
+    fn dictionary_round_trip() {
+        // Many small, similar records: train on some, test on others.
+        let recs: Vec<Vec<u8>> = (0..600u32)
+            .map(|i| format!("id,{},status,OK,region,eu-west-{},ts,2024-01-{:02}T00:00:00Z\n", i, i % 4, 1 + i % 28).into_bytes())
+            .collect();
+        let samples: Vec<&[u8]> = recs[..400].iter().map(|v| v.as_slice()).collect();
+        let dict = train_dict(&samples, 64 * 1024).expect("train");
+        assert!(!dict.is_empty());
+        for r in &recs[400..] {
+            let blob = compress_dict(r, Mode::Fast, 1, &dict).unwrap();
+            assert_eq!(decompress_dict(&blob, 1, &dict).unwrap(), *r);
+            // A dictionary blob must not decode without the dictionary.
+            assert!(decompress(&blob, 1).is_err());
         }
     }
 }

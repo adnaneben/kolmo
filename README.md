@@ -69,6 +69,24 @@ and decimal formatting (`tbl2_columns` / `exp/colbench.c`). An analytical reader
 otherwise decompress to CSV and re-parse reaches typed values about **3× faster**, and the columnar path is 1.2–1.4×
 faster than full row decode on its own. The default lossless round trip is unchanged.
 
+### Dictionaries (many small files)
+
+A single small file has too little history for any coder to find its structure, so on records of a few KB kolmo
+(like zstd) trails its own large-file ratios. Train a dictionary once on a representative sample and every similar
+file compresses against it. On 4,802 held-out ~4 KB OWID record files (dictionary trained on a disjoint 1,500),
+`fast` goes from **3.17× to 4.77×** — about a third smaller — with the dictionary adding no measurable decode cost.
+
+```bash
+./build/kolmo -t sample.dict records/*.csv       # train a dictionary from sample files
+./build/kolmo -m fast -D sample.dict one.csv one.czn   # compress against it
+./build/kolmo -d -D sample.dict one.czn one.back        # decompress (same dictionary required)
+```
+
+The dictionary id is recorded in the header; a file written with one refuses to decode without the matching
+dictionary (`CZN_ERR_DICT`) rather than returning wrong data. The API is `czn_train_dict` / `czn_compress_dict` /
+`czn_decompress_dict` (C), `kolmo.train_dict` + `compress(..., dict=d)` (Python), and `train_dict` / `compress_dict`
+/ `decompress_dict` (Rust). Dictionaries apply to the zstd-coded blocks (`rt`, `fast`, `hc`).
+
 ### Streaming (large inputs)
 
 For inputs too large to hold in memory, `-s` (or `-S <segMiB>`) compresses a stream of
@@ -97,6 +115,7 @@ make                                    # build/kolmo, build/czbench, build/cznt
 ./build/kolmo -d out.czn back.csv         # decompress (auto-detects one-shot vs streamed input)
 ./build/kolmo -s huge.csv huge.czs        # streaming compress: bounded memory, any size (-S N for N-MiB segments)
 ./build/kolmo -r 1000000:4096 out.czn x   # read 4 KiB at offset 1,000,000 without decoding the rest
+./build/kolmo -t s.dict samples/*.csv     # train a dictionary; then -D s.dict to compress/decompress small files
 ./build/czbench -X -o results.tsv file  # benchmark against LZ4, zstd, brotli and xz built from the same sources
 ```
 

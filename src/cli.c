@@ -1,7 +1,8 @@
-/* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n] in out
+/* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n] [-D dict] in out
  *                    kolmo -s ...                         (streaming: bounded memory, large inputs)
- *                    kolmo -d [-T threads] in out         (auto-detects one-shot vs streamed)
- *                    kolmo -r offset:length in out        (random access read) */
+ *                    kolmo -d [-T threads] [-D dict] in out  (auto-detects one-shot vs streamed)
+ *                    kolmo -r offset:length in out        (random access read)
+ *                    kolmo -t dict.bin sample1 sample2 ...   (train a dictionary from sample files) */
 #include "czn.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,8 @@ static void spit(const char *p, const uint8_t *b, size_t n) {
 }
 int main(int argc, char **argv) {
     czn_params P = {CZN_FAST, 0, 0, 0, 1}; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
-    while ((opt = getopt(argc, argv, "m:l:T:B:ndr:sS:")) != -1) switch (opt) {
+    char *dictpath = NULL, *trainpath = NULL;
+    while ((opt = getopt(argc, argv, "m:l:T:B:ndr:sS:D:t:")) != -1) switch (opt) {
         case 'm': P.mode = !strcmp(optarg, "rt") ? CZN_RT : !strcmp(optarg, "fast") ? CZN_FAST : !strcmp(optarg, "eco") ? CZN_ECO :
                          !strcmp(optarg, "max") ? CZN_MAX : !strcmp(optarg, "ultra") ? CZN_ULTRA : CZN_HC; break;
         case 'l': P.level = atoi(optarg); break;
@@ -31,10 +33,31 @@ int main(int argc, char **argv) {
         case 'r': range = optarg; break;
         case 's': stream = 1; break;
         case 'S': stream = 1; seg = atoi(optarg); break;
-        default: fprintf(stderr, "usage: kolmo [-m rt|fast|eco|hc|max|ultra] [-l lvl] [-T thr] [-B MiB] [-n] [-s|-S segMiB] | -d | -r off:len  in out\n"); return 2;
+        case 'D': dictpath = optarg; break;
+        case 't': trainpath = optarg; break;
+        default: fprintf(stderr, "usage: kolmo [-m rt|fast|eco|hc|max|ultra] [-l lvl] [-T thr] [-B MiB] [-n] [-D dict] [-s|-S segMiB] | -d [-D dict] | -r off:len | -t dict samples...  in out\n"); return 2;
     }
+
+    /* Training mode: concatenate the sample files given as positional args and write a dictionary. */
+    if (trainpath) {
+        int nf = argc - optind; if (nf < 1) { fprintf(stderr, "kolmo -t: need at least one sample file\n"); return 2; }
+        size_t *sz = malloc(nf * sizeof(size_t)), tot = 0; uint8_t **buf = malloc(nf * sizeof(uint8_t *));
+        for (int i = 0; i < nf; i++) { buf[i] = slurp(argv[optind + i], &sz[i]); tot += sz[i]; }
+        uint8_t *samp = malloc(tot ? tot : 1); size_t off = 0;
+        for (int i = 0; i < nf; i++) { memcpy(samp + off, buf[i], sz[i]); off += sz[i]; free(buf[i]); }
+        size_t dcap = 112 * 1024; uint8_t *dict = malloc(dcap);
+        int64_t dl = czn_train_dict(samp, sz, nf, dict, dcap);
+        if (dl < 0) { fprintf(stderr, "kolmo: train: %s\n", czn_strerror(dl)); return 1; }
+        spit(trainpath, dict, (size_t)dl);
+        fprintf(stderr, "kolmo: wrote %lld-byte dictionary from %d samples to %s\n", (long long)dl, nf, trainpath);
+        return 0;
+    }
+
     if (argc - optind != 2) { fprintf(stderr, "need input and output paths\n"); return 2; }
     const char *inp = argv[optind], *outp = argv[optind + 1];
+
+    size_t dictlen = 0; uint8_t *dict = NULL;
+    if (dictpath) dict = slurp(dictpath, &dictlen);
 
     /* Streaming compress, or decode of a streamed (CZNS) file: bounded memory via file descriptors. */
     int streamed_in = 0;
@@ -59,9 +82,11 @@ int main(int argc, char **argv) {
         out = malloc(len ? len : 1); r = czn_read_range(in, n, off, len, out, P.threads);
     } else if (dec) {
         int64_t o = czn_original_size(in, n); if (o < 0) { fprintf(stderr, "kolmo: %s\n", czn_strerror(o)); return 1; }
-        out = malloc(o ? o : 1); r = czn_decompress(in, n, out, o, P.threads);
+        out = malloc(o ? o : 1);
+        r = dict ? czn_decompress_dict(in, n, out, o, P.threads, dict, dictlen) : czn_decompress(in, n, out, o, P.threads);
     } else {
-        size_t cap = czn_bound(n, &P); out = malloc(cap); r = czn_compress(in, n, out, cap, &P);
+        size_t cap = czn_bound(n, &P); out = malloc(cap);
+        r = dict ? czn_compress_dict(in, n, out, cap, &P, dict, dictlen) : czn_compress(in, n, out, cap, &P);
     }
     if (r < 0) { fprintf(stderr, "kolmo: %s\n", czn_strerror(r)); return 1; }
     spit(outp, out, (size_t)r);
