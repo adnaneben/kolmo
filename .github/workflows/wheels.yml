@@ -41,10 +41,10 @@ jobs:
             arch: x86_64
           - os: ubuntu-24.04-arm
             arch: aarch64
+          # Build both macOS archs on the Intel runner (arm64 is cross-compiled), so the release
+          # does not depend on an Apple-silicon runner being available.
           - os: macos-13
-            arch: x86_64
-          - os: macos-14
-            arch: arm64
+            arch: "x86_64 arm64"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +63,7 @@ jobs:
           CIBW_TEST_COMMAND: "python -c \"import kolmo; d=b'col,val\\n'+b''.join(b'r,%d\\n'%i for i in range(5000)); assert kolmo.decompress(kolmo.compress(d, mode='hc'))==d; print('wheel ok')\""
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
+          name: wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
 
   publish:

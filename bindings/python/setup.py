@@ -70,8 +70,20 @@ def _find_lzma(cc, workdir):
 def build_library(dest_dir):
     """Compile libkolmo into dest_dir. Returns the full path to the built library."""
     c_src, cpp_src, z, b, l4, bsc = _sources()
-    arch = platform.machine().lower()
-    is_x86_64 = arch in ("x86_64", "amd64")
+
+    # Honor cibuildwheel's cross-compile request (ARCHFLAGS, e.g. "-arch arm64" when building an
+    # Apple-silicon wheel on an Intel runner). The *target* arch — not the host — decides which
+    # SIMD asm is compiled and whether the host's liblzma can be linked.
+    archflags = os.environ.get("ARCHFLAGS", "").split()
+    host = "x86_64" if platform.machine().lower() in ("x86_64", "amd64") else platform.machine().lower()
+    if "arm64" in archflags and "x86_64" not in archflags:
+        target = "arm64"
+    elif "x86_64" in archflags and "arm64" not in archflags:
+        target = "x86_64"
+    else:
+        target = host
+    is_x86_64 = target == "x86_64"
+    cross = IS_MAC and target != host   # e.g. arm64 wheel built on an Intel runner
     asm = os.path.join(z, "decompress", "huf_decompress_amd64.S")
 
     cc = os.environ.get("CC", "cc")
@@ -86,13 +98,16 @@ def build_library(dest_dir):
 
     # liblzma powers the max/ultra LZMA path. Detect it (on macOS it lives under the Homebrew/
     # MacPorts prefix, not the default include path); build without it if absent so the package
-    # still installs with no system deps (those tiers then fall back to BWT/context-mixing).
-    found = None if NO_LZMA else _find_lzma(cc, workdir)
+    # still installs with no system deps. When cross-compiling we cannot link the host-arch
+    # liblzma, so that wheel drops it too (max/ultra fall back to BWT/CM — ultra's usual winner,
+    # context-mixing, is unaffected).
+    want_lzma = (not NO_LZMA) and (not cross)
+    found = _find_lzma(cc, workdir) if want_lzma else None
     use_lzma = found is not None
     lzma_inc, lzma_libdir = found if use_lzma else (None, None)
     if not use_lzma:
         defs.append("-DCZN_NO_LZMA")
-        if not NO_LZMA:
+        if want_lzma:
             sys.stderr.write("kolmo: liblzma not found; building without it (max/ultra use BWT/CM). "
                              "Install xz (brew install xz / apt install liblzma-dev) for the LZMA path.\n")
     elif lzma_inc:
@@ -102,7 +117,7 @@ def build_library(dest_dir):
 
     def compile_one(compiler, f, extra):
         obj = os.path.join(workdir, "o%d.o" % len(objs))
-        cmd = [compiler, "-O3", "-fPIC", "-c"] + defs + includes + extra + [f, "-o", obj]
+        cmd = [compiler, "-O3", "-fPIC", "-c"] + archflags + defs + includes + extra + [f, "-o", obj]
         subprocess.check_call(cmd)
         objs.append(obj)
 
@@ -115,7 +130,7 @@ def build_library(dest_dir):
         compile_one(cxx, f, ["-I" + bsc])
 
     out = os.path.join(dest_dir, LIBNAME)
-    link = [cxx, "-shared"] + objs + ["-o", out, "-lpthread", "-lm"]
+    link = [cxx, "-shared"] + archflags + objs + ["-o", out, "-lpthread", "-lm"]
     if IS_MAC:
         link += ["-install_name", "@loader_path/" + LIBNAME]
     if use_lzma:
