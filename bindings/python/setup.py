@@ -42,6 +42,31 @@ def _sources():
     return c, cpp, z, b, l4, bsc
 
 
+def _find_lzma(cc, workdir):
+    """Probe for liblzma. Returns (include_dir_or_None, lib_dir_or_None) if found, else None.
+    A None include/lib means it is on the compiler's default search path."""
+    probe = os.path.join(workdir, "lzma_probe.c")
+    with open(probe, "w") as f:
+        f.write("#include <lzma.h>\nint main(void){return 0;}\n")
+    prefixes = []
+    for args in (["--prefix", "xz"], ["--prefix"]):
+        try:
+            p = subprocess.check_output(["brew"] + args, stderr=subprocess.DEVNULL).decode().strip()
+            if p:
+                prefixes.append(p)
+        except Exception:
+            pass
+    prefixes += ["/opt/homebrew", "/usr/local", "/opt/local"]
+    for inc in [None] + prefixes:   # default path first (typical on Linux with liblzma-dev)
+        cmd = [cc, "-fsyntax-only"]
+        if inc:
+            cmd.append("-I" + os.path.join(inc, "include"))
+        cmd.append(probe)
+        if subprocess.call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0:
+            return (None, None) if inc is None else (os.path.join(inc, "include"), os.path.join(inc, "lib"))
+    return None
+
+
 def build_library(dest_dir):
     """Compile libkolmo into dest_dir. Returns the full path to the built library."""
     c_src, cpp_src, z, b, l4, bsc = _sources()
@@ -49,17 +74,30 @@ def build_library(dest_dir):
     is_x86_64 = arch in ("x86_64", "amd64")
     asm = os.path.join(z, "decompress", "huf_decompress_amd64.S")
 
-    includes = ["-I" + p for p in (SRC, z, l4, bsc, os.path.join(b, "include"))]
-    defs = ["-DXXH_NAMESPACE=ZSTD_", "-DZSTD_MULTITHREAD", "-DZSTD_LEGACY_SUPPORT=0"]
-    if not is_x86_64:
-        defs.append("-DZSTD_DISABLE_ASM")
-    if NO_LZMA:
-        defs.append("-DCZN_NO_LZMA")
-
     cc = os.environ.get("CC", "cc")
     cxx = os.environ.get("CXX", "c++")
     workdir = os.path.join(dest_dir, "_kolmo_build")
     os.makedirs(workdir, exist_ok=True)
+
+    includes = ["-I" + p for p in (SRC, z, l4, bsc, os.path.join(b, "include"))]
+    defs = ["-DXXH_NAMESPACE=ZSTD_", "-DZSTD_MULTITHREAD", "-DZSTD_LEGACY_SUPPORT=0"]
+    if not is_x86_64:
+        defs.append("-DZSTD_DISABLE_ASM")
+
+    # liblzma powers the max/ultra LZMA path. Detect it (on macOS it lives under the Homebrew/
+    # MacPorts prefix, not the default include path); build without it if absent so the package
+    # still installs with no system deps (those tiers then fall back to BWT/context-mixing).
+    found = None if NO_LZMA else _find_lzma(cc, workdir)
+    use_lzma = found is not None
+    lzma_inc, lzma_libdir = found if use_lzma else (None, None)
+    if not use_lzma:
+        defs.append("-DCZN_NO_LZMA")
+        if not NO_LZMA:
+            sys.stderr.write("kolmo: liblzma not found; building without it (max/ultra use BWT/CM). "
+                             "Install xz (brew install xz / apt install liblzma-dev) for the LZMA path.\n")
+    elif lzma_inc:
+        includes.append("-I" + lzma_inc)
+
     objs = []
 
     def compile_one(compiler, f, extra):
@@ -80,7 +118,9 @@ def build_library(dest_dir):
     link = [cxx, "-shared"] + objs + ["-o", out, "-lpthread", "-lm"]
     if IS_MAC:
         link += ["-install_name", "@loader_path/" + LIBNAME]
-    if not NO_LZMA:
+    if use_lzma:
+        if lzma_libdir:
+            link.append("-L" + lzma_libdir)
         link.append("-llzma")
     subprocess.check_call(link)
     return out
