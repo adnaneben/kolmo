@@ -29,11 +29,13 @@ them with the system compiler. `--features no-lzma` drops the liblzma dependency
 
 ## 3. PyPI (Python binding) — automated
 
-Pushing a `v*` tag runs `.github/workflows/wheels.yml`, which builds the sdist and manylinux +
-macOS wheels (one `py3-none` wheel per platform, usable on every Python 3) and publishes them to
-PyPI via **Trusted Publishing**. One-time setup: on PyPI, add a trusted publisher for this repo
-and the `wheels.yml` workflow (https://docs.pypi.org/trusted-publishers/), and create a `pypi`
-environment on the repo. No API token is stored.
+The PyPI distribution name is **`kolmoc`** (the name `kolmo` is already taken on PyPI); it still
+imports as `import kolmo`. Pushing a `v*` tag runs `.github/workflows/wheels.yml`, which builds the
+sdist and manylinux + macOS wheels (one `py3-none` wheel per platform, usable on every Python 3)
+and publishes them to PyPI via **Trusted Publishing**. One-time setup: on PyPI, add a trusted
+publisher with PyPI Project Name `kolmoc` for this repo and the `wheels.yml` workflow
+(https://docs.pypi.org/trusted-publishers/), and create a `pypi` environment on the repo. No API
+token is stored. After it publishes: `pip install kolmoc`, then `import kolmo`.
 
 To publish by hand instead:
 

@@ -4,6 +4,10 @@ Python bindings for [kolmo](https://github.com/adnaneben/kolmo), a structure-awa
 compressor. Thin `ctypes` wrappers over the native core; the shared library is built and
 bundled at install time, so there is no runtime build dependency.
 
+```bash
+pip install kolmoc   # the distribution is "kolmoc" ("kolmo" was taken on PyPI); it imports as kolmo
+```
+
 ```python
 import kolmo
 blob = kolmo.compress(open("data.csv", "rb").read(), mode="hc")  # rt|fast|eco|hc|max|ultra

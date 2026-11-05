@@ -3,9 +3,11 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "kolmo"
+# PyPI distribution name is "kolmoc" ("kolmo" is already taken on PyPI); the import name is still
+# `import kolmo`, and everywhere else — the project, the crate, the CLI — it is "kolmo".
+name = "kolmoc"
 version = "1.0.0"
-description = "Structure-aware lossless compressor: best ratio across tables, logs and scientific data, with decode that scales across cores."
+description = "kolmo — structure-aware lossless compressor: best ratio across tables, logs and scientific data, with decode that scales across cores. Installs as `kolmoc`, imports as `kolmo`."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Adnane Aqartit and contributors" }]

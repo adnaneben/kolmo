@@ -100,7 +100,7 @@ at ~11 MB. `-d` detects a streamed file automatically. The library API is `czn_s
 
 ```bash
 cargo add kolmo                 # Rust    (bindings/rust)
-pip install kolmo               # Python  (bindings/python; builds the native core)
+pip install kolmoc              # Python  (import kolmo; "kolmo" was taken on PyPI)
 ```
 
 Or build the CLI and library from source (below). The Rust and Python packages compile and
