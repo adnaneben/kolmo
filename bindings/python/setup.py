@@ -119,9 +119,16 @@ def build_library(dest_dir):
     if IS_MAC:
         link += ["-install_name", "@loader_path/" + LIBNAME]
     if use_lzma:
-        if lzma_libdir:
-            link.append("-L" + lzma_libdir)
-        link.append("-llzma")
+        # On macOS, prefer the static liblzma.a: linking it into the dylib leaves no external
+        # liblzma reference for delocate to bundle (which otherwise fails to repair the wheel),
+        # while keeping the full LZMA path. On Linux, -llzma + auditwheel bundles it fine.
+        static_a = os.path.join(lzma_libdir, "liblzma.a") if lzma_libdir else None
+        if IS_MAC and static_a and os.path.exists(static_a):
+            link.append(static_a)
+        else:
+            if lzma_libdir:
+                link.append("-L" + lzma_libdir)
+            link.append("-llzma")
     subprocess.check_call(link)
     return out
 
