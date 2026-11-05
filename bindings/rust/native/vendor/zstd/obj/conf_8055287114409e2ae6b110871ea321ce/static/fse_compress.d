@@ -1,0 +1,38 @@
+obj/conf_8055287114409e2ae6b110871ea321ce/static/fse_compress.o: \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/fse_compress.c \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/compiler.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/portability_macros.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/mem.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/compiler.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/debug.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/zstd_deps.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/debug.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/hist.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/zstd_deps.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/bitstream.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/mem.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/error_private.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/../zstd_errors.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/bits.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/fse.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/bitstream.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/error_private.h \
+ /home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/bits.h
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/compiler.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/portability_macros.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/mem.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/compiler.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/debug.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/zstd_deps.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/debug.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/hist.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/zstd_deps.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/bitstream.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/mem.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/error_private.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/../zstd_errors.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/bits.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/fse.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/bitstream.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/error_private.h:
+/home/claude/ozl_src/openzl-0.3.0/deps/zstd/lib//compress/../common/bits.h:

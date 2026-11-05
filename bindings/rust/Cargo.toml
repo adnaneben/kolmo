@@ -10,7 +10,8 @@ readme = "README.md"
 keywords = ["compression", "lossless", "columnar", "zstd", "simd"]
 categories = ["compression", "encoding"]
 authors = ["Adnane Aqartit and contributors"]
-links = "kolmo"
+# Keep build artifacts out of the published crate; the C sources under native/ are shipped.
+exclude = ["native/**/*.o", "native/**/*.a", "native/**/build/**"]
 
 [features]
 # Build the native core without liblzma (the max/ultra modes then use the other coders).
