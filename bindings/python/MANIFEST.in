@@ -1,0 +1,7 @@
+# Ship the native core in the sdist so `pip install kolmo` can build it anywhere.
+graft native/src
+graft native/vendor
+include README.md
+include sync-native.sh
+global-exclude *.o *.a *.so *.dylib
+prune native/**/build

@@ -1,0 +1,85 @@
+name: wheels
+
+# Builds the PyPI sdist and per-platform wheels for the Python binding, and (on a version tag)
+# publishes them to PyPI via Trusted Publishing. The binding is pure-ctypes, so each platform
+# gets one py3-none wheel that works on every Python 3.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+    paths:
+      - "bindings/python/**"
+      - "src/**"
+      - "vendor/**"
+      - ".github/workflows/wheels.yml"
+
+jobs:
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync native sources into the package
+        run: bash bindings/python/sync-native.sh
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      - run: python -m build --sdist --outdir dist bindings/python
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  wheels:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+          - os: macos-13
+            arch: x86_64
+          - os: macos-14
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync native sources into the package
+        run: bash bindings/python/sync-native.sh
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.21.3
+        with:
+          package-dir: bindings/python
+        env:
+          CIBW_BUILD: "cp312-*"
+          CIBW_SKIP: "*-musllinux*"
+          CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_BEFORE_ALL_LINUX: "yum install -y xz-devel || apk add --no-cache xz-dev"
+          CIBW_BEFORE_ALL_MACOS: "brew install xz"
+          CIBW_TEST_COMMAND: "python -c \"import kolmo; d=b'col,val\\n'+b''.join(b'r,%d\\n'%i for i in range(5000)); assert kolmo.decompress(kolmo.compress(d, mode='hc'))==d; print('wheel ok')\""
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
+          path: wheelhouse/*.whl
+
+  publish:
+    # Publishes to PyPI on a version tag. Configure a Trusted Publisher on PyPI for this repo
+    # + workflow (no API token needed): https://docs.pypi.org/trusted-publishers/
+    needs: [sdist, wheels]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
