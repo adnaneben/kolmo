@@ -41,10 +41,12 @@ jobs:
             arch: x86_64
           - os: ubuntu-24.04-arm
             arch: aarch64
-          # Build both macOS archs on the Intel runner (arm64 is cross-compiled), so the release
-          # does not depend on an Apple-silicon runner being available.
-          - os: macos-13
-            arch: "x86_64 arm64"
+          # macOS wheels are disabled: GitHub is not allocating macOS runners to this repo
+          # (macos-14 reports "not supported"; macos-13 sits queued indefinitely). macOS users
+          # install from the sdist, which builds locally in ~1 min. Re-enable this entry once a
+          # macOS runner is available (it cross-compiles both archs on an Intel runner):
+          # - os: macos-13
+          #   arch: "x86_64 arm64"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
