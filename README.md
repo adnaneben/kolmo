@@ -98,15 +98,27 @@ at ~11 MB. `-d` detects a streamed file automatically. The library API is `czn_s
 
 ## Install
 
-```bash
-cargo add kolmo                 # Rust    (bindings/rust)
-pip install kolmoc              # Python  (import kolmo; "kolmo" was taken on PyPI)
-```
+| | Install | Package |
+|---|---|---|
+| CLI (macOS, Linux) | `brew install adnaneben/kolmo/kolmo` | [adnaneben/homebrew-kolmo](https://github.com/adnaneben/homebrew-kolmo) |
+| Python 3.8+ | `pip install kolmoc` | [kolmoc on PyPI](https://pypi.org/project/kolmoc/) |
+| Rust | `cargo add kolmo` | [kolmo on crates.io](https://crates.io/crates/kolmo) |
 
-Or build the CLI and library from source (below). The Rust and Python packages compile and
-bundle the native core, so they have no runtime dependency beyond `liblzma`.
+- **Homebrew** builds the `kolmo` command from source in a few seconds and pulls in `xz` for liblzma.
+- **Python:** the package is published as `kolmoc` because `kolmo` was already taken on PyPI, but you still
+  `import kolmo`. Linux (x86-64, aarch64) gets prebuilt wheels. Other platforms, macOS included, build the
+  sdist, which needs a C compiler and takes about a minute.
+- **Rust:** the crate compiles the C core in `build.rs` and links it statically. It needs a C compiler at
+  build time.
+- **liblzma** is optional for both packages. If it isn't found, `max` and `ultra` use the other coders.
+
+Usage for each binding is in [`bindings/python`](bindings/python/README.md) and
+[`bindings/rust`](bindings/rust/README.md). To build the CLI and library from source, see below.
 
 ## Build and use
+
+The examples below run the source build (`./build/kolmo`). After `brew install`, the same commands work
+with plain `kolmo`.
 
 ```bash
 make                                    # build/kolmo, build/czbench, build/czntest (Linux, macOS; gcc or clang)
@@ -131,6 +143,7 @@ overnight genetic search of the build-time settings (`tune/ga.py`).
 x86-64 and Apple silicon (verified: rt/fast/hc on tables, logs and scientific data hash the same on both). The decoder
 is fuzzed (OSS-Fuzz harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never returned as
 data. A shared library and Python and Rust bindings are in `bindings/`; the format is documented in `SPEC.md`.
+1.0.0 is published on Homebrew, PyPI and crates.io (see Install); `RELEASING.md` describes how to cut a release.
 
 ## Layout
 
@@ -143,6 +156,7 @@ src/word.inc       word dictionary for prose
 src/cm.inc         context-mixing coder
 src/cli.c          command line          bench/czbench.c   benchmark          tests/czntest.c   tests
 tune/ga.py         genetic tuning        mac/              Mac scripts        vendor/           zstd, LZ4, libbsc
+bindings/python    PyPI package kolmoc   bindings/rust     crate kolmo        packaging/homebrew  brew formula
 ```
 
 ## Licence

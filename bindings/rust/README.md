@@ -2,7 +2,11 @@
 
 Safe Rust wrappers over the [kolmo](https://github.com/adnaneben/kolmo) native core. The
 build compiles and statically links the C core, so there is no runtime shared-library
-dependency (a C toolchain and, by default, `liblzma` are needed at build time).
+dependency. Building needs a C compiler. liblzma is used if it is found and skipped if it isn't.
+
+```sh
+cargo add kolmo
+```
 
 ```rust
 let blob = kolmo::compress(data, kolmo::Mode::Hc, 0)?;  // 0 threads = all cores
@@ -12,10 +16,13 @@ let part = kolmo::read_range(&blob, 1_000_000, 4096, 0)?; // decode only the ove
 
 Modes: `Rt` (LZ4-speed) · `Fast` · `Eco` · `Hc` · `Max` · `Ultra` (archive tier, best ratio).
 
-Build without liblzma (the `max`/`ultra` modes then use the other coders):
+To build without liblzma even when it is installed (`max`/`ultra` then use the other coders):
 
-```sh
-cargo build --features no-lzma
+```toml
+kolmo = { version = "1", features = ["no-lzma"] }
 ```
+
+For the command-line tool, use `brew install adnaneben/kolmo/kolmo`. The Python package is
+`pip install kolmoc`.
 
 Apache-2.0.

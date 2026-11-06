@@ -2,7 +2,8 @@ name: wheels
 
 # Builds the PyPI sdist and per-platform wheels for the Python binding, and (on a version tag)
 # publishes them to PyPI via Trusted Publishing. The binding is pure-ctypes, so each platform
-# gets one py3-none wheel that works on every Python 3.
+# gets one py3-none wheel that works on every Python 3. Publishing also runs on a manual
+# workflow_dispatch; see RELEASING.md.
 on:
   workflow_dispatch:
   push:
