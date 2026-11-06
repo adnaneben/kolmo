@@ -72,7 +72,10 @@ jobs:
     # Publishes to PyPI on a version tag. Configure a Trusted Publisher on PyPI for this repo
     # + workflow (no API token needed): https://docs.pypi.org/trusted-publishers/
     needs: [sdist, wheels]
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Publishes on a version tag, or on a manual run (workflow_dispatch) — the version comes from
+    # pyproject.toml, and PyPI Trusted Publishing matches on repo + workflow + environment, not on
+    # the ref, so a manual run from main publishes the same artifacts.
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
