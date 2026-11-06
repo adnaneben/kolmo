@@ -88,3 +88,6 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
+          # Re-running for a version that is already on PyPI (e.g. a tag pushed after a manual
+          # publish) skips the existing files instead of failing the job.
+          skip-existing: true

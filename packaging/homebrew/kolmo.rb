@@ -1,5 +1,5 @@
 class Kolmo < Formula
-  desc "Structure-aware lossless compressor: best ratio on tables, logs and scientific data"
+  desc "Structure-aware lossless compressor for tables, logs and scientific data"
   homepage "https://github.com/adnaneben/kolmo"
   # After you cut the GitHub release, set url to its source tarball and paste the sha256:
   #   curl -sL https://github.com/adnaneben/kolmo/archive/refs/tags/v1.0.0.tar.gz | shasum -a 256
