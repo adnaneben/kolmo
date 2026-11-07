@@ -340,9 +340,9 @@ done:
 /* ------------------------------------------------ block encoder */
 typedef struct { int numeric, S; uint32_t cnt, nnum, nexc, nempty; uint8_t *kind, *sc; int64_t *m, *v; uint32_t *idx; } ncol_t;
 
-static void ncol_parse(const uint8_t *in, size_t n, const uint32_t *off, const uint32_t *len, uint32_t cnt, ncol_t *c) {
+static void ncol_parse(const uint8_t *in, size_t n, const uint32_t *off, const uint32_t *len, uint32_t cnt, int keep_mantissa, ncol_t *c) {
     memset(c, 0, sizeof *c); c->cnt = cnt;
-    c->kind = malloc(cnt + 1); c->sc = malloc(cnt + 1); c->m = malloc(8 * (cnt + 1)); c->v = malloc(8 * (cnt + 1)); c->idx = malloc(4 * (cnt + 1));
+    c->kind = malloc(cnt + 1); c->sc = malloc(cnt + 1); c->v = malloc(8 * (cnt + 1)); c->m = keep_mantissa ? malloc(8 * (cnt + 1)) : c->v; c->idx = malloc(4 * (cnt + 1));
     int S = 0;
     for (uint32_t i = 0; i < cnt; i++) {
         int64_t m; int s;
@@ -356,7 +356,7 @@ static void ncol_parse(const uint8_t *in, size_t n, const uint32_t *off, const u
         if (__builtin_mul_overflow(c->m[i], P10[S - c->sc[i]], &c->v[i]) || c->v[i] > (1LL << 62) || c->v[i] < -(1LL << 62)) numeric = 0;
     c->numeric = numeric;
 }
-static void ncol_free(ncol_t *c) { free(c->kind); free(c->sc); free(c->m); free(c->v); free(c->idx); }
+static void ncol_free(ncol_t *c) { free(c->kind); free(c->sc); if (c->m != c->v) free(c->m); free(c->v); free(c->idx); }
 
 /* per-row float values of a numeric column (NaN where empty or text); rows aligned with fields */
 static double *ncol_fvals(const ncol_t *c) {
@@ -520,11 +520,18 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
     { uint32_t g = 0; for (int64_t r = 0; r < nr; r++) {
         if (r && gcol >= 0) { uint32_t a = (uint32_t)(base[gcol] + r), b = a - 1; if (clen[a] != clen[b] || memcmp(in + coff[a], in + coff[b], clen[a])) g++; }
         gid[r] = g; } }
-    ncol_t *C = malloc(sizeof(ncol_t) * k);
-    for (int j = 0; j < k; j++) {
-        if (j == gcol) { memset(&C[j], 0, sizeof C[j]); continue; }
-        ncol_parse(in, (size_t)n, coff + base[j], clen + base[j], colcnt[j], &C[j]);
+    /* Only formula participants need to coexist. Parse ordinary columns just
+     * before emission so their row scratch is reused for the next column. */
+    uint8_t needed[256] = {0}, source[256] = {0};
+    if (aligned && fs) for (int q = 0; q < fs->n; q++) {
+        const tformula *f = &fs->f[q];
+        if (f->y >= k || f->a >= k || (f->b != FM_NONE && f->b >= k)) continue;
+        needed[f->y] = needed[f->a] = source[f->a] = 1;
+        if (f->b != FM_NONE) needed[f->b] = source[f->b] = 1;
     }
+    ncol_t C[256] = {0};
+    for (int j = 0; j < k; j++) if (needed[j] && j != gcol)
+        ncol_parse(in, n, coff + base[j], clen + base[j], colcnt[j], source[j], &C[j]);
     /* formulas usable in this block: target and sources numeric, rows aligned */
     int nform = 0; tformula FB[256]; int fofy[256]; for (int j = 0; j < k; j++) fofy[j] = -1;
     if (aligned && fs) for (int q = 0; q < fs->n; q++) {
@@ -546,7 +553,12 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
     double *la = malloc(sizeof(double) * ((size_t)nr + 1));
     for (int j = 0; j < k; j++) {
         const uint32_t *o = coff + base[j], *l = clen + base[j];
-        if (!C[j].numeric) { text_col_put(in, o, l, colcnt[j], &out); continue; }
+        if (!needed[j] && j != gcol) ncol_parse(in, n, o, l, colcnt[j], 0, &C[j]);
+        if (!C[j].numeric) {
+            text_col_put(in, o, l, colcnt[j], &out);
+            if (!needed[j]) ncol_free(&C[j]);
+            continue;
+        }
         uint64_t k0, k1, k2, c, *zt; num_cost012(&C[j], gid, gcol >= 0, &k0, &k1, &k2);
         int bm = 1; uint64_t bc = k1;                                   /* same choice as trying 1, 0, 2 in turn */
         if (k0 < bc) { bc = k0; bm = 0; }
@@ -571,9 +583,10 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
         if (!zready) num_resid(&C[j], bm, gid, NULL, NULL, NULL, NULL, zb);
         if (bm >= 4 && newmodes) *newmodes |= 1u << (bm - 4);
         num_col_put(in, o, l, &C[j], bm, bm == 3 ? fid : 0, zb, &out);
+        if (!needed[j]) ncol_free(&C[j]);
     }
-    for (int j = 0; j < k; j++) { if (j != gcol) ncol_free(&C[j]); free(fv[j]); }
-    free(C); free(fv); free(z); free(zb); free(la); free(gid); free(exc); free(coff); free(clen);
+    for (int j = 0; j < k; j++) { if (needed[j]) ncol_free(&C[j]); free(fv[j]); }
+    free(fv); free(z); free(zb); free(la); free(gid); free(exc); free(coff); free(clen);
     int64_t total = out.n;
     if (total > n + TSLACK - 64) { free(out.p); return -1; }
     memcpy(dst, out.p, total); free(out.p);

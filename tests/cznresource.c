@@ -107,10 +107,34 @@ static void legacy_frames(void) {
     }
     free(expected); free(back);
 }
+static void seekable_files(void) {
+    uint8_t data[12000], restored[sizeof data];
+    memset(data, 'A', sizeof data);
+    czn_params p = {CZN_FAST, 0, 1, 4096, 1};
+    size_t cap = czn_bound(sizeof data, &p);
+    uint8_t *frame = malloc(cap), *reference = malloc(cap);
+    FILE *input = tmpfile(), *output = tmpfile();
+    assert(frame && reference && input && output);
+    assert(fwrite(data, 1, sizeof data, input) == sizeof data && !fflush(input));
+    int in = fileno(input), out = fileno(output);
+    for (size_t n = 0; n <= sizeof data; n += sizeof data) {
+        int64_t size = czn_compress_from_fd(in, n, frame, cap, &p, NULL, 0);
+        assert(size > 0 && czn_compress(data, n, reference, cap, &p) == size);
+        assert(!memcmp(frame, reference, size));
+        assert(czn_decompress_to_fd(frame, size, out, 1, NULL, 0) == (int64_t)n);
+        assert(pread(out, restored, n, 0) == (ssize_t)n && !memcmp(data, restored, n));
+    }
+    assert(lseek(in, 0, SEEK_CUR) == sizeof data && lseek(out, 0, SEEK_CUR) == 0);
+    assert(czn_compress_from_fd(in, sizeof data + 1, frame, cap, &p, NULL, 0) == CZN_ERR_IO);
+    assert(czn_decompress_to_fd(reference, cap, -1, 1, NULL, 0) == CZN_ERR_IO);
+    fclose(input); fclose(output); free(frame); free(reference);
+}
+
 int main(void) {
     pool_failures();
     formula_thread_failure();
     legacy_frames();
+    seekable_files();
     uint8_t input[8192], output[8192], sentinel[64]; memset(input, 'A', sizeof input);
     czn_params p = {CZN_FAST, 0, 1, 4096, 0};
     size_t cap = czn_bound(sizeof input, &p); uint8_t *blob = malloc(cap), *bad = malloc(cap);

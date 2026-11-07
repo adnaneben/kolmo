@@ -33,6 +33,8 @@ typedef struct {
 #define CZN_ERR_DICT      (-6)   /* input was compressed with a dictionary; a matching one must be supplied to decode */
 #define CZN_ERR_LIMIT     (-7)   /* a caller-specified decoding limit was exceeded */
 
+#define CZN_ERR_IO        (-8)   /* seekable file read/write failed */
+
 /* Zero fields mean no limit. These bound format sizes, not total codec heap
  * memory; a context-mixing block can require much more memory than its bytes. */
 typedef struct {
@@ -53,6 +55,14 @@ int64_t czn_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len, u
  * seg_mib = 0 uses the default segment size. Both return total bytes written, or a negative error. */
 int64_t czn_stream_compress(int in_fd, int out_fd, const czn_params *p, uint32_t seg_mib);
 int64_t czn_stream_decompress(int in_fd, int out_fd, int threads);
+/* One-shot CZN1 file I/O. Input must remain a stable regular file of at least n
+ * bytes. Supply an empty seekable output fd without O_APPEND. Workers use
+ * offsets starting at zero, without changing the descriptor position. Discard
+ * partial output on error. Optional dictionary semantics match the buffer API. */
+int64_t czn_compress_from_fd(int fd, size_t n, uint8_t *dst, size_t cap, const czn_params *p,
+                             const void *dict, size_t dictlen);
+int64_t czn_decompress_to_fd(const uint8_t *src, size_t n, int fd, int threads,
+                             const void *dict, size_t dictlen);
 const char *czn_strerror(int64_t code);
 uint32_t czn_crc32c(uint32_t crc, const void *buf, size_t len);
 

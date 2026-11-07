@@ -76,6 +76,7 @@ build/kolmo-profile: src/cli.c src/czn.c src/czn.h src/tbl2.inc src/log.inc src/
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DCZN_TIMING $(INC) src/cli.c src/czn.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 check: all
+	python3 tests/test_fast_file.py
 	./build/cznresource
 	./build/cznparallel
 	./build/czntest

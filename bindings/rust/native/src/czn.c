@@ -7,6 +7,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <limits.h>
 #if defined(CZN_TRACE) || defined(CZN_PROF) || defined(CZN_TIMING)
 #include <stdio.h>
 #endif
@@ -1420,7 +1423,7 @@ size_t czn_bound(size_t n, const czn_params *p) {
 
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
-    const uint8_t *src; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
+    const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
     int codec, level; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint64_t *poff;   /* decode: payload offsets */
@@ -1459,6 +1462,27 @@ static void emit_block(job_t *J, uint32_t i, const uint8_t *hdr4, const uint8_t 
     pthread_mutex_unlock(&J->wmu);
 }
 
+/* POSIX allows a short positional read or write, including after a signal. */
+static int read_block(int fd, uint8_t *p, size_t n, off_t off) {
+    while (n) {
+        ssize_t count = pread(fd, p, n > SSIZE_MAX ? SSIZE_MAX : n, off);
+        if (count < 0 && errno == EINTR) continue;
+        if (count <= 0) return CZN_ERR_IO;
+        p += count; n -= count; off += count;
+    }
+    return 0;
+}
+
+static int write_block(int fd, const uint8_t *p, size_t n, off_t off) {
+    while (n) {
+        ssize_t count = pwrite(fd, p, n > SSIZE_MAX ? SSIZE_MAX : n, off);
+        if (count < 0 && errno == EINTR) continue;
+        if (count <= 0) return CZN_ERR_IO;
+        p += count; n -= count; off += count;
+    }
+    return 0;
+}
+
 static void *compress_worker(void *arg) {
     job_t *J = arg; tls_t *S = tls_begin();
     if (!S) { atomic_store(&J->err, CZN_ERR_ALLOC); return NULL; }
@@ -1466,11 +1490,17 @@ static void *compress_worker(void *arg) {
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TSLACK + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
-    if (!tbuf || !slot) { atomic_store(&J->err, CZN_ERR_ALLOC); tls_end(S); return NULL; }
+    uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
+    if (!tbuf || !slot || (J->input_fd >= 0 && !input)) { free(input); atomic_store(&J->err, CZN_ERR_ALLOC); tls_end(S); return NULL; }
     for (;;) {
         uint32_t i = atomic_fetch_add(&J->next, 1); if (i >= J->nb) break;
         const plan_t pl = J->plans[J->bplan[i]]; const uint64_t rs = J->rstart[i];
-        const uint8_t *raw = J->src + J->starts[i]; size_t len = J->starts[i + 1] - J->starts[i];
+        size_t len = J->starts[i + 1] - J->starts[i];
+        const uint8_t *raw;
+        if (input) {
+            if (read_block(J->input_fd, input, len, J->starts[i])) { atomic_store(&J->err, CZN_ERR_IO); break; }
+            raw = input;
+        } else raw = J->src + J->starts[i];
         const uint8_t *in = raw; size_t meta = 0; int tflag = 0; unsigned modes = 0;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
@@ -1545,6 +1575,7 @@ static void *compress_worker(void *arg) {
         else put32(e + 8, blk_sum(3, raw, len));
         e[12] = (uint8_t)codec; e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
     }
+    free(input);
     tls_end(S);
     return NULL;
 }
@@ -1666,7 +1697,7 @@ static void *plan_worker(void *arg) {
     return NULL;
 }
 
-static int64_t compress_impl(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const czn_params *p,
+static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, size_t cap, const czn_params *p,
                              const void *dict, size_t dictlen, uint32_t dictid) {
     czn_params d = {CZN_FAST, 0, 0, 0, 1}; if (!p) p = &d;
     if (cap < HDR + IDX) return CZN_ERR_DSTSIZE;
@@ -1682,7 +1713,15 @@ static int64_t compress_impl(const uint8_t *src, size_t n, uint8_t *dst, size_t 
     plan_t *plans = NULL;
     uint64_t *starts = NULL, *rstart = NULL; uint32_t *bplan = NULL;
     uint64_t *ss = array_alloc(MAXSEG, sizeof(uint64_t), 0), *se = array_alloc(MAXSEG, sizeof(uint64_t), 0);
+    void *planning_map = MAP_FAILED;
     if (!ss || !se) goto cleanup;
+    if (input_fd >= 0 && n) {
+        planning_map = mmap(NULL, n, PROT_READ, MAP_PRIVATE, input_fd, 0);
+        if (planning_map == MAP_FAILED) { ret = CZN_ERR_IO; goto cleanup; }
+        /* Formula discovery samples dispersed rows before the block pass. */
+        madvise(planning_map, n, MADV_RANDOM);
+        src = planning_map;
+    }
 #if defined(CZN_PROF) || defined(CZN_TIMING)
     double pt0 = prof_now();
 #endif
@@ -1727,7 +1766,10 @@ static int64_t compress_impl(const uint8_t *src, size_t n, uint8_t *dst, size_t 
     if (nb == 0) { starts[0] = 0; rstart[0] = 0; bplan[0] = 0; nb = 1; }
     starts[nb] = n;
     size_t maxb = 0; for (uint32_t i = 0; i < nb; i++) if (starts[i + 1] - starts[i] > maxb) maxb = starts[i + 1] - starts[i];
-    J.src = src; J.starts = starts; J.nb = nb; J.slot = slot_size((uint32_t)maxb, codec);
+    if (planning_map != MAP_FAILED) {
+        munmap(planning_map, n); planning_map = MAP_FAILED; src = NULL;
+    }
+    J.input_fd = input_fd; J.src = src; J.starts = starts; J.nb = nb; J.slot = slot_size((uint32_t)maxb, codec);
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
     if (!J.out || !J.outlen) goto cleanup;
@@ -1751,6 +1793,7 @@ static int64_t compress_impl(const uint8_t *src, size_t n, uint8_t *dst, size_t 
     if (!ret && J.wnext != nb) ret = CZN_ERR_ALLOC;
     w = J.wpos;
 cleanup:
+    if (planning_map != MAP_FAILED) munmap(planning_map, n);
     if (J.out) for (uint32_t i = 0; i < nb; i++) free(J.out[i]);
     free(J.outlen); if (mutex_ready) pthread_mutex_destroy(&J.wmu);
     if (plans) for (uint32_t g = 0; g < nseg; g++) { free(plans[g].fs); free(plans[g].rec); }
@@ -1765,7 +1808,7 @@ cleanup:
 }
 
 int64_t czn_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const czn_params *p) {
-    return compress_impl(src, n, dst, cap, p, NULL, 0, 0);
+    return compress_impl(src, -1, n, dst, cap, p, NULL, 0, 0);
 }
 
 /* ------------------------------------------------------------------ decoding */
@@ -1804,7 +1847,7 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const czn_decode_limit
 }
 
 typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
-                 uint64_t base; size_t maxraw; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen; } djob_t;
+                 int output_fd; size_t maxraw; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen; } djob_t;
 
 static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, uint8_t *tbuf, uint8_t *out) {
     const parsed_t *P = J->P; const uint8_t *e = P->idx + (size_t)i * IDX;
@@ -1863,8 +1906,9 @@ static void *decompress_worker(void *arg) {
     djob_t *J = arg; tls_t *S = tls_begin();
     if (!S) { atomic_store(&J->err, CZN_ERR_ALLOC); return NULL; }
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->maxraw + TSLACK + 64);
-    uint8_t *rbuf = J->clip_hi ? (S->rbuf = grow(S->rbuf, &S->rbcap, J->maxraw + 64)) : NULL;
-    if (!tbuf || (J->clip_hi && !rbuf)) { atomic_store(&J->err, CZN_ERR_ALLOC); tls_end(S); return NULL; }
+    int buffered = J->clip_hi || J->output_fd >= 0;
+    uint8_t *rbuf = buffered ? (S->rbuf = grow(S->rbuf, &S->rbcap, J->maxraw + 64)) : NULL;
+    if (!tbuf || (buffered && !rbuf)) { atomic_store(&J->err, CZN_ERR_ALLOC); tls_end(S); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
     for (;;) {
@@ -1874,7 +1918,9 @@ static void *decompress_worker(void *arg) {
         if (!rbuf) r = decode_block(J, i, xp, S, tbuf, J->dst + J->P->roff[i]);
         else {                                               /* range read: decode block, copy the overlap */
             r = decode_block(J, i, xp, S, tbuf, rbuf);
-            if (!r) {
+            if (!r && J->output_fd >= 0) {
+                r = write_block(J->output_fd, rbuf, J->P->roff[i + 1] - J->P->roff[i], J->P->roff[i]);
+            } else if (!r) {
                 uint64_t b0 = J->P->roff[i], b1 = J->P->roff[i + 1];
                 uint64_t a = J->clip_lo > b0 ? J->clip_lo : b0, z = J->clip_hi < b1 ? J->clip_hi : b1;
                 memcpy(J->dst + (a - J->clip_lo), rbuf + (a - b0), z - a);
@@ -1888,11 +1934,11 @@ static void *decompress_worker(void *arg) {
 
 int64_t czn_original_size(const uint8_t *src, size_t n) { return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : CZN_ERR_CORRUPT; }
 
-static int64_t run_decode(const uint8_t *src, size_t n, uint8_t *dst, int threads, uint64_t lo, uint64_t hi, int range,
+static int64_t run_decode(const uint8_t *src, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
                           const void *dict, size_t dictlen, uint32_t dictid, const czn_decode_limits *limits) {
     parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
     if (P.needdict && (!dict || dictid != P.dictid)) { free(P.poff); free(P.roff); return CZN_ERR_DICT; }
-    djob_t J = {0}; J.src = src; J.P = &P; J.dst = dst; J.dict = dict; J.dictlen = dictlen;
+    djob_t J = {0}; J.src = src; J.P = &P; J.dst = dst; J.output_fd = output_fd; J.dict = dict; J.dictlen = dictlen;
     for (uint32_t i = 0; i < P.nb; i++) { size_t l = get32(P.idx + (size_t)i * IDX); if (l > J.maxraw) J.maxraw = l; }
     if (range) {
         uint32_t a = 0, b = P.nb;
@@ -1910,7 +1956,7 @@ static int64_t run_decode(const uint8_t *src, size_t n, uint8_t *dst, int thread
 int64_t czn_decompress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads) {
     int64_t o = czn_original_size(src, n); if (o < 0) return o;
     if ((uint64_t)o > cap) return CZN_ERR_DSTSIZE;
-    return run_decode(src, n, dst, threads, 0, 0, 0, NULL, 0, 0, NULL);
+    return run_decode(src, n, dst, -1, threads, 0, 0, 0, NULL, 0, 0, NULL);
 }
 
 int64_t czn_decompress_limited(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
@@ -1918,7 +1964,7 @@ int64_t czn_decompress_limited(const uint8_t *src, size_t n, uint8_t *dst, size_
     int64_t o = czn_original_size(src, n); if (o < 0) return o;
     if (limits && limits->max_output_bytes && (uint64_t)o > limits->max_output_bytes) return CZN_ERR_LIMIT;
     if ((uint64_t)o > cap) return CZN_ERR_DSTSIZE;
-    return run_decode(src, n, dst, threads, 0, 0, 0, NULL, 0, 0, limits);
+    return run_decode(src, n, dst, -1, threads, 0, 0, 0, NULL, 0, 0, limits);
 }
 
 int64_t czn_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len, uint8_t *dst, int threads) {
@@ -1926,7 +1972,7 @@ int64_t czn_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len, u
     if (off > (uint64_t)o) return CZN_ERR_CORRUPT;
     if (len > (uint64_t)o - off) len = (size_t)((uint64_t)o - off);
     if (!len) return 0;
-    return run_decode(src, n, dst, threads, off, off + len, 1, NULL, 0, 0, NULL);
+    return run_decode(src, n, dst, -1, threads, off, off + len, 1, NULL, 0, 0, NULL);
 }
 
 const char *czn_strerror(int64_t c) {
@@ -1937,6 +1983,7 @@ const char *czn_strerror(int64_t c) {
         case CZN_ERR_ALLOC: return "out of memory";
         case CZN_ERR_CODEC: return "codec error";
         case CZN_ERR_DICT: return "dictionary required or mismatched (compressed with a different dictionary)";
+        case CZN_ERR_IO: return "file I/O error";
         case CZN_ERR_LIMIT: return "decoding resource limit exceeded";
     }
     return c >= 0 ? "ok" : "unknown error";
@@ -1956,7 +2003,7 @@ int64_t czn_compress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap
                           const czn_params *p, const void *dict, size_t dictlen) {
     if (!dict || !dictlen) return czn_compress(src, n, dst, cap, p);
     uint32_t id = (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u);   /* 'cznD' */
-    return compress_impl(src, n, dst, cap, p, dict, dictlen, id);
+    return compress_impl(src, -1, n, dst, cap, p, dict, dictlen, id);
 }
 
 int64_t czn_decompress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads,
@@ -1965,7 +2012,27 @@ int64_t czn_decompress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t c
     int64_t o = czn_original_size(src, n); if (o < 0) return o;
     if ((uint64_t)o > cap) return CZN_ERR_DSTSIZE;
     uint32_t id = (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u);
-    return run_decode(src, n, dst, threads, 0, 0, 0, dict, dictlen, id, NULL);
+    return run_decode(src, n, dst, -1, threads, 0, 0, 0, dict, dictlen, id, NULL);
+}
+
+int64_t czn_compress_from_fd(int fd, size_t n, uint8_t *dst, size_t cap, const czn_params *p,
+                             const void *dict, size_t dictlen) {
+    struct stat st;
+    if (fd < 0 || fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_size < 0 ||
+        (uintmax_t)st.st_size < n) return CZN_ERR_IO;
+    if (!dictlen) dict = NULL;
+    uint32_t id = dict ? (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u) : 0;
+    return compress_impl((const uint8_t *)"", fd, n, dst, cap, p, dict, dictlen, id);
+}
+
+int64_t czn_decompress_to_fd(const uint8_t *src, size_t n, int fd, int threads,
+                             const void *dict, size_t dictlen) {
+    if (fd < 0) return CZN_ERR_IO;
+    int64_t size = czn_original_size(src, n);
+    if (size < 0) return size;
+    if (!dictlen) dict = NULL;
+    uint32_t id = dict ? (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u) : 0;
+    return run_decode(src, n, NULL, fd, threads, 0, 0, 0, dict, dictlen, id, NULL);
 }
 
 #include "stream.inc"

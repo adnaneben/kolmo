@@ -1,0 +1,7 @@
+# Fresh electricity holdout
+
+Use the complete hourly single-index CSV in Open Power System Data's 2020-10-06 time series release. The previous electricity input was a different source (UCI household power). Keep every column, row order, line ending and field as published. Split once using the [previous protocol](../holdout/protocol.md). Share only the header and use complete records from the first quarter for OpenZL CSV training, capped at 4 MiB including the header. Score the remaining three quarters. Use only the old datasets for development.
+
+Freeze the candidate, merged PR #1 baseline, upstream Zstd 1.5.7 CLI and OpenZL 0.3.0 CLI by SHA-256 before running the holdout. Time one worker, file to file, with default Kolmo fast and Zstd -3. Train OpenZL once using the prior CSV profile, four offline training workers and ten seconds per training step. Count the entire decodable frame. Record training cost separately. Randomize order with a fixed seed, one warm-up and seven scored rounds. Verify every decode by SHA-256 and check frame identity between the two Kolmo builds. Use median wall time and the maximum observed peak RSS for each direction. No retuning on scored rows.
+
+The competitor requirement is at least 20% fewer bytes and no higher encode time, decode time, encode RSS or decode RSS against each rival, with zero slack. For preservation, report candidate changes against the merged baseline separately, including small timing regressions. This single dataset is one independent test.
