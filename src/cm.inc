@@ -26,7 +26,7 @@ _Static_assert(CM_LIM * 15 < 64, "CM_LIM too large for the rate table");
 #define CM_W3 (256 * 8)         /* model 2: byte 2 x bit position */
 #define CM_W4 65536             /* model 2: order 1 (partial byte, previous byte) */
 #define CM_WF 256               /* model 2: final mixer, by partial byte */
-#define CM_A3 (1 << 18)         /* model 2: order-2 hashed APM */
+#define CM_A3 (1 << 16)         /* model 2: order-2 hashed APM */
 #ifndef CM_LRF
 #define CM_LRF 12
 #endif
@@ -80,7 +80,7 @@ static inline int cm_SQ(int x) { if (x > 2047) x = 2047; if (x < -2047) x = -204
 typedef struct { uint32_t s[16]; } cm_bucket;          /* s[0] = check << 16 | priority; s[1..15] nibble-tree counters */
 typedef struct {
     cm_bucket *t[CM_NMX];
-    int sh, v2; size_t mem;                                      /* 32 - log2 buckets; model 2?; bytes held */
+    int sh, v2; size_t mem, tb;                                  /* 32 - log2 buckets; model 2?; bytes held */
     uint32_t o1[256 * 256];
     uint32_t h[CM_NMX]; uint32_t *slot[CM_NMX]; cm_bucket *cur[CM_NMX];
     int32_t w1[CM_W1][CM_NIX], w2[CM_W2][CM_NIX];
@@ -124,15 +124,38 @@ static size_t cm_mem_for(int bb, int v2) {
     return (size_t)((v2 ? CM_NMX : CM_NM) - 1) * ((size_t)sizeof(cm_bucket) << bb) + ((size_t)(v2 ? 48 : 16) << 20);
 }
 
+/* Model tables: zeroed, and on Linux backed by transparent huge pages where available (far fewer TLB misses on the
+ * random lookups that dominate CM time). Contents never depend on how the memory was obtained. */
+#if defined(__linux__)
+#include <sys/mman.h>
+static void *cm_big(size_t n) {
+    void *p = mmap(NULL, n, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (p == MAP_FAILED) return NULL;
+#ifdef MADV_HUGEPAGE
+    madvise(p, n, MADV_HUGEPAGE);
+#endif
+    return p;
+}
+static void cm_big_free(void *p, size_t n) { if (p) munmap(p, n); }
+#else
+static void *cm_big(size_t n) { return calloc(1, n); }
+static void cm_big_free(void *p, size_t n) { (void)n; free(p); }
+#endif
+static void cm_free_parts(cm_t *m) {
+    for (int i = 1; i < CM_NMX; i++) cm_big_free(m->t[i], m->tb);
+    cm_big_free(m->w3, sizeof(*m->w3) * CM_W3); cm_big_free(m->w4, sizeof(*m->w4) * CM_W4);
+    cm_big_free(m->a3, sizeof(*m->a3) * CM_A3); cm_big_free(m->mt, ((size_t)m->mmask + 1) * 4); free(m);
+}
 static cm_t *cm_new(uint8_t *buf, int bb, int v2) {
     pthread_once(&cm_once, cm_init_tables);
     size_t mem = cm_mem_for(bb, v2); cm_acquire(mem);
     cm_t *m = calloc(1, sizeof(cm_t)); if (!m) { cm_release(mem); return NULL; }
     int nm = v2 ? CM_NMX : CM_NM;
     m->sh = 32 - bb; m->mem = mem; m->v2 = v2;
-    for (int i = 1; i < nm; i++) { m->t[i] = calloc((size_t)1 << bb, sizeof(cm_bucket)); if (!m->t[i]) goto fail; }
+    m->tb = sizeof(cm_bucket) << bb;
+    for (int i = 1; i < nm; i++) { m->t[i] = cm_big(m->tb); if (!m->t[i]) goto fail; }
     if (v2) {
-        m->w3 = malloc(sizeof(*m->w3) * CM_W3); m->w4 = malloc(sizeof(*m->w4) * CM_W4); m->a3 = malloc(sizeof(*m->a3) * CM_A3);
+        m->w3 = cm_big(sizeof(*m->w3) * CM_W3); m->w4 = cm_big(sizeof(*m->w4) * CM_W4); m->a3 = cm_big(sizeof(*m->a3) * CM_A3);
         if (!m->w3 || !m->w4 || !m->a3) goto fail;
         for (int i = 0; i < CM_W3; i++) for (int j = 0; j < CM_NIX; j++) m->w3[i][j] = 1 << 14;
         for (int i = 0; i < CM_W4; i++) for (int j = 0; j < CM_NIX; j++) m->w4[i][j] = 1 << 14;
@@ -149,18 +172,16 @@ static cm_t *cm_new(uint8_t *buf, int bb, int v2) {
     for (int c = 0; c < 256; c++) for (int j = 0; j < 33; j++) m->a1[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
     for (int c = 0; c < 65536; c++) for (int j = 0; j < 33; j++) m->a2[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
     m->buf = buf; m->c0 = 1;
-    m->mmask = (1u << 22) - 1; m->mt = calloc((size_t)m->mmask + 1, 4); if (!m->mt) goto fail;
+    m->mmask = (1u << 22) - 1; m->mt = cm_big(((size_t)m->mmask + 1) * 4); if (!m->mt) goto fail;
     for (int i = 0; i < 64; i++) m->mc[i] = 1u << 15;
     return m;
 fail:
-    for (int i = 1; i < CM_NMX; i++) free(m->t[i]);
-    free(m->w3); free(m->w4); free(m->a3); free(m->mt); free(m); cm_release(mem); return NULL;
+    cm_free_parts(m); cm_release(mem); return NULL;
 }
 static void cm_free(cm_t *m) {
     if (!m) return;
     size_t mem = m->mem;
-    for (int i = 1; i < CM_NMX; i++) free(m->t[i]);
-    free(m->w3); free(m->w4); free(m->a3); free(m->mt); free(m); cm_release(mem);
+    cm_free_parts(m); cm_release(mem);
 }
 
 static inline cm_bucket *cm_find(cm_bucket *t, uint32_t h, int sh) {
@@ -245,7 +266,7 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     int p;
     if (!v2) p = (mixed + p1 + p2) / 3;
     else {
-        m->a3i = (int)(cm_hmix((m->c4 & 0xffff) * 0x9E3779B1u + c0 * 0x85EBCA6Bu) >> 14);
+        m->a3i = (int)(cm_hmix((m->c4 & 0xffff) * 0x9E3779B1u + c0 * 0x85EBCA6Bu) >> 16);
         int p3 = (m->a3[m->a3i][lo] * (128 - wt) + m->a3[m->a3i][lo + 1] * wt) >> 11;
         p = (mixed + p1 + p2 + p3 + 2) >> 2;
     }
