@@ -3,7 +3,8 @@
  * nibble buckets, an order-1 direct model and a match model; inputs mixed by two small neural networks with integer
  * weights selected by context; two adaptive probability maps refine the result; binary arithmetic coding.
  * Integer arithmetic only, so encoder and decoder agree bit-for-bit on every compiler and CPU.
- * Model 2 (streams flagged 8 in the size word) adds two sparse contexts (bytes 3-4, byte 2), two more mixers (weights
+ * Model 2 (streams flagged 8 in the size word) adds two sparse contexts (bytes 3-4, byte 2), two record contexts (the
+ * bytes one and two records back, once a fixed record length is detected), two more mixers (weights
  * selected by byte 2 and by order 1), a learned final mixer in place of the plain average, and an order-2 hashed APM.
  * Stream: size u32 (low 28 bits n, top 4 bits f: 0 = model 1 with 2^CM_BB buckets, else log2 buckets - 15 in f & 7,
  * model 2 when f & 8) | coded bytes.  Memory: 2^bits * 64 B per hashed model. */
@@ -11,7 +12,7 @@
 #define CM_NM 16                /* models: 0 = order-1 direct, 1..9 hashed */
 #endif
 #define CM_NI (2 * CM_NM + 3)   /* two inputs per model, two from the match model, bias */
-#define CM_NMX 18               /* models in model 2 */
+#define CM_NMX 20               /* models in model 2 */
 #define CM_NIX (2 * CM_NMX + 3)
 #ifndef CM_BB
 #define CM_BB 20                /* log2 buckets per hashed model in legacy streams (no size field) */
@@ -87,6 +88,7 @@ typedef struct {
     int xf[5], pr3, pr4, prf, w3i, w4i, wfi, a3i; uint16_t (*a3)[33];
     uint32_t sm[CM_NMX][256 * 8]; uint16_t sst[CM_NMX];           /* state -> probability (22 bits) | count (10 bits) */
     int x[CM_NIX];
+    uint32_t rl_last[256], rl_d[256], rlen, rcnt, rcand;
     int pr, pr1, pr2, w1i, w2i;
     uint16_t a1[256][33], a2[65536][33];
     int ai, aw, a2i;
@@ -313,6 +315,16 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
         m->h[7] = cm_hmix((c4 & 0xff00ff00u) * 0x9E3779B1u + 7);
         m->h[16] = cm_hmix((c4 & 0xffff0000u) * 0x9E3779B1u + 16);                                     /* model 2: bytes 3-4 */
         m->h[17] = cm_hmix((c4 & 0x0000ff00u) * 0x85EBCA6Bu + 17);                                     /* model 2: byte 2 */
+        {   uint32_t pos = (uint32_t)m->pos, d = pos - m->rl_last[c];                 /* record length: a repeated byte-to-byte distance */
+            if (m->rl_last[c] && d == m->rl_d[c] && d >= 2 && d < 65536) {
+                if (d == m->rcand) { if (m->rcnt < 255) m->rcnt++; if (m->rcnt >= 8 && m->rlen != d) m->rlen = d; }
+                else if (m->rcnt) m->rcnt--; else { m->rcand = d; m->rcnt = 1; }
+            }
+            m->rl_d[c] = d; m->rl_last[c] = pos;
+            uint32_t r = m->rlen, ab = r && pos >= r ? m->buf[pos - r] : 0, ab2 = r && pos >= 2 * r ? m->buf[pos - 2 * r] : 0;
+            m->h[18] = cm_hmix((ab << 16 | ab2 << 8 | (r ? 1u : 0u)) * 0x9E3779B1u + r * 0x85EBCA6Bu + 18);
+            m->h[19] = cm_hmix((ab << 8 | (c4 & 0xff)) * 0xC2B2AE35u + r * 0x9E3779B1u + 19);
+        }
 #if CM_NM > 14
         {   uint32_t c1 = c4 >> 8 & 0xff, c2 = c4 >> 8 & 0xffff;                           /* what followed the previous context last time */
             m->ind1[c1] = (uint16_t)(m->ind1[c1] << 8 | c); m->ind2[c2] = (uint16_t)(m->ind2[c2] << 8 | c);
