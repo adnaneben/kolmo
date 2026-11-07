@@ -79,9 +79,11 @@ In version 1 there is no plan prefix; the file-level `transform`/`a`/`b`/`c` in 
 
 `STORE` is the raw block. `LZ4`/`LZ4HC`, `ZSTD`, `BROTLI` and `LZMA2` are the standard formats from the vendored
 libraries. `BSC` is libbsc's block-sorting stream, prefixed with a 4-byte XXH32 of the stream that is checked before
-decoding. `CM` is this project's integer context-mixing coder; its stream starts with a 32-bit size word whose top 4
-bits carry the log2 of the model's hash-table size minus 15 (0 = the legacy default), and the arithmetic-coded bytes
-follow. CM output is bit-exact across compilers and CPUs (integer-only, `-ffp-contract=off`).
+decoding. `CM` is this project's integer context-mixing coder; its stream starts with a 32-bit size word whose low 28
+bits are the block length and whose top 4 bits `f` select the model: `f = 0` is model 1 with the legacy default table
+size; otherwise `f & 7` is the log2 of the hash-table size minus 15, and `f & 8` selects model 2 (two more sparse
+contexts, four mixers combined by a learned final mixer, and an extra order-2 APM). The arithmetic-coded bytes follow.
+Encoders write model 2; decoders accept both, so files written with model 1 still decode. CM output is bit-exact across compilers and CPUs (integer-only, `-ffp-contract=off`).
 
 ## Guarantees
 

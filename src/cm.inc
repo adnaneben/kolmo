@@ -3,11 +3,16 @@
  * nibble buckets, an order-1 direct model and a match model; inputs mixed by two small neural networks with integer
  * weights selected by context; two adaptive probability maps refine the result; binary arithmetic coding.
  * Integer arithmetic only, so encoder and decoder agree bit-for-bit on every compiler and CPU.
- * Stream: size u32 (low 28 bits n, top 4 bits log2 hash buckets - 15; 0 = 2^CM_BB) | coded bytes.  Memory: 2^bits * 64 B per hashed model. */
+ * Model 2 (streams flagged 8 in the size word) adds two sparse contexts (bytes 3-4, byte 2), two more mixers (weights
+ * selected by byte 2 and by order 1), a learned final mixer in place of the plain average, and an order-2 hashed APM.
+ * Stream: size u32 (low 28 bits n, top 4 bits f: 0 = model 1 with 2^CM_BB buckets, else log2 buckets - 15 in f & 7,
+ * model 2 when f & 8) | coded bytes.  Memory: 2^bits * 64 B per hashed model. */
 #ifndef CM_NM
 #define CM_NM 16                /* models: 0 = order-1 direct, 1..9 hashed */
 #endif
 #define CM_NI (2 * CM_NM + 3)   /* two inputs per model, two from the match model, bias */
+#define CM_NMX 18               /* models in model 2 */
+#define CM_NIX (2 * CM_NMX + 3)
 #ifndef CM_BB
 #define CM_BB 20                /* log2 buckets per hashed model in legacy streams (no size field) */
 #endif
@@ -17,6 +22,13 @@
 _Static_assert(CM_LIM * 15 < 64, "CM_LIM too large for the rate table");
 #define CM_W1 (256 * 3)
 #define CM_W2 (4 * 8 * 4)
+#define CM_W3 (256 * 8)         /* model 2: byte 2 x bit position */
+#define CM_W4 65536             /* model 2: order 1 (partial byte, previous byte) */
+#define CM_WF 256               /* model 2: final mixer, by partial byte */
+#define CM_A3 (1 << 18)         /* model 2: order-2 hashed APM */
+#ifndef CM_LRF
+#define CM_LRF 12
+#endif
 #ifndef CM_LR
 #define CM_LR 12
 #endif
@@ -66,13 +78,15 @@ static inline int cm_SQ(int x) { if (x > 2047) x = 2047; if (x < -2047) x = -204
 
 typedef struct { uint32_t s[16]; } cm_bucket;          /* s[0] = check << 16 | priority; s[1..15] nibble-tree counters */
 typedef struct {
-    cm_bucket *t[CM_NM];
-    int sh; size_t mem;                                          /* 32 - log2 buckets; bytes held */
+    cm_bucket *t[CM_NMX];
+    int sh, v2; size_t mem;                                      /* 32 - log2 buckets; model 2?; bytes held */
     uint32_t o1[256 * 256];
-    uint32_t h[CM_NM]; uint32_t *slot[CM_NM]; cm_bucket *cur[CM_NM];
-    int32_t w1[CM_W1][CM_NI], w2[CM_W2][CM_NI];
-    uint32_t sm[CM_NM][256 * 8]; uint16_t sst[CM_NM];             /* state -> probability (22 bits) | count (10 bits) */
-    int x[CM_NI];
+    uint32_t h[CM_NMX]; uint32_t *slot[CM_NMX]; cm_bucket *cur[CM_NMX];
+    int32_t w1[CM_W1][CM_NIX], w2[CM_W2][CM_NIX];
+    int32_t (*w3)[CM_NIX], (*w4)[CM_NIX], wf[CM_WF][5];        /* model 2 */
+    int xf[5], pr3, pr4, prf, w3i, w4i, wfi, a3i; uint16_t (*a3)[33];
+    uint32_t sm[CM_NMX][256 * 8]; uint16_t sst[CM_NMX];           /* state -> probability (22 bits) | count (10 bits) */
+    int x[CM_NIX];
     int pr, pr1, pr2, w1i, w2i;
     uint16_t a1[256][33], a2[65536][33];
     int ai, aw, a2i;
@@ -104,21 +118,32 @@ static void cm_release(size_t b) { pthread_mutex_lock(&cm_mu); cm_used -= b; pth
 #define CM_BB_MAX 22
 #endif
 static int cm_bits_for(size_t n) { int b = 16; while (b < CM_BB_MAX && ((size_t)1 << b) < n) b++; return b; }
-static size_t cm_mem_for(int bb) { return (size_t)(CM_NM - 1) * ((size_t)sizeof(cm_bucket) << bb) + ((size_t)16 << 20); }
+static size_t cm_mem_for(int bb, int v2) {
+    return (size_t)((v2 ? CM_NMX : CM_NM) - 1) * ((size_t)sizeof(cm_bucket) << bb) + ((size_t)(v2 ? 48 : 16) << 20);
+}
 
-static cm_t *cm_new(uint8_t *buf, int bb) {
+static cm_t *cm_new(uint8_t *buf, int bb, int v2) {
     pthread_once(&cm_once, cm_init_tables);
-    size_t mem = cm_mem_for(bb); cm_acquire(mem);
+    size_t mem = cm_mem_for(bb, v2); cm_acquire(mem);
     cm_t *m = calloc(1, sizeof(cm_t)); if (!m) { cm_release(mem); return NULL; }
-    m->sh = 32 - bb; m->mem = mem;
-    for (int i = 1; i < CM_NM; i++) { m->t[i] = calloc((size_t)1 << bb, sizeof(cm_bucket)); if (!m->t[i]) goto fail; }
+    int nm = v2 ? CM_NMX : CM_NM;
+    m->sh = 32 - bb; m->mem = mem; m->v2 = v2;
+    for (int i = 1; i < nm; i++) { m->t[i] = calloc((size_t)1 << bb, sizeof(cm_bucket)); if (!m->t[i]) goto fail; }
+    if (v2) {
+        m->w3 = malloc(sizeof(*m->w3) * CM_W3); m->w4 = malloc(sizeof(*m->w4) * CM_W4); m->a3 = malloc(sizeof(*m->a3) * CM_A3);
+        if (!m->w3 || !m->w4 || !m->a3) goto fail;
+        for (int i = 0; i < CM_W3; i++) for (int j = 0; j < CM_NIX; j++) m->w3[i][j] = 1 << 14;
+        for (int i = 0; i < CM_W4; i++) for (int j = 0; j < CM_NIX; j++) m->w4[i][j] = 1 << 14;
+        for (int i = 0; i < CM_WF; i++) { for (int j = 0; j < 4; j++) m->wf[i][j] = 1 << 14; m->wf[i][4] = 0; }
+        for (int c = 0; c < CM_A3; c++) for (int j = 0; j < 33; j++) m->a3[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
+    }
     for (int i = 0; i < 65536; i++) m->o1[i] = 0x80000000u;
-    for (int i = 0; i < CM_NM; i++) for (int j = 0; j < 256 * 8; j++) {
+    for (int i = 0; i < nm; i++) for (int j = 0; j < 256 * 8; j++) {
         int st = j & 255; uint32_t n0 = st < bh_ns ? bh_n0[st] : 0, n1 = st < bh_ns ? bh_n1[st] : 0;
         m->sm[i][j] = (uint32_t)(((2ull * n1 + 1) << 22) / (2ull * (n0 + n1) + 2)) << 10;
     }
-    for (int i = 0; i < CM_W1; i++) for (int j = 0; j < CM_NI; j++) m->w1[i][j] = 1 << 14;
-    for (int i = 0; i < CM_W2; i++) for (int j = 0; j < CM_NI; j++) m->w2[i][j] = 1 << 14;
+    for (int i = 0; i < CM_W1; i++) for (int j = 0; j < CM_NIX; j++) m->w1[i][j] = 1 << 14;
+    for (int i = 0; i < CM_W2; i++) for (int j = 0; j < CM_NIX; j++) m->w2[i][j] = 1 << 14;
     for (int c = 0; c < 256; c++) for (int j = 0; j < 33; j++) m->a1[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
     for (int c = 0; c < 65536; c++) for (int j = 0; j < 33; j++) m->a2[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
     m->buf = buf; m->c0 = 1;
@@ -126,10 +151,15 @@ static cm_t *cm_new(uint8_t *buf, int bb) {
     for (int i = 0; i < 64; i++) m->mc[i] = 1u << 15;
     return m;
 fail:
-    for (int i = 1; i < CM_NM; i++) free(m->t[i]);
-    free(m->mt); free(m); cm_release(mem); return NULL;
+    for (int i = 1; i < CM_NMX; i++) free(m->t[i]);
+    free(m->w3); free(m->w4); free(m->a3); free(m->mt); free(m); cm_release(mem); return NULL;
 }
-static void cm_free(cm_t *m) { if (!m) return; size_t mem = m->mem; for (int i = 1; i < CM_NM; i++) free(m->t[i]); free(m->mt); free(m); cm_release(mem); }
+static void cm_free(cm_t *m) {
+    if (!m) return;
+    size_t mem = m->mem;
+    for (int i = 1; i < CM_NMX; i++) free(m->t[i]);
+    free(m->w3); free(m->w4); free(m->a3); free(m->mt); free(m); cm_release(mem);
+}
 
 static inline cm_bucket *cm_find(cm_bucket *t, uint32_t h, int sh) {
     uint32_t idx = h >> sh, chk = h & 0xffff;
@@ -150,39 +180,59 @@ static inline int cm_expected(cm_t *m) {
 /* slot: high 16 bits adaptive probability, bits 8..15 bit-history state, low 8 bits count */
 static inline int cm_stc(uint32_t v) { return cm_st[v >> 20]; }
 
-static int cm_predict(cm_t *m) {
+/* v2 is a compile-time constant at each call site, so model 1 and model 2 each get their own specialized loop. */
+static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v2) {
+    const int nm = v2 ? CM_NMX : CM_NM, ni = 2 * nm + 3;
     uint32_t c0 = m->c0; int bp = (int)m->bitpos;
     if (bp == 0 || bp == 4) {
         uint32_t nib = bp ? (c0 & 15) * 0x5BD1E995u : 0;
-        for (int i = 1; i < CM_NM; i++) m->cur[i] = cm_find(m->t[i], cm_hmix(m->h[i] + nib), m->sh);
+        for (int i = 1; i < nm; i++) m->cur[i] = cm_find(m->t[i], cm_hmix(m->h[i] + nib), m->sh);
     }
     int node = bp < 4 ? (int)((c0 & ((1u << bp) - 1)) | (1u << bp)) : (int)((c0 & ((1u << (bp - 4)) - 1)) | (1u << (bp - 4)));
     m->slot[0] = &m->o1[c0 | (m->c4 & 0xff) << 8];
-    for (int i = 1; i < CM_NM; i++) m->slot[i] = &m->cur[i]->s[node];
-    for (int i = 0; i < CM_NM; i++) {
+    for (int i = 1; i < nm; i++) m->slot[i] = &m->cur[i]->s[node];
+    for (int i = 0; i < nm; i++) {
         uint32_t v = *m->slot[i]; uint16_t st = (uint16_t)((v >> 8 & 255) | bp << 8); m->sst[i] = st;
-        m->x[i] = cm_stc(v); m->x[CM_NM + 3 + i] = cm_st[m->sm[i][st] >> 20];
+        m->x[i] = cm_stc(v); m->x[nm + 3 + i] = cm_st[m->sm[i][st] >> 20];
     }
     int eb = cm_expected(m);
     if (eb >= 0) {
         int l = m->mlen > 31 ? 31 : m->mlen;
         m->mci = l * 2 + eb;
         int p = (int)(m->mc[m->mci] >> 4); if (p < 1) p = 1; if (p > 4095) p = 4095;
-        m->x[CM_NM] = cm_st[p];
-        m->x[CM_NM + 1] = eb ? l * 16 : -l * 16;
-    } else { m->mci = -1; m->x[CM_NM] = 0; m->x[CM_NM + 1] = 0; }
-    m->x[CM_NM + 2] = 64;
+        m->x[nm] = cm_st[p];
+        m->x[nm + 1] = eb ? l * 16 : -l * 16;
+    } else { m->mci = -1; m->x[nm] = 0; m->x[nm + 1] = 0; }
+    m->x[nm + 2] = 64;
     int ml = m->mlen == 0 ? 0 : m->mlen < 16 ? 1 : m->mlen < 32 ? 2 : 3;
     uint32_t c1 = m->c4 & 0xff;
     int cls = ((c1 | 32) >= 'a' && (c1 | 32) <= 'z') ? 0 : (c1 >= '0' && c1 <= '9') ? 1 : 2;
     m->w1i = (int)c0 + 256 * cls;
     m->w2i = (ml * 8 + bp) * 4 + (int)(c1 >> 6);
     const int32_t *w1 = m->w1[m->w1i], *w2 = m->w2[m->w2i];
-    int64_t s1 = 0, s2 = 0;
-    for (int i = 0; i < CM_NI; i++) { s1 += (int64_t)w1[i] * m->x[i]; s2 += (int64_t)w2[i] * m->x[i]; }
-    int d1 = (int)(s1 >> 16), d2 = (int)(s2 >> 16);
-    m->pr1 = cm_SQ(d1); m->pr2 = cm_SQ(d2);
-    int st = (d1 + d2) >> 1; if (st > 2047) st = 2047; if (st < -2047) st = -2047;
+    int st;
+    if (!v2) {
+        int64_t s1 = 0, s2 = 0;
+        for (int i = 0; i < ni; i++) { s1 += (int64_t)w1[i] * m->x[i]; s2 += (int64_t)w2[i] * m->x[i]; }
+        int d1 = (int)(s1 >> 16), d2 = (int)(s2 >> 16);
+        m->pr1 = cm_SQ(d1); m->pr2 = cm_SQ(d2);
+        st = (d1 + d2) >> 1;
+    } else {                                                  /* four mixers, then a small learned mixer of their outputs */
+        m->w3i = (int)((m->c4 >> 8 & 0xff) << 3 | (uint32_t)bp); m->w4i = (int)(c0 | c1 << 8); m->wfi = (int)c0;
+        const int32_t *w3 = m->w3[m->w3i], *w4 = m->w4[m->w4i], *wf = m->wf[m->wfi];
+        int64_t s1 = 0, s2 = 0, s3 = 0, s4 = 0;
+        for (int i = 0; i < ni; i++) {
+            s1 += (int64_t)w1[i] * m->x[i]; s2 += (int64_t)w2[i] * m->x[i]; s3 += (int64_t)w3[i] * m->x[i]; s4 += (int64_t)w4[i] * m->x[i];
+        }
+        int d[4] = {(int)(s1 >> 16), (int)(s2 >> 16), (int)(s3 >> 16), (int)(s4 >> 16)};
+        int64_t sf = (int64_t)wf[4] * 256;
+        for (int k = 0; k < 4; k++) { if (d[k] > 2047) d[k] = 2047; if (d[k] < -2047) d[k] = -2047; m->xf[k] = d[k]; sf += (int64_t)wf[k] * d[k]; }
+        m->xf[4] = 256;
+        m->pr1 = cm_SQ(d[0]); m->pr2 = cm_SQ(d[1]); m->pr3 = cm_SQ(d[2]); m->pr4 = cm_SQ(d[3]);
+        st = (int)(sf >> 16); if (st > 2047) st = 2047; if (st < -2047) st = -2047;
+        m->prf = cm_SQ(st);
+    }
+    if (st > 2047) st = 2047; if (st < -2047) st = -2047;
     int mixed = cm_SQ(st);
     int s = st + 2048;
     m->ai = s >> 7; m->aw = s & 127;
@@ -190,7 +240,13 @@ static int cm_predict(cm_t *m) {
     int lo = m->ai, wt = m->aw;
     int p1 = (m->a1[c0][lo] * (128 - wt) + m->a1[c0][lo + 1] * wt) >> 11;
     int p2 = (m->a2[m->a2i][lo] * (128 - wt) + m->a2[m->a2i][lo + 1] * wt) >> 11;
-    int p = (mixed + p1 + p2) / 3;
+    int p;
+    if (!v2) p = (mixed + p1 + p2) / 3;
+    else {
+        m->a3i = (int)(cm_hmix((m->c4 & 0xffff) * 0x9E3779B1u + c0 * 0x85EBCA6Bu) >> 14);
+        int p3 = (m->a3[m->a3i][lo] * (128 - wt) + m->a3[m->a3i][lo + 1] * wt) >> 11;
+        p = (mixed + p1 + p2 + p3 + 2) >> 2;
+    }
     if (p < 1) p = 1; if (p > 4095) p = 4095;
     return m->pr = p;
 }
@@ -212,13 +268,23 @@ static inline void cm_upd_sm(uint32_t *e, int y) {
     p = (uint32_t)((int64_t)p + d); if (p > (1u << 22) - 1) p = (1u << 22) - 1;
     *e = p << 10 | (n < SM_LIM ? n + 1 : n);
 }
-static void cm_update(cm_t *m, int y) {
-    for (int i = 0; i < CM_NM; i++) { cm_upd_sm(&m->sm[i][m->sst[i]], y); cm_upd_ctr(m->slot[i], y); }
-    for (int i = 1; i < CM_NM; i++) if ((m->cur[i]->s[0] & 0xffff) < 0xffff) m->cur[i]->s[0]++;
+static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, const int v2) {
+    const int nm = v2 ? CM_NMX : CM_NM, ni = 2 * nm + 3;
+    for (int i = 0; i < nm; i++) { cm_upd_sm(&m->sm[i][m->sst[i]], y); cm_upd_ctr(m->slot[i], y); }
+    for (int i = 1; i < nm; i++) if ((m->cur[i]->s[0] & 0xffff) < 0xffff) m->cur[i]->s[0]++;
     if (m->mci >= 0) { uint32_t *c = &m->mc[m->mci]; *c = (uint32_t)((int64_t)*c + ((((int64_t)y << 16) - (int64_t)*c) >> 6)); }
     int e1 = (y << 12) - m->pr1, e2 = (y << 12) - m->pr2;                  /* learning rate 1/2048 in 16.16 weights */
     int32_t *w1 = m->w1[m->w1i], *w2 = m->w2[m->w2i];
-    for (int i = 0; i < CM_NI; i++) { w1[i] += (m->x[i] * e1) >> CM_LR; w2[i] += (m->x[i] * e2) >> CM_LR; }
+    if (!v2) for (int i = 0; i < ni; i++) { w1[i] += (m->x[i] * e1) >> CM_LR; w2[i] += (m->x[i] * e2) >> CM_LR; }
+    else {
+        int e3 = (y << 12) - m->pr3, e4 = (y << 12) - m->pr4, ef = (y << 12) - m->prf;
+        int32_t *w3 = m->w3[m->w3i], *w4 = m->w4[m->w4i], *wf = m->wf[m->wfi];
+        for (int i = 0; i < ni; i++) {
+            w1[i] += (m->x[i] * e1) >> CM_LR; w2[i] += (m->x[i] * e2) >> CM_LR; w3[i] += (m->x[i] * e3) >> CM_LR; w4[i] += (m->x[i] * e4) >> CM_LR;
+        }
+        for (int k = 0; k < 5; k++) wf[k] += (m->xf[k] * ef) >> CM_LRF;
+        cm_upd_apm(m->a3[m->a3i], m->ai, m->aw, y);
+    }
     cm_upd_apm(m->a1[m->c0], m->ai, m->aw, y);
     cm_upd_apm(m->a2[m->a2i], m->ai, m->aw, y);
     int eb = cm_expected(m);
@@ -227,7 +293,7 @@ static void cm_update(cm_t *m, int y) {
     if (m->bitpos == 2) {                                     /* prefetch both candidate buckets for the second nibble */
         for (int b = 0; b < 2; b++) {
             uint32_t nib = (((m->c0 << 1) | (uint32_t)b) & 15) * 0x5BD1E995u;
-            for (int i = 1; i < CM_NM; i++) { uint32_t idx = cm_hmix(m->h[i] + nib) >> m->sh; __builtin_prefetch(&m->t[i][idx]); }
+            for (int i = 1; i < nm; i++) { uint32_t idx = cm_hmix(m->h[i] + nib) >> m->sh; __builtin_prefetch(&m->t[i][idx]); }
         }
     }
     if (++m->bitpos == 8) {
@@ -245,6 +311,8 @@ static void cm_update(cm_t *m, int y) {
         m->h[5] = cm_hmix(cm_hmix(c4) + (m->c8 & 0xffff) * 0x85EBCA6Bu + 5);
         m->h[6] = cm_hmix(m->word * 0x27D4EB2Fu + m->word1 * 0x165667B1u + 6);
         m->h[7] = cm_hmix((c4 & 0xff00ff00u) * 0x9E3779B1u + 7);
+        m->h[16] = cm_hmix((c4 & 0xffff0000u) * 0x9E3779B1u + 16);                                     /* model 2: bytes 3-4 */
+        m->h[17] = cm_hmix((c4 & 0x0000ff00u) * 0x85EBCA6Bu + 17);                                     /* model 2: byte 2 */
 #if CM_NM > 14
         {   uint32_t c1 = c4 >> 8 & 0xff, c2 = c4 >> 8 & 0xffff;                           /* what followed the previous context last time */
             m->ind1[c1] = (uint16_t)(m->ind1[c1] << 8 | c); m->ind2[c2] = (uint16_t)(m->ind2[c2] << 8 | c);
@@ -269,7 +337,7 @@ static void cm_update(cm_t *m, int y) {
         m->h[8] = cm_hmix(cm_hmix(c4 * 0x9E3779B1u) + (m->c8 & 0xff) * 0x85EBCA6Bu + 8);          /* order 5 */
         m->h[9] = cm_hmix(cm_hmix(c4 + 0x51ED27u) + (m->c8 & 0xffffff) * 0xC2B2AE35u + 9);     /* order 7 */
 #endif
-        for (int i = 1; i < CM_NM; i++) {                     /* prefetch the buckets for the first nibble */
+        for (int i = 1; i < nm; i++) {                        /* prefetch the buckets for the first nibble */
             uint32_t idx = cm_hmix(m->h[i]) >> m->sh;
             __builtin_prefetch(&m->t[i][idx]); __builtin_prefetch(&m->t[i][idx ^ 1]);
         }
@@ -289,46 +357,58 @@ static void cm_update(cm_t *m, int y) {
         }
     }
 }
-static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
-    if (cap < 8 || n > 0xFFFFFFF0u) return 0;
-    int bb = n < ((size_t)1 << 28) ? cm_bits_for(n) : CM_BB;   /* top 4 bits of the size word: log2 buckets - 15 (0 = legacy) */
-    uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new(hist, bb) : NULL;
-    if (!m) { free(hist); return 0; }
-    uint32_t n32 = (uint32_t)n | (n < ((size_t)1 << 28) ? (uint32_t)(bb - 15) << 28 : 0); memcpy(out, &n32, 4);
-    uint32_t x1 = 0, x2 = 0xffffffff; size_t o = 4;
+/* One coding loop per model, each with the model inlined and specialized. */
+static inline __attribute__((always_inline)) int cm_enc_loop(cm_t *m, const uint8_t *in, size_t n, uint8_t *out, size_t cap, size_t *po, const int v2) {
+    uint32_t x1 = 0, x2 = 0xffffffff; size_t o = *po;
     for (size_t i = 0; i < n; i++) {
         int c = in[i];
         for (int b = 7; b >= 0; b--) {
-            int y = (c >> b) & 1, p = cm_predict(m);
+            int y = (c >> b) & 1, p = cm_predict(m, v2);
             uint32_t xm = x1 + (uint32_t)(((uint64_t)(x2 - x1) * (uint32_t)p) >> 12);
             if (y) x2 = xm; else x1 = xm + 1;
-            cm_update(m, y);
-            while (((x1 ^ x2) & 0xff000000u) == 0) { if (o >= cap) { cm_free(m); free(hist); return 0; } out[o++] = (uint8_t)(x2 >> 24); x1 <<= 8; x2 = (x2 << 8) | 255; }
+            cm_update(m, y, v2);
+            while (((x1 ^ x2) & 0xff000000u) == 0) { if (o >= cap) return -1; out[o++] = (uint8_t)(x2 >> 24); x1 <<= 8; x2 = (x2 << 8) | 255; }
         }
     }
-    if (o + 4 > cap) { cm_free(m); free(hist); return 0; }
+    if (o + 4 > cap) return -1;
     out[o++] = (uint8_t)(x1 >> 24); out[o++] = 255; out[o++] = 255; out[o++] = 255;
-    cm_free(m); free(hist);
-    return o;
+    *po = o; return 0;
 }
-static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
-    if (cn < 8) return -1;
-    uint32_t n32; memcpy(&n32, in, 4);
-    int bb = CM_BB;
-    if (n < ((size_t)1 << 28)) { uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu; if (f) bb = (int)f + 15; }
-    if (n32 != n || bb < 16 || bb > 22) return -1;
-    cm_t *m = cm_new(out, bb); if (!m) return -1;
+static inline __attribute__((always_inline)) void cm_dec_loop(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, const int v2) {
+    (void)out;
     uint32_t x1 = 0, x2 = 0xffffffff, x = 0; size_t ip = 4;
     for (int k = 0; k < 4; k++) x = (x << 8) | (ip < cn ? in[ip++] : 255);
     for (size_t i = 0; i < n; i++)
         for (int b = 7; b >= 0; b--) {
-            int p = cm_predict(m);
+            int p = cm_predict(m, v2);
             uint32_t xm = x1 + (uint32_t)(((uint64_t)(x2 - x1) * (uint32_t)p) >> 12);
             int y = x <= xm;
             if (y) x2 = xm; else x1 = xm + 1;
-            cm_update(m, y);
+            cm_update(m, y, v2);
             while (((x1 ^ x2) & 0xff000000u) == 0) { x1 <<= 8; x2 = (x2 << 8) | 255; x = (x << 8) | (ip < cn ? in[ip++] : 255); }
         }
+}
+/* New streams use model 2 (model 1 only for n >= 2^28, whose size word has no room for flags). */
+static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
+    if (cap < 8 || n > 0xFFFFFFF0u) return 0;
+    int small = n < ((size_t)1 << 28), v2 = small;
+    int bb = small ? cm_bits_for(n) : CM_BB;
+    uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new(hist, bb, v2) : NULL;
+    if (!m) { free(hist); return 0; }
+    uint32_t n32 = (uint32_t)n | (small ? (uint32_t)((bb - 15) | (v2 ? 8 : 0)) << 28 : 0); memcpy(out, &n32, 4);
+    size_t o = 4;
+    int r = v2 ? cm_enc_loop(m, in, n, out, cap, &o, 1) : cm_enc_loop(m, in, n, out, cap, &o, 0);
+    cm_free(m); free(hist);
+    return r ? 0 : o;
+}
+static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+    if (cn < 8) return -1;
+    uint32_t n32; memcpy(&n32, in, 4);
+    int bb = CM_BB, v2 = 0;
+    if (n < ((size_t)1 << 28)) { uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu; if (f) { bb = (int)(f & 7) + 15; v2 = (int)(f >> 3); } }
+    if (n32 != n || bb < 16 || bb > 22) return -1;
+    cm_t *m = cm_new(out, bb, v2); if (!m) return -1;
+    if (v2) cm_dec_loop(m, in, cn, out, n, 1); else cm_dec_loop(m, in, cn, out, n, 0);
     cm_free(m);
     return 0;
 }
