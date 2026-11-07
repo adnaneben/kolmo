@@ -28,8 +28,10 @@ _Static_assert(CM_LIM * 15 < 64, "CM_LIM too large for the rate table");
 #define CM_W2 (4 * 8 * 4)
 #define CM_W3 (256 * 8)         /* model 2: byte 2 x bit position */
 #define CM_W4 65536             /* model 2: order 1 (partial byte, previous byte) */
-#define CM_WF 256               /* model 2: final mixer, by partial byte */
+#define CM_WF 1024              /* model 2: final mixer, by partial byte x match length */
 #define CM_A3 (1 << 16)         /* model 2: order-2 hashed APM */
+#define CM_LRK 20               /* model 2: mixer learning rate decays from 64/16 to CM_LRK/16 of 1/2^CM_LR ... */
+#define CM_LRD 13               /* ... by 1/16 every 2^CM_LRD bytes */
 #ifndef CM_LRF
 #define CM_LRF 12
 #endif
@@ -249,7 +251,7 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
         m->pr1 = cm_SQ(d1); m->pr2 = cm_SQ(d2);
         st = (d1 + d2) >> 1;
     } else {                                                  /* four mixers, then a small learned mixer of their outputs */
-        m->w3i = (int)((m->c4 >> 8 & 0xff) << 3 | (uint32_t)bp); m->w4i = (int)(c0 | c1 << 8); m->wfi = (int)c0;
+        m->w3i = (int)((m->c4 >> 8 & 0xff) << 3 | (uint32_t)bp); m->w4i = (int)(c0 | c1 << 8); m->wfi = (int)c0 | ml << 8;
         const int32_t *w3 = m->w3[m->w3i], *w4 = m->w4[m->w4i], *wf = m->wf[m->wfi];
         int64_t s1 = 0, s2 = 0, s3 = 0, s4 = 0;
         for (int i = 0; i < ni; i++) {
@@ -308,7 +310,9 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
     int32_t *w1 = m->w1[m->w1i], *w2 = m->w2[m->w2i];
     if (!v2) for (int i = 0; i < ni; i++) { w1[i] += (m->x[i] * e1) >> CM_LR; w2[i] += (m->x[i] * e2) >> CM_LR; }
     else {
-        int e3 = (y << 12) - m->pr3, e4 = (y << 12) - m->pr4, ef = (y << 12) - m->prf;
+        int k = 64 - (int)(m->pos >> CM_LRD); if (k < CM_LRK) k = CM_LRK;
+        e1 = e1 * k >> 4; e2 = e2 * k >> 4;
+        int e3 = ((y << 12) - m->pr3) * k >> 4, e4 = ((y << 12) - m->pr4) * k >> 4, ef = (y << 12) - m->prf;
         int32_t *w3 = m->w3[m->w3i], *w4 = m->w4[m->w4i], *wf = m->wf[m->wfi];
         for (int i = 0; i < ni; i++) {
             w1[i] += (m->x[i] * e1) >> CM_LR; w2[i] += (m->x[i] * e2) >> CM_LR; w3[i] += (m->x[i] * e3) >> CM_LR; w4[i] += (m->x[i] * e4) >> CM_LR;
