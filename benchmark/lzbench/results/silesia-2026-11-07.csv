@@ -1,0 +1,38 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo 1.0.0 -0,395.97,2091.16,211957760,98721319,46.58,/home/claude/czn_tune/data/silesia.tar
+kolmo 1.0.0 -1,127.49,876.05,211957760,58260468,27.49,/home/claude/czn_tune/data/silesia.tar
+kolmo 1.0.0 -2,7.59,325.11,211957760,50606731,23.88,/home/claude/czn_tune/data/silesia.tar
+kolmo 1.0.0 -3,2.41,636.18,211957760,47624838,22.47,/home/claude/czn_tune/data/silesia.tar
+kolmo 1.0.0 -4,2.85,62.79,211957760,41722234,19.68,/home/claude/czn_tune/data/silesia.tar
+lz4 1.10.0,538.55,3304.38,211957760,100881000,47.59,/home/claude/czn_tune/data/silesia.tar
+lz4hc 1.10.0 -9,32.79,3475.32,211957760,77884668,36.75,/home/claude/czn_tune/data/silesia.tar
+lz4hc 1.10.0 -12,10.24,3541.04,211957760,77262838,36.45,/home/claude/czn_tune/data/silesia.tar
+libdeflate 1.26 -1,258.09,858.72,211957760,73503012,34.68,/home/claude/czn_tune/data/silesia.tar
+libdeflate 1.26 -6,84.28,811.90,211957760,67510428,31.85,/home/claude/czn_tune/data/silesia.tar
+libdeflate 1.26 -12,4.13,891.50,211957760,64678484,30.51,/home/claude/czn_tune/data/silesia.tar
+zstd 1.5.7 -1,407.78,1101.26,211957760,73193862,34.53,/home/claude/czn_tune/data/silesia.tar
+zstd 1.5.7 -3,221.14,1282.48,211957760,66133628,31.20,/home/claude/czn_tune/data/silesia.tar
+zstd 1.5.7 -5,109.74,1018.75,211957760,62741008,29.60,/home/claude/czn_tune/data/silesia.tar
+zstd 1.5.7 -9,50.47,895.16,211957760,59071756,27.87,/home/claude/czn_tune/data/silesia.tar
+zstd 1.5.7 -15,4.63,837.92,211957760,56867643,26.83,/home/claude/czn_tune/data/silesia.tar
+zstd 1.5.7 -19,1.78,920.92,211957760,52834579,24.93,/home/claude/czn_tune/data/silesia.tar
+zstd 1.5.7 -22,1.21,643.41,211957760,52282945,24.67,/home/claude/czn_tune/data/silesia.tar
+brotli 1.2.0 -0,294.00,271.11,211957760,78434891,37.00,/home/claude/czn_tune/data/silesia.tar
+brotli 1.2.0 -5,41.09,389.82,211957760,59556176,28.10,/home/claude/czn_tune/data/silesia.tar
+brotli 1.2.0 -9,5.06,357.19,211957760,56702679,26.75,/home/claude/czn_tune/data/silesia.tar
+brotli 1.2.0 -11,0.48,370.86,211957760,50410214,23.78,/home/claude/czn_tune/data/silesia.tar
+xz 5.8.4 -6,1.78,88.37,211957760,49489516,23.35,/home/claude/czn_tune/data/silesia.tar
+xz 5.8.4 -9,1.48,98.74,211957760,48756932,23.00,/home/claude/czn_tune/data/silesia.tar
+lzma 26.03 -9,1.44,68.30,211957760,48687244,22.97,/home/claude/czn_tune/data/silesia.tar
+bsc 3.3.12 -m0 -e1,14.14,19.28,211957760,49292310,23.26,/home/claude/czn_tune/data/silesia.tar
+bsc 3.3.12 -m4 -e1,24.65,8.84,211957760,50686530,23.91,/home/claude/czn_tune/data/silesia.tar
+bzip3 1.5.4 -5,8.69,9.01,211957760,47236983,22.29,/home/claude/czn_tune/data/silesia.tar
+ppmd8 26.03 -4,9.21,8.82,211957760,51240319,24.17,/home/claude/czn_tune/data/silesia.tar
+ppmd8 26.03 -9,1.49,1.46,211957760,47994727,22.64,/home/claude/czn_tune/data/silesia.tar
+openzl 0.2.3 'generic',87.06,1186.00,211957760,61230482,28.89,/home/claude/czn_tune/data/silesia.tar
+kolmo 1.0.0 -5,0.28,0.37,211957760,37956686,17.91,/home/claude/bench_data/silesia.tar
+kanzi 2.6.0 -9,1.74,1.65,211957760,41809049,19.73,/home/claude/bench_data/silesia.tar
+zpaq 7.15 -5,0.39,0.39,211957760,40470268,19.09,/home/claude/bench_data/silesia.tar
+kanzi 2.6.0 -8,2.82,2.71,211957760,43250478,20.41,/home/claude/bench_data/silesia.tar
+kanzi 2.6.0 -7,10.83,16.03,211957760,47308349,22.32,/home/claude/bench_data/silesia.tar
+zpaq 7.15 -4,1.27,1.19,211957760,44287252,20.89,/home/claude/bench_data/silesia.tar
