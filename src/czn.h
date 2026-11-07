@@ -19,7 +19,8 @@ typedef enum { CZN_RT = 0, CZN_FAST = 1, CZN_ECO = 2, CZN_HC = 3, CZN_MAX = 4, C
 
 typedef struct {
     czn_mode mode;      /* rt: LZ4 | fast: zstd 3 | eco: brotli 8 | hc: zstd 19 | max: BWT (text) or LZMA2 | ultra: context mixing (archive tier) */
-    int level;          /* 0 = mode default; otherwise codec level (max: LZMA2 preset, except 1 = BWT for every block) */
+    int level;          /* 0 = mode default; otherwise codec level (max: LZMA2 preset, except 1 = BWT for every block;
+                           ultra: 1 = context-mixing model 1 only, faster) */
     int threads;        /* 0 = all cores */
     uint32_t block;     /* bytes per block, 0 = adaptive rt/fast, 16 MiB eco/hc (larger for text), 128 MiB max/ultra */
     int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap

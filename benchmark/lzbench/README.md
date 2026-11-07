@@ -12,7 +12,7 @@ sh benchmark/lzbench/setup.sh ./lzbench "KOLMO ZSTD BROTLI XZ"   # or omit the l
 
 | File | Role |
 |---|---|
-| `kolmo_lzbench.cpp` | The codec wrapper: lzbench levels 0–11 are a ladder of ordinary kolmo settings, from `rt` to `ultra` (see the file header) |
+| `kolmo_lzbench.cpp` | The codec wrapper: lzbench levels 0–12 are a ladder of ordinary kolmo settings, from `rt` to `ultra` (see the file header) |
 | `kolmo.mk` | The lzbench build fragment (`mk/kolmo.mk`) |
 | `setup.sh` | Builds kolmo, isolates it, drops it into lzbench, registers it and builds lzbench |
 

@@ -70,11 +70,11 @@ hdr = lzb / "bench/lzbench.h"
 # Drop any earlier kolmo registration, then register the current level ladder (see kolmo_lzbench.cpp).
 lines = [l for l in hdr.read_text().split("\n") if '{ "kolmo",' not in l]
 k = next(i for i, l in enumerate(lines) if "lzbench_kanzi_compress" in l)
-lines.insert(k + 1, '    { "kolmo",      "kolmo 1.0.0",             "structure transforms + LZ/BWT/CM", 0,   11,    0,   NO_THREADING, lzbench_kolmo_compress,      lzbench_kolmo_decompress,      NULL,                    NULL },')
+lines.insert(k + 1, '    { "kolmo",      "kolmo 1.0.0",             "structure transforms + LZ/BWT/CM", 0,   12,    0,   NO_THREADING, lzbench_kolmo_compress,      lzbench_kolmo_decompress,      NULL,                    NULL },')
 k = max(i for i, l in enumerate(lines) if l.strip().startswith('{ "kanzi",') and "lzbench_" not in l)
 for lo, hi, alg in reversed([(0, 0, "transforms + LZ4"), (1, 3, "quick transforms + zstd"), (4, 4, "transforms + zstd"),
                              (5, 6, "transforms + zstd (high)"), (7, 7, "transforms + BWT"), (8, 8, "transforms + brotli"),
-                             (9, 9, "transforms + zstd (high)"), (10, 10, "transforms + BWT or LZMA2"), (11, 11, "transforms + CM")]):
+                             (9, 9, "transforms + zstd (high)"), (10, 10, "transforms + BWT or LZMA2"), (11, 12, "transforms + CM")]):
     lines.insert(k + 1, f'    {{ "kolmo",    {lo},  {hi}, "{alg}" }},')
 hdr.write_text("\n".join(lines))
 print("registered kolmo in", lzb)

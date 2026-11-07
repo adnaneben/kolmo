@@ -1105,7 +1105,7 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
             if (lzma_raw_buffer_encode(f, NULL, in, n, out, &pos, cap) != LZMA_OK) return 0;
             return pos; }
 #endif
-        case C_CM: return cm_compress(in, n, out, cap);
+        case C_CM: return cm_compress_m(in, n, out, cap, level == 1);
     }
     return 0;
 }
@@ -1229,7 +1229,7 @@ static void mode_codec(const czn_params *p, int *codec, int *level) {
         case CZN_ECO: *codec = C_BROTLI; *level = p->level ? p->level : CZ_ECO_LEVEL; break;
         case CZN_HC:  *codec = C_ZSTD;   *level = p->level ? p->level : 19; break;
         case CZN_MAX: *codec = C_LZMA;   *level = p->level ? p->level : 9; break;     /* max: BWT for text, the better of BWT and LZMA2 for binary (level 1: BWT only) */
-        default:      *codec = C_CM;     *level = 0; break;                            /* ultra: context mixing */
+        default:      *codec = C_CM;     *level = p->level == 1 ? 1 : 0; break;        /* ultra: context mixing (level 1: model 1, CM only) */
     }
 }
 
@@ -1555,7 +1555,7 @@ static void *compress_worker(void *arg) {
             size_t c2 = alt ? codec_compress(xp, C_BSC, 9, in, inlen, alt, J->slot - meta) : 0;
             if (c2 && c2 < cl) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BSC; }
         }
-        if (codec == C_CM) {                          /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
+        if (codec == C_CM && level != 1) {            /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             if (alt) {
                 int alts[2] = {C_LZMA, C_BSC};

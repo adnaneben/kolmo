@@ -435,10 +435,11 @@ static inline __attribute__((always_inline)) void cm_dec_loop(cm_t *m, const uin
             while (((x1 ^ x2) & 0xff000000u) == 0) { x1 <<= 8; x2 = (x2 << 8) | 255; x = (x << 8) | (ip < cn ? in[ip++] : 255); }
         }
 }
-/* New streams use model 2 (model 1 only for n >= 2^28, whose size word has no room for flags). */
-static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
+/* model 2 by default; model 1 (fewer contexts, about 30% faster, what kolmo 1.0.0 wrote) when model1 is set, and always
+ * for n >= 2^28, whose size word has no room for flags */
+static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model1) {
     if (cap < 8 || n > 0xFFFFFFF0u) return 0;
-    int small = n < ((size_t)1 << 28), v2 = small;
+    int small = n < ((size_t)1 << 28), v2 = small && !model1;
     int bb = small ? cm_bits_for(n) : CM_BB;
     uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new(hist, bb, v2) : NULL;
     if (!m) { free(hist); return 0; }
@@ -448,6 +449,7 @@ static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap)
     cm_free(m); free(hist);
     return r ? 0 : o;
 }
+static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return cm_compress_m(in, n, out, cap, 0); }
 static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     if (cn < 8) return -1;
     uint32_t n32; memcpy(&n32, in, 4);
