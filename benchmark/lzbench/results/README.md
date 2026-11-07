@@ -52,3 +52,14 @@ It beats all three on ratio, compression speed and decompression speed at once.
 ## `silesia-2026-11-08-ladder.csv` — the kolmo ladder (levels 0–9 of the 0–10 ladder at the time; `ultra` measured separately)
 
 Measured before `max -l 1` was inserted as level 7, so levels 7–9 there are `eco`, `hc` and `max`.
+
+## `silesia-2026-11-08-max-ultra-levels.csv` — levels 7, 10, 11 of the 0–12 ladder (one pass each)
+
+| Level | Setting | Ratio | Compress | Decompress |
+|---|---|---|---|---|
+| 7 | `max -l 1` | 20.93% | 19.4 MB/s | 32.7 MB/s |
+| 10 | `max` (now also BWT for binary blocks when smaller) | 19.34% | 2.67 MB/s | 53.8 MB/s |
+| 11 | `ultra -l 1` (CM model 1 only) | **17.99%** | **0.43 MB/s** | **0.45 MB/s** |
+
+`ultra -l 1` beats zpaq -5 (19.09%, 0.39 / 0.39 MB/s) on ratio, compression speed and decompression speed at once;
+`ultra` (level 12, 17.01%) holds the ratio crown.
