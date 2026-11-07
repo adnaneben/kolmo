@@ -1,0 +1,258 @@
+{
+  "sample_sha256": "400d79a30d1a3e8703546529beb508a14f796818bda613876cddb70450b1db39",
+  "sample_bytes": 262144,
+  "modes": {
+    "rt": {
+      "pip": {
+        "bytes": 37802,
+        "sha256": "0e438f12fdac28338afd6d008930f922c8960851785134a255da83ac1ebb829a",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "cargo": {
+        "bytes": 37802,
+        "sha256": "0e438f12fdac28338afd6d008930f922c8960851785134a255da83ac1ebb829a",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "release": {
+        "bytes": 37802,
+        "sha256": "0e438f12fdac28338afd6d008930f922c8960851785134a255da83ac1ebb829a",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "kolmo": {
+        "bytes": 37802,
+        "sha256": "0e438f12fdac28338afd6d008930f922c8960851785134a255da83ac1ebb829a",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      }
+    },
+    "fast": {
+      "pip": {
+        "bytes": 31299,
+        "sha256": "b2bd8080b1d06b3bf446dd47efce995209541a9752b2f38b57d036a5d103ccfd",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "cargo": {
+        "bytes": 31299,
+        "sha256": "b2bd8080b1d06b3bf446dd47efce995209541a9752b2f38b57d036a5d103ccfd",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "release": {
+        "bytes": 31299,
+        "sha256": "b2bd8080b1d06b3bf446dd47efce995209541a9752b2f38b57d036a5d103ccfd",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "kolmo": {
+        "bytes": 31299,
+        "sha256": "b2bd8080b1d06b3bf446dd47efce995209541a9752b2f38b57d036a5d103ccfd",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      }
+    },
+    "eco": {
+      "pip": {
+        "bytes": 29839,
+        "sha256": "e0d5007e0419eee39efa971fc62c65104201083f4bc86221bbc50722e1ab0071",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "cargo": {
+        "bytes": 29839,
+        "sha256": "e0d5007e0419eee39efa971fc62c65104201083f4bc86221bbc50722e1ab0071",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "release": {
+        "bytes": 29839,
+        "sha256": "e0d5007e0419eee39efa971fc62c65104201083f4bc86221bbc50722e1ab0071",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "kolmo": {
+        "bytes": 29839,
+        "sha256": "e0d5007e0419eee39efa971fc62c65104201083f4bc86221bbc50722e1ab0071",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      }
+    },
+    "hc": {
+      "pip": {
+        "bytes": 29445,
+        "sha256": "fc520347c8ab9165b4f31f49c3ff798e208df9639423c9fe460bd0348ce9a6bf",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "cargo": {
+        "bytes": 29445,
+        "sha256": "fc520347c8ab9165b4f31f49c3ff798e208df9639423c9fe460bd0348ce9a6bf",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "release": {
+        "bytes": 29445,
+        "sha256": "fc520347c8ab9165b4f31f49c3ff798e208df9639423c9fe460bd0348ce9a6bf",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "kolmo": {
+        "bytes": 29445,
+        "sha256": "fc520347c8ab9165b4f31f49c3ff798e208df9639423c9fe460bd0348ce9a6bf",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      }
+    },
+    "max": {
+      "pip": {
+        "bytes": 28119,
+        "sha256": "5abd42581cf6a1427030a6a8b92f1b3c3c463c721448ecccdef7fc12911774f4",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "cargo": {
+        "bytes": 28119,
+        "sha256": "5abd42581cf6a1427030a6a8b92f1b3c3c463c721448ecccdef7fc12911774f4",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "release": {
+        "bytes": 28119,
+        "sha256": "5abd42581cf6a1427030a6a8b92f1b3c3c463c721448ecccdef7fc12911774f4",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "kolmo": {
+        "bytes": 28119,
+        "sha256": "5abd42581cf6a1427030a6a8b92f1b3c3c463c721448ecccdef7fc12911774f4",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      }
+    },
+    "ultra": {
+      "pip": {
+        "bytes": 28102,
+        "sha256": "0c3971a1d05d90ef7d5f6e634a1e198a1e47f39399aa52a9dae5b24de2eaf2ad",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "cargo": {
+        "bytes": 28102,
+        "sha256": "0c3971a1d05d90ef7d5f6e634a1e198a1e47f39399aa52a9dae5b24de2eaf2ad",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "release": {
+        "bytes": 28102,
+        "sha256": "0c3971a1d05d90ef7d5f6e634a1e198a1e47f39399aa52a9dae5b24de2eaf2ad",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      },
+      "kolmo": {
+        "bytes": 28102,
+        "sha256": "bd205bc18ed81ce529320f690d50cf824f5a4c5663a101f326ac896a1ab4268c",
+        "decoders": {
+          "pip": true,
+          "cargo": true,
+          "release": true,
+          "kolmo": true
+        }
+      }
+    }
+  }
+}

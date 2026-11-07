@@ -1,0 +1,41 @@
+{
+  "power": {
+    "url": "https://archive.ics.uci.edu/static/public/235/individual+household+electric+power+consumption.zip",
+    "archive_sha256": "9f84b46ade8a2d8e1286ec4b2b6c2987a45a755c59f263be3b3b3d10dfbda3ff",
+    "source_sha256": "4259c9d7ece5dbee9ab8d53682baac68d791c864f0f64a52b4043cb3b90894b7",
+    "source_rows": 2075259,
+    "fields_delimiter": ";",
+    "train_rows": 64626,
+    "train_bytes": 4194288,
+    "train_sha256": "fb614e159d8de566500d4f4dd43116dd212be29ca1cfa5d48f51180529b7bdd9",
+    "test_rows": 1556445,
+    "test_bytes": 99631060,
+    "test_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f"
+  },
+  "rides": {
+    "url": "https://divvy-tripdata.s3.amazonaws.com/202201-divvy-tripdata.zip",
+    "archive_sha256": "8773ba7f1fed12c12f68feb75beb7c558d3491ff10495c85b06ee8a7822b9580",
+    "source_sha256": "5f284a34e2429030cd63d739e9c311ba7839121de07cb5aff700830a4a4aeed1",
+    "source_rows": 103770,
+    "fields_delimiter": ",",
+    "train_rows": 21762,
+    "train_bytes": 4194173,
+    "train_sha256": "81def7d0396dddc864d5434ec4778aa9417c6e75d37b62f6ee16e5943358c50d",
+    "test_rows": 77828,
+    "test_bytes": 13998547,
+    "test_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4"
+  },
+  "quakes": {
+    "url": "https://earthquake.usgs.gov/fdsnws/event/1/query?format=csv&starttime=2020-01-01T00:00:00&endtime=2020-02-01T00:00:00&orderby=time-asc&limit=20000",
+    "archive_sha256": "fce55570726d4cdbcbaea24255fbf768a0fd7b0c397c62db1aaae61d0dbfc24d",
+    "source_sha256": "fce55570726d4cdbcbaea24255fbf768a0fd7b0c397c62db1aaae61d0dbfc24d",
+    "source_rows": 17513,
+    "fields_delimiter": ",",
+    "train_rows": 4378,
+    "train_bytes": 813976,
+    "train_sha256": "f068324c169ba313790a050e9247432625f5b3f87cdb33e00ab71dd94eba6cb5",
+    "test_rows": 13135,
+    "test_bytes": 2424830,
+    "test_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8"
+  }
+}
