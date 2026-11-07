@@ -79,7 +79,6 @@ typedef struct { int m, ns, SS, NW, SCNT, SM;
     const int *keys, *vc, *Smax; const double *F, *L, *PD, *PP, *LPD, *LPP; const uint8_t *V;
     const float *Lf, *Vf, *L2f, *Lyr, *LPDf, *LPPf, *VPDf, *VPPf; const uint64_t *VB; } fsctx;
 typedef struct { const fsctx *c; int y0, y1; float *Wa, *Da, *D2a; double *ratio; fcand *cands; size_t nc, ccap; } fswork;
-extern int cz_plan_threads;
 /* one worker over a disjoint range of target columns; own scratch + candidate buffer, shared arrays read-only.
  * The total-order cmp_fcand makes the merged candidate set sort identically to the serial version. */
 static void *fs_worker(void *arg) {
@@ -189,16 +188,23 @@ static void *fs_worker(void *arg) {
                 }
                 double h = (double)hit / okn;
                 if (h > 0.5 && isfinite(kk)) {
-                    if (W->nc == W->ccap) { W->ccap *= 2; W->cands = realloc(W->cands, sizeof(fcand) * W->ccap); }
+                    if (W->nc == W->ccap) {
+                        if (W->ccap > SIZE_MAX / 2 / sizeof(fcand)) goto done;
+                        fcand *grown = realloc(W->cands, sizeof(fcand) * W->ccap * 2);
+                        if (!grown) goto done;
+                        W->cands = grown; W->ccap *= 2;
+                    }
                     W->cands[W->nc++] = (fcand){-h * okn, yi, ta[q], tb[q], tf[q], kk};
                 }
             }
         
     }
+done:
+    zs_trim();
     return NULL;
 }
 
-static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs) {
+static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs, int threads) {
     fs->n = 0; fs->gcol = -1;
     const uint8_t *nl = memchr(s, '\n', n);
     if (!nl || k < 2) return;
@@ -289,7 +295,7 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
         fcand *cands = NULL; size_t nc = 0;
         {   /* formula search over target columns, parallel across disjoint yi ranges (deterministic: see cmp_fcand) */
             fsctx cx = { m, ns, SS, NW, SCNT, SM, keys, vc, Smax, F, L, PD, PP, LPD, LPP, V, Lf, Vf, L2f, Lyr, LPDf, LPPf, VPDf, VPPf, VB };
-            int T = cz_plan_threads; if (T < 1) T = 1; if (T > m) T = m; if (T > 16) T = 16;
+            int T = threads; if (T < 1) T = 1; if (T > m) T = m; if (T > 16) T = 16;
             fswork wk[16]; pthread_t th[16]; int tok = 1;
             float *WaA = malloc(sizeof(float) * (size_t)SS * T), *DaA = malloc(sizeof(float) * (size_t)SS * T), *D2aA = malloc(sizeof(float) * (size_t)SS * T);
             double *ratA = malloc(sizeof(double) * (size_t)ns * T);
@@ -300,8 +306,13 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
                 wk[t].ratio = ratA + (size_t)t * ns; wk[t].ccap = 64; wk[t].nc = 0; wk[t].cands = malloc(sizeof(fcand) * wk[t].ccap);
                 if (!wk[t].cands) { T = t; break; }
             }
-            for (int t = 1; t < T; t++) if (pthread_create(&th[t], NULL, fs_worker, &wk[t])) { tok = t; T = t; break; } else tok = t + 1;
+            for (int t = 1; t < T; t++) {
+                if (pthread_create(&th[t], NULL, fs_worker, &wk[t])) break;
+                tok = t + 1;
+            }
             if (T > 0) fs_worker(&wk[0]);
+            /* Preserve all target ranges when helpers cannot be created. */
+            for (int t = tok; t < T; t++) fs_worker(&wk[t]);
             for (int t = 1; t < tok; t++) pthread_join(th[t], NULL);
             size_t tot = 0; for (int t = 0; t < T; t++) tot += wk[t].nc;
             cands = malloc(sizeof(fcand) * (tot ? tot : 1));
@@ -469,7 +480,7 @@ fail:
     free(coff); free(clen); return 0;
 }
 
-static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, const fset_t *fs, uint8_t *dst) {
+static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, const fset_t *fs, uint8_t *dst, unsigned *newmodes) {
     if (quotes && !has_quotes(in, n)) quotes = 0;
     uint32_t colcnt[256] = {0}; int64_t nf = 0, nr = 0, nexc = 0; int noNL = 0;
     uint32_t *coff = NULL, *clen = NULL, *exc = NULL; int64_t base[256];
@@ -558,7 +569,7 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
             if (c < bc) { bc = c; bm = 3; zt = zb; zb = z; z = zt; zready = 1; }
         }
         if (!zready) num_resid(&C[j], bm, gid, NULL, NULL, NULL, NULL, zb);
-        if (bm >= 4) atomic_fetch_or_explicit(&cz_newmodes, 1 << (bm - 4), memory_order_relaxed);
+        if (bm >= 4 && newmodes) *newmodes |= 1u << (bm - 4);
         num_col_put(in, o, l, &C[j], bm, bm == 3 ? fid : 0, zb, &out);
     }
     for (int j = 0; j < k; j++) { if (j != gcol) ncol_free(&C[j]); free(fv[j]); }
@@ -1309,8 +1320,8 @@ static void tbl2_columns_free(czcols *x) { free(x->c); free(x->numbuf); free(x->
 
 int tbl2_columns_pub(const uint8_t *in, int64_t tn, czcols *out) { return tbl2_columns(in, tn, out); }
 void tbl2_columns_free_pub(czcols *x) { tbl2_columns_free(x); }
-int64_t tbl2_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, const fset_t *fs, uint8_t *dst) { return tbl2_encode(in, n, delim, k, quotes, fs, dst); }
+int64_t tbl2_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, const fset_t *fs, uint8_t *dst) { return tbl2_encode(in, n, delim, k, quotes, fs, dst, NULL); }
 int tbl2_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n) { return tbl2_decode(in, tn, delim, out, n); }
-void fset_discover_pub(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs) { fset_discover(s, n, delim, k, quotes, effort, fs); }
+void fset_discover_pub(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs) { fset_discover(s, n, delim, k, quotes, effort, fs, 1); }
 int parse_dec_pub(const uint8_t *p, uint32_t len, int64_t *m, int *sc) { return parse_dec(p, len, m, sc); }
 const int64_t *czn_p10_pub(void) { return P10; }
