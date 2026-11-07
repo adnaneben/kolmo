@@ -367,6 +367,7 @@ static int rec_period(const uint8_t *s, size_t n) {
 
 static int zcost_level = 3;
 static size_t zcost(ZSTD_CCtx *zc, const uint8_t *b, size_t n, uint8_t *tmp, size_t cap) { size_t r = ZSTD_compressCCtx(zc, tmp, cap, b, n, zcost_level); return ZSTD_isError(r) ? n : r; }
+static size_t zcost1(ZSTD_CCtx *zc, const uint8_t *b, size_t n, uint8_t *tmp, size_t cap) { size_t r = ZSTD_compressCCtx(zc, tmp, cap, b, n, 1); return ZSTD_isError(r) ? n : r; }
 
 typedef struct { const uint8_t *A; size_t n; int P; ZSTD_CCtx *zc; uint8_t *eb, *zb; size_t ecap, zcap; } rsearch_t;
 static size_t rec_best(rsearch_t *S, int o, int w, int *kind, double *qc) {

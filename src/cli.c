@@ -1,4 +1,4 @@
-/* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n] [-D dict] in out
+/* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n|-q] [-D dict] in out
  *                    kolmo -s ...                         (streaming: bounded memory, large inputs)
  *                    kolmo -d [-T threads] [-D dict] in out  (auto-detects one-shot vs streamed)
  *                    kolmo -r offset:length in out        (random access read)
@@ -22,20 +22,21 @@ static void spit(const char *p, const uint8_t *b, size_t n) {
 int main(int argc, char **argv) {
     czn_params P = {CZN_FAST, 0, 0, 0, 1}; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
     char *dictpath = NULL, *trainpath = NULL;
-    while ((opt = getopt(argc, argv, "m:l:T:B:ndr:sS:D:t:")) != -1) switch (opt) {
+    while ((opt = getopt(argc, argv, "m:l:T:B:nqdr:sS:D:t:")) != -1) switch (opt) {
         case 'm': P.mode = !strcmp(optarg, "rt") ? CZN_RT : !strcmp(optarg, "fast") ? CZN_FAST : !strcmp(optarg, "eco") ? CZN_ECO :
                          !strcmp(optarg, "max") ? CZN_MAX : !strcmp(optarg, "ultra") ? CZN_ULTRA : CZN_HC; break;
         case 'l': P.level = atoi(optarg); break;
         case 'T': P.threads = atoi(optarg); break;
         case 'B': P.block = (uint32_t)(atof(optarg) * 1048576); break;
         case 'n': P.transforms = 0; break;
+        case 'q': P.transforms = 2; break;
         case 'd': dec = 1; break;
         case 'r': range = optarg; break;
         case 's': stream = 1; break;
         case 'S': stream = 1; seg = atoi(optarg); break;
         case 'D': dictpath = optarg; break;
         case 't': trainpath = optarg; break;
-        default: fprintf(stderr, "usage: kolmo [-m rt|fast|eco|hc|max|ultra] [-l lvl] [-T thr] [-B MiB] [-n] [-D dict] [-s|-S segMiB] | -d [-D dict] | -r off:len | -t dict samples...  in out\n"); return 2;
+        default: fprintf(stderr, "usage: kolmo [-m rt|fast|eco|hc|max|ultra] [-l lvl] [-T thr] [-B MiB] [-n|-q] [-D dict] [-s|-S segMiB] | -d [-D dict] | -r off:len | -t dict samples...  in out\n"); return 2;
     }
 
     /* Training mode: concatenate the sample files given as positional args and write a dictionary. */

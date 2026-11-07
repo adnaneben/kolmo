@@ -1195,7 +1195,10 @@ static int json_lines(const uint8_t *s, size_t h) {
 }
 
 /* file-level analysis: one plan for every block */
-static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int structured, int strong) {
+/* light: the cheap analysis of the fastest settings: no JSON, log or word trials (whose transforms are also the slow
+ * ones), and binary candidates scored by zstd -1 on a 256 KiB slice instead of zstd -3 on 1 MiB */
+static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int structured, int strong, int light) {
+    if (light) logs = 0;
     plan_t pl = {T_NONE, 0, 0, 0};
     if (n < 4096) return pl;
     size_t h = n < 65536 ? n : 65536, pr = 0;
@@ -1287,7 +1290,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     /* structure-aware candidates (16-bit image, fixed records) against the shuffle and plain coding, scored by zstd -3
      * on a slice of up to 1 MiB from the middle of the input; kept only when at least 3% smaller */
     if (structured && n >= (1u << 18)) {
-        size_t L = n / 4 < (1u << 20) ? n / 4 : (1u << 20), st = (n / 2 - L / 2) & ~(size_t)7;
+        size_t LM = light ? (1u << 18) : (1u << 20), L = n / 4 < LM ? n / 4 : LM, st = (n / 2 - L / 2) & ~(size_t)7;
+#define zcost(zc, b, n, tmp, cap) (light ? zcost1(zc, b, n, tmp, cap) : zcost(zc, b, n, tmp, cap))
         size_t bc = L * 2 + 1024; uint8_t *buf = malloc(bc), *zb = malloc(ZSTD_compressBound(bc));
         size_t zcap = ZSTD_compressBound(bc);
         double plain = (double)zcost(zc, s + st, L, zb, zcap) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
@@ -1319,6 +1323,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         }
         if (chosen >= 2) pl = keep;
         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
+#undef zcost
         free(buf); free(zb);
     }
     ZSTD_freeCCtx(zc);
@@ -1599,7 +1604,7 @@ static int64_t compress_impl(const uint8_t *src, size_t n, uint8_t *dst, size_t 
     cz_plan_threads = p->threads > 0 ? p->threads : default_threads();
     for (uint32_t g = 0; g < nseg; g++) {
         const uint8_t *s0 = src + ss[g]; size_t len = (size_t)(se[g] - ss[g]);
-        plan_t pl = p->transforms ? make_plan(s0, len, p->mode >= CZN_ECO, p->mode != CZN_RT, p->mode != CZN_RT, p->mode >= CZN_MAX) : (plan_t){T_NONE, 0, 0, 0};
+        plan_t pl = p->transforms ? make_plan(s0, len, p->mode >= CZN_ECO, p->mode != CZN_RT, p->mode != CZN_RT, p->mode >= CZN_MAX, p->transforms == 2) : (plan_t){T_NONE, 0, 0, 0};
         if (p->mode == CZN_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;   /* rt keeps LZ4 decode speed */
         if (p->mode == CZN_ULTRA && !ultra_keep_transform(s0, len, &pl)) { free(pl.fs); pl.fs = NULL; pl.t = T_NONE; }
         plans[g] = pl;

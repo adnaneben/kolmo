@@ -1,0 +1,9 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+zstd 1.5.7 -1,443.81,1214.07,211957760,73193862,34.53,/home/claude/bench_data/silesia.tar
+zstd 1.5.7 -2,379.76,1152.76,211957760,69309925,32.70,/home/claude/bench_data/silesia.tar
+zstd 1.5.7 -3,209.59,981.45,211957760,66133628,31.20,/home/claude/bench_data/silesia.tar
+zstd 1.5.7 -5,120.92,878.17,211957760,62741008,29.60,/home/claude/bench_data/silesia.tar
+kolmo 1.0.0 -1,323.61,966.66,211957760,64282605,30.33,/home/claude/bench_data/silesia.tar
+kolmo 1.0.0 -2,294.77,1149.69,211957760,61239178,28.89,/home/claude/bench_data/silesia.tar
+kolmo 1.0.0 -3,234.03,1107.15,211957760,59066033,27.87,/home/claude/bench_data/silesia.tar
+kolmo 1.0.0 -4,131.80,827.81,211957760,58260468,27.49,/home/claude/bench_data/silesia.tar

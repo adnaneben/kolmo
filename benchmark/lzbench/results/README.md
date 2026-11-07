@@ -18,3 +18,19 @@ kolmo level 9 (`ultra`) after the CM model-2 work, same harness and machine: **1
 
 kolmo level 9 (`ultra`): **17.01% (5.88×)** at 0.25 MB/s compress, 0.29 MB/s decompress (1.0.0: 17.91% at
 0.28 / 0.37 MB/s; zpaq -5: 19.09% at 0.39 / 0.39 MB/s).
+
+## `silesia-2026-11-08-fast-quick.csv` — quick analysis (`-q`) for the fast tier
+
+New ladder levels 1–3 use quick analysis (`kolmo -m fast -l N -q`): only the cheap structure transforms, scored with
+zstd -1 on a 256 KiB slice. Two rounds on this VM (speeds vary by about ±15% between rounds; ratios are exact):
+
+| Entry | Ratio | Compress (2 rounds) | Decompress |
+|---|---|---|---|
+| zstd -1 | 34.53% | 444–459 MB/s | 1.2–1.5 GB/s |
+| zstd -2 | 32.70% | 374–380 MB/s | 1.15–1.42 GB/s |
+| **kolmo -1** (`fast -l1 -q`) | **30.33%** | 324–382 MB/s | 0.97–1.15 GB/s |
+| zstd -3 | 31.20% | 210–232 MB/s | 0.98–1.05 GB/s |
+| **kolmo -2** (`fast -l2 -q`) | **28.89%** | 294 MB/s | 0.99–1.15 GB/s |
+| **kolmo -3** (`fast -q`) | **27.87%** | 210–234 MB/s | 1.1 GB/s |
+| zstd -5 | 29.60% | 110–121 MB/s | 0.88–0.91 GB/s |
+| kolmo -4 (`fast`) | 27.49% | 132–141 MB/s | 0.83–0.98 GB/s |

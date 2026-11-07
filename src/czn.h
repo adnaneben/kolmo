@@ -22,7 +22,8 @@ typedef struct {
     int level;          /* 0 = mode default; otherwise codec level */
     int threads;        /* 0 = all cores */
     uint32_t block;     /* bytes per block, 0 = default (4 MiB for rt/fast, 16 MiB for eco/hc, 128 MiB for max and ultra) */
-    int transforms;     /* 1 = analyse and transform (default), 0 = codec only */
+    int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap
+                           structure transforms (images, records, executables, tables), for the fastest settings */
 } czn_params;
 
 #define CZN_ERR_CORRUPT   (-1)
