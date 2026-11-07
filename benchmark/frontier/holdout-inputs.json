@@ -1,0 +1,68 @@
+{
+  "akiyo": {
+    "artifact_sha256": "df88d83cbf6d99f3ec41f2c1fd2e67665d2a71ff8caa08f8b6bc46bf4567ea2e",
+    "frames": 300,
+    "height": 144,
+    "layout": "yuv420p",
+    "rate": "30000/1001",
+    "source_bytes": 11406644,
+    "target_bytes": 11404800,
+    "target_sha256": "e1efee0e95c6d27aefe2294a727768334db8466e67bf4a49cf8f5b2fb8b49108",
+    "url": "https://media.xiph.org/video/derf/y4m/akiyo_qcif.y4m",
+    "width": 176
+  },
+  "bsub": {
+    "artifact_sha256": "1a9e4f66533db783e9ecb6727355993a16a00ef36fa512dcac2de39eff1ae8c5",
+    "source_bytes": 1248396,
+    "target_bytes": 4268374,
+    "target_sha256": "59c09816fb55fb1a0b42d0715f627bb42018a19c6bf933c9cb37f6058ee4737e",
+    "url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/009/045/GCF_000009045.1_ASM904v1/GCF_000009045.1_ASM904v1_genomic.fna.gz"
+  },
+  "cellar": {
+    "artifact_sha256": "02c7e60ae7788c2cb6898a0a46985d759f1e62482ddd965a374dfd09a2a8390f",
+    "bits": 16,
+    "channels": 2,
+    "layout": "s16le",
+    "rate": 44100,
+    "samples": 308700,
+    "source_bytes": 549954,
+    "target_bytes": 1234800,
+    "target_sha256": "3b489985f9b2c217dea35cf80c3ae967b3d09d1de62b6e009aacac212428e404",
+    "url": "https://raw.githubusercontent.com/ietf-wg-cellar/flac-test-files/main/subset/01%20-%20blocksize%204096.flac"
+  },
+  "chr22": {
+    "artifact_sha256": "05f9d97d6fbfd08a44ca45b50837ca2ae9c471f35ba79dffec04d2cb5eaaf695",
+    "source_bytes": 12255678,
+    "target_bytes": 51834845,
+    "target_sha256": "ce3ee1ca39356238f7aee438a40a88b4f1b9d80b316b263e16fb12402212d10f",
+    "url": "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/chromosomes/chr22.fa.gz"
+  },
+  "coffee": {
+    "artifact_sha256": "cc02f8ca188b167c775a7101b5d767d1e71792cf762c33d6fa15a4599b5a8de7",
+    "height": 400,
+    "layout": "rgb24",
+    "source_bytes": 466706,
+    "target_bytes": 720000,
+    "target_sha256": "0ce2b51640b9c95f19617f03eabf40c3f0368589cc1ee1190b70966165ac184f",
+    "url": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.24.0/skimage/data/coffee.png",
+    "width": 600
+  },
+  "electricity": {
+    "rows": 153810,
+    "source_sha256": "eca7dee5ac6e53373cd0209bc05ba3383cd860bfa5d5e995f74fa78db8857c58",
+    "test_bytes": 47952469,
+    "test_rows": 115358,
+    "test_sha256": "f649749f59e9c76b47d2e671afacd3084f07b2c1a7dc380cbd207e5cb83c928c",
+    "train_bytes": 4194181,
+    "train_rows": 18979,
+    "train_sha256": "4106538568839f16e62d3538eac265bb0b3d29b5fef3f88c5041f04b6eb12162",
+    "url": "https://data.open-power-system-data.org/household_data/2020-04-15/household_data_15min_singleindex.csv"
+  },
+  "yeast": {
+    "artifact_sha256": "1ec41f951b35f2752d5065edeafe6972455609d4383fb36dae12519a60b27a73",
+    "source_bytes": 3843460,
+    "target_bytes": 12310392,
+    "target_sha256": "fe42735d3e6242f8c40b457a232940e34ef15eb4502717e54a34ed118face4c1",
+    "url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/146/045/GCF_000146045.2_R64/GCF_000146045.2_R64_genomic.fna.gz"
+  }
+}

@@ -1,6 +1,18 @@
 /* czn — native core of the cz compressor. See czn.h. */
 #define _GNU_SOURCE
 #include "czn.h"
+#ifdef CZN_FRONTIER
+#include "experimental/frontier_dna.h"
+#include "experimental/frontier_table.h"
+#include "experimental/frontier_prefix.h"
+#include "experimental/frontier_runs.h"
+#include "experimental/frontier_pcm.h"
+#include "experimental/frontier_lag.h"
+#include "experimental/frontier_shuffle.h"
+#define CZN_MAX_VERSION 6
+#else
+#define CZN_MAX_VERSION 5
+#endif
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -1044,6 +1056,9 @@ static inline void stw(uint8_t *p, uint64_t v, int w) {
 }
 #define SB 4096
 static void shuffle_fwd(const uint8_t *in, int64_t rows, int w, int c, int delta, uint8_t *out) {
+#ifdef CZN_FRONTIER
+    if (w == 2 && frontier_shuffle16(in, (size_t)rows, (unsigned)c, delta, out, 0)) return;
+#endif
     uint64_t prev[64] = {0}, tmp[SB]; uint64_t mask = w == 8 ? ~0ull : ((1ull << (8 * w)) - 1);
     for (int64_t r0 = 0; r0 < rows; r0 += SB) {
         int64_t nb = rows - r0 < SB ? rows - r0 : SB;
@@ -1056,6 +1071,9 @@ static void shuffle_fwd(const uint8_t *in, int64_t rows, int w, int c, int delta
     }
 }
 static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta, uint8_t *out) {
+#ifdef CZN_FRONTIER
+    if (w == 2 && frontier_shuffle16(in, (size_t)rows, (unsigned)c, delta, out, 1)) return;
+#endif
     uint64_t prev[64] = {0}, tmp[SB]; uint64_t mask = w == 8 ? ~0ull : ((1ull << (8 * w)) - 1);
     for (int64_t r0 = 0; r0 < rows; r0 += SB) {
         int64_t nb = rows - r0 < SB ? rows - r0 : SB;
@@ -1070,7 +1088,7 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 }
 
 /* ------------------------------------------------------------------ codecs */
-enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7 };
+enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11 };
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8 };
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
  * so repeated calls to one target produce identical bytes. Encoded back to front and decoded front to back (as in
@@ -1291,7 +1309,11 @@ static inline void put64(uint8_t *p, uint64_t v) { memcpy(p, &v, 8); }
 static inline uint32_t get32(const uint8_t *p) { uint32_t v; memcpy(&v, p, 4); return v; }
 static inline uint64_t get64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }
 
-typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; } plan_t;   /* tp/tbl: a=delim b=quotes c=k-1 | shuf: a=w b=ch c=delta; fs: formulas (encoder) */
+typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm;
+#ifdef CZN_FRONTIER
+    frontier_lags lags;
+#endif
+} plan_t;   /* tp/tbl: a=delim b=quotes c=k-1 | shuf: a=w b=ch c=delta; fs: formulas (encoder) */
 
 static int default_threads(void) { long n = sysconf(_SC_NPROCESSORS_ONLN); return n > 0 ? (int)n : 1; }
 
@@ -1510,9 +1532,9 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     while (pos < n) {
         size_t end = B < n - pos ? pos + B : n;
         if (pl.t == T_REC && pos == 0) end = (size_t)pl.rec->h + B < n ? (size_t)pl.rec->h + B : n;
-        if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG) && end < n) {
+        if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG || pl.experimental_table) && end < n) {
             size_t lo = pos + B / 2, e = end;
-            if (fd >= 0 && pl.wide) {
+            if (fd >= 0 && (pl.wide || pl.experimental_table)) {
                 /* Avoid faulting a sparse page from the planning map at every
                  * boundary of a large file. Search the same bytes backwards. */
                 uint8_t tail[4096];
@@ -1634,6 +1656,21 @@ static void *compress_worker(void *arg) {
         const uint8_t *in = raw; size_t meta = 0; int tflag = 0; unsigned modes = 0;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
+#ifdef CZN_FRONTIER
+        size_t trial_len = 0;
+        if (!J->dict && J->default_level) {
+            if (pl.experimental_table)
+                trial_len = frontier_table_encode(raw, len, pl.experimental_table, tbuf, len + TSLACK);
+            else if (pl.lags.near)
+                trial_len = frontier_lag_encode(raw, len, &pl.lags, tbuf, len + TSLACK);
+        }
+        if (trial_len) {
+            put32(sl, (uint32_t)trial_len);
+            slot[0] = T_TBL; slot[1] = (uint8_t)pl.experimental_table;
+            slot[2] = slot[3] = 0; tflag = pl.experimental_table ? 10 : 11;
+            meta = 4; in = tbuf; modes |= 4;
+        } else
+#endif
         if (pl.t == T_TP && len) {
             int k = pl.c + 1; int64_t colsz[256];
             int quoted = pl.b && (memchr(raw, '"', len) || memchr(raw, '[', len) || memchr(raw, ']', len));
@@ -1670,12 +1707,40 @@ static void *compress_worker(void *arg) {
         } else if (pl.t == T_X86 && len) {
             memcpy(tbuf, raw, len); e8e9_fwd(tbuf, len); in = tbuf; tflag = 8;
         }
-        size_t inlen = (tflag >= 3 && tflag <= 7) || tflag == 9 ? get32(sl) : len;
-        int codec = J->codec, level = pl.wide && J->default_level ? 1 : J->level;
+        size_t inlen = (tflag >= 3 && tflag <= 7) || tflag >= 9 ? get32(sl) : len;
+        int codec = J->codec, level = (pl.wide || tflag >= 10) && J->default_level ? 1 : J->level;
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
         if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         if (codec == C_ZSTD && level == 19 && tflag == 9) level = CZ_HC_TEXT_LEVEL;                                  /* hc text: ultra level */
-        size_t cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
+        size_t cl = 0;
+#ifdef CZN_FRONTIER
+#ifdef CZN_FRONTIER_PATCHED_PCM
+        if (pl.experimental_pcm && !J->dict && J->default_level) {
+            cl = frontier_pcm_encode(raw, len, pl.experimental_pcm, sl, J->slot);
+            if (cl) {
+                codec = C_PCM; tflag = 0; meta = 0; modes |= 4;
+                memset(slot, 0, 4);
+            }
+        }
+#endif
+        if (pl.experimental_dna && !J->dict && J->default_level) {
+            size_t packed = frontier_dna_encode(raw, len, tbuf, J->B + TSLACK);
+            if (packed) {
+                cl = frontier_runs_encode(tbuf, packed, sl, J->slot);
+                if (cl) codec = C_DNA_RUNS;
+                else {
+                    cl = frontier_prefix_encode(tbuf, packed, sl, J->slot);
+                    if (cl) codec = C_DNA_PREFIX;
+                    else { memcpy(sl, tbuf, packed); cl = packed; codec = C_DNA; }
+                }
+                modes |= 4;
+            }
+        }
+#endif
+#ifdef CZN_FRONTIER_FAST_PCM
+        if (pl.experimental_pcm && !J->dict && J->default_level && codec == C_ZSTD) level = 1;
+#endif
+        if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
         if (codec == C_CM) {                          /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             if (alt) {
@@ -1808,18 +1873,78 @@ static uint32_t segments(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se,
     return k;
 }
 
+#ifdef CZN_FRONTIER
+/* Select the wider layout against the incumbent bytes on the same complete
+ * records. All buffers are bounded by the sample size, independent of input. */
+static int prefer_frontier_table(const uint8_t *src, size_t n, const plan_t *pl, uint8_t delim) {
+    size_t sample = n < (192u << 10) ? n : (192u << 10);
+    while (sample && src[sample - 1] != '\n') --sample;
+    if (sample < 8192) return 0;
+    size_t cap = sample + TSLACK;
+    uint8_t *tmp = malloc(cap + 64);
+    size_t bound = ZSTD_compressBound(cap);
+    uint8_t *z = malloc(bound);
+    ZSTD_CCtx *ctx = ZSTD_createCCtx();
+    int keep = 0;
+    if (!tmp || !z || !ctx) goto done;
+    size_t trial = frontier_table_encode(src, sample, delim, tmp, cap);
+    if (!trial) goto done;
+    size_t candidate = ZSTD_compressCCtx(ctx, z, bound, tmp, trial, 1);
+    if (ZSTD_isError(candidate)) goto done;
+    const uint8_t *previous = src;
+    size_t bytes = sample;
+    if (pl->t == T_TBL) {
+        int64_t count = tbl2_encode(src, sample, pl->a, pl->c + 1, pl->b, pl->fs, tmp, NULL);
+        if (count > 0) { previous = tmp; bytes = (size_t)count; }
+    } else if (pl->t == T_TP) {
+        int64_t sizes[256];
+        if (pl->wide) tpq_wide_fwd(src, sample, pl->a, tmp, sizes);
+        else transpose_fwd(src, sample, pl->a, pl->c + 1, pl->b, tmp, sizes);
+        previous = tmp;
+    } else if (pl->t != T_NONE) goto done;
+    size_t reference = ZSTD_compressCCtx(ctx, z, bound, previous, bytes, pl->wide ? 1 : 3);
+    if (!ZSTD_isError(reference))
+        keep = 100 * (candidate + 4) < 97 * (reference + (pl->t == T_TP ? 4 * (pl->c + 1) : 4));
+done:
+    ZSTD_freeCCtx(ctx); free(tmp); free(z);
+    return keep;
+}
+#endif
+
 typedef struct {
     const uint8_t *src; const uint64_t *starts, *ends;
     plan_t *plans; const czn_params *params;
-    uint32_t count; int threads_per_plan; atomic_uint next;
+    uint32_t count; int threads_per_plan, allow_frontier; atomic_uint next;
 } plan_job;
 static void *plan_worker(void *arg) {
     plan_job *j = arg; const czn_params *p = j->params;
     for (;;) {
         uint32_t g = atomic_fetch_add(&j->next, 1); if (g >= j->count) break;
         const uint8_t *src = j->src + j->starts[g]; size_t len = j->ends[g] - j->starts[g];
+#ifdef CZN_FRONTIER
+        if (j->allow_frontier && frontier_dna_probe(src, len)) {
+            j->plans[g] = (plan_t){.experimental_dna = 1};
+            continue;
+        }
+#endif
         plan_t pl = p->transforms ? make_plan(src, len, p->mode >= CZN_ECO,
             p->mode != CZN_RT, p->mode != CZN_RT, j->threads_per_plan) : (plan_t){0};
+#ifdef CZN_FRONTIER
+        uint8_t delim = 0;
+        if (j->allow_frontier && frontier_table_probe(src, len, &delim) && prefer_frontier_table(src, len, &pl, delim))
+            pl.experimental_table = delim;
+#if defined(CZN_FRONTIER_PATCHED_PCM) || defined(CZN_FRONTIER_FAST_PCM)
+        else if (j->allow_frontier && pl.t == T_SHUF && pl.a == 2)
+            pl.experimental_pcm = frontier_pcm_probe(src, len);
+#endif
+#ifdef CZN_FRONTIER_LAG
+        else if (j->allow_frontier &&
+                 (pl.t == T_IMG || pl.t == T_REC || pl.t == T_NONE) && !looks_text(src,len)) {
+            frontier_lags trial = {0};
+            if (frontier_lag_probe(src, len, &trial)) pl.lags = trial;
+        }
+#endif
+#endif
         if (p->mode == CZN_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;
         if (p->mode == CZN_ULTRA && !ultra_keep_transform(src, len, &pl)) {
             free(pl.fs); pl.fs = NULL; pl.t = T_NONE;
@@ -1867,10 +1992,11 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     if (!plans || !starts || !bplan || !rstart) goto cleanup;
     /* Parallelize independent members, or formula discovery within a single
      * member. Never multiply the two thread budgets. Plans remain in input order. */
-    plan_job planning = {src, ss, se, plans, p, nseg, nseg > 1 ? 1 : threads};
+    plan_job planning = {src, ss, se, plans, p, nseg, nseg > 1 ? 1 : threads,
+                         p->transforms && p->mode == CZN_FAST && !p->level && !dict};
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
-    if (!p->block && nseg == 1 && plans[0].wide && B > (2u << 20)) B = 2u << 20;
+    if (!p->block && nseg == 1 && (plans[0].wide || plans[0].experimental_table) && B > (2u << 20)) B = 2u << 20;
     for (uint32_t g = 0; g < nseg; g++) {
         const uint8_t *s0 = src + ss[g]; size_t len = (size_t)(se[g] - ss[g]);
         plan_t pl = plans[g];
@@ -1942,7 +2068,7 @@ cleanup:
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }
-    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = czn_crc32c(0, dst, 28); hc = czn_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
@@ -1959,7 +2085,7 @@ int64_t czn_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, con
 typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict; uint32_t dictid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
 
 static int parse(const uint8_t *s, size_t n, parsed_t *P, const czn_decode_limits *limits) {
-    if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > 5) return CZN_ERR_CORRUPT;
+    if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > CZN_MAX_VERSION) return CZN_ERR_CORRUPT;
     P->ver = s[4]; P->psum = P->ver >= 3 && (s[10] & 1);
     P->needdict = P->ver >= 3 && (s[10] & 2); P->dictid = P->needdict ? get32(s + 6) : 0;
     P->orig = get64(s + 12); P->nb = get32(s + 20);
@@ -2006,6 +2132,17 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         pl.t = pay[0]; pl.a = pay[1]; pl.b = pay[2]; pl.c = pay[3]; pay += 4; cl -= 4;
         if (pl.t > T_WORD) return CZN_ERR_CORRUPT;
     }
+#ifdef CZN_FRONTIER
+    if (tflag == 10 || tflag == 11) {
+        if (P->ver < 6 || P->psum || pl.t != T_TBL || codec != C_ZSTD || cl < 4) return CZN_ERR_CORRUPT;
+        size_t bytes = get32(pay);
+        if (bytes > len + TSLACK || codec_decompress(x, codec, pay + 4, cl - 4, tbuf, bytes)) return CZN_ERR_CORRUPT;
+        int error = tflag == 10 ? frontier_table_decode(tbuf, bytes, (uint8_t)pl.a, out, len)
+                                : frontier_lag_decode(tbuf, bytes, out, len);
+        if (error) return CZN_ERR_CORRUPT;
+        return blk_sum(P->ver, out, len) == get32(e + 8) ? 0 : CZN_ERR_CHECKSUM;
+    }
+#endif
     if (tflag && pl.t == T_TP) meta = 4 * (size_t)(pl.c + 1);
     if ((tflag >= 3 && tflag <= 7) || tflag == 9) meta = 4;
     int maxf = pl.t == T_TP ? 2 : pl.t == T_TBL ? 4 : pl.t == T_LOG ? 5 : pl.t == T_IMG ? 6 : pl.t == T_REC ? 7 : pl.t == T_X86 ? 8 : pl.t == T_WORD ? 9 : 1;
@@ -2016,6 +2153,23 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     uint8_t *tgt = (tflag && tflag != 8) ? tbuf : out;
     size_t dlen = len;
     if ((tflag >= 3 && tflag <= 7) || tflag == 9) { dlen = get32(pay); if (dlen > len + TSLACK) return CZN_ERR_CORRUPT; }
+#ifdef CZN_FRONTIER
+    if (codec == C_PCM) {
+        if (P->ver < 6 || tflag || pl.t != T_NONE || frontier_pcm_decode(pay, cl, out, len)) return CZN_ERR_CORRUPT;
+    } else if (codec == C_DNA || codec == C_DNA_PREFIX || codec == C_DNA_RUNS) {
+        if (P->ver < 6 || tflag || pl.t != T_NONE) return CZN_ERR_CORRUPT;
+        if (codec != C_DNA) {
+            if (cl < 4) return CZN_ERR_CORRUPT;
+            size_t bytes = get32(pay);
+            if (bytes > len) return CZN_ERR_CORRUPT;
+            int error = codec == C_DNA_PREFIX ? frontier_prefix_decode(pay, cl, tbuf, bytes)
+                                              : frontier_runs_decode(pay, cl, tbuf, bytes);
+            if (error) return CZN_ERR_CORRUPT;
+            pay = tbuf; cl = bytes;
+        }
+        if (frontier_dna_decode(pay, cl, out, len)) return CZN_ERR_CORRUPT;
+    } else
+#endif
     if (codec_decompress(x, codec, pay + meta, cl - meta, tgt, dlen)) return CZN_ERR_CORRUPT;
     if (tflag == 3) { if (tbl_decode(tbuf, dlen, (uint8_t)pl.a, out, len)) return CZN_ERR_CORRUPT; }
     else if (tflag == 4) { if (tbl2_decode(tbuf, dlen, (uint8_t)pl.a, out, len)) return CZN_ERR_CORRUPT; }
@@ -2219,7 +2373,7 @@ int64_t czn_decompress_file(int input_fd, int output_fd, size_t n, int threads,
     if (read_block(input_fd, header, HDR, 0)) return CZN_ERR_IO;
     int64_t size = czn_original_size(header, HDR);
     uint32_t nb = get32(header + 20);
-    if (size < 0 || header[4] < 1 || header[4] > 5 || nb > (n - HDR) / IDX) return CZN_ERR_CORRUPT;
+    if (size < 0 || header[4] < 1 || header[4] > CZN_MAX_VERSION || nb > (n - HDR) / IDX) return CZN_ERR_CORRUPT;
     size_t index_size = HDR + (size_t)nb * IDX;
     uint8_t *index = malloc(index_size);
     if (!index) return CZN_ERR_ALLOC;

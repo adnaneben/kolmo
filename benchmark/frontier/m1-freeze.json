@@ -1,0 +1,33 @@
+{
+  "binaries": {
+    "baseline": "1b22d277569dd5ce99f548ac0bc2b8701700cd8f9c3efdef5fe3ec95be74fc43",
+    "candidate": "a4898bf1bae2be34ee16d1020e622ed8c955aa244d29b5a078de17ff73bcc062",
+    "candidate_library": "2b767a58ea0c49c88702ea4cd8d407929da2e164114b029a3d8865e0a8e1bf15",
+    "cossmic_graph": "57171494ad1072a31c4980fcf74ac7c00211dbc52e2d0b74e24167ded11a920e",
+    "ennaf": "e7a4c748961d927fd2fd83f15f413e4c5af4743dd714cba8f7fc116cd542b9d4",
+    "ffmpeg": "6d175a4743ca50256e89a8cdd731100f9cee33bd79aeea46894d209410dc6617",
+    "flac": "4747b784710cb558f06edb9001e4eab8f0e7e292802911c398340feddfbe1bdd",
+    "grid_graph": "3b31a7ca26f9b58c826c9209c1f34b4d9738a0d29c07405cf0616e4ae9636862",
+    "harness": "d2e3a9aeb9e8d28fa26faa83a70e6519912a2c2b55b0052f478a95ad6dc27195",
+    "portugal_graph": "81fb2c891da7272f6c21873109a7176cd5df4deb87edab4a5a76defd047bc2d0",
+    "release": "d3229132875ef09d5dd417895f367de414e0988e576999678e67d2cc8547bca2",
+    "unnaf": "0b49b88a33d88fdf25f3a8c3e8486b075f4d0f29a61c63d7a6c54b82eb2b7892",
+    "zli": "6d831ea6fef6417cd6386f956f17ec46e4487a96b9eb1808c207f55b7b134dbb",
+    "zstd": "8c6ba2cfb4734f62e33488bb4ab767c2936ec8b2992fe0abd91d73fdeccce835"
+  },
+  "candidate_source": "2c0aeeea8acd70fb2dafa44eb733a4692aef5261",
+  "protocol": "386fc8b53a35aa7cd5c9589ad701b361b85d59abc20bbad9cac26284136c4fdd",
+  "runners": {
+    "confirm.py": "1d32fcba42b643ec0468916c7622f9d31e3a9a172bd5b9abadf5866d216c829a",
+    "file_trials.py": "96158521e5d45a304acb5a2f9a0508183c7dfc23ec64de4eb5d663fd30fda101"
+  },
+  "system": "macOS-27.2-arm64-arm-64bit",
+  "training": {
+    "graph_bytes": 14876,
+    "graph_sha256": "57171494ad1072a31c4980fcf74ac7c00211dbc52e2d0b74e24167ded11a920e",
+    "peak_rss_bytes": 454098944,
+    "seconds": 22.30018775,
+    "train_sha256": "4106538568839f16e62d3538eac265bb0b3d29b5fef3f88c5041f04b6eb12162",
+    "trainer_sha256": "6d831ea6fef6417cd6386f956f17ec46e4487a96b9eb1808c207f55b7b134dbb"
+  }
+}
