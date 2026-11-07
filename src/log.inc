@@ -493,4 +493,5 @@ done:
 
 static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap) { return log_encode_m(in, n, dst, cap, 0); }
 int64_t log_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap) { return log_encode(in, n, dst, cap); }
+int64_t log_encode_json_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap) { return log_encode_m(in, n, dst, cap, 1); }
 int log_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n) { return log_decode(in, tn, out, n); }

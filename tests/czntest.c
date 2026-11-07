@@ -15,6 +15,7 @@ int parse_dec_pub(const uint8_t *p, uint32_t len, int64_t *m, int *sc);
 const int64_t *czn_p10_pub(void);
 int64_t log_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
 int log_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
+int64_t log_encode_json_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
 int64_t sci_encode_pub(const uint8_t *in, size_t n, int image, uint8_t *dst, size_t cap);
 int sci_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
 int64_t word_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
@@ -164,6 +165,40 @@ int main(void) {
         }
         printf("log codec fuzz: 4000 corrupt streams decoded without crashing\n");
         free(t); free(o); free(e); free(lg);
+    }
+    /* JSON lines: escapes, nesting, all scalar kinds, odd spacing, a 0x01 line, malformed lines, pretty-printed JSON */
+    {
+        size_t N = 3u << 20, q = 0; uint8_t *js = malloc(N + 4096); long id = 1000;
+        const char *nm[] = {"alpha", "be\\\"ta", "gam ma", "d\\u00e9lta", "\xc3\xa9psilon"};
+        while (q + 2000 < N) {
+            int k = (int)(rnd() % 20); id += 1 + (long)(rnd() % 5);
+            if (k < 12) q += sprintf((char *)js + q, "{\"id\":%ld,\"name\":\"%s\",\"score\":%d.%02d,\"ok\":%s,\"tags\":[\"a\",\"b%d\"],\"geo\":{\"lat\":-%d.%04d,\"lon\":%de%d},\"note\":%s}\n",
+                                     id, nm[rnd() % 5], (int)(rnd() % 1000), (int)(rnd() % 100), rnd() % 2 ? "true" : "false", (int)(rnd() % 9),
+                                     (int)(rnd() % 90), (int)(rnd() % 10000), (int)(rnd() % 9), (int)(rnd() % 5), rnd() % 3 ? "null" : "\"x: y, z\"");
+            else if (k < 16) q += sprintf((char *)js + q, "{ \"id\" : %ld , \"name\" : \"%s\" , \"vals\" : [ %d, %d, -%d ] }\n", id, nm[rnd() % 5], (int)(rnd() % 50), (int)(rnd() % 50), (int)(rnd() % 50));
+            else if (k < 17) q += sprintf((char *)js + q, "{\"id\":%ld,\"raw\":\"\x01\",\"n\":%d}\n", id, (int)(rnd() % 10));
+            else if (k < 18) q += sprintf((char *)js + q, "{\"id\":%ld,\"broken\":\"unterminated %d\n", id, (int)(rnd() % 10));
+            else if (k < 19) q += sprintf((char *)js + q, "[%ld,\"\\\\\",\"\\\\\\\"\",1.5E+10,-0.0,true]\n", id);
+            else q += sprintf((char *)js + q, "{\n  \"id\": %ld,\n  \"items\": [\n    {\"k\": \"v%d\", \"n\": %d}\n  ]\n}\n", id, (int)(rnd() % 100), (int)(rnd() % 1000));
+        }
+        q += sprintf((char *)js + q, "{\"last\":\"no newline\"}");
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("json", js, q, (czn_mode)m, 1 << 18, T);
+        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = czn_compress(js, q, d, cap, &p0), c1 = czn_compress(js, q, d, cap, &p1);
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0) { printf("FAIL json transform not chosen (%lld vs %lld)\n", (long long)c1, (long long)c0); fails++; }
+            else printf("json lines: fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
+            free(d); }
+        size_t len = 1 << 18; while (len && js[len - 1] != '\n') len--;
+        uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
+        int64_t tn = log_encode_json_pub(js, len, t, len + 65536);
+        if (tn <= 0 || log_decode_pub(t, tn, o, len) || memcmp(o, js, len)) { printf("FAIL json codec roundtrip (%lld)\n", (long long)tn); fails++; }
+        for (int it = 0; it < 3000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            log_decode_pub(e, rnd() % 8 ? (size_t)tn : rnd() % tn, o, len);
+        }
+        printf("json codec fuzz: 3000 corrupt streams decoded without crashing\n");
+        free(t); free(o); free(e); free(js);
     }
     /* scientific binary: fixed records (header, quantised doubles incl. NaN/huge outliers, small ints, ids) and a
      * 16-bit image (big-endian, odd offset) */
