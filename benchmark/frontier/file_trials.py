@@ -24,9 +24,9 @@ def trial(source, expected, commands, work, lock):
             fcntl.flock(f, fcntl.LOCK_EX)
             et = measure(render(commands["encode"], paths))
             dt = measure(render(commands["decode"], paths))
-        recovered = digest(decoded)
-        return dict(size=frame.stat().st_size, frame_sha256=digest(frame), decoded_sha256=recovered,
-                    exact=(recovered == expected), encode=et, decode=dt)
+            recovered = digest(decoded)
+            return dict(size=frame.stat().st_size, frame_sha256=digest(frame), decoded_sha256=recovered,
+                        exact=(recovered == expected), encode=et, decode=dt)
 
 
 def run(source, codecs, work, dest, rounds=7):
@@ -35,18 +35,30 @@ def run(source, codecs, work, dest, rounds=7):
               (commands["encode"][0], commands["decode"][0])}
     result = dict(source_bytes=source.stat().st_size, source_sha256=expected,
                   binary_hashes=hashes, commands=codecs, rounds=rounds, trials=[])
+    if dest.exists():
+        previous = json.loads(dest.read_text())
+        if any(previous[k] != result[k] for k in result if k != "trials"):
+            raise ValueError(f"Input, executable or protocol changed since {dest}")
+        result["trials"] = previous["trials"]
+    finished = {(r["codec"], r["repeat"]) for r in result["trials"]}
     rng = random.Random(7610382)
     for rep in range(rounds + 1):
         order = list(codecs)
         rng.shuffle(order)
         for codec in order:
-            row = trial(source, expected, codecs[codec], work, work/"timing.lock")
+            if (codec, rep) in finished:
+                continue
+            try:
+                row = trial(source, expected, codecs[codec], work, work/"timing.lock")
+            except (OSError, RuntimeError) as exc:
+                row = dict(exact=False, error=str(exc))
             result["trials"].append(dict(codec=codec, repeat=rep, **row))
-        save(dest, result)
+            save(dest, result)
     result["metrics"] = {}
     for k in codecs:
         measured = [r for r in result["trials"] if r["codec"] == k and r["repeat"]]
-        if all(r["exact"] for r in measured) and len({r["size"] for r in measured}) == 1:
+        if (all(r["exact"] for r in result["trials"] if r["codec"] == k)
+                and len(measured) == rounds and len({r["size"] for r in measured}) == 1):
             result["metrics"][k] = dict(size=measured[0]["size"],
                 encode_ms=1000*median(r["encode"]["seconds"] for r in measured),
                 decode_ms=1000*median(r["decode"]["seconds"] for r in measured),
