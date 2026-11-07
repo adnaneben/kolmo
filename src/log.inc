@@ -133,10 +133,15 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
     uint8_t *keys = malloc(nl + L + 16);
     size_t tcap = (L + 1) * 2 + 1; while (tcap & (tcap - 1)) tcap &= tcap - 1; tcap *= 2;
     tent_t *tab = calloc(tcap, sizeof(tent_t)); uint32_t *order = malloc(4 * (L + 1)); uint32_t nt = 0; size_t kp = 0;
-    tok_t *tk = NULL; int64_t *scratch = NULL; uint32_t *rows = NULL, *rstart = NULL, *remap = NULL;
+    tok_t *tk = NULL, *tkg = NULL; size_t tkg_cap = 0; int64_t *scratch = NULL; uint32_t *rows = NULL, *rstart = NULL, *remap = NULL;
     uint32_t *tokb = malloc(4 * (L + 1)), *toks = malloc(4 * (nl + L + 2));    /* per line: first token; token starts */
+    /* constant placeholders are found in this first pass, while each line is in cache: per token, whether it is
+     * variable; per template, its first line, the offset of its flags (one per placeholder: identical on every line
+     * so far) and how many flags are still set. Same decisions as comparing every row with the first one afterwards. */
+    uint8_t *tvar = malloc(nl + L + 2), *tfl = malloc(nl + L + 2); size_t fp = 0;
+    uint32_t *tl0 = malloc(4 * (L + 1)), *tfo = malloc(4 * (L + 1)), *tsc = malloc(4 * (L + 1));
     Buf out = {0};
-    if (!lstart || !lid || !keys || !tab || !order || !tokb || !toks) goto done;
+    if (!lstart || !lid || !keys || !tab || !order || !tokb || !toks || !tvar || !tfl || !tl0 || !tfo || !tsc) goto done;
     { size_t i = 0; for (size_t l = 0; l < L; l++) { lstart[l] = (uint32_t)i; const uint8_t *q = memchr(in + i, '\n', nl - i); i = (size_t)(q - in) + 1; } lstart[L] = (uint32_t)nl; }
     if (tokb) tokb[L] = 0;
     /* templates */
@@ -147,15 +152,45 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
         for (;;) {
             uint32_t s = i; toks[ntok++] = s;
             const uint8_t *sp = memchr(p + i, ' ', len - i); i = sp ? (uint32_t)(sp - p) : len;
-            if (is_var_tok(p + s, i - s)) keys[kp++] = 1; else { memcpy(keys + kp, p + s, i - s); kp += i - s; }
+            if (is_var_tok(p + s, i - s)) { keys[kp++] = 1; tvar[ntok - 1] = 1; }
+            else { tvar[ntok - 1] = 0; memcpy(keys + kp, p + s, i - s); kp += i - s; }
             if (i == len) break;
             keys[kp++] = ' '; i++;
         }
         uint32_t klen = (uint32_t)(kp - k0); uint64_t h = czn_xxh3(keys + k0, klen, 0); size_t at = h & (tcap - 1);
         for (;;) {
             tent_t *e = &tab[at];
-            if (!e->cnt) { e->h = h; e->koff = (uint32_t)k0; e->klen = klen; e->cnt = 1; e->id = nt; order[nt++] = (uint32_t)at; lid[l] = e->id; break; }
-            if (e->h == h && e->klen == klen && !memcmp(keys + e->koff, keys + k0, klen)) { e->cnt++; lid[l] = e->id; kp = k0; break; }
+            if (!e->cnt) {
+                e->h = h; e->koff = (uint32_t)k0; e->klen = klen; e->cnt = 1; e->id = nt; order[nt++] = (uint32_t)at; lid[l] = e->id;
+                uint32_t id = e->id, c = 0; tl0[id] = (uint32_t)l; tfo[id] = (uint32_t)fp;
+                for (size_t j = tokb[l]; j < ntok; j++) {
+                    if (!tvar[j]) continue;
+                    uint32_t s0 = toks[j], e0 = j + 1 < ntok ? toks[j + 1] - 1 : len;
+                    uint8_t f = !memchr(p + s0, 1, e0 - s0) && !memchr(p + s0, '\n', e0 - s0);
+                    tfl[fp++] = f; c += f;
+                }
+                tsc[id] = c;
+                break;
+            }
+            if (e->h == h && e->klen == klen && !memcmp(keys + e->koff, keys + k0, klen)) {
+                e->cnt++; lid[l] = e->id; kp = k0;
+                uint32_t id = e->id;
+                if (tsc[id]) {          /* same key: same token count and placeholder positions as the first line */
+                    uint32_t l0 = tl0[id], b0 = tokb[l0], n0 = tokb[l0 + 1] - b0, len0 = lstart[l0 + 1] - lstart[l0] - 1;
+                    const uint8_t *p0 = in + lstart[l0]; uint8_t *f = tfl + tfo[id]; uint32_t q = 0;
+                    for (size_t j = tokb[l]; j < ntok && tsc[id]; j++) {
+                        if (!tvar[j]) continue;
+                        if (f[q]) {
+                            uint32_t k = (uint32_t)(j - tokb[l]);
+                            uint32_t s = toks[j], en = j + 1 < ntok ? toks[j + 1] - 1 : len;
+                            uint32_t s0 = toks[b0 + k], e0 = k + 1 < n0 ? toks[b0 + k + 1] - 1 : len0;
+                            if (en - s != e0 - s0 || memcmp(p + s, p0 + s0, en - s)) { f[q] = 0; tsc[id]--; }
+                        }
+                        q++;
+                    }
+                }
+                break;
+            }
             at = (at + 1) & (tcap - 1);
         }
     }
@@ -182,7 +217,7 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
         uint32_t s_ = toks[tokb[l_] + tix_], e_ = tix_ + 1 < nt_ ? toks[tokb[l_] + tix_ + 1] - 1 : len_; tk[i].p = p_ + s_; tk[i].len = e_ - s_; } while (0)
     for (uint32_t t = 0; t < nt; t++) {
         if (!remap[t]) continue;
-        uint32_t tt = remap[t], m = rstart[tt + 1] - rstart[tt];
+        uint32_t tt = remap[t];
         const uint8_t *k = keys + tab[order[t]].koff; uint32_t kl = tab[order[t]].klen, np = 0, ti = 0;
         for (uint32_t i = 0; i <= kl; i++) {
             if (i == kl || k[i] == ' ') { ti++; continue; }
@@ -192,9 +227,7 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
         k2off[t] = (uint32_t)k2; uint32_t q = 0;
         for (uint32_t i = 0; i < kl; i++) {
             if (k[i] != 1) { keys2[k2++] = k[i]; continue; }
-            int same = 1; LOG_TOK(0, q); tok_t t0 = tk[0];
-            for (uint32_t r = 0; r < t0.len; r++) if (t0.p[r] == 1 || t0.p[r] == '\n') same = 0;
-            for (uint32_t r = 1; r < m && same; r++) { LOG_TOK(r, q); same = tk[r].len == t0.len && !memcmp(tk[r].p, t0.p, t0.len); }
+            int same = tfl[tfo[t] + q]; LOG_TOK(0, q); tok_t t0 = tk[0];     /* flag from the first pass */
             keep[(size_t)t * 1024 + q] = (uint8_t)!same;
             if (same) { memcpy(keys2 + k2, t0.p, t0.len); k2 += t0.len; } else keys2[k2++] = 1;
             q++;
@@ -221,10 +254,26 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
             if (i == kl || k[i] == ' ') { ti++; continue; }
             if (k[i] == 1) { if (np < 1024) vpos[np] = ti; np++; }
         }
-        for (uint32_t q = 0; q < np; q++) {
-            if (!keep[(size_t)t * 1024 + q]) continue;
-            for (uint32_t i = 0; i < m; i++) LOG_TOK(i, q);
-            put_column(&out, tk, m, scratch);
+        /* the template's kept columns, in placeholder order. Rows are read once per group of columns (row-major, at
+         * most 64 MiB of token refs) instead of once per column; the columns and their order are unchanged. */
+        uint32_t kq[1024], nk = 0;
+        for (uint32_t q = 0; q < np; q++) if (keep[(size_t)t * 1024 + q]) kq[nk++] = q;
+        if (!nk) continue;
+        uint32_t G = (uint32_t)((64u << 20) / (sizeof(tok_t) * (size_t)m)); if (G < 1) G = 1; if (G > nk) G = nk;
+        if ((size_t)G * m > tkg_cap) { free(tkg); tkg_cap = (size_t)G * m; tkg = malloc(sizeof(tok_t) * tkg_cap); if (!tkg) tkg_cap = 0; }
+        tok_t *cb = tkg; if (!cb) { cb = tk; G = 1; }                     /* tk holds one column (L + 1 refs) */
+        for (uint32_t g0 = 0; g0 < nk; g0 += G) {
+            uint32_t gn = nk - g0 < G ? nk - g0 : G;
+            for (uint32_t i = 0; i < m; i++) {
+                uint32_t l_ = rows[rstart[tt] + i]; const uint8_t *p_ = in + lstart[l_]; uint32_t len_ = lstart[l_ + 1] - lstart[l_] - 1;
+                uint32_t b_ = tokb[l_], nt_ = (l_ + 1 < L ? tokb[l_ + 1] : (uint32_t)ntok) - b_;
+                for (uint32_t j = 0; j < gn; j++) {
+                    uint32_t q = kq[g0 + j], tix_ = vpos[q] < nt_ ? vpos[q] : nt_ - 1;
+                    uint32_t s_ = toks[b_ + tix_], e_ = tix_ + 1 < nt_ ? toks[b_ + tix_ + 1] - 1 : len_;
+                    cb[(size_t)j * m + i].p = p_ + s_; cb[(size_t)j * m + i].len = e_ - s_;
+                }
+            }
+            for (uint32_t j = 0; j < gn; j++) put_column(&out, cb + (size_t)j * m, m, scratch);
         }
     }
 #undef LOG_TOK
@@ -234,6 +283,7 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
     memcpy(dst, out.p, out.n); ret = (int64_t)out.n;
 done:
     free(tokb); free(toks); free(lstart); free(tstart); free(lid); free(keys); free(tab); free(order); free(tk); free(scratch); free(rows); free(rstart); free(remap); free(out.p);
+    free(tvar); free(tfl); free(tl0); free(tfo); free(tsc); free(tkg);
     return ret;
 }
 
