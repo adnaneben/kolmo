@@ -63,6 +63,11 @@ int64_t czn_compress_from_fd(int fd, size_t n, uint8_t *dst, size_t cap, const c
                              const void *dict, size_t dictlen);
 int64_t czn_decompress_to_fd(const uint8_t *src, size_t n, int fd, int threads,
                              const void *dict, size_t dictlen);
+/* CZN1 regular file to file. As above, use a separate empty output. */
+int64_t czn_compress_file(int input_fd, int output_fd, size_t n, const czn_params *p,
+                          const void *dict, size_t dictlen);
+int64_t czn_decompress_file(int input_fd, int output_fd, size_t n, int threads,
+                            const void *dict, size_t dictlen);
 const char *czn_strerror(int64_t code);
 uint32_t czn_crc32c(uint32_t crc, const void *buf, size_t len);
 

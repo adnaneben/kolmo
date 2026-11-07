@@ -13,8 +13,10 @@ def main():
     parser.add_argument("work", type=Path)
     parser.add_argument("candidate", type=Path)
     parser.add_argument("merged", type=Path)
+    parser.add_argument("--evidence-dir", type=Path, default=HERE,
+                        help="directory holding the candidate and baseline freeze manifest")
     args = parser.parse_args()
-    freeze = json.loads((HERE / "freeze.json").read_text())
+    freeze = json.loads((args.evidence_dir / "freeze.json").read_text())
     before = HERE.parent / "holdout"
     release = json.loads((before / "release-runs.json").read_text())
     holdout = json.loads((before / "holdout-runs.json").read_text())
@@ -31,7 +33,8 @@ def main():
         sources[key] = old / (key + ".test")
         trial = next(t for t in holdout[key]["trials"] if t["codec"] == "kolmo")
         expected[key] = (row["test_sha256"], trial["encoded_sha256"])
-    bins = dict(candidate=args.candidate.resolve(), merged=args.merged.resolve())
+    baseline = "baseline" if "baseline" in freeze["binaries"] else "merged"
+    bins = {"candidate": args.candidate.resolve(), baseline: args.merged.resolve()}
     assert all(digest(exe) == freeze["binaries"][key] for key, exe in bins.items())
     assert all(digest(source) == expected[key][0] for key, source in sources.items())
     rng = random.Random(28937)
@@ -52,7 +55,7 @@ def main():
                     out.unlink()
                     frame.unlink()
             print("Regression round", repeat, flush=True)
-    save(HERE / "regression.json", dict(expected=expected, trials=results))
+    save(args.evidence_dir / "regression.json", dict(expected=expected, trials=results))
 
 
 if __name__ == "__main__":

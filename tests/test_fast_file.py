@@ -48,3 +48,21 @@ with tempfile.TemporaryDirectory() as directory:
     # Same input and output path is safe once the entire frame is verified.
     run("-d", "-D", dictionary, frame, frame)
     assert frame.read_bytes() == data
+
+    # The version-3 transpose packs 255 fields separately and the full suffix.
+    # Exercise partial/ragged rows, embedded separators, boundary-spanning
+    # fields, paths with and without file descriptors, and cross-thread decode.
+    row = b';'.join([b'12345'] * 270 + [b'"a;b"', b'z' * 80]) + b'\r\n'
+    wide = row * 5200 + b'only;two\n' + row * 90 + b'trailing;partial'
+    source.write_bytes(wide)
+    run("-T", "1", source, frame)
+    encoded = frame.read_bytes()
+    assert encoded[:5] == b'CZN1\x03' and encoded[45] == 2
+    run("-T", "4", source, frame)
+    assert frame.read_bytes() == encoded
+    run("-d", "-T", "4", frame, output)
+    assert output.read_bytes() == wide
+    run("-r", "2097000:500", frame, output)
+    assert output.read_bytes() == wide[2097000:2097500]
+    run("-m", "fast", "-T", "1", source, source)
+    assert source.read_bytes() == encoded
