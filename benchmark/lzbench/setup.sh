@@ -67,15 +67,16 @@ if "lzbench_kolmo_compress" not in s:
     codecs.write_text(s[:i] + decl + s[i:])
 
 hdr = lzb / "bench/lzbench.h"
-lines = hdr.read_text().split("\n")
-if not any("lzbench_kolmo_compress" in l for l in lines):
-    k = next(i for i, l in enumerate(lines) if "lzbench_kanzi_compress" in l)
-    lines.insert(k + 1, '    { "kolmo",      "kolmo 1.0.0",             "structure transforms + LZ/BWT/CM", 0,   5,    0,   NO_THREADING, lzbench_kolmo_compress,      lzbench_kolmo_decompress,      NULL,                    NULL },')
-    k = max(i for i, l in enumerate(lines) if l.strip().startswith('{ "kanzi",') and "lzbench_" not in l)
-    for lv, alg in reversed([(0, "transforms + LZ4"), (1, "transforms + zstd"), (2, "transforms + brotli"),
-                             (3, "transforms + zstd (high)"), (4, "transforms + BWT or LZMA2"), (5, "transforms + CM")]):
-        lines.insert(k + 1, f'    {{ "kolmo",    {lv},  {lv}, "{alg}" }},')
-    hdr.write_text("\n".join(lines))
+# Drop any earlier kolmo registration, then register the current level ladder (see kolmo_lzbench.cpp).
+lines = [l for l in hdr.read_text().split("\n") if '{ "kolmo",' not in l]
+k = next(i for i, l in enumerate(lines) if "lzbench_kanzi_compress" in l)
+lines.insert(k + 1, '    { "kolmo",      "kolmo 1.0.0",             "structure transforms + LZ/BWT/CM", 0,   9,    0,   NO_THREADING, lzbench_kolmo_compress,      lzbench_kolmo_decompress,      NULL,                    NULL },')
+k = max(i for i, l in enumerate(lines) if l.strip().startswith('{ "kanzi",') and "lzbench_" not in l)
+for lo, hi, alg in reversed([(0, 0, "transforms + LZ4"), (1, 3, "transforms + zstd"), (4, 5, "transforms + zstd (high)"),
+                             (6, 6, "transforms + brotli"), (7, 7, "transforms + zstd (high)"),
+                             (8, 8, "transforms + BWT or LZMA2"), (9, 9, "transforms + CM")]):
+    lines.insert(k + 1, f'    {{ "kolmo",    {lo},  {hi}, "{alg}" }},')
+hdr.write_text("\n".join(lines))
 print("registered kolmo in", lzb)
 PY
 
