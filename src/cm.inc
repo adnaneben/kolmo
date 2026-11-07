@@ -4,7 +4,7 @@
  * weights selected by context; two adaptive probability maps refine the result; binary arithmetic coding.
  * Integer arithmetic only, so encoder and decoder agree bit-for-bit on every compiler and CPU.
  * Model 2 (streams flagged 8 in the size word) adds two sparse contexts (bytes 3-4, byte 2), two record contexts (the
- * bytes one and two records back, once a fixed record length is detected), two more mixers (weights
+ * bytes one and two records back, once a fixed record length is detected, and the column within the record), two more mixers (weights
  * selected by byte 2 and by order 1), a learned final mixer in place of the plain average, and an order-2 hashed APM.
  * Stream: size u32 (low 28 bits n, top 4 bits f: 0 = model 1 with 2^CM_BB buckets, else log2 buckets - 15 in f & 7,
  * model 2 when f & 8) | coded bytes.  Memory: 2^bits * 64 B per hashed model. */
@@ -12,7 +12,10 @@
 #define CM_NM 16                /* models: 0 = order-1 direct, 1..9 hashed */
 #endif
 #define CM_NI (2 * CM_NM + 3)   /* two inputs per model, two from the match model, bias */
-#define CM_NMX 20               /* models in model 2 */
+#ifndef CM_SMALL
+#define CM_SMALL 1               /* model-2 contexts (16+) use tables 2^CM_SMALL times smaller */
+#endif
+#define CM_NMX 21               /* models in model 2 */
 #define CM_NIX (2 * CM_NMX + 3)
 #ifndef CM_BB
 #define CM_BB 20                /* log2 buckets per hashed model in legacy streams (no size field) */
@@ -80,7 +83,7 @@ static inline int cm_SQ(int x) { if (x > 2047) x = 2047; if (x < -2047) x = -204
 typedef struct { uint32_t s[16]; } cm_bucket;          /* s[0] = check << 16 | priority; s[1..15] nibble-tree counters */
 typedef struct {
     cm_bucket *t[CM_NMX];
-    int sh, v2; size_t mem, tb;                                  /* 32 - log2 buckets; model 2?; bytes held */
+    int sh, v2; size_t mem, tb; uint8_t shi[CM_NMX]; size_t tbi[CM_NMX];                                  /* 32 - log2 buckets; model 2?; bytes held */
     uint32_t o1[256 * 256];
     uint32_t h[CM_NMX]; uint32_t *slot[CM_NMX]; cm_bucket *cur[CM_NMX];
     int32_t w1[CM_W1][CM_NIX], w2[CM_W2][CM_NIX];
@@ -121,7 +124,8 @@ static void cm_release(size_t b) { pthread_mutex_lock(&cm_mu); cm_used -= b; pth
 #endif
 static int cm_bits_for(size_t n) { int b = 16; while (b < CM_BB_MAX && ((size_t)1 << b) < n) b++; return b; }
 static size_t cm_mem_for(int bb, int v2) {
-    return (size_t)((v2 ? CM_NMX : CM_NM) - 1) * ((size_t)sizeof(cm_bucket) << bb) + ((size_t)(v2 ? 48 : 16) << 20);
+    size_t t = (size_t)sizeof(cm_bucket) << bb, ts = bb > 18 ? t >> CM_SMALL : t;
+    return (size_t)(CM_NM - 1) * t + (v2 ? (size_t)(CM_NMX - CM_NM) * ts : 0) + ((size_t)(v2 ? 48 : 16) << 20);
 }
 
 /* Model tables: zeroed, and on Linux backed by transparent huge pages where available (far fewer TLB misses on the
@@ -142,7 +146,7 @@ static void *cm_big(size_t n) { return calloc(1, n); }
 static void cm_big_free(void *p, size_t n) { (void)n; free(p); }
 #endif
 static void cm_free_parts(cm_t *m) {
-    for (int i = 1; i < CM_NMX; i++) cm_big_free(m->t[i], m->tb);
+    for (int i = 1; i < CM_NMX; i++) cm_big_free(m->t[i], m->tbi[i]);
     cm_big_free(m->w3, sizeof(*m->w3) * CM_W3); cm_big_free(m->w4, sizeof(*m->w4) * CM_W4);
     cm_big_free(m->a3, sizeof(*m->a3) * CM_A3); cm_big_free(m->mt, ((size_t)m->mmask + 1) * 4); free(m);
 }
@@ -153,7 +157,11 @@ static cm_t *cm_new(uint8_t *buf, int bb, int v2) {
     int nm = v2 ? CM_NMX : CM_NM;
     m->sh = 32 - bb; m->mem = mem; m->v2 = v2;
     m->tb = sizeof(cm_bucket) << bb;
-    for (int i = 1; i < nm; i++) { m->t[i] = cm_big(m->tb); if (!m->t[i]) goto fail; }
+    for (int i = 1; i < nm; i++) {                            /* the model-2 contexts (16+) have fewer distinct values */
+        int b = i >= CM_NM && bb > 18 ? bb - CM_SMALL : bb;
+        m->shi[i] = (uint8_t)(32 - b); m->tbi[i] = sizeof(cm_bucket) << b;
+        m->t[i] = cm_big(m->tbi[i]); if (!m->t[i]) goto fail;
+    }
     if (v2) {
         m->w3 = cm_big(sizeof(*m->w3) * CM_W3); m->w4 = cm_big(sizeof(*m->w4) * CM_W4); m->a3 = cm_big(sizeof(*m->a3) * CM_A3);
         if (!m->w3 || !m->w4 || !m->a3) goto fail;
@@ -209,7 +217,7 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     uint32_t c0 = m->c0; int bp = (int)m->bitpos;
     if (bp == 0 || bp == 4) {
         uint32_t nib = bp ? (c0 & 15) * 0x5BD1E995u : 0;
-        for (int i = 1; i < nm; i++) m->cur[i] = cm_find(m->t[i], cm_hmix(m->h[i] + nib), m->sh);
+        for (int i = 1; i < nm; i++) m->cur[i] = cm_find(m->t[i], cm_hmix(m->h[i] + nib), m->shi[i]);
     }
     int node = bp < 4 ? (int)((c0 & ((1u << bp) - 1)) | (1u << bp)) : (int)((c0 & ((1u << (bp - 4)) - 1)) | (1u << (bp - 4)));
     m->slot[0] = &m->o1[c0 | (m->c4 & 0xff) << 8];
@@ -316,7 +324,7 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
     if (m->bitpos == 2) {                                     /* prefetch both candidate buckets for the second nibble */
         for (int b = 0; b < 2; b++) {
             uint32_t nib = (((m->c0 << 1) | (uint32_t)b) & 15) * 0x5BD1E995u;
-            for (int i = 1; i < nm; i++) { uint32_t idx = cm_hmix(m->h[i] + nib) >> m->sh; __builtin_prefetch(&m->t[i][idx]); }
+            for (int i = 1; i < nm; i++) { uint32_t idx = cm_hmix(m->h[i] + nib) >> m->shi[i]; __builtin_prefetch(&m->t[i][idx]); }
         }
     }
     if (++m->bitpos == 8) {
@@ -345,6 +353,8 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
             uint32_t r = m->rlen, ab = r && pos >= r ? m->buf[pos - r] : 0, ab2 = r && pos >= 2 * r ? m->buf[pos - 2 * r] : 0;
             m->h[18] = cm_hmix((ab << 16 | ab2 << 8 | (r ? 1u : 0u)) * 0x9E3779B1u + r * 0x85EBCA6Bu + 18);
             m->h[19] = cm_hmix((ab << 8 | (c4 & 0xff)) * 0xC2B2AE35u + r * 0x9E3779B1u + 19);
+            uint32_t col = r ? pos % r : 0; if (col > 4095) col = 4095;
+            m->h[20] = cm_hmix((col << 8 | (c4 & 0xff)) * 0x2545F491u + r * 0x85EBCA6Bu + 20);
         }
 #if CM_NM > 14
         {   uint32_t c1 = c4 >> 8 & 0xff, c2 = c4 >> 8 & 0xffff;                           /* what followed the previous context last time */
@@ -371,7 +381,7 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
         m->h[9] = cm_hmix(cm_hmix(c4 + 0x51ED27u) + (m->c8 & 0xffffff) * 0xC2B2AE35u + 9);     /* order 7 */
 #endif
         for (int i = 1; i < nm; i++) {                        /* prefetch the buckets for the first nibble */
-            uint32_t idx = cm_hmix(m->h[i]) >> m->sh;
+            uint32_t idx = cm_hmix(m->h[i]) >> m->shi[i];
             __builtin_prefetch(&m->t[i][idx]); __builtin_prefetch(&m->t[i][idx ^ 1]);
         }
         if (m->pos >= 6) {
