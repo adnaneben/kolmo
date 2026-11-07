@@ -1,0 +1,2 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo 1.0.0 -9,0.20,0.20,211957760,36228088,17.09,/home/claude/bench_data/silesia.tar

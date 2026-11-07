@@ -8,3 +8,8 @@ of its first compression pass (it also runs two threads) and is not included. lz
 round trip. The "Ratio" column is compressed size as a percentage of the original (lower is better).
 
 Reproduce: `sh benchmark/lzbench/setup.sh <lzbench checkout>` and run the same `-e` lists.
+
+## `silesia-2026-11-07-ultra-cm2.csv` — context-mixing model 2 (commit `eecdc83`)
+
+kolmo level 9 (`ultra`) after the CM model-2 work, same harness and machine: **17.09% (5.85×)**, up from
+17.91% (5.58×); zpaq -5 is 19.09% (5.24×). Compression and decompression run at 0.20 MB/s (was 0.28 / 0.37).
