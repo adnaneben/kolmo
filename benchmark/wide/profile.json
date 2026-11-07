@@ -1,0 +1,56 @@
+{
+  "frame_sha256": "a38523cfe9534ac25b1209ef7ffeaefff0b29c937c6fe31b355627e51471ac57",
+  "warmup_round": 0,
+  "measured_rounds": 5,
+  "median_seconds": {
+    "zstd_seconds": 0.21787,
+    "restore_rows_seconds": 0.119047,
+    "checksum_seconds": 0.011391
+  },
+  "restore_fraction_of_profiled_time": 0.3417865796938342,
+  "suffix_input_fraction": 0.3223360498314691,
+  "observations": [
+    {
+      "round": 0,
+      "zstd_seconds": 0.22932,
+      "restore_rows_seconds": 0.124784,
+      "checksum_seconds": 0.011938,
+      "suffix_bytes": 194675247
+    },
+    {
+      "round": 1,
+      "zstd_seconds": 0.217722,
+      "restore_rows_seconds": 0.119129,
+      "checksum_seconds": 0.011385,
+      "suffix_bytes": 194675247
+    },
+    {
+      "round": 2,
+      "zstd_seconds": 0.21787,
+      "restore_rows_seconds": 0.119031,
+      "checksum_seconds": 0.011391,
+      "suffix_bytes": 194675247
+    },
+    {
+      "round": 3,
+      "zstd_seconds": 0.217804,
+      "restore_rows_seconds": 0.119047,
+      "checksum_seconds": 0.011401,
+      "suffix_bytes": 194675247
+    },
+    {
+      "round": 4,
+      "zstd_seconds": 0.217886,
+      "restore_rows_seconds": 0.118949,
+      "checksum_seconds": 0.011385,
+      "suffix_bytes": 194675247
+    },
+    {
+      "round": 5,
+      "zstd_seconds": 0.220189,
+      "restore_rows_seconds": 0.119924,
+      "checksum_seconds": 0.011511,
+      "suffix_bytes": 194675247
+    }
+  ]
+}
