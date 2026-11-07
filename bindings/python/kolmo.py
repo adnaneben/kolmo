@@ -82,11 +82,12 @@ def train_dict(samples, dict_cap=112 * 1024):
 
 def compress(data, mode="fast", threads=0, block=0, transforms=True, level=0, dict=None):  # noqa: A002
     """Compress bytes; returns the compressed bytes. mode: rt|fast|eco|hc|max|ultra.
+    transforms: True (analyse and transform), False (codec only) or "quick" (cheap transforms only; fastest).
     Pass dict=<bytes from train_dict> to compress small files against a trained dictionary."""
     if mode not in _MODES:
         raise ValueError("mode must be one of " + ", ".join(_MODES))
     data = bytes(data)
-    p = _Params(_MODES[mode], level, threads, block, 1 if transforms else 0)
+    p = _Params(_MODES[mode], level, threads, block, 2 if transforms == "quick" else 1 if transforms else 0)
     cap = _lib.czn_bound(len(data), ctypes.byref(p))
     out = ctypes.create_string_buffer(cap)
     if dict:
