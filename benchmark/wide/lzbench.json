@@ -1,0 +1,73 @@
+{
+  "harness_sha256": "d2e3a9aeb9e8d28fa26faa83a70e6519912a2c2b55b0052f478a95ad6dc27195",
+  "shared_library_sha256": "1e03c0c92870051a6e0d90c1ebe324e0bb1edb7502a530409dba9ae670757a0a",
+  "upstream_commit": "d68cdbc2309408e82da881c61d23cf70cca8db09",
+  "samples": {
+    "portugal": {
+      "flags": [
+        "-ekolmo,1/zstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i5,5",
+        "-p3",
+        "-o4",
+        "-q"
+      ],
+      "source_sha256": "c8769dfd897125eda63b24281801517393e3d712531dc98f32d1aab4254897a2",
+      "rows": [
+        {
+          "Compressor name": "kolmo audit -1",
+          "Compression speed": "688.18",
+          "Decompression speed": "1676.81",
+          "Original size": "603951209",
+          "Compressed size": "130249618",
+          "Ratio": "21.57",
+          "Filename": "test.csv"
+        },
+        {
+          "Compressor name": "zstd 1.5.7 -3",
+          "Compression speed": "447.08",
+          "Decompression speed": "2382.68",
+          "Original size": "603951209",
+          "Compressed size": "148008043",
+          "Ratio": "24.51",
+          "Filename": "test.csv"
+        }
+      ]
+    },
+    "silesia": {
+      "flags": [
+        "-ezstd,3/kolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i5,5",
+        "-p3",
+        "-o4",
+        "-q"
+      ],
+      "source_sha256": "a667bac80089b3d04d5496772149e632f0758974b0579d743cd8d6e5e0d63eb2",
+      "rows": [
+        {
+          "Compressor name": "zstd 1.5.7 -3",
+          "Compression speed": "527.84",
+          "Decompression speed": "2109.52",
+          "Original size": "211947520",
+          "Compressed size": "66133500",
+          "Ratio": "31.20",
+          "Filename": "silesia.tar"
+        },
+        {
+          "Compressor name": "kolmo audit -1",
+          "Compression speed": "320.07",
+          "Decompression speed": "1764.38",
+          "Original size": "211947520",
+          "Compressed size": "58260313",
+          "Ratio": "27.49",
+          "Filename": "silesia.tar"
+        }
+      ]
+    }
+  }
+}
