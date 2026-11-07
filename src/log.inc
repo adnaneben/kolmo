@@ -199,8 +199,27 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
             }
         } else for (;;) {
             uint32_t s = i; toks[ntok++] = s;
-            const uint8_t *sp = memchr(p + i, ' ', len - i); i = sp ? (uint32_t)(sp - p) : len;
-            if (is_var_tok(p + s, i - s)) { keys[kp++] = 1; tvar[ntok - 1] = 1; }
+            int var = 0;                                /* one pass: the next space, and any digit or 0x01 before it */
+            for (;;) {
+                if (i + 8 <= len) {
+                    uint64_t x; memcpy(&x, p + i, 8);
+                    const uint64_t L7 = 0x7F7F7F7F7F7F7F7Full, H = 0x8080808080808080ull, O = 0x0101010101010101ull;
+                    uint64_t lo = x & L7, y = x ^ (O * ' '), z = x ^ O;
+                    uint64_t sp = ~(((y & L7) + L7) | y | L7);
+                    uint64_t vm = (((O * (127 + '9' + 1) - lo) & ~x & (lo + O * (127 - ('0' - 1)))) & H) | ~(((z & L7) + L7) | z | L7);
+                    if (sp) { int k = __builtin_ctzll(sp) >> 3; var |= k && (vm << (64 - 8 * k)) != 0; i += (uint32_t)k; break; }
+                    var |= vm != 0; i += 8;
+                    if (i - s >= 16) {                  /* a long token: the library search is faster from here */
+                        const uint8_t *q = memchr(p + i, ' ', len - i); uint32_t e = q ? (uint32_t)(q - p) : len;
+                        if (!var) var = is_var_tok(p + i, e - i);
+                        i = e; break;
+                    }
+                } else {
+                    while (i < len && p[i] != ' ') { var |= (uint8_t)(p[i] - '0') < 10 || p[i] == 1; i++; }
+                    break;
+                }
+            }
+            if (var) { keys[kp++] = 1; tvar[ntok - 1] = 1; }
             else { tvar[ntok - 1] = 0; memcpy(keys + kp, p + s, i - s); kp += i - s; }
             if (i == len) break;
             keys[kp++] = ' '; i++;
