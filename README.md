@@ -32,6 +32,32 @@ type — tables 3.6 GB/s vs 1.6, scientific 6.4 vs 1.2, logs 8.5 vs 4.1 — and 
 MB/s)**, all while holding the ratio lead, because `zstd` is flat with cores and kolmo scales ~3.7×. On a single core kolmo
 leads decode on scientific and trades 1.2–2× decode speed on tables/logs for 2–4× the ratio, making it back across cores.
 
+### lzbench: Silesia, one thread
+
+kolmo also runs inside [lzbench](https://github.com/inikep/lzbench) as an ordinary codec (same harness, same flags,
+one thread, round trips verified; see [`benchmark/lzbench`](benchmark/lzbench)). Each lzbench level is a plain CLI
+setting. On the 212 MB Silesia corpus (2-core 2.1 GHz Xeon VM; speeds vary by about ±15% between runs, ratios are
+exact):
+
+| kolmo setting | Ratio | Compress | Decompress | Best rival at that speed |
+|---|---|---|---|---|
+| `rt` | 46.58% | 540 MB/s | 2.5 GB/s | lz4: 47.59%, 539 MB/s, 3.3 GB/s |
+| `fast -l1 -q` | **30.33%** | 355 MB/s | 1.2 GB/s | zstd -2: 32.70%, 372 MB/s |
+| `fast -l2 -q` | **28.89%** | 294–337 MB/s | 1.1 GB/s | zstd -3: 31.20%, 210–232 MB/s |
+| `fast -q` | **27.87%** | 194–234 MB/s | 0.9–1.1 GB/s | zstd -3: 31.20% |
+| `fast` (default) | 27.49% | 132–188 MB/s | 0.8–1.0 GB/s | zstd -5: 29.60%, 110 MB/s |
+| `hc -l 9` | **24.70%** | 48.6 MB/s | 672 MB/s | brotli -5: 28.10%, 41 MB/s |
+| `max -l 1` | **20.93%** | 19–22 MB/s | 33 MB/s | bsc: 23.26%, 15 MB/s; bzip3 -5: 22.29%, 9.4 MB/s |
+| `hc` | 22.47% | 2.6 MB/s | **631 MB/s** | xz -9: 23.00%, 99 MB/s decode; bzip3 -5: 22.29%, 9.7 MB/s decode |
+| `max` | **19.34%** | 2.7 MB/s | 54 MB/s | kanzi -9: 19.73%, 1.7 MB/s |
+| `ultra -l 1` | **17.99%** | 0.43 MB/s | 0.45 MB/s | zpaq -5: 19.09%, 0.39 MB/s |
+| `ultra` | **17.01%** | 0.25 MB/s | 0.29 MB/s | — (smallest result on the board) |
+
+From about 350 MB/s down to the slowest tier, the bold settings give the smallest output of any entry at that
+compression speed or faster. `hc` (and `eco`) trade some of that for decode speed: `hc` decompresses 6× faster than
+xz and 65× faster than bzip3 at a similar ratio. Above 350 MB/s, and on raw decode speed in the LZ4 class, zstd -1
+and lz4 still lead.
+
 ## How it works
 
 | Data | Model |
@@ -52,14 +78,14 @@ All prediction that must agree between encoder and decoder is integer or plain I
 | Mode | Block | Coder | Use |
 |---|---|---|---|
 | `rt` | adaptive (≤4 MiB) | LZ4 | decode speed first |
-| `fast` | adaptive (≤4 MiB) | zstd 3 | default |
+| `fast` | adaptive (≤4 MiB) | zstd 3 | default (`-q`: quick analysis, cheap transforms only) |
 | `eco` | 16 MiB | brotli 8 | lowest storage cost at moderate CPU |
 | `hc` | 16 MiB (text 128 MiB) | zstd 19 / 22 | archive with fast reads |
-| `max` | 128 MiB | BWT for text, LZMA2 otherwise | cold archive |
-| `ultra` | 128 MiB | best of context mixing, LZMA2, BWT | coldest archive, best ratio |
+| `max` | 128 MiB | BWT for text; the better of BWT and LZMA2 otherwise (`-l 1`: BWT only) | cold archive |
+| `ultra` | 128 MiB | best of context mixing, LZMA2, BWT (`-l 1`: context mixing model 1 only, faster) | coldest archive, best ratio |
 
-`ultra` sizes its context-mixing tables to the block (up to about 4 GB per thread for blocks of 4 MiB and more, in
-both directions). Parallel blocks share a budget of 60% of physical memory and wait rather than swap.
+`ultra` sizes its context-mixing tables to the block (up to about 4.5 GB per thread for blocks of 4 MiB and more, in
+both directions; 3.8 GB with `-l 1`). On Linux the tables use transparent huge pages. Parallel blocks share a budget of 60% of physical memory and wait rather than swap.
 
 ### Columnar decode (tables)
 
