@@ -1,0 +1,6 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo 1.0.0 -7,21.58,33.21,211957760,44367726,20.93,/home/claude/bench_data/silesia.tar
+bzip3 1.5.4 -5,9.44,9.73,211957760,47236983,22.29,/home/claude/bench_data/silesia.tar
+kanzi 2.6.0 -7,10.74,16.13,211957760,47308349,22.32,/home/claude/bench_data/silesia.tar
+bsc 3.3.12 -m0 -e1,15.44,22.41,211957760,49292310,23.26,/home/claude/bench_data/silesia.tar
+brotli 1.2.0 -5,43.67,376.58,211957760,59556176,28.10,/home/claude/bench_data/silesia.tar

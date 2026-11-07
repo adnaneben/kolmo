@@ -34,3 +34,21 @@ zstd -1 on a 256 KiB slice. Two rounds on this VM (speeds vary by about ±15% be
 | **kolmo -3** (`fast -q`) | **27.87%** | 210–234 MB/s | 1.1 GB/s |
 | zstd -5 | 29.60% | 110–121 MB/s | 0.88–0.91 GB/s |
 | kolmo -4 (`fast`) | 27.49% | 132–141 MB/s | 0.83–0.98 GB/s |
+
+## `silesia-2026-11-08-bwt-tier.csv` — `max -l 1` (BWT for every block)
+
+New ladder level 7 (`kolmo -m max -l 1`): kolmo's transforms with libbsc's BWT on every block (default `max` sends
+binary blocks to LZMA2, which is ~8x slower). One run, same harness:
+
+| Entry | Ratio | Compress | Decompress |
+|---|---|---|---|
+| **kolmo `max -l 1`** | **20.93%** | **21.6 MB/s** | **33.2 MB/s** |
+| bsc -m0 -e1 | 23.26% | 15.4 MB/s | 22.4 MB/s |
+| kanzi -7 | 22.32% | 10.7 MB/s | 16.1 MB/s |
+| bzip3 -5 | 22.29% | 9.4 MB/s | 9.7 MB/s |
+
+It beats all three on ratio, compression speed and decompression speed at once.
+
+## `silesia-2026-11-08-ladder.csv` — the kolmo ladder (levels 0–9 of the 0–10 ladder at the time; `ultra` measured separately)
+
+Measured before `max -l 1` was inserted as level 7, so levels 7–9 there are `eco`, `hc` and `max`.

@@ -1228,7 +1228,7 @@ static void mode_codec(const czn_params *p, int *codec, int *level) {
         case CZN_FAST:*codec = C_ZSTD;   *level = p->level ? p->level : CZ_FAST_LEVEL; break;
         case CZN_ECO: *codec = C_BROTLI; *level = p->level ? p->level : CZ_ECO_LEVEL; break;
         case CZN_HC:  *codec = C_ZSTD;   *level = p->level ? p->level : 19; break;
-        case CZN_MAX: *codec = C_LZMA;   *level = p->level ? p->level : 9; break;     /* max: per block BWT or LZMA2 */
+        case CZN_MAX: *codec = C_LZMA;   *level = p->level ? p->level : 9; break;     /* max: per block BWT or LZMA2 (level 1: BWT only) */
         default:      *codec = C_CM;     *level = 0; break;                            /* ultra: context mixing */
     }
 }
@@ -1546,7 +1546,8 @@ static void *compress_worker(void *arg) {
         size_t inlen = (tflag >= 3 && tflag <= 7) || tflag == 9 ? get32(sl) : len;
         int codec = J->codec, level = J->level;
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
-        if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
+        if (codec == C_LZMA && level == 1) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
+        else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         if (codec == C_ZSTD && level == 19 && tflag == 9) level = CZ_HC_TEXT_LEVEL;                                  /* hc text: ultra level */
         size_t cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
         if (codec == C_CM) {                          /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
