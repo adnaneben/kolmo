@@ -51,9 +51,11 @@ static int decomp(const cfg_t *c, const uint8_t *s, size_t cn, uint8_t *d, size_
     }
 }
 int main(int argc, char **argv) {
-    int T = (int)sysconf(_SC_NPROCESSORS_ONLN), slow = 0, vslow = 0, opt; const char *outp = NULL, *only = NULL;
+    int T = (int)sysconf(_SC_NPROCESSORS_ONLN), slow = 0, vslow = 0, opt, status = 0, measured = 0; const char *outp = NULL, *only = NULL;
     while ((opt = getopt(argc, argv, "T:xXo:c:")) != -1) { if (opt == 'c') only = optarg; if (opt == 'T') T = atoi(optarg); else if (opt == 'x') slow = 1; else if (opt == 'X') slow = vslow = 1; else if (opt == 'o') outp = optarg; }
+    if (optind == argc) { fprintf(stderr, "czbench: supply at least one input file\n"); return 1; }
     zc = ZSTD_createCCtx(); zd = ZSTD_createDCtx();
+    if (!zc || !zd) { ZSTD_freeCCtx(zc); ZSTD_freeDCtx(zd); return 1; }
     cfg_t C[] = {
         {"lz4", 0, 0, 1}, {"lz4hc -9", 1, 9, 1},
         {"zstd -1", 2, 1, 1}, {"zstd -3", 2, 3, 1}, {"zstd -3 -T", 2, 3, T}, {"zstd -9", 2, 9, 1}, {"zstd -19", 2, 19, 1}, {"zstd -19 -T", 2, 19, T},
@@ -63,14 +65,25 @@ int main(int argc, char **argv) {
         {"cz max", 14, 0, 1}, {"cz max -T", 14, 0, T}, {"cz ultra", 15, 0, 1}, {"cz ultra -T", 15, 0, T},
     };
     FILE *o = outp ? fopen(outp, "a") : NULL;
+    if (outp && !o) { perror(outp); ZSTD_freeCCtx(zc); ZSTD_freeDCtx(zd); return 1; }
     for (int a = optind; a < argc; a++) {
-        FILE *f = fopen(argv[a], "rb"); if (!f) { perror(argv[a]); continue; }
-        fseek(f, 0, SEEK_END); size_t n = ftell(f); fseek(f, 0, SEEK_SET);
-        uint8_t *s = malloc(n), *back = malloc(n + 1); if (fread(s, 1, n, f) != n) return 1; fclose(f);
+        FILE *f = fopen(argv[a], "rb"); if (!f) { perror(argv[a]); status = 1; continue; }
+        long length;
+        if (fseek(f, 0, SEEK_END) || (length = ftell(f)) < 0 || fseek(f, 0, SEEK_SET)) {
+            perror(argv[a]); fclose(f); status = 1; continue;
+        }
+        size_t n = (size_t)length;
+        uint8_t *s = malloc(n ? n : 1), *back = malloc(n + 1);
+        if (!s || !back || fread(s, 1, n, f) != n) {
+            fprintf(stderr, "czbench: cannot allocate/read %s\n", argv[a]);
+            free(s); free(back); fclose(f); status = 1; continue;
+        }
+        fclose(f);
         czn_params bp = {CZN_RT, 0, 0, 0, 1}; size_t cap = czn_bound(n, &bp);
         if (cap < ZSTD_compressBound(n) + 4096) cap = ZSTD_compressBound(n) + 4096;
         if (cap < BrotliEncoderMaxCompressedSize(n)) cap = BrotliEncoderMaxCompressedSize(n) + 4096;
         uint8_t *d = malloc(cap);
+        if (!d) { free(s); free(back); status = 1; continue; }
         const char *base = strrchr(argv[a], '/') ? strrchr(argv[a], '/') + 1 : argv[a];
         for (size_t k = 0; k < sizeof C / sizeof *C; k++) {
             const cfg_t *c = &C[k];
@@ -100,12 +113,17 @@ int main(int argc, char **argv) {
                 tot += t2 - t1; if (r >= 4 && tot > 2.0) break;
             }
             double cm = n / bc / 1e6, dm = n / bd / 1e6;
+            measured++; if (!ok) status = 1;
             printf("%-22s %-14s T=%-2d ratio %7.3f  c %8.1f MB/s  d %8.1f MB/s  %s\n", base, c->name, c->threads, cl ? (double)n / cl : 0, cm, dm, ok ? "ok" : "FAIL");
-            fflush(stdout);
-            if (o) { fprintf(o, "%s\t%s\t%d\t%zu\t%zu\t%.2f\t%.2f\t%d\n", base, c->name, c->threads, n, cl, cm, dm, ok); fflush(o); }
+            if (fflush(stdout)) status = 1;
+            if (o) {
+                if (fprintf(o, "%s\t%s\t%d\t%zu\t%zu\t%.2f\t%.2f\t%d\n", base, c->name, c->threads, n, cl, cm, dm, ok) < 0 || fflush(o)) status = 1;
+            }
         }
         free(s); free(back); free(d);
     }
-    if (o) fclose(o);
-    return 0;
+    if (o && fclose(o)) status = 1;
+    if (!measured) { fprintf(stderr, "czbench: no settings measured\n"); status = 1; }
+    ZSTD_freeCCtx(zc); ZSTD_freeDCtx(zd);
+    return status;
 }

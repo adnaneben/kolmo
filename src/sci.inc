@@ -365,11 +365,9 @@ static int rec_period(const uint8_t *s, size_t n) {
     return bp;
 }
 
-static int zcost_level = 3;
-static size_t zcost(ZSTD_CCtx *zc, const uint8_t *b, size_t n, uint8_t *tmp, size_t cap) { size_t r = ZSTD_compressCCtx(zc, tmp, cap, b, n, zcost_level); return ZSTD_isError(r) ? n : r; }
-static size_t zcost1(ZSTD_CCtx *zc, const uint8_t *b, size_t n, uint8_t *tmp, size_t cap) { size_t r = ZSTD_compressCCtx(zc, tmp, cap, b, n, 1); return ZSTD_isError(r) ? n : r; }
+static size_t zcost(ZSTD_CCtx *zc, const uint8_t *b, size_t n, uint8_t *tmp, size_t cap, int level) { size_t r = ZSTD_compressCCtx(zc, tmp, cap, b, n, level); return ZSTD_isError(r) ? n : r; }
 
-typedef struct { const uint8_t *A; size_t n; int P; ZSTD_CCtx *zc; uint8_t *eb, *zb; size_t ecap, zcap; } rsearch_t;
+typedef struct { const uint8_t *A; size_t n; int P, level; ZSTD_CCtx *zc; uint8_t *eb, *zb; size_t ecap, zcap; } rsearch_t;
 static size_t rec_best(rsearch_t *S, int o, int w, int *kind, double *qc) {
     size_t best = (size_t)-1; *kind = RK_RAW; *qc = 0;
     int kinds[4] = {RK_RAW, RK_DELTA, -1, -1}, nk = 2;
@@ -388,7 +386,7 @@ static size_t rec_best(rsearch_t *S, int o, int w, int *kind, double *qc) {
     for (int q = 0; q < nk; q++) {
         int64_t e = rec_field_enc(S->A, S->n, S->P, o, w, kinds[q], c, S->eb);
         if (e < 0) continue;
-        size_t z = zcost(S->zc, S->eb, (size_t)e, S->zb, S->zcap);
+        size_t z = zcost(S->zc, S->eb, (size_t)e, S->zb, S->zcap, S->level);
         if (z < best) { best = z; *kind = kinds[q]; *qc = kinds[q] == RK_QUANT ? c : 0; }
     }
     return best;
@@ -410,13 +408,12 @@ static size_t rec_detect(const uint8_t *s, size_t n, int effort, rec_plan_t *R) 
     for (int h = 0; h <= P; h += P) {
         size_t cap_m = effort ? 32768 : 4096, nrec = (n - h) / P, m = nrec < cap_m ? nrec : cap_m;
         if (m < 1024) continue;
-        zcost_level = effort ? 3 : 1;
-        rsearch_t S = {s + h, m, P, zc, NULL, NULL, 0, 0};
+        rsearch_t S = {s + h, m, P, effort ? 3 : 1, zc, NULL, NULL, 0, 0};
         S.ecap = rec_field_bound(m, 8); S.eb = malloc(S.ecap); S.zcap = ZSTD_compressBound(S.ecap); S.zb = malloc(S.zcap);
         rec_plan_t T = {P, h, 0, {{0}}, {0}}; size_t tot = 0; int o = 0;
         while (o < P) { int w = 8; while (o % w || o + w > P) w /= 2; tot += rec_layout(&S, o, w, T.f, T.quant, &T.nf); o += w; }
         if (tot < bestc) { bestc = tot; *R = T; }
-        free(S.eb); free(S.zb); zcost_level = 3;
+        free(S.eb); free(S.zb);
     }
     ZSTD_freeCCtx(zc);
     return bestc == (size_t)-1 ? 0 : bestc;

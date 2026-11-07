@@ -1,0 +1,209 @@
+{
+  "power": {
+    "metrics": {
+      "kolmo": {
+        "bytes": 6422952,
+        "encode_seconds": 0.205382833,
+        "encode_peak_rss_bytes": 172392448,
+        "decode_seconds": 0.091582958,
+        "decode_peak_rss_bytes": 114311168
+      },
+      "release": {
+        "bytes": 6422952,
+        "encode_seconds": 0.226199542,
+        "encode_peak_rss_bytes": 175767552,
+        "decode_seconds": 0.098184875,
+        "decode_peak_rss_bytes": 114212864
+      },
+      "zstd": {
+        "bytes": 17220759,
+        "encode_seconds": 0.169414125,
+        "encode_peak_rss_bytes": 7749632,
+        "decode_seconds": 0.068056875,
+        "decode_peak_rss_bytes": 7716864
+      },
+      "openzl": {
+        "bytes": 4348202,
+        "encode_seconds": 0.765019625,
+        "encode_peak_rss_bytes": 745537536,
+        "decode_seconds": 0.1550225,
+        "decode_peak_rss_bytes": 272154624
+      }
+    },
+    "gates": {
+      "zstd": {
+        "ratios": {
+          "bytes": 0.37297728863170315,
+          "encode_seconds": 1.2123123322804399,
+          "encode_peak_rss_bytes": 22.24524312896406,
+          "decode_seconds": 1.3456826808459836,
+          "decode_peak_rss_bytes": 14.813163481953291
+        },
+        "flags": {
+          "bytes": true,
+          "encode_seconds": false,
+          "encode_peak_rss_bytes": false,
+          "decode_seconds": false,
+          "decode_peak_rss_bytes": false
+        },
+        "passed": false
+      },
+      "openzl": {
+        "ratios": {
+          "bytes": 1.4771512455033138,
+          "encode_seconds": 0.2684674043492675,
+          "encode_peak_rss_bytes": 0.23123241912798875,
+          "decode_seconds": 0.5907720363173088,
+          "decode_peak_rss_bytes": 0.42002287640720004
+        },
+        "flags": {
+          "bytes": false,
+          "encode_seconds": true,
+          "encode_peak_rss_bytes": true,
+          "decode_seconds": true,
+          "decode_peak_rss_bytes": true
+        },
+        "passed": false
+      }
+    },
+    "passed": false
+  },
+  "rides": {
+    "metrics": {
+      "kolmo": {
+        "bytes": 2654725,
+        "encode_seconds": 0.028165292,
+        "encode_peak_rss_bytes": 23216128,
+        "decode_seconds": 0.015667125,
+        "decode_peak_rss_bytes": 21397504
+      },
+      "release": {
+        "bytes": 2654725,
+        "encode_seconds": 0.029182208,
+        "encode_peak_rss_bytes": 23085056,
+        "decode_seconds": 0.016819083,
+        "decode_peak_rss_bytes": 21331968
+      },
+      "zstd": {
+        "bytes": 2731686,
+        "encode_seconds": 0.02744575,
+        "encode_peak_rss_bytes": 7798784,
+        "decode_seconds": 0.009487208,
+        "decode_peak_rss_bytes": 7733248
+      },
+      "openzl": {
+        "bytes": 1513512,
+        "encode_seconds": 0.121398833,
+        "encode_peak_rss_bytes": 200982528,
+        "decode_seconds": 0.027432667,
+        "decode_peak_rss_bytes": 88588288
+      }
+    },
+    "gates": {
+      "zstd": {
+        "ratios": {
+          "bytes": 0.971826556932239,
+          "encode_seconds": 1.0262168823952706,
+          "encode_peak_rss_bytes": 2.976890756302521,
+          "decode_seconds": 1.651394699051607,
+          "decode_peak_rss_bytes": 2.766949152542373
+        },
+        "flags": {
+          "bytes": false,
+          "encode_seconds": false,
+          "encode_peak_rss_bytes": false,
+          "decode_seconds": false,
+          "decode_peak_rss_bytes": false
+        },
+        "passed": false
+      },
+      "openzl": {
+        "ratios": {
+          "bytes": 1.7540164861593432,
+          "encode_seconds": 0.23200628295990294,
+          "encode_peak_rss_bytes": 0.11551316540311404,
+          "decode_seconds": 0.5711119884916768,
+          "decode_peak_rss_bytes": 0.24153874606990938
+        },
+        "flags": {
+          "bytes": false,
+          "encode_seconds": true,
+          "encode_peak_rss_bytes": true,
+          "decode_seconds": true,
+          "decode_peak_rss_bytes": true
+        },
+        "passed": false
+      }
+    },
+    "passed": false
+  },
+  "quakes": {
+    "metrics": {
+      "kolmo": {
+        "bytes": 612178,
+        "encode_seconds": 0.011475667,
+        "encode_peak_rss_bytes": 8011776,
+        "decode_seconds": 0.006103375,
+        "decode_peak_rss_bytes": 6275072
+      },
+      "release": {
+        "bytes": 612178,
+        "encode_seconds": 0.012253792,
+        "encode_peak_rss_bytes": 8323072,
+        "decode_seconds": 0.006770167,
+        "decode_peak_rss_bytes": 6209536
+      },
+      "zstd": {
+        "bytes": 680257,
+        "encode_seconds": 0.00882375,
+        "encode_peak_rss_bytes": 7454720,
+        "decode_seconds": 0.003995834,
+        "decode_peak_rss_bytes": 6766592
+      },
+      "openzl": {
+        "bytes": 498311,
+        "encode_seconds": 0.031416917,
+        "encode_peak_rss_bytes": 58130432,
+        "decode_seconds": 0.008949666,
+        "decode_peak_rss_bytes": 22478848
+      }
+    },
+    "gates": {
+      "zstd": {
+        "ratios": {
+          "bytes": 0.8999216472597856,
+          "encode_seconds": 1.3005430797563395,
+          "encode_peak_rss_bytes": 1.0747252747252747,
+          "decode_seconds": 1.5274345731078918,
+          "decode_peak_rss_bytes": 0.927360774818402
+        },
+        "flags": {
+          "bytes": false,
+          "encode_seconds": false,
+          "encode_peak_rss_bytes": false,
+          "decode_seconds": false,
+          "decode_peak_rss_bytes": true
+        },
+        "passed": false
+      },
+      "openzl": {
+        "ratios": {
+          "bytes": 1.2285058929062374,
+          "encode_seconds": 0.36527030962331536,
+          "encode_peak_rss_bytes": 0.1378241262683202,
+          "decode_seconds": 0.6819667907159888,
+          "decode_peak_rss_bytes": 0.2791545189504373
+        },
+        "flags": {
+          "bytes": false,
+          "encode_seconds": true,
+          "encode_peak_rss_bytes": true,
+          "decode_seconds": true,
+          "decode_peak_rss_bytes": true
+        },
+        "passed": false
+      }
+    },
+    "passed": false
+  }
+}

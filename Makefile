@@ -43,7 +43,7 @@ endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
 BLIBS   := $(LIBS)
 
-all: build/kolmo build/czbench build/czntest
+all: build/kolmo build/czbench build/czntest build/cznparallel build/cznresource
 
 build/obj/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -68,6 +68,26 @@ build/czbench: bench/czbench.c build/libczn.a build/libvendor.a
 	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(BLIBS) $(CXXLIB)
 build/czntest: tests/czntest.c build/libczn.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+build/cznparallel: tests/cznparallel.c build/libczn.a build/libvendor.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+build/cznresource: tests/cznresource.c tests/legacy_frames.h src/czn.c src/czn.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/cznresource.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/kolmo-profile: src/cli.c src/czn.c src/czn.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DCZN_TIMING $(INC) src/cli.c src/czn.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+
+check: all
+	./build/cznresource
+	./build/cznparallel
+	./build/czntest
+
+SANFLAGS ?= -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
+build/cznparallel-asan: tests/cznparallel.c src/czn.c src/czn.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/cznparallel.c src/czn.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/cznresource-asan: tests/cznresource.c tests/legacy_frames.h src/czn.c src/czn.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/cznresource.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-sanitizers: build/cznparallel-asan build/cznresource-asan
+	./build/cznresource-asan
+	./build/cznparallel-asan
 
 # Shared library for language bindings (Python, Rust): everything rebuilt -fPIC into build/pic.
 SOEXT := $(if $(filter Darwin,$(UNAME_S)),dylib,so)
@@ -83,10 +103,14 @@ build/pic/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -fPIC $(DEFS) $(INC) -c $< -o $@
 lib: build/libkolmo.$(SOEXT)
-build/libkolmo.$(SOEXT): src/czn.c $(PICC) $(PICPP)
+build/libkolmo.$(SOEXT): src/czn.c src/czn.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc $(PICC) $(PICPP)
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) $(INC) src/czn.c $(PICC) $(PICPP) -o $@ $(LIBS) $(CXXLIB)
 
 clean:
 	rm -rf build
-.PHONY: all clean lib
+.PHONY: all clean lib check check-sanitizers
+
+# Optional lower-memory archive encoder.
+build/kolmo-cm20: src/cli.c src/czn.c src/czn.h src/cm.inc src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/stream.inc build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli.c src/czn.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)

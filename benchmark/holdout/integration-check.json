@@ -1,0 +1,19 @@
+{
+  "source_commit": "90f3b2a",
+  "checked_root_sources": 9,
+  "rebuilt_executable_sha256": "53db4e3f67b2c10946e8abcb1897f989246bb3a0775844c72f7537bf6112e733",
+  "matched": {
+    "power": {
+      "sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+      "bytes": 6422952
+    },
+    "rides": {
+      "sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+      "bytes": 2654725
+    },
+    "quakes": {
+      "sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+      "bytes": 612178
+    }
+  }
+}

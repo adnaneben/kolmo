@@ -1,0 +1,12 @@
+{
+  "commit": "f3e6f84a87f2d80391eee6445569812454d5a2e5",
+  "executables": {
+    "kolmo": "d0c58cc8363758a15dae35d4d6928cf861cc31521cb117f34f5c5b60d565ccd3",
+    "release": "d3229132875ef09d5dd417895f367de414e0988e576999678e67d2cc8547bca2",
+    "zli": "6d831ea6fef6417cd6386f956f17ec46e4487a96b9eb1808c207f55b7b134dbb",
+    "zstd": "8c6ba2cfb4734f62e33488bb4ab767c2936ec8b2992fe0abd91d73fdeccce835"
+  },
+  "protocol_sha256": "ce510e4201fd182aa7b022a2c8ae58837197a4bff8fa7a1f5099349ab7cb2cc1",
+  "runtime_liblzma_sha256": "1b2e12cc1b920264f3dd15eeba22e85b8afd589595d8945d1d12a52afa694b09",
+  "platform": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B123"
+}

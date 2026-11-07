@@ -85,7 +85,7 @@ file compresses against it. On 4,802 held-out ~4 KB OWID record files (dictionar
 The dictionary id is recorded in the header; a file written with one refuses to decode without the matching
 dictionary (`CZN_ERR_DICT`) rather than returning wrong data. The API is `czn_train_dict` / `czn_compress_dict` /
 `czn_decompress_dict` (C), `kolmo.train_dict` + `compress(..., dict=d)` (Python), and `train_dict` / `compress_dict`
-/ `decompress_dict` (Rust). Dictionaries apply to the zstd-coded blocks (`rt`, `fast`, `hc`).
+/ `decompress_dict` (Rust). Dictionaries apply to the zstd-coded blocks (`fast`, `hc`).
 
 ### Streaming (large inputs)
 
@@ -95,6 +95,20 @@ independent frames — each a normal container for one segment — so compress a
 compression peaks at ~114 MB of RAM; streaming at 4 MiB segments peaks at ~32 MB, and decompression
 at ~11 MB. `-d` detects a streamed file automatically. The library API is `czn_stream_compress` /
 `czn_stream_decompress` (file descriptors in and out).
+
+For archival jobs with less available memory, build the optional CLI with
+`make build/kolmo-cm20` and run `./build/kolmo-cm20 -m ultra -T 1 input output.czn`.
+It uses smaller context-mixing tables when encoding. The standard decoder reads these
+files. The encoder setting controls table size; total process memory also depends on
+input, output buffers, other codecs and worker count.
+
+### Decoder limits
+
+C callers can use `czn_decompress_limited` with a `czn_decode_limits` structure to bound the
+original size, raw block size and block count of a frame. Each zero field disables that limit;
+exceeding a limit returns `CZN_ERR_LIMIT`. These are format-size limits, not a cap on total heap
+memory: an `ultra` block can still require gigabytes of context-mixing state. Existing decode
+functions keep their current behavior.
 
 ## Install
 
@@ -122,7 +136,7 @@ with plain `kolmo`.
 
 ```bash
 make                                    # build/kolmo, build/czbench, build/czntest (Linux, macOS; gcc or clang)
-./build/czntest                         # round trips in every mode, range reads, corruption fuzzing
+make check                             # resource failures, concurrent callers, round trips, ranges and corruption
 ./build/kolmo -m hc in.csv out.czn        # compress: -m rt|fast|eco|hc|max|ultra, -T threads, -B block MiB, -n no transforms, -q quick analysis (fastest)
 ./build/kolmo -d out.czn back.csv         # decompress (auto-detects one-shot vs streamed input)
 ./build/kolmo -s huge.csv huge.czs        # streaming compress: bounded memory, any size (-S N for N-MiB segments)

@@ -20,9 +20,9 @@ jobs:
       - name: build
         run: make -j4 ARCH=
       - name: tests (round trips in all modes, corruption fuzzing)
-        run: ./build/czntest
+        run: make check
       - name: shared library + Python binding round trip
-        run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py
+        run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py && python3 tests/test_concurrent_dict.py
       - name: Rust binding round trip
         run: cargo test --manifest-path bindings/rust/Cargo.toml
       - name: streaming round trip (multi-frame, bounded memory)
@@ -39,6 +39,8 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y liblzma-dev
       - name: build vendor libraries
         run: make -j4 ARCH= build/libvendor.a
+      - name: resource and concurrency regressions under ASan and UBSan
+        run: make -j4 ARCH= check-sanitizers
       - name: address and undefined-behaviour sanitizers
         run: |
           gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \

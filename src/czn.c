@@ -7,15 +7,21 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#if defined(CZN_TRACE) || defined(CZN_PROF)
+#if defined(CZN_TRACE) || defined(CZN_PROF) || defined(CZN_TIMING)
 #include <stdio.h>
+#endif
+#if defined(CZN_PROF) || defined(CZN_TIMING)
+#include <time.h>
+static double prof_now(void) {
+    struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec + t.tv_nsec * 1e-9;
+}
 #endif
 #ifdef CZN_PROF
 #include <x86intrin.h>
 #endif
 #include <stdint.h>
 unsigned long long czn_xxh3(const void *p, size_t n, unsigned long long seed);   /* vendor/xxhash/czn_xxh3.c */
-static _Atomic int cz_newmodes = 0;   /* bitmask of extended predictors used (bit0=mode4 dod -> v4, bit1=mode5 3rd-order -> v5) */
 #include "zstd.h"
 #include "zdict.h"
 #include "lz4.h"
@@ -918,7 +924,6 @@ int tbl_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, i
 #define calloc(a, b) zs_calloc(a, b)
 #define realloc(p, n) zs_realloc(p, n)
 #define free(p) zs_free(p)
-int cz_plan_threads = 1;   /* threads for the formula search in make_plan (set per czn_compress call) */
 #include "tbl2.inc"
 #include "log.inc"
 #include "sci.inc"
@@ -1031,6 +1036,7 @@ static void e8e9_inv(uint8_t *b, size_t n) {
 }
 
 static void bsc_once(void) { bsc_init(LIBBSC_FEATURE_FASTMODE); }
+static pthread_once_t bsc_init_once = PTHREAD_ONCE_INIT;
 static int looks_text(const uint8_t *s, size_t n) {          /* >= 95% printable in 4 slices of 16 KB */
     if (n < 4096) return 0;
     size_t tot = 0, pr = 0;
@@ -1064,10 +1070,12 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
         case C_LZ4: { int r = LZ4_compress_fast((const char *)in, (char *)out, (int)n, (int)cap, level > 0 ? level : 1); return r > 0 ? (size_t)r : 0; }
         case C_LZ4HC: {
             if (!x->lz4hc_state) x->lz4hc_state = malloc(LZ4_sizeofStateHC());
+            if (!x->lz4hc_state) return 0;
             int r = LZ4_compress_HC_extStateHC(x->lz4hc_state, (const char *)in, (char *)out, (int)n, (int)cap, level);
             return r > 0 ? (size_t)r : 0; }
         case C_ZSTD: {
             if (!x->zc) x->zc = ZSTD_createCCtx();
+            if (!x->zc) return 0;
             size_t r = x->dict ? ZSTD_compress_usingDict(x->zc, out, cap, in, n, x->dict, x->dictlen, level)
                                : ZSTD_compressCCtx(x->zc, out, cap, in, n, level);
             return ZSTD_isError(r) ? 0 : r; }
@@ -1076,7 +1084,7 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
             int ok = BrotliEncoderCompress(level, 24, BROTLI_MODE_GENERIC, n, in, &o, out);
             return ok ? o : 0; }
         case C_BSC: {                       /* payload: XXH32 of the bsc stream | bsc stream (checked before decoding) */
-            static pthread_once_t once = PTHREAD_ONCE_INIT; pthread_once(&once, bsc_once);
+            pthread_once(&bsc_init_once, bsc_once);
             if (n > 0x7FFFFFF0 || cap < n + LIBBSC_HEADER_SIZE + 4) return 0;
             int r = bsc_compress(in, out + 4, (int)n, LIBBSC_DEFAULT_LZPHASHSIZE, LIBBSC_DEFAULT_LZPMINLEN, LIBBSC_BLOCKSORTER_BWT,
                                  LIBBSC_CODER_QLFC_STATIC, LIBBSC_FEATURE_FASTMODE);
@@ -1107,12 +1115,13 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
         case C_STORE: if (cn != n) return -1; memcpy(out, in, n); return 0;
         case C_LZ4: case C_LZ4HC: { int r = LZ4_decompress_safe((const char *)in, (char *)out, (int)cn, (int)n); return r == (int)n ? 0 : -1; }
         case C_ZSTD: { if (!x->zd) x->zd = ZSTD_createDCtx();
+            if (!x->zd) return -1;
             size_t r = x->dict ? ZSTD_decompress_usingDict(x->zd, out, n, in, cn, x->dict, x->dictlen)
                                : ZSTD_decompressDCtx(x->zd, out, n, in, cn);
             return (!ZSTD_isError(r) && r == n) ? 0 : -1; }
         case C_BROTLI: { size_t o = n; int r = BrotliDecoderDecompress(cn, in, &o, out); return (r == BROTLI_DECODER_RESULT_SUCCESS && o == n) ? 0 : -1; }
         case C_BSC: {
-            static pthread_once_t once = PTHREAD_ONCE_INIT; pthread_once(&once, bsc_once);
+            pthread_once(&bsc_init_once, bsc_once);
             if (cn < 4 + LIBBSC_HEADER_SIZE || n > 0x7FFFFFF0 || cn > 0x7FFFFFF0) return -1;
             uint32_t h; memcpy(&h, in, 4); if (h != (uint32_t)XXH64(in + 4, cn - 4, 0x62736331)) return -1;
             int bs, ds; if (bsc_block_info(in + 4, LIBBSC_HEADER_SIZE, &bs, &ds, LIBBSC_FEATURE_FASTMODE) != LIBBSC_NO_ERROR) return -1;
@@ -1139,8 +1148,32 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
 static void codec_ctx_free(codec_ctx *x) { ZSTD_freeCCtx(x->zc); ZSTD_freeDCtx(x->zd); free(x->lz4hc_state); }
 
 /* per-thread state kept across calls (pool threads persist): codec contexts and scratch buffers */
-typedef struct { codec_ctx x; uint8_t *tbuf, *slot, *rbuf; uint32_t *pos, *rowbuf; size_t tcap, scap, rbcap, pcap, rcap; } tls_t;
-static __thread tls_t TLS;
+typedef struct { codec_ctx x; uint8_t *tbuf, *slot, *rbuf; uint32_t *pos, *rowbuf; size_t tcap, scap, rbcap, pcap, rcap; int retained; } tls_t;
+static __thread tls_t *TLS;
+static pthread_key_t tls_key;
+static pthread_once_t tls_once = PTHREAD_ONCE_INIT;
+static int tls_key_valid;
+static void tls_destroy(void *arg) {
+    tls_t *s = arg;
+    codec_ctx_free(&s->x);
+    free(s->tbuf); free(s->slot); free(s->rbuf); free(s->pos); free(s->rowbuf);
+    free(s);
+}
+static void tls_init(void) { tls_key_valid = pthread_key_create(&tls_key, tls_destroy) == 0; }
+static tls_t *tls_begin(void) {
+    pthread_once(&tls_once, tls_init);
+    if (!TLS) {
+        TLS = calloc(1, sizeof(*TLS));
+        if (!TLS) return NULL;
+        if (tls_key_valid && !pthread_setspecific(tls_key, TLS)) TLS->retained = 1;
+    }
+    return TLS;
+}
+static void tls_end(tls_t *s) {
+    zs_trim();
+    /* Without a destructor, retain nothing after a completed call. */
+    if (!s->retained) { TLS = NULL; tls_destroy(s); }
+}
 static void *grow(void *p, size_t *cap, size_t need) {
     if (need <= *cap) return p;
     free(p); p = malloc(need); *cap = p ? need : 0; return p;
@@ -1167,6 +1200,27 @@ static inline uint64_t get64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); r
 typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; } plan_t;   /* tp/tbl: a=delim b=quotes c=k-1 | shuf: a=w b=ch c=delta; fs: formulas (encoder) */
 
 static int default_threads(void) { long n = sysconf(_SC_NPROCESSORS_ONLN); return n > 0 ? (int)n : 1; }
+
+/* Container allocations use checked element counts and retain the old pointer
+ * on growth failure. The test-only counter exercises each cleanup path. */
+#ifdef CZN_TESTING
+static _Thread_local long czn_alloc_fail_after = -1;
+static int czn_alloc_fail(void) {
+    if (czn_alloc_fail_after < 0) return 0;
+    if (!czn_alloc_fail_after) return 1;
+    czn_alloc_fail_after--; return 0;
+}
+#else
+#define czn_alloc_fail() 0
+#endif
+static void *array_alloc(size_t count, size_t width, int zero) {
+    if (!width || count > SIZE_MAX / width || czn_alloc_fail()) return NULL;
+    return zero ? calloc(count ? count : 1, width) : malloc((count ? count : 1) * width);
+}
+static void *array_resize(void *old, size_t count, size_t width) {
+    if (!width || count > SIZE_MAX / width || czn_alloc_fail()) return NULL;
+    return realloc(old, (count ? count : 1) * width);
+}
 
 static void mode_codec(const czn_params *p, int *codec, int *level) {
     switch (p->mode) {
@@ -1197,7 +1251,7 @@ static int json_lines(const uint8_t *s, size_t h) {
 /* file-level analysis: one plan for every block */
 /* light: the cheap analysis of the fastest settings: no JSON, log or word trials (whose transforms are also the slow
  * ones), and binary candidates scored by zstd -1 on a 256 KiB slice instead of zstd -3 on 1 MiB */
-static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int structured, int strong, int light) {
+static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int structured, int threads, int strong, int light) {
     if (light) logs = 0;
     plan_t pl = {T_NONE, 0, 0, 0};
     if (n < 4096) return pl;
@@ -1223,6 +1277,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         }
         static const struct { uint8_t d; int q; } D[] = {{',', 1}, {'\t', 0}, {';', 1}, {'|', 0}, {' ', 1}};
         int *cnt = malloc(4001 * sizeof(int)); size_t head = n < (1 << 16) ? n : (1 << 16);
+        if (!cnt) return pl;
         for (int di = 0; di < 5 && pl.t == T_NONE; di++) {
             int L = tp_fieldcounts(s, (int64_t)head, D[di].d, D[di].q, cnt, 4000);
             if (L < 51) continue;
@@ -1233,21 +1288,27 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         free(cnt);
         if (pl.t == T_TP) {                       /* typed table transform, kept only if it helps on a sample */
             size_t mm = head; while (mm > 0 && s[mm - 1] != '\n') mm--; if (!mm) mm = head;
-            uint8_t *o = malloc(mm + TSLACK); int64_t tn = tbl_encode(s, mm, (uint8_t)pl.a, pl.c + 1, pl.b, o);
+            uint8_t *o = malloc(mm + TSLACK);
+            if (!o) return pl;
+            int64_t tn = tbl_encode(s, mm, (uint8_t)pl.a, pl.c + 1, pl.b, o);
             ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm + TSLACK); uint8_t *z = malloc(cap);
+            if (!zc || !z) { free(o); free(z); ZSTD_freeCCtx(zc); return pl; }
             size_t a = tn > 0 ? ZSTD_compressCCtx(zc, z, cap, o, tn, 1) : (size_t)-1, b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1);
             if (tn > 0 && !ZSTD_isError(a) && !ZSTD_isError(b) && a * 100 < CZ_TBL_GAIN_PCT * b) {
                 pl.t = T_TBL; pl.fs = malloc(sizeof(fset_t));
-                if (pl.fs) fset_discover(s, n, (uint8_t)pl.a, pl.c + 1, pl.b, effort, pl.fs);
+                if (pl.fs) fset_discover(s, n, (uint8_t)pl.a, pl.c + 1, pl.b, effort, pl.fs, threads);
             }
             free(o); free(z); ZSTD_freeCCtx(zc);
         }
         if (logs && pl.t == T_NONE && n >= 65536) {        /* logs: template transform, kept if it helps on a sample */
             size_t mm = n < (1u << 20) ? n : (1u << 20); while (mm > 0 && s[mm - 1] != '\n') mm--;
             if (mm >= 16384) {
-                uint8_t *o = malloc(mm + 64); int64_t tn = log_encode(s, mm, o, mm + 64);
+                uint8_t *o = malloc(mm + 64);
+                if (!o) return pl;
+                int64_t tn = log_encode(s, mm, o, mm + 64);
                 if (tn > 0) {
                     ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm); uint8_t *z = malloc(cap);
+                    if (!zc || !z) { free(o); free(z); ZSTD_freeCCtx(zc); return pl; }
                     size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1), b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1);
                     if (!ZSTD_isError(a) && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b) pl.t = T_LOG;
                     free(z); ZSTD_freeCCtx(zc);
@@ -1257,9 +1318,12 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         }
         if (logs && effort && pl.t == T_NONE && n >= 65536) {   /* prose and markup (eco and above): word dictionary */
             size_t mm = n < (2u << 20) ? n : (2u << 20);
-            uint8_t *o = malloc(mm + 64); int64_t tn = word_encode(s, mm, o, mm + 64);
+            uint8_t *o = malloc(mm + 64);
+            if (!o) return pl;
+            int64_t tn = word_encode(s, mm, o, mm + 64);
             if (tn > 0) {
                 ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm); uint8_t *z = malloc(cap);
+                if (!zc || !z) { free(o); free(z); ZSTD_freeCCtx(zc); return pl; }
                 size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 3), b = ZSTD_compressCCtx(zc, z, cap, s, mm, 3);
                 if (!ZSTD_isError(a) && !ZSTD_isError(b) && a * 100 < CZ_WORD_GAIN_PCT * b) pl.t = T_WORD;
                 free(z); ZSTD_freeCCtx(zc);
@@ -1273,6 +1337,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     const uint8_t *smp = s + mid;
     ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(sl);
     uint8_t *o = malloc(cap), *t = malloc(sl);
+    if (!zc || !o || !t) { free(o); free(t); ZSTD_freeCCtx(zc); return pl; }
     size_t base = ZSTD_compressCCtx(zc, o, cap, smp, sl, 1);
     if (!ZSTD_isError(base) && base * 4 >= sl) {
         double best = base * 0.95;
@@ -1291,39 +1356,49 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
      * on a slice of up to 1 MiB from the middle of the input; kept only when at least 3% smaller */
     if (structured && n >= (1u << 18)) {
         size_t LM = light ? (1u << 18) : (1u << 20), L = n / 4 < LM ? n / 4 : LM, st = (n / 2 - L / 2) & ~(size_t)7;
-#define zcost(zc, b, n, tmp, cap) (light ? zcost1(zc, b, n, tmp, cap) : zcost(zc, b, n, tmp, cap))
+        const int zl = light ? 1 : 3;                      /* scoring level */
         size_t bc = L * 2 + 1024; uint8_t *buf = malloc(bc), *zb = malloc(ZSTD_compressBound(bc));
+        if (!buf || !zb) { free(buf); free(zb); ZSTD_freeCCtx(zc); return pl; }
         size_t zcap = ZSTD_compressBound(bc);
-        double plain = (double)zcost(zc, s + st, L, zb, zcap) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
+        double plain = (double)zcost(zc, s + st, L, zb, zcap, zl) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
         if (pl.t == T_SHUF) {
             size_t u = (size_t)pl.a * pl.b, rows = L / u; shuffle_fwd(s + st, rows, pl.a, pl.b, pl.c, buf);
-            double c = (double)zcost(zc, buf, rows * u, zb, zcap) / (rows * u);
+            double c = (double)zcost(zc, buf, rows * u, zb, zcap, zl) / (rows * u);
             if (c < best) { best = c; chosen = 1; }
         }
         img_plan_t im;
+#if defined(CZN_PROF) || defined(CZN_TIMING)
+        double image_start = prof_now();
+#endif
         if (img16_detect(s, n, &im)) {
             int64_t e = img16_encode(s + st, L, st, &im, buf);
-            if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap) / L; if (c < best) { best = c; keep = pl; keep.t = T_IMG; keep.img = im; chosen = 2; } }
+            if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / L; if (c < best) { best = c; keep = pl; keep.t = T_IMG; keep.img = im; chosen = 2; } }
         }
+#if defined(CZN_PROF) || defined(CZN_TIMING)
+        double image_ms = (prof_now() - image_start) * 1000;
+        double record_start = prof_now();
+#endif
         rec_plan_t *R = malloc(sizeof(rec_plan_t));
         if (R && rec_detect(s, n, effort, R)) {
             size_t rs = (size_t)R->h + (st > (size_t)R->h ? (st - R->h) / R->P * R->P : 0); if (!rs) rs = R->P;
             size_t rl = L / R->P * R->P;
             if (rs + rl <= n) {
                 int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc);
-                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap) / rl; if (c < best) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; R = NULL; chosen = 3; } }
+                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < best) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; R = NULL; chosen = 3; } }
             }
         }
         free(R);
+#if defined(CZN_PROF) || defined(CZN_TIMING)
+        fprintf(stderr, "structure bytes=%zu image_ms=%.3f record_ms=%.3f\n", n, image_ms, (prof_now() - record_start) * 1000);
+#endif
         {   /* executables: x86 call/jump transform */
             memcpy(buf, s + st, L); e8e9_fwd(buf, L);
-            double c = (double)zcost(zc, buf, L, zb, zcap) / L;
+            double c = (double)zcost(zc, buf, L, zb, zcap, zl) / L;
             if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
             else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
         }
         if (chosen >= 2) pl = keep;
         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
-#undef zcost
         free(buf); free(zb);
     }
     ZSTD_freeCCtx(zc);
@@ -1332,23 +1407,31 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 
 /* block boundaries: newline-aligned for transposed text, element-aligned for shuffled arrays */
 static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, uint64_t **starts_out) {
-    size_t cap = n / (B / 2 + 1) + 2; uint64_t *st = malloc(cap * sizeof(uint64_t)); uint32_t nb = 0; size_t pos = 0;
+    size_t cap = n / (B / 2 + 1) + 2; uint64_t *st = array_alloc(cap, sizeof(uint64_t), 0); uint32_t nb = 0; size_t pos = 0;
+    *starts_out = NULL;
+    if (!st) return 0;
     if (pl.t == T_SHUF) { uint32_t u = pl.a * pl.b; B = B / u * u; if (!B) B = u; }
     if (pl.t == T_IMG) B &= ~1u;
     if (pl.t == T_REC) { B = B / pl.rec->P * pl.rec->P; if (!B) B = pl.rec->P; }
     while (pos < n) {
-        size_t end = pos + B < n ? pos + B : n;
+        size_t end = B < n - pos ? pos + B : n;
         if (pl.t == T_REC && pos == 0) end = (size_t)pl.rec->h + B < n ? (size_t)pl.rec->h + B : n;
         if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG) && end < n) {
             size_t lo = pos + B / 2, e = end;
             while (e > lo && s[e - 1] != '\n') e--;
             if (e > lo) end = e;
         }
-        if (nb + 1 >= cap) { cap *= 2; st = realloc(st, cap * sizeof(uint64_t)); }
+        if (nb == UINT32_MAX - 1) { free(st); return 0; }
+        if ((size_t)nb + 1 >= cap) {
+            if (cap > SIZE_MAX / 2) { free(st); return 0; }
+            uint64_t *grown = array_resize(st, cap * 2, sizeof(uint64_t));
+            if (!grown) { free(st); return 0; }
+            st = grown; cap *= 2;
+        }
         st[nb++] = pos; pos = end;
     }
     if (n == 0) st[nb++] = 0;
-    st = realloc(st, (nb + 1) * sizeof(uint64_t)); st[nb] = n;
+    st[nb] = n;
     *starts_out = st; return nb;
 }
 
@@ -1374,7 +1457,7 @@ size_t czn_bound(size_t n, const czn_params *p) {
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
     const uint8_t *src; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
-    int codec, level; plan_t pl; atomic_uint next; atomic_int err; size_t B;
+    int codec, level; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint64_t *poff;   /* decode: payload offsets */
     uint64_t rlo, rhi; uint8_t *rdst;   /* range read */
@@ -1388,12 +1471,12 @@ typedef struct {
 static void emit_block(job_t *J, uint32_t i, const uint8_t *hdr4, const uint8_t *body, size_t tot) {
     pthread_mutex_lock(&J->wmu);
     if (i == J->wnext) {
-        if (J->wpos + tot > J->cap) J->werr = CZN_ERR_DSTSIZE;
+        if (J->wpos > J->cap || tot > J->cap - J->wpos) J->werr = CZN_ERR_DSTSIZE;
         else { memcpy(J->dst + J->wpos, hdr4, 4); memcpy(J->dst + J->wpos + 4, body, tot - 4); J->wpos += tot; }
         J->wnext++;
         while (J->wnext < J->nb && J->out[J->wnext]) {
             uint32_t q = J->wnext; size_t l = J->outlen[q];
-            if (J->wpos + l > J->cap) J->werr = CZN_ERR_DSTSIZE; else { memcpy(J->dst + J->wpos, J->out[q], l); J->wpos += l; }
+            if (J->wpos > J->cap || l > J->cap - J->wpos) J->werr = CZN_ERR_DSTSIZE; else { memcpy(J->dst + J->wpos, J->out[q], l); J->wpos += l; }
             free(J->out[q]); J->out[q] = NULL; J->wnext++;
         }
         pthread_mutex_unlock(&J->wmu); return;
@@ -1406,23 +1489,25 @@ static void emit_block(job_t *J, uint32_t i, const uint8_t *hdr4, const uint8_t 
     J->outlen[i] = tot; J->out[i] = b;
     while (J->wnext < J->nb && J->out[J->wnext]) {                /* the frontier may have reached i meanwhile */
         uint32_t q = J->wnext; size_t l = J->outlen[q];
-        if (J->wpos + l > J->cap) J->werr = CZN_ERR_DSTSIZE; else { memcpy(J->dst + J->wpos, J->out[q], l); J->wpos += l; }
+        if (J->wpos > J->cap || l > J->cap - J->wpos) J->werr = CZN_ERR_DSTSIZE; else { memcpy(J->dst + J->wpos, J->out[q], l); J->wpos += l; }
         free(J->out[q]); J->out[q] = NULL; J->wnext++;
     }
     pthread_mutex_unlock(&J->wmu);
 }
 
 static void *compress_worker(void *arg) {
-    job_t *J = arg; tls_t *S = &TLS; codec_ctx *xp = &S->x;
+    job_t *J = arg; tls_t *S = tls_begin();
+    if (!S) { atomic_store(&J->err, CZN_ERR_ALLOC); return NULL; }
+    codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TSLACK + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
-    if (!tbuf || !slot) { atomic_store(&J->err, CZN_ERR_ALLOC); return NULL; }
+    if (!tbuf || !slot) { atomic_store(&J->err, CZN_ERR_ALLOC); tls_end(S); return NULL; }
     for (;;) {
         uint32_t i = atomic_fetch_add(&J->next, 1); if (i >= J->nb) break;
         const plan_t pl = J->plans[J->bplan[i]]; const uint64_t rs = J->rstart[i];
         const uint8_t *raw = J->src + J->starts[i]; size_t len = J->starts[i + 1] - J->starts[i];
-        const uint8_t *in = raw; size_t meta = 0; int tflag = 0;
+        const uint8_t *in = raw; size_t meta = 0; int tflag = 0; unsigned modes = 0;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
         if (pl.t == T_TP && len) {
@@ -1435,8 +1520,9 @@ static void *compress_worker(void *arg) {
             for (int j = 0; j < k; j++) put32(sl + 4 * j, (uint32_t)colsz[j]);
             meta = 4 * k; in = tbuf;
         } else if (pl.t == T_TBL && len) {
-            int64_t tn = tbl2_encode(raw, len, (uint8_t)pl.a, pl.c + 1, pl.b, pl.fs, tbuf);
+            int64_t tn = tbl2_encode(raw, len, (uint8_t)pl.a, pl.c + 1, pl.b, pl.fs, tbuf, &modes);
             if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 4; }
+            else modes = 0;
         } else if (pl.t == T_LOG && len) {
             int64_t tn = log_encode_m(raw, len, tbuf, len + TSLACK, pl.a == 1);
             if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 5; }
@@ -1485,14 +1571,17 @@ static void *compress_worker(void *arg) {
             codec = C_STORE; tflag = 0; tot = 4 + len;
             static const uint8_t h0[4] = {T_NONE, 0, 0, 0};
             emit_block(J, i, h0, raw, tot);
-        } else emit_block(J, i, slot, slot + 4, tot);
+        } else {
+            emit_block(J, i, slot, slot + 4, tot);
+            atomic_fetch_or_explicit(&J->newmodes, modes, memory_order_relaxed);
+        }
         put32(e, (uint32_t)len); put32(e + 4, (uint32_t)tot);
         if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)czn_xxh3(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)
                                                    : (uint32_t)czn_xxh3(slot + 4, tot - 4, 0x637a6e31u ^ get32(slot)));
         else put32(e + 8, blk_sum(3, raw, len));
         e[12] = (uint8_t)codec; e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
     }
-    zs_trim();
+    tls_end(S);
     return NULL;
 }
 
@@ -1522,15 +1611,20 @@ static void run_pool(void *(*fn)(void *), void *J, int threads, uint32_t units) 
     if ((uint32_t)threads > units) threads = (int)units;
     if (threads <= 1) { fn(J); return; }
     if (pthread_mutex_trylock(&pool_job)) {               /* pool busy (concurrent caller): private threads */
-        pthread_t th[256];
-        for (int t = 1; t < threads; t++) pthread_create(&th[t], NULL, fn, J);
+        pthread_t th[255]; int started = 0;
+        for (int t = 1; t < threads; t++) {
+            if (pthread_create(&th[started], NULL, fn, J)) break;
+            started++;
+        }
         fn(J);
-        for (int t = 1; t < threads; t++) pthread_join(th[t], NULL);
+        for (int t = 0; t < started; t++) pthread_join(th[t], NULL);
         return;
     }
     pthread_mutex_lock(&pool_mu);
     while (pool_n < threads - 1) {
-        pthread_t th; pthread_attr_t at; pthread_attr_init(&at); pthread_attr_setdetachstate(&at, PTHREAD_CREATE_DETACHED);
+        pthread_t th; pthread_attr_t at;
+        if (pthread_attr_init(&at)) break;
+        if (pthread_attr_setdetachstate(&at, PTHREAD_CREATE_DETACHED)) { pthread_attr_destroy(&at); break; }
         pool_start_gen[pool_n] = pool_gen;
         if (pthread_create(&th, &at, pool_main, (void *)(intptr_t)pool_n)) { pthread_attr_destroy(&at); break; }
         pthread_attr_destroy(&at); pool_n++;
@@ -1554,7 +1648,7 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, const plan_t *pl) {
     if (m < 65536) return 1;
     uint8_t *t = malloc(m + TSLACK + 64), *z = malloc(m + m / 8 + 64); int64_t tn = -1;
     if (!t || !z) { free(t); free(z); return 1; }
-    if (pl->t == T_TBL) tn = tbl2_encode(s, m, (uint8_t)pl->a, pl->c + 1, pl->b, pl->fs, t);
+    if (pl->t == T_TBL) tn = tbl2_encode(s, m, (uint8_t)pl->a, pl->c + 1, pl->b, pl->fs, t, NULL);
     else if (pl->t == T_LOG) tn = log_encode_m(s, m, t, m + TSLACK, pl->a == 1);
     else if (pl->t == T_WORD) tn = word_encode(s, m, t, m + TSLACK);
     int keep = 1;
@@ -1586,66 +1680,120 @@ static uint32_t segments(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se,
     return k;
 }
 
+typedef struct {
+    const uint8_t *src; const uint64_t *starts, *ends;
+    plan_t *plans; const czn_params *params;
+    uint32_t count; int threads_per_plan; atomic_uint next;
+} plan_job;
+static void *plan_worker(void *arg) {
+    plan_job *j = arg; const czn_params *p = j->params;
+    for (;;) {
+        uint32_t g = atomic_fetch_add(&j->next, 1); if (g >= j->count) break;
+        const uint8_t *src = j->src + j->starts[g]; size_t len = j->ends[g] - j->starts[g];
+        plan_t pl = p->transforms ? make_plan(src, len, p->mode >= CZN_ECO,
+            p->mode != CZN_RT, p->mode != CZN_RT, j->threads_per_plan, p->mode >= CZN_MAX, p->transforms == 2) : (plan_t){0};
+        if (p->mode == CZN_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;
+        if (p->mode == CZN_ULTRA && !ultra_keep_transform(src, len, &pl)) {
+            free(pl.fs); pl.fs = NULL; pl.t = T_NONE;
+        }
+        j->plans[g] = pl;
+    }
+    zs_trim();
+    return NULL;
+}
+
 static int64_t compress_impl(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const czn_params *p,
                              const void *dict, size_t dictlen, uint32_t dictid) {
     czn_params d = {CZN_FAST, 0, 0, 0, 1}; if (!p) p = &d;
-    atomic_store_explicit(&cz_newmodes, 0, memory_order_relaxed);   /* reset per call; table encoder ORs in extended predictors, then the version byte reflects the highest */
+    if (cap < HDR + IDX) return CZN_ERR_DSTSIZE;
+    if (n > INT64_MAX) return CZN_ERR_CORRUPT;
+    int threads = p->threads > 0 ? p->threads : default_threads();
     uint32_t B = p->block ? p->block : (p->mode >= CZN_MAX ? (128u << 20) : p->mode >= CZN_ECO ? (16u << 20) : czn_fast_block(n));   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
     if (B < 4096) B = 4096;
     int codec, level; mode_codec(p, &codec, &level);
     enum { MAXSEG = 4096 };
-    uint64_t *ss = malloc(8 * MAXSEG), *se = malloc(8 * MAXSEG);
-#ifdef CZN_PROF
-    uint64_t pt0 = __rdtsc();
+    int64_t ret = CZN_ERR_ALLOC; size_t w = 0;
+    job_t J = {0}; int mutex_ready = 0;
+    uint32_t nseg = 0, nb = 0; size_t bcap = 2;
+    plan_t *plans = NULL;
+    uint64_t *starts = NULL, *rstart = NULL; uint32_t *bplan = NULL;
+    uint64_t *ss = array_alloc(MAXSEG, sizeof(uint64_t), 0), *se = array_alloc(MAXSEG, sizeof(uint64_t), 0);
+    if (!ss || !se) goto cleanup;
+#if defined(CZN_PROF) || defined(CZN_TIMING)
+    double pt0 = prof_now();
 #endif
-    uint32_t nseg = segments(src, n, ss, se, MAXSEG);
-    plan_t *plans = calloc(nseg, sizeof(plan_t));
-    uint64_t *starts = malloc(8 * 2); uint32_t *bplan = malloc(4 * 2); uint64_t *rstart = malloc(8 * 2); uint32_t nb = 0, bcap = 2;
-    cz_plan_threads = p->threads > 0 ? p->threads : default_threads();
+    nseg = segments(src, n, ss, se, MAXSEG);
+    plans = array_alloc(nseg, sizeof(plan_t), 1);
+    starts = array_alloc(bcap, sizeof(uint64_t), 0);
+    bplan = array_alloc(bcap, sizeof(uint32_t), 0);
+    rstart = array_alloc(bcap, sizeof(uint64_t), 0);
+    if (!plans || !starts || !bplan || !rstart) goto cleanup;
+    /* Parallelize independent members, or formula discovery within a single
+     * member. Never multiply the two thread budgets. Plans remain in input order. */
+    plan_job planning = {src, ss, se, plans, p, nseg, nseg > 1 ? 1 : threads};
+    atomic_init(&planning.next, 0);
+    run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
     for (uint32_t g = 0; g < nseg; g++) {
         const uint8_t *s0 = src + ss[g]; size_t len = (size_t)(se[g] - ss[g]);
-        plan_t pl = p->transforms ? make_plan(s0, len, p->mode >= CZN_ECO, p->mode != CZN_RT, p->mode != CZN_RT, p->mode >= CZN_MAX, p->transforms == 2) : (plan_t){T_NONE, 0, 0, 0};
-        if (p->mode == CZN_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;   /* rt keeps LZ4 decode speed */
-        if (p->mode == CZN_ULTRA && !ultra_keep_transform(s0, len, &pl)) { free(pl.fs); pl.fs = NULL; pl.t = T_NONE; }
-        plans[g] = pl;
+        plan_t pl = plans[g];
         uint32_t Bs = B;
         if (!p->block && p->mode == CZN_HC && pl.t == T_WORD) Bs = 128u << 20;   /* hc text: one large window */
         uint64_t *st; uint32_t m = make_blocks(s0, len, Bs, pl, &st);
+        if (!st) goto cleanup;
         if (len == 0) m = 0;
-        while (nb + m + 1 > bcap) { bcap *= 2; starts = realloc(starts, 8 * bcap); bplan = realloc(bplan, 4 * bcap); rstart = realloc(rstart, 8 * bcap); }
+        if (m > UINT32_MAX - nb - 1) { free(st); goto cleanup; }
+        size_t needed = (size_t)nb + m + 1;
+        if (needed > bcap) {
+            size_t grown_cap = bcap;
+            while (grown_cap < needed) {
+                if (grown_cap > SIZE_MAX / 2) { free(st); goto cleanup; }
+                grown_cap *= 2;
+            }
+            uint64_t *grown_starts = array_resize(starts, grown_cap, sizeof(uint64_t));
+            if (!grown_starts) { free(st); goto cleanup; } starts = grown_starts;
+            uint32_t *grown_bplan = array_resize(bplan, grown_cap, sizeof(uint32_t));
+            if (!grown_bplan) { free(st); goto cleanup; } bplan = grown_bplan;
+            uint64_t *grown_rstart = array_resize(rstart, grown_cap, sizeof(uint64_t));
+            if (!grown_rstart) { free(st); goto cleanup; } rstart = grown_rstart;
+            bcap = grown_cap;
+        }
         for (uint32_t i = 0; i < m; i++) { starts[nb] = ss[g] + st[i]; rstart[nb] = st[i]; bplan[nb] = g; nb++; }
         free(st);
     }
     if (nb == 0) { starts[0] = 0; rstart[0] = 0; bplan[0] = 0; nb = 1; }
     starts[nb] = n;
     size_t maxb = 0; for (uint32_t i = 0; i < nb; i++) if (starts[i + 1] - starts[i] > maxb) maxb = starts[i + 1] - starts[i];
-    job_t J = {0};
     J.src = src; J.starts = starts; J.nb = nb; J.slot = slot_size((uint32_t)maxb, codec);
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
-    J.out = calloc(nb, sizeof(uint8_t *)); J.outlen = calloc(nb, sizeof(size_t));
+    J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
+    if (!J.out || !J.outlen) goto cleanup;
     J.psum = p->mode == CZN_RT;
     J.dict = dict; J.dictlen = dictlen;
-    J.dst = dst; J.cap = cap; J.wnext = 0; J.wpos = HDR + (size_t)nb * IDX; J.werr = 0; pthread_mutex_init(&J.wmu, NULL);
-    atomic_init(&J.next, 0); atomic_init(&J.err, 0);
-    int64_t ret = 0;
-    if (HDR + (size_t)nb * IDX > cap) ret = CZN_ERR_DSTSIZE;
-#ifdef CZN_PROF
-    uint64_t pt1 = __rdtsc();
+    J.dst = dst; J.cap = cap; J.wnext = 0; J.wpos = HDR + (size_t)nb * IDX; J.werr = 0;
+    if (pthread_mutex_init(&J.wmu, NULL)) goto cleanup;
+    mutex_ready = 1;
+    atomic_init(&J.next, 0); atomic_init(&J.newmodes, 0); atomic_init(&J.err, 0);
+    ret = 0;
+    if ((size_t)nb > (cap - HDR) / IDX) ret = CZN_ERR_DSTSIZE;
+#if defined(CZN_PROF) || defined(CZN_TIMING)
+    double pt1 = prof_now();
 #endif
-    if (!ret) run_pool(compress_worker, &J, p->threads > 0 ? p->threads : default_threads(), nb);
-#ifdef CZN_PROF
-    fprintf(stderr, "compress: plan %.1f Mcyc, blocks %.1f Mcyc\n", (pt1 - pt0) / 1e6, (__rdtsc() - pt1) / 1e6);
+    if (!ret) run_pool(compress_worker, &J, threads, nb);
+#if defined(CZN_PROF) || defined(CZN_TIMING)
+    fprintf(stderr, "compress bytes=%zu threads=%d plan_ms=%.3f blocks_ms=%.3f\n", n, threads, (pt1 - pt0) * 1000, (prof_now() - pt1) * 1000);
 #endif
     if (!ret) ret = atomic_load(&J.err);
     if (!ret) ret = J.werr;
     if (!ret && J.wnext != nb) ret = CZN_ERR_ALLOC;
-    size_t w = J.wpos;
-    for (uint32_t i = 0; i < nb; i++) free(J.out[i]);
-    free(J.outlen); pthread_mutex_destroy(&J.wmu);
-    for (uint32_t g = 0; g < nseg; g++) { free(plans[g].fs); free(plans[g].rec); }
+    w = J.wpos;
+cleanup:
+    if (J.out) for (uint32_t i = 0; i < nb; i++) free(J.out[i]);
+    free(J.outlen); if (mutex_ready) pthread_mutex_destroy(&J.wmu);
+    if (plans) for (uint32_t g = 0; g < nseg; g++) { free(plans[g].fs); free(plans[g].rec); }
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
+    zs_trim();
     if (ret) return ret;
-    { int nm = atomic_load_explicit(&cz_newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = czn_crc32c(0, dst, 28); hc = czn_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
@@ -1659,21 +1807,32 @@ int64_t czn_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, con
 /* ------------------------------------------------------------------ decoding */
 typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict; uint32_t dictid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
 
-static int parse(const uint8_t *s, size_t n, parsed_t *P) {
+static int parse(const uint8_t *s, size_t n, parsed_t *P, const czn_decode_limits *limits) {
     if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > 5) return CZN_ERR_CORRUPT;
     P->ver = s[4]; P->psum = P->ver >= 3 && (s[10] & 1);
     P->needdict = P->ver >= 3 && (s[10] & 2); P->dictid = P->needdict ? get32(s + 6) : 0;
     P->orig = get64(s + 12); P->nb = get32(s + 20);
+    if (limits && ((limits->max_output_bytes && P->orig > limits->max_output_bytes) ||
+                   (limits->max_blocks && P->nb > limits->max_blocks))) return CZN_ERR_LIMIT;
     P->pl = (plan_t){s[6], s[7], s[8], s[9]};
     if ((uint64_t)P->nb * IDX + HDR > n) return CZN_ERR_CORRUPT;
     uint32_t hc = czn_crc32c(0, s, 28); hc = czn_crc32c(hc, s + HDR, (size_t)P->nb * IDX);
     if (hc != get32(s + 28)) return CZN_ERR_CHECKSUM;
     P->idx = s + HDR;
-    P->poff = malloc((P->nb + 1) * sizeof(uint64_t)); P->roff = malloc((P->nb + 1) * sizeof(uint64_t));
+    P->poff = array_alloc((size_t)P->nb + 1, sizeof(uint64_t), 0);
+    P->roff = array_alloc((size_t)P->nb + 1, sizeof(uint64_t), 0);
+    if (!P->poff || !P->roff) { free(P->poff); free(P->roff); return CZN_ERR_ALLOC; }
     uint64_t po = HDR + (uint64_t)P->nb * IDX, ro = 0;
     for (uint32_t i = 0; i < P->nb; i++) {
         P->poff[i] = po; P->roff[i] = ro;
-        po += get32(P->idx + (size_t)i * IDX + 4); ro += get32(P->idx + (size_t)i * IDX);
+        uint32_t cl = get32(P->idx + (size_t)i * IDX + 4), raw = get32(P->idx + (size_t)i * IDX);
+        if (limits && limits->max_block_bytes && raw > limits->max_block_bytes) {
+            free(P->poff); free(P->roff); return CZN_ERR_LIMIT;
+        }
+        if (po > n || cl > n - po || ro > P->orig || raw > P->orig - ro) {
+            free(P->poff); free(P->roff); return CZN_ERR_CORRUPT;
+        }
+        po += cl; ro += raw;
     }
     P->poff[P->nb] = po; P->roff[P->nb] = ro;
     if (po > n || ro != P->orig) { free(P->poff); free(P->roff); return CZN_ERR_CORRUPT; }
@@ -1737,10 +1896,11 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, uin
 }
 
 static void *decompress_worker(void *arg) {
-    djob_t *J = arg; tls_t *S = &TLS;
+    djob_t *J = arg; tls_t *S = tls_begin();
+    if (!S) { atomic_store(&J->err, CZN_ERR_ALLOC); return NULL; }
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->maxraw + TSLACK + 64);
     uint8_t *rbuf = J->clip_hi ? (S->rbuf = grow(S->rbuf, &S->rbcap, J->maxraw + 64)) : NULL;
-    if (!tbuf || (J->clip_hi && !rbuf)) { atomic_store(&J->err, CZN_ERR_ALLOC); return NULL; }
+    if (!tbuf || (J->clip_hi && !rbuf)) { atomic_store(&J->err, CZN_ERR_ALLOC); tls_end(S); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
     for (;;) {
@@ -1758,15 +1918,15 @@ static void *decompress_worker(void *arg) {
         }
         if (r) atomic_store(&J->err, r);
     }
-    zs_trim();
+    tls_end(S);
     return NULL;
 }
 
 int64_t czn_original_size(const uint8_t *src, size_t n) { return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : CZN_ERR_CORRUPT; }
 
 static int64_t run_decode(const uint8_t *src, size_t n, uint8_t *dst, int threads, uint64_t lo, uint64_t hi, int range,
-                          const void *dict, size_t dictlen, uint32_t dictid) {
-    parsed_t P; int r = parse(src, n, &P); if (r) return r;
+                          const void *dict, size_t dictlen, uint32_t dictid, const czn_decode_limits *limits) {
+    parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
     if (P.needdict && (!dict || dictid != P.dictid)) { free(P.poff); free(P.roff); return CZN_ERR_DICT; }
     djob_t J = {0}; J.src = src; J.P = &P; J.dst = dst; J.dict = dict; J.dictlen = dictlen;
     for (uint32_t i = 0; i < P.nb; i++) { size_t l = get32(P.idx + (size_t)i * IDX); if (l > J.maxraw) J.maxraw = l; }
@@ -1786,15 +1946,23 @@ static int64_t run_decode(const uint8_t *src, size_t n, uint8_t *dst, int thread
 int64_t czn_decompress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads) {
     int64_t o = czn_original_size(src, n); if (o < 0) return o;
     if ((uint64_t)o > cap) return CZN_ERR_DSTSIZE;
-    return run_decode(src, n, dst, threads, 0, 0, 0, NULL, 0, 0);
+    return run_decode(src, n, dst, threads, 0, 0, 0, NULL, 0, 0, NULL);
+}
+
+int64_t czn_decompress_limited(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
+                               int threads, const czn_decode_limits *limits) {
+    int64_t o = czn_original_size(src, n); if (o < 0) return o;
+    if (limits && limits->max_output_bytes && (uint64_t)o > limits->max_output_bytes) return CZN_ERR_LIMIT;
+    if ((uint64_t)o > cap) return CZN_ERR_DSTSIZE;
+    return run_decode(src, n, dst, threads, 0, 0, 0, NULL, 0, 0, limits);
 }
 
 int64_t czn_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len, uint8_t *dst, int threads) {
     int64_t o = czn_original_size(src, n); if (o < 0) return o;
     if (off > (uint64_t)o) return CZN_ERR_CORRUPT;
-    if (off + len > (uint64_t)o) len = (size_t)((uint64_t)o - off);
+    if (len > (uint64_t)o - off) len = (size_t)((uint64_t)o - off);
     if (!len) return 0;
-    return run_decode(src, n, dst, threads, off, off + len, 1, NULL, 0, 0);
+    return run_decode(src, n, dst, threads, off, off + len, 1, NULL, 0, 0, NULL);
 }
 
 const char *czn_strerror(int64_t c) {
@@ -1805,6 +1973,7 @@ const char *czn_strerror(int64_t c) {
         case CZN_ERR_ALLOC: return "out of memory";
         case CZN_ERR_CODEC: return "codec error";
         case CZN_ERR_DICT: return "dictionary required or mismatched (compressed with a different dictionary)";
+        case CZN_ERR_LIMIT: return "decoding resource limit exceeded";
     }
     return c >= 0 ? "ok" : "unknown error";
 }
@@ -1832,7 +2001,7 @@ int64_t czn_decompress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t c
     int64_t o = czn_original_size(src, n); if (o < 0) return o;
     if ((uint64_t)o > cap) return CZN_ERR_DSTSIZE;
     uint32_t id = (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u);
-    return run_decode(src, n, dst, threads, 0, 0, 0, dict, dictlen, id);
+    return run_decode(src, n, dst, threads, 0, 0, 0, dict, dictlen, id, NULL);
 }
 
 #include "stream.inc"

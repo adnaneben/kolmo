@@ -1,0 +1,27 @@
+{
+  "pip": {
+    "files_checked": 285,
+    "native_byte_mismatches": 0,
+    "omitted_from_root": [],
+    "archive_sha256": "a57abb4090ca1b4ba3968299e4f3567b733e636c6daacd95ab6f1ad8fb80955d"
+  },
+  "cargo": {
+    "files_checked": 285,
+    "native_byte_mismatches": 0,
+    "omitted_from_root": [],
+    "archive_sha256": "befc2125caec09097fb60d948a4133ecaaef67aa7ca5fba2f76097d68aed899b",
+    "vcs": {
+      "git": {
+        "sha1": "b36125d39f8d880d55d6c6730953699949302ea1"
+      },
+      "path_in_vcs": "bindings/rust"
+    }
+  },
+  "brew": {
+    "archive_sha256": "168d741d84db8beb57d4e7f230af10185969482e0cc3385da4c8ce758018852b",
+    "source_files": 285,
+    "tag": "v1.0.0",
+    "peeled_tag": "7514f9415e99a8da82d14b42922e60b7ae647d00",
+    "installed_cli_sha256": "d3229132875ef09d5dd417895f367de414e0988e576999678e67d2cc8547bca2"
+  }
+}

@@ -1,0 +1,1472 @@
+{
+  "power": {
+    "graph_sha256": "506ef1b8d3a1b93f09388803728ac878d7739202198a83d784df3cd2aaa77ae1",
+    "graph_bytes": 11144,
+    "training": {
+      "seconds": 13.0642175,
+      "peak_rss_bytes": 280707072
+    },
+    "trials": [
+      {
+        "codec": "zstd",
+        "repeat": 0,
+        "compressed": 17220759,
+        "encoded_sha256": "d9ac241e8d720835090ef62514dcdbb6fbef47b9c8805a1bbbed89d485145994",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.189169625,
+          "peak_rss_bytes": 7782400
+        },
+        "decode": {
+          "seconds": 0.067919917,
+          "peak_rss_bytes": 7716864
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 0,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.23148425,
+          "peak_rss_bytes": 172146688
+        },
+        "decode": {
+          "seconds": 0.098562083,
+          "peak_rss_bytes": 114212864
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 0,
+        "compressed": 4348202,
+        "encoded_sha256": "c8eba80f0bb57f13e7f69cc985a70655c7cda0ef20134101b124e3ddb0214341",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.76374875,
+          "peak_rss_bytes": 745324544
+        },
+        "decode": {
+          "seconds": 0.153951,
+          "peak_rss_bytes": 272121856
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 0,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.203973292,
+          "peak_rss_bytes": 172392448
+        },
+        "decode": {
+          "seconds": 0.096133958,
+          "peak_rss_bytes": 114311168
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 1,
+        "compressed": 4348202,
+        "encoded_sha256": "c8eba80f0bb57f13e7f69cc985a70655c7cda0ef20134101b124e3ddb0214341",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.77204175,
+          "peak_rss_bytes": 745406464
+        },
+        "decode": {
+          "seconds": 0.156443916,
+          "peak_rss_bytes": 272105472
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 1,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.226199542,
+          "peak_rss_bytes": 172163072
+        },
+        "decode": {
+          "seconds": 0.102916792,
+          "peak_rss_bytes": 114212864
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 1,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.205382833,
+          "peak_rss_bytes": 172392448
+        },
+        "decode": {
+          "seconds": 0.0941,
+          "peak_rss_bytes": 114311168
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 1,
+        "compressed": 17220759,
+        "encoded_sha256": "d9ac241e8d720835090ef62514dcdbb6fbef47b9c8805a1bbbed89d485145994",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.169220167,
+          "peak_rss_bytes": 7749632
+        },
+        "decode": {
+          "seconds": 0.067696,
+          "peak_rss_bytes": 7585792
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 2,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.225612375,
+          "peak_rss_bytes": 172163072
+        },
+        "decode": {
+          "seconds": 0.099947125,
+          "peak_rss_bytes": 114212864
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 2,
+        "compressed": 17220759,
+        "encoded_sha256": "d9ac241e8d720835090ef62514dcdbb6fbef47b9c8805a1bbbed89d485145994",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.169414125,
+          "peak_rss_bytes": 7749632
+        },
+        "decode": {
+          "seconds": 0.068092333,
+          "peak_rss_bytes": 7716864
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 2,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.205166041,
+          "peak_rss_bytes": 172376064
+        },
+        "decode": {
+          "seconds": 0.091490583,
+          "peak_rss_bytes": 114311168
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 2,
+        "compressed": 4348202,
+        "encoded_sha256": "c8eba80f0bb57f13e7f69cc985a70655c7cda0ef20134101b124e3ddb0214341",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.763830542,
+          "peak_rss_bytes": 745439232
+        },
+        "decode": {
+          "seconds": 0.156476917,
+          "peak_rss_bytes": 272121856
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 3,
+        "compressed": 4348202,
+        "encoded_sha256": "c8eba80f0bb57f13e7f69cc985a70655c7cda0ef20134101b124e3ddb0214341",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.772240625,
+          "peak_rss_bytes": 745537536
+        },
+        "decode": {
+          "seconds": 0.1550225,
+          "peak_rss_bytes": 272105472
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 3,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.207653875,
+          "peak_rss_bytes": 172376064
+        },
+        "decode": {
+          "seconds": 0.091663542,
+          "peak_rss_bytes": 114311168
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 3,
+        "compressed": 17220759,
+        "encoded_sha256": "d9ac241e8d720835090ef62514dcdbb6fbef47b9c8805a1bbbed89d485145994",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.1707865,
+          "peak_rss_bytes": 7749632
+        },
+        "decode": {
+          "seconds": 0.068056875,
+          "peak_rss_bytes": 7716864
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 3,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.226133875,
+          "peak_rss_bytes": 172146688
+        },
+        "decode": {
+          "seconds": 0.09802425,
+          "peak_rss_bytes": 114212864
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 4,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.226786292,
+          "peak_rss_bytes": 172163072
+        },
+        "decode": {
+          "seconds": 0.098096708,
+          "peak_rss_bytes": 114212864
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 4,
+        "compressed": 17220759,
+        "encoded_sha256": "d9ac241e8d720835090ef62514dcdbb6fbef47b9c8805a1bbbed89d485145994",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.1688995,
+          "peak_rss_bytes": 7749632
+        },
+        "decode": {
+          "seconds": 0.068204041,
+          "peak_rss_bytes": 7716864
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 4,
+        "compressed": 4348202,
+        "encoded_sha256": "c8eba80f0bb57f13e7f69cc985a70655c7cda0ef20134101b124e3ddb0214341",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.771756958,
+          "peak_rss_bytes": 745455616
+        },
+        "decode": {
+          "seconds": 0.154513333,
+          "peak_rss_bytes": 272154624
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 4,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.202646625,
+          "peak_rss_bytes": 172392448
+        },
+        "decode": {
+          "seconds": 0.091404875,
+          "peak_rss_bytes": 114294784
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 5,
+        "compressed": 17220759,
+        "encoded_sha256": "d9ac241e8d720835090ef62514dcdbb6fbef47b9c8805a1bbbed89d485145994",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.170422,
+          "peak_rss_bytes": 7749632
+        },
+        "decode": {
+          "seconds": 0.067390708,
+          "peak_rss_bytes": 7585792
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 5,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.231620666,
+          "peak_rss_bytes": 172163072
+        },
+        "decode": {
+          "seconds": 0.098184875,
+          "peak_rss_bytes": 114212864
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 5,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.205353042,
+          "peak_rss_bytes": 172392448
+        },
+        "decode": {
+          "seconds": 0.092249666,
+          "peak_rss_bytes": 114311168
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 5,
+        "compressed": 4348202,
+        "encoded_sha256": "c8eba80f0bb57f13e7f69cc985a70655c7cda0ef20134101b124e3ddb0214341",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.765019625,
+          "peak_rss_bytes": 745340928
+        },
+        "decode": {
+          "seconds": 0.154017291,
+          "peak_rss_bytes": 272072704
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 6,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.225692958,
+          "peak_rss_bytes": 172163072
+        },
+        "decode": {
+          "seconds": 0.097748167,
+          "peak_rss_bytes": 114212864
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 6,
+        "compressed": 17220759,
+        "encoded_sha256": "d9ac241e8d720835090ef62514dcdbb6fbef47b9c8805a1bbbed89d485145994",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.169801208,
+          "peak_rss_bytes": 7749632
+        },
+        "decode": {
+          "seconds": 0.067947584,
+          "peak_rss_bytes": 7716864
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 6,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.207173875,
+          "peak_rss_bytes": 172392448
+        },
+        "decode": {
+          "seconds": 0.091582958,
+          "peak_rss_bytes": 114311168
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 6,
+        "compressed": 4348202,
+        "encoded_sha256": "c8eba80f0bb57f13e7f69cc985a70655c7cda0ef20134101b124e3ddb0214341",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.757511666,
+          "peak_rss_bytes": 745373696
+        },
+        "decode": {
+          "seconds": 0.155711875,
+          "peak_rss_bytes": 272072704
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 7,
+        "compressed": 4348202,
+        "encoded_sha256": "c8eba80f0bb57f13e7f69cc985a70655c7cda0ef20134101b124e3ddb0214341",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.758025959,
+          "peak_rss_bytes": 745340928
+        },
+        "decode": {
+          "seconds": 0.154028459,
+          "peak_rss_bytes": 272138240
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 7,
+        "compressed": 17220759,
+        "encoded_sha256": "d9ac241e8d720835090ef62514dcdbb6fbef47b9c8805a1bbbed89d485145994",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.169063458,
+          "peak_rss_bytes": 7749632
+        },
+        "decode": {
+          "seconds": 0.068269625,
+          "peak_rss_bytes": 7716864
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 7,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.254244667,
+          "peak_rss_bytes": 175767552
+        },
+        "decode": {
+          "seconds": 0.10880075,
+          "peak_rss_bytes": 114212864
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 7,
+        "compressed": 6422952,
+        "encoded_sha256": "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8",
+        "decoded_sha256": "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+        "encode": {
+          "seconds": 0.206919792,
+          "peak_rss_bytes": 172392448
+        },
+        "decode": {
+          "seconds": 0.091565042,
+          "peak_rss_bytes": 114311168
+        }
+      }
+    ]
+  },
+  "rides": {
+    "graph_sha256": "9fae9a830c3c82a293c6a441d51da963bf84ee122764102056c8117a12c728b6",
+    "graph_bytes": 10396,
+    "training": {
+      "seconds": 14.991876333,
+      "peak_rss_bytes": 390365184
+    },
+    "trials": [
+      {
+        "codec": "openzl",
+        "repeat": 0,
+        "compressed": 1513512,
+        "encoded_sha256": "deedc9ae2fffa53d089351bf8464deccd0e1989726a4d6a70ee1f5cdba021f26",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.118535458,
+          "peak_rss_bytes": 200966144
+        },
+        "decode": {
+          "seconds": 0.027496375,
+          "peak_rss_bytes": 88555520
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 0,
+        "compressed": 2731686,
+        "encoded_sha256": "4c318fb89756a6ee01733badcaa7ba001be8dab7086d079a0d746467f420408d",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.027476083,
+          "peak_rss_bytes": 7798784
+        },
+        "decode": {
+          "seconds": 0.009570625,
+          "peak_rss_bytes": 7733248
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 0,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.02822325,
+          "peak_rss_bytes": 23216128
+        },
+        "decode": {
+          "seconds": 0.01575525,
+          "peak_rss_bytes": 21397504
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 0,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.029119625,
+          "peak_rss_bytes": 23068672
+        },
+        "decode": {
+          "seconds": 0.0167845,
+          "peak_rss_bytes": 21331968
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 1,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.028854625,
+          "peak_rss_bytes": 23085056
+        },
+        "decode": {
+          "seconds": 0.016960708,
+          "peak_rss_bytes": 21331968
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 1,
+        "compressed": 2731686,
+        "encoded_sha256": "4c318fb89756a6ee01733badcaa7ba001be8dab7086d079a0d746467f420408d",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.0276835,
+          "peak_rss_bytes": 7798784
+        },
+        "decode": {
+          "seconds": 0.009338541,
+          "peak_rss_bytes": 7733248
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 1,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.028583167,
+          "peak_rss_bytes": 23216128
+        },
+        "decode": {
+          "seconds": 0.015667125,
+          "peak_rss_bytes": 21397504
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 1,
+        "compressed": 1513512,
+        "encoded_sha256": "deedc9ae2fffa53d089351bf8464deccd0e1989726a4d6a70ee1f5cdba021f26",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.118598375,
+          "peak_rss_bytes": 200949760
+        },
+        "decode": {
+          "seconds": 0.027440209,
+          "peak_rss_bytes": 88588288
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 2,
+        "compressed": 2731686,
+        "encoded_sha256": "4c318fb89756a6ee01733badcaa7ba001be8dab7086d079a0d746467f420408d",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.02744575,
+          "peak_rss_bytes": 7798784
+        },
+        "decode": {
+          "seconds": 0.009540292,
+          "peak_rss_bytes": 7733248
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 2,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.028915791,
+          "peak_rss_bytes": 23085056
+        },
+        "decode": {
+          "seconds": 0.016819083,
+          "peak_rss_bytes": 21331968
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 2,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.028056334,
+          "peak_rss_bytes": 23199744
+        },
+        "decode": {
+          "seconds": 0.015583625,
+          "peak_rss_bytes": 21397504
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 2,
+        "compressed": 1513512,
+        "encoded_sha256": "deedc9ae2fffa53d089351bf8464deccd0e1989726a4d6a70ee1f5cdba021f26",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.121398833,
+          "peak_rss_bytes": 200966144
+        },
+        "decode": {
+          "seconds": 0.027432667,
+          "peak_rss_bytes": 88539136
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 3,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.029182208,
+          "peak_rss_bytes": 23068672
+        },
+        "decode": {
+          "seconds": 0.017477041,
+          "peak_rss_bytes": 21331968
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 3,
+        "compressed": 2731686,
+        "encoded_sha256": "4c318fb89756a6ee01733badcaa7ba001be8dab7086d079a0d746467f420408d",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.027500125,
+          "peak_rss_bytes": 7798784
+        },
+        "decode": {
+          "seconds": 0.009486209,
+          "peak_rss_bytes": 7733248
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 3,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.028135667,
+          "peak_rss_bytes": 23216128
+        },
+        "decode": {
+          "seconds": 0.015709,
+          "peak_rss_bytes": 21397504
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 3,
+        "compressed": 1513512,
+        "encoded_sha256": "deedc9ae2fffa53d089351bf8464deccd0e1989726a4d6a70ee1f5cdba021f26",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.1230015,
+          "peak_rss_bytes": 200982528
+        },
+        "decode": {
+          "seconds": 0.027435292,
+          "peak_rss_bytes": 88539136
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 4,
+        "compressed": 1513512,
+        "encoded_sha256": "deedc9ae2fffa53d089351bf8464deccd0e1989726a4d6a70ee1f5cdba021f26",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.119122791,
+          "peak_rss_bytes": 200900608
+        },
+        "decode": {
+          "seconds": 0.027076375,
+          "peak_rss_bytes": 88522752
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 4,
+        "compressed": 2731686,
+        "encoded_sha256": "4c318fb89756a6ee01733badcaa7ba001be8dab7086d079a0d746467f420408d",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.0273555,
+          "peak_rss_bytes": 7798784
+        },
+        "decode": {
+          "seconds": 0.00962125,
+          "peak_rss_bytes": 7733248
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 4,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.029153208,
+          "peak_rss_bytes": 23085056
+        },
+        "decode": {
+          "seconds": 0.016765458,
+          "peak_rss_bytes": 21331968
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 4,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.028132417,
+          "peak_rss_bytes": 23216128
+        },
+        "decode": {
+          "seconds": 0.015616833,
+          "peak_rss_bytes": 21397504
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 5,
+        "compressed": 2731686,
+        "encoded_sha256": "4c318fb89756a6ee01733badcaa7ba001be8dab7086d079a0d746467f420408d",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.027196375,
+          "peak_rss_bytes": 7798784
+        },
+        "decode": {
+          "seconds": 0.009390583,
+          "peak_rss_bytes": 7733248
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 5,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.028165292,
+          "peak_rss_bytes": 23216128
+        },
+        "decode": {
+          "seconds": 0.015736959,
+          "peak_rss_bytes": 21397504
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 5,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.029230125,
+          "peak_rss_bytes": 23085056
+        },
+        "decode": {
+          "seconds": 0.016937708,
+          "peak_rss_bytes": 21331968
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 5,
+        "compressed": 1513512,
+        "encoded_sha256": "deedc9ae2fffa53d089351bf8464deccd0e1989726a4d6a70ee1f5cdba021f26",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.122314583,
+          "peak_rss_bytes": 200949760
+        },
+        "decode": {
+          "seconds": 0.027321042,
+          "peak_rss_bytes": 88571904
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 6,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.029198,
+          "peak_rss_bytes": 23085056
+        },
+        "decode": {
+          "seconds": 0.016813709,
+          "peak_rss_bytes": 21331968
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 6,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.028402791,
+          "peak_rss_bytes": 23216128
+        },
+        "decode": {
+          "seconds": 0.015741125,
+          "peak_rss_bytes": 21397504
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 6,
+        "compressed": 2731686,
+        "encoded_sha256": "4c318fb89756a6ee01733badcaa7ba001be8dab7086d079a0d746467f420408d",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.027708542,
+          "peak_rss_bytes": 7798784
+        },
+        "decode": {
+          "seconds": 0.009661167,
+          "peak_rss_bytes": 7733248
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 6,
+        "compressed": 1513512,
+        "encoded_sha256": "deedc9ae2fffa53d089351bf8464deccd0e1989726a4d6a70ee1f5cdba021f26",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.1205685,
+          "peak_rss_bytes": 200933376
+        },
+        "decode": {
+          "seconds": 0.027236125,
+          "peak_rss_bytes": 88588288
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 7,
+        "compressed": 2731686,
+        "encoded_sha256": "4c318fb89756a6ee01733badcaa7ba001be8dab7086d079a0d746467f420408d",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.027442,
+          "peak_rss_bytes": 7798784
+        },
+        "decode": {
+          "seconds": 0.009487208,
+          "peak_rss_bytes": 7733248
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 7,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.029218125,
+          "peak_rss_bytes": 23052288
+        },
+        "decode": {
+          "seconds": 0.016743917,
+          "peak_rss_bytes": 21331968
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 7,
+        "compressed": 1513512,
+        "encoded_sha256": "deedc9ae2fffa53d089351bf8464deccd0e1989726a4d6a70ee1f5cdba021f26",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.12162825,
+          "peak_rss_bytes": 200884224
+        },
+        "decode": {
+          "seconds": 0.027655042,
+          "peak_rss_bytes": 88588288
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 7,
+        "compressed": 2654725,
+        "encoded_sha256": "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed",
+        "decoded_sha256": "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+        "encode": {
+          "seconds": 0.028554667,
+          "peak_rss_bytes": 23216128
+        },
+        "decode": {
+          "seconds": 0.015510459,
+          "peak_rss_bytes": 21397504
+        }
+      }
+    ]
+  },
+  "quakes": {
+    "graph_sha256": "636d94b8fdd57fa512dc9bada53d52c3b4b34f0a58299dcb79a04600029ad739",
+    "graph_bytes": 11868,
+    "training": {
+      "seconds": 13.517881125,
+      "peak_rss_bytes": 127827968
+    },
+    "trials": [
+      {
+        "codec": "zstd",
+        "repeat": 0,
+        "compressed": 680257,
+        "encoded_sha256": "8c2b07738e689b828209bcbe24a3d66d83642c2212ac448e98fd855bc50c5ab9",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.009008458,
+          "peak_rss_bytes": 7454720
+        },
+        "decode": {
+          "seconds": 0.004113084,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 0,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.012150166,
+          "peak_rss_bytes": 8323072
+        },
+        "decode": {
+          "seconds": 0.007350083,
+          "peak_rss_bytes": 6209536
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 0,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.011742083,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006424875,
+          "peak_rss_bytes": 6275072
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 0,
+        "compressed": 498311,
+        "encoded_sha256": "222dfb9819d43d392a8204a24d962f83d52125ec996979eeff1f873bab1e3672",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.031743625,
+          "peak_rss_bytes": 58032128
+        },
+        "decode": {
+          "seconds": 0.009070708,
+          "peak_rss_bytes": 22478848
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 1,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.012361083,
+          "peak_rss_bytes": 8323072
+        },
+        "decode": {
+          "seconds": 0.006803958,
+          "peak_rss_bytes": 6193152
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 1,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.011308959,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006566042,
+          "peak_rss_bytes": 6275072
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 1,
+        "compressed": 680257,
+        "encoded_sha256": "8c2b07738e689b828209bcbe24a3d66d83642c2212ac448e98fd855bc50c5ab9",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.008654583,
+          "peak_rss_bytes": 7454720
+        },
+        "decode": {
+          "seconds": 0.0042595,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 1,
+        "compressed": 498311,
+        "encoded_sha256": "222dfb9819d43d392a8204a24d962f83d52125ec996979eeff1f873bab1e3672",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.031416917,
+          "peak_rss_bytes": 58064896
+        },
+        "decode": {
+          "seconds": 0.009043084,
+          "peak_rss_bytes": 22429696
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 2,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.011461666,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006075125,
+          "peak_rss_bytes": 6275072
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 2,
+        "compressed": 498311,
+        "encoded_sha256": "222dfb9819d43d392a8204a24d962f83d52125ec996979eeff1f873bab1e3672",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.03111075,
+          "peak_rss_bytes": 58114048
+        },
+        "decode": {
+          "seconds": 0.008992625,
+          "peak_rss_bytes": 22462464
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 2,
+        "compressed": 680257,
+        "encoded_sha256": "8c2b07738e689b828209bcbe24a3d66d83642c2212ac448e98fd855bc50c5ab9",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.008858708,
+          "peak_rss_bytes": 7454720
+        },
+        "decode": {
+          "seconds": 0.003954125,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 2,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.011894709,
+          "peak_rss_bytes": 8323072
+        },
+        "decode": {
+          "seconds": 0.00677,
+          "peak_rss_bytes": 6209536
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 3,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.01150375,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006397084,
+          "peak_rss_bytes": 6275072
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 3,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.011972417,
+          "peak_rss_bytes": 8306688
+        },
+        "decode": {
+          "seconds": 0.006886542,
+          "peak_rss_bytes": 6209536
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 3,
+        "compressed": 680257,
+        "encoded_sha256": "8c2b07738e689b828209bcbe24a3d66d83642c2212ac448e98fd855bc50c5ab9",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.008655875,
+          "peak_rss_bytes": 7454720
+        },
+        "decode": {
+          "seconds": 0.004034583,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 3,
+        "compressed": 498311,
+        "encoded_sha256": "222dfb9819d43d392a8204a24d962f83d52125ec996979eeff1f873bab1e3672",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.031433584,
+          "peak_rss_bytes": 58064896
+        },
+        "decode": {
+          "seconds": 0.008911333,
+          "peak_rss_bytes": 22478848
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 4,
+        "compressed": 498311,
+        "encoded_sha256": "222dfb9819d43d392a8204a24d962f83d52125ec996979eeff1f873bab1e3672",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.031313083,
+          "peak_rss_bytes": 58130432
+        },
+        "decode": {
+          "seconds": 0.008822916,
+          "peak_rss_bytes": 22478848
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 4,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.012394375,
+          "peak_rss_bytes": 8323072
+        },
+        "decode": {
+          "seconds": 0.006761167,
+          "peak_rss_bytes": 6209536
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 4,
+        "compressed": 680257,
+        "encoded_sha256": "8c2b07738e689b828209bcbe24a3d66d83642c2212ac448e98fd855bc50c5ab9",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.008956542,
+          "peak_rss_bytes": 7454720
+        },
+        "decode": {
+          "seconds": 0.003899542,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 4,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.011322167,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006103375,
+          "peak_rss_bytes": 6275072
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 5,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.011475667,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006368708,
+          "peak_rss_bytes": 6275072
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 5,
+        "compressed": 680257,
+        "encoded_sha256": "8c2b07738e689b828209bcbe24a3d66d83642c2212ac448e98fd855bc50c5ab9",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.00882375,
+          "peak_rss_bytes": 7454720
+        },
+        "decode": {
+          "seconds": 0.003918875,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 5,
+        "compressed": 498311,
+        "encoded_sha256": "222dfb9819d43d392a8204a24d962f83d52125ec996979eeff1f873bab1e3672",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.031339542,
+          "peak_rss_bytes": 58097664
+        },
+        "decode": {
+          "seconds": 0.008942292,
+          "peak_rss_bytes": 22413312
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 5,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.012253792,
+          "peak_rss_bytes": 8323072
+        },
+        "decode": {
+          "seconds": 0.006770167,
+          "peak_rss_bytes": 6209536
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 6,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.011546416,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006080917,
+          "peak_rss_bytes": 6258688
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 6,
+        "compressed": 498311,
+        "encoded_sha256": "222dfb9819d43d392a8204a24d962f83d52125ec996979eeff1f873bab1e3672",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.031512334,
+          "peak_rss_bytes": 58032128
+        },
+        "decode": {
+          "seconds": 0.009207291,
+          "peak_rss_bytes": 22446080
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 6,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.012048291,
+          "peak_rss_bytes": 8323072
+        },
+        "decode": {
+          "seconds": 0.006898291,
+          "peak_rss_bytes": 6209536
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 6,
+        "compressed": 680257,
+        "encoded_sha256": "8c2b07738e689b828209bcbe24a3d66d83642c2212ac448e98fd855bc50c5ab9",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.008830459,
+          "peak_rss_bytes": 7454720
+        },
+        "decode": {
+          "seconds": 0.004096125,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "kolmo",
+        "repeat": 7,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.011603292,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006055666,
+          "peak_rss_bytes": 6275072
+        }
+      },
+      {
+        "codec": "zstd",
+        "repeat": 7,
+        "compressed": 680257,
+        "encoded_sha256": "8c2b07738e689b828209bcbe24a3d66d83642c2212ac448e98fd855bc50c5ab9",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.008710334,
+          "peak_rss_bytes": 7454720
+        },
+        "decode": {
+          "seconds": 0.003995834,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "openzl",
+        "repeat": 7,
+        "compressed": 498311,
+        "encoded_sha256": "222dfb9819d43d392a8204a24d962f83d52125ec996979eeff1f873bab1e3672",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.03165375,
+          "peak_rss_bytes": 58032128
+        },
+        "decode": {
+          "seconds": 0.008949666,
+          "peak_rss_bytes": 22429696
+        }
+      },
+      {
+        "codec": "release",
+        "repeat": 7,
+        "compressed": 612178,
+        "encoded_sha256": "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e",
+        "decoded_sha256": "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+        "encode": {
+          "seconds": 0.012536875,
+          "peak_rss_bytes": 8306688
+        },
+        "decode": {
+          "seconds": 0.006747208,
+          "peak_rss_bytes": 6209536
+        }
+      }
+    ]
+  }
+}
