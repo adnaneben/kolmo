@@ -13,3 +13,8 @@ Reproduce: `sh benchmark/lzbench/setup.sh <lzbench checkout>` and run the same `
 
 kolmo level 9 (`ultra`) after the CM model-2 work, same harness and machine: **17.09% (5.85×)**, up from
 17.91% (5.58×); zpaq -5 is 19.09% (5.24×). Compression and decompression run at 0.20 MB/s (was 0.28 / 0.37).
+
+## `silesia-2026-11-08-ultra-cm2-hugepages.csv` — model 2 final + huge pages (commit `626dcb7`)
+
+kolmo level 9 (`ultra`): **17.01% (5.88×)** at 0.25 MB/s compress, 0.29 MB/s decompress (1.0.0: 17.91% at
+0.28 / 0.37 MB/s; zpaq -5: 19.09% at 0.39 / 0.39 MB/s).
