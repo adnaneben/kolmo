@@ -123,7 +123,7 @@ with plain `kolmo`.
 ```bash
 make                                    # build/kolmo, build/czbench, build/czntest (Linux, macOS; gcc or clang)
 ./build/czntest                         # round trips in every mode, range reads, corruption fuzzing
-./build/kolmo -m hc in.csv out.czn        # compress: -m rt|fast|eco|hc|max|ultra, -T threads, -B block MiB, -n no transforms
+./build/kolmo -m hc in.csv out.czn        # compress: -m rt|fast|eco|hc|max|ultra, -T threads, -B block MiB, -n no transforms, -q quick analysis (fastest)
 ./build/kolmo -d out.czn back.csv         # decompress (auto-detects one-shot vs streamed input)
 ./build/kolmo -s huge.csv huge.czs        # streaming compress: bounded memory, any size (-S N for N-MiB segments)
 ./build/kolmo -r 1000000:4096 out.czn x   # read 4 KiB at offset 1,000,000 without decoding the rest
