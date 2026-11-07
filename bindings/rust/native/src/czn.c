@@ -1105,7 +1105,7 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
             if (lzma_raw_buffer_encode(f, NULL, in, n, out, &pos, cap) != LZMA_OK) return 0;
             return pos; }
 #endif
-        case C_CM: return cm_compress(in, n, out, cap);
+        case C_CM: return cm_compress_m(in, n, out, cap, level == 1);
     }
     return 0;
 }
@@ -1228,18 +1228,53 @@ static void mode_codec(const czn_params *p, int *codec, int *level) {
         case CZN_FAST:*codec = C_ZSTD;   *level = p->level ? p->level : CZ_FAST_LEVEL; break;
         case CZN_ECO: *codec = C_BROTLI; *level = p->level ? p->level : CZ_ECO_LEVEL; break;
         case CZN_HC:  *codec = C_ZSTD;   *level = p->level ? p->level : 19; break;
-        case CZN_MAX: *codec = C_LZMA;   *level = p->level ? p->level : 9; break;     /* max: per block BWT or LZMA2 */
-        default:      *codec = C_CM;     *level = 0; break;                            /* ultra: context mixing */
+        case CZN_MAX: *codec = C_LZMA;   *level = p->level ? p->level : 9; break;     /* max: BWT for text, the better of BWT and LZMA2 for binary (level 1: BWT only) */
+        default:      *codec = C_CM;     *level = p->level == 1 ? 1 : 0; break;        /* ultra: context mixing (level 1: model 1, CM only) */
     }
 }
 
+/* JSON text: nearly every non-blank line of the sample starts (after indentation) with { [ " } or ], and some hold a ':'.
+ * Returns 2 for JSON lines (records start with { or [), 1 for other (pretty-printed) JSON, 0 otherwise. */
+static int json_lines(const uint8_t *s, size_t h) {
+    size_t lines = 0, js = 0, colon = 0, rec = 0, i = 0;
+    while (i < h) {
+        const uint8_t *e = memchr(s + i, '\n', h - i); size_t end = e ? (size_t)(e - s) : h;
+        size_t k = i; while (k < end && (s[k] == ' ' || s[k] == '\t' || s[k] == '\r')) k++;
+        if (k < end) { lines++; uint8_t c = s[k]; js += c == '{' || c == '[' || c == '"' || c == '}' || c == ']'; rec += (c == '{' || c == '[') && end - k > 2; colon += memchr(s + k, ':', end - k) != NULL; }
+        if (!e) break;
+        i = end + 1;
+    }
+    if (lines < 8 || js * 100 < lines * 95 || colon * 4 < lines) return 0;
+    return rec * 100 >= lines * 95 ? 2 : 1;
+}
+
 /* file-level analysis: one plan for every block */
-static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int structured, int threads) {
+/* light: the cheap analysis of the fastest settings: no JSON, log or word trials (whose transforms are also the slow
+ * ones), and binary candidates scored by zstd -1 on a 256 KiB slice instead of zstd -3 on 1 MiB */
+static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int structured, int threads, int strong, int light) {
+    if (light) logs = 0;
     plan_t pl = {T_NONE, 0, 0, 0};
     if (n < 4096) return pl;
     size_t h = n < 65536 ? n : 65536, pr = 0;
     for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
     if (pr * 100 > h * 95) {                                     /* text: field transposition if lines have a fixed field count */
+        int js = logs && n >= 65536 ? json_lines(s, h) : 0;
+        if (js == 2 || (js == 1 && !strong)) {   /* JSON: values become columns (max/ultra model pretty JSON well raw) */
+            size_t mm = n < (1u << 20) ? n : (1u << 20); while (mm > 0 && s[mm - 1] != '\n') mm--;
+            if (mm >= 16384) {                   /* JSON tokens, or log tokens when values hold free text: the smaller */
+                uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm); uint8_t *z = malloc(cap);
+                if (o && zc && z) {
+                    size_t b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1), best = ZSTD_isError(b) ? 0 : b * CZ_LOG_GAIN_PCT / 100;
+                    for (int jm = 1; jm >= 0; jm--) {
+                        int64_t tn = log_encode_m(s, mm, o, mm + 64, jm); if (tn <= 0) continue;
+                        size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1);
+                        if (!ZSTD_isError(a) && a < best) { best = a; pl.t = T_LOG; pl.a = (uint8_t)jm; }
+                    }
+                }
+                free(o); free(z); ZSTD_freeCCtx(zc);
+                if (pl.t == T_LOG) return pl;
+            }
+        }
         static const struct { uint8_t d; int q; } D[] = {{',', 1}, {'\t', 0}, {';', 1}, {'|', 0}, {' ', 1}};
         int *cnt = malloc(4001 * sizeof(int)); size_t head = n < (1 << 16) ? n : (1 << 16);
         if (!cnt) return pl;
@@ -1320,14 +1355,15 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     /* structure-aware candidates (16-bit image, fixed records) against the shuffle and plain coding, scored by zstd -3
      * on a slice of up to 1 MiB from the middle of the input; kept only when at least 3% smaller */
     if (structured && n >= (1u << 18)) {
-        size_t L = n / 4 < (1u << 20) ? n / 4 : (1u << 20), st = (n / 2 - L / 2) & ~(size_t)7;
+        size_t LM = light ? (1u << 18) : (1u << 20), L = n / 4 < LM ? n / 4 : LM, st = (n / 2 - L / 2) & ~(size_t)7;
+        const int zl = light ? 1 : 3;                      /* scoring level */
         size_t bc = L * 2 + 1024; uint8_t *buf = malloc(bc), *zb = malloc(ZSTD_compressBound(bc));
         if (!buf || !zb) { free(buf); free(zb); ZSTD_freeCCtx(zc); return pl; }
         size_t zcap = ZSTD_compressBound(bc);
-        double plain = (double)zcost(zc, s + st, L, zb, zcap, 3) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
+        double plain = (double)zcost(zc, s + st, L, zb, zcap, zl) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
         if (pl.t == T_SHUF) {
             size_t u = (size_t)pl.a * pl.b, rows = L / u; shuffle_fwd(s + st, rows, pl.a, pl.b, pl.c, buf);
-            double c = (double)zcost(zc, buf, rows * u, zb, zcap, 3) / (rows * u);
+            double c = (double)zcost(zc, buf, rows * u, zb, zcap, zl) / (rows * u);
             if (c < best) { best = c; chosen = 1; }
         }
         img_plan_t im;
@@ -1336,7 +1372,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #endif
         if (img16_detect(s, n, &im)) {
             int64_t e = img16_encode(s + st, L, st, &im, buf);
-            if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, 3) / L; if (c < best) { best = c; keep = pl; keep.t = T_IMG; keep.img = im; chosen = 2; } }
+            if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / L; if (c < best) { best = c; keep = pl; keep.t = T_IMG; keep.img = im; chosen = 2; } }
         }
 #if defined(CZN_PROF) || defined(CZN_TIMING)
         double image_ms = (prof_now() - image_start) * 1000;
@@ -1348,7 +1384,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             size_t rl = L / R->P * R->P;
             if (rs + rl <= n) {
                 int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc);
-                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, 3) / rl; if (c < best) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; R = NULL; chosen = 3; } }
+                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < best) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; R = NULL; chosen = 3; } }
             }
         }
         free(R);
@@ -1357,7 +1393,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #endif
         {   /* executables: x86 call/jump transform */
             memcpy(buf, s + st, L); e8e9_fwd(buf, L);
-            double c = (double)zcost(zc, buf, L, zb, zcap, 3) / L;
+            double c = (double)zcost(zc, buf, L, zb, zcap, zl) / L;
             if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
             else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
         }
@@ -1488,7 +1524,7 @@ static void *compress_worker(void *arg) {
             if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 4; }
             else modes = 0;
         } else if (pl.t == T_LOG && len) {
-            int64_t tn = log_encode(raw, len, tbuf, len + TSLACK);
+            int64_t tn = log_encode_m(raw, len, tbuf, len + TSLACK, pl.a == 1);
             if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 5; }
         } else if (pl.t == T_IMG && len) {
             int64_t tn = img16_encode(raw, len, rs, &pl.img, tbuf);
@@ -1510,10 +1546,16 @@ static void *compress_worker(void *arg) {
         size_t inlen = (tflag >= 3 && tflag <= 7) || tflag == 9 ? get32(sl) : len;
         int codec = J->codec, level = J->level;
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
-        if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
+        if (codec == C_LZMA && level == 1) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
+        else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         if (codec == C_ZSTD && level == 19 && tflag == 9) level = CZ_HC_TEXT_LEVEL;                                  /* hc text: ultra level */
         size_t cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
-        if (codec == C_CM) {                          /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
+        if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, keep the smaller (+6% time, -1.7% on Silesia) */
+            uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+            size_t c2 = alt ? codec_compress(xp, C_BSC, 9, in, inlen, alt, J->slot - meta) : 0;
+            if (c2 && c2 < cl) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BSC; }
+        }
+        if (codec == C_CM && level != 1) {            /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             if (alt) {
                 int alts[2] = {C_LZMA, C_BSC};
@@ -1613,7 +1655,7 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, const plan_t *pl) {
     uint8_t *t = malloc(m + TSLACK + 64), *z = malloc(m + m / 8 + 64); int64_t tn = -1;
     if (!t || !z) { free(t); free(z); return 1; }
     if (pl->t == T_TBL) tn = tbl2_encode(s, m, (uint8_t)pl->a, pl->c + 1, pl->b, pl->fs, t, NULL);
-    else if (pl->t == T_LOG) tn = log_encode(s, m, t, m + TSLACK);
+    else if (pl->t == T_LOG) tn = log_encode_m(s, m, t, m + TSLACK, pl->a == 1);
     else if (pl->t == T_WORD) tn = word_encode(s, m, t, m + TSLACK);
     int keep = 1;
     if (tn > 0) { size_t a = cm_compress(t, (size_t)tn, z, m + m / 8 + 64), b = cm_compress(s, m, z, m + m / 8 + 64); keep = a && (!b || a < b); }
@@ -1655,7 +1697,7 @@ static void *plan_worker(void *arg) {
         uint32_t g = atomic_fetch_add(&j->next, 1); if (g >= j->count) break;
         const uint8_t *src = j->src + j->starts[g]; size_t len = j->ends[g] - j->starts[g];
         plan_t pl = p->transforms ? make_plan(src, len, p->mode >= CZN_ECO,
-            p->mode != CZN_RT, p->mode != CZN_RT, j->threads_per_plan) : (plan_t){0};
+            p->mode != CZN_RT, p->mode != CZN_RT, j->threads_per_plan, p->mode >= CZN_MAX, p->transforms == 2) : (plan_t){0};
         if (p->mode == CZN_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;
         if (p->mode == CZN_ULTRA && !ultra_keep_transform(src, len, &pl)) {
             free(pl.fs); pl.fs = NULL; pl.t = T_NONE;
