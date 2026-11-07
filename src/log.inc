@@ -122,8 +122,47 @@ static void put_column(Buf *out, const tok_t *tk, uint32_t m, int64_t *scratch) 
 
 typedef struct { uint64_t h; uint32_t koff, klen, cnt, id; } tent_t;
 
-static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap) {
+/* JSON lines: the next scalar value (string, number, true/false/null; not an object key) at or after i, as [*vs, *ve).
+ * Returns 0 when there is none. Anything that is not well-formed JSON simply stays in the template. */
+static int json_next_value(const uint8_t *p, uint32_t i, uint32_t len, uint32_t *vs, uint32_t *ve) {
+    while (i < len) {
+        uint8_t c = p[i];
+        if (c == '"') {
+            uint32_t q = i + 1;
+            for (;;) {
+                const uint8_t *e = memchr(p + q, '"', len - q); if (!e) return 0;
+                q = (uint32_t)(e - p); uint32_t b = q; while (b > i + 1 && p[b - 1] == '\\') b--;
+                if (((q - b) & 1) == 0) break;                                   /* not escaped */
+                q++;
+            }
+            uint32_t k = q + 1; while (k < len && (p[k] == ' ' || p[k] == '\t')) k++;
+            if (k < len && p[k] == ':') { i = k + 1; continue; }                  /* object key: template */
+            *vs = i; *ve = q + 1; return 1;
+        }
+        uint8_t pc = i ? p[i - 1] : ',';
+        int after = pc == ':' || pc == ',' || pc == '[' || pc == ' ' || pc == '\t';
+        if (after && (c == '-' || (uint8_t)(c - '0') < 10)) {
+            uint32_t k = i + 1;
+            while (k < len && ((uint8_t)(p[k] - '0') < 10 || p[k] == '.' || p[k] == 'e' || p[k] == 'E' || p[k] == '+' || p[k] == '-')) k++;
+            *vs = i; *ve = k; return 1;
+        }
+        if (after && (c == 't' || c == 'f' || c == 'n')) {
+            uint32_t w = c == 'f' ? 5 : 4;
+            if (i + w <= len && (!memcmp(p + i, "true", 4) || !memcmp(p + i, "null", 4) || (w == 5 && !memcmp(p + i, "false", 5)))
+                && (i + w == len || !(((p[i + w] | 32) >= 'a' && (p[i + w] | 32) <= 'z') || (uint8_t)(p[i + w] - '0') < 10))) {
+                *vs = i; *ve = i + w; return 1;
+            }
+        }
+        i++;
+    }
+    return 0;
+}
+
+/* jm = 0: tokens are space-separated words, those with a digit are variable (logs). jm = 1: JSON lines; every scalar
+ * value is variable and the keys, punctuation and spacing are the template. Same output format either way. */
+static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t cap, int jm) {
     if (n < 4096) return -1;
+    const uint32_t sep = jm ? 0 : 1;                    /* bytes between tokens */
     size_t nl = n; while (nl > 0 && in[nl - 1] != '\n') nl--;
     if (nl == 0) return -1;
     size_t L = 0; for (const uint8_t *q = in; (q = memchr(q, '\n', nl - (size_t)(q - in))); q++) L++;
@@ -149,7 +188,16 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
     for (size_t l = 0; l < L; l++) {
         const uint8_t *p = in + lstart[l]; uint32_t len = lstart[l + 1] - lstart[l] - 1; size_t k0 = kp;
         uint32_t i = 0; tokb[l] = (uint32_t)ntok;
-        for (;;) {
+        if (jm) {                                       /* literal, value, literal, ..., literal */
+            int whole = memchr(p, 1, len) != NULL;      /* a 0x01 byte cannot sit in a template: the line is one value */
+            for (;;) {
+                uint32_t vs = len, ve = len; int hv = whole ? (i == 0) : json_next_value(p, i, len, &vs, &ve);
+                if (whole && hv) { vs = 0; ve = len; }
+                toks[ntok++] = i; tvar[ntok - 1] = 0; memcpy(keys + kp, p + i, vs - i); kp += vs - i;
+                if (!hv) break;
+                toks[ntok++] = vs; tvar[ntok - 1] = 1; keys[kp++] = 1; i = ve;
+            }
+        } else for (;;) {
             uint32_t s = i; toks[ntok++] = s;
             const uint8_t *sp = memchr(p + i, ' ', len - i); i = sp ? (uint32_t)(sp - p) : len;
             if (is_var_tok(p + s, i - s)) { keys[kp++] = 1; tvar[ntok - 1] = 1; }
@@ -165,7 +213,7 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
                 uint32_t id = e->id, c = 0; tl0[id] = (uint32_t)l; tfo[id] = (uint32_t)fp;
                 for (size_t j = tokb[l]; j < ntok; j++) {
                     if (!tvar[j]) continue;
-                    uint32_t s0 = toks[j], e0 = j + 1 < ntok ? toks[j + 1] - 1 : len;
+                    uint32_t s0 = toks[j], e0 = j + 1 < ntok ? toks[j + 1] - sep : len;
                     uint8_t f = !memchr(p + s0, 1, e0 - s0) && !memchr(p + s0, '\n', e0 - s0);
                     tfl[fp++] = f; c += f;
                 }
@@ -182,8 +230,8 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
                         if (!tvar[j]) continue;
                         if (f[q]) {
                             uint32_t k = (uint32_t)(j - tokb[l]);
-                            uint32_t s = toks[j], en = j + 1 < ntok ? toks[j + 1] - 1 : len;
-                            uint32_t s0 = toks[b0 + k], e0 = k + 1 < n0 ? toks[b0 + k + 1] - 1 : len0;
+                            uint32_t s = toks[j], en = j + 1 < ntok ? toks[j + 1] - sep : len;
+                            uint32_t s0 = toks[b0 + k], e0 = k + 1 < n0 ? toks[b0 + k + 1] - sep : len0;
                             if (en - s != e0 - s0 || memcmp(p + s, p0 + s0, en - s)) { f[q] = 0; tsc[id]--; }
                         }
                         q++;
@@ -214,12 +262,13 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
     if (!tk || !vpos || !keys2 || !k2off || !k2len || !keep) { free(vpos); free(keys2); free(k2off); free(k2len); free(keep); goto done; }
 #define LOG_TOK(i, q) do { uint32_t l_ = rows[rstart[tt] + (i)]; const uint8_t *p_ = in + lstart[l_]; uint32_t len_ = lstart[l_ + 1] - lstart[l_] - 1; \
         uint32_t nt_ = (l_ + 1 < L ? tokb[l_ + 1] : (uint32_t)ntok) - tokb[l_], tix_ = vpos[q] < nt_ ? vpos[q] : nt_ - 1; \
-        uint32_t s_ = toks[tokb[l_] + tix_], e_ = tix_ + 1 < nt_ ? toks[tokb[l_] + tix_ + 1] - 1 : len_; tk[i].p = p_ + s_; tk[i].len = e_ - s_; } while (0)
+        uint32_t s_ = toks[tokb[l_] + tix_], e_ = tix_ + 1 < nt_ ? toks[tokb[l_] + tix_ + 1] - sep : len_; tk[i].p = p_ + s_; tk[i].len = e_ - s_; } while (0)
     for (uint32_t t = 0; t < nt; t++) {
         if (!remap[t]) continue;
         uint32_t tt = remap[t];
         const uint8_t *k = keys + tab[order[t]].koff; uint32_t kl = tab[order[t]].klen, np = 0, ti = 0;
-        for (uint32_t i = 0; i <= kl; i++) {
+        if (jm) { for (uint32_t i = 0; i < kl; i++) if (k[i] == 1) { if (np < 1024) vpos[np] = 2 * np + 1; np++; } }
+        else for (uint32_t i = 0; i <= kl; i++) {
             if (i == kl || k[i] == ' ') { ti++; continue; }
             if (k[i] == 1) { if (np < 1024) vpos[np] = ti; np++; }
         }
@@ -250,7 +299,8 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
         if (!remap[t]) continue;
         uint32_t tt = remap[t], m = rstart[tt + 1] - rstart[tt];
         const uint8_t *k = keys + tab[order[t]].koff; uint32_t kl = tab[order[t]].klen, np = 0, ti = 0;
-        for (uint32_t i = 0; i <= kl; i++) {
+        if (jm) { for (uint32_t i = 0; i < kl; i++) if (k[i] == 1) { if (np < 1024) vpos[np] = 2 * np + 1; np++; } }
+        else for (uint32_t i = 0; i <= kl; i++) {
             if (i == kl || k[i] == ' ') { ti++; continue; }
             if (k[i] == 1) { if (np < 1024) vpos[np] = ti; np++; }
         }
@@ -269,7 +319,7 @@ static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap)
                 uint32_t b_ = tokb[l_], nt_ = (l_ + 1 < L ? tokb[l_ + 1] : (uint32_t)ntok) - b_;
                 for (uint32_t j = 0; j < gn; j++) {
                     uint32_t q = kq[g0 + j], tix_ = vpos[q] < nt_ ? vpos[q] : nt_ - 1;
-                    uint32_t s_ = toks[b_ + tix_], e_ = tix_ + 1 < nt_ ? toks[b_ + tix_ + 1] - 1 : len_;
+                    uint32_t s_ = toks[b_ + tix_], e_ = tix_ + 1 < nt_ ? toks[b_ + tix_ + 1] - sep : len_;
                     cb[(size_t)j * m + i].p = p_ + s_; cb[(size_t)j * m + i].len = e_ - s_;
                 }
             }
@@ -441,5 +491,6 @@ done:
     return ret;
 }
 
+static int64_t log_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap) { return log_encode_m(in, n, dst, cap, 0); }
 int64_t log_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap) { return log_encode(in, n, dst, cap); }
 int log_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n) { return log_decode(in, tn, out, n); }

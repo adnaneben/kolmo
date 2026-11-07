@@ -1179,13 +1179,45 @@ static void mode_codec(const czn_params *p, int *codec, int *level) {
     }
 }
 
+/* JSON text: nearly every non-blank line of the sample starts (after indentation) with { [ " } or ], and some hold a ':'.
+ * Returns 2 for JSON lines (records start with { or [), 1 for other (pretty-printed) JSON, 0 otherwise. */
+static int json_lines(const uint8_t *s, size_t h) {
+    size_t lines = 0, js = 0, colon = 0, rec = 0, i = 0;
+    while (i < h) {
+        const uint8_t *e = memchr(s + i, '\n', h - i); size_t end = e ? (size_t)(e - s) : h;
+        size_t k = i; while (k < end && (s[k] == ' ' || s[k] == '\t' || s[k] == '\r')) k++;
+        if (k < end) { lines++; uint8_t c = s[k]; js += c == '{' || c == '[' || c == '"' || c == '}' || c == ']'; rec += (c == '{' || c == '[') && end - k > 2; colon += memchr(s + k, ':', end - k) != NULL; }
+        if (!e) break;
+        i = end + 1;
+    }
+    if (lines < 8 || js * 100 < lines * 95 || colon * 4 < lines) return 0;
+    return rec * 100 >= lines * 95 ? 2 : 1;
+}
+
 /* file-level analysis: one plan for every block */
-static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int structured) {
+static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int structured, int strong) {
     plan_t pl = {T_NONE, 0, 0, 0};
     if (n < 4096) return pl;
     size_t h = n < 65536 ? n : 65536, pr = 0;
     for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
     if (pr * 100 > h * 95) {                                     /* text: field transposition if lines have a fixed field count */
+        int js = logs && n >= 65536 ? json_lines(s, h) : 0;
+        if (js == 2 || (js == 1 && !strong)) {   /* JSON: values become columns (max/ultra model pretty JSON well raw) */
+            size_t mm = n < (1u << 20) ? n : (1u << 20); while (mm > 0 && s[mm - 1] != '\n') mm--;
+            if (mm >= 16384) {                   /* JSON tokens, or log tokens when values hold free text: the smaller */
+                uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm); uint8_t *z = malloc(cap);
+                if (o && zc && z) {
+                    size_t b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1), best = ZSTD_isError(b) ? 0 : b * CZ_LOG_GAIN_PCT / 100;
+                    for (int jm = 1; jm >= 0; jm--) {
+                        int64_t tn = log_encode_m(s, mm, o, mm + 64, jm); if (tn <= 0) continue;
+                        size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1);
+                        if (!ZSTD_isError(a) && a < best) { best = a; pl.t = T_LOG; pl.a = (uint8_t)jm; }
+                    }
+                }
+                free(o); free(z); ZSTD_freeCCtx(zc);
+                if (pl.t == T_LOG) return pl;
+            }
+        }
         static const struct { uint8_t d; int q; } D[] = {{',', 1}, {'\t', 0}, {';', 1}, {'|', 0}, {' ', 1}};
         int *cnt = malloc(4001 * sizeof(int)); size_t head = n < (1 << 16) ? n : (1 << 16);
         for (int di = 0; di < 5 && pl.t == T_NONE; di++) {
@@ -1401,7 +1433,7 @@ static void *compress_worker(void *arg) {
             int64_t tn = tbl2_encode(raw, len, (uint8_t)pl.a, pl.c + 1, pl.b, pl.fs, tbuf);
             if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 4; }
         } else if (pl.t == T_LOG && len) {
-            int64_t tn = log_encode(raw, len, tbuf, len + TSLACK);
+            int64_t tn = log_encode_m(raw, len, tbuf, len + TSLACK, pl.a == 1);
             if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 5; }
         } else if (pl.t == T_IMG && len) {
             int64_t tn = img16_encode(raw, len, rs, &pl.img, tbuf);
@@ -1518,7 +1550,7 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, const plan_t *pl) {
     uint8_t *t = malloc(m + TSLACK + 64), *z = malloc(m + m / 8 + 64); int64_t tn = -1;
     if (!t || !z) { free(t); free(z); return 1; }
     if (pl->t == T_TBL) tn = tbl2_encode(s, m, (uint8_t)pl->a, pl->c + 1, pl->b, pl->fs, t);
-    else if (pl->t == T_LOG) tn = log_encode(s, m, t, m + TSLACK);
+    else if (pl->t == T_LOG) tn = log_encode_m(s, m, t, m + TSLACK, pl->a == 1);
     else if (pl->t == T_WORD) tn = word_encode(s, m, t, m + TSLACK);
     int keep = 1;
     if (tn > 0) { size_t a = cm_compress(t, (size_t)tn, z, m + m / 8 + 64), b = cm_compress(s, m, z, m + m / 8 + 64); keep = a && (!b || a < b); }
@@ -1567,7 +1599,7 @@ static int64_t compress_impl(const uint8_t *src, size_t n, uint8_t *dst, size_t 
     cz_plan_threads = p->threads > 0 ? p->threads : default_threads();
     for (uint32_t g = 0; g < nseg; g++) {
         const uint8_t *s0 = src + ss[g]; size_t len = (size_t)(se[g] - ss[g]);
-        plan_t pl = p->transforms ? make_plan(s0, len, p->mode >= CZN_ECO, p->mode != CZN_RT, p->mode != CZN_RT) : (plan_t){T_NONE, 0, 0, 0};
+        plan_t pl = p->transforms ? make_plan(s0, len, p->mode >= CZN_ECO, p->mode != CZN_RT, p->mode != CZN_RT, p->mode >= CZN_MAX) : (plan_t){T_NONE, 0, 0, 0};
         if (p->mode == CZN_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;   /* rt keeps LZ4 decode speed */
         if (p->mode == CZN_ULTRA && !ultra_keep_transform(s0, len, &pl)) { free(pl.fs); pl.fs = NULL; pl.t = T_NONE; }
         plans[g] = pl;
