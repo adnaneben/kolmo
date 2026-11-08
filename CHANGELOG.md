@@ -14,7 +14,8 @@
   ratio, compression and decompression speed.
 - **JSON**: JSON lines and pretty-printed JSON are detected; keys and punctuation form templates and every value
   becomes a typed column (OWID data as JSON lines: −51% at `fast`, −30% at `max`). Same block format as the log
-  transform, so 1.0.0 decodes these files.
+  transform, so 1.0.0 decodes these files. **Minified JSON** (one line of records) is split into records first
+  (block flag 10, container version 6): OWID records as one JSON array, −51% at `fast`, −37% at `max`.
 
 ### Speed
 - **Quick analysis (`-q`, `transforms = 2`)**: only the cheap structure transforms, scored with zstd -1 on a 256 KiB
@@ -25,7 +26,8 @@
 
 ### Format
 - CM streams flag model 2 in the top nibble of the size word (`f & 8`); 1.0.0 decoders reject them as corrupt input.
-  Every other output added here (JSON columns, `max` choices, quick analysis, `ultra -l 1`) is readable by 1.0.0.
+  Minified-JSON blocks (tflag 10) raise the container to version 6, which 1.0.0 rejects. Every other output added
+  here (JSON columns, `max` choices, quick analysis, `ultra -l 1`) is readable by 1.0.0.
 - `max` level 1 now means "BWT for every block" (it was LZMA2 preset 1); `ultra` level 1 selects model 1.
 
 ### Memory

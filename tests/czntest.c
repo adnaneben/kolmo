@@ -200,6 +200,24 @@ int main(void) {
         printf("json codec fuzz: 3000 corrupt streams decoded without crashing\n");
         free(t); free(o); free(e); free(js);
     }
+    /* minified JSON: one line of records (strings with escapes, nesting); small blocks start inside strings */
+    {
+        size_t N = 2u << 20, q = 0; uint8_t *js = malloc(N + 4096); long id = 5000;
+        js[q++] = '[';
+        while (q + 600 < N) {
+            id += 1 + (long)(rnd() % 3);
+            q += sprintf((char *)js + q, "{\"id\":%ld,\"name\":\"n%d, \\\"q\\\" },{x\",\"v\":[%d,{\"a\":%s}],\"f\":%d.%02d},",
+                         id, (int)(rnd() % 100), (int)(rnd() % 9), rnd() % 2 ? "true" : "null", (int)(rnd() % 1000), (int)(rnd() % 100));
+        }
+        q += sprintf((char *)js + q, "{\"end\":1}]");
+        for (int m = 1; m < 5; m++) { check("json-min", js, q, (czn_mode)m, 1 << 18, 1); check("json-min-odd", js, q, (czn_mode)m, 77777, 4); }
+        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = czn_compress(js, q, d, cap, &p0), c1 = czn_compress(js, q, d, cap, &p1);
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0) { printf("FAIL minified json transform not chosen (%lld vs %lld)\n", (long long)c1, (long long)c0); fails++; }
+            else printf("minified json: fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
+            free(d); }
+        free(js);
+    }
     /* scientific binary: fixed records (header, quantised doubles incl. NaN/huge outliers, small ints, ids) and a
      * 16-bit image (big-endian, odd offset) */
     {

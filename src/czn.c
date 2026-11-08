@@ -1233,6 +1233,34 @@ static void mode_codec(const czn_params *p, int *codec, int *level) {
     }
 }
 
+/* Minified JSON (no newline at all): a newline is inserted after every ',' that follows '}' or ']' outside strings, so
+ * each record becomes a line for the JSON template transform. The decoder removes every newline again, so the split
+ * is lossless whatever the input (a block that starts inside a string only splits worse). Returns the new length. */
+static size_t json_split(const uint8_t *s, size_t n, uint8_t *d) {
+    size_t o = 0, i = 0; int str = 0, esc = 0; uint8_t last = 0;
+    if (n && s[0] != '[' && s[0] != '{') {             /* a block may start inside a string: sync at the first "},{" */
+        while (i + 2 < n && !(s[i] == '}' && s[i + 1] == ',' && s[i + 2] == '{')) i++;
+        if (i + 2 >= n) i = n;
+        memcpy(d, s, i); o = i;
+    }
+    for (; i < n; i++) {
+        uint8_t c = s[i]; d[o++] = c;
+        if (str) { if (esc) esc = 0; else if (c == '\\') esc = 1; else if (c == '"') { str = 0; last = c; } continue; }
+        if (c == '"') { str = 1; continue; }
+        if (c == ',' && (last == '}' || last == ']')) d[o++] = '\n';
+        if (c != ' ' && c != '\t' && c != '\r') last = c;
+    }
+    return o;
+}
+/* minified JSON: no newline in the sample, starts with { or [, and many records (",{" after "}") */
+static int json_minified(const uint8_t *s, size_t h) {
+    if (memchr(s, '\n', h)) return 0;
+    size_t k = 0; while (k < h && (s[k] == ' ' || s[k] == '\t' || s[k] == '\r')) k++;
+    if (k == h || (s[k] != '{' && s[k] != '[')) return 0;
+    size_t rec = 0; for (size_t i = k; i + 2 < h; i++) rec += s[i] == '}' && s[i + 1] == ',' && (s[i + 2] == '{' || s[i + 2] == ' ');
+    return rec >= 16;
+}
+
 /* JSON text: nearly every non-blank line of the sample starts (after indentation) with { [ " } or ], and some hold a ':'.
  * Returns 2 for JSON lines (records start with { or [), 1 for other (pretty-printed) JSON, 0 otherwise. */
 static int json_lines(const uint8_t *s, size_t h) {
@@ -1258,6 +1286,20 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     size_t h = n < 65536 ? n : 65536, pr = 0;
     for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
     if (pr * 100 > h * 95) {                                     /* text: field transposition if lines have a fixed field count */
+        if (logs && n >= 65536 && json_minified(s, h)) {   /* minified JSON: split into records, then as JSON lines */
+            size_t mm = n < (1u << 20) ? n : (1u << 20);
+            uint8_t *sp = malloc(2 * mm + 64), *o = malloc(2 * mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx();
+            size_t cap = ZSTD_compressBound(2 * mm); uint8_t *z = malloc(cap);
+            if (sp && o && zc && z) {
+                size_t sn = json_split(s, mm, sp); int64_t tn = log_encode_m(sp, sn, o, 2 * mm + 64, 1);
+                if (tn > 0) {
+                    size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1), b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1);
+                    if (!ZSTD_isError(a) && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b) { pl.t = T_LOG; pl.a = 2; }
+                }
+            }
+            free(sp); free(o); free(z); ZSTD_freeCCtx(zc);
+            if (pl.t == T_LOG) return pl;
+        }
         int js = logs && n >= 65536 ? json_lines(s, h) : 0;
         if (js == 2 || (js == 1 && !strong)) {   /* JSON: values become columns (max/ultra model pretty JSON well raw) */
             size_t mm = n < (1u << 20) ? n : (1u << 20); while (mm > 0 && s[mm - 1] != '\n') mm--;
@@ -1524,8 +1566,15 @@ static void *compress_worker(void *arg) {
             if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 4; }
             else modes = 0;
         } else if (pl.t == T_LOG && len) {
-            int64_t tn = log_encode_m(raw, len, tbuf, len + TSLACK, pl.a == 1);
-            if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 5; }
+            uint8_t *sp = pl.a == 2 && !memchr(raw, '\n', len) ? malloc(2 * len + 64) : NULL;
+            if (sp) {                                   /* minified JSON: records split onto lines (block flag 10) */
+                size_t sn = json_split(raw, len, sp); int64_t tn = log_encode_m(sp, sn, tbuf, len + TSLACK, 1);
+                if (tn > 0) { put32(sl, (uint32_t)tn); put32(sl + 4, (uint32_t)(sn - len)); meta = 8; in = tbuf; tflag = 10; modes |= 4; }
+                free(sp);
+            } else {
+                int64_t tn = log_encode_m(raw, len, tbuf, len + TSLACK, pl.a >= 1);
+                if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 5; }
+            }
         } else if (pl.t == T_IMG && len) {
             int64_t tn = img16_encode(raw, len, rs, &pl.img, tbuf);
             if (tn > 0 && (size_t)tn <= len + TSLACK - 64) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 6; }
@@ -1543,7 +1592,7 @@ static void *compress_worker(void *arg) {
         } else if (pl.t == T_X86 && len) {
             memcpy(tbuf, raw, len); e8e9_fwd(tbuf, len); in = tbuf; tflag = 8;
         }
-        size_t inlen = (tflag >= 3 && tflag <= 7) || tflag == 9 ? get32(sl) : len;
+        size_t inlen = (tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10 ? get32(sl) : len;
         int codec = J->codec, level = J->level;
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
         if (codec == C_LZMA && level == 1) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
@@ -1799,7 +1848,7 @@ cleanup:
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) return ret;
-    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = czn_crc32c(0, dst, 28); hc = czn_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
@@ -1814,7 +1863,7 @@ int64_t czn_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, con
 typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict; uint32_t dictid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
 
 static int parse(const uint8_t *s, size_t n, parsed_t *P, const czn_decode_limits *limits) {
-    if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > 5) return CZN_ERR_CORRUPT;
+    if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > 6) return CZN_ERR_CORRUPT;
     P->ver = s[4]; P->psum = P->ver >= 3 && (s[10] & 1);
     P->needdict = P->ver >= 3 && (s[10] & 2); P->dictid = P->needdict ? get32(s + 6) : 0;
     P->orig = get64(s + 12); P->nb = get32(s + 20);
@@ -1863,18 +1912,27 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, uin
     }
     if (tflag && pl.t == T_TP) meta = 4 * (size_t)(pl.c + 1);
     if ((tflag >= 3 && tflag <= 7) || tflag == 9) meta = 4;
-    int maxf = pl.t == T_TP ? 2 : pl.t == T_TBL ? 4 : pl.t == T_LOG ? 5 : pl.t == T_IMG ? 6 : pl.t == T_REC ? 7 : pl.t == T_X86 ? 8 : pl.t == T_WORD ? 9 : 1;
-    if (tflag > maxf || (pl.t == T_TBL && tflag && tflag < 3) || (pl.t == T_LOG && tflag && tflag != 5)
+    if (tflag == 10) meta = 8;
+    int maxf = pl.t == T_TP ? 2 : pl.t == T_TBL ? 4 : pl.t == T_LOG ? (P->ver >= 6 ? 10 : 5) : pl.t == T_IMG ? 6 : pl.t == T_REC ? 7 : pl.t == T_X86 ? 8 : pl.t == T_WORD ? 9 : 1;
+    if (tflag > maxf || (pl.t == T_TBL && tflag && tflag < 3) || (pl.t == T_LOG && tflag && tflag != 5 && tflag != 10)
         || (pl.t == T_IMG && tflag && tflag != 6) || (pl.t == T_REC && tflag && tflag != 7) || (pl.t == T_X86 && tflag && tflag != 8) || (pl.t == T_WORD && tflag && tflag != 9)
         || (pl.t == T_NONE && tflag)) return CZN_ERR_CORRUPT;
     if (meta > cl) return CZN_ERR_CORRUPT;
     uint8_t *tgt = (tflag && tflag != 8) ? tbuf : out;
     size_t dlen = len;
-    if ((tflag >= 3 && tflag <= 7) || tflag == 9) { dlen = get32(pay); if (dlen > len + TSLACK) return CZN_ERR_CORRUPT; }
+    if ((tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10) { dlen = get32(pay); if (dlen > len + TSLACK) return CZN_ERR_CORRUPT; }
     if (codec_decompress(x, codec, pay + meta, cl - meta, tgt, dlen)) return CZN_ERR_CORRUPT;
     if (tflag == 3) { if (tbl_decode(tbuf, dlen, (uint8_t)pl.a, out, len)) return CZN_ERR_CORRUPT; }
     else if (tflag == 4) { if (tbl2_decode(tbuf, dlen, (uint8_t)pl.a, out, len)) return CZN_ERR_CORRUPT; }
     else if (tflag == 5) { if (log_decode(tbuf, dlen, out, len)) return CZN_ERR_CORRUPT; }
+    else if (tflag == 10) {                                    /* minified JSON: decode the split text, drop the newlines */
+        size_t k = get32(pay + 4); if (k > len) return CZN_ERR_CORRUPT;
+        uint8_t *sp = malloc(len + k + 64); if (!sp) return CZN_ERR_ALLOC;
+        int bad = log_decode(tbuf, dlen, sp, len + k); size_t o = 0;
+        if (!bad) for (size_t q = 0; q < len + k; q++) { uint8_t c = sp[q]; if (c != '\n') { if (o == len) { bad = 1; break; } out[o++] = c; } }
+        free(sp);
+        if (bad || o != len) return CZN_ERR_CORRUPT;
+    }
     else if (tflag == 6) { if (img16_decode(tbuf, dlen, out, len)) return CZN_ERR_CORRUPT; }
     else if (tflag == 7) { if (rec_decode(tbuf, dlen, out, len)) return CZN_ERR_CORRUPT; }
     else if (tflag == 8) e8e9_inv(out, len);
