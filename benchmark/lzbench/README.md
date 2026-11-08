@@ -7,7 +7,7 @@ measured by the same harness, on the same input, with the same flags as every ot
 ```sh
 git clone https://github.com/inikep/lzbench
 sh benchmark/lzbench/setup.sh ./lzbench "KOLMO ZSTD BROTLI XZ"   # or omit the list to build every codec
-./lzbench/lzbench -ekolmo/zstd,3,19/xz,6,9 silesia.tar
+./lzbench/lzbench -ekolmo,1,2,3,4/zstd,1,2,3,5 silesia.tar   # the fast tier; -ekolmo alone runs all 13 levels
 ```
 
 | File | Role |
@@ -15,6 +15,21 @@ sh benchmark/lzbench/setup.sh ./lzbench "KOLMO ZSTD BROTLI XZ"   # or omit the l
 | `kolmo_lzbench.cpp` | The codec wrapper: lzbench levels 0–12 are a ladder of ordinary kolmo settings, from `rt` to `ultra` (see the file header) |
 | `kolmo.mk` | The lzbench build fragment (`mk/kolmo.mk`) |
 | `setup.sh` | Builds kolmo, isolates it, drops it into lzbench, registers it and builds lzbench |
+
+## The ladder
+
+| lzbench level | kolmo setting | lzbench level | kolmo setting |
+|---|---|---|---|
+| 0 | `-m rt` | 7 | `-m max -l 1` |
+| 1 | `-m fast -l 1 -q` | 8 | `-m eco` |
+| 2 | `-m fast -l 2 -q` | 9 | `-m hc` |
+| 3 | `-m fast -q` | 10 | `-m max` |
+| 4 | `-m fast` | 11 | `-m ultra -l 1` |
+| 5 | `-m hc -l 9` | 12 | `-m ultra` |
+| 6 | `-m hc -l 12` | | |
+
+Each is reproducible with `kolmo -T1 <setting> in out`. `-q` is quick analysis (only the cheap structure
+transforms). Levels 11 and 12 need about 4 GB of memory. Measured results are in [`results/`](results/).
 
 ## Fairness
 
