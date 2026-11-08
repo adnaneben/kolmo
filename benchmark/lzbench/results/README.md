@@ -63,3 +63,8 @@ Measured before `max -l 1` was inserted as level 7, so levels 7–9 there are `e
 
 `ultra -l 1` beats zpaq -5 (19.09%, 0.39 / 0.39 MB/s) on ratio, compression speed and decompression speed at once;
 `ultra` (level 12, 17.01%) holds the ratio crown.
+
+## `silesia-2026-11-08-ultra-final.csv` — `ultra` with sample-gated alternatives (commit `ce349f0`)
+
+Level 12 (`ultra`): **17.01% at 0.28 MB/s compress, 0.30 MB/s decompress** — 1.0.0's compression speed (0.28) with
+5% smaller output (1.0.0: 17.91%).

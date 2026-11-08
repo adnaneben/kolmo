@@ -51,7 +51,7 @@ exact):
 | `hc` | 22.47% | 2.6 MB/s | **631 MB/s** | xz -9: 23.00%, 99 MB/s decode; bzip3 -5: 22.29%, 9.7 MB/s decode |
 | `max` | **19.34%** | 2.7 MB/s | 54 MB/s | kanzi -9: 19.73%, 1.7 MB/s |
 | `ultra -l 1` | **17.99%** | 0.43 MB/s | 0.45 MB/s | zpaq -5: 19.09%, 0.39 MB/s |
-| `ultra` | **17.01%** | 0.25 MB/s | 0.29 MB/s | — (smallest result on the board) |
+| `ultra` | **17.01%** | 0.28 MB/s | 0.30 MB/s | — (smallest result on the board) |
 
 From about 350 MB/s down to the slowest tier, the bold settings give the smallest output of any entry at that
 compression speed or faster. `hc` (and `eco`) trade some of that for decode speed: `hc` decompresses 6× faster than
