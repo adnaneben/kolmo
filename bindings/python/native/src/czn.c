@@ -1612,6 +1612,11 @@ static void *compress_worker(void *arg) {
                     int text = !tflag && looks_text(in, inlen);
                     if (alts[k] == C_BSC && !text) continue;
                     if (alts[k] == C_LZMA && text) continue;  /* text: BWT always beat LZMA2 in tests; saves ~25% of the time */
+                    if (cl && inlen > (2u << 20)) {           /* large block: try the alternative on a 1 MiB slice first */
+                        size_t sn = 1u << 20, so = (inlen - sn) / 2;
+                        size_t cs = codec_compress(xp, alts[k], 9, in + so, sn, alt, J->slot - meta);
+                        if (!cs || (double)cs / sn > 0.97 * (double)cl / inlen) continue;   /* not within reach of CM */
+                    }
                     size_t c2 = codec_compress(xp, alts[k], 9, in, inlen, alt, J->slot - meta);
 #if defined(CZN_TRACE) || defined(CZN_PROF)
                     fprintf(stderr, "len %zu t%d text %d cm %zu alt%d %zu\n", (size_t)inlen, tflag, looks_text(in, inlen), cl, alts[k], c2);
