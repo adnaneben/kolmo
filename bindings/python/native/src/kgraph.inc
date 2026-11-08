@@ -30,7 +30,7 @@ static int kb_res(kbuf *b, size_t add) {
     size_t c = b->cap ? b->cap : 256; while (c < b->n + add) c *= 2;
     uint8_t *q = realloc(b->p, c); if (!q) return -1; b->p = q; b->cap = c; return 0;
 }
-static int kb_put(kbuf *b, const void *s, size_t n) { if (kb_res(b, n)) return -1; memcpy(b->p + b->n, s, n); b->n += n; return 0; }
+static int kb_put(kbuf *b, const void *s, size_t n) { if (!n) return 0; if (kb_res(b, n)) return -1; memcpy(b->p + b->n, s, n); b->n += n; return 0; }
 static int kb_byte(kbuf *b, uint8_t v) { if (kb_res(b, 1)) return -1; b->p[b->n++] = v; return 0; }
 static int kb_uv(kbuf *b, uint64_t v) {
     if (kb_res(b, 10)) return -1;
@@ -44,32 +44,12 @@ static int kg_getuv(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
 }
 
 /* ---- FIELDS ---- */
-static int kg_fields_fwd(const uint8_t *s, size_t n, uint8_t d, uint32_t k, kbuf *shape, kbuf *cols) {
-    size_t lines = 0, last = 0, i = 0; int fin = n && s[n - 1] == '\n';
-    kbuf irr = {0};
-    while (i < n) {
-        const uint8_t *e = memchr(s + i, '\n', n - i); size_t end = e ? (size_t)(e - s) : n;
-        uint32_t f = 1; for (size_t q = i; q < end; q++) f += s[q] == d;
-        if (f == k) {
-            size_t a = i;
-            for (uint32_t j = 0; j < k; j++) {
-                size_t b = a; while (b < end && s[b] != d) b++;
-                if (kb_put(&cols[j], s + a, b - a) || kb_byte(&cols[j], '\n')) goto fail;
-                a = b + 1;
-            }
-        } else if (kb_uv(&irr, lines - last) || kb_uv(&irr, end - i) || kb_put(&irr, s + i, end - i)) goto fail;
-        else last = lines;
-        lines++; i = end + 1;
-    }
-    if (kb_uv(shape, lines) || kb_byte(shape, (uint8_t)fin) || kb_put(shape, irr.p, irr.n)) goto fail;
-    free(irr.p); return 0;
-fail: free(irr.p); return -1;
-}
 static int kg_fields_inv(uint8_t d, uint32_t k, const kbuf *shape, const kbuf *cols, kbuf *out) {
     size_t si = 0; uint64_t lines, gap = 0, len; int have = 0;
     if (kg_getuv(shape->p, shape->n, &si, &lines) || si >= shape->n) return -1;
     int fin = shape->p[si++]; if (fin > 1) return -1;
     size_t *cp = calloc(k, sizeof(size_t)); if (!cp) return -1;
+    { size_t tot = shape->n + lines; for (uint32_t j = 0; j < k; j++) tot += cols[j].n; if (kb_res(out, tot + 16)) { free(cp); return -1; } }
     uint64_t next = UINT64_MAX;
     if (si < shape->n) { if (kg_getuv(shape->p, shape->n, &si, &gap)) goto bad; next = gap; have = 1; }
     for (uint64_t l = 0; l < lines; l++) {
@@ -109,49 +89,34 @@ static int kg_num(const uint8_t *v, size_t l, uint8_t sep, int64_t *m, uint8_t *
     if (neg && x == 0) return 0;
     *m = neg ? -x : x; *sc = hassep ? (uint8_t)fd : 255; return 1;
 }
-static int kg_numfmt(int64_t m, uint8_t sc, uint8_t sep, kbuf *o) {
-    char dg[24]; int nd = 0; uint64_t u = m < 0 ? (uint64_t)0 - (uint64_t)m : (uint64_t)m;
-    do { dg[nd++] = (char)('0' + u % 10); u /= 10; } while (u);
-    int f = sc == 255 ? 0 : sc; if (f > 18) return -1;
-    while (nd < f + 1) dg[nd++] = '0';
-    if (kb_res(o, (size_t)nd + 3)) return -1;
-    if (m < 0) o->p[o->n++] = '-';
-    for (int q = nd - 1; q >= f; q--) o->p[o->n++] = (uint8_t)dg[q];
-    if (sc != 255) { o->p[o->n++] = sep; for (int q = f - 1; q >= 0; q--) o->p[o->n++] = (uint8_t)dg[q]; }
-    return 0;
-}
 static uint64_t kg_zz(int64_t x) { return ((uint64_t)x << 1) ^ (uint64_t)(x >> 63); }
 static int64_t kg_unzz(uint64_t u) { return (int64_t)(u >> 1) ^ -(int64_t)(u & 1); }
-/* returns the share of values that are numbers, in percent, without writing anything when probe is set */
-static int kg_decimal_fwd(const kbuf *in, uint8_t sep, uint8_t pred, kbuf *tags, kbuf *sc, kbuf *mant, kbuf *txt) {
-    size_t i = 0; int64_t prev = 0;
-    while (i < in->n) {
-        const uint8_t *e = memchr(in->p + i, '\n', in->n - i); if (!e) return -1;
-        size_t l = (size_t)(e - (in->p + i)); int64_t m; uint8_t s;
-        if (!l) { if (kb_byte(tags, 0)) return -1; }
-        else if (kg_num(in->p + i, l, sep, &m, &s)) {
-            if (kb_byte(tags, 1) || kb_byte(sc, s) || kb_uv(mant, kg_zz(pred ? (int64_t)((uint64_t)m - (uint64_t)prev) : m))) return -1;
-            prev = m;
-        } else if (kb_byte(tags, 2) || kb_put(txt, in->p + i, l + 1)) return -1;
-        i += l + 1;
-    }
-    return 0;
-}
 static int kg_decimal_inv(uint8_t sep, uint8_t pred, const kbuf *tags, const kbuf *sc, const kbuf *mant, const kbuf *txt, kbuf *out) {
     size_t si = 0, mi = 0, ti = 0; int64_t prev = 0;
+    if (kb_res(out, tags->n * 23 + txt->n + 16)) return -1;    /* a number prints in at most 21 bytes plus '\n' */
+    uint8_t *w = out->p + out->n;
     for (size_t q = 0; q < tags->n; q++) {
         uint8_t t = tags->p[q];
-        if (t == 0) { if (kb_byte(out, '\n')) return -1; }
+        if (t == 0) *w++ = '\n';
         else if (t == 1) {
-            uint64_t z; if (si >= sc->n || kg_getuv(mant->p, mant->n, &mi, &z)) return -1;
+            uint64_t z = 0; int sh = 0;
+            for (;;) { if (mi >= mant->n || sh > 63) return -1; uint8_t c = mant->p[mi++]; z |= (uint64_t)(c & 127) << sh; if (!(c & 128)) break; sh += 7; }
             int64_t m = pred ? (int64_t)((uint64_t)prev + (uint64_t)kg_unzz(z)) : kg_unzz(z); prev = m;
-            uint8_t s = sc->p[si++]; if (s != 255 && s > 18) return -1;
-            if (kg_numfmt(m, s, sep, out) || kb_byte(out, '\n')) return -1;
+            if (si >= sc->n) return -1;
+            uint8_t s = sc->p[si++]; int f = s == 255 ? 0 : s; if (s != 255 && s > 18) return -1;
+            char dg[24]; int nd = 0; uint64_t u = m < 0 ? (uint64_t)0 - (uint64_t)m : (uint64_t)m;
+            do { dg[nd++] = (char)('0' + u % 10); u /= 10; } while (u);
+            while (nd < f + 1) dg[nd++] = '0';
+            if (m < 0) *w++ = '-';
+            for (int r = nd - 1; r >= f; r--) *w++ = (uint8_t)dg[r];
+            if (s != 255) { *w++ = sep; for (int r = f - 1; r >= 0; r--) *w++ = (uint8_t)dg[r]; }
+            *w++ = '\n';
         } else if (t == 2) {
             const uint8_t *e = ti < txt->n ? memchr(txt->p + ti, '\n', txt->n - ti) : NULL; if (!e) return -1;
-            size_t l = (size_t)(e - (txt->p + ti)) + 1; if (kb_put(out, txt->p + ti, l)) return -1; ti += l;
+            size_t l = (size_t)(e - (txt->p + ti)) + 1; memcpy(w, txt->p + ti, l); w += l; ti += l;
         } else return -1;
     }
+    out->n = (size_t)(w - out->p);
     return si == sc->n && mi == mant->n && ti == txt->n ? 0 : -1;
 }
 
@@ -187,7 +152,11 @@ static int kgb_concat(kgb *g, const int *idx, int n) {
 }
 
 /* Delimited numeric table: FIELDS, then DECIMAL on each mostly-numeric column, then one CONCAT per stream kind.
- * Writes the payload to dst; returns its length, or 0 when the graph does not apply or does not fit. */
+ * The encoder fuses the nodes: each field is scanned once and written straight to its column's final streams (the
+ * intermediate column texts exist only in the decoder). Writes the payload to dst; returns its length, or 0 when the
+ * graph does not apply or does not fit. */
+typedef struct { kbuf tag, sc, mt, tx, raw; int64_t prev; uint8_t num, pred; } kgcol;
+static inline uint8_t *kg_uvw(uint8_t *q, uint64_t v) { while (v >= 128) { *q++ = (uint8_t)(v | 128); v >>= 7; } *q++ = (uint8_t)v; return q; }
 static size_t kg_encode_table(codec_ctx *x, int codec, int level, const uint8_t *src, size_t n, uint8_t d, uint8_t sep,
                               uint8_t *dst, size_t cap) {
     if (n < 64) return 0;
@@ -196,37 +165,76 @@ static size_t kg_encode_table(codec_ctx *x, int codec, int level, const uint8_t 
       const uint8_t *b = memchr(a, '\n', n - (size_t)(a - src)); if (!b) b = src + n;
       for (const uint8_t *q = a; q < b; q++) k += *q == d; }
     if (k < 2 || k > 60000) return 0;
-    kgb g = {0}; size_t out = 0;
+    size_t out = 0, lines = 0, last = 0, rows = 0, i = 0; int fin = src[n - 1] == '\n';
+    kgcol *C = calloc(k, sizeof(kgcol)); size_t *fs = malloc((k + 1) * sizeof(size_t)); kbuf irr = {0}, shape = {0};
+    kgb g = {0};
+    if (!C || !fs) goto done;
+    /* classify columns and pick each predictor on the first lines */
+    { size_t *vals = calloc(k, sizeof(size_t)), *nums = calloc(k, sizeof(size_t)), *c0 = calloc(k, sizeof(size_t)), *c1 = calloc(k, sizeof(size_t));
+      int64_t *pv = calloc(k, sizeof(int64_t));
+      if (!vals || !nums || !c0 || !c1 || !pv) { free(vals); free(nums); free(c0); free(c1); free(pv); goto done; }
+      size_t j0 = 0; int seen = 0;
+      while (j0 < n && seen < 4096) {
+          const uint8_t *e = memchr(src + j0, '\n', n - j0); size_t end = e ? (size_t)(e - src) : n, a = j0; uint32_t j = 0;
+          uint32_t f = 1; for (size_t q = j0; q < end; q++) f += src[q] == d;
+          if (f == k) for (;; j++) {
+              size_t bq = a; while (bq < end && src[bq] != d) bq++;
+              int64_t m; uint8_t sc; vals[j]++;
+              if (bq == a) nums[j]++;
+              else if (kg_num(src + a, bq - a, sep, &m, &sc)) {
+                  nums[j]++; uint64_t z0 = kg_zz(m), z1 = kg_zz((int64_t)((uint64_t)m - (uint64_t)pv[j])); pv[j] = m;
+                  c0[j] += 1 + (z0 >= 128) + (z0 >= 16384) + (z0 >= 2097152); c1[j] += 1 + (z1 >= 128) + (z1 >= 16384) + (z1 >= 2097152);
+              }
+              if (bq >= end) break; a = bq + 1;
+          }
+          seen++; j0 = end + 1;
+      }
+      for (uint32_t j = 0; j < k; j++) { C[j].num = vals[j] && nums[j] * 100 >= vals[j] * 60; C[j].pred = c1[j] <= c0[j]; }
+      free(vals); free(nums); free(c0); free(c1); free(pv); }
+    /* one pass: fields straight to their streams */
+    while (i < n) {
+        const uint8_t *e = memchr(src + i, '\n', n - i); size_t end = e ? (size_t)(e - src) : n;
+        uint32_t f = 0; fs[f++] = i;
+        for (const uint8_t *q = src + i, *qe = src + end; q < qe; q++) if (*q == d) { if (f > k) break; fs[f++] = (size_t)(q - src) + 1; }
+        if (f == k) {
+            fs[k] = end + 1;
+            for (uint32_t j = 0; j < k; j++) {
+                kgcol *c = &C[j]; const uint8_t *v = src + fs[j]; size_t l = fs[j + 1] - 1 - fs[j];
+                if (!c->num) { if (kb_put(&c->raw, v, l) || kb_byte(&c->raw, '\n')) goto done; continue; }
+                int64_t m; uint8_t sc;
+                if (kb_res(&c->tag, 1) || kb_res(&c->sc, 1) || kb_res(&c->mt, 10)) goto done;
+                if (!l) c->tag.p[c->tag.n++] = 0;
+                else if (kg_num(v, l, sep, &m, &sc)) {
+                    c->tag.p[c->tag.n++] = 1; c->sc.p[c->sc.n++] = sc;
+                    uint8_t *q = kg_uvw(c->mt.p + c->mt.n, kg_zz(c->pred ? (int64_t)((uint64_t)m - (uint64_t)c->prev) : m));
+                    c->mt.n = (size_t)(q - c->mt.p); c->prev = m;
+                } else { c->tag.p[c->tag.n++] = 2; if (kb_put(&c->tx, v, l) || kb_byte(&c->tx, '\n')) goto done; }
+            }
+            rows++;
+        } else if (kb_uv(&irr, lines - last) || kb_uv(&irr, end - i) || kb_put(&irr, src + i, end - i)) goto done;
+        else last = lines;
+        lines++; i = end + 1;
+    }
+    if (!rows || kb_uv(&shape, lines) || kb_byte(&shape, (uint8_t)fin) || kb_put(&shape, irr.p, irr.n)) goto done;
+    /* the program: FIELDS, DECIMAL per numeric column, CONCAT per stream kind (column streams stay virtual) */
     if (kgb_new(&g) != 0) goto done;
     { kbuf par = {0}; kb_byte(&par, d); kb_uv(&par, k);
-      int first = kgb_node(&g, KG_FIELDS, (int[]){0}, 1, (int)k + 1, &par); free(par.p);
-      if (first != 1 || kg_fields_fwd(src, n, d, k, &g.s[1], &g.s[2])) goto done; }
-    int *tg = malloc(sizeof(int) * k * 5), nt = 0, *scs = tg + k, nsc = 0, *mts = tg + 2 * k, nmt = 0, *txs = tg + 3 * k, ntx = 0, *raws = tg + 4 * k, nraw = 0;
-    if (!tg) goto done;
+      int first = kgb_node(&g, KG_FIELDS, (int[]){0}, 1, (int)k + 1, &par); free(par.p); if (first != 1) goto done; }
+    g.s[1] = shape; memset(&shape, 0, sizeof shape);
+    int *lists = malloc(sizeof(int) * k * 5); if (!lists) goto done;
+    int *tg = lists, *scs = lists + k, *mts = lists + 2 * k, *txs = lists + 3 * k, *raws = lists + 4 * k, nt = 0, nraw = 0;
     for (uint32_t j = 0; j < k; j++) {
-        int c = 2 + (int)j; kbuf *col = &g.s[c];
-        size_t vals = 0, nums = 0, i = 0; int64_t m; uint8_t s;
-        while (i < col->n && vals < 4096) { const uint8_t *q = memchr(col->p + i, '\n', col->n - i); size_t l = (size_t)(q - (col->p + i)); vals++; nums += !l || kg_num(col->p + i, l, sep, &m, &s); i += l + 1; }
-        if (!vals || nums * 100 < vals * 60) { raws[nraw++] = c; continue; }
-        /* predictor: previous value, unless no prediction is cheaper on a sample */
-        uint8_t pred = 1;
-        { kbuf t0 = {0}, s0 = {0}, m0 = {0}, x0 = {0}, t1 = {0}, s1 = {0}, m1 = {0}, x1 = {0}; kbuf sm = {col->p, i, i};
-          if (!kg_decimal_fwd(&sm, sep, 0, &t0, &s0, &m0, &x0) && !kg_decimal_fwd(&sm, sep, 1, &t1, &s1, &m1, &x1) && m0.n < m1.n) pred = 0;
-          free(t0.p); free(s0.p); free(m0.p); free(x0.p); free(t1.p); free(s1.p); free(m1.p); free(x1.p); }
-        kbuf par = {0}; kb_byte(&par, sep); kb_byte(&par, pred);
-        int o = kgb_node(&g, KG_DECIMAL, &c, 1, 4, &par); free(par.p); if (o < 0) { free(tg); goto done; }
-        col = &g.s[c];                                         /* the stream table may have moved */
-        if (kg_decimal_fwd(col, sep, pred, &g.s[o], &g.s[o + 1], &g.s[o + 2], &g.s[o + 3])) { free(tg); goto done; }
-        free(col->p); memset(col, 0, sizeof(kbuf));
-        tg[nt++] = o; scs[nsc++] = o + 1; mts[nmt++] = o + 2; txs[ntx++] = o + 3;
+        int c = 2 + (int)j;
+        if (!C[j].num) { g.s[c] = C[j].raw; memset(&C[j].raw, 0, sizeof(kbuf)); raws[nraw++] = c; continue; }
+        kbuf par = {0}; kb_byte(&par, sep); kb_byte(&par, C[j].pred);
+        int o = kgb_node(&g, KG_DECIMAL, &c, 1, 4, &par); free(par.p); if (o < 0) { free(lists); goto done; }
+        g.s[o] = C[j].tag; g.s[o + 1] = C[j].sc; g.s[o + 2] = C[j].mt; g.s[o + 3] = C[j].tx;
+        memset(&C[j].tag, 0, sizeof(kbuf)); memset(&C[j].sc, 0, sizeof(kbuf)); memset(&C[j].mt, 0, sizeof(kbuf)); memset(&C[j].tx, 0, sizeof(kbuf));
+        tg[nt] = o; scs[nt] = o + 1; mts[nt] = o + 2; txs[nt] = o + 3; nt++;
     }
-    int lv[6], nl = 0; lv[nl++] = 1;                           /* shape */
-    if (nt && (lv[nl++] = kgb_concat(&g, tg, nt)) < 0) { free(tg); goto done; }
-    if (nsc && (lv[nl++] = kgb_concat(&g, scs, nsc)) < 0) { free(tg); goto done; }
-    if (nmt && (lv[nl++] = kgb_concat(&g, mts, nmt)) < 0) { free(tg); goto done; }
-    if (ntx && (lv[nl++] = kgb_concat(&g, txs, ntx)) < 0) { free(tg); goto done; }
-    if (nraw && (lv[nl++] = kgb_concat(&g, raws, nraw)) < 0) { free(tg); goto done; }
-    free(tg);
+    if ((nt && (kgb_concat(&g, tg, nt) < 0 || kgb_concat(&g, scs, nt) < 0 || kgb_concat(&g, mts, nt) < 0 || kgb_concat(&g, txs, nt) < 0))
+        || (nraw && kgb_concat(&g, raws, nraw) < 0)) { free(lists); goto done; }
+    free(lists);
     /* serialize: header, program, leaves (every unconsumed stream, in index order) */
     kbuf o = {0}; int nleaf = 0;
     for (int q = 0; q < g.ns; q++) nleaf += !g.used[q];
@@ -237,7 +245,7 @@ static size_t kg_encode_table(codec_ctx *x, int codec, int level, const uint8_t 
         if (kb_uv(&o, (uint64_t)q) || kb_res(&o, 1 + 20 + zc)) { free(o.p); goto done; }
         size_t hp = o.n; o.n += 1;
         size_t z = s->n >= 64 ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
-        if (!z || z >= s->n) { cc = C_STORE; z = s->n; memcpy(o.p + o.n + 20, s->p, s->n); }
+        if (!z || z >= s->n) { cc = C_STORE; z = s->n; if (z) memcpy(o.p + o.n + 20, s->p, z); }
         o.p[hp] = (uint8_t)cc;
         uint8_t hdr[20]; size_t hn = 0;
         for (uint64_t v = s->n;; v >>= 7) { hdr[hn++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
@@ -247,6 +255,8 @@ static size_t kg_encode_table(codec_ctx *x, int codec, int level, const uint8_t 
     if (o.n < cap && o.n < n) { memcpy(dst, o.p, o.n); out = o.n; }
     free(o.p);
 done:
+    if (C) for (uint32_t j = 0; j < k; j++) { free(C[j].tag.p); free(C[j].sc.p); free(C[j].mt.p); free(C[j].tx.p); free(C[j].raw.p); }
+    free(C); free(fs); free(irr.p); free(shape.p);
     kgb_free(&g);
     return out;
 }
@@ -321,7 +331,8 @@ static int kg_decode(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *out, siz
         for (uint32_t r = 0; r < t->nout; r++) { free(s[t->firstout + r].p); memset(&s[t->firstout + r], 0, sizeof(kbuf)); }
     }
     if (!have[0] || s[0].n != len) goto out;
-    memcpy(out, s[0].p, len); rc = 0;
+    if (len) memcpy(out, s[0].p, len);
+    rc = 0;
 out:
     if (s) for (uint64_t q = 0; q < ns; q++) free(s[q].p);
     free(s); free(have); free(cons); free(nd); free(ins);
