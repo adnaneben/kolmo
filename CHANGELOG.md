@@ -6,7 +6,8 @@
 - **`ultra`: context-mixing model 2.** Two sparse contexts, three record contexts (a detected fixed record length:
   the bytes one and two records back, and the column within the record), four mixers combined by a learned final
   mixer whose learning rate decays over the block, and an order-2 APM. Silesia under lzbench: 17.91% → **17.01%**
-  (5.58× → 5.88×); zpaq -5 is 19.09%. Files written by 1.0.0 (model 1) still decode.
+  (5.58× → 5.88×); zpaq -5 is 19.09%. enwik8: 19.57 MB → 18.96 MB (5.27×). Files written by 1.0.0 (model 1)
+  still decode.
 - **`ultra -l 1`**: model 1 only, without the LZMA2/BWT alternatives: 17.99% at 0.43 / 0.45 MB/s on Silesia —
   ahead of zpaq -5 (19.09%, 0.39 / 0.39 MB/s) on ratio and on both speeds.
 - **`max`**: binary blocks keep the better of LZMA2 and BWT (Silesia 19.68% → 19.34%).
@@ -22,7 +23,14 @@
   slice. `fast -l1 -q` (30.33% at ~350 MB/s) beats zstd -2; `fast -l2 -q` (28.89% at ~300 MB/s) and `fast -q`
   (27.87% at ~220 MB/s) beat zstd -3.
 - **Context-mixing tables on transparent huge pages** (Linux): ultra back to 1.0.0's speed with model 2.
+- `ultra` tries LZMA2/BWT on a 1 MiB slice before coding a large block with them (same output on Silesia, up to 12%
+  faster).
 - Log transform: one-pass tokenizer for short tokens.
+
+### Verification
+- The full test suite (round trips in every mode, range reads, corruption fuzzing, JSON and minified-JSON cases) and
+  Codex's resource and parallel suites pass; the full suite is also clean under AddressSanitizer and UBSan.
+- Every change that is not meant to alter output was checked against 51 reference outputs (byte-identical).
 
 ### Format
 - CM streams flag model 2 in the top nibble of the size word (`f & 8`); 1.0.0 decoders reject them as corrupt input.
