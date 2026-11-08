@@ -45,11 +45,18 @@ static void img16_inv(const uint8_t *lo, const uint8_t *hi, int64_t n, int64_t W
 #define IMG_R(i) ((uint16_t)(((uint16_t)(lo[i] | hi[i] << 8) >> 1) ^ (uint16_t)-(uint16_t)(lo[i] & 1)))
     if (mode == 0) for (; i < n; i++) { L = (uint16_t)(L + IMG_R(i)); out[i] = L; }
     else if (mode == 1) for (; i < n; i++) { L = (uint16_t)(((L + out[i - W]) >> 1) + IMG_R(i)); out[i] = L; }
-    else for (; i < n; i++) {
-        int U = out[i - W], UL = out[i - W - 1], l = L;
-        int mx = l > U ? l : U, mn = l < U ? l : U;
-        int p = UL >= mx ? mn : UL <= mn ? mx : l + U - UL;
-        L = (uint16_t)(p + IMG_R(i)); out[i] = L;
+    else {                                    /* MED = median(L, U, L + U - UL): only L is on the serial chain */
+        enum { CH = 2048 }; uint16_t rr[CH];
+        while (i < n) {
+            int64_t m = n - i < CH ? n - i : CH;
+            for (int64_t k = 0; k < m; k++) rr[k] = IMG_R(i + k);      /* residuals first (vectorizes) */
+            for (int64_t k = 0; k < m; k++) {
+                int U = out[i + k - W], UL = out[i + k - W - 1], l = L, g = l + U - UL;
+                int mn = l < U ? l : U, mx = l < U ? U : l, t = mx < g ? mx : g;
+                L = (uint16_t)((mn > t ? mn : t) + rr[k]); out[i + k] = L;
+            }
+            i += m;
+        }
     }
 #undef IMG_R
 }
