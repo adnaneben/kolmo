@@ -22,7 +22,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 6 (4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10) |
+| 4 | 1 | version | 1 to 7 (4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 8) |
 | 5 | 1 | mode | the `czn_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -35,7 +35,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | 24 | 4 | block | nominal block size in bytes |
 | 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
 
-A reader rejects the file if the magic is wrong, the version is not 1–6, the index does not fit in the file, or the
+A reader rejects the file if the magic is wrong, the version is not 1–7, the index does not fit in the file, or the
 header+index CRC does not match. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
 of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `CZN_ERR_DICT`; an older
 reader that predates the flag refuses the newer version rather than returning wrong data.
@@ -129,3 +129,30 @@ src/sci.inc    fixed records and 16-bit images
 src/word.inc   word dictionary
 src/czn.c      container, typed transpose, byte-plane shuffle, x86 filter, coders
 ```
+
+## Kolmo graph blocks (version 7)
+
+A block with codec 8 and plan type 9 is a **kolmo graph**: instead of one fixed transform, the payload (after the
+4-byte plan) holds a small program. Stream 0 is the block's bytes. Each node consumes streams and appends its outputs
+to the stream table; streams no node consumes are leaves, each coded by an ordinary codec. The decoder decodes the
+leaves, then runs the nodes' inverses from the last node to the first. New transforms add node ids; the container
+version stays 7. A decoder rejects any node id it does not know.
+
+```
+payload := 'G' | 1 (graph version) | nodes uv | node * nodes | leaves uv | leaf * leaves
+node    := op u8 | nin uv | input index uv * nin | nout uv | param length uv | params
+leaf    := stream index uv | codec u8 (0-7, as for blocks) | raw length uv | coded length uv | coded bytes
+```
+
+Outputs of a node take the next stream indices, in order. Every stream is consumed at most once; stream 0 must be
+consumed when there are nodes; every unconsumed stream must appear exactly once as a leaf; inputs must refer to
+earlier streams. `uv` is an unsigned LEB128 varint.
+
+| Op | Name | Params | Inputs → outputs |
+|---|---|---|---|
+| 1 | FIELDS | delimiter u8, k uv | text → shape, column 0 … column k−1. A line with exactly k fields sends each field, `\n`-terminated, to its column. Any other line is kept in shape: line count uv, final-newline u8, then per irregular line its line-index gap uv (from the previous irregular line, or from 0), length uv and bytes. |
+| 2 | DECIMAL | separator u8, predictor u8 | values (`\n`-terminated) → tags, scales, mantissas, texts. Tag per value: 0 empty, 1 number, 2 text. A number matches `-?(0\|[1-9][0-9]*)(sep[0-9]+)?` with at most 18 digits and is not a negative zero; its scale byte is the digit count after the separator, or 255 for none; its mantissa (digits as one integer, signed) is stored as the zigzag uv of the difference from the previous number in the column (predictor 1) or of itself (predictor 0). Text values are stored `\n`-terminated. |
+| 3 | CONCAT | count uv, length uv * count | count streams → their concatenation |
+
+The planner uses graphs for delimited tables with more than 256 columns (the limit of the table transform). A
+version 1–6 decoder rejects version 7 files.

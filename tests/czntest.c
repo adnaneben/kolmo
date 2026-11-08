@@ -218,6 +218,46 @@ int main(void) {
             free(d); }
         free(js);
     }
+    /* wide delimited table (300 columns): kolmo graph blocks; odd values, irregular lines, CRLF, no final newline */
+    {
+        size_t N = 3u << 20, q = 0; uint8_t *w = malloc(N + 65536);
+        q += sprintf((char *)w + q, "name;year");
+        for (int c = 0; c < 298; c++) q += sprintf((char *)w + q, ";c%d", c);
+        w[q++] = '\n';
+        long t = 0; int row = 0;
+        while (q + 20000 < N) {
+            q += sprintf((char *)w + q, "v%d;%d", row % 7, 1900 + row % 120);
+            for (int c = 0; c < 298; c++) {
+                int k = (int)(rnd() % 100); w[q++] = ';';
+                if (k < 15) continue;                                             /* empty */
+                else if (k < 70) q += sprintf((char *)w + q, "%ld,%02d", (t + c * 37) % 100000, (int)((c * 7 + row) % 100));
+                else if (k < 85) q += sprintf((char *)w + q, "-%d", (int)(rnd() % 5000));
+                else if (k < 88) q += sprintf((char *)w + q, "%s", (const char *[]){"-0", "007", "-0,0", "1,", ",5", "12345678901234567890", "1e5", "NaN"}[rnd() % 8]);
+                else q += sprintf((char *)w + q, "%d", (int)(rnd() % 100));
+            }
+            if (row % 997 == 5) q += sprintf((char *)w + q, ";extra");                 /* irregular field count */
+            if (row % 1501 == 9) w[q++] = '\r';                                       /* a CRLF line */
+            w[q++] = '\n'; row++; t += 1 + (long)(rnd() % 3);
+            if (row % 2003 == 0) { q += sprintf((char *)w + q, "a comment line\n\n"); }
+        }
+        q += sprintf((char *)w + q, "end;1999");                                       /* no final newline */
+        for (int m = 1; m < 5; m++) { check("wide", w, q, (czn_mode)m, 1 << 20, 1); check("wide-odd", w, q, (czn_mode)m, 300001, 4); }
+        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = czn_compress(w, q, d, cap, &p0), c1 = czn_compress(w, q, d, cap, &p1);
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 7) { printf("FAIL wide table graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            else printf("wide table graph: fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
+            /* graph decoder fuzz: corrupt payload bytes of every block, decoding must fail cleanly or round-trip */
+            uint8_t *bk = malloc(q + 64), *e = malloc(c1);
+            for (int it = 0; it < 400; it++) {
+                memcpy(e, d, c1); int nf = 1 + (int)(rnd() % 3);
+                for (int f = 0; f < nf; f++) e[32 + rnd() % (c1 - 32)] ^= (uint8_t)(1 + rnd() % 255);
+                int64_t r = czn_decompress(e, c1, bk, q + 64, 1);
+                if (r >= 0 && (r != (int64_t)q || memcmp(bk, w, q))) { printf("FAIL wide graph fuzz accepted a wrong output\n"); fails++; break; }
+            }
+            printf("wide graph fuzz: 400 corrupted frames rejected or exact\n");
+            free(bk); free(e); free(d); }
+        free(w);
+    }
     /* scientific binary: fixed records (header, quantised doubles incl. NaN/huge outliers, small ints, ids) and a
      * 16-bit image (big-endian, odd offset) */
     {

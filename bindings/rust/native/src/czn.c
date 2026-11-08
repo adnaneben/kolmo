@@ -976,8 +976,8 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 }
 
 /* ------------------------------------------------------------------ codecs */
-enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7 };
-enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8 };
+enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_GRAPH = 8 };   /* 8: kolmo graph block */
+enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9 };   /* 9: kolmo graph (a=delim b=decimal separator) */
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
  * so repeated calls to one target produce identical bytes. Encoded back to front and decoded front to back (as in
  * zpaq), so every decision sees the same bytes on both sides. */
@@ -1145,6 +1145,8 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
     return -1;
 }
 
+#include "kgraph.inc"
+
 static void codec_ctx_free(codec_ctx *x) { ZSTD_freeCCtx(x->zc); ZSTD_freeDCtx(x->zd); free(x->lz4hc_state); }
 
 /* per-thread state kept across calls (pool threads persist): codec contexts and scratch buffers */
@@ -1286,6 +1288,31 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     size_t h = n < 65536 ? n : 65536, pr = 0;
     for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
     if (pr * 100 > h * 95) {                                     /* text: field transposition if lines have a fixed field count */
+        if (logs && n >= 65536) {                                /* wide delimited table (over 256 columns): kolmo graph */
+            static const uint8_t WD[4] = {';', ',', '\t', '|'};
+            for (int di = 0; di < 4 && pl.t != T_KG; di++) {
+                size_t lines = 0, same = 0, i = 0; uint32_t k0 = 0;
+                while (i < h) {
+                    const uint8_t *e = memchr(s + i, '\n', h - i); if (!e) break;
+                    uint32_t f = 1; for (const uint8_t *q = s + i; q < e; q++) f += *q == WD[di];
+                    if (lines == 1) k0 = f;                      /* the first line may be a header */
+                    if (lines >= 1) same += f == k0;
+                    lines++; i = (size_t)(e - s) + 1;
+                }
+                if (lines < 4 || k0 <= 256 || same * 100 < (lines - 1) * 95) continue;
+                uint8_t sep = '.';
+                if (WD[di] != ',') { size_t dc = 0, cc = 0; for (size_t q = 1; q + 1 < h; q++) if ((uint8_t)(s[q - 1] - '0') < 10 && (uint8_t)(s[q + 1] - '0') < 10) { dc += s[q] == '.'; cc += s[q] == ','; } if (cc > dc) sep = ','; }
+                size_t mm = n < (1u << 20) ? n : (1u << 20); while (mm > 0 && s[mm - 1] != '\n') mm--;
+                if (mm < 16384) continue;
+                codec_ctx cx = {0}; uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t zcap = ZSTD_compressBound(mm); uint8_t *z = malloc(zcap);
+                if (o && zc && z) {
+                    size_t a = kg_encode_table(&cx, C_ZSTD, 1, s, mm, WD[di], sep, o, mm + 64), b = ZSTD_compressCCtx(zc, z, zcap, s, mm, 1);
+                    if (a && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b) { pl.t = T_KG; pl.a = WD[di]; pl.b = sep; }
+                }
+                free(o); free(z); ZSTD_freeCCtx(zc); codec_ctx_free(&cx);
+            }
+            if (pl.t == T_KG) return pl;
+        }
         if (logs && n >= 65536 && json_minified(s, h)) {   /* minified JSON: split into records, then as JSON lines */
             size_t mm = n < (1u << 20) ? n : (1u << 20);
             uint8_t *sp = malloc(2 * mm + 64), *o = malloc(2 * mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx();
@@ -1458,7 +1485,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     while (pos < n) {
         size_t end = B < n - pos ? pos + B : n;
         if (pl.t == T_REC && pos == 0) end = (size_t)pl.rec->h + B < n ? (size_t)pl.rec->h + B : n;
-        if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG) && end < n) {
+        if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG || pl.t == T_KG) && end < n) {
             size_t lo = pos + B / 2, e = end;
             while (e > lo && s[e - 1] != '\n') e--;
             if (e > lo) end = e;
@@ -1592,13 +1619,18 @@ static void *compress_worker(void *arg) {
         } else if (pl.t == T_X86 && len) {
             memcpy(tbuf, raw, len); e8e9_fwd(tbuf, len); in = tbuf; tflag = 8;
         }
-        size_t inlen = (tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10 ? get32(sl) : len;
-        int codec = J->codec, level = J->level;
+        int codec = J->codec, level = J->level; size_t cl = 0, inlen = len;
+        if (pl.t == T_KG && len) {                                          /* kolmo graph: the block is a program + leaves */
+            cl = kg_encode_table(xp, codec, level, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot);
+            if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8; goto coded; }
+            slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
+        }
+        inlen = (tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10 ? get32(sl) : len;
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
         if (codec == C_LZMA && level == 1) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
         else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         if (codec == C_ZSTD && level == 19 && tflag == 9) level = CZ_HC_TEXT_LEVEL;                                  /* hc text: ultra level */
-        size_t cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
+        cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
         if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, keep the smaller (+6% time, -1.7% on Silesia) */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             size_t c2 = alt ? codec_compress(xp, C_BSC, 9, in, inlen, alt, J->slot - meta) : 0;
@@ -1625,6 +1657,7 @@ static void *compress_worker(void *arg) {
                 }
             }
         }
+coded:;
         size_t tot = 4 + meta + cl;
         uint8_t *e = J->idx + (size_t)i * IDX;
         if (cl == 0 || cl + meta >= len) {                                  /* store raw */
@@ -1853,7 +1886,7 @@ cleanup:
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) return ret;
-    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = czn_crc32c(0, dst, 28); hc = czn_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
@@ -1868,7 +1901,7 @@ int64_t czn_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, con
 typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict; uint32_t dictid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
 
 static int parse(const uint8_t *s, size_t n, parsed_t *P, const czn_decode_limits *limits) {
-    if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > 6) return CZN_ERR_CORRUPT;
+    if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > 7) return CZN_ERR_CORRUPT;
     P->ver = s[4]; P->psum = P->ver >= 3 && (s[10] & 1);
     P->needdict = P->ver >= 3 && (s[10] & 2); P->dictid = P->needdict ? get32(s + 6) : 0;
     P->orig = get64(s + 12); P->nb = get32(s + 20);
@@ -1913,7 +1946,13 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, uin
     if (P->ver >= 2) {                                         /* per-block plan */
         if (cl < 4) return CZN_ERR_CORRUPT;
         pl.t = pay[0]; pl.a = pay[1]; pl.b = pay[2]; pl.c = pay[3]; pay += 4; cl -= 4;
-        if (pl.t > T_WORD) return CZN_ERR_CORRUPT;
+        if (pl.t > T_KG || (pl.t == T_KG && P->ver < 7)) return CZN_ERR_CORRUPT;
+    }
+    if (codec == C_GRAPH || pl.t == T_KG) {                     /* kolmo graph block (version 7) */
+        if (codec != C_GRAPH || pl.t != T_KG || tflag || P->ver < 7) return CZN_ERR_CORRUPT;
+        int r = kg_decode(x, pay, cl, out, len); if (r) return CZN_ERR_CORRUPT;
+        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return CZN_ERR_CHECKSUM;
+        return 0;
     }
     if (tflag && pl.t == T_TP) meta = 4 * (size_t)(pl.c + 1);
     if ((tflag >= 3 && tflag <= 7) || tflag == 9) meta = 4;
