@@ -68,3 +68,23 @@ Measured before `max -l 1` was inserted as level 7, so levels 7–9 there are `e
 
 Level 12 (`ultra`): **17.01% at 0.28 MB/s compress, 0.30 MB/s decompress** — 1.0.0's compression speed (0.28) with
 5% smaller output (1.0.0: 17.91%).
+
+## `silesia-2026-11-08-kolmo-ladder-final.csv` — the full 0–12 ladder at the head of `claude/perf`
+
+Levels 0–10 in one run (`-t2,2`); levels 11 and 12 from their single-pass runs above.
+
+| Level | Setting | Ratio | Compress | Decompress |
+|---|---|---|---|---|
+| 0 | `rt` | 46.58% | 592 MB/s | 2470 MB/s |
+| 1 | `fast -l1 -q` | 30.33% | 387 MB/s | 1171 MB/s |
+| 2 | `fast -l2 -q` | 28.89% | 361 MB/s | 1165 MB/s |
+| 3 | `fast -q` | 27.87% | 191 MB/s | 1002 MB/s |
+| 4 | `fast` | 27.49% | 145 MB/s | 899 MB/s |
+| 5 | `hc -l 9` | 24.70% | 47.8 MB/s | 726 MB/s |
+| 6 | `hc -l 12` | 24.30% | 26.9 MB/s | 694 MB/s |
+| 7 | `max -l 1` | 20.93% | 21.6 MB/s | 32.6 MB/s |
+| 8 | `eco` | 23.88% | 8.45 MB/s | 343 MB/s |
+| 9 | `hc` | 22.47% | 2.46 MB/s | 645 MB/s |
+| 10 | `max` | 19.34% | 2.81 MB/s | 50.6 MB/s |
+| 11 | `ultra -l 1` | 17.99% | 0.43 MB/s | 0.45 MB/s |
+| 12 | `ultra` | 17.01% | 0.28 MB/s | 0.30 MB/s |
