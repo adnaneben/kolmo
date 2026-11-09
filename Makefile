@@ -76,6 +76,7 @@ build/kolmo-profile: src/cli.c src/czn.c src/czn.h src/tbl2.inc src/log.inc src/
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DCZN_TIMING $(INC) src/cli.c src/czn.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 check: all
+	python3 tests/test_fast_file.py
 	./build/cznresource
 	./build/cznparallel
 	./build/czntest
@@ -114,3 +115,17 @@ clean:
 # Optional lower-memory archive encoder.
 build/kolmo-cm20: src/cli.c src/czn.c src/czn.h src/cm.inc src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/stream.inc build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli.c src/czn.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+
+# Research build. Experimental recipes emit v6 frames only when used.
+FRONTIER_SRC := src/experimental/frontier_dna.c src/experimental/frontier_table.c src/experimental/frontier_prefix.c src/experimental/frontier_pcm.c src/experimental/frontier_lag.c src/experimental/frontier_shuffle.c src/experimental/frontier_runs.c
+FRONTIER_HDR := src/experimental/frontier_dna.h src/experimental/frontier_table.h src/experimental/frontier_prefix.h src/experimental/frontier_pcm.h src/experimental/frontier_lag.h src/experimental/frontier_shuffle.h src/experimental/frontier_runs.h
+build/kolmo-frontier: src/cli.c src/czn.c src/czn.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DCZN_FRONTIER $(INC) src/cli.c src/czn.c $(FRONTIER_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+
+build/frontier-test: tests/frontier.c $(FRONTIER_SRC) $(FRONTIER_HDR)
+	@mkdir -p build
+	$(CC) $(CFLAGS) $(SANFLAGS) tests/frontier.c $(FRONTIER_SRC) -o $@
+
+
+build/libkolmo-frontier.$(SOEXT): src/czn.c src/czn.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) $(PICC) $(PICPP)
+	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) -DCZN_FRONTIER $(INC) src/czn.c $(FRONTIER_SRC) $(PICC) $(PICPP) -o $@ $(LIBS) $(CXXLIB)

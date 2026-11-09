@@ -1,0 +1,26 @@
+{
+  "inputs": {
+    "url": "https://archive.ics.uci.edu/static/public/321/electricityloaddiagrams20112014.zip",
+    "archive_sha256": "f6c4d0e0df12ecdb9ea008dd6eef3518adb52c559d04a9bac2e1b81dcfc8d4e1",
+    "source_sha256": "d51565f2cb5a6b768d06ba1bbd3c084c6e2f3aab07f00c6f2dcb80e90175124b",
+    "rows": 140256,
+    "train_sha256": "fbce82059db586d5073ac6adaa8ff10ade4653a61dde16764393505b01b34aaa",
+    "test_sha256": "c8769dfd897125eda63b24281801517393e3d712531dc98f32d1aab4254897a2",
+    "train_rows": 1384,
+    "test_rows": 105192,
+    "train_bytes": 4193980,
+    "test_bytes": 603951209
+  },
+  "binaries": {
+    "candidate": "1b22d277569dd5ce99f548ac0bc2b8701700cd8f9c3efdef5fe3ec95be74fc43",
+    "baseline": "93492197b921236ae570fd0fc1300166bb7f7ac4f6c710642fd7d6e87a78233c",
+    "zstd": "8c6ba2cfb4734f62e33488bb4ab767c2936ec8b2992fe0abd91d73fdeccce835",
+    "openzl": "6d831ea6fef6417cd6386f956f17ec46e4487a96b9eb1808c207f55b7b134dbb",
+    "release": "d3229132875ef09d5dd417895f367de414e0988e576999678e67d2cc8547bca2"
+  },
+  "protocol_sha256": "f5222554a23301901ce6d57f18fad69b187dc7df5dda73317db2fe8555189299",
+  "runner_sha256": "edf8354bf27351eccda207eced3c4ad473e8167745cdee66ec3135a5537beabc",
+  "system": "macOS-27.2-arm64-arm-64bit",
+  "baseline_commit": "27febccfd8a6be7373cee0142777bcd4df371563",
+  "candidate_commit": "b6ce3e571597a3f845185b53ce6a3e6d29f2fba7"
+}

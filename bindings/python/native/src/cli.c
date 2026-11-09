@@ -9,15 +9,73 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <errno.h>
 
+static uint8_t *read_input(FILE *f, size_t *n) {
+    if (fseek(f, 0, SEEK_END)) { perror("seek"); exit(1); }
+    long s = ftell(f);
+    if (s < 0 || fseek(f, 0, SEEK_SET)) { perror("seek"); exit(1); }
+    uint8_t *b = malloc(s ? (size_t)s : 1);
+    if (!b || fread(b, 1, (size_t)s, f) != (size_t)s) { perror("read"); exit(1); }
+    fclose(f); *n = (size_t)s; return b;
+}
 static uint8_t *slurp(const char *p, size_t *n) {
     FILE *f = fopen(p, "rb"); if (!f) { perror(p); exit(1); }
-    fseek(f, 0, SEEK_END); long s = ftell(f); fseek(f, 0, SEEK_SET);
-    uint8_t *b = malloc(s ? s : 1); if (s && fread(b, 1, s, f) != (size_t)s) { perror("read"); exit(1); }
-    fclose(f); *n = s; return b;
+    return read_input(f, n);
 }
 static void spit(const char *p, const uint8_t *b, size_t n) {
-    FILE *f = fopen(p, "wb"); if (!f || fwrite(b, 1, n, f) != n) { perror(p); exit(1); } fclose(f);
+    FILE *f = fopen(p, "wb");
+    if (!f || fwrite(b, 1, n, f) != n || fclose(f)) { perror(p); exit(1); }
+}
+
+/* Stage the complete frame or verified decoded output in a private file. For a
+ * new destination, publish the verified inode. When overwriting, write through
+ * the original path to preserve symlink, hard-link and permission semantics. */
+static int process_file(int input_fd, size_t n, const char *path, const czn_params *params, int decode,
+                       const void *dict, size_t dictlen) {
+    const char *slash = strrchr(path, '/');
+    size_t dirlen = slash ? (size_t)(slash - path + 1) : 0;
+    static const char suffix[] = ".kolmo-XXXXXX";
+    char *stage = malloc(dirlen + sizeof(suffix));
+    if (!stage) return CZN_ERR_ALLOC;
+    memcpy(stage, path, dirlen); memcpy(stage + dirlen, suffix, sizeof(suffix));
+    int fd = mkstemp(stage);
+    FILE *anonymous = NULL;
+    if (fd < 0) { /* Existing outputs can be writable even in a read-only directory. */
+        anonymous = tmpfile();
+        if (!anonymous) { free(stage); return CZN_ERR_IO; }
+        fd = fileno(anonymous);
+    }
+    int64_t size = decode ? czn_decompress_file(input_fd, fd, n, params->threads, dict, dictlen)
+                          : czn_compress_file(input_fd, fd, n, params, dict, dictlen);
+    int ret = size < 0 ? (int)size : 0;
+    if (!ret && !anonymous) {
+        struct stat st;
+        if (lstat(path, &st) && errno == ENOENT) {
+            mode_t mask = umask(0); umask(mask);
+            if (!fchmod(fd, 0666 & ~mask) && !link(stage, path)) goto done;
+        }
+    }
+    if (!ret) {
+        FILE *out = fopen(path, "wb");
+        if (!out) ret = CZN_ERR_IO;
+        else {
+            uint8_t buffer[64 * 1024];
+            for (;;) {
+                ssize_t got = read(fd, buffer, sizeof(buffer));
+                if (got < 0 && errno == EINTR) continue;
+                if (!got) break;
+                if (got < 0 || fwrite(buffer, 1, (size_t)got, out) != (size_t)got) { ret = CZN_ERR_IO; break; }
+            }
+            if (fclose(out)) ret = CZN_ERR_IO;
+        }
+    }
+done:
+    if (anonymous) { if (fclose(anonymous)) ret = CZN_ERR_IO; }
+    else { if (close(fd)) ret = CZN_ERR_IO; unlink(stage); }
+    free(stage);
+    return ret;
 }
 int main(int argc, char **argv) {
     czn_params P = {CZN_FAST, 0, 0, 0, 1}; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
@@ -77,7 +135,27 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    size_t n; uint8_t *in = slurp(inp, &n), *out; int64_t r;
+    /* Small files fit in a few blocks. Keep their inexpensive in-memory path. */
+    const size_t file_threshold = 8u << 20;
+    FILE *input = fopen(inp, "rb"); if (!input) { perror(inp); return 1; }
+    if (!range && (dec || P.mode == CZN_FAST)) {
+        int fd = fileno(input); struct stat st;
+        if (!fstat(fd, &st) && S_ISREG(st.st_mode) && st.st_size >= 0 && (uintmax_t)st.st_size <= SIZE_MAX) {
+            int use_file = st.st_size >= (off_t)file_threshold;
+            if (dec) {
+                uint8_t header[32];
+                use_file = pread(fd, header, sizeof(header), 0) == sizeof(header) &&
+                    header[5] == CZN_FAST && czn_original_size(header, sizeof(header)) >= (int64_t)file_threshold;
+            }
+            if (use_file) {
+                int err = process_file(fd, st.st_size, outp, &P, dec, dict, dictlen);
+                fclose(input);
+                if (err) fprintf(stderr, "kolmo: %s\n", czn_strerror(err));
+                return err != 0;
+            }
+        }
+    }
+    size_t n; uint8_t *in = read_input(input, &n), *out; int64_t r;
     if (range) {
         unsigned long long off = strtoull(range, NULL, 10); char *c = strchr(range, ':'); size_t len = c ? strtoull(c + 1, NULL, 10) : 0;
         out = malloc(len ? len : 1); r = czn_read_range(in, n, off, len, out, P.threads);

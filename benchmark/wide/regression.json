@@ -1,0 +1,1506 @@
+{
+  "expected": {
+    "archive": [
+      "a667bac80089b3d04d5496772149e632f0758974b0579d743cd8d6e5e0d63eb2",
+      "53995578eb182ed73a9c96461cd9dc336800f8db2be65957c81bbde90c896115"
+    ],
+    "tables": [
+      "58033d4991c1e5a53eeacf09720e751d4ffdfc524936a64088797a7513b89339",
+      "9aa686be4f3ba920ea993a233051dd40c863de8cbea0d4b10f6135b3334bd8b2"
+    ],
+    "numbers": [
+      "d7e9463947e6696d769cf3ad4558777a9cb7f423d4fc2a9cb9af024bcd9a37d4",
+      "536ec1f90d49355bca0a9e2137b515c32ccdd31b8db03b7552a8b2bd64012ae5"
+    ],
+    "genome": [
+      "616964e443b2d8c3a30acda51f4246cfafc9506df794c88d0a0f05118bab6651",
+      "d7c79087b7b08217b1bd7cf3056b7f4823fbf1b0298a8ed200b4cbdf1a4c3078"
+    ],
+    "image": [
+      "a8c429c18afa7b0fd5673e598d73a21225d94c864a71bbb3885126fdecb41071",
+      "590096e43f8aa63552b97da53cf3530d4cfda96377233f786aa890e7a12f3ff3"
+    ],
+    "audio": [
+      "5efd042768f464f9a1ba31642bef0ede9507e7fb6a8d33a9df7c485d29ff68d2",
+      "a114623d1a0da5d9597e9420d6f9581d1208d858affa2baeca0bbf258a32c4c0"
+    ],
+    "video": [
+      "607a744279bb916e7e03f95bb1cf3605b7218b00a94a6135563d5868ce041a7f",
+      "4638ed89721d9c6434fbcbdaa5d518d3cd85424de34fc151856004ca9d95481b"
+    ],
+    "power": [
+      "22acd053afd4bde60aff25c2db4174cc5e67d19d2d2f90c59e527a3cb1c2025f",
+      "24b6cc8eee091c9f6dc42d488163085d318c2913b990b05e7d97c57cda7687b8"
+    ],
+    "rides": [
+      "f32166b1903c9be4c1f3ac71af19e98fb92e03adb81622ee1d2f5da6bb8ac3b4",
+      "8f8747c53d08c0d2d2e263d794e0a75baf31c38c30ab1bed966b24b7df36b3ed"
+    ],
+    "quakes": [
+      "f190cdb0055cc9b23c9af87486fad14c6ba7ab246b55f4220462da9a117c17f8",
+      "1dc636139d0177014828d573cfff7afdfeeeaea674095bab3a40c03d2111785e"
+    ]
+  },
+  "trials": {
+    "archive": [
+      {
+        "codec": "baseline",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.7059985,
+          "peak_rss_bytes": 143933440
+        },
+        "decode": {
+          "seconds": 0.144848291,
+          "peak_rss_bytes": 79151104
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.692501083,
+          "peak_rss_bytes": 85377024
+        },
+        "decode": {
+          "seconds": 0.142464541,
+          "peak_rss_bytes": 24166400
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.685524,
+          "peak_rss_bytes": 143687680
+        },
+        "decode": {
+          "seconds": 0.14297725,
+          "peak_rss_bytes": 79151104
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.685262916,
+          "peak_rss_bytes": 85295104
+        },
+        "decode": {
+          "seconds": 0.140407417,
+          "peak_rss_bytes": 24166400
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.684693375,
+          "peak_rss_bytes": 143687680
+        },
+        "decode": {
+          "seconds": 0.142453042,
+          "peak_rss_bytes": 79151104
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.684918959,
+          "peak_rss_bytes": 85475328
+        },
+        "decode": {
+          "seconds": 0.140753416,
+          "peak_rss_bytes": 24150016
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.686307375,
+          "peak_rss_bytes": 85327872
+        },
+        "decode": {
+          "seconds": 0.141911708,
+          "peak_rss_bytes": 24166400
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.683839875,
+          "peak_rss_bytes": 143753216
+        },
+        "decode": {
+          "seconds": 0.14313725,
+          "peak_rss_bytes": 79151104
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.683620459,
+          "peak_rss_bytes": 143818752
+        },
+        "decode": {
+          "seconds": 0.142150667,
+          "peak_rss_bytes": 79151104
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.68100275,
+          "peak_rss_bytes": 85295104
+        },
+        "decode": {
+          "seconds": 0.140092917,
+          "peak_rss_bytes": 24166400
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.680175334,
+          "peak_rss_bytes": 85475328
+        },
+        "decode": {
+          "seconds": 0.141265583,
+          "peak_rss_bytes": 24166400
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.685598792,
+          "peak_rss_bytes": 143736832
+        },
+        "decode": {
+          "seconds": 0.14256825,
+          "peak_rss_bytes": 79134720
+        }
+      }
+    ],
+    "tables": [
+      {
+        "codec": "baseline",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.039507166,
+          "peak_rss_bytes": 26361856
+        },
+        "decode": {
+          "seconds": 0.015610625,
+          "peak_rss_bytes": 6488064
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.039911875,
+          "peak_rss_bytes": 25100288
+        },
+        "decode": {
+          "seconds": 0.015784083,
+          "peak_rss_bytes": 5521408
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.0387255,
+          "peak_rss_bytes": 25165824
+        },
+        "decode": {
+          "seconds": 0.015471541,
+          "peak_rss_bytes": 5521408
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.038854083,
+          "peak_rss_bytes": 26378240
+        },
+        "decode": {
+          "seconds": 0.015391583,
+          "peak_rss_bytes": 6504448
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.038972834,
+          "peak_rss_bytes": 25165824
+        },
+        "decode": {
+          "seconds": 0.015389083,
+          "peak_rss_bytes": 5521408
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.038793834,
+          "peak_rss_bytes": 26394624
+        },
+        "decode": {
+          "seconds": 0.015409708,
+          "peak_rss_bytes": 6488064
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.039121666,
+          "peak_rss_bytes": 26361856
+        },
+        "decode": {
+          "seconds": 0.015637375,
+          "peak_rss_bytes": 6504448
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.039090709,
+          "peak_rss_bytes": 25116672
+        },
+        "decode": {
+          "seconds": 0.015500583,
+          "peak_rss_bytes": 5521408
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.038843458,
+          "peak_rss_bytes": 26361856
+        },
+        "decode": {
+          "seconds": 0.015672375,
+          "peak_rss_bytes": 6488064
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.039246,
+          "peak_rss_bytes": 25116672
+        },
+        "decode": {
+          "seconds": 0.015575417,
+          "peak_rss_bytes": 5521408
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.038314791,
+          "peak_rss_bytes": 26378240
+        },
+        "decode": {
+          "seconds": 0.015452333,
+          "peak_rss_bytes": 6504448
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.038712375,
+          "peak_rss_bytes": 25165824
+        },
+        "decode": {
+          "seconds": 0.01551,
+          "peak_rss_bytes": 5521408
+        }
+      }
+    ],
+    "numbers": [
+      {
+        "codec": "candidate",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.010481125,
+          "peak_rss_bytes": 12173312
+        },
+        "decode": {
+          "seconds": 0.004291125,
+          "peak_rss_bytes": 6733824
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.00943,
+          "peak_rss_bytes": 12222464
+        },
+        "decode": {
+          "seconds": 0.003624417,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.009027708,
+          "peak_rss_bytes": 12222464
+        },
+        "decode": {
+          "seconds": 0.00344375,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.0087095,
+          "peak_rss_bytes": 12173312
+        },
+        "decode": {
+          "seconds": 0.00348325,
+          "peak_rss_bytes": 6733824
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.008709,
+          "peak_rss_bytes": 12173312
+        },
+        "decode": {
+          "seconds": 0.003570417,
+          "peak_rss_bytes": 6733824
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.008901291,
+          "peak_rss_bytes": 12222464
+        },
+        "decode": {
+          "seconds": 0.003489541,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.00916375,
+          "peak_rss_bytes": 12222464
+        },
+        "decode": {
+          "seconds": 0.003626209,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.008795042,
+          "peak_rss_bytes": 12173312
+        },
+        "decode": {
+          "seconds": 0.003397041,
+          "peak_rss_bytes": 6733824
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.009394334,
+          "peak_rss_bytes": 12173312
+        },
+        "decode": {
+          "seconds": 0.003601833,
+          "peak_rss_bytes": 6733824
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.008774583,
+          "peak_rss_bytes": 12222464
+        },
+        "decode": {
+          "seconds": 0.003468584,
+          "peak_rss_bytes": 6766592
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.009268917,
+          "peak_rss_bytes": 12173312
+        },
+        "decode": {
+          "seconds": 0.003529833,
+          "peak_rss_bytes": 6733824
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.008837209,
+          "peak_rss_bytes": 12222464
+        },
+        "decode": {
+          "seconds": 0.00373675,
+          "peak_rss_bytes": 6766592
+        }
+      }
+    ],
+    "genome": [
+      {
+        "codec": "baseline",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.016516084,
+          "peak_rss_bytes": 10878976
+        },
+        "decode": {
+          "seconds": 0.0061795,
+          "peak_rss_bytes": 8323072
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.016078541,
+          "peak_rss_bytes": 10813440
+        },
+        "decode": {
+          "seconds": 0.006240333,
+          "peak_rss_bytes": 8306688
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.0160975,
+          "peak_rss_bytes": 10878976
+        },
+        "decode": {
+          "seconds": 0.006025708,
+          "peak_rss_bytes": 8323072
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.016092875,
+          "peak_rss_bytes": 10829824
+        },
+        "decode": {
+          "seconds": 0.005979,
+          "peak_rss_bytes": 8306688
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.015970292,
+          "peak_rss_bytes": 10862592
+        },
+        "decode": {
+          "seconds": 0.005706583,
+          "peak_rss_bytes": 8323072
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.015792542,
+          "peak_rss_bytes": 10813440
+        },
+        "decode": {
+          "seconds": 0.005960083,
+          "peak_rss_bytes": 8306688
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.015833834,
+          "peak_rss_bytes": 10829824
+        },
+        "decode": {
+          "seconds": 0.00574975,
+          "peak_rss_bytes": 8306688
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.015613125,
+          "peak_rss_bytes": 10878976
+        },
+        "decode": {
+          "seconds": 0.00599475,
+          "peak_rss_bytes": 8323072
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.015913417,
+          "peak_rss_bytes": 10878976
+        },
+        "decode": {
+          "seconds": 0.005823083,
+          "peak_rss_bytes": 8323072
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.015436209,
+          "peak_rss_bytes": 10829824
+        },
+        "decode": {
+          "seconds": 0.005855875,
+          "peak_rss_bytes": 8306688
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.016489709,
+          "peak_rss_bytes": 10829824
+        },
+        "decode": {
+          "seconds": 0.005868917,
+          "peak_rss_bytes": 8306688
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.015611833,
+          "peak_rss_bytes": 10862592
+        },
+        "decode": {
+          "seconds": 0.005800459,
+          "peak_rss_bytes": 8323072
+        }
+      }
+    ],
+    "image": [
+      {
+        "codec": "baseline",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.009411791,
+          "peak_rss_bytes": 9699328
+        },
+        "decode": {
+          "seconds": 0.004225083,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.009774291,
+          "peak_rss_bytes": 9650176
+        },
+        "decode": {
+          "seconds": 0.004134792,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.009860416,
+          "peak_rss_bytes": 9699328
+        },
+        "decode": {
+          "seconds": 0.004110958,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.009333542,
+          "peak_rss_bytes": 9650176
+        },
+        "decode": {
+          "seconds": 0.00366875,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.009808083,
+          "peak_rss_bytes": 9650176
+        },
+        "decode": {
+          "seconds": 0.0039025,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.009331666,
+          "peak_rss_bytes": 9699328
+        },
+        "decode": {
+          "seconds": 0.003800458,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.009860333,
+          "peak_rss_bytes": 9650176
+        },
+        "decode": {
+          "seconds": 0.00390225,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.009279958,
+          "peak_rss_bytes": 9699328
+        },
+        "decode": {
+          "seconds": 0.00398,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.009438958,
+          "peak_rss_bytes": 9699328
+        },
+        "decode": {
+          "seconds": 0.00360125,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.009281958,
+          "peak_rss_bytes": 9650176
+        },
+        "decode": {
+          "seconds": 0.003589875,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.009619625,
+          "peak_rss_bytes": 9699328
+        },
+        "decode": {
+          "seconds": 0.003850084,
+          "peak_rss_bytes": 6373376
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.009108917,
+          "peak_rss_bytes": 9650176
+        },
+        "decode": {
+          "seconds": 0.0037005,
+          "peak_rss_bytes": 6373376
+        }
+      }
+    ],
+    "audio": [
+      {
+        "codec": "candidate",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.021262334,
+          "peak_rss_bytes": 19169280
+        },
+        "decode": {
+          "seconds": 0.006937333,
+          "peak_rss_bytes": 9961472
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.021249208,
+          "peak_rss_bytes": 19234816
+        },
+        "decode": {
+          "seconds": 0.006846708,
+          "peak_rss_bytes": 9994240
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.02058025,
+          "peak_rss_bytes": 19185664
+        },
+        "decode": {
+          "seconds": 0.007059792,
+          "peak_rss_bytes": 9961472
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.020728916,
+          "peak_rss_bytes": 19218432
+        },
+        "decode": {
+          "seconds": 0.006905125,
+          "peak_rss_bytes": 9994240
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.02134975,
+          "peak_rss_bytes": 19234816
+        },
+        "decode": {
+          "seconds": 0.006736042,
+          "peak_rss_bytes": 9994240
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.021010791,
+          "peak_rss_bytes": 19185664
+        },
+        "decode": {
+          "seconds": 0.006613208,
+          "peak_rss_bytes": 9961472
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.020900041,
+          "peak_rss_bytes": 19169280
+        },
+        "decode": {
+          "seconds": 0.0069585,
+          "peak_rss_bytes": 9961472
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.020944625,
+          "peak_rss_bytes": 19234816
+        },
+        "decode": {
+          "seconds": 0.006672708,
+          "peak_rss_bytes": 9994240
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.020741917,
+          "peak_rss_bytes": 19234816
+        },
+        "decode": {
+          "seconds": 0.006562208,
+          "peak_rss_bytes": 9994240
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.020758458,
+          "peak_rss_bytes": 19169280
+        },
+        "decode": {
+          "seconds": 0.006842542,
+          "peak_rss_bytes": 9961472
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.020905833,
+          "peak_rss_bytes": 19234816
+        },
+        "decode": {
+          "seconds": 0.006827417,
+          "peak_rss_bytes": 9994240
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.021082042,
+          "peak_rss_bytes": 19169280
+        },
+        "decode": {
+          "seconds": 0.006854208,
+          "peak_rss_bytes": 9961472
+        }
+      }
+    ],
+    "video": [
+      {
+        "codec": "baseline",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.051125583,
+          "peak_rss_bytes": 22790144
+        },
+        "decode": {
+          "seconds": 0.017023875,
+          "peak_rss_bytes": 12894208
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.050934083,
+          "peak_rss_bytes": 14991360
+        },
+        "decode": {
+          "seconds": 0.01748525,
+          "peak_rss_bytes": 6127616
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.050222875,
+          "peak_rss_bytes": 22790144
+        },
+        "decode": {
+          "seconds": 0.016674209,
+          "peak_rss_bytes": 12894208
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.050013167,
+          "peak_rss_bytes": 14991360
+        },
+        "decode": {
+          "seconds": 0.016011417,
+          "peak_rss_bytes": 6127616
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.050725291,
+          "peak_rss_bytes": 14991360
+        },
+        "decode": {
+          "seconds": 0.016157667,
+          "peak_rss_bytes": 6127616
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.050000042,
+          "peak_rss_bytes": 22790144
+        },
+        "decode": {
+          "seconds": 0.016258042,
+          "peak_rss_bytes": 12894208
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.049914291,
+          "peak_rss_bytes": 22790144
+        },
+        "decode": {
+          "seconds": 0.017055792,
+          "peak_rss_bytes": 12894208
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.050534,
+          "peak_rss_bytes": 14991360
+        },
+        "decode": {
+          "seconds": 0.016117542,
+          "peak_rss_bytes": 6127616
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.050021083,
+          "peak_rss_bytes": 14991360
+        },
+        "decode": {
+          "seconds": 0.015847792,
+          "peak_rss_bytes": 6127616
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.050288541,
+          "peak_rss_bytes": 22790144
+        },
+        "decode": {
+          "seconds": 0.016566291,
+          "peak_rss_bytes": 12894208
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.049568041,
+          "peak_rss_bytes": 14991360
+        },
+        "decode": {
+          "seconds": 0.016146542,
+          "peak_rss_bytes": 6127616
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.049948542,
+          "peak_rss_bytes": 22790144
+        },
+        "decode": {
+          "seconds": 0.016653791,
+          "peak_rss_bytes": 12894208
+        }
+      }
+    ],
+    "power": [
+      {
+        "codec": "baseline",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.202370459,
+          "peak_rss_bytes": 68272128
+        },
+        "decode": {
+          "seconds": 0.089528625,
+          "peak_rss_bytes": 18907136
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.203407584,
+          "peak_rss_bytes": 61800448
+        },
+        "decode": {
+          "seconds": 0.088113625,
+          "peak_rss_bytes": 12812288
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.202206917,
+          "peak_rss_bytes": 68272128
+        },
+        "decode": {
+          "seconds": 0.085475333,
+          "peak_rss_bytes": 18907136
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.202983791,
+          "peak_rss_bytes": 61816832
+        },
+        "decode": {
+          "seconds": 0.084915334,
+          "peak_rss_bytes": 12812288
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.201273667,
+          "peak_rss_bytes": 68288512
+        },
+        "decode": {
+          "seconds": 0.085859625,
+          "peak_rss_bytes": 18907136
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.205298709,
+          "peak_rss_bytes": 61784064
+        },
+        "decode": {
+          "seconds": 0.090120042,
+          "peak_rss_bytes": 12845056
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.200780583,
+          "peak_rss_bytes": 68304896
+        },
+        "decode": {
+          "seconds": 0.086105875,
+          "peak_rss_bytes": 18907136
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.203832292,
+          "peak_rss_bytes": 61784064
+        },
+        "decode": {
+          "seconds": 0.085349291,
+          "peak_rss_bytes": 12812288
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.199973584,
+          "peak_rss_bytes": 68288512
+        },
+        "decode": {
+          "seconds": 0.089316084,
+          "peak_rss_bytes": 18907136
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.204773667,
+          "peak_rss_bytes": 61800448
+        },
+        "decode": {
+          "seconds": 0.087955834,
+          "peak_rss_bytes": 12795904
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.19992525,
+          "peak_rss_bytes": 61800448
+        },
+        "decode": {
+          "seconds": 0.085396625,
+          "peak_rss_bytes": 12812288
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.202547958,
+          "peak_rss_bytes": 68272128
+        },
+        "decode": {
+          "seconds": 0.086152875,
+          "peak_rss_bytes": 18907136
+        }
+      }
+    ],
+    "rides": [
+      {
+        "codec": "baseline",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.028526959,
+          "peak_rss_bytes": 10928128
+        },
+        "decode": {
+          "seconds": 0.015919958,
+          "peak_rss_bytes": 9158656
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.029700542,
+          "peak_rss_bytes": 8224768
+        },
+        "decode": {
+          "seconds": 0.015552667,
+          "peak_rss_bytes": 6832128
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.02748625,
+          "peak_rss_bytes": 10928128
+        },
+        "decode": {
+          "seconds": 0.014974334,
+          "peak_rss_bytes": 9158656
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.027882458,
+          "peak_rss_bytes": 8224768
+        },
+        "decode": {
+          "seconds": 0.014845,
+          "peak_rss_bytes": 6832128
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.027437583,
+          "peak_rss_bytes": 10928128
+        },
+        "decode": {
+          "seconds": 0.015005,
+          "peak_rss_bytes": 9158656
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.0276325,
+          "peak_rss_bytes": 8192000
+        },
+        "decode": {
+          "seconds": 0.015011291,
+          "peak_rss_bytes": 6832128
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.027359917,
+          "peak_rss_bytes": 8241152
+        },
+        "decode": {
+          "seconds": 0.014781417,
+          "peak_rss_bytes": 6832128
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.027556584,
+          "peak_rss_bytes": 10928128
+        },
+        "decode": {
+          "seconds": 0.01499375,
+          "peak_rss_bytes": 9158656
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.02752275,
+          "peak_rss_bytes": 8224768
+        },
+        "decode": {
+          "seconds": 0.014924083,
+          "peak_rss_bytes": 6832128
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.027441875,
+          "peak_rss_bytes": 10928128
+        },
+        "decode": {
+          "seconds": 0.01487275,
+          "peak_rss_bytes": 9158656
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.027797625,
+          "peak_rss_bytes": 8241152
+        },
+        "decode": {
+          "seconds": 0.014999042,
+          "peak_rss_bytes": 6832128
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.027550833,
+          "peak_rss_bytes": 10928128
+        },
+        "decode": {
+          "seconds": 0.015188833,
+          "peak_rss_bytes": 9158656
+        }
+      }
+    ],
+    "quakes": [
+      {
+        "codec": "candidate",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.011974958,
+          "peak_rss_bytes": 7946240
+        },
+        "decode": {
+          "seconds": 0.006637542,
+          "peak_rss_bytes": 6225920
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 0,
+        "encode": {
+          "seconds": 0.011657583,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006477208,
+          "peak_rss_bytes": 6291456
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.0114305,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006306125,
+          "peak_rss_bytes": 6291456
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 1,
+        "encode": {
+          "seconds": 0.011111625,
+          "peak_rss_bytes": 7946240
+        },
+        "decode": {
+          "seconds": 0.0063445,
+          "peak_rss_bytes": 6225920
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.011523667,
+          "peak_rss_bytes": 7962624
+        },
+        "decode": {
+          "seconds": 0.006070541,
+          "peak_rss_bytes": 6225920
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 2,
+        "encode": {
+          "seconds": 0.01119725,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006144375,
+          "peak_rss_bytes": 6291456
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.011373458,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006226292,
+          "peak_rss_bytes": 6291456
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 3,
+        "encode": {
+          "seconds": 0.011007875,
+          "peak_rss_bytes": 7946240
+        },
+        "decode": {
+          "seconds": 0.006061917,
+          "peak_rss_bytes": 6225920
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.011205458,
+          "peak_rss_bytes": 7962624
+        },
+        "decode": {
+          "seconds": 0.006239959,
+          "peak_rss_bytes": 6225920
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 4,
+        "encode": {
+          "seconds": 0.011215125,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.00624475,
+          "peak_rss_bytes": 6291456
+        }
+      },
+      {
+        "codec": "candidate",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.011002916,
+          "peak_rss_bytes": 7946240
+        },
+        "decode": {
+          "seconds": 0.006202708,
+          "peak_rss_bytes": 6225920
+        }
+      },
+      {
+        "codec": "baseline",
+        "repeat": 5,
+        "encode": {
+          "seconds": 0.01120125,
+          "peak_rss_bytes": 8011776
+        },
+        "decode": {
+          "seconds": 0.006227083,
+          "peak_rss_bytes": 6291456
+        }
+      }
+    ]
+  }
+}

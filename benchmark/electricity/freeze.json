@@ -1,0 +1,24 @@
+{
+  "protocol_sha256": "f2a668084dfa0f4a2179840b89e8f5111b7d9c2ef3dd0a6657e457869fbf4bc0",
+  "runner_sha256": "7b9ac9dd0e9b050456403e9f510aa8a96bf15b758378cde6e867c3b97ef03636",
+  "binaries": {
+    "candidate": "93492197b921236ae570fd0fc1300166bb7f7ac4f6c710642fd7d6e87a78233c",
+    "merged": "53db4e3f67b2c10946e8abcb1897f989246bb3a0775844c72f7537bf6112e733",
+    "zstd": "8c6ba2cfb4734f62e33488bb4ab767c2936ec8b2992fe0abd91d73fdeccce835",
+    "openzl": "6d831ea6fef6417cd6386f956f17ec46e4487a96b9eb1808c207f55b7b134dbb"
+  },
+  "merged_commit": "5bea3557ccb98af100f8fb8f24b3720cf44a641e",
+  "candidate_commit": "90f880c757df82a317093c5c6a95266e112a933f",
+  "system": "macOS-27.2-arm64-arm-64bit",
+  "inputs": {
+    "url": "https://data.open-power-system-data.org/time_series/2020-10-06/time_series_60min_singleindex.csv",
+    "rows": 50401,
+    "source_sha256": "6a7f2bc571314cbf9c321cc03437691cd4be95c3a6f075e60ff99e8035c704c8",
+    "train_rows": 1655,
+    "train_sha256": "4700172033d238c172d5a9e1fc18e83293c77878de9b407695e62a18875dc379",
+    "train_bytes": 4192040,
+    "test_rows": 37801,
+    "test_sha256": "ccd4d55d274f3b7964bc3c3253303375fcec4358ba7a303393669ff84ca2b4cc",
+    "test_bytes": 97758157
+  }
+}

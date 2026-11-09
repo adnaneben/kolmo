@@ -1,0 +1,49 @@
+{
+  "passed": false,
+  "tests": {
+    "zstd": {
+      "size": false,
+      "seconds_encode": true,
+      "seconds_decode": true,
+      "peak_rss_bytes_encode": false,
+      "peak_rss_bytes_decode": false
+    },
+    "openzl": {
+      "size": false,
+      "seconds_encode": true,
+      "seconds_decode": true,
+      "peak_rss_bytes_encode": true,
+      "peak_rss_bytes_decode": true
+    }
+  },
+  "metrics": {
+    "candidate": {
+      "size": 28952355,
+      "seconds_encode": 0.252024083,
+      "seconds_decode": 0.067531458,
+      "peak_rss_bytes_encode": 39960576,
+      "peak_rss_bytes_decode": 35356672
+    },
+    "merged": {
+      "size": 28952355,
+      "seconds_encode": 0.259160834,
+      "seconds_decode": 0.073536625,
+      "peak_rss_bytes_encode": 133578752,
+      "peak_rss_bytes_decode": 128909312
+    },
+    "zstd": {
+      "size": 29330836,
+      "seconds_encode": 0.269596333,
+      "seconds_decode": 0.07120525,
+      "peak_rss_bytes_encode": 7864320,
+      "peak_rss_bytes_decode": 8388608
+    },
+    "openzl": {
+      "size": 22590467,
+      "seconds_encode": 1.54096025,
+      "seconds_decode": 0.326814917,
+      "peak_rss_bytes_encode": 572768256,
+      "peak_rss_bytes_decode": 382631936
+    }
+  }
+}

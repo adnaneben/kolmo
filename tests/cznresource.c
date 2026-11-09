@@ -107,10 +107,55 @@ static void legacy_frames(void) {
     }
     free(expected); free(back);
 }
+static void seekable_files(void) {
+    uint8_t data[12000], restored[sizeof data];
+    memset(data, 'A', sizeof data);
+    czn_params p = {CZN_FAST, 0, 1, 4096, 1};
+    size_t cap = czn_bound(sizeof data, &p);
+    uint8_t *frame = malloc(cap), *reference = malloc(cap);
+    FILE *input = tmpfile(), *output = tmpfile();
+    assert(frame && reference && input && output);
+    assert(fwrite(data, 1, sizeof data, input) == sizeof data && !fflush(input));
+    int in = fileno(input), out = fileno(output);
+    for (size_t n = 0; n <= sizeof data; n += sizeof data) {
+        int64_t size = czn_compress_from_fd(in, n, frame, cap, &p, NULL, 0);
+        assert(size > 0 && czn_compress(data, n, reference, cap, &p) == size);
+        assert(!memcmp(frame, reference, size));
+        assert(czn_decompress_to_fd(frame, size, out, 1, NULL, 0) == (int64_t)n);
+        assert(pread(out, restored, n, 0) == (ssize_t)n && !memcmp(data, restored, n));
+    }
+    assert(lseek(in, 0, SEEK_CUR) == sizeof data && lseek(out, 0, SEEK_CUR) == 0);
+    assert(czn_compress_from_fd(in, sizeof data + 1, frame, cap, &p, NULL, 0) == CZN_ERR_IO);
+    assert(czn_decompress_to_fd(reference, cap, -1, 1, NULL, 0) == CZN_ERR_IO);
+    fclose(input); fclose(output); free(frame); free(reference);
+}
+
+/* Both implementations must emit the same legacy transpose for every byte
+ * alignment, including quoted punctuation, empty fields and ragged suffixes. */
+static void wide_transpose(void) {
+    enum { CAP = 16384 };
+    uint8_t *raw = malloc(CAP), *a = malloc(CAP), *b = malloc(CAP);
+    uint32_t *pos = malloc((CAP + 1) * sizeof(*pos));
+    uint32_t *rows = malloc((CAP + 8) * sizeof(*rows));
+    assert(raw && a && b && pos && rows);
+    for (int j = 0; j < CAP; j++) raw[j] = j % 1257 == 0 ? '\n' : j % 3 == 0 ? ';' : '7';
+    for (size_t n = CAP - 64; n <= CAP; n++) {
+        int64_t original[256], wide[256];
+        tpq_fwd(raw, n, ';', 256, a, original, pos);
+        tpq_wide_fwd(raw, n, ';', b, wide);
+        assert(!memcmp(original, wide, sizeof(wide)) && !memcmp(a, b, n));
+        int ret = tpq_inv_cols(b, n, ';', 256, wide, a, pos, rows);
+        if (ret == 1) ret = tpq_inv(b, n, ';', 256, wide, a, pos);
+        assert(ret == 0 && !memcmp(a, raw, n));
+    }
+    free(rows); free(pos); free(b); free(a); free(raw);
+}
 int main(void) {
     pool_failures();
     formula_thread_failure();
     legacy_frames();
+    seekable_files();
+    wide_transpose();
     uint8_t input[8192], output[8192], sentinel[64]; memset(input, 'A', sizeof input);
     czn_params p = {CZN_FAST, 0, 1, 4096, 0};
     size_t cap = czn_bound(sizeof input, &p); uint8_t *blob = malloc(cap), *bad = malloc(cap);

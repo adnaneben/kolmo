@@ -1,0 +1,135 @@
+{
+  "baseline": "8ada3f54dba9155c0abdfa5e88d140433571b1b5",
+  "libkolmo": "1e03c0c92870051a6e0d90c1ebe324e0bb1edb7502a530409dba9ae670757a0a",
+  "lzbench": "d2e3a9aeb9e8d28fa26faa83a70e6519912a2c2b55b0052f478a95ad6dc27195",
+  "options": {
+    "brotli11": "brotli,11",
+    "brotli8": "brotli,8",
+    "bsc": "bsc1",
+    "kbc": "kbc",
+    "kolmo_eco": "kolmo,2",
+    "kolmo_fast": "kolmo,1",
+    "kolmo_hc": "kolmo,3",
+    "kolmo_max": "kolmo,4",
+    "kolmo_rt": "kolmo,0",
+    "kolmo_ultra": "kolmo,5",
+    "krc": "krc",
+    "lz4": "lz4",
+    "lz4fast": "lz4fast,17",
+    "lzma9": "lzma,9",
+    "openzl": "openzl_generic",
+    "ppmd": "ppmd8,8",
+    "zpaq": "zpaq,5",
+    "zstd1": "zstd,1",
+    "zstd19": "zstd,19",
+    "zstd3": "zstd,3"
+  },
+  "samples": {
+    "co2": {
+      "sha256": "7eee741fe22d7c811a1dd8520aec1555b1f7c7b15642cf7e4d8e6d29853d9520",
+      "size": 4194304,
+      "source": "table.test.csv"
+    },
+    "dickens": {
+      "sha256": "6c7a2dec937a9b03d80bfc011b3a30b316a961e0633e5d6ccf581710df386215",
+      "size": 4194304,
+      "source": "Silesia/dickens"
+    },
+    "entropy": {
+      "sha256": "18e096a6a4922b7e821ca5fa3bcf064b996f7e58cd8dd6a8d47a59fccf46c241",
+      "size": 4194304,
+      "source": "SHAKE256 of the UTF-8 bytes kolmo entropy control v1"
+    },
+    "fasta": {
+      "sha256": "0dbf89bf93e9d6e1016073250f20d6a18a6236bda2e696689c39df1c0d09ae52",
+      "size": 4194304,
+      "source": "ecoli.fa"
+    },
+    "grid": {
+      "sha256": "7adaa263cf3529288e08542154db69e4a867d6122120ac1fc6a3ddfa2601f3ba",
+      "size": 4194304,
+      "source": "test.csv"
+    },
+    "integers": {
+      "sha256": "d7e9463947e6696d769cf3ad4558777a9cb7f423d4fc2a9cb9af024bcd9a37d4",
+      "size": 1553984,
+      "source": "numbers.test"
+    },
+    "mozilla": {
+      "sha256": "6babf4ed293fd5a9d44c766041bc32c81ff975e9fedb46cbfcca7f1bcb3cce35",
+      "size": 4194304,
+      "source": "Silesia/mozilla"
+    },
+    "mr": {
+      "sha256": "60e95ec3e03918fa0891cd40384d8648c78b53480e00f9399e379368a7c9d53f",
+      "size": 4194304,
+      "source": "Silesia/mr"
+    },
+    "nci": {
+      "sha256": "2c98cbb056dfda7d28ef56c612e48a0ae11fb8cf5d23a6918d35c78db1573134",
+      "size": 4194304,
+      "source": "Silesia/nci"
+    },
+    "ooffice": {
+      "sha256": "1e4b77af9a46097ef99906053676659f8e462506dfd73e1d1a9f8294fd7ebd22",
+      "size": 4194304,
+      "source": "Silesia/ooffice"
+    },
+    "osdb": {
+      "sha256": "446e42a87b8245e5c724932f806c5d165893592f381e338485cd85df671b4ac1",
+      "size": 4194304,
+      "source": "Silesia/osdb"
+    },
+    "pcm": {
+      "sha256": "5efd042768f464f9a1ba31642bef0ede9507e7fb6a8d33a9df7c485d29ff68d2",
+      "size": 4155610,
+      "source": "digits.pcm"
+    },
+    "png": {
+      "sha256": "88431cd9653ccd539741b555fb0a46b61558b301d4110412b5bc28b5e3ea6cb5",
+      "size": 791555,
+      "source": "astronaut.png"
+    },
+    "reymont": {
+      "sha256": "327f5767c848452d42d860923aeaf1e214e1f72cfb748b8d1237b940eea7b56c",
+      "size": 4194304,
+      "source": "Silesia/reymont"
+    },
+    "rgb": {
+      "sha256": "a8c429c18afa7b0fd5673e598d73a21225d94c864a71bbb3885126fdecb41071",
+      "size": 786432,
+      "source": "astronaut.rgb"
+    },
+    "samba": {
+      "sha256": "4dc827f318c79c8ee2ed682a8f2675c3240439da18d220e63bd5a36fc5cfa506",
+      "size": 4194304,
+      "source": "Silesia/samba"
+    },
+    "sao": {
+      "sha256": "9042e2bfb8a8b519e2e3018f12208e55a483fa45546c4cc6f415667feb0e9a42",
+      "size": 4194304,
+      "source": "Silesia/sao"
+    },
+    "webster": {
+      "sha256": "646d273c88ebf3f80955382823027f09387e5bfbe5b74eeb27c356ea279521e6",
+      "size": 4194304,
+      "source": "Silesia/webster"
+    },
+    "x-ray": {
+      "sha256": "df9c820788f3922d6643a75e7de98e6a08426040cf919f2984cb13a5d7bed9ff",
+      "size": 4194304,
+      "source": "Silesia/x-ray"
+    },
+    "xml": {
+      "sha256": "55d342402aac4aa1e300a7422e493c4cbbb5f29a63ad0dad26aec52d403f886c",
+      "size": 4194304,
+      "source": "Silesia/xml"
+    },
+    "yuv": {
+      "sha256": "1ce5d42074db8a1ce8f201dd46ca58157c594366fc2d8eed9dc1f49bc8366d9f",
+      "size": 4194304,
+      "source": "foreman.yuv"
+    }
+  },
+  "upstream_lzbench": "d68cdbc2309408e82da881c61d23cf70cca8db09"
+}

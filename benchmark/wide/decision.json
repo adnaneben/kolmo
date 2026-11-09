@@ -1,0 +1,50 @@
+{
+  "metrics": {
+    "candidate": {
+      "size": 130249618,
+      "seconds_encode": 0.924137667,
+      "seconds_decode": 0.405845542,
+      "peak_rss_bytes_encode": 7258112,
+      "peak_rss_bytes_decode": 6914048
+    },
+    "baseline": {
+      "size": 154614457,
+      "seconds_encode": 1.430454375,
+      "seconds_decode": 0.319302625,
+      "peak_rss_bytes_encode": 167264256,
+      "peak_rss_bytes_decode": 161005568
+    },
+    "zstd": {
+      "size": 149077758,
+      "seconds_encode": 1.503046125,
+      "seconds_decode": 0.363162625,
+      "peak_rss_bytes_encode": 7831552,
+      "peak_rss_bytes_decode": 8044544
+    },
+    "openzl": {
+      "size": 75757751,
+      "seconds_encode": 4.818268875,
+      "seconds_decode": 1.180908667,
+      "peak_rss_bytes_encode": 2349367296,
+      "peak_rss_bytes_decode": 1190838272
+    }
+  },
+  "tests": {
+    "zstd": {
+      "size": false,
+      "seconds_encode": true,
+      "seconds_decode": false,
+      "peak_rss_bytes_encode": true,
+      "peak_rss_bytes_decode": true
+    },
+    "openzl": {
+      "size": false,
+      "seconds_encode": true,
+      "seconds_decode": true,
+      "peak_rss_bytes_encode": true,
+      "peak_rss_bytes_decode": true
+    }
+  },
+  "zstd_pass": false,
+  "both_pass": false
+}
