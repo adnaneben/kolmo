@@ -1,0 +1,2084 @@
+{
+  "suite": "validation",
+  "seed": 20261108,
+  "repeats": 3,
+  "statistic": "median",
+  "lzbench_sha256": "d2e3a9aeb9e8d28fa26faa83a70e6519912a2c2b55b0052f478a95ad6dc27195",
+  "inputs": [
+    {
+      "path": "benchmark/ratio/data/calgary/bib",
+      "sha256": "0f1a13936e358191533aca4a32ff42906d1b7f641f3afb0a90458b2410419fcf"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/book1",
+      "sha256": "9ffa47cd93bccd732f20e0c304203cfbc1b8a91bedac536e2d8f6051003d9951"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/book2",
+      "sha256": "c8538730cf2ce6a243acf3eb299c43d619b5c695d892f4884df796c13081fdf8"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/geo",
+      "sha256": "913ff6f45610599020c02f543a0d5a1f46cf772412e25a568b683d23db8c447d"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/news",
+      "sha256": "7f0482f9774681429eb7021050c17966f6acf19450e170de6611e1ed953d42e8"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/obj1",
+      "sha256": "8c06109caffd7e794516e4ed10095b0238ea8df63ed66840907cd4dd23e2cf72"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/obj2",
+      "sha256": "8b3e7f028bfefaebdd48a791060a1ab11d1ffd9bf27e0d63b15e58dda0deb984"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/paper1",
+      "sha256": "8d9c42d9fa58b5bce1a8b5fae3cc27c9eb7cc7a032bc12a633d44e816497e143"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/paper2",
+      "sha256": "dc4b9cf68094c632a920f4e76d0a0a8b9617b624c36928ca46a5d29798c5bbbe"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/pic",
+      "sha256": "0ec3a75089bb52342813496b17e51377bc9eba3cb519a444d67025354841d650"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/progc",
+      "sha256": "151377a9d6aa9b7e872000269707a15e2b038c826340628e6f4d8b4db9ec3c19"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/progl",
+      "sha256": "9388db0cfb71ffbe5687d381819a5ff69cdd992d6931e0cf81a310a1caed0ba0"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/progp",
+      "sha256": "d0cd70ab5f7381a8584b25fa73b3608571a17ee1042cc5c546f63b904614d1bc"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/trans",
+      "sha256": "117a00c6af3e1c57f20013a8f1b468158f70634f685a348bedb7e4069cdd576a"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/news"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.1394190788269043
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.10159993171691895
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/news"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00503087043762207
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/bib"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.05324387550354004
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/bib"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0038268566131591797
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003033876419067383
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progc"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.014984130859375
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.021197080612182617
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.011780023574829102
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progc"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0036160945892333984
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.25719594955444336
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progc"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.014379024505615234
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/bib"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003286123275756836
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00861978530883789
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.01604604721069336
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.03548002243041992
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/trans"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.01992511749267578
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.16719293594360352
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progl"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.011092185974121094
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.03537583351135254
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/geo"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.09722590446472168
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progc"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003579854965209961
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0032150745391845703
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.009207010269165039
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0042340755462646484
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/trans"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.006854057312011719
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004513978958129883
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.48381590843200684
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/pic"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.2580070495605469
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.005885124206542969
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.2724769115447998
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.017828702926635742
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/geo"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0034422874450683594
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/news"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.31302809715270996
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progl"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0034291744232177734
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/geo"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.024266958236694336
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.06283211708068848
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/news"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.010056257247924805
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/pic"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.014271020889282227
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.04137015342712402
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/news"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.04997706413269043
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/bib"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.015770912170410156
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.008404970169067383
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/geo"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.007469892501831055
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progl"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0033538341522216797
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/bib"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.028568029403686523
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.005794048309326172
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/geo"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0037178993225097656
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.005953073501586914
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.013662099838256836
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progc"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003267049789428711
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progl"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.006522178649902344
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/pic"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.017159223556518555
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00823211669921875
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0034461021423339844
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progl"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.05379986763000488
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/trans"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.07288479804992676
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progc"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.005846977233886719
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/bib"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.006929874420166016
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0033550262451171875
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/news"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.005733966827392578
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progc"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004175901412963867
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0034427642822265625
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003209829330444336
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.002974987030029297
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progc"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0365297794342041
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003659963607788086
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/geo"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.024040937423706055
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/pic"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.31172609329223633
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.013889074325561523
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.027074098587036133
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/geo"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.052398681640625
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/bib"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.009187698364257812
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.020652055740356445
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.02096700668334961
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progl"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.006505250930786133
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0042269229888916016
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/trans"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0030601024627685547
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.01790595054626465
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.591184139251709
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/pic"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0042345523834228516
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004842996597290039
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/trans"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.011865854263305664
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.006753206253051758
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.04639315605163574
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progl"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.03779006004333496
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/trans"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004760026931762695
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.21712207794189453
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/pic"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.008647918701171875
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.07715892791748047
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00797891616821289
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.008078813552856445
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.07185196876525879
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/news"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.025487661361694336
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.06671690940856934
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.013450860977172852
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.03902697563171387
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0032219886779785156
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/pic"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.027364730834960938
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progl"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.018029212951660156
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/geo"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.011083841323852539
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.02472209930419922
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0781707763671875
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progl"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004462718963623047
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004755973815917969
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.008527040481567383
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/trans"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003325939178466797
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00457000732421875
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/bib"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0900888442993164
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.011757850646972656
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/pic"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.04998588562011719
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/trans"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.05036735534667969
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003659963607788086
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/book1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.016281843185424805
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.19652915000915527
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/pic"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004723072052001953
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progc"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.009168148040771484
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/trans"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00728917121887207
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/bib"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004739046096801758
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/paper1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.010834932327270508
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0029859542846679688
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/news"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.011230945587158203
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/progp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.005741119384765625
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/geo"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004484891891479492
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/obj2"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0033483505249023438
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/calgary/news"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.12310600280761719
+    }
+  ],
+  "compiler": "Apple clang 21; -mcpu=native; lzbench default -O3"
+}

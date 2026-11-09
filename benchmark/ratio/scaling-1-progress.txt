@@ -1,0 +1,5 @@
+scaling: 1/4 verified zstd,3 mozilla
+scaling: 2/4 verified kbc mozilla
+scaling: 3/4 verified krc mozilla
+scaling: 4/4 verified lz4 mozilla
+MATRIX PASSED 4 configurations; 12 compression/decompression sample pairs

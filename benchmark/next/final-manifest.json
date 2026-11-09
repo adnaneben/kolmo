@@ -1,0 +1,194 @@
+{
+  "date": "2026-11-07",
+  "base_git": "31ce410ec419ccf7039724b32d0656db40afcee8",
+  "platform": "Apple M5; macOS 27.2 arm64; Apple clang 21",
+  "build_flags": "-O3 -mcpu=native; existing Kolmo core -ffp-contract=off",
+  "source_checkpoint": "benchmark/checkpoints/independent-gpu-v1/manifest.json",
+  "checkpoint_manifest_sha256": "15a06d486867cfbb3c555f061b296fbd0677e4fdcc08a351125a9e953d6bbbca",
+  "results": "benchmark/next/final-results.csv",
+  "repeats": 5,
+  "files": 32,
+  "configurations": 256,
+  "verified_runs": 1280,
+  "cpu_threads": 10,
+  "gpu": "Apple M5; 10 cores; Metal SIMD planner with CPU encoding",
+  "default_protection": "benchmark/next/protected-gate.json",
+  "files_sha256": [
+    {
+      "path": "benchmark/next/.gitignore",
+      "sha256": "d08136821a90b45dfcb009bb043dc8d3f7d39bdf13ba2a51e4588ae8b655a959"
+    },
+    {
+      "path": "benchmark/next/PLAN.md",
+      "sha256": "0ad852fa7e9db9ae2c951c90f2a386c1e6bc4541f8cbf541273bdcc18c4ecdf9"
+    },
+    {
+      "path": "benchmark/next/RESULTS.md",
+      "sha256": "c0c31cf2342da3551df20843d5a28eb49a008aaddc833c9cad629bb1bb24e1eb"
+    },
+    {
+      "path": "benchmark/next/build-tests.log",
+      "sha256": "5ff4b35ec80e1648b4e65a5a06a0ec607963668b4d91d833a0b76bbb246b6162"
+    },
+    {
+      "path": "benchmark/next/cli-tests.txt",
+      "sha256": "68c322dc71eb1942333ab938269ce0bbffc96265d03e3f09abf83dea36089192"
+    },
+    {
+      "path": "benchmark/next/cold-cli.stderr",
+      "sha256": "f89c530519d230c04cfbb7c7984b049163259382b16114822c078978bb13a75c"
+    },
+    {
+      "path": "benchmark/next/cold-cli.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "benchmark/next/cpu-memory.txt",
+      "sha256": "23413c9a73786be4f436d02c0b9496ec948b3e7ac91d5f7dd037761a26bd027e"
+    },
+    {
+      "path": "benchmark/next/cpu-smoke.csv",
+      "sha256": "962d68d3f67a7115feece084fd48537ce67e930d00ad7ad7d942c113f04d5b9d"
+    },
+    {
+      "path": "benchmark/next/cpu-tests.txt",
+      "sha256": "ced8a0431054ac9f6793f4db4b76261a99fbc29d1b179255dfa889bc588a29e4"
+    },
+    {
+      "path": "benchmark/next/final-results.csv",
+      "sha256": "a80a8bc46064b8c941323653e5d543fc9e6e22fab37fdba40f3f2fd3d1299eb3"
+    },
+    {
+      "path": "benchmark/next/final-results.stderr",
+      "sha256": "7855c402fd4823d963f847a14117d7cf4b1d8200434d934f8b35e1f90a8fc64a"
+    },
+    {
+      "path": "benchmark/next/final-summary.csv",
+      "sha256": "a94ffcabea91cb660faeb8cb75d295c57bd842ff40b380d7c61f87889b0016e6"
+    },
+    {
+      "path": "benchmark/next/final-verification.txt",
+      "sha256": "6d800831872c583cc3057ab21cfc9f145f2c065d8b42d0a89997fc076c5fad1f"
+    },
+    {
+      "path": "benchmark/next/freeze_inputs.py",
+      "sha256": "d3e1f024d3244ae2008e409b43cd324ff7f37a555dd62b89a66efb15da7a7d04"
+    },
+    {
+      "path": "benchmark/next/gpu-frame-cpu-decode.txt",
+      "sha256": "eaf4036f84a5314ce612fbed87c61719f27874bb6ee9b500d80272b9e527b6a8"
+    },
+    {
+      "path": "benchmark/next/gpu-hybrid-tests.txt",
+      "sha256": "ab9bd64fc5d177b7929be7d844ea8b5b8ea38e1be0e088d5eca0b8a1f5b3380c"
+    },
+    {
+      "path": "benchmark/next/gpu-original-tests.txt",
+      "sha256": "f9c5da9e36fba385bb2beaa845001e718bdd5ead4c2e7743e70cea5fac9778e2"
+    },
+    {
+      "path": "benchmark/next/gpu-smoke.csv",
+      "sha256": "9917cb1e4f961a8c701dab5becbe5893b8c67165c71700606eda1cf830d1dd0d"
+    },
+    {
+      "path": "benchmark/next/gpu-smoke.stderr",
+      "sha256": "fe6d6410eefa67265c806a2b8b2b3c89d95951fb06f0dba061a94708e2e5ea6b"
+    },
+    {
+      "path": "benchmark/next/hybrid-smoke.csv",
+      "sha256": "928dab32e3ada8d1848e3d4f22b2cc76327d0b7e35a4aaf8f2ad8ef66b796b1c"
+    },
+    {
+      "path": "benchmark/next/hybrid-smoke.stderr",
+      "sha256": "5d1db395782657a59898df350bcdbd7015f15b8441143d265a3ea97505f8a5c3"
+    },
+    {
+      "path": "benchmark/next/inputs.json",
+      "sha256": "9c4e23d334fa8f533ddaf60ae9afbed2d777d497e08bd51c26b7807ffba4f0fa"
+    },
+    {
+      "path": "benchmark/next/protect_gains.py",
+      "sha256": "a2ce217df9d8d5f3d3eb5e04e93db039047e5f4e31a269066e4420b088c01c24"
+    },
+    {
+      "path": "benchmark/next/protected-gate.json",
+      "sha256": "10cf5b5ffe5e3b2d09b50355b8da2eb24c25a7d585960e7af51235f87cf74348"
+    },
+    {
+      "path": "benchmark/next/protected-performance.csv",
+      "sha256": "cfb41a44d56615601bcd46f2501dcacd5fa65c2ee7709855b7a84e5372952b80"
+    },
+    {
+      "path": "benchmark/next/protected-tests.txt",
+      "sha256": "8ecb0d305f49178f988fdd3ebbdc85cfafb6dc8c0ebb2633a105b8172403a85e"
+    },
+    {
+      "path": "benchmark/next/rejected/krc_simd_allwidths.metal",
+      "sha256": "1c9616646e1d9dbded229e3e52fe8d34c06b13a19fc65489026b92c48053738c"
+    },
+    {
+      "path": "benchmark/next/results.csv",
+      "sha256": "857c94ef890f08ee0d646675870707004df6f33f5333fd9e5255f143021f4855"
+    },
+    {
+      "path": "benchmark/next/results.stderr",
+      "sha256": "a5274d8dfd71c6fcf148f51dd04b93624476006a09721efeda63e6f91103d819"
+    },
+    {
+      "path": "benchmark/next/simd-observed-smoke.csv",
+      "sha256": "47de4f8f69f74e65a7e45b1d34944737d2f97ae5420d4aff64efb62e6b458dd7"
+    },
+    {
+      "path": "benchmark/next/simd-observed-smoke.stderr",
+      "sha256": "76ae04b6ad646975208cf74cf25916ca70e6629e5ed6ba1383b2bcc3b60644a4"
+    },
+    {
+      "path": "benchmark/next/simd-smoke.csv",
+      "sha256": "b2ba468685c10e1382238711cb4f90512e7bf5e3a3b64154cba85e39e5b8f0a8"
+    },
+    {
+      "path": "benchmark/next/simd-smoke.stderr",
+      "sha256": "e2e2047c384f300cb46b8a98ac3ca29be3702141f6ede5e207036d5726aadd63"
+    },
+    {
+      "path": "benchmark/next/summarize.py",
+      "sha256": "3be4da89cd2743141c1c97ad547215727c6b79a7b67894393c1733efe007aec7"
+    },
+    {
+      "path": "benchmark/next/validation-inputs.json",
+      "sha256": "33f33326d71fb50bd3ea729d3aa9e0c6a9bdb40cdc176ba632fbc920e50428b5"
+    },
+    {
+      "path": "build/krc",
+      "sha256": "91d56a53997a68298cbf57a1edce7a699865be0d362e58848f4741b09663f3c9"
+    },
+    {
+      "path": "build/krc-metal",
+      "sha256": "8a8d15a02ac26f2f03aa3acdf9c18a3d016c9a74c519a8724c30b25bb82af84c"
+    },
+    {
+      "path": "build/krcbench-cpu",
+      "sha256": "845ece938bad40fe17d610d3f442915beb0f6d1ed27a67e8246eff2e31f8ff8e"
+    },
+    {
+      "path": "build/krcbench-gpu",
+      "sha256": "1d16c0e8f3e4f1b2300704fc67bfdcf8b2754e56f83392eae92a568d29d40341"
+    },
+    {
+      "path": "build/krcgputest",
+      "sha256": "d7f9bb5959d3590d80be5b6ebcdf7cfa710a33df1d89eca4e63c8fda2935c90c"
+    },
+    {
+      "path": "build/krctest",
+      "sha256": "87402733646814d23f76ded83d314e68de79bf3c851a9915720ef5f19f243a6c"
+    },
+    {
+      "path": "build/krctest-asan",
+      "sha256": "bc903dc7916a74f076df11e17e8836d2ae23f1ee5db40a6ea6eb9280f35eaecd"
+    },
+    {
+      "path": "build/libkolmo.dylib",
+      "sha256": "95152bfea6d32ab95e0975d9564a69beee8c831d813309781c07be17a3887077"
+    }
+  ]
+}

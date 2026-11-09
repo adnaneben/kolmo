@@ -1,0 +1,4 @@
+./build/krctest
+KRC TESTS PASSED (240 cases, all predictor modes, tails, corruption, truncation, CPU thread agreement)
+./build/krctest-asan
+KRC TESTS PASSED (240 cases, all predictor modes, tails, corruption, truncation, CPU thread agreement)

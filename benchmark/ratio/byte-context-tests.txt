@@ -1,0 +1,7 @@
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Isrc/experimental tests/kbctest.c src/experimental/kbc.c src/experimental/krc.c -lpthread -o build/kbctest-asan
+cc -O3 -mcpu=native -std=c11 -Isrc/experimental -c src/experimental/kbc.c -o build/kbc.o
+cc -O3 -mcpu=native -Isrc/experimental tests/kbctest.c build/kbc.o build/krc.o -lpthread -o build/kbctest
+./build/kbctest
+KBC TESTS PASSED (97 cases; all storage modes, block boundaries, CPU agreement, guarded output, repaired-CRC corruption)
+./build/kbctest-asan
+KBC TESTS PASSED (97 cases; all storage modes, block boundaries, CPU agreement, guarded output, repaired-CRC corruption)

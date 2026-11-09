@@ -1,0 +1,86 @@
+{
+  "suite": "scaling",
+  "seed": 20261108,
+  "repeats": 3,
+  "statistic": "median",
+  "external_workers": 1,
+  "external_block_bytes": 1048576,
+  "lzbench_sha256": "d2e3a9aeb9e8d28fa26faa83a70e6519912a2c2b55b0052f478a95ad6dc27195",
+  "inputs": [
+    {
+      "path": "benchmark/audit/data/silesia/mozilla",
+      "sha256": "657fc3764b0c75ac9de9623125705831ebbfbe08fed248df73bc2dc66e2a963b"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-b1024",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.36713671684265137
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-b1024",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 37.445555210113525
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-b1024",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.876173734664917
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-b1024",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.18778395652770996
+    }
+  ],
+  "compiler": "Apple clang 21; -mcpu=native; lzbench default -O3"
+}

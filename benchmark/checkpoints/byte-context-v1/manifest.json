@@ -1,0 +1,57 @@
+{
+  "name": "byte-context-v1",
+  "base_git": "31ce410ec419ccf7039724b32d0656db40afcee8",
+  "apply_after": "benchmark/checkpoints/independent-gpu-v1/source.tar.gz",
+  "source_archive_sha256": "4227b9946ab1d5843607b5774b78334c6f67edf803a0af4b4a30c155b2c92ffd",
+  "files": [
+    {
+      "path": "src/experimental/kbc.c",
+      "sha256": "03d2d1181b30f8858a9b42f393273ef58b8aeead035097e8dd94915cc8c0e295"
+    },
+    {
+      "path": "src/experimental/kbc.h",
+      "sha256": "8bbb2193b91ad9c8b655b0622c8f8956a25b8a58b01604b803c43cad9a75dfa4"
+    },
+    {
+      "path": "src/experimental/kbc_cli.c",
+      "sha256": "863d18ed40be6e8dfb607312974b89ccb1a01278a773bda4e77b75957fc92e22"
+    },
+    {
+      "path": "src/experimental/KBC.md",
+      "sha256": "1024c271f18c6373a10bdc11bd9c117d6749f3215a77d1de7ab5c5d1cf0c0333"
+    },
+    {
+      "path": "tests/kbctest.c",
+      "sha256": "62fa98b309750099567209bdabe88b8ab7c73ce8f8526862d3e001b2d08ffefe"
+    },
+    {
+      "path": "Makefile",
+      "sha256": "31497a70317a7c02c68905ed2983ba72d2154eab7de3a67a79b5faa4aafacf20"
+    },
+    {
+      "path": "README.md",
+      "sha256": "975231d03a0b90f8da8e3630b8f688a87ec73fd1e09155555a90dcf5a105ebd5"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "78ef64ce06f58bf3ab22a317df0a3ae9cc62928a0b06447001253db012800557"
+    },
+    {
+      "path": "benchmark/ratio/prepare_lzbench.py",
+      "sha256": "9d78c9ca24779bc7329142604bed358c8a401d19ae9a2cfc0d11ad8fbf2d09dd"
+    },
+    {
+      "path": "benchmark/ratio/run_lzbench.py",
+      "sha256": "7fd0367eab3e632e4e62860c335ab9560065603e46f41655b7954f372e19bac7"
+    },
+    {
+      "path": "benchmark/ratio/protect_experiments.py",
+      "sha256": "276a3c4806ce02188dd7411adfc72cdda6d4bdb58968012389f06a0846c63367"
+    },
+    {
+      "path": "benchmark/ratio/summarize.py",
+      "sha256": "5b2d6e973212945cddb524f93bc29da3d4f59d9978b2260fdaaa8ad08b880c0e"
+    }
+  ],
+  "promotion": "Experimental reference only; normal Kolmo and KRC1/Metal implementations unchanged."
+}

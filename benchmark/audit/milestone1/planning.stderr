@@ -1,0 +1,189 @@
+owid-co2-data.csv T=10 repeat=2
+compress bytes=14377942 threads=10 plan_ms=6.574 blocks_ms=18.387
+
+silesia/mozilla T=1 repeat=0
+structure bytes=7528960 image_ms=0.240 record_ms=1.376
+structure bytes=1499136 image_ms=0.138 record_ms=8.748
+structure bytes=6082560 image_ms=0.120 record_ms=20.910
+structure bytes=7036928 image_ms=0.104 record_ms=8.379
+structure bytes=4292608 image_ms=0.094 record_ms=8.516
+structure bytes=1448448 image_ms=0.096 record_ms=15.200
+structure bytes=1433600 image_ms=0.094 record_ms=14.303
+structure bytes=7059968 image_ms=0.092 record_ms=18.182
+structure bytes=1196032 image_ms=0.092 record_ms=6.012
+structure bytes=10306560 image_ms=0.093 record_ms=17.622
+structure bytes=1622016 image_ms=0.093 record_ms=6.029
+structure bytes=1705472 image_ms=0.115 record_ms=0.861
+compress bytes=51220480 threads=1 plan_ms=174.924 blocks_ms=87.925
+
+owid-co2-data.csv T=10 repeat=0
+compress bytes=14377942 threads=10 plan_ms=2.678 blocks_ms=11.235
+
+silesia/mozilla T=10 repeat=2
+structure bytes=7528960 image_ms=0.144 record_ms=0.914
+structure bytes=1499136 image_ms=0.166 record_ms=6.903
+structure bytes=1705472 image_ms=0.098 record_ms=0.921
+structure bytes=1196032 image_ms=0.356 record_ms=9.716
+structure bytes=7036928 image_ms=0.165 record_ms=11.613
+structure bytes=1622016 image_ms=0.234 record_ms=10.854
+structure bytes=4292608 image_ms=0.282 record_ms=15.193
+structure bytes=1448448 image_ms=0.341 record_ms=19.978
+structure bytes=1433600 image_ms=0.178 record_ms=20.482
+structure bytes=6082560 image_ms=0.154 record_ms=24.702
+structure bytes=10306560 image_ms=0.296 record_ms=21.840
+structure bytes=7059968 image_ms=0.266 record_ms=25.495
+compress bytes=51220480 threads=10 plan_ms=32.081 blocks_ms=18.940
+
+silesia/nci T=1 repeat=2
+compress bytes=33553445 threads=1 plan_ms=7.296 blocks_ms=207.000
+
+silesia/nci T=10 repeat=0
+compress bytes=33553445 threads=10 plan_ms=7.335 blocks_ms=44.672
+
+silesia/nci T=1 repeat=1
+compress bytes=33553445 threads=1 plan_ms=7.385 blocks_ms=200.923
+
+silesia/mozilla T=4 repeat=2
+structure bytes=7528960 image_ms=0.144 record_ms=0.914
+structure bytes=1499136 image_ms=0.166 record_ms=6.829
+structure bytes=7036928 image_ms=0.157 record_ms=8.895
+structure bytes=4292608 image_ms=0.100 record_ms=9.207
+structure bytes=6082560 image_ms=0.146 record_ms=19.384
+structure bytes=1448448 image_ms=0.102 record_ms=16.687
+structure bytes=1433600 image_ms=0.122 record_ms=15.751
+structure bytes=1196032 image_ms=0.122 record_ms=6.718
+structure bytes=1705472 image_ms=0.099 record_ms=0.921
+structure bytes=1622016 image_ms=0.138 record_ms=6.754
+structure bytes=7059968 image_ms=0.099 record_ms=20.037
+structure bytes=10306560 image_ms=0.099 record_ms=18.851
+compress bytes=51220480 threads=4 plan_ms=53.542 blocks_ms=24.675
+
+silesia/nci T=4 repeat=1
+compress bytes=33553445 threads=4 plan_ms=7.398 blocks_ms=66.248
+
+owid-co2-data.csv T=10 repeat=1
+compress bytes=14377942 threads=10 plan_ms=2.686 blocks_ms=11.401
+
+owid-co2-data.csv T=4 repeat=2
+compress bytes=14377942 threads=4 plan_ms=3.121 blocks_ms=12.178
+
+silesia/nci T=10 repeat=2
+compress bytes=33553445 threads=10 plan_ms=7.629 blocks_ms=45.406
+
+silesia/mozilla T=4 repeat=0
+structure bytes=7528960 image_ms=0.144 record_ms=0.976
+structure bytes=1499136 image_ms=0.152 record_ms=6.775
+structure bytes=7036928 image_ms=0.159 record_ms=8.927
+structure bytes=4292608 image_ms=0.100 record_ms=9.257
+structure bytes=6082560 image_ms=0.149 record_ms=19.194
+structure bytes=1448448 image_ms=0.102 record_ms=16.627
+structure bytes=1433600 image_ms=0.127 record_ms=15.708
+structure bytes=1196032 image_ms=0.124 record_ms=6.712
+structure bytes=1705472 image_ms=0.101 record_ms=0.935
+structure bytes=1622016 image_ms=0.121 record_ms=6.743
+structure bytes=7059968 image_ms=0.099 record_ms=19.951
+structure bytes=10306560 image_ms=0.099 record_ms=18.727
+compress bytes=51220480 threads=4 plan_ms=53.203 blocks_ms=24.665
+
+silesia/nci T=10 repeat=1
+compress bytes=33553445 threads=10 plan_ms=7.426 blocks_ms=45.986
+
+owid-co2-data.csv T=4 repeat=1
+compress bytes=14377942 threads=4 plan_ms=3.085 blocks_ms=12.252
+
+owid-co2-data.csv T=1 repeat=2
+compress bytes=14377942 threads=1 plan_ms=4.958 blocks_ms=38.864
+
+silesia/mozilla T=1 repeat=2
+structure bytes=7528960 image_ms=0.146 record_ms=0.861
+structure bytes=1499136 image_ms=0.106 record_ms=6.149
+structure bytes=6082560 image_ms=0.097 record_ms=17.991
+structure bytes=7036928 image_ms=0.096 record_ms=8.187
+structure bytes=4292608 image_ms=0.097 record_ms=8.620
+structure bytes=1448448 image_ms=0.093 record_ms=15.253
+structure bytes=1433600 image_ms=0.121 record_ms=14.245
+structure bytes=7059968 image_ms=0.097 record_ms=18.627
+structure bytes=1196032 image_ms=0.121 record_ms=6.009
+structure bytes=10306560 image_ms=0.094 record_ms=17.933
+structure bytes=1622016 image_ms=0.112 record_ms=6.179
+structure bytes=1705472 image_ms=0.098 record_ms=0.896
+compress bytes=51220480 threads=1 plan_ms=165.763 blocks_ms=89.314
+
+silesia/mozilla T=10 repeat=0
+structure bytes=7528960 image_ms=0.151 record_ms=0.914
+structure bytes=1499136 image_ms=0.162 record_ms=6.822
+structure bytes=1705472 image_ms=0.215 record_ms=1.749
+structure bytes=1196032 image_ms=0.373 record_ms=9.228
+structure bytes=7036928 image_ms=0.150 record_ms=11.906
+structure bytes=1622016 image_ms=0.100 record_ms=9.953
+structure bytes=4292608 image_ms=0.277 record_ms=10.193
+structure bytes=1433600 image_ms=0.340 record_ms=20.457
+structure bytes=1448448 image_ms=0.377 record_ms=22.237
+structure bytes=6082560 image_ms=0.161 record_ms=24.196
+structure bytes=10306560 image_ms=0.292 record_ms=21.186
+structure bytes=7059968 image_ms=0.328 record_ms=27.310
+compress bytes=51220480 threads=10 plan_ms=33.930 blocks_ms=17.633
+
+silesia/mozilla T=10 repeat=1
+structure bytes=7528960 image_ms=0.153 record_ms=0.913
+structure bytes=1499136 image_ms=0.165 record_ms=6.831
+structure bytes=1705472 image_ms=0.212 record_ms=1.752
+structure bytes=1196032 image_ms=0.338 record_ms=9.329
+structure bytes=7036928 image_ms=0.147 record_ms=11.766
+structure bytes=1622016 image_ms=0.100 record_ms=9.899
+structure bytes=4292608 image_ms=0.294 record_ms=14.194
+structure bytes=1433600 image_ms=0.319 record_ms=20.965
+structure bytes=1448448 image_ms=0.357 record_ms=22.513
+structure bytes=6082560 image_ms=0.150 record_ms=24.323
+structure bytes=10306560 image_ms=0.304 record_ms=21.284
+structure bytes=7059968 image_ms=0.348 record_ms=25.407
+compress bytes=51220480 threads=10 plan_ms=32.009 blocks_ms=18.099
+
+silesia/nci T=1 repeat=0
+compress bytes=33553445 threads=1 plan_ms=7.400 blocks_ms=201.898
+
+owid-co2-data.csv T=1 repeat=1
+compress bytes=14377942 threads=1 plan_ms=4.769 blocks_ms=39.501
+
+silesia/mozilla T=4 repeat=1
+structure bytes=7528960 image_ms=0.142 record_ms=0.914
+structure bytes=1499136 image_ms=0.151 record_ms=6.766
+structure bytes=7036928 image_ms=0.144 record_ms=8.879
+structure bytes=4292608 image_ms=0.101 record_ms=9.207
+structure bytes=6082560 image_ms=0.161 record_ms=19.209
+structure bytes=1448448 image_ms=0.121 record_ms=16.589
+structure bytes=1433600 image_ms=0.101 record_ms=15.613
+structure bytes=1196032 image_ms=0.103 record_ms=6.710
+structure bytes=1705472 image_ms=0.102 record_ms=0.914
+structure bytes=1622016 image_ms=0.122 record_ms=6.669
+structure bytes=7059968 image_ms=0.099 record_ms=19.878
+structure bytes=10306560 image_ms=0.098 record_ms=18.711
+compress bytes=51220480 threads=4 plan_ms=53.130 blocks_ms=24.666
+
+silesia/mozilla T=1 repeat=1
+structure bytes=7528960 image_ms=0.155 record_ms=0.894
+structure bytes=1499136 image_ms=0.097 record_ms=6.207
+structure bytes=6082560 image_ms=0.096 record_ms=18.108
+structure bytes=7036928 image_ms=0.097 record_ms=8.237
+structure bytes=4292608 image_ms=0.095 record_ms=8.567
+structure bytes=1448448 image_ms=0.092 record_ms=15.170
+structure bytes=1433600 image_ms=0.097 record_ms=14.488
+structure bytes=7059968 image_ms=0.097 record_ms=18.741
+structure bytes=1196032 image_ms=0.097 record_ms=6.018
+structure bytes=10306560 image_ms=0.097 record_ms=18.009
+structure bytes=1622016 image_ms=0.092 record_ms=6.079
+structure bytes=1705472 image_ms=0.097 record_ms=0.872
+compress bytes=51220480 threads=1 plan_ms=165.991 blocks_ms=88.937
+
+silesia/nci T=4 repeat=2
+compress bytes=33553445 threads=4 plan_ms=7.398 blocks_ms=65.709
+
+silesia/nci T=4 repeat=0
+compress bytes=33553445 threads=4 plan_ms=7.478 blocks_ms=66.193
+
+owid-co2-data.csv T=4 repeat=0
+compress bytes=14377942 threads=4 plan_ms=3.070 blocks_ms=12.046
+
+owid-co2-data.csv T=1 repeat=0
+compress bytes=14377942 threads=1 plan_ms=4.967 blocks_ms=38.876
+

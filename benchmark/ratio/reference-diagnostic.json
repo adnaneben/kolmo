@@ -1,0 +1,7 @@
+{
+  "codec": "zpaq level 5",
+  "platform": "Apple M5 arm64",
+  "build_note": "Pinned lzbench mk/zpaq.mk sets NOJIT on non-x86; portable interpreter",
+  "diagnostic": "One-second macOS sample of the isolated benchmark showed Decoder::decode and Decoder::decompress while awaiting completion.",
+  "timing_limit": "Single observation only; diagnostic sampling perturbed this reference. Do not use its speed for a small-margin win or compare against AMD JIT speeds."
+}

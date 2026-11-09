@@ -1,0 +1,92 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo audit -4,38.19,62.03,10192446,2274350,22.31,benchmark/audit/data/silesia/dickens
+kolmo audit -5,1.03,1.23,10192446,2104515,20.65,benchmark/audit/data/silesia/dickens
+brotli 1.2.0 -11,1.18,788.50,10192446,2852894,27.99,benchmark/audit/data/silesia/dickens
+lzma 26.03 -6,3.73,180.45,10192446,2831248,27.78,benchmark/audit/data/silesia/dickens
+ppmd8 26.03 -6,19.12,17.90,10192446,2382801,23.38,benchmark/audit/data/silesia/dickens
+bsc 3.3.12 -m0 -e1,50.57,53.49,10192446,2274294,22.31,benchmark/audit/data/silesia/dickens
+openzl 0.2.3 'generic',127.08,1655.00,10192446,3418544,33.54,benchmark/audit/data/silesia/dickens
+kolmo audit -4,6.12,130.31,51220480,13835767,27.01,benchmark/audit/data/silesia/mozilla
+kolmo audit -5,1.08,1.23,51220480,13225608,25.82,benchmark/audit/data/silesia/mozilla
+brotli 1.2.0 -11,0.86,506.88,51220480,14079229,27.49,benchmark/audit/data/silesia/mozilla
+lzma 26.03 -6,5.93,139.31,51220480,13448348,26.26,benchmark/audit/data/silesia/mozilla
+ppmd8 26.03 -6,17.50,15.95,51220480,16132523,31.50,benchmark/audit/data/silesia/mozilla
+bsc 3.3.12 -m0 -e1,46.89,39.79,51220480,16107604,31.45,benchmark/audit/data/silesia/mozilla
+openzl 0.2.3 'generic',188.53,1762.77,51220480,17156051,33.49,benchmark/audit/data/silesia/mozilla
+kolmo audit -4,7.81,159.61,9970564,2171868,21.78,benchmark/audit/data/silesia/mr
+kolmo audit -5,1.31,1.53,9970564,1959524,19.65,benchmark/audit/data/silesia/mr
+brotli 1.2.0 -11,1.05,533.46,9970564,2826395,28.35,benchmark/audit/data/silesia/mr
+lzma 26.03 -6,7.19,136.56,9970564,2749744,27.58,benchmark/audit/data/silesia/mr
+ppmd8 26.03 -6,25.53,23.90,9970564,2363982,23.71,benchmark/audit/data/silesia/mr
+bsc 3.3.12 -m0 -e1,58.93,66.42,9970564,2231054,22.38,benchmark/audit/data/silesia/mr
+openzl 0.2.3 'generic',164.15,1719.43,9970564,3386490,33.96,benchmark/audit/data/silesia/mr
+kolmo audit -4,24.88,539.47,33553445,1533927,4.57,benchmark/audit/data/silesia/nci
+kolmo audit -5,1.67,257.45,33553445,1225386,3.65,benchmark/audit/data/silesia/nci
+brotli 1.2.0 -11,1.23,2482.15,33553445,1616005,4.82,benchmark/audit/data/silesia/nci
+lzma 26.03 -6,12.63,597.90,33553445,1965553,5.86,benchmark/audit/data/silesia/nci
+ppmd8 26.03 -6,101.71,98.85,33553445,2154413,6.42,benchmark/audit/data/silesia/nci
+bsc 3.3.12 -m0 -e1,89.28,107.89,33553445,1225330,3.65,benchmark/audit/data/silesia/nci
+openzl 0.2.3 'generic',351.58,3874.61,33553445,2426210,7.23,benchmark/audit/data/silesia/nci
+kolmo audit -4,6.80,109.62,6152192,2093384,34.03,benchmark/audit/data/silesia/ooffice
+kolmo audit -5,1.05,1.19,6152192,1796346,29.20,benchmark/audit/data/silesia/ooffice
+brotli 1.2.0 -11,0.79,357.38,6152192,2479448,40.30,benchmark/audit/data/silesia/ooffice
+lzma 26.03 -6,7.81,97.04,6152192,2427905,39.46,benchmark/audit/data/silesia/ooffice
+ppmd8 26.03 -6,13.55,12.44,6152192,2531215,41.14,benchmark/audit/data/silesia/ooffice
+bsc 3.3.12 -m0 -e1,37.85,37.36,6152192,2587434,42.06,benchmark/audit/data/silesia/ooffice
+openzl 0.2.3 'generic',145.24,1397.90,6152192,2931236,47.65,benchmark/audit/data/silesia/ooffice
+kolmo audit -4,5.79,138.11,10085684,2844553,28.20,benchmark/audit/data/silesia/osdb
+kolmo audit -5,1.05,1.20,10085684,2292863,22.73,benchmark/audit/data/silesia/osdb
+brotli 1.2.0 -11,1.24,622.89,10085684,2825161,28.01,benchmark/audit/data/silesia/osdb
+lzma 26.03 -6,6.66,136.90,10085684,2871715,28.47,benchmark/audit/data/silesia/osdb
+ppmd8 26.03 -6,21.52,19.83,10085684,2410211,23.90,benchmark/audit/data/silesia/osdb
+bsc 3.3.12 -m0 -e1,49.93,49.91,10085684,2276398,22.57,benchmark/audit/data/silesia/osdb
+openzl 0.2.3 'generic',203.62,2264.82,10085684,3395768,33.67,benchmark/audit/data/silesia/osdb
+kolmo audit -4,52.60,89.75,6627202,994018,15.00,benchmark/audit/data/silesia/reymont
+kolmo audit -5,1.48,1.44,6627202,921060,13.90,benchmark/audit/data/silesia/reymont
+brotli 1.2.0 -11,1.25,1026.31,6627202,1336162,20.16,benchmark/audit/data/silesia/reymont
+lzma 26.03 -6,4.66,219.41,6627202,1340846,20.23,benchmark/audit/data/silesia/reymont
+ppmd8 26.03 -6,32.12,29.06,6627202,1055003,15.92,benchmark/audit/data/silesia/reymont
+bsc 3.3.12 -m0 -e1,56.92,75.61,6627202,993962,15.00,benchmark/audit/data/silesia/reymont
+openzl 0.2.3 'generic',144.94,1964.29,6627202,1774256,26.77,benchmark/audit/data/silesia/reymont
+kolmo audit -4,4.38,221.38,21606400,3739524,17.31,benchmark/audit/data/silesia/samba
+kolmo audit -5,1.08,1.33,21606400,3004082,13.90,benchmark/audit/data/silesia/samba
+brotli 1.2.0 -11,1.34,884.31,21606400,3822632,17.69,benchmark/audit/data/silesia/samba
+lzma 26.03 -6,9.60,219.01,21606400,3857417,17.85,benchmark/audit/data/silesia/samba
+ppmd8 26.03 -6,29.49,27.04,21606400,3979189,18.42,benchmark/audit/data/silesia/samba
+bsc 3.3.12 -m0 -e1,63.05,68.35,21606400,3968402,18.37,benchmark/audit/data/silesia/samba
+openzl 0.2.3 'generic',232.73,2590.31,21606400,4573414,21.17,benchmark/audit/data/silesia/samba
+kolmo audit -4,15.36,138.15,7251944,2184759,30.13,benchmark/audit/data/silesia/sao
+kolmo audit -5,2.28,2.56,7251944,2128124,29.35,benchmark/audit/data/silesia/sao
+brotli 1.2.0 -11,1.01,279.79,7251944,4590042,63.29,benchmark/audit/data/silesia/sao
+lzma 26.03 -6,7.68,63.36,7251944,4413795,60.86,benchmark/audit/data/silesia/sao
+ppmd8 26.03 -6,8.71,7.49,7251944,4784272,65.97,benchmark/audit/data/silesia/sao
+bsc 3.3.12 -m0 -e1,30.01,25.71,7251944,4724778,65.15,benchmark/audit/data/silesia/sao
+openzl 0.2.3 'generic',141.40,1389.54,7251944,5272412,72.70,benchmark/audit/data/silesia/sao
+kolmo audit -4,56.04,91.60,41458703,6492700,15.66,benchmark/audit/data/silesia/webster
+kolmo audit -5,1.33,1.28,41458703,5739389,13.84,benchmark/audit/data/silesia/webster
+brotli 1.2.0 -11,1.20,913.25,41458703,8788752,21.20,benchmark/audit/data/silesia/webster
+lzma 26.03 -6,3.91,227.00,41458703,8725332,21.05,benchmark/audit/data/silesia/webster
+ppmd8 26.03 -6,26.88,25.18,41458703,7145020,17.23,benchmark/audit/data/silesia/webster
+bsc 3.3.12 -m0 -e1,52.97,55.42,41458703,6492644,15.66,benchmark/audit/data/silesia/webster
+openzl 0.2.3 'generic',154.84,2052.44,41458703,10807553,26.07,benchmark/audit/data/silesia/webster
+kolmo audit -4,9.63,77.88,8474240,3616667,42.68,benchmark/audit/data/silesia/x-ray
+kolmo audit -5,1.23,1.34,8474240,3575251,42.19,benchmark/audit/data/silesia/x-ray
+brotli 1.2.0 -11,0.93,272.73,8474240,4686258,55.30,benchmark/audit/data/silesia/x-ray
+lzma 26.03 -6,7.62,66.98,8474240,4479066,52.86,benchmark/audit/data/silesia/x-ray
+ppmd8 26.03 -6,12.66,11.48,8474240,3969027,46.84,benchmark/audit/data/silesia/x-ray
+bsc 3.3.12 -m0 -e1,32.55,36.12,8474240,3806826,44.92,benchmark/audit/data/silesia/x-ray
+openzl 0.2.3 'generic',152.44,1199.60,8474240,5551530,65.51,benchmark/audit/data/silesia/x-ray
+kolmo audit -4,64.24,190.55,5345280,399262,7.47,benchmark/audit/data/silesia/xml
+kolmo audit -5,1.13,1.47,5345280,316430,5.92,benchmark/audit/data/silesia/xml
+brotli 1.2.0 -11,1.58,1670.25,5345280,430369,8.05,benchmark/audit/data/silesia/xml
+lzma 26.03 -6,13.39,423.93,5345280,484800,9.07,benchmark/audit/data/silesia/xml
+ppmd8 26.03 -6,65.30,62.31,5345280,421788,7.89,benchmark/audit/data/silesia/xml
+bsc 3.3.12 -m0 -e1,95.53,150.23,5345280,399206,7.47,benchmark/audit/data/silesia/xml
+openzl 0.2.3 'generic',309.75,3387.91,5345280,546729,10.23,benchmark/audit/data/silesia/xml
+kolmo audit -4,7.17,312.29,14377942,1131224,7.87,benchmark/audit/data/owid-co2-data.csv
+kolmo audit -5,1.46,312.37,14377942,1131224,7.87,benchmark/audit/data/owid-co2-data.csv
+brotli 1.2.0 -11,1.02,476.96,14377942,3113459,21.65,benchmark/audit/data/owid-co2-data.csv
+lzma 26.03 -6,4.46,136.67,14377942,3178804,22.11,benchmark/audit/data/owid-co2-data.csv
+ppmd8 26.03 -6,22.49,21.22,14377942,3343887,23.26,benchmark/audit/data/owid-co2-data.csv
+bsc 3.3.12 -m0 -e1,53.20,56.12,14377942,3149226,21.90,benchmark/audit/data/owid-co2-data.csv
+openzl 0.2.3 'generic',139.61,1631.47,14377942,4189673,29.14,benchmark/audit/data/owid-co2-data.csv

@@ -1,0 +1,3 @@
+CHECKPOINT SOURCE GATE PASSED
+KRC1/GPU SOURCE AND PREVIOUS RAW EVIDENCE GATES PASSED
+FINAL GATES PASSED: 503 successful lzbench configurations; frozen inputs; three immutable source archives; unchanged prior evidence; matching equal-block sizes; CPU/default regression gates

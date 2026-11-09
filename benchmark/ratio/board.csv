@@ -1,0 +1,10 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+zstd 1.5.7 -3,526.04,2139.30,211947520,66133500,31.20,benchmark/ratio/data/silesia.tar
+brotli 1.2.0 -8,35.13,780.92,211947520,57148304,26.96,benchmark/ratio/data/silesia.tar
+ppmd8 26.03 -6,21.40,19.75,211947520,49520769,23.36,benchmark/ratio/data/silesia.tar
+independent KBC1,10.69,6.86,211947520,77574118,36.60,benchmark/ratio/data/silesia.tar
+lz4 1.10.0,1017.04,5889.24,211947520,100880800,47.60,benchmark/ratio/data/silesia.tar
+kolmo audit -1,314.77,1760.54,211947520,58260313,27.49,benchmark/ratio/data/silesia.tar
+independent KRC1,188.24,1902.43,211947520,191504228,90.35,benchmark/ratio/data/silesia.tar
+bsc 3.3.12 -m0 -e1,48.03,46.01,211947520,49295208,23.26,benchmark/ratio/data/silesia.tar
+zstd 1.5.7 -19,5.64,2177.47,211947520,52834954,24.93,benchmark/ratio/data/silesia.tar

@@ -1,0 +1,35 @@
+{
+  "suite": "ratio-leaders",
+  "seed": 20261108,
+  "repeats": 1,
+  "statistic": "single observation",
+  "lzbench_sha256": "d2e3a9aeb9e8d28fa26faa83a70e6519912a2c2b55b0052f478a95ad6dc27195",
+  "inputs": [
+    {
+      "path": "benchmark/ratio/data/silesia.tar",
+      "sha256": "a667bac80089b3d04d5496772149e632f0758974b0579d743cd8d6e5e0d63eb2"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/usr/bin/time",
+        "-l",
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezpaq,5",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i1,1",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/silesia.tar"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 580.6683089733124,
+      "process_peak_rss_bytes": 1027309568
+    }
+  ],
+  "compiler": "Apple clang 21; -mcpu=native; lzbench default -O3"
+}

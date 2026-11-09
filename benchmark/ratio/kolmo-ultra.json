@@ -1,0 +1,23 @@
+{
+  "suite": "existing-ultra",
+  "repeats": 1,
+  "statistic": "single observation",
+  "lzbench_sha256": "d2e3a9aeb9e8d28fa26faa83a70e6519912a2c2b55b0052f478a95ad6dc27195",
+  "argv": [
+    "/usr/bin/time",
+    "-l",
+    "/tmp/kolmo-lzbench-audit/lzbench",
+    "-ekolmo,5",
+    "-I1",
+    "-T1",
+    "-t0,0",
+    "-i1,1",
+    "-p3",
+    "-o4",
+    "-q",
+    "benchmark/ratio/data/silesia.tar"
+  ],
+  "exit_code": 0,
+  "process_peak_rss_bytes": 6209929216,
+  "note": "Existing hybrid Kolmo mode, not the new independent KBC1 implementation. Timings exploratory."
+}

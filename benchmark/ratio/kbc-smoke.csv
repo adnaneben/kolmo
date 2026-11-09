@@ -1,0 +1,13 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+independent KBC1,10.46,6.70,10192446,3767805,36.97,benchmark/audit/data/silesia/dickens
+independent KRC1,199.41,1517.92,10192446,9933704,97.46,benchmark/audit/data/silesia/dickens
+kolmo audit -1,305.72,1689.78,10192446,3721196,36.51,benchmark/audit/data/silesia/dickens
+zstd 1.5.7 -3,346.60,1800.34,10192446,3663504,35.94,benchmark/audit/data/silesia/dickens
+independent KBC1,10.14,6.70,51220480,22429244,43.79,benchmark/audit/data/silesia/mozilla
+independent KRC1,189.99,2888.39,51220480,42483819,82.94,benchmark/audit/data/silesia/mozilla
+kolmo audit -1,199.37,1842.39,51220480,18318543,35.76,benchmark/audit/data/silesia/mozilla
+zstd 1.5.7 -3,571.65,1885.01,51220480,18227296,35.59,benchmark/audit/data/silesia/mozilla
+independent KBC1,14.85,8.99,33553445,5871637,17.50,benchmark/audit/data/silesia/nci
+independent KRC1,184.11,1727.50,33553445,29422219,87.69,benchmark/audit/data/silesia/nci
+kolmo audit -1,155.20,1586.45,33553445,2038889,6.08,benchmark/audit/data/silesia/nci
+zstd 1.5.7 -3,1349.01,3993.21,33553445,2833843,8.45,benchmark/audit/data/silesia/nci

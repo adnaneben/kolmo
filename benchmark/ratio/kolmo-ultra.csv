@@ -1,0 +1,2 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo audit -5,1.23,1.56,211947520,37956550,17.91,benchmark/ratio/data/silesia.tar

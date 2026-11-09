@@ -1,0 +1,4112 @@
+{
+  "suite": "development",
+  "seed": 20261108,
+  "repeats": 3,
+  "statistic": "median",
+  "lzbench_sha256": "d2e3a9aeb9e8d28fa26faa83a70e6519912a2c2b55b0052f478a95ad6dc27195",
+  "inputs": [
+    {
+      "path": "benchmark/audit/data/silesia/dickens",
+      "sha256": "b24c37886142e11d0ee687db6ab06f936207aa7f2ea1fd1d9a36763c7a507e6a"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/mozilla",
+      "sha256": "657fc3764b0c75ac9de9623125705831ebbfbe08fed248df73bc2dc66e2a963b"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/mr",
+      "sha256": "68637ed52e3e4860174ed2dc0840ac77d5f1a60abbcb13770d5754e3774d53e6"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/nci",
+      "sha256": "fc63a31770947b8c2062d3b19ca94c00485a232bb91b502021948fee983e1635"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/ooffice",
+      "sha256": "e7ee013880d34dd5208283d0d3d91b07f442e067454276095ded14f322a656eb"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/osdb",
+      "sha256": "60f027179302ca3ad87c58ac90b6be72ec23588aaa7a3b7fe8ecc0f11def3fa3"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/reymont",
+      "sha256": "0eac0114a3dfe6e2ee1f345a0f79d653cb26c3bc9f0ed79238af4933422b7578"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/samba",
+      "sha256": "93ba07bc44d8267789c1d911992f40b089ffa2140b4a160fac11ccae9a40e7b2"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/sao",
+      "sha256": "c2d0ea2cc59d4c21b7fe43a71499342a00cbe530a1d5548770e91ecd6214adcc"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/webster",
+      "sha256": "6a68f69b26daf09f9dd84f7470368553194a0b294fcfa80f1604efb11143a383"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/x-ray",
+      "sha256": "7de9fce1405dc44ae5e6813ed21cd5751e761bd4265655a005d39b9685d1c9ad"
+    },
+    {
+      "path": "benchmark/audit/data/silesia/xml",
+      "sha256": "0e82e54e695c1938e4193448022543845b33020c8be6bf3bf3ead2224903e08c"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/alice29.txt",
+      "sha256": "7467306ee0feed4971260f3c87421154a05be571d944e9cb021a5713700c38f0"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/asyoulik.txt",
+      "sha256": "eaa3526fe53859f34ecdf255712f9ecf0b2c903451d4755b2edaa2e2599cb0fc"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/cp.html",
+      "sha256": "e0cd21cef5b6c4069461e949be100080c3ce887de6f1dd8626c480528efaaf61"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/fields.c",
+      "sha256": "85d73e354cc50cec76cb5a50537cf8dc035f8cbb8480f9e1cbe2f7d6c23393c7"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/grammar.lsp",
+      "sha256": "1b0805dfc0ae706b35aac2bb4e15f02485efd24dda5dbd29de7b2f84d1a88c15"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/kennedy.xls",
+      "sha256": "9af47239ca29dfe20e633f80bbbb9a4cc9783d0803d7b2b5626f42e4c3790420"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/lcet10.txt",
+      "sha256": "5314ba1dbb03f471df88bec6cd120a938ef60d0fd3511c5c1dce61bf7463245f"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/plrabn12.txt",
+      "sha256": "07e2e0b461af78c7c647cb53dab39de560198e16f799b4516eccf0fbd69f764c"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/ptt5",
+      "sha256": "0ec3a75089bb52342813496b17e51377bc9eba3cb519a444d67025354841d650"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/sum",
+      "sha256": "ee5733cd76ecc2f9d8ff156adc3c02a7a851051dcf43a2d56ff4ee4ff606bdb3"
+    },
+    {
+      "path": "benchmark/next/data/canterbury/xargs.1",
+      "sha256": "c58aeb5d2d1e12751d47e7412b45784405fc30a5671b03d480fa05776e183619"
+    },
+    {
+      "path": "benchmark/audit/data/owid-co2-data.csv",
+      "sha256": "7f78e2b218ce4bb8c538bbec04fdc9a7982e8d40bff972e650df603899edd5f6"
+    },
+    {
+      "path": "benchmark/next/data/mitdb-100.dat",
+      "sha256": "b2ea3c250e56e48f4b7b90697832b8ecd1afa1e0bb31f2dcfea4ed6e1075a639"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/alice29.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0771481990814209
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/samba"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.418781042098999
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.36624884605407715
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/asyoulik.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00811004638671875
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 21.937878847122192
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/fields.c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003347158432006836
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/x-ray"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.2729029655456543
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/sum"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0038373470306396484
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/cp.html"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00695490837097168
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/kennedy.xls"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.08652186393737793
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/sao"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.11084604263305664
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/sao"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 5.703485012054443
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/lcet10.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.1484851837158203
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/asyoulik.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004565000534057617
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/grammar.lsp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004037141799926758
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/fields.c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0070378780364990234
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/nci"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.5117278099060059
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/lcet10.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.3334951400756836
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/xml"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.10423088073730469
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/osdb"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.2815861701965332
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/mitdb-100.dat"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.7118868827819824
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/plrabn12.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.012380838394165039
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/lcet10.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.05285787582397461
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/x-ray"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 3.6934783458709717
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/sao"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 2.6380369663238525
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/ptt5"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.05038785934448242
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/fields.c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0057408809661865234
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/nci"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.6172869205474854
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/dickens"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.43495798110961914
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/alice29.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.026975154876708984
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/lcet10.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0054950714111328125
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/webster"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 31.22143006324768
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/xml"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 2.1421620845794678
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/ptt5"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.008612871170043945
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/kennedy.xls"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.02281332015991211
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/xml"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.030972003936767578
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/sum"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.03274393081665039
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/grammar.lsp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00432586669921875
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/lcet10.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.11995315551757812
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mr"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 2.7390010356903076
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/samba"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.13986611366271973
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/asyoulik.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0555729866027832
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/ooffice"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.09585118293762207
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/ooffice"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 3.210871934890747
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/fields.c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003934144973754883
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/osdb"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 8.88599705696106
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/reymont"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.1209108829498291
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/owid-co2-data.csv"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.07463717460632324
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/samba"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.4008040428161621
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/plrabn12.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.3714568614959717
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/fields.c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003520965576171875
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/fields.c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0051729679107666016
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/ooffice"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.02692580223083496
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/samba"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.08548092842102051
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/nci"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.9297168254852295
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/xargs.1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0034668445587158203
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/fields.c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0029916763305664062
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/owid-co2-data.csv"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 9.068695068359375
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/x-ray"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.16592192649841309
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.8934500217437744
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/cp.html"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004004955291748047
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/asyoulik.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.01949596405029297
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/alice29.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0059430599212646484
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/grammar.lsp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.002644777297973633
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/lcet10.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.006807088851928711
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/ooffice"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 2.377902030944824
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/sao"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.6594350337982178
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/mitdb-100.dat"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.6196527481079102
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/fields.c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004556179046630859
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/sum"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003233194351196289
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/ptt5"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004899740219116211
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/alice29.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004900932312011719
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/lcet10.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.01748204231262207
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/cp.html"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.012012243270874023
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/osdb"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 4.8157570362091064
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/sum"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003663778305053711
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/webster"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 31.067344903945923
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/alice29.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004087924957275391
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/reymont"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 4.409664154052734
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/asyoulik.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.011300086975097656
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/x-ray"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.8661699295043945
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/plrabn12.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.16949009895324707
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/reymont"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 4.696213960647583
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/nci"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.08750104904174805
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/cp.html"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004175901412963867
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/sao"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.6118032932281494
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/nci"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 20.144005060195923
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/reymont"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.5296661853790283
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/grammar.lsp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0033333301544189453
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/fields.c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.011856794357299805
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/plrabn12.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.008387088775634766
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/sum"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.014185905456542969
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/xargs.1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.002953052520751953
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/dickens"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 3.680475950241089
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/sum"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0044710636138916016
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.3319127559661865
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/kennedy.xls"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.5920000076293945
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/ooffice"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 5.306248903274536
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/ooffice"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.06157374382019043
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/xml"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.019819021224975586
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/sum"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.006144046783447266
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/samba"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.122849941253662
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/dickens"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.2353441715240479
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/asyoulik.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.10261774063110352
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/nci"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.11484742164611816
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/ptt5"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.2644951343536377
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/plrabn12.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0057337284088134766
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.9155728816986084
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/sao"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 6.86750602722168
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/kennedy.xls"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.008917093276977539
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/dickens"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 7.456223011016846
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mr"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.31898069381713867
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/osdb"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.041274070739746094
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/fields.c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003426074981689453
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/xargs.1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004801034927368164
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/webster"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.21264195442199707
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/cp.html"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.005274057388305664
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/owid-co2-data.csv"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.14619803428649902
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/alice29.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.11966276168823242
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/kennedy.xls"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.051892995834350586
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/ooffice"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.1023712158203125
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/ooffice"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.2514359951019287
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/nci"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 18.391860246658325
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/xargs.1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003731966018676758
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/samba"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.9977149963378906
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/xml"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.024645328521728516
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/lcet10.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.010856151580810547
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/webster"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 10.55360198020935
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 7.426459074020386
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/x-ray"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.10465288162231445
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/dickens"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.11572527885437012
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/x-ray"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 4.5898988246917725
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/osdb"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 3.3211588859558105
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/osdb"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.3056910037994385
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/owid-co2-data.csv"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.493819236755371
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/mitdb-100.dat"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.20401906967163086
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/osdb"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0959320068359375
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/dickens"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.9901199340820312
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/samba"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.12866806983947754
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/mitdb-100.dat"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.010391950607299805
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/mitdb-100.dat"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.8753659725189209
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/xml"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.3164939880371094
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/reymont"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.6448030471801758
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mr"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.041938066482543945
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/ooffice"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.02787184715271
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 5.4477503299713135
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/webster"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.39377689361572266
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/grammar.lsp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0070209503173828125
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/sao"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.11847591400146484
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/alice29.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.008454322814941406
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/reymont"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.044115304946899414
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/kennedy.xls"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.007581949234008789
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/asyoulik.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.042881011962890625
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/reymont"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.07709121704101562
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/cp.html"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00984501838684082
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/owid-co2-data.csv"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 12.306639194488525
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/webster"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 3.3070311546325684
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/plrabn12.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.16670632362365723
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mr"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.0123889446258545
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/grammar.lsp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.005044221878051758
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/xargs.1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004345893859863281
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/asyoulik.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.009537696838378906
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/nci"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.7476229667663574
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/sao"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.08450508117675781
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/alice29.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.07156825065612793
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/samba"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 4.837715148925781
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/nci"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 2.2164688110351562
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/xargs.1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003437042236328125
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/webster"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.3821420669555664
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/mitdb-100.dat"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0406031608581543
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/plrabn12.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.01533198356628418
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/dickens"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.1834268569946289
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 39.39071583747864
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/osdb"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.07035589218139648
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/lcet10.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.029223918914794922
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/ptt5"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.28128576278686523
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/reymont"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.06244301795959473
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mr"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 4.397288084030151
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/sum"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.006546974182128906
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/asyoulik.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0035257339477539062
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/reymont"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.22578811645507812
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/dickens"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.12700796127319336
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/nci"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 2.1856861114501953
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/ptt5"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.018608808517456055
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/samba"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 15.678007125854492
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.19275999069213867
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/webster"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.7547409534454346
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/grammar.lsp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003548860549926758
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/ptt5"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.010138750076293945
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/grammar.lsp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003092050552368164
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mr"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.16448092460632324
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/xargs.1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003765106201171875
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/asyoulik.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.005159139633178711
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/grammar.lsp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0031380653381347656
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/mitdb-100.dat"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.02930283546447754
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/cp.html"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0034949779510498047
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mozilla"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 20.318668127059937
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/ptt5"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.00490117073059082
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/lcet10.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.013254880905151367
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/xml"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.1378931999206543
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/mitdb-100.dat"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.26557087898254395
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mr"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.09338498115539551
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/kennedy.xls"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.02555990219116211
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/alice29.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.012946844100952148
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/plrabn12.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.061432600021362305
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/xargs.1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.007249116897583008
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/x-ray"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.11108827590942383
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/plrabn12.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.03918004035949707
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/mitdb-100.dat"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.05604290962219238
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/ooffice"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.903317928314209
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/grammar.lsp"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004218101501464844
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/alice29.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.010468244552612305
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/x-ray"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 7.659027099609375
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/xml"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 3.540787935256958
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/osdb"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.15604281425476074
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/sao"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.23338603973388672
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/cp.html"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0035212039947509766
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/sum"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.01640009880065918
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/owid-co2-data.csv"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.1897571086883545
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/owid-co2-data.csv"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.539309024810791
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/kennedy.xls"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.46186113357543945
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/ptt5"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.027909278869628906
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/owid-co2-data.csv"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.27201414108276367
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/xargs.1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004369020462036133
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/reymont"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.511491060256958
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mr"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.2111208438873291
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/xml"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.5231528282165527
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/ptt5"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.015184879302978516
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/x-ray"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.01513528823852539
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/owid-co2-data.csv"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 4.5838446617126465
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/mitdb-100.dat"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.08284401893615723
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/webster"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.355966329574585
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/dickens"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 7.884723901748657
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mr"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.9969179630279541
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/kennedy.xls"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.2553091049194336
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/owid-co2-data.csv"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.7033703327178955
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/sum"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.010310173034667969
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/mr"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 6.896785020828247
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/x-ray"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.542790174484253
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/kennedy.xls"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.018275022506713867
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/plrabn12.txt"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.02256011962890625
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/cp.html"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.02363872528076172
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/dickens"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.06008195877075195
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/cp.html"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.003732919692993164
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/webster"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 5.0458900928497314
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/samba"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 9.231992244720459
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/next/data/canterbury/xargs.1"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.004815816879272461
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/osdb"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.9444968700408936
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,9",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/xml"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.08351492881774902
+    },
+    {
+      "argv": [
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/audit/data/silesia/sao"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.027364730834960938
+    }
+  ],
+  "compiler": "Apple clang 21; -mcpu=native; lzbench default -O3"
+}

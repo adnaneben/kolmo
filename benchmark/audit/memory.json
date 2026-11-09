@@ -1,0 +1,18 @@
+{
+  "platform": "macOS",
+  "note": "ru_maxrss for child CLI processes; maximum is cumulative across children, fast ran before ultra. These probes overlapped correctness tests and are used only for process memory, not throughput.",
+  "runs": [
+    {
+      "mode": "fast",
+      "cumulative_child_maxrss": 21626880,
+      "input_bytes": 10192446,
+      "threads": 1
+    },
+    {
+      "mode": "ultra",
+      "cumulative_child_maxrss": 4602789888,
+      "input_bytes": 10192446,
+      "threads": 1
+    }
+  ]
+}

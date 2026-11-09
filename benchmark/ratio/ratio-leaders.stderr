@@ -1,0 +1,19 @@
+/tmp/kolmo-lzbench-audit/lzbench -ezpaq,5 -I1 -T1 -t0,0 -i1,1 -p3 -o4 -q benchmark/ratio/data/silesia.tar
+      580.66 real       578.48 user         1.65 sys
+          1027309568  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               64425  page reclaims
+                   3  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+               65808  involuntary context switches
+      12399286069601  instructions retired
+       2512748936452  cycles elapsed
+          1026753736  peak memory footprint

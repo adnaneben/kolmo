@@ -1,0 +1,1 @@
+GPU TESTS PASSED (280 exact CPU/GPU/hybrid plan, frame and round-trip cases; Apple M5; setup 50.817 ms)

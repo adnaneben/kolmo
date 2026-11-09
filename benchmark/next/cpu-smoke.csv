@@ -1,0 +1,7 @@
+file,codec,cpu_threads,input_bytes,compressed_bytes,ratio,compress_mbps,decode_mbps,first_encode_ms,gpu_device_ms,gpu_setup_ms,repeats,verified
+README.md,krc-cpu,1,12346,12183,1.013379,52.987,125.980,0.233,0.000,0.000,3,1
+README.md,krc-cpu,10,12346,12183,1.013379,50.187,124.707,0.262,0.000,0.000,3,1
+README.md,kolmo-fast,1,12346,5834,2.116215,54.149,514.417,0.380,0.000,0.000,3,1
+README.md,kolmo-fast,10,12346,5834,2.116215,54.871,514.417,0.245,0.000,0.000,3,1
+README.md,zstd-3,1,12346,5782,2.135247,148.747,561.181,0.243,0.000,0.000,3,1
+README.md,lz4,1,12346,8172,1.510768,301.122,1763.716,0.077,0.000,0.000,3,1

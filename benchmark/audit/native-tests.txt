@@ -1,0 +1,12 @@
+formula table: 3 formulas found, group column 0
+table-codec v2 fuzz: 4000 corrupt streams decoded without crashing
+columnar decode: 5520 rows x 8 cols, all cells correct
+columnar-codec fuzz: 4000 corrupt streams decoded without crashing
+log codec: 2.63x before entropy coding
+log codec fuzz: 4000 corrupt streams decoded without crashing
+image16 ratio 3.65, records ratio 2.28
+records/image codec fuzz: 6000 corrupt streams decoded without crashing
+word codec: 1.72x before entropy coding
+word codec fuzz: 3000 corrupt streams decoded without crashing
+table-codec fuzz: 3000 corrupt streams decoded without crashing
+ALL PASSED

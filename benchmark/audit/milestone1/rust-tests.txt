@@ -1,0 +1,19 @@
+   Compiling kolmo v1.0.0 (/Users/adnanbenali/Projects/kolmo/bindings/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.21s
+     Running unittests src/lib.rs (build/rust-audit/debug/deps/kolmo-b0b23eee9e2b7dd3)
+
+running 4 tests
+test tests::empty_and_tiny ... ok
+test tests::range_read ... ok
+test tests::dictionary_round_trip ... ok
+test tests::round_trip_all_modes ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.36s
+
+   Doc-tests kolmo
+
+running 1 test
+test src/lib.rs - (line 6) - compile ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+

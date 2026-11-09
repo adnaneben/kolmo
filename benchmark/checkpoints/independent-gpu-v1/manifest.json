@@ -1,0 +1,88 @@
+{
+  "name": "independent-gpu-v1",
+  "base_git": "31ce410ec419ccf7039724b32d0656db40afcee8",
+  "apply_after": "benchmark/checkpoints/cpu-planning-v1/source.tar.gz",
+  "source_archive_sha256": "6eb165c2174713870f2f7578c003ddfd6b278becf19aa284854a0b7ddaf08dd7",
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "28e1de1a2ae6e5d79af91fb835ec4c223ba98f20e9e261de6e07cd1a5dade330"
+    },
+    {
+      "path": "Makefile",
+      "sha256": "3236c3daad9957b56d588d693aba0b35ba1e37ee0de601b28c3c9020361ff304"
+    },
+    {
+      "path": "README.md",
+      "sha256": "c59f3b4a1c74579e79d601d48654ddb92b7a464a9f47fb2ad99464a8ecbb0ac9"
+    },
+    {
+      "path": "bench/krcbench.c",
+      "sha256": "b1cc0c769e3918e787d97ac5056dd39d1a5979d92dcb98e27c5673f155a761ea"
+    },
+    {
+      "path": "benchmark/next/PLAN.md",
+      "sha256": "0ad852fa7e9db9ae2c951c90f2a386c1e6bc4541f8cbf541273bdcc18c4ecdf9"
+    },
+    {
+      "path": "benchmark/next/RESULTS.md",
+      "sha256": "c0c31cf2342da3551df20843d5a28eb49a008aaddc833c9cad629bb1bb24e1eb"
+    },
+    {
+      "path": "benchmark/next/freeze_inputs.py",
+      "sha256": "d3e1f024d3244ae2008e409b43cd324ff7f37a555dd62b89a66efb15da7a7d04"
+    },
+    {
+      "path": "benchmark/next/protect_gains.py",
+      "sha256": "a2ce217df9d8d5f3d3eb5e04e93db039047e5f4e31a269066e4420b088c01c24"
+    },
+    {
+      "path": "benchmark/next/summarize.py",
+      "sha256": "3be4da89cd2743141c1c97ad547215727c6b79a7b67894393c1733efe007aec7"
+    },
+    {
+      "path": "src/experimental/README.md",
+      "sha256": "8a7b8ca3719a2806f8d59c774485c2b933d8a7c6daa8cb7679fdb1984de590a4"
+    },
+    {
+      "path": "src/experimental/krc.c",
+      "sha256": "fd82aebcae6d1fda86b486d49d5c90bb1061534cbb07b9c2d7d8f0997b4693ab"
+    },
+    {
+      "path": "src/experimental/krc.h",
+      "sha256": "c057b4a90903c06d523d9f8191dddd6fc318158aed4e80fb859e0d2c3f803afc"
+    },
+    {
+      "path": "src/experimental/krc.metal",
+      "sha256": "82fb5e4715a4720d3ebcd3d96a655907744740e42af1f9685e6ab660199cc78b"
+    },
+    {
+      "path": "src/experimental/krc_cli.c",
+      "sha256": "8ddb9b2db539fecbe1b4df5cc8fe37d4739eae48175938d61e1d5b1e450e9273"
+    },
+    {
+      "path": "src/experimental/krc_gpu.h",
+      "sha256": "cbb57215a6c7abb28f511248d85fb90ef87a53b7e5f1dbe195a8a1c73a3eadda"
+    },
+    {
+      "path": "src/experimental/krc_gpu.m",
+      "sha256": "6d36b4da57970306aab49cffe386b0faa543637ea9856505e04c33898fefca24"
+    },
+    {
+      "path": "src/experimental/krc_hybrid.c",
+      "sha256": "b5a59e898b838cab9a122ebaab378e26fa409cea93db58ce157f2dbc6d0697b5"
+    },
+    {
+      "path": "src/experimental/krc_simd.metal",
+      "sha256": "b40bc15473f72be542f935213dd7543e29dd4430d93ea86e40a85fa2d2c374bb"
+    },
+    {
+      "path": "tests/krcgputest.c",
+      "sha256": "8097156b85c98946e31a2f4fabed6ac3c5cbd13b1efef1444d870a0ade825b05"
+    },
+    {
+      "path": "tests/krctest.c",
+      "sha256": "523ddc0bb55b5663afb9b49084a7e241cf1d029a808c6878893b4831514b3d83"
+    }
+  ]
+}

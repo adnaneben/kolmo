@@ -1,0 +1,6 @@
+cc -O3 -mcpu=native -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -DZSTD_DISABLE_ASM -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include -I/opt/homebrew/include tests/cznresource.c build/libvendor.a -o build/cznresource -L/opt/homebrew/lib -llzma -lpthread -lm -lc++
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -DZSTD_DISABLE_ASM -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include -I/opt/homebrew/include tests/cznresource.c build/libvendor.a -o build/cznresource-asan -L/opt/homebrew/lib -llzma -lpthread -lm -lc++
+./build/cznresource-asan
+RESOURCE TESTS PASSED (12 injected compression allocation failures)
+./build/cznparallel-asan
+PARALLEL TESTS PASSED (144 concurrent table, archive and plain round trips)

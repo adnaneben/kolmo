@@ -1,0 +1,119 @@
+{
+  "policy": "Frozen before any KBC model performance evaluation. Public historic corpus, not unseen in the literature. Final evaluation only; do not tune and call it held out.",
+  "source": "https://corpus.canterbury.ac.nz/resources/calgary.tar.gz",
+  "archive_sha256": "e109eebdc19c5cee533c58bd6a49a4be3a77cc52f84ba234a089148a4f2093b7",
+  "files": [
+    {
+      "path": "benchmark/ratio/data/calgary/bib",
+      "bytes": 111261,
+      "sha256": "0f1a13936e358191533aca4a32ff42906d1b7f641f3afb0a90458b2410419fcf"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/book1",
+      "bytes": 768771,
+      "sha256": "9ffa47cd93bccd732f20e0c304203cfbc1b8a91bedac536e2d8f6051003d9951"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/book2",
+      "bytes": 610856,
+      "sha256": "c8538730cf2ce6a243acf3eb299c43d619b5c695d892f4884df796c13081fdf8"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/geo",
+      "bytes": 102400,
+      "sha256": "913ff6f45610599020c02f543a0d5a1f46cf772412e25a568b683d23db8c447d"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/news",
+      "bytes": 377109,
+      "sha256": "7f0482f9774681429eb7021050c17966f6acf19450e170de6611e1ed953d42e8"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/obj1",
+      "bytes": 21504,
+      "sha256": "8c06109caffd7e794516e4ed10095b0238ea8df63ed66840907cd4dd23e2cf72"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/obj2",
+      "bytes": 246814,
+      "sha256": "8b3e7f028bfefaebdd48a791060a1ab11d1ffd9bf27e0d63b15e58dda0deb984"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/paper1",
+      "bytes": 53161,
+      "sha256": "8d9c42d9fa58b5bce1a8b5fae3cc27c9eb7cc7a032bc12a633d44e816497e143"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/paper2",
+      "bytes": 82199,
+      "sha256": "dc4b9cf68094c632a920f4e76d0a0a8b9617b624c36928ca46a5d29798c5bbbe"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/paper3",
+      "bytes": 46526,
+      "sha256": "c3e1ba94849992147cf68531311cf6512c9032b88f548d3e2d62cb659aef19d8"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/paper4",
+      "bytes": 13286,
+      "sha256": "aeecc3ff5b2e497e35fbd2d2190627fff4818dabf7aee9734ac090c21b04739b"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/paper5",
+      "bytes": 11954,
+      "sha256": "7a4b1ee6aa419ca362a9bbae383287fe8fee4324c9d6aefa7e94b6d845452ee8"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/paper6",
+      "bytes": 38105,
+      "sha256": "8f38dd101a4e0c0e4acefec93d5da8198db593557e9e0019140e2dff24b1b080"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/pic",
+      "bytes": 513216,
+      "sha256": "0ec3a75089bb52342813496b17e51377bc9eba3cb519a444d67025354841d650"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/progc",
+      "bytes": 39611,
+      "sha256": "151377a9d6aa9b7e872000269707a15e2b038c826340628e6f4d8b4db9ec3c19"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/progl",
+      "bytes": 71646,
+      "sha256": "9388db0cfb71ffbe5687d381819a5ff69cdd992d6931e0cf81a310a1caed0ba0"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/progp",
+      "bytes": 49379,
+      "sha256": "d0cd70ab5f7381a8584b25fa73b3608571a17ee1042cc5c546f63b904614d1bc"
+    },
+    {
+      "path": "benchmark/ratio/data/calgary/trans",
+      "bytes": 93695,
+      "sha256": "117a00c6af3e1c57f20013a8f1b468158f70634f685a348bedb7e4069cdd576a"
+    }
+  ],
+  "standard_calgary_files": [
+    "benchmark/ratio/data/calgary/bib",
+    "benchmark/ratio/data/calgary/book1",
+    "benchmark/ratio/data/calgary/book2",
+    "benchmark/ratio/data/calgary/geo",
+    "benchmark/ratio/data/calgary/news",
+    "benchmark/ratio/data/calgary/obj1",
+    "benchmark/ratio/data/calgary/obj2",
+    "benchmark/ratio/data/calgary/paper1",
+    "benchmark/ratio/data/calgary/paper2",
+    "benchmark/ratio/data/calgary/pic",
+    "benchmark/ratio/data/calgary/progc",
+    "benchmark/ratio/data/calgary/progl",
+    "benchmark/ratio/data/calgary/progp",
+    "benchmark/ratio/data/calgary/trans"
+  ],
+  "excluded_from_standard_aggregate": [
+    "paper3",
+    "paper4",
+    "paper5",
+    "paper6"
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "name": "CPU planning milestone 1",
+  "base_commit": "31ce410ec419ccf7039724b32d0656db40afcee8",
+  "source_archive_sha256": "f3ac2afaeba12e6f0369116aad97e9663cfa4d57cd8a7bdee06b869813c4ca17",
+  "reference_library_sha256": "95152bfea6d32ab95e0975d9564a69beee8c831d813309781c07be17a3887077",
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "76e408cfc09f64069ed69172518c1f73f8ec72714aaf4fa2acd2a09220adf2b4"
+    },
+    {
+      "path": "Makefile",
+      "sha256": "75988149fdfbce34e745f647dc7e850165f2844e02dd158a9a2b906169eba70b"
+    },
+    {
+      "path": "README.md",
+      "sha256": "131dbeae3c945e9ad7f47f64c8e17f6a0124f8bdd6fe3581b55934c21c855346"
+    },
+    {
+      "path": "bench/czbench.c",
+      "sha256": "0e39a0b2966160b87dbf11d9f80ca12620b1b72b5350acca5205e060276483d0"
+    },
+    {
+      "path": "bindings/python/native/src/czn.c",
+      "sha256": "4ad761a997e052c9ee39732fa14b37f602dc39be2b808976c8bff312c18629c2"
+    },
+    {
+      "path": "bindings/python/native/src/czn.h",
+      "sha256": "c877d8d96cc0ee51654d47adbac70cd7cba38eaa969be53a0214b06fb4f3c729"
+    },
+    {
+      "path": "bindings/python/native/src/sci.inc",
+      "sha256": "d51591cad5cff8d7ab4606d9dc6c61255761f9d7383ce6b2257c4182e28e6f4b"
+    },
+    {
+      "path": "bindings/python/native/src/tbl2.inc",
+      "sha256": "794101df9cfd636ee71259eeb9ebd373b1823461a6d1557166089536875d6aa1"
+    },
+    {
+      "path": "bindings/rust/native/src/czn.c",
+      "sha256": "4ad761a997e052c9ee39732fa14b37f602dc39be2b808976c8bff312c18629c2"
+    },
+    {
+      "path": "bindings/rust/native/src/czn.h",
+      "sha256": "c877d8d96cc0ee51654d47adbac70cd7cba38eaa969be53a0214b06fb4f3c729"
+    },
+    {
+      "path": "bindings/rust/native/src/sci.inc",
+      "sha256": "d51591cad5cff8d7ab4606d9dc6c61255761f9d7383ce6b2257c4182e28e6f4b"
+    },
+    {
+      "path": "bindings/rust/native/src/tbl2.inc",
+      "sha256": "794101df9cfd636ee71259eeb9ebd373b1823461a6d1557166089536875d6aa1"
+    },
+    {
+      "path": "src/cli.c",
+      "sha256": "a687c51c11ae94a6a6714149009525fbd01e342a97626c3f5c549e391afddd40"
+    },
+    {
+      "path": "src/cm.inc",
+      "sha256": "8d30ce8e2d1cb1f681967dd438ab07ea6521bc78db2b6b5c9e4df7bbbf6bf55a"
+    },
+    {
+      "path": "src/czn.c",
+      "sha256": "4ad761a997e052c9ee39732fa14b37f602dc39be2b808976c8bff312c18629c2"
+    },
+    {
+      "path": "src/czn.h",
+      "sha256": "c877d8d96cc0ee51654d47adbac70cd7cba38eaa969be53a0214b06fb4f3c729"
+    },
+    {
+      "path": "src/log.inc",
+      "sha256": "05455bbda2da567c120089d1f92cbd2b234648290f6a71969d7f09180ef5a908"
+    },
+    {
+      "path": "src/sci.inc",
+      "sha256": "d51591cad5cff8d7ab4606d9dc6c61255761f9d7383ce6b2257c4182e28e6f4b"
+    },
+    {
+      "path": "src/stream.inc",
+      "sha256": "43dce14ffb8a365d2e154c198bdccd14582542fc5ad772579a5f670632d0a55a"
+    },
+    {
+      "path": "src/tbl2.inc",
+      "sha256": "794101df9cfd636ee71259eeb9ebd373b1823461a6d1557166089536875d6aa1"
+    },
+    {
+      "path": "src/word.inc",
+      "sha256": "54db613688c67d140e8e49891651ee9d60a596cdda672b1290b7a7f003ce67c3"
+    },
+    {
+      "path": "tests/cznparallel.c",
+      "sha256": "193100ac7a7bd58be952e4640e477c1599ca2f8ae89b7fbb00a8deafafb371ad"
+    },
+    {
+      "path": "tests/cznresource.c",
+      "sha256": "161eddc53a516dce9cff376cfe84214fc06c3778e701ba24822cfb1641725ada"
+    },
+    {
+      "path": "tests/czntest.c",
+      "sha256": "95901f59a0f446de8b4ae052828f165c5663c37f36a63938e987c471402cd3ee"
+    },
+    {
+      "path": "tests/legacy_frames.h",
+      "sha256": "3dbb0ef75d85b31c4b40e8a31dd8ad54a596598b404693de1f5731d0fc6122c8"
+    },
+    {
+      "path": "tests/test_concurrent_dict.py",
+      "sha256": "d2e3a9b539467fda3ce417c2ac2a39e0f4c45f8af7c256141ad5cac1e4393a45"
+    }
+  ],
+  "reference_results": "benchmark/audit/milestone1/performance.csv",
+  "note": "Apply archive over the pinned base revision. Vendor sources are unchanged. Native reference library is specific to this macOS ARM64 machine."
+}

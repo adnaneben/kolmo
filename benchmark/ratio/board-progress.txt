@@ -1,0 +1,10 @@
+board: 1/9 verified zstd,3 silesia.tar
+board: 2/9 verified brotli,8 silesia.tar
+board: 3/9 verified ppmd8,6 silesia.tar
+board: 4/9 verified kbc silesia.tar
+board: 5/9 verified lz4 silesia.tar
+board: 6/9 verified kolmo,1 silesia.tar
+board: 7/9 verified krc silesia.tar
+board: 8/9 verified bsc1 silesia.tar
+board: 9/9 verified zstd,19 silesia.tar
+MATRIX PASSED 9 configurations; 27 compression/decompression sample pairs

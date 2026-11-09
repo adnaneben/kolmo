@@ -1,0 +1,251 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+ppmd8 26.03 -6,12.08,12.10,152089,38629,25.40,benchmark/next/data/canterbury/alice29.txt
+zstd 1.5.7 -9,167.40,3184.87,21606400,4350213,20.13,benchmark/audit/data/silesia/samba
+zstd 1.5.7 -3,581.62,1937.00,51220480,18227296,35.59,benchmark/audit/data/silesia/mozilla
+kolmo audit -1,97.23,1733.59,125179,50376,40.24,benchmark/next/data/canterbury/asyoulik.txt
+zstd 1.5.7 -19,7.06,1508.28,51220480,15065760,29.41,benchmark/audit/data/silesia/mozilla
+independent KRC1,199.85,1602.47,11150,10900,97.76,benchmark/next/data/canterbury/fields.c
+zstd 1.5.7 -9,103.18,1268.31,8474240,5361356,63.27,benchmark/audit/data/silesia/x-ray
+independent KRC1,192.81,2185.14,38240,36157,94.55,benchmark/next/data/canterbury/sum
+bsc 3.3.12 -m0 -e1,38.00,44.16,24603,7400,30.08,benchmark/next/data/canterbury/cp.html
+bsc 3.3.12 -m0 -e1,65.93,85.41,1029744,107072,10.40,benchmark/next/data/canterbury/kennedy.xls
+kolmo audit -1,232.52,1937.60,7251944,2302435,31.75,benchmark/audit/data/silesia/sao
+ppmd8 26.03 -6,8.06,7.34,7251944,4784272,65.97,benchmark/audit/data/silesia/sao
+zstd 1.5.7 -19,8.89,2024.13,426754,121336,28.43,benchmark/next/data/canterbury/lcet10.txt
+zstd 1.5.7 -3,384.87,1491.34,125179,50324,40.20,benchmark/next/data/canterbury/asyoulik.txt
+ppmd8 26.03 -6,24.96,23.59,3721,1043,28.03,benchmark/next/data/canterbury/grammar.lsp
+zstd 1.5.7 -19,8.27,841.57,11150,3015,27.04,benchmark/next/data/canterbury/fields.c
+zstd 1.5.7 -9,234.64,5184.95,33553445,2246701,6.70,benchmark/audit/data/silesia/nci
+independent KBC1,9.98,6.38,426754,155236,36.38,benchmark/next/data/canterbury/lcet10.txt
+independent KRC1,183.29,1466.92,5345280,5194117,97.17,benchmark/audit/data/silesia/xml
+zstd 1.5.7 -9,113.55,2593.50,10085684,3342529,33.14,benchmark/audit/data/silesia/osdb
+zstd 1.5.7 -19,8.52,1119.71,1950000,974577,49.98,benchmark/next/data/mitdb-100.dat
+independent KRC1,193.07,1396.36,481861,469661,97.47,benchmark/next/data/canterbury/plrabn12.txt
+bsc 3.3.12 -m0 -e1,49.64,59.13,426754,100362,23.52,benchmark/next/data/canterbury/lcet10.txt
+zstd 1.5.7 -19,6.84,1114.77,8474240,5129823,60.53,benchmark/audit/data/silesia/x-ray
+zstd 1.5.7 -19,8.25,1479.10,7251944,5000572,68.95,benchmark/audit/data/silesia/sao
+ppmd8 26.03 -6,69.86,62.86,513216,48406,9.43,benchmark/next/data/canterbury/ptt5
+ppmd8 26.03 -6,28.61,25.57,11150,2566,23.01,benchmark/next/data/canterbury/fields.c
+independent KRC1,184.60,1712.48,33553445,29422219,87.69,benchmark/audit/data/silesia/nci
+zstd 1.5.7 -9,79.39,994.11,10192446,3282524,32.21,benchmark/audit/data/silesia/dickens
+bsc 3.3.12 -m0 -e1,46.19,57.75,152089,40558,26.67,benchmark/next/data/canterbury/alice29.txt
+lz4 1.10.0,675.89,4550.05,426754,233213,54.65,benchmark/next/data/canterbury/lcet10.txt
+zstd 1.5.7 -19,4.01,2574.85,41458703,8679359,20.93,benchmark/audit/data/silesia/webster
+zstd 1.5.7 -19,7.62,4825.62,5345280,452941,8.47,benchmark/audit/data/silesia/xml
+kolmo audit -1,311.13,3525.25,513216,54472,10.61,benchmark/next/data/canterbury/ptt5
+kolmo audit -1,173.28,2186.10,1029744,48166,4.68,benchmark/next/data/canterbury/kennedy.xls
+kolmo audit -1,758.30,3258.41,5345280,652714,12.21,benchmark/audit/data/silesia/xml
+independent KBC1,9.74,6.64,38240,16556,43.29,benchmark/next/data/canterbury/sum
+zstd 1.5.7 -19,11.40,452.24,3721,1211,32.55,benchmark/next/data/canterbury/grammar.lsp
+ppmd8 26.03 -6,22.77,21.43,426754,95817,22.45,benchmark/next/data/canterbury/lcet10.txt
+ppmd8 26.03 -6,22.19,21.76,9970564,2363982,23.71,benchmark/audit/data/silesia/mr
+kolmo audit -1,610.34,2753.69,21606400,5044560,23.35,benchmark/audit/data/silesia/samba
+zstd 1.5.7 -19,7.19,1386.40,125179,45137,36.06,benchmark/next/data/canterbury/asyoulik.txt
+kolmo audit -1,256.13,967.74,6152192,2793733,45.41,benchmark/audit/data/silesia/ooffice
+ppmd8 26.03 -6,11.76,11.44,6152192,2531215,41.14,benchmark/audit/data/silesia/ooffice
+zstd 1.5.7 -9,62.94,887.60,11150,3122,28.00,benchmark/next/data/canterbury/fields.c
+independent KBC1,8.69,5.59,10085684,5049105,50.06,benchmark/audit/data/silesia/osdb
+independent KRC1,194.45,1480.84,6627202,6456219,97.42,benchmark/audit/data/silesia/reymont
+lz4 1.10.0,748.03,4401.80,14377942,7385055,51.36,benchmark/audit/data/owid-co2-data.csv
+independent KRC1,185.11,1596.90,21606400,20280972,93.87,benchmark/audit/data/silesia/samba
+independent KBC1,10.16,6.46,481861,181104,37.58,benchmark/next/data/canterbury/plrabn12.txt
+kolmo audit -1,123.09,908.72,11150,3432,30.78,benchmark/next/data/canterbury/fields.c
+bsc 3.3.12 -m0 -e1,34.83,37.45,11150,2968,26.62,benchmark/next/data/canterbury/fields.c
+lz4 1.10.0,991.59,5070.49,6152192,4338918,70.53,benchmark/audit/data/silesia/ooffice
+lz4 1.10.0,1006.30,5920.54,21606400,7716839,35.72,benchmark/audit/data/silesia/samba
+brotli 1.2.0 -8,116.13,2794.17,33553445,2043502,6.09,benchmark/audit/data/silesia/nci
+kolmo audit -1,130.90,501.01,4227,1851,43.79,benchmark/next/data/canterbury/xargs.1
+lz4 1.10.0,852.25,4247.62,11150,5215,46.77,benchmark/next/data/canterbury/fields.c
+independent KBC1,12.47,7.79,14377942,4094423,28.48,benchmark/audit/data/owid-co2-data.csv
+independent KRC1,181.00,1248.52,8474240,6652988,78.51,benchmark/audit/data/silesia/x-ray
+independent KRC1,188.05,2726.34,51220480,42483819,82.94,benchmark/audit/data/silesia/mozilla
+zstd 1.5.7 -9,113.62,1741.81,24603,7929,32.23,benchmark/next/data/canterbury/cp.html
+bsc 3.3.12 -m0 -e1,43.62,51.14,125179,37548,30.00,benchmark/next/data/canterbury/asyoulik.txt
+independent KRC1,194.00,1493.21,152089,148146,97.41,benchmark/next/data/canterbury/alice29.txt
+independent KRC1,164.17,1464.38,3721,3661,98.39,benchmark/next/data/canterbury/grammar.lsp
+zstd 1.5.7 -3,400.85,1889.69,426754,141024,33.05,benchmark/next/data/canterbury/lcet10.txt
+zstd 1.5.7 -19,8.09,1218.89,6152192,2595003,42.18,benchmark/audit/data/silesia/ooffice
+brotli 1.2.0 -8,13.76,346.81,7251944,5210389,71.85,benchmark/audit/data/silesia/sao
+independent KBC1,9.31,6.02,1950000,987191,50.63,benchmark/next/data/mitdb-100.dat
+brotli 1.2.0 -8,82.77,585.58,11150,2968,26.62,benchmark/next/data/canterbury/fields.c
+lz4 1.10.0,1135.86,4061.17,38240,18812,49.19,benchmark/next/data/canterbury/sum
+zstd 1.5.7 -3,1422.14,3676.78,513216,54420,10.60,benchmark/next/data/canterbury/ptt5
+zstd 1.5.7 -3,344.35,1468.28,152089,56970,37.46,benchmark/next/data/canterbury/alice29.txt
+zstd 1.5.7 -9,94.29,1904.62,426754,130048,30.47,benchmark/next/data/canterbury/lcet10.txt
+zstd 1.5.7 -19,8.88,1562.10,24603,7713,31.35,benchmark/next/data/canterbury/cp.html
+zstd 1.5.7 -19,6.33,2471.59,10085684,3100173,30.74,benchmark/audit/data/silesia/osdb
+zstd 1.5.7 -3,703.81,1589.23,38240,13375,34.98,benchmark/next/data/canterbury/sum
+independent KBC1,10.39,6.55,41458703,13716096,33.08,benchmark/audit/data/silesia/webster
+lz4 1.10.0,713.48,4966.17,152089,88699,58.32,benchmark/next/data/canterbury/alice29.txt
+zstd 1.5.7 -19,4.53,2687.61,6627202,1348458,20.35,benchmark/audit/data/silesia/reymont
+brotli 1.2.0 -8,60.68,517.45,125179,46715,37.32,benchmark/next/data/canterbury/asyoulik.txt
+brotli 1.2.0 -8,14.49,357.85,8474240,5349960,63.13,benchmark/audit/data/silesia/x-ray
+zstd 1.5.7 -19,8.75,1607.54,481861,167438,34.75,benchmark/next/data/canterbury/plrabn12.txt
+independent KBC1,11.28,6.74,6627202,1896676,28.62,benchmark/audit/data/silesia/reymont
+lz4 1.10.0,1670.18,8258.12,33553445,5533040,16.49,benchmark/audit/data/silesia/nci
+kolmo audit -1,149.98,1783.99,24603,8516,34.61,benchmark/next/data/canterbury/cp.html
+bsc 3.3.12 -m0 -e1,29.48,25.02,7251944,4724778,65.15,benchmark/audit/data/silesia/sao
+zstd 1.5.7 -19,5.01,5804.15,33553445,1664984,4.96,benchmark/audit/data/silesia/nci
+ppmd8 26.03 -6,29.13,26.74,6627202,1055003,15.92,benchmark/audit/data/silesia/reymont
+zstd 1.5.7 -3,171.74,490.70,3721,1291,34.69,benchmark/next/data/canterbury/grammar.lsp
+independent KBC1,9.43,6.45,11150,4627,41.50,benchmark/next/data/canterbury/fields.c
+zstd 1.5.7 -3,331.77,1628.60,481861,191684,39.78,benchmark/next/data/canterbury/plrabn12.txt
+zstd 1.5.7 -19,10.29,1373.91,38240,11107,29.05,benchmark/next/data/canterbury/sum
+zstd 1.5.7 -3,342.74,957.20,4227,1799,42.56,benchmark/next/data/canterbury/xargs.1
+ppmd8 26.03 -6,17.16,16.53,10192446,2382801,23.38,benchmark/audit/data/silesia/dickens
+zstd 1.5.7 -9,126.01,1568.82,38240,12514,32.72,benchmark/next/data/canterbury/sum
+zstd 1.5.7 -9,124.91,1986.47,51220480,16665339,32.54,benchmark/audit/data/silesia/mozilla
+independent KBC1,14.54,8.26,1029744,181354,17.61,benchmark/next/data/canterbury/kennedy.xls
+independent KBC1,8.57,5.93,6152192,3351647,54.48,benchmark/audit/data/silesia/ooffice
+zstd 1.5.7 -3,423.09,1464.10,6152192,3126146,50.81,benchmark/audit/data/silesia/ooffice
+lz4 1.10.0,1323.05,6239.93,5345280,1227495,22.96,benchmark/audit/data/silesia/xml
+brotli 1.2.0 -8,57.29,537.96,38240,11531,30.15,benchmark/next/data/canterbury/sum
+brotli 1.2.0 -8,62.11,986.57,21606400,4238292,19.62,benchmark/audit/data/silesia/samba
+bsc 3.3.12 -m0 -e1,49.26,51.39,10192446,2274294,22.31,benchmark/audit/data/silesia/dickens
+independent KBC1,9.52,6.28,125179,48442,38.70,benchmark/next/data/canterbury/asyoulik.txt
+zstd 1.5.7 -3,1349.49,3959.77,33553445,2833843,8.45,benchmark/audit/data/silesia/nci
+independent KBC1,16.09,9.32,513216,60939,11.87,benchmark/next/data/canterbury/ptt5
+lz4 1.10.0,678.96,4873.44,481861,325589,67.57,benchmark/next/data/canterbury/plrabn12.txt
+kolmo audit -1,195.85,1837.94,51220480,18318543,35.76,benchmark/audit/data/silesia/mozilla
+independent KBC1,7.92,5.28,7251944,5151099,71.03,benchmark/audit/data/silesia/sao
+zstd 1.5.7 -3,873.65,2066.90,1029744,111827,10.86,benchmark/next/data/canterbury/kennedy.xls
+zstd 1.5.7 -19,4.09,2212.74,10192446,2849941,27.96,benchmark/audit/data/silesia/dickens
+zstd 1.5.7 -9,100.54,1998.84,9970564,3316438,33.26,benchmark/audit/data/silesia/mr
+lz4 1.10.0,1039.91,5421.56,10085684,5256666,52.12,benchmark/audit/data/silesia/osdb
+zstd 1.5.7 -3,500.20,924.39,11150,3380,30.31,benchmark/next/data/canterbury/fields.c
+bsc 3.3.12 -m0 -e1,18.61,20.92,4227,1736,41.07,benchmark/next/data/canterbury/xargs.1
+lz4 1.10.0,733.98,4874.46,41458703,20139988,48.58,benchmark/audit/data/silesia/webster
+brotli 1.2.0 -8,80.28,480.45,24603,7675,31.20,benchmark/next/data/canterbury/cp.html
+zstd 1.5.7 -3,380.47,1692.04,14377942,4536630,31.55,benchmark/audit/data/owid-co2-data.csv
+independent KBC1,10.05,6.45,152089,55237,36.32,benchmark/next/data/canterbury/alice29.txt
+brotli 1.2.0 -8,69.62,1154.45,1029744,68099,6.61,benchmark/next/data/canterbury/kennedy.xls
+independent KRC1,199.72,3753.53,6152192,5893806,95.80,benchmark/audit/data/silesia/ooffice
+zstd 1.5.7 -9,93.94,1476.39,6152192,2854930,46.41,benchmark/audit/data/silesia/ooffice
+independent KBC1,14.63,8.78,33553445,5871637,17.50,benchmark/audit/data/silesia/nci
+independent KRC1,187.87,1470.26,4227,4157,98.34,benchmark/next/data/canterbury/xargs.1
+bsc 3.3.12 -m0 -e1,65.00,66.31,21606400,3968402,18.37,benchmark/audit/data/silesia/samba
+zstd 1.5.7 -3,1056.15,3558.68,5345280,635299,11.89,benchmark/audit/data/silesia/xml
+independent KRC1,192.64,1472.31,426754,415952,97.47,benchmark/next/data/canterbury/lcet10.txt
+ppmd8 26.03 -6,24.07,23.29,41458703,7145020,17.23,benchmark/audit/data/silesia/webster
+bsc 3.3.12 -m0 -e1,45.59,38.62,51220480,16107604,31.45,benchmark/audit/data/silesia/mozilla
+zstd 1.5.7 -3,332.39,1230.57,8474240,6085208,71.81,benchmark/audit/data/silesia/x-ray
+zstd 1.5.7 -3,336.88,1779.28,10192446,3663504,35.94,benchmark/audit/data/silesia/dickens
+ppmd8 26.03 -6,11.61,10.79,8474240,3969027,46.84,benchmark/audit/data/silesia/x-ray
+ppmd8 26.03 -6,19.10,18.22,10085684,2410211,23.90,benchmark/audit/data/silesia/osdb
+bsc 3.3.12 -m0 -e1,49.16,43.97,10085684,2276398,22.57,benchmark/audit/data/silesia/osdb
+brotli 1.2.0 -8,30.61,682.14,14377942,4047213,28.15,benchmark/audit/data/owid-co2-data.csv
+brotli 1.2.0 -8,32.09,353.67,1950000,979998,50.26,benchmark/next/data/mitdb-100.dat
+kolmo audit -1,397.35,2350.99,10085684,3533740,35.04,benchmark/audit/data/silesia/osdb
+brotli 1.2.0 -8,32.10,774.17,10192446,3154087,30.95,benchmark/audit/data/silesia/dickens
+zstd 1.5.7 -3,679.69,2902.28,21606400,4955117,22.93,benchmark/audit/data/silesia/samba
+lz4 1.10.0,1054.39,5072.63,1950000,1762792,90.40,benchmark/next/data/mitdb-100.dat
+ppmd8 26.03 -6,13.72,13.18,1950000,715367,36.69,benchmark/next/data/mitdb-100.dat
+bsc 3.3.12 -m0 -e1,84.37,146.60,5345280,399206,7.47,benchmark/audit/data/silesia/xml
+bsc 3.3.12 -m0 -e1,56.25,69.89,6627202,993962,15.00,benchmark/audit/data/silesia/reymont
+lz4 1.10.0,1036.21,5668.65,9970564,5440937,54.57,benchmark/audit/data/silesia/mr
+bsc 3.3.12 -m0 -e1,37.07,35.51,6152192,2587434,42.06,benchmark/audit/data/silesia/ooffice
+brotli 1.2.0 -8,30.23,612.01,51220480,16113230,31.46,benchmark/audit/data/silesia/mozilla
+kolmo audit -1,396.88,1999.13,41458703,12151927,29.31,benchmark/audit/data/silesia/webster
+independent KBC1,9.85,6.12,3721,1718,46.17,benchmark/next/data/canterbury/grammar.lsp
+independent KRC1,201.33,5263.61,7251944,7294468,100.59,benchmark/audit/data/silesia/sao
+kolmo audit -1,102.97,1474.80,152089,57022,37.49,benchmark/next/data/canterbury/alice29.txt
+lz4 1.10.0,584.36,4011.57,6627202,3181387,48.00,benchmark/audit/data/silesia/reymont
+lz4 1.10.0,1062.30,5330.88,1029744,374704,36.39,benchmark/next/data/canterbury/kennedy.xls
+ppmd8 26.03 -6,20.04,18.29,125179,36099,28.84,benchmark/next/data/canterbury/asyoulik.txt
+kolmo audit -1,322.81,1942.35,6627202,1967300,29.69,benchmark/audit/data/silesia/reymont
+ppmd8 26.03 -6,24.25,22.75,24603,6550,26.62,benchmark/next/data/canterbury/cp.html
+zstd 1.5.7 -19,3.51,1561.44,14377942,3443074,23.95,benchmark/audit/data/owid-co2-data.csv
+brotli 1.2.0 -8,41.82,928.11,41458703,9842279,23.74,benchmark/audit/data/silesia/webster
+ppmd8 26.03 -6,18.70,17.29,481861,132728,27.54,benchmark/next/data/canterbury/plrabn12.txt
+bsc 3.3.12 -m0 -e1,57.52,62.70,9970564,2231054,22.38,benchmark/audit/data/silesia/mr
+bsc 3.3.12 -m0 -e1,19.47,19.17,3721,1264,33.97,benchmark/next/data/canterbury/grammar.lsp
+zstd 1.5.7 -19,18.67,508.54,4227,1724,40.79,benchmark/next/data/canterbury/xargs.1
+zstd 1.5.7 -9,63.04,1622.20,125179,47542,37.98,benchmark/next/data/canterbury/asyoulik.txt
+kolmo audit -1,151.02,1607.76,33553445,2038889,6.08,benchmark/audit/data/silesia/nci
+zstd 1.5.7 -3,350.15,1282.30,7251944,5527504,76.22,benchmark/audit/data/silesia/sao
+zstd 1.5.7 -19,6.73,1540.80,152089,49211,32.36,benchmark/next/data/canterbury/alice29.txt
+ppmd8 26.03 -6,27.79,26.26,21606400,3979189,18.42,benchmark/audit/data/silesia/samba
+ppmd8 26.03 -6,94.94,91.21,33553445,2154413,6.42,benchmark/audit/data/silesia/nci
+lz4 1.10.0,438.26,3274.21,4227,2658,62.88,benchmark/next/data/canterbury/xargs.1
+zstd 1.5.7 -3,408.23,2064.71,41458703,12096850,29.18,benchmark/audit/data/silesia/webster
+independent KRC1,164.07,5371.29,1950000,1961462,100.59,benchmark/next/data/mitdb-100.dat
+kolmo audit -1,132.21,1571.61,481861,191736,39.79,benchmark/next/data/canterbury/plrabn12.txt
+independent KRC1,194.73,1490.35,10192446,9933704,97.46,benchmark/audit/data/silesia/dickens
+independent KBC1,9.89,6.47,51220480,22429244,43.79,benchmark/audit/data/silesia/mozilla
+zstd 1.5.7 -3,584.55,2465.49,10085684,3501457,34.72,benchmark/audit/data/silesia/osdb
+brotli 1.2.0 -8,57.32,720.06,426754,128078,30.01,benchmark/next/data/canterbury/lcet10.txt
+zstd 1.5.7 -19,5.54,4148.61,513216,43640,8.50,benchmark/next/data/canterbury/ptt5
+zstd 1.5.7 -3,418.91,2057.37,6627202,1937973,29.24,benchmark/audit/data/silesia/reymont
+zstd 1.5.7 -19,6.88,1935.83,9970564,3107144,31.16,benchmark/audit/data/silesia/mr
+kolmo audit -1,48.57,1728.36,38240,13427,35.11,benchmark/next/data/canterbury/sum
+lz4 1.10.0,810.44,5162.02,125179,79653,63.63,benchmark/next/data/canterbury/asyoulik.txt
+zstd 1.5.7 -9,94.48,2426.45,6627202,1670539,25.21,benchmark/audit/data/silesia/reymont
+kolmo audit -1,299.44,1667.82,10192446,3721196,36.51,benchmark/audit/data/silesia/dickens
+bsc 3.3.12 -m0 -e1,84.24,102.66,33553445,1225330,3.65,benchmark/audit/data/silesia/nci
+brotli 1.2.0 -8,122.24,1437.00,513216,48409,9.43,benchmark/next/data/canterbury/ptt5
+independent KBC1,10.80,6.72,21606400,7202525,33.34,benchmark/audit/data/silesia/samba
+lz4 1.10.0,1056.01,5784.70,51220480,26435667,51.61,benchmark/audit/data/silesia/mozilla
+independent KRC1,190.32,1479.00,41458703,40406067,97.46,benchmark/audit/data/silesia/webster
+lz4 1.10.0,471.31,3574.45,3721,1912,51.38,benchmark/next/data/canterbury/grammar.lsp
+zstd 1.5.7 -9,241.36,4240.02,513216,49956,9.73,benchmark/next/data/canterbury/ptt5
+kolmo audit -1,298.68,429.38,3721,1343,36.09,benchmark/next/data/canterbury/grammar.lsp
+kolmo audit -1,247.10,835.43,9970564,2316612,23.23,benchmark/audit/data/silesia/mr
+zstd 1.5.7 -9,96.43,520.31,4227,1747,41.33,benchmark/next/data/canterbury/xargs.1
+independent KRC1,196.08,1386.40,125179,122038,97.49,benchmark/next/data/canterbury/asyoulik.txt
+zstd 1.5.7 -9,65.81,465.12,3721,1241,33.35,benchmark/next/data/canterbury/grammar.lsp
+zstd 1.5.7 -3,284.43,1292.00,1950000,1149878,58.97,benchmark/next/data/mitdb-100.dat
+lz4 1.10.0,1105.75,4920.60,24603,11905,48.39,benchmark/next/data/canterbury/cp.html
+ppmd8 26.03 -6,16.09,14.17,51220480,16132523,31.50,benchmark/audit/data/silesia/mozilla
+lz4 1.10.0,2145.10,8646.70,513216,86885,16.93,benchmark/next/data/canterbury/ptt5
+kolmo audit -1,150.46,1721.07,426754,141076,33.06,benchmark/next/data/canterbury/lcet10.txt
+brotli 1.2.0 -8,130.57,1826.48,5345280,485154,9.08,benchmark/audit/data/silesia/xml
+bsc 3.3.12 -m0 -e1,41.65,48.17,1950000,645134,33.08,benchmark/next/data/mitdb-100.dat
+zstd 1.5.7 -3,421.43,1897.30,9970564,3547526,35.58,benchmark/audit/data/silesia/mr
+zstd 1.5.7 -9,162.43,2146.61,1029744,111058,10.79,benchmark/next/data/canterbury/kennedy.xls
+brotli 1.2.0 -8,61.83,623.58,152089,51187,33.66,benchmark/next/data/canterbury/alice29.txt
+bsc 3.3.12 -m0 -e1,46.78,55.41,481861,135946,28.21,benchmark/next/data/canterbury/plrabn12.txt
+independent KBC1,8.92,5.60,4227,2236,52.90,benchmark/next/data/canterbury/xargs.1
+kolmo audit -1,297.44,1373.58,8474240,3657342,43.16,benchmark/audit/data/silesia/x-ray
+brotli 1.2.0 -8,45.69,570.93,481861,178163,36.97,benchmark/next/data/canterbury/plrabn12.txt
+kolmo audit -1,136.63,696.14,1950000,689673,35.37,benchmark/next/data/mitdb-100.dat
+brotli 1.2.0 -8,21.12,411.76,6152192,2771858,45.05,benchmark/audit/data/silesia/ooffice
+brotli 1.2.0 -8,59.70,309.57,3721,1186,31.87,benchmark/next/data/canterbury/grammar.lsp
+zstd 1.5.7 -9,65.42,1754.04,152089,52188,34.31,benchmark/next/data/canterbury/alice29.txt
+independent KBC1,8.57,5.49,8474240,5005901,59.07,benchmark/audit/data/silesia/x-ray
+independent KBC1,12.18,7.25,5345280,1213810,22.71,benchmark/audit/data/silesia/xml
+independent KRC1,213.29,5184.11,10085684,10144807,100.59,benchmark/audit/data/silesia/osdb
+zstd 1.5.7 -9,102.76,1545.24,7251944,5215722,71.92,benchmark/audit/data/silesia/sao
+zstd 1.5.7 -3,609.36,1570.47,24603,8464,34.40,benchmark/next/data/canterbury/cp.html
+ppmd8 26.03 -6,17.98,17.43,38240,11417,29.86,benchmark/next/data/canterbury/sum
+kolmo audit -1,333.92,943.35,14377942,1344603,9.35,benchmark/audit/data/owid-co2-data.csv
+zstd 1.5.7 -9,85.27,1850.42,14377942,4033414,28.05,benchmark/audit/data/owid-co2-data.csv
+zstd 1.5.7 -19,6.93,1344.61,1029744,64825,6.30,benchmark/next/data/canterbury/kennedy.xls
+bsc 3.3.12 -m0 -e1,118.03,143.67,513216,47118,9.18,benchmark/next/data/canterbury/ptt5
+independent KRC1,187.67,1274.52,14377942,13513069,93.98,benchmark/audit/data/owid-co2-data.csv
+brotli 1.2.0 -8,61.58,371.60,4227,1649,39.01,benchmark/next/data/canterbury/xargs.1
+brotli 1.2.0 -8,41.39,932.00,6627202,1558662,23.52,benchmark/audit/data/silesia/reymont
+independent KRC1,164.75,1327.54,9970564,7318198,73.40,benchmark/audit/data/silesia/mr
+ppmd8 26.03 -6,63.83,59.98,5345280,421788,7.89,benchmark/audit/data/silesia/xml
+independent KRC1,138.65,2742.64,513216,134101,26.13,benchmark/next/data/canterbury/ptt5
+lz4 1.10.0,3149.01,20241.05,8474240,8390195,99.01,benchmark/audit/data/silesia/x-ray
+ppmd8 26.03 -6,19.87,19.12,14377942,3343887,23.26,benchmark/audit/data/owid-co2-data.csv
+zstd 1.5.7 -9,80.18,1413.77,1950000,1024045,52.52,benchmark/next/data/mitdb-100.dat
+zstd 1.5.7 -9,97.62,2460.18,41458703,10258407,24.74,benchmark/audit/data/silesia/webster
+independent KBC1,10.08,6.38,10192446,3767805,36.97,benchmark/audit/data/silesia/dickens
+brotli 1.2.0 -8,32.18,664.67,9970564,3186089,31.95,benchmark/audit/data/silesia/mr
+ppmd8 26.03 -6,24.10,25.33,1029744,131443,12.76,benchmark/next/data/canterbury/kennedy.xls
+bsc 3.3.12 -m0 -e1,51.19,51.58,14377942,3149226,21.90,benchmark/audit/data/owid-co2-data.csv
+bsc 3.3.12 -m0 -e1,35.89,37.88,38240,12038,31.48,benchmark/next/data/canterbury/sum
+independent KBC1,11.94,6.89,9970564,2904701,29.13,benchmark/audit/data/silesia/mr
+bsc 3.3.12 -m0 -e1,31.97,34.73,8474240,3806826,44.92,benchmark/audit/data/silesia/x-ray
+independent KRC1,234.09,2496.60,1029744,1023411,99.38,benchmark/next/data/canterbury/kennedy.xls
+zstd 1.5.7 -9,80.07,1711.26,481861,179363,37.22,benchmark/next/data/canterbury/plrabn12.txt
+independent KBC1,9.22,6.25,24603,10274,41.76,benchmark/next/data/canterbury/cp.html
+lz4 1.10.0,654.68,4606.58,10192446,6428742,63.07,benchmark/audit/data/silesia/dickens
+independent KRC1,171.20,1323.95,24603,24017,97.62,benchmark/next/data/canterbury/cp.html
+bsc 3.3.12 -m0 -e1,46.92,53.79,41458703,6492644,15.66,benchmark/audit/data/silesia/webster
+zstd 1.5.7 -19,7.06,3032.94,21606400,3897788,18.04,benchmark/audit/data/silesia/samba
+ppmd8 26.03 -6,21.36,19.05,4227,1492,35.30,benchmark/next/data/canterbury/xargs.1
+brotli 1.2.0 -8,35.05,793.45,10085684,3149918,31.23,benchmark/audit/data/silesia/osdb
+zstd 1.5.7 -9,215.08,4498.92,5345280,516930,9.67,benchmark/audit/data/silesia/xml
+lz4 1.10.0,1182.17,8191.79,7251944,6790273,93.63,benchmark/audit/data/silesia/sao

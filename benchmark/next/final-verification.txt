@@ -1,0 +1,1 @@
+FINAL EVIDENCE PASSED: 32 frozen hashes, 256 configurations, 1280 verified runs; KRC sizes agree

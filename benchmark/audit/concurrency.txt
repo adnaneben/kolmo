@@ -1,0 +1,5 @@
+Serial version: 5 bytes: 585
+Concurrent background calls: 6430
+Concurrent versions: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+Metadata mismatches: 12
+All current-decoder round trips passed.

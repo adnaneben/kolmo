@@ -1,0 +1,10 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+lz4 1.10.0,1031.65,5614.36,51220480,26461359,51.66,benchmark/audit/data/silesia/mozilla
+zstd 1.5.7 -1,784.49,1880.65,51220480,20052683,39.15,benchmark/audit/data/silesia/mozilla
+zstd 1.5.7 -3,601.13,1911.92,51220480,18547442,36.21,benchmark/audit/data/silesia/mozilla
+lz4 1.10.0,1733.58,8360.19,33553445,5563919,16.58,benchmark/audit/data/silesia/nci
+zstd 1.5.7 -1,1507.35,3986.82,33553445,2877839,8.58,benchmark/audit/data/silesia/nci
+zstd 1.5.7 -3,1377.79,3891.42,33553445,2896840,8.63,benchmark/audit/data/silesia/nci
+lz4 1.10.0,754.45,4348.00,14377942,7392769,51.42,benchmark/audit/data/owid-co2-data.csv
+zstd 1.5.7 -1,731.82,2064.55,14377942,4108602,28.58,benchmark/audit/data/owid-co2-data.csv
+zstd 1.5.7 -3,400.81,1727.73,14377942,4464593,31.05,benchmark/audit/data/owid-co2-data.csv

@@ -1,0 +1,18 @@
+input_bytes=0 output_bytes=32 codec_seconds=0.000002000 requested_threads=10 process_peak_rss_bytes=1703936 verified=1
+input_bytes=32 output_bytes=0 codec_seconds=0.000002000 requested_threads=10 process_peak_rss_bytes=1703936 verified=1
+input_bytes=1 output_bytes=45 codec_seconds=0.000600000 requested_threads=10 process_peak_rss_bytes=6258688 verified=1
+input_bytes=45 output_bytes=1 codec_seconds=0.000001000 requested_threads=10 process_peak_rss_bytes=1703936 verified=1
+input_bytes=3 output_bytes=47 codec_seconds=0.000630000 requested_threads=10 process_peak_rss_bytes=6258688 verified=1
+input_bytes=47 output_bytes=3 codec_seconds=0.000001000 requested_threads=10 process_peak_rss_bytes=1703936 verified=1
+input_bytes=4 output_bytes=48 codec_seconds=0.000524000 requested_threads=10 process_peak_rss_bytes=6258688 verified=1
+input_bytes=48 output_bytes=4 codec_seconds=0.000001000 requested_threads=10 process_peak_rss_bytes=1703936 verified=1
+input_bytes=1025 output_bytes=1069 codec_seconds=0.000688000 requested_threads=10 process_peak_rss_bytes=6258688 verified=1
+input_bytes=1069 output_bytes=1025 codec_seconds=0.000007000 requested_threads=10 process_peak_rss_bytes=1703936 verified=1
+input_bytes=65539 output_bytes=65583 codec_seconds=0.011676000 requested_threads=10 process_peak_rss_bytes=6553600 verified=1
+input_bytes=65583 output_bytes=65539 codec_seconds=0.000284000 requested_threads=10 process_peak_rss_bytes=1884160 verified=1
+input_bytes=262145 output_bytes=262201 codec_seconds=0.035229000 requested_threads=10 process_peak_rss_bytes=11862016 verified=1
+input_bytes=262201 output_bytes=262145 codec_seconds=0.000921000 requested_threads=10 process_peak_rss_bytes=2277376 verified=1
+input_bytes=877984 output_bytes=8388608 codec_seconds=0.015831000 requested_threads=10 process_peak_rss_bytes=11141120 verified=1
+8MiB numeric CLI, threads 1 input_bytes=8388608 output_bytes=877984 codec_seconds=0.279003000 requested_threads=1 process_peak_rss_bytes=31555584 verified=1
+8MiB numeric CLI, threads 10 input_bytes=8388608 output_bytes=877984 codec_seconds=0.060673000 requested_threads=10 process_peak_rss_bytes=72744960 verified=1
+KBC CLI TESTS PASSED (7 boundary lengths; numeric 8MiB 1/10-thread exact frames; decode; invalid arguments; size limit)

@@ -1,0 +1,1 @@
+CLI TESTS PASSED (six lengths; CPU round trips; unavailable GPU fallback; required-GPU refusal)

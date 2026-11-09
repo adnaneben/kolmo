@@ -1,0 +1,187 @@
+{
+  "suite": "board",
+  "seed": 20261108,
+  "repeats": 3,
+  "statistic": "median",
+  "lzbench_sha256": "d2e3a9aeb9e8d28fa26faa83a70e6519912a2c2b55b0052f478a95ad6dc27195",
+  "inputs": [
+    {
+      "path": "benchmark/ratio/data/silesia.tar",
+      "sha256": "a667bac80089b3d04d5496772149e632f0758974b0579d743cd8d6e5e0d63eb2"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/usr/bin/time",
+        "-l",
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,3",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/silesia.tar"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.6614341735839844,
+      "process_peak_rss_bytes": 666091520
+    },
+    {
+      "argv": [
+        "/usr/bin/time",
+        "-l",
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebrotli,8",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/silesia.tar"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 19.01354193687439,
+      "process_peak_rss_bytes": 993443840
+    },
+    {
+      "argv": [
+        "/usr/bin/time",
+        "-l",
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-eppmd8,6",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/silesia.tar"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 62.1920702457428,
+      "process_peak_rss_bytes": 698138624
+    },
+    {
+      "argv": [
+        "/usr/bin/time",
+        "-l",
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekbc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/silesia.tar"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 152.2269802093506,
+      "process_peak_rss_bytes": 669728768
+    },
+    {
+      "argv": [
+        "/usr/bin/time",
+        "-l",
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-elz4",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/silesia.tar"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.8063280582427979,
+      "process_peak_rss_bytes": 664584192
+    },
+    {
+      "argv": [
+        "/usr/bin/time",
+        "-l",
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekolmo,1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/silesia.tar"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 2.465520143508911,
+      "process_peak_rss_bytes": 757170176
+    },
+    {
+      "argv": [
+        "/usr/bin/time",
+        "-l",
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ekrc",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/silesia.tar"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 3.789463996887207,
+      "process_peak_rss_bytes": 667910144
+    },
+    {
+      "argv": [
+        "/usr/bin/time",
+        "-l",
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ebsc1",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/silesia.tar"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 27.29694104194641,
+      "process_peak_rss_bytes": 1656930304
+    },
+    {
+      "argv": [
+        "/usr/bin/time",
+        "-l",
+        "/tmp/kolmo-lzbench-audit/lzbench",
+        "-ezstd,19",
+        "-I1",
+        "-T1",
+        "-t0,0",
+        "-i3,3",
+        "-p3",
+        "-o4",
+        "-q",
+        "benchmark/ratio/data/silesia.tar"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 113.10049414634705,
+      "process_peak_rss_bytes": 749993984
+    }
+  ],
+  "compiler": "Apple clang 21; -mcpu=native; lzbench default -O3"
+}

@@ -1,0 +1,2 @@
+process_peak_rss_bytes=19562496 requested_metal_buffer_bytes=0
+backend=cpu bytes=8388608 output=876576 complete_seconds=0.019618000 setup_seconds=0.000000000 device_seconds=0.000000000 verified=1

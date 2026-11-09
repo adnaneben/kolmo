@@ -1,0 +1,3 @@
+Running the pinned paired gate with evidence destinations redirected only
+CHECKPOINT SOURCE GATE PASSED
+DEFAULT FRAME AND PERFORMANCE GATES PASSED (paired medians; slowdown threshold 5%)

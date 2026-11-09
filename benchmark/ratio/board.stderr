@@ -1,0 +1,171 @@
+/tmp/kolmo-lzbench-audit/lzbench -ezstd,3 -I1 -T1 -t0,0 -i3,3 -p3 -o4 -q benchmark/ratio/data/silesia.tar
+        1.65 real         1.54 user         0.07 sys
+           666091520  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               40833  page reclaims
+                   9  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+                1527  involuntary context switches
+         23046193789  instructions retired
+          7014649803  cycles elapsed
+           665289592  peak memory footprint
+/tmp/kolmo-lzbench-audit/lzbench -ebrotli,8 -I1 -T1 -t0,0 -i3,3 -p3 -o4 -q benchmark/ratio/data/silesia.tar
+       19.01 real        18.81 user         0.17 sys
+           993443840  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               60818  page reclaims
+                   3  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+                3634  involuntary context switches
+        327672188016  instructions retired
+         83331805488  cycles elapsed
+           992675016  peak memory footprint
+/tmp/kolmo-lzbench-audit/lzbench -eppmd8,6 -I1 -T1 -t0,0 -i3,3 -p3 -o4 -q benchmark/ratio/data/silesia.tar
+       62.18 real        61.74 user         0.37 sys
+           698138624  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               42786  page reclaims
+                  11  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+               11523  involuntary context switches
+        697540531984  instructions retired
+        271503110730  cycles elapsed
+           697615272  peak memory footprint
+/tmp/kolmo-lzbench-audit/lzbench -ekbc -I1 -T1 -t0,0 -i3,3 -p3 -o4 -q benchmark/ratio/data/silesia.tar
+      152.22 real       151.31 user         0.76 sys
+           669728768  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               41060  page reclaims
+                   2  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+               23492  involuntary context switches
+       1256723017352  instructions retired
+        675631142185  cycles elapsed
+           669172648  peak memory footprint
+/tmp/kolmo-lzbench-audit/lzbench -elz4 -I1 -T1 -t0,0 -i3,3 -p3 -o4 -q benchmark/ratio/data/silesia.tar
+        0.80 real         0.75 user         0.04 sys
+           664584192  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               40747  page reclaims
+                   2  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+                 135  involuntary context switches
+          8488424667  instructions retired
+          3500300830  cycles elapsed
+           663995256  peak memory footprint
+/tmp/kolmo-lzbench-audit/lzbench -ekolmo,1 -I1 -T1 -t0,0 -i3,3 -p3 -o4 -q benchmark/ratio/data/silesia.tar
+        2.46 real         2.39 user         0.06 sys
+           757170176  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               46396  page reclaims
+                   4  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+                 535  involuntary context switches
+         36970755785  instructions retired
+         10616635929  cycles elapsed
+           756237344  peak memory footprint
+/tmp/kolmo-lzbench-audit/lzbench -ekrc -I1 -T1 -t0,0 -i3,3 -p3 -o4 -q benchmark/ratio/data/silesia.tar
+        3.78 real         3.71 user         0.06 sys
+           667910144  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               40950  page reclaims
+                   2  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+                 693  involuntary context switches
+         99800261014  instructions retired
+         16418493998  cycles elapsed
+           667386792  peak memory footprint
+/tmp/kolmo-lzbench-audit/lzbench -ebsc1 -I1 -T1 -t0,0 -i3,3 -p3 -o4 -q benchmark/ratio/data/silesia.tar
+       27.29 real        26.95 user         0.30 sys
+          1656930304  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              101312  page reclaims
+                   4  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+                4054  involuntary context switches
+        340266613006  instructions retired
+        119296891736  cycles elapsed
+          1656669792  peak memory footprint
+/tmp/kolmo-lzbench-audit/lzbench -ezstd,19 -I1 -T1 -t0,0 -i3,3 -p3 -o4 -q benchmark/ratio/data/silesia.tar
+      113.09 real       112.41 user         0.58 sys
+           749993984  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               45958  page reclaims
+                   4  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+               17828  involuntary context switches
+       1112739985230  instructions retired
+        501926551983  cycles elapsed
+           749241280  peak memory footprint

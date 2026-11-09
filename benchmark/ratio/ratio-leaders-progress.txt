@@ -1,0 +1,2 @@
+ratio-leaders: 1/1 verified zpaq,5 silesia.tar
+MATRIX PASSED 1 configurations; 1 compression/decompression sample pairs

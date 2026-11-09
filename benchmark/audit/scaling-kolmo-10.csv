@@ -1,0 +1,7 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo 1MiB -0,2503.26,37157.81,51220480,26454960,51.65,benchmark/audit/data/silesia/mozilla
+kolmo 1MiB -1,276.09,13073.68,51220480,18547715,36.21,benchmark/audit/data/silesia/mozilla
+kolmo 1MiB -0,9911.84,51309.91,33553445,5564591,16.58,benchmark/audit/data/silesia/nci
+kolmo 1MiB -1,830.06,9292.87,33553445,2205277,6.57,benchmark/audit/data/silesia/nci
+kolmo 1MiB -0,1502.53,6301.17,14377942,1787661,12.43,benchmark/audit/data/owid-co2-data.csv
+kolmo 1MiB -1,1473.62,5817.01,14377942,1356592,9.44,benchmark/audit/data/owid-co2-data.csv

@@ -1,0 +1,1 @@
+PERFORMANCE COMPARISON PASSED (90 randomized runs; identical frames across versions and thread counts)

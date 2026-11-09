@@ -1,0 +1,8 @@
+{
+  "source": "https://github.com/DataCompression/corpus-collection/tree/main/Silesia-Corpus",
+  "download": "https://raw.githubusercontent.com/DataCompression/corpus-collection/main/Silesia-Corpus/silesia.tar.gz",
+  "path": "benchmark/ratio/data/silesia.tar",
+  "bytes": 211947520,
+  "sha256": "a667bac80089b3d04d5496772149e632f0758974b0579d743cd8d6e5e0d63eb2",
+  "note": "Downloaded board-linked tar; equality with the published board artifact is not independently proven."
+}

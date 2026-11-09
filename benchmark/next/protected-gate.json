@@ -1,0 +1,71 @@
+{
+  "default_frames_identical": true,
+  "repeats": 5,
+  "max_slowdown": 1.05,
+  "passed": true,
+  "measurements": [
+    {
+      "file": "silesia/mozilla",
+      "threads": 1,
+      "checkpoint_mbps": 207.62081896346783,
+      "current_mbps": 208.7754433923736,
+      "elapsed_ratio": 0.9944695390887723
+    },
+    {
+      "file": "silesia/mozilla",
+      "threads": 4,
+      "checkpoint_mbps": 667.444997711463,
+      "current_mbps": 662.5465505086763,
+      "elapsed_ratio": 1.0073933630761882
+    },
+    {
+      "file": "silesia/mozilla",
+      "threads": 10,
+      "checkpoint_mbps": 989.1775679727408,
+      "current_mbps": 994.8871399300313,
+      "elapsed_ratio": 0.9942610857773354
+    },
+    {
+      "file": "silesia/nci",
+      "threads": 1,
+      "checkpoint_mbps": 165.05005464022435,
+      "current_mbps": 165.0584434568011,
+      "elapsed_ratio": 0.999949176689171
+    },
+    {
+      "file": "silesia/nci",
+      "threads": 4,
+      "checkpoint_mbps": 474.06657926935014,
+      "current_mbps": 473.9627838560189,
+      "elapsed_ratio": 1.000218994859653
+    },
+    {
+      "file": "silesia/nci",
+      "threads": 10,
+      "checkpoint_mbps": 646.6466718219656,
+      "current_mbps": 656.2299013555953,
+      "elapsed_ratio": 0.9853965363147376
+    },
+    {
+      "file": "owid-co2-data.csv",
+      "threads": 1,
+      "checkpoint_mbps": 349.42195683306403,
+      "current_mbps": 348.5519448249162,
+      "elapsed_ratio": 1.0024960756095762
+    },
+    {
+      "file": "owid-co2-data.csv",
+      "threads": 4,
+      "checkpoint_mbps": 1067.8837530538942,
+      "current_mbps": 1074.370452466602,
+      "elapsed_ratio": 0.9939623251944285
+    },
+    {
+      "file": "owid-co2-data.csv",
+      "threads": 10,
+      "checkpoint_mbps": 1268.7492251182687,
+      "current_mbps": 1273.727523087825,
+      "elapsed_ratio": 0.9960915518591548
+    }
+  ]
+}

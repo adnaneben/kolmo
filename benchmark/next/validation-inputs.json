@@ -1,0 +1,26 @@
+{
+  "note": "Frozen after GPU execution-layout tuning, before final validation. Codec model and format unchanged.",
+  "files": [
+    {
+      "path": "benchmark/next/data/validation-large/E.coli",
+      "family": "final-validation-large",
+      "bytes": 4638690,
+      "sha256": "9125dfd87315961ef4286f3856098069e050cc3a2abe65735fe43e69d1996f40",
+      "source": "https://corpus.canterbury.ac.nz/resources/large.tar.gz"
+    },
+    {
+      "path": "benchmark/next/data/validation-large/bible.txt",
+      "family": "final-validation-large",
+      "bytes": 4047392,
+      "sha256": "4e0a7e8dff7d9c82dbded57305c0ca3cdd3c4ca014db27121782fe9710f4723f",
+      "source": "https://corpus.canterbury.ac.nz/resources/large.tar.gz"
+    },
+    {
+      "path": "benchmark/next/data/validation-large/world192.txt",
+      "family": "final-validation-large",
+      "bytes": 2473400,
+      "sha256": "1aebdc97d29904b25791da9aa32be90b69d7da6dc0ac9b95512ed27ed40d2112",
+      "source": "https://corpus.canterbury.ac.nz/resources/large.tar.gz"
+    }
+  ]
+}

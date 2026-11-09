@@ -1,0 +1,127 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+ppmd8 26.03 -6,21.48,14.51,377109,103530,27.45,benchmark/ratio/data/calgary/news
+bsc 3.3.12 -m0 -e1,45.95,55.74,768771,214168,27.86,benchmark/ratio/data/calgary/book1
+lz4 1.10.0,912.91,5308.33,377109,222770,59.07,benchmark/ratio/data/calgary/news
+zstd 1.5.7 -19,6.68,1708.42,111261,31936,28.70,benchmark/ratio/data/calgary/bib
+zstd 1.5.7 -3,589.20,1947.68,111261,37034,33.29,benchmark/ratio/data/calgary/bib
+lz4 1.10.0,1295.11,6371.56,21504,12925,60.11,benchmark/ratio/data/calgary/obj1
+zstd 1.5.7 -19,9.79,1485.45,39611,12790,32.29,benchmark/ratio/data/calgary/progc
+zstd 1.5.7 -19,8.93,1563.56,53161,17618,33.14,benchmark/ratio/data/calgary/paper1
+ppmd8 26.03 -6,15.87,14.75,21504,9479,44.08,benchmark/ratio/data/calgary/obj1
+independent KRC1,198.37,1595.10,39611,38640,97.55,benchmark/ratio/data/calgary/progc
+ppmd8 26.03 -6,18.97,17.72,768771,210123,27.33,benchmark/ratio/data/calgary/book1
+ppmd8 26.03 -6,22.22,20.93,39611,10916,27.56,benchmark/ratio/data/calgary/progc
+lz4 1.10.0,955.37,5277.29,111261,56688,50.95,benchmark/ratio/data/calgary/bib
+zstd 1.5.7 -3,393.19,1801.94,610856,203784,33.36,benchmark/ratio/data/calgary/book2
+brotli 1.2.0 -8,68.32,538.53,246814,73530,29.79,benchmark/ratio/data/calgary/obj2
+bsc 3.3.12 -m0 -e1,43.27,50.06,246814,72546,29.39,benchmark/ratio/data/calgary/obj2
+ppmd8 26.03 -6,35.32,32.10,93695,14522,15.50,benchmark/ratio/data/calgary/trans
+ppmd8 26.03 -6,23.19,21.93,610856,139821,22.89,benchmark/ratio/data/calgary/book2
+bsc 3.3.12 -m0 -e1,54.98,64.52,71646,14776,20.62,benchmark/ratio/data/calgary/progl
+zstd 1.5.7 -19,7.79,1393.20,82199,27557,33.52,benchmark/ratio/data/calgary/paper2
+independent KBC1,8.80,5.17,102400,62401,60.94,benchmark/ratio/data/calgary/geo
+lz4 1.10.0,893.06,3757.80,39611,20903,52.77,benchmark/ratio/data/calgary/progc
+lz4 1.10.0,871.37,4736.60,82199,47824,58.18,benchmark/ratio/data/calgary/paper2
+kolmo audit -1,131.77,1735.07,246814,83371,33.78,benchmark/ratio/data/calgary/obj2
+independent KRC1,202.26,1395.69,82199,80149,97.51,benchmark/ratio/data/calgary/paper2
+brotli 1.2.0 -8,92.76,994.11,93695,17593,18.78,benchmark/ratio/data/calgary/trans
+kolmo audit -1,92.95,2223.48,49379,12196,24.70,benchmark/ratio/data/calgary/progp
+independent KBC1,9.34,6.56,610856,232476,38.06,benchmark/ratio/data/calgary/book2
+independent KBC1,16.25,9.65,513216,60939,11.87,benchmark/ratio/data/calgary/pic
+kolmo audit -1,93.94,1774.09,82199,30661,37.30,benchmark/ratio/data/calgary/paper2
+zstd 1.5.7 -19,8.77,1707.75,768771,264765,34.44,benchmark/ratio/data/calgary/book1
+kolmo audit -1,141.83,1754.50,610856,203836,33.37,benchmark/ratio/data/calgary/book2
+lz4 1.10.0,2635.51,24579.93,102400,98299,96.00,benchmark/ratio/data/calgary/geo
+independent KBC1,8.92,6.25,377109,166042,44.03,benchmark/ratio/data/calgary/news
+lz4 1.10.0,1321.69,5770.46,71646,26986,37.67,benchmark/ratio/data/calgary/progl
+bsc 3.3.12 -m0 -e1,29.25,28.97,102400,55132,53.84,benchmark/ratio/data/calgary/geo
+brotli 1.2.0 -8,42.12,623.52,768771,281120,36.57,benchmark/ratio/data/calgary/book1
+independent KRC1,195.69,1503.68,377109,366815,97.27,benchmark/ratio/data/calgary/news
+independent KRC1,142.86,2773.53,513216,134101,26.13,benchmark/ratio/data/calgary/pic
+brotli 1.2.0 -8,52.90,696.23,610856,182985,29.96,benchmark/ratio/data/calgary/book2
+bsc 3.3.12 -m0 -e1,45.16,53.45,377109,111362,29.53,benchmark/ratio/data/calgary/news
+bsc 3.3.12 -m0 -e1,49.84,63.19,111261,26272,23.61,benchmark/ratio/data/calgary/bib
+bsc 3.3.12 -m0 -e1,25.41,24.41,21504,10666,49.60,benchmark/ratio/data/calgary/obj1
+kolmo audit -1,72.36,1225.44,102400,53537,52.28,benchmark/ratio/data/calgary/geo
+zstd 1.5.7 -3,724.61,2259.56,71646,17565,24.52,benchmark/ratio/data/calgary/progl
+ppmd8 26.03 -6,27.02,25.05,111261,23985,21.56,benchmark/ratio/data/calgary/bib
+lz4 1.10.0,697.42,4810.69,610856,333498,54.60,benchmark/ratio/data/calgary/book2
+zstd 1.5.7 -3,440.51,1580.47,102400,69219,67.60,benchmark/ratio/data/calgary/geo
+brotli 1.2.0 -8,74.65,588.50,53161,18146,34.13,benchmark/ratio/data/calgary/paper1
+bsc 3.3.12 -m0 -e1,43.95,52.43,82199,23944,29.13,benchmark/ratio/data/calgary/paper2
+zstd 1.5.7 -3,584.31,1703.70,39611,14161,35.75,benchmark/ratio/data/calgary/progc
+brotli 1.2.0 -8,76.62,852.09,71646,15482,21.61,benchmark/ratio/data/calgary/progl
+brotli 1.2.0 -8,123.47,1408.00,513216,48409,9.43,benchmark/ratio/data/calgary/pic
+brotli 1.2.0 -8,64.19,558.63,82199,28688,34.90,benchmark/ratio/data/calgary/paper2
+independent KRC1,199.65,3440.64,21504,19057,88.62,benchmark/ratio/data/calgary/obj1
+independent KBC1,10.54,7.05,71646,24426,34.09,benchmark/ratio/data/calgary/progl
+independent KBC1,10.06,6.78,93695,33474,35.73,benchmark/ratio/data/calgary/trans
+brotli 1.2.0 -8,76.91,575.47,39611,12824,32.37,benchmark/ratio/data/calgary/progc
+kolmo audit -1,79.99,1858.87,111261,37086,33.33,benchmark/ratio/data/calgary/bib
+independent KRC1,198.05,1495.77,53161,51844,97.52,benchmark/ratio/data/calgary/paper1
+zstd 1.5.7 -3,438.10,1815.21,377109,137881,36.56,benchmark/ratio/data/calgary/news
+kolmo audit -1,99.89,1521.10,39611,14213,35.88,benchmark/ratio/data/calgary/progc
+zstd 1.5.7 -3,445.32,1709.52,82199,30609,37.24,benchmark/ratio/data/calgary/paper2
+zstd 1.5.7 -3,486.97,1763.51,53161,19498,36.68,benchmark/ratio/data/calgary/paper1
+zstd 1.5.7 -3,771.55,2139.19,49379,12144,24.59,benchmark/ratio/data/calgary/progp
+independent KBC1,9.59,6.31,39611,17173,43.35,benchmark/ratio/data/calgary/progc
+lz4 1.10.0,907.45,3943.99,53161,28933,54.43,benchmark/ratio/data/calgary/paper1
+zstd 1.5.7 -19,15.01,749.73,102400,63051,61.57,benchmark/ratio/data/calgary/geo
+zstd 1.5.7 -19,5.36,4302.22,513216,43640,8.50,benchmark/ratio/data/calgary/pic
+independent KRC1,197.99,1482.96,610856,595381,97.47,benchmark/ratio/data/calgary/book2
+ppmd8 26.03 -6,21.62,19.87,82199,22345,27.18,benchmark/ratio/data/calgary/paper2
+ppmd8 26.03 -6,13.18,11.85,102400,55504,54.20,benchmark/ratio/data/calgary/geo
+brotli 1.2.0 -8,74.32,610.07,111261,32599,29.30,benchmark/ratio/data/calgary/bib
+independent KBC1,8.86,6.27,21504,11737,54.58,benchmark/ratio/data/calgary/obj1
+kolmo audit -1,140.79,1590.15,768771,305340,39.72,benchmark/ratio/data/calgary/book1
+kolmo audit -1,73.23,2308.11,71646,17617,24.59,benchmark/ratio/data/calgary/progl
+kolmo audit -1,125.20,1676.58,53161,19550,36.78,benchmark/ratio/data/calgary/paper1
+lz4 1.10.0,1393.23,6732.90,93695,30036,32.06,benchmark/ratio/data/calgary/trans
+ppmd8 26.03 -6,22.53,20.19,53161,14554,27.38,benchmark/ratio/data/calgary/paper1
+independent KBC1,10.05,6.47,768771,298472,38.82,benchmark/ratio/data/calgary/book1
+lz4 1.10.0,2249.10,9137.49,513216,86885,16.93,benchmark/ratio/data/calgary/pic
+zstd 1.5.7 -3,490.40,1686.18,246814,83319,33.76,benchmark/ratio/data/calgary/obj2
+bsc 3.3.12 -m0 -e1,59.18,75.52,93695,16376,17.48,benchmark/ratio/data/calgary/trans
+lz4 1.10.0,683.35,4837.59,768771,522806,68.01,benchmark/ratio/data/calgary/book1
+independent KBC1,9.57,6.25,53161,22433,42.20,benchmark/ratio/data/calgary/paper1
+zstd 1.5.7 -19,6.39,2375.06,71646,15153,21.15,benchmark/ratio/data/calgary/progl
+independent KRC1,193.27,1505.14,93695,91202,97.34,benchmark/ratio/data/calgary/trans
+zstd 1.5.7 -19,8.53,1956.05,610856,173849,28.46,benchmark/ratio/data/calgary/book2
+kolmo audit -1,332.11,3172.50,513216,54472,10.61,benchmark/ratio/data/calgary/pic
+ppmd8 26.03 -6,21.15,19.13,246814,67392,27.30,benchmark/ratio/data/calgary/obj2
+zstd 1.5.7 -19,13.87,1237.64,21504,9829,45.71,benchmark/ratio/data/calgary/obj1
+independent KRC1,207.17,4252.41,246814,246212,99.76,benchmark/ratio/data/calgary/obj2
+bsc 3.3.12 -m0 -e1,47.87,61.65,610856,146426,23.97,benchmark/ratio/data/calgary/book2
+brotli 1.2.0 -8,60.17,586.14,377109,126251,33.48,benchmark/ratio/data/calgary/news
+independent KBC1,10.03,6.43,82199,32288,39.28,benchmark/ratio/data/calgary/paper2
+ppmd8 26.03 -6,30.73,28.04,49379,9271,18.78,benchmark/ratio/data/calgary/progp
+independent KBC1,10.37,6.86,49379,17528,35.50,benchmark/ratio/data/calgary/progp
+lz4 1.10.0,1239.00,4357.10,49379,18717,37.90,benchmark/ratio/data/calgary/progp
+bsc 3.3.12 -m0 -e1,120.28,144.05,513216,47118,9.18,benchmark/ratio/data/calgary/pic
+ppmd8 26.03 -6,30.89,27.77,71646,13023,18.18,benchmark/ratio/data/calgary/progl
+brotli 1.2.0 -8,53.76,264.49,102400,64928,63.41,benchmark/ratio/data/calgary/geo
+zstd 1.5.7 -19,6.80,2001.91,49379,10450,21.16,benchmark/ratio/data/calgary/progp
+zstd 1.5.7 -19,9.94,1521.59,246814,70224,28.45,benchmark/ratio/data/calgary/obj2
+independent KRC1,194.62,1501.76,71646,69828,97.46,benchmark/ratio/data/calgary/progl
+brotli 1.2.0 -8,73.53,397.30,21504,10089,46.92,benchmark/ratio/data/calgary/obj1
+bsc 3.3.12 -m0 -e1,54.93,62.14,49379,9958,20.17,benchmark/ratio/data/calgary/progp
+zstd 1.5.7 -3,903.08,2589.19,93695,20557,21.94,benchmark/ratio/data/calgary/trans
+kolmo audit -1,36.60,1568.72,21504,10824,50.33,benchmark/ratio/data/calgary/obj1
+independent KBC1,9.81,6.33,111261,41029,36.88,benchmark/ratio/data/calgary/bib
+zstd 1.5.7 -3,331.88,1630.05,768771,305288,39.71,benchmark/ratio/data/calgary/book1
+ppmd8 26.03 -6,69.35,62.43,513216,48406,9.43,benchmark/ratio/data/calgary/pic
+zstd 1.5.7 -19,5.93,2719.11,93695,17294,18.46,benchmark/ratio/data/calgary/trans
+independent KRC1,191.42,1586.47,49379,47971,97.15,benchmark/ratio/data/calgary/progp
+independent KRC1,196.25,1485.43,768771,749285,97.47,benchmark/ratio/data/calgary/book1
+independent KBC1,9.46,6.40,246814,107903,43.72,benchmark/ratio/data/calgary/obj2
+zstd 1.5.7 -3,1627.54,3724.60,513216,54420,10.60,benchmark/ratio/data/calgary/pic
+bsc 3.3.12 -m0 -e1,36.34,48.45,39611,12090,30.52,benchmark/ratio/data/calgary/progc
+kolmo audit -1,66.44,2535.18,93695,20609,22.00,benchmark/ratio/data/calgary/trans
+independent KRC1,195.34,1500.16,111261,108471,97.49,benchmark/ratio/data/calgary/bib
+bsc 3.3.12 -m0 -e1,39.26,47.04,53161,15896,29.90,benchmark/ratio/data/calgary/paper1
+zstd 1.5.7 -3,472.62,1559.28,21504,10772,50.09,benchmark/ratio/data/calgary/obj1
+kolmo audit -1,145.85,1862.65,377109,137933,36.58,benchmark/ratio/data/calgary/news
+brotli 1.2.0 -8,75.51,597.18,49379,10654,21.58,benchmark/ratio/data/calgary/progp
+independent KRC1,197.25,1654.95,102400,81234,79.33,benchmark/ratio/data/calgary/geo
+lz4 1.10.0,1045.64,5894.07,246814,117739,47.70,benchmark/ratio/data/calgary/obj2
+zstd 1.5.7 -19,9.99,1757.75,377109,122700,32.54,benchmark/ratio/data/calgary/news

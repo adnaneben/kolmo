@@ -1,0 +1,28 @@
+{
+  "fresh_process_verification": true,
+  "encode_command": [
+    "./build/kolmo",
+    "-m",
+    "ultra",
+    "-T",
+    "2",
+    "benchmark/ratio/data/silesia.tar",
+    "/tmp/kolmo-board-ultra.czn"
+  ],
+  "decode_command": [
+    "./build/kolmo",
+    "-d",
+    "-T",
+    "2",
+    "benchmark/ratio/data/kolmo-ultra.czn",
+    "/tmp/kolmo-board-ultra-restored.tar"
+  ],
+  "input_bytes": 211947520,
+  "input_and_restored_sha256": "a667bac80089b3d04d5496772149e632f0758974b0579d743cd8d6e5e0d63eb2",
+  "frame_path": "benchmark/ratio/data/kolmo-ultra.czn",
+  "frame_bytes": 37956550,
+  "frame_sha256": "4644ffd6f78b82620fb24144d0b37067094ab849dba6d14994effdb7e70ab827",
+  "cli_sha256": "d0c58cc8363758a15dae35d4d6928cf861cc31521cb117f34f5c5b60d565ccd3",
+  "matches_lzbench_one_thread_byte_count": true,
+  "note": "Correctness check with two CPU workers, not a timed leaderboard comparison."
+}

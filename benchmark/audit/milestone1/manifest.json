@@ -1,0 +1,26 @@
+{
+  "parent_revision": "31ce410ec419ccf7039724b32d0656db40afcee8",
+  "date": "2026-11-07",
+  "sources": [
+    {
+      "path": "src/czn.c",
+      "sha256": "4ad761a997e052c9ee39732fa14b37f602dc39be2b808976c8bff312c18629c2"
+    },
+    {
+      "path": "src/czn.h",
+      "sha256": "c877d8d96cc0ee51654d47adbac70cd7cba38eaa969be53a0214b06fb4f3c729"
+    },
+    {
+      "path": "src/tbl2.inc",
+      "sha256": "794101df9cfd636ee71259eeb9ebd373b1823461a6d1557166089536875d6aa1"
+    },
+    {
+      "path": "src/sci.inc",
+      "sha256": "d51591cad5cff8d7ab4606d9dc6c61255761f9d7383ce6b2257c4182e28e6f4b"
+    }
+  ],
+  "baseline_dylib_sha256": "b0c3ea1af275c46ae00e4cb4f1f8dbb687d1d5d440c5393e07913f6db366652d",
+  "current_dylib_sha256": "95152bfea6d32ab95e0975d9564a69beee8c831d813309781c07be17a3887077",
+  "performance_runs": 90,
+  "profile_runs": 27
+}

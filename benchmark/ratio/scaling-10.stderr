@@ -1,0 +1,4 @@
+/tmp/kolmo-lzbench-audit/lzbench -ezstd,3 -I1 -T10 -b1024 -t0,0 -i3,3 -p3 -o4 -q benchmark/audit/data/silesia/mozilla
+/tmp/kolmo-lzbench-audit/lzbench -ekbc -I1 -T10 -b1024 -t0,0 -i3,3 -p3 -o4 -q benchmark/audit/data/silesia/mozilla
+/tmp/kolmo-lzbench-audit/lzbench -ekrc -I1 -T10 -b1024 -t0,0 -i3,3 -p3 -o4 -q benchmark/audit/data/silesia/mozilla
+/tmp/kolmo-lzbench-audit/lzbench -elz4 -I1 -T10 -b1024 -t0,0 -i3,3 -p3 -o4 -q benchmark/audit/data/silesia/mozilla

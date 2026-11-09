@@ -1,0 +1,1 @@
+RESOURCE TESTS PASSED (12 injected compression allocation failures)

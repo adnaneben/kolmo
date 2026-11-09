@@ -1,0 +1,5 @@
+len       0: round trips ok in all modes
+len       5: round trips ok in all modes
+len    1000: round trips ok in all modes
+len  788907: round trips ok in all modes, hc ratio 2954.71
+ALL PASSED

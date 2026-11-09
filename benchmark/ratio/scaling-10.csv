@@ -1,0 +1,5 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+zstd 1.5.7 -3,3480.42,12060.98,51220480,18547442,36.21,benchmark/audit/data/silesia/mozilla
+independent KBC1,60.45,38.43,51220480,22430780,43.79,benchmark/audit/data/silesia/mozilla
+independent KRC1,1270.67,18363.26,51220480,42485355,82.95,benchmark/audit/data/silesia/mozilla
+lz4 1.10.0,7497.05,38846.33,51220480,26461359,51.66,benchmark/audit/data/silesia/mozilla
