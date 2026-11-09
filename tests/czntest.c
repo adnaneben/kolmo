@@ -258,6 +258,44 @@ int main(void) {
             free(bk); free(e); free(d); }
         free(w);
     }
+    /* integer arrays: kolmo graph INT node (gcd + delta timestamps with a ragged tail, a .npy int32 file, wrapping
+     * int64 extremes, unsigned 16-bit), round trips in every mode and odd block sizes, plus decoder fuzz */
+    {
+        size_t cnt = 400000, q = cnt * 8 + 5; uint8_t *a = malloc(q + 256);
+        int64_t ts = 1700000000000LL;
+        for (size_t i = 0; i < cnt; i++) { ts += 1000 * (int64_t)(rnd() % 16 ? 5 : 1 + rnd() % 40); memcpy(a + i * 8, &ts, 8); }
+        memcpy(a + cnt * 8, "tail!", 5);
+        for (int m = 0; m < 5; m++) { check("int-ts", a, q, (czn_mode)m, 1 << 20, 1); check("int-ts-odd", a, q, (czn_mode)m, 300001, 4); }
+        q = 30000 * 8;                                       /* a small array: the planner picks the graph */
+        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = czn_compress(a, q, d, cap, &p0), c1 = czn_compress(a, q, d, cap, &p1);
+            if (c1 <= 0 || c0 <= 0 || c1 * 2 >= c0 || d[4] != 7) { printf("FAIL integer graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            else printf("integer graph: timestamps fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
+            uint8_t *bk = malloc(q + 64), *e = malloc(c1);
+            for (int it = 0; it < 400; it++) {
+                memcpy(e, d, c1); int nf = 1 + (int)(rnd() % 3);
+                for (int f = 0; f < nf; f++) e[32 + rnd() % (c1 - 32)] ^= (uint8_t)(1 + rnd() % 255);
+                int64_t r = czn_decompress(e, c1, bk, q + 64, 1);
+                if (r >= 0 && (r != (int64_t)q || memcmp(bk, a, q))) { printf("FAIL integer graph fuzz accepted a wrong output\n"); fails++; break; }
+            }
+            printf("integer graph fuzz: 400 corrupted frames rejected or exact\n");
+            free(bk); free(e); free(d); }
+        /* .npy int32 (header of 128 bytes), slowly varying with noise */
+        size_t h = 128, n4 = 300000; q = h + n4 * 4;
+        memset(a, ' ', h); { static const char H[] = "\x93NUMPY\x01\x00\x76\x00{'descr': '<i4', 'fortran_order': False, 'shape': (300000,), }"; memcpy(a, H, sizeof H - 1); } a[h - 1] = '\n';
+        int32_t y = 0; for (size_t i = 0; i < n4; i++) { y += (int32_t)(rnd() % 21) - 10; memcpy(a + h + i * 4, &y, 4); }
+        for (int m = 0; m < 5; m++) { check("int-npy", a, q, (czn_mode)m, 1 << 20, 1); check("int-npy-odd", a, q, (czn_mode)m, 65537, 3); }
+        /* int64 extremes: deltas overflow and wrap */
+        q = 200000 * 8;
+        for (size_t i = 0; i < 200000; i++) { int64_t v = (i % 3 == 0) ? INT64_MIN + (int64_t)(rnd() % 7) : (i % 3 == 1) ? INT64_MAX - (int64_t)(rnd() % 7) : (int64_t)(rnd() % 1000); memcpy(a + i * 8, &v, 8); }
+        for (int m = 0; m < 5; m++) check("int-wrap", a, q, (czn_mode)m, 1 << 20, 1);
+        /* unsigned 16-bit with large values (signed and unsigned readings differ) */
+        q = 500000 * 2 + 1; uint16_t u = 60000;
+        for (size_t i = 0; i < 500000; i++) { u += (uint16_t)(rnd() % 9) - 4; memcpy(a + i * 2, &u, 2); }
+        a[q - 1] = 7;
+        for (int m = 0; m < 5; m++) check("int-u16", a, q, (czn_mode)m, 1 << 20, 2);
+        free(a);
+    }
     /* scientific binary: fixed records (header, quantised doubles incl. NaN/huge outliers, small ints, ids) and a
      * 16-bit image (big-endian, odd offset) */
     {

@@ -1281,6 +1281,41 @@ static int json_lines(const uint8_t *s, size_t h) {
 /* file-level analysis: one plan for every block */
 /* light: the cheap analysis of the fastest settings: no JSON, log or word trials (whose transforms are also the slow
  * ones), and binary candidates scored by zstd -1 on a 256 KiB slice instead of zstd -3 on 1 MiB */
+/* integer-array candidate for the planner: width from a .npy header (head = the header), else 2, 4 and 8 tried; each
+ * coded as an INT graph with zstd at the scoring level on the slice [st, st+L). Returns the best cost per byte (or a
+ * huge value) and sets the width and head. */
+static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh) {
+    size_t h = 0; int ws[3] = {2, 4, 8}, nw = 3; double best = 1e300;
+    if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
+        size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
+        const uint8_t *d = hl <= n ? memmem(s, hl, "'descr': '", 10) : NULL;
+        if (!d || d + 13 > s + hl || d[10] == '>' || (d[11] != 'i' && d[11] != 'u' && d[11] != 'f') || (d[12] != '2' && d[12] != '4' && d[12] != '8')) return best;
+        h = hl; ws[0] = d[12] - '0'; nw = 1;
+    }
+    if (n - h < 4096) return best;
+    if (st < h) st = h;
+    if (L > n - st) L = n - st;
+    {   /* score only the width with the fewest estimated residual bytes per input byte, and only when that estimate
+         * is near the plain coding cost (the bit-length estimate ignores repetition, so clearly worse means no gain) */
+        double eb = 1e300; int bw0 = 0;
+        for (int q = 0; q < nw; q++) {
+            int w = ws[q], o0, s0; size_t a = h + (st - h) / w * w, c = (n - a < L ? n - a : L) / w;
+            if (c < 16) continue;
+            double e = kg_num_choose(s + a, c, w, &o0, &s0) / (8.0 * w); if (e < eb) { eb = e; bw0 = w; }
+        }
+        if (!bw0 || eb > plain * 1.25) return best;
+        ws[0] = bw0; nw = 1;
+    }
+    codec_ctx cx = {0}; uint8_t *o = malloc(L + 64);
+    for (int q = 0; o && q < nw; q++) {
+        int w = ws[q]; size_t a = h + (st - h) / w * w, l = (n - a < L ? n - a : L) / w * w;
+        size_t z = l ? kg_encode_num(&cx, C_ZSTD, zl, s + a, l, w, 0, o, L + 64) : 0;
+        if (z && (double)z / l < best) { best = (double)z / l; *bw = w; *bh = h; }
+    }
+    free(o); codec_ctx_free(&cx);
+    return best;
+}
+
 static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int structured, int threads, int strong, int light) {
     if (light) logs = 0;
     plan_t pl = {T_NONE, 0, 0, 0};
@@ -1466,9 +1501,26 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
             else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
         }
+        {   /* integer arrays: kolmo graph INT node */
+            int w = 0; size_t hh = 0; double c = kg_num_trial(s, n, st, L, zl, plain, &w, &hh);
+            if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
+        }
         if (chosen >= 2) pl = keep;
         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
         free(buf); free(zb);
+    }
+    if (structured && n < (1u << 18)) {                    /* small arrays: the integer graph against plain and shuffle */
+        const int zl = light ? 1 : 3; size_t zcap = ZSTD_compressBound(n); uint8_t *zb = malloc(zcap), *buf = malloc(n);
+        if (zb && buf) {
+            double plain = (double)zcost(zc, s, n, zb, zcap, zl) / n, best = plain * CZ_STRUCT_GAIN_PCT / 100.0;
+            if (pl.t == T_SHUF) {
+                size_t u = (size_t)pl.a * pl.b, rows = n / u; shuffle_fwd(s, rows, pl.a, pl.b, pl.c, buf);
+                double c = (double)zcost(zc, buf, rows * u, zb, zcap, zl) / (rows * u); if (c < best) best = c;
+            }
+            int w = 0; size_t hh = 0; double c = kg_num_trial(s, n, 0, n, zl, plain, &w, &hh);
+            if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = w; pl.c = (int)hh; }
+        }
+        free(zb); free(buf);
     }
     ZSTD_freeCCtx(zc);
     return pl;
@@ -1482,10 +1534,13 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     if (pl.t == T_SHUF) { uint32_t u = pl.a * pl.b; B = B / u * u; if (!B) B = u; }
     if (pl.t == T_IMG) B &= ~1u;
     if (pl.t == T_REC) { B = B / pl.rec->P * pl.rec->P; if (!B) B = pl.rec->P; }
+    int kgnum = pl.t == T_KG && pl.a == 0;                     /* integer graph: width-aligned blocks after the head */
+    if (kgnum) { B = B / (uint32_t)pl.b * (uint32_t)pl.b; if (!B) B = (uint32_t)pl.b; }
     while (pos < n) {
         size_t end = B < n - pos ? pos + B : n;
         if (pl.t == T_REC && pos == 0) end = (size_t)pl.rec->h + B < n ? (size_t)pl.rec->h + B : n;
-        if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG || pl.t == T_KG) && end < n) {
+        if (kgnum && pos == 0) end = (size_t)pl.c + B < n ? (size_t)pl.c + B : n;
+        if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG || (pl.t == T_KG && !kgnum)) && end < n) {
             size_t lo = pos + B / 2, e = end;
             while (e > lo && s[e - 1] != '\n') e--;
             if (e > lo) end = e;
@@ -1621,7 +1676,8 @@ static void *compress_worker(void *arg) {
         }
         int codec = J->codec, level = J->level; size_t cl = 0, inlen = len;
         if (pl.t == T_KG && len) {                                          /* kolmo graph: the block is a program + leaves */
-            cl = kg_encode_table(xp, codec, level, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot);
+            cl = pl.a ? kg_encode_table(xp, codec, level, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
+                      : kg_encode_num(xp, codec, level, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
             if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8; goto coded; }
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
         }

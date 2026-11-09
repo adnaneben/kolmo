@@ -17,6 +17,12 @@
   becomes a typed column (OWID data as JSON lines: −51% at `fast`, −30% at `max`). Same block format as the log
   transform, so 1.0.0 decodes these files. **Minified JSON** (one line of records) is split into records first
   (block flag 10, container version 6): OWID records as one JSON array, −51% at `fast`, −37% at `max`.
+- **Integer arrays (kolmo graph INT node, branch `claude/graph`)**: 16/32/64-bit arrays, with or without a `.npy`
+  header, are coded as residuals: per block the order (value, delta, delta-of-delta), signedness, common divisor and
+  output width are chosen, and the residuals are stored as byte planes. Millisecond timestamps (int64): 10.6× →
+  24.5× at `fast` (9.3 MB/s compress+decompress) and 27.1× at `max`; OpenZL 0.3.0 reaches 20.6× at 5.2 MB/s.
+  Population counts (int64): 3.80× at `fast` (12.8 MB/s) vs OpenZL's 3.27× (10.8 MB/s). Other inputs are unchanged
+  (51 reference outputs byte-identical).
 
 ### Speed
 - **Quick analysis (`-q`, `transforms = 2`)**: only the cheap structure transforms, scored with zstd -1 on a 256 KiB

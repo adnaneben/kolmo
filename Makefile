@@ -57,7 +57,7 @@ build/obj/%.o: %.S
 
 build/libvendor.a: $(OBJ)
 	ar rcs $@ $^
-build/czn.o: src/czn.c src/czn.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc
+build/czn.o: src/czn.c src/czn.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) -c src/czn.c -o $@
 build/libczn.a: build/czn.o

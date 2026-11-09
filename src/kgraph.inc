@@ -20,8 +20,16 @@
  *             A number is -?(0|[1-9][0-9]*)(sep[0-9]+)? with at most 18 digits and not a negative zero; anything else
  *             is text, so every input round-trips.
  *   3 CONCAT  params: count uv, length uv * count. In: count streams. Out: their concatenation.
+ *   4 INT     params: width u8 (1, 2, 4 or 8), flags u8 (bit 0 signed, bits 1-2 order 0..2, bit 3 byte planes), output
+ *             width u8 (1, 2, 4 or 8), head uv, count uv, gcd uv (>= 1), bias uv (zigzag), then order seeds uv (zigzag).
+ *             In: bytes. Out: residuals, rest. The input is head bytes, count little-endian integers of the given width
+ *             (sign- or zero-extended to 64 bits), then trailing bytes; rest = head bytes then trailing bytes. Order 0
+ *             stores (v - bias) / gcd unsigned; orders 1 and 2 store zigzag((v - prediction) / gcd), the prediction being
+ *             the previous value or 2*previous - the one before, after the first `order` values (the seeds). Arithmetic
+ *             wraps modulo 2^64; each residual takes `output width` little-endian bytes, transposed into byte planes
+ *             when bit 3 is set.
  */
-enum { KG_FIELDS = 1, KG_DECIMAL = 2, KG_CONCAT = 3, KG_MAXOP = 3 };
+enum { KG_FIELDS = 1, KG_DECIMAL = 2, KG_CONCAT = 3, KG_INT = 4, KG_MAXOP = 4 };
 #define KG_MAXSTREAMS 65536
 
 typedef struct { uint8_t *p; size_t n, cap; } kbuf;
@@ -120,6 +128,44 @@ static int kg_decimal_inv(uint8_t sep, uint8_t pred, const kbuf *tags, const kbu
     return si == sc->n && mi == mant->n && ti == txt->n ? 0 : -1;
 }
 
+/* ---- INT ---- */
+static inline uint64_t kg_ld(const uint8_t *p, int w, int sg) {      /* little-endian load (as the rest of czn) */
+    uint64_t v;
+    if (w == 8) { memcpy(&v, p, 8); return v; }
+    if (w == 4) { uint32_t u; memcpy(&u, p, 4); return sg ? (uint64_t)(int64_t)(int32_t)u : u; }
+    if (w == 2) { uint16_t u; memcpy(&u, p, 2); return sg ? (uint64_t)(int64_t)(int16_t)u : u; }
+    return sg ? (uint64_t)(int64_t)(int8_t)p[0] : p[0];
+}
+static int kg_int_inv(const uint8_t *par, size_t plen, const kbuf *res, const kbuf *rest, size_t maxs, kbuf *out) {
+    size_t pi = 3; uint64_t h, cnt, g, bz, sd[2] = {0, 0};
+    if (plen < 3) return -1;
+    int w = par[0], fl = par[1], ow = par[2], ord = (fl >> 1) & 3, sg = fl & 1, pln = (fl >> 3) & 1;
+    if ((w != 1 && w != 2 && w != 4 && w != 8) || (ow != 1 && ow != 2 && ow != 4 && ow != 8) || ord > 2 || (fl & ~15)) return -1;
+    if (kg_getuv(par, plen, &pi, &h) || kg_getuv(par, plen, &pi, &cnt) || kg_getuv(par, plen, &pi, &g) || kg_getuv(par, plen, &pi, &bz) || g == 0) return -1;
+    for (int q = 0; q < ord; q++) if (kg_getuv(par, plen, &pi, &sd[q])) return -1;
+    if (pi != plen || h > rest->n || (uint64_t)ord > cnt || cnt > maxs / (unsigned)w || (cnt - (uint64_t)ord) * (unsigned)ow != res->n
+        || cnt * (unsigned)w + rest->n > maxs) return -1;
+    if (kb_res(out, (size_t)(cnt * w) + rest->n + 16)) return -1;
+    if (h) memcpy(out->p, rest->p, (size_t)h);
+    uint8_t *wp = out->p + h; uint64_t v1 = 0, v2 = 0, bias = (uint64_t)kg_unzz(bz); size_t m = (size_t)(cnt - (uint64_t)ord);
+    for (size_t q = 0; q < (size_t)cnt; q++) {
+        uint64_t v;
+        if (q < (size_t)ord) v = (uint64_t)kg_unzz(sd[q]);
+        else {
+            size_t r = q - (size_t)ord; uint64_t z = 0;
+            if (pln) for (int b = 0; b < ow; b++) z |= (uint64_t)res->p[(size_t)b * m + r] << (8 * b);
+            else for (int b = 0; b < ow; b++) z |= (uint64_t)res->p[r * (size_t)ow + b] << (8 * b);
+            if (ord == 0) v = bias + z * g;
+            else { uint64_t d = (uint64_t)kg_unzz(z) * g; v = (ord == 1 ? v1 : 2 * v1 - v2) + d; }
+        }
+        if (sg && w < 8) { int sh = 64 - 8 * w; v = (uint64_t)((int64_t)(v << sh) >> sh); } else if (w < 8) v &= ((uint64_t)1 << (8 * w)) - 1;
+        for (int b = 0; b < w; b++) *wp++ = (uint8_t)(v >> (8 * b));
+        v2 = v1; v1 = v;
+    }
+    memcpy(wp, rest->p + h, rest->n - (size_t)h); out->n = (size_t)(cnt * w) + rest->n;
+    return 0;
+}
+
 /* ---- program builder ---- */
 typedef struct { kbuf *s; int ns, cap; uint8_t *used; kbuf prog; int nodes; } kgb;
 static int kgb_new(kgb *g) {
@@ -149,6 +195,30 @@ static int kgb_concat(kgb *g, const int *idx, int n) {
     int o = kgb_node(g, KG_CONCAT, idx, n, 1, &par); free(par.p); if (o < 0) return -1;
     for (int q = 0; q < n; q++) { if (kb_put(&g->s[o], g->s[idx[q]].p, g->s[idx[q]].n)) return -1; free(g->s[idx[q]].p); memset(&g->s[idx[q]], 0, sizeof(kbuf)); }
     return o;
+}
+
+/* serialize a built program: header, program, leaves (every unconsumed stream, in index order). Returns the payload
+ * length, or 0 when it is not smaller than n or does not fit in cap. */
+static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n, uint8_t *dst, size_t cap) {
+    kbuf o = {0}; int nleaf = 0; size_t out = 0;
+    for (int q = 0; q < g->ns; q++) nleaf += !g->used[q];
+    if (kb_byte(&o, 'G') || kb_byte(&o, 1) || kb_uv(&o, (uint64_t)g->nodes) || kb_put(&o, g->prog.p, g->prog.n) || kb_uv(&o, (uint64_t)nleaf)) goto done;
+    for (int q = 0; q < g->ns; q++) {
+        if (g->used[q]) continue;
+        kbuf *s = &g->s[q]; size_t zc = s->n + s->n / 8 + 1024; int cc = codec == C_CM || codec == C_STORE ? C_LZMA : codec;
+        if (kb_uv(&o, (uint64_t)q) || kb_res(&o, 1 + 20 + zc)) goto done;
+        size_t hp = o.n; o.n += 1;
+        size_t z = s->n >= 64 ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
+        if (!z || z >= s->n) { cc = C_STORE; z = s->n; if (z) memcpy(o.p + o.n + 20, s->p, z); }
+        o.p[hp] = (uint8_t)cc;
+        uint8_t hdr[20]; size_t hn = 0;
+        for (uint64_t v = s->n;; v >>= 7) { hdr[hn++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
+        for (uint64_t v = z;; v >>= 7) { hdr[hn++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
+        memmove(o.p + o.n + hn, o.p + o.n + 20, z); memcpy(o.p + o.n, hdr, hn); o.n += hn + z;
+    }
+    if (o.n < cap && o.n < n) { memcpy(dst, o.p, o.n); out = o.n; }
+done:
+    free(o.p); return out;
 }
 
 /* Delimited numeric table: FIELDS, then DECIMAL on each mostly-numeric column, then one CONCAT per stream kind.
@@ -235,30 +305,101 @@ static size_t kg_encode_table(codec_ctx *x, int codec, int level, const uint8_t 
     if ((nt && (kgb_concat(&g, tg, nt) < 0 || kgb_concat(&g, scs, nt) < 0 || kgb_concat(&g, mts, nt) < 0 || kgb_concat(&g, txs, nt) < 0))
         || (nraw && kgb_concat(&g, raws, nraw) < 0)) { free(lists); goto done; }
     free(lists);
-    /* serialize: header, program, leaves (every unconsumed stream, in index order) */
-    kbuf o = {0}; int nleaf = 0;
-    for (int q = 0; q < g.ns; q++) nleaf += !g.used[q];
-    if (kb_byte(&o, 'G') || kb_byte(&o, 1) || kb_uv(&o, (uint64_t)g.nodes) || kb_put(&o, g.prog.p, g.prog.n) || kb_uv(&o, (uint64_t)nleaf)) { free(o.p); goto done; }
-    for (int q = 0; q < g.ns; q++) {
-        if (g.used[q]) continue;
-        kbuf *s = &g.s[q]; size_t zc = s->n + s->n / 8 + 1024; int cc = codec == C_CM || codec == C_STORE ? C_LZMA : codec;
-        if (kb_uv(&o, (uint64_t)q) || kb_res(&o, 1 + 20 + zc)) { free(o.p); goto done; }
-        size_t hp = o.n; o.n += 1;
-        size_t z = s->n >= 64 ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
-        if (!z || z >= s->n) { cc = C_STORE; z = s->n; if (z) memcpy(o.p + o.n + 20, s->p, z); }
-        o.p[hp] = (uint8_t)cc;
-        uint8_t hdr[20]; size_t hn = 0;
-        for (uint64_t v = s->n;; v >>= 7) { hdr[hn++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
-        for (uint64_t v = z;; v >>= 7) { hdr[hn++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
-        memmove(o.p + o.n + hn, o.p + o.n + 20, z); memcpy(o.p + o.n, hdr, hn); o.n += hn + z;
-    }
-    if (o.n < cap && o.n < n) { memcpy(dst, o.p, o.n); out = o.n; }
-    free(o.p);
+    out = kg_serialize(x, codec, level, &g, n, dst, cap);
 done:
     if (C) for (uint32_t j = 0; j < k; j++) { free(C[j].tag.p); free(C[j].sc.p); free(C[j].mt.p); free(C[j].tx.p); free(C[j].raw.p); }
     free(C); free(fs); free(irr.p); free(shape.p);
     kgb_free(&g);
     return out;
+}
+
+/* Integer array: one INT node. The width w and head length h come from the planner; the order, signedness, gcd and
+ * output width are chosen here for the block. Returns the payload length, or 0 when the graph does not apply. */
+static uint64_t kg_gcd(uint64_t a, uint64_t b) { while (b) { uint64_t t = a % b; a = b; b = t; } return a; }
+static int kg_bw(uint64_t z) { return z < 256 ? 1 : z < 65536 ? 2 : z < 4294967296ull ? 4 : 8; }
+/* choose signedness and order on a sample (16 runs of 1024 consecutive values) by the summed bit length of the
+ * residuals, the sample's gcd taken into account; returns the estimated bits per value */
+static double kg_num_choose(const uint8_t *a, size_t cnt, int w, int *bo, int *bs) {
+    size_t runs = cnt > 16384 ? 16 : 1, rl = cnt > 16384 ? 1024 : cnt, tot = 0; double bcost = 1e300;
+    for (int sg = (w == 8); sg <= 1; sg++) for (int ord = 0; ord <= 2; ord++) {
+        uint64_t g = 0; int64_t mn = INT64_MAX; double cost = 0; tot = 0;
+        for (int pass = 0; pass < 2; pass++) for (size_t r = 0; r < runs; r++) {
+            const uint8_t *b = a + (cnt - rl) / (runs > 1 ? runs - 1 : 1) * r * (size_t)w; uint64_t v1 = 0, v2 = 0;
+            for (size_t q = 0; q < rl; q++) {
+                uint64_t v = kg_ld(b + q * w, w, sg), z;
+                if (ord == 0) {
+                    if (!pass) { if ((int64_t)v < mn) mn = (int64_t)v; continue; }
+                    z = (v - (uint64_t)mn) / (g ? g : 1);
+                } else if ((int)q < ord) { v2 = v1; v1 = v; continue; }
+                else {
+                    int64_t d = (int64_t)(v - (ord == 1 ? v1 : 2 * v1 - v2));
+                    if (!pass) { uint64_t r0 = d < 0 ? (uint64_t)0 - (uint64_t)d : (uint64_t)d; if (g != 1) g = kg_gcd(r0, g); v2 = v1; v1 = v; continue; }
+                    z = kg_zz(d / (int64_t)(g ? g : 1));
+                }
+                cost += z ? 65 - __builtin_clzll(z) : 1; tot++;
+                v2 = v1; v1 = v;
+            }
+            if (!pass && ord == 0 && r + 1 == runs) for (size_t r2 = 0; r2 < runs; r2++) {   /* gcd of v - min */
+                const uint8_t *b2 = a + (cnt - rl) / (runs > 1 ? runs - 1 : 1) * r2 * (size_t)w;
+                for (size_t q = 0; q < rl && g != 1; q++) g = kg_gcd(kg_ld(b2 + q * w, w, sg) - (uint64_t)mn, g);
+            }
+        }
+        if (tot && cost / tot < bcost) { bcost = cost / tot; *bo = ord; *bs = sg; }
+    }
+    return bcost;
+}
+static size_t kg_encode_num(codec_ctx *x, int codec, int level, const uint8_t *src, size_t n, int w, size_t h,
+                            uint8_t *dst, size_t cap) {
+    if (h > n || (n - h) / (size_t)w < 16 || (w != 2 && w != 4 && w != 8)) return 0;
+    size_t cnt = (n - h) / (size_t)w, out = 0; const uint8_t *a = src + h;
+    int bo = 0, bs = 1; kg_num_choose(a, cnt, w, &bo, &bs);
+    /* the chosen predictor over the whole block: bias (order 0), exact gcd, largest residual */
+    uint64_t bg = 0, bbias = 0, bmax = 0;
+    {   uint64_t v1 = 0, v2 = 0; int64_t mn = INT64_MAX;
+        if (bo == 0) { for (size_t q = 0; q < cnt; q++) { int64_t v = (int64_t)kg_ld(a + q * w, w, bs); if (v < mn) mn = v; } bbias = (uint64_t)mn; }
+        for (size_t q = 0; q < cnt; q++) {
+            uint64_t v = kg_ld(a + q * w, w, bs), r;
+            if (bo == 0) r = v - bbias;
+            else if ((int)q < bo) { v2 = v1; v1 = v; continue; }
+            else { int64_t d = (int64_t)(v - (bo == 1 ? v1 : 2 * v1 - v2)); r = d < 0 ? (uint64_t)0 - (uint64_t)d : (uint64_t)d; }
+            if (bg != 1) bg = kg_gcd(r, bg);
+            v2 = v1; v1 = v;
+        }
+        if (!bg) bg = 1;
+        v1 = v2 = 0;
+        for (size_t q = 0; q < cnt; q++) {
+            uint64_t v = kg_ld(a + q * w, w, bs), z;
+            if (bo == 0) z = (v - bbias) / bg;
+            else if ((int)q < bo) { v2 = v1; v1 = v; continue; }
+            else z = kg_zz((int64_t)(v - (bo == 1 ? v1 : 2 * v1 - v2)) / (int64_t)bg);
+            if (z > bmax) bmax = z;
+            v2 = v1; v1 = v;
+        }
+    }
+    int ow = kg_bw(bmax), pln = ow > 1; size_t m = cnt - (size_t)bo;
+    kgb g = {0}; kbuf par = {0};
+    if (kgb_new(&g) != 0) goto done;
+    kb_byte(&par, (uint8_t)w); kb_byte(&par, (uint8_t)(bs | bo << 1 | pln << 3)); kb_byte(&par, (uint8_t)ow);
+    kb_uv(&par, h); kb_uv(&par, cnt); kb_uv(&par, bg); kb_uv(&par, kg_zz((int64_t)bbias));
+    for (int q = 0; q < bo; q++) kb_uv(&par, kg_zz((int64_t)kg_ld(a + (size_t)q * w, w, bs)));
+    if (!par.p) goto done;
+    int o = kgb_node(&g, KG_INT, (int[]){0}, 1, 2, &par); if (o != 1) goto done;
+    if (kb_res(&g.s[1], m * (size_t)ow + 1) || kb_res(&g.s[2], n - cnt * (size_t)w + 1)) goto done;
+    {   uint8_t *r = g.s[1].p; uint64_t v1 = 0, v2 = 0;
+        for (size_t q = 0; q < cnt; q++) {
+            uint64_t v = kg_ld(a + q * w, w, bs), z;
+            if ((int)q < bo) { v2 = v1; v1 = v; continue; }
+            z = bo == 0 ? (v - bbias) / bg : kg_zz((int64_t)(v - (bo == 1 ? v1 : 2 * v1 - v2)) / (int64_t)bg);
+            size_t i = q - (size_t)bo;
+            if (pln) for (int b = 0; b < ow; b++) r[(size_t)b * m + i] = (uint8_t)(z >> (8 * b));
+            else r[i] = (uint8_t)z;
+            v2 = v1; v1 = v;
+        }
+        g.s[1].n = m * (size_t)ow;
+        kb_put(&g.s[2], src, h); kb_put(&g.s[2], a + cnt * (size_t)w, n - h - cnt * (size_t)w); }
+    out = kg_serialize(x, codec, level, &g, n, dst, cap);
+done:
+    free(par.p); kgb_free(&g); return out;
 }
 
 /* ---- decoder ---- */
@@ -326,6 +467,10 @@ static int kg_decode(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *out, siz
                 s[t->in[r]] = b; off += (size_t)L;
             }
             if (off != o->n) goto out;
+        } else if (t->op == KG_INT) {
+            if (t->nin != 1 || t->nout != 2) goto out;
+            kbuf r = {0}; if (kg_int_inv(t->par, t->plen, &o[0], &o[1], maxs, &r)) { free(r.p); goto out; }
+            s[t->in[0]] = r;
         } else goto out;
         for (uint32_t r = 0; r < t->nin; r++) have[t->in[r]] = 1;
         for (uint32_t r = 0; r < t->nout; r++) { free(s[t->firstout + r].p); memset(&s[t->firstout + r], 0, sizeof(kbuf)); }
