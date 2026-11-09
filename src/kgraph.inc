@@ -219,7 +219,13 @@ static int kg_float_inv(const uint8_t *par, size_t plen, const kbuf *pl, const k
     if (kb_res(out, (size_t)(cnt * w) + rest->n + 16)) return -1;
     if (h) memcpy(out->p, rest->p, (size_t)h);
     uint8_t *o = out->p + h; const int bits = 8 * w;
-    for (size_t q = 0; q < (size_t)cnt; q++) {
+    if (w == 4) {
+        const uint8_t *p0 = pl[0].p, *p1 = pl[1].p, *p2 = pl[2].p, *p3 = pl[3].p;
+        for (size_t q = 0; q < (size_t)cnt; q++) {
+            uint32_t v = (uint32_t)p0[q] | (uint32_t)p1[q] << 8 | (uint32_t)p2[q] << 16 | (uint32_t)p3[q] << 24;
+            v = (v >> 1) | (v << 31); o[0] = (uint8_t)v; o[1] = (uint8_t)(v >> 8); o[2] = (uint8_t)(v >> 16); o[3] = (uint8_t)(v >> 24); o += 4;
+        }
+    } else for (size_t q = 0; q < (size_t)cnt; q++) {
         uint64_t v = 0; for (int b = 0; b < w; b++) v |= (uint64_t)pl[b].p[q] << (8 * b);
         v = (v >> 1) | ((v & 1) << (bits - 1));                          /* rotate right by one */
         for (int b = 0; b < w; b++) *o++ = (uint8_t)(v >> (8 * b));
@@ -486,7 +492,13 @@ static size_t kg_encode_float(codec_ctx *x, int codec, int level, const uint8_t 
     int o = kgb_node(&g, KG_FLOAT, (int[]){0}, 1, w + 1, &par); if (o != 1) goto done;
     for (int b = 0; b < w; b++) if (kb_res(&g.s[1 + b], cnt + 1)) goto done;
     if (kb_res(&g.s[1 + w], n - cnt * (size_t)w + 1)) goto done;
-    for (size_t q = 0; q < cnt; q++) {
+    if (w == 4) {                                             /* float32: the common case */
+        uint8_t *p0 = g.s[1].p, *p1 = g.s[2].p, *p2 = g.s[3].p, *p3 = g.s[4].p;
+        for (size_t q = 0; q < cnt; q++) {
+            uint32_t v = (uint32_t)a[q * 4] | (uint32_t)a[q * 4 + 1] << 8 | (uint32_t)a[q * 4 + 2] << 16 | (uint32_t)a[q * 4 + 3] << 24;
+            v = (v << 1) | (v >> 31); p0[q] = (uint8_t)v; p1[q] = (uint8_t)(v >> 8); p2[q] = (uint8_t)(v >> 16); p3[q] = (uint8_t)(v >> 24);
+        }
+    } else for (size_t q = 0; q < cnt; q++) {
         uint64_t v = 0; for (int b = 0; b < w; b++) v |= (uint64_t)a[q * w + b] << (8 * b);
         v = (v << 1) | (v >> (bits - 1)); if (bits < 64) v &= ((uint64_t)1 << bits) - 1;
         for (int b = 0; b < w; b++) g.s[1 + b].p[q] = (uint8_t)(v >> (8 * b));

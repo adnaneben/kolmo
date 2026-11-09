@@ -1583,6 +1583,20 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         }
         int js = logs && n >= 65536 ? json_lines(s, h) : 0;
         int logc = 0; size_t loga = 0, logb = 0;  /* the JSON trial's log-token result, reused by the log trial below */
+        if (js == 1 && !strong && n > (64u << 10)) {  /* pretty JSON: a 64 KiB look first; no gain there, no full trial */
+            size_t m0 = 64u << 10; while (m0 > 0 && s[m0 - 1] != '\n') m0--;
+            uint8_t *o = malloc(m0 + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(m0); uint8_t *z = malloc(cap);
+            int gain = 1;
+            if (o && zc && z && m0 >= 16384) {
+                size_t b = ZSTD_compressCCtx(zc, z, cap, s, m0, 1); gain = 0;
+                for (int jm = 1; jm >= 0 && !gain && !ZSTD_isError(b); jm--) {
+                    int64_t tn = log_encode_m(s, m0, o, m0 + 64, jm); if (tn <= 0) continue;
+                    size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1); gain = !ZSTD_isError(a) && a * 100 < b * 100;
+                }
+            }
+            free(o); free(z); ZSTD_freeCCtx(zc);
+            if (!gain) js = 0;
+        }
         if (js == 2 || (js == 1 && !strong)) {   /* JSON: values become columns (max/ultra model pretty JSON well raw) */
             size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
             if (mm >= 16384) {                   /* JSON tokens, or log tokens when values hold free text: the smaller */
@@ -1758,7 +1772,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                 size_t u = (size_t)pl.a * pl.b, rows = n / u; shuffle_fwd(s, rows, pl.a, pl.b, pl.c, buf);
                 double c = (double)zcost(zc, buf, rows * u, zb, zcap, zl) / (rows * u); if (c < best) best = c;
             }
-            int w = 0; size_t hh = 0; double c = kg_num_trial(s, n, 0, n, zl, plain, &w, &hh);
+            int w = 0; size_t hh = 0; double c = kg_num_trial(s, n, 0, n, zl, 1e300, &w, &hh);   /* small input: no pre-check */
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w; pl.c = (int)hh; }
             w = 0; hh = 0; c = kg_float_trial(s, n, 0, n, zl, &w, &hh);
             if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = w | 16; pl.c = (int)hh; }
