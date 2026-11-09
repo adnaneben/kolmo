@@ -24,7 +24,19 @@
   Population counts (int64): 3.80× at `fast` (12.8 MB/s) vs OpenZL's 3.27× (10.8 MB/s). Other inputs are unchanged
   (51 reference outputs byte-identical).
 
+- **Float arrays (graph FLOAT node + Huffman-only leaves)**: float32 words are rotated so the exponent fills one byte,
+  and each byte plane becomes its own leaf, coded by Huffman alone when that is smallest (the near-random mantissa
+  planes are stored). Model weights (safetensors, ONNX, GGUF): 1.17× → 1.20× at `fast`, level with OpenZL 0.3.0.
+- **Merge of Codex's `codex/lossless-frontier`**: blockwise file I/O, lower fast-file memory, legacy-compatible
+  wide-table lanes and the opt-in frontier build. Codex's frontier codecs keep ids 8–11; the graph codec is 12.
+
 ### Speed
+- Graph decoder: table numbers print straight into rows (no column text), leaf parts are views instead of copies,
+  two-digit number printing; minified JSON: newline removal by runs. Minified JSON decodes 1.8× faster, wide tables
+  1.65× faster (in memory).
+- Fast/hc planner: text-transform trials on 256 KiB instead of 1 MiB (same decisions on every file tested), the log
+  trial reuses the JSON trial's result; wide-table column analysis at `fast` samples runs of lines (+0.05% size,
+  about 1.3× faster to compress). `json_split` copies runs (1.5× faster, byte-identical).
 - **Quick analysis (`-q`, `transforms = 2`)**: only the cheap structure transforms, scored with zstd -1 on a 256 KiB
   slice. `fast -l1 -q` (30.33% at ~350 MB/s) beats zstd -2; `fast -l2 -q` (28.89% at ~300 MB/s) and `fast -q`
   (27.87% at ~220 MB/s) beat zstd -3.

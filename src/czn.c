@@ -1089,7 +1089,7 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 
 /* ------------------------------------------------------------------ codecs */
 enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
-       C_GRAPH = 12 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block */
+       C_GRAPH = 12, C_HUF = 13 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only (graph leaves) */
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9 };   /* 9: kolmo graph (a=delim b=decimal separator) */
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
  * so repeated calls to one target produce identical bytes. Encoded back to front and decoded front to back (as in
@@ -1178,8 +1178,56 @@ static size_t codec_bound(int codec, size_t n) {
 
 typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *dict; size_t dictlen; } codec_ctx;
 
+static int kgu_get(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
+    uint64_t r = 0; int sh = 0;
+    while (*i < n && sh < 64) { uint8_t c = p[(*i)++]; r |= (uint64_t)(c & 127) << sh; if (!(c & 128)) { *v = r; return 0; } sh += 7; }
+    return -1;
+}
+/* Huffman-only coding (zstd's HUF, no matches): for byte streams with a skewed distribution and no repeats, such as
+ * the exponent plane of float arrays. Chunks of up to 128 KiB: mode u8 (0 stored, 1 one repeated byte, 2 Huffman),
+ * raw length uv, then for mode 0 the bytes, mode 1 the byte, mode 2 coded length uv and the coded bytes. */
+#include "common/huf.h"
+static size_t huf_compress_all(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
+    U64 wk[HUF_WORKSPACE_SIZE_U64]; HUF_CREATE_STATIC_CTABLE(ct, HUF_SYMBOLVALUE_MAX); size_t o = 0;
+    for (size_t i = 0; i < n;) {
+        size_t m = n - i < HUF_BLOCKSIZE_MAX ? n - i : HUF_BLOCKSIZE_MAX;
+        if (cap - o < m + 16) return 0;
+        uint8_t *h = out + o; size_t hp = 1;
+        for (uint64_t v = m;; v >>= 7) { h[hp++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
+        HUF_repeat rp = HUF_repeat_none; uint8_t tmp[10];
+        size_t z = HUF_compress4X_repeat(h + hp + 4, cap - o - hp - 4, in + i, m, HUF_SYMBOLVALUE_MAX, HUF_TABLELOG_DEFAULT, wk, sizeof wk, ct, &rp, 0);
+        if (HUF_isError(z)) return 0;
+        if (z == 1) { h[0] = 1; h[hp] = in[i]; o += hp + 1; }                        /* one repeated byte */
+        else if (z == 0 || z + 4 >= m) { h[0] = 0; memcpy(h + hp, in + i, m); o += hp + m; }
+        else {
+            size_t tn = 0; for (uint64_t v = z;; v >>= 7) { tmp[tn++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
+            memmove(h + hp + tn, h + hp + 4, z); memcpy(h + hp, tmp, tn); h[0] = 2; o += hp + tn + z;
+        }
+        i += m;
+    }
+    return o;
+}
+static int huf_decompress_all(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+    HUF_CREATE_STATIC_DTABLEX2(dt, HUF_TABLELOG_MAX); U32 wk[HUF_DECOMPRESS_WORKSPACE_SIZE_U32]; size_t i = 0, o = 0;
+    while (o < n) {
+        uint64_t m, z; if (i >= cn) return -1;
+        uint8_t mode = in[i++]; if (kgu_get(in, cn, &i, &m) || m == 0 || m > HUF_BLOCKSIZE_MAX || m > n - o) return -1;
+        if (mode == 0) { if (m > cn - i) return -1; memcpy(out + o, in + i, m); i += m; }
+        else if (mode == 1) { if (i >= cn) return -1; memset(out + o, in[i++], m); }
+        else if (mode == 2) {
+            if (kgu_get(in, cn, &i, &z) || z > cn - i) return -1;
+            size_t r = HUF_decompress4X_hufOnly_wksp(dt, out + o, (size_t)m, in + i, (size_t)z, wk, sizeof wk, 0);
+            if (HUF_isError(r) || r != m) return -1;
+            i += z;
+        } else return -1;
+        o += m;
+    }
+    return i == cn ? 0 : -1;
+}
+
 static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     switch (codec) {
+        case C_HUF: return huf_compress_all(in, n, out, cap);
         case C_LZ4: { int r = LZ4_compress_fast((const char *)in, (char *)out, (int)n, (int)cap, level > 0 ? level : 1); return r > 0 ? (size_t)r : 0; }
         case C_LZ4HC: {
             if (!x->lz4hc_state) x->lz4hc_state = malloc(LZ4_sizeofStateHC());
@@ -1254,6 +1302,7 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
             return (ip == cn && op == n) ? 0 : -1; }
 #endif
         case C_CM: return cm_decompress(in, cn, out, n);
+        case C_HUF: return huf_decompress_all(in, cn, out, n);
     }
     return -1;
 }
@@ -1356,18 +1405,31 @@ static void mode_codec(const czn_params *p, int *codec, int *level) {
  * each record becomes a line for the JSON template transform. The decoder removes every newline again, so the split
  * is lossless whatever the input (a block that starts inside a string only splits worse). Returns the new length. */
 static size_t json_split(const uint8_t *s, size_t n, uint8_t *d) {
-    size_t o = 0, i = 0; int str = 0, esc = 0; uint8_t last = 0;
+    size_t o = 0, i = 0;
     if (n && s[0] != '[' && s[0] != '{') {             /* a block may start inside a string: sync at the first "},{" */
         while (i + 2 < n && !(s[i] == '}' && s[i + 1] == ',' && s[i + 2] == '{')) i++;
         if (i + 2 >= n) i = n;
         memcpy(d, s, i); o = i;
     }
-    for (; i < n; i++) {
-        uint8_t c = s[i]; d[o++] = c;
-        if (str) { if (esc) esc = 0; else if (c == '\\') esc = 1; else if (c == '"') { str = 0; last = c; } continue; }
-        if (c == '"') { str = 1; continue; }
-        if (c == ',' && (last == '}' || last == ']')) d[o++] = '\n';
-        if (c != ' ' && c != '\t' && c != '\r') last = c;
+    const size_t i0 = i;
+    while (i < n) {                                     /* runs between quotes and commas are copied whole */
+        size_t j = i; while (j < n && s[j] != '"' && s[j] != ',') j++;
+        memcpy(d + o, s + i, j - i); o += j - i; i = j;
+        if (i >= n) break;
+        if (s[i] == ',') {                              /* a newline after a ',' whose last non-blank byte is } or ] */
+            d[o++] = ','; uint8_t lst = 0;
+            for (size_t b2 = i; b2 > i0;) { uint8_t c = s[--b2]; if (c != ' ' && c != '\t' && c != '\r') { lst = c; break; } }
+            if (lst == '}' || lst == ']') d[o++] = '\n';
+            i++; continue;
+        }
+        size_t st = ++i;                                /* a string: its closing quote has an even run of backslashes before it */
+        for (;;) {
+            const uint8_t *q = i < n ? memchr(s + i, '"', n - i) : NULL;
+            if (!q) { i = n; break; }
+            size_t qi = (size_t)(q - s), bs = 0; while (qi - bs > st && s[qi - 1 - bs] == '\\') bs++;
+            i = qi + 1; if (!(bs & 1)) break;
+        }
+        d[o++] = '"'; memcpy(d + o, s + st, i - st); o += i - st;
     }
     return o;
 }
@@ -1401,6 +1463,45 @@ static int json_lines(const uint8_t *s, size_t h) {
 /* integer-array candidate for the planner: width from a .npy header (head = the header), else 2, 4 and 8 tried; each
  * coded as an INT graph with zstd at the scoring level on the slice [st, st+L). Returns the best cost per byte (or a
  * huge value) and sets the width and head. */
+/* float-array candidate: float32 (or a .npy float dtype) whose rotated top byte (the exponent) is far more predictable
+ * than its mantissa bytes; the byte alignment (head) with the most predictable exponent wins. Scored like the INT
+ * candidate; returns the cost per byte (or a huge value), sets width and head. */
+static double kg_plane_h(const uint8_t *p, size_t cnt, int w, int b, int rot) {   /* order-0 entropy of plane b, bits */
+    uint32_t c[256] = {0}; size_t m = cnt < 65536 ? cnt : 65536, step = cnt / m;
+    for (size_t q = 0; q < m; q++) {
+        const uint8_t *e = p + q * step * (size_t)w; uint64_t v = 0; for (int k = 0; k < w; k++) v |= (uint64_t)e[k] << (8 * k);
+        if (rot) v = (v << 1) | (v >> (8 * w - 1));
+        c[(v >> (8 * b)) & 255]++;
+    }
+    double hs = 0; for (int k = 0; k < 256; k++) if (c[k]) { double q = (double)c[k] / m; hs -= q * log2(q); }
+    return hs;
+}
+static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, int *bw, size_t *bh) {
+    double best = 1e300; int w = 4; size_t h = 0; int fixed = 0;
+    if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
+        size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
+        const uint8_t *d = hl <= n ? memmem(s, hl, "'descr': '", 10) : NULL;
+        if (!d || d + 13 > s + hl || d[10] == '>' || d[11] != 'f' || (d[12] != '2' && d[12] != '4' && d[12] != '8')) return best;
+        h = hl; w = d[12] - '0'; fixed = 1;
+    }
+    if (n < h + 4096) return best;
+    if (!fixed) {                                            /* float32 at the byte alignment with the most predictable exponent */
+        double he = 1e9; size_t ph = 0;
+        for (size_t k = 0; k < 4; k++) { double e = kg_plane_h(s + k, (n - k) / 4, 4, 3, 1); if (e < he) { he = e; ph = k; } }
+        double hm = kg_plane_h(s + ph, (n - ph) / 4, 4, 1, 1);
+        if (he > 6.0 || hm < 7.0) return best;               /* not float-like: exponent not predictable, or mantissa structured */
+        h = ph;
+    }
+    if (st < h) st = h;
+    if (L > n - st) L = n - st;
+    size_t a = h + (st - h) / w * w, l = (n - a < L ? n - a : L) / w * w;
+    codec_ctx cx = {0}; uint8_t *o = malloc(L + 64);
+    size_t z = o && l ? kg_encode_float(&cx, C_ZSTD, zl, s + a, l, w, 0, o, L + 64) : 0;
+    if (z) { best = (double)z / l; *bw = w; *bh = h; }
+    free(o); codec_ctx_free(&cx);
+    return best;
+}
+
 static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh) {
     size_t h = 0; int ws[3] = {2, 4, 8}, nw = 3; double best = 1e300;
     if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
@@ -1437,6 +1538,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     if (light) logs = 0;
     plan_t pl = {T_NONE, 0, 0, 0};
     if (n < 4096) return pl;
+    const size_t TRIAL = effort ? (1u << 20) : (256u << 10);   /* text-transform trial slice (fast, hc: 256 KiB) */
     size_t h = n < 65536 ? n : 65536, pr = 0;
     for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
     if (pr * 100 > h * 95) {                                     /* text: field transposition if lines have a fixed field count */
@@ -1454,7 +1556,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                 if (lines < 4 || k0 <= 256 || same * 100 < (lines - 1) * 95) continue;
                 uint8_t sep = '.';
                 if (WD[di] != ',') { size_t dc = 0, cc = 0; for (size_t q = 1; q + 1 < h; q++) if ((uint8_t)(s[q - 1] - '0') < 10 && (uint8_t)(s[q + 1] - '0') < 10) { dc += s[q] == '.'; cc += s[q] == ','; } if (cc > dc) sep = ','; }
-                size_t mm = n < (1u << 20) ? n : (1u << 20); while (mm > 0 && s[mm - 1] != '\n') mm--;
+                size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
                 if (mm < 16384) continue;
                 codec_ctx cx = {0}; uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t zcap = ZSTD_compressBound(mm); uint8_t *z = malloc(zcap);
                 if (o && zc && z) {
@@ -1466,7 +1568,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (pl.t == T_KG) return pl;
         }
         if (logs && n >= 65536 && json_minified(s, h)) {   /* minified JSON: split into records, then as JSON lines */
-            size_t mm = n < (1u << 20) ? n : (1u << 20);
+            size_t mm = n < TRIAL ? n : TRIAL;
             uint8_t *sp = malloc(2 * mm + 64), *o = malloc(2 * mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx();
             size_t cap = ZSTD_compressBound(2 * mm); uint8_t *z = malloc(cap);
             if (sp && o && zc && z) {
@@ -1480,15 +1582,19 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (pl.t == T_LOG) return pl;
         }
         int js = logs && n >= 65536 ? json_lines(s, h) : 0;
+        int logc = 0; size_t loga = 0, logb = 0;  /* the JSON trial's log-token result, reused by the log trial below */
         if (js == 2 || (js == 1 && !strong)) {   /* JSON: values become columns (max/ultra model pretty JSON well raw) */
-            size_t mm = n < (1u << 20) ? n : (1u << 20); while (mm > 0 && s[mm - 1] != '\n') mm--;
+            size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
             if (mm >= 16384) {                   /* JSON tokens, or log tokens when values hold free text: the smaller */
                 uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm); uint8_t *z = malloc(cap);
                 if (o && zc && z) {
                     size_t b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1), best = ZSTD_isError(b) ? 0 : b * CZ_LOG_GAIN_PCT / 100;
                     for (int jm = 1; jm >= 0; jm--) {
-                        int64_t tn = log_encode_m(s, mm, o, mm + 64, jm); if (tn <= 0) continue;
+                        int64_t tn = log_encode_m(s, mm, o, mm + 64, jm);
+                        if (jm == 0) { logc = 1; loga = (size_t)-1; logb = b; }
+                        if (tn <= 0) continue;
                         size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1);
+                        if (jm == 0) { loga = a; logc = 2; }
                         if (!ZSTD_isError(a) && a < best) { best = a; pl.t = T_LOG; pl.a = (uint8_t)jm; }
                     }
                 }
@@ -1536,8 +1642,10 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             free(o); free(z); ZSTD_freeCCtx(zc);
         }
         if (logs && pl.t == T_NONE && n >= 65536) {        /* logs: template transform, kept if it helps on a sample */
-            size_t mm = n < (1u << 20) ? n : (1u << 20); while (mm > 0 && s[mm - 1] != '\n') mm--;
-            if (mm >= 16384) {
+            size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
+            if (mm >= 16384 && logc) {           /* same slice already coded by the JSON trial */
+                if (logc == 2 && !ZSTD_isError(loga) && !ZSTD_isError(logb) && loga * 100 < CZ_LOG_GAIN_PCT * logb) pl.t = T_LOG;
+            } else if (mm >= 16384) {
                 uint8_t *o = malloc(mm + 64);
                 if (!o) return pl;
                 int64_t tn = log_encode(s, mm, o, mm + 64);
@@ -1635,6 +1743,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         {   /* integer arrays: kolmo graph INT node */
             int w = 0; size_t hh = 0; double c = kg_num_trial(s, n, st, L, zl, plain, &w, &hh);
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
+            w = 0; hh = 0; c = kg_float_trial(s, n, st, L, zl, &w, &hh);           /* float arrays: FLOAT node */
+            if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
         }
         if (chosen >= 2) pl = keep;
         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
@@ -1649,7 +1759,9 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                 double c = (double)zcost(zc, buf, rows * u, zb, zcap, zl) / (rows * u); if (c < best) best = c;
             }
             int w = 0; size_t hh = 0; double c = kg_num_trial(s, n, 0, n, zl, plain, &w, &hh);
-            if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = w; pl.c = (int)hh; }
+            if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w; pl.c = (int)hh; }
+            w = 0; hh = 0; c = kg_float_trial(s, n, 0, n, zl, &w, &hh);
+            if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = w | 16; pl.c = (int)hh; }
         }
         free(zb); free(buf);
     }
@@ -1688,7 +1800,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     if (pl.t == T_IMG) B &= ~1u;
     if (pl.t == T_REC) { B = B / pl.rec->P * pl.rec->P; if (!B) B = pl.rec->P; }
     int kgnum = pl.t == T_KG && pl.a == 0;                     /* integer graph: width-aligned blocks after the head */
-    if (kgnum) { B = B / (uint32_t)pl.b * (uint32_t)pl.b; if (!B) B = (uint32_t)pl.b; }
+    if (kgnum) { uint32_t kw = (uint32_t)(pl.b & 15); B = B / kw * kw; if (!B) B = kw; }
     while (pos < n) {
         size_t end = B < n - pos ? pos + B : n;
         if (pl.t == T_REC && pos == 0) end = (size_t)pl.rec->h + B < n ? (size_t)pl.rec->h + B : n;
@@ -1879,6 +1991,7 @@ static void *compress_worker(void *arg) {
         int codec = J->codec, level = (pl.wide || (tflag >= 10 && pl.t == T_TBL)) && J->default_level ? 1 : J->level;
         if (pl.t == T_KG && len) {                                          /* kolmo graph: the block is a program + leaves */
             cl = pl.a ? kg_encode_table(xp, codec, level, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
+                      : pl.b & 16 ? kg_encode_float(xp, codec, level, raw, len, pl.b & 15, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : kg_encode_num(xp, codec, level, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
             if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8; goto coded; }
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
@@ -2370,7 +2483,11 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         size_t k = get32(pay + 4); if (k > len) return CZN_ERR_CORRUPT;
         uint8_t *sp = malloc(len + k + 64); if (!sp) return CZN_ERR_ALLOC;
         int bad = log_decode(tbuf, dlen, sp, len + k); size_t o = 0;
-        if (!bad) for (size_t q = 0; q < len + k; q++) { uint8_t c = sp[q]; if (c != '\n') { if (o == len) { bad = 1; break; } out[o++] = c; } }
+        for (size_t q = 0, e = len + k; !bad && q < e;) {     /* copy the runs between newlines */
+            const uint8_t *nl = memchr(sp + q, '\n', e - q); size_t r = (nl ? (size_t)(nl - sp) : e) - q;
+            if (r > len - o) { bad = 1; break; }
+            memcpy(out + o, sp + q, r); o += r; q += r + (nl != NULL);
+        }
         free(sp);
         if (bad || o != len) return CZN_ERR_CORRUPT;
     }

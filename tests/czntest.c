@@ -296,6 +296,36 @@ int main(void) {
         for (int m = 0; m < 5; m++) check("int-u16", a, q, (czn_mode)m, 1 << 20, 2);
         free(a);
     }
+    /* float arrays: kolmo graph FLOAT node + Huffman-only leaves (weights-like float32 at an odd offset, .npy float16) */
+    {
+        size_t cnt = 300000, h = 3, q = h + cnt * 4 + 2; uint8_t *a = malloc(q + 256);
+        for (size_t i = 0; i < h; i++) a[i] = (uint8_t)(0x40 + i);
+        for (size_t i = 0; i < cnt; i++) {
+            double g = 0; for (int k = 0; k < 4; k++) g += (double)(rnd() % 20001) / 10000.0 - 1.0;
+            float f = (float)(g * 0.02); if (i % 5000 == 7) f = 0.0f; memcpy(a + h + i * 4, &f, 4);
+        }
+        a[q - 2] = 1; a[q - 1] = 2;
+        for (int m = 0; m < 5; m++) { check("float32", a, q, (czn_mode)m, 1 << 20, 1); check("float32-odd", a, q, (czn_mode)m, 262147, 3); }
+        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = czn_compress(a, q, d, cap, &p0), c1 = czn_compress(a, q, d, cap, &p1);
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 7) { printf("FAIL float graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            else printf("float graph: float32 fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
+            uint8_t *bk = malloc(q + 64), *e = malloc(c1);
+            for (int it = 0; it < 300; it++) {
+                memcpy(e, d, c1); int nf = 1 + (int)(rnd() % 3);
+                for (int f = 0; f < nf; f++) e[32 + rnd() % (c1 - 32)] ^= (uint8_t)(1 + rnd() % 255);
+                int64_t r = czn_decompress(e, c1, bk, q + 64, 1);
+                if (r >= 0 && (r != (int64_t)q || memcmp(bk, a, q))) { printf("FAIL float graph fuzz accepted a wrong output\n"); fails++; break; }
+            }
+            printf("float graph fuzz: 300 corrupted frames rejected or exact\n");
+            free(bk); free(e); free(d); }
+        /* .npy float16 */
+        size_t n2 = 400000; q = 128 + n2 * 2; memset(a, ' ', 128);
+        { static const char H[] = "\x93NUMPY\x01\x00\x76\x00{'descr': '<f2', 'fortran_order': False, 'shape': (400000,), }"; memcpy(a, H, sizeof H - 1); } a[127] = '\n';
+        for (size_t i = 0; i < n2; i++) { uint16_t v = (uint16_t)(0x3800 + (rnd() % 2048) - 1024); if (rnd() % 2) v |= 0x8000; memcpy(a + 128 + i * 2, &v, 2); }
+        for (int m = 0; m < 5; m++) check("float16-npy", a, q, (czn_mode)m, 1 << 20, 2);
+        free(a);
+    }
     /* scientific binary: fixed records (header, quantised doubles incl. NaN/huge outliers, small ints, ids) and a
      * 16-bit image (big-endian, odd offset) */
     {

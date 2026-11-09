@@ -141,7 +141,7 @@ version stays 7. A decoder rejects any node id it does not know.
 ```
 payload := 'G' | 1 (graph version) | nodes uv | node * nodes | leaves uv | leaf * leaves
 node    := op u8 | nin uv | input index uv * nin | nout uv | param length uv | params
-leaf    := stream index uv | codec u8 (0-7, as for blocks) | raw length uv | coded length uv | coded bytes
+leaf    := stream index uv | codec u8 (0-7 as for blocks, or 13) | raw length uv | coded length uv | coded bytes
 ```
 
 Outputs of a node take the next stream indices, in order. Every stream is consumed at most once; stream 0 must be
@@ -155,7 +155,14 @@ earlier streams. `uv` is an unsigned LEB128 varint.
 | 3 | CONCAT | count uv, length uv * count | count streams → their concatenation |
 | 4 | INT | width u8 (1, 2, 4, 8), flags u8 (bit 0 signed, bits 1–2 order 0–2, bit 3 byte planes), output width u8 (1, 2, 4, 8), head uv, count uv, gcd uv (≥ 1), bias uv (zigzag), seeds uv (zigzag) * order | bytes → residuals, rest. The input is `head` bytes, `count` little-endian integers of `width` bytes (sign-extended to 64 bits when signed, else zero-extended), then trailing bytes; rest holds the head bytes followed by the trailing bytes. Order 0 stores (v − bias) / gcd; orders 1 and 2 store zigzag((v − p) / gcd), where p is the previous value (order 1) or twice the previous minus the one before (order 2), for every value after the first `order` (the seeds). Arithmetic wraps modulo 2^64 and divisions are exact. Each residual takes `output width` little-endian bytes; with bit 3 the residual stream is byte planes (all low bytes, then all second bytes, …). |
 
+| 5 | FLOAT | width u8 (2, 4, 8), head uv, count uv | bytes → plane 0 … plane width−1, rest. The input is `head` bytes, `count` little-endian words of `width` bytes, then trailing bytes (rest = head bytes then trailing bytes). Each word is rotated left by one bit, so the sign moves to bit 0 and the top byte of a float32 is its exponent; byte b of every rotated word goes to plane b. |
+
+Leaf codec 13 is Huffman-only coding (zstd's Huffman coder, no matches), for skewed byte streams without repeats such
+as an exponent plane: chunks of at most 128 KiB, each `mode u8 | raw length uv` then for mode 0 the raw bytes, for
+mode 1 one byte repeated, for mode 2 `coded length uv | zstd HUF 4-stream data`. The encoder keeps, per leaf, the
+smallest of the block codec, Huffman-only and stored.
+
 The planner uses graphs for delimited tables with more than 256 columns (the limit of the table transform) and for
-arrays of 16-, 32- and 64-bit integers (a `.npy` header becomes the INT node's head), when a slice codes at least 3%
+arrays of 16-, 32- and 64-bit integers and float arrays (a `.npy` header becomes the node's head), when a slice codes at least 3%
 smaller than the other candidates. A
 version 1–6 decoder rejects version 7 files.
