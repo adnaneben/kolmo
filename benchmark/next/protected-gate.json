@@ -7,65 +7,65 @@
     {
       "file": "silesia/mozilla",
       "threads": 1,
-      "checkpoint_mbps": 207.62081896346783,
-      "current_mbps": 208.7754433923736,
-      "elapsed_ratio": 0.9944695390887723
+      "checkpoint_mbps": 197.29089020778952,
+      "current_mbps": 197.51621179518168,
+      "elapsed_ratio": 0.9988592248436508
     },
     {
       "file": "silesia/mozilla",
       "threads": 4,
-      "checkpoint_mbps": 667.444997711463,
-      "current_mbps": 662.5465505086763,
-      "elapsed_ratio": 1.0073933630761882
+      "checkpoint_mbps": 659.5318487996959,
+      "current_mbps": 657.2479124361996,
+      "elapsed_ratio": 1.0034749997988286
     },
     {
       "file": "silesia/mozilla",
       "threads": 10,
-      "checkpoint_mbps": 989.1775679727408,
-      "current_mbps": 994.8871399300313,
-      "elapsed_ratio": 0.9942610857773354
+      "checkpoint_mbps": 945.9676015596694,
+      "current_mbps": 931.1410723314202,
+      "elapsed_ratio": 1.0159229677100658
     },
     {
       "file": "silesia/nci",
       "threads": 1,
-      "checkpoint_mbps": 165.05005464022435,
-      "current_mbps": 165.0584434568011,
-      "elapsed_ratio": 0.999949176689171
+      "checkpoint_mbps": 152.74022749320227,
+      "current_mbps": 152.44425835786504,
+      "elapsed_ratio": 1.001941490867058
     },
     {
       "file": "silesia/nci",
       "threads": 4,
-      "checkpoint_mbps": 474.06657926935014,
-      "current_mbps": 473.9627838560189,
-      "elapsed_ratio": 1.000218994859653
+      "checkpoint_mbps": 456.33277118364043,
+      "current_mbps": 459.5381372220236,
+      "elapsed_ratio": 0.9930248095234052
     },
     {
       "file": "silesia/nci",
       "threads": 10,
-      "checkpoint_mbps": 646.6466718219656,
-      "current_mbps": 656.2299013555953,
-      "elapsed_ratio": 0.9853965363147376
+      "checkpoint_mbps": 634.4830227033655,
+      "current_mbps": 621.7506095448908,
+      "elapsed_ratio": 1.0204783283892467
     },
     {
       "file": "owid-co2-data.csv",
       "threads": 1,
-      "checkpoint_mbps": 349.42195683306403,
-      "current_mbps": 348.5519448249162,
-      "elapsed_ratio": 1.0024960756095762
+      "checkpoint_mbps": 336.2255284038846,
+      "current_mbps": 336.81822204707595,
+      "elapsed_ratio": 0.9982403159793757
     },
     {
       "file": "owid-co2-data.csv",
       "threads": 4,
-      "checkpoint_mbps": 1067.8837530538942,
-      "current_mbps": 1074.370452466602,
-      "elapsed_ratio": 0.9939623251944285
+      "checkpoint_mbps": 1061.327920130612,
+      "current_mbps": 1053.0044657295264,
+      "elapsed_ratio": 1.0079044815781661
     },
     {
       "file": "owid-co2-data.csv",
       "threads": 10,
-      "checkpoint_mbps": 1268.7492251182687,
-      "current_mbps": 1273.727523087825,
-      "elapsed_ratio": 0.9960915518591548
+      "checkpoint_mbps": 1217.3348573364026,
+      "current_mbps": 1243.2915554671094,
+      "elapsed_ratio": 0.9791225975785263
     }
   ]
 }

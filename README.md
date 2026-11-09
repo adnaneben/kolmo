@@ -96,12 +96,6 @@ compression peaks at ~114 MB of RAM; streaming at 4 MiB segments peaks at ~32 MB
 at ~11 MB. `-d` detects a streamed file automatically. The library API is `czn_stream_compress` /
 `czn_stream_decompress` (file descriptors in and out).
 
-For archival jobs with less available memory, build the optional CLI with
-`make build/kolmo-cm20` and run `./build/kolmo-cm20 -m ultra -T 1 input output.czn`.
-It uses smaller context-mixing tables when encoding. The standard decoder reads these
-files. The encoder setting controls table size; total process memory also depends on
-input, output buffers, other codecs and worker count.
-
 ### Decoder limits
 
 C callers can use `czn_decompress_limited` with a `czn_decode_limits` structure to bound the
@@ -182,3 +176,11 @@ Apache-2.0 (see LICENSE). Vendored code keeps its own licence (see NOTICE).
 An opt-in [standalone codec and Metal experiment](src/experimental/README.md) is available separately from normal Kolmo. Its [measured results](benchmark/next/RESULTS.md) include CPU/GPU comparisons, losses as well as wins, and protection of existing improvements. The [executive plan](benchmark/next/PLAN.md) tracks promotion gates and the next milestones. The prototype is not selected by normal compression modes.
 
 The separate [byte-context candidate](src/experimental/KBC.md) explores improved independent compression ratio. Its source, format and build targets preserve the earlier KRC1 and Metal implementations. Local lzbench adapters and reproducibility scripts are in `benchmark/ratio`.
+
+## Lower-memory archive encoder
+
+For archival jobs with less available memory, build the optional CLI with
+`make build/kolmo-cm20` and run `./build/kolmo-cm20 -m ultra -T 1 input output.czn`.
+It uses smaller context-mixing tables when encoding. The standard decoder reads these
+files. The encoder setting controls table size; total process memory also depends on
+input, output buffers, other codecs and worker count.
