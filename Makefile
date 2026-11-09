@@ -164,3 +164,7 @@ byte-context-check: build/kbctest build/kbctest-asan
 .PHONY: byte-context-check
 build/kbc: src/experimental/kbc_cli.c build/kbc.o build/krc.o
 	$(CC) $(CFLAGS) -Isrc/experimental $^ -lpthread -o $@
+
+# Optional lower-memory archive encoder.
+build/kolmo-cm20: src/cli.c src/czn.c src/czn.h src/cm.inc src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/stream.inc build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli.c src/czn.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
