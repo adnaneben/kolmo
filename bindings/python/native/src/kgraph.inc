@@ -277,7 +277,17 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
         if (kb_uv(&o, (uint64_t)q) || kb_res(&o, 1 + 20 + zc)) goto done;
         size_t hp = o.n; o.n += 1;
         size_t z = s->n >= 64 ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
-        if (s->n >= 64) {                                     /* Huffman only, when smaller (skewed bytes without repeats) */
+        int tryh = s->n >= 64;
+        if (tryh && z) {                                      /* Huffman cannot beat the order-0 entropy: skip when z is below it */
+            double bits = 0;                                  /* per 128 KiB chunk, as Huffman codes them */
+            for (size_t a = 0; a < s->n; a += 131072) {
+                size_t m = s->n - a < 131072 ? s->n - a : 131072; uint32_t hc[256] = {0};
+                for (size_t q = 0; q < m; q++) hc[s->p[a + q]]++;
+                for (int c = 0; c < 256; c++) if (hc[c]) bits -= (double)hc[c] * log2((double)hc[c] / (double)m);
+            }
+            if ((double)z * 8 <= bits) tryh = 0;
+        }
+        if (tryh) {                                           /* Huffman only, when smaller (skewed bytes without repeats) */
             uint8_t *hb = malloc(zc); size_t hz = hb ? codec_compress(x, C_HUF, 0, s->p, s->n, hb, zc) : 0;
             if (hz && (!z || hz < z)) { memcpy(o.p + o.n + 20, hb, hz); z = hz; cc = C_HUF; }
             free(hb);

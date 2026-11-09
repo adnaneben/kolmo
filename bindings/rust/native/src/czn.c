@@ -1521,7 +1521,7 @@ static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int 
             if (c < 16) continue;
             double e = kg_num_choose(s + a, c, w, &o0, &s0) / (8.0 * w); if (e < eb) { eb = e; bw0 = w; }
         }
-        if (!bw0 || eb > plain * 1.25) return best;
+        if (!bw0 || eb > plain) return best;            /* estimate above plain coding: no gain */
         ws[0] = bw0; nw = 1;
     }
     codec_ctx cx = {0}; uint8_t *o = malloc(L + 64);
@@ -1754,10 +1754,13 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
             else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
         }
-        {   /* integer arrays: kolmo graph INT node */
-            int w = 0; size_t hh = 0; double c = kg_num_trial(s, n, st, L, zl, plain, &w, &hh);
-            if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
-            w = 0; hh = 0; c = kg_float_trial(s, n, st, L, zl, &w, &hh);           /* float arrays: FLOAT node */
+        {   /* float arrays first (FLOAT node); integer arrays (INT node) only when the data does not look like floats */
+            int w = 0; size_t hh = 0; double c = kg_float_trial(s, n, st, L, zl, &w, &hh), cf = c; int fw = w; size_t fh = hh;
+            if (cf > 1e299) {
+                w = 0; hh = 0; c = kg_num_trial(s, n, st, L, zl, plain, &w, &hh);
+                if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
+            }
+            c = cf; w = fw; hh = fh;
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
         }
         if (chosen >= 2) pl = keep;
