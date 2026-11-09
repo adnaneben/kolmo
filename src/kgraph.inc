@@ -7,7 +7,7 @@
  *
  * Payload: 'G' | version u8 (1) | nodes uv | node* | leaves uv | leaf*
  *   node: op u8 | nin uv | in-index uv * nin | nout uv | plen uv | params[plen]   (outputs get the next stream indices)
- *   leaf: stream uv | codec u8 (block codecs 0-7, or 13 Huffman only) | raw length uv | coded length uv | coded bytes
+ *   leaf: stream uv | codec u8 (block codecs 0-7, 13 Huffman only, 14 rANS) | raw length uv | coded length uv | coded bytes
  * Every stream is consumed at most once and stream 0 at least once (when there are nodes).
  *
  * Nodes (version 1):
@@ -32,8 +32,13 @@
  *             head bytes, count little-endian words of the given width, then trailing bytes (rest = head then trailing).
  *             Each word is rotated left by one bit (the sign moves to bit 0, so the top byte of a float32 is its
  *             exponent) and byte b of every word goes to plane b.
+ *   6 IMG8    params: row bytes uv, channel step u8 (1-4), head uv. In: bytes. Out: residuals, rest. After `head` bytes, the
+ *             input is rows of `row bytes`; each byte is predicted from its neighbours `step` bytes left (a), one row up
+ *             (b) and up-left (c) with the median of a, b and a + b - c (LOCO-I), the first row from a, the first
+ *             `step` bytes of a row from b; residual = zigzag((x - prediction) mod 256 as int8). Bytes after the last
+ *             whole row and the head go to rest.
  */
-enum { KG_FIELDS = 1, KG_DECIMAL = 2, KG_CONCAT = 3, KG_INT = 4, KG_FLOAT = 5, KG_MAXOP = 5 };
+enum { KG_FIELDS = 1, KG_DECIMAL = 2, KG_CONCAT = 3, KG_INT = 4, KG_FLOAT = 5, KG_IMG8 = 6, KG_MAXOP = 6 };
 #define KG_MAXSTREAMS 65536
 
 typedef struct { uint8_t *p; size_t n, cap; } kbuf;
@@ -290,6 +295,9 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
         if (tryh) {                                           /* Huffman only, when smaller (skewed bytes without repeats) */
             uint8_t *hb = malloc(zc); size_t hz = hb ? codec_compress(x, C_HUF, 0, s->p, s->n, hb, zc) : 0;
             if (hz && (!z || hz < z)) { memcpy(o.p + o.n + 20, hb, hz); z = hz; cc = C_HUF; }
+            int slow = !(codec == C_ZSTD && level <= CZ_FAST_LEVEL);                        /* rANS at hc/max/ultra only */
+            size_t rz = hb && slow ? codec_compress(x, C_RANS, 0, s->p, s->n, hb, zc) : 0;   /* rANS: whole-bit loss of Huffman */
+            if (rz && (!z || rz < z)) { memcpy(o.p + o.n + 20, hb, rz); z = rz; cc = C_RANS; }
             free(hb);
         }
         if (!z || z >= s->n) { cc = C_STORE; z = s->n; if (z) memcpy(o.p + o.n + 20, s->p, z); }
@@ -520,6 +528,45 @@ done:
     free(par.p); kgb_free(&g); return out;
 }
 
+/* ---- IMG8 ---- */
+static inline uint8_t kg_med(int a, int b, int c) { int mx = a > b ? a : b, mn = a < b ? a : b; return (uint8_t)(c >= mx ? mn : c <= mn ? mx : a + b - c); }
+static inline uint8_t kg_zz8(uint8_t d) { int8_t v = (int8_t)d; return (uint8_t)(((unsigned)v << 1) ^ (unsigned)(v >> 7)); }
+static inline uint8_t kg_unzz8(uint8_t z) { return (uint8_t)((z >> 1) ^ (uint8_t)-(int)(z & 1)); }
+/* residual of byte i of a row-major image with row length W and channel step C */
+static inline uint8_t kg_img8_pred(const uint8_t *p, size_t i, size_t W, unsigned C) {
+    size_t x = i % W;
+    if (i < W) return x >= C ? p[i - C] : 0;
+    if (x < C) return p[i - W];
+    return kg_med(p[i - C], p[i - W], p[i - W - C]);
+}
+static int kg_img8_inv(const uint8_t *par, size_t plen, const kbuf *res, const kbuf *rest, size_t maxs, kbuf *out) {
+    size_t pi = 0; uint64_t W, h; if (kg_getuv(par, plen, &pi, &W) || pi >= plen) return -1;
+    unsigned C = par[pi++]; if (kg_getuv(par, plen, &pi, &h) || pi != plen || C < 1 || C > 4 || W < C || W > (1u << 26) || h > rest->n) return -1;
+    size_t m = res->n; if (m % W || m + rest->n > maxs) return -1;
+    if (kb_res(out, m + rest->n + 16)) return -1;
+    if (h) memcpy(out->p, rest->p, (size_t)h);
+    uint8_t *p = out->p + h; const uint8_t *r = res->p;
+    for (size_t i = 0; i < m; i++) p[i] = (uint8_t)(kg_img8_pred(p, i, (size_t)W, C) + kg_unzz8(r[i]));
+    memcpy(p + m, rest->p + h, rest->n - (size_t)h); out->n = m + rest->n;
+    return 0;
+}
+static size_t kg_encode_img8(codec_ctx *x, int codec, int level, const uint8_t *src, size_t n, size_t W, unsigned C, size_t h,
+                             uint8_t *dst, size_t cap) {
+    if (h > n || W < C || C < 1 || C > 4 || (n - h) / W < 2) return 0;
+    size_t m = (n - h) / W * W, out = 0; const uint8_t *a = src + h;
+    kgb g = {0}; kbuf par = {0};
+    if (kgb_new(&g) != 0) goto done;
+    kb_uv(&par, W); kb_byte(&par, (uint8_t)C); kb_uv(&par, h); if (!par.p) goto done;
+    if (kgb_node(&g, KG_IMG8, (int[]){0}, 1, 2, &par) != 1) goto done;
+    if (kb_res(&g.s[1], m + 1) || kb_res(&g.s[2], n - m + 1)) goto done;
+    for (size_t i = 0; i < m; i++) g.s[1].p[i] = kg_zz8((uint8_t)(a[i] - kg_img8_pred(a, i, W, C)));
+    g.s[1].n = m;
+    kb_put(&g.s[2], src, h); kb_put(&g.s[2], a + m, n - h - m);
+    out = kg_serialize(x, codec, level, &g, n, dst, cap);
+done:
+    free(par.p); kgb_free(&g); return out;
+}
+
 /* ---- decoder ---- */
 typedef struct { uint8_t op; uint32_t nin, nout, firstout; const uint32_t *in; const uint8_t *par; size_t plen; } kgnode;
 static int kg_decode(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *out, size_t len) {
@@ -598,6 +645,10 @@ static int kg_decode(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *out, siz
             if (off != o->n) goto out;
             for (uint32_t r = 0; r < t->nin; r++) have[t->in[r]] = 1;
             continue;                                               /* the concatenation stays alive for its views */
+        } else if (t->op == KG_IMG8) {
+            if (t->nin != 1 || t->nout != 2) goto out;
+            kbuf r = {0}; if (kg_img8_inv(t->par, t->plen, &o[0], &o[1], maxs, &r)) { free(r.p); goto out; }
+            s[t->in[0]] = r;
         } else if (t->op == KG_FLOAT) {
             if (t->nin != 1 || t->plen < 1 || (t->par[0] != 2 && t->par[0] != 4 && t->par[0] != 8) || t->nout != (uint32_t)t->par[0] + 1) goto out;
             kbuf r = {0}; if (kg_float_inv(t->par, t->plen, &o[0], &o[t->par[0]], maxs, &r)) { free(r.p); goto out; }

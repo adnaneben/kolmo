@@ -326,6 +326,35 @@ int main(void) {
         for (int m = 0; m < 5; m++) check("float16-npy", a, q, (czn_mode)m, 1 << 20, 2);
         free(a);
     }
+    /* 8-bit images: kolmo graph IMG8 node (raw RGB 640 wide with a ragged tail, .npy uint8 2-D), round trips and fuzz */
+    {
+        size_t W = 640, H = 300, C = 3, q = W * H * C + 7; uint8_t *a = malloc(q + 256);
+        for (size_t y = 0; y < H; y++) for (size_t x = 0; x < W; x++) for (size_t c = 0; c < C; c++) {
+            int v = (int)((x * 37 + c * 11) % 199) + (int)(y / 4) + (int)(rnd() % 5) - 2;   /* rows alike, columns not */
+            a[(y * W + x) * C + c] = (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v);
+        }
+        for (size_t i = W * H * C; i < q; i++) a[i] = (uint8_t)i;
+        for (int m = 0; m < 5; m++) { check("img8-rgb", a, q, (czn_mode)m, 1 << 20, 1); check("img8-rgb-odd", a, q, (czn_mode)m, 100003, 3); }
+        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = czn_compress(a, q, d, cap, &p0), c1 = czn_compress(a, q, d, cap, &p1);
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 7) { printf("FAIL image graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            else printf("image graph: 8-bit RGB fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
+            uint8_t *bk = malloc(q + 64), *e = malloc(c1);
+            for (int it = 0; it < 300; it++) {
+                memcpy(e, d, c1); int nf = 1 + (int)(rnd() % 3);
+                for (int f = 0; f < nf; f++) e[32 + rnd() % (c1 - 32)] ^= (uint8_t)(1 + rnd() % 255);
+                int64_t r = czn_decompress(e, c1, bk, q + 64, 1);
+                if (r >= 0 && (r != (int64_t)q || memcmp(bk, a, q))) { printf("FAIL image graph fuzz accepted a wrong output\n"); fails++; break; }
+            }
+            printf("image graph fuzz: 300 corrupted frames rejected or exact\n");
+            free(bk); free(e); free(d); }
+        /* .npy uint8 (300, 451): a width the raw detector does not list */
+        size_t w2 = 451, h2 = 300; q = 128 + w2 * h2; memset(a, ' ', 128);
+        { static const char Hd[] = "\x93NUMPY\x01\x00\x76\x00{'descr': '|u1', 'fortran_order': False, 'shape': (300, 451), }"; memcpy(a, Hd, sizeof Hd - 1); } a[127] = '\n';
+        for (size_t y = 0; y < h2; y++) for (size_t x = 0; x < w2; x++) a[128 + y * w2 + x] = (uint8_t)((x + y) / 3 + rnd() % 5);
+        for (int m = 0; m < 5; m++) check("img8-npy", a, q, (czn_mode)m, 1 << 20, 2);
+        free(a);
+    }
     /* scientific binary: fixed records (header, quantised doubles incl. NaN/huge outliers, small ints, ids) and a
      * 16-bit image (big-endian, odd offset) */
     {

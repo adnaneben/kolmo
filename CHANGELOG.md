@@ -30,6 +30,15 @@
 - **Merge of Codex's `codex/lossless-frontier`**: blockwise file I/O, lower fast-file memory, legacy-compatible
   wide-table lanes and the opt-in frontier build. Codex's frontier codecs keep ids 8–11; the graph codec is 12.
 
+- **8-bit images (graph IMG8 node)**: LOCO-I median prediction per channel, row length from a `.npy` header or detected
+  among common widths × 1/3/4 channels. img_camera 1.62× → 1.82× at `fast`, 1.97× at `max` (OpenZL 0.3.0: 1.75×);
+  astronaut 1.63× → 1.84× at `fast`.
+- **16-bit floats (bf16/fp16)** in the FLOAT node: a BF16 LLM shard 1.28× → 1.50× at `fast` (its entropy bound).
+- **rANS leaf codec (14)** at hc/max/ultra: model weights 1.2007× → 1.2036× (OpenZL's best ratio).
+- **Wide tables at hc/max/ultra**: the graph is kept only when it also wins with the setting's strong codec on a slice
+  from the middle of the file. Fixes a regression against 1.0.0 on the UCI electricity table at `max` (8.37× → 11.26×,
+  equal to 1.0.0).
+
 ### Speed
 - Graph decoder: table numbers print straight into rows (no column text), leaf parts are views instead of copies,
   two-digit number printing; minified JSON: newline removal by runs. Minified JSON decodes 1.8× faster, wide tables

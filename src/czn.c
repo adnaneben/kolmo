@@ -1089,7 +1089,7 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 
 /* ------------------------------------------------------------------ codecs */
 enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
-       C_GRAPH = 12, C_HUF = 13 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only (graph leaves) */
+       C_GRAPH = 12, C_HUF = 13, C_RANS = 14 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0 (graph leaves) */
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9 };   /* 9: kolmo graph (a=delim b=decimal separator) */
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
  * so repeated calls to one target produce identical bytes. Encoded back to front and decoded front to back (as in
@@ -1225,9 +1225,114 @@ static int huf_decompress_all(const uint8_t *in, size_t cn, uint8_t *out, size_t
     return i == cn ? 0 : -1;
 }
 
+/* Static order-0 rANS (graph leaves): near-entropy coding of skewed bytes, where Huffman's whole-bit code lengths
+ * lose (an exponent plane at 2.6 bits per byte). Chunks of up to 1 MiB: raw length uv, frequency table, coded length uv, then the bytes: a 32-bit state (4 bytes, little-endian) and the
+ * renormalisation bytes, read forwards. Table: per symbol its frequency uv; a 0 is followed by the count of further
+ * absent symbols uv. Frequencies are scaled to 2^16. */
+#define RANS_SB 16
+#define RANS_M (1u << RANS_SB)
+#define RANS_L (1u << 23)
+#define RANS_CHUNK (1u << 20)
+static int rans_norm(const uint32_t *cnt, size_t n, uint32_t *f) {   /* scale counts to sum RANS_M, present symbols >= 1 */
+    uint64_t tot = 0; int used = 0;
+    for (int s = 0; s < 256; s++) { f[s] = cnt[s] ? (uint32_t)(((uint64_t)cnt[s] * RANS_M) / n) : 0; if (cnt[s] && !f[s]) f[s] = 1; tot += f[s]; used += cnt[s] != 0; }
+    if (used < 2) return -1;
+    while (tot != RANS_M) {                                   /* adjust the largest (or the cheapest to change) */
+        int b = -1; double bc = 1e300;
+        for (int s = 0; s < 256; s++) {
+            if (!cnt[s]) continue;
+            if (tot > RANS_M && f[s] <= 1) continue;
+            double c = tot > RANS_M ? (double)cnt[s] * log2((double)f[s] / (f[s] - 1)) : -(double)cnt[s] * log2((double)(f[s] + 1) / f[s]);
+            if (c < bc) { bc = c; b = s; }
+        }
+        if (b < 0) return -1;
+        if (tot > RANS_M) { uint64_t d = tot - RANS_M, room = f[b] - 1, k = d < room ? d : room; if (k > (cnt[b] / 64) + 1) k = (cnt[b] / 64) + 1; if (k > room) k = room; f[b] -= (uint32_t)k; tot -= k; }
+        else { uint64_t d = RANS_M - tot, k = d < (cnt[b] / 64) + 1 ? d : (cnt[b] / 64) + 1; f[b] += (uint32_t)k; tot += k; }
+    }
+    return 0;
+}
+/* rans64 (ryg): 64-bit state, 32-bit renormalisation words, reciprocal encoding; four interleaved states */
+#define R64_L (1ull << 31)
+typedef struct { uint64_t rcp; uint32_t freq, bias, cmpl, shift; } r64sym;
+static void r64sym_init(r64sym *e, uint32_t start, uint32_t f) {
+    e->freq = f; e->cmpl = RANS_M - f;
+    if (f < 2) { e->rcp = ~0ull; e->shift = 0; e->bias = start + RANS_M - 1; }
+    else {
+        uint32_t sh = 0; while (f > (1u << sh)) sh++;
+        uint64_t x0 = f - 1, x1 = 1ull << (sh + 31), t1 = x1 / f; x0 += (x1 % f) << 32; uint64_t t0 = x0 / f;
+        e->rcp = t0 + (t1 << 32); e->shift = sh - 1; e->bias = start;
+    }
+}
+static inline uint64_t r64_mulhi(uint64_t a, uint64_t b) { return (uint64_t)(((unsigned __int128)a * b) >> 64); }
+static size_t rans_compress_all(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
+    size_t o = 0, cw = RANS_CHUNK + 64; uint32_t *tmp = malloc(cw * 4); if (!tmp) return 0;   /* 32-bit words, filled backwards */
+    for (size_t i = 0; i < n;) {
+        size_t m = n - i < RANS_CHUNK ? n - i : RANS_CHUNK; const uint8_t *src = in + i;
+        uint32_t cnt[256] = {0}, f[256], c = 0; r64sym es[256]; for (size_t q = 0; q < m; q++) cnt[src[q]]++;
+        if (rans_norm(cnt, m, f)) { free(tmp); return 0; }         /* one symbol: leave it to the other codecs */
+        for (int k = 0; k < 256; k++) { if (f[k]) r64sym_init(&es[k], c, f[k]); c += f[k]; }
+        uint32_t *e = tmp + cw; uint64_t x0 = R64_L, x1 = R64_L;   /* states for even and odd positions, back to front */
+#define R64_PUT(X, Q) do { const r64sym *y = &es[src[Q]]; uint64_t xmax = ((R64_L >> RANS_SB) << 32) * y->freq; \
+            if (X >= xmax) { *--e = (uint32_t)X; X >>= 32; } X = X + y->bias + (r64_mulhi(X, y->rcp) >> y->shift) * y->cmpl; } while (0)
+        uint64_t x2 = R64_L, x3 = R64_L; size_t q = m;            /* four states (position mod 4); at most one word per symbol */
+        while (q & 3) { q--; switch (q & 3) { case 0: R64_PUT(x0, q); break; case 1: R64_PUT(x1, q); break; default: R64_PUT(x2, q); } }
+        while (q) { q -= 4; R64_PUT(x3, q + 3); R64_PUT(x2, q + 2); R64_PUT(x1, q + 1); R64_PUT(x0, q); }
+#undef R64_PUT
+        uint64_t x[4] = {x0, x1, x2, x3};
+        if (e - tmp < 8) { free(tmp); return 0; }
+        for (int k = 3; k >= 0; k--) { *--e = (uint32_t)(x[k] >> 32); *--e = (uint32_t)x[k]; }   /* x0 lo, x0 hi, x1 lo, ... */
+        size_t zw = (size_t)(tmp + cw - e), z = zw * 4;
+        if (cap - o < 16 + 256 * 3 + z) { free(tmp); return 0; }
+        uint8_t *h = out + o;
+        for (uint64_t v = m;; v >>= 7) { *h++ = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
+        for (int k = 0; k < 256;) {
+            if (f[k]) { for (uint64_t v = f[k];; v >>= 7) { *h++ = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; } k++; continue; }
+            int r = 1; while (k + r < 256 && !f[k + r]) r++;
+            *h++ = 0; *h++ = (uint8_t)(r - 1); k += r;              /* r - 1 < 256 */
+        }
+        for (uint64_t v = z;; v >>= 7) { *h++ = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
+        for (size_t q = 0; q < zw; q++) { uint32_t w = e[q]; h[4 * q] = (uint8_t)w; h[4 * q + 1] = (uint8_t)(w >> 8); h[4 * q + 2] = (uint8_t)(w >> 16); h[4 * q + 3] = (uint8_t)(w >> 24); }
+        o = (size_t)(h - out) + z; i += m;
+    }
+    free(tmp); return o;
+}
+static inline uint32_t r64_rd(const uint8_t *p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24; }
+static int rans_decompress_all(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+    size_t i = 0, o = 0; uint8_t *sym = malloc(RANS_M); if (!sym) return -1;     /* slot -> symbol: 64 KiB, stays in cache */
+    while (o < n) {
+        uint64_t m, v, z; uint32_t f[256], c[257]; c[0] = 0;
+        if (kgu_get(in, cn, &i, &m) || m == 0 || m > RANS_CHUNK || m > n - o) goto bad;
+        for (int k = 0; k < 256;) {
+            if (kgu_get(in, cn, &i, &v) || v > RANS_M) goto bad;
+            if (v) { f[k] = (uint32_t)v; c[k + 1] = c[k] + f[k]; if (c[k + 1] > RANS_M) goto bad; k++; continue; }
+            if (i >= cn) goto bad;
+            int r = 1 + in[i++]; if (k + r > 256) goto bad;
+            for (int q = 0; q < r; q++) { f[k] = 0; c[k + 1] = c[k]; k++; }
+        }
+        if (c[256] != RANS_M || kgu_get(in, cn, &i, &z) || z < 32 || z % 4 || z > cn - i) goto bad;
+        for (int k = 0; k < 256; k++) if (f[k]) memset(sym + c[k], k, f[k]);
+        const uint8_t *p = in + i, *pe = p + z; uint64_t x[4];
+        for (int k = 0; k < 4; k++) { x[k] = (uint64_t)r64_rd(p) | (uint64_t)r64_rd(p + 4) << 32; p += 8; if (x[k] < R64_L) goto bad; }
+        uint8_t *w = out + o; uint64_t x0 = x[0], x1 = x[1], x2 = x[2], x3 = x[3];
+#define R64_GET(X, Q) do { uint32_t sl = (uint32_t)X & (RANS_M - 1); uint8_t k = sym[sl]; w[Q] = k; \
+            X = (uint64_t)f[k] * (X >> RANS_SB) + sl - c[k]; if (X < R64_L) { if (p >= pe) goto bad; X = (X << 32) | r64_rd(p); p += 4; } } while (0)
+        size_t q = 0;
+        for (; q + 3 < m; q += 4) { R64_GET(x0, q); R64_GET(x1, q + 1); R64_GET(x2, q + 2); R64_GET(x3, q + 3); }
+        if (q < m) R64_GET(x0, q);
+        if (q + 1 < m) R64_GET(x1, q + 1);
+        if (q + 2 < m) R64_GET(x2, q + 2);
+#undef R64_GET
+        if (p != pe || x0 != R64_L || x1 != R64_L || x2 != R64_L || x3 != R64_L) goto bad;   /* back where the encoder started */
+        i += z; o += m;
+    }
+    free(sym); return i == cn ? 0 : -1;
+bad: free(sym); return -1;
+}
+
 static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     switch (codec) {
         case C_HUF: return huf_compress_all(in, n, out, cap);
+        case C_RANS: return rans_compress_all(in, n, out, cap);
         case C_LZ4: { int r = LZ4_compress_fast((const char *)in, (char *)out, (int)n, (int)cap, level > 0 ? level : 1); return r > 0 ? (size_t)r : 0; }
         case C_LZ4HC: {
             if (!x->lz4hc_state) x->lz4hc_state = malloc(LZ4_sizeofStateHC());
@@ -1303,6 +1408,7 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
 #endif
         case C_CM: return cm_decompress(in, cn, out, n);
         case C_HUF: return huf_decompress_all(in, cn, out, n);
+        case C_RANS: return rans_decompress_all(in, cn, out, n);
     }
     return -1;
 }
@@ -1361,7 +1467,7 @@ static inline void put64(uint8_t *p, uint64_t v) { memcpy(p, &v, 8); }
 static inline uint32_t get32(const uint8_t *p) { uint32_t v; memcpy(&v, p, 4); return v; }
 static inline uint64_t get64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }
 
-typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm;
+typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw;   /* kgw: IMG8 row bytes */
 #ifdef CZN_FRONTIER
     frontier_lags lags;
 #endif
@@ -1463,7 +1569,7 @@ static int json_lines(const uint8_t *s, size_t h) {
 /* integer-array candidate for the planner: width from a .npy header (head = the header), else 2, 4 and 8 tried; each
  * coded as an INT graph with zstd at the scoring level on the slice [st, st+L). Returns the best cost per byte (or a
  * huge value) and sets the width and head. */
-/* float-array candidate: float32 (or a .npy float dtype) whose rotated top byte (the exponent) is far more predictable
+/* float-array candidate: float32 or a 16-bit float (or a .npy float dtype) whose rotated top byte (the exponent) is far more predictable
  * than its mantissa bytes; the byte alignment (head) with the most predictable exponent wins. Scored like the INT
  * candidate; returns the cost per byte (or a huge value), sets width and head. */
 static double kg_plane_h(const uint8_t *p, size_t cnt, int w, int b, int rot) {   /* order-0 entropy of plane b, bits */
@@ -1476,6 +1582,46 @@ static double kg_plane_h(const uint8_t *p, size_t cnt, int w, int b, int rot) { 
     double hs = 0; for (int k = 0; k < 256; k++) if (c[k]) { double q = (double)c[k] / m; hs -= q * log2(q); }
     return hs;
 }
+/* 8-bit image candidate (IMG8 node): row length and channel step from a .npy uint8 header (shape (H, W) or (H, W, C)),
+ * else from common image widths x 1, 3 or 4 channels, keeping the layout whose median-predictor residuals are much
+ * smaller than a left-neighbour predictor's on a sample. Scored like the other graph candidates. */
+static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, size_t *bw, unsigned *bc, size_t *bh) {
+    double best = 1e300; size_t h = 0, W = 0; unsigned C = 0;
+    if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
+        size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
+        const uint8_t *d = hl <= n ? memmem(s, hl, "'descr': '", 10) : NULL, *sh = hl <= n ? memmem(s, hl, "'shape': (", 10) : NULL;
+        if (!d || !sh || d + 13 > s + hl || d[11] != 'u' || d[12] != '1' || memmem(s, hl, "'fortran_order': True", 21)) return best;
+        uint64_t dims[4]; int nd = 0; const uint8_t *q = sh + 10;
+        while (q < s + hl && *q != ')' && nd < 4) { while (q < s + hl && (*q == ' ' || *q == ',')) q++; if (q >= s + hl || *q == ')') break; uint64_t v = 0; while (q < s + hl && *q >= '0' && *q <= '9') v = v * 10 + (uint64_t)(*q++ - '0'); dims[nd++] = v; }
+        if (nd == 2) { W = dims[1]; C = 1; } else if (nd == 3 && dims[2] >= 1 && dims[2] <= 4) { W = dims[1] * dims[2]; C = (unsigned)dims[2]; } else return best;
+        h = hl;
+    } else {
+        static const uint16_t WS[] = {128, 160, 192, 200, 240, 256, 300, 320, 352, 384, 400, 416, 480, 500, 512, 576, 600, 640, 720,
+                                      768, 800, 960, 1000, 1024, 1080, 1200, 1280, 1366, 1440, 1536, 1600, 1920, 2048, 2560, 3840, 4096};
+        size_t mid = n / 2, need = 0; double bestc = 1e300, left = 0;
+        for (size_t k = 0; k < sizeof WS / sizeof WS[0]; k++) for (unsigned c = 1; c <= 4; c++) {
+            if (c == 2) continue;
+            size_t w = (size_t)WS[k] * c; if (w * 8 > n) continue;
+            size_t a = (mid / w) * w, m = w * 16 < 65536 ? w * 16 : 65536 / w * w; if (a < w || a + m > n) continue;
+            double cost = 0, lc = 0;
+            for (size_t i = a; i < a + m; i++) {
+                int x = s[i], pr = kg_med(s[i - c], s[i - w], s[i - w - c]), d = x - pr; cost += d < 0 ? -d : d;
+                int dl = x - s[i - 1]; lc += dl < 0 ? -dl : dl;
+            }
+            cost /= m; lc /= m; if (cost < bestc) { bestc = cost; W = w; C = c; left = lc; need = 1; }
+        }
+        if (!need || bestc > 0.7 * left) return best;           /* no 2-D structure */
+    }
+    if (W < 2 || n < h + 4 * W) return best;
+    if (st < h) st = h;
+    size_t a = h + (st - h) / W * W, l = (n - a < L ? n - a : L) / W * W; if (l < 2 * W) l = (n - a) / W * W < 2 * W ? 0 : 2 * W;
+    codec_ctx cx = {0}; uint8_t *o = malloc(l + 64);
+    size_t z = o && l ? kg_encode_img8(&cx, C_ZSTD, zl, s + a, l, W, C, 0, o, l + 64) : 0;
+    if (z) { best = (double)z / l; *bw = W; *bc = C; *bh = h; }
+    free(o); codec_ctx_free(&cx);
+    return best;
+}
+
 static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, int *bw, size_t *bh) {
     double best = 1e300; int w = 4; size_t h = 0; int fixed = 0;
     if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
@@ -1485,19 +1631,24 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
         h = hl; w = d[12] - '0'; fixed = 1;
     }
     if (n < h + 4096) return best;
-    if (!fixed) {                                            /* float32 at the byte alignment with the most predictable exponent */
-        double he = 1e9; size_t ph = 0;
-        for (size_t k = 0; k < 4; k++) { double e = kg_plane_h(s + k, (n - k) / 4, 4, 3, 1); if (e < he) { he = e; ph = k; } }
-        double hm = kg_plane_h(s + ph, (n - ph) / 4, 4, 1, 1);
-        if (he > 6.0 || hm < 7.0) return best;               /* not float-like: exponent not predictable, or mantissa structured */
-        h = ph;
+    int ws[2] = {w, 0}; size_t hs[2] = {h, 0}; int nw = 1;
+    if (!fixed) {   /* float32 and 16-bit floats (bf16, fp16), each at the byte alignment with the most predictable exponent */
+        nw = 0;
+        for (int fw = 4; fw >= 2; fw -= 2) {
+            double he = 1e9; size_t ph = 0;
+            for (size_t k = 0; k < (size_t)fw; k++) { double e = kg_plane_h(s + k, (n - k) / fw, fw, fw - 1, 1); if (e < he) { he = e; ph = k; } }
+            double hm = kg_plane_h(s + ph, (n - ph) / fw, fw, fw - 2, 1);
+            if (he <= 6.0 && hm >= 7.0) { ws[nw] = fw; hs[nw] = ph; nw++; }   /* exponent predictable, mantissa near random */
+        }
+        if (!nw) return best;
     }
-    if (st < h) st = h;
-    if (L > n - st) L = n - st;
-    size_t a = h + (st - h) / w * w, l = (n - a < L ? n - a : L) / w * w;
     codec_ctx cx = {0}; uint8_t *o = malloc(L + 64);
-    size_t z = o && l ? kg_encode_float(&cx, C_ZSTD, zl, s + a, l, w, 0, o, L + 64) : 0;
-    if (z) { best = (double)z / l; *bw = w; *bh = h; }
+    for (int q = 0; o && q < nw; q++) {
+        int fw = ws[q]; size_t fh = hs[q], s0 = st < fh ? fh : st, L0 = L > n - s0 ? n - s0 : L;
+        size_t a = fh + (s0 - fh) / fw * fw, l = (n - a < L0 ? n - a : L0) / fw * fw;
+        size_t z = l ? kg_encode_float(&cx, C_ZSTD, zl, s + a, l, fw, 0, o, L + 64) : 0;
+        if (z && (double)z / l < best) { best = (double)z / l; *bw = fw; *bh = fh; }
+    }
     free(o); codec_ctx_free(&cx);
     return best;
 }
@@ -1538,7 +1689,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     if (light) logs = 0;
     plan_t pl = {T_NONE, 0, 0, 0};
     if (n < 4096) return pl;
-    const size_t TRIAL = effort ? (1u << 20) : (256u << 10);   /* text-transform trial slice (fast, hc: 256 KiB) */
+    const size_t TRIAL = effort ? (1u << 20) : (256u << 10);   /* text-transform trial slice (fast: 256 KiB) */
     size_t h = n < 65536 ? n : 65536, pr = 0;
     for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
     if (pr * 100 > h * 95) {                                     /* text: field transposition if lines have a fixed field count */
@@ -1558,10 +1709,21 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                 if (WD[di] != ',') { size_t dc = 0, cc = 0; for (size_t q = 1; q + 1 < h; q++) if ((uint8_t)(s[q - 1] - '0') < 10 && (uint8_t)(s[q + 1] - '0') < 10) { dc += s[q] == '.'; cc += s[q] == ','; } if (cc > dc) sep = ','; }
                 size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
                 if (mm < 16384) continue;
+                const uint8_t *ts = s;                           /* large inputs: trial from the middle (the start may be atypical) */
+                if (n > 4 * (size_t)TRIAL) {
+                    const uint8_t *m0 = memchr(s + n / 2, '\n', n / 2); size_t st = m0 ? (size_t)(m0 - s) + 1 : 0;
+                    if (st && st + mm <= n) { size_t e = mm; while (e > 0 && s[st + e - 1] != '\n') e--; if (e >= 16384) { ts = s + st; mm = e; } }
+                }
                 codec_ctx cx = {0}; uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t zcap = ZSTD_compressBound(mm); uint8_t *z = malloc(zcap);
                 if (o && zc && z) {
-                    size_t a = kg_encode_table(&cx, C_ZSTD, 1, s, mm, WD[di], sep, o, mm + 64), b = ZSTD_compressCCtx(zc, z, zcap, s, mm, 1);
-                    if (a && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b) { pl.t = T_KG; pl.a = WD[di]; pl.b = sep; }
+                    size_t a = kg_encode_table(&cx, C_ZSTD, 1, ts, mm, WD[di], sep, o, mm + 64), b = ZSTD_compressCCtx(zc, z, zcap, ts, mm, 1);
+                    int ok = a && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b;
+                    if (ok && effort) {                          /* slower settings: the graph must also win with a strong codec (max, */
+                        int cc = strong ? C_BSC : C_ZSTD, lv = 9;     /* ultra: BWT; hc: zstd -9 standing in for zstd -19) */
+                        size_t a2 = kg_encode_table(&cx, cc, lv, ts, mm, WD[di], sep, o, mm + 64), b2 = codec_compress(&cx, cc, lv, ts, mm, z, zcap);
+                        ok = a2 && b2 && a2 * 100 < 97 * b2;
+                    }
+                    if (ok) { pl.t = T_KG; pl.a = WD[di]; pl.b = sep; }
                 }
                 free(o); free(z); ZSTD_freeCCtx(zc); codec_ctx_free(&cx);
             }
@@ -1762,6 +1924,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             }
             c = cf; w = fw; hh = fh;
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
+            size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, st, L, zl, &iw, &ic, &ih);   /* 8-bit images: IMG8 */
+            if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7; }
         }
         if (chosen >= 2) pl = keep;
         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
@@ -1778,7 +1942,9 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             int w = 0; size_t hh = 0; double c = kg_num_trial(s, n, 0, n, zl, 1e300, &w, &hh);   /* small input: no pre-check */
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w; pl.c = (int)hh; }
             w = 0; hh = 0; c = kg_float_trial(s, n, 0, n, zl, &w, &hh);
-            if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = w | 16; pl.c = (int)hh; }
+            if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w | 16; pl.c = (int)hh; }
+            size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, 0, n, zl, &iw, &ic, &ih);
+            if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = 32 | (int)ic; pl.c = (int)ih; pl.kgw = (uint32_t)iw; }
         }
         free(zb); free(buf);
     }
@@ -1817,7 +1983,10 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     if (pl.t == T_IMG) B &= ~1u;
     if (pl.t == T_REC) { B = B / pl.rec->P * pl.rec->P; if (!B) B = pl.rec->P; }
     int kgnum = pl.t == T_KG && pl.a == 0;                     /* integer graph: width-aligned blocks after the head */
-    if (kgnum) { uint32_t kw = (uint32_t)(pl.b & 15); B = B / kw * kw; if (!B) B = kw; }
+    if (kgnum) {
+        uint32_t kw = pl.b & 32 ? pl.kgw : (uint32_t)(pl.b & 15);     /* IMG8: whole rows; INT/FLOAT: whole words */
+        B = B / kw * kw; if (!B) B = kw;
+    }
     while (pos < n) {
         size_t end = B < n - pos ? pos + B : n;
         if (pl.t == T_REC && pos == 0) end = (size_t)pl.rec->h + B < n ? (size_t)pl.rec->h + B : n;
@@ -2008,6 +2177,7 @@ static void *compress_worker(void *arg) {
         int codec = J->codec, level = (pl.wide || (tflag >= 10 && pl.t == T_TBL)) && J->default_level ? 1 : J->level;
         if (pl.t == T_KG && len) {                                          /* kolmo graph: the block is a program + leaves */
             cl = pl.a ? kg_encode_table(xp, codec, level, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
+                      : pl.b & 32 ? kg_encode_img8(xp, codec, level, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 16 ? kg_encode_float(xp, codec, level, raw, len, pl.b & 15, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : kg_encode_num(xp, codec, level, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
             if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8; goto coded; }
