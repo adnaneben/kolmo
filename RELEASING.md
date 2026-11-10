@@ -5,7 +5,7 @@ kolmo ships in three places, all at the same version:
 | Channel | Name | Install | Where it lives |
 |---|---|---|---|
 | Homebrew (CLI) | `kolmo` | `brew install adnaneben/kolmo/kolmo` | tap repo [adnaneben/homebrew-kolmo](https://github.com/adnaneben/homebrew-kolmo), `Formula/kolmo.rb` |
-| PyPI (Python) | `kolmoc` (imports as `kolmo`) | `pip install kolmoc` | `bindings/python`; published by `.github/workflows/wheels.yml` |
+| PyPI (Python) | `kolmoc` (imports as `kolmo`) | `pip install kolmoc` | `bindings/python`; published by `.github/workflows/wheels.yml`; Apple silicon wheel built by hand (step 3b) |
 | crates.io (Rust) | `kolmo` | `cargo add kolmo` | `bindings/rust`; published by hand with `cargo publish` |
 
 1.0.0 is live on all three. The one-time setup is done: the PyPI Trusted Publisher and `pypi`
@@ -49,11 +49,34 @@ then publishes them through Trusted Publishing. No token is stored. You can also
 with **Run workflow** (`workflow_dispatch`); the version comes from `pyproject.toml`. The publish
 step uses `skip-existing`, so running it again for a version that is already up is harmless.
 
-The macOS wheels are disabled for now because GitHub doesn't give this repo macOS runners (see the
-comment in `wheels.yml`). macOS users build the sdist, which takes about a minute. Check the run with
-`gh run list --workflow wheels.yml`.
+Check the run with `gh run list --workflow wheels.yml`.
 
 To publish by hand instead: `cd bindings/python && pipx run build && pipx run twine upload dist/*`.
+
+### 3b. Apple silicon wheel (manual, on a Mac)
+
+CI can't build macOS wheels because GitHub doesn't give this repo macOS runners (see the comment
+in `wheels.yml`). Build the Apple silicon wheel on an Apple silicon Mac once the release is on PyPI:
+
+```sh
+bash bindings/python/build-macos-wheel.sh            # version from pyproject.toml, or pass X.Y.Z
+```
+
+The script:
+- downloads the release sdist from PyPI and checks its sha256 against PyPI's record, so the wheel
+  is built from exactly the published source
+- builds a static liblzma for macOS 11+ from Homebrew's checksum-verified xz source. Homebrew's own
+  liblzma only targets the Mac's current macOS version, and a build without liblzma can't decode
+  `max`/`ultra` files that use LZMA.
+- builds the wheel (`py3-none-macosx_11_0_arm64`), then checks the architecture, the minimum macOS
+  version, that it depends only on system libraries, and `twine check`
+- installs it in a clean venv, runs `test_kolmo.py`, and prints the upload command
+
+Upload with `twine upload <wheel>` from your own terminal, using a PyPI token limited to `kolmoc`.
+PyPI accepts new wheel files for a version that is already published.
+
+An Intel (x86_64) wheel needs an Intel Mac, or Rosetta to test it, so Intel Macs install from the
+sdist.
 
 ## 4. crates.io (manual)
 

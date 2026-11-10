@@ -24,4 +24,5 @@ bindings/rust/Cargo.lock
 
 # Python packaging
 dist/
+dist-macos/
 *.egg-info/
