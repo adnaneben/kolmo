@@ -10,6 +10,9 @@ make -j
 benchmark/bench.sh data/owid-co2-data.csv        # one file; add -x / -X for the slower / archive tiers
 ```
 
+To weigh a ratio change against a speed change, see [`TRADEOFFS.md`](TRADEOFFS.md) and its model,
+`tradeoff_model.py`.
+
 Machine for the numbers below: 2-core Intel Xeon VM, gcc, `-O3 -march=native`, single thread
 (`T=1`). Ratio = original ÷ compressed; speeds in MB/s (compress / decompress).
 

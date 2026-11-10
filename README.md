@@ -11,7 +11,8 @@ Single core, in memory, best of repeated runs; every output decoded and compared
 compression ratio (original size / compressed size). Machine: 2-core Intel Xeon VM, 2.1 GHz, gcc 13, `-O3 -march=native`.
 The leaders were built from the same sources with the same flags (OpenZL: its own CLI, best profile, trained on the
 tables). Full per-mode tables, speeds, and a one-command way to reproduce all of this on your own machine are in
-[`benchmark/BENCHMARKS.md`](benchmark/BENCHMARKS.md).
+[`benchmark/BENCHMARKS.md`](benchmark/BENCHMARKS.md). How we decide whether a ratio gain is worth a speed loss (or
+the reverse), with the research and industry figures behind it, is in [`benchmark/TRADEOFFS.md`](benchmark/TRADEOFFS.md).
 
 | Data | kolmo fast | kolmo eco | kolmo hc | kolmo max | kolmo ultra | zstd -19 | brotli -11 | xz -9e | OpenZL |
 |---|---|---|---|---|---|---|---|---|---|

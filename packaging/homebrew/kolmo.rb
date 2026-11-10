@@ -1,8 +1,8 @@
 class Kolmo < Formula
   desc "Structure-aware lossless compressor for tables, logs and scientific data"
   homepage "https://github.com/adnaneben/kolmo"
-  url "https://github.com/adnaneben/kolmo/archive/refs/tags/v1.0.0.tar.gz"
-  sha256 "168d741d84db8beb57d4e7f230af10185969482e0cc3385da4c8ce758018852b"
+  url "https://github.com/adnaneben/kolmo/archive/refs/tags/v1.0.1.tar.gz"
+  sha256 "cf2a59aaacc1232b2c711a638302104308e77a54c32b476db9cfa33e722d1430"
   license "Apache-2.0"
   head "https://github.com/adnaneben/kolmo.git", branch: "main"
 
