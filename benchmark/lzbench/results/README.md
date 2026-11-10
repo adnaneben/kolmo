@@ -102,3 +102,15 @@ Levels 0–10 in one run (`-t2,2`); levels 11 and 12 from their single-pass runs
   Files under 1 MB mostly measure process start-up.
   At fast, 1.1.0 is smaller than OpenZL's best profile on 17 of 32 files, encodes faster
   on 21 and decodes faster on 28; at max it is smaller on 29.
+
+## 2026-11-10: Apple M5, kolmo 1.0.0 / 1.0.1 / 1.1.0 and the field
+
+`mac-m5-2026-11-10-v1.0.0-v1.0.1-v1.1.0.json`: 35 files, one thread, random run order, medians of up to five
+rounds (per row: file, n, set, size, tc, td in seconds). Geometric means (ratio over all files, speed over the 30
+files of 1 MB or more): kolmo 1.1.0 `fast` 4.64x at 330 / 1064 MB/s (1.0.1: 4.24x at 343 / 1017); zstd -19 4.27x at
+7.9 / 973; xz -6 4.53x at 7.0 / 123; kolmo 1.1.0 `max` 5.99x at 13.0 / 157 (1.0.1: 5.52x at 15.0 / 156);
+bzip3 4.81x at 16 / 28. 1.0.0 and 1.0.1 are identical in size on every file.
+Known regressions against 1.0.1, to recover: `max` encodes about 13% slower; `max` decode drops where block
+sorting replaces LZMA2 (llm_nvfp4: 508 -> 29 MB/s for a 0.2% size gain); at `fast` the wide-table and
+minified-JSON transforms roughly halve encode speed on the files they fire on; files whose output is unchanged
+encode up to 9% slower at `fast` and `hc -l 9`.
