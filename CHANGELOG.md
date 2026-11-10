@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (branch `claude/perf`)
+## 1.1.0 (2026-11-10)
 
 ### Ratio
 - **`ultra`: context-mixing model 2.** Two sparse contexts, three record contexts (a detected fixed record length:
@@ -40,6 +40,13 @@
   equal to 1.0.0).
 
 ### Speed
+- **Fast tier, per TRADEOFFS.md (unchanged output may not be more than 5% slower than 1.0.1):** graph trials at `fast`
+  use 256 KiB and are compared by their gain over plain coding of the same slice; image detection is a lag scan over
+  4096 sampled bytes; float detection samples 8192 words; graph leaves are coded from three samples (stored, Huffman
+  only or zstd). Unchanged binary files went from up to 40% slower than 1.0.1 to level or faster; model weights are
+  now both smaller (1.169× → 1.201×) and faster (+12% combined) than 1.0.1 at `fast`.
+- **CLI:** writing over an existing file replaces it atomically (rename) instead of copying the staged output over it
+  — decompression onto an existing file is about 30% faster; symlinks and hard-linked files keep the copy.
 - Graph decoder: table numbers print straight into rows (no column text), leaf parts are views instead of copies,
   two-digit number printing; minified JSON: newline removal by runs. Minified JSON decodes 1.8× faster, wide tables
   1.65× faster (in memory).

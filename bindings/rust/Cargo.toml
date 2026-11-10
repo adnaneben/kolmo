@@ -1,6 +1,6 @@
 [package]
 name = "kolmo"
-version = "1.0.1"
+version = "1.1.0"
 edition = "2021"
 description = "Structure-aware lossless compressor: best ratio across tables, logs and scientific data, with decode that scales across cores."
 license = "Apache-2.0"

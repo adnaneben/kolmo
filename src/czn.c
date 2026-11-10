@@ -1573,7 +1573,7 @@ static int json_lines(const uint8_t *s, size_t h) {
  * than its mantissa bytes; the byte alignment (head) with the most predictable exponent wins. Scored like the INT
  * candidate; returns the cost per byte (or a huge value), sets width and head. */
 static double kg_plane_h(const uint8_t *p, size_t cnt, int w, int b, int rot) {   /* order-0 entropy of plane b, bits */
-    uint32_t c[256] = {0}; size_t m = cnt < 65536 ? cnt : 65536, step = cnt / m;
+    uint32_t c[256] = {0}; size_t m = cnt < 8192 ? cnt : 8192, step = cnt / m;
     for (size_t q = 0; q < m; q++) {
         const uint8_t *e = p + q * step * (size_t)w; uint64_t v = 0; for (int k = 0; k < w; k++) v |= (uint64_t)e[k] << (8 * k);
         if (rot) v = (v << 1) | (v >> (8 * w - 1));
@@ -1596,21 +1596,26 @@ static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int
         if (nd == 2) { W = dims[1]; C = 1; } else if (nd == 3 && dims[2] >= 1 && dims[2] <= 4) { W = dims[1] * dims[2]; C = (unsigned)dims[2]; } else return best;
         h = hl;
     } else {
+        /* row length: the lag (width x channels, common widths) at which bytes repeat best, on 4096 sampled positions;
+         * it must stand out against the other lags, and the median predictor must not lose to the left neighbour */
         static const uint16_t WS[] = {128, 160, 192, 200, 240, 256, 300, 320, 352, 384, 400, 416, 480, 500, 512, 576, 600, 640, 720,
                                       768, 800, 960, 1000, 1024, 1080, 1200, 1280, 1366, 1440, 1536, 1600, 1920, 2048, 2560, 3840, 4096};
-        size_t mid = n / 2, need = 0; double bestc = 1e300, left = 0;
+        enum { NS = 4096 }; size_t maxlag = 4096 * 4; if (n < 4 * maxlag) maxlag = n / 4;
+        size_t span = n - maxlag, stp = span / NS ? span / NS : 1; uint32_t bestc = UINT32_MAX, sum = 0, cnt = 0; size_t bl = 0;
         for (size_t k = 0; k < sizeof WS / sizeof WS[0]; k++) for (unsigned c = 1; c <= 4; c++) {
-            if (c == 2) continue;
-            size_t w = (size_t)WS[k] * c; if (w * 8 > n) continue;
-            size_t a = (mid / w) * w, m = w * 16 < 65536 ? w * 16 : 65536 / w * w; if (a < w || a + m > n) continue;
-            double cost = 0, lc = 0;
-            for (size_t i = a; i < a + m; i++) {
-                int x = s[i], pr = kg_med(s[i - c], s[i - w], s[i - w - c]), d = x - pr; cost += d < 0 ? -d : d;
-                int dl = x - s[i - 1]; lc += dl < 0 ? -dl : dl;
-            }
-            cost /= m; lc /= m; if (cost < bestc) { bestc = cost; W = w; C = c; left = lc; need = 1; }
+            size_t lag = (size_t)WS[k] * c; if (c == 2 || lag > maxlag) continue;
+            uint32_t cost = 0; for (size_t q = 0, i = maxlag; q < NS && i < n; q++, i += stp) { int d = s[i] - s[i - lag]; cost += (uint32_t)(d < 0 ? -d : d); }
+            sum += cost / 64; cnt++; if (cost < bestc) { bestc = cost; bl = lag; }
         }
-        if (!need || bestc > 0.7 * left) return best;           /* no 2-D structure */
+        if (!cnt || !bl || (uint64_t)(bestc / 64) * cnt * 2 > sum) return best;     /* rows repeat: one lag at half the average cost or less */
+        uint32_t lc[5] = {0};
+        for (size_t q = 0, i = maxlag; q < NS && i < n; q++, i += stp) for (unsigned c = 1; c <= 4; c++) { int d = s[i] - s[i - c]; lc[c] += (uint32_t)(d < 0 ? -d : d); }
+        W = bl; C = 1; for (unsigned c = 3; c <= 4; c++) if (bl % c == 0 && lc[c] < lc[C]) C = c;
+        size_t a0 = (n / 2 / W) * W, m = W * 16 < 65536 ? W * 16 : (65536 / W ? 65536 / W * W : W);
+        if (a0 < W || a0 + m > n) return best;
+        double pc = 0, left = 0;
+        for (size_t i = a0; i < a0 + m; i++) { int x = s[i], d = x - kg_med(s[i - C], s[i - W], s[i - W - C]), dl = x - s[i - C]; pc += d < 0 ? -d : d; left += dl < 0 ? -dl : dl; }
+        if (pc > left) return best;                             /* the 2-D predictor must not lose to the left neighbour */
     }
     if (W < 2 || n < h + 4 * W) return best;
     if (st < h) st = h;
@@ -1622,13 +1627,15 @@ static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int
     return best;
 }
 
-static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, int *bw, size_t *bh) {
+static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh) {
     double best = 1e300; int w = 4; size_t h = 0; int fixed = 0;
     if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
         size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
         const uint8_t *d = hl <= n ? memmem(s, hl, "'descr': '", 10) : NULL;
         if (!d || d + 13 > s + hl || d[10] == '>' || d[11] != 'f' || (d[12] != '2' && d[12] != '4' && d[12] != '8')) return best;
         h = hl; w = d[12] - '0'; fixed = 1;
+        if (n < h + 4096) return best;                       /* same shape test as raw data: predictable exponent, random mantissa */
+        if (kg_plane_h(s + h, (n - h) / w, w, w - 1, 1) > 6.0 || kg_plane_h(s + h, (n - h) / w, w, w - 2, 1) < 7.0) return best;
     }
     if (n < h + 4096) return best;
     int ws[2] = {w, 0}; size_t hs[2] = {h, 0}; int nw = 1;
@@ -1646,6 +1653,10 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
     for (int q = 0; o && q < nw; q++) {
         int fw = ws[q]; size_t fh = hs[q], s0 = st < fh ? fh : st, L0 = L > n - s0 ? n - s0 : L;
         size_t a = fh + (s0 - fh) / fw * fw, l = (n - a < L0 ? n - a : L0) / fw * fw;
+        if (l >= 4096) {                                      /* screen: the planes' order-0 entropy must already beat plain coding */
+            double e = 0; for (int b = 0; b < fw; b++) e += kg_plane_h(s + a, l / fw, fw, b, 1);
+            if (e / (8.0 * fw) >= plain) continue;
+        }
         size_t z = l ? kg_encode_float(&cx, C_ZSTD, zl, s + a, l, fw, 0, o, L + 64) : 0;
         if (z && (double)z / l < best) { best = (double)z / l; *bw = fw; *bh = fh; }
     }
@@ -1917,16 +1928,21 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
         }
         {   /* float arrays first (FLOAT node); integer arrays (INT node) only when the data does not look like floats */
-            int w = 0; size_t hh = 0; double c = kg_float_trial(s, n, st, L, zl, &w, &hh), cf = c; int fw = w; size_t fh = hh;
+            const size_t Lg = effort || L <= (256u << 10) ? L : (256u << 10);     /* fast: graph trials on 256 KiB */
+            double plg = -1;                                    /* a shorter slice is compared by its gain over plain coding of that slice */
+#define KG_ADJ(C) ((C) > 1e299 || Lg == L ? (C) : (C) * plain / (plg > 0 ? plg : (plg = (double)zcost(zc, s + st, Lg, zb, zcap, zl) / Lg)))
+            /* the float trial keeps the full slice: its pre-check is cheap, and zstd's plain cost on 256 KiB misleads on float data */
+            int w = 0; size_t hh = 0; double c = kg_float_trial(s, n, st, L, zl, plain, &w, &hh), cf = c; int fw = w; size_t fh = hh;
             if (cf > 1e299) {
-                w = 0; hh = 0; c = kg_num_trial(s, n, st, L, zl, plain, &w, &hh);
+                w = 0; hh = 0; c = kg_num_trial(s, n, st, Lg, zl, plain, &w, &hh); c = KG_ADJ(c);
                 if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
             }
             c = cf; w = fw; hh = fh;
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
-            size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, st, L, zl, &iw, &ic, &ih);   /* 8-bit images: IMG8 */
+            size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, st, Lg, zl, &iw, &ic, &ih); c = KG_ADJ(c);   /* 8-bit images: IMG8 */
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7; }
         }
+#undef KG_ADJ
         if (chosen >= 2) pl = keep;
         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
         free(buf); free(zb);
@@ -1941,7 +1957,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             }
             int w = 0; size_t hh = 0; double c = kg_num_trial(s, n, 0, n, zl, 1e300, &w, &hh);   /* small input: no pre-check */
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w; pl.c = (int)hh; }
-            w = 0; hh = 0; c = kg_float_trial(s, n, 0, n, zl, &w, &hh);
+            w = 0; hh = 0; c = kg_float_trial(s, n, 0, n, zl, plain, &w, &hh);
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w | 16; pl.c = (int)hh; }
             size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, 0, n, zl, &iw, &ic, &ih);
             if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = 32 | (int)ic; pl.c = (int)ih; pl.kgw = (uint32_t)iw; }

@@ -230,6 +230,9 @@ static int kg_float_inv(const uint8_t *par, size_t plen, const kbuf *pl, const k
             uint32_t v = (uint32_t)p0[q] | (uint32_t)p1[q] << 8 | (uint32_t)p2[q] << 16 | (uint32_t)p3[q] << 24;
             v = (v >> 1) | (v << 31); o[0] = (uint8_t)v; o[1] = (uint8_t)(v >> 8); o[2] = (uint8_t)(v >> 16); o[3] = (uint8_t)(v >> 24); o += 4;
         }
+    } else if (w == 2) {
+        const uint8_t *p0 = pl[0].p, *p1 = pl[1].p;
+        for (size_t q = 0; q < (size_t)cnt; q++) { unsigned v = (unsigned)p0[q] | (unsigned)p1[q] << 8; v = ((v >> 1) | (v << 15)) & 0xffff; o[0] = (uint8_t)v; o[1] = (uint8_t)(v >> 8); o += 2; }
     } else for (size_t q = 0; q < (size_t)cnt; q++) {
         uint64_t v = 0; for (int b = 0; b < w; b++) v |= (uint64_t)pl[b].p[q] << (8 * b);
         v = (v >> 1) | ((v & 1) << (bits - 1));                          /* rotate right by one */
@@ -281,8 +284,21 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
         kbuf *s = &g->s[q]; size_t zc = s->n + s->n / 8 + 1024; int cc = codec == C_CM || codec == C_STORE ? C_LZMA : codec;
         if (kb_uv(&o, (uint64_t)q) || kb_res(&o, 1 + 20 + zc)) goto done;
         size_t hp = o.n; o.n += 1;
-        size_t z = s->n >= 64 ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
-        int tryh = s->n >= 64;
+        /* fast settings, large leaves: three 32 KiB samples decide between stored (no gain either way), Huffman only
+         * (it matches or beats zstd -1: skewed bytes without repeats) and the block codec */
+        int flat = 0, hufonly = 0;
+        if (s->n >= (256u << 10) && cc == C_ZSTD && level <= CZ_FAST_LEVEL) {
+            size_t zs = 0, hs = 0, sn = 32768; uint8_t *sb = o.p + o.n + 20;
+            for (int q = 1; q <= 3; q++) {
+                const uint8_t *sp = s->p + ((s->n / 4 * q - sn / 2) & ~(size_t)63);
+                size_t a1 = codec_compress(x, C_ZSTD, 1, sp, sn, sb, zc), a2 = codec_compress(x, C_HUF, 0, sp, sn, sb, zc);
+                zs += a1 && a1 < sn ? a1 : sn; hs += a2 && a2 < sn ? a2 : sn;
+            }
+            flat = zs * 100 >= 3 * sn * 99 && hs * 100 >= 3 * sn * 99;
+            hufonly = !flat && hs * 100 <= zs * 97;
+        }
+        size_t z = s->n >= 64 && !flat && !hufonly ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
+        int tryh = s->n >= 64 && !flat;
         if (tryh && z) {                                      /* Huffman cannot beat the order-0 entropy: skip when z is below it */
             double bits = 0;                                  /* per 128 KiB chunk, as Huffman codes them */
             for (size_t a = 0; a < s->n; a += 131072) {
@@ -516,6 +532,9 @@ static size_t kg_encode_float(codec_ctx *x, int codec, int level, const uint8_t 
             uint32_t v = (uint32_t)a[q * 4] | (uint32_t)a[q * 4 + 1] << 8 | (uint32_t)a[q * 4 + 2] << 16 | (uint32_t)a[q * 4 + 3] << 24;
             v = (v << 1) | (v >> 31); p0[q] = (uint8_t)v; p1[q] = (uint8_t)(v >> 8); p2[q] = (uint8_t)(v >> 16); p3[q] = (uint8_t)(v >> 24);
         }
+    } else if (w == 2) {                                       /* bf16 / fp16 */
+        uint8_t *p0 = g.s[1].p, *p1 = g.s[2].p;
+        for (size_t q = 0; q < cnt; q++) { unsigned v = (unsigned)a[q * 2] | (unsigned)a[q * 2 + 1] << 8; v = ((v << 1) | (v >> 15)) & 0xffff; p0[q] = (uint8_t)v; p1[q] = (uint8_t)(v >> 8); }
     } else for (size_t q = 0; q < cnt; q++) {
         uint64_t v = 0; for (int b = 0; b < w; b++) v |= (uint64_t)a[q * w + b] << (8 * b);
         v = (v << 1) | (v >> (bits - 1)); if (bits < 64) v &= ((uint64_t)1 << bits) - 1;
@@ -529,15 +548,32 @@ done:
 }
 
 /* ---- IMG8 ---- */
-static inline uint8_t kg_med(int a, int b, int c) { int mx = a > b ? a : b, mn = a < b ? a : b; return (uint8_t)(c >= mx ? mn : c <= mn ? mx : a + b - c); }
+static inline uint8_t kg_med(int a, int b, int c) {       /* median of a, b, a + b - c, branch-free */
+    int mx = a > b ? a : b, mn = a < b ? a : b, g = a + b - c; g = g < mn ? mn : g; return (uint8_t)(g > mx ? mx : g);
+}
 static inline uint8_t kg_zz8(uint8_t d) { int8_t v = (int8_t)d; return (uint8_t)(((unsigned)v << 1) ^ (unsigned)(v >> 7)); }
 static inline uint8_t kg_unzz8(uint8_t z) { return (uint8_t)((z >> 1) ^ (uint8_t)-(int)(z & 1)); }
-/* residual of byte i of a row-major image with row length W and channel step C */
-static inline uint8_t kg_img8_pred(const uint8_t *p, size_t i, size_t W, unsigned C) {
-    size_t x = i % W;
-    if (i < W) return x >= C ? p[i - C] : 0;
-    if (x < C) return p[i - W];
-    return kg_med(p[i - C], p[i - W], p[i - W - C]);
+/* rows of W bytes, channel step C: row 0 predicts from the left, later rows from above for the first C bytes and from
+ * the median of left, above and left + above - above-left after that */
+static void kg_img8_fwd(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r) {
+    size_t x = 0;
+    for (; x < C && x < m; x++) r[x] = kg_zz8(p[x]);
+    for (; x < W && x < m; x++) r[x] = kg_zz8((uint8_t)(p[x] - p[x - C]));
+    for (size_t y = W; y + W <= m; y += W) {
+        const uint8_t *q = p + y, *u = q - W; uint8_t *o = r + y;
+        for (x = 0; x < C; x++) o[x] = kg_zz8((uint8_t)(q[x] - u[x]));
+        for (; x < W; x++) o[x] = kg_zz8((uint8_t)(q[x] - kg_med(q[x - C], u[x], u[x - C])));
+    }
+}
+static void kg_img8_back(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p) {
+    size_t x = 0;
+    for (; x < C && x < m; x++) p[x] = kg_unzz8(r[x]);
+    for (; x < W && x < m; x++) p[x] = (uint8_t)(p[x - C] + kg_unzz8(r[x]));
+    for (size_t y = W; y + W <= m; y += W) {
+        uint8_t *q = p + y; const uint8_t *u = q - W, *o = r + y;
+        for (x = 0; x < C; x++) q[x] = (uint8_t)(u[x] + kg_unzz8(o[x]));
+        for (; x < W; x++) q[x] = (uint8_t)(kg_med(q[x - C], u[x], u[x - C]) + kg_unzz8(o[x]));
+    }
 }
 static int kg_img8_inv(const uint8_t *par, size_t plen, const kbuf *res, const kbuf *rest, size_t maxs, kbuf *out) {
     size_t pi = 0; uint64_t W, h; if (kg_getuv(par, plen, &pi, &W) || pi >= plen) return -1;
@@ -545,9 +581,8 @@ static int kg_img8_inv(const uint8_t *par, size_t plen, const kbuf *res, const k
     size_t m = res->n; if (m % W || m + rest->n > maxs) return -1;
     if (kb_res(out, m + rest->n + 16)) return -1;
     if (h) memcpy(out->p, rest->p, (size_t)h);
-    uint8_t *p = out->p + h; const uint8_t *r = res->p;
-    for (size_t i = 0; i < m; i++) p[i] = (uint8_t)(kg_img8_pred(p, i, (size_t)W, C) + kg_unzz8(r[i]));
-    memcpy(p + m, rest->p + h, rest->n - (size_t)h); out->n = m + rest->n;
+    kg_img8_back(res->p, m, (size_t)W, C, out->p + h);
+    memcpy(out->p + h + m, rest->p + h, rest->n - (size_t)h); out->n = m + rest->n;
     return 0;
 }
 static size_t kg_encode_img8(codec_ctx *x, int codec, int level, const uint8_t *src, size_t n, size_t W, unsigned C, size_t h,
@@ -559,7 +594,7 @@ static size_t kg_encode_img8(codec_ctx *x, int codec, int level, const uint8_t *
     kb_uv(&par, W); kb_byte(&par, (uint8_t)C); kb_uv(&par, h); if (!par.p) goto done;
     if (kgb_node(&g, KG_IMG8, (int[]){0}, 1, 2, &par) != 1) goto done;
     if (kb_res(&g.s[1], m + 1) || kb_res(&g.s[2], n - m + 1)) goto done;
-    for (size_t i = 0; i < m; i++) g.s[1].p[i] = kg_zz8((uint8_t)(a[i] - kg_img8_pred(a, i, W, C)));
+    kg_img8_fwd(a, m, W, C, g.s[1].p);
     g.s[1].n = m;
     kb_put(&g.s[2], src, h); kb_put(&g.s[2], a + m, n - h - m);
     out = kg_serialize(x, codec, level, &g, n, dst, cap);

@@ -55,6 +55,13 @@ static int process_file(int input_fd, size_t n, const char *path, const czn_para
         if (lstat(path, &st) && errno == ENOENT) {
             mode_t mask = umask(0); umask(mask);
             if (!fchmod(fd, 0666 & ~mask) && !link(stage, path)) goto done;
+        } else if (S_ISREG(st.st_mode) && st.st_nlink == 1) {
+            /* An existing plain file: replace it atomically and keep its mode, instead of copying the staged output
+             * over it (a second pass over the whole output). Symlinks, hard links and special files take the copy. */
+            if (!fchmod(fd, st.st_mode & 07777) && !rename(stage, path)) {
+                if (close(fd)) ret = CZN_ERR_IO;
+                free(stage); return ret;
+            }
         }
     }
     if (!ret) {

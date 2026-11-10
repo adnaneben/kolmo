@@ -129,6 +129,34 @@ In `fast`, the slowdown has two parts:
 | Heavier analysis as the `fast` default | No | Below the 0.45 exchange rate and loses on fast links. `fast` should behave like `-q`, which dominates `main`, with the heavier analysis kept at `fast -l 9` and `hc`. |
 | Slowdown on byte-identical output | No | Breaks the 5% rule for files whose output does not change. Fix before merging. |
 
+## Follow-up: the decision verified and refined (2026-11-10, `claude/graph` before 1.1.0)
+
+An independent run on the same machine (35 files, 497 MB, median of three) confirmed the measurements above and
+corrected two conclusions.
+
+- **Where the slowdown on unchanged output came from.** Compression: planner trials on binary files (x-ray −29%,
+  pickle −23%, mr −21%). Decompression: not the planner. The Codex build showed the same −10% against `main` with no
+  planner change, because the CLI copied its staged output over an existing output file. Both are fixed in 1.1.0
+  (cheaper trials; atomic replace).
+- **`fast` = `-q` is not a free speed-up.** Against 1.0.1's `fast`, `-q` makes logs 31% bigger (14.1× → 9.8×) and
+  `nci` 28% bigger, because it drops transforms 1.0.1 already applied; the totals only look level because `-q` kept new
+  graph gains that fail the same link rule. The 1 Gbit/s rule (model 2) applied consistently also rejects 1.0.1's own
+  log transform (42% more total time), so it is too strict to be the only test for the speed tier.
+- **Rule adopted for `fast`:** model 1 per transform. A transform stays on by default when it saves at least 0.45% of
+  bytes per 1% of combined speed lost, measured against 1.0.1.
+
+| Transform at `fast` | Bytes saved | Combined speed | Rate | Default at `fast` |
+|---|---:|---:|---:|---|
+| Minified JSON | 51% | −24% | 2.1 | on |
+| Wide table (graph) | 43% | −50% | 0.85 | on |
+| Logs (already in 1.0.1) | 31% | −52% | 0.60 | on |
+| BF16 floats | 15% | +7% | dominates | on |
+| float32 weights | 2.7% | +12% | dominates | on |
+| 8-bit images | 10–11% | −25% to −27% | 0.38–0.45 | on (files under 1 MB, where fixed trial cost dominates; revisit with larger images) |
+
+Speeds in this table are from a 2-core cloud VM (±10% noise), after the 1.1.0 fixes. Files whose output is unchanged
+are within the 5% limit there; the Apple M5 re-run is the reference measurement.
+
 ## References
 
 1. S. Karandikar et al., *CDPU: Co-designing Compression and Decompression Processing Units for

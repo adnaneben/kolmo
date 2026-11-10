@@ -41,7 +41,7 @@ $DATA/wide_test.csv max 925251
 $DATA/magika.safetensors fast 2614491
 $DATA/magika.safetensors hc 2608222
 $DATA/magika.safetensors max 2608222
-$DATA/magika.onnx fast 2650964
+$DATA/magika.onnx fast 2669294
 $DATA/magika.onnx hc 2641074
 $DATA/magika.onnx max 2640821
 $DATA/magika.gguf fast 2614223
@@ -53,7 +53,7 @@ $DATA/year.i32 max 661
 $DATA/lfw_subset.npy fast 321037
 $DATA/lfw_subset.npy hc 303200
 $DATA/lfw_subset.npy max 290906
-$DATA/img_astronaut.u8 fast 426991
+$DATA/img_astronaut.u8 fast 431865
 $DATA/img_astronaut.u8 hc 423438
 $DATA/img_astronaut.u8 max 408525
 $DATA/img_camera.u8 fast 144259
@@ -90,6 +90,10 @@ $DATA/ld30.txt max 2663306
 $DATA/chr22.fa fast 12724397
 $DATA/chr22.fa hc 9988697
 $DATA/chr22.fa max 9210838
-$DATA/llm_bf16_10mb.safetensors fast 6992123
+$DATA/llm_bf16_10mb.safetensors fast 6992125
 $DATA/llm_bf16_10mb.safetensors hc 6967587
 $DATA/llm_bf16_10mb.safetensors max 6967587
+# 10 Nov 2026, fast tier only (TRADEOFFS.md: unchanged output may not be more than 5% slower; trades need a rate of 0.45):
+# graph leaves are coded from three samples (stored / Huffman only / zstd) and graph trials use 256 KiB. Three floors
+# moved: magika.onnx +0.7% (now 12% faster than 1.0.1 and still 1.1% smaller), img_astronaut.u8 +1.1% (10% smaller
+# than 1.0.1), llm_bf16 +2 bytes. hc and max floors are unchanged.
