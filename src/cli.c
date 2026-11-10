@@ -158,16 +158,16 @@ int main(int argc, char **argv) {
     }
 
     /* Small files fit in a few blocks. Keep their inexpensive in-memory path. */
-    const size_t file_threshold = 8u << 20;
+    const size_t file_threshold = 0;       /* the file path (reused block buffers, staged output) is faster at every size */
     FILE *input = fopen(inp, "rb"); if (!input) { perror(inp); return 1; }
-    if (!range && (dec || P.mode == KOLMO_FAST)) {
+    if (!range && (dec || P.mode == KOLMO_FAST || P.mode == KOLMO_RT)) {
         int fd = fileno(input); struct stat st;
         if (!fstat(fd, &st) && S_ISREG(st.st_mode) && st.st_size >= 0 && (uintmax_t)st.st_size <= SIZE_MAX) {
             int use_file = st.st_size >= (off_t)file_threshold;
             if (dec) {
                 uint8_t header[32];
                 use_file = pread(fd, header, sizeof(header), 0) == sizeof(header) &&
-                    header[5] == KOLMO_FAST && kolmo_original_size(header, sizeof(header)) >= (int64_t)file_threshold;
+                    kolmo_original_size(header, sizeof(header)) >= (int64_t)file_threshold;
             }
             if (use_file) {
                 int err = process_file(fd, st.st_size, outp, &P, dec, dict, dictlen);

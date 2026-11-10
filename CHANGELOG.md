@@ -101,3 +101,7 @@
 - **Quick analysis (`-q`) is quick again.** Record layouts are searched only when the record period is clear, and the
   integer and image graph trials are skipped or shortened unless a `.npy` header names the type. Planning time on a
   browser tarball falls from 331 to about 100 ms; sizes on the test files are unchanged.
+- **Faster command line at every size.** The file path with reused block buffers and staged output, which `fast`
+  used for inputs of 8 MiB and more, now serves `speed` and `balanced` compression of any size and decompression in
+  every mode. Output bytes are unchanged. On the Linux test machine: `speed` encodes 14 to 62% and decodes 33 to 73%
+  faster; `balanced` encodes 7 to 17% and decodes 18 to 29% faster on files under 8 MiB.
