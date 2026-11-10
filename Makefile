@@ -122,6 +122,14 @@ FRONTIER_HDR := src/experimental/frontier_dna.h src/experimental/frontier_table.
 build/kolmo-frontier: src/cli.c src/czn.c src/czn.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DCZN_FRONTIER $(INC) src/cli.c src/czn.c $(FRONTIER_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
+build/kolmo-ultra-compact: src/cli.c src/czn.c src/czn.h $(wildcard src/*.inc) build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DCZN_CM_COMPACT $(INC) src/cli.c src/czn.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+
+READS_SRC := src/experimental/frontier_fastq.c src/experimental/frontier_entropy.c
+READS_HDR := src/experimental/frontier_fastq.h src/experimental/frontier_entropy.h
+build/kolmo-reads: src/cli.c src/czn.c src/czn.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) $(READS_SRC) $(READS_HDR) build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DCZN_FRONTIER -DCZN_FRONTIER_FASTQ $(INC) src/cli.c src/czn.c $(FRONTIER_SRC) $(READS_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+
 build/frontier-test: tests/frontier.c $(FRONTIER_SRC) $(FRONTIER_HDR)
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(SANFLAGS) tests/frontier.c $(FRONTIER_SRC) -o $@
@@ -129,3 +137,35 @@ build/frontier-test: tests/frontier.c $(FRONTIER_SRC) $(FRONTIER_HDR)
 
 build/libkolmo-frontier.$(SOEXT): src/czn.c src/czn.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) $(PICC) $(PICPP)
 	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) -DCZN_FRONTIER $(INC) src/czn.c $(FRONTIER_SRC) $(PICC) $(PICPP) -o $@ $(LIBS) $(CXXLIB)
+
+# Standalone KRC1 experiments. The standard Kolmo format and CLI use their usual targets.
+KRC_DIR := src/experimental
+KRC_CORE := $(KRC_DIR)/krc.c $(KRC_DIR)/krc.h $(KRC_DIR)/krc_parallel.inc
+build/krc-cpu: $(KRC_DIR)/krc_cli.c $(KRC_CORE)
+	@mkdir -p build
+	$(CC) $(CFLAGS) -I$(KRC_DIR) $(KRC_DIR)/krc_cli.c $(KRC_DIR)/krc.c -lpthread -o $@
+
+build/krc-frontier-test: tests/krc_frontier.c $(KRC_CORE)
+	@mkdir -p build
+	$(CC) $(CFLAGS) $(SANFLAGS) -I$(KRC_DIR) tests/krc_frontier.c $(KRC_DIR)/krc.c -lpthread -o $@
+
+ifeq ($(UNAME_S),Darwin)
+KRC_METAL := $(KRC_DIR)/krc_hybrid.c $(KRC_DIR)/krc_dispatch.c
+build/krc_kernel.inc: $(KRC_DIR)/krc_simd.metal
+	@mkdir -p build
+	xxd -i < $< > $@
+build/krc-frontier-metal.o: $(KRC_DIR)/krc_gpu.m $(KRC_DIR)/krc_gpu.h $(KRC_DIR)/krc.h build/krc_kernel.inc
+	@mkdir -p build
+	$(CC) $(CFLAGS) -Ibuild -fobjc-arc -c $< -o $@
+build/krc-auto: $(KRC_DIR)/krc_cli.c $(KRC_CORE) $(KRC_METAL) build/krc-frontier-metal.o
+	$(CC) $(CFLAGS) -DKRC_HAVE_METAL -I$(KRC_DIR) $< $(KRC_DIR)/krc.c $(KRC_METAL) build/krc-frontier-metal.o -framework Foundation -framework Metal -lpthread -o $@
+build/krc-frontier-bench: benchmark/frontier/krc_measure.c $(KRC_CORE) $(KRC_METAL) build/krc-frontier-metal.o
+	$(CC) $(CFLAGS) -I$(KRC_DIR) $< $(KRC_DIR)/krc.c $(KRC_METAL) build/krc-frontier-metal.o -framework Foundation -framework Metal -lpthread -o $@
+else
+build/krc-auto: build/krc-cpu
+	cp $< $@
+endif
+
+build/frontier-reads-test: tests/frontier_reads.c $(READS_SRC) $(READS_HDR) src/experimental/frontier_runs.c src/experimental/frontier_runs.h
+	@mkdir -p build
+	$(CC) $(CFLAGS) $(SANFLAGS) tests/frontier_reads.c $(READS_SRC) src/experimental/frontier_runs.c -o $@

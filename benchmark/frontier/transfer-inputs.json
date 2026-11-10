@@ -1,0 +1,43 @@
+{
+  "docx": {
+    "git_blob_sha1": "859f035d9a1bc61d97cde2e7b45259932fbc4690",
+    "name": "saut_page.docx",
+    "target_bytes": 2959626,
+    "target_sha256": "748f34f3dc285f4d48474930758b2c37382d17965545a1729cb7400cada793da",
+    "url": "https://raw.githubusercontent.com/apache/poi/trunk/test-data/document/saut_page.docx"
+  },
+  "eia": {
+    "cutoff_utc": "2020-02-15T18:00:00+00:00",
+    "distinct_hours": 4370,
+    "source_bytes": 42970027,
+    "source_sha256": "fff83ed20365e69933bdd6ebde06afaa8083930c613363c438844b0fd52034cf",
+    "target_bytes": 32222880,
+    "target_sha256": "269ce7cb166b4dbf65391030d106a028747148cbb04eb627fd1ed7b6084472e0",
+    "test_rows": 209710,
+    "train_bytes": 4194249,
+    "train_rows": 28141,
+    "train_sha256": "51f0cf6c94b4e5c92abb0f3ab766e5642f82eb8c61e93bab8f16876d96088086",
+    "url": "https://www.eia.gov/electricity/gridmonitor/sixMonthFiles/EIA930_BALANCE_2020_Jan_Jun.csv"
+  },
+  "flac": {
+    "name": "cellar-01.flac",
+    "target_bytes": 549954,
+    "target_sha256": "02c7e60ae7788c2cb6898a0a46985d759f1e62482ddd965a374dfd09a2a8390f"
+  },
+  "png": {
+    "name": "coffee.png",
+    "target_bytes": 466706,
+    "target_sha256": "cc02f8ca188b167c775a7101b5d767d1e71792cf762c33d6fa15a4599b5a8de7"
+  },
+  "sqlite": {
+    "name": "chinook.sqlite",
+    "target_bytes": 1007616,
+    "target_sha256": "7651ba378ac2fcd0dfc3c66fb101f7a7eed3ba39a612ec642b96e20702061f15",
+    "url": "https://raw.githubusercontent.com/lerocha/chinook-database/master/ChinookDatabase/DataSources/Chinook_Sqlite.sqlite"
+  },
+  "y4m": {
+    "name": "akiyo.y4m",
+    "target_bytes": 11406644,
+    "target_sha256": "df88d83cbf6d99f3ec41f2c1fd2e67665d2a71ff8caa08f8b6bc46bf4567ea2e"
+  }
+}

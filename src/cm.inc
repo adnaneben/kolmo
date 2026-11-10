@@ -65,8 +65,14 @@ static void cm_init_tables(void) {
 static inline int cm_SQ(int x) { if (x > 2047) x = 2047; if (x < -2047) x = -2047; return cm_sq[x + 2048]; }
 
 typedef struct { uint32_t s[16]; } cm_bucket;          /* s[0] = check << 16 | priority; s[1..15] nibble-tree counters */
+#ifndef CZN_CM_GROUP_BITS
+#define CZN_CM_GROUP_BITS 1
+#endif
 typedef struct {
     cm_bucket *t[CM_NM];
+#ifdef CZN_CM_COMPACT
+    uint32_t *pair_map[CM_NM], pairs_used[CM_NM];
+#endif
     int sh; size_t mem;                                          /* 32 - log2 buckets; bytes held */
     uint32_t o1[256 * 256];
     uint32_t h[CM_NM]; uint32_t *slot[CM_NM]; cm_bucket *cur[CM_NM];
@@ -104,14 +110,36 @@ static void cm_release(size_t b) { pthread_mutex_lock(&cm_mu); cm_used -= b; pth
 #define CM_BB_MAX 22
 #endif
 static int cm_bits_for(size_t n) { int b = 16; while (b < CM_BB_MAX && ((size_t)1 << b) < n) b++; return b; }
-static size_t cm_mem_for(int bb) { return (size_t)(CM_NM - 1) * ((size_t)sizeof(cm_bucket) << bb) + ((size_t)16 << 20); }
+static size_t cm_mem_for(int bb) {
+    size_t bytes = (size_t)(CM_NM - 1) * ((size_t)sizeof(cm_bucket) << bb) + ((size_t)16 << 20);
+#ifdef CZN_CM_COMPACT
+    bytes += (size_t)(CM_NM - 1) * (sizeof(uint32_t) << (bb - CZN_CM_GROUP_BITS));
+#endif
+    return bytes;
+}
+
+static void cm_free_tables(cm_t *m) {
+    for (int i = 1; i < CM_NM; ++i) {
+        free(m->t[i]);
+#ifdef CZN_CM_COMPACT
+        free(m->pair_map[i]);
+#endif
+    }
+}
 
 static cm_t *cm_new(uint8_t *buf, int bb) {
     pthread_once(&cm_once, cm_init_tables);
     size_t mem = cm_mem_for(bb); cm_acquire(mem);
     cm_t *m = calloc(1, sizeof(cm_t)); if (!m) { cm_release(mem); return NULL; }
     m->sh = 32 - bb; m->mem = mem;
-    for (int i = 1; i < CM_NM; i++) { m->t[i] = calloc((size_t)1 << bb, sizeof(cm_bucket)); if (!m->t[i]) goto fail; }
+    for (int i = 1; i < CM_NM; i++) {
+        m->t[i] = calloc((size_t)1 << bb, sizeof(cm_bucket));
+        if (!m->t[i]) goto fail;
+#ifdef CZN_CM_COMPACT
+        m->pair_map[i] = calloc((size_t)1 << (bb - CZN_CM_GROUP_BITS), sizeof(uint32_t));
+        if (!m->pair_map[i]) goto fail;
+#endif
+    }
     for (int i = 0; i < 65536; i++) m->o1[i] = 0x80000000u;
     for (int i = 0; i < CM_NM; i++) for (int j = 0; j < 256 * 8; j++) {
         int st = j & 255; uint32_t n0 = st < bh_ns ? bh_n0[st] : 0, n1 = st < bh_ns ? bh_n1[st] : 0;
@@ -126,13 +154,23 @@ static cm_t *cm_new(uint8_t *buf, int bb) {
     for (int i = 0; i < 64; i++) m->mc[i] = 1u << 15;
     return m;
 fail:
-    for (int i = 1; i < CM_NM; i++) free(m->t[i]);
+    cm_free_tables(m);
     free(m->mt); free(m); cm_release(mem); return NULL;
 }
-static void cm_free(cm_t *m) { if (!m) return; size_t mem = m->mem; for (int i = 1; i < CM_NM; i++) free(m->t[i]); free(m->mt); free(m); cm_release(mem); }
+static void cm_free(cm_t *m) { if (!m) return; size_t mem = m->mem; cm_free_tables(m); free(m->mt); free(m); cm_release(mem); }
 
-static inline cm_bucket *cm_find(cm_bucket *t, uint32_t h, int sh) {
-    uint32_t idx = h >> sh, chk = h & 0xffff;
+static inline cm_bucket *cm_find(cm_t *m, unsigned bank, uint32_t h) {
+    uint32_t idx = h >> m->sh, chk = h & 0xffff;
+    cm_bucket *t = m->t[bank];
+#ifdef CZN_CM_COMPACT
+    /* Two neighbors are always probed together. Assign physical pairs in
+     * first-touch order, keeping the original set, parity and initial state.
+     * Only densely used payload pages contribute to resident memory. */
+    uint32_t *entry = &m->pair_map[bank][idx >> CZN_CM_GROUP_BITS];
+    uint32_t physical = *entry;
+    if (!physical) *entry = physical = ++m->pairs_used[bank];
+    idx = ((physical - 1) << CZN_CM_GROUP_BITS) + (idx & ((1u << CZN_CM_GROUP_BITS) - 1));
+#endif
     cm_bucket *a = &t[idx], *b = &t[idx ^ 1];
     if ((a->s[0] >> 16) == chk) return a;
     if ((b->s[0] >> 16) == chk) return b;
@@ -140,6 +178,18 @@ static inline cm_bucket *cm_find(cm_bucket *t, uint32_t h, int sh) {
     v->s[0] = chk << 16;
     for (int k = 1; k < 16; k++) v->s[k] = 0x80000000u;
     return v;
+}
+static inline void cm_prefetch(cm_t *m, unsigned bank, uint32_t idx) {
+#ifdef CZN_CM_COMPACT
+#ifdef CZN_CM_PREFETCH_VALUES
+    uint32_t pair = m->pair_map[bank][idx >> CZN_CM_GROUP_BITS];
+    if (pair) __builtin_prefetch(&m->t[bank][((pair - 1) << CZN_CM_GROUP_BITS) + (idx & ((1u << CZN_CM_GROUP_BITS) - 1))]);
+#else
+    __builtin_prefetch(&m->pair_map[bank][idx >> CZN_CM_GROUP_BITS]);
+#endif
+#else
+    __builtin_prefetch(&m->t[bank][idx]);
+#endif
 }
 static inline int cm_expected(cm_t *m) {
     if (!m->mlen) return -1;
@@ -154,7 +204,15 @@ static int cm_predict(cm_t *m) {
     uint32_t c0 = m->c0; int bp = (int)m->bitpos;
     if (bp == 0 || bp == 4) {
         uint32_t nib = bp ? (c0 & 15) * 0x5BD1E995u : 0;
-        for (int i = 1; i < CM_NM; i++) m->cur[i] = cm_find(m->t[i], cm_hmix(m->h[i] + nib), m->sh);
+        for (int i = 1; i < CM_NM; i++) {
+            m->cur[i] = cm_find(m, i, cm_hmix(m->h[i] + nib));
+#ifdef CZN_CM_GROUP_PRIORITY
+            /* The same bucket handles all four bits of this nibble. The next
+             * lookup is the first reader of its updated replacement priority. */
+            uint32_t key=m->cur[i]->s[0], priority=key&65535;
+            m->cur[i]->s[0]=(key&0xffff0000u) | (priority<=65531?priority+4:65535);
+#endif
+        }
     }
     int node = bp < 4 ? (int)((c0 & ((1u << bp) - 1)) | (1u << bp)) : (int)((c0 & ((1u << (bp - 4)) - 1)) | (1u << (bp - 4)));
     m->slot[0] = &m->o1[c0 | (m->c4 & 0xff) << 8];
@@ -214,7 +272,9 @@ static inline void cm_upd_sm(uint32_t *e, int y) {
 }
 static void cm_update(cm_t *m, int y) {
     for (int i = 0; i < CM_NM; i++) { cm_upd_sm(&m->sm[i][m->sst[i]], y); cm_upd_ctr(m->slot[i], y); }
+#ifndef CZN_CM_GROUP_PRIORITY
     for (int i = 1; i < CM_NM; i++) if ((m->cur[i]->s[0] & 0xffff) < 0xffff) m->cur[i]->s[0]++;
+#endif
     if (m->mci >= 0) { uint32_t *c = &m->mc[m->mci]; *c = (uint32_t)((int64_t)*c + ((((int64_t)y << 16) - (int64_t)*c) >> 6)); }
     int e1 = (y << 12) - m->pr1, e2 = (y << 12) - m->pr2;                  /* learning rate 1/2048 in 16.16 weights */
     int32_t *w1 = m->w1[m->w1i], *w2 = m->w2[m->w2i];
@@ -227,7 +287,7 @@ static void cm_update(cm_t *m, int y) {
     if (m->bitpos == 2) {                                     /* prefetch both candidate buckets for the second nibble */
         for (int b = 0; b < 2; b++) {
             uint32_t nib = (((m->c0 << 1) | (uint32_t)b) & 15) * 0x5BD1E995u;
-            for (int i = 1; i < CM_NM; i++) { uint32_t idx = cm_hmix(m->h[i] + nib) >> m->sh; __builtin_prefetch(&m->t[i][idx]); }
+            for (int i = 1; i < CM_NM; i++) { uint32_t idx = cm_hmix(m->h[i] + nib) >> m->sh; cm_prefetch(m, i, idx); }
         }
     }
     if (++m->bitpos == 8) {
@@ -271,7 +331,10 @@ static void cm_update(cm_t *m, int y) {
 #endif
         for (int i = 1; i < CM_NM; i++) {                     /* prefetch the buckets for the first nibble */
             uint32_t idx = cm_hmix(m->h[i]) >> m->sh;
-            __builtin_prefetch(&m->t[i][idx]); __builtin_prefetch(&m->t[i][idx ^ 1]);
+            cm_prefetch(m, i, idx);
+#ifndef CZN_CM_COMPACT
+            cm_prefetch(m, i, idx ^ 1);
+#endif
         }
         if (m->pos >= 6) {
             uint32_t hh = cm_hmix(c4 ^ ((m->c8 & 0xffff) * 0x9E3779B1u)) & m->mmask;

@@ -1,0 +1,18 @@
+{
+  "develop": {
+    "prefix_bytes": 33554432,
+    "prefix_sha256": "ca4cf49c89a228f93b2ad802e2686e7f48b1c6592c04ea8fea11fd3b44f62d59",
+    "records": 100000,
+    "target_bytes": 63177790,
+    "target_sha256": "4cf5843c7b6f6c643f05d00681c9ea5a926ce229a2ade2e04cf9d3f15e9e665f",
+    "url": "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR177/003/SRR1770413/SRR1770413_1.fastq.gz"
+  },
+  "reserve": {
+    "prefix_bytes": 33554432,
+    "prefix_sha256": "f594f32ba00bbfd8fd2e9bdca8778ec08069c7b45204f5ae1466308a3f0d926e",
+    "records": 100000,
+    "target_bytes": 22877790,
+    "target_sha256": "96fd53757116f50c0565952d293de1d02408fc55c4ca3f72cd915d3ffdbe9f88",
+    "url": "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR835/SRR835775/SRR835775_1.fastq.gz"
+  }
+}

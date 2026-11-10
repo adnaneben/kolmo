@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kolmo lossless compression comparison</title>
+<style>
+:root{color-scheme:light;--ink:#183045;--soft:#496575;--rule:#dae3e6;--ratio:#55758a;--kolmo:#08786d;--enc:#ce6834;--dec:#9bc2d7}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);background:#fff;font:15px/1.48 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1320px;margin:0 auto;padding:38px 4vw 30px}h1,h2,p{margin:0}h1{font-size:clamp(29px,4vw,49px);line-height:1.08;letter-spacing:-.045em}h2{font-size:21px;letter-spacing:-.025em}
+#sub,.muted,#status,#note,footer{color:var(--soft)}#sub{margin-top:8px}.controls{display:flex;gap:13px;align-items:flex-end;flex-wrap:wrap;margin:27px 0 25px}label{display:grid;gap:5px;font-size:12px;font-weight:650}select{font:inherit;font-size:14px;color:var(--ink);padding:9px 28px 9px 10px;border:1px solid #b7c9d0;background:#fff;border-radius:5px;max-width:100%}label:first-child{min-width:270px;max-width:100%}
+section{padding-top:16px;border-top:2px solid var(--ink)}#status,#note,footer{font-size:13px}#status{margin:3px 0 13px}.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;margin-bottom:14px}.key:before{content:"";display:inline-block;width:14px;height:8px;margin-right:5px;background:var(--c)}.scroll{overflow-x:auto;max-width:100%;padding-bottom:6px}.plot{min-width:780px}
+.row,.head{display:grid;grid-template-columns:minmax(145px,1.1fr) minmax(120px,1fr) minmax(220px,2fr) 78px 80px;gap:15px;align-items:center}
+.row{min-height:35px;border-bottom:1px solid #eaf0f1;font-size:13px}.head{min-height:31px;border-bottom:1px solid var(--rule);font-size:12px;font-weight:680}.row .name{overflow-wrap:anywhere}.own .name{font-weight:650;color:#066a60}.ratio{display:flex;align-items:center;gap:6px;min-width:0}.bar{height:13px;background:var(--ratio);min-width:1px}.own .bar{background:var(--kolmo)}.ratio span,.num{font-variant-numeric:tabular-nums}.ratio span{font-size:12px;white-space:nowrap}.pair{display:flex;height:13px}.en{background:var(--enc)}.de{background:var(--dec)}.num,.right{text-align:right}.row:focus,.row:hover{background:#f1f6f5;outline:0}.row:focus-visible{outline:2px solid var(--kolmo)}
+#note{max-width:980px;margin:13px 0 4px}footer{margin-top:23px;border-top:1px solid var(--rule);padding-top:8px}#detail{min-height:28px;margin-top:8px;color:var(--ink);font-size:13px}
+@media(max-width:600px){main{padding:24px 16px}label:first-child{width:100%;min-width:0}.controls{gap:9px}}
+@media print{.controls{display:none}main{padding:12px}.row{break-inside:avoid}.scroll{overflow:visible}.plot{min-width:600px}}
+</style>
+<main><h1>Kolmo and the competition</h1><p id="sub">Lossless compression on Apple M5. Choose a workload to compare size, encoding and decoding on the same input.</p>
+<div class="controls"><label>Workload<select id="work"></select></label><label>Show<select id="filter"><option value="focus">Kolmo, references and metric leaders</option><option value="all">All measured settings</option></select></label>
+<label>Sort by<select id="sort"><option value="family">Codec family</option><option value="ratio">Highest ratio</option><option value="encode">Fastest encode</option><option value="decode">Fastest decode</option></select></label>
+<label>Bar units<select id="units"><option value="speed">Speed · MB/s</option><option value="time">Time · ms</option></select></label></div>
+<section><h2 id="title"></h2><p id="status"></p><div class="legend"><span class="key" style="--c:var(--kolmo)">Kolmo ratio</span><span class="key" style="--c:var(--ratio)">Competitor ratio</span><span class="key" style="--c:var(--enc)">Encode</span><span class="key" style="--c:var(--dec)">Decode</span></div>
+<div class="scroll"><div class="plot"><div class="head"><span>Setting</span><span>Compression ratio</span><span id="phase">Phase speed · MB/s</span><span class="right">Encode</span><span class="right">Decode</span></div><div id="rows"></div></div></div>
+<p id="detail" aria-live="polite"></p><p id="note"></p></section>
+<footer>Ratio = input bytes / compressed bytes. Speed uses decimal MB of original input per second. Each colored segment represents one phase. Choose time to read the combined duration. Figures describe this machine and the selected settings.</footer></main>
+<script>
+const report=/*DATA*/;
+const el=id=>document.getElementById(id), f=(x,p=1)=>x.toLocaleString('en-US',{minimumFractionDigits:p,maximumFractionDigits:p});
+const groups=new Map(report.groups.map(x=>[x.id,x]));
+const priority=['m1_fast','candidate','baseline','release','kolmo_rt','kolmo_fast','kolmo_eco','kolmo_hc','kolmo_max','kolmo_ultra','kbc','krc','zstd','zstd3','zstd19','lz4','openzl','brotli11','zpaq','bsc'];
+const own=k=>k.startsWith('kolmo_')||['candidate','baseline','release','m1_fast','kbc','krc','m2_fast','adaptive'].includes(k)||k.startsWith('parallel-')||k.startsWith('legacy-');
+const label=(g,k)=>k==='openzl'&&g.id.startsWith('cli-')?'OpenZL · trained CSV':g.id.startsWith('pool')||g.id.startsWith('internal')||g.id==='rgb-api'?k==='kolmo_fast'?'Kolmo fast · M1':report.labels[k]||k:report.labels[k]||k;
+const buckets=[['Whole archive',k=>k==='archive'],['Complete specialist files',k=>k.startsWith('cli-')||k==='rgb-api'],['Diagnostic samples',k=>k.startsWith('slice-')],['Complete-file replays',k=>k.startsWith('full-')],['Multicore and GPU',k=>/^(internal|pool|gpu-)/.test(k)]];
+for(const [name,test] of buckets){const og=document.createElement('optgroup');og.label=name;for(const g of report.groups.filter(g=>test(g.id))){
+const op=document.createElement('option');op.value=g.id;op.textContent=g.title+(g.id.startsWith('internal')?' · internal workers':g.id.startsWith('pool')?' · chunk pool':g.id.startsWith('gpu-')?' · CPU/GPU':g.id==='rgb-api'?' · native APIs':'');og.append(op)}if(og.children.length)el('work').append(og)}
+if(groups.has(location.hash.slice(1)))el('work').value=location.hash.slice(1);
+const node=(cls,text)=>{const t=document.createElement('div');t.className=cls;if(text!==undefined)t.textContent=text;return t};
+function render(){
+ const g=groups.get(el('work').value);if(!g)return;const all=Object.entries(g.rows),phase=el('units').value==='time';
+ el('title').textContent=g.title;
+ const expected=g.expected?(' · '+all.filter(([k])=>k!=='m1_fast').length+'/'+g.expected+' baseline settings verified'):' · '+all.length+' verified settings';
+ el('status').textContent=g.method+' · '+f(g.original/1e6,2)+' MB'+expected+(g.failed.length?' · '+g.failed.length+' failed':'');
+ const ext=all.filter(([k])=>!own(k)), leaders=new Set();
+ for(const field of ['bytes','encode','decode']){const best=field==='bytes'?Math.min(...ext.map(([,r])=>r[field])):Math.max(...ext.map(([,r])=>r[field]));for(const [k,r] of ext)if(r[field]===best)leaders.add(k)}
+ let data=all;
+ if(el('filter').value==='focus'&&all.length>15)data=data.filter(([k])=>priority.includes(k)||own(k)||leaders.has(k));
+ const sort=el('sort').value;
+ const rank=k=>priority.includes(k)?priority.indexOf(k):100;
+ data=[...data].sort(([a,x],[b,y])=>sort==='ratio'?x.bytes-y.bytes:sort==='family'?(rank(a)-rank(b)||label(g,a).localeCompare(label(g,b))):y[sort]-x[sort]);
+ const e=r=>phase?g.original/(1000*r.encode):r.encode,d=r=>phase?g.original/(1000*r.decode):r.decode;
+ const maxR=Math.max(...data.map(([,r])=>g.original/r.bytes),1),maxS=Math.max(...data.map(([,r])=>e(r)+d(r)),1);
+ el('phase').textContent=phase?'Combined phase time · ms':'Phase speed · MB/s';
+ el('rows').replaceChildren();el('detail').textContent='Select a row for frame size, timing and available memory measurements.';
+ for(const [k,r] of data){const row=node('row'+(own(k)?' own':''));row.tabIndex=0;
+  const ratio=g.original/r.bytes, size=node('ratio'),bar=node('bar');bar.style.width=(ratio/maxR*71)+'%';const value=document.createElement('span');value.textContent=f(ratio,2)+'×';size.append(bar,value);
+  const phases=node('pair'),enc=node('en'),dec=node('de');enc.style.width=(100*e(r)/maxS)+'%';dec.style.width=(100*d(r)/maxS)+'%';phases.append(enc,dec);
+  row.append(node('name',label(g,k)),size,phases,node('num',f(e(r))),node('num',f(d(r))));
+  let details=label(g,k)+' · '+f(r.bytes,0)+' compressed bytes · encode '+f(g.original/(1000*r.encode),2)+' ms · decode '+f(g.original/(1000*r.decode),2)+' ms';
+  if(r.encode_rss)details+=' · peak RSS '+f(r.encode_rss/1048576)+' / '+f(r.decode_rss/1048576)+' MiB (encode/decode)';
+  if(r.repeats)details+=' · '+r.repeats+' timed pairs';
+  row.title=details;for(const ev of ['focus','click'])row.addEventListener(ev,()=>el('detail').textContent=details);el('rows').append(row);
+ }
+ el('note').textContent=g.note+(g.failed.length?' Failed exact or executable checks: '+g.failed.join(', ')+'.':'');
+}
+for(const id of ['work','filter','sort','units'])el(id).addEventListener('change',()=>{if(id==='work')history.replaceState(null,'','#'+el('work').value);render()});
+render();
+</script></html>

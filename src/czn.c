@@ -9,7 +9,12 @@
 #include "experimental/frontier_pcm.h"
 #include "experimental/frontier_lag.h"
 #include "experimental/frontier_shuffle.h"
+#ifdef CZN_FRONTIER_FASTQ
+#include "experimental/frontier_fastq.h"
+#define CZN_MAX_VERSION 7
+#else
 #define CZN_MAX_VERSION 6
+#endif
 #else
 #define CZN_MAX_VERSION 5
 #endif
@@ -1088,7 +1093,7 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 }
 
 /* ------------------------------------------------------------------ codecs */
-enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11 };
+enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11, C_FASTQ = 12 };
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8 };
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
  * so repeated calls to one target produce identical bytes. Encoded back to front and decoded front to back (as in
@@ -1310,6 +1315,9 @@ static inline uint32_t get32(const uint8_t *p) { uint32_t v; memcpy(&v, p, 4); r
 static inline uint64_t get64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }
 
 typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm;
+#ifdef CZN_FRONTIER_FASTQ
+    int experimental_fastq;
+#endif
 #ifdef CZN_FRONTIER
     frontier_lags lags;
 #endif
@@ -1713,6 +1721,12 @@ static void *compress_worker(void *arg) {
         if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         if (codec == C_ZSTD && level == 19 && tflag == 9) level = CZ_HC_TEXT_LEVEL;                                  /* hc text: ultra level */
         size_t cl = 0;
+#ifdef CZN_FRONTIER_FASTQ
+        if (pl.experimental_fastq) {
+            cl = frontier_fastq_encode(raw, len, sl, J->slot);
+            if (cl) { codec = C_FASTQ; modes |= 8; }
+        }
+#endif
 #ifdef CZN_FRONTIER
 #ifdef CZN_FRONTIER_PATCHED_PCM
         if (pl.experimental_pcm && !J->dict && J->default_level) {
@@ -1922,6 +1936,12 @@ static void *plan_worker(void *arg) {
         uint32_t g = atomic_fetch_add(&j->next, 1); if (g >= j->count) break;
         const uint8_t *src = j->src + j->starts[g]; size_t len = j->ends[g] - j->starts[g];
 #ifdef CZN_FRONTIER
+#ifdef CZN_FRONTIER_FASTQ
+        if (j->allow_frontier && frontier_fastq_probe(src, len)) {
+            j->plans[g] = (plan_t){.experimental_fastq = 1};
+            continue;
+        }
+#endif
         if (j->allow_frontier && frontier_dna_probe(src, len)) {
             j->plans[g] = (plan_t){.experimental_dna = 1};
             continue;
@@ -2068,7 +2088,7 @@ cleanup:
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }
-    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = czn_crc32c(0, dst, 28); hc = czn_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
@@ -2154,6 +2174,12 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     size_t dlen = len;
     if ((tflag >= 3 && tflag <= 7) || tflag == 9) { dlen = get32(pay); if (dlen > len + TSLACK) return CZN_ERR_CORRUPT; }
 #ifdef CZN_FRONTIER
+#ifdef CZN_FRONTIER_FASTQ
+    if (codec == C_FASTQ) {
+        if (P->ver < 7 || tflag || pl.t != T_NONE || frontier_fastq_decode(pay, cl, out, len)) return CZN_ERR_CORRUPT;
+        return blk_sum(P->ver, out, len) == get32(e + 8) ? 0 : CZN_ERR_CHECKSUM;
+    }
+#endif
     if (codec == C_PCM) {
         if (P->ver < 6 || tflag || pl.t != T_NONE || frontier_pcm_decode(pay, cl, out, len)) return CZN_ERR_CORRUPT;
     } else if (codec == C_DNA || codec == C_DNA_PREFIX || codec == C_DNA_RUNS) {

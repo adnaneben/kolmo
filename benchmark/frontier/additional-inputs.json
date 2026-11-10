@@ -1,0 +1,32 @@
+{
+  "events": {
+    "artifact_bytes": 4414816,
+    "artifact_sha256": "35fda58cea6d157c8bf14d250d0fbada2de8896760a8f9beff0d81f06fc9c5f9",
+    "records": 13773,
+    "target_bytes": 31644150,
+    "target_sha256": "4a20b69348d86e68c538e43846b5b57662f15f00440277b7fe6ad1e35c12dbaf",
+    "url": "https://data.gharchive.org/2016-01-01-0.json.gz"
+  },
+  "quic": {
+    "artifact_bytes": 1535216,
+    "artifact_sha256": "24f411581702fea968f554264a629a80aa5a03a2a959733063391575256edcc7",
+    "target_bytes": 1535216,
+    "target_sha256": "24f411581702fea968f554264a629a80aa5a03a2a959733063391575256edcc7",
+    "url": "https://www.rfc-editor.org/rfc/rfc9000.pdf"
+  },
+  "reads": {
+    "artifact_bytes": 183292913,
+    "artifact_sha256": "c2b69fdbe3423a8ab9fb185cb57cff574874e32deb3cebd3396a0deb3eb2dcf9",
+    "records": 100000,
+    "target_bytes": 36637534,
+    "target_sha256": "758029a19f65e3c2867efbb6ab636799a28ed1ddc50515552bbd06ca680a2a59",
+    "url": "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/003/SRR2584863/SRR2584863_1.fastq.gz"
+  },
+  "taxi": {
+    "artifact_bytes": 38139949,
+    "artifact_sha256": "797d6f008e67c3e3371b7f957ab97dbc2b38a9fb0ac083cb5eae4b0297b32372",
+    "target_bytes": 38139949,
+    "target_sha256": "797d6f008e67c3e3371b7f957ab97dbc2b38a9fb0ac083cb5eae4b0297b32372",
+    "url": "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2022-01.parquet"
+  }
+}
