@@ -1924,7 +1924,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         double record_start = prof_now();
 #endif
         rec_plan_t *R = malloc(sizeof(rec_plan_t));
-        if (R && rec_detect(s, n, effort, light ? 6 : 2, R)) {   /* quick analysis: only a clear record period is searched */
+        if (R && rec_detect(s, n, effort, light ? 6 : 4, R)) {   /* layouts are searched only for a clear record period (4x the median lag; quick analysis 6x) */
             size_t rs = (size_t)R->h + (st > (size_t)R->h ? (st - R->h) / R->P * R->P : 0); if (!rs) rs = R->P;
             size_t rl = L / R->P * R->P;
             if (rs + rl <= n) {
