@@ -82,9 +82,20 @@ static void cm_init_tables(void) {
 }
 static inline int cm_SQ(int x) { if (x > 2047) x = 2047; if (x < -2047) x = -2047; return cm_sq[x + 2048]; }
 
+#ifdef KOLMO_CM_COMPACT
+enum { CM_BYTE_VALUES = 257, CM_NIBBLES = 16, CM_PAIR_BITS = 13 };
+typedef struct {
+    uint32_t keys[1u << CM_PAIR_BITS];
+    uint16_t pairs[1u << CM_PAIR_BITS];
+} cm_pair_scratch;
+#endif
 typedef struct { uint32_t s[16]; } cm_bucket;          /* s[0] = check << 16 | priority; s[1..15] nibble-tree counters */
 typedef struct {
     cm_bucket *t[CM_NMX];
+#ifdef KOLMO_CM_COMPACT
+    /* High 16 bits hold the compact slot, low 16 hold the original tag. */
+    uint32_t one_byte[2][CM_BYTE_VALUES][CM_NIBBLES];
+#endif
     int sh, v2; size_t mem, tb; uint8_t shi[CM_NMX]; size_t tbi[CM_NMX];                                  /* 32 - log2 buckets; model 2?; bytes held */
     uint32_t o1[256 * 256];
     uint32_t h[CM_NMX]; uint32_t *slot[CM_NMX]; cm_bucket *cur[CM_NMX];
@@ -116,7 +127,11 @@ static void cm_acquire(size_t b) {
         long pg = sysconf(_SC_PHYS_PAGES), ps = sysconf(_SC_PAGE_SIZE);
         cm_budget = (pg > 0 && ps > 0) ? (size_t)((double)pg * (double)ps * 0.6) : ((size_t)4 << 30);
     }
+#ifdef KOLMO_CM_COMPACT
+    while (cm_used && (b > cm_budget || cm_used > cm_budget - b)) pthread_cond_wait(&cm_cv, &cm_mu);
+#else
     while (cm_used && cm_used + b > cm_budget) pthread_cond_wait(&cm_cv, &cm_mu);
+#endif
     cm_used += b; pthread_mutex_unlock(&cm_mu);
 }
 static void cm_release(size_t b) { pthread_mutex_lock(&cm_mu); cm_used -= b; pthread_cond_broadcast(&cm_cv); pthread_mutex_unlock(&cm_mu); }
@@ -127,7 +142,21 @@ static void cm_release(size_t b) { pthread_mutex_lock(&cm_mu); cm_used -= b; pth
 static int cm_bits_for(size_t n) { int b = 16; while (b < CM_BB_MAX && ((size_t)1 << b) < n) b++; return b; }
 static size_t cm_mem_for(int bb, int v2) {
     size_t t = (size_t)sizeof(cm_bucket) << bb, ts = bb > 18 ? t >> CM_SMALL : t;
+#ifdef KOLMO_CM_COMPACT
+    /* A distinct (byte, nibble) can introduce at most one two-bucket pair.
+     * Account for both maps and the temporary hash table before allocation. */
+    size_t max_bank = 2u * CM_BYTE_VALUES * CM_NIBBLES * sizeof(cm_bucket);
+    uint64_t bytes = ((uint64_t)(v2 ? 48 : 16) << 20) + sizeof(((cm_t *)0)->one_byte) + sizeof(cm_pair_scratch);
+    int nm = v2 ? CM_NMX : CM_NM;
+    for (int bank = 1; bank < nm; ++bank) {
+        size_t bank_bytes = bank >= CM_NM ? ts : t;
+        if ((bank == 1 || bank == 17) && bank_bytes > max_bank) bank_bytes = max_bank;
+        bytes += bank_bytes;
+    }
+    return bytes > SIZE_MAX ? SIZE_MAX : (size_t)bytes;
+#else
     return (size_t)(CM_NM - 1) * t + (v2 ? (size_t)(CM_NMX - CM_NM) * ts : 0) + ((size_t)(v2 ? 48 : 16) << 20);
+#endif
 }
 
 /* Model tables: zeroed, and on Linux backed by transparent huge pages where available (far fewer TLB misses on the
@@ -152,6 +181,40 @@ static void cm_free_parts(cm_t *m) {
     cm_big_free(m->w3, sizeof(*m->w3) * CM_W3); cm_big_free(m->w4, sizeof(*m->w4) * CM_W4);
     cm_big_free(m->a3, sizeof(*m->a3) * CM_A3); cm_big_free(m->mt, ((size_t)m->mmask + 1) * 4); free(m);
 }
+#ifdef KOLMO_CM_COMPACT
+/* Only these two context banks depend on a single previous byte. Map
+ * neighboring buckets together to preserve collisions and tie-breaking. */
+static size_t cm_build_byte_table(uint32_t map[CM_BYTE_VALUES][CM_NIBBLES], int bank, unsigned shift) {
+    cm_pair_scratch *scratch = calloc(1, sizeof(*scratch));
+    if (!scratch) return 0;
+    unsigned count = 0;
+    for (unsigned c = 0; c < CM_BYTE_VALUES; ++c) {
+        /* Before the first byte, both context hashes are exactly zero. */
+        uint32_t context = 0;
+        if (c != 256) {
+            context = bank == 1 ? cm_hmix(c + 0x1000000u)
+                                : cm_hmix((c << 8) * 0x85EBCA6Bu + 17);
+        }
+        for (unsigned nib = 0; nib < CM_NIBBLES; ++nib) {
+            uint32_t h = cm_hmix(context + nib * 0x5BD1E995u);
+            uint32_t original = h >> shift;
+            uint32_t key = (original >> 1) + 1;
+            uint32_t slot = (key * 0x9E3779B1u) >> (32 - CM_PAIR_BITS);
+            while (scratch->keys[slot] && scratch->keys[slot] != key)
+                slot = (slot + 1) & ((1u << CM_PAIR_BITS) - 1);
+            if (!scratch->keys[slot]) {
+                scratch->keys[slot] = key;
+                scratch->pairs[slot] = (uint16_t)count++;
+            }
+            uint32_t compact = 2u * scratch->pairs[slot] + (original & 1u);
+            map[c][nib] = (compact << 16) | (h & 65535);
+        }
+    }
+    free(scratch);
+    return 2 * (size_t)count * sizeof(cm_bucket);
+}
+#endif
+
 static cm_t *cm_new(uint8_t *buf, int bb, int v2) {
     pthread_once(&cm_once, cm_init_tables);
     size_t mem = cm_mem_for(bb, v2); cm_acquire(mem);
@@ -162,6 +225,12 @@ static cm_t *cm_new(uint8_t *buf, int bb, int v2) {
     for (int i = 1; i < nm; i++) {                            /* the model-2 contexts (16+) have fewer distinct values */
         int b = i >= CM_NM && bb > 18 ? bb - CM_SMALL : bb;
         m->shi[i] = (uint8_t)(32 - b); m->tbi[i] = sizeof(cm_bucket) << b;
+#ifdef KOLMO_CM_COMPACT
+        if (i == 1 || i == 17) {
+            m->tbi[i] = cm_build_byte_table(m->one_byte[i == 17], i, m->shi[i]);
+            if (!m->tbi[i]) goto fail;
+        }
+#endif
         m->t[i] = cm_big(m->tbi[i]); if (!m->t[i]) goto fail;
     }
     if (v2) {
@@ -194,8 +263,12 @@ static void cm_free(cm_t *m) {
     cm_free_parts(m); cm_release(mem);
 }
 
+#ifdef KOLMO_CM_COMPACT
+static inline cm_bucket *cm_find_at(cm_bucket *t, uint32_t idx, uint32_t chk) {
+#else
 static inline cm_bucket *cm_find(cm_bucket *t, uint32_t h, int sh) {
     uint32_t idx = h >> sh, chk = h & 0xffff;
+#endif
     cm_bucket *a = &t[idx], *b = &t[idx ^ 1];
     if ((a->s[0] >> 16) == chk) return a;
     if ((b->s[0] >> 16) == chk) return b;
@@ -204,6 +277,24 @@ static inline cm_bucket *cm_find(cm_bucket *t, uint32_t h, int sh) {
     for (int k = 1; k < 16; k++) v->s[k] = 0x80000000u;
     return v;
 }
+#ifdef KOLMO_CM_COMPACT
+static inline uint32_t cm_byte_entry(const cm_t *m, int i, unsigned nib) {
+    unsigned c = i == 1 ? m->c4 & 255 : (m->c4 >> 8) & 255;
+    return m->one_byte[i == 17][m->pos ? c : 256][nib];
+}
+static inline cm_bucket *cm_find_model(cm_t *m, int i, unsigned nib, uint32_t salt) {
+    if (i == 1 || i == 17) {
+        uint32_t entry = cm_byte_entry(m, i, nib);
+        return cm_find_at(m->t[i], entry >> 16, entry & 65535);
+    }
+    uint32_t h = cm_hmix(m->h[i] + salt);
+    return cm_find_at(m->t[i], h >> m->shi[i], h & 65535);
+}
+static inline uint32_t cm_prefetch_slot(const cm_t *m, int i, unsigned nib, uint32_t salt) {
+    if (i == 1 || i == 17) return cm_byte_entry(m, i, nib) >> 16;
+    return cm_hmix(m->h[i] + salt) >> m->shi[i];
+}
+#endif
 static inline int cm_expected(cm_t *m) {
     if (!m->mlen) return -1;
     int b = m->buf[m->mptr];
@@ -219,7 +310,11 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     uint32_t c0 = m->c0; int bp = (int)m->bitpos;
     if (bp == 0 || bp == 4) {
         uint32_t nib = bp ? (c0 & 15) * 0x5BD1E995u : 0;
+#ifdef KOLMO_CM_COMPACT
+        for (int i = 1; i < nm; i++) m->cur[i] = cm_find_model(m, i, bp ? (c0 & 15) : 0, nib);
+#else
         for (int i = 1; i < nm; i++) m->cur[i] = cm_find(m->t[i], cm_hmix(m->h[i] + nib), m->shi[i]);
+#endif
     }
     int node = bp < 4 ? (int)((c0 & ((1u << bp) - 1)) | (1u << bp)) : (int)((c0 & ((1u << (bp - 4)) - 1)) | (1u << (bp - 4)));
     m->slot[0] = &m->o1[c0 | (m->c4 & 0xff) << 8];
@@ -328,7 +423,11 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
     if (m->bitpos == 2) {                                     /* prefetch both candidate buckets for the second nibble */
         for (int b = 0; b < 2; b++) {
             uint32_t nib = (((m->c0 << 1) | (uint32_t)b) & 15) * 0x5BD1E995u;
+#ifdef KOLMO_CM_COMPACT
+            for (int i = 1; i < nm; i++) { uint32_t idx = cm_prefetch_slot(m, i, ((m->c0 << 1) | (uint32_t)b) & 15, nib); __builtin_prefetch(&m->t[i][idx]); }
+#else
             for (int i = 1; i < nm; i++) { uint32_t idx = cm_hmix(m->h[i] + nib) >> m->shi[i]; __builtin_prefetch(&m->t[i][idx]); }
+#endif
         }
     }
     if (++m->bitpos == 8) {
@@ -385,7 +484,11 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
         m->h[9] = cm_hmix(cm_hmix(c4 + 0x51ED27u) + (m->c8 & 0xffffff) * 0xC2B2AE35u + 9);     /* order 7 */
 #endif
         for (int i = 1; i < nm; i++) {                        /* prefetch the buckets for the first nibble */
+#ifdef KOLMO_CM_COMPACT
+            uint32_t idx = cm_prefetch_slot(m, i, 0, 0);
+#else
             uint32_t idx = cm_hmix(m->h[i]) >> m->shi[i];
+#endif
             __builtin_prefetch(&m->t[i][idx]); __builtin_prefetch(&m->t[i][idx ^ 1]);
         }
         if (m->pos >= 6) {
