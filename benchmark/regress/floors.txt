@@ -2,6 +2,8 @@
 # claude/graph before the Codex merge (9 Nov 2026), plus later improvements. A floor is raised when a change improves a
 # file and is never lowered without a recorded reason. Exception: wide_test.csv at fast is +544 bytes (+0.05%) since
 # round 1 (sampled column analysis, about 1.3x faster compression).
+# wide_test.csv at max: 925251 -> 951938 (+2.9%) on 10 Nov 2026: the column leaves take BWT instead of LZMA2, ten times
+# faster to encode (the old setting was 0.13x of 1.0.1's encode speed); still 32% smaller than 1.0.1. ultra keeps 925251.
 $JSON/api.json fast 365846
 $JSON/api.json hc 221589
 $JSON/api.json max 213374
@@ -37,7 +39,8 @@ $DATA/population.i64 hc 38417
 $DATA/population.i64 max 37365
 $DATA/wide_test.csv fast 1174169
 $DATA/wide_test.csv hc 968667
-$DATA/wide_test.csv max 925251
+$DATA/wide_test.csv max 951938
+$DATA/wide_test.csv ultra 925251
 $DATA/magika.safetensors fast 2614491
 $DATA/magika.safetensors hc 2608222
 $DATA/magika.safetensors max 2608222

@@ -2236,10 +2236,13 @@ static void *compress_worker(void *arg) {
         size_t inlen = (tflag >= 3 && tflag <= 7) || tflag >= 9 ? get32(sl) : len, cl = 0;
         int codec = J->codec, level = (pl.wide || (tflag >= 10 && pl.t == T_TBL)) && J->default_level ? 1 : J->level;
         if (pl.t == T_KG && len) {                                          /* kolmo graph: the block is a program + leaves */
-            cl = pl.a ? kg_encode_table(xp, codec, level, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
-                      : pl.b & 32 ? kg_encode_img8(xp, codec, level, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
-                      : pl.b & 16 ? kg_encode_float(xp, codec, level, raw, len, pl.b & 15, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
-                      : kg_encode_num(xp, codec, level, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
+            /* max, wide table: the column leaves are text, so they take BWT like any text block at max (LZMA2 on the
+             * leaves was 3% smaller and ten times slower to encode) */
+            int kgc = codec == C_LZMA && pl.a ? C_BSC : codec, kgl = kgc != codec ? 9 : level;
+            cl = pl.a ? kg_encode_table(xp, kgc, kgl, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
+                      : pl.b & 32 ? kg_encode_img8(xp, kgc, kgl, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
+                      : pl.b & 16 ? kg_encode_float(xp, kgc, kgl, raw, len, pl.b & 15, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
+                      : kg_encode_num(xp, kgc, kgl, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
             if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8; goto coded; }
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
         }

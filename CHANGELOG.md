@@ -112,3 +112,6 @@
 - **Speed mode is speed first.** `-m speed` now uses minimal analysis (`-Q`): only the byte-plane shuffle is tried,
   and text is coded as it is. The table, record and image transforms, which made some files 2 to 4x slower to encode,
   stay in `balanced` and in the advanced `rt` setting. `-Q` also works with `fast`.
+- **`max` on wide tables encodes ten times faster.** Column leaves take BWT like other text at `max`; LZMA2 on the
+  leaves was 3% smaller and ran at about a tenth of the speed. Against 1.0.1 the file is 32% smaller and faster in
+  both directions.
