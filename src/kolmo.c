@@ -2660,17 +2660,32 @@ done:
 typedef struct {
     const uint8_t *src; const uint64_t *starts, *ends;
     plan_t *plans; const kolmo_params *params;
-    uint32_t count; int threads_per_plan, allow_frontier; atomic_uint next;
+    uint32_t count; int threads_per_plan, allow_frontier, member_fd; atomic_uint next;
 } plan_job;
 static void *plan_worker(void *arg) {
     plan_job *j = arg; const kolmo_params *p = j->params;
+    long page_size = j->member_fd >= 0 ? sysconf(_SC_PAGESIZE) : 0;
     for (;;) {
         uint32_t g = atomic_fetch_add(&j->next, 1); if (g >= j->count) break;
         const uint8_t *src = j->src + j->starts[g]; size_t len = j->ends[g] - j->starts[g];
+        /* Keep pages touched by this archive member resident only while its
+         * planner runs. Block construction retains the original file mapping. */
+        void *member = MAP_FAILED;
+        size_t mapped = 0;
+        if (page_size > 0 && len >= (1u << 20)) {
+            size_t offset = (size_t)j->starts[g], delta = offset % (size_t)page_size;
+            mapped = len + delta;
+            member = mmap(NULL, mapped, PROT_READ, MAP_PRIVATE, j->member_fd, (off_t)(offset - delta));
+            if (member != MAP_FAILED) {
+                madvise(member, mapped, MADV_RANDOM);
+                src = (const uint8_t *)member + delta;
+            }
+        }
 #ifdef KOLMO_FRONTIER
         int dna_candidate = j->allow_frontier && frontier_dna_probe(src, len);
         if (dna_candidate && is_simple_dna(src, len)) {
             j->plans[g] = (plan_t){.experimental_dna = 1};
+            if (member != MAP_FAILED) munmap(member, mapped);
             continue;
         }
 #endif
@@ -2711,6 +2726,7 @@ static void *plan_worker(void *arg) {
             free(pl.fs); pl.fs = NULL; pl.t = T_NONE;
         }
         j->plans[g] = pl;
+        if (member != MAP_FAILED) munmap(member, mapped);
     }
     zs_trim();
     return NULL;
@@ -2754,7 +2770,8 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     /* Parallelize independent members, or formula discovery within a single
      * member. Never multiply the two thread budgets. Plans remain in input order. */
     plan_job planning = {src, ss, se, plans, p, nseg, nseg > 1 ? 1 : threads,
-                         p->transforms && p->mode == KOLMO_FAST && !p->level && !dict};
+                         p->transforms && p->mode == KOLMO_FAST && !p->level && !dict,
+                         nseg > 1 && p->transforms && p->mode == KOLMO_FAST ? input_fd : -1};
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
     if (!p->block && nseg == 1 && (plans[0].wide || plans[0].experimental_table) && B > (2u << 20)) B = 2u << 20;
