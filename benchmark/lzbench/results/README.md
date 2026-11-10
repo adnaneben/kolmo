@@ -88,3 +88,17 @@ Levels 0–10 in one run (`-t2,2`); levels 11 and 12 from their single-pass runs
 | 10 | `max` | 19.34% | 2.81 MB/s | 50.6 MB/s |
 | 11 | `ultra -l 1` | 17.99% | 0.43 MB/s | 0.45 MB/s |
 | 12 | `ultra` | 17.01% | 0.28 MB/s | 0.30 MB/s |
+
+## 2026-11-10: kolmo 1.1.0 against the field
+
+- `silesia-2026-11-10-v1.1.0-fast.csv`, `silesia-2026-11-10-v1.1.0-slow.csv`: lzbench on
+  silesia.tar, single thread, 2-core cloud VM (timings vary 10 to 15% between runs).
+  kolmo 1.1.0 levels 0 to 10 next to lz4, libdeflate, zstd, brotli, OpenZL 0.2.3, xz, bsc,
+  bzip3, ppmd8, kanzi and zpaq. Sizes are identical to 1.0.x at every level: none of the
+  1.1.0 transforms fire inside a tar.
+- `panel-2026-11-10-v1.1.0-vs-openzl.csv`: the 32-file OpenZL panel, one row per file and
+  compressor (ratio, encode MB/s, decode MB/s). kolmo 1.0.x and 1.1.0 were run back to
+  back through the CLI; OpenZL rows were measured on the same VM earlier the same day.
+  Files under 1 MB mostly measure process start-up.
+  At fast, 1.1.0 is smaller than OpenZL's best profile on 17 of 32 files, encodes faster
+  on 21 and decodes faster on 28; at max it is smaller on 29.

@@ -1,0 +1,21 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo 1.1.0 -10,2.26,36.64,211957760,40996444,19.34,/home/claude/bench_data/silesia.tar
+zstd 1.5.7 -19,1.56,751.16,211957760,52834579,24.93,/home/claude/bench_data/silesia.tar
+zstd 1.5.7 -22,1.07,587.40,211957760,52282945,24.67,/home/claude/bench_data/silesia.tar
+brotli 1.2.0 -11,0.38,233.03,211957760,50410214,23.78,/home/claude/bench_data/silesia.tar
+xz 5.8.4 -6,1.63,83.06,211957760,49489516,23.35,/home/claude/bench_data/silesia.tar
+xz 5.8.4 -9,1.50,83.20,211957760,48756932,23.00,/home/claude/bench_data/silesia.tar
+bsc 3.3.12 -m0 -e2,10.80,11.85,211957760,48740974,23.00,/home/claude/bench_data/silesia.tar
+bsc 3.3.12 -m0 -e1,12.77,17.74,211957760,49292310,23.26,/home/claude/bench_data/silesia.tar
+bsc 3.3.12 -m0 -e0,14.70,21.17,211957760,50263368,23.71,/home/claude/bench_data/silesia.tar
+bsc 3.3.12 -m3 -e1,19.51,10.33,211957760,53473612,25.23,/home/claude/bench_data/silesia.tar
+bsc 3.3.12 -m4 -e1,22.85,8.99,211957760,50686530,23.91,/home/claude/bench_data/silesia.tar
+bsc 3.3.12 -m5 -e1,20.28,8.50,211957760,49606012,23.40,/home/claude/bench_data/silesia.tar
+bsc 3.3.12 -m6 -e1,17.83,7.39,211957760,49243534,23.23,/home/claude/bench_data/silesia.tar
+bzip3 1.5.4 -5,7.39,7.65,211957760,47236983,22.29,/home/claude/bench_data/silesia.tar
+ppmd8 26.03 -4,8.83,7.99,211957760,51240319,24.17,/home/claude/bench_data/silesia.tar
+kanzi 2.6.0 -7,8.09,10.89,211957760,47308349,22.32,/home/claude/bench_data/silesia.tar
+kanzi 2.6.0 -8,2.29,2.30,211957760,43250478,20.41,/home/claude/bench_data/silesia.tar
+kanzi 2.6.0 -9,1.62,1.59,211957760,41809049,19.73,/home/claude/bench_data/silesia.tar
+zpaq 7.15 -4,1.07,1.03,211957760,44287252,20.89,/home/claude/bench_data/silesia.tar
+zpaq 7.15 -5,0.31,0.31,211957760,40470268,19.09,/home/claude/bench_data/silesia.tar
