@@ -1,0 +1,12 @@
+{
+  "candidate": "af29c9cbd660cc03382982d29fa0d8831e3611aafcbc53e9d4565498d20bc3cf",
+  "cases": [
+    "dickens:262144",
+    "osdb:1048576",
+    "webster:1048576",
+    "x-ray:1048576",
+    "mr:complete"
+  ],
+  "source": "da4a95fb0b1a78141963587bd1f2ce96f460c5014413d2bb6c8b87a09733aac5",
+  "stock": "e450319552902f14c47f9b4b04d63796e8a0159bdb1243f16185147fb67f59d1"
+}

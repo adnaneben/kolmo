@@ -1,0 +1,108 @@
+{
+  "cli": "e450319552902f14c47f9b4b04d63796e8a0159bdb1243f16185147fb67f59d1",
+  "commands": {
+    "fixed_quarter_mib": {
+      "decode": [
+        "$EVIDENCE_CHECKOUT/build/frontier/github-110/build/kolmo",
+        "-T",
+        "1",
+        "-d",
+        "{frame}",
+        "{out}"
+      ],
+      "encode": [
+        "$EVIDENCE_CHECKOUT/build/frontier/github-110/build/kolmo",
+        "-T",
+        "1",
+        "-m",
+        "fast",
+        "-B",
+        "0.25",
+        "{src}",
+        "{frame}"
+      ]
+    },
+    "openzl": {
+      "decode": [
+        "$REFERENCE_CHECKOUT/build/holdout/frozen/zli",
+        "decompress",
+        "{frame}",
+        "--output",
+        "{out}"
+      ],
+      "encode": [
+        "$REFERENCE_CHECKOUT/build/holdout/frozen/zli",
+        "compress",
+        "--compressor",
+        "$EVIDENCE_CHECKOUT/build/frontier/v110-eia-2022/transfer/eia2022.zlc",
+        "{src}",
+        "--output",
+        "{frame}"
+      ]
+    },
+    "stock": {
+      "decode": [
+        "$EVIDENCE_CHECKOUT/build/frontier/github-110/build/kolmo",
+        "-T",
+        "1",
+        "-d",
+        "{frame}",
+        "{out}"
+      ],
+      "encode": [
+        "$EVIDENCE_CHECKOUT/build/frontier/github-110/build/kolmo",
+        "-T",
+        "1",
+        "-m",
+        "fast",
+        "{src}",
+        "{frame}"
+      ]
+    },
+    "zstd": {
+      "decode": [
+        "$REFERENCE_CHECKOUT/build/holdout/frozen/zstd",
+        "--single-thread",
+        "-q",
+        "-d",
+        "{frame}",
+        "-o",
+        "{out}"
+      ],
+      "encode": [
+        "$REFERENCE_CHECKOUT/build/holdout/frozen/zstd",
+        "--single-thread",
+        "-q",
+        "-3",
+        "{src}",
+        "-o",
+        "{frame}"
+      ]
+    }
+  },
+  "frozen_utc": "2026-11-10T19:52:29.940695+00:00",
+  "kolmo_source": "87dfc86b2665cac637c98179fb8afa8db3eeb668",
+  "protocol": "One worker per scoring codec. One warmup, seven randomized matched verified file-to-file rounds, shared timing lock. Median wall milliseconds and maximum RSS bytes by direction. Include training time, graph bytes and peak memory separately. No retuning.",
+  "runner_sha256": "807fc5636c2a805fe555209108ed0589918085001f8dec93af4da1d4ace5d7ea",
+  "split": "Cutoff is sorted distinct UTC end-of-hour timestamp at floor(N/4). Header plus earliest rows below cutoff in source order limited to 4 MiB for training; test header plus all rows at or above cutoff in source order, exact raw lines.",
+  "splitter_sha256": "f567c2d523bfb543d7cdaa3e3137b072f6584bdac52ba56587e82861d6d0e0fb",
+  "success": "At least 20% smaller than each comparator separately; encode and decode time and RSS each <= corresponding comparator. Combined gate must pass both. Record unrounded bytes/time/RSS.",
+  "timing_runner_sha256": "96158521e5d45a304acb5a2f9a0508183c7dfc23ec64de4eb5d663fd30fda101",
+  "training": [
+    "$REFERENCE_CHECKOUT/build/holdout/frozen/zli",
+    "train",
+    "--profile",
+    "csv",
+    "--threads",
+    "4",
+    "--max-time-secs",
+    "10",
+    "$EVIDENCE_CHECKOUT/build/frontier/v110-eia-2022/transfer/train.csv",
+    "--output",
+    "$EVIDENCE_CHECKOUT/build/frontier/v110-eia-2022/transfer/eia2022.zlc"
+  ],
+  "url": "https://www.eia.gov/electricity/gridmonitor/sixMonthFiles/EIA930_BALANCE_2022_Jan_Jun.csv",
+  "zli": "6d831ea6fef6417cd6386f956f17ec46e4487a96b9eb1808c207f55b7b134dbb",
+  "zstd": "8c6ba2cfb4734f62e33488bb4ab767c2936ec8b2992fe0abd91d73fdeccce835",
+  "original_receipt_sha256": "2a7eeead29d79620a4bf8bdd25fba0512e7359ca37e9a7c10889e8ba50ec60d7"
+}

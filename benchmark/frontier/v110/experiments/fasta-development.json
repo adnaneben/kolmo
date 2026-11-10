@@ -1,0 +1,50 @@
+{
+  "random_upper": {
+    "raw_bytes": 265434,
+    "route": "frontier",
+    "input_sha256": "80342c8398080f6094bfad69e3fa511c93510cb1bef46024ff0b1cd71463c89f",
+    "stock": 87736,
+    "frontier": 65670,
+    "guard": 65670
+  },
+  "random_lower": {
+    "raw_bytes": 265434,
+    "route": "frontier",
+    "input_sha256": "aef2015560fa5233e50329a3cd17d89ca2e5dd327a0e21f3913658de74529476",
+    "stock": 87791,
+    "frontier": 65670,
+    "guard": 65670
+  },
+  "n_suffix": {
+    "raw_bytes": 265434,
+    "route": "frontier",
+    "input_sha256": "ec9bd774ffb727bea2cb2d84f2fb854f7508fb2feef539886060046b72938f43",
+    "stock": 66377,
+    "frontier": 49274,
+    "guard": 49274
+  },
+  "mixed_case": {
+    "raw_bytes": 265434,
+    "route": "frontier",
+    "input_sha256": "ef81c095ccb5a29d486c300b71e8de84901cace442301157c10ce751a41140c5",
+    "stock": 89404,
+    "frontier": 65680,
+    "guard": 65680
+  },
+  "tandem_repeat": {
+    "raw_bytes": 265434,
+    "route": "stock",
+    "input_sha256": "d15441800527372fac75aa9bc8c5661f6a2df61672493d3479e32afce89f866e",
+    "stock": 299,
+    "frontier": 57630,
+    "guard": 299
+  },
+  "mixed_repeat": {
+    "raw_bytes": 265434,
+    "route": "frontier",
+    "input_sha256": "f6053ac0d79fea753238ed5a5d536bc43852b76958d78b5c64b38afb3d47884e",
+    "stock": 44791,
+    "frontier": 32935,
+    "guard": 32935
+  }
+}

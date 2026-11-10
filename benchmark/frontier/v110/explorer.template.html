@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kolmo v1.1.0 · Compression benchmarks</title>
+<style>
+:root{color-scheme:light;--ink:#18313a;--dim:#48606a;--line:#c6d1d4;--teal:#006d61;--enc:#b95d2c;--dec:#8dbad2;--slate:#748893}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f7f7}
+main{max-width:1160px;margin:auto;padding:36px 34px 50px}h1{font-size:clamp(28px,4vw,42px);letter-spacing:-.04em;line-height:1.1;margin:0 0 10px}h2{font-size:23px;letter-spacing:-.025em;line-height:1.15;margin:0}
+p{margin:.45rem 0}header{margin-bottom:24px}header p,.note,footer{color:var(--dim)}.panel{background:white;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.controls{display:grid;grid-template-columns:1.22fr 1.12fr .94fr .78fr;gap:14px;border-bottom:1px solid var(--line);background:#edf3f2;padding:17px 22px}
+label{display:block;font-size:12px;color:var(--dim);font-weight:650}select{display:block;width:100%;margin-top:4px;color:var(--ink);font:inherit;font-size:13px;font-weight:500;background:#fff;border:1px solid #899da5;border-radius:4px;padding:7px 6px}
+select:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid #438bb4;outline-offset:2px}
+.heading{padding:22px 22px 9px}.method{margin:8px 0 0;font-size:13px;color:var(--dim);max-width:960px}.note{font-size:13px}
+.leaders{display:grid;grid-template-columns:repeat(3,1fr);margin:9px 22px 16px;background:#f5f8f7;border:1px solid #dae4e2;border-radius:5px}
+.leaders div{padding:10px 13px;min-width:0}.leaders div+div{border-left:1px solid #d8e1e0}
+.leaders small{display:block;color:var(--dim);font-size:11px}.leaders strong{font-size:15px;color:var(--teal)}.leaders span{display:block;font-size:12px}
+.table-scroll{overflow:auto;margin:0 22px}table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}caption{text-align:left;color:var(--dim);font-size:12px;padding-bottom:6px}th,td{padding:7px 6px;border-bottom:1px solid #e1e8ea;text-align:right;font-size:13px}th{border-top:1px solid #9aaeb3;color:var(--dim);font-weight:600;white-space:nowrap;font-size:11px}
+th:first-child,td:first-child{text-align:left;padding-left:0}tbody tr:last-child td{border-bottom:0}
+#chart{min-width:730px}#chart tbody tr:hover{background:#f4f8f7}
+#chart .name{font-weight:500;min-width:145px;max-width:230px;overflow-wrap:anywhere}.name.k{color:var(--teal);font-weight:650!important}
+.ratio-cell{min-width:135px}.ratio-wrap{display:flex;gap:6px;align-items:center}.track{width:100%;display:flex;height:10px}.ratio-val{min-width:51px;text-align:right}
+.ratio-bar{background:var(--slate)}.ratio-bar.k{background:var(--teal)}.stack{min-width:190px;width:27%;text-align:left}.en,.de{display:block;height:100%}.en{background:var(--enc)}.de{background:var(--dec)}
+.swatch{display:inline-block;width:9px;height:9px;vertical-align:baseline;margin:0 3px 0 6px}.swatch:first-child{margin-left:0}.swatch.en,.swatch.de{height:9px;display:inline-block}
+.gates{margin:24px 22px 0}.gates h3{font-size:16px;margin:0 0 5px}.gate-scroll{overflow:auto}.gates table{min-width:580px}.ok{color:#086453}.miss{color:#98451d}
+footer{padding:16px 22px;border-top:1px solid var(--line);margin-top:16px;font-size:12px}.links{display:flex;gap:14px;flex-wrap:wrap}a{color:#096556;text-decoration-thickness:1px;text-underline-offset:2px}
+details{margin-top:12px;font-size:13px}summary{cursor:pointer}.composition{columns:2;padding-left:22px}.composition li{break-inside:avoid;margin:3px 0}.hidden{display:none}.sha{overflow-wrap:anywhere}
+@media(max-width:870px){main{padding:20px 12px}.controls{grid-template-columns:1fr 1fr;padding:14px}.heading,footer{padding-left:14px;padding-right:14px}.table-scroll,.leaders,.gates{margin-left:14px;margin-right:14px}}
+@media(max-width:520px){.leaders{grid-template-columns:1fr}.leaders div{display:grid;grid-template-columns:1fr auto;gap:0 8px;padding:5px 9px}.leaders div+div{border-left:0;border-top:1px solid #d8e1e0}.leaders strong{grid-column:2;grid-row:1/3;align-self:center}.composition{columns:1}}
+@media(max-width:650px){
+ .controls label:nth-child(-n+2){grid-column:1/-1}.table-scroll{overflow:visible}#chart{display:block;min-width:0}
+ #chart caption,#chart tbody{display:block}#chart thead{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
+ #chart tbody tr{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;padding:10px 0;border-top:1px solid var(--line)}
+ #chart td{border:0;text-align:left;padding:0;min-width:0}
+ #chart .name{grid-column:1/-1;max-width:none;margin-bottom:4px}
+ #chart .ratio-cell:before,#chart .stack:before{display:block;font-size:10px;color:var(--dim);margin-bottom:3px}
+ #chart .ratio-cell:before{content:"Compression ratio"}#chart .stack:before{content:"Encode + decode  ·  MB/s"}
+ #chart .stack{width:auto}#chart .stack .track{margin-top:5px}
+ #chart .ratio-val{min-width:42px;font-size:12px}.rate{font-size:12px;color:var(--dim);padding-top:4px!important}
+ .rate:before{content:attr(data-phase) " "}.row-rss,.row-repeat{font-size:11px;color:var(--dim)}
+ .row-rss:before{content:"Peak MiB  "}.row-repeat:before{content:"Timed pairs  "}
+}
+</style>
+</head>
+<body><main>
+<header><h1>Kolmo v1.1.0 compression benchmarks</h1><p>Compare file size, encoding speed and decoding speed within one run and input.</p></header>
+<section class="panel" aria-label="Compression chart">
+<div class="controls">
+<label>Measurement source<select id="source"></select></label>
+<label>Dataset<select id="dataset"></select></label>
+<label>Settings<select id="filter"><option value="current">Current settings + rivals</option><option value="all">All settings and versions</option><option value="kolmo">Kolmo only</option><option value="winner">Kolmo + metric leaders</option></select></label>
+<label>Order by<select id="sort"><option value="ratio">Compression ratio</option><option value="enc">Encoding speed</option><option value="dec">Decoding speed</option><option value="name">Setting name</option></select></label>
+</div>
+<div class="heading"><h2 id="heading"></h2><p class="note" id="description"></p><p class="method" id="method"></p><p class="method links" id="related"></p></div>
+<div class="leaders" id="leaders" aria-live="polite"></div>
+<div class="table-scroll" tabindex="0" aria-label="Scrollable chart"><table id="chart"><caption id="count"></caption><thead><tr id="columns"></tr></thead><tbody id="rows"></tbody></table></div>
+<div id="gates" class="gates hidden"></div>
+<footer><p>Ratio is original bytes divided by compressed bytes. Higher values are better for each metric. The two speed segments measure separate phases on the same linear scale. Round-trip throughput is original bytes divided by total encode and decode time.</p>
+<p id="fingerprint" class="sha"></p><p class="links" id="links"></p>
+<details id="corpus"><summary>Silesia corpus composition</summary><ul class="composition" id="members"></ul><a href="https://sun.aei.polsl.pl/~sdeor/index.php?page=silesia" target="_blank" rel="noopener">Original corpus descriptions</a></details></footer>
+</section></main>
+<script type="application/json" id="data">__CHART_DATA__</script>
+<script>
+"use strict";
+const data=JSON.parse(document.getElementById("data").textContent);
+const el=id=>document.getElementById(id);
+const create=(tag, text, cls)=>{const x=document.createElement(tag);if(text!==undefined)x.textContent=text;if(cls)x.className=cls;return x};
+const selector=el("source"), dataset=el("dataset"), filter=el("filter"), sort=el("sort");
+const format=(n,d)=>n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const speed=n=>format(n,n<1?2:1);
+const kolmo=r=>/kolmo|^v1\.|Nov 7 · M1|^PR #5 · FASTA selector/i.test(r.label);
+const metricNames={ratio:"Highest compression ratio",enc:"Fastest encode",dec:"Fastest decode"};
+const metrics=Object.keys(metricNames);
+const src=()=>data.sources.find(s=>s.key===selector.value);
+const g=()=>src().groups.find(t=>t.key===dataset.value);
+function initialize(){
+  for(const s of data.sources)selector.add(new Option(s.title,s.key));
+  for(const [id,n] of Object.entries(data.members)){const li=create("li");li.append(create("strong",id+" · "),n);el("members").append(li)}
+  selector.addEventListener("change",()=>selectSource());
+  for(const field of [dataset,sort,filter])field.addEventListener("change",render);
+  const params=new URLSearchParams(location.hash.slice(1));
+  const initial=data.sources.find(s=>s.key===params.get("source"));if(initial)selector.value=initial.key;
+  selectSource(params.get("file"));
+}
+function selectSource(initialFile){
+  dataset.replaceChildren();const categories=new Map();
+  for(const item of src().groups){
+    if(!categories.has(item.category)){const opt=create("optgroup");opt.label=item.category;categories.set(item.category,opt);dataset.append(opt)}
+    categories.get(item.category).append(new Option(item.title,item.key));
+  }
+  if(src().groups.some(item=>item.key===initialFile))dataset.value=initialFile;
+  filter.children[0].disabled=src().key!=="mac";filter.value=src().key==="mac"?"current":"all";render();
+}
+function selectLink(title,key,file){
+  const a=create("a",title);a.href="#"+new URLSearchParams({source:key,file});
+  a.addEventListener("click",event=>{if(!event.metaKey&&!event.ctrlKey){event.preventDefault();selector.value=key;selectSource(file)}});
+  return a;
+}
+function winners(rows,metric){
+  const eligible=metric==="ratio"?rows:rows.filter(r=>!r.single_pass);
+  const max=Math.max(...eligible.map(r=>r[metric]));return eligible.filter(r=>r[metric]===max);
+}
+function selectedRows(d){
+  const leaders=new Set(metrics.flatMap(k=>winners(d.rows,k)));
+  let rows=[...d.rows];
+  if(filter.value==="current")rows=rows.filter(r=>!/^kolmo 1\.0\./i.test(r.label));
+  if(filter.value==="kolmo")rows=rows.filter(kolmo);
+  if(filter.value==="winner")rows=rows.filter(r=>kolmo(r)||leaders.has(r));
+  return rows.sort((a,b)=>(sort.value==="name"?0:b[sort.value]-a[sort.value]) || a.label.localeCompare(b.label,"en",{numeric:true}));
+}
+function bars(row,ratioMax,speedMax,hasRSS,hasRepeats){
+  const tr=create("tr");const name=create("td",row.label,"name"+(kolmo(row)?" k":""));tr.append(name);
+  if(row.size!==undefined)name.title=format(row.size,0)+" compressed bytes";
+  const ratio=create("td",undefined,"ratio-cell"),wrap=create("div",undefined,"ratio-wrap"),track=create("div",undefined,"track"),bar=create("i",undefined,"ratio-bar"+(kolmo(row)?" k":""));
+  bar.style.width=(100*row.ratio/ratioMax)+"%";track.append(bar);wrap.append(track,create("span",format(row.ratio,2)+"×","ratio-val"));ratio.append(wrap);tr.append(ratio);
+  const cell=create("td",undefined,"stack"),stack=create("div",undefined,"track");
+  for(const [key,cls] of [["enc","en"],["dec","de"]]){const b=create("i",undefined,cls);b.style.width=(100*row[key]/speedMax)+"%";stack.append(b)}
+  cell.append(stack);tr.append(cell);
+  for(const [k,phase] of [["enc","Encode"],["dec","Decode"]]){const td=create("td",speed(row[k]),"rate");td.dataset.phase=phase;tr.append(td)}
+  if(hasRSS)tr.append(create("td",row.rss?row.rss.map(n=>format(n/1048576,1)).join(" / "):"—","row-rss"));
+  if(hasRepeats)tr.append(create("td",row.repeats??"—","row-repeat"));
+  return tr;
+}
+function showGates(d){
+  const host=el("gates");host.replaceChildren();host.classList.toggle("hidden",!d.gates);
+  if(!d.gates)return;
+  const table=create("table"),head=table.createTHead().insertRow(),body=table.createTBody();
+  for(const v of ["Rival","Bytes saved","≥20% smaller","Encode time","Decode time","Encode RSS","Decode RSS"])head.append(create("th",v));
+  for(const [key,val] of Object.entries(d.gates)){
+    const tr=body.insertRow();tr.append(create("td",key==="zstd"?"Zstd −3":"Trained OpenZL"),create("td",format(val.bytes_saved_pct,1)+"%"));
+    for(const metric of ["at_least_20pct_smaller","encode_ms","decode_ms","encode_rss","decode_rss"]){const ok=val.checks[metric];tr.append(create("td",ok?"Pass":"Miss",ok?"ok":"miss"))}
+  }
+  const holder=create("div",undefined,"gate-scroll");holder.append(table);host.append(create("h3",d.gates_title||"Opt-in fast · five checks"),create("p","Kolmo must produce at least 20% fewer bytes than the rival and use equal or lower time and peak RSS in both phases.","note"),holder);
+}
+function render(){
+  const s=src(),d=g(),rows=selectedRows(d);
+  el("heading").textContent=d.title;
+  el("description").textContent=[d.n?format(d.n,0)+" input bytes":"",d.note,d.upstream_size_comparison].filter(Boolean).join(" · ");
+  el("method").textContent=s.method;el("leaders").replaceChildren();
+  const related=el("related");related.replaceChildren();
+  if(s.key==="local-lz"){
+    for(const o of s.groups.filter(item=>item.key!==d.key)){
+      const ultra=o.key.includes("single-pass")?o.rows.find(r=>r.label.endsWith(" ultra")):null;
+      const label=ultra?"Open single-pass measurements":"All release modes and rivals";
+      related.append(selectLink(label,s.key,o.key));
+    }
+    related.append(selectLink("Published 35-file comparison","mac","overall"));
+  }
+  for(const key of metrics){
+    const passed=winners(rows,key),best=passed[0],box=create("div");
+    if(!best){box.append(create("small",metricNames[key]),create("strong","—"));el("leaders").append(box);continue}
+    const n=key==="ratio"?format(best.ratio,2)+"×":speed(best[key])+" MB/s";
+    box.append(create("small",metricNames[key]),create("strong",n),create("span",passed.map(r=>r.label).join(" / ")));el("leaders").append(box);
+  }
+  const ratioMax=Math.max(...d.rows.map(r=>r.ratio)),speedMax=Math.max(...d.rows.map(r=>r.enc+r.dec));
+  const rss=d.rows.some(r=>r.rss),repeats=d.rows.some(r=>r.repeats);
+  const cols=el("columns");cols.replaceChildren(create("th","Setting"),create("th","Compression ratio"));
+  const legend=create("th",undefined,"stack");legend.append(create("i",undefined,"swatch en"),"Encode",create("i",undefined,"swatch de"),"Decode · MB/s");cols.append(legend,create("th","Encode"),create("th","Decode"));if(rss)cols.append(create("th","Peak MiB · enc / dec"));if(repeats)cols.append(create("th","Timed pairs"));
+  el("rows").replaceChildren(...rows.map(r=>bars(r,ratioMax,speedMax,rss,repeats)));
+  el("count").textContent=rows.length+" of "+d.rows.length+" settings shown. Leaders above reflect the visible settings.";
+  showGates(d);
+  el("fingerprint").textContent=d.sha?"Input SHA-256 · "+d.sha:"";
+  el("links").replaceChildren();
+  for(const [name,url] of s.links){const a=create("a",name);a.href=url;a.target="_blank";a.rel="noopener";el("links").append(a)}
+  const link=create("a","Link to this comparison");link.href="#"+new URLSearchParams({source:s.key,file:d.key});
+  el("links").append(link);history.replaceState(null,"",link.hash);
+}
+initialize();
+</script>
+</body></html>

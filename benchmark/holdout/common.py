@@ -1,4 +1,4 @@
-"""Process-level measurements on macOS. Outputs are verified outside timing."""
+"""Process-level measurements on macOS and Linux. Outputs are verified outside timing."""
 import hashlib
 import json
 import os
@@ -25,7 +25,9 @@ def save(path, value):
     tmp.replace(path)
 
 def measure(args):
-    assert sys.platform == 'darwin', 'ru_maxrss is in bytes on macOS'
+    if sys.platform != 'darwin' and not sys.platform.startswith('linux'):
+        raise RuntimeError('Process RSS measurements require macOS or Linux')
+    rss_unit = 1 if sys.platform == 'darwin' else 1024
     with tempfile.TemporaryFile() as log:
         start=time.perf_counter_ns()
         with subprocess.Popen(args, stdout=log, stderr=log) as p:
@@ -35,7 +37,7 @@ def measure(args):
             if p.returncode:
                 log.seek(0)
                 raise RuntimeError(f'{args}: {log.read()[-4000:]}')
-    return {'seconds':elapsed,'peak_rss_bytes':int(usage.ru_maxrss)}
+    return {'seconds':elapsed,'peak_rss_bytes':int(usage.ru_maxrss) * rss_unit}
 
 def kolmo_enc(exe,mode,src,dst):
     return [BIN/exe,'-m',mode,'-T','1',src,dst]

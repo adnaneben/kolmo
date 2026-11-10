@@ -1,0 +1,56 @@
+--- a/src/kolmo.c
++++ b/src/kolmo.c
+@@ -2377,2 +2377,48 @@
+ #ifdef KOLMO_FRONTIER
++/* A packed base costs two bits even in long gaps or repeated motifs. Check
++ * several parts of the segment before bypassing the regular planner. */
++static int prefer_frontier_dna(const uint8_t *src, size_t len) {
++    if (!frontier_dna_probe(src, len)) return 0;
++    enum { WINDOW = 1024, MAX_WINDOWS = 12, SIXMERS = 4096 };
++    size_t width = len < WINDOW ? len : WINDOW;
++    size_t windows = len / width;
++    if (windows > MAX_WINDOWS) windows = MAX_WINDOWS;
++    size_t step = windows > 1 ? (len - width) / (windows - 1) : 0;
++    unsigned lower = 0, upper = 0;
++    for (size_t w = 0; w < windows; ++w) {
++        const uint8_t *sample = src + w * step;
++        size_t pos = 0;
++        if (sample[0] == '>') {
++            const uint8_t *newline = memchr(sample, '\n', width);
++            if (!newline) return 0;
++            pos = (size_t)(newline - sample) + 1;
++        }
++        uint64_t seen[SIXMERS / 64] = {0};
++        unsigned kmer = 0, run = 0, known = 0, other = 0, words = 0, distinct = 0;
++        for (; pos < width; ++pos) {
++            uint8_t c = sample[pos];
++            if (c == '\n' || c == '\r') continue;
++            uint8_t base = c & 0xdf;
++            if (base != 'A' && base != 'C' && base != 'T' && base != 'G') {
++                ++other;
++                run = 0;
++                continue;
++            }
++            ++known;
++            lower += (c >> 5) & 1;
++            upper += 1 - ((c >> 5) & 1);
++            kmer = ((kmer << 2) | ((c >> 1) & 3u)) & (SIXMERS - 1);
++            if (++run < 6) continue;
++            uint64_t bit = UINT64_C(1) << (kmer & 63);
++            distinct += !(seen[kmer >> 6] & bit);
++            seen[kmer >> 6] |= bit;
++            ++words;
++        }
++        if (32 * other > known + other || (words >= 128 && distinct * 3 < words)) return 0;
++    }
++    /* Entirely lower-case sequence packs as efficiently as upper case. */
++    unsigned minority = lower < upper ? lower : upper;
++    return 64 * minority <= lower + upper;
++}
++
+ /* Select the wider layout against the incumbent bytes on the same complete
+@@ -2425,3 +2471,3 @@
+ #ifdef KOLMO_FRONTIER
+-        if (j->allow_frontier && frontier_dna_probe(src, len)) {
++        if (j->allow_frontier && prefer_frontier_dna(src, len)) {
+             j->plans[g] = (plan_t){.experimental_dna = 1};

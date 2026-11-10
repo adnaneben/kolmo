@@ -1,0 +1,19 @@
+{
+  "stock": {
+    "frame_bytes": 40787,
+    "transform": 3,
+    "frame_sha256": "8526f5aa092baa502c3719dc8c2cc09d0591380a24a0fa247f4a3cb7b105878e"
+  },
+  "old_frontier": {
+    "frame_bytes": 184750,
+    "transform": 0,
+    "frame_sha256": "90b7dca54302a29da28e6b365abf65b5492648ab12620fe51459691d5c4bea5e"
+  },
+  "candidate": {
+    "frame_bytes": 40787,
+    "transform": 3,
+    "frame_sha256": "8526f5aa092baa502c3719dc8c2cc09d0591380a24a0fa247f4a3cb7b105878e"
+  },
+  "file_1_threads": "18956ae34dfdf84cf8af9cfdd0bb34269c7dbcb2869a34e5c2312373355a40f2",
+  "file_4_threads": "18956ae34dfdf84cf8af9cfdd0bb34269c7dbcb2869a34e5c2312373355a40f2"
+}

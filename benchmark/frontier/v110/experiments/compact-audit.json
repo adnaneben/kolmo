@@ -1,0 +1,153 @@
+{
+  "maps": [
+    {
+      "bank": 1,
+      "bits": 16,
+      "pairs": 3862,
+      "allocated": 494336
+    },
+    {
+      "bank": 17,
+      "bits": 16,
+      "pairs": 3852,
+      "allocated": 493056
+    },
+    {
+      "bank": 1,
+      "bits": 17,
+      "pairs": 3973,
+      "allocated": 508544
+    },
+    {
+      "bank": 17,
+      "bits": 17,
+      "pairs": 3974,
+      "allocated": 508672
+    },
+    {
+      "bank": 1,
+      "bits": 18,
+      "pairs": 4035,
+      "allocated": 516480
+    },
+    {
+      "bank": 17,
+      "bits": 18,
+      "pairs": 4049,
+      "allocated": 518272
+    },
+    {
+      "bank": 1,
+      "bits": 19,
+      "pairs": 4064,
+      "allocated": 520192
+    },
+    {
+      "bank": 17,
+      "bits": 19,
+      "pairs": 4082,
+      "allocated": 522496
+    },
+    {
+      "bank": 1,
+      "bits": 20,
+      "pairs": 4088,
+      "allocated": 523264
+    },
+    {
+      "bank": 17,
+      "bits": 20,
+      "pairs": 4097,
+      "allocated": 524416
+    },
+    {
+      "bank": 1,
+      "bits": 21,
+      "pairs": 4099,
+      "allocated": 524672
+    },
+    {
+      "bank": 17,
+      "bits": 21,
+      "pairs": 4105,
+      "allocated": 525440
+    },
+    {
+      "bank": 1,
+      "bits": 22,
+      "pairs": 4102,
+      "allocated": 525056
+    },
+    {
+      "bank": 17,
+      "bits": 22,
+      "pairs": 4108,
+      "allocated": 525824
+    }
+  ],
+  "streams": [
+    {
+      "input_bytes": 4096,
+      "model": "model1",
+      "bits": 16,
+      "size_nibble": 1,
+      "compressed_bytes": 552,
+      "sha256": "817cd52f24fed5c250698bfc5b3144c87edf9eb9e3fb9f7cb30e5f8889559f0b",
+      "asan": true
+    },
+    {
+      "input_bytes": 4096,
+      "model": "model2",
+      "bits": 16,
+      "size_nibble": 9,
+      "compressed_bytes": 373,
+      "sha256": "b8a23130e43900f65de1ee7f126fa20e918170a5857ebaba52e3d0faa6a9c90b",
+      "asan": true
+    },
+    {
+      "input_bytes": 4096,
+      "model": "legacy",
+      "bits": 20,
+      "size_nibble": 0,
+      "compressed_bytes": 552,
+      "sha256": "a57de0fe9ba31e845e0dd12d5712f3c3d9eb02cf5024c9919d155a6174d0dc3d",
+      "asan": true
+    },
+    {
+      "input_bytes": 65537,
+      "model": "model1",
+      "bits": 17,
+      "size_nibble": 2,
+      "compressed_bytes": 5190,
+      "sha256": "db2e958cc5b9cf11f81e7aabef1549c43773205767aa028c9c4a8bc9a7805f68",
+      "asan": false
+    },
+    {
+      "input_bytes": 65537,
+      "model": "model2",
+      "bits": 17,
+      "size_nibble": 10,
+      "compressed_bytes": 4825,
+      "sha256": "2f2e8f006ac6ee6ad7db95669249960ad702d9b07690297d55af58784d6050dd",
+      "asan": false
+    },
+    {
+      "input_bytes": 1048576,
+      "model": "model1",
+      "bits": 20,
+      "size_nibble": 5,
+      "compressed_bytes": 5914,
+      "sha256": "560358906eb19c7f156677b9d2b884e70b7dfa6517715da654135f662ba8ff29",
+      "asan": false
+    },
+    {
+      "input_bytes": 1048576,
+      "model": "model2",
+      "bits": 20,
+      "size_nibble": 13,
+      "compressed_bytes": 5502,
+      "sha256": "6f29260e25be629fdb6119c909516804cf3a72720d1513d77df06ae314ba691a",
+      "asan": false
+    }
+  ]
+}
