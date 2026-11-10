@@ -2,7 +2,11 @@
 """Release acceptance check. Reads a results file written by the Mac benchmark (list of
 {file, n, set, size, tc, td, ok}) and decides whether the candidate may be released.
 
-  accept.py results.json [candidate-label] [baseline-label]      (defaults: cand, 1.0.1)
+  accept.py results.json [candidate-label] [baseline-label] [second-results.json]      (defaults: cand, 1.0.1)
+
+Timing noise: the same binary measured in two runs on the M5 differs by more than 5% in about a quarter of the
+file/setting pairs (median 2.7%, 90th percentile 9.5%). Check B therefore counts a slowdown only when a second
+results file, if given, shows it too; with one file every case is listed and counted.
 
 A candidate is accepted only when all three hold:
   A. Every rival in the file is beaten by one kolmo setting on the whole set: ratio at least equal,
@@ -13,11 +17,13 @@ A candidate is accepted only when all three hold:
 Ratio is averaged over all files; speeds over files of 1 MB or more (smaller files measure start-up).
 Exit status 0 = accepted, 1 = not yet."""
 import json, math, sys, collections
-R = json.load(open(sys.argv[1])); cand = sys.argv[2] if len(sys.argv) > 2 else 'cand'; base = sys.argv[3] if len(sys.argv) > 3 else '1.0.1'
+R = json.load(open(sys.argv[1])); R2 = json.load(open(sys.argv[4])) if len(sys.argv) > 4 else None; cand = sys.argv[2] if len(sys.argv) > 2 else 'cand'; base = sys.argv[3] if len(sys.argv) > 3 else '1.0.1'
 D = collections.defaultdict(dict)
 for r in R:
     if not r['ok']: print('ROUND TRIP FAILURE', r['file'], r['set']); sys.exit(1)
     D[r['set']][r['file']] = (r['n'] / r['size'], r['n'] / 1e6 / r['tc'], r['n'] / 1e6 / r['td'], r['n'], r['size'])
+D2 = collections.defaultdict(dict)
+for r in (R2 or []): D2[r['set']][r['file']] = (r['n'] / r['size'], r['n'] / 1e6 / r['tc'], r['n'] / 1e6 / r['td'], r['n'], r['size'])
 gm = lambda v: math.exp(sum(map(math.log, v)) / len(v)) if v else float('nan')
 def summ(s, files=None):
     v = [x for f, x in D[s].items() if files is None or f in files]; big = [x for x in v if x[3] >= 1e6]
@@ -46,7 +52,9 @@ for s in ours:
     for f, x in D[s].items():
         y = D.get(o, {}).get(f)
         if y and x[3] >= 1e6 and x[4] == y[4] and (x[1] < 0.95 * y[1] or x[2] < 0.95 * y[2]):
-            nb += 1; print(f"  SLOWER   {s[6:]:16s} {f:28s} enc x{x[1]/y[1]:.2f} dec x{x[2]/y[2]:.2f}")
+            x2 = D2.get(s, {}).get(f); y2 = D2.get(o, {}).get(f); again = True
+            if R2 is not None: again = bool(x2 and y2) and ((x[1] < 0.95 * y[1] and x2[1] < 0.95 * y2[1]) or (x[2] < 0.95 * y[2] and x2[2] < 0.95 * y2[2]))
+            nb += again; print(f"  {'SLOWER  ' if again else 'once    '} {s[6:]:16s} {f:28s} enc x{x[1]/y[1]:.2f} dec x{x[2]/y[2]:.2f}" + (f"   second run: enc x{x2[1]/y2[1]:.2f} dec x{x2[2]/y2[2]:.2f}" if x2 and y2 else ''))
 print('  none' if not nb else f'  {nb} case(s)'); fail += nb
 print('C. per setting against', base, '(ratio, encode, decode multiples)')
 for s in ours:
