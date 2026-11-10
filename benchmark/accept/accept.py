@@ -9,6 +9,7 @@ A candidate is accepted only when all three hold:
      encode and decode speed at least 98% of the rival's, and better on at least one of the three.
   B. No file whose compressed size is unchanged from the baseline encodes or decodes more than 5% slower.
   C. Per setting, against the baseline: geometric-mean ratio not lower, encode and decode not below 97%.
+  D. No file is larger than with the baseline at the same setting.
 Ratio is averaged over all files; speeds over files of 1 MB or more (smaller files measure start-up).
 Exit status 0 = accepted, 1 = not yet."""
 import json, math, sys, collections
@@ -54,5 +55,15 @@ for s in ours:
     files = set(D[s]) & set(D[o]); a = summ(o, files); b = summ(s, files); m = (b[0] / a[0], b[1] / a[1], b[2] / a[2])
     bad = m[0] < 0.999 or m[1] < 0.97 or m[2] < 0.97; fail += bad
     print(f"  {'BEHIND  ' if bad else 'ok      '} {s[6:]:16s} x{m[0]:.3f} x{m[1]:.3f} x{m[2]:.3f}")
+print('D. no file may be larger than with', base, 'at the same setting')
+nd = 0
+for s in ours:
+    o = 'kolmo ' + base + ' ' + s[len('kolmo ' + cand + ' '):]
+    if o not in D or s.endswith(REDEFINED): continue
+    for f, x in D[s].items():
+        y = D[o].get(f)
+        if y and x[4] > y[4]:
+            nd += 1; print(f"  LARGER   {s[6:]:16s} {f:28s} {y[4]} -> {x[4]} bytes")
+print('  none' if not nd else f'  {nd} case(s)'); fail += nd
 print('ACCEPTED' if not fail else f'NOT ACCEPTED: {fail} open item(s)')
 sys.exit(1 if fail else 0)
