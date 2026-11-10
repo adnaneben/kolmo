@@ -17,8 +17,10 @@ part = kolmo.read_range(blob, 1_000_000, 4096)                    # decode only 
 
 `threads=0` (the default) uses all cores. Apache-2.0.
 
-Linux (x86-64 and aarch64) gets prebuilt wheels from PyPI, so no toolchain is needed. Other
-platforms, macOS included, build the sdist, which needs a C compiler and takes about a minute.
+Prebuilt wheels on PyPI cover Linux (x86-64 and aarch64) and, from 1.0.1, Apple silicon Macs
+running macOS 11 or later, so no toolchain is needed there. The Mac wheel includes liblzma, so
+every mode works without Homebrew. Other platforms, Intel Macs included, build the sdist, which
+needs a C compiler and takes about a minute.
 liblzma is optional. If it is found (`brew install xz`, `apt install liblzma-dev`), `max` and
 `ultra` use it; otherwise they use the other coders. Set `KOLMO_NO_LZMA=1` to always build
 without it.

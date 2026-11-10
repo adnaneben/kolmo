@@ -147,8 +147,9 @@ functions keep their current behavior.
 
 - **Homebrew** builds the `kolmo` command from source in a few seconds and pulls in `xz` for liblzma.
 - **Python:** the package is published as `kolmoc` because `kolmo` was already taken on PyPI, but you still
-  `import kolmo`. Linux (x86-64, aarch64) gets prebuilt wheels. Other platforms, macOS included, build the
-  sdist, which needs a C compiler and takes about a minute.
+  `import kolmo`. Prebuilt wheels cover Linux (x86-64, aarch64) and, from 1.0.1, Apple silicon Macs
+  (macOS 11 or later). Other platforms, Intel Macs included, build the sdist, which needs a C compiler and
+  takes about a minute.
 - **Rust:** the crate compiles the C core in `build.rs` and links it statically. It needs a C compiler at
   build time.
 - **liblzma** is optional for both packages. If it isn't found, `max` and `ultra` use the other coders.
