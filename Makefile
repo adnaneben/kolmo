@@ -132,6 +132,21 @@ clean:
 build/kolmo-cm20: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
+# The compact variant retains the standard Ultra bitstream and table sizes elsewhere.
+build/kolmo-cm-compact: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) -DKOLMO_CM_COMPACT $(DEFS) $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+
+build/cm-reference.o: tests/test_cm_compact.c src/cm.inc
+	@mkdir -p build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/cm-compact-test: tests/test_cm_compact.c src/cm.inc build/cm-reference.o
+	$(CC) $(CFLAGS) -DKOLMO_CM_COMPACT $< build/cm-reference.o -lpthread -o $@
+
+check-cm-compact: build/cm-compact-test
+	./build/cm-compact-test
+.PHONY: check-cm-compact
+
 # Research build. Experimental recipes emit v6 frames only when used.
 FRONTIER_SRC := src/experimental/frontier_dna.c src/experimental/frontier_table.c src/experimental/frontier_prefix.c src/experimental/frontier_pcm.c src/experimental/frontier_lag.c src/experimental/frontier_shuffle.c src/experimental/frontier_runs.c
 FRONTIER_HDR := src/experimental/frontier_dna.h src/experimental/frontier_table.h src/experimental/frontier_prefix.h src/experimental/frontier_pcm.h src/experimental/frontier_lag.h src/experimental/frontier_shuffle.h src/experimental/frontier_runs.h
