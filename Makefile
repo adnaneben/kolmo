@@ -139,6 +139,13 @@ FRONTIER_HDR := src/experimental/frontier_dna.h src/experimental/frontier_table.
 build/kolmo-frontier: src/cli.c src/kolmo.c src/kolmo.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) src/cli.c src/kolmo.c $(FRONTIER_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
+build/kolmo-tar-file-test: tests/test_tar_file.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) $< $(FRONTIER_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+
+check-tar-files: build/kolmo-tar-file-test
+	./build/kolmo-tar-file-test
+.PHONY: check-tar-files
+
 check-frontier-dna: build/kolmo build/kolmo-frontier
 	python3 tests/test_frontier_dna.py $^
 .PHONY: check-frontier-dna
