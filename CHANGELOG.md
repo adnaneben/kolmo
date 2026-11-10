@@ -120,3 +120,5 @@
   ratio; `balanced` still takes that trade).
 - **`hc` keeps its fast reads on model weights.** rANS leaves, which decode about four times slower than Huffman, are
   taken with the zstd family only when at least 3% smaller. Weights grow 0.24 to 0.35% and decode 40 to 80% faster.
+- **Small arrays never lose to 1.0.1.** For blocks under 256 KiB the block's own coder on the plain bytes is compared
+  with the graph, and the smaller is kept (a 93 KB integer file at `eco` had grown from 660 to 717 bytes).

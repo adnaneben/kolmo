@@ -1756,8 +1756,11 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             }
             if (pl.t == T_KG) return pl;
         }
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+        double tx0 = prof_now(); fprintf(stderr, "text: minified=%d\n", (int)(logs && n >= 65536 && json_minified(s, h)));
+#endif
         if (logs && n >= 65536 && json_minified(s, h)) {   /* minified JSON: split into records, then as JSON lines */
-            size_t mm = n < TRIAL ? n : TRIAL;
+            size_t mm = n < TRIAL ? n : TRIAL;             /* (shorter slices were tried: the gain does not show below 256 KiB) */
             uint8_t *sp = malloc(2 * mm + 64), *o = malloc(2 * mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx();
             size_t cap = ZSTD_compressBound(2 * mm); uint8_t *z = malloc(cap);
             if (sp && o && zc && z) {
@@ -1805,6 +1808,9 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                 if (pl.t == T_LOG) return pl;
             }
         }
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+        fprintf(stderr, "text: json_ms=%.3f js=%d\n", (prof_now() - tx0) * 1000, js); tx0 = prof_now();
+#endif
         static const struct { uint8_t d; int q; } D[] = {{',', 1}, {'\t', 0}, {';', 1}, {'|', 0}, {' ', 1}};
         int *cnt = malloc(4001 * sizeof(int)); size_t head = n < (1 << 16) ? n : (1 << 16);
         if (!cnt) return pl;
@@ -1862,6 +1868,9 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                 free(o);
             }
         }
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+        fprintf(stderr, "text: table_log_ms=%.3f t=%d\n", (prof_now() - tx0) * 1000, pl.t);
+#endif
         if (logs && effort && pl.t == T_NONE && n >= 65536) {   /* prose and markup (eco and above): word dictionary */
             size_t mm = n < (2u << 20) ? n : (2u << 20);
             uint8_t *o = malloc(mm + 64);
@@ -2248,6 +2257,12 @@ static void *compress_worker(void *arg) {
                       : pl.b & 32 ? kg_encode_img8(xp, kgc, kgl, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 16 ? kg_encode_float(xp, kgc, kgl, raw, len, pl.b & 15, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : kg_encode_num(xp, kgc, kgl, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
+            if (cl && len < (256u << 10)) {                                 /* small block: the plan was scored with zstd; the block's
+                                                                             * own coder on the plain bytes may still be smaller */
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+                size_t pc = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
+                if (pc && pc < cl) cl = 0;
+            }
             if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8; goto coded; }
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
         }
