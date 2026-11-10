@@ -61,7 +61,13 @@ static void img16_inv(const uint8_t *lo, const uint8_t *hi, int64_t n, int64_t W
 #undef IMG_R
 }
 static double h0(const uint8_t *b, size_t n) {
-    size_t c[256] = {0}; for (size_t i = 0; i < n; i++) c[b[i]]++;
+    size_t c[256] = {0}; uint32_t c4[4][256]; size_t i = 0;
+    if (n < UINT32_MAX) {                                 /* four counters: no store-to-load stall on repeated bytes */
+        memset(c4, 0, sizeof c4);
+        for (; i + 4 <= n; i += 4) { c4[0][b[i]]++; c4[1][b[i + 1]]++; c4[2][b[i + 2]]++; c4[3][b[i + 3]]++; }
+        for (int k = 0; k < 256; k++) c[k] = (size_t)c4[0][k] + c4[1][k] + c4[2][k] + c4[3][k];
+    }
+    for (; i < n; i++) c[b[i]]++;
     double t = 0; for (int k = 0; k < 256; k++) if (c[k]) t -= c[k] * log2((double)c[k] / n);
     return t / 8;
 }

@@ -76,13 +76,26 @@ All prediction that must agree between encoder and decoder is integer or plain I
 
 ## Modes
 
+Three modes cover almost every use:
+
+| Mode | What it is for | Same as |
+|---|---|---|
+| `-m speed` | fastest; data that is read or sent right away | `rt` |
+| `-m balanced` (default) | small and fast; everyday storage and transfer | `fast` |
+| `-m ratio` | smallest at practical speed; archives | `max` |
+
+`-x` asks for the smallest output of all (`ultra`): context mixing, very slow, large memory. It was never removed; it
+is left out of the speed benchmarks because it runs at well under 1 MB/s.
+
+Advanced settings, for tuning between the three:
+
 | Mode | Block | Coder | Use |
 |---|---|---|---|
 | `rt` | adaptive (≤4 MiB) | LZ4 | decode speed first |
 | `fast` | adaptive (≤4 MiB) | zstd 3 | default (`-q`: quick analysis, cheap transforms only) |
 | `eco` | 16 MiB | brotli 8 | lowest storage cost at moderate CPU |
 | `hc` | 16 MiB (text 128 MiB) | zstd 19 / 22 | archive with fast reads |
-| `max` | 128 MiB | BWT for text; the better of BWT and LZMA2 otherwise (`-l 1`: BWT only) | cold archive |
+| `max` | 128 MiB | BWT for text; LZMA2 otherwise, or BWT where it is at least 5% smaller (`-l 1`: BWT only) | cold archive |
 | `ultra` | 128 MiB | best of context mixing, LZMA2, BWT (`-l 1`: context mixing model 1 only, faster) | coldest archive, best ratio |
 
 `ultra` sizes its context-mixing tables to the block (up to about 4.5 GB per thread for blocks of 4 MiB and more, in
@@ -165,7 +178,7 @@ with plain `kolmo`.
 ```bash
 make                                    # build/kolmo, build/kolmobench, build/kolmotest (Linux, macOS; gcc or clang)
 make check                             # resource failures, concurrent callers, round trips, ranges and corruption
-./build/kolmo -m hc in.csv out.kolmo        # compress: -m rt|fast|eco|hc|max|ultra, -T threads, -B block MiB, -n no transforms, -q quick analysis (fastest)
+./build/kolmo -m ratio in.csv out.kolmo     # compress: -m speed|balanced|ratio (-x: smallest of all), -T threads; advanced: -m rt|fast|eco|hc|max|ultra, -l level, -q
 ./build/kolmo -d out.kolmo back.csv         # decompress (auto-detects one-shot vs streamed input)
 ./build/kolmo -s huge.csv huge.czs        # streaming compress: bounded memory, any size (-S N for N-MiB segments)
 ./build/kolmo -r 1000000:4096 out.kolmo x   # read 4 KiB at offset 1,000,000 without decoding the rest

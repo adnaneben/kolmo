@@ -87,9 +87,16 @@ done:
 int main(int argc, char **argv) {
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
     char *dictpath = NULL, *trainpath = NULL;
-    while ((opt = getopt(argc, argv, "m:l:T:B:nqdr:sS:D:t:")) != -1) switch (opt) {
-        case 'm': P.mode = !strcmp(optarg, "rt") ? KOLMO_RT : !strcmp(optarg, "fast") ? KOLMO_FAST : !strcmp(optarg, "eco") ? KOLMO_ECO :
-                         !strcmp(optarg, "max") ? KOLMO_MAX : !strcmp(optarg, "ultra") ? KOLMO_ULTRA : KOLMO_HC; break;
+    int extreme = 0;
+    while ((opt = getopt(argc, argv, "m:l:T:B:nqxdr:sS:D:t:")) != -1) switch (opt) {
+        /* three modes: speed, balanced (default), ratio. The older names stay as advanced settings. */
+        case 'm': P.mode = !strcmp(optarg, "speed") || !strcmp(optarg, "rt") ? KOLMO_RT :
+                           !strcmp(optarg, "balanced") || !strcmp(optarg, "fast") ? KOLMO_FAST :
+                           !strcmp(optarg, "ratio") || !strcmp(optarg, "max") ? KOLMO_MAX :
+                           !strcmp(optarg, "eco") ? KOLMO_ECO : !strcmp(optarg, "hc") ? KOLMO_HC : !strcmp(optarg, "ultra") ? KOLMO_ULTRA : (kolmo_mode)-1;
+                  if ((int)P.mode < 0) { fprintf(stderr, "kolmo: unknown mode '%s' (speed, balanced or ratio)\n", optarg); return 2; }
+                  break;
+        case 'x': extreme = 1; break;
         case 'l': P.level = atoi(optarg); break;
         case 'T': P.threads = atoi(optarg); break;
         case 'B': P.block = (uint32_t)(atof(optarg) * 1048576); break;
@@ -101,8 +108,16 @@ int main(int argc, char **argv) {
         case 'S': stream = 1; seg = atoi(optarg); break;
         case 'D': dictpath = optarg; break;
         case 't': trainpath = optarg; break;
-        default: fprintf(stderr, "usage: kolmo [-m rt|fast|eco|hc|max|ultra] [-l lvl] [-T thr] [-B MiB] [-n|-q] [-D dict] [-s|-S segMiB] | -d [-D dict] | -r off:len | -t dict samples...  in out\n"); return 2;
+        default: fprintf(stderr,
+            "usage: kolmo [-m speed|balanced|ratio] [-x] [-T threads] in out      compress (default: balanced)\n"
+            "       kolmo -d in out                                               decompress\n"
+            "  speed     fastest, for data that is read or sent right away\n"
+            "  balanced  small and fast; the default\n"
+            "  ratio     smallest at practical speed;  -x  smallest of all (very slow, large memory)\n"
+            "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -n no transforms  -B blockMiB\n"
+            "          -D dict  -t dict samples...  -s|-S segMiB stream  -r off:len read a range\n"); return 2;
     }
+    if (extreme) P.mode = KOLMO_ULTRA;
 
     /* Training mode: concatenate the sample files given as positional args and write a dictionary. */
     if (trainpath) {

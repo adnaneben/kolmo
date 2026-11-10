@@ -17,6 +17,7 @@
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/mman.h>
@@ -32,7 +33,7 @@ static double prof_now(void) {
     return t.tv_sec + t.tv_nsec * 1e-9;
 }
 #endif
-#ifdef KOLMO_PROF
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
 #include <x86intrin.h>
 #endif
 #include <stdint.h>
@@ -1496,6 +1497,9 @@ static void *array_resize(void *old, size_t count, size_t width) {
     return realloc(old, (count ? count : 1) * width);
 }
 
+#ifndef KOLMO_BWT_GAIN_PCT
+#define KOLMO_BWT_GAIN_PCT 5      /* max: least size gain (%) for BWT to replace LZMA2 on a binary block */
+#endif
 static void mode_codec(const kolmo_params *p, int *codec, int *level) {
     switch (p->mode) {
         case KOLMO_RT:  *codec = C_LZ4;    *level = p->level ? p->level : 1; break;
@@ -1585,7 +1589,9 @@ static double kg_plane_h(const uint8_t *p, size_t cnt, int w, int b, int rot) { 
 /* 8-bit image candidate (IMG8 node): row length and channel step from a .npy uint8 header (shape (H, W) or (H, W, C)),
  * else from common image widths x 1, 3 or 4 channels, keeping the layout whose median-predictor residuals are much
  * smaller than a left-neighbour predictor's on a sample. Scored like the other graph candidates. */
-static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, size_t *bw, unsigned *bc, size_t *bh) {
+#define KG_SCREEN ((size_t)32 << 10)   /* graph trials: bytes coded first as a screen */
+#define KG_SCREEN_SLACK 1.25            /* screen passes when within this factor of plain coding (a short run codes worse) */
+static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, size_t *bw, unsigned *bc, size_t *bh) {
     double best = 1e300; size_t h = 0, W = 0; unsigned C = 0;
     if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
         size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
@@ -1621,6 +1627,10 @@ static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int
     if (st < h) st = h;
     size_t a = h + (st - h) / W * W, l = (n - a < L ? n - a : L) / W * W; if (l < 2 * W) l = (n - a) / W * W < 2 * W ? 0 : 2 * W;
     codec_ctx cx = {0}; uint8_t *o = malloc(l + 64);
+    if (o && plain < 1e299 && l > KG_SCREEN * 2 && W * 8 <= KG_SCREEN) {   /* screen on a few rows, as for integers */
+        size_t ls = KG_SCREEN / W * W, zs = kg_encode_img8(&cx, C_ZSTD, zl, s + a, ls, W, C, 0, o, l + 64);
+        if (!zs || (double)zs / ls > plain * KG_SCREEN_SLACK) { free(o); codec_ctx_free(&cx); return best; }
+    }
     size_t z = o && l ? kg_encode_img8(&cx, C_ZSTD, zl, s + a, l, W, C, 0, o, l + 64) : 0;
     if (z) { best = (double)z / l; *bw = W; *bc = C; *bh = h; }
     free(o); codec_ctx_free(&cx);
@@ -1689,6 +1699,10 @@ static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int 
     codec_ctx cx = {0}; uint8_t *o = malloc(L + 64);
     for (int q = 0; o && q < nw; q++) {
         int w = ws[q]; size_t a = h + (st - h) / w * w, l = (n - a < L ? n - a : L) / w * w;
+        if (plain < 1e299 && l > KG_SCREEN * 2) {            /* screen on a short run: far above plain coding means no full trial */
+            size_t zs = kg_encode_num(&cx, C_ZSTD, zl, s + a, KG_SCREEN / w * w, w, 0, o, L + 64);
+            if (!zs || (double)zs / (KG_SCREEN / w * w) > plain * KG_SCREEN_SLACK) continue;
+        }
         size_t z = l ? kg_encode_num(&cx, C_ZSTD, zl, s + a, l, w, 0, o, L + 64) : 0;
         if (z && (double)z / l < best) { best = (double)z / l; *bw = w; *bh = h; }
     }
@@ -1731,7 +1745,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                     int ok = a && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b;
                     if (ok && effort) {                          /* slower settings: the graph must also win with a strong codec (max, */
                         int cc = strong ? C_BSC : C_ZSTD, lv = 9;     /* ultra: BWT; hc: zstd -9 standing in for zstd -19) */
-                        size_t a2 = kg_encode_table(&cx, cc, lv, ts, mm, WD[di], sep, o, mm + 64), b2 = codec_compress(&cx, cc, lv, ts, mm, z, zcap);
+                        size_t ms = mm; if (ms > (384u << 10)) { ms = 384u << 10; while (ms > 0 && ts[ms - 1] != '\n') ms--; }   /* a shorter run decides the same and costs a third */
+                        size_t a2 = ms ? kg_encode_table(&cx, cc, lv, ts, ms, WD[di], sep, o, mm + 64) : 0, b2 = ms ? codec_compress(&cx, cc, lv, ts, ms, z, zcap) : 0;
                         ok = a2 && b2 && a2 * 100 < 97 * b2;
                     }
                     if (ok) { pl.t = T_KG; pl.a = WD[di]; pl.b = sep; }
@@ -1932,14 +1947,26 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             double plg = -1;                                    /* a shorter slice is compared by its gain over plain coding of that slice */
 #define KG_ADJ(C) ((C) > 1e299 || Lg == L ? (C) : (C) * plain / (plg > 0 ? plg : (plg = (double)zcost(zc, s + st, Lg, zb, zcap, zl) / Lg)))
             /* the float trial keeps the full slice: its pre-check is cheap, and zstd's plain cost on 256 KiB misleads on float data */
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+            double kgt0 = prof_now();
+#endif
             int w = 0; size_t hh = 0; double c = kg_float_trial(s, n, st, L, zl, plain, &w, &hh), cf = c; int fw = w; size_t fh = hh;
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+            double kgt1 = prof_now();
+#endif
             if (cf > 1e299) {
                 w = 0; hh = 0; c = kg_num_trial(s, n, st, Lg, zl, plain, &w, &hh); c = KG_ADJ(c);
                 if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
             }
             c = cf; w = fw; hh = fh;
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
-            size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, st, Lg, zl, &iw, &ic, &ih); c = KG_ADJ(c);   /* 8-bit images: IMG8 */
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+            double kgt2 = prof_now();
+#endif
+            size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, st, Lg, zl, plain, &iw, &ic, &ih); c = KG_ADJ(c);   /* 8-bit images: IMG8 */
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+            fprintf(stderr, "kg float_ms=%.3f num_ms=%.3f img8_ms=%.3f\n", (kgt1 - kgt0) * 1000, (kgt2 - kgt1) * 1000, (prof_now() - kgt2) * 1000);
+#endif
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7; }
         }
 #undef KG_ADJ
@@ -1959,7 +1986,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w; pl.c = (int)hh; }
             w = 0; hh = 0; c = kg_float_trial(s, n, 0, n, zl, plain, &w, &hh);
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w | 16; pl.c = (int)hh; }
-            size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, 0, n, zl, &iw, &ic, &ih);
+            size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, 0, n, zl, 1e300, &iw, &ic, &ih);
             if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = 32 | (int)ic; pl.c = (int)ih; pl.kgw = (uint32_t)iw; }
         }
         free(zb); free(buf);
@@ -2231,10 +2258,13 @@ static void *compress_worker(void *arg) {
         if (pl.experimental_pcm && !J->dict && J->default_level && codec == C_ZSTD) level = 1;
 #endif
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
-        if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, keep the smaller (+6% time, -1.7% on Silesia) */
-            uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+        if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, kept only when clearly smaller */
+            /* BWT decodes about half as fast as LZMA2 here, so it must pay for that: at least KOLMO_BWT_GAIN_PCT smaller. */
+            /* BWT is tried only where it has won in tests: not on x86 code, and only when LZMA2 already reaches
+             * 35% or less (on less compressible binary data BWT was 1.5 to 8% larger) */
+            uint8_t *alt = tflag == 8 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
             size_t c2 = alt ? codec_compress(xp, C_BSC, 9, in, inlen, alt, J->slot - meta) : 0;
-            if (c2 && c2 < cl) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BSC; }
+            if (c2 && (uint64_t)c2 * 100 <= (uint64_t)cl * (100 - KOLMO_BWT_GAIN_PCT)) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BSC; }
         }
         if (codec == C_CM && level != 1) {            /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);

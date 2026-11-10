@@ -21,6 +21,15 @@ pub enum Mode {
     Max = 4,
     Ultra = 5,
 }
+impl Mode {
+    /// Fastest: for data that is read or sent right away.
+    pub const SPEED: Mode = Mode::Rt;
+    /// Small and fast; the usual choice.
+    pub const BALANCED: Mode = Mode::Fast;
+    /// Smallest at practical speed.
+    pub const RATIO: Mode = Mode::Max;
+}
+
 
 #[repr(C)]
 struct Params {

@@ -86,3 +86,15 @@
   `kolmobench`. This breaks C callers of the 1.0.x `czn_*` names; the CLI, the Python package and the Rust crate
   keep their interfaces. The on-disk magic bytes (`CZN1`, `CZNS`) are unchanged, so every existing file still
   decodes and output is byte-identical to before the rename.
+
+## Unreleased (candidate branch `claude/next`)
+
+- **Three modes.** `-m speed`, `-m balanced` (default) and `-m ratio`; `-x` selects the smallest output of all
+  (`ultra`). The older names (`rt`, `fast`, `eco`, `hc`, `max`, `ultra`) remain as advanced settings.
+- **`max` no longer gives up decode speed for almost nothing.** Block sorting replaces LZMA2 on a binary block only
+  when it is at least 5% smaller, and is not tried at all on x86 code or where LZMA2 is above 35% of the input
+  (where it lost in every test). One weights file had dropped from 508 to 29 MB/s decode for a 0.2% gain.
+- **Cheaper planning.** Byte histograms in the 16-bit image detector use four counters (same result, a third less
+  time); integer and image graph trials are screened on a short run first; the strong-codec check for wide tables
+  uses 384 KiB.
+- `benchmark/accept/`: release targets and the script that checks a results file against them.

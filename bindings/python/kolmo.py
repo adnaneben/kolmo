@@ -9,7 +9,8 @@ Build the library first:  make lib   (produces build/libkolmo.so / .dylib).
 """
 import ctypes, os, sys
 
-_MODES = {"rt": 0, "fast": 1, "eco": 2, "hc": 3, "max": 4, "ultra": 5}
+_MODES = {"speed": 0, "balanced": 1, "ratio": 4,                 # the three modes
+          "rt": 0, "fast": 1, "eco": 2, "hc": 3, "max": 4, "ultra": 5}   # advanced settings
 
 def _load():
     here = os.path.dirname(os.path.abspath(__file__))
@@ -80,8 +81,8 @@ def train_dict(samples, dict_cap=112 * 1024):
     n = _check(_lib.kolmo_train_dict(blob, sizes, len(samples), out, dict_cap))
     return out.raw[:n]
 
-def compress(data, mode="fast", threads=0, block=0, transforms=True, level=0, dict=None):  # noqa: A002
-    """Compress bytes; returns the compressed bytes. mode: rt|fast|eco|hc|max|ultra.
+def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0, dict=None):  # noqa: A002
+    """Compress bytes; returns the compressed bytes. mode: speed|balanced|ratio (advanced: rt|fast|eco|hc|max|ultra).
     transforms: True (analyse and transform), False (codec only) or "quick" (cheap transforms only; fastest).
     Pass dict=<bytes from train_dict> to compress small files against a trained dictionary."""
     if mode not in _MODES:
