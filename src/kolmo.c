@@ -1498,7 +1498,7 @@ static void *array_resize(void *old, size_t count, size_t width) {
 }
 
 #ifndef KOLMO_BWT_GAIN_PCT
-#define KOLMO_BWT_GAIN_PCT 5      /* max: least size gain (%) for BWT to replace LZMA2 on a binary block */
+#define KOLMO_BWT_GAIN_PCT 3      /* max: least size gain (%) for BWT to replace LZMA2 on a binary block */
 #endif
 static void mode_codec(const kolmo_params *p, int *codec, int *level) {
     switch (p->mode) {
