@@ -115,3 +115,6 @@
 - **`max` on wide tables encodes ten times faster.** Column leaves take BWT like other text at `max`; LZMA2 on the
   leaves was 3% smaller and ran at about a tenth of the speed. Against 1.0.1 the file is 32% smaller and faster in
   both directions.
+- **Speed mode plans in a fraction of a millisecond.** The entropy screen runs before any coder is set up, and a
+  shuffle is skipped where LZ4 finds the input incompressible (it would trade most of LZ4's pass-through speed for
+  ratio; `balanced` still takes that trade).

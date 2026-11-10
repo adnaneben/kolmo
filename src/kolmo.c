@@ -1718,7 +1718,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     size_t h = n < 65536 ? n : 65536, pr = 0;
     for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
     if (pr * 100 > h * 95) {                                     /* text: field transposition if lines have a fixed field count */
-        if (light == 2) return pl;                               /* minimal analysis: text is coded as it is */
+        if (light >= 2) return pl;                               /* minimal analysis: text is coded as it is */
         if (logs && n >= 65536) {                                /* wide delimited table (over 256 columns): kolmo graph */
             static const uint8_t WD[4] = {';', ',', '\t', '|'};
             for (int di = 0; di < 4 && pl.t != T_KG; di++) {
@@ -1881,18 +1881,23 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     /* binary: numeric byte-plane shuffle, chosen by a zstd -1 trial on a 32 KB slice */
     size_t mid = n / 2, sl = n - mid < 32768 ? n - mid : 32768;
     const uint8_t *smp = s + mid;
-    ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(sl);
-    uint8_t *o = malloc(cap), *t = malloc(sl);
-    if (!zc || !o || !t) { free(o); free(t); ZSTD_freeCCtx(zc); return pl; }
-    size_t base = ZSTD_compressCCtx(zc, o, cap, smp, sl, 1);
     int wonly = 0;                                        /* minimal analysis: at most one word width goes to the trials */
-    if (light == 2 && sl >= 4096) {
+    if (light >= 2 && sl >= 4096) {
         /* a shuffle can only pay where some byte plane is more predictable than the bytes as a whole: compare the
          * mean plane entropy per width with the plain byte entropy on the sample (microseconds; no coder runs) */
         double h1 = kg_plane_h(smp, sl, 1, 0, 0), hb = 1e9;
         for (int w = 2; w <= 8; w *= 2) { double e = 0; for (int b = 0; b < w; b++) e += kg_plane_h(smp, sl / w, w, b, 0); e /= w; if (e < hb) { hb = e; wonly = w; } }
-        if (hb > 0.93 * h1) wonly = -1;
+        if (hb > 0.93 * h1) return pl;                      /* no plane stands out: plain coding, and no coder was run */
+        if (light == 3) {                                   /* speed mode: LZ4 passes over incompressible input at several GB/s;
+                                                             * a shuffle that makes such data compressible costs most of that speed */
+            char lz[LZ4_COMPRESSBOUND(32768)]; int lc = LZ4_compress_default((const char *)smp, lz, (int)sl, (int)sizeof lz);
+            if (lc <= 0 || (size_t)lc * 100 >= sl * 98) return pl;
+        }
     }
+    ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(sl);
+    uint8_t *o = malloc(cap), *t = malloc(sl);
+    if (!zc || !o || !t) { free(o); free(t); ZSTD_freeCCtx(zc); return pl; }
+    size_t base = ZSTD_compressCCtx(zc, o, cap, smp, sl, 1);
     if (!ZSTD_isError(base) && base * 4 >= sl && wonly >= 0) {
         double best = base * 0.95;
         for (int w = 2; w <= 8; w *= 2) for (int c = 1; c <= 8; c++) {
@@ -2482,7 +2487,7 @@ static void *plan_worker(void *arg) {
          * trial costs microseconds and whose decode is faster than the bytes it saves) */
         plan_t pl = p->transforms ? make_plan(src, len, p->mode >= KOLMO_ECO,
             p->mode != KOLMO_RT && p->transforms != 3, p->mode != KOLMO_RT && p->transforms != 3, j->threads_per_plan, p->mode >= KOLMO_MAX,
-            p->transforms == 2 ? 1 : p->transforms == 3 ? 2 : 0) : (plan_t){0};
+            p->transforms == 2 ? 1 : p->transforms == 3 ? (p->mode == KOLMO_RT ? 3 : 2) : 0) : (plan_t){0};
 #ifdef KOLMO_FRONTIER
         uint8_t delim = 0;
         if (j->allow_frontier && frontier_table_probe(src, len, &delim) && prefer_frontier_table(src, len, &pl, delim))
