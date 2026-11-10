@@ -98,3 +98,6 @@
   time); integer and image graph trials are screened on a short run first; the strong-codec check for wide tables
   uses 384 KiB.
 - `benchmark/accept/`: release targets and the script that checks a results file against them.
+- **Quick analysis (`-q`) is quick again.** Record layouts are searched only when the record period is clear, and the
+  integer and image graph trials are skipped or shortened unless a `.npy` header names the type. Planning time on a
+  browser tarball falls from 331 to about 100 ms; sizes on the test files are unchanged.

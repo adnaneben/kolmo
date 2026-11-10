@@ -1924,7 +1924,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         double record_start = prof_now();
 #endif
         rec_plan_t *R = malloc(sizeof(rec_plan_t));
-        if (R && rec_detect(s, n, effort, R)) {
+        if (R && rec_detect(s, n, effort, light ? 6 : 2, R)) {   /* quick analysis: only a clear record period is searched */
             size_t rs = (size_t)R->h + (st > (size_t)R->h ? (st - R->h) / R->P * R->P : 0); if (!rs) rs = R->P;
             size_t rl = L / R->P * R->P;
             if (rs + rl <= n) {
@@ -1954,7 +1954,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt1 = prof_now();
 #endif
-            if (cf > 1e299) {
+            const int npy = n > 16 && !memcmp(s, "\x93NUMPY", 6);   /* quick analysis: integer and image trials only for a .npy header */
+            if (cf > 1e299 && (!light || npy)) {
                 w = 0; hh = 0; c = kg_num_trial(s, n, st, Lg, zl, plain, &w, &hh); c = KG_ADJ(c);
                 if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
             }
@@ -1963,7 +1964,9 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt2 = prof_now();
 #endif
-            size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, st, Lg, zl, plain, &iw, &ic, &ih); c = KG_ADJ(c);   /* 8-bit images: IMG8 */
+            size_t iw = 0, ih = 0; unsigned ic = 0; const size_t Li = light && !npy && Lg > (64u << 10) ? (64u << 10) : Lg;   /* quick analysis: a 64 KiB image trial */
+            c = kg_img8_trial(s, n, st, Li, zl, plain, &iw, &ic, &ih);
+            if (c < 1e299 && Li != Lg) c = c * plain / ((double)zcost(zc, s + st, Li, zb, zcap, zl) / Li); else c = KG_ADJ(c);   /* 8-bit images: IMG8 */
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             fprintf(stderr, "kg float_ms=%.3f num_ms=%.3f img8_ms=%.3f\n", (kgt1 - kgt0) * 1000, (kgt2 - kgt1) * 1000, (prof_now() - kgt2) * 1000);
 #endif
