@@ -118,3 +118,5 @@
 - **Speed mode plans in a fraction of a millisecond.** The entropy screen runs before any coder is set up, and a
   shuffle is skipped where LZ4 finds the input incompressible (it would trade most of LZ4's pass-through speed for
   ratio; `balanced` still takes that trade).
+- **`hc` keeps its fast reads on model weights.** rANS leaves, which decode about four times slower than Huffman, are
+  taken with the zstd family only when at least 3% smaller. Weights grow 0.24 to 0.35% and decode 40 to 80% faster.

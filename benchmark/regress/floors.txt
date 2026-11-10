@@ -2,6 +2,8 @@
 # claude/graph before the Codex merge (9 Nov 2026), plus later improvements. A floor is raised when a change improves a
 # file and is never lowered without a recorded reason. Exception: wide_test.csv at fast is +544 bytes (+0.05%) since
 # round 1 (sampled column analysis, about 1.3x faster compression).
+# Weights at hc (magika.safetensors, magika.gguf, llm_bf16): +0.24 to +0.35% on 10 Nov 2026: rANS leaves are taken only
+# when at least 3% smaller, because they decode about four times slower (decode at hc -l 9 rises 40 to 80%).
 # wide_test.csv at max: 925251 -> 951938 (+2.9%) on 10 Nov 2026: the column leaves take BWT instead of LZMA2, ten times
 # faster to encode (the old setting was 0.13x of 1.0.1's encode speed); still 32% smaller than 1.0.1. ultra keeps 925251.
 $JSON/api.json fast 365846
@@ -42,13 +44,13 @@ $DATA/wide_test.csv hc 968667
 $DATA/wide_test.csv max 951938
 $DATA/wide_test.csv ultra 925251
 $DATA/magika.safetensors fast 2614491
-$DATA/magika.safetensors hc 2608222
+$DATA/magika.safetensors hc 2614351
 $DATA/magika.safetensors max 2608222
 $DATA/magika.onnx fast 2669294
 $DATA/magika.onnx hc 2641074
 $DATA/magika.onnx max 2640821
 $DATA/magika.gguf fast 2614223
-$DATA/magika.gguf hc 2607722
+$DATA/magika.gguf hc 2614083
 $DATA/magika.gguf max 2607722
 $DATA/year.i32 fast 902
 $DATA/year.i32 hc 729
@@ -94,7 +96,7 @@ $DATA/chr22.fa fast 12724397
 $DATA/chr22.fa hc 9988697
 $DATA/chr22.fa max 9210838
 $DATA/llm_bf16_10mb.safetensors fast 6992125
-$DATA/llm_bf16_10mb.safetensors hc 6967587
+$DATA/llm_bf16_10mb.safetensors hc 6991662
 $DATA/llm_bf16_10mb.safetensors max 6967587
 # 10 Nov 2026, fast tier only (TRADEOFFS.md: unchanged output may not be more than 5% slower; trades need a rate of 0.45):
 # graph leaves are coded from three samples (stored / Huffman only / zstd) and graph trials use 256 KiB. Three floors
