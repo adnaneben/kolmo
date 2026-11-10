@@ -1936,11 +1936,15 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
         fprintf(stderr, "structure bytes=%zu image_ms=%.3f record_ms=%.3f\n", n, image_ms, (prof_now() - record_start) * 1000);
 #endif
-        {   /* executables: x86 call/jump transform */
+        {   /* executables: x86 call/jump transform, tried only where call/jump opcodes with a plausible 32-bit
+             * displacement (top byte 00 or FF) are at least 1 in 1000 bytes; other data has about 1 in 16000 */
+            size_t ej = 0; for (size_t i = 0; i + 4 < L; i++) ej += ((s[st + i] & 0xFE) == 0xE8) & ((uint8_t)(s[st + i + 4] + 1) < 2);
+            if (ej * 1000 >= L) {
             memcpy(buf, s + st, L); e8e9_fwd(buf, L);
             double c = (double)zcost(zc, buf, L, zb, zcap, zl) / L;
             if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
             else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
+            }
         }
         {   /* float arrays first (FLOAT node); integer arrays (INT node) only when the data does not look like floats */
             const size_t Lg = effort || L <= (256u << 10) ? L : (256u << 10);     /* fast: graph trials on 256 KiB */

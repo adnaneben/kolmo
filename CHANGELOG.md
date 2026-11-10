@@ -105,3 +105,7 @@
   used for inputs of 8 MiB and more, now serves `speed` and `balanced` compression of any size and decompression in
   every mode. Output bytes are unchanged. On the Linux test machine: `speed` encodes 14 to 62% and decodes 33 to 73%
   faster; `balanced` encodes 7 to 17% and decodes 18 to 29% faster on files under 8 MiB.
+- **Planning skips two searches that never paid off.** Record layouts are searched only when the record period
+  stands at least 4x above the median lag, and the x86 transform is tried only where call/jump opcodes are at least
+  1 in 1000 bytes. Outputs are byte-identical across the test corpus; planning time at `balanced` falls from 435 to
+  about 150 ms on a browser tarball and by a third on record and database files.
