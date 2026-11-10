@@ -1885,9 +1885,18 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     uint8_t *o = malloc(cap), *t = malloc(sl);
     if (!zc || !o || !t) { free(o); free(t); ZSTD_freeCCtx(zc); return pl; }
     size_t base = ZSTD_compressCCtx(zc, o, cap, smp, sl, 1);
-    if (!ZSTD_isError(base) && base * 4 >= sl) {
+    int wonly = 0;                                        /* minimal analysis: at most one word width goes to the trials */
+    if (light == 2 && sl >= 4096) {
+        /* a shuffle can only pay where some byte plane is more predictable than the bytes as a whole: compare the
+         * mean plane entropy per width with the plain byte entropy on the sample (microseconds; no coder runs) */
+        double h1 = kg_plane_h(smp, sl, 1, 0, 0), hb = 1e9;
+        for (int w = 2; w <= 8; w *= 2) { double e = 0; for (int b = 0; b < w; b++) e += kg_plane_h(smp, sl / w, w, b, 0); e /= w; if (e < hb) { hb = e; wonly = w; } }
+        if (hb > 0.93 * h1) wonly = -1;
+    }
+    if (!ZSTD_isError(base) && base * 4 >= sl && wonly >= 0) {
         double best = base * 0.95;
         for (int w = 2; w <= 8; w *= 2) for (int c = 1; c <= 8; c++) {
+            if (wonly && w != wonly) continue;
             if (c == 5 || c == 6 || c == 7 || w * c > 32) continue;
             for (int dl = 1; dl >= 0; dl--) {
                 size_t rows = sl / (w * c); if (!rows) continue;
