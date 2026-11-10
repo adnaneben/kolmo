@@ -44,7 +44,7 @@ for grp,src,profs,zlc in panel:
     rows=[]
     for kl,args in [('kolmo fast -q',['-m','fast','-q']),('kolmo fast',['-m','fast']),('kolmo hc',['-m','hc']),('kolmo max',['-m','max'])]:
         rp = 1 if (kl=='kolmo max' and n>20e6) else reps
-        m,e=measure([K]+args+['-T1',src,O+'k.czn'],[K,'-d','-T1',O+'k.czn',O+'k.back'],O+'k.czn',src,O+'k.back',rp)
+        m,e=measure([K]+args+['-T1',src,O+'k.kolmo'],[K,'-d','-T1',O+'k.kolmo',O+'k.back'],O+'k.kolmo',src,O+'k.back',rp)
         rows.append((kl,m,e))
     for lvl in ['6','9']:
         best=None

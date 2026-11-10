@@ -105,13 +105,13 @@ file compresses against it. On 4,802 held-out ~4 KB OWID record files (dictionar
 
 ```bash
 ./build/kolmo -t sample.dict records/*.csv       # train a dictionary from sample files
-./build/kolmo -m fast -D sample.dict one.csv one.czn   # compress against it
-./build/kolmo -d -D sample.dict one.czn one.back        # decompress (same dictionary required)
+./build/kolmo -m fast -D sample.dict one.csv one.kolmo   # compress against it
+./build/kolmo -d -D sample.dict one.kolmo one.back        # decompress (same dictionary required)
 ```
 
 The dictionary id is recorded in the header; a file written with one refuses to decode without the matching
-dictionary (`CZN_ERR_DICT`) rather than returning wrong data. The API is `czn_train_dict` / `czn_compress_dict` /
-`czn_decompress_dict` (C), `kolmo.train_dict` + `compress(..., dict=d)` (Python), and `train_dict` / `compress_dict`
+dictionary (`KOLMO_ERR_DICT`) rather than returning wrong data. The API is `kolmo_train_dict` / `kolmo_compress_dict` /
+`kolmo_decompress_dict` (C), `kolmo.train_dict` + `compress(..., dict=d)` (Python), and `train_dict` / `compress_dict`
 / `decompress_dict` (Rust). Dictionaries apply to the zstd-coded blocks (`fast`, `hc`).
 
 ### Streaming (large inputs)
@@ -120,20 +120,20 @@ For inputs too large to hold in memory, `-s` (or `-S <segMiB>`) compresses a str
 independent frames — each a normal container for one segment — so compress and decompress run in
 **bounded memory** (one segment, not the whole file) and work on pipes. On a 47 MB input, one-shot
 compression peaks at ~114 MB of RAM; streaming at 4 MiB segments peaks at ~32 MB, and decompression
-at ~11 MB. `-d` detects a streamed file automatically. The library API is `czn_stream_compress` /
-`czn_stream_decompress` (file descriptors in and out).
+at ~11 MB. `-d` detects a streamed file automatically. The library API is `kolmo_stream_compress` /
+`kolmo_stream_decompress` (file descriptors in and out).
 
 For archival jobs with less available memory, build the optional CLI with
-`make build/kolmo-cm20` and run `./build/kolmo-cm20 -m ultra -T 1 input output.czn`.
+`make build/kolmo-cm20` and run `./build/kolmo-cm20 -m ultra -T 1 input output.kolmo`.
 It uses smaller context-mixing tables when encoding. The standard decoder reads these
 files. The encoder setting controls table size; total process memory also depends on
 input, output buffers, other codecs and worker count.
 
 ### Decoder limits
 
-C callers can use `czn_decompress_limited` with a `czn_decode_limits` structure to bound the
+C callers can use `kolmo_decompress_limited` with a `kolmo_decode_limits` structure to bound the
 original size, raw block size and block count of a frame. Each zero field disables that limit;
-exceeding a limit returns `CZN_ERR_LIMIT`. These are format-size limits, not a cap on total heap
+exceeding a limit returns `KOLMO_ERR_LIMIT`. These are format-size limits, not a cap on total heap
 memory: an `ultra` block can still require gigabytes of context-mixing state. Existing decode
 functions keep their current behavior.
 
@@ -163,14 +163,14 @@ The examples below run the source build (`./build/kolmo`). After `brew install`,
 with plain `kolmo`.
 
 ```bash
-make                                    # build/kolmo, build/czbench, build/czntest (Linux, macOS; gcc or clang)
+make                                    # build/kolmo, build/kolmobench, build/kolmotest (Linux, macOS; gcc or clang)
 make check                             # resource failures, concurrent callers, round trips, ranges and corruption
-./build/kolmo -m hc in.csv out.czn        # compress: -m rt|fast|eco|hc|max|ultra, -T threads, -B block MiB, -n no transforms, -q quick analysis (fastest)
-./build/kolmo -d out.czn back.csv         # decompress (auto-detects one-shot vs streamed input)
+./build/kolmo -m hc in.csv out.kolmo        # compress: -m rt|fast|eco|hc|max|ultra, -T threads, -B block MiB, -n no transforms, -q quick analysis (fastest)
+./build/kolmo -d out.kolmo back.csv         # decompress (auto-detects one-shot vs streamed input)
 ./build/kolmo -s huge.csv huge.czs        # streaming compress: bounded memory, any size (-S N for N-MiB segments)
-./build/kolmo -r 1000000:4096 out.czn x   # read 4 KiB at offset 1,000,000 without decoding the rest
+./build/kolmo -r 1000000:4096 out.kolmo x   # read 4 KiB at offset 1,000,000 without decoding the rest
 ./build/kolmo -t s.dict samples/*.csv     # train a dictionary; then -D s.dict to compress/decompress small files
-./build/czbench -X -o results.tsv file  # benchmark against LZ4, zstd, brotli and xz built from the same sources
+./build/kolmobench -X -o results.tsv file  # benchmark against LZ4, zstd, brotli and xz built from the same sources
 ```
 
 Requires liblzma (`apt install liblzma-dev`, `brew install xz`); zstd, LZ4, brotli and libbsc are vendored. Build with `make NO_LZMA=1`
@@ -190,13 +190,13 @@ data. A shared library and Python and Rust bindings are in `bindings/`; the form
 ## Layout
 
 ```
-src/czn.h, czn.c   library: planning, container, codecs, thread pool, table v1, field transposition, shuffle
+src/kolmo.h, kolmo.c   library: planning, container, codecs, thread pool, table v1, field transposition, shuffle
 src/tbl2.inc       tables: typed columns, predictors, formula discovery
 src/log.inc        logs: templates and skeleton columns
 src/sci.inc        fixed records and 16-bit images
 src/word.inc       word dictionary for prose
 src/cm.inc         context-mixing coder
-src/cli.c          command line          bench/czbench.c   benchmark          tests/czntest.c   tests
+src/cli.c          command line          bench/kolmobench.c   benchmark          tests/kolmotest.c   tests
 tune/ga.py         genetic tuning        mac/              Mac scripts        vendor/           zstd, LZ4, libbsc
 bindings/python    PyPI package kolmoc   bindings/rust     crate kolmo        packaging/homebrew  brew formula
 ```

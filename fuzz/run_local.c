@@ -1,5 +1,5 @@
 /* Local driver so the OSS-Fuzz targets can be exercised here under gcc's ASan/UBSan: seeds the targets
- * with real .czn files (decompress target) and random inputs, plus bit-flipped mutations. Not a
+ * with real .kolmo files (decompress target) and random inputs, plus bit-flipped mutations. Not a
  * replacement for libFuzzer coverage-guided fuzzing -- it just proves the harness and the paths are clean. */
 #include <stdint.h>
 #include <stdlib.h>

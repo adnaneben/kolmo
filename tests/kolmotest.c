@@ -1,5 +1,5 @@
-/* round-trip, range-read and corruption tests for czn */
-#include "czn.h"
+/* round-trip, range-read and corruption tests for kolmo */
+#include "kolmo.h"
 int64_t tbl_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, uint8_t *dst);
 int tbl_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n);
 typedef struct { uint16_t y, a, b; uint8_t form; double k; } tformula;
@@ -12,7 +12,7 @@ typedef struct { int k; long long nr; czcol *c; long long *numbuf; unsigned *off
 int tbl2_columns_pub(const uint8_t *in, int64_t tn, czcols *out);
 void tbl2_columns_free_pub(czcols *x);
 int parse_dec_pub(const uint8_t *p, uint32_t len, int64_t *m, int *sc);
-const int64_t *czn_p10_pub(void);
+const int64_t *kolmo_p10_pub(void);
 int64_t log_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
 int log_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
 int64_t log_encode_json_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
@@ -27,22 +27,22 @@ int word_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
 static uint64_t rs = 88172645463325252ull;
 static uint64_t rnd(void) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return rs; }
 static int fails = 0;
-static void check(const char *name, const uint8_t *s, size_t n, czn_mode m, uint32_t B, int T) {
-    czn_params p = {m, 0, T, B, 1}; size_t cap = czn_bound(n, &p); uint8_t *d = malloc(cap), *b = malloc(n + 1);
-    int64_t c = czn_compress(s, n, d, cap, &p);
-    if (c < 0) { printf("FAIL compress %s: %s\n", name, czn_strerror(c)); fails++; return; }
-    int64_t r = czn_decompress(d, c, b, n, T);
+static void check(const char *name, const uint8_t *s, size_t n, kolmo_mode m, uint32_t B, int T) {
+    kolmo_params p = {m, 0, T, B, 1}; size_t cap = kolmo_bound(n, &p); uint8_t *d = malloc(cap), *b = malloc(n + 1);
+    int64_t c = kolmo_compress(s, n, d, cap, &p);
+    if (c < 0) { printf("FAIL compress %s: %s\n", name, kolmo_strerror(c)); fails++; return; }
+    int64_t r = kolmo_decompress(d, c, b, n, T);
     if (r != (int64_t)n || memcmp(b, s, n)) { printf("FAIL roundtrip %s mode %d T %d: %lld\n", name, m, T, (long long)r); fails++; }
     for (int k = 0; k < 20 && n; k++) {                      /* range reads */
         size_t off = rnd() % n, len = rnd() % (n - off + 1);
-        int64_t q = czn_read_range(d, c, off, len, b, T);
+        int64_t q = kolmo_read_range(d, c, off, len, b, T);
         if (q != (int64_t)len || memcmp(b, s + off, len)) { printf("FAIL range %s off %zu len %zu\n", name, off, len); fails++; break; }
     }
     int silent = 0;
     for (int k = 0; k < 300 && c > 0; k++) {                  /* corruption must never return wrong bytes silently */
         uint8_t *e = malloc(c); memcpy(e, d, c); size_t at = rnd() % c; e[at] ^= 1 << (rnd() % 8);
         size_t cl = (rnd() % 5 == 0) ? rnd() % c : (size_t)c;
-        int64_t q = czn_decompress(e, cl, b, n, T);
+        int64_t q = kolmo_decompress(e, cl, b, n, T);
         if (q == (int64_t)n && memcmp(b, s, n)) silent++;
         free(e);
     }
@@ -63,13 +63,13 @@ int main(void) {
     struct { const char *n; uint8_t *s; size_t len; } in[] = {{"csv", csv, ncsv}, {"float32", bin, N}, {"random", rndb, N}, {"text", txt, N - 8},
         {"empty", csv, 0}, {"tiny", csv, 7}, {"one-block-edge", csv, 1 << 16}};
     for (size_t i = 0; i < sizeof in / sizeof *in; i++)
-        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check(in[i].n, in[i].s, in[i].len, (czn_mode)m, 1 << 18, T);
-    check("csv-default-block", csv, ncsv, CZN_FAST, 0, 2);
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check(in[i].n, in[i].s, in[i].len, (kolmo_mode)m, 1 << 18, T);
+    check("csv-default-block", csv, ncsv, KOLMO_FAST, 0, 2);
     /* quoted CSV and short rows exercise the slow and exception paths */
     {
         size_t q = 0; uint8_t *qc = malloc(N);
         while (q + 200 < N) q += sprintf((char *)qc + q, (rnd() % 9) ? "%d,\"name, %d\",%.3f,x\n" : "%d,short\n", (int)(rnd() % 1000), (int)(rnd() % 50), (rnd() % 100000) / 1000.0);
-        for (int m = 0; m < 5; m++) check("quoted-csv", qc, q, (czn_mode)m, 1 << 18, 2);
+        for (int m = 0; m < 5; m++) check("quoted-csv", qc, q, (kolmo_mode)m, 1 << 18, 2);
         free(qc);
     }
     /* tables with derived columns (ratio, change, % change inside entity groups) and blanks: formula path */
@@ -92,8 +92,8 @@ int main(void) {
         fset_t fs; fset_discover_pub(ft, fq, ',', 8, 1, 1, &fs);
         printf("formula table: %d formulas found, group column %d\n", fs.n, fs.gcol);
         if (fs.n < 2) { printf("FAIL formula discovery\n"); fails++; }
-        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("formula-table", ft, fq, (czn_mode)m, 1 << 18, T);
-        check("formula-table-1block", ft, fq, CZN_HC, 0, 1);
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("formula-table", ft, fq, (kolmo_mode)m, 1 << 18, T);
+        check("formula-table-1block", ft, fq, KOLMO_HC, 0, 1);
         /* fuzz the v2 stream itself */
         size_t len = 1 << 18; while (ft[len - 1] != '\n') len--;
         uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
@@ -117,7 +117,7 @@ int main(void) {
                     unsigned flen = (unsigned)(ci - f0); czcol *c = &cols.c[j];
                     if (c->type == 0) { if (c->len[rr] != flen || memcmp(c->txt + c->off[rr], ft + f0, flen)) cbad++; }
                     else { int64_t m; int sc;
-                        if (parse_dec_pub(ft + f0, flen, &m, &sc)) { int64_t want = m * czn_p10_pub()[c->scale - sc];
+                        if (parse_dec_pub(ft + f0, flen, &m, &sc)) { int64_t want = m * kolmo_p10_pub()[c->scale - sc];
                             if (!c->valid[rr] || c->num[rr] != want) cbad++; }
                         else if (c->valid[rr]) cbad++; }
                     if (ci < len && ft[ci] == ',') ci++;
@@ -151,8 +151,8 @@ int main(void) {
             else { int w = 1 + (int)(rnd() % 12); for (int i = 0; i < w; i++) lq += sprintf((char *)lg + lq, "%s%c", (rnd() % 2) ? "x" : "free-text", i + 1 < w ? ' ' : '\n'); }
         }
         lq += sprintf((char *)lg + lq, "partial last line 42");
-        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("logs", lg, lq, (czn_mode)m, 1 << 18, T);
-        check("logs-1block", lg, lq, CZN_FAST, 0, 1);
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("logs", lg, lq, (kolmo_mode)m, 1 << 18, T);
+        check("logs-1block", lg, lq, KOLMO_FAST, 0, 1);
         size_t len = 1 << 18; uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
         int64_t tn = log_encode_pub(lg, len, t, len + 65536);
         if (tn <= 0 || log_decode_pub(t, tn, o, len) || memcmp(o, lg, len)) { printf("FAIL log codec roundtrip (%lld)\n", (long long)tn); fails++; }
@@ -182,9 +182,9 @@ int main(void) {
             else q += sprintf((char *)js + q, "{\n  \"id\": %ld,\n  \"items\": [\n    {\"k\": \"v%d\", \"n\": %d}\n  ]\n}\n", id, (int)(rnd() % 100), (int)(rnd() % 1000));
         }
         q += sprintf((char *)js + q, "{\"last\":\"no newline\"}");
-        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("json", js, q, (czn_mode)m, 1 << 18, T);
-        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
-            int64_t c0 = czn_compress(js, q, d, cap, &p0), c1 = czn_compress(js, q, d, cap, &p1);
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("json", js, q, (kolmo_mode)m, 1 << 18, T);
+        {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = kolmo_compress(js, q, d, cap, &p0), c1 = kolmo_compress(js, q, d, cap, &p1);
             if (c1 <= 0 || c0 <= 0 || c1 >= c0) { printf("FAIL json transform not chosen (%lld vs %lld)\n", (long long)c1, (long long)c0); fails++; }
             else printf("json lines: fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             free(d); }
@@ -210,9 +210,9 @@ int main(void) {
                          id, (int)(rnd() % 100), (int)(rnd() % 9), rnd() % 2 ? "true" : "null", (int)(rnd() % 1000), (int)(rnd() % 100));
         }
         q += sprintf((char *)js + q, "{\"end\":1}]");
-        for (int m = 1; m < 5; m++) { check("json-min", js, q, (czn_mode)m, 1 << 18, 1); check("json-min-odd", js, q, (czn_mode)m, 77777, 4); }
-        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
-            int64_t c0 = czn_compress(js, q, d, cap, &p0), c1 = czn_compress(js, q, d, cap, &p1);
+        for (int m = 1; m < 5; m++) { check("json-min", js, q, (kolmo_mode)m, 1 << 18, 1); check("json-min-odd", js, q, (kolmo_mode)m, 77777, 4); }
+        {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = kolmo_compress(js, q, d, cap, &p0), c1 = kolmo_compress(js, q, d, cap, &p1);
             if (c1 <= 0 || c0 <= 0 || c1 >= c0) { printf("FAIL minified json transform not chosen (%lld vs %lld)\n", (long long)c1, (long long)c0); fails++; }
             else printf("minified json: fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             free(d); }
@@ -241,9 +241,9 @@ int main(void) {
             if (row % 2003 == 0) { q += sprintf((char *)w + q, "a comment line\n\n"); }
         }
         q += sprintf((char *)w + q, "end;1999");                                       /* no final newline */
-        for (int m = 1; m < 5; m++) { check("wide", w, q, (czn_mode)m, 1 << 20, 1); check("wide-odd", w, q, (czn_mode)m, 300001, 4); }
-        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
-            int64_t c0 = czn_compress(w, q, d, cap, &p0), c1 = czn_compress(w, q, d, cap, &p1);
+        for (int m = 1; m < 5; m++) { check("wide", w, q, (kolmo_mode)m, 1 << 20, 1); check("wide-odd", w, q, (kolmo_mode)m, 300001, 4); }
+        {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = kolmo_compress(w, q, d, cap, &p0), c1 = kolmo_compress(w, q, d, cap, &p1);
             if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 7) { printf("FAIL wide table graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("wide table graph: fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             /* graph decoder fuzz: corrupt payload bytes of every block, decoding must fail cleanly or round-trip */
@@ -251,7 +251,7 @@ int main(void) {
             for (int it = 0; it < 400; it++) {
                 memcpy(e, d, c1); int nf = 1 + (int)(rnd() % 3);
                 for (int f = 0; f < nf; f++) e[32 + rnd() % (c1 - 32)] ^= (uint8_t)(1 + rnd() % 255);
-                int64_t r = czn_decompress(e, c1, bk, q + 64, 1);
+                int64_t r = kolmo_decompress(e, c1, bk, q + 64, 1);
                 if (r >= 0 && (r != (int64_t)q || memcmp(bk, w, q))) { printf("FAIL wide graph fuzz accepted a wrong output\n"); fails++; break; }
             }
             printf("wide graph fuzz: 400 corrupted frames rejected or exact\n");
@@ -265,17 +265,17 @@ int main(void) {
         int64_t ts = 1700000000000LL;
         for (size_t i = 0; i < cnt; i++) { ts += 1000 * (int64_t)(rnd() % 16 ? 5 : 1 + rnd() % 40); memcpy(a + i * 8, &ts, 8); }
         memcpy(a + cnt * 8, "tail!", 5);
-        for (int m = 0; m < 5; m++) { check("int-ts", a, q, (czn_mode)m, 1 << 20, 1); check("int-ts-odd", a, q, (czn_mode)m, 300001, 4); }
+        for (int m = 0; m < 5; m++) { check("int-ts", a, q, (kolmo_mode)m, 1 << 20, 1); check("int-ts-odd", a, q, (kolmo_mode)m, 300001, 4); }
         q = 30000 * 8;                                       /* a small array: the planner picks the graph */
-        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
-            int64_t c0 = czn_compress(a, q, d, cap, &p0), c1 = czn_compress(a, q, d, cap, &p1);
+        {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = kolmo_compress(a, q, d, cap, &p0), c1 = kolmo_compress(a, q, d, cap, &p1);
             if (c1 <= 0 || c0 <= 0 || c1 * 2 >= c0 || d[4] != 7) { printf("FAIL integer graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("integer graph: timestamps fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
             for (int it = 0; it < 400; it++) {
                 memcpy(e, d, c1); int nf = 1 + (int)(rnd() % 3);
                 for (int f = 0; f < nf; f++) e[32 + rnd() % (c1 - 32)] ^= (uint8_t)(1 + rnd() % 255);
-                int64_t r = czn_decompress(e, c1, bk, q + 64, 1);
+                int64_t r = kolmo_decompress(e, c1, bk, q + 64, 1);
                 if (r >= 0 && (r != (int64_t)q || memcmp(bk, a, q))) { printf("FAIL integer graph fuzz accepted a wrong output\n"); fails++; break; }
             }
             printf("integer graph fuzz: 400 corrupted frames rejected or exact\n");
@@ -284,16 +284,16 @@ int main(void) {
         size_t h = 128, n4 = 300000; q = h + n4 * 4;
         memset(a, ' ', h); { static const char H[] = "\x93NUMPY\x01\x00\x76\x00{'descr': '<i4', 'fortran_order': False, 'shape': (300000,), }"; memcpy(a, H, sizeof H - 1); } a[h - 1] = '\n';
         int32_t y = 0; for (size_t i = 0; i < n4; i++) { y += (int32_t)(rnd() % 21) - 10; memcpy(a + h + i * 4, &y, 4); }
-        for (int m = 0; m < 5; m++) { check("int-npy", a, q, (czn_mode)m, 1 << 20, 1); check("int-npy-odd", a, q, (czn_mode)m, 65537, 3); }
+        for (int m = 0; m < 5; m++) { check("int-npy", a, q, (kolmo_mode)m, 1 << 20, 1); check("int-npy-odd", a, q, (kolmo_mode)m, 65537, 3); }
         /* int64 extremes: deltas overflow and wrap */
         q = 200000 * 8;
         for (size_t i = 0; i < 200000; i++) { int64_t v = (i % 3 == 0) ? INT64_MIN + (int64_t)(rnd() % 7) : (i % 3 == 1) ? INT64_MAX - (int64_t)(rnd() % 7) : (int64_t)(rnd() % 1000); memcpy(a + i * 8, &v, 8); }
-        for (int m = 0; m < 5; m++) check("int-wrap", a, q, (czn_mode)m, 1 << 20, 1);
+        for (int m = 0; m < 5; m++) check("int-wrap", a, q, (kolmo_mode)m, 1 << 20, 1);
         /* unsigned 16-bit with large values (signed and unsigned readings differ) */
         q = 500000 * 2 + 1; uint16_t u = 60000;
         for (size_t i = 0; i < 500000; i++) { u += (uint16_t)(rnd() % 9) - 4; memcpy(a + i * 2, &u, 2); }
         a[q - 1] = 7;
-        for (int m = 0; m < 5; m++) check("int-u16", a, q, (czn_mode)m, 1 << 20, 2);
+        for (int m = 0; m < 5; m++) check("int-u16", a, q, (kolmo_mode)m, 1 << 20, 2);
         free(a);
     }
     /* float arrays: kolmo graph FLOAT node + Huffman-only leaves (weights-like float32 at an odd offset, .npy float16) */
@@ -305,16 +305,16 @@ int main(void) {
             float f = (float)(g * 0.02); if (i % 5000 == 7) f = 0.0f; memcpy(a + h + i * 4, &f, 4);
         }
         a[q - 2] = 1; a[q - 1] = 2;
-        for (int m = 0; m < 5; m++) { check("float32", a, q, (czn_mode)m, 1 << 20, 1); check("float32-odd", a, q, (czn_mode)m, 262147, 3); }
-        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
-            int64_t c0 = czn_compress(a, q, d, cap, &p0), c1 = czn_compress(a, q, d, cap, &p1);
+        for (int m = 0; m < 5; m++) { check("float32", a, q, (kolmo_mode)m, 1 << 20, 1); check("float32-odd", a, q, (kolmo_mode)m, 262147, 3); }
+        {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = kolmo_compress(a, q, d, cap, &p0), c1 = kolmo_compress(a, q, d, cap, &p1);
             if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 7) { printf("FAIL float graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("float graph: float32 fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
             for (int it = 0; it < 300; it++) {
                 memcpy(e, d, c1); int nf = 1 + (int)(rnd() % 3);
                 for (int f = 0; f < nf; f++) e[32 + rnd() % (c1 - 32)] ^= (uint8_t)(1 + rnd() % 255);
-                int64_t r = czn_decompress(e, c1, bk, q + 64, 1);
+                int64_t r = kolmo_decompress(e, c1, bk, q + 64, 1);
                 if (r >= 0 && (r != (int64_t)q || memcmp(bk, a, q))) { printf("FAIL float graph fuzz accepted a wrong output\n"); fails++; break; }
             }
             printf("float graph fuzz: 300 corrupted frames rejected or exact\n");
@@ -323,7 +323,7 @@ int main(void) {
         size_t n2 = 400000; q = 128 + n2 * 2; memset(a, ' ', 128);
         { static const char H[] = "\x93NUMPY\x01\x00\x76\x00{'descr': '<f2', 'fortran_order': False, 'shape': (400000,), }"; memcpy(a, H, sizeof H - 1); } a[127] = '\n';
         for (size_t i = 0; i < n2; i++) { uint16_t v = (uint16_t)(0x3800 + (rnd() % 2048) - 1024); if (rnd() % 2) v |= 0x8000; memcpy(a + 128 + i * 2, &v, 2); }
-        for (int m = 0; m < 5; m++) check("float16-npy", a, q, (czn_mode)m, 1 << 20, 2);
+        for (int m = 0; m < 5; m++) check("float16-npy", a, q, (kolmo_mode)m, 1 << 20, 2);
         free(a);
     }
     /* 8-bit images: kolmo graph IMG8 node (raw RGB 640 wide with a ragged tail, .npy uint8 2-D), round trips and fuzz */
@@ -334,16 +334,16 @@ int main(void) {
             a[(y * W + x) * C + c] = (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v);
         }
         for (size_t i = W * H * C; i < q; i++) a[i] = (uint8_t)i;
-        for (int m = 0; m < 5; m++) { check("img8-rgb", a, q, (czn_mode)m, 1 << 20, 1); check("img8-rgb-odd", a, q, (czn_mode)m, 100003, 3); }
-        {   czn_params p0 = {CZN_FAST, 0, 1, 0, 0}, p1 = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(q, &p0); uint8_t *d = malloc(cap);
-            int64_t c0 = czn_compress(a, q, d, cap, &p0), c1 = czn_compress(a, q, d, cap, &p1);
+        for (int m = 0; m < 5; m++) { check("img8-rgb", a, q, (kolmo_mode)m, 1 << 20, 1); check("img8-rgb-odd", a, q, (kolmo_mode)m, 100003, 3); }
+        {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = kolmo_compress(a, q, d, cap, &p0), c1 = kolmo_compress(a, q, d, cap, &p1);
             if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 7) { printf("FAIL image graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("image graph: 8-bit RGB fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
             for (int it = 0; it < 300; it++) {
                 memcpy(e, d, c1); int nf = 1 + (int)(rnd() % 3);
                 for (int f = 0; f < nf; f++) e[32 + rnd() % (c1 - 32)] ^= (uint8_t)(1 + rnd() % 255);
-                int64_t r = czn_decompress(e, c1, bk, q + 64, 1);
+                int64_t r = kolmo_decompress(e, c1, bk, q + 64, 1);
                 if (r >= 0 && (r != (int64_t)q || memcmp(bk, a, q))) { printf("FAIL image graph fuzz accepted a wrong output\n"); fails++; break; }
             }
             printf("image graph fuzz: 300 corrupted frames rejected or exact\n");
@@ -352,7 +352,7 @@ int main(void) {
         size_t w2 = 451, h2 = 300; q = 128 + w2 * h2; memset(a, ' ', 128);
         { static const char Hd[] = "\x93NUMPY\x01\x00\x76\x00{'descr': '|u1', 'fortran_order': False, 'shape': (300, 451), }"; memcpy(a, Hd, sizeof Hd - 1); } a[127] = '\n';
         for (size_t y = 0; y < h2; y++) for (size_t x = 0; x < w2; x++) a[128 + y * w2 + x] = (uint8_t)((x + y) / 3 + rnd() % 5);
-        for (int m = 0; m < 5; m++) check("img8-npy", a, q, (czn_mode)m, 1 << 20, 2);
+        for (int m = 0; m < 5; m++) check("img8-npy", a, q, (kolmo_mode)m, 1 << 20, 2);
         free(a);
     }
     /* scientific binary: fixed records (header, quantised doubles incl. NaN/huge outliers, small ints, ids) and a
@@ -370,19 +370,19 @@ int main(void) {
             memcpy(q, &ra, 8); memcpy(q + 8, &dec, 8); memcpy(q + 16, &mag, 2); memcpy(q + 18, &sp, 2); memcpy(q + 20, &id, 4); memcpy(q + 24, &fl, 4);
         }
         memcpy(rec + rn - 5, "tail!", 5);
-        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("records", rec, rn, (czn_mode)m, 1 << 20, T);
-        check("records-1block", rec, rn, CZN_HC, 0, 1);
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("records", rec, rn, (kolmo_mode)m, 1 << 20, T);
+        check("records-1block", rec, rn, KOLMO_HC, 0, 1);
         size_t W = 1024, H = 1600, in_ = 1 + W * H * 2 + 3; uint8_t *im = malloc(in_); im[0] = 0x42;
         for (size_t y = 0; y < H; y++) for (size_t x = 0; x < W; x++) {
             int v = 2000 + (int)(800 * sin(x / 70.0) * cos(y / 90.0)) + (int)(rnd() % 9);
             im[1 + 2 * (y * W + x)] = (uint8_t)(v >> 8); im[2 + 2 * (y * W + x)] = (uint8_t)v;
         }
         memcpy(im + in_ - 3, "end", 3);
-        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("image16", im, in_, (czn_mode)m, 1 << 20, T);
-        czn_params pp = {CZN_FAST, 0, 1, 0, 1}; size_t cap = czn_bound(in_, &pp); uint8_t *d = malloc(cap);
-        int64_t c1 = czn_compress(im, in_, d, cap, &pp); printf("image16 ratio %.2f, ", (double)in_ / c1);
-        int64_t c2 = czn_compress(rec, rn, d, cap > czn_bound(rn, &pp) ? cap : cap, &pp); (void)c2; free(d);
-        pp.mode = CZN_FAST; cap = czn_bound(rn, &pp); d = malloc(cap); c2 = czn_compress(rec, rn, d, cap, &pp); printf("records ratio %.2f\n", (double)rn / c2); free(d);
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("image16", im, in_, (kolmo_mode)m, 1 << 20, T);
+        kolmo_params pp = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(in_, &pp); uint8_t *d = malloc(cap);
+        int64_t c1 = kolmo_compress(im, in_, d, cap, &pp); printf("image16 ratio %.2f, ", (double)in_ / c1);
+        int64_t c2 = kolmo_compress(rec, rn, d, cap > kolmo_bound(rn, &pp) ? cap : cap, &pp); (void)c2; free(d);
+        pp.mode = KOLMO_FAST; cap = kolmo_bound(rn, &pp); d = malloc(cap); c2 = kolmo_compress(rec, rn, d, cap, &pp); printf("records ratio %.2f\n", (double)rn / c2); free(d);
         /* fuzz both decoders on their own streams */
         uint8_t *t = malloc(rn * 3 + 65536), *o = malloc(rn + 64), *e = malloc(rn * 3 + 65536);
         int64_t tn = sci_encode_pub(rec, rn, 0, t, rn * 3 + 65536);
@@ -420,14 +420,14 @@ int main(void) {
             q += (sz + 511) / 512 * 512;
         }
         q += 1024;
-        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("tar-archive", ar, q, (czn_mode)m, 1 << 20, T);
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("tar-archive", ar, q, (kolmo_mode)m, 1 << 20, T);
         free(ar);
     }
     /* x86 transform: adversarial bytes (E8/E9 next to 00/FF) must round-trip through every mode */
     {
         size_t n2 = 3u << 20; uint8_t *x = malloc(n2);
         for (size_t i = 0; i < n2; i++) { uint64_t r = rnd() % 5; x[i] = r == 0 ? 0xE8 : r == 1 ? 0xE9 : r == 2 ? 0xFF : r == 3 ? 0x00 : (uint8_t)rnd(); }
-        for (int m = 0; m < 5; m++) check("e8e9-adversarial", x, n2, (czn_mode)m, 1 << 20, 2);
+        for (int m = 0; m < 5; m++) check("e8e9-adversarial", x, n2, (kolmo_mode)m, 1 << 20, 2);
         free(x);
     }
     /* prose: word dictionary transform (capitalised words, long words, UTF-8, control bytes absent/present) */
@@ -436,8 +436,8 @@ int main(void) {
         const char *vocab[] = {"the", "The", "architecture", "Architecture", "NEOM", "data", "compression", "of", "and", "Riyadh",
                                "supercalifragilisticexpialidocious", "caf\xc3\xa9", "Zebra", "zebra", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"};
         while (q + 80 < pn) { const char *x = vocab[rnd() % 15]; size_t l = strlen(x); memcpy(pr + q, x, l); q += l; pr[q++] = (uint8_t)(rnd() % 9 ? ' ' : (rnd() % 2 ? ',' : '\n')); }
-        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("prose", pr, q, (czn_mode)m, 1 << 20, T);
-        check("prose-1block", pr, q, CZN_HC, 0, 1);
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("prose", pr, q, (kolmo_mode)m, 1 << 20, T);
+        check("prose-1block", pr, q, KOLMO_HC, 0, 1);
         uint8_t *t = malloc(q + 65536), *o = malloc(q + 64), *e = malloc(q + 65536);
         int64_t tn = word_encode_pub(pr, q, t, q + 65536);
         if (tn <= 0 || word_decode_pub(t, tn, o, q) || memcmp(o, pr, q)) { printf("FAIL word codec roundtrip (%lld)\n", (long long)tn); fails++; }
@@ -454,9 +454,9 @@ int main(void) {
     {
         size_t un = 300000; uint8_t *u = malloc(un);
         for (size_t i = 0; i < un;) { const char *x = w[rnd() % 8]; size_t l = strlen(x); if (i + l > un) break; memcpy(u + i, x, l); i += l; }
-        check("ultra-text", u, un - 8, CZN_ULTRA, 1 << 17, 2);
-        check("ultra-csv", csv, 400000, CZN_ULTRA, 1 << 17, 1);
-        check("ultra-random", rndb, 200000, CZN_ULTRA, 1 << 17, 1);
+        check("ultra-text", u, un - 8, KOLMO_ULTRA, 1 << 17, 2);
+        check("ultra-csv", csv, 400000, KOLMO_ULTRA, 1 << 17, 1);
+        check("ultra-random", rndb, 200000, KOLMO_ULTRA, 1 << 17, 1);
         free(u);
     }
     /* table codec fuzz: corrupt the transformed stream itself (bypasses the container CRC) */

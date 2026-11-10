@@ -1,4 +1,4 @@
-czn — native core of the kolmo compressor. Copyright 2026 Adnane Aqartit and contributors. Apache-2.0.
+kolmo — native core of the kolmo compressor. Copyright 2026 Adnane Aqartit and contributors. Apache-2.0.
 
 Third-party code vendored unmodified under vendor/:
   zstd 1.5.7  (vendor/zstd)  BSD-3-Clause, Copyright (c) Meta Platforms, Inc. and affiliates

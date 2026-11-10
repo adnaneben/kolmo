@@ -28,11 +28,11 @@ static int test_join(pthread_t t, void **result) {
 static int test_setspecific(pthread_key_t key, const void *value) {
     return fail_setspecific ? ENOMEM : pthread_setspecific(key, value);
 }
-#define CZN_TESTING
+#define KOLMO_TESTING
 #define pthread_create test_create
 #define pthread_join test_join
 #define pthread_setspecific test_setspecific
-#include "../src/czn.c"
+#include "../src/kolmo.c"
 #undef pthread_create
 #undef pthread_join
 #undef pthread_setspecific
@@ -61,8 +61,8 @@ static void pool_failures(void) {
     create_budget = -1;
 }
 static void frame_crc(uint8_t *blob) {
-    uint32_t c = czn_crc32c(0, blob, 28);
-    c = czn_crc32c(c, blob + HDR, (size_t)get32(blob + 20) * IDX);
+    uint32_t c = kolmo_crc32c(0, blob, 28);
+    c = kolmo_crc32c(c, blob + HDR, (size_t)get32(blob + 20) * IDX);
     put32(blob + 28, c);
 }
 static void formula_thread_failure(void) {
@@ -101,7 +101,7 @@ static void legacy_frames(void) {
             }
         }
         for (int threads = 1; threads <= 4; threads += 3) {
-            assert(czn_decompress(frames[v - 1], sizes[v - 1], back, cap, threads) == (int64_t)n);
+            assert(kolmo_decompress(frames[v - 1], sizes[v - 1], back, cap, threads) == (int64_t)n);
             assert(!memcmp(back, expected, n));
         }
     }
@@ -110,23 +110,23 @@ static void legacy_frames(void) {
 static void seekable_files(void) {
     uint8_t data[12000], restored[sizeof data];
     memset(data, 'A', sizeof data);
-    czn_params p = {CZN_FAST, 0, 1, 4096, 1};
-    size_t cap = czn_bound(sizeof data, &p);
+    kolmo_params p = {KOLMO_FAST, 0, 1, 4096, 1};
+    size_t cap = kolmo_bound(sizeof data, &p);
     uint8_t *frame = malloc(cap), *reference = malloc(cap);
     FILE *input = tmpfile(), *output = tmpfile();
     assert(frame && reference && input && output);
     assert(fwrite(data, 1, sizeof data, input) == sizeof data && !fflush(input));
     int in = fileno(input), out = fileno(output);
     for (size_t n = 0; n <= sizeof data; n += sizeof data) {
-        int64_t size = czn_compress_from_fd(in, n, frame, cap, &p, NULL, 0);
-        assert(size > 0 && czn_compress(data, n, reference, cap, &p) == size);
+        int64_t size = kolmo_compress_from_fd(in, n, frame, cap, &p, NULL, 0);
+        assert(size > 0 && kolmo_compress(data, n, reference, cap, &p) == size);
         assert(!memcmp(frame, reference, size));
-        assert(czn_decompress_to_fd(frame, size, out, 1, NULL, 0) == (int64_t)n);
+        assert(kolmo_decompress_to_fd(frame, size, out, 1, NULL, 0) == (int64_t)n);
         assert(pread(out, restored, n, 0) == (ssize_t)n && !memcmp(data, restored, n));
     }
     assert(lseek(in, 0, SEEK_CUR) == sizeof data && lseek(out, 0, SEEK_CUR) == 0);
-    assert(czn_compress_from_fd(in, sizeof data + 1, frame, cap, &p, NULL, 0) == CZN_ERR_IO);
-    assert(czn_decompress_to_fd(reference, cap, -1, 1, NULL, 0) == CZN_ERR_IO);
+    assert(kolmo_compress_from_fd(in, sizeof data + 1, frame, cap, &p, NULL, 0) == KOLMO_ERR_IO);
+    assert(kolmo_decompress_to_fd(reference, cap, -1, 1, NULL, 0) == KOLMO_ERR_IO);
     fclose(input); fclose(output); free(frame); free(reference);
 }
 
@@ -157,44 +157,44 @@ int main(void) {
     seekable_files();
     wide_transpose();
     uint8_t input[8192], output[8192], sentinel[64]; memset(input, 'A', sizeof input);
-    czn_params p = {CZN_FAST, 0, 1, 4096, 0};
-    size_t cap = czn_bound(sizeof input, &p); uint8_t *blob = malloc(cap), *bad = malloc(cap);
+    kolmo_params p = {KOLMO_FAST, 0, 1, 4096, 0};
+    size_t cap = kolmo_bound(sizeof input, &p); uint8_t *blob = malloc(cap), *bad = malloc(cap);
     assert(blob && bad);
     int failures = 0; int64_t cn = 0;
     for (long i = 0; i < 64; i++) {
-        czn_alloc_fail_after = i;
-        cn = czn_compress(input, sizeof input, blob, cap, &p);
-        czn_alloc_fail_after = -1;
+        kolmo_alloc_fail_after = i;
+        cn = kolmo_compress(input, sizeof input, blob, cap, &p);
+        kolmo_alloc_fail_after = -1;
         if (cn >= 0) break;
-        assert(cn == CZN_ERR_ALLOC); failures++;
+        assert(cn == KOLMO_ERR_ALLOC); failures++;
     }
     assert(failures >= 8 && cn > 0);
     for (long i = 0; i < 2; i++) {
-        czn_alloc_fail_after = i;
-        assert(czn_decompress(blob, cn, output, sizeof output, 1) == CZN_ERR_ALLOC);
-        czn_alloc_fail_after = -1;
+        kolmo_alloc_fail_after = i;
+        assert(kolmo_decompress(blob, cn, output, sizeof output, 1) == KOLMO_ERR_ALLOC);
+        kolmo_alloc_fail_after = -1;
     }
-    assert(czn_decompress(blob, cn, output, sizeof output, 1) == sizeof input);
+    assert(kolmo_decompress(blob, cn, output, sizeof output, 1) == sizeof input);
     assert(!memcmp(input, output, sizeof input));
-    czn_decode_limits lim = {sizeof input, 4096, 2};
-    assert(czn_decompress_limited(blob, cn, output, sizeof output, 1, &lim) == sizeof input);
-    lim.max_output_bytes--; assert(czn_decompress_limited(blob, cn, output, sizeof output, 1, &lim) == CZN_ERR_LIMIT);
+    kolmo_decode_limits lim = {sizeof input, 4096, 2};
+    assert(kolmo_decompress_limited(blob, cn, output, sizeof output, 1, &lim) == sizeof input);
+    lim.max_output_bytes--; assert(kolmo_decompress_limited(blob, cn, output, sizeof output, 1, &lim) == KOLMO_ERR_LIMIT);
     lim.max_output_bytes++; lim.max_blocks = 1;
-    assert(czn_decompress_limited(blob, cn, output, sizeof output, 1, &lim) == CZN_ERR_LIMIT);
+    assert(kolmo_decompress_limited(blob, cn, output, sizeof output, 1, &lim) == KOLMO_ERR_LIMIT);
     lim.max_blocks = 2; lim.max_block_bytes--;
-    assert(czn_decompress_limited(blob, cn, output, sizeof output, 1, &lim) == CZN_ERR_LIMIT);
+    assert(kolmo_decompress_limited(blob, cn, output, sizeof output, 1, &lim) == KOLMO_ERR_LIMIT);
     memset(&lim, 0, sizeof lim);
-    assert(czn_decompress_limited(blob, cn, output, sizeof output, 1, &lim) == sizeof input);
+    assert(kolmo_decompress_limited(blob, cn, output, sizeof output, 1, &lim) == sizeof input);
     memcpy(bad, blob, cn); put32(bad + HDR + 4, (uint32_t)cn + 1); frame_crc(bad);
-    assert(czn_decompress(bad, cn, output, sizeof output, 1) == CZN_ERR_CORRUPT);
+    assert(kolmo_decompress(bad, cn, output, sizeof output, 1) == KOLMO_ERR_CORRUPT);
     memcpy(bad, blob, cn); put32(bad + HDR, UINT32_MAX); frame_crc(bad);
-    assert(czn_decompress(bad, cn, output, sizeof output, 1) == CZN_ERR_CORRUPT);
+    assert(kolmo_decompress(bad, cn, output, sizeof output, 1) == KOLMO_ERR_CORRUPT);
     memset(sentinel, 0xA5, sizeof sentinel);
     for (size_t n = 0; n < HDR + IDX; n++) {
-        assert(czn_compress(input, sizeof input, sentinel, n, &p) == CZN_ERR_DSTSIZE);
+        assert(kolmo_compress(input, sizeof input, sentinel, n, &p) == KOLMO_ERR_DSTSIZE);
         for (size_t j = 0; j < sizeof sentinel; j++) assert(sentinel[j] == 0xA5);
     }
-    assert(czn_read_range(blob, cn, sizeof input - 16, SIZE_MAX, output, 1) == 16);
+    assert(kolmo_read_range(blob, cn, sizeof input - 16, SIZE_MAX, output, 1) == 16);
     assert(!memcmp(output, input + sizeof input - 16, 16));
     assert(!array_alloc(SIZE_MAX, 8, 0));
     if (TLS) {
@@ -202,11 +202,11 @@ int main(void) {
         tls_destroy(TLS); TLS = NULL;
     }
     fail_setspecific = 1;
-    assert(czn_decompress(blob, cn, output, sizeof output, 1) == sizeof input);
+    assert(kolmo_decompress(blob, cn, output, sizeof output, 1) == sizeof input);
     assert(!TLS); /* Failed destructor registration must retain no scratch. */
     fail_setspecific = 0;
     int key_valid = tls_key_valid; tls_key_valid = 0;
-    assert(czn_decompress(blob, cn, output, sizeof output, 1) == sizeof input && !TLS);
+    assert(kolmo_decompress(blob, cn, output, sizeof output, 1) == sizeof input && !TLS);
     tls_key_valid = key_valid;
     free(blob); free(bad);
     zs_trim();

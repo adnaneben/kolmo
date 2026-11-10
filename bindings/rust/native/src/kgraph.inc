@@ -177,7 +177,7 @@ bad: free(cp); return -1;
 }
 
 /* ---- INT ---- */
-static inline uint64_t kg_ld(const uint8_t *p, int w, int sg) {      /* little-endian load (as the rest of czn) */
+static inline uint64_t kg_ld(const uint8_t *p, int w, int sg) {      /* little-endian load (as the rest of kolmo) */
     uint64_t v;
     if (w == 8) { memcpy(&v, p, 8); return v; }
     if (w == 4) { uint32_t u; memcpy(&u, p, 4); return sg ? (uint64_t)(int64_t)(int32_t)u : u; }

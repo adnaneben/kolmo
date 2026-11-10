@@ -27,7 +27,7 @@ Machine for the numbers below: 2-core Intel Xeon VM, gcc, `-O3 -march=native`, s
 | Mixed (Silesia, 212 MB) | 3.64 | **5.58** | 4.01 | 4.27 | 4.38 | 3.35 |
 
 \*OpenZL (Meta's format-aware framework) uses its own CLI with its best matching profile,
-trained on the tables. See the cz-vs-OpenZL head-to-head: kolmo compresses smaller on every
+trained on the tables. See the kolmo-vs-OpenZL head-to-head: kolmo compresses smaller on every
 dataset tested — including OpenZL's own SAO benchmark (3.15× vs 2.09×) — with zero configuration.
 
 ## Full mode sweep — tables (reproducible with `bench.sh`)

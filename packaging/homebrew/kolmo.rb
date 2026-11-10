@@ -16,8 +16,8 @@ class Kolmo < Formula
   test do
     # round-trip a file and confirm it comes back byte-identical
     (testpath/"in.csv").write (1..500).map { |i| "row,#{i},#{i * 2},ok\n" }.join
-    system bin/"kolmo", "-m", "fast", "in.csv", "out.czn"
-    system bin/"kolmo", "-d", "out.czn", "back.csv"
+    system bin/"kolmo", "-m", "fast", "in.csv", "out.kolmo"
+    system bin/"kolmo", "-d", "out.kolmo", "back.csv"
     assert_equal (testpath/"in.csv").read, (testpath/"back.csv").read
   end
 end

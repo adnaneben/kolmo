@@ -1,6 +1,6 @@
 //! Rust binding for **kolmo**, a structure-aware lossless compressor.
 //!
-//! Thin, safe wrappers over the native core (`czn.h`). The whole file is compressed or
+//! Thin, safe wrappers over the native core (`kolmo.h`). The whole file is compressed or
 //! decompressed in one call; [`read_range`] decodes only the blocks overlapping a byte range.
 //!
 //! ```no_run
@@ -32,15 +32,15 @@ struct Params {
 }
 
 extern "C" {
-    fn czn_bound(n: usize, p: *const Params) -> usize;
-    fn czn_compress(src: *const u8, n: usize, dst: *mut u8, cap: usize, p: *const Params) -> i64;
-    fn czn_original_size(src: *const u8, n: usize) -> i64;
-    fn czn_decompress(src: *const u8, n: usize, dst: *mut u8, cap: usize, threads: c_int) -> i64;
-    fn czn_read_range(src: *const u8, n: usize, off: u64, len: usize, dst: *mut u8, threads: c_int) -> i64;
-    fn czn_strerror(code: i64) -> *const c_char;
-    fn czn_train_dict(samples: *const u8, sizes: *const usize, nsamples: usize, dict: *mut u8, dict_cap: usize) -> i64;
-    fn czn_compress_dict(src: *const u8, n: usize, dst: *mut u8, cap: usize, p: *const Params, dict: *const u8, dictlen: usize) -> i64;
-    fn czn_decompress_dict(src: *const u8, n: usize, dst: *mut u8, cap: usize, threads: c_int, dict: *const u8, dictlen: usize) -> i64;
+    fn kolmo_bound(n: usize, p: *const Params) -> usize;
+    fn kolmo_compress(src: *const u8, n: usize, dst: *mut u8, cap: usize, p: *const Params) -> i64;
+    fn kolmo_original_size(src: *const u8, n: usize) -> i64;
+    fn kolmo_decompress(src: *const u8, n: usize, dst: *mut u8, cap: usize, threads: c_int) -> i64;
+    fn kolmo_read_range(src: *const u8, n: usize, off: u64, len: usize, dst: *mut u8, threads: c_int) -> i64;
+    fn kolmo_strerror(code: i64) -> *const c_char;
+    fn kolmo_train_dict(samples: *const u8, sizes: *const usize, nsamples: usize, dict: *mut u8, dict_cap: usize) -> i64;
+    fn kolmo_compress_dict(src: *const u8, n: usize, dst: *mut u8, cap: usize, p: *const Params, dict: *const u8, dictlen: usize) -> i64;
+    fn kolmo_decompress_dict(src: *const u8, n: usize, dst: *mut u8, cap: usize, threads: c_int, dict: *const u8, dictlen: usize) -> i64;
 }
 
 /// An error returned by the native core (corrupt input, checksum mismatch, allocation, …).
@@ -59,7 +59,7 @@ impl std::error::Error for Error {}
 
 fn err(code: i64) -> Error {
     let msg = unsafe {
-        let p = czn_strerror(code);
+        let p = kolmo_strerror(code);
         if p.is_null() { String::from("unknown error") }
         else { std::ffi::CStr::from_ptr(p).to_string_lossy().into_owned() }
     };
@@ -69,9 +69,9 @@ fn err(code: i64) -> Error {
 /// Compress `data` in `mode`. `threads` = 0 uses all cores.
 pub fn compress(data: &[u8], mode: Mode, threads: i32) -> Result<Vec<u8>, Error> {
     let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1 };
-    let cap = unsafe { czn_bound(data.len(), &p) };
+    let cap = unsafe { kolmo_bound(data.len(), &p) };
     let mut out = vec![0u8; cap.max(1)];
-    let n = unsafe { czn_compress(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p) };
+    let n = unsafe { kolmo_compress(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p) };
     if n < 0 { return Err(err(n)); }
     out.truncate(n as usize);
     Ok(out)
@@ -79,7 +79,7 @@ pub fn compress(data: &[u8], mode: Mode, threads: i32) -> Result<Vec<u8>, Error>
 
 /// Original (decompressed) length recorded in a compressed blob's header.
 pub fn original_size(blob: &[u8]) -> Result<usize, Error> {
-    let n = unsafe { czn_original_size(blob.as_ptr(), blob.len()) };
+    let n = unsafe { kolmo_original_size(blob.as_ptr(), blob.len()) };
     if n < 0 { Err(err(n)) } else { Ok(n as usize) }
 }
 
@@ -87,7 +87,7 @@ pub fn original_size(blob: &[u8]) -> Result<usize, Error> {
 pub fn decompress(blob: &[u8], threads: i32) -> Result<Vec<u8>, Error> {
     let o = original_size(blob)?;
     let mut out = vec![0u8; o.max(1)];
-    let got = unsafe { czn_decompress(blob.as_ptr(), blob.len(), out.as_mut_ptr(), out.len(), threads as c_int) };
+    let got = unsafe { kolmo_decompress(blob.as_ptr(), blob.len(), out.as_mut_ptr(), out.len(), threads as c_int) };
     if got < 0 { return Err(err(got)); }
     out.truncate(got as usize);
     Ok(out)
@@ -96,7 +96,7 @@ pub fn decompress(blob: &[u8], threads: i32) -> Result<Vec<u8>, Error> {
 /// Return bytes `[off, off + len)` of the original, decoding only the overlapping blocks.
 pub fn read_range(blob: &[u8], off: u64, len: usize, threads: i32) -> Result<Vec<u8>, Error> {
     let mut out = vec![0u8; len.max(1)];
-    let got = unsafe { czn_read_range(blob.as_ptr(), blob.len(), off, len, out.as_mut_ptr(), threads as c_int) };
+    let got = unsafe { kolmo_read_range(blob.as_ptr(), blob.len(), off, len, out.as_mut_ptr(), threads as c_int) };
     if got < 0 { return Err(err(got)); }
     out.truncate(got as usize);
     Ok(out)
@@ -109,7 +109,7 @@ pub fn train_dict(samples: &[&[u8]], dict_cap: usize) -> Result<Vec<u8>, Error> 
     let mut blob = Vec::new();
     let sizes: Vec<usize> = samples.iter().map(|s| { blob.extend_from_slice(s); s.len() }).collect();
     let mut dict = vec![0u8; dict_cap.max(256)];
-    let n = unsafe { czn_train_dict(blob.as_ptr(), sizes.as_ptr(), sizes.len(), dict.as_mut_ptr(), dict.len()) };
+    let n = unsafe { kolmo_train_dict(blob.as_ptr(), sizes.as_ptr(), sizes.len(), dict.as_mut_ptr(), dict.len()) };
     if n < 0 { return Err(err(n)); }
     dict.truncate(n as usize);
     Ok(dict)
@@ -119,9 +119,9 @@ pub fn train_dict(samples: &[&[u8]], dict_cap: usize) -> Result<Vec<u8>, Error> 
 /// supplied to [`decompress_dict`]; a blob written with a dictionary refuses to decode without it.
 pub fn compress_dict(data: &[u8], mode: Mode, threads: i32, dict: &[u8]) -> Result<Vec<u8>, Error> {
     let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1 };
-    let cap = unsafe { czn_bound(data.len(), &p) };
+    let cap = unsafe { kolmo_bound(data.len(), &p) };
     let mut out = vec![0u8; cap.max(1)];
-    let n = unsafe { czn_compress_dict(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p, dict.as_ptr(), dict.len()) };
+    let n = unsafe { kolmo_compress_dict(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p, dict.as_ptr(), dict.len()) };
     if n < 0 { return Err(err(n)); }
     out.truncate(n as usize);
     Ok(out)
@@ -131,7 +131,7 @@ pub fn compress_dict(data: &[u8], mode: Mode, threads: i32, dict: &[u8]) -> Resu
 pub fn decompress_dict(blob: &[u8], threads: i32, dict: &[u8]) -> Result<Vec<u8>, Error> {
     let o = original_size(blob)?;
     let mut out = vec![0u8; o.max(1)];
-    let got = unsafe { czn_decompress_dict(blob.as_ptr(), blob.len(), out.as_mut_ptr(), out.len(), threads as c_int, dict.as_ptr(), dict.len()) };
+    let got = unsafe { kolmo_decompress_dict(blob.as_ptr(), blob.len(), out.as_mut_ptr(), out.len(), threads as c_int, dict.as_ptr(), dict.len()) };
     if got < 0 { return Err(err(got)); }
     out.truncate(got as usize);
     Ok(out)

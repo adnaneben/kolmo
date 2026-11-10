@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""List the blocks of a .czn file: raw size, stored size, codec and transform."""
+"""List the blocks of a .kolmo file: raw size, stored size, codec and transform."""
 import struct, sys
 CODEC = ["store", "lz4", "lz4hc", "zstd", "brotli", "bwt", "lzma", "cm"]
 d = open(sys.argv[1], "rb").read()

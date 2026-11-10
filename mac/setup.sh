@@ -43,6 +43,6 @@ fi
 
 echo "== Build and self-test"
 make clean >/dev/null; make -j"$(sysctl -n hw.ncpu)"
-./build/czntest | tail -3
+./build/kolmotest | tail -3
 echo
 echo "Setup done. Next: bash mac/bench.sh"

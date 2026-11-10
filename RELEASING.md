@@ -108,7 +108,7 @@ once the project qualifies.
 
 ## 6. Benchmark leaderboards (reach)
 
-- **lzbench**: fork it, register kolmo as a codec (wrap `czn_compress`/`czn_decompress`), and
+- **lzbench**: fork it, register kolmo as a codec (wrap `kolmo_compress`/`kolmo_decompress`), and
   submit results. This is the standard way compressors get compared publicly.
 - **Squash Compression Benchmark** and **Large Text Compression Benchmark (enwik8/enwik9)**: submit
   results produced by `benchmark/bench.sh`.

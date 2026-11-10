@@ -1,4 +1,4 @@
-// Compiles the kolmo native core (czn.c + vendored zstd, lz4, brotli, libbsc, xxhash) into a
+// Compiles the kolmo native core (kolmo.c + vendored zstd, lz4, brotli, libbsc, xxhash) into a
 // static library and links it, so the published crate is self-contained: it needs a C/C++
 // compiler and (optionally) liblzma, but no `make`, no prebuilt library, and no external Rust
 // crates. The C sources live in `native/` inside the crate — refreshed from the repo root by
@@ -59,7 +59,7 @@ fn main() {
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
     // Prefer the bundled copy (present in the published crate); fall back to the repo tree.
     let bundled = manifest.join("native");
-    let base = if bundled.join("src/czn.c").exists() {
+    let base = if bundled.join("src/kolmo.c").exists() {
         bundled
     } else {
         manifest.parent().unwrap().parent().unwrap().to_path_buf()
@@ -93,7 +93,7 @@ fn main() {
     let lzma = if no_lzma { None } else { find_lzma(&cc, &out) };
     let use_lzma = lzma.is_some();
     if !use_lzma {
-        defs.push("-DCZN_NO_LZMA".into());
+        defs.push("-DKOLMO_NO_LZMA".into());
         if !no_lzma {
             println!("cargo:warning=kolmo: liblzma not found; building without it (max/ultra use BWT/CM). Install xz (brew install xz / apt install liblzma-dev) for the LZMA path.");
         }
@@ -104,14 +104,14 @@ fn main() {
 
     // Gather compile jobs: (compiler, source, extra_flags).
     let mut jobs: Vec<(String, PathBuf, Vec<String>)> = Vec::new();
-    // czn.c needs -ffp-contract=off for byte-identical output across compilers/CPUs.
-    jobs.push((cc.clone(), src.join("czn.c"), vec!["-ffp-contract=off".into()]));
+    // kolmo.c needs -ffp-contract=off for byte-identical output across compilers/CPUs.
+    jobs.push((cc.clone(), src.join("kolmo.c"), vec!["-ffp-contract=off".into()]));
     let mut cfiles = Vec::new();
     for sub in ["common", "compress", "decompress", "dictBuilder"] { list(&zstd.join(sub), "c", false, &mut cfiles); }
     for sub in ["common", "dec", "enc"] { list(&brotli.join(sub), "c", false, &mut cfiles); }
     cfiles.push(lz4.join("lz4.c"));
     cfiles.push(lz4.join("lz4hc.c"));
-    cfiles.push(vendor.join("xxhash/czn_xxh3.c"));
+    cfiles.push(vendor.join("xxhash/kolmo_xxh3.c"));
     cfiles.push(bsc.join("libbsc/bwt/libsais/libsais.c"));
     cfiles.sort();
     for f in cfiles { jobs.push((cc.clone(), f, vec![])); }
@@ -173,7 +173,7 @@ fn main() {
         println!("cargo:rustc-link-lib=lzma");
     }
 
-    println!("cargo:rerun-if-changed={}", src.join("czn.c").display());
-    println!("cargo:rerun-if-changed={}", src.join("czn.h").display());
+    println!("cargo:rerun-if-changed={}", src.join("kolmo.c").display());
+    println!("cargo:rerun-if-changed={}", src.join("kolmo.h").display());
     println!("cargo:rerun-if-changed=build.rs");
 }

@@ -9,7 +9,7 @@
 #  - kolmo is built at -O3 -march=native; lzbench builds every other codec with the same
 #    MOREFLAGS="-march=native" on top of its own -O3, so all entries get the same compiler options.
 #  - kolmo's core, its vendored codecs and a static liblzma are partially linked into one object whose
-#    only global symbols are czn_*, so kolmo never shares code with another entry and no other entry
+#    only global symbols are kolmo_*, so kolmo never shares code with another entry and no other entry
 #    uses kolmo's copies of zstd/brotli/lz4/bsc/xz.
 # Linux (GNU ld + objcopy). The build needs a static liblzma (liblzma-dev provides liblzma.a).
 set -e
@@ -20,18 +20,18 @@ root=$(cd "$here/../.." && pwd)
 LZB=$(cd "$LZB" && pwd)
 
 # 1. kolmo, built with its normal flags (-O3 -march=native).
-make -C "$root" -j"$(nproc)" build/libczn.a build/libvendor.a >/dev/null
+make -C "$root" -j"$(nproc)" build/libkolmo.a build/libvendor.a >/dev/null
 
-# 2. One isolated object: kolmo + vendored codecs + static liblzma, only czn_* left global.
+# 2. One isolated object: kolmo + vendored codecs + static liblzma, only kolmo_* left global.
 lzma_a=""
 for d in /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu /usr/lib64 /usr/lib /usr/local/lib; do
     [ -f "$d/liblzma.a" ] && lzma_a="$d/liblzma.a" && break
 done
 [ -n "$lzma_a" ] || { echo "setup.sh: need a static liblzma (apt install liblzma-dev)"; exit 1; }
 work=$(mktemp -d)
-ld -r --whole-archive "$root/build/libczn.a" "$root/build/libvendor.a" --no-whole-archive "$lzma_a" \
+ld -r --whole-archive "$root/build/libkolmo.a" "$root/build/libvendor.a" --no-whole-archive "$lzma_a" \
    -o "$work/kolmo_all.o"
-printf 'czn_compress\nczn_decompress\nczn_bound\nczn_original_size\nczn_strerror\n' > "$work/keep.txt"
+printf 'kolmo_compress\nkolmo_decompress\nkolmo_bound\nkolmo_original_size\nkolmo_strerror\n' > "$work/keep.txt"
 # Rename every C++ symbol kolmo defines (libbsc's inline functions, templates). Their COMDAT group
 # signatures carry the same names as lzbench's own libbsc; without the rename the linker keeps
 # lzbench's copy of each group and discards kolmo's, leaving kolmo's localized references dangling.
@@ -43,7 +43,7 @@ objcopy --keep-global-symbols="$work/keep.txt" "$work/kolmo_ren.o" "$work/kolmo_
 mkdir -p "$LZB/misc/kolmo"
 rm -f "$LZB/misc/kolmo/libkolmo_iso.a"
 ar rcs "$LZB/misc/kolmo/libkolmo_iso.a" "$work/kolmo_iso.o"
-cp "$root/src/czn.h" "$here/kolmo_lzbench.cpp" "$LZB/misc/kolmo/"
+cp "$root/src/kolmo.h" "$here/kolmo_lzbench.cpp" "$LZB/misc/kolmo/"
 cp "$here/kolmo.mk" "$LZB/mk/kolmo.mk"
 rm -rf "$work"
 

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <inttypes.h>
-#include "../../src/czn.c"
+#include "../../src/kolmo.c"
 
 static double seconds(void) {
     struct timespec t;

@@ -45,8 +45,8 @@ jobs:
         run: |
           gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
             -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include \
-            tests/czntest.c src/czn.c build/libvendor.a -llzma -lpthread -lm -lstdc++ -o czntest_asan
-          ./czntest_asan
+            tests/kolmotest.c src/kolmo.c build/libvendor.a -llzma -lpthread -lm -lstdc++ -o kolmotest_asan
+          ./kolmotest_asan
         timeout-minutes: 240
   fuzz-smoke:
     runs-on: ubuntu-latest
@@ -61,7 +61,7 @@ jobs:
             gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
               -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 \
               -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include \
-              fuzz/$t.c fuzz/run_local.c src/czn.c build/libvendor.a \
+              fuzz/$t.c fuzz/run_local.c src/kolmo.c build/libvendor.a \
               -llzma -lpthread -lm -lstdc++ -o $t
             ASAN_OPTIONS=detect_leaks=0 ./$t 20000
           done

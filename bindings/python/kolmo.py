@@ -29,43 +29,43 @@ class _Params(ctypes.Structure):
     _fields_ = [("mode", ctypes.c_int), ("level", ctypes.c_int), ("threads", ctypes.c_int),
                 ("block", ctypes.c_uint32), ("transforms", ctypes.c_int)]
 
-_lib.czn_bound.restype = ctypes.c_size_t
-_lib.czn_bound.argtypes = [ctypes.c_size_t, ctypes.POINTER(_Params)]
-_lib.czn_compress.restype = ctypes.c_int64
-_lib.czn_compress.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t, ctypes.POINTER(_Params)]
-_lib.czn_original_size.restype = ctypes.c_int64
-_lib.czn_original_size.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
-_lib.czn_decompress.restype = ctypes.c_int64
-_lib.czn_decompress.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_int]
-_lib.czn_read_range.restype = ctypes.c_int64
-_lib.czn_read_range.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_uint64, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_int]
-_lib.czn_strerror.restype = ctypes.c_char_p
-_lib.czn_strerror.argtypes = [ctypes.c_int64]
-_lib.czn_train_dict.restype = ctypes.c_int64
-_lib.czn_train_dict.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t), ctypes.c_size_t,
+_lib.kolmo_bound.restype = ctypes.c_size_t
+_lib.kolmo_bound.argtypes = [ctypes.c_size_t, ctypes.POINTER(_Params)]
+_lib.kolmo_compress.restype = ctypes.c_int64
+_lib.kolmo_compress.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t, ctypes.POINTER(_Params)]
+_lib.kolmo_original_size.restype = ctypes.c_int64
+_lib.kolmo_original_size.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
+_lib.kolmo_decompress.restype = ctypes.c_int64
+_lib.kolmo_decompress.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_int]
+_lib.kolmo_read_range.restype = ctypes.c_int64
+_lib.kolmo_read_range.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_uint64, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_int]
+_lib.kolmo_strerror.restype = ctypes.c_char_p
+_lib.kolmo_strerror.argtypes = [ctypes.c_int64]
+_lib.kolmo_train_dict.restype = ctypes.c_int64
+_lib.kolmo_train_dict.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t), ctypes.c_size_t,
                                 ctypes.c_char_p, ctypes.c_size_t]
-_lib.czn_compress_dict.restype = ctypes.c_int64
-_lib.czn_compress_dict.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t,
+_lib.kolmo_compress_dict.restype = ctypes.c_int64
+_lib.kolmo_compress_dict.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t,
                                    ctypes.POINTER(_Params), ctypes.c_char_p, ctypes.c_size_t]
-_lib.czn_decompress_dict.restype = ctypes.c_int64
-_lib.czn_decompress_dict.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t,
+_lib.kolmo_decompress_dict.restype = ctypes.c_int64
+_lib.kolmo_decompress_dict.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t,
                                      ctypes.c_int, ctypes.c_char_p, ctypes.c_size_t]
 
 def _check(code):
     if code < 0:
-        raise ValueError("kolmo: " + _lib.czn_strerror(code).decode())
+        raise ValueError("kolmo: " + _lib.kolmo_strerror(code).decode())
     return code
 
 def original_size(blob):
     """Original byte length recorded in a compressed blob's header."""
     blob = bytes(blob)
-    return _check(_lib.czn_original_size(blob, len(blob)))
+    return _check(_lib.kolmo_original_size(blob, len(blob)))
 
 def read_range(blob, off, length, threads=0):
     """Return bytes [off, off+length) of the original, decoding only the blocks that overlap."""
     blob = bytes(blob)
     out = ctypes.create_string_buffer(length if length else 1)
-    got = _check(_lib.czn_read_range(blob, len(blob), off, length, out, threads))
+    got = _check(_lib.kolmo_read_range(blob, len(blob), off, length, out, threads))
     return out.raw[:got]
 
 def train_dict(samples, dict_cap=112 * 1024):
@@ -77,7 +77,7 @@ def train_dict(samples, dict_cap=112 * 1024):
     blob = b"".join(samples)
     sizes = (ctypes.c_size_t * len(samples))(*[len(s) for s in samples])
     out = ctypes.create_string_buffer(dict_cap)
-    n = _check(_lib.czn_train_dict(blob, sizes, len(samples), out, dict_cap))
+    n = _check(_lib.kolmo_train_dict(blob, sizes, len(samples), out, dict_cap))
     return out.raw[:n]
 
 def compress(data, mode="fast", threads=0, block=0, transforms=True, level=0, dict=None):  # noqa: A002
@@ -88,13 +88,13 @@ def compress(data, mode="fast", threads=0, block=0, transforms=True, level=0, di
         raise ValueError("mode must be one of " + ", ".join(_MODES))
     data = bytes(data)
     p = _Params(_MODES[mode], level, threads, block, 2 if transforms == "quick" else 1 if transforms else 0)
-    cap = _lib.czn_bound(len(data), ctypes.byref(p))
+    cap = _lib.kolmo_bound(len(data), ctypes.byref(p))
     out = ctypes.create_string_buffer(cap)
     if dict:
         d = bytes(dict)
-        n = _check(_lib.czn_compress_dict(data, len(data), out, cap, ctypes.byref(p), d, len(d)))
+        n = _check(_lib.kolmo_compress_dict(data, len(data), out, cap, ctypes.byref(p), d, len(d)))
     else:
-        n = _check(_lib.czn_compress(data, len(data), out, cap, ctypes.byref(p)))
+        n = _check(_lib.kolmo_compress(data, len(data), out, cap, ctypes.byref(p)))
     return out.raw[:n]
 
 def decompress(blob, threads=0, dict=None):  # noqa: A002
@@ -104,7 +104,7 @@ def decompress(blob, threads=0, dict=None):  # noqa: A002
     out = ctypes.create_string_buffer(n if n else 1)
     if dict:
         d = bytes(dict)
-        got = _check(_lib.czn_decompress_dict(blob, len(blob), out, n, threads, d, len(d)))
+        got = _check(_lib.kolmo_decompress_dict(blob, len(blob), out, n, threads, d, len(d)))
     else:
-        got = _check(_lib.czn_decompress(blob, len(blob), out, n, threads))
+        got = _check(_lib.kolmo_decompress(blob, len(blob), out, n, threads))
     return out.raw[:got]

@@ -7,7 +7,7 @@
 # and compared byte-for-byte; speeds are best-of-repeated in-memory runs.
 #
 # Usage:
-#   make -j                      # build build/czbench (and the rest)
+#   make -j                      # build build/kolmobench (and the rest)
 #   benchmark/bench.sh FILE...   # benchmark each FILE; add -x for slower modes, -X for the archive tiers
 #
 # Suggested public corpora (download yourself; not bundled):
@@ -19,9 +19,9 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 flags=""
 case "${1:-}" in -x|-X) flags="$1"; shift;; esac
 [ "$#" -ge 1 ] || { echo "usage: benchmark/bench.sh [-x|-X] FILE..."; exit 2; }
-[ -x "$root/build/czbench" ] || make -C "$root" -j"$(nproc 2>/dev/null || echo 4)"
+[ -x "$root/build/kolmobench" ] || make -C "$root" -j"$(nproc 2>/dev/null || echo 4)"
 for f in "$@"; do
   echo "== $f ($(wc -c <"$f") bytes) =="
-  "$root/build/czbench" $flags "$f"
+  "$root/build/kolmobench" $flags "$f"
   echo
 done

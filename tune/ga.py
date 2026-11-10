@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Genetic search over cz build-time settings (thresholds, coder levels, context-mixing parameters).
+"""Genetic search over kolmo build-time settings (thresholds, coder levels, context-mixing parameters).
 
-Each genome is compiled into its own czn binary (src/cli.c + src/czn.c against the prebuilt vendor library), run on a
+Each genome is compiled into its own kolmo binary (src/cli.c + src/kolmo.c against the prebuilt vendor library), run on a
 corpus in the chosen modes, and scored by total compressed size relative to the defaults. Genomes that compress or
 decompress more than --slack slower than the defaults are penalised, so the search cannot buy ratio with speed.
 Every result is verified by a full round trip. Runs until --hours have passed, then writes tune/best.json and a log.
@@ -33,13 +33,13 @@ def flags():
 
 def build(genome, bindir):
     key = hashlib.sha1(json.dumps(genome, sort_keys=True).encode()).hexdigest()[:12]
-    exe = os.path.join(bindir, "czn_" + key)
+    exe = os.path.join(bindir, "kolmo_" + key)
     if os.path.exists(exe):
         return exe
     cf, lf = flags()
     defs = " ".join(f"-D{k}={v}" for k, v in sorted(genome.items()))
     sh(f"cc {cf} -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 {defs} "
-       f"-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include src/cli.c src/czn.c build/libvendor.a {lf} "
+       f"-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include src/cli.c src/kolmo.c build/libvendor.a {lf} "
        f"-llzma -lpthread -lm -o {exe}", cwd=ROOT)
     return exe
 
@@ -48,7 +48,7 @@ def run(exe, files, modes, tmp):
     size = ctime = dtime = 0.0
     for m in modes:
         for f in files:
-            c, d = os.path.join(tmp, "x.czn"), os.path.join(tmp, "x.out")
+            c, d = os.path.join(tmp, "x.kolmo"), os.path.join(tmp, "x.out")
             t0 = time.perf_counter(); sh(f'"{exe}" -m {m} "{f}" "{c}"'); t1 = time.perf_counter()
             sh(f'"{exe}" -d "{c}" "{d}"'); t2 = time.perf_counter()
             if not filecmp(f, d):
@@ -93,7 +93,7 @@ def main():
     random.seed(a.seed)
     corpus = os.path.join(ROOT, a.corpus) if not os.path.isabs(a.corpus) else a.corpus
     files = sorted(os.path.join(corpus, f) for f in os.listdir(corpus)
-                   if os.path.isfile(os.path.join(corpus, f)) and not f.endswith((".zip", ".xz", ".czn")))
+                   if os.path.isfile(os.path.join(corpus, f)) and not f.endswith((".zip", ".xz", ".kolmo")))
     modes = a.modes.split(",")
     bindir = os.path.join(ROOT, "tune", "bin"); os.makedirs(bindir, exist_ok=True)
     if not os.path.exists(os.path.join(ROOT, "build", "libvendor.a")):

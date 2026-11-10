@@ -6,7 +6,7 @@ it into ``libkolmo`` with the system C/C++ compiler — no ``make``, no system c
 (beyond optional liblzma) — so both the sdist and per-platform wheels build anywhere. The compiled
 library sits next to ``kolmo.py`` and is loaded by ctypes, so the installed package needs no
 toolchain at run time. Portable flags (no ``-march=native``) are used so a wheel built in CI runs
-on any CPU of that architecture; czn.c selects SIMD paths at compile time with scalar fallbacks.
+on any CPU of that architecture; kolmo.c selects SIMD paths at compile time with scalar fallbacks.
 
 Set ``KOLMO_NO_LZMA=1`` to build without liblzma (the max/ultra tiers then use the other coders).
 """
@@ -18,7 +18,7 @@ from setuptools.dist import Distribution
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 # Prefer the bundled copy (present in the sdist); fall back to the repo tree for in-repo builds.
-NATIVE = HERE if os.path.exists(os.path.join(HERE, "native", "src", "czn.c")) else ROOT
+NATIVE = HERE if os.path.exists(os.path.join(HERE, "native", "src", "kolmo.c")) else ROOT
 SRC = os.path.join(NATIVE, "native", "src") if NATIVE == HERE else os.path.join(ROOT, "src")
 VENDOR = os.path.join(NATIVE, "native", "vendor") if NATIVE == HERE else os.path.join(ROOT, "vendor")
 
@@ -30,13 +30,13 @@ NO_LZMA = os.environ.get("KOLMO_NO_LZMA") == "1"
 def _sources():
     z, b, l4 = (os.path.join(VENDOR, d) for d in ("zstd", "brotli", "lz4"))
     bsc = os.path.join(VENDOR, "libbsc")
-    c = [os.path.join(SRC, "czn.c")]
+    c = [os.path.join(SRC, "kolmo.c")]
     for sub in ("common", "compress", "decompress", "dictBuilder"):
         c += sorted(glob.glob(os.path.join(z, sub, "*.c")))
     for sub in ("common", "dec", "enc"):
         c += sorted(glob.glob(os.path.join(b, sub, "*.c")))
     c += [os.path.join(l4, "lz4.c"), os.path.join(l4, "lz4hc.c")]
-    c += [os.path.join(VENDOR, "xxhash", "czn_xxh3.c")]
+    c += [os.path.join(VENDOR, "xxhash", "kolmo_xxh3.c")]
     c += [os.path.join(bsc, "libbsc", "bwt", "libsais", "libsais.c")]
     cpp = sorted(glob.glob(os.path.join(bsc, "libbsc", "**", "*.cpp"), recursive=True))
     return c, cpp, z, b, l4, bsc
@@ -106,7 +106,7 @@ def build_library(dest_dir):
     use_lzma = found is not None
     lzma_inc, lzma_libdir = found if use_lzma else (None, None)
     if not use_lzma:
-        defs.append("-DCZN_NO_LZMA")
+        defs.append("-DKOLMO_NO_LZMA")
         if want_lzma:
             sys.stderr.write("kolmo: liblzma not found; building without it (max/ultra use BWT/CM). "
                              "Install xz (brew install xz / apt install liblzma-dev) for the LZMA path.\n")
@@ -121,7 +121,7 @@ def build_library(dest_dir):
         subprocess.check_call(cmd)
         objs.append(obj)
 
-    compile_one(cc, c_src[0], ["-ffp-contract=off"])  # czn.c: deterministic across compilers
+    compile_one(cc, c_src[0], ["-ffp-contract=off"])  # kolmo.c: deterministic across compilers
     for f in c_src[1:]:
         compile_one(cc, f, [])
     if is_x86_64 and os.path.exists(asm):

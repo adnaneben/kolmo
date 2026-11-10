@@ -1,5 +1,5 @@
 #!/bin/bash
-# Overnight genetic tuning on this Mac. Keeps the Mac awake, searches cz's settings on the benchmark corpus and writes
+# Overnight genetic tuning on this Mac. Keeps the Mac awake, searches kolmo's settings on the benchmark corpus and writes
 # the best settings to tune/best.json (progress in tune/log.tsv). Default: 8 hours on fast, hc and max.
 #   bash mac/tune.sh            # 8 hours
 #   bash mac/tune.sh 2 fast,hc  # 2 hours, chosen modes

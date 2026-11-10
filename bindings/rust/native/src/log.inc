@@ -224,7 +224,7 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
             if (i == len) break;
             keys[kp++] = ' '; i++;
         }
-        uint32_t klen = (uint32_t)(kp - k0); uint64_t h = czn_xxh3(keys + k0, klen, 0); size_t at = h & (tcap - 1);
+        uint32_t klen = (uint32_t)(kp - k0); uint64_t h = kolmo_xxh3(keys + k0, klen, 0); size_t at = h & (tcap - 1);
         for (;;) {
             tent_t *e = &tab[at];
             if (!e->cnt) {

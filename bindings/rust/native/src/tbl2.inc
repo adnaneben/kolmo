@@ -663,7 +663,7 @@ static double *col2_fvals(const Col2 *c, uint32_t nr) {
 }
 
 
-#ifdef CZN_PROF
+#ifdef KOLMO_PROF
 #include <x86intrin.h>
 static uint64_t sp_acc[8], sp_last;
 #define SP(i) do { uint64_t t_ = __rdtsc(); sp_acc[i] += t_ - sp_last; sp_last = t_; } while (0)
@@ -756,7 +756,7 @@ static int tbl2_stream(Col2 *C, int k, int64_t nr, const uint32_t *gid, const tf
     uint8_t *o = out, *oe = out + n;
     for (int64_t r0 = 0; r0 < nr; r0 += TR) {
         int R = (int)(nr - r0 < TR ? nr - r0 : TR);
-#ifdef CZN_PROF
+#ifdef KOLMO_PROF
         sp_last = __rdtsc();
 #endif
         /* values of plain numeric columns, then of formula targets */
@@ -911,7 +911,7 @@ done:
     return ret;
 }
 
-#ifdef CZN_PROF
+#ifdef KOLMO_PROF
 #include <x86intrin.h>
 static uint64_t prof_acc[8], prof_last, prof_mode[4], prof_cnt[4]; static int prof_ph;
 #define PROF_T(ph) do { uint64_t t_ = __rdtsc(); prof_acc[prof_ph] += t_ - prof_last; prof_last = t_; prof_ph = (ph); } while (0)
@@ -922,7 +922,7 @@ __attribute__((destructor)) static void prof_dump(void) { const char *nm[8] = {"
 #define PROF_T(ph) ((void)0)
 #endif
 static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n) {
-#ifdef CZN_PROF
+#ifdef KOLMO_PROF
     prof_last = __rdtsc(); prof_ph = 0;
 #endif
     if (tn < 24) return -1;
@@ -1011,7 +1011,7 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
         }
     } else for (int64_t r = 0; r < nr; r++) gid[r] = 0;
     PROF_T(2);
-    if (aligned && nr > 0 && !getenv("CZN_OLDTBL")) { ret = tbl2_stream(C, k, nr, gid, FB, nform, delim, (int)noNL, out, n); goto out; }
+    if (aligned && nr > 0 && !getenv("KOLMO_OLDTBL")) { ret = tbl2_stream(C, k, nr, gid, FB, nform, delim, (int)noNL, out, n); goto out; }
     /* numeric columns: non-formula first, then formula targets (sources are never targets) */
     size_t totnum = 0; for (int j = 0; j < k; j++) if (C[j].type == 2) totnum += C[j].nnum;
     vals = malloc(8 * (totnum + 1)); fv = calloc(k, sizeof(double *)); la = malloc(sizeof(double) * ((size_t)nr + 1));
@@ -1024,11 +1024,11 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
         for (int j = 0; j < k; j++) {
             Col2 *c = &C[j]; if (c->type != 2 || (c->mode == 3) != pass) continue;
             if ((c->mode == 2 || c->mode == 3 || c->mode == 4 || c->mode == 5) && !aligned) goto out;
-#ifdef CZN_PROF
+#ifdef KOLMO_PROF
             uint64_t tq0 = __rdtsc();
 #endif
             if (c->mode != 3) { if (num_decode(c, gid, NULL, NULL, NULL, NULL, c->vals)) goto out;
-#ifdef CZN_PROF
+#ifdef KOLMO_PROF
                 prof_mode[c->mode] += __rdtsc() - tq0; prof_cnt[c->mode] += c->nnum;
 #endif
                 continue; }
@@ -1042,7 +1042,7 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
             const double *fa = fv[F->a];
             if (F->form != FM_RATIO) { la[0] = NAN; for (int64_t r = 1; r < nr; r++) la[r] = gid[r] == gid[r - 1] ? fa[r - 1] : NAN; }
             if (num_decode(c, gid, F, fa, B ? fv[F->b] : NULL, F->form != FM_RATIO ? la : NULL, c->vals)) goto out;
-#ifdef CZN_PROF
+#ifdef KOLMO_PROF
             prof_mode[3] += __rdtsc() - tq0; prof_cnt[3] += c->nnum;
 #endif
         }
@@ -1067,7 +1067,7 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
             for (int j = 0; j < k; j++) if (C[j].type == 2) xbytes += (size_t)(C[j].dend - C[j].edata);
             size_t acap = (size_t)RC * 24 * k + xbytes + 64;
             bm = malloc(8 * (size_t)RC * W); RL = malloc(2 * (size_t)RC * k); arena = malloc(acap); lv = malloc(RC);
-            uint32_t rowtot[RC]; int dense_rows = getenv("CZN_DENSE") ? atoi(getenv("CZN_DENSE")) : 1;
+            uint32_t rowtot[RC]; int dense_rows = getenv("KOLMO_DENSE") ? atoi(getenv("KOLMO_DENSE")) : 1;
             const uint8_t *src[256], *se[256];
             uint8_t dl[32]; memset(dl, delim, 32);
             int okp = bm && RL && arena && lv;
@@ -1159,7 +1159,7 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
                 r = r1;
             }
             free(bm); free(RL); free(arena); free(lv); bm = NULL; RL = NULL; arena = NULL; lv = NULL;
-#ifdef CZN_TRACE
+#ifdef KOLMO_TRACE
             fprintf(stderr, "tbl2 aligned path: r %lld of %lld okp %d\n", (long long)r, (long long)nr, okp);
 #endif
             if (r < nr) {                       /* rare fallback (very long values): restart the block on the generic path */
@@ -1337,4 +1337,4 @@ int64_t tbl2_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int 
 int tbl2_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n) { return tbl2_decode(in, tn, delim, out, n); }
 void fset_discover_pub(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs) { fset_discover(s, n, delim, k, quotes, effort, fs, 1); }
 int parse_dec_pub(const uint8_t *p, uint32_t len, int64_t *m, int *sc) { return parse_dec(p, len, m, sc); }
-const int64_t *czn_p10_pub(void) { return P10; }
+const int64_t *kolmo_p10_pub(void) { return P10; }

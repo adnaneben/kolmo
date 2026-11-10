@@ -23,7 +23,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
 | 4 | 1 | version | 1 to 7 (4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 8) |
-| 5 | 1 | mode | the `czn_mode` used (rt=0 … ultra=5); informational |
+| 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
 | 8 | 1 | b | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -37,7 +37,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 
 A reader rejects the file if the magic is wrong, the version is not 1–7, the index does not fit in the file, or the
 header+index CRC does not match. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
-of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `CZN_ERR_DICT`; an older
+of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `KOLMO_ERR_DICT`; an older
 reader that predates the flag refuses the newer version rather than returning wrong data.
 
 ## Block index — one 16-byte entry per block
@@ -95,7 +95,7 @@ Encoders write model 2; decoders accept both, so files written with model 1 stil
 ## Guarantees
 
 - **Seekable.** Any byte range decodes by reading the header and index and decoding only the blocks it overlaps
-  (`czn_read_range`).
+  (`kolmo_read_range`).
 - **Parallel.** Blocks are independent in both directions.
 - **Integrity.** The header+index CRC and per-block checksums are verified; corrupt input is reported as an error,
   never returned as data.
@@ -115,7 +115,7 @@ Each frame is a normal container (above) for one segment of the input (default 6
 decode hold at most one segment plus its frame in memory. Segments are independent — compressed and
 decoded across cores like blocks — so very small segments cost a little ratio at their boundaries. A
 decoder distinguishes the two formats by the first four bytes (`CZN1` one-shot vs `CZNS` stream).
-Produced and consumed by `czn_stream_compress` / `czn_stream_decompress`.
+Produced and consumed by `kolmo_stream_compress` / `kolmo_stream_decompress`.
 
 ## Transform sub-formats
 
@@ -127,7 +127,7 @@ src/tbl2.inc   table v2: typed columns, predictors, formula discovery
 src/log.inc    log templates and skeleton columns
 src/sci.inc    fixed records and 16-bit images
 src/word.inc   word dictionary
-src/czn.c      container, typed transpose, byte-plane shuffle, x86 filter, coders
+src/kolmo.c      container, typed transpose, byte-plane shuffle, x86 filter, coders
 ```
 
 ## Kolmo graph blocks (version 7)

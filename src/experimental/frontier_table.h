@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 /* Literal rectangular rows, split on published separator bytes. A row that
- * does not fit can always use an existing CZN block recipe. */
+ * does not fit can always use an existing kolmo block recipe. */
 size_t frontier_table_encode(const uint8_t *, size_t, uint8_t, uint8_t *, size_t);
 int frontier_table_decode(const uint8_t *, size_t, uint8_t, uint8_t *, size_t);
 int frontier_table_probe(const uint8_t *, size_t, uint8_t *);

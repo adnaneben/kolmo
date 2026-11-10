@@ -1,7 +1,7 @@
-/* czn — native core of the cz compressor. See czn.h. */
+/* kolmo — native core of the kolmo compressor. See kolmo.h. */
 #define _GNU_SOURCE
-#include "czn.h"
-#ifdef CZN_FRONTIER
+#include "kolmo.h"
+#ifdef KOLMO_FRONTIER
 #include "experimental/frontier_dna.h"
 #include "experimental/frontier_table.h"
 #include "experimental/frontier_prefix.h"
@@ -9,9 +9,9 @@
 #include "experimental/frontier_pcm.h"
 #include "experimental/frontier_lag.h"
 #include "experimental/frontier_shuffle.h"
-#define CZN_MAX_VERSION 7
+#define KOLMO_MAX_VERSION 7
 #else
-#define CZN_MAX_VERSION 7   /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks */
+#define KOLMO_MAX_VERSION 7   /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks */
 #endif
 #include <pthread.h>
 #include <stdatomic.h>
@@ -22,21 +22,21 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <limits.h>
-#if defined(CZN_TRACE) || defined(CZN_PROF) || defined(CZN_TIMING)
+#if defined(KOLMO_TRACE) || defined(KOLMO_PROF) || defined(KOLMO_TIMING)
 #include <stdio.h>
 #endif
-#if defined(CZN_PROF) || defined(CZN_TIMING)
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
 #include <time.h>
 static double prof_now(void) {
     struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t);
     return t.tv_sec + t.tv_nsec * 1e-9;
 }
 #endif
-#ifdef CZN_PROF
+#ifdef KOLMO_PROF
 #include <x86intrin.h>
 #endif
 #include <stdint.h>
-unsigned long long czn_xxh3(const void *p, size_t n, unsigned long long seed);   /* vendor/xxhash/czn_xxh3.c */
+unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);   /* vendor/xxhash/kolmo_xxh3.c */
 #include "zstd.h"
 #include "zdict.h"
 #include "lz4.h"
@@ -44,7 +44,7 @@ unsigned long long czn_xxh3(const void *p, size_t n, unsigned long long seed);  
 #include "common/xxhash.h"
 #include <brotli/encode.h>
 #include <brotli/decode.h>
-#ifndef CZN_NO_LZMA
+#ifndef KOLMO_NO_LZMA
 #include <lzma.h>
 #endif
 #include "libbsc/libbsc.h"
@@ -52,7 +52,7 @@ unsigned long long czn_xxh3(const void *p, size_t n, unsigned long long seed);  
 /* ------------------------------------------------------------------ CRC32C (hardware where available) */
 #if defined(__SSE4_2__)
 #include <nmmintrin.h>
-uint32_t czn_crc32c(uint32_t crc, const void *buf, size_t len) {
+uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len) {
     const uint8_t *p = buf; uint64_t c = ~crc;
     while (len >= 8) { uint64_t v; memcpy(&v, p, 8); c = _mm_crc32_u64(c, v); p += 8; len -= 8; }
     while (len--) c = _mm_crc32_u8((uint32_t)c, *p++);
@@ -60,7 +60,7 @@ uint32_t czn_crc32c(uint32_t crc, const void *buf, size_t len) {
 }
 #elif defined(__ARM_FEATURE_CRC32)
 #include <arm_acle.h>
-uint32_t czn_crc32c(uint32_t crc, const void *buf, size_t len) {
+uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len) {
     const uint8_t *p = buf; uint32_t c = ~crc;
     while (len >= 8) { uint64_t v; memcpy(&v, p, 8); c = __crc32cd(c, v); p += 8; len -= 8; }
     while (len--) c = __crc32cb(c, *p++);
@@ -78,7 +78,7 @@ static void crc_init(void) {
     for (int t = 1; t < 8; t++)
         for (int i = 0; i < 256; i++) crc_tab[t][i] = (crc_tab[t - 1][i] >> 8) ^ crc_tab[0][crc_tab[t - 1][i] & 0xFF];
 }
-uint32_t czn_crc32c(uint32_t crc, const void *buf, size_t len) {
+uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len) {
     pthread_once(&crc_once, crc_init);
     const uint8_t *p = buf; uint32_t c = ~crc;
     while (len >= 8) {
@@ -92,7 +92,7 @@ uint32_t czn_crc32c(uint32_t crc, const void *buf, size_t len) {
 }
 #endif
 
-/* ------------------------------------------------------------------ transforms (shared with cz's czfast.c) */
+/* ------------------------------------------------------------------ transforms (shared with the first kolmo prototype) */
 #define TP_STEP(c) do { \
     if (quotes) { if (c == '"' && !inbr) inq ^= 1; else if (c == '[' && !inq) inbr = 1; else if (c == ']' && !inq) inbr = 0; } \
     if (c == '\n') { j = 0; inq = inbr = 0; } \
@@ -154,10 +154,10 @@ static inline void term_masks64(const uint8_t *p, uint8_t a, uint64_t *t, uint64
     uint8x16_t n0 = vceqq_u8(vld1q_u8(p), vn), n1 = vceqq_u8(vld1q_u8(p + 16), vn), n2 = vceqq_u8(vld1q_u8(p + 32), vn), n3 = vceqq_u8(vld1q_u8(p + 48), vn);
     uint8x16_t t0 = vorrq_u8(n0, vceqq_u8(vld1q_u8(p), va)), t1 = vorrq_u8(n1, vceqq_u8(vld1q_u8(p + 16), va));
     uint8x16_t t2 = vorrq_u8(n2, vceqq_u8(vld1q_u8(p + 32), va)), t3 = vorrq_u8(n3, vceqq_u8(vld1q_u8(p + 48), va));
-#define CZN_MM64(r0, r1, r2, r3) ({ uint8x16_t s0 = vpaddq_u8(vandq_u8(r0, w), vandq_u8(r1, w)), s1 = vpaddq_u8(vandq_u8(r2, w), vandq_u8(r3, w)); \
+#define KOLMO_MM64(r0, r1, r2, r3) ({ uint8x16_t s0 = vpaddq_u8(vandq_u8(r0, w), vandq_u8(r1, w)), s1 = vpaddq_u8(vandq_u8(r2, w), vandq_u8(r3, w)); \
         s0 = vpaddq_u8(s0, s1); s0 = vpaddq_u8(s0, s0); vgetq_lane_u64(vreinterpretq_u64_u8(s0), 0); })
-    *t = CZN_MM64(t0, t1, t2, t3); *nl = CZN_MM64(n0, n1, n2, n3);
-#undef CZN_MM64
+    *t = KOLMO_MM64(t0, t1, t2, t3); *nl = KOLMO_MM64(n0, n1, n2, n3);
+#undef KOLMO_MM64
 #else
     uint64_t mt = 0, mn = 0;
     for (int q = 0; q < 64; q++) { mt |= (uint64_t)(p[q] == a || p[q] == '\n') << q; mn |= (uint64_t)(p[q] == '\n') << q; }
@@ -384,7 +384,7 @@ static int has_quotes(const uint8_t *p, size_t n) { return memchr(p, '"', n) || 
 
 
 /* ---------------------------------------------------------------- table transform (v0.3)
- * Rows are split into fields (quote-aware, same rules as cz). Each column becomes one section:
+ * Rows are split into fields (quote-aware, same rules as kolmo). Each column becomes one section:
  *   text    : field lengths (u8, 255 = long, then u32) + the bytes, no delimiters
  *   numeric : canonical decimals (-?(0|[1-9]d*)(.d+)?, <= 18 digits) as int64 at the column's largest scale,
  *             delta-coded down the column, zigzag, byte planes; per value a kind (0 empty, 1 number, 2 other text)
@@ -1056,7 +1056,7 @@ static inline void stw(uint8_t *p, uint64_t v, int w) {
 }
 #define SB 4096
 static void shuffle_fwd(const uint8_t *in, int64_t rows, int w, int c, int delta, uint8_t *out) {
-#ifdef CZN_FRONTIER
+#ifdef KOLMO_FRONTIER
     if (w == 2 && frontier_shuffle16(in, (size_t)rows, (unsigned)c, delta, out, 0)) return;
 #endif
     uint64_t prev[64] = {0}, tmp[SB]; uint64_t mask = w == 8 ? ~0ull : ((1ull << (8 * w)) - 1);
@@ -1071,7 +1071,7 @@ static void shuffle_fwd(const uint8_t *in, int64_t rows, int w, int c, int delta
     }
 }
 static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta, uint8_t *out) {
-#ifdef CZN_FRONTIER
+#ifdef KOLMO_FRONTIER
     if (w == 2 && frontier_shuffle16(in, (size_t)rows, (unsigned)c, delta, out, 1)) return;
 #endif
     uint64_t prev[64] = {0}, tmp[SB]; uint64_t mask = w == 8 ? ~0ull : ((1ull << (8 * w)) - 1);
@@ -1166,7 +1166,7 @@ static size_t codec_bound(int codec, size_t n) {
         case C_ZSTD: return ZSTD_compressBound(n);
         case C_BROTLI: return BrotliEncoderMaxCompressedSize(n) ? BrotliEncoderMaxCompressedSize(n) : n + 1024;
         case C_BSC: return n + LIBBSC_HEADER_SIZE + 64;
-#ifndef CZN_NO_LZMA
+#ifndef KOLMO_NO_LZMA
         case C_LZMA: return lzma_stream_buffer_bound(n) + 64;
 #else
         case C_LZMA: return n + n / 8 + 64;
@@ -1357,7 +1357,7 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
             if (r <= 0) return 0;
             uint32_t h = (uint32_t)XXH64(out + 4, (size_t)r, 0x62736331); memcpy(out, &h, 4);
             return (size_t)r + 4; }
-#ifdef CZN_NO_LZMA
+#ifdef KOLMO_NO_LZMA
         case C_LZMA: return 0;                /* built without liblzma: block stored or another codec used */
 #else
         case C_LZMA: {                      /* payload: dict u32 | lc lp pb | raw LZMA2 */
@@ -1393,7 +1393,7 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
             int bs, ds; if (bsc_block_info(in + 4, LIBBSC_HEADER_SIZE, &bs, &ds, LIBBSC_FEATURE_FASTMODE) != LIBBSC_NO_ERROR) return -1;
             if ((size_t)bs != cn - 4 || (size_t)ds != n) return -1;
             return bsc_decompress(in + 4, (int)(cn - 4), out, (int)n, LIBBSC_FEATURE_FASTMODE) == LIBBSC_NO_ERROR ? 0 : -1; }
-#ifdef CZN_NO_LZMA
+#ifdef KOLMO_NO_LZMA
         case C_LZMA: return -1;
 #else
         case C_LZMA: {
@@ -1459,7 +1459,7 @@ static void *grow(void *p, size_t *cap, size_t need) {
 #define HDR 32
 #define IDX 16
 static inline uint32_t blk_sum(int ver, const uint8_t *p, size_t n) {
-    return ver >= 3 ? (uint32_t)czn_xxh3(p, n, 0x637a6e31) : (uint32_t)XXH64(p, n, 0x637a6e31);
+    return ver >= 3 ? (uint32_t)kolmo_xxh3(p, n, 0x637a6e31) : (uint32_t)XXH64(p, n, 0x637a6e31);
 }
 
 static inline void put32(uint8_t *p, uint32_t v) { memcpy(p, &v, 4); }
@@ -1468,7 +1468,7 @@ static inline uint32_t get32(const uint8_t *p) { uint32_t v; memcpy(&v, p, 4); r
 static inline uint64_t get64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }
 
 typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw;   /* kgw: IMG8 row bytes */
-#ifdef CZN_FRONTIER
+#ifdef KOLMO_FRONTIER
     frontier_lags lags;
 #endif
 } plan_t;   /* tp/tbl: a=delim b=quotes c=k-1 | shuf: a=w b=ch c=delta; fs: formulas (encoder) */
@@ -1477,32 +1477,32 @@ static int default_threads(void) { long n = sysconf(_SC_NPROCESSORS_ONLN); retur
 
 /* Container allocations use checked element counts and retain the old pointer
  * on growth failure. The test-only counter exercises each cleanup path. */
-#ifdef CZN_TESTING
-static _Thread_local long czn_alloc_fail_after = -1;
-static int czn_alloc_fail(void) {
-    if (czn_alloc_fail_after < 0) return 0;
-    if (!czn_alloc_fail_after) return 1;
-    czn_alloc_fail_after--; return 0;
+#ifdef KOLMO_TESTING
+static _Thread_local long kolmo_alloc_fail_after = -1;
+static int kolmo_alloc_fail(void) {
+    if (kolmo_alloc_fail_after < 0) return 0;
+    if (!kolmo_alloc_fail_after) return 1;
+    kolmo_alloc_fail_after--; return 0;
 }
 #else
-#define czn_alloc_fail() 0
+#define kolmo_alloc_fail() 0
 #endif
 static void *array_alloc(size_t count, size_t width, int zero) {
-    if (!width || count > SIZE_MAX / width || czn_alloc_fail()) return NULL;
+    if (!width || count > SIZE_MAX / width || kolmo_alloc_fail()) return NULL;
     return zero ? calloc(count ? count : 1, width) : malloc((count ? count : 1) * width);
 }
 static void *array_resize(void *old, size_t count, size_t width) {
-    if (!width || count > SIZE_MAX / width || czn_alloc_fail()) return NULL;
+    if (!width || count > SIZE_MAX / width || kolmo_alloc_fail()) return NULL;
     return realloc(old, (count ? count : 1) * width);
 }
 
-static void mode_codec(const czn_params *p, int *codec, int *level) {
+static void mode_codec(const kolmo_params *p, int *codec, int *level) {
     switch (p->mode) {
-        case CZN_RT:  *codec = C_LZ4;    *level = p->level ? p->level : 1; break;
-        case CZN_FAST:*codec = C_ZSTD;   *level = p->level ? p->level : CZ_FAST_LEVEL; break;
-        case CZN_ECO: *codec = C_BROTLI; *level = p->level ? p->level : CZ_ECO_LEVEL; break;
-        case CZN_HC:  *codec = C_ZSTD;   *level = p->level ? p->level : 19; break;
-        case CZN_MAX: *codec = C_LZMA;   *level = p->level ? p->level : 9; break;     /* max: BWT for text, the better of BWT and LZMA2 for binary (level 1: BWT only) */
+        case KOLMO_RT:  *codec = C_LZ4;    *level = p->level ? p->level : 1; break;
+        case KOLMO_FAST:*codec = C_ZSTD;   *level = p->level ? p->level : CZ_FAST_LEVEL; break;
+        case KOLMO_ECO: *codec = C_BROTLI; *level = p->level ? p->level : CZ_ECO_LEVEL; break;
+        case KOLMO_HC:  *codec = C_ZSTD;   *level = p->level ? p->level : 19; break;
+        case KOLMO_MAX: *codec = C_LZMA;   *level = p->level ? p->level : 9; break;     /* max: BWT for text, the better of BWT and LZMA2 for binary (level 1: BWT only) */
         default:      *codec = C_CM;     *level = p->level == 1 ? 1 : 0; break;        /* ultra: context mixing (level 1: model 1, CM only) */
     }
 }
@@ -1897,14 +1897,14 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (c < best) { best = c; chosen = 1; }
         }
         img_plan_t im;
-#if defined(CZN_PROF) || defined(CZN_TIMING)
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
         double image_start = prof_now();
 #endif
         if (img16_detect(s, n, &im)) {
             int64_t e = img16_encode(s + st, L, st, &im, buf);
             if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / L; if (c < best) { best = c; keep = pl; keep.t = T_IMG; keep.img = im; chosen = 2; } }
         }
-#if defined(CZN_PROF) || defined(CZN_TIMING)
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
         double image_ms = (prof_now() - image_start) * 1000;
         double record_start = prof_now();
 #endif
@@ -1918,7 +1918,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             }
         }
         free(R);
-#if defined(CZN_PROF) || defined(CZN_TIMING)
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
         fprintf(stderr, "structure bytes=%zu image_ms=%.3f record_ms=%.3f\n", n, image_ms, (prof_now() - record_start) * 1000);
 #endif
         {   /* executables: x86 call/jump transform */
@@ -1973,7 +1973,7 @@ static int read_block(int fd, uint8_t *p, size_t n, off_t off) {
     while (n) {
         ssize_t count = pread(fd, p, n > SSIZE_MAX ? SSIZE_MAX : n, off);
         if (count < 0 && errno == EINTR) continue;
-        if (count <= 0) return CZN_ERR_IO;
+        if (count <= 0) return KOLMO_ERR_IO;
         p += count; n -= count; off += count;
     }
     return 0;
@@ -1983,7 +1983,7 @@ static int write_block(int fd, const uint8_t *p, size_t n, off_t off) {
     while (n) {
         ssize_t count = pwrite(fd, p, n > SSIZE_MAX ? SSIZE_MAX : n, off);
         if (count < 0 && errno == EINTR) continue;
-        if (count <= 0) return CZN_ERR_IO;
+        if (count <= 0) return KOLMO_ERR_IO;
         p += count; n -= count; off += count;
     }
     return 0;
@@ -2016,7 +2016,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
                 while (e > lo) {
                     size_t count = e - lo < sizeof(tail) ? e - lo : sizeof(tail);
                     if (read_block(fd, tail, count, offset + e - count)) {
-                        free(st); *error = CZN_ERR_IO; return 0;
+                        free(st); *error = KOLMO_ERR_IO; return 0;
                     }
                     size_t at = count;
                     while (at && tail[at - 1] != '\n') at--;
@@ -2046,15 +2046,15 @@ static size_t slot_size(uint32_t B, int codec) { size_t a = codec_bound(codec, (
    compress parallelise across cores, with a 1 MiB floor (below it ratio drops faster
    than speed rises) and the 4 MiB ceiling (so large inputs are unchanged). A pure
    function of n, so output stays byte-identical across machines regardless of cores. */
-static uint32_t czn_fast_block(size_t n) {
+static uint32_t kolmo_fast_block(size_t n) {
     uint64_t b = (uint64_t)n / 8;
     if (b < (1u << 20)) b = 1u << 20;
     if (b > (4u << 20)) b = 4u << 20;
     return (uint32_t)b;
 }
 /* worst case: every block stored raw (+ index entry); blocks are >= B/2 except the last */
-size_t czn_bound(size_t n, const czn_params *p) {
-    uint32_t B = p && p->block ? p->block : (p && p->mode >= CZN_MAX ? (128u << 20) : p && p->mode >= CZN_ECO ? (16u << 20) : czn_fast_block(n));
+size_t kolmo_bound(size_t n, const kolmo_params *p) {
+    uint32_t B = p && p->block ? p->block : (p && p->mode >= KOLMO_MAX ? (128u << 20) : p && p->mode >= KOLMO_ECO ? (16u << 20) : kolmo_fast_block(n));
     size_t nb = n / (B / 2 > 0 ? B / 2 : 1) + 2 + 2 * (n >> 20);     /* + archive segments (>= 1 MiB each) */
     return HDR + nb * (IDX + 4) + n + 64 + 2 * IDX;
 }
@@ -2074,7 +2074,7 @@ typedef struct {
 } job_t;
 static void append_bytes(job_t *j, const uint8_t *bytes, size_t size) {
     if (j->werr) return;
-    if (size > j->cap - j->wpos) { j->werr = CZN_ERR_DSTSIZE; return; }
+    if (size > j->cap - j->wpos) { j->werr = KOLMO_ERR_DSTSIZE; return; }
     if (j->output_fd >= 0) j->werr = write_block(j->output_fd, bytes, size, j->wpos);
     else memcpy(j->dst + j->wpos, bytes, size);
     j->wpos += size;
@@ -2101,7 +2101,7 @@ static void emit_block(job_t *j, uint32_t i, const uint8_t *header, const uint8_
     }
     pthread_mutex_unlock(&j->wmu);
     uint8_t *saved = malloc(size);
-    if (!saved) { atomic_store(&j->err, CZN_ERR_ALLOC); return; }
+    if (!saved) { atomic_store(&j->err, KOLMO_ERR_ALLOC); return; }
     if (!header) memcpy(saved, body, size);
     else { memcpy(saved, header, 4); memcpy(saved + 4, body, size - 4); }
     pthread_mutex_lock(&j->wmu);
@@ -2112,26 +2112,26 @@ static void emit_block(job_t *j, uint32_t i, const uint8_t *header, const uint8_
 
 static void *compress_worker(void *arg) {
     job_t *J = arg; tls_t *S = tls_begin();
-    if (!S) { atomic_store(&J->err, CZN_ERR_ALLOC); return NULL; }
+    if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TSLACK + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
-    if (!tbuf || !slot || (J->input_fd >= 0 && !input)) { free(input); atomic_store(&J->err, CZN_ERR_ALLOC); tls_end(S); return NULL; }
+    if (!tbuf || !slot || (J->input_fd >= 0 && !input)) { free(input); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
     for (;;) {
         uint32_t i = atomic_fetch_add(&J->next, 1); if (i >= J->nb) break;
         const plan_t pl = J->plans[J->bplan[i]]; const uint64_t rs = J->rstart[i];
         size_t len = J->starts[i + 1] - J->starts[i];
         const uint8_t *raw;
         if (input) {
-            if (read_block(J->input_fd, input, len, J->starts[i])) { atomic_store(&J->err, CZN_ERR_IO); break; }
+            if (read_block(J->input_fd, input, len, J->starts[i])) { atomic_store(&J->err, KOLMO_ERR_IO); break; }
             raw = input;
         } else raw = J->src + J->starts[i];
         const uint8_t *in = raw; size_t meta = 0; int tflag = 0; unsigned modes = 0;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
-#ifdef CZN_FRONTIER
+#ifdef KOLMO_FRONTIER
         size_t trial_len = 0;
         if (!J->dict && J->default_level) {
             if (pl.experimental_table)
@@ -2153,7 +2153,7 @@ static void *compress_worker(void *arg) {
             else if (pl.wide) { tpq_wide_fwd(raw, len, (uint8_t)pl.a, tbuf, colsz); tflag = 2; }
             else {
                 uint32_t *pos = S->pos = grow(S->pos, &S->pcap, (J->B + 1) * sizeof(uint32_t));
-                if (!pos) { atomic_store(&J->err, CZN_ERR_ALLOC); break; }
+                if (!pos) { atomic_store(&J->err, KOLMO_ERR_ALLOC); break; }
                 tpq_fwd(raw, len, (uint8_t)pl.a, k, tbuf, colsz, pos); tflag = 2;
             }
             for (int j = 0; j < k; j++) put32(sl + 4 * j, (uint32_t)colsz[j]);
@@ -2203,8 +2203,8 @@ static void *compress_worker(void *arg) {
         if (codec == C_LZMA && level == 1) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
         else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         if (codec == C_ZSTD && level == 19 && tflag == 9) level = CZ_HC_TEXT_LEVEL;                                  /* hc text: ultra level */
-#ifdef CZN_FRONTIER
-#ifdef CZN_FRONTIER_PATCHED_PCM
+#ifdef KOLMO_FRONTIER
+#ifdef KOLMO_FRONTIER_PATCHED_PCM
         if (pl.experimental_pcm && !J->dict && J->default_level) {
             cl = frontier_pcm_encode(raw, len, pl.experimental_pcm, sl, J->slot);
             if (cl) {
@@ -2227,7 +2227,7 @@ static void *compress_worker(void *arg) {
             }
         }
 #endif
-#ifdef CZN_FRONTIER_FAST_PCM
+#ifdef KOLMO_FRONTIER_FAST_PCM
         if (pl.experimental_pcm && !J->dict && J->default_level && codec == C_ZSTD) level = 1;
 #endif
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
@@ -2250,7 +2250,7 @@ static void *compress_worker(void *arg) {
                         if (!cs || (double)cs / sn > 0.97 * (double)cl / inlen) continue;   /* not within reach of CM */
                     }
                     size_t c2 = codec_compress(xp, alts[k], 9, in, inlen, alt, J->slot - meta);
-#if defined(CZN_TRACE) || defined(CZN_PROF)
+#if defined(KOLMO_TRACE) || defined(KOLMO_PROF)
                     fprintf(stderr, "len %zu t%d text %d cm %zu alt%d %zu\n", (size_t)inlen, tflag, looks_text(in, inlen), cl, alts[k], c2);
 #endif
                     if (c2 && (!cl || c2 < cl)) { memcpy(sl + meta, alt, c2); cl = c2; codec = alts[k]; }
@@ -2269,8 +2269,8 @@ coded:;
             atomic_fetch_or_explicit(&J->newmodes, modes, memory_order_relaxed);
         }
         put32(e, (uint32_t)len); put32(e + 4, (uint32_t)tot);
-        if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)czn_xxh3(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)
-                                                   : (uint32_t)czn_xxh3(slot + 4, tot - 4, 0x637a6e31u ^ get32(slot)));
+        if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)kolmo_xxh3(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)
+                                                   : (uint32_t)kolmo_xxh3(slot + 4, tot - 4, 0x637a6e31u ^ get32(slot)));
         else put32(e + 8, blk_sum(3, raw, len));
         e[12] = (uint8_t)codec; e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
     }
@@ -2374,7 +2374,7 @@ static uint32_t segments(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se,
     return k;
 }
 
-#ifdef CZN_FRONTIER
+#ifdef KOLMO_FRONTIER
 /* Select the wider layout against the incumbent bytes on the same complete
  * records. All buffers are bounded by the sample size, independent of input. */
 static int prefer_frontier_table(const uint8_t *src, size_t n, const plan_t *pl, uint8_t delim) {
@@ -2414,31 +2414,31 @@ done:
 
 typedef struct {
     const uint8_t *src; const uint64_t *starts, *ends;
-    plan_t *plans; const czn_params *params;
+    plan_t *plans; const kolmo_params *params;
     uint32_t count; int threads_per_plan, allow_frontier; atomic_uint next;
 } plan_job;
 static void *plan_worker(void *arg) {
-    plan_job *j = arg; const czn_params *p = j->params;
+    plan_job *j = arg; const kolmo_params *p = j->params;
     for (;;) {
         uint32_t g = atomic_fetch_add(&j->next, 1); if (g >= j->count) break;
         const uint8_t *src = j->src + j->starts[g]; size_t len = j->ends[g] - j->starts[g];
-#ifdef CZN_FRONTIER
+#ifdef KOLMO_FRONTIER
         if (j->allow_frontier && frontier_dna_probe(src, len)) {
             j->plans[g] = (plan_t){.experimental_dna = 1};
             continue;
         }
 #endif
-        plan_t pl = p->transforms ? make_plan(src, len, p->mode >= CZN_ECO,
-            p->mode != CZN_RT, p->mode != CZN_RT, j->threads_per_plan, p->mode >= CZN_MAX, p->transforms == 2) : (plan_t){0};
-#ifdef CZN_FRONTIER
+        plan_t pl = p->transforms ? make_plan(src, len, p->mode >= KOLMO_ECO,
+            p->mode != KOLMO_RT, p->mode != KOLMO_RT, j->threads_per_plan, p->mode >= KOLMO_MAX, p->transforms == 2) : (plan_t){0};
+#ifdef KOLMO_FRONTIER
         uint8_t delim = 0;
         if (j->allow_frontier && frontier_table_probe(src, len, &delim) && prefer_frontier_table(src, len, &pl, delim))
             pl.experimental_table = delim;
-#if defined(CZN_FRONTIER_PATCHED_PCM) || defined(CZN_FRONTIER_FAST_PCM)
+#if defined(KOLMO_FRONTIER_PATCHED_PCM) || defined(KOLMO_FRONTIER_FAST_PCM)
         else if (j->allow_frontier && pl.t == T_SHUF && pl.a == 2)
             pl.experimental_pcm = frontier_pcm_probe(src, len);
 #endif
-#ifdef CZN_FRONTIER_LAG
+#ifdef KOLMO_FRONTIER_LAG
         else if (j->allow_frontier &&
                  (pl.t == T_IMG || pl.t == T_REC || pl.t == T_NONE) && !looks_text(src,len)) {
             frontier_lags trial = {0};
@@ -2446,8 +2446,8 @@ static void *plan_worker(void *arg) {
         }
 #endif
 #endif
-        if (p->mode == CZN_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;
-        if (p->mode == CZN_ULTRA && !ultra_keep_transform(src, len, &pl)) {
+        if (p->mode == KOLMO_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;
+        if (p->mode == KOLMO_ULTRA && !ultra_keep_transform(src, len, &pl)) {
             free(pl.fs); pl.fs = NULL; pl.t = T_NONE;
         }
         j->plans[g] = pl;
@@ -2456,17 +2456,17 @@ static void *plan_worker(void *arg) {
     return NULL;
 }
 
-static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const czn_params *p,
+static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen, uint32_t dictid) {
-    czn_params d = {CZN_FAST, 0, 0, 0, 1}; if (!p) p = &d;
-    if (cap < HDR + IDX) return CZN_ERR_DSTSIZE;
-    if (n > INT64_MAX) return CZN_ERR_CORRUPT;
+    kolmo_params d = {KOLMO_FAST, 0, 0, 0, 1}; if (!p) p = &d;
+    if (cap < HDR + IDX) return KOLMO_ERR_DSTSIZE;
+    if (n > INT64_MAX) return KOLMO_ERR_CORRUPT;
     int threads = p->threads > 0 ? p->threads : default_threads();
-    uint32_t B = p->block ? p->block : (p->mode >= CZN_MAX ? (128u << 20) : p->mode >= CZN_ECO ? (16u << 20) : czn_fast_block(n));   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
+    uint32_t B = p->block ? p->block : (p->mode >= KOLMO_MAX ? (128u << 20) : p->mode >= KOLMO_ECO ? (16u << 20) : kolmo_fast_block(n));   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
     if (B < 4096) B = 4096;
     int codec, level; mode_codec(p, &codec, &level);
     enum { MAXSEG = 4096 };
-    int64_t ret = CZN_ERR_ALLOC; size_t w = 0;
+    int64_t ret = KOLMO_ERR_ALLOC; size_t w = 0;
     uint8_t *file_index = NULL;
     job_t J = {0}; int mutex_ready = 0;
     uint32_t nseg = 0, nb = 0; size_t bcap = 2;
@@ -2477,12 +2477,12 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     if (!ss || !se) goto cleanup;
     if (input_fd >= 0 && n) {
         planning_map = mmap(NULL, n, PROT_READ, MAP_PRIVATE, input_fd, 0);
-        if (planning_map == MAP_FAILED) { ret = CZN_ERR_IO; goto cleanup; }
+        if (planning_map == MAP_FAILED) { ret = KOLMO_ERR_IO; goto cleanup; }
         /* Formula discovery samples dispersed rows before the block pass. */
         madvise(planning_map, n, MADV_RANDOM);
         src = planning_map;
     }
-#if defined(CZN_PROF) || defined(CZN_TIMING)
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     double pt0 = prof_now();
 #endif
     nseg = segments(src, n, ss, se, MAXSEG);
@@ -2494,7 +2494,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     /* Parallelize independent members, or formula discovery within a single
      * member. Never multiply the two thread budgets. Plans remain in input order. */
     plan_job planning = {src, ss, se, plans, p, nseg, nseg > 1 ? 1 : threads,
-                         p->transforms && p->mode == CZN_FAST && !p->level && !dict};
+                         p->transforms && p->mode == KOLMO_FAST && !p->level && !dict};
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
     if (!p->block && nseg == 1 && (plans[0].wide || plans[0].experimental_table) && B > (2u << 20)) B = 2u << 20;
@@ -2502,7 +2502,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         const uint8_t *s0 = src + ss[g]; size_t len = (size_t)(se[g] - ss[g]);
         plan_t pl = plans[g];
         uint32_t Bs = B;
-        if (!p->block && p->mode == CZN_HC && pl.t == T_WORD) Bs = 128u << 20;   /* hc text: one large window */
+        if (!p->block && p->mode == KOLMO_HC && pl.t == T_WORD) Bs = 128u << 20;   /* hc text: one large window */
         uint64_t *st; uint32_t m = make_blocks(s0, len, Bs, pl, &st, input_fd, ss[g], &ret);
         if (!st) goto cleanup;
         if (len == 0) m = 0;
@@ -2542,24 +2542,24 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
     if (!J.out || !J.outlen) goto cleanup;
-    J.psum = p->mode == CZN_RT;
+    J.psum = p->mode == KOLMO_RT;
     J.dict = dict; J.dictlen = dictlen;
     J.dst = dst; J.cap = cap; J.wnext = 0; J.wpos = HDR + (size_t)nb * IDX; J.werr = 0;
     if (pthread_mutex_init(&J.wmu, NULL)) goto cleanup;
     mutex_ready = 1;
     atomic_init(&J.next, 0); atomic_init(&J.newmodes, 0); atomic_init(&J.err, 0);
     ret = 0;
-    if ((size_t)nb > (cap - HDR) / IDX) ret = CZN_ERR_DSTSIZE;
-#if defined(CZN_PROF) || defined(CZN_TIMING)
+    if ((size_t)nb > (cap - HDR) / IDX) ret = KOLMO_ERR_DSTSIZE;
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     double pt1 = prof_now();
 #endif
     if (!ret) run_pool(compress_worker, &J, threads, nb);
-#if defined(CZN_PROF) || defined(CZN_TIMING)
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     fprintf(stderr, "compress bytes=%zu threads=%d plan_ms=%.3f blocks_ms=%.3f\n", n, threads, (pt1 - pt0) * 1000, (prof_now() - pt1) * 1000);
 #endif
     if (!ret) ret = atomic_load(&J.err);
     if (!ret) ret = J.werr;
-    if (!ret && J.wnext != nb) ret = CZN_ERR_ALLOC;
+    if (!ret && J.wnext != nb) ret = KOLMO_ERR_ALLOC;
     w = J.wpos;
 cleanup:
     if (planning_map != MAP_FAILED) munmap(planning_map, n);
@@ -2572,48 +2572,48 @@ cleanup:
     { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
-    uint32_t hc = czn_crc32c(0, dst, 28); hc = czn_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
+    uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
     if (output_fd >= 0) ret = write_block(output_fd, file_index, HDR + (size_t)nb * IDX, 0);
     if (file_index) { free(file_index); zs_trim(); }
     return ret ? ret : (int64_t)w;
 }
 
-int64_t czn_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const czn_params *p) {
+int64_t kolmo_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p) {
     return compress_impl(src, -1, n, dst, -1, cap, p, NULL, 0, 0);
 }
 
 /* ------------------------------------------------------------------ decoding */
 typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict; uint32_t dictid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
 
-static int parse(const uint8_t *s, size_t n, parsed_t *P, const czn_decode_limits *limits) {
-    if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > CZN_MAX_VERSION) return CZN_ERR_CORRUPT;
+static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_limits *limits) {
+    if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > KOLMO_MAX_VERSION) return KOLMO_ERR_CORRUPT;
     P->ver = s[4]; P->psum = P->ver >= 3 && (s[10] & 1);
     P->needdict = P->ver >= 3 && (s[10] & 2); P->dictid = P->needdict ? get32(s + 6) : 0;
     P->orig = get64(s + 12); P->nb = get32(s + 20);
     if (limits && ((limits->max_output_bytes && P->orig > limits->max_output_bytes) ||
-                   (limits->max_blocks && P->nb > limits->max_blocks))) return CZN_ERR_LIMIT;
+                   (limits->max_blocks && P->nb > limits->max_blocks))) return KOLMO_ERR_LIMIT;
     P->pl = (plan_t){s[6], s[7], s[8], s[9]};
-    if ((uint64_t)P->nb * IDX + HDR > n) return CZN_ERR_CORRUPT;
-    uint32_t hc = czn_crc32c(0, s, 28); hc = czn_crc32c(hc, s + HDR, (size_t)P->nb * IDX);
-    if (hc != get32(s + 28)) return CZN_ERR_CHECKSUM;
+    if ((uint64_t)P->nb * IDX + HDR > n) return KOLMO_ERR_CORRUPT;
+    uint32_t hc = kolmo_crc32c(0, s, 28); hc = kolmo_crc32c(hc, s + HDR, (size_t)P->nb * IDX);
+    if (hc != get32(s + 28)) return KOLMO_ERR_CHECKSUM;
     P->idx = s + HDR;
     P->poff = array_alloc((size_t)P->nb + 1, sizeof(uint64_t), 0);
     P->roff = array_alloc((size_t)P->nb + 1, sizeof(uint64_t), 0);
-    if (!P->poff || !P->roff) { free(P->poff); free(P->roff); return CZN_ERR_ALLOC; }
+    if (!P->poff || !P->roff) { free(P->poff); free(P->roff); return KOLMO_ERR_ALLOC; }
     uint64_t po = HDR + (uint64_t)P->nb * IDX, ro = 0;
     for (uint32_t i = 0; i < P->nb; i++) {
         P->poff[i] = po; P->roff[i] = ro;
         uint32_t cl = get32(P->idx + (size_t)i * IDX + 4), raw = get32(P->idx + (size_t)i * IDX);
         if (limits && limits->max_block_bytes && raw > limits->max_block_bytes) {
-            free(P->poff); free(P->roff); return CZN_ERR_LIMIT;
+            free(P->poff); free(P->roff); return KOLMO_ERR_LIMIT;
         }
         if (po > n || cl > n - po || ro > P->orig || raw > P->orig - ro) {
-            free(P->poff); free(P->roff); return CZN_ERR_CORRUPT;
+            free(P->poff); free(P->roff); return KOLMO_ERR_CORRUPT;
         }
         po += cl; ro += raw;
     }
     P->poff[P->nb] = po; P->roff[P->nb] = ro;
-    if (po > n || ro != P->orig) { free(P->poff); free(P->roff); return CZN_ERR_CORRUPT; }
+    if (po > n || ro != P->orig) { free(P->poff); free(P->roff); return KOLMO_ERR_CORRUPT; }
     return 0;
 }
 
@@ -2626,28 +2626,28 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     size_t meta = 0;
     plan_t pl = P->pl;
     if (P->psum) {                                             /* rt: the checksum covers the stored bytes; checked first */
-        if (cl < 4 || (uint32_t)czn_xxh3(pay + 4, cl - 4, 0x637a6e31u ^ get32(pay)) != get32(e + 8)) return CZN_ERR_CHECKSUM;
+        if (cl < 4 || (uint32_t)kolmo_xxh3(pay + 4, cl - 4, 0x637a6e31u ^ get32(pay)) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
     }
     if (P->ver >= 2) {                                         /* per-block plan */
-        if (cl < 4) return CZN_ERR_CORRUPT;
+        if (cl < 4) return KOLMO_ERR_CORRUPT;
         pl.t = pay[0]; pl.a = pay[1]; pl.b = pay[2]; pl.c = pay[3]; pay += 4; cl -= 4;
-        if (pl.t > T_KG || (pl.t == T_KG && P->ver < 7)) return CZN_ERR_CORRUPT;
+        if (pl.t > T_KG || (pl.t == T_KG && P->ver < 7)) return KOLMO_ERR_CORRUPT;
     }
     if (codec == C_GRAPH || pl.t == T_KG) {                     /* kolmo graph block (version 7) */
-        if (codec != C_GRAPH || pl.t != T_KG || tflag || P->ver < 7) return CZN_ERR_CORRUPT;
-        int r = kg_decode(x, pay, cl, out, len); if (r) return CZN_ERR_CORRUPT;
-        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return CZN_ERR_CHECKSUM;
+        if (codec != C_GRAPH || pl.t != T_KG || tflag || P->ver < 7) return KOLMO_ERR_CORRUPT;
+        int r = kg_decode(x, pay, cl, out, len); if (r) return KOLMO_ERR_CORRUPT;
+        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
-#ifdef CZN_FRONTIER
+#ifdef KOLMO_FRONTIER
     if (pl.t == T_TBL && (tflag == 10 || tflag == 11)) {   /* experimental wide table / lag (the log plan's flag 10 is minified JSON) */
-        if (P->ver < 6 || P->psum || pl.t != T_TBL || codec != C_ZSTD || cl < 4) return CZN_ERR_CORRUPT;
+        if (P->ver < 6 || P->psum || pl.t != T_TBL || codec != C_ZSTD || cl < 4) return KOLMO_ERR_CORRUPT;
         size_t bytes = get32(pay);
-        if (bytes > len + TSLACK || codec_decompress(x, codec, pay + 4, cl - 4, tbuf, bytes)) return CZN_ERR_CORRUPT;
+        if (bytes > len + TSLACK || codec_decompress(x, codec, pay + 4, cl - 4, tbuf, bytes)) return KOLMO_ERR_CORRUPT;
         int error = tflag == 10 ? frontier_table_decode(tbuf, bytes, (uint8_t)pl.a, out, len)
                                 : frontier_lag_decode(tbuf, bytes, out, len);
-        if (error) return CZN_ERR_CORRUPT;
-        return blk_sum(P->ver, out, len) == get32(e + 8) ? 0 : CZN_ERR_CHECKSUM;
+        if (error) return KOLMO_ERR_CORRUPT;
+        return blk_sum(P->ver, out, len) == get32(e + 8) ? 0 : KOLMO_ERR_CHECKSUM;
     }
 #endif
     if (tflag && pl.t == T_TP) meta = 4 * (size_t)(pl.c + 1);
@@ -2656,35 +2656,35 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     int maxf = pl.t == T_TP ? 2 : pl.t == T_TBL ? 4 : pl.t == T_LOG ? (P->ver >= 6 ? 10 : 5) : pl.t == T_IMG ? 6 : pl.t == T_REC ? 7 : pl.t == T_X86 ? 8 : pl.t == T_WORD ? 9 : 1;
     if (tflag > maxf || (pl.t == T_TBL && tflag && tflag < 3) || (pl.t == T_LOG && tflag && tflag != 5 && tflag != 10)
         || (pl.t == T_IMG && tflag && tflag != 6) || (pl.t == T_REC && tflag && tflag != 7) || (pl.t == T_X86 && tflag && tflag != 8) || (pl.t == T_WORD && tflag && tflag != 9)
-        || (pl.t == T_NONE && tflag)) return CZN_ERR_CORRUPT;
-    if (meta > cl) return CZN_ERR_CORRUPT;
+        || (pl.t == T_NONE && tflag)) return KOLMO_ERR_CORRUPT;
+    if (meta > cl) return KOLMO_ERR_CORRUPT;
     uint8_t *tgt = (tflag && tflag != 8) ? tbuf : out;
     size_t dlen = len;
-    if ((tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10) { dlen = get32(pay); if (dlen > len + TSLACK) return CZN_ERR_CORRUPT; }
-#ifdef CZN_FRONTIER
+    if ((tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10) { dlen = get32(pay); if (dlen > len + TSLACK) return KOLMO_ERR_CORRUPT; }
+#ifdef KOLMO_FRONTIER
     if (codec == C_PCM) {
-        if (P->ver < 6 || tflag || pl.t != T_NONE || frontier_pcm_decode(pay, cl, out, len)) return CZN_ERR_CORRUPT;
+        if (P->ver < 6 || tflag || pl.t != T_NONE || frontier_pcm_decode(pay, cl, out, len)) return KOLMO_ERR_CORRUPT;
     } else if (codec == C_DNA || codec == C_DNA_PREFIX || codec == C_DNA_RUNS) {
-        if (P->ver < 6 || tflag || pl.t != T_NONE) return CZN_ERR_CORRUPT;
+        if (P->ver < 6 || tflag || pl.t != T_NONE) return KOLMO_ERR_CORRUPT;
         if (codec != C_DNA) {
-            if (cl < 4) return CZN_ERR_CORRUPT;
+            if (cl < 4) return KOLMO_ERR_CORRUPT;
             size_t bytes = get32(pay);
-            if (bytes > len) return CZN_ERR_CORRUPT;
+            if (bytes > len) return KOLMO_ERR_CORRUPT;
             int error = codec == C_DNA_PREFIX ? frontier_prefix_decode(pay, cl, tbuf, bytes)
                                               : frontier_runs_decode(pay, cl, tbuf, bytes);
-            if (error) return CZN_ERR_CORRUPT;
+            if (error) return KOLMO_ERR_CORRUPT;
             pay = tbuf; cl = bytes;
         }
-        if (frontier_dna_decode(pay, cl, out, len)) return CZN_ERR_CORRUPT;
+        if (frontier_dna_decode(pay, cl, out, len)) return KOLMO_ERR_CORRUPT;
     } else
 #endif
-    if (codec_decompress(x, codec, pay + meta, cl - meta, tgt, dlen)) return CZN_ERR_CORRUPT;
-    if (tflag == 3) { if (tbl_decode(tbuf, dlen, (uint8_t)pl.a, out, len)) return CZN_ERR_CORRUPT; }
-    else if (tflag == 4) { if (tbl2_decode(tbuf, dlen, (uint8_t)pl.a, out, len)) return CZN_ERR_CORRUPT; }
-    else if (tflag == 5) { if (log_decode(tbuf, dlen, out, len)) return CZN_ERR_CORRUPT; }
+    if (codec_decompress(x, codec, pay + meta, cl - meta, tgt, dlen)) return KOLMO_ERR_CORRUPT;
+    if (tflag == 3) { if (tbl_decode(tbuf, dlen, (uint8_t)pl.a, out, len)) return KOLMO_ERR_CORRUPT; }
+    else if (tflag == 4) { if (tbl2_decode(tbuf, dlen, (uint8_t)pl.a, out, len)) return KOLMO_ERR_CORRUPT; }
+    else if (tflag == 5) { if (log_decode(tbuf, dlen, out, len)) return KOLMO_ERR_CORRUPT; }
     else if (tflag == 10) {                                    /* minified JSON: decode the split text, drop the newlines */
-        size_t k = get32(pay + 4); if (k > len) return CZN_ERR_CORRUPT;
-        uint8_t *sp = malloc(len + k + 64); if (!sp) return CZN_ERR_ALLOC;
+        size_t k = get32(pay + 4); if (k > len) return KOLMO_ERR_CORRUPT;
+        uint8_t *sp = malloc(len + k + 64); if (!sp) return KOLMO_ERR_ALLOC;
         int bad = log_decode(tbuf, dlen, sp, len + k); size_t o = 0;
         for (size_t q = 0, e = len + k; !bad && q < e;) {     /* copy the runs between newlines */
             const uint8_t *nl = memchr(sp + q, '\n', e - q); size_t r = (nl ? (size_t)(nl - sp) : e) - q;
@@ -2692,50 +2692,50 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
             memcpy(out + o, sp + q, r); o += r; q += r + (nl != NULL);
         }
         free(sp);
-        if (bad || o != len) return CZN_ERR_CORRUPT;
+        if (bad || o != len) return KOLMO_ERR_CORRUPT;
     }
-    else if (tflag == 6) { if (img16_decode(tbuf, dlen, out, len)) return CZN_ERR_CORRUPT; }
-    else if (tflag == 7) { if (rec_decode(tbuf, dlen, out, len)) return CZN_ERR_CORRUPT; }
+    else if (tflag == 6) { if (img16_decode(tbuf, dlen, out, len)) return KOLMO_ERR_CORRUPT; }
+    else if (tflag == 7) { if (rec_decode(tbuf, dlen, out, len)) return KOLMO_ERR_CORRUPT; }
     else if (tflag == 8) e8e9_inv(out, len);
-    else if (tflag == 9) { if (word_decode(tbuf, dlen, out, len)) return CZN_ERR_CORRUPT; }
+    else if (tflag == 9) { if (word_decode(tbuf, dlen, out, len)) return KOLMO_ERR_CORRUPT; }
     else if (tflag && pl.t == T_TP) {
         int k = pl.c + 1; int64_t colsz[256];
-        if (cl < 4 * (size_t)k) return CZN_ERR_CORRUPT;
+        if (cl < 4 * (size_t)k) return KOLMO_ERR_CORRUPT;
         for (int j = 0; j < k; j++) colsz[j] = get32(pay + 4 * j);
         if (tflag == 2) {
             int uniform = 1;
             if (k == 256) uniform = tpq_inv_cols(tbuf, len, (uint8_t)pl.a, k, colsz, out, NULL, NULL);
             if (uniform > 0) {
                 uint32_t *pos = S->pos = grow(S->pos, &S->pcap, (J->maxraw + 1) * sizeof(uint32_t));
-                if (!pos) return CZN_ERR_ALLOC;
+                if (!pos) return KOLMO_ERR_ALLOC;
                 if (k != 256) {
                     uint32_t *rows = S->rowbuf = grow(S->rowbuf, &S->rcap, (J->maxraw + 8) * sizeof(uint32_t));
-                    if (!rows) return CZN_ERR_ALLOC;
+                    if (!rows) return KOLMO_ERR_ALLOC;
                     uniform = tpq_inv_cols(tbuf, len, (uint8_t)pl.a, k, colsz, out, pos, rows);
                 }
-                if (uniform > 0 && tpq_inv(tbuf, len, (uint8_t)pl.a, k, colsz, out, pos)) return CZN_ERR_CORRUPT;
+                if (uniform > 0 && tpq_inv(tbuf, len, (uint8_t)pl.a, k, colsz, out, pos)) return KOLMO_ERR_CORRUPT;
             }
-            if (uniform < 0) return CZN_ERR_CORRUPT;
+            if (uniform < 0) return KOLMO_ERR_CORRUPT;
         }
-        else if (transpose_inv(tbuf, len, (uint8_t)pl.a, k, pl.b, colsz, out)) return CZN_ERR_CORRUPT;
+        else if (transpose_inv(tbuf, len, (uint8_t)pl.a, k, pl.b, colsz, out)) return KOLMO_ERR_CORRUPT;
     } else if (tflag && pl.t == T_SHUF) {
         size_t u = (size_t)pl.a * pl.b, rows = u ? len / u : 0;
-        if (!u || u > 64 * 8 || (pl.a != 2 && pl.a != 4 && pl.a != 8) || pl.b < 1 || pl.b > 8) return CZN_ERR_CORRUPT;
+        if (!u || u > 64 * 8 || (pl.a != 2 && pl.a != 4 && pl.a != 8) || pl.b < 1 || pl.b > 8) return KOLMO_ERR_CORRUPT;
         shuffle_inv(tbuf, rows, pl.a, pl.b, pl.c, out);
         memcpy(out + rows * u, tbuf + rows * u, len - rows * u);
-    } else if (tflag) return CZN_ERR_CORRUPT;
-    if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return CZN_ERR_CHECKSUM;
+    } else if (tflag) return KOLMO_ERR_CORRUPT;
+    if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
     return 0;
 }
 
 static void *decompress_worker(void *arg) {
     djob_t *J = arg; tls_t *S = tls_begin();
-    if (!S) { atomic_store(&J->err, CZN_ERR_ALLOC); return NULL; }
+    if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->maxraw + TSLACK + 64);
     int buffered = J->clip_hi || J->output_fd >= 0;
     uint8_t *rbuf = buffered ? (S->rbuf = grow(S->rbuf, &S->rbcap, J->maxraw + 64)) : NULL;
     uint8_t *packed = J->input_fd >= 0 ? malloc(J->maxcompressed ? J->maxcompressed : 1) : NULL;
-    if ((J->input_fd >= 0 && !packed) || !tbuf || (buffered && !rbuf)) { free(packed); atomic_store(&J->err, CZN_ERR_ALLOC); tls_end(S); return NULL; }
+    if ((J->input_fd >= 0 && !packed) || !tbuf || (buffered && !rbuf)) { free(packed); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
     for (;;) {
@@ -2745,7 +2745,7 @@ static void *decompress_worker(void *arg) {
         const uint8_t *payload;
         if (packed) {
             size_t bytes = J->P->poff[i + 1] - J->P->poff[i];
-            if (read_block(J->input_fd, packed, bytes, J->P->poff[i])) { atomic_store(&J->err, CZN_ERR_IO); break; }
+            if (read_block(J->input_fd, packed, bytes, J->P->poff[i])) { atomic_store(&J->err, KOLMO_ERR_IO); break; }
             payload = packed;
         } else payload = J->src + J->P->poff[i];
         if (!rbuf) r = decode_block(J, i, xp, S, payload, tbuf, J->dst + J->P->roff[i]);
@@ -2766,12 +2766,12 @@ static void *decompress_worker(void *arg) {
     return NULL;
 }
 
-int64_t czn_original_size(const uint8_t *src, size_t n) { return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : CZN_ERR_CORRUPT; }
+int64_t kolmo_original_size(const uint8_t *src, size_t n) { return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : KOLMO_ERR_CORRUPT; }
 
 static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
-                          const void *dict, size_t dictlen, uint32_t dictid, const czn_decode_limits *limits) {
+                          const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits) {
     parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
-    if (P.needdict && (!dict || dictid != P.dictid)) { free(P.poff); free(P.roff); return CZN_ERR_DICT; }
+    if (P.needdict && (!dict || dictid != P.dictid)) { free(P.poff); free(P.roff); return KOLMO_ERR_DICT; }
     djob_t J = {0}; J.src = src; J.P = &P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd; J.dict = dict; J.dictlen = dictlen;
     for (uint32_t i = 0; i < P.nb; i++) {
         size_t raw = P.roff[i + 1] - P.roff[i], stored = P.poff[i + 1] - P.poff[i];
@@ -2791,117 +2791,117 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
     return r ? r : (int64_t)(range ? hi - lo : P.orig);
 }
 
-int64_t czn_decompress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads) {
-    int64_t o = czn_original_size(src, n); if (o < 0) return o;
-    if ((uint64_t)o > cap) return CZN_ERR_DSTSIZE;
+int64_t kolmo_decompress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads) {
+    int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
+    if ((uint64_t)o > cap) return KOLMO_ERR_DSTSIZE;
     return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, NULL, 0, 0, NULL);
 }
 
-int64_t czn_decompress_limited(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
-                               int threads, const czn_decode_limits *limits) {
-    int64_t o = czn_original_size(src, n); if (o < 0) return o;
-    if (limits && limits->max_output_bytes && (uint64_t)o > limits->max_output_bytes) return CZN_ERR_LIMIT;
-    if ((uint64_t)o > cap) return CZN_ERR_DSTSIZE;
+int64_t kolmo_decompress_limited(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
+                               int threads, const kolmo_decode_limits *limits) {
+    int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
+    if (limits && limits->max_output_bytes && (uint64_t)o > limits->max_output_bytes) return KOLMO_ERR_LIMIT;
+    if ((uint64_t)o > cap) return KOLMO_ERR_DSTSIZE;
     return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, NULL, 0, 0, limits);
 }
 
-int64_t czn_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len, uint8_t *dst, int threads) {
-    int64_t o = czn_original_size(src, n); if (o < 0) return o;
-    if (off > (uint64_t)o) return CZN_ERR_CORRUPT;
+int64_t kolmo_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len, uint8_t *dst, int threads) {
+    int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
+    if (off > (uint64_t)o) return KOLMO_ERR_CORRUPT;
     if (len > (uint64_t)o - off) len = (size_t)((uint64_t)o - off);
     if (!len) return 0;
     return run_decode(src, -1, n, dst, -1, threads, off, off + len, 1, NULL, 0, 0, NULL);
 }
 
-const char *czn_strerror(int64_t c) {
+const char *kolmo_strerror(int64_t c) {
     switch (c) {
-        case CZN_ERR_CORRUPT: return "corrupt or unsupported input";
-        case CZN_ERR_CHECKSUM: return "checksum mismatch (data corrupted)";
-        case CZN_ERR_DSTSIZE: return "destination buffer too small";
-        case CZN_ERR_ALLOC: return "out of memory";
-        case CZN_ERR_CODEC: return "codec error";
-        case CZN_ERR_DICT: return "dictionary required or mismatched (compressed with a different dictionary)";
-        case CZN_ERR_IO: return "file I/O error";
-        case CZN_ERR_LIMIT: return "decoding resource limit exceeded";
+        case KOLMO_ERR_CORRUPT: return "corrupt or unsupported input";
+        case KOLMO_ERR_CHECKSUM: return "checksum mismatch (data corrupted)";
+        case KOLMO_ERR_DSTSIZE: return "destination buffer too small";
+        case KOLMO_ERR_ALLOC: return "out of memory";
+        case KOLMO_ERR_CODEC: return "codec error";
+        case KOLMO_ERR_DICT: return "dictionary required or mismatched (compressed with a different dictionary)";
+        case KOLMO_ERR_IO: return "file I/O error";
+        case KOLMO_ERR_LIMIT: return "decoding resource limit exceeded";
     }
     return c >= 0 ? "ok" : "unknown error";
 }
 
 /* ------------------------------------------------------------------ dictionary */
 
-int64_t czn_train_dict(const uint8_t *samples, const size_t *sizes, size_t nsamples,
+int64_t kolmo_train_dict(const uint8_t *samples, const size_t *sizes, size_t nsamples,
                        uint8_t *dict, size_t dict_cap) {
-    if (!samples || !sizes || !nsamples || !dict || dict_cap < 256) return CZN_ERR_CORRUPT;
+    if (!samples || !sizes || !nsamples || !dict || dict_cap < 256) return KOLMO_ERR_CORRUPT;
     size_t r = ZDICT_trainFromBuffer(dict, dict_cap, samples, sizes, (unsigned)nsamples);
-    if (ZDICT_isError(r)) return CZN_ERR_CODEC;
+    if (ZDICT_isError(r)) return KOLMO_ERR_CODEC;
     return (int64_t)r;
 }
 
-int64_t czn_compress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
-                          const czn_params *p, const void *dict, size_t dictlen) {
-    if (!dict || !dictlen) return czn_compress(src, n, dst, cap, p);
-    uint32_t id = (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u);   /* 'cznD' */
+int64_t kolmo_compress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
+                          const kolmo_params *p, const void *dict, size_t dictlen) {
+    if (!dict || !dictlen) return kolmo_compress(src, n, dst, cap, p);
+    uint32_t id = (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u);   /* 'cznD' */
     return compress_impl(src, -1, n, dst, -1, cap, p, dict, dictlen, id);
 }
 
-int64_t czn_decompress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads,
+int64_t kolmo_decompress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads,
                             const void *dict, size_t dictlen) {
-    if (!dict || !dictlen) return czn_decompress(src, n, dst, cap, threads);
-    int64_t o = czn_original_size(src, n); if (o < 0) return o;
-    if ((uint64_t)o > cap) return CZN_ERR_DSTSIZE;
-    uint32_t id = (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u);
+    if (!dict || !dictlen) return kolmo_decompress(src, n, dst, cap, threads);
+    int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
+    if ((uint64_t)o > cap) return KOLMO_ERR_DSTSIZE;
+    uint32_t id = (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u);
     return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, dict, dictlen, id, NULL);
 }
 
-int64_t czn_compress_from_fd(int fd, size_t n, uint8_t *dst, size_t cap, const czn_params *p,
+int64_t kolmo_compress_from_fd(int fd, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen) {
     struct stat st;
     if (fd < 0 || fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_size < 0 ||
-        (uintmax_t)st.st_size < n) return CZN_ERR_IO;
+        (uintmax_t)st.st_size < n) return KOLMO_ERR_IO;
     if (!dictlen) dict = NULL;
-    uint32_t id = dict ? (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u) : 0;
+    uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
     return compress_impl((const uint8_t *)"", fd, n, dst, -1, cap, p, dict, dictlen, id);
 }
 
-int64_t czn_decompress_to_fd(const uint8_t *src, size_t n, int fd, int threads,
+int64_t kolmo_decompress_to_fd(const uint8_t *src, size_t n, int fd, int threads,
                              const void *dict, size_t dictlen) {
-    if (fd < 0) return CZN_ERR_IO;
-    int64_t size = czn_original_size(src, n);
+    if (fd < 0) return KOLMO_ERR_IO;
+    int64_t size = kolmo_original_size(src, n);
     if (size < 0) return size;
     if (!dictlen) dict = NULL;
-    uint32_t id = dict ? (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u) : 0;
+    uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
     return run_decode(src, -1, n, NULL, fd, threads, 0, 0, 0, dict, dictlen, id, NULL);
 }
 
-int64_t czn_compress_file(int input_fd, int output_fd, size_t n, const czn_params *p,
+int64_t kolmo_compress_file(int input_fd, int output_fd, size_t n, const kolmo_params *p,
                           const void *dict, size_t dictlen) {
     struct stat st;
     if (output_fd < 0 || fstat(input_fd, &st) || !S_ISREG(st.st_mode) ||
-        st.st_size < 0 || (uintmax_t)st.st_size < n) return CZN_ERR_IO;
+        st.st_size < 0 || (uintmax_t)st.st_size < n) return KOLMO_ERR_IO;
     if (!dictlen) dict = NULL;
-    uint32_t id = dict ? (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u) : 0;
+    uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
     return compress_impl((const uint8_t *)"", input_fd, n, NULL, output_fd, INT64_MAX, p, dict, dictlen, id);
 }
 
-int64_t czn_decompress_file(int input_fd, int output_fd, size_t n, int threads,
+int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads,
                             const void *dict, size_t dictlen) {
     uint8_t header[HDR];
-    if (n < HDR) return CZN_ERR_CORRUPT;
+    if (n < HDR) return KOLMO_ERR_CORRUPT;
     struct stat st;
     if (output_fd < 0 || fstat(input_fd, &st) || !S_ISREG(st.st_mode) ||
-        st.st_size < 0 || (uintmax_t)st.st_size < n) return CZN_ERR_IO;
-    if (read_block(input_fd, header, HDR, 0)) return CZN_ERR_IO;
-    int64_t size = czn_original_size(header, HDR);
+        st.st_size < 0 || (uintmax_t)st.st_size < n) return KOLMO_ERR_IO;
+    if (read_block(input_fd, header, HDR, 0)) return KOLMO_ERR_IO;
+    int64_t size = kolmo_original_size(header, HDR);
     uint32_t nb = get32(header + 20);
-    if (size < 0 || header[4] < 1 || header[4] > CZN_MAX_VERSION || nb > (n - HDR) / IDX) return CZN_ERR_CORRUPT;
+    if (size < 0 || header[4] < 1 || header[4] > KOLMO_MAX_VERSION || nb > (n - HDR) / IDX) return KOLMO_ERR_CORRUPT;
     size_t index_size = HDR + (size_t)nb * IDX;
     uint8_t *index = malloc(index_size);
-    if (!index) return CZN_ERR_ALLOC;
+    if (!index) return KOLMO_ERR_ALLOC;
     memcpy(index, header, HDR);
     int64_t ret = read_block(input_fd, index + HDR, index_size - HDR, HDR);
     if (!ret) {
         if (!dictlen) dict = NULL;
-        uint32_t id = dict ? (uint32_t)czn_xxh3(dict, dictlen, 0x637a6e44u) : 0;
+        uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
         ret = run_decode(index, input_fd, n, NULL, output_fd, threads, 0, 0, 0, dict, dictlen, id, NULL);
     }
     free(index);

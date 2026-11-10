@@ -40,7 +40,7 @@ transforms). Levels 11 and 12 need about 4 GB of memory. Measured results are in
 - **Same compiler options.** kolmo is built at `-O3 -march=native`; lzbench builds every other codec at
   `-O3` plus the same `MOREFLAGS="-march=native"`.
 - **No shared code.** kolmo vendors its own zstd, lz4, brotli and libbsc, and `setup.sh` adds a static
-  liblzma. All of it is partially linked into one object whose only global symbols are `czn_*`, and its
+  liblzma. All of it is partially linked into one object whose only global symbols are `kolmo_*`, and its
   C++ symbols are renamed so their COMDAT groups cannot merge with lzbench's own libbsc. No other entry
   ever runs kolmo's copies, and kolmo never runs theirs.
 - **Verified.** lzbench checks every decompressed buffer against the input.
