@@ -2303,7 +2303,7 @@ static void *compress_worker(void *arg) {
             /* BWT is tried only where it has won in tests: not on x86 code, and only when LZMA2 already reaches
              * 35% or less (on less compressible binary data BWT was 1.5 to 8% larger) */
             uint8_t *alt = tflag == 8 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
-            if (alt && inlen > (1u << 20)) {
+            if (alt && inlen > (8u << 20)) {                /* large blocks only: on small ones the slice costs as much as the attempt */
                 /* a short slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the
                  * outcome: where BWT won on the whole block the slice ratio was at most 1.02, where it lost by 5% or
                  * more it was 1.04 or higher. Above 1.03 the full attempt is skipped. */
