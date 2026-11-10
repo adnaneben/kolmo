@@ -2303,6 +2303,14 @@ static void *compress_worker(void *arg) {
             /* BWT is tried only where it has won in tests: not on x86 code, and only when LZMA2 already reaches
              * 35% or less (on less compressible binary data BWT was 1.5 to 8% larger) */
             uint8_t *alt = tflag == 8 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
+            if (alt && inlen > (1u << 20)) {
+                /* a short slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the
+                 * outcome: where BWT won on the whole block the slice ratio was at most 1.02, where it lost by 5% or
+                 * more it was 1.04 or higher. Above 1.03 the full attempt is skipped. */
+                size_t sn = inlen / 8 < (512u << 10) ? inlen / 8 : (512u << 10), so = ((inlen - sn) / 2) & ~(size_t)63;
+                size_t sb = codec_compress(xp, C_BSC, 9, in + so, sn, alt, J->slot - meta), slz = sb ? codec_compress(xp, C_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
+                if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) alt = NULL;
+            }
             size_t c2 = alt ? codec_compress(xp, C_BSC, 9, in, inlen, alt, J->slot - meta) : 0;
             if (c2 && (uint64_t)c2 * 100 <= (uint64_t)cl * (100 - KOLMO_BWT_GAIN_PCT)) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BSC; }
         }
