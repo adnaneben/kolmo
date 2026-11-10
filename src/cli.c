@@ -85,12 +85,13 @@ done:
     return ret;
 }
 int main(int argc, char **argv) {
-    kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
+    kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int speed = 0; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
     char *dictpath = NULL, *trainpath = NULL;
     int extreme = 0;
-    while ((opt = getopt(argc, argv, "m:l:T:B:nqxdr:sS:D:t:")) != -1) switch (opt) {
+    while ((opt = getopt(argc, argv, "m:l:T:B:nqQxdr:sS:D:t:")) != -1) switch (opt) {
         /* three modes: speed, balanced (default), ratio. The older names stay as advanced settings. */
-        case 'm': P.mode = !strcmp(optarg, "speed") || !strcmp(optarg, "rt") ? KOLMO_RT :
+        case 'm': speed = !strcmp(optarg, "speed");
+                  P.mode = !strcmp(optarg, "speed") || !strcmp(optarg, "rt") ? KOLMO_RT :
                            !strcmp(optarg, "balanced") || !strcmp(optarg, "fast") ? KOLMO_FAST :
                            !strcmp(optarg, "ratio") || !strcmp(optarg, "max") ? KOLMO_MAX :
                            !strcmp(optarg, "eco") ? KOLMO_ECO : !strcmp(optarg, "hc") ? KOLMO_HC : !strcmp(optarg, "ultra") ? KOLMO_ULTRA : (kolmo_mode)-1;
@@ -102,6 +103,7 @@ int main(int argc, char **argv) {
         case 'B': P.block = (uint32_t)(atof(optarg) * 1048576); break;
         case 'n': P.transforms = 0; break;
         case 'q': P.transforms = 2; break;
+        case 'Q': P.transforms = 3; break;
         case 'd': dec = 1; break;
         case 'r': range = optarg; break;
         case 's': stream = 1; break;
@@ -114,10 +116,12 @@ int main(int argc, char **argv) {
             "  speed     fastest, for data that is read or sent right away\n"
             "  balanced  small and fast; the default\n"
             "  ratio     smallest at practical speed;  -x  smallest of all (very slow, large memory)\n"
-            "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -n no transforms  -B blockMiB\n"
+            "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -Q minimal analysis  -n no transforms\n"
+            "          -B blockMiB\n"
             "          -D dict  -t dict samples...  -s|-S segMiB stream  -r off:len read a range\n"); return 2;
     }
     if (extreme) P.mode = KOLMO_ULTRA;
+    if (speed && P.transforms == 1) P.transforms = 3;      /* speed: nothing that costs encode time */
 
     /* Training mode: concatenate the sample files given as positional args and write a dictionary. */
     if (trainpath) {

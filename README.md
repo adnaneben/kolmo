@@ -80,7 +80,7 @@ Three modes cover almost every use:
 
 | Mode | What it is for | Same as |
 |---|---|---|
-| `-m speed` | fastest; data that is read or sent right away | `rt` |
+| `-m speed` | fastest; data that is read or sent right away | `rt -Q` |
 | `-m balanced` (default) | small and fast; everyday storage and transfer | `fast` |
 | `-m ratio` | smallest at practical speed; archives | `max` |
 

@@ -109,3 +109,6 @@
   stands at least 4x above the median lag, and the x86 transform is tried only where call/jump opcodes are at least
   1 in 1000 bytes. Outputs are byte-identical across the test corpus; planning time at `balanced` falls from 435 to
   about 150 ms on a browser tarball and by a third on record and database files.
+- **Speed mode is speed first.** `-m speed` now uses minimal analysis (`-Q`): only the byte-plane shuffle is tried,
+  and text is coded as it is. The table, record and image transforms, which made some files 2 to 4x slower to encode,
+  stay in `balanced` and in the advanced `rt` setting. `-Q` also works with `fast`.

@@ -1718,6 +1718,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     size_t h = n < 65536 ? n : 65536, pr = 0;
     for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
     if (pr * 100 > h * 95) {                                     /* text: field transposition if lines have a fixed field count */
+        if (light == 2) return pl;                               /* minimal analysis: text is coded as it is */
         if (logs && n >= 65536) {                                /* wide delimited table (over 256 columns): kolmo graph */
             static const uint8_t WD[4] = {';', ',', '\t', '|'};
             for (int di = 0; di < 4 && pl.t != T_KG; di++) {
@@ -2465,8 +2466,11 @@ static void *plan_worker(void *arg) {
             continue;
         }
 #endif
+        /* transforms: 1 full analysis, 2 quick analysis, 3 minimal (speed first: only the byte-plane shuffle, whose
+         * trial costs microseconds and whose decode is faster than the bytes it saves) */
         plan_t pl = p->transforms ? make_plan(src, len, p->mode >= KOLMO_ECO,
-            p->mode != KOLMO_RT, p->mode != KOLMO_RT, j->threads_per_plan, p->mode >= KOLMO_MAX, p->transforms == 2) : (plan_t){0};
+            p->mode != KOLMO_RT && p->transforms != 3, p->mode != KOLMO_RT && p->transforms != 3, j->threads_per_plan, p->mode >= KOLMO_MAX,
+            p->transforms == 2 ? 1 : p->transforms == 3 ? 2 : 0) : (plan_t){0};
 #ifdef KOLMO_FRONTIER
         uint8_t delim = 0;
         if (j->allow_frontier && frontier_table_probe(src, len, &delim) && prefer_frontier_table(src, len, &pl, delim))
