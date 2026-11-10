@@ -1,0 +1,69 @@
+{
+  "bsub": {
+    "artifact_sha256": "1a9e4f66533db783e9ecb6727355993a16a00ef36fa512dcac2de39eff1ae8c5",
+    "source_bytes": 1248396,
+    "target_bytes": 4268374,
+    "target_sha256": "59c09816fb55fb1a0b42d0715f627bb42018a19c6bf933c9cb37f6058ee4737e",
+    "url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/009/045/GCF_000009045.1_ASM904v1/GCF_000009045.1_ASM904v1_genomic.fna.gz"
+  },
+  "ce11": {
+    "artifact_sha256": "b5f80e37d22eb8f1cce1efff09a7e2e2ac2b6c73650f674c41c0b2e281c97241",
+    "target_bytes": 15373889,
+    "target_sha256": "2294f37afef1a706acd5353797203de8024d4ec3fa70c759483f72c553654623",
+    "url": "https://hgdownload.soe.ucsc.edu/goldenPath/ce11/bigZips/ce11.fa.gz"
+  },
+  "chr22": {
+    "artifact_sha256": "05f9d97d6fbfd08a44ca45b50837ca2ae9c471f35ba79dffec04d2cb5eaaf695",
+    "source_bytes": 12255678,
+    "target_bytes": 51834845,
+    "target_sha256": "ce3ee1ca39356238f7aee438a40a88b4f1b9d80b316b263e16fb12402212d10f",
+    "url": "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/chromosomes/chr22.fa.gz"
+  },
+  "danrer25": {
+    "artifact_sha256": "b03819292b480ea65046e0c1a7140ed5a67f6e723fb76318ce941946f636c061",
+    "target_bytes": 38252100,
+    "target_sha256": "000c04661ea17c3e19313a8a2ef7f180c5f2e5986294d46e46bbbe2a787bfc11",
+    "url": "https://hgdownload.soe.ucsc.edu/goldenPath/danRer11/bigZips/danRer11.fa.gz"
+  },
+  "eia": {
+    "artifact_sha256": "fff83ed20365e69933bdd6ebde06afaa8083930c613363c438844b0fd52034cf",
+    "cutoff_utc": "2020-02-15T18:00:00+00:00",
+    "distinct_hours": 4370,
+    "source_bytes": 42970027,
+    "source_sha256": "fff83ed20365e69933bdd6ebde06afaa8083930c613363c438844b0fd52034cf",
+    "target_bytes": 32222880,
+    "target_sha256": "269ce7cb166b4dbf65391030d106a028747148cbb04eb627fd1ed7b6084472e0",
+    "test_rows": 209710,
+    "train_bytes": 4194249,
+    "train_rows": 28141,
+    "train_sha256": "51f0cf6c94b4e5c92abb0f3ab766e5642f82eb8c61e93bab8f16876d96088086",
+    "url": "https://www.eia.gov/electricity/gridmonitor/sixMonthFiles/EIA930_BALANCE_2020_Jan_Jun.csv"
+  },
+  "eia2022": {
+    "artifact_sha256": "d3d315a0c29d9527a1c64cf6ddcdcc5c0b7281fddd99199bd70f06d242e503d5",
+    "cutoff_utc": "2022-02-15T12:00:00+00:00",
+    "distinct_hours": 4346,
+    "source_bytes": 42567904,
+    "source_sha256": "d3d315a0c29d9527a1c64cf6ddcdcc5c0b7281fddd99199bd70f06d242e503d5",
+    "target_bytes": 31941804,
+    "target_sha256": "94778706355217b8d540b5901b42251ab2c23da73bb65d626368ce84390fb7c6",
+    "test_rows": 205300,
+    "train_bytes": 4194304,
+    "train_rows": 27927,
+    "train_sha256": "555ba5827fb0ed2b5e63ea069afa6b312d7330a1fccc3d1994bac1371d1c67f0",
+    "url": "https://www.eia.gov/electricity/gridmonitor/sixMonthFiles/EIA930_BALANCE_2022_Jan_Jun.csv"
+  },
+  "pao1": {
+    "artifact_sha256": "9433cb94b3f21fa40e94d0d9454996fcca39da1d49074b9b22b6a459e63ca510",
+    "target_bytes": 6342768,
+    "target_sha256": "3e9335fb76772d324537b0c4c8cc7935e8b467b2acb0fae0c6e6dbeb2f227117",
+    "url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/006/765/GCF_000006765.1_ASM676v1/GCF_000006765.1_ASM676v1_genomic.fna.gz"
+  },
+  "yeast": {
+    "artifact_sha256": "1ec41f951b35f2752d5065edeafe6972455609d4383fb36dae12519a60b27a73",
+    "source_bytes": 3843460,
+    "target_bytes": 12310392,
+    "target_sha256": "fe42735d3e6242f8c40b457a232940e34ef15eb4502717e54a34ed118face4c1",
+    "url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/146/045/GCF_000146045.2_R64/GCF_000146045.2_R64_genomic.fna.gz"
+  }
+}

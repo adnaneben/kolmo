@@ -1,0 +1,138 @@
+{
+  "stock": {
+    "bytes": 5179218,
+    "frame_sha256": "43e87c346dc2338ca23f8958123c5dda6eace9627edd6f302d1502b9de372b66",
+    "encode_MB_s": 292.79280344568883,
+    "decode_MB_s": 1150.1148123504986,
+    "encode_MiB": 52.125,
+    "decode_MiB": 11.15625,
+    "against": {
+      "zstd": {
+        "size_saving_percent": 18.172933333417596,
+        "saves_20pct": false,
+        "resource_checks": {
+          "encode_ms": false,
+          "decode_ms": false,
+          "encode_rss": false,
+          "decode_rss": false
+        },
+        "all_resources": false,
+        "full_pass": false
+      },
+      "openzl": {
+        "size_saving_percent": -50.26560118652314,
+        "saves_20pct": false,
+        "resource_checks": {
+          "encode_ms": true,
+          "decode_ms": true,
+          "encode_rss": true,
+          "decode_rss": true
+        },
+        "all_resources": true,
+        "full_pass": false
+      }
+    }
+  },
+  "fixed_quarter_mib": {
+    "bytes": 2291098,
+    "frame_sha256": "a0cb7eae0193a94bcbedc0ac10d2c98c7fb6ac1f64a19b928a69d67317420ace",
+    "encode_MB_s": 426.4654988269056,
+    "decode_MB_s": 701.5750150432558,
+    "encode_MiB": 13.5,
+    "decode_MiB": 3.078125,
+    "against": {
+      "zstd": {
+        "size_saving_percent": 63.80267662305901,
+        "saves_20pct": true,
+        "resource_checks": {
+          "encode_ms": false,
+          "decode_ms": false,
+          "encode_rss": false,
+          "decode_rss": true
+        },
+        "all_resources": false,
+        "full_pass": false
+      },
+      "openzl": {
+        "size_saving_percent": 33.52795376691214,
+        "saves_20pct": true,
+        "resource_checks": {
+          "encode_ms": true,
+          "decode_ms": true,
+          "encode_rss": true,
+          "decode_rss": true
+        },
+        "all_resources": true,
+        "full_pass": true
+      }
+    }
+  },
+  "zstd": {
+    "bytes": 6329468,
+    "frame_sha256": "f7f5466e72b312443608ae471b57bfb1ba07474c4a176b2d21029115f3bcded9",
+    "encode_MB_s": 503.1483034077551,
+    "decode_MB_s": 1423.2412779040235,
+    "encode_MiB": 7.453125,
+    "decode_MiB": 7.375,
+    "against": {
+      "zstd": {
+        "size_saving_percent": 0.0,
+        "saves_20pct": false,
+        "resource_checks": {
+          "encode_ms": true,
+          "decode_ms": true,
+          "encode_rss": true,
+          "decode_rss": true
+        },
+        "all_resources": true,
+        "full_pass": false
+      },
+      "openzl": {
+        "size_saving_percent": -83.63801527776207,
+        "saves_20pct": false,
+        "resource_checks": {
+          "encode_ms": true,
+          "decode_ms": true,
+          "encode_rss": true,
+          "decode_rss": true
+        },
+        "all_resources": true,
+        "full_pass": false
+      }
+    }
+  },
+  "openzl": {
+    "bytes": 3446709,
+    "frame_sha256": "441e5adc763a659a6549ba727ee3be56e66ccb2261be04e0c1e317f43539774f",
+    "encode_MB_s": 113.60137128814168,
+    "decode_MB_s": 253.0279372535662,
+    "encode_MiB": 482.328125,
+    "decode_MiB": 232.609375,
+    "against": {
+      "zstd": {
+        "size_saving_percent": 45.545044228045704,
+        "saves_20pct": true,
+        "resource_checks": {
+          "encode_ms": false,
+          "decode_ms": false,
+          "encode_rss": false,
+          "decode_rss": false
+        },
+        "all_resources": false,
+        "full_pass": false
+      },
+      "openzl": {
+        "size_saving_percent": 0.0,
+        "saves_20pct": false,
+        "resource_checks": {
+          "encode_ms": true,
+          "decode_ms": true,
+          "encode_rss": true,
+          "decode_rss": true
+        },
+        "all_resources": true,
+        "full_pass": false
+      }
+    }
+  }
+}

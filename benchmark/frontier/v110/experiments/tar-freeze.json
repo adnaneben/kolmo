@@ -1,0 +1,16 @@
+{
+  "compiled": "2928714347418e53e096d719acfb845d87b72a81ca881b4d0c9c4ff9b275d60e",
+  "members": {
+    "binary": {
+      "akiyo.y4m": "df88d83cbf6d99f3ec41f2c1fd2e67665d2a71ff8caa08f8b6bc46bf4567ea2e",
+      "chinook.sqlite": "7651ba378ac2fcd0dfc3c66fb101f7a7eed3ba39a612ec642b96e20702061f15",
+      "saut_page.docx": "748f34f3dc285f4d48474930758b2c37382d17965545a1729cb7400cada793da"
+    },
+    "structured": {
+      "bsub.fa": "59c09816fb55fb1a0b42d0715f627bb42018a19c6bf933c9cb37f6058ee4737e",
+      "events.jsonl": "4a20b69348d86e68c538e43846b5b57662f15f00440277b7fe6ad1e35c12dbaf",
+      "test.csv": "269ce7cb166b4dbf65391030d106a028747148cbb04eb627fd1ed7b6084472e0"
+    }
+  },
+  "source": "09c56b7893efe1c570dddfc7b057b3c8b20963d466dbaba652f85a6651c55019"
+}

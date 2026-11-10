@@ -1,0 +1,78 @@
+{
+  "input": "Silesia dickens, first 262144 bytes",
+  "source_bytes": 262144,
+  "input_sha256": "becc366f2948cfbaefb219df19f54b101a842737428b01c7538b871a35c3edf4",
+  "full_mr_score_sha256": "a53bcb916b0a76c6c15ffad562a57ce9564f7c684ff7bb19b53b634efc4e0cac",
+  "models": {
+    "model2_default": {
+      "frame_bytes": 65474,
+      "frame_sha256": "a6757d6ef8e25596663b4836cb14440e3e93a14d261463c5815c8ec415405a5b",
+      "block_codecs": [
+        7
+      ],
+      "verified_encoders": [
+        "release_stock",
+        "pre_tar_compact",
+        "combined_stock",
+        "combined_compact"
+      ],
+      "verified_decoders": [
+        "release_stock",
+        "pre_tar_compact",
+        "combined_stock",
+        "combined_compact"
+      ]
+    },
+    "model1": {
+      "frame_bytes": 65759,
+      "frame_sha256": "f7a399635e08eacc4a7fbd0d7d2ace59beafe6810f0cd92449e0b412a410dddc",
+      "block_codecs": [
+        7
+      ],
+      "verified_encoders": [
+        "release_stock",
+        "pre_tar_compact",
+        "combined_stock",
+        "combined_compact"
+      ],
+      "verified_decoders": [
+        "release_stock",
+        "pre_tar_compact",
+        "combined_stock",
+        "combined_compact"
+      ]
+    }
+  },
+  "binaries": {
+    "release_stock": {
+      "binary": "$EVIDENCE_CHECKOUT/build/frontier/github-110/build/kolmo",
+      "binary_sha256": "e450319552902f14c47f9b4b04d63796e8a0159bdb1243f16185147fb67f59d1",
+      "revision": "87dfc86b2665cac637c98179fb8afa8db3eeb668",
+      "cm_sha256": "a3a1056856863b7bcc5e463a62e4f2cf1e31ff12a755d35a9d9020e3d04efa02",
+      "native_core_sha256": "01846ab2d0ded938f639f79e40ff8529efe8b3399436cdad558258fbd68d038f"
+    },
+    "pre_tar_compact": {
+      "binary": "$EVIDENCE_CHECKOUT/build/frontier/frozen-110/a0d59c6-compact",
+      "binary_sha256": "af29c9cbd660cc03382982d29fa0d8831e3611aafcbc53e9d4565498d20bc3cf",
+      "revision": "a0d59c6d822bfdda8915565c45050abc0feb75c3",
+      "cm_sha256": "da4a95fb0b1a78141963587bd1f2ce96f460c5014413d2bb6c8b87a09733aac5",
+      "native_core_sha256": "ed5f60ba2e622455d59875f51257f835ffb7e9f3f9700d80d5955b8d1172e30a"
+    },
+    "combined_stock": {
+      "binary": "$EVIDENCE_CHECKOUT/build/frontier/frozen-110/f5146d8-fast",
+      "binary_sha256": "2928714347418e53e096d719acfb845d87b72a81ca881b4d0c9c4ff9b275d60e",
+      "revision": "f5146d834f836f80b1e514b5bc6beea8a2ad9d8b",
+      "cm_sha256": "da4a95fb0b1a78141963587bd1f2ce96f460c5014413d2bb6c8b87a09733aac5",
+      "native_core_sha256": "09c56b7893efe1c570dddfc7b057b3c8b20963d466dbaba652f85a6651c55019"
+    },
+    "combined_compact": {
+      "binary": "$VALIDATION_CHECKOUT/build/kolmo-cm-compact",
+      "binary_sha256": "563c90f3155903272502a9fd7270dd51a3c7d684c471c3acd15aabd37cb6d4cc",
+      "revision": "f5146d834f836f80b1e514b5bc6beea8a2ad9d8b",
+      "cm_sha256": "da4a95fb0b1a78141963587bd1f2ce96f460c5014413d2bb6c8b87a09733aac5",
+      "native_core_sha256": "09c56b7893efe1c570dddfc7b057b3c8b20963d466dbaba652f85a6651c55019",
+      "sealed_copy": "$EVIDENCE_CHECKOUT/build/frontier/frozen-110/f5146d8-compact"
+    }
+  },
+  "original_receipt_sha256": "89f4ee71a5cae10658814a8f41a7289f660ff2f920cbabfedca8248007cb3b97"
+}

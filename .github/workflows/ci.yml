@@ -21,6 +21,8 @@ jobs:
         run: make -j4 ARCH=
       - name: tests (round trips in all modes, corruption fuzzing)
         run: make check
+      - name: FASTA, compact ultra and tar file compatibility
+        run: make -j4 ARCH= check-frontier-dna check-cm-compact check-tar-files
       - name: shared library + Python binding round trip
         run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py && python3 tests/test_concurrent_dict.py
       - name: Rust binding round trip
