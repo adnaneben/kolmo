@@ -1764,7 +1764,25 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             size_t mm = n < TRIAL ? n : TRIAL;             /* (shorter slices were tried: the gain does not show below 256 KiB) */
             uint8_t *sp = malloc(2 * mm + 64), *o = malloc(2 * mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx();
             size_t cap = ZSTD_compressBound(2 * mm); uint8_t *z = malloc(cap);
-            if (sp && o && zc && z) {
+            int shaped = 1;
+            if (sp && mm >= (64u << 10)) {
+                /* records must share a few key layouts for the template transform to pay: split the first 64 KiB and
+                 * count distinct key sequences over up to 256 records (a hash of each record's key names) */
+                size_t sn0 = json_split(s, 64u << 10, sp), i = 0; uint32_t seen[64]; int ns = 0, lines = 0;
+                while (i < sn0 && lines < 256) {
+                    const uint8_t *e = memchr(sp + i, '\n', sn0 - i); size_t l = e ? (size_t)(e - (sp + i)) : sn0 - i; uint32_t hk = 2166136261u; int inq = 0; size_t qs = 0;
+                    for (size_t q = 0; q < l; q++) {
+                        uint8_t c = sp[i + q];
+                        if (c == '\\' && inq) { q++; continue; }
+                        if (c == '"') { if (!inq) { inq = 1; qs = q + 1; } else { inq = 0; if (q + 1 < l && sp[i + q + 1] == ':') { for (size_t r = qs; r < q; r++) hk = (hk ^ sp[i + r]) * 16777619u; hk = (hk ^ 0xFF) * 16777619u; } } }
+                    }
+                    int f = 0; for (int q = 0; q < ns; q++) if (seen[q] == hk) { f = 1; break; }
+                    if (!f) { if (ns < 64) seen[ns] = hk; ns++; }
+                    lines++; i += l + 1;
+                }
+                shaped = lines >= 8 && (ns <= 8 || ns * 16 <= lines);   /* a handful of layouts, or at most one per 16 records */
+            }
+            if (sp && o && zc && z && shaped) {
                 size_t sn = json_split(s, mm, sp); int64_t tn = log_encode_m(sp, sn, o, 2 * mm + 64, 1);
                 if (tn > 0) {
                     size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1), b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1);
@@ -2269,7 +2287,7 @@ static void *compress_worker(void *arg) {
         }
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
         if (codec == C_LZMA && level == 1) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
-        else if (codec == C_LZMA && tflag == 10) codec = C_BSC;            /* max, minified JSON records: BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
+        else if (codec == C_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BSC;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
         else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         if (codec == C_ZSTD && level == 19 && tflag == 9) level = CZ_HC_TEXT_LEVEL;                                  /* hc text: ultra level */
 #ifdef KOLMO_FRONTIER
@@ -2302,9 +2320,9 @@ static void *compress_worker(void *arg) {
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
         if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, kept only when clearly smaller */
             /* BWT decodes about half as fast as LZMA2 here, so it must pay for that: at least KOLMO_BWT_GAIN_PCT smaller. */
-            /* BWT is tried only where it has won in tests: not on x86 code or typed table columns (4 to 6% larger), and only when LZMA2 already reaches
+            /* BWT is tried only where it has won in tests: not on x86 code, typed table columns or log token streams (4 to 12% larger), and only when LZMA2 already reaches
              * 35% or less (on less compressible binary data BWT was 1.5 to 8% larger) */
-            uint8_t *alt = tflag == 8 || tflag == 4 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
+            uint8_t *alt = tflag == 8 || tflag == 4 || tflag == 5 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
             if (alt && inlen > (8u << 20)) {                /* large blocks only: on small ones the slice costs as much as the attempt */
                 /* a short slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the
                  * outcome: where BWT won on the whole block the slice ratio was at most 1.02, where it lost by 5% or
