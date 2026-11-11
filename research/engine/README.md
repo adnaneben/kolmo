@@ -50,5 +50,30 @@ byte at the last offset (Oodle's "sub" literals), binary context coding of liter
 is new on its own; what is untested elsewhere, as far as we know, is driving these contexts from kolmo's structure
 planner. OpenZL is the nearest system (a graph of codecs with zstd-class back ends).
 
-Next (experiment 1b): a real encoder and decoder for the decode-cheap variant on a level-1/2-cost parse, timed end
-to end against zstd -3, and the same coding applied to kolmo's transformed streams instead of raw input.
+## Experiment 1b (11 Nov 2026): a working encoder and decoder
+
+`exp1b.c` codes zstd's level-N matches with the decode-cheap schemes of experiment 1 (literals plain, minus the
+byte at the last offset, or split by record position; sequence symbols in FSE streams split by context) and decodes
+them. All 12 Silesia files round-trip. Cloud VM, one thread, best of three.
+
+| Search | Size | Against zstd -3 (66.14 MB) | Search time | Our coding | Our decode | zstd -3 encode / decode |
+|---|---|---|---|---|---|---|
+| level 3 | 64.14 MB | -3.0% | 948 ms | 1255 ms | 651 ms | 949 / 215 ms |
+| level 2 | 66.66 MB | +0.8% | 641 ms | 1323 ms | 653 ms | 1038 / 227 ms |
+
+The real coder keeps about two thirds of the estimated gain (-3.0% against an estimated -4.8% on the level-3
+parse); stream headers and per-block tables take the rest. The gain sits in three record-structured files (sao
+-12%, x-ray -10%, mr -7%), where kolmo's transforms already do far better; mozilla gains 2.6%; text and the other
+binaries are within 0.5%. The coding and decoding stages are unoptimised (three times zstd's decode), so no speed
+claim can be made for a tuned version; what the numbers do fix is the size it would have.
+
+Verdict: coding zstd-style matches with static contexts does not clear the bar for replacing zstd at the balanced
+setting. It equals zstd -3's size from a level-2 search, and its gains fall where transforms already win. Even the
+adaptive mix on these parses (26.5% of Silesia) is behind xz -6 (23.4%), so it is not a ratio-tier engine either.
+This line stops here.
+
+What the two experiments point to instead:
+- Text is 90% match descriptions at this level. A text engine has to change how matches are found and described
+  (longer history, reduced-offset or predicted-position matches, word-level units), not how literals are coded.
+- kolmo's edge is the planner and the transforms. Decode speed of the inverse transforms and planning time are the
+  open costs there, and they are measured, bounded engineering.
