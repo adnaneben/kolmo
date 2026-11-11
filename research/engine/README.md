@@ -77,3 +77,23 @@ What the two experiments point to instead:
   (longer history, reduced-offset or predicted-position matches, word-level units), not how literals are coded.
 - kolmo's edge is the planner and the transforms. Decode speed of the inverse transforms and planning time are the
   open costs there, and they are measured, bounded engineering.
+
+## Experiment 2 (11 Nov 2026): binary doubles that hold decimal values
+
+Prompted by an outside review that listed exact float coding among untested ideas. kolmo has a DECIMAL node for
+numbers written as text, but nothing for IEEE doubles whose values are short decimals (the ALP idea, Afroozeh et
+al. 2024): per column, find the power of ten e with round(v * 10^e) / 10^e == v bit for bit, store the integers,
+tag the missing-value pattern, keep the rest as exceptions.
+
+One-file check, numpy prototype, same zstd level-3 back end as balanced:
+
+| owid_energy_f64.npy (23,377 x 128 doubles, 23.9 MB) | Bytes |
+|---|---|
+| zstd -3 | 2,798,755 |
+| kolmo balanced (finds no transform) | 2,798,755 |
+| kolmo max | 1,779,790 |
+| decimal mapping per column + byte shuffle + zstd 3 | 1,455,903 (-48% vs balanced, -18% vs max) |
+
+Exponents used: 0, 2, 3; two true exceptions in 2.99 M values. On a float file that is not decimal
+(lfw_subset.npy) 87% of values are exceptions, so a trial would reject it. One positive file is not a result yet:
+next is more decimal-valued binary tables (Arrow, Parquet plain pages, .npy from CSV sources) held out from tuning.
