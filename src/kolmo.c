@@ -2268,6 +2268,7 @@ static void *compress_worker(void *arg) {
         }
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
         if (codec == C_LZMA && level == 1) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
+        else if (codec == C_LZMA && tflag == 10) codec = C_BSC;            /* max, minified JSON records: BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
         else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         if (codec == C_ZSTD && level == 19 && tflag == 9) level = CZ_HC_TEXT_LEVEL;                                  /* hc text: ultra level */
 #ifdef KOLMO_FRONTIER

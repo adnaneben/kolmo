@@ -124,3 +124,5 @@
   with the graph, and the smaller is kept (a 93 KB integer file at `eco` had grown from 660 to 717 bytes).
 - **`max` skips hopeless block-sorting attempts on large blocks.** A slice from the middle is coded both ways first;
   outputs are unchanged on the test corpus and a 21 MB source tarball encodes 9% faster.
+- **`max` on minified JSON encodes nine times faster.** The record streams go straight to BWT, which had been winning
+  over LZMA2 anyway; the LZMA2 pass is no longer run first. Output is unchanged.
