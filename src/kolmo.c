@@ -1705,24 +1705,12 @@ static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
             if (ok && prod >= 2 && (n - h) / 8 / prod >= 16) cols = (size_t)prod;
         }
     } else {
-        /* a plain array, possibly inside other data (pickle, Arrow, HDF5: a header, then columns): each of the 8
-         * byte alignments is sampled, and the best one must be mostly decimal words or one repeated pattern */
+        /* arrays inside other data (a raw dump, pickle, Arrow, HDF5: headers, then columns at any byte alignment):
+         * 64 places across the input are probed, and a quarter of them must hold decimal doubles */
         if (n < 4096) return best;
-        size_t bs = 0; const size_t sn = 256, words = (n - 8) / 8;
-        for (size_t k = 0; k < 8; k++) {
-            size_t pass = 0, zero = 0, vote = 0, nm = 0; uint64_t cand = 0;
-            for (size_t q = 0; q < sn; q++) {
-                uint64_t bits = get64(s + k + (size_t)((uint64_t)q * words / sn) * 8); int64_t m; int e = 0;
-                while (e < KG_DEC_ESEARCH && !kg_dec_fit(bits, KG_P10[e], &m)) e++;
-                if (e < KG_DEC_ESEARCH) { pass++; zero += bits == 0; }
-                else if (!vote) { cand = bits; vote = 1; } else if (cand == bits) vote++; else vote--;
-            }
-            if (vote) for (size_t q = 0; q < sn; q++) nm += get64(s + k + (size_t)((uint64_t)q * words / sn) * 8) == cand;
-            if (nm < 8) nm = 0;
-            if ((pass + nm) * 2 < sn || pass * 5 < sn || zero * 2 > pass) continue;   /* not decimal, or mostly zero words */
-            if (pass + nm > bs) { bs = pass + nm; h = k; }
-        }
-        if (!bs) return best;
+        size_t hits = 0;
+        for (size_t q = 0; q < 64; q++) hits += kg_dec_probe(s + (size_t)((uint64_t)q * (n - 136) / 64)) != 0;
+        if (hits < 16) return best;
     }
     if (n < h + 512) return best;
     const size_t rb = cols ? cols * 8 : 8;

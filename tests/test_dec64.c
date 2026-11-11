@@ -17,14 +17,18 @@ int main(void) {
     for (int it = 0; it < 400; it++) {
         size_t cols = it % 4 == 0 ? 0 : 1 + rnd() % (it % 9 == 0 ? 300 : 12), tc = cols ? cols : 1 + rnd() % 6;
         size_t rows = 16 + rnd() % (it % 11 == 0 ? 40000 : 3000), h = it % 3 ? rnd() % 200 : 0, tail = rnd() % 23;
-        size_t n = h + rows * tc * 8 + tail; uint8_t *in = malloc(n + 8), *z = malloc(n + 4096), *out = malloc(n + 8);
+        /* every other plain array: text of a random length before each column, so the byte alignment keeps changing
+         * (as in a pickle or an Arrow file) */
+        size_t gap[8] = {0}, gaps = 0; if (!cols && it % 8 == 4) for (size_t c = 0; c < tc; c++) { gap[c] = 1 + rnd() % 90; gaps += gap[c]; }
+        size_t n = h + gaps + rows * tc * 8 + tail; uint8_t *in = malloc(n + 8), *z = malloc(n + 4096), *out = malloc(n + 8);
+        for (size_t i = 0; i < n; i++) in[i] = (uint8_t)('a' + rnd() % 26);
         int ce[512], kind[512]; double lvl[512];
         for (size_t c = 0; c < tc; c++) { ce[c] = (int)(rnd() % 7); kind[c] = (int)(rnd() % 10); lvl[c] = (double)(rnd() % 100000); }
         for (size_t i = 0; i < h; i++) in[i] = (uint8_t)rnd();
-        for (size_t i = 0; i < tail; i++) in[n - tail + i] = (uint8_t)rnd();
         for (size_t r = 0; r < rows; r++) for (size_t c = 0; c < tc; c++) {
             /* a table (cols > 0) is row by row; a plain array is column after column */
-            size_t at = cols ? r * tc + c : c * rows + r; double v; uint32_t k = rnd();
+            size_t at = cols ? r * tc + c : c * rows + r, shift = 0; double v; uint32_t k = rnd();
+            if (!cols) for (size_t j = 0; j <= c; j++) shift += gap[j];
             if (kind[c] == 0) { uint64_t b = (uint64_t)rnd() << 32 | rnd(); memcpy(&v, &b, 8); }           /* arbitrary bits */
             else if (kind[c] == 1 && k % 3 == 0) v = NAN;                                                    /* a third missing */
             else if (k % 97 == 0) v = special();
@@ -34,7 +38,7 @@ int main(void) {
                 v = strtod(buf, NULL);
                 if (kind[c] == 3 && k % 5 == 0) v = v / 3.0;                                                 /* some values not decimal */
             }
-            memcpy(in + h + at * 8, &v, 8);
+            memcpy(in + h + shift + at * 8, &v, 8);
         }
         size_t zn = kg_encode_dec64(&cx, C_ZSTD, 3, in, n, cols, h, z, n + 4096);
         if (!zn) { rejected++; free(in); free(z); free(out); continue; }
