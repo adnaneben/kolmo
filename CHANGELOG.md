@@ -89,6 +89,23 @@
 
 ## Unreleased (on main, not tagged)
 
+- **Decimal doubles: a new kolmo graph node (DEC64, node id 7; branch `claude/dec64`, not on main yet).** Binary
+  float64 values that were written in decimal (prices, measurements, counts, most CSV data loaded into arrays) are
+  stored as the integer `m` with value = `m / 10^e`: one exponent per column, the integers as zigzag byte planes with
+  an optional delta, one tag byte per value. A column's most common other pattern (usually NaN for missing) is a tag;
+  anything else (NaN payloads, -0.0, full-precision values) is kept verbatim as an exception, so every input round
+  trips exactly. A row-major `.npy` table uses its shape for the columns; column-major and headerless arrays are cut
+  into runs of 4,096 values that each choose their own exponent, and runs of other data before or after the array
+  stay as plain bytes. On a holdout set built after the design was fixed (OWID CO2, three OpenZL sample tables, a
+  nuclear mass table, scikit-learn digits and a telemetry table, each as `.npy` and as a raw column-major array; 14
+  files, 95 MB): `balanced` 11.9 MB → 5.8 MB (every file 25 to 57% smaller), `ratio` 7.2 MB → 4.6 MB (0 to 49%
+  smaller; xz -9: 8.3 MB). The three control files without decimal values are byte-identical. On the affected files
+  encode takes 1.4 to 2.4 times the CPU and decode 1.3 to 1.8 times (still 120 to 240 MB/s and 420 to 770 MB/s on the
+  cloud VM); other files pay one 64-value sample. At `ratio` and `ultra` the plan is scored with zstd, so each such
+  block is also coded plainly and the smaller result kept. Files that use the node need this version or later; an
+  older reader stops with an error at the unknown node. The inverse checks every tag and count before it writes
+  (`make check-dec64`: round trips with awkward values and 59,000 damaged payloads under AddressSanitizer).
+  Not covered yet: arrays inside containers whose alignment changes from column to column (pandas pickle).
 - **Line classes: a new transform for fixed-width text (block flag 12, container version 8).** Text whose lines come
   in a few fixed lengths (chemistry and geometry files, fixed-width reports and dumps) is stored column by column
   per line length. `balanced` takes it where it codes a trial slice at least as small as the template transform; it

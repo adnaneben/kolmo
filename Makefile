@@ -102,6 +102,10 @@ build/test-lines-asan: tests/test_lines.c src/kolmo.c src/kolmo.h src/lines.inc 
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_lines.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-lines: build/test-lines-asan
 	./build/test-lines-asan
+build/test-dec64-asan: tests/test_dec64.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dec64.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-dec64: build/test-dec64-asan
+	./build/test-dec64-asan
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan

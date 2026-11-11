@@ -1469,7 +1469,7 @@ static inline uint32_t get32(const uint8_t *p) { uint32_t v; memcpy(&v, p, 4); r
 static inline uint64_t get64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }
 #include "lines.inc"
 
-typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw;   /* kgw: IMG8 row bytes */
+typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw;   /* kgw: IMG8 or DEC64 row bytes */
 #ifdef KOLMO_FRONTIER
     frontier_lags lags;
 #endif
@@ -1671,6 +1671,67 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
         size_t z = l ? kg_encode_float(&cx, C_ZSTD, zl, s + a, l, fw, 0, o, L + 64) : 0;
         if (z && (double)z / l < best) { best = (double)z / l; *bw = fw; *bh = fh; }
     }
+    free(o); codec_ctx_free(&cx);
+    return best;
+}
+
+/* Binary64 values that were written in decimal (DEC64). A row-major .npy '<f8' table gives its row length; any other
+ * data is tried as a plain array of doubles when a spread sample of 8-byte words is nearly all decimal or one repeated
+ * pattern (missing values). *bcols: values per row, or 0 for a plain array. */
+static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, uint32_t *bcols, size_t *bh) {
+    double best = 1e300; size_t h = 0, cols = 0;
+    if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
+        size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
+        const uint8_t *d = hl <= n ? memmem(s, hl, "'descr': '", 10) : NULL;
+        if (!d || d + 13 > s + hl || d[10] != '<' || d[11] != 'f' || d[12] != '8') return best;
+        h = hl;
+        if (n >= h + 4096) {                                 /* 64 values across the array: a quarter must be decimal or NaN */
+            size_t words = (n - h) / 8, ok = 0;
+            for (size_t q = 0; q < 64; q++) {
+                uint64_t bits = get64(s + h + (size_t)((uint64_t)q * words / 64) * 8); int64_t m; int e = 0;
+                while (e < KG_DEC_ESEARCH && !kg_dec_fit(bits, KG_P10[e], &m)) e++;
+                ok += e < KG_DEC_ESEARCH || (bits & 0x7ff0000000000000ull) == 0x7ff0000000000000ull;
+            }
+            if (ok < 16) return best;
+        }
+        const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+        if (sh && fo) {                                      /* row-major: a row is the product of the dimensions after the first */
+            const uint8_t *q = sh + 10, *e = s + hl; uint64_t dim = 0, prod = 1; int nd = 0, ok = 1, dig = 0;
+            for (; q < e && *q != ')'; q++) {
+                if (*q >= '0' && *q <= '9') { dim = dim * 10 + (uint64_t)(*q - '0'); dig = 1; if (dim > (1u << 30)) ok = 0; }
+                else if (*q == ',') { if (nd++ && dig) { prod *= dim; if (prod > 65536) ok = 0; } dim = 0; dig = 0; }
+            }
+            if (dig && nd) { prod *= dim; if (prod > 65536) ok = 0; }
+            if (ok && prod >= 2 && (n - h) / 8 / prod >= 16) cols = (size_t)prod;
+        }
+    } else {
+        /* a plain array, possibly inside other data (pickle, Arrow, HDF5: a header, then columns): each of the 8
+         * byte alignments is sampled, and the best one must be mostly decimal words or one repeated pattern */
+        if (n < 4096) return best;
+        size_t bs = 0; const size_t sn = 256, words = (n - 8) / 8;
+        for (size_t k = 0; k < 8; k++) {
+            size_t pass = 0, zero = 0, vote = 0, nm = 0; uint64_t cand = 0;
+            for (size_t q = 0; q < sn; q++) {
+                uint64_t bits = get64(s + k + (size_t)((uint64_t)q * words / sn) * 8); int64_t m; int e = 0;
+                while (e < KG_DEC_ESEARCH && !kg_dec_fit(bits, KG_P10[e], &m)) e++;
+                if (e < KG_DEC_ESEARCH) { pass++; zero += bits == 0; }
+                else if (!vote) { cand = bits; vote = 1; } else if (cand == bits) vote++; else vote--;
+            }
+            if (vote) for (size_t q = 0; q < sn; q++) nm += get64(s + k + (size_t)((uint64_t)q * words / sn) * 8) == cand;
+            if (nm < 8) nm = 0;
+            if ((pass + nm) * 2 < sn || pass * 5 < sn || zero * 2 > pass) continue;   /* not decimal, or mostly zero words */
+            if (pass + nm > bs) { bs = pass + nm; h = k; }
+        }
+        if (!bs) return best;
+    }
+    if (n < h + 512) return best;
+    const size_t rb = cols ? cols * 8 : 8;
+    if (st < h) st = h;
+    size_t a = h + (st - h) / rb * rb, l = (n - a < L ? n - a : L) / rb * rb;
+    if (l < 16 * rb || l < 512) { a = h; l = (n - h < L ? n - h : L) / rb * rb; if (l < 512) return best; }
+    codec_ctx cx = {0}; uint8_t *o = malloc(l + 64);
+    size_t z = o ? kg_encode_dec64(&cx, C_ZSTD, zl, s + a, l, cols, 0, o, l + 64) : 0;
+    if (z) { best = (double)z / l; *bcols = (uint32_t)cols; *bh = h; }
     free(o); codec_ctx_free(&cx);
     return best;
 }
@@ -2031,8 +2092,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (ej * 1000 >= L) {
             memcpy(buf, s + st, L); e8e9_fwd(buf, L);
             double c = (double)zcost(zc, buf, L, zb, zcap, zl) / L;
-            if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
-            else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
+            if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; if (keep.rec != pl.rec) free(keep.rec);   /* a record plan loses to this one */ keep = pl; keep.t = T_X86; chosen = 4; }
+            else if (c < best && chosen == 0) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_X86; chosen = 4; }
             }
         }
         {   /* float arrays first (FLOAT node); integer arrays (INT node) only when the data does not look like floats */
@@ -2050,10 +2111,12 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             const int npy = n > 16 && !memcmp(s, "\x93NUMPY", 6);   /* quick analysis: integer and image trials only for a .npy header */
             if (cf > 1e299 && (!light || npy || numtrial)) {
                 w = 0; hh = 0; c = kg_num_trial(s, n, st, Lg, zl, plain, &w, &hh); c = KG_ADJ(c);
-                if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
+                if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
             }
             c = cf; w = fw; hh = fh;
-            if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
+            if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
+            { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, st, L, zl, &dc, &dh);     /* decimal doubles */
+              if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = dc ? 64 : 65; keep.c = (int)dh; keep.kgw = dc ? dc * 8 : 8; chosen = 8; } }
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt2 = prof_now();
 #endif
@@ -2063,7 +2126,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             fprintf(stderr, "kg float_ms=%.3f num_ms=%.3f img8_ms=%.3f\n", (kgt1 - kgt0) * 1000, (kgt2 - kgt1) * 1000, (prof_now() - kgt2) * 1000);
 #endif
-            if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7; }
+            if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7; }
         }
 #undef KG_ADJ
 structured_done:
@@ -2083,6 +2146,8 @@ structured_done:
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w; pl.c = (int)hh; }
             w = 0; hh = 0; c = kg_float_trial(s, n, 0, n, zl, plain, &w, &hh);
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w | 16; pl.c = (int)hh; }
+            { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, 0, n, zl, &dc, &dh);
+              if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = dc ? 64 : 65; pl.c = (int)dh; pl.kgw = dc ? dc * 8 : 8; } }
             size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, 0, n, zl, 1e300, &iw, &ic, &ih);
             if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = 32 | (int)ic; pl.c = (int)ih; pl.kgw = (uint32_t)iw; }
         }
@@ -2124,7 +2189,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     if (pl.t == T_REC) { B = B / pl.rec->P * pl.rec->P; if (!B) B = pl.rec->P; }
     int kgnum = pl.t == T_KG && pl.a == 0;                     /* integer graph: width-aligned blocks after the head */
     if (kgnum) {
-        uint32_t kw = pl.b & 32 ? pl.kgw : (uint32_t)(pl.b & 15);     /* IMG8: whole rows; INT/FLOAT: whole words */
+        uint32_t kw = pl.b & 96 ? pl.kgw : (uint32_t)(pl.b & 15);     /* IMG8, DEC64: whole rows; INT/FLOAT: whole words */
         B = B / kw * kw; if (!B) B = kw;
     }
     while (pos < n) {
@@ -2324,6 +2389,7 @@ static void *compress_worker(void *arg) {
             int kgc = codec == C_LZMA && pl.a ? C_BSC : codec, kgl = kgc != codec ? 9 : level;
             cl = pl.a ? kg_encode_table(xp, kgc, kgl, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
                       : pl.b & 32 ? kg_encode_img8(xp, kgc, kgl, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
+                      : pl.b & 64 ? kg_encode_dec64(xp, kgc, kgl, raw, len, pl.b & 1 ? 0 : pl.kgw / 8, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 16 ? kg_encode_float(xp, kgc, kgl, raw, len, pl.b & 15, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : kg_encode_num(xp, kgc, kgl, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
             if (cl && len < (256u << 10)) {                                 /* small block: the plan was scored with zstd; the block's
@@ -2331,6 +2397,17 @@ static void *compress_worker(void *arg) {
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
                 size_t pc = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (pc && pc < cl) cl = 0;
+            }
+            if (cl && (pl.b & 64) && !pl.a && len >= (256u << 10) && (codec == C_LZMA || codec == C_BSC || codec == C_CM)) {
+                /* decimal doubles under the slow coders: the plan was scored with zstd, and on small-integer tables
+                 * block sorting or context mixing over the plain bytes can still be smaller. Both are coded; the
+                 * smaller one is kept. */
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4); int bc = 0; size_t bz = cl;
+                size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
+                if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = codec; }
+                size_t a2 = alt && codec == C_LZMA ? codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot) : 0;
+                if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_BSC; }
+                if (bc) { cl = bz; codec = bc; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; goto coded; }
             }
             if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8; goto coded; }
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
