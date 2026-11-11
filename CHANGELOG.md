@@ -129,3 +129,8 @@
 - Smaller planning costs at the slow settings: the wide-table trial uses half a MiB from `eco` up, block sorting is
   not attempted on typed table columns at `max`, and the command-line file path applies from 8 MiB as in 1.0.1.
   Outputs are unchanged on the test corpus.
+- `max`: JSON token streams (one record per line or minified) go straight to BWT, and block sorting is not attempted
+  on log token streams, where it lost by 4 to 12%. JSON lines encode nine times faster at `max`; outputs unchanged.
+- The minified-JSON trial runs only when the first records share a few key layouts, so a nested JSON document no
+  longer pays for a trial it cannot win.
+- Speed mode asks for stronger evidence before trying a shuffle, which cuts its planning on tarballs by two thirds.

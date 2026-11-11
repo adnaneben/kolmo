@@ -1915,7 +1915,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
          * mean plane entropy per width with the plain byte entropy on the sample (microseconds; no coder runs) */
         double h1 = kg_plane_h(smp, sl, 1, 0, 0), hb = 1e9;
         for (int w = 2; w <= 8; w *= 2) { double e = 0; for (int b = 0; b < w; b++) e += kg_plane_h(smp, sl / w, w, b, 0); e /= w; if (e < hb) { hb = e; wonly = w; } }
-        if (hb > 0.93 * h1) return pl;                      /* no plane stands out: plain coding, and no coder was run */
+        if (hb > (light == 3 ? 0.75 : 0.93) * h1) return pl;  /* (speed mode asks for a plane a quarter below the byte entropy) */                     /* no plane stands out: plain coding, and no coder was run */
         if (light == 3) {                                   /* speed mode: LZ4 passes over incompressible input at several GB/s;
                                                              * a shuffle that makes such data compressible costs most of that speed */
             char lz[LZ4_COMPRESSBOUND(32768)]; int lc = LZ4_compress_default((const char *)smp, lz, (int)sl, (int)sizeof lz);
