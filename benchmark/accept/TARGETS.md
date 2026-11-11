@@ -28,7 +28,9 @@ claude/next 6aeebcb on the M5 (six runs of the branch agree within a point on th
   `max -l 1`. Open: lz4 -1 (2.28x, 952, 1497) against `speed` (2.32x, 928, 1926): encode 97.5% of lz4, target 98%.
   kolmo is 11 to 29% faster than lz4 on incompressible input and 3 to 14% slower on compressible input; the per-file
   gaps fit a fixed cost of under a millisecond per run plus about 0.05 ms per MB.
-- Target 2: no confirmed slowdown on unchanged output.
+- Target 2: no confirmed slowdown at 6aeebcb; the next run (e3e6b08, same code plus a static liblzma on macOS) confirms
+  one, api.json at `max` (encode x0.92 to x0.94), and leaves lz4 at 97.7%. The Mac script now also records where a
+  speed-mode run spends its time (start-up, planning, blocks) against lz4.
 - Target 3: every setting at or above 1.0.1: rt x1.000 / x1.029 / x1.078 (ratio / encode / decode); fast x1.095 / x1.015 /
   x1.051; hc -l 9 x1.080 / x1.046 / x1.027; hc x1.075 / x1.192 / x1.040; max x1.085 / x1.037 / x1.091.
 - Target 4: no file larger than with 1.0.1 (Mac set, and 264 file/setting pairs on the cloud).
