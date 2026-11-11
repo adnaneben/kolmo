@@ -11,6 +11,9 @@ A version is released only when `accept.py` prints ACCEPTED on a results file fr
 3. **No setting moves backwards.** Against the baseline (1.0.1), per setting: ratio not lower, encode and decode not
    below 97%.
 4. **No file gets larger.** At the same setting, no file may compress to more bytes than with the baseline.
+5. **One thread means one thread.** Every tool is asked for one thread. A run whose CPU time exceeds its elapsed time
+   by more than 3% used helper threads and is charged its CPU time. (lz4 1.10 with `-T1` does this: on a 20 MB file it
+   takes 11.0 ms elapsed and 14.1 ms of CPU; kolmo takes 12.2 ms elapsed and 11.4 ms of CPU.)
 
 Rivals measured today: lz4, zstd (-1, -3, -9, -19), brotli, gzip, xz, bzip3. To be added as they are installed:
 OpenZL, zxc, JPEG XL (images), Pcodec (numeric), CLP (logs).

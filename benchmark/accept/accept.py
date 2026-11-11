@@ -14,16 +14,25 @@ A candidate is accepted only when all three hold:
   B. No file whose compressed size is unchanged from the baseline encodes or decodes more than 5% slower.
   C. Per setting, against the baseline: geometric-mean ratio not lower, encode and decode not below 97%.
   D. No file is larger than with the baseline at the same setting.
-Ratio is averaged over all files; speeds over files of 1 MB or more (smaller files measure start-up).
+All tools are asked for one thread. Where a run's CPU time exceeds its elapsed time by more than 3% (lz4 1.10 reads,
+writes and checksums on helper threads even with -T1), the run is charged its CPU time, so one thread is compared with
+one thread. Ratio is averaged over all files; speeds over files of 1 MB or more (smaller files measure start-up).
 Exit status 0 = accepted, 1 = not yet."""
 import json, math, sys, collections
 R = json.load(open(sys.argv[1])); R2 = json.load(open(sys.argv[4])) if len(sys.argv) > 4 else None; cand = sys.argv[2] if len(sys.argv) > 2 else 'cand'; base = sys.argv[3] if len(sys.argv) > 3 else '1.0.1'
 D = collections.defaultdict(dict)
+def one(t, c):   # one thread means one thread: a run whose CPU time clearly exceeds its elapsed time is charged its CPU time
+    return c if c is not None and c > 1.03 * t else t
+multi = set()
+def row(r):
+    tc, td = one(r['tc'], r.get('tc_cpu')), one(r['td'], r.get('td_cpu'))
+    if tc != r['tc'] or td != r['td']: multi.add(r['set'])
+    return (r['n'] / r['size'], r['n'] / 1e6 / tc, r['n'] / 1e6 / td, r['n'], r['size'])
 for r in R:
     if not r['ok']: print('ROUND TRIP FAILURE', r['file'], r['set']); sys.exit(1)
-    D[r['set']][r['file']] = (r['n'] / r['size'], r['n'] / 1e6 / r['tc'], r['n'] / 1e6 / r['td'], r['n'], r['size'])
+    D[r['set']][r['file']] = row(r)
 D2 = collections.defaultdict(dict)
-for r in (R2 or []): D2[r['set']][r['file']] = (r['n'] / r['size'], r['n'] / 1e6 / r['tc'], r['n'] / 1e6 / r['td'], r['n'], r['size'])
+for r in (R2 or []): D2[r['set']][r['file']] = row(r)
 gm = lambda v: math.exp(sum(map(math.log, v)) / len(v)) if v else float('nan')
 def summ(s, files=None):
     v = [x for f, x in D[s].items() if files is None or f in files]; big = [x for x in v if x[3] >= 1e6]
@@ -32,6 +41,7 @@ REDEFINED = ('max -l 1',)   # settings whose meaning changed since the baseline:
 ours = [s for s in D if s.startswith('kolmo ' + cand + ' ')]; rivals = [s for s in D if not s.startswith('kolmo ')]
 if not ours: print('no rows for candidate label', cand); sys.exit(1)
 fail = 0
+if multi: print('charged CPU time on some runs (more than one thread used):', ', '.join(sorted(multi)))
 print('A. rivals (ratio, encode MB/s, decode MB/s)')
 for rv in rivals:
     files = set(D[rv]); a = summ(rv); best = None
