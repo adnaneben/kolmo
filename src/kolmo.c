@@ -1974,8 +1974,10 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     /* structure-aware candidates (16-bit image, fixed records) against the shuffle and plain coding, scored by zstd -3
      * on a slice of up to 1 MiB from the middle of the input; kept only when at least 3% smaller */
     if (structured && n >= (1u << 18)) {
-        size_t LM = light ? (1u << 18) : (1u << 20), L = n / 4 < LM ? n / 4 : LM, st = (n / 2 - L / 2) & ~(size_t)7;
+        size_t LM = light && !numtrial ? (1u << 18) : (1u << 20), L = n / 4 < LM ? n / 4 : LM, st = (n / 2 - L / 2) & ~(size_t)7;
         const int zl = light ? 1 : 3;                      /* scoring level */
+        /* balanced keeps the 1 MiB slice of the full analysis: on a 47 MB weights file the 256 KiB slice picked a layout
+         * that coded 0.8% larger, and the slice costs under a millisecond at level 1 */
         size_t bc = L * 2 + 1024; uint8_t *buf = malloc(bc), *zb = malloc(ZSTD_compressBound(bc));
         if (!buf || !zb) { free(buf); free(zb); ZSTD_freeCCtx(zc); return pl; }
         size_t zcap = ZSTD_compressBound(bc);
