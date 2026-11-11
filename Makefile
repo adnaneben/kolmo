@@ -67,7 +67,7 @@ build/obj/%.o: %.S
 
 build/libvendor.a: $(OBJ)
 	ar rcs $@ $^
-build/kolmo.o: src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc
+build/kolmo.o: src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) -c src/kolmo.c -o $@
 build/libkolmo.a: build/kolmo.o
@@ -80,9 +80,9 @@ build/kolmotest: tests/kolmotest.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
-build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
+build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
-build/kolmo-profile: src/cli.c src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
+build/kolmo-profile: src/cli.c src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 check: all
@@ -92,10 +92,14 @@ check: all
 	./build/kolmotest
 
 SANFLAGS ?= -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
-build/kolmoparallel-asan: tests/kolmoparallel.c src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
+build/kolmoparallel-asan: tests/kolmoparallel.c src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoparallel.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
-build/kolmoresource-asan: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
+build/kolmoresource-asan: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc build/libvendor.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-lines-asan: tests/test_lines.c src/kolmo.c src/kolmo.h src/lines.inc build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_lines.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-lines: build/test-lines-asan
+	./build/test-lines-asan
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
@@ -114,7 +118,7 @@ build/pic/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -fPIC $(DEFS) $(INC) -c $< -o $@
 lib: build/libkolmo.$(SOEXT)
-build/libkolmo.$(SOEXT): src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc $(PICC) $(PICPP)
+build/libkolmo.$(SOEXT): src/kolmo.c src/kolmo.h src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc $(PICC) $(PICPP)
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) $(INC) src/kolmo.c $(PICC) $(PICPP) -o $@ $(LIBS) $(CXXLIB)
 
@@ -123,7 +127,7 @@ clean:
 .PHONY: all clean lib check check-sanitizers
 
 # Optional lower-memory archive encoder.
-build/kolmo-cm20: src/cli.c src/kolmo.c src/kolmo.h src/cm.inc src/tbl2.inc src/log.inc src/sci.inc src/word.inc src/stream.inc build/libvendor.a
+build/kolmo-cm20: src/cli.c src/kolmo.c src/kolmo.h src/cm.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/stream.inc build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 # Research build. Experimental recipes emit v6 frames only when used.

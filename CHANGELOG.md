@@ -89,6 +89,24 @@
 
 ## Unreleased (candidate branch `claude/next`)
 
+- **Line classes: a new transform for fixed-width text (block flag 12, container version 8).** Text whose lines come
+  in a few fixed lengths (chemistry and geometry files, fixed-width reports and dumps) is stored column by column
+  per line length. `balanced` takes it where it codes a trial slice at least as small as the template transform; it
+  costs a line scan and a transpose instead of tokens and templates. Silesia `nci` at `balanced`: 2,038,889 →
+  2,027,737 bytes, encode 254 → 92 ms, decode 57 → 36 ms, peak memory 54 → 14 MB. Files that use it carry version 8
+  and need this version or later to decode; every other file is written as before (version 3 to 7). The decoder
+  checks every length and count (`make check-lines`: round trips and 51,200 damaged inputs under AddressSanitizer).
+- **`balanced` plans binary data with the quick analysis.** Trial slices of 256 KiB scored at zstd level 1, shuffle
+  trials only at the byte width whose planes are most predictable and only where one is, the remaining layout trials
+  skipped once a 16-bit image layout saves a fifth, and the x86 check first on code. The text trials and the integer
+  trial are unchanged. Sizes on the 132-file test corpus are unchanged except one weights file (0.02% smaller).
+- **Template transform: 25% less encode time on repetitive logs.** A line with the same shape as the last line of its
+  length (digits in the same places, every other byte equal) reuses that line's tokens and template; runs of spaces
+  are not scanned; the template table starts small. Output is byte-identical.
+- Silesia, 12 files, one thread, in memory, same process as zstd 1.5.7 level 3 (cloud VM): `balanced` goes from 127.7
+  to 147.6 MB/s round trip (encode 152.7 → 180.4, decode 782 → 812) at 27.60% of the input; zstd -3 is 172 to 184 MB/s
+  at 31.21%. The size advantage is kept (11.6% smaller; 11.9% on the tar); the round trip is at 86% of zstd -3, up
+  from 69%. What remains is planning time on archives of executables and the LZ pass itself, which is zstd's.
 - **Three modes.** `-m speed`, `-m balanced` (default) and `-m ratio`; `-x` selects the smallest output of all
   (`ultra`). The older names (`rt`, `fast`, `eco`, `hc`, `max`, `ultra`) remain as advanced settings.
 - **`max` no longer gives up decode speed for almost nothing.** Block sorting replaces LZMA2 on a binary block only

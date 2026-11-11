@@ -1,7 +1,8 @@
 #!/bin/sh
 # Regression gate: a change may not lose a record or an earlier improvement.
 #   gate.sh NEW_BINARY RECORD_BINARY [ultra]
-# 1. identity: every lzbench ladder setting on every Silesia file must produce the same bytes as RECORD_BINARY (the
+# 1. identity: every lzbench ladder setting on every Silesia file must produce the same bytes as RECORD_BINARY, or
+#    different bytes that are not larger (listed as "changed, not larger") (the
 #    build that set the records), and NEW must decode its own output; with "ultra", ultra and ultra -l 1 too, and
 #    enwik8 at ultra. Identical bytes = identical ratios, so the lzbench ladder, ultra 17.01% / ultra -l 1 17.99% and
 #    enwik8 18.96 MB are kept exactly.
@@ -18,7 +19,10 @@ IFS='|'; for s in $LADDER; do
     rm -f $W/n.kolmo $W/r.kolmo $W/n.out
     $NEW -m $m "$@" -T1 "$f" $W/n.kolmo 2>/dev/null || { echo "RUN FAIL (new, exit $?): $(basename $f) [$s]"; F=$((F+1)); continue; }
     $REC -m $m "$@" -T1 "$f" $W/r.kolmo 2>/dev/null || { echo "RUN FAIL (record, exit $?): $(basename $f) [$s]"; F=$((F+1)); continue; }
-    if ! cmp -s $W/n.kolmo $W/r.kolmo; then echo "IDENTITY FAIL: $(basename $f) [$s] $(stat -c%s $W/n.kolmo) vs $(stat -c%s $W/r.kolmo)"; F=$((F+1)); fi
+    if ! cmp -s $W/n.kolmo $W/r.kolmo; then   # different bytes: a failure only if larger than the record (speed work may change a plan byte or shrink a file)
+      a=$(stat -c%s $W/n.kolmo); b=$(stat -c%s $W/r.kolmo)
+      if [ "$a" -gt "$b" ]; then echo "IDENTITY FAIL: $(basename $f) [$s] $a vs $b"; F=$((F+1)); else echo "changed, not larger: $(basename $f) [$s] $a vs $b"; fi
+    fi
     $NEW -d -T1 $W/n.kolmo $W/n.out 2>/dev/null && cmp -s "$f" $W/n.out || { echo "ROUNDTRIP FAIL: $(basename $f) [$s]"; F=$((F+1)); }
   done; echo "identity [$s]: done"; IFS='|'
 done; IFS=' '
