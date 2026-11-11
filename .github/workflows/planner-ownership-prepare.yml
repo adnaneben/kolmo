@@ -1,0 +1,77 @@
+name: Prepare pinned planner repair
+on:
+  push:
+    branches: [fix/planner-record-ownership]
+    paths: [.github/workflows/planner-ownership-prepare.yml]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 3c6890a91314b4d71db1911043ec19b87c16a86d
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prepare the exact three-site repair as an unattached Git blob
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import difflib, hashlib, json, os, pathlib, urllib.request
+          pin = '3c6890a91314b4d71db1911043ec19b87c16a86d'
+          expected = 'db8b7ad665ab0ff61f6634a2d6cb76ed1b17b70a'
+          original = pathlib.Path('src/kolmo.c').read_bytes()
+          def blob_sha(data):
+              return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+          if blob_sha(original) != expected:
+              raise SystemExit('Pinned core hash mismatch')
+          edits = [
+              (b'plan_t keep = pl; int chosen = 0;\n',
+               b'plan_t keep = pl; int chosen = 0;\n        /* Ownership survives replacement of the tentative winning plan. */\n        rec_plan_t *owned_rec = NULL;\n'),
+              (b'keep.rec = R; R = NULL; chosen = 3;',
+               b'keep.rec = R; owned_rec = R; R = NULL; chosen = 3;'),
+              (b'structured_done:\n        if (chosen >= 2) pl = keep;',
+               b'structured_done:\n        if (owned_rec && chosen != 3) free(owned_rec);\n        if (chosen >= 2) pl = keep;')
+          ]
+          candidate = original
+          for before, after in edits:
+              if candidate.count(before) != 1:
+                  raise SystemExit('Nonunique repair anchor')
+              candidate = candidate.replace(before, after, 1)
+          local_sha = blob_sha(candidate)
+          request = urllib.request.Request(
+              'https://api.github.com/repos/adnaneben/kolmo/git/blobs',
+              data=json.dumps({'content': candidate.decode('utf-8'), 'encoding': 'utf-8'}).encode(),
+              headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                       'Accept': 'application/vnd.github+json',
+                       'Content-Type': 'application/json'}, method='POST')
+          with urllib.request.urlopen(request, timeout=60) as response:
+              result = json.load(response)
+          if result['sha'] != local_sha:
+              raise SystemExit('Remote candidate hash mismatch')
+          out = pathlib.Path('planner-repair-preparation')
+          out.mkdir()
+          metadata = {'baseline_commit': pin, 'baseline_core_blob': expected,
+                      'candidate_core_blob': local_sha, 'source_edits': 3,
+                      'validation': 'NOT_RUN', 'branch_modified_by_workflow': False}
+          (out / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          (out / 'candidate.diff').write_text(''.join(difflib.unified_diff(
+              original.decode().splitlines(True), candidate.decode().splitlines(True),
+              fromfile='a/src/kolmo.c', tofile='b/src/kolmo.c')))
+          print('CANDIDATE_CORE_BLOB=' + local_sha)
+          print(json.dumps(metadata, sort_keys=True))
+          PY
+      - name: Preserve committed pinned source for reproducible local verification
+        run: git bundle create planner-repair-preparation/kolmo-pinned.bundle HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: planner-repair-preparation
+          path: planner-repair-preparation/
+          retention-days: 7
+          if-no-files-found: error
