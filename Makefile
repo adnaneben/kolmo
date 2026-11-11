@@ -40,6 +40,16 @@ LZMALIB :=
 else
 LZMALIB := -llzma
 endif
+# macOS: link Homebrew's liblzma statically when its archive is present. A dylib outside the system cache adds
+# start-up time to every run, which shows on small files at the speeds of the fast modes.
+ifeq ($(UNAME_S),Darwin)
+ifneq ($(NO_LZMA),1)
+LZMA_A := $(firstword $(wildcard $(BREW)/lib/liblzma.a $(BREW)/opt/xz/lib/liblzma.a))
+ifneq ($(LZMA_A),)
+LZMALIB := $(LZMA_A)
+endif
+endif
+endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
 BLIBS   := $(LIBS)
 

@@ -134,3 +134,4 @@
 - The minified-JSON trial runs only when the first records share a few key layouts, so a nested JSON document no
   longer pays for a trial it cannot win.
 - Speed mode asks for stronger evidence before trying a shuffle, which cuts its planning on tarballs by two thirds.
+- macOS builds link Homebrew's liblzma statically when the archive is present (less start-up time per run).
