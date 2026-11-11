@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
     }
 
     /* Small files fit in a few blocks. Keep their inexpensive in-memory path. */
-    const size_t file_threshold = 4u << 20;   /* the file path (reused block buffers, staged output) wins from a few MiB; below
+    const size_t file_threshold = 8u << 20;   /* the file path (reused block buffers, staged output) wins from 8 MiB; below
                                                * that its extra file operations cost more than they save on macOS */
     FILE *input = fopen(inp, "rb"); if (!input) { perror(inp); return 1; }
     if (!range && (dec || P.mode == KOLMO_FAST || P.mode == KOLMO_RT)) {

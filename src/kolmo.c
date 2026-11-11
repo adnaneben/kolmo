@@ -1733,7 +1733,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                 if (lines < 4 || k0 <= 256 || same * 100 < (lines - 1) * 95) continue;
                 uint8_t sep = '.';
                 if (WD[di] != ',') { size_t dc = 0, cc = 0; for (size_t q = 1; q + 1 < h; q++) if ((uint8_t)(s[q - 1] - '0') < 10 && (uint8_t)(s[q + 1] - '0') < 10) { dc += s[q] == '.'; cc += s[q] == ','; } if (cc > dc) sep = ','; }
-                size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
+                const size_t TW = effort ? (512u << 10) : TRIAL;      /* wide rows repeat their structure every line: half a MiB decides */
+                size_t mm = n < TW ? n : TW; while (mm > 0 && s[mm - 1] != '\n') mm--;
                 if (mm < 16384) continue;
                 const uint8_t *ts = s;                           /* large inputs: trial from the middle (the start may be atypical) */
                 if (n > 4 * (size_t)TRIAL) {
@@ -2301,9 +2302,9 @@ static void *compress_worker(void *arg) {
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
         if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, kept only when clearly smaller */
             /* BWT decodes about half as fast as LZMA2 here, so it must pay for that: at least KOLMO_BWT_GAIN_PCT smaller. */
-            /* BWT is tried only where it has won in tests: not on x86 code, and only when LZMA2 already reaches
+            /* BWT is tried only where it has won in tests: not on x86 code or typed table columns (4 to 6% larger), and only when LZMA2 already reaches
              * 35% or less (on less compressible binary data BWT was 1.5 to 8% larger) */
-            uint8_t *alt = tflag == 8 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
+            uint8_t *alt = tflag == 8 || tflag == 4 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
             if (alt && inlen > (8u << 20)) {                /* large blocks only: on small ones the slice costs as much as the attempt */
                 /* a short slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the
                  * outcome: where BWT won on the whole block the slice ratio was at most 1.02, where it lost by 5% or

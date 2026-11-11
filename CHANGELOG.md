@@ -126,3 +126,6 @@
   outputs are unchanged on the test corpus and a 21 MB source tarball encodes 9% faster.
 - **`max` on minified JSON encodes nine times faster.** The record streams go straight to BWT, which had been winning
   over LZMA2 anyway; the LZMA2 pass is no longer run first. Output is unchanged.
+- Smaller planning costs at the slow settings: the wide-table trial uses half a MiB from `eco` up, block sorting is
+  not attempted on typed table columns at `max`, and the command-line file path applies from 8 MiB as in 1.0.1.
+  Outputs are unchanged on the test corpus.
