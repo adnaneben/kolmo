@@ -61,7 +61,13 @@ static void img16_inv(const uint8_t *lo, const uint8_t *hi, int64_t n, int64_t W
 #undef IMG_R
 }
 static double h0(const uint8_t *b, size_t n) {
-    size_t c[256] = {0}; for (size_t i = 0; i < n; i++) c[b[i]]++;
+    size_t c[256] = {0}; uint32_t c4[4][256]; size_t i = 0;
+    if (n < UINT32_MAX) {                                 /* four counters: no store-to-load stall on repeated bytes */
+        memset(c4, 0, sizeof c4);
+        for (; i + 4 <= n; i += 4) { c4[0][b[i]]++; c4[1][b[i + 1]]++; c4[2][b[i + 2]]++; c4[3][b[i + 3]]++; }
+        for (int k = 0; k < 256; k++) c[k] = (size_t)c4[0][k] + c4[1][k] + c4[2][k] + c4[3][k];
+    }
+    for (; i < n; i++) c[b[i]]++;
     double t = 0; for (int k = 0; k < 256; k++) if (c[k]) t -= c[k] * log2((double)c[k] / n);
     return t / 8;
 }
@@ -359,7 +365,7 @@ out:
 }
 
 /* record period by self-similarity at lag p (smallest divisor with a similar score) */
-static int rec_period(const uint8_t *s, size_t n) {
+static int rec_period(const uint8_t *s, size_t n, int minx) {   /* minx: how far the best lag must stand above the median lag */
     if (n < (1u << 16)) return 0;
     size_t m = n - REC_MAXP < (1u << 18) ? n - REC_MAXP : (1u << 18);
     int sc[REC_MAXP + 1] = {0}, best = 0, bp = 0;
@@ -367,7 +373,7 @@ static int rec_period(const uint8_t *s, size_t n) {
     int tmp[REC_MAXP]; int nt = 0; for (int p = 2; p <= REC_MAXP; p++) tmp[nt++] = sc[p];
     for (int i = 1; i < nt; i++) for (int j = i; j > 0 && tmp[j - 1] > tmp[j]; j--) { int t = tmp[j]; tmp[j] = tmp[j - 1]; tmp[j - 1] = t; }
     int med = tmp[nt / 2];
-    if (best < 2 * med) return 0;
+    if (best < minx * med) return 0;
     for (int q = 2; q <= REC_MAXP; q++) if (bp % q == 0 && sc[q] > 0.9 * best) return q;
     return bp;
 }
@@ -409,8 +415,8 @@ static size_t rec_layout(rsearch_t *S, int o, int w, rfield_t *out, double *qout
     return c1 + c2;
 }
 /* plan: period, header length (0 or one record), field layout; returns estimated cost or 0 */
-static size_t rec_detect(const uint8_t *s, size_t n, int effort, rec_plan_t *R) {
-    int P = rec_period(s, n); if (!P) return 0;
+static size_t rec_detect(const uint8_t *s, size_t n, int effort, int minx, rec_plan_t *R) {
+    int P = rec_period(s, n, minx); if (!P) return 0;
     size_t bestc = (size_t)-1; ZSTD_CCtx *zc = ZSTD_createCCtx();
     for (int h = 0; h <= P; h += P) {
         size_t cap_m = effort ? 32768 : 4096, nrec = (n - h) / P, m = nrec < cap_m ? nrec : cap_m;
@@ -468,7 +474,7 @@ static int rec_decode(const uint8_t *in, size_t tn, uint8_t *out, size_t len) {
 /* test hooks: whole-buffer encode with a detected plan (type byte 0 = records, 1 = image) */
 int64_t sci_encode_pub(const uint8_t *in, size_t n, int image, uint8_t *dst, size_t cap) {
     if (image) { img_plan_t P; if (!img16_detect(in, n, &P)) return -1; dst[0] = 1; int64_t r = img16_encode(in, n, 0, &P, dst + 1); return r < 0 ? r : r + 1; }
-    rec_plan_t R; if (!rec_detect(in, n, 1, &R)) return -1; dst[0] = 0; int64_t r = rec_encode(in, n, 0, &R, dst + 1, cap - 1); return r < 0 ? r : r + 1;
+    rec_plan_t R; if (!rec_detect(in, n, 1, 2, &R)) return -1; dst[0] = 0; int64_t r = rec_encode(in, n, 0, &R, dst + 1, cap - 1); return r < 0 ? r : r + 1;
 }
 int sci_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n) {
     if (tn < 1) return -1;

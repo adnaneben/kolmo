@@ -65,6 +65,7 @@ and lz4 still lead.
 |---|---|
 | Tables (CSV/TSV) | Columns become typed streams. Numeric columns are exact decimals at a common scale, predicted per block by raw, delta, delta within an entity (e.g. country), **delta-of-delta** and **third-order** within an entity (for counters and steady trends), or a discovered **formula of other columns** (`y = k·a/b`, change and % change): 51 formulas on the OWID energy table. Quoted fields, short rows and odd values are lossless. |
 | Logs | Lines are split into **templates and variables**; timestamps, IPs and IDs become integer columns ("skeleton" columns). |
+| Fixed-width text | Lines that come in a few fixed lengths (chemistry and geometry files, fixed-width reports) are stored **column by column per line length**: a line scan and a transpose, several times cheaper than templates. Files that use it carry container version 8. |
 | Prose and markup | Frequent words become 2-byte codes from byte values the block never uses (eco and above); `hc` then uses zstd 22 with a 128 MiB window. |
 | Scientific binary | **Fixed records** (period found by self-similarity; fields of 1/2/4/8 bytes stored raw, as deltas, as dictionary tokens, or as multiples of a discovered quantum with exact bit corrections) and **16-bit images** (byte order, row stride and predictor found automatically). |
 | Executables, archives | x86 call/jump transform; each tar member gets its own model. |
@@ -206,6 +207,7 @@ data. A shared library and Python and Rust bindings are in `bindings/`; the form
 src/kolmo.h, kolmo.c   library: planning, container, codecs, thread pool, table v1, field transposition, shuffle
 src/tbl2.inc       tables: typed columns, predictors, formula discovery
 src/log.inc        logs: templates and skeleton columns
+src/lines.inc      fixed-width text: line classes stored column by column
 src/sci.inc        fixed records and 16-bit images
 src/word.inc       word dictionary for prose
 src/cm.inc         context-mixing coder

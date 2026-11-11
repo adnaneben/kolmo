@@ -85,24 +85,43 @@ done:
     return ret;
 }
 int main(int argc, char **argv) {
-    kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
+    kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int speed = 0; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
     char *dictpath = NULL, *trainpath = NULL;
-    while ((opt = getopt(argc, argv, "m:l:T:B:nqdr:sS:D:t:")) != -1) switch (opt) {
-        case 'm': P.mode = !strcmp(optarg, "rt") ? KOLMO_RT : !strcmp(optarg, "fast") ? KOLMO_FAST : !strcmp(optarg, "eco") ? KOLMO_ECO :
-                         !strcmp(optarg, "max") ? KOLMO_MAX : !strcmp(optarg, "ultra") ? KOLMO_ULTRA : KOLMO_HC; break;
+    int extreme = 0;
+    while ((opt = getopt(argc, argv, "m:l:T:B:nqQxdr:sS:D:t:")) != -1) switch (opt) {
+        /* three modes: speed, balanced (default), ratio. The older names stay as advanced settings. */
+        case 'm': speed = !strcmp(optarg, "speed");
+                  P.mode = !strcmp(optarg, "speed") || !strcmp(optarg, "rt") ? KOLMO_RT :
+                           !strcmp(optarg, "balanced") || !strcmp(optarg, "fast") ? KOLMO_FAST :
+                           !strcmp(optarg, "ratio") || !strcmp(optarg, "max") ? KOLMO_MAX :
+                           !strcmp(optarg, "eco") ? KOLMO_ECO : !strcmp(optarg, "hc") ? KOLMO_HC : !strcmp(optarg, "ultra") ? KOLMO_ULTRA : (kolmo_mode)-1;
+                  if ((int)P.mode < 0) { fprintf(stderr, "kolmo: unknown mode '%s' (speed, balanced or ratio)\n", optarg); return 2; }
+                  break;
+        case 'x': extreme = 1; break;
         case 'l': P.level = atoi(optarg); break;
         case 'T': P.threads = atoi(optarg); break;
         case 'B': P.block = (uint32_t)(atof(optarg) * 1048576); break;
         case 'n': P.transforms = 0; break;
         case 'q': P.transforms = 2; break;
+        case 'Q': P.transforms = 3; break;
         case 'd': dec = 1; break;
         case 'r': range = optarg; break;
         case 's': stream = 1; break;
         case 'S': stream = 1; seg = atoi(optarg); break;
         case 'D': dictpath = optarg; break;
         case 't': trainpath = optarg; break;
-        default: fprintf(stderr, "usage: kolmo [-m rt|fast|eco|hc|max|ultra] [-l lvl] [-T thr] [-B MiB] [-n|-q] [-D dict] [-s|-S segMiB] | -d [-D dict] | -r off:len | -t dict samples...  in out\n"); return 2;
+        default: fprintf(stderr,
+            "usage: kolmo [-m speed|balanced|ratio] [-x] [-T threads] in out      compress (default: balanced)\n"
+            "       kolmo -d in out                                               decompress\n"
+            "  speed     fastest, for data that is read or sent right away\n"
+            "  balanced  small and fast; the default\n"
+            "  ratio     smallest at practical speed;  -x  smallest of all (very slow, large memory)\n"
+            "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -Q minimal analysis  -n no transforms\n"
+            "          -B blockMiB\n"
+            "          -D dict  -t dict samples...  -s|-S segMiB stream  -r off:len read a range\n"); return 2;
     }
+    if (extreme) P.mode = KOLMO_ULTRA;
+    if (speed && P.transforms == 1) P.transforms = 3;      /* speed: nothing that costs encode time */
 
     /* Training mode: concatenate the sample files given as positional args and write a dictionary. */
     if (trainpath) {
@@ -143,16 +162,20 @@ int main(int argc, char **argv) {
     }
 
     /* Small files fit in a few blocks. Keep their inexpensive in-memory path. */
-    const size_t file_threshold = 8u << 20;
+#ifndef KOLMO_FILE_THRESHOLD
+#define KOLMO_FILE_THRESHOLD (8u << 20)
+#endif
+    const size_t file_threshold = KOLMO_FILE_THRESHOLD;   /* the file path (reused block buffers, staged output) wins from 8 MiB; below
+                                               * that its extra file operations cost more than they save on macOS */
     FILE *input = fopen(inp, "rb"); if (!input) { perror(inp); return 1; }
-    if (!range && (dec || P.mode == KOLMO_FAST)) {
+    if (!range && (dec || P.mode == KOLMO_FAST || P.mode == KOLMO_RT)) {
         int fd = fileno(input); struct stat st;
         if (!fstat(fd, &st) && S_ISREG(st.st_mode) && st.st_size >= 0 && (uintmax_t)st.st_size <= SIZE_MAX) {
             int use_file = st.st_size >= (off_t)file_threshold;
             if (dec) {
                 uint8_t header[32];
                 use_file = pread(fd, header, sizeof(header), 0) == sizeof(header) &&
-                    header[5] == KOLMO_FAST && kolmo_original_size(header, sizeof(header)) >= (int64_t)file_threshold;
+                    kolmo_original_size(header, sizeof(header)) >= (int64_t)file_threshold;
             }
             if (use_file) {
                 int err = process_file(fd, st.st_size, outp, &P, dec, dict, dictlen);

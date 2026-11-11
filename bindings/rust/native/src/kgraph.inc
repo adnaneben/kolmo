@@ -313,7 +313,9 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
             if (hz && (!z || hz < z)) { memcpy(o.p + o.n + 20, hb, hz); z = hz; cc = C_HUF; }
             int slow = !(codec == C_ZSTD && level <= CZ_FAST_LEVEL);                        /* rANS at hc/max/ultra only */
             size_t rz = hb && slow ? codec_compress(x, C_RANS, 0, s->p, s->n, hb, zc) : 0;   /* rANS: whole-bit loss of Huffman */
-            if (rz && (!z || rz < z)) { memcpy(o.p + o.n + 20, hb, rz); z = rz; cc = C_RANS; }
+            /* rANS decodes about four times slower than Huffman or zstd here: with the zstd family (hc: fast reads) it
+             * must be at least 3% smaller to be taken; max and ultra take any gain */
+            if (rz && (!z || (codec == C_ZSTD ? (uint64_t)rz * 100 <= (uint64_t)z * 97 : rz < z))) { memcpy(o.p + o.n + 20, hb, rz); z = rz; cc = C_RANS; }
             free(hb);
         }
         if (!z || z >= s->n) { cc = C_STORE; z = s->n; if (z) memcpy(o.p + o.n + 20, s->p, z); }

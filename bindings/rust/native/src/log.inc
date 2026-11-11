@@ -122,6 +122,25 @@ static void put_column(Buf *out, const tok_t *tk, uint32_t m, int64_t *scratch) 
 
 typedef struct { uint64_t h; uint32_t koff, klen, cnt, id; } tent_t;
 
+/* Two lines of the same length with digits in the same places and every other byte equal split into the same tokens,
+ * with the same variable flags and the same template. */
+static inline int log_same_shape(const uint8_t *a, const uint8_t *b, uint32_t len) {
+    const uint64_t L7 = 0x7F7F7F7F7F7F7F7Full, H = 0x8080808080808080ull, O = 0x0101010101010101ull;
+    uint32_t i = 0;
+    for (; i + 8 <= len; i += 8) {
+        uint64_t x, y; memcpy(&x, a + i, 8); memcpy(&y, b + i, 8);
+        uint64_t lx = x & L7, ly = y & L7;
+        uint64_t dx = ((O * (127 + '9' + 1) - lx) & ~x & (lx + O * (127 - ('0' - 1)))) & H;
+        uint64_t dy = ((O * (127 + '9' + 1) - ly) & ~y & (ly + O * (127 - ('0' - 1)))) & H;
+        if ((dx ^ dy) | ((x ^ y) & ~((dx >> 7) * 255))) return 0;
+    }
+    for (; i < len; i++) {
+        int da = (uint8_t)(a[i] - '0') < 10, db = (uint8_t)(b[i] - '0') < 10;
+        if (da != db || (!da && a[i] != b[i])) return 0;
+    }
+    return 1;
+}
+
 /* JSON lines: the next scalar value (string, number, true/false/null; not an object key) at or after i, as [*vs, *ve).
  * Returns 0 when there is none. Anything that is not well-formed JSON simply stays in the template. */
 static int json_next_value(const uint8_t *p, uint32_t i, uint32_t len, uint32_t *vs, uint32_t *ve) {
@@ -170,7 +189,7 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
     int64_t ret = -1;
     uint32_t *lstart = malloc(4 * (L + 1)), *tstart = NULL, *lid = malloc(4 * L);
     uint8_t *keys = malloc(nl + L + 16);
-    size_t tcap = (L + 1) * 2 + 1; while (tcap & (tcap - 1)) tcap &= tcap - 1; tcap *= 2;
+    size_t tcap = 4096;                                 /* templates are few: the table starts small and doubles when half full */
     tent_t *tab = calloc(tcap, sizeof(tent_t)); uint32_t *order = malloc(4 * (L + 1)); uint32_t nt = 0; size_t kp = 0;
     tok_t *tk = NULL, *tkg = NULL; size_t tkg_cap = 0; int64_t *scratch = NULL; uint32_t *rows = NULL, *rstart = NULL, *remap = NULL;
     uint32_t *tokb = malloc(4 * (L + 1)), *toks = malloc(4 * (nl + L + 2));    /* per line: first token; token starts */
@@ -183,11 +202,40 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
     if (!lstart || !lid || !keys || !tab || !order || !tokb || !toks || !tvar || !tfl || !tl0 || !tfo || !tsc) goto done;
     { size_t i = 0; for (size_t l = 0; l < L; l++) { lstart[l] = (uint32_t)i; const uint8_t *q = memchr(in + i, '\n', nl - i); i = (size_t)(q - in) + 1; } lstart[L] = (uint32_t)nl; }
     if (tokb) tokb[L] = 0;
+#define LOG_CONST_CHECK(id) do { \
+                if (tsc[id]) {          /* same key: same token count and placeholder positions as the first line */ \
+                    uint32_t l0 = tl0[id], b0 = tokb[l0], n0 = tokb[l0 + 1] - b0, len0 = lstart[l0 + 1] - lstart[l0] - 1; \
+                    const uint8_t *p0 = in + lstart[l0]; uint8_t *f = tfl + tfo[id]; uint32_t q = 0; \
+                    for (size_t j = tokb[l]; j < ntok && tsc[id]; j++) { \
+                        if (!tvar[j]) continue; \
+                        if (f[q]) { \
+                            uint32_t k = (uint32_t)(j - tokb[l]); \
+                            uint32_t s = toks[j], en = j + 1 < ntok ? toks[j + 1] - sep : len; \
+                            uint32_t s0 = toks[b0 + k], e0 = k + 1 < n0 ? toks[b0 + k + 1] - sep : len0; \
+                            if (en - s != e0 - s0 || memcmp(p + s, p0 + s0, en - s)) { f[q] = 0; tsc[id]--; } \
+                        } \
+                        q++; \
+                    } \
+                } } while (0)
     /* templates */
+#ifdef KOLMO_TIMING
+    double T0_ = prof_now();
+#endif
     size_t ntok = 0;
+    uint32_t lastl[256]; memset(lastl, 0xFF, sizeof lastl);   /* the last line of each length (mod 256) */
     for (size_t l = 0; l < L; l++) {
         const uint8_t *p = in + lstart[l]; uint32_t len = lstart[l + 1] - lstart[l] - 1; size_t k0 = kp;
         uint32_t i = 0; tokb[l] = (uint32_t)ntok;
+        if (!jm) {                                      /* same shape as an earlier line: its tokens and template, no scan */
+            uint32_t c = lastl[len & 255]; lastl[len & 255] = (uint32_t)l;
+            if (c != UINT32_MAX && lstart[c + 1] - lstart[c] - 1 == len && log_same_shape(p, in + lstart[c], len)) {
+                uint32_t b0c = tokb[c], cnt = tokb[c + 1] - b0c;
+                memcpy(toks + ntok, toks + b0c, 4 * (size_t)cnt); memcpy(tvar + ntok, tvar + b0c, cnt); ntok += cnt;
+                uint32_t id = lid[c]; tab[order[id]].cnt++; lid[l] = id;
+                LOG_CONST_CHECK(id);
+                continue;
+            }
+        }
         if (jm) {                                       /* literal, value, literal, ..., literal */
             int whole = memchr(p, 1, len) != NULL;      /* a 0x01 byte cannot sit in a template: the line is one value */
             for (;;) {
@@ -198,6 +246,9 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
                 toks[ntok++] = vs; tvar[ntok - 1] = 1; keys[kp++] = 1; i = ve;
             }
         } else for (;;) {
+            if (i < len && p[i] == ' ') {               /* empty token (a run of spaces): nothing to scan */
+                toks[ntok] = i; tvar[ntok++] = 0; keys[kp++] = ' '; i++; continue;
+            }
             uint32_t s = i; toks[ntok++] = s;
             int var = 0;                                /* one pass: the next space, and any digit or 0x01 before it */
             for (;;) {
@@ -228,6 +279,17 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
         for (;;) {
             tent_t *e = &tab[at];
             if (!e->cnt) {
+                if ((size_t)(nt + 1) * 2 > tcap) {         /* grow: reinsert by stored hash, slots are found again through order[] */
+                    size_t nc = tcap * 2; tent_t *nb = calloc(nc, sizeof(tent_t)); if (!nb) goto done;
+                    for (uint32_t t = 0; t < nt; t++) {
+                        tent_t *o = &tab[order[t]]; size_t a2 = o->h & (nc - 1);
+                        while (nb[a2].cnt) a2 = (a2 + 1) & (nc - 1);
+                        nb[a2] = *o; order[t] = (uint32_t)a2;
+                    }
+                    free(tab); tab = nb; tcap = nc; at = h & (tcap - 1);
+                    while (tab[at].cnt) at = (at + 1) & (tcap - 1);
+                    e = &tab[at];
+                }
                 e->h = h; e->koff = (uint32_t)k0; e->klen = klen; e->cnt = 1; e->id = nt; order[nt++] = (uint32_t)at; lid[l] = e->id;
                 uint32_t id = e->id, c = 0; tl0[id] = (uint32_t)l; tfo[id] = (uint32_t)fp;
                 for (size_t j = tokb[l]; j < ntok; j++) {
@@ -242,25 +304,16 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
             if (e->h == h && e->klen == klen && !memcmp(keys + e->koff, keys + k0, klen)) {
                 e->cnt++; lid[l] = e->id; kp = k0;
                 uint32_t id = e->id;
-                if (tsc[id]) {          /* same key: same token count and placeholder positions as the first line */
-                    uint32_t l0 = tl0[id], b0 = tokb[l0], n0 = tokb[l0 + 1] - b0, len0 = lstart[l0 + 1] - lstart[l0] - 1;
-                    const uint8_t *p0 = in + lstart[l0]; uint8_t *f = tfl + tfo[id]; uint32_t q = 0;
-                    for (size_t j = tokb[l]; j < ntok && tsc[id]; j++) {
-                        if (!tvar[j]) continue;
-                        if (f[q]) {
-                            uint32_t k = (uint32_t)(j - tokb[l]);
-                            uint32_t s = toks[j], en = j + 1 < ntok ? toks[j + 1] - sep : len;
-                            uint32_t s0 = toks[b0 + k], e0 = k + 1 < n0 ? toks[b0 + k + 1] - sep : len0;
-                            if (en - s != e0 - s0 || memcmp(p + s, p0 + s0, en - s)) { f[q] = 0; tsc[id]--; }
-                        }
-                        q++;
-                    }
-                }
+                LOG_CONST_CHECK(id);
                 break;
             }
             at = (at + 1) & (tcap - 1);
         }
     }
+#undef LOG_CONST_CHECK
+#ifdef KOLMO_TIMING
+    double T1_ = prof_now();
+#endif
     if (nt > L / 4) goto done;
     remap = malloc(4 * (nt + 1)); uint32_t T = 0;
     for (uint32_t t = 0; t < nt; t++) remap[t] = tab[order[t]].cnt >= LOG_MIN ? ++T : 0;
@@ -302,6 +355,9 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
         }
         k2len[t] = (uint32_t)(k2 - k2off[t]);
     }
+#ifdef KOLMO_TIMING
+    double T2_ = prof_now();
+#endif
     /* header + sections */
     uint32_t rare_len = 0; for (uint32_t i = rstart[0]; i < rstart[1]; i++) { uint32_t l = rows[i]; rare_len += lstart[l + 1] - lstart[l]; }
     uint32_t dict_len = 0; for (uint32_t t = 0; t < nt; t++) if (remap[t]) dict_len += k2len[t] + 1;
@@ -346,6 +402,9 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
         }
     }
 #undef LOG_TOK
+#ifdef KOLMO_TIMING
+    fprintf(stderr, "log: L=%zu ntok=%zu nt=%u first=%.1f fold=%.1f cols=%.1f\n", L, ntok, nt, (T1_ - T0_) * 1e3, (T2_ - T1_) * 1e3, (prof_now() - T2_) * 1e3);
+#endif
     free(keys2); free(k2off); free(k2len); free(keep);
     free(vpos);
     if (out.n + 64 > cap || out.n >= n) goto done;

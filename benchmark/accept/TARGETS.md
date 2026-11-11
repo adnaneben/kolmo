@@ -24,6 +24,8 @@ OpenZL, zxc, JPEG XL (images), Pcodec (numeric), CLP (logs).
 |---|---|---|
 | main (rename commit 87dfc86) | not accepted | lz4 -1, zstd -1, zstd -3 on encode speed; 19 unchanged-output slowdowns; `fast` encode 0.963x and `max` encode 0.865x of 1.0.1 |
 | claude/next 6aeebcb (11 Nov) | not accepted: targets 2, 3 and 4 pass; lz4 misses target 1 | see below |
+| claude/next 3f6c7d5 (11 Nov) | **ACCEPTED** (first time), with target 5 in force | none; needs a second accepted run before a merge to main |
+| claude/next with line classes and Codex's three commits (11 Nov) | waiting for the M5 run | balanced changed, so it is measured again from scratch |
 
 claude/next 6aeebcb on the M5 (six runs of the branch agree within a point on the lz4 figure):
 - Target 1: nine of ten rivals beaten. zstd -1 (3.25x, 690, 1113 MB/s) by `fast -l 1 -Q` (3.34x, 722, 1247); zstd -3 by
@@ -39,3 +41,18 @@ claude/next 6aeebcb on the M5 (six runs of the branch agree within a point on th
   x1.051; hc -l 9 x1.080 / x1.046 / x1.027; hc x1.075 / x1.192 / x1.040; max x1.085 / x1.037 / x1.091.
 - Target 4: no file larger than with 1.0.1 (Mac set, and 264 file/setting pairs on the cloud).
 - The cloud gate passes: 132 ladder outputs identical to the record build, 90 floors, 51 references, all test suites.
+
+claude/next 3f6c7d5 on the M5, with runs that used helper threads charged their CPU time (target 5): all ten rivals
+beaten. lz4 -1 (2.28x, 858, 1313 MB/s) by `speed` (2.32x, 907, 1844); zstd -1 (3.25x, 656, 1034) by `fast -l 1 -Q`
+(3.34x, 712, 1212); zstd -3 (3.46x, 475, 964) by `fast -l 1 -q` (4.12x, 502, 1164); zstd -9 by `fast`; zstd -19 by `hc`;
+brotli and gzip by `hc -l 9`; xz -6 by `max`; bzip3 by `max -l 1`. No confirmed slowdown on unchanged output, every
+setting at or above 1.0.1, no file larger. lz4 on elapsed time alone is still 2 to 3% ahead on encode.
+
+## A separate goal: balanced against zstd -3 on Silesia, round trip
+
+Not part of the acceptance rule, tracked here. Silesia tar, in memory, one thread, same process, cloud VM:
+zstd -3 is 31.20% at 198.5 MB/s round trip (encode 244.7, decode 1051.7). `balanced` was 27.49% at 111.9 MB/s (56%)
+and is 27.48% at 178.1 MB/s (90%; encode 224.3, decode 863.4). Open: about 120 ms on 212 MB, of which planning is
+130 ms (record search on sao, 16-bit image detection on mr and x-ray, the trials on mozilla, osdb and samba) and
+decode 43 ms (image and line-class inverses). The LZ pass itself is zstd level 3 in both, so passing zstd -3 at this
+ratio needs either planning near zero or an LZ stage cheaper than zstd's at the same ratio.
