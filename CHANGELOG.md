@@ -89,6 +89,14 @@
 
 ## Unreleased (on main, not tagged)
 
+- **Mixed inputs: a numeric plan is checked away from its trial slice (branch `claude/dec64`).** A numeric graph or
+  byte shuffle is chosen on one slice from the middle of the input. Four 32 KiB probes elsewhere now test that the
+  rest is the same kind of data; where the plan codes a probe over 10% larger than plain coding, each block is coded
+  both ways and the smaller kept. Fixes a regression of the `balanced` quick analysis that is on main: a pandas
+  pickle of int64 columns followed by strings coded 69% larger than 1.0.1 (219,892 against 129,908 bytes; now
+  129,908). A table of full-precision doubles that every version shuffled is 20% smaller at `balanced` and 26% at
+  `ratio`. Both files are outside the test corpus; on the 81 corpus and holdout files, plain coding now beats the
+  chosen plan by more than 1% on none (before: these two). No corpus output changed.
 - **Decimal doubles: a new kolmo graph node (DEC64, node id 7; branch `claude/dec64`, not on main yet).** Binary
   float64 values that were written in decimal (prices, measurements, counts, most CSV data loaded into arrays) are
   stored as the integer `m` with value = `m / 10^e`: one exponent per column, the integers as zigzag byte planes with

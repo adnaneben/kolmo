@@ -1469,7 +1469,7 @@ static inline uint32_t get32(const uint8_t *p) { uint32_t v; memcpy(&v, p, 4); r
 static inline uint64_t get64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }
 #include "lines.inc"
 
-typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw;   /* kgw: IMG8 or DEC64 row bytes */
+typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw; int verify;   /* kgw: IMG8 or DEC64 row bytes; verify: code graph blocks plainly too, keep the smaller */
 #ifdef KOLMO_FRONTIER
     frontier_lags lags;
 #endif
@@ -2118,7 +2118,33 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         }
 #undef KG_ADJ
 structured_done:
+        if (chosen >= 5 && n >= (1u << 20)) {
+            /* a numeric graph was chosen on one slice from the middle. Four short probes elsewhere check that the
+             * rest of the input is the same kind of data: where the graph codes a probe clearly larger than plain
+             * coding (a pickle whose integer columns are followed by strings), the plan is marked, and every block is
+             * then coded both ways and the smaller kept. Inputs that are one kind of data throughout pay only the probes. */
+            static const int at16[4] = {1, 5, 11, 15}; const size_t E = 32u << 10;
+            for (int q = 0; q < 4 && !keep.verify; q++) {
+                size_t pos = (n / 16 * (size_t)at16[q]) & ~(size_t)7; if (pos + E > n) continue;
+                double pe = (double)zcost(zc, s + pos, E, zb, zcap, zl) / E, c = 1e300; int w3 = 0; size_t h3 = 0, iw3 = 0; unsigned ic3 = 0; uint32_t dc3 = 0;
+                if (chosen == 5) c = kg_num_trial(s, n, pos, E, zl, 1e300, &w3, &h3);
+                else if (chosen == 6) c = kg_float_trial(s, n, pos, E, zl, 1e300, &w3, &h3);
+                else if (chosen == 7) c = kg_img8_trial(s, n, pos, E, zl, 1e300, &iw3, &ic3, &h3);
+                else c = kg_dec64_trial(s, n, pos, E, zl, &dc3, &h3);
+                if (c > pe * 1.10 && pe < 0.98) keep.verify = 1;
+            }
+        }
         if (chosen >= 2) pl = keep;
+        else if (pl.t == T_SHUF && n >= (1u << 20)) {      /* the same probes for a byte shuffle */
+            static const int at16[4] = {1, 5, 11, 15}; const size_t u = (size_t)pl.a * pl.b, E = (32u << 10) / u * u;
+            for (int q = 0; q < 4 && !pl.verify; q++) {
+                size_t pos = n / 16 * (size_t)at16[q] / u * u; if (pos + E > n || E > bc) continue;
+                double pe = (double)zcost(zc, s + pos, E, zb, zcap, zl) / E;
+                shuffle_fwd(s + pos, E / u, pl.a, pl.b, pl.c, buf);
+                if ((double)zcost(zc, buf, E, zb, zcap, zl) / E > pe * 1.10 && pe < 0.98) pl.verify = 1;
+            }
+        }
+        if (0) {}
         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
         free(buf); free(zb);
     }
@@ -2386,10 +2412,11 @@ static void *compress_worker(void *arg) {
                 size_t pc = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (pc && pc < cl) cl = 0;
             }
-            if (cl && (pl.b & 64) && !pl.a && len >= (256u << 10) && (codec == C_LZMA || codec == C_BSC || codec == C_CM)) {
+            if (cl && !pl.a && len >= (256u << 10) && (pl.verify || ((pl.b & 64) && (codec == C_LZMA || codec == C_BSC || codec == C_CM)))) {
                 /* decimal doubles under the slow coders: the plan was scored with zstd, and on small-integer tables
-                 * block sorting or context mixing over the plain bytes can still be smaller. Both are coded; the
-                 * smaller one is kept. */
+                 * block sorting or context mixing over the plain bytes can still be smaller. Marked plans (the input
+                 * is not one kind of data throughout): this block may be the part the graph does not fit. Both are
+                 * coded; the smaller one is kept. */
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4); int bc = 0; size_t bz = cl;
                 size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = codec; }
@@ -2433,6 +2460,11 @@ static void *compress_worker(void *arg) {
         if (pl.experimental_pcm && !J->dict && J->default_level && codec == C_ZSTD) level = 1;
 #endif
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
+        if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
+            uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+            size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
+            if (a1 && a1 < cl) { memcpy(sl, alt, a1); cl = a1; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
+        }
         if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, kept only when clearly smaller */
             /* BWT decodes about half as fast as LZMA2 here, so it must pay for that: at least KOLMO_BWT_GAIN_PCT smaller. */
             /* BWT is tried only where it has won in tests: not on x86 code, typed table columns or log token streams (4 to 12% larger), and only when LZMA2 already reaches
