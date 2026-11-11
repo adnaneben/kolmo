@@ -87,7 +87,7 @@
   keep their interfaces. The on-disk magic bytes (`CZN1`, `CZNS`) are unchanged, so every existing file still
   decodes and output is byte-identical to before the rename.
 
-## Unreleased (candidate branch `claude/next`)
+## Unreleased (on main, not tagged)
 
 - **Line classes: a new transform for fixed-width text (block flag 12, container version 8).** Text whose lines come
   in a few fixed lengths (chemistry and geometry files, fixed-width reports and dumps) is stored column by column

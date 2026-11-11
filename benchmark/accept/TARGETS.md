@@ -25,7 +25,8 @@ OpenZL, zxc, JPEG XL (images), Pcodec (numeric), CLP (logs).
 | main (rename commit 87dfc86) | not accepted | lz4 -1, zstd -1, zstd -3 on encode speed; 19 unchanged-output slowdowns; `fast` encode 0.963x and `max` encode 0.865x of 1.0.1 |
 | claude/next 6aeebcb (11 Nov) | not accepted: targets 2, 3 and 4 pass; lz4 misses target 1 | see below |
 | claude/next 3f6c7d5 (11 Nov) | **ACCEPTED** (first time), with target 5 in force | none; needs a second accepted run before a merge to main |
-| claude/next with line classes and Codex's three commits (11 Nov) | waiting for the M5 run | balanced changed, so it is measured again from scratch |
+| claude/next c591613 (11 Nov) | not accepted: one file larger than 1.0.1 at balanced (llm_bf16_47mb, +0.8%) | fixed in 7c6d1c2 (1 MiB planning slice) |
+| claude/next 7c6d1c2 (11 Nov), merged to main | the ten original rivals beaten, plus zstd -22, brotli -11 and xz -9; no slowdown, no setting behind 1.0.1, no file larger | lz4 -9, added to the rival list the same day: decode at 97% of it (needs 98%) |
 
 claude/next 6aeebcb on the M5 (six runs of the branch agree within a point on the lz4 figure):
 - Target 1: nine of ten rivals beaten. zstd -1 (3.25x, 690, 1113 MB/s) by `fast -l 1 -Q` (3.34x, 722, 1247); zstd -3 by
@@ -57,3 +58,9 @@ is 27.48% at 176 MB/s (93%; encode 221, decode 867). `fast -l 2` is 28.48% at 20
 detection on mr and x-ray, the trials on mozilla, osdb and samba) and decode is 45 ms behind (image and line-class
 inverses). The LZ pass is zstd level 3 in both, so passing zstd -3 at this ratio needs planning near zero or an LZ
 stage cheaper than zstd's at the same ratio.
+
+7c6d1c2 on the M5, with four rivals added (zstd -22 --ultra, brotli -11, xz -9, lz4 -9): thirteen of fourteen beaten.
+lz4 -9 is 2.88x at 72 MB/s encode and 1285 MB/s decode; the closest kolmo setting, `fast -l 1 -Q`, is 3.34x at
+724 MB/s encode and 1240 MB/s decode: 16% smaller and ten times faster to encode, 3% slower to decode. Merged to
+main on the user's instruction after the regression gate (0 failures, 91 floors), the test suites, the 264-pair
+comparison with 1.0.1 (0 larger) and targets 2 to 4 on the M5 all cleared.
