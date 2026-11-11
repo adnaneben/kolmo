@@ -50,9 +50,10 @@ setting at or above 1.0.1, no file larger. lz4 on elapsed time alone is still 2 
 
 ## A separate goal: balanced against zstd -3 on Silesia, round trip
 
-Not part of the acceptance rule, tracked here. Silesia tar, in memory, one thread, same process, cloud VM:
-zstd -3 is 31.20% at 198.5 MB/s round trip (encode 244.7, decode 1051.7). `balanced` was 27.49% at 111.9 MB/s (56%)
-and is 27.48% at 178.1 MB/s (90%; encode 224.3, decode 863.4). Open: about 120 ms on 212 MB, of which planning is
-130 ms (record search on sao, 16-bit image detection on mr and x-ray, the trials on mozilla, osdb and samba) and
-decode 43 ms (image and line-class inverses). The LZ pass itself is zstd level 3 in both, so passing zstd -3 at this
-ratio needs either planning near zero or an LZ stage cheaper than zstd's at the same ratio.
+Not part of the acceptance rule, tracked here. Silesia tar, in memory, one thread, same process, cloud VM, best of
+seven: zstd -3 is 31.20% at 189 MB/s round trip (encode 230, decode 1063). `balanced` was 27.49% at 124 MB/s (66%) and
+is 27.48% at 176 MB/s (93%; encode 221, decode 867). `fast -l 2` is 28.48% at 200 MB/s: 8.7% smaller than zstd -3 and
+6% faster. Open for `balanced`: about 80 ms on 212 MB. Planning is 130 ms (record search on sao, 16-bit image
+detection on mr and x-ray, the trials on mozilla, osdb and samba) and decode is 45 ms behind (image and line-class
+inverses). The LZ pass is zstd level 3 in both, so passing zstd -3 at this ratio needs planning near zero or an LZ
+stage cheaper than zstd's at the same ratio.

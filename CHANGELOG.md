@@ -103,10 +103,11 @@
 - **Template transform: 25% less encode time on repetitive logs.** A line with the same shape as the last line of its
   length (digits in the same places, every other byte equal) reuses that line's tokens and template; runs of spaces
   are not scanned; the template table starts small. Output is byte-identical.
-- Silesia, 12 files, one thread, in memory, same process as zstd 1.5.7 level 3 (cloud VM): `balanced` goes from 127.7
-  to 147.6 MB/s round trip (encode 152.7 → 180.4, decode 782 → 812) at 27.60% of the input; zstd -3 is 172 to 184 MB/s
-  at 31.21%. The size advantage is kept (11.6% smaller; 11.9% on the tar); the round trip is at 86% of zstd -3, up
-  from 69%. What remains is planning time on archives of executables and the LZ pass itself, which is zstd's.
+- Silesia as one tar, one thread, in memory, same process as zstd 1.5.7 (cloud VM, best of seven): `balanced` goes
+  from 124 to 176 MB/s round trip (encode 146 → 221, decode 851 → 867) at 27.48% of the input; zstd -3 is 189 MB/s
+  at 31.20%. The 11.9% size advantage is kept and the round trip is at 93% of zstd -3, up from 66%. `fast -l 2` is
+  8.7% smaller than zstd -3 and 6% faster on the round trip (200 MB/s). What remains for `balanced` is planning time
+  (about 130 ms on 212 MB) and the inverse transforms on decode; the LZ pass is zstd's in both.
 - **Three modes.** `-m speed`, `-m balanced` (default) and `-m ratio`; `-x` selects the smallest output of all
   (`ultra`). The older names (`rt`, `fast`, `eco`, `hc`, `max`, `ultra`) remain as advanced settings.
 - **`max` no longer gives up decode speed for almost nothing.** Block sorting replaces LZMA2 on a binary block only
