@@ -1,0 +1,83 @@
+name: E03 costed native selection
+on:
+  push:
+    branches: [fix/planner-record-ownership-isolated-20261112]
+    paths:
+      - research/codec/E03/**
+      - .github/workflows/e03-native-selection.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: e03-native-selection-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  experiment:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Environment
+        run: |
+          set -euo pipefail
+          mkdir e03-evidence
+          sudo apt-get update && sudo apt-get install -y liblzma-dev clang
+          { uname -a; gcc --version; clang --version; python --version; } > e03-evidence/environment.txt
+          cp research/codec/E03/PROTOCOL.md e03-evidence/PROTOCOL.md
+      - name: Exact observed development corpus and evidence-tool tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python research/codec/E03/test_tools.py 2>&1 | tee e03-evidence/tool-tests.log
+          python research/codec/E03/prepare.py --output "$RUNNER_TEMP/e03-prepared" | tee e03-evidence/preparation.log
+          cp "$RUNNER_TEMP/e03-prepared/inputs.json" e03-evidence/inputs.json
+          cp "$RUNNER_TEMP/e03-prepared/source_receipts.json" e03-evidence/source_receipts.json
+      - name: Sample selector under sanitizers
+        run: |
+          set -euo pipefail
+          clang -std=c11 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer research/codec/E03/test_selector.c -o /tmp/e03-selector-test
+          ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 /tmp/e03-selector-test | tee e03-evidence/selector-tests.log
+      - name: Full-source sanitized selector and small real inputs
+        run: |
+          set -euo pipefail
+          python research/codec/E03/build.py --output "$RUNNER_TEMP/e03-asan" --cc clang --sanitize 2>&1 | tee e03-evidence/asan.log
+          cp "$RUNNER_TEMP/e03-asan/build.json" e03-evidence/asan-build.json
+          python research/codec/E03/run.py --prepared "$RUNNER_TEMP/e03-prepared" --probe "$RUNNER_TEMP/e03-asan/probe" --output e03-evidence/sanitized --repeats 1 --small-only | tee e03-evidence/small-sanitized.log
+      - name: Costed native matrix and confirmation
+        run: |
+          set -euo pipefail
+          python research/codec/E03/build.py --output "$RUNNER_TEMP/e03-release" --cc gcc 2>&1 | tee e03-evidence/build.log
+          cp "$RUNNER_TEMP/e03-release/build.json" e03-evidence/release-build.json
+          cp "$RUNNER_TEMP/e03-release/capture.diff" e03-evidence/capture.diff
+          python research/codec/E03/run.py --prepared "$RUNNER_TEMP/e03-prepared" --probe "$RUNNER_TEMP/e03-release/probe" --output e03-evidence/first --repeats 7 --seed 303031 | tee e03-evidence/first.log
+          python research/codec/E03/run.py --prepared "$RUNNER_TEMP/e03-prepared" --probe "$RUNNER_TEMP/e03-release/probe" --output e03-evidence/confirmation --repeats 5 --seed 303032 | tee e03-evidence/confirmation.log
+          python research/codec/E03/analyse.py --prepared "$RUNNER_TEMP/e03-prepared" --first e03-evidence/first --confirmation e03-evidence/confirmation --output e03-evidence/DECISION.json | tee e03-evidence/decision.log
+          git diff --exit-code 91c4cdaaca57d0bb667a059341dbf25fd5a8df71 -- src vendor Makefile benchmark/accept/TARGETS.md research/codec/E02C research/codec/E02D
+      - name: Hash retained evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib
+          p = pathlib.Path('e03-evidence')
+          files = {str(f.relative_to(p)): hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.rglob('*')) if f.is_file() and f.name != 'MANIFEST.json'}
+          (p/'MANIFEST.json').write_text(json.dumps(files, indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e03-selection-${{ github.run_id }}-${{ github.run_attempt }}
+          path: e03-evidence/
+          retention-days: 14
+          if-no-files-found: error
