@@ -1,0 +1,86 @@
+{
+  "decision": "Preserve evidence; change research priority to compatible entropy boundaries before another packing selector",
+  "authorization": "Only isolated branch; no merge, release, other branch, frozen experiment or production default change",
+  "actions": [
+    {
+      "id": "R0",
+      "priority": "P0",
+      "action": "Record one evidence map and exposure boundary",
+      "status": "done_review_recorded",
+      "recommended_owner_role": "Research lead",
+      "acceptance_or_boundary": "Keep frozen reports; E02D UCI235 is observed and overlaps release source; E02E is now observed. Registry automation still pending."
+    },
+    {
+      "id": "R1",
+      "priority": "P0",
+      "action": "Verify format-compatible aligned HUF/rANS and singleton rANS",
+      "status": "feasibility_passed",
+      "recommended_owner_role": "Codec engineer",
+      "acceptance_or_boundary": "351 leaf selftest cases per build; 58 archived streams replayed in GCC and Clang ASan; no production integration or timings."
+    },
+    {
+      "id": "R2",
+      "priority": "P0",
+      "action": "Execute costed aligned-chunk experiment with independent decode timing",
+      "status": "next",
+      "recommended_owner_role": "Codec engineer",
+      "acceptance_or_boundary": "Prospectively compare fixed aligned controls and actual bounded choice against E03 native_base; complete-input old-decoder and size-cost checks."
+    },
+    {
+      "id": "R3",
+      "priority": "P1",
+      "action": "Add constant/run/nonzero-map and magnitude/exact-offset models",
+      "status": "proposed_after_R2",
+      "recommended_owner_role": "Codec engineer",
+      "acceptance_or_boundary": "Separate control, low bits and exception streams; compare against stronger native baseline; no unlimited selector search."
+    },
+    {
+      "id": "R4",
+      "priority": "P1",
+      "action": "Add pinned specialist controls and fused packing/inverse microbenchmarks",
+      "status": "proposed",
+      "recommended_owner_role": "Performance engineer",
+      "acceptance_or_boundary": "Pcodec, OpenZL and one suitable mature integer kernel; match input semantics and licensing; no inherited benchmark speed claims."
+    },
+    {
+      "id": "R5",
+      "priority": "P1",
+      "action": "Profile and reuse statistics/table/scratch work",
+      "status": "proposed",
+      "recommended_owner_role": "Performance engineer",
+      "acceptance_or_boundary": "Measure histogram, normalization, 4MiB rANS temporary allocation, 64KiB decoder table and copies; preserve on-wire precision."
+    },
+    {
+      "id": "R6",
+      "priority": "P2",
+      "action": "Restore local FOR/min-delta and bounded Rice controls",
+      "status": "proposed",
+      "recommended_owner_role": "Codec researcher",
+      "acceptance_or_boundary": "Test fixed residual distribution hypotheses and charge bases/escapes; preserve original-predictor ablation as control."
+    },
+    {
+      "id": "R7",
+      "priority": "P2",
+      "action": "Separate predictor-objective and block-granularity experiment",
+      "status": "proposed",
+      "recommended_owner_role": "Codec researcher",
+      "acceptance_or_boundary": "Original summed-bit-length objective is not final compressed cost; vary only in a separately frozen protocol."
+    },
+    {
+      "id": "R8",
+      "priority": "P0_before_new_validation",
+      "action": "Create source-family exposure registry and fresh validation design",
+      "status": "pending",
+      "recommended_owner_role": "Evaluation owner",
+      "acceptance_or_boundary": "Cross-check every manifest; separate eligible multi-byte and non-target populations; no retuning/threshold edits after outcomes."
+    },
+    {
+      "id": "R9",
+      "priority": "P0_before_integration",
+      "action": "Full format/API/security/target-machine gate",
+      "status": "pending",
+      "recommended_owner_role": "Integration owner",
+      "acceptance_or_boundary": "No default promotion until complete product, decoder limits/fuzzing, old-frame compatibility and M5 acceptance; no merge authorization."
+    }
+  ]
+}
