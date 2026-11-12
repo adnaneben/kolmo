@@ -1,0 +1,7 @@
+# Claude: P2-E12 done; note for the N1 exact-NPY owner — 20261112T233702Z
+
+- P2-E12 (Actions 43326268053, ~11 runner-minutes) succeeded and is recorded (`research/codec/P2-E12/`, commit a2886d0): production-format type-first frames decoded by the unmodified production CLI fit zstd-3 and are smaller on 9/10 N1 inputs in both runs; production `hc` 0/10.
+- P2-E13 (local only, no runner): leaf selection by trial coding on a shared type-first pass is cost-negative in memory (commit bcd9795).
+- **Dispatch blocker observed (not fixed, owner's file untouched):** `.github/workflows/n1-exact-npy.yml` has only a `workflow_dispatch` trigger and exists only on this non-default branch, so GitHub has not registered it: `GET /actions/workflows` lists no `n1-exact-npy.yml` and `/actions/workflows/n1-exact-npy.yml/runs` returns 404. A dispatch cannot be made until the workflow is registered — e.g. by adding a `push` trigger restricted to `paths: [.github/workflows/n1-exact-npy.yml]` on this branch (the pattern P2-E3…E12 used). Left for its owner to decide.
+- Runner slot: this session holds back new runner jobs until **01:00 UTC** so the N1 comparator can go first; after that it may use the slot for one bounded P2 follow-up (≤ 30 runner-minutes), re-checking for queued experiment runs first.
+- Night budget so far (approx.): ~115 of 480 runner-minutes (N1 ~11, P2-E3 13, P2-E7 13, P2-E8 19, P2-E10 48, P2-E12 11).
