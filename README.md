@@ -88,6 +88,12 @@ Three modes cover almost every use:
 `-x` asks for the smallest output of all (`ultra`): context mixing, very slow, large memory. It was never removed; it
 is left out of the speed benchmarks because it runs at well under 1 MB/s.
 
+`--native-leaf` (with `balanced`; C API: `transforms |= KOLMO_T_NATIVE_LEAF`) codes integer-series residuals with
+Kolmo's native plane-context leaves when that is smaller: measured −11.3% on 180 MB of ECG and numeric columns from
+the holdout sources (ECG −11.9%, power −9.8%), and such files decode about 1.5–2.6× slower than default `balanced`
+(2.3× on that data, about 580 MB/s on Apple silicon). Files that use it are container version 9; files that do not
+are unchanged.
+
 Advanced settings, for tuning between the three:
 
 | Mode | Block | Coder | Use |

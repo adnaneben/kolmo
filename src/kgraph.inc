@@ -243,7 +243,7 @@ static int kg_float_inv(const uint8_t *par, size_t plen, const kbuf *pl, const k
 }
 
 /* ---- program builder ---- */
-typedef struct { kbuf *s; int ns, cap; uint8_t *used; kbuf prog; int nodes; } kgb;
+typedef struct { kbuf *s; int ns, cap; uint8_t *used; kbuf prog; int nodes; int nph_q, nph_np; } kgb;   /* nph: stream nph_q holds nph_np byte planes of integer residuals (native-leaf hint; 0 = none) */
 static int kgb_new(kgb *g) {
     int ns = g->ns; if (ns >= KG_MAXSTREAMS) return -1;
     if (ns == g->cap) {
@@ -317,6 +317,12 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
              * must be at least 3% smaller to be taken; max and ultra take any gain */
             if (rz && (!z || (codec == C_ZSTD ? (uint64_t)rz * 100 <= (uint64_t)z * 97 : rz < z))) { memcpy(o.p + o.n + 20, hb, rz); z = rz; cc = C_RANS; }
             free(hb);
+        }
+        if (x->native_leaf && g->nph_np && q == g->nph_q && s->n >= 64) {   /* opt-in (balanced): native plane-context leaf,
+                                                                             * kept only when smaller than the choice above */
+            uint8_t *nb = malloc(np_bound(s->n)); size_t nz = nb ? np_compress(x, s->p, s->n, g->nph_np, nb, np_bound(s->n)) : 0;
+            if (nz && nz <= zc && nz < s->n && (!z || nz < z)) { memcpy(o.p + o.n + 20, nb, nz); z = nz; cc = C_NPLANE; x->used_native_leaf = 1; }
+            free(nb);
         }
         if (!z || z >= s->n) { cc = C_STORE; z = s->n; if (z) memcpy(o.p + o.n + 20, s->p, z); }
         o.p[hp] = (uint8_t)cc;
@@ -499,6 +505,7 @@ static size_t kg_encode_num(codec_ctx *x, int codec, int level, const uint8_t *s
     for (int q = 0; q < bo; q++) kb_uv(&par, kg_zz((int64_t)kg_ld(a + (size_t)q * w, w, bs)));
     if (!par.p) goto done;
     int o = kgb_node(&g, KG_INT, (int[]){0}, 1, 2, &par); if (o != 1) goto done;
+    g.nph_q = 1; g.nph_np = pln ? ow : 1;                                   /* stream 1: ow byte planes of residuals */
     if (kb_res(&g.s[1], m * (size_t)ow + 1) || kb_res(&g.s[2], n - cnt * (size_t)w + 1)) goto done;
     {   uint8_t *r = g.s[1].p; uint64_t v1 = 0, v2 = 0;
         for (size_t q = 0; q < cnt; q++) {

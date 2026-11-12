@@ -20,6 +20,11 @@ int64_t sci_encode_pub(const uint8_t *in, size_t n, int image, uint8_t *dst, siz
 int sci_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
 int64_t word_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
 int word_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
+size_t np_encode_pub(const uint8_t *s, size_t n, int np, uint8_t *out, size_t cap);
+int np_decode_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+size_t np_bound_pub(size_t n);
+#define NP_GOLDEN_LEN 17372
+#define NP_GOLDEN_HASH 0xe9dace4722cab3f7ull   /* FNV-1a 64 of the codec-15 leaf for the fixed planes in main() */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,10 +32,16 @@ int word_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
 static uint64_t rs = 88172645463325252ull;
 static uint64_t rnd(void) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return rs; }
 static int fails = 0;
+static int64_t check_p(const char *name, const uint8_t *s, size_t n, kolmo_params p, uint8_t **frame);
 static void check(const char *name, const uint8_t *s, size_t n, kolmo_mode m, uint32_t B, int T) {
-    kolmo_params p = {m, 0, T, B, 1}; size_t cap = kolmo_bound(n, &p); uint8_t *d = malloc(cap), *b = malloc(n + 1);
+    kolmo_params p = {m, 0, T, B, 1}; check_p(name, s, n, p, NULL);
+}
+/* as check, with explicit parameters; returns the compressed size (or a negative error); *frame keeps the output */
+static int64_t check_p(const char *name, const uint8_t *s, size_t n, kolmo_params p, uint8_t **frame) {
+    int T = p.threads; kolmo_mode m = p.mode;
+    size_t cap = kolmo_bound(n, &p); uint8_t *d = malloc(cap), *b = malloc(n + 1);
     int64_t c = kolmo_compress(s, n, d, cap, &p);
-    if (c < 0) { printf("FAIL compress %s: %s\n", name, kolmo_strerror(c)); fails++; return; }
+    if (c < 0) { printf("FAIL compress %s: %s\n", name, kolmo_strerror(c)); fails++; free(d); free(b); return c; }
     int64_t r = kolmo_decompress(d, c, b, n, T);
     if (r != (int64_t)n || memcmp(b, s, n)) { printf("FAIL roundtrip %s mode %d T %d: %lld\n", name, m, T, (long long)r); fails++; }
     for (int k = 0; k < 20 && n; k++) {                      /* range reads */
@@ -47,7 +58,9 @@ static void check(const char *name, const uint8_t *s, size_t n, kolmo_mode m, ui
         free(e);
     }
     if (silent) { printf("FAIL %s: %d silent corruptions\n", name, silent); fails++; }
-    free(d); free(b);
+    if (frame) *frame = d; else free(d);
+    free(b);
+    return c;
 }
 int main(void) {
     size_t N = 3 << 20;
@@ -458,6 +471,62 @@ int main(void) {
         check("ultra-csv", csv, 400000, KOLMO_ULTRA, 1 << 17, 1);
         check("ultra-random", rndb, 200000, KOLMO_ULTRA, 1 << 17, 1);
         free(u);
+    }
+    /* native plane-context leaf (codec 15): direct round trips, every truncation rejected, corrupt leaves never
+     * crash, and a golden vector (integer-only input; fixes the coded bytes across compilers and architectures) */
+    {
+        size_t L = 20000, np = 4, n = L * np, bad = 0; uint8_t *src = malloc(n), *o = malloc(n + 64);
+        size_t cap = np_bound_pub(n); uint8_t *e = malloc(cap), *f = malloc(cap); uint32_t s = 777;
+        for (size_t i = 0; i < L; i++) {                        /* plane 0 noisy, 1 sparse, 2 runs, 3 constant */
+            s = s * 1103515245u + 12345u; uint32_t r = (s >> 16) & 0x7fff;
+            src[i] = (uint8_t)((r % 23) * 2 + (i & 1)); src[L + i] = r % 97 == 0 ? (uint8_t)(1 + r % 3) : 0;
+            src[2 * L + i] = (uint8_t)((i / 300) & 7); src[3 * L + i] = 0;
+        }
+        for (size_t k = 1; k <= 4; k <<= 1) {
+            size_t z = np_encode_pub(src, n, (int)k, e, cap);
+            if (!z || z >= n || np_decode_pub(e, z, o, n) || memcmp(o, src, n)) { printf("FAIL native leaf roundtrip np=%zu (%zu)\n", k, z); fails++; }
+        }
+        size_t z = np_encode_pub(src, n, (int)np, e, cap);
+        uint64_t hsh = 1469598103934665603ull; for (size_t i = 0; i < z; i++) hsh = (hsh ^ e[i]) * 1099511628211ull;
+        if (z != NP_GOLDEN_LEN || hsh != NP_GOLDEN_HASH) { printf("FAIL native leaf golden vector: %zu %016llx\n", z, (unsigned long long)hsh); fails++; }
+        for (size_t l = 0; l < z; l++) if (!np_decode_pub(e, l, o, n)) bad++;          /* every truncation must be rejected */
+        if (bad) { printf("FAIL native leaf: %zu truncations accepted\n", bad); fails++; }
+        for (int it = 0; it < 3000; it++) {                     /* corrupt leaves: must not crash (the frame checksum catches the rest) */
+            memcpy(f, e, z); int nf = 1 + rnd() % 4;
+            for (int q = 0; q < nf; q++) f[rnd() % z] ^= (uint8_t)(1 + rnd() % 255);
+            np_decode_pub(f, rnd() % 8 ? z : rnd() % z, o, n);
+        }
+        printf("native leaf: %zu -> %zu bytes; %zu truncations rejected; 3000 corrupt leaves decoded without crashing\n", n, z, z);
+        free(src); free(o); free(e); free(f);
+    }
+    /* native leaf in balanced frames: smaller on an integer series, version 9 only when used, round trip and corruption
+     * like every mode, default output unaffected, and a reader must refuse the codec-15 leaf below version 9 */
+    {
+        size_t cnt = 65536, un = cnt * 2; uint8_t *u = malloc(un); uint32_t s = 12345;
+        for (size_t i = 0; i < cnt; i++) {
+            int g = 0; for (int k = 0; k < 4; k++) { s = (s * 1103515245u + 12345u) & 0x7fffffffu; g += (int)((s >> 16) & 0x7fff); }
+            g = g / 64 - 1024; int ph = (int)(i % 148), tri = ph < 74 ? ph * 4000 / 74 - 2000 : 2000 - (ph - 74) * 4000 / 74;
+            int16_t v = (int16_t)(tri + g / 4); memcpy(u + 2 * i, &v, 2);
+        }
+        kolmo_params pd = {KOLMO_FAST, 0, 1, 0, 1}, pn = {KOLMO_FAST, 0, 1, 0, 1 | KOLMO_T_NATIVE_LEAF};
+        uint8_t *fd = NULL, *fn = NULL;
+        int64_t cd = check_p("balanced-int16-series", u, un, pd, &fd), cn = check_p("balanced-native-leaf-int16-series", u, un, pn, &fn);
+        if (cd > 0 && cn > 0) {
+            if (cn >= cd) { printf("FAIL native leaf not smaller: %lld >= %lld\n", (long long)cn, (long long)cd); fails++; }
+            if (fd[4] >= 9 || fn[4] != 9) { printf("FAIL native leaf versions: default %d, native %d\n", fd[4], fn[4]); fails++; }
+            uint8_t *b = malloc(un + 1);
+            for (int v = 7; v <= 8; v++) {                      /* the same frame labelled as an older version must be refused */
+                fn[4] = (uint8_t)v; int64_t r = kolmo_decompress(fn, (size_t)cn, b, un, 1);
+                if (r >= 0) { printf("FAIL native leaf accepted in a version %d frame\n", v); fails++; }
+            }
+            fn[4] = 9; free(b);
+            printf("native leaf int16 series: %lld -> %lld bytes (version %d)\n", (long long)cd, (long long)cn, fn[4]);
+        }
+        kolmo_params pr = {KOLMO_MAX, 0, 1, 0, 1 | KOLMO_T_NATIVE_LEAF}; uint8_t *fr = NULL, *fr0 = NULL;   /* ignored outside balanced */
+        kolmo_params pr0 = {KOLMO_MAX, 0, 1, 0, 1};
+        int64_t a = check_p("max-native-flag-ignored", u, un, pr, &fr), a0 = check_p("max-default", u, un, pr0, &fr0);
+        if (a > 0 && a0 > 0 && (a != a0 || memcmp(fr, fr0, (size_t)a))) { printf("FAIL native flag changed a non-balanced mode\n"); fails++; }
+        free(fd); free(fn); free(fr); free(fr0); free(u);
     }
     /* table codec fuzz: corrupt the transformed stream itself (bypasses the container CRC) */
     {
