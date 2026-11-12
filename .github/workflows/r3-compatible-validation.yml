@@ -1,0 +1,86 @@
+name: R3 bounded compatible native validation
+on:
+  push:
+    branches: [fix/planner-record-ownership-isolated-20261112]
+    paths:
+      - research/codec/R3-guard/**
+      - .github/workflows/r3-compatible-validation.yml
+permissions:
+  contents: read
+concurrency:
+  group: r3-compatible-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validation:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify frozen policy and environment
+        run: |
+          set -euo pipefail
+          mkdir r3-evidence
+          sudo apt-get update && sudo apt-get install -y clang liblzma-dev
+          python - <<'PY'
+          import json,pathlib,subprocess
+          p=pathlib.Path('research/codec/R3-guard')
+          r=json.loads((p/'FROZEN.json').read_text())
+          for f,h in r['git_blobs'].items():
+              actual=subprocess.check_output(['git','hash-object',str(p/f)],text=True).strip()
+              if actual!=h: raise SystemExit('frozen source mismatch: '+f)
+          subprocess.run(['git','diff','--exit-code',r['preregistration_commit'],'--',str(p/'PREREGISTRATION.md')],check=True)
+          PY
+          cp research/codec/R3-guard/{FROZEN.json,PREREGISTRATION.md} r3-evidence/
+          { git rev-parse HEAD; uname -a; gcc --version; clang --version; python --version; } > r3-evidence/environment.txt
+      - name: Synthetic infrastructure tests
+        run: |
+          set -euo pipefail
+          python research/codec/R3-guard/test_tools.py 2>&1 | tee r3-evidence/unit-tests.log
+      - name: Build and sanitize isolated source adapters
+        run: |
+          set -euo pipefail
+          python research/codec/R3-guard/build.py --source "$PWD" --output "$RUNNER_TEMP/r3-build" 2>&1 | tee r3-evidence/build.log
+          mkdir r3-evidence/build
+          cp "$RUNNER_TEMP/r3-build/"*.log "$RUNNER_TEMP/r3-build/receipt.json" "$RUNNER_TEMP/r3-build/shared.diff" r3-evidence/build/
+      - name: Audit exposure then fetch and freeze registered input bytes
+        run: |
+          set -euo pipefail
+          python research/codec/R3-guard/prepare.py --repo "$PWD" --capture "$RUNNER_TEMP/r3-build/capture" --output r3-evidence/prepared 2>&1 | tee r3-evidence/prepare.log
+      - name: Sanitize every new source and allocation-failure position
+        run: |
+          set -euo pipefail
+          python research/codec/R3-guard/run.py --manifest r3-evidence/prepared/manifest.json --probe "$RUNNER_TEMP/r3-build/probe-asan" --output r3-evidence/sanitized --correctness-only 2>&1 | tee r3-evidence/sanitized.log
+      - name: Registered release matrix and confirmation
+        run: |
+          set -euo pipefail
+          python research/codec/R3-guard/run.py --manifest r3-evidence/prepared/manifest.json --probe "$RUNNER_TEMP/r3-build/probe-release" --output r3-evidence/first --rounds 7 --seed 2026111203 2>&1 | tee r3-evidence/first.log
+          python research/codec/R3-guard/run.py --manifest r3-evidence/prepared/manifest.json --probe "$RUNNER_TEMP/r3-build/probe-release" --output r3-evidence/confirmation --rounds 5 --seed 2026111204 2>&1 | tee r3-evidence/confirmation.log
+          python research/codec/R3-guard/decide.py r3-evidence/first r3-evidence/confirmation r3-evidence/DECISION.json | tee r3-evidence/decision.log
+          git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
+      - name: Hash retained evidence even on failure
+        if: always()
+        run: |
+          python - <<'PY'
+          import hashlib,json,pathlib
+          r=pathlib.Path('r3-evidence');r.mkdir(exist_ok=True)
+          m={str(p.relative_to(r)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(r.rglob('*')) if p.is_file() and p.name!='MANIFEST.json'}
+          (r/'MANIFEST.json').write_text(json.dumps(m,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r3-compatible-${{ github.run_id }}-${{ github.run_attempt }}
+          path: r3-evidence/
+          retention-days: 30
+          if-no-files-found: error
