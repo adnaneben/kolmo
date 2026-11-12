@@ -298,6 +298,15 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
             hufonly = !flat && hs * 100 <= zs * 97;
         }
         size_t z = s->n >= 64 && !flat && !hufonly ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
+        /* ultra level 2 (maximum ratio): the leaf also tries context mixing and keeps it only when smaller than the
+         * LZMA2 leaf. Smaller graph blocks (measured: -11% to -15% on integer series where the graph is chosen,
+         * -2% over a mixed corpus), but such leaves decode at context-mixing speed, up to ~100x slower than LZMA2.
+         * Default ultra keeps LZMA2 leaves. No format change: leaf codec 7 has always been valid. */
+        if (codec == C_CM && level == 2 && s->n >= 64 && !flat) {
+            uint8_t *cb = malloc(zc); size_t cz = cb ? codec_compress(x, C_CM, level, s->p, s->n, cb, zc) : 0;
+            if (cz && (!z || cz < z)) { memcpy(o.p + o.n + 20, cb, cz); z = cz; cc = C_CM; }
+            free(cb);
+        }
         int tryh = s->n >= 64 && !flat;
         if (tryh && z) {                                      /* Huffman cannot beat the order-0 entropy: skip when z is below it */
             double bits = 0;                                  /* per 128 KiB chunk, as Huffman codes them */

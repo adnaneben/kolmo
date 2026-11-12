@@ -27,10 +27,15 @@ int word_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
 static uint64_t rs = 88172645463325252ull;
 static uint64_t rnd(void) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return rs; }
 static int fails = 0;
+static int64_t check_lvl(const char *name, const uint8_t *s, size_t n, kolmo_mode m, int level, uint32_t B, int T);
 static void check(const char *name, const uint8_t *s, size_t n, kolmo_mode m, uint32_t B, int T) {
-    kolmo_params p = {m, 0, T, B, 1}; size_t cap = kolmo_bound(n, &p); uint8_t *d = malloc(cap), *b = malloc(n + 1);
+    check_lvl(name, s, n, m, 0, B, T);
+}
+/* as check, at an explicit level; returns the compressed size (or a negative error) */
+static int64_t check_lvl(const char *name, const uint8_t *s, size_t n, kolmo_mode m, int level, uint32_t B, int T) {
+    kolmo_params p = {m, level, T, B, 1}; size_t cap = kolmo_bound(n, &p); uint8_t *d = malloc(cap), *b = malloc(n + 1);
     int64_t c = kolmo_compress(s, n, d, cap, &p);
-    if (c < 0) { printf("FAIL compress %s: %s\n", name, kolmo_strerror(c)); fails++; return; }
+    if (c < 0) { printf("FAIL compress %s: %s\n", name, kolmo_strerror(c)); fails++; free(d); free(b); return c; }
     int64_t r = kolmo_decompress(d, c, b, n, T);
     if (r != (int64_t)n || memcmp(b, s, n)) { printf("FAIL roundtrip %s mode %d T %d: %lld\n", name, m, T, (long long)r); fails++; }
     for (int k = 0; k < 20 && n; k++) {                      /* range reads */
@@ -48,6 +53,7 @@ static void check(const char *name, const uint8_t *s, size_t n, kolmo_mode m, ui
     }
     if (silent) { printf("FAIL %s: %d silent corruptions\n", name, silent); fails++; }
     free(d); free(b);
+    return c;
 }
 int main(void) {
     size_t N = 3 << 20;
@@ -457,6 +463,22 @@ int main(void) {
         check("ultra-text", u, un - 8, KOLMO_ULTRA, 1 << 17, 2);
         check("ultra-csv", csv, 400000, KOLMO_ULTRA, 1 << 17, 1);
         check("ultra-random", rndb, 200000, KOLMO_ULTRA, 1 << 17, 1);
+        free(u);
+    }
+    /* ultra level 2 (maximum ratio): integer graph leaves may also use context mixing. On an integer series where
+     * the graph is chosen it must round-trip, survive corruption like every mode, and be strictly smaller than
+     * default ultra (which proves the CM-leaf path ran); default ultra is unaffected by the option. */
+    {
+        size_t cnt = 40000, un = cnt * 4; uint8_t *u = malloc(un); uint32_t s = 12345;
+        for (size_t i = 0; i < cnt; i++) {
+            s = (s * 1103515245u + 12345u) & 0x7fffffffu;
+            uint32_t v = (uint32_t)(((uint64_t)i * i) % 100003u) + ((s >> 16) % 16u);
+            memcpy(u + 4 * i, &v, 4);
+        }
+        int64_t c0 = check_lvl("ultra-int-series", u, un, KOLMO_ULTRA, 0, 1 << 17, 1);
+        int64_t c2 = check_lvl("ultra-l2-int-series", u, un, KOLMO_ULTRA, 2, 1 << 17, 1);
+        if (c0 > 0 && c2 > 0 && c2 >= c0) { printf("FAIL ultra level 2 not smaller on an integer series: %lld >= %lld\n", (long long)c2, (long long)c0); fails++; }
+        else if (c0 > 0 && c2 > 0) printf("ultra level 2 integer series: %lld -> %lld bytes\n", (long long)c0, (long long)c2);
         free(u);
     }
     /* table codec fuzz: corrupt the transformed stream itself (bypasses the container CRC) */

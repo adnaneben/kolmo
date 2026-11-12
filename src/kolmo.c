@@ -1508,7 +1508,7 @@ static void mode_codec(const kolmo_params *p, int *codec, int *level) {
         case KOLMO_ECO: *codec = C_BROTLI; *level = p->level ? p->level : CZ_ECO_LEVEL; break;
         case KOLMO_HC:  *codec = C_ZSTD;   *level = p->level ? p->level : 19; break;
         case KOLMO_MAX: *codec = C_LZMA;   *level = p->level ? p->level : 9; break;     /* max: BWT for text, the better of BWT and LZMA2 for binary (level 1: BWT only) */
-        default:      *codec = C_CM;     *level = p->level == 1 ? 1 : 0; break;        /* ultra: context mixing (level 1: model 1, CM only) */
+        default:      *codec = C_CM;     *level = p->level == 1 || p->level == 2 ? p->level : 0; break;   /* ultra: context mixing (level 1: model 1, CM only; level 2: maximum ratio, graph leaves may use CM) */
     }
 }
 
@@ -2820,7 +2820,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         if (!file_index) goto cleanup;
         dst = file_index;
     }
-    J.output_fd = output_fd; J.default_level = !p->level;
+    J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2);   /* ultra level 2 = default ultra + CM graph leaves */
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
     if (!J.out || !J.outlen) goto cleanup;
