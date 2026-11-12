@@ -11,7 +11,12 @@ between runs; counts below moved by ±1–2 across three repeated development ru
   Coverage: orders 0, 1, 2; signed and unsigned; element widths 2, 4, 8; output widths 1, 2, 4, 8; gcd 1 and 100.
 - Every pipeline reconstructs every input byte for byte (before and after every timed sample); the container
   checksum is verified on every decode. ASan/UBSan/LSan: clean on all 20 inputs × 23 pipelines (`run`, 1 round).
-- Not yet done for the new inverse: malformed-container / resource fuzzing (required before any validation run).
+- Malformed-input checks (`fuzz.c`, ASan/UBSan/LSan build, `results/fuzz.jsonl`): differential fuzzing of
+  `fi_inverse` against production `kg_int_inv` on 3.3 million random parameter/stream cases (including invalid
+  widths, flags, truncated/trailing parameters, wrong residual lengths and small resource limits) agreed on every
+  accept/reject decision and every accepted output byte; 140,000 mutated research containers (7 input/leaf
+  combinations: flips, truncation, header/length edits, splices, varint continuation bytes) were never accepted
+  with a wrong output and raised no sanitizer report.
 
 ## Policy evaluator
 
@@ -51,7 +56,9 @@ archive `BLOCKED_MISSING_COMPETITOR` 20/20.
 
 ## Next
 
-- Malformed-input fuzzing of the research container and `fi_inverse`.
+- fs_mtime diagnosis: 87% of adjacent values repeat, so the order-1 residual is mostly zero, but it is 8 bytes wide
+  and per-plane Huffman cannot spend under 1 bit per byte (>= 8 bits/value) while zstd needs 2.8. This is a missing
+  representation (N3 zero-run/sparse residual layer), not only a guard problem.
 - A zero-probe applicability signal (from `fi_choose`'s own statistics) to replace the zstd probe; evaluate on the
   E02E/E02F/E02G downloads (development now) on a runner, sequenced after the N1 workflow.
 - Archive side once N1's pinned OpenZL rival exists on a matching boundary.

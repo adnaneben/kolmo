@@ -1,0 +1,9 @@
+{"kind":"p2e2_fuzz_inverse","iterations":300000,"both_rejected":222409,"both_accepted_identical":77591}
+{"kind":"p2e2_fuzz_inverse","iterations":3000000,"both_rejected":2225457,"both_accepted_identical":774543}
+{"kind":"p2e2_fuzz_container","input":"/home/claude/e02c-corpus/goog_date_i64.npy","candidate":"tf_planes_huf","iterations":20000,"rejected":19358,"accepted_exact":642,"accepted_wrong":0}
+{"kind":"p2e2_fuzz_container","input":"/home/claude/e02c-corpus/goog_volume_i64.npy","candidate":"tf_prod3","iterations":20000,"rejected":19838,"accepted_exact":162,"accepted_wrong":0}
+{"kind":"p2e2_fuzz_container","input":"/home/claude/e02c-corpus/topobathy_i16.npy","candidate":"tf_planes_huf_pg16","iterations":20000,"rejected":19764,"accepted_exact":236,"accepted_wrong":0}
+{"kind":"p2e2_fuzz_container","input":"/home/claude/e02c-corpus/mri_s1045_u16.npy","candidate":"tf_planes_ent","iterations":20000,"rejected":19898,"accepted_exact":102,"accepted_wrong":0}
+{"kind":"p2e2_fuzz_container","input":"/home/claude/e02c-corpus/goog_date_i64.npy","candidate":"tf_planes_prod3g","iterations":20000,"rejected":19048,"accepted_exact":952,"accepted_wrong":0}
+{"kind":"p2e2_fuzz_container","input":"/home/claude/e02c-corpus/topobathy_i16.npy","candidate":"tf_huf","iterations":20000,"rejected":19821,"accepted_exact":179,"accepted_wrong":0}
+{"kind":"p2e2_fuzz_container","input":"/home/claude/e02c-corpus/fs_mtime_i64.npy","candidate":"tf_planes_huf_pg16","iterations":20000,"rejected":19879,"accepted_exact":121,"accepted_wrong":0}
