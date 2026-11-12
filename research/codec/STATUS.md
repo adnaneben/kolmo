@@ -22,8 +22,11 @@ Updated 2026-11-12. Research only: no default, format, threshold or release chan
 | E02C parallel forced-typed implementation (`c880659`/`706cdab`: `build.py`, `probe.c`, `run.py`, zstd-1 control) | Executed by the parallel workstream (Actions 43232093686, 43233624953; reported there, not re-checked here): unconditional packing rejected; global/local/patched packing retained only as workload-specific candidates | [`E02C_RESULTS.md`](E02C_RESULTS.md), `E02C/README.md` |
 | Previous result "packing before zstd enlarges" | Reproduced (A real +13–25%, B fast +2.3–7.4% vs existing layout with zstd-3) | `E02C-harness/RESULTS.md` §1 |
 
-Next substantive task: X-01 in `PROVISIONAL.md` — reconcile per-plane leaves with E03's costed native baseline on
-one measurement boundary, before any further selector or packing work.
+X-01 done (`E02C-harness/X01.md`): against the E03-style native baseline, per-plane entropy coding gains in every
+multi-byte family (−1.7% to −18.5%); its narrow result applies only against zstd.
+
+Next substantive task: R2 (`review-20261112/NEXT_TASK.md`) — costed, decoder-compatible plane-aligned entropy chunks
+with decode-only timing. Ownership between the two workstreams to be confirmed before starting, to avoid duplicate runs.
 
 Not started / not authorised: LZ engine, float or JSON codecs, neural selector, transform backlog, default or
 threshold changes, merges, releases.
