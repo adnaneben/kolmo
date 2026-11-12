@@ -392,7 +392,7 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
         size_t hp = o.n; o.n += 1;
         /* fast settings, large leaves: three 32 KiB samples decide between stored (no gain either way), Huffman only
          * (it matches or beats zstd -1: skewed bytes without repeats) and the block codec */
-        int flat = 0, hufonly = 0;
+        int flat = 0, hufonly = 0, nohuf = 0;
         if (s->n >= (256u << 10) && cc == C_ZSTD && level <= CZ_FAST_LEVEL) {
             size_t zs = 0, hs = 0, sn = 32768; uint8_t *sb = o.p + o.n + 20;
             for (int q = 1; q <= 3; q++) {
@@ -402,31 +402,36 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
             }
             flat = zs * 100 >= 3 * sn * 99 && hs * 100 >= 3 * sn * 99;
             hufonly = !flat && hs * 100 <= zs * 97;
+            nohuf = hs * 100 > zs * 110;                        /* Huffman a tenth behind on the samples: zstd alone */
             if (hufonly) {
                 /* the three samples can all land in the busy part of a leaf that is mostly one byte value (a high
                  * byte plane that only a few columns use). Huffman cannot go below one bit per byte there, where
                  * zstd codes the runs for almost nothing: 164 KB against 3 KB on one plane (found by the E02C
                  * research harness). When one value fills half the leaf, both are tried. */
-                uint32_t hc[256] = {0}, top = 0; for (size_t i = 0; i < s->n; i++) hc[s->p[i]]++;
+                uint32_t hc[256], top = 0; kg_hist(s->p, s->n, hc);
                 for (int c = 0; c < 256; c++) if (hc[c] > top) top = hc[c];
                 if ((uint64_t)top * 2 >= s->n) hufonly = 0;
             }
         }
         size_t z = s->n >= 64 && !flat && !hufonly ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
-        int tryh = s->n >= 64 && !flat;
-        if (tryh && z) {                                      /* Huffman cannot beat the order-0 entropy: skip when z is below it */
-            double bits = 0;                                  /* per 128 KiB chunk, as Huffman codes them */
+        int tryh = s->n >= 64 && !flat, tryhuf = 1;
+        const int fastleaf = codec == C_ZSTD && level <= CZ_FAST_LEVEL;   /* no rANS at these settings */
+        if (tryh && z && nohuf && fastleaf) tryh = 0;
+        else if (tryh && z) {                                 /* Huffman cannot beat the order-0 entropy: skip when z is below it */
+            double bits = 0, hbits = 0;                       /* per 128 KiB chunk, as Huffman codes them */
             for (size_t a = 0; a < s->n; a += 131072) {
-                size_t m = s->n - a < 131072 ? s->n - a : 131072; uint32_t hc[256] = {0};
-                for (size_t q = 0; q < m; q++) hc[s->p[a + q]]++;
-                for (int c = 0; c < 256; c++) if (hc[c]) bits -= (double)hc[c] * log2((double)hc[c] / (double)m);
+                size_t m = s->n - a < 131072 ? s->n - a : 131072; uint32_t hc[256]; double e = 0; int nd = 0;
+                kg_hist(s->p + a, m, hc);
+                for (int c = 0; c < 256; c++) if (hc[c]) { e -= (double)hc[c] * log2((double)hc[c] / (double)m); nd++; }
+                bits += e; hbits += nd > 1 && e < (double)m ? (double)m : e;   /* a prefix code spends a whole bit per byte */
             }
             if ((double)z * 8 <= bits) tryh = 0;
+            tryhuf = (double)z * 8 > hbits && !nohuf;         /* (rANS below is bounded by the entropy alone) */
         }
-        if (tryh) {                                           /* Huffman only, when smaller (skewed bytes without repeats) */
-            uint8_t *hb = malloc(zc); size_t hz = hb ? codec_compress(x, C_HUF, 0, s->p, s->n, hb, zc) : 0;
+        if (tryh && (tryhuf || !fastleaf)) {   /* Huffman only, when smaller (skewed bytes without repeats) */
+            uint8_t *hb = malloc(zc); size_t hz = hb && tryhuf ? codec_compress(x, C_HUF, 0, s->p, s->n, hb, zc) : 0;
             if (hz && (!z || hz < z)) { memcpy(o.p + o.n + 20, hb, hz); z = hz; cc = C_HUF; }
-            int slow = !(codec == C_ZSTD && level <= CZ_FAST_LEVEL);                        /* rANS at hc/max/ultra only */
+            int slow = !fastleaf;                                                           /* rANS at hc/max/ultra only */
             size_t rz = hb && slow ? codec_compress(x, C_RANS, 0, s->p, s->n, hb, zc) : 0;   /* rANS: whole-bit loss of Huffman */
             /* rANS decodes about four times slower than Huffman or zstd here: with the zstd family (hc: fast reads) it
              * must be at least 3% smaller to be taken; max and ultra take any gain */

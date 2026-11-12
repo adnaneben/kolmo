@@ -1033,6 +1033,14 @@ int tbl_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, i
 #define free(p) zs_free(p)
 #include "tbl2.inc"
 #include "log.inc"
+/* Byte histogram over four tables: one table stalls on runs of the same byte (each count waits for the last). */
+static void kg_hist(const uint8_t *p, size_t n, uint32_t hc[256]) {
+    uint32_t h1[256] = {0}, h2[256] = {0}, h3[256] = {0}; size_t i = 0;
+    memset(hc, 0, 256 * sizeof(uint32_t));
+    for (; i + 4 <= n; i += 4) { hc[p[i]]++; h1[p[i + 1]]++; h2[p[i + 2]]++; h3[p[i + 3]]++; }
+    for (; i < n; i++) hc[p[i]]++;
+    for (int c = 0; c < 256; c++) hc[c] += h1[c] + h2[c] + h3[c];
+}
 #include "sci.inc"
 #include "word.inc"
 #undef malloc
@@ -1269,7 +1277,7 @@ static size_t rans_compress_all(const uint8_t *in, size_t n, uint8_t *out, size_
     size_t o = 0, cw = RANS_CHUNK + 64; uint32_t *tmp = malloc(cw * 4); if (!tmp) return 0;   /* 32-bit words, filled backwards */
     for (size_t i = 0; i < n;) {
         size_t m = n - i < RANS_CHUNK ? n - i : RANS_CHUNK; const uint8_t *src = in + i;
-        uint32_t cnt[256] = {0}, f[256], c = 0; r64sym es[256]; for (size_t q = 0; q < m; q++) cnt[src[q]]++;
+        uint32_t cnt[256], f[256], c = 0; r64sym es[256]; kg_hist(src, m, cnt);
         if (rans_norm(cnt, m, f)) { free(tmp); return 0; }         /* one symbol: leave it to the other codecs */
         for (int k = 0; k < 256; k++) { if (f[k]) r64sym_init(&es[k], c, f[k]); c += f[k]; }
         uint32_t *e = tmp + cw; uint64_t x0 = R64_L, x1 = R64_L;   /* states for even and odd positions, back to front */
@@ -2070,16 +2078,21 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #endif
         /* balanced: a layout that already saves a fifth is the answer; the remaining trials are alternatives to it */
         if (numtrial && chosen == 2 && best < plain * 0.80) goto structured_done;
-        rec_plan_t *R = malloc(sizeof(rec_plan_t));
-        if (R && rec_detect(s, n, effort, light ? 6 : 4, R)) {   /* layouts are searched only for a clear record period (4x the median lag; quick analysis 6x) */
-            size_t rs = (size_t)R->h + (st > (size_t)R->h ? (st - R->h) / R->P * R->P : 0); if (!rs) rs = R->P;
-            size_t rl = L / R->P * R->P;
-            if (rs + rl <= n) {
-                int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc);
-                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < best) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } }
-            }
-        }
-        free(R);
+        /* balanced types the data first: the float, integer, decimal and image trials run before the record search,
+         * and a typed plan that saves a fifth is the answer (the search is the largest fixed cost of planning) */
+#define REC_TRIAL(BAR) do { \
+        rec_plan_t *R = malloc(sizeof(rec_plan_t)); \
+        if (R && rec_detect(s, n, effort, light ? 6 : 4, R)) {   /* layouts are searched only for a clear record period (4x the median lag; quick analysis 6x) */ \
+            size_t rs = (size_t)R->h + (st > (size_t)R->h ? (st - R->h) / R->P * R->P : 0); if (!rs) rs = R->P; \
+            size_t rl = L / R->P * R->P; \
+            if (rs + rl <= n) { \
+                int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc); \
+                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < (BAR)) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } } \
+            } \
+        } \
+        free(R); \
+    } while (0)
+        if (!numtrial) REC_TRIAL(best);
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
         fprintf(stderr, "structure bytes=%zu image_ms=%.3f record_ms=%.3f\n", n, image_ms, (prof_now() - record_start) * 1000);
 #endif
@@ -2127,6 +2140,16 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7; }
         }
 #undef KG_ADJ
+        if (numtrial && !(chosen >= 5 && best < plain * 0.80)) {
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+            double rt0 = prof_now();
+#endif
+            REC_TRIAL(chosen == 8 ? best / 0.93 : best);          /* a decimal plan keeps its 7% margin over a record layout */
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+            fprintf(stderr, "record late_ms=%.3f\n", (prof_now() - rt0) * 1000);
+#endif
+        }
+#undef REC_TRIAL
 structured_done:
         if (chosen >= 5 && n >= (1u << 20)) {
             /* a numeric graph was chosen on one slice from the middle. Four short probes elsewhere check that the

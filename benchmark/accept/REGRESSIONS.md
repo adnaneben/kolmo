@@ -85,6 +85,27 @@ Each is a choice that could reasonably go the other way. The number is what the 
 | 14 | DEC64 blocks at balanced stay at the normal block size (up to 4 MiB) | Yes | One block of up to 32 MiB: 2.6 to 9.3% smaller on four files, decode CPU about 1.8x, no parallel decode of the file | If size matters more than decode speed at balanced for these files; ratio mode already uses large blocks |
 | 13 | Model 3 only for text blocks | Yes | Everywhere (database file 2.2% smaller, executables 1%; three binary files 0.02 to 0.06% larger than 1.0.1, 20% slower) or code both and keep the smaller (2.2x the time) | If the no-file-larger rule is relaxed to a tolerance at `ultra` |
 | 12 | Image model is a new block codec (17; 15 and 16 are left for the native leaf of `feat/native-residual-leaf`) | Yes | Fold it into codec 7 behind a stream flag | Release policy, with decision 7 |
+| 15 | Budget rule (12 November): a mode that is over its competitor's cost today keeps its output; the work is to make it cheaper | Yes | Apply the rule strictly now: `balanced` would give back 3.4 points of size against zstd -3 on the M5 (0.843 to 0.877) and files would get larger than with 1.0.1 | If being within the competitor's cost on every file matters more than targets 3 and 4 |
+| 16 | Archive lifetime for the rule | 30 days, as `TRADEOFFS.md` has it; one year reported beside it | One year: `ratio` is within OpenZL's cost on 24 of 32 files instead of 3 | What the archive modes are for: at 30 days the rule says the archive default should be near `hc -l 9` |
+| 17 | Balanced: a typed plan that saves a fifth skips the record search | Yes (planning -29%; mixed_price_qty_ratio.npy 3.7% smaller and 23% faster to encode with the decimal plan; its decode goes from 15 to 28 ms on 9.6 MB) | Always run the search | A file where the record layout beats a typed plan that already saves a fifth: none in 83 |
+| 18 | Balanced: a leaf whose three samples put Huffman a tenth behind zstd does not try Huffman | Yes (with the four-table count: decimal arrays encode 36% faster; no output changed on 83 files) | Always try both | A leaf where Huffman wins the whole although it loses the samples by a tenth; the sparse-leaf case found on 12 November went the other way and has its own guard |
+
+### The decisions above under the budget rule (12 November 2026)
+
+| Decision | Under the rule |
+|---|---|
+| 2: DEC64 must win by 7% (decode is slower) | The margin guards the wrong cost. On the M5 the decimal files decode at 1.01x to 1.02x zstd -3's time and encode at 2.8x to 3.0x. The cost to fix is encode speed (tracker A13); once the planner has a cost table (B12) the margin goes |
+| 3: DEC64 costs 1.7x to 3x encode at balanced | Over budget (x1.63 to x1.69 at 1 Gbit/s) for a file 41% smaller. Kept under decision 15; first item of tracker B14 |
+| 14: 32 MiB blocks for DEC64 at balanced | Stays rejected: decode would go from 1.02x to about 1.8x zstd -3's time. Open for the archive modes, where it has to fit OpenZL's cost |
+| 5: speed mode skips the table transform | Under the rule the natural speed-tier setting is `balanced -Q` (within zstd -3's cost on 35 of 35 files, 4% smaller). `speed` is over on 11 text files because its larger output costs more in transfer than it saves in CPU at 1 Gbit/s; it remains the setting for faster links and for the lz4 comparison |
+| 1: ratio may switch a block to block sorting for 3% | Judged by OpenZL's cost: nci at `ratio` is x1.84 at 30 days and x0.61 at one year. The excess is the 5.3 s encode, not the slower decode (0.47 s against 0.09 s). Part of tracker B15 |
+
+## M5, 12 November 2026, runs of 18d7efb and 3c5f599
+
+Both runs: 17 of 19 rivals beaten (open: lz4 -9 on decode, paq8px -8), every setting at or above 1.0.1 (`balanced`
+x1.131 ratio, x1.016 encode, x1.053 decode at 3c5f599), no file larger. Slowdown flags on unchanged output: three at
+18d7efb (`hc` mr encode x0.91; `ratio` ld30.txt and webster decode x0.92 and x0.91), none of them at 3c5f599, which has
+one other (`ratio` chr22.fa encode x0.92). No flag repeats across the two runs: noise, not counted.
 
 ## M5, 12 November 2026 (commit 67a022f, before this branch)
 

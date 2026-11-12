@@ -49,6 +49,67 @@ beaten. lz4 -1 (2.28x, 858, 1313 MB/s) by `speed` (2.32x, 907, 1844); zstd -1 (3
 brotli and gzip by `hc -l 9`; xz -6 by `max`; bzip3 by `max -l 1`. No confirmed slowdown on unchanged output, every
 setting at or above 1.0.1, no file larger. lz4 on elapsed time alone is still 2 to 3% ahead on encode.
 
+## The budget rule (12 November 2026)
+
+This replaces fixed percentage thresholds as the test for whether a change is an improvement.
+
+> Inside each mode, kolmo picks the smallest option whose measured cost stays within the cost of that mode's
+> competitor on the same input. A change is an improvement when it makes a mode's output smaller and the mode stays
+> within that cost, or when it lowers the cost of a mode that is over it without making the output larger.
+
+| Tier | Modes | Competitor | Cost |
+|---|---|---|---|
+| Speed | `speed`, `balanced` | zstd -3 | compress time + transfer at a 1 Gbit/s link + decompress time, one thread (model 2 of `benchmark/TRADEOFFS.md`) |
+| Archive | `hc`, `ratio` | OpenZL 0.3.0, its cheapest setting for the file (levels 6 and 9, every profile, trained where a trainer exists) | CPU dollars for one compression and 3.3 decompressions + storage dollars for the lifetime (model 3) |
+
+`-x` (`ultra`) is outside the rule: it is the explicit "smallest of all" setting and is judged against PAQ8PX.
+The planner types the data first (container header, number width and kind, table columns), then tries only the
+options that type allows, then picks by the rule.
+
+`python3 benchmark/accept/budget.py speed <M5 results>` and `... archive <OpenZL results>` print, for every setting,
+on how many files it is within the budget, and the "oracle": the smallest kolmo result within the budget per file.
+
+Three points of this definition are a reading of the rule, not something it states; each changes the verdicts:
+1. **Speed-tier cost includes the link.** With compress and decompress time alone (no link), `balanced` is within zstd
+   -3's cost on 10 of 35 files instead of 14, because nothing pays for a smaller output.
+2. **Archive lifetime.** `TRADEOFFS.md` says "30 days or more". At 30 days CPU decides and `ratio` is within OpenZL's
+   cost on 3 of 32 files; at one year storage decides and it is within on 24 of 32.
+3. **Existing output is not made larger to meet the budget.** Where a mode is over the budget today, the work is to
+   make it cheaper. Targets 3 and 4 (no setting behind 1.0.1, no file larger) still hold.
+
+### Status against the rule
+
+Speed tier, Apple M5, 35 files, commit 1079e90 (`budget.py speed`):
+
+| Setting | Files within zstd -3's cost | Total size against zstd -3 |
+|---|---|---|
+| `balanced` | 14 of 35 | 0.843 |
+| `balanced -q` | 22 of 35 | 0.861 |
+| `balanced -Q` | 35 of 35 | 0.957 |
+| `speed` | 24 of 35 | 1.467 |
+| smallest within the budget, per file | 35 of 35 | 0.877 |
+
+`balanced` is over the budget mostly on encode time: decimal arrays (cost x1.63 to x1.69: encode 2.8x to 3.0x zstd
+-3, decode 1.01x), wide and typed tables (x1.30 to x1.46), a JSON number array (x1.41), 8-bit images (x1.30 to x1.36), logs (x1.31), and
+three files where planning or a transform gains nothing and still costs 10% (mozilla, osdb, chr22.fa). `speed` is over on text, where its
+larger output costs more in transfer than it saves in CPU at 1 Gbit/s.
+
+Archive tier, cloud VM, 32 files, commit 3c5f599, OpenZL timed in the same session
+(`benchmark/openzl/results-3c5f599.json`):
+
+| Setting | Within OpenZL's cost, 30 days | Size against OpenZL | Within, one year |
+|---|---|---|---|
+| `balanced` | 27 of 32 | 0.948 | 21 of 32 |
+| `hc -l 9` | 27 of 32 | 0.863 | 28 of 32 |
+| `hc` | 4 of 32 | 0.803 | 25 of 32 |
+| `ratio -l 1` | 6 of 32 | 0.748 | 23 of 32 |
+| `ratio` | 3 of 32 | 0.711 | 24 of 32 |
+| smallest within the budget, per file | 29 of 32 | 0.800 | 28 of 32 (0.712) |
+
+No kolmo setting is within OpenZL's cost on: lfw_subset.npy (kolmo is 9% larger at `ratio`, 43% at `balanced`),
+magika.onnx (1 to 2% larger), xml at 30 days (the settings that are 12 to 30% smaller cost 7 to 16% more); at one year also magika.gguf and
+magika.safetensors (equal size within 0.2%, 1 to 2% more CPU).
+
 ## A separate goal: balanced against zstd -3 on Silesia, round trip
 
 Not part of the acceptance rule, tracked here. Silesia tar, in memory, one thread, same process, cloud VM, best of

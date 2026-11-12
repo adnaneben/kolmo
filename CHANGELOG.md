@@ -89,6 +89,20 @@
 
 ## Unreleased (on main, not tagged)
 
+- **Budget rule and a typed order in the balanced planner (branch `claude/dec64`).** A change is now judged by
+  whether a mode's output gets smaller while its cost stays within its competitor's (zstd -3 for `speed` and
+  `balanced`, OpenZL for `hc` and `ratio`): `benchmark/accept/budget.py`, rule and status in
+  `benchmark/accept/TARGETS.md`. First step in the planner: at `balanced` the typed trials for binary data (float,
+  integer, decimal, 8-bit image) run before the record search, and the search is skipped when a typed plan already
+  saves a fifth. Planning time over 79 files falls 29% (24.5% to 20.8% of encode); one of 83 files changes (3.7%
+  smaller).
+- **Graph leaves are coded faster at `balanced` (branch `claude/dec64`).** The byte count that decides whether a
+  leaf tries Huffman used one table, which stalls on runs of one byte value (most of a number plane); it now uses
+  four. Huffman is not tried where it cannot win: a prefix code spends at least one bit per byte, and at `balanced`
+  a leaf whose samples put Huffman a tenth behind zstd skips it. Output is byte-identical on 83 files at
+  `balanced`, `hc -l 9` and `ratio -l 1`. Encode CPU on decimal arrays: 118 to 75 ms (24 MB), 323 to 205 ms (31 MB);
+  a 316-column table 87 to 76 ms. With the planner order below, `balanced` encode CPU over 79 files is 13% lower
+  (5,506 to 4,793 ms).
 - **DEC64: second difference (branch `claude/dec64`).** A column or segment may store the difference of successive
   deltas (flag bit 4), chosen when it is 5% shorter again: running totals and steady trends. A 31 MB table with
   cumulative columns (`co2.npy`, float64 or float32): 10.6% smaller at `balanced`, 11.4% at `ratio`; other tables

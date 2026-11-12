@@ -7,7 +7,7 @@ number that justifies dropping it is in the row). Decision of 12 November 2026.
 Sources: S = session plan, G = the "Kolmo-inspired codec" plan (experiment ids E00 to E10), M = found by measurement.
 Costs and trade-offs of what was done are in `benchmark/accept/REGRESSIONS.md`; this file tracks what was planned.
 
-Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 86 rows. 22 done (one of them on another branch), 10 dropped, 13 partly done or measured only, 40 not done,
+Status on 12 November 2026 (branch `claude/dec64`): 93 rows. 23 done (one of them on another branch), 10 dropped, 17 partly done or measured only, 42 not done,
 1 deferred (the merge).
 
 ## A. Numeric and structured data
@@ -26,9 +26,10 @@ Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 86 rows. 22 done (o
 | A10 | Several small entropy contexts per leaf (byte position, sign, exception flag) | G E04 | Done elsewhere | Built on `feat/native-residual-leaf` (plane-context rANS leaf, opt-in at balanced): -9.8% over 317 integer files, whole-file decode 2.3x slower. Tried here on the DEC64 planes of four tables: +3.2%, -0.3%, +4.0%, +33% against the per-plane best of zstd, Huffman and rANS, so it is not applied to DEC64. Take it for integer series when the branches are brought together (X2) |
 | A11 | Cross-field prediction (one column from another) | G | Dropped | Difference from an earlier column: 1 of 144 columns qualifies, 0 bytes. Linear fit on any other column (an optimistic bound, either direction): 0.6%, 0%, 1.0% on three tables, 10.3% on a physics table. Reopen only for tables of physically related quantities |
 | A12 | Segmentation: restart or switch models where the data changes | G E07 | Partly | Per-segment exponents and per-block both-ways coding exist; no general change detector |
-| A13 | DEC64 speed: reuse the trial slice, code leaves once, batch the decode | M | Not done | Encode is 1.7x to 3x, decode 1.2x to 1.9x on those files |
+| A13 | DEC64 speed: reuse the trial slice, code leaves once, batch the decode | M | Partly | Profile of a 24 MB decimal array at balanced: leaf coding 2/3 of the block time, and 2/3 of that was the byte count before the Huffman attempt (one table stalls on runs). Four-table count, Huffman skipped where it cannot win: encode 118 -> 75 ms and 323 -> 205 ms, output identical. Left: finding and coding the columns (about 40 ms of the 75: column-stride reads of a row-major table), the trial slice coded twice, decode |
 | A15 | Magnitude token plus exact offset bits for integer residuals (pcodec-style) | R1 review | Partly | Entropy bound with order-1 tokens against the balanced coder on eight integer sets: 1 to 12% smaller on five (decimal tables 1.3%, 5.9%, 11.6%; integer columns 5.4%; population 7.5%), larger on three (timestamps 2.2x). Against the ratio coder: worse on seven. Left: build it as a leaf candidate for balanced, or drop after a costed test |
 | A14 | JSON and log structure parsing into streams | G E05 | Partly | Tables, templates and fixed-width lines exist; no JSON key/value split. See D8 for the ultra side |
+| A16 | Full-precision float64 arrays against OpenZL | M | Not done | lfw_subset.npy: OpenZL 224,659 bytes, kolmo `ratio` 9% larger, `balanced` 43% larger (45,258 distinct values in 125,000; not decimal, not a small dictionary). The only file where no kolmo setting is smaller than OpenZL besides magika (1 to 2%) |
 
 ## B. Planner
 
@@ -42,7 +43,13 @@ Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 86 rows. 22 done (o
 | B6 | Ultra never larger than ratio | M | Partly | Fixed for images (404,896 -> 323,467; 276,549 -> 203,747). Left: one CSV 0.6% larger |
 | B7 | Sweep the thresholds chosen by judgement | M | Not done | Ledger decision 10 |
 | B8 | Check the 25% text slice limit on more text | M | Not done | Set from nci alone (ledger decision 8) |
-| B9 | Planning time at balanced | S | Not done | About 130 ms on the Silesia tar; part of the zstd -3 round-trip gap |
+| B9 | Planning time at balanced | S | Partly | Was 24.5% of balanced encode over 79 files (1,542 ms of 6,303). With the typed trials before the record search (B11): 1,101 ms, 20.8%. Planning that ends in plain coding is 3.8% of encode (mozilla 146 ms, osdb 22 ms). Left: the fixed cost on files of 1 to 10 MB (23 to 43 ms each) |
+| B10 | Budget rule as the acceptance test: per mode, the smallest option within the competitor's cost (zstd -3 for the speed tier, OpenZL for the archive tier) | User, 12 Nov | Done | `benchmark/accept/budget.py`, rule and status in `TARGETS.md`. `balanced` is within zstd -3's cost on 14 of 35 M5 files (size 0.843 of zstd -3); `ratio` within OpenZL's cost on 3 of 32 files at 30 days and 24 of 32 at one year (size 0.711) |
+| B11 | Type first: the planner decides what the data is before it tries codecs | User, 12 Nov | Partly | Text tables already type their columns (number, text, formula search). Binary data at balanced now runs the typed trials (float, integer, decimal, image) before the record search and skips the search when a typed plan saves a fifth: planning -29%, one of 83 files changed (3.7% smaller). Left: one trial chosen from a container header (.npy, safetensors, ONNX, Parquet say the type); the same order at ratio; typed columns inside records |
+| B12 | Cost table in the planner: encode and decode cost per option and data type, fitted offline, so the budget check is deterministic and needs no clock | M | Not done | The planner compares sizes only; the one cost proxy is DEC64's 7% margin (ledger decision 2) |
+| B13 | Learned selector (reinforcement learning or a bandit) in place of trials | User, 12 Nov | Measured, not planned now | Ceiling at balanced: all planning is 20.8% of encode, planning with no gain 3.8%. One ordering rule (B11) took 29% of planning. The choice is one decision per block with an immediate result, so a fitted cost table (B12) and gates checked on a holdout cover it; revisit if the gap to the per-file oracle stays above 2% after B11 and B12 (today: 0.843 picked against 0.877 within budget, which is a cost gap, not a selection gap) |
+| B14 | Bring `balanced` within zstd -3's cost | M | Not done | Over on 21 of 35 files. By excess: decimal arrays x1.63 to x1.69 (A13), wide and typed tables x1.30 to x1.46, JSON number array x1.41, 8-bit images x1.30 to x1.36, logs x1.31, nci x1.23, plans with no gain x1.10 (B9) |
+| B15 | Bring `hc` and `ratio` within OpenZL's cost, or set their lifetime | M | Not done | At 30 days `hc -l 9` is the largest setting that fits (27 of 32, size 0.863 of OpenZL); `hc` and `ratio` fit at one year (25 and 24 of 32). Ledger decision 15 |
 
 ## C. Engine: matching and fast paths
 
