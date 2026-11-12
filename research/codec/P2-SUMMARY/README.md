@@ -26,6 +26,14 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
    only), probe-based leaf selection (P2-08), the unfused zero-run leaf. E02G's decode misses are real but not what
    blocks P2 feasibility.
 
+7. **The best type-first stack exists in today's format (P2-E11).** Written as a standard `CZN1` frame (one KG_INT
+   graph block; per-plane Huffman as plane-aligned chunks inside one ordinary Huffman leaf), it is decoded by the
+   unchanged production decoder and CLI (60/60 frames); in memory it fits zstd-3 on 13/20 and is feasible-and-smaller
+   on 9/20 development inputs. Only the encoder is new, so decision P2-D1 no longer blocks the main result.
+8. **Archive frontier (P2-E8):** inside OpenZL csv-9's archive cost the smallest pipelines are production `hc`
+   (Covertype −41.1%) and `max` (CollegeMsg −30.6%); heavier modes are smaller but over cost at these sizes.
+9. **Fused predictor choice (P2-E9)** is identical to production on 200,000 random arrays and trims small-input cost.
+
 ## Correctness evidence behind these claims
 
 Identity checks against production (19/19 typed inputs: choice, parameters, residual, rest, inverse); 3.3 M
@@ -35,10 +43,12 @@ timing run (runner gates: P2-E3 all inputs × 7 policies, P2-E7 50/50).
 
 ## What is needed next (in order)
 
-1. **Decision P2-D1** (user): may a complete, checksummed research container count for P2 *research* acceptance?
+1. Run P2-E11's production-format frames on N1's CLI boundary, decoded by the production CLI (queued behind P2-E10
+   and the N1 owner's typed-NPY OpenZL comparator).
 2. **Fresh, source-disjoint whole original files**, registered before reading (candidates not referenced anywhere in
    the repository: ESC-50 16-bit WAV clips, FiveThirtyEight data CSVs; fetching them needs approval).
 3. OpenZL typed NPY adapter (N1 owner) to unblock archive mode for arrays.
 4. Small-input cost: per-call fixed costs and a zero-probe guard.
 
-Runner use by this workstream tonight: P2-E3 ~13 and P2-E7 ~13 minutes (plus N1 ~11 by the parallel workstream).
+Runner use by this workstream tonight: P2-E3 ~13, P2-E7 ~13, P2-E8 ~19 minutes, P2-E10 running (N1 ~11 by the
+parallel workstream). Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.
