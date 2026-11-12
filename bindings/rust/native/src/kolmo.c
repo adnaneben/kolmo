@@ -1090,7 +1090,7 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 
 /* ------------------------------------------------------------------ codecs */
 enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
-       C_GRAPH = 12, C_HUF = 13, C_RANS = 14 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0 (graph leaves) */
+       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_CMI = 15 };   /* 15: context mixing with the image model (ultra; carries its own row length, channels and head) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0 (graph leaves) */
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9, T_LINES = 10 };   /* 9: kolmo graph (a=delim b=decimal separator) */
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
  * so repeated calls to one target produce identical bytes. Encoded back to front and decoded front to back (as in
@@ -1408,6 +1408,7 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
             return (ip == cn && op == n) ? 0 : -1; }
 #endif
         case C_CM: return cm_decompress(in, cn, out, n);
+        case C_CMI: return cm_decompress_img(in, cn, out, n);
         case C_HUF: return huf_decompress_all(in, cn, out, n);
         case C_RANS: return rans_decompress_all(in, cn, out, n);
     }
@@ -2414,13 +2415,27 @@ static void *compress_worker(void *arg) {
                       : pl.b & 64 ? kg_encode_dec64(xp, kgc, kgl, raw, len, pl.b & 1 ? 0 : pl.kgw / 8, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 16 ? kg_encode_float(xp, kgc, kgl, raw, len, pl.b & 15, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : kg_encode_num(xp, kgc, kgl, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
+            if (cl && (pl.b & 32) && !pl.a && (codec == C_LZMA || codec == C_CM)) {
+                /* 8-bit images under the slow coders: block-sorted leaves are 5 to 10% smaller than LZMA2 leaves on
+                 * colour photographs (the residual planes are noise-like, with no matches to find). Both are coded. */
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+                size_t c2 = alt ? kg_encode_img8(xp, C_BSC, 9, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, alt, J->slot) : 0;
+                if (c2 && c2 < cl) { memcpy(sl, alt, c2); cl = c2; }
+            }
+            if (cl && (pl.b & 32) && !pl.a && codec == C_CM && level != 1 && len < ((size_t)1 << 28)) {
+                /* ultra, 8-bit image: context mixing with the image model (the pixel's neighbours as contexts) over
+                 * the plain pixels; 12 to 20% smaller than the predictor graph on photographs */
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+                size_t c2 = alt ? cm_compress_img(raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (uint32_t)pl.c : 0, alt, J->slot) : 0;
+                if (c2 && c2 < cl) { memcpy(sl, alt, c2); cl = c2; codec = C_CMI; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; goto coded; }
+            }
             if (cl && len < (256u << 10)) {                                 /* small block: the plan was scored with zstd; the block's
                                                                              * own coder on the plain bytes may still be smaller */
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
                 size_t pc = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (pc && pc < cl) cl = 0;
             }
-            if (cl && !pl.a && len >= (256u << 10) && (pl.verify || ((pl.b & 64) && (codec == C_LZMA || codec == C_BSC || codec == C_CM)))) {
+            if (cl && !pl.a && len >= (256u << 10) && (pl.verify || codec == C_CM || ((pl.b & 64) && (codec == C_LZMA || codec == C_BSC)))) {
                 /* decimal doubles under the slow coders: the plan was scored with zstd, and on small-integer tables
                  * block sorting or context mixing over the plain bytes can still be smaller. Marked plans (the input
                  * is not one kind of data throughout): this block may be the part the graph does not fit. Both are
@@ -2431,7 +2446,9 @@ static void *compress_worker(void *arg) {
                      * reach (a slice sorts worse than the block, so the limit is loose); otherwise the graph stands */
                     size_t sn = len < (512u << 10) ? len : (512u << 10), so = ((len - sn) / 2) & ~(size_t)63;
                     size_t cs = codec_compress(xp, C_BSC, 9, raw + so, sn, alt, J->slot);
-                    if (!cs || (double)cs / sn > 1.35 * (double)cl / len) alt = NULL;
+                    /* ultra: every numeric graph block comes here, and context mixing over the plain bytes costs 20
+                     * times the graph's time, so plain block sorting must already be within 2% (model weights are not) */
+                    if (!cs || (double)cs / sn > (codec == C_CM ? 1.02 : 1.35) * (double)cl / len) alt = NULL;
                 }
                 size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = codec; }
@@ -2534,6 +2551,22 @@ static void *compress_worker(void *arg) {
                     fprintf(stderr, "len %zu t%d text %d cm %zu alt%d %zu\n", (size_t)inlen, tflag, looks_text(in, inlen), cl, alts[k], c2);
 #endif
                     if (c2 && (!cl || c2 < cl)) { memcpy(sl + meta, alt, c2); cl = c2; codec = alts[k]; }
+                }
+                if (cl && in != raw && len >= (64u << 10)) {
+                    /* ultra, transformed block: the transform was chosen by its zstd score, and the plain bytes can be
+                     * smaller under the strong coders (a 1 MB image array was larger at ultra than at max). Plain block
+                     * sorting is quick; when it comes within 2% of the transformed block, plain context mixing and,
+                     * up to 2 MiB, plain LZMA2 are tried as well. The smallest is kept. */
+                    int bc = 0; size_t bz = cl + meta, ref = cl + meta;
+                    size_t a1 = codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot);
+                    if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = C_BSC; }
+                    if (a1 && (double)a1 <= 1.02 * (double)ref) {
+                        size_t a2 = codec_compress(xp, C_CM, level, raw, len, alt, J->slot);
+                        if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_CM; }
+                        size_t a3 = len <= (2u << 20) ? codec_compress(xp, C_LZMA, 9, raw, len, alt, J->slot) : 0;
+                        if (a3 && a3 < bz) { memcpy(sl, alt, a3); bz = a3; bc = C_LZMA; }
+                    }
+                    if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
                 }
             }
         }

@@ -111,6 +111,7 @@ typedef struct {
     uint8_t *buf; int64_t pos;
     uint32_t c0, c4, c8, word, word1, word2, bitpos; uint16_t ind1[256]; uint16_t ind2[65536]; int64_t line0, line1;   /* current and previous line starts */
     uint32_t *mt, mmask; int64_t mptr; int mlen;
+    uint32_t iw, ich, ih, i_pred, i_cls, i_act, i_n, i_med, i_wn;   /* image model: row bytes, channels, head; mixer selectors */
     uint32_t mc[64];
     int mci;
 } cm_t;
@@ -317,7 +318,8 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
 #endif
     }
     int node = bp < 4 ? (int)((c0 & ((1u << bp) - 1)) | (1u << bp)) : (int)((c0 & ((1u << (bp - 4)) - 1)) | (1u << (bp - 4)));
-    m->slot[0] = &m->o1[c0 | (m->c4 & 0xff) << 8];
+    const int img = v2 == 2;
+    m->slot[0] = &m->o1[c0 | (img ? m->i_pred : (m->c4 & 0xff)) << 8];
     for (int i = 1; i < nm; i++) m->slot[i] = &m->cur[i]->s[node];
     for (int i = 0; i < nm; i++) {
         uint32_t v = *m->slot[i]; uint16_t st = (uint16_t)((v >> 8 & 255) | bp << 8); m->sst[i] = st;
@@ -335,8 +337,9 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     int ml = m->mlen == 0 ? 0 : m->mlen < 16 ? 1 : m->mlen < 32 ? 2 : 3;
     uint32_t c1 = m->c4 & 0xff;
     int cls = ((c1 | 32) >= 'a' && (c1 | 32) <= 'z') ? 0 : (c1 >= '0' && c1 <= '9') ? 1 : 2;
+    if (img) { cls = (int)m->i_cls; c1 = m->i_pred; }
     m->w1i = (int)c0 + 256 * cls;
-    m->w2i = (ml * 8 + bp) * 4 + (int)(c1 >> 6);
+    m->w2i = (ml * 8 + bp) * 4 + (int)(img ? m->i_act : c1 >> 6);
     const int32_t *w1 = m->w1[m->w1i], *w2 = m->w2[m->w2i];
     int st;
     if (!v2) {
@@ -346,7 +349,7 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
         m->pr1 = cm_SQ(d1); m->pr2 = cm_SQ(d2);
         st = (d1 + d2) >> 1;
     } else {                                                  /* four mixers, then a small learned mixer of their outputs */
-        m->w3i = (int)((m->c4 >> 8 & 0xff) << 3 | (uint32_t)bp); m->w4i = (int)(c0 | c1 << 8); m->wfi = (int)c0 | ml << 8;
+        m->w3i = (int)((img ? m->i_n : (m->c4 >> 8 & 0xff)) << 3 | (uint32_t)bp); m->w4i = (int)(c0 | (img ? m->i_med : c1) << 8); m->wfi = (int)c0 | ml << 8;
         const int32_t *w3 = m->w3[m->w3i], *w4 = m->w4[m->w4i], *wf = m->wf[m->wfi];
         int64_t s1 = 0, s2 = 0, s3 = 0, s4 = 0;
         for (int i = 0; i < ni; i++) {
@@ -371,7 +374,7 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     int p;
     if (!v2) p = (mixed + p1 + p2) / 3;
     else {
-        m->a3i = (int)(cm_hmix((m->c4 & 0xffff) * 0x9E3779B1u + c0 * 0x85EBCA6Bu) >> 16);
+        m->a3i = (int)(cm_hmix((img ? m->i_wn : (m->c4 & 0xffff)) * 0x9E3779B1u + c0 * 0x85EBCA6Bu) >> 16);
         int p3 = (m->a3[m->a3i][lo] * (128 - wt) + m->a3[m->a3i][lo + 1] * wt) >> 11;
         p = (mixed + p1 + p2 + p3 + 2) >> 2;
     }
@@ -483,6 +486,37 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
         m->h[8] = cm_hmix(cm_hmix(c4 * 0x9E3779B1u) + (m->c8 & 0xff) * 0x85EBCA6Bu + 8);          /* order 5 */
         m->h[9] = cm_hmix(cm_hmix(c4 + 0x51ED27u) + (m->c8 & 0xffffff) * 0xC2B2AE35u + 9);     /* order 7 */
 #endif
+        if (v2 == 2) {
+            /* image model: the hashed contexts are the pixel's neighbours instead of the preceding bytes. W, N, NW, NE
+             * are the same channel of the pixels to the left, above and diagonal; P1, P2 the earlier channels of this
+             * pixel. Predictions (gradient, median, inter-channel) are contexts too, with the local activity. */
+            const uint8_t *bf = m->buf; const int64_t q = m->pos; const int64_t w = m->iw, ch = m->ich;
+#define IB(d) ((uint32_t)(q >= (int64_t)(d) + (int64_t)m->ih ? bf[q - (d)] : 0))
+#define ICL(x) ((uint32_t)((x) < 0 ? 0 : (x) > 255 ? 255 : (x)))
+            const uint32_t W = IB(ch), N = IB(w), NW = IB(w + ch), NE = w > ch ? IB(w - ch) : 0, WW = IB(2 * ch), NN = IB(2 * w);
+            const uint32_t NNE = w > ch ? IB(2 * w - ch) : 0, P1 = IB(1), P2 = IB(2), W1 = IB(ch + 1), N1 = IB(w + 1);
+            const uint32_t ci = q >= (int64_t)m->ih ? (uint32_t)((q - m->ih) % ch) : 0;
+            const uint32_t grad = ICL((int)W + (int)N - (int)NW), mn = W < N ? W : N, mx = W < N ? N : W;
+            const uint32_t med = NW >= mx ? mn : NW <= mn ? mx : grad, avg = (W + N + 1) >> 1;
+            const int a0 = abs((int)W - (int)NW) + abs((int)N - (int)NW) + abs((int)N - (int)NE);
+            const uint32_t act = a0 < 3 ? 0 : a0 < 8 ? 1 : a0 < 16 ? 2 : a0 < 32 ? 3 : a0 < 64 ? 4 : a0 < 128 ? 5 : a0 < 256 ? 6 : 7;
+            const int col = ci > 0;                                   /* an earlier channel of this pixel is known */
+            const uint32_t icp = col ? ICL((int)W + (int)P1 - (int)W1) : grad, icn = col ? ICL((int)N + (int)P1 - (int)N1) : avg;
+            const uint32_t k = ci * 0x9E3779B1u;
+#define IH(i, v) m->h[i] = cm_hmix((uint32_t)(v) * 0x9E3779B1u + k + (uint32_t)(i) * 0x85EBCA6Bu)
+            IH(1, W << 8 | N); IH(2, N << 8 | NE); IH(3, W << 8 | NW); IH(4, grad << 3 | act); IH(5, med << 3 | act);
+            IH(6, W << 16 | N << 8 | NW); IH(7, W << 16 | N << 8 | NE); IH(8, N << 8 | NN); IH(9, W << 8 | WW);
+            IH(10, (ICL(2 * (int)W - (int)WW) >> 2) << 6 | ICL(2 * (int)N - (int)NN) >> 2); IH(11, avg << 6 | ((W - N + 256) & 511) >> 3);
+            if (col) { IH(12, icp << 3 | act); IH(13, icp << 8 | P1); IH(14, P1 << 8 | W); IH(15, P1 << 8 | N); IH(16, P1 << 8 | P2); IH(17, icn << 8 | W); }
+            else { IH(12, ICL((int)N + (int)NE - (int)NNE) << 3 | act); IH(13, ICL((int)W + (int)NE - (int)N)); IH(14, NW << 8 | NE); IH(15, ((W + NE) >> 1) << 6 | N >> 2);
+                   IH(16, (W >> 2) << 18 | (N >> 2) << 12 | (NW >> 2) << 6 | NE >> 2); IH(17, WW << 8 | NN); }
+            IH(18, (grad >> 1) << 7 | med >> 1); IH(19, (W >> 3) << 20 | (N >> 3) << 15 | (NE >> 3) << 10 | (NW >> 3) << 5 | P1 >> 3);
+            IH(20, (icp + icn + 1) >> 1);
+#undef IH
+#undef IB
+#undef ICL
+            m->i_pred = icp; m->i_cls = ci > 2 ? 2 : ci; m->i_act = act >> 1; m->i_n = N; m->i_med = med; m->i_wn = W << 8 | N;
+        }
         for (int i = 1; i < nm; i++) {                        /* prefetch the buckets for the first nibble */
 #ifdef KOLMO_CM_COMPACT
             uint32_t idx = cm_prefetch_slot(m, i, 0, 0);
@@ -553,6 +587,32 @@ static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t ca
     return r ? 0 : o;
 }
 static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return cm_compress_m(in, n, out, cap, 0); }
+/* Image model (block codec 8): 8-bit samples in rows of iw bytes, ich interleaved channels, after ih bytes that are
+ * not pixels. Stream: iw u32 | ih u32 | ich u8 | size word as above (always model 2 tables) | coded bytes. */
+static size_t cm_compress_img(const uint8_t *in, size_t n, uint32_t iw, uint32_t ich, uint32_t ih, uint8_t *out, size_t cap) {
+    if (cap < 20 || n >= ((size_t)1 << 28) || !iw || !ich || ich > 4 || iw < ich || ih > n) return 0;
+    int bb = cm_bits_for(n);
+    uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new(hist, bb, 1) : NULL;
+    if (!m) { free(hist); return 0; }
+    m->iw = iw; m->ich = ich; m->ih = ih;
+    memcpy(out, &iw, 4); memcpy(out + 4, &ih, 4); out[8] = (uint8_t)ich;
+    uint32_t n32 = (uint32_t)n | (uint32_t)((bb - 15) | 8) << 28; memcpy(out + 9, &n32, 4);
+    size_t o = 4;
+    int r = cm_enc_loop(m, in, n, out + 9, cap - 9, &o, 2);
+    cm_free(m); free(hist);
+    return r ? 0 : o + 9;
+}
+static int cm_decompress_img(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+    if (cn < 17 || n >= ((size_t)1 << 28)) return -1;
+    uint32_t iw, ih, n32; memcpy(&iw, in, 4); memcpy(&ih, in + 4, 4); uint32_t ich = in[8]; memcpy(&n32, in + 9, 4);
+    uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu; int bb = (int)(f & 7) + 15;
+    if (n32 != n || !(f & 8) || bb < 16 || bb > 22 || !iw || !ich || ich > 4 || iw < ich || ih > n) return -1;
+    cm_t *m = cm_new(out, bb, 1); if (!m) return -1;
+    m->iw = iw; m->ich = ich; m->ih = ih;
+    cm_dec_loop(m, in + 9, cn - 9, out, n, 2);
+    cm_free(m);
+    return 0;
+}
 static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     if (cn < 8) return -1;
     uint32_t n32; memcpy(&n32, in, 4);

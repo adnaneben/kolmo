@@ -89,6 +89,17 @@
 
 ## Unreleased (on main, not tagged)
 
+- **`ultra`: an image model for the context mixer (block codec 15; branch `claude/dec64`).** For 8-bit images the
+  mixer's hashed contexts are the pixel's neighbours (left, above, the diagonals, two back), the earlier channels of
+  the same pixel, and gradient, median and inter-channel predictions with the local activity, in place of the
+  preceding bytes; the mixers are selected by the prediction and the neighbours. A 512x512 grey photograph: 132,883 →
+  116,664 bytes (paq8px -8: 113,869); a 512x512 RGB photograph: 404,896 → 323,467 (paq8px -8: 308,539). Encode about
+  150 KB/s, as the mixer elsewhere. Files that use it need this version; an older reader stops with an error.
+  `make check-cmimg` round-trips generated images and decodes damaged streams under AddressSanitizer.
+- **`ratio` and `ultra`: image graphs try block-sorted leaves; `ultra` tries a transformed block plain.** Colour
+  photographs are 5 to 6% smaller at `ratio` with block-sorted leaves in the image graph. At `ultra` a transformed
+  block is also coded plain when plain block sorting is within 2% of it, which removes a case where `ultra` was
+  larger than `ratio` (a 1 MB image array: 276,549 → 203,747; `ratio` 245,200).
 - **Integer columns inside containers (branch `claude/dec64`).** The array finder of the DEC64 node also takes runs
   of small int64 values (a per-segment flag), and a whole-file numeric plan that the probes mark gives way to the
   segment plan. The int64 pickle that regressed on main: 129,908 → 98,236 bytes at `balanced` (1.0.1: 129,908), 76,398

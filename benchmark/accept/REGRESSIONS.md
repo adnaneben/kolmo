@@ -30,6 +30,8 @@ noise. CPU time on this VM moves by up to 25% between passes, so a single-pass s
 | mixed decimal / computed table at balanced: 4% smaller for 1.8x decode time | DEC64 chosen on a thin margin | Fixed: DEC64 must beat the next plan by 7%. |
 | digits table 15% larger at ratio | DEC64 scored with zstd, coded with LZMA2 | Fixed before it left the branch (both codings, smaller kept). |
 | 16-bit model file 0.84% larger than 1.0.1 at balanced | 256 KiB planning slice | Fixed in 7c6d1c2 (1 MiB slice restored). |
+| `ultra` larger than `ratio` on images (RGB photograph 404,896 vs 381,565; image array 276,549 vs 245,200) | `ultra` kept the graph or transform chosen by its zstd score | Fixed: image model, and plain coding tried for transformed blocks. Now 323,467 and 203,747. |
+| `ultra` 20x slower on model weights for no gain (1.3 -> 26 s on a 3 MB file) | plain context mixing tried for every numeric graph block | Fixed before it left the branch: tried only when plain block sorting is within 2%. |
 
 ## Open, fixable
 
@@ -42,6 +44,9 @@ noise. CPU time on this VM moves by up to 25% between passes, so a single-pass s
 | Small transformed blocks at ratio still try two plain codings when block sorting is close | img_chelsea.u8 (0.4 MB): 0.13 -> 0.25 s, same output | Tighter limit for the LZMA2 attempt | hours |
 | Text-transform slice limit (25%) set from one file (nci) | unknown | More text files in the corpus before trusting it | corpus work |
 
+| `ultra` larger than `ratio` on one CSV | energy_test.csv: 635,318 against 631,255 (0.6%); 1.0.1 has it too | Keep the `ratio` result when it is smaller (costs a `ratio` pass per block) | hours |
+| Headerless RGB images are not recognised | img_chelsea.u8: no row length found, so no image graph and no image model; the `.npy` form of the same picture is 11% smaller | Row-length search for interleaved channels | 1 to 2 days |
+| No image model for 16-bit images | mr, x-ray: 7% and 1% behind paq8px -8 | 16-bit variant of the model | 2 to 3 days |
 ## Accepted: worth the cost
 
 | Cost | What it buys | Why accepted |
@@ -53,6 +58,8 @@ noise. CPU time on this VM moves by up to 25% between passes, so a single-pass s
 | Mixed-content files at ratio: both codings per block | neg_boost.npy 26% smaller, mixed table 19% smaller | Only files the probes mark; others pay four 32 KiB probes |
 | mr, osdb at ratio: decode 1.8x to 2x against 1.0.1 (already on main) | 7% and 20% smaller | Block sorting; accepted when it went to main |
 | wide_test.csv at balanced: decode 2.4x against 1.0.1 (already on main) | 43% smaller | Wide-table graph; accepted when it went to main |
+| `ultra` on 8-bit images: 0.5 s -> 5 s for a 0.8 MB photograph (the graph was coded with LZMA2 leaves, the image model runs the mixer) | 12 to 20% smaller; within 2.5 to 5% of paq8px -8, from 17 to 31% | `ultra` is the smallest-output setting and runs the mixer on everything else |
+| `ratio` on 8-bit images: the image graph is coded twice (LZMA2 and block-sorted leaves) | 5 to 6% smaller on colour photographs | Small blocks; time not yet measured per file |
 | Files using the new graph node or the fixed-width transform need this version | the gains above | Older readers stop with a clear error; no silent misread |
 | Speed mode skips the table transform | CSV-like files up to 4x larger than balanced | Measured: the transform costs 2.3x encode and decode and would lose the win over lz4 -1 |
 
@@ -72,6 +79,8 @@ Each is a choice that could reasonably go the other way. The number is what the 
 | 8 | Text-transform slice limit of 25% at ratio | Set from nci alone | 10% like other transforms (loses nci's 20%) | More text files |
 | 9 | Integer probe requires values below 2^32 | Yes | Wider (finds timestamps; misreads short-mantissa doubles, 0.8% larger on two pickles) | A better discriminator |
 | 10 | 3% minimum for a plain result at ratio, 10% probe margin, 1.35x slice limit | Chosen by judgement, not tuned | - | A sweep on a larger holdout |
+| 11 | `ultra` tries plain context mixing only when plain block sorting is within 2% | Yes | Always try (magika.onnx 1.1% smaller, 20x the time on every model file) | If `ultra` time stops mattering |
+| 12 | Image model is a new block codec (15) | Yes | Fold it into codec 7 behind a stream flag | Release policy, with decision 7 |
 
 ## M5, 12 November 2026 (commit 67a022f, before this branch)
 
@@ -81,6 +90,12 @@ Each is a choice that could reasonably go the other way. The number is what the 
 the 23 files and 5% ahead on the per-file mean; the total is carried by tables and records (sao, CSV). paq8px's
 largest leads: small images (17 to 52%), JSON (43%), executables (33%), logs and XML (25%). No setting slower than
 1.0.1 on unchanged output, no file larger.
+
+## Process note
+
+Two round-trip failures appeared in an `ultra` pass on 12 November (magika.safetensors, mr). Both were the kernel
+killing the encoder for memory while a second context-mixing job ran beside it; each file round-trips when run alone.
+`ultra` needs about 4.5 GB: one job at a time on the 2-core VM.
 
 ## Not regressions: gaps to rivals that are still open
 

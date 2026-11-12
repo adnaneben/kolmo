@@ -106,6 +106,10 @@ build/test-dec64-asan: tests/test_dec64.c src/kolmo.c src/kolmo.h src/kgraph.inc
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dec64.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-dec64: build/test-dec64-asan
 	./build/test-dec64-asan
+build/test-cmimg-asan: tests/test_cmimg.c src/kolmo.c src/kolmo.h src/cm.inc build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmimg.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-cmimg: build/test-cmimg-asan
+	./build/test-cmimg-asan
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
