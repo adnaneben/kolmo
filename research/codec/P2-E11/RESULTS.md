@@ -1,0 +1,36 @@
+# P2-E11 — type-first pipelines written as genuine Kolmo frames (development)
+
+The type-first encoder now writes **standard `CZN1` frames** (one block, version 7, plan `T_KG/0/width/header`,
+codec `C_GRAPH`, production block checksum and header CRC) that the **unchanged production decoder** reads:
+`kolmo_decompress` in the in-memory harness and the shipped `kolmo -d` CLI. No `src/` change, no new identifiers;
+only the encoder is research code (`tpframe.inc`, `p2e11.c`, `tpcli.c`).
+
+- `tp_prod3`: fast identity-checked passes + production `kg_serialize` (zstd-3 leaf rule). Its payload is checked
+  **byte-identical to production `kg_encode_num`** on all 19 typed inputs (`results/identity.jsonl`).
+- `tp_phuf`: per-plane Huffman inside one ordinary `C_HUF` leaf. The leaf format is a sequence of self-describing
+  chunks of any length up to 128 KiB read until the output is full, so concatenating `huf_compress_all()` over each
+  byte plane is a valid leaf (the R1/P-17 observation). Rest leaf stored.
+- `tp_phuf_pg16`: with the 16 KiB pre-guard; fallback = a production frame from `kolmo_compress` (transforms off).
+
+## Correctness
+
+ASan/UBSan/LSan: 20 inputs × 3 variants decode through `kolmo_decompress`; all 60 frames written by `tpcli` decode
+byte-exactly with the production `kolmo -d` CLI (`results/cli_roundtrip.txt`); predictor choice, forward program and
+inverse identical to production on 19/19 typed inputs.
+
+## Development timing (local 2-vCPU, in memory, 5 paired rounds; decoding by production `kolmo_decompress`)
+
+| Pipeline | Fits zstd-3 cost | Fits and smaller | Notes |
+|---|---|---|---|
+| production `kolmo_fast` | 0 / 20 | 0 | +81% … +861% cost |
+| `tp_prod3` (production format, production leaf rule) | 4 | 4 | bytes as production (identical payload) |
+| **`tp_phuf`** (production format, per-plane Huffman) | **13** | **9** | same bytes as P2-E2's research container ± ~52 B frame |
+| `tp_phuf_pg16` | 7 | 5 | guard bounds fs_mtime to +0.2% |
+
+## What this changes
+
+Decision P2-D1 (research containers) no longer blocks the main type-first result: the same stack is available in the
+existing production format, decodable by today's decoder. What remains research is the encoder (declared-type
+routing, the identity-checked fast passes, plane-aligned Huffman chunks). A production integration would be an
+encoder-side change only, still subject to review. Next: the same pipelines on N1's CLI boundary, decoded by the
+production CLI, and on the broader cohort.
