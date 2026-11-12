@@ -55,10 +55,15 @@ zstd library; rANS is Kolmo's own code. No new production hook was needed or add
 | `lbp128` | local bitpacking | width per 128 values (1 byte each) — matched control for `gbp` |
 | `gpp` | global patched | one `b` chosen by an estimated cost; exceptions as position gaps (uv) + high parts (uv) — matched control for `lpp128` |
 | `lpp128` | local patched (PFOR-style) | per 128 values: exact-cost `b`, exception count, positions (u8) + high parts (uv) |
+| `planes` | plane-aware control (follow-up) | the existing residual bytes split into one stream per byte plane (`ow` streams when planar), so every backend builds a table per plane |
 
 Each representation emits 1–5 streams; each stream is coded by the configured backend
 (`store`, `huf`, `rans`, `zstd3`) and **falls back to stored when the coded form is not smaller** — every stream's
 requested and actual codec is recorded (`kernel_size` records), so a stored fallback is never reported as entropy-coded.
+Follow-up backend `ent` (configurations `exist+ent`, `planes+ent`, `lpp128+ent`): per stream both existing entropy coders
+(Huffman-only and rANS) are run and the smaller kept, both charged — the best entropy-only leaf available from existing code.
+Configuration indices 0–23 are unchanged from the first run; 24–30 are appended. `sel+<backend>` still chooses among
+the first five representations only.
 `sel+<backend>` is an implemented size selector: it encodes all five representations with the backend and keeps the
 smallest; all five trials are inside its measured encode time (an exhaustive oracle, charged, not free).
 

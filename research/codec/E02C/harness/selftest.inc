@@ -32,7 +32,7 @@ static void gen(uint64_t *z, size_t m, int ow, int pat, uint64_t seed) {
 }
 static void rt_case(codec_ctx *x, int ow, int pln, size_t m, int pat, int heavy, const char *dir) {
     uint64_t *z = malloc((m ? m : 1) * 8); uint8_t *r = malloc(m * (size_t)ow + 1); gen(z, m, ow, pat, m * 31 + (size_t)pat * 7 + (size_t)ow);
-    z_to_res(z, m, ow, pln, r); char cs[64], cf[32]; uint64_t dg = 1469598103934665603ull; size_t gb = 0; snprintf(cs, sizeof cs, "ow%d_p%d_m%zu_pat%d", ow, pln, m, pat);
+    z_to_res(z, m, ow, pln, r); char cs[64], cf[32]; uint64_t dg = 1469598103934665603ull, dgp = dg, dge = dg; size_t gb = 0, gbp = 0, gbe = 0; snprintf(cs, sizeof cs, "ow%d_p%d_m%zu_pat%d", ow, pln, m, pat);
     for (int c = 0; c < NCONF; c++) {
         kbuf b = {0}, b2 = {0}, d = {0}; estat st; conf_name(c, cf);
         CHECK(!conf_encode(x, c, r, m, ow, pln, &b, &st), "encode %s %s", cs, cf);
@@ -40,9 +40,11 @@ static void rt_case(codec_ctx *x, int ow, int pln, size_t m, int pat, int heavy,
         CHECK(!e2c_decode(x, b.p, b.n, m, ow, pln, m * (size_t)ow + 64, &d) && d.n == m * (size_t)ow && !memcmp(d.p, r, d.n), "round trip %s %s", cs, cf);
         T_roundtrips++;
         for (int q = 0; q < st.ns; q++) CHECK(st.s[q].actual == C_STORE || st.s[q].coded < st.s[q].raw, "coded not smaller %s", cs);
-        dg = (dg ^ fnv(b.p, b.n) ^ b.n) * 1099511628211ull; gb += b.n;
-        if (dir && c < R_N * B_N && c % B_N == B_STORE && (pat == 3 || pat == 5 || pat == 6) && (m == 129 || m == 1000)) {   /* vectors for the independent reference */
-            char path[512]; snprintf(path, sizeof path, "%s/%s_%s.blob", dir, cs, RN[c / B_N]);
+        if (c >= NFIX + 2 * B_N) { dge = (dge ^ fnv(b.p, b.n) ^ b.n) * 1099511628211ull; gbe += b.n; }
+        else if (conf_rep(c) == R_PLANES) { dgp = (dgp ^ fnv(b.p, b.n) ^ b.n) * 1099511628211ull; gbp += b.n; }   /* appended configs: own line */
+        else { dg = (dg ^ fnv(b.p, b.n) ^ b.n) * 1099511628211ull; gb += b.n; }
+        if (dir && conf_rep(c) >= 0 && conf_be(c) == B_STORE && (pat == 3 || pat == 5 || pat == 6) && (m == 129 || m == 1000)) {   /* vectors for the independent reference */
+            char path[512]; snprintf(path, sizeof path, "%s/%s_%s.blob", dir, cs, RN[conf_rep(c)]);
             FILE *f = fopen(path, "wb"); fwrite(b.p, 1, b.n, f); fclose(f);
             snprintf(path, sizeof path, "%s/%s.res", dir, cs); f = fopen(path, "wb"); fwrite(r, 1, m * (size_t)ow, f); fclose(f);
         }
@@ -64,6 +66,7 @@ static void rt_case(codec_ctx *x, int ow, int pln, size_t m, int pat, int heavy,
         free(b.p); free(b2.p); free(d.p);
     }
     golden(cs, dg, gb);
+    { char cp[80]; snprintf(cp, sizeof cp, "%s_planes", cs); golden(cp, dgp, gbp); snprintf(cp, sizeof cp, "%s_ent", cs); golden(cp, dge, gbe); }
     free(z); free(r);
 }
 static void expect_reject(codec_ctx *x, const uint8_t *p, size_t n, size_t m, int ow, size_t maxs, const char *what) {
@@ -72,7 +75,8 @@ static void expect_reject(codec_ctx *x, const uint8_t *p, size_t n, size_t m, in
 static void malformed(codec_ctx *x) {
     /* tag / representation */
     expect_reject(x, (const uint8_t[]){0x00}, 1, 0, 1, 64, "non-experimental tag");
-    expect_reject(x, (const uint8_t[]){0xE5}, 1, 0, 1, 64, "unknown representation");
+    expect_reject(x, (const uint8_t[]){0xE6}, 1, 0, 1, 64, "unknown representation");
+    expect_reject(x, (const uint8_t[]){0xE5, 0, 2, 2, 1, 2}, 6, 2, 2, 64, "planes: too few plane streams");
     expect_reject(x, (const uint8_t[]){0}, 0, 0, 1, 64, "empty blob");
     /* stream framing: invalid codec id, raw length mismatch, coded > available, coded >= raw for entropy codec */
     expect_reject(x, (const uint8_t[]){0xE0, 7, 2, 2, 1, 2}, 6, 2, 1, 64, "invalid codec id");

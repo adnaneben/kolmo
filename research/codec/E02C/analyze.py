@@ -10,7 +10,8 @@ import collections, json, pathlib, statistics, sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 REPS = ['exist', 'gbp', 'lbp128', 'gpp', 'lpp128']; BES = ['store', 'huf', 'rans', 'zstd3']
-CONFS = [f'{r}+{b}' for r in REPS for b in BES] + [f'sel+{b}' for b in BES]
+CONFS = [f'{r}+{b}' for r in REPS for b in BES] + [f'sel+{b}' for b in BES] + [f'planes+{b}' for b in BES] + ['exist+ent', 'planes+ent', 'lpp128+ent']
+FIXED = CONFS[:20] + CONFS[24:28]
 
 def med(v): return statistics.median(v) if v else None
 def q(v, p): v = sorted(v); return v[min(len(v) - 1, int(p * (len(v) - 1) + 0.5))] if v else None
@@ -85,7 +86,7 @@ def main(raw, out):
     rows = []
     for f in sorted({fam(n) for n in capA}):
         ins = [n for n in capA if fam(n) == f]; prod = sum(capA[n]['payload'] for n in ins)
-        best = min(CONFS[:20], key=lambda cf: sum(totA[n][cf] for n in ins))
+        best = min(FIXED, key=lambda cf: sum(totA[n][cf] for n in ins))
         r = [f, len(ins), prod]
         for cf in ('exist+huf', 'exist+rans', 'lbp128+rans', 'gpp+rans', 'lpp128+huf', 'lpp128+rans', 'lpp128+zstd3', 'sel+rans'):
             r.append(f'{100 * (sum(totA[n][cf] for n in ins) / prod - 1):+.2f}%')
@@ -116,7 +117,7 @@ def main(raw, out):
         f = frB[k]; ib = [b for b in f['blocks_detail'] if 'int' in b]
         rows.append([k[0], k[1], man[k[0]]['origin'], f['bytes'], f['frame'], f['zstd3_whole_input'], f'{f["int_blocks"]}/{f["blocks"]}',
                      ','.join(sorted({b['int']['residual_codec'] for b in ib})) or '-', ','.join(sorted({f'w{b["int"]["w"]}o{b["int"]["order"]}ow{b["int"]["ow"]}' for b in ib})) or '-',
-                     min(((totB[k][cf], cf) for cf in CONFS[:20]), default=(f['frame'], '-'))[1] if ib else '-'])
+                     min(((totB[k][cf], cf) for cf in FIXED), default=(f['frame'], '-'))[1] if ib else '-'])
     table('Regime B per input: production planner selection', ['input', 'mode', 'origin', 'bytes', 'frame', 'zstd -3', 'INT blocks', 'prod residual codec', 'INT shape', 'smallest fixed config'], rows)
     S['B_planner'] = B
     cand = ['exist+zstd3', 'gpp+huf', 'gpp+zstd3', 'lpp128+huf', 'lpp128+rans', 'lpp128+zstd3', 'sel+huf', 'sel+rans', 'sel+zstd3']

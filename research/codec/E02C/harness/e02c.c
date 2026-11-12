@@ -18,6 +18,8 @@
  *                                                                streams: packed lows, position gaps uv, highs uv
  *   rep 4 LPP    local patched, 128 values                       streams: widths u8, exception counts u8, packed
  *                                                                lows, positions u8 (in segment), highs uv
+ *   rep 5 PLANES existing residual bytes, one stream per byte plane (ow streams of m bytes when the layout is planar,
+ *                else the single stream): the plane-aware control, so each backend builds one table per plane
  *   stream: codec u8 (0 stored, 3 zstd, 13 Huffman only, 14 rANS) | raw length uv | coded length uv | bytes
  * Count m, output width and plane flag come from the KG_INT parameters, as for a production leaf.
  * Packing is LSB first; padding bits are zero; a coded stream is always smaller than its raw length (else stored).
@@ -34,18 +36,21 @@
 #include "../../../../src/kolmo.c"
 
 #define SEG 128
-enum { R_EXIST, R_GBP, R_LBP, R_GPP, R_LPP, R_N };
-enum { B_STORE, B_HUF, B_RANS, B_ZSTD, B_N };
-static const char *RN[R_N] = {"exist", "gbp", "lbp128", "gpp", "lpp128"};
-static const char *BN[B_N] = {"store", "huf", "rans", "zstd3"};
+enum { R_EXIST, R_GBP, R_LBP, R_GPP, R_LPP, R_PLANES, R_N };
+#define R_SEL 5                           /* the size selector chooses among the first five representations (as in the first E02C run) */
+enum { B_STORE, B_HUF, B_RANS, B_ZSTD, B_N, B_ENT = B_N };   /* B_ENT: per stream, both existing entropy coders tried, smaller kept (both charged) */
+static const char *RN[R_N] = {"exist", "gbp", "lbp128", "gpp", "lpp128", "planes"};
+static const char *BN[B_N + 1] = {"store", "huf", "rans", "zstd3", "ent"};
 static const int BC[B_N] = {C_STORE, C_HUF, C_RANS, C_ZSTD};
 #define ZSTD_CONTROL_LEVEL 3
-#define NCONF (R_N * B_N + B_N)         /* 20 fixed configurations + one charged size selector per backend */
+#define NFIX (R_SEL * B_N)              /* configurations 0-19: fixed; 20-23: charged selector per backend; 24-27: planes (appended, indices kept) */
+static const int ENT_REPS[3] = {R_EXIST, R_PLANES, R_LPP};   /* configurations 28-30: entropy-only best-of-two per stream */
+#define NCONF (NFIX + B_N + B_N + 3)
 
 static int uvlen(uint64_t v) { int l = 1; while (v >= 128) { v >>= 7; l++; } return l; }
 static int e2bitlen(uint64_t z) { return z ? 64 - __builtin_clzll(z) : 0; }
 static uint64_t lomask(int b) { return b >= 64 ? ~0ull : ((1ull << b) - 1); }
-static const char *codec_name(int c) { return c == C_STORE ? "store" : c == C_HUF ? "huf" : c == C_RANS ? "rans" : c == C_ZSTD ? "zstd" : c == C_LZMA ? "lzma" : c == C_BSC ? "bsc" : "other"; }
+static const char *codec_name(int c) { return c == -1 ? "huf|rans" : c == C_STORE ? "store" : c == C_HUF ? "huf" : c == C_RANS ? "rans" : c == C_ZSTD ? "zstd" : c == C_LZMA ? "lzma" : c == C_BSC ? "bsc" : "other"; }
 
 /* ---------------- residual layout <-> values ---------------- */
 static void res_to_z(const uint8_t *r, size_t m, int ow, int pln, uint64_t *z) {
@@ -94,12 +99,18 @@ static int pk_get(const uint8_t *p, size_t avail, size_t cnt, int b, uint64_t *v
 
 /* ---------------- per-stream backend ---------------- */
 typedef struct { int requested, actual; size_t raw, coded; } sstat;
-typedef struct { int rep, be, ns; sstat s[5]; size_t hdr; int b; uint64_t ne; } estat;
+typedef struct { int rep, be, ns; sstat s[8]; size_t hdr; int b; uint64_t ne; } estat;
 static int enc_stream(codec_ctx *x, int be, const kbuf *s, kbuf *o, sstat *st) {
     size_t cap = s->n + s->n / 8 + 1024, z = 0; int cc = C_STORE;
     if (kb_res(o, 1 + 20 + cap)) return -1;
     uint8_t *dst = o->p + o->n + 21;
-    if (s->n && be != B_STORE) {
+    if (s->n && be == B_ENT) {                                 /* existing Huffman-only and rANS, smaller kept */
+        size_t h = codec_compress(x, C_HUF, 0, s->p, s->n, dst, cap);
+        if (h && h < s->n) { z = h; cc = C_HUF; }
+        uint8_t *t = malloc(cap); size_t r = t ? codec_compress(x, C_RANS, 0, s->p, s->n, t, cap) : 0;
+        if (r && r < s->n && (!z || r < z)) { memcpy(dst, t, r); z = r; cc = C_RANS; }
+        free(t);
+    } else if (s->n && be != B_STORE) {
         size_t r = codec_compress(x, BC[be], be == B_ZSTD ? ZSTD_CONTROL_LEVEL : 0, s->p, s->n, dst, cap);
         if (r && r < s->n) { z = r; cc = BC[be]; }
     }
@@ -107,7 +118,7 @@ static int enc_stream(codec_ctx *x, int be, const kbuf *s, kbuf *o, sstat *st) {
     uint8_t hdr[21]; size_t hn = 0; hdr[hn++] = (uint8_t)cc;
     hn = (size_t)(kg_uvw(hdr + hn, s->n) - hdr); hn = (size_t)(kg_uvw(hdr + hn, z) - hdr);
     memmove(o->p + o->n + hn, dst, z); memcpy(o->p + o->n, hdr, hn); o->n += hn + z;
-    if (st) { st->requested = BC[be]; st->actual = cc; st->raw = s->n; st->coded = z; }
+    if (st) { st->requested = be == B_ENT ? -1 : BC[be]; st->actual = cc; st->raw = s->n; st->coded = z; }
     return 0;
 }
 /* exact < 0: any raw length up to maxraw */
@@ -149,11 +160,14 @@ static int lpp_choose(const uint64_t *z, size_t len) {
 }
 /* r: production residual stream (m * ow bytes) */
 static int e2c_encode(codec_ctx *x, int rep, int be, const uint8_t *r, size_t m, int ow, int pln, kbuf *blob, estat *st) {
-    kbuf s[5] = {{0}}; int ns = 0, rc = -1; uint64_t *z = NULL; blob->n = 0;
+    kbuf s[8] = {{0}}; int ns = 0, rc = -1; uint64_t *z = NULL; blob->n = 0;
     estat dummy; if (!st) st = &dummy; memset(st, 0, sizeof *st); st->rep = rep; st->be = be;
     if (kb_byte(blob, (uint8_t)(0xE0 | rep))) goto done;
     if (rep == R_EXIST) { ns = 1; if (kb_put(&s[0], r, m * (size_t)ow)) goto done; }
-    else {
+    else if (rep == R_PLANES) {
+        ns = pln ? ow : 1;
+        for (int q = 0; q < ns; q++) if (kb_put(&s[q], r + (pln ? (size_t)q * m : 0), pln ? m : m * (size_t)ow)) goto done;
+    } else {
         z = malloc((m ? m : 1) * sizeof(uint64_t)); if (!z) goto done; res_to_z(r, m, ow, pln, z);
         if (rep == R_GBP) {
             uint64_t mx = 0; for (size_t i = 0; i < m; i++) mx |= z[i];
@@ -188,11 +202,11 @@ static int e2c_encode(codec_ctx *x, int rep, int be, const uint8_t *r, size_t m,
     for (int q = 0; q < ns; q++) if (enc_stream(x, be, &s[q], blob, &st->s[q])) goto done;
     rc = 0;
 done:
-    for (int q = 0; q < 5; q++) free(s[q].p); free(z); return rc;
+    for (int q = 0; q < 8; q++) free(s[q].p); free(z); return rc;
 }
 /* decode into the production residual stream layout; maxs: resource limit on the residual stream bytes */
 static int e2c_decode(codec_ctx *x, const uint8_t *p, size_t n, size_t m, int ow, int pln, size_t maxs, kbuf *out) {
-    size_t i = 0; int rc = -1; kbuf s[5] = {{0}}; uint64_t *z = NULL;
+    size_t i = 0; int rc = -1; kbuf s[8] = {{0}}; uint64_t *z = NULL;
     if ((ow != 1 && ow != 2 && ow != 4 && ow != 8) || m > maxs / (size_t)ow) return -1;
     if (n < 1 || (p[0] & 0xF0) != 0xE0 || (p[0] & 15) >= R_N) return -1;
     int rep = p[0] & 15; i = 1; size_t rb = m * (size_t)ow, nsg = (size_t)seg_count(m), lim = 10 * m + 64;
@@ -200,6 +214,9 @@ static int e2c_decode(codec_ctx *x, const uint8_t *p, size_t n, size_t m, int ow
     if (rep == R_EXIST) {
         if (dec_stream(x, p, n, &i, (int64_t)rb, rb, &s[0])) goto done;
         memcpy(out->p, s[0].p, rb);
+    } else if (rep == R_PLANES) {
+        int np = pln ? ow : 1; size_t pl = pln ? m : rb;
+        for (int q = 0; q < np; q++) { if (dec_stream(x, p, n, &i, (int64_t)pl, pl, &s[0])) goto done; if (pl) memcpy(out->p + (size_t)q * pl, s[0].p, pl); }
     } else {
         z = malloc((m ? m : 1) * sizeof(uint64_t)); if (!z) goto done;
         if (rep == R_GBP) {
@@ -260,21 +277,25 @@ static int e2c_decode(codec_ctx *x, const uint8_t *p, size_t n, size_t m, int ow
     if (i != n) goto done;
     out->n = rb; rc = 0;
 done:
-    for (int q = 0; q < 5; q++) free(s[q].p); free(z); return rc;
+    for (int q = 0; q < 8; q++) free(s[q].p); free(z); return rc;
 }
 
 /* ---------------- configurations (incl. charged selector) ---------------- */
+static int conf_rep(int c) { return c < NFIX ? c / B_N : c < NFIX + B_N ? -1 : c < NFIX + 2 * B_N ? R_PLANES : ENT_REPS[c - NFIX - 2 * B_N]; }
+static int conf_be(int c) { return c < NFIX ? c % B_N : c < NFIX + B_N ? c - NFIX : c < NFIX + 2 * B_N ? c - NFIX - B_N : B_ENT; }
 static const char *conf_name(int c, char *buf) {
-    if (c < R_N * B_N) snprintf(buf, 32, "%s+%s", RN[c / B_N], BN[c % B_N]);
-    else snprintf(buf, 32, "sel+%s", BN[c - R_N * B_N]);
+    if (c < NFIX) snprintf(buf, 32, "%s+%s", RN[c / B_N], BN[c % B_N]);
+    else if (c < NFIX + B_N) snprintf(buf, 32, "sel+%s", BN[c - NFIX]);
+    else snprintf(buf, 32, "%s+%s", RN[conf_rep(c)], BN[conf_be(c)]);
     return buf;
 }
 /* selector: every representation is encoded with the backend; the smallest blob wins (all trials are run, so their
  * cost is part of the measured encode time) */
 static int conf_encode(codec_ctx *x, int c, const uint8_t *r, size_t m, int ow, int pln, kbuf *blob, estat *st) {
-    if (c < R_N * B_N) return e2c_encode(x, c / B_N, c % B_N, r, m, ow, pln, blob, st);
-    int be = c - R_N * B_N; kbuf t = {0}; estat ts; int ok = 0; blob->n = 0;
-    for (int rep = 0; rep < R_N; rep++) {
+    if (c < NFIX) return e2c_encode(x, c / B_N, c % B_N, r, m, ow, pln, blob, st);
+    if (c >= NFIX + B_N) return e2c_encode(x, conf_rep(c), conf_be(c), r, m, ow, pln, blob, st);
+    int be = c - NFIX; kbuf t = {0}; estat ts; int ok = 0; blob->n = 0;
+    for (int rep = 0; rep < R_SEL; rep++) {
         if (e2c_encode(x, rep, be, r, m, ow, pln, &t, &ts)) { free(t.p); return -1; }
         if (!ok || t.n < blob->n) { blob->n = 0; if (kb_put(blob, t.p, t.n)) { free(t.p); return -1; } if (st) *st = ts; ok = 1; }
     }

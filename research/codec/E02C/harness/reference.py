@@ -34,6 +34,11 @@ def decode(b, m, ow, pln):
     rep = b[0] - 0xE0; i = 1; seg = 128; nseg = (m + seg - 1) // seg
     if rep == 0:
         r, i = stream(b, i, m * ow); assert i == len(b); return r
+    if rep == 5:
+        parts = []
+        for _ in range(ow if pln else 1):
+            r, i = stream(b, i, m if pln else m * ow); parts.append(r)
+        assert i == len(b); return b''.join(parts)
     if rep == 1:
         w = b[i]; i += 1; p, i = stream(b, i); z = unpack(p, m, w)
     elif rep == 2:
