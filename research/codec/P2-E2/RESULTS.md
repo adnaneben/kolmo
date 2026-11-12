@@ -62,3 +62,18 @@ archive `BLOCKED_MISSING_COMPETITOR` 20/20.
 - A zero-probe applicability signal (from `fi_choose`'s own statistics) to replace the zstd probe; evaluate on the
   E02E/E02F/E02G downloads (development now) on a runner, sequenced after the N1 workflow.
 - Archive side once N1's pinned OpenZL rival exists on a matching boundary.
+
+## Sensitivity to the link parameter (labelled sensitivity, NOT the registered rule)
+
+Same records, `policy.run_cost` with only `link_bytes_per_second` changed; feasible on every pair AND smaller than
+zstd-3, of 20 inputs. The registered P2 rule stays 1 Gbit/s.
+
+| Link | `tf_planes_huf` | `tf_huf` | `tf_prod3` | `tf_planes_huf_pg16` | `typed_fast` |
+|---|---|---|---|---|---|
+| 100 Mbit/s | 11 | 9 | 12 | 10 | 10 |
+| **1 Gbit/s (registered)** | **8** | **7** | **5** | **6** | **2** |
+| 10 Gbit/s | 7 | 7 | 5 | 5 | 1 |
+| CPU only (no transfer) | 7 | 7 | 5 | 4 | 1 |
+
+On 7 inputs the per-plane Huffman pipeline is both faster end to end than zstd-3 and smaller, independent of the
+link: the finding does not rest on the transfer term.
