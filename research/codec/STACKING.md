@@ -43,6 +43,39 @@ baseline, as `R2-stack/PROTOCOL.md` also requires.
    by how much? It is the only route by which leaf gains reach blocks the planner currently codes otherwise.
 4. **Wait for R2-stack** (ST-3) before ST-4; ST-4's ceiling is large but selection cost decides it.
 
+## Sequences and locations (transform order)
+
+A transform's gain depends on **where** in the pipeline it sits and **what runs before it**. The pipeline locations are:
+
+| Loc | Stage | What can change there | Constraint now |
+|---|---|---|---|
+| L0 | Planner: block split, transform choice | which graph a block gets (INT, table, raw) | unchanged; ST-7 measures feedback only |
+| L1 | Structural transform | column split, table fields, DECIMAL mantissa/exponent | existing transforms only |
+| L2 | KG_INT predictor, GCD, bias | order 0/1/2 | **fixed** (AGENTS.md) |
+| L3 | Residual layout | existing, byte planes, global/local/patched packing | research location |
+| L4 | Leaf coder | stored, Huffman, rANS, zstd level, sparse-leaf guard | research location |
+| L5 | Container | leaf chunk size, aligned chunks in one leaf (P-17) | R2-stack |
+
+| ID | Sequence | Status | Evidence / reason |
+|---|---|---|---|
+| SQ-1 | L2 predictor → L3 planes → L4 coder | **Measured, provisional** | E02E/E02F/E02G; this is the ST-1 pipeline |
+| SQ-2 | L3 planes → L4 guard (guard after layout) | **Measured** | Guard alone changes 0 bytes; after planes it rescues sparse planes (ST-1) |
+| SQ-3 | L3 packing → L4 zstd | **Measured, negative** | Development result kept: packing before zstd generally enlarges (`E02C-harness/RESULTS.md` summary) |
+| SQ-4 | L3 planes **before** L2 predictor (transpose raw values, then predict) | Not run; expected worse | Splitting bytes first removes the carry structure the predictor uses; test only as a cheap development check if a reason appears |
+| SQ-5 | L3 planes → per-plane choice of L4 coder | Partly measured | `planes+ent` (best of Huffman/rANS per plane) is X-01's −1.7% to −18.5%; overlaps ST-3/ST-4 |
+| SQ-6 | L1 column/field split → L2 INT → L3 planes | **Candidate, untested** | Planes only help where the planner already builds an INT graph; a split that creates more INT columns would carry the gain to more bytes. Same mechanism as ST-7 |
+| SQ-7 | L1 DECIMAL mantissa → L2 INT → L3 planes | **Candidate, untested** | Reuses the existing DECIMAL transform; no new floating-point coding. Needs a check that it stays inside "no floating-point work yet" before any test |
+| SQ-8 | L3 planes → L5 aligned chunks (P-17) + singleton rANS (P-18) | In R2-stack | Container-level stack; owned by the parallel workstream |
+| SQ-9 | L2 predictor chosen by final coded cost (not residual entropy) | **Blocked** | Changes L2, which is fixed in this continuation; listed so it is not lost |
+
+Order rules used here: transforms that **remove redundancy** (predictor, GCD) come before transforms that **re-arrange
+bytes** (planes, packing), which come before **coders**; two re-arrangements of the same stream are alternatives
+(ST-6), not a sequence. A stack is credited only when the combined pipeline is measured end to end on a common baseline.
+
+**What to test next, in order:** (1) SQ-6/ST-7 together on development data: re-plan with the candidate leaf costs and
+count bytes newly routed to INT+planes; (2) SQ-7 only after the constraint check; (3) SQ-4 only if (1) shows a reason.
+SQ-9 waits for an authorization change.
+
 ## Reproduce
 
 `python3 -I research/codec/E02C-harness/stack.py` recomputes the context, gate and oracle diagnostics from committed
