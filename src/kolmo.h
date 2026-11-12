@@ -30,9 +30,10 @@ typedef struct {
 
 /* Opt-in bit for kolmo_params.transforms (balanced / KOLMO_FAST only; ignored elsewhere): integer-series residuals in
  * graph blocks may use Kolmo's native plane-context leaf coder (Huffman/rANS with byte-plane and context modelling)
- * when it is smaller than the default leaf. Typically 5-12% smaller on sensor, ECG and numeric-column data; those
- * leaves decode about 1.5x slower than the default rANS leaf (about 3x a zstd leaf). Files that use it are written as
- * container version 9 and need a kolmo release that reads version 9; files that do not are unchanged. */
+ * when it is smaller than the default leaf. Typically 5-12% smaller on sensor, ECG and numeric-column data; such files
+ * decode about 1.5-2.6x slower than default balanced (measured: 2.3x over 180 MB of ECG and numeric columns, ~580 MB/s
+ * on Apple silicon), since those leaves are entropy coded with context models instead of zstd. Files that use it are
+ * written as container version 9 and need a kolmo release that reads version 9; files that do not are unchanged. */
 #define KOLMO_T_NATIVE_LEAF 16
 
 #define KOLMO_ERR_CORRUPT   (-1)
