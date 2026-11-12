@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Validate the pinned planner repair in disposable GitHub Actions checkouts.
+"""Validate the planner record-ownership repair in disposable checkouts.
 
-Until src/kolmo.c is committed with the fix, the candidate edit is applied ONLY
-inside the disposable candidate checkout. Original production source is never
-mistaken for a repaired build. No push, merge, suppression, or performance claim.
+The candidate checkout must already contain the committed repaired src/kolmo.c:
+its blob must equal the pinned original with exactly the three ownership edits.
+An unrepaired candidate is rejected rather than patched, so a pass always refers
+to the committed production source. No push, merge, suppression, or performance claim.
 """
 from __future__ import annotations
 import argparse
@@ -91,10 +92,12 @@ def main() -> None:
         expected = repaired(original)
         candidate_file = candidate / 'src/kolmo.c'
         current = candidate_file.read_bytes()
-        if current not in (original, expected): raise RuntimeError('Unexpected candidate core; do not substitute a new baseline')
-        state['candidate_patch_applied_in_disposable_checkout'] = current == original
-        candidate_file.write_bytes(expected)
-        state['original_core_blob'] = blob(original); state['candidate_core_blob'] = blob(expected)
+        if current == original: raise RuntimeError('Candidate does not contain the committed repair')
+        if current != expected: raise RuntimeError('Unexpected candidate core; do not substitute a new baseline')
+        state['original_core_blob'] = blob(original); state['candidate_core_blob'] = blob(current)
+        state['candidate_head'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=candidate, text=True).strip()
+        if subprocess.run(['git', 'diff', '--quiet', 'HEAD', '--', 'src/kolmo.c'], cwd=candidate).returncode:
+            raise RuntimeError('Candidate src/kolmo.c differs from its committed HEAD')
         for relative in ('src/kgraph.inc', 'benchmark/accept/TARGETS.md'):
             if (baseline / relative).read_bytes() != (candidate / relative).read_bytes():
                 raise RuntimeError(f'Out-of-scope change: {relative}')
