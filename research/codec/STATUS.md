@@ -6,6 +6,14 @@ Layout: `E02C/` holds the parallel forced-typed E02C implementation, frozen by t
 (`E02D/PREREGISTRATION.md`); `E02C-harness/` holds the separate production-connected harness and its results (moved
 there unchanged so the frozen directory stays byte-identical); `E02D/` is the preregistered validation.
 
+**Competitor-bounded (P2) overnight work, 12/13 November** (development; see `PROVISIONAL.md` §A4 and each
+directory's RESULTS.md): P2-E1 complete-pipeline baseline (production `fast` never inside zstd-3's cost on 20 dev
+inputs); P2-E2 type-first fast integer path, identity-checked against production; **P2-E3 on N1's complete-CLI
+boundary (Actions 43302008497): type-first per-plane Huffman smaller than the zstd-3 CLI and inside its round-trip
+cost on 7/8 typed NPY inputs in both runs, production 0/8**; P2-E4 zero-run leaf; P2-E5/E6 typed CSV; P2-E7
+(typed CSV vs OpenZL csv-9) running. Archive NPY comparison blocked (OpenZL v0.3.0 has no numpy profile). No P2
+acceptance: development data and research containers (open decision P2-D1).
+
 Updated 2026-11-12. Research only: no default, format, threshold or release change is proposed here.
 
 | Item | State | Evidence |

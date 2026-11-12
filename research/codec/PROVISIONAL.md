@@ -55,6 +55,26 @@ source-disjoint data, and release decisions need an audited holdout (see D-01).
 | ST-4 | Per-plane layout + per-file coder or packing choice | Offline ceiling −2.6% to −7.2% (fast); test after R2-stack with a cheap gate |
 | ST-7 | Leaf improvements fed back into the planner's transform choice | Untested; development test after ST-1 |
 
+## A4. Competitor-bounded (P2) proposals from the 12/13 November overnight run (development unless stated)
+
+Under P2 (`benchmark/accept/ACTIVE_POLICY.json`) a candidate must be the smallest complete pipeline whose measured
+cost fits the mode rival (zstd-3 for rt/fast). Entries here are judged on that rule; old percentage bars do not apply.
+
+| ID | Proposal | Status | Evidence | Validation needed | Revise when |
+|---|---|---|---|---|---|
+| P2-01 | **Type-first planning for declared arrays**: read the NumPy/WAV declaration, then build the KG_INT graph directly (no planner analysis) | **Provisional, two boundaries** | P2-E1: production `fast` fits zstd-3's cost on 0/20 dev inputs, typed-first cuts cost sharply; P2-E3 (Actions 43302008497, CLI, pinned zstd-3): with P2-03 fits and is smaller on 7/8 typed NPY (production: 0/8) | Fresh source-disjoint whole original files with declared types | A fresh validation shows no feasible-and-smaller majority |
+| P2-02 | **Identity-preserving fast KG_INT encoder and inverse** (`P2-E2/fastint.inc`): same choice, parameters, residual and output as production, specialised loops | **Correctness established on development data**; production-review candidate (no format change) | 19/19 typed inputs byte-identical (orders 0–2, widths 2/4/8, output widths 1–8, gcd 1/100); 3.3 M differential fuzz cases agree with `kg_int_inv`; removing it loses 6 feasible inputs (14 → 8) | Review against production sources; broader identity corpus incl. every planner-produced INT block | Any identity mismatch |
+| P2-03 | **Per-plane Huffman leaves on type-first residuals** (cost stack: P2-01 + P2-02 + planes + Huffman) | **Provisional** | P2-E2 dev: fits 14/20, feasible-and-smaller 8/20; P2-E3 CLI: 7/8 both runs; faster than zstd-3 end to end on 7 dev inputs even with free transfer | As P2-01 | — |
+| P2-04 | **Pre-encode applicability guard** (predictor bit estimate vs a 16 KiB zstd probe) | **Provisional; cost is the open issue** | Bounds the worst case (fs_mtime +340% → 0.0%; cover_control +46.6% → 0.0%) but costs as much as it saves on sub-0.3 MB inputs | A zero-probe signal validated on fresh data | A cheaper signal matches its protection |
+| P2-05 | **Zero-run residual leaf** (runs + nonzero planes; fused run-aware inverse) | **Byte-positive, cost-neutral; reopenable** | P2-E4: mri −28.9% vs −15.9%, fs_inode −75.2% vs −48.3% (vs zstd-3); auto variant ties P2-03 on count | Encode-side cost reduction, then fresh sparse families | — |
+| P2-06 | **Type-first CSV columns** (canonical INT, fixed-scale DEC as exact mantissas, TEXT stream) | **Provisional (development)**; P2-E7 measuring vs OpenZL csv-9 | P2-E5/E6: −25% to −88% bytes vs zstd-3 where numeric columns exist; fits zstd-3 cost on all-integer dem/goog; 310/310 typing agreement with an oracle | Fresh public CSVs (whole original files) | P2-E7 / fresh data |
+| P2-07 | **Wide-table layout**: >= 16 numeric columns and < 4096 rows → one column-major stream | **Development rule, frozen for validation** | P2-E5: dem cost +25% → −19%; mri bytes −6.1% → −25.4%; wrong for narrow tables (goog) | Fresh wide tables | — |
+| P2-08 | **Probe-based leaf selection** (Huffman, then a zstd probe to decide) | **Negative under P2 at these sizes** | P2-E2: charged trials exceed the bytes saved on sub-0.3 MB inputs | Only for large inputs (>= several MB) | Large-input evidence |
+| P2-D1 | **Open user decision**: may a *research container* (complete, checksummed, not a production frame) count as a `complete_pipeline` for P2 research acceptance? `policy.py` currently rejects it, which blocks every type-first result regardless of data | **Decision needed** | All P2-E1…E7 records | — | User decision |
+
+ST-1/ST-2 under P2: E02G's decode misses are real (E02G-verify) but not what blocks P2 feasibility; production
+`fast` is outside zstd-3's budget because of encoder analysis (P2-E1).
+
 ## C. Cross-links and process items to revise
 
 | ID | Item | Status | Action |

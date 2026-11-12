@@ -76,6 +76,15 @@ bytes** (planes, packing), which come before **coders**; two re-arrangements of 
 count bytes newly routed to INT+planes; (2) SQ-7 only after the constraint check; (3) SQ-4 only if (1) shows a reason.
 SQ-9 waits for an authorization change.
 
+## Under the competitor-bounded policy (P2): cost stacks
+
+P2 judges whole pipelines by bytes within the rival's cost, which turns stacking into **cost stacking**. The
+measured stack is L0/L1 typing-first (P2-01) → L2 identity-preserving fast passes and inverse (P2-02) → L3 byte
+planes → L4 Huffman per plane (P2-03): each layer removes cost and the stack moves typed arrays from 0 feasible
+(production `fast`) to 7/8 on N1's CLI boundary. Layers that save bytes but add cost (zstd-coded leaves, probe-based
+selection, zero-run leaf before fusing) move the other way under a speed rival and belong to archive modes instead.
+Order still matters: the guard (P2-04) must run before residuals are written to save anything.
+
 ## Reproduce
 
 `python3 -I research/codec/E02C-harness/stack.py` recomputes the context, gate and oracle diagnostics from committed
