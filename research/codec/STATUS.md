@@ -1,0 +1,17 @@
+# Codec research status (isolated branch `fix/planner-record-ownership-isolated-20261112`)
+
+Updated 2026-11-12. Research only: no default, format, threshold or release change is proposed here.
+
+| Item | State | Evidence |
+|---|---|---|
+| Planner record-ownership repair | Committed at `2f3308a` (`src/kolmo.c` `e06467c8…`); focused validator re-run locally and passed; CI runs 43187874283 / 43187874421 / 43187874238 reported successful (also recorded in `E02C/BASELINE.md`) but their artifacts were **not verified in this session** (no GitHub API access) | [`E02C/BASELINE_EVIDENCE.md`](E02C/BASELINE_EVIDENCE.md) |
+| E02C residual representations (global/local bitpacking, global/local patched packing × stored/Huffman/rANS/zstd-3) | **Complete — negative.** No fixed combination beats unmodified Kolmo on real development data; a charged zstd-3 selector saves 0.20% (fast) at ~1.5× encode. GBP, LBP, fixed GPP/LPP rejected; LPP/GPP kept only as selector candidates; sel+zstd3 kept only for a size-oriented profile study | [`E02C/RESULTS.md`](E02C/RESULTS.md) |
+| E02C experimental C checks (this harness) | ASan/UBSan/LSan selftest, golden vectors (two builds) and independent Python reference passed locally (clean worktree of `41bcc96`, re-checked on the rebased tree); **no CI job runs them** — `e02c-research.yml` builds only the parallel implementation | `make -f research/codec/E02C/Makefile check` |
+| E02C parallel forced-typed implementation (`c880659`: `build.py`, `probe.c`, `run.py`, zstd-1 control) | Committed by the parallel workstream; its README states results are not yet established; measured by `.github/workflows/e02c-research.yml` (run status not visible from this session) | `E02C/README.md`, `E02C/BASELINE.md` |
+| Previous result "packing before zstd enlarges" | Reproduced (A real +13–25%, B fast +2.3–7.4% vs existing layout with zstd-3) | `E02C/RESULTS.md` §1 |
+
+Next substantive task: plane-aware rANS control for KG_INT residuals (one static table per residual byte plane with the
+existing rANS kernel), re-running E02C regimes A and B unchanged.
+
+Not started / not authorised: LZ engine, float or JSON codecs, neural selector, transform backlog, default or
+threshold changes, merges, releases.
