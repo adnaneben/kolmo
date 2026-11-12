@@ -82,6 +82,7 @@ Each is a choice that could reasonably go the other way. The number is what the 
 | 9 | Integer probe requires values below 2^32 | Yes | Wider (finds timestamps; misreads short-mantissa doubles, 0.8% larger on two pickles) | A better discriminator |
 | 10 | 3% minimum for a plain result at ratio, 10% probe margin, 1.35x slice limit | Chosen by judgement, not tuned | - | A sweep on a larger holdout |
 | 11 | `ultra` tries plain context mixing only when plain block sorting is within 2% | Yes | Always try (magika.onnx 1.1% smaller, 20x the time on every model file) | If `ultra` time stops mattering |
+| 14 | DEC64 blocks at balanced stay at the normal block size (up to 4 MiB) | Yes | One block of up to 32 MiB: 2.6 to 9.3% smaller on four files, decode CPU about 1.8x, no parallel decode of the file | If size matters more than decode speed at balanced for these files; ratio mode already uses large blocks |
 | 13 | Model 3 only for text blocks | Yes | Everywhere (database file 2.2% smaller, executables 1%; three binary files 0.02 to 0.06% larger than 1.0.1, 20% slower) or code both and keep the smaller (2.2x the time) | If the no-file-larger rule is relaxed to a tolerance at `ultra` |
 | 12 | Image model is a new block codec (17; 15 and 16 are left for the native leaf of `feat/native-residual-leaf`) | Yes | Fold it into codec 7 behind a stream flag | Release policy, with decision 7 |
 
@@ -102,6 +103,12 @@ x1.055 x1.115; balanced x1.129 x1.031 x1.063; hc x1.107 x1.167 x1.045; ratio x1.
 23 files: 33.05 MB against 34.38 MB (3.9% smaller in total; per-file mean now 3% behind, from 5%). The run of 486655e
 before it showed four unchanged outputs 6 to 8% slower to decode and ratio encode at x0.949; the first did not repeat
 (noise), the second was the ungated both-ways coding that 93d4866 fixed.
+
+## Process note 3
+
+Twice in this work an unstaged source edit was lost to `git checkout <file>` meant to drop a one-line experiment
+(the DEC64 planner wiring on 11 November, the second-difference flag on 12 November). Both were re-applied from the
+session and re-verified. Rule since: stage before any experiment, and drop experiments by editing them out.
 
 ## Process note 2
 

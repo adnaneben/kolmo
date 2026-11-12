@@ -89,6 +89,10 @@
 
 ## Unreleased (on main, not tagged)
 
+- **DEC64: second difference (branch `claude/dec64`).** A column or segment may store the difference of successive
+  deltas (flag bit 4), chosen when it is 5% shorter again: running totals and steady trends. A 31 MB table with
+  cumulative columns (`co2.npy`, float64 or float32): 10.6% smaller at `balanced`, 11.4% at `ratio`; other tables
+  within 0.7%.
 - **Graph leaves: the Huffman-only shortcut no longer misfires on sparse leaves (branch `claude/dec64`).** At
   `balanced`, three 32 KiB samples decide whether a large leaf is coded with Huffman alone. When all three fall in the
   busy part of a leaf that is mostly one byte value, Huffman was chosen and spent one bit per byte on the rest (found

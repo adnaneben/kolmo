@@ -7,7 +7,7 @@ number that justifies dropping it is in the row). Decision of 12 November 2026.
 Sources: S = session plan, G = the "Kolmo-inspired codec" plan (experiment ids E00 to E10), M = found by measurement.
 Costs and trade-offs of what was done are in `benchmark/accept/REGRESSIONS.md`; this file tracks what was planned.
 
-Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 71 rows. 18 done (one of them on another branch), 6 dropped, 10 partly done, 36 not done,
+Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 86 rows. 22 done (one of them on another branch), 10 dropped, 13 partly done or measured only, 40 not done,
 1 deferred (the merge).
 
 ## A. Numeric and structured data
@@ -96,6 +96,29 @@ Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 71 rows. 18 done (o
 | E9 | Final validation: freeze, full holdout, damaged-input tests, acceptance twice | G E09 | Not done | Last step before the merge |
 | E10 | Merge to main | S | Deferred | Not before every row above is Done or Dropped. Main still has the int64 pickle regression |
 | E11 | Tag and publish | S | Not done | From the Mac, after E10 |
+
+## S. Stacking and amplification
+
+Gains that only show when two things are used together, or that grow in one situation. Each row was a candidate;
+the status says whether it was tested, and what it gave on top of what was already there.
+
+| # | Combination | Status | Result on top of the base |
+|---|---|---|---|
+| S1 | Sparse-leaf guard on DEC64 planes (the other branch's observation, this branch's node) | Done | co2.npy -18.1% at balanced; nine files -1.5 to -3.5% |
+| S2 | Second difference inside DEC64 (the integer node's predictor, layered on the decimal mapping) | Done | co2 as float64 and float32: -10.6% balanced, -11.4% ratio; the other tables within 0.7%. Estimated before building: -7.8% |
+| S3 | One large block for DEC64 at balanced (the leaf coder then sees the whole plane) | Measured, decision open | 4 MiB blocks -> one block of up to 32 MiB: -2.6%, -8.0%, -8.9%, -9.3% on four files; encode time the same, decode CPU about 1.8x and no parallel decode. Ledger decision 14 |
+| S4 | Context-mixing leaves on DEC64 and table graphs at ultra (`feat/ultra-cm-graph-leaves`) | Measured | -2.8 to -4.3% on decimal tables, -4.8% on a wide CSV, -12.2% on timestamps; 50 to 100x decode time of those blocks. Their opt-in level |
+| S5 | Per-leaf LZMA2 contexts (pb=0, lc=0) and block-sorted leaves on DEC64 at ratio, all three stacked | Dropped | -0.2 to -0.5% on five large files, -2.3% and -3.8% on two small ones, at 3x the encode time |
+| S6 | Native plane-context leaf on DEC64 planes | Dropped | +3.2%, -0.3%, +4.0%, +33% (A10) |
+| S7 | Token plus offset coding on DEC64 residuals | Bound only | -1.3%, -5.9%, -11.6% at balanced as an entropy bound; would replace the byte planes, so it does not add to S1 (A15) |
+| S8 | Common factor per column on DEC64 integers | Dropped | No column with a factor in three of five tables; where there is one the planes already code it (estimate not realised) |
+| S9 | DEC64 at speed mode (LZ4 leaves) | Blocked on A13 | co2.npy 7.99 MB -> 2.36 MB, three other tables 1.8 to 4.9x smaller, but the encoder runs at 140 to 250 MB/s where speed mode needs about 950 |
+| S10 | Marked plan gives way to integer segments (probes + DEC64 integers) | Done | int64 pickle 129,908 -> 98,236 |
+| S11 | Image model, block-sorted image leaves and plain context mixing as alternatives per block at ultra | Done | Smallest of the three kept per block |
+| S12 | Model 3 on the text columns of a table graph at ultra (model 3 + S4) | Not tested | Needs S4's level |
+| S13 | Image model on decimal image arrays (DEC64 integers of a stack of float images) | Dropped | The one candidate, lfw_subset.npy, holds full-precision floats (45,258 distinct values, not k/255 and not decimal), so there are no integers to hand to the image model. Its 12% gap needs a float image model (D17) |
+| S14 | Structure contexts on template-transformed logs at ultra | Not tested | Logs are 20% behind |
+| S15 | DEC64 segments choosing predictor per column across block boundaries (carry the last values) | Not tested | Part of what S3 gains may come from this instead of from the coder's window |
 
 ## X. From the other branches (read 12 November 2026)
 
