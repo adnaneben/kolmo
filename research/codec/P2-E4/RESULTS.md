@@ -10,11 +10,19 @@ records `results/records.tar.xz`). Every pipeline reconstructs every input; ASan
 
 | Pipeline | Fits | Fits and smaller | Bytes where it matters |
 |---|---|---|---|
-| `tf_planes_huf` | 12 | 8 | mri −15.9%, fs_inode −48.3%, fs_mtime +340% |
-| `tf_zrl` | 4 | 4 | mri −28.9%, fs_inode −75.2%, fs_mtime +84% |
-| `tf_zrl_auto` | 11 | 7 | as zrl on sparse residuals, as planes elsewhere |
+| `tf_planes_huf` | 14 | 8 | mri −15.9%, fs_inode −48.3%, fs_mtime +340% |
+| `tf_zrl` (unfused) | 4 | 4 | mri −28.9%, fs_inode −75.2%, fs_mtime +84% |
+| `tf_zrl_auto` (unfused) | 12 | 8 | as zrl on sparse residuals, as planes elsewhere |
+| `tf_zrlf` (fused encoder and run-aware inverse) | 4 | 4 | same bytes |
+| `tf_zrlf_auto` (fused) | 12 | 8 | same bytes; fs_inode feasible at −75.2% (cost −55%) |
 
-**Verdict: byte-positive, cost-negative as implemented (PROVISIONAL, reopenable).** The representation recovers much of
+Second run (this table): the fused variants write runs/nonzero planes in one pass and invert straight from runs
+(zero runs become value repetition / linear extrapolation), checked byte-exact end to end and under sanitizers.
+
+**Verdict: byte-positive; cost-neutral overall with the fused decoder (PROVISIONAL, reopenable).** Fusing cut mri
+from +70% to +45% of zstd-3's cost, still over budget there (its cost is mostly encode-side analysis), and made
+fs_inode feasible at −75.2% bytes; the auto rule's extra scan costs a few small audio inputs their feasibility.
+Original note on the unfused version: The representation recovers much of
 zstd's advantage on sparse residuals without an LZ stage, but this first decoder materialises the residual and parses
 runs value by value, so on mri the auto variant costs +84% vs zstd-3. A fused run-aware inverse (write output values
 directly while walking runs) is the obvious next step; until then it is not a P2 candidate. fs_mtime remains a loss

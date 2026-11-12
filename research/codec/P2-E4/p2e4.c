@@ -22,6 +22,7 @@ static const cand_t CAND[] = {   /* leaf "zrl": zero-run leaf; guard 6: zrl when
     {"zstd3", 'Z', 3, NULL, 0, 0},
     {"tf_planes_huf", 'F', 3, "planes+huf", 'f', 0}, {"tf_prod3", 'F', 3, "exist+prod3", 'f', 0},
     {"tf_zrl", 'F', 3, "zrl", 'f', 0}, {"tf_zrl_auto", 'F', 3, "planes+huf", 'f', 6},
+    {"tf_zrlf", 'F', 3, "zrl", 'z', 0}, {"tf_zrlf_auto", 'F', 3, "planes+huf", 'z', 6},
     {"zstd19", 'Z', 19, NULL, 0, 0}, {"tf_planes_prod19", 'F', 19, "planes+prod19", 'f', 0},
 };
 #define NC ((int)(sizeof CAND / sizeof CAND[0]))
@@ -81,7 +82,7 @@ static size_t enc(const uint8_t *src, size_t n, int ci, uint8_t **dst) {
         int fr = fi_forward_g(src, n, w, h, &P, (c->guard == 2 || c->guard == 4 || c->guard == 5) ? pre_guard : NULL, &gc);
         int usez = CONF[ci] < 0;
         if (!fr && c->guard == 6) { size_t nz = 0; for (size_t i = 0; i < P.m; i++) nz += !zrl_get(P.res.p, i, P.m, P.ow, P.pln); usez = nz * 4 >= P.m; }
-        if (!fr && !(usez ? zrl_encode(&x, P.res.p, P.m, P.ow, P.pln, &blob) : conf_encode(&x, CONF[ci], P.res.p, P.m, P.ow, P.pln, &blob, NULL))) {
+        if (!fr && !(usez ? (c->inv == 'z' ? zrl_encode_fast : zrl_encode)(&x, P.res.p, P.m, P.ow, P.pln, &blob) : conf_encode(&x, CONF[ci], P.res.p, P.m, P.ow, P.pln, &blob, NULL))) {
             if (c->guard == 3 || c->guard == 4) {                 /* cheap leaf selection: zstd-3 probe on the residual */
                 double est = zprobe(P.res.p, P.res.n, c->level) + 16;
                 if (est < 0.95 * (double)blob.n) { kbuf b2 = {0}; if (conf_encode(&x, conf_by_name("exist+prod3"), P.res.p, P.m, P.ow, P.pln, &b2, NULL)) DIE("sel");
@@ -120,6 +121,10 @@ static int dec(const uint8_t *f, size_t fn, int ci, uint8_t *out, size_t n) {
         if (kg_getuv(f, fn, &i, &bl) || bl != fn - i || plen < 3) goto done;
         size_t pi = 3; uint64_t hh, cnt; if (kg_getuv(par, plen, &pi, &hh) || kg_getuv(par, plen, &pi, &cnt)) goto done;
         int ord = (par[1] >> 1) & 3, ow = par[2], pln = (par[1] >> 3) & 1; if ((uint64_t)ord > cnt || cnt > maxs) goto done;
+        if (c->inv == 'z' && bl && f[i] == 0xB0) {
+            if (zrl_inverse_fused(&x, par, plen, f + i, (size_t)bl, &rest, maxs, out, n + 64)) goto done;
+            rc = 0; goto done;
+        }
         if (bl && f[i] == 0xB0 ? zrl_decode(&x, f + i, (size_t)bl, (size_t)(cnt - (uint64_t)ord), ow, pln, &res)
                                : e2c_decode(&x, f + i, (size_t)bl, (size_t)(cnt - (uint64_t)ord), ow, pln, maxs, &res)) goto done;
         if ((c->inv == 'p' ? kg_int_inv : fi_inverse)(par, plen, &res, &rest, maxs, &o) || o.n != n) goto done;
