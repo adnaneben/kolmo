@@ -1,0 +1,62 @@
+{
+  "status": "INFRASTRUCTURE_CHECKS_NOT_RIVAL_BENCHMARK",
+  "tests": 12,
+  "artifact_manifest_entries": 282,
+  "inputs": [
+    {
+      "id": "covertype__elevation",
+      "input_bytes": 1048704,
+      "input_sha256": "7eae95120cd4eb435fdfaedac45eca3af2febedcfca08e2ce086081c30de3bd2"
+    },
+    {
+      "id": "covertype__road_distance",
+      "input_bytes": 1048704,
+      "input_sha256": "d8f8ab9f248e8658a86b30bbcc3b3204adbabb3bd12da7d8998b4b7431d0f8e3"
+    },
+    {
+      "id": "covertype__fire_distance",
+      "input_bytes": 1048704,
+      "input_sha256": "55a4dc1a4f0eaf2c850bfe816f53667e72f452b8fabf0dc4d84fe9ae94aea284"
+    },
+    {
+      "id": "covertype__hillshade_control",
+      "input_bytes": 1048704,
+      "input_sha256": "abc1da632fc4e37bc16f1f901fad740519d25c49e66a333ccd713435c0619f54"
+    },
+    {
+      "id": "covertype__cover_control",
+      "input_bytes": 1048704,
+      "input_sha256": "cd50965f72fd8bfc0e454bf211028e6a9f0e402f3f876ffe9e60c2289609b496"
+    },
+    {
+      "id": "covertype__table",
+      "input_bytes": 5410689,
+      "input_sha256": "a029039bf8038566c4776992c83b83a6d84a9d69fbbf40bd3bc6a78077718aa5"
+    },
+    {
+      "id": "collegemsg__source_id",
+      "input_bytes": 239468,
+      "input_sha256": "e1e47073e881a2b41cfd7ec8181e2f077978ab5fb8f842f637eaf1143feb1b68"
+    },
+    {
+      "id": "collegemsg__target_id",
+      "input_bytes": 239468,
+      "input_sha256": "5e4b6e559637fe798099d92caee4d87c0b1aaa1aa7bcbc7d4241c96f2070ef6e"
+    },
+    {
+      "id": "collegemsg__unix_timestamp",
+      "input_bytes": 239468,
+      "input_sha256": "1887975eb6df79b37ab696553551641aa10cfcdd8a2382a16bd5eb1326a906c4"
+    },
+    {
+      "id": "collegemsg__table",
+      "input_bytes": 1150474,
+      "input_sha256": "ea3e08f0f2a4efbcd0654741b3f20d8c2b7b977d2c7071c97c8878bc2255f048"
+    }
+  ],
+  "source": {
+    "test_baselines.py": "47c62a7dc41c5d9299ed92e5b058770e0ae6cbbaca1bbe49c6107c792a8466e5",
+    "baselines.py": "7e477271e6e9e72c2a8034c62087f27d79981cef853ebe24bdb8046130017d26"
+  },
+  "end_to_end_test": "copy-command fixtures only, not a compression benchmark"
+}
