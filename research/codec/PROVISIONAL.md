@@ -45,6 +45,16 @@ source-disjoint data, and release decisions need an audited holdout (see D-01).
 | P-19 | **R1 algorithm backlog**: constant/zero-run coding, separate control/exception streams, magnitude token + exact offset bits (pcodec-style), local FOR, Rice with escape, small dictionaries, cost-aware trial gate, reused statistics/scratch | **Backlog, untested here** | R1 §3 | One focused, preregistered experiment each, against P-14 | — | After R2 |
 | P-20 | **Application profiles** (one-time-encode/many-read, ingest-speed, tiny-message) for research Pareto decisions; TARGETS.md unchanged | **Proposed** | R1 §4.7 | Profiles stated before the experiments that use them | — | Before the next selector decision |
 
+## A3. Stacks and amplifiers (see `STACKING.md`)
+
+| ID | Combination | Status |
+|---|---|---|
+| ST-1 | Per-plane leaves + sparse-leaf guard (P-01 × P-03) | **Amplifier shown on development data** (guard alone 0; with planes, typed +4.48% → −0.80%). Next: validate (E02G), with ST-2 as phenotype |
+| ST-2 | Per-plane leaves gated by KG_INT parameters (order 0 or width ≥ 4) | **Context amplification observed** (−7% to −15% vs −0.1% to −4% for dense 2-byte residuals); use as eligibility, not as a size gate |
+| ST-3 | Entropy-only planes + aligned chunks + singleton rANS | Owned by R2-stack |
+| ST-4 | Per-plane layout + per-file coder or packing choice | Offline ceiling −2.6% to −7.2% (fast); test after R2-stack with a cheap gate |
+| ST-7 | Leaf improvements fed back into the planner's transform choice | Untested; development test after ST-1 |
+
 ## C. Cross-links and process items to revise
 
 | ID | Item | Status | Action |
