@@ -89,6 +89,10 @@
 
 ## Unreleased (on main, not tagged)
 
+- **Integer columns inside containers (branch `claude/dec64`).** The array finder of the DEC64 node also takes runs
+  of small int64 values (a per-segment flag), and a whole-file numeric plan that the probes mark gives way to the
+  segment plan. The int64 pickle that regressed on main: 129,908 → 98,236 bytes at `balanced` (1.0.1: 129,908), 76,398
+  → 71,804 at `ratio`; a mixed pickle 8.5% smaller. Other outputs within 0.1%.
 - **Regression ledger (`benchmark/accept/REGRESSIONS.md`, branch `claude/dec64`).** Every file of the corpus and
   the holdout sets measured against 1.0.1 and main at three settings: what got slower or larger, what was fixed, what
   is open, and which costs are accepted for what gain. From it: the plain attempts at `ratio` are now made only when

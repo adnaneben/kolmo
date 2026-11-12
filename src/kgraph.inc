@@ -39,8 +39,8 @@
  *             whole row and the head go to rest.
  *   7 DEC64   params: layout u8, then for layout 0 (a table): head uv, rows uv, cols uv; for layout 1 (segments):
  *             count uv; then planes u8 (1-8), then per column or segment: for layout 1 skip uv and values uv (>= 1);
- *             exponent u8 (0-22), flags u8 (bit 0 delta, bit 1 has a missing pattern), and the 8-byte missing pattern
- *             when bit 1 is set. In: bytes. Out: tags, plane 0 .. plane planes-1, exceptions, rest. The values are
+ *             exponent u8 (0-22), flags u8 (bit 0 delta, bit 1 has a missing pattern, bit 2 integers), and the
+ *             8-byte missing pattern when bit 1 is set. In: bytes. Out: tags, plane 0 .. plane planes-1, exceptions, rest. The values are
  *             little-endian binary64. Layout 0: after `head` bytes, rows x cols values row by row, then trailing
  *             bytes (rest = head then trailing); every stream is in column order (column 0 top to bottom, then
  *             column 1). Layout 1: each segment is `skip` bytes that are not values, then its values; rest is every
@@ -48,6 +48,7 @@
  *             (arrays at any byte alignment inside other data: pickles, Arrow and HDF5 files). Tag 0: the value is
  *             m / 10^exponent (IEEE-754 division, round to nearest even) for a signed integer m; the planes hold
  *             zigzag(m), or zigzag(m - previous tag-0 m of the column or segment) with delta, byte b in plane b.
+ *             With bit 2 the words are int64 and a tag-0 value is m itself (integer columns beside the float ones).
  *             Tag 1: the missing pattern. Tag 2: the next 8 bytes of exceptions, verbatim. Tags 1 and 2 hold 0 in
  *             the planes. Values written in decimal (prices, measurements, counts) become small integers; anything
  *             else (NaN payloads, -0.0, full-precision values) stays exact as an exception.
@@ -281,34 +282,34 @@ static int kg_dec64_inv(const uint8_t *par, size_t plen, const kbuf *st, uint32_
     /* pass 1: the columns' parameters, and the tags checked and counted, so that each column knows where its
      * exceptions start. pass 2 then needs no checks, and a table is rebuilt a band of rows at a time (every column's
      * part of the band), which keeps the writes inside the cache. */
-    typedef struct { double P; uint64_t miss, prev, dmask, skip, n; const uint8_t *xp; } kgdc;
+    typedef struct { double P; uint64_t miss, prev, dmask, skip, n; const uint8_t *xp; int isint; } kgdc;
     kgdc *C = malloc((size_t)cols * sizeof(kgdc)); if (!C) return -1;
     int rc = -1; uint64_t nx = 0, q = 0, skips = 0;
     for (uint64_t c = 0; c < cols; c++) {
         uint64_t skip = 0, rn = rows;
         if (segs && (kg_getuv(par, plen, &pi, &skip) || kg_getuv(par, plen, &pi, &rn) || !rn || rn > cnt - q || skip > rest->n - skips)) goto bad;
         if (plen - pi < 2) goto bad;
-        int e = par[pi], fl = par[pi + 1]; pi += 2; if (e > KG_DEC_MAXE || fl > 3) goto bad;
+        int e = par[pi], fl = par[pi + 1]; pi += 2; if (e > KG_DEC_MAXE || fl > 7) goto bad;
         uint64_t miss = 0; if (fl & 2) { if (plen - pi < 8) goto bad; miss = kg_ld64(par + pi); pi += 8; }
         unsigned mx = 0; uint64_t n1 = 0, n2 = 0;
         for (uint64_t r = 0; r < rn; r++) { unsigned g = t[q + r]; mx |= g; n1 += g == 1; n2 += g == 2; }
         if (mx > 3) goto bad;
         if (mx == 3) for (uint64_t r = 0; r < rn; r++) if (t[q + r] == 3) goto bad;   /* 1 | 2 also gives 3 */
         if ((n1 && !(fl & 2)) || n2 > ex->n / 8 - nx) goto bad;
-        C[c] = (kgdc){KG_P10[e], miss, 0, fl & 1 ? ~(uint64_t)0 : 0, skip, rn, ex->p + nx * 8};
+        C[c] = (kgdc){KG_P10[e], miss, 0, fl & 1 ? ~(uint64_t)0 : 0, skip, rn, ex->p + nx * 8, fl & 4};
         nx += n2; q += rn; skips += skip;
     }
     if (pi != plen || nx != ex->n / 8 || q != cnt) goto bad;
 #define KG_DEC_VALUE(K, Q, BITS) do { const unsigned tag_ = t[Q];                                       \
         if (tag_ == 0) { uint64_t z_ = 0; for (int b_ = 0; b_ < np; b_++) z_ |= (uint64_t)pl[b_].p[Q] << (8 * b_); \
                          uint64_t m_ = (uint64_t)kg_unzz(z_) + (prev & dmask); prev = m_;                \
-                         BITS = kg_dbits((double)(int64_t)m_ / P); }                                     \
+                         BITS = isint ? m_ : kg_dbits((double)(int64_t)m_ / P); }                                     \
         else if (tag_ == 1) BITS = (K)->miss;                                                            \
         else { BITS = kg_ld64(xp); xp += 8; } } while (0)
     if (segs) {
         uint8_t *w = out->p; const uint8_t *rp = rest->p; size_t qq = 0;
         for (uint64_t c = 0; c < cols; c++) {
-            kgdc *K = &C[c]; const double P = K->P; uint64_t prev = 0; const uint64_t dmask = K->dmask; const uint8_t *xp = K->xp;
+            kgdc *K = &C[c]; const double P = K->P; uint64_t prev = 0; const uint64_t dmask = K->dmask; const uint8_t *xp = K->xp; const int isint = K->isint;
             if (K->skip) { memcpy(w, rp, (size_t)K->skip); w += K->skip; rp += K->skip; }
             for (size_t r = 0; r < (size_t)K->n; r++, qq++, w += 8) { uint64_t bits; KG_DEC_VALUE(K, qq, bits); memcpy(w, &bits, 8); }
         }
@@ -320,7 +321,7 @@ static int kg_dec64_inv(const uint8_t *par, size_t plen, const kbuf *st, uint32_
             const size_t rn = (size_t)(rows - r0 < band ? rows - r0 : band);
             for (uint64_t c = 0; c < cols; c++) {
                 const size_t q0 = (size_t)(c * rows + r0);
-                kgdc *K = &C[c]; const double P = K->P; uint64_t prev = K->prev; const uint64_t dmask = K->dmask; const uint8_t *xp = K->xp;
+                kgdc *K = &C[c]; const double P = K->P; uint64_t prev = K->prev; const uint64_t dmask = K->dmask; const uint8_t *xp = K->xp; const int isint = K->isint;
                 uint8_t *w = o + ((size_t)r0 * (size_t)cols + (size_t)c) * 8;
                 for (size_t r = 0; r < rn; r++, w += step) { uint64_t bits; KG_DEC_VALUE(K, q0 + r, bits); memcpy(w, &bits, 8); }
                 K->prev = prev; K->xp = xp;
@@ -686,12 +687,13 @@ static void kg_dec_sample(const uint8_t *base, size_t step, size_t rn, uint8_t *
 }
 /* One column or segment into its tags t[0..rn) and plane bytes at q0. col is scratch for rn values. Returns the
  * delta flag, or -1 when memory ran out. */
-static int kg_dec_code(const uint8_t *p, size_t step, size_t rn, int e, int hasm, uint64_t miss, uint8_t *t, uint8_t **pln, size_t q0,
+static inline int kg_int_plaus(uint64_t b) { return (b >> 47) == 0 || (b >> 47) == 0x1ffff; }   /* an int64 below 2^47 in magnitude */
+static int kg_dec_code(const uint8_t *p, size_t step, size_t rn, int e, int hasm, uint64_t miss, int isint, uint8_t *t, uint8_t **pln, size_t q0,
                        uint64_t *col, kbuf *exc, uint64_t *all) {
     const double P = KG_P10[e]; size_t k = 0; uint64_t prev = 0, any = 0; double bp = 0, bd = 0;
     for (size_t r = 0; r < rn; r++, p += step) {
         uint64_t bits = kg_ld64(p); int64_t m;
-        if (kg_dec_fit(bits, P, &m)) {
+        if (isint ? (m = (int64_t)bits, kg_int_plaus(bits)) : kg_dec_fit(bits, P, &m)) {
             t[r] = 0; col[k++] = (uint64_t)m;
             uint64_t zp = kg_zz(m), zd = kg_zz((int64_t)((uint64_t)m - prev)); prev = (uint64_t)m;
             bp += 64 - __builtin_clzll(zp | 1); bd += 64 - __builtin_clzll(zd | 1);
@@ -712,7 +714,8 @@ static int kg_dec_code(const uint8_t *p, size_t step, size_t rn, int e, int hasm
  * integers and doubles read at the wrong byte alignment mostly fail it, at the cost of one comparison. */
 static inline int kg_dec_plaus(uint64_t b) { unsigned ex = (unsigned)(b >> 52) & 0x7ff; return ex == 0x7ff || b == 0 || ex - 959u < 128u; }
 /* 16 words at each of the 8 byte alignments from p (136 readable bytes): the alignment + 1 at which they are decimal
- * doubles (at least 12 decimal or NaN, at least 4 of them not zero), or 0. */
+ * doubles (at least 12 decimal or NaN, at least 4 of them not zero), 9 + the alignment at which they are small
+ * int64 values, or 0. */
 static int kg_dec_probe(const uint8_t *p) {
     int best = 0, bk = -1;
     for (int k = 0; k < 8; k++) {
@@ -727,7 +730,19 @@ static int kg_dec_probe(const uint8_t *p) {
         }
         if (fit >= 12 && nz >= 4 && fit > best) { best = fit; bk = k; }
     }
-    return bk + 1;
+    if (bk >= 0) return bk + 1;
+    best = 0;                                                /* not doubles (tried first: 1.0 read two bytes off looks like an integer) */
+    for (int k = 0; k < 8; k++) {                            /* small int64 values: 14 of 16, at least 6 not zero and 4 different */
+        /* below 2^32 in magnitude at this alignment and not one byte later. Doubles with short mantissas read a
+         * few bytes off also have zero high bytes, but they keep them one byte later; an integer's low byte lands
+         * in the high byte of the word before it. */
+        int pl = 0, nz = 0, p1 = 0;
+        for (int i = 0; i < 16; i++) { uint64_t b = kg_ld64(p + k + 8 * i); pl += (b >> 32) == 0 || (b >> 32) == 0xffffffffu; nz += b != 0; }
+        if (pl < 14 || nz < 6 || pl <= best) continue;
+        for (int i = 0; i < 15; i++) { uint64_t b = kg_ld64(p + k + 1 + 8 * i); p1 += (b >> 32) == 0 || (b >> 32) == 0xffffffffu; }
+        if (p1 < 13) { best = pl; bk = k + 8; }
+    }
+    return bk + 1;                                           /* 9 .. 16: integers at alignment bk - 8 */
 }
 typedef struct { size_t off; uint32_t n; uint8_t e, fl; uint64_t miss; } kgseg;
 /* Binary64 values that were written in decimal: one DEC64 node. cols > 0: a table of rows of cols values after h
@@ -748,21 +763,24 @@ static size_t kg_encode_dec64(codec_ctx *x, int codec, int level, const uint8_t 
             int k1 = kg_dec_probe(src + pos);
             if (!k1) { pos += stepb; if (stepb < 4096) stepb *= 2; continue; }
             stepb = 64;
+            const int isint = k1 > 8; if (isint) k1 -= 8;
+#define KG_PL(b) (isint ? kg_int_plaus(b) : kg_dec_plaus(b))
             size_t s0 = pos + (size_t)k1 - 1, e0;
-            while (s0 >= prevend + 8 && kg_dec_plaus(kg_ld64(src + s0 - 8))) s0 -= 8;
+            while (s0 >= prevend + 8 && KG_PL(kg_ld64(src + s0 - 8))) s0 -= 8;
             for (e0 = s0;;) {
                 size_t left = (n - e0) / 8, m = left < 64 ? left : 64, pl = 0; if (!m) break;
-                for (size_t i = 0; i < m; i++) pl += (size_t)kg_dec_plaus(kg_ld64(src + e0 + 8 * i));
+                for (size_t i = 0; i < m; i++) pl += (size_t)KG_PL(kg_ld64(src + e0 + 8 * i));
                 if (pl * 16 >= m * 15) { e0 += m * 8; continue; }
-                size_t i = 0; while (i < m && kg_dec_plaus(kg_ld64(src + e0 + 8 * i))) i++;
+                size_t i = 0; while (i < m && KG_PL(kg_ld64(src + e0 + 8 * i))) i++;
                 e0 += i * 8; break;
             }
+#undef KG_PL
             size_t nv = (e0 - s0) / 8;
             if (nv < KG_DEC_MINSPAN || e0 <= pos) { pos += 64; continue; }
             for (size_t v = 0; v < nv;) {                    /* segments of KG_DEC_RUN values; a short remainder joins the last */
                 size_t rn = nv - v < KG_DEC_RUN + KG_DEC_MINSPAN ? nv - v : KG_DEC_RUN;
-                uint8_t e, fl; uint64_t miss; uint32_t ok, seen;
-                kg_dec_sample(src + s0 + v * 8, 8, rn, &e, &fl, &miss, &ok, &seen);
+                uint8_t e = 0, fl = 4; uint64_t miss = 0; uint32_t ok = 1, seen = 1;
+                if (!isint) kg_dec_sample(src + s0 + v * 8, 8, rn, &e, &fl, &miss, &ok, &seen);
                 if (ok && ok * 2 >= seen && nseg < KG_DEC_MAXCOLS) {   /* mostly decimal; other runs stay plain bytes */
                     if (nseg == segcap) { segcap = segcap ? segcap * 2 : 64; kgseg *q = realloc(S, segcap * sizeof(kgseg)); if (!q) goto done; S = q; }
                     S[nseg++] = (kgseg){s0 + v * 8, (uint32_t)rn, e, fl, miss}; cnt += rn; if (rn > maxrn) maxrn = rn;
@@ -788,7 +806,7 @@ static size_t kg_encode_dec64(codec_ctx *x, int codec, int level, const uint8_t 
     for (int b = 0; b < 8; b++) pln[b] = malloc(cnt + 1);
     if (!tags || !col || !pln[0] || !pln[1] || !pln[2] || !pln[3] || !pln[4] || !pln[5] || !pln[6] || !pln[7]) goto done;
     for (size_t c = 0, q0 = 0; c < nseg; c++) {
-        int d = kg_dec_code(src + S[c].off, segs ? 8 : cols * 8, S[c].n, S[c].e, S[c].fl & 2, S[c].miss, tags + q0, pln, q0, col, &exc, &all);
+        int d = kg_dec_code(src + S[c].off, segs ? 8 : cols * 8, S[c].n, S[c].e, S[c].fl & 2, S[c].miss, S[c].fl & 4, tags + q0, pln, q0, col, &exc, &all);
         if (d < 0) goto done;
         S[c].fl |= (uint8_t)d; q0 += S[c].n;
     }

@@ -2031,6 +2031,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         if (!buf || !zb) { free(buf); free(zb); ZSTD_freeCCtx(zc); return pl; }
         size_t zcap = ZSTD_compressBound(bc);
         double plain = (double)zcost(zc, s + st, L, zb, zcap, zl) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
+        double d64c = 1e300; uint32_t d64cols = 0; size_t d64h = 0;   /* the DEC64 trial's result, kept for a marked plan */
         if (pl.t == T_SHUF) {
             size_t u = (size_t)pl.a * pl.b, rows = L / u; shuffle_fwd(s + st, rows, pl.a, pl.b, pl.c, buf);
             double c = (double)zcost(zc, buf, rows * u, zb, zcap, zl) / (rows * u);
@@ -2104,6 +2105,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             c = cf; w = fw; hh = fh;
             if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
             { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, st, L, zl, &dc, &dh);     /* decimal doubles: decode is slower than the other graphs, so it must win by 7% */
+              d64c = c; d64cols = dc; d64h = dh;
               if (c < best * 0.93) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = dc ? 64 : 65; keep.c = (int)dh; keep.kgw = dc ? dc * 8 : 8; chosen = 8; } }
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt2 = prof_now();
@@ -2132,6 +2134,12 @@ structured_done:
                 else if (chosen == 7) c = kg_img8_trial(s, n, pos, E, zl, 1e300, &iw3, &ic3, &h3);
                 else c = kg_dec64_trial(s, n, pos, E, zl, &dc3, &h3);
                 if (c > pe * 1.10 && pe < 0.98) keep.verify = 1;
+            }
+            /* a marked whole-file plan (one word size and alignment for everything) gives way to the segment plan when
+             * that also beat plain coding on the slice: segments follow the arrays wherever they sit */
+            if (keep.verify && chosen != 8 && d64c < plain * CZ_STRUCT_GAIN_PCT / 100.0) {
+                if (keep.rec != pl.rec) free(keep.rec);
+                keep = pl; keep.t = T_KG; keep.a = 0; keep.b = d64cols ? 64 : 65; keep.c = (int)d64h; keep.kgw = d64cols ? d64cols * 8 : 8; keep.verify = 1; chosen = 8;
             }
         }
         if (chosen >= 2) pl = keep;

@@ -30,6 +30,7 @@ int main(void) {
             size_t at = cols ? r * tc + c : c * rows + r, shift = 0; double v; uint32_t k = rnd();
             if (!cols) for (size_t j = 0; j <= c; j++) shift += gap[j];
             if (kind[c] == 0) { uint64_t b = (uint64_t)rnd() << 32 | rnd(); memcpy(&v, &b, 8); }           /* arbitrary bits */
+            else if (kind[c] >= 8 && !cols) { int64_t iv = k % 53 == 0 ? (int64_t)((uint64_t)rnd() << 30) - (1ll << 40) : (int64_t)(k % 5000) - 300 + (int64_t)r; memcpy(&v, &iv, 8); }   /* an int64 column */
             else if (kind[c] == 1 && k % 3 == 0) v = NAN;                                                    /* a third missing */
             else if (k % 97 == 0) v = special();
             else {
