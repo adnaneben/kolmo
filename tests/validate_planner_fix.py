@@ -73,7 +73,9 @@ def main() -> None:
             entry.update(returncode=proc.returncode, seconds=time.monotonic() - start,
                          status='completed', sha256=hashlib.sha256((evidence / name).read_bytes()).hexdigest())
             save()
-            if proc.returncode not in allowed: raise RuntimeError(f'Command failed; see {name}')
+            if proc.returncode not in allowed:
+                sys.stderr.write(f'--- tail of {name} ---\n' + ''.join(text.splitlines(True)[-80:]) + '--- end ---\n')
+                raise RuntimeError(f'Command failed; see {name}')
             return proc.returncode, text
         except BaseException:
             if entry['status'] == 'running': entry['status'] = 'interrupted_or_launch_failed'; save()
@@ -127,6 +129,10 @@ def main() -> None:
                 if label == 'baseline':
                     if code != 1 or not int(marker[4]) or not int(marker[5]) or 'LeakSanitizer: detected memory leaks' not in text:
                         raise RuntimeError('Original targeted leak was not reproduced')
+                    traces = re.findall(r'(?:Direct|Indirect) leak of .*?(?=\n(?:Direct|Indirect) leak of |\nSUMMARY:|\Z)', text, re.S)
+                    if not traces or any(not re.search(r'\bin make_plan\b', x) or not re.search(r'kolmo\.c:2015(?:\D|$)', x) for x in traces):
+                        raise RuntimeError('Original targeted leak is not the pinned make_plan record allocation')
+                    state['baseline_focused_leak_summary'] = re.findall(r'SUMMARY: AddressSanitizer: .*', text)
                 elif code or int(marker[4]) or int(marker[5]) or 'ERROR:' in text or 'PLANNER OWNERSHIP PASSED' not in text:
                     raise RuntimeError('Candidate targeted sanitizer did not pass')
                 logs[label] = re.findall(r'^seed=.*?plan=\d+', text, flags=re.M)

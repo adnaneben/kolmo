@@ -1,7 +1,10 @@
 /* Regression for record plans displaced by later graph candidates.
  * Includes the REAL core: no detector or compression-cost stubs.
- * Only malloc/free are observed; allocation requests and results are unchanged.
- * This is deliberately single-threaded and is run under ASan/UBSan/LSan.
+ * Allocations are observed through AddressSanitizer's allocator hooks, which see
+ * every real malloc/free (kolmo.c redefines and then #undefs malloc/free, so
+ * preprocessor interception cannot reach make_plan). A record plan is an
+ * allocation of exactly sizeof(rec_plan_t) made while make_plan runs; requests
+ * and results are unchanged. Single-threaded; run under ASan/UBSan/LSan.
  */
 #define _GNU_SOURCE
 #include <stdint.h>
@@ -9,38 +12,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-static void *ownership_malloc(size_t n, const char *caller);
-static void ownership_free(void *p);
-#define malloc(n) ownership_malloc((n), __func__)
-#define free(p) ownership_free(p)
 #include "../src/kolmo.c"
-#undef malloc
-#undef free
 
-static void *records[1024];
+int __sanitizer_install_malloc_and_free_hooks(void (*malloc_hook)(const volatile void *, size_t),
+                                              void (*free_hook)(const volatile void *));
+static const void *records[1024];
 static size_t nrecords, record_allocations;
-static int observe;
-static void *ownership_malloc(size_t n, const char *caller) {
-    void *p = malloc(n);
-    if (observe && p && n == sizeof(rec_plan_t) && !strcmp(caller, "make_plan")) {
+static volatile int observe;
+static void ownership_malloc_hook(const volatile void *p, size_t n) {
+    if (observe && p && n == sizeof(rec_plan_t)) {
         if (nrecords == sizeof(records) / sizeof(records[0])) abort();
-        records[nrecords++] = p;
+        records[nrecords++] = (const void *)p;
         record_allocations++;
     }
-    return p;
 }
-static void ownership_free(void *p) {
-    if (p) for (size_t i = 0; i < nrecords; i++) if (records[i] == p) {
+static void ownership_free_hook(const volatile void *p) {
+    if (p) for (size_t i = 0; i < nrecords; i++) if (records[i] == (const void *)p) {
         records[i] = records[--nrecords]; records[nrecords] = NULL; break;
     }
-    free(p);
 }
 static uint64_t state;
 static uint64_t next_random(void) {
     state ^= state << 13; state ^= state >> 7; state ^= state << 17;
     return state;
 }
-static void put32(uint8_t *p, uint32_t v) {
+static void test_put32(uint8_t *p, uint32_t v) {
     for (unsigned i = 0; i < 4; i++) p[i] = (uint8_t)(v >> (8 * i));
 }
 static size_t fill(uint8_t *a, int kind, uint64_t seed) {
@@ -52,7 +48,7 @@ static size_t fill(uint8_t *a, int kind, uint64_t seed) {
             double g = 0;
             for (int k = 0; k < 4; k++) g += (double)(next_random() % 20001) / 10000.0 - 1.0;
             float f = i % 5000 == 7 ? 0.0f : (float)(g * 0.02);
-            uint32_t u; memcpy(&u, &f, 4); put32(a + head + 4 * i, u);
+            uint32_t u; memcpy(&u, &f, 4); test_put32(a + head + 4 * i, u);
         }
         a[head + 4 * count] = 1; a[head + 4 * count + 1] = 2;
         return head + 4 * count + 2;
@@ -64,7 +60,7 @@ static size_t fill(uint8_t *a, int kind, uint64_t seed) {
         uint32_t v = 0;
         for (size_t i = 0; i < count; i++) {
             v += (uint32_t)((int32_t)(next_random() % 21) - 10);
-            put32(a + head + 4 * i, v);
+            test_put32(a + head + 4 * i, v);
         }
         return head + 4 * count;
     }
@@ -77,6 +73,9 @@ static size_t fill(uint8_t *a, int kind, uint64_t seed) {
     return width * height * channels + 7;
 }
 int main(void) {
+    if (!__sanitizer_install_malloc_and_free_hooks(ownership_malloc_hook, ownership_free_hook)) {
+        fprintf(stderr, "FAIL insufficient planner-path coverage: allocator hooks unavailable\n"); return 2;
+    }
     uint8_t *a = malloc(2u << 20);
     if (!a) return 2;
     const uint64_t seeds[] = {88172645463325252ull, 731094ull, 1700000001ull};
@@ -89,7 +88,7 @@ int main(void) {
             plan_t p = make_plan(a, n, effort, 1, 1, 1, 0, quick ? 4 : 0);
             observe = 0;
             graph_cases += p.t == T_KG;
-            ownership_free(p.fs); ownership_free(p.rec);
+            free(p.fs); free(p.rec);
             leaked_cases += nrecords != before;
             printf("seed=%llu kind=%d effort=%d light=%d plan=%d live_records=%zu\n",
                    (unsigned long long)seeds[s], kind, effort, quick ? 4 : 0, p.t, nrecords);
