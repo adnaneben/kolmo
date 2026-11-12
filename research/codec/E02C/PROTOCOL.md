@@ -62,7 +62,12 @@ Each representation emits 1–5 streams; each stream is coded by the configured 
 requested and actual codec is recorded (`kernel_size` records), so a stored fallback is never reported as entropy-coded.
 Follow-up backend `ent` (configurations `exist+ent`, `planes+ent`, `lpp128+ent`): per stream both existing entropy coders
 (Huffman-only and rANS) are run and the smaller kept, both charged — the best entropy-only leaf available from existing code.
-Configuration indices 0–23 are unchanged from the first run; 24–30 are appended. `sel+<backend>` still chooses among
+Follow-up 2 (configurations 31–36): `exist/planes+zstd19` (fixed zstd -19 per stream) and `exist/planes+prod3|prod19`,
+which hand the streams as leaves of a leaf-only program to the unchanged `kg_serialize`, so each stream gets
+production's own leaf rule (fast-level sampling between stored / Huffman-only / zstd, Huffman and rANS trials with
+their thresholds) at zstd level 3 or 19. `exist+prod3` reproduces production fast frames and `exist+prod19` production
+hc frames to within the 13-byte experimental framing.
+Configuration indices 0–23 are unchanged from the first run; 24–36 are appended. `sel+<backend>` still chooses among
 the first five representations only.
 `sel+<backend>` is an implemented size selector: it encodes all five representations with the backend and keeps the
 smallest; all five trials are inside its measured encode time (an exhaustive oracle, charged, not free).

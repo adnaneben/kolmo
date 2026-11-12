@@ -21,6 +21,9 @@
  *   rep 5 PLANES existing residual bytes, one stream per byte plane (ow streams of m bytes when the layout is planar,
  *                else the single stream): the plane-aware control, so each backend builds one table per plane
  *   stream: codec u8 (0 stored, 3 zstd, 13 Huffman only, 14 rANS) | raw length uv | coded length uv | bytes
+ * Production-leaf-rule variant (follow-up 2, exist/planes only): tag 0xD0 | rep, then the output of the unchanged
+ * kg_serialize for a leaf-only program ('G' 1, 0 nodes, leaves 1..k = the streams), so each stream gets production's
+ * own leaf decision (sampling, Huffman/rANS trials and thresholds, stored fallback) at the given zstd level.
  * Count m, output width and plane flag come from the KG_INT parameters, as for a production leaf.
  * Packing is LSB first; padding bits are zero; a coded stream is always smaller than its raw length (else stored).
  */
@@ -38,14 +41,17 @@
 #define SEG 128
 enum { R_EXIST, R_GBP, R_LBP, R_GPP, R_LPP, R_PLANES, R_N };
 #define R_SEL 5                           /* the size selector chooses among the first five representations (as in the first E02C run) */
-enum { B_STORE, B_HUF, B_RANS, B_ZSTD, B_N, B_ENT = B_N };   /* B_ENT: per stream, both existing entropy coders tried, smaller kept (both charged) */
+enum { B_STORE, B_HUF, B_RANS, B_ZSTD, B_N, B_ENT = B_N, B_Z19, B_PROD3, B_PROD19 };   /* B_ENT: per stream, both existing entropy coders tried, smaller kept (both charged) */
 static const char *RN[R_N] = {"exist", "gbp", "lbp128", "gpp", "lpp128", "planes"};
-static const char *BN[B_N + 1] = {"store", "huf", "rans", "zstd3", "ent"};
+static const char *BN[B_N + 4] = {"store", "huf", "rans", "zstd3", "ent", "zstd19", "prod3", "prod19"};
 static const int BC[B_N] = {C_STORE, C_HUF, C_RANS, C_ZSTD};
 #define ZSTD_CONTROL_LEVEL 3
 #define NFIX (R_SEL * B_N)              /* configurations 0-19: fixed; 20-23: charged selector per backend; 24-27: planes (appended, indices kept) */
-static const int ENT_REPS[3] = {R_EXIST, R_PLANES, R_LPP};   /* configurations 28-30: entropy-only best-of-two per stream */
-#define NCONF (NFIX + B_N + B_N + 3)
+/* appended configurations 28-36: best-of-entropy (28-30), then level-matched zstd -19 and production's leaf rule
+ * at levels 3 and 19 (31-36), for the existing layout and the plane layout */
+static const int XREP[9] = {R_EXIST, R_PLANES, R_LPP, R_EXIST, R_PLANES, R_EXIST, R_PLANES, R_EXIST, R_PLANES};
+static const int XBE[9] = {B_ENT, B_ENT, B_ENT, B_Z19, B_Z19, B_PROD3, B_PROD3, B_PROD19, B_PROD19};
+#define NCONF (NFIX + B_N + B_N + 9)
 
 static int uvlen(uint64_t v) { int l = 1; while (v >= 128) { v >>= 7; l++; } return l; }
 static int e2bitlen(uint64_t z) { return z ? 64 - __builtin_clzll(z) : 0; }
@@ -110,6 +116,9 @@ static int enc_stream(codec_ctx *x, int be, const kbuf *s, kbuf *o, sstat *st) {
         uint8_t *t = malloc(cap); size_t r = t ? codec_compress(x, C_RANS, 0, s->p, s->n, t, cap) : 0;
         if (r && r < s->n && (!z || r < z)) { memcpy(dst, t, r); z = r; cc = C_RANS; }
         free(t);
+    } else if (s->n && be == B_Z19) {
+        size_t r = codec_compress(x, C_ZSTD, 19, s->p, s->n, dst, cap);
+        if (r && r < s->n) { z = r; cc = C_ZSTD; }
     } else if (s->n && be != B_STORE) {
         size_t r = codec_compress(x, BC[be], be == B_ZSTD ? ZSTD_CONTROL_LEVEL : 0, s->p, s->n, dst, cap);
         if (r && r < s->n) { z = r; cc = BC[be]; }
@@ -118,7 +127,7 @@ static int enc_stream(codec_ctx *x, int be, const kbuf *s, kbuf *o, sstat *st) {
     uint8_t hdr[21]; size_t hn = 0; hdr[hn++] = (uint8_t)cc;
     hn = (size_t)(kg_uvw(hdr + hn, s->n) - hdr); hn = (size_t)(kg_uvw(hdr + hn, z) - hdr);
     memmove(o->p + o->n + hn, dst, z); memcpy(o->p + o->n, hdr, hn); o->n += hn + z;
-    if (st) { st->requested = be == B_ENT ? -1 : BC[be]; st->actual = cc; st->raw = s->n; st->coded = z; }
+    if (st) { st->requested = be == B_ENT ? -1 : be == B_Z19 ? C_ZSTD : BC[be]; st->actual = cc; st->raw = s->n; st->coded = z; }
     return 0;
 }
 /* exact < 0: any raw length up to maxraw */
@@ -162,7 +171,9 @@ static int lpp_choose(const uint64_t *z, size_t len) {
 static int e2c_encode(codec_ctx *x, int rep, int be, const uint8_t *r, size_t m, int ow, int pln, kbuf *blob, estat *st) {
     kbuf s[8] = {{0}}; int ns = 0, rc = -1; uint64_t *z = NULL; blob->n = 0;
     estat dummy; if (!st) st = &dummy; memset(st, 0, sizeof *st); st->rep = rep; st->be = be;
-    if (kb_byte(blob, (uint8_t)(0xE0 | rep))) goto done;
+    int prodrule = be == B_PROD3 || be == B_PROD19;
+    if (prodrule && rep != R_EXIST && rep != R_PLANES) goto done;
+    if (kb_byte(blob, (uint8_t)((prodrule ? 0xD0 : 0xE0) | rep))) goto done;
     if (rep == R_EXIST) { ns = 1; if (kb_put(&s[0], r, m * (size_t)ow)) goto done; }
     else if (rep == R_PLANES) {
         ns = pln ? ow : 1;
@@ -199,6 +210,19 @@ static int e2c_encode(codec_ctx *x, int rep, int be, const uint8_t *r, size_t m,
         } else goto done;
     }
     st->hdr = blob->n; st->ns = ns;
+    if (prodrule) {                                             /* production's leaf rule, via the unchanged kg_serialize */
+        kgb g = {0}; size_t tot = 0; int ok = kgb_new(&g) == 0;
+        if (ok) g.used[0] = 1;
+        for (int q = 0; ok && q < ns; q++) { int id = kgb_new(&g); ok = id == q + 1 && !kb_put(&g.s[id], s[q].p, s[q].n); tot += s[q].n; }
+        size_t cap = tot + tot / 8 + 4096 * (size_t)(ns + 1), w = 0;
+        uint8_t *o = ok ? malloc(cap) : NULL;
+        if (o) w = kg_serialize(x, C_ZSTD, be == B_PROD3 ? CZ_FAST_LEVEL : 19, &g, SIZE_MAX / 2, o, cap);
+        if (w) { size_t i = 2; uint64_t v, nn, nl; kg_getuv(o, w, &i, &nn); kg_getuv(o, w, &i, &nl);   /* record leaf choices */
+                 for (int q = 0; q < ns && q < 8; q++) { uint64_t rl, zl; kg_getuv(o, w, &i, &v); int cc = o[i++]; kg_getuv(o, w, &i, &rl); kg_getuv(o, w, &i, &zl);
+                     st->s[q] = (sstat){C_ZSTD, cc, (size_t)rl, (size_t)zl}; i += zl; } }
+        int bad = !w || kb_put(blob, o, w);
+        free(o); kgb_free(&g); if (bad) goto done;
+    } else
     for (int q = 0; q < ns; q++) if (enc_stream(x, be, &s[q], blob, &st->s[q])) goto done;
     rc = 0;
 done:
@@ -208,10 +232,23 @@ done:
 static int e2c_decode(codec_ctx *x, const uint8_t *p, size_t n, size_t m, int ow, int pln, size_t maxs, kbuf *out) {
     size_t i = 0; int rc = -1; kbuf s[8] = {{0}}; uint64_t *z = NULL;
     if ((ow != 1 && ow != 2 && ow != 4 && ow != 8) || m > maxs / (size_t)ow) return -1;
-    if (n < 1 || (p[0] & 0xF0) != 0xE0 || (p[0] & 15) >= R_N) return -1;
+    if (n < 1 || ((p[0] & 0xF0) != 0xE0 && (p[0] & 0xF0) != 0xD0) || (p[0] & 15) >= R_N) return -1;
     int rep = p[0] & 15; i = 1; size_t rb = m * (size_t)ow, nsg = (size_t)seg_count(m), lim = 10 * m + 64;
     out->n = 0; if (kb_res(out, rb + 16)) return -1;
-    if (rep == R_EXIST) {
+    if ((p[0] & 0xF0) == 0xD0) {                               /* production-leaf-rule framing: leaf-only 'G' program */
+        if (rep != R_EXIST && rep != R_PLANES) goto done;
+        int np = rep == R_PLANES && pln ? ow : 1; size_t pl = np > 1 ? m : rb; uint64_t nn, nl, id, rl, zl;
+        if (n - i < 2 || p[i] != 'G' || p[i + 1] != 1) goto done;
+        i += 2; if (kg_getuv(p, n, &i, &nn) || nn || kg_getuv(p, n, &i, &nl) || nl != (uint64_t)np) goto done;
+        for (int q = 0; q < np; q++) {
+            if (kg_getuv(p, n, &i, &id) || id != (uint64_t)(q + 1) || i >= n) goto done;
+            int cc = p[i++];
+            if ((cc != C_STORE && cc != C_HUF && cc != C_RANS && cc != C_ZSTD) || kg_getuv(p, n, &i, &rl) || rl != pl || kg_getuv(p, n, &i, &zl) || zl > n - i) goto done;
+            if (cc == C_STORE && zl != rl) goto done;
+            if (pl && codec_decompress(x, cc, p + i, (size_t)zl, out->p + (size_t)q * pl, pl)) goto done;
+            i += zl;
+        }
+    } else if (rep == R_EXIST) {
         if (dec_stream(x, p, n, &i, (int64_t)rb, rb, &s[0])) goto done;
         memcpy(out->p, s[0].p, rb);
     } else if (rep == R_PLANES) {
@@ -281,8 +318,8 @@ done:
 }
 
 /* ---------------- configurations (incl. charged selector) ---------------- */
-static int conf_rep(int c) { return c < NFIX ? c / B_N : c < NFIX + B_N ? -1 : c < NFIX + 2 * B_N ? R_PLANES : ENT_REPS[c - NFIX - 2 * B_N]; }
-static int conf_be(int c) { return c < NFIX ? c % B_N : c < NFIX + B_N ? c - NFIX : c < NFIX + 2 * B_N ? c - NFIX - B_N : B_ENT; }
+static int conf_rep(int c) { return c < NFIX ? c / B_N : c < NFIX + B_N ? -1 : c < NFIX + 2 * B_N ? R_PLANES : XREP[c - NFIX - 2 * B_N]; }
+static int conf_be(int c) { return c < NFIX ? c % B_N : c < NFIX + B_N ? c - NFIX : c < NFIX + 2 * B_N ? c - NFIX - B_N : XBE[c - NFIX - 2 * B_N]; }
 static const char *conf_name(int c, char *buf) {
     if (c < NFIX) snprintf(buf, 32, "%s+%s", RN[c / B_N], BN[c % B_N]);
     else if (c < NFIX + B_N) snprintf(buf, 32, "sel+%s", BN[c - NFIX]);
