@@ -45,3 +45,13 @@ production `kolmo -d` CLI (`results/cli_roundtrip_table.txt`). Development timin
 table encoder and DECIMAL inverse are slower than P2-E6's typed path. **Archive-mode candidate, not a speed-mode
 one.** P2-E6's typed CSV (research container) remains the speed-mode table result; expressing it in the existing
 graph ops would need new semantics (DECIMAL's mantissa stream is not the INT node's fixed-width input).
+
+## Addendum: entropy guard (`tp_phuf_eg`) — negative
+
+After the passes, the sum of per-plane order-0 entropies of the residual (what per-plane Huffman approximates) is
+compared with a 16 KiB zstd probe of the input. It does not catch the two inputs that pass the cheap guard and still
+lose bytes (fs_size +6.4%, syn_sparse +5.7%: their plane entropy really is below the probe's whole-file zstd
+estimate, so the small probe underestimates zstd there), and it costs more than the cheap pre-guard because it runs
+after the passes (fs_mtime +206% vs +21%). Development run `results/summary-eg.txt`: feasible-and-smaller 4/20 vs
+`tp_phuf` 8/20 and `tp_phuf_pg16` 6/20 in the same run. Guarding remains the weak spot: the probe, not the estimate,
+is the limiting factor.

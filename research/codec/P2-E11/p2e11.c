@@ -21,7 +21,7 @@ typedef struct { const char *name; char kind; int level; const char *leaf; char 
 static const cand_t CAND[] = {   /* kind 'P': production-frame type-first; leaf "prod" or "phuf"; guard 5 = 16 KiB pre-guard */
     {"zstd3", 'Z', 3, NULL, 0, 0}, {"kolmo_fast", 'K', 3, NULL, 0, 0},
     {"tp_prod3", 'P', 3, "prod", 0, 0}, {"tp_phuf", 'P', 3, "phuf", 0, 0}, {"tp_phuf_pg16", 'P', 3, "phuf", 0, 5},
-    {"tp_table3", 'P', 3, "table", 0, 0},
+    {"tp_table3", 'P', 3, "table", 0, 0}, {"tp_phuf_eg", 'P', 3, "phuf", 0, 7},
 };
 #define NC ((int)(sizeof CAND / sizeof CAND[0]))
 static int conf_by_name(const char *want) { char nb[32]; for (int c = 0; c < NCONF; c++) if (!strcmp(conf_name(c, nb), want)) return c; DIE("no config %s", want); }
@@ -74,7 +74,17 @@ static size_t enc(const uint8_t *src, size_t n, int ci, uint8_t **dst) {
                       uint32_t hc = kolmo_crc32c(0, f, 28); hc = kolmo_crc32c(hc, f + HDR, IDX); put32(f + 28, hc); free(tmp); }
         } else if (!type_of(src, n, &w, &h)) {
             fiprog P; gctx_t gc = {src, n, c->level, 16384};
-            if (!fi_forward_g(src, n, w, h, &P, c->guard == 5 ? pre_guard : NULL, &gc)) {
+            int fr = fi_forward_g(src, n, w, h, &P, c->guard == 5 ? pre_guard : NULL, &gc);
+            if (!fr && c->guard == 7) {             /* entropy guard: sum of per-plane order-0 entropies vs a 16 KiB zstd probe */
+                int planes = P.pln ? P.ow : 1; size_t plen = P.pln ? P.m : P.res.n; double bits = 0;
+                for (int b = 0; b < planes; b++) {
+                    uint32_t hc[256] = {0}; const uint8_t *q = P.res.p + (size_t)b * plen;
+                    for (size_t k = 0; k < plen; k++) hc[q[k]]++;
+                    for (int v = 0; v < 256; v++) if (hc[v]) bits -= (double)hc[v] * log2((double)hc[v] / (double)plen);
+                }
+                if (bits / 8.0 > zprobe_n(src, n, c->level, 16384)) fr = 1;
+            }
+            if (!fr) {
                 size_t pn = !strcmp(c->leaf, "prod") ? tp_payload_prod(&x, &P, n, c->level, f + HDR + IDX + 4, cap - HDR - IDX - 4)
                                                       : tp_payload_phuf(&P, f + HDR + IDX + 4, cap - HDR - IDX - 4);
                 if (pn) { memmove(f + HDR + IDX + 4, f + HDR + IDX + 4, pn); uint8_t *tmp = malloc(pn); memcpy(tmp, f + HDR + IDX + 4, pn); fn = tp_wrap(src, n, w, h, tmp, pn, f); free(tmp); }
