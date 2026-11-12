@@ -3,9 +3,13 @@
 Method and framing: [`PROTOCOL.md`](PROTOCOL.md). These results come from `harness/e02c.c` only. The parallel
 forced-typed implementation on this branch (`README.md`, `probe.c`, `run.py`; zstd level 1 control) is measured by its own
 workflow and is not summarised here; its numbers are not interchangeable with these (different zstd level, framing,
-corpus and selector policy).
+corpus and selector policy). Its executed results (`../E02C_RESULTS.md`, Actions runs 43232093686 / 43233624953) reach the
+same direction: unconditional packing rejected, packing kept only for narrow workload hypotheses.
 
-**Outcome: negative for every fixed representation; marginal for a charged per-block selector that needs zstd.**
+**Outcome: negative for every fixed packing representation; marginal for a charged per-block selector that needs zstd.
+Follow-up (§8): the existing rANS failure is its single-symbol rejection, and one stream per byte plane coded with
+zstd -3 (`planes+zstd3`) is the only fixed configuration smaller than production fast (−0.37%) — a layout finding, not a
+packing one.**
 No representation/backend combination, used unconditionally, stored fewer complete-input bytes than unmodified Kolmo
 on the real development inputs in either regime. A size selector over all five representations with the zstd -3
 control saved 0.20% (fast planner, real inputs) at roughly 1.5× encode time. The earlier result is reproduced:
@@ -159,9 +163,60 @@ page-granular; buffers allocated before the reset are excluded.
   block (≤ ~0.05% here).
 - E2E encode for experimental rows is derived, not an implemented encoder.
 
-## 7. Next substantive task
+## 7. Next substantive task (as first stated; done in §8)
 
-Replace the `exist+rans` control with a plane-aware variant (one static table per residual byte plane, using the existing
-rANS kernel per plane) and re-run regimes A and B unchanged. It tests the one mechanism behind the large entropy-only
-deltas above — empty and mixed byte planes — without changing representations, and decides whether an entropy-only
-leaf can match zstd on KG_INT residuals before any selector integration work.
+Replace the `exist+rans` control with a plane-aware variant and re-run regimes A and B unchanged, to decide whether an
+entropy-only leaf can match zstd on KG_INT residuals.
+
+## 8. Follow-up: plane-aware and best-of-entropy controls
+
+Run 2 of the same matrix (same corpus hashes, seed, 7 repetitions, harness `b7cfbcf`, production `2f3308a` unchanged)
+with seven appended configurations: `planes+{store,huf,rans,zstd3}` (existing residual bytes, one stream per byte
+plane) and `{exist,planes,lpp128}+ent` (existing Huffman-only and rANS both run per stream, smaller kept, both charged).
+All 1,120 complete-input sizes of run 1 were reproduced exactly (and all 1,300 of an intermediate run). Records:
+`results-followup/` (raw uncompressed SHA-256 in its `SHA256SUMS`).
+
+**Mechanism.** The existing rANS (`rans_compress_all`) returns failure for a whole stream if any 1 MiB chunk holds a
+single symbol, so the leaf falls back to stored. In regime A one 6.0 MB audio residual leaf was stored outright;
+with planes, 17 constant or near-constant planes (1.78 MB) were stored in regime B. Huffman's chunk format codes a
+repeated byte in a few bytes, so it never hits this. Plane mixing is a secondary effect: `planes+rans` is still
++14.29% (B fast), worse than `exist+rans`.
+
+| config | A typed, real | B fast, real | B hc, real | B fast: vs exist, same backend |
+|---|---|---|---|---|
+| exist+huf | +19.94% | +6.43% | +7.02% | — |
+| exist+ent | +15.71% | +4.91% | +5.17% | — |
+| planes+huf | +17.25% | +5.44% | +6.64% | −0.93% |
+| planes+rans | +64.58% | +14.29% | +7.75% | +4.88% |
+| planes+ent | +4.58% | +1.19% | +2.96% | −3.55% (vs exist+ent) |
+| lpp128+ent | +16.95% | +3.88% | +3.24% | −0.99% (vs exist+ent) |
+| exist+zstd3 | +0.02% | +0.01% | +1.05% | — |
+| **planes+zstd3** | **−0.58%** (13 of 17 smaller) | **−0.37%** (9 of 12 smaller) | +0.87% (level 3 vs production 19) | −0.39% |
+
+**Can an entropy-only leaf match zstd here?** Not in aggregate. The best entropy-only leaf from existing code
+(`planes+ent`) closes about three quarters of the fast-mode gap (+4.91% → +1.19%) and wins on 7 of 12 files
+(audio, topobathy, goog_volume: −0.9% to −7.5%), but loses heavily where the residuals keep repeats that zstd's LZ
+stage removes (fs_inode +37.6%, mri +25.7%, fs_size +11.4%). It also decodes 55% slower than production end to end
+(12.08 vs 7.79 ms, rANS planes) and its charged double trial costs 4× the Huffman-only encode in the kernel.
+
+**planes+zstd3.** Per input (fast): −0.31% to −3.81% on nine files; +0.04% (mri), +0.05% (fs_inode), +1.84% (goog_date,
+326 B). End to end (fast, 12 real INT files): 887,026 vs 898,742 B (−1.30%), encode 112.7 vs 112.9 ms (derived), decode
+8.07 vs 7.79 ms (+3.6%); kernel 326 / 1,175 MB/s vs `exist+zstd3` 308 / 1,142; decode peak memory median 568 vs 562 KiB.
+At hc it is +0.87% against production, but the control is zstd -3 against production's zstd -19 leaf, so hc is untested.
+Using it would need a production hook: KG_INT emits one residual stream, and no existing node splits a stream into
+planes (CONCAT only joins), so plane leaves need a new KG node or INT flag — a format change, outside this branch's
+authority and not covered by the source-identity gate. It is recorded as a hypothesis, not implemented.
+
+**Decisions added**
+
+| combination | decision |
+|---|---|
+| planes + zstd (one leaf per residual byte plane) | **Keep for integration research** — the only fixed, selector-free gain (−0.37% fast, −0.58% typed), with equal encode and +3.6% decode; needs a level-matched hc test and a format-change proposal reviewed separately |
+| planes + entropy-only (`ent`) | **Keep only for a workload-specific study** (audio-like residuals without repeats); reject as a general leaf (+1.19% fast, +55% decode) |
+| planes + rANS alone | **Reject** — single-symbol rejection stores constant planes |
+| exist/lpp128 + `ent` | **Reject** — dominated by planes+ent / planes+zstd3 |
+| existing rANS single-symbol behaviour | Not a production defect (production only takes rANS when it wins); a constraint for any rANS-only design |
+
+**Next substantive task.** A level-matched test of per-plane leaves: add zstd -19 (and production's own leaf choice
+rule) as per-plane backends, re-run regimes A and B, and include the larger source-disjoint real integer data the
+parallel report calls for, to decide whether a per-plane KG_INT leaf layout earns a format-change proposal.
