@@ -40,7 +40,7 @@ Against unmodified production frames: GHCN fast −4.18%, hc −3.67%; MIT-BIH h
   mode and −5.3% to −8.1% in hc; temperatures gain −0.1% to −1.2% (fast) and −1.4% to −3.8% (hc); TMIN at Los Angeles
   has `ow1` residuals (0.00%).
 - **The hc decode failure is a fixed per-leaf cost on small files.** GHCN files decode in 0.13–0.45 ms; the extra zstd
-  frame adds 15–57 µs per file (one file was faster). On the larger development files (E02C-harness §9) the same
+  frame adds 11–57 µs per file (one file was 17 µs faster). On the larger development files (E02C-harness §9) the same
   layout cost about +1%. The registered bar is applied as written: H2 fails.
 - **Guard.** No large leaf in this data met the misfire condition, so the guard cost nothing and changed nothing.
 
