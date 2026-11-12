@@ -1,0 +1,332 @@
+{
+ "experiment": "E02F",
+ "split": "validation (not a final holdout)",
+ "generator": "research/codec/E02F/prepare.py",
+ "numpy": "2.1.3",
+ "sources": [
+  {
+   "file": "S001R01.edf",
+   "sha256": "4743b736131a7e147c150e8b37711029b6cda5e356c4b3e8261a03cdcaaf8b0c",
+   "bytes": 1275936
+  },
+  {
+   "file": "S002R01.edf",
+   "sha256": "d542689b31c977838f20b1a2062865b98ecf10a7e9702f56f101000d47f2ec68",
+   "bytes": 1275936
+  },
+  {
+   "file": "S003R01.edf",
+   "sha256": "2af68afa8d4f158a7ae7f3903b66f0947925880639b7a8b5b6bb13b0c6c50f96",
+   "bytes": 1275936
+  },
+  {
+   "file": "S004R01.edf",
+   "sha256": "23e9645f492488d2376ac3a606d177043efc6e5fb00281c2d6648e4b06a6ce62",
+   "bytes": 1275936
+  },
+  {
+   "file": "wiki_Earth.json",
+   "sha256": "0f005a519b981e730b1b22b4f92b2784a0a31c3d51dd6a6d8787f7c559a38b79",
+   "bytes": 521053
+  },
+  {
+   "file": "wiki_Moon.json",
+   "sha256": "0f489a990777337f1e112f56829d94994490ba5882d394d1128772dc6b313bc6",
+   "bytes": 515280
+  },
+  {
+   "file": "wiki_Mathematics.json",
+   "sha256": "93343e8ac8dce8dad3f9bdfcae070a8874e0d40a18c4593f561a2094e065fc62",
+   "bytes": 540680
+  },
+  {
+   "file": "wiki_Water.json",
+   "sha256": "a50637ea6f3f663272f12944af156f4b56df54a3f9584e42ef9e6ebc103da3ef",
+   "bytes": 518744
+  },
+  {
+   "file": "wiki_London.json",
+   "sha256": "3b726e256d81c6dbc651afc10682f254bcfed1d4438b3222e2a97cfa6062887c",
+   "bytes": 525255
+  },
+  {
+   "file": "wiki_Music.json",
+   "sha256": "01ac15ced0fb6bef83ab8709b8f1fa11c56e671ff77b86f52c725c083610ca9a",
+   "bytes": 519091
+  },
+  {
+   "file": "wiki_Albert_Einstein.json",
+   "sha256": "30770e0cebd1a3080f7cdf3d704f5ee664c908ee5d945022ac30359045dfd653",
+   "bytes": 558914
+  },
+  {
+   "file": "wiki_Python_(programming_language).json",
+   "sha256": "fb3ae8fc2caad7157e69bb7bb718879c55a1e50580763251dcfa46201a716c9a",
+   "bytes": 606655
+  },
+  {
+   "file": "fsdd-master.zip",
+   "sha256": "63938a0ef8dee8870149d18fd455ff86e5edb1c7a783b87dd39f23a730cb6d53",
+   "bytes": 16422817
+  }
+ ],
+ "missing": [],
+ "inputs": [
+  {
+   "name": "eeg_S001R01.npy",
+   "family": "F1_eeg",
+   "origin": "real",
+   "bytes": 1249408,
+   "sha256": "8e4c803c6abde9767291b1a10a783407f017fbaf77c758b7f002b44644d31bb9",
+   "width": 2,
+   "head": 128,
+   "tail": 0,
+   "count": 624640,
+   "dtype": "int16",
+   "source": "PhysioNet eegmmidb 1.0.0 S001/S001R01.edf",
+   "conversion": "64 data signals, channel-major int16",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "eeg_S002R01.npy",
+   "family": "F1_eeg",
+   "origin": "real",
+   "bytes": 1249408,
+   "sha256": "d07b54cdb5aefeab811a9342270a6215bd227c7c8d31c69f31001b0effb14bda",
+   "width": 2,
+   "head": 128,
+   "tail": 0,
+   "count": 624640,
+   "dtype": "int16",
+   "source": "PhysioNet eegmmidb 1.0.0 S002/S002R01.edf",
+   "conversion": "64 data signals, channel-major int16",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "eeg_S003R01.npy",
+   "family": "F1_eeg",
+   "origin": "real",
+   "bytes": 1249408,
+   "sha256": "f828a50b69da3d64db9fe6e6ac825544b2e7e533355e223ab99e2e59fc6a619e",
+   "width": 2,
+   "head": 128,
+   "tail": 0,
+   "count": 624640,
+   "dtype": "int16",
+   "source": "PhysioNet eegmmidb 1.0.0 S003/S003R01.edf",
+   "conversion": "64 data signals, channel-major int16",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "eeg_S004R01.npy",
+   "family": "F1_eeg",
+   "origin": "real",
+   "bytes": 1249408,
+   "sha256": "03fc5809a28a01e00c6ea6b38630749a5786ab02b15acc03a4110d206ca6ca54",
+   "width": 2,
+   "head": 128,
+   "tail": 0,
+   "count": 624640,
+   "dtype": "int16",
+   "source": "PhysioNet eegmmidb 1.0.0 S004/S004R01.edf",
+   "conversion": "64 data signals, channel-major int16",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "pageviews_Earth.npy",
+   "family": "F2_pageviews",
+   "origin": "real",
+   "bytes": 14740,
+   "sha256": "c812c14b47dc11119f5011c659dc5524a8d5747497c3ab645db65c610fb05869",
+   "width": 4,
+   "head": 128,
+   "tail": 0,
+   "count": 3653,
+   "dtype": "int32",
+   "source": "Wikimedia pageviews en.wikipedia Earth user daily",
+   "conversion": "views 2016010100..2025123100, 3653 days, int32",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "pageviews_Moon.npy",
+   "family": "F2_pageviews",
+   "origin": "real",
+   "bytes": 14740,
+   "sha256": "f43fb803d3203c67ad5bda7613d92b08fc2d39dc31cac715dbea49c6e8c89396",
+   "width": 4,
+   "head": 128,
+   "tail": 0,
+   "count": 3653,
+   "dtype": "int32",
+   "source": "Wikimedia pageviews en.wikipedia Moon user daily",
+   "conversion": "views 2016010100..2025123100, 3653 days, int32",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "pageviews_Mathematics.npy",
+   "family": "F2_pageviews",
+   "origin": "real",
+   "bytes": 14740,
+   "sha256": "eab759eaba4acaeb86124569370e80263f09d9d59f666e044511f182e5856de9",
+   "width": 4,
+   "head": 128,
+   "tail": 0,
+   "count": 3653,
+   "dtype": "int32",
+   "source": "Wikimedia pageviews en.wikipedia Mathematics user daily",
+   "conversion": "views 2016010100..2025123100, 3653 days, int32",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "pageviews_Water.npy",
+   "family": "F2_pageviews",
+   "origin": "real",
+   "bytes": 14740,
+   "sha256": "b88aa6d4c2e62300c449b317a363ea9dd43e67d72df311a33e483cc0b16022ab",
+   "width": 4,
+   "head": 128,
+   "tail": 0,
+   "count": 3653,
+   "dtype": "int32",
+   "source": "Wikimedia pageviews en.wikipedia Water user daily",
+   "conversion": "views 2016010100..2025123100, 3653 days, int32",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "pageviews_London.npy",
+   "family": "F2_pageviews",
+   "origin": "real",
+   "bytes": 14740,
+   "sha256": "9937c66ab46fc1747f60e627267d7cdfc7f4a1c6e43cb9fa2f3c97919b5ed08f",
+   "width": 4,
+   "head": 128,
+   "tail": 0,
+   "count": 3653,
+   "dtype": "int32",
+   "source": "Wikimedia pageviews en.wikipedia London user daily",
+   "conversion": "views 2016010100..2025123100, 3653 days, int32",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "pageviews_Music.npy",
+   "family": "F2_pageviews",
+   "origin": "real",
+   "bytes": 14740,
+   "sha256": "ee9360a4d5de87a30157da387e4599175c3678fb5dce0742ba952ced509208ec",
+   "width": 4,
+   "head": 128,
+   "tail": 0,
+   "count": 3653,
+   "dtype": "int32",
+   "source": "Wikimedia pageviews en.wikipedia Music user daily",
+   "conversion": "views 2016010100..2025123100, 3653 days, int32",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "pageviews_Albert_Einstein.npy",
+   "family": "F2_pageviews",
+   "origin": "real",
+   "bytes": 14740,
+   "sha256": "268f84e637176186ec865fd1660caaaf1b37d190389d259b4cf753bbf1192b08",
+   "width": 4,
+   "head": 128,
+   "tail": 0,
+   "count": 3653,
+   "dtype": "int32",
+   "source": "Wikimedia pageviews en.wikipedia Albert_Einstein user daily",
+   "conversion": "views 2016010100..2025123100, 3653 days, int32",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "pageviews_Python_programming_language.npy",
+   "family": "F2_pageviews",
+   "origin": "real",
+   "bytes": 14740,
+   "sha256": "ec272844dbd8ef34bdbd8bb2bdec0433375c2ecf6b58db483e4b749bb1f32d3c",
+   "width": 4,
+   "head": 128,
+   "tail": 0,
+   "count": 3653,
+   "dtype": "int32",
+   "source": "Wikimedia pageviews en.wikipedia Python_(programming_language) user daily",
+   "conversion": "views 2016010100..2025123100, 3653 days, int32",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "fsdd_jackson.npy",
+   "family": "F3_speech",
+   "origin": "real",
+   "bytes": 4131808,
+   "sha256": "e699aee534dde09d6d962b5eb75b8be657b5ea64b1aa88b97fc6050b0950a425",
+   "width": 2,
+   "head": 128,
+   "tail": 0,
+   "count": 2065840,
+   "dtype": "int16",
+   "source": "Free Spoken Digit Dataset master.zip, speaker jackson",
+   "conversion": "500 recordings concatenated in (digit, index) order, int16",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "fsdd_nicolas.npy",
+   "family": "F3_speech",
+   "origin": "real",
+   "bytes": 2793630,
+   "sha256": "52e9a3948057224e633460b1ba9cc4b8c68c62b0dd78b10bd50e40a001a73236",
+   "width": 2,
+   "head": 128,
+   "tail": 0,
+   "count": 1396751,
+   "dtype": "int16",
+   "source": "Free Spoken Digit Dataset master.zip, speaker nicolas",
+   "conversion": "500 recordings concatenated in (digit, index) order, int16",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "fsdd_theo.npy",
+   "family": "F3_speech",
+   "origin": "real",
+   "bytes": 3111026,
+   "sha256": "84a5b26e6c904b7072dec1659c593bb2be15a05b342becb6fbe7050a068fedaf",
+   "width": 2,
+   "head": 128,
+   "tail": 0,
+   "count": 1555449,
+   "dtype": "int16",
+   "source": "Free Spoken Digit Dataset master.zip, speaker theo",
+   "conversion": "500 recordings concatenated in (digit, index) order, int16",
+   "split": "E02F validation",
+   "holdout": false
+  },
+  {
+   "name": "fsdd_yweweler.npy",
+   "family": "F3_speech",
+   "origin": "real",
+   "bytes": 2833468,
+   "sha256": "c76cad274ea4098c5ef9928b8d518d141ab46eac4296a2cfbc9500cffd4b2928",
+   "width": 2,
+   "head": 128,
+   "tail": 0,
+   "count": 1416670,
+   "dtype": "int16",
+   "source": "Free Spoken Digit Dataset master.zip, speaker yweweler",
+   "conversion": "500 recordings concatenated in (digit, index) order, int16",
+   "split": "E02F validation",
+   "holdout": false
+  }
+ ]
+}
