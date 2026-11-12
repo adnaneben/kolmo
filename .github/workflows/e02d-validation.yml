@@ -1,0 +1,80 @@
+name: E02D frozen real-data validation
+on:
+  push:
+    branches: [fix/planner-record-ownership-isolated-20261112]
+    paths:
+      - research/codec/E02D/**
+      - .github/workflows/e02d-validation.yml
+permissions:
+  contents: read
+concurrency:
+  group: e02d-frozen-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validation:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Environment and preregistration
+        run: |
+          set -euo pipefail
+          mkdir e02d-evidence
+          sudo apt-get update && sudo apt-get install -y liblzma-dev zstd clang
+          python -m pip install -r research/codec/E02C/requirements.txt
+          cp research/codec/E02D/PREREGISTRATION.md e02d-evidence/
+          { uname -a; gcc --version; clang --version; zstd --version; python -m pip freeze; } > e02d-evidence/environment.txt
+          git diff --exit-code 706cdab65caace2ce698e5dfe4c5dd99e8fcbe00 -- src vendor Makefile benchmark/accept/TARGETS.md research/codec/E02C
+      - name: Validation infrastructure unit tests
+        run: |
+          set -euo pipefail
+          python research/codec/E02D/test_validation.py 2>&1 | tee e02d-evidence/unit-tests.log
+      - name: Fetch exact registered sources and freeze input hashes
+        run: |
+          set -euo pipefail
+          python research/codec/E02D/validate.py prepare --output e02d-evidence/prepared | tee e02d-evidence/prepare.log
+      - name: Frozen sanitized codec and real small-message checks
+        run: |
+          set -euo pipefail
+          python research/codec/E02C/build.py --output "$RUNNER_TEMP/e02d-asan" --cc clang --sanitize 2>&1 | tee e02d-evidence/asan-build.log
+          cp "$RUNNER_TEMP/e02d-asan/build.json" e02d-evidence/asan-build.json
+          python research/codec/E02D/validate.py run --probe "$RUNNER_TEMP/e02d-asan/probe" --prepared e02d-evidence/prepared --output e02d-evidence/sanitized --repeats 1 --seed 20261112 --subset small128 | tee e02d-evidence/sanitized.log
+      - name: Frozen release matrix and independent confirmation
+        run: |
+          set -euo pipefail
+          python research/codec/E02C/build.py --output "$RUNNER_TEMP/e02d-release" --cc gcc 2>&1 | tee e02d-evidence/release-build.log
+          cp "$RUNNER_TEMP/e02d-release/build.json" e02d-evidence/release-build.json
+          python research/codec/E02D/validate.py run --probe "$RUNNER_TEMP/e02d-release/probe" --prepared e02d-evidence/prepared --output e02d-evidence/first --repeats 5 --seed 20261112 | tee e02d-evidence/first.log
+          python research/codec/E02D/validate.py run --probe "$RUNNER_TEMP/e02d-release/probe" --prepared e02d-evidence/prepared --output e02d-evidence/confirmation --repeats 3 --seed 20261113 | tee e02d-evidence/confirmation.log
+          python research/codec/E02D/validate.py analyze e02d-evidence/first e02d-evidence/confirmation --output e02d-evidence/DECISION.json | tee e02d-evidence/decision.log
+          git diff --exit-code 706cdab65caace2ce698e5dfe4c5dd99e8fcbe00 -- src vendor Makefile benchmark/accept/TARGETS.md research/codec/E02C
+      - name: Hash retained evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path('e02d-evidence');root.mkdir(exist_ok=True)
+          result={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob('*')) if p.is_file() and p.name!='MANIFEST.json'}
+          (root/'MANIFEST.json').write_text(json.dumps(result,indent=2)+'\n')
+          PY
+      - name: Retain success and failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e02d-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: e02d-evidence/
+          retention-days: 14
+          if-no-files-found: error
