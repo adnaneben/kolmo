@@ -1,0 +1,73 @@
+name: E02C numeric representation research
+on:
+  push:
+    branches: [fix/planner-record-ownership-isolated-20261112]
+    paths:
+      - research/codec/E02C/**
+      - .github/workflows/e02c-research.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: e02c-research-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  experiment:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Dependencies and environment
+        run: |
+          set -euo pipefail
+          mkdir -p research-evidence
+          sudo apt-get update && sudo apt-get install -y liblzma-dev zstd clang
+          python -m pip install -r research/codec/E02C/requirements.txt
+          { uname -a; gcc --version; clang --version; zstd --version; gh --version; python -m pip freeze; } > research-evidence/environment.txt
+      - name: Preserve and verify completed baseline evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python research/codec/E02C/baseline_evidence.py --output "$RUNNER_TEMP/e02c-baseline" | tee research-evidence/baseline.log
+          cp "$RUNNER_TEMP/e02c-baseline/receipt.json" research-evidence/baseline-receipt.json
+      - name: Independent packing tests
+        run: |
+          set -euo pipefail
+          gcc -O2 -std=c11 research/codec/E02C/test_packing.c -o /tmp/e02c-packing
+          /tmp/e02c-packing | tee research-evidence/packing.log
+          python research/codec/E02C/test_reference.py | tee research-evidence/reference.log
+      - name: Full-source sanitized research build
+        run: |
+          set -euo pipefail
+          python research/codec/E02C/build.py --output "$RUNNER_TEMP/e02c-asan" --cc clang --sanitize 2>&1 | tee research-evidence/asan.log
+          cp "$RUNNER_TEMP/e02c-asan/build.json" research-evidence/asan-build.json
+          cp "$RUNNER_TEMP/e02c-asan/capture.diff" research-evidence/capture.diff
+      - name: Native release build and measured development matrix
+        run: |
+          set -euo pipefail
+          python research/codec/E02C/build.py --output "$RUNNER_TEMP/e02c-release" --cc gcc 2>&1 | tee research-evidence/build.log
+          cp "$RUNNER_TEMP/e02c-release/build.json" research-evidence/release-build.json
+          python research/codec/E02C/run.py --probe "$RUNNER_TEMP/e02c-release/probe" --output research-evidence/first --repeats 5 | tee research-evidence/first.log
+          python research/codec/E02C/run.py --probe "$RUNNER_TEMP/e02c-release/probe" --output research-evidence/confirmation --repeats 3 | tee research-evidence/confirmation.log
+          python research/codec/E02C/confirm.py research-evidence/first research-evidence/confirmation | tee research-evidence/confirmation-check.json
+          git diff --exit-code -- src vendor Makefile benchmark/accept/TARGETS.md
+      - name: Retain actual evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e02c-research-${{ github.run_id }}-${{ github.run_attempt }}
+          path: research-evidence/
+          retention-days: 14
+          if-no-files-found: error
