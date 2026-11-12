@@ -47,12 +47,13 @@ timing run (runner gates: P2-E3 all inputs × 7 policies, P2-E7 50/50).
 
 ## What is needed next (in order)
 
-1. P2-E11's production-format frames on N1's CLI boundary, decoded by the production CLI: **P2-E12 running**
-   (Actions 43326268053); the N1 owner's exact typed-NPY OpenZL comparator is next in the runner queue.
+1. ~~P2-E11 frames on N1's boundary~~ **done (P2-E12, Actions 43326268053)**: production-format type-first frames,
+   decoded by the unmodified production CLI, fit zstd-3 and are smaller on 9/10 inputs in both runs (best per input
+   −37…−64% on typed columns); production `hc` 0/10. Next in the runner queue: the N1 owner's exact typed-NPY OpenZL comparator.
 2. **Fresh, source-disjoint whole original files**, registered before reading (candidates not referenced anywhere in
    the repository: ESC-50 16-bit WAV clips, FiveThirtyEight data CSVs; fetching them needs approval).
 3. OpenZL typed NPY adapter (N1 owner) to unblock archive mode for arrays.
 4. Small-input cost: per-call fixed costs and a zero-probe guard.
 
-Runner use by this workstream tonight: P2-E3 ~13, P2-E7 ~13, P2-E8 ~19, P2-E10 ~48 minutes, P2-E12 running (N1 ~11 by the
+Runner use by this workstream tonight: P2-E3 ~13, P2-E7 ~13, P2-E8 ~19, P2-E10 ~48, P2-E12 ~11 minutes (N1 ~11 by the
 parallel workstream). Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.
