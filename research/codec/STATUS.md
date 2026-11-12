@@ -10,8 +10,9 @@ there unchanged so the frozen directory stays byte-identical); `E02D/` is the pr
 directory's RESULTS.md): P2-E1 complete-pipeline baseline (production `fast` never inside zstd-3's cost on 20 dev
 inputs); P2-E2 type-first fast integer path, identity-checked against production; **P2-E3 on N1's complete-CLI
 boundary (Actions 43302008497): type-first per-plane Huffman smaller than the zstd-3 CLI and inside its round-trip
-cost on 7/8 typed NPY inputs in both runs, production 0/8**; P2-E4 zero-run leaf; P2-E5/E6 typed CSV; P2-E7
-(typed CSV vs OpenZL csv-9) running. Archive NPY comparison blocked (OpenZL v0.3.0 has no numpy profile). No P2
+cost on 7/8 typed NPY inputs in both runs, production 0/8**; P2-E4 zero-run leaf; P2-E5/E6 typed CSV; P2-E7/E8
+typed CSV vs OpenZL csv-9 (Kolmo smallest within cost on both tables); **P2-E10 on 61 inputs: type-first
+per-plane Huffman fits zstd-3 and is smaller on 43/41, production 0/61**; P2-E11 writes it as production frames. Archive NPY uses OpenZL `le-*` profiles on whole files (exact NPY adapter pending). No P2
 acceptance: development data and research containers (open decision P2-D1).
 
 Updated 2026-11-12. Research only: no default, format, threshold or release change is proposed here.

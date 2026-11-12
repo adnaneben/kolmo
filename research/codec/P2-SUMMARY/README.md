@@ -33,6 +33,10 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
 8. **Archive frontier (P2-E8):** inside OpenZL csv-9's archive cost the smallest pipelines are production `hc`
    (Covertype −41.1%) and `max` (CollegeMsg −30.6%); heavier modes are smaller but over cost at these sizes.
 9. **Fused predictor choice (P2-E9)** is identical to production on 200,000 random arrays and trims small-input cost.
+10. **Broader cohort (P2-E10, 61 inputs, 11 families, Actions 43318087650):** type-first per-plane Huffman fits zstd-3's
+   speed cost and is smaller on 43 / 41 inputs (two runs); **production Kolmo (fast, -q, hc, max) on 0/61**. Archive vs
+   OpenZL's typed `le-*` profile at level 9 on whole files: some Kolmo pipeline is smallest within OpenZL's cost on
+   47/61; OpenZL keeps 14 (GHCN 7/9). The research per-plane best-entropy pipeline wins most often (23 / 25).
 
 ## Correctness evidence behind these claims
 
@@ -43,12 +47,12 @@ timing run (runner gates: P2-E3 all inputs × 7 policies, P2-E7 50/50).
 
 ## What is needed next (in order)
 
-1. Run P2-E11's production-format frames on N1's CLI boundary, decoded by the production CLI (queued behind P2-E10
-   and the N1 owner's typed-NPY OpenZL comparator).
+1. P2-E11's production-format frames on N1's CLI boundary, decoded by the production CLI: **P2-E12 running**
+   (Actions 43326268053); the N1 owner's exact typed-NPY OpenZL comparator is next in the runner queue.
 2. **Fresh, source-disjoint whole original files**, registered before reading (candidates not referenced anywhere in
    the repository: ESC-50 16-bit WAV clips, FiveThirtyEight data CSVs; fetching them needs approval).
 3. OpenZL typed NPY adapter (N1 owner) to unblock archive mode for arrays.
 4. Small-input cost: per-call fixed costs and a zero-probe guard.
 
-Runner use by this workstream tonight: P2-E3 ~13, P2-E7 ~13, P2-E8 ~19 minutes, P2-E10 running (N1 ~11 by the
+Runner use by this workstream tonight: P2-E3 ~13, P2-E7 ~13, P2-E8 ~19, P2-E10 ~48 minutes, P2-E12 running (N1 ~11 by the
 parallel workstream). Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.
