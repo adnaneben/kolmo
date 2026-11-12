@@ -19,3 +19,14 @@ complete-CLI cost once process start-up is included? P2-E13 found both cost-nega
   - Archive (informative): the smallest pipeline inside OpenZL-9's archive cost.
   - No pooled claims. No acceptance: this is development data.
 - Budget: workflow timeout 60 minutes. Expected about 25 runner-minutes.
+
+## Amendment 1 (before any P2-E14 measurement; no runner job had started)
+
+Added two archive-family research policies, encoded by `p2e13 enc` and decoded by the production CLI:
+- `tp_pent`: per-plane rANS leaf (`C_RANS`, chunks aligned to planes, R1 singleton normalisation, P-18) or per-plane
+  Huffman leaf, whichever is smaller.
+- `tp_arch19`: the smallest of `tp_pent`, the production zstd-19 leaves and a whole-input fallback frame.
+
+Locally, `tp_pent` is within 0.1% of P2-E10's archive-most-frequent research container `tf_planes_ent19` on the 20
+development inputs, now as a production frame (`P2-E13/results/archive_sizes.txt`). Archive analysis: the smallest
+pipeline inside OpenZL-9's archive cost on every pair. The workflow timeout was raised to 75 minutes.

@@ -12,18 +12,45 @@
  *                residual (Huffman estimate) vs zstd-3 on a <= 16 KiB residual sample taken evenly from every plane,
  *                extrapolated; prod leaf if its estimate is < 0.97 x the Huffman estimate, else phuf
  * Includes P2-E11's p2e11.c unmodified (entry via a glibc constructor) for the frozen encoders, harness and identity checks.
+ * Archive-family additions (after the first P2-E13 measurement; speed candidates unchanged):
+ *   tp_prans   : no guard -> fi_forward -> residual leaf C_RANS = per-plane p13_rans_compress_all chunks (a chunk never
+ *                spans planes; singleton planes allowed by the R1 normalisation); rest stored
+ *   tp_pent    : no guard -> build phuf and prans leaves, keep the smaller (C_HUF or C_RANS leaf; one codec per leaf)
+ *   tp_arch19  : tp_pent, plus the production zstd-19 leaves (kg_serialize at 19) and a whole-input fallback frame;
+ *                smallest of four
  *   p2e13 run FILE TAG ROUNDS SEED      p2e13 mem FILE CANDIDATE
  *   p2e13 enc CANDIDATE SRC DST         (CLI encoder writing the frame; decode with the production `kolmo -d`;
  *                                        added after the P2-E13 measurement at bcd9795, encoders unchanged) */
-#include "../P2-E11/p2e11.c"   /* its main() is never reached: p2e13 runs from a constructor and exits (as tpcli) */
+#include "../P2-E11/p2e11.c"
+#include "rans1.inc"   /* production rANS encoder + R1 singleton normalisation (gen_rans1.py); production decoder */   /* its main() is never reached: p2e13 runs from a constructor and exits (as tpcli) */
 
 typedef struct { const char *name; int e11; int mode; } c13_t;   /* e11 >= 0: reuse that P2-E11 candidate */
 static const c13_t C13[] = {
     {"zstd3", 0, 0}, {"kolmo_fast", 1, 0}, {"tp_prod3", 2, 0}, {"tp_phuf", 3, 0}, {"tp_phuf_pg16", 4, 0},
     {"tb_best", -1, 1}, {"tb_best_fb", -1, 2}, {"tb_lazy", -1, 3}, {"tb_pick", -1, 4},
+    {"tp_prans", -1, 5}, {"tp_pent", -1, 6}, {"tp_arch19", -1, 7},
 };
 #define N13 ((int)(sizeof C13 / sizeof C13[0]))
 
+/* plane-aligned C_RANS residual leaf, stored rest leaf: tp_payload_phuf's syntax with the codec byte C_RANS */
+static size_t tp_payload_prans(fiprog *P, uint8_t *dst, size_t cap) {
+    kbuf o = {0}; size_t out = 0, zc = P->res.n + P->res.n / 4 + 4096 * (size_t)(P->ow + 1);
+    uint8_t *hb = malloc(zc); if (!hb) return 0;
+    size_t z = 0; int ok = 1, planes = P->pln ? P->ow : 1; size_t plen = P->pln ? P->m : P->res.n;
+    for (int b = 0; b < planes && ok; b++) {
+        size_t r = plen ? p13_rans_compress_all(P->res.p + (size_t)b * plen, plen, hb + z, zc - z) : 0;
+        if (plen && !r) ok = 0; else z += r;
+    }
+    if (!ok || !P->res.n || z >= P->res.n) goto done;               /* caller keeps another leaf */
+    if (kb_byte(&o, 'G') || kb_byte(&o, 1) || kb_uv(&o, 1)
+        || kb_byte(&o, KG_INT) || kb_uv(&o, 1) || kb_uv(&o, 0) || kb_uv(&o, 2) || kb_uv(&o, P->par.n) || kb_put(&o, P->par.p, P->par.n)
+        || kb_uv(&o, 2)
+        || kb_uv(&o, 1) || kb_byte(&o, C_RANS) || kb_uv(&o, P->res.n) || kb_uv(&o, z) || kb_put(&o, hb, z)
+        || kb_uv(&o, 2) || kb_byte(&o, C_STORE) || kb_uv(&o, P->rest.n) || kb_uv(&o, P->rest.n) || kb_put(&o, P->rest.p, P->rest.n)) goto done;
+    if (o.n <= cap) { memcpy(dst, o.p, o.n); out = o.n; }
+done:
+    free(o.p); free(hb); return out;
+}
 static size_t enc13(const uint8_t *src, size_t n, int ci, uint8_t **dst) {
     const c13_t *c = &C13[ci];
     if (c->e11 >= 0) return enc(src, n, c->e11, dst);
@@ -32,7 +59,16 @@ static size_t enc13(const uint8_t *src, size_t n, int ci, uint8_t **dst) {
     if (!f || !pa || !pb) DIE("oom");
     if (!type_of(src, n, &w, &h)) {
         fiprog P; gctx_t gc = {src, n, 3, 16384};
-        if (!fi_forward_g(src, n, w, h, &P, pre_guard, &gc)) {
+        if (c->mode >= 5 && !fi_forward(src, n, w, h, &P)) {             /* archive family: no pre-guard */
+            uint8_t *pc = malloc(cap); size_t best = 0; const uint8_t *bp = NULL;
+            size_t nr = tp_payload_prans(&P, pa, cap);
+            if (nr) { best = nr; bp = pa; }
+            if (c->mode >= 6) { size_t nh = tp_payload_phuf(&P, pb, cap); if (nh && (!best || nh < best)) { best = nh; bp = pb; } }
+            if (c->mode == 7 && pc) { size_t nz = tp_payload_prod(&x, &P, n, 19, pc, cap); if (nz && (!best || nz < best)) { best = nz; bp = pc; } }
+            if (best) fn = tp_wrap(src, n, w, h, bp, best, f);
+            free(pc); fi_free(&P); goto coded;
+        }
+        if (c->mode < 5 && !fi_forward_g(src, n, w, h, &P, pre_guard, &gc)) {
             if (c->mode == 4) {
                 int planes = P.pln ? P.ow : 1; size_t plen = P.pln ? P.m : P.res.n; double hbits = 0, zest = 0;
                 size_t per = planes ? 16384 / (size_t)planes : 0; uint8_t *zb = malloc(ZSTD_compressBound(16384) + 64);
@@ -59,7 +95,7 @@ static size_t enc13(const uint8_t *src, size_t n, int ci, uint8_t **dst) {
     }
 coded:
     codec_ctx_free(&x);
-    if (c->mode == 2) {
+    if (c->mode == 2 || c->mode == 7) {
         uint8_t *g = malloc(cap); size_t gn = g ? tp_fallback(src, n, g, cap) : 0;
         if (gn && (!fn || gn < fn)) { memcpy(f, g, gn); fn = gn; }
         free(g);

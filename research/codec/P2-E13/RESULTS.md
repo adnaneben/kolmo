@@ -41,3 +41,26 @@ same conclusion.
 
 This is development data only, with no acceptance. No new wire semantics: the frames use existing `T_KG`,
 `C_GRAPH`, `C_HUF` and `C_ZSTD` leaves.
+
+## Addendum: production-format per-plane rANS (archive family), still local
+
+`gen_rans1.py` generates `rans1.inc` from the pinned core, using the same single-line transform as the R1 review
+(P-18): a single-symbol chunk gets frequency `RANS_M`. The unchanged production `rans_decompress_all` reads the
+result.
+
+New candidates:
+- `tp_prans`: plane-aligned `C_RANS` residual leaf.
+- `tp_pent`: the smaller of the rANS and Huffman leaves.
+- `tp_arch19`: also tries production zstd-19 leaves and a whole-input fallback.
+
+Correctness: every frame decodes with the production `kolmo -d`. That is 60/60 on the corpus and **360/360 on 120
+random NPY arrays** (constant, two-symbol, walk, ramp and wide arrays), with ASan/UBSan/LSan on the encoder.
+
+Bytes (`results/archive_sizes.txt`):
+- `tp_pent` matches P2-E10's most frequent archive winner, the research container `tf_planes_ent19`, to within
+  0.1% on all 20 inputs, now as a production frame.
+- `tp_arch19` is smaller again where zstd-19's match model helps (`fs_mtime` 53,349 vs 147,554 bytes;
+  `fs_inode` 33,213 vs 53,448 bytes).
+- Production `kolmo -m max` is smaller on most audio, but at a much higher CPU cost.
+
+Archive cost against OpenZL is measured in P2-E14 (amendment 1).

@@ -17,7 +17,7 @@ jobs:
   e3:
     if: github.repository == 'adnaneben/kolmo'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     env:
       OMP_NUM_THREADS: '1'
       OPENBLAS_NUM_THREADS: '1'
@@ -37,7 +37,7 @@ jobs:
           git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
           git rev-parse HEAD > ev/COMMIT.txt
           { uname -a; gcc --version; cmake --version; nproc; lscpu; } > ev/environment.txt
-          sha256sum research/codec/N1-baselines/baselines.py research/codec/P2-E14/run_e14.py research/codec/P2-E14/PROTOCOL.md research/codec/P2-E10/prepare_e10.py research/codec/P2-E13/p2e13.c research/codec/P2-E11/p2e11.c research/codec/P2-E11/tpframe.inc research/codec/P2-E9/fastint9.inc research/codec/P2-E9/fastchoose.inc research/codec/P2-E2/p2e2.c research/codec/P2-E2/fastint.inc research/codec/E02C-harness/harness/e02c.c > ev/source-hashes.txt
+          sha256sum research/codec/N1-baselines/baselines.py research/codec/P2-E14/run_e14.py research/codec/P2-E14/PROTOCOL.md research/codec/P2-E10/prepare_e10.py research/codec/P2-E13/p2e13.c research/codec/P2-E13/rans1.inc research/codec/P2-E11/p2e11.c research/codec/P2-E11/tpframe.inc research/codec/P2-E9/fastint9.inc research/codec/P2-E9/fastchoose.inc research/codec/P2-E2/p2e2.c research/codec/P2-E2/fastint.inc research/codec/E02C-harness/harness/e02c.c > ev/source-hashes.txt
           python -m unittest discover -s research/codec/N1-baselines -p 'test_*.py' 2>&1 | tail -3 | tee ev/unit-tests.log
           sudo apt-get update -qq && sudo apt-get install -y liblzma-dev
       - uses: actions/checkout@v4
@@ -72,7 +72,7 @@ jobs:
           set -euo pipefail
           export ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
           for f in ev/prepared/inputs/*; do
-            for c in tp_phuf tp_phuf_pg16 tp_prod3 tb_best tb_lazy; do build/p2e13-asan enc $c "$f" "$RUNNER_TEMP/x.czn"; build/kolmo -d -T1 "$RUNNER_TEMP/x.czn" "$RUNNER_TEMP/y"; cmp "$f" "$RUNNER_TEMP/y"; echo "asan-ok $(basename $f) $c"; done
+            for c in tp_phuf tp_phuf_pg16 tp_prod3 tb_best tb_lazy tp_pent tp_arch19; do build/p2e13-asan enc $c "$f" "$RUNNER_TEMP/x.czn"; build/kolmo -d -T1 "$RUNNER_TEMP/x.czn" "$RUNNER_TEMP/y"; cmp "$f" "$RUNNER_TEMP/y"; echo "asan-ok $(basename $f) $c"; done
           done > ev/asan.log; grep -c asan-ok ev/asan.log
       - name: Complete CLI comparison and confirmation
         run: |

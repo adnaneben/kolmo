@@ -17,7 +17,8 @@ HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('n1baselines', HERE.parent / 'N1-baselines' / 'baselines.py')
 n1 = importlib.util.module_from_spec(spec); sys.modules['n1baselines'] = n1; spec.loader.exec_module(n1)
 
-RESEARCH = ['tp_phuf', 'tp_phuf_pg16', 'tp_prod3', 'tb_best', 'tb_lazy']   # frozen before any P2-E14 measurement
+RESEARCH = [('tp_phuf', 'speed'), ('tp_phuf_pg16', 'speed'), ('tp_prod3', 'speed'), ('tb_best', 'speed'), ('tb_lazy', 'speed'),
+            ('tp_pent', 'archive'), ('tp_arch19', 'archive')]   # frozen before any P2-E14 measurement (amendment 1 added the archive pair)
 KEEP = {'zstd_3', 'kolmo_fast'}
 _n1_policies, _n1_command = n1.policies, n1.command
 
@@ -25,8 +26,8 @@ _n1_policies, _n1_command = n1.policies, n1.command
 def policies(profile, tools):
     base = _n1_policies(profile, {k: v for k, v in tools.items() if k != 'tb'})
     res = [r for r in base if r['id'] in KEEP or r['id'] == f'openzl_{profile}_9']
-    for cand in RESEARCH:
-        res.append(dict(id=cand, tool='tb', research=True, mode_family='speed', decoder='production kolmo CLI',
+    for cand, fam in RESEARCH:
+        res.append(dict(id=cand, tool='tb', research=True, mode_family=fam, decoder='production kolmo CLI',
                         enc=[tools['tb'], 'enc', cand], dec=[tools['kolmo'], '-d', '-T1']))
     seen, uniq = set(), []
     for r in res:
