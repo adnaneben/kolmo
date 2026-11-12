@@ -1,5 +1,7 @@
 # Codec research status (isolated branch `fix/planner-record-ownership-isolated-20261112`)
 
+**Provisional proposals to revisit later: [`PROVISIONAL.md`](PROVISIONAL.md)** (both workstreams; update entries in place).
+
 Layout: `E02C/` holds the parallel forced-typed E02C implementation, frozen by the E02D preregistration
 (`E02D/PREREGISTRATION.md`); `E02C-harness/` holds the separate production-connected harness and its results (moved
 there unchanged so the frozen directory stays byte-identical); `E02D/` is the preregistered validation.
@@ -20,9 +22,8 @@ Updated 2026-11-12. Research only: no default, format, threshold or release chan
 | E02C parallel forced-typed implementation (`c880659`/`706cdab`: `build.py`, `probe.c`, `run.py`, zstd-1 control) | Executed by the parallel workstream (Actions 43232093686, 43233624953; reported there, not re-checked here): unconditional packing rejected; global/local/patched packing retained only as workload-specific candidates | [`E02C_RESULTS.md`](E02C_RESULTS.md), `E02C/README.md` |
 | Previous result "packing before zstd enlarges" | Reproduced (A real +13–25%, B fast +2.3–7.4% vs existing layout with zstd-3) | `E02C-harness/RESULTS.md` §1 |
 
-Next substantive task: close the per-plane line as a general layout. The remaining hypothesis — per-block
-selection of plane leaves when high residual planes are sparse — is selector work; if pursued, it should be scoped
-together with the parallel E03 selector results and preregistered on fresh sources.
+Next substantive task: X-01 in `PROVISIONAL.md` — reconcile per-plane leaves with E03's costed native baseline on
+one measurement boundary, before any further selector or packing work.
 
 Not started / not authorised: LZ engine, float or JSON codecs, neural selector, transform backlog, default or
 threshold changes, merges, releases.
