@@ -18,7 +18,7 @@ static int e02c_capture_enabled;
 static ec_buf ec_par, ec_res, ec_rest;
 static uint64_t ec_ns(clockid_t id){struct timespec t;if(clock_gettime(id,&t))abort();return (uint64_t)t.tv_sec*1000000000u+(unsigned long)t.tv_nsec;}
 static void ec_u64(uint8_t*p,uint64_t v){for(unsigned j=0;j<8;j++)p[j]=(uint8_t)(v>>(j*8));}
-static uint64_t ec_r64(const uint8_t*p){uint64_t v=0;for(unsigned j=0;j<8;j++)v|=(uint64_t)p[j]<<(8*j);return v;}
+static uint64_t ec_r64(const uint8_t*p){uint64_t v=0;for(unsigned j=0;j<8;j++)v|=(uint64_t)p[j]<<(j*8);return v;}
 static void ec_u32(uint8_t*p,uint32_t v){for(unsigned j=0;j<4;j++)p[j]=(uint8_t)(v>>(j*8));}
 static uint32_t ec_r32(const uint8_t*p){return (uint32_t)p[0]|(uint32_t)p[1]<<8|(uint32_t)p[2]<<16|(uint32_t)p[3]<<24;}
 static void ec_clear_capture(void){ec_free(&ec_par);ec_free(&ec_res);ec_free(&ec_rest);}
@@ -138,8 +138,14 @@ int main(int argc,char**argv){
         printf("{\"type\":\"timing\",\"repeat\":%llu,\"encode_ns\":%llu,\"decode_ns\":%llu,\"encode_cpu_ns\":%llu,\"decode_cpu_ns\":%llu,\"representation_encode_ns\":%llu,\"representation_decode_ns\":%llu}\n",i,(unsigned long long)(t1-t0),(unsigned long long)(t2-t1),(unsigned long long)(cpu1-cpu0),(unsigned long long)(cpu2-cpu1),(unsigned long long)ek,(unsigned long long)dk);
     }
     if(ec_decode(frame.p,frame.n,&decoded,&rep,&dk)||ec_write(argv[8],".frame",frame.p,frame.n)||ec_write(argv[8],".represented",rep.p,rep.n)||ec_write(argv[8],".decoded",decoded.p,decoded.n)||ec_write(argv[8],".params",ec_par.p,ec_par.n)||ec_write(argv[8],".residual",ec_res.p,ec_res.n)||ec_write(argv[8],".rest",ec_rest.p,ec_rest.n))goto done;
+    /* Linux ru_maxrss can retain the Python launcher's pre-exec high water.
+     * /proc/self/status VmHWM belongs to this post-exec memory image. */
     struct rusage ru;if(getrusage(RUSAGE_SELF,&ru))goto done;
+    unsigned long long image_hwm=0;char status_line[256];FILE *status_file=fopen("/proc/self/status","r");
+    if(!status_file)goto done;
+    while(fgets(status_line,sizeof status_line,status_file))if(sscanf(status_line,"VmHWM: %llu kB",&image_hwm)==1)break;
+    if(fclose(status_file)||!image_hwm)goto done;
     unsigned modes[3]={0};if(frame.p[7]==13&&ec_huf_modes(frame.p+64+ec_par.n+ec_rest.n,frame.n-64-ec_par.n-ec_rest.n,modes))goto done;
-    printf("{\"type\":\"summary\",\"input_bytes\":%zu,\"stored_bytes\":%zu,\"residual_bytes\":%zu,\"represented_bytes\":%zu,\"requested_codec\":%llu,\"actual_codec\":%u,\"huf_stored_chunks\":%u,\"huf_rle_chunks\":%u,\"huf_coded_chunks\":%u,\"peak_process_rss_kib\":%ld,\"count_scope\":\"forced_typed_numeric_C_pipeline\"}\n",input.n,frame.n,ec_res.n,rep.n,coder,(unsigned)frame.p[7],modes[0],modes[1],modes[2],ru.ru_maxrss);fail=0;
+    printf("{\"type\":\"summary\",\"input_bytes\":%zu,\"stored_bytes\":%zu,\"residual_bytes\":%zu,\"represented_bytes\":%zu,\"requested_codec\":%llu,\"actual_codec\":%u,\"huf_stored_chunks\":%u,\"huf_rle_chunks\":%u,\"huf_coded_chunks\":%u,\"pre_exec_inclusive_ru_maxrss_kib\":%ld,\"post_exec_image_peak_rss_kib\":%llu,\"count_scope\":\"forced_typed_numeric_C_pipeline\"}\n",input.n,frame.n,ec_res.n,rep.n,coder,(unsigned)frame.p[7],modes[0],modes[1],modes[2],ru.ru_maxrss,image_hwm);fail=0;
  done:ec_free(&input);ec_free(&frame);ec_free(&first);ec_free(&decoded);ec_free(&rep);ec_clear_capture();if(fail)fprintf(stderr,"E02C operation failed\n");return fail;
 }
