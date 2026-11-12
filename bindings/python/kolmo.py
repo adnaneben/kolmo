@@ -84,6 +84,8 @@ def train_dict(samples, dict_cap=112 * 1024):
 def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0, dict=None):  # noqa: A002
     """Compress bytes; returns the compressed bytes. mode: speed|balanced|ratio (advanced: rt|fast|eco|hc|max|ultra).
     transforms: True (analyse and transform), False (codec only) or "quick" (cheap transforms only; fastest).
+    level: 0 = mode default; with mode="ultra", 1 = model 1 only (faster) and 2 = maximum ratio (numeric graph
+    leaves may also use context mixing: smaller integer series, much slower decoding of those blocks).
     Pass dict=<bytes from train_dict> to compress small files against a trained dictionary."""
     if mode not in _MODES:
         raise ValueError("mode must be one of " + ", ".join(_MODES))

@@ -87,6 +87,9 @@ Three modes cover almost every use:
 
 `-x` asks for the smallest output of all (`ultra`): context mixing, very slow, large memory. It was never removed; it
 is left out of the speed benchmarks because it runs at well under 1 MB/s.
+`-x -l 2` goes further for ratio at the cost of decode speed: numeric graph leaves may also use context mixing when
+that is smaller (measured −11% to −15% on integer series such as sensor and ECG samples, about −2% on a mixed
+numeric corpus), and those blocks then decode at context-mixing speed. Plain `-x` is unchanged; any decoder reads both.
 
 Advanced settings, for tuning between the three:
 
@@ -97,7 +100,7 @@ Advanced settings, for tuning between the three:
 | `eco` | 16 MiB | brotli 8 | lowest storage cost at moderate CPU |
 | `hc` | 16 MiB (text 128 MiB) | zstd 19 / 22 | archive with fast reads |
 | `max` | 128 MiB | BWT for text; LZMA2 otherwise, or BWT where it is at least 3% smaller (`-l 1`: BWT only) | cold archive |
-| `ultra` | 128 MiB | best of context mixing, LZMA2, BWT (`-l 1`: context mixing model 1 only, faster) | coldest archive, best ratio |
+| `ultra` | 128 MiB | best of context mixing, LZMA2, BWT (`-l 1`: context mixing model 1 only, faster; `-l 2`: maximum ratio, numeric graph leaves may also use context mixing, slower decode) | coldest archive, best ratio |
 
 `ultra` sizes its context-mixing tables to the block (up to about 4.5 GB per thread for blocks of 4 MiB and more, in
 both directions; 3.8 GB with `-l 1`). On Linux the tables use transparent huge pages. Parallel blocks share a budget of 60% of physical memory and wait rather than swap.
