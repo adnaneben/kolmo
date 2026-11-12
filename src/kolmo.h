@@ -24,8 +24,16 @@ typedef struct {
     int threads;        /* 0 = all cores */
     uint32_t block;     /* bytes per block, 0 = adaptive rt/fast, 16 MiB eco/hc (larger for text), 128 MiB max/ultra */
     int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap
-                           structure transforms (images, records, executables, tables), for the fastest settings */
+                           structure transforms (images, records, executables, tables), for the fastest settings.
+                           May be OR-ed with KOLMO_T_NATIVE_LEAF (below). */
 } kolmo_params;
+
+/* Opt-in bit for kolmo_params.transforms (balanced / KOLMO_FAST only; ignored elsewhere): integer-series residuals in
+ * graph blocks may use Kolmo's native plane-context leaf coder (Huffman/rANS with byte-plane and context modelling)
+ * when it is smaller than the default leaf. Typically 5-12% smaller on sensor, ECG and numeric-column data; those
+ * leaves decode about 1.5x slower than the default rANS leaf (about 3x a zstd leaf). Files that use it are written as
+ * container version 9 and need a kolmo release that reads version 9; files that do not are unchanged. */
+#define KOLMO_T_NATIVE_LEAF 16
 
 #define KOLMO_ERR_CORRUPT   (-1)
 #define KOLMO_ERR_CHECKSUM  (-2)

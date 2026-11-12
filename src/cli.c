@@ -1,4 +1,5 @@
-/* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n|-q] [-D dict] in out
+/* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n|-q] [-D dict] [--native-leaf] in out
+ *                    (--native-leaf: balanced only; native plane-context leaves for integer series, KOLMO_T_NATIVE_LEAF)
  *                    kolmo -s ...                         (streaming: bounded memory, large inputs)
  *                    kolmo -d [-T threads] [-D dict] in out  (auto-detects one-shot vs streamed)
  *                    kolmo -r offset:length in out        (random access read)
@@ -87,7 +88,9 @@ done:
 int main(int argc, char **argv) {
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int speed = 0; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
     char *dictpath = NULL, *trainpath = NULL;
-    int extreme = 0;
+    int extreme = 0, native_leaf = 0;
+    for (int a = 1; a < argc; a++)                           /* long option, removed before getopt sees the arguments */
+        if (!strcmp(argv[a], "--native-leaf")) { native_leaf = 1; for (int b = a; b < argc; b++) argv[b] = argv[b + 1]; argc--; a--; }
     while ((opt = getopt(argc, argv, "m:l:T:B:nqQxdr:sS:D:t:")) != -1) switch (opt) {
         /* three modes: speed, balanced (default), ratio. The older names stay as advanced settings. */
         case 'm': speed = !strcmp(optarg, "speed");
@@ -116,11 +119,15 @@ int main(int argc, char **argv) {
             "  speed     fastest, for data that is read or sent right away\n"
             "  balanced  small and fast; the default\n"
             "  ratio     smallest at practical speed;  -x  smallest of all (very slow, large memory)\n"
+            "  --native-leaf  with balanced: smaller integer series (sensor, ECG, numeric columns) using\n"
+            "            Kolmo's native plane-context leaves; those decode more slowly, and the file needs a\n"
+            "            kolmo that reads container version 9\n"
             "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -Q minimal analysis  -n no transforms\n"
             "          -B blockMiB\n"
             "          -D dict  -t dict samples...  -s|-S segMiB stream  -r off:len read a range\n"); return 2;
     }
     if (extreme) P.mode = KOLMO_ULTRA;
+    if (native_leaf && P.transforms) P.transforms |= KOLMO_T_NATIVE_LEAF;   /* applied by the library at balanced only */
     if (speed && P.transforms == 1) P.transforms = 3;      /* speed: nothing that costs encode time */
 
     /* Training mode: concatenate the sample files given as positional args and write a dictionary. */

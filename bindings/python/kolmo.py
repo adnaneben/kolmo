@@ -81,14 +81,17 @@ def train_dict(samples, dict_cap=112 * 1024):
     n = _check(_lib.kolmo_train_dict(blob, sizes, len(samples), out, dict_cap))
     return out.raw[:n]
 
-def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0, dict=None):  # noqa: A002
+def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0, dict=None, native_leaf=False):  # noqa: A002
     """Compress bytes; returns the compressed bytes. mode: speed|balanced|ratio (advanced: rt|fast|eco|hc|max|ultra).
     transforms: True (analyse and transform), False (codec only) or "quick" (cheap transforms only; fastest).
+    native_leaf: with mode="balanced", integer series may use Kolmo's native plane-context leaves when smaller
+    (sensor/ECG/numeric columns; slower decoding of those leaves; such files are container version 9).
     Pass dict=<bytes from train_dict> to compress small files against a trained dictionary."""
     if mode not in _MODES:
         raise ValueError("mode must be one of " + ", ".join(_MODES))
     data = bytes(data)
-    p = _Params(_MODES[mode], level, threads, block, 2 if transforms == "quick" else 1 if transforms else 0)
+    tr = 2 if transforms == "quick" else 1 if transforms else 0
+    p = _Params(_MODES[mode], level, threads, block, tr | (16 if native_leaf and tr else 0))   # 16 = KOLMO_T_NATIVE_LEAF
     cap = _lib.kolmo_bound(len(data), ctypes.byref(p))
     out = ctypes.create_string_buffer(cap)
     if dict:
