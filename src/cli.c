@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
             "  speed     fastest, for data that is read or sent right away\n"
             "  balanced  small and fast; the default\n"
             "  ratio     smallest at practical speed;  -x  smallest of all (very slow, large memory)\n"
-            "  --native-leaf  with balanced: 5-12% smaller integer series (sensor, ECG, numeric columns) using\n"
+            "  --native-leaf  with balanced: 5-12%% smaller integer series (sensor, ECG, numeric columns) using\n"
             "            Kolmo's native plane-context leaves; such files decode ~1.5-2.6x slower than balanced\n"
             "            and need a kolmo that reads container version 9\n"
             "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -Q minimal analysis  -n no transforms\n"
