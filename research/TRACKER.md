@@ -7,7 +7,7 @@ number that justifies dropping it is in the row). Decision of 12 November 2026.
 Sources: S = session plan, G = the "Kolmo-inspired codec" plan (experiment ids E00 to E10), M = found by measurement.
 Costs and trade-offs of what was done are in `benchmark/accept/REGRESSIONS.md`; this file tracks what was planned.
 
-Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 59 rows. 12 done, 3 dropped, 6 partly done, 37 not done,
+Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 60 rows. 14 done, 6 dropped, 9 partly done, 30 not done,
 1 deferred (the merge).
 
 ## A. Numeric and structured data
@@ -20,11 +20,11 @@ Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 59 rows. 12 done, 3
 | A4 | Integer columns inside containers | M | Done | int64 pickle 129,908 -> 98,236; mixed pickle -8.5% |
 | A5 | Doubles interleaved with other fields (rows of structs) | M | Not done | Finder needs contiguous arrays |
 | A6 | Integers of 2^32 and above inside containers (timestamps) | M | Not done | Probe limited to 2^32 to keep short-mantissa doubles out (ledger decision 9) |
-| A7 | Decimal mapping for float32 | M | Not done | Same idea, 4-byte words; no measurement yet |
-| A8 | Gorilla XOR and bit-plane coding for floats against the byte-plane node | G E03 | Not done | |
-| A9 | Residual packing for integers: frame of reference, bit-packing, patched, Rice, against byte planes | G E02 | Not done | The integer node has gcd, bias and planes only |
-| A10 | Several small entropy contexts per leaf (byte position, sign, exception flag) | G E04 | Not done | Leaves are order-0 Huffman or rANS, or a general coder |
-| A11 | Cross-field prediction (one column from another) | G | Not done | |
+| A7 | Decimal mapping for float32 | M | Done | Same node, 4-byte words (`.npy` tables and arrays inside containers). Four holdout tables as float32: balanced 5.63 -> 2.59 MB, ratio 3.79 -> 2.11 MB; per file -3% to -58% |
+| A8 | Gorilla XOR and bit-plane coding for floats against the byte-plane node | G E03 | Dropped | Six float sets: XOR + planes is 1 to 16% larger than byte planes on tables, noise and weights; 7% smaller on a smooth series, where kolmo's own choice is already smaller still (5.50 against 5.57 MB; a sine: 2.91 against 4.99 MB). XOR bit planes within 1% of XOR byte planes |
+| A9 | Residual packing for integers: frame of reference, bit-packing, patched, Rice, against byte planes | G E02 | Dropped | Five integer sets: the best of Rice, bit-packing and patched packing (ideal parameters per 128 values) is 14% to 10x larger than the integer graph at balanced (timestamps 13,106 against 2,628 bytes; decimals as integers 73,910 against 64,840). They are speed encodings, not size ones |
+| A10 | Several small entropy contexts per leaf (byte position, sign, exception flag) | G E04 | Partly | Position, sign and exception flag are already separate leaves. Measured an order-1 leaf (previous byte of the same plane) on three tables' planes against the balanced coder: 2,284 against 2,182 KB (worse), 343 to 395 against 460 KB (14 to 25% smaller), 89 to 105 against 111 KB (5 to 20% smaller). Left: build an order-1 rANS leaf and let the serializer pick it per leaf |
+| A11 | Cross-field prediction (one column from another) | G | Dropped | Difference from an earlier column: 1 of 144 columns qualifies, 0 bytes. Linear fit on any other column (an optimistic bound, either direction): 0.6%, 0%, 1.0% on three tables, 10.3% on a physics table. Reopen only for tables of physically related quantities |
 | A12 | Segmentation: restart or switch models where the data changes | G E07 | Partly | Per-segment exponents and per-block both-ways coding exist; no general change detector |
 | A13 | DEC64 speed: reuse the trial slice, code leaves once, batch the decode | M | Not done | Encode is 1.7x to 3x, decode 1.2x to 1.9x on those files |
 | A14 | JSON and log structure parsing into streams | G E05 | Partly | Tables, templates and fixed-width lines exist; no JSON key/value split. See D8 for the ultra side |
@@ -65,11 +65,12 @@ Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 59 rows. 12 done, 3
 | D5 | Text model 3 (higher orders, expected byte) | M | Done | JSON -4.4%, prose -3.4%, logs -2.8%, XML -2.5%; about 20% slower |
 | D6 | Match that carries on past an edit | M | Dropped | +0.2% to -0.9% alone; kept inside model 3 at no cost |
 | D7 | Mixer and APM selected by the expected byte | M | Dropped | Within 0.1% on three files |
-| D8 | JSON and XML structure contexts | M | Not done | api.json 37% behind, xml 22% |
-| D9 | Log field contexts | M | Not done | 23% behind |
+| D8 | JSON and XML structure contexts | M | Partly | Key contexts ("key":, key=, tag after <) added to model 3: api.json -1.1%, xml -0.9%. Still 33% and 19% behind. Left: nesting depth, array position, value type |
+| D9 | Log field contexts | M | Partly | Field index and the byte above in the same field added to model 3: logs -2.1%, CSV -4.3%. Logs still 20% behind |
 | D10 | Word and text model (stems, word position, more word orders) | M | Not done | reymont 16% behind, dickens 9% |
 | D11 | Executable model | S | Not done | ooffice 33% behind; mozilla and samba carry most of the published gap |
-| D12 | Two-layer mixing and a chain of APMs | M | Not done | Half of api.json's output is spent where only a short match is active: broad modelling, not one context |
+| D12 | Two-layer mixing and a chain of APMs | M | Not done | Measured on api.json: 72% of the output is spent on the 7% of bytes where the match model's prediction is wrong (2.7 to 3.6 bits each). Paq8px must be about 30% cheaper on exactly those bytes |
+| D20 | Choose the match by longest agreeing context among 16 candidates | M | Done | Offline it looked like half the misses (88% -> 94% right); in the coder, which already keeps a match until it breaks, misses fell 1.4%: api.json -0.8%, xml -1.1%, logs 0. Kept in model 3 |
 | D13 | Re-compress embedded deflate streams | S | Not done | Scan: 3.2 MB of deflate data in mozilla, 0.4 MB in samba; about 1.5 to 2 MB recoverable |
 | D14 | PAQ8PX with and without zlib on mozilla and samba (Mac) | S | Not done | Tells how much of its lead is deflate |
 | D15 | Model 3 on binary blocks | M | Not done | -2.2% on a database file, but three files 0.02 to 0.06% larger than 1.0.1 (ledger decision 13) |

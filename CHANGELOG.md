@@ -89,6 +89,16 @@
 
 ## Unreleased (on main, not tagged)
 
+- **Decimal mapping for float32 (branch `claude/dec64`).** The DEC64 node takes 4-byte words (a per-column flag):
+  binary32 values that were written in decimal are stored as the integer `m` with value = `(float)(m / 10^e)`.
+  `.npy` `<f4` tables and float32 arrays inside containers. Four holdout tables converted to float32: `balanced`
+  5.63 MB → 2.59 MB, `ratio` 3.79 MB → 2.11 MB (per file 3 to 58% smaller). Float64 output is unchanged.
+- **`ultra` model 3: structure contexts and a better match choice.** Five more contexts for text: the key a value
+  belongs to (`"key":`, `key=`, the tag after `<`) and the field of a delimited line with the byte above it in the same
+  field; the match model now takes, of the last 16 places a context was seen, the one that agrees for longest. On
+  top of the first model 3: CSV 4.4% smaller, JSON 2.4%, XML 2.3%, logs 2.0%. Against model 2 in all: JSON 6.7%, CSV
+  5.4%, XML and logs 4.7%, Polish prose 3.4%, English prose 0.3%, at about 35% more time. Model 3 uses about 0.8 GB
+  more memory than model 2, plus 4 bytes per input byte.
 - **`ultra`: context-mixing model 3 for text (branch `claude/dec64`).** Model 2 plus four contexts (orders 12 and 20,
   and the byte the match model expects with orders 1 and 2), finer length classes for long matches, and a match that
   carries on past a one-byte difference. Used for text blocks; binary blocks keep model 2, where model 3 gained

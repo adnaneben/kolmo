@@ -20,7 +20,8 @@ int main(void) {
         /* every other plain array: text of a random length before each column, so the byte alignment keeps changing
          * (as in a pickle or an Arrow file) */
         size_t gap[8] = {0}, gaps = 0; if (!cols && it % 8 == 4) for (size_t c = 0; c < tc; c++) { gap[c] = 1 + rnd() % 90; gaps += gap[c]; }
-        size_t n = h + gaps + rows * tc * 8 + tail; uint8_t *in = malloc(n + 8), *z = malloc(n + 4096), *out = malloc(n + 8);
+        const int f32 = it % 5 == 3; const size_t W = f32 ? 4 : 8;      /* every fifth: binary32 values, 4-byte words */
+        size_t n = h + gaps + rows * tc * W + tail; uint8_t *in = malloc(n + 8), *z = malloc(n + 4096), *out = malloc(n + 8);
         for (size_t i = 0; i < n; i++) in[i] = (uint8_t)('a' + rnd() % 26);
         int ce[512], kind[512]; double lvl[512];
         for (size_t c = 0; c < tc; c++) { ce[c] = (int)(rnd() % 7); kind[c] = (int)(rnd() % 10); lvl[c] = (double)(rnd() % 100000); }
@@ -30,7 +31,7 @@ int main(void) {
             size_t at = cols ? r * tc + c : c * rows + r, shift = 0; double v; uint32_t k = rnd();
             if (!cols) for (size_t j = 0; j <= c; j++) shift += gap[j];
             if (kind[c] == 0) { uint64_t b = (uint64_t)rnd() << 32 | rnd(); memcpy(&v, &b, 8); }           /* arbitrary bits */
-            else if (kind[c] >= 8 && !cols) { int64_t iv = k % 53 == 0 ? (int64_t)((uint64_t)rnd() << 30) - (1ll << 40) : (int64_t)(k % 5000) - 300 + (int64_t)r; memcpy(&v, &iv, 8); }   /* an int64 column */
+            else if (kind[c] >= 8 && !cols && !f32) { int64_t iv = k % 53 == 0 ? (int64_t)((uint64_t)rnd() << 30) - (1ll << 40) : (int64_t)(k % 5000) - 300 + (int64_t)r; memcpy(&v, &iv, 8); }   /* an int64 column */
             else if (kind[c] == 1 && k % 3 == 0) v = NAN;                                                    /* a third missing */
             else if (k % 97 == 0) v = special();
             else {
@@ -39,9 +40,14 @@ int main(void) {
                 v = strtod(buf, NULL);
                 if (kind[c] == 3 && k % 5 == 0) v = v / 3.0;                                                 /* some values not decimal */
             }
-            memcpy(in + h + shift + at * 8, &v, 8);
+            if (f32) {
+                float fv = (float)v; if (kind[c] == 0) { uint32_t b = rnd() << 11 ^ rnd(); memcpy(&fv, &b, 4); }
+                else if (kind[c] != 1 && k % 97 == 0) { static const uint32_t sp[] = {0x80000000u, 0x7f800000u, 0xff800000u, 0x7fc00000u, 0x7fc00001u, 1u, 0x007fffffu, 0x7f7fffffu, 0x3e99999au}; uint32_t b = sp[rnd() % 9]; memcpy(&fv, &b, 4); }
+                else if (kind[c] >= 2) { char buf[64]; snprintf(buf, sizeof buf, "%.*f", ce[c] % 4, (double)((int)(k % 200000) - 100000) / KG_P10[ce[c] % 4]); fv = strtof(buf, NULL); if (kind[c] == 3 && k % 5 == 0) fv /= 3.0f; }
+                memcpy(in + h + shift + at * 4, &fv, 4);
+            } else memcpy(in + h + shift + at * 8, &v, 8);
         }
-        size_t zn = kg_encode_dec64(&cx, C_ZSTD, 3, in, n, cols, h, z, n + 4096);
+        size_t zn = kg_encode_dec64(&cx, C_ZSTD, 3, in, n, cols && f32 ? cols | KG_DEC_F32 : cols, h, z, n + 4096);
         if (!zn) { rejected++; free(in); free(z); free(out); continue; }
         coded++;
         memset(out, 0xA5, n);

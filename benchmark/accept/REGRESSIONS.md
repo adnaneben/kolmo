@@ -59,7 +59,8 @@ noise. CPU time on this VM moves by up to 25% between passes, so a single-pass s
 | mr, osdb at ratio: decode 1.8x to 2x against 1.0.1 (already on main) | 7% and 20% smaller | Block sorting; accepted when it went to main |
 | wide_test.csv at balanced: decode 2.4x against 1.0.1 (already on main) | 43% smaller | Wide-table graph; accepted when it went to main |
 | `ultra` on 8-bit images: 0.5 s -> 5 s for a 0.8 MB photograph (the graph was coded with LZMA2 leaves, the image model runs the mixer) | 12 to 20% smaller; within 2.5 to 5% of paq8px -8, from 17 to 31% | `ultra` is the smallest-output setting and runs the mixer on everything else |
-| `ultra` on text: model 3 is about 20% slower than model 2 (JSON 21 -> 27 s, a 41 MB dictionary 249 -> 295 s on the VM) | 1 to 4.4% smaller on text | `ultra` is the smallest-output setting; binary blocks keep model 2 and its speed |
+| `ultra` on text: model 3 is about 35% slower than model 2 (JSON 27 -> 34 s, a 10 MB novel 66 -> 91 s on the VM) and needs about 0.8 GB more memory plus 4 bytes per input byte (5.3 GB against 4.5 GB at the largest table size) | 0.3 to 6.7% smaller on text (JSON 6.7%, CSV 5.4%, XML and logs 4.7%) | `ultra` is the smallest-output setting; binary blocks keep model 2, its speed and its memory |
+| Decimal float32 files: the same encode and decode costs as the float64 form | 3 to 58% smaller (four tables: 5.63 -> 2.59 MB at balanced) | Same trade as float64 |
 | `ratio` on 8-bit images: the image graph is coded twice (LZMA2 and block-sorted leaves) | 5 to 6% smaller on colour photographs | Small blocks; time not yet measured per file |
 | Files using the new graph node or the fixed-width transform need this version | the gains above | Older readers stop with a clear error; no silent misread |
 | Speed mode skips the table transform | CSV-like files up to 4x larger than balanced | Measured: the transform costs 2.3x encode and decode and would lose the win over lz4 -1 |
@@ -101,6 +102,12 @@ x1.055 x1.115; balanced x1.129 x1.031 x1.063; hc x1.107 x1.167 x1.045; ratio x1.
 23 files: 33.05 MB against 34.38 MB (3.9% smaller in total; per-file mean now 3% behind, from 5%). The run of 486655e
 before it showed four unchanged outputs 6 to 8% slower to decode and ratio encode at x0.949; the first did not repeat
 (noise), the second was the ungated both-ways coding that 93d4866 fixed.
+
+## Process note 2
+
+A context-mixing run hung for an hour on 12 November: the match chain was reserved from the memory budget after the
+model's tables, and when the two together passed the budget the reservation waited for memory that only the same
+thread could release. Caught on a 10 MB file before any commit; the reservation is now made once, for both.
 
 ## Process note
 

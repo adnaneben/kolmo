@@ -1679,19 +1679,23 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
 /* Binary64 values that were written in decimal (DEC64). A row-major .npy '<f8' table gives its row length; any other
  * data is tried as a plain array of doubles when a spread sample of 8-byte words is nearly all decimal or one repeated
  * pattern (missing values). *bcols: values per row, or 0 for a plain array. */
+/* plan byte and row bytes for a DEC64 plan from the trial's column count: 64 a binary64 table, 65 segments, 66 a binary32 table */
+#define DEC_B(dc) (!(dc) ? 65 : ((dc) & KG_DEC_F32) ? 66 : 64)
+#define DEC_KGW(dc) (!(dc) ? 8u : ((dc) & KG_DEC_F32) ? (uint32_t)((dc) & ~KG_DEC_F32) * 4u : (uint32_t)(dc) * 8u)
 static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, uint32_t *bcols, size_t *bh) {
-    double best = 1e300; size_t h = 0, cols = 0;
+    double best = 1e300; size_t h = 0, cols = 0, tw = 8; int f32 = 0;
     if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
         size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
         const uint8_t *d = hl <= n ? memmem(s, hl, "'descr': '", 10) : NULL;
-        if (!d || d + 13 > s + hl || d[10] != '<' || d[11] != 'f' || d[12] != '8') return best;
-        h = hl;
+        if (!d || d + 13 > s + hl || d[10] != '<' || d[11] != 'f' || (d[12] != '8' && d[12] != '4')) return best;
+        h = hl; f32 = d[12] == '4'; tw = f32 ? 4 : 8;
         if (n >= h + 4096) {                                 /* 64 values across the array: a quarter must be decimal or NaN */
-            size_t words = (n - h) / 8, ok = 0;
+            size_t words = (n - h) / tw, ok = 0;
             for (size_t q = 0; q < 64; q++) {
-                uint64_t bits = get64(s + h + (size_t)((uint64_t)q * words / 64) * 8); int64_t m; int e = 0;
-                while (e < KG_DEC_ESEARCH && !kg_dec_fit(bits, KG_P10[e], &m)) e++;
-                ok += e < KG_DEC_ESEARCH || (bits & 0x7ff0000000000000ull) == 0x7ff0000000000000ull;
+                const uint8_t *wp = s + h + (size_t)((uint64_t)q * words / 64) * tw; int64_t m; int e = 0;
+                if (f32) { uint32_t bits = get32(wp); while (e < 8 && !kg_dec_fit32(bits, KG_P10[e], &m)) e++; ok += e < 8 || (bits & 0x7f800000u) == 0x7f800000u; }
+                else { uint64_t bits = get64(wp); while (e < KG_DEC_ESEARCH && !kg_dec_fit(bits, KG_P10[e], &m)) e++;
+                       ok += e < KG_DEC_ESEARCH || (bits & 0x7ff0000000000000ull) == 0x7ff0000000000000ull; }
             }
             if (ok < 16) return best;
         }
@@ -1703,7 +1707,7 @@ static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
                 else if (*q == ',') { if (nd++ && dig) { prod *= dim; if (prod > 65536) ok = 0; } dim = 0; dig = 0; }
             }
             if (dig && nd) { prod *= dim; if (prod > 65536) ok = 0; }
-            if (ok && prod >= 2 && (n - h) / 8 / prod >= 16) cols = (size_t)prod;
+            if (ok && prod >= 2 && (n - h) / tw / prod >= 16) cols = (size_t)prod;
         }
     } else {
         /* arrays inside other data (a raw dump, pickle, Arrow, HDF5: headers, then columns at any byte alignment):
@@ -1714,13 +1718,14 @@ static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
         if (hits < 16) return best;
     }
     if (n < h + 512) return best;
-    const size_t rb = cols ? cols * 8 : 8;
+    const size_t rb = cols ? cols * tw : 8;
     if (st < h) st = h;
     size_t a = h + (st - h) / rb * rb, l = (n - a < L ? n - a : L) / rb * rb;
     if (l < 16 * rb || l < 512) { a = h; l = (n - h < L ? n - h : L) / rb * rb; if (l < 512) return best; }
     codec_ctx cx = {0}; uint8_t *o = malloc(l + 64);
-    size_t z = o ? kg_encode_dec64(&cx, C_ZSTD, zl, s + a, l, cols, 0, o, l + 64) : 0;
-    if (z) { best = (double)z / l; *bcols = (uint32_t)cols; *bh = h; }
+    const size_t ca = cols && f32 ? cols | KG_DEC_F32 : cols;      /* a binary32 table carries the flag in its column count */
+    size_t z = o ? kg_encode_dec64(&cx, C_ZSTD, zl, s + a, l, ca, 0, o, l + 64) : 0;
+    if (z) { best = (double)z / l; *bcols = (uint32_t)ca; *bh = h; }
     free(o); codec_ctx_free(&cx);
     return best;
 }
@@ -2107,7 +2112,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
             { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, st, L, zl, &dc, &dh);     /* decimal doubles: decode is slower than the other graphs, so it must win by 7% */
               d64c = c; d64cols = dc; d64h = dh;
-              if (c < best * 0.93) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = dc ? 64 : 65; keep.c = (int)dh; keep.kgw = dc ? dc * 8 : 8; chosen = 8; } }
+              if (c < best * 0.93) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = DEC_B(dc); keep.c = (int)dh; keep.kgw = DEC_KGW(dc); chosen = 8; } }
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt2 = prof_now();
 #endif
@@ -2140,7 +2145,7 @@ structured_done:
              * that also beat plain coding on the slice: segments follow the arrays wherever they sit */
             if (keep.verify && chosen != 8 && d64c < plain * CZ_STRUCT_GAIN_PCT / 100.0) {
                 if (keep.rec != pl.rec) free(keep.rec);
-                keep = pl; keep.t = T_KG; keep.a = 0; keep.b = d64cols ? 64 : 65; keep.c = (int)d64h; keep.kgw = d64cols ? d64cols * 8 : 8; keep.verify = 1; chosen = 8;
+                keep = pl; keep.t = T_KG; keep.a = 0; keep.b = DEC_B(d64cols); keep.c = (int)d64h; keep.kgw = DEC_KGW(d64cols); keep.verify = 1; chosen = 8;
             }
         }
         if (chosen >= 2) pl = keep;
@@ -2170,7 +2175,7 @@ structured_done:
             w = 0; hh = 0; c = kg_float_trial(s, n, 0, n, zl, plain, &w, &hh);
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w | 16; pl.c = (int)hh; }
             { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, 0, n, zl, &dc, &dh);
-              if (c < best * 0.93) { best = c; pl.t = T_KG; pl.a = 0; pl.b = dc ? 64 : 65; pl.c = (int)dh; pl.kgw = dc ? dc * 8 : 8; } }
+              if (c < best * 0.93) { best = c; pl.t = T_KG; pl.a = 0; pl.b = DEC_B(dc); pl.c = (int)dh; pl.kgw = DEC_KGW(dc); } }
             size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, 0, n, zl, 1e300, &iw, &ic, &ih);
             if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = 32 | (int)ic; pl.c = (int)ih; pl.kgw = (uint32_t)iw; }
         }
@@ -2412,7 +2417,7 @@ static void *compress_worker(void *arg) {
             int kgc = codec == C_LZMA && pl.a ? C_BSC : codec, kgl = kgc != codec ? 9 : level;
             cl = pl.a ? kg_encode_table(xp, kgc, kgl, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
                       : pl.b & 32 ? kg_encode_img8(xp, kgc, kgl, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
-                      : pl.b & 64 ? kg_encode_dec64(xp, kgc, kgl, raw, len, pl.b & 1 ? 0 : pl.kgw / 8, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
+                      : pl.b & 64 ? kg_encode_dec64(xp, kgc, kgl, raw, len, pl.b & 1 ? 0 : pl.b & 2 ? (pl.kgw / 4) | KG_DEC_F32 : pl.kgw / 8, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 16 ? kg_encode_float(xp, kgc, kgl, raw, len, pl.b & 15, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : kg_encode_num(xp, kgc, kgl, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
             if (cl && (pl.b & 32) && !pl.a && (codec == C_LZMA || codec == C_CM)) {
