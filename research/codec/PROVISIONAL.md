@@ -49,7 +49,7 @@ source-disjoint data, and release decisions need an audited holdout (see D-01).
 
 | ID | Combination | Status |
 |---|---|---|
-| ST-1 | Per-plane leaves + sparse-leaf guard (P-01 × P-03) | **Amplifier shown on development data** (guard alone 0; with planes, typed +4.48% → −0.80%). Next: validate (E02G), with ST-2 as phenotype |
+| ST-1 | Per-plane leaves + sparse-leaf guard (P-01 × P-03) | **Amplifier shown on development data** (guard alone 0; with planes, typed +4.48% → −0.80%). **E02G preregistered** (Backblaze, OWID; EEG and single-byte controls) |
 | ST-2 | Per-plane leaves gated by KG_INT parameters (order 0 or width ≥ 4) | **Context amplification observed** (−7% to −15% vs −0.1% to −4% for dense 2-byte residuals); use as eligibility, not as a size gate |
 | ST-3 | Entropy-only planes + aligned chunks + singleton rANS | Owned by R2-stack |
 | ST-4 | Per-plane layout + per-file coder or packing choice | Offline ceiling −2.6% to −7.2% (fast); test after R2-stack with a cheap gate |
@@ -61,7 +61,7 @@ source-disjoint data, and release decisions need an audited holdout (see D-01).
 |---|---|---|---|
 | X-01 | **Reconcile per-plane leaves with E03's costed native baseline** | **Done** (`E02C-harness/X01.md`, analysis of committed records) | Per-plane beats the native baseline in every multi-byte family; the narrow 'sparse planes' result applies only against zstd. Decode-only timing is still owed (R2) |
 | D-01 | **UCI 235 (household power) is in the release holdout** (`benchmark/holdout/inputs.json`) and was used by E02D and E03 | **Open; owner decision** | E02D/E03 household results are measured evidence, not pristine validation (acknowledged in `E03_RESULTS.md`). Decide whether that holdout entry must be replaced before any release decision |
-| D-02 | **Observed corpora** (exclude from future validation): E02C-harness development corpus; parallel E02C (digits, Gapminder, Nile, sunspots); E02D (UCI 235, 492, 275, 374); E02E (GHCN-Daily USW00094728/USW00023174/USW00014739, MIT-BIH 100/101/200/201); E02F (eegmmidb S001–S004 R01, Wikimedia pageviews for 8 articles, FSDD) | **Standing** | Check new registrations against this list and against `benchmark/` manifests |
+| D-02 | **Observed corpora** (exclude from future validation): E02C-harness development corpus; parallel E02C (digits, Gapminder, Nile, sunspots); E02D (UCI 235, 492, 275, 374); E02E (GHCN-Daily USW00094728/USW00023174/USW00014739, MIT-BIH 100/101/200/201); E02F (eegmmidb S001–S004 R01, Wikimedia pageviews for 8 articles, FSDD) | **Standing.** Reserved for E02G (observed once it runs): Backblaze Q1 2023, OWID COVID-19, eegmmidb S005–S008. Also exposed via `benchmark/frontier/protocol.md`: NYC TLC yellow taxi, GH Archive | Check new registrations against this list and against `benchmark/` manifests |
 | D-03 | **E02F's decode rule** (per input byte) was set after seeing E02E | **Disclosed** | Did not decide any E02F outcome; keep the disclosure if the rule is reused |
 | D-04 | **Terminology clash**: "local byte planes" in E02C/E02D (per-128-value width-rounded planes, a packing control) ≠ "planes" in E02C-harness/E02E/E02F (one leaf per residual byte plane) | **Standing** | Never pool or cross-cite their numbers as the same thing |
 | D-05 | **No CI runs the E02C-harness self-check** (only the E02E/E02F validation workflows build it) | **Open** | Add a research CI job if the harness keeps changing |

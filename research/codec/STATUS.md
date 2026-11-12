@@ -28,8 +28,11 @@ multi-byte family (−1.7% to −18.5%); its narrow result applies only against 
 R2 is owned by the parallel workstream (`R2-stack/PROTOCOL.md`). Stacking map: [`STACKING.md`](STACKING.md) — ST-1
 (per-plane leaves + sparse-leaf guard) shows a development amplifier.
 
-Next substantive task: preregister E02G — validation of the frozen stacked pipeline (per-plane leaves + guard, with the
-KG_INT-parameter phenotype) on fresh, large count/telemetry/timestamp sources plus dense non-target controls.
+E02G preregistered (`E02G/PREREGISTRATION.md`): validation of the stacked pipeline (per-plane leaves + sparse-leaf guard,
+KG_INT-parameter phenotype) on Backblaze drive stats and OWID COVID counts, with dense EEG and single-byte controls.
+It consumes those sources; the native-compatible validation proposed by R2-stack must use others.
+
+Next substantive task: execute E02G as registered (`.github/workflows/e02g-validation.yml`) and record its decision.
 
 Not started / not authorised: LZ engine, float or JSON codecs, neural selector, transform backlog, default or
 threshold changes, merges, releases.
