@@ -125,7 +125,7 @@ def main(raw, out, manifest=None):
     rows = []
     for k in sorted(frB):
         if not frB[k]['int_blocks']: continue
-        rows.append([k[0], k[1], man[k[0]]['origin'], frB[k]['frame']] + [f'{100 * (totB[k][cf] / frB[k]['frame'] - 1):+.2f}%' for cf in cand])
+        rows.append([k[0], k[1], man[k[0]]['origin'], frB[k]['frame']] + [f"{100 * (totB[k][cf] / frB[k]['frame'] - 1):+.2f}%" for cf in cand])
     table('Regime B per input with INT blocks: complete-input change vs production frame', ['input', 'mode', 'origin', 'production frame'] + cand, rows)
     rows = []
     for n in sorted(capA):
