@@ -12,7 +12,9 @@
  *                residual (Huffman estimate) vs zstd-3 on a <= 16 KiB residual sample taken evenly from every plane,
  *                extrapolated; prod leaf if its estimate is < 0.97 x the Huffman estimate, else phuf
  * Includes P2-E11's p2e11.c unmodified (entry via a glibc constructor) for the frozen encoders, harness and identity checks.
- *   p2e13 run FILE TAG ROUNDS SEED      p2e13 mem FILE CANDIDATE */
+ *   p2e13 run FILE TAG ROUNDS SEED      p2e13 mem FILE CANDIDATE
+ *   p2e13 enc CANDIDATE SRC DST         (CLI encoder writing the frame; decode with the production `kolmo -d`;
+ *                                        added after the P2-E13 measurement at bcd9795, encoders unchanged) */
 #include "../P2-E11/p2e11.c"   /* its main() is never reached: p2e13 runs from a constructor and exits (as tpcli) */
 
 typedef struct { const char *name; int e11; int mode; } c13_t;   /* e11 >= 0: reuse that P2-E11 candidate */
@@ -74,6 +76,15 @@ static int dec13(const uint8_t *f, size_t fn, int ci, uint8_t *out, size_t n) {
 static int p2e13_main(int argc, char **argv);
 __attribute__((constructor)) static void p2e13_entry(int argc, char **argv, char **envp) { (void)envp; exit(p2e13_main(argc, argv)); }
 static int p2e13_main(int argc, char **argv) {
+    if (argc == 5 && !strcmp(argv[1], "enc")) {
+        int ci = -1; for (int c = 0; c < N13; c++) if (!strcmp(argv[2], C13[c].name) && (C13[c].e11 < 0 || CAND[C13[c].e11].kind == 'P')) ci = c;
+        if (ci < 0) DIE("p2e13 enc: unknown frame candidate %s", argv[2]);
+        for (int c = 0; c < NC; c++) CONF[c] = -1;
+        size_t n; uint8_t *src = readfile(argv[3], &n); if (!src || !n) DIE("p2e13 enc: cannot read %s", argv[3]);
+        uint8_t *f; size_t fn = enc13(src, n, ci, &f); FILE *o = fopen(argv[4], "wb");
+        if (!o || fwrite(f, 1, fn, o) != fn || fclose(o)) DIE("p2e13 enc: write failed");
+        free(f); free(src); return 0;
+    }
     if (argc < 4) DIE("usage: p2e13 run FILE TAG ROUNDS SEED | p2e13 mem FILE CANDIDATE");
     for (int c = 0; c < NC; c++) CONF[c] = -1;
     size_t n; uint8_t *src = readfile(argv[2], &n); if (!src || !n) DIE("read");
