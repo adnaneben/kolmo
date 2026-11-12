@@ -9,7 +9,8 @@ same direction: unconditional packing rejected, packing kept only for narrow wor
 **Outcome: negative for every fixed packing representation; marginal for a charged per-block selector that needs zstd.
 Follow-up (§8): the existing rANS failure is its single-symbol rejection, and one stream per byte plane coded with
 zstd -3 (`planes+zstd3`) is the only fixed configuration smaller than production fast (−0.37%) — a layout finding, not a
-packing one.**
+packing one. Follow-up 2 (§9), level-matched with production's own leaf rule: per-plane leaves are −1.94% (fast) and
+−0.64% (hc) on files with INT blocks, at equal decode speed.**
 No representation/backend combination, used unconditionally, stored fewer complete-input bytes than unmodified Kolmo
 on the real development inputs in either regime. A size selector over all five representations with the zstd -3
 control saved 0.20% (fast planner, real inputs) at roughly 1.5× encode time. The earlier result is reproduced:
@@ -220,3 +221,50 @@ authority and not covered by the source-identity gate. It is recorded as a hypot
 **Next substantive task.** A level-matched test of per-plane leaves: add zstd -19 (and production's own leaf choice
 rule) as per-plane backends, re-run regimes A and B, and include the larger source-disjoint real integer data the
 parallel report calls for, to decide whether a per-plane KG_INT leaf layout earns a format-change proposal.
+
+## 9. Follow-up 2: level-matched per-plane leaves with production's own leaf rule
+
+Run 3 (same corpus, seed and repetitions; harness `00500f4`; production `2f3308a` unchanged; records in
+`results-followup2/`). New configurations: `exist|planes + zstd19` and `exist|planes + prod3|prod19`. The `prod`
+backends pass the streams to the **unchanged `kg_serialize`** as leaves, so every stream gets production's exact leaf
+decision at zstd level 3 (fast) or 19 (hc). Calibration: `exist+prod3` reproduces the production fast frames and
+`exist+prod19` the hc frames to within the 13-byte experimental framing (+0.02% in aggregate). All sizes from the
+earlier runs (1,120 and 1,435 records) were reproduced exactly.
+
+| complete planner, real inputs | files with INT blocks: production | per-plane, production rule, same level | all 17 real inputs |
+|---|---|---|---|
+| fast (zstd 3) | 898,742 B | 881,295 B (**−1.94%**, 9 of 12 smaller) | −0.55% |
+| hc (zstd 19) | 551,671 B | 548,150 B (**−0.64%**, 6 of 8 smaller) | −0.14% |
+
+Per file, fast: −0.31% to −6.66% on nine files; +0.06% on mri and fs_inode; +3.37% (+11 B) on the 326-byte goog_date.
+hc: −0.12% to −4.44% on six; +0.06% (mri), +3.82% (+10 B, goog_date).
+
+| cost (complete planner) | production | per-plane, production rule |
+|---|---|---|
+| fast decode, sequential (12 files) | 7.05 ms | 7.15 ms (+1.4%) |
+| hc decode, sequential (8 files) | 4.70 ms | 4.75 ms (+1.1%) |
+| residual leaf encode, kernel, fast / hc | 17.2 / 296 ms | 16.2 / 370 ms (−6% / +25%: more zstd -19 frames) |
+| full decode peak memory, median (fast) | 438 KiB | 508 KiB |
+
+**Typed regime caveat — a production heuristic misfire, not a layout cost.** In regime A `planes+prod3` is +4.48% in
+aggregate although 13 of 17 inputs are smaller. All of it is one input: on `audio_concat` (6.0 MB residual, ow 4) the
+per-plane layout is +166 KB. A diagnostic outside the harness shows plain zstd -3 per plane costs only +0.3% there
+(1,689,273 vs 1,684,176 B). The loss comes from production's fast leaf rule for leaves ≥ 256 KiB, which picks
+Huffman-only from three 32 KiB samples. For the nearly empty third plane those samples favour Huffman, which cannot go
+below 1 bit per byte: 164,040 B where zstd needs 2,996 B. The same rule can misjudge any large, sparse leaf in
+production today. This is recorded as an observation; no production change is made or proposed here. At zstd -19,
+where the rule has no sampling shortcut, regime A per-plane is −0.27% versus the existing layout.
+
+**Decisions added**
+
+| item | decision |
+|---|---|
+| per-plane KG_INT residual leaves (production leaf rule) | **Keep for integration research.** Smaller in both modes level-matched (−1.94% fast, −0.64% hc on INT files), decode within ~1.5%, no selector. Requires (a) a separately reviewed KG format change (new node or INT flag; no existing node splits a stream), (b) a guard for the fast sampling misfire on sparse planes, (c) validation on larger source-disjoint data; development gains of 0.1–2% are not a general result |
+| fast leaf rule's Huffman-only sampling on sparse ≥ 256 KiB leaves | **Observation for a separate production review** (not changed here) |
+| fixed zstd -19 per stream in fast mode | Out of scope: −6% in fast mode is a level change (fast is level 3 by design), not a layout effect |
+
+**Next substantive task.** Pre-register and run the per-plane-leaf validation on larger, source-disjoint real integer and
+telemetry data (the data the parallel report also calls for): `exist+prod` against `planes+prod` at both levels, plus a
+variant with a sparse-plane guard on the fast sampling rule, with complete-planner reconstruction, and no tuning on that
+data. It needs network access or attached datasets, which this session did not have.
+

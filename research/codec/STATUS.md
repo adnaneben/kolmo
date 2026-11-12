@@ -5,14 +5,15 @@ Updated 2026-11-12. Research only: no default, format, threshold or release chan
 | Item | State | Evidence |
 |---|---|---|
 | Planner record-ownership repair | Committed at `2f3308a` (`src/kolmo.c` `e06467c8…`); focused validator re-run locally and passed; CI runs 43187874283 / 43187874421 / 43187874238 reported successful (also recorded in `E02C/BASELINE.md`) but their artifacts were **not verified in this session** (no GitHub API access) | [`E02C/BASELINE_EVIDENCE.md`](E02C/BASELINE_EVIDENCE.md) |
+| E02C follow-up 2: level-matched per-plane leaves (production leaf rule) | **Complete.** −1.94% (fast) / −0.64% (hc) on files with INT blocks, decode within ~1.5%; kept for integration research pending a format-change review, a sparse-plane guard and larger validation. Found: the fast leaf rule's sampling can choose Huffman-only for sparse large leaves (164 KB vs 3 KB on one plane) | [`E02C/RESULTS.md`](E02C/RESULTS.md) §9 |
 | E02C follow-up: plane-aware controls | **Complete.** One leaf per residual byte plane with zstd -3 is −0.37% (fast) / −0.58% (typed) with equal encode, +3.6% decode — the only selector-free gain; best entropy-only per plane +1.19% (fast). Existing rANS fails on single-symbol chunks. Per-plane leaves would need a KG format change (not proposed here) | [`E02C/RESULTS.md`](E02C/RESULTS.md) §8 |
 | E02C residual representations (global/local bitpacking, global/local patched packing × stored/Huffman/rANS/zstd-3) | **Complete — negative.** No fixed combination beats unmodified Kolmo on real development data; a charged zstd-3 selector saves 0.20% (fast) at ~1.5× encode. GBP, LBP, fixed GPP/LPP rejected; LPP/GPP kept only as selector candidates; sel+zstd3 kept only for a size-oriented profile study | [`E02C/RESULTS.md`](E02C/RESULTS.md) |
 | E02C experimental C checks (this harness) | ASan/UBSan/LSan selftest, golden vectors (two builds) and independent Python reference passed locally (clean worktree of `41bcc96`, re-checked on the rebased tree); **no CI job runs them** — `e02c-research.yml` builds only the parallel implementation | `make -f research/codec/E02C/Makefile check` |
 | E02C parallel forced-typed implementation (`c880659`/`706cdab`: `build.py`, `probe.c`, `run.py`, zstd-1 control) | Executed by the parallel workstream (Actions 43232093686, 43233624953; reported there, not re-checked here): unconditional packing rejected; global/local/patched packing retained only as workload-specific candidates | [`E02C_RESULTS.md`](E02C_RESULTS.md), `E02C/README.md` |
 | Previous result "packing before zstd enlarges" | Reproduced (A real +13–25%, B fast +2.3–7.4% vs existing layout with zstd-3) | `E02C/RESULTS.md` §1 |
 
-Next substantive task: level-matched (zstd -19 and production leaf rule) test of per-plane KG_INT leaves in both regimes,
-on larger source-disjoint real integer data, to decide whether a per-plane leaf layout earns a format-change proposal.
+Next substantive task: pre-registered validation of per-plane KG_INT leaves (production leaf rule, both levels, plus a
+sparse-plane sampling guard) on larger source-disjoint real integer/telemetry data. Needs network access or attached data.
 
 Not started / not authorised: LZ engine, float or JSON codecs, neural selector, transform backlog, default or
 threshold changes, merges, releases.
