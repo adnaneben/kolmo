@@ -37,9 +37,14 @@ mode cells (−0.67% to −2.00%), each mode misses one large-file decode-ratio 
 the guard amplifier reproduced on fresh data. See `E02G/RESULTS.md`. The parallel R3-guard validation uses UCI
 Covertype and SNAP CollegeMsg (disjoint from E02G).
 
-Next substantive task: noise-controlled, decode-only timing of the exact E02G frames (identical-frame controls,
-warm/displaced regimes, family-level uncertainty), as verification of whether the two decode misses are real. It
-cannot change E02G's registered verdict; a fresh validation would be needed for that.
+E02G-verify executed (Actions 43280075566): decode-only, noise-controlled timing of the identical E02G frames.
+Both decode misses are **reproduced** in warm and cache-displaced regimes (Backblaze fast 1.087× / 1.090×, OWID hc
+1.198× / 1.206×; identical-frame noise bands within ±6%). The cost is concentrated in a few files and not proportional
+to size gain (hc EEG 1.33× for ≤ 0.10%). E02G's verdict is unchanged. See `E02G-verify/RESULTS.md`.
+
+Next substantive task: on development data only, attribute decode time per leaf (coder and leaf count per plane),
+then specify a gain-per-decode-cost gate for per-plane leaves (ST-2 as a decode gate). Validate it only on fresh,
+preregistered sources.
 
 Not started / not authorised: LZ engine, float or JSON codecs, neural selector, transform backlog, default or
 threshold changes, merges, releases.

@@ -49,7 +49,7 @@ source-disjoint data, and release decisions need an audited holdout (see D-01).
 
 | ID | Combination | Status |
 |---|---|---|
-| ST-1 | Per-plane leaves + sparse-leaf guard (P-01 × P-03) | **E02G: provisional in both modes; size met in both target families** (fast −1.51% / −0.67%, hc −1.17% / −2.00%); one decode-ratio miss per mode (1.075×, 1.18×). Guard amplifier reproduced on fresh data (EEG +6.9%/+14.4% → 0.00%). Next: noise-controlled decode-only timing of the E02G frames |
+| ST-1 | Per-plane leaves + sparse-leaf guard (P-01 × P-03) | **E02G: provisional in both modes; size met in both target families** (fast −1.51% / −0.67%, hc −1.17% / −2.00%); one decode-ratio miss per mode (1.075×, 1.18×). Guard amplifier reproduced on fresh data (EEG +6.9%/+14.4% → 0.00%). **E02G-verify: both decode misses reproduced** (1.09× fast, 1.20× hc, outside identical-frame noise); cost concentrated in few files, not proportional to gain. Revise when a decode-cost gate (ST-2) is validated |
 | ST-2 | Per-plane leaves gated by KG_INT parameters (order 0 or width ≥ 4) | Context amplification observed in development; used as E02G eligibility. E02G adds a decode reason for an encoder-side gate: ineligible dense EEG would cost +33% hc decode for ≈ 0 size |
 | ST-3 | Entropy-only planes + aligned chunks + singleton rANS | Owned by R2-stack |
 | ST-4 | Per-plane layout + per-file coder or packing choice | Offline ceiling −2.6% to −7.2% (fast); test after R2-stack with a cheap gate |
