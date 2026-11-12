@@ -1,0 +1,40 @@
+{
+ "split": "development (derived from observed E02C inputs)",
+ "inputs": [
+  {
+   "name": "fs_table.csv",
+   "rows": 150686,
+   "columns": 3,
+   "bytes": 4725868,
+   "sha256": "6733d7ec1011bb469fafdd09bc03f79b6a91444f01aee3d8af8ad29633d916fc"
+  },
+  {
+   "name": "goog_table.csv",
+   "rows": 1047,
+   "columns": 2,
+   "bytes": 14898,
+   "sha256": "eaa545ad53c4410c15b9972a2fe6813305447591cc6c368382fa5c336c03a64d"
+  },
+  {
+   "name": "syn_table.csv",
+   "rows": 300000,
+   "columns": 3,
+   "bytes": 3061427,
+   "sha256": "b886f17ae36926127e2c8d142dc62b18369bcb649b8b596d2288ab4931142f98"
+  },
+  {
+   "name": "mri_rows.csv",
+   "rows": 256,
+   "columns": 256,
+   "bytes": 172078,
+   "sha256": "de14a59f7cd98e57430faa7ba41caea495f9c409acaf2dedba7d1257f28de9bc"
+  },
+  {
+   "name": "dem_rows.csv",
+   "rows": 344,
+   "columns": 403,
+   "bytes": 556873,
+   "sha256": "ddb108d845e91a91b51ccbb4944638eeecca770c212a349e832a0688b236c1e3"
+  }
+ ]
+}
