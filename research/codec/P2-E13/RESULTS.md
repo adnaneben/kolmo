@@ -64,3 +64,7 @@ Bytes (`results/archive_sizes.txt`):
 - Production `kolmo -m max` is smaller on most audio, but at a much higher CPU cost.
 
 Archive cost against OpenZL is measured in P2-E14 (amendment 1).
+
+Against zstd-3's in-memory speed cost (seed 20261114, `results/summary-archive-family.txt`), per-plane rANS is an
+archive-only leaf. Fits and smaller: `tp_prans` 2/20, `tp_pent` 2/20 and `tp_arch19` 0/20, against 7/20 for
+`tp_phuf`. Even so, rANS is about 10% smaller than Huffman on audio and outlier columns.
