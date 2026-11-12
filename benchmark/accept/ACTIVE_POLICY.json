@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "policy_id": "competitor-bounded-v2",
+  "authorized_date": "2026-11-12",
+  "scope": "prospective research acceptance on fix/planner-record-ownership-isolated-20261112; no merge or release authorization",
+  "contract": "research/codec/competitor-policy-v2/DECISION.md",
+  "reference_evaluator": "research/codec/competitor-policy-v2/policy.py",
+  "objective": "smallest complete byte-exact typed pipeline within the designated competitor cost",
+  "speed_modes": ["rt", "fast"],
+  "archive_modes": ["eco", "hc", "max", "ultra"],
+  "aliases": {"speed": "rt", "balanced": "fast", "ratio": "max"},
+  "speed_competitor": {"tool": "zstd", "level": 3, "build": "must_be_pinned_by_benchmark"},
+  "archive_competitor": {"tool": "openzl", "build_profile_level_and_graph": "must_be_pinned_by_benchmark"},
+  "cost_source": "benchmark/TRADEOFFS.md and benchmark/tradeoff_model.py",
+  "historical_results": "preserve registered verdicts; no retrospective acceptance",
+  "mandatory": ["column_typing_before_graph_selection", "lossless_roundtrip", "total_work_accounting", "memory_and_runtime_limits", "layered_DAG_validity", "fresh_source_audit"],
+  "production_status": "not_integrated",
+  "release_status": "not_accepted"
+}

@@ -2,7 +2,8 @@
 
 @AGENTS.md
 
-Work only on `fix/planner-record-ownership-isolated-20261112` for this continuation.
-The prior instruction to push to `fix/planner-record-ownership` is superseded.
-The source repair is already inherited; verify it rather than applying it twice.
-Leave existing source branches and PR #6 unchanged. PPP means continue the agreed steps, not merge or release.
+Work only on `fix/planner-record-ownership-isolated-20261112`; keep PR #7 draft/unmerged.
+Read `benchmark/accept/ACTIVE_POLICY.json` and `research/codec/competitor-policy-v2/DECISION.md`.
+The user's latest threshold is competitor-bounded, column-first and applies to whole layered pipelines.
+Old percentage gates remain historical, not prospective authority. No merge, release or changed format is implied.
+Use `research/codec/competitor-policy-v2/NEXT_TASK.md`; preserve concurrent work and all frozen prior studies.
