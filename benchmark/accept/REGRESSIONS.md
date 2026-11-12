@@ -5,7 +5,7 @@ Last full pass: branch `claude/dec64`, 12 November 2026, cloud VM (2 cores, x86-
 (user + system), 81 files / 860 MB: the test corpus plus two holdout sets that were built after the code they test.
 Method: size, encode CPU and decode CPU per file for 1.0.1, main and the branch, best of three runs at speed and
 balanced, single runs at ratio.
-None of this has been confirmed on the M5 yet.
+The M5 confirmed the branch at 6fa4144 (see below); later commits are not confirmed yet.
 
 ## Totals
 
@@ -59,6 +59,7 @@ noise. CPU time on this VM moves by up to 25% between passes, so a single-pass s
 | mr, osdb at ratio: decode 1.8x to 2x against 1.0.1 (already on main) | 7% and 20% smaller | Block sorting; accepted when it went to main |
 | wide_test.csv at balanced: decode 2.4x against 1.0.1 (already on main) | 43% smaller | Wide-table graph; accepted when it went to main |
 | `ultra` on 8-bit images: 0.5 s -> 5 s for a 0.8 MB photograph (the graph was coded with LZMA2 leaves, the image model runs the mixer) | 12 to 20% smaller; within 2.5 to 5% of paq8px -8, from 17 to 31% | `ultra` is the smallest-output setting and runs the mixer on everything else |
+| `ultra` on text: model 3 is about 20% slower than model 2 (JSON 21 -> 27 s, a 41 MB dictionary 249 -> 295 s on the VM) | 1 to 4.4% smaller on text | `ultra` is the smallest-output setting; binary blocks keep model 2 and its speed |
 | `ratio` on 8-bit images: the image graph is coded twice (LZMA2 and block-sorted leaves) | 5 to 6% smaller on colour photographs | Small blocks; time not yet measured per file |
 | Files using the new graph node or the fixed-width transform need this version | the gains above | Older readers stop with a clear error; no silent misread |
 | Speed mode skips the table transform | CSV-like files up to 4x larger than balanced | Measured: the transform costs 2.3x encode and decode and would lose the win over lz4 -1 |
@@ -80,6 +81,7 @@ Each is a choice that could reasonably go the other way. The number is what the 
 | 9 | Integer probe requires values below 2^32 | Yes | Wider (finds timestamps; misreads short-mantissa doubles, 0.8% larger on two pickles) | A better discriminator |
 | 10 | 3% minimum for a plain result at ratio, 10% probe margin, 1.35x slice limit | Chosen by judgement, not tuned | - | A sweep on a larger holdout |
 | 11 | `ultra` tries plain context mixing only when plain block sorting is within 2% | Yes | Always try (magika.onnx 1.1% smaller, 20x the time on every model file) | If `ultra` time stops mattering |
+| 13 | Model 3 only for text blocks | Yes | Everywhere (database file 2.2% smaller, executables 1%; three binary files 0.02 to 0.06% larger than 1.0.1, 20% slower) or code both and keep the smaller (2.2x the time) | If the no-file-larger rule is relaxed to a tolerance at `ultra` |
 | 12 | Image model is a new block codec (15) | Yes | Fold it into codec 7 behind a stream flag | Release policy, with decision 7 |
 
 ## M5, 12 November 2026 (commit 67a022f, before this branch)
@@ -90,6 +92,15 @@ Each is a choice that could reasonably go the other way. The number is what the 
 the 23 files and 5% ahead on the per-file mean; the total is carried by tables and records (sao, CSV). paq8px's
 largest leads: small images (17 to 52%), JSON (43%), executables (33%), logs and XML (25%). No setting slower than
 1.0.1 on unchanged output, no file larger.
+
+## M5, 12 November 2026, second run (commit 6fa4144: this branch up to the image model)
+
+Same 17 of 19 rivals beaten; open: lz4 -9 (decode 96%) and paq8px -8. No unchanged output more than 5% slower than
+1.0.1, no file larger, every round trip correct. Against 1.0.1 per setting (ratio, encode, decode): speed core x1.000
+x1.055 x1.115; balanced x1.129 x1.031 x1.063; hc x1.107 x1.167 x1.045; ratio x1.122 x0.987 x1.127. Against paq8px -8 on
+23 files: 33.05 MB against 34.38 MB (3.9% smaller in total; per-file mean now 3% behind, from 5%). The run of 486655e
+before it showed four unchanged outputs 6 to 8% slower to decode and ratio encode at x0.949; the first did not repeat
+(noise), the second was the ungated both-ways coding that 93d4866 fixed.
 
 ## Process note
 

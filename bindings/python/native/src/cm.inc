@@ -6,8 +6,10 @@
  * Model 2 (streams flagged 8 in the size word) adds two sparse contexts (bytes 3-4, byte 2), two record contexts (the
  * bytes one and two records back, once a fixed record length is detected, and the column within the record), two more mixers (weights
  * selected by byte 2 and by order 1), a learned final mixer in place of the plain average, and an order-2 hashed APM.
+ * Model 3 (extended header) adds orders 12 and 20, the byte the match model expects (with orders 1 and 2) as
+ * contexts, finer length classes for long matches, and a match that carries on past a one-byte difference.
  * Stream: size u32 (low 28 bits n, top 4 bits f: 0 = model 1 with 2^CM_BB buckets, else log2 buckets - 15 in f & 7,
- * model 2 when f & 8) | coded bytes.  Memory: 2^bits * 64 B per hashed model. */
+ * model 2 when f & 8; f = 8 exactly: one more byte, model << 4 | log2 buckets - 15) | coded bytes.  Memory: 2^bits * 64 B per hashed model. */
 #ifndef CM_NM
 #define CM_NM 16                /* models: 0 = order-1 direct, 1..9 hashed */
 #endif
@@ -17,6 +19,9 @@
 #endif
 #define CM_NMX 21               /* models in model 2 */
 #define CM_NIX (2 * CM_NMX + 3)
+#define CM_NM3 25               /* models in model 3: model 2 + orders 12 and 20, and the match model's expected byte with orders 1 and 2 */
+#define CM_NIX3 (2 * CM_NM3 + 3)
+#define CM_NMOD(v) ((v) == 3 ? CM_NM3 : (v) ? CM_NMX : CM_NM)
 #ifndef CM_BB
 #define CM_BB 20                /* log2 buckets per hashed model in legacy streams (no size field) */
 #endif
@@ -91,19 +96,19 @@ typedef struct {
 #endif
 typedef struct { uint32_t s[16]; } cm_bucket;          /* s[0] = check << 16 | priority; s[1..15] nibble-tree counters */
 typedef struct {
-    cm_bucket *t[CM_NMX];
+    cm_bucket *t[CM_NM3];
 #ifdef KOLMO_CM_COMPACT
     /* High 16 bits hold the compact slot, low 16 hold the original tag. */
     uint32_t one_byte[2][CM_BYTE_VALUES][CM_NIBBLES];
 #endif
-    int sh, v2; size_t mem, tb; uint8_t shi[CM_NMX]; size_t tbi[CM_NMX];                                  /* 32 - log2 buckets; model 2?; bytes held */
+    int sh, v2; size_t mem, tb; uint8_t shi[CM_NM3]; size_t tbi[CM_NM3];                                  /* 32 - log2 buckets; model 2?; bytes held */
     uint32_t o1[256 * 256];
-    uint32_t h[CM_NMX]; uint32_t *slot[CM_NMX]; cm_bucket *cur[CM_NMX];
-    int32_t w1[CM_W1][CM_NIX], w2[CM_W2][CM_NIX];
-    int32_t (*w3)[CM_NIX], (*w4)[CM_NIX], wf[CM_WF][5];        /* model 2 */
+    uint32_t h[CM_NM3]; uint32_t *slot[CM_NM3]; cm_bucket *cur[CM_NM3];
+    int32_t w1[CM_W1][CM_NIX3], w2[CM_W2][CM_NIX3];
+    int32_t (*w3)[CM_NIX3], (*w4)[CM_NIX3], wf[CM_WF][5];        /* model 2 */
     int xf[5], pr3, pr4, prf, w3i, w4i, wfi, a3i; uint16_t (*a3)[33];
-    uint32_t sm[CM_NMX][256 * 8]; uint16_t sst[CM_NMX];           /* state -> probability (22 bits) | count (10 bits) */
-    int x[CM_NIX];
+    uint32_t sm[CM_NM3][256 * 8]; uint16_t sst[CM_NM3];           /* state -> probability (22 bits) | count (10 bits) */
+    int x[CM_NIX3];
     uint32_t rl_last[256], rl_d[256], rlen, rcnt, rcand;
     int pr, pr1, pr2, w1i, w2i;
     uint16_t a1[256][33], a2[65536][33];
@@ -111,6 +116,7 @@ typedef struct {
     uint8_t *buf; int64_t pos;
     uint32_t c0, c4, c8, word, word1, word2, bitpos; uint16_t ind1[256]; uint16_t ind2[65536]; int64_t line0, line1;   /* current and previous line starts */
     uint32_t *mt, mmask; int64_t mptr; int mlen;
+    int mrec;                                             /* model 3: attempts left to pick a broken match up again */
     uint32_t iw, ich, ih, i_pred, i_cls, i_act, i_n, i_med, i_wn;   /* image model: row bytes, channels, head; mixer selectors */
     uint32_t mc[64];
     int mci;
@@ -148,15 +154,15 @@ static size_t cm_mem_for(int bb, int v2) {
      * Account for both maps and the temporary hash table before allocation. */
     size_t max_bank = 2u * CM_BYTE_VALUES * CM_NIBBLES * sizeof(cm_bucket);
     uint64_t bytes = ((uint64_t)(v2 ? 48 : 16) << 20) + sizeof(((cm_t *)0)->one_byte) + sizeof(cm_pair_scratch);
-    int nm = v2 ? CM_NMX : CM_NM;
+    int nm = CM_NMOD(v2);
     for (int bank = 1; bank < nm; ++bank) {
-        size_t bank_bytes = bank >= CM_NM ? ts : t;
+        size_t bank_bytes = bank >= CM_NM && bank < CM_NMX ? ts : t;
         if ((bank == 1 || bank == 17) && bank_bytes > max_bank) bank_bytes = max_bank;
         bytes += bank_bytes;
     }
     return bytes > SIZE_MAX ? SIZE_MAX : (size_t)bytes;
 #else
-    return (size_t)(CM_NM - 1) * t + (v2 ? (size_t)(CM_NMX - CM_NM) * ts : 0) + ((size_t)(v2 ? 48 : 16) << 20);
+    return (size_t)(CM_NM - 1) * t + (v2 ? (size_t)(CM_NMX - CM_NM) * ts : 0) + (v2 == 3 ? (size_t)(CM_NM3 - CM_NMX) * t : 0) + ((size_t)(v2 ? 48 : 16) << 20);
 #endif
 }
 
@@ -178,7 +184,7 @@ static void *cm_big(size_t n) { return calloc(1, n); }
 static void cm_big_free(void *p, size_t n) { (void)n; free(p); }
 #endif
 static void cm_free_parts(cm_t *m) {
-    for (int i = 1; i < CM_NMX; i++) cm_big_free(m->t[i], m->tbi[i]);
+    for (int i = 1; i < CM_NM3; i++) cm_big_free(m->t[i], m->tbi[i]);
     cm_big_free(m->w3, sizeof(*m->w3) * CM_W3); cm_big_free(m->w4, sizeof(*m->w4) * CM_W4);
     cm_big_free(m->a3, sizeof(*m->a3) * CM_A3); cm_big_free(m->mt, ((size_t)m->mmask + 1) * 4); free(m);
 }
@@ -220,11 +226,11 @@ static cm_t *cm_new(uint8_t *buf, int bb, int v2) {
     pthread_once(&cm_once, cm_init_tables);
     size_t mem = cm_mem_for(bb, v2); cm_acquire(mem);
     cm_t *m = calloc(1, sizeof(cm_t)); if (!m) { cm_release(mem); return NULL; }
-    int nm = v2 ? CM_NMX : CM_NM;
+    int nm = CM_NMOD(v2);
     m->sh = 32 - bb; m->mem = mem; m->v2 = v2;
     m->tb = sizeof(cm_bucket) << bb;
     for (int i = 1; i < nm; i++) {                            /* the model-2 contexts (16+) have fewer distinct values */
-        int b = i >= CM_NM && bb > 18 ? bb - CM_SMALL : bb;
+        int b = i >= CM_NM && i < CM_NMX && bb > 18 ? bb - CM_SMALL : bb;
         m->shi[i] = (uint8_t)(32 - b); m->tbi[i] = sizeof(cm_bucket) << b;
 #ifdef KOLMO_CM_COMPACT
         if (i == 1 || i == 17) {
@@ -237,8 +243,8 @@ static cm_t *cm_new(uint8_t *buf, int bb, int v2) {
     if (v2) {
         m->w3 = cm_big(sizeof(*m->w3) * CM_W3); m->w4 = cm_big(sizeof(*m->w4) * CM_W4); m->a3 = cm_big(sizeof(*m->a3) * CM_A3);
         if (!m->w3 || !m->w4 || !m->a3) goto fail;
-        for (int i = 0; i < CM_W3; i++) for (int j = 0; j < CM_NIX; j++) m->w3[i][j] = 1 << 14;
-        for (int i = 0; i < CM_W4; i++) for (int j = 0; j < CM_NIX; j++) m->w4[i][j] = 1 << 14;
+        for (int i = 0; i < CM_W3; i++) for (int j = 0; j < CM_NIX3; j++) m->w3[i][j] = 1 << 14;
+        for (int i = 0; i < CM_W4; i++) for (int j = 0; j < CM_NIX3; j++) m->w4[i][j] = 1 << 14;
         for (int i = 0; i < CM_WF; i++) { for (int j = 0; j < 4; j++) m->wf[i][j] = 1 << 14; m->wf[i][4] = 0; }
         for (int c = 0; c < CM_A3; c++) for (int j = 0; j < 33; j++) m->a3[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
     }
@@ -247,8 +253,8 @@ static cm_t *cm_new(uint8_t *buf, int bb, int v2) {
         int st = j & 255; uint32_t n0 = st < bh_ns ? bh_n0[st] : 0, n1 = st < bh_ns ? bh_n1[st] : 0;
         m->sm[i][j] = (uint32_t)(((2ull * n1 + 1) << 22) / (2ull * (n0 + n1) + 2)) << 10;
     }
-    for (int i = 0; i < CM_W1; i++) for (int j = 0; j < CM_NIX; j++) m->w1[i][j] = 1 << 14;
-    for (int i = 0; i < CM_W2; i++) for (int j = 0; j < CM_NIX; j++) m->w2[i][j] = 1 << 14;
+    for (int i = 0; i < CM_W1; i++) for (int j = 0; j < CM_NIX3; j++) m->w1[i][j] = 1 << 14;
+    for (int i = 0; i < CM_W2; i++) for (int j = 0; j < CM_NIX3; j++) m->w2[i][j] = 1 << 14;
     for (int c = 0; c < 256; c++) for (int j = 0; j < 33; j++) m->a1[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
     for (int c = 0; c < 65536; c++) for (int j = 0; j < 33; j++) m->a2[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
     m->buf = buf; m->c0 = 1;
@@ -307,7 +313,7 @@ static inline int cm_stc(uint32_t v) { return cm_st[v >> 20]; }
 
 /* v2 is a compile-time constant at each call site, so model 1 and model 2 each get their own specialized loop. */
 static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v2) {
-    const int nm = v2 ? CM_NMX : CM_NM, ni = 2 * nm + 3;
+    const int nm = CM_NMOD(v2), ni = 2 * nm + 3;
     uint32_t c0 = m->c0; int bp = (int)m->bitpos;
     if (bp == 0 || bp == 4) {
         uint32_t nib = bp ? (c0 & 15) * 0x5BD1E995u : 0;
@@ -328,6 +334,10 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     int eb = cm_expected(m);
     if (eb >= 0) {
         int l = m->mlen > 31 ? 31 : m->mlen;
+        if (v2 == 3 && m->mlen >= 16) {                       /* model 3: long matches keep telling their length apart, up to 4096 */
+            int ml3 = m->mlen; l = ml3 < 24 ? 16 : ml3 < 32 ? 17 : ml3 < 48 ? 18 : ml3 < 64 ? 19 : ml3 < 96 ? 20 : ml3 < 128 ? 21 : ml3 < 192 ? 22 : ml3 < 256 ? 23
+                             : ml3 < 384 ? 24 : ml3 < 512 ? 25 : ml3 < 768 ? 26 : ml3 < 1024 ? 27 : ml3 < 1536 ? 28 : ml3 < 2048 ? 29 : ml3 < 4096 ? 30 : 31;
+        }
         m->mci = l * 2 + eb;
         int p = (int)(m->mc[m->mci] >> 4); if (p < 1) p = 1; if (p > 4095) p = 4095;
         m->x[nm] = cm_st[p];
@@ -400,7 +410,7 @@ static inline void cm_upd_sm(uint32_t *e, int y) {
     *e = p << 10 | (n < SM_LIM ? n + 1 : n);
 }
 static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, const int v2) {
-    const int nm = v2 ? CM_NMX : CM_NM, ni = 2 * nm + 3;
+    const int nm = CM_NMOD(v2), ni = 2 * nm + 3;
     for (int i = 0; i < nm; i++) { cm_upd_sm(&m->sm[i][m->sst[i]], y); cm_upd_ctr(m->slot[i], y); }
     for (int i = 1; i < nm; i++) if ((m->cur[i]->s[0] & 0xffff) < 0xffff) m->cur[i]->s[0]++;
     if (m->mci >= 0) { uint32_t *c = &m->mc[m->mci]; *c = (uint32_t)((int64_t)*c + ((((int64_t)y << 16) - (int64_t)*c) >> 6)); }
@@ -421,7 +431,12 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
     cm_upd_apm(m->a1[m->c0], m->ai, m->aw, y);
     cm_upd_apm(m->a2[m->a2i], m->ai, m->aw, y);
     int eb = cm_expected(m);
-    if (eb >= 0 && eb != y) m->mlen = 0;
+    if (eb >= 0 && eb != y) {
+        /* model 3: a match of 16 or more that breaks is given 8 bytes to pick up again past the difference (an
+         * edited copy); a match still recovering loses one attempt per miss */
+        if (v2 == 3) m->mrec = m->mlen >= 16 ? 8 : m->mrec > 0 ? m->mrec - 1 : 0;
+        m->mlen = 0;
+    }
     m->c0 = (m->c0 << 1) | (uint32_t)y;
     if (m->bitpos == 2) {                                     /* prefetch both candidate buckets for the second nibble */
         for (int b = 0; b < 2; b++) {
@@ -486,6 +501,11 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
         m->h[8] = cm_hmix(cm_hmix(c4 * 0x9E3779B1u) + (m->c8 & 0xff) * 0x85EBCA6Bu + 8);          /* order 5 */
         m->h[9] = cm_hmix(cm_hmix(c4 + 0x51ED27u) + (m->c8 & 0xffffff) * 0xC2B2AE35u + 9);     /* order 7 */
 #endif
+        if (v2 == 3) {                                        /* model 3: orders 12 and 20 */
+            const uint8_t *bf = m->buf + m->pos; uint32_t hh = 0; const int lim = m->pos < 20 ? (int)m->pos : 20;
+            m->h[21] = 21; m->h[22] = 22;
+            for (int k = 1; k <= lim; k++) { hh = (hh + bf[-k] + 1) * 0x2F0B3A55u; if (k == 12) m->h[21] = cm_hmix(hh + 21); if (k == 20) m->h[22] = cm_hmix(hh + 22); }
+        }
         if (v2 == 2) {
             /* image model: the hashed contexts are the pixel's neighbours instead of the preceding bytes. W, N, NW, NE
              * are the same channel of the pixels to the left, above and diagonal; P1, P2 the earlier channels of this
@@ -530,14 +550,21 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
             if (m->mlen) { m->mptr++; if (m->mlen < 65535) m->mlen++; }
             else {
                 int64_t cand = m->mt[hh];
+                int found = 0;
                 if (cand > 0) {
                     int l = 0;
                     while (l < 400 && cand - 1 - l >= 0 && m->buf[cand - 1 - l] == m->buf[m->pos - 1 - l]) l++;
-                    if (l >= 6) { m->mlen = l; m->mptr = cand; }
+                    if (l >= 6) { m->mlen = l; m->mptr = cand; found = 1; }
                 }
+                if (v2 == 3 && !found && m->mrec > 0 && m->mptr + 1 < m->pos) { m->mptr++; m->mlen = 1; }   /* carry on past the difference */
             }
             m->mt[hh] = (uint32_t)m->pos;
             if (m->mlen && m->mptr >= m->pos) m->mlen = 0;
+        }
+        if (v2 == 3) {                                        /* model 3: the byte the match model expects, with orders 1 and 2 */
+            uint32_t eb = m->mlen ? m->buf[m->mptr] : 256, lq = m->mlen == 0 ? 0 : m->mlen < 8 ? 1 : m->mlen < 12 ? 2 : m->mlen < 16 ? 3 : m->mlen < 24 ? 4 : m->mlen < 32 ? 5 : m->mlen < 64 ? 6 : 7;
+            m->h[23] = cm_hmix((eb << 3 | lq) * 0x9E3779B1u + (m->c4 & 0xff) * 0x85EBCA6Bu + 23);
+            m->h[24] = cm_hmix((eb << 3 | lq) * 0xC2B2AE35u + (m->c4 & 0xffff) * 0x9E3779B1u + 24);
         }
     }
 }
@@ -548,6 +575,10 @@ static inline __attribute__((always_inline)) int cm_enc_loop(cm_t *m, const uint
         int c = in[i];
         for (int b = 7; b >= 0; b--) {
             int y = (c >> b) & 1, p = cm_predict(m, v2);
+#ifdef CM_STAT
+            { static int cls; if (b == 7) cls = m->mlen == 0 ? 0 : m->mlen < 16 ? 1 : m->mlen < 32 ? 2 : m->mlen < 400 ? 3 : 4;
+              extern double cm_stat_bits[5]; extern long cm_stat_n[5]; cm_stat_bits[cls] -= log2((y ? p : 4096 - p) / 4096.0); if (b == 7) cm_stat_n[cls]++; }
+#endif
             uint32_t xm = x1 + (uint32_t)(((uint64_t)(x2 - x1) * (uint32_t)p) >> 12);
             if (y) x2 = xm; else x1 = xm + 1;
             cm_update(m, y, v2);
@@ -572,21 +603,27 @@ static inline __attribute__((always_inline)) void cm_dec_loop(cm_t *m, const uin
             while (((x1 ^ x2) & 0xff000000u) == 0) { x1 <<= 8; x2 = (x2 << 8) | 255; x = (x << 8) | (ip < cn ? in[ip++] : 255); }
         }
 }
-/* model 2 by default; model 1 (fewer contexts, about 30% faster, what kolmo 1.0.0 wrote) when model1 is set, and always
- * for n >= 2^28, whose size word has no room for flags */
-static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model1) {
+/* model 1 (fewer contexts, about 30% faster, what kolmo 1.0.0 wrote; always for n >= 2^28, whose size word has no room
+ * for flags), model 2, or model 3 (about 20% slower than model 2; 1 to 4% smaller on text, no gain on binary data) */
+/* model: 1, 2 or 3 */
+static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model) {
     if (cap < 8 || n > 0xFFFFFFF0u) return 0;
-    int small = n < ((size_t)1 << 28), v2 = small && !model1;
+    int small = n < ((size_t)1 << 28), v2 = small && model > 1 ? (model == 3 ? 3 : 1) : 0;
     int bb = small ? cm_bits_for(n) : CM_BB;
     uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new(hist, bb, v2) : NULL;
     if (!m) { free(hist); return 0; }
-    uint32_t n32 = (uint32_t)n | (small ? (uint32_t)((bb - 15) | (v2 ? 8 : 0)) << 28 : 0); memcpy(out, &n32, 4);
-    size_t o = 4;
-    int r = v2 ? cm_enc_loop(m, in, n, out, cap, &o, 1) : cm_enc_loop(m, in, n, out, cap, &o, 0);
+    size_t o = 4; int r;
+    if (v2 == 3) {                                           /* extended header: flags 8, then model << 4 | log2 buckets - 15 */
+        uint32_t n32 = (uint32_t)n | (uint32_t)8 << 28; memcpy(out, &n32, 4); out[4] = (uint8_t)(3 << 4 | (bb - 15));
+        r = cm_enc_loop(m, in, n, out + 1, cap - 1, &o, 3); o++;
+    } else {
+        uint32_t n32 = (uint32_t)n | (small ? (uint32_t)((bb - 15) | (v2 ? 8 : 0)) << 28 : 0); memcpy(out, &n32, 4);
+        r = v2 ? cm_enc_loop(m, in, n, out, cap, &o, 1) : cm_enc_loop(m, in, n, out, cap, &o, 0);
+    }
     cm_free(m); free(hist);
     return r ? 0 : o;
 }
-static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return cm_compress_m(in, n, out, cap, 0); }
+static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return cm_compress_m(in, n, out, cap, 2); }
 /* Image model (block codec 8): 8-bit samples in rows of iw bytes, ich interleaved channels, after ih bytes that are
  * not pixels. Stream: iw u32 | ih u32 | ich u8 | size word as above (always model 2 tables) | coded bytes. */
 static size_t cm_compress_img(const uint8_t *in, size_t n, uint32_t iw, uint32_t ich, uint32_t ih, uint8_t *out, size_t cap) {
@@ -617,10 +654,14 @@ static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     if (cn < 8) return -1;
     uint32_t n32; memcpy(&n32, in, 4);
     int bb = CM_BB, v2 = 0;
-    if (n < ((size_t)1 << 28)) { uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu; if (f) { bb = (int)(f & 7) + 15; v2 = (int)(f >> 3); } }
+    if (n < ((size_t)1 << 28)) {
+        uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu;
+        if (f == 8) { if (cn < 9 || in[4] >> 4 != 3) return -1; v2 = 3; bb = (in[4] & 15) + 15; in++; cn--; }   /* extended header */
+        else if (f) { bb = (int)(f & 7) + 15; v2 = (int)(f >> 3); }
+    }
     if (n32 != n || bb < 16 || bb > 22) return -1;
     cm_t *m = cm_new(out, bb, v2); if (!m) return -1;
-    if (v2) cm_dec_loop(m, in, cn, out, n, 1); else cm_dec_loop(m, in, cn, out, n, 0);
+    if (v2 == 3) cm_dec_loop(m, in, cn, out, n, 3); else if (v2) cm_dec_loop(m, in, cn, out, n, 1); else cm_dec_loop(m, in, cn, out, n, 0);
     cm_free(m);
     return 0;
 }

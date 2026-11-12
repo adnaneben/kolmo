@@ -1372,7 +1372,7 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
             if (lzma_raw_buffer_encode(f, NULL, in, n, out, &pos, cap) != LZMA_OK) return 0;
             return pos; }
 #endif
-        case C_CM: return cm_compress_m(in, n, out, cap, level == 1);
+        case C_CM: return cm_compress_m(in, n, out, cap, level == 1 ? 1 : looks_text(in, n) ? 3 : 2);   /* model 3 where it gains: text */
     }
     return 0;
 }

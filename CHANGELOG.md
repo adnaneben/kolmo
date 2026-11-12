@@ -89,6 +89,12 @@
 
 ## Unreleased (on main, not tagged)
 
+- **`ultra`: context-mixing model 3 for text (branch `claude/dec64`).** Model 2 plus four contexts (orders 12 and 20,
+  and the byte the match model expects with orders 1 and 2), finer length classes for long matches, and a match that
+  carries on past a one-byte difference. Used for text blocks; binary blocks keep model 2, where model 3 gained
+  nothing (-2.2% to +0.06% on seven binary files). JSON 142,217 → 135,936 bytes (4.4% smaller), Polish prose 3.4%,
+  logs 2.8%, XML 2.5%, CSV and source code about 1%; about 20% slower than model 2. Streams carry an extended header
+  (flags 8, then model and table size); an older reader stops with an error.
 - **`ultra`: an image model for the context mixer (block codec 15; branch `claude/dec64`).** For 8-bit images the
   mixer's hashed contexts are the pixel's neighbours (left, above, the diagonals, two back), the earlier channels of
   the same pixel, and gradient, median and inter-channel predictions with the local activity, in place of the

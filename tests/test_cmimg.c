@@ -26,6 +26,23 @@ int main(void) {
         }
         free(in); free(z); free(out);
     }
+    /* model 3 (extended header): text with repeats and one-byte edits; round trip, then damaged copies */
+    for (int it = 0; it < 6; it++) {
+        size_t n = 12000 + rnd() % 20000; uint8_t *in = malloc(n), *z = malloc(n + n / 8 + 4096), *out = malloc(n);
+        static const char *w[] = {"alpha ", "beta ", "gamma, ", "delta.\n", "{\"key\":\"value\"}", "the quick brown fox ", "0123456789 "};
+        size_t i = 0; while (i < n) {
+            if (i > 4000 && rnd() % 4 == 0) { size_t from = rnd() % (i - 2000), len = 200 + rnd() % 1500; for (size_t k = 0; k < len && i < n; k++) in[i++] = in[from + k]; if (i < n) in[i - 1 - rnd() % 100] ^= 1; }
+            else { const char *q = w[rnd() % 7]; for (; *q && i < n; q++) in[i++] = (uint8_t)*q; }
+        }
+        size_t zn = cm_compress_m(in, n, z, n + n / 8 + 4096, 3);
+        if (!zn || z[3] >> 4 != 8 || cm_decompress(z, zn, out, n) || memcmp(in, out, n)) { printf("MODEL 3 ROUND TRIP FAIL it=%d\n", it); fails++; }
+        for (int m = 0; zn && m < 12; m++) {
+            uint8_t *d = malloc(zn); memcpy(d, z, zn);
+            size_t at = m < 12 ? rnd() % 5 : rnd() % zn; d[at] = (uint8_t)rnd();
+            uint8_t *o2 = malloc(n + 1); cm_decompress(d, m % 9 == 0 ? rnd() % (zn + 1) : zn, o2, n); free(o2); free(d);
+        }
+        free(in); free(z); free(out);
+    }
     /* through the container at ultra: a .npy RGB image must come out as an image-model block and round trip */
     {   uint32_t wpx = 320, hpx = 240, ch = 3, head = 128; size_t n = head + (size_t)wpx * hpx * ch; uint8_t *in = calloc(n, 1), *z = malloc(n + (1u << 20)), *b = malloc(n);
         memset(in, ' ', head); memcpy(in, "\x93NUMPY\x01\x00\x76\x00{'descr': '|u1', 'fortran_order': False, 'shape': (240, 320, 3), }", 76); in[head - 1] = '\n';
