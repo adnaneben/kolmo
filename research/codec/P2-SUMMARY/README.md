@@ -38,6 +38,13 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
    OpenZL's typed `le-*` profile at level 9 on whole files: some Kolmo pipeline is smallest within OpenZL's cost on
    47/61; OpenZL keeps 14 (GHCN 7/9). The research per-plane best-entropy pipeline wins most often (23 / 25).
 
+11. **Leaf selection must be cheap (P2-E13, local):** sharing one typed pass and trial-coding both leaves (or
+   predicting with probes) is cost-negative against zstd-3 in memory; choose the leaf from declaration-level facts.
+12. **The archive winner now exists in today's format (P2-E13):** per-plane rANS leaves (`C_RANS`, R1 singleton
+   normalisation, P-18) decoded by the unmodified production CLI match P2-E10's `tf_planes_ent19` within 0.1%;
+   `tp_arch19` adds production zstd-19 leaves. Correctness: 60/60 corpus, 360/360 random NPY stress. Their archive
+   cost against OpenZL is P2-E14's job (pending the runner slot).
+
 ## Correctness evidence behind these claims
 
 Identity checks against production (19/19 typed inputs: choice, parameters, residual, rest, inverse); 3.3 M
