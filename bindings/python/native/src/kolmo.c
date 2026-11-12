@@ -2481,6 +2481,25 @@ static void *compress_worker(void *arg) {
             size_t c2 = alt ? codec_compress(xp, C_BSC, 9, in, inlen, alt, J->slot - meta) : 0;
             if (c2 && (uint64_t)c2 * 100 <= (uint64_t)cl * (100 - KOLMO_BWT_GAIN_PCT)) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BSC; }
         }
+        if ((codec == C_LZMA || codec == C_BSC) && J->codec == C_LZMA && cl && in != raw && len >= (64u << 10)) {
+            /* max, transformed block: the transform was chosen by its zstd score, and under block sorting or LZMA2 the
+             * plain bytes can be smaller (Silesia nci: template tokens 1.53 MB, plain block sorting 1.23 MB). Block
+             * sorting of the plain block is tried when a slice from the middle comes within 10% of the transformed
+             * block's ratio (25% for text transforms); blocks up to 2 MiB also try plain LZMA2. A plain result must be 3% smaller to be kept. */
+            uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+            int try_bsc = alt != NULL, bc = 0; size_t bz = cl + meta;
+            if (alt && len > (2u << 20)) {
+                size_t sn = 512u << 10, so = ((len - sn) / 2) & ~(size_t)63, cs = codec_compress(xp, C_BSC, 9, raw + so, sn, alt, J->slot);
+                /* a slice sorts worse than the whole block, most of all on repetitive text (nci: slice 5.2%, block 3.7%) */
+                const double tol = tflag == 4 || tflag == 5 || tflag == 12 ? 1.25 : 1.10;
+                if (!cs || (double)cs / sn > tol * (double)bz / len) try_bsc = 0;
+            }
+            size_t a1 = try_bsc ? codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot) : 0;
+            if (a1 && (uint64_t)a1 * 100 <= (uint64_t)bz * 97) { memcpy(sl, alt, a1); bz = a1; bc = C_BSC; }
+            size_t a2 = alt && len <= (2u << 20) ? codec_compress(xp, C_LZMA, level, raw, len, alt, J->slot) : 0;
+            if (a2 && (uint64_t)a2 * 100 <= (uint64_t)(cl + meta) * 97 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_LZMA; }
+            if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
+        }
         if (codec == C_CM && level != 1) {            /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             if (alt) {

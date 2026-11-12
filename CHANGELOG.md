@@ -89,6 +89,13 @@
 
 ## Unreleased (on main, not tagged)
 
+- **`ratio`: a transformed block is also tried plain (branch `claude/dec64`).** Transforms are chosen by their zstd
+  score; under block sorting or LZMA2 the plain bytes are sometimes smaller. A transformed block now tries block
+  sorting of the plain bytes when a slice from the middle is within reach, blocks up to 2 MiB also try plain LZMA2,
+  and a plain result is kept when it is at least 3% smaller. Silesia `nci`: 1,533,927 → 1,225,386 bytes (20%
+  smaller; its decode goes from about 120 to 67 MB/s, the block-sorting rate). Silesia tar: 40,996,509 → 40,687,968
+  (19.34% → 19.20%), encode time unchanged, decode about 10% slower on the cloud VM. A 1 MB image array was 16%
+  smaller. On 81 corpus and holdout files plain coding now beats the `ratio` plan by more than 1% on none (before: 2).
 - **Mixed inputs: a numeric plan is checked away from its trial slice (branch `claude/dec64`).** A numeric graph or
   byte shuffle is chosen on one slice from the middle of the input. Four 32 KiB probes elsewhere now test that the
   rest is the same kind of data; where the plan codes a probe over 10% larger than plain coding, each block is coded
