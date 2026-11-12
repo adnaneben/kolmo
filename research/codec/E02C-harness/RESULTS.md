@@ -1,7 +1,7 @@
 # E02C results — KG_INT residual representations (production-connected harness)
 
 Method and framing: [`PROTOCOL.md`](PROTOCOL.md). These results come from `harness/e02c.c` only. The parallel
-forced-typed implementation on this branch (`README.md`, `probe.c`, `run.py`; zstd level 1 control) is measured by its own
+forced-typed implementation on this branch (`../E02C/README.md`, `probe.c`, `run.py`; zstd level 1 control) is measured by its own
 workflow and is not summarised here; its numbers are not interchangeable with these (different zstd level, framing,
 corpus and selector policy). Its executed results (`../E02C_RESULTS.md`, Actions runs 43232093686 / 43233624953) reach the
 same direction: unconditional packing rejected, packing kept only for narrow workload hypotheses.
@@ -24,7 +24,7 @@ Nothing here is a holdout result, a release measurement or a general claim.
 | | |
 |---|---|
 | Production code | reference `2f3308a3380a140ad0f6873ae228de7715e5eef5`, `src/kolmo.c` `e06467c8…`, `src/kgraph.inc` `91ad067d…`, unmodified |
-| Harness | committed in `cef71a9` (first committed as `41bcc96`, rebased unchanged onto the parallel work; the run used the byte-identical harness files, SHA-256 in `results/env.json`) |
+| Harness | committed in `cc42a00` (first committed as `41bcc96`, rebased unchanged onto the parallel work and later moved to `E02C-harness/`; the run used the byte-identical harness files, SHA-256 in `results/env.json`) |
 | Binary | `build/e02c` SHA-256 `fc05802c…5c51`; `build/libvendor.a` `55709832…9fb8` |
 | Toolchain / host | gcc 13.3.0 `-O3 -march=native -fno-plt -ffp-contract=off` (core + harness in one TU), vendor `-O3 -fno-plt`; zstd 1.5.7 (vendored); Intel Xeon @ 2.10 GHz, 2 vCPU shared VM, Linux 6.18 |
 | Run | 1 thread; 7 repetitions; job order and configuration order shuffled per repetition (seed 20261112); all samples kept |
@@ -171,7 +171,7 @@ entropy-only leaf can match zstd on KG_INT residuals.
 
 ## 8. Follow-up: plane-aware and best-of-entropy controls
 
-Run 2 of the same matrix (same corpus hashes, seed, 7 repetitions, harness `b7cfbcf`, production `2f3308a` unchanged)
+Run 2 of the same matrix (same corpus hashes, seed, 7 repetitions, harness `8d8fbb8`, production `2f3308a` unchanged)
 with seven appended configurations: `planes+{store,huf,rans,zstd3}` (existing residual bytes, one stream per byte
 plane) and `{exist,planes,lpp128}+ent` (existing Huffman-only and rANS both run per stream, smaller kept, both charged).
 All 1,120 complete-input sizes of run 1 were reproduced exactly (and all 1,300 of an intermediate run). Records:
@@ -224,7 +224,7 @@ parallel report calls for, to decide whether a per-plane KG_INT leaf layout earn
 
 ## 9. Follow-up 2: level-matched per-plane leaves with production's own leaf rule
 
-Run 3 (same corpus, seed and repetitions; harness `00500f4`; production `2f3308a` unchanged; records in
+Run 3 (same corpus, seed and repetitions; harness `6c64ebf`; production `2f3308a` unchanged; records in
 `results-followup2/`). New configurations: `exist|planes + zstd19` and `exist|planes + prod3|prod19`. The `prod`
 backends pass the streams to the **unchanged `kg_serialize`** as leaves, so every stream gets production's exact leaf
 decision at zstd level 3 (fast) or 19 (hc). Calibration: `exist+prod3` reproduces the production fast frames and

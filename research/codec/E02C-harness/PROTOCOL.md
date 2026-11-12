@@ -1,8 +1,8 @@
 # E02C protocol — production-connected residual representation trial (harness `harness/e02c.c`)
 
-This directory holds two independent E02C implementations. This file describes the production-connected harness
+Two independent E02C implementations exist on this branch. This file (`research/codec/E02C-harness/`) describes the production-connected harness
 (`harness/`, `Makefile`, `run_matrix.py`, `analyze.py`, results in `RESULTS.md`), which also covers the complete
-production planner. `README.md` / `BASELINE.md` / `build.py` / `probe.c` / `run.py` describe the parallel
+production planner. `../E02C/README.md` / `BASELINE.md` / `build.py` / `probe.c` / `run.py` describe the parallel
 forced-typed-path implementation (commit `c880659`, zstd level 1 control, measured by `.github/workflows/e02c-research.yml`);
 its results are produced by that workflow and are not reported here.
 
@@ -92,7 +92,7 @@ All other bytes — container header, index, block checksums, plan bytes, graph 
 
 ## Correctness (this experiment's own checks)
 
-`make -f research/codec/E02C/Makefile check` (from the repository root):
+`make -f research/codec/E02C-harness/Makefile check` (from the repository root):
 
 1. ASan + UBSan (`-fno-sanitize-recover=undefined`) + LSan selftest, golden vectors compared;
 2. the optimised build against the same golden vectors (cross-build determinism);
@@ -111,14 +111,21 @@ reconstruction for every configuration; complete-planner frames (including the e
 int32 fixture) reconstructed block by block with production checksums. Measurement runs additionally reconstruct
 every complete input for every configuration, and check every timed decode.
 
+## Location
+
+These files were committed under `research/codec/E02C/` and moved unchanged to `research/codec/E02C-harness/` after the
+E02D preregistration froze `research/codec/E02C/`. The measured harness files (`harness/*`) are byte-identical to the
+SHA-256 values in each run's `env.json`; the run instructions comment in `harness/selftest.inc` still names the old
+path and was left as is to keep those hashes. Commit ids cited in `RESULTS.md` refer to the pre-move paths.
+
 ## Reproduce
 
 ```
 make ARCH= build/libvendor.a
-make -f research/codec/E02C/Makefile all check
-python3 research/codec/E02C/corpus/build_corpus.py <corpus-dir> research/codec/E02C/corpus/manifest.json
-python3 -I research/codec/E02C/run_matrix.py <corpus-dir> <out-dir> --reps 7 --seed 20261112
-python3 -I research/codec/E02C/analyze.py <out-dir>/raw.jsonl <out-dir>
+make -f research/codec/E02C-harness/Makefile all check
+python3 research/codec/E02C-harness/corpus/build_corpus.py <corpus-dir> research/codec/E02C-harness/corpus/manifest.json
+python3 -I research/codec/E02C-harness/run_matrix.py <corpus-dir> <out-dir> --reps 7 --seed 20261112
+python3 -I research/codec/E02C-harness/analyze.py <out-dir>/raw.jsonl <out-dir>
 ```
 
 `run_matrix.py` refuses to run if any corpus file's SHA-256 differs from the manifest. The filesystem-metadata inputs are

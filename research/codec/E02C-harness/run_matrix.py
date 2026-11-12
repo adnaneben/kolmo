@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run the E02C measurement matrix over the development corpus.
 
-usage (repository root, after `make -f research/codec/E02C/Makefile all check`):
-  python3 -I research/codec/E02C/run_matrix.py CORPUS_DIR OUT_DIR [--reps 7] [--seed 20261112] [--no-mem]
+usage (repository root, after `make -f research/codec/E02C-harness/Makefile all check`):
+  python3 -I research/codec/E02C-harness/run_matrix.py CORPUS_DIR OUT_DIR [--reps 7] [--seed 20261112] [--no-mem]
 
 Writes OUT_DIR/raw.jsonl (every record, every repetition), OUT_DIR/env.json (identities, toolchain, hardware).
 One thread throughout. Input order and configuration order are shuffled per repetition with a recorded seed.

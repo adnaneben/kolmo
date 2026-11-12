@@ -80,7 +80,7 @@ def main(out, manifest):
     cl = rng.integers(0, 16, 500000).astype('<u4')
     for s0 in rng.choice(500000 - 300, 40, replace=False): cl[s0:s0 + 300] = rng.integers(0, 1 << 24, 300)
     b, hl = npy(cl); add('syn_clustered_outliers_u32.npy', 'synthetic', 'synthetic', b, 4, hl, '<u4', 'numpy default_rng(20261112)', 'uniform 0..15 with 40 runs of 300 values in 0..2^24')
-    m = dict(experiment='E02C', split='development only; no holdout', generator='research/codec/E02C/corpus/build_corpus.py',
+    m = dict(experiment='E02C', split='development only; no holdout', generator='research/codec/E02C-harness/corpus/build_corpus.py',
              numpy=np.__version__, inputs=items)
     pathlib.Path(manifest).write_text(json.dumps(m, indent=1) + '\n')
     print(f'{len(items)} inputs, {sum(i["bytes"] for i in items)} bytes')

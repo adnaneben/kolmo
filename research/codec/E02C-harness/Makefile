@@ -1,7 +1,7 @@
 # E02C experimental build (research only; the production Makefile, library and CLI are unchanged).
 # Run from the repository root:
-#   make -f research/codec/E02C/Makefile            -> build/e02c (optimised, kernel/E2E measurements)
-#   make -f research/codec/E02C/Makefile check      -> ASan/UBSan/LSan selftest + golden vectors + independent Python reference
+#   make -f research/codec/E02C-harness/Makefile            -> build/e02c (optimised, kernel/E2E measurements)
+#   make -f research/codec/E02C-harness/Makefile check      -> ASan/UBSan/LSan selftest + golden vectors + independent Python reference
 CC      ?= gcc
 E02C_CFLAGS ?= -O3 -march=native -fno-plt
 SANFLAGS ?= -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined
@@ -9,7 +9,7 @@ FPFLAGS := -ffp-contract=off
 DEFS    := -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0
 INC     := -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include
 LIBS    := -llzma -lpthread -lm -lstdc++
-H       := research/codec/E02C/harness
+H       := research/codec/E02C-harness/harness
 SRCS    := $(H)/e02c.c $(H)/selftest.inc src/kolmo.c src/kolmo.h $(wildcard src/*.inc)
 VEC     ?= build/e02c-vectors
 

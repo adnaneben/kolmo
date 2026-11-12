@@ -30,7 +30,7 @@ The task brief reports these runs as successful for the validated reference:
 Reported findings: original known leak reproduced; committed repaired source passed the full main sanitizer;
 36 focused planner cases matched; 45 compressed-frame pairs identical; 90 cross-decodes exact; ordinary CI passed.
 
-`BASELINE.md` (committed in parallel on this branch, `4d33976`) records that GitHub reported these runs as
+`../E02C/BASELINE.md` (committed in parallel on this branch, `4d33976`) records that GitHub reported these runs as
 completed/success and lists the dedicated run's artifact ids (focused 13929272548, main-baseline 13933582138,
 main-candidate 13932569145); it also states that artifact download and hash verification had not yet been executed.
 
