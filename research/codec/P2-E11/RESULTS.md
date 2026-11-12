@@ -34,3 +34,14 @@ existing production format, decodable by today's decoder. What remains research 
 routing, the identity-checked fast passes, plane-aligned Huffman chunks). A production integration would be an
 encoder-side change only, still subject to review. Next: the same pipelines on N1's CLI boundary, decoded by the
 production CLI, and on the broader cohort.
+
+## Addendum: production table graph, forced (`tp_table3`)
+
+For comma-separated inputs the encoder calls production `kg_encode_table(',', '.')` directly (no planner analysis)
+and writes the result as a production frame (plan `T_KG/','/'.'`). All 21 test frames decode byte-exactly with the
+production `kolmo -d` CLI (`results/cli_roundtrip_table.txt`). Development timing on the 10 CSVs
+(`results/summary-csv.txt`): bytes are often better than production `fast` (fs_table −60.6% vs −45.6%, syn_table
+−44.0% vs −18.2%, mri −29.0% vs +1.1% against zstd-3) but cost is 10–213% above zstd-3 on every table: production's
+table encoder and DECIMAL inverse are slower than P2-E6's typed path. **Archive-mode candidate, not a speed-mode
+one.** P2-E6's typed CSV (research container) remains the speed-mode table result; expressing it in the existing
+graph ops would need new semantics (DECIMAL's mantissa stream is not the INT node's fixed-width input).

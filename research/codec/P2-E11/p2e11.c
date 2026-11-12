@@ -21,6 +21,7 @@ typedef struct { const char *name; char kind; int level; const char *leaf; char 
 static const cand_t CAND[] = {   /* kind 'P': production-frame type-first; leaf "prod" or "phuf"; guard 5 = 16 KiB pre-guard */
     {"zstd3", 'Z', 3, NULL, 0, 0}, {"kolmo_fast", 'K', 3, NULL, 0, 0},
     {"tp_prod3", 'P', 3, "prod", 0, 0}, {"tp_phuf", 'P', 3, "phuf", 0, 0}, {"tp_phuf_pg16", 'P', 3, "phuf", 0, 5},
+    {"tp_table3", 'P', 3, "table", 0, 0},
 };
 #define NC ((int)(sizeof CAND / sizeof CAND[0]))
 static int conf_by_name(const char *want) { char nb[32]; for (int c = 0; c < NCONF; c++) if (!strcmp(conf_name(c, nb), want)) return c; DIE("no config %s", want); }
@@ -67,7 +68,11 @@ static size_t enc(const uint8_t *src, size_t n, int ci, uint8_t **dst) {
     if (c->kind == 'P') {
         kolmo_params kp = {KOLMO_FAST, 0, 1, 0, 0}; size_t cap = kolmo_bound(n, &kp) + n / 8 + 65536; uint8_t *f = malloc(cap); size_t fn = 0;
         int w; size_t h; codec_ctx x = {0};
-        if (!type_of(src, n, &w, &h)) {
+        if (!strcmp(c->leaf, "table")) {           /* declared/obvious CSV: production table graph directly, no planner analysis */
+            size_t pn = n >= 64 ? kg_encode_table(&x, C_ZSTD, c->level, src, n, ',', '.', f + HDR + IDX + 4, cap - HDR - IDX - 4) : 0;
+            if (pn) { uint8_t *tmp = malloc(pn); memcpy(tmp, f + HDR + IDX + 4, pn); fn = tp_wrap(src, n, 0, 0, tmp, pn, f); f[HDR + IDX + 1] = ','; f[HDR + IDX + 2] = '.';
+                      uint32_t hc = kolmo_crc32c(0, f, 28); hc = kolmo_crc32c(hc, f + HDR, IDX); put32(f + 28, hc); free(tmp); }
+        } else if (!type_of(src, n, &w, &h)) {
             fiprog P; gctx_t gc = {src, n, c->level, 16384};
             if (!fi_forward_g(src, n, w, h, &P, c->guard == 5 ? pre_guard : NULL, &gc)) {
                 size_t pn = !strcmp(c->leaf, "prod") ? tp_payload_prod(&x, &P, n, c->level, f + HDR + IDX + 4, cap - HDR - IDX - 4)
