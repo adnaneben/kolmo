@@ -11,7 +11,7 @@ import collections, json, pathlib, statistics, sys
 HERE = pathlib.Path(__file__).resolve().parent
 REPS = ['exist', 'gbp', 'lbp128', 'gpp', 'lpp128']; BES = ['store', 'huf', 'rans', 'zstd3']
 CONFS = [f'{r}+{b}' for r in REPS for b in BES] + [f'sel+{b}' for b in BES] + [f'planes+{b}' for b in BES] + ['exist+ent', 'planes+ent', 'lpp128+ent'] \
-        + ['exist+zstd19', 'planes+zstd19', 'exist+prod3', 'planes+prod3', 'exist+prod19', 'planes+prod19']
+        + ['exist+zstd19', 'planes+zstd19', 'exist+prod3', 'planes+prod3', 'exist+prod19', 'planes+prod19', 'exist+prod3g', 'planes+prod3g']
 FIXED = CONFS[:20] + CONFS[24:28] + CONFS[31:33]
 
 def med(v): return statistics.median(v) if v else None

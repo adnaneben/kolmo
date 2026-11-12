@@ -32,7 +32,7 @@ static void gen(uint64_t *z, size_t m, int ow, int pat, uint64_t seed) {
 }
 static void rt_case(codec_ctx *x, int ow, int pln, size_t m, int pat, int heavy, const char *dir) {
     uint64_t *z = malloc((m ? m : 1) * 8); uint8_t *r = malloc(m * (size_t)ow + 1); gen(z, m, ow, pat, m * 31 + (size_t)pat * 7 + (size_t)ow);
-    z_to_res(z, m, ow, pln, r); char cs[64], cf[32]; uint64_t dg = 1469598103934665603ull, dgp = dg, dge = dg, dgl = dg; size_t gb = 0, gbp = 0, gbe = 0, gbl = 0; snprintf(cs, sizeof cs, "ow%d_p%d_m%zu_pat%d", ow, pln, m, pat);
+    z_to_res(z, m, ow, pln, r); char cs[64], cf[32]; uint64_t dg = 1469598103934665603ull, dgp = dg, dge = dg, dgl = dg, dgg = dg; size_t gb = 0, gbp = 0, gbe = 0, gbl = 0, gbg = 0; snprintf(cs, sizeof cs, "ow%d_p%d_m%zu_pat%d", ow, pln, m, pat);
     for (int c = 0; c < NCONF; c++) {
         kbuf b = {0}, b2 = {0}, d = {0}; estat st; conf_name(c, cf);
         CHECK(!conf_encode(x, c, r, m, ow, pln, &b, &st), "encode %s %s", cs, cf);
@@ -40,7 +40,8 @@ static void rt_case(codec_ctx *x, int ow, int pln, size_t m, int pat, int heavy,
         CHECK(!e2c_decode(x, b.p, b.n, m, ow, pln, m * (size_t)ow + 64, &d) && d.n == m * (size_t)ow && !memcmp(d.p, r, d.n), "round trip %s %s", cs, cf);
         T_roundtrips++;
         for (int q = 0; q < st.ns; q++) CHECK(st.s[q].actual == C_STORE || st.s[q].coded < st.s[q].raw, "coded not smaller %s", cs);
-        if (c >= NFIX + 2 * B_N + 3) { dgl = (dgl ^ fnv(b.p, b.n) ^ b.n) * 1099511628211ull; gbl += b.n; }
+        if (c >= NFIX + 2 * B_N + 9) { dgg = (dgg ^ fnv(b.p, b.n) ^ b.n) * 1099511628211ull; gbg += b.n; }
+        else if (c >= NFIX + 2 * B_N + 3) { dgl = (dgl ^ fnv(b.p, b.n) ^ b.n) * 1099511628211ull; gbl += b.n; }
         else if (c >= NFIX + 2 * B_N) { dge = (dge ^ fnv(b.p, b.n) ^ b.n) * 1099511628211ull; gbe += b.n; }
         else if (conf_rep(c) == R_PLANES) { dgp = (dgp ^ fnv(b.p, b.n) ^ b.n) * 1099511628211ull; gbp += b.n; }   /* appended configs: own line */
         else { dg = (dg ^ fnv(b.p, b.n) ^ b.n) * 1099511628211ull; gb += b.n; }
@@ -67,7 +68,7 @@ static void rt_case(codec_ctx *x, int ow, int pln, size_t m, int pat, int heavy,
         free(b.p); free(b2.p); free(d.p);
     }
     golden(cs, dg, gb);
-    { char cp[80]; snprintf(cp, sizeof cp, "%s_planes", cs); golden(cp, dgp, gbp); snprintf(cp, sizeof cp, "%s_ent", cs); golden(cp, dge, gbe); snprintf(cp, sizeof cp, "%s_lvl", cs); golden(cp, dgl, gbl); }
+    { char cp[80]; snprintf(cp, sizeof cp, "%s_planes", cs); golden(cp, dgp, gbp); snprintf(cp, sizeof cp, "%s_ent", cs); golden(cp, dge, gbe); snprintf(cp, sizeof cp, "%s_lvl", cs); golden(cp, dgl, gbl); snprintf(cp, sizeof cp, "%s_guard", cs); golden(cp, dgg, gbg); }
     free(z); free(r);
 }
 static void expect_reject(codec_ctx *x, const uint8_t *p, size_t n, size_t m, int ow, size_t maxs, const char *what) {
@@ -194,6 +195,27 @@ static void planner_cases(codec_ctx *x) {
         free(a);
     }
 }
+/* the fast leaf rule samples three 32 KiB windows at the quarter points of a leaf >= 256 KiB; a plane that is empty there
+ * and sparse elsewhere makes it pick Huffman-only (>= 1 bit per byte). The guard must replace that leaf with zstd. */
+static size_t T_guard;
+static void guard_case(codec_ctx *x) {
+    const size_t m = 400000; uint8_t *r = malloc(2 * m); xs = 4242;
+    for (size_t i = 0; i < m; i++) r[i] = (uint8_t)(xr() & 15);                    /* plane 0: small values */
+    for (size_t i = 0; i < m; i++) {                                                   /* plane 1: sparse, empty at samples */
+        int near = 0; for (int q = 1; q <= 3; q++) { size_t c = m / 4 * (size_t)q; near |= i + 40000 > c && i < c + 40000; }
+        r[m + i] = !near && xr() % 100 == 0 ? (uint8_t)(1 + xr() % 3) : 0;
+    }
+    char nb[32]; kbuf b3 = {0}, bg = {0}, d = {0}; estat s3, sg;
+    CHECK(!conf_encode(x, NFIX + 2 * B_N + 6, r, m, 2, 1, &b3, &s3) && !conf_encode(x, NFIX + 2 * B_N + 10, r, m, 2, 1, &bg, &sg), "guard encode");
+    CHECK(!strcmp(conf_name(NFIX + 2 * B_N + 10, nb), "planes+prod3g"), "guard config index");
+    CHECK(s3.ns == 2 && s3.s[1].actual == C_HUF, "fixture no longer triggers the fast rule's Huffman-only choice (got %s)", codec_name(s3.s[1].actual));
+    CHECK(bg.n < b3.n, "guard did not shrink the sparse plane (%zu vs %zu)", bg.n, b3.n);
+    CHECK(!e2c_decode(x, bg.p, bg.n, m, 2, 1, 4 * m, &d) && d.n == 2 * m && !memcmp(d.p, r, d.n), "guard round trip");
+    CHECK(!e2c_decode(x, b3.p, b3.n, m, 2, 1, 4 * m, &d) && d.n == 2 * m && !memcmp(d.p, r, d.n), "prod3 round trip");
+    for (size_t t = 0; t < bg.n; t += bg.n / 97 + 1) CHECK(e2c_decode(x, bg.p, t, m, 2, 1, 4 * m, &d), "guard truncation accepted");
+    printf("guard case: prod3 %zu B (plane 1 %s %zu B), prod3g %zu B\n", b3.n, codec_name(s3.s[1].actual), s3.s[1].coded, bg.n);
+    T_guard++; free(b3.p); free(bg.p); free(d.p); free(r);
+}
 static int selftest(const char *dir, const char *goldpath) {
     codec_ctx x = {0};
     if (goldpath) {
@@ -208,12 +230,13 @@ static int selftest(const char *dir, const char *goldpath) {
     malformed(&x);
     prod_cases(&x, dir);
     planner_cases(&x);
+    guard_case(&x);
     CHECK(T_planner_cases_int >= 2, "complete planner selected the INT graph in fewer than two cases");
     const char *gs = golden_in ? "compared" : golden_out ? "written" : "none";
     if (golden_out) fclose(golden_out);
     free(golden_in); codec_ctx_free(&x);
     printf("E02C SELFTEST PASSED roundtrips=%zu truncations=%zu mutations=%zu malformed=%zu production_typed_cases=%zu production_typed_not_applicable=%zu "
-           "production_typed_reconstructions=%zu planner_int_blocks=%zu planner_reconstructions=%zu golden_checked=%zu golden=%s\n",
-           T_roundtrips, T_truncations, T_mutations, T_malformed, T_prod_cases, T_prod_na, T_prod_recon, T_planner_blocks, T_planner_recon, T_golden, gs);
+           "production_typed_reconstructions=%zu planner_int_blocks=%zu planner_reconstructions=%zu golden_checked=%zu golden=%s guard_cases=%zu\n",
+           T_roundtrips, T_truncations, T_mutations, T_malformed, T_prod_cases, T_prod_na, T_prod_recon, T_planner_blocks, T_planner_recon, T_golden, gs, T_guard);
     return 0;
 }

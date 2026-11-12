@@ -41,17 +41,19 @@
 #define SEG 128
 enum { R_EXIST, R_GBP, R_LBP, R_GPP, R_LPP, R_PLANES, R_N };
 #define R_SEL 5                           /* the size selector chooses among the first five representations (as in the first E02C run) */
-enum { B_STORE, B_HUF, B_RANS, B_ZSTD, B_N, B_ENT = B_N, B_Z19, B_PROD3, B_PROD19 };   /* B_ENT: per stream, both existing entropy coders tried, smaller kept (both charged) */
+enum { B_STORE, B_HUF, B_RANS, B_ZSTD, B_N, B_ENT = B_N, B_Z19, B_PROD3, B_PROD19, B_PROD3G };   /* B_ENT: per stream, both existing entropy coders tried, smaller kept (both charged) */
 static const char *RN[R_N] = {"exist", "gbp", "lbp128", "gpp", "lpp128", "planes"};
-static const char *BN[B_N + 4] = {"store", "huf", "rans", "zstd3", "ent", "zstd19", "prod3", "prod19"};
+static const char *BN[B_N + 5] = {"store", "huf", "rans", "zstd3", "ent", "zstd19", "prod3", "prod19", "prod3g"};
 static const int BC[B_N] = {C_STORE, C_HUF, C_RANS, C_ZSTD};
 #define ZSTD_CONTROL_LEVEL 3
 #define NFIX (R_SEL * B_N)              /* configurations 0-19: fixed; 20-23: charged selector per backend; 24-27: planes (appended, indices kept) */
 /* appended configurations 28-36: best-of-entropy (28-30), then level-matched zstd -19 and production's leaf rule
  * at levels 3 and 19 (31-36), for the existing layout and the plane layout */
-static const int XREP[9] = {R_EXIST, R_PLANES, R_LPP, R_EXIST, R_PLANES, R_EXIST, R_PLANES, R_EXIST, R_PLANES};
-static const int XBE[9] = {B_ENT, B_ENT, B_ENT, B_Z19, B_Z19, B_PROD3, B_PROD3, B_PROD19, B_PROD19};
-#define NCONF (NFIX + B_N + B_N + 9)
+/* 37-38 (E02E, frozen before validation data): production fast rule with a sparse-leaf guard */
+static const int XREP[11] = {R_EXIST, R_PLANES, R_LPP, R_EXIST, R_PLANES, R_EXIST, R_PLANES, R_EXIST, R_PLANES, R_EXIST, R_PLANES};
+static const int XBE[11] = {B_ENT, B_ENT, B_ENT, B_Z19, B_Z19, B_PROD3, B_PROD3, B_PROD19, B_PROD19, B_PROD3G, B_PROD3G};
+#define NCONF (NFIX + B_N + B_N + 11)
+#define GUARD_MIN (256u << 10)   /* the fast rule samples leaves of at least 256 KiB */
 
 static int uvlen(uint64_t v) { int l = 1; while (v >= 128) { v >>= 7; l++; } return l; }
 static int e2bitlen(uint64_t z) { return z ? 64 - __builtin_clzll(z) : 0; }
@@ -171,7 +173,7 @@ static int lpp_choose(const uint64_t *z, size_t len) {
 static int e2c_encode(codec_ctx *x, int rep, int be, const uint8_t *r, size_t m, int ow, int pln, kbuf *blob, estat *st) {
     kbuf s[8] = {{0}}; int ns = 0, rc = -1; uint64_t *z = NULL; blob->n = 0;
     estat dummy; if (!st) st = &dummy; memset(st, 0, sizeof *st); st->rep = rep; st->be = be;
-    int prodrule = be == B_PROD3 || be == B_PROD19;
+    int prodrule = be == B_PROD3 || be == B_PROD19 || be == B_PROD3G;
     if (prodrule && rep != R_EXIST && rep != R_PLANES) goto done;
     if (kb_byte(blob, (uint8_t)((prodrule ? 0xD0 : 0xE0) | rep))) goto done;
     if (rep == R_EXIST) { ns = 1; if (kb_put(&s[0], r, m * (size_t)ow)) goto done; }
@@ -216,7 +218,26 @@ static int e2c_encode(codec_ctx *x, int rep, int be, const uint8_t *r, size_t m,
         for (int q = 0; ok && q < ns; q++) { int id = kgb_new(&g); ok = id == q + 1 && !kb_put(&g.s[id], s[q].p, s[q].n); tot += s[q].n; }
         size_t cap = tot + tot / 8 + 4096 * (size_t)(ns + 1), w = 0;
         uint8_t *o = ok ? malloc(cap) : NULL;
-        if (o) w = kg_serialize(x, C_ZSTD, be == B_PROD3 ? CZ_FAST_LEVEL : 19, &g, SIZE_MAX / 2, o, cap);
+        if (o) w = kg_serialize(x, C_ZSTD, be == B_PROD19 ? 19 : CZ_FAST_LEVEL, &g, SIZE_MAX / 2, o, cap);
+        if (w && be == B_PROD3G) {                              /* guard: a large leaf the fast rule sent to Huffman-only also
+                                                                 * gets zstd at the fast level; the smaller is kept (charged) */
+            kbuf ob = {0}; size_t i = 2; uint64_t nn, nl; int okg = !kg_getuv(o, w, &i, &nn) && !kg_getuv(o, w, &i, &nl) && nl == (uint64_t)ns;
+            okg = okg && !kb_byte(&ob, 'G') && !kb_byte(&ob, 1) && !kb_uv(&ob, 0) && !kb_uv(&ob, nl);
+            for (int q = 0; okg && q < ns; q++) {
+                uint64_t id, rl, zl; okg = !kg_getuv(o, w, &i, &id) && i < w; if (!okg) break;
+                int cc = o[i++]; okg = !kg_getuv(o, w, &i, &rl) && !kg_getuv(o, w, &i, &zl) && zl <= w - i; if (!okg) break;
+                const uint8_t *cd = o + i; size_t cz = (size_t)zl; uint8_t *alt = NULL;
+                if (cc == C_HUF && rl >= GUARD_MIN) {
+                    size_t ac = (size_t)rl + (size_t)rl / 8 + 1024; alt = malloc(ac);
+                    size_t a = alt ? codec_compress(x, C_ZSTD, CZ_FAST_LEVEL, s[q].p, s[q].n, alt, ac) : 0;
+                    if (a && a < cz) { cd = alt; cz = a; cc = C_ZSTD; }
+                }
+                okg = !kb_uv(&ob, id) && !kb_byte(&ob, (uint8_t)cc) && !kb_uv(&ob, rl) && !kb_uv(&ob, cz) && !kb_put(&ob, cd, cz);
+                free(alt); i += zl;
+            }
+            if (okg && i == w && ob.n <= cap) { memcpy(o, ob.p, ob.n); w = ob.n; } else w = 0;
+            free(ob.p);
+        }
         if (w) { size_t i = 2; uint64_t v, nn, nl; kg_getuv(o, w, &i, &nn); kg_getuv(o, w, &i, &nl);   /* record leaf choices */
                  for (int q = 0; q < ns && q < 8; q++) { uint64_t rl, zl; kg_getuv(o, w, &i, &v); int cc = o[i++]; kg_getuv(o, w, &i, &rl); kg_getuv(o, w, &i, &zl);
                      st->s[q] = (sstat){C_ZSTD, cc, (size_t)rl, (size_t)zl}; i += zl; } }
