@@ -18,9 +18,9 @@ def sh(*a): return subprocess.check_output(a, cwd=ROOT, text=True).strip()
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('corpus'); ap.add_argument('out')
-    ap.add_argument('--reps', type=int, default=7); ap.add_argument('--seed', type=int, default=20261112); ap.add_argument('--no-mem', action='store_true')
+    ap.add_argument('--reps', type=int, default=7); ap.add_argument('--seed', type=int, default=20261112); ap.add_argument('--no-mem', action='store_true'); ap.add_argument('--manifest', default=str(HERE / 'corpus/manifest.json'))
     a = ap.parse_args(); corpus = pathlib.Path(a.corpus); out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
-    man = json.loads((HERE / 'corpus/manifest.json').read_text())
+    man = json.loads(pathlib.Path(a.manifest).read_text())
     for it in man['inputs']:
         if sha(corpus / it['name']) != it['sha256']: raise SystemExit(f'corpus hash mismatch: {it["name"]}')
     env = dict(head=sh('git', 'rev-parse', 'HEAD'), kolmo_c_blob=sh('git', 'rev-parse', 'HEAD:src/kolmo.c'),
@@ -32,6 +32,7 @@ def main():
                vendor_flags='make ARCH= build/libvendor.a (-O3 -fno-plt)', cpu=next((l.split(':', 1)[1].strip() for l in open('/proc/cpuinfo') if l.startswith('model name')), ''),
                nproc=os.cpu_count(), kernel=platform.release(), python=sys.version.split()[0], threads=1, reps=a.reps, seed=a.seed,
                started=time.strftime('%Y-%m-%dT%H:%M:%S%z'))
+    env['manifest'] = str(a.manifest); env['manifest_sha256'] = sha(a.manifest)
     rng = random.Random(a.seed); jobs = []
     for it in man['inputs']:
         jobs.append(('typed', it, None)); jobs.append(('planner', it, 'fast')); jobs.append(('planner', it, 'hc'))

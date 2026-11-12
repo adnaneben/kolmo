@@ -17,9 +17,9 @@ FIXED = CONFS[:20] + CONFS[24:28] + CONFS[31:33]
 def med(v): return statistics.median(v) if v else None
 def q(v, p): v = sorted(v); return v[min(len(v) - 1, int(p * (len(v) - 1) + 0.5))] if v else None
 
-def main(raw, out):
+def main(raw, out, manifest=None):
     out = pathlib.Path(out); out.mkdir(parents=True, exist_ok=True)
-    man = {i['name']: i for i in json.loads((HERE / 'corpus/manifest.json').read_text())['inputs']}
+    man = {i['name']: i for i in json.loads(pathlib.Path(manifest or HERE / 'corpus/manifest.json').read_text())['inputs']}
     R = [json.loads(l) for l in open(raw)]
     fam = lambda n: man[n]['family']; real = lambda n: man[n]['origin'] != 'synthetic'
     S = {}
@@ -188,4 +188,4 @@ def main(raw, out):
     (out / 'summary.json').write_text(json.dumps(S, indent=1) + '\n'); (out / 'tables.md').write_text('\n'.join(T) + '\n')
     print(f'wrote {out}/summary.json, {out}/tables.md')
 
-if __name__ == '__main__': main(*sys.argv[1:3])
+if __name__ == '__main__': main(*sys.argv[1:4])
