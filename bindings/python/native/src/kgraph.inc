@@ -400,6 +400,15 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
             }
             flat = zs * 100 >= 3 * sn * 99 && hs * 100 >= 3 * sn * 99;
             hufonly = !flat && hs * 100 <= zs * 97;
+            if (hufonly) {
+                /* the three samples can all land in the busy part of a leaf that is mostly one byte value (a high
+                 * byte plane that only a few columns use). Huffman cannot go below one bit per byte there, where
+                 * zstd codes the runs for almost nothing: 164 KB against 3 KB on one plane (found by the E02C
+                 * research harness). When one value fills half the leaf, both are tried. */
+                uint32_t hc[256] = {0}, top = 0; for (size_t i = 0; i < s->n; i++) hc[s->p[i]]++;
+                for (int c = 0; c < 256; c++) if (hc[c] > top) top = hc[c];
+                if ((uint64_t)top * 2 >= s->n) hufonly = 0;
+            }
         }
         size_t z = s->n >= 64 && !flat && !hufonly ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
         int tryh = s->n >= 64 && !flat;

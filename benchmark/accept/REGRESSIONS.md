@@ -83,7 +83,7 @@ Each is a choice that could reasonably go the other way. The number is what the 
 | 10 | 3% minimum for a plain result at ratio, 10% probe margin, 1.35x slice limit | Chosen by judgement, not tuned | - | A sweep on a larger holdout |
 | 11 | `ultra` tries plain context mixing only when plain block sorting is within 2% | Yes | Always try (magika.onnx 1.1% smaller, 20x the time on every model file) | If `ultra` time stops mattering |
 | 13 | Model 3 only for text blocks | Yes | Everywhere (database file 2.2% smaller, executables 1%; three binary files 0.02 to 0.06% larger than 1.0.1, 20% slower) or code both and keep the smaller (2.2x the time) | If the no-file-larger rule is relaxed to a tolerance at `ultra` |
-| 12 | Image model is a new block codec (15) | Yes | Fold it into codec 7 behind a stream flag | Release policy, with decision 7 |
+| 12 | Image model is a new block codec (17; 15 and 16 are left for the native leaf of `feat/native-residual-leaf`) | Yes | Fold it into codec 7 behind a stream flag | Release policy, with decision 7 |
 
 ## M5, 12 November 2026 (commit 67a022f, before this branch)
 

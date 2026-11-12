@@ -1,4 +1,4 @@
-/* Context mixing with the image model (block codec 15): round trips on generated images, and decoding of damaged
+/* Context mixing with the image model (block codec 17): round trips on generated images, and decoding of damaged
  * streams (must fail or return, never read or write out of bounds; run under AddressSanitizer by `make check-cmimg`). */
 #include "../src/kolmo.c"
 #include <stdio.h>

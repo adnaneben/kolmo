@@ -676,7 +676,7 @@ static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t ca
     return r ? 0 : o;
 }
 static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return cm_compress_m(in, n, out, cap, 2); }
-/* Image model (block codec 8): 8-bit samples in rows of iw bytes, ich interleaved channels, after ih bytes that are
+/* Image model (block codec 17): 8-bit samples in rows of iw bytes, ich interleaved channels, after ih bytes that are
  * not pixels. Stream: iw u32 | ih u32 | ich u8 | size word as above (always model 2 tables) | coded bytes. */
 static size_t cm_compress_img(const uint8_t *in, size_t n, uint32_t iw, uint32_t ich, uint32_t ih, uint8_t *out, size_t cap) {
     if (cap < 20 || n >= ((size_t)1 << 28) || !iw || !ich || ich > 4 || iw < ich || ih > n) return 0;

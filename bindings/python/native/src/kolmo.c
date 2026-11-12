@@ -1090,7 +1090,7 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 
 /* ------------------------------------------------------------------ codecs */
 enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
-       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_CMI = 15 };   /* 15: context mixing with the image model (ultra; carries its own row length, channels and head) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0 (graph leaves) */
+       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_CMI = 17 };   /* 15 and 16 are left for the native plane-context leaf of feat/native-residual-leaf; 17: context mixing with the image model (ultra; carries its own row length, channels and head) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0 (graph leaves) */
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9, T_LINES = 10 };   /* 9: kolmo graph (a=delim b=decimal separator) */
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
  * so repeated calls to one target produce identical bytes. Encoded back to front and decoded front to back (as in
@@ -2037,6 +2037,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         if (!buf || !zb) { free(buf); free(zb); ZSTD_freeCCtx(zc); return pl; }
         size_t zcap = ZSTD_compressBound(bc);
         double plain = (double)zcost(zc, s + st, L, zb, zcap, zl) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
+        /* Ownership survives replacement of the tentative winning plan (same repair as fix/planner-record-ownership). */
+        rec_plan_t *owned_rec = NULL;
         double d64c = 1e300; uint32_t d64cols = 0; size_t d64h = 0;   /* the DEC64 trial's result, kept for a marked plan */
         if (pl.t == T_SHUF) {
             size_t u = (size_t)pl.a * pl.b, rows = L / u; shuffle_fwd(s + st, rows, pl.a, pl.b, pl.c, buf);
@@ -2074,7 +2076,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             size_t rl = L / R->P * R->P;
             if (rs + rl <= n) {
                 int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc);
-                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < best) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; R = NULL; chosen = 3; } }
+                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < best) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } }
             }
         }
         free(R);
@@ -2087,8 +2089,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (ej * 1000 >= L) {
             memcpy(buf, s + st, L); e8e9_fwd(buf, L);
             double c = (double)zcost(zc, buf, L, zb, zcap, zl) / L;
-            if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; if (keep.rec != pl.rec) free(keep.rec);   /* a record plan loses to this one */ keep = pl; keep.t = T_X86; chosen = 4; }
-            else if (c < best && chosen == 0) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_X86; chosen = 4; }
+            if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
+            else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
             }
         }
         {   /* float arrays first (FLOAT node); integer arrays (INT node) only when the data does not look like floats */
@@ -2106,13 +2108,13 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             const int npy = n > 16 && !memcmp(s, "\x93NUMPY", 6);   /* quick analysis: integer and image trials only for a .npy header */
             if (cf > 1e299 && (!light || npy || numtrial)) {
                 w = 0; hh = 0; c = kg_num_trial(s, n, st, Lg, zl, plain, &w, &hh); c = KG_ADJ(c);
-                if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
+                if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
             }
             c = cf; w = fw; hh = fh;
-            if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
+            if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
             { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, st, L, zl, &dc, &dh);     /* decimal doubles: decode is slower than the other graphs, so it must win by 7% */
               d64c = c; d64cols = dc; d64h = dh;
-              if (c < best * 0.93) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = DEC_B(dc); keep.c = (int)dh; keep.kgw = DEC_KGW(dc); chosen = 8; } }
+              if (c < best * 0.93) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = DEC_B(dc); keep.c = (int)dh; keep.kgw = DEC_KGW(dc); chosen = 8; } }
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt2 = prof_now();
 #endif
@@ -2122,7 +2124,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             fprintf(stderr, "kg float_ms=%.3f num_ms=%.3f img8_ms=%.3f\n", (kgt1 - kgt0) * 1000, (kgt2 - kgt1) * 1000, (prof_now() - kgt2) * 1000);
 #endif
-            if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7; }
+            if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7; }
         }
 #undef KG_ADJ
 structured_done:
@@ -2144,10 +2146,10 @@ structured_done:
             /* a marked whole-file plan (one word size and alignment for everything) gives way to the segment plan when
              * that also beat plain coding on the slice: segments follow the arrays wherever they sit */
             if (keep.verify && chosen != 8 && d64c < plain * CZ_STRUCT_GAIN_PCT / 100.0) {
-                if (keep.rec != pl.rec) free(keep.rec);
                 keep = pl; keep.t = T_KG; keep.a = 0; keep.b = DEC_B(d64cols); keep.c = (int)d64h; keep.kgw = DEC_KGW(d64cols); keep.verify = 1; chosen = 8;
             }
         }
+        if (owned_rec && chosen != 3) { free(owned_rec); if (keep.rec == owned_rec) keep.rec = NULL; }
         if (chosen >= 2) pl = keep;
         else if (pl.t == T_SHUF && n >= (1u << 20)) {      /* the same probes for a byte shuffle */
             static const int at16[4] = {1, 5, 11, 15}; const size_t u = (size_t)pl.a * pl.b, E = (32u << 10) / u * u;

@@ -7,7 +7,7 @@ number that justifies dropping it is in the row). Decision of 12 November 2026.
 Sources: S = session plan, G = the "Kolmo-inspired codec" plan (experiment ids E00 to E10), M = found by measurement.
 Costs and trade-offs of what was done are in `benchmark/accept/REGRESSIONS.md`; this file tracks what was planned.
 
-Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 60 rows. 14 done, 6 dropped, 9 partly done, 30 not done,
+Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 71 rows. 18 done (one of them on another branch), 6 dropped, 10 partly done, 36 not done,
 1 deferred (the merge).
 
 ## A. Numeric and structured data
@@ -22,11 +22,12 @@ Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 60 rows. 14 done, 6
 | A6 | Integers of 2^32 and above inside containers (timestamps) | M | Not done | Probe limited to 2^32 to keep short-mantissa doubles out (ledger decision 9) |
 | A7 | Decimal mapping for float32 | M | Done | Same node, 4-byte words (`.npy` tables and arrays inside containers). Four holdout tables as float32: balanced 5.63 -> 2.59 MB, ratio 3.79 -> 2.11 MB; per file -3% to -58% |
 | A8 | Gorilla XOR and bit-plane coding for floats against the byte-plane node | G E03 | Dropped | Six float sets: XOR + planes is 1 to 16% larger than byte planes on tables, noise and weights; 7% smaller on a smooth series, where kolmo's own choice is already smaller still (5.50 against 5.57 MB; a sine: 2.91 against 4.99 MB). XOR bit planes within 1% of XOR byte planes |
-| A9 | Residual packing for integers: frame of reference, bit-packing, patched, Rice, against byte planes | G E02 | Dropped | Five integer sets: the best of Rice, bit-packing and patched packing (ideal parameters per 128 values) is 14% to 10x larger than the integer graph at balanced (timestamps 13,106 against 2,628 bytes; decimals as integers 73,910 against 64,840). They are speed encodings, not size ones |
-| A10 | Several small entropy contexts per leaf (byte position, sign, exception flag) | G E04 | Partly | Position, sign and exception flag are already separate leaves. Measured an order-1 leaf (previous byte of the same plane) on three tables' planes against the balanced coder: 2,284 against 2,182 KB (worse), 343 to 395 against 460 KB (14 to 25% smaller), 89 to 105 against 111 KB (5 to 20% smaller). Left: build an order-1 rANS leaf and let the serializer pick it per leaf |
+| A9 | Residual packing for integers: frame of reference, bit-packing, patched, Rice, against byte planes | G E02 | Dropped (agrees with E02C/E02D on the isolated research branch: packing before zstd enlarges; it helps only entropy-only leaves and still ends above zstd-1) | Five integer sets: the best of Rice, bit-packing and patched packing (ideal parameters per 128 values) is 14% to 10x larger than the integer graph at balanced (timestamps 13,106 against 2,628 bytes; decimals as integers 73,910 against 64,840). They are speed encodings, not size ones |
+| A10 | Several small entropy contexts per leaf (byte position, sign, exception flag) | G E04 | Done elsewhere | Built on `feat/native-residual-leaf` (plane-context rANS leaf, opt-in at balanced): -9.8% over 317 integer files, whole-file decode 2.3x slower. Tried here on the DEC64 planes of four tables: +3.2%, -0.3%, +4.0%, +33% against the per-plane best of zstd, Huffman and rANS, so it is not applied to DEC64. Take it for integer series when the branches are brought together (X2) |
 | A11 | Cross-field prediction (one column from another) | G | Dropped | Difference from an earlier column: 1 of 144 columns qualifies, 0 bytes. Linear fit on any other column (an optimistic bound, either direction): 0.6%, 0%, 1.0% on three tables, 10.3% on a physics table. Reopen only for tables of physically related quantities |
 | A12 | Segmentation: restart or switch models where the data changes | G E07 | Partly | Per-segment exponents and per-block both-ways coding exist; no general change detector |
 | A13 | DEC64 speed: reuse the trial slice, code leaves once, batch the decode | M | Not done | Encode is 1.7x to 3x, decode 1.2x to 1.9x on those files |
+| A15 | Magnitude token plus exact offset bits for integer residuals (pcodec-style) | R1 review | Partly | Entropy bound with order-1 tokens against the balanced coder on eight integer sets: 1 to 12% smaller on five (decimal tables 1.3%, 5.9%, 11.6%; integer columns 5.4%; population 7.5%), larger on three (timestamps 2.2x). Against the ratio coder: worse on seven. Left: build it as a leaf candidate for balanced, or drop after a costed test |
 | A14 | JSON and log structure parsing into streams | G E05 | Partly | Tables, templates and fixed-width lines exist; no JSON key/value split. See D8 for the ultra side |
 
 ## B. Planner
@@ -86,7 +87,8 @@ Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 60 rows. 14 done, 6
 | E1 | All rival tools on the Mac | S | Done | 19 rivals measured, bsc and paq8px included |
 | E2 | Reuse rival results between Mac runs | M | Done | Six hours -> 27 minutes per commit |
 | E3 | Regression ledger with decisions to revisit | S | Done | `benchmark/accept/REGRESSIONS.md`, 13 decisions; kept current |
-| E4 | M5 confirmation of each batch | S | Done to 6fa4144 | 17 of 19 rivals, no slowdown, no file larger. e2bfeef pending |
+| E4 | M5 confirmation of each batch | S | Done to 1079e90 | 17 of 19 rivals, no file larger, all round trips correct; one recurring decode flag (E12). Against paq8px -8 on 23 files: 4.1% smaller in total, per-file mean 2% behind |
+| E12 | M5 flags `hc` decode of osdb 5 to 11% slower than 1.0.1 on unchanged output in three of four runs of this branch | M | Not done | Not reproduced on the VM (22 ms both, best of 9). 22 ms is short for a process-level timing; needs decode-only timing on the M5 |
 | E5 | A quiet x86 Linux machine | S | Not done | Cloud VM CPU time moves by up to 25% between passes; needs hardware |
 | E6 | Dashboard with the 19-rival M5 data and this branch | S | Not done | Shows 7c6d1c2 |
 | E7 | Executive deck | S | Not done | "Changes" slide still says speed mode "tighten"; no DEC64, image model or PAQ8PX results |
@@ -94,6 +96,22 @@ Status on 12 November 2026 (branch `claude/dec64`, e2bfeef): 60 rows. 14 done, 6
 | E9 | Final validation: freeze, full holdout, damaged-input tests, acceptance twice | G E09 | Not done | Last step before the merge |
 | E10 | Merge to main | S | Deferred | Not before every row above is Done or Dropped. Main still has the int64 pickle regression |
 | E11 | Tag and publish | S | Not done | From the Mac, after E10 |
+
+## X. From the other branches (read 12 November 2026)
+
+Three branches moved today besides this one. What each has, and what this work takes from it.
+
+| # | Branch | What it has | Taken here | Status |
+|---|---|---|---|---|
+| X1 | `fix/planner-record-ownership` | The record-plan leak in `make_plan`, fixed with one owner freed at the end, plus tests | This branch had fixed the same leak site by site; switched to their single-owner form so the two merge cleanly | Done |
+| X2 | `feat/native-residual-leaf` | Graph leaf codec 15 (plane-context rANS), container version 9, opt-in `--native-leaf` at balanced: -9.8% on integer series | Codec id clash: the image model here was block codec 15, now 17. The leaf itself is theirs to land; not useful on DEC64 planes (A10) | Clash removed; integration open |
+| X3 | `feat/ultra-cm-graph-leaves` | `-x -l 2`: graph leaves may use context mixing | Measured here on this branch's graphs: decimal tables -2.8 to -4.3%, a wide CSV -4.8%, timestamps -12.2%, model weights -1.0%, at 10x the encode and 50 to 100x the decode time of those blocks. Their opt-in level is the right shape; not duplicated here | Take at integration |
+| X4 | isolated research branch, E02C follow-up 2 | The fast leaf rule picks Huffman-only from three samples and misfires on sparse large leaves (164 KB against 3 KB on one plane) | Guard added here (both coders tried when one byte value fills half the leaf): co2.npy -18.1% at balanced, nine other DEC64 files -1.5 to -3.5%, nothing else changed | Done |
+| X5 | isolated research branch, E02C/E02D | Bit-packing, patched packing against existing layout, preregistered on new sources: no unconditional gain, zstd-1 on the existing layout smallest | Confirms dropping A9 | Done |
+| X6 | isolated research branch, E02E and `codex/v110-validation` holdout | Preregistered validation on NOAA and MIT-BIH data; a release holdout list (`benchmark/holdout/inputs.json`) | Independent sources for A2. Needs a machine with network (the Mac) | Not done |
+| X8 | GPT review R1 (`research/codec/review-20261112/`) | Plane-aligned Huffman or rANS chunks readable by today's decoder; the rANS encoder refuses a one-symbol chunk although the decoder accepts it; token-plus-offset coding; decode-only timing; family as the unit of evidence; an exposure registry for holdouts | Taken: the token-plus-offset idea (measured, A15); decode-only timing for the M5 flag in E12; the exposure check for A2 (the release holdout's three sources, UCI power, Divvy rides, USGS quakes, do not overlap this branch's holdout and are candidates for it). Not taken: plane-aligned chunks (DEC64 planes are separate leaves already) and its next task, which belongs to that branch | Partly |
+| X9 | GPT review R1, R5 | The rANS encoder allocates 4 MiB per call and the decoder builds a 64K table per stream | Relevant to DEC64 speed (A13): a DEC64 block has up to 11 leaves. To profile there | Not done |
+| X7 | all three | Container version 9 and new ids are being claimed in parallel (this branch: version 8 for fixed-width lines, node 7, block codec 17, extended CM header) | One table of ids and versions agreed before any of the branches goes to main | Not done |
 
 ## Considered and not planned
 

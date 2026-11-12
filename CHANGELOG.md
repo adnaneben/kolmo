@@ -89,6 +89,15 @@
 
 ## Unreleased (on main, not tagged)
 
+- **Graph leaves: the Huffman-only shortcut no longer misfires on sparse leaves (branch `claude/dec64`).** At
+  `balanced`, three 32 KiB samples decide whether a large leaf is coded with Huffman alone. When all three fall in the
+  busy part of a leaf that is mostly one byte value, Huffman was chosen and spent one bit per byte on the rest (found
+  by the E02C research harness on another branch: 164 KB against 3 KB on one plane). Both coders are now tried when
+  one value fills half the leaf. A 31 MB decimal table (`co2.npy`): 2,397,150 → 1,963,547 bytes (18.1% smaller); nine
+  other decimal files 1.5 to 3.5% smaller; no other output in the 81-file set changed.
+- **Planner: the record-plan leak is fixed the way `fix/planner-record-ownership` fixes it** (one owner, freed at the
+  end), replacing this branch's site-by-site frees, and the image model's block codec moves from 15 to 17, so the two
+  branches and `feat/native-residual-leaf` (graph leaf codec 15) can be brought together without clashes.
 - **Decimal mapping for float32 (branch `claude/dec64`).** The DEC64 node takes 4-byte words (a per-column flag):
   binary32 values that were written in decimal are stored as the integer `m` with value = `(float)(m / 10^e)`.
   `.npy` `<f4` tables and float32 arrays inside containers. Four holdout tables converted to float32: `balanced`
@@ -105,7 +114,7 @@
   nothing (-2.2% to +0.06% on seven binary files). JSON 142,217 → 135,936 bytes (4.4% smaller), Polish prose 3.4%,
   logs 2.8%, XML 2.5%, CSV and source code about 1%; about 20% slower than model 2. Streams carry an extended header
   (flags 8, then model and table size); an older reader stops with an error.
-- **`ultra`: an image model for the context mixer (block codec 15; branch `claude/dec64`).** For 8-bit images the
+- **`ultra`: an image model for the context mixer (block codec 17; branch `claude/dec64`).** For 8-bit images the
   mixer's hashed contexts are the pixel's neighbours (left, above, the diagonals, two back), the earlier channels of
   the same pixel, and gradient, median and inter-channel predictions with the local activity, in place of the
   preceding bytes; the mixers are selected by the prediction and the neighbours. A 512x512 grey photograph: 132,883 →
