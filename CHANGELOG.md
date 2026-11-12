@@ -89,6 +89,11 @@
 
 ## Unreleased (on main, not tagged)
 
+- **Regression ledger (`benchmark/accept/REGRESSIONS.md`, branch `claude/dec64`).** Every file of the corpus and
+  the holdout sets measured against 1.0.1 and main at three settings: what got slower or larger, what was fixed, what
+  is open, and which costs are accepted for what gain. From it: the plain attempts at `ratio` are now made only when
+  a block-sorted slice says they can win (ratio encode over 81 files: 384 s → 228 s, main 262 s), and DEC64 must
+  beat the next plan by 7%.
 - **`ratio`: a transformed block is also tried plain (branch `claude/dec64`).** Transforms are chosen by their zstd
   score; under block sorting or LZMA2 the plain bytes are sometimes smaller. A transformed block now tries block
   sorting of the plain bytes when a slice from the middle is within reach, blocks up to 2 MiB also try plain LZMA2,

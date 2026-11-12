@@ -2103,8 +2103,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             }
             c = cf; w = fw; hh = fh;
             if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
-            { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, st, L, zl, &dc, &dh);     /* decimal doubles */
-              if (c < best) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = dc ? 64 : 65; keep.c = (int)dh; keep.kgw = dc ? dc * 8 : 8; chosen = 8; } }
+            { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, st, L, zl, &dc, &dh);     /* decimal doubles: decode is slower than the other graphs, so it must win by 7% */
+              if (c < best * 0.93) { best = c; if (keep.rec != pl.rec) free(keep.rec); keep = pl; keep.t = T_KG; keep.a = 0; keep.b = dc ? 64 : 65; keep.c = (int)dh; keep.kgw = dc ? dc * 8 : 8; chosen = 8; } }
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt2 = prof_now();
 #endif
@@ -2161,7 +2161,7 @@ structured_done:
             w = 0; hh = 0; c = kg_float_trial(s, n, 0, n, zl, plain, &w, &hh);
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w | 16; pl.c = (int)hh; }
             { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, 0, n, zl, &dc, &dh);
-              if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = dc ? 64 : 65; pl.c = (int)dh; pl.kgw = dc ? dc * 8 : 8; } }
+              if (c < best * 0.93) { best = c; pl.t = T_KG; pl.a = 0; pl.b = dc ? 64 : 65; pl.c = (int)dh; pl.kgw = dc ? dc * 8 : 8; } }
             size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, 0, n, zl, 1e300, &iw, &ic, &ih);
             if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = 32 | (int)ic; pl.c = (int)ih; pl.kgw = (uint32_t)iw; }
         }
@@ -2418,6 +2418,13 @@ static void *compress_worker(void *arg) {
                  * is not one kind of data throughout): this block may be the part the graph does not fit. Both are
                  * coded; the smaller one is kept. */
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4); int bc = 0; size_t bz = cl;
+                if (alt && codec != C_ZSTD && codec != C_LZ4) {
+                    /* the slow coders: block sorting of a slice from the middle tells whether plain coding is within
+                     * reach (a slice sorts worse than the block, so the limit is loose); otherwise the graph stands */
+                    size_t sn = len < (512u << 10) ? len : (512u << 10), so = ((len - sn) / 2) & ~(size_t)63;
+                    size_t cs = codec_compress(xp, C_BSC, 9, raw + so, sn, alt, J->slot);
+                    if (!cs || (double)cs / sn > 1.35 * (double)cl / len) alt = NULL;
+                }
                 size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = codec; }
                 size_t a2 = alt && codec == C_LZMA ? codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot) : 0;
@@ -2496,7 +2503,8 @@ static void *compress_worker(void *arg) {
             }
             size_t a1 = try_bsc ? codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot) : 0;
             if (a1 && (uint64_t)a1 * 100 <= (uint64_t)bz * 97) { memcpy(sl, alt, a1); bz = a1; bc = C_BSC; }
-            size_t a2 = alt && len <= (2u << 20) ? codec_compress(xp, C_LZMA, level, raw, len, alt, J->slot) : 0;
+            /* plain LZMA2 only where plain block sorting came within 25% of the transformed block */
+            size_t a2 = alt && len <= (2u << 20) && a1 && (double)a1 <= 1.25 * (double)(cl + meta) ? codec_compress(xp, C_LZMA, level, raw, len, alt, J->slot) : 0;
             if (a2 && (uint64_t)a2 * 100 <= (uint64_t)(cl + meta) * 97 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_LZMA; }
             if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
         }
