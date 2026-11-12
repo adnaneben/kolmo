@@ -50,6 +50,31 @@ static int num_field(const uint8_t *p, size_t l, int64_t *out) {
     if ((neg && v == 0) || (neg ? v > (uint64_t)INT64_MAX + 1 : v > (uint64_t)INT64_MAX)) return -1;
     *out = neg ? (int64_t)(0 - v) : (int64_t)v; return d;
 }
+/* SWAR: number of leading ASCII digits in the 8 bytes at p (little-endian load; carries/borrows only move upward, so
+ * the lowest non-digit byte is found exactly), and their value. Caller guarantees 8 readable bytes. */
+static inline int mcsv_swar8(const uint8_t *p, uint64_t *val) {
+    uint64_t x; memcpy(&x, p, 8);
+    uint64_t m = ((x + 0x4646464646464646ull) | (x - 0x3030303030303030ull)) & 0x8080808080808080ull;
+    int k = m ? __builtin_ctzll(m) >> 3 : 8;
+    if (!k) { *val = 0; return 0; }
+    if (k < 8) { int sh = 8 * (8 - k); x = (x << sh) | (0x3030303030303030ull >> (64 - sh)); }
+    x -= 0x3030303030303030ull; x = x * 10 + (x >> 8);
+    x = (((x & 0x000000FF000000FFull) * (100 + (1000000ull << 32))) + (((x >> 16) & 0x000000FF000000FFull) * (1 + (10000ull << 32)))) >> 32;
+    *val = x; return k;
+}
+static const uint64_t SW10[9] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000};
+/* digit run starting at s[i] (up to lim digits): advances i, returns the count, accumulates into *u (no overflow for
+ * <= 19 digits since the caller bounds the total) */
+static inline size_t digits_run(const uint8_t *s, size_t n, size_t *i, uint64_t *u, size_t lim) {
+    size_t c = 0;
+    while (c < lim) {
+        if (*i + 8 <= n) { uint64_t v; int k = mcsv_swar8(s + *i, &v); if ((size_t)k > lim - c) break;
+                           *u = *u * SW10[k] + v; *i += (size_t)k; c += (size_t)k; if (k < 8) return c; }
+        else { if (*i < n && (unsigned)(s[*i] - '0') < 10) { *u = *u * 10 + (uint64_t)(s[*i] - '0'); (*i)++; c++; } else return c; }
+    }
+    while (c < lim && *i < n && (unsigned)(s[*i] - '0') < 10) { *u = *u * 10 + (uint64_t)(s[*i] - '0'); (*i)++; c++; }   /* finish */
+    return c;
+}
 typedef struct { size_t hl, k, rows; uint32_t *roff; uint8_t *type; int64_t *num; size_t nnum; size_t *nidx; } table_t;
 static void tfree(table_t *T) { free(T->roff); free(T->type); free(T->num); free(T->nidx); memset(T, 0, sizeof *T); }
 /* single pass: structure + per-column running type (scale, or 255 = TEXT once any field disagrees); numeric values
@@ -74,7 +99,7 @@ static int mcsv_type(const uint8_t *s, size_t n, table_t *T) {
                 int neg = 0; uint64_t u = 0; size_t st, nd;
                 if (i < n && s[i] == '-') { neg = 1; i++; }
                 st = i;
-                while (i < n && (unsigned)(s[i] - '0') < 10 && i - st < 18) { u = u * 10 + (uint64_t)(s[i] - '0'); i++; }
+                digits_run(s, n, &i, &u, 18);
                 int ok = i > st && !(s[st] == '0' && i - st > 1), sc = 0; nd = i - st;
                 if (ok && i < n && (unsigned)(s[i] - '0') < 10) { u = u * 10 + (uint64_t)(s[i] - '0'); i++; nd++;       /* 19th digit: fits u64 */
                                                                   if (i < n && (unsigned)(s[i] - '0') < 10) ok = 0; }   /* 20+: TEXT */
@@ -153,7 +178,10 @@ static size_t enc(const uint8_t *src, size_t n, int ci, uint8_t **dst) {
     size_t r = ZSTD_compress(q, cap - (size_t)(q - d), src, n, c->level); if (ZSTD_isError(r)) DIE("zstd");
     codec_ctx_free(&x); *dst = d; return (size_t)(q - d) + r;
 }
-static inline int ndig(uint64_t u) { int d = 1; while (u >= 10000) { u /= 10000; d += 4; } return d + (u >= 10) + (u >= 100) + (u >= 1000); }
+static inline int ndig(uint64_t u) {
+    if (u < 100000000ull) return u < 10000 ? (u < 100 ? 1 + (u >= 10) : 3 + (u >= 1000)) : (u < 1000000 ? 5 + (u >= 100000) : 7 + (u >= 10000000));
+    int d = 9; for (uint64_t t = 1000000000ull; d < 20 && u >= t; d++) { if (t > UINT64_MAX / 10) { d++; break; } t *= 10; } return d;
+}
 static inline uint8_t *utoa_w(uint8_t *o, uint64_t u, int d) {    /* exactly d digits (zero-padded), two per step */
     uint8_t *e = o + d, *q = e;
     while (q - o >= 2) { unsigned r = (unsigned)(u % 100); u /= 100; q -= 2; q[0] = (uint8_t)KG_D2[2 * r]; q[1] = (uint8_t)KG_D2[2 * r + 1]; }

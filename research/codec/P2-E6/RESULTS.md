@@ -35,3 +35,12 @@ all-integer parser (fs_table +24% vs about −3% there; a shared, noisy 2-vCPU m
 pass for nothing. **Provisional:** byte-strong, cost not yet inside the speed budget except on all-integer tables;
 next is to make the TEXT path cost-neutral (skip typing when the first rows are all text) and to profile the mixed
 decoder. The archive comparison against OpenZL's CSV profile on the N1 boundary is the natural next measurement.
+
+## Revision 2 (SWAR parse, branch-chain digit count)
+
+Parsing digit runs eight bytes at a time (SWAR, exact; scalar near the buffer end) and counting printed digits
+without a division loop. Re-verified: typing agreement 310/310 with the oracle, plus 40 SWAR stress files
+(`gen_swar.py`: integers of 1–19 digits, int64 bounds, decimals of scale 1–18 up to 19 digits) 40/40 agreement;
+all files round-trip exactly under ASan/UBSan/LSan. Local timing (`results/summary-v2.txt`) is **inconclusive**: on
+this shared 2-vCPU machine an unchanged path (syn_mixed) moved by about 20 points between runs. P2-E7 measures the
+earlier committed version on runner hardware; the revision needs its own runner measurement before any claim.
