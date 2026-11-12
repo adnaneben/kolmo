@@ -1,0 +1,14 @@
+{
+  "DOWNLOAD.sha256": "f4dd3d3add38083781eeec6a6fab7003418b44550b58612cd7308025010744eb",
+  "FROZEN.sha256": "950440afcb017a30c6286c0380238eca79bfc7cb0c943d28c2d56d926d57e9c8",
+  "PREREGISTRATION.md": "9892d825481808f2369168641eed338ed229f9e53aa1d7e0a1709408d6917b5b",
+  "environment.txt": "6cf8c99495e55ca79ebd5ec7ee8a6504de4bbbd4456ff8dc67a20c760dcc5e0e",
+  "fetch.log": "f4dd3d3add38083781eeec6a6fab7003418b44550b58612cd7308025010744eb",
+  "out/decision.json": "c91ea6394cec278763699c6ba3c51f1b788645c4672d1e5361ff9b12074874d2",
+  "out/manifest.json": "9a706ef62c6db3a0c9313a30256966b7c21285489fc5fdca1d8e2c56381aca0c",
+  "out/run/env.json": "9a189a3f32bcf4348c27d2adaad6fcdce401fe4eb0a9ca55d5bb90d2ce33c636",
+  "out/run/raw.jsonl.xz": "38c0b6ba69dec4ea1eea5842e733bb455db71d041e403c7c3bef21cbdf12c14a",
+  "out/run/summary.json": "47de4a19b21784fed7deecfa420a8250c9bba3b7ae048c617365e13f9d4c3a87",
+  "out/run/tables.md": "cd0fb5ede3cc038e68c71ef1f9cdfd4bb3f78303253f4e2565d1776b9619d0c2",
+  "run.log": "8e43bd18b9da78379438b447e943dbcfb738a953d397a78c52a063df163a8134"
+}

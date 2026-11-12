@@ -32,7 +32,14 @@ E02G preregistered (`E02G/PREREGISTRATION.md`): validation of the stacked pipeli
 KG_INT-parameter phenotype) on Backblaze drive stats and OWID COVID counts, with dense EEG and single-byte controls.
 It consumes those sources; the native-compatible validation proposed by R2-stack must use others.
 
-Next substantive task: execute E02G as registered (`.github/workflows/e02g-validation.yml`) and record its decision.
+E02G executed (Actions 43272770322): both modes **provisional**; the stacked candidate is smaller in all four target ×
+mode cells (−0.67% to −2.00%), each mode misses one large-file decode-ratio bar (1.075×, 1.18×), controls passed, and
+the guard amplifier reproduced on fresh data. See `E02G/RESULTS.md`. The parallel R3-guard validation uses UCI
+Covertype and SNAP CollegeMsg (disjoint from E02G).
+
+Next substantive task: noise-controlled, decode-only timing of the exact E02G frames (identical-frame controls,
+warm/displaced regimes, family-level uncertainty), as verification of whether the two decode misses are real. It
+cannot change E02G's registered verdict; a fresh validation would be needed for that.
 
 Not started / not authorised: LZ engine, float or JSON codecs, neural selector, transform backlog, default or
 threshold changes, merges, releases.
