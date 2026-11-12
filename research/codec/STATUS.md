@@ -9,6 +9,7 @@ Updated 2026-11-12. Research only: no default, format, threshold or release chan
 | Item | State | Evidence |
 |---|---|---|
 | Planner record-ownership repair | Committed at `2f3308a` (`src/kolmo.c` `e06467c8…`); focused validator re-run locally and passed; CI runs 43187874283 / 43187874421 / 43187874238 reported successful (also recorded in `E02C/BASELINE.md`) but their artifacts were **not verified in this session** (no GitHub API access) | [`E02C-harness/BASELINE_EVIDENCE.md`](E02C-harness/BASELINE_EVIDENCE.md) |
+| E02F per-plane leaves on multi-byte residuals | **Preregistered** before any data: phenotype (INT blocks with `ow ≥ 2`), sources PhysioNet EEG (eegmmidb), Wikimedia pageviews, Free Spoken Digit Dataset; decode cost bounded per input byte; run via `e02f-validation.yml` | [`E02F/PREREGISTRATION.md`](E02F/PREREGISTRATION.md) |
 | E02E per-plane leaf validation | **Executed** (Actions 43255531577). Calibration passed. H1 fast **provisional** (GHCN −4.23%, decode 1.02×; MIT-BIH not exercised); H2 hc **not supported** (GHCN −3.72% but decode 1.105× > 1.05×; MIT-BIH residuals are single-byte, 0.00%); guard never triggered. No format change justified | [`E02E/RESULTS.md`](E02E/RESULTS.md) |
 | Holdout overlap note | E02D source UCI 235 (household power) is also listed in the release holdout `benchmark/holdout/inputs.json`; E02D's preregistration does not mention it. Not changed here; flagged for the E02D owner | `benchmark/holdout/inputs.json` |
 | E02D source-disjoint validation of the parallel implementation's candidates | Preregistered (`e6bf564`) and executed by the parallel workstream; results recorded in `91c4cda` (`E02D_RESULTS.md`), **deliberately not read in this session** so E02E stays blind. Per-plane leaves are not in its frozen matrix | [`E02D/PREREGISTRATION.md`](E02D/PREREGISTRATION.md) |
@@ -19,9 +20,7 @@ Updated 2026-11-12. Research only: no default, format, threshold or release chan
 | E02C parallel forced-typed implementation (`c880659`/`706cdab`: `build.py`, `probe.c`, `run.py`, zstd-1 control) | Executed by the parallel workstream (Actions 43232093686, 43233624953; reported there, not re-checked here): unconditional packing rejected; global/local/patched packing retained only as workload-specific candidates | [`E02C_RESULTS.md`](E02C_RESULTS.md), `E02C/README.md` |
 | Previous result "packing before zstd enlarges" | Reproduced (A real +13–25%, B fast +2.3–7.4% vs existing layout with zstd-3) | `E02C-harness/RESULTS.md` §1 |
 
-Next substantive task: decide whether per-plane leaves merit one more validation. If yes, preregister it fresh with a
-phenotype condition fixed in advance (sources whose KG_INT residuals are multi-byte, ≥ 2 families) and a stated rule for
-small-file decode overhead; otherwise close the per-plane line at "provisional, one family".
+Next substantive task: execute E02F as registered (`research/codec/E02F/fetch.sh`, `run.sh`, via `.github/workflows/e02f-validation.yml`) and record its decision.
 
 Not started / not authorised: LZ engine, float or JSON codecs, neural selector, transform backlog, default or
 threshold changes, merges, releases.
