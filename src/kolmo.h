@@ -19,7 +19,8 @@ typedef enum { KOLMO_RT = 0, KOLMO_FAST = 1, KOLMO_ECO = 2, KOLMO_HC = 3, KOLMO_
 
 typedef struct {
     kolmo_mode mode;      /* rt: LZ4 | fast: zstd 3 | eco: brotli 8 | hc: zstd 19 | max: BWT (text) or LZMA2 | ultra: context mixing (archive tier) */
-    int level;          /* 0 = mode default; otherwise codec level (max: LZMA2 preset, except 1 = BWT for every block;
+    int level;          /* 0 = mode default; otherwise codec level (max: 1 = BWT for every block, 10 = LZMA2 also on
+                           decimal-array planes, smaller and about 25 times slower to encode on such files;
                            ultra: 1 = context-mixing model 1 only, faster) */
     int threads;        /* 0 = all cores */
     uint32_t block;     /* bytes per block, 0 = adaptive rt/fast, 16 MiB eco/hc (larger for text), 128 MiB max/ultra */

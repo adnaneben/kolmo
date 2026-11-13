@@ -67,6 +67,7 @@ and lz4 still lead.
 | Logs | Lines are split into **templates and variables**; timestamps, IPs and IDs become integer columns ("skeleton" columns). |
 | Fixed-width text | Lines that come in a few fixed lengths (chemistry and geometry files, fixed-width reports) are stored **column by column per line length**: a line scan and a transpose, several times cheaper than templates. Files that use it carry container version 8. |
 | Prose and markup | Frequent words become 2-byte codes from byte values the block never uses (eco and above); `hc` then uses zstd 22 with a 128 MiB window. |
+| Decimal doubles | Float64 arrays whose values were written in decimal (`.npy` tables, raw arrays, the columns inside pickle, `.npz` and `.mat` files) are stored as **integers over a power of ten per column**, with missing values as a tag and anything else kept verbatim. |
 | Scientific binary | **Fixed records** (period found by self-similarity; fields of 1/2/4/8 bytes stored raw, as deltas, as dictionary tokens, or as multiples of a discovered quantum with exact bit corrections) and **16-bit images** (byte order, row stride and predictor found automatically). |
 | Executables, archives | x86 call/jump transform; each tar member gets its own model. |
 | Coders | LZ4 (`rt`), zstd (`fast`, `hc`), brotli (`eco`), BWT via libbsc and LZMA2 (`max`), and an integer **context-mixing** coder (`ultra`: orders 1–7, words, columns, indirect contexts, bit histories, neural mixing, APMs), best per block. |
@@ -97,7 +98,7 @@ Advanced settings, for tuning between the three:
 | `eco` | 16 MiB | brotli 8 | lowest storage cost at moderate CPU |
 | `hc` | 16 MiB (text 128 MiB) | zstd 19 / 22 | archive with fast reads |
 | `max` | 128 MiB | BWT for text; LZMA2 otherwise, or BWT where it is at least 3% smaller (`-l 1`: BWT only) | cold archive |
-| `ultra` | 128 MiB | best of context mixing, LZMA2, BWT (`-l 1`: context mixing model 1 only, faster) | coldest archive, best ratio |
+| `ultra` | 128 MiB | best of context mixing (with an image model for 8-bit images), LZMA2, BWT (`-l 1`: context mixing model 1 only, faster) | coldest archive, best ratio |
 
 `ultra` sizes its context-mixing tables to the block (up to about 4.5 GB per thread for blocks of 4 MiB and more, in
 both directions; 3.8 GB with `-l 1`). On Linux the tables use transparent huge pages. Parallel blocks share a budget of 60% of physical memory and wait rather than swap.

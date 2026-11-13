@@ -81,29 +81,19 @@ static int lines_decode(const uint8_t *t, size_t tn, uint8_t *out, size_t n) {
     }
     if (L > n || lines > L || hdr + L + other + tail + covered != tn || covered + lines + other + tail != n) return -1;
     const uint8_t *cls = t + hdr, *op = cls + L, *oe = op + other, *tp = oe, *cp = tp + tail;
-    /* each class back to rows, then the lines in order */
-    uint8_t *rowb = malloc((size_t)covered + 1); if (!rowb) return -1;
-    const uint8_t *row[LINES_K]; uint32_t left[LINES_K];
-    { uint8_t *rb = rowb;
-      for (int k = 0; k < K; k++) {
-          uint32_t len = klen[k], m = kcnt[k]; row[k] = rb; left[k] = m;
-          for (uint32_t r0 = 0; r0 < m; r0 += LINES_CHUNK) {
-              uint32_t rn = m - r0 < LINES_CHUNK ? m - r0 : LINES_CHUNK;
-              for (uint32_t j = 0; j < len; j++) {
-                  const uint8_t *col = cp + (size_t)j * m + r0; uint8_t *w = rb + (size_t)r0 * len + j;
-                  for (uint32_t r = 0; r < rn; r++) w[(size_t)r * len] = col[r];
-              }
-          }
-          rb += (size_t)len * m; cp += (size_t)len * m;
-      } }
+    /* Pass 1: the lines in order. Other lines and the newlines are written now; each class row only gets its place.
+     * Pass 2: each class's columns go straight to those places, a chunk of rows at a time (no intermediate copy). */
+    uint32_t *place = malloc(4 * ((size_t)lines + 1)); if (!place) return -1;
+    uint32_t *pk[LINES_K], used[LINES_K];
+    { uint32_t *pp = place; for (int k = 0; k < K; k++) { pk[k] = pp; pp += kcnt[k]; used[k] = 0; } }
     int ret = -1; uint8_t *o = out, *oend = out + n;
     for (uint64_t l = 0; l < L; l++) {
         unsigned c = cls[l];
         if (c) {
-            if (c > (unsigned)K || !left[c - 1]) goto done;
+            if (c > (unsigned)K || used[c - 1] >= kcnt[c - 1]) goto done;
             uint32_t len = klen[c - 1];
             if ((size_t)(oend - o) < (size_t)len + 1) goto done;
-            memcpy(o, row[c - 1], len); o[len] = '\n'; o += len + 1; row[c - 1] += len; left[c - 1]--;
+            pk[c - 1][used[c - 1]++] = (uint32_t)(o - out); o[len] = '\n'; o += len + 1;
         } else {
             const uint8_t *q = memchr(op, '\n', (size_t)(oe - op)); if (!q) goto done;
             size_t len = (size_t)(q - op) + 1;
@@ -111,11 +101,22 @@ static int lines_decode(const uint8_t *t, size_t tn, uint8_t *out, size_t n) {
             memcpy(o, op, len); o += len; op += len;
         }
     }
-    for (int k = 0; k < K; k++) if (left[k]) goto done;
+    for (int k = 0; k < K; k++) if (used[k] != kcnt[k]) goto done;
     if (op != oe || (size_t)(oend - o) != tail) goto done;
     memcpy(o, tp, tail);
+    for (int k = 0; k < K; k++) {
+        uint32_t len = klen[k], m = kcnt[k]; const uint32_t *P = pk[k];
+        for (uint32_t r0 = 0; r0 < m; r0 += LINES_CHUNK) {
+            uint32_t rn = m - r0 < LINES_CHUNK ? m - r0 : LINES_CHUNK;
+            for (uint32_t j = 0; j < len; j++) {
+                const uint8_t *col = cp + (size_t)j * m + r0;
+                for (uint32_t r = 0; r < rn; r++) out[(size_t)P[r0 + r] + j] = col[r];
+            }
+        }
+        cp += (size_t)len * m;
+    }
     ret = 0;
 done:
-    free(rowb);
+    free(place);
     return ret;
 }

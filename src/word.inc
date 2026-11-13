@@ -22,7 +22,11 @@ static inline uint64_t wd_hash(const uint8_t *w, uint32_t L, int cn) {
 
 static int64_t word_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap) {
     if (n < 65536) return -1;
-    size_t used[256] = {0}; for (size_t i = 0; i < n; i++) used[in[i]]++;
+    size_t used[256] = {0};
+    for (size_t a = 0; a < n; a += (size_t)1 << 30) {      /* (32-bit counts per GiB) */
+        uint32_t hc[256]; size_t m = n - a < ((size_t)1 << 30) ? n - a : (size_t)1 << 30; kg_hist(in + a, m, hc);
+        for (int c = 0; c < 256; c++) used[c] += hc[c];
+    }
     uint8_t pre[64]; int np = 0, capb = -1;
     for (int pass = 0; pass < 2 && np < 8; pass++) {     /* control bytes first: the decoder finds them with SIMD */
         np = 0; capb = -1;

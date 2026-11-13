@@ -1033,6 +1033,14 @@ int tbl_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, i
 #define free(p) zs_free(p)
 #include "tbl2.inc"
 #include "log.inc"
+/* Byte histogram over four tables: one table stalls on runs of the same byte (each count waits for the last). */
+static void kg_hist(const uint8_t *p, size_t n, uint32_t hc[256]) {
+    uint32_t h1[256] = {0}, h2[256] = {0}, h3[256] = {0}; size_t i = 0;
+    memset(hc, 0, 256 * sizeof(uint32_t));
+    for (; i + 4 <= n; i += 4) { hc[p[i]]++; h1[p[i + 1]]++; h2[p[i + 2]]++; h3[p[i + 3]]++; }
+    for (; i < n; i++) hc[p[i]]++;
+    for (int c = 0; c < 256; c++) hc[c] += h1[c] + h2[c] + h3[c];
+}
 #include "sci.inc"
 #include "word.inc"
 #undef malloc
@@ -1090,7 +1098,7 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 
 /* ------------------------------------------------------------------ codecs */
 enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
-       C_GRAPH = 12, C_HUF = 13, C_RANS = 14 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0 (graph leaves) */
+       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_CMI = 17 };   /* 15 and 16 are left for the native plane-context leaf of feat/native-residual-leaf; 17: context mixing with the image model (ultra; carries its own row length, channels and head) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0 (graph leaves) */
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9, T_LINES = 10 };   /* 9: kolmo graph (a=delim b=decimal separator) */
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
  * so repeated calls to one target produce identical bytes. Encoded back to front and decoded front to back (as in
@@ -1269,7 +1277,7 @@ static size_t rans_compress_all(const uint8_t *in, size_t n, uint8_t *out, size_
     size_t o = 0, cw = RANS_CHUNK + 64; uint32_t *tmp = malloc(cw * 4); if (!tmp) return 0;   /* 32-bit words, filled backwards */
     for (size_t i = 0; i < n;) {
         size_t m = n - i < RANS_CHUNK ? n - i : RANS_CHUNK; const uint8_t *src = in + i;
-        uint32_t cnt[256] = {0}, f[256], c = 0; r64sym es[256]; for (size_t q = 0; q < m; q++) cnt[src[q]]++;
+        uint32_t cnt[256], f[256], c = 0; r64sym es[256]; kg_hist(src, m, cnt);
         if (rans_norm(cnt, m, f)) { free(tmp); return 0; }         /* one symbol: leave it to the other codecs */
         for (int k = 0; k < 256; k++) { if (f[k]) r64sym_init(&es[k], c, f[k]); c += f[k]; }
         uint32_t *e = tmp + cw; uint64_t x0 = R64_L, x1 = R64_L;   /* states for even and odd positions, back to front */
@@ -1372,7 +1380,7 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
             if (lzma_raw_buffer_encode(f, NULL, in, n, out, &pos, cap) != LZMA_OK) return 0;
             return pos; }
 #endif
-        case C_CM: return cm_compress_m(in, n, out, cap, level == 1);
+        case C_CM: return cm_compress_m(in, n, out, cap, level == 1 ? 1 : looks_text(in, n) ? 3 : 2);   /* model 3 where it gains: text */
     }
     return 0;
 }
@@ -1408,6 +1416,7 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
             return (ip == cn && op == n) ? 0 : -1; }
 #endif
         case C_CM: return cm_decompress(in, cn, out, n);
+        case C_CMI: return cm_decompress_img(in, cn, out, n);
         case C_HUF: return huf_decompress_all(in, cn, out, n);
         case C_RANS: return rans_decompress_all(in, cn, out, n);
     }
@@ -1469,7 +1478,7 @@ static inline uint32_t get32(const uint8_t *p) { uint32_t v; memcpy(&v, p, 4); r
 static inline uint64_t get64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }
 #include "lines.inc"
 
-typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw;   /* kgw: IMG8 row bytes */
+typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw; int verify;   /* kgw: IMG8 or DEC64 row bytes; verify: code graph blocks plainly too, keep the smaller */
 #ifdef KOLMO_FRONTIER
     frontier_lags lags;
 #endif
@@ -1580,9 +1589,10 @@ static int json_lines(const uint8_t *s, size_t h) {
 static double kg_plane_h(const uint8_t *p, size_t cnt, int w, int b, int rot) {   /* order-0 entropy of plane b, bits */
     uint32_t c[256] = {0}; size_t m = cnt < 8192 ? cnt : 8192, step = cnt / m;
     for (size_t q = 0; q < m; q++) {
-        const uint8_t *e = p + q * step * (size_t)w; uint64_t v = 0; for (int k = 0; k < w; k++) v |= (uint64_t)e[k] << (8 * k);
-        if (rot) v = (v << 1) | (v >> (8 * w - 1));
-        c[(v >> (8 * b)) & 255]++;
+        const uint8_t *e = p + q * step * (size_t)w; unsigned x;
+        if (!rot) x = e[b];                                   /* plane b is byte b of the little-endian word */
+        else x = (((unsigned)e[b] << 1) | (e[b ? b - 1 : w - 1] >> 7)) & 255;   /* rotated left one bit: the top bit of the byte below */
+        c[x]++;
     }
     double hs = 0; for (int k = 0; k < 256; k++) if (c[k]) { double q = (double)c[k] / m; hs -= q * log2(q); }
     return hs;
@@ -1675,6 +1685,60 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
     return best;
 }
 
+/* Binary64 values that were written in decimal (DEC64). A row-major .npy '<f8' table gives its row length; any other
+ * data is tried as a plain array of doubles when a spread sample of 8-byte words is nearly all decimal or one repeated
+ * pattern (missing values). *bcols: values per row, or 0 for a plain array. */
+/* plan byte and row bytes for a DEC64 plan from the trial's column count: 64 a binary64 table, 65 segments, 66 a binary32 table */
+#define DEC_B(dc) (!(dc) ? 65 : ((dc) & KG_DEC_F32) ? 66 : 64)
+#define DEC_KGW(dc) (!(dc) ? 8u : ((dc) & KG_DEC_F32) ? (uint32_t)((dc) & ~KG_DEC_F32) * 4u : (uint32_t)(dc) * 8u)
+static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, uint32_t *bcols, size_t *bh) {
+    double best = 1e300; size_t h = 0, cols = 0, tw = 8; int f32 = 0;
+    if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
+        size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
+        const uint8_t *d = hl <= n ? memmem(s, hl, "'descr': '", 10) : NULL;
+        if (!d || d + 13 > s + hl || d[10] != '<' || d[11] != 'f' || (d[12] != '8' && d[12] != '4')) return best;
+        h = hl; f32 = d[12] == '4'; tw = f32 ? 4 : 8;
+        if (n >= h + 4096) {                                 /* 64 values across the array: a quarter must be decimal or NaN */
+            size_t words = (n - h) / tw, ok = 0;
+            for (size_t q = 0; q < 64; q++) {
+                const uint8_t *wp = s + h + (size_t)((uint64_t)q * words / 64) * tw; int64_t m; int e = 0;
+                if (f32) { uint32_t bits = get32(wp); while (e < 8 && !kg_dec_fit32(bits, KG_P10[e], &m)) e++; ok += e < 8 || (bits & 0x7f800000u) == 0x7f800000u; }
+                else { uint64_t bits = get64(wp); while (e < KG_DEC_ESEARCH && !kg_dec_fit(bits, KG_P10[e], &m)) e++;
+                       ok += e < KG_DEC_ESEARCH || (bits & 0x7ff0000000000000ull) == 0x7ff0000000000000ull; }
+            }
+            if (ok < 16) return best;
+        }
+        const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+        if (sh && fo) {                                      /* row-major: a row is the product of the dimensions after the first */
+            const uint8_t *q = sh + 10, *e = s + hl; uint64_t dim = 0, prod = 1; int nd = 0, ok = 1, dig = 0;
+            for (; q < e && *q != ')'; q++) {
+                if (*q >= '0' && *q <= '9') { dim = dim * 10 + (uint64_t)(*q - '0'); dig = 1; if (dim > (1u << 30)) ok = 0; }
+                else if (*q == ',') { if (nd++ && dig) { prod *= dim; if (prod > 65536) ok = 0; } dim = 0; dig = 0; }
+            }
+            if (dig && nd) { prod *= dim; if (prod > 65536) ok = 0; }
+            if (ok && prod >= 2 && (n - h) / tw / prod >= 16) cols = (size_t)prod;
+        }
+    } else {
+        /* arrays inside other data (a raw dump, pickle, Arrow, HDF5: headers, then columns at any byte alignment):
+         * 64 places across the input are probed, and a quarter of them must hold decimal doubles */
+        if (n < 4096) return best;
+        size_t hits = 0;
+        for (size_t q = 0; q < 64; q++) hits += kg_dec_probe(s + (size_t)((uint64_t)q * (n - 136) / 64)) != 0;
+        if (hits < 16) return best;
+    }
+    if (n < h + 512) return best;
+    const size_t rb = cols ? cols * tw : 8;
+    if (st < h) st = h;
+    size_t a = h + (st - h) / rb * rb, l = (n - a < L ? n - a : L) / rb * rb;
+    if (l < 16 * rb || l < 512) { a = h; l = (n - h < L ? n - h : L) / rb * rb; if (l < 512) return best; }
+    codec_ctx cx = {0}; uint8_t *o = malloc(l + 64);
+    const size_t ca = cols && f32 ? cols | KG_DEC_F32 : cols;      /* a binary32 table carries the flag in its column count */
+    size_t z = o ? kg_encode_dec64(&cx, C_ZSTD, zl, s + a, l, ca, 0, o, l + 64) : 0;
+    if (z) { best = (double)z / l; *bcols = (uint32_t)ca; *bh = h; }
+    free(o); codec_ctx_free(&cx);
+    return best;
+}
+
 static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh) {
     size_t h = 0; int ws[3] = {2, 4, 8}, nw = 3; double best = 1e300;
     if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
@@ -1692,6 +1756,8 @@ static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int 
         for (int q = 0; q < nw; q++) {
             int w = ws[q], o0, s0; size_t a = h + (st - h) / w * w, c = (n - a < L ? n - a : L) / w;
             if (c < 16) continue;
+            /* four of the sixteen sample runs first: an estimate a quarter above plain coding ends this width */
+            if (c > 16384 && plain < 1e299 && kg_num_choose_n(s + a, c, w, &o0, &s0, 4) / (8.0 * w) > plain * 1.25) continue;
             double e = kg_num_choose(s + a, c, w, &o0, &s0) / (8.0 * w); if (e < eb) { eb = e; bw0 = w; }
         }
         if (!bw0 || eb > plain) return best;            /* estimate above plain coding: no gain */
@@ -1982,8 +2048,9 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         if (!buf || !zb) { free(buf); free(zb); ZSTD_freeCCtx(zc); return pl; }
         size_t zcap = ZSTD_compressBound(bc);
         double plain = (double)zcost(zc, s + st, L, zb, zcap, zl) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
-        /* Ownership survives replacement of the tentative winning plan. */
+        /* Ownership survives replacement of the tentative winning plan (same repair as fix/planner-record-ownership). */
         rec_plan_t *owned_rec = NULL;
+        double d64c = 1e300; uint32_t d64cols = 0; size_t d64h = 0;   /* the DEC64 trial's result, kept for a marked plan */
         if (pl.t == T_SHUF) {
             size_t u = (size_t)pl.a * pl.b, rows = L / u; shuffle_fwd(s + st, rows, pl.a, pl.b, pl.c, buf);
             double c = (double)zcost(zc, buf, rows * u, zb, zcap, zl) / (rows * u);
@@ -2014,16 +2081,21 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #endif
         /* balanced: a layout that already saves a fifth is the answer; the remaining trials are alternatives to it */
         if (numtrial && chosen == 2 && best < plain * 0.80) goto structured_done;
-        rec_plan_t *R = malloc(sizeof(rec_plan_t));
-        if (R && rec_detect(s, n, effort, light ? 6 : 4, R)) {   /* layouts are searched only for a clear record period (4x the median lag; quick analysis 6x) */
-            size_t rs = (size_t)R->h + (st > (size_t)R->h ? (st - R->h) / R->P * R->P : 0); if (!rs) rs = R->P;
-            size_t rl = L / R->P * R->P;
-            if (rs + rl <= n) {
-                int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc);
-                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < best) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } }
-            }
-        }
-        free(R);
+        /* balanced types the data first: the float, integer, decimal and image trials run before the record search,
+         * and a typed plan that saves a fifth is the answer (the search is the largest fixed cost of planning) */
+#define REC_TRIAL(BAR) do { \
+        rec_plan_t *R = malloc(sizeof(rec_plan_t)); \
+        if (R && rec_detect(s, n, effort, light ? 6 : 4, R)) {   /* layouts are searched only for a clear record period (4x the median lag; quick analysis 6x) */ \
+            size_t rs = (size_t)R->h + (st > (size_t)R->h ? (st - R->h) / R->P * R->P : 0); if (!rs) rs = R->P; \
+            size_t rl = L / R->P * R->P; \
+            if (rs + rl <= n) { \
+                int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc); \
+                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < (BAR)) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } } \
+            } \
+        } \
+        free(R); \
+    } while (0)
+        if (!numtrial) REC_TRIAL(best);
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
         fprintf(stderr, "structure bytes=%zu image_ms=%.3f record_ms=%.3f\n", n, image_ms, (prof_now() - record_start) * 1000);
 #endif
@@ -2045,32 +2117,87 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt0 = prof_now();
 #endif
+            const int npy = n > 16 && !memcmp(s, "\x93NUMPY", 6);   /* quick analysis: integer and image trials only for a .npy header */
+            size_t iw = 0, ih = 0; unsigned ic = 0; double ci = 1e300; int imgdone = 0;
+            const size_t Li = light && !npy && Lg > (64u << 10) ? (64u << 10) : Lg;   /* quick analysis: a 64 KiB image trial */
+#define IMG8_TRIAL() do { ci = kg_img8_trial(s, n, st, Li, zl, plain, &iw, &ic, &ih); \
+                if (ci < 1e299 && Li != Lg) ci = ci * plain / ((double)zcost(zc, s + st, Li, zb, zcap, zl) / Li); else ci = KG_ADJ(ci); imgdone = 1; } while (0)
+            /* balanced: the image trial first (its pre-check is the cheapest); an image layout that saves a fifth is the
+             * answer and the float, integer and decimal trials are not run */
+            if (numtrial) IMG8_TRIAL();
+            if (imgdone && ci < best && ci < plain * 0.80) {
+                best = ci; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7;
+            } else {
             int w = 0; size_t hh = 0; double c = kg_float_trial(s, n, st, L, zl, plain, &w, &hh), cf = c; int fw = w; size_t fh = hh;
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt1 = prof_now();
 #endif
-            const int npy = n > 16 && !memcmp(s, "\x93NUMPY", 6);   /* quick analysis: integer and image trials only for a .npy header */
             if (cf > 1e299 && (!light || npy || numtrial)) {
                 w = 0; hh = 0; c = kg_num_trial(s, n, st, Lg, zl, plain, &w, &hh); c = KG_ADJ(c);
                 if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
             }
             c = cf; w = fw; hh = fh;
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
+            { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, st, L, zl, &dc, &dh);     /* decimal doubles: decode is slower than the other graphs, so it must win by 7% */
+              d64c = c; d64cols = dc; d64h = dh;
+              if (c < best * 0.93) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = DEC_B(dc); keep.c = (int)dh; keep.kgw = DEC_KGW(dc); chosen = 8; } }
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt2 = prof_now();
 #endif
-            size_t iw = 0, ih = 0; unsigned ic = 0; const size_t Li = light && !npy && Lg > (64u << 10) ? (64u << 10) : Lg;   /* quick analysis: a 64 KiB image trial */
-            c = kg_img8_trial(s, n, st, Li, zl, plain, &iw, &ic, &ih);
-            if (c < 1e299 && Li != Lg) c = c * plain / ((double)zcost(zc, s + st, Li, zb, zcap, zl) / Li); else c = KG_ADJ(c);   /* 8-bit images: IMG8 */
+            if (!imgdone) IMG8_TRIAL();                          /* 8-bit images: IMG8 */
+            c = ci;
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             fprintf(stderr, "kg float_ms=%.3f num_ms=%.3f img8_ms=%.3f\n", (kgt1 - kgt0) * 1000, (kgt2 - kgt1) * 1000, (prof_now() - kgt2) * 1000);
 #endif
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7; }
+            }
+#undef IMG8_TRIAL
         }
 #undef KG_ADJ
+        if (numtrial && !(chosen >= 5 && best < plain * 0.80)) {
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+            double rt0 = prof_now();
+#endif
+            REC_TRIAL(chosen == 8 ? best / 0.93 : best);          /* a decimal plan keeps its 7% margin over a record layout */
+#if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
+            fprintf(stderr, "record late_ms=%.3f\n", (prof_now() - rt0) * 1000);
+#endif
+        }
+#undef REC_TRIAL
 structured_done:
-        if (owned_rec && chosen != 3) free(owned_rec);
+        if (chosen >= 5 && n >= (1u << 20)) {
+            /* a numeric graph was chosen on one slice from the middle. Four short probes elsewhere check that the
+             * rest of the input is the same kind of data: where the graph codes a probe clearly larger than plain
+             * coding (a pickle whose integer columns are followed by strings), the plan is marked, and every block is
+             * then coded both ways and the smaller kept. Inputs that are one kind of data throughout pay only the probes. */
+            static const int at16[4] = {1, 5, 11, 15}; const size_t E = 32u << 10;
+            for (int q = 0; q < 4 && !keep.verify; q++) {
+                size_t pos = (n / 16 * (size_t)at16[q]) & ~(size_t)7; if (pos + E > n) continue;
+                double pe = (double)zcost(zc, s + pos, E, zb, zcap, zl) / E, c = 1e300; int w3 = 0; size_t h3 = 0, iw3 = 0; unsigned ic3 = 0; uint32_t dc3 = 0;
+                if (chosen == 5) c = kg_num_trial(s, n, pos, E, zl, 1e300, &w3, &h3);
+                else if (chosen == 6) c = kg_float_trial(s, n, pos, E, zl, 1e300, &w3, &h3);
+                else if (chosen == 7) c = kg_img8_trial(s, n, pos, E, zl, 1e300, &iw3, &ic3, &h3);
+                else c = kg_dec64_trial(s, n, pos, E, zl, &dc3, &h3);
+                if (c > pe * 1.10 && pe < 0.98) keep.verify = 1;
+            }
+            /* a marked whole-file plan (one word size and alignment for everything) gives way to the segment plan when
+             * that also beat plain coding on the slice: segments follow the arrays wherever they sit */
+            if (keep.verify && chosen != 8 && d64c < plain * CZ_STRUCT_GAIN_PCT / 100.0) {
+                keep = pl; keep.t = T_KG; keep.a = 0; keep.b = DEC_B(d64cols); keep.c = (int)d64h; keep.kgw = DEC_KGW(d64cols); keep.verify = 1; chosen = 8;
+            }
+        }
+        if (owned_rec && chosen != 3) { free(owned_rec); if (keep.rec == owned_rec) keep.rec = NULL; }
         if (chosen >= 2) pl = keep;
+        else if (pl.t == T_SHUF && n >= (1u << 20)) {      /* the same probes for a byte shuffle */
+            static const int at16[4] = {1, 5, 11, 15}; const size_t u = (size_t)pl.a * pl.b, E = (32u << 10) / u * u;
+            for (int q = 0; q < 4 && !pl.verify; q++) {
+                size_t pos = n / 16 * (size_t)at16[q] / u * u; if (pos + E > n || E > bc) continue;
+                double pe = (double)zcost(zc, s + pos, E, zb, zcap, zl) / E;
+                shuffle_fwd(s + pos, E / u, pl.a, pl.b, pl.c, buf);
+                if ((double)zcost(zc, buf, E, zb, zcap, zl) / E > pe * 1.10 && pe < 0.98) pl.verify = 1;
+            }
+        }
+        if (0) {}
         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
         free(buf); free(zb);
     }
@@ -2086,6 +2213,8 @@ structured_done:
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w; pl.c = (int)hh; }
             w = 0; hh = 0; c = kg_float_trial(s, n, 0, n, zl, plain, &w, &hh);
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w | 16; pl.c = (int)hh; }
+            { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, 0, n, zl, &dc, &dh);
+              if (c < best * 0.93) { best = c; pl.t = T_KG; pl.a = 0; pl.b = DEC_B(dc); pl.c = (int)dh; pl.kgw = DEC_KGW(dc); } }
             size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, 0, n, zl, 1e300, &iw, &ic, &ih);
             if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = 32 | (int)ic; pl.c = (int)ih; pl.kgw = (uint32_t)iw; }
         }
@@ -2127,7 +2256,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     if (pl.t == T_REC) { B = B / pl.rec->P * pl.rec->P; if (!B) B = pl.rec->P; }
     int kgnum = pl.t == T_KG && pl.a == 0;                     /* integer graph: width-aligned blocks after the head */
     if (kgnum) {
-        uint32_t kw = pl.b & 32 ? pl.kgw : (uint32_t)(pl.b & 15);     /* IMG8: whole rows; INT/FLOAT: whole words */
+        uint32_t kw = pl.b & 96 ? pl.kgw : (uint32_t)(pl.b & 15);     /* IMG8, DEC64: whole rows; INT/FLOAT: whole words */
         B = B / kw * kw; if (!B) B = kw;
     }
     while (pos < n) {
@@ -2323,17 +2452,70 @@ static void *compress_worker(void *arg) {
         int codec = J->codec, level = (pl.wide || (tflag >= 10 && pl.t == T_TBL)) && J->default_level ? 1 : J->level;
         if (pl.t == T_KG && len) {                                          /* kolmo graph: the block is a program + leaves */
             /* max, wide table: the column leaves are text, so they take BWT like any text block at max (LZMA2 on the
-             * leaves was 3% smaller and ten times slower to encode) */
-            int kgc = codec == C_LZMA && pl.a ? C_BSC : codec, kgl = kgc != codec ? 9 : level;
+             * leaves was 3% smaller and ten times slower to encode). Float and decimal arrays too: on float planes
+             * BWT is the same size and four to six times faster; on decimal planes LZMA2 is 10 to 12% smaller at 25
+             * to 30 times the encode time, 18 KB saved per CPU second where the cost model breaks even at 54 (data kept
+             * a year) or 652 (30 days). Integer arrays keep LZMA2 (2 to 9% smaller, small inputs). */
+            /* max -l 10 keeps LZMA2 on decimal planes: the smallest output without context mixing, whatever it costs */
+            int kgc = codec == C_LZMA && (pl.a || (!(pl.b & 32) && ((pl.b & 16) || ((pl.b & 64) && level < 10)))) ? C_BSC : codec, kgl = kgc != codec ? 9 : level;
+            /* hc: zstd 19 over float planes gives the size of zstd 9 (the planes are coded by Huffman or rANS when that
+             * is smaller) at up to 16 times the time. Decimal planes keep zstd 19: zstd 12 was 3 to 36% larger. */
+            if (codec == C_ZSTD && level > 9 && !pl.a && !(pl.b & (32 | 64)) && (pl.b & 16)) kgl = 9;
             cl = pl.a ? kg_encode_table(xp, kgc, kgl, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
                       : pl.b & 32 ? kg_encode_img8(xp, kgc, kgl, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
+                      : pl.b & 64 ? kg_encode_dec64(xp, kgc, kgl, raw, len, pl.b & 1 ? 0 : pl.b & 2 ? (pl.kgw / 4) | KG_DEC_F32 : pl.kgw / 8, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 16 ? kg_encode_float(xp, kgc, kgl, raw, len, pl.b & 15, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : kg_encode_num(xp, kgc, kgl, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
+            if (cl && (pl.b & 32) && !pl.a && (codec == C_LZMA || codec == C_CM)) {
+                /* 8-bit images under the slow coders: block-sorted leaves are 5 to 10% smaller than LZMA2 leaves on
+                 * colour photographs (the residual planes are noise-like, with no matches to find). Both are coded. */
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+                size_t c2 = alt ? kg_encode_img8(xp, C_BSC, 9, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, alt, J->slot) : 0;
+                if (c2 && c2 < cl) { memcpy(sl, alt, c2); cl = c2; }
+            }
+            if (cl && (pl.b & 32) && !pl.a && codec == C_CM && level != 1 && len < ((size_t)1 << 28)) {
+                /* ultra, 8-bit image: context mixing with the image model (the pixel's neighbours as contexts) over
+                 * the plain pixels; 12 to 20% smaller than the predictor graph on photographs */
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+                size_t c2 = alt ? cm_compress_img(raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (uint32_t)pl.c : 0, alt, J->slot) : 0;
+                if (c2 && c2 < cl) { memcpy(sl, alt, c2); cl = c2; codec = C_CMI; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; goto coded; }
+            }
             if (cl && len < (256u << 10)) {                                 /* small block: the plan was scored with zstd; the block's
                                                                              * own coder on the plain bytes may still be smaller */
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
                 size_t pc = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (pc && pc < cl) cl = 0;
+            }
+            if (cl && !pl.a && len >= (256u << 10) && (pl.verify || codec == C_CM || ((pl.b & 64) && (codec == C_LZMA || codec == C_BSC)))) {
+                /* decimal doubles under the slow coders: the plan was scored with zstd, and on small-integer tables
+                 * block sorting or context mixing over the plain bytes can still be smaller. Marked plans (the input
+                 * is not one kind of data throughout): this block may be the part the graph does not fit. Both are
+                 * coded; the smaller one is kept. */
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4); int bc = 0; size_t bz = cl;
+                if (alt && codec != C_ZSTD && codec != C_LZ4) {
+                    /* the slow coders: block sorting of a slice from the middle tells whether plain coding is within
+                     * reach (a slice sorts worse than the block, so the limit is loose); otherwise the graph stands */
+                    size_t sn = len < (512u << 10) ? len : (512u << 10), so = ((len - sn) / 2) & ~(size_t)63;
+                    size_t cs = codec_compress(xp, C_BSC, 9, raw + so, sn, alt, J->slot);
+                    /* ultra: every numeric graph block comes here, and context mixing over the plain bytes costs 20
+                     * times the graph's time, so plain block sorting must already be within 2% (model weights are not) */
+                    if (!cs || (double)cs / sn > (codec == C_CM ? 1.02 : 1.35) * (double)cl / len) alt = NULL;
+                }
+                if (alt && (codec == C_ZSTD || codec == C_LZ4) && len >= ((size_t)1 << 20)) {
+                    /* the fast coders: three 64 KiB slices (start, middle, end) coded plain; the full plain pass costs
+                     * as much as the graph, so it runs only when the slices come within 35% of the graph's rate */
+                    const size_t sn = 64u << 10; size_t cs = 0;
+                    for (int k = 0; k < 3; k++) {
+                        size_t z = codec_compress(xp, codec, level, raw + (k == 0 ? 0 : k == 1 ? ((len - sn) / 2) & ~(size_t)63 : len - sn), sn, alt, J->slot);
+                        cs += z && z < sn ? z : sn;
+                    }
+                    if ((double)cs / (double)(3 * sn) > 1.35 * (double)cl / (double)len) alt = NULL;
+                }
+                size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
+                if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = codec; }
+                size_t a2 = alt && codec == C_LZMA ? codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot) : 0;
+                if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_BSC; }
+                if (bc) { cl = bz; codec = bc; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; goto coded; }
             }
             if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8; goto coded; }
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
@@ -2371,6 +2553,11 @@ static void *compress_worker(void *arg) {
         if (pl.experimental_pcm && !J->dict && J->default_level && codec == C_ZSTD) level = 1;
 #endif
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
+        if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
+            uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+            size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
+            if (a1 && a1 < cl) { memcpy(sl, alt, a1); cl = a1; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
+        }
         if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, kept only when clearly smaller */
             /* BWT decodes about half as fast as LZMA2 here, so it must pay for that: at least KOLMO_BWT_GAIN_PCT smaller. */
             /* BWT is tried only where it has won in tests: not on x86 code, typed table columns or log token streams (4 to 12% larger), and only when LZMA2 already reaches
@@ -2386,6 +2573,26 @@ static void *compress_worker(void *arg) {
             }
             size_t c2 = alt ? codec_compress(xp, C_BSC, 9, in, inlen, alt, J->slot - meta) : 0;
             if (c2 && (uint64_t)c2 * 100 <= (uint64_t)cl * (100 - KOLMO_BWT_GAIN_PCT)) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BSC; }
+        }
+        if ((codec == C_LZMA || codec == C_BSC) && J->codec == C_LZMA && cl && in != raw && len >= (64u << 10)) {
+            /* max, transformed block: the transform was chosen by its zstd score, and under block sorting or LZMA2 the
+             * plain bytes can be smaller (Silesia nci: template tokens 1.53 MB, plain block sorting 1.23 MB). Block
+             * sorting of the plain block is tried when a slice from the middle comes within 10% of the transformed
+             * block's ratio (25% for text transforms); blocks up to 2 MiB also try plain LZMA2. A plain result must be 3% smaller to be kept. */
+            uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+            int try_bsc = alt != NULL, bc = 0; size_t bz = cl + meta;
+            if (alt && len > (2u << 20)) {
+                size_t sn = 512u << 10, so = ((len - sn) / 2) & ~(size_t)63, cs = codec_compress(xp, C_BSC, 9, raw + so, sn, alt, J->slot);
+                /* a slice sorts worse than the whole block, most of all on repetitive text (nci: slice 5.2%, block 3.7%) */
+                const double tol = tflag == 4 || tflag == 5 || tflag == 12 ? 1.25 : 1.10;
+                if (!cs || (double)cs / sn > tol * (double)bz / len) try_bsc = 0;
+            }
+            size_t a1 = try_bsc ? codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot) : 0;
+            if (a1 && (uint64_t)a1 * 100 <= (uint64_t)bz * 97) { memcpy(sl, alt, a1); bz = a1; bc = C_BSC; }
+            /* plain LZMA2 only where plain block sorting came within 25% of the transformed block */
+            size_t a2 = alt && len <= (2u << 20) && a1 && (double)a1 <= 1.25 * (double)(cl + meta) ? codec_compress(xp, C_LZMA, level, raw, len, alt, J->slot) : 0;
+            if (a2 && (uint64_t)a2 * 100 <= (uint64_t)(cl + meta) * 97 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_LZMA; }
+            if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
         }
         if (codec == C_CM && level != 1) {            /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
@@ -2405,6 +2612,22 @@ static void *compress_worker(void *arg) {
                     fprintf(stderr, "len %zu t%d text %d cm %zu alt%d %zu\n", (size_t)inlen, tflag, looks_text(in, inlen), cl, alts[k], c2);
 #endif
                     if (c2 && (!cl || c2 < cl)) { memcpy(sl + meta, alt, c2); cl = c2; codec = alts[k]; }
+                }
+                if (cl && in != raw && len >= (64u << 10)) {
+                    /* ultra, transformed block: the transform was chosen by its zstd score, and the plain bytes can be
+                     * smaller under the strong coders (a 1 MB image array was larger at ultra than at max). Plain block
+                     * sorting is quick; when it comes within 2% of the transformed block, plain context mixing and,
+                     * up to 2 MiB, plain LZMA2 are tried as well. The smallest is kept. */
+                    int bc = 0; size_t bz = cl + meta, ref = cl + meta;
+                    size_t a1 = codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot);
+                    if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = C_BSC; }
+                    if (a1 && (double)a1 <= 1.02 * (double)ref) {
+                        size_t a2 = codec_compress(xp, C_CM, level, raw, len, alt, J->slot);
+                        if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_CM; }
+                        size_t a3 = len <= (2u << 20) ? codec_compress(xp, C_LZMA, 9, raw, len, alt, J->slot) : 0;
+                        if (a3 && a3 < bz) { memcpy(sl, alt, a3); bz = a3; bc = C_LZMA; }
+                    }
+                    if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
                 }
             }
         }

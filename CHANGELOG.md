@@ -89,6 +89,128 @@
 
 ## Unreleased (on main, not tagged)
 
+- **Budget rule and a typed order in the balanced planner (branch `claude/dec64`).** A change is now judged by
+  whether a mode's output gets smaller while its cost stays within its competitor's (zstd -3 for `speed` and
+  `balanced`, OpenZL for `hc` and `ratio`): `benchmark/accept/budget.py`, rule and status in
+  `benchmark/accept/TARGETS.md`. First step in the planner: at `balanced` the typed trials for binary data (float,
+  integer, decimal, 8-bit image) run before the record search, and the search is skipped when a typed plan already
+  saves a fifth. Planning time over 79 files falls 29% (24.5% to 20.8% of encode); one of 83 files changes (3.7%
+  smaller).
+- **`ratio`: float and decimal arrays code their planes with block sorting (branch `claude/dec64`).** The budget rule
+  applied to the largest single cost found in `ratio`: LZMA2 at its extreme preset over the byte planes. On float
+  arrays (model weights) block sorting gives the same size four to six times faster (a 10 MB safetensors file 5.4 to
+  0.8 s). On decimal arrays LZMA2 was 10 to 12% smaller at 25 to 30 times the encode time (a 24 MB table: 8.0 s for
+  1.26 MB against 0.3 s for 1.40 MB), which is 18 KB saved per CPU second where the cost model breaks even at 54
+  (data kept a year) or 652 (30 days). With block sorting that table costs less than OpenZL (CPU and storage) and
+  is 23% smaller; with LZMA2 it cost 3.3 times OpenZL. Decimal files at `ratio` are 2 to 12.6% larger than at the
+  previous commit and still 5 to 43% smaller than with 1.0.1 (eight files checked); `-x` is unchanged. Integer arrays keep LZMA2.
+  Both are kept: `ratio -l 10` (`-m max -l 10`) keeps LZMA2 on decimal planes and gives the earlier sizes.
+  `hc`: float planes at zstd 9 instead of 19 (same size, up to 16 times faster); decimal planes keep zstd 19 (zstd 12
+  was 3 to 36% larger).
+- **More encode time off `balanced`, output unchanged (branch `claude/dec64`).** Measured by instruction counts
+  (callgrind) and CPU time; every change below leaves all 83 test files byte-identical at `balanced`.
+  - A plan marked "check each block" coded every block twice at the fast settings (the graph and plain zstd). The
+    plain pass now runs only when three 64 KiB slices coded plain come within 35% of the graph's rate: a 31 MB
+    decimal table goes from 185 to 109 ms.
+  - Delimited tables (graph path): fields are found eight bytes at a time, numbers are read in one pass, and tag and
+    scale streams are reserved once per block: a 316-column table 54 to 48 ms.
+  - Planner: the integer trial looks at four of its sixteen sample runs first and stops a width whose estimate is a
+    quarter above plain coding; plane entropies read one byte per value. On mozilla (no plan wins) total
+    instructions fall 8.4%.
+  - DEC64 writes only the byte planes a column reaches.
+  - Planner: the 8-bit image trial runs first at `balanced`, and an image layout that saves a fifth ends the typed
+    trials (the integer trial was a quarter of the encode of a 0.8 MB photograph): instructions on that file -41%.
+- **Graph leaves are coded faster at `balanced` (branch `claude/dec64`).** The byte count that decides whether a
+  leaf tries Huffman used one table, which stalls on runs of one byte value (most of a number plane); it now uses
+  four. Huffman is not tried where it cannot win: a prefix code spends at least one bit per byte, and at `balanced`
+  a leaf whose samples put Huffman a tenth behind zstd skips it. Output is byte-identical on 83 files at
+  `balanced`, `hc -l 9` and `ratio -l 1`. Encode CPU on decimal arrays: 118 to 75 ms (24 MB), 323 to 205 ms (31 MB);
+  a 316-column table 87 to 76 ms. With the planner order below, `balanced` encode CPU over 79 files is 13% lower
+  (5,506 to 4,793 ms).
+- **DEC64: second difference (branch `claude/dec64`).** A column or segment may store the difference of successive
+  deltas (flag bit 4), chosen when it is 5% shorter again: running totals and steady trends. A 31 MB table with
+  cumulative columns (`co2.npy`, float64 or float32): 10.6% smaller at `balanced`, 11.4% at `ratio`; other tables
+  within 0.7%.
+- **Graph leaves: the Huffman-only shortcut no longer misfires on sparse leaves (branch `claude/dec64`).** At
+  `balanced`, three 32 KiB samples decide whether a large leaf is coded with Huffman alone. When all three fall in the
+  busy part of a leaf that is mostly one byte value, Huffman was chosen and spent one bit per byte on the rest (found
+  by the E02C research harness on another branch: 164 KB against 3 KB on one plane). Both coders are now tried when
+  one value fills half the leaf. A 31 MB decimal table (`co2.npy`): 2,397,150 → 1,963,547 bytes (18.1% smaller); nine
+  other decimal files 1.5 to 3.5% smaller; no other output in the 81-file set changed.
+- **Planner: the record-plan leak is fixed the way `fix/planner-record-ownership` fixes it** (one owner, freed at the
+  end), replacing this branch's site-by-site frees, and the image model's block codec moves from 15 to 17, so the two
+  branches and `feat/native-residual-leaf` (graph leaf codec 15) can be brought together without clashes.
+- **Decimal mapping for float32 (branch `claude/dec64`).** The DEC64 node takes 4-byte words (a per-column flag):
+  binary32 values that were written in decimal are stored as the integer `m` with value = `(float)(m / 10^e)`.
+  `.npy` `<f4` tables and float32 arrays inside containers. Four holdout tables converted to float32: `balanced`
+  5.63 MB → 2.59 MB, `ratio` 3.79 MB → 2.11 MB (per file 3 to 58% smaller). Float64 output is unchanged.
+- **`ultra` model 3: structure contexts and a better match choice.** Five more contexts for text: the key a value
+  belongs to (`"key":`, `key=`, the tag after `<`) and the field of a delimited line with the byte above it in the same
+  field; the match model now takes, of the last 16 places a context was seen, the one that agrees for longest. On
+  top of the first model 3: CSV 4.4% smaller, JSON 2.4%, XML 2.3%, logs 2.0%. Against model 2 in all: JSON 6.7%, CSV
+  5.4%, XML and logs 4.7%, Polish prose 3.4%, English prose 0.3%, at about 35% more time. Model 3 uses about 0.8 GB
+  more memory than model 2, plus 4 bytes per input byte.
+- **`ultra`: context-mixing model 3 for text (branch `claude/dec64`).** Model 2 plus four contexts (orders 12 and 20,
+  and the byte the match model expects with orders 1 and 2), finer length classes for long matches, and a match that
+  carries on past a one-byte difference. Used for text blocks; binary blocks keep model 2, where model 3 gained
+  nothing (-2.2% to +0.06% on seven binary files). JSON 142,217 → 135,936 bytes (4.4% smaller), Polish prose 3.4%,
+  logs 2.8%, XML 2.5%, CSV and source code about 1%; about 20% slower than model 2. Streams carry an extended header
+  (flags 8, then model and table size); an older reader stops with an error.
+- **`ultra`: an image model for the context mixer (block codec 17; branch `claude/dec64`).** For 8-bit images the
+  mixer's hashed contexts are the pixel's neighbours (left, above, the diagonals, two back), the earlier channels of
+  the same pixel, and gradient, median and inter-channel predictions with the local activity, in place of the
+  preceding bytes; the mixers are selected by the prediction and the neighbours. A 512x512 grey photograph: 132,883 →
+  116,664 bytes (paq8px -8: 113,869); a 512x512 RGB photograph: 404,896 → 323,467 (paq8px -8: 308,539). Encode about
+  150 KB/s, as the mixer elsewhere. Files that use it need this version; an older reader stops with an error.
+  `make check-cmimg` round-trips generated images and decodes damaged streams under AddressSanitizer.
+- **`ratio` and `ultra`: image graphs try block-sorted leaves; `ultra` tries a transformed block plain.** Colour
+  photographs are 5 to 6% smaller at `ratio` with block-sorted leaves in the image graph. At `ultra` a transformed
+  block is also coded plain when plain block sorting is within 2% of it, which removes a case where `ultra` was
+  larger than `ratio` (a 1 MB image array: 276,549 → 203,747; `ratio` 245,200).
+- **Integer columns inside containers (branch `claude/dec64`).** The array finder of the DEC64 node also takes runs
+  of small int64 values (a per-segment flag), and a whole-file numeric plan that the probes mark gives way to the
+  segment plan. The int64 pickle that regressed on main: 129,908 → 98,236 bytes at `balanced` (1.0.1: 129,908), 76,398
+  → 71,804 at `ratio`; a mixed pickle 8.5% smaller. Other outputs within 0.1%.
+- **Regression ledger (`benchmark/accept/REGRESSIONS.md`, branch `claude/dec64`).** Every file of the corpus and
+  the holdout sets measured against 1.0.1 and main at three settings: what got slower or larger, what was fixed, what
+  is open, and which costs are accepted for what gain. From it: the plain attempts at `ratio` are now made only when
+  a block-sorted slice says they can win (ratio encode over 81 files: 384 s → 228 s, main 262 s), and DEC64 must
+  beat the next plan by 7%.
+- **`ratio`: a transformed block is also tried plain (branch `claude/dec64`).** Transforms are chosen by their zstd
+  score; under block sorting or LZMA2 the plain bytes are sometimes smaller. A transformed block now tries block
+  sorting of the plain bytes when a slice from the middle is within reach, blocks up to 2 MiB also try plain LZMA2,
+  and a plain result is kept when it is at least 3% smaller. Silesia `nci`: 1,533,927 → 1,225,386 bytes (20%
+  smaller; its decode goes from about 120 to 67 MB/s, the block-sorting rate). Silesia tar: 40,996,509 → 40,687,968
+  (19.34% → 19.20%), encode time unchanged, decode about 10% slower on the cloud VM. A 1 MB image array was 16%
+  smaller. On 81 corpus and holdout files plain coding now beats the `ratio` plan by more than 1% on none (before: 2).
+- **Mixed inputs: a numeric plan is checked away from its trial slice (branch `claude/dec64`).** A numeric graph or
+  byte shuffle is chosen on one slice from the middle of the input. Four 32 KiB probes elsewhere now test that the
+  rest is the same kind of data; where the plan codes a probe over 10% larger than plain coding, each block is coded
+  both ways and the smaller kept. Fixes a regression of the `balanced` quick analysis that is on main: a pandas
+  pickle of int64 columns followed by strings coded 69% larger than 1.0.1 (219,892 against 129,908 bytes; now
+  129,908). A table of full-precision doubles that every version shuffled is 20% smaller at `balanced` and 26% at
+  `ratio`. Both files are outside the test corpus; on the 81 corpus and holdout files, plain coding now beats the
+  chosen plan by more than 1% on none (before: these two). No corpus output changed.
+- **Decimal doubles: a new kolmo graph node (DEC64, node id 7; branch `claude/dec64`, not on main yet).** Binary
+  float64 values that were written in decimal (prices, measurements, counts, most CSV data loaded into arrays) are
+  stored as the integer `m` with value = `m / 10^e`: one exponent per column, the integers as zigzag byte planes with
+  an optional delta, one tag byte per value. A column's most common other pattern (usually NaN for missing) is a tag;
+  anything else (NaN payloads, -0.0, full-precision values) is kept verbatim as an exception, so every input round
+  trips exactly. A row-major `.npy` table uses its shape for the columns. Any other input is searched for arrays of
+  doubles at any byte alignment (a raw dump, a column-major `.npy`, and the columns inside a pandas pickle, an
+  uncompressed `.npz` or a MATLAB `.mat` file); each array is cut into segments of 4,096 values that choose their
+  own exponent, and everything between the arrays stays as plain bytes. On a holdout set built after the design was fixed (OWID CO2, three OpenZL sample tables, a
+  nuclear mass table, scikit-learn digits and a telemetry table, each as `.npy` and as a raw column-major array; 14
+  files, 95 MB): `balanced` 11.9 MB → 5.8 MB (every file 25 to 57% smaller), `ratio` 7.2 MB → 4.6 MB (0 to 49%
+  smaller; xz -9: 8.3 MB). The three control files without decimal values are byte-identical. On the affected files
+  encode takes 1.4 to 2.4 times the CPU and decode 1.3 to 1.8 times (still 120 to 240 MB/s and 420 to 770 MB/s on the
+  cloud VM); other files pay one 64-value sample. At `ratio` and `ultra` the plan is scored with zstd, so each such
+  block is also coded plainly and the smaller result kept. Files that use the node need this version or later; an
+  older reader stops with an error at the unknown node. The inverse checks every tag and count before it writes
+  (`make check-dec64`: round trips with awkward values and 59,000 damaged payloads under AddressSanitizer).
+  A second holdout of containers (the same tables as pandas pickle, `.npz` and `.mat`; 12 files, 123 MB):
+  `balanced` 15.5 MB → 7.8 MB, `ratio` 8.9 MB → 6.6 MB, no file larger (xz -9: 10.6 MB). Not covered yet: integer
+  arrays inside containers (a pickle of int64 columns is unchanged), and doubles interleaved with other fields.
 - **Line classes: a new transform for fixed-width text (block flag 12, container version 8).** Text whose lines come
   in a few fixed lengths (chemistry and geometry files, fixed-width reports and dumps) is stored column by column
   per line length. `balanced` takes it where it codes a trial slice at least as small as the template transform; it
