@@ -1,0 +1,66 @@
+name: Planner ownership validation
+on:
+  push:
+    branches: [fix/planner-record-ownership]
+    paths:
+      - src/kolmo.c
+      - tests/test_planner_ownership.c
+      - tests/test_planner_identity.py
+      - tests/validate_planner_fix.py
+      - .github/workflows/planner-ownership-validation.yml
+  pull_request:
+    paths:
+      - src/kolmo.c
+      - tests/test_planner_ownership.c
+      - tests/test_planner_identity.py
+      - tests/validate_planner_fix.py
+      - .github/workflows/planner-ownership-validation.yml
+permissions:
+  contents: read
+concurrency:
+  group: planner-ownership-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    if: github.repository == 'adnaneben/kolmo' && (github.event_name == 'push' || github.head_ref == 'fix/planner-record-ownership')
+    strategy:
+      fail-fast: false
+      matrix:
+        phase: [focused, main-baseline, main-candidate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: proposal
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 3c6890a91314b4d71db1911043ec19b87c16a86d
+          path: baseline
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: candidate
+          persist-credentials: false
+      - name: Dependencies
+        run: sudo apt-get update && sudo apt-get install -y liblzma-dev
+      - name: Real-source ownership and compatibility gate
+        env:
+          PHASE: ${{ matrix.phase }}
+        run: |
+          python3 proposal/tests/validate_planner_fix.py \
+            --baseline "$GITHUB_WORKSPACE/baseline" \
+            --candidate "$GITHUB_WORKSPACE/candidate" \
+            --evidence "$GITHUB_WORKSPACE/evidence/$PHASE" \
+            --phase "$PHASE"
+      - name: Retain evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: planner-ownership-${{ matrix.phase }}-${{ github.run_id }}
+          path: evidence/${{ matrix.phase }}/
+          if-no-files-found: error
+          retention-days: 14
