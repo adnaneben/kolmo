@@ -77,3 +77,27 @@ Two further observations:
   research claim, with no format, default or release change.
 - **Not supported:** the speed rule clearing a pre-set majority bar on fresh audio, and any archive or speed
   advantage on fresh real-world CSVs.
+
+## Follow-up (exploratory, local): the `classic-rock` anomaly
+
+This uses the now-observed fresh file `classic-rock/classic-rock-raw-data.csv`, 4,371,738 bytes, with SHA-256
+`ff57e2bc…` equal to the manifest.
+
+**The file uses classic-Mac `\r` line endings only** (37,673 CR, 0 LF), which explains both anomalies:
+- OpenZL's `csv` profile errors on it.
+- Kolmo's line and table analysis finds no lines, so `hc` falls back to its generic high-level zstd path. Stack
+  samples show `ZSTD_compressBlock_opt2` / `btGetAllMatches`: about 1.4 s locally. `max` takes another route in
+  0.1 s.
+
+With `\r`→`\n` (not lossless as is; shown for diagnosis only):
+
+| Pipeline | Original file | `\r`→`\n` |
+|---|---|---|
+| `kolmo fast` | 459,013 | 358,211 |
+| `kolmo hc` | 289,383 | 307,886 |
+| `kolmo max` | 262,576 | 267,229 |
+| OpenZL `csv`-9 | error | 344,145 |
+
+Possible follow-up: accept `\r`-only records as an exact line delimiter in the existing table path. That would be a
+parameter or semantics change in `src/` (FIELDS uses `\n`), so it needs separate authorization. It is recorded here
+only. One input does not justify it.
