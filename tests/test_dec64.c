@@ -37,7 +37,7 @@ int main(void) {
             else {
                 lvl[c] += (double)((int)(k % 2001) - 1000);
                 if (kind[c] == 4) { static double tr[512]; if (r == 0) tr[c] = 0; tr[c] += 37.0 + (double)(k % 3); lvl[c] += tr[c] - (double)((int)(k % 2001) - 1000); }   /* a steady trend: second difference */
-                char buf[64]; snprintf(buf, sizeof buf, "%.*f", ce[c], (kind[c] == 2 || kind[c] == 4 ? lvl[c] : (double)((int)(k % 2000000) - 1000000)) / KG_P10[ce[c]]);
+                char buf[64]; snprintf(buf, sizeof buf, "%.*f", ce[c], (kind[c] == 2 || kind[c] == 4 ? lvl[c] : kind[c] == 5 ? (double)((int)((k * 2654435761u >> 9) % 41) * 104729 - 2000000) /* few distinct values: dictionary */ : (double)((int)(k % 2000000) - 1000000)) / KG_P10[ce[c]]);
                 v = strtod(buf, NULL);
                 if (kind[c] == 3 && k % 5 == 0) v = v / 3.0;                                                 /* some values not decimal */
             }
