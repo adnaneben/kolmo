@@ -1,0 +1,24 @@
+{
+  "raw_sha256": "5e65fd44256bc05406e3dfd1a983a2b40f5706764e5f3043fe1fcec1be9c671b",
+  "compressed_sha256": "97ebbc65ab55d56d04ad173bf4ca5230b776bf8406ff6122a9d7bd5adebf27d2",
+  "policies": [
+    "exact6",
+    "exact9",
+    "exact9_duplicate",
+    "serial6",
+    "serial9",
+    "whole6",
+    "whole9"
+  ],
+  "inputs": [
+    "collegemsg__source_id",
+    "collegemsg__target_id",
+    "collegemsg__unix_timestamp",
+    "covertype__cover_control",
+    "covertype__elevation",
+    "covertype__fire_distance",
+    "covertype__hillshade_control",
+    "covertype__road_distance"
+  ],
+  "units": "nanoseconds for complete native process; three repeats each phase per pass"
+}
