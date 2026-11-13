@@ -85,7 +85,7 @@ int main(void) {
         for (int effort = 0; effort <= 1; effort++) for (int quick = 0; quick <= 1; quick++) {
             size_t before = nrecords;
             observe = 1;
-            plan_t p = make_plan(a, n, effort, 1, 1, 1, 0, quick ? 4 : 0);
+            plan_t p = make_plan(a, n, effort, 1, 1, 1, 0, quick ? 4 : 0, 0);
             observe = 0;
             graph_cases += p.t == T_KG;
             free(p.fs); free(p.rec);

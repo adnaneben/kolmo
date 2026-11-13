@@ -1,10 +1,15 @@
 # Isolated Kolmo repair and codec research
 
-## Writable branch
-Only `fix/planner-record-ownership-isolated-20261112` is authorized for new commits and pushes in this continuation.
-Do not modify, move, reset, force-push, merge into, or delete any other pre-existing branch. Leave PR #6 unchanged.
-Before repository writes inspect HEAD and the working tree; use isolated worktrees and preserve concurrent changes.
-No merge, release, default promotion or silent format change is authorized.
+## Writable integration branch — user authorization, 13 November 2026
+The user authorized selective integration of the best compatible features from branches and PRs,
+then asked to proceed with the release-candidate plan. New integration writes belong ONLY on
+`integration/best-features-rc-20261113`. Preserve `main`, every source/research branch and existing PR.
+Do not force-push, publish tags/releases/packages, or merge into main. This supersedes the earlier
+research-only branch restriction for this integration work, not its evidence/correctness obligations.
+Use reviewable feature commits; retain expensive or format-changing features as explicit opt-ins.
+Read `integration/rc1/FEATURES.json` and `integration/rc1/STATUS.md` when present.
+Before writes inspect branch HEAD and working tree and preserve concurrent work. Never reapply a
+feature merely because its source commit is not an ancestor: several earlier PRs were ported manually.
 
 ## Latest user decision: competitor-bounded acceptance (12 November 2026)
 The user explicitly replaced the improvement threshold. Read `benchmark/accept/ACTIVE_POLICY.json` and

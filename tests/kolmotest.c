@@ -33,6 +33,9 @@ static uint64_t rs = 88172645463325252ull;
 static uint64_t rnd(void) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return rs; }
 static int fails = 0;
 static int64_t check_p(const char *name, const uint8_t *s, size_t n, kolmo_params p, uint8_t **frame);
+static int64_t check_lvl(const char *name, const uint8_t *s, size_t n, kolmo_mode m, int level, uint32_t B, int T) {
+    kolmo_params p = {m, level, T, B, 1}; return check_p(name, s, n, p, NULL);
+}
 static void check(const char *name, const uint8_t *s, size_t n, kolmo_mode m, uint32_t B, int T) {
     kolmo_params p = {m, 0, T, B, 1}; check_p(name, s, n, p, NULL);
 }
@@ -527,6 +530,22 @@ int main(void) {
         int64_t a = check_p("max-native-flag-ignored", u, un, pr, &fr), a0 = check_p("max-default", u, un, pr0, &fr0);
         if (a > 0 && a0 > 0 && (a != a0 || memcmp(fr, fr0, (size_t)a))) { printf("FAIL native flag changed a non-balanced mode\n"); fails++; }
         free(fd); free(fn); free(fr); free(fr0); free(u);
+    }
+    /* ultra level 2 (maximum ratio): integer graph leaves may also use context mixing. On an integer series where
+     * the graph is chosen it must round-trip, survive corruption like every mode, and be strictly smaller than
+     * default ultra (which proves the CM-leaf path ran); default ultra is unaffected by the option. */
+    {
+        size_t cnt = 40000, un = cnt * 4; uint8_t *u = malloc(un); uint32_t s = 12345;
+        for (size_t i = 0; i < cnt; i++) {
+            s = (s * 1103515245u + 12345u) & 0x7fffffffu;
+            uint32_t v = (uint32_t)(((uint64_t)i * i) % 100003u) + ((s >> 16) % 16u);
+            memcpy(u + 4 * i, &v, 4);
+        }
+        int64_t c0 = check_lvl("ultra-int-series", u, un, KOLMO_ULTRA, 0, 1 << 17, 1);
+        int64_t c2 = check_lvl("ultra-l2-int-series", u, un, KOLMO_ULTRA, 2, 1 << 17, 1);
+        if (c0 > 0 && c2 > 0 && c2 >= c0) { printf("FAIL ultra level 2 not smaller on an integer series: %lld >= %lld\n", (long long)c2, (long long)c0); fails++; }
+        else if (c0 > 0 && c2 > 0) printf("ultra level 2 integer series: %lld -> %lld bytes\n", (long long)c0, (long long)c2);
+        free(u);
     }
     /* table codec fuzz: corrupt the transformed stream itself (bypasses the container CRC) */
     {

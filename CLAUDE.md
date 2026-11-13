@@ -1,9 +1,9 @@
-# Claude Code: isolated continuation
+# Claude Code: selective release-candidate integration
 
 @AGENTS.md
 
-Work only on `fix/planner-record-ownership-isolated-20261112`; keep PR #7 draft/unmerged.
-Read `benchmark/accept/ACTIVE_POLICY.json` and `research/codec/competitor-policy-v2/DECISION.md`.
-The user's latest threshold is competitor-bounded, column-first and applies to whole layered pipelines.
-Old percentage gates remain historical, not prospective authority. No merge, release or changed format is implied.
-Use `research/codec/competitor-policy-v2/NEXT_TASK.md`; preserve concurrent work and all frozen prior studies.
+Work only on `integration/best-features-rc-20261113` for the user-authorized integration.
+Leave main, published releases, source branches and existing PRs unchanged.
+Read `benchmark/accept/ACTIVE_POLICY.json`, `integration/rc1/FEATURES.json` and
+`integration/rc1/STATUS.md`. Preserve historical research studies and negative results.
+Test the combined build, not just each historical PR. No implicit default or wire-ID promotion.

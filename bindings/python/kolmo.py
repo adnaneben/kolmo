@@ -81,17 +81,24 @@ def train_dict(samples, dict_cap=112 * 1024):
     n = _check(_lib.kolmo_train_dict(blob, sizes, len(samples), out, dict_cap))
     return out.raw[:n]
 
-def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0, dict=None, native_leaf=False):  # noqa: A002
+def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0, dict=None, native_leaf=False, typed_huf=False, csv_archive=False):  # noqa: A002
     """Compress bytes; returns the compressed bytes. mode: speed|balanced|ratio (advanced: rt|fast|eco|hc|max|ultra).
     transforms: True (analyse and transform), False (codec only) or "quick" (cheap transforms only; fastest).
     native_leaf: with mode="balanced", integer series may use Kolmo's native plane-context leaves when smaller
     (sensor/ECG/numeric columns, typically 5-12% smaller; such files decode ~1.5-2.6x slower and are container version 9).
+    level: 0 = mode default; with mode="ultra", 1 = model 1 only (faster) and 2 = maximum ratio (numeric graph
+    leaves may also use context mixing: smaller integer series, much slower decoding of those blocks).
+    typed_huf: RC opt-in integer NPY/PCM16 path, mode fast/balanced, threads=1, default level.
+    csv_archive: RC opt-in CSV regularity route, mode eco, threads=1, default level.
+    Both RC routes are limited to <=16 MiB buffer inputs and retain generic fallbacks.
     Pass dict=<bytes from train_dict> to compress small files against a trained dictionary."""
     if mode not in _MODES:
         raise ValueError("mode must be one of " + ", ".join(_MODES))
+    if native_leaf and typed_huf:
+        raise ValueError("choose native_leaf or typed_huf, not both")
     data = bytes(data)
     tr = 2 if transforms == "quick" else 1 if transforms else 0
-    p = _Params(_MODES[mode], level, threads, block, tr | (16 if native_leaf and tr else 0))   # 16 = KOLMO_T_NATIVE_LEAF
+    p = _Params(_MODES[mode], level, threads, block, tr | (16 if native_leaf and tr else 0) | (32 if typed_huf and tr else 0) | (64 if csv_archive and tr else 0))   # 16 = KOLMO_T_NATIVE_LEAF
     cap = _lib.kolmo_bound(len(data), ctypes.byref(p))
     out = ctypes.create_string_buffer(cap)
     if dict:

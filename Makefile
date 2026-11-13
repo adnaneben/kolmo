@@ -53,7 +53,7 @@ endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
 BLIBS   := $(LIBS)
 
-KOLMO_INCLUDES := src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc
+KOLMO_INCLUDES := src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/kg_int_fast.inc src/typed_int_encoder.inc src/csv_archive_encoder.inc
 
 all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
 
@@ -171,3 +171,20 @@ build/frontier-test: tests/frontier.c $(FRONTIER_SRC) $(FRONTIER_HDR)
 
 build/libkolmo-frontier.$(SOEXT): src/kolmo.c src/kolmo.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) $(PICC) $(PICPP)
 	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) -DKOLMO_FRONTIER $(INC) src/kolmo.c $(FRONTIER_SRC) $(PICC) $(PICPP) -o $@ $(LIBS) $(CXXLIB)
+
+# Combined release-candidate inverse differential gate (generic fallback retained).
+build/test-int-inverse-fast: tests/test_int_inverse_fast.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-int-inverse-fast-asan: tests/test_int_inverse_fast.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-int-inverse-fast: build/test-int-inverse-fast
+	./build/test-int-inverse-fast
+.PHONY: check-int-inverse-fast
+
+build/test-rc-options: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-rc-options-asan: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-rc-options: build/test-rc-options
+	./build/test-rc-options
+.PHONY: check-rc-options

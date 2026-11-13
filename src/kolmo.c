@@ -1515,7 +1515,7 @@ static void mode_codec(const kolmo_params *p, int *codec, int *level) {
         case KOLMO_ECO: *codec = C_BROTLI; *level = p->level ? p->level : CZ_ECO_LEVEL; break;
         case KOLMO_HC:  *codec = C_ZSTD;   *level = p->level ? p->level : 19; break;
         case KOLMO_MAX: *codec = C_LZMA;   *level = p->level ? p->level : 9; break;     /* max: BWT for text, the better of BWT and LZMA2 for binary (level 1: BWT only) */
-        default:      *codec = C_CM;     *level = p->level == 1 ? 1 : 0; break;        /* ultra: context mixing (level 1: model 1, CM only) */
+        default:      *codec = C_CM;     *level = p->level == 1 || p->level == 2 ? p->level : 0; break;   /* ultra: context mixing (level 1: model 1, CM only; level 2: maximum ratio, graph leaves may use CM) */
     }
 }
 
@@ -2746,15 +2746,31 @@ static void *plan_worker(void *arg) {
     return NULL;
 }
 
+#include "typed_int_encoder.inc"
+#include "csv_archive_encoder.inc"
+
 static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen, uint32_t dictid) {
     kolmo_params d = {KOLMO_FAST, 0, 0, 0, 1}; if (!p) p = &d;
     /* KOLMO_T_NATIVE_LEAF is an opt-in bit of transforms: read it, then clear it so every other use of transforms sees
      * the analysis level alone. It applies to balanced (KOLMO_FAST) with analysis on; elsewhere it is ignored. */
-    kolmo_params q = *p; int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0; q.transforms &= ~KOLMO_T_NATIVE_LEAF;
+    kolmo_params q = *p; int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0;
+    int typed_huf=(q.transforms & KOLMO_T_TYPED_HUF)!=0;
+    int csv_archive=(q.transforms & KOLMO_T_CSV_ARCHIVE)!=0;
+    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_CSV_ARCHIVE);
     native_leaf = native_leaf && q.mode == KOLMO_FAST && q.transforms; p = &q;
     if (cap < HDR + IDX) return KOLMO_ERR_DSTSIZE;
     if (n > INT64_MAX) return KOLMO_ERR_CORRUPT;
+    if(typed_huf && !native_leaf && q.transforms && q.mode==KOLMO_FAST && !q.level && q.threads==1
+       && input_fd<0 && output_fd<0 && !dictlen && n<=(16u<<20) && (!q.block || n<=q.block)) {
+        int plain=0;int64_t tr=ktf_encode(src,n,dst,cap,&plain);
+        if(tr)return tr;
+        if(plain)q.transforms=0;
+    }
+    if(csv_archive && q.transforms && q.mode==KOLMO_ECO && !q.level && q.threads==1
+       && input_fd<0 && output_fd<0 && !dictlen && n<=(16u<<20) && (!q.block || n<=q.block)) {
+        int64_t cr=kcsv_encode(src,n,dst,cap);if(cr)return cr;
+    }
     int threads = p->threads > 0 ? p->threads : default_threads();
     uint32_t B = p->block ? p->block : (p->mode >= KOLMO_MAX ? (128u << 20) : p->mode >= KOLMO_ECO ? (16u << 20) : kolmo_fast_block(n));   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
     if (B < 4096) B = 4096;
@@ -2833,7 +2849,8 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         if (!file_index) goto cleanup;
         dst = file_index;
     }
-    J.output_fd = output_fd; J.default_level = !p->level; J.native_leaf = native_leaf;
+    J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2);   /* ultra level 2 = default ultra + CM graph leaves */
+    J.native_leaf = native_leaf;
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
     if (!J.out || !J.outlen) goto cleanup;
