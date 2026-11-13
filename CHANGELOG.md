@@ -104,6 +104,7 @@
   (data kept a year) or 652 (30 days). With block sorting that table costs less than OpenZL (CPU and storage) and
   is 23% smaller; with LZMA2 it cost 3.3 times OpenZL. Decimal files at `ratio` are 2 to 12.6% larger than at the
   previous commit and still 5 to 43% smaller than with 1.0.1 (eight files checked); `-x` is unchanged. Integer arrays keep LZMA2.
+  Both are kept: `ratio -l 10` (`-m max -l 10`) keeps LZMA2 on decimal planes and gives the earlier sizes.
   `hc`: float planes at zstd 9 instead of 19 (same size, up to 16 times faster); decimal planes keep zstd 19 (zstd 12
   was 3 to 36% larger).
 - **More encode time off `balanced`, output unchanged (branch `claude/dec64`).** Measured by instruction counts

@@ -2456,7 +2456,8 @@ static void *compress_worker(void *arg) {
              * BWT is the same size and four to six times faster; on decimal planes LZMA2 is 10 to 12% smaller at 25
              * to 30 times the encode time, 18 KB saved per CPU second where the cost model breaks even at 54 (data kept
              * a year) or 652 (30 days). Integer arrays keep LZMA2 (2 to 9% smaller, small inputs). */
-            int kgc = codec == C_LZMA && (pl.a || (!(pl.b & 32) && (pl.b & (16 | 64)))) ? C_BSC : codec, kgl = kgc != codec ? 9 : level;
+            /* max -l 10 keeps LZMA2 on decimal planes: the smallest output without context mixing, whatever it costs */
+            int kgc = codec == C_LZMA && (pl.a || (!(pl.b & 32) && ((pl.b & 16) || ((pl.b & 64) && level < 10)))) ? C_BSC : codec, kgl = kgc != codec ? 9 : level;
             /* hc: zstd 19 over float planes gives the size of zstd 9 (the planes are coded by Huffman or rANS when that
              * is smaller) at up to 16 times the time. Decimal planes keep zstd 19: zstd 12 was 3 to 36% larger. */
             if (codec == C_ZSTD && level > 9 && !pl.a && !(pl.b & (32 | 64)) && (pl.b & 16)) kgl = 9;

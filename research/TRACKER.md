@@ -7,7 +7,7 @@ number that justifies dropping it is in the row). Decision of 12 November 2026.
 Sources: S = session plan, G = the "Kolmo-inspired codec" plan (experiment ids E00 to E10), M = found by measurement.
 Costs and trade-offs of what was done are in `benchmark/accept/REGRESSIONS.md`; this file tracks what was planned.
 
-Status on 12 November 2026 (branch `claude/dec64`): 93 rows. 23 done (one of them on another branch), 10 dropped, 17 partly done or measured only, 42 not done,
+Status on 13 November 2026 (branch `claude/dec64`): 110 rows. 23 done (one of them on another branch), 10 dropped, 18 partly done or measured only, 58 not done,
 1 deferred (the merge).
 
 ## A. Numeric and structured data
@@ -48,7 +48,7 @@ Status on 12 November 2026 (branch `claude/dec64`): 93 rows. 23 done (one of the
 | B11 | Type first: the planner decides what the data is before it tries codecs | User, 12 Nov | Partly | Text tables already type their columns (number, text, formula search). Binary data at balanced: typed trials (float, integer, decimal, image) before the record search, skipped when a typed plan saves a fifth (planning -29%, one of 83 files changed, 3.7% smaller); the image trial first, ending the other typed trials when it saves a fifth (no output change). Left: one trial chosen from a container header (.npy, safetensors, ONNX, Parquet say the type); the same order at ratio; typed columns inside records |
 | B12 | Cost table in the planner: encode and decode cost per option and data type, fitted offline, so the budget check is deterministic and needs no clock | M | Not done | The planner compares sizes only; the one cost proxy is DEC64's 7% margin (ledger decision 2) |
 | B13 | Learned selector (reinforcement learning or a bandit) in place of trials | User, 12 Nov | Measured, not planned now | Ceiling at balanced: all planning is 20.8% of encode, planning with no gain 3.8%. One ordering rule (B11) took 29% of planning. The choice is one decision per block with an immediate result, so a fitted cost table (B12) and gates checked on a holdout cover it; revisit if the gap to the per-file oracle stays above 2% after B11 and B12 (today: 0.843 picked against 0.877 within budget, which is a cost gap, not a selection gap) |
-| B14 | Bring `balanced` within zstd -3's cost | M | Partly | M5 at ac6f88b: within on 16 of 35 (was 14). Decimal arrays x1.63-1.69 -> x1.16-1.17. Still over, by excess: lfw_subset.npy x1.50 (1 MB, fixed costs), JSON number array x1.37, energy_test.csv x1.28 (the formula search is 37% of its encode and gives 27% of its size), logs x1.27, wide table x1.27, nci x1.21, decimal arrays x1.16, 8-bit images x1.12-1.15, mozilla x1.10. Since ac6f88b (not yet on the M5): marked plans no longer code twice, faster table fields, cheaper planner trials. Profiles of the log and typed-table encoders are flat (already tuned): no cheap step left there |
+| B14 | Bring `balanced` within zstd -3's cost | M | Partly | M5 at ec50fcd: within on 18 of 35 (14 at 1079e90, 16 at ac6f88b); decimal arrays are within it. Earlier detail, M5 at ac6f88b: Decimal arrays x1.63-1.69 -> x1.16-1.17. Still over, by excess: lfw_subset.npy x1.50 (1 MB, fixed costs), JSON number array x1.37, energy_test.csv x1.28 (the formula search is 37% of its encode and gives 27% of its size), logs x1.27, wide table x1.27, nci x1.21, decimal arrays x1.16, 8-bit images x1.12-1.15, mozilla x1.10. Since ac6f88b (not yet on the M5): marked plans no longer code twice, faster table fields, cheaper planner trials. Profiles of the log and typed-table encoders are flat (already tuned): no cheap step left there |
 | B15 | Bring `hc` and `ratio` within OpenZL's cost, or set their lifetime | M | Partly | At 30 days `hc -l 9` is the largest setting that fits (27 of 32, size 0.863 of OpenZL); `hc` and `ratio` fit at one year (25 and 24 of 32); per-file best within budget at 30 days is `eco` on 11 files and `hc -l 9` on 9. First cost removed from `ratio`: LZMA2 over float and decimal planes (ledger decisions 21, 22): encode of the 64-file set 177 -> about 95 s, size +0.9%. Measured and kept: the LZMA2 extreme preset (6 KB per CPU second, but dropping it breaks target 4). OpenZL comparison re-run at 4e103b0: `ratio` within its cost on 9 of 32 files at 30 days (was 3) and 25 at one year (was 24), size 0.721 of OpenZL (was 0.711); `hc` 9 (was 4) and 27 (was 25). Left: the lifetime (ledger decision 16); the same accounting for `hc` (zstd -19 leaves: 3.4 s for a result block sorting reaches in 0.3 s) |
 
 ## C. Engine: matching and fast paths
@@ -142,6 +142,36 @@ Three branches moved today besides this one. What each has, and what this work t
 | X8 | GPT review R1 (`research/codec/review-20261112/`) | Plane-aligned Huffman or rANS chunks readable by today's decoder; the rANS encoder refuses a one-symbol chunk although the decoder accepts it; token-plus-offset coding; decode-only timing; family as the unit of evidence; an exposure registry for holdouts | Taken: the token-plus-offset idea (measured, A15); decode-only timing for the M5 flag in E12; the exposure check for A2 (the release holdout's three sources, UCI power, Divvy rides, USGS quakes, do not overlap this branch's holdout and are candidates for it). Not taken: plane-aligned chunks (DEC64 planes are separate leaves already) and its next task, which belongs to that branch | Partly |
 | X9 | GPT review R1, R5 | The rANS encoder allocates 4 MiB per call and the decoder builds a 64K table per stream | Relevant to DEC64 speed (A13): a DEC64 block has up to 11 leaves. To profile there | Not done |
 | X7 | all three | Container version 9 and new ids are being claimed in parallel (this branch: version 8 for fixed-width lines, node 7, block codec 17, extended CM header) | One table of ids and versions agreed before any of the branches goes to main | Not done |
+
+## R. Basic transforms that stack (research of 13 November, `research/transforms-20261113/REPORT.md`)
+
+Published gains are upper ranges: most were measured against weaker pipelines than kolmo's. Each row needs its own
+measurement here, alone and in its stack, before it counts. Stacking class from the report: enabler (worth little
+until a successor exists), independent, substitute (partly cancels), destructive.
+
+| # | Item | Size | Status | Outcome / evidence |
+|---|---|---|---|---|
+| R1 | Decimal node output into a dictionary or run-length cascade (few distinct values, long runs) | S | Not done | ALP's own table: 21.7 -> 18.8 bits per value with the cascade; independent of the planes |
+| R2 | Static order-1 rANS leaf, chosen per stream from the histogram | M | Not done | 5.9 to 19.6% under order 0 on two real streams, about 1,000 MB/s decode with AVX2; not measured after shuffle + delta. Enabler for R3, R9 |
+| R3 | Byte-delta inside shuffled planes, planes coded separately | S | Not done | Blosc on ERA5: median 5.86x against 5.1x for shuffle; negative on some sets, so by trial. Enabler chain shuffle -> plane delta -> per-plane coder (4.0x -> 5.7x) |
+| R4 | ARM64, RISC-V and ARM-Thumb branch filters; lc/lp matched to instruction alignment | M | Not done | xz maintainer: 5%, 7 to 8%, 5% with LZMA2; alignment 0 to 2% more |
+| R5 | Cross-column nodes beyond formulas: equality, one-to-one map, difference against a reference column, per-key frame of reference | M | Not done | FastLanes about 8% at table level; Corra 30 to 58% on date columns; overlaps the formula search, untested after zstd or BWT |
+| R6 | Logs: typed numeric tokens (by digit count and leading digit, delta, timestamp delta) and column-wise variables | M | Not done | Denum +5.9 to 17% over template compressors, regressions of 4 to 19% on some sets: by trial |
+| R7 | Binning leaf (entropy-coded bin + raw offset bits, as pcodec) | M | Not done | pcodec 29 to 94% over shuffle+zstd class pipelines; no comparison with a decimal node published |
+| R8 | Same-length line XOR / run-length before LZ (no parsing) | S | Not done | LogLite + LZMA 37.7% under LZMA on JSON logs |
+| R9 | PACK for alphabets of 16 or fewer, run-length on a symbol subset with runs in a side stream, raw fallback for tiny streams | S | Not done | CRAM 3.1 codec set 7 to 16% under 3.0 as a whole; no isolated numbers |
+| R10 | LZMA2 lc/lp/pb by trial on a sample | S | Not done | One data point: 1.84% on binary game data, no decode cost |
+| R11 | Byte planes grouped by entropy before coding | S | Not done | One 2025 paper, 1.075x geomean on float64, internally inconsistent |
+| R12 | Dictionary variant per back end; semi-dynamic dictionary | M | Not done | Word transform gain by back end: gzip 15.6%, bzip2 12.1%, PPMd 9.7%, PAQ6 7.9%; variants conflict across back ends |
+| R13 | Value-level lookback (LZ over numbers, field LZ) | M | Not done | In pcodec and OpenZL; no isolated numbers |
+| R14 | Integer-multiple, float-multiple and float-quantum detection; delta order up to 7 by trial | S | Partly | gcd, decimals and second difference exist; arbitrary float base and orders 3 to 7 do not |
+| R15 | JPEG and deflate recompression | L | Not done (also in section C) | Lepton 22.7% on JPEG; preflate exact deflate reconstruction, slow; archive modes only |
+| R16 | Split-stream executable filter (BCJ2), table delta, long-range match pass | L | Not done | No sourced numbers found (sources blocked) |
+| R17 | Measure cascade depth and order here: each of R1 to R14 alone, in its stack, and greedy against exhaustive choice on the test set | M | Not done | No published ablation of depth or of greedy against exhaustive search exists; cheap sampled trial is reported within 1 to 3.3% of optimal |
+
+Not worth pursuing per the evidence: Chimp, Patas, ALP-RD (zstd alone beats them in their own tables), frequency
+encoding (0.09%), linear-model residuals (parity with delta on real data), other BWT second stages (under 1% over
+libbsc), PPMd (larger and slower than libbsc on large text).
 
 ## Considered and not planned
 
