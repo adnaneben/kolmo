@@ -57,6 +57,14 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
    pipeline (all decodable by the production CLI) is smallest on 47/61 inputs; production modes alone 37–39/61.
    `max` holds audio/pageviews, `tp_pent` takes MIT-BIH/EEG; OpenZL keeps GHCN daily weather (7/9).
 
+16. **Fresh preregistered validation (P2-E20, Actions 43350744793; ESC-50 WAV + FiveThirtyEight CSV):** archive on
+   fresh audio **passes** (Kolmo pipeline smallest within OpenZL `le-i16`-9 cost on 35/40 in both runs, −10.3% bytes);
+   the speed rule beats zstd-3 within cost on 25/40 and 24/40 but **fails** the preregistered CP95 > 0.5 bar
+   (production 0/40); fresh real-world CSVs **fail** in archive (OpenZL 23/23 within cost; Kolmo hc/max smaller by up
+   to 43% but 1.05–2.1× its cost). **P2-D1 closed by test**: research containers not useful (4/24, 1/24).
+17. **Wire review (13 Nov):** singleton `C_RANS` chunks are conformant existing-format use (4,500 mutants, 0 findings);
+   the GHCN order-1 leaf (P2-19) would reach only OpenZL parity and is not pursued.
+
 ## Correctness evidence behind these claims
 
 Identity checks against production (19/19 typed inputs: choice, parameters, residual, rest, inverse); 3.3 M
@@ -66,15 +74,13 @@ timing run (runner gates: P2-E3 all inputs × 7 policies, P2-E7 50/50).
 
 ## What is needed next (in order)
 
-1. **Preregistered, source-disjoint validation** of the fixed rule `tp_phuf_pg16` (speed vs zstd-3) and of the
-   archive pipelines `tp_pent`/`tb_best` beside production `max` (vs OpenZL typed-9), on whole original files
-   registered before reading (candidates not referenced in the repository: ESC-50 16-bit WAV clips,
-   FiveThirtyEight CSVs; **fetching them needs the user's approval**).
-2. **Wire review** of singleton `C_RANS` chunks (existing decoder behaviour, used by `tp_pent`) before any
-   production encoder emits them; and review of the proposed fast order-1 entropy leaf for GHCN-like series (P2-19).
-3. Header-exact OpenZL control: the N1 exact-NPY run (43334484927) is recorded by its owner.
-4. User decision P2-D1 (research containers for typed CSV).
+1. Archive, text-heavy CSV: a heavy-ratio path whose CPU fits OpenZL `csv`-9's cost (Kolmo `max` is 8–43% smaller
+   but 1.05–2.1× the cost on fresh CSVs); first, investigate production `hc`'s 1.3 s encode on one 2.5 MB fresh CSV.
+2. Speed rule on audio: understand the categories where `tp_phuf_pg16` misses (natural soundscapes,
+   interior/domestic) using **development** data only; any revised rule needs a new preregistration and new fresh data.
+3. If promotion is ever wanted: authorization for the one-line `rans_norm` change in `src/` plus conformance vectors
+   in `tests/` (wire review §A), and the production CLI exit-time buffer leak.
 
 Runner use by this workstream tonight (approx. minutes): P2-E3 13, P2-E7 13, P2-E8 19, P2-E10 48, P2-E12 11,
-P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1 = ~154 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
+P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16 = ~170 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
 Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.

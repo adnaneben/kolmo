@@ -14,7 +14,8 @@ cost on 7/8 typed NPY inputs in both runs, production 0/8**; P2-E4 zero-run leaf
 typed CSV vs OpenZL csv-9 (Kolmo smallest within cost on both tables); **P2-E10 on 61 inputs: type-first
 per-plane Huffman fits zstd-3 and is smaller on 43/41, production 0/61**; P2-E11 writes it as production frames; **P2-E14 (production frames, production CLI decode, 61 inputs): guarded
 per-plane Huffman fits zstd-3 and is smaller on 49/47, production 0/61; P2-E17 archive: a Kolmo pipeline is
-smallest within OpenZL typed-9 cost on 47/61** (OpenZL keeps GHCN; P2-E18 explains why). Archive NPY uses OpenZL `le-*` profiles on whole files (exact NPY adapter pending). No P2
+smallest within OpenZL typed-9 cost on 47/61** (OpenZL keeps GHCN; P2-E18 explains why). **Fresh preregistered validation P2-E20: archive on fresh
+audio PASS (35/40 vs OpenZL); speed rule 60–62.5% FAIL vs its CP95 bar; fresh CSV archive FAIL; P2-D1 closed (not useful).** Archive NPY uses OpenZL `le-*` profiles on whole files (exact NPY adapter pending). No P2
 acceptance: development data and research containers (open decision P2-D1).
 
 Updated 2026-11-12. Research only: no default, format, threshold or release change is proposed here.
