@@ -2969,15 +2969,30 @@ static void *plan_worker(void *arg) {
     return NULL;
 }
 
+/* Opt-in typed encoder route ported from the RC1 integration (PR #10). It writes ordinary version 7 graph frames. */
+#include "typed_int_encoder.inc"
+
 static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen, uint32_t dictid) {
     kolmo_params d = {KOLMO_FAST, 0, 0, 0, 1}; if (!p) p = &d;
-    /* KOLMO_T_NATIVE_LEAF is an opt-in bit of transforms: read it, then clear it so every other use of transforms sees
-     * the analysis level alone. It applies to balanced (KOLMO_FAST) with analysis on; elsewhere it is ignored. */
-    kolmo_params q = *p; int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0; q.transforms &= ~KOLMO_T_NATIVE_LEAF;
+    /* KOLMO_T_NATIVE_LEAF and KOLMO_T_TYPED_HUF are opt-in bits of transforms: read them, then clear them so every
+     * other use of transforms sees the analysis level alone. The native leaf applies to balanced (KOLMO_FAST) with
+     * analysis on; elsewhere it is ignored. */
+    kolmo_params q = *p; int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0;
+    int typed_huf = (q.transforms & KOLMO_T_TYPED_HUF) != 0;
+    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF);
     native_leaf = native_leaf && q.mode == KOLMO_FAST && q.transforms; p = &q;
     if (cap < HDR + IDX) return KOLMO_ERR_DSTSIZE;
     if (n > INT64_MAX) return KOLMO_ERR_CORRUPT;
+    /* The typed route below produces a whole frame on its own (one block, one thread, at most 16 MiB, buffer API, no
+     * dictionary, default level) and returns it; when it does not apply the normal planner runs. A declared integer
+     * NPY / PCM16 WAV that the typed route's size guard rejects is compressed with the plain codec (transforms 0). */
+    if (typed_huf && !native_leaf && q.transforms && q.mode == KOLMO_FAST && !q.level && q.threads == 1
+        && input_fd < 0 && output_fd < 0 && !dictlen && n <= (16u << 20) && (!q.block || n <= q.block)) {
+        int plain = 0; int64_t tr = ktf_encode(src, n, dst, cap, &plain);
+        if (tr) return tr;
+        if (plain) q.transforms = 0;
+    }
     int threads = p->threads > 0 ? p->threads : default_threads();
     uint32_t B = p->block ? p->block : (p->mode >= KOLMO_MAX ? (128u << 20) : p->mode >= KOLMO_ECO ? (16u << 20) : kolmo_fast_block(n));   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
     if (B < 4096) B = 4096;

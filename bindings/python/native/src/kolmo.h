@@ -28,7 +28,7 @@ typedef struct {
     uint32_t block;     /* bytes per block, 0 = adaptive rt/fast, 16 MiB eco/hc (larger for text), 128 MiB max/ultra */
     int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap
                            structure transforms (images, records, executables, tables), for the fastest settings.
-                           May be OR-ed with KOLMO_T_NATIVE_LEAF (below). */
+                           May be OR-ed with KOLMO_T_NATIVE_LEAF or KOLMO_T_TYPED_HUF (below). */
 } kolmo_params;
 
 /* Opt-in bit for kolmo_params.transforms (balanced / KOLMO_FAST only; ignored elsewhere): integer-series residuals in
@@ -38,6 +38,23 @@ typedef struct {
  * on Apple silicon), since those leaves are entropy coded with context models instead of zstd. Files that use it are
  * written as container version 9 and need a kolmo release that reads version 9; files that do not are unchanged. */
 #define KOLMO_T_NATIVE_LEAF 16
+
+/* Opt-in bit for kolmo_params.transforms, ported from the RC1 integration (PR #10): a file declared as a little-endian
+ * integer NPY array or a PCM16 WAV whose data chunk ends the file is coded type first, as one integer graph node with
+ * static Huffman residual planes, in an existing version 7 frame that every reader of version 7 decodes. It applies
+ * only to KOLMO_FAST at the default level with analysis on, exactly one thread requested, the buffer API, no
+ * dictionary, and inputs of at most 16 MiB that fit one block. A file of those types that a sampled zstd estimate
+ * predicts would not gain is compressed with the plain codec; other inputs are planned as usual. KOLMO_T_NATIVE_LEAF
+ * takes precedence when both bits are set. Not chosen by default.
+ * It is a speed option, not a ratio option. Measured on this branch (Apple silicon, one thread, in memory, 12 inputs):
+ * arrays and clips of 0.06-2.6 MB compress 4-13x faster than default balanced; single-channel 16-bit series (ECG) are
+ * also about 7% smaller and decode faster; but 7 of the 12 inputs come out larger than default balanced, by 14% to
+ * 170%, and interleaved two-channel data and one audio clip come out larger than plain zstd level 3: the route has no
+ * match-finding stage, predicts interleaved channels or columns as one series, and its guard estimates from a single
+ * 16 KiB sample. On 40 mono 16-bit audio clips (sizes only) the total is 5.9% smaller than default balanced: smaller
+ * on 22 clips, the same on 6, larger on 12 (one of them by 170%), and larger than zstd level 3 on 6. Compare sizes
+ * before relying on it. */
+#define KOLMO_T_TYPED_HUF 32
 
 #define KOLMO_ERR_CORRUPT   (-1)
 #define KOLMO_ERR_CHECKSUM  (-2)
