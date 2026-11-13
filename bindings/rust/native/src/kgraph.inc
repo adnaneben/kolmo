@@ -243,7 +243,7 @@ static int kg_float_inv(const uint8_t *par, size_t plen, const kbuf *pl, const k
 }
 
 /* ---- program builder ---- */
-typedef struct { kbuf *s; int ns, cap; uint8_t *used; kbuf prog; int nodes; } kgb;
+typedef struct { kbuf *s; int ns, cap; uint8_t *used; kbuf prog; int nodes; int nph_q, nph_np; } kgb;   /* nph: stream nph_q holds nph_np byte planes of integer residuals (native-leaf hint; 0 = none) */
 static int kgb_new(kgb *g) {
     int ns = g->ns; if (ns >= KG_MAXSTREAMS) return -1;
     if (ns == g->cap) {
@@ -298,6 +298,15 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
             hufonly = !flat && hs * 100 <= zs * 97;
         }
         size_t z = s->n >= 64 && !flat && !hufonly ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
+        /* ultra level 2 (maximum ratio): the leaf also tries context mixing and keeps it only when smaller than the
+         * LZMA2 leaf. Smaller graph blocks (measured: -11% to -15% on integer series where the graph is chosen,
+         * -2% over a mixed corpus), but such leaves decode at context-mixing speed, up to ~100x slower than LZMA2.
+         * Default ultra keeps LZMA2 leaves. No format change: leaf codec 7 has always been valid. */
+        if (codec == C_CM && level == 2 && s->n >= 64 && !flat) {
+            uint8_t *cb = malloc(zc); size_t cz = cb ? codec_compress(x, C_CM, level, s->p, s->n, cb, zc) : 0;
+            if (cz && (!z || cz < z)) { memcpy(o.p + o.n + 20, cb, cz); z = cz; cc = C_CM; }
+            free(cb);
+        }
         int tryh = s->n >= 64 && !flat;
         if (tryh && z) {                                      /* Huffman cannot beat the order-0 entropy: skip when z is below it */
             double bits = 0;                                  /* per 128 KiB chunk, as Huffman codes them */
@@ -317,6 +326,12 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
              * must be at least 3% smaller to be taken; max and ultra take any gain */
             if (rz && (!z || (codec == C_ZSTD ? (uint64_t)rz * 100 <= (uint64_t)z * 97 : rz < z))) { memcpy(o.p + o.n + 20, hb, rz); z = rz; cc = C_RANS; }
             free(hb);
+        }
+        if (x->native_leaf && g->nph_np && q == g->nph_q && s->n >= 64) {   /* opt-in (balanced): native plane-context leaf,
+                                                                             * kept only when smaller than the choice above */
+            uint8_t *nb = malloc(np_bound(s->n)); size_t nz = nb ? np_compress(x, s->p, s->n, g->nph_np, nb, np_bound(s->n)) : 0;
+            if (nz && nz <= zc && nz < s->n && (!z || nz < z)) { memcpy(o.p + o.n + 20, nb, nz); z = nz; cc = C_NPLANE; x->used_native_leaf = 1; }
+            free(nb);
         }
         if (!z || z >= s->n) { cc = C_STORE; z = s->n; if (z) memcpy(o.p + o.n + 20, s->p, z); }
         o.p[hp] = (uint8_t)cc;
@@ -499,6 +514,7 @@ static size_t kg_encode_num(codec_ctx *x, int codec, int level, const uint8_t *s
     for (int q = 0; q < bo; q++) kb_uv(&par, kg_zz((int64_t)kg_ld(a + (size_t)q * w, w, bs)));
     if (!par.p) goto done;
     int o = kgb_node(&g, KG_INT, (int[]){0}, 1, 2, &par); if (o != 1) goto done;
+    g.nph_q = 1; g.nph_np = pln ? ow : 1;                                   /* stream 1: ow byte planes of residuals */
     if (kb_res(&g.s[1], m * (size_t)ow + 1) || kb_res(&g.s[2], n - cnt * (size_t)w + 1)) goto done;
     {   uint8_t *r = g.s[1].p; uint64_t v1 = 0, v2 = 0;
         for (size_t q = 0; q < cnt; q++) {
@@ -604,6 +620,8 @@ done:
     free(par.p); kgb_free(&g); return out;
 }
 
+#include "kg_int_fast.inc"
+
 /* ---- decoder ---- */
 typedef struct { uint8_t op; uint32_t nin, nout, firstout; const uint32_t *in; const uint8_t *par; size_t plen; } kgnode;
 static int kg_decode(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *out, size_t len) {
@@ -692,7 +710,7 @@ static int kg_decode(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *out, siz
             s[t->in[0]] = r;
         } else if (t->op == KG_INT) {
             if (t->nin != 1 || t->nout != 2) goto out;
-            kbuf r = {0}; if (kg_int_inv(t->par, t->plen, &o[0], &o[1], maxs, &r)) { free(r.p); goto out; }
+            kbuf r = {0}; if (kgi_inverse(t->par, t->plen, &o[0], &o[1], maxs, &r)) { free(r.p); goto out; }
             s[t->in[0]] = r;
         } else goto out;
         for (uint32_t r = 0; r < t->nin; r++) have[t->in[r]] = 1;
