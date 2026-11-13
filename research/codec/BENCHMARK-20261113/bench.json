@@ -631,6 +631,138 @@
    "archive_wins": "\u2014"
   }
  },
+ "C3. Fresh audio AudioMNIST + audiomentations, 40 (speed rival only; _fd = research fast-inverse decoder)": {
+  "zstd_3": {
+   "files": 40,
+   "ratio_total": 1.688,
+   "ratio_gmean": 2.199,
+   "enc_MBps": 22.3,
+   "dec_MBps": 26.2,
+   "enc_agg_MBps": 30.4,
+   "dec_agg_MBps": 36.2,
+   "mem_max_MiB": 17.9,
+   "mem_MiB": 17.7,
+   "speed_wins": "\u2014",
+   "archive_wins": "\u2014"
+  },
+  "kolmo_fast": {
+   "files": 40,
+   "ratio_total": 2.347,
+   "ratio_gmean": 3.495,
+   "enc_MBps": 9.8,
+   "dec_MBps": 28.8,
+   "enc_agg_MBps": 13.8,
+   "dec_agg_MBps": 39.6,
+   "mem_max_MiB": 17.9,
+   "mem_MiB": 17.7,
+   "speed_wins": "0/40",
+   "archive_wins": "\u2014"
+  },
+  "tp_phuf_pg16": {
+   "files": 40,
+   "ratio_total": 2.389,
+   "ratio_gmean": 3.283,
+   "enc_MBps": 24.6,
+   "dec_MBps": 29.6,
+   "enc_agg_MBps": 33.6,
+   "dec_agg_MBps": 40.7,
+   "mem_max_MiB": 17.9,
+   "mem_MiB": 17.7,
+   "speed_wins": "33/40",
+   "archive_wins": "\u2014"
+  },
+  "tp_phuf_pg16_fd": {
+   "files": 40,
+   "ratio_total": 2.389,
+   "ratio_gmean": 3.283,
+   "enc_MBps": 24.5,
+   "dec_MBps": 30.2,
+   "enc_agg_MBps": 33.4,
+   "dec_agg_MBps": 41.4,
+   "mem_max_MiB": 17.9,
+   "mem_MiB": 17.7,
+   "speed_wins": "34/40",
+   "archive_wins": "\u2014"
+  },
+  "ta_phuf": {
+   "files": 40,
+   "ratio_total": 2.389,
+   "ratio_gmean": 3.283,
+   "enc_MBps": 24.4,
+   "dec_MBps": 29.6,
+   "enc_agg_MBps": 34.4,
+   "dec_agg_MBps": 40.6,
+   "mem_max_MiB": 17.9,
+   "mem_MiB": 17.7,
+   "speed_wins": "35/40",
+   "archive_wins": "\u2014"
+  },
+  "ta_phuf_fd": {
+   "files": 40,
+   "ratio_total": 2.389,
+   "ratio_gmean": 3.283,
+   "enc_MBps": 25.2,
+   "dec_MBps": 30.5,
+   "enc_agg_MBps": 34.3,
+   "dec_agg_MBps": 41.6,
+   "mem_max_MiB": 17.9,
+   "mem_MiB": 17.7,
+   "speed_wins": "35/40",
+   "archive_wins": "\u2014"
+  },
+  "ta_rep": {
+   "files": 40,
+   "ratio_total": 2.408,
+   "ratio_gmean": 3.335,
+   "enc_MBps": 22.6,
+   "dec_MBps": 29.6,
+   "enc_agg_MBps": 31.5,
+   "dec_agg_MBps": 40.4,
+   "mem_max_MiB": 17.9,
+   "mem_MiB": 17.7,
+   "speed_wins": "34/40",
+   "archive_wins": "\u2014"
+  },
+  "ta_rep_fd": {
+   "files": 40,
+   "ratio_total": 2.408,
+   "ratio_gmean": 3.335,
+   "enc_MBps": 22.9,
+   "dec_MBps": 30.3,
+   "enc_agg_MBps": 31.1,
+   "dec_agg_MBps": 41.6,
+   "mem_max_MiB": 17.9,
+   "mem_MiB": 17.7,
+   "speed_wins": "30/40",
+   "archive_wins": "\u2014"
+  },
+  "ta_rep_fb": {
+   "files": 40,
+   "ratio_total": 2.352,
+   "ratio_gmean": 3.191,
+   "enc_MBps": 22.8,
+   "dec_MBps": 29.9,
+   "enc_agg_MBps": 31.5,
+   "dec_agg_MBps": 40.5,
+   "mem_max_MiB": 17.9,
+   "mem_MiB": 17.7,
+   "speed_wins": "29/40",
+   "archive_wins": "\u2014"
+  },
+  "ta_rep_fb_fd": {
+   "files": 40,
+   "ratio_total": 2.352,
+   "ratio_gmean": 3.191,
+   "enc_MBps": 22.8,
+   "dec_MBps": 30.1,
+   "enc_agg_MBps": 31.5,
+   "dec_agg_MBps": 41.6,
+   "mem_max_MiB": 17.9,
+   "mem_MiB": 17.7,
+   "speed_wins": "33/40",
+   "archive_wins": "\u2014"
+  }
+ },
  "D. Regular numeric CSV tables (Covertype, CollegeMsg), development, 2": {
   "zstd_3": {
    "files": 2,

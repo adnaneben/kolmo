@@ -16,7 +16,8 @@ production decoder reads.
 | Real-world CSV, FiveThirtyEight (24, fresh) | 4.67 | 4.98 | **7.15** (`max`) | +44% bytes | **No**: `max`/`hc` cost 1.05–2.1× OpenZL; eco/pick not run on this set |
 | Typed numeric arrays, NPY (50, dev) | 2.90 | 3.61 | **4.06** (`max`); 3.86 (`tp_pent`) | +12% (max), +7% (tp_pent) | Speed: `tp_phuf_pg16` 41/50 vs zstd-3. Archive: frames 31/50, production 0–23/50 |
 | Fresh audio ESC-50 (40) | 1.36 | 1.72 | **1.92** (`tp_arch19`); 1.84 (`tb_best`) | **+11%** | **Archive PASS (preregistered)**: 30/40 tb_best, 35/40 any Kolmo pipeline. Speed: 25/40 (bar not met) |
-| Fresh audio MS-SNSD (40) | 1.29 | not run | 1.60 (`tb_best`) | — | Speed: 22–26/40 (bar not met) |
+| Fresh audio MS-SNSD (40) | 1.29 | not run | 1.60 (`tb_best`) | — | Speed: 22–26/40 (bar not met); 28/40 with the P2-E30 levers (dev) |
+| Fresh audio AudioMNIST + fixtures (40) | 1.69 | not run | 2.41 (`ta_rep`); 2.39 (`ta_phuf`) | — | **Speed PASS (preregistered)**: 34–35/40 (`ta_phuf_fd`) |
 | Whole WAV speech, FSDD (10, dev) | 1.13 | 1.33 | **1.41** (`max`); 1.37 (frames) | +6% | Archive 10/10; speed 7/10 |
 | Weather series, GHCN (9, dev; inside A) | — | best on 7/9 | 5–18% larger than OpenZL on 6/9 | — | No: no cheap model found |
 
@@ -51,7 +52,6 @@ production decoder reads.
 | Memory | Peak RSS per process from `wait4`. Linux counts the pre-exec Python image, so about 18–25 MiB is a floor and only values above it are informative |
 
 ## 3. Full tables per cohort (first run of each experiment)
-
 
 ### A. Typed numeric arrays (NPY), development, 50 inputs / 9 families
 
@@ -121,6 +121,21 @@ production decoder reads.
 | tb_lazy | 1.41 | 1.512 | 39.9 / 79.0 | 47.8 / 98.6 | 19.7 / 25.4 | 19/40 | — |
 | tb_lazy_fd | 1.41 | 1.512 | 38.4 / 79.1 | 50.5 / 120.4 | 19.7 / 25.5 | 21/40 | — |
 
+### C3. Fresh audio AudioMNIST + audiomentations, 40 (speed rival only; _fd = research fast-inverse decoder)
+
+| Pipeline | Ratio (total) | Ratio (geomean) | Encode MB/s (median file / aggregate) | Decode MB/s (median file / aggregate) | Peak RSS MiB (median / max) | Beats zstd-3 within speed cost | Beats OpenZL within archive cost |
+|---|---|---|---|---|---|---|---|
+| zstd -3 (speed rival) | 1.688 | 2.199 | 22.3 / 30.4 | 26.2 / 36.2 | 17.7 / 17.9 | — | — |
+| Kolmo fast (production) | 2.347 | 3.495 | 9.8 / 13.8 | 28.8 / 39.6 | 17.7 / 17.9 | 0/40 | — |
+| ta_rep | 2.408 | 3.335 | 22.6 / 31.5 | 29.6 / 40.4 | 17.7 / 17.9 | 34/40 | — |
+| ta_rep_fd | 2.408 | 3.335 | 22.9 / 31.1 | 30.3 / 41.6 | 17.7 / 17.9 | 30/40 | — |
+| tp_phuf_pg16 | 2.389 | 3.283 | 24.6 / 33.6 | 29.6 / 40.7 | 17.7 / 17.9 | 33/40 | — |
+| tp_phuf_pg16_fd | 2.389 | 3.283 | 24.5 / 33.4 | 30.2 / 41.4 | 17.7 / 17.9 | 34/40 | — |
+| ta_phuf | 2.389 | 3.283 | 24.4 / 34.4 | 29.6 / 40.6 | 17.7 / 17.9 | 35/40 | — |
+| ta_phuf_fd | 2.389 | 3.283 | 25.2 / 34.3 | 30.5 / 41.6 | 17.7 / 17.9 | 35/40 | — |
+| ta_rep_fb | 2.352 | 3.191 | 22.8 / 31.5 | 29.9 / 40.5 | 17.7 / 17.9 | 29/40 | — |
+| ta_rep_fb_fd | 2.352 | 3.191 | 22.8 / 31.5 | 30.1 / 41.6 | 17.7 / 17.9 | 33/40 | — |
+
 ### D. Regular numeric CSV tables (Covertype, CollegeMsg), development, 2
 
 | Pipeline | Ratio (total) | Ratio (geomean) | Encode MB/s (median file / aggregate) | Decode MB/s (median file / aggregate) | Peak RSS MiB (median / max) | Beats zstd-3 within speed cost | Beats OpenZL within archive cost |
@@ -179,7 +194,7 @@ production decoder reads.
 | CSV regularity picker beats OpenZL `csv`-9 within archive cost | **Validated, fresh, Bonferroni-adjusted**: 33/35 and 26/28 | P2-E26, P2-E27 |
 | Production `eco` beats OpenZL `csv`-9 within archive cost | **Validated, fresh**: 27/35 | P2-E24 |
 | Kolmo pipeline smallest within OpenZL `le-i16`-9 cost on audio | **Validated, fresh**: 35/40 | P2-E20 H2 |
-| Type-first frame beats zstd-3 within speed cost on audio | **Not validated**: 25/40 (ESC-50), 22–26/40 (MS-SNSD) | P2-E20 H1, P2-E29 |
+| Type-first frame beats zstd-3 within speed cost on audio | **Source-dependent**: fail on ESC-50 (25/40) and MS-SNSD (22–26/40), **pass** on AudioMNIST + fixtures (34–35/40) | P2-E20 H1, P2-E29, P2-E31 |
 | Archive on FiveThirtyEight CSV (hc/max) | **Fails cost**: bytes better, CPU too high | P2-E20 H2 |
 | Fast KG_INT inverse decoder | Decode-speed gain measured (dev 24→35/40); not validated on fresh audio | P2-E28, P2-E29 |
 | Numeric arrays (NPY) | Development only (61-input cohort, observed sources) | P2-E10/E14/E17 |

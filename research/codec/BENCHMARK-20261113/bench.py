@@ -13,6 +13,7 @@ COHORTS = [
  ('B. Whole WAV (FSDD speech), development, 10', [('P2-E17', 'wav'), ('P2-E14', 'wav')]),
  ('C1. Fresh audio ESC-50, 40', [('P2-E20', 'wav')]),
  ('C2. Fresh audio MS-SNSD, 40 (speed rival only)', [('P2-E29', 'wav')]),
+ ('C3. Fresh audio AudioMNIST + audiomentations, 40 (speed rival only; _fd = research fast-inverse decoder)', [('P2-E31', 'wav')]),
  ('D. Regular numeric CSV tables (Covertype, CollegeMsg), development, 2', [('P2-E8', 'csv'), ('P2-E7', 'csv')]),
  ('E1. Fresh real-world CSV, FiveThirtyEight, 24', [('P2-E20', 'csv')]),
  ('E2. Fresh real-world CSV, TidyTuesday + selva86/dsdojo, 158 (P2-E22/23/24/26/27)', [('P2-E22', 'csv'), ('P2-E23', 'csv'), ('P2-E24', 'csv'), ('P2-E26', 'csv'), ('P2-E27', 'csv')]),

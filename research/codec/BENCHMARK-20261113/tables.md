@@ -67,6 +67,21 @@
 | tb_lazy | 1.41 | 1.512 | 39.9 / 79.0 | 47.8 / 98.6 | 19.7 / 25.4 | 19/40 | — |
 | tb_lazy_fd | 1.41 | 1.512 | 38.4 / 79.1 | 50.5 / 120.4 | 19.7 / 25.5 | 21/40 | — |
 
+### C3. Fresh audio AudioMNIST + audiomentations, 40 (speed rival only; _fd = research fast-inverse decoder)
+
+| Pipeline | Ratio (total) | Ratio (geomean) | Encode MB/s (median file / aggregate) | Decode MB/s (median file / aggregate) | Peak RSS MiB (median / max) | Beats zstd-3 within speed cost | Beats OpenZL within archive cost |
+|---|---|---|---|---|---|---|---|
+| zstd -3 (speed rival) | 1.688 | 2.199 | 22.3 / 30.4 | 26.2 / 36.2 | 17.7 / 17.9 | — | — |
+| Kolmo fast (production) | 2.347 | 3.495 | 9.8 / 13.8 | 28.8 / 39.6 | 17.7 / 17.9 | 0/40 | — |
+| ta_rep | 2.408 | 3.335 | 22.6 / 31.5 | 29.6 / 40.4 | 17.7 / 17.9 | 34/40 | — |
+| ta_rep_fd | 2.408 | 3.335 | 22.9 / 31.1 | 30.3 / 41.6 | 17.7 / 17.9 | 30/40 | — |
+| tp_phuf_pg16 | 2.389 | 3.283 | 24.6 / 33.6 | 29.6 / 40.7 | 17.7 / 17.9 | 33/40 | — |
+| tp_phuf_pg16_fd | 2.389 | 3.283 | 24.5 / 33.4 | 30.2 / 41.4 | 17.7 / 17.9 | 34/40 | — |
+| ta_phuf | 2.389 | 3.283 | 24.4 / 34.4 | 29.6 / 40.6 | 17.7 / 17.9 | 35/40 | — |
+| ta_phuf_fd | 2.389 | 3.283 | 25.2 / 34.3 | 30.5 / 41.6 | 17.7 / 17.9 | 35/40 | — |
+| ta_rep_fb | 2.352 | 3.191 | 22.8 / 31.5 | 29.9 / 40.5 | 17.7 / 17.9 | 29/40 | — |
+| ta_rep_fb_fd | 2.352 | 3.191 | 22.8 / 31.5 | 30.1 / 41.6 | 17.7 / 17.9 | 33/40 | — |
+
 ### D. Regular numeric CSV tables (Covertype, CollegeMsg), development, 2
 
 | Pipeline | Ratio (total) | Ratio (geomean) | Encode MB/s (median file / aggregate) | Decode MB/s (median file / aggregate) | Peak RSS MiB (median / max) | Beats zstd-3 within speed cost | Beats OpenZL within archive cost |
