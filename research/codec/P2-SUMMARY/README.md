@@ -82,6 +82,10 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
    datasets it fits OpenZL `csv`-9's archive cost and is smaller on **33/35** in both runs (Bonferroni over five
    sequential CSV tests, LB 0.781 → PASS; −16.0% bytes), beating `eco` alone by 3–4 inputs.
 
+21. **Cross-aggregator CSV check (P2-E27, Actions 43407137403):** on 28 CSVs from `selva86/datasets` (+1
+   `datasciencedojo`), the picker fits OpenZL `csv`-9's cost and is smaller on 26/28 in both runs (alpha 0.05/6, LB
+   0.726 → PASS; −16.1%); ~20 distinct datasets (train/test variants not merged); `eco` ties it there.
+
 ## Correctness evidence behind these claims
 
 Identity checks against production (19/19 typed inputs: choice, parameters, residual, rest, inverse); 3.3 M
@@ -91,13 +95,13 @@ timing run (runner gates: P2-E3 all inputs × 7 policies, P2-E7 50/50).
 
 ## What is needed next (in order)
 
-1. Archive, CSV: the picker is validated (P2-E26, 33/35). Next: a cross-aggregator fresh check, then (if authorized)
-   wiring the regularity choice into the production CSV path. (`hc`'s 1.3 s case is the CR-only file, P2-E20 follow-up.)
+1. Archive, CSV: the picker is validated on two fresh tests (P2-E26 33/35, P2-E27 26/28, second aggregator). Next,
+   if authorized: wire the regularity choice into the production CSV path. (`hc`'s 1.3 s case is the CR-only file, P2-E20 follow-up.)
 2. Speed rule on audio: understand the categories where `tp_phuf_pg16` misses (natural soundscapes,
    interior/domestic) using **development** data only; any revised rule needs a new preregistration and new fresh data.
 3. If promotion is ever wanted: authorization for the one-line `rans_norm` change in `src/` plus conformance vectors
    in `tests/` (wire review §A), and the production CLI exit-time buffer leak.
 
 Runner use by this workstream tonight (approx. minutes): P2-E3 13, P2-E7 13, P2-E8 19, P2-E10 48, P2-E12 11,
-P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16, P2-E21 12, P2-E22 13, P2-E23 ~47 (hung build, cancelled) + 10 (re-run), P2-E24 13, P2-E26 11 = ~276 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
+P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16, P2-E21 12, P2-E22 13, P2-E23 ~47 (hung build, cancelled) + 10 (re-run), P2-E24 13, P2-E26 11, P2-E27 14 = ~290 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
 Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.
