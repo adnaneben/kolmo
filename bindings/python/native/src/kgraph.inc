@@ -240,6 +240,69 @@ static int kg_int_inv(const uint8_t *par, size_t plen, const kbuf *res, const kb
     return 0;
 }
 
+/* The same inverse, 3 to 5 times faster on integer arrays and audio: one loop per element width (2, 4, 8), residual
+ * width (1, 2, 4, 8), sign and order, for residuals in byte planes or one byte wide, which is every program the
+ * encoder writes. kg_int_inv stays the reference and takes the rest. The output is the same byte for byte
+ * (tests/test_fastint.c runs the two against each other on every loop). From the research branch, experiments
+ * P2-E2 and P2-E28. The loops store whole words, so they are used on little-endian hosts only. */
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define FI_HOST_LE 0
+#else
+#define FI_HOST_LE 1
+#endif
+#define FI_ST(o, v, W) do { if ((W) == 8) { uint64_t t_ = (v); memcpy(o, &t_, 8); } else if ((W) == 4) { uint32_t t_ = (uint32_t)(v); memcpy(o, &t_, 4); } \
+                            else { uint16_t t_ = (uint16_t)(v); memcpy(o, &t_, 2); } } while (0)
+#define FI_FIX(v, W, SG) ((W) == 8 ? (v) : (SG) ? (uint64_t)(int64_t)((W) == 4 ? (int64_t)(int32_t)(uint32_t)(v) : (int64_t)(int16_t)(uint16_t)(v)) \
+                                              : ((v) & (((uint64_t)1 << (8 * (W))) - 1)))
+#define FI_Z(r, i, m, OW) ((OW) == 1 ? (uint64_t)(r)[i] : (OW) == 2 ? (uint64_t)(r)[i] | (uint64_t)(r)[(m) + (i)] << 8 \
+                         : (OW) == 4 ? (uint64_t)(r)[i] | (uint64_t)(r)[(m) + (i)] << 8 | (uint64_t)(r)[2 * (m) + (i)] << 16 | (uint64_t)(r)[3 * (m) + (i)] << 24 \
+                         : fi_zpl(r, i, m, OW))
+static inline uint64_t fi_zpl(const uint8_t *r, size_t i, size_t m, int ow) { uint64_t z = 0; for (int b = 0; b < ow; b++) z |= (uint64_t)r[(size_t)b * m + i] << (8 * b); return z; }
+#define FI_INV(W, OW, SG)                                                                                             \
+static void fi_inv_##W##_##OW##_##SG(const uint8_t *r, size_t m, int ord, uint64_t g, uint64_t bias, uint64_t v1, uint64_t v2, uint8_t *o) { \
+    if (ord == 0) { if (g == 1) for (size_t i = 0; i < m; i++, o += W) { uint64_t v = bias + FI_Z(r, i, m, OW); FI_ST(o, FI_FIX(v, W, SG), W); } \
+                    else for (size_t i = 0; i < m; i++, o += W) { uint64_t v = bias + FI_Z(r, i, m, OW) * g; FI_ST(o, FI_FIX(v, W, SG), W); } } \
+    else if (ord == 1) { for (size_t i = 0; i < m; i++, o += W) { uint64_t d = (uint64_t)kg_unzz(FI_Z(r, i, m, OW)); if (g != 1) d *= g; \
+                                                                   uint64_t v = FI_FIX(v1 + d, W, SG); FI_ST(o, v, W); v1 = v; } } \
+    else { for (size_t i = 0; i < m; i++, o += W) { uint64_t d = (uint64_t)kg_unzz(FI_Z(r, i, m, OW)); if (g != 1) d *= g;      \
+                                                     uint64_t v = FI_FIX(2 * v1 - v2 + d, W, SG); FI_ST(o, v, W); v2 = v1; v1 = v; } } \
+}
+#define FI_INV_W(W) FI_INV(W, 1, 0) FI_INV(W, 1, 1) FI_INV(W, 2, 0) FI_INV(W, 2, 1) FI_INV(W, 4, 0) FI_INV(W, 4, 1) FI_INV(W, 8, 0) FI_INV(W, 8, 1)
+FI_INV_W(2) FI_INV_W(4) FI_INV_W(8)
+typedef void (*fi_inv_fn)(const uint8_t *, size_t, int, uint64_t, uint64_t, uint64_t, uint64_t, uint8_t *);
+static fi_inv_fn fi_pick(int w, int ow, int sg) {
+    int oi = ow == 1 ? 0 : ow == 2 ? 1 : ow == 4 ? 2 : 3;
+    static const fi_inv_fn T2[4][2] = {{fi_inv_2_1_0, fi_inv_2_1_1}, {fi_inv_2_2_0, fi_inv_2_2_1}, {fi_inv_2_4_0, fi_inv_2_4_1}, {fi_inv_2_8_0, fi_inv_2_8_1}};
+    static const fi_inv_fn T4[4][2] = {{fi_inv_4_1_0, fi_inv_4_1_1}, {fi_inv_4_2_0, fi_inv_4_2_1}, {fi_inv_4_4_0, fi_inv_4_4_1}, {fi_inv_4_8_0, fi_inv_4_8_1}};
+    static const fi_inv_fn T8[4][2] = {{fi_inv_8_1_0, fi_inv_8_1_1}, {fi_inv_8_2_0, fi_inv_8_2_1}, {fi_inv_8_4_0, fi_inv_8_4_1}, {fi_inv_8_8_0, fi_inv_8_8_1}};
+    return w == 2 ? T2[oi][sg] : w == 4 ? T4[oi][sg] : w == 8 ? T8[oi][sg] : NULL;
+}
+/* same contract, validation and output as kg_int_inv */
+static int fi_inverse(const uint8_t *par, size_t plen, const kbuf *res, const kbuf *rest, size_t maxs, kbuf *out) {
+    size_t pi = 3; uint64_t h, cnt, g, bz, sd[2] = {0, 0};
+    if (plen < 3) return -1;
+    int w = par[0], fl = par[1], ow = par[2], ord = (fl >> 1) & 3, sg = fl & 1, pln = (fl >> 3) & 1;
+    if ((w != 1 && w != 2 && w != 4 && w != 8) || (ow != 1 && ow != 2 && ow != 4 && ow != 8) || ord > 2 || (fl & ~15)) return -1;
+    if (kg_getuv(par, plen, &pi, &h) || kg_getuv(par, plen, &pi, &cnt) || kg_getuv(par, plen, &pi, &g) || kg_getuv(par, plen, &pi, &bz) || g == 0) return -1;
+    for (int q = 0; q < ord; q++) if (kg_getuv(par, plen, &pi, &sd[q])) return -1;
+    if (pi != plen || h > rest->n || (uint64_t)ord > cnt || cnt > maxs / (unsigned)w || (cnt - (uint64_t)ord) * (unsigned)ow != res->n
+        || cnt * (unsigned)w + rest->n > maxs) return -1;
+    fi_inv_fn f = FI_HOST_LE && (pln || ow == 1) ? fi_pick(w, ow, sg) : NULL;
+    if (!f) return kg_int_inv(par, plen, res, rest, maxs, out);            /* w = 1, interleaved multi-byte residuals, big-endian host */
+    if (kb_res(out, (size_t)(cnt * w) + rest->n + 16)) return -1;
+    if (h) memcpy(out->p, rest->p, (size_t)h);
+    uint8_t *wp = out->p + h; uint64_t v1 = 0, v2 = 0, bias = (uint64_t)kg_unzz(bz); size_t m = (size_t)(cnt - (uint64_t)ord);
+    for (int q = 0; q < ord; q++) {                                         /* seeds, through the same fix-up */
+        uint64_t v = (uint64_t)kg_unzz(sd[q]);
+        if (sg && w < 8) { int sh = 64 - 8 * w; v = (uint64_t)((int64_t)(v << sh) >> sh); } else if (w < 8) v &= ((uint64_t)1 << (8 * w)) - 1;
+        for (int b = 0; b < w; b++) *wp++ = (uint8_t)(v >> (8 * b));
+        v2 = v1; v1 = v;
+    }
+    f(res->p, m, ord, g, bias, v1, v2, wp); wp += m * (size_t)w;
+    memcpy(wp, rest->p + h, rest->n - (size_t)h); out->n = (size_t)(cnt * w) + rest->n;
+    return 0;
+}
+
 /* ---- FLOAT ---- */
 static int kg_float_inv(const uint8_t *par, size_t plen, const kbuf *pl, const kbuf *rest, size_t maxs, kbuf *out) {
     size_t pi = 1; uint64_t h, cnt; if (plen < 1) return -1;
@@ -371,7 +434,7 @@ bad:
 }
 
 /* ---- program builder ---- */
-typedef struct { kbuf *s; int ns, cap; uint8_t *used; kbuf prog; int nodes; } kgb;
+typedef struct { kbuf *s; int ns, cap; uint8_t *used; kbuf prog; int nodes; int nph_q, nph_np; } kgb;   /* nph: stream nph_q holds nph_np byte planes of integer residuals (native-leaf hint; 0 = none) */
 static int kgb_new(kgb *g) {
     int ns = g->ns; if (ns >= KG_MAXSTREAMS) return -1;
     if (ns == g->cap) {
@@ -436,6 +499,15 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
             }
         }
         size_t z = s->n >= 64 && !flat && !hufonly ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
+        /* ultra level 2 (maximum ratio): the leaf also tries context mixing and keeps it only when smaller than the
+         * LZMA2 leaf. Smaller graph blocks (measured: -11% to -15% on integer series where the graph is chosen,
+         * -2% over a mixed corpus), but such leaves decode at context-mixing speed, up to ~100x slower than LZMA2.
+         * Default ultra keeps LZMA2 leaves. No format change: leaf codec 7 has always been valid. */
+        if (codec == C_CM && level == 2 && s->n >= 64 && !flat) {
+            uint8_t *cb = malloc(zc); size_t cz = cb ? codec_compress(x, C_CM, level, s->p, s->n, cb, zc) : 0;
+            if (cz && (!z || cz < z)) { memcpy(o.p + o.n + 20, cb, cz); z = cz; cc = C_CM; }
+            free(cb);
+        }
         int tryh = s->n >= 64 && !flat, tryhuf = 1;
         const int fastleaf = codec == C_ZSTD && level <= CZ_FAST_LEVEL;   /* no rANS at these settings */
         if (tryh && z && nohuf && fastleaf) tryh = 0;
@@ -459,6 +531,12 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
              * must be at least 3% smaller to be taken; max and ultra take any gain */
             if (rz && (!z || (codec == C_ZSTD ? (uint64_t)rz * 100 <= (uint64_t)z * 97 : rz < z))) { memcpy(o.p + o.n + 20, hb, rz); z = rz; cc = C_RANS; }
             free(hb);
+        }
+        if (x->native_leaf && g->nph_np && q == g->nph_q && s->n >= 64) {   /* opt-in (balanced): native plane-context leaf,
+                                                                             * kept only when smaller than the choice above */
+            uint8_t *nb = malloc(np_bound(s->n)); size_t nz = nb ? np_compress(x, s->p, s->n, g->nph_np, nb, np_bound(s->n)) : 0;
+            if (nz && nz <= zc && nz < s->n && (!z || nz < z)) { memcpy(o.p + o.n + 20, nb, nz); z = nz; cc = C_NPLANE; x->used_native_leaf = 1; }
+            free(nb);
         }
         if (!z || z >= s->n) { cc = C_STORE; z = s->n; if (z) memcpy(o.p + o.n + 20, s->p, z); }
         o.p[hp] = (uint8_t)cc;
@@ -651,6 +729,7 @@ static size_t kg_encode_num(codec_ctx *x, int codec, int level, const uint8_t *s
     for (int q = 0; q < bo; q++) kb_uv(&par, kg_zz((int64_t)kg_ld(a + (size_t)q * w, w, bs)));
     if (!par.p) goto done;
     int o = kgb_node(&g, KG_INT, (int[]){0}, 1, 2, &par); if (o != 1) goto done;
+    g.nph_q = 1; g.nph_np = pln ? ow : 1;                                   /* stream 1: ow byte planes of residuals */
     if (kb_res(&g.s[1], m * (size_t)ow + 1) || kb_res(&g.s[2], n - cnt * (size_t)w + 1)) goto done;
     {   uint8_t *r = g.s[1].p; uint64_t v1 = 0, v2 = 0;
         for (size_t q = 0; q < cnt; q++) {
@@ -1163,7 +1242,7 @@ static int kg_decode(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *out, siz
             s[t->in[0]] = r;
         } else if (t->op == KG_INT) {
             if (t->nin != 1 || t->nout != 2) goto out;
-            kbuf r = {0}; if (kg_int_inv(t->par, t->plen, &o[0], &o[1], maxs, &r)) { free(r.p); goto out; }
+            kbuf r = {0}; if (fi_inverse(t->par, t->plen, &o[0], &o[1], maxs, &r)) { free(r.p); goto out; }
             s[t->in[0]] = r;
         } else goto out;
         for (uint32_t r = 0; r < t->nin; r++) have[t->in[r]] = 1;
