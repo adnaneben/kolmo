@@ -73,6 +73,10 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
    **P2-E23 (zstd-12 frame as primary, 24 new datasets) also FAILED: 12/24**; there `eco` was 18/24 and `tt_bsc0`
    15–16/24. Rankings among these near-boundary pipelines change between samples; nothing is validated for CSV.
 
+19. **CSV archive validated for production `eco` (P2-E24, Actions 43401044132):** on 35 new diverse TidyTuesday
+   CSVs, `kolmo -m eco` fits OpenZL `csv`-9's archive cost and is smaller on 27/35 in both runs (Bonferroni-adjusted
+   LB 0.575 → PASS; −7.3% bytes). Fourth of four sequential CSV tests (E21 pass/low diversity, E22 fail, E23 fail).
+
 ## Correctness evidence behind these claims
 
 Identity checks against production (19/19 typed inputs: choice, parameters, residual, rest, inverse); 3.3 M
@@ -82,14 +86,14 @@ timing run (runner gates: P2-E3 all inputs × 7 policies, P2-E7 50/50).
 
 ## What is needed next (in order)
 
-1. Archive, text-heavy CSV: P2-E21–E23 show no fixed pipeline reliably inside OpenZL `csv`-9's cost on diverse
-   CSVs. Next: a single preregistered test of production `kolmo -m eco` (best pooled, 31–32/47) on new datasets —
-   reported together with this test sequence — or stop and accept OpenZL's CSV lead under P2. (`hc`'s 1.3 s case is the CR-only file, P2-E20 follow-up.)
+1. Archive, CSV: `eco` is validated (P2-E24, 77%). Development (P2-E25, local): `eco` and the zstd-12 table frame are
+   complementary — either one fits and is smaller on 59/70 dev CSVs vs 45 for `eco` alone — so a cheap choice
+   between them is the next lever; trial-encoding both is over cost. (`hc`'s 1.3 s case is the CR-only file, P2-E20 follow-up.)
 2. Speed rule on audio: understand the categories where `tp_phuf_pg16` misses (natural soundscapes,
    interior/domestic) using **development** data only; any revised rule needs a new preregistration and new fresh data.
 3. If promotion is ever wanted: authorization for the one-line `rans_norm` change in `src/` plus conformance vectors
    in `tests/` (wire review §A), and the production CLI exit-time buffer leak.
 
 Runner use by this workstream tonight (approx. minutes): P2-E3 13, P2-E7 13, P2-E8 19, P2-E10 48, P2-E12 11,
-P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16, P2-E21 12, P2-E22 13, P2-E23 ~47 (hung build, cancelled) + 10 (re-run) = ~252 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
+P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16, P2-E21 12, P2-E22 13, P2-E23 ~47 (hung build, cancelled) + 10 (re-run), P2-E24 13 = ~265 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
 Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.
