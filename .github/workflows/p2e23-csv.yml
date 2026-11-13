@@ -46,19 +46,23 @@ jobs:
           path: _rivals/openzl
           persist-credentials: false
       - name: Build pinned rivals, Kolmo and ttcli with N1's flags
+        timeout-minutes: 25
         run: |
           set -euo pipefail
           test "$(git -C _rivals/openzl rev-parse HEAD)" = 32246b48faee46807f84183dac4db479089f5445
           FLAGS='-O3 -DNDEBUG -fno-plt -ffp-contract=off'
           cmake -S _rivals/openzl -B _rivals/openzl/build -DCMAKE_BUILD_TYPE=Release -DOPENZL_BUILD_TESTS=OFF -DOPENZL_BUILD_EXAMPLES=OFF -DOPENZL_BUILD_BENCHMARKS=OFF -DOPENZL_BUILD_PARQUET_TOOLS=OFF -DOPENZL_ALLOW_INTROSPECTION=OFF -DZSTD_BUILD_SHARED=OFF -DCMAKE_C_FLAGS_RELEASE="$FLAGS" -DCMAKE_CXX_FLAGS_RELEASE="$FLAGS" > ev/openzl-configure.log 2>&1
-          cmake --build _rivals/openzl/build --target zli --parallel 2 > ev/openzl-build.log 2>&1
-          make -C _rivals/openzl/deps/zstd/programs -j2 zstd CFLAGS="$FLAGS" > ev/zstd-build.log 2>&1
-          make -j2 build/kolmo CFLAGS="$FLAGS" > ev/kolmo-build.log 2>&1
-          make build/libvendor.a > ev/libvendor-build.log 2>&1
+          timeout 900 cmake --build _rivals/openzl/build --target zli --parallel 2 > ev/openzl-build.log 2>&1
+          timeout 900 make -C _rivals/openzl/deps/zstd/programs -j2 zstd CFLAGS="$FLAGS" > ev/zstd-build.log 2>&1
+          timeout 900 make -j2 build/kolmo CFLAGS="$FLAGS" > ev/kolmo-build.log 2>&1
+          timeout 900 make build/libvendor.a > ev/libvendor-build.log 2>&1
           DEFS="-DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0"; INC="-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include"
-          gcc $FLAGS $DEFS $INC research/codec/P2-E21/ttcli.c build/libvendor.a -o build/ttcli -llzma -lpthread -lm -lstdc++ > ev/ttcli-build.log 2>&1
-          gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined -ffp-contract=off $DEFS $INC research/codec/P2-E21/ttcli.c build/libvendor.a -o build/ttcli-asan -llzma -lpthread -lm -lstdc++ >> ev/ttcli-build.log 2>&1
+          timeout 900 gcc $FLAGS $DEFS $INC research/codec/P2-E21/ttcli.c build/libvendor.a -o build/ttcli -llzma -lpthread -lm -lstdc++ > ev/ttcli-build.log 2>&1
+          timeout 900 gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined -ffp-contract=off $DEFS $INC research/codec/P2-E21/ttcli.c build/libvendor.a -o build/ttcli-asan -llzma -lpthread -lm -lstdc++ >> ev/ttcli-build.log 2>&1
           { _rivals/openzl/build/cli/zli --version; _rivals/openzl/deps/zstd/programs/zstd --version; sha256sum _rivals/openzl/build/cli/zli _rivals/openzl/deps/zstd/programs/zstd build/kolmo build/ttcli; } > ev/toolchain.txt
+      - name: Show build logs if the build failed or timed out
+        if: failure()
+        run: for f in ev/*build.log; do echo "=== $f"; tail -n 40 "$f"; done
       - name: Select and fetch new TidyTuesday CSVs (paths only; P2-E22 datasets excluded)
         run: |
           set -euo pipefail
