@@ -12,7 +12,9 @@ inputs); P2-E2 type-first fast integer path, identity-checked against production
 boundary (Actions 43302008497): type-first per-plane Huffman smaller than the zstd-3 CLI and inside its round-trip
 cost on 7/8 typed NPY inputs in both runs, production 0/8**; P2-E4 zero-run leaf; P2-E5/E6 typed CSV; P2-E7/E8
 typed CSV vs OpenZL csv-9 (Kolmo smallest within cost on both tables); **P2-E10 on 61 inputs: type-first
-per-plane Huffman fits zstd-3 and is smaller on 43/41, production 0/61**; P2-E11 writes it as production frames. Archive NPY uses OpenZL `le-*` profiles on whole files (exact NPY adapter pending). No P2
+per-plane Huffman fits zstd-3 and is smaller on 43/41, production 0/61**; P2-E11 writes it as production frames; **P2-E14 (production frames, production CLI decode, 61 inputs): guarded
+per-plane Huffman fits zstd-3 and is smaller on 49/47, production 0/61; P2-E17 archive: a Kolmo pipeline is
+smallest within OpenZL typed-9 cost on 47/61** (OpenZL keeps GHCN; P2-E18 explains why). Archive NPY uses OpenZL `le-*` profiles on whole files (exact NPY adapter pending). No P2
 acceptance: development data and research containers (open decision P2-D1).
 
 Updated 2026-11-12. Research only: no default, format, threshold or release change is proposed here.

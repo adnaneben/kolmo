@@ -66,13 +66,15 @@ timing run (runner gates: P2-E3 all inputs × 7 policies, P2-E7 50/50).
 
 ## What is needed next (in order)
 
-1. ~~P2-E11 frames on N1's boundary~~ **done (P2-E12, Actions 43326268053)**: production-format type-first frames,
-   decoded by the unmodified production CLI, fit zstd-3 and are smaller on 9/10 inputs in both runs (best per input
-   −37…−64% on typed columns); production `hc` 0/10. Next in the runner queue: the N1 owner's exact typed-NPY OpenZL comparator.
-2. **Fresh, source-disjoint whole original files**, registered before reading (candidates not referenced anywhere in
-   the repository: ESC-50 16-bit WAV clips, FiveThirtyEight data CSVs; fetching them needs approval).
-3. OpenZL typed NPY adapter (N1 owner) to unblock archive mode for arrays.
-4. Small-input cost: per-call fixed costs and a zero-probe guard.
+1. **Preregistered, source-disjoint validation** of the fixed rule `tp_phuf_pg16` (speed vs zstd-3) and of the
+   archive pipelines `tp_pent`/`tb_best` beside production `max` (vs OpenZL typed-9), on whole original files
+   registered before reading (candidates not referenced in the repository: ESC-50 16-bit WAV clips,
+   FiveThirtyEight CSVs; **fetching them needs the user's approval**).
+2. **Wire review** of singleton `C_RANS` chunks (existing decoder behaviour, used by `tp_pent`) before any
+   production encoder emits them; and review of the proposed fast order-1 entropy leaf for GHCN-like series (P2-19).
+3. Header-exact OpenZL control: the N1 exact-NPY run (43334484927) is recorded by its owner.
+4. User decision P2-D1 (research containers for typed CSV).
 
-Runner use by this workstream tonight: P2-E3 ~13, P2-E7 ~13, P2-E8 ~19, P2-E10 ~48, P2-E12 ~11 minutes (N1 ~11 by the
-parallel workstream). Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.
+Runner use by this workstream tonight (approx. minutes): P2-E3 13, P2-E7 13, P2-E8 19, P2-E10 48, P2-E12 11,
+P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1 = ~154 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
+Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.
