@@ -1,0 +1,21 @@
+{
+  "source_commit": "ae3957ad80d134506ce37b59857af25fe8826062",
+  "ci_commit": "b627c1171d821deca1484f023c7eeda6a1e5bde1",
+  "integration_branch": "integration/best-features-rc-20261113",
+  "release_published": false,
+  "features": [
+    {"feature":"Planner record-ownership repair","source":"PR #6; commit 83425e1","status":"retained in combined core","default":"correctness fix"},
+    {"feature":"Concurrent resource handling and decoder size limits","source":"release/base ancestry, PR #1","status":"already present, retained","default":"unchanged"},
+    {"feature":"File-path/tar planning memory improvements","source":"base ancestry including 5426dd9; earlier PR #2/#5 work","status":"already present, retained","default":"API-memory pilot does not measure file-mapping benefit"},
+    {"feature":"Compact context-mixing memory option","source":"base ancestry aacf5a8 / PR #5","status":"retained optional build target","default":"not enabled in this pilot"},
+    {"feature":"Native contextual plane leaf","source":"PR #9 e31b3fe; port a552a7c","status":"integrated opt-in","default":"off; transforms bit 16; version 9 only if used"},
+    {"feature":"Ultra level 2 context-mixing graph leaves","source":"PR #8 39463d6; port d03cbd4","status":"integrated opt-in","default":"ultra default unchanged; existing codec semantics"},
+    {"feature":"Checked fast integer inverse","source":"P2 inverse research; port d03cbd4","status":"integrated with checked generic fallback","default":"inverse acceleration, encoder bytes unchanged"},
+    {"feature":"Declared integer type-first Huffman path","source":"P2-E11/E13 research; bounded port d03cbd4","status":"integrated opt-in","default":"off; bit 32; supported single-worker NPY/PCM16 buffer cases <=16 MiB"},
+    {"feature":"Frozen CSV archive routing","source":"P2-E25/C1; port d03cbd4","status":"integrated opt-in, known regressions retained","default":"off; bit 64; not a completed joint column-first planner"},
+    {"feature":"CLI ownership cleanup and binding source synchronization","source":"d03cbd4 / ae3957a","status":"integrated","default":"Python/Rust native sources synchronized"},
+    {"feature":"Huffman->zstd/LZ4 KST1 layered research","source":"S1/S2","status":"deferred from production integration","default":"not a production format ID; separate evidence retained"},
+    {"feature":"FASTA/wide-table frontier and KRC/Metal branches","source":"PR #3/#4/#5 and research/krc-kbc-metal","status":"specialist/experimental facilities retained where inherited; no blanket promotion","default":"no genomic/GPU claim in this pilot"},
+    {"feature":"General typed-column/cross-column joint planner and learned selection","source":"competitor-policy-v2","status":"not integrated","default":"no RL model, no trained rival claim"}
+  ]
+}

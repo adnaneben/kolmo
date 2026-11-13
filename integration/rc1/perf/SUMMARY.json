@@ -1,0 +1,21 @@
+{
+ "scope":"Observed development native API pilot, not release acceptance",
+ "codec_commit":"ae3957ad80d134506ce37b59857af25fe8826062",
+ "ci_commit":"b627c1171d821deca1484f023c7eeda6a1e5bde1",
+ "inputs":35,"input_bytes":33381545,"registered_options":31,
+ "applicable_cases":931,"successful_cases":842,"resource_exclusions":88,"rival_generation_failures":1,
+ "timed_batches":5052,"memory_batches":1684,"timing_repeats":3,
+ "selected":[
+ {"workload":"Numeric arrays","option":"rc_typed_huf","rival":"zstd_3","matched":8,"scope":8,"strict_wins":7,"ratio":6.3168,"encode_mib_s":469.9532,"decode_mib_s":1462.8272,"enc_avg_mib":5.4957,"enc_peak_mib":6.7969,"dec_avg_mib":5.6923,"dec_peak_mib":7.1172,"bytes_saved_pct":30.3225,"cost_saved_pct":29.3536},
+ {"workload":"Numeric arrays","option":"rc_native_leaf","rival":"zstd_3","matched":8,"scope":8,"strict_wins":0,"ratio":7.8759,"encode_mib_s":24.8525,"decode_mib_s":478.7661,"enc_avg_mib":8.4125,"enc_peak_mib":13.082,"dec_avg_mib":5.8558,"dec_peak_mib":7.2773,"bytes_saved_pct":44.1153,"cost_saved_pct":-635.3455},
+ {"workload":"Numeric arrays","option":"rc_max","rival":"ozwhole_9","matched":8,"scope":8,"strict_wins":0,"ratio":8.8234,"encode_mib_s":4.0682,"decode_mib_s":220.4854,"enc_avg_mib":9.3543,"enc_peak_mib":15.6562,"dec_avg_mib":5.6223,"dec_peak_mib":7.0664,"bytes_saved_pct":8.7212,"cost_saved_pct":-98.5692},
+ {"workload":"Regular CSV","option":"rc_eco","rival":"ozcsv_9","matched":2,"scope":2,"strict_wins":2,"ratio":8.957,"encode_mib_s":31.6713,"decode_mib_s":159.1105,"enc_avg_mib":39.2907,"enc_peak_mib":71.3008,"dec_avg_mib":14.3336,"dec_peak_mib":24.9883,"bytes_saved_pct":36.7448,"cost_saved_pct":34.9731},
+ {"workload":"Regular CSV","option":"rc_csv_archive","rival":"ozcsv_9","matched":2,"scope":2,"strict_wins":2,"ratio":8.609,"encode_mib_s":75.2756,"decode_mib_s":246.9911,"enc_avg_mib":20.7768,"enc_peak_mib":39.5156,"dec_avg_mib":13.1399,"dec_peak_mib":23.4336,"bytes_saved_pct":34.1882,"cost_saved_pct":39.9684},
+ {"workload":"CSV regression controls","option":"rc_eco","rival":"ozcsv_9","matched":3,"scope":4,"strict_wins":3,"ratio":4.7305,"encode_mib_s":20.5363,"decode_mib_s":259.4908,"enc_avg_mib":25.1154,"enc_peak_mib":48.4492,"dec_avg_mib":9.4231,"dec_peak_mib":14.5117,"bytes_saved_pct":15.0569,"cost_saved_pct":14.388},
+ {"workload":"CSV regression controls","option":"rc_csv_archive","rival":"ozcsv_9","matched":3,"scope":4,"strict_wins":2,"ratio":4.2606,"encode_mib_s":46.2842,"decode_mib_s":318.8238,"enc_avg_mib":13.914,"enc_peak_mib":22.8281,"dec_avg_mib":8.8972,"dec_peak_mib":14.1445,"bytes_saved_pct":5.6889,"cost_saved_pct":12.7455},
+ {"workload":"Log samples","option":"rc_eco","rival":"ozserial_9","matched":4,"scope":4,"strict_wins":4,"ratio":11.9941,"encode_mib_s":31.3963,"decode_mib_s":670.1227,"enc_avg_mib":16.9828,"enc_peak_mib":23.1172,"dec_avg_mib":4.3199,"dec_peak_mib":4.6875,"bytes_saved_pct":34.9128,"cost_saved_pct":22.4748},
+ {"workload":"Mixed corpus prefixes","option":"rc_fast","rival":"zstd_3","matched":12,"scope":12,"strict_wins":0,"ratio":3.0528,"encode_mib_s":89.1722,"decode_mib_s":896.0154,"enc_avg_mib":8.4385,"enc_peak_mib":13.207,"dec_avg_mib":6.2997,"dec_peak_mib":7.9961,"bytes_saved_pct":18.2597,"cost_saved_pct":-72.5246},
+ {"workload":"Audio samples","option":"rc_typed_huf","rival":"zstd_3","matched":4,"scope":4,"strict_wins":0,"ratio":1.6604,"encode_mib_s":172.9566,"decode_mib_s":594.6432,"enc_avg_mib":4.2098,"enc_peak_mib":5.0469,"dec_avg_mib":3.7715,"dec_peak_mib":4.5898,"bytes_saved_pct":24.2766,"cost_saved_pct":-27.004}
+ ],
+ "unmeasured":["source-trained OpenZL","complete Silesia corpus","genomics specialists","M5 target hardware","multithread scaling","streaming/file-mapping performance","general joint column-first planner"]
+}
