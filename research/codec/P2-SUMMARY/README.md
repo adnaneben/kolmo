@@ -86,6 +86,14 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
    `datasciencedojo`), the picker fits OpenZL `csv`-9's cost and is smaller on 26/28 in both runs (alpha 0.05/6, LB
    0.726 → PASS; −16.1%); ~20 distinct datasets (train/test variants not merged); `eco` ties it there.
 
+22. **Audio speed mode (P2-E28/E29):** the production decoder's KG_INT inverse is ~75% of decode time; P2-E2's
+   identity-checked inverse is 3–5× faster, lifting development audio fits from 24 to 35/40 (P2-E28). On fresh
+   MS-SNSD audio the preregistered test **failed** (22/26 of 40): long silent/repetitive noise files need a
+   repeat-aware guard and multi-MB files need faster encoding. Decoder patch prepared, not applied
+   (`production-proposals/`).
+23. **GHCN (step 3, development):** with today's leaves the type-first frame is 5–18% larger than OpenZL-9 on 6/9
+   series and BWT/CM close the bytes only at too much CPU; no cheap production-leaf route found (P2-E18, re-checked).
+
 ## Correctness evidence behind these claims
 
 Identity checks against production (19/19 typed inputs: choice, parameters, residual, rest, inverse); 3.3 M
@@ -103,5 +111,5 @@ timing run (runner gates: P2-E3 all inputs × 7 policies, P2-E7 50/50).
    in `tests/` (wire review §A), and the production CLI exit-time buffer leak.
 
 Runner use by this workstream tonight (approx. minutes): P2-E3 13, P2-E7 13, P2-E8 19, P2-E10 48, P2-E12 11,
-P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16, P2-E21 12, P2-E22 13, P2-E23 ~47 (hung build, cancelled) + 10 (re-run), P2-E24 13, P2-E26 11, P2-E27 14 = ~290 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
+P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16, P2-E21 12, P2-E22 13, P2-E23 ~47 (hung build, cancelled) + 10 (re-run), P2-E24 13, P2-E26 11, P2-E27 14, P2-E28 10, P2-E29 13 = ~313 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
 Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.

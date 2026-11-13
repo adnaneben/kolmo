@@ -16,7 +16,7 @@ cleanly to the repaired core (`git apply --check`); it is **not applied**.
 | In-process ASan/UBSan/LSan (P2-E28) | 240/240 |
 | Inverse speed | 3.0× faster on audio, 5.2× on numeric arrays (local) |
 | Audio speed mode vs zstd-3 (P2-E28, development) | 24 → 35 of 40 clips fit and are smaller |
-| Fresh audio test | P2-E29 (MS-SNSD), pending |
+| Fresh audio test | **P2-E29 (MS-SNSD) FAIL**: 22/26 of 40; misses there come from guard and encoder throughput, not the decoder |
 
 **Required with it:**
 - conformance vectors in `tests/` covering every specialised path and the fallback;
