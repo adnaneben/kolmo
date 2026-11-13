@@ -1,10 +1,15 @@
-# Next execution: do not confuse driver tests with a measured codec comparison
+# Next: improve the fixed speed path without uncharged search
 
-Work only on the authorized isolated research branch. Read AGENTS.md and PROTOCOL.md. Preserve the concurrent CSV work and the existing overnight cutoff/budget.
+N2 real execution is complete; read ../N2-real-20261113/RESULTS.md and EVIDENCE.json.
+Do not repeat the blocked source-transfer workaround or treat historical LOCAL_CHECKS.json as current status.
 
-1. Check P2-E23 run 43358797920 and all newer research jobs. Do not dispatch a competing overnight experiment or repeat a queued job. Do not start a new long overnight job after 07:00 Riyadh, 13 November 2026. This source commit does not extend that authorization.
-2. The current local evidence is 17 infrastructure tests, repeated with the copy-codec C++ driver under ASan/UBSan/leak detection. Exact eight R3 input hashes and all 282 archive entries verified. The true combined codec build and performance matrix are NOT_RUN. Shell GitHub DNS was unavailable in the interactive session; the complete later P2 dependencies were not locally restored. No downstream benchmark or competitor pass follows from the mock test.
-3. In a complete disposable checkout with pinned OpenZL available, execute README.md's build. Preserve compiler output and exact source receipts. Review any build/ABI failure as infrastructure; do not change the frozen compression algorithms or omit inconvenient arms. Vendor-library symbol/linking compatibility remains an unexecuted integration check.
-4. Add a correctness-only first invocation (one round on every fixed input) before the timing run; verify stock OpenZL and unmodified Kolmo CLI cross-decoding of representative retained frames where binaries are available. This is a new harness, so old test counts are not its results. Run the real adapter under sanitizers before reporting a verified release benchmark; current build.py emits a release binary only, so prepare a separate instrumented wrapper build without editing frozen source and state vendor coverage.
-5. Run the complete matrix and confirmation only after these checks. All outputs must reconstruct exactly; preserve failures and every frame hash. Report fixed-pipeline costs, duplicate-baseline timing uncertainty and conditional comparisons against both exact-header and whole-file-numeric OpenZL, not a convenient weaker rival.
-6. Use no new data and train no model during this plumbing task. No hindsight best-size choice is a deployable online selector. Record a result or precise blocker, and commit compact evidence with no production/default/format/other-branch/merge change.
+Work only on fix/planner-record-ownership-isolated-20261112; preserve other contributors and all old protocols.
+Keep PR #7 draft and unmerged. No production-default or format changes.
+
+1. Reproduce the exact real build and 96-arm stock-reader gate using the corrected research include handling.
+2. Profile the existing fixed guarded-Huffman path on cover class, road distance and fire distance. Distinguish guard/probe, forward, residual coding, framing/copies and inverse costs.
+3. Test ONE output-identical workspace/copy optimization against the frozen N2 path. Require byte-identical frames, independent exact decode, actual allocation accounting and malformed/resource checks relevant to the changed code. Do not add full compression trials or alter predictor/coder settings in the same experiment.
+4. Count all typing/planning and unchanged fallback work. Keep duplicate timing controls, both OpenZL alternatives and complete cost models. No minimum size percentage; no acceptance based on a median that hides failed pairs.
+5. Any changed selector is development until frozen and independently validated. N2 has five observed speed opportunities, no robust archive win against both level-9 controls, and no fresh-source or deployable online mode acceptance.
+
+Full raw evidence is a separate attachment; Git contains source/support and compact receipts, not every generated frame. Use exact hash manifests. No overnight schedule is extended by this handoff.

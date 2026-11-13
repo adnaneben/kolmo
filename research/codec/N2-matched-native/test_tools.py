@@ -10,6 +10,11 @@ class Tools(unittest.TestCase):
  def test_prefix_duplicate(self):
   with self.assertRaises(ValueError):build.prefix('abcabc','abc')
  def test_absolute_include(self): self.assertEqual(build.absolute_includes('#include "x.h"',pathlib.Path('/tmp')), '#include "/tmp/x.h"')
+ def test_public_include_kept(self):
+  text='#include "openzl/zl_compress.h"'
+  self.assertEqual(build.absolute_includes(text,pathlib.Path('/missing')),text)
+ def test_public_override(self):
+  self.assertEqual(build.absolute_includes('#include "openzl/zl_compress.h"',pathlib.Path('/missing'),{'openzl/zl_compress.h':pathlib.Path('/verified/header.h')}),'#include "/verified/header.h"')
  def test_override(self):self.assertEqual(build.absolute_includes('#include "x.h"',pathlib.Path('/tmp'),{'x.h':pathlib.Path('/other')}),'#include "/other"')
  def test_valid_rows(self):self.assertEqual(len(run.validate_rows(self.rows(),2)),48)
  def test_missing(self):

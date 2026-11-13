@@ -14,6 +14,10 @@ def prefix(text, marker):
 def absolute_includes(text, directory, overrides=None):
     overrides=overrides or {}
     def change(m):
+        # OpenZL public headers are resolved by the compiler's include search
+        # path, not relative to the file containing the directive.
+        if m.group(1).startswith('openzl/') and m.group(1) not in overrides:
+            return m.group(0)
         target=overrides.get(m.group(1), (directory/m.group(1)).resolve())
         return '#include '+json.dumps(str(target))
     return re.sub(r'#include\s+"([^"\n]+)"',change,text)
