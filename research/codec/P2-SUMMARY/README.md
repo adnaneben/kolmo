@@ -53,6 +53,10 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
    gain; size rules, decision rules and 1-NN over encode-time features do not beat it out of family (and the features
    cost ~10% of zstd-3's round trip). Second leaves (zstd-3/rANS/zstd-19) are archive-mode tools.
 
+15. **Archive frontier in one run (P2-E17, Actions 43341163635):** inside OpenZL typed-9's archive cost, some Kolmo
+   pipeline (all decodable by the production CLI) is smallest on 47/61 inputs; production modes alone 37–39/61.
+   `max` holds audio/pageviews, `tp_pent` takes MIT-BIH/EEG; OpenZL keeps GHCN daily weather (7/9).
+
 ## Correctness evidence behind these claims
 
 Identity checks against production (19/19 typed inputs: choice, parameters, residual, rest, inverse); 3.3 M

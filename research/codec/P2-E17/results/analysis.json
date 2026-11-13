@@ -1,0 +1,233 @@
+{
+ "first": {
+  "all": {
+   "total": {
+    "openzl_9": 14,
+    "tp_pent": 15,
+    "kolmo_max": 19,
+    "tb_best": 5,
+    "kolmo_fast": 6,
+    "kolmo_hc": 2
+   },
+   "bytes_vs_openzl9": -0.1057,
+   "families": {
+    "Backblaze:whole_csv": {
+     "kolmo_fast": 1
+    },
+    "E02E:F1_ghcn_daily": {
+     "openzl_9": 7,
+     "tp_pent": 2
+    },
+    "E02E:F2_mitdb": {
+     "kolmo_max": 1,
+     "tp_pent": 7
+    },
+    "E02F:F1_eeg": {
+     "tp_pent": 2,
+     "tb_best": 2
+    },
+    "E02F:F2_pageviews": {
+     "kolmo_max": 7,
+     "tb_best": 1
+    },
+    "E02F:F3_speech": {
+     "kolmo_fast": 3,
+     "openzl_9": 1
+    },
+    "E02G:C1_dense_control": {
+     "openzl_9": 2,
+     "tb_best": 2
+    },
+    "E02G:C2_single_byte_control": {
+     "tp_pent": 1
+    },
+    "E02G:F1_backblaze": {
+     "openzl_9": 2,
+     "tp_pent": 2,
+     "kolmo_hc": 1,
+     "kolmo_max": 1
+    },
+    "E02G:F2_owid_covid": {
+     "kolmo_fast": 2,
+     "openzl_9": 2,
+     "tp_pent": 1,
+     "kolmo_hc": 1
+    },
+    "FSDD:whole_wav": {
+     "kolmo_max": 10
+    }
+   }
+  },
+  "production_only": {
+   "total": {
+    "openzl_9": 22,
+    "kolmo_fast": 17,
+    "kolmo_max": 20,
+    "kolmo_hc": 2
+   },
+   "bytes_vs_openzl9": -0.1022,
+   "families": {
+    "Backblaze:whole_csv": {
+     "kolmo_fast": 1
+    },
+    "E02E:F1_ghcn_daily": {
+     "openzl_9": 8,
+     "kolmo_fast": 1
+    },
+    "E02E:F2_mitdb": {
+     "kolmo_max": 1,
+     "openzl_9": 5,
+     "kolmo_fast": 2
+    },
+    "E02F:F1_eeg": {
+     "kolmo_fast": 4
+    },
+    "E02F:F2_pageviews": {
+     "kolmo_max": 8
+    },
+    "E02F:F3_speech": {
+     "kolmo_fast": 3,
+     "openzl_9": 1
+    },
+    "E02G:C1_dense_control": {
+     "openzl_9": 2,
+     "kolmo_fast": 2
+    },
+    "E02G:C2_single_byte_control": {
+     "kolmo_fast": 1
+    },
+    "E02G:F1_backblaze": {
+     "openzl_9": 3,
+     "kolmo_fast": 1,
+     "kolmo_hc": 1,
+     "kolmo_max": 1
+    },
+    "E02G:F2_owid_covid": {
+     "kolmo_fast": 2,
+     "openzl_9": 3,
+     "kolmo_hc": 1
+    },
+    "FSDD:whole_wav": {
+     "kolmo_max": 10
+    }
+   }
+  }
+ },
+ "confirmation": {
+  "all": {
+   "total": {
+    "openzl_9": 14,
+    "tp_pent": 15,
+    "kolmo_max": 17,
+    "tb_best": 7,
+    "kolmo_fast": 6,
+    "kolmo_hc": 2
+   },
+   "bytes_vs_openzl9": -0.1057,
+   "families": {
+    "Backblaze:whole_csv": {
+     "kolmo_fast": 1
+    },
+    "E02E:F1_ghcn_daily": {
+     "openzl_9": 7,
+     "tp_pent": 2
+    },
+    "E02E:F2_mitdb": {
+     "kolmo_max": 1,
+     "tp_pent": 7
+    },
+    "E02F:F1_eeg": {
+     "tp_pent": 2,
+     "tb_best": 2
+    },
+    "E02F:F2_pageviews": {
+     "kolmo_max": 6,
+     "tb_best": 2
+    },
+    "E02F:F3_speech": {
+     "kolmo_fast": 3,
+     "openzl_9": 1
+    },
+    "E02G:C1_dense_control": {
+     "openzl_9": 2,
+     "tb_best": 2
+    },
+    "E02G:C2_single_byte_control": {
+     "tp_pent": 1
+    },
+    "E02G:F1_backblaze": {
+     "openzl_9": 2,
+     "tp_pent": 2,
+     "kolmo_hc": 1,
+     "kolmo_max": 1
+    },
+    "E02G:F2_owid_covid": {
+     "kolmo_fast": 2,
+     "openzl_9": 2,
+     "tp_pent": 1,
+     "kolmo_hc": 1
+    },
+    "FSDD:whole_wav": {
+     "kolmo_max": 9,
+     "tb_best": 1
+    }
+   }
+  },
+  "production_only": {
+   "total": {
+    "openzl_9": 24,
+    "kolmo_fast": 17,
+    "kolmo_max": 18,
+    "kolmo_hc": 2
+   },
+   "bytes_vs_openzl9": -0.1022,
+   "families": {
+    "Backblaze:whole_csv": {
+     "kolmo_fast": 1
+    },
+    "E02E:F1_ghcn_daily": {
+     "openzl_9": 8,
+     "kolmo_fast": 1
+    },
+    "E02E:F2_mitdb": {
+     "kolmo_max": 1,
+     "openzl_9": 5,
+     "kolmo_fast": 2
+    },
+    "E02F:F1_eeg": {
+     "kolmo_fast": 4
+    },
+    "E02F:F2_pageviews": {
+     "kolmo_max": 7,
+     "openzl_9": 1
+    },
+    "E02F:F3_speech": {
+     "kolmo_fast": 3,
+     "openzl_9": 1
+    },
+    "E02G:C1_dense_control": {
+     "openzl_9": 2,
+     "kolmo_fast": 2
+    },
+    "E02G:C2_single_byte_control": {
+     "kolmo_fast": 1
+    },
+    "E02G:F1_backblaze": {
+     "openzl_9": 3,
+     "kolmo_fast": 1,
+     "kolmo_hc": 1,
+     "kolmo_max": 1
+    },
+    "E02G:F2_owid_covid": {
+     "kolmo_fast": 2,
+     "openzl_9": 3,
+     "kolmo_hc": 1
+    },
+    "FSDD:whole_wav": {
+     "kolmo_max": 9,
+     "openzl_9": 1
+    }
+   }
+  }
+ }
+}
