@@ -96,6 +96,16 @@
   integer, decimal, 8-bit image) run before the record search, and the search is skipped when a typed plan already
   saves a fifth. Planning time over 79 files falls 29% (24.5% to 20.8% of encode); one of 83 files changes (3.7%
   smaller).
+- **DEC64: dictionary columns (branch `claude/dec64`).** A decimal or integer column of few distinct values is coded
+  as indices into its sorted values (column flag bit 5; the values go to their own stream, layout bit 1). At
+  `balanced` it is taken when the index saves a byte plane and the order-0 size of its planes is a tenth smaller. At
+  `hc` and `ratio` a one-byte index is also tried against the residuals by coding up to 16,384 rows both ways with
+  the coder that follows, because a column of repeated values keeps its repeats as an index and loses them as
+  differences. massdata: -5.7% at `balanced`, -6.2% at `hc`, -6.4% at `ratio`, in every container; the ozl tables
+  -1.5 to -4.2% at `hc` and `ratio`; skl_digits -2.8% at `hc`; no file larger; the large decimal tables are
+  unchanged and cost 2% more instructions to encode. First item from the research on basic transforms that stack
+  (`research/transforms-20261113`); the second, a byte delta inside float planes, was measured on nine float files
+  and not taken (0.0% at best on seven of them).
 - **`ratio`: float and decimal arrays code their planes with block sorting (branch `claude/dec64`).** The budget rule
   applied to the largest single cost found in `ratio`: LZMA2 at its extreme preset over the byte planes. On float
   arrays (model weights) block sorting gives the same size four to six times faster (a 10 MB safetensors file 5.4 to

@@ -7,7 +7,7 @@ number that justifies dropping it is in the row). Decision of 12 November 2026.
 Sources: S = session plan, G = the "Kolmo-inspired codec" plan (experiment ids E00 to E10), M = found by measurement.
 Costs and trade-offs of what was done are in `benchmark/accept/REGRESSIONS.md`; this file tracks what was planned.
 
-Status on 13 November 2026 (branch `claude/dec64`): 110 rows. 23 done (one of them on another branch), 10 dropped, 18 partly done or measured only, 58 not done,
+Status on 13 November 2026 (branch `claude/dec64`): 110 rows. 23 done (one of them on another branch), 11 dropped, 19 partly done or measured only, 56 not done,
 1 deferred (the merge).
 
 ## A. Numeric and structured data
@@ -151,9 +151,9 @@ until a successor exists), independent, substitute (partly cancels), destructive
 
 | # | Item | Size | Status | Outcome / evidence |
 |---|---|---|---|---|
-| R1 | Decimal node output into a dictionary or run-length cascade (few distinct values, long runs) | S | Not done | ALP's own table: 21.7 -> 18.8 bits per value with the cascade; independent of the planes |
+| R1 | Decimal node output into a dictionary or run-length cascade (few distinct values, long runs) | S | Partly | Dictionary done: DEC64 column flag bit 5, indices in the planes and the sorted values in their own stream, taken when the order-0 size of the index planes plus 8 bytes an entry is a tenth under the residual planes'. massdata (13 columns, 5 of them a few hundred distinct values spread over 2 to 5 planes): -5.7% balanced, -6.4% ratio, -6.4 to -6.9% as float32, -3.8 to -4.9% as a pickle. At hc and ratio a one-byte index is also tried by coding up to 16,384 rows both ways with the coder that follows (order 0 cannot see that an index keeps a column's repeats and differences lose them): ozl tables -1.5 to -4.2%, skl_digits -2.8% at hc, no file larger. Stacking class confirmed here as substitute with the coder: forcing every one-byte dictionary gives -10% on skl_digits at balanced and -5% on ozl at ratio but +3% on ozl at balanced. Cost: +2% instructions on large decimal tables that gain nothing. A cruder rule (index narrower than the value) gave -4% on three more small files at ratio but +0.2% on the large tables: not taken. Run-length not done: a prototype with one stream per column showed -1.0 to -2.4% on the large tables with zstd, but runs change the value count and do not fit the fixed plane layout |
 | R2 | Static order-1 rANS leaf, chosen per stream from the histogram | M | Not done | 5.9 to 19.6% under order 0 on two real streams, about 1,000 MB/s decode with AVX2; not measured after shuffle + delta. Enabler for R3, R9 |
-| R3 | Byte-delta inside shuffled planes, planes coded separately | S | Not done | Blosc on ERA5: median 5.86x against 5.1x for shuffle; negative on some sets, so by trial. Enabler chain shuffle -> plane delta -> per-plane coder (4.0x -> 5.7x) |
+| R3 | Byte-delta inside shuffled planes, planes coded separately | S | Dropped for float planes | Measured per plane on 9 float files (`/tmp/cmp/r1/r3.py`): delta in every plane is +0.5 to +17% larger with zstd and with block sorting; the best choice per plane is 0.0% on 7 files, -3.3% on lfw_subset.npy with zstd only, -0.7% on telemetry.npy with block sorting only. The published gain is on smooth gridded fields (ERA5); the test set has none. Revisit only with such data in the holdout |
 | R4 | ARM64, RISC-V and ARM-Thumb branch filters; lc/lp matched to instruction alignment | M | Not done | xz maintainer: 5%, 7 to 8%, 5% with LZMA2; alignment 0 to 2% more |
 | R5 | Cross-column nodes beyond formulas: equality, one-to-one map, difference against a reference column, per-key frame of reference | M | Not done | FastLanes about 8% at table level; Corra 30 to 58% on date columns; overlaps the formula search, untested after zstd or BWT |
 | R6 | Logs: typed numeric tokens (by digit count and leading digit, delta, timestamp delta) and column-wise variables | M | Not done | Denum +5.9 to 17% over template compressors, regressions of 4 to 19% on some sets: by trial |
