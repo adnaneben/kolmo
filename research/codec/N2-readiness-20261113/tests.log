@@ -1,0 +1,27 @@
+test_changed_frame_length (test_check.GateTests.test_changed_frame_length) ... ok
+test_command_success_and_failure_receipts (test_check.GateTests.test_command_success_and_failure_receipts) ... ok
+test_complete_decoder_config (test_check.GateTests.test_complete_decoder_config) ... ok
+test_decoder_hash_mismatch (test_check.GateTests.test_decoder_hash_mismatch) ... ok
+test_decoder_placeholder_and_path_validation (test_check.GateTests.test_decoder_placeholder_and_path_validation) ... ok
+test_duplicate_control_bytes_mismatch (test_check.GateTests.test_duplicate_control_bytes_mismatch) ... ok
+test_duplicate_sample (test_check.GateTests.test_duplicate_sample) ... ok
+test_encode_decode_size_disagreement (test_check.GateTests.test_encode_decode_size_disagreement) ... ok
+test_frozen_runner_change (test_check.GateTests.test_frozen_runner_change) ... ok
+test_input_and_batch_bounds (test_check.GateTests.test_input_and_batch_bounds) ... ok
+test_invalid_integers (test_check.GateTests.test_invalid_integers) ... ok
+test_missing_and_extra_frames (test_check.GateTests.test_missing_and_extra_frames) ... ok
+test_missing_decoder (test_check.GateTests.test_missing_decoder) ... ok
+test_missing_sample (test_check.GateTests.test_missing_sample) ... ok
+test_prerequisite_failure_records_not_run (test_check.GateTests.test_prerequisite_failure_records_not_run) ... ok
+test_restored_bytes_and_length (test_check.GateTests.test_restored_bytes_and_length) ... ok
+test_self_consistent_wrong_batch (test_check.GateTests.test_self_consistent_wrong_batch) ... ok
+test_self_consistent_wrong_original_length (test_check.GateTests.test_self_consistent_wrong_original_length) ... ok
+test_symlink_frame (test_check.GateTests.test_symlink_frame) ... ok
+test_timeout_and_limits (test_check.GateTests.test_timeout_and_limits) ... ok
+test_unexpected_arm (test_check.GateTests.test_unexpected_arm) ... ok
+test_valid_synthetic_ledger (test_check.GateTests.test_valid_synthetic_ledger) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 2.859s
+
+OK
