@@ -106,6 +106,10 @@ build/test-dec64-asan: tests/test_dec64.c src/kolmo.c src/kolmo.h src/kgraph.inc
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dec64.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-dec64: build/test-dec64-asan
 	./build/test-dec64-asan
+build/test-fastint-asan: tests/test_fastint.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fastint.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-fastint: build/test-fastint-asan
+	./build/test-fastint-asan
 build/test-cmimg-asan: tests/test_cmimg.c src/kolmo.c src/kolmo.h src/cm.inc build/libvendor.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmimg.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-cmimg: build/test-cmimg-asan
