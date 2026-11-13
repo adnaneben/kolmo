@@ -68,7 +68,8 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
 18. **Text-heavy CSV archive (P2-E21, Actions 43355382170):** the production table graph with BSC leaves, written as
    a production frame (`tt_bsc0`), fits OpenZL `csv`-9's archive cost and is smaller on 16–17/23 development CSVs
    (−20%) and on 23/24 fresh plotly CSVs (preregistered PASS, −15.3%) — but 21 of those 24 fresh files come from one
-   t-SNE generator, so a diverse fresh confirmation is still needed.
+   t-SNE generator. **Diverse fresh confirmation (P2-E22, 24 TidyTuesday datasets) FAILED**: 12/23 (LB 0.335); the
+   zstd-12 table frame (17/23) and production `eco` (13–14/23) were the more robust secondary pipelines.
 
 ## Correctness evidence behind these claims
 
@@ -87,5 +88,5 @@ timing run (runner gates: P2-E3 all inputs × 7 policies, P2-E7 50/50).
    in `tests/` (wire review §A), and the production CLI exit-time buffer leak.
 
 Runner use by this workstream tonight (approx. minutes): P2-E3 13, P2-E7 13, P2-E8 19, P2-E10 48, P2-E12 11,
-P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16, P2-E21 12 = ~182 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
+P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16, P2-E21 12, P2-E22 13 = ~195 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
 Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.
