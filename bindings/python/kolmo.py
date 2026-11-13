@@ -81,19 +81,30 @@ def train_dict(samples, dict_cap=112 * 1024):
     n = _check(_lib.kolmo_train_dict(blob, sizes, len(samples), out, dict_cap))
     return out.raw[:n]
 
-def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0, dict=None, native_leaf=False):  # noqa: A002
+def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0, dict=None, native_leaf=False,  # noqa: A002
+             typed_huf=False):
     """Compress bytes; returns the compressed bytes. mode: speed|balanced|ratio (advanced: rt|fast|eco|hc|max|ultra).
     transforms: True (analyse and transform), False (codec only) or "quick" (cheap transforms only; fastest).
     native_leaf: with mode="balanced", integer series may use Kolmo's native plane-context leaves when smaller
     (sensor/ECG/numeric columns, typically 5-12% smaller; such files decode ~1.5-2.6x slower and are container version 9).
     level: 0 = mode default; with mode="ultra", 1 = model 1 only (faster) and 2 = maximum ratio (numeric graph
     leaves may also use context mixing: smaller integer series, much slower decoding of those blocks).
+    typed_huf: opt-in, with mode="balanced" (or "fast"), threads=1 and the default level: a little-endian integer
+    NPY array or a PCM16 WAV of at most 16 MiB is coded type first (integer prediction, Huffman planes). A speed
+    option: several times faster to compress. On single-channel 16-bit signals (ECG, mono audio) the output is
+    often smaller too; on other arrays and on multi-channel data (channels are not split) it is often larger than
+    the default and sometimes larger than plain zstd, so compare sizes before relying on it.
+    It applies only without a dictionary; anything else is compressed as usual. typed_huf excludes native_leaf.
     Pass dict=<bytes from train_dict> to compress small files against a trained dictionary."""
     if mode not in _MODES:
         raise ValueError("mode must be one of " + ", ".join(_MODES))
+    if native_leaf and typed_huf:
+        raise ValueError("choose native_leaf or typed_huf, not both")
     data = bytes(data)
     tr = 2 if transforms == "quick" else 1 if transforms else 0
-    p = _Params(_MODES[mode], level, threads, block, tr | (16 if native_leaf and tr else 0))   # 16 = KOLMO_T_NATIVE_LEAF
+    # 16 = KOLMO_T_NATIVE_LEAF, 32 = KOLMO_T_TYPED_HUF
+    p = _Params(_MODES[mode], level, threads, block,
+                tr | (16 if native_leaf and tr else 0) | (32 if typed_huf and tr else 0))
     cap = _lib.kolmo_bound(len(data), ctypes.byref(p))
     out = ctypes.create_string_buffer(cap)
     if dict:

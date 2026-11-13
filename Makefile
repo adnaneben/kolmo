@@ -53,7 +53,7 @@ endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
 BLIBS   := $(LIBS)
 
-KOLMO_INCLUDES := src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc
+KOLMO_INCLUDES := src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc
 
 all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
 
@@ -118,6 +118,16 @@ build/test-cmimg-asan: tests/test_cmimg.c src/kolmo.c src/kolmo.h src/cm.inc bui
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmimg.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-cmimg: build/test-cmimg-asan
 	./build/test-cmimg-asan
+# Opt-in --typed-huf route (ported from the RC1 integration, PR #10): round trips, header parsing, and agreement of
+# the typed route's predictor choice with the graph planner's.
+build/test-rc-options: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-rc-options-asan: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-rc-options: build/test-rc-options build/test-rc-options-asan
+	./build/test-rc-options
+	./build/test-rc-options-asan
+.PHONY: check-rc-options
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
