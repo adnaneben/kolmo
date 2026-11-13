@@ -59,7 +59,7 @@ jobs:
         run: make -j4 ARCH= build/libvendor.a
       - name: build and run fuzz targets under ASan/UBSan (bounded)
         run: |
-          for t in fuzz_decompress fuzz_roundtrip; do
+          for t in fuzz_decompress fuzz_roundtrip fuzz_nplane; do
             gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
               -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 \
               -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include \
