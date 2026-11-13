@@ -94,17 +94,22 @@ Speed tier, Apple M5, 35 files, commit 1079e90 (`budget.py speed`):
 three files where planning or a transform gains nothing and still costs 10% (mozilla, osdb, chr22.fa). `speed` is over on text, where its
 larger output costs more in transfer than it saves in CPU at 1 Gbit/s.
 
-Archive tier, cloud VM, 32 files, commit 3c5f599, OpenZL timed in the same session
-(`benchmark/openzl/results-3c5f599.json`):
+Archive tier, cloud VM, 32 files, OpenZL timed in the same session. First at commit 3c5f599
+(`benchmark/openzl/results-3c5f599.json`), then at 4e103b0 after `ratio` and `hc` stopped paying for float and
+decimal planes that do not earn their CPU (`results-4e103b0.json`):
 
 | Setting | Within OpenZL's cost, 30 days | Size against OpenZL | Within, one year |
 |---|---|---|---|
-| `balanced` | 27 of 32 | 0.948 | 21 of 32 |
-| `hc -l 9` | 27 of 32 | 0.863 | 28 of 32 |
-| `hc` | 4 of 32 | 0.803 | 25 of 32 |
-| `ratio -l 1` | 6 of 32 | 0.748 | 23 of 32 |
-| `ratio` | 3 of 32 | 0.711 | 24 of 32 |
-| smallest within the budget, per file | 29 of 32 | 0.800 | 28 of 32 (0.712) |
+| `balanced` | 27 -> 25 of 32 | 0.948 -> 0.950 | 21 -> 20 of 32 |
+| `hc -l 9` | 27 of 32 | 0.863 -> 0.865 | 28 -> 27 of 32 |
+| `eco` | 17 of 32 | 0.841 | 28 of 32 |
+| `hc` | 4 -> 9 of 32 | 0.803 -> 0.804 | 25 -> 27 of 32 |
+| `ratio -l 1` | 6 -> 13 of 32 | 0.748 -> 0.758 | 23 -> 25 of 32 |
+| `ratio` | 3 -> 9 of 32 | 0.711 -> 0.721 | 24 -> 25 of 32 |
+| smallest within the budget, per file | 29 -> 30 of 32 | 0.800 -> 0.775 | 28 of 32 (0.712 -> 0.719) |
+
+Counts within a file or two move between sessions on files whose cost is within 3% of OpenZL's (the three magika
+files, x-ray).
 
 No kolmo setting is within OpenZL's cost on: lfw_subset.npy (kolmo is 9% larger at `ratio`, 43% at `balanced`),
 magika.onnx (1 to 2% larger), xml at 30 days (the settings that are 12 to 30% smaller cost 7 to 16% more); at one year also magika.gguf and
