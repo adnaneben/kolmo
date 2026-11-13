@@ -165,5 +165,4 @@ def main():
     if args.output:args.output.write_text(json.dumps(res,indent=2,sort_keys=True)+'\n')
     print(json.dumps(res,indent=2,sort_keys=True))
 
-
 if __name__=='__main__':main()
