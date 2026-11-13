@@ -49,6 +49,10 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
    often than in memory (boundary-specific claims only). Archive: a Kolmo production frame is smallest within
    OpenZL-9 typed cost on 45/61, OpenZL on 16/61.
 
+14. **Selection (P2-E15/E16):** a fixed guarded per-plane Huffman frame captures ~80% of the oracle speed-mode byte
+   gain; size rules, decision rules and 1-NN over encode-time features do not beat it out of family (and the features
+   cost ~10% of zstd-3's round trip). Second leaves (zstd-3/rANS/zstd-19) are archive-mode tools.
+
 ## Correctness evidence behind these claims
 
 Identity checks against production (19/19 typed inputs: choice, parameters, residual, rest, inverse); 3.3 M
