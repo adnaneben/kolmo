@@ -1,5 +1,6 @@
 /* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n|-q] [-D dict] [--native-leaf] in out
  *                    (--native-leaf: balanced only; native plane-context leaves for integer series, KOLMO_T_NATIVE_LEAF)
+ *                    (ultra/-x: -l 1 = context-mixing model 1 only, faster; -l 2 = maximum ratio, graph leaves may use CM)
  *                    kolmo -s ...                         (streaming: bounded memory, large inputs)
  *                    kolmo -d [-T threads] [-D dict] in out  (auto-detects one-shot vs streamed)
  *                    kolmo -r offset:length in out        (random access read)
@@ -122,6 +123,8 @@ int main(int argc, char **argv) {
             "  --native-leaf  with balanced: 5-12%% smaller integer series (sensor, ECG, numeric columns) using\n"
             "            Kolmo's native plane-context leaves; such files decode ~1.5-2.6x slower than balanced\n"
             "            and need a kolmo that reads container version 9\n"
+            "  -x -l 2   maximum ratio: as -x, and numeric graph leaves may also use context mixing\n"
+            "            (smaller integer series; those blocks decode much more slowly)\n"
             "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -Q minimal analysis  -n no transforms\n"
             "          -B blockMiB\n"
             "          -D dict  -t dict samples...  -s|-S segMiB stream  -r off:len read a range\n"); return 2;

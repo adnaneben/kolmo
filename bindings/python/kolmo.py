@@ -86,6 +86,8 @@ def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0
     transforms: True (analyse and transform), False (codec only) or "quick" (cheap transforms only; fastest).
     native_leaf: with mode="balanced", integer series may use Kolmo's native plane-context leaves when smaller
     (sensor/ECG/numeric columns, typically 5-12% smaller; such files decode ~1.5-2.6x slower and are container version 9).
+    level: 0 = mode default; with mode="ultra", 1 = model 1 only (faster) and 2 = maximum ratio (numeric graph
+    leaves may also use context mixing: smaller integer series, much slower decoding of those blocks).
     Pass dict=<bytes from train_dict> to compress small files against a trained dictionary."""
     if mode not in _MODES:
         raise ValueError("mode must be one of " + ", ".join(_MODES))

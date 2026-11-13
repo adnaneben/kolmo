@@ -21,7 +21,9 @@ typedef struct {
     kolmo_mode mode;      /* rt: LZ4 | fast: zstd 3 | eco: brotli 8 | hc: zstd 19 | max: BWT (text) or LZMA2 | ultra: context mixing (archive tier) */
     int level;          /* 0 = mode default; otherwise codec level (max: 1 = BWT for every block, 10 = LZMA2 also on
                            decimal-array planes, smaller and about 25 times slower to encode on such files;
-                           ultra: 1 = context-mixing model 1 only, faster) */
+                           ultra: 1 = context-mixing model 1 only, faster; 2 = maximum ratio: as the default, and
+                           integer/table graph leaves may also use context mixing when smaller, so those blocks
+                           decode up to ~100x slower; any decoder reads the output) */
     int threads;        /* 0 = all cores */
     uint32_t block;     /* bytes per block, 0 = adaptive rt/fast, 16 MiB eco/hc (larger for text), 128 MiB max/ultra */
     int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap
