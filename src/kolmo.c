@@ -1589,9 +1589,10 @@ static int json_lines(const uint8_t *s, size_t h) {
 static double kg_plane_h(const uint8_t *p, size_t cnt, int w, int b, int rot) {   /* order-0 entropy of plane b, bits */
     uint32_t c[256] = {0}; size_t m = cnt < 8192 ? cnt : 8192, step = cnt / m;
     for (size_t q = 0; q < m; q++) {
-        const uint8_t *e = p + q * step * (size_t)w; uint64_t v = 0; for (int k = 0; k < w; k++) v |= (uint64_t)e[k] << (8 * k);
-        if (rot) v = (v << 1) | (v >> (8 * w - 1));
-        c[(v >> (8 * b)) & 255]++;
+        const uint8_t *e = p + q * step * (size_t)w; unsigned x;
+        if (!rot) x = e[b];                                   /* plane b is byte b of the little-endian word */
+        else x = (((unsigned)e[b] << 1) | (e[b ? b - 1 : w - 1] >> 7)) & 255;   /* rotated left one bit: the top bit of the byte below */
+        c[x]++;
     }
     double hs = 0; for (int k = 0; k < 256; k++) if (c[k]) { double q = (double)c[k] / m; hs -= q * log2(q); }
     return hs;
@@ -1755,6 +1756,8 @@ static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int 
         for (int q = 0; q < nw; q++) {
             int w = ws[q], o0, s0; size_t a = h + (st - h) / w * w, c = (n - a < L ? n - a : L) / w;
             if (c < 16) continue;
+            /* four of the sixteen sample runs first: an estimate a quarter above plain coding ends this width */
+            if (c > 16384 && plain < 1e299 && kg_num_choose_n(s + a, c, w, &o0, &s0, 4) / (8.0 * w) > plain * 1.25) continue;
             double e = kg_num_choose(s + a, c, w, &o0, &s0) / (8.0 * w); if (e < eb) { eb = e; bw0 = w; }
         }
         if (!bw0 || eb > plain) return best;            /* estimate above plain coding: no gain */
@@ -2114,11 +2117,21 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt0 = prof_now();
 #endif
+            const int npy = n > 16 && !memcmp(s, "\x93NUMPY", 6);   /* quick analysis: integer and image trials only for a .npy header */
+            size_t iw = 0, ih = 0; unsigned ic = 0; double ci = 1e300; int imgdone = 0;
+            const size_t Li = light && !npy && Lg > (64u << 10) ? (64u << 10) : Lg;   /* quick analysis: a 64 KiB image trial */
+#define IMG8_TRIAL() do { ci = kg_img8_trial(s, n, st, Li, zl, plain, &iw, &ic, &ih); \
+                if (ci < 1e299 && Li != Lg) ci = ci * plain / ((double)zcost(zc, s + st, Li, zb, zcap, zl) / Li); else ci = KG_ADJ(ci); imgdone = 1; } while (0)
+            /* balanced: the image trial first (its pre-check is the cheapest); an image layout that saves a fifth is the
+             * answer and the float, integer and decimal trials are not run */
+            if (numtrial) IMG8_TRIAL();
+            if (imgdone && ci < best && ci < plain * 0.80) {
+                best = ci; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7;
+            } else {
             int w = 0; size_t hh = 0; double c = kg_float_trial(s, n, st, L, zl, plain, &w, &hh), cf = c; int fw = w; size_t fh = hh;
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt1 = prof_now();
 #endif
-            const int npy = n > 16 && !memcmp(s, "\x93NUMPY", 6);   /* quick analysis: integer and image trials only for a .npy header */
             if (cf > 1e299 && (!light || npy || numtrial)) {
                 w = 0; hh = 0; c = kg_num_trial(s, n, st, Lg, zl, plain, &w, &hh); c = KG_ADJ(c);
                 if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
@@ -2131,13 +2144,14 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt2 = prof_now();
 #endif
-            size_t iw = 0, ih = 0; unsigned ic = 0; const size_t Li = light && !npy && Lg > (64u << 10) ? (64u << 10) : Lg;   /* quick analysis: a 64 KiB image trial */
-            c = kg_img8_trial(s, n, st, Li, zl, plain, &iw, &ic, &ih);
-            if (c < 1e299 && Li != Lg) c = c * plain / ((double)zcost(zc, s + st, Li, zb, zcap, zl) / Li); else c = KG_ADJ(c);   /* 8-bit images: IMG8 */
+            if (!imgdone) IMG8_TRIAL();                          /* 8-bit images: IMG8 */
+            c = ci;
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             fprintf(stderr, "kg float_ms=%.3f num_ms=%.3f img8_ms=%.3f\n", (kgt1 - kgt0) * 1000, (kgt2 - kgt1) * 1000, (prof_now() - kgt2) * 1000);
 #endif
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7; }
+            }
+#undef IMG8_TRIAL
         }
 #undef KG_ADJ
         if (numtrial && !(chosen >= 5 && best < plain * 0.80)) {
@@ -2438,8 +2452,14 @@ static void *compress_worker(void *arg) {
         int codec = J->codec, level = (pl.wide || (tflag >= 10 && pl.t == T_TBL)) && J->default_level ? 1 : J->level;
         if (pl.t == T_KG && len) {                                          /* kolmo graph: the block is a program + leaves */
             /* max, wide table: the column leaves are text, so they take BWT like any text block at max (LZMA2 on the
-             * leaves was 3% smaller and ten times slower to encode) */
-            int kgc = codec == C_LZMA && pl.a ? C_BSC : codec, kgl = kgc != codec ? 9 : level;
+             * leaves was 3% smaller and ten times slower to encode). Float and decimal arrays too: on float planes
+             * BWT is the same size and four to six times faster; on decimal planes LZMA2 is 10 to 12% smaller at 25
+             * to 30 times the encode time, 18 KB saved per CPU second where the cost model breaks even at 54 (data kept
+             * a year) or 652 (30 days). Integer arrays keep LZMA2 (2 to 9% smaller, small inputs). */
+            int kgc = codec == C_LZMA && (pl.a || (!(pl.b & 32) && (pl.b & (16 | 64)))) ? C_BSC : codec, kgl = kgc != codec ? 9 : level;
+            /* hc: zstd 19 over float planes gives the size of zstd 9 (the planes are coded by Huffman or rANS when that
+             * is smaller) at up to 16 times the time. Decimal planes keep zstd 19: zstd 12 was 3 to 36% larger. */
+            if (codec == C_ZSTD && level > 9 && !pl.a && !(pl.b & (32 | 64)) && (pl.b & 16)) kgl = 9;
             cl = pl.a ? kg_encode_table(xp, kgc, kgl, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
                       : pl.b & 32 ? kg_encode_img8(xp, kgc, kgl, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 64 ? kg_encode_dec64(xp, kgc, kgl, raw, len, pl.b & 1 ? 0 : pl.b & 2 ? (pl.kgw / 4) | KG_DEC_F32 : pl.kgw / 8, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
@@ -2479,6 +2499,16 @@ static void *compress_worker(void *arg) {
                     /* ultra: every numeric graph block comes here, and context mixing over the plain bytes costs 20
                      * times the graph's time, so plain block sorting must already be within 2% (model weights are not) */
                     if (!cs || (double)cs / sn > (codec == C_CM ? 1.02 : 1.35) * (double)cl / len) alt = NULL;
+                }
+                if (alt && (codec == C_ZSTD || codec == C_LZ4) && len >= ((size_t)1 << 20)) {
+                    /* the fast coders: three 64 KiB slices (start, middle, end) coded plain; the full plain pass costs
+                     * as much as the graph, so it runs only when the slices come within 35% of the graph's rate */
+                    const size_t sn = 64u << 10; size_t cs = 0;
+                    for (int k = 0; k < 3; k++) {
+                        size_t z = codec_compress(xp, codec, level, raw + (k == 0 ? 0 : k == 1 ? ((len - sn) / 2) & ~(size_t)63 : len - sn), sn, alt, J->slot);
+                        cs += z && z < sn ? z : sn;
+                    }
+                    if ((double)cs / (double)(3 * sn) > 1.35 * (double)cl / (double)len) alt = NULL;
                 }
                 size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = codec; }

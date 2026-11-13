@@ -78,19 +78,22 @@ static int kg_getuv(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
     return -1;
 }
 
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+static inline uint64_t kg_le64(uint64_t w) { return __builtin_bswap64(w); }
+#else
+static inline uint64_t kg_le64(uint64_t w) { return w; }
+#endif
 /* ---- DECIMAL ---- */
 static int kg_num(const uint8_t *v, size_t l, uint8_t sep, int64_t *m, uint8_t *sc) {
-    size_t i = 0; int neg = 0;
+    size_t i = 0; int neg = 0; uint64_t x = 0;                /* digits are summed as they are scanned; more than 18 is refused below */
     if (i < l && v[i] == '-') { neg = 1; i++; }
-    size_t a = i; while (i < l && (uint8_t)(v[i] - '0') < 10) i++;
+    size_t a = i; for (unsigned c; i < l && (c = (unsigned)v[i] - '0') < 10; i++) x = x * 10 + c;
     size_t id = i - a; if (!id || (id > 1 && v[a] == '0')) return 0;
     size_t fd = 0, b = 0; int hassep = 0;
-    if (i < l) { if (v[i] != sep) return 0; hassep = 1; b = ++i; while (i < l && (uint8_t)(v[i] - '0') < 10) i++; fd = i - b; if (!fd || i != l) return 0; }
+    if (i < l) { if (v[i] != sep) return 0; hassep = 1; b = ++i; for (unsigned c; i < l && (c = (unsigned)v[i] - '0') < 10; i++) x = x * 10 + c; fd = i - b; if (!fd || i != l) return 0; }
     if (id + fd > 18) return 0;
-    int64_t x = 0; for (size_t q = a; q < a + id; q++) x = x * 10 + (v[q] - '0');
-    for (size_t q = b; q < b + fd; q++) x = x * 10 + (v[q] - '0');
     if (neg && x == 0) return 0;
-    *m = neg ? -x : x; *sc = hassep ? (uint8_t)fd : 255; return 1;
+    *m = neg ? -(int64_t)x : (int64_t)x; *sc = hassep ? (uint8_t)fd : 255; return 1;
 }
 static uint64_t kg_zz(int64_t x) { return ((uint64_t)x << 1) ^ (uint64_t)(x >> 63); }
 static int64_t kg_unzz(uint64_t u) { return (int64_t)(u >> 1) ^ -(int64_t)(u & 1); }
@@ -496,18 +499,27 @@ static size_t kg_encode_table(codec_ctx *x, int codec, int level, const uint8_t 
       }
       for (uint32_t j = 0; j < k; j++) { C[j].num = vals[j] && nums[j] * 100 >= vals[j] * 60; C[j].pred = c1[j] <= c0[j]; }
       free(vals); free(nums); free(c0); free(c1); free(pv); }
+    {   size_t nl = 1; for (const uint8_t *q = src, *e; (e = memchr(q, '\n', n - (size_t)(q - src))); q = e + 1) nl++;
+        for (uint32_t j = 0; j < k; j++) if (C[j].num && (kb_res(&C[j].tag, nl) || kb_res(&C[j].sc, nl) || kb_res(&C[j].mt, 16))) goto done; }
     /* one pass: fields straight to their streams */
     while (i < n) {
         const uint8_t *e = memchr(src + i, '\n', n - i); size_t end = e ? (size_t)(e - src) : n;
         uint32_t f = 0; fs[f++] = i;
-        for (const uint8_t *q = src + i, *qe = src + end; q < qe; q++) if (*q == d) { if (f > k) break; fs[f++] = (size_t)(q - src) + 1; }
+        {   const uint8_t *q = src + i, *qe = src + end; const uint64_t dd = 0x0101010101010101ull * d;
+            for (; q + 8 <= qe && f <= k; q += 8) {           /* eight bytes at a time: the bytes equal to the delimiter */
+                uint64_t w; memcpy(&w, q, 8); w = kg_le64(w) ^ dd;
+                uint64_t hit = ~(((w & 0x7f7f7f7f7f7f7f7full) + 0x7f7f7f7f7f7f7f7full) | w | 0x7f7f7f7f7f7f7f7full);
+                for (; hit; hit &= hit - 1) { if (f > k) break; fs[f++] = (size_t)(q - src) + ((size_t)__builtin_ctzll(hit) >> 3) + 1; }
+            }
+            for (; q < qe; q++) if (*q == d) { if (f > k) break; fs[f++] = (size_t)(q - src) + 1; }
+        }
         if (f == k) {
             fs[k] = end + 1;
             for (uint32_t j = 0; j < k; j++) {
                 kgcol *c = &C[j]; const uint8_t *v = src + fs[j]; size_t l = fs[j + 1] - 1 - fs[j];
                 if (!c->num) { if (kb_put(&c->raw, v, l) || kb_byte(&c->raw, '\n')) goto done; continue; }
                 int64_t m; uint8_t sc;
-                if (kb_res(&c->tag, 1) || kb_res(&c->sc, 1) || kb_res(&c->mt, 10)) goto done;
+                if (c->mt.cap - c->mt.n < 10 && kb_res(&c->mt, 10)) goto done;   /* tags and scales were reserved above */
                 if (!l) c->tag.p[c->tag.n++] = 0;
                 else if (kg_num(v, l, sep, &m, &sc)) {
                     c->tag.p[c->tag.n++] = 1; c->sc.p[c->sc.n++] = sc;
@@ -554,8 +566,8 @@ static uint64_t kg_gcd(uint64_t a, uint64_t b) { while (b) { uint64_t t = a % b;
 static int kg_bw(uint64_t z) { return z < 256 ? 1 : z < 65536 ? 2 : z < 4294967296ull ? 4 : 8; }
 /* choose signedness and order on a sample (16 runs of 1024 consecutive values) by the summed bit length of the
  * residuals, the sample's gcd taken into account; returns the estimated bits per value */
-static double kg_num_choose(const uint8_t *a, size_t cnt, int w, int *bo, int *bs) {
-    size_t runs = cnt > 16384 ? 16 : 1, rl = cnt > 16384 ? 1024 : cnt, tot = 0; double bcost = 1e300;
+static double kg_num_choose_n(const uint8_t *a, size_t cnt, int w, int *bo, int *bs, size_t nruns) {
+    size_t runs = cnt > 16384 ? nruns : 1, rl = cnt > 16384 ? 1024 : cnt, tot = 0; double bcost = 1e300;
     for (int sg = (w == 8); sg <= 1; sg++) for (int ord = 0; ord <= 2; ord++) {
         uint64_t g = 0; int64_t mn = INT64_MAX; double cost = 0; tot = 0;
         for (int pass = 0; pass < 2; pass++) for (size_t r = 0; r < runs; r++) {
@@ -564,12 +576,12 @@ static double kg_num_choose(const uint8_t *a, size_t cnt, int w, int *bo, int *b
                 uint64_t v = kg_ld(b + q * w, w, sg), z;
                 if (ord == 0) {
                     if (!pass) { if ((int64_t)v < mn) mn = (int64_t)v; continue; }
-                    z = (v - (uint64_t)mn) / (g ? g : 1);
+                    z = v - (uint64_t)mn; if (g > 1) z /= g;           /* (a division only where there is a common factor) */
                 } else if ((int)q < ord) { v2 = v1; v1 = v; continue; }
                 else {
                     int64_t d = (int64_t)(v - (ord == 1 ? v1 : 2 * v1 - v2));
                     if (!pass) { uint64_t r0 = d < 0 ? (uint64_t)0 - (uint64_t)d : (uint64_t)d; if (g != 1) g = kg_gcd(r0, g); v2 = v1; v1 = v; continue; }
-                    z = kg_zz(d / (int64_t)(g ? g : 1));
+                    z = kg_zz(g > 1 ? d / (int64_t)g : d);
                 }
                 cost += z ? 65 - __builtin_clzll(z) : 1; tot++;
                 v2 = v1; v1 = v;
@@ -583,6 +595,7 @@ static double kg_num_choose(const uint8_t *a, size_t cnt, int w, int *bo, int *b
     }
     return bcost;
 }
+static double kg_num_choose(const uint8_t *a, size_t cnt, int w, int *bo, int *bs) { return kg_num_choose_n(a, cnt, w, bo, bs, 16); }
 static size_t kg_encode_num(codec_ctx *x, int codec, int level, const uint8_t *src, size_t n, int w, size_t h,
                             uint8_t *dst, size_t cap) {
     if (h > n || (n - h) / (size_t)w < 16 || (w != 2 && w != 4 && w != 8)) return 0;
@@ -725,7 +738,7 @@ static void kg_dec_sample(const uint8_t *base, size_t step, size_t rn, int f32, 
     uint32_t ok = 0; for (int e = 0; e <= be; e++) ok += hist[e];
     *pok = ok; *pseen = (uint32_t)sn - nm;
 }
-/* One column or segment into its tags t[0..rn) and plane bytes at q0. col is scratch for rn values. Returns the
+/* One column or segment into its tags t[0..rn) and plane bytes at q0. col is scratch for 2 * rn values. Returns the
  * flags to add (1 delta, 16 | 1 second difference), or -1 when memory ran out. */
 static inline int kg_int_plaus(uint64_t b) { return (b >> 47) == 0 || (b >> 47) == 0x1ffff; }   /* an int64 below 2^47 in magnitude */
 static int kg_dec_code(const uint8_t *p, size_t step, size_t rn, int e, int hasm, uint64_t miss, int isint, int f32, uint8_t *t, uint8_t **pln, size_t q0,
@@ -742,12 +755,16 @@ static int kg_dec_code(const uint8_t *p, size_t step, size_t rn, int e, int hasm
     }
     /* the second difference where it is 5% shorter again (running totals, steady trends) */
     const int ord2 = b2 < 0.95 * (bd < bp ? bd : bp), delta = ord2 || bd < bp * 0.95; size_t q = q0; k = 0; prev = 0; pd = 0;
-    for (size_t r = 0; r < rn; r++, q++) {
+    uint64_t *zs = col + rn;                                 /* the residuals, one per row, then plane by plane */
+    for (size_t r = 0; r < rn; r++) {
         uint64_t z = 0;
         if (!t[r]) { uint64_t m = col[k++]; const uint64_t dl = m - prev; z = kg_zz((int64_t)(ord2 ? dl - pd : delta ? dl : m)); prev = m; pd = dl; }
-        any |= z;
-        pln[0][q] = (uint8_t)z; pln[1][q] = (uint8_t)(z >> 8); pln[2][q] = (uint8_t)(z >> 16); pln[3][q] = (uint8_t)(z >> 24);
-        pln[4][q] = (uint8_t)(z >> 32); pln[5][q] = (uint8_t)(z >> 40); pln[6][q] = (uint8_t)(z >> 48); pln[7][q] = (uint8_t)(z >> 56);
+        any |= z; zs[r] = z;
+    }
+    for (int b = 0; b < 8; b++) {                            /* only the planes this column reaches are extracted */
+        uint8_t *o = pln[b] + q;
+        if (!(any >> (8 * b))) { memset(o, 0, rn); continue; }
+        for (size_t r = 0; r < rn; r++) o[r] = (uint8_t)(zs[r] >> (8 * b));
     }
     *all |= any; return delta | (ord2 ? 16 : 0);
 }
@@ -863,7 +880,7 @@ static size_t kg_encode_dec64(codec_ctx *x, int codec, int level, const uint8_t 
         }
         if (good * 4 < seen || !good) goto done;             /* under a quarter of the present values are decimal */
     }
-    tags = malloc(cnt + 1); col = malloc((maxrn + 1) * 8);
+    tags = malloc(cnt + 1); col = malloc((maxrn + 1) * 16);
     for (int b = 0; b < 8; b++) pln[b] = malloc(cnt + 1);
     if (!tags || !col || !pln[0] || !pln[1] || !pln[2] || !pln[3] || !pln[4] || !pln[5] || !pln[6] || !pln[7]) goto done;
     for (size_t c = 0, q0 = 0; c < nseg; c++) {

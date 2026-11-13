@@ -96,6 +96,29 @@
   integer, decimal, 8-bit image) run before the record search, and the search is skipped when a typed plan already
   saves a fifth. Planning time over 79 files falls 29% (24.5% to 20.8% of encode); one of 83 files changes (3.7%
   smaller).
+- **`ratio`: float and decimal arrays code their planes with block sorting (branch `claude/dec64`).** The budget rule
+  applied to the largest single cost found in `ratio`: LZMA2 at its extreme preset over the byte planes. On float
+  arrays (model weights) block sorting gives the same size four to six times faster (a 10 MB safetensors file 5.4 to
+  0.8 s). On decimal arrays LZMA2 was 10 to 12% smaller at 25 to 30 times the encode time (a 24 MB table: 8.0 s for
+  1.26 MB against 0.3 s for 1.40 MB), which is 18 KB saved per CPU second where the cost model breaks even at 54
+  (data kept a year) or 652 (30 days). With block sorting that table costs less than OpenZL (CPU and storage) and
+  is 23% smaller; with LZMA2 it cost 3.3 times OpenZL. Decimal files at `ratio` are 2 to 12.6% larger than at the
+  previous commit and still 5 to 43% smaller than with 1.0.1 (eight files checked); `-x` is unchanged. Integer arrays keep LZMA2.
+  `hc`: float planes at zstd 9 instead of 19 (same size, up to 16 times faster); decimal planes keep zstd 19 (zstd 12
+  was 3 to 36% larger).
+- **More encode time off `balanced`, output unchanged (branch `claude/dec64`).** Measured by instruction counts
+  (callgrind) and CPU time; every change below leaves all 83 test files byte-identical at `balanced`.
+  - A plan marked "check each block" coded every block twice at the fast settings (the graph and plain zstd). The
+    plain pass now runs only when three 64 KiB slices coded plain come within 35% of the graph's rate: a 31 MB
+    decimal table goes from 185 to 109 ms.
+  - Delimited tables (graph path): fields are found eight bytes at a time, numbers are read in one pass, and tag and
+    scale streams are reserved once per block: a 316-column table 54 to 48 ms.
+  - Planner: the integer trial looks at four of its sixteen sample runs first and stops a width whose estimate is a
+    quarter above plain coding; plane entropies read one byte per value. On mozilla (no plan wins) total
+    instructions fall 8.4%.
+  - DEC64 writes only the byte planes a column reaches.
+  - Planner: the 8-bit image trial runs first at `balanced`, and an image layout that saves a fifth ends the typed
+    trials (the integer trial was a quarter of the encode of a 0.8 MB photograph): instructions on that file -41%.
 - **Graph leaves are coded faster at `balanced` (branch `claude/dec64`).** The byte count that decides whether a
   leaf tries Huffman used one table, which stalls on runs of one byte value (most of a number plane); it now uses
   four. Huffman is not tried where it cannot win: a prefix code spends at least one bit per byte, and at `balanced`

@@ -6,6 +6,11 @@
 # when at least 3% smaller, because they decode about four times slower (decode at hc -l 9 rises 40 to 80%).
 # wide_test.csv at max: 925251 -> 951938 (+2.9%) on 10 Nov 2026: the column leaves take BWT instead of LZMA2, ten times
 # faster to encode (the old setting was 0.13x of 1.0.1's encode speed); still 32% smaller than 1.0.1. ultra keeps 925251.
+# magika.onnx at hc 2641074 -> 2645422 (+0.16%) and at max 2640821 -> 2644257 (+0.13%) on 13 Nov 2026: float planes take
+# zstd 9 (hc) and BWT (max) instead of zstd 19 and LZMA2, 4 to 16 times faster to encode at the same size on the other
+# float files (budget rule, ledger decisions 22 and 23); still smaller than 1.0.1 (2663986, 2658100).
+# owid_energy_f64.npy: floors moved down to the DEC64 results (fast 1576921, hc 1405042, max 1403314; max was 1259112
+# with LZMA2 planes until 13 Nov 2026, ledger decision 21).
 $JSON/api.json fast 365846
 $JSON/api.json hc 221589
 $JSON/api.json max 213374
@@ -29,9 +34,9 @@ $JSON/owid_arr.json max 391956
 $DATA/owid_energy.pkl fast 2831486
 $DATA/owid_energy.pkl hc 2363811
 $DATA/owid_energy.pkl max 1791684
-$DATA/owid_energy_f64.npy fast 2798755
-$DATA/owid_energy_f64.npy hc 2350431
-$DATA/owid_energy_f64.npy max 1779790
+$DATA/owid_energy_f64.npy fast 1576921
+$DATA/owid_energy_f64.npy hc 1405042
+$DATA/owid_energy_f64.npy max 1403314
 $DATA/owid_test.csv fast 1063753
 $DATA/owid_test.csv hc 906634
 $DATA/owid_test.csv max 855265
@@ -47,8 +52,8 @@ $DATA/magika.safetensors fast 2614491
 $DATA/magika.safetensors hc 2614351
 $DATA/magika.safetensors max 2608222
 $DATA/magika.onnx fast 2669294
-$DATA/magika.onnx hc 2641074
-$DATA/magika.onnx max 2640821
+$DATA/magika.onnx hc 2645422
+$DATA/magika.onnx max 2644257
 $DATA/magika.gguf fast 2614223
 $DATA/magika.gguf hc 2614083
 $DATA/magika.gguf max 2607722

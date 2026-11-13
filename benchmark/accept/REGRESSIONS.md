@@ -89,6 +89,24 @@ Each is a choice that could reasonably go the other way. The number is what the 
 | 16 | Archive lifetime for the rule | 30 days, as `TRADEOFFS.md` has it; one year reported beside it | One year: `ratio` is within OpenZL's cost on 24 of 32 files instead of 3 | What the archive modes are for: at 30 days the rule says the archive default should be near `hc -l 9` |
 | 17 | Balanced: a typed plan that saves a fifth skips the record search | Yes (planning -29%; mixed_price_qty_ratio.npy 3.7% smaller and 23% faster to encode with the decimal plan; its decode goes from 15 to 28 ms on 9.6 MB) | Always run the search | A file where the record layout beats a typed plan that already saves a fifth: none in 83 |
 | 18 | Balanced: a leaf whose three samples put Huffman a tenth behind zstd does not try Huffman | Yes (with the four-table count: decimal arrays encode 36% faster; no output changed on 83 files) | Always try both | A leaf where Huffman wins the whole although it loses the samples by a tenth; the sparse-leaf case found on 12 November went the other way and has its own guard |
+| 19 | Fast settings, marked plan: the plain pass over a graph block runs only when three 64 KiB plain slices come within 35% of the graph's rate | Yes (31 MB decimal table 185 -> 109 ms; no output changed on 83 files at balanced, balanced -q, hc -l 9, speed) | Always code both | A block where plain coding wins the whole although its start, middle and end are each 35% behind the graph |
+| 20 | Balanced: the integer trial stops a width when four of sixteen sample runs put it a quarter above plain coding | Yes (no output changed on 83 files) | Always run all sixteen | An integer array whose first, 5th, 10th and last sample runs are unlike the rest |
+| 21 | `ratio`: decimal array planes take block sorting, not LZMA2 (budget rule) | Yes: the table goes from 3.3x OpenZL's cost to 0.8x and stays 23% smaller than OpenZL. Decimal files are 2 to 12.6% larger at `ratio` than at ac6f88b (owid_energy.pkl +12.6%, co2.npy +9.7%, telemetry.npy +2.1%; four small ones 1 to 2% smaller), encode 25 to 30 times faster | LZMA2 planes: 10 to 12% smaller, 8 s per 24 MB | Data kept three years or more (LZMA2 saves 18 KB per CPU second; break-even is 652 KB at 30 days, 54 at one year, 18 at three years), or `ratio` meaning "smallest without context mixing" whatever it costs |
+| 22 | `ratio`: float array planes take block sorting | Yes (same size on 6 of 7 files, magika.onnx +0.13% with decode 0.03 -> 0.24 s; encode four to six times faster) | LZMA2 planes | A float file where LZMA2 planes are clearly smaller: none in the set |
+| 23 | `hc`: float planes at zstd 9 instead of 19 | Yes: float files keep their size (magika.onnx +0.16%) and encode up to 16 times faster (10 MB safetensors 5.5 -> 0.3 s). Decimal planes keep zstd 19: zstd 12 was measured and rejected (3 to 5% larger on big tables, 12 to 14% on small ones, 36% on telemetry.pkl) | zstd 19 float planes | A float file where zstd 19 planes are clearly smaller: none in the set |
+| 24 | Balanced: an 8-bit image layout that saves a fifth ends the float, integer and decimal trials | Yes (0.8 MB photograph: 41% fewer instructions; no output changed on 83 files) | Always run every typed trial | Data that passes the image pre-check and saves a fifth as an image, but is smaller still as integers or decimals: none in 83 |
+
+### What `ratio` pays for, measured (13 November 2026)
+
+Each expensive choice in `ratio` against its cheaper alternative, over 64 files (`/tmp/cmp/var.py`, CPU time, one
+compression and 3.3 decompressions). The cost model breaks even at 652 KB saved per CPU second for data kept 30 days
+and 54 KB for one year.
+
+| Choice | Size it buys | CPU it costs | KB per CPU second | Decision |
+|---|---|---|---|---|
+| LZMA2 planes for decimal arrays (against block sorting) | 1.28% of the set, 10 to 12% of those files | 72 s of 208 | 17.9 | Dropped (decision 21) |
+| LZMA2 planes for float arrays | none (one file 0.13%) | 10 s | below 1 | Dropped (decision 22) |
+| LZMA2 extreme preset (against preset 9) | 0.46% of the set; samba 0.64%, CSV 1.3 to 1.8%; mozilla is 0.13% larger with it | 75 s of 208 | 6.2 | Kept: without it samba, x-ray and the CSV files would be larger than with 1.0.1 (target 4). Revisit at the end |
 
 ### The decisions above under the budget rule (12 November 2026)
 
@@ -142,6 +160,9 @@ thread could release. Caught on a 10 MB file before any commit; the reservation 
 Two round-trip failures appeared in an `ultra` pass on 12 November (magika.safetensors, mr). Both were the kernel
 killing the encoder for memory while a second context-mixing job ran beside it; each file round-trips when run alone.
 `ultra` needs about 4.5 GB: one job at a time on the 2-core VM.
+
+The same happened once more on 13 November (loghub_all.log at `ultra`, during the gate, while profiling jobs ran
+beside it); alone it gives 185,557 bytes and round-trips. Nothing else may run during a gate.
 
 ## Not regressions: gaps to rivals that are still open
 
