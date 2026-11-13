@@ -110,6 +110,10 @@ build/test-fastint-asan: tests/test_fastint.c src/kolmo.c src/kolmo.h src/kgraph
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fastint.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-fastint: build/test-fastint-asan
 	./build/test-fastint-asan
+build/test-planner-ownership-asan: tests/test_planner_ownership.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_planner_ownership.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-planner-ownership: build/test-planner-ownership-asan
+	./build/test-planner-ownership-asan
 build/test-cmimg-asan: tests/test_cmimg.c src/kolmo.c src/kolmo.h src/cm.inc build/libvendor.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmimg.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-cmimg: build/test-cmimg-asan

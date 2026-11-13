@@ -82,16 +82,18 @@ int main(void) {
     size_t cases = 0, graph_cases = 0, leaked_cases = 0;
     for (size_t s = 0; s < sizeof(seeds) / sizeof(seeds[0]); s++) for (int kind = 0; kind < 3; kind++) {
         size_t n = fill(a, kind, seeds[s]);
-        for (int effort = 0; effort <= 1; effort++) for (int quick = 0; quick <= 1; quick++) {
+        /* native: the opt-in native graph leaf (make_plan's ninth argument) keeps the integer graph trial alive after
+         * an image or record layout has already won, which is one more way a tentative record plan gets displaced */
+        for (int effort = 0; effort <= 1; effort++) for (int quick = 0; quick <= 1; quick++) for (int native = 0; native <= 1; native++) {
             size_t before = nrecords;
             observe = 1;
-            plan_t p = make_plan(a, n, effort, 1, 1, 1, 0, quick ? 4 : 0);
+            plan_t p = make_plan(a, n, effort, 1, 1, 1, 0, quick ? 4 : 0, native);
             observe = 0;
             graph_cases += p.t == T_KG;
             free(p.fs); free(p.rec);
             leaked_cases += nrecords != before;
-            printf("seed=%llu kind=%d effort=%d light=%d plan=%d live_records=%zu\n",
-                   (unsigned long long)seeds[s], kind, effort, quick ? 4 : 0, p.t, nrecords);
+            printf("seed=%llu kind=%d effort=%d light=%d native=%d plan=%d live_records=%zu\n",
+                   (unsigned long long)seeds[s], kind, effort, quick ? 4 : 0, native, p.t, nrecords);
             cases++;
         }
     }
