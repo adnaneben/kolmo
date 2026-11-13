@@ -25,7 +25,7 @@ production decoder reads.
 - **Ratio.** Kolmo's best pipeline beats both leaders on every data type measured except GHCN weather series. The
   gaps are largest on structured tables: +44–66% vs OpenZL on regular tables, +16% on real-world CSV with the picker.
 - **Speed.**
-  - Kolmo's production modes are never inside zstd-3's speed budget: 0 of about 250 inputs.
+  - Kolmo's production modes are almost never inside zstd-3's speed budget: `fast` managed 3 of about 300 inputs (Covertype CSV and two real-world CSVs).
   - The type-first frames encode at 150–175 MB/s and decode at 155–190 MB/s on arrays, matching or beating zstd-3
     (73–101 MB/s encode, 150–175 MB/s decode).
   - On audio, decode is the bottleneck. A faster inverse loop decodes faster than zstd-3 (2.66 vs 2.93 ms per
