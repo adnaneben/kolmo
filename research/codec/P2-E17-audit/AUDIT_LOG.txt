@@ -1,0 +1,29 @@
+{
+  "status": "PASSED_EVIDENCE_CONSISTENCY_ONLY",
+  "acceptance": "NOT_EVALUATED",
+  "artifact_sha256": "f2e4c589b9e77c3c1cce609f3df120d6a6fc0be6033cc18f2a3cf8ec00669e1a",
+  "executed_commit": "f4fcadcd762d7d7bc9e484a4730900eb3388d5e9",
+  "openzl_commit_from_executed_workflow": "32246b48faee46807f84183dac4db479089f5445",
+  "manifest_entries_verified": 7842,
+  "input_files_separately_verified": 61,
+  "configurations_per_pass": 488,
+  "matching_recorded_frame_identities": 488,
+  "timing_events_reconciled": 5856,
+  "paired_cost_samples_recomputed": 2928,
+  "recorded_sanitizer_gate_cases": 183,
+  "view_counts": {
+    "npy": 50,
+    "wav": 10,
+    "csv": 1
+  },
+  "largest_input_bytes": 82741337,
+  "modeled_cost_parameters": {
+    "link_bytes_s": 125000000,
+    "reads": 3.3,
+    "retention_months": 1,
+    "storage_usd_per_GB_month": 0.023,
+    "cpu_usd_per_hour": 0.05402777777777778,
+    "cpu_override_ratio": 1.03,
+    "egress_transfers": 0
+  }
+}

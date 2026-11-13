@@ -1,0 +1,40 @@
+{
+  "status": "PASS_ARCHIVED_EVIDENCE_AUDIT",
+  "protocol_commit": "b5451487f27e2c7031793e200d90e4bee83ff746",
+  "python": "3.13.5",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "tests": 43,
+  "manifests_verified": 6182,
+  "original_input_instances": 64,
+  "unique_original_input_hashes": 63,
+  "record_rows": 768,
+  "successful_records": 766,
+  "failed_records": 2,
+  "timed_operations": 4596,
+  "paired_costs_recomputed": 2298,
+  "medians_recomputed": 5362,
+  "new_roundtrips": 0,
+  "new_benchmarks": 0,
+  "new_workflow_minutes": 0,
+  "limits": [
+    "Artifacts exclude encoded frames; recorded byte-exact flags/status/hash repeatability checked, not new decoding.",
+    "Unit tests use labelled synthetic audit fixtures, not codec performance."
+  ],
+  "source_sha256": {
+    "test_audit_csv.py": "ecfee8cc60518a0e30441969f122ec71b417bc010530445f62d55e2695303cf7",
+    "audit_csv.py": "3eb5f0dd2a62fc67459748d1a7d401a0da5537393d0a71bf017890d9ed943fae"
+  },
+  "audit_json_sha256": "17d8d4719b340e26c4c051760abae00d5cca80a2b9524de144e129cdc809b366",
+  "test_log_sha256": "411da031b140bc7575b6128b018e6a2d29222e4b6111156030f7def7a914ec16",
+  "environment_note": "Initial audit exited 0 with an unrelated installed site-hook spreadsheet warmup warning; standard-library python -S rerun was clean and byte-identical. Original warning retained.",
+  "archive_pins": {
+    "E26": {
+      "filename": "Kolmo_C1_E26_43403830702.zip",
+      "sha256": "606ab9dbf841f86bc9c69b1c185e898c168bf929bb351db4ffb4d5938cf1af08"
+    },
+    "E27": {
+      "filename": "Kolmo_C1_E27_43407137403.zip",
+      "sha256": "6ca1ee6612ee1f5b92a79cf189af2ce3c55c1fedc3d2f1cc3e67b29b0a81a3ef"
+    }
+  }
+}

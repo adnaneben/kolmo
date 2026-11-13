@@ -1,0 +1,70 @@
+{
+  "status": "DEVELOPMENT_VERIFIED_TARGETED_OPTIMIZATION_NOT_P2_ACCEPTANCE",
+  "source_reference": "2f3308a3380a140ad0f6873ae228de7715e5eef5",
+  "local_checkout": "85c4a281b0f52c6c68e8c4dba335fdd890ee5278",
+  "remote_start": "da639cb5b5ca1bec33b33aff3c191d4c15657175",
+  "claim_commit": "68c7ddbbb5d41da6b819fc1510fc04c191fa9085",
+  "core_blob": "e06467c8872d494b97270811bedf6fd0bac2aa31",
+  "graph_blob": "91ad067dc583b9d9e6f060f214a0f7c402bb4a31",
+  "original_reader_sha256": "66650ea9a4b8b71148f6825ba760a346f998f26bcd9d5467b6acde3bf272050d",
+  "pre_repair_reader_identical": true,
+  "artifact": {
+    "status": "passed_development_replay",
+    "archive_sha256": "00ae71bdc5e4f3612d017dfeabb0f5154742feda67bde2be92f1bfeefb50ebe1",
+    "verified_manifest_entries": 282,
+    "complete_inputs": 8,
+    "cli_roundtrips": 8,
+    "timed_rans_inputs": 7,
+    "rounds": [
+      7,
+      5
+    ],
+    "sample_batches": 504,
+    "new_source_data": false,
+    "production_changed": false,
+    "fresh_validation": false,
+    "P2_competitor_acceptance": false,
+    "binary_sha256": {
+      "base": "7a3cd66d0aefcf28b85702522fca4a706d620930730bb1681004650078177517",
+      "fast": "2c890f2bd1e79e54be1af9f17461804aa9f0fc5e04ed86d1b35093bc465bf4bd",
+      "asan": "b824840133c1a99e996ed6957e63abf78a50a25f24b6ed416ef029a7ef27833a"
+    },
+    "cost_boundary": "decode only; leaf kernel or full CZN1 verified decoding. No encode/pipeline competitor timing. 32 MiB displacement before batch, not before every decode."
+  },
+  "selftest_per_build": {
+    "valid_leaves": 2663,
+    "truncations": 10748,
+    "leaf_mutations": 12805,
+    "full_graph_roundtrips_and_ranges": 107,
+    "full_frame_mutations": 1536,
+    "allocation_failure": 1,
+    "decision_digest": "4f59cfd2bd87566c",
+    "status": "passed"
+  },
+  "python_tests": 11,
+  "golden_cli_decodes": 8,
+  "archived_cli_decodes": 8,
+  "full_frame_builds": [
+    "GCC original algorithm",
+    "GCC singleton fast path",
+    "Clang singleton ASan/UBSan"
+  ],
+  "source_preserved": true,
+  "new_workflow_runner_minutes": 0,
+  "production_integrated": false,
+  "observed_timestamp_warm_kernel_ratio": [
+    0.7981549627394674,
+    0.7771782277759265
+  ],
+  "limitations": [
+    "Only pinned full decoder/CLI validated; not every historical binary.",
+    "Full core and harness instrumented, vendor archive uninstrumented.",
+    "One direct rANS malloc failure position tested; not comprehensive allocation failure coverage.",
+    "On rejection partial destination contents can differ; both report failure and no accepted output is altered.",
+    "Timing is local shared x86-64 O2, not Apple M5 or matched competitor-cost evidence.",
+    "The allocation hook is identical in both staged core variants and inactive during timing.",
+    "Seven RANS inputs timed; the eighth HUF input is correctness-only.",
+    "Initial allocation hook was ineffective because upstream macros undefine malloc; this harness issue was corrected and all suites rerun.",
+    "No pipeline size gain, fresh source validation, general aggregate speed gain, or production change is claimed."
+  ]
+}

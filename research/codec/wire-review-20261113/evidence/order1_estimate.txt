@@ -1,0 +1,9 @@
+14739_PRCP oz 13423  adapt order0 13154  order1(prev) 15801  order1(prev>>2) 15285
+14739_TMAX oz 26169  adapt order0 25861  order1(prev) 23983  order1(prev>>2) 23985
+14739_TMIN oz 21937  adapt order0 25634  order1(prev) 21125  order1(prev>>2) 21285
+23174_PRCP oz 4151  adapt order0 4081  order1(prev) 4686  order1(prev>>2) 4558
+23174_TMAX oz 15836  adapt order0 18448  order1(prev) 16224  order1(prev>>2) 16224
+23174_TMIN oz 13451  adapt order0 18223  order1(prev) 13472  order1(prev>>2) 13472
+94728_PRCP oz 26170  adapt order0 22402  order1(prev) 26464  order1(prev>>2) 25650
+94728_TMAX oz 38645  adapt order0 44642  order1(prev) 38737  order1(prev>>2) 38725
+94728_TMIN oz 37357  adapt order0 44064  order1(prev) 35139  order1(prev>>2) 35286

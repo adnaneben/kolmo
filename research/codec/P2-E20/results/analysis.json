@@ -1,0 +1,522 @@
+{
+ "first": {
+  "missing": [
+   [
+    "F38__classic-rock",
+    "openzl_csv_9"
+   ]
+  ],
+  "H1": {
+   "n": 40,
+   "k": 25,
+   "cp95_lower": 0.4828,
+   "pass_": false,
+   "per_family": {
+    "ESC50:major0": "7/8",
+    "ESC50:major1": "4/8",
+    "ESC50:major2": "7/8",
+    "ESC50:major3": "2/8",
+    "ESC50:major4": "5/8"
+   },
+   "all_pipelines_fit_and_smaller": {
+    "kolmo_fast": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tb_best": 6,
+    "tb_lazy": 23,
+    "tp_arch19": 0,
+    "tp_pent": 3,
+    "tp_phuf": 24,
+    "tp_phuf_pg16": 25
+   }
+  },
+  "H2": {
+   "ESC50": {
+    "n": 40,
+    "winners": {
+     "tp_arch19": 19,
+     "tp_pent": 9,
+     "tb_best": 3,
+     "openzl_9": 5,
+     "kolmo_fast": 1,
+     "kolmo_max": 3
+    },
+    "kolmo": 35,
+    "openzl": 5,
+    "pass_": true,
+    "frontier_bytes_vs_openzl9": -0.1026
+   },
+   "F38": {
+    "n": 24,
+    "winners": {
+     "openzl_9": 23,
+     "openzl_missing": 1
+    },
+    "kolmo": 0,
+    "openzl": 23,
+    "pass_": false,
+    "frontier_bytes_vs_openzl9": 0.0
+   }
+  },
+  "H3": {
+   "n": 24,
+   "container_unique_smallest_speed": 4,
+   "container_unique_smallest_archive": 1,
+   "useful_in_this_run": false,
+   "detail": [
+    {
+     "input": "F38__police-killings",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__riddler-castles",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__weather-check",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__mayweather-mcgregor",
+     "speed": [
+      656687,
+      "mcsv_planes_huf"
+     ],
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__classic-rock",
+     "speed": [
+      435040,
+      "mcsv_planes_huf"
+     ],
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__sandy-311-calls",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__food-world-cup",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__impeachment-polls",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__riddler-pick-lowest",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__region-survey",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__tenth-circuit",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__twitter-ratio",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__ncaa-womens-basketball-tournament",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__congress-age",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__police-deaths",
+     "speed": [
+      713380,
+      "mcsv_planes_huf"
+     ],
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__undefeated-boxers",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__nba-raptor",
+     "speed": [
+      1312227,
+      "tb_best"
+     ],
+     "speed_best_noncontainer": [
+      1312227,
+      "tb_best"
+     ],
+     "archive": [
+      1174423,
+      "mcsv_planes_huf"
+     ],
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__thanksgiving-2015",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__goose",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__pollster-ratings",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__comic-characters",
+     "speed": [
+      455712,
+      "mcsv_planes_huf"
+     ],
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__biopics",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__congress-generic-ballot",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__primary-project-2022",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    }
+   ]
+  }
+ },
+ "confirmation": {
+  "missing": [
+   [
+    "F38__classic-rock",
+    "openzl_csv_9"
+   ]
+  ],
+  "H1": {
+   "n": 40,
+   "k": 24,
+   "cp95_lower": 0.4578,
+   "pass_": false,
+   "per_family": {
+    "ESC50:major0": "6/8",
+    "ESC50:major1": "3/8",
+    "ESC50:major2": "5/8",
+    "ESC50:major3": "4/8",
+    "ESC50:major4": "6/8"
+   },
+   "all_pipelines_fit_and_smaller": {
+    "kolmo_fast": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tb_best": 8,
+    "tb_lazy": 23,
+    "tp_arch19": 0,
+    "tp_pent": 3,
+    "tp_phuf": 25,
+    "tp_phuf_pg16": 24
+   }
+  },
+  "H2": {
+   "ESC50": {
+    "n": 40,
+    "winners": {
+     "tp_arch19": 20,
+     "tp_pent": 8,
+     "tb_best": 3,
+     "openzl_9": 5,
+     "kolmo_fast": 1,
+     "kolmo_max": 3
+    },
+    "kolmo": 35,
+    "openzl": 5,
+    "pass_": true,
+    "frontier_bytes_vs_openzl9": -0.1026
+   },
+   "F38": {
+    "n": 24,
+    "winners": {
+     "openzl_9": 23,
+     "openzl_missing": 1
+    },
+    "kolmo": 0,
+    "openzl": 23,
+    "pass_": false,
+    "frontier_bytes_vs_openzl9": 0.0
+   }
+  },
+  "H3": {
+   "n": 24,
+   "container_unique_smallest_speed": 4,
+   "container_unique_smallest_archive": 1,
+   "useful_in_this_run": false,
+   "detail": [
+    {
+     "input": "F38__police-killings",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__riddler-castles",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__weather-check",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__mayweather-mcgregor",
+     "speed": [
+      656687,
+      "mcsv_planes_huf"
+     ],
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__classic-rock",
+     "speed": [
+      435040,
+      "mcsv_planes_huf"
+     ],
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__sandy-311-calls",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__food-world-cup",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__impeachment-polls",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__riddler-pick-lowest",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__region-survey",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__tenth-circuit",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__twitter-ratio",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__ncaa-womens-basketball-tournament",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__congress-age",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__police-deaths",
+     "speed": [
+      713380,
+      "mcsv_planes_huf"
+     ],
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__undefeated-boxers",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__nba-raptor",
+     "speed": [
+      1195494,
+      "kolmo_fast"
+     ],
+     "speed_best_noncontainer": [
+      1195494,
+      "kolmo_fast"
+     ],
+     "archive": [
+      1174423,
+      "mcsv_planes_huf"
+     ],
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__thanksgiving-2015",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__goose",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__pollster-ratings",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__comic-characters",
+     "speed": [
+      455712,
+      "mcsv_planes_huf"
+     ],
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__biopics",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__congress-generic-ballot",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    },
+    {
+     "input": "F38__primary-project-2022",
+     "speed": null,
+     "speed_best_noncontainer": null,
+     "archive": null,
+     "archive_best_noncontainer": null
+    }
+   ]
+  }
+ },
+ "decisions": {
+  "H1_pass_both_runs": false,
+  "H2_ESC50_pass_both": true,
+  "H2_F38_pass_both": false,
+  "P2D1_useful_both_runs": false
+ }
+}

@@ -1,0 +1,332 @@
+{
+ "dev (E02C-harness run 3) | fast": {
+  "int_files": 12,
+  "production": 898742,
+  "configs": {
+   "exist+ent": {
+    "bytes": 1053516,
+    "vs_production_pct": 17.221182497312903,
+    "decode_vs_production": 1.2500046802509295
+   },
+   "planes+ent": {
+    "bytes": 936149,
+    "vs_production_pct": 4.1621510956425745,
+    "decode_vs_production": 1.617944167159275
+   },
+   "exist+prod3": {
+    "bytes": 898905,
+    "vs_production_pct": 0.01813646185446771,
+    "decode_vs_production": 0.988038413230417
+   },
+   "planes+prod3": {
+    "bytes": 881295,
+    "vs_production_pct": -1.9412690182499581,
+    "decode_vs_production": 1.0136155590829203
+   },
+   "exist+prod19": {
+    "bytes": 845056,
+    "vs_production_pct": -5.973460681708431,
+    "decode_vs_production": 1.1411892716168026
+   },
+   "planes+prod19": {
+    "bytes": 840116,
+    "vs_production_pct": -6.523117869199391,
+    "decode_vs_production": 1.1285731588460146
+   }
+  },
+  "planes_ent_vs_exist_ent_pct": -11.140504747910807,
+  "multibyte_families": {
+   "audio_s16": {
+    "files": 6,
+    "planes_ent_vs_exist_ent_pct": -11.983406374841687,
+    "exist_ent_vs_production_pct": 11.70088052710414,
+    "planes_ent_vs_production_pct": -1.6846899107351598
+   },
+   "fs_meta": {
+    "files": 2,
+    "planes_ent_vs_exist_ent_pct": -10.369003386032405,
+    "exist_ent_vs_production_pct": 28.232911927316273,
+    "planes_ent_vs_production_pct": 14.936436947564879
+   },
+   "raster_16": {
+    "files": 1,
+    "planes_ent_vs_exist_ent_pct": -13.335807050092763,
+    "exist_ent_vs_production_pct": 7.5418994413407825,
+    "planes_ent_vs_production_pct": -6.7996807661612095
+   },
+   "series_64": {
+    "files": 1,
+    "planes_ent_vs_exist_ent_pct": -17.067468269873075,
+    "exist_ent_vs_production_pct": 14.10060975609757,
+    "planes_ent_vs_production_pct": -5.373475609756095
+   }
+  }
+ },
+ "dev (E02C-harness run 3) | hc": {
+  "int_files": 8,
+  "production": 551671,
+  "configs": {
+   "exist+ent": {
+    "bytes": 684258,
+    "vs_production_pct": 24.03370849654958,
+    "decode_vs_production": 1.2746394225658844
+   },
+   "planes+ent": {
+    "bytes": 627649,
+    "vs_production_pct": 13.772338948394957,
+    "decode_vs_production": 1.5249551218110124
+   },
+   "exist+prod3": {
+    "bytes": 578704,
+    "vs_production_pct": 4.900203200820785,
+    "decode_vs_production": 0.9633597542775654
+   },
+   "planes+prod3": {
+    "bytes": 573578,
+    "vs_production_pct": 3.971026209461792,
+    "decode_vs_production": 0.99222529488648
+   },
+   "exist+prod19": {
+    "bytes": 551769,
+    "vs_production_pct": 0.017764210915571788,
+    "decode_vs_production": 1.0563632637476923
+   },
+   "planes+prod19": {
+    "bytes": 548150,
+    "vs_production_pct": -0.6382427207520469,
+    "decode_vs_production": 1.0091758995408862
+   }
+  },
+  "planes_ent_vs_exist_ent_pct": -8.27304905459637,
+  "multibyte_families": {
+   "audio_s16": {
+    "files": 2,
+    "planes_ent_vs_exist_ent_pct": -5.99717617680472,
+    "exist_ent_vs_production_pct": 12.104702071906392,
+    "planes_ent_vs_production_pct": 5.3815855861721
+   },
+   "fs_meta": {
+    "files": 2,
+    "planes_ent_vs_exist_ent_pct": -10.36592727552107,
+    "exist_ent_vs_production_pct": 35.11687830197423,
+    "planes_ent_vs_production_pct": 21.110760960237272
+   },
+   "raster_16": {
+    "files": 1,
+    "planes_ent_vs_exist_ent_pct": -13.336796793825146,
+    "exist_ent_vs_production_pct": 12.068535307327632,
+    "planes_ent_vs_production_pct": -2.8778175164268505
+   },
+   "series_64": {
+    "files": 1,
+    "planes_ent_vs_exist_ent_pct": -17.07317073170732,
+    "exist_ent_vs_production_pct": 18.113654301499604,
+    "planes_ent_vs_production_pct": -2.0520915548539853
+   }
+  }
+ },
+ "E02E | fast": {
+  "int_files": 9,
+  "production": 219566,
+  "configs": {
+   "exist+ent": {
+    "bytes": 250544,
+    "vs_production_pct": 14.108741790623313,
+    "decode_vs_production": 1.5986779410415666
+   },
+   "planes+ent": {
+    "bytes": 204155,
+    "vs_production_pct": -7.0188462694588445,
+    "decode_vs_production": 1.5444049925263197
+   },
+   "exist+prod3": {
+    "bytes": 219681,
+    "vs_production_pct": 0.052376050936842056,
+    "decode_vs_production": 1.0047739818796981
+   },
+   "planes+prod3": {
+    "bytes": 210385,
+    "vs_production_pct": -4.181430640445239,
+    "decode_vs_production": 1.0224480214982976
+   },
+   "exist+prod19": {
+    "bytes": 213374,
+    "vs_production_pct": -2.8201087600083774,
+    "decode_vs_production": 1.4185055877226591
+   },
+   "planes+prod19": {
+    "bytes": 205430,
+    "vs_production_pct": -6.438155269941614,
+    "decode_vs_production": 1.523103115202599
+   }
+  },
+  "planes_ent_vs_exist_ent_pct": -18.515310683951725,
+  "multibyte_families": {
+   "F1_ghcn_daily": {
+    "files": 8,
+    "planes_ent_vs_exist_ent_pct": -19.770960482798593,
+    "exist_ent_vs_production_pct": 15.273356129387249,
+    "planes_ent_vs_production_pct": -7.517293558149585
+   }
+  }
+ },
+ "E02E | hc": {
+  "int_files": 17,
+  "production": 2692268,
+  "configs": {
+   "exist+ent": {
+    "bytes": 2710599,
+    "vs_production_pct": 0.6808757523396602,
+    "decode_vs_production": 1.4831513707233366
+   },
+   "planes+ent": {
+    "bytes": 2664210,
+    "vs_production_pct": -1.042169650272562,
+    "decode_vs_production": 1.4720863577925258
+   },
+   "exist+prod3": {
+    "bytes": 2715134,
+    "vs_production_pct": 0.849321092848121,
+    "decode_vs_production": 0.9879013224279568
+   },
+   "planes+prod3": {
+    "bytes": 2705838,
+    "vs_production_pct": 0.5040360023593538,
+    "decode_vs_production": 0.9885834158406583
+   },
+   "exist+prod19": {
+    "bytes": 2692486,
+    "vs_production_pct": 0.008097262233919267,
+    "decode_vs_production": 1.1410079395777615
+   },
+   "planes+prod19": {
+    "bytes": 2684542,
+    "vs_production_pct": -0.2869699450426144,
+    "decode_vs_production": 1.151123005657409
+   }
+  },
+  "planes_ent_vs_exist_ent_pct": -1.7113929430358388,
+  "multibyte_families": {
+   "F1_ghcn_daily": {
+    "files": 8,
+    "planes_ent_vs_exist_ent_pct": -19.771634615384613,
+    "exist_ent_vs_production_pct": 18.95959032601531,
+    "planes_ent_vs_production_pct": -4.5606652132028636
+   }
+  }
+ },
+ "E02F | fast": {
+  "int_files": 16,
+  "production": 8810204,
+  "configs": {
+   "exist+ent": {
+    "bytes": 9210447,
+    "vs_production_pct": 4.542948154208459,
+    "decode_vs_production": 1.0656616736567577
+   },
+   "planes+ent": {
+    "bytes": 8812857,
+    "vs_production_pct": 0.030112810100657583,
+    "decode_vs_production": 1.7358885753669155
+   },
+   "exist+prod3": {
+    "bytes": 8810565,
+    "vs_production_pct": 0.00409752146488529,
+    "decode_vs_production": 0.996885371589035
+   },
+   "planes+prod3": {
+    "bytes": 8797102,
+    "vs_production_pct": -0.1487139230828216,
+    "decode_vs_production": 0.9940980978811286
+   },
+   "exist+prod19": {
+    "bytes": 8641763,
+    "vs_production_pct": -1.91188535475455,
+    "decode_vs_production": 1.039809747433374
+   },
+   "planes+prod19": {
+    "bytes": 8609473,
+    "vs_production_pct": -2.278392191599654,
+    "decode_vs_production": 1.0819679674404492
+   }
+  },
+  "planes_ent_vs_exist_ent_pct": -4.316728601771446,
+  "multibyte_families": {
+   "F1_eeg": {
+    "files": 4,
+    "planes_ent_vs_exist_ent_pct": -10.219460764860633,
+    "exist_ent_vs_production_pct": 11.407041956966113,
+    "planes_ent_vs_production_pct": 0.02184301488212803
+   },
+   "F2_pageviews": {
+    "files": 8,
+    "planes_ent_vs_exist_ent_pct": -22.470637234485636,
+    "exist_ent_vs_production_pct": 16.771068399346344,
+    "planes_ent_vs_production_pct": -9.468134775503856
+   },
+   "F3_speech": {
+    "files": 3,
+    "planes_ent_vs_exist_ent_pct": -2.589675112050349,
+    "exist_ent_vs_production_pct": 2.879344237855208,
+    "planes_ent_vs_production_pct": 0.21510346468687214
+   }
+  }
+ },
+ "E02F | hc": {
+  "int_files": 13,
+  "production": 8627589,
+  "configs": {
+   "exist+ent": {
+    "bytes": 9267268,
+    "vs_production_pct": 7.41434252373403,
+    "decode_vs_production": 1.0508748010947377
+   },
+   "planes+ent": {
+    "bytes": 8832072,
+    "vs_production_pct": 2.370105947327805,
+    "decode_vs_production": 1.70007951885291
+   },
+   "exist+prod3": {
+    "bytes": 8814644,
+    "vs_production_pct": 2.1681028152824577,
+    "decode_vs_production": 1.0685637630763496
+   },
+   "planes+prod3": {
+    "bytes": 8851780,
+    "vs_production_pct": 2.598535929330903,
+    "decode_vs_production": 0.9764182015489704
+   },
+   "exist+prod19": {
+    "bytes": 8627752,
+    "vs_production_pct": 0.0018892879575016508,
+    "decode_vs_production": 1.1201744613788949
+   },
+   "planes+prod19": {
+    "bytes": 8596030,
+    "vs_production_pct": -0.36579164816497034,
+    "decode_vs_production": 1.0487908102705112
+   }
+  },
+  "planes_ent_vs_exist_ent_pct": -4.6960549754253345,
+  "multibyte_families": {
+   "F1_eeg": {
+    "files": 4,
+    "planes_ent_vs_exist_ent_pct": -11.834104497130992,
+    "exist_ent_vs_production_pct": 13.741876069215397,
+    "planes_ent_vs_production_pct": 0.2815435981872172
+   },
+   "F2_pageviews": {
+    "files": 5,
+    "planes_ent_vs_exist_ent_pct": -23.02951501755298,
+    "exist_ent_vs_production_pct": 20.412700400801608,
+    "planes_ent_vs_production_pct": -7.317760521042082
+   },
+   "F3_speech": {
+    "files": 3,
+    "planes_ent_vs_exist_ent_pct": -2.6271842350169883,
+    "exist_ent_vs_production_pct": 5.352162870666177,
+    "planes_ent_vs_production_pct": 2.584367456478631
+   }
+  }
+ }
+}

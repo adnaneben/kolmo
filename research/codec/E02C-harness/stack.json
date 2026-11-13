@@ -1,0 +1,328 @@
+{
+ "dev | fast": {
+  "files": 12,
+  "production": 898742,
+  "exist_prod": 898905,
+  "planes_prod": 881295,
+  "oracle_gate": 881295,
+  "oracle_gate_planes_chosen": 10,
+  "oracle_broad": 839207,
+  "oracle_broad_choices": [
+   [
+    "exist+zstd19",
+    4
+   ],
+   [
+    "planes+zstd19",
+    4
+   ],
+   [
+    "planes+prod19",
+    3
+   ],
+   [
+    "planes+ent",
+    1
+   ]
+  ],
+  "decode_planes_vs_exist": 1.0258867929728341,
+  "decode_gate_vs_exist": 1.0247002683101742,
+  "exist_prod_vs_production_pct": 0.01813646185446771,
+  "planes_prod_vs_production_pct": -1.9412690182499581,
+  "oracle_gate_vs_production_pct": -1.9412690182499581,
+  "oracle_broad_vs_production_pct": -6.624259242363218,
+  "planes_gain_by_context": {
+   "max_ow1_order2": {
+    "files": 2,
+    "change_pct": 0.0
+   },
+   "max_ow2_order1": {
+    "files": 3,
+    "change_pct": -4.243405739612771
+   },
+   "max_ow4_order1": {
+    "files": 4,
+    "change_pct": -1.2575663537446435
+   },
+   "max_ow4_order2": {
+    "files": 3,
+    "change_pct": -1.96347730544294
+   }
+  }
+ },
+ "dev | hc": {
+  "files": 8,
+  "production": 551671,
+  "exist_prod": 551769,
+  "planes_prod": 548150,
+  "oracle_gate": 548150,
+  "oracle_gate_planes_chosen": 6,
+  "oracle_broad": 548100,
+  "oracle_broad_choices": [
+   [
+    "planes+zstd19",
+    4
+   ],
+   [
+    "exist+zstd19",
+    2
+   ],
+   [
+    "planes+ent",
+    1
+   ],
+   [
+    "planes+prod19",
+    1
+   ]
+  ],
+  "decode_planes_vs_exist": 0.955330362360957,
+  "decode_gate_vs_exist": 0.9586861899694262,
+  "exist_prod_vs_production_pct": 0.017764210915571788,
+  "planes_prod_vs_production_pct": -0.6382427207520469,
+  "oracle_gate_vs_production_pct": -0.6382427207520469,
+  "oracle_broad_vs_production_pct": -0.647306093668143,
+  "planes_gain_by_context": {
+   "max_ow1_order2": {
+    "files": 2,
+    "change_pct": 0.0
+   },
+   "max_ow2_order1": {
+    "files": 2,
+    "change_pct": -1.3408786163950803
+   },
+   "max_ow4_order1": {
+    "files": 2,
+    "change_pct": -0.14263604801940666
+   },
+   "max_ow4_order2": {
+    "files": 2,
+    "change_pct": -1.0332481322242404
+   }
+  }
+ },
+ "E02E | fast": {
+  "files": 9,
+  "production": 219566,
+  "exist_prod": 219681,
+  "planes_prod": 210385,
+  "oracle_gate": 210385,
+  "oracle_gate_planes_chosen": 8,
+  "oracle_broad": 203774,
+  "oracle_broad_choices": [
+   [
+    "planes+rans",
+    6
+   ],
+   [
+    "exist+rans",
+    1
+   ],
+   [
+    "planes+ent",
+    1
+   ],
+   [
+    "gpp+huf",
+    1
+   ]
+  ],
+  "decode_planes_vs_exist": 1.0175900649671834,
+  "decode_gate_vs_exist": 1.0159364817829268,
+  "exist_prod_vs_production_pct": 0.052376050936842056,
+  "planes_prod_vs_production_pct": -4.181430640445239,
+  "oracle_gate_vs_production_pct": -4.181430640445239,
+  "oracle_broad_vs_production_pct": -7.192370403432225,
+  "planes_gain_by_context": {
+   "max_ow1_order1": {
+    "files": 1,
+    "change_pct": 0.0
+   },
+   "max_ow2_order0": {
+    "files": 3,
+    "change_pct": -14.84603506222182
+   },
+   "max_ow2_order1": {
+    "files": 5,
+    "change_pct": -0.756382821227175
+   }
+  }
+ },
+ "E02E | hc": {
+  "files": 17,
+  "production": 2692268,
+  "exist_prod": 2692486,
+  "planes_prod": 2684542,
+  "oracle_gate": 2684542,
+  "oracle_gate_planes_chosen": 8,
+  "oracle_broad": 2573370,
+  "oracle_broad_choices": [
+   [
+    "gpp+rans",
+    6
+   ],
+   [
+    "planes+rans",
+    6
+   ],
+   [
+    "exist+rans",
+    2
+   ],
+   [
+    "gpp+zstd3",
+    1
+   ],
+   [
+    "planes+ent",
+    1
+   ],
+   [
+    "gpp+huf",
+    1
+   ]
+  ],
+  "decode_planes_vs_exist": 1.0088650269019082,
+  "decode_gate_vs_exist": 1.0098979110690505,
+  "exist_prod_vs_production_pct": 0.008097262233919267,
+  "planes_prod_vs_production_pct": -0.2869699450426144,
+  "oracle_gate_vs_production_pct": -0.2869699450426144,
+  "oracle_broad_vs_production_pct": -4.4162765371055235,
+  "planes_gain_by_context": {
+   "max_ow1_order1": {
+    "files": 8,
+    "change_pct": 0.0
+   },
+   "max_ow1_order2": {
+    "files": 1,
+    "change_pct": 0.0
+   },
+   "max_ow2_order0": {
+    "files": 3,
+    "change_pct": -7.498077416047167
+   },
+   "max_ow2_order1": {
+    "files": 5,
+    "change_pct": -2.9457879351581173
+   }
+  }
+ },
+ "E02F | fast": {
+  "files": 16,
+  "production": 8810204,
+  "exist_prod": 8810565,
+  "planes_prod": 8797102,
+  "oracle_gate": 8795523,
+  "oracle_gate_planes_chosen": 13,
+  "oracle_broad": 8563634,
+  "oracle_broad_choices": [
+   [
+    "planes+ent",
+    3
+   ],
+   [
+    "lpp128+ent",
+    3
+   ],
+   [
+    "exist+zstd19",
+    3
+   ],
+   [
+    "planes+prod3",
+    3
+   ],
+   [
+    "planes+huf",
+    2
+   ],
+   [
+    "planes+prod19",
+    1
+   ]
+  ],
+  "decode_planes_vs_exist": 0.9972040178466421,
+  "decode_gate_vs_exist": 0.9972217648591675,
+  "exist_prod_vs_production_pct": 0.00409752146488529,
+  "planes_prod_vs_production_pct": -0.1487139230828216,
+  "oracle_gate_vs_production_pct": -0.16663632306357368,
+  "oracle_broad_vs_production_pct": -2.79868661384004,
+  "planes_gain_by_context": {
+   "max_ow1_order1": {
+    "files": 1,
+    "change_pct": 0.0
+   },
+   "max_ow2_order1": {
+    "files": 8,
+    "change_pct": -0.0745616650277392
+   },
+   "max_ow4_order1": {
+    "files": 6,
+    "change_pct": -9.018144382962301
+   },
+   "max_ow4_order2": {
+    "files": 1,
+    "change_pct": -0.20369626504272986
+   }
+  }
+ },
+ "E02F | hc": {
+  "files": 13,
+  "production": 8627589,
+  "exist_prod": 8627752,
+  "planes_prod": 8596030,
+  "oracle_gate": 8595996,
+  "oracle_gate_planes_chosen": 10,
+  "oracle_broad": 8550854,
+  "oracle_broad_choices": [
+   [
+    "lpp128+ent",
+    3
+   ],
+   [
+    "planes+ent",
+    2
+   ],
+   [
+    "exist+zstd19",
+    2
+   ],
+   [
+    "planes+prod3",
+    2
+   ],
+   [
+    "planes+prod19",
+    1
+   ],
+   [
+    "planes+huf",
+    1
+   ]
+  ],
+  "decode_planes_vs_exist": 0.9362745236840045,
+  "decode_gate_vs_exist": 0.936847298559314,
+  "exist_prod_vs_production_pct": 0.0018892879575016508,
+  "planes_prod_vs_production_pct": -0.36579164816497034,
+  "oracle_gate_vs_production_pct": -0.3661857327696083,
+  "oracle_broad_vs_production_pct": -0.889414180485415,
+  "planes_gain_by_context": {
+   "max_ow1_order1": {
+    "files": 1,
+    "change_pct": 0.0
+   },
+   "max_ow2_order1": {
+    "files": 7,
+    "change_pct": -0.2327794574326303
+   },
+   "max_ow4_order1": {
+    "files": 4,
+    "change_pct": -7.2173371722044966
+   },
+   "max_ow4_order2": {
+    "files": 1,
+    "change_pct": -0.6077199734702332
+   }
+  }
+ }
+}

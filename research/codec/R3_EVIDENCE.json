@@ -1,0 +1,85 @@
+{
+  "scope": "R3 local development verification; fresh validation pending",
+  "implementation_commit": "06db7f2f2849fa6ccdc207227cfaf4498d17870e",
+  "preregistration_commit": "c72628a6330e224a59a5a7e1d995a2a4439c7b51",
+  "production_reference": "2f3308a3380a140ad0f6873ae228de7715e5eef5",
+  "local_source_snapshot": {
+    "source_artifact": 13929641752,
+    "archive_sha256": "b91637f9dd75fe0850fbc05f8a3083ac1f3d2ebcf0da7aab84863e341d554f91",
+    "src_tree": "f8be58e590e68b7e8581d810bea8f1e2f234253d",
+    "vendor_tree": "ecf82d39017d8f988bfb32c402740a64bd32438f",
+    "trees_verified_this_execution": true,
+    "full_git_checkout": false
+  },
+  "code_identities": {
+    "test_tools.py": "deedac00c19b8c873140c86bc246db363ed99c94",
+    "probe.c": "01e93ae4fc9be15feee44b00d4fbe0c7396f0f7c",
+    "run.py": "504587b87ad15df831d4ba6725b1476c3691c0f2",
+    "capture.c": "15f28f9ca19608dcda0b4c0dea4370e24972bd25",
+    "track.h": "976923ba2d52bcad2e88f48b7ed71289b70fca6f",
+    "build.py": "f094809261da05c68d386a3c54eb9d6ff112db8b",
+    "decide.py": "8adb0b25b4aa937a8bea5527a5a06048cfca88d6",
+    "gate.h": "f8b77c7c63f880cabb28e3f670b32e8cd1a1b427",
+    "prepare.py": "02fb0742f938655c087d48f863730dbba3bcb5f8"
+  },
+  "completed_local_checks": {
+    "GCC_release_build_and_tests": "passed",
+    "Clang_ASan_UBSan_leak_build_and_tests": "passed",
+    "R1_checks_per_build": 351,
+    "R2_roundtrips_per_build": 144,
+    "R2_truncations_per_build": 1710,
+    "R2_mutations_per_build": 3456,
+    "R2_single_plane_identities_per_build": 12,
+    "new_gate_checks_per_build": 7,
+    "shared_scratch_identity_checks_per_build": 18,
+    "python_infrastructure_groups": 8,
+    "full_numeric_capture_reproduction_cases": 40,
+    "observed_inputs": 58,
+    "configurations_per_pass": 290,
+    "passes": ["sanitized_correctness", "release_7_rounds", "release_confirmation_5_rounds"],
+    "candidate_to_chosen_control_identity": "passed",
+    "retained_frame_hashes_verified": 870,
+    "reported_medians_recomputed": 5800,
+    "timing_batches": 17400,
+    "tracked_allocation_failure_positions": 348,
+    "outstanding_tracked_bytes": 0
+  },
+  "development_full_real": {
+    "cases": 11,
+    "original_native_bytes": 337195,
+    "fixed_HRS_bytes": 319539,
+    "candidate_bytes": 319539,
+    "saving_pct": 5.236139325909339,
+    "aligned_cases": 4,
+    "encode_duration_ratios": [0.9410824391596057, 0.9428387582141621],
+    "warm_verified_decode_ratios": [0.958175338194202, 0.999571831273375],
+    "duplicate_baseline_encode_noise_ratios": [0.9461402702957366, 0.9928879543009651],
+    "speedup_claim": false
+  },
+  "other_development_sizes": {
+    "C_real": {"inputs":7,"baseline":51436,"candidate":51436,"aligned":0},
+    "D_small128": {"inputs":11,"baseline":3237,"candidate":3237,"aligned":0},
+    "D_small1024": {"inputs":11,"baseline":8317,"candidate":8317,"aligned":0},
+    "synthetic": {"inputs":18,"baseline":628234,"candidate":612292,"aligned":6}
+  },
+  "tracked_requested_heap_examples": [
+    {"case":"bicycle_count","control":"fixed R2 HRS","baseline_peak_bytes":4464656,"candidate_peak_bytes":358807,"baseline_allocations":5,"candidate_allocations":4},
+    {"case":"traffic_volume","control":"fixed R2 HRS","baseline_peak_bytes":4711256,"candidate_peak_bytes":775367,"baseline_allocations":5,"candidate_allocations":4}
+  ],
+  "fresh_validation": {
+    "run_id":43276455708,
+    "job_id":131386028141,
+    "head_sha":"06db7f2f2849fa6ccdc207227cfaf4498d17870e",
+    "last_observed_status":"queued",
+    "steps_executed":false,
+    "scientific_verdict":"NOT_ESTABLISHED"
+  },
+  "limitations": [
+    "Only observed development data has completed execution at this checkpoint.",
+    "Tracked requested heap excludes vendor internal allocations, allocator overhead and stack.",
+    "Vendor objects uninstrumented; finite tests are not a security proof.",
+    "Residual-to-frame encode is not full-product encode; no small speedup claimed.",
+    "Heuristic can expand versus an uncomputed compressed baseline.",
+    "No full production-container, M5 or release acceptance."
+  ]
+}

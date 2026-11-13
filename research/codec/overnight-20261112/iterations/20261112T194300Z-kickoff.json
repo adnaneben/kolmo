@@ -1,0 +1,50 @@
+{
+  "kind": "overnight_kickoff_not_benchmark",
+  "date_local": "2026-11-12",
+  "timezone": "Asia/Riyadh",
+  "authorized_branch": "fix/planner-record-ownership-isolated-20261112",
+  "plan_commit": "9547f19e1f8b0f4171c1c92cb3ffe7d24585c169",
+  "last_measured_policy_reference": "85c4a281b0f52c6c68e8c4dba335fdd890ee5278",
+  "checkpoint_job": {
+    "workflow_run": 43286007814,
+    "job": 131419459053,
+    "state": "completed",
+    "conclusion": "success",
+    "completed_at": "2026-11-12T19:31:50Z",
+    "verified_from": "GitHub Actions job and step metadata",
+    "steps_succeeded": [
+      "Verify exact reference files and preserved research ancestry",
+      "Execute reference policy and exact-typing tests",
+      "Export complete reachable source history as a second backup",
+      "Upload artifact"
+    ],
+    "artifact_independently_downloaded_and_audited_this_session": false,
+    "not_a_competitor_benchmark": true
+  },
+  "scheduled_continuations": {
+    "created_successfully": true,
+    "start_local": "2026-11-12T23:00:00+03:00",
+    "cadence": "hourly",
+    "count": 8,
+    "timing": "flexible; actual start times may vary",
+    "no_new_long_job_after_local": "2026-11-13T07:00:00+03:00",
+    "newly_configured_job_deadline_local": "2026-11-13T08:00:00+03:00"
+  },
+  "morning_report": {
+    "created_successfully": true,
+    "approximate_local_time": "2026-11-13T08:00:00+03:00",
+    "must_report_blockers_and_not_run_options": true
+  },
+  "new_overnight_runner_minutes_used": 0,
+  "new_overnight_runner_minutes_budget": 480,
+  "new_overnight_workflows_launched": [],
+  "current_status": "SCHEDULED_WITH_DURABLE_PLAN",
+  "next_ready_task": "N0/N1: verify saved artifact; pin matched whole-file zstd-3/OpenZL controls and export existing C typed-column traces before candidate acceptance",
+  "production_source_changed": false,
+  "merged_or_released": false,
+  "limitations": [
+    "No new compression benchmark or candidate win was established by scheduling.",
+    "Future execution depends on connected-tool and runner availability; missing execution must be reported.",
+    "Try all options means the bounded portfolio in PLAN.md, not exhaustive search or unlimited training."
+  ]
+}

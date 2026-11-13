@@ -1,0 +1,49 @@
+{
+  "status": "ARCHIVED_EVIDENCE_AUDIT_PASS_NOT_NEW_VALIDATION",
+  "E26": {
+    "files": 36,
+    "comparable": 35,
+    "wins_in_both_passes": 33,
+    "known_groups": 35,
+    "group_all_member_wins": 33,
+    "picker_actual_bytes": 5368612,
+    "openzl_actual_bytes": 6391791,
+    "actual_reduction_pct": 16.00770425691328,
+    "hindsight_fallback_bytes": 5366694,
+    "fallback_reduction_pct": 16.037711495885898,
+    "eco_actual_bytes": 5534056,
+    "picker_larger_than_eco_files": 8,
+    "picker_smaller_than_eco_files": 8,
+    "robust_win_additions_vs_eco": 4,
+    "robust_win_losses_vs_eco": 0
+  },
+  "E27": {
+    "files": 28,
+    "comparable": 28,
+    "wins_in_both_passes": 26,
+    "known_groups": 21,
+    "group_all_member_wins": 19,
+    "unique_input_hashes": 27,
+    "picker_actual_bytes": 4193751,
+    "openzl_actual_bytes": 4972885,
+    "actual_reduction_pct": 15.667645642318295,
+    "hindsight_fallback_bytes": 4173621,
+    "fallback_reduction_pct": 16.07244084671172,
+    "eco_actual_bytes": 4151266,
+    "picker_larger_than_eco_files": 11,
+    "picker_smaller_than_eco_files": 16,
+    "robust_win_additions_vs_eco": 2,
+    "robust_win_losses_vs_eco": 2,
+    "exact_duplicate": [
+      "selva86/olist_orders_45d.csv",
+      "selva86/orders_45d.csv"
+    ]
+  },
+  "grouping_note": "Retrospective provenance/naming sensitivity; 21 groups are not certified independent populations.",
+  "limitations": [
+    "No new performance runs or decodes. Archived frame payloads excluded.",
+    "Untrained pinned OpenZL CSV-9 only; source-trained frontier untested.",
+    "Fixed selector not uniformly better than eco; do not infer general non-regression.",
+    "Full type-before-route contract and production integration not established."
+  ]
+}

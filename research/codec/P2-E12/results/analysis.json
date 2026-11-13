@@ -1,0 +1,990 @@
+{
+ "first": {
+  "inputs": {
+   "covertype__elevation": {
+    "zstd_3_bytes": 319407,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 163202,
+      "fit": false,
+      "delta": -0.489
+     },
+     "kolmo_fast": {
+      "bytes": 163202,
+      "fit": false,
+      "delta": -0.489
+     },
+     "kolmo_hc": {
+      "bytes": 159909,
+      "fit": false,
+      "delta": -0.4994
+     },
+     "tp_phuf": {
+      "bytes": 185881,
+      "fit": true,
+      "delta": -0.418
+     },
+     "tp_phuf_pg16": {
+      "bytes": 185881,
+      "fit": true,
+      "delta": -0.418
+     },
+     "tp_prod3": {
+      "bytes": 163202,
+      "fit": true,
+      "delta": -0.489
+     },
+     "tp_table3": {
+      "bytes": 319490,
+      "fit": true,
+      "delta": 0.0003
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 275798,
+     "winner": "kolmo_hc",
+     "winner_bytes": 159909
+    }
+   },
+   "covertype__road_distance": {
+    "zstd_3_bytes": 185793,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 102470,
+      "fit": false,
+      "delta": -0.4485
+     },
+     "kolmo_fast": {
+      "bytes": 102470,
+      "fit": false,
+      "delta": -0.4485
+     },
+     "kolmo_hc": {
+      "bytes": 80656,
+      "fit": false,
+      "delta": -0.5659
+     },
+     "tp_phuf": {
+      "bytes": 141185,
+      "fit": true,
+      "delta": -0.2401
+     },
+     "tp_phuf_pg16": {
+      "bytes": 141185,
+      "fit": true,
+      "delta": -0.2401
+     },
+     "tp_prod3": {
+      "bytes": 102470,
+      "fit": true,
+      "delta": -0.4485
+     },
+     "tp_table3": {
+      "bytes": 185926,
+      "fit": true,
+      "delta": 0.0007
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 164144,
+     "winner": "kolmo_fast",
+     "winner_bytes": 102470
+    }
+   },
+   "covertype__fire_distance": {
+    "zstd_3_bytes": 177394,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 97472,
+      "fit": false,
+      "delta": -0.4505
+     },
+     "kolmo_fast": {
+      "bytes": 97472,
+      "fit": false,
+      "delta": -0.4505
+     },
+     "kolmo_hc": {
+      "bytes": 73158,
+      "fit": false,
+      "delta": -0.5876
+     },
+     "tp_phuf": {
+      "bytes": 140765,
+      "fit": true,
+      "delta": -0.2065
+     },
+     "tp_phuf_pg16": {
+      "bytes": 140765,
+      "fit": true,
+      "delta": -0.2065
+     },
+     "tp_prod3": {
+      "bytes": 97472,
+      "fit": true,
+      "delta": -0.4505
+     },
+     "tp_table3": {
+      "bytes": 177520,
+      "fit": true,
+      "delta": 0.0007
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 161505,
+     "winner": "kolmo_hc",
+     "winner_bytes": 73158
+    }
+   },
+   "covertype__hillshade_control": {
+    "zstd_3_bytes": 279209,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 175543,
+      "fit": false,
+      "delta": -0.3713
+     },
+     "kolmo_fast": {
+      "bytes": 175543,
+      "fit": false,
+      "delta": -0.3713
+     },
+     "kolmo_hc": {
+      "bytes": 173435,
+      "fit": false,
+      "delta": -0.3788
+     },
+     "tp_phuf": {
+      "bytes": 207485,
+      "fit": true,
+      "delta": -0.2569
+     },
+     "tp_phuf_pg16": {
+      "bytes": 207485,
+      "fit": true,
+      "delta": -0.2569
+     },
+     "tp_prod3": {
+      "bytes": 175543,
+      "fit": true,
+      "delta": -0.3713
+     },
+     "tp_table3": {
+      "bytes": 279288,
+      "fit": true,
+      "delta": 0.0003
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 252109,
+     "winner": "kolmo_hc",
+     "winner_bytes": 173435
+    }
+   },
+   "covertype__cover_control": {
+    "zstd_3_bytes": 26336,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 26411,
+      "fit": false,
+      "delta": 0.0028
+     },
+     "kolmo_fast": {
+      "bytes": 26411,
+      "fit": false,
+      "delta": 0.0028
+     },
+     "kolmo_hc": {
+      "bytes": 18387,
+      "fit": false,
+      "delta": -0.3018
+     },
+     "tp_phuf": {
+      "bytes": 38658,
+      "fit": false,
+      "delta": 0.4679
+     },
+     "tp_phuf_pg16": {
+      "bytes": 26411,
+      "fit": true,
+      "delta": 0.0028
+     },
+     "tp_prod3": {
+      "bytes": 22565,
+      "fit": false,
+      "delta": -0.1432
+     },
+     "tp_table3": {
+      "bytes": 26411,
+      "fit": true,
+      "delta": 0.0028
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 30374,
+     "winner": "tp_prod3",
+     "winner_bytes": 22565
+    }
+   },
+   "covertype__table": {
+    "zstd_3_bytes": 2079900,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 570082,
+      "fit": true,
+      "delta": -0.7259
+     },
+     "kolmo_fast": {
+      "bytes": 570082,
+      "fit": true,
+      "delta": -0.7259
+     },
+     "kolmo_hc": {
+      "bytes": 491444,
+      "fit": false,
+      "delta": -0.7637
+     },
+     "tp_phuf": {
+      "bytes": 2068165,
+      "fit": true,
+      "delta": -0.0056
+     },
+     "tp_phuf_pg16": {
+      "bytes": 2068165,
+      "fit": true,
+      "delta": -0.0056
+     },
+     "tp_prod3": {
+      "bytes": 2068165,
+      "fit": true,
+      "delta": -0.0056
+     },
+     "tp_table3": {
+      "bytes": 635046,
+      "fit": true,
+      "delta": -0.6947
+     }
+    },
+    "archive": {
+     "rival": "openzl_csv_9",
+     "rival_bytes": 834271,
+     "winner": "kolmo_hc",
+     "winner_bytes": 491444
+    }
+   },
+   "collegemsg__source_id": {
+    "zstd_3_bytes": 79752,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 79800,
+      "fit": false,
+      "delta": 0.0006
+     },
+     "kolmo_fast": {
+      "bytes": 79800,
+      "fit": false,
+      "delta": 0.0006
+     },
+     "kolmo_hc": {
+      "bytes": 72239,
+      "fit": false,
+      "delta": -0.0942
+     },
+     "tp_phuf": {
+      "bytes": 79433,
+      "fit": true,
+      "delta": -0.004
+     },
+     "tp_phuf_pg16": {
+      "bytes": 79433,
+      "fit": true,
+      "delta": -0.004
+     },
+     "tp_prod3": {
+      "bytes": 85968,
+      "fit": false,
+      "delta": 0.0779
+     },
+     "tp_table3": {
+      "bytes": 80355,
+      "fit": false,
+      "delta": 0.0076
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 74711,
+     "winner": "openzl",
+     "winner_bytes": 74711
+    }
+   },
+   "collegemsg__target_id": {
+    "zstd_3_bytes": 87873,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 80814,
+      "fit": false,
+      "delta": -0.0803
+     },
+     "kolmo_fast": {
+      "bytes": 79650,
+      "fit": false,
+      "delta": -0.0936
+     },
+     "kolmo_hc": {
+      "bytes": 75116,
+      "fit": false,
+      "delta": -0.1452
+     },
+     "tp_phuf": {
+      "bytes": 82775,
+      "fit": true,
+      "delta": -0.058
+     },
+     "tp_phuf_pg16": {
+      "bytes": 82775,
+      "fit": true,
+      "delta": -0.058
+     },
+     "tp_prod3": {
+      "bytes": 90406,
+      "fit": true,
+      "delta": 0.0288
+     },
+     "tp_table3": {
+      "bytes": 87921,
+      "fit": true,
+      "delta": 0.0005
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_6",
+     "rival_bytes": 82390,
+     "winner": "kolmo_fast",
+     "winner_bytes": 79650
+    }
+   },
+   "collegemsg__unix_timestamp": {
+    "zstd_3_bytes": 198822,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 64161,
+      "fit": false,
+      "delta": -0.6773
+     },
+     "kolmo_fast": {
+      "bytes": 64495,
+      "fit": false,
+      "delta": -0.6756
+     },
+     "kolmo_hc": {
+      "bytes": 62466,
+      "fit": false,
+      "delta": -0.6858
+     },
+     "tp_phuf": {
+      "bytes": 79884,
+      "fit": true,
+      "delta": -0.5982
+     },
+     "tp_phuf_pg16": {
+      "bytes": 79884,
+      "fit": true,
+      "delta": -0.5982
+     },
+     "tp_prod3": {
+      "bytes": 71801,
+      "fit": true,
+      "delta": -0.6389
+     },
+     "tp_table3": {
+      "bytes": 199403,
+      "fit": false,
+      "delta": 0.0029
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_6",
+     "rival_bytes": 188852,
+     "winner": "kolmo_hc",
+     "winner_bytes": 62466
+    }
+   },
+   "collegemsg__table": {
+    "zstd_3_bytes": 378073,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 233695,
+      "fit": false,
+      "delta": -0.3819
+     },
+     "kolmo_fast": {
+      "bytes": 233695,
+      "fit": false,
+      "delta": -0.3819
+     },
+     "kolmo_hc": {
+      "bytes": 226987,
+      "fit": false,
+      "delta": -0.3996
+     },
+     "tp_phuf": {
+      "bytes": 376105,
+      "fit": true,
+      "delta": -0.0052
+     },
+     "tp_phuf_pg16": {
+      "bytes": 376105,
+      "fit": true,
+      "delta": -0.0052
+     },
+     "tp_prod3": {
+      "bytes": 376105,
+      "fit": true,
+      "delta": -0.0052
+     },
+     "tp_table3": {
+      "bytes": 248546,
+      "fit": false,
+      "delta": -0.3426
+     }
+    },
+    "archive": {
+     "rival": "openzl_csv_9",
+     "rival_bytes": 323766,
+     "winner": "kolmo_hc",
+     "winner_bytes": 226987
+    }
+   }
+  },
+  "totals": {
+   "kolmo_fast": {
+    "fit": 1,
+    "fit_and_smaller": 1
+   },
+   "kolmo_fast_quick": {
+    "fit": 1,
+    "fit_and_smaller": 1
+   },
+   "kolmo_hc": {
+    "fit": 0,
+    "fit_and_smaller": 0
+   },
+   "tp_phuf": {
+    "fit": 9,
+    "fit_and_smaller": 9
+   },
+   "tp_phuf_pg16": {
+    "fit": 10,
+    "fit_and_smaller": 9
+   },
+   "tp_prod3": {
+    "fit": 8,
+    "fit_and_smaller": 7
+   },
+   "tp_table3": {
+    "fit": 7,
+    "fit_and_smaller": 1
+   }
+  }
+ },
+ "confirmation": {
+  "inputs": {
+   "covertype__elevation": {
+    "zstd_3_bytes": 319407,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 163202,
+      "fit": false,
+      "delta": -0.489
+     },
+     "kolmo_fast": {
+      "bytes": 163202,
+      "fit": false,
+      "delta": -0.489
+     },
+     "kolmo_hc": {
+      "bytes": 159909,
+      "fit": false,
+      "delta": -0.4994
+     },
+     "tp_phuf": {
+      "bytes": 185881,
+      "fit": true,
+      "delta": -0.418
+     },
+     "tp_phuf_pg16": {
+      "bytes": 185881,
+      "fit": true,
+      "delta": -0.418
+     },
+     "tp_prod3": {
+      "bytes": 163202,
+      "fit": true,
+      "delta": -0.489
+     },
+     "tp_table3": {
+      "bytes": 319490,
+      "fit": true,
+      "delta": 0.0003
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 275798,
+     "winner": "kolmo_hc",
+     "winner_bytes": 159909
+    }
+   },
+   "covertype__road_distance": {
+    "zstd_3_bytes": 185793,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 102470,
+      "fit": false,
+      "delta": -0.4485
+     },
+     "kolmo_fast": {
+      "bytes": 102470,
+      "fit": false,
+      "delta": -0.4485
+     },
+     "kolmo_hc": {
+      "bytes": 80656,
+      "fit": false,
+      "delta": -0.5659
+     },
+     "tp_phuf": {
+      "bytes": 141185,
+      "fit": true,
+      "delta": -0.2401
+     },
+     "tp_phuf_pg16": {
+      "bytes": 141185,
+      "fit": true,
+      "delta": -0.2401
+     },
+     "tp_prod3": {
+      "bytes": 102470,
+      "fit": false,
+      "delta": -0.4485
+     },
+     "tp_table3": {
+      "bytes": 185926,
+      "fit": true,
+      "delta": 0.0007
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 164144,
+     "winner": "kolmo_fast",
+     "winner_bytes": 102470
+    }
+   },
+   "covertype__fire_distance": {
+    "zstd_3_bytes": 177394,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 97472,
+      "fit": false,
+      "delta": -0.4505
+     },
+     "kolmo_fast": {
+      "bytes": 97472,
+      "fit": false,
+      "delta": -0.4505
+     },
+     "kolmo_hc": {
+      "bytes": 73158,
+      "fit": false,
+      "delta": -0.5876
+     },
+     "tp_phuf": {
+      "bytes": 140765,
+      "fit": true,
+      "delta": -0.2065
+     },
+     "tp_phuf_pg16": {
+      "bytes": 140765,
+      "fit": true,
+      "delta": -0.2065
+     },
+     "tp_prod3": {
+      "bytes": 97472,
+      "fit": true,
+      "delta": -0.4505
+     },
+     "tp_table3": {
+      "bytes": 177520,
+      "fit": true,
+      "delta": 0.0007
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 161505,
+     "winner": "kolmo_hc",
+     "winner_bytes": 73158
+    }
+   },
+   "covertype__hillshade_control": {
+    "zstd_3_bytes": 279209,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 175543,
+      "fit": false,
+      "delta": -0.3713
+     },
+     "kolmo_fast": {
+      "bytes": 175543,
+      "fit": false,
+      "delta": -0.3713
+     },
+     "kolmo_hc": {
+      "bytes": 173435,
+      "fit": false,
+      "delta": -0.3788
+     },
+     "tp_phuf": {
+      "bytes": 207485,
+      "fit": true,
+      "delta": -0.2569
+     },
+     "tp_phuf_pg16": {
+      "bytes": 207485,
+      "fit": true,
+      "delta": -0.2569
+     },
+     "tp_prod3": {
+      "bytes": 175543,
+      "fit": true,
+      "delta": -0.3713
+     },
+     "tp_table3": {
+      "bytes": 279288,
+      "fit": true,
+      "delta": 0.0003
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 252109,
+     "winner": "kolmo_hc",
+     "winner_bytes": 173435
+    }
+   },
+   "covertype__cover_control": {
+    "zstd_3_bytes": 26336,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 26411,
+      "fit": false,
+      "delta": 0.0028
+     },
+     "kolmo_fast": {
+      "bytes": 26411,
+      "fit": false,
+      "delta": 0.0028
+     },
+     "kolmo_hc": {
+      "bytes": 18387,
+      "fit": false,
+      "delta": -0.3018
+     },
+     "tp_phuf": {
+      "bytes": 38658,
+      "fit": false,
+      "delta": 0.4679
+     },
+     "tp_phuf_pg16": {
+      "bytes": 26411,
+      "fit": true,
+      "delta": 0.0028
+     },
+     "tp_prod3": {
+      "bytes": 22565,
+      "fit": false,
+      "delta": -0.1432
+     },
+     "tp_table3": {
+      "bytes": 26411,
+      "fit": true,
+      "delta": 0.0028
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 30374,
+     "winner": "tp_prod3",
+     "winner_bytes": 22565
+    }
+   },
+   "covertype__table": {
+    "zstd_3_bytes": 2079900,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 570082,
+      "fit": true,
+      "delta": -0.7259
+     },
+     "kolmo_fast": {
+      "bytes": 570082,
+      "fit": true,
+      "delta": -0.7259
+     },
+     "kolmo_hc": {
+      "bytes": 491444,
+      "fit": false,
+      "delta": -0.7637
+     },
+     "tp_phuf": {
+      "bytes": 2068165,
+      "fit": true,
+      "delta": -0.0056
+     },
+     "tp_phuf_pg16": {
+      "bytes": 2068165,
+      "fit": true,
+      "delta": -0.0056
+     },
+     "tp_prod3": {
+      "bytes": 2068165,
+      "fit": true,
+      "delta": -0.0056
+     },
+     "tp_table3": {
+      "bytes": 635046,
+      "fit": true,
+      "delta": -0.6947
+     }
+    },
+    "archive": {
+     "rival": "openzl_csv_9",
+     "rival_bytes": 834271,
+     "winner": "kolmo_hc",
+     "winner_bytes": 491444
+    }
+   },
+   "collegemsg__source_id": {
+    "zstd_3_bytes": 79752,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 79800,
+      "fit": false,
+      "delta": 0.0006
+     },
+     "kolmo_fast": {
+      "bytes": 79800,
+      "fit": false,
+      "delta": 0.0006
+     },
+     "kolmo_hc": {
+      "bytes": 72239,
+      "fit": false,
+      "delta": -0.0942
+     },
+     "tp_phuf": {
+      "bytes": 79433,
+      "fit": true,
+      "delta": -0.004
+     },
+     "tp_phuf_pg16": {
+      "bytes": 79433,
+      "fit": true,
+      "delta": -0.004
+     },
+     "tp_prod3": {
+      "bytes": 85968,
+      "fit": true,
+      "delta": 0.0779
+     },
+     "tp_table3": {
+      "bytes": 80355,
+      "fit": true,
+      "delta": 0.0076
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_9",
+     "rival_bytes": 74711,
+     "winner": "openzl",
+     "winner_bytes": 74711
+    }
+   },
+   "collegemsg__target_id": {
+    "zstd_3_bytes": 87873,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 80814,
+      "fit": false,
+      "delta": -0.0803
+     },
+     "kolmo_fast": {
+      "bytes": 79650,
+      "fit": false,
+      "delta": -0.0936
+     },
+     "kolmo_hc": {
+      "bytes": 75116,
+      "fit": false,
+      "delta": -0.1452
+     },
+     "tp_phuf": {
+      "bytes": 82775,
+      "fit": true,
+      "delta": -0.058
+     },
+     "tp_phuf_pg16": {
+      "bytes": 82775,
+      "fit": true,
+      "delta": -0.058
+     },
+     "tp_prod3": {
+      "bytes": 90406,
+      "fit": true,
+      "delta": 0.0288
+     },
+     "tp_table3": {
+      "bytes": 87921,
+      "fit": true,
+      "delta": 0.0005
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_6",
+     "rival_bytes": 82390,
+     "winner": "kolmo_fast",
+     "winner_bytes": 79650
+    }
+   },
+   "collegemsg__unix_timestamp": {
+    "zstd_3_bytes": 198822,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 64161,
+      "fit": false,
+      "delta": -0.6773
+     },
+     "kolmo_fast": {
+      "bytes": 64495,
+      "fit": false,
+      "delta": -0.6756
+     },
+     "kolmo_hc": {
+      "bytes": 62466,
+      "fit": false,
+      "delta": -0.6858
+     },
+     "tp_phuf": {
+      "bytes": 79884,
+      "fit": true,
+      "delta": -0.5982
+     },
+     "tp_phuf_pg16": {
+      "bytes": 79884,
+      "fit": true,
+      "delta": -0.5982
+     },
+     "tp_prod3": {
+      "bytes": 71801,
+      "fit": true,
+      "delta": -0.6389
+     },
+     "tp_table3": {
+      "bytes": 199403,
+      "fit": false,
+      "delta": 0.0029
+     }
+    },
+    "archive": {
+     "rival": "openzl_serial_6",
+     "rival_bytes": 188852,
+     "winner": "kolmo_hc",
+     "winner_bytes": 62466
+    }
+   },
+   "collegemsg__table": {
+    "zstd_3_bytes": 378073,
+    "speed": {
+     "kolmo_fast_quick": {
+      "bytes": 233695,
+      "fit": false,
+      "delta": -0.3819
+     },
+     "kolmo_fast": {
+      "bytes": 233695,
+      "fit": false,
+      "delta": -0.3819
+     },
+     "kolmo_hc": {
+      "bytes": 226987,
+      "fit": false,
+      "delta": -0.3996
+     },
+     "tp_phuf": {
+      "bytes": 376105,
+      "fit": true,
+      "delta": -0.0052
+     },
+     "tp_phuf_pg16": {
+      "bytes": 376105,
+      "fit": true,
+      "delta": -0.0052
+     },
+     "tp_prod3": {
+      "bytes": 376105,
+      "fit": true,
+      "delta": -0.0052
+     },
+     "tp_table3": {
+      "bytes": 248546,
+      "fit": false,
+      "delta": -0.3426
+     }
+    },
+    "archive": {
+     "rival": "openzl_csv_9",
+     "rival_bytes": 323766,
+     "winner": "kolmo_hc",
+     "winner_bytes": 226987
+    }
+   }
+  },
+  "totals": {
+   "kolmo_fast": {
+    "fit": 1,
+    "fit_and_smaller": 1
+   },
+   "kolmo_fast_quick": {
+    "fit": 1,
+    "fit_and_smaller": 1
+   },
+   "kolmo_hc": {
+    "fit": 0,
+    "fit_and_smaller": 0
+   },
+   "tp_phuf": {
+    "fit": 9,
+    "fit_and_smaller": 9
+   },
+   "tp_phuf_pg16": {
+    "fit": 10,
+    "fit_and_smaller": 9
+   },
+   "tp_prod3": {
+    "fit": 8,
+    "fit_and_smaller": 6
+   },
+   "tp_table3": {
+    "fit": 8,
+    "fit_and_smaller": 1
+   }
+  }
+ }
+}

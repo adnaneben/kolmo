@@ -1,0 +1,132 @@
+{
+ "first": {
+  "development": {
+   "n": 0,
+   "openzl_missing": [],
+   "pick": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   }
+  },
+  "fresh": {
+   "n": 35,
+   "openzl_missing": [
+    "TT__2018-05-14__week7_starwars"
+   ],
+   "pick": {
+    "fit_and_smaller": 33,
+    "cp95_lower": 0.8308,
+    "cp_bonf_lower": 0.7808,
+    "rule_bytes_vs_openzl9": -0.1604
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 29,
+    "cp95_lower": 0.6894,
+    "cp_bonf_lower": 0.6326,
+    "rule_bytes_vs_openzl9": -0.1313
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 26,
+    "cp95_lower": 0.5942,
+    "cp_bonf_lower": 0.5361,
+    "rule_bytes_vs_openzl9": -0.1057
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 14,
+    "cp95_lower": 0.2605,
+    "cp_bonf_lower": 0.2146,
+    "rule_bytes_vs_openzl9": -0.0169
+   }
+  }
+ },
+ "confirmation": {
+  "development": {
+   "n": 0,
+   "openzl_missing": [],
+   "pick": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   }
+  },
+  "fresh": {
+   "n": 35,
+   "openzl_missing": [
+    "TT__2018-05-14__week7_starwars"
+   ],
+   "pick": {
+    "fit_and_smaller": 33,
+    "cp95_lower": 0.8308,
+    "cp_bonf_lower": 0.7808,
+    "rule_bytes_vs_openzl9": -0.1604
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 30,
+    "cp95_lower": 0.7228,
+    "cp_bonf_lower": 0.667,
+    "rule_bytes_vs_openzl9": -0.1315
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 26,
+    "cp95_lower": 0.5942,
+    "cp_bonf_lower": 0.5361,
+    "rule_bytes_vs_openzl9": -0.1057
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 14,
+    "cp95_lower": 0.2605,
+    "cp_bonf_lower": 0.2146,
+    "rule_bytes_vs_openzl9": -0.0169
+   }
+  }
+ },
+ "decision": {
+  "fresh_n": 35,
+  "inconclusive": false,
+  "primary_pick_fresh_pass_both": true,
+  "unadjusted_cp95_pass_both": true,
+  "pick_minus_eco": {
+   "first": 4,
+   "confirmation": 3
+  }
+ }
+}

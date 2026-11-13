@@ -1,0 +1,22 @@
+input                            tp_phuf  tp_prans   tp_pent tp_arch19 kolmo_max  tf_ent19
+audio_concat_s16.raw             1871368   1871368   1871368   1871368   1364710   1699618
+audio_curve.wav                    87208     86770     86770     75936     71051     86686
+audio_drama.wav                   100544     89660     89660     87634     72948     89594
+audio_gong.wav                    144258    131580    131580    120058     99714    131515
+audio_roll.wav                    173478    172468    172468    169760    166584    172078
+audio_soft.wav                    106530     93915     93915     88674     72674     93849
+audio_space2.wav                   74242     72715     72715     67191     49268     72675
+audio_space3.wav                   53657     52093     52093     48862     39892     52053
+audio_untie.wav                   120341    119226    119226    112345     87194    119186
+dem_jacksboro_i16.npy             113690     94765     94765     94765     88766     94723
+fs_inode_u64.npy                  103421     53448     53448     33213     31475     53417
+fs_mtime_i64.npy                  234575    147554    147554     53349     44989    147553
+fs_size_u32.npy                   299996    273248    273248    236512    230010    273219
+goog_date_i64.npy                    470       491       470       262       271       420
+goog_volume_i64.npy                 2516      3444      2516      2516      2542      2469
+mri_s1045_u16.npy                  27721     27434     27434     21363     20681     27386
+syn_clustered_outliers_u32.npy    427381    309152    309152    303194    299081    309102
+syn_sparse_outliers_u32.npy       570571    380826    380826    380826    389432    380796
+syn_walk_i32.npy                  167921    165000    165000    165000    164960    164952
+topobathy_i16.npy                  11849     11987     11849     11849     11877     11662
+# all tp_* frames decoded by production kolmo -d (60/60 corpus, 360/360 random NPY stress incl. constant/singleton planes, ASan/UBSan/LSan encoder)
