@@ -1,0 +1,650 @@
+{
+ "first": {
+  "Backblaze:whole_csv": {
+   "n": 1,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 0,
+    "tf_planes_huf_pg16": 0,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "speed_fit": {
+    "tf_planes_huf": 0,
+    "tf_planes_huf_pg16": 0,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "archive_smallest_feasible": {
+    "kolmo_fast": 1
+   }
+  },
+  "E02E:F1_ghcn_daily": {
+   "n": 9,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 8,
+    "tf_planes_huf_pg16": 5,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 4
+   },
+   "speed_fit": {
+    "tf_planes_huf": 8,
+    "tf_planes_huf_pg16": 6,
+    "mcsv_planes_huf": 6,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 4
+   },
+   "archive_smallest_feasible": {
+    "openzl": 7,
+    "tf_planes_ent19": 2
+   }
+  },
+  "E02E:F2_mitdb": {
+   "n": 8,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 8,
+    "tf_planes_huf_pg16": 8,
+    "mcsv_planes_huf": 3,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 8
+   },
+   "speed_fit": {
+    "tf_planes_huf": 8,
+    "tf_planes_huf_pg16": 8,
+    "mcsv_planes_huf": 8,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 8
+   },
+   "archive_smallest_feasible": {
+    "kolmo_max": 1,
+    "tf_planes_ent19": 7
+   }
+  },
+  "E02F:F1_eeg": {
+   "n": 4,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 4,
+    "tf_planes_huf_pg16": 4,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "speed_fit": {
+    "tf_planes_huf": 4,
+    "tf_planes_huf_pg16": 4,
+    "mcsv_planes_huf": 4,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "archive_smallest_feasible": {
+    "tf_planes_ent19": 2,
+    "kolmo_fast": 2
+   }
+  },
+  "E02F:F2_pageviews": {
+   "n": 8,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 6,
+    "tf_planes_huf_pg16": 2,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 1,
+    "tf_planes_ent19": 1
+   },
+   "speed_fit": {
+    "tf_planes_huf": 6,
+    "tf_planes_huf_pg16": 2,
+    "mcsv_planes_huf": 5,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 1,
+    "tf_planes_ent19": 1
+   },
+   "archive_smallest_feasible": {
+    "kolmo_max": 2,
+    "tf_planes_ent19": 6
+   }
+  },
+  "E02F:F3_speech": {
+   "n": 4,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 2,
+    "tf_planes_huf_pg16": 2,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "speed_fit": {
+    "tf_planes_huf": 2,
+    "tf_planes_huf_pg16": 2,
+    "mcsv_planes_huf": 3,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "archive_smallest_feasible": {
+    "kolmo_fast": 3,
+    "openzl": 1
+   }
+  },
+  "E02G:C1_dense_control": {
+   "n": 4,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 4,
+    "tf_planes_huf_pg16": 3,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "speed_fit": {
+    "tf_planes_huf": 4,
+    "tf_planes_huf_pg16": 3,
+    "mcsv_planes_huf": 4,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "archive_smallest_feasible": {
+    "openzl": 2,
+    "tf_prod19": 1,
+    "kolmo_fast": 1
+   }
+  },
+  "E02G:C2_single_byte_control": {
+   "n": 1,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 1,
+    "tf_planes_huf_pg16": 1,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 1
+   },
+   "speed_fit": {
+    "tf_planes_huf": 1,
+    "tf_planes_huf_pg16": 1,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 1
+   },
+   "archive_smallest_feasible": {
+    "tf_planes_ent19": 1
+   }
+  },
+  "E02G:F1_backblaze": {
+   "n": 6,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 3,
+    "tf_planes_huf_pg16": 3,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 2
+   },
+   "speed_fit": {
+    "tf_planes_huf": 3,
+    "tf_planes_huf_pg16": 4,
+    "mcsv_planes_huf": 5,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 2
+   },
+   "archive_smallest_feasible": {
+    "openzl": 2,
+    "tf_planes_ent19": 2,
+    "tf_prod19": 1,
+    "kolmo_max": 1
+   }
+  },
+  "E02G:F2_owid_covid": {
+   "n": 6,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 2,
+    "tf_planes_huf_pg16": 3,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "speed_fit": {
+    "tf_planes_huf": 2,
+    "tf_planes_huf_pg16": 4,
+    "mcsv_planes_huf": 6,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "archive_smallest_feasible": {
+    "kolmo_fast": 1,
+    "openzl": 2,
+    "tf_planes_ent19": 1,
+    "kolmo_fast_quick": 2
+   }
+  },
+  "FSDD:whole_wav": {
+   "n": 10,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 5,
+    "tf_planes_huf_pg16": 8,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 6
+   },
+   "speed_fit": {
+    "tf_planes_huf": 5,
+    "tf_planes_huf_pg16": 8,
+    "mcsv_planes_huf": 7,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 6
+   },
+   "archive_smallest_feasible": {
+    "kolmo_max": 8,
+    "tf_planes_ent19": 2
+   }
+  }
+ },
+ "confirmation": {
+  "Backblaze:whole_csv": {
+   "n": 1,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 0,
+    "tf_planes_huf_pg16": 0,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "speed_fit": {
+    "tf_planes_huf": 0,
+    "tf_planes_huf_pg16": 0,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "archive_smallest_feasible": {
+    "kolmo_fast": 1
+   }
+  },
+  "E02E:F1_ghcn_daily": {
+   "n": 9,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 5,
+    "tf_planes_huf_pg16": 6,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 4
+   },
+   "speed_fit": {
+    "tf_planes_huf": 5,
+    "tf_planes_huf_pg16": 7,
+    "mcsv_planes_huf": 6,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 4
+   },
+   "archive_smallest_feasible": {
+    "openzl": 7,
+    "tf_planes_ent19": 2
+   }
+  },
+  "E02E:F2_mitdb": {
+   "n": 8,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 8,
+    "tf_planes_huf_pg16": 8,
+    "mcsv_planes_huf": 3,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 8
+   },
+   "speed_fit": {
+    "tf_planes_huf": 8,
+    "tf_planes_huf_pg16": 8,
+    "mcsv_planes_huf": 8,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 8
+   },
+   "archive_smallest_feasible": {
+    "kolmo_max": 1,
+    "tf_planes_ent19": 7
+   }
+  },
+  "E02F:F1_eeg": {
+   "n": 4,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 4,
+    "tf_planes_huf_pg16": 4,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "speed_fit": {
+    "tf_planes_huf": 4,
+    "tf_planes_huf_pg16": 4,
+    "mcsv_planes_huf": 4,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "archive_smallest_feasible": {
+    "tf_planes_ent19": 2,
+    "kolmo_fast": 2
+   }
+  },
+  "E02F:F2_pageviews": {
+   "n": 8,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 6,
+    "tf_planes_huf_pg16": 6,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 1,
+    "tf_planes_ent19": 4
+   },
+   "speed_fit": {
+    "tf_planes_huf": 6,
+    "tf_planes_huf_pg16": 6,
+    "mcsv_planes_huf": 5,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 1,
+    "tf_planes_ent19": 4
+   },
+   "archive_smallest_feasible": {
+    "tf_planes_ent19": 8
+   }
+  },
+  "E02F:F3_speech": {
+   "n": 4,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 2,
+    "tf_planes_huf_pg16": 2,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "speed_fit": {
+    "tf_planes_huf": 2,
+    "tf_planes_huf_pg16": 2,
+    "mcsv_planes_huf": 4,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "archive_smallest_feasible": {
+    "kolmo_fast": 2,
+    "openzl": 1,
+    "tf_prod19": 1
+   }
+  },
+  "E02G:C1_dense_control": {
+   "n": 4,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 4,
+    "tf_planes_huf_pg16": 4,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "speed_fit": {
+    "tf_planes_huf": 4,
+    "tf_planes_huf_pg16": 4,
+    "mcsv_planes_huf": 4,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 0
+   },
+   "archive_smallest_feasible": {
+    "openzl": 2,
+    "tf_prod19": 1,
+    "kolmo_fast": 1
+   }
+  },
+  "E02G:C2_single_byte_control": {
+   "n": 1,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 1,
+    "tf_planes_huf_pg16": 1,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 1
+   },
+   "speed_fit": {
+    "tf_planes_huf": 1,
+    "tf_planes_huf_pg16": 1,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 1
+   },
+   "archive_smallest_feasible": {
+    "tf_planes_ent19": 1
+   }
+  },
+  "E02G:F1_backblaze": {
+   "n": 6,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 3,
+    "tf_planes_huf_pg16": 4,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 3
+   },
+   "speed_fit": {
+    "tf_planes_huf": 3,
+    "tf_planes_huf_pg16": 6,
+    "mcsv_planes_huf": 6,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 3
+   },
+   "archive_smallest_feasible": {
+    "openzl": 2,
+    "tf_planes_ent19": 2,
+    "tf_prod19": 1,
+    "kolmo_max": 1
+   }
+  },
+  "E02G:F2_owid_covid": {
+   "n": 6,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 2,
+    "tf_planes_huf_pg16": 3,
+    "mcsv_planes_huf": 1,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 2
+   },
+   "speed_fit": {
+    "tf_planes_huf": 2,
+    "tf_planes_huf_pg16": 6,
+    "mcsv_planes_huf": 6,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 2
+   },
+   "archive_smallest_feasible": {
+    "kolmo_fast": 1,
+    "openzl": 2,
+    "tf_planes_ent19": 1,
+    "kolmo_fast_quick": 2
+   }
+  },
+  "FSDD:whole_wav": {
+   "n": 10,
+   "speed_fit_and_smaller": {
+    "tf_planes_huf": 6,
+    "tf_planes_huf_pg16": 6,
+    "mcsv_planes_huf": 0,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 4
+   },
+   "speed_fit": {
+    "tf_planes_huf": 6,
+    "tf_planes_huf_pg16": 6,
+    "mcsv_planes_huf": 6,
+    "kolmo_fast": 0,
+    "kolmo_fast_quick": 0,
+    "kolmo_hc": 0,
+    "kolmo_max": 0,
+    "tf_prod19": 0,
+    "tf_planes_ent19": 4
+   },
+   "archive_smallest_feasible": {
+    "kolmo_max": 8,
+    "tf_planes_ent19": 2
+   }
+  }
+ }
+}

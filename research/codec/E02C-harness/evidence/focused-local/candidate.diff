@@ -1,0 +1,28 @@
+--- a/src/kolmo.c
++++ b/src/kolmo.c
+@@ -1982,6 +1982,8 @@
+         if (!buf || !zb) { free(buf); free(zb); ZSTD_freeCCtx(zc); return pl; }
+         size_t zcap = ZSTD_compressBound(bc);
+         double plain = (double)zcost(zc, s + st, L, zb, zcap, zl) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
++        /* Ownership survives replacement of the tentative winning plan. */
++        rec_plan_t *owned_rec = NULL;
+         if (pl.t == T_SHUF) {
+             size_t u = (size_t)pl.a * pl.b, rows = L / u; shuffle_fwd(s + st, rows, pl.a, pl.b, pl.c, buf);
+             double c = (double)zcost(zc, buf, rows * u, zb, zcap, zl) / (rows * u);
+@@ -2018,7 +2020,7 @@
+             size_t rl = L / R->P * R->P;
+             if (rs + rl <= n) {
+                 int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc);
+-                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < best) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; R = NULL; chosen = 3; } }
++                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < best) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } }
+             }
+         }
+         free(R);
+@@ -2067,6 +2069,7 @@
+         }
+ #undef KG_ADJ
+ structured_done:
++        if (owned_rec && chosen != 3) free(owned_rec);
+         if (chosen >= 2) pl = keep;
+         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
+         free(buf); free(zb);

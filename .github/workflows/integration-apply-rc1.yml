@@ -1,0 +1,63 @@
+name: Apply hash-verified integration candidate
+on:
+  push:
+    branches: [integration/best-features-rc-20261113]
+    paths: [.github/workflows/integration-apply-rc1.yml]
+permissions:
+  contents: read
+concurrency:
+  group: integration-apply-rc1
+  cancel-in-progress: false
+jobs:
+  apply:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reproduce the exact locally tested source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch origin a64f57fdeb742f4bf57d44c8cfc994ebf48ae121 e31b3fe3a278c657e79682eaea440904252d28aa
+          git config user.name 'Kolmo integration runner'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          python3 integration/rc1/import/apply.py
+      - name: Build and execute focused integration gates
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/kolmo-rc1-import
+          sudo apt-get update -qq
+          sudo apt-get install -y liblzma-dev
+          make -j2 ARCH= build/kolmo build/test-int-inverse-fast build/test-rc-options > /tmp/kolmo-rc1-import/build.log 2>&1
+          ./build/test-int-inverse-fast | tee /tmp/kolmo-rc1-import/inverse.log
+          ./build/test-rc-options | tee /tmp/kolmo-rc1-import/options.log
+          git diff --exit-code
+      - name: Publish only the integration branch without force
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          target=refs/heads/integration/best-features-rc-20261113
+          test "$(git ls-remote origin "$target" | cut -f1)" = "$GITHUB_SHA"
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c http.extraheader="AUTHORIZATION: basic $auth" push origin "HEAD:$target"
+          git rev-parse HEAD > /tmp/kolmo-rc1-import/COMMIT.txt
+          git bundle create /tmp/kolmo-rc1-import/rc1-source.bundle HEAD
+          git bundle verify /tmp/kolmo-rc1-import/rc1-source.bundle
+          sha256sum /tmp/kolmo-rc1-import/rc1-source.bundle > /tmp/kolmo-rc1-import/SHA256SUMS
+      - name: Failure diagnostics
+        if: failure()
+        run: tail -n 100 /tmp/kolmo-rc1-import/build.log || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-rc1-source-${{ github.run_id }}
+          path: /tmp/kolmo-rc1-import/
+          if-no-files-found: error
+          retention-days: 90

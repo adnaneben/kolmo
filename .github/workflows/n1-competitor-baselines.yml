@@ -1,0 +1,95 @@
+name: N1 pinned whole-file competitor baselines
+on:
+  push:
+    branches: [fix/planner-record-ownership-isolated-20261112]
+    paths: [.github/workflows/n1-competitor-baselines.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: n1-competitor-baselines-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  baseline:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Freeze local source and test the runner
+        run: |
+          set -euo pipefail
+          mkdir -p n1-evidence
+          git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
+          git rev-parse HEAD > n1-evidence/COMMIT.txt
+          { uname -a; gcc --version; cmake --version; nproc; lscpu; } > n1-evidence/environment.txt
+          cp -r research/codec/N1-baselines n1-evidence/source
+          cp research/codec/overnight-20261112/iterations/20261112T201500Z-N1-claim.md n1-evidence/PROTOCOL.md
+          python -m unittest discover -s research/codec/N1-baselines -p 'test_*.py' -v 2>&1 | tee n1-evidence/unit-tests.log
+          sudo apt-get update -qq && sudo apt-get install -y liblzma-dev
+      - uses: actions/checkout@v4
+        with:
+          repository: meta/openzl
+          ref: 32246b48faee46807f84183dac4db479089f5445
+          path: _rivals/openzl
+          persist-credentials: false
+      - name: Build exact official OpenZL and matched CLI controls
+        run: |
+          set -euo pipefail
+          test "$(git -C _rivals/openzl rev-parse HEAD)" = 32246b48faee46807f84183dac4db479089f5445
+          FLAGS='-O3 -DNDEBUG -fno-plt -ffp-contract=off'
+          cmake -S _rivals/openzl -B _rivals/openzl/build -DCMAKE_BUILD_TYPE=Release -DOPENZL_BUILD_TESTS=OFF -DOPENZL_BUILD_EXAMPLES=OFF -DOPENZL_BUILD_BENCHMARKS=OFF -DOPENZL_BUILD_PARQUET_TOOLS=OFF -DOPENZL_ALLOW_INTROSPECTION=OFF -DZSTD_BUILD_SHARED=OFF -DCMAKE_C_FLAGS_RELEASE="$FLAGS" -DCMAKE_CXX_FLAGS_RELEASE="$FLAGS" 2>&1 | tee n1-evidence/openzl-configure.log
+          cmake --build _rivals/openzl/build --target zli --parallel 2 2>&1 | tee n1-evidence/openzl-build.log
+          make -C _rivals/openzl/deps/zstd/programs -j2 zstd CFLAGS="$FLAGS" 2>&1 | tee n1-evidence/zstd-build.log
+          make -j2 build/kolmo CFLAGS="$FLAGS" 2>&1 | tee n1-evidence/kolmo-build.log
+          _rivals/openzl/build/cli/zli --version > n1-evidence/openzl-version.txt
+          _rivals/openzl/build/cli/zli list-profiles > n1-evidence/openzl-profiles.txt
+          _rivals/openzl/deps/zstd/programs/zstd --version > n1-evidence/zstd-version.txt
+          _rivals/openzl/build/cli/zli compress --help > n1-evidence/openzl-compress-help.txt 2>&1
+          { git -C _rivals/openzl submodule status --recursive; sha256sum _rivals/openzl/build/cli/zli _rivals/openzl/deps/zstd/programs/zstd build/kolmo; ldd _rivals/openzl/build/cli/zli; } > n1-evidence/toolchain.txt
+          mkdir n1-evidence/binaries
+          cp _rivals/openzl/build/cli/zli _rivals/openzl/deps/zstd/programs/zstd build/kolmo n1-evidence/binaries/
+          git -C _rivals/openzl ls-tree -r HEAD > n1-evidence/openzl-tree.txt
+          cp _rivals/openzl/build/CMakeCache.txt n1-evidence/
+          tar --exclude='.git' --exclude='openzl/build' --exclude='cachedObjs' --exclude='*.o' --exclude='*.a' --exclude='*.so*' -czf n1-evidence/openzl-source.tar.gz -C _rivals openzl
+      - name: Fetch exact observed research inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api /repos/adnaneben/kolmo/actions/artifacts/13970918568/zip > "$RUNNER_TEMP/r3-input.zip"
+          python research/codec/N1-baselines/baselines.py prepare "$RUNNER_TEMP/r3-input.zip" n1-evidence/prepared
+      - name: Complete CLI comparison and confirmation
+        run: |
+          set -euo pipefail
+          python research/codec/N1-baselines/baselines.py run n1-evidence/prepared n1-evidence/first --zstd _rivals/openzl/deps/zstd/programs/zstd --openzl _rivals/openzl/build/cli/zli --kolmo build/kolmo
+          python research/codec/N1-baselines/baselines.py run n1-evidence/prepared n1-evidence/confirmation --zstd _rivals/openzl/deps/zstd/programs/zstd --openzl _rivals/openzl/build/cli/zli --kolmo build/kolmo --seed 20261113
+          python research/codec/N1-baselines/baselines.py confirm n1-evidence/first n1-evidence/confirmation > n1-evidence/confirmation.json
+          git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
+      - name: Preserve success and failure evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import hashlib,json,pathlib
+          p=pathlib.Path('n1-evidence');p.mkdir(exist_ok=True)
+          m={str(f.relative_to(p)):hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.rglob('*')) if f.is_file() and f.name!='MANIFEST.json'}
+          (p/'MANIFEST.json').write_text(json.dumps(m,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: n1-competitor-baselines-${{ github.run_id }}-${{ github.run_attempt }}
+          path: n1-evidence/
+          retention-days: 30
+          if-no-files-found: error

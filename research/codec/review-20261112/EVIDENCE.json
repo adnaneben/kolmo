@@ -1,0 +1,93 @@
+{
+  "scope": "Research review R1: development-only compatibility feasibility; not timings, whole-product integration or fresh holdout",
+  "review_base_commit": "a5518d016348acc521a9ce8dd739ffce4d3fe249",
+  "source_reference": "2f3308a3380a140ad0f6873ae228de7715e5eef5",
+  "core_blob": "e06467c8872d494b97270811bedf6fd0bac2aa31",
+  "graph_blob": "91ad067dc583b9d9e6f060f214a0f7c402bb4a31",
+  "source_distribution_artifact": 13929641752,
+  "source_distribution_sha256": "b91637f9dd75fe0850fbc05f8a3083ac1f3d2ebcf0da7aab84863e341d554f91",
+  "input_artifact": 13961345681,
+  "input_sha256": "5d02cee72dbbbc8a396e85e29c2cb3f5bf91f26abd2e808995b9a54205660e82",
+  "input_manifest_files_verified": 611,
+  "selftests": {
+    "release": {
+      "status": "passed",
+      "singleton_cases": 272,
+      "mixed_and_identity_cases": 15,
+      "plane_compatibility_cases": 64,
+      "decoder": "pinned_unmodified"
+    },
+    "asan": {
+      "status": "passed",
+      "singleton_cases": 272,
+      "mixed_and_identity_cases": 15,
+      "plane_compatibility_cases": 64,
+      "decoder": "pinned_unmodified"
+    }
+  },
+  "archive_replays": {
+    "inputs": 58,
+    "GCC_Clang_asan_sizes_and_residuals_agree": true,
+    "original_native_baseline_sizes_reproduced": true,
+    "all_emitted_payloads_decoded_with_unmodified_pinned_leaf_decoders": true
+  },
+  "unit_tests": 11,
+  "groups": {
+    "C_real": {
+      "cases": 7,
+      "totals": {
+        "baseline_bytes": 51436,
+        "huf_original_frame_bytes": 51728,
+        "huf_aligned_frame_bytes": 51078,
+        "rans_singleton_frame_bytes": 51960,
+        "rans_aligned_frame_bytes": 52252,
+        "offline_best_compatible_frame_bytes": 50786
+      },
+      "multi_byte_cases": 3,
+      "constant_planes": 1,
+      "rans_previously_rejected": 1
+    },
+    "D_full": {
+      "cases": 11,
+      "totals": {
+        "baseline_bytes": 337195,
+        "huf_original_frame_bytes": 426202,
+        "huf_aligned_frame_bytes": 411824,
+        "rans_singleton_frame_bytes": 337537,
+        "rans_aligned_frame_bytes": 319748,
+        "offline_best_compatible_frame_bytes": 319539
+      },
+      "multi_byte_cases": 4,
+      "constant_planes": 1,
+      "rans_previously_rejected": 1
+    },
+    "synthetic": {
+      "cases": 18,
+      "totals": {
+        "baseline_bytes": 628234,
+        "huf_original_frame_bytes": 653456,
+        "huf_aligned_frame_bytes": 597578,
+        "rans_singleton_frame_bytes": 630258,
+        "rans_aligned_frame_bytes": 595693,
+        "offline_best_compatible_frame_bytes": 591902
+      },
+      "multi_byte_cases": 12,
+      "constant_planes": 18,
+      "rans_previously_rejected": 0
+    }
+  },
+  "raw_artifact_sha256": {
+    "audit_release/AUDIT.json": "121e5750435b1db3dc6db2eb4d526237b681de8f45dd9e06fe9653e0ecc3c13e",
+    "audit_asan/AUDIT.json": "2b357de58d433ef777d9df749242fd4d2056822aebe4ba45bb55036953813bff",
+    "leaf_build/receipt.json": "8a349232dc0725bf7989304a16491ce6d554a6e3ceed440e5f40fee3dea77528",
+    "unit-tests.log": "4ead6ac412e32867bd3fcd4b462a1f60aaefed8aec3abec08bede87d938bf4ee"
+  },
+  "limitations": [
+    "Exact complete leaf functions were extracted from verified core; no production source edit or full CLI compatibility claim",
+    "Vendor objects are uninstrumented; C harness and leaf functions instrumented in ASan/UBSan run",
+    "No throughput, separate decode timing, selection cost, new holdout, or M5 measurements",
+    "Aggregate numbers are shared-E2C1-overhead accounting with actual payload sizes; no integrated new encoder",
+    "Singleton handling can prevent rANS rejection but HUF already wins many constant cases",
+    "Initial local build driver had a Python object-list error and full-core Clang attempts timed out; neither produced a sanitizer verdict. Final bounded leaf-function build passed."
+  ]
+}

@@ -1,0 +1,1630 @@
+{
+ "first": {
+  "covertype__elevation": {
+   "view": "npy",
+   "zstd3_bytes": 319407,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 163202,
+     "bytes_vs_zstd3_pct": -48.90468900180647,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 99.42569831491224,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 163202,
+     "bytes_vs_zstd3_pct": -48.90468900180647,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 99.70461150539846,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 159909,
+     "bytes_vs_zstd3_pct": -49.93566202368764,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 476.51812054133575,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 281144,
+     "bytes_vs_zstd3_pct": -11.979386801165914,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 78.14679582598451,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 275798,
+     "bytes_vs_zstd3_pct": -13.65311342581722,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 115.99339764800129,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 185840,
+     "bytes_vs_zstd3_pct": -41.81717996161637,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -30.816748040977792,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 185840,
+     "bytes_vs_zstd3_pct": -41.81717996161637,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -29.55853523182378,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 319416,
+     "bytes_vs_zstd3_pct": 0.0028177215903202324,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -7.795499332171774,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 319416,
+     "bytes_vs_zstd3_pct": 0.0028177215903202324,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -11.198579648387552,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 268969,
+     "bytes_vs_zstd3_pct": -15.791137952518264,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1419.918163653329,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "covertype__road_distance": {
+   "view": "npy",
+   "zstd3_bytes": 185793,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 102470,
+     "bytes_vs_zstd3_pct": -44.84722244648614,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 131.63708021264014,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 102470,
+     "bytes_vs_zstd3_pct": -44.84722244648614,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 130.5810498566092,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 80656,
+     "bytes_vs_zstd3_pct": -56.58824605878585,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1173.633832884509,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 169746,
+     "bytes_vs_zstd3_pct": -8.637031535095508,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 74.39993531668341,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 164144,
+     "bytes_vs_zstd3_pct": -11.652215099600093,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 87.08397016419345,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 141144,
+     "bytes_vs_zstd3_pct": -24.031583536516443,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -15.266610277690129,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 141144,
+     "bytes_vs_zstd3_pct": -24.031583536516443,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -14.347693510138582,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 185802,
+     "bytes_vs_zstd3_pct": 0.004844100692702469,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -14.891208866628581,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 185802,
+     "bytes_vs_zstd3_pct": 0.004844100692702469,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -15.889782637104977,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 135971,
+     "bytes_vs_zstd3_pct": -26.815864968002025,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 2124.7319606722926,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "covertype__fire_distance": {
+   "view": "npy",
+   "zstd3_bytes": 177394,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 97472,
+     "bytes_vs_zstd3_pct": -45.05338399269423,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 123.59309878070653,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 97472,
+     "bytes_vs_zstd3_pct": -45.05338399269423,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 120.95542115825131,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 73158,
+     "bytes_vs_zstd3_pct": -58.75959728062956,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1101.1233707716449,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 164573,
+     "bytes_vs_zstd3_pct": -7.227414681443567,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 64.32708585143763,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 161505,
+     "bytes_vs_zstd3_pct": -8.956898203997877,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 78.81437295604555,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 140724,
+     "bytes_vs_zstd3_pct": -20.671499599760978,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": -17.595211097610154,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 140724,
+     "bytes_vs_zstd3_pct": -20.671499599760978,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -17.158238761679435,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 177403,
+     "bytes_vs_zstd3_pct": 0.005073452315196292,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -15.569880270059699,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 177403,
+     "bytes_vs_zstd3_pct": 0.005073452315196292,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -18.519854081364805,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 154509,
+     "bytes_vs_zstd3_pct": -12.900661803668667,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 2057.7838791792124,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "covertype__hillshade_control": {
+   "view": "npy",
+   "zstd3_bytes": 279209,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 175543,
+     "bytes_vs_zstd3_pct": -37.12845932616785,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 88.70762814120121,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 175543,
+     "bytes_vs_zstd3_pct": -37.12845932616785,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 91.39392412246532,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 173435,
+     "bytes_vs_zstd3_pct": -37.88344931574555,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 297.706821013404,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 253147,
+     "bytes_vs_zstd3_pct": -9.334226332245732,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 76.8346591499104,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 252109,
+     "bytes_vs_zstd3_pct": -9.705990852730395,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 125.19621374950458,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 207444,
+     "bytes_vs_zstd3_pct": -25.702968027534933,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -27.81637560547643,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 207444,
+     "bytes_vs_zstd3_pct": -25.702968027534933,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -27.343459935183223,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 279218,
+     "bytes_vs_zstd3_pct": 0.0032233917961033143,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -11.904905176587144,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 279218,
+     "bytes_vs_zstd3_pct": 0.0032233917961033143,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -14.83874054633546,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 223560,
+     "bytes_vs_zstd3_pct": -19.930947784634444,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1583.4844634689532,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "covertype__cover_control": {
+   "view": "npy",
+   "zstd3_bytes": 26336,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 26411,
+     "bytes_vs_zstd3_pct": 0.2847812879708478,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 179.41292470618694,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 26411,
+     "bytes_vs_zstd3_pct": 0.2847812879708478,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 183.6417814047246,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 18387,
+     "bytes_vs_zstd3_pct": -30.18301944106926,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1495.2338347984253,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 32365,
+     "bytes_vs_zstd3_pct": 22.8926184690158,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 60.30411850156043,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 30374,
+     "bytes_vs_zstd3_pct": 15.332624544349937,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 88.8172902865832,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 38610,
+     "bytes_vs_zstd3_pct": 46.6054070473876,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -7.208662727903126,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 26345,
+     "bytes_vs_zstd3_pct": 0.03417375455649907,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -15.01970705073552,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 26345,
+     "bytes_vs_zstd3_pct": 0.03417375455649907,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -23.634946473495578,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 26345,
+     "bytes_vs_zstd3_pct": 0.03417375455649907,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -18.568814878252894,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 18348,
+     "bytes_vs_zstd3_pct": -30.3311057108141,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1291.0903019112318,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "covertype__table": {
+   "view": "csv",
+   "zstd3_bytes": 2079900,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 570082,
+     "bytes_vs_zstd3_pct": -72.59089379297082,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -8.533702114264807,
+     "bytes_vs_openzl9_pct": -31.667048237323357,
+     "archive_fits_every_pair": true
+    },
+    "kolmo_fast": {
+     "bytes": 570082,
+     "bytes_vs_zstd3_pct": -72.59089379297082,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -8.027604367288676,
+     "bytes_vs_openzl9_pct": -31.667048237323357,
+     "archive_fits_every_pair": true
+    },
+    "kolmo_hc": {
+     "bytes": 491444,
+     "bytes_vs_zstd3_pct": -76.37174864176161,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 606.4033618091803,
+     "bytes_vs_openzl9_pct": -41.09300215397634,
+     "archive_fits_every_pair": true
+    },
+    "openzl_csv_6": {
+     "bytes": 861749,
+     "bytes_vs_zstd3_pct": -58.56776768113852,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 174.85625994962626,
+     "bytes_vs_openzl9_pct": 3.293653980541089,
+     "archive_fits_every_pair": true
+    },
+    "openzl_csv_9": {
+     "bytes": 834271,
+     "bytes_vs_zstd3_pct": -59.88888888888889,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 381.299744498327,
+     "bytes_vs_openzl9_pct": 0.0,
+     "archive_fits_every_pair": true
+    },
+    "openzl_serial_6": {
+     "bytes": 1971231,
+     "bytes_vs_zstd3_pct": -5.224722342420307,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 117.13630543377036,
+     "bytes_vs_openzl9_pct": 136.28185565601586,
+     "archive_fits_every_pair": false
+    },
+    "openzl_serial_9": {
+     "bytes": 1949394,
+     "bytes_vs_zstd3_pct": -6.274628587912878,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 200.82010453322056,
+     "bytes_vs_openzl9_pct": 133.664360861159,
+     "archive_fits_every_pair": false
+    },
+    "tf_planes_huf": {
+     "bytes": 2076073,
+     "bytes_vs_zstd3_pct": -0.18399923073224578,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -3.3362373366425335,
+     "bytes_vs_openzl9_pct": 148.84875538044594,
+     "archive_fits_every_pair": false
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 2076073,
+     "bytes_vs_zstd3_pct": -0.18399923073224578,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -3.887244748238794,
+     "bytes_vs_openzl9_pct": 148.84875538044594,
+     "archive_fits_every_pair": false
+    },
+    "mcsv_planes_huf": {
+     "bytes": 713137,
+     "bytes_vs_zstd3_pct": -65.71291889033127,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -15.48755183317736,
+     "bytes_vs_openzl9_pct": -14.519742385867417,
+     "archive_fits_every_pair": true
+    },
+    "mcsv_prod3": {
+     "bytes": 560612,
+     "bytes_vs_zstd3_pct": -73.04620414443002,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -3.571423943831198,
+     "bytes_vs_openzl9_pct": -32.802170997193954,
+     "archive_fits_every_pair": true
+    },
+    "mcsv_prod19": {
+     "bytes": 497259,
+     "bytes_vs_zstd3_pct": -76.09216789268714,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 699.8157863344297,
+     "bytes_vs_openzl9_pct": -40.395986436062145,
+     "archive_fits_every_pair": true
+    }
+   }
+  },
+  "collegemsg__source_id": {
+   "view": "npy",
+   "zstd3_bytes": 79752,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 79800,
+     "bytes_vs_zstd3_pct": 0.060186578393017776,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 42.67143313457558,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 79800,
+     "bytes_vs_zstd3_pct": 0.060186578393017776,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 46.5840349951258,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 72239,
+     "bytes_vs_zstd3_pct": -9.420453405557227,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 678.1413374978227,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 74751,
+     "bytes_vs_zstd3_pct": -6.270689136322605,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 69.71099669586975,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 74711,
+     "bytes_vs_zstd3_pct": -6.320844618316778,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 90.67052545721322,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 79392,
+     "bytes_vs_zstd3_pct": -0.4513993379476333,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -22.891461060066565,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 79392,
+     "bytes_vs_zstd3_pct": -0.4513993379476333,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -19.1574463218956,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 79761,
+     "bytes_vs_zstd3_pct": 0.011284983448689445,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -9.219151615559273,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 79761,
+     "bytes_vs_zstd3_pct": 0.011284983448689445,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -8.128309181510707,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 72200,
+     "bytes_vs_zstd3_pct": -9.469355000501556,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 614.000584206621,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "collegemsg__target_id": {
+   "view": "npy",
+   "zstd3_bytes": 87873,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 80814,
+     "bytes_vs_zstd3_pct": -8.033184254549175,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 34.0805884677833,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 79650,
+     "bytes_vs_zstd3_pct": -9.357823222150152,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 44.36377774512512,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 75116,
+     "bytes_vs_zstd3_pct": -14.517542362272827,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 301.6882022402216,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 82390,
+     "bytes_vs_zstd3_pct": -6.239686820752677,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 58.444516917355216,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 82431,
+     "bytes_vs_zstd3_pct": -6.193028575330306,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 80.30442665825662,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 82734,
+     "bytes_vs_zstd3_pct": -5.848212761599125,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -19.259669918666468,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 82734,
+     "bytes_vs_zstd3_pct": -5.848212761599125,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -22.85939265924154,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 87882,
+     "bytes_vs_zstd3_pct": 0.010242053873210644,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -13.468823982444034,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 87882,
+     "bytes_vs_zstd3_pct": 0.010242053873210644,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -11.66464364325428,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 80388,
+     "bytes_vs_zstd3_pct": -8.517974804547467,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 573.2056131525284,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "collegemsg__unix_timestamp": {
+   "view": "npy",
+   "zstd3_bytes": 198822,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 64161,
+     "bytes_vs_zstd3_pct": -67.72942632103087,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 24.76647100665057,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 64495,
+     "bytes_vs_zstd3_pct": -67.56143686312379,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 28.134075122477654,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 62466,
+     "bytes_vs_zstd3_pct": -68.58194767178682,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 290.2551758144724,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 188852,
+     "bytes_vs_zstd3_pct": -5.014535614770999,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 57.20188832796389,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 188852,
+     "bytes_vs_zstd3_pct": -5.014535614770999,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 72.17411871358746,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 79853,
+     "bytes_vs_zstd3_pct": -59.836939574091396,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -15.6724225186627,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 79853,
+     "bytes_vs_zstd3_pct": -59.836939574091396,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -11.10847556788448,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 198831,
+     "bytes_vs_zstd3_pct": 0.004526662039405771,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -8.894599878513088,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 198831,
+     "bytes_vs_zstd3_pct": 0.004526662039405771,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -11.207860740221387,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 110765,
+     "bytes_vs_zstd3_pct": -44.289364356057185,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 334.7473701009054,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "collegemsg__table": {
+   "view": "csv",
+   "zstd3_bytes": 378073,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 233695,
+     "bytes_vs_zstd3_pct": -38.18786319044206,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 0.492954674534829,
+     "bytes_vs_openzl9_pct": -27.819783423830792,
+     "archive_fits_every_pair": true
+    },
+    "kolmo_fast": {
+     "bytes": 233695,
+     "bytes_vs_zstd3_pct": -38.18786319044206,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 2.486283186226723,
+     "bytes_vs_openzl9_pct": -27.819783423830792,
+     "archive_fits_every_pair": true
+    },
+    "kolmo_hc": {
+     "bytes": 226987,
+     "bytes_vs_zstd3_pct": -39.96212371684833,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 258.1035245384616,
+     "bytes_vs_openzl9_pct": -29.891650142386784,
+     "archive_fits_every_pair": true
+    },
+    "openzl_csv_6": {
+     "bytes": 354340,
+     "bytes_vs_zstd3_pct": -6.277359134347071,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 157.43075288273377,
+     "bytes_vs_openzl9_pct": 9.44323987077087,
+     "archive_fits_every_pair": false
+    },
+    "openzl_csv_9": {
+     "bytes": 323766,
+     "bytes_vs_zstd3_pct": -14.364157186575078,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 303.765896803496,
+     "bytes_vs_openzl9_pct": 0.0,
+     "archive_fits_every_pair": true
+    },
+    "openzl_serial_6": {
+     "bytes": 362306,
+     "bytes_vs_zstd3_pct": -4.170358634443616,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 82.46947141956042,
+     "bytes_vs_openzl9_pct": 11.90365881531723,
+     "archive_fits_every_pair": true
+    },
+    "openzl_serial_9": {
+     "bytes": 357383,
+     "bytes_vs_zstd3_pct": -5.472488117374152,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 115.47203811481381,
+     "bytes_vs_openzl9_pct": 10.383116201207043,
+     "archive_fits_every_pair": true
+    },
+    "tf_planes_huf": {
+     "bytes": 378082,
+     "bytes_vs_zstd3_pct": 0.0023804926561732387,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -11.603482225504502,
+     "bytes_vs_openzl9_pct": 16.77631375746682,
+     "archive_fits_every_pair": true
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 378082,
+     "bytes_vs_zstd3_pct": 0.0023804926561732387,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -10.763151259661097,
+     "bytes_vs_openzl9_pct": 16.77631375746682,
+     "archive_fits_every_pair": true
+    },
+    "mcsv_planes_huf": {
+     "bytes": 241604,
+     "bytes_vs_zstd3_pct": -36.095939144027746,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -15.295409872965182,
+     "bytes_vs_openzl9_pct": -25.376969786821345,
+     "archive_fits_every_pair": true
+    },
+    "mcsv_prod3": {
+     "bytes": 247794,
+     "bytes_vs_zstd3_pct": -34.45868919494384,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -1.483937216295983,
+     "bytes_vs_openzl9_pct": -23.465095161320214,
+     "archive_fits_every_pair": true
+    },
+    "mcsv_prod19": {
+     "bytes": 229591,
+     "bytes_vs_zstd3_pct": -39.27336784166021,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 303.5857613845846,
+     "bytes_vs_openzl9_pct": -29.087365566489375,
+     "archive_fits_every_pair": true
+    }
+   }
+  }
+ },
+ "confirmation": {
+  "covertype__elevation": {
+   "view": "npy",
+   "zstd3_bytes": 319407,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 163202,
+     "bytes_vs_zstd3_pct": -48.90468900180647,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 103.83355364567043,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 163202,
+     "bytes_vs_zstd3_pct": -48.90468900180647,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 102.56635895017556,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 159909,
+     "bytes_vs_zstd3_pct": -49.93566202368764,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 481.7483200074245,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 281144,
+     "bytes_vs_zstd3_pct": -11.979386801165914,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 78.60201876902819,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 275798,
+     "bytes_vs_zstd3_pct": -13.65311342581722,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 115.06938454822229,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 185840,
+     "bytes_vs_zstd3_pct": -41.81717996161637,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -31.49160392985546,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 185840,
+     "bytes_vs_zstd3_pct": -41.81717996161637,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -30.25150059058327,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 319416,
+     "bytes_vs_zstd3_pct": 0.0028177215903202324,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -7.728671971578738,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 319416,
+     "bytes_vs_zstd3_pct": 0.0028177215903202324,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -8.991728212810068,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 268969,
+     "bytes_vs_zstd3_pct": -15.791137952518264,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1447.0715857920454,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "covertype__road_distance": {
+   "view": "npy",
+   "zstd3_bytes": 185793,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 102470,
+     "bytes_vs_zstd3_pct": -44.84722244648614,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 136.01499550340583,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 102470,
+     "bytes_vs_zstd3_pct": -44.84722244648614,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 131.18151550014022,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 80656,
+     "bytes_vs_zstd3_pct": -56.58824605878585,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1179.2284839907152,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 169746,
+     "bytes_vs_zstd3_pct": -8.637031535095508,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 70.21103837360289,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 164144,
+     "bytes_vs_zstd3_pct": -11.652215099600093,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 94.21505515326956,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 141144,
+     "bytes_vs_zstd3_pct": -24.031583536516443,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -13.451755284212318,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 141144,
+     "bytes_vs_zstd3_pct": -24.031583536516443,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -14.16289389955081,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 185802,
+     "bytes_vs_zstd3_pct": 0.004844100692702469,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -11.928912547941762,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 185802,
+     "bytes_vs_zstd3_pct": 0.004844100692702469,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -12.911865612336083,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 135971,
+     "bytes_vs_zstd3_pct": -26.815864968002025,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 2188.7617015879073,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "covertype__fire_distance": {
+   "view": "npy",
+   "zstd3_bytes": 177394,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 97472,
+     "bytes_vs_zstd3_pct": -45.05338399269423,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 132.80313449542177,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 97472,
+     "bytes_vs_zstd3_pct": -45.05338399269423,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 132.14232317333904,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 73158,
+     "bytes_vs_zstd3_pct": -58.75959728062956,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1147.8343969407517,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 164573,
+     "bytes_vs_zstd3_pct": -7.227414681443567,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 67.50216753337158,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 161505,
+     "bytes_vs_zstd3_pct": -8.956898203997877,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 87.18871160999599,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 140724,
+     "bytes_vs_zstd3_pct": -20.671499599760978,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -17.01750598668027,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 140724,
+     "bytes_vs_zstd3_pct": -20.671499599760978,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -16.4976170373898,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 177403,
+     "bytes_vs_zstd3_pct": 0.005073452315196292,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -14.931479654922686,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 177403,
+     "bytes_vs_zstd3_pct": 0.005073452315196292,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -15.42472710328907,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 154509,
+     "bytes_vs_zstd3_pct": -12.900661803668667,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 2144.1939427245375,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "covertype__hillshade_control": {
+   "view": "npy",
+   "zstd3_bytes": 279209,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 175543,
+     "bytes_vs_zstd3_pct": -37.12845932616785,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 96.38185917506861,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 175543,
+     "bytes_vs_zstd3_pct": -37.12845932616785,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 93.79602392878215,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 173435,
+     "bytes_vs_zstd3_pct": -37.88344931574555,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 307.492516872031,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 253147,
+     "bytes_vs_zstd3_pct": -9.334226332245732,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 80.44399713164707,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 252109,
+     "bytes_vs_zstd3_pct": -9.705990852730395,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 126.24930013911086,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 207444,
+     "bytes_vs_zstd3_pct": -25.702968027534933,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -26.363544353953028,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 207444,
+     "bytes_vs_zstd3_pct": -25.702968027534933,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -24.520019251558,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 279218,
+     "bytes_vs_zstd3_pct": 0.0032233917961033143,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -11.30698482701592,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 279218,
+     "bytes_vs_zstd3_pct": 0.0032233917961033143,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -10.67438056927762,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 223560,
+     "bytes_vs_zstd3_pct": -19.930947784634444,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1624.2267506212609,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "covertype__cover_control": {
+   "view": "npy",
+   "zstd3_bytes": 26336,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 26411,
+     "bytes_vs_zstd3_pct": 0.2847812879708478,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 198.02037913525137,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 26411,
+     "bytes_vs_zstd3_pct": 0.2847812879708478,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 196.06003914591275,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 18387,
+     "bytes_vs_zstd3_pct": -30.18301944106926,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1578.1930475369318,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 32365,
+     "bytes_vs_zstd3_pct": 22.8926184690158,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 66.58981671520414,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 30374,
+     "bytes_vs_zstd3_pct": 15.332624544349937,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 92.58820206322132,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 38610,
+     "bytes_vs_zstd3_pct": 46.6054070473876,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": -1.175798080436652,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 26345,
+     "bytes_vs_zstd3_pct": 0.03417375455649907,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -11.47171495577355,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 26345,
+     "bytes_vs_zstd3_pct": 0.03417375455649907,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -14.976854566518716,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 26345,
+     "bytes_vs_zstd3_pct": 0.03417375455649907,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -19.400910992684462,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 18348,
+     "bytes_vs_zstd3_pct": -30.3311057108141,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 1366.0643797695348,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "covertype__table": {
+   "view": "csv",
+   "zstd3_bytes": 2079900,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 570082,
+     "bytes_vs_zstd3_pct": -72.59089379297082,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -6.853635876521702,
+     "bytes_vs_openzl9_pct": -31.667048237323357,
+     "archive_fits_every_pair": true
+    },
+    "kolmo_fast": {
+     "bytes": 570082,
+     "bytes_vs_zstd3_pct": -72.59089379297082,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -7.786501446257754,
+     "bytes_vs_openzl9_pct": -31.667048237323357,
+     "archive_fits_every_pair": true
+    },
+    "kolmo_hc": {
+     "bytes": 491444,
+     "bytes_vs_zstd3_pct": -76.37174864176161,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 608.5793118571204,
+     "bytes_vs_openzl9_pct": -41.09300215397634,
+     "archive_fits_every_pair": true
+    },
+    "openzl_csv_6": {
+     "bytes": 861749,
+     "bytes_vs_zstd3_pct": -58.56776768113852,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 176.0201161319734,
+     "bytes_vs_openzl9_pct": 3.293653980541089,
+     "archive_fits_every_pair": true
+    },
+    "openzl_csv_9": {
+     "bytes": 834271,
+     "bytes_vs_zstd3_pct": -59.88888888888889,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 377.14727259332574,
+     "bytes_vs_openzl9_pct": 0.0,
+     "archive_fits_every_pair": true
+    },
+    "openzl_serial_6": {
+     "bytes": 1971231,
+     "bytes_vs_zstd3_pct": -5.224722342420307,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 114.46839611595637,
+     "bytes_vs_openzl9_pct": 136.28185565601586,
+     "archive_fits_every_pair": false
+    },
+    "openzl_serial_9": {
+     "bytes": 1949394,
+     "bytes_vs_zstd3_pct": -6.274628587912878,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 198.19609345293193,
+     "bytes_vs_openzl9_pct": 133.664360861159,
+     "archive_fits_every_pair": false
+    },
+    "tf_planes_huf": {
+     "bytes": 2076073,
+     "bytes_vs_zstd3_pct": -0.18399923073224578,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -3.1626755414245533,
+     "bytes_vs_openzl9_pct": 148.84875538044594,
+     "archive_fits_every_pair": false
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 2076073,
+     "bytes_vs_zstd3_pct": -0.18399923073224578,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -2.998186886416365,
+     "bytes_vs_openzl9_pct": 148.84875538044594,
+     "archive_fits_every_pair": false
+    },
+    "mcsv_planes_huf": {
+     "bytes": 713137,
+     "bytes_vs_zstd3_pct": -65.71291889033127,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -15.601216196400658,
+     "bytes_vs_openzl9_pct": -14.519742385867417,
+     "archive_fits_every_pair": true
+    },
+    "mcsv_prod3": {
+     "bytes": 560612,
+     "bytes_vs_zstd3_pct": -73.04620414443002,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -3.072513357453077,
+     "bytes_vs_openzl9_pct": -32.802170997193954,
+     "archive_fits_every_pair": true
+    },
+    "mcsv_prod19": {
+     "bytes": 497259,
+     "bytes_vs_zstd3_pct": -76.09216789268714,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 694.8656916842258,
+     "bytes_vs_openzl9_pct": -40.395986436062145,
+     "archive_fits_every_pair": true
+    }
+   }
+  },
+  "collegemsg__source_id": {
+   "view": "npy",
+   "zstd3_bytes": 79752,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 79800,
+     "bytes_vs_zstd3_pct": 0.060186578393017776,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 42.73730763561328,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 79800,
+     "bytes_vs_zstd3_pct": 0.060186578393017776,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 47.27650847357185,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 72239,
+     "bytes_vs_zstd3_pct": -9.420453405557227,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 667.8615577441111,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 74751,
+     "bytes_vs_zstd3_pct": -6.270689136322605,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 58.46581833269913,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 74711,
+     "bytes_vs_zstd3_pct": -6.320844618316778,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 83.23028503097807,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 79392,
+     "bytes_vs_zstd3_pct": -0.4513993379476333,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -19.621959621740913,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 79392,
+     "bytes_vs_zstd3_pct": -0.4513993379476333,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -16.850727226857963,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 79761,
+     "bytes_vs_zstd3_pct": 0.011284983448689445,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -12.828380294177222,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 79761,
+     "bytes_vs_zstd3_pct": 0.011284983448689445,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -11.859757097826297,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 72200,
+     "bytes_vs_zstd3_pct": -9.469355000501556,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 610.3314136970818,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "collegemsg__target_id": {
+   "view": "npy",
+   "zstd3_bytes": 87873,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 80814,
+     "bytes_vs_zstd3_pct": -8.033184254549175,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 40.39236886860906,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 79650,
+     "bytes_vs_zstd3_pct": -9.357823222150152,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 47.49429032217974,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 75116,
+     "bytes_vs_zstd3_pct": -14.517542362272827,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 317.0541982025389,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 82390,
+     "bytes_vs_zstd3_pct": -6.239686820752677,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 66.26446061349995,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 82431,
+     "bytes_vs_zstd3_pct": -6.193028575330306,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 93.22389107014992,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 82734,
+     "bytes_vs_zstd3_pct": -5.848212761599125,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -20.485540103495993,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 82734,
+     "bytes_vs_zstd3_pct": -5.848212761599125,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -14.478280280412326,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 87882,
+     "bytes_vs_zstd3_pct": 0.010242053873210644,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -8.441126505811013,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 87882,
+     "bytes_vs_zstd3_pct": 0.010242053873210644,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -5.303322750472972,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 80388,
+     "bytes_vs_zstd3_pct": -8.517974804547467,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 598.3864818537882,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "collegemsg__unix_timestamp": {
+   "view": "npy",
+   "zstd3_bytes": 198822,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 64161,
+     "bytes_vs_zstd3_pct": -67.72942632103087,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 23.328506167016695,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_fast": {
+     "bytes": 64495,
+     "bytes_vs_zstd3_pct": -67.56143686312379,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 29.672529816387637,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "kolmo_hc": {
+     "bytes": 62466,
+     "bytes_vs_zstd3_pct": -68.58194767178682,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 296.44299341871687,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_6": {
+     "bytes": 188852,
+     "bytes_vs_zstd3_pct": -5.014535614770999,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 58.477449169958184,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "openzl_serial_9": {
+     "bytes": 188852,
+     "bytes_vs_zstd3_pct": -5.014535614770999,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 71.89289218886871,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf": {
+     "bytes": 79853,
+     "bytes_vs_zstd3_pct": -59.836939574091396,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -12.504935986734889,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 79853,
+     "bytes_vs_zstd3_pct": -59.836939574091396,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -12.165709291160564,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_planes_huf": {
+     "bytes": 198831,
+     "bytes_vs_zstd3_pct": 0.004526662039405771,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -7.214114924714677,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod3": {
+     "bytes": 198831,
+     "bytes_vs_zstd3_pct": 0.004526662039405771,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -6.529977152107314,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    },
+    "mcsv_prod19": {
+     "bytes": 110765,
+     "bytes_vs_zstd3_pct": -44.289364356057185,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 333.69884947923936,
+     "archive": "BLOCKED: OpenZL typed profile not measured (v0.3.0 has no numpy profile)"
+    }
+   }
+  },
+  "collegemsg__table": {
+   "view": "csv",
+   "zstd3_bytes": 378073,
+   "policies": {
+    "kolmo_fast_quick": {
+     "bytes": 233695,
+     "bytes_vs_zstd3_pct": -38.18786319044206,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 4.371038797417337,
+     "bytes_vs_openzl9_pct": -27.819783423830792,
+     "archive_fits_every_pair": true
+    },
+    "kolmo_fast": {
+     "bytes": 233695,
+     "bytes_vs_zstd3_pct": -38.18786319044206,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 3.529411282961803,
+     "bytes_vs_openzl9_pct": -27.819783423830792,
+     "archive_fits_every_pair": true
+    },
+    "kolmo_hc": {
+     "bytes": 226987,
+     "bytes_vs_zstd3_pct": -39.96212371684833,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 287.563093854792,
+     "bytes_vs_openzl9_pct": -29.891650142386784,
+     "archive_fits_every_pair": true
+    },
+    "openzl_csv_6": {
+     "bytes": 354340,
+     "bytes_vs_zstd3_pct": -6.277359134347071,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 167.69566880839645,
+     "bytes_vs_openzl9_pct": 9.44323987077087,
+     "archive_fits_every_pair": false
+    },
+    "openzl_csv_9": {
+     "bytes": 323766,
+     "bytes_vs_zstd3_pct": -14.364157186575078,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 317.6766392481756,
+     "bytes_vs_openzl9_pct": 0.0,
+     "archive_fits_every_pair": true
+    },
+    "openzl_serial_6": {
+     "bytes": 362306,
+     "bytes_vs_zstd3_pct": -4.170358634443616,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 88.432607125277,
+     "bytes_vs_openzl9_pct": 11.90365881531723,
+     "archive_fits_every_pair": true
+    },
+    "openzl_serial_9": {
+     "bytes": 357383,
+     "bytes_vs_zstd3_pct": -5.472488117374152,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 125.39704443744685,
+     "bytes_vs_openzl9_pct": 10.383116201207043,
+     "archive_fits_every_pair": true
+    },
+    "tf_planes_huf": {
+     "bytes": 378082,
+     "bytes_vs_zstd3_pct": 0.0023804926561732387,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -7.734541434006692,
+     "bytes_vs_openzl9_pct": 16.77631375746682,
+     "archive_fits_every_pair": true
+    },
+    "tf_planes_huf_pg16": {
+     "bytes": 378082,
+     "bytes_vs_zstd3_pct": 0.0023804926561732387,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -9.406704037856572,
+     "bytes_vs_openzl9_pct": 16.77631375746682,
+     "archive_fits_every_pair": true
+    },
+    "mcsv_planes_huf": {
+     "bytes": 241604,
+     "bytes_vs_zstd3_pct": -36.095939144027746,
+     "speed_fits_every_pair": true,
+     "speed_cost_vs_zstd3_pct": -10.797297397515992,
+     "bytes_vs_openzl9_pct": -25.376969786821345,
+     "archive_fits_every_pair": true
+    },
+    "mcsv_prod3": {
+     "bytes": 247794,
+     "bytes_vs_zstd3_pct": -34.45868919494384,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": -0.12521973852906987,
+     "bytes_vs_openzl9_pct": -23.465095161320214,
+     "archive_fits_every_pair": true
+    },
+    "mcsv_prod19": {
+     "bytes": 229591,
+     "bytes_vs_zstd3_pct": -39.27336784166021,
+     "speed_fits_every_pair": false,
+     "speed_cost_vs_zstd3_pct": 320.3653830255776,
+     "bytes_vs_openzl9_pct": -29.087365566489375,
+     "archive_fits_every_pair": true
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,1 @@
+probe-fast: /mnt/data/kolmo_ppp_20261113/repo/research/codec/R4-singleton/probe.c:89: selftest: Assertion `rans_decompress_all(p.p,p.n,out,sizeof out)<0' failed.

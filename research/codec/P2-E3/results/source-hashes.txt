@@ -1,0 +1,7 @@
+7e477271e6e9e72c2a8034c62087f27d79981cef853ebe24bdb8046130017d26  research/codec/N1-baselines/baselines.py
+c94766ae58dd7e1c2abd196db0811985943b1cb70fbaec1293a0f14b9d8bc5f7  research/codec/P2-E3/run_e3.py
+7caba513fc4451e1ce9b5a10714af9c67419b4f697f6ede0eedb26019671a9fc  research/codec/P2-E3/PROTOCOL.md
+124553d52e757e6f5abebd90cbfa4c33b432a40fbc2fac167973f032fb8dc72d  research/codec/P2-E2/p2e2.c
+a205228f493b6f45a6b38e85ed05ac8eca5cd190e3be99782058781f42e6ceab  research/codec/P2-E2/fastint.inc
+284153bd1354bf34bc50d82c119d13c0b9afb00e67aefcba388cf0d4750110c2  research/codec/P2-E2/tfcli.c
+3171cd94921bbc7b3ee247704ab65454863da16eda81341242870e714da988e3  research/codec/E02C-harness/harness/e02c.c

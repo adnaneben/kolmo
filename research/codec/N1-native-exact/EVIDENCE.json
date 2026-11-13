@@ -1,0 +1,125 @@
+{
+  "status": "NATIVE_COMPARATOR_BUILT_TESTED_AND_MEASURED_NOT_P2_ACCEPTANCE",
+  "openzl_commit": "32246b48faee46807f84183dac4db479089f5445",
+  "base_research_head": "3d847949913a39b831db76570e8a7e47dfe5bc20",
+  "claim_commit": "4f13bdde066a2a44c1066a3f794359728dba13ca",
+  "source_artifact": {
+    "id": 13980664053,
+    "run": 43299261465,
+    "zip_sha256": "7f14230393e38e8ed790db70f0de4f6ad30b7e09ca708418562d0dfda440e357",
+    "manifest_entries": 1229,
+    "openzl_blobs_verified": 3674,
+    "source_tar_sha256": "7348508fe66345e5aa8ce1e3fa33372f1d24c28233b324dc3f6e492f0b6b56bf"
+  },
+  "input_artifact": {
+    "id": 13970918568,
+    "zip_sha256": "00ae71bdc5e4f3612d017dfeabb0f5154742feda67bde2be92f1bfeefb50ebe1",
+    "manifest_entries": 282,
+    "inputs": {
+      "collegemsg__source_id.npy": "e1e47073e881a2b41cfd7ec8181e2f077978ab5fb8f842f637eaf1143feb1b68",
+      "collegemsg__target_id.npy": "5e4b6e559637fe798099d92caee4d87c0b1aaa1aa7bcbc7d4241c96f2070ef6e",
+      "collegemsg__unix_timestamp.npy": "1887975eb6df79b37ab696553551641aa10cfcdd8a2382a16bd5eb1326a906c4",
+      "covertype__cover_control.npy": "cd50965f72fd8bfc0e454bf211028e6a9f0e402f3f876ffe9e60c2289609b496",
+      "covertype__elevation.npy": "7eae95120cd4eb435fdfaedac45eca3af2febedcfca08e2ce086081c30de3bd2",
+      "covertype__fire_distance.npy": "55a4dc1a4f0eaf2c850bfe816f53667e72f452b8fabf0dc4d84fe9ae94aea284",
+      "covertype__hillshade_control.npy": "abc1da632fc4e37bc16f1f901fad740519d25c49e66a333ccd713435c0619f54",
+      "covertype__road_distance.npy": "d8f8ab9f248e8658a86b30bbcc3b3204adbabb3bd12da7d8998b4b7431d0f8e3"
+    }
+  },
+  "tests": {
+    "parser_groups_each_release_and_clang_asan": 14,
+    "linked_groups_each_release_and_asan": 5,
+    "full_roundtrip_fixtures_each": 35,
+    "level_configurations_each": 70,
+    "release_sanitizer_frame_matches": 56,
+    "timing_samples": 672,
+    "configuration_frames": 56,
+    "independently_recomputed_medians": 448
+  },
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "caf9375791a9229b9a3aca10e9e687faf1c6fe9d458021a080a1787cc0e53f67",
+      "git_blob": "970319818bc9a766e82318d895df5b5481f9a4b4"
+    },
+    "PROTOCOL.md": {
+      "sha256": "605cdf54f821ba9e48b21caf969da012f036165fd2fada76bd584746ba695ce9",
+      "git_blob": "03e3b4ec96a36384ea2382aedc1b8a420b20d988"
+    },
+    "adapter.cpp": {
+      "sha256": "6807afce8f7b030f52e107c03d2494d7f09b83be0c394a2e83f47f297bfcdede",
+      "git_blob": "3f9a77ce1ebbc2ebd4f4e94e345d0b546d123d7a"
+    },
+    "audit.py": {
+      "sha256": "e1a7641ecae07618676fc8157cd7d74fdf3f335c0c04b39613601d76884f65e9",
+      "git_blob": "744d6e4ccf678593855d549252b67fee6673a9a7"
+    },
+    "bench.py": {
+      "sha256": "4381486b293bb6976b561ef522535823e6d4b456ba820dabef840242d47d084e",
+      "git_blob": "a004831de907af471e97ce4545b83ed54f7c3873"
+    },
+    "header_parser.hpp": {
+      "sha256": "78f59fba7d6eae715f2c366399908c3c5ed130917f5d135d35dfe600596c1b20",
+      "git_blob": "6a2033740661b21e9a3e1a6e7df6f43a79e8db6d"
+    },
+    "parse_cli.cpp": {
+      "sha256": "a8b7546d4236681f214f9364dcc9518662b4186a634d16d0f60448d8b425f9c8",
+      "git_blob": "88a6c73aac674b83b48904e97a710cdefcf22b40"
+    },
+    "stock_reader.c": {
+      "sha256": "d2a425bb3dca5136f1e7848f898fb10bfcd91f03ca9f7d3c23c937421f5faea3",
+      "git_blob": "7b599b114e5c83975be290d6045a44ed47bff989"
+    },
+    "test_parser.py": {
+      "sha256": "bb720a4dc4594ff0db3e204e58feb5f87f9ede227e507cc1220c48643e3039bf",
+      "git_blob": "ce68f587ce82e0268970a0b967109dcf206b5127"
+    },
+    "test_roundtrip.py": {
+      "sha256": "822539899565a76f7ec2b068d234e01c0b98351e6ea6a0ecf1c93a79190f1a60",
+      "git_blob": "8c8435a38fbc23374d60130329c213aca5a5d78c"
+    }
+  },
+  "binary_sha256": {
+    "native_exact": "667bbd7733648a1dd7d121b540c5cf0c0998f9b449dd61e9fa487caa0b4bfb7e",
+    "native_exact_san": "dda57b0e81a5555b43135976b9cf8a3ed6ed7b321bff0cac2bfa2808701ca468",
+    "stock_reader": "27244214b24dd1656d584d27ce36093fe82d967a0f9ff5f944d5e02624267c55"
+  },
+  "environment": {
+    "uname": {
+      "system": "Linux",
+      "node": "598c7628af05",
+      "release": "6.18.57",
+      "version": "#1 SMP Tue Oct 20 21:56:04 UTC 2026",
+      "machine": "x86_64",
+      "processor": ""
+    },
+    "cxx": "c++ (Debian 14.2.0-19) 14.2.0",
+    "clang": "clang version 17.0.0 (https://github.com/swiftlang/llvm-project.git 10999b6d034fe318f3d56c83bddb6572593a8bb0)",
+    "python": "3.13.5"
+  },
+  "logs": {
+    "build-retry.log": "085f67736ee89f966bb3565e86e144b725d66653a36e08179052f8942b8abcf0",
+    "build-sanitizer.log": "55101997de36be6580d5d98ae4eba44c1800ca4de40530f92d87e0448971df1d",
+    "bench.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "parser-asan.log": "860e4f9f870bbcf917b3dd9ef3a6ad606f99b108449a449e715498657e12abaa",
+    "configure-final.log": "046cf89cfe4bc2aba6ec715622014c9053bbc4e56514ebb98884ed996cc46d5e",
+    "build.log": "c55156df328630aba27e131c0d454f23e9e92d4dc90580113bde904e9bde938f",
+    "configure.log": "03e6b3f487efc0f7c595e133841f4f65655d5b1f9b8c89ef786187c879957fcc",
+    "build-final.log": "334fe2d9ff344efe13c666bf60495797338124c721dc24cbda4b601fb5fd33dd",
+    "parser-tests.log": "3c6a97572186afbdafd755c820803cf1d58cdbca1e65e06df3fc8e47ab0a58af",
+    "roundtrip-asan.log": "7a109fc881f8cb2b103a4c9848aeaab001c6ac951113f217f2aa4dc047b8b53b",
+    "roundtrip.log": "09a7350c018e1bef9a360feb9641f230830e5279b2e5c786c697ffe1b8a4990b"
+  },
+  "new_actions_runner_minutes": 0,
+  "limitations": [
+    "All eight sources are observed R3 development data.",
+    "No candidate Kolmo or zstd timings; no competitor acceptance or fresh validation.",
+    "Custom typed OpenZL front end; no training. All inverse nodes are standard.",
+    "Stock OpenZL CLI binary from CI requires unavailable GLIBC_2.43. Compatibility tested using separately compiled stock public decoder API, not that CLI binary.",
+    "ASan/UBSan covers new adapter/parser; pinned OpenZL/vendor archives remain uninstrumented.",
+    "Three repeats per pass and identical-frame noise cannot justify precise latency claims.",
+    "Input parser supports only narrow exact integer NPY and PCM16 WAV grammars; other formats explicitly reject.",
+    "Initial smoke graph nested CLI segmenters; OpenZL rejected it. Removed segmenters consistently before any benchmark and imposed 16 MiB comparator input limit.",
+    "Initial symlink file hash compared normalized pathlib target; exact tar linkname matches recorded Git blob.",
+    "One new CMake target build invoked before reconfigure did not build; reconfiguration and final build succeeded."
+  ]
+}

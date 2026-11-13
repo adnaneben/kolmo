@@ -1,0 +1,87 @@
+{
+ "calibration": {
+  "fast": {
+   "config": "exist+prod3",
+   "production": 219566,
+   "control": 219681,
+   "change_pct": 0.052376050936842056,
+   "ok": true
+  },
+  "hc": {
+   "config": "exist+prod19",
+   "production": 2692268,
+   "control": 2692486,
+   "change_pct": 0.008097262233919267,
+   "ok": true
+  }
+ },
+ "hypotheses": {
+  "H1_fast": {
+   "mode": "fast",
+   "control": "exist+prod3",
+   "candidate": "planes+prod3",
+   "status": "provisional",
+   "families": {
+    "F1_ghcn_daily": {
+     "int_files": 9,
+     "control_bytes": 219681,
+     "candidate_bytes": 210385,
+     "pooled_change_pct": -4.231590351464165,
+     "worst_file": [
+      0.0,
+      "ghcn_USW00023174_TMIN.npy"
+     ],
+     "decode_ratio": 1.0175900649671834,
+     "vs_production_pct": -4.181430640445239,
+     "meets": true
+    },
+    "F2_mitdb": {
+     "status": "not exercised",
+     "int_files": 0
+    }
+   },
+   "family_mean_change_pct": -4.231590351464165
+  },
+  "H2_hc": {
+   "mode": "hc",
+   "control": "exist+prod19",
+   "candidate": "planes+prod19",
+   "status": "not supported",
+   "families": {
+    "F1_ghcn_daily": {
+     "int_files": 9,
+     "control_bytes": 213365,
+     "candidate_bytes": 205421,
+     "pooled_change_pct": -3.7231973378951566,
+     "worst_file": [
+      0.0,
+      "ghcn_USW00023174_TMIN.npy"
+     ],
+     "decode_ratio": 1.1053698745916631,
+     "vs_production_pct": -3.6717295581263354,
+     "meets": false
+    },
+    "F2_mitdb": {
+     "int_files": 8,
+     "control_bytes": 2479121,
+     "candidate_bytes": 2479121,
+     "pooled_change_pct": 0.0,
+     "worst_file": [
+      0.0,
+      "mitdb_201_sig1.npy"
+     ],
+     "decode_ratio": 0.9981930947060756,
+     "vs_production_pct": 0.004195211247037811,
+     "meets": false
+    }
+   },
+   "family_mean_change_pct": -1.8615986689475783
+  },
+  "H3_guard": {
+   "mode": "fast",
+   "descriptive": true,
+   "files_changed": 0,
+   "bytes_saved": 0
+  }
+ }
+}

@@ -1,0 +1,65 @@
+{
+  "status": "EXECUTED_LOCAL_DEVELOPMENT_NOT_PRODUCTION_ACCEPTANCE",
+  "date": "2026-11-13",
+  "protocol_commit": "dda927d30d58205e32ae25ee25ae313153dd6cbe",
+  "source_reference": "4c78ea9893a7882bc4d427cca29076623312d66a",
+  "inputs": {
+    "real_observed": 8,
+    "real_source_families": 2,
+    "synthetic_mechanisms": 6,
+    "total_bytes": 7535556,
+    "R3_archive_sha256": "00ae71bdc5e4f3612d017dfeabb0f5154742feda67bde2be92f1bfeefb50ebe1"
+  },
+  "arms": 35,
+  "rounds": [7, 5],
+  "configurations_per_pass": 490,
+  "raw_timed_batches": 11760,
+  "frame_instances_compared": 1470,
+  "recomputed_medians": 2940,
+  "per_build_selftest": {"roundtrips": 420, "truncations_rejected": 2079, "mutation_probes": 2376, "arms": 35},
+  "reference": {"frames_reconstructed": 490, "entropy_reader_calls_after_exact_byte_cache": 568, "integer_inverse_cache_entries": 42, "status": "PASS", "limitation": "independent framing and integer inverse; pinned entropy decoder implementation reused"},
+  "runner_tests": 11,
+  "source_dependencies_verified": 250,
+  "archive_acceptance": "NOT_EVALUATED_NO_MATCHED_OPENZL_RUN",
+  "production_changed": false,
+  "other_branches_changed": false,
+  "new_runner_minutes": 0,
+  "new_automation": false,
+  "noise_real": {
+    "zstd3": {"encode": [0.8501965765978965, 1.1729147824659287], "decode": [0.8942444645122941, 1.1287010168060085], "cost": [0.9290853492832813, 1.0765604005992222]},
+    "split_H": {"encode": [0.9665881757634, 1.063555807742876], "decode": [0.9188292135484109, 1.0763492237882122], "cost": [0.985074287322311, 1.0600078777170086]}
+  },
+  "source_files": {
+    "analyze.py": "405cf03f7d22856446f7f674627da0e4bdbb698b07843ba59f5bdf435735209e",
+    "bridge.c": "b79bdcc59e4bdc3f3187d134d3803484f0e8cd85822998bae5f91ce6b5be7509",
+    "build.py": "a0345b376bb4b6de97464ebd872b92c961b0d5925e1159f7a17feb5327335eef",
+    "leaf_reader.c": "f53147be26b1d8ecef8d914f2642e43d889ace11a213bab4ba96eaf38325f97f",
+    "prepare.py": "b9e4c226f8b1eea33a587f39f4255fa69470d74f109689f740799171117b243f",
+    "reference.py": "9649c760a2acf953ea1f484c157fd0e113ed697513da74a1283fd48615630cfc",
+    "run.py": "394721ec6578b05e21a9a3edbd7436e4f952fa6770931d6f7b559a61bb47c74d",
+    "stack.cpp": "8ed61f6059c15340a5241594875d1d5d4094e13af28f87ca9c7445127c7e84c4",
+    "test_runner.py": "3200e0546cda7b47195e00094369bf7ab813cb48e827b7b79c991f8f32aef4b3"
+  },
+  "receipt_hashes": {
+    "evidence/INPUTS.json": "c5d03f16d59619103b489150a87f64750866369e7ea1f56d2472ab00f60755d0",
+    "evidence/REFERENCE.json": "308b730f7fe81677be2921e46d35b09767b20e50aa0a9620e79606cb773d780b",
+    "evidence/ARMS.txt": "aa800eb5b65b1eabaa7902ad1adafbc0f96862a167410e803ba0285d17678660",
+    "first/HASHES.json": "54fa6d0923ba6a06541e89120c38d1b372ef3e71d34ff3d5cc3a0ed1150542cc",
+    "confirmation/HASHES.json": "54fa6d0923ba6a06541e89120c38d1b372ef3e71d34ff3d5cc3a0ed1150542cc",
+    "sanitized/HASHES.json": "54fa6d0923ba6a06541e89120c38d1b372ef3e71d34ff3d5cc3a0ed1150542cc",
+    "audited/AUDIT.json": "bb47031d608ea76c5b7f2fc400273371e2d7dc105d15e59be85bf3fe7fd1c910",
+    "audited/SUMMARY.json": "2b314ef7b841dc49b45e319092a46689a0866e04e0a11aa976029995889302cf",
+    "audited/RAW_TIMINGS.csv.xz": "e28fb0cd5187c1025f0e7ef08c5e12652231a9dd20a2ecf765a3669849307cd2",
+    "audited/RAW_SCHEMA.json": "50a78bab36f24f2b924b6180a80bf0ea7ef34f465233a4ab1d85ada823776c77"
+  },
+  "limitations": [
+    "Previously observed derived numeric files, not fresh validation or original CSV reconstruction.",
+    "KST1 experimental framing; not CZN1 compatibility or production integration.",
+    "Direct zstd baseline checksum off; candidate original-content CRC counted.",
+    "Vendor archive not sanitizer-instrumented.",
+    "Reference inverse independent for framing and numbers, not entropy implementations.",
+    "Intermediate copies fully timed; no fused implementation or scratch-memory result.",
+    "Shared-host timing noise; observed paired wins are not statistical guarantees.",
+    "No allocation-failure exhaustive test, RL training or archive promotion."
+  ]
+}

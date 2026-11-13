@@ -1,0 +1,73 @@
+name: E02E preregistered per-plane leaf validation
+# Executes research/codec/E02E exactly as registered (fetch.sh, then run.sh). Research only: no production build,
+# release or default is affected. The registered files are not modified by this workflow.
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/planner-record-ownership-isolated-20261112]
+    paths:
+      - .github/workflows/e02e-validation.yml
+permissions:
+  contents: read
+concurrency:
+  group: e02e-registered-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validation:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Environment
+        run: |
+          set -euo pipefail
+          mkdir e02e-evidence
+          sudo apt-get update && sudo apt-get install -y liblzma-dev
+          python -m pip install 'numpy==2.1.3'
+          cp research/codec/E02E/PREREGISTRATION.md research/codec/E02E/FROZEN.sha256 e02e-evidence/
+          { git rev-parse HEAD; uname -a; gcc --version; nproc; grep -m1 'model name' /proc/cpuinfo; python -m pip freeze; } > e02e-evidence/environment.txt
+      - name: Fetch the registered publisher files
+        run: |
+          set -euo pipefail
+          sh research/codec/E02E/fetch.sh "$RUNNER_TEMP/e02e-download" 2>&1 | tee e02e-evidence/fetch.log
+          cp "$RUNNER_TEMP/e02e-download/DOWNLOAD.sha256" e02e-evidence/
+      - name: Registered run
+        run: |
+          set -euo pipefail
+          sh research/codec/E02E/run.sh "$RUNNER_TEMP/e02e-download" e02e-evidence/out 2>&1 | tee e02e-evidence/run.log
+          git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
+      - name: Compress raw records and hash retained evidence
+        if: always()
+        run: |
+          set -eu
+          rm -rf e02e-evidence/out/inputs                     # derived inputs are reproducible from the hashed downloads
+          [ -f e02e-evidence/out/run/raw.jsonl ] && xz -9 e02e-evidence/out/run/raw.jsonl || true
+          python - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path('e02e-evidence');root.mkdir(exist_ok=True)
+          res={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob('*')) if p.is_file() and p.name!='MANIFEST.json'}
+          (root/'MANIFEST.json').write_text(json.dumps(res,indent=2)+'\n')
+          PY
+      - name: Print decision, tables and raw records to the log (artifact storage may be unreachable for reviewers)
+        if: always()
+        run: |
+          set -eu
+          cd e02e-evidence
+          for f in DOWNLOAD.sha256 out/manifest.json out/decision.json out/run/env.json MANIFEST.json; do [ -f "$f" ] && { echo "=== BEGIN $f"; cat "$f"; echo "=== END $f"; } || true; done
+          [ -f out/run/tables.md ] && { echo "=== BEGIN out/run/tables.md"; cat out/run/tables.md; echo "=== END out/run/tables.md"; } || true
+          [ -f out/run/raw.jsonl.xz ] && { echo "=== BEGIN base64 out/run/raw.jsonl.xz"; base64 -w 0 out/run/raw.jsonl.xz; echo; echo "=== END base64 out/run/raw.jsonl.xz"; } || true
+      - name: Retain success and failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e02e-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: e02e-evidence/
+          retention-days: 30
+          if-no-files-found: error

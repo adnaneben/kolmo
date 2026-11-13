@@ -1,0 +1,158 @@
+{
+ "calibration": {
+  "fast": {
+   "config": "exist+prod3",
+   "production": 8810204,
+   "control": 8810565,
+   "change_pct": 0.00409752146488529,
+   "ok": true
+  },
+  "hc": {
+   "config": "exist+prod19",
+   "production": 8627589,
+   "control": 8627752,
+   "change_pct": 0.0018892879575016508,
+   "ok": true
+  }
+ },
+ "phenotype": {
+  "fast": {
+   "F1_eeg": {
+    "int_files": 4,
+    "multibyte_files": 4
+   },
+   "F2_pageviews": {
+    "int_files": 8,
+    "multibyte_files": 8
+   },
+   "F3_speech": {
+    "int_files": 4,
+    "multibyte_files": 3
+   }
+  },
+  "hc": {
+   "F1_eeg": {
+    "int_files": 4,
+    "multibyte_files": 4
+   },
+   "F2_pageviews": {
+    "int_files": 5,
+    "multibyte_files": 5
+   },
+   "F3_speech": {
+    "int_files": 4,
+    "multibyte_files": 3
+   }
+  }
+ },
+ "hypotheses": {
+  "H1_fast": {
+   "mode": "fast",
+   "control": "exist+prod3",
+   "candidate": "planes+prod3",
+   "status": "provisional",
+   "families": {
+    "F1_eeg": {
+     "multibyte_files": 4,
+     "control_bytes": 1904603,
+     "candidate_bytes": 1906154,
+     "pooled_change_pct": 0.08143429365594645,
+     "worst_file": [
+      0.3200953386508276,
+      "eeg_S002R01.npy"
+     ],
+     "added_decode_ns_per_input_byte": 0.004643399113820305,
+     "large_files": 4,
+     "large_file_decode_ratio": 1.003456409781315,
+     "vs_production_pct": 0.08689949430269461,
+     "meets": false
+    },
+    "F2_pageviews": {
+     "multibyte_files": 8,
+     "control_bytes": 51492,
+     "candidate_bytes": 46566,
+     "pooled_change_pct": -9.566534607317646,
+     "worst_file": [
+      null,
+      null
+     ],
+     "added_decode_ns_per_input_byte": -0.2137635685210312,
+     "large_files": 0,
+     "large_file_decode_ratio": null,
+     "vs_production_pct": -9.411718932378799,
+     "meets": true
+    },
+    "F3_speech": {
+     "multibyte_files": 3,
+     "control_bytes": 6278504,
+     "candidate_bytes": 6268416,
+     "pooled_change_pct": -0.1606752181729898,
+     "worst_file": [
+      -0.11965838568387399,
+      "fsdd_theo.npy"
+     ],
+     "added_decode_ns_per_input_byte": -0.005754988288362139,
+     "large_files": 3,
+     "large_file_decode_ratio": 0.9964045624588926,
+     "vs_production_pct": -0.15860794530558886,
+     "meets": false
+    }
+   },
+   "family_mean_change_pct": -3.215258510611563
+  },
+  "H2_hc": {
+   "mode": "hc",
+   "control": "exist+prod19",
+   "candidate": "planes+prod19",
+   "status": "provisional",
+   "families": {
+    "F1_eeg": {
+     "multibyte_files": 4,
+     "control_bytes": 1899225,
+     "candidate_bytes": 1898812,
+     "pooled_change_pct": -0.021745712066767453,
+     "worst_file": [
+      0.004604167189858899,
+      "eeg_S002R01.npy"
+     ],
+     "added_decode_ns_per_input_byte": 0.26066345021001947,
+     "large_files": 4,
+     "large_file_decode_ratio": 1.1783547415156908,
+     "vs_production_pct": -0.01900827360119539,
+     "meets": false
+    },
+    "F2_pageviews": {
+     "multibyte_files": 5,
+     "control_bytes": 31991,
+     "candidate_bytes": 29598,
+     "pooled_change_pct": -7.48022881435404,
+     "worst_file": [
+      null,
+      null
+     ],
+     "added_decode_ns_per_input_byte": -0.3376933514246947,
+     "large_files": 0,
+     "large_file_decode_ratio": null,
+     "vs_production_pct": -7.320891783567129,
+     "meets": true
+    },
+    "F3_speech": {
+     "multibyte_files": 3,
+     "control_bytes": 6167587,
+     "candidate_bytes": 6138671,
+     "pooled_change_pct": -0.46883813718395784,
+     "worst_file": [
+      -0.0639931614338507,
+      "fsdd_theo.npy"
+     ],
+     "added_decode_ns_per_input_byte": -0.32265815375521695,
+     "large_files": 3,
+     "large_file_decode_ratio": 0.8411275309358252,
+     "vs_production_pct": -0.4681442078078413,
+     "meets": false
+    }
+   },
+   "family_mean_change_pct": -2.6569375545349216
+  }
+ }
+}

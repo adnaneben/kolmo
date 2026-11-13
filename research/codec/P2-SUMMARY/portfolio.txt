@@ -1,0 +1,58 @@
+
+P2-E2 in-memory development arrays (20): 20 inputs; inside zstd-3 cost on every pair 8; smaller 12; both 6; worst bytes +6.4%
+  audio_concat_s16.raw               tf_planes_huf_pg16   over    +0.0%
+  audio_curve.wav                    tf_planes_huf_pg16   over   -15.9%
+  audio_drama.wav                    tf_planes_huf_pg16   over    +0.0%
+  audio_gong.wav                     tf_planes_huf_pg16   over    +0.0%
+  audio_roll.wav                     tf_planes_huf_pg16   over   -24.3%
+  audio_soft.wav                     tf_planes_huf_pg16   over    +0.6%
+  audio_space2.wav                   tf_planes_huf_pg16   fit    -27.1%
+  audio_space3.wav                   tf_planes_huf_pg16   fit    -16.6%
+  audio_untie.wav                    tf_planes_huf_pg16   over    +0.0%
+  dem_jacksboro_i16.npy              tf_planes_huf_pg16   fit    -31.4%
+  fs_inode_u64.npy                   tf_planes_huf_pg16   fit    -48.3%
+  fs_mtime_i64.npy                   tf_planes_huf_pg16   over    +0.0%
+  fs_size_u32.npy                    tf_planes_huf_pg16   fit     +6.4%
+  goog_date_i64.npy                  tf_planes_huf_pg16   fit    -65.4%
+  goog_volume_i64.npy                tf_planes_huf_pg16   over   -31.1%
+  mri_s1045_u16.npy                  tf_planes_huf_pg16   over   -15.9%
+  syn_clustered_outliers_u32.npy     tf_planes_huf_pg16   over    -4.1%
+  syn_sparse_outliers_u32.npy        tf_planes_huf_pg16   fit     +5.7%
+  syn_walk_i32.npy                   tf_planes_huf_pg16   fit    -56.7%
+  topobathy_i16.npy                  tf_planes_huf_pg16   over   -19.8%
+
+P2-E6 in-memory development CSVs (10, revision 1 records): 10 inputs; inside zstd-3 cost on every pair 2; smaller 10; both 2; worst bytes -3.3%
+  dem_rows.csv                       mcsv_planes_huf      fit    -35.6%
+  fs_mixed.csv                       mcsv_planes_huf      over   -62.1%
+  fs_table.csv                       mcsv_planes_huf      over   -25.8%
+  goog_mixed.csv                     mcsv_planes_huf      over   -42.1%
+  goog_table.csv                     mcsv_planes_huf      fit    -55.4%
+  mri_rows.csv                       mcsv_planes_huf      over   -24.7%
+  real_stocks.csv                    mcsv_planes_huf      over    -3.3%
+  real_zipsums.csv                   mcsv_planes_huf      over   -11.1%
+  syn_mixed.csv                      mcsv_planes_huf      over   -87.9%
+  syn_table.csv                      mcsv_planes_huf      over   -35.5%
+
+P2-E7 N1 CLI boundary, first run (8 NPY + 2 CSV): 10 inputs; inside zstd-3 cost on every pair 10; smaller 9; both 9; worst bytes +0.0%
+  collegemsg__source_id              tf_planes_huf_pg16   fit     -0.5%
+  collegemsg__table                  mcsv_planes_huf      fit    -36.1%
+  collegemsg__target_id              tf_planes_huf_pg16   fit     -5.8%
+  collegemsg__unix_timestamp         tf_planes_huf_pg16   fit    -59.8%
+  covertype__cover_control           tf_planes_huf_pg16   fit     +0.0%
+  covertype__elevation               tf_planes_huf_pg16   fit    -41.8%
+  covertype__fire_distance           tf_planes_huf_pg16   fit    -20.7%
+  covertype__hillshade_control       tf_planes_huf_pg16   fit    -25.7%
+  covertype__road_distance           tf_planes_huf_pg16   fit    -24.0%
+  covertype__table                   mcsv_planes_huf      fit    -65.7%
+
+P2-E7 N1 CLI boundary, confirmation run (8 NPY + 2 CSV): 10 inputs; inside zstd-3 cost on every pair 10; smaller 9; both 9; worst bytes +0.0%
+  collegemsg__source_id              tf_planes_huf_pg16   fit     -0.5%
+  collegemsg__table                  mcsv_planes_huf      fit    -36.1%
+  collegemsg__target_id              tf_planes_huf_pg16   fit     -5.8%
+  collegemsg__unix_timestamp         tf_planes_huf_pg16   fit    -59.8%
+  covertype__cover_control           tf_planes_huf_pg16   fit     +0.0%
+  covertype__elevation               tf_planes_huf_pg16   fit    -41.8%
+  covertype__fire_distance           tf_planes_huf_pg16   fit    -20.7%
+  covertype__hillshade_control       tf_planes_huf_pg16   fit    -25.7%
+  covertype__road_distance           tf_planes_huf_pg16   fit    -24.0%
+  covertype__table                   mcsv_planes_huf      fit    -65.7%

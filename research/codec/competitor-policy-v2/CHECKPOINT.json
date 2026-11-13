@@ -1,0 +1,40 @@
+{
+  "scope": "Active repository research is preserved by Git ancestry; local historical source archives remain separately attached, not claimed as Git objects.",
+  "branch": "fix/planner-record-ownership-isolated-20261112",
+  "previous_head": "3919f5ccbc573fde549eb27c7e5d22373d658fab",
+  "previous_root_tree": "4b54c068d3b5e0540047e09a9ee37a3957ea8471",
+  "active_research_implementations": [
+    "c880659f4490bfe49831411fb30f91bb8af1e321",
+    "706cdab65caace2ce698e5dfe4c5dd99e8fcbe00",
+    "2ad085f62c795ea84ce7b87d8e5bc8f49e821d87",
+    "3d596d16c2fa367e44aabc81c5cba80949468403",
+    "25b1c80c46517736e6df169a5421c4879da91499",
+    "be41cc58185712ae660dbf3b7e7a93959625b8e9",
+    "06db7f2f2849fa6ccdc207227cfaf4498d17870e"
+  ],
+  "preserved_frozen_paths": [
+    "src",
+    "vendor",
+    "Makefile",
+    "tests",
+    "research/codec/E02C",
+    "research/codec/E02D",
+    "research/codec/E03",
+    "research/codec/review-20261112",
+    "research/codec/R2-stack",
+    "research/codec/R3-guard",
+    "benchmark/accept/TARGETS.md"
+  ],
+  "external_backup_files": [
+    {
+      "filename": "Kolmo_All_Local_Source_History.tar.xz",
+      "bytes": 132964,
+      "sha256": "d4b8f296c90f8b8ff4164687667114daf7bec90bd3918c29b513dfdd5669732c"
+    },
+    {
+      "filename": "Kolmo_All_Local_Code_History.tar.xz",
+      "bytes": 62752,
+      "sha256": "aa3900bdf05106f0c46ecafcd65f952b1edecce24f1960ed45f8899504b87f06"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# 20261112T2113Z — N1 independent artifact integrity and comparator-gap audit
+
+Status: COMPLETED_OFFLINE_AUDIT / COMMITTED_SOURCE_PENDING_EXACT_CI. No new compression experiment launched.
+
+- Authorized branch HEAD observed before this work: `77234e0fd0d2205408ad5ba5e9b846282251aaf7` (preserves Claude's P2-E4 changes). PR #7 remains draft and unmerged.
+- Prior dedicated N1 workflow: `43299261465` succeeded; job `131465730936`, ~11 wall-clock runner-minutes. Artifact `13980664053` ZIP SHA-256 `7f14230393e38e8ed790db70f0de4f6ad30b7e09ca708418562d0dfda440e357` downloaded.
+- Executed read-only independent Python audit against complete ZIP: all 1,229 files verified versus manifest; 80 configurations / 64 complete, 16 failed OpenZL numpy profile attempts; two complete passes retained exactly matching frame hashes and sizes; 384 timing samples checked against active P2 cost arithmetic.
+- Missing OpenZL typed NPY evidence is material: official pinned v0.3.0 has no `numpy` profile. 16 failures are invalid profile invocations, not compression results. `serial` remains generic. Typed archive NPY comparator is BLOCKED until an exact, fully costed typed payload/header adapter is measured.
+- Examined actual CLI error log `first/covertype__elevation/openzl_numpy_9/warmup.encode.log`: `Profile not found: 'numpy'`. Confirmed CLI `zli list-profiles` names `le-i16/le-i32/le-i64` (plus unsigned), csv and serial.
+- Development whole-CLI Kolmo quick compared with zstd-3: smaller on 8/10, cost-fitting on 1/10. Derived Covertype CSV was smaller and below cost, but the production control is NOT P2-admitted: type-first not proved, observed data only. No end-to-end accepted candidate, no release.
+- Local auditor implementation used for real artifact: `/mnt/data/kolmo_n1_audit/audit.py` SHA-256 `0d28eb359677cb2bdc1e0c48bedd7d5cc0b07ffb936de3d5ff19ebaf58a88363`; 14 synthetic local infrastructure tests passed with ResourceWarning promoted to error. A smaller functionally equivalent reproducibility script and a separate 10-test fixture suite are committed to `research/codec/N1-audit/` but the exact committed variant has not been run yet; its status is TEST_NOT_RUN, not PASS.
+- P2-E3 run `43302008497` inspected **in_progress** (job `131475341390`), so no new workflow was dispatched or cancelled. Do not double-spend runner budget. Night budget conservative reservation N1 60 + P2-E3 90 = 150/480 runner-minutes; 330 unreserved, although N1 observed runtime was ~11 minutes; reconcile after P2-E3 completes. This audit used 0 new runner-minutes.
+- Exact intended artifact and conclusion are in `research/codec/N1-audit/RESULTS.md`; no production/format/default/other-branch change, PR #6 untouched; no holdout exposed, trained model or RL run.
+
+Next prerequisite: first inspect P2-E3 output. Independently build/test exact NPY-header-preserving OpenZL numeric typed adapter (without changing current candidate/source code), then run it once the experiment slot is free; charge all costs before any archive-size conclusion.

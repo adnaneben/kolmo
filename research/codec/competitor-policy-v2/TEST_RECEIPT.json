@@ -1,0 +1,20 @@
+{
+  "status": "reference_tests_passed_NOT_COMPRESSION_BENCHMARK",
+  "python": "3.13.5",
+  "tests": 39,
+  "random_byte_roundtrip_cases": 500,
+  "commands": [
+    "python -m unittest -v test_policy"
+  ],
+  "code_files_sha256": {
+    "research/codec/competitor-policy-v2/test_policy.py": "8acfb4f7b08ccd76b471284e09a603db81eb7bbe6b3093f969dc2bc6e2e5b068",
+    "research/codec/competitor-policy-v2/typed_columns.py": "43aa0651c218c26af0ea96e86fc979eb5797dfb775f3c7c403c1bdd8b7848246",
+    "research/codec/competitor-policy-v2/DECISION.md": "48a03edaf389b708580ececbc6e62dfbe9ccacb1cfb6eaab1a56b18b4367a55d",
+    "research/codec/competitor-policy-v2/NEXT_TASK.md": "9f627eb2871a54b5590d1fc72ab2ae53ec4af84440d85ae08fb624442957fefa",
+    "research/codec/competitor-policy-v2/policy.py": "1ff10706bbb737c4b949583ecc99746fb28dcb710c24bc51d382c5f614dee657",
+    "benchmark/accept/ACTIVE_POLICY.json": "f759726ea8fcfcc165fdd2184acb40b70168d1345f4c3e5d52e9f347e634a8f5"
+  },
+  "production_planner_integrated": false,
+  "competitor_benchmark_executed": false,
+  "rl_model_trained": false
+}
