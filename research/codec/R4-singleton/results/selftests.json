@@ -1,0 +1,32 @@
+{
+  "base": {
+    "valid_leaves": 2663,
+    "truncations": 10748,
+    "leaf_mutations": 12805,
+    "full_graph_roundtrips_and_ranges": 107,
+    "full_frame_mutations": 1536,
+    "allocation_failure": 1,
+    "decision_digest": "4f59cfd2bd87566c",
+    "status": "passed"
+  },
+  "fast": {
+    "valid_leaves": 2663,
+    "truncations": 10748,
+    "leaf_mutations": 12805,
+    "full_graph_roundtrips_and_ranges": 107,
+    "full_frame_mutations": 1536,
+    "allocation_failure": 1,
+    "decision_digest": "4f59cfd2bd87566c",
+    "status": "passed"
+  },
+  "asan": {
+    "valid_leaves": 2663,
+    "truncations": 10748,
+    "leaf_mutations": 12805,
+    "full_graph_roundtrips_and_ranges": 107,
+    "full_frame_mutations": 1536,
+    "allocation_failure": 1,
+    "decision_digest": "4f59cfd2bd87566c",
+    "status": "passed"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "phases": [
+    "first",
+    "confirmation"
+  ],
+  "cases": [
+    "collegemsg__source_id",
+    "collegemsg__unix_timestamp",
+    "covertype__cover_control",
+    "covertype__elevation",
+    "covertype__fire_distance",
+    "covertype__hillshade_control",
+    "covertype__road_distance"
+  ],
+  "arms": [
+    "base",
+    "fast",
+    "base_duplicate"
+  ],
+  "raw_sha256": "e8297b68a612b90770fadc02573805af961d5259f167fc3601043d2af0391a13",
+  "xz_sha256": "040983ff8553c53b9b0dc62b50177607ce844ef4421a232567e814aee98c3367",
+  "rows": 504,
+  "units": "nanoseconds per batch; divide by batch for per-decode observation"
+}
