@@ -1,0 +1,8 @@
+{
+  "file": "Kolmo_S1_Stack_Order_Evidence.zip",
+  "sha256": "fd8e8cdb7e21ead2b753f8cc39dfa303ceabd6fe65526c3e254ba7cbd3d6d08c",
+  "bytes": 155653103,
+  "verified_members": 1619,
+  "location": "Delivered conversation attachment; large raw archive is not Git-tracked.",
+  "contains": "All 11760 raw timing samples, 1470 frame instances, input files, stage accounting, logs, source and complete audits."
+}
