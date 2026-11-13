@@ -1,0 +1,9 @@
+{
+  "file": "Kolmo_C1_CSV_Audit_Source_and_Evidence.zip",
+  "sha256": "feae92f9b6709f28901b3bbe2e306a771a41dd4e20fa4b52a918bc6cba89d176",
+  "bytes": 14983834,
+  "manifest_payload_members": 14,
+  "contains": "Exact tested sources, full recomputed audit JSON, per-input ledger, logs, reports and the original pinned E26/E27 evidence ZIPs.",
+  "distribution_check": "All member hashes verified; extracted source independently reran 43 unit tests successfully.",
+  "location": "Conversation attachment; this large archive is not Git-tracked. Reproduction inputs can also be downloaded using the pinned Actions artifact IDs."
+}
