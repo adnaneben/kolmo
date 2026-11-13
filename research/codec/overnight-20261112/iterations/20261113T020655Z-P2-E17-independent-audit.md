@@ -11,3 +11,7 @@ At last active-run inspection, P2-E17 completed successfully; P2-E18 export comp
 Historical protocols intact; no branch other than fix/planner-record-ownership-isolated-20261112 touched. Do not merge PR #7 or release.
 
 Next task: evaluate header-exact OpenZL comparator with **native** typing/framing rather than the Python startup overhead, then preregister and audit source-disjoint data before choosing a deployable deterministic selector. No new release/performance claim.
+
+## Exact commit checkpoint
+
+Research source, unit tests and evidence were first committed as `3f966c792d7a99e24d3d663d5e93d0193e80780d`. An independent collaborator appended an unrelated R4 claim at `68c7ddbbb5d41da6b819fc1510fc04c191fa9085`, preserved unchanged. The audit source was then normalized to the byte-exact locally tested blob at `96963eaae1c880e9be21a1d1f3b9dab135d3141c` (blob SHA-1 `4fcb913b7b7e7f0b224bd1d28a3774076054e993`); the test source matches local SHA-1 `c7f68f725071452ffd4e057762864c8569ce5d6e`. No repo-side CI assertion is made for the corrected commit. The local executed 5-test suite and real evidence audit remain the actual verification recorded above.
