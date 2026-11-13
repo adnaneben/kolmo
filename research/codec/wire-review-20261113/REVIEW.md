@@ -88,3 +88,26 @@ leaves either do not use that context (Huffman, rANS, zstd) or are far too slow 
 **Next step.** Build a research-container prototype, not a production frame, to measure bytes and decode speed on
 the GHCN development inputs against OpenZL-9's cost. A production implementation and a decoder change in `src/`
 would need explicit authorization and a separate review of the frozen design.
+
+### (B) addendum: feasibility estimate before any prototype (same day)
+
+I computed ideal code lengths on the nine GHCN development inputs (`evidence/order1_estimate.py` and `.txt`; the
+input hashes are in `P2-E18/results/ghcn.sha256`).
+
+**Static tables cost too much.** Static order-1 tables at a realistic cost (about 1.5 bytes per used symbol per
+context) add 10–20% to the output. With them, static order-1 is *larger* than OpenZL-9 on every temperature series.
+The `C_RANS1` design above therefore does not reach its goal as written.
+
+**An adaptive order-1 model only reaches parity.** It needs no tables (ideal code length, value | previous value):
+
+| Series | Adaptive order-1 vs OpenZL-9 |
+|---|---|
+| TMAX / TMIN | 23,983 vs 26,169; 21,125 vs 21,937; 16,224 vs 15,836; 13,472 vs 13,451; 38,737 vs 38,645; 35,139 vs 37,357 |
+| Range | −8% to +2.5% |
+
+That is before any decoder-speed cost. Plain adaptive *order-0* values beat OpenZL on PRCP by 2–14%, but per-plane
+rANS (`tp_pent`) is already close there.
+
+**Revised recommendation: do not pursue P2-19 now.** The best case is roughly OpenZL-9 parity on GHCN, while the
+decoder would need to run at OpenZL's speed. Only the much slower CM model clearly beats it. A new codec ID is not
+justified by this evidence. PROVISIONAL P2-19 is downgraded accordingly.
