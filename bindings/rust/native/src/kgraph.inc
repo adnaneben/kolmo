@@ -736,7 +736,8 @@ static void kg_dec_sample(const uint8_t *base, size_t step, size_t rn, int f32, 
     uint32_t hist[KG_DEC_ESEARCH + 1] = {0}; double mx[KG_DEC_ESEARCH] = {0}; uint64_t cand = 0, vote = 0;
     for (size_t k = 0; k < sn; k++) {
         uint64_t bits = kg_ldv(base + (size_t)((uint64_t)k * rn / sn) * step, f32); int64_t m; int e = 0;
-        while (e < (f32 ? 10 : KG_DEC_ESEARCH) && !kg_dec_fitv(bits, KG_P10[e], &m, f32)) e++;
+        if (f32 ? ((bits >> 23) & 0xff) == 0xff : ((bits >> 52) & 0x7ff) == 0x7ff) e = f32 ? 10 : KG_DEC_ESEARCH;   /* NaN and infinity fit no exponent */
+        else while (e < (f32 ? 10 : KG_DEC_ESEARCH) && !kg_dec_fitv(bits, KG_P10[e], &m, f32)) e++;
         if (f32 && e == 10) e = KG_DEC_ESEARCH;
         hist[e]++;
         if (e == KG_DEC_ESEARCH) { if (!vote) { cand = bits; vote = 1; } else if (cand == bits) vote++; else vote--; }

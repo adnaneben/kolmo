@@ -96,6 +96,9 @@
   integer, decimal, 8-bit image) run before the record search, and the search is skipped when a typed plan already
   saves a fifth. Planning time over 79 files falls 29% (24.5% to 20.8% of encode); one of 83 files changes (3.7%
   smaller).
+- **DEC64 sampling skips NaN and infinity (branch `claude/dec64`).** A missing value was tried against all sixteen
+  exponents before being counted as not decimal. Output identical on 83 files at `balanced`, `hc -l 9` and `ratio`;
+  encode instructions -5.3% on a 127-column table and -10.7% on one with many missing values.
 - **DEC64: dictionary columns (branch `claude/dec64`).** A decimal or integer column of few distinct values is coded
   as indices into its sorted values (column flag bit 5; the values go to their own stream, layout bit 1). At
   `balanced` it is taken when the index saves a byte plane and the order-0 size of its planes is a tenth smaller. At
