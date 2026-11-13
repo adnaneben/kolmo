@@ -65,6 +65,11 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
 17. **Wire review (13 Nov):** singleton `C_RANS` chunks are conformant existing-format use (4,500 mutants, 0 findings);
    the GHCN order-1 leaf (P2-19) would reach only OpenZL parity and is not pursued.
 
+18. **Text-heavy CSV archive (P2-E21, Actions 43355382170):** the production table graph with BSC leaves, written as
+   a production frame (`tt_bsc0`), fits OpenZL `csv`-9's archive cost and is smaller on 16–17/23 development CSVs
+   (−20%) and on 23/24 fresh plotly CSVs (preregistered PASS, −15.3%) — but 21 of those 24 fresh files come from one
+   t-SNE generator, so a diverse fresh confirmation is still needed.
+
 ## Correctness evidence behind these claims
 
 Identity checks against production (19/19 typed inputs: choice, parameters, residual, rest, inverse); 3.3 M
@@ -74,13 +79,13 @@ timing run (runner gates: P2-E3 all inputs × 7 policies, P2-E7 50/50).
 
 ## What is needed next (in order)
 
-1. Archive, text-heavy CSV: a heavy-ratio path whose CPU fits OpenZL `csv`-9's cost (Kolmo `max` is 8–43% smaller
-   but 1.05–2.1× the cost on fresh CSVs); first, investigate production `hc`'s 1.3 s encode on one 2.5 MB fresh CSV.
+1. Archive, text-heavy CSV: confirm `tt_bsc0` on a **diverse** fresh CSV set (one file per dataset); P2-E21 passed
+   but its fresh set was dominated by one generator. (`hc`'s 1.3 s case is the CR-only file, P2-E20 follow-up.)
 2. Speed rule on audio: understand the categories where `tp_phuf_pg16` misses (natural soundscapes,
    interior/domestic) using **development** data only; any revised rule needs a new preregistration and new fresh data.
 3. If promotion is ever wanted: authorization for the one-line `rans_norm` change in `src/` plus conformance vectors
    in `tests/` (wire review §A), and the production CLI exit-time buffer leak.
 
 Runner use by this workstream tonight (approx. minutes): P2-E3 13, P2-E7 13, P2-E8 19, P2-E10 48, P2-E12 11,
-P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16 = ~170 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
+P2-E14 14, P2-E16 3, P2-E17 32, P2-E18 1, P2-E20 16, P2-E21 12 = ~182 (plus N1 ~11 and the N1 exact-NPY run by the parallel workstream).
 Decision P2-D1 remains useful for research containers (typed CSV) but no longer blocks arrays.
