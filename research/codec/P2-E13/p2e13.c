@@ -19,6 +19,8 @@
  *   tp_arch19  : tp_pent, plus the production zstd-19 leaves (kg_serialize at 19) and a whole-input fallback frame;
  *                smallest of four
  *   p2e13 run FILE TAG ROUNDS SEED      p2e13 mem FILE CANDIDATE
+ *   p2e13 feat SRC                      (P2-E16: encode-time features from the shared type-first pass, JSON line, with
+ *                                        their own extraction time; no frame written)
  *   p2e13 enc CANDIDATE SRC DST         (CLI encoder writing the frame; decode with the production `kolmo -d`;
  *                                        added after the P2-E13 measurement at bcd9795, encoders unchanged) */
 #include "../P2-E11/p2e11.c"
@@ -112,6 +114,26 @@ static int dec13(const uint8_t *f, size_t fn, int ci, uint8_t *out, size_t n) {
 static int p2e13_main(int argc, char **argv);
 __attribute__((constructor)) static void p2e13_entry(int argc, char **argv, char **envp) { (void)envp; exit(p2e13_main(argc, argv)); }
 static int p2e13_main(int argc, char **argv) {
+    if (argc == 3 && !strcmp(argv[1], "feat")) {
+        size_t n; uint8_t *src = readfile(argv[2], &n); if (!src || !n) DIE("p2e13 feat: cannot read %s", argv[2]);
+        uint64_t t0 = ns_of(CLOCK_MONOTONIC); int w = 0; size_t h = 0; int typed = !type_of(src, n, &w, &h), fwd = -1;
+        double ent[8] = {0}, zero = 0; fiprog P; memset(&P, 0, sizeof P); int planes = 0;
+        if (typed && !(fwd = fi_forward(src, n, w, h, &P))) {
+            planes = P.pln ? P.ow : 1; size_t plen = P.pln ? P.m : P.res.n;
+            for (int b = 0; b < planes && b < 8; b++) {
+                const uint8_t *q = P.res.p + (size_t)b * plen; uint32_t hc[256] = {0};
+                for (size_t k = 0; k < plen; k++) hc[q[k]]++;
+                for (int v = 0; v < 256; v++) if (hc[v]) ent[b] -= (double)hc[v] / (double)plen * log2((double)hc[v] / (double)plen);
+                zero += plen ? (double)hc[0] / (double)plen / planes : 0;
+            }
+        }
+        uint64_t t1 = ns_of(CLOCK_MONOTONIC);
+        printf("{\"kind\":\"p2e16_feat\",\"input_bytes\":%zu,\"typed\":%d,\"forward_ok\":%d,\"w\":%d,\"order\":%d,\"signed\":%d,\"ow\":%d,\"planes\":%d,\"gcd\":%llu,\"res_bytes\":%zu,\"rest_bytes\":%zu,\"zero_frac\":%.6f,\"ent\":[",
+               n, typed, fwd == 0, w, P.bo, P.bs, P.ow, planes, (unsigned long long)P.g, P.res.n, P.rest.n, zero);
+        for (int b = 0; b < planes && b < 8; b++) printf("%s%.6f", b ? "," : "", ent[b]);
+        printf("],\"extract_s\":%.9f}\n", (double)(t1 - t0) * 1e-9);
+        if (fwd == 0) fi_free(&P); free(src); return 0;
+    }
     if (argc == 5 && !strcmp(argv[1], "enc")) {
         int ci = -1; for (int c = 0; c < N13; c++) if (!strcmp(argv[2], C13[c].name) && (C13[c].e11 < 0 || CAND[C13[c].e11].kind == 'P')) ci = c;
         if (ci < 0) DIE("p2e13 enc: unknown frame candidate %s", argv[2]);
