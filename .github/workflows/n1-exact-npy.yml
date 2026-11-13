@@ -1,6 +1,13 @@
 name: N1 exact typed NPY OpenZL comparator (manual bounded development)
-# Manual dispatch ONLY. Do not run while another overnight experiment is queued/running.
+# One-shot branch-scoped bootstrap: workflow_dispatch is unavailable until the workflow is registered.
+# This push trigger matches ONLY changes to this exact workflow file on the authorized branch.
+# Subsequent research commits do not retrigger this benchmark; never merge/release.
 on:
+  push:
+    branches:
+      - fix/planner-record-ownership-isolated-20261112
+    paths:
+      - .github/workflows/n1-exact-npy.yml
   workflow_dispatch:
 permissions:
   contents: read
