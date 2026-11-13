@@ -42,8 +42,12 @@ in `PROVISIONAL.md` §A4). Production source, format, defaults and other branche
    predicting with probes) is cost-negative against zstd-3 in memory; choose the leaf from declaration-level facts.
 12. **The archive winner now exists in today's format (P2-E13):** per-plane rANS leaves (`C_RANS`, R1 singleton
    normalisation, P-18) decoded by the unmodified production CLI match P2-E10's `tf_planes_ent19` within 0.1%;
-   `tp_arch19` adds production zstd-19 leaves. Correctness: 60/60 corpus, 360/360 random NPY stress. Their archive
-   cost against OpenZL is P2-E14's job (pending the runner slot).
+   `tp_arch19` adds production zstd-19 leaves. Correctness: 60/60 corpus, 360/360 random NPY stress.
+13. **P2-E14 (Actions 43338093009, 61 inputs, production frames, production CLI decode):** guarded per-plane Huffman
+   fits zstd-3 and is smaller on 49/47; production `kolmo fast` 0/0. The per-input oracle frontier of production-frame
+   pipelines is −14.8%/−15.0% byte-weighted vs zstd-3; on the CLI boundary `tb_best` and `tp_pent` fit far more
+   often than in memory (boundary-specific claims only). Archive: a Kolmo production frame is smallest within
+   OpenZL-9 typed cost on 45/61, OpenZL on 16/61.
 
 ## Correctness evidence behind these claims
 
