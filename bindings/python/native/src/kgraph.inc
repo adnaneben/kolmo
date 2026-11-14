@@ -244,11 +244,18 @@ static int kg_int_inv(const uint8_t *par, size_t plen, const kbuf *res, const kb
  * width (1, 2, 4, 8), sign and order, for residuals in byte planes or one byte wide, which is every program the
  * encoder writes. kg_int_inv stays the reference and takes the rest. The output is the same byte for byte
  * (tests/test_fastint.c runs the two against each other on every loop). From the research branch, experiments
- * P2-E2 and P2-E28. The loops store whole words, so they are used on little-endian hosts only. */
+ * P2-E2 and P2-E28. The loops store whole words, so they are used on little-endian hosts only. A build with
+ * -DKOLMO_FORCE_GENERIC_INT_INV sends every program to kg_int_inv: the same source without the fast loops, as the
+ * control in a benchmark of them. */
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #define FI_HOST_LE 0
 #else
 #define FI_HOST_LE 1
+#endif
+#if defined(KOLMO_FORCE_GENERIC_INT_INV)
+#define FI_USE 0
+#else
+#define FI_USE FI_HOST_LE
 #endif
 #define FI_ST(o, v, W) do { if ((W) == 8) { uint64_t t_ = (v); memcpy(o, &t_, 8); } else if ((W) == 4) { uint32_t t_ = (uint32_t)(v); memcpy(o, &t_, 4); } \
                             else { uint16_t t_ = (uint16_t)(v); memcpy(o, &t_, 2); } } while (0)
@@ -287,8 +294,8 @@ static int fi_inverse(const uint8_t *par, size_t plen, const kbuf *res, const kb
     for (int q = 0; q < ord; q++) if (kg_getuv(par, plen, &pi, &sd[q])) return -1;
     if (pi != plen || h > rest->n || (uint64_t)ord > cnt || cnt > maxs / (unsigned)w || (cnt - (uint64_t)ord) * (unsigned)ow != res->n
         || cnt * (unsigned)w + rest->n > maxs) return -1;
-    fi_inv_fn f = FI_HOST_LE && (pln || ow == 1) ? fi_pick(w, ow, sg) : NULL;
-    if (!f) return kg_int_inv(par, plen, res, rest, maxs, out);            /* w = 1, interleaved multi-byte residuals, big-endian host */
+    fi_inv_fn f = FI_USE && (pln || ow == 1) ? fi_pick(w, ow, sg) : NULL;
+    if (!f) return kg_int_inv(par, plen, res, rest, maxs, out);            /* w = 1, interleaved multi-byte residuals, big-endian host, or the control build */
     if (kb_res(out, (size_t)(cnt * w) + rest->n + 16)) return -1;
     if (h) memcpy(out->p, rest->p, (size_t)h);
     uint8_t *wp = out->p + h; uint64_t v1 = 0, v2 = 0, bias = (uint64_t)kg_unzz(bz); size_t m = (size_t)(cnt - (uint64_t)ord);

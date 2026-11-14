@@ -108,8 +108,16 @@ check-dec64: build/test-dec64-asan
 	./build/test-dec64-asan
 build/test-fastint-asan: tests/test_fastint.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fastint.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
-check-fastint: build/test-fastint-asan
+# The same test in the optimised build (the loops a release runs), and in the control build that sends every program
+# to the generic inverse (-DKOLMO_FORCE_GENERIC_INT_INV).
+build/test-fastint: tests/test_fastint.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fastint.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-fastint-generic: tests/test_fastint.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FORCE_GENERIC_INT_INV $(INC) tests/test_fastint.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-fastint: build/test-fastint-asan build/test-fastint build/test-fastint-generic
 	./build/test-fastint-asan
+	./build/test-fastint
+	./build/test-fastint-generic
 build/test-planner-ownership-asan: tests/test_planner_ownership.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_planner_ownership.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-planner-ownership: build/test-planner-ownership-asan
@@ -128,6 +136,9 @@ check-rc-options: build/test-rc-options build/test-rc-options-asan
 	./build/test-rc-options
 	./build/test-rc-options-asan
 .PHONY: check-rc-options
+# Component tests of the features merged for the release candidate. `make check` does not run them; CI does.
+check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options
+.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
