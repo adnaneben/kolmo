@@ -1,0 +1,12 @@
+input                      kolmo_fast        tp_table3          tp_phuf
+dem_rows.csv             -36.8/ +144      -36.8/  +70       +0.0/   +2 
+fs_mixed.csv             -69.2/   +8      -64.8/  +14       -1.6/   -3 
+fs_table.csv             -45.6/  +11      -60.6/  +35       -1.7/   -2 
+goog_mixed.csv           -26.0/ +176      -26.4/  +69       +0.5/  -12*
+goog_table.csv           -41.3/ +118      -36.1/  +38       +0.9/  -17*
+mri_rows.csv              +1.1/ +123      -29.0/ +213       +0.1/   -3 
+real_stocks.csv           -2.2/ +129       +2.3/  +76       +0.2/   -3 
+real_zipsums.csv         -11.1/  +16      -11.1/  +36       +0.0/   +1 
+syn_mixed.csv            -82.3/   +3      -87.3/  +10       -1.0/   +0 
+syn_table.csv            -18.2/  +20      -44.0/  +29       -0.7/   +2 
+fit&smaller / fit: {'kolmo_fast': (0, 0), 'tp_table3': (0, 0), 'tp_phuf': (0, 2)}

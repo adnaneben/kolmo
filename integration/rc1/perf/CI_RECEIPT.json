@@ -1,0 +1,11 @@
+{
+  "commit":"b627c1171d821deca1484f023c7eeda6a1e5bde1",
+  "ci_run":43472625541,
+  "jobs":{"build-test (ubuntu-latest)":"success","build-test (ubuntu-24.04-arm)":"success","build-test (macos-latest)":"success","sanitizers":"success","fuzz-smoke":"success"},
+  "wheels_run":43472625565,"wheels_result":"success",
+  "historical_ownership_workflow":"skipped, not a pass",
+  "source_diff_from_ae3957a":[".github/workflows/ci.yml"],
+  "local_focused":{"inverse_valid":2880,"inverse_malformed":76012,"options_roundtrips":119,"option_headers":5108,"forward_differentials":36},
+  "preintegration_frame_checks":53,"frame_mismatches":0,
+  "scope":"Live verification of completed combined CI plus new local focused checks; not a new local full sanitizer or performance-driver sanitizer certification."
+}

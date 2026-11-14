@@ -1,6 +1,7 @@
 name: ci
 on:
   push:
+    branches-ignore: [integration/best-features-rc-20261113]
   pull_request:
 jobs:
   build-test:
@@ -21,6 +22,8 @@ jobs:
         run: make -j4 ARCH=
       - name: tests (round trips in all modes, corruption fuzzing)
         run: make check
+      - name: combined RC inverse and opt-in routes
+        run: make -j2 ARCH= check-int-inverse-fast check-rc-options
       - name: FASTA, compact ultra and tar file compatibility
         run: make -j4 ARCH= check-frontier-dna check-cm-compact check-tar-files
       - name: shared library + Python binding round trip
@@ -36,6 +39,9 @@ jobs:
           cmp s.in s.out
   sanitizers:
     runs-on: ubuntu-latest
+    env:
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y liblzma-dev
@@ -43,6 +49,11 @@ jobs:
         run: make -j4 ARCH= build/libvendor.a
       - name: resource and concurrency regressions under ASan and UBSan
         run: make -j4 ARCH= check-sanitizers
+      - name: combined inverse and route sanitizer gates
+        run: |
+          make -j2 ARCH= build/test-int-inverse-fast-asan build/test-rc-options-asan
+          ./build/test-int-inverse-fast-asan
+          ./build/test-rc-options-asan
       - name: address and undefined-behaviour sanitizers
         run: |
           gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
@@ -59,12 +70,12 @@ jobs:
         run: make -j4 ARCH= build/libvendor.a
       - name: build and run fuzz targets under ASan/UBSan (bounded)
         run: |
-          for t in fuzz_decompress fuzz_roundtrip; do
+          for t in fuzz_decompress fuzz_roundtrip fuzz_nplane; do
             gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
               -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 \
               -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include \
               fuzz/$t.c fuzz/run_local.c src/kolmo.c build/libvendor.a \
               -llzma -lpthread -lm -lstdc++ -o $t
-            ASAN_OPTIONS=detect_leaks=0 ./$t 20000
+            ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./$t 20000
           done
         timeout-minutes: 60

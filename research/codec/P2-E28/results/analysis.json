@@ -1,0 +1,132 @@
+{
+ "first": {
+  "kolmo_fast": {
+   "fit_and_smaller": 0,
+   "n": 40,
+   "median_decode_ms": 3.105
+  },
+  "kolmo_fast_fd": {
+   "fit_and_smaller": 0,
+   "n": 40,
+   "median_decode_ms": 2.802
+  },
+  "tb_best": {
+   "fit_and_smaller": 5,
+   "n": 40,
+   "median_decode_ms": 3.173
+  },
+  "tb_best_fd": {
+   "fit_and_smaller": 6,
+   "n": 40,
+   "median_decode_ms": 2.691
+  },
+  "tb_lazy": {
+   "fit_and_smaller": 24,
+   "n": 40,
+   "median_decode_ms": 3.192
+  },
+  "tb_lazy_fd": {
+   "fit_and_smaller": 29,
+   "n": 40,
+   "median_decode_ms": 2.68
+  },
+  "tp_phuf": {
+   "fit_and_smaller": 21,
+   "n": 40,
+   "median_decode_ms": 3.17
+  },
+  "tp_phuf_fd": {
+   "fit_and_smaller": 31,
+   "n": 40,
+   "median_decode_ms": 2.713
+  },
+  "tp_phuf_pg16": {
+   "fit_and_smaller": 24,
+   "n": 40,
+   "median_decode_ms": 3.168
+  },
+  "tp_phuf_pg16_fd": {
+   "fit_and_smaller": 35,
+   "n": 40,
+   "median_decode_ms": 2.669
+  },
+  "tp_prod3": {
+   "fit_and_smaller": 3,
+   "n": 40,
+   "median_decode_ms": 3.242
+  },
+  "tp_prod3_fd": {
+   "fit_and_smaller": 5,
+   "n": 40,
+   "median_decode_ms": 2.758
+  },
+  "zstd_3": {
+   "median_decode_ms": 2.925
+  }
+ },
+ "confirmation": {
+  "kolmo_fast": {
+   "fit_and_smaller": 0,
+   "n": 40,
+   "median_decode_ms": 3.02
+  },
+  "kolmo_fast_fd": {
+   "fit_and_smaller": 0,
+   "n": 40,
+   "median_decode_ms": 2.768
+  },
+  "tb_best": {
+   "fit_and_smaller": 6,
+   "n": 40,
+   "median_decode_ms": 3.115
+  },
+  "tb_best_fd": {
+   "fit_and_smaller": 6,
+   "n": 40,
+   "median_decode_ms": 2.664
+  },
+  "tb_lazy": {
+   "fit_and_smaller": 23,
+   "n": 40,
+   "median_decode_ms": 3.158
+  },
+  "tb_lazy_fd": {
+   "fit_and_smaller": 29,
+   "n": 40,
+   "median_decode_ms": 2.664
+  },
+  "tp_phuf": {
+   "fit_and_smaller": 20,
+   "n": 40,
+   "median_decode_ms": 3.171
+  },
+  "tp_phuf_fd": {
+   "fit_and_smaller": 30,
+   "n": 40,
+   "median_decode_ms": 2.674
+  },
+  "tp_phuf_pg16": {
+   "fit_and_smaller": 24,
+   "n": 40,
+   "median_decode_ms": 3.151
+  },
+  "tp_phuf_pg16_fd": {
+   "fit_and_smaller": 34,
+   "n": 40,
+   "median_decode_ms": 2.649
+  },
+  "tp_prod3": {
+   "fit_and_smaller": 3,
+   "n": 40,
+   "median_decode_ms": 3.202
+  },
+  "tp_prod3_fd": {
+   "fit_and_smaller": 6,
+   "n": 40,
+   "median_decode_ms": 2.731
+  },
+  "zstd_3": {
+   "median_decode_ms": 2.878
+  }
+ }
+}

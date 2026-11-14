@@ -1,0 +1,8 @@
+df0f8aab972ccefcf6223c26b3e8baa875d741326a9a343ee64947d8536e3a6d  research/codec/P2-E16/PROTOCOL.md
+42a109c6f8023022d63b5fccc2f1d9e18e6645de7d36f0600f78b27e25278357  research/codec/P2-E10/prepare_e10.py
+4c16551ad614efdff70cd2514bd29c7de3f89d590974c3435e1bbe084727bc69  research/codec/P2-E13/p2e13.c
+d4a74c12149acc609353d4d0c02232db45803260640eb9c49aa4daf43720f471  research/codec/P2-E13/rans1.inc
+b07792b7045108fc81c57d706fbdc2058a1cbebd7f62422b5eef9cd7ed7c7dd1  research/codec/P2-E11/p2e11.c
+603af3319d9a8ae9d8dea5361e2a5b6b90d05733ea56e4768a1a8cdc396435cd  research/codec/P2-E11/tpframe.inc
+92244ed5e7569d32eb2a7c0a228e314ab3f206734f9df2353beed71143b0fc20  research/codec/P2-E9/fastint9.inc
+3171cd94921bbc7b3ee247704ab65454863da16eda81341242870e714da988e3  research/codec/E02C-harness/harness/e02c.c

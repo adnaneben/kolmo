@@ -1,0 +1,61 @@
+{
+  "status": "EXECUTED_OBSERVED_DEVELOPMENT_NOT_RELEASE",
+  "reference_commit": "4c78ea9893a7882bc4d427cca29076623312d66a",
+  "remote_start": "3667bf0d3135db7659c2d584263cee20ad03e413",
+  "preregistration_commit": "2bcc340c2d04b0bb448a54a70b60aaf8faa75f40",
+  "source_checkpoint": "03e45ed40f3f99986fab796402d702196295db75",
+  "s1_artifact_sha256": "fd8e8cdb7e21ead2b753f8cc39dfa303ceabd6fe65526c3e254ba7cbd3d6d08c",
+  "s1_manifest_verified": 1619,
+  "arms": 16,
+  "inputs": 14,
+  "real_inputs": 8,
+  "source_families": 2,
+  "synthetic_inputs": 6,
+  "configurations_per_pass": 224,
+  "rounds": [7, 5],
+  "timed_batches": 5376,
+  "independent_reference_frames": 224,
+  "medians_recomputed": 1344,
+  "original_S1_control_comparisons": 140,
+  "selftest_each_build": {"roundtrips": 192, "truncations": 882, "mutations": 1008},
+  "sanitizer_configurations": 224,
+  "python_tests": 20,
+  "production_changed": false,
+  "new_actions_workflows": 0,
+  "archive_acceptance": "NOT_EVALUATED",
+  "fresh_validation": false,
+  "rl_trained": false,
+  "vendor_sanitized": false,
+  "source_sha256": {
+    "test_cost.py": "4ac77b1404d822b44bc568f4aa8cbe4528b9cad0a8aad940ca7e99a7c95512ed",
+    "audit.py": "ef2c7821c3debf0e5f200a5236f98079b137271e9f60ff22d13d5b7884dcbf56",
+    "conditional.cpp": "f85c1fa4181e98de48ed219b445f4170ecf49e145ad31bc2984983c2e596665c",
+    "run.py": "0cf2cfb6071d8b4cba7f3db201271ac2abcd15b221ce9ebc58aa50a0ebd2dcf2",
+    "test_tools.py": "2e29217a3be505a2f14c73e338416f6573e6ab7e43514abffc6932e2a19c0c1a",
+    "build.py": "d0c6cc5bf27220e75312e5062526bb343ff28e859b663d2599ffc11be2d90aae"
+  },
+  "measurement_sha256": {
+    "audited/timings.csv.xz": "b6075edd4ce59a272323645cb6f9466921041b10f76d1a53722c9dc4e38dd1b4",
+    "audited/PROFILE.json": "0cdb0c6d3dc6b503614ddcad1934e266da694fc622370b08c45ec3934c569117",
+    "audited/SUMMARY.json": "e997a968401bf4b2eaeb7b83d34f0fc2538cec0d949923a00d7b4efd0c1ca2d7",
+    "audited/AUDIT.json": "29266b7130a346b8183d23d42a47528a90bda40b0bb77baf407594fbc1f10f38",
+    "evidence/reference.log": "be3eb053232b77460572d2e3326c8aef885f6a1bf46c613f44723e02765105b7",
+    "evidence/unit-tests-final.log": "371219be23bf38c8d5dd7eaf67ee4769179f686fe546fef861ace83a338fd420"
+  },
+  "environment": {"platform": "Linux-6.18.57-x86_64-with-glibc2.41", "machine": "x86_64", "python": "3.13.5", "gcc": "gcc (Debian 14.2.0-19) 14.2.0"},
+  "limitations": [
+    "Observed development inputs only; two correlated source families.",
+    "Warm shared-host timings; no M5 or performance SLA.",
+    "Decoder unchanged; byte-identical decoding differences are noise, not optimization.",
+    "Instrumentation covers included core, bridge and driver; linked vendor objects not instrumented.",
+    "Independent frame/numeric inverse reuses pinned leaf decoders.",
+    "Profile remainder mixes framing, copies, allocation and timer overhead; not isolated allocator or memory instrumentation.",
+    "No matched OpenZL comparison and no archive acceptance.",
+    "Full-output KST1 is research framing, not production promotion.",
+    "Direct zstd checksum-off vs KST1 CRC-on settings remain explicit."
+  ],
+  "failures_retained": [
+    "Initial combined vendor/S1 build exceeded the tool wall-time limit; incremental/reissued S1 build succeeded.",
+    "Interactive terminal session unsupported; bounded child compilation completed within this turn."
+  ]
+}

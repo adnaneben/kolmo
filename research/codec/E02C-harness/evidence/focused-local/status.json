@@ -1,0 +1,217 @@
+{
+  "status": "passed_targeted_ownership_and_byte_identity_NOT_RELEASE_ACCEPTANCE",
+  "phase": "focused",
+  "pin": "3c6890a91314b4d71db1911043ec19b87c16a86d",
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "<local>/wt/baseline",
+      "log": "000.log",
+      "status": "completed",
+      "returncode": 0,
+      "seconds": 0.003996010999998134,
+      "sha256": "5bc62c8f55c41b087c0e160d27c90198d45e7875a22a30f7a6af498f8c72a791"
+    },
+    {
+      "argv": [
+        "gcc",
+        "--version"
+      ],
+      "cwd": "<local>/wt/baseline",
+      "log": "001.log",
+      "status": "completed",
+      "returncode": 0,
+      "seconds": 0.004305032000019082,
+      "sha256": "320a07621a1a787ff6ce5b8a961be03650ee1870ef77298c32aff8c34cfac65c"
+    },
+    {
+      "argv": [
+        "make",
+        "-j4",
+        "ARCH=",
+        "build/libvendor.a"
+      ],
+      "cwd": "<local>/wt/baseline",
+      "log": "002.log",
+      "status": "completed",
+      "returncode": 0,
+      "seconds": 35.705103502000014,
+      "sha256": "4cd629228d8240111b4cbabeb88611c231b482482773d4ef6029ff0c6af01cdb"
+    },
+    {
+      "argv": [
+        "gcc",
+        "-O1",
+        "-g",
+        "-fsanitize=address,undefined",
+        "-fno-omit-frame-pointer",
+        "-ffp-contract=off",
+        "-DXXH_NAMESPACE=ZSTD_",
+        "-DZSTD_MULTITHREAD",
+        "-DZSTD_LEGACY_SUPPORT=0",
+        "-Isrc",
+        "-Ivendor/zstd",
+        "-Ivendor/lz4",
+        "-Ivendor/libbsc",
+        "-Ivendor/brotli/include",
+        "tests/test_planner_ownership.c",
+        "<local>/wt/baseline/build/libvendor.a",
+        "-llzma",
+        "-lpthread",
+        "-lm",
+        "-lstdc++",
+        "-o",
+        "<local>/wt/baseline/planner-ownership-asan"
+      ],
+      "cwd": "<local>/wt/baseline",
+      "log": "003.log",
+      "status": "completed",
+      "returncode": 0,
+      "seconds": 42.620175697000036,
+      "sha256": "69591f88fefdb5d001e06f02d98bd457a8e6fb0c720f33e9ef5ac2acc2abe753"
+    },
+    {
+      "argv": [
+        "<local>/wt/baseline/planner-ownership-asan"
+      ],
+      "cwd": "<local>/wt/baseline",
+      "log": "004.log",
+      "status": "completed",
+      "returncode": 1,
+      "seconds": 6.1375270839999985,
+      "sha256": "62ae0408890fc92e7778b90ec730f2d618bab0959b658f6d6c8a24a048b70044"
+    },
+    {
+      "argv": [
+        "gcc",
+        "-O1",
+        "-g",
+        "-fsanitize=address,undefined",
+        "-fno-omit-frame-pointer",
+        "-ffp-contract=off",
+        "-DXXH_NAMESPACE=ZSTD_",
+        "-DZSTD_MULTITHREAD",
+        "-DZSTD_LEGACY_SUPPORT=0",
+        "-Isrc",
+        "-Ivendor/zstd",
+        "-Ivendor/lz4",
+        "-Ivendor/libbsc",
+        "-Ivendor/brotli/include",
+        "tests/test_planner_ownership.c",
+        "<local>/wt/baseline/build/libvendor.a",
+        "-llzma",
+        "-lpthread",
+        "-lm",
+        "-lstdc++",
+        "-o",
+        "<local>/wt/candidate/planner-ownership-asan"
+      ],
+      "cwd": "<local>/wt/candidate",
+      "log": "005.log",
+      "status": "completed",
+      "returncode": 0,
+      "seconds": 42.42754202200001,
+      "sha256": "f38fb16ced9084694f06221a68fcf1d0ecf66846f1480b842e3fd30a573d9402"
+    },
+    {
+      "argv": [
+        "<local>/wt/candidate/planner-ownership-asan"
+      ],
+      "cwd": "<local>/wt/candidate",
+      "log": "006.log",
+      "status": "completed",
+      "returncode": 0,
+      "seconds": 5.835620559999995,
+      "sha256": "5988e17fc695d1138090dc67fb42243e447bd03adf29be5d4b1fdb3d67e3bf22"
+    },
+    {
+      "argv": [
+        "gcc",
+        "-O3",
+        "-ffp-contract=off",
+        "-DXXH_NAMESPACE=ZSTD_",
+        "-DZSTD_MULTITHREAD",
+        "-DZSTD_LEGACY_SUPPORT=0",
+        "-Isrc",
+        "-Ivendor/zstd",
+        "-Ivendor/lz4",
+        "-Ivendor/libbsc",
+        "-Ivendor/brotli/include",
+        "src/cli.c",
+        "src/kolmo.c",
+        "<local>/wt/baseline/build/libvendor.a",
+        "-llzma",
+        "-lpthread",
+        "-lm",
+        "-lstdc++",
+        "-o",
+        "<local>/wt/baseline/planner-identity-cli"
+      ],
+      "cwd": "<local>/wt/baseline",
+      "log": "007.log",
+      "status": "completed",
+      "returncode": 0,
+      "seconds": 12.310831925999992,
+      "sha256": "54a734634934353ad74a66abbc78ef74ccad1d6c95866090ffeff8068cf278bb"
+    },
+    {
+      "argv": [
+        "gcc",
+        "-O3",
+        "-ffp-contract=off",
+        "-DXXH_NAMESPACE=ZSTD_",
+        "-DZSTD_MULTITHREAD",
+        "-DZSTD_LEGACY_SUPPORT=0",
+        "-Isrc",
+        "-Ivendor/zstd",
+        "-Ivendor/lz4",
+        "-Ivendor/libbsc",
+        "-Ivendor/brotli/include",
+        "src/cli.c",
+        "src/kolmo.c",
+        "<local>/wt/baseline/build/libvendor.a",
+        "-llzma",
+        "-lpthread",
+        "-lm",
+        "-lstdc++",
+        "-o",
+        "<local>/wt/candidate/planner-identity-cli"
+      ],
+      "cwd": "<local>/wt/candidate",
+      "log": "008.log",
+      "status": "completed",
+      "returncode": 0,
+      "seconds": 11.855933240000013,
+      "sha256": "8d7b7da0cc3a4e0191edd0d6fd7573fce7c5e3c9b4ce30bb5fe70ffd82b4ab95"
+    },
+    {
+      "argv": [
+        "/usr/local/bin/python3",
+        "<local>/wt/candidate/tests/test_planner_identity.py",
+        "--baseline",
+        "<local>/wt/baseline/planner-identity-cli",
+        "--candidate",
+        "<local>/wt/candidate/planner-identity-cli",
+        "--output",
+        "<local>/evidence/focused-local/identity"
+      ],
+      "cwd": "<local>/wt/candidate",
+      "log": "009.log",
+      "status": "completed",
+      "returncode": 0,
+      "seconds": 11.349622494000016,
+      "sha256": "dc43d7a096913561e6ab434a2c7cc2efdd91a49d34ff6cd1e4e8b59e86536ef8"
+    }
+  ],
+  "scope": "repair correctness; NOT release or performance acceptance",
+  "original_core_blob": "db8b7ad665ab0ff61f6634a2d6cb76ed1b17b70a",
+  "candidate_core_blob": "e06467c8872d494b97270811bedf6fd0bac2aa31",
+  "candidate_head": "2f3308a3380a140ad0f6873ae228de7715e5eef5",
+  "baseline_focused_leak_summary": [
+    "SUMMARY: AddressSanitizer: 10800 byte(s) leaked in 15 allocation(s)."
+  ]
+}

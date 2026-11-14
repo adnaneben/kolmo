@@ -1,0 +1,19 @@
+candidate               fits fits+smaller  worst bytes vs z3
+typed_fast                 2            2            +130.4%
+tf_prod3                   5            5            +130.5%
+tf_prod3_pinv              3            3            +130.5%
+tf_huf                    13            7            +345.5%
+tf_planes_huf             14            8            +340.4%
+tf_planes_huf_pinv         8            7            +340.4%
+tf_planes_ent              2            2            +177.0%
+tf_planes_prod3g           3            3            +129.6%
+tf_planes_store            8            1           +2163.4%
+tf_prod3_g                 3            3              +2.4%
+tf_planes_huf_g            6            4              +6.4%
+tf_prod3_pg                3            3              +0.0%
+tf_planes_huf_pg           7            5              +6.4%
+tf_sel                     5            4            +340.4%
+tf_sel_pg                  2            2              +0.0%
+tf_planes_huf_pg16         8            6              +6.4%
+tf_huf_pg16                8            7              +8.2%
+policy statuses: {('fast', 'NO_FEASIBLE_CANDIDATE'): 20, ('hc', 'BLOCKED_MISSING_COMPETITOR'): 20}

@@ -1,4 +1,6 @@
-/* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n|-q] [-D dict] in out
+/* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n|-q] [-D dict] [--native-leaf] in out
+ *                    (--native-leaf: balanced only; native plane-context leaves for integer series, KOLMO_T_NATIVE_LEAF)
+ *                    (ultra/-x: -l 1 = context-mixing model 1 only, faster; -l 2 = maximum ratio, graph leaves may use CM)
  *                    kolmo -s ...                         (streaming: bounded memory, large inputs)
  *                    kolmo -d [-T threads] [-D dict] in out  (auto-detects one-shot vs streamed)
  *                    kolmo -r offset:length in out        (random access read)
@@ -24,9 +26,12 @@ static uint8_t *slurp(const char *p, size_t *n) {
     FILE *f = fopen(p, "rb"); if (!f) { perror(p); exit(1); }
     return read_input(f, n);
 }
-static void spit(const char *p, const uint8_t *b, size_t n) {
-    FILE *f = fopen(p, "wb");
-    if (!f || fwrite(b, 1, n, f) != n || fclose(f)) { perror(p); exit(1); }
+static int spit(const char *p, const uint8_t *b, size_t n) {
+    FILE *f=fopen(p,"wb");if(!f){perror(p);return -1;}
+    int failed=fwrite(b,1,n,f)!=n;
+    if(fclose(f))failed=1;
+    if(failed)perror(p);
+    return failed?-1:0;
 }
 
 /* Stage the complete frame or verified decoded output in a private file. For a
@@ -87,7 +92,13 @@ done:
 int main(int argc, char **argv) {
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int speed = 0; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
     char *dictpath = NULL, *trainpath = NULL;
-    int extreme = 0;
+    int extreme = 0, native_leaf = 0, typed_huf = 0, csv_archive = 0;
+    for (int a = 1; a < argc; a++)                           /* long option, removed before getopt sees the arguments */
+        if (!strcmp(argv[a], "--native-leaf") || !strcmp(argv[a], "--typed-huf") || !strcmp(argv[a], "--csv-archive")) {
+            if(!strcmp(argv[a],"--native-leaf"))native_leaf=1;
+            else if(!strcmp(argv[a],"--typed-huf"))typed_huf=1;else csv_archive=1;
+            for(int b=a;b<argc;b++)argv[b]=argv[b+1];argc--;a--;
+        }
     while ((opt = getopt(argc, argv, "m:l:T:B:nqQxdr:sS:D:t:")) != -1) switch (opt) {
         /* three modes: speed, balanced (default), ratio. The older names stay as advanced settings. */
         case 'm': speed = !strcmp(optarg, "speed");
@@ -116,11 +127,22 @@ int main(int argc, char **argv) {
             "  speed     fastest, for data that is read or sent right away\n"
             "  balanced  small and fast; the default\n"
             "  ratio     smallest at practical speed;  -x  smallest of all (very slow, large memory)\n"
+            "  --native-leaf  with balanced: 5-12%% smaller integer series (sensor, ECG, numeric columns) using\n"
+            "            Kolmo's native plane-context leaves; such files decode ~1.5-2.6x slower than balanced\n"
+            "            and need a kolmo that reads container version 9\n"
+            "  --csv-archive RC option: CSV regularity route, -m eco -T1; may lose to plain eco\n"
+            "  --typed-huf  RC option: declared integer NPY / PCM16, -m fast -T1; generic fallback otherwise\n"
+            "  -x -l 2   maximum ratio: as -x, and numeric graph leaves may also use context mixing\n"
+            "            (smaller integer series; those blocks decode much more slowly)\n"
             "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -Q minimal analysis  -n no transforms\n"
             "          -B blockMiB\n"
             "          -D dict  -t dict samples...  -s|-S segMiB stream  -r off:len read a range\n"); return 2;
     }
     if (extreme) P.mode = KOLMO_ULTRA;
+    if(native_leaf && typed_huf){fprintf(stderr,"kolmo: choose --native-leaf OR --typed-huf\n");return 2;}
+    if(typed_huf && P.transforms)P.transforms |= KOLMO_T_TYPED_HUF;
+    if(csv_archive && P.transforms)P.transforms |= KOLMO_T_CSV_ARCHIVE;
+    if (native_leaf && P.transforms) P.transforms |= KOLMO_T_NATIVE_LEAF;   /* applied by the library at balanced only */
     if (speed && P.transforms == 1) P.transforms = 3;      /* speed: nothing that costs encode time */
 
     /* Training mode: concatenate the sample files given as positional args and write a dictionary. */
@@ -132,10 +154,10 @@ int main(int argc, char **argv) {
         for (int i = 0; i < nf; i++) { memcpy(samp + off, buf[i], sz[i]); off += sz[i]; free(buf[i]); }
         size_t dcap = 112 * 1024; uint8_t *dict = malloc(dcap);
         int64_t dl = kolmo_train_dict(samp, sz, nf, dict, dcap);
-        if (dl < 0) { fprintf(stderr, "kolmo: train: %s\n", kolmo_strerror(dl)); return 1; }
-        spit(trainpath, dict, (size_t)dl);
-        fprintf(stderr, "kolmo: wrote %lld-byte dictionary from %d samples to %s\n", (long long)dl, nf, trainpath);
-        return 0;
+        if (dl < 0) { fprintf(stderr, "kolmo: train: %s\n", kolmo_strerror(dl)); free(samp);free(sz);free(buf);free(dict);return 1; }
+        int write_failed=spit(trainpath, dict, (size_t)dl);
+        if(!write_failed)fprintf(stderr, "kolmo: wrote %lld-byte dictionary from %d samples to %s\n", (long long)dl, nf, trainpath);
+        free(samp);free(sz);free(buf);free(dict);return write_failed!=0;
     }
 
     if (argc - optind != 2) { fprintf(stderr, "need input and output paths\n"); return 2; }
@@ -147,16 +169,16 @@ int main(int argc, char **argv) {
     /* Streaming compress, or decode of a streamed (CZNS) file: bounded memory via file descriptors. */
     int streamed_in = 0;
     if (dec) {
-        FILE *pf = fopen(inp, "rb"); if (!pf) { perror(inp); return 1; }
+        FILE *pf = fopen(inp, "rb"); if (!pf) { perror(inp); free(dict);return 1; }
         char mg[4] = {0}; size_t g = fread(mg, 1, 4, pf); fclose(pf);
         streamed_in = (g == 4 && !memcmp(mg, "CZNS", 4));
     }
     if ((stream && !dec && !range) || (dec && streamed_in)) {
-        int ifd = open(inp, O_RDONLY); if (ifd < 0) { perror(inp); return 1; }
-        int ofd = open(outp, O_WRONLY | O_CREAT | O_TRUNC, 0644); if (ofd < 0) { perror(outp); close(ifd); return 1; }
+        int ifd = open(inp, O_RDONLY); if (ifd < 0) { perror(inp); free(dict);return 1; }
+        int ofd = open(outp, O_WRONLY | O_CREAT | O_TRUNC, 0644); if (ofd < 0) { perror(outp); close(ifd);free(dict);return 1; }
         int64_t sr = dec ? kolmo_stream_decompress(ifd, ofd, P.threads)
                          : kolmo_stream_compress(ifd, ofd, &P, (uint32_t)(seg > 0 ? seg : 0));
-        close(ifd); close(ofd);
+        close(ifd); close(ofd);free(dict);
         if (sr < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(sr)); return 1; }
         return 0;
     }
@@ -167,7 +189,7 @@ int main(int argc, char **argv) {
 #endif
     const size_t file_threshold = KOLMO_FILE_THRESHOLD;   /* the file path (reused block buffers, staged output) wins from 8 MiB; below
                                                * that its extra file operations cost more than they save on macOS */
-    FILE *input = fopen(inp, "rb"); if (!input) { perror(inp); return 1; }
+    FILE *input = fopen(inp, "rb"); if (!input) { perror(inp);free(dict);return 1; }
     if (!range && (dec || P.mode == KOLMO_FAST || P.mode == KOLMO_RT)) {
         int fd = fileno(input); struct stat st;
         if (!fstat(fd, &st) && S_ISREG(st.st_mode) && st.st_size >= 0 && (uintmax_t)st.st_size <= SIZE_MAX) {
@@ -179,7 +201,7 @@ int main(int argc, char **argv) {
             }
             if (use_file) {
                 int err = process_file(fd, st.st_size, outp, &P, dec, dict, dictlen);
-                fclose(input);
+                fclose(input);free(dict);
                 if (err) fprintf(stderr, "kolmo: %s\n", kolmo_strerror(err));
                 return err != 0;
             }
@@ -190,14 +212,14 @@ int main(int argc, char **argv) {
         unsigned long long off = strtoull(range, NULL, 10); char *c = strchr(range, ':'); size_t len = c ? strtoull(c + 1, NULL, 10) : 0;
         out = malloc(len ? len : 1); r = kolmo_read_range(in, n, off, len, out, P.threads);
     } else if (dec) {
-        int64_t o = kolmo_original_size(in, n); if (o < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(o)); return 1; }
+        int64_t o = kolmo_original_size(in, n); if (o < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(o));free(in);free(dict);return 1; }
         out = malloc(o ? o : 1);
         r = dict ? kolmo_decompress_dict(in, n, out, o, P.threads, dict, dictlen) : kolmo_decompress(in, n, out, o, P.threads);
     } else {
         size_t cap = kolmo_bound(n, &P); out = malloc(cap);
         r = dict ? kolmo_compress_dict(in, n, out, cap, &P, dict, dictlen) : kolmo_compress(in, n, out, cap, &P);
     }
-    if (r < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r)); return 1; }
-    spit(outp, out, (size_t)r);
-    return 0;
+    if (r < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r));free(in);free(out);free(dict);return 1; }
+    int failed=spit(outp,out,(size_t)r);
+    free(in);free(out);free(dict);return failed!=0;
 }

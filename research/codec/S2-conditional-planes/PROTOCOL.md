@@ -1,0 +1,20 @@
+# S2: conditional second layers and copy ablation
+
+13 November 2026. User authorized continuing S1's recommended next action. Research only on fix/planner-record-ownership-isolated-20261112, PR #7 draft/unmerged. Preserve concurrent P2 CSV work, all frozen experiments, production files and active competitor policy.
+
+## Fixed development scope
+Use every S1 input: eight previously observed exact R3 NPY files and six synthetic mechanism controls. Full S1 artifact SHA256 fd8e8cdb7e21ead2b753f8cc39dfa303ceabd6fe65526c3e254ba7cbd3d6d08c. Reproduce S1 reference frames before timing. Reuse frozen typing, prediction/GCD, inverse and H/Z/L implementations at reference 4c78ea9893a7882bc4d427cca29076623312d66a, with S1 source from 880e00bdd631a34449a05de2d9b146e9d0ef066f. No fresh-validation or release claim.
+
+## Separate ablations
+1. Profile top-level typing/forward, leaf calls, checksum and remaining framing/layout/allocation work in diagnostic runs. Profiling is not enabled in comparison timing.
+2. Preserve KST1 syntax and exact emitted bytes while removing avoidable C++ staging copies: pass borrowed group spans directly to leaf encoders, append codec-owned buffers directly to the frame, and avoid copying residual buffers when already in the requested layout. Require identical frames to S1 H, Z, HZ and HL independent-plane controls. Decoder stays the S1 decoder.
+3. Fixed location policies: HZ on lower half of planes, HZ on upper half; likewise HL. Other planes use H. Plane order is least-significant first. The one-plane case belongs to both low and high arms; report that overlap, not as two independent strata.
+4. Bounded conditional policies after H coding: gate-HZ and gate-menu (H, Z, HZ, HL). For Huffman-framed streams >=8192 bytes, take at most 4096 bytes from beginning/middle/end, run fixed Z (or Z and L for menu) sample trials and extrapolate total coded length. Admit a second full stage only when estimated total including its 17-byte stage header is at least 64 bytes smaller. This 64-byte uncertainty margin is an encoder heuristic, NOT an acceptance minimum. When the menu's H output fails to shrink the original plane, try Z on the original plane instead. At most one additional FULL compression per plane, plus two bounded sample trials. Keep the smaller complete group when a trial loses; charge all rejected work. No guarantee against an uncomputed Z baseline. Record all proposals, choices and wasted trials.
+
+## Frozen comparison matrix
+16 arms: direct zstd3 and identical duplicate; original S1 and copy-reduced H/Z/HZ/HL per-plane arms (8); lower/upper HZ/HL policies (4); gate-HZ and gate-menu (2). Complete input is typed before representation/coder selection. Include framing, parameters, header/tail bytes, CRC, all samples/copies/allocations and cleanup. All arms use original S1 KST1 except direct zstd. Experimental frames are not production IDs.
+
+Independent warm encoding/decoding in deterministic randomized paired order; first 7 rounds and confirmation 5. Fixed batch max(1,min(8,floor(2 MiB/input_bytes))), same across arms. External verification outside timers; allocation and freeing charged. Use active CPU charging above 1.03x wall and 1-Gbit/s speed cost. No matched OpenZL in this scope: archive acceptance NOT_EVALUATED. Never pool old timings with this run. Check duplicate-frame noise and per-file/family regressions, not only aggregate.
+
+## Gates and interpretation
+Run deterministic round trips, malformed/truncated tests, release/sanitized frame agreement, and an independent KST1/numeric inverse using pinned leaf readers. Verify all original S1 control frames byte-for-byte and optimized/original controls equal. Freeze the source before measurement; correct implementation defects with recorded failures, never tune this policy against results. Compact raw timings and decisions retained. Any observed smallest-per-file choice across arms is an offline diagnostic, not a free deployable selector. A small reproducible gain may qualify; no arbitrary improvement percentage. No algorithm/default/format promotion, new RL model, merge, release or renewed overnight task.

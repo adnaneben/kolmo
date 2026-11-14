@@ -1,0 +1,28 @@
+name: Integration public corpus snapshot
+on:
+  push:
+    branches: [integration/best-features-rc-20261113]
+    paths: [.github/workflows/integration-corpus-snapshot.yml]
+permissions:
+  contents: read
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Download fixed public corpora and record hashes
+        run: |
+          set -euo pipefail
+          mkdir corpus
+          curl --fail --location --retry 2 --max-time 180 https://mattmahoney.net/dc/silesia.zip -o corpus/silesia.zip
+          curl --fail --location --retry 2 --max-time 120 https://corpus.canterbury.ac.nz/resources/cantrbry.tar.gz -o corpus/cantrbry.tar.gz
+          curl --fail --location --retry 2 --max-time 120 https://corpus.canterbury.ac.nz/resources/large.tar.gz -o corpus/large.tar.gz
+          printf '%s\n' 'https://mattmahoney.net/dc/silesia.zip' 'https://corpus.canterbury.ac.nz/resources/cantrbry.tar.gz' 'https://corpus.canterbury.ac.nz/resources/large.tar.gz' > corpus/SOURCES.txt
+          (cd corpus && sha256sum *.zip *.gz > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-corpus-${{ github.run_id }}
+          path: corpus/
+          retention-days: 30
+          if-no-files-found: error

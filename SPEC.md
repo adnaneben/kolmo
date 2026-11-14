@@ -22,7 +22,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 7 (4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 8) |
+| 4 | 1 | version | 1 to 9 (9 only when a graph leaf uses codec 15; version 8 (line classes) is documented in a separate change; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 8) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -141,8 +141,29 @@ version stays 7. A decoder rejects any node id it does not know.
 ```
 payload := 'G' | 1 (graph version) | nodes uv | node * nodes | leaves uv | leaf * leaves
 node    := op u8 | nin uv | input index uv * nin | nout uv | param length uv | params
-leaf    := stream index uv | codec u8 (0-7 as for blocks, 13 or 14) | raw length uv | coded length uv | coded bytes
+leaf    := stream index uv | codec u8 (0-7 as for blocks, 13, 14, or 15 from version 9) | raw length uv | coded length uv | coded bytes
 ```
+
+**Leaf codec 15: native plane-context leaf (container version 9).** Written only on request (`--native-leaf`,
+`KOLMO_T_NATIVE_LEAF`, balanced), only for the integer residual stream of an `INT` node, and only when smaller than
+the other leaf codings. A reader rejects codec 15 in a file of version below 9, and as a block codec. Payload, for raw
+length `rl`:
+
+```
+payload := fmt u8 (= 1) | np u8 (1-8, rl % np == 0, L = rl / np) | plane * np        ; plane k = bytes k*L .. k*L+L-1
+plane   := 'c' value u8 | 's' L bytes | 'h' len uv | Huffman stream | 'r' len uv | rANS stream
+         | 'l' len uv | context stream (lanes, L >= 8) | 'p' len uv | context stream (cross-plane, plane k >= 1)
+context := mask u16 (buckets 0-8, nonzero, bits 9-15 zero) | table * popcount(mask) | z uv | state u64 * 4 | word u32 *
+table   := 256 frequencies in the rANS table format, summing to 65536 (a one-symbol table holds 65536)
+```
+
+The `h` and `r` streams are those of codecs 13 and 14. In a context stream the bucket of a context byte `c` is 0 when
+`c` is 0, else its bit length (1-8); rANS uses four 64-bit states with lower bound 2^31 and 16-bit frequencies, words
+are read forwards, `z` (a multiple of 4, at least 32) is the rest of the stream, and every state must end at 2^31.
+Lanes (`l`): with `L4 = L / 4`, lane `j` is positions `j*L4 .. j*L4+L4-1`, decoded in lockstep by state `j`, then the
+tail positions `4*L4 + j` by state `j`; the context is the previous byte of the plane, reset to bucket 0 at position 0
+and at each lane start. Cross-plane (`p`): position `i` uses state `i mod 4` and the context is byte `i` of plane
+`k - 1`. Any other tag, table, length or final state is corrupt.
 
 Outputs of a node take the next stream indices, in order. Every stream is consumed at most once; stream 0 must be
 consumed when there are nodes; every unconsumed stream must appear exactly once as a leaf; inputs must refer to

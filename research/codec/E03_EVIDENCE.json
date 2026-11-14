@@ -1,0 +1,63 @@
+{
+  "status": "completed_E03_development_do_not_promote_selector",
+  "protocol_commit": "b7de3f5bfc36bc5b5884b55fa29f55ca8a684be9",
+  "executed_commit": "3d596d16c2fa367e44aabc81c5cba80949468403",
+  "workflow_run": 43250751948,
+  "job": 131295561593,
+  "artifact_id": 13961345681,
+  "artifact_name": "e03-selection-43250751948-1",
+  "archive_sha256": "5d02cee72dbbbc8a396e85e29c2cb3f5bf91f26abd2e808995b9a54205660e82",
+  "independent_archive_audit": {
+    "manifest_files": 611,
+    "frame_hashes": 576,
+    "median_values": 4032,
+    "exact_archived_corpus_equal": true,
+    "fixed_candidate_minimum_checks": true,
+    "sample_and_entropy_call_budgets": true,
+    "repeat_choices_sizes_hashes_captures_match": true
+  },
+  "matrix": {
+    "inputs": 58,
+    "policies": 4,
+    "configurations_per_release_pass": 232,
+    "repetitions": [7, 5],
+    "release_timing_pairs": 2784,
+    "sanitized_small_configurations": 112,
+    "partition": "observed_development_NOT_fresh_validation"
+  },
+  "full_source_selftests_per_build": {
+    "cases": 576,
+    "fixed_control_comparisons": 1554,
+    "truncation_checks": 7337,
+    "mutation_probes": 6912,
+    "independent_entropy_decoder": false
+  },
+  "local_reproduction": {
+    "scope": "Verified complete sdist native source snapshot, NOT a full Git checkout or CI pass",
+    "source_distribution_run": 43187874238,
+    "source_distribution_artifact": 13929641752,
+    "source_distribution_zip_sha256": "b91637f9dd75fe0850fbc05f8a3083ac1f3d2ebcf0da7aab84863e341d554f91",
+    "src_git_tree": "f8be58e590e68b7e8581d810bea8f1e2f234253d",
+    "vendor_git_tree": "ecf82d39017d8f988bfb32c402740a64bd32438f",
+    "core_blob": "e06467c8872d494b97270811bedf6fd0bac2aa31",
+    "graph_blob": "91ad067dc583b9d9e6f060f214a0f7c402bb4a31",
+    "release_selftest": "passed",
+    "clang_asan_ubsan_leak_selftest": "passed_after_recorded_compile_timeout_and_complete_retry",
+    "inputs": 58,
+    "selector_configurations": 116,
+    "github_frame_hash_matches": 116,
+    "receipt_archive_sha256": "3ea9c1b3887668367dc5cdd5e9fb26be865f3bb230973b93a10030c39ae20f09"
+  },
+  "decision": {
+    "full_E02D_baseline_bytes": 337195,
+    "full_E02D_optional_bytes": 319859,
+    "incremental_saving_pct": 5.14124,
+    "encoding_duration_ratio": [1.71579, 1.71573],
+    "eligible_real_families": 0,
+    "provisional_screen": "at least 3% savings, encode <=1.25x, decode <=1.10x on two real families in both passes",
+    "default_or_release_authorized": false,
+    "decode_caveat": "Immediate post-encode decode timings depend on prior encoding and allocation/cache history; no intrinsic decoder speedup claimed"
+  },
+  "source_overlap_note": "UCI235 household appears in benchmark/holdout/inputs.json. E02D was new to our E02C, not to the whole release programme. All reused sources are development for E03.",
+  "next": "Reconcile registered per-plane E02E evidence with the costed native baseline before another packing-selector design; preserve frozen protocols."
+}

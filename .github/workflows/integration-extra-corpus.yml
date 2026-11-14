@@ -1,0 +1,30 @@
+name: Integration extra corpus
+on:
+  push:
+    branches: [integration/best-features-rc-20261113]
+    paths: [.github/workflows/integration-extra-corpus.yml]
+permissions:
+  contents: read
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch pinned logs and optional Canterbury data
+        run: |
+          set -euo pipefail
+          mkdir corpus
+          PIN=dd61d0952749ee7963bde24220d1be5ede023033
+          for NAME in Linux HDFS Apache HPC; do
+            curl --fail --location --max-time 60 "https://raw.githubusercontent.com/logpai/loghub/$PIN/$NAME/${NAME}_2k.log" -o "corpus/${NAME}_2k.log"
+          done
+          printf '%s\n' "$PIN" > corpus/LOGHUB_PIN.txt
+          if curl --fail --location --max-time 60 http://corpus.canterbury.ac.nz/resources/large.tar.gz -o corpus/large.tar.gz; then echo OK > corpus/canterbury_status.txt; else rm -f corpus/large.tar.gz; echo 'DOWNLOAD_FAILED_NO_GENOMIC_RESULT_CLAIM' > corpus/canterbury_status.txt; fi
+          (cd corpus && sha256sum * > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-extra-corpus-${{ github.run_id }}
+          path: corpus/
+          retention-days: 30
+          if-no-files-found: error

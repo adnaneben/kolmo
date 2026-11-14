@@ -1,0 +1,34 @@
+{
+  "recorded_at_utc": "2026-11-13T06:57:38.338776+00:00",
+  "scope": "new N2 correctness-readiness gate; synthetic/infrastructure tests only",
+  "base_commit_inspected": "03e45ed40f3f99986fab796402d702196295db75",
+  "authorized_branch": "fix/planner-record-ownership-isolated-20261112",
+  "command": "python -m unittest discover -s research/codec/N2-readiness-20261113 -p 'test_*.py' -v",
+  "exit_code": 0,
+  "tests_run": 22,
+  "failures": 0,
+  "errors": 0,
+  "py_compile": "PASS: check.py and test_check.py",
+  "python": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "local_access": "New files authored/tested in an isolated local directory, not a complete repository checkout. Shell GitHub DNS failed.",
+  "sha256": {
+    "check.py": "78609945a88189dab2926498a610d2011c617e0ff4cf5fb76463619334eb2aef",
+    "test_check.py": "d548cc1e3fa4b66a94c183981410305ce1064e3940c76c89d9784bb481d5316b",
+    "README.md": "68d09adca125763552103121d698e814550a823c6ea688ec3347b82ea0d6b700",
+    "tests.log": "9622d9e24a14511379612c085c8214cfc757612d1c7050b2bbdf24af911a72e3"
+  },
+  "real_combined_codec_build": "NOT_RUN",
+  "real_roundtrip_and_independent_crossdecode": "NOT_RUN",
+  "real_sanitizers": "NOT_RUN",
+  "two_pass_performance_matrix": "NOT_RUN",
+  "new_experiment_dispatched": false,
+  "new_automation": false,
+  "learning_tested": false,
+  "observed_concurrent_experiment": {
+    "run_id": 43381239112,
+    "source_commit": "b20835bbecabdbccfd00639cd8d16f8159caa091",
+    "observed_stage": "build pinned rivals/Kolmo/ttcli; fresh-input and benchmark stages pending"
+  },
+  "preserved_concurrent_source_refresh": "03e45ed40f3f99986fab796402d702196295db75"
+}

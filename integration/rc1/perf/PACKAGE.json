@@ -1,0 +1,10 @@
+{
+ "source":{"file":"Kolmo_RC1_Benchmark_Source.zip","bytes":30578,"sha256":"1a5366ad2adf279edb423f65251bec7fc402467bc97d195ad9b2992c81f90c7d","members":18},
+ "compact":{"file":"Kolmo_RC1_Measurements_and_Audit.zip","bytes":2326392,"sha256":"0787f1206d0b0f900edcdc76c407dfecc5825d0ae83df89d4583d9fc6479a678","members":1707},
+ "full":{"file":"Kolmo_RC1_Full_Performance_Evidence.zip","bytes":203849269,"sha256":"79be4376a7bc825a487c711ac15ff4ca635b55b7e088cb845b543b0cdcba15f8","members":2585},
+ "workbook":{"file":"Kolmo_RC1_Performance_Comparison.xlsx","bytes":323666,"sha256":"15f12a711ae800cdc92bb1457bfbee51559a750ad940f039b91073697e2672e7","formula_cells":5760,"error_cells":0,"matched_formulas_checked":1980},
+ "html":{"file":"Kolmo_RC1_Performance_Dashboard.html","sha256":"3709079cf62138711edc86773c0b8a781018f2b452ddde86a6f3cde140ebe5d9"},
+ "location":"Delivered conversation attachments, separate from Git-tracked readable benchmark source and reports.",
+ "measured_binary_sha256":"e4747d105867e156c30653e14c2c3dd0e73bed5051ab007e6b77a47cea02f47b",
+ "source_tree":"fc476502df9c526dfdd719ac4be0db5819b7887a"
+}

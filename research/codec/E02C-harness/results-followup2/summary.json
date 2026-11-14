@@ -1,0 +1,5035 @@
+{
+ "A_typed": {
+  "not_applicable": [],
+  "inputs": {
+   "fs_mtime_i64.npy": {
+    "family": "fs_meta",
+    "origin": "derived",
+    "bytes": 1205616,
+    "production_payload": 122746,
+    "zstd3": 53269,
+    "production_residual_codec": "zstd",
+    "order": 1,
+    "ow": 8,
+    "m": 150685,
+    "configs": {
+     "exist+store": 1205618,
+     "exist+huf": 237304,
+     "exist+rans": 156136,
+     "exist+zstd3": 122754,
+     "gbp+store": 1149113,
+     "gbp+huf": 227168,
+     "gbp+rans": 160972,
+     "gbp+zstd3": 92421,
+     "lbp128+store": 451923,
+     "lbp128+huf": 154150,
+     "lbp128+rans": 141564,
+     "lbp128+zstd3": 85530,
+     "gpp+store": 139094,
+     "gpp+huf": 112432,
+     "gpp+rans": 112130,
+     "gpp+zstd3": 66450,
+     "lpp128+store": 137976,
+     "lpp128+huf": 120962,
+     "lpp128+rans": 121436,
+     "lpp128+zstd3": 74597,
+     "sel+store": 137976,
+     "sel+huf": 112432,
+     "sel+rans": 112130,
+     "sel+zstd3": 66450,
+     "planes+store": 1205667,
+     "planes+huf": 234540,
+     "planes+rans": 147517,
+     "planes+zstd3": 122277,
+     "exist+ent": 156136,
+     "planes+ent": 147517,
+     "lpp128+ent": 120779,
+     "exist+zstd19": 104742,
+     "planes+zstd19": 103854,
+     "exist+prod3": 122759,
+     "planes+prod3": 122289,
+     "exist+prod19": 104747,
+     "planes+prod19": 103866
+    }
+   },
+   "syn_clustered_outliers_u32.npy": {
+    "family": "synthetic",
+    "origin": "synthetic",
+    "bytes": 2000128,
+    "production_payload": 305584,
+    "zstd3": 445558,
+    "production_residual_codec": "zstd",
+    "order": 0,
+    "ow": 4,
+    "m": 500000,
+    "configs": {
+     "exist+store": 2000127,
+     "exist+huf": 442677,
+     "exist+rans": 415782,
+     "exist+zstd3": 305592,
+     "gbp+store": 1500128,
+     "gbp+huf": 480974,
+     "gbp+rans": 450550,
+     "gbp+zstd3": 398433,
+     "lbp128+store": 296903,
+     "lbp128+huf": 290606,
+     "lbp128+rans": 290214,
+     "lbp128+zstd3": 283670,
+     "gpp+store": 296787,
+     "gpp+huf": 286636,
+     "gpp+rans": 284105,
+     "gpp+zstd3": 285299,
+     "lpp128+store": 291098,
+     "lpp128+huf": 284146,
+     "lpp128+rans": 283590,
+     "lpp128+zstd3": 282196,
+     "sel+store": 291098,
+     "sel+huf": 284146,
+     "sel+rans": 283590,
+     "sel+zstd3": 282196,
+     "planes+store": 2000148,
+     "planes+huf": 427314,
+     "planes+rans": 809046,
+     "planes+zstd3": 305526,
+     "exist+ent": 415782,
+     "planes+ent": 309064,
+     "lpp128+ent": 283384,
+     "exist+zstd19": 303151,
+     "planes+zstd19": 303027,
+     "exist+prod3": 305597,
+     "planes+prod3": 302557,
+     "exist+prod19": 303156,
+     "planes+prod19": 289259
+    }
+   },
+   "syn_walk_i32.npy": {
+    "family": "synthetic",
+    "origin": "synthetic",
+    "bytes": 1200128,
+    "production_payload": 167827,
+    "zstd3": 387240,
+    "production_residual_codec": "huf",
+    "order": 1,
+    "ow": 1,
+    "m": 299999,
+    "configs": {
+     "exist+store": 300127,
+     "exist+huf": 167835,
+     "exist+rans": 164914,
+     "exist+zstd3": 168004,
+     "gbp+store": 187629,
+     "gbp+huf": 181286,
+     "gbp+rans": 181047,
+     "gbp+zstd3": 181251,
+     "lbp128+store": 189977,
+     "lbp128+huf": 181293,
+     "lbp128+rans": 183395,
+     "lbp128+zstd3": 181273,
+     "gpp+store": 187636,
+     "gpp+huf": 181293,
+     "gpp+rans": 181054,
+     "gpp+zstd3": 181258,
+     "lpp128+store": 192332,
+     "lpp128+huf": 181307,
+     "lpp128+rans": 185750,
+     "lpp128+zstd3": 181302,
+     "sel+store": 187629,
+     "sel+huf": 167835,
+     "sel+rans": 164914,
+     "sel+zstd3": 168004,
+     "planes+store": 300127,
+     "planes+huf": 167835,
+     "planes+rans": 164914,
+     "planes+zstd3": 168004,
+     "exist+ent": 164914,
+     "planes+ent": 164914,
+     "lpp128+ent": 181068,
+     "exist+zstd19": 168195,
+     "planes+zstd19": 168195,
+     "exist+prod3": 167840,
+     "planes+prod3": 167840,
+     "exist+prod19": 167840,
+     "planes+prod19": 167840
+    }
+   },
+   "audio_curve.wav": {
+    "family": "audio_s16",
+    "origin": "real",
+    "bytes": 134660,
+    "production_payload": 83489,
+    "zstd3": 103632,
+    "production_residual_codec": "zstd",
+    "order": 1,
+    "ow": 2,
+    "m": 67307,
+    "configs": {
+     "exist+store": 134697,
+     "exist+huf": 94165,
+     "exist+rans": 94490,
+     "exist+zstd3": 83497,
+     "gbp+store": 126285,
+     "gbp+huf": 102899,
+     "gbp+rans": 102674,
+     "gbp+zstd3": 101222,
+     "lbp128+store": 107244,
+     "lbp128+huf": 93129,
+     "lbp128+rans": 93105,
+     "lbp128+zstd3": 92008,
+     "gpp+store": 112913,
+     "gpp+huf": 95417,
+     "gpp+rans": 95293,
+     "gpp+zstd3": 94539,
+     "lpp128+store": 104863,
+     "lpp128+huf": 91574,
+     "lpp128+rans": 91966,
+     "lpp128+zstd3": 90816,
+     "sel+store": 104863,
+     "sel+huf": 91574,
+     "sel+rans": 91966,
+     "sel+zstd3": 83497,
+     "planes+store": 134704,
+     "planes+huf": 87171,
+     "planes+rans": 86733,
+     "planes+zstd3": 81059,
+     "exist+ent": 94165,
+     "planes+ent": 86689,
+     "lpp128+ent": 91574,
+     "exist+zstd19": 75892,
+     "planes+zstd19": 75246,
+     "exist+prod3": 83502,
+     "planes+prod3": 81065,
+     "exist+prod19": 75897,
+     "planes+prod19": 75252
+    }
+   },
+   "audio_space3.wav": {
+    "family": "audio_s16",
+    "origin": "real",
+    "bytes": 144748,
+    "production_payload": 56236,
+    "zstd3": 64267,
+    "production_residual_codec": "huf",
+    "order": 1,
+    "ow": 2,
+    "m": 72351,
+    "configs": {
+     "exist+store": 144786,
+     "exist+huf": 56244,
+     "exist+rans": 55692,
+     "exist+zstd3": 56716,
+     "gbp+store": 144787,
+     "gbp+huf": 57006,
+     "gbp+rans": 55689,
+     "gbp+zstd3": 53853,
+     "lbp128+store": 108203,
+     "lbp128+huf": 70280,
+     "lbp128+rans": 69637,
+     "lbp128+zstd3": 67613,
+     "gpp+store": 105099,
+     "gpp+huf": 67529,
+     "gpp+rans": 67386,
+     "gpp+zstd3": 63645,
+     "lpp128+store": 87492,
+     "lpp128+huf": 65329,
+     "lpp128+rans": 65587,
+     "lpp128+zstd3": 64301,
+     "sel+store": 87492,
+     "sel+huf": 56244,
+     "sel+rans": 55689,
+     "sel+zstd3": 53853,
+     "planes+store": 144793,
+     "planes+huf": 53620,
+     "planes+rans": 52056,
+     "planes+zstd3": 54100,
+     "exist+ent": 55692,
+     "planes+ent": 52056,
+     "lpp128+ent": 65260,
+     "exist+zstd19": 48818,
+     "planes+zstd19": 48412,
+     "exist+prod3": 56249,
+     "planes+prod3": 52883,
+     "exist+prod19": 48823,
+     "planes+prod19": 48418
+    }
+   },
+   "audio_untie.wav": {
+    "family": "audio_s16",
+    "origin": "real",
+    "bytes": 190884,
+    "production_payload": 118690,
+    "zstd3": 115927,
+    "production_residual_codec": "zstd",
+    "order": 2,
+    "ow": 2,
+    "m": 95418,
+    "configs": {
+     "exist+store": 190920,
+     "exist+huf": 127228,
+     "exist+rans": 130004,
+     "exist+zstd3": 118698,
+     "gbp+store": 190921,
+     "gbp+huf": 130387,
+     "gbp+rans": 130005,
+     "gbp+zstd3": 129075,
+     "lbp128+store": 166579,
+     "lbp128+huf": 143633,
+     "lbp128+rans": 143685,
+     "lbp128+zstd3": 143465,
+     "gpp+store": 173470,
+     "gpp+huf": 143315,
+     "gpp+rans": 144148,
+     "gpp+zstd3": 141906,
+     "lpp128+store": 163251,
+     "lpp128+huf": 140336,
+     "lpp128+rans": 140476,
+     "lpp128+zstd3": 140154,
+     "sel+store": 163251,
+     "sel+huf": 127228,
+     "sel+rans": 130004,
+     "sel+zstd3": 118698,
+     "planes+store": 190927,
+     "planes+huf": 120304,
+     "planes+rans": 119189,
+     "planes+zstd3": 115238,
+     "exist+ent": 127228,
+     "planes+ent": 119189,
+     "lpp128+ent": 140235,
+     "exist+zstd19": 112301,
+     "planes+zstd19": 110208,
+     "exist+prod3": 118703,
+     "planes+prod3": 115244,
+     "exist+prod19": 112306,
+     "planes+prod19": 110214
+    }
+   },
+   "audio_soft.wav": {
+    "family": "audio_s16",
+    "origin": "real",
+    "bytes": 185752,
+    "production_payload": 95059,
+    "zstd3": 105852,
+    "production_residual_codec": "zstd",
+    "order": 1,
+    "ow": 4,
+    "m": 92853,
+    "configs": {
+     "exist+store": 371496,
+     "exist+huf": 112304,
+     "exist+rans": 134809,
+     "exist+zstd3": 95067,
+     "gbp+store": 197398,
+     "gbp+huf": 133976,
+     "gbp+rans": 132802,
+     "gbp+zstd3": 124768,
+     "lbp128+store": 150514,
+     "lbp128+huf": 119044,
+     "lbp128+rans": 118766,
+     "lbp128+zstd3": 115685,
+     "gpp+store": 157963,
+     "gpp+huf": 120297,
+     "gpp+rans": 120460,
+     "gpp+zstd3": 117251,
+     "lpp128+store": 145960,
+     "lpp128+huf": 116190,
+     "lpp128+rans": 116096,
+     "lpp128+zstd3": 115979,
+     "sel+store": 145960,
+     "sel+huf": 112304,
+     "sel+rans": 116096,
+     "sel+zstd3": 95067,
+     "planes+store": 371517,
+     "planes+huf": 106504,
+     "planes+rans": 186702,
+     "planes+zstd3": 93579,
+     "exist+ent": 112304,
+     "planes+ent": 93852,
+     "lpp128+ent": 115741,
+     "exist+zstd19": 88630,
+     "planes+zstd19": 89359,
+     "exist+prod3": 95072,
+     "planes+prod3": 93570,
+     "exist+prod19": 88635,
+     "planes+prod19": 89351
+    }
+   },
+   "fs_size_u32.npy": {
+    "family": "fs_meta",
+    "origin": "derived",
+    "bytes": 602872,
+    "production_payload": 245282,
+    "zstd3": 281940,
+    "production_residual_codec": "zstd",
+    "order": 1,
+    "ow": 4,
+    "m": 150685,
+    "configs": {
+     "exist+store": 602871,
+     "exist+huf": 305053,
+     "exist+rans": 324863,
+     "exist+zstd3": 245290,
+     "gbp+store": 565201,
+     "gbp+huf": 347762,
+     "gbp+rans": 346184,
+     "gbp+zstd3": 343592,
+     "lbp128+store": 332903,
+     "lbp128+huf": 293241,
+     "lbp128+rans": 292448,
+     "lbp128+zstd3": 286091,
+     "gpp+store": 329955,
+     "gpp+huf": 276776,
+     "gpp+rans": 277031,
+     "gpp+zstd3": 246823,
+     "lpp128+store": 292999,
+     "lpp128+huf": 275907,
+     "lpp128+rans": 275898,
+     "lpp128+zstd3": 267217,
+     "sel+store": 292999,
+     "sel+huf": 275907,
+     "sel+rans": 275898,
+     "sel+zstd3": 245290,
+     "planes+store": 602892,
+     "planes+huf": 299933,
+     "planes+rans": 273183,
+     "planes+zstd3": 244517,
+     "exist+ent": 305053,
+     "planes+ent": 273183,
+     "lpp128+ent": 275367,
+     "exist+zstd19": 236469,
+     "planes+zstd19": 236176,
+     "exist+prod3": 245295,
+     "planes+prod3": 244525,
+     "exist+prod19": 236474,
+     "planes+prod19": 236184
+    }
+   },
+   "audio_gong.wav": {
+    "family": "audio_s16",
+    "origin": "real",
+    "bytes": 191292,
+    "production_payload": 130622,
+    "zstd3": 120006,
+    "production_residual_codec": "zstd",
+    "order": 2,
+    "ow": 4,
+    "m": 95622,
+    "configs": {
+     "exist+store": 382576,
+     "exist+huf": 155293,
+     "exist+rans": 184248,
+     "exist+zstd3": 130630,
+     "gbp+store": 203286,
+     "gbp+huf": 169816,
+     "gbp+rans": 170028,
+     "gbp+zstd3": 168620,
+     "lbp128+store": 182034,
+     "lbp128+huf": 156141,
+     "lbp128+rans": 157167,
+     "lbp128+zstd3": 156073,
+     "gpp+store": 186883,
+     "gpp+huf": 159271,
+     "gpp+rans": 159564,
+     "gpp+zstd3": 158821,
+     "lpp128+store": 178663,
+     "lpp128+huf": 155711,
+     "lpp128+rans": 155868,
+     "lpp128+zstd3": 155599,
+     "sel+store": 178663,
+     "sel+huf": 155293,
+     "sel+rans": 155868,
+     "sel+zstd3": 130630,
+     "planes+store": 382597,
+     "planes+huf": 144232,
+     "planes+rans": 227137,
+     "planes+zstd3": 128023,
+     "exist+ent": 155293,
+     "planes+ent": 131518,
+     "lpp128+ent": 155558,
+     "exist+zstd19": 121686,
+     "planes+zstd19": 121251,
+     "exist+prod3": 130635,
+     "planes+prod3": 128001,
+     "exist+prod19": 121691,
+     "planes+prod19": 121154
+    }
+   },
+   "audio_space2.wav": {
+    "family": "audio_s16",
+    "origin": "real",
+    "bytes": 192686,
+    "production_payload": 76545,
+    "zstd3": 101803,
+    "production_residual_codec": "zstd",
+    "order": 2,
+    "ow": 2,
+    "m": 96319,
+    "configs": {
+     "exist+store": 192723,
+     "exist+huf": 78754,
+     "exist+rans": 82275,
+     "exist+zstd3": 76553,
+     "gbp+store": 168645,
+     "gbp+huf": 103451,
+     "gbp+rans": 102415,
+     "gbp+zstd3": 86401,
+     "lbp128+store": 135514,
+     "lbp128+huf": 98673,
+     "lbp128+rans": 97582,
+     "lbp128+zstd3": 91189,
+     "gpp+store": 125956,
+     "gpp+huf": 90659,
+     "gpp+rans": 90426,
+     "gpp+zstd3": 84004,
+     "lpp128+store": 124463,
+     "lpp128+huf": 93437,
+     "lpp128+rans": 93349,
+     "lpp128+zstd3": 87534,
+     "sel+store": 124463,
+     "sel+huf": 78754,
+     "sel+rans": 82275,
+     "sel+zstd3": 76553,
+     "planes+store": 192730,
+     "planes+huf": 74205,
+     "planes+rans": 72678,
+     "planes+zstd3": 74072,
+     "exist+ent": 78754,
+     "planes+ent": 72678,
+     "lpp128+ent": 93001,
+     "exist+zstd19": 67147,
+     "planes+zstd19": 66511,
+     "exist+prod3": 76558,
+     "planes+prod3": 69930,
+     "exist+prod19": 67152,
+     "planes+prod19": 65169
+    }
+   },
+   "audio_roll.wav": {
+    "family": "audio_s16",
+    "origin": "real",
+    "bytes": 242648,
+    "production_payload": 175945,
+    "zstd3": 229159,
+    "production_residual_codec": "zstd",
+    "order": 2,
+    "ow": 2,
+    "m": 121300,
+    "configs": {
+     "exist+store": 242686,
+     "exist+huf": 178059,
+     "exist+rans": 194117,
+     "exist+zstd3": 175953,
+     "gbp+store": 242687,
+     "gbp+huf": 193044,
+     "gbp+rans": 194118,
+     "gbp+zstd3": 193242,
+     "lbp128+store": 185150,
+     "lbp128+huf": 179557,
+     "lbp128+rans": 179438,
+     "lbp128+zstd3": 180306,
+     "gpp+store": 198441,
+     "gpp+huf": 180195,
+     "gpp+rans": 180044,
+     "gpp+zstd3": 181199,
+     "lpp128+store": 176064,
+     "lpp128+huf": 170768,
+     "lpp128+rans": 170637,
+     "lpp128+zstd3": 171607,
+     "sel+store": 176064,
+     "sel+huf": 170768,
+     "sel+rans": 170637,
+     "sel+zstd3": 171607,
+     "planes+store": 242693,
+     "planes+huf": 173437,
+     "planes+rans": 172081,
+     "planes+zstd3": 173010,
+     "exist+ent": 178059,
+     "planes+ent": 172081,
+     "lpp128+ent": 170325,
+     "exist+zstd19": 169716,
+     "planes+zstd19": 168462,
+     "exist+prod3": 175958,
+     "planes+prod3": 173016,
+     "exist+prod19": 169721,
+     "planes+prod19": 168468
+    }
+   },
+   "goog_date_i64.npy": {
+    "family": "series_64",
+    "origin": "real",
+    "bytes": 8504,
+    "production_payload": 274,
+    "zstd3": 1199,
+    "production_residual_codec": "zstd",
+    "order": 2,
+    "ow": 1,
+    "m": 1045,
+    "configs": {
+     "exist+store": 1173,
+     "exist+huf": 382,
+     "exist+rans": 403,
+     "exist+zstd3": 280,
+     "gbp+store": 652,
+     "gbp+huf": 329,
+     "gbp+rans": 370,
+     "gbp+zstd3": 255,
+     "lbp128+store": 548,
+     "lbp128+huf": 381,
+     "lbp128+rans": 467,
+     "lbp128+zstd3": 300,
+     "gpp+store": 531,
+     "gpp+huf": 364,
+     "gpp+rans": 452,
+     "gpp+zstd3": 288,
+     "lpp128+store": 552,
+     "lpp128+huf": 379,
+     "lpp128+rans": 473,
+     "lpp128+zstd3": 309,
+     "sel+store": 531,
+     "sel+huf": 329,
+     "sel+rans": 370,
+     "sel+zstd3": 255,
+     "planes+store": 1173,
+     "planes+huf": 382,
+     "planes+rans": 403,
+     "planes+zstd3": 280,
+     "exist+ent": 382,
+     "planes+ent": 382,
+     "lpp128+ent": 379,
+     "exist+zstd19": 216,
+     "planes+zstd19": 216,
+     "exist+prod3": 285,
+     "planes+prod3": 285,
+     "exist+prod19": 221,
+     "planes+prod19": 221
+    }
+   },
+   "topobathy_i16.npy": {
+    "family": "raster_16",
+    "origin": "real",
+    "bytes": 21968,
+    "production_payload": 12478,
+    "zstd3": 14717,
+    "production_residual_codec": "zstd",
+    "order": 1,
+    "ow": 2,
+    "m": 10919,
+    "configs": {
+     "exist+store": 21968,
+     "exist+huf": 13423,
+     "exist+rans": 13521,
+     "exist+zstd3": 12485,
+     "gbp+store": 16508,
+     "gbp+huf": 13025,
+     "gbp+rans": 13214,
+     "gbp+zstd3": 13078,
+     "lbp128+store": 15806,
+     "lbp128+huf": 13121,
+     "lbp128+rans": 13355,
+     "lbp128+zstd3": 13208,
+     "gpp+store": 14796,
+     "gpp+huf": 12474,
+     "gpp+rans": 12867,
+     "gpp+zstd3": 12571,
+     "lpp128+store": 14309,
+     "lpp128+huf": 12543,
+     "lpp128+rans": 12936,
+     "lpp128+zstd3": 12680,
+     "sel+store": 14309,
+     "sel+huf": 12474,
+     "sel+rans": 12867,
+     "sel+zstd3": 12485,
+     "planes+store": 21971,
+     "planes+huf": 11768,
+     "planes+rans": 11906,
+     "planes+zstd3": 12133,
+     "exist+ent": 13423,
+     "planes+ent": 11626,
+     "lpp128+ent": 12543,
+     "exist+zstd19": 11979,
+     "planes+zstd19": 11432,
+     "exist+prod3": 12490,
+     "planes+prod3": 11774,
+     "exist+prod19": 11984,
+     "planes+prod19": 11438
+    }
+   },
+   "goog_volume_i64.npy": {
+    "family": "series_64",
+    "origin": "real",
+    "bytes": 8504,
+    "production_payload": 2572,
+    "zstd3": 3582,
+    "production_residual_codec": "zstd",
+    "order": 1,
+    "ow": 4,
+    "m": 1046,
+    "configs": {
+     "exist+store": 4310,
+     "exist+huf": 2942,
+     "exist+rans": 3245,
+     "exist+zstd3": 2578,
+     "gbp+store": 2742,
+     "gbp+huf": 2675,
+     "gbp+rans": 2742,
+     "gbp+zstd3": 2685,
+     "lbp128+store": 2604,
+     "lbp128+huf": 2604,
+     "lbp128+rans": 2604,
+     "lbp128+zstd3": 2604,
+     "gpp+store": 2519,
+     "gpp+huf": 2456,
+     "gpp+rans": 2485,
+     "gpp+zstd3": 2487,
+     "lpp128+store": 2501,
+     "lpp128+huf": 2470,
+     "lpp128+rans": 2495,
+     "lpp128+zstd3": 2494,
+     "sel+store": 2501,
+     "sel+huf": 2456,
+     "sel+rans": 2485,
+     "sel+zstd3": 2487,
+     "planes+store": 4325,
+     "planes+huf": 2436,
+     "planes+rans": 3474,
+     "planes+zstd3": 2512,
+     "exist+ent": 2942,
+     "planes+ent": 2431,
+     "lpp128+ent": 2470,
+     "exist+zstd19": 2489,
+     "planes+zstd19": 2449,
+     "exist+prod3": 2583,
+     "planes+prod3": 2444,
+     "exist+prod19": 2494,
+     "planes+prod19": 2443
+    }
+   },
+   "dem_jacksboro_i16.npy": {
+    "family": "raster_16",
+    "origin": "real",
+    "bytes": 277392,
+    "production_payload": 96437,
+    "zstd3": 165635,
+    "production_residual_codec": "zstd",
+    "order": 2,
+    "ow": 2,
+    "m": 138630,
+    "configs": {
+     "exist+store": 277394,
+     "exist+huf": 114378,
+     "exist+rans": 123852,
+     "exist+zstd3": 96445,
+     "gbp+store": 190752,
+     "gbp+huf": 130598,
+     "gbp+rans": 128870,
+     "gbp+zstd3": 131267,
+     "lbp128+store": 125946,
+     "lbp128+huf": 110876,
+     "lbp128+rans": 110608,
+     "lbp128+zstd3": 110880,
+     "gpp+store": 107510,
+     "gpp+huf": 99910,
+     "gpp+rans": 100251,
+     "gpp+zstd3": 99909,
+     "lpp128+store": 108621,
+     "lpp128+huf": 99819,
+     "lpp128+rans": 100022,
+     "lpp128+zstd3": 99972,
+     "sel+store": 107510,
+     "sel+huf": 99819,
+     "sel+rans": 100022,
+     "sel+zstd3": 96445,
+     "planes+store": 277401,
+     "planes+huf": 113614,
+     "planes+rans": 94688,
+     "planes+zstd3": 97084,
+     "exist+ent": 114378,
+     "planes+ent": 94688,
+     "lpp128+ent": 99751,
+     "exist+zstd19": 96129,
+     "planes+zstd19": 96127,
+     "exist+prod3": 96450,
+     "planes+prod3": 96465,
+     "exist+prod19": 96134,
+     "planes+prod19": 96133
+    }
+   },
+   "mri_s1045_u16.npy": {
+    "family": "raster_16",
+    "origin": "real",
+    "bytes": 131200,
+    "production_payload": 21745,
+    "zstd3": 32903,
+    "production_residual_codec": "zstd",
+    "order": 2,
+    "ow": 1,
+    "m": 65534,
+    "configs": {
+     "exist+store": 65666,
+     "exist+huf": 27638,
+     "exist+rans": 27351,
+     "exist+zstd3": 21753,
+     "gbp+store": 65667,
+     "gbp+huf": 27639,
+     "gbp+rans": 27352,
+     "gbp+zstd3": 21754,
+     "lbp128+store": 52857,
+     "lbp128+huf": 28641,
+     "lbp128+rans": 28766,
+     "lbp128+zstd3": 24131,
+     "gpp+store": 50708,
+     "gpp+huf": 25591,
+     "gpp+rans": 25898,
+     "gpp+zstd3": 22353,
+     "lpp128+store": 40155,
+     "lpp128+huf": 29573,
+     "lpp128+rans": 30209,
+     "lpp128+zstd3": 23689,
+     "sel+store": 40155,
+     "sel+huf": 25591,
+     "sel+rans": 25898,
+     "sel+zstd3": 21753,
+     "planes+store": 65666,
+     "planes+huf": 27638,
+     "planes+rans": 27351,
+     "planes+zstd3": 21753,
+     "exist+ent": 27351,
+     "planes+ent": 27351,
+     "lpp128+ent": 29573,
+     "exist+zstd19": 21321,
+     "planes+zstd19": 21321,
+     "exist+prod3": 21758,
+     "planes+prod3": 21758,
+     "exist+prod19": 21326,
+     "planes+prod19": 21326
+    }
+   },
+   "syn_sparse_outliers_u32.npy": {
+    "family": "synthetic",
+    "origin": "synthetic",
+    "bytes": 2000128,
+    "production_payload": 387573,
+    "zstd3": 539580,
+    "production_residual_codec": "zstd",
+    "order": 0,
+    "ow": 4,
+    "m": 500000,
+    "configs": {
+     "exist+store": 2000127,
+     "exist+huf": 578803,
+     "exist+rans": 503655,
+     "exist+zstd3": 387581,
+     "gbp+store": 1937628,
+     "gbp+huf": 762222,
+     "gbp+rans": 737113,
+     "gbp+zstd3": 654946,
+     "lbp128+store": 562447,
+     "lbp128+huf": 466777,
+     "lbp128+rans": 464848,
+     "lbp128+zstd3": 430736,
+     "gpp+store": 378060,
+     "gpp+huf": 377868,
+     "gpp+rans": 378060,
+     "gpp+zstd3": 377887,
+     "lpp128+store": 385434,
+     "lpp128+huf": 378027,
+     "lpp128+rans": 381841,
+     "lpp128+zstd3": 378104,
+     "sel+store": 378060,
+     "sel+huf": 377868,
+     "sel+rans": 378060,
+     "sel+zstd3": 377887,
+     "planes+store": 2000148,
+     "planes+huf": 570506,
+     "planes+rans": 380758,
+     "planes+zstd3": 387397,
+     "exist+ent": 503655,
+     "planes+ent": 380758,
+     "lpp128+ent": 377775,
+     "exist+zstd19": 387908,
+     "planes+zstd19": 387541,
+     "exist+prod3": 387586,
+     "planes+prod3": 387385,
+     "exist+prod19": 387913,
+     "planes+prod19": 385302
+    }
+   },
+   "fs_inode_u64.npy": {
+    "family": "fs_meta",
+    "origin": "derived",
+    "bytes": 1205616,
+    "production_payload": 38670,
+    "zstd3": 199898,
+    "production_residual_codec": "zstd",
+    "order": 2,
+    "ow": 4,
+    "m": 150684,
+    "configs": {
+     "exist+store": 602871,
+     "exist+huf": 106402,
+     "exist+rans": 59289,
+     "exist+zstd3": 38678,
+     "gbp+store": 489859,
+     "gbp+huf": 98343,
+     "gbp+rans": 64818,
+     "gbp+zstd3": 54651,
+     "lbp128+store": 143532,
+     "lbp128+huf": 53111,
+     "lbp128+rans": 50515,
+     "lbp128+zstd3": 47420,
+     "gpp+store": 70887,
+     "gpp+huf": 43480,
+     "gpp+rans": 43405,
+     "gpp+zstd3": 36534,
+     "lpp128+store": 63324,
+     "lpp128+huf": 51954,
+     "lpp128+rans": 52670,
+     "lpp128+zstd3": 43822,
+     "sel+store": 63324,
+     "sel+huf": 43480,
+     "sel+rans": 43405,
+     "sel+zstd3": 36534,
+     "planes+store": 602892,
+     "planes+huf": 103358,
+     "planes+rans": 53381,
+     "planes+zstd3": 38198,
+     "exist+ent": 59289,
+     "planes+ent": 53381,
+     "lpp128+ent": 51951,
+     "exist+zstd19": 33170,
+     "planes+zstd19": 32946,
+     "exist+prod3": 38683,
+     "planes+prod3": 38206,
+     "exist+prod19": 33175,
+     "planes+prod19": 32954
+    }
+   },
+   "audio_drama.wav": {
+    "family": "audio_s16",
+    "origin": "real",
+    "bytes": 162366,
+    "production_payload": 93650,
+    "zstd3": 98330,
+    "production_residual_codec": "zstd",
+    "order": 1,
+    "ow": 4,
+    "m": 81160,
+    "configs": {
+     "exist+store": 324724,
+     "exist+huf": 113246,
+     "exist+rans": 129699,
+     "exist+zstd3": 93658,
+     "gbp+store": 172550,
+     "gbp+huf": 124206,
+     "gbp+rans": 123922,
+     "gbp+zstd3": 119371,
+     "lbp128+store": 142302,
+     "lbp128+huf": 114575,
+     "lbp128+rans": 114370,
+     "lbp128+zstd3": 113639,
+     "gpp+store": 147154,
+     "gpp+huf": 114373,
+     "gpp+rans": 114437,
+     "gpp+zstd3": 111104,
+     "lpp128+store": 138873,
+     "lpp128+huf": 112136,
+     "lpp128+rans": 111838,
+     "lpp128+zstd3": 112108,
+     "sel+store": 138873,
+     "sel+huf": 112136,
+     "sel+rans": 111838,
+     "sel+zstd3": 93658,
+     "planes+store": 324745,
+     "planes+huf": 100518,
+     "planes+rans": 170754,
+     "planes+zstd3": 89906,
+     "exist+ent": 113246,
+     "planes+ent": 89597,
+     "lpp128+ent": 111629,
+     "exist+zstd19": 87590,
+     "planes+zstd19": 87774,
+     "exist+prod3": 93663,
+     "planes+prod3": 89781,
+     "exist+prod19": 87595,
+     "planes+prod19": 87766
+    }
+   },
+   "audio_concat_s16.raw": {
+    "family": "audio_s16",
+    "origin": "derived",
+    "bytes": 2990280,
+    "production_payload": 1684209,
+    "zstd3": 1868162,
+    "production_residual_codec": "zstd",
+    "order": 1,
+    "ow": 4,
+    "m": 1495139,
+    "configs": {
+     "exist+store": 5980600,
+     "exist+huf": 1940793,
+     "exist+rans": 5980600,
+     "exist+zstd3": 1684218,
+     "gbp+store": 3177216,
+     "gbp+huf": 2320825,
+     "gbp+rans": 2349295,
+     "gbp+zstd3": 2188858,
+     "lbp128+store": 2537259,
+     "lbp128+huf": 2082805,
+     "lbp128+rans": 2107088,
+     "lbp128+zstd3": 2032588,
+     "gpp+store": 2812635,
+     "gpp+huf": 2140096,
+     "gpp+rans": 2159547,
+     "gpp+zstd3": 2022355,
+     "lpp128+store": 2449957,
+     "lpp128+huf": 2036748,
+     "lpp128+rans": 2051447,
+     "lpp128+zstd3": 1989356,
+     "sel+store": 2449957,
+     "sel+huf": 1940793,
+     "sel+rans": 2051447,
+     "sel+zstd3": 1684218,
+     "planes+store": 5980619,
+     "planes+huf": 1927995,
+     "planes+rans": 3327957,
+     "planes+zstd3": 1689332,
+     "exist+ent": 1940793,
+     "planes+ent": 1766457,
+     "lpp128+ent": 2036327,
+     "exist+zstd19": 1596536,
+     "planes+zstd19": 1596705,
+     "exist+prod3": 1684223,
+     "planes+prod3": 1850379,
+     "exist+prod19": 1596541,
+     "planes+prod19": 1596708
+    }
+   }
+  },
+  "aggregate_real": {
+   "inputs": [
+    "fs_mtime_i64.npy",
+    "audio_curve.wav",
+    "audio_space3.wav",
+    "audio_untie.wav",
+    "audio_soft.wav",
+    "fs_size_u32.npy",
+    "audio_gong.wav",
+    "audio_space2.wav",
+    "audio_roll.wav",
+    "goog_date_i64.npy",
+    "topobathy_i16.npy",
+    "goog_volume_i64.npy",
+    "dem_jacksboro_i16.npy",
+    "mri_s1045_u16.npy",
+    "fs_inode_u64.npy",
+    "audio_drama.wav",
+    "audio_concat_s16.raw"
+   ],
+   "raw": 7896988,
+   "production": 3054649,
+   "zstd3": 3560281,
+   "rows": [
+    [
+     "exist+store",
+     10747079,
+     "+251.83%",
+     "+0.00%",
+     "0/17/0"
+    ],
+    [
+     "exist+huf",
+     3663608,
+     "+19.94%",
+     "+0.00%",
+     "0/17/0"
+    ],
+    [
+     "exist+rans",
+     7694594,
+     "+151.90%",
+     "+0.00%",
+     "1/16/0"
+    ],
+    [
+     "exist+zstd3",
+     3055253,
+     "+0.02%",
+     "+0.00%",
+     "0/17/0"
+    ],
+    [
+     "gbp+store",
+     7104269,
+     "+132.57%",
+     "-33.90%",
+     "0/17/0"
+    ],
+    [
+     "gbp+huf",
+     4183149,
+     "+36.94%",
+     "+14.18%",
+     "0/17/0"
+    ],
+    [
+     "gbp+rans",
+     4105470,
+     "+34.40%",
+     "-46.64%",
+     "1/16/0"
+    ],
+    [
+     "gbp+zstd3",
+     3825113,
+     "+25.22%",
+     "+25.20%",
+     "3/14/0"
+    ],
+    [
+     "lbp128+store",
+     4840918,
+     "+58.48%",
+     "-54.96%",
+     "0/17/0"
+    ],
+    [
+     "lbp128+huf",
+     3713962,
+     "+21.58%",
+     "+1.37%",
+     "0/17/0"
+    ],
+    [
+     "lbp128+rans",
+     3721165,
+     "+21.82%",
+     "-51.64%",
+     "0/17/0"
+    ],
+    [
+     "lbp128+zstd3",
+     3562730,
+     "+16.63%",
+     "+16.61%",
+     "1/16/0"
+    ],
+    [
+     "gpp+store",
+     4736514,
+     "+55.06%",
+     "-55.93%",
+     "1/16/0"
+    ],
+    [
+     "gpp+huf",
+     3684635,
+     "+20.62%",
+     "+0.57%",
+     "3/14/0"
+    ],
+    [
+     "gpp+rans",
+     3705824,
+     "+21.32%",
+     "-51.84%",
+     "2/15/0"
+    ],
+    [
+     "gpp+zstd3",
+     3462239,
+     "+13.34%",
+     "+13.32%",
+     "3/14/0"
+    ],
+    [
+     "lpp128+store",
+     4230023,
+     "+38.48%",
+     "-60.64%",
+     "1/16/0"
+    ],
+    [
+     "lpp128+huf",
+     3575836,
+     "+17.06%",
+     "-2.40%",
+     "3/14/0"
+    ],
+    [
+     "lpp128+rans",
+     3593403,
+     "+17.64%",
+     "-53.30%",
+     "3/14/0"
+    ],
+    [
+     "lpp128+zstd3",
+     3452234,
+     "+13.02%",
+     "+12.99%",
+     "3/14/0"
+    ],
+    [
+     "sel+store",
+     4228891,
+     "+38.44%",
+     "-60.65%",
+     "1/16/0"
+    ],
+    [
+     "sel+huf",
+     3417582,
+     "+11.88%",
+     "-6.72%",
+     "4/13/0"
+    ],
+    [
+     "sel+rans",
+     3538895,
+     "+15.85%",
+     "-54.01%",
+     "4/13/0"
+    ],
+    [
+     "sel+zstd3",
+     2989480,
+     "-2.13%",
+     "-2.15%",
+     "6/11/0"
+    ],
+    [
+     "planes+store",
+     10747312,
+     "+251.83%",
+     "+0.00%",
+     "0/17/0"
+    ],
+    [
+     "planes+huf",
+     3581655,
+     "+17.25%",
+     "-2.24%",
+     "5/12/0"
+    ],
+    [
+     "planes+rans",
+     5027190,
+     "+64.58%",
+     "-34.67%",
+     "5/12/0"
+    ],
+    [
+     "planes+zstd3",
+     3037073,
+     "-0.58%",
+     "-0.60%",
+     "13/4/0"
+    ],
+    [
+     "exist+ent",
+     3534488,
+     "+15.71%",
+     "+0.00%",
+     "1/16/0"
+    ],
+    [
+     "planes+ent",
+     3194676,
+     "+4.58%",
+     "-9.61%",
+     "8/9/0"
+    ],
+    [
+     "lpp128+ent",
+     3572463,
+     "+16.95%",
+     "+1.07%",
+     "3/14/0"
+    ],
+    [
+     "exist+zstd19",
+     2874831,
+     "-5.89%",
+     "+0.00%",
+     "17/0/0"
+    ],
+    [
+     "planes+zstd19",
+     2868449,
+     "-6.10%",
+     "-0.22%",
+     "17/0/0"
+    ],
+    [
+     "exist+prod3",
+     3054866,
+     "+0.01%",
+     "+0.00%",
+     "0/17/0"
+    ],
+    [
+     "planes+prod3",
+     3191615,
+     "+4.48%",
+     "+4.48%",
+     "13/4/0"
+    ],
+    [
+     "exist+prod19",
+     2874916,
+     "-5.88%",
+     "+0.00%",
+     "17/0/0"
+    ],
+    [
+     "planes+prod19",
+     2867065,
+     "-6.14%",
+     "-0.27%",
+     "17/0/0"
+    ]
+   ]
+  },
+  "aggregate_synthetic": {
+   "inputs": [
+    "syn_clustered_outliers_u32.npy",
+    "syn_walk_i32.npy",
+    "syn_sparse_outliers_u32.npy"
+   ],
+   "raw": 5200384,
+   "production": 860984,
+   "zstd3": 1372378,
+   "rows": [
+    [
+     "exist+store",
+     4300381,
+     "+399.47%",
+     "+0.00%",
+     "0/3/0"
+    ],
+    [
+     "exist+huf",
+     1189315,
+     "+38.13%",
+     "+0.00%",
+     "0/3/0"
+    ],
+    [
+     "exist+rans",
+     1084351,
+     "+25.94%",
+     "+0.00%",
+     "1/2/0"
+    ],
+    [
+     "exist+zstd3",
+     861177,
+     "+0.02%",
+     "+0.00%",
+     "0/3/0"
+    ],
+    [
+     "gbp+store",
+     3625385,
+     "+321.07%",
+     "-15.70%",
+     "0/3/0"
+    ],
+    [
+     "gbp+huf",
+     1424482,
+     "+65.45%",
+     "+19.77%",
+     "0/3/0"
+    ],
+    [
+     "gbp+rans",
+     1368710,
+     "+58.97%",
+     "+26.22%",
+     "0/3/0"
+    ],
+    [
+     "gbp+zstd3",
+     1234630,
+     "+43.40%",
+     "+43.37%",
+     "0/3/0"
+    ],
+    [
+     "lbp128+store",
+     1049327,
+     "+21.88%",
+     "-75.60%",
+     "1/2/0"
+    ],
+    [
+     "lbp128+huf",
+     938676,
+     "+9.02%",
+     "-21.07%",
+     "1/2/0"
+    ],
+    [
+     "lbp128+rans",
+     938457,
+     "+9.00%",
+     "-13.45%",
+     "1/2/0"
+    ],
+    [
+     "lbp128+zstd3",
+     895679,
+     "+4.03%",
+     "+4.01%",
+     "1/2/0"
+    ],
+    [
+     "gpp+store",
+     862483,
+     "+0.17%",
+     "-79.94%",
+     "2/1/0"
+    ],
+    [
+     "gpp+huf",
+     845797,
+     "-1.76%",
+     "-28.88%",
+     "2/1/0"
+    ],
+    [
+     "gpp+rans",
+     843219,
+     "-2.06%",
+     "-22.24%",
+     "2/1/0"
+    ],
+    [
+     "gpp+zstd3",
+     844444,
+     "-1.92%",
+     "-1.94%",
+     "2/1/0"
+    ],
+    [
+     "lpp128+store",
+     868864,
+     "+0.92%",
+     "-79.80%",
+     "2/1/0"
+    ],
+    [
+     "lpp128+huf",
+     843480,
+     "-2.03%",
+     "-29.08%",
+     "2/1/0"
+    ],
+    [
+     "lpp128+rans",
+     851181,
+     "-1.14%",
+     "-21.50%",
+     "2/1/0"
+    ],
+    [
+     "lpp128+zstd3",
+     841602,
+     "-2.25%",
+     "-2.27%",
+     "2/1/0"
+    ],
+    [
+     "sel+store",
+     856787,
+     "-0.49%",
+     "-80.08%",
+     "2/1/0"
+    ],
+    [
+     "sel+huf",
+     829849,
+     "-3.62%",
+     "-30.22%",
+     "2/1/0"
+    ],
+    [
+     "sel+rans",
+     826564,
+     "-4.00%",
+     "-23.77%",
+     "3/0/0"
+    ],
+    [
+     "sel+zstd3",
+     828087,
+     "-3.82%",
+     "-3.84%",
+     "2/1/0"
+    ],
+    [
+     "planes+store",
+     4300423,
+     "+399.48%",
+     "+0.00%",
+     "0/3/0"
+    ],
+    [
+     "planes+huf",
+     1165655,
+     "+35.39%",
+     "-1.99%",
+     "0/3/0"
+    ],
+    [
+     "planes+rans",
+     1354718,
+     "+57.35%",
+     "+24.93%",
+     "2/1/0"
+    ],
+    [
+     "planes+zstd3",
+     860927,
+     "-0.01%",
+     "-0.03%",
+     "2/1/0"
+    ],
+    [
+     "exist+ent",
+     1084351,
+     "+25.94%",
+     "+0.00%",
+     "1/2/0"
+    ],
+    [
+     "planes+ent",
+     854736,
+     "-0.73%",
+     "-21.18%",
+     "2/1/0"
+    ],
+    [
+     "lpp128+ent",
+     842227,
+     "-2.18%",
+     "-22.33%",
+     "2/1/0"
+    ],
+    [
+     "exist+zstd19",
+     859254,
+     "-0.20%",
+     "+0.00%",
+     "1/2/0"
+    ],
+    [
+     "planes+zstd19",
+     858763,
+     "-0.26%",
+     "-0.06%",
+     "2/1/0"
+    ],
+    [
+     "exist+prod3",
+     861023,
+     "+0.00%",
+     "+0.00%",
+     "0/3/0"
+    ],
+    [
+     "planes+prod3",
+     857782,
+     "-0.37%",
+     "-0.38%",
+     "2/1/0"
+    ],
+    [
+     "exist+prod19",
+     858909,
+     "-0.24%",
+     "+0.00%",
+     "1/2/0"
+    ],
+    [
+     "planes+prod19",
+     842401,
+     "-2.16%",
+     "-1.92%",
+     "2/1/0"
+    ]
+   ]
+  }
+ },
+ "B_planner": {
+  "fast_real": {
+   "inputs": [
+    "audio_drama.wav",
+    "mri_s1045_u16.npy",
+    "goog_volume_i64.npy",
+    "audio_space2.wav",
+    "fs_size_u32.npy",
+    "audio_concat_s16.raw",
+    "goog_date_i64.npy",
+    "audio_untie.wav",
+    "fs_inode_u64.npy",
+    "audio_space3.wav",
+    "audio_roll.wav",
+    "dem_jacksboro_i16.npy",
+    "topobathy_i16.npy",
+    "audio_curve.wav",
+    "audio_gong.wav",
+    "fs_mtime_i64.npy",
+    "audio_soft.wav"
+   ],
+   "with_int": [
+    "audio_drama.wav",
+    "mri_s1045_u16.npy",
+    "goog_volume_i64.npy",
+    "audio_space2.wav",
+    "fs_size_u32.npy",
+    "goog_date_i64.npy",
+    "fs_inode_u64.npy",
+    "audio_space3.wav",
+    "audio_roll.wav",
+    "topobathy_i16.npy",
+    "audio_curve.wav",
+    "audio_soft.wav"
+   ],
+   "raw": 7896988,
+   "production_frame": 3150852,
+   "zstd3": 3560281,
+   "rows": [
+    [
+     "exist+store",
+     5398185,
+     "+71.32%",
+     "+0.00%",
+     "0/12/5"
+    ],
+    [
+     "exist+huf",
+     3353365,
+     "+6.43%",
+     "+0.00%",
+     "0/12/5"
+    ],
+    [
+     "exist+rans",
+     3433358,
+     "+8.97%",
+     "+0.00%",
+     "1/11/5"
+    ],
+    [
+     "exist+zstd3",
+     3151304,
+     "+0.01%",
+     "+0.00%",
+     "0/12/5"
+    ],
+    [
+     "gbp+store",
+     4490782,
+     "+42.53%",
+     "-16.81%",
+     "0/12/5"
+    ],
+    [
+     "gbp+huf",
+     3477502,
+     "+10.37%",
+     "+3.70%",
+     "0/12/5"
+    ],
+    [
+     "gbp+rans",
+     3439416,
+     "+9.16%",
+     "+0.18%",
+     "1/11/5"
+    ],
+    [
+     "gbp+zstd3",
+     3385222,
+     "+7.44%",
+     "+7.42%",
+     "2/10/5"
+    ],
+    [
+     "lbp128+store",
+     3629854,
+     "+15.20%",
+     "-32.76%",
+     "0/12/5"
+    ],
+    [
+     "lbp128+huf",
+     3319145,
+     "+5.34%",
+     "-1.02%",
+     "0/12/5"
+    ],
+    [
+     "lbp128+rans",
+     3314018,
+     "+5.18%",
+     "-3.48%",
+     "0/12/5"
+    ],
+    [
+     "lbp128+zstd3",
+     3286039,
+     "+4.29%",
+     "+4.28%",
+     "0/12/5"
+    ],
+    [
+     "gpp+store",
+     3569846,
+     "+13.30%",
+     "-33.87%",
+     "1/11/5"
+    ],
+    [
+     "gpp+huf",
+     3282283,
+     "+4.17%",
+     "-2.12%",
+     "2/10/5"
+    ],
+    [
+     "gpp+rans",
+     3283179,
+     "+4.20%",
+     "-4.37%",
+     "1/11/5"
+    ],
+    [
+     "gpp+zstd3",
+     3224562,
+     "+2.34%",
+     "+2.32%",
+     "2/10/5"
+    ],
+    [
+     "lpp128+store",
+     3444632,
+     "+9.32%",
+     "-36.19%",
+     "1/11/5"
+    ],
+    [
+     "lpp128+huf",
+     3275405,
+     "+3.95%",
+     "-2.32%",
+     "2/10/5"
+    ],
+    [
+     "lpp128+rans",
+     3277991,
+     "+4.04%",
+     "-4.53%",
+     "2/10/5"
+    ],
+    [
+     "lpp128+zstd3",
+     3242694,
+     "+2.91%",
+     "+2.90%",
+     "2/10/5"
+    ],
+    [
+     "sel+store",
+     3444611,
+     "+9.32%",
+     "-36.19%",
+     "1/11/5"
+    ],
+    [
+     "sel+huf",
+     3243915,
+     "+2.95%",
+     "-3.26%",
+     "3/9/5"
+    ],
+    [
+     "sel+rans",
+     3250605,
+     "+3.17%",
+     "-5.32%",
+     "3/9/5"
+    ],
+    [
+     "sel+zstd3",
+     3144442,
+     "-0.20%",
+     "-0.22%",
+     "5/7/5"
+    ],
+    [
+     "planes+store",
+     5398364,
+     "+71.33%",
+     "+0.00%",
+     "0/12/5"
+    ],
+    [
+     "planes+huf",
+     3322142,
+     "+5.44%",
+     "-0.93%",
+     "3/9/5"
+    ],
+    [
+     "planes+rans",
+     3600967,
+     "+14.29%",
+     "+4.88%",
+     "2/10/5"
+    ],
+    [
+     "planes+zstd3",
+     3139136,
+     "-0.37%",
+     "-0.39%",
+     "9/3/5"
+    ],
+    [
+     "exist+ent",
+     3305626,
+     "+4.91%",
+     "+0.00%",
+     "1/11/5"
+    ],
+    [
+     "planes+ent",
+     3188259,
+     "+1.19%",
+     "-3.55%",
+     "7/5/5"
+    ],
+    [
+     "lpp128+ent",
+     3273051,
+     "+3.88%",
+     "-0.99%",
+     "2/10/5"
+    ],
+    [
+     "exist+zstd19",
+     3097101,
+     "-1.71%",
+     "+0.00%",
+     "12/0/5"
+    ],
+    [
+     "planes+zstd19",
+     3093706,
+     "-1.81%",
+     "-0.11%",
+     "12/0/5"
+    ],
+    [
+     "exist+prod3",
+     3151015,
+     "+0.01%",
+     "+0.00%",
+     "0/12/5"
+    ],
+    [
+     "planes+prod3",
+     3133405,
+     "-0.55%",
+     "-0.56%",
+     "9/3/5"
+    ],
+    [
+     "exist+prod19",
+     3097166,
+     "-1.70%",
+     "+0.00%",
+     "12/0/5"
+    ],
+    [
+     "planes+prod19",
+     3092226,
+     "-1.86%",
+     "-0.16%",
+     "12/0/5"
+    ]
+   ]
+  },
+  "fast_synthetic": {
+   "inputs": [
+    "syn_sparse_outliers_u32.npy",
+    "syn_clustered_outliers_u32.npy",
+    "syn_walk_i32.npy"
+   ],
+   "with_int": [
+    "syn_clustered_outliers_u32.npy",
+    "syn_walk_i32.npy"
+   ],
+   "raw": 5200384,
+   "production_frame": 858799,
+   "zstd3": 1372378,
+   "rows": [
+    [
+     "exist+store",
+     2687465,
+     "+212.93%",
+     "+0.00%",
+     "0/2/1"
+    ],
+    [
+     "exist+huf",
+     997826,
+     "+16.19%",
+     "+0.00%",
+     "0/2/1"
+    ],
+    [
+     "exist+rans",
+     1032813,
+     "+20.26%",
+     "+0.00%",
+     "1/1/1"
+    ],
+    [
+     "exist+zstd3",
+     869645,
+     "+1.26%",
+     "+0.00%",
+     "0/2/1"
+    ],
+    [
+     "gbp+store",
+     2074971,
+     "+141.61%",
+     "-22.79%",
+     "0/2/1"
+    ],
+    [
+     "gbp+huf",
+     1049539,
+     "+22.21%",
+     "+5.18%",
+     "0/2/1"
+    ],
+    [
+     "gbp+rans",
+     1019248,
+     "+18.68%",
+     "-1.31%",
+     "0/2/1"
+    ],
+    [
+     "gbp+zstd3",
+     969366,
+     "+12.87%",
+     "+11.47%",
+     "0/2/1"
+    ],
+    [
+     "lbp128+store",
+     874102,
+     "+1.78%",
+     "-67.47%",
+     "1/1/1"
+    ],
+    [
+     "lbp128+huf",
+     859191,
+     "+0.05%",
+     "-13.89%",
+     "1/1/1"
+    ],
+    [
+     "lbp128+rans",
+     861837,
+     "+0.35%",
+     "-16.55%",
+     "1/1/1"
+    ],
+    [
+     "lbp128+zstd3",
+     852252,
+     "-0.76%",
+     "-2.00%",
+     "1/1/1"
+    ],
+    [
+     "gpp+store",
+     871655,
+     "+1.50%",
+     "-67.57%",
+     "1/1/1"
+    ],
+    [
+     "gpp+huf",
+     855254,
+     "-0.41%",
+     "-14.29%",
+     "1/1/1"
+    ],
+    [
+     "gpp+rans",
+     853338,
+     "-0.64%",
+     "-17.38%",
+     "1/1/1"
+    ],
+    [
+     "gpp+zstd3",
+     853876,
+     "-0.57%",
+     "-1.81%",
+     "1/1/1"
+    ],
+    [
+     "lpp128+store",
+     870678,
+     "+1.38%",
+     "-67.60%",
+     "1/1/1"
+    ],
+    [
+     "lpp128+huf",
+     852794,
+     "-0.70%",
+     "-14.53%",
+     "1/1/1"
+    ],
+    [
+     "lpp128+rans",
+     857138,
+     "-0.19%",
+     "-17.01%",
+     "1/1/1"
+    ],
+    [
+     "lpp128+zstd3",
+     851042,
+     "-0.90%",
+     "-2.14%",
+     "1/1/1"
+    ],
+    [
+     "sel+store",
+     865960,
+     "+0.83%",
+     "-67.78%",
+     "1/1/1"
+    ],
+    [
+     "sel+huf",
+     839235,
+     "-2.28%",
+     "-15.89%",
+     "1/1/1"
+    ],
+    [
+     "sel+rans",
+     835899,
+     "-2.67%",
+     "-19.07%",
+     "2/0/1"
+    ],
+    [
+     "sel+zstd3",
+     848259,
+     "-1.23%",
+     "-2.46%",
+     "1/1/1"
+    ],
+    [
+     "planes+store",
+     2687507,
+     "+212.94%",
+     "+0.00%",
+     "0/2/1"
+    ],
+    [
+     "planes+huf",
+     982380,
+     "+14.39%",
+     "-1.55%",
+     "0/2/1"
+    ],
+    [
+     "planes+rans",
+     1362005,
+     "+58.59%",
+     "+31.87%",
+     "1/1/1"
+    ],
+    [
+     "planes+zstd3",
+     887219,
+     "+3.31%",
+     "+2.02%",
+     "0/2/1"
+    ],
+    [
+     "exist+ent",
+     994971,
+     "+15.86%",
+     "+0.00%",
+     "1/1/1"
+    ],
+    [
+     "planes+ent",
+     862021,
+     "+0.38%",
+     "-13.36%",
+     "1/1/1"
+    ],
+    [
+     "lpp128+ent",
+     851923,
+     "-0.80%",
+     "-14.38%",
+     "1/1/1"
+    ],
+    [
+     "exist+zstd19",
+     858575,
+     "-0.03%",
+     "+0.00%",
+     "1/1/1"
+    ],
+    [
+     "planes+zstd19",
+     858538,
+     "-0.03%",
+     "-0.00%",
+     "1/1/1"
+    ],
+    [
+     "exist+prod3",
+     858851,
+     "+0.01%",
+     "+0.00%",
+     "0/2/1"
+    ],
+    [
+     "planes+prod3",
+     857659,
+     "-0.13%",
+     "-0.14%",
+     "1/1/1"
+    ],
+    [
+     "exist+prod19",
+     858225,
+     "-0.07%",
+     "+0.00%",
+     "1/1/1"
+    ],
+    [
+     "planes+prod19",
+     844617,
+     "-1.65%",
+     "-1.59%",
+     "1/1/1"
+    ]
+   ]
+  },
+  "hc_real": {
+   "inputs": [
+    "goog_volume_i64.npy",
+    "audio_space3.wav",
+    "mri_s1045_u16.npy",
+    "audio_roll.wav",
+    "audio_gong.wav",
+    "fs_size_u32.npy",
+    "topobathy_i16.npy",
+    "audio_drama.wav",
+    "audio_concat_s16.raw",
+    "audio_curve.wav",
+    "audio_space2.wav",
+    "fs_mtime_i64.npy",
+    "audio_soft.wav",
+    "audio_untie.wav",
+    "goog_date_i64.npy",
+    "dem_jacksboro_i16.npy",
+    "fs_inode_u64.npy"
+   ],
+   "with_int": [
+    "goog_volume_i64.npy",
+    "mri_s1045_u16.npy",
+    "audio_roll.wav",
+    "fs_size_u32.npy",
+    "topobathy_i16.npy",
+    "audio_curve.wav",
+    "goog_date_i64.npy",
+    "fs_inode_u64.npy"
+   ],
+   "raw": 7896988,
+   "production_frame": 2562687,
+   "zstd3": 3560281,
+   "rows": [
+    [
+     "exist+store",
+     3930315,
+     "+53.37%",
+     "+0.00%",
+     "0/8/9"
+    ],
+    [
+     "exist+huf",
+     2742674,
+     "+7.02%",
+     "+0.00%",
+     "0/8/9"
+    ],
+    [
+     "exist+rans",
+     2766388,
+     "+7.95%",
+     "+0.00%",
+     "0/8/9"
+    ],
+    [
+     "exist+zstd3",
+     2589680,
+     "+1.05%",
+     "+0.00%",
+     "0/8/9"
+    ],
+    [
+     "gbp+store",
+     3544609,
+     "+38.32%",
+     "-9.81%",
+     "0/8/9"
+    ],
+    [
+     "gbp+huf",
+     2809515,
+     "+9.63%",
+     "+2.44%",
+     "0/8/9"
+    ],
+    [
+     "gbp+rans",
+     2774515,
+     "+8.27%",
+     "+0.29%",
+     "0/8/9"
+    ],
+    [
+     "gbp+zstd3",
+     2750667,
+     "+7.34%",
+     "+6.22%",
+     "0/8/9"
+    ],
+    [
+     "lbp128+store",
+     2851989,
+     "+11.29%",
+     "-27.44%",
+     "0/8/9"
+    ],
+    [
+     "lbp128+huf",
+     2675123,
+     "+4.39%",
+     "-2.46%",
+     "0/8/9"
+    ],
+    [
+     "lbp128+rans",
+     2672050,
+     "+4.27%",
+     "-3.41%",
+     "0/8/9"
+    ],
+    [
+     "lbp128+zstd3",
+     2656553,
+     "+3.66%",
+     "+2.58%",
+     "0/8/9"
+    ],
+    [
+     "gpp+store",
+     2792218,
+     "+8.96%",
+     "-28.96%",
+     "0/8/9"
+    ],
+    [
+     "gpp+huf",
+     2648195,
+     "+3.34%",
+     "-3.44%",
+     "1/7/9"
+    ],
+    [
+     "gpp+rans",
+     2648946,
+     "+3.37%",
+     "-4.25%",
+     "0/8/9"
+    ],
+    [
+     "gpp+zstd3",
+     2608320,
+     "+1.78%",
+     "+0.72%",
+     "0/8/9"
+    ],
+    [
+     "lpp128+store",
+     2706268,
+     "+5.60%",
+     "-31.14%",
+     "0/8/9"
+    ],
+    [
+     "lpp128+huf",
+     2646623,
+     "+3.28%",
+     "-3.50%",
+     "1/7/9"
+    ],
+    [
+     "lpp128+rans",
+     2648770,
+     "+3.36%",
+     "-4.25%",
+     "0/8/9"
+    ],
+    [
+     "lpp128+zstd3",
+     2624023,
+     "+2.39%",
+     "+1.33%",
+     "0/8/9"
+    ],
+    [
+     "sel+store",
+     2706247,
+     "+5.60%",
+     "-31.14%",
+     "0/8/9"
+    ],
+    [
+     "sel+huf",
+     2634034,
+     "+2.78%",
+     "-3.96%",
+     "1/7/9"
+    ],
+    [
+     "sel+rans",
+     2635012,
+     "+2.82%",
+     "-4.75%",
+     "0/8/9"
+    ],
+    [
+     "sel+zstd3",
+     2585341,
+     "+0.88%",
+     "-0.17%",
+     "0/8/9"
+    ],
+    [
+     "planes+store",
+     3930403,
+     "+53.37%",
+     "+0.00%",
+     "0/8/9"
+    ],
+    [
+     "planes+huf",
+     2732883,
+     "+6.64%",
+     "-0.36%",
+     "2/6/9"
+    ],
+    [
+     "planes+rans",
+     2761374,
+     "+7.75%",
+     "-0.18%",
+     "1/7/9"
+    ],
+    [
+     "planes+zstd3",
+     2584998,
+     "+0.87%",
+     "-0.18%",
+     "0/8/9"
+    ],
+    [
+     "exist+ent",
+     2695274,
+     "+5.17%",
+     "+0.00%",
+     "0/8/9"
+    ],
+    [
+     "planes+ent",
+     2638665,
+     "+2.96%",
+     "-2.10%",
+     "2/6/9"
+    ],
+    [
+     "lpp128+ent",
+     2645650,
+     "+3.24%",
+     "-1.84%",
+     "1/7/9"
+    ],
+    [
+     "exist+zstd19",
+     2562745,
+     "+0.00%",
+     "+0.00%",
+     "0/8/9"
+    ],
+    [
+     "planes+zstd19",
+     2559142,
+     "-0.14%",
+     "-0.14%",
+     "6/2/9"
+    ],
+    [
+     "exist+prod3",
+     2589720,
+     "+1.05%",
+     "+0.00%",
+     "0/8/9"
+    ],
+    [
+     "planes+prod3",
+     2584594,
+     "+0.85%",
+     "-0.20%",
+     "2/6/9"
+    ],
+    [
+     "exist+prod19",
+     2562785,
+     "+0.00%",
+     "+0.00%",
+     "0/8/9"
+    ],
+    [
+     "planes+prod19",
+     2559166,
+     "-0.14%",
+     "-0.14%",
+     "6/2/9"
+    ]
+   ]
+  },
+  "hc_synthetic": {
+   "inputs": [
+    "syn_walk_i32.npy",
+    "syn_sparse_outliers_u32.npy",
+    "syn_clustered_outliers_u32.npy"
+   ],
+   "with_int": [
+    "syn_walk_i32.npy",
+    "syn_sparse_outliers_u32.npy",
+    "syn_clustered_outliers_u32.npy"
+   ],
+   "raw": 5200384,
+   "production_frame": 859023,
+   "zstd3": 1372378,
+   "rows": [
+    [
+     "exist+store",
+     4300534,
+     "+400.63%",
+     "+0.00%",
+     "0/3/0"
+    ],
+    [
+     "exist+huf",
+     1189468,
+     "+38.47%",
+     "+0.00%",
+     "0/3/0"
+    ],
+    [
+     "exist+rans",
+     1084504,
+     "+26.25%",
+     "+0.00%",
+     "1/2/0"
+    ],
+    [
+     "exist+zstd3",
+     861330,
+     "+0.27%",
+     "+0.00%",
+     "1/2/0"
+    ],
+    [
+     "gbp+store",
+     3625538,
+     "+322.05%",
+     "-15.70%",
+     "0/3/0"
+    ],
+    [
+     "gbp+huf",
+     1424635,
+     "+65.84%",
+     "+19.77%",
+     "0/3/0"
+    ],
+    [
+     "gbp+rans",
+     1368863,
+     "+59.35%",
+     "+26.22%",
+     "0/3/0"
+    ],
+    [
+     "gbp+zstd3",
+     1234783,
+     "+43.74%",
+     "+43.36%",
+     "0/3/0"
+    ],
+    [
+     "lbp128+store",
+     1049480,
+     "+22.17%",
+     "-75.60%",
+     "1/2/0"
+    ],
+    [
+     "lbp128+huf",
+     938829,
+     "+9.29%",
+     "-21.07%",
+     "1/2/0"
+    ],
+    [
+     "lbp128+rans",
+     938610,
+     "+9.26%",
+     "-13.45%",
+     "1/2/0"
+    ],
+    [
+     "lbp128+zstd3",
+     895832,
+     "+4.28%",
+     "+4.01%",
+     "1/2/0"
+    ],
+    [
+     "gpp+store",
+     862636,
+     "+0.42%",
+     "-79.94%",
+     "2/1/0"
+    ],
+    [
+     "gpp+huf",
+     845950,
+     "-1.52%",
+     "-28.88%",
+     "2/1/0"
+    ],
+    [
+     "gpp+rans",
+     843372,
+     "-1.82%",
+     "-22.23%",
+     "2/1/0"
+    ],
+    [
+     "gpp+zstd3",
+     844597,
+     "-1.68%",
+     "-1.94%",
+     "2/1/0"
+    ],
+    [
+     "lpp128+store",
+     869017,
+     "+1.16%",
+     "-79.79%",
+     "2/1/0"
+    ],
+    [
+     "lpp128+huf",
+     843633,
+     "-1.79%",
+     "-29.07%",
+     "2/1/0"
+    ],
+    [
+     "lpp128+rans",
+     851334,
+     "-0.90%",
+     "-21.50%",
+     "2/1/0"
+    ],
+    [
+     "lpp128+zstd3",
+     841755,
+     "-2.01%",
+     "-2.27%",
+     "2/1/0"
+    ],
+    [
+     "sel+store",
+     856940,
+     "-0.24%",
+     "-80.07%",
+     "2/1/0"
+    ],
+    [
+     "sel+huf",
+     830002,
+     "-3.38%",
+     "-30.22%",
+     "2/1/0"
+    ],
+    [
+     "sel+rans",
+     826717,
+     "-3.76%",
+     "-23.77%",
+     "3/0/0"
+    ],
+    [
+     "sel+zstd3",
+     828240,
+     "-3.58%",
+     "-3.84%",
+     "2/1/0"
+    ],
+    [
+     "planes+store",
+     4300576,
+     "+400.64%",
+     "+0.00%",
+     "0/3/0"
+    ],
+    [
+     "planes+huf",
+     1165808,
+     "+35.71%",
+     "-1.99%",
+     "0/3/0"
+    ],
+    [
+     "planes+rans",
+     1354871,
+     "+57.72%",
+     "+24.93%",
+     "2/1/0"
+    ],
+    [
+     "planes+zstd3",
+     861080,
+     "+0.24%",
+     "-0.03%",
+     "1/2/0"
+    ],
+    [
+     "exist+ent",
+     1084504,
+     "+26.25%",
+     "+0.00%",
+     "1/2/0"
+    ],
+    [
+     "planes+ent",
+     854889,
+     "-0.48%",
+     "-21.17%",
+     "2/1/0"
+    ],
+    [
+     "lpp128+ent",
+     842380,
+     "-1.94%",
+     "-22.33%",
+     "2/1/0"
+    ],
+    [
+     "exist+zstd19",
+     859407,
+     "+0.04%",
+     "+0.00%",
+     "0/3/0"
+    ],
+    [
+     "planes+zstd19",
+     858916,
+     "-0.01%",
+     "-0.06%",
+     "2/1/0"
+    ],
+    [
+     "exist+prod3",
+     861176,
+     "+0.25%",
+     "+0.00%",
+     "1/2/0"
+    ],
+    [
+     "planes+prod3",
+     857935,
+     "-0.13%",
+     "-0.38%",
+     "2/1/0"
+    ],
+    [
+     "exist+prod19",
+     859062,
+     "+0.00%",
+     "+0.00%",
+     "0/3/0"
+    ],
+    [
+     "planes+prod19",
+     842554,
+     "-1.92%",
+     "-1.92%",
+     "2/1/0"
+    ]
+   ]
+  }
+ },
+ "kernel": {
+  "A_typed": {
+   "inputs": [
+    "fs_mtime_i64.npy",
+    "audio_curve.wav",
+    "audio_space3.wav",
+    "audio_untie.wav",
+    "audio_soft.wav",
+    "fs_size_u32.npy",
+    "audio_gong.wav",
+    "audio_space2.wav",
+    "audio_roll.wav",
+    "goog_date_i64.npy",
+    "topobathy_i16.npy",
+    "goog_volume_i64.npy",
+    "dem_jacksboro_i16.npy",
+    "mri_s1045_u16.npy",
+    "fs_inode_u64.npy",
+    "audio_drama.wav",
+    "audio_concat_s16.raw"
+   ],
+   "residual_bytes": 10745303,
+   "rows": [
+    [
+     "exist+store",
+     "1.88",
+     "1.88\u20132.15",
+     "5720",
+     "1.88",
+     "1.51",
+     "1.39\u20131.72",
+     "7117",
+     "1.51"
+    ],
+    [
+     "exist+huf",
+     "12.41",
+     "12.50\u201312.89",
+     "866",
+     "12.26",
+     "10.18",
+     "10.34\u201310.60",
+     "1056",
+     "10.17"
+    ],
+    [
+     "exist+rans",
+     "42.63",
+     "43.14\u201350.01",
+     "252",
+     "42.19",
+     "13.18",
+     "13.43\u201313.67",
+     "815",
+     "13.18"
+    ],
+    [
+     "exist+zstd3",
+     "35.92",
+     "35.66\u201338.60",
+     "299",
+     "35.31",
+     "9.40",
+     "9.56\u201310.40",
+     "1143",
+     "9.40"
+    ],
+    [
+     "gbp+store",
+     "14.92",
+     "15.19\u201316.97",
+     "720",
+     "14.91",
+     "12.22",
+     "12.41\u201312.71",
+     "879",
+     "12.22"
+    ],
+    [
+     "gbp+huf",
+     "22.44",
+     "22.64\u201323.60",
+     "479",
+     "22.37",
+     "20.69",
+     "20.74\u201320.93",
+     "519",
+     "20.55"
+    ],
+    [
+     "gbp+rans",
+     "45.41",
+     "43.56\u201352.81",
+     "237",
+     "43.83",
+     "35.48",
+     "35.05\u201339.97",
+     "303",
+     "34.89"
+    ],
+    [
+     "gbp+zstd3",
+     "53.15",
+     "53.44\u201365.21",
+     "202",
+     "52.96",
+     "21.34",
+     "21.21\u201323.28",
+     "504",
+     "21.33"
+    ],
+    [
+     "lbp128+store",
+     "14.89",
+     "15.07\u201315.52",
+     "722",
+     "14.79",
+     "11.41",
+     "11.48\u201311.70",
+     "941",
+     "11.34"
+    ],
+    [
+     "lbp128+huf",
+     "20.33",
+     "20.40\u201323.33",
+     "529",
+     "20.09",
+     "17.64",
+     "17.76\u201318.30",
+     "609",
+     "17.63"
+    ],
+    [
+     "lbp128+rans",
+     "34.58",
+     "34.69\u201337.03",
+     "311",
+     "34.55",
+     "28.11",
+     "28.22\u201328.84",
+     "382",
+     "27.97"
+    ],
+    [
+     "lbp128+zstd3",
+     "42.34",
+     "39.74\u201345.45",
+     "254",
+     "41.68",
+     "17.46",
+     "17.54\u201320.30",
+     "616",
+     "17.41"
+    ],
+    [
+     "gpp+store",
+     "26.38",
+     "26.00\u201328.39",
+     "407",
+     "25.55",
+     "12.20",
+     "12.24\u201313.25",
+     "881",
+     "12.19"
+    ],
+    [
+     "gpp+huf",
+     "30.75",
+     "30.97\u201333.49",
+     "349",
+     "30.73",
+     "18.71",
+     "18.83\u201319.30",
+     "574",
+     "18.71"
+    ],
+    [
+     "gpp+rans",
+     "46.46",
+     "47.20\u201348.29",
+     "231",
+     "46.39",
+     "28.78",
+     "28.83\u201329.55",
+     "373",
+     "28.73"
+    ],
+    [
+     "gpp+zstd3",
+     "52.11",
+     "51.28\u201362.96",
+     "206",
+     "51.81",
+     "18.36",
+     "18.43\u201319.23",
+     "585",
+     "18.31"
+    ],
+    [
+     "lpp128+store",
+     "26.77",
+     "27.69\u201327.88",
+     "401",
+     "26.44",
+     "11.68",
+     "11.87\u201312.12",
+     "920",
+     "11.68"
+    ],
+    [
+     "lpp128+huf",
+     "31.26",
+     "31.80\u201333.01",
+     "344",
+     "31.21",
+     "17.59",
+     "17.76\u201318.08",
+     "611",
+     "17.56"
+    ],
+    [
+     "lpp128+rans",
+     "45.20",
+     "45.74\u201347.24",
+     "238",
+     "44.85",
+     "26.71",
+     "26.64\u201328.46",
+     "402",
+     "26.53"
+    ],
+    [
+     "lpp128+zstd3",
+     "41.17",
+     "41.78\u201343.32",
+     "261",
+     "41.05",
+     "16.82",
+     "16.86\u201317.11",
+     "639",
+     "16.82"
+    ],
+    [
+     "sel+store",
+     "84.41",
+     "85.55\u201390.72",
+     "127",
+     "84.35",
+     "11.51",
+     "11.58\u201312.45",
+     "934",
+     "11.50"
+    ],
+    [
+     "sel+huf",
+     "118.91",
+     "122.33\u2013129.82",
+     "90",
+     "118.28",
+     "11.83",
+     "12.02\u201312.49",
+     "908",
+     "11.82"
+    ],
+    [
+     "sel+rans",
+     "234.50",
+     "217.16\u2013257.54",
+     "46",
+     "232.85",
+     "26.35",
+     "26.25\u201330.57",
+     "408",
+     "26.09"
+    ],
+    [
+     "sel+zstd3",
+     "210.04",
+     "212.71\u2013214.45",
+     "51",
+     "209.51",
+     "10.00",
+     "9.97\u201310.71",
+     "1075",
+     "9.96"
+    ],
+    [
+     "planes+store",
+     "1.89",
+     "1.88\u20132.08",
+     "5680",
+     "1.86",
+     "1.33",
+     "1.32\u20131.42",
+     "8109",
+     "1.32"
+    ],
+    [
+     "planes+huf",
+     "12.64",
+     "12.89\u201313.87",
+     "850",
+     "12.52",
+     "9.44",
+     "9.43\u201310.00",
+     "1138",
+     "9.44"
+    ],
+    [
+     "planes+rans",
+     "40.74",
+     "40.69\u201342.11",
+     "264",
+     "40.25",
+     "23.96",
+     "23.99\u201325.29",
+     "448",
+     "23.81"
+    ],
+    [
+     "planes+zstd3",
+     "33.86",
+     "33.71\u201335.96",
+     "317",
+     "33.14",
+     "9.15",
+     "9.20\u20139.78",
+     "1175",
+     "9.14"
+    ],
+    [
+     "exist+ent",
+     "60.01",
+     "57.92\u201363.82",
+     "179",
+     "59.17",
+     "13.57",
+     "13.02\u201314.75",
+     "792",
+     "13.47"
+    ],
+    [
+     "planes+ent",
+     "51.96",
+     "53.43\u201361.81",
+     "207",
+     "51.65",
+     "17.69",
+     "18.34\u201319.45",
+     "607",
+     "17.69"
+    ],
+    [
+     "lpp128+ent",
+     "50.67",
+     "50.33\u201355.65",
+     "212",
+     "50.51",
+     "20.58",
+     "20.69\u201321.68",
+     "522",
+     "20.57"
+    ],
+    [
+     "exist+zstd19",
+     "1787.40",
+     "1795.85\u20131871.51",
+     "6",
+     "1754.90",
+     "11.31",
+     "11.68\u201311.77",
+     "950",
+     "11.30"
+    ],
+    [
+     "planes+zstd19",
+     "1894.81",
+     "1905.66\u20131939.72",
+     "6",
+     "1880.23",
+     "10.32",
+     "10.44\u201310.66",
+     "1041",
+     "10.30"
+    ],
+    [
+     "exist+prod3",
+     "56.80",
+     "57.49\u201360.68",
+     "189",
+     "56.64",
+     "8.69",
+     "8.69\u20139.21",
+     "1237",
+     "8.51"
+    ],
+    [
+     "planes+prod3",
+     "50.54",
+     "50.10\u201354.56",
+     "213",
+     "49.97",
+     "8.77",
+     "8.82\u201310.09",
+     "1226",
+     "8.76"
+    ],
+    [
+     "exist+prod19",
+     "1770.50",
+     "1785.26\u20131920.17",
+     "6",
+     "1763.15",
+     "10.73",
+     "10.65\u201312.72",
+     "1001",
+     "10.57"
+    ],
+    [
+     "planes+prod19",
+     "1976.83",
+     "1967.89\u20132047.01",
+     "5",
+     "1963.69",
+     "10.27",
+     "10.60\u201310.93",
+     "1047",
+     "10.24"
+    ]
+   ]
+  },
+  "B_planner_fast": {
+   "inputs": [
+    "audio_drama.wav",
+    "mri_s1045_u16.npy",
+    "goog_volume_i64.npy",
+    "audio_space2.wav",
+    "fs_size_u32.npy",
+    "goog_date_i64.npy",
+    "fs_inode_u64.npy",
+    "audio_space3.wav",
+    "audio_roll.wav",
+    "topobathy_i16.npy",
+    "audio_curve.wav",
+    "audio_soft.wav"
+   ],
+   "residual_bytes": 3144353,
+   "rows": [
+    [
+     "exist+store",
+     "0.27",
+     "0.28\u20130.28",
+     "11451",
+     "0.27",
+     "0.22",
+     "0.22\u20130.23",
+     "14286",
+     "0.22"
+    ],
+    [
+     "exist+huf",
+     "3.53",
+     "3.58\u20133.75",
+     "891",
+     "3.53",
+     "2.91",
+     "2.97\u20133.08",
+     "1082",
+     "2.91"
+    ],
+    [
+     "exist+rans",
+     "12.90",
+     "13.24\u201313.73",
+     "244",
+     "12.84",
+     "7.84",
+     "8.00\u20138.48",
+     "401",
+     "7.81"
+    ],
+    [
+     "exist+zstd3",
+     "9.95",
+     "9.94\u201310.74",
+     "316",
+     "9.87",
+     "2.40",
+     "2.40\u20132.62",
+     "1313",
+     "2.39"
+    ],
+    [
+     "gbp+store",
+     "4.29",
+     "4.45\u20134.71",
+     "732",
+     "4.29",
+     "3.60",
+     "3.65\u20133.82",
+     "874",
+     "3.60"
+    ],
+    [
+     "gbp+huf",
+     "6.94",
+     "7.00\u20137.33",
+     "453",
+     "6.94",
+     "6.24",
+     "6.25\u20136.39",
+     "504",
+     "6.22"
+    ],
+    [
+     "gbp+rans",
+     "13.81",
+     "14.35\u201315.13",
+     "228",
+     "13.78",
+     "10.58",
+     "10.86\u201311.03",
+     "297",
+     "10.58"
+    ],
+    [
+     "gbp+zstd3",
+     "17.31",
+     "17.34\u201318.60",
+     "182",
+     "17.26",
+     "6.41",
+     "6.43\u20136.72",
+     "491",
+     "6.41"
+    ],
+    [
+     "lbp128+store",
+     "4.22",
+     "4.47\u20134.58",
+     "746",
+     "4.22",
+     "3.30",
+     "3.34\u20133.52",
+     "952",
+     "3.29"
+    ],
+    [
+     "lbp128+huf",
+     "5.78",
+     "6.11\u20136.51",
+     "544",
+     "5.78",
+     "5.21",
+     "5.36\u20135.48",
+     "604",
+     "5.18"
+    ],
+    [
+     "lbp128+rans",
+     "10.75",
+     "11.11\u201311.99",
+     "293",
+     "10.73",
+     "8.14",
+     "8.23\u20138.51",
+     "386",
+     "8.13"
+    ],
+    [
+     "lbp128+zstd3",
+     "11.15",
+     "11.25\u201312.47",
+     "282",
+     "11.12",
+     "5.22",
+     "5.37\u20135.48",
+     "603",
+     "5.21"
+    ],
+    [
+     "gpp+store",
+     "7.74",
+     "7.79\u20138.80",
+     "406",
+     "7.74",
+     "3.50",
+     "3.53\u20133.61",
+     "899",
+     "3.48"
+    ],
+    [
+     "gpp+huf",
+     "9.28",
+     "9.72\u201310.26",
+     "339",
+     "9.27",
+     "5.34",
+     "5.43\u20135.76",
+     "589",
+     "5.33"
+    ],
+    [
+     "gpp+rans",
+     "15.24",
+     "15.16\u201315.90",
+     "206",
+     "15.20",
+     "8.21",
+     "8.28\u20138.48",
+     "383",
+     "8.20"
+    ],
+    [
+     "gpp+zstd3",
+     "14.84",
+     "15.56\u201316.86",
+     "212",
+     "14.85",
+     "5.57",
+     "5.66\u20135.80",
+     "565",
+     "5.46"
+    ],
+    [
+     "lpp128+store",
+     "8.52",
+     "9.08\u20139.50",
+     "369",
+     "8.46",
+     "3.42",
+     "3.57\u20133.81",
+     "918",
+     "3.41"
+    ],
+    [
+     "lpp128+huf",
+     "9.79",
+     "9.80\u201310.37",
+     "321",
+     "9.79",
+     "5.05",
+     "5.11\u20135.20",
+     "622",
+     "5.05"
+    ],
+    [
+     "lpp128+rans",
+     "15.26",
+     "15.53\u201316.41",
+     "206",
+     "15.19",
+     "7.62",
+     "7.81\u20138.05",
+     "413",
+     "7.60"
+    ],
+    [
+     "lpp128+zstd3",
+     "13.95",
+     "14.53\u201315.05",
+     "225",
+     "13.84",
+     "5.03",
+     "5.12\u20135.27",
+     "625",
+     "5.03"
+    ],
+    [
+     "sel+store",
+     "25.52",
+     "26.11\u201327.78",
+     "123",
+     "25.43",
+     "3.42",
+     "3.63\u20133.79",
+     "921",
+     "3.41"
+    ],
+    [
+     "sel+huf",
+     "35.37",
+     "36.42\u201338.59",
+     "89",
+     "35.19",
+     "4.31",
+     "4.37\u20134.49",
+     "729",
+     "4.31"
+    ],
+    [
+     "sel+rans",
+     "68.41",
+     "70.08\u201371.53",
+     "46",
+     "67.90",
+     "7.59",
+     "7.58\u20137.88",
+     "414",
+     "7.56"
+    ],
+    [
+     "sel+zstd3",
+     "65.52",
+     "67.67\u201373.59",
+     "48",
+     "65.34",
+     "3.24",
+     "3.29\u20133.54",
+     "972",
+     "3.18"
+    ],
+    [
+     "planes+store",
+     "0.33",
+     "0.34\u20130.35",
+     "9502",
+     "0.33",
+     "0.20",
+     "0.20\u20130.23",
+     "16111",
+     "0.20"
+    ],
+    [
+     "planes+huf",
+     "3.53",
+     "3.71\u20134.44",
+     "892",
+     "3.53",
+     "2.70",
+     "2.77\u20133.16",
+     "1163",
+     "2.70"
+    ],
+    [
+     "planes+rans",
+     "12.44",
+     "12.51\u201313.19",
+     "253",
+     "12.44",
+     "6.73",
+     "6.76\u20136.99",
+     "467",
+     "6.73"
+    ],
+    [
+     "planes+zstd3",
+     "8.33",
+     "8.57\u20138.89",
+     "377",
+     "8.30",
+     "2.35",
+     "2.43\u20132.52",
+     "1336",
+     "2.36"
+    ],
+    [
+     "exist+ent",
+     "16.22",
+     "16.37\u201317.18",
+     "194",
+     "16.15",
+     "4.06",
+     "4.10\u20134.25",
+     "774",
+     "4.06"
+    ],
+    [
+     "planes+ent",
+     "15.81",
+     "16.37\u201317.99",
+     "199",
+     "15.81",
+     "6.65",
+     "6.82\u20136.97",
+     "473",
+     "6.63"
+    ],
+    [
+     "lpp128+ent",
+     "16.61",
+     "16.60\u201318.36",
+     "189",
+     "16.58",
+     "6.98",
+     "7.11\u20137.33",
+     "451",
+     "6.94"
+    ],
+    [
+     "exist+zstd19",
+     "502.30",
+     "513.57\u2013542.47",
+     "6",
+     "498.90",
+     "3.03",
+     "3.08\u20133.22",
+     "1037",
+     "3.02"
+    ],
+    [
+     "planes+zstd19",
+     "581.75",
+     "608.35\u2013636.57",
+     "5",
+     "576.26",
+     "2.96",
+     "3.02\u20133.41",
+     "1062",
+     "2.92"
+    ],
+    [
+     "exist+prod3",
+     "17.24",
+     "17.45\u201318.02",
+     "182",
+     "17.15",
+     "2.16",
+     "2.17\u20132.31",
+     "1456",
+     "2.16"
+    ],
+    [
+     "planes+prod3",
+     "16.15",
+     "16.63\u201317.08",
+     "195",
+     "16.08",
+     "2.15",
+     "2.19\u20132.27",
+     "1460",
+     "2.15"
+    ],
+    [
+     "exist+prod19",
+     "507.43",
+     "523.00\u2013542.51",
+     "6",
+     "502.46",
+     "2.81",
+     "2.94\u20133.10",
+     "1118",
+     "2.80"
+    ],
+    [
+     "planes+prod19",
+     "588.53",
+     "617.80\u2013624.61",
+     "5",
+     "585.45",
+     "2.80",
+     "2.94\u20133.02",
+     "1123",
+     "2.79"
+    ]
+   ]
+  },
+  "B_planner_hc": {
+   "inputs": [
+    "goog_volume_i64.npy",
+    "mri_s1045_u16.npy",
+    "audio_roll.wav",
+    "fs_size_u32.npy",
+    "topobathy_i16.npy",
+    "audio_curve.wav",
+    "goog_date_i64.npy",
+    "fs_inode_u64.npy"
+   ],
+   "residual_bytes": 1918023,
+   "rows": [
+    [
+     "exist+store",
+     "0.17",
+     "0.17\u20130.19",
+     "11269",
+     "0.17",
+     "0.14",
+     "0.14\u20130.16",
+     "13528",
+     "0.14"
+    ],
+    [
+     "exist+huf",
+     "2.32",
+     "2.31\u20132.66",
+     "827",
+     "2.31",
+     "2.09",
+     "2.09\u20132.57",
+     "919",
+     "1.99"
+    ],
+    [
+     "exist+rans",
+     "8.24",
+     "8.62\u20139.34",
+     "233",
+     "8.19",
+     "4.86",
+     "4.97\u20135.43",
+     "395",
+     "4.83"
+    ],
+    [
+     "exist+zstd3",
+     "5.08",
+     "5.17\u20135.53",
+     "377",
+     "5.08",
+     "1.34",
+     "1.33\u20131.41",
+     "1435",
+     "1.34"
+    ],
+    [
+     "gbp+store",
+     "2.83",
+     "2.99\u20133.17",
+     "677",
+     "2.80",
+     "2.39",
+     "2.38\u20132.40",
+     "803",
+     "2.33"
+    ],
+    [
+     "gbp+huf",
+     "4.61",
+     "4.62\u20135.03",
+     "416",
+     "4.50",
+     "4.33",
+     "4.28\u20134.54",
+     "442",
+     "4.26"
+    ],
+    [
+     "gbp+rans",
+     "9.50",
+     "9.87\u201310.55",
+     "202",
+     "9.46",
+     "7.04",
+     "7.26\u20137.58",
+     "272",
+     "6.97"
+    ],
+    [
+     "gbp+zstd3",
+     "10.12",
+     "10.72\u201311.00",
+     "189",
+     "10.12",
+     "4.12",
+     "4.26\u20134.65",
+     "465",
+     "4.06"
+    ],
+    [
+     "lbp128+store",
+     "2.64",
+     "2.95\u20132.99",
+     "726",
+     "2.64",
+     "2.10",
+     "2.11\u20132.20",
+     "913",
+     "2.03"
+    ],
+    [
+     "lbp128+huf",
+     "3.96",
+     "3.97\u20134.18",
+     "484",
+     "3.97",
+     "3.29",
+     "3.33\u20133.43",
+     "583",
+     "3.27"
+    ],
+    [
+     "lbp128+rans",
+     "6.63",
+     "6.64\u20137.86",
+     "289",
+     "6.59",
+     "4.93",
+     "4.93\u20135.39",
+     "389",
+     "4.93"
+    ],
+    [
+     "lbp128+zstd3",
+     "5.74",
+     "6.22\u20137.38",
+     "334",
+     "5.68",
+     "3.12",
+     "3.20\u20133.43",
+     "615",
+     "3.10"
+    ],
+    [
+     "gpp+store",
+     "4.81",
+     "4.81\u20135.31",
+     "398",
+     "4.79",
+     "2.12",
+     "2.12\u20132.39",
+     "905",
+     "2.10"
+    ],
+    [
+     "gpp+huf",
+     "5.75",
+     "6.08\u20136.55",
+     "333",
+     "5.72",
+     "3.23",
+     "3.30\u20133.49",
+     "593",
+     "3.19"
+    ],
+    [
+     "gpp+rans",
+     "9.96",
+     "10.07\u201311.40",
+     "193",
+     "9.95",
+     "4.95",
+     "4.89\u20135.45",
+     "387",
+     "4.95"
+    ],
+    [
+     "gpp+zstd3",
+     "8.19",
+     "8.45\u20139.15",
+     "234",
+     "8.11",
+     "3.15",
+     "3.18\u20133.36",
+     "609",
+     "3.15"
+    ],
+    [
+     "lpp128+store",
+     "5.21",
+     "5.35\u20136.27",
+     "368",
+     "5.18",
+     "2.07",
+     "2.06\u20132.35",
+     "927",
+     "2.05"
+    ],
+    [
+     "lpp128+huf",
+     "5.96",
+     "6.31\u20136.72",
+     "322",
+     "5.92",
+     "3.00",
+     "3.11\u20133.20",
+     "640",
+     "3.00"
+    ],
+    [
+     "lpp128+rans",
+     "9.44",
+     "9.86\u201310.74",
+     "203",
+     "9.37",
+     "4.62",
+     "4.68\u20134.78",
+     "415",
+     "4.60"
+    ],
+    [
+     "lpp128+zstd3",
+     "7.87",
+     "8.25\u20138.73",
+     "244",
+     "7.69",
+     "2.90",
+     "3.06\u20133.15",
+     "661",
+     "2.89"
+    ],
+    [
+     "sel+store",
+     "15.95",
+     "16.36\u201319.14",
+     "120",
+     "15.92",
+     "2.12",
+     "2.12\u20132.34",
+     "906",
+     "2.10"
+    ],
+    [
+     "sel+huf",
+     "22.99",
+     "23.26\u201326.43",
+     "83",
+     "22.78",
+     "3.15",
+     "3.15\u20133.49",
+     "609",
+     "3.12"
+    ],
+    [
+     "sel+rans",
+     "43.23",
+     "45.18\u201346.98",
+     "44",
+     "43.16",
+     "4.56",
+     "4.67\u20134.72",
+     "421",
+     "4.52"
+    ],
+    [
+     "sel+zstd3",
+     "36.97",
+     "39.33\u201341.66",
+     "52",
+     "36.71",
+     "1.94",
+     "2.05\u20132.12",
+     "990",
+     "1.93"
+    ],
+    [
+     "planes+store",
+     "0.23",
+     "0.23\u20130.24",
+     "8281",
+     "0.23",
+     "0.13",
+     "0.13\u20130.14",
+     "14390",
+     "0.13"
+    ],
+    [
+     "planes+huf",
+     "2.37",
+     "2.42\u20132.70",
+     "809",
+     "2.36",
+     "1.87",
+     "1.93\u20132.03",
+     "1023",
+     "1.86"
+    ],
+    [
+     "planes+rans",
+     "8.63",
+     "8.56\u20139.68",
+     "222",
+     "8.55",
+     "4.20",
+     "4.20\u20134.60",
+     "456",
+     "4.20"
+    ],
+    [
+     "planes+zstd3",
+     "4.24",
+     "4.23\u20134.85",
+     "453",
+     "4.21",
+     "1.34",
+     "1.37\u20131.50",
+     "1434",
+     "1.34"
+    ],
+    [
+     "exist+ent",
+     "10.32",
+     "10.61\u201311.83",
+     "186",
+     "10.31",
+     "2.85",
+     "2.88\u20133.07",
+     "673",
+     "2.85"
+    ],
+    [
+     "planes+ent",
+     "10.57",
+     "10.66\u201312.70",
+     "181",
+     "10.56",
+     "4.01",
+     "4.02\u20134.50",
+     "478",
+     "4.01"
+    ],
+    [
+     "lpp128+ent",
+     "10.06",
+     "11.07\u201311.53",
+     "191",
+     "10.03",
+     "3.86",
+     "3.96\u20134.33",
+     "497",
+     "3.82"
+    ],
+    [
+     "exist+zstd19",
+     "299.92",
+     "302.42\u2013316.29",
+     "6",
+     "291.91",
+     "1.74",
+     "1.74\u20132.02",
+     "1100",
+     "1.73"
+    ],
+    [
+     "planes+zstd19",
+     "354.68",
+     "362.96\u2013386.31",
+     "5",
+     "349.51",
+     "1.55",
+     "1.58\u20131.72",
+     "1239",
+     "1.54"
+    ],
+    [
+     "exist+prod3",
+     "9.70",
+     "10.30\u201310.49",
+     "198",
+     "9.52",
+     "1.24",
+     "1.29\u20131.36",
+     "1550",
+     "1.24"
+    ],
+    [
+     "planes+prod3",
+     "9.31",
+     "9.31\u20139.98",
+     "206",
+     "9.06",
+     "1.29",
+     "1.31\u20131.43",
+     "1486",
+     "1.29"
+    ],
+    [
+     "exist+prod19",
+     "295.87",
+     "298.25\u2013309.30",
+     "6",
+     "293.43",
+     "1.63",
+     "1.69\u20131.78",
+     "1175",
+     "1.62"
+    ],
+    [
+     "planes+prod19",
+     "369.88",
+     "379.04\u2013428.89",
+     "5",
+     "364.74",
+     "1.46",
+     "1.46\u20131.65",
+     "1315",
+     "1.45"
+    ]
+   ]
+  }
+ },
+ "e2e": {
+  "fast": {
+   "inputs": [
+    "audio_drama.wav",
+    "mri_s1045_u16.npy",
+    "goog_volume_i64.npy",
+    "audio_space2.wav",
+    "fs_size_u32.npy",
+    "goog_date_i64.npy",
+    "fs_inode_u64.npy",
+    "audio_space3.wav",
+    "audio_roll.wav",
+    "topobathy_i16.npy",
+    "audio_curve.wav",
+    "audio_soft.wav"
+   ],
+   "raw": 3041524,
+   "prod_compress_ms": 112.50345,
+   "prod_leaf_reencode_ms": 9.305423,
+   "rows": [
+    [
+     "production kolmo (unmodified)",
+     898742,
+     "112.5",
+     "6.87",
+     "7.05"
+    ],
+    [
+     "zstd -3 whole input (direct control)",
+     1237282,
+     "16.6",
+     "4.53",
+     "-"
+    ],
+    [
+     "exist+store",
+     3146075,
+     "103.6",
+     "-",
+     "5.13"
+    ],
+    [
+     "exist+huf",
+     1101255,
+     "106.9",
+     "-",
+     "7.70"
+    ],
+    [
+     "exist+rans",
+     1181248,
+     "116.5",
+     "-",
+     "12.70"
+    ],
+    [
+     "exist+zstd3",
+     899194,
+     "113.4",
+     "-",
+     "7.33"
+    ],
+    [
+     "gbp+store",
+     2238672,
+     "107.7",
+     "-",
+     "8.48"
+    ],
+    [
+     "gbp+huf",
+     1225392,
+     "110.1",
+     "-",
+     "11.55"
+    ],
+    [
+     "gbp+rans",
+     1187306,
+     "117.5",
+     "-",
+     "15.54"
+    ],
+    [
+     "gbp+zstd3",
+     1133112,
+     "121.3",
+     "-",
+     "11.27"
+    ],
+    [
+     "lbp128+store",
+     1377744,
+     "107.6",
+     "-",
+     "8.17"
+    ],
+    [
+     "lbp128+huf",
+     1067035,
+     "109.3",
+     "-",
+     "10.07"
+    ],
+    [
+     "lbp128+rans",
+     1061908,
+     "114.4",
+     "-",
+     "13.22"
+    ],
+    [
+     "lbp128+zstd3",
+     1033929,
+     "114.9",
+     "-",
+     "10.48"
+    ],
+    [
+     "gpp+store",
+     1317736,
+     "111.1",
+     "-",
+     "8.25"
+    ],
+    [
+     "gpp+huf",
+     1030173,
+     "112.8",
+     "-",
+     "10.22"
+    ],
+    [
+     "gpp+rans",
+     1031069,
+     "118.9",
+     "-",
+     "13.16"
+    ],
+    [
+     "gpp+zstd3",
+     972452,
+     "118.3",
+     "-",
+     "10.29"
+    ],
+    [
+     "lpp128+store",
+     1192522,
+     "112.0",
+     "-",
+     "8.31"
+    ],
+    [
+     "lpp128+huf",
+     1023295,
+     "113.9",
+     "-",
+     "10.44"
+    ],
+    [
+     "lpp128+rans",
+     1025881,
+     "119.2",
+     "-",
+     "12.72"
+    ],
+    [
+     "lpp128+zstd3",
+     990584,
+     "117.3",
+     "-",
+     "10.15"
+    ],
+    [
+     "sel+store",
+     1192501,
+     "129.1",
+     "-",
+     "8.24"
+    ],
+    [
+     "sel+huf",
+     991805,
+     "139.6",
+     "-",
+     "9.58"
+    ],
+    [
+     "sel+rans",
+     998495,
+     "173.4",
+     "-",
+     "12.38"
+    ],
+    [
+     "sel+zstd3",
+     892332,
+     "170.9",
+     "-",
+     "8.23"
+    ],
+    [
+     "planes+store",
+     3146254,
+     "103.8",
+     "-",
+     "5.12"
+    ],
+    [
+     "planes+huf",
+     1070032,
+     "107.0",
+     "-",
+     "7.60"
+    ],
+    [
+     "planes+rans",
+     1348857,
+     "116.4",
+     "-",
+     "11.69"
+    ],
+    [
+     "planes+zstd3",
+     887026,
+     "112.3",
+     "-",
+     "7.29"
+    ],
+    [
+     "exist+ent",
+     1053516,
+     "119.8",
+     "-",
+     "8.81"
+    ],
+    [
+     "planes+ent",
+     936149,
+     "119.7",
+     "-",
+     "11.41"
+    ],
+    [
+     "lpp128+ent",
+     1020941,
+     "120.6",
+     "-",
+     "11.83"
+    ],
+    [
+     "exist+zstd19",
+     844991,
+     "623.5",
+     "-",
+     "8.17"
+    ],
+    [
+     "planes+zstd19",
+     841596,
+     "691.1",
+     "-",
+     "8.11"
+    ],
+    [
+     "exist+prod3",
+     898905,
+     "121.0",
+     "-",
+     "6.97"
+    ],
+    [
+     "planes+prod3",
+     881295,
+     "119.9",
+     "-",
+     "7.15"
+    ],
+    [
+     "exist+prod19",
+     845056,
+     "615.2",
+     "-",
+     "8.05"
+    ],
+    [
+     "planes+prod19",
+     840116,
+     "704.4",
+     "-",
+     "7.96"
+    ]
+   ]
+  },
+  "hc": {
+   "inputs": [
+    "goog_volume_i64.npy",
+    "mri_s1045_u16.npy",
+    "audio_roll.wav",
+    "fs_size_u32.npy",
+    "topobathy_i16.npy",
+    "audio_curve.wav",
+    "goog_date_i64.npy",
+    "fs_inode_u64.npy"
+   ],
+   "raw": 2355972,
+   "prod_compress_ms": 445.949626,
+   "prod_leaf_reencode_ms": 276.495916,
+   "rows": [
+    [
+     "production kolmo (unmodified)",
+     551671,
+     "445.9",
+     "4.59",
+     "4.70"
+    ],
+    [
+     "zstd -3 whole input (direct control)",
+     867030,
+     "10.2",
+     "3.25",
+     "-"
+    ],
+    [
+     "exist+store",
+     1919299,
+     "169.8",
+     "-",
+     "3.44"
+    ],
+    [
+     "exist+huf",
+     731658,
+     "171.8",
+     "-",
+     "5.30"
+    ],
+    [
+     "exist+rans",
+     755372,
+     "177.9",
+     "-",
+     "7.89"
+    ],
+    [
+     "exist+zstd3",
+     578664,
+     "174.9",
+     "-",
+     "4.54"
+    ],
+    [
+     "gbp+store",
+     1533593,
+     "172.3",
+     "-",
+     "5.44"
+    ],
+    [
+     "gbp+huf",
+     798499,
+     "174.0",
+     "-",
+     "7.27"
+    ],
+    [
+     "gbp+rans",
+     763499,
+     "178.8",
+     "-",
+     "9.99"
+    ],
+    [
+     "gbp+zstd3",
+     739651,
+     "180.1",
+     "-",
+     "7.21"
+    ],
+    [
+     "lbp128+store",
+     840973,
+     "172.2",
+     "-",
+     "5.18"
+    ],
+    [
+     "lbp128+huf",
+     664107,
+     "173.1",
+     "-",
+     "6.37"
+    ],
+    [
+     "lbp128+rans",
+     661034,
+     "176.1",
+     "-",
+     "8.07"
+    ],
+    [
+     "lbp128+zstd3",
+     645537,
+     "175.4",
+     "-",
+     "6.27"
+    ],
+    [
+     "gpp+store",
+     781202,
+     "174.4",
+     "-",
+     "5.30"
+    ],
+    [
+     "gpp+huf",
+     637179,
+     "175.3",
+     "-",
+     "6.54"
+    ],
+    [
+     "gpp+rans",
+     637930,
+     "178.8",
+     "-",
+     "8.00"
+    ],
+    [
+     "gpp+zstd3",
+     597304,
+     "177.6",
+     "-",
+     "6.37"
+    ],
+    [
+     "lpp128+store",
+     695252,
+     "174.6",
+     "-",
+     "5.24"
+    ],
+    [
+     "lpp128+huf",
+     635607,
+     "175.5",
+     "-",
+     "6.24"
+    ],
+    [
+     "lpp128+rans",
+     637754,
+     "178.5",
+     "-",
+     "7.48"
+    ],
+    [
+     "lpp128+zstd3",
+     613007,
+     "177.2",
+     "-",
+     "6.10"
+    ],
+    [
+     "sel+store",
+     695231,
+     "185.4",
+     "-",
+     "5.16"
+    ],
+    [
+     "sel+huf",
+     623018,
+     "191.8",
+     "-",
+     "6.33"
+    ],
+    [
+     "sel+rans",
+     623996,
+     "216.3",
+     "-",
+     "8.15"
+    ],
+    [
+     "sel+zstd3",
+     574325,
+     "205.5",
+     "-",
+     "4.98"
+    ],
+    [
+     "planes+store",
+     1919387,
+     "169.8",
+     "-",
+     "3.31"
+    ],
+    [
+     "planes+huf",
+     721867,
+     "171.8",
+     "-",
+     "5.04"
+    ],
+    [
+     "planes+rans",
+     750358,
+     "178.0",
+     "-",
+     "7.31"
+    ],
+    [
+     "planes+zstd3",
+     573982,
+     "174.0",
+     "-",
+     "4.63"
+    ],
+    [
+     "exist+ent",
+     684258,
+     "180.1",
+     "-",
+     "6.00"
+    ],
+    [
+     "planes+ent",
+     627649,
+     "180.3",
+     "-",
+     "7.17"
+    ],
+    [
+     "lpp128+ent",
+     634634,
+     "180.0",
+     "-",
+     "7.04"
+    ],
+    [
+     "exist+zstd19",
+     551729,
+     "445.3",
+     "-",
+     "4.97"
+    ],
+    [
+     "planes+zstd19",
+     548126,
+     "524.5",
+     "-",
+     "5.04"
+    ],
+    [
+     "exist+prod3",
+     578704,
+     "179.2",
+     "-",
+     "4.53"
+    ],
+    [
+     "planes+prod3",
+     573578,
+     "178.9",
+     "-",
+     "4.67"
+    ],
+    [
+     "exist+prod19",
+     551769,
+     "460.8",
+     "-",
+     "4.97"
+    ],
+    [
+     "planes+prod19",
+     548150,
+     "544.5",
+     "-",
+     "4.75"
+    ]
+   ]
+  }
+ },
+ "memory": {
+  "prod_compress:": {
+   "max_kb": 3328,
+   "median_kb": 2230.0
+  },
+  "prod_decompress_api:": {
+   "max_kb": 1652,
+   "median_kb": 432.0
+  },
+  "prod_decode_seq:": {
+   "max_kb": 1656,
+   "median_kb": 438.0
+  },
+  "exp_residual_encode:exist+store": {
+   "max_kb": 1180,
+   "median_kb": 464.0
+  },
+  "exp_residual_decode:exist+store": {
+   "max_kb": 1188,
+   "median_kb": 464.0
+  },
+  "exp_decode_seq:exist+store": {
+   "max_kb": 1796,
+   "median_kb": 470.0
+  },
+  "exp_residual_encode:exist+huf": {
+   "max_kb": 888,
+   "median_kb": 328.0
+  },
+  "exp_residual_decode:exist+huf": {
+   "max_kb": 1188,
+   "median_kb": 464.0
+  },
+  "exp_decode_seq:exist+huf": {
+   "max_kb": 1796,
+   "median_kb": 470.0
+  },
+  "exp_residual_encode:exist+rans": {
+   "max_kb": 1228,
+   "median_kb": 450.0
+  },
+  "exp_residual_decode:exist+rans": {
+   "max_kb": 1248,
+   "median_kb": 524.0
+  },
+  "exp_decode_seq:exist+rans": {
+   "max_kb": 1856,
+   "median_kb": 530.0
+  },
+  "exp_residual_encode:exist+zstd3": {
+   "max_kb": 1800,
+   "median_kb": 1220.0
+  },
+  "exp_residual_decode:exist+zstd3": {
+   "max_kb": 1220,
+   "median_kb": 552.0
+  },
+  "exp_decode_seq:exist+zstd3": {
+   "max_kb": 1812,
+   "median_kb": 590.0
+  },
+  "exp_residual_encode:gbp+store": {
+   "max_kb": 2284,
+   "median_kb": 912.0
+  },
+  "exp_residual_decode:gbp+store": {
+   "max_kb": 2320,
+   "median_kb": 992.0
+  },
+  "exp_decode_seq:gbp+store": {
+   "max_kb": 2340,
+   "median_kb": 1012.0
+  },
+  "exp_residual_encode:gbp+huf": {
+   "max_kb": 2072,
+   "median_kb": 848.0
+  },
+  "exp_residual_decode:gbp+huf": {
+   "max_kb": 2320,
+   "median_kb": 992.0
+  },
+  "exp_decode_seq:gbp+huf": {
+   "max_kb": 2340,
+   "median_kb": 994.0
+  },
+  "exp_residual_encode:gbp+rans": {
+   "max_kb": 2412,
+   "median_kb": 952.0
+  },
+  "exp_residual_decode:gbp+rans": {
+   "max_kb": 2380,
+   "median_kb": 1052.0
+  },
+  "exp_decode_seq:gbp+rans": {
+   "max_kb": 2400,
+   "median_kb": 1054.0
+  },
+  "exp_residual_encode:gbp+zstd3": {
+   "max_kb": 3092,
+   "median_kb": 1618.0
+  },
+  "exp_residual_decode:gbp+zstd3": {
+   "max_kb": 2400,
+   "median_kb": 1114.0
+  },
+  "exp_decode_seq:gbp+zstd3": {
+   "max_kb": 2404,
+   "median_kb": 1114.0
+  },
+  "exp_residual_encode:lbp128+store": {
+   "max_kb": 1892,
+   "median_kb": 944.0
+  },
+  "exp_residual_decode:lbp128+store": {
+   "max_kb": 2104,
+   "median_kb": 960.0
+  },
+  "exp_decode_seq:lbp128+store": {
+   "max_kb": 2668,
+   "median_kb": 988.0
+  },
+  "exp_residual_encode:lbp128+huf": {
+   "max_kb": 1852,
+   "median_kb": 912.0
+  },
+  "exp_residual_decode:lbp128+huf": {
+   "max_kb": 2104,
+   "median_kb": 960.0
+  },
+  "exp_decode_seq:lbp128+huf": {
+   "max_kb": 2668,
+   "median_kb": 988.0
+  },
+  "exp_residual_encode:lbp128+rans": {
+   "max_kb": 2144,
+   "median_kb": 1016.0
+  },
+  "exp_residual_decode:lbp128+rans": {
+   "max_kb": 2168,
+   "median_kb": 1054.0
+  },
+  "exp_decode_seq:lbp128+rans": {
+   "max_kb": 2668,
+   "median_kb": 1050.0
+  },
+  "exp_residual_encode:lbp128+zstd3": {
+   "max_kb": 2824,
+   "median_kb": 1590.0
+  },
+  "exp_residual_decode:lbp128+zstd3": {
+   "max_kb": 2188,
+   "median_kb": 1110.0
+  },
+  "exp_decode_seq:lbp128+zstd3": {
+   "max_kb": 2704,
+   "median_kb": 1150.0
+  },
+  "exp_residual_encode:gpp+store": {
+   "max_kb": 1848,
+   "median_kb": 860.0
+  },
+  "exp_residual_decode:gpp+store": {
+   "max_kb": 2104,
+   "median_kb": 964.0
+  },
+  "exp_decode_seq:gpp+store": {
+   "max_kb": 2120,
+   "median_kb": 996.0
+  },
+  "exp_residual_encode:gpp+huf": {
+   "max_kb": 1796,
+   "median_kb": 826.0
+  },
+  "exp_residual_decode:gpp+huf": {
+   "max_kb": 2104,
+   "median_kb": 964.0
+  },
+  "exp_decode_seq:gpp+huf": {
+   "max_kb": 2120,
+   "median_kb": 996.0
+  },
+  "exp_residual_encode:gpp+rans": {
+   "max_kb": 2056,
+   "median_kb": 926.0
+  },
+  "exp_residual_decode:gpp+rans": {
+   "max_kb": 2168,
+   "median_kb": 1080.0
+  },
+  "exp_decode_seq:gpp+rans": {
+   "max_kb": 2184,
+   "median_kb": 1112.0
+  },
+  "exp_residual_encode:gpp+zstd3": {
+   "max_kb": 2752,
+   "median_kb": 1440.0
+  },
+  "exp_residual_decode:gpp+zstd3": {
+   "max_kb": 2192,
+   "median_kb": 1120.0
+  },
+  "exp_decode_seq:gpp+zstd3": {
+   "max_kb": 2700,
+   "median_kb": 1132.0
+  },
+  "exp_residual_encode:lpp128+store": {
+   "max_kb": 1912,
+   "median_kb": 928.0
+  },
+  "exp_residual_decode:lpp128+store": {
+   "max_kb": 2064,
+   "median_kb": 946.0
+  },
+  "exp_decode_seq:lpp128+store": {
+   "max_kb": 2084,
+   "median_kb": 996.0
+  },
+  "exp_residual_encode:lpp128+huf": {
+   "max_kb": 1896,
+   "median_kb": 904.0
+  },
+  "exp_residual_decode:lpp128+huf": {
+   "max_kb": 2064,
+   "median_kb": 946.0
+  },
+  "exp_decode_seq:lpp128+huf": {
+   "max_kb": 2084,
+   "median_kb": 996.0
+  },
+  "exp_residual_encode:lpp128+rans": {
+   "max_kb": 2148,
+   "median_kb": 978.0
+  },
+  "exp_residual_decode:lpp128+rans": {
+   "max_kb": 2128,
+   "median_kb": 1054.0
+  },
+  "exp_decode_seq:lpp128+rans": {
+   "max_kb": 2148,
+   "median_kb": 1060.0
+  },
+  "exp_residual_encode:lpp128+zstd3": {
+   "max_kb": 2596,
+   "median_kb": 1468.0
+  },
+  "exp_residual_decode:lpp128+zstd3": {
+   "max_kb": 2156,
+   "median_kb": 1098.0
+  },
+  "exp_decode_seq:lpp128+zstd3": {
+   "max_kb": 2676,
+   "median_kb": 1162.0
+  },
+  "exp_residual_encode:sel+store": {
+   "max_kb": 3288,
+   "median_kb": 1374.0
+  },
+  "exp_residual_decode:sel+store": {
+   "max_kb": 2064,
+   "median_kb": 948.0
+  },
+  "exp_decode_seq:sel+store": {
+   "max_kb": 2112,
+   "median_kb": 950.0
+  },
+  "exp_residual_encode:sel+huf": {
+   "max_kb": 2988,
+   "median_kb": 1100.0
+  },
+  "exp_residual_decode:sel+huf": {
+   "max_kb": 2064,
+   "median_kb": 748.0
+  },
+  "exp_decode_seq:sel+huf": {
+   "max_kb": 2084,
+   "median_kb": 748.0
+  },
+  "exp_residual_encode:sel+rans": {
+   "max_kb": 4180,
+   "median_kb": 1374.0
+  },
+  "exp_residual_decode:sel+rans": {
+   "max_kb": 2140,
+   "median_kb": 1020.0
+  },
+  "exp_decode_seq:sel+rans": {
+   "max_kb": 2192,
+   "median_kb": 1028.0
+  },
+  "exp_residual_encode:sel+zstd3": {
+   "max_kb": 3780,
+   "median_kb": 2102.0
+  },
+  "exp_residual_decode:sel+zstd3": {
+   "max_kb": 1664,
+   "median_kb": 714.0
+  },
+  "exp_decode_seq:sel+zstd3": {
+   "max_kb": 1908,
+   "median_kb": 722.0
+  },
+  "exp_residual_encode:planes+store": {
+   "max_kb": 1204,
+   "median_kb": 476.0
+  },
+  "exp_residual_decode:planes+store": {
+   "max_kb": 740,
+   "median_kb": 312.0
+  },
+  "exp_decode_seq:planes+store": {
+   "max_kb": 1668,
+   "median_kb": 402.0
+  },
+  "exp_residual_encode:planes+huf": {
+   "max_kb": 904,
+   "median_kb": 328.0
+  },
+  "exp_residual_decode:planes+huf": {
+   "max_kb": 748,
+   "median_kb": 312.0
+  },
+  "exp_decode_seq:planes+huf": {
+   "max_kb": 1716,
+   "median_kb": 392.0
+  },
+  "exp_residual_encode:planes+rans": {
+   "max_kb": 1136,
+   "median_kb": 420.0
+  },
+  "exp_residual_decode:planes+rans": {
+   "max_kb": 848,
+   "median_kb": 372.0
+  },
+  "exp_decode_seq:planes+rans": {
+   "max_kb": 1816,
+   "median_kb": 452.0
+  },
+  "exp_residual_encode:planes+zstd3": {
+   "max_kb": 1736,
+   "median_kb": 956.0
+  },
+  "exp_residual_decode:planes+zstd3": {
+   "max_kb": 828,
+   "median_kb": 428.0
+  },
+  "exp_decode_seq:planes+zstd3": {
+   "max_kb": 1732,
+   "median_kb": 556.0
+  },
+  "exp_residual_encode:exist+ent": {
+   "max_kb": 1528,
+   "median_kb": 550.0
+  },
+  "exp_residual_decode:exist+ent": {
+   "max_kb": 1248,
+   "median_kb": 494.0
+  },
+  "exp_decode_seq:exist+ent": {
+   "max_kb": 1856,
+   "median_kb": 500.0
+  },
+  "exp_residual_encode:planes+ent": {
+   "max_kb": 1384,
+   "median_kb": 442.0
+  },
+  "exp_residual_decode:planes+ent": {
+   "max_kb": 848,
+   "median_kb": 372.0
+  },
+  "exp_decode_seq:planes+ent": {
+   "max_kb": 1816,
+   "median_kb": 452.0
+  },
+  "exp_residual_encode:lpp128+ent": {
+   "max_kb": 2408,
+   "median_kb": 1062.0
+  },
+  "exp_residual_decode:lpp128+ent": {
+   "max_kb": 2128,
+   "median_kb": 1010.0
+  },
+  "exp_decode_seq:lpp128+ent": {
+   "max_kb": 2148,
+   "median_kb": 1060.0
+  },
+  "exp_residual_encode:exist+zstd19": {
+   "max_kb": 18008,
+   "median_kb": 7370.0
+  },
+  "exp_residual_decode:exist+zstd19": {
+   "max_kb": 1220,
+   "median_kb": 560.0
+  },
+  "exp_decode_seq:exist+zstd19": {
+   "max_kb": 1812,
+   "median_kb": 566.0
+  },
+  "exp_residual_encode:planes+zstd19": {
+   "max_kb": 5948,
+   "median_kb": 2766.0
+  },
+  "exp_residual_decode:planes+zstd19": {
+   "max_kb": 832,
+   "median_kb": 430.0
+  },
+  "exp_decode_seq:planes+zstd19": {
+   "max_kb": 1728,
+   "median_kb": 584.0
+  },
+  "exp_residual_encode:exist+prod3": {
+   "max_kb": 2636,
+   "median_kb": 1568.0
+  },
+  "exp_residual_decode:exist+prod3": {
+   "max_kb": 620,
+   "median_kb": 284.0
+  },
+  "exp_decode_seq:exist+prod3": {
+   "max_kb": 1576,
+   "median_kb": 440.0
+  },
+  "exp_residual_encode:planes+prod3": {
+   "max_kb": 2704,
+   "median_kb": 1314.0
+  },
+  "exp_residual_decode:planes+prod3": {
+   "max_kb": 680,
+   "median_kb": 364.0
+  },
+  "exp_decode_seq:planes+prod3": {
+   "max_kb": 1824,
+   "median_kb": 508.0
+  },
+  "exp_residual_encode:exist+prod19": {
+   "max_kb": 18840,
+   "median_kb": 7690.0
+  },
+  "exp_residual_decode:exist+prod19": {
+   "max_kb": 628,
+   "median_kb": 336.0
+  },
+  "exp_decode_seq:exist+prod19": {
+   "max_kb": 1660,
+   "median_kb": 476.0
+  },
+  "exp_residual_encode:planes+prod19": {
+   "max_kb": 6900,
+   "median_kb": 3120.0
+  },
+  "exp_residual_decode:planes+prod19": {
+   "max_kb": 684,
+   "median_kb": 346.0
+  },
+  "exp_decode_seq:planes+prod19": {
+   "max_kb": 1820,
+   "median_kb": 510.0
+  }
+ }
+}

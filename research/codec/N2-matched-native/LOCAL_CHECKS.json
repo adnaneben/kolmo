@@ -1,0 +1,39 @@
+{
+  "status": "INFRASTRUCTURE_TESTED_REAL_CODEC_BUILD_AND_BENCHMARK_NOT_RUN",
+  "local_tests": 17,
+  "fixture_native_driver": "C++ compiled and executed with labelled copy codecs, not actual codec implementations",
+  "exact_archived_inputs_verified": [
+    {"name":"collegemsg__source_id.npy","sha256":"e1e47073e881a2b41cfd7ec8181e2f077978ab5fb8f842f637eaf1143feb1b68","bytes":239468},
+    {"name":"collegemsg__target_id.npy","sha256":"5e4b6e559637fe798099d92caee4d87c0b1aaa1aa7bcbc7d4241c96f2070ef6e","bytes":239468},
+    {"name":"collegemsg__unix_timestamp.npy","sha256":"1887975eb6df79b37ab696553551641aa10cfcdd8a2382a16bd5eb1326a906c4","bytes":239468},
+    {"name":"covertype__cover_control.npy","sha256":"cd50965f72fd8bfc0e454bf211028e6a9f0e402f3f876ffe9e60c2289609b496","bytes":1048704},
+    {"name":"covertype__elevation.npy","sha256":"7eae95120cd4eb435fdfaedac45eca3af2febedcfca08e2ce086081c30de3bd2","bytes":1048704},
+    {"name":"covertype__fire_distance.npy","sha256":"55a4dc1a4f0eaf2c850bfe816f53667e72f452b8fabf0dc4d84fe9ae94aea284","bytes":1048704},
+    {"name":"covertype__hillshade_control.npy","sha256":"abc1da632fc4e37bc16f1f901fad740519d25c49e66a333ccd713435c0619f54","bytes":1048704},
+    {"name":"covertype__road_distance.npy","sha256":"d8f8ab9f248e8658a86b30bbcc3b3204adbabb3bd12da7d8998b4b7431d0f8e3","bytes":1048704}
+  ],
+  "source_sha256": {
+    "PROTOCOL.md":"6784ba882c4a65645a302233444bd74e4dfda654f89b42d9e65d6046f0b330f1",
+    "README.md":"add0bce00a15acc68c0162e24373e28dfcf6890edda480641687c68403d47310",
+    "build.py":"2db90e6fa14097edc7a41cf6234423461bc69ad9e065f99136d99ef74407a53c",
+    "native.cpp":"b2fb86dbcbfecbe24037495827a7147ae50779a94a99d112911e6d14cb789338",
+    "run.py":"93c0729fd3739ccde2decde2b578b0d61721a05aa3f6f483410aa3ce0e87aa7a",
+    "test_tools.py":"59c94cb345d22cf817a43097870ba350bdadda42eac37647d0e6bd677ea62524"
+  },
+  "active_cost_model_loaded_and_synthetic_parity_checked": true,
+  "real_benchmark": false,
+  "production_changed": false,
+  "new_runner_minutes": 0,
+  "sanitized_fixture_suite_tests": 17,
+  "sanitizer_scope":"New native driver and labelled copy-codec ABI fixture only; no upstream compression library was linked in this local test.",
+  "git_blobs": {
+    "build.py":"01a55edbdfbb001b079d69338456ffb3bdda823e",
+    "native.cpp":"2a0f3fa7e3c7f2dbf233fbfd9fd6a7decfe74be3",
+    "run.py":"9cb8e4fd00d270435a2e01b8f9ddfe39e1f1aabe",
+    "test_tools.py":"5b22f664166fea6c1284a3e2d33d226611154b0c"
+  },
+  "test_logs": {
+    "tests.log":"8b6b9c22f7a10281dd136887f866763a409fbcbb7922da9ab3c10ea29b0ed7bc",
+    "tests-asan.log":"186a1a112c50ddaf1138fdc2317120ce81a692b1787d49f3e2bc2a40f56857e1"
+  }
+}

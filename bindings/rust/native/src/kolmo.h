@@ -20,12 +20,34 @@ typedef enum { KOLMO_RT = 0, KOLMO_FAST = 1, KOLMO_ECO = 2, KOLMO_HC = 3, KOLMO_
 typedef struct {
     kolmo_mode mode;      /* rt: LZ4 | fast: zstd 3 | eco: brotli 8 | hc: zstd 19 | max: BWT (text) or LZMA2 | ultra: context mixing (archive tier) */
     int level;          /* 0 = mode default; otherwise codec level (max: LZMA2 preset, except 1 = BWT for every block;
-                           ultra: 1 = context-mixing model 1 only, faster) */
+                           ultra: 1 = context-mixing model 1 only, faster; 2 = maximum ratio: as the default, and
+                           integer/table graph leaves may also use context mixing when smaller, so those blocks
+                           decode up to ~100x slower; any decoder reads the output) */
     int threads;        /* 0 = all cores */
     uint32_t block;     /* bytes per block, 0 = adaptive rt/fast, 16 MiB eco/hc (larger for text), 128 MiB max/ultra */
     int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap
-                           structure transforms (images, records, executables, tables), for the fastest settings */
+                           structure transforms (images, records, executables, tables), for the fastest settings.
+                           May be OR-ed with KOLMO_T_NATIVE_LEAF (below). */
 } kolmo_params;
+
+/* Opt-in bit for kolmo_params.transforms (balanced / KOLMO_FAST only; ignored elsewhere): integer-series residuals in
+ * graph blocks may use Kolmo's native plane-context leaf coder (Huffman/rANS with byte-plane and context modelling)
+ * when it is smaller than the default leaf. Typically 5-12% smaller on sensor, ECG and numeric-column data; such files
+ * decode about 1.5-2.6x slower than default balanced (measured: 2.3x over 180 MB of ECG and numeric columns, ~580 MB/s
+ * on Apple silicon), since those leaves are entropy coded with context models instead of zstd. Files that use it are
+ * written as container version 9 and need a kolmo release that reads version 9; files that do not are unchanged. */
+#define KOLMO_T_NATIVE_LEAF 16
+
+/* RC opt-in: declared little-endian integer NPY / terminal PCM16 WAV -> guarded
+ * plane Huffman, existing v7 frame. FAST default level, one explicit worker,
+ * buffer API, <=16 MiB and requested block limit only. Other inputs use normal
+ * planning. No dictionary. Native-leaf takes precedence if both bits are set. */
+#define KOLMO_T_TYPED_HUF 32
+
+/* RC opt-in, ECO/default level, one explicit worker, <=16 MiB buffer inputs:
+ * frozen CSV regularity route -> table zstd12 or ordinary eco. Not guaranteed
+ * smaller/faster than eco. Existing v7 frames. Not a complete joint planner. */
+#define KOLMO_T_CSV_ARCHIVE 64
 
 #define KOLMO_ERR_CORRUPT   (-1)
 #define KOLMO_ERR_CHECKSUM  (-2)

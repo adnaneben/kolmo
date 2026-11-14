@@ -1,0 +1,44 @@
+{
+ "first": {
+  "always_tp_phuf_pg16": [
+   49,
+   -0.11923770964966707
+  ],
+  "lofo_tree1": [
+   44,
+   -0.10987985010912893
+  ],
+  "lofo_tree2": [
+   38,
+   -0.10460863975803592
+  ],
+  "lofo_1nn": [
+   38,
+   -0.10636983783663367
+  ],
+  "in_sample_tree2_rule": "ent_min<=0.06708?[res_ratio<=0.5?tp_pent:tb_best]:[res_ratio<=0.5?tp_pent:tp_phuf_pg16]",
+  "feature_extract_s_median": 0.001234405,
+  "zstd3_roundtrip_s_median": 0.012167813
+ },
+ "confirmation": {
+  "always_tp_phuf_pg16": [
+   47,
+   -0.12509790804081045
+  ],
+  "lofo_tree1": [
+   43,
+   -0.1442874581388659
+  ],
+  "lofo_tree2": [
+   38,
+   -0.12614241336358756
+  ],
+  "lofo_1nn": [
+   31,
+   -0.09034283048427538
+  ],
+  "in_sample_tree2_rule": "ent_min<=0.06708?[zero<=0.4844?tp_pent:tb_best]:[ent_min<=3.273?tb_lazy:tp_pent]",
+  "feature_extract_s_median": 0.001234405,
+  "zstd3_roundtrip_s_median": 0.012379706
+ }
+}

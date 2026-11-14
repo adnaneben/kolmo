@@ -1,0 +1,84 @@
+name: P2-E16 encode-time features on the P2-E10 cohort (no timing, no frames)
+# Research only. Same pinned rivals, inputs and harness as N1 (baselines.py imported unchanged by
+# research/codec/P2-E16/PROTOCOL.md: p2e13 feat on every P2-E10 cohort input. Development data.
+on:
+  push:
+    branches: [fix/planner-record-ownership-isolated-20261112]
+    paths: [.github/workflows/p2e16-feat.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2e16-feat-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  e3:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Freeze source identity and test harnesses
+        run: |
+          set -euo pipefail
+          mkdir -p ev
+          git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
+          git rev-parse HEAD > ev/COMMIT.txt
+          { uname -a; gcc --version; cmake --version; nproc; lscpu; } > ev/environment.txt
+          sha256sum research/codec/P2-E16/PROTOCOL.md research/codec/P2-E10/prepare_e10.py research/codec/P2-E13/p2e13.c research/codec/P2-E13/rans1.inc research/codec/P2-E11/p2e11.c research/codec/P2-E11/tpframe.inc research/codec/P2-E9/fastint9.inc research/codec/E02C-harness/harness/e02c.c > ev/source-hashes.txt
+          sudo apt-get update -qq && sudo apt-get install -y liblzma-dev
+      - name: Build Kolmo and p2e13 with N1's flags
+        run: |
+          set -euo pipefail
+          FLAGS='-O3 -DNDEBUG -fno-plt -ffp-contract=off'
+          make -j2 build/kolmo CFLAGS="$FLAGS" > ev/kolmo-build.log 2>&1
+          make build/libvendor.a > ev/libvendor-build.log 2>&1
+          DEFS="-DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0"; INC="-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include"
+          gcc $FLAGS $DEFS $INC research/codec/P2-E13/p2e13.c build/libvendor.a -o build/p2e13 -llzma -lpthread -lm -lstdc++ > ev/p2e13-build.log 2>&1
+          sha256sum build/p2e13 > ev/toolchain.txt
+      - name: Fetch the registered E02E/E02F/E02G sources and build the P2-E10 cohort
+        run: |
+          set -euo pipefail
+          python -m pip install -q 'numpy==2.1.3'
+          for e in E02E E02F E02G; do sh research/codec/$e/fetch.sh "$RUNNER_TEMP/dl_$e" > ev/fetch_$e.log 2>&1; cp "$RUNNER_TEMP/dl_$e/DOWNLOAD.sha256" ev/DOWNLOAD_$e.sha256; done
+          for e in E02E E02F E02G; do python research/codec/$e/prepare.py "$RUNNER_TEMP/dl_$e" "$RUNNER_TEMP/out_$e" "$RUNNER_TEMP/out_$e/manifest.json" > ev/prepare_$e.log 2>&1 || { tail -20 ev/prepare_$e.log; exit 1; }; done
+          python research/codec/P2-E10/prepare_e10.py "$RUNNER_TEMP/out_E02E" "$RUNNER_TEMP/out_E02F" "$RUNNER_TEMP/out_E02G" "$RUNNER_TEMP/dl_E02F" "$RUNNER_TEMP/dl_E02G" ev/prepared | tee ev/prepare_e10.log
+      - name: Features (three repetitions of the timing of extraction)
+        run: |
+          set -euo pipefail
+          for r in 0 1 2; do for f in ev/prepared/inputs/*; do printf '{"input":"%s","rep":%d,"f":%s}\n' "$(basename "$f")" $r "$(build/p2e13 feat "$f")"; done; done > ev/features.jsonl
+          wc -l ev/features.jsonl
+          git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
+      - name: Hash and print compact evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import hashlib,json,pathlib,base64,lzma
+          p=pathlib.Path('ev'); p.mkdir(exist_ok=True)
+          m={str(f.relative_to(p)):hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.rglob('*')) if f.is_file() and f.name!='MANIFEST.json' and 'prepared/inputs' not in str(f)}
+          (p/'MANIFEST.json').write_text(json.dumps(m,indent=2)+'\n')
+          for name in ['COMMIT.txt','toolchain.txt','source-hashes.txt','prepare_e10.log','MANIFEST.json']:
+              f=p/name
+              if f.exists(): print(f'=== BEGIN {name}'); print(f.read_text(),end=''); print(f'=== END {name}')
+          for name in ['features.jsonl','prepared/manifest.json']:
+              f=p/name
+              if f.exists(): print(f'=== BEGIN base64-xz {name}'); print(base64.b64encode(lzma.compress(f.read_bytes(),preset=9)).decode()); print(f'=== END base64-xz {name}')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p2e16-feat-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ev/
+          retention-days: 30
+          if-no-files-found: error

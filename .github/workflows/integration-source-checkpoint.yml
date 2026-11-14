@@ -1,0 +1,36 @@
+name: Integration source checkpoint
+on:
+  push:
+    branches: [integration/best-features-rc-20261113]
+    paths: [.github/workflows/integration-source-checkpoint.yml]
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Export complete branch and PR inventory and reachable source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir checkpoint
+          gh api --paginate 'repos/adnaneben/kolmo/branches?per_page=100' --slurp > checkpoint/branches.json
+          gh api --paginate 'repos/adnaneben/kolmo/pulls?state=all&per_page=100' --slurp > checkpoint/pulls.json
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*' '+refs/pull/*/head:refs/remotes/pull/*'
+          git for-each-ref --format='%(objectname) %(refname)' > checkpoint/refs.txt
+          git rev-parse HEAD > checkpoint/HEAD.txt
+          git bundle create checkpoint/all-source.bundle --all
+          git bundle verify checkpoint/all-source.bundle 2>&1 | tee checkpoint/verification.log
+          (cd checkpoint && sha256sum all-source.bundle branches.json pulls.json refs.txt HEAD.txt > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integration-source-${{ github.run_id }}
+          path: checkpoint/
+          retention-days: 90
+          if-no-files-found: error

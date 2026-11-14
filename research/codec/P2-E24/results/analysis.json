@@ -1,0 +1,176 @@
+{
+ "first": {
+  "development": {
+   "n": 0,
+   "openzl_missing": [],
+   "tt_bsc0": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "tt_brotli9": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_hc": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   }
+  },
+  "fresh": {
+   "n": 35,
+   "openzl_missing": [
+    "TT__2019-02-26__regularite-mensuelle-tgv-aqst"
+   ],
+   "tt_bsc0": {
+    "fit_and_smaller": 20,
+    "cp95_lower": 0.4192,
+    "cp_bonf_lower": 0.371,
+    "rule_bytes_vs_openzl9": -0.1467
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 27,
+    "cp95_lower": 0.6252,
+    "cp_bonf_lower": 0.5746,
+    "rule_bytes_vs_openzl9": -0.0725
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 28,
+    "cp95_lower": 0.657,
+    "cp_bonf_lower": 0.6067,
+    "rule_bytes_vs_openzl9": -0.0666
+   },
+   "tt_brotli9": {
+    "fit_and_smaller": 19,
+    "cp95_lower": 0.3917,
+    "cp_bonf_lower": 0.3444,
+    "rule_bytes_vs_openzl9": -0.0647
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 4,
+    "cp95_lower": 0.04,
+    "cp_bonf_lower": 0.0259,
+    "rule_bytes_vs_openzl9": -0.0051
+   },
+   "kolmo_hc": {
+    "fit_and_smaller": 2,
+    "cp95_lower": 0.0102,
+    "cp_bonf_lower": 0.0048,
+    "rule_bytes_vs_openzl9": -0.0024
+   }
+  }
+ },
+ "confirmation": {
+  "development": {
+   "n": 0,
+   "openzl_missing": [],
+   "tt_bsc0": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "tt_brotli9": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_hc": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "cp_bonf_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   }
+  },
+  "fresh": {
+   "n": 35,
+   "openzl_missing": [
+    "TT__2019-02-26__regularite-mensuelle-tgv-aqst"
+   ],
+   "tt_bsc0": {
+    "fit_and_smaller": 20,
+    "cp95_lower": 0.4192,
+    "cp_bonf_lower": 0.371,
+    "rule_bytes_vs_openzl9": -0.1467
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 27,
+    "cp95_lower": 0.6252,
+    "cp_bonf_lower": 0.5746,
+    "rule_bytes_vs_openzl9": -0.0725
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 28,
+    "cp95_lower": 0.657,
+    "cp_bonf_lower": 0.6067,
+    "rule_bytes_vs_openzl9": -0.0666
+   },
+   "tt_brotli9": {
+    "fit_and_smaller": 17,
+    "cp95_lower": 0.3379,
+    "cp_bonf_lower": 0.2929,
+    "rule_bytes_vs_openzl9": -0.0641
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 4,
+    "cp95_lower": 0.04,
+    "cp_bonf_lower": 0.0259,
+    "rule_bytes_vs_openzl9": -0.0051
+   },
+   "kolmo_hc": {
+    "fit_and_smaller": 2,
+    "cp95_lower": 0.0102,
+    "cp_bonf_lower": 0.0048,
+    "rule_bytes_vs_openzl9": -0.0024
+   }
+  }
+ },
+ "decision": {
+  "fresh_n": 35,
+  "inconclusive": false,
+  "primary_kolmo_eco_fresh_pass_both": true,
+  "unadjusted_cp95_pass_both": true
+ }
+}

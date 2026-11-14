@@ -1,0 +1,47 @@
+test_boundary_mismatch (test_audit_e17.AuditTests.test_boundary_mismatch) ... ok
+test_confirmation_receipt_mismatch (test_audit_e17.AuditTests.test_confirmation_receipt_mismatch) ... ok
+test_corrupt_cost_summary (test_audit_e17.AuditTests.test_corrupt_cost_summary) ... ok
+test_corrupt_raw_timing (test_audit_e17.AuditTests.test_corrupt_raw_timing) ... ok
+test_cpu_override_strict_boundary (test_audit_e17.AuditTests.test_cpu_override_strict_boundary) ... ok
+test_duplicate_archive_member (test_audit_e17.AuditTests.test_duplicate_archive_member) ... ok
+test_duplicate_event (test_audit_e17.AuditTests.test_duplicate_event) ... ok
+test_duplicate_json_key (test_audit_e17.AuditTests.test_duplicate_json_key) ... ok
+test_duplicate_record (test_audit_e17.AuditTests.test_duplicate_record) ... ok
+test_environment_mismatch (test_audit_e17.AuditTests.test_environment_mismatch) ... ok
+test_exact_size_tie_is_not_a_win (test_audit_e17.AuditTests.test_exact_size_tie_is_not_a_win) ... ok
+test_exposure_label (test_audit_e17.AuditTests.test_exposure_label) ... ok
+test_failed_timed_operation (test_audit_e17.AuditTests.test_failed_timed_operation) ... ok
+test_false_roundtrip_flag (test_audit_e17.AuditTests.test_false_roundtrip_flag) ... ok
+test_frame_mismatch_across_passes (test_audit_e17.AuditTests.test_frame_mismatch_across_passes) ... ok
+test_frontier_rejects_truncated_pairs (test_audit_e17.AuditTests.test_frontier_rejects_truncated_pairs) ... ok
+test_input_hash (test_audit_e17.AuditTests.test_input_hash) ... ok
+test_joint_frontier_needs_all_six_pairs (test_audit_e17.AuditTests.test_joint_frontier_needs_all_six_pairs) ... ok
+test_manifest_digest (test_audit_e17.AuditTests.test_manifest_digest) ... ok
+test_missing_event (test_audit_e17.AuditTests.test_missing_event) ... ok
+test_missing_rival (test_audit_e17.AuditTests.test_missing_rival) ... ok
+test_missing_sanitizer_gate_case (test_audit_e17.AuditTests.test_missing_sanitizer_gate_case) ... ok
+test_nan_in_raw_json (test_audit_e17.AuditTests.test_nan_in_raw_json) ... ok
+test_negative_nonfinite_and_bool_rejected (test_audit_e17.AuditTests.test_negative_nonfinite_and_bool_rejected) ... ok
+test_outer_digest (test_audit_e17.AuditTests.test_outer_digest) ... ok
+test_reject_leaf_only_input (test_audit_e17.AuditTests.test_reject_leaf_only_input) ... ok
+test_safe_paths (test_audit_e17.AuditTests.test_safe_paths) ... ok
+test_source_receipt (test_audit_e17.AuditTests.test_source_receipt) ... ok
+test_symlink_archive_member (test_audit_e17.AuditTests.test_symlink_archive_member) ... ok
+test_timeout_with_zero_exit_code (test_audit_e17.AuditTests.test_timeout_with_zero_exit_code) ... ok
+test_toolchain_receipt_mismatch (test_audit_e17.AuditTests.test_toolchain_receipt_mismatch) ... ok
+test_traversal_rejected (test_audit_e17.AuditTests.test_traversal_rejected) ... ok
+test_unexpected_rival_level (test_audit_e17.AuditTests.test_unexpected_rival_level) ... ok
+test_unmanifested_evidence (test_audit_e17.AuditTests.test_unmanifested_evidence) ... ok
+test_valid_complete_fixture (test_audit_e17.AuditTests.test_valid_complete_fixture) ... ok
+test_wrong_median (test_audit_e17.AuditTests.test_wrong_median) ... ok
+test_wrong_memory_summary (test_audit_e17.AuditTests.test_wrong_memory_summary) ... ok
+test_wrong_pair_id (test_audit_e17.AuditTests.test_wrong_pair_id) ... ok
+test_wrong_policy_command (test_audit_e17.AuditTests.test_wrong_policy_command) ... ok
+test_wrong_raw_command (test_audit_e17.AuditTests.test_wrong_raw_command) ... ok
+test_wrong_repeat_count (test_audit_e17.AuditTests.test_wrong_repeat_count) ... ok
+test_wrong_source_commit (test_audit_e17.AuditTests.test_wrong_source_commit) ... ok
+
+----------------------------------------------------------------------
+Ran 42 tests in 0.178s
+
+OK

@@ -1,0 +1,104 @@
+name: N1 exact typed NPY OpenZL comparator (manual bounded development)
+# One-shot branch-scoped bootstrap: workflow_dispatch is unavailable until the workflow is registered.
+# This push trigger matches ONLY changes to this exact workflow file on the authorized branch.
+# Subsequent research commits do not retrigger this benchmark; never merge/release.
+on:
+  push:
+    branches:
+      - fix/planner-record-ownership-isolated-20261112
+    paths:
+      - .github/workflows/n1-exact-npy.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: n1-exact-npy-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  baseline:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test exact committed adapter and freeze source identity
+        run: |
+          set -euo pipefail
+          mkdir -p ev
+          git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
+          git rev-parse HEAD > ev/COMMIT.txt
+          { uname -a; gcc --version; cmake --version; nproc; lscpu; } > ev/environment.txt
+          sha256sum research/codec/N1-exact-npy/npy_openzl.py research/codec/N1-exact-npy/run_npy_adapter.py research/codec/N1-exact-npy/test_npy_openzl.py research/codec/N1-baselines/baselines.py benchmark/accept/ACTIVE_POLICY.json > ev/source-hashes.txt
+          python -m unittest discover -s research/codec/N1-exact-npy -p 'test_*.py' -v > ev/unit-tests.log 2>&1 || { cat ev/unit-tests.log; exit 1; }
+          cat ev/unit-tests.log
+          sudo apt-get update -qq && sudo apt-get install -y liblzma-dev
+      - uses: actions/checkout@v4
+        with:
+          repository: meta/openzl
+          ref: 32246b48faee46807f84183dac4db479089f5445
+          path: _rivals/openzl
+          persist-credentials: false
+      - name: Build pinned unmodified OpenZL/zstd and Kolmo
+        run: |
+          set -euo pipefail
+          test "$(git -C _rivals/openzl rev-parse HEAD)" = 32246b48faee46807f84183dac4db479089f5445
+          FLAGS='-O3 -DNDEBUG -fno-plt -ffp-contract=off'
+          cmake -S _rivals/openzl -B _rivals/openzl/build -DCMAKE_BUILD_TYPE=Release -DOPENZL_BUILD_TESTS=OFF -DOPENZL_BUILD_EXAMPLES=OFF -DOPENZL_BUILD_BENCHMARKS=OFF -DOPENZL_BUILD_PARQUET_TOOLS=OFF -DOPENZL_ALLOW_INTROSPECTION=OFF -DZSTD_BUILD_SHARED=OFF -DCMAKE_C_FLAGS_RELEASE="$FLAGS" -DCMAKE_CXX_FLAGS_RELEASE="$FLAGS" > ev/openzl-configure.log 2>&1
+          cmake --build _rivals/openzl/build --target zli --parallel 2 > ev/openzl-build.log 2>&1
+          make -C _rivals/openzl/deps/zstd/programs -j2 zstd CFLAGS="$FLAGS" > ev/zstd-build.log 2>&1
+          make -j2 build/kolmo CFLAGS="$FLAGS" > ev/kolmo-build.log 2>&1
+          { _rivals/openzl/build/cli/zli --version; _rivals/openzl/build/cli/zli list-profiles; sha256sum _rivals/openzl/build/cli/zli _rivals/openzl/deps/zstd/programs/zstd build/kolmo; } > ev/toolchain.txt
+      - name: Prepare the observed N1 development inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api /repos/adnaneben/kolmo/actions/artifacts/13970918568/zip > "$RUNNER_TEMP/r3-input.zip"
+          python research/codec/N1-exact-npy/run_npy_adapter.py prepare "$RUNNER_TEMP/r3-input.zip" ev/prepared
+          for f in ev/prepared/inputs/*.npy; do
+            python research/codec/N1-exact-npy/npy_openzl.py inspect "$f"
+          done | tee ev/npy-profiles.jsonl
+      - name: Measure complete original-byte CLI twice (3 pairs per pass)
+        run: |
+          set -euo pipefail
+          T="--zstd _rivals/openzl/deps/zstd/programs/zstd --openzl _rivals/openzl/build/cli/zli --kolmo build/kolmo"
+          python research/codec/N1-exact-npy/run_npy_adapter.py run ev/prepared ev/first $T
+          python research/codec/N1-exact-npy/run_npy_adapter.py run ev/prepared ev/confirmation $T --seed 20261114
+          python research/codec/N1-exact-npy/run_npy_adapter.py confirm ev/first ev/confirmation > ev/confirmation.json
+          git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
+      - name: Hash all evidence; preserve errors
+        if: always()
+        run: |
+          python - <<'PY'
+          import hashlib,json,pathlib,base64,lzma
+          p=pathlib.Path('ev');p.mkdir(exist_ok=True)
+          manifest={str(f.relative_to(p)):hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.rglob('*')) if f.is_file() and f.name!='MANIFEST.json' and 'prepared/inputs' not in str(f) and not f.name.endswith(('.frame','.decoded'))}
+          (p/'MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          for name in ['COMMIT.txt','source-hashes.txt','toolchain.txt','unit-tests.log','confirmation.json','npy-profiles.jsonl','first/tables.md','confirmation/tables.md','MANIFEST.json']:
+              f=p/name
+              if f.exists():print(f'=== BEGIN {name}');print(f.read_text(),end='');print(f'=== END {name}')
+          for name in ['first/records.json','confirmation/records.json','first/timings.jsonl','confirmation/timings.jsonl','prepared/manifest.json']:
+              f=p/name
+              if f.exists():print(f'=== BEGIN base64-xz {name}');print(base64.b64encode(lzma.compress(f.read_bytes(),preset=9)).decode());print(f'=== END base64-xz {name}')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: n1-exact-npy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ev/
+            !ev/**/*.frame
+          retention-days: 30
+          if-no-files-found: error

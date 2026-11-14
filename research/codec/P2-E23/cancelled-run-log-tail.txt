@@ -1,0 +1,19 @@
+2026-11-13T03:25:42.5774353Z [36;1mmake -j2 build/kolmo CFLAGS="$FLAGS" > ev/kolmo-build.log 2>&1[0m
+2026-11-13T03:25:42.5776488Z [36;1mmake build/libvendor.a > ev/libvendor-build.log 2>&1[0m
+2026-11-13T03:25:42.5780771Z [36;1mDEFS="-DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0"; INC="-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libb
+2026-11-13T03:25:42.5786342Z [36;1mgcc $FLAGS $DEFS $INC research/codec/P2-E21/ttcli.c build/libvendor.a -o build/ttcli -llzma -lpthread -lm -lstdc++ > ev/ttcl
+2026-11-13T03:25:42.5791572Z [36;1mgcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined -ffp-contract=off $DEFS $INC
+2026-11-13T03:25:42.5798570Z [36;1m{ _rivals/openzl/build/cli/zli --version; _rivals/openzl/deps/zstd/programs/zstd --version; sha256sum _rivals/openzl/build/c
+2026-11-13T03:25:42.6109846Z shell: /usr/bin/bash -e {0}
+2026-11-13T03:25:42.6110836Z env:
+2026-11-13T03:25:42.6112175Z   OMP_NUM_THREADS: 1
+2026-11-13T03:25:42.6113050Z   OPENBLAS_NUM_THREADS: 1
+2026-11-13T03:25:42.6113972Z   CMAKE_BUILD_PARALLEL_LEVEL: 2
+2026-11-13T03:25:42.6115194Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-13T03:25:42.6116875Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib/pkgconfig
+2026-11-13T03:25:42.6118523Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-13T03:25:42.6120001Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-13T03:25:42.6121458Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-13T03:25:42.6123362Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib
+2026-11-13T03:25:42.6124718Z ##[endgroup]
+2026-11-13T04:12:21.6177232Z ##[error]The operation was canceled.

@@ -1,0 +1,70 @@
+{
+  "scope":"R3 fresh native-component validation; provisional in one family",
+  "preregistration_commit":"c72628a6330e224a59a5a7e1d995a2a4439c7b51",
+  "implementation_commit":"06db7f2f2849fa6ccdc207227cfaf4498d17870e",
+  "run_id":43276455708,
+  "job_id":131386028141,
+  "artifact_id":13970918568,
+  "workflow_conclusion":"success",
+  "scientific_decision":"provisional_one_family",
+  "archive_sha256":"00ae71bdc5e4f3612d017dfeabb0f5154742feda67bde2be92f1bfeefb50ebe1",
+  "verification":{
+    "frozen_source_files":9,
+    "exposure_text_files_scanned":229,
+    "exposure_identifier_matches":0,
+    "inputs":8,
+    "input_bytes":5961924,
+    "exact_source_values_checked":1490225,
+    "configurations_per_pass":40,
+    "passes":["sanitized","release_7_rounds","confirmation_5_rounds"],
+    "timed_batches":2400,
+    "artifact_manifest_entries_checked":282,
+    "frame_hashes_checked":120,
+    "reported_medians_recomputed":800,
+    "tracked_allocation_failure_positions":48,
+    "independent_decision_reproduced":true,
+    "local_sanitized_reproduction_configurations":40,
+    "local_cloud_frame_capture_gate_identities_match":true
+  },
+  "sizes":{
+    "covertype":{"baseline":680310,"candidate":582508,"saving_pct":14.376093251605885,"aligned_inputs":4,"inputs":5},
+    "collegemsg":{"baseline":275663,"candidate":232938,"saving_pct":15.498996963683918,"aligned_inputs":3,"inputs":3},
+    "pooled":{"baseline":955973,"candidate":815446,"saving_pct":14.699892151765791},
+    "individual_input_expansions":0
+  },
+  "registered_family_decisions":{
+    "covertype":{
+      "encode_ratios":[1.0095980664780224,1.0027585850124732],
+      "verified_decode_ratios":[1.0597560805543036,1.063255933912043],
+      "kernel_decode_ratios":[1.5584980241389743,1.550452764991962],
+      "supports_both_passes":false,
+      "failed_dimension":"kernel_decode"
+    },
+    "collegemsg":{
+      "encode_ratios":[1.033820285712993,1.0046187015107066],
+      "verified_decode_ratios":[0.9377947833073284,0.9241509717485191],
+      "kernel_decode_ratios":[0.8680533721799519,0.9569377072299091],
+      "supports_both_passes":true
+    },
+    "registered_noise_checks_passed":true
+  },
+  "posthoc_diagnostic":{
+    "elevation_codec_change":"HUF to rANS",
+    "elevation_kernel_ratios":[4.270421629873652,4.3003],
+    "hillshade_codec_change":"HUF to rANS",
+    "hillshade_kernel_ratios":[4.02354153455929,3.8628],
+    "selected_high_plane_symbols":[18,2],
+    "selected_timestamp_singleton_raw_bytes":59833,
+    "classification":"inspection of measured records, not a new preregistered hypothesis or causal ablation"
+  },
+  "limitations":[
+    "Two families with correlated fields; now observed data, not future holdout.",
+    "Typed exact derived NPY boundary, not original publisher text.",
+    "Raw fallback does not guarantee no expansion against the compressed native baseline.",
+    "Component encode begins from captured residuals, not full production planning.",
+    "Tracked heap excludes vendor internals, stack and allocator overhead.",
+    "Vendor objects uninstrumented; independent numeric inverse is not an independent entropy decoder.",
+    "No complete-Kolmo comparison on this new cohort, production integration, M5 or release acceptance."
+  ],
+  "supersedes_queued_checkpoint":"46e6f7666cc866e3887cf2f66af4c705b0f112c5"
+}
