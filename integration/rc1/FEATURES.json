@@ -1,0 +1,36 @@
+{
+  "candidate": "1.2.0-rc1",
+  "branch": "claude/release-rc1-20261114",
+  "base": {"branch": "claude/integration-20261113", "commit": "a6f4eaeac1e7cf609c3b26b61ec472960e17b66f"},
+  "compared_with": {"branch": "integration/best-features-rc-20261113", "commit": "1966514452af4f7f2882921cc252b36967835843", "pull_request": 10},
+  "main_at": "3c6890a",
+  "release_published": false,
+  "pushed": false,
+  "features": [
+    {"feature": "Planner record-ownership repair", "source": "PR #6", "merged_as": "b8ffcd1 (merge)", "status": "in both branches; kept", "default": "correctness fix"},
+    {"feature": "DEC64 decimal floats (graph node 7), dictionary columns, typed-first balanced planner", "source": "claude/dec64 up to 5069da4", "merged_as": "4ac39ab, f27a191 (merges)", "status": "this lane only; kept", "default": "on where the planner picks it"},
+    {"feature": "Image model and CM model 3 for ultra (block codec 17, extended CM header)", "source": "claude/dec64", "merged_as": "4ac39ab (merge)", "status": "this lane only; kept", "default": "on (ultra)"},
+    {"feature": "Line classes (container version 8)", "source": "main", "merged_as": "already on main", "status": "kept", "default": "on where the planner picks it"},
+    {"feature": "Native plane-context leaf (leaf codec 15, container version 9)", "source": "PR #9 e31b3fe", "merged_as": "4d227ff (merge)", "status": "in both branches; kept", "default": "off; --native-leaf / KOLMO_T_NATIVE_LEAF"},
+    {"feature": "Ultra level 2: context mixing on graph leaves", "source": "PR #8 39463d6", "merged_as": "cf75fa6 (merge)", "status": "in both branches; kept", "default": "off; -x -l 2"},
+    {"feature": "Checked fast integer inverse", "source": "inverse research (P2); Codex port d03cbd4", "merged_as": "0a5b28e", "status": "in both branches; this lane's version kept (144 of 144 cases, conformance test)", "default": "on; decoder only; no format change"},
+    {"feature": "Compile-time control for the fast inverse (-DKOLMO_FORCE_GENERIC_INT_INV)", "source": "PR #10 src/kg_int_fast.inc", "merged_as": "this branch", "status": "taken from Codex", "default": "off; benchmark control build only"},
+    {"feature": "Typed Huffman route for integer NPY and PCM16 WAV", "source": "PR #10", "merged_as": "c56961f", "status": "taken from Codex", "default": "off; --typed-huf / KOLMO_T_TYPED_HUF; a speed option, larger on 7 of 12 inputs measured"},
+    {"feature": "CLI frees its buffers on every exit path", "source": "PR #10", "merged_as": "c56961f", "status": "taken from Codex", "default": "n/a"},
+    {"feature": "CI: component tests of the merged features in the test and sanitizer jobs; leak detection and halt-on-error in the sanitizer and fuzz jobs; third fuzz target", "source": "PR #10 .github/workflows/ci.yml", "merged_as": "this branch", "status": "taken from Codex; not yet run on GitHub for this branch", "default": "n/a"},
+    {"feature": "Benchmark protocol: one harness for Kolmo and rivals, fresh process per case, duplicate zstd -3 control, protocol frozen before measuring, round-trip and completeness audit, memory figures", "source": "PR #10 integration/rc1/perf (Linux only)", "merged_as": "benchmark/rc1 (macOS, lzbench with Kolmo added)", "status": "idea taken from Codex; new driver", "default": "n/a"},
+    {"feature": "Feature manifest and status record", "source": "PR #10 integration/rc1", "merged_as": "integration/rc1 (this file)", "status": "idea taken from Codex", "default": "n/a"},
+    {"feature": "One table of identifiers and versions", "source": "research/TRACKER.md item X7", "merged_as": "SPEC.md, Identifiers and versions", "status": "new; documentation only", "default": "n/a"}
+  ],
+  "left_out": [
+    {"item": "--csv-archive (CSV archive profile)", "source": "PR #10", "reason": "measured on this lane: never smaller than eco, and with DEC64 the default balanced mode is smaller and decodes faster on the same tables"},
+    {"item": "research/codec tree (919 files)", "source": "PR #7, carried whole in PR #10", "reason": "research records, not release content; they stay on their own branch"},
+    {"item": "integration/rc1/import payloads and the branch-specific workflow rules", "source": "PR #10", "reason": "tied to that branch's import process and name"},
+    {"item": "Linux-only matched benchmark driver", "source": "PR #10 integration/rc1/perf", "reason": "does not run on macOS; its protocol was reused, the driver was not"}
+  ],
+  "open_decisions": [
+    "Whether block codec 17, graph node 7 and CM model 3 should raise the container version (to 10). Today an older reader refuses such frames part-way with 'corrupt or unsupported input'; no change was made.",
+    "The acceptance script (benchmark/accept/accept.py) does not accept this build; see STATUS.md.",
+    "Merging to main, tagging and publishing are not authorised and were not done."
+  ]
+}

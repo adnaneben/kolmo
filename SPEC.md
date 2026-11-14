@@ -1,7 +1,9 @@
 # kolmo container format
 
-This describes the `CZN1` container as written by this implementation. Version 6 is current (written only for minified JSON; otherwise 3 to 5); versions 1 to 5
-remain readable. The container framing below is stable and intended to be frozen at 1.0. The per-block *transform*
+This describes the `CZN1` container as written by this implementation. The writer emits the lowest version a file
+needs: 3 by default, and 4 to 9 only when a block uses a feature that needs it; versions 1 to 9 are readable. The
+section *Identifiers and versions* lists every version, codec id, node id and model, and which release reads each.
+The container framing below is stable and intended to be frozen at 1.0. The per-block *transform*
 sub-formats (tables, logs, scientific records, images, words) are not yet frozen and may change before 1.0; a decoder
 identifies them per block and this document specifies where that identification lives, not every transform's bytes.
 
@@ -22,7 +24,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 9 (9 only when a graph leaf uses codec 15; version 8 (line classes) is documented in a separate change; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 8) |
+| 4 | 1 | version | 1 to 9: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -35,7 +37,8 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | 24 | 4 | block | nominal block size in bytes |
 | 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
 
-A reader rejects the file if the magic is wrong, the version is not 1–7, the index does not fit in the file, or the
+A reader rejects the file if the magic is wrong, the version is not one it knows (1–9 for this implementation; older
+releases stop earlier, see *Identifiers and versions*), the index does not fit in the file, or the
 header+index CRC does not match. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
 of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `KOLMO_ERR_DICT`; an older
 reader that predates the flag refuses the newer version rather than returning wrong data.
@@ -47,7 +50,7 @@ reader that predates the flag refuses the newer version rather than returning wr
 | 0 | 4 | raw | decoded length of this block |
 | 4 | 4 | comp | stored length of this block's payload |
 | 8 | 4 | checksum | low 32 bits of a block checksum (see below) |
-| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7 |
+| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7, GRAPH=12 (kolmo graph block), CMI=17 (context mixing with the image model); the full list is in *Identifiers and versions* |
 | 13 | 1 | tflag | transform applied before the coder (see below) |
 | 14 | 2 | reserved | 0 |
 
@@ -90,7 +93,72 @@ decoding. `CM` is this project's integer context-mixing coder; its stream starts
 bits are the block length and whose top 4 bits `f` select the model: `f = 0` is model 1 with the legacy default table
 size; otherwise `f & 7` is the log2 of the hash-table size minus 15, and `f & 8` selects model 2 (two more sparse
 contexts, three record contexts, four mixers combined by a learned final mixer, and an extra order-2 APM). The arithmetic-coded bytes follow.
-Encoders write model 2; decoders accept both, so files written with model 1 still decode. CM output is bit-exact across compilers and CPUs (integer-only, `-ffp-contract=off`).
+`f = 8` exactly is the extended header: one more byte follows the size word, `model << 4 | (log2 of the table size − 15)`;
+it carries model 3 (orders 12 and 20, the byte the match model expects as a context, finer classes for long matches).
+Encoders write model 3 for text, model 2 for other data, and model 1 at level 1 and for blocks of 2^28 bytes or more;
+decoders accept all three, so files written with an older model still decode. `CMI` (codec 17) is the same coder with
+an image model for 8-bit samples: `iw u32 | ih u32 | ich u8` (row width in bytes, bytes before the first pixel,
+interleaved channels), then a size word as above and the coded bytes. CM output is bit-exact across compilers and
+CPUs (integer-only, `-ffp-contract=off`).
+
+## Identifiers and versions
+
+One table of every identifier a frame can carry, the first build that writes it, and what an older reader does with
+it. A new identifier is claimed here first, so that two lines of work do not take the same number.
+
+**Container versions** (header byte 4). The writer emits the highest version any block needs; a reader refuses a
+version above the highest it knows.
+
+| version | written when | first reader |
+|----|----|----|
+| 1, 2 | never (historical; read only) | 1.0.0 |
+| 3 | by default | 1.0.0 |
+| 4, 5 | a table column uses the delta-of-delta (4) or third-order (5) predictor | 1.0.0 |
+| 6 | a block uses the minified-JSON split (tflag 10) | 1.1.0 |
+| 7 | a block is a kolmo graph (codec 12, plan type 9) | 1.1.0 |
+| 8 | a block uses the line-class transform (plan type 10, tflag 12) | 1.1.0 |
+| 9 | a graph leaf uses codec 15; on request only (`--native-leaf`) | 1.2.0 |
+
+Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0. (1.1.0 is the state of `main` under that
+version number; it was not tagged or published. 1.2.0 is this build, a release candidate.)
+
+**Block codecs** (index byte 12) and **graph leaf codecs**.
+
+| id | name | where | first reader |
+|----|----|----|----|
+| 0–7 | STORE, LZ4, LZ4HC, ZSTD, BROTLI, BSC, LZMA2, CM | blocks and graph leaves | 1.0.0 |
+| 8–11 | DNA, DNA_PREFIX, PCM, DNA_RUNS | blocks; experimental, read and written only by builds made with `-DKOLMO_FRONTIER` | none (not in release builds) |
+| 12 | GRAPH | blocks, version 7 or later | 1.1.0 |
+| 13, 14 | HUF (Huffman only), RANS (order-0 rANS) | graph leaves | 1.1.0 |
+| 15 | NPLANE (native plane-context leaf) | graph leaves, version 9 only | 1.2.0 |
+| 16 | not assigned | | |
+| 17 | CMI (context mixing, image model) | blocks; written by `ultra` | 1.2.0 |
+
+**Graph nodes** (op byte of a node).
+
+| id | node | first reader |
+|----|----|----|
+| 1–6 | FIELDS, DECIMAL, CONCAT, INT, FLOAT, IMG8 | 1.1.0 |
+| 7 | DEC64 (binary64 values that are short decimals) | 1.2.0 |
+
+**CM models** (top bits of the size word, above).
+
+| model | flag | written when | first reader |
+|----|----|----|----|
+| 1 | `f` = 0–7 | `ultra` level 1; blocks of 2^28 bytes or more | 1.0.0 |
+| 2 | `f` = 9–15 | `ultra`, data that is not text | 1.1.0 |
+| 3 | `f` = 8, then one byte | `ultra`, text | 1.2.0 |
+
+**What an older reader does.** Only versions 4 to 9 are announced in the header. Block codec 17, graph node 7 and
+CM models 2 and 3 are written inside frames whose header carries the version the rest of the frame needs (3, 7 or
+8), following the rule in *Kolmo graph blocks*: new identifiers do not raise the container version, and a decoder
+rejects an identifier it does not know. So an older reader refuses such a frame part-way, when it meets the block,
+and reports `KOLMO_ERR_CORRUPT` ("corrupt or unsupported input"); it does not return wrong bytes. Measured on 580
+frames of 35 files written by 1.2.0-rc1: 1.0.1 decoded 403 and refused 177; 1.1.0 decoded 547 and refused 33 (DEC64
+nodes, `ultra` text and `ultra` images); no frame decoded to different bytes. Every frame written by 1.0.1 and
+1.1.0 decodes with 1.2.0-rc1. Whether these three identifiers should instead raise the container version (to 10),
+so that an older reader refuses at the header with a clearer cause, is an open decision for the project owner; it
+would change the bytes of the frames concerned and is not made here.
 
 ## Guarantees
 
@@ -132,7 +200,7 @@ src/kolmo.c      container, typed transpose, byte-plane shuffle, x86 filter, cod
 
 ## Kolmo graph blocks (version 7)
 
-A block with codec 8 and plan type 9 is a **kolmo graph**: instead of one fixed transform, the payload (after the
+A block with codec 12 and plan type 9 is a **kolmo graph**: instead of one fixed transform, the payload (after the
 4-byte plan) holds a small program. Stream 0 is the block's bytes. Each node consumes streams and appends its outputs
 to the stream table; streams no node consumes are leaves, each coded by an ordinary codec. The decoder decodes the
 leaves, then runs the nodes' inverses from the last node to the first. New transforms add node ids; the container

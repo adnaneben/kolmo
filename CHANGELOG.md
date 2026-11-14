@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.2.0-rc1 (2026-11-14) — release candidate, not tagged, not published
+
+One build that carries the best of the two integration branches: `claude/integration-20261113` (the base) and
+`integration/best-features-rc-20261113` (PR #10). What came from where, what was left out and why:
+`integration/rc1/FEATURES.json`; what was verified: `integration/rc1/STATUS.md`.
+
+### Merged since 1.1.0
+- **Planner record-ownership fix** (PR #6).
+- **DEC64** (graph node 7): binary64 values that are short decimals are stored as decimal digits and exponents;
+  dictionary columns; a typed-first order in the balanced planner (branch `claude/dec64`).
+- **`ultra`: image model (block codec 17) and CM model 3** for text (branch `claude/dec64`).
+- **Native plane-context leaf**, on request: `--native-leaf` / `KOLMO_T_NATIVE_LEAF` (PR #9; container version 9
+  only when such a leaf is written).
+- **`ultra` level 2**, on request: `-x -l 2`, context mixing on graph leaves (PR #8).
+- **Fast integer inverse** in the decoder, checked against the generic inverse (144 of 144 cases); no format change.
+- **Typed Huffman route**, on request: `--typed-huf` / `KOLMO_T_TYPED_HUF` (PR #10); a speed option.
+
+### From the comparison with PR #10
+- A compile-time control build for the fast inverse, `-DKOLMO_FORCE_GENERIC_INT_INV`, and the conformance test built
+  three ways (sanitizers, optimised, control): `make check-fastint`.
+- `make check-rc`: one target for the component tests of the merged features; CI runs it under ASan and UBSan.
+- CI: leak detection and halt-on-error in the sanitizer and fuzz jobs; `fuzz_nplane` joins the fuzz job; the fast
+  inverse and the opt-in routes are tested in the release build on all three runners.
+- A feature manifest and status record under `integration/rc1/`.
+
+### Format
+- No change to any byte this build writes relative to `claude/integration-20261113`.
+- `SPEC.md` has a new section, *Identifiers and versions*: every container version, codec id, node id and CM model,
+  the first reader of each, and what older readers do. It also corrects three stale lines (the graph block is codec
+  12, not 8; the highest readable version; the current version).
+- Open decision, not taken here: block codec 17, graph node 7 and CM model 3 are written without raising the
+  container version, as the graph section of `SPEC.md` prescribes for new identifiers. Readers 1.0.1 and 1.1.0
+  refuse such frames with "corrupt or unsupported input" and return no data. Raising the version (to 10) would make
+  them refuse at the header instead.
+
+### Not in this build
+- `--csv-archive` from PR #10 (never smaller than `eco`; default balanced is smaller and decodes faster on the same
+  tables since DEC64).
+
 ## 1.1.0 (2026-11-10)
 
 ### Ratio
