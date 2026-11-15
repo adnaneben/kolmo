@@ -1,0 +1,2 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo_ctl 1.2.0-rc2 -4,200.20,815.90,211948032,58245973,27.48,/home/user/data/silesia/silesia.tar

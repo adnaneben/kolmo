@@ -1,0 +1,6 @@
+kolmo commit 94b11326a94932f3e7a0668f3034e10ccb36fe07, version 1.2.0-rc2
+release: make ARCH= LZMALIB=/usr/lib/x86_64-linux-gnu/liblzma.a lib
+control: make ARCH="-DKOLMO_FORCE_GENERIC_INT_INV -DKOLMO_FORCE_GENERIC_INT_FWD" LZMALIB=/usr/lib/x86_64-linux-gnu/liblzma.a lib
+link change in both: --version-script (kolmo_* only)
+8454ea02853a5bc7fc96c8fbe6fadb2be954543131a88dc453122bdf130e0f6f  /home/user/tools/lzbench-kolmo-rc2/misc/kolmo/libkolmo.so
+46ffb5b67b9250af6a8a71ba47b92c7c0b86969419a690c18bf66bc5ff8f1506  /home/user/tools/lzbench-kolmo-rc2/misc/kolmo/libkolmo_ctl.so

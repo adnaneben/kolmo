@@ -1,0 +1,50 @@
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors  lz+entropy/zxc/src/lib/zxc_pstream.c -c -o lz+entropy/zxc/src/lib/zxc_pstream.o
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors  lz+entropy/zxc/src/lib/zxc_seekable.c -c -o lz+entropy/zxc/src/lib/zxc_seekable.o
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors -DZXC_FUNCTION_SUFFIX=_default lz+entropy/zxc/src/lib/zxc_compress.c -c -o lz+entropy/zxc/src/lib/zxc_compress_default.o
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors -DZXC_FUNCTION_SUFFIX=_default lz+entropy/zxc/src/lib/zxc_decompress.c -c -o lz+entropy/zxc/src/lib/zxc_decompress_default.o
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors -DZXC_FUNCTION_SUFFIX=_default lz+entropy/zxc/src/lib/zxc_huffman.c -c -o lz+entropy/zxc/src/lib/zxc_huffman_default.o
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors -mavx2 -mbmi -mbmi2 -mlzcnt -mno-avx512f -DZXC_FUNCTION_SUFFIX=_avx2 -DZXC_USE_AVX2 lz+entropy/zxc/src/lib/zxc_compress.c -c -o lz+entropy/zxc/src/lib/zxc_compress_avx2.o
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors -mavx2 -mbmi -mbmi2 -mlzcnt -mno-avx512f -DZXC_FUNCTION_SUFFIX=_avx2 -DZXC_USE_AVX2 lz+entropy/zxc/src/lib/zxc_decompress.c -c -o lz+entropy/zxc/src/lib/zxc_decompress_avx2.o
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors -mavx2 -mbmi -mbmi2 -mlzcnt -mno-avx512f -DZXC_FUNCTION_SUFFIX=_avx2 -DZXC_USE_AVX2 lz+entropy/zxc/src/lib/zxc_huffman.c -c -o lz+entropy/zxc/src/lib/zxc_huffman_avx2.o
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors -mavx512f -mavx512bw -mavx512vbmi -mavx512vbmi2 -mbmi -mbmi2 -mlzcnt -DZXC_FUNCTION_SUFFIX=_avx512 -DZXC_USE_AVX512 lz+entropy/zxc/src/lib/zxc_compress.c -c -o lz+entropy/zxc/src/lib/zxc_compress_avx512.o
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors -mavx512f -mavx512bw -mavx512vbmi -mavx512vbmi2 -mbmi -mbmi2 -mlzcnt -DZXC_FUNCTION_SUFFIX=_avx512 -DZXC_USE_AVX512 lz+entropy/zxc/src/lib/zxc_decompress.c -c -o lz+entropy/zxc/src/lib/zxc_decompress_avx512.o
+cc -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/zxc/src/lib/vendors -mavx512f -mavx512bw -mavx512vbmi -mavx512vbmi2 -mbmi -mbmi2 -mlzcnt -DZXC_FUNCTION_SUFFIX=_avx512 -DZXC_USE_AVX512 lz+entropy/zxc/src/lib/zxc_huffman.c -c -o lz+entropy/zxc/src/lib/zxc_huffman_avx512.o
+g++ -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz -Ilz/misa77/include bench/lz_codecs.cpp -c -o bench/lz_codecs.o
+g++ -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy -Ilz+entropy/brotli/include -Ilz+entropy/openzl/include -Ilz+entropy/zxc/src/lib/vendors bench/lz_entropy_codecs.cpp -c -o bench/lz_entropy_codecs.o
+g++ -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -Ilz+entropy/libcsc bench/buggy_codecs.cpp -c -o bench/buggy_codecs.o
+g++ -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -fopenmp bench/symmetric_codecs.cpp -c -o bench/symmetric_codecs.o
+g++ -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP -fopenmp -DLZBENCH_GIT_COMMIT=\"9be0e25505b1-dirty\" bench/lzbench.cpp -c -o bench/lzbench.o
+g++ -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP  bench/misc_codecs.cpp -c -o bench/misc_codecs.o
+g++ -Wno-unknown-pragmas -Wno-sign-compare -Wno-conversion -fomit-frame-pointer -fstrict-aliasing -ffast-math -O3 -DNDEBUG -U_FORTIFY_SOURCE -Dunix -I. -DZXC_STATIC_DEFINE -DBENCH_REMOVE_AOCL -DBENCH_REMOVE_SKIM   -MMD -MP  bench/threadpool.cpp -c -o bench/threadpool.o
+Building go-brrr (Go)...
+cd lz+entropy/gobrrr && CC="cc" CGO_ENABLED=1 GOTOOLCHAIN=local GOPROXY=off GOWORK=off \
+go build -buildmode=c-archive -trimpath -o /home/user/tools/lzbench-kolmo-rc2/lz+entropy/gobrrr/libgobrrr.a ./ffi
+Building Rust codecs (density mbrotli mzstd pulsar)...
+cd misc/rust-codecs/ && \
+RUSTFLAGS="-C target-cpu=native -C linker=g++" \
+cargo rustc --locked --offline --features "density mbrotli mzstd pulsar" --crate-type=cdylib --release -- --print=native-static-libs
+warning: failed to connect to jobserver from environment variable `MAKEFLAGS="w -j4 --jobserver-auth=3,4"`: cannot open file descriptor 3 from the jobserver environment variable value: Bad file descriptor (os error 9)
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling branches v0.5.1
+   Compiling thiserror v2.0.21
+   Compiling borrowed-buf v0.1.1
+   Compiling fearless_simd v1.0.0
+   Compiling pulsar v2.5.0 (/home/user/tools/lzbench-kolmo-rc2/bwt/pulsar)
+   Compiling density-rs v0.16.6 (/home/user/tools/lzbench-kolmo-rc2/misc/density/src)
+   Compiling syn v3.0.6
+   Compiling thiserror-impl v2.0.21
+   Compiling fearless_simd_macros v0.1.0
+   Compiling mzstd v0.2.11 (/home/user/tools/lzbench-kolmo-rc2/lz+entropy/mzstd)
+   Compiling mbrotli v0.5.20 (/home/user/tools/lzbench-kolmo-rc2/lz+entropy/mbrotli)
+   Compiling mzstd-ffi v0.2.11 (/home/user/tools/lzbench-kolmo-rc2/lz+entropy/mzstd/mzstd-ffi)
+   Compiling mbrotli-ffi v0.2.4 (/home/user/tools/lzbench-kolmo-rc2/lz+entropy/mbrotli/mbrotli-ffi)
+   Compiling lzbench-rust v0.0.0 (/home/user/tools/lzbench-kolmo-rc2/misc/rust-codecs)
+    Finished `release` profile [optimized] target(s) in 2m 03s
+touch misc/rust-codecs/target/release/liblzbench_rust.so
+g++ -o lzbench @lzbench.objs -pthread   -fopenmp -Wl,-rpath,misc/rust-codecs/target/release -Lmisc/rust-codecs/target/release -llzbench_rust 
+/usr/bin/ld: lz+entropy/tornado/tor_test.o: in function `GetTempDir':
+tor_test.cpp:(.text+0x45e5): warning: the use of `tempnam' is dangerous, better use `mkstemp'
+Linked GCC_VERSION=130300 CLANG_VERSION= COMPILER=gcc
+make: Leaving directory '/home/user/tools/lzbench-kolmo-rc2'

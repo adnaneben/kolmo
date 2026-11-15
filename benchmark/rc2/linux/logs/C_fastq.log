@@ -1,0 +1,49 @@
+SRR1770413.fastq         kolmo-fastq (prototype)              26,270,480 c   210.37 d   404.58 MB/s
+SRR1770413.fastq         kolmo -m balanced                    18,115,658 c   187.80 d   633.88 MB/s
+SRR1770413.fastq         kolmo -m hc                          13,217,550 c     0.97 d   254.39 MB/s
+SRR1770413.fastq         kolmo -m ratio                       10,327,642 c    18.89 d    31.95 MB/s
+SRR1770413.fastq         kolmo -x                             10,706,117 c     0.17 d     0.17 MB/s
+SRR1770413.fastq         zstd -3                              18,088,207 c   169.64 d   693.66 MB/s
+SRR1770413.fastq         zstd -19                             12,698,907 c     0.84 d   559.27 MB/s
+SRR1770413.fastq         xz -9                                10,253,632 c     0.78 d    78.35 MB/s
+SRR1770413.fastq         brotli -11                           11,332,776 c     0.30 d   177.96 MB/s
+SRR1770413.fastq         bsc -m0 -e2                          11,507,230 c    15.37 d    21.33 MB/s
+SRR1770413.fastq         bzip3 -b 16                          11,834,348 c     8.74 d     7.70 MB/s
+SRR1770413.fastq         krc (KRC1, cpu)                      58,846,920 c    41.29 d   134.30 MB/s
+SRR1770413.fastq         kbc (KBC1)                           15,847,649 c     2.01 d     3.52 MB/s
+SRR1770413.fastq         kbx -l 0                             15,847,649 c     2.06 d     3.68 MB/s
+SRR1770413.fastq         kbx -l 1                             14,259,727 c     1.01 d     1.75 MB/s
+SRR1770413.fastq         kbx -l 2                             14,259,727 c     0.83 d     1.74 MB/s
+SRR2584863.fastq         kolmo-fastq (prototype)              20,206,308 c   172.09 d   341.13 MB/s
+SRR2584863.fastq         kolmo -m balanced                    12,636,749 c   148.09 d   649.37 MB/s
+SRR2584863.fastq         kolmo -m hc                           9,960,582 c     0.89 d   246.71 MB/s
+SRR2584863.fastq         kolmo -m ratio                        8,031,260 c    16.15 d    26.60 MB/s
+SRR2584863.fastq         kolmo -x                              7,650,237 c     0.15 d     0.15 MB/s
+SRR2584863.fastq         zstd -3                              12,648,856 c   124.95 d   547.29 MB/s
+SRR2584863.fastq         zstd -19                              9,749,221 c     0.70 d   432.12 MB/s
+SRR2584863.fastq         xz -9                                 8,700,420 c     0.65 d    57.59 MB/s
+SRR2584863.fastq         brotli -11                            8,937,210 c     0.31 d   165.71 MB/s
+SRR2584863.fastq         bsc -m0 -e2                           8,266,486 c    14.26 d    17.59 MB/s
+SRR2584863.fastq         bzip3 -b 16                           8,363,722 c     7.66 d     6.71 MB/s
+SRR2584863.fastq         krc (KRC1, cpu)                      35,695,019 c    41.29 d   133.17 MB/s
+SRR2584863.fastq         kbc (KBC1)                           10,688,192 c     1.67 d     2.70 MB/s
+SRR2584863.fastq         kbx -l 0                             10,688,192 c     1.74 d     3.26 MB/s
+SRR2584863.fastq         kbx -l 1                              9,653,359 c     0.84 d     1.45 MB/s
+SRR2584863.fastq         kbx -l 2                              9,653,359 c     0.73 d     1.49 MB/s
+SRR835775.fastq          kolmo-fastq (prototype)              12,642,889 c   181.59 d   366.94 MB/s
+SRR835775.fastq          kolmo -m balanced                     6,652,692 c   184.35 d   710.94 MB/s
+SRR835775.fastq          kolmo -m hc                           5,650,910 c     1.04 d   293.19 MB/s
+SRR835775.fastq          kolmo -m ratio                        4,879,646 c    20.02 d    30.16 MB/s
+SRR835775.fastq          kolmo -x                              3,890,027 c     0.14 d     0.15 MB/s
+SRR835775.fastq          zstd -3                               6,667,689 c   149.31 d   686.27 MB/s
+SRR835775.fastq          zstd -19                              5,644,174 c     1.00 d   378.89 MB/s
+SRR835775.fastq          xz -9                                 5,336,036 c     0.90 d    63.69 MB/s
+SRR835775.fastq          brotli -11                            5,283,259 c     0.36 d   170.63 MB/s
+SRR835775.fastq          bsc -m0 -e2                           4,804,486 c    16.40 d    19.49 MB/s
+SRR835775.fastq          bzip3 -b 16                           4,700,964 c    10.57 d     9.75 MB/s
+SRR835775.fastq          krc (KRC1, cpu)                      22,296,390 c    44.42 d   110.62 MB/s
+SRR835775.fastq          kbc (KBC1)                            7,263,136 c     1.70 d     2.91 MB/s
+SRR835775.fastq          kbx -l 0                              7,263,136 c     1.84 d     3.40 MB/s
+SRR835775.fastq          kbx -l 1                              6,369,349 c     0.94 d     1.63 MB/s
+SRR835775.fastq          kbx -l 2                              6,369,349 c     0.77 d     1.62 MB/s
+fastq rc=0

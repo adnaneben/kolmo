@@ -1,0 +1,24 @@
+sysctl: cannot stat /proc/sys/machdep/cpu/brand_string: No such file or directory
+A1 [1/21] main silesia.tar lz4: 211948032 -> 100297674, 508.9 / 2759.7 MB/s, cpu 3.7 s of 3.8 s +python3 62%
+A1 [2/21] main silesia.tar kolmo_ctl,16: 211948032 -> 99918118, 467.2 / 2155.1 MB/s, cpu 3.9 s of 4.0 s
+A1 [3/21] main silesia.tar zstd,3: 211948032 -> 66132559, 167.5 / 974.1 MB/s, cpu 6.6 s of 6.6 s
+A1 [4/21] main silesia.tar kolmo_ctl,4: 211948032 -> 58245973, 168.4 / 767.5 MB/s, cpu 6.3 s of 6.4 s
+A1 [5/21] main silesia.tar kolmo_ctl,0: 211948032 -> 98721284, 475.7 / 1880.3 MB/s, cpu 3.8 s of 3.9 s
+A1 [6/21] main silesia.tar kolmo_ctl,17: 211948032 -> 70908594, 377.6 / 1002.0 MB/s, cpu 4.2 s of 4.3 s
+A1 [7/21] main silesia.tar kolmo_ctl,1: 211948032 -> 64282602, 308.8 / 903.6 MB/s, cpu 4.7 s of 4.7 s
+A1 [8/21] main silesia.tar kolmo_ctl,3: 211948032 -> 59066038, 197.2 / 878.9 MB/s, cpu 5.9 s of 5.9 s
+A1 [9/21] main silesia.tar kolmo_ctl,4: 211948032 -> 58245973, 186.1 / 826.3 MB/s, cpu 6.2 s of 6.2 s
+A1 [10/21] main silesia.tar kolmo_ctl,8: 211948032 -> 50606732, 7.5 / 286.3 MB/s, cpu 89.8 s of 90.4 s
+A1 [11/21] main silesia.tar kolmo_ctl,5: 211948032 -> 52354883, 43.5 / 585.1 MB/s, cpu 17.6 s of 17.7 s
+A1 [12/21] main silesia.tar kolmo_ctl,7: 211948032 -> 43966976, 15.2 / 29.3 MB/s, cpu 36.3 s of 36.5 s
+A1 [13/21] main silesia.tar kolmo_ctl,9: 211948032 -> 47624843, 2.1 / 608.5 MB/s, cpu 103.0 s of 103.7 s
+A1 [14/21] main silesia.tar kolmo_ctl,10: 211948032 -> 40687879, 2.3 / 46.5 MB/s, cpu 105.4 s of 106.0 s
+A1 [15/21] main silesia.tar kolmo_ctl,11: 211948032 -> 38132318, 0.4 / 0.4 MB/s, cpu 1109.2 s of 1118.7 s
+A1 [16/21] main silesia.tar kolmo_ctl,12: 211948032 -> 35770715, 0.2 / 0.2 MB/s, cpu 2428.0 s of 2447.5 s
+A1 [17/21] main silesia.tar kolmo_ctl,13: 211948032 -> 35770715, 0.2 / 0.2 MB/s, cpu 2385.4 s of 2403.8 s
+A1 [18/21] end silesia.tar lz4: 211948032 -> 100297674, 516.2 / 2716.0 MB/s, cpu 3.8 s of 3.8 s
+A1 [19/21] end silesia.tar kolmo_ctl,16: 211948032 -> 99918118, 503.2 / 2124.0 MB/s, cpu 3.9 s of 4.0 s
+A1 [20/21] end silesia.tar zstd,3: 211948032 -> 66132559, 200.2 / 1028.4 MB/s, cpu 6.4 s of 6.4 s
+A1 [21/21] end silesia.tar kolmo_ctl,4: 211948032 -> 58245973, 200.2 / 815.9 MB/s, cpu 6.0 s of 6.0 s
+A1 finished 18:49:49
+A1_ctl rc=0

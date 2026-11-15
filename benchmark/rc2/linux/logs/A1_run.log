@@ -37,3 +37,12 @@ A1 [35/45] main silesia.tar ppmd8,4: 211948032 -> 51256310, 10.3 / 9.3 MB/s, cpu
 A1 [36/45] main silesia.tar kanzi,7: 211948032 -> 47308609, 10.1 / 14.8 MB/s, cpu 35.4 s of 35.8 s
 A1 [37/45] main silesia.tar kolmo,11: 211948032 -> 38132318, 0.4 / 0.4 MB/s, cpu 1127.7 s of 1138.0 s
 A1 [38/45] main silesia.tar kolmo,12: 211948032 -> 35770715, 0.2 / 0.2 MB/s, cpu 2298.4 s of 2318.2 s
+A1 [39/45] main silesia.tar kolmo,13: 211948032 -> 35770715, 0.2 / 0.2 MB/s, cpu 2386.5 s of 2409.1 s
+A1 [40/45] main silesia.tar kanzi,9: 211948032 -> 41855945, 1.7 / 1.6 MB/s, cpu 252.8 s of 254.7 s
+A1 [41/45] main silesia.tar zpaq,5: 211948032 -> 40485070, 0.4 / 0.4 MB/s, cpu 1149.6 s of 1159.5 s
+A1 [42/45] end silesia.tar lz4: 211948032 -> 100297674, 490.4 / 2750.9 MB/s, cpu 4.1 s of 4.1 s
+A1 [43/45] end silesia.tar kolmo,16: 211948032 -> 99918118, 517.7 / 2168.6 MB/s, cpu 3.9 s of 3.9 s
+A1 [44/45] end silesia.tar zstd,3: 211948032 -> 66132559, 219.2 / 963.3 MB/s, cpu 5.5 s of 5.5 s
+A1 [45/45] end silesia.tar kolmo,4: 211948032 -> 58245973, 176.7 / 802.2 MB/s, cpu 6.3 s of 6.3 s
+A1 finished 17:03:18
+A1 rc=0

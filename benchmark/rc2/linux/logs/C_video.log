@@ -1,0 +1,58 @@
+akiyo_cif.y4m            kvid -m balanced                      8,405,112 c    40.32 d   218.17 MB/s
+akiyo_cif.y4m            kvid -m hc                            6,985,276 c     1.47 d   142.29 MB/s
+akiyo_cif.y4m            kvid -m ratio                         6,259,122 c     0.65 d    31.89 MB/s
+akiyo_cif.y4m            kvid -m x                             6,042,133 c     0.17 d     0.33 MB/s
+akiyo_cif.y4m            kolmo -m balanced                    18,118,923 c   207.63 d   153.33 MB/s
+akiyo_cif.y4m            kolmo -m hc                          12,953,821 c     1.37 d   181.78 MB/s
+akiyo_cif.y4m            kolmo -m ratio                       11,232,641 c     0.94 d    45.26 MB/s
+akiyo_cif.y4m            kolmo -x                              8,287,024 c     0.08 d     0.14 MB/s
+akiyo_cif.y4m            zstd -3                              15,198,562 c   209.45 d   817.53 MB/s
+akiyo_cif.y4m            zstd -19                             11,759,434 c     1.31 d   421.91 MB/s
+akiyo_cif.y4m            xz -9                                 9,505,636 c     1.48 d    55.65 MB/s
+akiyo_cif.y4m            brotli -11                           10,561,411 c     0.42 d   198.05 MB/s
+akiyo_cif.y4m            bsc -m0 -e2                           9,147,032 c    19.28 d    19.42 MB/s
+akiyo_cif.y4m            bzip3 -b 16                           8,947,930 c    12.61 d    10.53 MB/s
+akiyo_cif.y4m            krc (KRC1, cpu)                      44,557,956 c    46.22 d   128.63 MB/s
+akiyo_cif.y4m            kbc (KBC1)                           20,692,462 c     1.24 d     2.06 MB/s
+akiyo_cif.y4m            kbx -l 0                             20,692,462 c     1.38 d     2.41 MB/s
+akiyo_cif.y4m            kbx -l 1                             19,330,097 c     0.71 d     1.27 MB/s
+akiyo_cif.y4m            kbx -l 2                             19,330,097 c     0.62 d     1.40 MB/s
+foreman_cif.y4m          kvid -m balanced                     22,450,190 c    24.02 d    86.03 MB/s
+foreman_cif.y4m          kvid -m hc                           21,153,482 c     0.77 d    78.24 MB/s
+foreman_cif.y4m          kvid -m ratio                        20,664,184 c     0.52 d    26.24 MB/s
+foreman_cif.y4m          kvid -m x                            18,753,337 c     0.12 d     0.25 MB/s
+foreman_cif.y4m          kolmo -m balanced                    23,156,754 c   117.28 d   143.94 MB/s
+foreman_cif.y4m          kolmo -m hc                          22,973,573 c     0.83 d   100.15 MB/s
+foreman_cif.y4m          kolmo -m ratio                       20,987,517 c     0.51 d    14.03 MB/s
+foreman_cif.y4m          kolmo -x                             18,357,467 c     0.14 d     0.20 MB/s
+foreman_cif.y4m          zstd -3                              33,660,184 c   112.68 d   556.04 MB/s
+foreman_cif.y4m          zstd -19                             26,876,415 c     1.03 d   191.36 MB/s
+foreman_cif.y4m          xz -9                                24,777,860 c     0.79 d    25.06 MB/s
+foreman_cif.y4m          brotli -11                           25,664,666 c     0.32 d    87.70 MB/s
+foreman_cif.y4m          bsc -m0 -e2                          21,318,940 c     9.62 d     9.34 MB/s
+foreman_cif.y4m          bzip3 -b 16                          20,754,868 c     7.45 d     5.76 MB/s
+foreman_cif.y4m          krc (KRC1, cpu)                      44,647,763 c    46.35 d   135.05 MB/s
+foreman_cif.y4m          kbc (KBC1)                           24,365,615 c     1.12 d     1.85 MB/s
+foreman_cif.y4m          kbx -l 0                             24,365,615 c     1.36 d     2.44 MB/s
+foreman_cif.y4m          kbx -l 1                             23,026,776 c     0.81 d     1.41 MB/s
+foreman_cif.y4m          kbx -l 2                             23,026,776 c     0.61 d     1.38 MB/s
+mobile_cif.y4m           kvid -m balanced                     29,995,313 c    23.78 d    91.53 MB/s
+mobile_cif.y4m           kvid -m hc                           29,553,642 c     1.10 d    78.97 MB/s
+mobile_cif.y4m           kvid -m ratio                        28,634,082 c     0.66 d    19.44 MB/s
+mobile_cif.y4m           kvid -m x                            26,672,675 c     0.10 d     0.19 MB/s
+mobile_cif.y4m           kolmo -m balanced                    32,418,001 c    72.14 d   141.29 MB/s
+mobile_cif.y4m           kolmo -m hc                          32,352,672 c     1.19 d    86.18 MB/s
+mobile_cif.y4m           kolmo -m ratio                       30,246,791 c     0.69 d    11.11 MB/s
+mobile_cif.y4m           kolmo -x                             27,062,151 c     0.13 d     0.15 MB/s
+mobile_cif.y4m           zstd -3                              40,938,429 c   127.43 d   578.71 MB/s
+mobile_cif.y4m           zstd -19                             35,882,711 c     1.44 d   218.34 MB/s
+mobile_cif.y4m           xz -9                                31,889,240 c     1.03 d    18.81 MB/s
+mobile_cif.y4m           brotli -11                           33,435,161 c     0.29 d    68.00 MB/s
+mobile_cif.y4m           bsc -m0 -e2                          30,593,372 c     7.59 d     6.61 MB/s
+mobile_cif.y4m           bzip3 -b 16                          29,968,304 c     6.32 d     4.95 MB/s
+mobile_cif.y4m           krc (KRC1, cpu)                      45,680,952 c    47.99 d   139.70 MB/s
+mobile_cif.y4m           kbc (KBC1)                           32,951,541 c     0.99 d     1.61 MB/s
+mobile_cif.y4m           kbx -l 0                             32,951,541 c     1.15 d     2.08 MB/s
+mobile_cif.y4m           kbx -l 1                             31,866,907 c     0.81 d     1.44 MB/s
+mobile_cif.y4m           kbx -l 2                             31,866,907 c     0.62 d     1.46 MB/s
+video rc=0

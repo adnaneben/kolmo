@@ -1,0 +1,7 @@
+cd802609cd682b6fe229cecdbe640dc7a3678e31a111a26e1df7f9f25a3728f8  /home/user/data/silesia/silesia.tar
+4cf5843c7b6f6c643f05d00681c9ea5a926ce229a2ade2e04cf9d3f15e9e665f  /home/user/data/fastq/SRR1770413.fastq
+758029a19f65e3c2867efbb6ab636799a28ed1ddc50515552bbd06ca680a2a59  /home/user/data/fastq/SRR2584863.fastq
+96fd53757116f50c0565952d293de1d02408fc55c4ca3f72cd915d3ffdbe9f88  /home/user/data/fastq/SRR835775.fastq
+0f7a1f997930217d601ab324b1428859fdb599dde8d33772a24bfe2803a9b067  /home/user/data/video/akiyo_cif.y4m
+b0e3c35eff9fe1da91521a02eb9f0e3ef4bc5aec341ecef1567cd87f1711267b  /home/user/data/video/foreman_cif.y4m
+8b32924ea00ef3bd52f7ddafd3ceb55d2bb331610b59957c5c3cc9628f9e0d90  /home/user/data/video/mobile_cif.y4m

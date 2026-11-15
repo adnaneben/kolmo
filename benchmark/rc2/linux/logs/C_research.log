@@ -1,0 +1,85 @@
+silesia.tar              krc (KRC1, cpu)                     191,504,283 c    43.52 d   127.89 MB/s
+silesia.tar              kbc (KBC1)                           77,570,988 c     1.46 d     2.45 MB/s
+silesia.tar              kbx -l 0                             77,570,988 c     1.62 d     2.88 MB/s
+silesia.tar              kbx -l 1                             63,612,060 c     0.91 d     1.61 MB/s
+silesia.tar              kbx -l 2                             63,612,060 c     0.76 d     1.67 MB/s
+silesia.tar              kolmo -m balanced                    58,245,973 c   190.25 d   722.83 MB/s
+silesia.tar              kolmo -m hc                          47,624,843 c     2.41 d   328.58 MB/s
+silesia.tar              kolmo -m ratio                       40,687,879 c     2.75 d    42.68 MB/s
+silesia.tar              zstd -3                              66,557,030 c   193.17 d   792.32 MB/s THREADS
+silesia.tar              zstd -19                             52,999,040 c     1.47 d   434.74 MB/s THREADS
+silesia.tar              xz -9                                48,752,732 c     1.42 d    62.72 MB/s
+silesia.tar              brotli -11                           49,766,867 c     0.42 d   235.30 MB/s
+silesia.tar              bsc -m0 -e2                          47,402,890 c    14.92 d    17.44 MB/s
+silesia.tar              bzip3 -b 16                          47,253,491 c     8.64 d     8.37 MB/s
+dickens                  krc (KRC1, cpu)                       9,933,704 c    45.52 d   136.70 MB/s
+dickens                  kbc (KBC1)                            3,767,805 c     1.42 d     2.35 MB/s
+dickens                  kbx -l 0                              3,767,805 c     1.66 d     2.98 MB/s
+dickens                  kbx -l 1                              3,220,456 c     0.75 d     1.30 MB/s
+dickens                  kbx -l 2                              3,220,456 c     0.62 d     1.28 MB/s
+dickens                  kolmo -m balanced                     3,721,196 c   104.73 d   605.69 MB/s
+dickens                  kolmo -m hc                           2,728,251 c     1.89 d   227.12 MB/s
+dickens                  kolmo -m ratio                        2,274,350 c    13.28 d    25.41 MB/s
+dickens                  zstd -3                               3,669,252 c   105.22 d   554.11 MB/s
+dickens                  zstd -19                              2,850,281 c     1.06 d   370.93 MB/s
+dickens                  xz -9                                 2,830,604 c     0.94 d    64.15 MB/s
+dickens                  brotli -11                            2,827,777 c     0.43 d   241.34 MB/s
+dickens                  bsc -m0 -e2                           2,259,134 c    14.02 d    18.05 MB/s
+dickens                  bzip3 -b 16                           2,233,954 c     8.02 d     6.62 MB/s
+mozilla                  krc (KRC1, cpu)                      42,483,819 c    47.73 d   156.37 MB/s
+mozilla                  kbc (KBC1)                           22,429,244 c     1.38 d     2.30 MB/s
+mozilla                  kbx -l 0                             22,429,244 c     1.57 d     2.68 MB/s
+mozilla                  kbx -l 1                             19,237,000 c     1.00 d     1.76 MB/s
+mozilla                  kbx -l 2                             19,237,000 c     0.76 d     1.72 MB/s
+mozilla                  kolmo -m balanced                    18,318,543 c   142.08 d   660.38 MB/s
+mozilla                  kolmo -m hc                          15,419,842 c     2.46 d   309.92 MB/s
+mozilla                  kolmo -m ratio                       13,835,767 c     1.96 d    53.20 MB/s
+mozilla                  zstd -3                              18,504,727 c   188.26 d   723.99 MB/s
+mozilla                  zstd -19                             15,113,896 c     1.81 d   435.56 MB/s
+mozilla                  xz -9                                13,374,160 c     1.51 d    46.63 MB/s
+mozilla                  brotli -11                           13,872,265 c     0.33 d   174.58 MB/s
+mozilla                  bsc -m0 -e2                          15,977,814 c    12.82 d    13.29 MB/s
+mozilla                  bzip3 -b 16                          15,881,570 c     7.76 d     7.86 MB/s
+osdb                     krc (KRC1, cpu)                      10,144,807 c    49.46 d   144.29 MB/s
+osdb                     kbc (KBC1)                            5,049,105 c     1.02 d     1.61 MB/s
+osdb                     kbx -l 0                              5,049,105 c     1.24 d     2.17 MB/s
+osdb                     kbx -l 1                              4,025,540 c     0.70 d     1.25 MB/s
+osdb                     kbx -l 2                              4,025,540 c     0.55 d     1.18 MB/s
+osdb                     kolmo -m balanced                     3,533,740 c   147.30 d   714.30 MB/s
+osdb                     kolmo -m hc                           3,100,225 c     1.71 d   276.57 MB/s
+osdb                     kolmo -m ratio                        2,276,454 c     1.28 d    24.26 MB/s
+osdb                     zstd -3                               3,506,596 c   103.38 d   605.59 MB/s
+osdb                     zstd -19                              3,098,473 c     1.62 d   382.47 MB/s
+osdb                     xz -9                                 2,849,908 c     1.41 d    51.26 MB/s
+osdb                     brotli -11                            2,816,278 c     0.43 d   173.38 MB/s
+osdb                     bsc -m0 -e2                           2,224,780 c    13.01 d    16.87 MB/s
+osdb                     bzip3 -b 16                           2,261,872 c     6.89 d     5.51 MB/s
+nci                      krc (KRC1, cpu)                      29,422,219 c    43.67 d   133.57 MB/s
+nci                      kbc (KBC1)                            5,871,637 c     2.15 d     3.81 MB/s
+nci                      kbx -l 0                              5,871,637 c     2.14 d     3.66 MB/s
+nci                      kbx -l 1                              3,347,803 c     1.24 d     2.37 MB/s
+nci                      kbx -l 2                              3,347,803 c     1.07 d     2.38 MB/s
+nci                      kolmo -m balanced                     2,027,737 c   314.65 d   681.79 MB/s
+nci                      kolmo -m hc                           1,645,823 c    13.52 d   253.88 MB/s
+nci                      kolmo -m ratio                        1,225,386 c     6.79 d    58.57 MB/s
+nci                      zstd -3                               2,844,574 c   393.18 d  1032.38 MB/s
+nci                      zstd -19                              1,688,918 c     1.95 d   938.52 MB/s
+nci                      xz -9                                 1,738,884 c     2.63 d   217.15 MB/s
+nci                      brotli -11                            1,519,768 c     0.50 d   531.09 MB/s
+nci                      bsc -m0 -e2                           1,266,320 c    28.04 d    50.78 MB/s
+nci                      bzip3 -b 16                           1,425,956 c    18.45 d    15.67 MB/s
+x-ray                    krc (KRC1, cpu)                       6,652,988 c    47.52 d   136.25 MB/s
+x-ray                    kbc (KBC1)                            5,005,901 c     1.00 d     1.63 MB/s
+x-ray                    kbx -l 0                              5,005,901 c     1.27 d     2.05 MB/s
+x-ray                    kbx -l 1                              4,738,983 c     0.78 d     1.27 MB/s
+x-ray                    kbx -l 2                              4,738,983 c     0.54 d     1.26 MB/s
+x-ray                    kolmo -m balanced                     3,657,342 c   196.79 d   456.68 MB/s
+x-ray                    kolmo -m hc                           3,649,636 c     8.40 d   248.20 MB/s
+x-ray                    kolmo -m ratio                        3,616,667 c     2.97 d    27.96 MB/s
+x-ray                    zstd -3                               6,086,279 c    93.67 d   294.82 MB/s
+x-ray                    zstd -19                              5,155,753 c     1.67 d   192.80 MB/s
+x-ray                    xz -9                                 4,489,868 c     1.41 d    26.00 MB/s
+x-ray                    brotli -11                            4,682,753 c     0.32 d    82.78 MB/s
+x-ray                    bsc -m0 -e2                           3,756,584 c     8.79 d     9.52 MB/s
+x-ray                    bzip3 -b 16                           3,657,090 c     6.42 d     6.48 MB/s
+research rc=0
