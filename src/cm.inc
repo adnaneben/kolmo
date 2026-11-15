@@ -10,6 +10,7 @@
  * contexts, finer length classes for long matches, and a match that carries on past a one-byte difference.
  * Stream: size u32 (low 28 bits n, top 4 bits f: 0 = model 1 with 2^CM_BB buckets, else log2 buckets - 15 in f & 7,
  * model 2 when f & 8; f = 8 exactly: one more byte, model << 4 | log2 buckets - 15) | coded bytes.  Memory: 2^bits * 64 B per hashed model. */
+#include <math.h>              /* exp, floor: the squash knots (cm_knots_init) */
 #ifndef CM_NM
 #define CM_NM 16                /* models: 0 = order-1 direct, 1..9 hashed */
 #endif
@@ -52,13 +53,23 @@ static int16_t cm_sq[4096], cm_st[4096];
 static uint32_t cm_rcp[64], cm_srcp[1024];
 #define SM_LIM 255
 static pthread_once_t cm_once = PTHREAD_ONCE_INIT;
-static int cm_squash_i(int d) {                     /* 4096 / (1 + e^(-d/256)), integer interpolation (lpaq1) */
-    static const int t[33] = {1, 2, 3, 6, 10, 16, 27, 45, 73, 120, 194, 310, 488, 747, 1101, 1546, 2047, 2549, 2994, 3348,
-                              3607, 3785, 3901, 3975, 4022, 4050, 4068, 4079, 4085, 4089, 4092, 4093, 4094};
-    if (d > 2047) return 4095;
-    if (d < -2047) return 1;
-    int w = d & 127; d = (d >> 7) + 16;
-    return (t[d] * (128 - w) + t[d + 1] * w + 64) >> 7;
+/* The logistic function in 12-bit fixed point: squash(x) ~ 4096 / (1 + e^(-x/256)), x a stretched probability in
+ * [-2047, 2047]. It is sampled at the 33 knots x = 128 (k - 16), k = 0..32, and linearly interpolated between them
+ * with rounding to nearest. Knots below the midpoint are floor(4096 / (1 + e^((16 - k) / 2))); the curve is
+ * symmetric, squash(-x) = 4095 - squash(x), so the knots above it mirror those below and the midpoint is 2047.
+ * (Every knot value lies at least 0.0025 away from an integer, so floor() of the double result is exact on any
+ * conforming libm.) The values are those every PAQ-family coder uses, so frames stay compatible. */
+static int cm_knot[33];
+static void cm_knots_init(void) {
+    for (int k = 0; k < 16; k++) cm_knot[k] = (int)floor(4096.0 / (1.0 + exp((16 - k) * 0.5)));
+    cm_knot[16] = 2047;
+    for (int k = 0; k < 16; k++) cm_knot[32 - k] = 4095 - cm_knot[k];
+}
+static int cm_squash_i(int x) {
+    if (x >= 2048) return 4095;
+    if (x <= -2048) return 1;
+    int seg = (x + 2048) >> 7, frac = (x + 2048) & 127;          /* knot index below x, distance past it (of 128) */
+    return (cm_knot[seg] * (128 - frac) + cm_knot[seg + 1] * frac + 64) >> 7;   /* weighted mean of the two knots */
 }
 /* bit histories: state = (zeros, ones, last bit) with counts capped at BH_CAP; on a bit, the opposite count above 2
  * is halved. 215 states, numbered by breadth-first search from the empty history (identical everywhere). */
@@ -82,10 +93,20 @@ static void bh_init(void) {
 }
 static void cm_init_tables(void) {
     bh_init();
+    cm_knots_init();
+#ifdef KOLMO_CM_EXACT_LOGISTIC   /* research build only: the curve itself at every point; changes the bitstream */
+    for (int i = 0; i < 4096; i++) { int v = (int)floor(4096.0 / (1.0 + exp(-(i - 2048) / 256.0)) + 0.5); cm_sq[i] = (int16_t)(v < 1 ? 1 : v > 4095 ? 4095 : v); }
+#define cm_squash_i(x) cm_sq[((x) < -2048 ? -2048 : (x) > 2047 ? 2047 : (x)) + 2048]
+#else
     for (int i = 0; i < 4096; i++) { int v = cm_squash_i(i - 2048); cm_sq[i] = (int16_t)(v < 1 ? 1 : v > 4095 ? 4095 : v); }
-    int pi = 0;
-    for (int x = -2047; x <= 2047; x++) { int v = cm_squash_i(x); for (int j = pi; j <= v && j < 4096; j++) cm_st[j] = (int16_t)x; pi = v + 1; }
-    for (int j = pi; j < 4096; j++) cm_st[j] = 2047;
+#endif
+    /* stretch = the inverse of squash: for a 12-bit probability p, the smallest x in [-2047, 2047] whose squash
+     * reaches p (2047 when none does). squash is non-decreasing, so a binary search over x finds it. */
+    for (int p = 0; p < 4096; p++) {
+        int lo = -2047, hi = 2048;                       /* answer in [lo, hi]; hi = 2048 stands for "none" */
+        while (lo < hi) { int mid = lo + ((hi - lo) >> 1); if (cm_squash_i(mid) >= p) hi = mid; else lo = mid + 1; }
+        cm_st[p] = (int16_t)(lo > 2047 ? 2047 : lo);
+    }
     for (int i = 0; i < 64; i++) cm_rcp[i] = (uint32_t)(655360 / (10 * i + 16));
     for (int i = 0; i < 1024; i++) cm_srcp[i] = (uint32_t)(655360 / (10 * i + 15));
 }
@@ -619,9 +640,19 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
         }
     }
 }
+/* Binary arithmetic coder: interval coding on 32 bits without carries. The current interval is [low, high]. A bit
+ * whose probability of being 1 is p / 4096 splits it at mid = low + (high - low) * p / 4096 (rounded down): a 1
+ * keeps [low, mid], a 0 keeps [mid + 1, high]. Once low and high share their top byte, that byte can no longer
+ * change: the encoder emits it, the decoder consumes one more input byte, and both ends move up by 8 bits (high
+ * refilled with ones). The encoder ends with the top byte of low and three 0xff bytes. */
+typedef struct { uint32_t low, high; } cm_ac;
+static inline uint32_t cm_ac_mid(const cm_ac *a, int p) { return a->low + (uint32_t)(((uint64_t)(a->high - a->low) * (uint32_t)p) >> 12); }
+static inline int cm_ac_settled(const cm_ac *a) { return (a->low ^ a->high) < (1u << 24); }
+static inline void cm_ac_shift(cm_ac *a) { a->low <<= 8; a->high = (a->high << 8) | 0xffu; }
+
 /* One coding loop per model, each with the model inlined and specialized. */
 static inline __attribute__((always_inline)) int cm_enc_loop(cm_t *m, const uint8_t *in, size_t n, uint8_t *out, size_t cap, size_t *po, const int v2) {
-    uint32_t x1 = 0, x2 = 0xffffffff; size_t o = *po;
+    cm_ac ac = {0, 0xffffffffu}; size_t o = *po;
     for (size_t i = 0; i < n; i++) {
         int c = in[i];
         for (int b = 7; b >= 0; b--) {
@@ -631,28 +662,28 @@ static inline __attribute__((always_inline)) int cm_enc_loop(cm_t *m, const uint
             { static int cls; if (b == 7) { cls = m->mlen == 0 ? 0 : m->mlen < 16 ? 1 : m->mlen < 32 ? 2 : m->mlen < 400 ? 3 : 4; if (getenv_miss && m->mlen) cls = (m->mlen < 16 ? 0 : 2) + (m->buf[m->mptr] != c); else if (getenv_miss) cls = 4; }
               extern double cm_stat_bits[5]; extern long cm_stat_n[5]; extern int getenv_miss; cm_stat_bits[cls] -= log2((y ? p : 4096 - p) / 4096.0); if (b == 7) cm_stat_n[cls]++; }
 #endif
-            uint32_t xm = x1 + (uint32_t)(((uint64_t)(x2 - x1) * (uint32_t)p) >> 12);
-            if (y) x2 = xm; else x1 = xm + 1;
+            uint32_t mid = cm_ac_mid(&ac, p);
+            if (y) ac.high = mid; else ac.low = mid + 1;
             cm_update(m, y, v2);
-            while (((x1 ^ x2) & 0xff000000u) == 0) { if (o >= cap) return -1; out[o++] = (uint8_t)(x2 >> 24); x1 <<= 8; x2 = (x2 << 8) | 255; }
+            for (; cm_ac_settled(&ac); cm_ac_shift(&ac)) { if (o >= cap) return -1; out[o++] = (uint8_t)(ac.high >> 24); }
         }
     }
     if (o + 4 > cap) return -1;
-    out[o++] = (uint8_t)(x1 >> 24); out[o++] = 255; out[o++] = 255; out[o++] = 255;
+    out[o++] = (uint8_t)(ac.low >> 24); out[o++] = 0xff; out[o++] = 0xff; out[o++] = 0xff;
     *po = o; return 0;
 }
 static inline __attribute__((always_inline)) void cm_dec_loop(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, const int v2) {
     (void)out;
-    uint32_t x1 = 0, x2 = 0xffffffff, x = 0; size_t ip = 4;
-    for (int k = 0; k < 4; k++) x = (x << 8) | (ip < cn ? in[ip++] : 255);
+    cm_ac ac = {0, 0xffffffffu}; uint32_t code = 0; size_t ip = 4;      /* code: the next 32 bits of the stream */
+    for (int k = 0; k < 4; k++) code = (code << 8) | (ip < cn ? in[ip++] : 0xffu);
     for (size_t i = 0; i < n; i++)
         for (int b = 7; b >= 0; b--) {
             int p = cm_predict(m, v2);
-            uint32_t xm = x1 + (uint32_t)(((uint64_t)(x2 - x1) * (uint32_t)p) >> 12);
-            int y = x <= xm;
-            if (y) x2 = xm; else x1 = xm + 1;
+            uint32_t mid = cm_ac_mid(&ac, p);
+            int y = code <= mid;
+            if (y) ac.high = mid; else ac.low = mid + 1;
             cm_update(m, y, v2);
-            while (((x1 ^ x2) & 0xff000000u) == 0) { x1 <<= 8; x2 = (x2 << 8) | 255; x = (x << 8) | (ip < cn ? in[ip++] : 255); }
+            for (; cm_ac_settled(&ac); cm_ac_shift(&ac)) code = (code << 8) | (ip < cn ? in[ip++] : 0xffu);
         }
 }
 /* model 1 (fewer contexts, about 30% faster, what kolmo 1.0.0 wrote; always for n >= 2^28, whose size word has no room

@@ -178,7 +178,7 @@ build/cm-reference.o: tests/test_cm_compact.c src/cm.inc
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/cm-compact-test: tests/test_cm_compact.c src/cm.inc build/cm-reference.o
-	$(CC) $(CFLAGS) -DKOLMO_CM_COMPACT $< build/cm-reference.o -lpthread -o $@
+	$(CC) $(CFLAGS) -DKOLMO_CM_COMPACT $< build/cm-reference.o -lpthread -lm -o $@
 
 check-cm-compact: build/cm-compact-test
 	./build/cm-compact-test
