@@ -21,7 +21,14 @@ No default output changes; no format change.
 - `build/kolmo-fastq`: the four-line FASTQ prototype (Codex, 7 November) with a command line of its own.
 - `build/kvid`: a lossless video front end prototype for 8-bit y4m (temporal and intra prediction per strip,
   residuals coded by the Kolmo library).
+- `build/kfam`: a family-stream coder (FASTQ, CSV, or one stream) with small dedicated models per family and its
+  own binary arithmetic coder; streams code in parallel.
 None of these is used by `kolmo`, and none writes a Kolmo frame.
+
+### Licence hygiene
+- The context-mixing coder's squash table, its inverse and the arithmetic coder's renormalisation, which followed
+  lpaq1 (GPL), are rewritten from their mathematical definitions. The bitstream is unchanged: 246 frames
+  byte-identical over `-x`, `-x -l 1` and `-x -l 2`, both directions of cross-decoding checked.
 
 ## 1.2.0-rc1 (2026-11-14) — release candidate, not tagged, not published
 
