@@ -208,3 +208,6 @@ build/frontier-test: tests/frontier.c $(FRONTIER_SRC) $(FRONTIER_HDR)
 
 build/libkolmo-frontier.$(SOEXT): src/kolmo.c src/kolmo.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) $(PICC) $(PICPP)
 	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) -DKOLMO_FRONTIER $(INC) src/kolmo.c $(FRONTIER_SRC) $(PICC) $(PICPP) -o $@ $(LIBS) $(CXXLIB)
+
+# Standalone research codecs (not part of kolmo): see experimental.mk
+include experimental.mk
