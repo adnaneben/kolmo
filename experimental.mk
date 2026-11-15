@@ -74,6 +74,22 @@ build/frontier-reads-test: tests/frontier_reads.c $(FASTQ_SRC) $(FASTQ_HDR)
 	@mkdir -p build
 	$(CC) $(SANFLAGS) -I$(XD) tests/frontier_reads.c $(FASTQ_SRC) -o $@
 
+build/kfam: $(XD)/kfam.c
+	@mkdir -p build
+	$(CC) $(CFLAGS) -ffp-contract=off $(XD)/kfam.c -lpthread -o $@
+
+build/kfam-asan: $(XD)/kfam.c
+	@mkdir -p build
+	$(CC) $(SANFLAGS) -ffp-contract=off $(XD)/kfam.c -lpthread -o $@
+
+# kfam round trips (FASTQ, CSV and one-stream families) under ASan and UBSan, on inputs made from the test files
+kfam-check: build/kfam-asan
+	printf '@r1 x/1\nACGTNACGTA\n+\nIIIIIHHHGG\n@r2 x/1\nTTGCA\n+\n#####\n@r3 x/1\nACGTACGTAC\n+r3 x/1\nIIIIIIIIII\n' > build/kfam-t.fastq
+	printf 'country,year,co2,share\nA,2000,1.5,\nA,2001,1.75,0.1\nB,2000,,-0.25\nB,2001,12,3\n' > build/kfam-t.csv
+	for f in build/kfam-t.fastq build/kfam-t.csv tests/*.c; do ./build/kfam-asan -T 2 -b $$f > /dev/null || exit 1; ./build/kfam-asan -f one -b $$f > /dev/null || exit 1; done
+	@echo "KFAM TESTS PASSED"
+.PHONY: kfam-check
+
 build/kvid: $(XD)/kvid.c src/kolmo.h build/libkolmo.a build/libvendor.a
 	@mkdir -p build
 	$(CC) $(CFLAGS) -Isrc $(XD)/kvid.c build/libkolmo.a build/libvendor.a $(LIBS) $(CXXLIB) -o $@
