@@ -40,7 +40,7 @@ static int geometry(const uint8_t *h, const uint8_t *e, layout_t *L) {
     }
     if (!W || !H || W > 16384 || H > 16384) return -1;
     size_t cw, ch;
-    if (!strncmp(cs, "420", 3) && !strchr(cs, 'p')) { cw = (W + 1) / 2; ch = (H + 1) / 2; L->np = 3; }
+    if (!strcmp(cs, "420") || !strcmp(cs, "420jpeg") || !strcmp(cs, "420mpeg2") || !strcmp(cs, "420paldv")) { cw = (W + 1) / 2; ch = (H + 1) / 2; L->np = 3; }
     else if (!strcmp(cs, "422")) { cw = (W + 1) / 2; ch = H; L->np = 3; }
     else if (!strcmp(cs, "444")) { cw = W; ch = H; L->np = 3; }
     else if (!strcmp(cs, "mono")) { cw = ch = 0; L->np = 1; }
