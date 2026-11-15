@@ -1,0 +1,1201 @@
+{
+ "fastq": [
+  {
+   "label": "kolmo-fastq (prototype)",
+   "c": [
+    "/home/user/kolmo/build/kolmo-fastq",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo-fastq",
+    "-d",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m balanced",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m hc",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m ratio",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -x",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "zstd -3",
+   "c": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-3",
+    "-T1",
+    "{in}",
+    "-o",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-d",
+    "{out}",
+    "-o",
+    "{back}"
+   ]
+  },
+  {
+   "label": "zstd -19",
+   "c": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-19",
+    "-T1",
+    "{in}",
+    "-o",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-d",
+    "{out}",
+    "-o",
+    "{back}"
+   ]
+  },
+  {
+   "label": "xz -9",
+   "c": [
+    "/usr/bin/xz",
+    "-9",
+    "-T1",
+    "-c",
+    "{in}",
+    ">",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/xz",
+    "-d",
+    "-T1",
+    "-c",
+    "{out}",
+    ">",
+    "{back}"
+   ]
+  },
+  {
+   "label": "brotli -11",
+   "c": [
+    "/usr/bin/brotli",
+    "-q",
+    "11",
+    "-f",
+    "{in}",
+    "-o",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/brotli",
+    "-d",
+    "-f",
+    "{out}",
+    "-o",
+    "{back}"
+   ]
+  },
+  {
+   "label": "bsc -m0 -e2",
+   "c": [
+    "/usr/local/bin/bsc",
+    "e",
+    "{in}",
+    "{out}",
+    "-m0",
+    "-e2"
+   ],
+   "d": [
+    "/usr/local/bin/bsc",
+    "d",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "bzip3 -b 16",
+   "c": [
+    "/usr/bin/bzip3",
+    "-e",
+    "-j",
+    "1",
+    "-b",
+    "16",
+    "-c",
+    "{in}",
+    ">",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/bzip3",
+    "-d",
+    "-j",
+    "1",
+    "-c",
+    "{out}",
+    ">",
+    "{back}"
+   ]
+  },
+  {
+   "label": "krc (KRC1, cpu)",
+   "c": [
+    "/home/user/kolmo/build/krc-cpu",
+    "-b",
+    "cpu",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/krc-cpu",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbc (KBC1)",
+   "c": [
+    "/home/user/kolmo/build/kbc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbc",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 0",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "0",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 1",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "1",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 2",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "2",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ],
+ "video": [
+  {
+   "label": "kvid -m balanced",
+   "c": [
+    "/home/user/kolmo/build/kvid",
+    "-m",
+    "balanced",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kvid",
+    "-d",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kvid -m hc",
+   "c": [
+    "/home/user/kolmo/build/kvid",
+    "-m",
+    "hc",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kvid",
+    "-d",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kvid -m ratio",
+   "c": [
+    "/home/user/kolmo/build/kvid",
+    "-m",
+    "ratio",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kvid",
+    "-d",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kvid -m x",
+   "c": [
+    "/home/user/kolmo/build/kvid",
+    "-m",
+    "x",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kvid",
+    "-d",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m balanced",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m hc",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m ratio",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -x",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "zstd -3",
+   "c": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-3",
+    "-T1",
+    "{in}",
+    "-o",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-d",
+    "{out}",
+    "-o",
+    "{back}"
+   ]
+  },
+  {
+   "label": "zstd -19",
+   "c": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-19",
+    "-T1",
+    "{in}",
+    "-o",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-d",
+    "{out}",
+    "-o",
+    "{back}"
+   ]
+  },
+  {
+   "label": "xz -9",
+   "c": [
+    "/usr/bin/xz",
+    "-9",
+    "-T1",
+    "-c",
+    "{in}",
+    ">",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/xz",
+    "-d",
+    "-T1",
+    "-c",
+    "{out}",
+    ">",
+    "{back}"
+   ]
+  },
+  {
+   "label": "brotli -11",
+   "c": [
+    "/usr/bin/brotli",
+    "-q",
+    "11",
+    "-f",
+    "{in}",
+    "-o",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/brotli",
+    "-d",
+    "-f",
+    "{out}",
+    "-o",
+    "{back}"
+   ]
+  },
+  {
+   "label": "bsc -m0 -e2",
+   "c": [
+    "/usr/local/bin/bsc",
+    "e",
+    "{in}",
+    "{out}",
+    "-m0",
+    "-e2"
+   ],
+   "d": [
+    "/usr/local/bin/bsc",
+    "d",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "bzip3 -b 16",
+   "c": [
+    "/usr/bin/bzip3",
+    "-e",
+    "-j",
+    "1",
+    "-b",
+    "16",
+    "-c",
+    "{in}",
+    ">",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/bzip3",
+    "-d",
+    "-j",
+    "1",
+    "-c",
+    "{out}",
+    ">",
+    "{back}"
+   ]
+  },
+  {
+   "label": "krc (KRC1, cpu)",
+   "c": [
+    "/home/user/kolmo/build/krc-cpu",
+    "-b",
+    "cpu",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/krc-cpu",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbc (KBC1)",
+   "c": [
+    "/home/user/kolmo/build/kbc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbc",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 0",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "0",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 1",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "1",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 2",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "2",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ],
+ "research": [
+  {
+   "label": "krc (KRC1, cpu)",
+   "c": [
+    "/home/user/kolmo/build/krc-cpu",
+    "-b",
+    "cpu",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/krc-cpu",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbc (KBC1)",
+   "c": [
+    "/home/user/kolmo/build/kbc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbc",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 0",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "0",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 1",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "1",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 2",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "2",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m balanced",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m hc",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m ratio",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "zstd -3",
+   "c": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-3",
+    "-T1",
+    "{in}",
+    "-o",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-d",
+    "{out}",
+    "-o",
+    "{back}"
+   ]
+  },
+  {
+   "label": "zstd -19",
+   "c": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-19",
+    "-T1",
+    "{in}",
+    "-o",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/zstd",
+    "-q",
+    "-f",
+    "-d",
+    "{out}",
+    "-o",
+    "{back}"
+   ]
+  },
+  {
+   "label": "xz -9",
+   "c": [
+    "/usr/bin/xz",
+    "-9",
+    "-T1",
+    "-c",
+    "{in}",
+    ">",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/xz",
+    "-d",
+    "-T1",
+    "-c",
+    "{out}",
+    ">",
+    "{back}"
+   ]
+  },
+  {
+   "label": "brotli -11",
+   "c": [
+    "/usr/bin/brotli",
+    "-q",
+    "11",
+    "-f",
+    "{in}",
+    "-o",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/brotli",
+    "-d",
+    "-f",
+    "{out}",
+    "-o",
+    "{back}"
+   ]
+  },
+  {
+   "label": "bsc -m0 -e2",
+   "c": [
+    "/usr/local/bin/bsc",
+    "e",
+    "{in}",
+    "{out}",
+    "-m0",
+    "-e2"
+   ],
+   "d": [
+    "/usr/local/bin/bsc",
+    "d",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "bzip3 -b 16",
+   "c": [
+    "/usr/bin/bzip3",
+    "-e",
+    "-j",
+    "1",
+    "-b",
+    "16",
+    "-c",
+    "{in}",
+    ">",
+    "{out}"
+   ],
+   "d": [
+    "/usr/bin/bzip3",
+    "-d",
+    "-j",
+    "1",
+    "-c",
+    "{out}",
+    ">",
+    "{back}"
+   ]
+  }
+ ],
+ "scaling": [
+  {
+   "label": "krc cpu -T 1",
+   "c": [
+    "/home/user/kolmo/build/krc-auto",
+    "-b",
+    "cpu",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/krc-auto",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "krc cpu -T 4",
+   "c": [
+    "/home/user/kolmo/build/krc-auto",
+    "-b",
+    "cpu",
+    "-T",
+    "4",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/krc-auto",
+    "-d",
+    "-T",
+    "4",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "krc cpu -T 10",
+   "c": [
+    "/home/user/kolmo/build/krc-auto",
+    "-b",
+    "cpu",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/krc-auto",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "krc metal -T 10",
+   "c": [
+    "/home/user/kolmo/build/krc-auto",
+    "-b",
+    "metal",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/krc-auto",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "krc hybrid -T 10",
+   "c": [
+    "/home/user/kolmo/build/krc-auto",
+    "-b",
+    "hybrid",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/krc-auto",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 1 -T 1",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "1",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 1 -T 4",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "1",
+    "-T",
+    "4",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "4",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kbx -l 1 -T 10",
+   "c": [
+    "/home/user/kolmo/build/kbx",
+    "-l",
+    "1",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kbx",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m balanced -T 1",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m balanced -T 4",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "balanced",
+    "-T",
+    "4",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "4",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "kolmo -m balanced -T 10",
+   "c": [
+    "/home/user/kolmo/build/kolmo",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "/home/user/kolmo/build/kolmo",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ]
+}
