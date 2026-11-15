@@ -668,9 +668,15 @@ done:
  * output width are chosen here for the block. Returns the payload length, or 0 when the graph does not apply. */
 static uint64_t kg_gcd(uint64_t a, uint64_t b) { while (b) { uint64_t t = a % b; a = b; b = t; } return a; }
 static int kg_bw(uint64_t z) { return z < 256 ? 1 : z < 65536 ? 2 : z < 4294967296ull ? 4 : 8; }
+#ifndef KOLMO_FORCE_GENERIC_INT_FWD
+#include "kg_int_fwd.inc"
+#endif
 /* choose signedness and order on a sample (16 runs of 1024 consecutive values) by the summed bit length of the
  * residuals, the sample's gcd taken into account; returns the estimated bits per value */
 static double kg_num_choose_n(const uint8_t *a, size_t cnt, int w, int *bo, int *bs, size_t nruns) {
+#ifndef KOLMO_FORCE_GENERIC_INT_FWD
+    if (w == 2 || w == 4 || w == 8) return kgf_num_choose_n(a, cnt, w, bo, bs, nruns);
+#endif
     size_t runs = cnt > 16384 ? nruns : 1, rl = cnt > 16384 ? 1024 : cnt, tot = 0; double bcost = 1e300;
     for (int sg = (w == 8); sg <= 1; sg++) for (int ord = 0; ord <= 2; ord++) {
         uint64_t g = 0; int64_t mn = INT64_MAX; double cost = 0; tot = 0;
@@ -707,6 +713,9 @@ static size_t kg_encode_num(codec_ctx *x, int codec, int level, const uint8_t *s
     int bo = 0, bs = 1; kg_num_choose(a, cnt, w, &bo, &bs);
     /* the chosen predictor over the whole block: bias (order 0), exact gcd, largest residual */
     uint64_t bg = 0, bbias = 0, bmax = 0;
+#ifndef KOLMO_FORCE_GENERIC_INT_FWD
+    kgf_scan(a, cnt, w, bs, bo, &bbias, &bg, &bmax);
+#else
     {   uint64_t v1 = 0, v2 = 0; int64_t mn = INT64_MAX;
         if (bo == 0) { for (size_t q = 0; q < cnt; q++) { int64_t v = (int64_t)kg_ld(a + q * w, w, bs); if (v < mn) mn = v; } bbias = (uint64_t)mn; }
         for (size_t q = 0; q < cnt; q++) {
@@ -728,6 +737,7 @@ static size_t kg_encode_num(codec_ctx *x, int codec, int level, const uint8_t *s
             v2 = v1; v1 = v;
         }
     }
+#endif
     int ow = kg_bw(bmax), pln = ow > 1; size_t m = cnt - (size_t)bo;
     kgb g = {0}; kbuf par = {0};
     if (kgb_new(&g) != 0) goto done;
@@ -738,7 +748,11 @@ static size_t kg_encode_num(codec_ctx *x, int codec, int level, const uint8_t *s
     int o = kgb_node(&g, KG_INT, (int[]){0}, 1, 2, &par); if (o != 1) goto done;
     g.nph_q = 1; g.nph_np = pln ? ow : 1;                                   /* stream 1: ow byte planes of residuals */
     if (kb_res(&g.s[1], m * (size_t)ow + 1) || kb_res(&g.s[2], n - cnt * (size_t)w + 1)) goto done;
-    {   uint8_t *r = g.s[1].p; uint64_t v1 = 0, v2 = 0;
+    {   uint8_t *r = g.s[1].p;
+#ifndef KOLMO_FORCE_GENERIC_INT_FWD
+        kgf_write(a, cnt, w, bs, bo, bbias, bg, ow, r);
+#else
+        uint64_t v1 = 0, v2 = 0;
         for (size_t q = 0; q < cnt; q++) {
             uint64_t v = kg_ld(a + q * w, w, bs), z;
             if ((int)q < bo) { v2 = v1; v1 = v; continue; }
@@ -748,6 +762,7 @@ static size_t kg_encode_num(codec_ctx *x, int codec, int level, const uint8_t *s
             else r[i] = (uint8_t)z;
             v2 = v1; v1 = v;
         }
+#endif
         g.s[1].n = m * (size_t)ow;
         kb_put(&g.s[2], src, h); kb_put(&g.s[2], a + cnt * (size_t)w, n - h - cnt * (size_t)w); }
     out = kg_serialize(x, codec, level, &g, n, dst, cap);

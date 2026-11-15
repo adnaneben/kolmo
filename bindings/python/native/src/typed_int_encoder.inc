@@ -165,6 +165,37 @@ done:
     free(o.p); free(hb); return out;
 }
 
+/* Repetition-aware leaves (research P2-E30 on PR #7). Loop recordings repeat long stretches of samples, which
+ * per-plane Huffman cannot see: there the residual is coded by the usual graph serializer with zstd-3 leaves.
+ * The score hashes 16-byte windows every 64 bytes of the first half and probes 32 windows of the second half at
+ * all 64 alignments; it returns the share of probes found earlier. Research threshold: 0.03. Only the leaf
+ * codec changes; every decoder that reads a typed frame reads these. */
+static double ktf_rep_score(const uint8_t *b, size_t n) {
+    enum { K = 16, PROBES = 32, HB = 16 };
+    if (n < 8192) return 0.0;
+    size_t half = n / 2, slots = (size_t)1 << HB, stride = 64; while (half / stride > slots / 2) stride *= 2;   /* load <= 50% */
+    uint64_t *tab = calloc(slots, sizeof *tab); if (!tab) return 0.0;
+    for (size_t i = 0; i + K <= half; i += stride) { uint64_t x = XXH64(b + i, K, 0) | 1; size_t s = (size_t)(x >> (64 - HB));
+        while (tab[s] && tab[s] != x) s = (s + 1) & (slots - 1); tab[s] = x; }
+    int hit = 0;
+    for (int j = 0; j < PROBES; j++) {
+        size_t q = half + ((size_t)j * (n - half - stride - K)) / PROBES;
+        for (size_t o = 0; o < stride; o++) { uint64_t x = XXH64(b + q + o, K, 0) | 1; size_t s = (size_t)(x >> (64 - HB));
+            while (tab[s] && tab[s] != x) s = (s + 1) & (slots - 1);
+            if (tab[s] == x) { hit++; break; } }
+    }
+    free(tab); return (double)hit / PROBES;
+}
+static size_t ktf_payload_rep(ktf_prog *P, size_t n, uint8_t *dst, size_t cap) {
+    kgb g = {0}; codec_ctx cx = {0}; size_t out = 0;
+    if (kgb_new(&g) != 0 || kgb_node(&g, KG_INT, (int[]){0}, 1, 2, &P->par) != 1) goto done;
+    g.nph_q = 1; g.nph_np = P->pln ? P->ow : 1;
+    if (kb_put(&g.s[1], P->res.p, P->res.n) || kb_put(&g.s[2], P->rest.p, P->rest.n)) goto done;
+    out = kg_serialize(&cx, C_ZSTD, 3, &g, n, dst, cap);
+done:
+    kgb_free(&g); codec_ctx_free(&cx); return out;
+}
+
 static const uint8_t *ktf_unique(const uint8_t *s,size_t n,const char *key) {
     size_t k=strlen(key); const uint8_t *p=memmem(s,n,key,k);
     if(!p || memmem(p+k,n-(size_t)(p+k-s),key,k)) return NULL;
@@ -240,10 +271,11 @@ static int64_t ktf_encode(const uint8_t *s,size_t n,uint8_t *dst,size_t cap,int 
     int w;size_t h;*plain=0;
     if(!ktf_type(s,n,&w,&h) || (n-h)/(size_t)w<16)return 0;
     ktf_prog P;ktf_guard_ctx gc={s,n,0};
-    int fr=ktf_forward_g(s,n,w,h,&P,ktf_guard,&gc);
+    int rep = !memcmp(s,"RIFF",4) && ktf_rep_score(s,n)>=0.03;      /* 16-bit WAV with long repeats (P2-E30) */
+    int fr=ktf_forward_g(s,n,w,h,&P,rep?NULL:ktf_guard,&gc);
     if(fr){ktf_free(&P);if(fr<0||gc.oom)return KOLMO_ERR_ALLOC;*plain=1;return 0;}
     if(cap<HDR+IDX+4){ktf_free(&P);return KOLMO_ERR_DSTSIZE;}
-    size_t pn=ktf_payload_huf(&P,dst+HDR+IDX+4,cap-HDR-IDX-4);ktf_free(&P);
+    size_t pn=rep?ktf_payload_rep(&P,n,dst+HDR+IDX+4,cap-HDR-IDX-4):ktf_payload_huf(&P,dst+HDR+IDX+4,cap-HDR-IDX-4);ktf_free(&P);
     if(!pn){*plain=1;return 0;}
     return (int64_t)ktf_wrap(s,n,w,h,dst+HDR+IDX+4,pn,dst);
 }
