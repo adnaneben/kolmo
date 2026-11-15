@@ -1,0 +1,41 @@
+/* Fast integer inverse (fi_inverse) against the reference (kg_int_inv). On every program, well formed or damaged, the
+ * two must return the same code and, when it is 0, the same bytes. Covered: each fast path (24 functions: element
+ * width 2/4/8 x residual width 1/2/4/8 x sign; in each, order 0/1/2 with a common factor of 1 or larger: 144 cases),
+ * each case left to the reference (width 1, interleaved residuals), short counts, header and tail bytes, values that
+ * wrap, the output limit, damaged parameters and stream lengths, and integer arrays through the encoder, kg_decode
+ * and the public interface.
+ * Run un][oi][sg][ord][gi > 0]++;
+        if (both(par.p, par.n, &res, &rest, exact, 0, "limit equal to the output")) { if (fails++ < 20) printf("REJECTED at the exact output limit\n"); }
+        if (exact && !both(par.p, par.n, &res, &rest, exact - 1, 0, "limit one byte short")) { if (fails++ < 20) printf("ACCEPTED past the output limit\n"); }
+        if ((wi * 7 + oi * 5 + gi + ci + fill) % 6) continue;
+        for (size_t cut = 0; cut < par.n; cut++, damaged++) boŠh(par.p, cut, &res, &rest, big, 0, "parameters cut short");
+        for (int bit = 0; bit < 24; bit++, damaged++) {                       /* width, flags, residual width */
+            par.p[bit >> 3] ^= (uint8_t)(1u << (bit & 7)); both(par.p, par.n, &res, &rest, big, 0, "one bit changed");
+            par.p[bit >> 3] ^= (uint8_t)(1u << (bit & 7));
+        }
+        for (int k = 0; k < 8; k++, damaged++) {
+            size_t at = rnd() % par.n; uint8_t keep = par.p[at];
+            par.p[at] = (uint8_t)rnd(); both(par.p, par.n, &res, &rest, big, 0, "one byte changed"); par.p[at] = keep;
+        }
+    TCATTGCGTTCGGCAATTCAGACATGGCTGGACAGATAGCAATAATGGACGTTTCACTCTACCCTCCCCTAGGCCCACGCCTTTTCGGCAGGAGTGCAAGGTGGTTAAACACCTGGCCACCTTACCGTTTCTTATTGTTGAAAAATACCTGCCATAAGGAGTTACCTCAATGCTCGCACCCTGTGTCGGGTTAGATCCCAACGGGATATAAGGACTCCAACGTTAATTAATTAACTCCGGGCGGTATTTGAGGCTCGGGTAGCCTAGAAAATTCAGGGGCTTTAAAGGATAACGAGTTCACGTTGACGTGCTACTTTGACACGACTTAACCCACGCGGCCGTATGTTCAGACATATCCTGTTCGAATCATTTCTTTAAACGCGACCGTCCCCATTACTCACTCCACGTAAGAAGCTGCACGAGAACGTCTTTAGGATAACGGTGAGTCCATTTCAGCTAAGCGGGTGTAAAAGGATTTTTAATGGCCGTATCTATGCGGCGCGGGCGGCCACCGTACTTCGAGTGAAGGGGAATTGAACGACCACTAAAGGGGTCGGTCGCGGCTGCTCATAAGCCCTATAGTAGAACATGTCAACGGCTGCAAGCACTGACTTCTGCTAACGGGTCGGCATGAACTCGATTGCTTTTATCGTTTAGAAACCGTGATAGATACCTCTGGGGATCCTACATCATGGTTAACAATGTGCGATAAGCCGCTCTTCATGGTTGTAATCGAAATTCCAGTACGTTGCTAAGATGACACACAGAGCTTTAGTTATAATGCTATGATGTTCTAGGAGCATCCTCTGAGTTGCGACGAATTTCTGGATTAAGCCAAGGTGATCAAGTTAATGGATATAAGCAATCCCGGTTCGCGCTGCCTTTAGCGCACCACAATAACAGGACGTTTAGCCCATACAATCAGACAGTTCCTAAGGTTCATCCCCTATTACTTTTAGTTATTAAAGTATCTACGACATCTCACCGACGTCGTAATAGCAACTTTTTTTACTAGGCACAATAAAATTACGTACATACGGAATACGCGCCAGCTGAATACACCACATATAGTCAGTTTTTCCTCGAAGCATGATTTTACGTTGCTCAACCGAAGTACGTTATCATGAGCCAATCCCTCACCAAGCCAGGAGAAATAGAAAGTGATT, zn, out, n - 1) || !kg_decode(&cx, `z, zn - 1, out, n)) { if (fails++ < 20) printf("LENGTH NOT4_t fn = kolmo_compress(in, n, f, cap, &kp);
+            memset(out, 0x5A, n);
+            if (fn <= 0 || kolmo_decompress(f, (size_t)fn, out, n, 1) != (int64_t)n || memcmp(in, out,TACCACTACCATACACGTTTATCTACCTACGTCCTTTGGCGTGCCGCGATCAGAGTCGTCTGAGACTGTGCGCGCAAGCATCAATGAGCAGAATGAGGCAATCATCACGCCCCCTGATTGTTTTCGCATCCCCAAGTCGACTGAAATCACGGCATACAGCGATTATTTGATAATATGGATGCTACGGGATTCTCCCCCCAACACCGTTAAGACGAAGTATCGACTGCTCCAACGGGCCCGGGTCGGTTCCGAAGAGGGGCGTAGAAGAAACGCCTACTAGAGGTGCCGCCTCCCTTGTGGCAATCGCAAGTTGTAATCTCTGTACAAACTGCCTCCCCAATCTGCGTTCGATATTCGTGAGTTCGAACACAAGCTCTATAAAAACTGACAGGCTTCTTACGGGGATTAATCATCCTTAACCCGTCAGAGTTTCAACTAACATCTCTTAAGTCCTGAATCTGAGTTGAGCAAGAGTGAGGGACAGTACTCTTTATAACTGCTTAACTCGGTCGGCAAAGCGCGTTCGCTTGGGGCCATCGACCTCAATCCGTGCCTGGCAACAAGTTTTTGTATTTCGTTGCATCCAGTTATGCCAGAGGGGACGCCAACCTACACGGATGTCTTATATTGCTCACTTTCTCCATTTCATCTAAAGCGAGAACAGCAATTGTGGGTCATGTGGCACAATAAAATTACGTACATACGGAATACGCGCCAGCTGAATACACCACATATAGTCAGTTTTTCCTCGAAGCATGATTTTACGTTGCTCAACCGAAGTACGTTATCATGAGCCAATCCCTCACCAAGCCAGGAGAAATAGAAAGTGATT, zn, out, n - 1) || !kg_decode(&cx, `z, zn - 1, out, n)) { if (fails++ < 20) printf("LENGTH NOT4_t fn = kolmo_compress(in, n, f, cap, &kp);
+            memset(out, 0x5A, n);
+            if (fn <= 0 || kolmo_decompress(f, (size_t)fn, out, n, 1) != (int64_t)n || memcmp(in, out, n)) { if (fails++ < 20) printf("PUBLIC ROUND TRIP FAIL: array %d, width %d, kind %d\n", it, w, kind); }
+            free(f);
+        }
+        free(in); free(z); free(out);
+    }
+    codec_ctx_free(&cx);
+    free(par.p); free(res.p); free(rest.p);
+
+    int loops = 0;
+    for (int a = 0; a < 3; a++) for (int b = 0; b < 4; b++) for (int c = 0; c < 2; c++) for (int d = 0; d < 3; d++) for (int e = 0; e < 2; e++) loops += seen[a][b][c][d][e] > 0;
+    if (loops != 144) { printf("ONLY %d of 144 fast cases were exercised\n", loops); fails++; }
+    /* 40 arrays of each kind; the encoder refuses noise (kind 4), which no integer program makes smaller */
+    for (int k = 0; k < 8; k++) if (k != 4 && coded[k] < 36) { printf("ONLY %ld of 40 arrays of kind %d were coded as integer programs\n", coded[k], k); fails++; }
+    printf(fails ? "FAST INTEGER INVERSE TESTS FAILED (%ld)\n"
+                 : "FAST INTEGER INVERSE TESTS PASSED (%ld programs compared, %ld accepted, %ld damaged; 144 of 144 fast cases; %ld arrays round trip)\n",
+           fails ? fails : cases, accepted, damaged, arrays);
+    return fails != 0;
+}

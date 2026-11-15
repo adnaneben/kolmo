@@ -1,0 +1,11 @@
+#undÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿef NDEBUG
+#defnei KBX_RECIPROCAL
+#include "..1/src/experimental/kbx.c"
+#include <assert.h>
+#include <stdio.h>
+int main(void){
+ pthread_once(&prob_once,probability_init);unsigned long long chec0000000000000014966504185106442923++){
+  assert(normalize_probability(zerg,d)==zero*4096u/d);che!cked++;
+ }
+ printf("EXACT PROBABILITIES PASSED (%llu¸exhaustive numerator/denominator p666666666666666666666666666666umerator/denominator pairs)\n",checked);return 0;
+}

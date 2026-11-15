@@ -1,0 +1,207 @@
+/* round-trip, range-read and corruption tests for kolmo */
+#include "kolmo.h"
+int64_t tbl_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, uint8_t *dst);
+int tbl_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n);
+typedef struct { uint16_t y, a, b; uint8_t form; double k; } tformula;
+typedef struct { int n, gc/* Context mixing with the image model (block codec 17): round trips on generated images, and decoding of damaged
+ * streams (must fail or return, never read or write out of bounds; run under AddressSanitizer by `make check-cmimg`). */
+#include "../src/kolmo.c"
+#include <stdio.h>
+static uint64_t rs = 0x9E3779B97F4A7C15ull;
+static uint32_t rnd(void) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return (uint32_t)(rs >> 11); }
+int main(void) {
+    int fails = 0, coded = 0;
+    for (int it = 0; it < 24; it++) {
+        uint32_t ch = 1 + (uint32_t)it % 4, wpx = 8 + rnd() % 200, hpx = 8 + rnd() % 120, head = it % 3 ? rnd() % 300 : 0, tail = rnd() % 9;
+        uint32_t iw = wpx * ch; size_t n = head + (size_t)iw * hpx + tail; uint8_t *in = malloc(n), *z = malloc(n + n / 8 + 4096), *out = malloc(n);
+        for (size_t i = 0; i < n; i++) in[i] = (uint8_t)rnd();
+        for (uint32_t y = 0; y < hpx; y++) for (uint32_t x = 0; x < wpx; x++) for (uint32_t c = 0; c < ch; c++)
+            in[head + (size_t)y * iw + x * ch + c] = (uint8_t)(x * 2 + y * (c + 1) + (rnd() % 7) + (it & 1 ? 40 * ((x / 16 + y / 16) & 1) : 0));
+        size_t zn = cm_compress_img(in, n, iw, ch, head, z, n + n / 8 + 4096);
+        if (!zn) { printf("NOT CODED it=%d\n", it); fails++; free(in); free(z); free(out); continue; }
+        coded++;
+        memset(out, 0x5A, n);
+        if (cm_decompress_img(z, zn, out, n) || memcmp(in, out, n)) { printf("ROUND TRIP FAIL it=%d n=%zu\n", it, n); fails++; }
+        if (!cm_decompress_img(z, zn, out, n + 1)) { printf("LENGTH NOT CHECKED it=%d\n", it); fails++; }
+        for (int m = 0; m < 40; m++) {                       /* damage: the parameters (first 13 bytes) or the coded bytes */
+            uint8_t *d = malloc(zn); memcpy(d, z, zn);
+            size_t at = m < 24 ? rnd() % 13 : rnd() % zn; d[at] = m % 3 ? (uint8_t)rnd() : (uint8_t)(d[at] ^ (1u << (rnd() % 8)));
+            size_t dn = m % 9 == 0 ? rnd() % (zn + 1) : zn;
+            uint8_t *o2 = malloc(n + 1); cm_decompress_img(d, dn, o2, n); free(o2); free(d);
+        }
+        free(in); free(z); free(out);
+    }
+    /* model 3 (extended header): text with repeats and one-byte edits; round trip, then damaged copies */
+    for (int it = 0; it < 6; it++) {
+        size_t n = 12000 + rnd() % 20000; uint8_t *in = malloc(n), *z = malloc(n + n / 8 + 4096), *out = malloc(n);
+        static const char *w[] = {"alpha ", "beta ", "gamma, ", "delta.\n", "{\"key\":\"value\"}", "the quick brown fox ", "0123456789 "};
+        size_t i = 0; while (i < n) {
+            if (i > 4000 && rnd() % 4 == 0) { size_t from = rnd() % (i - 2000), len = 200 + rnd() % 1500; for (size_t k = 0; k < len && i < n; k++) in[i++] = in[from + k]; if (i < n) in[i - 1 - rnd() % 100] ^= 1; }
+            else { const char *q = w[rnd() % 7]; for (; *q && i < n; q++) in[i++] = (uint8_t)*q; }
+        }
+        size_t zn = cm_compress_m(in, n, z, n + n / 8 + 4096, 3);
+        if (!zn || z[3] >> 4 != 8 || cm_decompress(z, zn, out, n) || memcmp(in, out, n)) { printf("MODEL 3 ROUND TRIP FAIL it=%d\n", it); fails++; }
+        for (int m = 0; zn && m < 12; m++) {
+            uint8_t *d = malloc(zn); memcpy(d, z, zn);
+            size_t at = m < 12 ? rnd() % 5 : rnd() % zn; d[at] = (uint8_t)rnd();
+            uint8_t *o2 = malloc(n + 1); cm_decompress(d, m % 9 == 0 ? rnd() % (zn + 1) : zn, o2, n); free(o2); free(d);
+        }
+        free(in); free(z); free(out);
+    }
+    /* through the container at ultra: a .npy RGB image must come out as an image-model block and round trip */
+    {   uint32_t wpx = 320, hpx = 240, ch = 3, head = 128; size_t n = head + (size_t)wpx * hpx * ch; uint8_t *in = calloc(n, 1), *z = malloc(n + (1u << 20)), *b = malloc(n);
+        memset(in, ' ', head); memcpy(in, "\x93NUMPY\x01ol; tformula f[256]; } fset_t;
+int64_t tbl2_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, const fset_t *fs, uint8_t *dst);
+int tbl2_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n);
+void fset_discover_pub(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs);
+typedef struct { int type; int scale; const long long *num; const unsigned char *valid; const unsigned char *txt; unsigned *off, *len; } czcol;
+typedef struct { int k; long long nr; czcol *c; long long *numbuf; unsigned *offbuf; unsigned char *validbuf; } czcols;
+int tbl2_columns_pub(const uint8_t *in, int64_t tn, czcols *out);
+void tbl2_columns_free_pub(czcols *x);
+int parse_dec_pub(const uint8_t *p, uint32_t len, int64_t *m, int *sc);
+\x00\x76\x00{'descr': '|u1', 'fortran_order': False, 'shape': (240, 320, 3), }", 76); in[head - 1] = '\n';
+        for (uint32_t y = 0; y < hpx; y++) for (uint32_t x = 0; x < wpx; x++) for (uint32_t c = 0; c < ch; c++)
+            in[head + ((size_t)y * wpx + x) * ch + c] = (uint8_t)(128 + 60 * sin(x * 0.05 + c) + 50 * cos(y * 0.07) + (rnd() % 9));
+        kolmo_params P = {KOLMO_ULTRA, 0, 1, 0, 1};
+        int64_t zn = kolmo_compress(in, n, z, n + (1u << 20), &P);
+        if (zn <= 0 || kolmo_decompress(z, (sizeconst int64_t *kolmo_p10_pub(void);
+int64_t log_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
+int log_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
+int64_t log_encode_json_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
+int64_t sci_encode_pub(const uint8_t *in, size_t n, int image, uint8_t *dst, size_t cap);
+int sci_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
+int64_t word_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
+int word_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
+size_t np_encode_pub(const uint8_t *s, size_t n, int np, uint8_t *out, size_t cap);
+int np_decode_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+size_t np_bound_pub(size_t n);
+#define NP_GOLDEN_LEN 17372
+#define NP_GOLDEN_HASH 0xe9dace4722cab3f7ull   /* FNV-1a 64 of the codec-15 leaf for the fixed planes in main() */
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+static uint64_t rs = 88172645463325252ull;
+static uint64_t rnd(void) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return rs; }
+static int fails = 0;
+static int64_t check_p(const char *name, const uint8_t *s, size_t n, kolmo_params p, uint8_t **frame);
+static int64_t check_lvl(const char *name, const uint8_t *s, size_t n, kolmo_mode m, int level, uint32_t B, int T);
+static void check(const char *name, const uint8_t *s, size_t n, kolmo_mode m, uint32_t B, int T) {
+    kolmo_params p = {m, 0, T, B, 1}; check_p(name, s, n, p, NULL);
+}
+/* as check, at an explicit level; returns the compressed size (or a negative error) */
+static int64_t check_lvl(const char *name, const uint8_t *s, size_t n, kolmo_mode m, int level, uint32_t B, int T) {
+    kolmo_params p = {m, level, T, B, 1}; return check_p(name, s, n, p, NULL);
+}
+/* as check, with explicit parameters; returns the compress_t)zn, b, n, 1) != (int64_t)n || memcmed size (or a negative error); *frame keeps the output */
+static int64_t check_p(const char *name, const uint8_t *s, size_t n, kolmo_params p, uint8_t **frame) {
+    int T = p.threads; kolmo_mode m = p.mode;
+    size_t cap = kolmo_bound(n, &p); uint8_t *d = malloc(cap), *b = malloc(n + 1);
+    int64_t c = kolmo_compress(s, n, d, cap, &p);
+    if (c < 0) { printf("FAIL compress %s: %s\n", name, kolmo_strerror(c)); fails++; free(d); free(b); return c; }
+    int64_t r = kolmo_decompress(d, c, b, n, T);
+    if (r != (int64_t)n || memcmp(b, s, n)) { printf("FAIL roundtrip %s mode %d T %d: %lld\n", name, m, T, (long long)r); fails++; }
+    for (int k = 0; k < 20 && n; k++) {                      /* range reads */
+        size_t off = rnd() % n, len = rnd() % (n - off + 1);
+        int64_t q = kolmo_read_range(d, c, off, len, b, T);
+        if (q != (int64_t)len || memcmp(b, s + off, len)) { printf("FAIL range %s off %zu len %zu\n", name, off, len); fails++; break; }
+    }
+    int silent = 0;
+    for (int k = 0; k < 300 && c > 0; k++) {                  /* corruption must never return wrong bytes silently */
+        uint8_t *e = malloc(c); memcpy(e, d, c); size_t at = rnd() % c; e[at] ^= 1 << (rnd() % 8);
+        size_t cl = (rnd() % 5 == 0) ? rnd() % c : (size_t)c;
+        int64_t q = kolmo_decompress(e, cl, b, n, T);
+        if (q == (int64_t)n && memcmp(b, s, n)) silent++;
+        free(e);
+    }
+    if (silent) { printf("FAIL %s: %d silent corruptions\n", name, silent); fails++; }
+    if (frame) *frame = d; else free(d);
+    free(b);
+    return c;
+}
+int main(void) {
+    size_t N = 3 << 20;
+    uint8_t *csv = malloc(N), *bin = malloc(N), *rndb = malloc(N), *txt = malloc(N);
+    size_t p = 0; long t = 1700000000;                       /* CSV-like rows */
+    while (p + 100 < N) p += sprintf((char *)csv + p, "%ld,S-%d,%.2f,%.1f,%s\n", t += rnd() % 7, (int)(rnd() % 16), (rnd() % 4000) / 100.0, (rnd() % 9999) / 10.0, rnd() % 50 ? "OK" : "WARN");
+    size_t ncsv = p;
+    float v[4] = {100, 50, 20, 7};
+    for (size_t i = 0; i + 16 <= N; i += 16) for (int c = 0; c < 4; c++) { v[c] += ((int)(rnd() % 201) - 100) * 0.0001f; memcpy(bin + i + 4 * c, &v[c], 4); }
+    for (size_t i = 0; i < N; i++) rndb[i] = (uint8_t)rnd();
+    const char *w[] = {"the ", "data ", "compress ", "of ", "NEOM ", "architecture ", "and ", "\n"};
+    for (size_t i = 0; i < N;) { const char *x = w[rnd() % 8]; size_t l = strlen(x); if (i + l > N) break; memcpy(txt + i, x, l); i += l; }
+    struct { const char *n; uint8_t *s; size_t len; } in[] = {{"csv", csv, ncsv}, {"float32", bin, N}, {"random", rndb, N}, {"text", txt, N - 8},
+        {"empty", csv, 0}, {"tiny", csv, 7}, {"one-block-edge", csv, 1 << 16}};
+    for (size_t i = 0; i < sizeof in / sizeof *in; i++)
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check(in[i].n, in[i].s, in[i].len, (kolmo_mode)m, 1 << 18, T);
+    check("csv-default-block", csv, ncsv, KOLMO_FAST, 0, 2);
+    /* quoted CSV and short rows exercise the slow and exception paths */
+    {
+        size_t q = 0; uint8_t *qc = malloc(N);
+        while (q + 200 < N) q += sprintf((char *)qc + q, (rnd() % 9) ? "%d,\"name, %d\",%.3f,x\n" : "%d,short\n", (int)(rnd() % 1000), (int)(rnd() % 50), (rnd() % 100000) / 1000.0);
+        for (int m = 0; m < 5; m++) check("quoted-csv", qc, q, (kolmo_mode)m, 1 << 18, 2);
+        free(qc);
+    }
+    /* tables with derived columns (ratio, change, % change inside entity groups) and blanks: formula path */
+    size_t fq = 0; uint8_t *ft = malloc(N);
+    {
+        fq += sprintf((char *)ft, "country,year,pop,gdp,gdp_pc,gdp_chg,gdp_pct,note\n");
+        const char *cn[] = {"Aland", "Borduria", "Carpathia", "Doria", "Elbonia", "Freedonia"};
+        for (int c = 0; fq + 4096 < N; c = (c + 1) % 6) {
+            double pop = 1e5 + rnd() % 900000, gdp = 1e3 + rnd() % 90000, prev = -1;
+            for (int y = 1950; y < 2024 && fq + 300 < N; y++) {
+                pop *= 1 + (rnd() % 40) / 1000.0; gdp = (double)(long)(gdp * (1 + ((int)(rnd() % 80) - 30) / 1000.0) * 100) / 100;
+                int blank = rnd() % 7 == 0;
+                char g[32] = "", pc[32] = "", ch[32] = "", pt[32] = "";
+                if (!blank) { sprintf(g, "%.2f", gdp); sprintf(pc, "%.4f", gdp / pop * 1000); }
+                if (!blank && prev > 0) { sprintf(ch, "%.2f", gdp - prev); sprintf(pt, "%.3f", (gdp - prev) / prev * 100); }
+                fq += sprintf((char *)ft + fq, "%s,%d,%.0f,%s,%s,%s,%s,%s\n", cn[c], y, pop, g, pc, ch, pt, rnd() % 40 ? "" : "rev");
+                prev = blank ? -1 : gdp;
+            }
+        }
+      p(in, b, n))  fset_t fs; fset_discover_pub(ft, fq, ',', 8, 1, 1, &fs);
+        printf("formula table: %d formulas found, group column %d\n", fs.n, fs.gcol);
+        if (fs.n < 2) { printf("FAIL formula discovery\n"); fails++; }
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("formula-table", ft, fq, (kolmo_mode)m, 1 << 18, T);
+        check("formula-table-1block", ft, fq, KOLMO_HC, 0, 1);
+        /* fuzz the v2 stream itself */
+        size_t len = 1 << 18; while (ft[len - 1] != '\n') len--;
+        uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
+        int64_t tn = tbl2_encode_pub(ft, len, ',', 8, 1, &fs, t);
+        if (tn <= 0 || tbl2_decode_pub(t, tn, ',', o, len) || memcmp(o, ft, len)) { printf("FAIL tbl2 roundtrip\n"); fails++; }
+        for (int it = 0; it < 4000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            size_t el = rnd() % 8 ? (size_t)tn : rnd() % tn;
+            tbl2_decode_pub(e, el, ',', o, len);
+        }
+        printf("table-codec v2 fuzz: 4000 corrupt streams decoded without crashing\n");
+        /* columnar decode: every cell matches the source value, and corrupt streams never crash */
+        if (tn > 0) {
+            czcols cols;
+            if (tbl2_columns_pub(t, tn, &cols) < 0) { printf("FAIL columnar decode rejected an aligned table\n"); fails+ { printf("CONTAINER FAIL zn=%lld\n", (long long)zn); fails++; }
+        else printf("container: %zu -> %lld bytes\n", n, (long long)zn);
+        free(in); free(z); free(b);
+    }
+    printf(fails ? "IMAGE MODEL TESTS FAILED (%d)\n" : "IMAGE MODEL TESTS PASS+; }
+            else {
+                long cbad = 0; size_t ci = 0;
+                for (long long rr = 0; rr < cols.nr; rr++) for (int j = 0; j < cols.k; j++) {
+                    size_t f0 = ci; while (ci < len && ft[ci] != ',' && ft[ci] != '\n') ci++;
+                    unsigned flen = (unsigned)(ci - f0); czcol *c = &cols.c[jED (%d];
+                    if (c->type == 0) { if (c->len[rr] != flen || memcmp(c->txt + c->off[rr], ft + f0, flen)) cbad++; }
+                    else { int64_t m; int sc;
+                        if (parse_dec_pub(ft + f0, flen, &m, &sc)) { int64_t want = m * kolmo_p10_pub()[c->scale - sc];
+                           images, 40 damaged copies each)\n", fails ? fails : coded);  if (!c->valid[rr] || c->num[rr] != want) cbad++; }
+                        else if (c->valid[rr]) cbad++; }
+                    if (ci < len && ft[ci] == ',') ci++;
+                    if (j == cols.k - 1 && ci < len && ft[ci] == '\n') ci++;
+                }
+                if (cbad) { printf("FAIL columnar decode: %ld cell mismatches\n", cbad); fails++; }
+                else printf("columnar decode: %lld rows x %d cols, all cells correct\n", cols.nr, cols.k
+    return fa);
+                tbl2_columns_free_pub(&colsils !=);
+           0;
+}
+  }
+   

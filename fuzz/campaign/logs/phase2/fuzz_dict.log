@@ -1,0 +1,106 @@
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2643634141
+INFO: Loaded 1 modules   (20991 inline 8-bit counters): 20991 [0x55a2c5c2fc00, 0x55a2c5c34dff), 
+INFO: Loaded 1 PC tables (20991 PCs): 20991 [0x55a2c5c34e00,0x55a2c5c86df0), 
+INFO: -fork=1: fuzzing in separate process(s)
+INFO: -fork=1: 577 seed inputs, starting to fuzz in /tmp/libFuzzerTemp.FuzzWithFork21584.dir
+#26: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 578s job: 1 dft_time: 0
+#52: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 601s job: 2 dft_time: 0
+#78: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 617s job: 3 dft_time: 0
+#104: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 641s job: 4 dft_time: 0
+#130: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 660s job: 5 dft_time: 0
+#157: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 678s job: 6 dft_time: 0
+#184: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 694s job: 7 dft_time: 0
+#210: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 720s job: 8 dft_time: 0
+#236: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 745s job: 9 dft_time: 0
+#263: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 763s job: 10 dft_time: 0
+#290: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 789s job: 11 dft_time: 0
+#317: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 810s job: 12 dft_time: 0
+#344: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 828s job: 13 dft_time: 0
+#371: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 847s job: 14 dft_time: 0
+#398: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 869s job: 15 dft_time: 0
+#426: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 888s job: 16 dft_time: 0
+#452: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 908s job: 17 dft_time: 0
+#480: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 929s job: 18 dft_time: 0
+#506: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 954s job: 19 dft_time: 0
+#539: cov: 4073 ft: 4073 corp: 577 exec/s: 1 oom/timeout/crash: 0/0/0 time: 979s job: 20 dft_time: 0
+  NEW_FUNC: 0x55a2c5834768 in kolmo_crc32c /home/user/kolmo/src/kolmo.c:82
+  NEW_FUNC: 0x55a2c5834ff8 in crc_init /home/user/kolmo/src/kolmo.c:73
+  NEW_FUNC: 0x55a2c5882f28 in kolmo_original_size /home/user/kolmo/src/kolmo.c:3307
+  NEW_FUNC: 0x55a2c5883218 in run_decode /home/user/kolmo/src/kolmo.c:3310
+  NEW_FUNC: 0x55a2c5885298 in kolmo_decompress_dict /home/user/kolmo/src/kolmo.c:3386
+  NEW_FUNC: 0x55a2c58d8ab8 in cm_new_x /home/user/kolmo/src/cm.inc:231
+  NEW_FUNC: 0x55a2c58da2b8 in cm_free /home/user/kolmo/src/cm.inc:275
+  NEW_FUNC: 0x55a2c58da378 in cm_init_tables /home/user/kolmo/src/cm.inc:83
+  NEW_FUNC: 0x55a2c58db338 in cm_free_parts /home/user/kolmo/src/cm.inc:192
+  NEW_FUNC: 0x55a2c58db678 in cm_squash_i /home/user/kolmo/src/cm.inc:55
+  NEW_FUNC: 0x55a2c58db878 in cm_find /home/user/kolmo/src/cm.inc:284
+  NEW_FUNC: 0x55a2c58dbb68 in cm_expected /home/user/kolmo/src/cm.inc:313
+  NEW_FUNC: 0x55a2c58dbe38 in cm_upd_ctr /home/user/kolmo/src/cm.inc:407
+  NEW_FUNC: 0x55a2c58dc128 in cm_upd_apm /home/user/kolmo/src/cm.inc:402
+  NEW_FUNC: 0x55a2c58dc708 in codec_decompress /home/user/kolmo/src/kolmo.c:1393
+  NEW_FUNC: 0x55a2c58e26c8 in cm_decompress /home/user/kolmo/src/cm.inc:705
+  NEW_FUNC: 0x55a2c5912eb8 in run_pool /home/user/kolmo/src/kolmo.c:2686
+  NEW_FUNC: 0x55a2c592a298 in blk_sum /home/user/kolmo/src/kolmo.c:1478
+  NEW_FUNC: 0x55a2c595c698 in tls_begin /home/user/kolmo/src/kolmo.c:1450
+  NEW_FUNC: 0x55a2c595c978 in tls_end /home/user/kolmo/src/kolmo.c:1459
+  NEW_FUNC: 0x55a2c5967b38 in tls_init /home/user/kolmo/src/kolmo.c:1449
+  NEW_FUNC: 0x55a2c5968db8 in decompress_worker /home/user/kolmo/src/kolmo.c:3269
+  NEW_FUNC: 0x55a2c596a638 in decode_block /home/user/kolmo/src/kolmo.c:3156
+#576: cov: 4571 ft: 4077 corp: 579 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1004s job: 21 dft_time: 0
+#673: cov: 4571 ft: 4077 corp: 579 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1031s job: 22 dft_time: 0
+  NEW_FUNC: 0x55a2c587d558 in np_decompress /home/user/kolmo/src/nplane.inc:158
+  NEW_FUNC: 0x55a2c58dc448 in kgu_get /home/user/kolmo/src/kolmo.c:1194
+  NEW_FUNC: 0x55a2c58dd598 in np_ctx_decode /home/user/kolmo/src/nplane.inc:80
+  NEW_FUNC: 0x55a2c590ada8 in r64_rd /home/user/kolmo/src/kolmo.c:1312
+  NEW_FUNC: 0x55a2c59266a8 in kb_res /home/user/kolmo/src/kgraph.inc:68
+  NEW_FUNC: 0x55a2c596cb08 in kg_decode /home/user/kolmo/src/kgraph.inc:1177
+  NEW_FUNC: 0x55a2c5979648 in kg_getuv /home/user/kolmo/src/kgraph.inc:80
+#740: cov: 4681 ft: 4082 corp: 582 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1059s job: 23 dft_time: 0
+  NEW_FUNC: 0x55a2c5908a88 in rans_decompress_all /home/user/kolmo/src/kolmo.c:1313
+#789: cov: 4855 ft: 4092 corp: 590 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1091s job: 24 dft_time: 0
+#838: cov: 4855 ft: 4095 corp: 592 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1121s job: 25 dft_time: 0
+#883: cov: 4855 ft: 4095 corp: 592 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1153s job: 26 dft_time: 0
+#971: cov: 4855 ft: 4097 corp: 594 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1185s job: 27 dft_time: 0
+#1043: cov: 4856 ft: 4099 corp: 596 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1216s job: 28 dft_time: 0
+#1103: cov: 4856 ft: 4099 corp: 596 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1247s job: 29 dft_time: 0
+#1172: cov: 4856 ft: 4101 corp: 598 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1280s job: 30 dft_time: 0
+  NEW_FUNC: 0x55a2c5908268 in huf_decompress_all /home/user/kolmo/src/kolmo.c:1223
+  NEW_FUNC: 0x55a2c592a318 in pool_main /home/user/kolmo/src/kolmo.c:2670
+  NEW_FUNC: 0x55a2c5982858 in fi_inverse /home/user/kolmo/src/kgraph.inc:288
+  NEW_FUNC: 0x55a2c5985128 in fi_pick /home/user/kolmo/src/kgraph.inc:280
+  NEW_FUNC: 0x55a2c598b7f8 in fi_inv_4_1_1 /home/user/kolmo/src/kgraph.inc:278
+#1249: cov: 4922 ft: 4112 corp: 599 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1313s job: 31 dft_time: 0
+#1308: cov: 4924 ft: 4114 corp: 601 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1348s job: 32 dft_time: 0
+#1390: cov: 4925 ft: 4115 corp: 602 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1385s job: 33 dft_time: 0
+#1504: cov: 4925 ft: 4116 corp: 603 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1422s job: 34 dft_time: 0
+#1561: cov: 4930 ft: 4125 corp: 610 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1465s job: 35 dft_time: 0
+#1656: cov: 4930 ft: 4125 corp: 610 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1503s job: 36 dft_time: 0
+#1782: cov: 4934 ft: 4130 corp: 612 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1542s job: 37 dft_time: 0
+#1843: cov: 4935 ft: 4136 corp: 617 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1586s job: 38 dft_time: 0
+#1939: cov: 4935 ft: 4138 corp: 618 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1628s job: 39 dft_time: 0
+#2025: cov: 4935 ft: 4141 corp: 621 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1673s job: 40 dft_time: 0
+#2180: cov: 4935 ft: 4141 corp: 621 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1716s job: 41 dft_time: 0
+#2258: cov: 4939 ft: 4153 corp: 627 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1765s job: 42 dft_time: 0
+#2352: cov: 4939 ft: 4165 corp: 634 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1815s job: 43 dft_time: 0
+#2467: cov: 4940 ft: 4172 corp: 639 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1864s job: 44 dft_time: 0
+#2547: cov: 4942 ft: 4175 corp: 641 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1911s job: 45 dft_time: 0
+#2643: cov: 4943 ft: 4176 corp: 642 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1960s job: 46 dft_time: 0
+#2822: cov: 4943 ft: 4176 corp: 642 exec/s: 3 oom/timeout/crash: 0/0/0 time: 2011s job: 47 dft_time: 0
+#2974: cov: 4945 ft: 4185 corp: 648 exec/s: 3 oom/timeout/crash: 0/0/0 time: 2063s job: 48 dft_time: 0
+#3073: cov: 4945 ft: 4192 corp: 651 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2116s job: 49 dft_time: 0
+#3163: cov: 4945 ft: 4193 corp: 652 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2169s job: 50 dft_time: 0
+#3258: cov: 4945 ft: 4197 corp: 655 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2224s job: 51 dft_time: 0
+#3402: cov: 4945 ft: 4197 corp: 655 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2277s job: 52 dft_time: 0
+#3542: cov: 4945 ft: 4201 corp: 659 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2335s job: 53 dft_time: 0
+#3656: cov: 4945 ft: 4204 corp: 662 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2395s job: 54 dft_time: 0
+#3797: cov: 4945 ft: 4209 corp: 666 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2456s job: 55 dft_time: 0
+#3906: cov: 4947 ft: 4212 corp: 667 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2517s job: 56 dft_time: 0
+#4024: cov: 4947 ft: 4214 corp: 669 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2579s job: 57 dft_time: 0
+  NEW_FUNC: 0x55a2c584cd88 in tbl2_decode /home/user/kolmo/src/tbl2.inc:924
+  NEW_FUNC: 0x55a2c5887978 in zs_free /home/user/kolmo/src/kolmo.c:755
+  NEW_FUNC: 0x55a2c5887d88 in zs_malloc /home/user/kolmo/src/kolmo.c:745
+#4128: cov: 4974 ft: 4218 corp: 672 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2644s job: 58 dft_time: 0
+#4242: cov: 4974 ft: 4218 corp: 672 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2706s job: 59 dft_time: 0
+INFO: fuzzed for 2708 seconds, wrapping up soon
+INFO: exiting: 0 time: 2708s

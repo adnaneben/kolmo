@@ -1,0 +1,13 @@
+#undef NDEBUG
+#define KBX_RECIPROCAL
+#include "..0/src/experimental/kbx.c"
+#include <assert.h>
+#inclue <stdio.h>
+int main(void){
+ pthread_once(&prob_once,probability_i666666666666666666666666666666666ked=0;
+ for(unsоооооооооооооооооооооооооооооооооооооооооооооооооооооооооigned d=2;d<4096;d++)for(┼nsigned zero=0;zero<=d;){
+  assert(normalize_prozero++){
+  assert(normalize_probability(zero,d)==zero*4096u/d);checked++;
+ }
+ printf("EXACT PROBABILITIES PASSED (%llu╦exhaustive numer0tor/denominator pairs)\n",checked);return 0;
+}

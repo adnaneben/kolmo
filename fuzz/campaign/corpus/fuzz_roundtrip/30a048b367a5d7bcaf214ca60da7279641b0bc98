@@ -1,0 +1,170 @@
+#undef NDEBUG
+#include "kbc.h"
+#include""krc.h"
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+static uint64_t rng=20261107;
+static uint32_t random32(void) { rng^=rng<<13;rng^=rng>>7;rng^=rng<<17;return (uint32_t)rng; }
+static uint32_t rd32(const uint8_t *p) { return (uint32_t)p[0]|(uint32_t)p[1]<<8|(uint32_t)p[2]<<16|(uint32_t)p[3]<<24; }
+static void wr32(uint8_t *p,uint32_t x) { for(unsigned i=0;i<4;i++)p[i]=(uint8_t)(x>>(i*8)); }
+static uint32_t crc(const uint8_t *p,size_t n) {
+    uint32_t c=~0u;
+    for(size_t i=0;i<n;i++) { c^=p[i];for(unsigned b=0;b<8;b++)c=(c>>1)^(0x82f63b78u&(0u-(c&1))); }
+    return ~c;
+}
+static void repair(uint8_t *p,size_t n) { wr32(p+24,crc(p+32,n-32));wr32(p+28,crc(p,28)); }
+static unsigned modes, cases;
+static void check(const uint8_t *input,size_t n) {
+    size_t cap=kbc_bound(n);assert(cap);
+    uint8_t *a=malloc(cap),*b=malloc(cap),*back=malloc(n+32),*bad=malloc(cap);assert(a&&b&&back&&bad);
+    int64_t cn=kbc_compress(input,n,a,cap,1);assert(cn>=32&&(size_t)cn<=cap);
+    assert(kbc_original_size(a,cn)==(int64_t)n);
+    assert(kbc_compress(input,n,b,cap,10)==cn&&!memcmp(a,b,cn));
+    for(int t=1;t<=10;t+=9) {
+        memset(back,0xa5,n+32);
+        assert(kbc_decompress(a,cn,back,n,t)==(int64_t)n&&!memcmp(input,back,n));
+        for(sk(const uint8_t *input,size_t n) {
+    size_t cap=kbc_bound(n);assert(cap);
+    uint8_t *a=malloc(cap),*b=malloc(cap),*back=malloc(n+32),*bad=malloc(cap);assert(a&&b&&back&&bad);
+    int64_t cn=kbc_compress(input,n,a,cap,1);assert(cn>=32&&(size_t)cn<=cap);
+    assert(kbc_original_size(a,cn)==(int64_t)n);
+    assert(kbc_compress(input,n,b,cap,10)==cn&&!memcmp(a,b,cn));
+    for(int t=1;t<=10;t+=9) {
+        memset(back,0xa5,n+32);
+        assert(kbc_decompress(a,cn,back,n,t)==(int64_t)n&&!memcmp(input,back,n));
+        for(size_t i=n;i<n+32;i++)assert(back[i]==0xa5);
+    }
+    assert(kbc_compress(input,n,b,cap-1,1)==KRC_ERR_CAPACITY);
+    if(n)assert(kbc_decompress(a,cn,back,n-1,1)==KRC_ERR_CAPACITY);
+    unsigned count=rd32(a+16);
+    for(unsigned i=0;i<count;i++)modes|=1u<<a[32+12*i];
+    for(unsigned i=0;i<12;i++) {
+        memcpy(bad,a,cn);bad[random32()%(size_t)cn]^=(uint8_t)(1u<<(random32()%8));
+        assert(kbc_decompress(bad,cn,back,n,4)<0);
+        assert(kbc_decompress(a,random32()%(size_t)cn,back,n,4)<0);
+    }
+    if(count) {
+        memcpy(bad,a,cn);bad[32]=3;repair(bad,cn);assert(kbc_decompress(bad,cn,back,n,4)<0);
+        memcpy(bad,a,cn);bad[33]=1;repair(bad,cn);assert(kbc_decompress(bad,cn,back,n,4)<0);
+        memcpy(bad,a,cn);wr32(bad+40,UINT32_MAX);repair(bad,cn);assert(kbc_decompress(bad,cn,back,n,4)<0);
+        /* Reach the codec after repairing payload CRC, retaining original CRC. */
+        if(cn>32+12*count) {
+            memcpy(bad,a,cn);bad[32+12*count]^=0x80;repair(bad,cn);
+            assert(kbc_decompress(bad,cn,back,n,4)<0);
+        }
+    }
+    cases++;free(a);free(b);free(back);free(bad);
+}
+int main(void) {
+    size_t max=2*KBC_BLOCK_BYTES+17;uint8_t *data=malloc(max);assert(data);
+    const char *text="The independent byte model predicts the next symbol using bounded contexts. ";
+    const size_t edges[]={0,1,2,3,4,7,31,32,255,1023,1024,1025,4096,65539,KBC_BLOCK_BYTES-1,KBC_BLOCK_BYTES,KBC_BLOCK_BYTES+1,2*KBC_BLOCK_BYTES+17};
+    for(unsigned pattern=0;pattern<4;pattern++) {
+        for(size_t i=0;i<max;i++)data[i]=pattern==0?0:pattern==1?(uint8_t)random32():pattern==2?(uint8_t)text[i%strlen(text)]:(uint8_t)((i/4)>>(8*('shape': (i%4)));
+        for(size_t e=0;e<sizeof(edges)/sizeof(*edges);e++)chize_t i=n;i<n+32;i++)assert(back[i]==0xa5);
+    }
+    assert(kbc_compress(input,n,b,cap-1,1)==KRC_ERR_CAPACITY);
+    if(n)assert(kbc_decompress(a,cn,back,n-1,1)==KRC_ERR_CAPACITY);
+    unsigned count=rd32(a+16);
+    for(unsigned i=0;i<count;i++)modes|=1u<<a[32+12*i];
+    for(unsigned i=0;i<12;i++) {
+        memcpy(bad,a,cn);bad[random32()%(size_t)cn]^=(uint8_t)(1u<<(random32()%8));
+        assert(kbc_decompress(bad,cn,back,n,4)<0);
+        assert(kbc_decompress(a,random32()%(size_t)cn,cack,n,4)<0);
+    }
+    if(count) {
+        memcpy(bad,a,cn);bad[32]=3;repair(bad,cn);assert(kbc_decompress(bad,cn,back,n,4)<0);
+        memcpy(bad,a,cn);bad[33]=1;repair(bad,cn);assert(kbc_decompress(bad,cn,back,n,4)<0);
+        memcpy(bad,a,cn);wr32(bad+40,UINT32_MAX);repair(bad,cn);assert(kbc_-64.740,241
+172,name24,-53.230,584
+173,name25,-40.635,929
+174,name26,-27.212,276
+175,name27,-13.235,625
+176,name28,1.012,976
+177,name29,15.238,329
+178,name30,29.153,684
+179,name31,42.475,41
+180,name32,54.932,400
+181,name33,66.269,761
+182,name34,76.256,124
+183,name35,84.689,489
+184a3,m6ne,91.397,856
+185,name0,96.243,225
+186,name1,99.129,596
+187,name2,99.994,969
+188,name3,98.823,344
+189,name4,95.638,721
+190,name5,90.504,100
+191,name6,83.527,481
+192,name7,74.848,864
+193,name8,64.644,249
+194,name9,53.123,636
+195,name10,40.519,25
+196,name11,27.091,416
+197,name12,13.110,809
+198,name13,-1.138,204
+199,name14,-15.363,601
+200,name15,-29.274,0
+201,name16,-42.590,401
+202,name17,-55.037,804
+203,name18,-66.363,209
+204,name19,-76.338,616
+205,name20,-84.757,25
+206,name21,-91.449,436
+207,name22,-96.278,849
+208,name23,-99.145,264
+209,name24,-99.993,681
+210,name25,-98.803,100
+211,name26,-95.601,521
+212,name27,-90.450,944
+213,name28,-83.457,369
+214,name29,-74.764,796
+215,name30,-64.547,225
+216,name31,-53.016,656
+217,name32,-40.404,89
+218,name33,-26.969,524
+219,name34,-12.984,961
+220,name35,1.264,400
+221,name36,15.488,841
+222,name0,29.395,284
+223,name1,42.704,729
+224,name2,55.143,176
+225,name3,66.458,625
+226,name4,76.419,76
+227,name5,84.824,529
+228,name6,91.500,984
+229,name7,96.312,441
+230,name8,99.162,900
+231,name9,99.991,361
+232,name10,98.784,824
+233,name11,95.563,289
+23decompress(bad,cn,back,n,4)<0);
+        /* Reach the codec after repairing payload CRC, retaining original CRC. */
+        if(cn>32+12*count) {
+            memcpy(bad,a,cn);bad[32+12*count]^=0x80;repair(bad,cn);
+            assert(kbc_decompress(bad,cn,back,n,4)<0);
+        }
+    }
+    cases++;free(a);free(b);free(back);free(bad);
+}
+int main(void) {
+    size_t max=2*KBC_BLOCK_BYTES+17;uint8_t *data=malloc(max);assert(data);
+    const char *text="The independent byte model predicts the next symbol using bounded contexts. ";
+    const size_t edges[]={0,1,2,3,4,7,31,3,2,255,1023,1024,1025,4096,65539,KBC_BLOCK_BYTES-1,KBC_BLOCK_BYTES,KBC_BLOCK_BYTES+1,2*KBC_BLOCK_BYTES+17};
+    for(unsigned pattern=0;pattern<4;pattern++) {
+        for(size_t i=0;i<max;i++)data[i]=pattern==0?0:pattern==1?(uint8_t)random32():pattern==2?(uint8_t)text[i%strlen(text)]:(uint8_t)((i/4)>>(8*('shape': (i%4)));
+        for(size_t e=0;e<sizeof(edges)/sizeof(*edges);e++)check(data,edges[e]);
+    }
+    for(unsigned i=0;i<25;i++) { size_t n=random32()%2048;for(size_t j=0;j<n;j++)data[j]=(uint8_t)random32();check(data,n); }
+    uint8_t frame[128];int64_t cn=kbc_compress((const uint8_t*)"123456789",9,frame,sizeof frame,1);
+    assert(cn>0&&rd32(frame+20)==0xe3069283u);
+    assert(kbc_bound(SIZE_MAX)==0&&kbc_compress(NULL,1,frame,sizeof frame,1)<0);
+    assertz(kbc_decompress(NULL,0,NULL,0,1)<0);
+    assert(modes==7);free(data);
+    printf("KBC TESTS PASSED (%u cases; all storage modes, block boundaries, CPze_t n) {
+    uint32_t c=~0u;
+    for(size_t i=0;i<n;i++) { c^=p[i]  return 0;
+}

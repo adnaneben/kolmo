@@ -1,0 +1,871 @@
+# kolmo container format
+
+This describes the `CZN1` container as written by this implementation. The writer emits the lowest version a file
+needs: 3 by default, and 4 to 9 only when a block uses a feature that needs it; versions 1 to 9 are readable. The
+section *Identifiers and versions* lists every version, codec id, node id and model, and which release reads each.
+The container framing below is stable and intended to be frozen at 1.0. The per-block *transform*
+sub-formats (tables, logs, scientific records, images, words) are not yet frozen and may change before 1.0; a decoder
+identifies them per block and this document specifies where that identification lives, not every transform's bytes.
+
+All multi-byte integers are little-endian. Offsets are in bytes from the start of the file.
+
+## File
+
+```
++----------------+------------------------+-------------------------+
+| header (32 B)  | block index (16 B/blk) | block payloads          |
++----------------+------------------------+-------------------------+
+```
+
+The payloads follow the index in block order; payload *i* occupies the next `comp[i]` bytes.
+
+## Header (32 bytes)
+
+| off | size | field | meaning |
+|----|----|----|----|
+| 0 | 4 | magic | ASCII `CZN1` |
+| 4 | 1 | version | 1 to 9: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15) |
+| 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
+| 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
+| 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 8 | 1 | b | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 9 | 1 | c | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 10 | 1 | flags | bit 0 (v3+): block checksums cover the stored payload, not the decoded bytes (set in `rt`). bit 1 (v3+): the zstd-coded blocks were compressed with a dictionary, whose 32-bit id is in bytes 6–9; decoding requires the matching dictionary. Other bits 0 |
+| 11 | 1 | reserved | 0 |
+| 12 | 8 | orig | original (uncompressed) length in bytes |
+| 20 | 4 | nblocks | number of blocks |
+| 24 | 4 | block | nominal block size in bytes |
+| 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
+
+A reader rejects the file if the magic is wrong, the version is not one it knows (1–9 for this implementation; older
+releases stop earlier, see *Identifiers and versions*), the index does not fit in the file, or the
+header+index CRC does not match. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
+of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `KOLMO_ERR_DICT`; an older
+reader that predates the flag refuses the newer version rather than returning wrong data.
+
+## Block index — one 16-byte entry per block
+
+| off | size | field | meaning |
+|----|----|----|----|
+| 0 | 4 | raw | decoded length of this block |
+| 4 | 4 | comp | stored length of this block's payload |
+| 8 | 4 | checksum | low 32 bits of a block checksum (see below) |
+| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7, GRAPH=12 (kolmo graph block), CMI=17 (context mixing with the image model); the full list is in *Identifiers and versions* |
+| 13 | 1 | tflag | transform applied before the coder (see below) |
+| 14 | 2 | reserved | 0 |
+
+`raw` values sum to `orig`. Payload offsets are the running sum of `comp`, starting at 32 + 16·nblocks.
+
+**Block checksum.** Version 3 uses the low 32 bits of XXH3-64; versions 1–2 use XXH64. By default it is computed over
+the *decoded* block and checked after decoding. When header flag bit 0 is set (rt), it is instead computed over the
+stored payload after its 4-byte plan prefix, seeded with those 4 bytes, and checked *before* decoding.
+
+## Block payload
+
+In versions 2 and 3 every payload begins with a 4-byte **plan prefix** `t, a, b, c`, followed by the coded stream.
+`t` is the transform/plan type:
+
+```
+T_NONE=0  TP=1 (typed transpose)  SHUF=2 (byte-plane shuffle)  TBL=3 (table v2)  LOG=4 (log templates)
+IMG=5 (16-bit image)  REC=6 (fixed records)  X86=7 (call/jump filter)  WORD=8 (word dictionary)
+```
+
+`tflag` in the index records which transform actually produced the stored bytes (0 = none; the transform-specific
+values are defined in the source). When a transform is present, a small transform header may precede the coded data
+inside the payload (for example a 4-byte transformed-length for the table, log, record, image and word transforms, or
+k×4 column sizes for the transpose). The decoder reads the plan prefix, undoes the coder to recover the transformed
+bytes, then undoes the transform named by `tflag` to recover the block.
+
+In version 1 there is no plan prefix; the file-level `transform`/`a`/`b`/`c` in the header apply to every block.
+
+**JSON.** The LOG plan carries the tokenizer in `a`: 0 = space-separated words (logs), 1 = JSON (keys and punctuation
+form the template, every scalar value is a placeholder), 2 = minified JSON. The output of modes 0 and 1 is the same
+log-template stream (tflag 5). Mode 2 inserts a newline after every `,` that follows `}` or `]` outside strings and
+codes the result as JSON lines; such blocks have tflag 10 and an 8-byte prefix (log-stream length u32, number of
+inserted newlines u32), and the decoder removes every newline from the decoded text (the encoder only uses mode 2 on
+blocks that contain no newline). Files with a tflag 10 block are version 6.
+
+## Entropy coders
+
+`STORE` is the raw block. `LZ4`/`LZ4HC`, `ZSTD`, `BROTLI` and `LZMA2` are the standard formats from the vendored
+libraries. `BSC` is libbsc's block-sorting stream, prefixed with a 4-byte XXH32 of the stream that is checked before
+decoding. `CM` is this project's integer context-mixing coder; its stream starts with a 32-bit size word whose low 28
+bits are the block length and whose top 4 bits `f` select the model: `f = 0` is model 1 with the legacy default table
+size; otherwise `f & 7` is the log2 of the hash-table size minus 15, and `f & 8` selects model 2 (two more sparse
+contexts, three record contexts, four mixers combined by a learned final mixer, and an extra order-2 APM). The arithmetic-coded bytes follow.
+`f = 8` exactly is the extended header: one more byte follows the size word, `model << 4 | (log2 of the table size − 15)`;
+it carries model 3 (orders 12 and 20, the byte the match model expects as a context, finer classes for long matches).
+Encoders write model 3 for text, model 2 for other data, and model 1 at level 1 and for blocks of 2^28 bytes or more;
+decoders accept all three, so files written with an older model still decode. `CMI` (codec 18) is the same coder with
+an image model for 8-bit samples: `iw u32 | ih u32 | ich u8` (row width in bytes, bytes before the first pixel,
+interleaved channels), then a size word as above and the coded bytes. CM output is bit-exact across compilers and
+CPUs (integer-only, `-ffp-contract=off`).
+
+## Identifiers and versions
+
+One table of every identifier a frame can carry, the first build that writes it, and what an older reader does with
+it. A new identifier is claimed here first, so that two lines of work do not take the same number.
+
+**Container versions** (header byte 4). The writer emits the highest version any block needs; a reader refuses a
+version above the highest it knows.
+
+| version | written when | first reader |
+|----|----|----|
+| 1, 2 | never (historical; read only) | 1.0.0 |
+| 3 | by default | 1.0.0 |
+| 4, 5 | a table column uses the delta-of-delta (4) or third-order (5) predictor | 1.0.0 |
+| 6 | a block uses the minified-JSON split (tflag 10) | 1.1.0 |
+| 7 | a block is a kolmo graph (codec 12, plan type 9) | 1.1.0 |
+| 8 | a block uses the line-class transform (plan type 10, tflag 12) | 1.1.0 |
+| 9 | a graph leaf uses codec 15; on request only (`--native-leaf`) | 1.2.0 |
+
+Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0. (1.1.0 is the state of `main` under that
+version number; it was not tagged or published. 1.2.0 is this build, a release candidate.)
+
+**Block codecs** (index byte 12) and **graph leaf codecs**.
+
+| id | name | where | first reader |
+|----|----|----|----|
+| 0–7 | STORE, LZ4, LZ4HC, ZSTD, BROTLI, BSC, LZMA2, CM | blocks and graph leaves | 1.0.0 |
+| 8–11 | DNA, DNA_PREFIX, PCM, DNA_RUNS | blocks; experimental, read and written only by builds made with `-DKOLMO_FRONTIER` | none (not in release builds) |
+| 12 | GRAPH | blocks, version 7 or later | 1.1.0 |
+| 13, 14 | HUF (Huffman only), RANS (order-0 rANS) | graph leaves | 1.1.0 |
+| 15 | NPLANE (native plane-context leaf) | graph leaves, version 9 only | 1.2.0 |
+| 16 | not assigned | | |
+| 17 | CMI (context mixing, image model) | blocks; written by `ultra` | 1.2.0 |
+
+**Graph nodes** (op byte of a node).
+
+| id | node | first reader |
+|----|----|----|
+| 1–6 | FIELDS, DECIMAL, CONCAT, INT, FLOAT, IMG8 | 1.1.0 |
+| 7 | DEC64 (binary64 values that are short decimals) | 1.2.0 |
+
+**CM models** (top bits of the size word, above).
+
+| model | flag | written when | first reader |
+|----|----|----|----|
+| 1 | `f` = 0–7 | `ultra` level 1; blocks of 2^28 bytes or more | 1.0.0 |
+| 2 | `f` = 9–15 | `ultra`, data that is not text | 1.1.0 |
+| 3 | `f` = 8, then one byte | `ultra`, text | 1.2.0 |
+
+**What an older reader does.** Only versions 4 to 9 are announced in the header. Block codec 17, graph node 7 and
+CM models 2 and 3 are written inside frames whose header carries the version the rest of the frame needs (3, 7 or
+8), following the rule in *Kolmo graph blocks*: new identifiers do not raise the container version, and a decoder
+rejects an identifier it does not know. So an older reader refuses such a frame part-way, when it meets the block,
+and reports `KOLMO_ERR_CORRUPT` ("corrupt or unsupported input"); it does not return wrong bytes. Measured on 580
+frames of 35 files written by 1.2.0-rc1: 1.0.1 decoded 403 and refused 177; 1.1.0 decoded 547 and refused 33 (DEC64
+nodes, `ultra` text and `ultra` images); no frame decoded to different bytes. Every frame written by 1.0.1 and
+1.1.0 decodes with 1.2.0-rc1. Whether these three identifiers should instead raise the container version (to 10),
+so that an older reader refuses at the header with a clearer cause, is an open decision for the project owner; it
+would change the bytes of the frames concerned and is not made here.
+
+## Guarantees
+
+- **Seekable.** Any byte range decodes by reading the header and index and decoding only the blocks it overlaps
+  (`kolmo_read_range`).
+- **Parallel.** Blocks are independent in both directions.
+- **Integrity.** The header+index CRC and per-block checksums are verified; corrupt input is reported as an error,
+  never returned as data.
+- **Portable.** For a given mode and input, the bytes are identical across Intel and Apple-silicon builds.
+
+## Stream format (`CZNS`) — large inputs
+
+For inputs processed in bounded memory (and over pipes), a stream wraps independent containers:
+
+```
+"CZNS"  ver(1 = 1)  reserved(3)  seg_bytes(u32 le)      # 12-byte stream header
+then, repeated:   len(u64 le)  frame[len]               # frame = one complete CZN1 container
+end:              0 (u64 le)                             # zero-length terminator
+```
+
+Each frame is a normal container (above) for one segment of the input (default 64 MiB), so encode and
+decode hold at most one segment plus its frame in memory. Segments are independent — compressed and
+decoded across cores like blocks — so very small segments cost a little ratio at their boundaries. A
+decoder distinguishes the two formats by the first four bytes (`CZN1` one-shot vs `CZNS` stream).
+Produced and consumed by `kolmo_stream_compress` / `kolmo_stream_decompress`.
+
+## Transform sub-formats
+
+The byte layouts of the table, log, record, image and word transforms live with their code and are documented there,
+not frozen here:
+
+```
+src/tbl2.inc   table v2: typed columns, predictors, formula discovery
+src/log.inc    log templates and skeleton columns
+src/sci.inc    fixed records and 16-bit images
+src/word.inc   word dictionary
+src/kolmo.c      container, typed transpose, byte-plane shuffle, x86 filter, coders
+```
+
+## Kolmo graph blocks (version 7)
+
+A block with codec 12 and plan type 9 is a **kolmo graph**: instead of one fixed transform, the payload (after the
+4-byte plan) holds a small program. Stream 0 is the block's bytes. Each node consumes streams and appends its outputs
+to the stream table; streams no node consumes are leaves, each coded by an ordinary codec. The decoder decodes the
+leaves, then runs the nodes' inverses from the last node to the first. New transforms add node ids; the container
+version stays 7. A decoder rejects any node id it does not know.
+
+```
+payload := 'G' | 1 (graph version) | nodes uv | node * nodes | leaves uv | leaf * leaves
+node    := op u8 | nin uv | input index uv * nin | nout uv | param length uv | params
+leaf    := stream index uv | codec u8 (0-7 as for blocks, 13, 14, or 15 from version 9) | raw length uv | coded length uv | coded bytes
+```
+
+**Leaf codec 15: native plane-context leaf (container version 9).** Written only on request (`--native-leaf`,
+`KOLMO_T_NATIVE_LEAF`, balanced), only for the integer residual stream of an `INT` node, and only when smaller than
+the other leaf codings. A reader rejects codec 15 in a file of version below 9, and as a block codec. Payload, for raw
+length `rl`:
+
+```
+payload := fmt u8 (= 1) | np u8 (1-8, rl % np == 0, L = rl / np) | plane * np        ; plane k = bytes k*L .. k*L+L-1
+plane   := 'c' value u8 | 's' L bytes | 'h' len uv | Huffman stream | 'r' len uv | rANS stream
+         | 'l' len uv | context stream (lanes, L >= 8) | 'p' len uv | context stream (cross-plane, plane k >= 1)
+context := mask u16 (buckets 0-8, nonzero, bits 9-15 zero) | table * popcount(mask) | z uv | state u64 * 4 | word u32 *
+table   := 256 frequencies in the rANS table format, summing to 65536 (a one-symbol table holds 65536)
+```
+
+The `h` and `r` streams are those of codecs 13 and 14. In a context stream the bucket of a context byte `c` is 0 when
+`c` is 0, else its bit length (1-8); rANS uses four 64-bit states with lower bound 2^31 and 16-bit frequencies, words
+are read forwards, `z` (a multiple of 4, at least 32) is the rest of the stream, and every state must end at 2^31.
+Lanes (`l`): with `L4 = L / 4`, lane `j` is positions `j*L4 .. j*L4+L4-1`, decoded in lockstep by state `j`, then the
+tail positions `4*L4 + j` by state `j`; the context is the previous byte of the plane, reset to bucket 0 at position 0
+and at each lane start. Cross-plane (`p`): position `i` uses state `i mod 4` and the context is byte `i` of plane
+`k - 1`. Any other tag, table, length or final state is corrupt.
+
+Outputs of a node take the next stream indices, in order. Every stream is consumed at most once; stream 0 must be
+consumed when there are nodes; every unconsumed stream must appear exactly once as a leaf; inputs must refer to
+earlier streams. `uv` is an unsigned LEB128 varint.
+
+| Op | Name | Params | Inputs → outputs |
+|---|---|---|---|
+| 1 | FIELDS | delimiter u8, k uv | text → shape, column 0 … column k−1. A line with exactly k fields sends each field, `\n`-terminated, to its column. Any other line is kept in shape: line count uv, final-newline u8, then per irregular line its line-index gap uv (from the previous irregular line, or from 0), length uv and bytes. |
+| 2 | DECIMAL | separator u8, predictor u8 | values (`\n`-terminated) → tags, scales, mantissas, texts. Tag per value: 0 empty, 1 number, 2 text. A number matches `-?(0\|[1-9][0-9]*)(sep[0-9]+)?` with at most 18 digits and is not a negative zero; its scale byte is the digit count after the separator, or 255 for none; its mantissa (digits as one integer, signed) is stored as the zigzag uv of the difference from the previous number in the column (predictor 1) or of itself (predictor 0). Text values are stored `\n`-terminated. |
+| 3 | CONCAT | count uv, length uv * count | count streams → their concatenation |
+| 4 | INT | width u8 (1, 2, 4, 8), flags u8 (bit 0 signed, bits 1–2 order 0–2, bit 3 byte planes), output width u8 (1, 2, 4, 8), head uv, count uv, gcd uv (≥ 1), bias uv (zigzag), seeds uv (zigzag) * order | bytes → residuals, rest. The input is `head` bytes, `count` little-endian integers of `width` bytes (sign-extended to 64 bits when signed, else zero-extended), then trailing bytes; rest holds the head bytes followed by the trailing bytes. Order 0 stores (v − bias) / gcd; orders 1 and 2 store zigzag((v − p) / gcd), where p is the previous value (order 1) or twice the previous minus the one before (order 2), for every value after the first `order` (the seeds). Arithmetic wraps modulo 2^64 and divisions are exact. Each residual takes `output width` little-endian bytes; with bit 3 the residual stream is byte planes (all low bytes, then all second bytes, …). |
+
+| 5 | FLOAT | width u8 (2, 4, 8), head uv, count uv | bytes → plane 0 … plane width−1, rest. The input is `head` bytes, `count` little-endian words of `width` bytes, then trailing bytes (rest = head bytes then trailing bytes). Each word is rotated left by one bit, so the sign moves to bit 0 and the top byte of a float32 is its exponent; byte b of every rotated word goes to plane b. |
+
+| 6 | IMG8 | row bytes uv, channel step u8 (1–4), head uv | bytes → residuals, rest. After `head` bytes the input is rows of `row bytes`; each byte is predicted from the bytes `step` to the left (a), one row up (b) and up-left (c) by the median of a, b and a + b − c (LOCO-I); the first row uses a, the first `step` bytes of a row use b. Residual = zigzag of (x − prediction) mod 256 read as int8. Bytes after the last whole row and the head go to rest. |
+
+Leaf codec 14 is static order-0 rANS: chunks of at most 1 MiB, each `raw length uv | frequency table | coded length uv |
+words`. The table gives each byte's frequency (scaled to 2^16) as a uv, a 0 being followed by one byte counting the
+further absent symbols. The words are 32-bit little-endian: four 64-bit states (position mod 4, low word first), then
+the renormalisation words, read forwards (rans64). The encoder tries it at hc, max and ultra.
+
+Leaf codec 13 is Huffman-only coding (zstd's Huffman coder, no matches), for skewed byte streams without repeats such
+as an exponent plane: chunks of at most 128 KiB, each `mode u8 | raw length uv` then for mode 0 the raw bytes, for
+mode 1 one byte repeated, for mode 2 `coded length uv | zstd HUF 4-stream data`. The encoder keeps, per leaf, the
+smallest of the block codec, Huffman-only and stored.
+
+The planner uses graphs for delimited tables with more than 256 columns (the limit of the table transform) and for
+arrays of 16-, 32- and 64-bit integers and float arrays (a `.npy` header becomes the node's head), when a slice codes at least 3%
+smaller than the other candidates. A
+version 1–6 decoder rejects version 7 files.
+# kolmo — a structure-aware compressor
+
+kolmo reads the structure of its input — tables, logs, prose, scientific records and images, executables, archives — and
+stores it in a form that entropy coders compress far better, then encodes independent, checksummed blocks on every core.
+It has six modes, from LZ4-speed `rt` to the context-mixing archive tier `ultra`. In every mode the goal is the same:
+**at the speed of the leading compressor of that class, produce smaller files.**
+
+## Results
+
+Single core, in memory, best of repeated runs; every output decoded and compared byte for byte. Each cell is the
+compression ratio (original size / compressed size). Machine: 2-core Intel Xeon VM, 2.1 GHz, gcc 13, `-O3 -march=native`.
+The leaders were built from the same sources with the same flags (OpenZL: its own CLI, best profile, trained on the
+tables). Full per-mode tables, speeds, and a one-command way to reproduce all of this on your own machine are in
+[`benchmark/BENCHMARKS.md`](benchmark/BENCHMARKS.md). How we decide whether a ratio gain is worth a speed loss (or
+the reverse), with the research and industry figures behind it, is in [`benchmark/TRADEOFFS.md`](benchmark/TRADEOFFS.md).
+
+| Data | kolmo fast | kolmo eco | kolmo hc | kolmo max | kolmo ultra | zstd -19 | brotli -11 | xz -9e | OpenZL |
+|---|---|---|---|---|---|---|---|---|---|
+| Tables: OWID CO2 + energy, 23.6 MB | 10.31 | 10.58 | 10.82 | 11.38 | 11.44 | 4.20 | 4.56 | 4.54 | 4.82 |
+| Logs: 16 Loghub logs, 4.5 MB | 14.10 | 15.79 | 16.27 | 17.67 | 22.42 | 13.48 | 14.50 | 14.67 | 9.84 |
+| Text: enwik8, 100 MB | 2.81 | 3.48 | 4.10 | 4.62 | 5.11 | 3.71 | 3.88 | 4.03 | 3.06 |
+| Scientific: star catalogue + X-ray, 15.7 MB | 2.64 | 2.69 | 2.68 | 2.71 | 2.76 | 1.55 | 1.70 | 1.76 | 2.56 |
+| Mixed: Silesia corpus, 212 MB | 3.64 | 4.19 | 4.45 | 5.08 | 5.58 | 4.01 | 4.27 | 4.38 | 3.35 |
+
+Speeds (single core, MB/s, compress / decompress) for the same runs are in `results_*.tsv`. In short: `fast` compresses
+at 100–190 MB/s and decompresses at 500–1100 MB/s on this machine (2.3–3.3× faster on Apple M5 cores); `hc` decompresses
+at 460–1030 MB/s, 4–10× faster than xz; `max` and `ultra` are archive tiers (`ultra` runs at well under 1 MB/s per core).
+
+Blocks are independent, so both directions scale with cores while the single-stream LZ coders do not. The speed modes
+(`rt`, `fast`) size blocks adaptively (~1 MiB, ≥8 per input) so decode and compress parallelise; the archive modes keep
+large windows for ratio. On a 4-core Apple-silicon build, `kolmo fast` **decompresses faster than `zstd -3` on every data
+type — tables 3.6 GB/s vs 1.6, scientific 6.4 vs 1.2, logs 8.5 vs 4.1 — and compresses tables faster too (759 vs 600
+MB/s)**, all while holding the ratio lead, because `zstd` is flat with cores and kolmo scales ~3.7×. On a single core kolmo
+leads decode on scientific and trades 1.2–2× decode speed on tables/logs for 2–4× the ratio, making it back across cores.
+
+### lzbench: Silesia, one thread
+
+kolmo also runs inside [lzbench](https://github.com/inikep/lzbench) as an ordinary codec (same harness, same flags,
+one thread, round trips verified; see [`benchmark/lzbench`](benchmark/lzbench)). Each lzbench level is a plain CLI
+setting. On the 212 MB Silesia corpus (2-core 2.1 GHz Xeon VM; speeds vary by about ±15% between runs, ratios are
+exact):
+
+| kolmo setting | Ratio | Compress | Decompress | Best rival at that speed |
+|---|---|---|---|---|
+| `rt` | 46.58% | 540 MB/s | 2.5 GB/s | lz4: 47.59%, 539 MB/s, 3.3 GB/s |
+| `fast -l1 -q` | **30.33%** | 355 MB/s | 1.2 GB/s | zstd -2: 32.70%, 372 MB/s |
+| `fast -l2 -q` | **28.89%** | 294–337 MB/s | 1.1 GB/s | zstd -3: 31.20%, 210–232 MB/s |
+| `fast -q` | **27.87%** | 194–234 MB/s | 0.9–1.1 GB/s | zstd -3: 31.20% |
+| `fast` (default) | 27.49% | 132–188 MB/s | 0.8–1.0 GB/s | zstd -5: 29.60%, 110 MB/s |
+| `hc -l 9` | **24.70%** | 48.6 MB/s | 672 MB/s | brotli -5: 28.10%, 41 MB/s |
+| `max -l 1` | **20.93%** | 19–22 MB/s | 33 MB/s | bsc: 23.26%, 15 MB/s; bzip3 -5: 22.29%, 9.4 MB/s |
+| `hc` | 22.47% | 2.6 MB/s | **631 MB/s** | xz -9: 23.00%, 99 MB/s decode; bzip3 -5: 22.29%, 9.7 MB/s decode |
+| `max` | **19.34%** | 2.7 MB/s | 54 MB/s | kanzi -9: 19.73%, 1.7 MB/s |
+| `ultra -l 1` | **17.99%** | 0.43 MB/s | 0.45 MB/s | zpaq -5: 19.09%, 0.39 MB/s |
+| `ultra` | **17.01%** | 0.28 MB/s | 0.30 MB/s | — (smallest result on the board) |
+
+From about 350 MB/s down to the slowest tier, the bold settings give the smallest output of any entry at that
+compression speed or faster. `hc` (and `eco`) trade some of that for decode speed: `hc` decompresses 6× faster than
+xz and 65× faster than bzip3 at a similar ratio. Above 350 MB/s, and on raw decode speed in the LZ4 class, zstd -1
+and lz4 still lead.
+
+## How it works
+
+| Data | Model |
+|---|---|
+| Tables (CSV/TSV) | Columns become typed streams. Numeric columns are exact decimals at a common scale, predicted per block by raw, delta, delta within an entity (e.g. country), **delta-of-delta** and **third-order** within an entity (for counters and steady trends), or a discovered **formula of other columns** (`y = k·a/b`, change and % change): 51 formulas on the OWID energy table. Quoted fields, short rows and odd values are lossless. |
+| Logs | Lines are split into **templates and variables**; timestamps, IPs and IDs become integer columns ("skeleton" columns). |
+| Fixed-width text | Lines that come in a few fixed lengths (chemistry and geometry files, fixed-width reports) are stored **column by column per line length**: a line scan and a transpose, several times cheaper than templates. Files that use it carry container version 8. |
+| Prose and markup | Frequent words become 2-byte codes from byte values the block never uses (eco and above); `hc` then uses zstd 22 with a 128 MiB window. |
+| Decimal doubles | Float64 arrays whose values were written in decimal (`.npy` tables, raw arrays, the columns inside pickle, `.npz` and `.mat` files) are stored as **integers over a power of ten per column**, with missing values as a tag and anything else kept verbatim. |
+| Scientific binary | **Fixed records** (period found by self-similarity; fields of 1/2/4/8 bytes stored raw, as deltas, as dictionary tokens, or as multiples of a discovered quantum with exact bit corrections) and **16-bit images** (byte order, row stride and predictor found automatically). |
+| Executables, archives | x86 call/jump transform; each tar member gets its own model. |
+| Coders | LZ4 (`rt`), zstd (`fast`, `hc`), brotli (`eco`), BWT via libbsc and LZMA2 (`max`), and an integer **context-mixing** coder (`ultra`: orders 1–7, words, columns, indirect contexts, bit histories, neural mixing, APMs), best per block. |
+| Container | Independent blocks with an index, so any byte range decodes alone. XXH3 per block and CRC32C over the header and index: corrupt input is reported, never returned as data. Blocks compress and decompress in parallel, so throughput scales with cores. |
+
+All prediction that must agree between encoder and decoder is integer or plain IEEE double without fused multiply-add
+(`-ffp-contract=off`), so **Intel and Apple-silicon builds produce byte-identical files** and decode each other's output.
+
+## Modes
+
+Three modes cover almost every use:
+
+| Mode | What it is for | Same as |
+|---|---|---|
+| `-m speed` | fastest; data that is read or sent right away | `rt -Q` |
+| `-m balanced` (default) | small and fast; everyday storage and transfer | `fast` |
+| `-m ratio` | smallest at practical speed; archives | `max` |
+
+`-x` asks for the smallest output of all (`ultra`): context mixing, very slow, large memory. It was never removed; it
+is left out of the speed benchmarks because it runs at well under 1 MB/s.
+`-x -l 2` goes further for ratio at the cost of decode speed: numeric graph leaves may also use context mixing when
+that is smaller (measured −11% to −15% on integer series such as sensor and ECG samples, about −2% on a mixed
+numeric corpus), and those blocks then decode at context-mixing speed. Plain `-x` is unchanged; any decoder reads both.
+
+`--native-leaf` (with `balanced`; C API: `transforms |= KOLMO_T_NATIVE_LEAF`) codes integer-series residuals with
+Kolmo's native plane-context leaves when that is smaller: measured −11.3% on 180 MB of ECG and numeric columns from
+the holdout sources (ECG −11.9%, power −9.8%), and such files decode about 1.5–2.6× slower than default `balanced`
+(2.3× on that data, about 580 MB/s on Apple silicon). Files that use it are container version 9; files that do not
+are unchanged.
+
+Advanced settings, for tuning between the three:
+
+| Mode | Block | Coder | Use |
+|---|---|---|---|
+| `rt` | adaptive (≤4 MiB) | LZ4 | decode speed first |
+| `fast` | adaptive (≤4 MiB) | zstd 3 | default (`-q`: quick analysis, cheap transforms only) |
+| `eco` | 16 MiB | brotli 8 | lowest storage cost at moderate CPU |
+| `hc` | 16 MiB (text 128 MiB) | zstd 19 / 22 | archive with fast reads |
+| `max` | 128 MiB | BWT for text; LZMA2 otherwise, or BWT where it is at least 3% smaller (`-l 1`: BWT only) | cold archive |
+| `ultra` | 128 MiB | best of context mixing (with an image model for 8-bit images), LZMA2, BWT (`-l 1`: context mixing model 1 only, faster; `-l 2`: maximum ratio, numeric graph leaves may also use context mixing, slower decode) | coldest archive, best ratio |
+
+`ultra` sizes its context-mixing tables to the block (up to about 4.5 GB per thread for blocks of 4 MiB and more, in
+both directions; 3.8 GB with `-l 1`). On Linux the tables use transparent huge pages. Parallel blocks share a budget of 60% of physical memory and wait rather than swap.
+
+### Colujnar decode (tables)
+
+A table block can be decoded straight to **typed columns** — numeric columns as 64-bit integers at a common scale
+(plus a validity flag per cell), text columns as offset/length into the block's bytes — skipping CSV row reassembly
+and decimal formatting (`tbl2_columns` / `exp/colbench.c`). An analytical reader (Arrow, DuckDB, pandas) that would
+otherwise decompress to CSV and re-parse reaches typed values about **3× faster**, and the columnar path is 1.2–1.4×
+faster than full row decode on its own. The default lossless round trip is unchanged.
+
+### Dictionaries (many small files)
+
+A single small file has too little history for any coder to find its structure, so on records of a few KB kolmo
+(like zstd) trails its own large-file ratios. Train a dictionary once on a representative sample and every similar
+file compresses against it. On 4,802 held-out ~4 KB OWID record files (dictionary trained on a disjoint 1,500),
+`fast` goes from **3.17× to 4.77×** — about a third smaller — with the dictionary adding no measurable decode cost.
+
+```bash
+./build/kolmo -t sample.dict records/*.csv       # train a dictionary from sample files
+./build/kolmo -m fast -D sample.dict one.csv one.kolmo   # compress against it
+./build/kolmo -d -D sample.dict one.kolmo one.back        # decompress (same dictionary required)
+```
+
+The dictionary id is recorded in the header; a file written with one refuses to decode without the matching
+dictionary (`KOLMO_ERR_DICT`) rather than returning wrong data. The API is `kolmo_train_dict` / `kolmo_compress_dict` /
+`kolmo_decompress_dict` (C), `kolmo.train_dict` + `compress(..., dict=d)` (Python), and `train_dict` / `compress_dict`
+/ `decompress_dict` (Rust). Dictionaries apply to the zstd-coded blocks (`fast`, `hc`).
+
+### Streaming (large inputs)
+
+For inputs too large to hold in memory, `-s` (or `-S <segMiB>`) compresses a stream of
+independent frames — each a normal container for one segment — so compress and decompress run in
+**bounded memory** (one segment, not the whole file) and work on pipes. On a 47 MB input, one-shot
+compression peaks at ~114 MB of RAM; streaming at 4 MiB segments peaks at ~32 MB, and decompression
+at ~11 MB. `-d` detects a streamed file automatically. The library API is `kolmo_stream_compress` /
+`kolmo_stream_decompress` (file descriptors in and out).
+
+For archival jobs with less available memory, build the optional CLI with
+`make build/kolmo-cm20` and run `./build/kolmo-cm20 -m ultra -T 1 input output.kolmo`.
+It uses smaller context-mixing tables when encoding. The standard decoder reads these
+files. The encoder setting controls table size; total process memory also depends on
+input, output buffers, other codecs and worker count.
+
+### Decoder limits
+
+C callers can use `kolmo_decompress_limited` with a `kolmo_decode_limits` structure to bound the
+original size, raw block size and block count of a frame. Each zero field disables that limit;
+exceeding a limit returns `KOLMO_ERR_LIMIT`. These are format-size limits, not a cap on total heap
+memory: an `ultra` block can still require gigabytes of context-mixing state. Existing decode
+functions keep their current behavior.
+
+## Install
+
+| | Install | Package |
+|---|---|---|
+| CLI (macOS, Linux) | `brew install adnaneben/kolmo/kolmo` | [adnaneben/homebrew-kolmo](https://github.com/adnaneben/homebrew-kolmo) |
+| Python 3.8+ | `pip install kolmoc` | [kolmoc on PyPI](https://pypi.org/project/kolmoc/) |
+| Rust | `cargo add kolmo` | [kolmo on crates.io](https://crates.io/crates/kolmo) |
+
+- **Homebrew** builds the `kolmo` command from source in a few seconds and pulls in `xz` for liblzma.
+- **Python:** the package is published as `kolmoc` because `kolmo` was already taken on PyPI, but you still
+  `import kolmo`. Prebuilt wheels cover Linux (x86-64, aarch64) and, from 1.0.1, Apple silicon Macs
+  (macOS 11 or later). Other platforms, Intel Macs included, build the sdist, which needs a C compiler and
+  takes about a minute.
+- **Rust:** the crate compiles the C core in `build.rs` and links it statically. It needs a C compiler at
+  build time.
+- **liblzma** is optional for both packages. If it isn't found, `max` and `ultra` use the other coders.
+
+Usage for each binding is in [`bindings/python`](bindings/python/README.md) and
+[`bindings/rust`](bindings/rust/README.md). To build the CLI and library from source, see below.
+
+## Build and use
+
+The examples below run the source build (`./build/kolmo`). After `brew install`, the same commands work
+with plain `kolmo`.
+
+```bash
+make                                    # build/kolmo, build/kolmobench, build/kolmotest (Linux, macOS; gcc or clang)
+make check                             # resource failures, concurrent callers, round trips, ranges and corruption
+./build/kolmo -m ratio in.csv out.kolmo     # compress: -m speed|balanced|ratio (-x: smallest of all), -T threads; advanced: -m rt|fast|eco|hc|max|ultra, -l level, -q
+./build/kolmo -d out.kolmo back.csv         # decompress (auto-detects one-shot vs streamed input)
+./build/kolmo -s huge.csv huge.czs        # streaming compress: bounded memory, any size (-S N for N-MiB segments)
+./build/kolmo -r 1000000:4096 out.kolmo x   # read 4 KiB at offset 1,000,000 without decoding the rest
+./build/kolmo -t s.dict samples/*.csv     # train a dictionary; then -D s.dict to compress/decompress small files
+./build/kolmobench -X -o results.tsv file  # benchmark against LZ4, zstd, brotli and xz built from the same sources
+```
+
+Requires liblzma (`apt install liblzma-dev`, `brew install xz`); zstd, LZ4, brotli and libbsc are vendored. Build with `make NO_LZMA=1`
+where liblzma is unavailable (max and ultra then use the other coders).
+
+On a Mac: `bash mac/setup.sh` once, then `bash mac/bench.sh` for the full benchmark and `bash mac/tune.sh` for an
+overnight genetic search of the build-time settings (`tune/ga.py`).
+
+## Status
+
+1.x. The container is version 5 (a stream uses v4/v5 only when the delta-of-delta or third-order predictor is selected, else v3); versions 1–3 remain readable, and an older decoder reports an error on a newer version rather than returning wrong data. Output is byte-identical across
+x86-64 and Apple silicon (verified: rt/fast/hc on tables, logs and scientific data hash the same on both). The decoder
+is fuzzed (OSS-Fuzz harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never returned as
+data. A shared library and Python and Rust bindings are in `bindings/`; the format is documented in `SPEC.md`.
+1.0.0 is published on Homebrew, PyPI and crates.io (see Install); `RELEASING.md` describes how to cut a release.
+
+## Layout
+
+```
+src/kolmo.h, kolmo.c   library: planning, container, codecs, thread pool, table v1, field transposition, shuffle
+src/tbl2.inc       tables: typed columns, predictors, formula discovery
+src/log.inc        logs: templates and skeleton columns
+src/lines.inc      fixed-width text: line classes stored column by column
+src/sci.inc        fixed records and 16-bit images
+src/word.inc       word dictionary for prose
+src/cm.inc         context-mixing coder
+src/cli.c          command line          bench/kolmobench.c   benchmark          tests/kolmotest.c   tests
+tune/ga.py         genetic tuning        mac/              Mac scripts        vendor/           zstd, LZ4, libbsc
+bindings/python    PyPI package kolmoc   bindings/rust     crate kolmo        packaging/homebrew  brew formula
+```
+
+## Licence
+
+Apache-2.0 (see LICENSE). Vendored code keeps its own licence (see NOTICE).
+# kolmo container format
+
+This describes the `CZN1` container as written by this implementation. The writer emits the lowest version a file
+needs: 3 by default, and 4 to 9 only when a block uses a feature that needs it; versions 1 to 9 are readable. The
+section *Identifiers and versions* lists every version, codec id, node id and model, and which release reads each.
+The container framing below is stable and intended to be frozen at 1.0. The per-block *transform*
+sub-formats (tables, logs, scientific records, images, words) are not yet frozen and may change before 1.0; a decoder
+identifies them per block and this document specifies where that identification lives, not every transform's bytes.
+
+All multi-byte integers are little-endian. Offsets are in bytes from the start of the file.
+
+## File
+
+```
++----------------+------------------------+-------------------------+
+| header (32 B)  | block index (16 B/blk) | block payloads          |
++----------------+------------------------+-------------------------+
+```
+
+The payloads follow the index in block order; payload *i* occupies the next `comp[i]` bytes.
+
+## Header (32 bytes)
+
+| off | size | field | meaning |
+|----|----|----|----|
+| 0 | 4 | magic | ASCII `CZN1` |
+| 4 | 1 | version | 1 to 9: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15) |
+| 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
+| 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
+| 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 8 | 1 | b | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 9 | 1 | c | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 10 | 1 | flags | bit 0 (v3+): block checksums cover the stored payload, not the decoded bytes (set in `rt`). bit 1 (v3+): the zstd-coded blocks were compressed with a dictionary, whose 32-bit id is in bytes 6–9; decoding requires the matching dictionary. Other bits 0 |
+| 11 | 1 | reserved | 0 |
+| 12 | 8 | orig | original (uncompressed) length in bytes |
+| 20 | 4 | nblocks | number of blocks |
+| 24 | 4 | block | nominal block size in bytes |
+| 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
+
+A reader rejects the file if the magic is wrong, the version is not one it knows (1–9 for this implementation; older
+releases stop earlier, see *Identifiers and versions*), the index does not fit in the file, or the
+header+index CRC does not match. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
+of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `KOLMO_ERR_DICT`; an older
+reader that predates the flag refuses the newer version rather than returning wrong data.
+
+## Block index — one 16-byte entry per block
+
+| off | size | field | meaning |
+|----|----|----|----|
+| 0 | 4 | raw | decoded length of this block |
+| 4 | 4 | comp | stored length of this block's payload |
+| 8 | 4 | checksum | low 32 bits of a block checksum (see below) |
+| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7, GRAPH=12 (kolmo graph block), CMI=17 (context mixing with the image model); the full list is in *Identifiers and versions* |
+| 13 | 1 | tflag | transform applied before the coder (see below) |
+| 14 | 2 | reserved | 0 |
+
+`raw` values sum to `orig`. Payload offsets are the running sum of `comp`, starting at 32 + 16·nblocks.
+
+**Block checksum.** Version 3 uses the low 32 bits of XXH3-64; versions 1–2 use XXH64. By default it is computed over
+the *decoded* block and checked after decoding. When header flag bit 0 is set (rt), it is instead computed over the
+stored payload after its 4-byte plan prefix, seeded with those 4 bytes, and checked *before* decoding.
+
+## Block payload
+
+In versions 2 and 3 every payload begins with a 4-byte **plan prefix** `t, a, b, c`, followed by the coded stream.
+`t` is the transform/plan type:
+
+```
+T_NONE=0  TP=1 (typed transpose)  SHUF=2 (byte-plane shuffle)  TBL=3 (table v2)  LOG=4 (log templates)
+IMG=5 (16-bit image)  REC=6 (fixed records)  X86=7 (call/jump filter)  WORD=8 (word dictionary)
+```
+
+`tflag` in the index records which transform actually produced the stored bytes (0 = none; the transform-specific
+values are defined in the source). When a transform is present, a small transform header may precede the coded data
+inside the payload (for example a 4-byte transformed-length for the table, log, record, image and word transforms, or
+k×4 column sizes for the transpose). The decoder reads the plan prefix, undoes the coder to recover the transformed
+bytes, then undoes the transform named by `tflag` to recover the block.
+
+In version 1 there is no plan prefix; the file-level `transform`/`a`/`b`/`c` in the header apply to every block.
+
+**JSON.** The LOG plan carries the tokenizer in `a`: 0 = space-separated words (logs), 1 = JSON (keys and punctuation
+form the template, every scalar value is a placeholder), 2 = minified JSON. The output of modes 0 and 1 is the same
+log-template stream (tflag 5). Mode 2 inserts a newline after every `,` that follows `}` or `]` outside strings and
+codes the result as JSON lines; such blocks have tflag 10 and an 8-byte prefix (log-stream length u32, number of
+inserted newlines u32), and the decoder removes every newline from the decoded text (the encoder only uses mode 2 on
+blocks that contain no newline). Files with a tflag 10 block are version 6.
+
+## Entropy coders
+
+`STORE` is the raw block. `LZ4`/`LZ4HC`, `ZSTD`, `BROTLI` and `LZMA2` are the standard formats from the vendored
+libraries. `BSC` is libbsc's block-sorting stream, prefixed with a 4-byte XXH32 of the stream that is checked before
+decoding. `CM` is this project's integer context-mixing coder; its stream starts with a 32-bit size word whose low 28
+bits are the block length and whose top 4 bits `f` select the model: `f = 0` is model 1 with the legacy default table
+size; otherwise `f & 7` is the log2 of the hash-table size minus 15, and `f & 8` selects model 2 (two more sparse
+contexts, three record contexts, four mixers combined by a learned final mixer, and an extra order-2 APM). The arithmetic-coded bytes follow.
+`f = 8` exactly is the extended header: one more byte follows the size word, `model << 4 | (log2 of the table size − 15)`;
+it carries model 3 (orders 12 and 20, the byte the match model expects as a context, finer classes for long matches).
+Encoders write model 3 for text, model 2 for other data, and model 1 at level 1 and for blocks of 2^28 bytes or more;
+decoders accept all three, so files written with an older model still decode. `CMI` (codec 17) is the same coder with
+an image model for 8-bit samples: `iw u32 | ih u32 | ich u8` (row width in bytes, bytes before the first pixel,
+interleaved channels), then a size word as above and the coded bytes. CM output is bit-exact across compilers and
+CPUs (integer-only, `-ffp-contract=off`).
+
+## Identifiers and versions
+
+One table of every identifier a frame can carry, the first build that writes it, and what an older reader does with
+it. A new identifier is claimed here first, so that two lines of work do not take the same number.
+
+**Container versions** (header byte 4). The writer emits the highest version any block needs; a reader refuses a
+version above the highest it knows.
+
+| version | written when | first reader |
+|----|----|----|
+| 1, 2 | never (historical; read only) | 1.0.0 |
+| 3 | by default | 1.0.0 |
+| 4, 5 | a table column uses the delta-of-delta (4) or third-order (5) predictor | 1.0.0 |
+| 6 | a block uses the minified-JSON split (tflag 10) | 1.1.0 |
+| 7 | a block is a kolmo graph (codec 12, plan type 9) | 1.1.0 |
+| 8 | a block uses the line-class transform (plan type 10, tflag 12) | 1.1.0 |
+| 9 | a graph leaf uses codec 15; on request only (`--native-leaf`) | 1.2.0 |
+
+Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0. (1.1.0 is the state of `main` under that
+version number; it was not tagged or published. 1.2.0 is this build, a release candidate.)
+
+**Block codecs** (index byte 12) and **graph leaf codecs**.
+
+| id | name | where | first reader |
+|----|----|----|----|
+| 0–7 | STORE, LZ4, LZ4HC, ZSTD, BROTLI, BSC, LZMA2, CM | blocks and graph leaves | 1.0.0 |
+| 8–11 | DNA, DNA_PREFIX, PCM, DNA_RUNS | blocks; experimental, read and written only by builds made with `-DKOLMO_FRONTIER` | none (not in release builds) |
+| 12 | GRAPH | blocks, version 7 or later | 1.1.0 |
+| 13, 14 | HUF (Huffman only), RANS (order-0 rANS) | graph leaves | 1.1.0 |
+| 15 | NPLANE (native plane-context leaf) | graph leaves, version 9 only | 1.2.0 |
+| 16 | not assigned | | |
+| 17 | CMI (context mixing, image model) | blocks; written by `ultra` | 1.2.0 |
+
+**Graph nodes** (op byte of a node).
+
+| id | node | first reader |
+|----|----|----|
+| 1–6 | FIELDS, DECIMAL, CONCAT, INT, FLOAT, IMG8 | 1.1.0 |
+| 7 | DEC64 (binary64 values that are short decimals) | 1.2.0 |
+
+**CM models** (top bits of the size word, above).
+
+| model | flag | written when | first reader |
+|----|----|----|----|
+| 1 | `f` = 0–7 | `ultra` level 1; blocks of 2^28 bytes or more | 1.0.0 |
+| 2 | `f` = 9–15 | `ultra`, data that is not text | 1.1.0 |
+| 3 | `f` = 8, then one byte | `ultra`, text | 1.2.0 |
+
+**What an older reader does.** Only versions 4 to 9 are announced in the header. Block codec 17, graph node 7 and
+CM models 2 and 3 are written inside frames whose header carries the version the rest of the frame needs (3, 7 or
+8), following the rule in *Kolmo graph blocks*: new identifiers do not raise the container version, and a decoder
+rejects an identifier it does not know. So an older reader refuses such a frame part-way, when it meets the block,
+and reports `KOLMO_ERR_CORRUPT` ("corrupt or unsupported input"); it does not return wrong bytes. Measured on 580
+frames of 35 files written by 1.2.0-rc1: 1.0.1 decoded 403 and refused 177; 1.1.0 decoded 547 and refused 33 (DEC64
+nodes, `ultra` text and `ultra` images); no frame decoded to different bytes. Every frame written by 1.0.1 and
+1.1.0 decodes with 1.2.0-rc1. Whether these three identifiers should instead raise the container version (to 10),
+so that an older reader refuses at the header with a clearer cause, is an open decision for the project owner; it
+would change the bytes of the frames concerned and is not made here.
+
+## Guarantees
+
+- **Seekable.** Any byte range decodes by reading the header and index and decoding only the blocks it overlaps
+  (`kolmo_read_range`).
+- **Parallel.** Blocks are independent in both directions.
+- **Integrity.** The header+index CRC and per-block checksums are verified; corrupt input is reported as an error,
+  never returned as data.
+- **Portable.** For a given mode and input, the bytes are identical across Intel and Apple-silicon builds.
+
+## Stream format (`CZNS`) — large inputs
+
+For inputs processed in bounded memory (and over pipes), a stream wraps independent containers:
+
+```
+"CZNS"  ver(1 = 1)  reserved(3)  seg_bytes(u32 le)      # 12-byte stream header
+then, repeated:   len(u64 le)  frame[len]               # frame = one complete CZN1 container
+end:              0 (u64 le)                             # zero-length terminator
+```
+
+Each frame is a normal container (above) for one segment of the input (default 64 MiB), so encode and
+decode hold at most one segment plus its frame in memory. Segments are independent — compressed and
+decoded across cores like blocks — so very small segments cost a little ratio at their boundaries. A
+decoder distinguishes the two formats by the first four bytes (`CZN1` one-shot vs `CZNS` stream).
+Produced and consumed by `kolmo_stream_compress` / `kolmo_stream_decompress`.
+
+## Transform sub-formats
+
+The byte layouts of the table, log, record, image and word transforms live with their code and are documented there,
+not frozen here:
+
+```
+src/tbl2.inc   table v2: typed columns, predictors, formula discovery
+src/log.inc    log templates and skeleton columns
+src/sci.inc    fixed records and 16-bit images
+src/word.inc   word dictionary
+src/kolmo.c      container, typed transpose, byte-plane shuffle, x86 filter, coders
+```
+
+## Kolmo graph blocks (version 7)
+
+A block with codec 12 and plan type 9 is a **kolmo graph**: instead of one fixed transform, the payload (after the
+4-byte plan) holds a small program. Stream 0 is the block's bytes. Each node consumes streams and appends its outputs
+to the stream table; streams no node consumes are leaves, each coded by an ordinary codec. The decoder decodes the
+leaves, then runs the nodes' inverses from the last node to the first. New transforms add node ids; the container
+version stays 7. A decoder rejects any node id it does not know.
+
+```
+payload�= 'G' | 1 (graph version) | nodes uv | node * nodes | leaves uv | leaf * leaves
+node    := op u8 | nin uv | input index uv * nin | nout uv | param length uv | params
+leaf    := stream index uv | codec u8 (0-7 as for blocks, 13, 14, or 15 from version 9) | raw length uv | coded length uv | coded bytes
+```
+
+**Leaf codec 15: native plane-context leaf (container version 9).** Written only on request (`--native-leaf`,
+`KOLMO_T_NATIVE_LEAF`, balanced), only for the integer residual stream of an `INT` node, and only when smaller than
+the other leaf codings. A reader rejects codec 15 in a file of version below 9, and as a block codec. Payload, for raw
+length `rl`:
+
+```
+payload := fmt u8 (= 1) | np u8 (1-8, rl % np == 0, L = rl / np) | plane * np        ; plane k = bytes k*L .. k*L+L-1
+plane   := 'c' value u8 | 's' L bytes | 'h' len uv | Huffman stream | 'r' len uv | rANS stream
+         | 'l' len uv | context stream (lanes, L >= 8) | 'p' len uv | context stream (cross-plane, plane k >= 1)
+context := mask u16 (buckets 0-8, nonzero, bits 9-15 zero) | table * popcount(mask) | z uv | state u64 * 4 | word u32 *
+table   := 256 frequencies in the rANS table format, summing to 65536 (a one-symbol table holds 65536)
+```
+
+The `h` and `r` streams are those of codecs 13 and 14. In a context stream the bucket of a context byte `c` is 0 when
+`c` is 0, else its bit length (1-8); rANS uses four 64-bit states with lower bound 2^31 and 16-bit frequencies, words
+are read forwards, `z` (a multiple of 4, at least 32) is the rest of the stream, and every state must end at 2^31.
+Lanes (`l`): with `L4 = L / 4`, lane `j` is positions `j*L4 .. j*L4+L4-1`, decoded in lockstep by state `j`, then the
+tail positions `4*L4 + j` by state `j`; the context is the previous byte of the plane, reset to bucket 0 at position 0
+and at each lane start. Cross-plane (`p`): position `i` uses state `i mod 4` and the context is byte `i` of plane
+`k - 1`. Any other tag, table, length or final state is corrupt.
+
+Outputs of a node take the next stream indices, in order. Every stream is consumed at most once; stream 0 must be
+consumed when there are nodes; every unconsumed stream must appear exactly once as a leaf; inputs must refer to
+earlier streams. `uv` is an unsigned LEB128 varint.
+
+| Op | Name | Params | Inputs → outputs |
+|---|---|---|---|
+| 1 | FIELDS | delimiter u8, k uv | text → shape, column 0 … column k−1. A line with exactly k fields sends each field, `\n`-terminated, to its column. Any other line is kept in shape: line count uv, final-newline u8, then per irregular line its line-index gap uv (from the previous irregular line, or from 0), length uv and bytes. |
+| 2 | DECIMAL | separator u8, predictor u8 | values (`\n`-terminated) → tags, scales, mantissas, texts. Tag per value: 0 empty, 1 number, 2 text. A number matches `-?(0\|[1-9][0-9]*)(sep[0-9]+)?` with at most 18 digits and is not a negative zero; its scale byte is the digit count after the separator, or 255 for none; its mantissa (digits as one integer, signed) is stored as the zigzag uv of the difference from the previous number in the column (predictor 1) or of itself (predictor 0). Text values are stored `\n`-terminated. |
+| 3 | CONCAT | count uv, length uv * count | count streams → their concatenation |
+| 4 | INT | width u8 (1, 2, 4, 8), flags u8 (bit 0 signed, bits 1–2 order 0–2, bit 3 byte planes), output width u8 (1, 2, 4, 8), head uv, count uv, gcd uv (≥ 1), bias uv (zigzag), seeds uv (zigzag) * order | bytes → residuals, rest. The input is `head` bytes, `count` little-endian integers of `width` bytes (sign-extended to 64 bits when signed, else zero-extended), then trailing bytes; rest holds the head bytes followed by the trailing bytes. Order 0 stores (v − bias) / gcd; orders 1 and 2 store zigzag((v − p) / gcd), where p is the previous value (order 1) or twice the previous minus the one before (order 2), for every value after the first `order` (the seeds). Arithmetic wraps modulo 2^64 and divisions are exact. Each residual takes `output width` little-endian bytes; with bit 3 the residual stream is byte planes (all low bytes, then all second bytes, …). |
+
+| 5 | FLOAT | width u8 (2, 4, 8), head uv, count uv | bytes → plane 0 … plane width−1, rest. The input is `head` bytes, `count` little-endian words of `width` bytes, then trailing bytes (rest = head bytes then trailing bytes). Each word is rotated left by one bit, so the sign moves to bit 0 and the top byte of a float32 is its exponent; byte b of every rotated word goes to plane b. |
+
+| 6 | IMG8 | row bytes uv, channel step u8 (1–4), head uv | bytes → residuals, rest. After `head` bytes the input is rows of `row bytes`; each byte is predicted from the bytes `step` to the left (a), one row up (b) and up-left (c) by the median of a, b and a + b − c (LOCO-I); the first row uses a, the first `step` bytes of a row use b. Residual = zigzag of (x − prediction) mod 256 read as int8. Bytes after the last whole row and the head go to rest. |
+
+Leaf codec 14 is static order-0 rANS: chunks of at most 1 MiB, each `raw length uv | frequency table | coded length uv |
+words`. The table gives each byte's frequency (scaled to 2^16) as a uv, a 0 being followed by one byte counting the
+further absent symbols. The words are 32-bit little-endian: four 64-bit states (position mod 4, low word first), then
+the renormalisation words, read forwards (rans64). The encoder tries it at hc, max and ultra.
+
+Leaf codec 13 is Huffman-only coding (zstd's Huffman coder, no matches), for skewed byte streams without repeats such
+as an exponent plane: chunks of at most 128 KiB, each `mode u8 | raw length uv` then for mode 0 the raw bytes, for
+mode 1 one byte repeated, for mode 2 `coded length uv | zstd HUF 4-stream data`. The encoder keeps, per leaf, the
+smallest of the block codec, Huffman-only and stored.
+
+The planner uses graphs for delimited tables with more than 256 columns (the limit of the table transform) and for
+arrays of 16-, 32- and 64-bit integers and float arrays (a `.npy` header becomes the node's head), when a slice codes at least 3%
+smaller than the other candidates. A
+version 1–6 decoder rejects version 7 files.
+# kolmo — a structure-aware compressor
+
+kolmo reads the structure of its input — tables, logs, prose, scientific records and images, executables, archives — and
+stores it in a form that entropy coders compress far better, then encodes independent, checksummed blocks on every core.
+It has six modes, from LZ4-speed `rt` to the context-mixing archive tier `ultra`. In every mode the goal is the same:
+**at the speed of the leading compressor of that class, produce smaller files.**
+
+## Results
+
+Single core, in memory, best of repeated runs; every output decoded and compared byte for byte. Each cell is the
+compression ratio (original size / compressed size). Machine: 2-core Intel Xeon VM, 2.1 GHz, gcc 13, `-O3 -march=native`.
+The leaders were built from the same sources with the same flags (OpenZL: its own CLI, best profile, trained on the
+tables). Full per-mode tables, speeds, and a one-command way to reproduce all of this on your own machine are in
+[`benchmark/BENCHMARKS.md`](benchmark/BENCHMARKS.md). How we decide whether a ratio gain is worth a speed loss (or
+the reverse), with the research and industry figures behind it, is in [`benchmark/TRADEOFFS.md`](benchmark/TRADEOFFS.md).
+
+| Data | kolmo fast | kolmo eco | kolmo hc | kolmo max | kolmo ultra | zstd -19 | brotli -11 | xz -9e | OpenZL |
+|---|---|---|---|---|---|---|---|---|---|
+| Tables: OWID CO2 + energy, 23.6 MB | 10.31 | 10.58 | 10.82 | 11.38 | 11.44 | 4.20 | 4.56 | 4.54 | 4.82 |
+| Logs: 16 Loghub logs, 4.5 MB | 14.10 | 15.79 | 16.27 | 17.67 | 22.42 | 13.48 | 14.50 | 14.67 | 9.84 |
+| Text: enwik8, 100 MB | 2.81 | 3.48 | 4.10 | 4.62 | 5.11 | 3.71 | 3.88 | 4.03 | 3.06 |
+| Scientific: star catalogue + X-ray, 15.7 MB | 2.64 | 2.69 | 2.68 | 2.71 | 2.76 | 1.55 | 1.70 | 1.76 | 2.56 |
+| Mixed: Silesia corpus, 212 MB | 3.64 | 4.19 | 4.45 | 5.08 | 5.58 | 4.01 | 4.27 | 4.38 | 3.35 |
+
+Speeds (single core, MB/s, compress / decompress) for the same runs are in `results_*.tsv`. In short: `fast` compresses
+at 100–190 MB/s and decompresses at 500–1100 MB/s on this machine (2.3–3.3× faster on Apple M5 cores); `hc` decompresses
+at 460–1030 MB/s, 4–10× faster than xz; `max` and `ultra` are archive tiers (`ultra` runs at well under 1 MB/s per core).
+
+Blocks are independent, so both directions scale with cores while the single-stream LZ coders do not. The speed modes
+(`rt`, `fast`) size blocks adaptively (~1 MiB, ≥8 per input) so decode and compress parallelise; the archive modes keep
+large windows for ratio. On a 4-core Apple-silicon build, `kolmo fast` **decompresses faster than `zstd -3` on every data
+type — tables 3.6 GB/s vs 1.6, scientific 6.4 vs 1.2, logs 8.5 vs 4.1 — and compresses tables faster too (759 vs 600
+MB/s)**, all while holding the ratio lead, because `zstd` is flat with cores and kolmo scales ~3.7×. On a single core kolmo
+leads decode on scientific and trades 1.2–2× decode speed on tables/logs for 2–4× the ratio, making it back across cores.
+
+### lzbench: Silesia, one thread
+
+kolmo also runs inside [lzbench](https://github.com/inikep/lzbench) as an ordinary codec (same harness, same flags,
+one thread, round trips verified; see [`benchmark/lzbench`](benchmark/lzbench)). Each lzbench level is a plain CLI
+setting. On the 212 MB Silesia corpus (2-core 2.1 GHz Xeon VM; speeds vary by about ±15% between runs, ratios are
+exact):
+
+| kolmo setting | Ratio | Compress | Decompress | Best rival at that speed |
+|---|---|---|---|---|
+| `rt` | 46.58% | 540 MB/s | 2.5 GB/s | lz4: 47.59%, 539 MB/s, 3.3 GB/s |
+| `fast -l1 -q` | **30.33%** | 355 MB/s | 1.2 GB/s | zstd -2: 32.70%, 372 MB/s |
+| `fast -l2 -q` | **28.89%** | 294–337 MB/s | 1.1 GB/s | zstd -3: 31.20%, 210–232 MB/s |
+| `fast -q` | **27.87%** | 194–234 MB/s | 0.9–1.1 GB/s | zstd -3: 31.20% |
+| `fast` (default) | 27.49% | 132–188 MB/s | 0.8–1.0 GB/s | zstd -5: 29.60%, 110 MB/s |
+| `hc -l 9` | **24.70%** | 48.6 MB/s | 672 MB/s | brotli -5: 28.10%, 41 MB/s |
+| `max -l 1` | **20.93%** | 19–22 MB/s | 33 MB/s | bsc: 23.26%, 15 MB/s; bzip3 -5: 22.29%, 9.4 MB/s |
+| `hc` | 22.47% | 2.6 MB/s | **631 MB/s** | xz -9: 23.00%, 99 MB/s decode; bzip3 -5: 22.29%, 9.7 MB/s decode |
+| `max` | **19.34%** | 2.7 MB/s | 54 MB/s | kanzi -9: 19.73%, 1.7 MB/s |
+| `ultra -l 1` | **17.99%** | 0.43 MB/s | 0.45 MB/s | zpaq -5: 19.09%, 0.39 MB/s |
+| `ultra` | **17.01%** | 0.28 MB/s | 0.30 MB/s | — (smallest result on the board) |
+
+From about 350 MB/s down to the slowest tier, the bold settings give the smallest output of any entry at that
+compression speed or faster. `hc` (and `eco`) trade some of that for decode speed: `hc` decompresses 6× faster than
+xz and 65× faster than bzip3 at a similar ratio. Above 350 MB/s, and on raw decode speed in the LZ4 class, zstd -1
+and lz4 still lead.
+
+## How it works
+
+| Data | Model |
+|---|---|
+| Tables (CSV/TSV) | Columns become typed streams. Numeric columns are exact decimals at a common scale, predicted per block by raw, delta, delta within an entity (e.g. country), **delta-of-delta** and **third-order** within an entity (for counters and steady trends), or a discovered **formula of other columns** (`y = k·a/b`, change and % change): 51 formulas on the OWID energy table. Quoted fields, short rows and odd values are lossless. |
+| Logs | Lines are split into **templates and variables**; timestamps, IPs and IDs become integer columns ("skeleton" columns). |
+| Fixed-width text | Lines that come in a few fixed lengths (chemistry and geometry files, fixed-width reports) are stored **column by column per line length**: a line scan and a transpose, several times cheaper than templates. Files that use it carry container version 8. |
+| Prose and markup | Frequent words become 2-byte codes from byte values the block never uses (eco and above); `hc` then uses zstd 22 with a 128 MiB window. |
+| Decimal doubles | Float64 arrays whose values were written in decimal (`.npy` tables, raw arrays, the columns inside pickle, `.npz` and `.mat` files) are stored as **integers over a power of ten per column**, with missing values as a tag and anything else kept verbatim. |
+| Scientific binary | **Fixed records** (period found by self-similarity; fields of 1/2/4/8 bytes stored raw, as deltas, as dictionary tokens, or as multiples of a discovered quantum with exact bit corrections) and **16-bit images** (byte order, row stride and predictor found automatically). |
+| Executables, archives | x86 call/jump transform; each tar member gets its own model. |
+| Coders | LZ4 (`rt`), zstd (`fast`, `hc`), brotli (`eco`), BWT via libbsc and LZMA2 (`max`), and an integer **context-mixing** coder (`ultra`: orders 1–7, words, columns, indirect contexts, bit histories, neural mixing, APMs), best per block. |
+| Container | Independent blocks with an index, so any byte range decodes alone. XXH3 per block and CRC32C over the header and index: corrupt input is reported, never returned as data. Blocks compress and decompress in parallel, so throughput scales with cores. |
+
+All prediction that must agree between encoder and decoder is integer or plain IEEE double without fused multiply-add
+(`-ffp-contract=off`), so **Intel and Apple-silicon builds produce byte-identical files** and decode each other's output.
+
+## Modes
+
+Three modes cover almost every use:
+
+| Mode | What it is for | Same as |
+|---|---|---|
+| `-m speed` | fastest; data that is read or sent right away | `rt -Q` |
+| `-m balanced` (default) | small and fast; everyday storage and transfer | `fast` |
+| `-m ratio` | smallest at practical speed; archives | `max` |
+
+`-x` asks for the smallest output of all (`ultra`): context mixing, very slow, large memory. It was never removed; it
+is left out of the speed benchmarks because it runs at well under 1 MB/s.
+`-x -l 2` goes further for ratio at the cost of decode speed: numeric graph leaves may also use context mixing when
+that is smaller (measured −11% to −15% on integer series such as sensor and ECG samples, about −2% on a mixed
+numeric corpus), and those blocks then decode at context-mixing speed. Plain `-x` is unchanged; any decoder reads both.
+
+`--native-leaf` (with `balanced`; C API: `transforms |= KOLMO_T_NATIVE_LEAF`) codes integer-series residuals with
+Kolmo's native plane-context leaves when that is smaller: measured −11.3% on 180 MB of ECG and numeric columns from
+the holdout sources (ECG −11.9%, power −9.8%), and such files decode about 1.5–2.6× slower than default `balanced`
+(2.3× on that data, about 580 MB/s on Apple silicon). Files that use it are container version 9; files that do not
+are unchanged.
+
+Advanced settings, for tuning between the three:
+
+| Mode | Block | Coder | Use |
+|---|---|---|---|
+| `rt` | adaptive (≤4 MiB) | LZ4 | decode speed first |
+| `fast` | adaptive (≤4 MiB) | zstd 3 | default (`-q`: quick analysis, cheap transforms only) |
+| `eco` | 16 MiB | brotli 8 | lowest storage cost at moderate CPU |
+| `hc` | 16 MiB (text 128 MiB) | zstd 19 / 22 | archive with fast reads |
+| `max` | 128 MiB | BWT for text; LZMA2 otherwise, or BWT where it is at least 3% smaller (`-l 1`: BWT only) | cold archive |
+| `ultra` | 128 MiB | best of context mixing (with an image model for 8-bit images), LZMA2, BWT (`-l 1`: context mixing model 1 only, faster; `-l 2`: maximum ratio, numeric graph leaves may also use context mixing, slower decode) | coldest archive, best ratio |
+
+`ultra` sizes its context-mixing tables to the block (up to about 4.5 GB per thread

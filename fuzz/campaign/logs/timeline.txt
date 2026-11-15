@@ -1,0 +1,310 @@
+## 2026-11-15T16:18:13Z mem_avail_MB=13414
+fuzz_decompress 
+fuzz_dict 
+fuzz_fastq #29829: cov: 194 ft: 256 corp: 52 exec/s: 3478 oom/timeout/crash: 0/0/0 time: 9s job: 3 dft_time: 0
+fuzz_kbcx 
+fuzz_krc #31400: cov: 200 ft: 202 corp: 42 exec/s: 5520 oom/timeout/crash: 0/0/0 time: 9s job: 3 dft_time: 0
+fuzz_limited 
+fuzz_nplane #191: cov: 1851 ft: 1613 corp: 169 exec/s: 36 oom/timeout/crash: 0/0/0 time: 10s job: 2 dft_time: 0
+fuzz_roundtrip 
+fuzz_stream #212924: cov: 809 ft: 747 corp: 119 exec/s: 25286 oom/timeout/crash: 0/0/0 time: 9s job: 3 dft_time: 0
+## 2026-11-15T16:23:13Z mem_avail_MB=12273
+fuzz_decompress 
+fuzz_dict 
+fuzz_fastq #1679044: cov: 229 ft: 316 corp: 88 exec/s: 4930 oom/timeout/crash: 0/0/0 time: 302s job: 23 dft_time: 0
+fuzz_kbcx #696810: cov: 668 ft: 663 corp: 91 exec/s: 2967 oom/timeout/crash: 0/0/0 time: 289s job: 21 dft_time: 0
+fuzz_krc #1368221: cov: 201 ft: 205 corp: 45 exec/s: 5570 oom/timeout/crash: 0/0/0 time: 303s job: 23 dft_time: 0
+fuzz_limited 
+fuzz_nplane #8410: cov: 2014 ft: 2497 corp: 566 exec/s: 32 oom/timeout/crash: 0/0/0 time: 303s job: 22 dft_time: 0
+fuzz_roundtrip #1006: cov: 10337 ft: 8754 corp: 268 exec/s: 12 oom/timeout/crash: 0/0/0 time: 305s job: 17 dft_time: 0
+fuzz_stream #6348128: cov: 915 ft: 1003 corp: 251 exec/s: 17796 oom/timeout/crash: 0/0/0 time: 304s job: 23 dft_time: 0
+## 2026-11-15T16:28:13Z mem_avail_MB=12585
+fuzz_decompress 
+fuzz_dict #13: cov: 3119 ft: 3119 corp: 138 exec/s: 0 oom/timeout/crash: 0/0/0 time: 600s job: 1 dft_time: 0
+fuzz_fastq #3556684: cov: 229 ft: 322 corp: 91 exec/s: 6068 oom/timeout/crash: 0/0/0 time: 599s job: 33 dft_time: 0
+fuzz_kbcx #1743294: cov: 669 ft: 664 corp: 92 exec/s: 4308 oom/timeout/crash: 0/0/0 time: 600s job: 32 dft_time: 0
+fuzz_krc #3059903: cov: 205 ft: 209 corp: 47 exec/s: 1294 oom/timeout/crash: 0/0/0 time: 600s job: 33 dft_time: 0
+fuzz_limited #133: cov: 2677 ft: 2677 corp: 128 exec/s: 0 oom/timeout/crash: 0/0/0 time: 598s job: 10 dft_time: 0
+fuzz_nplane #17136: cov: 2027 ft: 2630 corp: 645 exec/s: 36 oom/timeout/crash: 0/0/0 time: 595s job: 32 dft_time: 0
+fuzz_roundtrip #2029: cov: 10620 ft: 10237 corp: 511 exec/s: 1 oom/timeout/crash: 0/0/0 time: 609s job: 26 dft_time: 0
+fuzz_stream #13105041: cov: 933 ft: 1047 corp: 275 exec/s: 24404 oom/timeout/crash: 0/0/0 time: 601s job: 33 dft_time: 0
+## 2026-11-15T16:33:13Z mem_avail_MB=13332
+fuzz_decompress #38: cov: 2687 ft: 2687 corp: 132 exec/s: 0 oom/timeout/crash: 0/1/0 time: 841s job: 3 dft_time: 0
+fuzz_dict #113: cov: 3119 ft: 3119 corp: 138 exec/s: 0 oom/timeout/crash: 0/0/0 time: 846s job: 8 dft_time: 0
+fuzz_fastq #5757205: cov: 229 ft: 322 corp: 91 exec/s: 3798 oom/timeout/crash: 0/0/0 time: 908s job: 41 dft_time: 0
+fuzz_kbcx #2616282: cov: 669 ft: 664 corp: 92 exec/s: 1660 oom/timeout/crash: 0/0/0 time: 903s job: 40 dft_time: 0
+fuzz_krc #4609288: cov: 205 ft: 209 corp: 47 exec/s: 4232 oom/timeout/crash: 0/0/0 time: 910s job: 41 dft_time: 0
+fuzz_limited #299: cov: 3193 ft: 2738 corp: 143 exec/s: 0 oom/timeout/crash: 0/0/0 time: 833s job: 20 dft_time: 0
+fuzz_nplane #24429: cov: 2028 ft: 2696 corp: 687 exec/s: 23 oom/timeout/crash: 0/0/0 time: 900s job: 40 dft_time: 0
+fuzz_roundtrip #3042: cov: 11016 ft: 11030 corp: 639 exec/s: 3 oom/timeout/crash: 0/0/0 time: 891s job: 32 dft_time: 0
+fuzz_stream #19757592: cov: 936 ft: 1070 corp: 285 exec/s: 19036 oom/timeout/crash: 0/0/0 time: 910s job: 41 dft_time: 0
+## 2026-11-15T16:36:39Z mem_avail_MB=12260
+fuzz_decompress 
+fuzz_dict 
+fuzz_fastq #6896677: cov: 229 ft: 325 corp: 92 exec/s: 3912 oom/timeout/crash: 0/0/0 time: 1086s job: 45 dft_time: 0
+fuzz_kbcx #3019765: cov: 672 ft: 667 corp: 94 exec/s: 2364 oom/timeout/crash: 0/0/0 time: 1078s job: 44 dft_time: 0
+fuzz_krc #5312585: cov: 205 ft: 209 corp: 47 exec/s: 2816 oom/timeout/crash: 0/0/0 time: 1089s job: 45 dft_time: 0
+fuzz_limited 
+fuzz_nplane #27843: cov: 2029 ft: 2725 corp: 701 exec/s: 13 oom/timeout/crash: 0/0/0 time: 1076s job: 44 dft_time: 0
+fuzz_roundtrip #3575: cov: 11085 ft: 11338 corp: 696 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1075s job: 36 dft_time: 0
+fuzz_stream #22979889: cov: 937 ft: 1075 corp: 289 exec/s: 17476 oom/timeout/crash: 0/0/0 time: 1089s job: 45 dft_time: 0
+## 2026-11-15T16:41:39Z mem_avail_MB=12252
+fuzz_decompress #287: cov: 3270 ft: 2564 corp: 139 exec/s: 3 oom/timeout/crash: 0/0/0 time: 285s job: 13 dft_time: 0
+fuzz_dict #873: cov: 3596 ft: 2960 corp: 192 exec/s: 3 oom/timeout/crash: 0/0/0 time: 286s job: 17 dft_time: 0
+fuzz_fastq #8125424: cov: 229 ft: 325 corp: 92 exec/s: 2899 oom/timeout/crash: 0/0/0 time: 1384s job: 51 dft_time: 0
+fuzz_kbcx #3610690: cov: 672 ft: 667 corp: 94 exec/s: 658 oom/timeout/crash: 0/0/0 time: 1371s job: 50 dft_time: 0
+fuzz_krc #6689287: cov: 206 ft: 210 corp: 48 exec/s: 5032 oom/timeout/crash: 0/0/0 time: 1387s job: 51 dft_time: 0
+fuzz_limited #744: cov: 3375 ft: 2822 corp: 184 exec/s: 2 oom/timeout/crash: 0/0/0 time: 292s job: 17 dft_time: 0
+fuzz_nplane #33499: cov: 2032 ft: 2748 corp: 716 exec/s: 24 oom/timeout/crash: 0/0/0 time: 1370s job: 50 dft_time: 0
+fuzz_roundtrip #4041: cov: 11108 ft: 11533 corp: 755 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1387s job: 42 dft_time: 0
+fuzz_stream #27564002: cov: 1006 ft: 1157 corp: 297 exec/s: 20041 oom/timeout/crash: 0/0/0 time: 1388s job: 51 dft_time: 0
+## 2026-11-15T16:46:39Z mem_avail_MB=12275
+fuzz_decompress #1079: cov: 3363 ft: 2745 corp: 193 exec/s: 1 oom/timeout/crash: 0/0/0 time: 582s job: 24 dft_time: 0
+fuzz_dict #1690: cov: 3658 ft: 3168 corp: 244 exec/s: 6 oom/timeout/crash: 0/0/0 time: 604s job: 28 dft_time: 0
+fuzz_fastq #9259953: cov: 229 ft: 325 corp: 92 exec/s: 3394 oom/timeout/crash: 0/0/0 time: 1660s job: 56 dft_time: 0
+fuzz_kbcx #4433149: cov: 672 ft: 667 corp: 94 exec/s: 1597 oom/timeout/crash: 0/0/0 time: 1700s job: 56 dft_time: 0
+fuzz_krc #8340730: cov: 206 ft: 210 corp: 48 exec/s: 3156 oom/timeout/crash: 0/0/0 time: 1663s job: 56 dft_time: 0
+fuzz_limited #1371: cov: 3416 ft: 3073 corp: 251 exec/s: 1 oom/timeout/crash: 0/0/0 time: 586s job: 27 dft_time: 0
+fuzz_nplane #39763: cov: 2033 ft: 2770 corp: 727 exec/s: 15 oom/timeout/crash: 0/0/0 time: 1701s job: 56 dft_time: 0
+fuzz_roundtrip #4358: cov: 11123 ft: 11891 corp: 800 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1708s job: 47 dft_time: 0
+fuzz_stream #32821420: cov: 1009 ft: 1163 corp: 301 exec/s: 21446 oom/timeout/crash: 0/0/0 time: 1664s job: 56 dft_time: 0
+## 2026-11-15T16:51:39Z mem_avail_MB=12080
+fuzz_decompress #1412: cov: 3379 ft: 2856 corp: 225 exec/s: 1 oom/timeout/crash: 0/0/0 time: 858s job: 31 dft_time: 0
+fuzz_dict #2221: cov: 3686 ft: 3318 corp: 294 exec/s: 1 oom/timeout/crash: 0/0/0 time: 887s job: 35 dft_time: 0
+fuzz_fastq #10883837: cov: 229 ft: 325 corp: 92 exec/s: 8777 oom/timeout/crash: 0/0/0 time: 1960s job: 61 dft_time: 0
+fuzz_kbcx #5074889: cov: 672 ft: 667 corp: 94 exec/s: 3063 oom/timeout/crash: 0/0/0 time: 2001s job: 61 dft_time: 0
+fuzz_krc #10748843: cov: 206 ft: 210 corp: 48 exec/s: 11756 oom/timeout/crash: 0/0/0 time: 1964s job: 61 dft_time: 0
+fuzz_limited #1930: cov: 3460 ft: 3238 corp: 308 exec/s: 2 oom/timeout/crash: 0/0/0 time: 903s job: 35 dft_time: 0
+fuzz_nplane #46793: cov: 2037 ft: 2812 corp: 752 exec/s: 25 oom/timeout/crash: 0/0/0 time: 2005s job: 61 dft_time: 0
+fuzz_roundtrip #4657: cov: 11167 ft: 12236 corp: 839 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1971s job: 51 dft_time: 0
+fuzz_stream #38203772: cov: 1009 ft: 1163 corp: 301 exec/s: 21294 oom/timeout/crash: 0/0/0 time: 1965s job: 61 dft_time: 0
+## 2026-11-15T16:56:39Z mem_avail_MB=11863
+fuzz_decompress #1743: cov: 3385 ft: 2938 corp: 257 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1173s job: 38 dft_time: 0
+fuzz_dict #2692: cov: 3697 ft: 3416 corp: 325 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1165s job: 41 dft_time: 0
+fuzz_fastq #12059586: cov: 229 ft: 325 corp: 92 exec/s: 3195 oom/timeout/crash: 0/0/0 time: 2286s job: 66 dft_time: 0
+fuzz_kbcx #5413874: cov: 672 ft: 667 corp: 94 exec/s: 822 oom/timeout/crash: 0/0/0 time: 2261s job: 65 dft_time: 0
+fuzz_krc #12060790: cov: 206 ft: 210 corp: 48 exec/s: 1499 oom/timeout/crash: 0/0/0 time: 2291s job: 66 dft_time: 0
+fuzz_limited #2458: cov: 3475 ft: 3296 corp: 341 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1173s job: 41 dft_time: 0
+fuzz_nplane #51615: cov: 2039 ft: 2827 corp: 762 exec/s: 20 oom/timeout/crash: 0/0/0 time: 2265s job: 65 dft_time: 0
+fuzz_roundtrip #5178: cov: 11172 ft: 12462 corp: 901 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2313s job: 56 dft_time: 0
+fuzz_stream #42840710: cov: 1010 ft: 1172 corp: 304 exec/s: 17170 oom/timeout/crash: 0/0/0 time: 2291s job: 66 dft_time: 0
+## 2026-11-15T17:01:40Z mem_avail_MB=11691
+fuzz_decompress #2002: cov: 3390 ft: 2992 corp: 282 exec/s: 0 oom/timeout/crash: 0/0/0 time: 1477s job: 44 dft_time: 0
+fuzz_dict #3209: cov: 3704 ft: 3533 corp: 359 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1480s job: 47 dft_time: 0
+fuzz_fastq #13473061: cov: 229 ft: 325 corp: 92 exec/s: 3519 oom/timeout/crash: 0/0/0 time: 2565s job: 70 dft_time: 0
+fuzz_kbcx #5953276: cov: 672 ft: 667 corp: 94 exec/s: 2152 oom/timeout/crash: 0/0/0 time: 2610s job: 70 dft_time: 0
+fuzz_krc #14188493: cov: 206 ft: 210 corp: 48 exec/s: 5561 oom/timeout/crash: 0/0/0 time: 2570s job: 70 dft_time: 0
+fuzz_limited #2981: cov: 3478 ft: 3347 corp: 368 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1475s job: 47 dft_time: 0
+fuzz_nplane #58746: cov: 2041 ft: 2852 corp: 780 exec/s: 17 oom/timeout/crash: 0/0/0 time: 2613s job: 70 dft_time: 0
+fuzz_roundtrip #5577: cov: 11173 ft: 12597 corp: 936 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2586s job: 60 dft_time: 0
+fuzz_stream #46430058: cov: 1013 ft: 1179 corp: 309 exec/s: 17044 oom/timeout/crash: 0/0/0 time: 2571s job: 70 dft_time: 0
+## 2026-11-15T17:06:40Z mem_avail_MB=11664
+fuzz_decompress #2335: cov: 3491 ft: 3059 corp: 307 exec/s: 0 oom/timeout/crash: 0/0/0 time: 1769s job: 49 dft_time: 0
+fuzz_dict #3758: cov: 3706 ft: 3613 corp: 393 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1775s job: 52 dft_time: 0
+fuzz_fastq #15004571: cov: 229 ft: 325 corp: 92 exec/s: 6748 oom/timeout/crash: 0/0/0 time: 2859s job: 74 dft_time: 0
+fuzz_kbcx #6525614: cov: 672 ft: 667 corp: 94 exec/s: 2237 oom/timeout/crash: 0/0/0 time: 2905s job: 74 dft_time: 0
+fuzz_krc #16402479: cov: 206 ft: 210 corp: 48 exec/s: 1967 oom/timeout/crash: 0/0/0 time: 2865s job: 74 dft_time: 0
+fuzz_limited #3472: cov: 3480 ft: 3401 corp: 393 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1761s job: 52 dft_time: 0
+fuzz_nplane #64309: cov: 2046 ft: 2869 corp: 796 exec/s: 20 oom/timeout/crash: 0/0/0 time: 2909s job: 74 dft_time: 0
+fuzz_roundtrip #5886: cov: 11176 ft: 12856 corp: 973 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2899s job: 64 dft_time: 0
+fuzz_stream #50320988: cov: 1013 ft: 1179 corp: 309 exec/s: 13245 oom/timeout/crash: 0/0/0 time: 2865s job: 74 dft_time: 0
+## 2026-11-15T17:11:40Z mem_avail_MB=11809
+fuzz_decompress #2761: cov: 3508 ft: 3084 corp: 322 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2067s job: 54 dft_time: 0
+fuzz_dict #4261: cov: 3706 ft: 3689 corp: 424 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2096s job: 57 dft_time: 0
+fuzz_fastq #17037461: cov: 229 ft: 325 corp: 92 exec/s: 8006 oom/timeout/crash: 0/0/0 time: 3170s job: 78 dft_time: 0
+fuzz_kbcx #7023968: cov: 672 ft: 667 corp: 94 exec/s: 1594 oom/timeout/crash: 0/0/0 time: 3137s job: 77 dft_time: 0
+fuzz_krc #18243618: cov: 206 ft: 210 corp: 48 exec/s: 2403 oom/timeout/crash: 0/0/0 time: 3176s job: 78 dft_time: 0
+fuzz_limited #4032: cov: 3493 ft: 3472 corp: 420 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2069s job: 57 dft_time: 0
+fuzz_nplane #69687: cov: 2047 ft: 2893 corp: 815 exec/s: 24 oom/timeout/crash: 0/0/0 time: 3142s job: 77 dft_time: 0
+fuzz_roundtrip #6080: cov: 11182 ft: 12969 corp: 995 exec/s: 0 oom/timeout/crash: 0/0/0 time: 3152s job: 67 dft_time: 0
+fuzz_stream #54311998: cov: 1015 ft: 1184 corp: 312 exec/s: 18366 oom/timeout/crash: 0/0/0 time: 3177s job: 78 dft_time: 0
+## 2026-11-15T17:16:40Z mem_avail_MB=12003
+fuzz_decompress #2974: cov: 3509 ft: 3106 corp: 339 exec/s: 0 oom/timeout/crash: 0/0/0 time: 2334s job: 58 dft_time: 0
+fuzz_dict #4706: cov: 3713 ft: 3751 corp: 461 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2380s job: 61 dft_time: 0
+fuzz_fastq #19006772: cov: 229 ft: 325 corp: 92 exec/s: 6511 oom/timeout/crash: 0/0/0 time: 3496s job: 82 dft_time: 0
+fuzz_kbcx #7627188: cov: 672 ft: 667 corp: 94 exec/s: 2168 oom/timeout/crash: 0/0/0 time: 3462s job: 81 dft_time: 0
+fuzz_krc #19529711: cov: 206 ft: 210 corp: 48 exec/s: 6465 oom/timeout/crash: 0/0/0 time: 3503s job: 82 dft_time: 0
+fuzz_limited #4610: cov: 3501 ft: 3512 corp: 445 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2404s job: 62 dft_time: 0
+fuzz_nplane #76041: cov: 2047 ft: 2905 corp: 823 exec/s: 25 oom/timeout/crash: 0/0/0 time: 3466s job: 81 dft_time: 0
+fuzz_roundtrip #6426: cov: 11184 ft: 13120 corp: 1027 exec/s: 1 oom/timeout/crash: 0/0/0 time: 3516s job: 71 dft_time: 0
+fuzz_stream #56405644: cov: 1016 ft: 1185 corp: 313 exec/s: 6130 oom/timeout/crash: 0/0/0 time: 3504s job: 82 dft_time: 0
+## 2026-11-15T17:21:40Z mem_avail_MB=11552
+fuzz_decompress #3288: cov: 3511 ft: 3123 corp: 350 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2697s job: 63 dft_time: 0
+fuzz_dict #5137: cov: 3717 ft: 3793 corp: 482 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2671s job: 65 dft_time: 0
+fuzz_fastq #20753842: cov: 229 ft: 325 corp: 92 exec/s: 7215 oom/timeout/crash: 0/0/0 time: 3752s job: 85 dft_time: 0
+fuzz_kbcx #8270358: cov: 672 ft: 667 corp: 94 exec/s: 1034 oom/timeout/crash: 0/0/0 time: 3802s job: 85 dft_time: 0
+fuzz_krc #21694634: cov: 206 ft: 210 corp: 48 exec/s: 15878 oom/timeout/crash: 0/0/0 time: 3758s job: 85 dft_time: 0
+fuzz_limited #5091: cov: 3501 ft: 3536 corp: 463 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2686s job: 66 dft_time: 0
+fuzz_nplane #82896: cov: 2047 ft: 2929 corp: 836 exec/s: 16 oom/timeout/crash: 0/0/0 time: 3807s job: 85 dft_time: 0
+fuzz_roundtrip #6704: cov: 11200 ft: 13590 corp: 1065 exec/s: 0 oom/timeout/crash: 0/0/0 time: 3799s job: 74 dft_time: 0
+fuzz_stream #59832971: cov: 1016 ft: 1190 corp: 315 exec/s: 12026 oom/timeout/crash: 0/0/0 time: 3760s job: 85 dft_time: 0
+## 2026-11-15T17:26:40Z mem_avail_MB=11461
+fuzz_decompress #3588: cov: 3511 ft: 3148 corp: 363 exec/s: 0 oom/timeout/crash: 0/0/0 time: 2984s job: 67 dft_time: 0
+fuzz_dict #5602: cov: 3720 ft: 3840 corp: 510 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2977s job: 69 dft_time: 0
+fuzz_fastq #22294880: cov: 231 ft: 331 corp: 95 exec/s: 4907 oom/timeout/crash: 0/0/0 time: 4106s job: 89 dft_time: 0
+fuzz_kbcx #8823506: cov: 672 ft: 667 corp: 94 exec/s: 2616 oom/timeout/crash: 0/0/0 time: 4066s job: 88 dft_time: 0
+fuzz_krc #24161366: cov: 206 ft: 210 corp: 48 exec/s: 6849 oom/timeout/crash: 0/0/0 time: 4113s job: 89 dft_time: 0
+fuzz_limited #5619: cov: 3514 ft: 3564 corp: 479 exec/s: 1 oom/timeout/crash: 0/0/0 time: 2975s job: 70 dft_time: 0
+fuzz_nplane #88385: cov: 2048 ft: 2939 corp: 846 exec/s: 16 oom/timeout/crash: 0/0/0 time: 4073s job: 88 dft_time: 0
+fuzz_roundtrip #7017: cov: 11201 ft: 13697 corp: 1085 exec/s: 0 oom/timeout/crash: 0/0/0 time: 4067s job: 77 dft_time: 0
+fuzz_stream #64123857: cov: 1023 ft: 1196 corp: 317 exec/s: 16739 oom/timeout/crash: 0/0/0 time: 4115s job: 89 dft_time: 0
+## 2026-11-15T17:31:40Z mem_avail_MB=11885
+fuzz_decompress #3915: cov: 3511 ft: 3171 corp: 377 exec/s: 1 oom/timeout/crash: 0/0/0 time: 3303s job: 71 dft_time: 0
+fuzz_dict #6023: cov: 3722 ft: 3882 corp: 531 exec/s: 1 oom/timeout/crash: 0/0/0 time: 3293s job: 73 dft_time: 0
+fuzz_fastq #23121531: cov: 231 ft: 331 corp: 95 exec/s: 2862 oom/timeout/crash: 0/0/0 time: 4383s job: 92 dft_time: 0
+fuzz_kbcx #9457450: cov: 672 ft: 667 corp: 94 exec/s: 2487 oom/timeout/crash: 0/0/0 time: 4340s job: 91 dft_time: 0
+fuzz_krc #25780506: cov: 206 ft: 210 corp: 48 exec/s: 5169 oom/timeout/crash: 0/0/0 time: 4390s job: 92 dft_time: 0
+fuzz_limited #6328: cov: 3517 ft: 3592 corp: 490 exec/s: 3 oom/timeout/crash: 0/0/0 time: 3278s job: 74 dft_time: 0
+fuzz_nplane #92951: cov: 2048 ft: 2948 corp: 851 exec/s: 21 oom/timeout/crash: 0/0/0 time: 4347s job: 91 dft_time: 0
+fuzz_roundtrip #7385: cov: 11202 ft: 13768 corp: 1112 exec/s: 0 oom/timeout/crash: 0/0/0 time: 4335s job: 80 dft_time: 0
+fuzz_stream #66559650: cov: 1025 ft: 1200 corp: 320 exec/s: 11070 oom/timeout/crash: 0/0/0 time: 4392s job: 92 dft_time: 0
+## 2026-11-15T17:36:40Z mem_avail_MB=11489
+fuzz_decompress #4137: cov: 3511 ft: 3177 corp: 381 exec/s: 1 oom/timeout/crash: 0/0/0 time: 3538s job: 74 dft_time: 0
+fuzz_dict #6507: cov: 3722 ft: 3923 corp: 556 exec/s: 1 oom/timeout/crash: 0/0/0 time: 3552s job: 76 dft_time: 0
+fuzz_fastq #24609966: cov: 231 ft: 331 corp: 95 exec/s: 3758 oom/timeout/crash: 0/0/0 time: 4668s job: 95 dft_time: 0
+fuzz_kbcx #9841183: cov: 672 ft: 667 corp: 94 exec/s: 910 oom/timeout/crash: 0/0/0 time: 4623s job: 94 dft_time: 0
+fuzz_krc #27143294: cov: 206 ft: 210 corp: 48 exec/s: 1562 oom/timeout/crash: 0/0/0 time: 4676s job: 95 dft_time: 0
+fuzz_limited #7020: cov: 3522 ft: 3608 corp: 501 exec/s: 2 oom/timeout/crash: 0/0/0 time: 3601s job: 78 dft_time: 0
+fuzz_nplane #97933: cov: 2049 ft: 2952 corp: 854 exec/s: 17 oom/timeout/crash: 0/0/0 time: 4630s job: 94 dft_time: 0
+fuzz_roundtrip #8034: cov: 11218 ft: 14026 corp: 1166 exec/s: 3 oom/timeout/crash: 0/0/0 time: 4647s job: 83 dft_time: 0
+fuzz_stream #71079300: cov: 1028 ft: 1203 corp: 322 exec/s: 14844 oom/timeout/crash: 0/0/0 time: 4677s job: 95 dft_time: 0
+## 2026-11-15T17:41:40Z mem_avail_MB=11284
+fuzz_decompress #4434: cov: 3512 ft: 3193 corp: 391 exec/s: 0 oom/timeout/crash: 0/0/0 time: 3886s job: 78 dft_time: 0
+fuzz_dict #6906: cov: 3723 ft: 3956 corp: 579 exec/s: 1 oom/timeout/crash: 0/0/0 time: 3820s job: 79 dft_time: 0
+fuzz_fastq #25688444: cov: 231 ft: 333 corp: 96 exec/s: 2834 oom/timeout/crash: 0/0/0 time: 4962s job: 98 dft_time: 0
+fuzz_kbcx #10325546: cov: 672 ft: 667 corp: 94 exec/s: 977 oom/timeout/crash: 0/0/0 time: 5016s job: 98 dft_time: 0
+fuzz_krc #29688834: cov: 206 ft: 210 corp: 48 exec/s: 7984 oom/timeout/crash: 0/0/0 time: 4971s job: 98 dft_time: 0
+fuzz_limited #7469: cov: 3625 ft: 3637 corp: 509 exec/s: 2 oom/timeout/crash: 0/0/0 time: 3853s job: 81 dft_time: 0
+fuzz_nplane #103396: cov: 2050 ft: 2957 corp: 858 exec/s: 17 oom/timeout/crash: 0/0/0 time: 4923s job: 97 dft_time: 0
+fuzz_roundtrip #8392: cov: 11221 ft: 14210 corp: 1211 exec/s: 1 oom/timeout/crash: 0/0/0 time: 4956s job: 86 dft_time: 0
+fuzz_stream #76317827: cov: 1029 ft: 1207 corp: 325 exec/s: 17697 oom/timeout/crash: 0/0/0 time: 4972s job: 98 dft_time: 0
+## 2026-11-15T17:46:40Z mem_avail_MB=11566
+fuzz_decompress #4657: cov: 3513 ft: 3197 corp: 393 exec/s: 0 oom/timeout/crash: 0/0/0 time: 4136s job: 81 dft_time: 0
+fuzz_dict #7489: cov: 3724 ft: 3992 corp: 603 exec/s: 1 oom/timeout/crash: 0/0/0 time: 4185s job: 83 dft_time: 0
+fuzz_fastq #26763245: cov: 231 ft: 333 corp: 96 exec/s: 3561 oom/timeout/crash: 0/0/0 time: 5266s job: 101 dft_time: 0
+fuzz_kbcx #10803156: cov: 672 ft: 667 corp: 94 exec/s: 1947 oom/timeout/crash: 0/0/0 time: 5218s job: 100 dft_time: 0
+fuzz_krc #31759184: cov: 206 ft: 210 corp: 48 exec/s: 6285 oom/timeout/crash: 0/0/0 time: 5275s job: 101 dft_time: 0
+fuzz_limited #8068: cov: 3629 ft: 3650 corp: 516 exec/s: 2 oom/timeout/crash: 0/0/0 time: 4202s job: 85 dft_time: 0
+fuzz_nplane #111093: cov: 2050 ft: 2975 corp: 868 exec/s: 24 oom/timeout/crash: 0/0/0 time: 5225s job: 100 dft_time: 0
+fuzz_roundtrip #8892: cov: 11225 ft: 14357 corp: 1251 exec/s: 0 oom/timeout/crash: 0/0/0 time: 5287s job: 89 dft_time: 0
+fuzz_stream #79676436: cov: 1029 ft: 1207 corp: 325 exec/s: 17317 oom/timeout/crash: 0/0/0 time: 5276s job: 101 dft_time: 0
+## 2026-11-15T17:51:41Z mem_avail_MB=11124
+fuzz_decompress #5060: cov: 3518 ft: 3207 corp: 399 exec/s: 1 oom/timeout/crash: 0/0/0 time: 4485s job: 85 dft_time: 0
+fuzz_dict #7948: cov: 3728 ft: 4021 corp: 623 exec/s: 2 oom/timeout/crash: 0/0/0 time: 4471s job: 86 dft_time: 0
+fuzz_fastq #27815250: cov: 231 ft: 333 corp: 96 exec/s: 3400 oom/timeout/crash: 0/0/0 time: 5578s job: 104 dft_time: 0
+fuzz_kbcx #11518495: cov: 672 ft: 667 corp: 94 exec/s: 2365 oom/timeout/crash: 0/0/0 time: 5527s job: 103 dft_time: 0
+fuzz_krc #33925890: cov: 206 ft: 210 corp: 48 exec/s: 3081 oom/timeout/crash: 0/0/0 time: 5587s job: 104 dft_time: 0
+fuzz_limited #8625: cov: 3631 ft: 3662 corp: 523 exec/s: 2 oom/timeout/crash: 0/0/0 time: 4478s job: 88 dft_time: 0
+fuzz_nplane #118320: cov: 2052 ft: 2989 corp: 879 exec/s: 24 oom/timeout/crash: 0/0/0 time: 5535s job: 103 dft_time: 0
+fuzz_roundtrip #9150: cov: 11379 ft: 14473 corp: 1280 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5513s job: 91 dft_time: 0
+fuzz_stream #80458164: cov: 1031 ft: 1209 corp: 326 exec/s: 1964 oom/timeout/crash: 0/0/0 time: 5588s job: 104 dft_time: 0
+## 2026-11-15T17:56:41Z mem_avail_MB=11527
+fuzz_decompress #5410: cov: 3520 ft: 3217 corp: 406 exec/s: 0 oom/timeout/crash: 0/0/0 time: 4764s job: 88 dft_time: 0
+fuzz_dict #8247: cov: 3728 ft: 4054 corp: 642 exec/s: 1 oom/timeout/crash: 0/0/0 time: 4774s job: 89 dft_time: 0
+fuzz_fastq #29321429: cov: 231 ft: 333 corp: 96 exec/s: 5806 oom/timeout/crash: 0/0/0 time: 5900s job: 107 dft_time: 0
+fuzz_kbcx #12124094: cov: 672 ft: 667 corp: 94 exec/s: 1244 oom/timeout/crash: 0/0/0 time: 5846s job: 106 dft_time: 0
+fuzz_krc #36008670: cov: 206 ft: 210 corp: 48 exec/s: 3800 oom/timeout/crash: 0/0/0 time: 5909s job: 107 dft_time: 0
+fuzz_limited #9229: cov: 3633 ft: 3666 corp: 526 exec/s: 2 oom/timeout/crash: 0/0/0 time: 4754s job: 91 dft_time: 0
+fuzz_nplane #125010: cov: 2052 ft: 2993 corp: 882 exec/s: 16 oom/timeout/crash: 0/0/0 time: 5855s job: 106 dft_time: 0
+fuzz_roundtrip #9400: cov: 11386 ft: 14617 corp: 1307 exec/s: 0 oom/timeout/crash: 0/0/0 time: 5873s job: 94 dft_time: 0
+fuzz_stream #84164258: cov: 1035 ft: 1216 corp: 333 exec/s: 2137 oom/timeout/crash: 0/0/0 time: 5910s job: 107 dft_time: 0
+## 2026-11-15T18:01:41Z mem_avail_MB=12446
+fuzz_decompress #5750: cov: 3521 ft: 3220 corp: 409 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5047s job: 91 dft_time: 0
+fuzz_dict #8753: cov: 3732 ft: 4081 corp: 660 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5073s job: 92 dft_time: 0
+fuzz_fastq #29714826: cov: 231 ft: 333 corp: 96 exec/s: 3609 oom/timeout/crash: 0/0/0 time: 6009s job: 108 dft_time: 0
+fuzz_kbcx #13437972: cov: 672 ft: 667 corp: 94 exec/s: 3737 oom/timeout/crash: 0/0/0 time: 6063s job: 108 dft_time: 0
+fuzz_krc #36364324: cov: 206 ft: 210 corp: 48 exec/s: 3262 oom/timeout/crash: 0/0/0 time: 6018s job: 108 dft_time: 0
+fuzz_limited #9891: cov: 3636 ft: 3677 corp: 535 exec/s: 3 oom/timeout/crash: 0/0/0 time: 5041s job: 94 dft_time: 0
+fuzz_nplane #131528: cov: 2052 ft: 2998 corp: 887 exec/s: 38 oom/timeout/crash: 0/0/0 time: 6073s job: 108 dft_time: 0
+fuzz_roundtrip #9506: cov: 11386 ft: 14639 corp: 1317 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5997s job: 95 dft_time: 0
+fuzz_stream #86040132: cov: 1035 ft: 1216 corp: 333 exec/s: 17209 oom/timeout/crash: 0/0/0 time: 6019s job: 108 dft_time: 0
+## 2026-11-15T18:06:41Z mem_avail_MB=12603
+fuzz_decompress #6118: cov: 3523 ft: 3228 corp: 416 exec/s: 0 oom/timeout/crash: 0/0/0 time: 5346s job: 94 dft_time: 0
+fuzz_dict #9199: cov: 3734 ft: 4113 corp: 678 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5381s job: 95 dft_time: 0
+fuzz_fastq #29714826: cov: 231 ft: 333 corp: 96 exec/s: 3609 oom/timeout/crash: 0/0/0 time: 6009s job: 108 dft_time: 0
+fuzz_kbcx #13437972: cov: 672 ft: 667 corp: 94 exec/s: 3737 oom/timeout/crash: 0/0/0 time: 6063s job: 108 dft_time: 0
+fuzz_krc #36364324: cov: 206 ft: 210 corp: 48 exec/s: 3262 oom/timeout/crash: 0/0/0 time: 6018s job: 108 dft_time: 0
+fuzz_limited #10506: cov: 3637 ft: 3680 corp: 538 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5336s job: 97 dft_time: 0
+fuzz_nplane #131528: cov: 2052 ft: 2998 corp: 887 exec/s: 38 oom/timeout/crash: 0/0/0 time: 6073s job: 108 dft_time: 0
+fuzz_roundtrip #9506: cov: 11386 ft: 14639 corp: 1317 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5997s job: 95 dft_time: 0
+fuzz_stream #86040132: cov: 1035 ft: 1216 corp: 333 exec/s: 17209 oom/timeout/crash: 0/0/0 time: 6019s job: 108 dft_time: 0
+## 2026-11-15T18:11:41Z mem_avail_MB=12860
+fuzz_decompress #6433: cov: 3525 ft: 3242 corp: 427 exec/s: 0 oom/timeout/crash: 0/0/0 time: 5658s job: 97 dft_time: 0
+fuzz_dict #9647: cov: 3735 ft: 4133 corp: 691 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5689s job: 98 dft_time: 0
+fuzz_fastq #29714826: cov: 231 ft: 333 corp: 96 exec/s: 3609 oom/timeout/crash: 0/0/0 time: 6009s job: 108 dft_time: 0
+fuzz_kbcx #13437972: cov: 672 ft: 667 corp: 94 exec/s: 3737 oom/timeout/crash: 0/0/0 time: 6063s job: 108 dft_time: 0
+fuzz_krc #36364324: cov: 206 ft: 210 corp: 48 exec/s: 3262 oom/timeout/crash: 0/0/0 time: 6018s job: 108 dft_time: 0
+fuzz_limited #11133: cov: 3640 ft: 3684 corp: 542 exec/s: 2 oom/timeout/crash: 0/0/0 time: 5641s job: 100 dft_time: 0
+fuzz_nplane #131528: cov: 2052 ft: 2998 corp: 887 exec/s: 38 oom/timeout/crash: 0/0/0 time: 6073s job: 108 dft_time: 0
+fuzz_roundtrip #9506: cov: 11386 ft: 14639 corp: 1317 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5997s job: 95 dft_time: 0
+fuzz_stream #86040132: cov: 1035 ft: 1216 corp: 333 exec/s: 17209 oom/timeout/crash: 0/0/0 time: 6019s job: 108 dft_time: 0
+## 2026-11-15T18:16:41Z mem_avail_MB=12827
+fuzz_decompress #7010: cov: 3530 ft: 3251 corp: 434 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5974s job: 100 dft_time: 0
+fuzz_dict #10138: cov: 3735 ft: 4150 corp: 705 exec/s: 1 oom/timeout/crash: 0/0/0 time: 6009s job: 101 dft_time: 0
+fuzz_fastq #29714826: cov: 231 ft: 333 corp: 96 exec/s: 3609 oom/timeout/crash: 0/0/0 time: 6009s job: 108 dft_time: 0
+fuzz_kbcx #13437972: cov: 672 ft: 667 corp: 94 exec/s: 3737 oom/timeout/crash: 0/0/0 time: 6063s job: 108 dft_time: 0
+fuzz_krc #36364324: cov: 206 ft: 210 corp: 48 exec/s: 3262 oom/timeout/crash: 0/0/0 time: 6018s job: 108 dft_time: 0
+fuzz_limited #11825: cov: 3640 ft: 3692 corp: 544 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5953s job: 103 dft_time: 0
+fuzz_nplane #131528: cov: 2052 ft: 2998 corp: 887 exec/s: 38 oom/timeout/crash: 0/0/0 time: 6073s job: 108 dft_time: 0
+fuzz_roundtrip #9506: cov: 11386 ft: 14639 corp: 1317 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5997s job: 95 dft_time: 0
+fuzz_stream #86040132: cov: 1035 ft: 1216 corp: 333 exec/s: 17209 oom/timeout/crash: 0/0/0 time: 6019s job: 108 dft_time: 0
+## 2026-11-15T18:21:41Z mem_avail_MB=14115
+fuzz_decompress #7251: cov: 3531 ft: 3254 corp: 437 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6079s job: 101 dft_time: 0
+fuzz_dict #10138: cov: 3735 ft: 4150 corp: 705 exec/s: 1 oom/timeout/crash: 0/0/0 time: 6009s job: 101 dft_time: 0
+fuzz_fastq #29714826: cov: 231 ft: 333 corp: 96 exec/s: 3609 oom/timeout/crash: 0/0/0 time: 6009s job: 108 dft_time: 0
+fuzz_kbcx #13437972: cov: 672 ft: 667 corp: 94 exec/s: 3737 oom/timeout/crash: 0/0/0 time: 6063s job: 108 dft_time: 0
+fuzz_krc #36364324: cov: 206 ft: 210 corp: 48 exec/s: 3262 oom/timeout/crash: 0/0/0 time: 6018s job: 108 dft_time: 0
+fuzz_limited #12084: cov: 3640 ft: 3693 corp: 545 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6060s job: 104 dft_time: 0
+fuzz_nplane #131528: cov: 2052 ft: 2998 corp: 887 exec/s: 38 oom/timeout/crash: 0/0/0 time: 6073s job: 108 dft_time: 0
+fuzz_roundtrip #9506: cov: 11386 ft: 14639 corp: 1317 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5997s job: 95 dft_time: 0
+fuzz_stream #86040132: cov: 1035 ft: 1216 corp: 333 exec/s: 17209 oom/timeout/crash: 0/0/0 time: 6019s job: 108 dft_time: 0
+## 2026-11-15T18:26:41Z mem_avail_MB=13784
+fuzz_decompress #7251: cov: 3531 ft: 3254 corp: 437 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6079s job: 101 dft_time: 0
+fuzz_dict #10138: cov: 3735 ft: 4150 corp: 705 exec/s: 1 oom/timeout/crash: 0/0/0 time: 6009s job: 101 dft_time: 0
+fuzz_fastq #29714826: cov: 231 ft: 333 corp: 96 exec/s: 3609 oom/timeout/crash: 0/0/0 time: 6009s job: 108 dft_time: 0
+fuzz_kbcx #13437972: cov: 672 ft: 667 corp: 94 exec/s: 3737 oom/timeout/crash: 0/0/0 time: 6063s job: 108 dft_time: 0
+fuzz_krc #36364324: cov: 206 ft: 210 corp: 48 exec/s: 3262 oom/timeout/crash: 0/0/0 time: 6018s job: 108 dft_time: 0
+fuzz_limited #12084: cov: 3640 ft: 3693 corp: 545 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6060s job: 104 dft_time: 0
+fuzz_nplane #131528: cov: 2052 ft: 2998 corp: 887 exec/s: 38 oom/timeout/crash: 0/0/0 time: 6073s job: 108 dft_time: 0
+fuzz_roundtrip #9506: cov: 11386 ft: 14639 corp: 1317 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5997s job: 95 dft_time: 0
+fuzz_stream #86040132: cov: 1035 ft: 1216 corp: 333 exec/s: 17209 oom/timeout/crash: 0/0/0 time: 6019s job: 108 dft_time: 0
+## 2026-11-15T18:31:41Z mem_avail_MB=13721
+fuzz_decompress #7251: cov: 3531 ft: 3254 corp: 437 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6079s job: 101 dft_time: 0
+fuzz_dict #10138: cov: 3735 ft: 4150 corp: 705 exec/s: 1 oom/timeout/crash: 0/0/0 time: 6009s job: 101 dft_time: 0
+fuzz_fastq #29714826: cov: 231 ft: 333 corp: 96 exec/s: 3609 oom/timeout/crash: 0/0/0 time: 6009s job: 108 dft_time: 0
+fuzz_kbcx #13437972: cov: 672 ft: 667 corp: 94 exec/s: 3737 oom/timeout/crash: 0/0/0 time: 6063s job: 108 dft_time: 0
+fuzz_krc #36364324: cov: 206 ft: 210 corp: 48 exec/s: 3262 oom/timeout/crash: 0/0/0 time: 6018s job: 108 dft_time: 0
+fuzz_limited #12084: cov: 3640 ft: 3693 corp: 545 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6060s job: 104 dft_time: 0
+fuzz_nplane #131528: cov: 2052 ft: 2998 corp: 887 exec/s: 38 oom/timeout/crash: 0/0/0 time: 6073s job: 108 dft_time: 0
+fuzz_roundtrip #9506: cov: 11386 ft: 14639 corp: 1317 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5997s job: 95 dft_time: 0
+fuzz_stream #86040132: cov: 1035 ft: 1216 corp: 333 exec/s: 17209 oom/timeout/crash: 0/0/0 time: 6019s job: 108 dft_time: 0
+## 2026-11-15T18:36:41Z mem_avail_MB=13763
+fuzz_decompress #7251: cov: 3531 ft: 3254 corp: 437 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6079s job: 101 dft_time: 0
+fuzz_dict #10138: cov: 3735 ft: 4150 corp: 705 exec/s: 1 oom/timeout/crash: 0/0/0 time: 6009s job: 101 dft_time: 0
+fuzz_fastq #29714826: cov: 231 ft: 333 corp: 96 exec/s: 3609 oom/timeout/crash: 0/0/0 time: 6009s job: 108 dft_time: 0
+fuzz_kbcx #13437972: cov: 672 ft: 667 corp: 94 exec/s: 3737 oom/timeout/crash: 0/0/0 time: 6063s job: 108 dft_time: 0
+fuzz_krc #36364324: cov: 206 ft: 210 corp: 48 exec/s: 3262 oom/timeout/crash: 0/0/0 time: 6018s job: 108 dft_time: 0
+fuzz_limited #12084: cov: 3640 ft: 3693 corp: 545 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6060s job: 104 dft_time: 0
+fuzz_nplane #131528: cov: 2052 ft: 2998 corp: 887 exec/s: 38 oom/timeout/crash: 0/0/0 time: 6073s job: 108 dft_time: 0
+fuzz_roundtrip #9506: cov: 11386 ft: 14639 corp: 1317 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5997s job: 95 dft_time: 0
+fuzz_stream #86040132: cov: 1035 ft: 1216 corp: 333 exec/s: 17209 oom/timeout/crash: 0/0/0 time: 6019s job: 108 dft_time: 0
+## 2026-11-15T18:41:42Z mem_avail_MB=13746
+fuzz_decompress #7251: cov: 3531 ft: 3254 corp: 437 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6079s job: 101 dft_time: 0
+fuzz_dict #10138: cov: 3735 ft: 4150 corp: 705 exec/s: 1 oom/timeout/crash: 0/0/0 time: 6009s job: 101 dft_time: 0
+fuzz_fastq #29714826: cov: 231 ft: 333 corp: 96 exec/s: 3609 oom/timeout/crash: 0/0/0 time: 6009s job: 108 dft_time: 0
+fuzz_kbcx #13437972: cov: 672 ft: 667 corp: 94 exec/s: 3737 oom/timeout/crash: 0/0/0 time: 6063s job: 108 dft_time: 0
+fuzz_krc #36364324: cov: 206 ft: 210 corp: 48 exec/s: 3262 oom/timeout/crash: 0/0/0 time: 6018s job: 108 dft_time: 0
+fuzz_limited #12084: cov: 3640 ft: 3693 corp: 545 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6060s job: 104 dft_time: 0
+fuzz_nplane #131528: cov: 2052 ft: 2998 corp: 887 exec/s: 38 oom/timeout/crash: 0/0/0 time: 6073s job: 108 dft_time: 0
+fuzz_roundtrip #9506: cov: 11386 ft: 14639 corp: 1317 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5997s job: 95 dft_time: 0
+fuzz_stream #86040132: cov: 1035 ft: 1216 corp: 333 exec/s: 17209 oom/timeout/crash: 0/0/0 time: 6019s job: 108 dft_time: 0
+## 2026-11-15T18:46:42Z mem_avail_MB=14674
+fuzz_decompress #7251: cov: 3531 ft: 3254 corp: 437 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6079s job: 101 dft_time: 0
+fuzz_dict #10138: cov: 3735 ft: 4150 corp: 705 exec/s: 1 oom/timeout/crash: 0/0/0 time: 6009s job: 101 dft_time: 0
+fuzz_fastq #29714826: cov: 231 ft: 333 corp: 96 exec/s: 3609 oom/timeout/crash: 0/0/0 time: 6009s job: 108 dft_time: 0
+fuzz_kbcx #13437972: cov: 672 ft: 667 corp: 94 exec/s: 3737 oom/timeout/crash: 0/0/0 time: 6063s job: 108 dft_time: 0
+fuzz_krc #36364324: cov: 206 ft: 210 corp: 48 exec/s: 3262 oom/timeout/crash: 0/0/0 time: 6018s job: 108 dft_time: 0
+fuzz_limited #12084: cov: 3640 ft: 3693 corp: 545 exec/s: 2 oom/timeout/crash: 0/0/0 time: 6060s job: 104 dft_time: 0
+fuzz_nplane #131528: cov: 2052 ft: 2998 corp: 887 exec/s: 38 oom/timeout/crash: 0/0/0 time: 6073s job: 108 dft_time: 0
+fuzz_roundtrip #9506: cov: 11386 ft: 14639 corp: 1317 exec/s: 1 oom/timeout/crash: 0/0/0 time: 5997s job: 95 dft_time: 0
+fuzz_stream #86040132: cov: 1035 ft: 1216 corp: 333 exec/s: 17209 oom/timeout/crash: 0/0/0 time: 6019s job: 108 dft_time: 0

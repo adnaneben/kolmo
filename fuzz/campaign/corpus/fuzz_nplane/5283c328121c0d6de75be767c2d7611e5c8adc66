@@ -1,0 +1,18 @@
+#undef NDEBUG
+#define KBX_RECIPROCAL
+#66666666{
+ pthread_once(&prob_once,probability_init)<unsigned long long chec6666666666666666666666666666666666++){
+  asse1rt(normalize_probability(zero,d)==zero*4096u/d);checked++;
+ }
+ printf("EXACT PROBABILITIES PASSED (%llu¸exhaustive numerator/denominator p6666666666666666666666666666666666666666666666666666666666ked=0;
+ for(unsigned d=2;d<4096;d++)for(unsigned zero=0;zero<=d;){
+  assert(normalize_prozero++){
+  assert(normalize_probability(zero,d)==zero*4096u/d);checked++;
+ }
+ printf("EXACT666666666666666666666666666666666666666666666ked=0;
+ for(unsigned d=2;d<4096;d++)for(unsigned zero=0;zero<=d;){
+  assert(normalize_prozero++){
+  assert(normalize_probability(zero,d)==zero*4096u/d);checked++;
+ }
+ printf("EXACT PROBABILITIES PASSED (%llu¸exhaustive numerator/denominator pairs)\n",checked);reÿÿÿÿÿÿÿÿturn 0;
+}

@@ -1,0 +1,20 @@
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2024045326
+INFO: Loaded 1 modules   (20991 inline 8-bit counters): 20991 [0x55cca5f16c00, 0x55cca5f1bdff), 
+INFO: Loaded 1 PC tables (20991 PCs): 20991 [0x55cca5f1be00,0x55cca5f6ddf0), 
+INFO: -fork=1: fuzzing in separate process(s)
+INFO: -fork=1: 138 seed inputs, starting to fuzz in /tmp/libFuzzerTemp.FuzzWithFork24972.dir
+#13: cov: 3119 ft: 3119 corp: 138 exec/s: 0 oom/timeout/crash: 0/0/0 time: 600s job: 1 dft_time: 0
+#28: cov: 3119 ft: 3119 corp: 138 exec/s: 0 oom/timeout/crash: 0/0/0 time: 646s job: 2 dft_time: 0
+#41: cov: 3119 ft: 3119 corp: 138 exec/s: 0 oom/timeout/crash: 0/0/0 time: 676s job: 3 dft_time: 0
+#55: cov: 3119 ft: 3119 corp: 138 exec/s: 1 oom/timeout/crash: 0/0/0 time: 691s job: 4 dft_time: 0
+#70: cov: 3119 ft: 3119 corp: 138 exec/s: 0 oom/timeout/crash: 0/0/0 time: 739s job: 5 dft_time: 0
+#85: cov: 3119 ft: 3119 corp: 138 exec/s: 1 oom/timeout/crash: 0/0/0 time: 749s job: 6 dft_time: 0
+#99: cov: 3119 ft: 3119 corp: 138 exec/s: 0 oom/timeout/crash: 0/0/0 time: 770s job: 7 dft_time: 0
+#113: cov: 3119 ft: 3119 corp: 138 exec/s: 0 oom/timeout/crash: 0/0/0 time: 846s job: 8 dft_time: 0
+==24972== libFuzzer: run interrupted; exiting
+stat::number_of_executed_units: 0
+stat::average_exec_per_sec:     0
+stat::new_units_added:          0
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              39
