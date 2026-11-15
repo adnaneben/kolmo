@@ -1,0 +1,6 @@
+make: 'build/kolmo-fastq' is up to date.
+cc -O3  -fno-plt -Isrc src/experimental/kvid.c build/libkolmo.a build/libvendor.a  -llzma -lpthread -lm -lstdc++ -o build/kvid
+make: 'build/krc-cpu' is up to date.
+make: 'build/krc-auto' is up to date.
+make: 'build/kbc' is up to date.
+make: 'build/kbx' is up to date.

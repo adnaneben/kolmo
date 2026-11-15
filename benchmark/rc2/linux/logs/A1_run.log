@@ -1,0 +1,10 @@
+sysctl: cannot stat /proc/sys/machdep/cpu/brand_string: No such file or directory
+A1 [1/45] main silesia.tar lz4: 211948032 -> 100297674, 531.8 / 2481.6 MB/s, cpu 3.9 s of 3.9 s +python3 62%
+A1 [2/45] main silesia.tar kolmo,16: 211948032 -> 99918118, 398.0 / 2123.2 MB/s, cpu 4.3 s of 4.3 s
+A1 [3/45] main silesia.tar zstd,3: 211948032 -> 66132559, 163.0 / 959.4 MB/s, cpu 6.9 s of 6.9 s
+A1 [4/45] main silesia.tar kolmo,4: 211948032 -> 58245973, 169.2 / 783.6 MB/s, cpu 7.0 s of 7.0 s
+A1 [5/45] main silesia.tar memcpy: 211948032 -> 211948032, 9161.1 / 10178.7 MB/s, cpu 3.6 s of 3.6 s
+A1 [6/45] main silesia.tar lzav,1: 211948032 -> 83153734, 399.6 / 1822.5 MB/s, cpu 4.5 s of 4.5 s
+A1 [7/45] main silesia.tar zxc,1: 211948032 -> 130717706, 545.7 / 4509.2 MB/s, cpu 3.8 s of 3.8 s
+A1 [8/45] main silesia.tar zxc,3: 211948032 -> 99289070, 165.2 / 3699.3 MB/s, cpu 6.6 s of 6.7 s
+A1 [9/45] main silesia.tar snappy: 211948032 -> 101435293, 503.1 / 1110.4 MB/s, cpu 3.9 s of 4.0 s

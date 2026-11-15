@@ -9,3 +9,211 @@ tests/../src/tbl2.inc: In function 'hsum8':
 tests/../src/tbl2.inc:67:21: note: the ABI for passing parameters with 32-byte alignment has changed in GCC 4.6
    67 | static inline float hsum8(v8f v) {
       |                     ^~~~~
+tests/../src/kolmo.c: In function 'kg_dec64_trial':
+tests/../src/kolmo.c:1718:29: warning: argument 1 is null but the corresponding size argument 2 value is [10, 4294967307] [-Wnonnull]
+ 1718 |         const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/../src/kolmo.c:19:
+/usr/include/string.h:389:14: note: in a call to function 'memmem' declared with attribute 'access (read_only, 3, 4)'
+  389 | extern void *memmem (const void *__haystack, size_t __haystacklen,
+      |              ^~~~~~
+./build/test-lines-asan
+container: 3145674 -> 920008 bytes, format version 8
+LINES TESTS PASSED (256 inputs coded, 200 damaged copies each)
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/test_dec64.c build/libvendor.a -o build/test-dec64-asan  -llzma -lpthread -lm -lstdc++
+In file included from tests/../src/kolmo.c:1034,
+                 from tests/test_dec64.c:4:
+tests/../src/tbl2.inc: In function 'ld8':
+tests/../src/tbl2.inc:63:1: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   63 | static inline v8f ld8(const float *p) { v8f v; memcpy(&v, p, 32); return v; }
+      | ^~~~~~
+tests/../src/tbl2.inc: In function 'hsum8':
+tests/../src/tbl2.inc:67:21: note: the ABI for passing parameters with 32-byte alignment has changed in GCC 4.6
+   67 | static inline float hsum8(v8f v) {
+      |                     ^~~~~
+tests/../src/kolmo.c: In function 'kg_dec64_trial':
+tests/../src/kolmo.c:1718:29: warning: argument 1 is null but the corresponding size argument 2 value is [10, 4294967307] [-Wnonnull]
+ 1718 |         const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/../src/kolmo.c:19:
+/usr/include/string.h:389:14: note: in a call to function 'memmem' declared with attribute 'access (read_only, 3, 4)'
+  389 | extern void *memmem (const void *__haystack, size_t __haystacklen,
+      |              ^~~~~~
+./build/test-dec64-asan
+container pass 0: 3360128 -> 897074 bytes
+container pass 1: 3360000 -> 901374 bytes
+container pass 2: 3360128 -> 871500 bytes
+container pass 3: 3360000 -> 884230 bytes
+DEC64 TESTS PASSED (389 tables coded, 150 damaged copies each)
+rejected as not decimal: 11
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/test_fastint.c build/libvendor.a -o build/test-fastint-asan  -llzma -lpthread -lm -lstdc++
+In file included from tests/../src/kolmo.c:1034,
+                 from tests/test_fastint.c:8:
+tests/../src/tbl2.inc: In function 'ld8':
+tests/../src/tbl2.inc:63:1: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   63 | static inline v8f ld8(const float *p) { v8f v; memcpy(&v, p, 32); return v; }
+      | ^~~~~~
+tests/../src/tbl2.inc: In function 'hsum8':
+tests/../src/tbl2.inc:67:21: note: the ABI for passing parameters with 32-byte alignment has changed in GCC 4.6
+   67 | static inline float hsum8(v8f v) {
+      |                     ^~~~~
+tests/../src/kolmo.c: In function 'kg_dec64_trial':
+tests/../src/kolmo.c:1718:29: warning: argument 1 is null but the corresponding size argument 2 value is [10, 4294967307] [-Wnonnull]
+ 1718 |         const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/../src/kolmo.c:19:
+/usr/include/string.h:389:14: note: in a call to function 'memmem' declared with attribute 'access (read_only, 3, 4)'
+  389 | extern void *memmem (const void *__haystack, size_t __haystacklen,
+      |              ^~~~~~
+cc -O3 -march=native -fno-plt -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/test_fastint.c build/libvendor.a -o build/test-fastint  -llzma -lpthread -lm -lstdc++
+cc -O3 -march=native -fno-plt -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -DKOLMO_FORCE_GENERIC_INT_INV -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/test_fastint.c build/libvendor.a -o build/test-fastint-generic  -llzma -lpthread -lm -lstdc++
+./build/test-fastint-asan
+FAST INTEGER INVERSE TESTS PASSED (1098727 programs compared, 406043 accepted, 538583 damaged; 144 of 144 fast cases; 279 arrays round trip)
+./build/test-fastint
+FAST INTEGER INVERSE TESTS PASSED (1098727 programs compared, 406043 accepted, 538583 damaged; 144 of 144 fast cases; 279 arrays round trip)
+./build/test-fastint-generic
+FAST INTEGER INVERSE TESTS PASSED (1098727 programs compared, 406043 accepted, 538583 damaged; 144 of 144 fast cases; 279 arrays round trip)
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/test_planner_ownership.c build/libvendor.a -o build/test-planner-ownership-asan  -llzma -lpthread -lm -lstdc++
+In file included from tests/../src/kolmo.c:1034,
+                 from tests/test_planner_ownership.c:15:
+tests/../src/tbl2.inc: In function 'ld8':
+tests/../src/tbl2.inc:63:1: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   63 | static inline v8f ld8(const float *p) { v8f v; memcpy(&v, p, 32); return v; }
+      | ^~~~~~
+tests/../src/tbl2.inc: In function 'hsum8':
+tests/../src/tbl2.inc:67:21: note: the ABI for passing parameters with 32-byte alignment has changed in GCC 4.6
+   67 | static inline float hsum8(v8f v) {
+      |                     ^~~~~
+tests/../src/kolmo.c: In function 'kg_dec64_trial':
+tests/../src/kolmo.c:1718:29: warning: argument 1 is null but the corresponding size argument 2 value is [10, 4294967307] [-Wnonnull]
+ 1718 |         const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/test_planner_ownership.c:14:
+/usr/include/string.h:389:14: note: in a call to function 'memmem' declared with attribute 'access (read_only, 3, 4)'
+  389 | extern void *memmem (const void *__haystack, size_t __haystacklen,
+      |              ^~~~~~
+./build/test-planner-ownership-asan
+seed=88172645463325252 kind=0 effort=0 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=0 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=0 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=0 light=4 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=1 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=1 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=1 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=1 light=4 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=0 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=0 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=0 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=0 light=4 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=1 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=1 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=1 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=1 light=4 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=0 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=0 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=0 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=0 light=4 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=1 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=1 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=1 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=1 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=0 effort=0 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=0 effort=0 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=0 effort=0 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=0 effort=0 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=0 effort=1 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=0 effort=1 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=0 effort=1 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=0 effort=1 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=1 effort=0 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=1 effort=0 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=1 effort=0 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=1 effort=0 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=1 effort=1 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=1 effort=1 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=1 effort=1 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=1 effort=1 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=2 effort=0 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=2 effort=0 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=2 effort=0 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=2 effort=0 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=2 effort=1 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=2 effort=1 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=2 effort=1 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=2 effort=1 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=0 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=0 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=0 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=0 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=4 native=1 plan=9 live_records=0
+PLANNER_OWNERSHIP cases=72 record_allocations=36 graph_cases=72 leaked_cases=0 outstanding=0
+PLANNER OWNERSHIP PASSED
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/test_cmimg.c build/libvendor.a -o build/test-cmimg-asan  -llzma -lpthread -lm -lstdc++
+In file included from tests/../src/kolmo.c:1034,
+                 from tests/test_cmimg.c:3:
+tests/../src/tbl2.inc: In function 'ld8':
+tests/../src/tbl2.inc:63:1: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   63 | static inline v8f ld8(const float *p) { v8f v; memcpy(&v, p, 32); return v; }
+      | ^~~~~~
+tests/../src/tbl2.inc: In function 'hsum8':
+tests/../src/tbl2.inc:67:21: note: the ABI for passing parameters with 32-byte alignment has changed in GCC 4.6
+   67 | static inline float hsum8(v8f v) {
+      |                     ^~~~~
+tests/../src/kolmo.c: In function 'kg_dec64_trial':
+tests/../src/kolmo.c:1718:29: warning: argument 1 is null but the corresponding size argument 2 value is [10, 4294967307] [-Wnonnull]
+ 1718 |         const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/../src/kolmo.c:19:
+/usr/include/string.h:389:14: note: in a call to function 'memmem' declared with attribute 'access (read_only, 3, 4)'
+  389 | extern void *memmem (const void *__haystack, size_t __haystacklen,
+      |              ^~~~~~
+./build/test-cmimg-asan
+container: 230528 -> 111026 bytes
+IMAGE MODEL TESTS PASSED (24 images, 40 damaged copies each)
+cc -O3 -march=native -fno-plt -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/test_rc_options.c build/libvendor.a -o build/test-rc-options  -llzma -lpthread -lm -lstdc++
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/test_rc_options.c build/libvendor.a -o build/test-rc-options-asan  -llzma -lpthread -lm -lstdc++
+In file included from tests/../src/kolmo.c:1034,
+                 from tests/test_rc_options.c:5:
+tests/../src/tbl2.inc: In function 'ld8':
+tests/../src/tbl2.inc:63:1: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   63 | static inline v8f ld8(const float *p) { v8f v; memcpy(&v, p, 32); return v; }
+      | ^~~~~~
+tests/../src/tbl2.inc: In function 'hsum8':
+tests/../src/tbl2.inc:67:21: note: the ABI for passing parameters with 32-byte alignment has changed in GCC 4.6
+   67 | static inline float hsum8(v8f v) {
+      |                     ^~~~~
+tests/../src/kolmo.c: In function 'kg_dec64_trial':
+tests/../src/kolmo.c:1718:29: warning: argument 1 is null but the corresponding size argument 2 value is [10, 4294967307] [-Wnonnull]
+ 1718 |         const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/../src/kolmo.c:19:
+/usr/include/string.h:389:14: note: in a call to function 'memmem' declared with attribute 'access (read_only, 3, 4)'
+  389 | extern void *memmem (const void *__haystack, size_t __haystacklen,
+      |              ^~~~~~
+./build/test-rc-options
+RC_OPTIONS roundtrips=109 headers=5108 forward_differentials=36 PASSED
+./build/test-rc-options-asan
+RC_OPTIONS roundtrips=109 headers=5108 forward_differentials=36 PASSED
+
+real	18m16.804s
+user	17m0.703s
+sys	1m7.072s

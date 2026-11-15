@@ -1,0 +1,27 @@
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Isrc/experimental tests/krc_frontier.c src/experimental/krc.c -lpthread -o build/krc-frontier-test
+cc -O3  -fno-plt -Isrc/experimental tests/krctest.c src/experimental/krc.c -lpthread -o build/krctest
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Isrc/experimental tests/krctest.c src/experimental/krc.c -lpthread -o build/krctest-asan
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Isrc/experimental tests/kbctest.c src/experimental/kbc.c src/experimental/krc.c -lpthread -o build/kbctest-asan
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Isrc/experimental tests/kbxtest.c src/experimental/kbx.c src/experimental/kbc.c src/experimental/krc.c -lpthread -o build/kbxtest-asan
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Isrc/experimental tests/frontier_reads.c src/experimental/frontier_fastq.c src/experimental/frontier_entropy.c src/experimental/frontier_runs.c -o build/frontier-reads-test
+cc -O3  -fno-plt -Isrc/experimental src/experimental/krc_cli.c src/experimental/krc.c -lpthread -o build/krc-cpu
+cp build/krc-cpu build/krc-auto
+cc -O3  -fno-plt -Isrc/experimental src/experimental/kbc_cli.c src/experimental/kbc.c src/experimental/krc.c -lpthread -o build/kbc
+cc -O3  -fno-plt -Isrc/experimental src/experimental/kbx_cli.c src/experimental/kbx.c src/experimental/krc.c -lpthread -o build/kbx
+cc -O3  -fno-plt -Isrc/experimental src/experimental/fastq_cli.c src/experimental/frontier_fastq.c src/experimental/frontier_entropy.c src/experimental/frontier_runs.c -o build/kolmo-fastq
+./build/krc-frontier-test
+All region layouts produced exact KRC1 bytes and rejected damaged payloads.
+./build/krctest
+KRC TESTS PASSED (240 cases, all predictor modes, tails, corruption, truncation, CPU thread agreement)
+./build/krctest-asan
+KRC TESTS PASSED (240 cases, all predictor modes, tails, corruption, truncation, CPU thread agreement)
+./build/kbctest-asan
+KBC TESTS PASSED (97 cases; all storage modes, block boundaries, CPU agreement, guarded output, repaired-CRC corruption)
+./build/kbxtest-asan
+KBX TESTS PASSED (73 cases x 3 profiles; exact KBC1 frames; stronger-model round trips; smallest-payload invariant; CPU agreement; corruption and bounds)
+./build/frontier-reads-test
+FASTQ and integer entropy round trips and corruption probes passed.
+
+real	1m39.271s
+user	1m46.136s
+sys	0m4.541s
