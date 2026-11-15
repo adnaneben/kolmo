@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.2.0-rc2 (2026-11-15) — release candidate, not tagged, not published
+
+1.2.0-rc1 plus the improvements that no branch carried yet and the research codecs, as opt-in tools.
+No default output changes; no format change.
+
+### Changed
+- **Faster encoding of integer arrays** (default modes): the integer node's predictor choice evaluates its three
+  orders in one sweep and its residual pass skips the division when the common factor is 1 (research P2-E2,
+  P2-E9, P2-E30 on PR #7). Same bytes as rc1 (5,181 frame pairs compared with a control build). In memory on one
+  thread at `-m balanced`: 1.18x to 2.20x faster compression on integer arrays; other data unchanged.
+  `-DKOLMO_FORCE_GENERIC_INT_FWD` builds the old path as a control.
+- **`--typed-huf`, 16-bit WAV**: clips with long repeats (a near-free repetition score of at least 0.03) get
+  zstd-3 leaves on the residual instead of per-plane Huffman (research P2-E30). rc1 decodes the output.
+  ESC-50, 40 clips: 3.1% smaller in total, no clip larger.
+
+### Added (experimental, standalone, `make experimental-check`)
+- KRC1, KBC1 and KBX3 research codecs (Codex), KRC1's threaded encode and decode, and its Metal GPU path with
+  CPU fallback (`build/krc-auto`).
+- `build/kolmo-fastq`: the four-line FASTQ prototype (Codex, 7 November) with a command line of its own.
+- `build/kvid`: a lossless video front end prototype for 8-bit y4m (temporal and intra prediction per strip,
+  residuals coded by the Kolmo library).
+None of these is used by `kolmo`, and none writes a Kolmo frame.
+
 ## 1.2.0-rc1 (2026-11-14) — release candidate, not tagged, not published
 
 One build that carries the best of the two integration branches: `claude/integration-20261113` (the base) and

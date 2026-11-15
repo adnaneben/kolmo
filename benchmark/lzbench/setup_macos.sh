@@ -9,7 +9,7 @@
 #  1. Exports <commit> (default HEAD) of this repository twice into the work dir and builds the shared library in
 #     each export with the release flags (`make ARCH= lib`: -O3 and no -mcpu, as the release binaries are built):
 #        release   no extra define                     -> codec `kolmo`
-#        control   -DKOLMO_FORCE_GENERIC_INT_INV       -> codec `kolmo_ctl` (generic integer inverse in the decoder)
+#        control   -DKOLMO_FORCE_GENERIC_INT_INV -DKOLMO_FORCE_GENERIC_INT_FWD -> codec `kolmo_ctl` (generic integer paths: decoder inverse and encoder forward pass)
 #     The one difference from the stock `make lib` is at link time: only kolmo_* is exported and the install name is
 #     the library's place in the lzbench checkout. The compiled code is the release build's.
 #  2. Copies both libraries, kolmo.h and the wrapper into <lzbench>/misc/kolmo, and kolmo_dl.mk to mk/kolmo.mk.
@@ -50,7 +50,7 @@ build() {   # <name> <ARCH value> <library file name in lzbench>
     echo "$1: $(nm -gU "$WORK/$1/build/libkolmo.dylib" | wc -l | tr -d ' ') exported symbols, all kolmo_*"
 }
 build release "" libkolmo.dylib
-build control "-DKOLMO_FORCE_GENERIC_INT_INV" libkolmo_ctl.dylib
+build control "-DKOLMO_FORCE_GENERIC_INT_INV -DKOLMO_FORCE_GENERIC_INT_FWD" libkolmo_ctl.dylib
 
 # 2. Drop the codec into lzbench.
 mkdir -p "$LZB/misc/kolmo"
@@ -67,7 +67,7 @@ version=$(cat "$WORK/release/VERSION")
 {
     echo "kolmo commit $commit, version $version"
     echo "release: make ARCH= lib"
-    echo "control: make ARCH=-DKOLMO_FORCE_GENERIC_INT_INV lib"
+    echo "control: make ARCH=\"-DKOLMO_FORCE_GENERIC_INT_INV -DKOLMO_FORCE_GENERIC_INT_FWD\" lib"
     echo "link change in both: -exported_symbols_list (kolmo_* only) and -install_name"
     shasum -a 256 "$LZB/misc/kolmo/libkolmo.dylib" "$LZB/misc/kolmo/libkolmo_ctl.dylib"
 } > "$LZB/misc/kolmo/BUILD-INFO.txt"
