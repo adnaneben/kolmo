@@ -1,0 +1,45 @@
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/kolmoparallel.c src/kolmo.c build/libvendor.a -o build/kolmoparallel-asan  -llzma -lpthread -lm -lstdc++
+In file included from src/kolmo.c:1034:
+src/tbl2.inc: In function 'ld8':
+src/tbl2.inc:63:1: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   63 | static inline v8f ld8(const float *p) { v8f v; memcpy(&v, p, 32); return v; }
+      | ^~~~~~
+src/tbl2.inc: In function 'hsum8':
+src/tbl2.inc:67:21: note: the ABI for passing parameters with 32-byte alignment has changed in GCC 4.6
+   67 | static inline float hsum8(v8f v) {
+      |                     ^~~~~
+src/kolmo.c: In function 'kg_dec64_trial':
+src/kolmo.c:1718:29: warning: argument 1 is null but the corresponding size argument 2 value is [10, 4294967307] [-Wnonnull]
+ 1718 |         const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from src/kolmo.c:19:
+/usr/include/string.h:389:14: note: in a call to function 'memmem' declared with attribute 'access (read_only, 3, 4)'
+  389 | extern void *memmem (const void *__haystack, size_t __haystacklen,
+      |              ^~~~~~
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/kolmoresource.c build/libvendor.a -o build/kolmoresource-asan  -llzma -lpthread -lm -lstdc++
+In file included from tests/../src/kolmo.c:1034,
+                 from tests/kolmoresource.c:35:
+tests/../src/tbl2.inc: In function 'ld8':
+tests/../src/tbl2.inc:63:1: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   63 | static inline v8f ld8(const float *p) { v8f v; memcpy(&v, p, 32); return v; }
+      | ^~~~~~
+tests/../src/tbl2.inc: In function 'hsum8':
+tests/../src/tbl2.inc:67:21: note: the ABI for passing parameters with 32-byte alignment has changed in GCC 4.6
+   67 | static inline float hsum8(v8f v) {
+      |                     ^~~~~
+tests/../src/kolmo.c: In function 'kg_dec64_trial':
+tests/../src/kolmo.c:1718:29: warning: argument 1 is null but the corresponding size argument 2 value is [10, 4294967307] [-Wnonnull]
+ 1718 |         const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/kolmoresource.c:12:
+/usr/include/string.h:389:14: note: in a call to function 'memmem' declared with attribute 'access (read_only, 3, 4)'
+  389 | extern void *memmem (const void *__haystack, size_t __haystacklen,
+      |              ^~~~~~
+./build/kolmoresource-asan
+RESOURCE TESTS PASSED (12 injected compression allocation failures)
+./build/kolmoparallel-asan
+PARALLEL TESTS PASSED (144 concurrent table, archive and plain round trips)
+
+real	2m45.444s
+user	2m49.394s
+sys	0m2.494s

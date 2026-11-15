@@ -1,0 +1,3 @@
+SRR1770413: 100000 reads, 63,177,790 bytes, from https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR177/003/SRR1770413/SRR1770413_1.fastq.gz (80,000,001 compressed bytes fetched)
+SRR2584863: 100000 reads, 36,637,534 bytes, from https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/003/SRR2584863/SRR2584863_1.fastq.gz (80,000,001 compressed bytes fetched)
+SRR835775: 100000 reads, 22,877,790 bytes, from https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR835/SRR835775/SRR835775_1.fastq.gz (80,000,001 compressed bytes fetched)

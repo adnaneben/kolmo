@@ -1,0 +1,11 @@
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include  tests/test_lines.c build/libvendor.a -o build/test-lines-asan  -llzma -lpthread -lm -lstdc++
+In file included from tests/../src/kolmo.c:1034,
+                 from tests/test_lines.c:3:
+tests/../src/tbl2.inc: In function 'ld8':
+tests/../src/tbl2.inc:63:1: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   63 | static inline v8f ld8(const float *p) { v8f v; memcpy(&v, p, 32); return v; }
+      | ^~~~~~
+tests/../src/tbl2.inc: In function 'hsum8':
+tests/../src/tbl2.inc:67:21: note: the ABI for passing parameters with 32-byte alignment has changed in GCC 4.6
+   67 | static inline float hsum8(v8f v) {
+      |                     ^~~~~

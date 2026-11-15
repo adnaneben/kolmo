@@ -1,0 +1,36 @@
+python3 tests/test_fast_file.py
+./build/kolmoresource
+RESOURCE TESTS PASSED (12 injected compression allocation failures)
+./build/kolmoparallel
+PARALLEL TESTS PASSED (144 concurrent table, archive and plain round trips)
+./build/kolmotest
+formula table: 3 formulas found, group column 0
+table-codec v2 fuzz: 4000 corrupt streams decoded without crashing
+columnar decode: 5462 rows x 8 cols, all cells correct
+columnar-codec fuzz: 4000 corrupt streams decoded without crashing
+log codec: 2.63x before entropy coding
+log codec fuzz: 4000 corrupt streams decoded without crashing
+json lines: fast 49.4% of fast without transforms
+json codec fuzz: 3000 corrupt streams decoded without crashing
+minified json: fast 42.8% of fast without transforms
+wide table graph: fast 71.0% of fast without transforms
+wide graph fuzz: 400 corrupted frames rejected or exact
+integer graph: timestamps fast 7.9% of fast without transforms
+integer graph fuzz: 400 corrupted frames rejected or exact
+float graph: float32 fast 55.7% of fast without transforms
+float graph fuzz: 300 corrupted frames rejected or exact
+image graph: 8-bit RGB fast 47.0% of fast without transforms
+image graph fuzz: 300 corrupted frames rejected or exact
+image16 ratio 3.66, records ratio 2.27
+records/image codec fuzz: 6000 corrupt streams decoded without crashing
+word codec: 1.73x before entropy coding
+word codec fuzz: 3000 corrupt streams decoded without crashing
+native leaf: 80000 -> 17372 bytes; 17372 truncations rejected; 3000 corrupt leaves decoded without crashing
+native leaf int16 series: 79621 -> 73622 bytes (version 9)
+ultra level 2 integer series: 34642 -> 32105 bytes
+table-codec fuzz: 3000 corrupt streams decoded without crashing
+ALL PASSED
+
+real	22m25.455s
+user	26m21.971s
+sys	1m17.923s
