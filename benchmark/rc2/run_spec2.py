@@ -109,9 +109,10 @@ def main():
         from zipnn import ZipNN
         for name in WEIGHTS:
             raw = open(os.path.join(a.data, name), "rb").read()
-            z = ZipNN(input_format="byte", bytearray_dtype="bfloat16", threads=1)
+            # this zipnn release: byte input, 2 byte groups (bfloat16), zstd on one thread
+            z = ZipNN(method="zstd", input_type="byte", bg_partitions=2, zstd_threads=1)
             zz, back, f = pair(lambda: z.compress(raw), lambda b: z.decompress(b))
-            emit("weights", name, "ZipNN (bfloat16, threads 1)", len(raw), f, bytes(back) == raw)
+            emit("weights", name, "ZipNN (2 byte groups, zstd, threads 1)", len(raw), f, bytes(back) == raw)
             kolmo_rows("weights", name, raw)
 
     if not only or "audio" in only:
@@ -132,6 +133,7 @@ def main():
 
     if not only or "video" in only:
         import av
+        from fractions import Fraction
         for name in sorted(x for x in os.listdir(a.video) if x.endswith(".y4m")):
             raw = open(os.path.join(a.video, name), "rb").read()
             hdr_end = raw.index(b"\n") + 1
@@ -148,7 +150,7 @@ def main():
             def enc():
                 c = av.CodecContext.create("ffv1", "w")
                 c.width, c.height, c.pix_fmt = W, H, "yuv420p"
-                c.time_base = av.Fraction(1001, 30000)
+                c.time_base = Fraction(1001, 30000)
                 c.thread_count = 1
                 c.options = {"level": "3", "context": "1", "g": "1", "slicecrc": "0"}
                 pk = []
