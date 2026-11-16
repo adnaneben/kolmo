@@ -18,10 +18,10 @@ M5) repeat is left to the integration lane.
 
 | change | files | output | measured effect |
 |---|---|---|---|
-| liblzma subset vendored (XZ Utils 5.8.1, signature verified), system liblzma no longer linked | `vendor/xz/` (70 release files + 4 Kolmo files), `Makefile`, `src/kolmo.c` (include and the buffer bound), `bench/kolmobench.c`, CI, `fuzz/build.sh`, `tune/ga.py`, both bindings | identical (determinism check: 110 frames) | LZMA2 decode 1.43× faster; `ratio` decompression −8% on Silesia |
+| liblzma subset vendored (XZ Utils 5.8.1, signature verified), system liblzma no longer linked | `vendor/xz/` (70 release files + 4 Kolmo files), `Makefile`, `src/core/common.h` (include), `src/codecs/lzma.c` (the buffer bound), `bench/kolmobench.c`, CI, `fuzz/build.sh`, `tune/ga.py`, both bindings | identical (determinism check: 110 frames) | LZMA2 decode 1.43× faster; `ratio` decompression −8% on Silesia |
 | vendored zstd and Brotli files Kolmo never compiles removed | `vendor/zstd` (63 files), `vendor/brotli/common/dictionary.bin*` | identical | zstd tree 3.6 → 2.3 MB |
 | function-section garbage collection of vendored code | `Makefile` (`VSECT`, `LDGC`) | identical | binary code 3.13 → 2.78 MB; speed within noise |
-| Huffman leaves pass zstd's BMI2 flag | `src/kolmo.c` (`huf_flags`) | identical | 1.15–1.21× faster leaf decode on baseline x86-64; below noise end to end |
+| Huffman leaves pass zstd's BMI2 flag | `src/codecs/huf.c` (`huf_flags`) | identical | 1.15–1.21× faster leaf decode on baseline x86-64; below noise end to end |
 | `kolmobench`'s xz rival coded as raw LZMA2 | `bench/kolmobench.c` | rival only | the subset has no .xz container; xz's own figures add about 60 bytes and a CRC64 pass |
 
 The format did not change. No `expected.sha256` regeneration was needed.
@@ -235,6 +235,13 @@ Every one ran with no system liblzma linked (`ldd build/kolmo` shows none).
   possible gain is bounded above (≤ about 6% of Silesia `ratio` decode at a 1.3× faster decoder).
 - **Not repeated on the Apple M5.** In particular, the AArch64 Huffman question (zstd ships no AArch64 assembly) is
   for the simd-arm lane.
-- **Structure lane not merged.** `claude/rc3-structure-20261116` had not been pushed while this lane worked. The hooks
-  are small: the include in `src/kolmo.c`, `kolmo_lzma2_bound`, `huf_flags`, and the Makefile `XZ*`/`VSECT`/`LDGC`
-  blocks. They move with `kolmo.c` into `src/codecs/lzma.c` and `src/codecs/huf.c` at integration.
+- **Structure lane merged late.** `claude/rc3-structure-20261116` appeared after the four deps commits were made on
+  the old layout. It was merged into this branch (`git merge`), and the hooks moved into the new files:
+  - the include into `src/core/common.h`;
+  - `kolmo_lzma2_bound` into `src/codecs/lzma.c`;
+  - `huf_flags` into `src/codecs/huf.c`;
+  - `-Ivendor/xz` and the `-llzma` removal into the structure lane's new CI, fuzz, `tune/ga.py`, Rust build script and
+    lzbench setup.
+
+  The merged `src/` differs from the structure branch only by those three hooks. Every test above was run again on the
+  merged tree before pushing.

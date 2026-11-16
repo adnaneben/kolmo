@@ -60,7 +60,7 @@ How to read the table:
 | zstd | 1.5.7 | one-shot `ZSTD_compressCCtx`/`decompressDCtx` (levels 1, 3, 9, 19, 22), dictionaries, `ZDICT_trainFromBuffer`, HUF directly | **done:** 63 unused files removed; 152 KiB of unused code dropped at link | C99 with x86-64 Huffman assembly; the assembly is worth ~2% of `balanced` decode end to end; no ARM port needed for rc3 | none measurable: per-call overhead is negligible (105 frames for 212 MB) | **done:** Kolmo's Huffman leaves now pass zstd's BMI2 flag, 1.15–1.21× faster leaf decode on baseline x86-64 builds; frameless zstd leaves would save < 0.03% |
 | LZ4 | 1.10.0 | `LZ4_compress_fast`, `LZ4_compress_HC_extStateHC`, `LZ4_decompress_safe` | **done:** 105 KiB (49%) of its code dropped at link; already 2 files | C99; no | none: decode is at 2.4 GB/s per thread, copy-bound | none |
 | Brotli | 1.1.0 | `BrotliEncoderCompress` (quality 8, window 24), `BrotliDecoderDecompress` | **done:** unused dictionary blobs removed; 13 KiB dropped at link | C99; no | none from ownership: 93% of `eco` compression is the quality-8 search itself | none |
-| xxHash | 0.8.2 | XXH3-64 (block checksums), XXH64 (bsc payload check, versions 1–2) | 27 KiB (75%) of its code dropped at link; keep | C99 with AVX2 dispatch (rc2); no | none: checksums take 0.4–2% | already specialised (`kolmo_xxh3.c`) |
+| xxHash | 0.8.2 | XXH3-64 (block checksums), XXH64 (bsc payload check, versions 1–2) | 27 KiB (75%) of its code dropped at link; keep | C99 with AVX2 dispatch (rc2); no | none: checksums take 0.4–2% | already specialised (`src/arch/xxh3.c`) |
 | libbsc | 3.4.0 (C++) | `bsc_compress`/`bsc_decompress` (LZP, BWT, static QLFC) | bwt lane: ported to C (codec 18) | bwt lane | 60% of Silesia `ratio` decode | bwt lane |
 | libsais | (in libbsc) | `libsais_bwt`/`unbwt` | bwt lane: owned under `src/algo/sais/` | bwt lane | — | bwt lane |
 
@@ -222,7 +222,7 @@ a mode choice (the TRADEOFFS.md cost model), not overhead. Brotli decoding is 62
 ## xxHash
 
 **What Kolmo uses.**
-- XXH3-64 for block checksums (`kolmo_xxh3.c`, with rc2's AVX2 runtime dispatch);
+- XXH3-64 for block checksums (`src/arch/xxh3.c`, with rc2's AVX2 runtime dispatch);
 - XXH64 (zstd's copy) for the bsc payload check and for checksums in container versions 1–2.
 
 **1.** Keep it. It costs 0.4–2% of decode time, and the linker drops the unused 75% of its code.

@@ -13,7 +13,7 @@
 static void *test_calloc(size_t count, size_t size);
 #define calloc test_calloc
 #endif
-#include "../src/cm.inc"
+#include "../src/codecs/cm.c"
 #ifdef KOLMO_CM_COMPACT
 #undef calloc
 #endif

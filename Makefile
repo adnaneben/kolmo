@@ -50,11 +50,12 @@ endif
 LZMALIB :=
 BSC     := vendor/libbsc/libbsc
 BSRC    := $(shell find $(BSC) -name '*.cpp')
-OBJ     := $(patsubst %.c,build/obj/%.o,$(ZSRC) $(BROSRC) $(XZSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/obj/%.o,$(ZASM)) \
+OBJ     := $(patsubst %.c,build/obj/%.o,$(ZSRC) $(BROSRC) $(XZSRC) $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/obj/%.o,$(ZASM)) \
            $(patsubst %.cpp,build/obj/%.o,$(BSRC))
 # Vendored code is compiled one function per section and the linker drops what Kolmo never calls (the trim measured in
 # benchmark/rc3/deps/RESULTS.md: about 370 KiB of zstd, LZ4, libbsc, xxHash, Brotli and liblzma code). Same bytes out.
-VSECT   := -ffunction-sections -fdata-sections
+VSECT   :=
+$(OBJ): VSECT := -ffunction-sections -fdata-sections
 ifeq ($(UNAME_S),Darwin)
 LDGC    := -Wl,-dead_strip
 else
@@ -63,7 +64,37 @@ endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) $(LDGC) -lpthread -lm
 BLIBS   := $(LIBS)
 
-KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc
+# Library sources (docs/LAYOUT.md). src/kolmo.c includes the parts below into one translation unit, so they are listed
+# by directory as its prerequisites. Compiled on their own and archived with it: arch/xxh3.c and the assembly kernels of
+# this machine's ISA, src/arch/<isa>/*.S (NO_ASM=1 drops them and builds the C references only), and on macOS the GPU
+# host code src/arch/metal/*.m (NO_GPU=1 drops it).
+LIBDIRS := api core plan transforms codecs algo arch arch/x86_64 arch/aarch64
+KOLMO_INCLUDES := src/kolmo.h $(foreach d,$(LIBDIRS),$(wildcard src/$(d)/*.c src/$(d)/*.h))
+ifeq ($(UNAME_M),x86_64)
+ASM_ISA := x86_64
+else ifneq ($(filter arm64 aarch64,$(UNAME_M)),)
+ASM_ISA := aarch64
+endif
+ifeq ($(NO_ASM),1)
+DEFS    += -DKOLMO_NO_ASM
+ASMSRC  :=
+else
+ASMSRC  := $(if $(ASM_ISA),$(wildcard src/arch/$(ASM_ISA)/*.S))
+endif
+ifeq ($(NO_GPU),1)
+DEFS    += -DKOLMO_NO_GPU
+GPUSRC  :=
+else
+GPUSRC  := $(if $(filter Darwin,$(UNAME_S)),$(wildcard src/arch/metal/*.m))
+endif
+ifneq ($(GPUSRC),)
+DEFS    += -DKOLMO_HAVE_METAL
+LIBS    += -framework Foundation -framework Metal
+endif
+ARCHSRC := src/arch/xxh3.c $(ASMSRC) $(GPUSRC)
+ARCHOBJ := $(addprefix build/obj/,$(addsuffix .o,$(basename $(ARCHSRC))))
+ARCHPIC := $(addprefix build/pic/,$(addsuffix .o,$(basename $(ARCHSRC))))
+$(ARCHOBJ): VSECT := -ffunction-sections -fdata-sections   # arch/xxh3.c carries xxHash (see VSECT above)
 
 all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
 
@@ -79,15 +110,20 @@ build/obj/%.o: %.cpp
 build/obj/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEFS) $(INC) -c $< -o $@
+build/obj/%.o: %.m
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(DEFS) $(INC) -fobjc-arc -c $< -o $@
 
 build/libvendor.a: $(OBJ)
 	ar rcs $@ $^
 build/kolmo.o: src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES)
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) -c src/kolmo.c -o $@
-build/libkolmo.a: build/kolmo.o
+build/libkolmoarch.a: $(ARCHOBJ)
 	ar rcs $@ $^
-build/kolmo: src/cli.c build/libkolmo.a build/libvendor.a
+build/libkolmo.a: build/kolmo.o $(ARCHOBJ)
+	ar rcs $@ $^
+build/kolmo: src/cli/cli.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmobench: bench/kolmobench.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(BLIBS) $(CXXLIB)
@@ -95,10 +131,10 @@ build/kolmotest: tests/kolmotest.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
-build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
-build/kolmo-profile: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/kolmo-profile: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 check: all
 	python3 tests/test_fast_file.py
@@ -108,59 +144,59 @@ check: all
 
 SANFLAGS ?= -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
 override SANFLAGS += $(FPFLAGS)
-build/kolmoparallel-asan: tests/kolmoparallel.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoparallel.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
-build/kolmoresource-asan: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
-build/test-lines-asan: tests/test_lines.c src/kolmo.c src/kolmo.h src/lines.inc build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_lines.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/kolmoparallel-asan: tests/kolmoparallel.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoparallel.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/kolmoresource-asan: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-lines-asan: tests/test_lines.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_lines.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-lines: build/test-lines-asan
 	./build/test-lines-asan
-build/test-dec64-asan: tests/test_dec64.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dec64.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-dec64-asan: tests/test_dec64.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dec64.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-dec64: build/test-dec64-asan
 	./build/test-dec64-asan
-build/test-fastint-asan: tests/test_fastint.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fastint.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-fastint-asan: tests/test_fastint.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fastint.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 # The same test in the optimised build (the loops a release runs), and in the control build that sends every program
 # to the generic inverse (-DKOLMO_FORCE_GENERIC_INT_INV).
-build/test-fastint: tests/test_fastint.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fastint.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
-build/test-fastint-generic: tests/test_fastint.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FORCE_GENERIC_INT_INV $(INC) tests/test_fastint.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-fastint: tests/test_fastint.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fastint.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-fastint-generic: tests/test_fastint.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FORCE_GENERIC_INT_INV $(INC) tests/test_fastint.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-fastint: build/test-fastint-asan build/test-fastint build/test-fastint-generic
 	./build/test-fastint-asan
 	./build/test-fastint
 	./build/test-fastint-generic
-build/test-planner-ownership-asan: tests/test_planner_ownership.c src/kolmo.c src/kolmo.h src/kgraph.inc build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_planner_ownership.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-planner-ownership-asan: tests/test_planner_ownership.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_planner_ownership.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-planner-ownership: build/test-planner-ownership-asan
 	./build/test-planner-ownership-asan
-build/test-cmimg-asan: tests/test_cmimg.c src/kolmo.c src/kolmo.h src/cm.inc build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmimg.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-cmimg-asan: tests/test_cmimg.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmimg.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-cmimg: build/test-cmimg-asan
 	./build/test-cmimg-asan
 # Opt-in --typed-huf route (ported from the RC1 integration, PR #10): round trips, header parsing, and agreement of
 # the typed route's predictor choice with the graph planner's.
-build/test-rc-options: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
-build/test-rc-options-asan: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-rc-options: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-rc-options-asan: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-rc-options: build/test-rc-options build/test-rc-options-asan
 	./build/test-rc-options
 	./build/test-rc-options-asan
 .PHONY: check-rc-options
 # FASTQ family blocks (codec 16): container round trips at ultra, the modes that must not write it, damaged payloads
-build/test-fqfam-asan: tests/test_fqfam.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fqfam.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-fqfam-asan: tests/test_fqfam.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fqfam.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-fqfam: build/test-fqfam-asan
 	./build/test-fqfam-asan
 # Component tests of the features merged for the release candidate. `make check` does not run them; CI does.
 # Runtime ISA dispatch (x86-64): CRC32C and XXH3 against scalar references, optimised and with sanitizers.
 build/test-dispatch: tests/test_dispatch.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
-build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) vendor/xxhash/kolmo_xxh3.c build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c vendor/xxhash/kolmo_xxh3.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c src/arch/xxh3.c $(ASMSRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan
@@ -172,7 +208,7 @@ check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 
 # Shared library for language bindings (Python, Rust): everything rebuilt -fPIC into build/pic.
 SOEXT := $(if $(filter Darwin,$(UNAME_S)),dylib,so)
-PICC  := $(patsubst %.c,build/pic/%.o,$(ZSRC) $(BROSRC) $(XZSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/pic/%.o,$(ZASM))
+PICC  := $(patsubst %.c,build/pic/%.o,$(ZSRC) $(BROSRC) $(XZSRC) $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/pic/%.o,$(ZASM))
 PICPP := $(patsubst %.cpp,build/pic/%.o,$(BSRC))
 build/pic/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -186,28 +222,31 @@ build/pic/%.o: %.cpp
 build/pic/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -fPIC $(DEFS) $(INC) -c $< -o $@
+build/pic/%.o: %.m
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -fPIC $(DEFS) $(INC) -fobjc-arc -c $< -o $@
 lib: build/libkolmo.$(SOEXT)
-build/libkolmo.$(SOEXT): src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(PICC) $(PICPP)
+build/libkolmo.$(SOEXT): src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(PICC) $(PICPP) $(ARCHPIC)
 	@mkdir -p build
-	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) $(INC) src/kolmo.c $(PICC) $(PICPP) -o $@ $(LIBS) $(CXXLIB)
+	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) $(INC) src/kolmo.c $(PICC) $(PICPP) $(ARCHPIC) -o $@ $(LIBS) $(CXXLIB)
 
 clean:
 	rm -rf build
 .PHONY: all clean lib check check-sanitizers
 
 # Optional lower-memory archive encoder.
-build/kolmo-cm20: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/kolmo-cm20: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 # The compact variant retains the standard Ultra bitstream and table sizes elsewhere.
-build/kolmo-cm-compact: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) -DKOLMO_CM_COMPACT $(DEFS) $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/kolmo-cm-compact: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) -DKOLMO_CM_COMPACT $(DEFS) $(INC) src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
-build/cm-reference.o: tests/test_cm_compact.c src/cm.inc
+build/cm-reference.o: tests/test_cm_compact.c src/codecs/cm.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-build/cm-compact-test: tests/test_cm_compact.c src/cm.inc build/cm-reference.o
+build/cm-compact-test: tests/test_cm_compact.c src/codecs/cm.c build/cm-reference.o
 	$(CC) $(CFLAGS) -DKOLMO_CM_COMPACT $< build/cm-reference.o -lpthread -lm -o $@
 
 check-cm-compact: build/cm-compact-test
@@ -217,11 +256,11 @@ check-cm-compact: build/cm-compact-test
 # Research build. Experimental recipes emit v6 frames only when used.
 FRONTIER_SRC := src/experimental/frontier_dna.c src/experimental/frontier_table.c src/experimental/frontier_prefix.c src/experimental/frontier_pcm.c src/experimental/frontier_lag.c src/experimental/frontier_shuffle.c src/experimental/frontier_runs.c
 FRONTIER_HDR := src/experimental/frontier_dna.h src/experimental/frontier_table.h src/experimental/frontier_prefix.h src/experimental/frontier_pcm.h src/experimental/frontier_lag.h src/experimental/frontier_shuffle.h src/experimental/frontier_runs.h
-build/kolmo-frontier: src/cli.c src/kolmo.c src/kolmo.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) src/cli.c src/kolmo.c $(FRONTIER_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/kolmo-frontier: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) src/cli/cli.c src/kolmo.c $(FRONTIER_SRC) build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
-build/kolmo-tar-file-test: tests/test_tar_file.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) $< $(FRONTIER_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/kolmo-tar-file-test: tests/test_tar_file.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) $< $(FRONTIER_SRC) build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 check-tar-files: build/kolmo-tar-file-test
 	./build/kolmo-tar-file-test
@@ -236,8 +275,8 @@ build/frontier-test: tests/frontier.c $(FRONTIER_SRC) $(FRONTIER_HDR)
 	$(CC) $(CFLAGS) $(SANFLAGS) tests/frontier.c $(FRONTIER_SRC) -o $@
 
 
-build/libkolmo-frontier.$(SOEXT): src/kolmo.c src/kolmo.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) $(PICC) $(PICPP)
-	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) -DKOLMO_FRONTIER $(INC) src/kolmo.c $(FRONTIER_SRC) $(PICC) $(PICPP) -o $@ $(LIBS) $(CXXLIB)
+build/libkolmo-frontier.$(SOEXT): src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(FRONTIER_SRC) $(FRONTIER_HDR) $(PICC) $(PICPP) $(ARCHPIC)
+	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) -DKOLMO_FRONTIER $(INC) src/kolmo.c $(FRONTIER_SRC) $(PICC) $(PICPP) $(ARCHPIC) -o $@ $(LIBS) $(CXXLIB)
 
 # Standalone research codecs (not part of kolmo): see experimental.mk
 include experimental.mk
