@@ -33,7 +33,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | 20 | video | kvid: temporal prediction front end, then Kolmo | own | 3 CIF clips, all threads: −14.0% vs FFV1 (10 threads, 16 slices) at 0.94× compress and 2.1× decompress; `ratio` −16% vs xz -9 | rc3 (format2 lane) |
 | 21–23 | stacking leaves | per-plane leaves, Huffman→zstd leaf, zero-run leaf | own | ST-1: −0.67% to −2.0% vs production on integer files (fresh data) | rc3 (format2 lane) |
 | 24 | own LZMA-class coder | — | own | pending | rc3 (deps lane), only if it gains |
-| 25 | parallel CM | stream- or block-parallel context mixing | own | pending | rc3 (xmode lane) |
+| 25 | CM over parts | parts each coded by their own context-mixing model (codec 7 streams), in parallel for encoding and decoding; parts from the table's columns (transpose plan) or two halves of a non-text stream ≥ 8 MiB; cuts depend on the input only; container version 11 | own | columns: CSV 1 MB −0.5%, encode 2.1× and decode 4.4× faster at 4 threads; halves: +0.14% (CSV 10 MB, binary 100 MB) to +0.40% (binary 10 MB), 2× faster both ways (`benchmark/rc3/xmode/RESULTS.md`) | rc3 (xmode lane) |
 
 ## Transforms and graph techniques
 
@@ -78,3 +78,13 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | `-ffp-contract=off` everywhere | build | Brotli encoder output no longer depends on FMA | in (rc2) |
 | Metal GPU (KRC hybrid) | KRC | no faster than the CPU path | research |
 | hand-written assembly | — | below a few percent where measured so far (SIMD-ASM.md) | rc3 simd lanes: kept wherever it gains |
+| concurrent ultra trials (`core/trials.c`) | `-x` encode | LZMA2 / block sorting, their slice test, plain block sorting and the FASTQ family coder run beside CM when the block has threads to spare; the planner's two CM samples in parallel; frames unchanged | rc3 (xmode) |
+| FASTQ: family coder first at `-x` | `-x` encode | CM and the other trials skipped when codec 16 applies (blocks ≥ 64 KiB); frames unchanged; ~20× faster, 1.4–5.4 GiB → 30–150 MiB | rc3 (xmode) |
+| CM: prefetch of the next bit's mixer and APM rows | `-x` both ways | 20–25% faster on 1 MB inputs (VM); frames unchanged | rc3 (xmode) |
+| CM: AVX2 build of the coding loops, runtime dispatch | `-x` both ways, baseline-ISA builds | 21% faster than the SSE2 build; frames unchanged | rc3 (xmode) |
+| CM: hand-written AVX2 mixer dot product and update | `-x` | 2% over the compiler's AVX2 code (noise): the mixer is 11% of the instructions, counter and state-map updates 45% | dropped (xmode) |
+| CM: byte-ahead prefetch of hashed buckets (both candidates) | `-x` | no gain | dropped (xmode) |
+| CM: block-parallel text (2/4/8 parts) | `-x` | +2.8% / +6.4% / +10.9% on 10 MB text, +8.7% for 4 parts on 100 MB | dropped (xmode) |
+| CM: block-parallel binary, 4 or 8 parts | `-x` | +0.90% / +1.3% on 100 MB (3.7× faster) — over the 0.5% budget | dropped (xmode); 2 halves kept |
+| family coder: name/quality chunks of block/16 (1–4 MiB) | `-x` FASTQ decode | 10 MB: 1.4× faster decode at 4 threads, +0.57%; 100 MB unchanged (4 MiB); smaller base chunks +13% | rc3 (xmode) |
+| CM tables sized to the block (`--x-tables=scaled`) | `-x` memory | see `benchmark/rc3/xmode/RESULTS.md` | opt-in until the memory model is approved |
