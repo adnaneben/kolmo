@@ -69,7 +69,7 @@ BLIBS   := $(LIBS)
 # this machine's ISA, src/arch/<isa>/*.S (NO_ASM=1 drops them and builds the C references only), and on macOS the GPU
 # host code src/arch/metal/*.m (NO_GPU=1 drops it).
 LIBDIRS := api core plan transforms codecs algo arch arch/x86_64 arch/aarch64
-KOLMO_INCLUDES := src/kolmo.h $(foreach d,$(LIBDIRS),$(wildcard src/$(d)/*.c src/$(d)/*.h))
+KOLMO_INCLUDES := src/kolmo.h $(foreach d,$(LIBDIRS),$(wildcard src/$(d)/*.c src/$(d)/*.h)) src/plan/target_table.inc
 ifeq ($(UNAME_M),x86_64)
 ASM_ISA := x86_64
 else ifneq ($(filter arm64 aarch64,$(UNAME_M)),)
@@ -139,17 +139,22 @@ build/libkolmoarch.a: $(ARCHOBJ)
 	ar rcs $@ $^
 build/libkolmo.a: build/kolmo.o $(ARCHOBJ)
 	ar rcs $@ $^
-build/kolmo: src/cli/cli.c build/libkolmo.a build/libvendor.a
-	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+build/kolmo: src/cli/cli.c src/cli/train.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(INC) $(filter-out src/cli/train.c,$^) -o $@ $(LIBS) $(CXXLIB)
 build/kolmobench: bench/kolmobench.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(BLIBS) $(CXXLIB)
+# features-a benchmark: trained profiles against untrained Kolmo and zstd dictionaries (benchmark/rc3/features-a)
+build/kpbench: benchmark/rc3/features-a/kpbench.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+build/tgbench: benchmark/rc3/features-a/tgbench.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmotest: tests/kolmotest.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
-build/kolmo-profile: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 check: all
@@ -257,7 +262,16 @@ build/test-format2-asan: tests/test_format2.c src/kolmo.c $(KOLMO_INCLUDES) $(AR
 check-format2: build/test-format2 build/test-format2-asan
 	./build/test-format2
 	./build/test-format2-asan
-check-rc: check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2
+# Trained profiles and --target (features-a): round trips, damaged profiles and frames, targets, merging.
+build/test-profile: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-profile-asan: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-profile: build/test-profile build/test-profile-asan
+	./build/test-profile
+	KOLMO_SKIP_CALIBRATE=1 ./build/test-profile-asan
+.PHONY: check-profile
+check-rc: check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
 .PHONY: check-rc check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm check-arch check-format2
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan

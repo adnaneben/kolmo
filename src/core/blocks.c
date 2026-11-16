@@ -76,6 +76,7 @@ typedef struct {
     int psum;               /* checksums over stored bytes (rt) instead of decoded bytes */
     const void *dict; size_t dictlen;   /* optional zstd dictionary, read-only by workers */
     int aud_prof, aud_ch; uint64_t aud_off, aud_end;   /* format 2: 16-bit PCM WAV (kaud profile, channels, sample bytes [off, end)); aud_prof < 0: none */
+    const struct kolmo_profile *prof;   /* optional trained profile, read-only by workers */
 } job_t;
 static void append_bytes(job_t *j, const uint8_t *bytes, size_t size) {
     if (j->werr) return;
@@ -120,6 +121,7 @@ static void *compress_worker(void *arg) {
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
+    xp->prof = J->prof;
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TBL_SLACK(J->B) + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;

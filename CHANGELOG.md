@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased (rc3, features-a lane: `claude/rc3-features-a-20261116`)
+
+### Added
+- **Trained profiles: `kolmo train`, `kolmo -P`.** A versioned, checksummed profile file (`KPF1`, `SPEC.md`) holds the
+  setting, pinned plans per kind of file, a zstd dictionary and a raw dictionary (Brotli, LZ4), and reserves a section
+  for context-mixing priors. Frames written with a profile carry its id (container version 11, header flag bit 2);
+  one-block frames up to 1 MiB use a compact form (`CZC1`, 14–21 bytes of header), and their zstd leaves up to
+  64 KiB are raw zstd blocks. Training measures on a held-out fifth of the samples to choose the dictionary trainer
+  (zstd's fastCover or COVER), the largest leaf that takes the dictionary and, with `--target`, the setting. API:
+  `kolmo_profile_train`, `kolmo_profile_load`, `kolmo_compress_profile`, `kolmo_decompress_profile`,
+  `kolmo_frame_profile_id`; error `KOLMO_ERR_PROFILE`.
+- **`--target`** (`size`, `decode>=R`, `encode>=R`, `cost:<formula>`, `cost:cloud[=months]`, `cost:link=R`): the
+  setting of each 16 MiB chunk is chosen by trial compression and a calibrated speed table; chunk frames are joined
+  into one ordinary frame. **`kolmo calibrate`** measures the table on this machine. API: `kolmo_target_parse`,
+  `kolmo_compress_target`, `kolmo_calibrate`; error `KOLMO_ERR_TARGET`.
+
 ## Unreleased (on 1.2.0-rc2: branches `claude/kfam-fastq-20261116`, `claude/kbin-20261116`, `claude/simd-dispatch-20261116`)
 
 The SIMD and build changes below change no output and no format (measurements in `benchmark/rc2/SIMD-ASM.md`). The

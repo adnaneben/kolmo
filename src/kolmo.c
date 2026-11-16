@@ -98,3 +98,8 @@ int kolmo_force_c;
 #include "core/decode.c"
 #include "api/api.c"
 #include "core/stream.c"
+
+/* rc3 features (features-a lane): trained profiles (kolmo train, -P) and --target, with the public entry points */
+#include "plan/profile.c"
+#include "plan/target.c"
+#include "api/features.c"

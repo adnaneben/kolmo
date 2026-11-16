@@ -16,10 +16,12 @@ static size_t codec_bound(int codec, size_t n) {
     return c && c->bound ? c->bound(n) : n;
 }
 static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
+    if (x->prof) { int h = 0; size_t r = kp_codec_compress(x->prof, (void **)&x->zc, codec, level, in, n, out, cap, &h); if (h) return r; }
     const kolmo_codec *c = codec_get(codec);
     return c && c->compress ? c->compress(x, level, in, n, out, cap) : 0;
 }
 static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+    if (x->prof) { int h = 0; int r = kp_codec_decompress(x->prof, (void **)&x->zd, codec, in, cn, out, n, &h); if (h) return r; }
     const kolmo_codec *c = codec_get(codec);
     return c && c->decompress ? c->decompress(x, in, cn, out, n) : -1;
 }

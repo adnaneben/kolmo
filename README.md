@@ -142,6 +142,44 @@ dictionary (`KOLMO_ERR_DICT`) rather than returning wrong data. The API is `kolm
 `kolmo_decompress_dict` (C), `kolmo.train_dict` + `compress(..., dict=d)` (Python), and `train_dict` / `compress_dict`
 / `decompress_dict` (Rust). Dictionaries apply to the zstd-coded blocks (`fast`, `hc`).
 
+### Trained profiles (`kolmo train`)
+
+A dictionary helps small files; a **profile** carries everything Kolmo learns from a sample of one dataset — the
+setting, the plan the analysis picks for each kind of file (so later files skip the analysis), a zstd dictionary and
+a raw dictionary for Brotli and LZ4 — and the frames written with it drop their per-file framing to 14–16 bytes.
+
+```bash
+./build/kolmo train -o logs.kpf samples/            # learn a profile (files or directories)
+./build/kolmo train --target 'cost:cloud' -o logs.kpf samples/   # also pick the setting, measured on held-out samples
+./build/kolmo -P logs.kpf today.log today.kolmo      # compress with it (its setting unless -m is given)
+./build/kolmo -d -P logs.kpf today.kolmo today.log   # the decoder needs the same profile
+./build/kolmo profile logs.kpf                       # what it contains
+```
+
+On held-out files of the same sources (one thread, `balanced`, against zstd level 3 with a dictionary trained by
+`zstd --train -B16K` on the same sample; `benchmark/rc3/features-a/RESULTS.md`): single JSON, OpenStack and SSH
+messages 2.4–11% smaller than zstd with its dictionary and 64–75% smaller than untrained Kolmo, at the same speed or
+faster; Hadoop application logs 25% smaller than zstd with a dictionary and 39% smaller than untrained Kolmo. The
+profile id is recorded in every frame; decoding without the profile, or with another, fails with `KOLMO_ERR_PROFILE`.
+The file format is in `SPEC.md` (*Trained profiles*, *Profile frames*); the C API is `kolmo_profile_train`,
+`kolmo_profile_load`, `kolmo_compress_profile`, `kolmo_decompress_profile`.
+
+### Targets (`--target`)
+
+Instead of a mode, say what matters; Kolmo picks the setting per 16 MiB chunk that is cheapest under it, from trial
+compressions of the chunk and a table of calibrated speeds:
+
+```bash
+./build/kolmo --target 'decode>=1GB/s' in out        # smallest output that decodes at 1 GB/s per core
+./build/kolmo --target 'cost:cloud=12' in out        # storage for a year + CPU, benchmark/TRADEOFFS.md model 3
+./build/kolmo --target 'cost:link=100Mbit' in out    # compress + transfer + decompress time
+./build/kolmo --target 'cost:size/1e9*0.02 + enc*1e-5' -v in out   # any formula of size, n, enc, dec
+./build/kolmo calibrate                              # measure this machine (~/.config/kolmo/calibration)
+```
+
+The output is an ordinary frame. How close the choices come to the best fixed setting is measured in
+`benchmark/rc3/features-a/RESULTS.md`.
+
 ### Streaming (large inputs)
 
 For inputs too large to hold in memory, `-s` (or `-S <segMiB>`) compresses a stream of

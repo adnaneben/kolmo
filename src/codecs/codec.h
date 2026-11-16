@@ -7,6 +7,7 @@ enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5,
        C_AUD = 19, C_VID = 20, C_PLANES = 21, C_HZ = 22, C_ZRUN = 23 };   /* 19-23: container version 11 (format 2): 19 audio (kaud), 20 video (kvid), 21 per-plane leaf, 22 Huffman then zstd leaf, 23 zero-run leaf (21-23: graph leaves only) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head) */
 
 typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *dict; size_t dictlen;
+                 const struct kolmo_profile *prof;   /* trained profile: its dictionaries for zstd, Brotli and LZ4 (src/plan/profile.c) */
                  int native_leaf;        /* encoder: graph integer residual leaves may use C_NPLANE (opt-in, balanced) */
                  int used_native_leaf;   /* encoder: set when a C_NPLANE leaf was written (the frame needs version 9) */
                  int allow_nplane;       /* decoder: C_NPLANE leaves are valid (container version 9 or later) */

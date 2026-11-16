@@ -11,7 +11,7 @@
 #include "../experimental/frontier_shuffle.h"
 #define KOLMO_MAX_VERSION 11
 #else
-#define KOLMO_MAX_VERSION 11  /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16); 11: format 2 (codecs 19-23, and table blocks (flag 4) larger than the block plus TSLACK, up to TBL_SLACK) */
+#define KOLMO_MAX_VERSION 11  /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16); 11: format 2 (codecs 19-23; table blocks (flag 4) larger than the block plus TSLACK, up to TBL_SLACK; trained profile, header flag bit 2, src/plan/profile.c) */
 #endif
 #include <pthread.h>
 #include <stdatomic.h>
@@ -45,6 +45,7 @@ unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);
 #include "common/xxhash.h"
 #include <brotli/encode.h>
 #include <brotli/decode.h>
+#include "plan/profile.h"
 #ifndef KOLMO_NO_LZMA
 #include "kolmo_lzma.h"   /* vendored liblzma subset (vendor/xz) */
 #endif

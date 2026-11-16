@@ -1,11 +1,14 @@
 /* The decoder: header and index parsing, block decoding on the pool. */
 /* ------------------------------------------------------------------ decoding */
-typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict; uint32_t dictid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
+typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict, needprof; uint32_t dictid, profid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
 
 static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_limits *limits) {
+    if (n >= 4 && !memcmp(s, "CZC1", 4)) return KOLMO_ERR_PROFILE;   /* compact profile frame: kolmo_decompress_profile */
     if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > KOLMO_MAX_VERSION) return KOLMO_ERR_CORRUPT;
     P->ver = s[4]; P->psum = P->ver >= 3 && (s[10] & 1);
     P->needdict = P->ver >= 3 && (s[10] & 2); P->dictid = P->needdict ? get32(s + 6) : 0;
+    P->needprof = P->ver >= 11 && (s[10] & 4); P->profid = P->needprof ? get32(s + 6) : 0;
+    if (P->needdict && P->needprof) return KOLMO_ERR_CORRUPT;
     P->orig = get64(s + 12); P->nb = get32(s + 20);
     if (limits && ((limits->max_output_bytes && P->orig > limits->max_output_bytes) ||
                    (limits->max_blocks && P->nb > limits->max_blocks))) return KOLMO_ERR_LIMIT;
@@ -35,7 +38,8 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_lim
 }
 
 typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
-                 int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen; } djob_t;
+                 int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen;
+                 const struct kolmo_profile *prof; } djob_t;
 
 static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, const uint8_t *pay, uint8_t *tbuf, uint8_t *out) {
     const parsed_t *P = J->P; const uint8_t *e = P->idx + (size_t)i * IDX;
@@ -173,6 +177,7 @@ static void *decompress_worker(void *arg) {
     if ((J->input_fd >= 0 && !packed) || !tbuf || (buffered && !rbuf)) { free(packed); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
+    xp->prof = J->prof;
     for (;;) {
         uint32_t i = J->lo + atomic_fetch_add(&J->next, 1); if (i >= J->hi) break;
         if (atomic_load(&J->err)) break;
@@ -201,6 +206,8 @@ static void *decompress_worker(void *arg) {
     return NULL;
 }
 
+static int64_t run_decode_p(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
+                            const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits, const struct kolmo_profile *prof);
 static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
                           const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits);
 /* the single codec-20 block of a frame: the payload's plan bytes are 0, the rest is a Kolmo frame of the kvid layout */
@@ -233,13 +240,19 @@ out:
 }
 static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
                           const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits) {
+    return run_decode_p(src, input_fd, n, dst, output_fd, threads, lo, hi, range, dict, dictlen, dictid, limits, NULL);
+}
+static int64_t run_decode_p(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
+                            const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits, const struct kolmo_profile *prof) {
     parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
     if (P.needdict && (!dict || dictid != P.dictid)) { free(P.poff); free(P.roff); return KOLMO_ERR_DICT; }
+    if (P.needprof && (!prof || kp_id(prof) != P.profid)) { free(P.poff); free(P.roff); return KOLMO_ERR_PROFILE; }
+    if (!P.needprof) prof = NULL;                          /* a frame without a profile is decoded without one */
     if (P.nb == 1 && P.idx[12] == C_VID) {                      /* format 2: a video frame, decoded whole (codec 20) */
         int64_t vr = vid_decode_frame(&P, src, input_fd, dst, output_fd, threads, lo, hi, range);
         free(P.poff); free(P.roff); return vr;
     }
-    djob_t J = {0}; J.src = src; J.P = &P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd; J.dict = dict; J.dictlen = dictlen;
+    djob_t J = {0}; J.src = src; J.P = &P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd; J.dict = dict; J.dictlen = dictlen; J.prof = prof;
     for (uint32_t i = 0; i < P.nb; i++) {
         size_t raw = P.roff[i + 1] - P.roff[i], stored = P.poff[i + 1] - P.poff[i];
         if (raw > J.maxraw) J.maxraw = raw;

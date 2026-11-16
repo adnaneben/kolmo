@@ -1,0 +1,102 @@
+{
+ "csv-quakes/train": {
+  "files": 1,
+  "bytes": 3238646,
+  "sha256": "69d345f7eae24759ba94299d823b6ed421b1cc5ad3f6ec94f8f3efc219232e6e"
+ },
+ "csv-quakes/test": {
+  "files": 5,
+  "bytes": 15893570,
+  "sha256": "4c089c73ea91894e21703010b32f403f88bc5754e158c6f8908a79be337c65e2"
+ },
+ "json-quakes/train": {
+  "files": 1,
+  "bytes": 12541505,
+  "sha256": "00b386bc2cc53edebef2e0764231dae82485d6584021043a73da3f8ebfc7a164"
+ },
+ "json-quakes/test": {
+  "files": 2,
+  "bytes": 20313266,
+  "sha256": "34428cbf8b3f69590a0cc64ec9d0678c0ebe2b0ecf858638e92d2161f63da1d5"
+ },
+ "log-hadoop/train": {
+  "files": 196,
+  "bytes": 14777209,
+  "sha256": "48c5867890ff0611311494819989721c4d6ffcd0f084de3cac735d7c212880dc"
+ },
+ "log-hadoop/test": {
+  "files": 782,
+  "bytes": 33818386,
+  "sha256": "2eef5ba2cf656b30dd1963d2f194d9b9387ef51a367c5a9a9fe9fd4e17131d6e"
+ },
+ "log-openstack/train": {
+  "files": 23,
+  "bytes": 6026150,
+  "sha256": "249cec1c3616e420331f80a3fe15343dfa4c571e4779fc378b4f68f4232c16d7"
+ },
+ "log-openstack/test": {
+  "files": 212,
+  "bytes": 55415932,
+  "sha256": "a7d3a152b9e9bc3d2929700f6c39ae243b25f0476f12e8ef94b4a398a14786ee"
+ },
+ "log-ssh/train": {
+  "files": 4,
+  "bytes": 4194069,
+  "sha256": "471a87680ba6704d7f1a212a5c9c212c8bc52958bc7bd6bf6cc555e9b632d78b"
+ },
+ "log-ssh/test": {
+  "files": 20,
+  "bytes": 20970333,
+  "sha256": "97811698aa489f0f6d325cb034cae7fc91c5540be85a3bb95dde0fbd0c45aad0"
+ },
+ "msg-geojson/train": {
+  "files": 2000,
+  "bytes": 1432390,
+  "sha256": "3a017be5e8a09a3fe37e476155f448ef2a702671ac14d142ba11877807516942"
+ },
+ "msg-geojson/test": {
+  "files": 6000,
+  "bytes": 4282429,
+  "sha256": "b828f6dcebe5ed8bb415056994d1f6072d1dd77ef3311071dfdcd18cd6980eba"
+ },
+ "msg-openstack/train": {
+  "files": 2000,
+  "bytes": 592238,
+  "sha256": "f1f9829afc1710b468ced64daa03a0b0c09cd8f3055dccf4f6af92cdac02ea9c"
+ },
+ "msg-openstack/test": {
+  "files": 3000,
+  "bytes": 887583,
+  "sha256": "2b0f0833e4b113c87f1f560783e1acac21c52e7f6887ef8b92fa7d8993c5f664"
+ },
+ "msg-ssh/train": {
+  "files": 2000,
+  "bytes": 225218,
+  "sha256": "79905f3653ce16c10de2a56c8fc0c77f02e3c0f1ab15f479ed644eec573994c2"
+ },
+ "msg-ssh/test": {
+  "files": 3000,
+  "bytes": 357079,
+  "sha256": "d8c273184f4ff95cb6fec9141565628242f4f86615f45f7956b016752d9a716f"
+ },
+ "num-power/train": {
+  "files": 2,
+  "bytes": 4324968,
+  "sha256": "d735d7b5204991755a863a80dbf4f6632b3d19d63a12f78e19b6914b5cdaa119"
+ },
+ "num-power/test": {
+  "files": 12,
+  "bytes": 33773267,
+  "sha256": "e1c807a5ad176b5675a96d8487942c704f8a263f057682f17c6bb2dbac321b34"
+ },
+ "num-power-f32/train": {
+  "files": 2,
+  "bytes": 1866064,
+  "sha256": "1f23ef1d420a497b725d50e55f18ee0c2a22944f4ed3a0141253cde49a522c6c"
+ },
+ "num-power-f32/test": {
+  "files": 12,
+  "bytes": 14718336,
+  "sha256": "2edef6385395204c2b46ff864ce8b0eaa2ce71119a5d9c527b270d9d81687977"
+ }
+}

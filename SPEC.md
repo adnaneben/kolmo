@@ -24,13 +24,13 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 (format 2) when a block or graph leaf uses codecs 19-23, or a table block's transformed length exceeds the block length + 16384, see below) |
+| 4 | 1 | version | 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 (format 2) when a block or graph leaf uses codecs 19-23, a table block's transformed length exceeds the block length + 16384 (see below), or the frame uses a trained profile (flag bit 2)) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
 | 8 | 1 | b | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
 | 9 | 1 | c | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
-| 10 | 1 | flags | bit 0 (v3+): block checksums cover the stored payload, not the decoded bytes (set in `rt`). bit 1 (v3+): the zstd-coded blocks were compressed with a dictionary, whose 32-bit id is in bytes 6–9; decoding requires the matching dictionary. Other bits 0 |
+| 10 | 1 | flags | bit 0 (v3+): block checksums cover the stored payload, not the decoded bytes (set in `rt`). bit 1 (v3+): the zstd-coded blocks were compressed with a dictionary, whose 32-bit id is in bytes 6–9; decoding requires the matching dictionary. bit 2 (v11+): the frame was written with a trained profile, whose 32-bit id is in bytes 6–9; decoding requires that profile (*Profile frames*). Bits 1 and 2 are never both set. Other bits 0 |
 | 11 | 1 | reserved | 0 |
 | 12 | 8 | orig | original (uncompressed) length in bytes |
 | 20 | 4 | nblocks | number of blocks |
@@ -124,7 +124,7 @@ version above the highest it knows.
 | 8 | a block uses the line-class transform (plan type 10, tflag 12) | 1.1.0 |
 | 9 | a graph leaf uses codec 15; on request only (`--native-leaf`) | 1.2.0 |
 | 10 | a block uses the FASTQ family coder (codec 16); `ultra` only | this branch (after 1.2.0-rc2) |
-| 11 | format 2: a block uses codec 19 (audio) or 20 (video), or a graph leaf uses codec 21, 22 or 23 | rc3 |
+| 11 | format 2: a block uses codec 19 (audio) or 20 (video), a graph leaf uses codec 21, 22 or 23, a table block uses the larger transform slack, or the frame was written with a trained profile (flag bit 2; see *Profile frames*) | rc3 |
 
 Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0-rc1 and rc2; 10 by the FASTQ branch; 11 by rc3. (1.1.0 is the state of `main` under that
 version number; it was not tagged or published. 1.2.0 is this build, a release candidate.)
@@ -192,6 +192,82 @@ the project owner; it would change the bytes of the frames concerned and is not 
 - **Integrity.** The header+index CRC and per-block checksums are verified; corrupt input is reported as an error,
   never returned as data.
 - **Portable.** For a given mode and input, the bytes are identical across Intel and Apple-silicon builds.
+
+## Trained profiles (`KPF1`)
+
+A profile (`kolmo train`, `kolmo_profile_train`) is a file learnt from a sample of a dataset and needed again to
+decode the frames written with it. All integers little-endian.
+
+```
+"KPF1" | version u16 = 1 | flags u16 = 0 | profile id u32 | section count u32 | sections | crc32c u32
+section: tag[4] | flags u32 (bit 0: critical, other bits 0) | length u32 | data[length]
+```
+
+- **profile id**: the low 32 bits of XXH3-64 of the section bytes (from offset 16 to the CRC), seed `0x4B504631`.
+- **crc32c**: CRC-32C of every byte before it.
+
+A reader rejects the file (`KOLMO_ERR_PROFILE`) when the magic, version, flags, CRC or id do not match, a section does
+not fit, the sections do not end exactly at the CRC, a known section appears twice, a known section has the wrong
+critical bit or a malformed body, or an unknown section has the critical bit set. Unknown sections without it are
+skipped. Version 1 sections:
+
+| tag | critical | body | use |
+|----|----|----|----|
+| `PARM` | no | mode u8, level i8, analysis u8 (0 none, 1 full, 2 quick, 3 minimal), 0 u8, block u32 | the setting the profile was trained for; what `kolmo -P` uses unless `-m` or `-l` is given |
+| `PLAN` | no | count u32 (at most 256), then per pinned plan: key length u8 (≤ 32), key, binary u8, mode u8, analysis u8, size band u8 (0: < 64 KiB, 1: < 1 MiB, 2: < 16 MiB, 3: larger), plan type, a, b, c, wide, verify, kgw (u32 each), image plan (be, off, mode u32, W u64), has formulas u8, formula count u16, group column u32, formulas (y, a, b u16, form u8, 0 u8, k f64) | the plan the analysis chose for a kind of file; matching inputs skip the analysis |
+| `ZDIC` | yes | a zstd dictionary (ZDICT format) | zstd leaves of profile frames |
+| `RDIC` | yes | raw bytes (the content part of `ZDIC`) | Brotli leaves (attached as a raw prefix dictionary) and LZ4 leaves (its last 64 KiB) |
+| `DLIM` | yes | u64 | leaves of at most this many bytes use the dictionaries; absent: 256 KiB. The trainer picks it among 64 KiB, 256 KiB, 1 MiB, 4 MiB and unlimited on a held-out fifth of the samples |
+| `INFO` | no | UTF-8 text | summary of the training run |
+| `CMPR` | yes (reserved) | context-mixing priors | reserved; no writer yet, so this reader rejects a file that carries it |
+
+**Pinned plans.** The key of an input is its first line with every run of digits replaced by `0` and every run of
+ASCII letters by `a`, at most 32 bytes (text), or its first 32 bytes as they are (binary: under 95% printable in the
+first 4 KiB). A pinned plan is used for an input of at least 4 KiB when key, binary flag, mode, analysis and size
+band match, and, for transposition and table plans, when lines 1 to 32 have the plan's field count (quotes respected);
+for wide-table graph plans when line 1 has more than 256 fields; for numeric graph and image plans when the input
+is longer than the plan's header. Otherwise the analysis runs as usual. The trainer pins a plan only when the analysis
+chose it for at least 90% of the training bytes under that key and band. A pinned plan changes how a file is
+encoded, never how it is decoded: every block still carries its plan.
+
+## Profile frames
+
+A frame written with a profile is a `CZN1` frame of version 11 or later with flag bit 2 set and the profile id in
+bytes 6–9, or the compact form below. Inside it, every leaf coded with zstd, Brotli or LZ4 whose decoded size is at
+most the profile's `DLIM` uses the profile's dictionaries:
+
+- **zstd** (codec 3): with `ZDIC` as dictionary. A leaf of at most 64 KiB is one raw zstd compressed block (the
+  zstd block format without block header, as `ZSTD_compressBlock` writes it); a larger leaf is a zstd frame without
+  magic number, content size, dictionary id or checksum (`ZSTD_f_zstd1_magicless`).
+- **Brotli** (codec 4): a Brotli stream with `RDIC` attached as a raw prefix dictionary.
+- **LZ4** (codec 1): an LZ4 block with the last 64 KiB of `RDIC` as dictionary.
+
+Leaves larger than `DLIM`, and every other codec, are coded exactly as in frames without a profile. A decoder given
+no profile, or a profile with another id, fails with `KOLMO_ERR_PROFILE` before decoding any block; a decoder given
+a profile for a frame that does not need one ignores it.
+
+**Compact form (`CZC1`).** A profile frame of one block whose original size is at most 1 MiB is written as:
+
+```
+"CZC1" | profile id u32 | A u8 | [block flag u8, when A bit 6] | original size (LEB128, 1 to 3 bytes) |
+checksum u32 | [block plan 4 bytes, when A bit 5] | block payload
+```
+
+`A`: bits 0–4 the block codec, bit 5 plan bytes present (otherwise the plan is 0 0 0 0), bit 6 block flag present
+(otherwise 0; a present flag is never 0), bit 7 zero. The checksum is the block checksum over the decoded bytes
+(low 32 bits of XXH3-64, seed `0x637a6e31`), also for speed-mode blocks, so every header field is covered by the check
+of the decoded output. The block is decoded as the only block of a version 11 frame with the same codec, flag, plan
+and payload. The header is 14 to 21 bytes, against 52 for the one-block `CZN1` frame; with the raw zstd blocks above,
+a small message costs 14 to 16 bytes of framing in all (the zstd command line writes 13 to 18 for a frame with a
+dictionary id, content size and checksum).
+
+## Target frames (`--target`)
+
+`kolmo_compress_target` codes each chunk of the input with its own setting and joins the chunk frames into one
+`CZN1` frame: the indexes and payloads are concatenated in order, the version is the highest of the chunk frames,
+flag bit 0 is set only when every chunk frame had it (otherwise the speed-mode chunks' checksums are recomputed over
+their decoded bytes), and byte 5 holds the most common mode. No reader change is needed: blocks were always
+independent and carry their own codec, plan and flag.
 
 ## Stream format (`CZNS`) — large inputs
 
