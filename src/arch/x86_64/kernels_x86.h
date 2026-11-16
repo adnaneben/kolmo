@@ -17,4 +17,8 @@ void kolmo_med8_rows_sse41(const uint8_t *r, size_t W, unsigned C, uint8_t *p, s
 int kolmo_vid_strip_enc_sse2(const uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, uint8_t *res);
 void kolmo_vid_strip_dec_sse2(uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, int k, const uint8_t *res);
 void kolmo_vid_strip_dec_sse41(uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, int k, const uint8_t *res);
+uint64_t kolmo_sad16_sse2(const uint16_t *x, const uint16_t *y, size_t n);
+uint64_t kolmo_sad16_avx2(const uint16_t *x, const uint16_t *y, size_t n);
+void kolmo_img16_fwd_sse2(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi);
+void kolmo_img16_fwd_avx2(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi);
 #endif

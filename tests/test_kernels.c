@@ -104,6 +104,28 @@ static void test_video(int level, const kolmo_kernels *k) {
     }
 }
 
+static void test_img16(int level, const kolmo_kernels *k) {
+    for (int it = 0; it < 600; it++) {
+        int64_t W = it < 40 ? 1 + it : 1 + (int64_t)(rnd() % 700), n = (int64_t)(rnd() % 5000); int mode = it % 3, kind = (it / 3) % 5;
+        if (it % 50 == 0) n = 70000;
+        uint16_t *a = malloc(2 * (size_t)n + 2); uint8_t *l1 = malloc((size_t)n + 64), *h1 = malloc((size_t)n + 64), *l2 = malloc((size_t)n + 64), *h2 = malloc((size_t)n + 64);
+        for (int64_t i = 0; i < n; i++) a[i] = kind == 0 ? (uint16_t)rnd() : kind == 1 ? (uint16_t)(30000 + rnd() % 9) : kind == 2 ? (rnd() & 1 ? 0 : 65535)
+                                         : kind == 3 ? (uint16_t)(i * 7 + rnd() % 3) : (uint16_t)(65530 + rnd() % 6);
+        memset(l1, 1, (size_t)n + 64); memset(h1, 2, (size_t)n + 64); memset(l2, 1, (size_t)n + 64); memset(h2, 2, (size_t)n + 64);
+        kolmo_img16_fwd_c(a, n, W, mode, l1, h1); k->img16_fwd(a, n, W, mode, l2, h2);
+        CHECK(!memcmp(l1, l2, (size_t)n + 64) && !memcmp(h1, h2, (size_t)n + 64), "img16_fwd %s n=%lld W=%lld mode=%d kind=%d", kolmo_isa_name(level), (long long)n, (long long)W, mode, kind);
+        if (n > 2) { size_t off = rnd() % (size_t)(n / 2 + 1), len = (size_t)n - off;
+            CHECK(kolmo_sad16_c(a, a + off, len - off) == k->sad16(a, a + off, len - off), "sad16 %s n=%zu off=%zu", kolmo_isa_name(level), len - off, off); }
+        free(a); free(l1); free(h1); free(l2); free(h2);
+    }
+    {   /* the largest sums: every difference 65535 */
+        size_t n = 200000; uint16_t *x = malloc(2 * n), *y = malloc(2 * n);
+        for (size_t i = 0; i < n; i++) { x[i] = i & 1 ? 0 : 65535; y[i] = i & 1 ? 65535 : 0; }
+        CHECK(kolmo_sad16_c(x, y, n) == k->sad16(x, y, n), "sad16 %s saturated", kolmo_isa_name(level));
+        free(x); free(y);
+    }
+}
+
 int main(void) {
     int mx = kolmo_cpu_max_level();
     printf("CPU max level %s, dispatched %s\n", kolmo_isa_name(mx), kolmo_isa_name(kolmo_cpu_level()));
@@ -114,6 +136,7 @@ int main(void) {
         test_planes(l, &k);
         test_mixer(l, &k);
         test_video(l, &k);
+        test_img16(l, &k);
         printf("  %-6s %ld checks, %ld failures\n", kolmo_isa_name(l), checks - c0, fails - f0);
     }
     printf("%s: %ld checks, %ld failures\n", fails ? "FAILED" : "PASSED", checks, fails);

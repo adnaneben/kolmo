@@ -25,6 +25,9 @@ typedef struct {
     /* video strips (kvid, Y4M): predictor choice and residuals, and their inverse; see algo/video.h */
     int (*vid_strip_enc)(const uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, uint8_t *res);
     void (*vid_strip_dec)(uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, int k, const uint8_t *res);
+    /* IMG16 forward prediction and the detector's stride search; see algo/predict.h */
+    void (*img16_fwd)(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi);
+    uint64_t (*sad16)(const uint16_t *x, const uint16_t *y, size_t n);
 } kolmo_kernels;
 
 const kolmo_kernels *kolmo_kernels_get(void);          /* the table for this CPU (thread safe, cheap after the first call) */
