@@ -49,6 +49,9 @@ unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);
 #include <lzma.h>
 #endif
 #include "libbsc/libbsc.h"
+#ifdef KOLMO_GPU
+#include "core/hetero.h"         /* the GPU worker (Metal), off unless asked for */
+#endif
 
 /* ------------------------------------------------------------------ runtime ISA dispatch (x86-64)
  * Release builds and the Python wheels compile for baseline x86-64 (no -mavx2 / -msse4.2), so the vector paths below
@@ -1453,8 +1456,12 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
         case C_BSC: {                       /* payload: XXH32 of the bsc stream | bsc stream (checked before decoding) */
             pthread_once(&bsc_init_once, bsc_once);
             if (n > 0x7FFFFFF0 || cap < n + LIBBSC_HEADER_SIZE + 4) return 0;
+            int features = LIBBSC_FEATURE_FASTMODE;
+#ifdef KOLMO_GPU
+            if (kolmo_gpu_thread()) features |= LIBBSC_FEATURE_CUDA;     /* the GPU worker sorts on the GPU (same bytes) */
+#endif
             int r = bsc_compress(in, out + 4, (int)n, LIBBSC_DEFAULT_LZPHASHSIZE, LIBBSC_DEFAULT_LZPMINLEN, LIBBSC_BLOCKSORTER_BWT,
-                                 LIBBSC_CODER_QLFC_STATIC, LIBBSC_FEATURE_FASTMODE);
+                                 LIBBSC_CODER_QLFC_STATIC, features);
             if (r <= 0) return 0;
             uint32_t h = (uint32_t)XXH64(out + 4, (size_t)r, 0x62736331); memcpy(out, &h, 4);
             return (size_t)r + 4; }
@@ -2472,6 +2479,10 @@ static void *compress_worker(void *arg) {
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
     if (!tbuf || !slot || (J->input_fd >= 0 && !input)) { free(input); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
     for (;;) {
+#ifdef KOLMO_GPU
+        uint32_t nx = atomic_load(&J->next);
+        if (!kolmo_gpu_take(nx < J->nb ? J->nb - nx : 0)) break;          /* GPU worker: only while the CPU has a backlog */
+#endif
         uint32_t i = atomic_fetch_add(&J->next, 1); if (i >= J->nb) break;
         const plan_t pl = J->plans[J->bplan[i]]; const uint64_t rs = J->rstart[i];
         size_t len = J->starts[i + 1] - J->starts[i];
@@ -3187,6 +3198,11 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     double pt1 = prof_now();
 #endif
+#ifdef KOLMO_GPU
+    /* modes whose blocks may be block-sorted (ratio, -x): the GPU worker joins when there are more blocks than threads */
+    if (!ret && (codec == C_LZMA || codec == C_CM) && !dict) kolmo_hetero_run(run_pool, compress_worker, &J, threads, nb);
+    else
+#endif
     if (!ret) run_pool(compress_worker, &J, threads, nb);
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     fprintf(stderr, "compress bytes=%zu threads=%d plan_ms=%.3f blocks_ms=%.3f\n", n, threads, (pt1 - pt0) * 1000, (prof_now() - pt1) * 1000);
@@ -3214,6 +3230,14 @@ cleanup:
 
 int64_t kolmo_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p) {
     return compress_impl(src, -1, n, dst, -1, cap, p, NULL, 0, 0);
+}
+
+int kolmo_set_gpu(int on) {
+#ifdef KOLMO_GPU
+    return kolmo_gpu_set(on);
+#else
+    (void)on; return 0;
+#endif
 }
 
 /* ------------------------------------------------------------------ decoding */

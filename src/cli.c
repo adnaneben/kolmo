@@ -96,8 +96,9 @@ int main(int argc, char **argv) {
     char *dictpath = NULL, *trainpath = NULL;
     int extreme = 0, native_leaf = 0, typed_huf = 0;
     for (int a = 1; a < argc; a++)                           /* long options, removed before getopt sees the arguments */
-        if (!strcmp(argv[a], "--native-leaf") || !strcmp(argv[a], "--typed-huf")) {
-            if (!strcmp(argv[a], "--native-leaf")) native_leaf = 1; else typed_huf = 1;
+        if (!strcmp(argv[a], "--native-leaf") || !strcmp(argv[a], "--typed-huf") || !strcmp(argv[a], "--gpu")) {
+            if (!strcmp(argv[a], "--gpu")) kolmo_set_gpu(1);
+            else if (!strcmp(argv[a], "--native-leaf")) native_leaf = 1; else typed_huf = 1;
             for (int b = a; b < argc; b++) argv[b] = argv[b + 1];
             argc--; a--;
         }

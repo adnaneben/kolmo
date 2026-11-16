@@ -56,6 +56,22 @@ endif
 endif
 endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
+# GPU worker on macOS (Metal): the scheduler in src/core/hetero.c, the kernels and their host code in src/arch/metal,
+# and libbsc's GPU hook (bwt.cpp with LIBBSC_CUDA_SUPPORT, served by cubwt_metal.c). Off at run time unless asked for
+# (--gpu, KOLMO_GPU=1); the output is the same bytes either way. NO_GPU=1 builds without it.
+GPUOBJ  :=
+GPUPIC  :=
+ifeq ($(UNAME_S),Darwin)
+ifneq ($(NO_GPU),1)
+GPUSRC  := src/core/hetero.c src/arch/metal/cubwt_metal.c
+GPUOBJ  := $(patsubst %.c,build/obj/%.o,$(GPUSRC)) build/obj/src/arch/metal/sa_metal.o
+GPUPIC  := $(patsubst %.c,build/pic/%.o,$(GPUSRC)) build/pic/src/arch/metal/sa_metal.o
+DEFS    += -DKOLMO_GPU
+OBJ     += $(GPUOBJ)
+LIBS    += -framework Metal -framework Foundation
+build/obj/$(BSC)/bwt/bwt.o build/pic/$(BSC)/bwt/bwt.o: CXXDEFS := -DLIBBSC_CUDA_SUPPORT
+endif
+endif
 BLIBS   := $(LIBS)
 
 KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc
@@ -67,7 +83,17 @@ build/obj/%.o: %.c
 	$(CC) $(CFLAGS) $(DEFS) $(INC) -c $< -o $@
 build/obj/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CFLAGS) -I$(BSC) -c $< -o $@
+	$(CXX) $(CFLAGS) $(CXXDEFS) -I$(BSC) -c $< -o $@
+# Metal kernels are compiled at run time from their source, embedded as bytes (no offline Metal compiler needed)
+build/%_metal.inc: src/arch/metal/%.metal
+	@mkdir -p build
+	xxd -i < $< > $@
+build/obj/src/arch/metal/sa_metal.o: src/arch/metal/sa_metal.m src/arch/metal/metal.h build/sa_metal.inc
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -fobjc-arc -Ibuild -Isrc -c $< -o $@
+build/pic/src/arch/metal/sa_metal.o: src/arch/metal/sa_metal.m src/arch/metal/metal.h build/sa_metal.inc
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -fPIC -fobjc-arc -Ibuild -Isrc -c $< -o $@
 build/obj/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEFS) $(INC) -c $< -o $@
@@ -156,8 +182,18 @@ build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
-.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
+# GPU worker (macOS): the Metal suffix sort and BWT against libsais, and frames coded with and without the GPU worker
+build/test-gpu-sa: tests/test_gpu_sa.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+ifneq ($(GPUOBJ),)
+check-gpu: build/test-gpu-sa
+	./build/test-gpu-sa
+else
+check-gpu:
+	@echo "check-gpu: built without the GPU worker"
+endif
+check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-gpu
+.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-gpu
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
@@ -165,13 +201,13 @@ check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 # Shared library for language bindings (Python, Rust): everything rebuilt -fPIC into build/pic.
 SOEXT := $(if $(filter Darwin,$(UNAME_S)),dylib,so)
 PICC  := $(patsubst %.c,build/pic/%.o,$(ZSRC) $(BROSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/pic/%.o,$(ZASM))
-PICPP := $(patsubst %.cpp,build/pic/%.o,$(BSRC))
+PICPP := $(patsubst %.cpp,build/pic/%.o,$(BSRC)) $(GPUPIC)
 build/pic/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -fPIC $(DEFS) $(INC) -c $< -o $@
 build/pic/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CFLAGS) -fPIC -I$(BSC) -c $< -o $@
+	$(CXX) $(CFLAGS) $(CXXDEFS) -fPIC -I$(BSC) -c $< -o $@
 build/pic/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -fPIC $(DEFS) $(INC) -c $< -o $@

@@ -102,6 +102,10 @@ int64_t kolmo_compress_file(int input_fd, int output_fd, size_t n, const kolmo_p
 int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads,
                             const void *dict, size_t dictlen);
 const char *kolmo_strerror(int64_t code);
+/* GPU worker (macOS builds with Metal): 1 lets the GPU code blocks beside the CPU threads in the modes that block-sort
+ * (ratio, -x) when a file has more blocks than threads; 0 (the default) is CPU only. The output is the same bytes
+ * either way. Returns 1 when this build and machine have a GPU path. KOLMO_GPU=1 in the environment also turns it on. */
+int kolmo_set_gpu(int on);
 uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len);
 
 /* --- Dictionary support (small files) ------------------------------------------------------------
