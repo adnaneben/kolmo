@@ -39,8 +39,8 @@ def build(genome, bindir):
     cf, lf = flags()
     defs = " ".join(f"-D{k}={v}" for k, v in sorted(genome.items()))
     sh(f"cc {cf} -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 {defs} "
-       f"-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a {lf} "
-       f"-llzma -lpthread -lm -o {exe}", cwd=ROOT)
+       f"-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include -Ivendor/xz src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a {lf} "
+       f"-lpthread -lm -o {exe}", cwd=ROOT)
     return exe
 
 

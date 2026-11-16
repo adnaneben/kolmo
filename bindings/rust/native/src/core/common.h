@@ -46,6 +46,6 @@ unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);
 #include <brotli/encode.h>
 #include <brotli/decode.h>
 #ifndef KOLMO_NO_LZMA
-#include <lzma.h>
+#include "kolmo_lzma.h"   /* vendored liblzma subset (vendor/xz) */
 #endif
 #include "libbsc/libbsc.h"

@@ -1,7 +1,14 @@
-/* Codec 6: raw LZMA2 (max), liblzma. Payload: dict u32 | lc lp pb | raw LZMA2. Built without liblzma
+/* Codec 6: raw LZMA2 (max), the vendored liblzma subset (vendor/xz). Payload: dict u32 | lc lp pb | raw LZMA2. Built without liblzma
  * (-DKOLMO_NO_LZMA): never written, refused when read. */
 #ifndef KOLMO_NO_LZMA
-static size_t lzma_bound(size_t n) { return lzma_stream_buffer_bound(n) + 64; }
+/* Same value as liblzma's lzma_stream_buffer_bound(), which the vendored LZMA2-only subset does not hold: LZMA2 chunks
+ * of at most 64 KiB stored with a 3-byte header and an end byte, padded to 4 bytes, plus the .xz block headers (92
+ * bytes) and the stream headers and index (2 x 12 + 24). Kept equal so every buffer and every size check stays as before. */
+static size_t kolmo_lzma2_bound(size_t n) {
+    if (n > ((uint64_t)1 << 62)) return 0;
+    return ((n + (n + 65535) / 65536 * 3 + 1 + 3) & ~(size_t)3) + 92 + 48;
+}
+static size_t lzma_bound(size_t n) { return kolmo_lzma2_bound(n) + 64; }
 static size_t lzma_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     (void)x;
     lzma_options_lzma opt; if (lzma_lzma_preset(&opt, 9 | LZMA_PRESET_EXTREME)) return 0;

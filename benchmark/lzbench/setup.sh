@@ -8,10 +8,10 @@
 #  - kolmo runs single-threaded (threads = 1) with its default block size and transforms.
 #  - kolmo is built at -O3 -march=native; lzbench builds every other codec with the same
 #    MOREFLAGS="-march=native" on top of its own -O3, so all entries get the same compiler options.
-#  - kolmo's core, its vendored codecs and a static liblzma are partially linked into one object whose
+#  - kolmo's core and its vendored codecs (liblzma included, vendor/xz) are partially linked into one object whose
 #    only global symbols are kolmo_*, so kolmo never shares code with another entry and no other entry
 #    uses kolmo's copies of zstd/brotli/lz4/bsc/xz.
-# Linux (GNU ld + objcopy). The build needs a static liblzma (liblzma-dev provides liblzma.a).
+# Linux (GNU ld + objcopy). No system liblzma is needed: kolmo carries its own subset (vendor/xz).
 set -e
 LZB=${1:?usage: setup.sh <path-to-lzbench-checkout> [BUILD_ONLY codec list]}
 ONLY=${2:-}
@@ -22,14 +22,9 @@ LZB=$(cd "$LZB" && pwd)
 # 1. kolmo, built with its normal flags (-O3 -march=native).
 make -C "$root" -j"$(nproc)" build/libkolmo.a build/libvendor.a >/dev/null
 
-# 2. One isolated object: kolmo + vendored codecs + static liblzma, only kolmo_* left global.
-lzma_a=""
-for d in /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu /usr/lib64 /usr/lib /usr/local/lib; do
-    [ -f "$d/liblzma.a" ] && lzma_a="$d/liblzma.a" && break
-done
-[ -n "$lzma_a" ] || { echo "setup.sh: need a static liblzma (apt install liblzma-dev)"; exit 1; }
+# 2. One isolated object: kolmo + vendored codecs, only kolmo_* left global.
 work=$(mktemp -d)
-ld -r --whole-archive "$root/build/libkolmo.a" "$root/build/libvendor.a" --no-whole-archive "$lzma_a" \
+ld -r --whole-archive "$root/build/libkolmo.a" "$root/build/libvendor.a" --no-whole-archive \
    -o "$work/kolmo_all.o"
 printf 'kolmo_compress\nkolmo_decompress\nkolmo_bound\nkolmo_original_size\nkolmo_strerror\n' > "$work/keep.txt"
 # Rename every C++ symbol kolmo defines (libbsc's inline functions, templates). Their COMDAT group

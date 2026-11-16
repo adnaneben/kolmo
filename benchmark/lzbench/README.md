@@ -45,4 +45,4 @@ transforms). Levels 11 and 12 need about 4 GB of memory. Measured results are in
   ever runs kolmo's copies, and kolmo never runs theirs.
 - **Verified.** lzbench checks every decompressed buffer against the input.
 
-Linux only (GNU `ld -r` and `objcopy`); needs a static liblzma (`apt install liblzma-dev`).
+Linux only (GNU `ld -r` and `objcopy`); needs no system liblzma (Kolmo builds its own subset, `vendor/xz`).

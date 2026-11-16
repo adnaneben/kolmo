@@ -201,8 +201,8 @@ make check                             # resource failures, concurrent callers, 
 ./build/kolmobench -X -o results.tsv file  # benchmark against LZ4, zstd, brotli and xz built from the same sources
 ```
 
-Requires liblzma (`apt install liblzma-dev`, `brew install xz`); zstd, LZ4, brotli and libbsc are vendored. Build with `make NO_LZMA=1`
-where liblzma is unavailable (max and ultra then use the other coders).
+Needs only a C/C++ compiler: zstd, LZ4, Brotli, libbsc, xxHash and a liblzma subset (LZMA2 only, XZ Utils 5.8.1,
+`vendor/xz`) are vendored. `make NO_LZMA=1` builds without the LZMA2 coder (the ratio modes then use the other coders).
 
 On a Mac: `bash mac/setup.sh` once, then `bash mac/bench.sh` for the full benchmark and `bash mac/tune.sh` for an
 overnight genetic search of the build-time settings (`tune/ga.py`).
