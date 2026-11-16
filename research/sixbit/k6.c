@@ -4,6 +4,8 @@
  *   61 SHIFT  next letter code is upper case          (only with case folding)
  *   62 LOCK   toggle caps lock for letter codes       (only with case folding)
  *   63 ESC    the next two codes carry one raw byte (2 + 6 bits)
+ *   62 PAGE   (no case folding, optional page 2) the next code indexes a second table of up to 64 bytes
+ * Without case folding codes 61 and 62 are ordinary table entries (unless PAGE is in use).
  * Symbols are packed 4 per 3 bytes. Encoding is greedy longest match over the table.
  *
  * usage: k6 table.bin in out.k6       encode (prints sizes and timing)
@@ -20,15 +22,22 @@
 #define LOCK 62
 #define ESC 63
 
-typedef struct { int n, fold; uint8_t len[64]; uint8_t s[64][8];
-                 int cand[256][64]; int ncand[256]; } table;
+typedef struct { int n, fold, np; uint8_t len[64]; uint8_t s[64][8];
+                 int cand[256][64]; int ncand[256]; int16_t pagecode[256]; uint8_t page[64]; } table;
+#define PAGE 62     /* only without case folding, when the table has a page: next code indexes page 2 */
 
 static void load_table(table *t, const char *path) {
     FILE *f = fopen(path, "rb"); if (!f) { perror(path); exit(1); }
     t->fold = fgetc(f); t->n = fgetc(f);
-    if (t->n > 61) { fprintf(stderr, "table too big\n"); exit(1); }
+    int max = t->fold ? 61 : 63;
     memset(t->ncand, 0, sizeof t->ncand);
     for (int i = 0; i < t->n; i++) { t->len[i] = fgetc(f); if (fread(t->s[i], 1, t->len[i], f) != t->len[i]) exit(1); }
+    /* optional page 2: u8 count, then that many single bytes (up to 64), reached through PAGE + one code */
+    int np = fgetc(f); t->np = np == EOF ? 0 : np;
+    memset(t->pagecode, -1, sizeof t->pagecode);
+    for (int i = 0; i < t->np; i++) { t->page[i] = fgetc(f); t->pagecode[t->page[i]] = i; }
+    if (t->np) max = 62;
+    if (t->n > max || t->np > 64) { fprintf(stderr, "table too big\n"); exit(1); }
     fclose(f);
     /* candidates per first byte, longest first */
     for (int L = 8; L >= 1; L--) for (int i = 0; i < t->n; i++) if (t->len[i] == L) {
@@ -65,6 +74,7 @@ static size_t encode_syms(const table *t, const uint8_t *in, size_t n, uint8_t *
             if (i + L <= n && memcmp(in + i, t->s[e], L) == 0) { best = e; break; }
         }
         if (best >= 0) { sym[k++] = best; i += t->len[best]; }
+        else if (t->np && t->pagecode[c] >= 0) { sym[k++] = PAGE; sym[k++] = t->pagecode[c]; i++; }
         else { sym[k++] = ESC; sym[k++] = c >> 6; sym[k++] = c & 63; i++; }
     }
     return k;
@@ -92,8 +102,9 @@ static size_t decode(const table *t, const uint8_t *p, size_t k, uint8_t *out) {
     while (i < k) {
         int s = GET(i); i++;
         if (s == ESC) { int a = GET(i), b = GET(i + 1); i += 2; out[o++] = a << 6 | b; continue; }
-        if (s == SHIFT) { shift = 1; continue; }
-        if (s == LOCK) { lock ^= 1; continue; }
+        if (t->np && s == PAGE) { out[o++] = t->page[GET(i)]; i++; continue; }
+        if (t->fold && s == SHIFT) { shift = 1; continue; }
+        if (t->fold && s == LOCK) { lock ^= 1; continue; }
         memcpy(out + o, t->s[s], 8); /* over-copy, out has slack */
         if ((shift || lock) && t->len[s] == 1 && out[o] >= 'a' && out[o] <= 'z') out[o] -= 32;
         shift = 0; o += t->len[s];

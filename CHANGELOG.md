@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased: planned for rc3
+
+### Ratio
+- **Derived table columns (OWID formulas), to do.** A `DERIVE` kgraph node stores a column as the residual from a
+  formula over columns already decoded: `a / b * k` (OWID: every `*_per_capita` = X / population * 1e6 and every
+  `*_per_gdp` = X / gdp * 1e9), `a - lag(a)`, `100 * (a / lag(a) - 1)`, chosen by a search over column pairs on a
+  sample. Prototype measurement on OWID CO2 (11 derived columns, 72-99% of rows exact, the rest +-1 in the last
+  digit): `balanced` 10.94 -> 11.47 (-4.6%), `ratio` 12.45 -> 13.44 (-7.3%). Must use exact integer arithmetic
+  (128-bit rounded division), not floats, so every platform decodes the same. See `research/FINDINGS.md` section 3
+  and `research/mathred/tabmath.py`.
+
 ## 1.1.0 (2026-11-10)
 
 ### Ratio

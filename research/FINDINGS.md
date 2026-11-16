@@ -66,6 +66,46 @@ ESC + two codes carries any other byte, so every input round-trips.
 
 Where 6 bits *does* pay off is as the alphabet of a bit-level model (section 2).
 
+### Dense layout: a-z, 0-9, A-Z in sequence, absent symbols pruned (`sixbit/bench_dense.py`)
+
+Codes follow a-z, 0-9, A-Z (code 36, the 37th code, is `A`). Letters and digits the file never uses are removed, so
+the rest pack densely, and uppercase has its own codes, so no SHIFT is needed. Ratio = original / packed (below 1
+means the output is larger):
+
+| file | letters+digits present (of 62) | other distinct bytes | non-alnum share | 36 + 3 controls | dense + ESC | dense + PAGE | dense + fill freed slots | frequency choice (63 + ESC) |
+|---|---|---|---|---|---|---|---|---|
+| owid-co2.csv | 62 | 9 | 41.3% | 0.727 | 0.731 | 0.944 | 1.067 | **1.332** |
+| covid.csv | 61 | 9 | 21.5% | 0.909 | 0.933 | 1.098 | 1.238 | **1.329** |
+| diamonds.csv | 37 | 5 | 41.0% | 0.702 | 0.733 | 0.946 | **1.333** | **1.333** |
+| titanic.csv | 61 | 10 | 31.3% | 0.779 | 0.820 | 1.016 | 1.139 | **1.329** |
+| hdfs.log | 52 | 12 | 17.3% | 0.954 | 0.991 | 1.137 | **1.333** | **1.333** |
+| apache.log | 39 | 13 | 27.2% | 0.845 | 0.864 | 1.048 | **1.333** | **1.333** |
+| shakespeare.txt | 53 | 12 | 23.7% | 0.882 | 0.905 | 1.078 | **1.333** | **1.333** |
+
+ESC = the next 2 codes carry a raw byte (18 bits per escaped byte); PAGE = the next code indexes a second table of 64
+bytes (12 bits); "fill" gives the slots freed by pruning (plus the 26 never used) to the most frequent other bytes.
+Encode 125–225 MB/s, decode 200–525 MB/s for the scalar prototype; all round trips verified.
+
+* **Letters and digits alone can't carry CSV, logs or text.** Space, comma, newline, `.` and `-` are 17–41% of all
+  bytes. With only 36 + 3 controls (or with 62 dense letters and digits and nothing else), each of those costs 18 bits
+  and the "compressed" file grows by 5–43%.
+* **Pruning works when the file uses few letters.** Diamonds uses 37 of the 62, the Apache log 39, Shakespeare 53. The
+  freed slots take the punctuation, and dense+fill reaches the full 1.333 with zero escapes.
+* **It does not work for tables with country or person names.** OWID, COVID and Titanic use 61–62 of the 62, because
+  names bring in nearly every uppercase letter. Pruning frees 0–1 slots, a rare `Q` or `X` keeps a code while the comma
+  (8–12% of all bytes) is escaped, and the ratio drops to 1.07–1.24.
+* **Pick symbols by frequency, not by being a letter.** Choose the 63 most used bytes of the file (rare uppercase
+  letters escaped) and every file reaches 1.329–1.333, with escapes under 0.3% of symbols. The order of codes (a-z
+  first, `A` = 37th) doesn't change the size of a fixed-width code; only which symbols get a code does.
+* Every file here has at most 71 distinct bytes, so 64 codes are always enough. Two (diamonds with 42, Apache with 52)
+  fit entirely and need no ESC at all.
+
+**Answer to "do we need more than 26 + 10 + 3 controls":** yes, at least space, comma, newline, `.` and `-`, and in
+practice the file's most frequent punctuation (10–13 bytes). We never need to go beyond 64 codes: one control (ESC)
+is enough, because uppercase gets its own codes and SHIFT/LOCK disappear. The best rule is: rank all bytes by
+frequency, give the top 63 a code, ESC the rest. This doesn't change the overall conclusion: the ceiling stays 1.333,
+below Huffman's 1.53–2.35 on the same files.
+
 ## 2. Bit-level neural network coding (`neural/nncm.c`)
 
 A real coder with an arithmetic encoder and decoder. Each symbol is coded as binary decisions. Hashed context models
