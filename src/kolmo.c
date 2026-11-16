@@ -50,6 +50,13 @@ unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);
 #endif
 #include "libbsc/libbsc.h"
 
+/* CPU kernels with C references (src/arch, docs/LAYOUT.md); built into this file until the source split. */
+#include "arch/arch.h"
+int kolmo_force_c;
+#if KOLMO_NEON
+#include "arch/aarch64/word_neon.c"
+#endif
+
 /* ------------------------------------------------------------------ runtime ISA dispatch (x86-64)
  * Release builds and the Python wheels compile for baseline x86-64 (no -mavx2 / -msse4.2), so the vector paths below
  * are compiled for their ISA with a target attribute and chosen at first use by CPUID (__builtin_cpu_supports).
