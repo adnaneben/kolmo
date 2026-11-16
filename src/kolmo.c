@@ -2462,6 +2462,8 @@ static void emit_block(job_t *j, uint32_t i, const uint8_t *header, const uint8_
     pthread_mutex_unlock(&j->wmu);
 }
 
+#include "core/trials.inc"
+
 static void *compress_worker(void *arg) {
     job_t *J = arg; tls_t *S = tls_begin();
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
@@ -2546,6 +2548,21 @@ static void *compress_worker(void *arg) {
         }
         size_t inlen = (tflag >= 3 && tflag <= 7) || tflag >= 9 ? get32(sl) : len, cl = 0;
         int codec = J->codec, level = (pl.wide || (tflag >= 10 && pl.t == T_TBL)) && J->default_level ? 1 : J->level;
+        /* trials run beside context mixing (ultra, core/trials.inc), and whether this block is FASTQ for the family coder */
+        enum { XT_ALT, XT_ALTS, XT_A1, XT_FQ, XT_N }; xtrial_t xt[XT_N]; memset(xt, 0, sizeof xt);
+        const int xfq = J->codec == C_CM && J->level != 1 && !J->dict && len >= 64 && kf_fastq_like(raw, len);
+        if (xfq && len >= (64u << 10)) {
+            /* ultra, a FASTQ block: the family coder first, with every thread the block has. It has beaten context
+             * mixing on every FASTQ input measured (by 10 to 20%), so when it applies the context-mixing, LZMA2 and
+             * block-sorting trials are not run (the frame is unchanged; encoding is about 20 times faster). Blocks under
+             * 64 KiB still try both. */
+            size_t fz = 0; uint8_t *fq = kf_fastq_compress(raw, len, J->fqthreads, KF_CHUNK, KF_BCHUNK, &fz);
+            if (fq && fz < len && fz <= J->slot) {
+                memcpy(sl, fq, fz); cl = fz; codec = C_FQ; tflag = 0; meta = 0; modes = 64; in = raw; inlen = len;
+                slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; free(fq); goto coded;
+            }
+            free(fq);
+        }
         if (pl.t == T_KG && len) {                                          /* kolmo graph: the block is a program + leaves */
             /* max, wide table: the column leaves are text, so they take BWT like any text block at max (LZMA2 on the
              * leaves was 3% smaller and ten times slower to encode). Float and decimal arrays too: on float planes
@@ -2649,6 +2666,14 @@ static void *compress_worker(void *arg) {
 #ifdef KOLMO_FRONTIER_FAST_PCM
         if (pl.experimental_pcm && !J->dict && J->default_level && codec == C_ZSTD) level = 1;
 #endif
+        /* ultra with threads to spare: the alternative coders start now, beside context mixing (core/trials.inc) */
+        if (codec == C_CM && level != 1 && !cl && J->fqthreads > 1) {
+            const int text = !tflag && looks_text(in, inlen), ak = text ? C_BSC : C_LZMA;
+            xtrial_start(&xt[XT_ALT], ak, 9, in, inlen, J->slot - meta, 1);
+            if (inlen > (2u << 20)) xtrial_start(&xt[XT_ALTS], ak, 9, in + (inlen - (1u << 20)) / 2, 1u << 20, J->slot - meta, 1);
+            if (in != raw && len >= (64u << 10)) xtrial_start(&xt[XT_A1], C_BSC, 9, raw, len, J->slot, 1);
+            if (xfq) xtrial_start(&xt[XT_FQ], C_FQ, 0, raw, len, 0, J->fqthreads - 1);
+        }
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
         if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
@@ -2699,12 +2724,16 @@ static void *compress_worker(void *arg) {
                     int text = !tflag && looks_text(in, inlen);
                     if (alts[k] == C_BSC && !text) continue;
                     if (alts[k] == C_LZMA && text) continue;  /* text: BWT always beat LZMA2 in tests; saves ~25% of the time */
+                    int hit;
                     if (cl && inlen > (2u << 20)) {           /* large block: try the alternative on a 1 MiB slice first */
                         size_t sn = 1u << 20, so = (inlen - sn) / 2;
-                        size_t cs = codec_compress(xp, alts[k], 9, in + so, sn, alt, J->slot - meta);
+                        size_t cs = xtrial_take(&xt[XT_ALTS], alts[k], in + so, sn, &hit);
+                        if (!hit) cs = codec_compress(xp, alts[k], 9, in + so, sn, alt, J->slot - meta);
                         if (!cs || (double)cs / sn > 0.97 * (double)cl / inlen) continue;   /* not within reach of CM */
                     }
-                    size_t c2 = codec_compress(xp, alts[k], 9, in, inlen, alt, J->slot - meta);
+                    size_t c2 = xtrial_take(&xt[XT_ALT], alts[k], in, inlen, &hit);
+                    if (hit) { if (c2) memcpy(alt, xt[XT_ALT].out, c2); }
+                    else c2 = codec_compress(xp, alts[k], 9, in, inlen, alt, J->slot - meta);
 #if defined(KOLMO_TRACE) || defined(KOLMO_PROF)
                     fprintf(stderr, "len %zu t%d text %d cm %zu alt%d %zu\n", (size_t)inlen, tflag, looks_text(in, inlen), cl, alts[k], c2);
 #endif
@@ -2715,13 +2744,20 @@ static void *compress_worker(void *arg) {
                      * smaller under the strong coders (a 1 MB image array was larger at ultra than at max). Plain block
                      * sorting is quick; when it comes within 2% of the transformed block, plain context mixing and,
                      * up to 2 MiB, plain LZMA2 are tried as well. The smallest is kept. */
-                    int bc = 0; size_t bz = cl + meta, ref = cl + meta;
-                    size_t a1 = codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot);
+                    int bc = 0, hit; size_t bz = cl + meta, ref = cl + meta;
+                    size_t a1 = xtrial_take(&xt[XT_A1], C_BSC, raw, len, &hit);
+                    if (hit) { if (a1) memcpy(alt, xt[XT_A1].out, a1); }
+                    else a1 = codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot);
                     if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = C_BSC; }
                     if (a1 && (double)a1 <= 1.02 * (double)ref) {
+                        /* plain LZMA2 (up to 2 MiB) beside plain context mixing when a thread is free */
+                        xtrial_t *x3 = &xt[XT_A1]; xtrial_free(x3);
+                        if (len <= (2u << 20) && J->fqthreads > 1) xtrial_start(x3, C_LZMA, 9, raw, len, J->slot, 1);
                         size_t a2 = codec_compress(xp, C_CM, level, raw, len, alt, J->slot);
                         if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_CM; }
-                        size_t a3 = len <= (2u << 20) ? codec_compress(xp, C_LZMA, 9, raw, len, alt, J->slot) : 0;
+                        size_t a3 = xtrial_take(x3, C_LZMA, raw, len, &hit);
+                        if (hit) { if (a3) memcpy(alt, x3->out, a3); }
+                        else a3 = len <= (2u << 20) ? codec_compress(xp, C_LZMA, 9, raw, len, alt, J->slot) : 0;
                         if (a3 && a3 < bz) { memcpy(sl, alt, a3); bz = a3; bc = C_LZMA; }
                     }
                     if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
@@ -2729,18 +2765,21 @@ static void *compress_worker(void *arg) {
             }
         }
 coded:;
-        if (J->codec == C_CM && J->level != 1 && !J->dict && len >= 64 && kf_fastq_like(raw, len)) {
+        if (xfq && codec != C_FQ) {
             /* ultra (not level 1), a block of complete FASTQ records: the family coder (codec 16: layout, names,
              * bases, base exceptions and qualities, each with its own model) when it is smaller than the block as
              * coded above. Anything that is not complete FASTQ fails the split and leaves the block as it is. */
-            size_t fz = 0, cur = cl && cl + meta < len ? cl + meta : len;
-            uint8_t *fq = kf_fastq_compress(raw, len, J->fqthreads, KF_CHUNK, KF_BCHUNK, &fz);
+            size_t fz = 0, cur = cl && cl + meta < len ? cl + meta : len; int hit;
+            uint8_t *fq = NULL; fz = xtrial_take(&xt[XT_FQ], C_FQ, raw, len, &hit);
+            if (hit) { fq = xt[XT_FQ].out; xt[XT_FQ].out = NULL; }
+            else fq = kf_fastq_compress(raw, len, J->fqthreads, KF_CHUNK, KF_BCHUNK, &fz);
             if (fq && fz < cur && fz <= J->slot) {
                 memcpy(sl, fq, fz); cl = fz; codec = C_FQ; tflag = 0; meta = 0; modes = 64;
                 slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
             }
             free(fq);
         }
+        for (int k = 0; k < XT_N; k++) xtrial_free(&xt[k]);
         size_t tot = 4 + meta + cl;
         uint8_t *e = J->idx + (size_t)i * IDX;
         if (cl == 0 || cl + meta >= len) {                                  /* store raw */
@@ -2819,7 +2858,9 @@ static void run_pool(void *(*fn)(void *), void *J, int threads, uint32_t units) 
 
 /* ultra: the context-mixing coder models text, logs and CSV directly (column and word contexts), so a text transform is
  * kept only if CM on a 1 MiB transformed sample beats CM on the raw sample */
-static int ultra_keep_transform(const uint8_t *s, size_t n, const plan_t *pl) {
+typedef struct { const uint8_t *in; size_t n; uint8_t *out; size_t cap, res; } ukt_arg;
+static void *ukt_main(void *a) { ukt_arg *u = a; u->res = cm_compress(u->in, u->n, u->out, u->cap); return NULL; }
+static int ultra_keep_transform(const uint8_t *s, size_t n, const plan_t *pl, int threads) {
     if (pl->t != T_TBL && pl->t != T_LOG && pl->t != T_WORD && pl->t != T_TP) return 1;
     size_t m = n < (1u << 20) ? n : (1u << 20); while (m > 0 && s[m - 1] != '\n') m--;
     if (m < 65536) return 1;
@@ -2829,7 +2870,15 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, const plan_t *pl) {
     else if (pl->t == T_LOG) tn = log_encode_m(s, m, t, m + TSLACK, pl->a == 1);
     else if (pl->t == T_WORD) tn = word_encode(s, m, t, m + TSLACK);
     int keep = 1;
-    if (tn > 0) { size_t a = cm_compress(t, (size_t)tn, z, m + m / 8 + 64), b = cm_compress(s, m, z, m + m / 8 + 64); keep = a && (!b || a < b); }
+    if (tn > 0) {
+        /* the two samples are coded on two threads when there are two (same result) */
+        uint8_t *z2 = threads > 1 ? malloc(m + m / 8 + 64) : NULL; pthread_t th; ukt_arg u = {s, m, z2, m + m / 8 + 64, 0};
+        int par = z2 && !pthread_create(&th, NULL, ukt_main, &u);
+        size_t a = cm_compress(t, (size_t)tn, z, m + m / 8 + 64), b;
+        if (par) { pthread_join(th, NULL); b = u.res; } else b = cm_compress(s, m, z, m + m / 8 + 64);
+        free(z2);
+        keep = a && (!b || a < b);
+    }
     else if (pl->t == T_TP) keep = 0;
     free(t); free(z);
     return keep;
@@ -3059,7 +3108,7 @@ static void *plan_worker(void *arg) {
         }
 #endif
         if (p->mode == KOLMO_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;
-        if (p->mode == KOLMO_ULTRA && !ultra_keep_transform(src, len, &pl)) {
+        if (p->mode == KOLMO_ULTRA && !ultra_keep_transform(src, len, &pl, j->threads_per_plan)) {
             free(pl.fs); pl.fs = NULL; pl.t = T_NONE;
         }
         j->plans[g] = pl;
