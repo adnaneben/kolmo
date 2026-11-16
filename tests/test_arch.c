@@ -83,7 +83,7 @@ static void test_word(void) {
 
 /* ---------------------------------------------------------------- byte-plane shuffle */
 static void test_shuffle(void) {
-    size_t N = 1 << 16; uint8_t *in = malloc(N * 32 + 64), *a = malloc(N * 32 + 64), *b = malloc(N * 32 + 64), *back = malloc(N * 32 + 64);
+    size_t N = 1 << 16; uint8_t *in = malloc(N * 64 + 64), *a = malloc(N * 64 + 64), *b = malloc(N * 64 + 64), *back = malloc(N * 64 + 64);   /* rows of up to 8 x 8 bytes */
     for (int it = 0; it < 400; it++) {
         int w = 1 << (rnd() % 4), c = 1 + (int)(rnd() % (it % 5 ? 4 : 8)), delta = rnd() & 1;
         int64_t rows = it < 64 ? it : (int64_t)(rnd() % (it % 7 ? 300 : N));
@@ -107,8 +107,83 @@ static void test_shuffle(void) {
     free(in); free(a); free(b); free(back);
 }
 
+/* ---------------------------------------------------------------- image prediction */
+static void fill_img(uint8_t *p, size_t n, size_t W, int kind) {
+    double fx = 0.01 + (rnd() % 100) / 1000.0, fy = 0.01 + (rnd() % 100) / 1000.0;
+    for (size_t i = 0; i < n; i++) {
+        size_t y = i / (W ? W : 1), x = i % (W ? W : 1);
+        if (kind == 0) p[i] = (uint8_t)rnd();
+        else if (kind == 1) p[i] = (uint8_t)(128 + 100 * sin(x * fx) * cos(y * fy) + (int)(rnd() % 7) - 3);
+        else if (kind == 2) p[i] = rnd() & 1 ? 0 : 255;                         /* saturating edges */
+        else p[i] = (uint8_t)((x * 7 + y * 3) & 255);
+    }
+}
+static void test_img8(void) {
+    for (int it = 0; it < 300; it++) {
+        size_t W = it < 40 ? 1 + it * 5 : 1 + rnd() % (rnd() % 4 ? 400 : 3000);
+        unsigned C = 1 + rnd() % 4; if (W < C) W = C;
+        size_t H = 1 + rnd() % (it % 3 ? 40 : 100), m = W * H + (it % 5 == 0 ? rnd() % W : 0);
+        uint8_t *p = malloc(m + 64), *ra = malloc(m + 64), *rb = malloc(m + 64), *pa = malloc(m + 64), *pb = malloc(m + 64);
+        fill_img(p, m, W, (int)(rnd() % 4));
+        memset(ra, 0x11, m + 64); memset(rb, 0x11, m + 64);
+        kolmo_force_c = 1; kg_img8_fwd(p, m, W, C, ra);
+        kolmo_force_c = 0; kg_img8_fwd(p, m, W, C, rb);
+        CHECK(!memcmp(ra, rb, m + 64), "img8 forward W=%zu C=%u H=%zu", W, C, H);
+        if (it % 4 == 3) for (size_t i = 0; i < m; i++) ra[i] = (uint8_t)rnd();   /* any residuals decode */
+        memset(pa, 0x22, m + 64); memset(pb, 0x22, m + 64);
+        kolmo_force_c = 1; kg_img8_back(ra, m, W, C, pa);
+        kolmo_force_c = 0; kg_img8_back(ra, m, W, C, pb);
+        CHECK(!memcmp(pa, pb, m + 64), "img8 inverse W=%zu C=%u H=%zu", W, C, H);
+        if (it % 4 != 3) { size_t full = m / W * W; CHECK(!memcmp(pa, p, full), "img8 round trip W=%zu C=%u", W, C); }
+        free(p); free(ra); free(rb); free(pa); free(pb);
+    }
+}
+static void test_img16(void) {
+    for (int it = 0; it < 300; it++) {
+        int64_t W = 1 + (int64_t)(rnd() % (it % 3 ? 300 : 4096)), n = (int64_t)(rnd() % (it % 5 ? 20000 : 300000));
+        int mode = (int)(rnd() % 3), kind = (int)(rnd() % 4);
+        uint16_t *a = malloc(2 * (size_t)n + 64); uint8_t *l1 = malloc((size_t)n + 64), *h1 = malloc((size_t)n + 64), *l2 = malloc((size_t)n + 64), *h2 = malloc((size_t)n + 64);
+        for (int64_t i = 0; i < n; i++) {
+            int64_t y = i / W, x = i % W;
+            a[i] = kind == 0 ? (uint16_t)rnd() : kind == 1 ? (uint16_t)(30000 + 20000 * sin(x * 0.03) * cos(y * 0.02) + (int)(rnd() % 9) - 4)
+                 : kind == 2 ? (uint16_t)(rnd() & 1 ? 0 : 65535) : (uint16_t)(rnd() % 4096);
+        }
+        memset(l1, 1, (size_t)n + 64); memset(h1, 1, (size_t)n + 64); memset(l2, 1, (size_t)n + 64); memset(h2, 1, (size_t)n + 64);
+        kolmo_force_c = 1; img16_fwd(a, n, W, mode, l1, h1);
+        kolmo_force_c = 0; img16_fwd(a, n, W, mode, l2, h2);
+        CHECK(!memcmp(l1, l2, (size_t)n + 64) && !memcmp(h1, h2, (size_t)n + 64), "img16 forward W=%lld n=%lld mode=%d", (long long)W, (long long)n, mode);
+        free(a); free(l1); free(h1); free(l2); free(h2);
+    }
+#if KOLMO_NEON
+    for (int it = 0; it < 2000; it++) {                       /* SAD: steps 1 and 4 against the plain sums */
+        int64_t n = (int64_t)(rnd() % (it % 10 ? 300 : 70000)); int step = it & 1 ? 4 : 1;
+        size_t len = (size_t)(n ? step * (n - 1) + 1 : 0);
+        uint16_t *x = malloc(2 * len + 2), *y = malloc(2 * len + 2);
+        for (size_t i = 0; i < len; i++) { x[i] = (uint16_t)(it % 3 ? rnd() : rnd() & 1 ? 65535 : 0); y[i] = (uint16_t)rnd(); }
+        uint64_t ref = 0; for (int64_t k = 0; k < n; k++) ref += (uint64_t)abs((int)x[k * step] - (int)y[k * step]);
+        CHECK(kolmo_sad_u16_neon(x, y, n, step) == ref, "sad n=%lld step=%d", (long long)n, step);
+        free(x); free(y);
+    }
+#endif
+    for (int it = 0; it < 12; it++) {                         /* the whole detector: the same plan either way */
+        size_t W = 64 + rnd() % 1500, H = (1u << 19) / W + 2 + rnd() % 100, n = 2 * W * H + rnd() % 3;
+        uint8_t *s = malloc(n);
+        for (size_t i = 0; i < n / 2; i++) {
+            size_t y = i / W, x = i % W; uint16_t v = (uint16_t)(2048 + 1500 * sin(y * 0.01 * (it + 1)) * cos(x * 0.013) + (int)(rnd() % 5));
+            if (it & 1) { s[2 * i] = (uint8_t)(v >> 8); s[2 * i + 1] = (uint8_t)v; } else { s[2 * i] = (uint8_t)v; s[2 * i + 1] = (uint8_t)(v >> 8); }
+        }
+        img_plan_t pa = {0}, pb = {0};
+        kolmo_force_c = 1; int fa = img16_detect(s, n, &pa);
+        kolmo_force_c = 0; int fb = img16_detect(s, n, &pb);
+        CHECK(fa == fb && (!fa || (pa.be == pb.be && pa.off == pb.off && pa.mode == pb.mode && pa.W == pb.W)), "img16_detect W=%zu: %d %d", W, fa, fb);
+        free(s);
+    }
+}
+
 int main(void) {
     printf("kernels: %s\n", KOLMO_NEON ? "NEON" : "none (C references only)");
+    test_img8();
+    test_img16();
     test_shuffle();
     test_word();
     kolmo_force_c = 0;

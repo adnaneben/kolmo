@@ -1220,6 +1220,9 @@ static inline uint8_t kg_unzz8(uint8_t z) { return (uint8_t)((z >> 1) ^ (uint8_t
 /* rows of W bytes, channel step C: row 0 predicts from the left, later rows from above for the first C bytes and from
  * the median of left, above and left + above - above-left after that */
 static void kg_img8_fwd(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r) {
+#if KOLMO_NEON
+    if (!kolmo_force_c && kolmo_img8_fwd_neon(p, m, W, C, r)) return;
+#endif
     size_t x = 0;
     for (; x < C && x < m; x++) r[x] = kg_zz8(p[x]);
     for (; x < W && x < m; x++) r[x] = kg_zz8((uint8_t)(p[x] - p[x - C]));
@@ -1230,6 +1233,9 @@ static void kg_img8_fwd(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_
     }
 }
 static void kg_img8_back(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p) {
+#if KOLMO_NEON
+    if (!kolmo_force_c && kolmo_img8_back_neon(r, m, W, C, p)) return;
+#endif
     size_t x = 0;
     for (; x < C && x < m; x++) p[x] = kg_unzz8(r[x]);
     for (; x < W && x < m; x++) p[x] = (uint8_t)(p[x - C] + kg_unzz8(r[x]));

@@ -31,6 +31,9 @@ static inline int pred16_in(const uint16_t *x, int64_t i, int64_t W, int mode) {
 }
 static void img16_fwd(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi) {
     for (int64_t i = 0; i < n; i++) {
+#if KOLMO_NEON
+        if (i == W + 1 && !kolmo_force_c) { i = kolmo_img16_fwd_neon(a, i, n, W, mode, lo, hi); if (i >= n) break; }
+#endif
         int p = i > W ? pred16_in(a, i, W, mode) : pred16(a, i, W, mode);
         uint16_t r = (uint16_t)(a[i] - p); uint16_t z = (uint16_t)((uint16_t)(r << 1) ^ (uint16_t)-(uint16_t)(r >> 15));
         lo[i] = (uint8_t)z; hi[i] = (uint8_t)(z >> 8);
@@ -97,6 +100,9 @@ static int img16_detect(const uint8_t *s, size_t n, img_plan_t *P) {
             for (int64_t w = 16; w <= IMG_MAXW && w < wl / 2; w++) {
                 uint64_t sc = 0; const uint16_t *x = a + w0 + w, *y = a + w0;
                 int64_t lim = wl - w < CW ? wl - w : CW;
+#if KOLMO_NEON
+                if (!kolmo_force_c) sc = kolmo_sad_u16_neon(x, y, lim, 1); else
+#endif
                 for (int64_t i = 0; i < lim; i++) sc += (uint64_t)abs((int)x[i] - (int)y[i]);
                 sc = sc * CW / (uint64_t)(lim > 0 ? lim : 1);
                 if (nc < NC) { cw[nc] = w; cs[nc] = sc; nc++; }
@@ -105,7 +111,11 @@ static int img16_detect(const uint8_t *s, size_t n, img_plan_t *P) {
             for (int q = 1; q < nc; q++) for (int r = q; r > 0 && cw[r] < cw[r - 1]; r--) { int64_t t = cw[r]; cw[r] = cw[r - 1]; cw[r - 1] = t; uint64_t u = cs[r]; cs[r] = cs[r - 1]; cs[r - 1] = u; }
             for (int q = 0; q < nc; q++) {
                 int64_t w = cw[q];
-                double v = 0; for (int64_t i = w; i < wl; i += 4) v += abs((int)a[w0 + i] - (int)a[w0 + i - w]);
+                double v = 0;                      /* (integer sums below 2^53: the order of the additions does not matter) */
+#if KOLMO_NEON
+                if (!kolmo_force_c) v = (double)kolmo_sad_u16_neon(a + w0 + w, a + w0, wl > w ? (wl - w + 3) / 4 : 0, 4); else
+#endif
+                for (int64_t i = w; i < wl; i += 4) v += abs((int)a[w0 + i] - (int)a[w0 + i - w]);
                 v /= (double)((wl - w + 3) / 4);
                 if (v < wv * 1.5 && (W == 1 || v < wv)) { W = w; wv = v; }
             }

@@ -27,6 +27,14 @@ void kolmo_wd_dec_neon(const uint8_t **pp, const uint8_t *end, uint8_t **po, uin
  * or 8 bytes and 1 to 4 channels; returns 0 for other shapes, which take the C reference */
 int kolmo_shuffle_fwd_neon(const uint8_t *in, int64_t rows, int w, int c, int delta, uint8_t *out);
 int kolmo_shuffle_inv_neon(const uint8_t *in, int64_t rows, int w, int c, int delta, uint8_t *out);
+/* image prediction (src/arch/aarch64/image_neon.c): IMG8 inverse and forward residuals (kg_img8_back / kg_img8_fwd;
+ * return 0 when the row is too short and the reference runs), IMG16 forward residuals from sample i > W on (returns
+ * where it stopped), and the sum of absolute differences of 16-bit samples x[k * step], y[k * step], k < n (step 1
+ * or 4; reads at most x[step * (n - 1)]) */
+int kolmo_img8_back_neon(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p);
+int kolmo_img8_fwd_neon(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r);
+int64_t kolmo_img16_fwd_neon(const uint16_t *a, int64_t i, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi);
+uint64_t kolmo_sad_u16_neon(const uint16_t *x, const uint16_t *y, int64_t n, int step);
 #endif
 
 #endif

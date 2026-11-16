@@ -56,6 +56,7 @@ int kolmo_force_c;
 #if KOLMO_NEON
 #include "arch/aarch64/word_neon.c"
 #include "arch/aarch64/shuffle_neon.c"
+#include "arch/aarch64/image_neon.c"
 #endif
 
 /* ------------------------------------------------------------------ runtime ISA dispatch (x86-64)
