@@ -88,6 +88,7 @@ static int fc_query(int argc, char **argv, int grep) {
         else if (!strcmp(s, "-n")) q.flags |= KOLMO_Q_LINENO;
         else if (!strcmp(s, "-c")) q.flags |= KOLMO_Q_COUNT;
         else if (!strcmp(s, "-F") && grep) q.flags |= KOLMO_Q_FIXED;
+        else if (!strcmp(s, "-E") && grep) ;                    /* extended regex is the default */
         else if (!strcmp(s, "-i") && grep) q.flags |= KOLMO_Q_ICASE;
         else if (!strcmp(s, "-w") && grep) q.flags |= KOLMO_Q_WORD;
         else if (!strcmp(s, "--no-index")) q.flags |= KOLMO_Q_NOINDEX;
