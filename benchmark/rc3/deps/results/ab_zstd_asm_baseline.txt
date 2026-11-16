@@ -1,0 +1,3 @@
+settings -m balanced  files 12  input 211938580  same bytes: True
+  /tmp/claude-0/-home-user-kolmo/3ae9f39a-7849-50a9-87a8-d6f6876842ce/scratchpad/var/noasm/build/kolmo out    58487839  c   1.468s    144.4 MB/s  d   0.480s    441.5 MB/s
+  /tmp/claude-0/-home-user-kolmo/3ae9f39a-7849-50a9-87a8-d6f6876842ce/scratchpad/var/new/build/kolmo out    58487839  c   1.365s    155.2 MB/s  d   0.469s    451.4 MB/s

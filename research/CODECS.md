@@ -19,7 +19,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | 3 | zstd (`balanced`, `hc`) | zstd level 3 / 19 / 22 for text | vendored zstd 1.5.7 | balanced vs zstd -3 with all threads: general −8.7%, structured −57.5%, numeric −36.7%, weights −12.8% | in |
 | 4 | Brotli (`eco`) | Brotli quality 8, window 2^24 | vendored Brotli 1.1.0 | eco vs brotli -11: −2.5% to −47% at 25–86× compress speed | in |
 | 5 | BWT (`ratio` text) | libbsc: LZP + BWT (libsais) + static QLFC | vendored libbsc 3.4.0 (C++) | ratio vs xz -9 general −12.7% | in; replaced by codec 18 in rc3 |
-| 6 | LZMA2 (`ratio` binary) | liblzma preset 9e, raw LZMA2 | system / Homebrew liblzma | — | in; vendoring in rc3 (deps lane) |
+| 6 | LZMA2 (`ratio` binary) | liblzma preset 9e, raw LZMA2 | vendored liblzma subset, XZ Utils 5.8.1 (rc3; was the system / Homebrew liblzma) | rc3 vendoring: same bytes, LZMA2 decode 1.43× faster than the system 5.4.5 (44.7–45.5 → 63.8–64.9 MB/s), Silesia `ratio` decode −8%; no system library needed (`docs/DEPENDENCIES.md`) | in |
 | 7 | context mixing (`-x`) | orders 1–7, word, column, indirect contexts, bit histories, neural mixer, APMs; squash/stretch and coder rewritten from the mathematics (`1641a08`), exact logistic tables (`d5abd6e`, −0.019% over 82 files, none larger) | own (lpaq1-derived parts rewritten) | `-x` vs zpaq -m5: general −7.4%, structured −45.3%, weights −6.8%, FASTQ −24% | in |
 | 8–11 | frontier DNA, DNA prefix, PCM, DNA runs | experimental frontier codecs | own (Codex) | see `research/TRACKER.md` | research (opt-in build) |
 | 12 | graph block | integer/decimal graph: predictors, zig-zag residuals in byte planes, per-leaf coder choice | own | the main source of the numeric and table gains | in |
@@ -32,7 +32,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | 19 | audio | kaud: quantised LPC + partitioned Rice (profile 0); NLMS/sign-sign LMS cascade + binary range coder (profile 1) | own | 40 ESC-50 clips: −4.0% (p0) and −8.2% (p1) vs FLAC -8; p1 −6.7% vs WavPack -hhx6; decodes slower than FLAC | rc3 (format2 lane) |
 | 20 | video | kvid: temporal prediction front end, then Kolmo | own | 3 CIF clips, all threads: −14.0% vs FFV1 (10 threads, 16 slices) at 0.94× compress and 2.1× decompress; `ratio` −16% vs xz -9 | rc3 (format2 lane) |
 | 21–23 | stacking leaves | per-plane leaves, Huffman→zstd leaf, zero-run leaf | own | ST-1: −0.67% to −2.0% vs production on integer files (fresh data) | rc3 (format2 lane) |
-| 24 | own LZMA-class coder | — | own | pending | rc3 (deps lane), only if it gains |
+| 24 | own LZMA-class coder | — | own | not written: liblzma 5.8.1 is already the faster decoder; no LZMA2 parse setting gives 9e's size for less time (depth 64 +0.22% at 1.41×, non-extreme +1.19% at 2.3× on structured data); an infinitely fast decoder could save at most the 24% (Silesia) to 46% (structured) of `ratio` decode left in LZMA2 | dropped (deps lane, rc3) |
 | 25 | parallel CM | stream- or block-parallel context mixing | own | pending | rc3 (xmode lane) |
 
 ## Transforms and graph techniques
@@ -78,3 +78,11 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | `-ffp-contract=off` everywhere | build | Brotli encoder output no longer depends on FMA | in (rc2) |
 | Metal GPU (KRC hybrid) | KRC | no faster than the CPU path | research |
 | hand-written assembly | — | below a few percent where measured so far (SIMD-ASM.md) | rc3 simd lanes: kept wherever it gains |
+| vendored liblzma 5.8.1 instead of the system 5.4.5 (deps lane) | LZMA2 decode | 1.43× (coder), `ratio` decode −8% on Silesia; same bytes; encode within ±4% | in (rc3) |
+| Huffman leaves pass `HUF_flags_bmi2` (deps lane) | codec 13 decode | 1.15–1.21× leaf decode on baseline x86-64 builds (Kolmo's own leaf chunks); below noise end to end (leaves ≈ 2% of decode); same bytes | in (rc3) |
+| function-section GC of vendored code (deps lane) | build | binary code 3.13 → 2.78 MB (371 KiB of zstd, LZ4, libbsc, xxHash, Brotli, liblzma never reached); same bytes; speed within noise | in (rc3) |
+| zstd x86-64 Huffman assembly (vendored) | `balanced` decode | 2% end to end (0.480 → 0.469 s, Silesia, baseline build); no AArch64 equivalent in zstd | in; AArch64 port left to simd-arm, low priority |
+| LZMA2 parse lighter than 9e in `ratio` (deps lane) | `ratio` encode | depth auto +0.065% at 1.11×, depth 64 +0.22% at 1.41×, nice 128 +0.48% at 1.52×, non-extreme +1.19% at 2.3× (structured); Silesia non-extreme +0.018% at 1.2× | dropped: 9e kept |
+| LZMA2 decoded straight into the output block (deps lane) | `ratio` decode | ≤ 3% of LZMA2 decode (dictionary mapping + copy, 22 ms per 47.5 MB) | dropped (not worth a fork of liblzma) |
+| Huffman leaf format variants: table log 8–12, optimal depth, previous-table reuse (deps lane) | codec 13 size | −0.09% to +1.95%; reuse never chosen | dropped |
+| zstd leaves without the frame (magicless, no content size) (deps lane) | leaf size | < 0.03% (26 frames in a 3.2 MB structured output) | dropped |

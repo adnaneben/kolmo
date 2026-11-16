@@ -1,0 +1,7 @@
+dickens      10192446  dictionary alloc+fill+copy 5.48 ms
+osdb         10085684  dictionary alloc+fill+copy 5.05 ms
+ooffice       6152192  dictionary alloc+fill+copy 2.75 ms
+sao           7251944  dictionary alloc+fill+copy 3.15 ms
+x-ray         8474240  dictionary alloc+fill+copy 3.54 ms
+xml           5345280  dictionary alloc+fill+copy 2.19 ms
+TOTAL 47501786 bytes  22.17 ms
