@@ -88,6 +88,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | NEON DEC64 inverse (planes → 64-bit lanes, 2-lane prefix sums, FCVT/FDIV; tagged values in stream order) | decimal-double decode | f64 array balanced −21%, hc −25%, eco −12% | in (rc3 simd-arm) |
 | planner image trial: sample loop outside the lag loop (cache) | IMG8 trial in the planner | image compress −3.5% more, y4m −4.5% | in (rc3 simd-arm) |
 | kvid NEON strip prediction (encoder costs/residuals, temporal add, intra via the IMG8 wavefront) | kvid (research) | CIF clip -m rt compress −54%, decode −61% | in kvid (rc3 simd-arm) |
+| 64-byte function/loop alignment of vendored LZ4 (build flag) | -m speed decode | removes a 21% placement penalty (JSON, logs) seen with a byte-identical lz4.o; at most 5% slower than a fortunate placement on two inputs | in (rc3 simd-arm; integration may revisit) |
 | FEAT_CSSC scalar min/max for the IMG16 median chain | IMG16 decode | 7–13% slower than compare-select on M5 | dropped |
 | NEON rANS decode for Kolmo's own leaf (4 × 64-bit states) | rANS leaves | not attempted: no 64-bit lane multiply, 4 states only; krans analysis: NEON loses below 16 ways (no gather, lane transfers, horizontal renorm mask in the per-round chain) | stays scalar |
 | NEON CM mixer dot product / weight update | `-x` | clang already vectorises them (224 SMLAL in cm_compress_m); mixer ~8% of `-x`, the rest is cache misses in cm_find (48%) | no hand kernel (prefetch: xmode lane) |
