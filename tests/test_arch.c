@@ -200,8 +200,35 @@ static void test_intinv(void) {
 #endif
 }
 
+/* ---------------------------------------------------------------- table decoder helpers */
+static void test_table(void) {
+    for (int it = 0; it < 20000; it++) {
+        int n = 1 + (int)(rnd() % 64), R = (int)(rnd() % 256), dens = (int)(rnd() % 5);
+        uint16_t rl[64]; uint8_t kd[256 + 16], ra[256 + 16], rb[256 + 16];
+        for (int j = 0; j < 64; j++) rl[j] = dens == 0 ? 0 : dens == 4 ? (uint16_t)(1 + rnd() % 70000) : (uint16_t)(rnd() % (unsigned)(dens + 1) ? rnd() % 300 : 0);
+        for (int t = 0; t < R + 16; t++) kd[t] = dens == 4 ? 1 : (uint8_t)(rnd() % (unsigned)(dens + 2));
+        kolmo_force_c = 1; uint64_t ma = row_nonempty(rl, n); int qa = compact_rows(kd, R, ra);
+        kolmo_force_c = 0; uint64_t mb = row_nonempty(rl, n); int qb = compact_rows(kd, R, rb);
+        CHECK(ma == mb, "row_nonempty n=%d", n);
+        CHECK(qa == qb && !memcmp(ra, rb, (size_t)qa), "compact_rows R=%d", R);
+    }
+#if KOLMO_NEON
+    for (int it = 0; it < 3000; it++) {
+        uint32_t cnt = it < 100 ? (uint32_t)it : rnd() % (it % 10 ? 2000 : 300000); uint8_t *k = malloc(cnt + 1);
+        int lim = it % 7 == 0 ? 256 : 3;
+        for (uint32_t i = 0; i < cnt; i++) k[i] = (uint8_t)(rnd() % (unsigned)lim);
+        uint32_t n1 = 0, n2 = 0, bad = 0, m1, m2;
+        for (uint32_t i = 0; i < cnt; i++) { n1 += k[i] == 1; n2 += k[i] == 2; bad |= k[i] > 2; }
+        int b = kolmo_kind_count_neon(k, cnt, &m1, &m2);
+        CHECK((uint32_t)b == bad && m1 == n1 && m2 == n2, "kind counts cnt=%u", cnt);
+        free(k);
+    }
+#endif
+}
+
 int main(void) {
     printf("kernels: %s\n", KOLMO_NEON ? "NEON" : "none (C references only)");
+    test_table();
     test_intinv();
     test_img8();
     test_img16();

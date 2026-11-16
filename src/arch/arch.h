@@ -38,6 +38,11 @@ uint64_t kolmo_sad_u16_neon(const uint16_t *x, const uint16_t *y, int64_t n, int
 /* integer graph inverse for 32-bit elements (fi_inverse in src/kgraph.inc, planar residuals of 1/2/4/8 bytes, any
  * order and factor); returns 0 for other shapes */
 int kolmo_int_inv4_neon(const uint8_t *r, size_t m, int ow, int ord, uint64_t g, uint64_t bias, uint64_t v1, uint64_t v2, uint8_t *o);
+/* table decoder helpers (src/tbl2.inc): nonzero-length mask of up to 64 fields, indices of the numbers in a chunk
+ * (writes up to 8 bytes past the last index), and the kind counts of a column (returns 1 if a kind is above 2) */
+uint64_t kolmo_row_nonempty_neon(const uint16_t *rl, int n);
+int kolmo_compact_rows_neon(const uint8_t *kd, int R, uint8_t *rows);
+int kolmo_kind_count_neon(const uint8_t *kind, uint32_t cnt, uint32_t *n1, uint32_t *n2);
 #endif
 
 #endif
