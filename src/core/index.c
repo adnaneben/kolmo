@@ -198,7 +198,8 @@ size_t kolmo_indexed_bound(size_t n, const kolmo_params *p) {
     kolmo_params q = p ? *p : (kolmo_params){KOLMO_FAST, 0, 0, 0, 1};
     if (!q.block) q.block = IX_DEFAULT_BLOCK;
     size_t nb = n / (q.block / 2 + 1) + 2;
-    return kolmo_bound(n, &q) + 4096 + nb * 24 + n / 4 + (size_t)(n / 8 * 1.5);   /* filters: at most ~1.44 bits/byte */
+    /* filters: 1.44 bits per bit set; at most one trigram per byte and one token per 4 bytes at up to 16 bits each */
+    return kolmo_bound(n, &q) + 4096 + nb * 96 + n + n / 2;
 }
 
 typedef struct {
