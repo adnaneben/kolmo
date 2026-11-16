@@ -138,6 +138,18 @@ static void test_img8(void) {
         free(p); free(ra); free(rb); free(pa); free(pb);
     }
 }
+static void test_img8_trial(void) {                    /* the planner's 8-bit image trial: same cost and layout */
+    for (int it = 0; it < 16; it++) {
+        static const size_t WS[] = {320, 640, 1024, 1366, 1920};
+        size_t W = WS[rnd() % 5] * (1 + rnd() % 4), n = W * (40 + rnd() % 200) + rnd() % 100;
+        uint8_t *p = malloc(n); fill_img(p, n, W, it % 4 == 0 ? 0 : 1);
+        size_t bw1 = 0, bh1 = 0, bw2 = 0, bh2 = 0; unsigned bc1 = 0, bc2 = 0;
+        kolmo_force_c = 1; double c1 = kg_img8_trial(p, n, 0, n, 1, 1.0, &bw1, &bc1, &bh1);
+        kolmo_force_c = 0; double c2 = kg_img8_trial(p, n, 0, n, 1, 1.0, &bw2, &bc2, &bh2);
+        CHECK(c1 == c2 && bw1 == bw2 && bc1 == bc2 && bh1 == bh2, "img8 trial W=%zu n=%zu", W, n);
+        free(p);
+    }
+}
 static void test_img16(void) {
     for (int it = 0; it < 300; it++) {
         int64_t W = 1 + (int64_t)(rnd() % (it % 3 ? 300 : 4096)), n = (int64_t)(rnd() % (it % 5 ? 20000 : 300000));
@@ -237,6 +249,7 @@ int main(void) {
     test_table();
     test_intinv();
     test_img8();
+    test_img8_trial();
     test_img16();
     test_shuffle();
     test_word();
