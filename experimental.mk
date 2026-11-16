@@ -75,11 +75,11 @@ build/frontier-reads-test: tests/frontier_reads.c $(FASTQ_SRC) $(FASTQ_HDR)
 	@mkdir -p build
 	$(CC) $(SANFLAGS) -I$(XD) tests/frontier_reads.c $(FASTQ_SRC) -o $@
 
-build/kfam: $(XD)/kfam.c src/kfam.inc
+build/kfam: $(XD)/kfam.c src/codecs/fastq.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) -ffp-contract=off $(XD)/kfam.c -lpthread -o $@
 
-build/kfam-asan: $(XD)/kfam.c src/kfam.inc
+build/kfam-asan: $(XD)/kfam.c src/codecs/fastq.c
 	@mkdir -p build
 	$(CC) $(SANFLAGS) -ffp-contract=off $(XD)/kfam.c -lpthread -o $@
 

@@ -16,7 +16,7 @@
  * 16; this file adds the CSV and one-stream families and the command line. */
 #include <stdio.h>
 #include <time.h>
-#include "../kfam.inc"
+#include "../codecs/fastq.c"
 
 /* CSV / TSV (one delimiter, the same field count on every line, no quotes, "\n" endings):
  *   stream 0  layout: delimiter, column count, row count, per column its type (0 text, 1 number), then the header line
