@@ -49,3 +49,6 @@ static int planes_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t
     }
     return i == cn ? 0 : -1;
 }
+
+static int planes_dec_tab(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return x->allow_f2 ? planes_decompress(x, in, cn, out, n) : -1; }
+static const kolmo_codec codec_planes = { C_PLANES, "planes", NULL, NULL, planes_dec_tab, NULL };   /* written by the graph leaves */

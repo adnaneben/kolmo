@@ -42,3 +42,6 @@ static size_t hz_try(codec_ctx *x, int probe, int level, const uint8_t *huf, siz
     if (qz && qz < q1) { memcpy(out, u, qz); q1 = qz; }
     free(u); return q1;
 }
+
+static int hz_dec_tab(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return x->allow_f2 ? hz_decompress(x, in, cn, out, n) : -1; }
+static const kolmo_codec codec_hz = { C_HZ, "hz", NULL, NULL, hz_dec_tab, NULL };   /* written by the graph leaves */

@@ -1798,3 +1798,6 @@ static int aud_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
     if (!n || ka_kaud_decode(in, cn, 1, &b, &err, n) || b.p != out || b.len != n) { if (b.p != out) free(b.p); return -1; }
     return 0;
 }
+
+/* coded and decoded at block level by core/blocks.c and core/decode.c (never a graph leaf): a name only */
+static const kolmo_codec codec_audio = { C_AUD, "audio", NULL, NULL, NULL, NULL };

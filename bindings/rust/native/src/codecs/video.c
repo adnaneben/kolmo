@@ -153,3 +153,6 @@ static int kv_inverse(const uint8_t *t, size_t tn, uint8_t *out, size_t n) {
     return o == n ? 0 : -1;
 }
 
+
+/* a whole frame, coded by core/compress.c and decoded by core/decode.c (never a graph leaf): a name only */
+static const kolmo_codec codec_video = { C_VID, "video", NULL, NULL, NULL, NULL };

@@ -49,3 +49,6 @@ static int zrun_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *
 out:
     free(runs); free(lits); return rc;
 }
+
+static int zrun_dec_tab(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return x->allow_f2 ? zrun_decompress(x, in, cn, out, n) : -1; }
+static const kolmo_codec codec_zrun = { C_ZRUN, "zrun", NULL, NULL, zrun_dec_tab, NULL };   /* written by the graph leaves */

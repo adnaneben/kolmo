@@ -3,14 +3,14 @@ on:
   push:
     branches: [fix/planner-record-ownership]
     paths:
-      - src/kolmo.c
+      - src/**
       - tests/test_planner_ownership.c
       - tests/test_planner_identity.py
       - tests/validate_planner_fix.py
       - .github/workflows/planner-ownership-validation.yml
   pull_request:
     paths:
-      - src/kolmo.c
+      - src/**
       - tests/test_planner_ownership.c
       - tests/test_planner_identity.py
       - tests/validate_planner_fix.py
