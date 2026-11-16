@@ -515,6 +515,48 @@ static void kg_leaf_bounds(const uint8_t *p, size_t n, int np, double *pbits, do
     *pbits = bits; *phbits = hbits;
 }
 
+#ifndef KOLMO_F2_MASK
+#define KOLMO_F2_MASK 7     /* format-2 leaves tried by the encoder: 1 per-plane (21), 2 Huffman then zstd (22), 4 zero-run (23) */
+#endif
+/* the leaf coders' choice for one sub-stream of a format-2 leaf (a byte plane, zero-run lengths, literals): the
+ * block codec, Huffman, rANS (not at the fast settings; at hc only when 3% smaller than a non-rANS choice, as for
+ * whole leaves), Huffman then zstd and (when allowed) the zero-run leaf; the smallest is kept. */
+typedef struct { int codec, level, zr; } kgsel;
+/* zstd level of the Huffman-then-zstd leaf (src/codecs/hufzstd_leaf.c: hz_try decides when it is worth running) */
+#define KG_HZ_LEVEL(codec, level) ((codec) == C_ZSTD && (level) > 19 ? (level) : 19)
+#define KG_HZ_PROBE(codec, level) ((codec) == C_ZSTD && (level) <= 9 ? (level) : 1)
+static size_t kg_sel_sub(codec_ctx *x, const void *ctx, const uint8_t *p, size_t n, uint8_t *out, size_t cap, int *pcc) {
+    const kgsel *S = ctx; const int codec = S->codec, level = S->level;
+    int cc = codec == C_CM || codec == C_STORE ? C_LZMA : codec; size_t z = 0;
+    const int fastleaf = codec == C_ZSTD && level <= CZ_FAST_LEVEL;
+    uint8_t *t = malloc(cap); if (!t) return 0;
+    if (n >= 64) z = codec_compress(x, cc, level, p, n, out, cap);
+    if (!z) cc = C_STORE;
+    if (codec == C_CM && level == 2 && n >= 64) {
+        size_t cz = codec_compress(x, C_CM, level, p, n, t, cap);
+        if (cz && (!z || cz < z)) { memcpy(out, t, cz); z = cz; cc = C_CM; }
+    }
+    size_t hz = n >= 64 ? huf_compress_all(p, n, t, cap) : 0;
+    if (hz && (!z || hz < z)) { memcpy(out, t, hz); z = hz; cc = C_HUF; }
+    if (hz && (KOLMO_F2_MASK & 2) && hz >= 64) {
+        uint8_t *u = malloc(cap); size_t qz = u ? hz_try(x, KG_HZ_PROBE(codec, level), KG_HZ_LEVEL(codec, level), t, hz, u, cap, z) : 0;
+        if (qz && (!z || qz < z)) { memcpy(out, u, qz); z = qz; cc = C_HZ; }
+        free(u);
+    }
+    if (!fastleaf && n >= 64) {
+        size_t rz = rans_compress_all_x(p, n, t, cap, 1);
+        if (rz && (!z || (codec == C_ZSTD && cc != C_RANS ? (uint64_t)rz * 100 <= (uint64_t)z * 97 : rz < z))) { memcpy(out, t, rz); z = rz; cc = C_RANS; }
+    }
+    if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * 2 <= n) {
+        kgsel S2 = *S; S2.zr = 0;
+        size_t zz = zrun_compress(x, p, n, t, cap, kg_sel_sub, &S2);
+        if (zz && (!z || zz < z)) { memcpy(out, t, zz); z = zz; cc = C_ZRUN; }
+    }
+    free(t);
+    if (!z || z >= n) { if (cap < n) return 0; memcpy(out, p, n); z = n; cc = C_STORE; }
+    *pcc = cc; return z;
+}
+
 /* serialize a built program: header, program, leaves (every unconsumed stream, in index order). Returns the payload
  * length, or 0 when it is not smaller than n or does not fit in cap. */
 static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n, uint8_t *dst, size_t cap) {
@@ -566,7 +608,9 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
          * PR #7). Same leaf codec ids, read by every decoder of this container. Not a default: no file of the release
          * benchmark sets got smaller in any mode (research/STACK-AUDIT.md) */
         const int np = q == g->nph_q ? g->nph_np : 1;
-        const int al = (KOLMO_ALIGNED_LEAVES || x->aligned_leaf || x->native_leaf) && np > 1 && s->n % (size_t)np == 0;
+        /* format 2: default at hc (zstd above the fast levels), the one mode where they still gained on top of codecs
+         * 21-23 (benchmark/rc3/format2/RESULTS.md); fast, eco and max gained nothing more from them */
+        const int al = (KOLMO_ALIGNED_LEAVES || x->aligned_leaf || x->native_leaf || (!x->no_f2 && codec == C_ZSTD && level > CZ_FAST_LEVEL)) && np > 1 && s->n % (size_t)np == 0;
         if (tryh && z && nohuf && fastleaf) tryh = 0;
         else if (tryh && z) {                                 /* Huffman cannot beat the order-0 entropy: skip when z is below it */
             double bits, hbits;                               /* per 128 KiB chunk, as Huffman codes them */
@@ -596,6 +640,24 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
             uint8_t *nb = malloc(np_bound(s->n)); size_t nz = nb ? np_compress(x, s->p, s->n, g->nph_np, nb, np_bound(s->n)) : 0;
             if (nz && nz <= zc && nz < s->n && (!z || nz < z)) { memcpy(o.p + o.n + 20, nb, nz); z = nz; cc = C_NPLANE; x->used_native_leaf = 1; }
             free(nb);
+        }
+        if (KOLMO_F2_MASK && !x->no_f2 && s->n >= 64 && !flat) {
+            /* format 2 (version 11): the leaf as per-plane leaves (integer residual planes), as Huffman then zstd, or as
+             * zero runs and literals; each kept only when smaller than the choice above */
+            kgsel S = {codec, level, 1}; uint8_t *fb = malloc(zc); size_t fz;
+            if (fb && (KOLMO_F2_MASK & 1) && np > 1 && s->n % (size_t)np == 0 && (fz = planes_compress(x, np, s->p, s->n, fb, zc, kg_sel_sub, &S)) && (!z || fz < z)) {
+                memcpy(o.p + o.n + 20, fb, fz); z = fz; cc = C_PLANES; x->used_f2 = 1;
+            }
+            if (fb && (KOLMO_F2_MASK & 2) && cc != C_STORE && (fz = huf_compress_all(s->p, s->n, fb, zc)) >= 64) {
+                uint8_t *u = malloc(zc); size_t qz = u ? hz_try(x, KG_HZ_PROBE(codec, level), KG_HZ_LEVEL(codec, level), fb, fz, u, zc, z) : 0;
+                if (qz && (!z || qz < z)) { memcpy(o.p + o.n + 20, u, qz); z = qz; cc = C_HZ; x->used_f2 = 1; }
+                free(u);
+            }
+            if (fb && (KOLMO_F2_MASK & 4) && zr_count_nonzero(s->p, s->n) * 2 <= s->n) {
+                kgsel S2 = S; S2.zr = 0;
+                if ((fz = zrun_compress(x, s->p, s->n, fb, zc, kg_sel_sub, &S2)) && (!z || fz < z)) { memcpy(o.p + o.n + 20, fb, fz); z = fz; cc = C_ZRUN; x->used_f2 = 1; }
+            }
+            free(fb);
         }
         if (!z || z >= s->n) { cc = C_STORE; z = s->n; if (z) memcpy(o.p + o.n + 20, s->p, z); }
         o.p[hp] = (uint8_t)cc;

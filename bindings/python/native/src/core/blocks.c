@@ -75,6 +75,7 @@ typedef struct {
     pthread_mutex_t wmu; uint32_t wnext; size_t wpos, cap; int werr;   /* blocks are written to dst in order as they finish */
     int psum;               /* checksums over stored bytes (rt) instead of decoded bytes */
     const void *dict; size_t dictlen;   /* optional zstd dictionary, read-only by workers */
+    int aud_prof, aud_ch; uint64_t aud_off, aud_end;   /* format 2: 16-bit PCM WAV (kaud profile, channels, sample bytes [off, end)); aud_prof < 0: none */
 } job_t;
 static void append_bytes(job_t *j, const uint8_t *bytes, size_t size) {
     if (j->werr) return;
@@ -133,6 +134,9 @@ static void *compress_worker(void *arg) {
             raw = input;
         } else raw = J->src + J->starts[i];
         const uint8_t *in = raw; size_t meta = 0; int tflag = 0; unsigned modes = 0;
+        /* a block of WAV samples is coded by the audio codec when that is smaller (it was on all 43 WAV files measured,
+         * by 17% or more); the rest of the block's path keeps rc2's leaf rule, without the format-2 leaf trials */
+        xp->no_f2 = J->aud_prof >= 0 && J->starts[i] < J->aud_end && J->starts[i + 1] > J->aud_off;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
 #ifdef KOLMO_FRONTIER
@@ -209,7 +213,7 @@ static void *compress_worker(void *arg) {
             /* hc: zstd 19 over float planes gives the size of zstd 9 (the planes are coded by Huffman or rANS when that
              * is smaller) at up to 16 times the time. Decimal planes keep zstd 19: zstd 12 was 3 to 36% larger. */
             if (codec == C_ZSTD && level > 9 && !pl.a && !(pl.b & (32 | 64)) && (pl.b & 16)) kgl = 9;
-            xp->native_leaf = J->native_leaf; xp->used_native_leaf = 0;
+            xp->native_leaf = J->native_leaf; xp->used_native_leaf = 0; xp->used_f2 = 0;
             cl = pl.a ? kg_encode_table(xp, kgc, kgl, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
                       : pl.b & 32 ? kg_encode_img8(xp, kgc, kgl, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 64 ? kg_encode_dec64(xp, kgc, kgl, raw, len, pl.b & 1 ? 0 : pl.b & 2 ? (pl.kgw / 4) | KG_DEC_F32 : pl.kgw / 8, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
@@ -266,7 +270,7 @@ static void *compress_worker(void *arg) {
                 if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_BSC; }
                 if (bc) { cl = bz; codec = bc; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; goto coded; }
             }
-            if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8 | (xp->used_native_leaf ? 32 : 0); goto coded; }
+            if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8 | (xp->used_native_leaf ? 32 : 0) | (xp->used_f2 ? 128 : 0); goto coded; }
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
         }
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
@@ -392,6 +396,20 @@ coded:;
                 slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
             }
             free(fq);
+        }
+        if (J->aud_prof >= 0) {                                         /* format 2: audio block (codec 19) */
+            const uint64_t fs = 2 * (uint64_t)J->aud_ch, s0 = J->starts[i], s1 = J->starts[i + 1];
+            const uint64_t a = s0 > J->aud_off ? s0 : J->aud_off, b = s1 < J->aud_end ? s1 : J->aud_end;
+            const uint64_t f0 = a < b ? (a - J->aud_off + fs - 1) / fs : 0, f1 = a < b ? (b - J->aud_off) / fs : 0;
+            if (f1 > f0 + 1024) {
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+                size_t cur = cl && cl + meta < len ? cl + meta : len;
+                size_t az = alt ? aud_compress(J->aud_prof, J->aud_ch, raw, len, (size_t)(J->aud_off + f0 * fs - s0), f1 - f0, alt, J->slot) : 0;
+                if (az && az < cur) {
+                    memcpy(sl, alt, az); cl = az; codec = C_AUD; tflag = 0; meta = 0; modes = 128;
+                    slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
+                }
+            }
         }
         size_t tot = 4 + meta + cl;
         uint8_t *e = J->idx + (size_t)i * IDX;

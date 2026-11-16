@@ -8,6 +8,7 @@
 #   build/kolmo-fastq  four-line FASTQ prototype (names, bases, qualities as streams) (Codex, 7 Nov 2026)
 #   build/kvid         temporal-prediction front end for raw video frames             (new, 15 Nov 2026)
 #   build/kbin         KBN1 numeric-array coder after the pcodec paper (KBIN.md)    (new, 16 Nov 2026)
+#   build/kaud         KAU1 lossless coder for 16-bit PCM WAV, profiles 0 and 1       (new, 16 Nov 2026)
 #
 # `make experimental-check` builds them and runs their correctness tests, with and without sanitizers.
 
@@ -103,6 +104,21 @@ kfam-check: build/kfam-asan
 build/kvid: $(XD)/kvid.c src/arch/aarch64/kvid_neon.c src/kolmo.h build/libkolmo.a build/libvendor.a
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(filter -DKOLMO_NO_ASM,$(DEFS)) -Isrc $(XD)/kvid.c src/arch/aarch64/kvid_neon.c build/libkolmo.a build/libvendor.a $(LIBS) $(CXXLIB) -o $@
+
+# KAU1 audio coder. Integer decoding path; -ffp-contract=off keeps the encoder's choices reproducible
+build/kaud: $(XD)/kaud.c
+	@mkdir -p build
+	$(CC) $(CFLAGS) -ffp-contract=off -fopenmp-simd $(XD)/kaud.c -lpthread -lm -o $@
+
+build/kaud-asan: $(XD)/kaud.c
+	@mkdir -p build
+	$(CC) $(SANFLAGS) -ffp-contract=off -fopenmp-simd $(XD)/kaud.c -lpthread -lm -o $@
+
+# synthetic round trips (mono/stereo, odd sizes, extensible headers, trailing chunks) and corrupted
+# streams, under ASan and UBSan
+kaud-check: build/kaud-asan
+	./build/kaud-asan --selftest
+.PHONY: kaud-check
 
 experimental-check: build/krc-frontier-test build/krctest build/krctest-asan build/kbctest-asan build/kbxtest-asan \
 		build/frontier-reads-test build/krc-cpu build/krc-auto build/kbc build/kbx build/kolmo-fastq $(GPU_CHECK) \

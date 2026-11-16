@@ -41,8 +41,8 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     const parsed_t *P = J->P; const uint8_t *e = P->idx + (size_t)i * IDX;
     size_t len = get32(e), cl = get32(e + 4); int codec = e[12], tflag = e[13];
     size_t meta = 0;
-    x->allow_nplane = 0;
-    if (codec == C_NPLANE) return KOLMO_ERR_CORRUPT;                 /* graph leaves only */
+    x->allow_nplane = 0; x->allow_f2 = 0;
+    if (codec == C_NPLANE || codec == C_PLANES || codec == C_HZ || codec == C_ZRUN) return KOLMO_ERR_CORRUPT;   /* graph leaves only */
     plan_t pl = P->pl;
     if (P->psum) {                                             /* rt: the checksum covers the stored bytes; checked first */
         if (cl < 4 || (uint32_t)kolmo_xxh3(pay + 4, cl - 4, 0x637a6e31u ^ get32(pay)) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
@@ -58,10 +58,17 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
+    if (codec == C_VID) return KOLMO_ERR_CORRUPT;                /* video frames are decoded whole, by run_decode */
+    if (codec == C_AUD) {                                       /* audio (kaud) block (version 11) */
+        if (P->ver < 11 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
+        if (aud_decompress(pay, cl, out, len)) return KOLMO_ERR_CORRUPT;
+        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        return 0;
+    }
     if (codec == C_GRAPH || pl.t == T_KG) {                     /* kolmo graph block (version 7) */
         if (codec != C_GRAPH || pl.t != T_KG || tflag || P->ver < 7) return KOLMO_ERR_CORRUPT;
-        x->allow_nplane = P->ver >= 9;
-        int r = kg_decode(x, pay, cl, out, len); x->allow_nplane = 0; if (r) return KOLMO_ERR_CORRUPT;
+        x->allow_nplane = P->ver >= 9; x->allow_f2 = P->ver >= 11;
+        int r = kg_decode(x, pay, cl, out, len); x->allow_nplane = 0; x->allow_f2 = 0; if (r) return KOLMO_ERR_CORRUPT;
         if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
@@ -195,9 +202,43 @@ static void *decompress_worker(void *arg) {
 }
 
 static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
+                          const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits);
+/* the single codec-20 block of a frame: the payload's plan bytes are 0, the rest is a Kolmo frame of the kvid layout */
+static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input_fd, uint8_t *dst, int output_fd, int threads,
+                                uint64_t lo, uint64_t hi, int range) {
+    const uint8_t *e = P->idx; size_t raw = get32(e), cl = (size_t)(P->poff[1] - P->poff[0]);
+    if (P->ver < 11 || P->psum || e[13] || cl < 4 + HDR + IDX || raw != P->orig) return KOLMO_ERR_CORRUPT;
+    uint8_t *pb = NULL, *t = NULL, *full = NULL; const uint8_t *pay; int64_t ret = KOLMO_ERR_CORRUPT;
+    if (input_fd >= 0) {
+        pb = malloc(cl); if (!pb) return KOLMO_ERR_ALLOC;
+        if (read_block(input_fd, pb, cl, (off_t)P->poff[0])) { free(pb); return KOLMO_ERR_IO; }
+        pay = pb;
+    } else pay = src + P->poff[0];
+    if (pay[0] != T_NONE || pay[1] || pay[2] || pay[3]) goto out;
+    /* the nested frame is never itself a video frame (no recursion); the layout is the input plus 4 bytes and one
+     * byte per strip, at most one per sample */
+    if (get32(pay + 4 + 20) == 1 && pay[4 + HDR + 12] == C_VID) goto out;
+    int64_t tn = kolmo_original_size(pay + 4, cl - 4);
+    if (tn <= 0 || (uint64_t)tn > 2 * (uint64_t)raw + 4096) goto out;
+    t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
+    if (!t || !full) { ret = KOLMO_ERR_ALLOC; goto out; }
+    if (run_decode(pay + 4, -1, cl - 4, t, -1, threads, 0, 0, 0, NULL, 0, 0, NULL) != tn) goto out;
+    if (kv_inverse(t, (size_t)tn, full, raw)) goto out;
+    if (blk_sum(P->ver, full, raw) != get32(e + 8)) { ret = KOLMO_ERR_CHECKSUM; goto out; }
+    if (range) { if (hi > raw || lo > hi) goto out; memcpy(dst, full + lo, (size_t)(hi - lo)); ret = (int64_t)(hi - lo); }
+    else if (output_fd >= 0) { int w = write_block(output_fd, full, raw, 0); ret = w ? w : (int64_t)raw; }
+    else ret = (int64_t)raw;
+out:
+    free(pb); free(t); if (full != dst) free(full); return ret;
+}
+static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
                           const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits) {
     parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
     if (P.needdict && (!dict || dictid != P.dictid)) { free(P.poff); free(P.roff); return KOLMO_ERR_DICT; }
+    if (P.nb == 1 && P.idx[12] == C_VID) {                      /* format 2: a video frame, decoded whole (codec 20) */
+        int64_t vr = vid_decode_frame(&P, src, input_fd, dst, output_fd, threads, lo, hi, range);
+        free(P.poff); free(P.roff); return vr;
+    }
     djob_t J = {0}; J.src = src; J.P = &P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd; J.dict = dict; J.dictlen = dictlen;
     for (uint32_t i = 0; i < P.nb; i++) {
         size_t raw = P.roff[i + 1] - P.roff[i], stored = P.poff[i + 1] - P.poff[i];

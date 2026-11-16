@@ -1,3 +1,6 @@
+#ifndef KOLMO_F2_PLAN
+#define KOLMO_F2_PLAN 0   /* 1: the planner's graph scores also try codecs 21-23 (measured: no decision changes) */
+#endif
 /* The planner: codec per mode, the candidate trials, and the file-level analysis (make_plan). */
 #ifndef KOLMO_BWT_GAIN_PCT
 #define KOLMO_BWT_GAIN_PCT 3      /* max: least size gain (%) for BWT to replace LZMA2 on a binary block */
@@ -83,7 +86,7 @@ static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int
     if (W < 2 || n < h + 4 * W) return best;
     if (st < h) st = h;
     size_t a = h + (st - h) / W * W, l = (n - a < L ? n - a : L) / W * W; if (l < 2 * W) l = (n - a) / W * W < 2 * W ? 0 : 2 * W;
-    codec_ctx cx = {0}; uint8_t *o = malloc(l + 64);
+    codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(l + 64);
     if (o && plain < 1e299 && l > KG_SCREEN * 2 && W * 8 <= KG_SCREEN) {   /* screen on a few rows, as for integers */
         size_t ls = KG_SCREEN / W * W, zs = kg_encode_img8(&cx, C_ZSTD, zl, s + a, ls, W, C, 0, o, l + 64);
         if (!zs || (double)zs / ls > plain * KG_SCREEN_SLACK) { free(o); codec_ctx_free(&cx); return best; }
@@ -116,7 +119,7 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
         }
         if (!nw) return best;
     }
-    codec_ctx cx = {0}; uint8_t *o = malloc(L + 64);
+    codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(L + 64);
     for (int q = 0; o && q < nw; q++) {
         int fw = ws[q]; size_t fh = hs[q], s0 = st < fh ? fh : st, L0 = L > n - s0 ? n - s0 : L;
         size_t a = fh + (s0 - fh) / fw * fw, l = (n - a < L0 ? n - a : L0) / fw * fw;
@@ -177,7 +180,7 @@ static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
     if (st < h) st = h;
     size_t a = h + (st - h) / rb * rb, l = (n - a < L ? n - a : L) / rb * rb;
     if (l < 16 * rb || l < 512) { a = h; l = (n - h < L ? n - h : L) / rb * rb; if (l < 512) return best; }
-    codec_ctx cx = {0}; uint8_t *o = malloc(l + 64);
+    codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(l + 64);
     const size_t ca = cols && f32 ? cols | KG_DEC_F32 : cols;      /* a binary32 table carries the flag in its column count */
     size_t z = o ? kg_encode_dec64(&cx, C_ZSTD, zl, s + a, l, ca, 0, o, l + 64) : 0;
     if (z) { best = (double)z / l; *bcols = (uint32_t)ca; *bh = h; }
@@ -210,7 +213,7 @@ static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int 
                                                          * overstates the native leaf's entropy coding, so it is not used to skip) */
         ws[0] = bw0; nw = 1;
     }
-    codec_ctx cx = {0}; cx.native_leaf = native; uint8_t *o = malloc(L + 64);
+    codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ cx.native_leaf = native; uint8_t *o = malloc(L + 64);
     for (int q = 0; o && q < nw; q++) {
         int w = ws[q]; size_t a = h + (st - h) / w * w, l = (n - a < L ? n - a : L) / w * w;
         if (plain < 1e299 && l > KG_SCREEN * 2) {            /* screen on a short run: far above plain coding means no full trial */
@@ -259,7 +262,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                     const uint8_t *m0 = memchr(s + n / 2, '\n', n / 2); size_t st = m0 ? (size_t)(m0 - s) + 1 : 0;
                     if (st && st + mm <= n) { size_t e = mm; while (e > 0 && s[st + e - 1] != '\n') e--; if (e >= 16384) { ts = s + st; mm = e; } }
                 }
-                codec_ctx cx = {0}; uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t zcap = ZSTD_compressBound(mm); uint8_t *z = malloc(zcap);
+                codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t zcap = ZSTD_compressBound(mm); uint8_t *z = malloc(zcap);
                 if (o && zc && z) {
                     size_t a = kg_encode_table(&cx, C_ZSTD, 1, ts, mm, WD[di], sep, o, mm + 64), b = ZSTD_compressCCtx(zc, z, zcap, ts, mm, 1);
                     int ok = a && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b;

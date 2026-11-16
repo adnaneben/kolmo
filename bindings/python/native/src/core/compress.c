@@ -1,5 +1,30 @@
 /* The encoder: plan, split, code the blocks on the pool, write the container. */
 static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
+                             const void *dict, size_t dictlen, uint32_t dictid);
+#ifndef KOLMO_VID_MODES
+#define KOLMO_VID_MODES 0x3E   /* modes (bit = kolmo_mode) in which a Y4M file takes the video route (codec 20): all but rt */
+#endif
+/* Format 2, video (codec 20): a whole 8-bit YUV4MPEG2 file becomes one block whose payload is a Kolmo frame of the
+ * kvid layout (codecs/video.c), coded with the caller's parameters (blocks and threads as usual). Returns the frame
+ * length written to dst (or output_fd), or 0 when the route does not apply or is not smaller than the input. */
+static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *q) {
+    if (n < 4096 || n > UINT32_MAX || memcmp(s, "YUV4MPEG2 ", 10) || !((KOLMO_VID_MODES >> q->mode) & 1)) return 0;
+    size_t tn; uint8_t *t = kv_transform(s, n, &tn); if (!t) return 0;
+    size_t ic = kolmo_bound(tn, q), tot; uint8_t *in = malloc(ic), *f = NULL; int64_t z = -1;
+    if (in) z = compress_impl(t, -1, tn, in, -1, ic, q, NULL, 0, 0);
+    free(t);
+    if (z <= 0 || (tot = HDR + IDX + 4 + (size_t)z) >= n) { free(in); return 0; }
+    f = output_fd >= 0 ? malloc(tot) : tot <= cap ? dst : NULL;
+    if (!f) { free(in); return 0; }
+    memset(f, 0, HDR + IDX + 4); memcpy(f, "CZN1", 4); f[4] = 11; f[5] = (uint8_t)q->mode;
+    put64(f + 12, n); put32(f + 20, 1); put32(f + 24, (uint32_t)n);
+    uint8_t *e = f + HDR; put32(e, (uint32_t)n); put32(e + 4, (uint32_t)(4 + z)); put32(e + 8, blk_sum(3, s, n)); e[12] = C_VID;
+    f[HDR + IDX] = T_NONE; memcpy(f + HDR + IDX + 4, in, (size_t)z); free(in);
+    uint32_t hc = kolmo_crc32c(0, f, 28); hc = kolmo_crc32c(hc, f + HDR, IDX); put32(f + 28, hc);
+    if (output_fd >= 0) { int r = write_block(output_fd, f, tot, 0); free(f); return r ? r : (int64_t)tot; }
+    return (int64_t)tot;
+}
+static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen, uint32_t dictid) {
     kolmo_params d = {KOLMO_FAST, 0, 0, 0, 1}; if (!p) p = &d;
     /* KOLMO_T_NATIVE_LEAF and KOLMO_T_TYPED_HUF are opt-in bits of transforms: read them, then clear them so every
@@ -19,6 +44,13 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         int plain = 0; int64_t tr = ktf_encode(src, n, dst, cap, &plain);
         if (tr) return tr;
         if (plain) q.transforms = 0;
+    }
+    if (!dictlen && q.mode != KOLMO_RT && n >= 4096 && n <= UINT32_MAX) {   /* format 2: video route (codec 20) */
+        const uint8_t *vs = src; void *vm = MAP_FAILED;
+        if (input_fd >= 0) { vm = mmap(NULL, n, PROT_READ, MAP_PRIVATE, input_fd, 0); vs = vm == MAP_FAILED ? NULL : vm; }
+        int64_t vr = vs && !memcmp(vs, "YUV4MPEG2 ", 10) ? vid_compress_frame(vs, n, dst, output_fd, cap, &q) : 0;
+        if (vm != MAP_FAILED) munmap(vm, n);
+        if (vr) return vr;
     }
     int threads = p->threads > 0 ? p->threads : default_threads();
     uint32_t B = p->block ? p->block : (p->mode >= KOLMO_MAX ? (128u << 20) : p->mode >= KOLMO_ECO ? (16u << 20) : kolmo_fast_block(n));   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
@@ -88,6 +120,16 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     if (nb == 0) { starts[0] = 0; rstart[0] = 0; bplan[0] = 0; nb = 1; }
     starts[nb] = n;
     size_t maxb = 0; for (uint32_t i = 0; i < nb; i++) if (starts[i + 1] - starts[i] > maxb) maxb = starts[i + 1] - starts[i];
+    J.aud_prof = -1;
+    if (p->mode != KOLMO_RT && !dictlen && src && n >= 4096) {
+        /* format 2: a 16-bit PCM WAV file (mono or stereo). Every block that holds samples is also coded by the audio
+         * codec (19, kaud: profile 0 up to hc, profile 1 at max and ultra) and the smaller coding is kept */
+        ka_Wav w; const char *werr;
+        pthread_once(&ka_once, ka_init);
+        if (!ka_wav_parse(src, n, &w, &werr) && w.n) {
+            J.aud_prof = p->mode >= KOLMO_MAX ? 1 : 0; J.aud_ch = w.ch; J.aud_off = w.data_off; J.aud_end = w.trl_off;
+        }
+    }
     if (planning_map != MAP_FAILED) {
         munmap(planning_map, n); planning_map = MAP_FAILED; src = NULL;
     }

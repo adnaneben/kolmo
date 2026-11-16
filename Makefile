@@ -249,8 +249,16 @@ build/test-arch-asan: tests/test_arch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES
 check-arch: build/test-arch build/test-arch-asan
 	./build/test-arch
 	./build/test-arch-asan
-check-rc: check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-arch
-.PHONY: check-rc check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm check-arch
+# Format 2 (codecs 19-23, container version 11): leaves, audio and video blocks, damaged payloads, file API
+build/test-format2: tests/test_format2.c src/kolmo.c $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-format2-asan: tests/test_format2.c src/kolmo.c $(KOLMO_INCLUDES) $(ARCHSRC) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< $(ARCHSRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-format2: build/test-format2 build/test-format2-asan
+	./build/test-format2
+	./build/test-format2-asan
+check-rc: check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2
+.PHONY: check-rc check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm check-arch check-format2
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan

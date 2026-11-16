@@ -71,6 +71,12 @@ int kolmo_force_c;
 #include "codecs/rans.c"
 #include "codecs/graph_leaf.c"
 #include "codecs/codec.c"
+/* format 2 (container version 11): audio and video blocks, per-plane / Huffman-then-zstd / zero-run graph leaves */
+#include "codecs/audio.c"
+#include "codecs/video.c"
+#include "codecs/hufzstd_leaf.c"
+#include "codecs/planes_leaf.c"
+#include "codecs/zrun_leaf.c"
 #include "codecs/nplane.c"
 #include "transforms/graph.c"
 
