@@ -1344,6 +1344,15 @@ static int rans_decompress_all(const uint8_t *in, size_t cn, uint8_t *out, size_
             for (int q = 0; q < r; q++) { f[k] = 0; c[k + 1] = c[k]; k++; }
         }
         if (c[256] != RANS_M || kgu_get(in, cn, &i, &z) || z < 32 || z % 4 || z > cn - i) goto bad;
+        /* one symbol at frequency RANS_M (a constant plane of a plane-aligned leaf): the state update below is the
+         * identity and reads no word, so the loop accepts exactly the chunks whose body is the four states, all
+         * R64_L, and writes m copies of the symbol. Same acceptance and output, as a fill (research R4, PR #7). */
+        int one = -1; for (int k = 0; k < 256; k++) if (f[k] == RANS_M) one = k;
+        if (one >= 0) {
+            if (z != 32) goto bad;
+            for (int k = 0; k < 4; k++) if (((uint64_t)r64_rd(in + i + 8 * k) | (uint64_t)r64_rd(in + i + 8 * k + 4) << 32) != R64_L) goto bad;
+            memset(out + o, one, m); i += z; o += m; continue;
+        }
         for (int k = 0; k < 256; k++) if (f[k]) memset(sym + c[k], k, f[k]);
         const uint8_t *p = in + i, *pe = p + z; uint64_t x[4];
         for (int k = 0; k < 4; k++) { x[k] = (uint64_t)r64_rd(p) | (uint64_t)r64_rd(p + 4) << 32; p += 8; if (x[k] < R64_L) goto bad; }
