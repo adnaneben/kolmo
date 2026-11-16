@@ -25,6 +25,13 @@ int kolmo_metal_sa(const uint8_t *t, int32_t *sa, int32_t n);
  * the suffix array, k = 0..(n-1)/r. u may be t. Returns 0 or a negative error (u and I are then untouched). */
 int kolmo_metal_bwt_aux(const uint8_t *t, uint8_t *u, int32_t n, int32_t r, int32_t *I);
 
+/* kvid's strip prediction (src/experimental/kvid.c, encode_plane) for all frames at once: file holds the whole y4m
+ * input, frame_at[f] the offset of frame f's first sample; planes w[p] x h[p]. Writes the residuals plane-major over
+ * all frames and one predictor flag per strip, the same bytes as the CPU loop. Returns 0 or a negative error. */
+int kolmo_metal_kvid(const uint8_t *file, size_t n, const uint64_t *frame_at, uint32_t frames, int np,
+                     const size_t *w, const size_t *h, uint8_t *res, uint8_t *flags);
+double kolmo_metal_kvid_gpu_seconds(void);
+
 /* Time the GPU spent on the last call (seconds, from the command buffers' GPU timestamps) and doubling rounds. */
 double kolmo_metal_last_gpu_seconds(void);
 int kolmo_metal_last_rounds(void);

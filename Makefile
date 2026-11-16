@@ -56,16 +56,18 @@ endif
 endif
 endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
-# GPU worker on macOS (Metal): the scheduler in src/core/hetero.c, the kernels and their host code in src/arch/metal,
-# and libbsc's GPU hook (bwt.cpp with LIBBSC_CUDA_SUPPORT, served by cubwt_metal.c). Off at run time unless asked for
-# (--gpu, KOLMO_GPU=1); the output is the same bytes either way. NO_GPU=1 builds without it.
+# GPU worker on macOS (Metal), built with GPU=1: the scheduler in src/core/hetero.c, the kernels and their host code in
+# src/arch/metal, and libbsc's GPU hook (bwt.cpp with LIBBSC_CUDA_SUPPORT, served by cubwt_metal.c). At run time it is
+# off unless asked for (--gpu, KOLMO_GPU=1), and the output is the same bytes either way. Not in the default build:
+# linking Metal and Foundation adds 0.8 ms to every process start (2.7 -> 3.5 ms on a small file, M5), and no GPU path
+# is faster than the CPU path it would replace (benchmark/rc3/gpu/RESULTS.md). NO_GPU=1 is accepted and is the default.
 GPUOBJ  :=
 GPUPIC  :=
 ifeq ($(UNAME_S),Darwin)
-ifneq ($(NO_GPU),1)
+ifeq ($(GPU),1)
 GPUSRC  := src/core/hetero.c src/arch/metal/cubwt_metal.c
-GPUOBJ  := $(patsubst %.c,build/obj/%.o,$(GPUSRC)) build/obj/src/arch/metal/sa_metal.o
-GPUPIC  := $(patsubst %.c,build/pic/%.o,$(GPUSRC)) build/pic/src/arch/metal/sa_metal.o
+GPUOBJ  := $(patsubst %.c,build/obj/%.o,$(GPUSRC)) build/obj/src/arch/metal/sa_metal.o build/obj/src/arch/metal/kvid_metal.o
+GPUPIC  := $(patsubst %.c,build/pic/%.o,$(GPUSRC)) build/pic/src/arch/metal/sa_metal.o build/pic/src/arch/metal/kvid_metal.o
 DEFS    += -DKOLMO_GPU
 OBJ     += $(GPUOBJ)
 LIBS    += -framework Metal -framework Foundation
@@ -73,8 +75,15 @@ build/obj/$(BSC)/bwt/bwt.o build/pic/$(BSC)/bwt/bwt.o: CXXDEFS := -DLIBBSC_CUDA_
 endif
 endif
 BLIBS   := $(LIBS)
+# Rebuild what depends on the GPU setting when it changes (make does not track flags): build/gpu.cfg holds it.
+GPUCFG  := $(if $(GPUOBJ),on,off)
+build/gpu.cfg: FORCE
+	@mkdir -p build; echo $(GPUCFG) | cmp -s - $@ || echo $(GPUCFG) > $@
+FORCE:
+.PHONY: FORCE
+build/obj/$(BSC)/bwt/bwt.o build/pic/$(BSC)/bwt/bwt.o: build/gpu.cfg
 
-KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc
+KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc build/gpu.cfg
 
 all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
 
@@ -88,18 +97,19 @@ build/obj/%.o: %.cpp
 build/%_metal.inc: src/arch/metal/%.metal
 	@mkdir -p build
 	xxd -i < $< > $@
-build/obj/src/arch/metal/sa_metal.o: src/arch/metal/sa_metal.m src/arch/metal/metal.h build/sa_metal.inc
+build/obj/src/arch/metal/%_metal.o: src/arch/metal/%_metal.m src/arch/metal/metal.h build/%_metal.inc
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -fobjc-arc -Ibuild -Isrc -c $< -o $@
-build/pic/src/arch/metal/sa_metal.o: src/arch/metal/sa_metal.m src/arch/metal/metal.h build/sa_metal.inc
+build/pic/src/arch/metal/%_metal.o: src/arch/metal/%_metal.m src/arch/metal/metal.h build/%_metal.inc
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -fPIC -fobjc-arc -Ibuild -Isrc -c $< -o $@
 build/obj/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEFS) $(INC) -c $< -o $@
 
-build/libvendor.a: $(OBJ)
-	ar rcs $@ $^
+build/libvendor.a: $(OBJ) build/gpu.cfg
+	rm -f $@
+	ar rcs $@ $(OBJ)
 build/kolmo.o: src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES)
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) -c src/kolmo.c -o $@

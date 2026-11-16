@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
     int extreme = 0, native_leaf = 0, typed_huf = 0;
     for (int a = 1; a < argc; a++)                           /* long options, removed before getopt sees the arguments */
         if (!strcmp(argv[a], "--native-leaf") || !strcmp(argv[a], "--typed-huf") || !strcmp(argv[a], "--gpu")) {
-            if (!strcmp(argv[a], "--gpu")) kolmo_set_gpu(1);
+            if (!strcmp(argv[a], "--gpu")) { if (!kolmo_set_gpu(1)) fprintf(stderr, "kolmo: --gpu: this build or machine has no GPU path; the CPU does the work\n"); }
             else if (!strcmp(argv[a], "--native-leaf")) native_leaf = 1; else typed_huf = 1;
             for (int b = a; b < argc; b++) argv[b] = argv[b + 1];
             argc--; a--;
@@ -142,7 +142,8 @@ int main(int argc, char **argv) {
             "            (smaller integer series; those blocks decode much more slowly)\n"
             "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -Q minimal analysis  -n no transforms\n"
             "          -B blockMiB\n"
-            "          -D dict  -t dict samples...  -s|-S segMiB stream  -r off:len read a range\n"); return 2;
+            "          -D dict  -t dict samples...  -s|-S segMiB stream  -r off:len read a range\n"
+            "          --gpu  macOS builds made with GPU=1: one GPU worker beside the threads in ratio and -x (same output)\n"); return 2;
     }
     if (extreme) P.mode = KOLMO_ULTRA;
     if (native_leaf && typed_huf) { fprintf(stderr, "kolmo: choose --native-leaf or --typed-huf, not both\n"); return 2; }

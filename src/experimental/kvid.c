@@ -11,12 +11,21 @@
  *
  *   kvid [-m rt|balanced|eco|hc|ratio|x] [-T threads] in.y4m out   compress (default: ratio, one thread)
  *   kvid -d in out                                        decompress
- *   kvid -b [-m ...] in.y4m                               in-memory timing (fastest of at least 3 runs), JSON line */
+ *   kvid -b [-m ...] in.y4m                               in-memory timing (fastest of at least 3 runs), JSON line
+ * The prediction runs on -T threads (frames are independent at encode time), or on the GPU with --gpu (macOS builds
+ * with Metal; src/arch/metal/kvid.metal), with the same bytes in every case. */
 #include "kolmo.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <pthread.h>
+#include <stdatomic.h>
+#ifdef KVID_GPU
+#include "arch/metal/metal.h"
+#endif
+static int kv_threads = 1, kv_gpu = 0;
+static double kv_transform_s = 1e30;                             /* fastest transform seen (-b reports it) */
 
 enum { STRIP = 16, MAXP = 3 };
 typedef struct { size_t w[MAXP], h[MAXP]; int np; size_t frame_bytes, frames, hdr_len; } layout_t;
@@ -114,6 +123,26 @@ static int decode_plane(uint8_t *cur, const uint8_t *prev, size_t w, size_t h, c
 }
 static size_t strips(size_t h) { return (h + STRIP - 1) / STRIP; }
 
+/* Frames are independent at encode time (the previous frame is the input's): workers take whole frames. */
+static double now(void);
+typedef struct {
+    const uint8_t *s; const layout_t *L; const uint64_t *at; uint8_t *rs, *fl; const size_t *plane_off; size_t fpf;
+    atomic_size_t next;
+} kv_job;
+static void *kv_worker(void *arg) {
+    kv_job *J = arg; const layout_t *L = J->L;
+    for (size_t f; (f = atomic_fetch_add(&J->next, 1)) < L->frames; ) {
+        const uint8_t *cur = J->s + J->at[f], *pp = f ? J->s + J->at[f - 1] : NULL;
+        uint8_t *fl = J->fl + f * J->fpf;
+        for (int p = 0; p < L->np; p++) {
+            size_t ps = L->w[p] * L->h[p];
+            encode_plane(cur, pp, L->w[p], L->h[p], J->rs + J->plane_off[p] + f * ps, fl); fl += strips(L->h[p]);
+            cur += ps; if (pp) pp += ps;
+        }
+    }
+    return NULL;
+}
+
 /* Layout: u32 header length, header bytes, flags (one per strip, frame-major), then residuals plane by plane. */
 static uint8_t *transform(const uint8_t *s, size_t n, size_t *outn) {
     layout_t L; uint8_t *hdr;
@@ -124,18 +153,28 @@ static uint8_t *transform(const uint8_t *s, size_t n, size_t *outn) {
     put32(o, (uint32_t)L.hdr_len); memcpy(o + 4, hdr, L.hdr_len);
     uint8_t *fl = o + 4 + L.hdr_len, *rs = fl + nflags;
     size_t plane_off[MAXP], acc = 0; for (int p = 0; p < L.np; p++) { plane_off[p] = acc; acc += L.frames * L.w[p] * L.h[p]; }
-    const uint8_t *prev = NULL; size_t i = (size_t)((const uint8_t *)memchr(s, '\n', n) - s) + 1;
+    uint64_t *at = malloc(L.frames * sizeof(uint64_t)); if (!at) { free(o); free(hdr); return NULL; }
+    size_t i = (size_t)((const uint8_t *)memchr(s, '\n', n) - s) + 1;
     for (size_t f = 0; f < L.frames; f++) {
         i = (size_t)((const uint8_t *)memchr(s + i, '\n', n - i) - s) + 1;
-        const uint8_t *cur = s + i, *pp = prev;
-        for (int p = 0; p < L.np; p++) {
-            size_t ps = L.w[p] * L.h[p];
-            encode_plane(cur, pp, L.w[p], L.h[p], rs + plane_off[p] + f * ps, fl); fl += strips(L.h[p]);
-            cur += ps; if (pp) pp += ps;
-        }
-        prev = s + i; i += L.frame_bytes;
+        at[f] = i; i += L.frame_bytes;
     }
-    free(hdr); *outn = tot; return o;
+    double t0 = now();
+    int done = 0;
+#ifdef KVID_GPU
+    if (kv_gpu && L.frames <= UINT32_MAX)
+        done = !kolmo_metal_kvid(s, n, at, (uint32_t)L.frames, L.np, L.w, L.h, rs, fl);
+#endif
+    if (!done) {
+        kv_job J = {s, &L, at, rs, fl, plane_off, nflags / L.frames, 0};
+        int T = kv_threads > 1 ? kv_threads : 1; pthread_t th[64]; int started = 0;
+        if (T > 64) T = 64;
+        for (int t = 1; t < T && (size_t)t < L.frames; t++) if (!pthread_create(&th[started], NULL, kv_worker, &J)) started++;
+        kv_worker(&J);
+        for (int t = 0; t < started; t++) pthread_join(th[t], NULL);
+    }
+    double e = now() - t0; if (e < kv_transform_s) kv_transform_s = e;
+    free(at); free(hdr); *outn = tot; return o;
 }
 static int inverse(const uint8_t *t, size_t tn, uint8_t *out, size_t n) {
     if (tn < 4) return -1;
@@ -207,10 +246,11 @@ int main(int argc, char **argv) {
         if (!strcmp(argv[a], "-d")) d = 1; else if (!strcmp(argv[a], "-b")) bench = 1;
         else if (!strcmp(argv[a], "-m") && a + 1 < argc) m = argv[++a];
         else if (!strcmp(argv[a], "-T") && a + 1 < argc) threads = atoi(argv[++a]);
+        else if (!strcmp(argv[a], "--gpu")) kv_gpu = 1;
         else { fprintf(stderr, "kvid: unknown option %s\n", argv[a]); return 2; }
     }
     kolmo_params P; if (mode_of(m, &P)) { fprintf(stderr, "kvid: unknown mode %s\n", m); return 2; }
-    P.threads = threads > 0 ? threads : 1; dec_threads = P.threads;
+    P.threads = threads > 0 ? threads : 1; dec_threads = P.threads; kv_threads = P.threads;
     if (d) {
         if (argc - a != 2) return 2;
         size_t cn; uint8_t *c = slurp(argv[a], &cn); if (!c || cn < 12) return 1;
@@ -229,6 +269,10 @@ int main(int argc, char **argv) {
     do { double st = now(); if (dec(c, (size_t)z, back, n)) { fprintf(stderr, "kvid: verification failed\n"); return 1; } double e = now() - st; if (e < de) de = e; k++; }
     while (bench && (k < 3 || now() - t0 < 1.0));
     if (memcmp(s, back, n)) { fprintf(stderr, "kvid: round trip differs\n"); return 1; }
-    if (bench) { printf("{\"mode\": \"%s\", \"input\": %zu, \"compressed\": %lld, \"compress_mbs\": %.3f, \"decompress_mbs\": %.3f}\n", m, n, (long long)z, n / ce / 1e6, n / de / 1e6); return 0; }
+    double gk = 0;
+#ifdef KVID_GPU
+    if (kv_gpu) gk = kolmo_metal_kvid_gpu_seconds();
+#endif
+    if (bench) { printf("{\"mode\": \"%s\", \"input\": %zu, \"compressed\": %lld, \"compress_mbs\": %.3f, \"decompress_mbs\": %.3f, \"transform_ms\": %.2f, \"gpu\": %d, \"gpu_kernel_ms\": %.2f}\n", m, n, (long long)z, n / ce / 1e6, n / de / 1e6, kv_transform_s * 1e3, kv_gpu, gk * 1e3); return 0; }
     return spit(argv[a + 1], c, (size_t)z) ? 1 : 0;
 }

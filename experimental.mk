@@ -100,9 +100,9 @@ kfam-check: build/kfam-asan
 	@echo "KFAM TESTS PASSED"
 .PHONY: kfam-check
 
-build/kvid: $(XD)/kvid.c src/kolmo.h build/libkolmo.a build/libvendor.a
+build/kvid: $(XD)/kvid.c src/kolmo.h build/libkolmo.a build/libvendor.a build/gpu.cfg
 	@mkdir -p build
-	$(CC) $(CFLAGS) -Isrc $(XD)/kvid.c build/libkolmo.a build/libvendor.a $(LIBS) $(CXXLIB) -o $@
+	$(CC) $(CFLAGS) $(if $(GPUOBJ),-DKVID_GPU) -Isrc $(XD)/kvid.c build/libkolmo.a build/libvendor.a $(LIBS) $(CXXLIB) -o $@
 
 experimental-check: build/krc-frontier-test build/krctest build/krctest-asan build/kbctest-asan build/kbxtest-asan \
 		build/frontier-reads-test build/krc-cpu build/krc-auto build/kbc build/kbx build/kolmo-fastq $(GPU_CHECK) \
