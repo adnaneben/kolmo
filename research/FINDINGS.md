@@ -195,3 +195,67 @@ python3 research/sixbit/bench6.py ./k6 build/kolmo workdir data/*.csv data/*.log
 python3 research/mathred/tabmath.py file.csv [report.json]
 python3 research/structures/dstruct.py layout|fdgraph file.csv ... ; python3 research/structures/dstruct.py wgraph|trie file.txt
 ```
+
+## 5. Reading the numbers, and the recommended 6-bit model
+
+**How to read a ratio.** Ratio = original size ÷ compressed size; "% of original" = compressed ÷ original.
+
+| ratio | file becomes | saved |
+|---|---|---|
+| 1.333 | 75% of original | 25% |
+| 1.53 | 65% | 35% |
+| 2.35 | 42.5% | 57.5% |
+| 4.83 | 20.7% | 79% |
+| 12.45 | 8% | 92% |
+
+**Why Huffman (1.53–2.35) beats fixed 6-bit (1.333).** A fixed code gives every symbol the same 6 bits. Huffman gives
+frequent symbols short codes and rare ones long codes. In OWID, `,` is 28.8% of all bytes and ideally costs 1.8 bits,
+`0` (20.1%) 2.3 bits and `.` 3.1 bits, while `Q` (0.01%) costs 13.8 bits. Most bytes are frequent ones, so the
+average drops to 3.45 bits, against 6 for the fixed code.
+
+### Experiments (all lossless, decoders included; `sixbit/gr6.py`, `sixbit/variants.py`)
+
+* **radix**: the "42 symbols, then 43 rolls over" idea. Number the file's N distinct bytes 0..N−1 and write the text as
+  one base-N number, so each character costs log2(N) bits (DEC's RADIX-50 packed 40 characters, 3 per 16-bit word).
+* **bpe63**: the file's distinct bytes get codes 0..N−1, and codes N..62 go to the most frequent pairs and strings.
+* **GR6**: a repeat model plus a graph map, then 6-bit units. Each token (a run of letters, digits, `.` or `-`, or
+  one punctuation byte) is coded as: DITTO (same as the line above, same position), else its rank in the graph's list
+  of tokens that followed the same context before, else its global id, else NEW plus its characters. Values are
+  written as 6-bit units: 5 data bits and a continuation bit.
+
+Size as % of original (ratio in brackets):
+
+| file | distinct bytes | plain 6-bit | radix | bpe63 | GR6 → fixed 6-bit | GR6 → Huffman | GR6 → xz | GR6 → neural | xz -9e original | Huffman original |
+|---|---|---|---|---|---|---|---|---|---|---|
+| titanic.csv | 71 | n/a | 77.0% (1.30) | 75.3% (1.33) | 70.0% (1.43) | 54.5% (1.84) | 44.1% (2.27) | 39.7% (2.52) | 31.2% (3.21) | 62.9% (1.59) |
+| hdfs.log | 64 | 75.0% (1.33) | 75.0% (1.33) | 75.0% (1.33) | 38.7% (2.58) | 23.6% (4.23) | 16.0% (6.25) | 15.8% (6.32) | 14.7% (6.80) | 65.5% (1.53) |
+| apache.log | 52 | 75.0% (1.33) | 71.3% (1.40) | 61.2% (1.63) | 36.4% (2.74) | 12.3% (8.13) | 4.5% (22.1) | 5.5% (18.3) | 3.9% (25.4) | 62.5% (1.60) |
+| diamonds.csv | 42 | 75.0% (1.33) | 67.4% (1.48) | 48.7% (2.05) | 45.5% (2.20) | 24.1% (4.14) | 19.3% (5.19) | 16.8% (5.94) | 16.1% (6.22) | 54.1% (1.85) |
+| shakespeare.txt | 65 | n/a | 75.3% (1.33) | 75.0% (1.33) | 54.0% (1.85) | 46.2% (2.16) | 40.7% (2.46) | 36.4% (2.74) | 32.7% (3.06) | 60.2% (1.66) |
+| covid.csv | 70 | n/a | 76.6% (1.31) | 75.2% (1.33) | 43.6% (2.30) | 25.9% (3.87) | 13.9% (7.18) | 12.2% (8.21) | 11.9% (8.42) | 54.5% (1.83) |
+| owid-co2.csv | 71 | n/a | 76.9% (1.30) | 75.1% (1.33) | 53.8% (1.86) | 34.0% (2.94) | 25.9% (3.86) | 21.4% (4.67) | 20.7% (4.83) | 42.5% (2.35) |
+
+GR6 token mix: DITTO 42–77% of tokens on CSV and logs, graph hit 7–61%, NEW 1–12%. GR6 ran at 0.25–1.3 MB/s in Python;
+no C version exists yet, so it has no speed figure.
+
+* **Radix** only helps when a file uses few distinct bytes: 42 → 5.39 bits/char (67%). Real files use 64–71 distinct
+  bytes, and then it is no better than 6 bits.
+* **Codes after the alphabet for pairs (bpe63)** is the best pure alphabet trick: diamonds 2.05 (49%), Apache 1.63.
+  It needs free codes, so it does nothing for files that use 64+ distinct bytes.
+* **Repeat + graph first, then 6-bit (GR6)** is the best fixed-width result: 36–70% of original (1.43–2.74). It beats
+  Huffman on 5 of 7 files, while staying a simple stream of 6-bit units.
+* Fixed 6-bit is still the weak final step. On covid, DITTO is 42% of units and carries about 1.2 bits of
+  information, yet costs 6. Replace the final 6-bit stage with Huffman over the units and the size roughly halves
+  again. A neural coder over the same units reaches xz -9e level (within 0.2–1.6 points on 5 of 7 files).
+
+### Recommended model
+
+1. **Transform**: tokens → DITTO (repeat from the line above) → graph map (rank among the successors seen in the same
+   context) → global id → NEW literal. For tables, add the column predictors and formulas of section 3.
+2. **6-bit units as the internal alphabet**: every decision becomes a value written in 6-bit units. This keeps the
+   symbol alphabet at 64, which makes the final coder simple and fast. A bit-level network codes 6 decisions per unit
+   instead of 8 (section 2: ~40% faster).
+3. **Adaptive final coder, never fixed width**: Huffman over units for speed, the neural coder for size.
+
+Stored as raw 6-bit units, the format is simple but gives up 30–60% of the achievable size. 6 bits is the right
+*alphabet*, not the right *code length*.
