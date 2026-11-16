@@ -11,4 +11,6 @@ rm -rf "$dst"
 mkdir -p "$dst"
 cp -R "$root/src"    "$dst/src"
 cp -R "$root/vendor" "$dst/vendor"
+# research tools are not part of the library: keep only the frontier sources kolmo.c can include (-DKOLMO_FRONTIER)
+find "$dst/src/experimental" -type f ! -name 'frontier_*' -delete
 echo "synced native/ from $root (src + vendor)"
