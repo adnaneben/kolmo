@@ -74,11 +74,11 @@ build/frontier-reads-test: tests/frontier_reads.c $(FASTQ_SRC) $(FASTQ_HDR)
 	@mkdir -p build
 	$(CC) $(SANFLAGS) -I$(XD) tests/frontier_reads.c $(FASTQ_SRC) -o $@
 
-build/kfam: $(XD)/kfam.c
+build/kfam: $(XD)/kfam.c src/kfam.inc
 	@mkdir -p build
 	$(CC) $(CFLAGS) -ffp-contract=off $(XD)/kfam.c -lpthread -o $@
 
-build/kfam-asan: $(XD)/kfam.c
+build/kfam-asan: $(XD)/kfam.c src/kfam.inc
 	@mkdir -p build
 	$(CC) $(SANFLAGS) -ffp-contract=off $(XD)/kfam.c -lpthread -o $@
 
@@ -87,6 +87,13 @@ kfam-check: build/kfam-asan
 	printf '@r1 x/1\nACGTNACGTA\n+\nIIIIIHHHGG\n@r2 x/1\nTTGCA\n+\n#####\n@r3 x/1\nACGTACGTAC\n+r3 x/1\nIIIIIIIIII\n' > build/kfam-t.fastq
 	printf 'country,year,co2,share\nA,2000,1.5,\nA,2001,1.75,0.1\nB,2000,,-0.25\nB,2001,12,3\n' > build/kfam-t.csv
 	for f in build/kfam-t.fastq build/kfam-t.csv tests/*.c; do ./build/kfam-asan -T 2 -b $$f > /dev/null || exit 1; ./build/kfam-asan -f one -b $$f > /dev/null || exit 1; done
+	awk 'BEGIN { srand(7); g = ""; for (i = 0; i < 3000; i++) g = g substr("ACGT", int(rand() * 4) + 1, 1); \
+	  for (r = 0; r < 3000; r++) { L = r % 97 == 0 ? 0 : 20 + int(rand() * 130); o = int(rand() * (3000 - L)); s = substr(g, o + 1, L); \
+	    if (r % 5 == 0) { t = ""; for (i = 1; i <= L; i++) t = t substr(s, L - i + 1, 1); gsub(/A/, "t", t); gsub(/T/, "a", t); gsub(/C/, "g", t); gsub(/G/, "c", t); s = toupper(t) } \
+	    if (r % 7 == 0 && L > 10) s = substr(s, 1, 5) "N" substr(s, 7); q = ""; for (i = 0; i < L; i++) q = q sprintf("%c", 35 + int(rand() * 40)); \
+	    printf "@x%d:%d %d/1\n%s\n+%s\n%s\n", r, r * 3 + 1, o, s, (r % 11 == 0 ? "x" r ":" (r * 3 + 1) " " o "/1" : ""), q } }' > build/kfam-t2.fastq
+	./build/kfam-asan -T 3 -C 997 -B 5000 -b build/kfam-t2.fastq > /dev/null
+	./build/kfam-asan -T 1 -C 0 -B 0 -b build/kfam-t2.fastq > /dev/null
 	@echo "KFAM TESTS PASSED"
 .PHONY: kfam-check
 

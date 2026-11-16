@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased (branch claude/kfam-fastq-20261116)
+
+### Added
+- **FASTQ family blocks at `-x`** (block codec 16, container version 10): at `ultra` levels 0 and 2, a block that
+  is complete FASTQ text is also coded by the family coder (`src/kfam.inc`: layout, names, bases, base exceptions
+  and qualities, each with a model of its own, cut into chunks coded in parallel), and that coding is kept when it
+  is smaller. On three runs (SRR835775, SRR2584863, SRR1770413) it is 16.6 MB against 22.2 MB for `-x` before.
+  Only such frames are version 10, so readers up to 1.2.0-rc2 refuse them at the header ("corrupt or unsupported
+  input"); every other mode, `-x -l 1`, and every input that is not FASTQ keep their bytes (35 bench files compared
+  at `-m balanced`, `-m hc`, `-m ratio` and `-x -l 1`). `make check-fqfam` (part of `check-rc`).
+- `build/kfam`: new quality model (fqzcomp-style contexts, two mixers, a second-layer mixer, two APMs), new base
+  model (orders 6 and 12 with forward, reverse-complement and local match models), faster-adapting name model,
+  chunked jobs; frame `KFM2`. Results in `src/experimental/KFAM.md`.
+
 ## 1.2.0-rc2 (2026-11-15) — release candidate, not tagged, not published
 
 1.2.0-rc1 plus the improvements that no branch carried yet and the research codecs, as opt-in tools.

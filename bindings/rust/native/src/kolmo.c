@@ -9,9 +9,9 @@
 #include "experimental/frontier_pcm.h"
 #include "experimental/frontier_lag.h"
 #include "experimental/frontier_shuffle.h"
-#define KOLMO_MAX_VERSION 9
+#define KOLMO_MAX_VERSION 10
 #else
-#define KOLMO_MAX_VERSION 9   /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15) */
+#define KOLMO_MAX_VERSION 10  /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16) */
 #endif
 #include <pthread.h>
 #include <stdatomic.h>
@@ -1098,7 +1098,8 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 
 /* ------------------------------------------------------------------ codecs */
 enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
-       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_CMI = 17 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16 is not assigned; 17: context mixing with the image model (ultra; carries its own row length, channels and head) */
+       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_FQ = 16, C_CMI = 17 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head) */
+#include "kfam.inc"
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9, T_LINES = 10 };   /* 9: kolmo graph (a=delim b=decimal separator) */
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
  * so repeated calls to one target produce identical bytes. Encoded back to front and decoded front to back (as in
@@ -2356,7 +2357,7 @@ size_t kolmo_bound(size_t n, const kolmo_params *p) {
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
     const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
-    int codec, level, default_level, output_fd, native_leaf; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
+    int codec, level, default_level, output_fd, native_leaf, fqthreads; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint64_t *poff;   /* decode: payload offsets */
     uint64_t rlo, rhi; uint8_t *rdst;   /* range read */
@@ -2671,6 +2672,18 @@ static void *compress_worker(void *arg) {
             }
         }
 coded:;
+        if (J->codec == C_CM && J->level != 1 && !J->dict && len >= 64 && kf_fastq_like(raw, len)) {
+            /* ultra (not level 1), a block of complete FASTQ records: the family coder (codec 16: layout, names,
+             * bases, base exceptions and qualities, each with its own model) when it is smaller than the block as
+             * coded above. Anything that is not complete FASTQ fails the split and leaves the block as it is. */
+            size_t fz = 0, cur = cl && cl + meta < len ? cl + meta : len;
+            uint8_t *fq = kf_fastq_compress(raw, len, J->fqthreads, KF_CHUNK, KF_BCHUNK, &fz);
+            if (fq && fz < cur && fz <= J->slot) {
+                memcpy(sl, fq, fz); cl = fz; codec = C_FQ; tflag = 0; meta = 0; modes = 64;
+                slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
+            }
+            free(fq);
+        }
         size_t tot = 4 + meta + cl;
         uint8_t *e = J->idx + (size_t)i * IDX;
         if (cl == 0 || cl + meta >= len) {                                  /* store raw */
@@ -3103,6 +3116,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     }
     J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2); J.native_leaf = native_leaf;   /* ultra level 2 = default ultra + CM graph leaves */
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
+    J.fqthreads = threads / (int)(nb < 256 ? nb : 256) > 0 ? threads / (int)(nb < 256 ? nb : 256) : 1;   /* threads left over per block */
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
     if (!J.out || !J.outlen) goto cleanup;
     J.psum = p->mode == KOLMO_RT;
@@ -3132,7 +3146,7 @@ cleanup:
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }
-    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 64) ? 10 : (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
@@ -3181,7 +3195,7 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_lim
 }
 
 typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
-                 int input_fd, output_fd; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen; } djob_t;
+                 int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen; } djob_t;
 
 static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, const uint8_t *pay, uint8_t *tbuf, uint8_t *out) {
     const parsed_t *P = J->P; const uint8_t *e = P->idx + (size_t)i * IDX;
@@ -3197,6 +3211,12 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         if (cl < 4) return KOLMO_ERR_CORRUPT;
         pl.t = pay[0]; pl.a = pay[1]; pl.b = pay[2]; pl.c = pay[3]; pay += 4; cl -= 4;
         if (pl.t > T_LINES || (pl.t == T_KG && P->ver < 7) || (pl.t == T_LINES && P->ver < 8)) return KOLMO_ERR_CORRUPT;
+    }
+    if (codec == C_FQ) {                                        /* FASTQ family block (version 10) */
+        if (P->ver < 10 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
+        if (kf_fastq_decompress(pay, cl, out, len, J->fqthreads)) return KOLMO_ERR_CORRUPT;
+        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        return 0;
     }
     if (codec == C_GRAPH || pl.t == T_KG) {                     /* kolmo graph block (version 7) */
         if (codec != C_GRAPH || pl.t != T_KG || tflag || P->ver < 7) return KOLMO_ERR_CORRUPT;
@@ -3353,7 +3373,9 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
         J.lo = a; J.hi = b; J.clip_lo = lo; J.clip_hi = hi;
     } else { J.lo = 0; J.hi = P.nb; }
     atomic_init(&J.next, 0); atomic_init(&J.err, 0);
-    run_pool(decompress_worker, &J, threads > 0 ? threads : default_threads(), J.hi - J.lo);
+    int nt = threads > 0 ? threads : default_threads(), nblk = (int)(J.hi - J.lo < 256 ? J.hi - J.lo : 256);
+    J.fqthreads = nblk > 0 && nt / nblk > 0 ? nt / nblk : 1;    /* threads left over per block (FASTQ family blocks) */
+    run_pool(decompress_worker, &J, nt, J.hi - J.lo);
     free(P.poff); free(P.roff);
     r = atomic_load(&J.err);
     return r ? r : (int64_t)(range ? hi - lo : P.orig);
