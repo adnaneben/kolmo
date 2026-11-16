@@ -77,6 +77,27 @@ static int parse(const uint8_t *s, size_t n, layout_t *L, uint8_t **hdr) {
     L->hdr_len = hn; *hdr = hb; return 0;
 }
 
+#ifdef KVID_NEON   /* the NEON strip paths below use the scalar predictor for the first column and the tail */
+static inline int med(int a, int b, int c) {
+    int mx = a > b ? a : b, mn = a < b ? a : b;
+    return c >= mx ? mn : c <= mn ? mx : a + b - c;
+}
+static inline int predict(int k, const uint8_t *cur, const uint8_t *prev, size_t w, size_t x, size_t y) {
+    size_t i = y * w + x;
+    if (k == 1) return prev[i];
+    int a, b, c;
+    if (k == 0) {
+        a = x ? cur[i - 1] : (y ? cur[i - w] : 0); b = y ? cur[i - w] : a; c = (x && y) ? cur[i - w - 1] : b;
+        return med(a, b, c);
+    }
+#define D(j) ((int)(int8_t)(uint8_t)(cur[j] - prev[j]))
+    a = x ? D(i - 1) : (y ? D(i - w) : 0); b = y ? D(i - w) : a; c = (x && y) ? D(i - w - 1) : b;
+#undef D
+    return prev[i] + med(a, b, c);
+}
+static inline uint8_t zz(int r) { int8_t s = (int8_t)(uint8_t)r; return (uint8_t)(((uint8_t)s << 1) ^ (uint8_t)(s >> 7)); }
+static inline int unzz(uint8_t z) { return (int)((z >> 1) ^ (uint8_t)-(int)(z & 1)); }
+#endif
 /* Strip choice and residuals: src/algo/video.c (the reference, the prediction described above) and its SIMD kernels
  * in src/arch. */
 static void encode_plane(const uint8_t *cur, const uint8_t *prev, size_t w, size_t h, uint8_t *res, uint8_t *flags) {
