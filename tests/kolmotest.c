@@ -3,7 +3,7 @@
 int64_t tbl_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, uint8_t *dst);
 int tbl_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n);
 typedef struct { uint16_t y, a, b; uint8_t form; double k; } tformula;
-typedef struct { int n, gcol; tformula f[256]; } fset_t;
+typedef struct { int n, gcol, gweak; tformula f[256]; } fset_t;
 int64_t tbl2_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, const fset_t *fs, uint8_t *dst);
 int tbl2_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n);
 void fset_discover_pub(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs);

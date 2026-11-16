@@ -89,6 +89,16 @@
 
 ## Unreleased (on main, not tagged)
 
+- **Tables of short numbers keep the table transform (container version 9).** Two faults turned it off on long-form
+  tables such as daily counts per country (`Date,Country,Confirmed,Recovered,Deaths`, 5.5 MB):
+  1. The transformed table (a kind and a scale byte per value, a length byte per text field) is a few percent larger
+     than the CSV before coding (+4.4% here), and a transform output above block + 16 KiB was refused, so every block
+     of about 400 KiB or more was stored untransformed (all of `ratio`'s single 5.5 MB block). Table blocks may now
+     use block + 1/8 + 16 KiB; files that need the extra room are version 9, all others are written as before.
+  2. The group (entity) column was taken only if some sampled row differed from the row above it. With groups of
+     ~800 rows, 512 samples (`balanced`) often never land on a boundary, so per-entity delta and delta-of-delta were
+     off. The column now only has to take more than one value across the sample.
+  countries-aggregated.csv: `balanced` 4.16 → 15.94, `ratio` 5.18 → 17.85, `-x` 15.41 → 18.84 (xz -9e: 8.42).
 - **Line classes: a new transform for fixed-width text (block flag 12, container version 8).** Text whose lines come
   in a few fixed lengths (chemistry and geometry files, fixed-width reports and dumps) is stored column by column
   per line length. `balanced` takes it where it codes a trial slice at least as small as the template transform; it

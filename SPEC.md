@@ -22,7 +22,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 7 (4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 8) |
+| 4 | 1 | version | 1 to 9 (4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 8; 8 when a block uses line classes, tflag 12; 9 when a table block's transformed length exceeds the block length + 16384, see below) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -35,7 +35,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | 24 | 4 | block | nominal block size in bytes |
 | 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
 
-A reader rejects the file if the magic is wrong, the version is not 1–7, the index does not fit in the file, or the
+A reader rejects the file if the magic is wrong, the version is not 1–9, the index does not fit in the file, or the
 header+index CRC does not match. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
 of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `KOLMO_ERR_DICT`; an older
 reader that predates the flag refuses the newer version rather than returning wrong data.
@@ -72,6 +72,11 @@ values are defined in the source). When a transform is present, a small transfor
 inside the payload (for example a 4-byte transformed-length for the table, log, record, image and word transforms, or
 k×4 column sizes for the transpose). The decoder reads the plan prefix, undoes the coder to recover the transformed
 bytes, then undoes the transform named by `tflag` to recover the block.
+
+The transformed length may exceed the block length by at most 16384 bytes. Exception (version 9): for the table
+transform (tflag 4) the bound is the block length + ⌊block length / 8⌋ + 16384, because its typed columns carry a kind
+and a scale byte per value and a length byte per text field (short numbers grow a few percent before coding). Encoders
+write version 9 only when some table block uses that extra room; a reader of versions up to 8 rejects such files.
 
 In version 1 there is no plan prefix; the file-level `transform`/`a`/`b`/`c` in the header apply to every block.
 

@@ -9,9 +9,10 @@
 #include "experimental/frontier_pcm.h"
 #include "experimental/frontier_lag.h"
 #include "experimental/frontier_shuffle.h"
-#define KOLMO_MAX_VERSION 8
+#define KOLMO_MAX_VERSION 9
 #else
-#define KOLMO_MAX_VERSION 8   /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12) */
+#define KOLMO_MAX_VERSION 9   /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12);
+                                  9: table blocks (flag 4) larger than the block plus TSLACK, up to TBL_SLACK */
 #endif
 #include <pthread.h>
 #include <stdatomic.h>
@@ -367,6 +368,10 @@ static int tpq_inv_cols(const uint8_t *in, size_t n, uint8_t delim, int k, const
 }
 
 #define TSLACK 16384            /* table transform may exceed the block by this much (headers, exceptions) */
+/* table transform v2 (flag 4) in version 9: an eighth of the block more. Its typed columns carry a kind and a scale byte
+ * per value and a length byte per text field, so a table of short numbers grows by a few percent before coding (5.5 MB
+ * of daily counts: +4.4%) and a fixed 16 KiB slack turned the transform off on every block of 400 KiB or more. */
+#define TBL_SLACK(n) ((size_t)(n) / 8 + TSLACK)
 #define ONES 0x0101010101010101ull
 #define HIGHS 0x8080808080808080ull
 /* first index of byte a or b in p[0..lim), or lim (SWAR, 8 bytes per step; lowest flagged byte is always exact) */
@@ -2164,7 +2169,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     *starts_out = st; return nb;
 }
 
-static size_t slot_size(uint32_t B, int codec) { size_t a = codec_bound(codec, (size_t)B + TSLACK), b = codec_bound(C_BSC, (size_t)B + TSLACK); return (a > b ? a : b) + 256 * 4 + 64; }
+static size_t slot_size(uint32_t B, int codec) { size_t a = codec_bound(codec, (size_t)B + TBL_SLACK(B)), b = codec_bound(C_BSC, (size_t)B + TBL_SLACK(B)); return (a > b ? a : b) + 256 * 4 + 64; }
 
 /* Speed-tier (rt/fast) default block size: aim for ~8 balanced blocks so decode and
    compress parallelise across cores, with a 1 MiB floor (below it ratio drops faster
@@ -2239,7 +2244,7 @@ static void *compress_worker(void *arg) {
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
-    uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TSLACK + 64);
+    uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TBL_SLACK(J->B) + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
     if (!tbuf || !slot || (J->input_fd >= 0 && !input)) { free(input); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
@@ -2284,7 +2289,7 @@ static void *compress_worker(void *arg) {
             meta = 4 * k; in = tbuf;
         } else if (pl.t == T_TBL && len) {
             int64_t tn = tbl2_encode(raw, len, (uint8_t)pl.a, pl.c + 1, pl.b, pl.fs, tbuf, &modes);
-            if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 4; }
+            if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 4; if ((size_t)tn > len + TSLACK) modes |= 32; }
             else modes = 0;
         } else if (pl.t == T_LOG && len) {
             uint8_t *sp = pl.a == 2 && !memchr(raw, '\n', len) ? malloc(2 * len + 64) : NULL;
@@ -2488,7 +2493,7 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, const plan_t *pl) {
     if (pl->t != T_TBL && pl->t != T_LOG && pl->t != T_WORD && pl->t != T_TP) return 1;
     size_t m = n < (1u << 20) ? n : (1u << 20); while (m > 0 && s[m - 1] != '\n') m--;
     if (m < 65536) return 1;
-    uint8_t *t = malloc(m + TSLACK + 64), *z = malloc(m + m / 8 + 64); int64_t tn = -1;
+    uint8_t *t = malloc(m + TBL_SLACK(m) + 64), *z = malloc(m + m / 8 + 64); int64_t tn = -1;
     if (!t || !z) { free(t); free(z); return 1; }
     if (pl->t == T_TBL) tn = tbl2_encode(s, m, (uint8_t)pl->a, pl->c + 1, pl->b, pl->fs, t, NULL);
     else if (pl->t == T_LOG) tn = log_encode_m(s, m, t, m + TSLACK, pl->a == 1);
@@ -2629,7 +2634,7 @@ static int prefer_frontier_table(const uint8_t *src, size_t n, const plan_t *pl,
     while (sample && src[sample - 1] != '\n') --sample;
     if (sample < 8192) return 0;
     size_t cap = sample + TSLACK;
-    uint8_t *tmp = malloc(cap + 64);
+    uint8_t *tmp = malloc(sample + TBL_SLACK(sample) + 64);   /* tbl2_encode below may use the table slack */
     size_t bound = ZSTD_compressBound(cap);
     uint8_t *z = malloc(bound);
     ZSTD_CCtx *ctx = ZSTD_createCCtx();
@@ -2848,7 +2853,7 @@ cleanup:
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }
-    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
@@ -2940,7 +2945,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     if (meta > cl) return KOLMO_ERR_CORRUPT;
     uint8_t *tgt = (tflag && tflag != 8) ? tbuf : out;
     size_t dlen = len;
-    if ((tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10 || tflag == 12) { dlen = get32(pay); if (dlen > len + TSLACK) return KOLMO_ERR_CORRUPT; }
+    if ((tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10 || tflag == 12) { dlen = get32(pay); if (dlen > len + (tflag == 4 && P->ver >= 9 ? TBL_SLACK(len) : TSLACK)) return KOLMO_ERR_CORRUPT; }
 #ifdef KOLMO_FRONTIER
     if (codec == C_PCM) {
         if (P->ver < 6 || tflag || pl.t != T_NONE || frontier_pcm_decode(pay, cl, out, len)) return KOLMO_ERR_CORRUPT;
@@ -3012,7 +3017,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
 static void *decompress_worker(void *arg) {
     djob_t *J = arg; tls_t *S = tls_begin();
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
-    uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->maxraw + TSLACK + 64);
+    uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->maxraw + TBL_SLACK(J->maxraw) + 64);
     int buffered = J->clip_hi || J->output_fd >= 0;
     uint8_t *rbuf = buffered ? (S->rbuf = grow(S->rbuf, &S->rbcap, J->maxraw + 64)) : NULL;
     uint8_t *packed = J->input_fd >= 0 ? malloc(J->maxcompressed ? J->maxcompressed : 1) : NULL;
