@@ -54,3 +54,12 @@ For N input bytes and T tiles, output capacity is bounded by `N + 32 + 6*T`; CPU
 The executive plan and measurements live in `benchmark/next`. Run `python3 benchmark/next/protect_gains.py --sources-only` for checkpoint integrity, and `make experimental-check` for CPU correctness plus address/undefined-behavior sanitizers. Metal tests compare both plans and complete frames with the CPU, including hybrid splits. Benchmark output always includes every metadata/checksum byte and verifies decoded contents.
 
 This prototype is not promoted into normal Kolmo: its weak ratio on general files outweighs the currently observed planning speed benefits. New encoding ideas must preserve these experimental results and pass the protected production gates before promotion.
+
+## KRANS (static interleaved rANS)
+
+`build/krans` is a separate research entropy coder: static order-0 and order-1 rANS with 8, 16 or 32 interleaved
+states and portable, AVX2 and NEON decoders. Design, frame layout, results against zstd's HUF/FSE, lz4 and zstd,
+and what did not work are in [KRANS.md](KRANS.md); `make build/krans krans-check` builds and tests it. It implements
+**static (per-block table) rANS only**: no probability adapts while coding. A US patent granted to Microsoft in
+January 2022 concerns modifications of rANS (adaptive variants); we have not analysed its scope, so any adaptive idea is listed in KRANS.md
+under "needs a patent check" and is not implemented. Kolmo does not use KRANS.
