@@ -24,6 +24,8 @@ constraint for rc3: a change that makes Kolmo faster or smaller may break readin
 src/
   kolmo.h                    public API (the only installed header)
   api/        api.c          public entry points, parameter checking, limits
+              features.c     public entry points of trained profiles and --target, the compact profile frame,
+                             target chunk merging, kolmo_calibrate
   core/                      the container and everything every mode shares
               container.c    frame header, block index, version, checksums (CRC32C, XXH3 wrappers)
               blocks.c       block splitting, block scheduler, thread pool
@@ -31,6 +33,8 @@ src/
               memory.c       memory model: budgets, limits, accounting (docs/MEMORY-MODEL.md)
   plan/       planner.c      analysis, transform choice, codec choice per block and per leaf, --target cost model
               detect.c       content detection (text, table, FASTQ, WAV, Y4M, NPY, executables, ...)
+              profile.c      trained profiles (KPF1): format, pinned plans, dictionary codecs of profile frames, training
+              target.c       --target: parser, cost model, speed table (target_table.inc), per-chunk choice
   transforms/                structure transforms, one per file (format-aware, codec-agnostic)
               table.c log.c lines.c sci.c word.c json.c x86.c tar.c nplane.c
               graph.c        integer/decimal graph (was kgraph.inc), graph_fwd.c (was kg_int_fwd.inc)
@@ -51,6 +55,7 @@ src/
               aarch64/       *_neon.c (intrinsics), *_neon.S (assembly)
               metal/         GPU kernels (*.metal) and their host code (*.m)
   cli/        cli.c
+              train.c        kolmo train, kolmo calibrate, kolmo profile
   experimental/              research tools that are not part of the library
 ```
 
