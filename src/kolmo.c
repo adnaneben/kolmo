@@ -9,9 +9,9 @@
 #include "experimental/frontier_pcm.h"
 #include "experimental/frontier_lag.h"
 #include "experimental/frontier_shuffle.h"
-#define KOLMO_MAX_VERSION 10
+#define KOLMO_MAX_VERSION 11
 #else
-#define KOLMO_MAX_VERSION 10  /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16) */
+#define KOLMO_MAX_VERSION 11  /* 11: format 2 (codecs 19-23);  6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16) */
 #endif
 #include <pthread.h>
 #include <stdatomic.h>
@@ -1155,7 +1155,8 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 
 /* ------------------------------------------------------------------ codecs */
 enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
-       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_FQ = 16, C_CMI = 17 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head) */
+       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_FQ = 16, C_CMI = 17,
+       C_AUD = 19, C_VID = 20, C_PLANES = 21, C_HZ = 22, C_ZRUN = 23 };   /* 19-23: container version 11 (format 2): 19 audio (kaud), 20 video (kvid), 21 per-plane leaf, 22 Huffman then zstd leaf, 23 zero-run leaf (21-23: graph leaves only) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head) */
 #include "kfam.inc"
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9, T_LINES = 10 };   /* 9: kolmo graph (a=delim b=decimal separator) */
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
@@ -1249,7 +1250,10 @@ typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *di
                  int used_native_leaf;   /* encoder: set when a C_NPLANE leaf was written (the frame needs version 9) */
                  int allow_nplane;       /* decoder: C_NPLANE leaves are valid (container version 9 or later) */
                  int aligned_leaf;       /* encoder: graph integer residual leaves also try plane-aligned Huffman / rANS chunks
-                                          * (opt-in: --native-leaf, --typed-huf; existing leaf ids, any version-7 decoder) */ } codec_ctx;
+                                          * (opt-in: --native-leaf, --typed-huf; existing leaf ids, any version-7 decoder) */
+                 int used_f2;            /* encoder: a format-2 leaf (codecs 21-23) was written (the frame needs version 11) */
+                 int no_f2;              /* encoder: do not try codecs 21-23 (the --typed-huf route writes version 7 frames) */
+                 int allow_f2;           /* decoder: codecs 21-23 are valid graph leaves (container version 11 or later) */ } codec_ctx;
 
 static int kgu_get(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
     uint64_t r = 0; int sh = 0;
@@ -1478,6 +1482,10 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
 }
 
 static int np_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+static int aud_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+static int planes_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+static int hz_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+static int zrun_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     switch (codec) {
         case C_STORE: if (cn != n) return -1; memcpy(out, in, n); return 0;
@@ -1513,10 +1521,20 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
         case C_HUF: return huf_decompress_all(in, cn, out, n);
         case C_RANS: return rans_decompress_all(in, cn, out, n);
         case C_NPLANE: return x->allow_nplane ? np_decompress(x, in, cn, out, n) : -1;
+        case C_PLANES: return x->allow_f2 ? planes_decompress(x, in, cn, out, n) : -1;
+        case C_HZ: return x->allow_f2 ? hz_decompress(x, in, cn, out, n) : -1;
+        case C_ZRUN: return x->allow_f2 ? zrun_decompress(x, in, cn, out, n) : -1;
     }
     return -1;
 }
 
+#include "codecs/audio.c"
+#include "codecs/hufzstd_leaf.c"
+#include "codecs/planes_leaf.c"
+#include "codecs/zrun_leaf.c"
+#ifndef KOLMO_F2_PLAN
+#define KOLMO_F2_PLAN 0   /* 1: the planner's graph scores also try codecs 21-23 */
+#endif
 #include "nplane.inc"
 #include "kgraph.inc"
 
@@ -1732,7 +1750,7 @@ static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int
     if (W < 2 || n < h + 4 * W) return best;
     if (st < h) st = h;
     size_t a = h + (st - h) / W * W, l = (n - a < L ? n - a : L) / W * W; if (l < 2 * W) l = (n - a) / W * W < 2 * W ? 0 : 2 * W;
-    codec_ctx cx = {0}; uint8_t *o = malloc(l + 64);
+    codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(l + 64);
     if (o && plain < 1e299 && l > KG_SCREEN * 2 && W * 8 <= KG_SCREEN) {   /* screen on a few rows, as for integers */
         size_t ls = KG_SCREEN / W * W, zs = kg_encode_img8(&cx, C_ZSTD, zl, s + a, ls, W, C, 0, o, l + 64);
         if (!zs || (double)zs / ls > plain * KG_SCREEN_SLACK) { free(o); codec_ctx_free(&cx); return best; }
@@ -1765,7 +1783,7 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
         }
         if (!nw) return best;
     }
-    codec_ctx cx = {0}; uint8_t *o = malloc(L + 64);
+    codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(L + 64);
     for (int q = 0; o && q < nw; q++) {
         int fw = ws[q]; size_t fh = hs[q], s0 = st < fh ? fh : st, L0 = L > n - s0 ? n - s0 : L;
         size_t a = fh + (s0 - fh) / fw * fw, l = (n - a < L0 ? n - a : L0) / fw * fw;
@@ -1826,7 +1844,7 @@ static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
     if (st < h) st = h;
     size_t a = h + (st - h) / rb * rb, l = (n - a < L ? n - a : L) / rb * rb;
     if (l < 16 * rb || l < 512) { a = h; l = (n - h < L ? n - h : L) / rb * rb; if (l < 512) return best; }
-    codec_ctx cx = {0}; uint8_t *o = malloc(l + 64);
+    codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(l + 64);
     const size_t ca = cols && f32 ? cols | KG_DEC_F32 : cols;      /* a binary32 table carries the flag in its column count */
     size_t z = o ? kg_encode_dec64(&cx, C_ZSTD, zl, s + a, l, ca, 0, o, l + 64) : 0;
     if (z) { best = (double)z / l; *bcols = (uint32_t)ca; *bh = h; }
@@ -1859,7 +1877,7 @@ static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int 
                                                          * overstates the native leaf's entropy coding, so it is not used to skip) */
         ws[0] = bw0; nw = 1;
     }
-    codec_ctx cx = {0}; cx.native_leaf = native; uint8_t *o = malloc(L + 64);
+    codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ cx.native_leaf = native; uint8_t *o = malloc(L + 64);
     for (int q = 0; o && q < nw; q++) {
         int w = ws[q]; size_t a = h + (st - h) / w * w, l = (n - a < L ? n - a : L) / w * w;
         if (plain < 1e299 && l > KG_SCREEN * 2) {            /* screen on a short run: far above plain coding means no full trial */
@@ -1908,7 +1926,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                     const uint8_t *m0 = memchr(s + n / 2, '\n', n / 2); size_t st = m0 ? (size_t)(m0 - s) + 1 : 0;
                     if (st && st + mm <= n) { size_t e = mm; while (e > 0 && s[st + e - 1] != '\n') e--; if (e >= 16384) { ts = s + st; mm = e; } }
                 }
-                codec_ctx cx = {0}; uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t zcap = ZSTD_compressBound(mm); uint8_t *z = malloc(zcap);
+                codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t zcap = ZSTD_compressBound(mm); uint8_t *z = malloc(zcap);
                 if (o && zc && z) {
                     size_t a = kg_encode_table(&cx, C_ZSTD, 1, ts, mm, WD[di], sep, o, mm + 64), b = ZSTD_compressCCtx(zc, z, zcap, ts, mm, 1);
                     int ok = a && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b;
@@ -2557,7 +2575,7 @@ static void *compress_worker(void *arg) {
             /* hc: zstd 19 over float planes gives the size of zstd 9 (the planes are coded by Huffman or rANS when that
              * is smaller) at up to 16 times the time. Decimal planes keep zstd 19: zstd 12 was 3 to 36% larger. */
             if (codec == C_ZSTD && level > 9 && !pl.a && !(pl.b & (32 | 64)) && (pl.b & 16)) kgl = 9;
-            xp->native_leaf = J->native_leaf; xp->used_native_leaf = 0;
+            xp->native_leaf = J->native_leaf; xp->used_native_leaf = 0; xp->used_f2 = 0;
             cl = pl.a ? kg_encode_table(xp, kgc, kgl, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
                       : pl.b & 32 ? kg_encode_img8(xp, kgc, kgl, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 64 ? kg_encode_dec64(xp, kgc, kgl, raw, len, pl.b & 1 ? 0 : pl.b & 2 ? (pl.kgw / 4) | KG_DEC_F32 : pl.kgw / 8, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
@@ -2614,7 +2632,7 @@ static void *compress_worker(void *arg) {
                 if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_BSC; }
                 if (bc) { cl = bz; codec = bc; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; goto coded; }
             }
-            if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8 | (xp->used_native_leaf ? 32 : 0); goto coded; }
+            if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8 | (xp->used_native_leaf ? 32 : 0) | (xp->used_f2 ? 128 : 0); goto coded; }
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
         }
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
@@ -3203,7 +3221,7 @@ cleanup:
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }
-    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 64) ? 10 : (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 128) ? 11 : (nm & 64) ? 10 : (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
@@ -3258,8 +3276,8 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     const parsed_t *P = J->P; const uint8_t *e = P->idx + (size_t)i * IDX;
     size_t len = get32(e), cl = get32(e + 4); int codec = e[12], tflag = e[13];
     size_t meta = 0;
-    x->allow_nplane = 0;
-    if (codec == C_NPLANE) return KOLMO_ERR_CORRUPT;                 /* graph leaves only */
+    x->allow_nplane = 0; x->allow_f2 = 0;
+    if (codec == C_NPLANE || codec == C_PLANES || codec == C_HZ || codec == C_ZRUN) return KOLMO_ERR_CORRUPT;   /* graph leaves only */
     plan_t pl = P->pl;
     if (P->psum) {                                             /* rt: the checksum covers the stored bytes; checked first */
         if (cl < 4 || (uint32_t)kolmo_xxh3(pay + 4, cl - 4, 0x637a6e31u ^ get32(pay)) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
@@ -3275,10 +3293,17 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
+    if (codec == C_VID) return KOLMO_ERR_CORRUPT;                /* video frames are decoded whole, by run_decode */
+    if (codec == C_AUD) {                                       /* audio (kaud) block (version 11) */
+        if (P->ver < 11 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
+        if (aud_decompress(pay, cl, out, len)) return KOLMO_ERR_CORRUPT;
+        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        return 0;
+    }
     if (codec == C_GRAPH || pl.t == T_KG) {                     /* kolmo graph block (version 7) */
         if (codec != C_GRAPH || pl.t != T_KG || tflag || P->ver < 7) return KOLMO_ERR_CORRUPT;
-        x->allow_nplane = P->ver >= 9;
-        int r = kg_decode(x, pay, cl, out, len); x->allow_nplane = 0; if (r) return KOLMO_ERR_CORRUPT;
+        x->allow_nplane = P->ver >= 9; x->allow_f2 = P->ver >= 11;
+        int r = kg_decode(x, pay, cl, out, len); x->allow_nplane = 0; x->allow_f2 = 0; if (r) return KOLMO_ERR_CORRUPT;
         if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }

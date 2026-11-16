@@ -189,7 +189,7 @@ static double ktf_rep_score(const uint8_t *b, size_t n) {
 static size_t ktf_payload_rep(ktf_prog *P, size_t n, uint8_t *dst, size_t cap) {
     kgb g = {0}; codec_ctx cx = {0}; size_t out = 0;
     if (kgb_new(&g) != 0 || kgb_node(&g, KG_INT, (int[]){0}, 1, 2, &P->par) != 1) goto done;
-    g.nph_q = 1; g.nph_np = P->pln ? P->ow : 1; cx.aligned_leaf = 1;                  /* plane-aligned Huffman chunks too */
+    g.nph_q = 1; g.nph_np = P->pln ? P->ow : 1; cx.aligned_leaf = 1; cx.no_f2 = 1;    /* plane-aligned Huffman chunks too */
     if (kb_put(&g.s[1], P->res.p, P->res.n) || kb_put(&g.s[2], P->rest.p, P->rest.n)) goto done;
     out = kg_serialize(&cx, C_ZSTD, 3, &g, n, dst, cap);
 done:
