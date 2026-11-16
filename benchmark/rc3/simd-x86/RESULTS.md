@@ -12,7 +12,10 @@ previous study: `benchmark/rc2/SIMD-ASM.md`. Scripts are in `tools/`, raw result
   only, and `KOLMO_CPU=c|sse2|sse41|avx2` lowers the level of a build at run time.
 - **Output is unchanged.** Frames are byte-identical across the branch point, `NO_ASM=1`, the generic build at every
   level (`KOLMO_CPU=c`, `sse2`, `sse41`, dispatched AVX2), `-msse4.2 -mavx2 -mbmi2 -mfma` and `-march=native`
-  (AVX-512 host): 17 inputs x 10 settings (section 4). The determinism check passes.
+  (AVX-512 host): 17 inputs x 10 settings, 170 of 170 (section 4). The determinism check passes.
+- **Over all inputs and modes** the geometric mean is 1.04x for compression and 1.08x for decompression (1 and 4
+  threads); `balanced` decode 1.17x, `-x` 1.13x/1.14x. The gains are large where Kolmo's own loops were the cost
+  (images, video, integer arrays, `-x`) and nil where vendored coders are (text and logs in `hc`/`ratio`).
 - **Largest gains** (one thread, fastest of N, generic build with dispatch, against the branch point):
 
   | where | kernel | end to end |
@@ -30,7 +33,38 @@ previous study: `benchmark/rc2/SIMD-ASM.md`. Scripts are in `tools/`, raw result
   SSE4.1), a wavefront for the 16-bit median inverse (impossible: its rows are serial), a packed slot table for the
   rANS decoder (no gain), hand-written assembly (no kernel where the intrinsics leave a measurable margin; section 6).
 
-SECTION_E2E
+## End to end
+
+`tools/final.sh`: every input in every mode, `base` (branch point) against `final` (this branch, `eeaea83`, generic
+`ARCH=` build, dispatched to AVX2 here) and `final-sse2` (the same binary at `KOLMO_CPU=sse2`, i.e. a CPU with only the
+x86-64 baseline), with `base2` (a copy of `base`) as the A/A control. `speed` and `balanced` on the full inputs with
+1 and 4 threads, fastest of 9; `eco`, `hc` and `ratio` on 4 MiB prefixes (one block, so 4 threads equal 1), fastest of 3;
+`-x` on 512 KiB prefixes, fastest of 3. Geometric means of base time / new time over the 17 inputs (>1 = faster):
+
+| mode | inputs | T | compress: final (SSE2 level) | decompress: final (SSE2 level) | largest gains (final) | A/A geo mean |
+|---|---|---:|---:|---:|---|---:|
+| `-m speed` | full | 1 | 1.021× (1.023×) | 1.055× (1.056×) | num_walk_i32.npy d 1.61×, img16_mr.npy d 1.56×, num_walk_i32.npy c 1.20× | 0.998 |
+| `-m speed` | full | 4 | 1.006× (1.004×) | 1.019× (1.032×) | img16_mr.npy d 1.25×, text_webster.txt c 1.20×, num_walk_i32.npy d 1.15× | 1.008 |
+| `-m balanced` | full | 1 | 1.055× (1.051×) | 1.173× (1.167×) | video_akiyo.y4m d 2.39×, video_foreman.y4m d 2.34×, img8_grey.npy d 1.85× | 1.000 |
+| `-m balanced` | full | 4 | 1.066× (1.038×) | 1.147× (1.159×) | video_foreman.y4m d 1.99×, video_akiyo.y4m d 1.88×, img8_grey.npy d 1.80× | 1.011 |
+| `-m eco` | 4 MiB prefixes | 1 | 1.055× (1.042×) | 1.061× (1.057×) | img8_grey.npy d 1.76×, num_f64.npy c 1.29×, img16_xray.npy d 1.28× | 1.000 |
+| `-m hc` | 4 MiB prefixes | 1 | 1.011× (1.003×) | 1.044× (0.973×) | img8_grey.npy d 1.95×, num_sao.bin d 1.44×, video_foreman.y4m d 1.41× | 0.972 |
+| `-m ratio` | 4 MiB prefixes | 1 | 1.007× (0.996×) | 1.032× (1.017×) | video_akiyo.y4m d 1.13×, log_access.log d 1.12×, num_sao.bin d 1.11× | 0.994 |
+| `-x` | 512 KiB prefixes | 1 | 1.126× (1.000×) | 1.144× (0.990×) | img16_mr.npy d 1.41×, table_trades.csv d 1.37×, img16_mr.npy c 1.31× | 0.991 |
+
+All rows: `results/e2e_tables.md` (raw times `results/e2e.jsonl`). Over all 136 (input, mode, threads) cases the
+geometric mean is 1.043x for compression and 1.083x for decompression (SSE2 level: 1.020x and 1.054x). Every build
+wrote the same frame in every case.
+
+**Noise.** |A/A - 1| on the fastest run: median 2.1%, 90th percentile 10.2%, max 52% (a 3-round decode of 12-25 ms).
+Single cells within about +-10% are noise here, especially the 3-round `eco`/`hc`/`ratio` decodes. The cells of that
+run that looked 6-28% slower were timed again with 15 rounds (`results/recheck_tables.md`, A/A within 4.8%): all nine
+are 0.965x-1.20x, i.e. no regression; the slowest, `log_access` `eco` decode at 0.965x, is inside the A/A band.
+
+**Where nothing moves:** compression in `hc` and `ratio` (zstd-19/22, liblzma, libbsc), `speed` compression except the
+integer arrays (LZ4), and text and logs in every generic mode: their hot loops are vendored or already vectorised
+(section 6). The `-x` gain needs SSE4.1 (the SSE2 level keeps the C mixer: 1.000x).
+
 
 ## 1. Setup
 
@@ -103,7 +137,17 @@ residuals). A mutation test (one lane mask changed in a copy of the kernel) was 
 Microbenchmarks (`tools/bench_*.c`, fastest of 15, in process, real data from the corpus). The C reference is compiled
 `-O3` for baseline x86-64, so "C" already includes gcc's own SSE2 vectorisation.
 
-KERNEL_TABLE
+| kernel | unit | C | SSE2 | SSE4.1 | AVX2 |
+|---|---|---:|---:|---:|---:|
+| `img16_fwd` | ns/sample, MED | 3.658 | 0.402 (9.09x) | 0.427 (8.57x) | 0.187 (19.52x) |
+| `sad16` | ns/sample | 0.696 | 0.111 (6.28x) | 0.110 (6.33x) | 0.070 (9.88x) |
+| `med8_fwd` | ns/byte, RGB | 0.804 | 0.150 (5.36x) | 0.149 (5.39x) | 0.100 (8.00x) |
+| `cm_dot` | ns/input, 4 sets x 63 | 1.291 | 1.290 (1.00x) | 0.658 (1.96x) | 0.421 (3.07x) |
+| `cm_train` | ns/input, 4 sets x 63 | 1.121 | 1.121 (1.00x) | 0.680 (1.65x) | 0.504 (2.22x) |
+| `cm_hash` | ns/hash, 29 contexts | 0.611 | 0.610 (1.00x) | 0.423 (1.44x) | 0.338 (1.81x) |
+
+(`tools/bench_k.c` on `img16_xray.npy` and `img8_rgb.npy`; `results/kernels_micro.txt`. The median inverse, byte
+planes and kvid have their own tables below.)
 
 ### 3.1 IMG8 median inverse: a 16-row wavefront (`med8_inv`, SSE2, SSE4.1)
 
@@ -234,7 +278,17 @@ frame. `python3 benchmark/determinism/check.py` passes: 110 frames OK, with 1 an
 
 ## 5. Tests
 
-TESTS_SECTION
+On the pushed head (`c5e8088`, clean build, `ARCH=`): `make check` (ALL PASSED), `make check-rc` (with the new
+`check-kernels`: 17,310-17,329 checks per level, 0 failures, optimised and ASan/UBSan; the new `check-scan`: 7,000,000
+checks; the structure lane's `check-asm` and `check-dispatch`), `make check-sanitizers`, `make experimental-check
+GPU_CHECK=`, `make kfam-check`, `make check-cm-compact`, and `python3 benchmark/determinism/check.py build/kolmo
+build/determinism` (110 frames OK). Bindings: `setup.py build` plus `test_kolmo.py` ALL PASSED; `cargo test --release`
+4 + 1 passed. A first run of `check-rc` on the merge with the structure lane failed to link `test-dispatch-asan` (that
+rule lists the separately built objects by hand); it lists the kernel sources now.
+
+The kernel tests were checked against faults: changing one lane mask in the median inverse, or the bias constant of
+kvid's predictor 2, makes them fail (hundreds of failures per level). `make NO_ASM=1` builds and runs the references
+only.
 
 ## 6. What did not land, and what is left
 
@@ -245,7 +299,9 @@ TESTS_SECTION
   forward) or are a small share after the change; the one with spills (median inverse, 0.33-0.5 ns/B) is now 20% of
   CIF video decode, so a perfect schedule would gain a few percent end to end. A 32-row AVX2 wavefront (two 128-bit
   halves, a cross-half lane shift per step) is the larger opportunity there, and it can be written with intrinsics.
-  The structure lane's `asm.h` pattern was not yet merged when this lane finished.
+  The structure lane's `asm.h` pattern and its assembly histogram arrived at the end of this lane and are merged
+  (`check-asm` runs in `check-rc`); `docs/LAYOUT.md` now describes both patterns (assembly with per-algorithm dispatch,
+  intrinsics through the table).
 - **16-bit median inverse**: the IMG16 node treats the samples as one sequence with a row stride; the left neighbour of
   a row's first sample is the previous row's last, so rows are serial and the wavefront does not apply. The loop
   already keeps only the left neighbour on the serial chain.
