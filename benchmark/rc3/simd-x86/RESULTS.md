@@ -214,7 +214,23 @@ an inline SWAR count (the builtin where the ISA has the instruction, e.g. arm64)
 
 ## 4. Same bytes everywhere
 
-FRAMES_SECTION
+`tools/framecmp.py` compressed every input with every setting below, using eight builds and levels, and compared the
+frames by SHA-256. It then decoded the first build's frame with every build (`results/frames.json`, `frames.txt`):
+
+- `base`: the branch point `2207da1`, `ARCH=`
+- `noasm`: this branch, `make NO_ASM=1 ARCH=` (C references only)
+- `generic-c`, `generic-sse2`, `generic-sse41`: this branch, `ARCH=`, with `KOLMO_CPU=c`, `sse2`, `sse41`
+- `generic`: the same binary, dispatched (AVX2 here)
+- `avx2`: `ARCH="-msse4.2 -mavx2 -mbmi2 -mfma"`
+- `native`: `ARCH=-march=native` (AVX-512 host)
+
+Settings: `-m speed`, `-m balanced`, `-m balanced --native-leaf`, `-m fast --typed-huf` (`-T1`) on the full inputs;
+`-m eco`, `-m hc` and `-m ratio` on 4 MiB prefixes (one block); `-x`, `-x -l 1` and `-x -l 2` on 512 KiB prefixes.
+Four threads, except `--typed-huf`. **All 170 cases: one frame for all eight builds, and every build decodes it back to
+the input.** kvid: frames of akiyo and foreman for `rt`, `balanced`, `eco`, `hc` and `ratio` are identical across
+`base`, `noasm`, `KOLMO_CPU=c`, `sse2`, the dispatched, `avx2` and `native` builds, and the `noasm` build decodes them
+(`results/kvid_frames.txt`). Every A/B timing in this report also checked that each build wrote the first build's
+frame. `python3 benchmark/determinism/check.py` passes: 110 frames OK, with 1 and 4 threads and every decode.
 
 ## 5. Tests
 

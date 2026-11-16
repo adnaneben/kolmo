@@ -1,0 +1,10 @@
+akiyo rt distinct=1 7160cabf855b decode=ok
+akiyo balanced distinct=1 e7610782631f decode=ok
+akiyo eco distinct=1 81f1f4a60bb3 decode=ok
+akiyo hc distinct=1 8593aed51255 decode=ok
+akiyo ratio distinct=1 d180b0d6706b decode=ok
+foreman rt distinct=1 7abc08035ca8 decode=ok
+foreman balanced distinct=1 c3bc79c3f43f decode=ok
+foreman eco distinct=1 f1029223e95b decode=ok
+foreman hc distinct=1 cb1ddf0cd02b decode=ok
+foreman ratio distinct=1 36ac13958ca6 decode=ok
