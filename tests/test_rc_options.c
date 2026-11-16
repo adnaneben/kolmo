@@ -61,6 +61,7 @@ int main(void) {
             memset(b,0xa5,n);int r=codec==C_HUF?huf_decompress_all(z,zn,b,n):rans_decompress_all(z,zn,b,n);
             if(r||memcmp(a,b,n))return 15;
             if(zn>1){int r2=codec==C_HUF?huf_decompress_all(z,zn-1,b,n):rans_decompress_all(z,zn-1,b,n);if(!r2)return 16;}
+            if(codec==C_RANS&&L<=(int)RANS_CHUNK){for(int q=1;q<=32;q+=31){z[zn-q]^=4;if(!rans_decompress_all(z,zn,b,n))return 18;z[zn-q]^=4;}}   /* one-symbol chunk: its four states must stay R64_L */
             aligned++;}
         if(rans_compress_all(a+(size_t)(np-1)*L,(size_t)L,z,cap))return 17;          /* whole leaf: unchanged refusal */
         free(a);free(z);free(b);
