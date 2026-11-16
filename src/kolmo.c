@@ -25,6 +25,7 @@
 #include <limits.h>
 #include "arch/cpu.h"          /* dispatched kernels (src/arch), C references in src/algo */
 #include "algo/predict.h"
+#include "algo/planes.h"
 #if defined(KOLMO_TRACE) || defined(KOLMO_PROF) || defined(KOLMO_TIMING)
 #include <stdio.h>
 #endif
@@ -1127,6 +1128,7 @@ static void shuffle_fwd(const uint8_t *in, int64_t rows, int w, int c, int delta
 #ifdef KOLMO_FRONTIER
     if (w == 2 && frontier_shuffle16(in, (size_t)rows, (unsigned)c, delta, out, 0)) return;
 #endif
+    if (c == 1) { KOLMO_K->planes_split(in, (size_t)rows, (unsigned)w, delta, out); return; }   /* algo/planes.c, SIMD in src/arch */
     uint64_t prev[64] = {0}, tmp[SB]; uint64_t mask = w == 8 ? ~0ull : ((1ull << (8 * w)) - 1);
     for (int64_t r0 = 0; r0 < rows; r0 += SB) {
         int64_t nb = rows - r0 < SB ? rows - r0 : SB;
@@ -1142,6 +1144,7 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 #ifdef KOLMO_FRONTIER
     if (w == 2 && frontier_shuffle16(in, (size_t)rows, (unsigned)c, delta, out, 1)) return;
 #endif
+    if (c == 1) { KOLMO_K->planes_merge(in, (size_t)rows, (unsigned)w, delta, out); return; }
     uint64_t prev[64] = {0}, tmp[SB]; uint64_t mask = w == 8 ? ~0ull : ((1ull << (8 * w)) - 1);
     for (int64_t r0 = 0; r0 < rows; r0 += SB) {
         int64_t nb = rows - r0 < SB ? rows - r0 : SB;

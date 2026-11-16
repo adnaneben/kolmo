@@ -16,6 +16,9 @@ enum { KOLMO_ISA_C = 0, KOLMO_ISA_SSE2 = 1, KOLMO_ISA_SSE41 = 2, KOLMO_ISA_AVX2 
 typedef struct {
     /* IMG8 inverse: rows of W bytes, channel step C (1..4), m bytes (only whole rows are written); see predict.h */
     void (*med8_inv)(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p);
+    /* byte planes of w-byte words, one channel (T_SHUF); see algo/planes.h */
+    void (*planes_split)(const uint8_t *in, size_t rows, unsigned w, int delta, uint8_t *out);
+    void (*planes_merge)(const uint8_t *in, size_t rows, unsigned w, int delta, uint8_t *out);
 } kolmo_kernels;
 
 const kolmo_kernels *kolmo_kernels_get(void);          /* the table for this CPU (thread safe, cheap after the first call) */
