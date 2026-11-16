@@ -44,6 +44,10 @@ typedef int64_t i64;
 #define MAX_ORDER 7
 #define MAX_LPC 32
 #define BATCH 256
+#define MAX_LANES 8
+/* interleaved rANS states (lanes) for a stream of n symbols: fewer for short streams, whose four-byte
+ * final states would otherwise cost more than the speed is worth */
+static int ans_lanes(size_t n) { return n >= 16384 ? 8 : n >= 2048 ? 4 : 1; }
 
 static int g_debug;
 static double g_tm[8];
@@ -257,7 +261,7 @@ static void scr_init(Scr *s, size_t n, int dec) {
     s->t2 = malloc(s->cap * 8);
     s->t3 = malloc(s->cap * 8);
     s->t4 = malloc(s->cap * 8);
-    s->words = malloc(s->cap * 2);
+    s->words = malloc((s->cap + 2 * MAX_LANES) * 2);
     s->bits = malloc(s->cap * 8 + 16);
     if (!s->t2 || !s->t3 || !s->t4 || !s->words || !s->bits) die("out of memory");
 }
@@ -611,36 +615,49 @@ static void code_residuals(Buf *o, const u64 *res, size_t n, int level, int ctx,
             for (int i = 0; i < nb; i++) cumt[(size_t)c * nb + i] = acc, acc += w[i];
         }
         if (g_debug && C > 1) fprintf(stderr, "    contexts=%d\n", C);
-        /* rANS, four interleaved states, encoded backwards so the decoder reads forwards */
-        u32 st[4] = {ANS_L, ANS_L, ANS_L, ANS_L};
+        /* rANS with NL interleaved states, each with its own word stream (so the decoder's lanes do not
+         * wait on each other), encoded backwards so the decoder reads forwards. Uses the exact
+         * reciprocal q = mulhi(x, ceil(2^64 / f)) instead of a division. */
+        int NL = ans_lanes(n);
+        u32 st[MAX_LANES];
+        size_t lcap = n / (size_t)NL + 2, wp[MAX_LANES];
         u16 *w = sc->words;
-        size_t wp = n;
+        for (int k = 0; k < NL; k++) st[k] = ANS_L, wp[k] = (size_t)(k + 1) * lcap;
+        u64 *rcp = malloc((size_t)C * nb * sizeof(u64));
+        if (!rcp) die("out of memory");
+        for (size_t k = 0; k < (size_t)C * nb; k++) rcp[k] = wt[k] > 1 ? (~0ull / wt[k]) + 1 : 0;
         for (size_t i = n; i-- > 0;) {
-            int b = idx[i];
+            int b = idx[i], l = (int)(i & (size_t)(NL - 1));
             size_t tix = (size_t)(i ? cmap[idx[i - 1]] : 0) * nb + b;
             u32 f = wt[tix];
-            u32 x = st[i & 3];
+            u32 x = st[l];
             if ((u64)x >= ((u64)f << (32 - S))) {
-                w[--wp] = (u16)x;
+                w[--wp[l]] = (u16)x;
                 x >>= 16;
             }
-            x = ((x / f) << S) + (x % f) + cumt[tix];
-            st[i & 3] = x;
+            u32 q = f > 1 ? (u32)(((unsigned __int128)x * rcp[tix]) >> 64) : x;
+            x = (q << S) + (x - q * f) + cumt[tix];
+            st[l] = x;
         }
+        free(rcp);
         free(cmap);
         free(wt);
         free(cumt);
         free(cnt);
         if (g_debug) g_tm[4] += now_s() - tb_;
-        size_t nwords = n - wp;
+        size_t nwords = 0, nw[MAX_LANES];
+        for (int k = 0; k < NL; k++) nw[k] = (size_t)(k + 1) * lcap - wp[k], nwords += nw[k];
         put_var(o, (u64)nwords);
-        buf_reserve(o, 16 + nwords * 2);
-        for (int k = 0; k < 4; k++) {
+        for (int k = 0; k + 1 < NL; k++) put_var(o, (u64)nw[k]);
+        buf_reserve(o, 4 * (size_t)NL + nwords * 2);
+        for (int k = 0; k < NL; k++) {
             memcpy(o->p + o->n, &st[k], 4);
             o->n += 4;
         }
-        memcpy(o->p + o->n, w + wp, nwords * 2);
-        o->n += nwords * 2;
+        for (int k = 0; k < NL; k++) {
+            memcpy(o->p + o->n, w + wp[k], nw[k] * 2);
+            o->n += nw[k] * 2;
+        }
     } else {
         memset(idx, 0, n * 2);
     }
@@ -725,9 +742,11 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
     if (r->err) return -1;
     int S = 0, nctx = 1;
     DecEnt *tbl = NULL;
-    const u8 *words = NULL;
     u64 nwords = 0;
-    u32 st[4] = {0};
+    const int NL = ans_lanes(n);
+    u32 st[MAX_LANES] = {0};
+    u64 lw[MAX_LANES] = {0};
+    const u8 *lp[MAX_LANES] = {0}, *lend[MAX_LANES] = {0};
     if (nb > 1) {
         S = get_u8(r);
         int C = get_u8(r);
@@ -774,17 +793,29 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
         }
         free(wts);
         nwords = get_var(r);
-        if (r->err || nwords > n) {
+        u64 lsum = 0;
+        for (int k = 0; k + 1 < NL; k++) {
+            lw[k] = get_var(r);
+            lsum += lw[k];
+            if (lw[k] > nwords) lsum = nwords + 1;
+        }
+        if (r->err || nwords > n || lsum > nwords) {
             free(tbl);
             return -1;
         }
-        const u8 *sp = get_bytes(r, 16 + nwords * 2);
+        lw[NL - 1] = nwords - lsum;
+        const u8 *sp = get_bytes(r, 4 * (u64)NL + nwords * 2);
         if (!sp) {
             free(tbl);
             return -1;
         }
-        for (int k = 0; k < 4; k++) memcpy(&st[k], sp + 4 * k, 4);
-        words = sp + 16;
+        for (int k = 0; k < NL; k++) memcpy(&st[k], sp + 4 * k, 4);
+        const u8 *wbase = sp + 4 * NL;
+        for (int k = 0; k < NL; k++) {
+            lp[k] = wbase;
+            lend[k] = wbase + 2 * lw[k];
+            wbase = lend[k];
+        }
     }
     u64 off_len = get_var(r);
     const u8 *bits = get_bytes(r, off_len);
@@ -793,7 +824,6 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
         return -1;
     }
     u64 total_bits = off_len * 8, pos = 0;
-    size_t wi = 0;
     typedef struct {
         u64 lower, mask;
         u64 ob;
@@ -815,111 +845,75 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
         if (nb == 1) {
             int ob = obs[0];
             if (total_bits - pos < (u64)ob * len) goto bad;
-            u64 lw = lower[0];
+            u64 lw0 = lower[0];
             if (ob == 0)
-                for (size_t k = 0; k < len; k++) res[base + k] = lw;
+                for (size_t k = 0; k < len; k++) res[base + k] = lw0;
             else
-                for (size_t k = 0; k < len; k++, pos += (u64)ob) res[base + k] = lw + read_bits_any(bits, off_len, pos, ob);
+                for (size_t k = 0; k < len; k++, pos += (u64)ob) res[base + k] = lw0 + read_bits_any(bits, off_len, pos, ob);
             continue;
         }
-        if (nwords - wi >= len && maxob <= 56 && pos + (u64)maxob * len + 64 <= total_bits) {
+        int fast = maxob <= 56 && pos + (u64)maxob * len + 64 <= total_bits;
+        size_t per = len / (size_t)NL + 1;
+        for (int k = 0; k < NL && fast; k++)
+            if ((size_t)(lend[k] - lp[k]) < 2 * per) fast = 0;
+        if (fast) {
             /* fused fast path: every word and every 8-byte offset load of this batch is in bounds */
-#define DECF(X, K)                                                                                     \
+#define DECF(L, K)                                                                                     \
     do {                                                                                               \
-        const DecEnt e = cur[(X) & mask];                                                              \
+        u32 X_ = x[L];                                                                                 \
+        const DecEnt e = cur[X_ & mask];                                                               \
         if (CTXON) cur = tbl + ((size_t)e.pad << S);                                                   \
-        (X) = (u32)e.f * ((X) >> S) + e.s;                                                             \
+        X_ = (u32)e.f * (X_ >> S) + e.s;                                                               \
         u16 wv;                                                                                        \
-        memcpy(&wv, words + 2 * wi, 2);                                                                \
-        int need = (X) < ANS_L;                                                                        \
-        (X) = need ? ((X) << 16) | wv : (X);                                                           \
-        wi += (size_t)need;                                                                            \
+        memcpy(&wv, p[L], 2);                                                                          \
+        int need = X_ < ANS_L;                                                                         \
+        x[L] = need ? (X_ << 16) | wv : X_;                                                            \
+        p[L] += 2 * need;                                                                              \
         const BinD *bd = &bdt[e.b];                                                                    \
         out[K] = bd->lower + ((load64(bits + (pos >> 3)) >> (pos & 7)) & bd->mask);                   \
         pos += bd->ob;                                                                                 \
     } while (0)
-            u32 x0 = st[0], x1 = st[1], x2 = st[2], x3 = st[3];
+#define DECF_BATCH(NLC)                                                                                \
+    do {                                                                                               \
+        u32 x[NLC];                                                                                    \
+        const u8 *p[NLC];                                                                              \
+        for (int q = 0; q < NLC; q++) x[q] = st[q], p[q] = lp[q];                                      \
+        size_t k = 0;                                                                                  \
+        for (; k + NLC <= len; k += NLC)                                                               \
+            for (int q = 0; q < NLC; q++) DECF(q, k + q);                                              \
+        for (int q = 0; k < len; q++, k++) DECF(q, k);                                                 \
+        for (int q = 0; q < NLC; q++) st[q] = x[q], lp[q] = p[q];                                      \
+    } while (0)
             u64 *out = res + base;
-            size_t k = 0;
-#define DECF_BATCH                                                                                     \
-    for (; k + 4 <= len; k += 4) {                                                                     \
-        DECF(x0, k);                                                                                   \
-        DECF(x1, k + 1);                                                                               \
-        DECF(x2, k + 2);                                                                               \
-        DECF(x3, k + 3);                                                                               \
-    }                                                                                                  \
-    if (k < len) {                                                                                     \
-        DECF(x0, k);                                                                                   \
-        k++;                                                                                           \
-    }                                                                                                  \
-    if (k < len) {                                                                                     \
-        DECF(x1, k);                                                                                   \
-        k++;                                                                                           \
-    }                                                                                                  \
-    if (k < len) {                                                                                     \
-        DECF(x2, k);                                                                                   \
-        k++;                                                                                           \
-    }
             if (nctx > 1) {
 #define CTXON 1
-                DECF_BATCH
+                if (NL == 8) DECF_BATCH(8);
+                else if (NL == 4) DECF_BATCH(4);
+                else DECF_BATCH(1);
 #undef CTXON
             } else {
 #define CTXON 0
-                DECF_BATCH
+                if (NL == 8) DECF_BATCH(8);
+                else if (NL == 4) DECF_BATCH(4);
+                else DECF_BATCH(1);
 #undef CTXON
             }
-            st[0] = x0, st[1] = x1, st[2] = x2, st[3] = x3;
             continue;
         }
-        if (nwords - wi >= len) {
-#define DEC1(X, K)                                                                                     \
-    do {                                                                                               \
-        const DecEnt e = cur[(X) & mask];                                                              \
-        cur = tbl + ((size_t)e.pad << S);                                                              \
-        idx[K] = e.b;                                                                                  \
-        (X) = (u32)e.f * ((X) >> S) + e.s;                                                             \
-        u16 wv;                                                                                        \
-        memcpy(&wv, words + 2 * wi, 2);                                                                \
-        int need = (X) < ANS_L;                                                                        \
-        (X) = need ? ((X) << 16) | wv : (X);                                                           \
-        wi += (size_t)need;                                                                            \
-    } while (0)
-            u32 x0 = st[0], x1 = st[1], x2 = st[2], x3 = st[3];
-            size_t k = 0;
-            for (; k + 4 <= len; k += 4) {
-                DEC1(x0, k);
-                DEC1(x1, k + 1);
-                DEC1(x2, k + 2);
-                DEC1(x3, k + 3);
-            }
-            if (k < len) {
-                DEC1(x0, k);
-                k++;
-            }
-            if (k < len) {
-                DEC1(x1, k);
-                k++;
-            }
-            if (k < len) {
-                DEC1(x2, k);
-                k++;
-            }
-            st[0] = x0, st[1] = x1, st[2] = x2, st[3] = x3;
-        } else {
-            for (size_t k = 0; k < len; k++) {
-                u32 *x = &st[k & 3];
-                const DecEnt e = cur[*x & mask];
-                cur = tbl + ((size_t)e.pad << S);
-                idx[k] = e.b;
-                *x = (u32)e.f * (*x >> S) + e.s;
-                if (*x < ANS_L) {
-                    if (wi >= nwords) goto bad;
-                    u16 wv;
-                    memcpy(&wv, words + 2 * wi, 2);
-                    wi++;
-                    *x = (*x << 16) | wv;
-                }
+        /* checked path, near the end of the streams */
+        for (size_t k = 0; k < len; k++) {
+            int l = (int)(k & (size_t)(NL - 1));
+            u32 *x = &st[l];
+            const DecEnt e = cur[*x & mask];
+            cur = tbl + ((size_t)e.pad << S);
+            idx[k] = e.b;
+            *x = (u32)e.f * (*x >> S) + e.s;
+            if (*x < ANS_L) {
+                if (lp[l] >= lend[l]) goto bad;
+                u16 wv;
+                memcpy(&wv, lp[l], 2);
+                lp[l] += 2;
+                *x = (*x << 16) | wv;
             }
         }
         u64 need = 0;
@@ -936,9 +930,8 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
         }
     }
     if (nb > 1) {
-        if (wi != nwords) goto bad;
-        for (int k = 0; k < 4; k++)
-            if (st[k] != ANS_L) goto bad;
+        for (int k = 0; k < NL; k++)
+            if (st[k] != ANS_L || lp[k] != lend[k]) goto bad;
     }
     if ((pos + 7) / 8 != off_len) goto bad;
     free(tbl);
@@ -1153,31 +1146,29 @@ static Delta choose_delta(const u64 *lat, size_t n, int max_order, int allow_lpc
         u64 *ls = sc->t4;
         size_t lm = take_sample(lat, n, ls, 4096);
         double lscale = (double)n / (double)lm;
-        u64 *smp = ls;
-        size_t m = lm;
         double base_cost = best * scale / lscale;
-        u64 mn = smp[0], mx = smp[0];
-        for (size_t i = 0; i < m; i++) {
-            if (smp[i] < mn) mn = smp[i];
-            if (smp[i] > mx) mx = smp[i];
+        u64 mn = ls[0], mx = ls[0];
+        for (size_t i = 0; i < lm; i++) {
+            if (ls[i] < mn) mn = ls[i];
+            if (ls[i] > mx) mx = ls[i];
         }
-        if (bitlen(mx - mn) <= 40) {
+        if (bitlen(mx - mn) <= 30) {
             static __thread double a[MAX_LPC + 1][MAX_LPC + 1];
             double err[MAX_LPC + 1];
             int maxp = MAX_LPC;
-            if ((size_t)maxp * 64 > m) maxp = (int)(m / 64);
-            if (maxp >= 1 && lpc_analyse(smp, m, maxp, a, err)) {
+            if ((size_t)maxp * 64 > lm) maxp = (int)(lm / 64);
+            if (maxp >= 1 && lpc_analyse(ls, lm, maxp, a, err)) {
                 int bp = 1;
                 double be = 1e300;
                 for (int p = 1; p <= maxp; p++) {
-                    double e = 0.5 * (double)n * log2(err[p] / (double)m + 1e-12) + 20.0 * p;
+                    double e = 0.5 * (double)n * log2(err[p] / (double)lm + 1e-12) + 20.0 * p;
                     if (e < be) be = e, bp = p;
                 }
                 Delta l;
                 lpc_quantize(a[bp], bp, (double)(mx - mn), &l);
                 u64 *out = sc->t1;
-                lpc_residuals(smp, m, &l, sc->t2, out);
-                double c = proxy_cost(out + l.p, m - l.p, 0) + (64.0 * l.p + 16.0 * l.p) / lscale;
+                lpc_residuals(ls, lm, &l, sc->t2, out);
+                double c = proxy_cost(out + l.p, lm - l.p, 0) + (64.0 * l.p + 16.0 * l.p) / lscale;
                 if (c < base_cost * 0.985) {
                     best = c * lscale / scale;
                     d = l;
