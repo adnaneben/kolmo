@@ -23,6 +23,10 @@ extern int kolmo_force_c;
  * It also stops in front of a token the C loop rejects, so errors are reported by the reference. */
 void kolmo_wd_dec_neon(const uint8_t **pp, const uint8_t *end, uint8_t **po, uint8_t *oe, const uint8_t *arena,
                        const uint8_t *wl, uint32_t nw, const int16_t *pidx, uint8_t capb, const uint8_t *special);
+/* byte-plane split / merge with optional per-channel delta (shuffle_fwd / shuffle_inv in src/kolmo.c): words of 2, 4
+ * or 8 bytes and 1 to 4 channels; returns 0 for other shapes, which take the C reference */
+int kolmo_shuffle_fwd_neon(const uint8_t *in, int64_t rows, int w, int c, int delta, uint8_t *out);
+int kolmo_shuffle_inv_neon(const uint8_t *in, int64_t rows, int w, int c, int delta, uint8_t *out);
 #endif
 
 #endif

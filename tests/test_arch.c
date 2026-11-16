@@ -81,8 +81,35 @@ static void test_word(void) {
     free(txt);
 }
 
+/* ---------------------------------------------------------------- byte-plane shuffle */
+static void test_shuffle(void) {
+    size_t N = 1 << 16; uint8_t *in = malloc(N * 32 + 64), *a = malloc(N * 32 + 64), *b = malloc(N * 32 + 64), *back = malloc(N * 32 + 64);
+    for (int it = 0; it < 400; it++) {
+        int w = 1 << (rnd() % 4), c = 1 + (int)(rnd() % (it % 5 ? 4 : 8)), delta = rnd() & 1;
+        int64_t rows = it < 64 ? it : (int64_t)(rnd() % (it % 7 ? 300 : N));
+        size_t n = (size_t)rows * w * c;
+        int kind = rnd() % 3;                       /* random bytes, a smooth walk, values at the wrap-around edges */
+        uint64_t v = rnd64();
+        for (size_t i = 0; i < n; i++) {
+            if (kind == 0) in[i] = (uint8_t)rnd();
+            else if (kind == 1) { if (i % w == 0) v += (uint64_t)(int64_t)(int)(rnd() % 64 - 32); in[i] = (uint8_t)(v >> (8 * (i % w))); }
+            else in[i] = (uint8_t)(rnd() & 1 ? 0xFF : 0x00);
+        }
+        memset(a, 0xA5, n + 64); memset(b, 0xA5, n + 64);
+        kolmo_force_c = 1; shuffle_fwd(in, rows, w, c, delta, a);
+        kolmo_force_c = 0; shuffle_fwd(in, rows, w, c, delta, b);
+        CHECK(!memcmp(a, b, n + 64), "shuffle_fwd w=%d c=%d delta=%d rows=%lld", w, c, delta, (long long)rows);
+        memset(back, 0x5A, n + 64); memset(b, 0x5A, n + 64);
+        kolmo_force_c = 1; shuffle_inv(a, rows, w, c, delta, back);
+        kolmo_force_c = 0; shuffle_inv(a, rows, w, c, delta, b);
+        CHECK(!memcmp(back, b, n + 64) && !memcmp(back, in, n), "shuffle_inv w=%d c=%d delta=%d rows=%lld", w, c, delta, (long long)rows);
+    }
+    free(in); free(a); free(b); free(back);
+}
+
 int main(void) {
     printf("kernels: %s\n", KOLMO_NEON ? "NEON" : "none (C references only)");
+    test_shuffle();
     test_word();
     kolmo_force_c = 0;
     printf("%ld checks, %ld failures\n", checks, fails);
