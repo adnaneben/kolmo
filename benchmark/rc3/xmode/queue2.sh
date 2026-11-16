@@ -1,8 +1,7 @@
 #!/bin/sh
-# Resume of queue.sh after the container restart of 16 November (rows already in the CSVs are not re-run).
+# Resume of queue.sh after the container restarts of 16 November (rows already in the CSVs are not re-run).
 set -e
 B=$1; D=$2; O=$3; R="python3 -I $(dirname "$0")/run.py"
-$R $B/kolmo-base $D $O/base100.csv --sizes 100m --kinds bin,fq --threads 1,4 --label base
 $R $B/kolmo-final $D $O/final100.csv --sizes 100m --threads 1,4 --label final
 $R $B/kolmo-s4 $D $O/s5.csv --sizes 10m --kinds osdb --threads 1,4 --label s4-columns
 $R $B/kolmo-s5 $D $O/s5.csv --sizes 10m --kinds osdb --threads 1,4 --label s5-halves
