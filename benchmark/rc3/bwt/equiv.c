@@ -9,7 +9,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "libbsc/libbsc.h"
-#include "codecs/bwt.h"
+#include "codecs/bwt_stream.h"
 #include "algo/qlfc.h"
 
 static uint8_t *readall(const char *p, size_t *n) {

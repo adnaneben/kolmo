@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Genetic search over kolmo build-time settings (thresholds, coder levels, context-mixing parameters).
 
-Each genome is compiled into its own kolmo binary (src/cli.c + src/kolmo.c against the prebuilt vendor library), run on a
+Each genome is compiled into its own kolmo binary (src/cli/cli.c + src/kolmo.c against the prebuilt vendor and arch libraries), run on a
 corpus in the chosen modes, and scored by total compressed size relative to the defaults. Genomes that compress or
 decompress more than --slack slower than the defaults are penalised, so the search cannot buy ratio with speed.
 Every result is verified by a full round trip. Runs until --hours have passed, then writes tune/best.json and a log.
@@ -39,7 +39,7 @@ def build(genome, bindir):
     cf, lf = flags()
     defs = " ".join(f"-D{k}={v}" for k, v in sorted(genome.items()))
     sh(f"cc {cf} -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 {defs} "
-       f"-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include src/cli.c src/kolmo.c build/libvendor.a {lf} "
+       f"-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a {lf} "
        f"-llzma -lpthread -lm -o {exe}", cwd=ROOT)
     return exe
 
@@ -96,8 +96,8 @@ def main():
                    if os.path.isfile(os.path.join(corpus, f)) and not f.endswith((".zip", ".xz", ".kolmo")))
     modes = a.modes.split(",")
     bindir = os.path.join(ROOT, "tune", "bin"); os.makedirs(bindir, exist_ok=True)
-    if not os.path.exists(os.path.join(ROOT, "build", "libvendor.a")):
-        sh("make build/libvendor.a", cwd=ROOT)
+    if not all(os.path.exists(os.path.join(ROOT, "build", f)) for f in ("libvendor.a", "libkolmoarch.a")):
+        sh("make build/libvendor.a build/libkolmoarch.a", cwd=ROOT)
     tmp = tempfile.mkdtemp(prefix="cztune")
     log = open(os.path.join(ROOT, "tune", "log.tsv"), "a")
     cache = {}

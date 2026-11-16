@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include "codecs/bwt.h"
+#include "codecs/bwt_stream.h"
 #include "algo/lzp.h"
 #include "algo/qlfc.h"
 #ifdef GOLDEN_FROM_LIBBSC
