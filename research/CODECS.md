@@ -67,7 +67,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | kolmo-fastq prototype (Codex) | four-line FASTQ split | 58% larger than zstd -3 | dropped (superseded by kfam) |
 | kfam CSV and one-stream families | family streams | loses to the table transform on CSV; +9.9% vs `-x` on chr22 FASTA | research |
 | kbin | pcodec-style binning, rANS bin indices, offset bits, LPC up to order 8 | beats pcodec 8/12 on all 18 files; ECG −4.4% vs `ratio` at 38× compress speed; equal to `balanced` over all NPY | candidate numeric node (rc3 decision) |
-| krans | 32-way interleaved static rANS, order 0/1, AVX2 | order 0: −0.4% to −0.8% vs HUF leaves, 1.19–1.26× faster decode on x86; order 1: −20–25% at 0.35–0.47× decode; NEON slower than scalar on M5 | candidate leaf coder on x86 (simd lanes) |
+| krans | 32-way interleaved static rANS, order 0/1, AVX2 | order 0: −0.4% to −0.8% vs HUF leaves, 1.19–1.26× faster decode on x86; order 1: −20–25% at 0.35–0.47× decode; NEON on M5 (simd-arm): order 0 0.43× scalar at 8 ways, 1.2–1.3× at 16–32 ways; order 1 0.38–0.53× | candidate leaf coder on x86 (simd lanes) |
 
 ## Speed techniques
 
@@ -78,3 +78,17 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | `-ffp-contract=off` everywhere | build | Brotli encoder output no longer depends on FMA | in (rc2) |
 | Metal GPU (KRC hybrid) | KRC | no faster than the CPU path | research |
 | hand-written assembly | — | below a few percent where measured so far (SIMD-ASM.md) | rc3 simd lanes: kept wherever it gains |
+| NEON word-transform decoder (64-byte classification, token walk by count-trailing-zeros) | decode, word transform (eco, hc) | dickens -m hc decode −36%, -m eco −20% (M5, 1 thread) | in (rc3 simd-arm) |
+| NEON byte-plane split/merge with delta (LD2-LD4, UZP/ZIP, prefix sums) | `shuffle` transform | mr -m speed decode −57%, stereo WAV balanced decode −50%, compress −8% | in (rc3 simd-arm) |
+| NEON IMG8 median inverse as a 16-row wavefront (skewed 16×16 tiles, transposes) | IMG8 decode | RGB image balanced decode −62%, eco −40%; Y4M decode via IMG8 | in (rc3 simd-arm) |
+| NEON IMG8/IMG16 forward residuals, 16-bit SAD in the row-stride search | image compress | 16-bit images balanced compress −41 to −42% (x-ray, img16) | in (rc3 simd-arm) |
+| IMG16 median inverse with a 4-op chain (case split on L against min/max(U, UL)), portable C; NEON left predictor | IMG16 decode | mr / 16-bit image balanced decode −24 to −25% | in (rc3 simd-arm) |
+| NEON integer-graph inverse, 32-bit, every residual width / order / factor | decode of int32 arrays | balanced −25%, hc −30%, ratio −10% | in (rc3 simd-arm) |
+| NEON table-decoder helpers (field mask, number-index left-pack, kind counts) | CSV decode | owid/energy CSV decode −11 to −12% | in (rc3 simd-arm) |
+| NEON DEC64 inverse (planes → 64-bit lanes, 2-lane prefix sums, FCVT/FDIV; tagged values in stream order) | decimal-double decode | f64 array balanced −21%, hc −25%, eco −12% | in (rc3 simd-arm) |
+| planner image trial: sample loop outside the lag loop (cache) | IMG8 trial in the planner | image compress −3.5% more, y4m −4.5% | in (rc3 simd-arm) |
+| kvid NEON strip prediction (encoder costs/residuals, temporal add, intra via the IMG8 wavefront) | kvid (research) | CIF clip -m rt compress −54%, decode −61% | in kvid (rc3 simd-arm) |
+| FEAT_CSSC scalar min/max for the IMG16 median chain | IMG16 decode | 7–13% slower than compare-select on M5 | dropped |
+| NEON rANS decode for Kolmo's own leaf (4 × 64-bit states) | rANS leaves | not attempted: no 64-bit lane multiply, 4 states only; krans analysis: NEON loses below 16 ways (no gather, lane transfers, horizontal renorm mask in the per-round chain) | stays scalar |
+| NEON CM mixer dot product / weight update | `-x` | clang already vectorises them (224 SMLAL in cm_compress_m); mixer ~8% of `-x`, the rest is cache misses in cm_find (48%) | no hand kernel (prefetch: xmode lane) |
+| NEON word-transform encoder (run ends by vector compare, memcmp confirm, slot list instead of table scan) | word encode | 5–10% slower (short runs: the vector chain replaces well-predicted branches) | dropped |

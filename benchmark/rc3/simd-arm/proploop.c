@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
     const char *fr = dec ? getenv("PROPLOOP_FRAME") : NULL; int64_t zn = 0; FILE *ff = fr ? fopen(fr, "rb") : NULL;
     if (ff) { zn = (int64_t)fread(z, 1, cap, ff); fclose(ff); }
     else {
-        zn = kolmo_compress(src, n, z, cap, &P);
+        zn = dec || fr ? kolmo_compress(src, n, z, cap, &P) : 1;   /* (compression: the timed loop writes it) */
         if (fr && zn > 0 && (ff = fopen(fr, "wb"))) { fwrite(z, 1, (size_t)zn, ff); fclose(ff); }
     }
     if (zn <= 0) { fprintf(stderr, "compress failed %lld\n", (long long)zn); return 1; }
@@ -61,6 +61,7 @@ int main(int argc, char **argv) {
         int64_t r = dec ? kolmo_decompress(z, (size_t)zn, back, n, 1) : kolmo_compress(src, n, z, cap, &P);
         double b = now() - a; if (b < best) best = b; runs++;
         if (r <= 0) { fprintf(stderr, "run failed %lld\n", (long long)r); return 1; }
+        if (!dec) zn = r;
     } while (now() - t0 < secs);
     if (pcf) {
         struct itimerval it = {{0, 0}, {0, 0}}; setitimer(ITIMER_PROF, &it, NULL);
@@ -69,6 +70,6 @@ int main(int argc, char **argv) {
         fclose(g);
     }
     if (dec && memcmp(back, src, n)) { fprintf(stderr, "round trip differs\n"); return 1; }
-    printf("%s %s %zu -> %lld runs %d best %.2f ms\n", m, dec ? "d" : "c", n, (long long)zn, runs, best * 1e3);
+    printf("%s %s %zu -> %lld runs %d best %.3f ms\n", m, dec ? "d" : "c", n, (long long)zn, runs, best * 1e3);
     return 0;
 }
