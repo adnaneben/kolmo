@@ -1,6 +1,6 @@
 /* Fast forward path of the integer node (KG_INT): the predictor choice and the residual pass of kg_encode_num.
  *
- * Same decisions and same bytes as the generic code in kgraph.inc, which stays as the reference and the control
+ * Same decisions and same bytes as the generic code in graph.c, which stays as the reference and the control
  * build (-DKOLMO_FORCE_GENERIC_INT_FWD). Ported from the research tree of PR #7: P2-E2 (fused, specialised
  * forward passes), P2-E9 (the three predictor orders evaluated in one sweep) and P2-E30 (the 16-bit audio case,
  * which is the W = 2 instance here). What changes:

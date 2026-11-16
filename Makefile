@@ -195,6 +195,15 @@ build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan
+# Assembly kernels (src/arch/<isa>/*.S) against their C references, optimised and with sanitizers; with NO_ASM=1 the
+# references only.
+build/test-asm: tests/test_asm.c src/kolmo.c $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-asm-asan: tests/test_asm.c src/kolmo.c $(KOLMO_INCLUDES) $(ARCHSRC) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< $(ARCHSRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-asm: build/test-asm build/test-asm-asan
+	./build/test-asm
+	./build/test-asm-asan
 # Trained profiles and --target (features-a): round trips, damaged profiles and frames, targets, merging.
 build/test-profile: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
@@ -204,8 +213,8 @@ check-profile: build/test-profile build/test-profile-asan
 	./build/test-profile
 	KOLMO_SKIP_CALIBRATE=1 ./build/test-profile-asan
 .PHONY: check-profile
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-profile
-.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
+check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-profile
+.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan

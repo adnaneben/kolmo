@@ -59,6 +59,46 @@ src/
   experimental/              research tools that are not part of the library
 ```
 
+### The tree as built in rc3 (structure lane)
+
+The proposal above is followed with these differences, which the structure lane chose to keep the output byte-identical
+and the move mechanical:
+
+- **One translation unit.** `src/kolmo.c` is now only a list of `#include`s of the parts below, in dependency order.
+  The compiler still sees the whole library at once (the same inlining as rc2), internal functions stay `static`, and
+  the tests that include `src/kolmo.c` to reach them work unchanged. Each part can only use what an earlier part
+  defines. Compiled on their own and archived with it: `arch/xxh3.c` (it defines its own xxHash instance) and the
+  assembly kernels `arch/<isa>/*.S`. The Makefile lists the parts by directory as prerequisites.
+- **Per-file blocks instead of a few big files.** `core/` has `blocks.c` (block splitting and the block encoder),
+  `pool.c` (thread pool, per-thread state), `compress.c`, `decode.c`, `io.c`, `memory.c` (scratch cache, checked
+  allocation), `stream.c`, `container.h`, `common.h` (system and codec headers). There is no `core/container.c` yet:
+  the header layout is in `container.h`, parsing in `decode.c`, CRC32C in `arch/crc32c.c`.
+- **plan/**: `planner.c` (mode, trials, `make_plan`), `detect.c` (text and JSON detection), `parallel.c` (planning
+  of archive members on the pool), `frontier.c` (opt-in research build), `plan.h`, `tunables.h`.
+- **transforms/**: `table.c` (was `tbl2.inc`), `table_v03.c` (the column table of v0.3, tflag 3), `transpose.c`,
+  `shuffle.c`, `log.c`, `lines.c`, `sci.c`, `word.c`, `json.c`, `x86.c`, `tar.c` (archive segments), `graph.c`,
+  `graph_fwd.c`, `graph_typed.c` (was `typed_int_encoder.inc`), `common.h` (transform ids, scanners).
+- **codecs/**: one file per codec family with its `kolmo_codec` table: `store.c lz4.c (LZ4, LZ4-HC) zstd.c brotli.c
+  bwt.c (libbsc, codec 5) lzma.c cm.c cm_image.c (codec 17) huf.c rans.c nplane.c (codec 15, a graph leaf codec, so
+  in codecs/ rather than transforms/) fastq.c (was kfam.inc, codec 16)`, `graph_leaf.c` (plane-aligned leaves), and
+  `codec.c`, the registry and `codec_bound`/`codec_compress`/`codec_decompress`. `audio.c` and `video.c` come with
+  the format2 lane.
+- **algo/**: `decimal.c` (decimal parse and format: the references of the decimal kernels), `hist.c` (byte
+  histogram), `varint.h`. The libbsc and libsais code stays in `vendor/` until the bwt lane takes it over.
+- **arch/**: `cpu.h` (CPUID dispatch, target attributes, host byte order), `crc32c.c` (reference and dispatch),
+  `decimal.c` (dispatch of the formatters), `xxh3.c` (was `vendor/xxhash/kolmo_xxh3.c`), `asm.h`;
+  `x86_64/`: `crc32c_sse42.c decimal_avx2.c int_inv_sse2.c int_inv_avx2.c hist_x86_64.S`;
+  `aarch64/`: `crc32c_arm.c decimal_neon.c hist_aarch64.S`. `arch/metal/` does not exist yet (`NO_GPU=1` is ready
+  for it). The SSE2/NEON scanners inside the transforms (transpose, table, word) were left where they are; they are
+  candidates for the simd lanes.
+- **cli/**: `cli.c`.
+
+Adding a part: create the file in its directory, add one `#include` line to `src/kolmo.c` after the parts it uses,
+and nothing else (the Makefile and the bindings find it). Adding a codec: a file in `codecs/` defining
+`static const kolmo_codec codec_<name>`, its tentative declaration in `codecs/codec.h` and its identifier in the
+registry of `codecs/codec.c`. Adding an assembly kernel: copy `arch/x86_64/hist_x86_64.S` (or the aarch64 one), its
+reference and dispatch in `algo/hist.c`, and its test in `tests/test_asm.c`.
+
 ### Why per ISA, not a single `asm/` folder
 
 Assembly is specific to an instruction set, and so are intrinsics. Keeping both in `arch/<isa>/` puts every kernel
