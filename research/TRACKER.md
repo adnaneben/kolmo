@@ -1,8 +1,14 @@
 # Research tracker
 
-Every takeaway and planned action from the experimentation, with its status and outcome. The research phase is not
-closed, and nothing is merged to main, until every row is **Done** or **Dropped** (dropped means: measured, and the
-number that justifies dropping it is in the row). Decision of 12 November 2026.
+Every takeaway and planned action from the experimentation, with its status and outcome. A row is closed when it is
+**Done** or **Dropped** (dropped means: measured, and the number that justifies dropping it is in the row).
+
+**Release train (owner decision of 16 November 2026, replacing the rule of 12 November that nothing merges to main until
+every row is closed).** Research continues on branches and never blocks a release. A release line merges to main when:
+the owner gives a written go; CI is green on macOS, Linux x86-64 and Linux ARM (tests, sanitizers, determinism,
+research-codec checks); a coverage-guided fuzzing run of every decoder is recorded; the acceptance script's verdict
+and the open format decisions are settled in writing. Measured features land behind an option or as a new format
+identifier; a default changes only through the evidence gate (a preregistered fresh test against the named rival).
 
 Sources: S = session plan, G = the "Kolmo-inspired codec" plan (experiment ids E00 to E10), M = found by measurement.
 Costs and trade-offs of what was done are in `benchmark/accept/REGRESSIONS.md`; this file tracks what was planned.
@@ -101,7 +107,7 @@ Status on 13 November 2026 (branch `claude/dec64`): 110 rows. 23 done (one of th
 | E7 | Executive deck | S | Not done | "Changes" slide still says speed mode "tighten"; no DEC64, image model or PAQ8PX results |
 | E8 | Revisit the 13 ledger decisions | S | Not done | At the end, by agreement |
 | E9 | Final validation: freeze, full holdout, damaged-input tests, acceptance twice | G E09 | Not done | Last step before the merge |
-| E10 | Merge to main | S | Deferred | Not before every row above is Done or Dropped. Main still has the int64 pickle regression |
+| E10 | Merge to main | S | Release train | Merges per the release-train rule above (16 November), not when every row is closed. Main still has the int64 pickle regression, which the release line fixes |
 | E11 | Tag and publish | S | Not done | From the Mac, after E10 |
 
 ## S. Stacking and amplification
