@@ -33,6 +33,28 @@ The code change is in commit `fc9a356`. Scripts are in `benchmark/rc2/simd/`, ra
   x86-64 Huffman assembly), in the kernel (`pread`/`pwrite`, page faults), or in memory-bound or latency-bound code:
   the context-mixing model, MED image prediction, the `lines` scatter and histograms. Assembly does not help there.
 
+## Kolmo options and their backends
+
+Every option this report mentions, with the backend codec it runs and what Kolmo adds or changes on top. "This
+branch" means `claude/simd-dispatch-20261116`; "rc2" means the 1.2.0-rc2 changes in `CHANGELOG.md`. All modes share
+the container: independent blocks, XXH3-64 per block (this branch: xxHash's AVX2 kernel chosen at run time) and
+CRC32C over the header and index (this branch: SSE4.2 instruction chosen at run time).
+
+| option | backend | Kolmo on top (transforms, choices, tweaks) |
+|---|---|---|
+| `-m speed` (= `-m rt -Q`) | LZ4 1.x, `LZ4_compress_fast`, acceleration 1 | adaptive blocks (~8 per input, ≤4 MiB); minimal analysis (`-Q`): the table and log transforms are dropped, only cheap ones kept; per-block XXH3 recorded in the index |
+| `-m balanced` (default, = `-m fast`) | zstd 1.5.x level 3 (`CZ_FAST_LEVEL`) | adaptive blocks; structure transforms (typed table columns with delta/entity/delta-of-delta/third-order/formula predictors, log templates, fixed-width lines, JSON split, decimal doubles, fixed records, 16-bit images, x86 branch transform, per-member tar models); integer arrays go to the integer graph (predicted, zig-zag residuals in byte planes; each leaf coded by the mode's coder, Huffman, or in the slower modes rANS order 0, whichever is smallest). rc2: faster integer forward path (one-sweep order choice, no division when the factor is 1; same bytes). This branch: decode of numeric CSV uses the AVX2 decimal formatter by CPUID, and 32-bit integer arrays use the new SSE2/AVX2 prefix-sum inverse (same bytes) |
+| `--native-leaf` (with balanced) | Kolmo's plane-context leaves instead of zstd/Huffman for integer residuals | container version 9; files that do not use it are unchanged |
+| `--typed-huf` (with `-m fast -T1`) | per-plane Huffman on integer NPY and PCM16 WAV under 8 MiB, coded type first | rc2: WAV clips with long repeats get zstd-3 leaves instead of Huffman |
+| `-m eco` | Brotli quality 8 (`CZ_ECO_LEVEL`), window 2^24, `BROTLI_MODE_GENERIC` | 16 MiB blocks; the transforms above plus word codes (frequent words become 2-byte codes from unused byte values). This branch: Brotli and all other vendored code compiled with `-ffp-contract=off`, so its float cost model never uses FMA |
+| `-m hc` | zstd level 19; text after the word transform: zstd level 22 (`CZ_HC_TEXT_LEVEL`) with one 128 MiB window | 16 MiB blocks; transforms as in eco |
+| `-m ratio` (= `-m max`) | LZMA2 (liblzma, preset 9 + EXTREME, dictionary the next power of two above the block, at most 64 MiB, raw LZMA2 with stored lc/lp/pb) for binary blocks; BWT from libbsc (LZP hash 15, min length 72, BWT sorter, static QLFC coder, fast mode; XXH32 guard) for text and JSON token streams | 128 MiB blocks; binary blocks switch to BWT when it is at least 3 % smaller (`KOLMO_BWT_GAIN_PCT`); `-l 1`: BWT for every block |
+| `-x` (= `-m ultra`) | Kolmo's own context-mixing coder (orders 1–7, words, columns, indirect contexts, bit histories, neural mixing, APMs; model 3 on text, model 2 otherwise), an image model for 8-bit images | 128 MiB blocks; best per block of CM, LZMA2 and BWT. rc2: the squash table, its inverse and the arithmetic coder were rewritten from their definitions (bitstream unchanged). `-x -l 1`: model 1 only; `-x -l 2`: integer-graph leaves may use CM too |
+| `-T n` | — | threads; blocks are independent, frames are the same for every `n` (checked in this study) |
+
+In the tables below, `speed` = LZ4, `balanced` = zstd 3 + transforms, `hc` = zstd 19/22 + transforms,
+`ratio` = LZMA2/BWT + transforms, as in this table.
+
 ## Setup
 
 | | |
@@ -70,13 +92,13 @@ build, so its fast paths are not missing from generic builds.
 ### Byte identity and FMA
 
 Kolmo compiles `kolmo.c` with `-ffp-contract=off`. Kolmo's own object has **0 FMA instructions** in the `avx2` and
-`native` builds (`objdump -d build/kolmo.o | grep vfmadd`). The vendored sources do *not* get `-ffp-contract=off`.
-With `-mfma` or `-march=native`, 201 FMA instructions appear in the **Brotli encoder's** float cost model
+`native` builds (`objdump -d build/kolmo.o | grep vfmadd`). At `9d4496a` and `fc9a356` the vendored sources did
+*not* get `-ffp-contract=off`. With `-mfma` or `-march=native`, 201 FMA instructions appeared in the **Brotli encoder's** float cost model
 (`WriteMetaBlockInternal`, `BrotliPopulationCost*`, `BlockSplitterFinishBlock*`, `BrotliCompareAndPushToQueue*`,
 `ShouldCompress`, `ShouldMergeBlock`). Kolmo uses Brotli only in `-m eco`. Eco frames of all four inputs were
 identical across 5 builds, but no flag guarantees that, so this is a risk for local `-march=native` builds (the
-Makefile default) and for arm64, where contraction is on by default. Recommended follow-up: compile the vendored C
-with `-ffp-contract=off` too.
+Makefile default) and for arm64, where contraction is on by default. **Fixed since:** every C and C++ file of every
+build is now compiled with `-ffp-contract=off` (section 5).
 
 Frames of the timed runs (round 1; every build, every case):
 
@@ -84,112 +106,112 @@ Frames of the timed runs (round 1; every build, every case):
 |---|---|---:|---:|---|---:|
 | input | mode | T | size (bytes) | SHA-256 (first 16) | builds agreeing |
 |---|---|---:|---:|---|---:|
-| silesia.tar | speed | 1 | 99,918,100 | `88007657ae0a774f` | 4/4 |
-| silesia.tar | speed | 4 | 99,918,100 | `88007657ae0a774f` | 4/4 |
-| silesia.tar | balanced | 1 | 58,245,943 | `43ef81d7fc5da90e` | 4/4 |
-| silesia.tar | balanced | 4 | 58,245,943 | `43ef81d7fc5da90e` | 4/4 |
-| silesia.tar | hc | 1 | 47,624,828 | `2342befaad9eb08e` | 4/4 |
-| silesia.tar | hc | 4 | 47,624,828 | `2342befaad9eb08e` | 4/4 |
-| silesia.tar | ratio | 1 | 40,687,857 | `649ccb3c09a84e36` | 4/4 |
-| silesia.tar | ratio | 4 | 40,687,857 | `649ccb3c09a84e36` | 4/4 |
-| trades.csv | speed | 1 | 36,817,721 | `849c8ec4a1840aa6` | 4/4 |
-| trades.csv | speed | 4 | 36,817,721 | `849c8ec4a1840aa6` | 4/4 |
-| trades.csv | balanced | 1 | 12,085,484 | `f4d6fc81bbd9fca6` | 4/4 |
-| trades.csv | balanced | 4 | 12,085,484 | `f4d6fc81bbd9fca6` | 4/4 |
-| trades.csv | hc | 1 | 11,782,261 | `7a690f0d706ac084` | 4/4 |
-| trades.csv | hc | 4 | 11,782,261 | `7a690f0d706ac084` | 4/4 |
-| trades.csv | ratio | 1 | 11,615,464 | `ec4d6ac51681e842` | 4/4 |
-| trades.csv | ratio | 4 | 11,615,464 | `ec4d6ac51681e842` | 4/4 |
-| events.ndjson | speed | 1 | 19,727,354 | `59041f724700f1f8` | 4/4 |
-| events.ndjson | speed | 4 | 19,727,354 | `59041f724700f1f8` | 4/4 |
-| events.ndjson | balanced | 1 | 6,770,194 | `a2eeaf90fe08beb7` | 4/4 |
-| events.ndjson | balanced | 4 | 6,770,194 | `a2eeaf90fe08beb7` | 4/4 |
-| events.ndjson | hc | 1 | 5,178,170 | `a47ce72a4fb6a5af` | 4/4 |
-| events.ndjson | hc | 4 | 5,178,170 | `a47ce72a4fb6a5af` | 4/4 |
-| events.ndjson | ratio | 1 | 4,252,578 | `d9a0b7c3b127b8c3` | 4/4 |
-| events.ndjson | ratio | 4 | 4,252,578 | `d9a0b7c3b127b8c3` | 4/4 |
-| walk_i32.npy | speed | 1 | 67,107,281 | `dc0bd9071ff4bcf2` | 4/4 |
-| walk_i32.npy | speed | 4 | 67,107,281 | `dc0bd9071ff4bcf2` | 4/4 |
-| walk_i32.npy | balanced | 1 | 26,541,943 | `2bcea0bf21426717` | 4/4 |
-| walk_i32.npy | balanced | 4 | 26,541,943 | `2bcea0bf21426717` | 4/4 |
-| walk_i32.npy | hc | 1 | 26,541,311 | `8601ab034763a27f` | 4/4 |
-| walk_i32.npy | hc | 4 | 26,541,311 | `8601ab034763a27f` | 4/4 |
-| walk_i32.npy | ratio | 1 | 26,377,410 | `5645d7d50063f32b` | 4/4 |
-| walk_i32.npy | ratio | 4 | 26,377,410 | `5645d7d50063f32b` | 4/4 |
+| silesia.tar | speed (LZ4) | 1 | 99,918,100 | `88007657ae0a774f` | 4/4 |
+| silesia.tar | speed (LZ4) | 4 | 99,918,100 | `88007657ae0a774f` | 4/4 |
+| silesia.tar | balanced (zstd 3) | 1 | 58,245,943 | `43ef81d7fc5da90e` | 4/4 |
+| silesia.tar | balanced (zstd 3) | 4 | 58,245,943 | `43ef81d7fc5da90e` | 4/4 |
+| silesia.tar | hc (zstd 19/22) | 1 | 47,624,828 | `2342befaad9eb08e` | 4/4 |
+| silesia.tar | hc (zstd 19/22) | 4 | 47,624,828 | `2342befaad9eb08e` | 4/4 |
+| silesia.tar | ratio (LZMA2/BWT) | 1 | 40,687,857 | `649ccb3c09a84e36` | 4/4 |
+| silesia.tar | ratio (LZMA2/BWT) | 4 | 40,687,857 | `649ccb3c09a84e36` | 4/4 |
+| trades.csv | speed (LZ4) | 1 | 36,817,721 | `849c8ec4a1840aa6` | 4/4 |
+| trades.csv | speed (LZ4) | 4 | 36,817,721 | `849c8ec4a1840aa6` | 4/4 |
+| trades.csv | balanced (zstd 3) | 1 | 12,085,484 | `f4d6fc81bbd9fca6` | 4/4 |
+| trades.csv | balanced (zstd 3) | 4 | 12,085,484 | `f4d6fc81bbd9fca6` | 4/4 |
+| trades.csv | hc (zstd 19/22) | 1 | 11,782,261 | `7a690f0d706ac084` | 4/4 |
+| trades.csv | hc (zstd 19/22) | 4 | 11,782,261 | `7a690f0d706ac084` | 4/4 |
+| trades.csv | ratio (LZMA2/BWT) | 1 | 11,615,464 | `ec4d6ac51681e842` | 4/4 |
+| trades.csv | ratio (LZMA2/BWT) | 4 | 11,615,464 | `ec4d6ac51681e842` | 4/4 |
+| events.ndjson | speed (LZ4) | 1 | 19,727,354 | `59041f724700f1f8` | 4/4 |
+| events.ndjson | speed (LZ4) | 4 | 19,727,354 | `59041f724700f1f8` | 4/4 |
+| events.ndjson | balanced (zstd 3) | 1 | 6,770,194 | `a2eeaf90fe08beb7` | 4/4 |
+| events.ndjson | balanced (zstd 3) | 4 | 6,770,194 | `a2eeaf90fe08beb7` | 4/4 |
+| events.ndjson | hc (zstd 19/22) | 1 | 5,178,170 | `a47ce72a4fb6a5af` | 4/4 |
+| events.ndjson | hc (zstd 19/22) | 4 | 5,178,170 | `a47ce72a4fb6a5af` | 4/4 |
+| events.ndjson | ratio (LZMA2/BWT) | 1 | 4,252,578 | `d9a0b7c3b127b8c3` | 4/4 |
+| events.ndjson | ratio (LZMA2/BWT) | 4 | 4,252,578 | `d9a0b7c3b127b8c3` | 4/4 |
+| walk_i32.npy | speed (LZ4) | 1 | 67,107,281 | `dc0bd9071ff4bcf2` | 4/4 |
+| walk_i32.npy | speed (LZ4) | 4 | 67,107,281 | `dc0bd9071ff4bcf2` | 4/4 |
+| walk_i32.npy | balanced (zstd 3) | 1 | 26,541,943 | `2bcea0bf21426717` | 4/4 |
+| walk_i32.npy | balanced (zstd 3) | 4 | 26,541,943 | `2bcea0bf21426717` | 4/4 |
+| walk_i32.npy | hc (zstd 19/22) | 1 | 26,541,311 | `8601ab034763a27f` | 4/4 |
+| walk_i32.npy | hc (zstd 19/22) | 4 | 26,541,311 | `8601ab034763a27f` | 4/4 |
+| walk_i32.npy | ratio (LZMA2/BWT) | 1 | 26,377,410 | `5645d7d50063f32b` | 4/4 |
+| walk_i32.npy | ratio (LZMA2/BWT) | 4 | 26,377,410 | `5645d7d50063f32b` | 4/4 |
 
 ### Timing: compression
 
 | input | mode | T | generic | avx2 | native | dispatch | avx2/generic | native/generic | dispatch/generic |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| silesia.tar | speed | 1 | 416.3 | 419.4 | 409.5 | 401.7 | 0.993 | 1.017 | 1.036 |
-| silesia.tar | speed | 4 | 1407.4 | 1445.7 | 1413.9 | 1373.9 | 0.974 | 0.995 | 1.024 |
-| silesia.tar | balanced | 1 | 175.8 | 183.8 | 190.8 | 192.0 | 0.957 | 0.921 | 0.916 |
-| silesia.tar | balanced | 4 | 629.6 | 641.6 | 638.0 | 652.7 | 0.981 | 0.987 | 0.965 |
-| silesia.tar | hc | 1 | 2.6 | 2.6 | 2.5 | 2.5 | 1.015 | 1.039 | 1.057 |
-| silesia.tar | hc | 4 | 8.2 | 8.4 | 8.5 | 8.7 | 0.984 | 0.972 | 0.947 |
-| silesia.tar | ratio | 1 | 2.8 | 2.7 | 2.8 | 2.6 | 1.015 | 0.990 | 1.050 |
-| silesia.tar | ratio | 4 | 5.6 | 5.6 | 5.9 | 6.0 | 1.008 | 0.950 | 0.934 |
-| trades.csv | speed | 1 | 325.2 | 352.4 | 357.2 | 340.2 | 0.923 | 0.910 | 0.956 |
-| trades.csv | speed | 4 | 1017.2 | 1048.1 | 1047.9 | 1008.5 | 0.971 | 0.971 | 1.009 |
-| trades.csv | balanced | 1 | 180.4 | 199.8 | 197.5 | 178.0 | 0.903 | 0.913 | 1.014 |
-| trades.csv | balanced | 4 | 454.9 | 521.8 | 555.5 | 462.1 | 0.872 | 0.819 | 0.984 |
-| trades.csv | hc | 1 | 9.0 | 9.0 | 9.0 | 8.7 | 1.003 | 1.003 | 1.043 |
-| trades.csv | hc | 4 | 26.9 | 27.1 | 24.8 | 24.9 | 0.992 | 1.085 | 1.077 |
-| trades.csv | ratio | 1 | 4.6 | 4.6 | 4.7 | 4.5 | 0.989 | 0.968 | 1.017 |
-| trades.csv | ratio | 4 | 4.6 | 4.5 | 4.4 | 4.6 | 1.011 | 1.025 | 0.983 |
-| events.ndjson | speed | 1 | 478.5 | 495.7 | 507.3 | 499.7 | 0.965 | 0.943 | 0.958 |
-| events.ndjson | speed | 4 | 1536.2 | 1565.7 | 1631.2 | 1605.7 | 0.981 | 0.942 | 0.957 |
-| events.ndjson | balanced | 1 | 180.3 | 179.7 | 188.9 | 177.5 | 1.003 | 0.954 | 1.015 |
-| events.ndjson | balanced | 4 | 574.9 | 532.4 | 591.8 | 547.5 | 1.080 | 0.971 | 1.050 |
-| events.ndjson | hc | 1 | 5.1 | 5.1 | 5.0 | 4.9 | 1.002 | 1.021 | 1.037 |
-| events.ndjson | hc | 4 | 14.5 | 15.0 | 14.9 | 14.6 | 0.972 | 0.975 | 1.000 |
-| events.ndjson | ratio | 1 | 39.8 | 39.2 | 42.3 | 40.0 | 1.014 | 0.942 | 0.994 |
-| events.ndjson | ratio | 4 | 38.7 | 38.7 | 39.3 | 39.4 | 1.002 | 0.986 | 0.984 |
-| walk_i32.npy | speed | 1 | 916.5 | 943.9 | 916.8 | 845.1 | 0.971 | 1.000 | 1.084 |
-| walk_i32.npy | speed | 4 | 2025.8 | 2212.2 | 1716.4 | 1797.0 | 0.916 | 1.180 | 1.127 |
-| walk_i32.npy | balanced | 1 | 302.5 | 304.1 | 319.8 | 318.6 | 0.995 | 0.946 | 0.950 |
-| walk_i32.npy | balanced | 4 | 897.5 | 715.4 | 870.9 | 918.7 | 1.255 | 1.031 | 0.977 |
-| walk_i32.npy | hc | 1 | 5.5 | 5.6 | 5.2 | 5.2 | 0.994 | 1.060 | 1.071 |
-| walk_i32.npy | hc | 4 | 20.5 | 19.8 | 19.9 | 19.7 | 1.034 | 1.029 | 1.040 |
-| walk_i32.npy | ratio | 1 | 2.6 | 2.6 | 2.6 | 2.6 | 1.010 | 1.013 | 1.018 |
-| walk_i32.npy | ratio | 4 | 2.7 | 2.6 | 2.6 | 2.6 | 1.041 | 1.017 | 1.005 |
+| silesia.tar | speed (LZ4) | 1 | 416.3 | 419.4 | 409.5 | 401.7 | 0.993 | 1.017 | 1.036 |
+| silesia.tar | speed (LZ4) | 4 | 1407.4 | 1445.7 | 1413.9 | 1373.9 | 0.974 | 0.995 | 1.024 |
+| silesia.tar | balanced (zstd 3) | 1 | 175.8 | 183.8 | 190.8 | 192.0 | 0.957 | 0.921 | 0.916 |
+| silesia.tar | balanced (zstd 3) | 4 | 629.6 | 641.6 | 638.0 | 652.7 | 0.981 | 0.987 | 0.965 |
+| silesia.tar | hc (zstd 19/22) | 1 | 2.6 | 2.6 | 2.5 | 2.5 | 1.015 | 1.039 | 1.057 |
+| silesia.tar | hc (zstd 19/22) | 4 | 8.2 | 8.4 | 8.5 | 8.7 | 0.984 | 0.972 | 0.947 |
+| silesia.tar | ratio (LZMA2/BWT) | 1 | 2.8 | 2.7 | 2.8 | 2.6 | 1.015 | 0.990 | 1.050 |
+| silesia.tar | ratio (LZMA2/BWT) | 4 | 5.6 | 5.6 | 5.9 | 6.0 | 1.008 | 0.950 | 0.934 |
+| trades.csv | speed (LZ4) | 1 | 325.2 | 352.4 | 357.2 | 340.2 | 0.923 | 0.910 | 0.956 |
+| trades.csv | speed (LZ4) | 4 | 1017.2 | 1048.1 | 1047.9 | 1008.5 | 0.971 | 0.971 | 1.009 |
+| trades.csv | balanced (zstd 3) | 1 | 180.4 | 199.8 | 197.5 | 178.0 | 0.903 | 0.913 | 1.014 |
+| trades.csv | balanced (zstd 3) | 4 | 454.9 | 521.8 | 555.5 | 462.1 | 0.872 | 0.819 | 0.984 |
+| trades.csv | hc (zstd 19/22) | 1 | 9.0 | 9.0 | 9.0 | 8.7 | 1.003 | 1.003 | 1.043 |
+| trades.csv | hc (zstd 19/22) | 4 | 26.9 | 27.1 | 24.8 | 24.9 | 0.992 | 1.085 | 1.077 |
+| trades.csv | ratio (LZMA2/BWT) | 1 | 4.6 | 4.6 | 4.7 | 4.5 | 0.989 | 0.968 | 1.017 |
+| trades.csv | ratio (LZMA2/BWT) | 4 | 4.6 | 4.5 | 4.4 | 4.6 | 1.011 | 1.025 | 0.983 |
+| events.ndjson | speed (LZ4) | 1 | 478.5 | 495.7 | 507.3 | 499.7 | 0.965 | 0.943 | 0.958 |
+| events.ndjson | speed (LZ4) | 4 | 1536.2 | 1565.7 | 1631.2 | 1605.7 | 0.981 | 0.942 | 0.957 |
+| events.ndjson | balanced (zstd 3) | 1 | 180.3 | 179.7 | 188.9 | 177.5 | 1.003 | 0.954 | 1.015 |
+| events.ndjson | balanced (zstd 3) | 4 | 574.9 | 532.4 | 591.8 | 547.5 | 1.080 | 0.971 | 1.050 |
+| events.ndjson | hc (zstd 19/22) | 1 | 5.1 | 5.1 | 5.0 | 4.9 | 1.002 | 1.021 | 1.037 |
+| events.ndjson | hc (zstd 19/22) | 4 | 14.5 | 15.0 | 14.9 | 14.6 | 0.972 | 0.975 | 1.000 |
+| events.ndjson | ratio (LZMA2/BWT) | 1 | 39.8 | 39.2 | 42.3 | 40.0 | 1.014 | 0.942 | 0.994 |
+| events.ndjson | ratio (LZMA2/BWT) | 4 | 38.7 | 38.7 | 39.3 | 39.4 | 1.002 | 0.986 | 0.984 |
+| walk_i32.npy | speed (LZ4) | 1 | 916.5 | 943.9 | 916.8 | 845.1 | 0.971 | 1.000 | 1.084 |
+| walk_i32.npy | speed (LZ4) | 4 | 2025.8 | 2212.2 | 1716.4 | 1797.0 | 0.916 | 1.180 | 1.127 |
+| walk_i32.npy | balanced (zstd 3) | 1 | 302.5 | 304.1 | 319.8 | 318.6 | 0.995 | 0.946 | 0.950 |
+| walk_i32.npy | balanced (zstd 3) | 4 | 897.5 | 715.4 | 870.9 | 918.7 | 1.255 | 1.031 | 0.977 |
+| walk_i32.npy | hc (zstd 19/22) | 1 | 5.5 | 5.6 | 5.2 | 5.2 | 0.994 | 1.060 | 1.071 |
+| walk_i32.npy | hc (zstd 19/22) | 4 | 20.5 | 19.8 | 19.9 | 19.7 | 1.034 | 1.029 | 1.040 |
+| walk_i32.npy | ratio (LZMA2/BWT) | 1 | 2.6 | 2.6 | 2.6 | 2.6 | 1.010 | 1.013 | 1.018 |
+| walk_i32.npy | ratio (LZMA2/BWT) | 4 | 2.7 | 2.6 | 2.6 | 2.6 | 1.041 | 1.017 | 1.005 |
 
 ### Timing: decompression
 
 | input | mode | T | generic | avx2 | native | dispatch | avx2/generic | native/generic | dispatch/generic |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| silesia.tar | speed | 1 | 1252.5 | 1384.3 | 1354.2 | 1221.0 | 0.905 | 0.925 | 1.026 |
-| silesia.tar | speed | 4 | 3644.6 | 3809.7 | 3837.9 | 3671.8 | 0.957 | 0.950 | 0.993 |
-| silesia.tar | balanced | 1 | 657.3 | 647.8 | 682.6 | 675.6 | 1.015 | 0.963 | 0.973 |
-| silesia.tar | balanced | 4 | 2147.9 | 2094.2 | 2145.9 | 2147.7 | 1.026 | 1.001 | 1.000 |
-| silesia.tar | hc | 1 | 427.2 | 413.7 | 418.7 | 411.1 | 1.033 | 1.020 | 1.039 |
-| silesia.tar | hc | 4 | 1011.6 | 1162.1 | 1189.7 | 1144.6 | 0.870 | 0.850 | 0.884 |
-| silesia.tar | ratio | 1 | 41.1 | 40.2 | 40.2 | 38.1 | 1.023 | 1.021 | 1.078 |
-| silesia.tar | ratio | 4 | 83.1 | 90.3 | 92.6 | 95.5 | 0.920 | 0.898 | 0.870 |
-| trades.csv | speed | 1 | 1377.9 | 1518.5 | 1413.4 | 1511.5 | 0.907 | 0.975 | 0.912 |
-| trades.csv | speed | 4 | 2655.9 | 2611.0 | 2758.6 | 2731.6 | 1.017 | 0.963 | 0.972 |
-| trades.csv | balanced | 1 | 313.6 | 443.2 | 461.1 | 426.0 | 0.708 | 0.680 | 0.736 |
-| trades.csv | balanced | 4 | 831.9 | 1126.2 | 1080.6 | 1103.1 | 0.739 | 0.770 | 0.754 |
-| trades.csv | hc | 1 | 171.1 | 201.0 | 216.1 | 201.4 | 0.851 | 0.792 | 0.850 |
-| trades.csv | hc | 4 | 282.4 | 305.9 | 268.8 | 299.8 | 0.923 | 1.051 | 0.942 |
-| trades.csv | ratio | 1 | 76.0 | 82.8 | 81.2 | 77.6 | 0.917 | 0.935 | 0.979 |
-| trades.csv | ratio | 4 | 80.0 | 87.4 | 84.0 | 79.6 | 0.915 | 0.952 | 1.005 |
-| events.ndjson | speed | 1 | 1459.4 | 1567.5 | 1510.3 | 1606.6 | 0.931 | 0.966 | 0.908 |
-| events.ndjson | speed | 4 | 2868.4 | 3266.2 | 3511.3 | 3452.4 | 0.878 | 0.817 | 0.831 |
-| events.ndjson | balanced | 1 | 616.3 | 671.2 | 665.3 | 644.8 | 0.918 | 0.926 | 0.956 |
-| events.ndjson | balanced | 4 | 1371.5 | 1591.1 | 2053.9 | 1890.8 | 0.862 | 0.668 | 0.725 |
-| events.ndjson | hc | 1 | 247.5 | 218.8 | 242.2 | 237.3 | 1.131 | 1.022 | 1.043 |
-| events.ndjson | hc | 4 | 280.6 | 321.7 | 360.3 | 286.4 | 0.872 | 0.779 | 0.980 |
-| events.ndjson | ratio | 1 | 62.5 | 64.1 | 62.5 | 62.3 | 0.976 | 1.000 | 1.003 |
-| events.ndjson | ratio | 4 | 64.0 | 61.1 | 63.7 | 61.6 | 1.047 | 1.005 | 1.040 |
-| walk_i32.npy | speed | 1 | 1619.2 | 1532.4 | 1562.1 | 1759.1 | 1.057 | 1.037 | 0.920 |
-| walk_i32.npy | speed | 4 | 2632.7 | 2969.0 | 2522.6 | 2872.1 | 0.887 | 1.044 | 0.917 |
-| walk_i32.npy | balanced | 1 | 989.6 | 1044.3 | 1028.7 | 1127.9 | 0.948 | 0.962 | 0.877 |
-| walk_i32.npy | balanced | 4 | 1993.1 | 1940.6 | 2200.8 | 2043.1 | 1.027 | 0.906 | 0.976 |
-| walk_i32.npy | hc | 1 | 202.3 | 223.6 | 196.3 | 226.2 | 0.905 | 1.031 | 0.894 |
-| walk_i32.npy | hc | 4 | 291.2 | 339.1 | 314.0 | 326.7 | 0.859 | 0.927 | 0.891 |
-| walk_i32.npy | ratio | 1 | 165.1 | 151.1 | 164.9 | 161.3 | 1.093 | 1.002 | 1.024 |
-| walk_i32.npy | ratio | 4 | 168.6 | 158.6 | 160.8 | 164.7 | 1.063 | 1.048 | 1.024 |
+| silesia.tar | speed (LZ4) | 1 | 1252.5 | 1384.3 | 1354.2 | 1221.0 | 0.905 | 0.925 | 1.026 |
+| silesia.tar | speed (LZ4) | 4 | 3644.6 | 3809.7 | 3837.9 | 3671.8 | 0.957 | 0.950 | 0.993 |
+| silesia.tar | balanced (zstd 3) | 1 | 657.3 | 647.8 | 682.6 | 675.6 | 1.015 | 0.963 | 0.973 |
+| silesia.tar | balanced (zstd 3) | 4 | 2147.9 | 2094.2 | 2145.9 | 2147.7 | 1.026 | 1.001 | 1.000 |
+| silesia.tar | hc (zstd 19/22) | 1 | 427.2 | 413.7 | 418.7 | 411.1 | 1.033 | 1.020 | 1.039 |
+| silesia.tar | hc (zstd 19/22) | 4 | 1011.6 | 1162.1 | 1189.7 | 1144.6 | 0.870 | 0.850 | 0.884 |
+| silesia.tar | ratio (LZMA2/BWT) | 1 | 41.1 | 40.2 | 40.2 | 38.1 | 1.023 | 1.021 | 1.078 |
+| silesia.tar | ratio (LZMA2/BWT) | 4 | 83.1 | 90.3 | 92.6 | 95.5 | 0.920 | 0.898 | 0.870 |
+| trades.csv | speed (LZ4) | 1 | 1377.9 | 1518.5 | 1413.4 | 1511.5 | 0.907 | 0.975 | 0.912 |
+| trades.csv | speed (LZ4) | 4 | 2655.9 | 2611.0 | 2758.6 | 2731.6 | 1.017 | 0.963 | 0.972 |
+| trades.csv | balanced (zstd 3) | 1 | 313.6 | 443.2 | 461.1 | 426.0 | 0.708 | 0.680 | 0.736 |
+| trades.csv | balanced (zstd 3) | 4 | 831.9 | 1126.2 | 1080.6 | 1103.1 | 0.739 | 0.770 | 0.754 |
+| trades.csv | hc (zstd 19/22) | 1 | 171.1 | 201.0 | 216.1 | 201.4 | 0.851 | 0.792 | 0.850 |
+| trades.csv | hc (zstd 19/22) | 4 | 282.4 | 305.9 | 268.8 | 299.8 | 0.923 | 1.051 | 0.942 |
+| trades.csv | ratio (LZMA2/BWT) | 1 | 76.0 | 82.8 | 81.2 | 77.6 | 0.917 | 0.935 | 0.979 |
+| trades.csv | ratio (LZMA2/BWT) | 4 | 80.0 | 87.4 | 84.0 | 79.6 | 0.915 | 0.952 | 1.005 |
+| events.ndjson | speed (LZ4) | 1 | 1459.4 | 1567.5 | 1510.3 | 1606.6 | 0.931 | 0.966 | 0.908 |
+| events.ndjson | speed (LZ4) | 4 | 2868.4 | 3266.2 | 3511.3 | 3452.4 | 0.878 | 0.817 | 0.831 |
+| events.ndjson | balanced (zstd 3) | 1 | 616.3 | 671.2 | 665.3 | 644.8 | 0.918 | 0.926 | 0.956 |
+| events.ndjson | balanced (zstd 3) | 4 | 1371.5 | 1591.1 | 2053.9 | 1890.8 | 0.862 | 0.668 | 0.725 |
+| events.ndjson | hc (zstd 19/22) | 1 | 247.5 | 218.8 | 242.2 | 237.3 | 1.131 | 1.022 | 1.043 |
+| events.ndjson | hc (zstd 19/22) | 4 | 280.6 | 321.7 | 360.3 | 286.4 | 0.872 | 0.779 | 0.980 |
+| events.ndjson | ratio (LZMA2/BWT) | 1 | 62.5 | 64.1 | 62.5 | 62.3 | 0.976 | 1.000 | 1.003 |
+| events.ndjson | ratio (LZMA2/BWT) | 4 | 64.0 | 61.1 | 63.7 | 61.6 | 1.047 | 1.005 | 1.040 |
+| walk_i32.npy | speed (LZ4) | 1 | 1619.2 | 1532.4 | 1562.1 | 1759.1 | 1.057 | 1.037 | 0.920 |
+| walk_i32.npy | speed (LZ4) | 4 | 2632.7 | 2969.0 | 2522.6 | 2872.1 | 0.887 | 1.044 | 0.917 |
+| walk_i32.npy | balanced (zstd 3) | 1 | 989.6 | 1044.3 | 1028.7 | 1127.9 | 0.948 | 0.962 | 0.877 |
+| walk_i32.npy | balanced (zstd 3) | 4 | 1993.1 | 1940.6 | 2200.8 | 2043.1 | 1.027 | 0.906 | 0.976 |
+| walk_i32.npy | hc (zstd 19/22) | 1 | 202.3 | 223.6 | 196.3 | 226.2 | 0.905 | 1.031 | 0.894 |
+| walk_i32.npy | hc (zstd 19/22) | 4 | 291.2 | 339.1 | 314.0 | 326.7 | 0.859 | 0.927 | 0.891 |
+| walk_i32.npy | ratio (LZMA2/BWT) | 1 | 165.1 | 151.1 | 164.9 | 161.3 | 1.093 | 1.002 | 1.024 |
+| walk_i32.npy | ratio (LZMA2/BWT) | 4 | 168.6 | 158.6 | 160.8 | 164.7 | 1.063 | 1.048 | 1.024 |
 
 ### Noise and summary
 
@@ -210,14 +232,14 @@ the same frame with every build:
 
 | input | mode | T | generic ms | avx2 ms | native ms | dispatch ms | avx2/generic | native/generic | dispatch/generic |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| trades.csv | balanced | 1 | 153 | 115 | 112 | 118 | 0.748 | 0.729 | 0.766 |
-| trades.csv | balanced | 4 | 52 | 41 | 40 | 41 | 0.781 | 0.770 | 0.787 |
-| trades.csv | hc | 1 | 173 | 135 | 133 | 139 | 0.780 | 0.769 | 0.806 |
-| walk_i32.npy | balanced | 1 | 65 | 62 | 61 | 54 | 0.958 | 0.942 | 0.824 |
-| walk_i32.npy | speed | 1 | 36 | 36 | 35 | 36 | 1.007 | 0.996 | 1.013 |
-| silesia.tar | speed | 1 | 144 | 144 | 140 | 142 | 0.996 | 0.969 | 0.986 |
-| silesia.tar | hc | 4 | 150 | 138 | 159 | 147 | 0.922 | 1.062 | 0.982 |
-| events.ndjson | balanced | 4 | 39 | 40 | 40 | 41 | 1.029 | 1.023 | 1.052 |
+| trades.csv | balanced (zstd 3) | 1 | 153 | 115 | 112 | 118 | 0.748 | 0.729 | 0.766 |
+| trades.csv | balanced (zstd 3) | 4 | 52 | 41 | 40 | 41 | 0.781 | 0.770 | 0.787 |
+| trades.csv | hc (zstd 19/22) | 1 | 173 | 135 | 133 | 139 | 0.780 | 0.769 | 0.806 |
+| walk_i32.npy | balanced (zstd 3) | 1 | 65 | 62 | 61 | 54 | 0.958 | 0.942 | 0.824 |
+| walk_i32.npy | speed (LZ4) | 1 | 36 | 36 | 35 | 36 | 1.007 | 0.996 | 1.013 |
+| silesia.tar | speed (LZ4) | 1 | 144 | 144 | 140 | 142 | 0.996 | 0.969 | 0.986 |
+| silesia.tar | hc (zstd 19/22) | 4 | 150 | 138 | 159 | 147 | 0.922 | 1.062 | 0.982 |
+| events.ndjson | balanced (zstd 3) | 4 | 39 | 40 | 40 | 41 | 1.029 | 1.023 | 1.052 |
 
 Conclusions from both views:
 
@@ -351,8 +373,10 @@ gcc 13 and clang 18.
 
 **A bug found on the way.** The first version of the XXH3 dispatch kept the seeded secret in a buffer aligned to
 `XXH_SEC_ALIGN` (8 in a non-AVX2 build), but the AVX2 kernel stores to it with 32-byte aligned stores, so it crashed
-(SIGSEGV in `vmovdqa`). It is now `XXH_ALIGN(64)`, as upstream uses. `tests/test_dispatch.c` reproduces the crash
-when the old alignment is restored.
+(SIGSEGV in `vmovdqa`, at the first seeded hash of an input over 240 bytes, i.e. the first block of any
+compression). It was fixed before the first commit: the buffer is `XXH_ALIGN(64)`, as upstream's dispatcher uses,
+so no pushed commit has the bug. `tests/test_dispatch.c` (`make check-dispatch`, part of `check-rc`) crashes with
+SIGSEGV when the old alignment is restored and passes with the fix (gcc 13 -O3, clang 18 -O3 and -O0, ASan/UBSan).
 
 **Proof of identical output:**
 
@@ -366,10 +390,9 @@ when the old alignment is restored.
   times in the default build, and `fi_vec4_sse2` 9,954 times in a `-DKOLMO_NO_DISPATCH` build. Both paths pass.
 - `make ARCH= check` (`ALL PASSED`), `make ARCH= check-sanitizers` and `make ARCH= check-rc` pass on `fc9a356`.
 
-**Packaging note.** The Python and Rust packages build from copies under `bindings/*/native/`. Run their
-`sync-native.sh` before packaging to pick up this change. `bindings/rust/build.rs` currently compiles with
-`-march=native`, so Rust builds are host-specific rather than generic. They do not crash on the build host, but
-they are not portable either.
+**Packaging.** The Python and Rust packages build from copies under `bindings/*/native/`. The three changed files
+(`src/kolmo.c`, `src/kgraph.inc`, `vendor/xxhash/kolmo_xxh3.c`) are now copied there too. `bindings/rust/build.rs`
+compiled with `-march=native`, so Rust builds were host-specific; it is portable now (section 5).
 
 ## 4. Assembly
 
@@ -424,6 +447,39 @@ Where assembly will not help:
 - **Kernel I/O** is 20–45 % of decode time.
 - **zstd's hot loops** (`ZSTD_compressBlock_doubleFast`, `ZSTD_decodeSequence`) are vendored and already tuned,
   with zstd's own asm Huffman decoder.
+
+## 5. Follow-up fixes (after the first report)
+
+Commit after `7b68a2c` on the same branch.
+
+| fix | files | effect on frames |
+|---|---|---|
+| **No FMA contraction in any codec.** `-ffp-contract=off` is added to every C and C++ compile, whatever `CFLAGS` says (`override CFLAGS += $(FPFLAGS)`, `override SANFLAGS += $(FPFLAGS)`). This covers the vendored zstd, Brotli, LZ4/LZ4HC, xxHash, libsais and the libbsc C++ sources, and the rc2 research codecs in `experimental.mk` that missed it: KRC1 (`krc-cpu`, `krc-auto`), KBC1 (`kbc`), KBX3 (`kbx`), `kolmo-fastq`, `kvid` (only `kfam` had it). It also covers the tools and tests, and the lzbench builds, which go through the Makefile. | `Makefile`, `fuzz/build.sh` (the fuzz harness), `bindings/python/setup.py` (all C and C++ files), `bindings/rust/build.rs` (all C and C++ files) | none on generic x86-64: the machine code of all 77 vendored objects and of `kolmo` itself is identical with and without the flag at `ARCH=`. With `-march=native` the Brotli encoder (`-m eco` = Brotli quality 8) now has 0 FMA instructions instead of 201, so local native builds and arm64 builds make the same Brotli choices as the release build |
+| **Portable Rust build.** `build.rs` no longer passes `-march=native` / `-mcpu=native`; `KOLMO_NATIVE=1` opts back in. It also re-runs when `kgraph.inc` or `kolmo_xxh3.c` changes. | `bindings/rust/build.rs` | none (same sources; the dispatched paths still reach AVX2 on CPUs that have it). The static library now has VEX code only in the four dispatched functions (`kolmo_xxh3_long_avx2`, `fi_vec4_avx2`, `fmt_slots_avx2`, `fmt_run_avx2`), no AVX-512, no FMA |
+| **Bindings carry the dispatch.** `src/kolmo.c`, `src/kgraph.inc` and `vendor/xxhash/kolmo_xxh3.c` copied into `bindings/python/native/` and `bindings/rust/native/`. `sync-native.sh` was not run: it would also copy the rc2 research tools, which the packages never shipped. | `bindings/*/native/` | none |
+| **kfam (rc2 research codec): `make kfam-check` failed at rc2.** LeakSanitizer reported 4,351 bytes: `main` never freed the input, the frame and the decoded copy. `fastq_join` also leaked its name buffer on every error return. Both fixed. | `src/experimental/kfam.c` | none (kfam frames unchanged; it never writes Kolmo frames) |
+| **kfam: a damaged frame could hang the decoder.** A stream header's raw length was accepted up to 2^40, and the arithmetic decoder fed zeros after its input ran out. Two flipped bits made `kfam -d` run for more than 10 minutes, reserving 21 GB. Now (1) a stream that reads more than 8 bytes past its end is corrupt (a valid stream never reads past its end: the decoder renormalises in step with the encoder, which flushes exactly 4 bytes); (2) a raw length above 8,192 symbols per compressed byte is refused before allocation (every symbol costs at least 2 decisions of at least 0.000727 bits, so valid streams stay under about 5,500; 20 MB of zeros, 1,415:1, still round trips). | `src/experimental/kfam.c`, `tests/kfam_damage.py`, `experimental.mk` | none for valid frames; the hanging frame is now rejected in 18 ms. `tests/kfam_damage.py`, 800 damaged frames under ASan/UBSan: 0 hangs, 0 sanitizer reports; a 120-frame run is now part of `kfam-check` |
+| **XXH3 dispatch alignment** (the crash found while building section 3) | `vendor/xxhash/kolmo_xxh3.c` (in `fc9a356`) | fixed before any push; regression test in `make check-dispatch` |
+
+For the research codecs, `-ffp-contract=off` changes nothing on generic x86-64 either. Their FMA instructions with
+`-march=native` (4 in `krc-cpu`, `kbc` and `kbx`, 8 in `kolmo-fastq` and `kvid`) are all in `main` (timing and
+statistics output), not in their coders.
+
+**Proof that frames did not change** (`benchmark/rc2/simd/results/frames-fixes.txt`). Five builds:
+- `generic` and `native`: `9d4496a`, `ARCH=` and `ARCH=-march=native`, the old flags
+- `disp`: `fc9a356`, `ARCH=`
+- `fp-generic` and `fp-native`: this fix, `ARCH=` and `ARCH=-march=native`
+
+Frames compared by SHA-256, every one also decoded back to the input. Every option is listed with its backend
+from the table at the top. Full inputs for the four main modes and `-m eco`; 4 MB prefixes of each input for
+`-x` (all three levels) and the opt-in leaves:
+
+(frame comparison running; filled in by the next commit)
+
+**Tests on the fixed tree:** `make ARCH= check`, `check-sanitizers` and `check-rc` (with `check-dispatch`);
+`experimental-check` and `kfam-check` (the rc2 research codecs, now built with the flag); `cargo test --release` in
+`bindings/rust` (4 tests and the doc test); `python3 setup.py build` plus `test_kolmo.py` for the Python package.
+Results: (running; filled in by the next commit)
 
 ## Reproduce
 

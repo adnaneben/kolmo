@@ -121,13 +121,16 @@ def build_library(dest_dir):
         subprocess.check_call(cmd)
         objs.append(obj)
 
-    compile_one(cc, c_src[0], ["-ffp-contract=off"])  # kolmo.c: deterministic across compilers
+    # -ffp-contract=off on every C and C++ file, not only kolmo.c: Brotli's encoder (-m eco) decides with float costs,
+    # and FMA contraction (arm64, or x86-64 with FMA enabled) could change its choices and so the frame bytes.
+    fp = ["-ffp-contract=off"]
+    compile_one(cc, c_src[0], fp)  # kolmo.c: deterministic across compilers
     for f in c_src[1:]:
-        compile_one(cc, f, [])
+        compile_one(cc, f, fp)
     if is_x86_64 and os.path.exists(asm):
         compile_one(cc, asm, [])
     for f in cpp_src:
-        compile_one(cxx, f, ["-I" + bsc])
+        compile_one(cxx, f, fp + ["-I" + bsc])
 
     out = os.path.join(dest_dir, LIBNAME)
     link = [cxx, "-shared"] + archflags + objs + ["-o", out, "-lpthread", "-lm"]

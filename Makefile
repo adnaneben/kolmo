@@ -16,6 +16,11 @@ ARCH    ?= -march=native
 CFLAGS  ?= -O3 $(ARCH) -fno-plt
 endif
 FPFLAGS := -ffp-contract=off
+# No floating-point contraction anywhere: Kolmo, the vendored codecs, the tools and the research codecs.
+# Brotli's encoder (-m eco) chooses block splits and clusters with float costs; with -mfma, -march=native or on arm64
+# the compiler would otherwise fuse those into FMA and could pick other splits on different builds. Kolmo's own
+# frames depend on kolmo.c (always built with FPFLAGS) and on these encoders, so both get it, whatever CFLAGS says.
+override CFLAGS += $(FPFLAGS)
 ZSTD    := vendor/zstd
 LZ4     := vendor/lz4
 BRO     := vendor/brotli
@@ -94,6 +99,7 @@ check: all
 	./build/kolmotest
 
 SANFLAGS ?= -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
+override SANFLAGS += $(FPFLAGS)
 build/kolmoparallel-asan: tests/kolmoparallel.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoparallel.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 build/kolmoresource-asan: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a

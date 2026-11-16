@@ -50,7 +50,7 @@ static inline int st(int p) { return kst[p]; }
 
 /* ------------------------------------------------------------------ binary arithmetic coder, 16-bit probabilities */
 typedef struct { uint32_t lo, hi; uint8_t *buf; size_t n, cap; int err; } aenc;
-typedef struct { uint32_t lo, hi, x; const uint8_t *in; size_t n, pos; } adec;
+typedef struct { uint32_t lo, hi, x; const uint8_t *in; size_t n, pos, over; } adec;   /* over: reads past the end */
 static void ae_put(aenc *e, uint8_t b) {
     if (e->n == e->cap) { size_t c = e->cap ? 2 * e->cap : 4096; uint8_t *t = realloc(e->buf, c); if (!t) { e->err = 1; return; } e->buf = t; e->cap = c; }
     e->buf[e->n++] = b;
@@ -61,9 +61,9 @@ static inline void ae_bit(aenc *e, int y, uint32_t p) {          /* p = P(y = 1)
     while ((e->lo ^ e->hi) < (1u << 24)) { ae_put(e, (uint8_t)(e->hi >> 24)); e->lo <<= 8; e->hi = (e->hi << 8) | 0xffu; }
 }
 static void ae_end(aenc *e) { for (int k = 0; k < 4; k++) { ae_put(e, (uint8_t)(e->lo >> 24)); e->lo <<= 8; } }
-static inline uint8_t ad_next(adec *d) { return d->pos < d->n ? d->in[d->pos++] : 0; }
+static inline uint8_t ad_next(adec *d) { if (d->pos < d->n) return d->in[d->pos++]; d->over++; return 0; }
 static void ad_init(adec *d, const uint8_t *in, size_t n) {
-    d->lo = 0; d->hi = 0xffffffffu; d->x = 0; d->in = in; d->n = n; d->pos = 0;
+    d->lo = 0; d->hi = 0xffffffffu; d->x = 0; d->in = in; d->n = n; d->pos = 0; d->over = 0;
     for (int k = 0; k < 4; k++) d->x = (d->x << 8) | ad_next(d);
 }
 static inline int ad_bit(adec *d, uint32_t p) {
@@ -251,6 +251,10 @@ static void *enc_stream(void *arg) {
 }
 /* decoding needs the context string, which some families can only rebuild while decoding: they pass a callback */
 typedef struct { stream *s; const uint8_t *in; size_t inn; size_t rawn; int (*ctxfn)(void *, size_t, const uint8_t *); void *ctxarg; } djob;
+/* The decoder renormalises in step with the encoder, which flushes exactly 4 bytes at the end, so a valid stream is
+ * never read past its end. A damaged stream (e.g. a raw length changed in the frame header) would otherwise decode
+ * zeros for up to 2^40 symbols; it is reported corrupt once it has read more than AD_OVER_MAX bytes past its end. */
+#define AD_OVER_MAX 8
 static void *dec_stream(void *arg) {
     djob *j = arg; stream *s = j->s; adec d; ad_init(&d, j->in, j->inn); coder c = {NULL, &d};
     size_t n = j->rawn; s->data.p = malloc(n ? n : 1); s->data.n = n;
@@ -258,7 +262,7 @@ static void *dec_stream(void *arg) {
     uint8_t *o = s->data.p;
     if (s->kind == K_DNA) {
         dmodel m; if (dm_new(&m, n)) { s->err = 1; return NULL; }
-        for (size_t i = 0; i < n; i++) o[i] = (uint8_t)dm_code(&m, &c, 0);
+        for (size_t i = 0; i < n; i++) { o[i] = (uint8_t)dm_code(&m, &c, 0); if (d.over > AD_OVER_MAX) { s->err = 1; break; } }
         dm_free(&m);
     } else if (s->kind == K_QUAL) {
         qmodel m; if (qm_new(&m)) { s->err = 1; return NULL; }
@@ -266,11 +270,15 @@ static void *dec_stream(void *arg) {
             int v = qm_code(&m, &c, 0);
             if (v == 127) qm_read_start(&m);
             o[i] = (uint8_t)v;
+            if (d.over > AD_OVER_MAX) { s->err = 1; break; }
         }
         qm_free(&m);
     } else {
         bmodel m; if (bm_new(&m, n)) { s->err = 1; return NULL; }
-        for (size_t i = 0; i < n; i++) o[i] = (uint8_t)bm_code(&m, &c, 0, j->ctxfn ? (uint32_t)j->ctxfn(j->ctxarg, i, o) : 0);
+        for (size_t i = 0; i < n; i++) {
+            o[i] = (uint8_t)bm_code(&m, &c, 0, j->ctxfn ? (uint32_t)j->ctxfn(j->ctxarg, i, o) : 0);
+            if (d.over > AD_OVER_MAX) { s->err = 1; break; }
+        }
         bm_free(&m);
     }
     return NULL;
@@ -364,45 +372,48 @@ static int name_ctx(void *arg, size_t i, const uint8_t *o) {
 static int fastq_join(stream *st, buf *out) {
     const uint8_t *L = st[0].data.p, *N = st[1].data.p, *B = st[2].data.p, *X = st[3].data.p, *Q = st[4].data.p;
     size_t li = 0, ni = 0, bi = 0, xi = 0, qi = 0, len = 0, site = 0, nextx = (size_t)-1;
-    uint64_t dx; if (xi < st[3].data.n) { if (getvar(X, st[3].data.n, &xi, &dx)) return -1; nextx = dx; }
+    uint64_t dx; if (xi < st[3].data.n) { if (getvar(X, st[3].data.n, &xi, &dx)) goto fail; nextx = dx; }
     span pv[MAXTOK]; int pk = 0; buf names = {0};          /* previous name's tokens live in `names` */
     uint8_t name[4096];
     while (li < st[0].data.n) {
-        int f = L[li++]; if (f >= 2) { uint64_t v; if (getvar(L, st[0].data.n, &li, &v)) return -1; len = v; f -= 2; }
+        int f = L[li++]; if (f >= 2) { uint64_t v; if (getvar(L, st[0].data.n, &li, &v)) goto fail; len = v; f -= 2; }
         size_t nn = 0; int k = 0; span tk[MAXTOK];
         for (;;) {
-            if (ni >= st[1].data.n) return -1;
+            if (ni >= st[1].data.n) goto fail;
             int op = N[ni++];
             if (op == OP_END) break;
-            if (k >= MAXTOK) return -1;
+            if (k >= MAXTOK) goto fail;
             size_t start = nn;
-            if (op == OP_SAME) { if (k >= pk || nn + pv[k].n > sizeof name) return -1; memcpy(name + nn, pv[k].p, pv[k].n); nn += pv[k].n; }
+            if (op == OP_SAME) { if (k >= pk || nn + pv[k].n > sizeof name) goto fail; memcpy(name + nn, pv[k].p, pv[k].n); nn += pv[k].n; }
             else if (op == OP_DELTA) {
-                uint64_t z, b; if (getvar(N, st[1].data.n, &ni, &z) || k >= pk || !num_tok(pv[k], &b)) return -1;
+                uint64_t z, b; if (getvar(N, st[1].data.n, &ni, &z) || k >= pk || !num_tok(pv[k], &b)) goto fail;
                 uint64_t a = b + (uint64_t)unzz(z); char tmp[24]; int l = snprintf(tmp, sizeof tmp, "%llu", (unsigned long long)a);
-                if (nn + (size_t)l > sizeof name) return -1; memcpy(name + nn, tmp, (size_t)l); nn += (size_t)l;
+                if (nn + (size_t)l > sizeof name) goto fail; memcpy(name + nn, tmp, (size_t)l); nn += (size_t)l;
             } else if (op == OP_LIT) {
-                uint64_t l; if (getvar(N, st[1].data.n, &ni, &l) || l > st[1].data.n - ni || nn + l > sizeof name) return -1;
+                uint64_t l; if (getvar(N, st[1].data.n, &ni, &l) || l > st[1].data.n - ni || nn + l > sizeof name) goto fail;
                 memcpy(name + nn, N + ni, l); ni += l; nn += l;
-            } else return -1;
+            } else goto fail;
             tk[k].p = (const uint8_t *)(uintptr_t)start; tk[k].n = nn - start; k++;
         }
-        names.n = 0; if (bput(&names, name, nn)) return -1;
+        names.n = 0; if (bput(&names, name, nn)) goto fail;
         for (int t = 0; t < k; t++) { pv[t].p = names.p + (size_t)(uintptr_t)tk[t].p; pv[t].n = tk[t].n; } pk = k;
-        if (bbyte(out, '@') || bput(out, name, nn) || bbyte(out, '\n')) return -1;
-        if (bi + len > st[2].data.n) return -1;
+        if (bbyte(out, '@') || bput(out, name, nn) || bbyte(out, '\n')) goto fail;
+        if (bi + len > st[2].data.n) goto fail;
         for (size_t q = 0; q < len; q++, site++, bi++) {
             uint8_t c = b2c[B[bi] & 3];
-            if (site == nextx) { if (xi >= st[3].data.n) return -1; c = X[xi++]; if (xi < st[3].data.n) { if (getvar(X, st[3].data.n, &xi, &dx)) return -1; nextx = site + dx; } else nextx = (size_t)-1; }
-            if (bbyte(out, c)) return -1;
+            if (site == nextx) { if (xi >= st[3].data.n) goto fail; c = X[xi++]; if (xi < st[3].data.n) { if (getvar(X, st[3].data.n, &xi, &dx)) goto fail; nextx = site + dx; } else nextx = (size_t)-1; }
+            if (bbyte(out, c)) goto fail;
         }
-        if (bbyte(out, '\n') || bbyte(out, '+') || (f == 1 && bput(out, name, nn)) || bbyte(out, '\n')) return -1;
-        if (qi >= st[4].data.n || Q[qi++] != 127 || qi + len > st[4].data.n) return -1;
-        for (size_t q = 0; q < len; q++) if (bbyte(out, (uint8_t)(Q[qi++] + 33))) return -1;
-        if (bbyte(out, '\n')) return -1;
+        if (bbyte(out, '\n') || bbyte(out, '+') || (f == 1 && bput(out, name, nn)) || bbyte(out, '\n')) goto fail;
+        if (qi >= st[4].data.n || Q[qi++] != 127 || qi + len > st[4].data.n) goto fail;
+        for (size_t q = 0; q < len; q++) if (bbyte(out, (uint8_t)(Q[qi++] + 33))) goto fail;
+        if (bbyte(out, '\n')) goto fail;
     }
     free(names.p);
     return 0;
+fail:
+    free(names.p);
+    return -1;
 }
 
 /* CSV / TSV (one delimiter, the same field count on every line, no quotes, "\n" endings):
@@ -593,7 +604,10 @@ static uint8_t *kfam_decompress(const uint8_t *c, size_t cn, int threads, size_t
     size_t q = HDR + (size_t)ns * PER;
     for (int i = 0; i < ns; i++) {
         const uint8_t *e = c + HDR + (size_t)i * PER; uint64_t rn = get64(e), zn = get64(e + 8);
-        if (zn > cn - q || rn > (1ull << 40) || e[16] > K_QUAL) goto done;
+        /* Every symbol costs at least 2 binary decisions of at least -log2(65503/65536) bits each (probabilities are
+         * clamped), so a valid stream holds fewer than 5,500 symbols per compressed byte: a larger raw length is damage,
+         * refused before its buffer is allocated. */
+        if (zn > cn - q || rn > (1ull << 40) || rn / 8192 > zn + 16 || e[16] > K_QUAL) goto done;
         st[i].kind = e[16]; jb[i] = (djob){&st[i], c + q, (size_t)zn, (size_t)rn, NULL, NULL}; q += zn;
     }
     dec_stream(&jb[0]);                                   /* the layout stream first: it says how to read the rest */
@@ -644,21 +658,27 @@ int main(int argc, char **argv) {
     }
     if (argc - a != (bench ? 1 : 2)) { fprintf(stderr, "usage: kfam [-T threads] [-f auto|fastq|csv|one] in out | -d in out | -b in\n"); return 2; }
     size_t n; uint8_t *s = slurp(argv[a], &n); if (!s) return 1;
-    if (dec) { size_t m; uint8_t *o = kfam_decompress(s, n, threads, &m); if (!o) { fprintf(stderr, "kfam: corrupt input\n"); return 1; } return spit(argv[a + 1], o, m) ? 1 : 0; }
+    if (dec) {
+        size_t m; uint8_t *o = kfam_decompress(s, n, threads, &m); free(s);
+        if (!o) { fprintf(stderr, "kfam: corrupt input\n"); return 1; }
+        int r = spit(argv[a + 1], o, m) ? 1 : 0; free(o); return r;
+    }
     size_t z = 0; int ff = 0, ns = 0; uint8_t *c = NULL; double ce = 1e30, de = 1e30, t0 = now(); int k = 0;
     do { free(c); double t = now(); c = kfam_compress(s, n, fam, threads, &z, &ff, &ns); double e = now() - t; if (e < ce) ce = e; k++; }
     while (bench && c && (k < 3 || now() - t0 < 1.0));
-    if (!c) { fprintf(stderr, "kfam: the input does not fit family %s\n", fam >= 0 ? famname[fam] : "auto"); return 1; }
+    if (!c) { fprintf(stderr, "kfam: the input does not fit family %s\n", fam >= 0 ? famname[fam] : "auto"); free(s); return 1; }
     size_t m = 0; uint8_t *back = NULL; t0 = now(); k = 0;
     do { free(back); double t = now(); back = kfam_decompress(c, z, threads, &m); double e = now() - t; if (e < de) de = e; k++; }
     while (bench && back && (k < 3 || now() - t0 < 1.0));
-    if (!back || m != n || memcmp(back, s, n)) { fprintf(stderr, "kfam: round trip failed\n"); return 1; }
+    int ok = back && m == n && !memcmp(back, s, n);
+    free(back); free(s);
+    if (!ok) { fprintf(stderr, "kfam: round trip failed\n"); free(c); return 1; }
     if (bench) {
         printf("{\"family\": \"%s\", \"streams\": %d, \"threads\": %d, \"input\": %zu, \"compressed\": %zu, \"compress_mbs\": %.3f, \"decompress_mbs\": %.3f, \"stream_sizes\": [",
                famname[ff], ns, threads, n, z, n / ce / 1e6, n / de / 1e6);
         for (int i = 0; i < ns && i < 12; i++) printf("%s[%llu, %llu]", i ? ", " : "", (unsigned long long)get64(c + HDR + (size_t)i * PER), (unsigned long long)get64(c + HDR + (size_t)i * PER + 8));
         printf("%s]}\n", ns > 12 ? ", ..." : "");
-        return 0;
+        free(c); return 0;
     }
-    return spit(argv[a + 1], c, z) ? 1 : 0;
+    int r = spit(argv[a + 1], c, z) ? 1 : 0; free(c); return r;
 }

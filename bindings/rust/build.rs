@@ -100,12 +100,16 @@ fn main() {
     } else if let Some((Some(inc), _)) = &lzma {
         defs.push(format!("-I{inc}"));
     }
-    let arch_flag = if is_x86_64 { "-march=native" } else { "-mcpu=native" };
+    // Portable by default: the target's baseline ISA, like the release binaries and the Python wheels. On x86-64 the
+    // AVX2/SSE4.2 paths are chosen at run time by CPUID, so baseline builds lose little. KOLMO_NATIVE=1 builds for
+    // the host CPU instead (the library then runs only on CPUs like the build machine).
+    let native = env::var("KOLMO_NATIVE").map_or(false, |v| v == "1");
+    let arch_flag: Option<&str> = if !native { None } else if is_x86_64 { Some("-march=native") } else { Some("-mcpu=native") };
 
-    // Gather compile jobs: (compiler, source, extra_flags).
+    // Gather compile jobs: (compiler, source, extra_flags). Every C and C++ file gets -ffp-contract=off (added below):
+    // kolmo.c and Brotli's encoder decide with floats, and FMA contraction would change the frame bytes.
     let mut jobs: Vec<(String, PathBuf, Vec<String>)> = Vec::new();
-    // kolmo.c needs -ffp-contract=off for byte-identical output across compilers/CPUs.
-    jobs.push((cc.clone(), src.join("kolmo.c"), vec!["-ffp-contract=off".into()]));
+    jobs.push((cc.clone(), src.join("kolmo.c"), vec![]));
     let mut cfiles = Vec::new();
     for sub in ["common", "compress", "decompress", "dictBuilder"] { list(&zstd.join(sub), "c", false, &mut cfiles); }
     for sub in ["common", "dec", "enc"] { list(&brotli.join(sub), "c", false, &mut cfiles); }
@@ -133,14 +137,15 @@ fn main() {
         let objs = Arc::clone(&objs);
         let failed = Arc::clone(&failed);
         let (out, inc_flags, defs, arch_flag, bsc) =
-            (out.clone(), inc_flags.clone(), defs.clone(), arch_flag.to_string(), bsc.clone());
+            (out.clone(), inc_flags.clone(), defs.clone(), arch_flag.map(str::to_string), bsc.clone());
         handles.push(thread::spawn(move || loop {
             let job = { jobs.lock().unwrap().pop() };
             let Some((idx, (compiler, file, extra))) = job else { break };
             let obj = out.join(format!("k{idx}.o"));
             let mut cmd = Command::new(&compiler);
-            cmd.arg("-O3").arg(&arch_flag).arg("-fPIC").arg("-c")
-                .args(&defs).args(&inc_flags).args(&extra);
+            cmd.arg("-O3").args(arch_flag.iter()).arg("-fPIC").arg("-c");
+            if file.extension().map_or(true, |e| e != "S") { cmd.arg("-ffp-contract=off"); }
+            cmd.args(&defs).args(&inc_flags).args(&extra);
             if file.extension().map_or(false, |e| e == "cpp") { cmd.arg(format!("-I{}", bsc.display())); }
             cmd.arg(&file).arg("-o").arg(&obj);
             match cmd.status() {
@@ -175,5 +180,8 @@ fn main() {
 
     println!("cargo:rerun-if-changed={}", src.join("kolmo.c").display());
     println!("cargo:rerun-if-changed={}", src.join("kolmo.h").display());
+    println!("cargo:rerun-if-changed={}", src.join("kgraph.inc").display());
+    println!("cargo:rerun-if-changed={}", vendor.join("xxhash/kolmo_xxh3.c").display());
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-env-changed=KOLMO_NATIVE");
 }

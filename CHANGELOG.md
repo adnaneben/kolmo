@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased (branch `claude/simd-dispatch-20261116`, on 1.2.0-rc2)
+
+No default output changes; no format change. Measurements in `benchmark/rc2/SIMD-ASM.md`.
+
+### Changed
+- **x86-64 runtime ISA dispatch.** Release builds and wheels compile for baseline x86-64, which compiled out the AVX2
+  decimal formatter (table decode), the SSE4.2 CRC32C and xxHash's AVX2 kernel. These are now chosen by CPUID at
+  first use: numeric CSV decode (`-m balanced` = zstd 3 + table transform) is 19–23% faster in a generic build.
+  `-DKOLMO_NO_DISPATCH` restores compile-time selection.
+- **Integer inverse for 32-bit arrays** (all modes' integer graph, order 1/2, factor 1): SSE2 (baseline) and AVX2
+  (dispatched) prefix-sum loops. `-m balanced` decode of an int32 array is 18% faster. Same bytes.
+- **No floating-point contraction in any codec.** `-ffp-contract=off` now applies to every C/C++ file, including the
+  vendored codecs and the rc2 research codecs, in the Makefile, the Python build and the Rust build. With `-mfma`,
+  `-march=native` or on arm64, the Brotli encoder (`-m eco` = Brotli 8) no longer uses FMA in its cost model.
+  Generic x86-64 machine code is unchanged.
+- **Rust crate builds for the target's baseline ISA** (was `-march=native`); `KOLMO_NATIVE=1` opts back in.
+  `bindings/*/native/` carry the dispatch code.
+
+### Fixed
+- `kfam` (rc2 research codec): `make kfam-check` failed with LeakSanitizer reports; a damaged frame could make
+  `kfam -d` run for hours (raw stream length up to 2^40 decoded from an exhausted input). Both fixed; damaged-frame
+  test added to `kfam-check`.
+
+### Added
+- `make check-dispatch` (part of `check-rc`): CRC32C and XXH3 against scalar references.
+
 ## 1.2.0-rc2 (2026-11-15) — release candidate, not tagged, not published
 
 1.2.0-rc1 plus the improvements that no branch carried yet and the research codecs, as opt-in tools.
