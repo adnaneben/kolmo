@@ -148,6 +148,12 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 1 | `f` = 0–7 | `ultra` level 1; blocks of 2^28 bytes or more | 1.0.0 |
 | 2 | `f` = 9–15 | `ultra`, data that is not text | 1.1.0 |
 | 3 | `f` = 8, then one byte | `ultra`, text | 1.2.0 |
+| 1, 2, 3 with exact logistic tables | `f` = 8, then one byte whose high nibble is 5, 6 or 7 (model 1, 2, 3) | every `ultra` stream under 2^28 bytes, from 1.2.0-rc2 | 1.2.0-rc2 |
+| image model with exact logistic tables | block codec 17, bit 7 of the channel byte | `ultra`, 8-bit images, from 1.2.0-rc2 | 1.2.0-rc2 |
+
+The exact logistic tables use the logistic curve round(4096 / (1 + e^(-x/256))) at every x in [-2048, 2047] instead of the
+33 interpolated knots of the earlier models; stretch is its inverse (the smallest x whose squash reaches p). Readers before
+1.2.0-rc2 refuse these streams (an unknown model nibble or channel count) with `KOLMO_ERR_CORRUPT`; 1.2.0-rc2 reads both kinds.
 
 **What an older reader does.** Only versions 4 to 9 are announced in the header. Block codec 17, graph node 7 and
 CM models 2 and 3 are written inside frames whose header carries the version the rest of the frame needs (3, 7 or

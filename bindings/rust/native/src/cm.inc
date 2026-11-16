@@ -9,7 +9,9 @@
  * Model 3 (extended header) adds orders 12 and 20, the byte the match model expects (with orders 1 and 2) as
  * contexts, finer length classes for long matches, and a match that carries on past a one-byte difference.
  * Stream: size u32 (low 28 bits n, top 4 bits f: 0 = model 1 with 2^CM_BB buckets, else log2 buckets - 15 in f & 7,
- * model 2 when f & 8; f = 8 exactly: one more byte, model << 4 | log2 buckets - 15) | coded bytes.  Memory: 2^bits * 64 B per hashed model. */
+ * model 2 when f & 8; f = 8 exactly: one more byte, nibble << 4 | log2 buckets - 15, nibble 3 = model 3, 5/6/7 = model
+ * 1/2/3 with the exact logistic tables, which every encoder since 1.2.0-rc2 writes) | coded bytes.  Image model (codec 17):
+ * bit 7 of the channel byte selects the exact tables.  Memory: 2^bits * 64 B per hashed model. */
 #include <math.h>              /* exp, floor: the squash knots (cm_knots_init) */
 #ifndef CM_NM
 #define CM_NM 16                /* models: 0 = order-1 direct, 1..9 hashed */
@@ -49,7 +51,8 @@ _Static_assert(CM_LIM * 15 < 64, "CM_LIM too large for the rate table");
 #define CM_LR 12
 #endif
 
-static int16_t cm_sq[4096], cm_st[4096];
+static int16_t cm_sq[4096], cm_st[4096];      /* the logistic function sampled at 33 knots and interpolated (legacy) */
+static int16_t cm_sqx[4096], cm_stx[4096];    /* the logistic function itself at every point (model nibbles 5-7) */
 static uint32_t cm_rcp[64], cm_srcp[1024];
 #define SM_LIM 255
 static pthread_once_t cm_once = PTHREAD_ONCE_INIT;
@@ -94,23 +97,22 @@ static void bh_init(void) {
 static void cm_init_tables(void) {
     bh_init();
     cm_knots_init();
-#ifdef KOLMO_CM_EXACT_LOGISTIC   /* research build only: the curve itself at every point; changes the bitstream */
-    for (int i = 0; i < 4096; i++) { int v = (int)floor(4096.0 / (1.0 + exp(-(i - 2048) / 256.0)) + 0.5); cm_sq[i] = (int16_t)(v < 1 ? 1 : v > 4095 ? 4095 : v); }
-#define cm_squash_i(x) cm_sq[((x) < -2048 ? -2048 : (x) > 2047 ? 2047 : (x)) + 2048]
-#else
     for (int i = 0; i < 4096; i++) { int v = cm_squash_i(i - 2048); cm_sq[i] = (int16_t)(v < 1 ? 1 : v > 4095 ? 4095 : v); }
-#endif
+    /* exact: round(4096 / (1 + e^(-x/256))) at every x; no value lies within 0.00017 of a rounding boundary, so the
+     * result is the same with any conforming libm */
+    for (int i = 0; i < 4096; i++) { int v = (int)floor(4096.0 / (1.0 + exp(-(i - 2048) / 256.0)) + 0.5); cm_sqx[i] = (int16_t)(v < 1 ? 1 : v > 4095 ? 4095 : v); }
     /* stretch = the inverse of squash: for a 12-bit probability p, the smallest x in [-2047, 2047] whose squash
      * reaches p (2047 when none does). squash is non-decreasing, so a binary search over x finds it. */
     for (int p = 0; p < 4096; p++) {
-        int lo = -2047, hi = 2048;                       /* answer in [lo, hi]; hi = 2048 stands for "none" */
+        int lo = -2047, hi = 2048, lx = -2047, hx = 2048;  /* answers in [lo, hi] and [lx, hx]; 2048 stands for "none" */
         while (lo < hi) { int mid = lo + ((hi - lo) >> 1); if (cm_squash_i(mid) >= p) hi = mid; else lo = mid + 1; }
-        cm_st[p] = (int16_t)(lo > 2047 ? 2047 : lo);
+        while (lx < hx) { int mid = lx + ((hx - lx) >> 1); if (cm_sqx[mid + 2048] >= p) hx = mid; else lx = mid + 1; }
+        cm_st[p] = (int16_t)(lo > 2047 ? 2047 : lo); cm_stx[p] = (int16_t)(lx > 2047 ? 2047 : lx);
     }
     for (int i = 0; i < 64; i++) cm_rcp[i] = (uint32_t)(655360 / (10 * i + 16));
     for (int i = 0; i < 1024; i++) cm_srcp[i] = (uint32_t)(655360 / (10 * i + 15));
 }
-static inline int cm_SQ(int x) { if (x > 2047) x = 2047; if (x < -2047) x = -2047; return cm_sq[x + 2048]; }
+static inline int cm_SQ(const int16_t *sq, int x) { if (x > 2047) x = 2047; if (x < -2047) x = -2047; return sq[x + 2048]; }
 
 #ifdef KOLMO_CM_COMPACT
 enum { CM_BYTE_VALUES = 257, CM_NIBBLES = 16, CM_PAIR_BITS = 13 };
@@ -122,6 +124,7 @@ typedef struct {
 typedef struct { uint32_t s[16]; } cm_bucket;          /* s[0] = check << 16 | priority; s[1..15] nibble-tree counters */
 typedef struct {
     cm_bucket *t[CM_NM3];
+    const int16_t *sq, *st;                  /* logistic tables: cm_sq/cm_st (legacy) or cm_sqx/cm_stx (exact) */
 #ifdef KOLMO_CM_COMPACT
     /* High 16 bits hold the compact slot, low 16 hold the original tag. */
     uint32_t one_byte[2][CM_BYTE_VALUES][CM_NIBBLES];
@@ -249,12 +252,12 @@ static size_t cm_build_byte_table(uint32_t map[CM_BYTE_VALUES][CM_NIBBLES], int 
 }
 #endif
 
-static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain) {   /* chain: bytes for model 3's match chain (4 per input byte) */
+static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain, int lx) {   /* lx: exact logistic tables */   /* chain: bytes for model 3's match chain (4 per input byte) */
     pthread_once(&cm_once, cm_init_tables);
     size_t mem = cm_mem_for(bb, v2) + chain; cm_acquire(mem);
     cm_t *m = calloc(1, sizeof(cm_t)); if (!m) { cm_release(mem); return NULL; }
     int nm = CM_NMOD(v2);
-    m->sh = 32 - bb; m->mem = mem; m->v2 = v2;
+    m->sh = 32 - bb; m->mem = mem; m->v2 = v2; m->sq = lx ? cm_sqx : cm_sq; m->st = lx ? cm_stx : cm_st;
     m->tb = sizeof(cm_bucket) << bb;
     for (int i = 1; i < nm; i++) {                            /* the model-2 contexts (16+) have fewer distinct values */
         int b = i >= CM_NM && bb > 18 ? bb - CM_SMALL - (i >= CM_NM3 - 5) : bb;   /* model 2 and 3 contexts: half; structure contexts: a quarter */
@@ -273,7 +276,7 @@ static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain) {   /* chain: 
         for (int i = 0; i < CM_W3; i++) for (int j = 0; j < CM_NIX3; j++) m->w3[i][j] = 1 << 14;
         for (int i = 0; i < CM_W4; i++) for (int j = 0; j < CM_NIX3; j++) m->w4[i][j] = 1 << 14;
         for (int i = 0; i < CM_WF; i++) { for (int j = 0; j < 4; j++) m->wf[i][j] = 1 << 14; m->wf[i][4] = 0; }
-        for (int c = 0; c < CM_A3; c++) for (int j = 0; j < 33; j++) m->a3[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
+        for (int c = 0; c < CM_A3; c++) for (int j = 0; j < 33; j++) m->a3[c][j] = (uint16_t)(cm_SQ(m->sq, (j - 16) * 128) * 16);
     }
     for (int i = 0; i < 65536; i++) m->o1[i] = 0x80000000u;
     for (int i = 0; i < nm; i++) for (int j = 0; j < 256 * 8; j++) {
@@ -282,8 +285,8 @@ static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain) {   /* chain: 
     }
     for (int i = 0; i < CM_W1; i++) for (int j = 0; j < CM_NIX3; j++) m->w1[i][j] = 1 << 14;
     for (int i = 0; i < CM_W2; i++) for (int j = 0; j < CM_NIX3; j++) m->w2[i][j] = 1 << 14;
-    for (int c = 0; c < 256; c++) for (int j = 0; j < 33; j++) m->a1[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
-    for (int c = 0; c < 65536; c++) for (int j = 0; j < 33; j++) m->a2[c][j] = (uint16_t)(cm_SQ((j - 16) * 128) * 16);
+    for (int c = 0; c < 256; c++) for (int j = 0; j < 33; j++) m->a1[c][j] = (uint16_t)(cm_SQ(m->sq, (j - 16) * 128) * 16);
+    for (int c = 0; c < 65536; c++) for (int j = 0; j < 33; j++) m->a2[c][j] = (uint16_t)(cm_SQ(m->sq, (j - 16) * 128) * 16);
     m->buf = buf; m->c0 = 1;
     m->mmask = (1u << 22) - 1; m->mt = cm_big(((size_t)m->mmask + 1) * 4); if (!m->mt) goto fail;
     for (int i = 0; i < 64; i++) m->mc[i] = 1u << 15;
@@ -292,7 +295,7 @@ static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain) {   /* chain: 
 fail:
     cm_free_parts(m); cm_release(mem); return NULL;
 }
-static cm_t *cm_new(uint8_t *buf, int bb, int v2) { return cm_new_x(buf, bb, v2, 0); }
+static cm_t *cm_new(uint8_t *buf, int bb, int v2) { return cm_new_x(buf, bb, v2, 0, 0); }
 static void cm_free(cm_t *m) {
     if (!m) return;
     size_t mem = m->mem;
@@ -338,7 +341,7 @@ static inline int cm_expected(cm_t *m) {
     return (b >> (7 - m->bitpos)) & 1;
 }
 /* slot: high 16 bits adaptive probability, bits 8..15 bit-history state, low 8 bits count */
-static inline int cm_stc(uint32_t v) { return cm_st[v >> 20]; }
+static inline int cm_stc(const int16_t *st, uint32_t v) { return st[v >> 20]; }
 
 /* v2 is a compile-time constant at each call site, so model 1 and model 2 each get their own specialized loop. */
 static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v2) {
@@ -358,7 +361,7 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     for (int i = 1; i < nm; i++) m->slot[i] = &m->cur[i]->s[node];
     for (int i = 0; i < nm; i++) {
         uint32_t v = *m->slot[i]; uint16_t st = (uint16_t)((v >> 8 & 255) | bp << 8); m->sst[i] = st;
-        m->x[i] = cm_stc(v); m->x[nm + 3 + i] = cm_st[m->sm[i][st] >> 20];
+        m->x[i] = cm_stc(m->st, v); m->x[nm + 3 + i] = m->st[m->sm[i][st] >> 20];
     }
     int eb = cm_expected(m);
     if (eb >= 0) {
@@ -369,7 +372,7 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
         }
         m->mci = l * 2 + eb;
         int p = (int)(m->mc[m->mci] >> 4); if (p < 1) p = 1; if (p > 4095) p = 4095;
-        m->x[nm] = cm_st[p];
+        m->x[nm] = m->st[p];
         m->x[nm + 1] = eb ? l * 16 : -l * 16;
     } else { m->mci = -1; m->x[nm] = 0; m->x[nm + 1] = 0; }
     m->x[nm + 2] = 64;
@@ -385,7 +388,7 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
         int64_t s1 = 0, s2 = 0;
         for (int i = 0; i < ni; i++) { s1 += (int64_t)w1[i] * m->x[i]; s2 += (int64_t)w2[i] * m->x[i]; }
         int d1 = (int)(s1 >> 16), d2 = (int)(s2 >> 16);
-        m->pr1 = cm_SQ(d1); m->pr2 = cm_SQ(d2);
+        m->pr1 = cm_SQ(m->sq, d1); m->pr2 = cm_SQ(m->sq, d2);
         st = (d1 + d2) >> 1;
     } else {                                                  /* four mixers, then a small learned mixer of their outputs */
         m->w3i = (int)((img ? m->i_n : (m->c4 >> 8 & 0xff)) << 3 | (uint32_t)bp); m->w4i = (int)(c0 | (img ? m->i_med : c1) << 8); m->wfi = (int)c0 | ml << 8;
@@ -398,12 +401,12 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
         int64_t sf = (int64_t)wf[4] * 256;
         for (int k = 0; k < 4; k++) { if (d[k] > 2047) d[k] = 2047; if (d[k] < -2047) d[k] = -2047; m->xf[k] = d[k]; sf += (int64_t)wf[k] * d[k]; }
         m->xf[4] = 256;
-        m->pr1 = cm_SQ(d[0]); m->pr2 = cm_SQ(d[1]); m->pr3 = cm_SQ(d[2]); m->pr4 = cm_SQ(d[3]);
+        m->pr1 = cm_SQ(m->sq, d[0]); m->pr2 = cm_SQ(m->sq, d[1]); m->pr3 = cm_SQ(m->sq, d[2]); m->pr4 = cm_SQ(m->sq, d[3]);
         st = (int)(sf >> 16); if (st > 2047) st = 2047; if (st < -2047) st = -2047;
-        m->prf = cm_SQ(st);
+        m->prf = cm_SQ(m->sq, st);
     }
     if (st > 2047) st = 2047; if (st < -2047) st = -2047;
-    int mixed = cm_SQ(st);
+    int mixed = cm_SQ(m->sq, st);
     int s = st + 2048;
     m->ai = s >> 7; m->aw = s & 127;
     m->a2i = (int)((c0 | c1 << 8) & 0xffff);
@@ -692,13 +695,18 @@ static inline __attribute__((always_inline)) void cm_dec_loop(cm_t *m, const uin
 static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model) {
     if (cap < 8 || n > 0xFFFFFFF0u) return 0;
     int small = n < ((size_t)1 << 28), v2 = small && model > 1 ? (model == 3 ? 3 : 1) : 0;
+    /* exact logistic tables: model 3 always (its header has the model byte anyway); models 1 and 2 from 64 KiB, below
+     * which the extra header byte can cost more than the better tables gain */
+    int lx = small && (v2 == 3 || n >= ((size_t)1 << 16));
     int bb = small ? cm_bits_for(n) : CM_BB;
-    uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new_x(hist, bb, v2, v2 == 3 ? (n + 8) * 4 : 0) : NULL;
+    uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new_x(hist, bb, v2, v2 == 3 ? (n + 8) * 4 : 0, lx) : NULL;
     if (!m) { free(hist); return 0; }
     size_t o = 4; int r;
-    if (v2 == 3) {                                           /* extended header: flags 8, then model << 4 | log2 buckets - 15 */
-        uint32_t n32 = (uint32_t)n | (uint32_t)8 << 28; memcpy(out, &n32, 4); out[4] = (uint8_t)(3 << 4 | (bb - 15));
-        r = cm_enc_loop(m, in, n, out + 1, cap - 1, &o, 3); o++;
+    if (lx || v2 == 3) {      /* extended header: flags 8, then model nibble << 4 | log2 buckets - 15; nibble = model | 4 when exact */
+        int base = v2 == 3 ? 3 : v2 ? 2 : 1;
+        uint32_t n32 = (uint32_t)n | (uint32_t)8 << 28; memcpy(out, &n32, 4); out[4] = (uint8_t)((base | (lx ? 4 : 0)) << 4 | (bb - 15));
+        r = v2 == 3 ? cm_enc_loop(m, in, n, out + 1, cap - 1, &o, 3) : v2 ? cm_enc_loop(m, in, n, out + 1, cap - 1, &o, 1) : cm_enc_loop(m, in, n, out + 1, cap - 1, &o, 0);
+        o++;
     } else {
         uint32_t n32 = (uint32_t)n | (small ? (uint32_t)((bb - 15) | (v2 ? 8 : 0)) << 28 : 0); memcpy(out, &n32, 4);
         r = v2 ? cm_enc_loop(m, in, n, out, cap, &o, 1) : cm_enc_loop(m, in, n, out, cap, &o, 0);
@@ -712,10 +720,10 @@ static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap)
 static size_t cm_compress_img(const uint8_t *in, size_t n, uint32_t iw, uint32_t ich, uint32_t ih, uint8_t *out, size_t cap) {
     if (cap < 20 || n >= ((size_t)1 << 28) || !iw || !ich || ich > 4 || iw < ich || ih > n) return 0;
     int bb = cm_bits_for(n);
-    uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new(hist, bb, 1) : NULL;
+    uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new_x(hist, bb, 1, 0, 1) : NULL;
     if (!m) { free(hist); return 0; }
     m->iw = iw; m->ich = ich; m->ih = ih;
-    memcpy(out, &iw, 4); memcpy(out + 4, &ih, 4); out[8] = (uint8_t)ich;
+    memcpy(out, &iw, 4); memcpy(out + 4, &ih, 4); out[8] = (uint8_t)(ich | 0x80);   /* bit 7: exact logistic tables */
     uint32_t n32 = (uint32_t)n | (uint32_t)((bb - 15) | 8) << 28; memcpy(out + 9, &n32, 4);
     size_t o = 4;
     int r = cm_enc_loop(m, in, n, out + 9, cap - 9, &o, 2);
@@ -724,10 +732,10 @@ static size_t cm_compress_img(const uint8_t *in, size_t n, uint32_t iw, uint32_t
 }
 static int cm_decompress_img(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     if (cn < 17 || n >= ((size_t)1 << 28)) return -1;
-    uint32_t iw, ih, n32; memcpy(&iw, in, 4); memcpy(&ih, in + 4, 4); uint32_t ich = in[8]; memcpy(&n32, in + 9, 4);
+    uint32_t iw, ih, n32; memcpy(&iw, in, 4); memcpy(&ih, in + 4, 4); uint32_t ich = in[8] & 0x7f; int lx = in[8] >> 7; memcpy(&n32, in + 9, 4);
     uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu; int bb = (int)(f & 7) + 15;
     if (n32 != n || !(f & 8) || bb < 16 || bb > 22 || !iw || !ich || ich > 4 || iw < ich || ih > n) return -1;
-    cm_t *m = cm_new(out, bb, 1); if (!m) return -1;
+    cm_t *m = cm_new_x(out, bb, 1, 0, lx); if (!m) return -1;
     m->iw = iw; m->ich = ich; m->ih = ih;
     cm_dec_loop(m, in + 9, cn - 9, out, n, 2);
     cm_free(m);
@@ -736,14 +744,18 @@ static int cm_decompress_img(const uint8_t *in, size_t cn, uint8_t *out, size_t 
 static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     if (cn < 8) return -1;
     uint32_t n32; memcpy(&n32, in, 4);
-    int bb = CM_BB, v2 = 0;
+    int bb = CM_BB, v2 = 0, lx = 0;
     if (n < ((size_t)1 << 28)) {
         uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu;
-        if (f == 8) { if (cn < 9 || in[4] >> 4 != 3) return -1; v2 = 3; bb = (in[4] & 15) + 15; in++; cn--; }   /* extended header */
+        if (f == 8) {                                     /* extended header: model nibble 3 (legacy tables) or 5, 6, 7 (exact) */
+            int mb = cn < 9 ? 0 : in[4] >> 4;
+            if (mb != 3 && mb != 5 && mb != 6 && mb != 7) return -1;
+            lx = mb >= 5; v2 = (mb & 3) == 3 ? 3 : (mb & 3) == 2 ? 1 : 0; bb = (in[4] & 15) + 15; in++; cn--;
+        }
         else if (f) { bb = (int)(f & 7) + 15; v2 = (int)(f >> 3); }
     }
     if (n32 != n || bb < 16 || bb > 22) return -1;
-    cm_t *m = cm_new_x(out, bb, v2, v2 == 3 ? (n + 8) * 4 : 0); if (!m) return -1;
+    cm_t *m = cm_new_x(out, bb, v2, v2 == 3 ? (n + 8) * 4 : 0, lx); if (!m) return -1;
     if (v2 == 3) cm_dec_loop(m, in, cn, out, n, 3); else if (v2) cm_dec_loop(m, in, cn, out, n, 1); else cm_dec_loop(m, in, cn, out, n, 0);
     cm_free(m);
     return 0;
