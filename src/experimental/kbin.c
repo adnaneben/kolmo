@@ -45,9 +45,11 @@ typedef int64_t i64;
 #define MAX_LPC 32
 #define BATCH 256
 #define MAX_LANES 8
-/* interleaved rANS states (lanes) for a stream of n symbols: fewer for short streams, whose four-byte
- * final states would otherwise cost more than the speed is worth */
-static int ans_lanes(size_t n) { return n >= 16384 ? 8 : n >= 2048 ? 4 : 1; }
+/* interleaved rANS states (lanes) for a stream of n symbols: one for short streams, whose four-byte
+ * final states would otherwise cost more than the speed is worth. With the context extension, the
+ * context of symbol i is the bin of symbol i - lanes, the previous symbol of the same lane, so that
+ * the lanes decode independently. */
+static int ans_lanes(size_t n) { return n >= 65536 ? 4 : 1; }
 
 static int g_debug;
 static double g_tm[8];
@@ -467,16 +469,16 @@ static double row_cost(const u32 *r, int nb) {
 }
 
 /* Context extension (not in the paper): code each bin index with one of up to 8 static tables, picked
- * by the bin of the previous value. Previous bins are clustered greedily; returns the number of
+ * by the bin of the value `lag` positions earlier. Those bins are clustered greedily; returns the number of
  * contexts (1 = plain order 0) and fills cmap. */
 #define CTX_MAX_BINS 64
 #define CTX_MAX 8
-static int choose_contexts(const u16 *idx, size_t n, int nb, u8 *cmap) {
+static int choose_contexts(const u16 *idx, size_t n, int nb, int lag, u8 *cmap) {
     if (nb > CTX_MAX_BINS || n < 2048) return 1;
     static __thread u32 K[CTX_MAX_BINS][CTX_MAX_BINS];
     static __thread double D[CTX_MAX_BINS][CTX_MAX_BINS];
     memset(K, 0, sizeof K);
-    for (size_t i = 1; i < n; i++) K[idx[i - 1]][idx[i]]++;
+    for (size_t i = (size_t)lag; i < n; i++) K[idx[i - (size_t)lag]][idx[i]]++;
     int alive[CTX_MAX_BINS], na = 0, owner[CTX_MAX_BINS];
     double cst[CTX_MAX_BINS];
     u32 all[CTX_MAX_BINS] = {0};
@@ -594,11 +596,12 @@ static void code_residuals(Buf *o, const u64 *res, size_t n, int level, int ctx,
         if (g_debug) g_tm[3] += now_s() - tb_, tb_ = now_s();
         u8 *cmap = calloc((size_t)nb, 1);
         if (!cmap) die("out of memory");
-        int C = ctx ? choose_contexts(idx, n, nb, cmap) : 1;
+        int NL = ans_lanes(n);
+        int C = ctx ? choose_contexts(idx, n, nb, NL, cmap) : 1;
         u32 *wt = calloc((size_t)C * nb, sizeof(u32)), *cumt = calloc((size_t)C * nb, sizeof(u32));
         u32 *cnt = calloc((size_t)C * nb, sizeof(u32));
         if (!wt || !cumt || !cnt) die("out of memory");
-        for (size_t i = 0; i < n; i++) cnt[(size_t)(i ? cmap[idx[i - 1]] : 0) * nb + idx[i]]++;
+        for (size_t i = 0; i < n; i++) cnt[(size_t)(i >= (size_t)NL ? cmap[idx[i - NL]] : 0) * nb + idx[i]]++;
         put_u8(o, (u8)S);
         put_u8(o, (u8)C);
         if (C > 1)
@@ -618,7 +621,6 @@ static void code_residuals(Buf *o, const u64 *res, size_t n, int level, int ctx,
         /* rANS with NL interleaved states, each with its own word stream (so the decoder's lanes do not
          * wait on each other), encoded backwards so the decoder reads forwards. Uses the exact
          * reciprocal q = mulhi(x, ceil(2^64 / f)) instead of a division. */
-        int NL = ans_lanes(n);
         u32 st[MAX_LANES];
         size_t lcap = n / (size_t)NL + 2, wp[MAX_LANES];
         u16 *w = sc->words;
@@ -628,7 +630,7 @@ static void code_residuals(Buf *o, const u64 *res, size_t n, int level, int ctx,
         for (size_t k = 0; k < (size_t)C * nb; k++) rcp[k] = wt[k] > 1 ? (~0ull / wt[k]) + 1 : 0;
         for (size_t i = n; i-- > 0;) {
             int b = idx[i], l = (int)(i & (size_t)(NL - 1));
-            size_t tix = (size_t)(i ? cmap[idx[i - 1]] : 0) * nb + b;
+            size_t tix = (size_t)(i >= (size_t)NL ? cmap[idx[i - NL]] : 0) * nb + b;
             u32 f = wt[tix];
             u32 x = st[l];
             if ((u64)x >= ((u64)f << (32 - S))) {
@@ -839,7 +841,8 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
     }
     u16 *idx = sc->idx;
     u32 mask = (1u << S) - 1;
-    const DecEnt *cur = tbl;
+    const DecEnt *curl[MAX_LANES];
+    for (int k = 0; k < MAX_LANES; k++) curl[k] = tbl;
     for (size_t base = 0; base < n; base += BATCH) {
         size_t len = n - base < BATCH ? n - base : BATCH;
         if (nb == 1) {
@@ -861,8 +864,8 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
 #define DECF(L, K)                                                                                     \
     do {                                                                                               \
         u32 X_ = x[L];                                                                                 \
-        const DecEnt e = cur[X_ & mask];                                                               \
-        if (CTXON) cur = tbl + ((size_t)e.pad << S);                                                   \
+        const DecEnt e = c[L][X_ & mask];                                                              \
+        if (CTXON) c[L] = tbl + ((size_t)e.pad << S);                                                  \
         X_ = (u32)e.f * (X_ >> S) + e.s;                                                               \
         u16 wv;                                                                                        \
         memcpy(&wv, p[L], 2);                                                                          \
@@ -877,24 +880,23 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
     do {                                                                                               \
         u32 x[NLC];                                                                                    \
         const u8 *p[NLC];                                                                              \
-        for (int q = 0; q < NLC; q++) x[q] = st[q], p[q] = lp[q];                                      \
+        const DecEnt *c[NLC];                                                                          \
+        for (int q = 0; q < NLC; q++) x[q] = st[q], p[q] = lp[q], c[q] = curl[q];                      \
         size_t k = 0;                                                                                  \
         for (; k + NLC <= len; k += NLC)                                                               \
             for (int q = 0; q < NLC; q++) DECF(q, k + q);                                              \
         for (int q = 0; k < len; q++, k++) DECF(q, k);                                                 \
-        for (int q = 0; q < NLC; q++) st[q] = x[q], lp[q] = p[q];                                      \
+        for (int q = 0; q < NLC; q++) st[q] = x[q], lp[q] = p[q], curl[q] = c[q];                      \
     } while (0)
             u64 *out = res + base;
             if (nctx > 1) {
 #define CTXON 1
-                if (NL == 8) DECF_BATCH(8);
-                else if (NL == 4) DECF_BATCH(4);
+                if (NL == 4) DECF_BATCH(4);
                 else DECF_BATCH(1);
 #undef CTXON
             } else {
 #define CTXON 0
-                if (NL == 8) DECF_BATCH(8);
-                else if (NL == 4) DECF_BATCH(4);
+                if (NL == 4) DECF_BATCH(4);
                 else DECF_BATCH(1);
 #undef CTXON
             }
@@ -904,8 +906,8 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
         for (size_t k = 0; k < len; k++) {
             int l = (int)(k & (size_t)(NL - 1));
             u32 *x = &st[l];
-            const DecEnt e = cur[*x & mask];
-            cur = tbl + ((size_t)e.pad << S);
+            const DecEnt e = curl[l][*x & mask];
+            curl[l] = tbl + ((size_t)e.pad << S);
             idx[k] = e.b;
             *x = (u32)e.f * (*x >> S) + e.s;
             if (*x < ANS_L) {
@@ -1327,7 +1329,7 @@ typedef struct {
 
 static double quick_cost_stream(const u64 *lat, size_t n, Scr *sc, int lpc) {
     double c;
-    (void)choose_delta(lat, n, MAX_ORDER, lpc, 1, sc, &c);
+    (void)choose_delta(lat, n, MAX_ORDER, lpc, 0, sc, &c);
     return c;
 }
 
@@ -2120,6 +2122,39 @@ static int selftest(void) {
             }
             free(buf);
         }
+    }
+    /* long streams (four rANS lanes, lane contexts): a random walk with bursts, as i16, i64 and f64 */
+    {
+        size_t n = 140000;
+        u8 *buf = malloc(n * 8);
+        i64 v = 0;
+        for (int t = 0; t < T_COUNT; t++) {
+            if (t != T_I16 && t != T_I64 && t != T_F64) continue;
+            for (size_t i = 0; i < n; i++) {
+                v += (i64)(rng() % ((i / 1000) % 7 == 0 ? 401 : 9)) - ((i / 1000) % 7 == 0 ? 200 : 4);
+                if (v > 30000 || v < -30000) v /= 2;
+                if (t == T_I16) {
+                    i16 w = (i16)v;
+                    memcpy(buf + 2 * i, &w, 2);
+                } else if (t == T_I64) {
+                    i64 w = v * 1000 + 7;
+                    memcpy(buf + 8 * i, &w, 8);
+                } else {
+                    double w = (double)v / 100.0;
+                    memcpy(buf + 8 * i, &w, 8);
+                }
+            }
+            for (int ctx = 0; ctx < 2; ctx++) {
+                InOpt io = {t, 1, 1};
+                Opt o2 = op;
+                o2.ctx = ctx;
+                o2.threads = 2;
+                o2.chunk_log = 17;
+                fails += roundtrip(buf, n * (size_t)twidth[t], &io, &o2, "long stream");
+                cases++;
+            }
+        }
+        free(buf);
     }
     /* special float bit patterns: NaN payloads, signalling NaN, -0.0, subnormals, inf */
     {
