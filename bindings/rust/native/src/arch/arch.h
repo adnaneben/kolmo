@@ -33,6 +33,7 @@ int kolmo_shuffle_inv_neon(const uint8_t *in, int64_t rows, int w, int c, int de
  * or 4; reads at most x[step * (n - 1)]) */
 int kolmo_img8_back_neon(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p);
 int kolmo_img8_fwd_neon(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r);
+int kolmo_med_band16_neon(const uint8_t *r, size_t W, uint8_t *p, size_t y0);
 int64_t kolmo_img16_fwd_neon(const uint16_t *a, int64_t i, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi);
 uint64_t kolmo_sad_u16_neon(const uint16_t *x, const uint16_t *y, int64_t n, int step);
 /* integer graph inverse for 32-bit elements (fi_inverse in src/kgraph.inc, planar residuals of 1/2/4/8 bytes, any

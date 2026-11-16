@@ -87,6 +87,12 @@ AI void img8_band(const uint8_t *r, size_t W, const unsigned C, uint8_t *p, size
     }
     for (size_t l = 0; l < 16; l++) ib_row(r, W, C, p, y0 + l, s0 - l, W);
 }
+/* rows y0 .. y0 + 15 of a one-channel plane (kvid's intra strips: the same predictor with C = 1) */
+int kolmo_med_band16_neon(const uint8_t *r, size_t W, uint8_t *p, size_t y0) {
+    if (W < 64 || y0 < 1) return 0;
+    img8_band(r, W, 1, p, y0);
+    return 1;
+}
 int kolmo_img8_back_neon(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p) {
     if (W < 64 || C < 1 || C > 4) return 0;
     size_t x = 0, H = m / W, y = 1;
