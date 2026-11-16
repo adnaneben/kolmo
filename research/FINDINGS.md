@@ -259,3 +259,98 @@ no C version exists yet, so it has no speed figure.
 
 Stored as raw 6-bit units, the format is simple but gives up 30–60% of the achievable size. 6 bits is the right
 *alphabet*, not the right *code length*.
+
+## 6. GR6 and GR6+ in C (`research/gr6/`)
+
+### GR6 (baseline), C port
+`gr6.c` emits exactly the same units as the Python prototype (checked on all 7 files). Fixed 6-bit output, single
+thread: **encode 16–64 MB/s, decode 35–99 MB/s**, ratio as in section 5 (1.43–2.74). The move-to-front searches are
+the hot spot.
+
+### GR6+ (`gr6plus.c`): the recommended model, built
+1. **Transform.** Fields split at the detected separator. One op per field: DITTO (same as above), EMPTY, NUM
+   (residual from the best of 4 column predictors chosen by recent cost: derived-column formula, delta,
+   delta-of-delta, damped trend), RANK (column move-to-front list), RANK2 (graph: what followed the previous field),
+   CDICT (column dictionary), GID (global id), NUMNEW, NEW (shared prefix with the graph or column reference, then
+   characters).
+   **Formula discovery** (encoder, a 20k-row sample, exact integer arithmetic) now searches six types: `a/b·10^k`,
+   `a − lag(a)`, `100·(a/lag(a) − 1)`, `lag(t) + a` (running totals), `a` (copy) and `a·b/10^k`. A formula is kept
+   when ≥ 50% of sample rows fall within ±2 in the last digit, and then used only where its recent cost is lowest.
+   On OWID it finds 32, including all `*_per_capita`, `*_per_gdp`, `*_growth_abs` and `cumulative_*` columns.
+2. **6-bit units** everywhere. Ops are one unit; other values go magnitude-first: one unit for the bit length, then
+   the bits below the top bit, 6 per unit.
+3. **Final coder**, three modes: 0 = fixed 6-bit, 1 = static Huffman per stream (op stream per column), 2 = context
+   mixing. Mode 2 has 8 context models that see the unit's role, column, ops above, left and two lines up, the field
+   above, the previous field, residual sizes above and left, and the reference characters. Two neural mixers (one
+   selected by role and unit position, one by the op above) plus an APM feed a binary arithmetic coder. Table size
+   follows input size (2²⁰–2²³ entries per model).
+
+### Results (ratio = original ÷ compressed; MB/s single thread, compress / decompress; all round trips verified)
+
+| file | **GR6+ mode 2** | kolmo -x | kolmo ratio | xz -9e | zstd -19 | brotli -11 |
+|---|---|---|---|---|---|---|
+| owid-co2.csv (15.2 MB) | **13.59** · 1.2 / 1.8 | 12.57 · 0.4 / 0.6 | 12.45 · 3.2 / 109 | 4.83 · 1.0 / 80 | 4.36 | 4.83 |
+| covid.csv (5.5 MB) | **19.49** · 2.5 / 2.5 | 15.41 · 0.35 | 5.18 · 23 / 38 | 8.42 · 1.0 / 95 | 7.26 | 8.34 |
+| diamonds.csv (2.8 MB) | 10.22 · 2.0 / 2.1 | **10.91** · 0.20 | 9.10 · 3.4 / 111 | 6.22 · 1.8 / 131 | 5.81 | 6.01 |
+| titanic.csv (60 KB) | 3.92 · 0.7 / 0.8 | **4.50** · 0.12 | 3.51 · 3.2 / 20 | 3.21 | 2.97 | 3.28 |
+| hdfs.log (288 KB) | 7.84 · 1.7 / 1.7 | **9.53** · 0.12 | 7.94 · 7.4 / 61 | 6.80 | 6.72 | 7.02 |
+| apache.log (171 KB) | 42.6 · 3.1 / 3.0 | **52.9** · 0.15 | 44.2 · 18 / 74 | 25.4 | 23.9 | 25.5 |
+| shakespeare.txt (1.1 MB) | 3.26 · 0.8 / 1.1 | **4.10** · 0.09 | 3.76 · 8.2 / 33 | 3.06 | 3.03 | 3.09 |
+
+* **GR6+ beats xz -9e, zstd -19 and brotli -11 on all 7 files**, by 1.3× to 2.8× on the tables.
+* **It beats every kolmo mode, `-x` included, on the two time-series tables:** OWID +8%, COVID +26%. It beats kolmo
+  `ratio` on 4 of 7 files.
+* It loses to kolmo `-x` on logs, text and small or unsorted tables (kolmo `-x` is 4–19% smaller there), but runs
+  **5–10× faster than kolmo `-x`** in both directions.
+* **Decompression is the cost.** Like any context-mixing coder, GR6+ mode 2 decodes as slowly as it encodes
+  (1–3 MB/s). kolmo `ratio` and xz decode at 20–130 MB/s.
+* Mode 1 (Huffman) and mode 0 (fixed 6-bit) are not competitive with kolmo balanced (OWID 6.83 and 2.84 vs 10.94 at
+  far lower speed). The adaptive model is where the ratio comes from.
+
+What each step added on OWID, in ratio: 10.23 (v1) → 10.42 (larger tables) → 12.66 (time formulas) → 12.88 (near-hit
+scoring) → 13.49 (copy and product formulas, previous-field context) → 13.59 (second mixer, table sizing).
+
+## 7. Smaller neural networks, GPU and map-reduce
+
+There was no GPU in the test machine, so everything below is measured on the 4 CPU cores. GPU throughput is reasoned
+from those measurements, not measured.
+
+**Map-reduce.** Map = cut the file at line boundaries into P blocks, each coded by its own GR6+ model in parallel.
+Reduce = concatenate the coded blocks with an index; decoding is parallel the same way (`gr6/mapreduce.py`).
+
+| file | 1 block | 4 blocks | 16 blocks | 16 blocks, warm start | 64 blocks |
+|---|---|---|---|---|---|
+| covid | 19.49 · 2.3 MB/s | 18.77 (+3.8%) · **7.5 MB/s** | 17.07 (+14%) | 19.13 (+1.9%) | 13.78 (+41%) |
+| owid | 13.52 · 1.3 / 1.8 | 13.22 (+2.3%) · 2.7 / **6.2** | 12.64 (+7%) | 13.19 (+2.5%) | 11.77 (+15%) |
+| diamonds | 10.22 · 1.9 | 10.01 (+2.1%) · **6.2** | 9.49 (+7.7%) | 9.98 (+2.4%) | 8.46 (+21%) |
+
+(Speeds are wall clock on 4 cores. At 16 and 64 blocks they fall, because each block is a separate process that
+allocates and clears its own tables; an in-process implementation would not pay that.)
+
+* Block parallelism scales almost linearly (3.2–3.5× on 4 cores) at +2–4% size for blocks of 1–4 MB.
+* Small blocks lose a lot because each model starts empty. **Warm start** (every block starts from the model trained
+  on block 0, which the decoder rebuilds once and copies to every lane) cuts the 16-block loss from +7–14% to about
+  +2%. That is the "reduce" step a GPU version needs: train once, broadcast, code in parallel.
+
+**Smaller networks** (fewer context models, smaller tables):
+
+| model | covid | diamonds | apache | titanic |
+|---|---|---|---|---|
+| 8 models, 2²⁰–2²³ entries (default) | 19.49 | 10.22 | 42.6 | 3.92 |
+| 8 models, 2¹⁶ entries (256 KB each) | 15.87 | 9.90 | 40.8 | 3.70 |
+| 4 models, 2¹⁶ entries | 15.64 | 9.67 | 38.6 | 3.52 |
+| 4 models, 2¹³ entries (on-chip GPU size) | 12.72 | 9.27 | 35.1 | 3.14 |
+
+* Networks small enough for a GPU's on-chip memory lose 9–35% of ratio. The cost is context capacity, not the
+  number of models (8 → 4 models costs only 1–6%).
+* A GPU version therefore keeps full-size tables in GPU main memory, at roughly 32–64 MB per lane, and runs one lane
+  per block. Each lane is sequential, so throughput comes from running many lanes. That only pays off on inputs of
+  hundreds of MB or more, where thousands of 1 MB blocks exist. It is untested here.
+* Better GPU fits, also untested: (a) the **formula search** (3 s of OWID's 12 s encode), which is embarrassingly
+  parallel across target columns and rows, and is a true map (per column pair) and reduce (best per target);
+  (b) encoding with a **frozen** network trained on a sample. Every symbol is known while encoding, so all
+  probabilities can be computed at once, fully parallel. Decoding stays sequential per lane.
+
+**Recommendation:** for kolmo, take the transform ideas (time and cross-column formulas, previous-field and
+op-above contexts) into the existing CM tier and table transform. GR6+ as a stand-alone codec is an archive-class tool
+(strong ratio, symmetric 1–3 MB/s), and on time-series tables it is the strongest coder measured here.

@@ -10,6 +10,10 @@
   digit): `balanced` 10.94 -> 11.47 (-4.6%), `ratio` 12.45 -> 13.44 (-7.3%). Must use exact integer arithmetic
   (128-bit rounded division), not floats, so every platform decodes the same. See `research/FINDINGS.md` section 3
   and `research/mathred/tabmath.py`.
+- **Time formulas (same `DERIVE` node), to do.** `a - lag(a)` (growth_abs), `100 * (a / lag(a) - 1)` (growth_prct),
+  `lag(t) + a` (cumulative), plus `a` (copy) and `a * b / 10^k`, scored on near-hits (+-2 in the last digit). In the
+  GR6+ prototype these took OWID from 10.42 to 12.66 by themselves; with the other GR6+ steps it reaches 13.59
+  (kolmo -x 12.57). See `research/FINDINGS.md` section 6 and `research/gr6/gr6plus.c` (`fpred`, `find_formulas`).
 
 ## 1.1.0 (2026-11-10)
 
