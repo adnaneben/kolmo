@@ -43,6 +43,8 @@ int kolmo_int_inv4_neon(const uint8_t *r, size_t m, int ow, int ord, uint64_t g,
 uint64_t kolmo_row_nonempty_neon(const uint16_t *rl, int n);
 int kolmo_compact_rows_neon(const uint8_t *kd, int R, uint8_t *rows);
 int kolmo_kind_count_neon(const uint8_t *kind, uint32_t cnt, uint32_t *n1, uint32_t *n2);
+/* IMG16 inverse, left predictor (mode 0), from sample i >= 1 */
+void kolmo_img16_left_neon(const uint8_t *lo, const uint8_t *hi, int64_t i, int64_t n, uint16_t *out);
 #endif
 
 #endif

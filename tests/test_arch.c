@@ -152,7 +152,13 @@ static void test_img16(void) {
         kolmo_force_c = 1; img16_fwd(a, n, W, mode, l1, h1);
         kolmo_force_c = 0; img16_fwd(a, n, W, mode, l2, h2);
         CHECK(!memcmp(l1, l2, (size_t)n + 64) && !memcmp(h1, h2, (size_t)n + 64), "img16 forward W=%lld n=%lld mode=%d", (long long)W, (long long)n, mode);
-        free(a); free(l1); free(h1); free(l2); free(h2);
+        uint16_t *b1 = malloc(2 * (size_t)n + 64), *b2 = malloc(2 * (size_t)n + 64);
+        if (it % 4 == 3) for (int64_t i = 0; i < n; i++) { l1[i] = (uint8_t)rnd(); h1[i] = (uint8_t)rnd(); }   /* any residuals decode */
+        memset(b1, 7, 2 * (size_t)n + 64); memset(b2, 7, 2 * (size_t)n + 64);
+        kolmo_force_c = 1; img16_inv(l1, h1, n, W, mode, b1);
+        kolmo_force_c = 0; img16_inv(l1, h1, n, W, mode, b2);
+        CHECK(!memcmp(b1, b2, 2 * (size_t)n + 64) && (it % 4 == 3 || !memcmp(b1, a, 2 * (size_t)n)), "img16 inverse W=%lld n=%lld mode=%d", (long long)W, (long long)n, mode);
+        free(a); free(l1); free(h1); free(l2); free(h2); free(b1); free(b2);
     }
 #if KOLMO_NEON
     for (int it = 0; it < 2000; it++) {                       /* SAD: steps 1 and 4 against the plain sums */

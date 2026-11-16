@@ -39,10 +39,31 @@ static void img16_fwd(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t
         lo[i] = (uint8_t)z; hi[i] = (uint8_t)(z >> 8);
     }
 }
+/* MED inverse from sample i (> W) with a shorter dependency chain; same output as the reference loop below.
+ * With d = U - UL, lo = min(U, UL), hi = max(U, UL), the median of L, U and L + d is L + max(d, 0) when L < lo, L +
+ * min(d, 0) when L > hi, and U otherwise (at the boundaries the cases agree). Everything but L is known before the
+ * left neighbour is, so a sample costs two compare-selects and an add after it. Values sit in the top 16 bits of a
+ * 32-bit word: unsigned compares are unchanged and the residual add wraps mod 2^16 without a mask. */
+static void img16_med_inv(const uint8_t *lo, const uint8_t *hi, int64_t i, int64_t n, int64_t W, uint16_t *out) {
+    uint32_t L = (uint32_t)out[i - 1] << 16;
+    for (; i < n; i++) {
+        uint32_t U = (uint32_t)out[i - W] << 16, UL = (uint32_t)out[i - W - 1] << 16, z = (uint32_t)lo[i] | (uint32_t)hi[i] << 8;
+        uint32_t r = ((z >> 1) ^ (0u - (z & 1))) << 16;
+        uint32_t mn = U < UL ? U : UL, mx = U < UL ? UL : U, dp = U >= UL ? U - UL : 0, dn = U >= UL ? 0 : U - UL;
+        uint32_t x = L > mx ? L + dn : U;
+        x = L < mn ? L + dp : x;
+        L = x + r;
+        out[i] = (uint16_t)(L >> 16);
+    }
+}
 static void img16_inv(const uint8_t *lo, const uint8_t *hi, int64_t n, int64_t W, int mode, uint16_t *out) {
     int64_t i = 0, head = n < W + 1 ? n : W + 1;
     for (; i < head; i++) { uint16_t z = (uint16_t)(lo[i] | hi[i] << 8); int16_t r = (int16_t)((z >> 1) ^ (uint16_t)-(int16_t)(z & 1)); out[i] = (uint16_t)(pred16(out, i, W, mode) + r); }
     if (i >= n) return;
+#if KOLMO_NEON
+    if (!kolmo_force_c && mode == 0) { kolmo_img16_left_neon(lo, hi, i, n, out); return; }
+#endif
+    if (!kolmo_force_c && mode == 2) { img16_med_inv(lo, hi, i, n, W, out); return; }
     /* one loop per predictor, the left neighbour kept in a register (the serial chain is the decode speed) */
     uint16_t L = out[i - 1];
 #define IMG_R(i) ((uint16_t)(((uint16_t)(lo[i] | hi[i] << 8) >> 1) ^ (uint16_t)-(uint16_t)(lo[i] & 1)))

@@ -140,6 +140,24 @@ int64_t kolmo_img16_fwd_neon(const uint16_t *a, int64_t i, int64_t n, int64_t W,
     return i;
 }
 
+/* IMG16 inverse, left predictor (mode 0) from sample i >= 1: a running sum mod 2^16, 16 samples per step */
+void kolmo_img16_left_neon(const uint8_t *lo, const uint8_t *hi, int64_t i, int64_t n, uint16_t *out) {
+    const uint16x8_t z0 = vdupq_n_u16(0), one = vdupq_n_u16(1);
+    uint16x8_t c = vdupq_n_u16(out[i - 1]);
+    for (; i + 16 <= n; i += 16) {
+        uint8x16_t l = vld1q_u8(lo + i), h = vld1q_u8(hi + i);
+        uint16x8_t z[2] = {vreinterpretq_u16_u8(vzip1q_u8(l, h)), vreinterpretq_u16_u8(vzip2q_u8(l, h))};
+        for (int k = 0; k < 2; k++) {
+            uint16x8_t x = veorq_u16(vshrq_n_u16(z[k], 1), vtstq_u16(z[k], one));
+            x = vaddq_u16(x, vextq_u16(z0, x, 7)); x = vaddq_u16(x, vextq_u16(z0, x, 6)); x = vaddq_u16(x, vextq_u16(z0, x, 4));
+            x = vaddq_u16(x, vdupq_laneq_u16(c, 7)); c = x;
+            vst1q_u16(out + i + 8 * k, x);
+        }
+    }
+    uint16_t L = out[i - 1];
+    for (; i < n; i++) { uint16_t z = (uint16_t)(lo[i] | hi[i] << 8); L = (uint16_t)(L + ((z >> 1) ^ (uint16_t)-(uint16_t)(z & 1))); out[i] = L; }
+}
+
 uint64_t kolmo_sad_u16_neon(const uint16_t *x, const uint16_t *y, int64_t n, int step) {
     uint64_t s = 0; int64_t i = 0, nv = step == 1 ? n : n - 1;   /* step 4: loads reach 3 samples past the last one used */
     while (i + 16 <= nv) {                       /* lanes take at most 2^15 pairs of 16-bit differences */
