@@ -1,0 +1,335 @@
+# Profiles of the branch point (2207da1, ARCH= plus -g), sampler of benchmark/rc2/simd/sampler.c, one thread.
+# speed/balanced: 12 runs per file and direction; eco/hc/ratio: decode 12 runs, compress 1 run; -x: 2 MB prefixes, 1 run.
+
+## mspeed compress
+
+total 1151
+ 50.65%     583  LZ4_compress_generic_validated (vendor/lz4)
+ 15.38%     177  [libc.so.6]
+ 13.12%     151  LZ4_count (vendor/lz4)
+ 11.29%     130  LZ4_hash5 (vendor/lz4)
+  2.61%      30  LZ4_getIndexOnHash (vendor/lz4)
+  2.43%      28  LZ4_wildCopy8 (vendor/lz4)
+  1.91%      22  shuffle_fwd (kolmo)
+  1.30%      15  LZ4_write32 (vendor/lz4)
+  0.52%       6  LZ4_NbCommonBytes (vendor/lz4)
+  0.35%       4  XXH3_accumulate_512_avx2 (vendor/xxhash)
+  0.35%       4  XXH3_accumulate_avx2 (vendor/xxhash)
+  0.09%       1  [sampler.so]
+vendor 82.6%  sys/other 15.5%  kolmo 1.9%
+
+## mspeed d (decompress)
+
+total 303
+ 42.24%     128  [libc.so.6]
+ 38.94%     118  LZ4_decompress_generic (vendor/lz4)
+ 11.55%      35  shuffle_inv (kolmo)
+  2.97%       9  read_variable_length (vendor/lz4)
+  0.99%       3  XXH3_accumulate_512_avx2 (vendor/xxhash)
+  0.99%       3  LZ4_decompress_safe (vendor/lz4)
+  0.66%       2  LZ4_memcpy_using_offset (vendor/lz4)
+  0.66%       2  LZ4_wildCopy32 (vendor/lz4)
+  0.33%       1  LZ4_wildCopy8 (vendor/lz4)
+  0.33%       1  XXH3_scrambleAcc_avx2 (vendor/xxhash)
+  0.33%       1  [sampler.so]
+vendor 45.9%  sys/other 42.6%  kolmo 11.6%
+
+## mbalanced compress
+
+total 3006
+ 17.00%     511  ZSTD_compressBlock_doubleFast_noDict_generic (vendor/zstd)
+  8.08%     243  [libc.so.6]
+  5.29%     159  MEM_read64 (vendor/zstd)
+  4.62%     139  ZSTD_hash8 (vendor/zstd)
+  4.56%     137  HIST_count_parallel_wksp (vendor/zstd)
+  3.23%      97  img16_detect (kolmo)
+  3.06%      92  ZSTD_count (vendor/zstd)
+  2.86%      86  ZSTD_storeSeqOnly (vendor/zstd)
+  2.53%      76  kg_img8_trial (kolmo)
+  2.16%      65  ZSTD_encodeSequences_body (vendor/zstd)
+  2.06%      62  ZSTD_compressBlock_fast_noDict_generic (vendor/zstd)
+  2.03%      61  FSE_encodeSymbol (vendor/zstd)
+  1.90%      57  kg_hist (kolmo)
+  1.73%      52  HUF_addBits (vendor/zstd)
+  1.60%      48  sort_u64 (kolmo)
+  1.53%      46  ZSTD_hash5 (vendor/zstd)
+  1.33%      40  ZSTD_selectAddr (vendor/zstd)
+  1.30%      39  HUF_encodeSymbol (vendor/zstd)
+  1.30%      39  kg_img8_fwd (kolmo)
+  1.26%      38  ZSTD_seqToCodes (vendor/zstd)
+  1.16%      35  kg_zz (kolmo)
+  1.16%      35  ZSTD_storeSeq (vendor/zstd)
+  1.13%      34  parse_dec_fast (kolmo)
+  1.06%      32  kg_dec_code (kolmo)
+  1.03%      31  rec_period (kolmo)
+vendor 62.0%  kolmo 28.8%  sys/other 9.2%
+
+## mbalanced d (decompress)
+
+total 1070
+ 18.22%     195  [libc.so.6]
+ 18.22%     195  kg_img8_back (kolmo)
+  9.07%      97  kg_med (kolmo)
+  6.54%      70  ZSTD_execSequence (vendor/zstd)
+  5.98%      64  ZSTD_decodeSequence (vendor/zstd)
+  4.95%      53  img16_inv (kolmo)
+  3.27%      35  HUF_decodeSymbolX2 (vendor/zstd)
+  3.08%      33  tpq_inv_cols (kolmo)
+  2.71%      29  tbl2_stream (kolmo)
+  2.62%      28  HUF_decompress4X2_usingDTable_internal_fast_asm_loop (vendor/zstd)
+  2.34%      25  fmt_slots_avx2 (kolmo)
+  1.59%      17  memcpy (?)
+  1.50%      16  _HUF_decompress4X1_usingDTable_internal_fast_asm_loop (vendor/zstd)
+  1.40%      15  HUF_decompress4X2_usingDTable_internal_body (vendor/zstd)
+  1.31%      14  ZSTD_overlapCopy8 (vendor/zstd)
+  1.31%      14  kg_dec64_inv (kolmo)
+  0.93%      10  scan_terms (kolmo)
+  0.93%      10  BIT_lookBitsFast (vendor/zstd)
+  0.93%      10  rec_field_dec (kolmo)
+  0.93%      10  swar8 (kolmo)
+  0.84%       9  BIT_lookBits (vendor/zstd)
+  0.84%       9  BIT_reloadDStream (vendor/zstd)
+  0.84%       9  XXH3_accumulate_512_avx2 (vendor/xxhash)
+  0.75%       8  ZSTD_buildFSETable_body (vendor/zstd)
+  0.65%       7  BIT_skipBits (vendor/zstd)
+kolmo 47.1%  vendor 32.8%  sys/other 20.1%
+
+## meco compress
+
+total 4259
+ 67.95%    2894  FindLongestMatchH6 (vendor/brotli)
+  8.50%     362  [libc.so.6]
+  5.14%     219  FindMatchLengthWithLimit (vendor/brotli)
+  3.87%     165  StoreH6 (vendor/brotli)
+  1.88%      80  CreateBackwardReferencesNH6 (vendor/brotli)
+  0.70%      30  CombineLengthCodes (vendor/brotli)
+  0.66%      28  HashBytesH6 (vendor/brotli)
+  0.61%      26  wd_hash (kolmo)
+  0.56%      24  word_encode (kolmo)
+  0.54%      23  BrotliStoreMetaBlock (vendor/brotli)
+  0.54%      23  memcpy (?)
+  0.52%      22  BrotliBuildMetaBlockGreedyInternal (vendor/brotli)
+  0.49%      21  ZSTD_compressBlock_doubleFast_noDict_generic (vendor/zstd)
+  0.42%      18  sort_u64 (kolmo)
+  0.31%      13  StoreSymbol (vendor/brotli)
+  0.31%      13  rans_compress_all_x (kolmo)
+  0.28%      12  HIST_count_parallel_wksp (vendor/zstd)
+  0.28%      12  kg_hist (kolmo)
+  0.28%      12  ZSTD_hash8 (vendor/zstd)
+  0.23%      10  img16_detect (kolmo)
+  0.16%       7  BrotliWriteBits (vendor/brotli)
+  0.14%       6  kg_img8_trial (kolmo)
+  0.14%       6  StoreCommandExtra (vendor/brotli)
+  0.14%       6  XXH3_accumulate_512_avx2 (vendor/xxhash)
+  0.12%       5  rec_period (kolmo)
+vendor 86.1%  sys/other 9.2%  kolmo 4.8%
+
+## meco d (decompress)
+
+total 2480
+ 22.86%     567  ProcessCommandsInternal (vendor/brotli)
+ 22.46%     557  [libc.so.6]
+  6.65%     165  rans_decompress_all (kolmo)
+  4.56%     113  kg_img8_back (kolmo)
+  3.71%      92  ReadDistanceInternal (vendor/brotli)
+  3.71%      92  BrotliDropBits (vendor/brotli)
+  3.63%      90  BrotliFillBitWindow (vendor/brotli)
+  3.15%      78  img16_inv (kolmo)
+  2.42%      60  kg_med (kolmo)
+  2.38%      59  DecodeSymbol (vendor/brotli)
+  2.14%      53  memcpy (?)
+  1.90%      47  BrotliBitReaderLoadBits (vendor/brotli)
+  1.90%      47  tpq_inv_cols (kolmo)
+  1.90%      47  tbl2_stream (kolmo)
+  1.53%      38  kg_dec64_inv (kolmo)
+  1.45%      36  XXH3_accumulate_512_avx2 (vendor/xxhash)
+  1.33%      33  BrotliCheckInputAmount (vendor/brotli)
+  1.25%      31  ReadCommandInternal (vendor/brotli)
+  0.93%      23  PreloadSymbol (vendor/brotli)
+  0.93%      23  wd_scan_low (kolmo)
+  0.89%      22  fi_vec4_avx2 (kolmo)
+  0.85%      21  scan_terms (kolmo)
+  0.81%      20  ReadPreloadedSymbol (vendor/brotli)
+  0.77%      19  rec_field_dec (kolmo)
+  0.77%      19  stw (kolmo)
+vendor 45.8%  kolmo 29.5%  sys/other 24.7%
+
+## mhc compress
+
+total 15846
+ 53.67%    8504  ZSTD_insertBtAndGetAllMatches (vendor/zstd)
+ 13.84%    2193  ZSTD_btGetAllMatches_noDict_3 (vendor/zstd)
+  8.15%    1292  ZSTD_compressBlock_opt_generic (vendor/zstd)
+  5.09%     807  ZSTD_getMatchPrice (vendor/zstd)
+  3.41%     540  ZSTD_count (vendor/zstd)
+  2.30%     364  ZSTD_fracWeight (vendor/zstd)
+  1.34%     212  [libc.so.6]
+  1.21%     192  ZSTD_updateRep (vendor/zstd)
+  1.19%     189  ZSTD_highbit32 (vendor/zstd)
+  1.05%     167  ZSTD_countLeadingZeros32 (vendor/zstd)
+  0.96%     152  ZSTD_litLengthPrice (vendor/zstd)
+  0.83%     131  ZSTD_NbCommonBytes (vendor/zstd)
+  0.67%     106  MEM_readST (vendor/zstd)
+  0.55%      87  ZSTD_MLcode (vendor/zstd)
+  0.45%      71  ZSTD_rawLiteralsCost (vendor/zstd)
+  0.36%      57  ZSTD_insertAndFindFirstIndexHash3 (vendor/zstd)
+  0.25%      40  HIST_count_parallel_wksp (vendor/zstd)
+  0.23%      36  ZSTD_insertBt1 (vendor/zstd)
+  0.20%      31  addEvents_generic (vendor/zstd)
+  0.20%      31  ZSTD_rescaleFreqs (vendor/zstd)
+  0.19%      30  ZSTD_countTrailingZeros64 (vendor/zstd)
+  0.18%      28  word_encode (kolmo)
+  0.16%      25  ZSTD_btGetAllMatches_internal (vendor/zstd)
+  0.16%      25  sort_u64 (kolmo)
+  0.13%      20  ZSTD_hash3 (vendor/zstd)
+vendor 97.2%  sys/other 1.4%  kolmo 1.4%
+
+## mhc d (decompress)
+
+total 1527
+ 21.22%     324  [libc.so.6]
+ 14.60%     223  ZSTD_execSequence (vendor/zstd)
+  8.51%     130  kg_img8_back (kolmo)
+  5.57%      85  img16_inv (kolmo)
+  3.86%      59  ZSTD_decodeSequence (vendor/zstd)
+  3.54%      54  memcpy (?)
+  3.34%      51  kg_med (kolmo)
+  3.21%      49  tbl2_stream (kolmo)
+  3.08%      47  BIT_reloadDStream (vendor/zstd)
+  2.69%      41  tpq_inv_cols (kolmo)
+  2.29%      35  kg_dec64_inv (kolmo)
+  2.03%      31  XXH3_accumulate_512_avx2 (vendor/xxhash)
+  1.90%      29  _HUF_decompress4X1_usingDTable_internal_fast_asm_loop (vendor/zstd)
+  1.70%      26  word_decode (kolmo)
+  1.64%      25  HUF_decompress4X2_usingDTable_internal_fast_asm_loop (vendor/zstd)
+  1.57%      24  stw (kolmo)
+  1.31%      20  fi_vec4_avx2 (kolmo)
+  1.31%      20  wd_scan_low (kolmo)
+  1.24%      19  scan_terms (kolmo)
+  1.24%      19  rec_field_dec (kolmo)
+  1.24%      19  fmt_slots_avx2 (kolmo)
+  1.18%      18  ZSTD_buildFSETable_body (vendor/zstd)
+  0.85%      13  BIT_lookBitsFast (vendor/zstd)
+  0.85%      13  rans_decompress_all (kolmo)
+  0.79%      12  ZSTD_updateFseStateWithDInfo (vendor/zstd)
+kolmo 39.7%  vendor 35.5%  sys/other 24.8%
+
+## mratio compress
+
+total 19612
+ 91.04%   17854  [liblzma.so.5.4.5]
+  1.36%     266  _Z22bsc_qlfc_static_encodePKhPhS1_iiP21QlfcStatisticalModel1 (vendor/libbsc)
+  0.63%     124  [libc.so.6]
+  0.42%      82  libsais_final_bwt_aux_scan_right_to_left_8u (vendor/libbsc)
+  0.36%      70  libsais_final_bwt_aux_scan_left_to_right_8u (vendor/libbsc)
+  0.36%      70  _Z18bsc_qlfc_transformPKhPhiS1_ (vendor/libbsc)
+  0.28%      54  _ZN10RangeCoder9EncodeBitILi12EEEvji (vendor/libbsc)
+  0.27%      52  _Z30bsc_lzp_encode_large_fast_pathPKhS0_PhS1_Pi (vendor/libbsc)
+  0.25%      50  libsais_partial_sorting_scan_left_to_right_8u (vendor/libbsc)
+  0.25%      49  _ZN10RangeCoder10EncodeBit1ILi12EEEvi (vendor/libbsc)
+  0.24%      47  libsais_partial_sorting_scan_right_to_left_8u (vendor/libbsc)
+  0.22%      44  libsais_final_sorting_scan_right_to_left_32s (vendor/libbsc)
+  0.21%      42  _ZN18ProbabilityCounter15UpdateBitEncodeEjRsiiii (vendor/libbsc)
+  0.20%      39  libsais_final_sorting_scan_left_to_right_32s (vendor/libbsc)
+  0.15%      30  _ZN18ProbabilityCounter10UpdateBit0ERsii (vendor/libbsc)
+  0.14%      28  _ZN18ProbabilityCounter10UpdateBit1ERsii (vendor/libbsc)
+  0.13%      26  wd_hash (kolmo)
+  0.13%      25  _ZN10RangeCoder10EncodeBit0ILi12EEEvi (vendor/libbsc)
+  0.13%      25  _Z23bsc_qlfc_transform_scanPKhlh (vendor/libbsc)
+  0.12%      24  libsais_radix_sort_lms_suffixes_8u (vendor/libbsc)
+  0.12%      23  sort_u64 (kolmo)
+  0.11%      22  word_encode (kolmo)
+  0.11%      21  model_run_state (vendor/libbsc)
+  0.09%      18  ZSTD_compressBlock_doubleFast_noDict_generic (vendor/zstd)
+  0.09%      18  libsais_partial_sorting_scan_right_to_left_32s_6k (vendor/libbsc)
+sys/other 91.8%  vendor 7.2%  kolmo 1.1%
+
+## mratio d (decompress)
+
+total 13227
+ 33.58%    4441  [liblzma.so.5.4.5]
+ 24.74%    3273  _Z22bsc_qlfc_static_decodePKhPhP21QlfcStatisticalModel1 (vendor/libbsc)
+  7.22%     955  [libc.so.6]
+  5.32%     704  _ZN18ProbabilityCounter9UpdateBitEjRsiiii (vendor/libbsc)
+  4.77%     631  libsais_unbwt_calculate_biPSI (vendor/libbsc)
+  2.71%     359  _ZN18ProbabilityCounter10UpdateBit1ERsii (vendor/libbsc)
+  2.18%     288  libsais_unbwt_touch (vendor/libbsc)
+  2.03%     269  _ZN10RangeCoder9DecodeBitILi12EEEii (vendor/libbsc)
+  1.95%     258  libsais_unbwt_decode_9 (vendor/libbsc)
+  1.74%     230  libsais_unbwt_decode_16 (vendor/libbsc)
+  1.56%     206  libsais_unbwt_decode_10 (vendor/libbsc)
+  1.30%     172  _ZN18ProbabilityCounter10UpdateBit0ERsii (vendor/libbsc)
+  1.27%     168  _Z20bsc_lzp_decode_blockPKhS0_PhPiii (vendor/libbsc)
+  0.88%     117  kg_img8_back (kolmo)
+  0.86%     114  model_run_state (vendor/libbsc)
+  0.78%     103  _ZN10RangeCoder7PeakBitILi12EEEii (vendor/libbsc)
+  0.64%      85  libsais_unbwt_decode_8 (vendor/libbsc)
+  0.59%      78  img16_inv (kolmo)
+  0.50%      66  libsais_unbwt_compute_histogram_checkpoints (vendor/libbsc)
+  0.40%      53  XXH3_accumulate_512_avx2 (vendor/xxhash)
+  0.39%      51  kg_med (kolmo)
+  0.37%      49  tpq_inv_cols (kolmo)
+  0.36%      48  tbl2_stream (kolmo)
+  0.30%      40  libsais_unbwt_decode_6 (vendor/libbsc)
+  0.29%      38  kg_dec64_inv (kolmo)
+vendor 54.5%  sys/other 41.2%  kolmo 4.3%
+
+## x c
+
+total 39739
+ 36.55%   14523  cm_predict (kolmo)
+ 19.69%    7823  cm_update (kolmo)
+ 12.51%    4973  cm_hmix (kolmo)
+ 11.81%    4694  cm_upd_sm (kolmo)
+  5.50%    2186  cm_upd_ctr (kolmo)
+  4.93%    1961  [liblzma.so.5.4.5]
+  3.83%    1521  cm_enc_loop (kolmo)
+  0.94%     373  cm_stc (kolmo)
+  0.91%     362  cm_SQ (kolmo)
+  0.72%     288  cm_find (kolmo)
+  0.64%     253  cm_upd_apm (kolmo)
+  0.20%      81  _Z22bsc_qlfc_static_encodePKhPhS1_iiP21QlfcStatisticalModel1 (vendor/libbsc)
+  0.20%      78  cm_expected (kolmo)
+  0.17%      69  [libc.so.6]
+  0.12%      47  cm_ac_mid (kolmo)
+  0.11%      45  cm_new_x (kolmo)
+  0.06%      24  sort_u64 (kolmo)
+  0.05%      20  _Z18bsc_qlfc_transformPKhPhiS1_ (vendor/libbsc)
+  0.05%      18  ZSTD_compressBlock_doubleFast_noDict_generic (vendor/zstd)
+  0.05%      18  libsais_final_bwt_aux_scan_right_to_left_8u (vendor/libbsc)
+  0.04%      17  _ZN10RangeCoder10EncodeBit1ILi12EEEvi (vendor/libbsc)
+  0.04%      15  cm_bits_for (kolmo)
+  0.04%      15  _ZN18ProbabilityCounter15UpdateBitEncodeEjRsiiii (vendor/libbsc)
+  0.04%      14  _ZN10RangeCoder9EncodeBitILi12EEEvji (vendor/libbsc)
+  0.03%      13  libsais_partial_sorting_scan_left_to_right_8u (vendor/libbsc)
+kolmo 93.9%  sys/other 5.1%  vendor 1.0%
+
+## x d (decompress)
+
+total 28962
+ 40.08%   11607  cm_predict (kolmo)
+ 18.92%    5480  cm_update (kolmo)
+ 13.79%    3993  cm_hmix (kolmo)
+ 12.80%    3706  cm_upd_sm (kolmo)
+  5.88%    1703  cm_upd_ctr (kolmo)
+  3.73%    1080  cm_dec_loop (kolmo)
+  1.14%     331  cm_SQ (kolmo)
+  0.85%     247  cm_find (kolmo)
+  0.55%     158  cm_upd_apm (kolmo)
+  0.51%     148  cm_stc (kolmo)
+  0.44%     126  cm_release (kolmo)
+  0.25%      71  cm_ac_mid (kolmo)
+  0.19%      56  cm_ac_settled (kolmo)
+  0.19%      56  cm_decompress_img (kolmo)
+  0.14%      41  cm_expected (kolmo)
+  0.11%      32  [libc.so.6]
+  0.09%      25  cm_decompress (kolmo)
+  0.09%      25  codec_decompress (kolmo)
+  0.07%      21  cm_new_x (kolmo)
+  0.07%      19  cm_free (kolmo)
+  0.06%      18  [liblzma.so.5.4.5]
+  0.03%       8  cm_ac_shift (kolmo)
+  0.02%       6  cm_big (kolmo)
+  0.01%       2  img16_inv (kolmo)
+  0.01%       2  memcpy (?)
+kolmo 99.8%  sys/other 0.2%

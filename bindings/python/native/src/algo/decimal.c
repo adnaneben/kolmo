@@ -7,6 +7,18 @@ static const int64_t P10[19] = {1LL,10LL,100LL,1000LL,10000LL,100000LL,1000000LL
 /* canonical decimal -> (mantissa, scale); 0 if not canonical (then stored as text) */
 /* parse_dec for fields with at most 8 digits before and after the dot, when 24 bytes can be read at p: SWAR
  * validation and conversion, no per-byte loop. Same result as parse_dec (checked by the tests); others go to it. */
+/* population count without a library call: baseline x86-64 has no POPCNT instruction, and __builtin_popcountll then
+ * calls libgcc (6% of -m balanced compression of a numeric CSV). Same count everywhere. */
+static inline int kolmo_popcnt64(uint64_t x) {
+#if defined(__POPCNT__) || !defined(__x86_64__)
+    return __builtin_popcountll(x);
+#else
+    x -= (x >> 1) & 0x5555555555555555ull; x = (x & 0x3333333333333333ull) + ((x >> 2) & 0x3333333333333333ull);
+    return (int)((((x + (x >> 4)) & 0x0F0F0F0F0F0F0F0Full) * 0x0101010101010101ull) >> 56);
+#endif
+}
+/* the same for masks with at most bit 7 of each byte set: the bytes' bits summed by one multiply */
+static inline int kolmo_popcnt_highs(uint64_t z) { return (int)(((z >> 7) * 0x0101010101010101ull) >> 56); }
 static inline uint64_t swar_digits_ok(uint64_t x, uint64_t m) {   /* all bytes selected by m are '0'..'9' */
     uint64_t hi = x & 0xF0F0F0F0F0F0F0F0ull, lo = x & 0x0F0F0F0F0F0F0F0Full;
     return (((hi ^ 0x3030303030303030ull) | ((lo + 0x0606060606060606ull) & 0xF0F0F0F0F0F0F0F0ull)) & m) == 0;
@@ -46,7 +58,7 @@ static inline int parse_dec_fast(const uint8_t *p, uint32_t len, size_t avail, i
     uint64_t z1 = ~(((d1 & 0x7F7F7F7F7F7F7F7Full) + 0x7F7F7F7F7F7F7F7Full) | d1 | 0x7F7F7F7F7F7F7F7Full);
     uint64_t m0 = L >= 8 ? ~0ull : ((1ull << (8 * L)) - 1), m1 = L <= 8 ? 0 : L >= 16 ? ~0ull : ((1ull << (8 * (L - 8))) - 1);
     z0 &= m0 & HIGHS; z1 &= m1 & HIGHS;
-    int ndot = __builtin_popcountll(z0) + __builtin_popcountll(z1);
+    int ndot = kolmo_popcnt_highs(z0) + kolmo_popcnt_highs(z1);
     if (ndot > 1) return 0;
     int ip = ndot ? (z0 ? __builtin_ctzll(z0) >> 3 : 8 + (__builtin_ctzll(z1) >> 3)) : L;
     int fl = ndot ? L - ip - 1 : 0;

@@ -98,6 +98,11 @@ fn main() {
         sfiles.sort();
         for f in sfiles { jobs.push((cc.clone(), f, vec![])); }
     }
+    // Dispatched kernels (src/arch/cpu.c): C references always, x86-64 versions unless KOLMO_NO_ASM (Makefile: KSRC).
+    for f in ["arch/cpu.c", "algo/predict.c", "algo/planes.c", "algo/mixer.c", "algo/video.c"] { jobs.push((cc.clone(), src.join(f), vec![])); }
+    if is_x86_64 && !no_asm {
+        for f in ["med8_sse2.c", "planes_sse2.c", "mixer_avx2.c", "video_sse2.c", "img16_sse2.c", "med8f_avx2.c"] { jobs.push((cc.clone(), src.join("arch/x86_64").join(f), vec![])); }
+    }
     // libbsc C++ sources.
     let mut cpps = Vec::new();
     list(&bsc.join("libbsc"), "cpp", true, &mut cpps);

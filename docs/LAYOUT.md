@@ -93,6 +93,12 @@ and nothing else (the Makefile and the bindings find it). Adding a codec: a file
 `static const kolmo_codec codec_<name>`, its tentative declaration in `codecs/codec.h` and its identifier in the
 registry of `codecs/codec.c`. Adding an assembly kernel: copy `arch/x86_64/hist_x86_64.S` (or the aarch64 one), its
 reference and dispatch in `algo/hist.c`, and its test in `tests/test_asm.c`.
+Adding an intrinsics kernel chosen through the table (the simd-x86 lane's pattern): the reference `kolmo_<name>_c` in
+`algo/<topic>.c` with its prototype in `algo/<topic>.h`; the ISA versions `kolmo_<name>_<isa>` in
+`arch/x86_64/<name>_<isa>.c` (or a `*_tmpl.h` included once per ISA), compiled on their own with
+`__attribute__((target))`; a pointer in `arch/kernels.h`, set by level in `arch/cpu.c`; the file in the Makefile's
+`KSRC` (and the two bindings' lists); a comparison at every level in `tests/test_kernels.c`. Callers use
+`KOLMO_K-><name>(...)`. `KOLMO_CPU=c|sse2|sse41|avx2` lowers the level at run time for tests and benchmarks.
 
 ### Why per ISA, not a single `asm/` folder
 

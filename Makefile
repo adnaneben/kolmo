@@ -91,7 +91,16 @@ ifneq ($(GPUSRC),)
 DEFS    += -DKOLMO_HAVE_METAL
 LIBS    += -framework Foundation -framework Metal
 endif
-ARCHSRC := src/arch/xxh3.c $(ASMSRC) $(GPUSRC)
+# Kernels called through the dispatch table of src/arch/cpu.c (arch/kernels.h), each object on its own: the C
+# references in src/algo, and on x86-64 the SSE2/SSE4.1/AVX2 versions (intrinsics with target attributes, chosen by
+# CPUID at first use). NO_ASM=1 keeps the references only.
+KSRC    := src/arch/cpu.c src/algo/predict.c src/algo/planes.c src/algo/mixer.c src/algo/video.c
+ifeq ($(ASM_ISA)$(NO_ASM),x86_64)
+KSRC    += src/arch/x86_64/med8_sse2.c src/arch/x86_64/planes_sse2.c src/arch/x86_64/mixer_avx2.c src/arch/x86_64/video_sse2.c \
+           src/arch/x86_64/img16_sse2.c src/arch/x86_64/med8f_avx2.c
+endif
+KHDR    := src/arch/kernels.h src/algo/predict.h src/algo/planes.h src/algo/mixer.h src/algo/video.h $(wildcard src/arch/x86_64/*.h)
+ARCHSRC := src/arch/xxh3.c $(KSRC) $(ASMSRC) $(GPUSRC)
 ARCHOBJ := $(addprefix build/obj/,$(addsuffix .o,$(basename $(ARCHSRC))))
 ARCHPIC := $(addprefix build/pic/,$(addsuffix .o,$(basename $(ARCHSRC))))
 $(ARCHOBJ): VSECT := -ffunction-sections -fdata-sections   # arch/xxh3.c carries xxHash (see VSECT above)
@@ -125,6 +134,7 @@ build/libvendor.a: $(OBJ)
 build/kolmo.o: src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES)
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) -c src/kolmo.c -o $@
+$(ARCHOBJ) $(ARCHPIC): $(KHDR)
 build/libkolmoarch.a: $(ARCHOBJ)
 	ar rcs $@ $^
 build/libkolmo.a: build/kolmo.o $(ARCHOBJ)
@@ -201,11 +211,26 @@ check-fqfam: build/test-fqfam-asan
 # Runtime ISA dispatch (x86-64): CRC32C and XXH3 against scalar references, optimised and with sanitizers.
 build/test-dispatch: tests/test_dispatch.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
-build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c src/arch/xxh3.c $(ASMSRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(KSRC) $(KHDR) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c src/arch/xxh3.c $(KSRC) $(ASMSRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan
+# Dispatched kernels (src/arch) against their C references (src/algo), at every ISA level of this CPU; also with
+# sanitizers.
+build/test-kernels: tests/test_kernels.c build/libkolmoarch.a
+	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ -lpthread -lm
+build/test-kernels-asan: tests/test_kernels.c $(KSRC) $(KHDR)
+	$(CC) $(SANFLAGS) $(DEFS) $(INC) tests/test_kernels.c $(KSRC) -o $@ -lpthread -lm
+check-kernels: build/test-kernels build/test-kernels-asan
+	./build/test-kernels
+	./build/test-kernels-asan
+# Scanner helpers of the table and log transforms (population counts, SWAR decimal parser) against references.
+build/test-scan-asan: tests/test_scan.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_scan.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-scan: build/test-scan-asan
+	./build/test-scan-asan
+.PHONY: check-kernels check-scan
 # Assembly kernels (src/arch/<isa>/*.S) against their C references, optimised and with sanitizers; with NO_ASM=1 the
 # references only.
 build/test-asm: tests/test_asm.c src/kolmo.c $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
@@ -224,8 +249,8 @@ build/test-arch-asan: tests/test_arch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES
 check-arch: build/test-arch build/test-arch-asan
 	./build/test-arch
 	./build/test-arch-asan
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-arch
-.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm check-arch
+check-rc: check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-arch
+.PHONY: check-rc check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm check-arch
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
@@ -266,12 +291,12 @@ build/kolmo-cm20: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/
 build/kolmo-cm-compact: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) -DKOLMO_CM_COMPACT $(DEFS) $(INC) src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
-build/cm-reference.o: tests/test_cm_compact.c src/codecs/cm.c
+build/cm-reference.o: tests/test_cm_compact.c src/codecs/cm.c $(KHDR)
 	@mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-build/cm-compact-test: tests/test_cm_compact.c src/codecs/cm.c build/cm-reference.o
-	$(CC) $(CFLAGS) -DKOLMO_CM_COMPACT $< build/cm-reference.o -lpthread -lm -o $@
+build/cm-compact-test: tests/test_cm_compact.c src/codecs/cm.c build/cm-reference.o build/libkolmoarch.a
+	$(CC) $(CFLAGS) -DKOLMO_CM_COMPACT $< build/cm-reference.o build/libkolmoarch.a -lpthread -lm -o $@
 
 check-cm-compact: build/cm-compact-test
 	./build/cm-compact-test

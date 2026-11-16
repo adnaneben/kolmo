@@ -1179,6 +1179,7 @@ static inline uint8_t kg_unzz8(uint8_t z) { return (uint8_t)((z >> 1) ^ (uint8_t
  * the median of left, above and left + above - above-left after that */
 static void kg_img8_fwd(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r) {
 #if KOLMO_NEON
+#if KOLMO_NEON
     if (!kolmo_force_c && kolmo_img8_fwd_neon(p, m, W, C, r)) return;
 #endif
     size_t x = 0;
@@ -1202,6 +1203,12 @@ static void kg_img8_back(const uint8_t *r, size_t m, size_t W, unsigned C, uint8
         for (x = 0; x < C; x++) q[x] = (uint8_t)(u[x] + kg_unzz8(o[x]));
         for (; x < W; x++) q[x] = (uint8_t)(kg_med(q[x - C], u[x], u[x - C]) + kg_unzz8(o[x]));
     }
+#else
+    KOLMO_K->med8_fwd(p, m, W, C, r);     /* reference: kolmo_med8_fwd_c (src/algo/predict.c); SIMD in src/arch */
+}
+static void kg_img8_back(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p) {
+    KOLMO_K->med8_inv(r, m, W, C, p);     /* reference: kolmo_med8_inv_c (src/algo/predict.c); SIMD in src/arch */
+#endif
 }
 static int kg_img8_inv(const uint8_t *par, size_t plen, const kbuf *res, const kbuf *rest, size_t maxs, kbuf *out) {
     size_t pi = 0; uint64_t W, h; if (kg_getuv(par, plen, &pi, &W) || pi >= plen) return -1;

@@ -50,3 +50,6 @@ static int kolmo_have_sse42(void) {
 #else
 #define FI_USE FI_HOST_LE
 #endif
+
+/* the table of kernels with C references (src/algo) and per-ISA versions in separate objects (src/arch/cpu.c) */
+#include "arch/kernels.h"

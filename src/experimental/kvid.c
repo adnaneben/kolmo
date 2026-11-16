@@ -13,6 +13,7 @@
  *   kvid -d in out                                        decompress
  *   kvid -b [-m ...] in.y4m                               in-memory timing (fastest of at least 3 runs), JSON line */
 #include "kolmo.h"
+#include "arch/kernels.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -76,28 +77,10 @@ static int parse(const uint8_t *s, size_t n, layout_t *L, uint8_t **hdr) {
     L->hdr_len = hn; *hdr = hb; return 0;
 }
 
-static inline int med(int a, int b, int c) {
-    int mx = a > b ? a : b, mn = a < b ? a : b;
-    return c >= mx ? mn : c <= mn ? mx : a + b - c;
-}
-/* Prediction of sample (x, y) under predictor k; cur holds the samples decoded so far, prev the previous frame. */
-static inline int predict(int k, const uint8_t *cur, const uint8_t *prev, size_t w, size_t x, size_t y) {
-    size_t i = y * w + x;
-    if (k == 1) return prev[i];
-    int a, b, c;
-    if (k == 0) {
-        a = x ? cur[i - 1] : (y ? cur[i - w] : 0); b = y ? cur[i - w] : a; c = (x && y) ? cur[i - w - 1] : b;
-        return med(a, b, c);
-    }
-#define D(j) ((int)(int8_t)(uint8_t)(cur[j] - prev[j]))
-    a = x ? D(i - 1) : (y ? D(i - w) : 0); b = y ? D(i - w) : a; c = (x && y) ? D(i - w - 1) : b;
-#undef D
-    return prev[i] + med(a, b, c);
-}
-static inline uint8_t zz(int r) { int8_t s = (int8_t)(uint8_t)r; return (uint8_t)(((uint8_t)s << 1) ^ (uint8_t)(s >> 7)); }
-static inline int unzz(uint8_t z) { return (int)((z >> 1) ^ (uint8_t)-(int)(z & 1)); }
-
+/* Strip choice and residuals: src/algo/video.c (the reference, the prediction described above) and its SIMD kernels
+ * in src/arch. */
 static void encode_plane(const uint8_t *cur, const uint8_t *prev, size_t w, size_t h, uint8_t *res, uint8_t *flags) {
+#ifdef KVID_NEON
     for (size_t y0 = 0, s = 0; y0 < h; y0 += STRIP, s++) {
         size_t y1 = y0 + STRIP < h ? y0 + STRIP : h; int best = 0; uint64_t bc = UINT64_MAX;
         for (int k = 0; k < (prev ? 3 : 1); k++) {
@@ -124,10 +107,17 @@ static void encode_plane(const uint8_t *cur, const uint8_t *prev, size_t w, size
             for (size_t x = 0; x < w; x++) res[y * w + x] = zz(cur[y * w + x] - predict(best, cur, prev, w, x, y));
         }
     }
+#else
+    const kolmo_kernels *K = kolmo_kernels_get();
+    for (size_t y0 = 0, s = 0; y0 < h; y0 += STRIP, s++)
+        flags[s] = (uint8_t)K->vid_strip_enc(cur, prev, w, y0, y0 + STRIP < h ? y0 + STRIP : h, res);
+#endif
 }
 static int decode_plane(uint8_t *cur, const uint8_t *prev, size_t w, size_t h, const uint8_t *res, const uint8_t *flags) {
+    const kolmo_kernels *K = kolmo_kernels_get();
     for (size_t y0 = 0, s = 0; y0 < h; y0 += STRIP, s++) {
         int k = flags[s]; if (k > 2 || (k && !prev)) return -1;
+#ifdef KVID_NEON
         size_t y1 = y0 + STRIP < h ? y0 + STRIP : h;
 #ifdef KVID_NEON
         if (!kvid_c && k == 1) { kolmo_kvid_add_neon(cur + y0 * w, prev + y0 * w, res + y0 * w, (y1 - y0) * w); continue; }
@@ -135,6 +125,9 @@ static int decode_plane(uint8_t *cur, const uint8_t *prev, size_t w, size_t h, c
 #endif
         for (size_t y = y0; y < y1; y++) for (size_t x = 0; x < w; x++)
             cur[y * w + x] = (uint8_t)(predict(k, cur, prev, w, x, y) + unzz(res[y * w + x]));
+#else
+        K->vid_strip_dec(cur, prev, w, y0, y0 + STRIP < h ? y0 + STRIP : h, k, res);
+#endif
     }
     return 0;
 }

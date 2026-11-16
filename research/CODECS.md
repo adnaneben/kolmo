@@ -107,3 +107,15 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | LZMA2 decoded straight into the output block (deps lane) | `ratio` decode | ≤ 3% of LZMA2 decode (dictionary mapping + copy, 22 ms per 47.5 MB) | dropped (not worth a fork of liblzma) |
 | Huffman leaf format variants: table log 8–12, optimal depth, previous-table reuse (deps lane) | codec 13 size | −0.09% to +1.95%; reuse never chosen | dropped |
 | zstd leaves without the frame (magicless, no content size) (deps lane) | leaf size | < 0.03% (26 frames in a 3.2 MB structured output) | dropped |
+| kernel dispatch table (`src/arch/cpu.c`, `arch/kernels.h`) with C references in `src/algo` | all | `KOLMO_CPU=c\|sse2\|sse41\|avx2` lowers the level; `make NO_ASM=1` = references only; `check-kernels` compares every level | in (rc3 simd-x86) |
+| IMG8 median inverse as a 16-row wavefront (rows in byte lanes, skewed C bytes, 16×16 transposes), SSE2/SSE4.1 | decode of 8-bit images, Y4M in the generic modes | loop 4.3× (RGB) to 8.4× (grey); `balanced` decode 1.35× (RGB), 1.83× (grey), 2.38× (CIF video) | in (rc3 simd-x86) |
+| same kernel, VEX (AVX2 target) or AVX-512VL build | — | 25–35% (VEX) and 10% (AVX-512VL) slower than the SSE4.1 build | out |
+| IMG8 forward (median residuals) SSE2/AVX2 | compress of 8-bit images, Y4M | loop 5.4× / 8×; `balanced` compress +6–7% | in (rc3 simd-x86) |
+| byte-plane split/merge by unpack rounds (T_SHUF, one channel; w = 2 also with delta) | `speed` integer arrays; eco/hc video | loops 4.7–45×; `speed` compress 1.16–1.23×, decode 1.49×; eco video decode 1.10–1.64× | in (rc3 simd-x86) |
+| CM mixer dot products (vpmuldq) and weight updates (vpmulld), AVX2/SSE4.1 | `-x` | kernels 3.1× / 2.2×; `-x` 1.15–1.23× faster both ways | in (rc3 simd-x86) |
+| CM context hashes 8 at a time (vpmulld) | `-x` | kernel 1.8×; with the mixer, `-x` text 1.22× compress / 1.18× decode | in (rc3 simd-x86) |
+| kvid strip prediction: 3 predictors' costs in one vector pass; decode by vector add or the wavefront median inverse | kvid (Y4M node) | `rt` 4.8× compress, 6.4× decode; `balanced` 2.6–3.4× / 2.5–4.2× | in (rc3 simd-x86) |
+| IMG16 stride search (Σ\|Δ\| in 32-bit lanes) and forward prediction, SSE2/AVX2 | compress of 16-bit images | kernels 9.9× / 19.5× (AVX2); `balanced` compress 1.32–1.42× | in (rc3 simd-x86) |
+| inline popcount (no libgcc call on baseline x86-64) | table scanners, decimal parser | numeric CSV `balanced` compress +4.8% | in (rc3 simd-x86) |
+| IMG16 median inverse as a wavefront | — | not possible: a row's first sample predicts from the previous row's last one (rows are serial) | out |
+| rANS order-0 decode with a packed slot table | eco/hc leaves | −5% to +1% (noise) | out |

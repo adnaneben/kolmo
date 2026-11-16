@@ -1,0 +1,171 @@
+audio_esc.wav        -m speed                     same      decoded b31ffe3dc8b1195d
+audio_esc.wav        -m balanced                  same      decoded 5ba66c15fd23d1fe
+audio_esc.wav        -m balanced --native-leaf    same      decoded 5ba66c15fd23d1fe
+audio_esc.wav        -m fast --typed-huf          same      decoded 26166bb96567a9af
+audio_esc.wav        -m eco                       same      decoded 1a990975eb7d6b3b
+audio_esc.wav        -m hc                        same      decoded 24e622e7351e7f06
+audio_esc.wav        -m ratio                     same      decoded bf949f0bfd0755ce
+audio_esc.wav        -x                           same      decoded 29dcd333189eddda
+audio_esc.wav        -x -l 1                      same      decoded 051264df895ef63a
+audio_esc.wav        -x -l 2                      same      decoded 29dcd333189eddda
+bin_mozilla          -m speed                     same      decoded d6355249ab726565
+bin_mozilla          -m balanced                  same      decoded 7b7db6163cea9443
+bin_mozilla          -m balanced --native-leaf    same      decoded 7b7db6163cea9443
+bin_mozilla          -m fast --typed-huf          same      decoded 7b7db6163cea9443
+bin_mozilla          -m eco                       same      decoded f524d306dee23b43
+bin_mozilla          -m hc                        same      decoded 6567f59c08a1a297
+bin_mozilla          -m ratio                     same      decoded 1d36213707495ab0
+bin_mozilla          -x                           same      decoded 21d009705b8976f3
+bin_mozilla          -x -l 1                      same      decoded 88cefc5701afa554
+bin_mozilla          -x -l 2                      same      decoded 21d009705b8976f3
+img16_mr.npy         -m speed                     same      decoded e387941a5215f898
+img16_mr.npy         -m balanced                  same      decoded 2a76144986fb12ff
+img16_mr.npy         -m balanced --native-leaf    same      decoded 2a76144986fb12ff
+img16_mr.npy         -m fast --typed-huf          same      decoded 2a76144986fb12ff
+img16_mr.npy         -m eco                       same      decoded 697e104509ffd3d0
+img16_mr.npy         -m hc                        same      decoded a3d2f1a89ccd8a65
+img16_mr.npy         -m ratio                     same      decoded 6ac9cce4d8fc48a9
+img16_mr.npy         -x                           same      decoded bcfa56b7668384cf
+img16_mr.npy         -x -l 1                      same      decoded f80b69a559e05ff6
+img16_mr.npy         -x -l 2                      same      decoded bcfa56b7668384cf
+img16_xray.npy       -m speed                     same      decoded 9327d028c574abc5
+img16_xray.npy       -m balanced                  same      decoded 8484c7dbef1530a6
+img16_xray.npy       -m balanced --native-leaf    same      decoded 8484c7dbef1530a6
+img16_xray.npy       -m fast --typed-huf          same      decoded 8484c7dbef1530a6
+img16_xray.npy       -m eco                       same      decoded a8b5fe25eca3384c
+img16_xray.npy       -m hc                        same      decoded 428f50038bdccf8c
+img16_xray.npy       -m ratio                     same      decoded 6186291aee98836d
+img16_xray.npy       -x                           same      decoded c983a565e362ba8d
+img16_xray.npy       -x -l 1                      same      decoded c983a565e362ba8d
+img16_xray.npy       -x -l 2                      same      decoded c3d6e9a317674f21
+img8_grey.npy        -m speed                     same      decoded 200d43a0f0544333
+img8_grey.npy        -m balanced                  same      decoded 9e694f80db76e7ca
+img8_grey.npy        -m balanced --native-leaf    same      decoded 9e694f80db76e7ca
+img8_grey.npy        -m fast --typed-huf          same      decoded 9e694f80db76e7ca
+img8_grey.npy        -m eco                       same      decoded 4c2e0b81965fa2df
+img8_grey.npy        -m hc                        same      decoded 598aabb67fe0a95b
+img8_grey.npy        -m ratio                     same      decoded 65d8e13725c047bb
+img8_grey.npy        -x                           same      decoded f599494cd51f4054
+img8_grey.npy        -x -l 1                      same      decoded f170597842570e90
+img8_grey.npy        -x -l 2                      same      decoded f599494cd51f4054
+img8_rgb.npy         -m speed                     same      decoded e1da45b8febbab65
+img8_rgb.npy         -m balanced                  same      decoded 9bcc5073b5ae34e5
+img8_rgb.npy         -m balanced --native-leaf    same      decoded 9bcc5073b5ae34e5
+img8_rgb.npy         -m fast --typed-huf          same      decoded 9bcc5073b5ae34e5
+img8_rgb.npy         -m eco                       same      decoded 4e0c947412a6c21c
+img8_rgb.npy         -m hc                        same      decoded 1d93d1009145b5b0
+img8_rgb.npy         -m ratio                     same      decoded 1a2b5cc874405261
+img8_rgb.npy         -x                           same      decoded 143d4814339f92d5
+img8_rgb.npy         -x -l 1                      same      decoded 314a386c1ea8e307
+img8_rgb.npy         -x -l 2                      same      decoded 143d4814339f92d5
+log_access.log       -m speed                     same      decoded 696efc6010cbdde1
+log_access.log       -m balanced                  same      decoded 64fa3123b6a9a938
+log_access.log       -m balanced --native-leaf    same      decoded 64fa3123b6a9a938
+log_access.log       -m fast --typed-huf          same      decoded 64fa3123b6a9a938
+log_access.log       -m eco                       same      decoded 2073793ac63bf61f
+log_access.log       -m hc                        same      decoded dd2018bf53fff89c
+log_access.log       -m ratio                     same      decoded f8e4ee5b7b3b74e3
+log_access.log       -x                           same      decoded 380f3f97d373cac9
+log_access.log       -x -l 1                      same      decoded 76779b67492bfe7d
+log_access.log       -x -l 2                      same      decoded 380f3f97d373cac9
+num_f64.npy          -m speed                     same      decoded 0f5bbabb45ad01d8
+num_f64.npy          -m balanced                  same      decoded bf9617fe309c1456
+num_f64.npy          -m balanced --native-leaf    same      decoded bf9617fe309c1456
+num_f64.npy          -m fast --typed-huf          same      decoded bf9617fe309c1456
+num_f64.npy          -m eco                       same      decoded bc85fbeecefacb66
+num_f64.npy          -m hc                        same      decoded 8a0771c9ffb46f77
+num_f64.npy          -m ratio                     same      decoded ff9da517728ec4a3
+num_f64.npy          -x                           same      decoded 24cdd63d384a61b8
+num_f64.npy          -x -l 1                      same      decoded 24cdd63d384a61b8
+num_f64.npy          -x -l 2                      same      decoded c9ba9da6b3c74db1
+num_sao.bin          -m speed                     same      decoded b1cea4f4cdcf967a
+num_sao.bin          -m balanced                  same      decoded 6352a48e12287cd3
+num_sao.bin          -m balanced --native-leaf    same      decoded 6352a48e12287cd3
+num_sao.bin          -m fast --typed-huf          same      decoded 6352a48e12287cd3
+num_sao.bin          -m eco                       same      decoded db477e1823a02550
+num_sao.bin          -m hc                        same      decoded 4695e05ee3355319
+num_sao.bin          -m ratio                     same      decoded f2e4a0b6143ee069
+num_sao.bin          -x                           same      decoded b0b8a75338de8b16
+num_sao.bin          -x -l 1                      same      decoded 0062eb2624a312f6
+num_sao.bin          -x -l 2                      same      decoded b0b8a75338de8b16
+num_walk_i32.npy     -m speed                     same      decoded 03174b941252ae8e
+num_walk_i32.npy     -m balanced                  same      decoded c6e657029d90c016
+num_walk_i32.npy     -m balanced --native-leaf    same      decoded 55e750499ae76efc
+num_walk_i32.npy     -m fast --typed-huf          same      decoded c6e657029d90c016
+num_walk_i32.npy     -m eco                       same      decoded 7efd1ade7377f758
+num_walk_i32.npy     -m hc                        same      decoded d7db01217f2915ec
+num_walk_i32.npy     -m ratio                     same      decoded e93b14fce2c7952e
+num_walk_i32.npy     -x                           same      decoded 87bdab2e10c7d517
+num_walk_i32.npy     -x -l 1                      same      decoded 87bdab2e10c7d517
+num_walk_i32.npy     -x -l 2                      same      decoded 8231ae9c02d4f7f6
+table_osdb.bin       -m speed                     same      decoded 071d5f4e796f3733
+table_osdb.bin       -m balanced                  same      decoded b7ac4a8e563c6c63
+table_osdb.bin       -m balanced --native-leaf    same      decoded b7ac4a8e563c6c63
+table_osdb.bin       -m fast --typed-huf          same      decoded b7ac4a8e563c6c63
+table_osdb.bin       -m eco                       same      decoded 7a6b6ecc28100a0f
+table_osdb.bin       -m hc                        same      decoded 1b67959b69119ac8
+table_osdb.bin       -m ratio                     same      decoded 78dee98f39182bd7
+table_osdb.bin       -x                           same      decoded 2f933a6baa5afc2e
+table_osdb.bin       -x -l 1                      same      decoded c9ef24d0e00b32fe
+table_osdb.bin       -x -l 2                      same      decoded 2f933a6baa5afc2e
+table_trades.csv     -m speed                     same      decoded 0101379a04e65191
+table_trades.csv     -m balanced                  same      decoded bf4263717ff49d11
+table_trades.csv     -m balanced --native-leaf    same      decoded bf4263717ff49d11
+table_trades.csv     -m fast --typed-huf          same      decoded bf4263717ff49d11
+table_trades.csv     -m eco                       same      decoded c500b02330003349
+table_trades.csv     -m hc                        same      decoded 2edcb7d4224b2aec
+table_trades.csv     -m ratio                     same      decoded c8a7601b8d582c50
+table_trades.csv     -x                           same      decoded b3b12e7a81aa4a9d
+table_trades.csv     -x -l 1                      same      decoded e6da2eb14ea9457d
+table_trades.csv     -x -l 2                      same      decoded b3b12e7a81aa4a9d
+text_dickens.txt     -m speed                     same      decoded 326e7b3a8768bad1
+text_dickens.txt     -m balanced                  same      decoded 7dbf303c7db239ab
+text_dickens.txt     -m balanced --native-leaf    same      decoded 7dbf303c7db239ab
+text_dickens.txt     -m fast --typed-huf          same      decoded 7dbf303c7db239ab
+text_dickens.txt     -m eco                       same      decoded 11d0bf92580a9418
+text_dickens.txt     -m hc                        same      decoded 4af5a36b85394897
+text_dickens.txt     -m ratio                     same      decoded 5f743713a75118e2
+text_dickens.txt     -x                           same      decoded 3d27dffe9ea1d30f
+text_dickens.txt     -x -l 1                      same      decoded e5e2d64881a2c67c
+text_dickens.txt     -x -l 2                      same      decoded 3d27dffe9ea1d30f
+text_webster.txt     -m speed                     same      decoded 50ac56ad40d05882
+text_webster.txt     -m balanced                  same      decoded 6b54af2633afc458
+text_webster.txt     -m balanced --native-leaf    same      decoded 6b54af2633afc458
+text_webster.txt     -m fast --typed-huf          same      decoded 6b54af2633afc458
+text_webster.txt     -m eco                       same      decoded 17de140e2c5137b5
+text_webster.txt     -m hc                        same      decoded b1e85c4aa484f0ec
+text_webster.txt     -m ratio                     same      decoded 8488707475c32809
+text_webster.txt     -x                           same      decoded f3d81c9daac99ce8
+text_webster.txt     -x -l 1                      same      decoded 6681ce2cb5d77ba4
+text_webster.txt     -x -l 2                      same      decoded f3d81c9daac99ce8
+text_xml.xml         -m speed                     same      decoded f0a52fbc4d36626e
+text_xml.xml         -m balanced                  same      decoded 9d1ced15ee422d3d
+text_xml.xml         -m balanced --native-leaf    same      decoded 9d1ced15ee422d3d
+text_xml.xml         -m fast --typed-huf          same      decoded 9d1ced15ee422d3d
+text_xml.xml         -m eco                       same      decoded 05812a92eb4e499e
+text_xml.xml         -m hc                        same      decoded fff3041e63ad24da
+text_xml.xml         -m ratio                     same      decoded 16ba1274a730593a
+text_xml.xml         -x                           same      decoded ebfddbe0b0b143e0
+text_xml.xml         -x -l 1                      same      decoded eeb069ac86cc7d4d
+text_xml.xml         -x -l 2                      same      decoded ebfddbe0b0b143e0
+video_akiyo.y4m      -m speed                     same      decoded 55f2856bdc891e81
+video_akiyo.y4m      -m balanced                  same      decoded de21278e67d1cab6
+video_akiyo.y4m      -m balanced --native-leaf    same      decoded de21278e67d1cab6
+video_akiyo.y4m      -m fast --typed-huf          same      decoded de21278e67d1cab6
+video_akiyo.y4m      -m eco                       same      decoded 274604ca4a41abba
+video_akiyo.y4m      -m hc                        same      decoded ed361a35722a99a6
+video_akiyo.y4m      -m ratio                     same      decoded 7ec30205f8b51948
+video_akiyo.y4m      -x                           same      decoded 2be6fd03ef012e78
+video_akiyo.y4m      -x -l 1                      same      decoded 478dce8f6e7f001a
+video_akiyo.y4m      -x -l 2                      same      decoded 2be6fd03ef012e78
+video_foreman.y4m    -m speed                     same      decoded d53e1550506b4ee3
+video_foreman.y4m    -m balanced                  same      decoded 97b810261889131e
+video_foreman.y4m    -m balanced --native-leaf    same      decoded 97b810261889131e
+video_foreman.y4m    -m fast --typed-huf          same      decoded 97b810261889131e
+video_foreman.y4m    -m eco                       same      decoded 4ffc648e5f5ced93
+video_foreman.y4m    -m hc                        same      decoded ed3a6723c56c8740
+video_foreman.y4m    -m ratio                     same      decoded 03dc95ce587608dc
+video_foreman.y4m    -x                           same      decoded fd04901c4c1a0021
+video_foreman.y4m    -x -l 1                      same      decoded 81ee423d609fd200
+video_foreman.y4m    -x -l 2                      same      decoded fd04901c4c1a0021
+ALL SAME AND DECODED

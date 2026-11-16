@@ -95,12 +95,12 @@ static void *fs_worker(void *arg) {
                     if (a == yi) continue;
                     const float *la = c->Lf + (size_t)a * c->SS, *va = c->Vf + (size_t)a * c->SS;
                     uint64_t wb[SCREEN / 64]; int wc = 0;
-                    for (int u = 0; u < c->SS / 64 + (c->SS % 64 != 0); u++) { wb[u] = c->VB[(size_t)yi * c->NW + u] & c->VB[(size_t)a * c->NW + u]; wc += __builtin_popcountll(wb[u]); }
+                    for (int u = 0; u < c->SS / 64 + (c->SS % 64 != 0); u++) { wb[u] = c->VB[(size_t)yi * c->NW + u] & c->VB[(size_t)a * c->NW + u]; wc += kolmo_popcnt64(wb[u]); }
                     if (wc < c->SCNT) continue;
                     for (int i = 0; i < c->SS; i++) { float w = vy[i] * va[i], d = (ly[i] - la[i]) * w; W->Wa[i] = w; W->Da[i] = d; W->D2a[i] = d * d; }
                     for (int b = 0; b < c->m; b++) {
                         if (b == yi || b == a) continue;
-                        { int cc = 0; for (int u = 0; u < c->NW; u++) cc += __builtin_popcountll(wb[u] & c->VB[(size_t)b * c->NW + u]); if (cc < c->SCNT) continue; }
+                        { int cc = 0; for (int u = 0; u < c->NW; u++) cc += kolmo_popcnt64(wb[u] & c->VB[(size_t)b * c->NW + u]); if (cc < c->SCNT) continue; }
                         const float *vb = c->Vf + (size_t)b * c->SS, *lb = c->Lf + (size_t)b * c->SS, *l2 = c->L2f + (size_t)b * c->SS;
                         v8f c0 = {0}, c1 = {0}, c2 = {0}, c3 = {0}, c4 = {0}, c5 = {0};
                         int i = 0;
@@ -452,7 +452,7 @@ static int split_aligned(const uint8_t *in, int64_t n, uint8_t delim, int k, uin
     if (n <= 0 || n >= 0xFFFFFFF0ll || k < 2) return 0;
     /* rows: newlines counted by the same SIMD masks (rows of k fields need >= k - 1 delimiters and a newline) */
     size_t nn = 0, i = 0; uint64_t mt, mn;
-    for (; i + 64 <= (size_t)n; i += 64) { term_masks64(in + i, delim, &mt, &mn); nn += (size_t)__builtin_popcountll(mn); }
+    for (; i + 64 <= (size_t)n; i += 64) { term_masks64(in + i, delim, &mt, &mn); nn += (size_t)kolmo_popcnt64(mn); }
     for (; i < (size_t)n; i++) nn += in[i] == '\n';
     int64_t cap = (int64_t)nn + 1;
     uint32_t *coff = malloc(4 * ((size_t)cap * k + 1)), *clen = malloc(4 * ((size_t)cap * k + 1));

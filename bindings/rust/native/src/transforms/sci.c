@@ -22,6 +22,7 @@ static inline int pred16(const uint16_t *x, int64_t i, int64_t W, int mode) {
     if (UL <= mn) return mx;
     return L + U - UL;
 }
+#if KOLMO_NEON
 static inline int pred16_in(const uint16_t *x, int64_t i, int64_t W, int mode) {      /* i > W: no bounds checks */
     int L = x[i - 1], U = x[i - W], UL = x[i - W - 1];
     if (mode == 0) return L;
@@ -29,7 +30,9 @@ static inline int pred16_in(const uint16_t *x, int64_t i, int64_t W, int mode) {
     int mx = L > U ? L : U, mn = L < U ? L : U;
     return UL >= mx ? mn : UL <= mn ? mx : L + U - UL;
 }
+#endif
 static void img16_fwd(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi) {
+#if KOLMO_NEON
     for (int64_t i = 0; i < n; i++) {
 #if KOLMO_NEON
         if (i == W + 1 && !kolmo_force_c) { i = kolmo_img16_fwd_neon(a, i, n, W, mode, lo, hi); if (i >= n) break; }
@@ -38,6 +41,9 @@ static void img16_fwd(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t
         uint16_t r = (uint16_t)(a[i] - p); uint16_t z = (uint16_t)((uint16_t)(r << 1) ^ (uint16_t)-(uint16_t)(r >> 15));
         lo[i] = (uint8_t)z; hi[i] = (uint8_t)(z >> 8);
     }
+#else
+    KOLMO_K->img16_fwd(a, n, W, mode, lo, hi);     /* reference: kolmo_img16_fwd_c (src/algo/predict.c); SIMD in src/arch */
+#endif
 }
 /* MED inverse from sample i (> W) with a shorter dependency chain; same output as the reference loop below.
  * With d = U - UL, lo = min(U, UL), hi = max(U, UL), the median of L, U and L + d is L + max(d, 0) when L < lo, L +
@@ -112,19 +118,24 @@ static int img16_detect(const uint8_t *s, size_t n, img_plan_t *P) {
         if (big > 1000) continue;
         /* row stride: lag with the smallest mean absolute difference, on a 64K window */
         int64_t w0 = m / 2, wl = 65536 < m / 2 ? 65536 : m / 2; double lag1 = 0;
-        for (int64_t i = 1; i < wl; i++) lag1 += abs((int)a[w0 + i] - (int)a[w0 + i - 1]);
+        if (wl > 1) lag1 = (double)KOLMO_K->sad16(a + w0 + 1, a + w0, (size_t)(wl - 1));   /* an integer sum: exact in a double */
         lag1 /= wl; int64_t W = 1; double wv = lag1;
         /* coarse score for every lag on a short contiguous run (vectorizes), then the exact score of the best few;
          * the exact rule is the one of a full scan: the smallest score below 1.5x lag 1, earliest lag on ties */
         {   enum { NC = 24, CW = 4096 };
             int64_t cw[NC]; uint64_t cs[NC]; int nc = 0;
             for (int64_t w = 16; w <= IMG_MAXW && w < wl / 2; w++) {
-                uint64_t sc = 0; const uint16_t *x = a + w0 + w, *y = a + w0;
+                const uint16_t *x = a + w0 + w, *y = a + w0;
                 int64_t lim = wl - w < CW ? wl - w : CW;
+#if KOLMO_NEON
+                uint64_t sc = 0;
 #if KOLMO_NEON
                 if (!kolmo_force_c) sc = kolmo_sad_u16_neon(x, y, lim, 1); else
 #endif
                 for (int64_t i = 0; i < lim; i++) sc += (uint64_t)abs((int)x[i] - (int)y[i]);
+#else
+                uint64_t sc = lim > 0 ? KOLMO_K->sad16(x, y, (size_t)lim) : 0;
+#endif
                 sc = sc * CW / (uint64_t)(lim > 0 ? lim : 1);
                 if (nc < NC) { cw[nc] = w; cs[nc] = sc; nc++; }
                 else { int mx = 0; for (int q = 1; q < NC; q++) if (cs[q] > cs[mx]) mx = q; if (sc < cs[mx]) { cw[mx] = w; cs[mx] = sc; } }
