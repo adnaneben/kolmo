@@ -28,8 +28,9 @@ Branch `claude/rc3-simd-arm-20261116`, from `claude/release-rc3-20261116` (`2207
   renormalisation mask, which then needs a dependent shuffle-row load. The scalar decoder runs 8 short chains in
   parallel.
 - **No assembly.** Every kernel is NEON intrinsics in `src/arch/aarch64/*_neon.c`. The loops are latency- or
-  load-bound, and clang schedules them well. No `.S` file was justified, so `src/arch/asm.h` (not yet written by
-  the structure lane) was not needed.
+  load-bound, and clang schedules them well. No `.S` file was justified. The structure lane's `src/arch/asm.h` and its
+  assembly histogram arrived with the last merge (`b43f7cc`); they are tested by `check-asm` and left as they
+  are.
 
 Machine: Apple M5 (4 performance + 6 efficiency cores, 128 KiB L1D and 16 MiB L2 per performance cluster, 24 GB),
 macOS 27.2, Apple clang 21.0.0. Flags are the Makefile default, `-O3 -mcpu=native -ffp-contract=off`. NEON is
