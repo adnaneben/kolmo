@@ -65,6 +65,8 @@ typedef struct {
 #define KOLMO_ERR_LIMIT     (-7)   /* a caller-specified decoding limit was exceeded */
 
 #define KOLMO_ERR_IO        (-8)   /* seekable file read/write failed */
+#define KOLMO_ERR_PROFILE   (-9)   /* trained profile required, mismatched, or damaged */
+#define KOLMO_ERR_TARGET    (-10)  /* --target expression or calibration table invalid */
 
 /* Zero fields mean no limit. These bound format sizes, not total codec heap
  * memory; a context-mixing block can require much more memory than its bytes. */
@@ -123,6 +125,81 @@ int64_t kolmo_compress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t c
                           const kolmo_params *p, const void *dict, size_t dictlen);
 int64_t kolmo_decompress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads,
                             const void *dict, size_t dictlen);
+
+/* --- Trained profiles (kolmo train) ---------------------------------------------------------------
+ * A profile is learnt once from a sample of a dataset (files of one source: monthly CSV exports, rotated logs, JSON
+ * messages of one API) and then used for every later file of that dataset. It holds the setting to use (mode, level,
+ * analysis), the plans the analysis chose for each kind of file in the sample (pinned: matching files skip the
+ * analysis), a zstd dictionary and a raw dictionary for Brotli and LZ4, and reserved room for context-mixing priors.
+ * The serialized form (a .kpf file) is versioned and checksummed: SPEC.md, "Trained profiles (KPF1)".
+ *
+ * Frames written with a profile record its 32-bit id; decoding needs the same profile and fails with
+ * KOLMO_ERR_PROFILE without it or with another one. A frame of a single block of at most 1 MiB is written in the
+ * compact form ("CZC1", 16-17 bytes of header instead of 52), which is what makes small messages pay off.
+ * A loaded profile is read-only and may be used by any number of concurrent calls. */
+typedef struct kolmo_profile kolmo_profile;
+
+typedef struct {
+    kolmo_params params;   /* setting the profile is trained for (and records as its default) */
+    size_t dict_size;      /* 0 = 110 KiB; dictionary budget for zstd (the raw dictionary is its content part) */
+    int no_dict;           /* 1 = no dictionaries: plans and setting only */
+    const char *target;    /* NULL, or a --target expression: the setting is chosen among the candidate settings by
+                              measuring them on a held-out fifth of the samples (see kolmo_compress_target) */
+} kolmo_train_params;
+
+/* Train: samples laid end to end in `samples`, each length in `sizes`. Writes the serialized profile to dst (at most
+ * cap bytes; kolmo_profile_bound gives enough) and returns its length, or a negative error. */
+size_t  kolmo_profile_bound(const kolmo_train_params *tp);
+int64_t kolmo_profile_train(const uint8_t *samples, const size_t *sizes, size_t nsamples,
+                            const kolmo_train_params *tp, uint8_t *dst, size_t cap);
+/* Load (validate magic, version, CRC32C, id, every section) a serialized profile. 0 or KOLMO_ERR_PROFILE. */
+int     kolmo_profile_load(const void *buf, size_t n, kolmo_profile **out);
+void    kolmo_profile_free(kolmo_profile *prof);
+uint32_t kolmo_profile_id(const kolmo_profile *prof);
+/* The setting recorded in the profile (what kolmo -P uses unless -m or -l is given). */
+void    kolmo_profile_params(const kolmo_profile *prof, kolmo_params *p);
+/* Human-readable summary (training sample, sections, pinned plans). Returns the length written (NUL-terminated). */
+size_t  kolmo_profile_describe(const kolmo_profile *prof, char *out, size_t cap);
+/* As kolmo_compress / kolmo_decompress with a profile. p = NULL uses the profile's setting. The decoder also reads
+ * frames written without a profile. */
+int64_t kolmo_compress_profile(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
+                               const kolmo_profile *prof);
+int64_t kolmo_decompress_profile(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads,
+                                 const kolmo_profile *prof);
+/* 1 and *id when the frame was written with a profile, 0 when not, or a negative error. */
+int     kolmo_frame_profile_id(const uint8_t *src, size_t n, uint32_t *id);
+
+/* --- Targets (--target) ---------------------------------------------------------------------------
+ * A target tells the planner what "best" means, and the planner picks, per chunk of the input (16 MiB by default,
+ * cut where the analysis would cut blocks), the setting that is cheapest under it. Settings considered: speed (rt),
+ * balanced without analysis (fast -n), balanced, eco, hc, ratio -l 1 (BWT), ratio, -x -l 1, -x.
+ *   "size"                         smallest output, whatever the time
+ *   "decode>=1GB/s", "encode>=50MB/s"   speed floors (one thread, from the calibration table); smallest output that
+ *                                  meets them. Several terms are joined with ','.
+ *   "cost:<formula>"               minimise a formula of size (bytes), n (input bytes), enc and dec (seconds, one
+ *                                  thread, predicted from the calibration table): + - * / ( ) and numbers. Presets:
+ *                                  cost:cloud[=months] (benchmark/TRADEOFFS.md model 3: S3 storage $0.023/GB-month,
+ *                                  vCPU $0.054/h, 3.3 reads), cost:link=<rate> (model 2: enc + transfer + dec,
+ *                                  e.g. link=1Gbit). The formula must not decrease when size grows.
+ * Sizes are predicted from trial compressions of the chunk (the whole chunk up to 1 MiB, three 256 KiB slices above);
+ * speeds come from a calibration table (kolmo_calibrate), or a built-in table measured on the reference machine.
+ * The output is an ordinary frame; any kolmo decodes it. */
+typedef struct kolmo_target kolmo_target;
+int     kolmo_target_parse(const char *spec, kolmo_target **out);        /* 0 or KOLMO_ERR_TARGET */
+/* Replace the built-in speed table with a calibration table (the text kolmo_calibrate writes). 0 or KOLMO_ERR_TARGET. */
+int     kolmo_target_set_calibration(kolmo_target *t, const char *table, size_t n);
+void    kolmo_target_free(kolmo_target *t);
+/* Per-chunk report (optional): which setting each chunk got. */
+typedef struct { uint32_t chunks; uint32_t per_setting[16]; double predicted_cost, predicted_enc_s, predicted_dec_s;
+                 uint64_t predicted_size; } kolmo_target_report;
+const char *kolmo_target_setting_name(int setting);                      /* 0..8, NULL past the end */
+/* p: threads and, if non-zero, the chunk size (block); other fields ignored. prof may be NULL. */
+int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
+                              const kolmo_target *t, const kolmo_profile *prof, kolmo_target_report *report);
+/* Measure encode and decode speed of every setting on built-in synthetic data of each class (or, with files, on
+ * them) on one thread, and write the calibration table (text). Returns its length, or a negative error. */
+int64_t kolmo_calibrate(const uint8_t *const *files, const size_t *sizes, size_t nfiles, double seconds_per_point,
+                        char *out, size_t cap);
 
 #ifdef __cplusplus
 }

@@ -9,9 +9,9 @@
 #include "experimental/frontier_pcm.h"
 #include "experimental/frontier_lag.h"
 #include "experimental/frontier_shuffle.h"
-#define KOLMO_MAX_VERSION 10
+#define KOLMO_MAX_VERSION 11
 #else
-#define KOLMO_MAX_VERSION 10  /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16) */
+#define KOLMO_MAX_VERSION 11  /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16); 11: trained profile (flag bit 2, src/plan/profile.c) */
 #endif
 #include <pthread.h>
 #include <stdatomic.h>
@@ -45,6 +45,7 @@ unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);
 #include "common/xxhash.h"
 #include <brotli/encode.h>
 #include <brotli/decode.h>
+#include "plan/profile.h"
 #ifndef KOLMO_NO_LZMA
 #include <lzma.h>
 #endif
@@ -1245,6 +1246,7 @@ static size_t codec_bound(int codec, size_t n) {
 }
 
 typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *dict; size_t dictlen;
+                 const struct kolmo_profile *prof;   /* trained profile: its dictionaries for zstd, Brotli and LZ4 (src/plan/profile.c) */
                  int native_leaf;        /* encoder: graph integer residual leaves may use C_NPLANE (opt-in, balanced) */
                  int used_native_leaf;   /* encoder: set when a C_NPLANE leaf was written (the frame needs version 9) */
                  int allow_nplane;       /* decoder: C_NPLANE leaves are valid (container version 9 or later) */
@@ -1431,6 +1433,7 @@ bad: free(sym); return -1;
 }
 
 static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
+    if (x->prof) { int h = 0; size_t r = kp_codec_compress(x->prof, (void **)&x->zc, codec, level, in, n, out, cap, &h); if (h) return r; }
     switch (codec) {
         case C_HUF: return huf_compress_all(in, n, out, cap);
         case C_RANS: return rans_compress_all(in, n, out, cap);
@@ -1479,6 +1482,7 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
 
 static int np_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+    if (x->prof) { int h = 0; int r = kp_codec_decompress(x->prof, (void **)&x->zd, codec, in, cn, out, n, &h); if (h) return r; }
     switch (codec) {
         case C_STORE: if (cn != n) return -1; memcpy(out, in, n); return 0;
         case C_LZ4: case C_LZ4HC: { int r = LZ4_decompress_safe((const char *)in, (char *)out, (int)cn, (int)n); return r == (int)n ? 0 : -1; }
@@ -2423,6 +2427,7 @@ typedef struct {
     pthread_mutex_t wmu; uint32_t wnext; size_t wpos, cap; int werr;   /* blocks are written to dst in order as they finish */
     int psum;               /* checksums over stored bytes (rt) instead of decoded bytes */
     const void *dict; size_t dictlen;   /* optional zstd dictionary, read-only by workers */
+    const struct kolmo_profile *prof;   /* optional trained profile, read-only by workers */
 } job_t;
 static void append_bytes(job_t *j, const uint8_t *bytes, size_t size) {
     if (j->werr) return;
@@ -2467,6 +2472,7 @@ static void *compress_worker(void *arg) {
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
+    xp->prof = J->prof;
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TSLACK + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
@@ -2998,7 +3004,15 @@ typedef struct {
     const uint8_t *src; const uint64_t *starts, *ends;
     plan_t *plans; const kolmo_params *params;
     uint32_t count; int threads_per_plan, allow_frontier, member_fd, native_leaf; atomic_uint next;
+    const struct kolmo_profile *prof;   /* trained profile: its pinned plans replace the analysis where they match */
 } plan_job;
+static int kp_plan_pinned(const struct kolmo_profile *P, const uint8_t *s, size_t n, const kolmo_params *p, plan_t *out);
+/* The analysis of one member, as plan_worker runs it (also used by kolmo train to record the plans it pins). */
+static plan_t plan_for(const uint8_t *src, size_t len, const kolmo_params *p, int threads, int native_leaf) {
+    return p->transforms ? make_plan(src, len, p->mode >= KOLMO_ECO,
+        p->mode != KOLMO_RT && p->transforms != 3, p->mode != KOLMO_RT && p->transforms != 3, threads, p->mode >= KOLMO_MAX,
+        p->transforms == 2 ? 1 : p->transforms == 3 ? (p->mode == KOLMO_RT ? 3 : 2) : p->mode == KOLMO_FAST ? 4 : 0, native_leaf) : (plan_t){0};
+}
 static void *plan_worker(void *arg) {
     plan_job *j = arg; const kolmo_params *p = j->params;
     long page_size = j->member_fd >= 0 ? sysconf(_SC_PAGESIZE) : 0;
@@ -3031,9 +3045,8 @@ static void *plan_worker(void *arg) {
 #ifdef KOLMO_TIMING
         double mp0_ = prof_now();
 #endif
-        plan_t pl = p->transforms ? make_plan(src, len, p->mode >= KOLMO_ECO,
-            p->mode != KOLMO_RT && p->transforms != 3, p->mode != KOLMO_RT && p->transforms != 3, j->threads_per_plan, p->mode >= KOLMO_MAX,
-            p->transforms == 2 ? 1 : p->transforms == 3 ? (p->mode == KOLMO_RT ? 3 : 2) : p->mode == KOLMO_FAST ? 4 : 0, j->native_leaf) : (plan_t){0};
+        plan_t pl;
+        if (!j->prof || !kp_plan_pinned(j->prof, src, len, p, &pl)) pl = plan_for(src, len, p, j->threads_per_plan, j->native_leaf);
 #ifdef KOLMO_TIMING
         fprintf(stderr, "mp n=%zu ms=%.3f t=%d\n", len, (prof_now() - mp0_) * 1000, pl.t);
 #endif
@@ -3072,8 +3085,16 @@ static void *plan_worker(void *arg) {
 /* Opt-in typed encoder route ported from the RC1 integration (PR #10). It writes ordinary version 7 graph frames. */
 #include "typed_int_encoder.inc"
 
+static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
+                               const void *dict, size_t dictlen, uint32_t dictid, const struct kolmo_profile *prof);
 static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen, uint32_t dictid) {
+    return compress_impl_p(src, input_fd, n, dst, output_fd, cap, p, dict, dictlen, dictid, NULL);
+}
+/* prof: a trained profile (src/plan/profile.c); its dictionaries code the zstd, Brotli and LZ4 leaves, its pinned plans
+ * replace the analysis where they match, and the frame records its id (version 11, flag bit 2). */
+static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
+                               const void *dict, size_t dictlen, uint32_t dictid, const struct kolmo_profile *prof) {
     kolmo_params d = {KOLMO_FAST, 0, 0, 0, 1}; if (!p) p = &d;
     /* KOLMO_T_NATIVE_LEAF and KOLMO_T_TYPED_HUF are opt-in bits of transforms: read them, then clear them so every
      * other use of transforms sees the analysis level alone. The native leaf applies to balanced (KOLMO_FAST) with
@@ -3087,7 +3108,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     /* The typed route below produces a whole frame on its own (one block, one thread, at most 16 MiB, buffer API, no
      * dictionary, default level) and returns it; when it does not apply the normal planner runs. A declared integer
      * NPY / PCM16 WAV that the typed route's size guard rejects is compressed with the plain codec (transforms 0). */
-    if (typed_huf && !native_leaf && q.transforms && q.mode == KOLMO_FAST && !q.level && q.threads == 1
+    if (typed_huf && !native_leaf && !prof && q.transforms && q.mode == KOLMO_FAST && !q.level && q.threads == 1
         && input_fd < 0 && output_fd < 0 && !dictlen && n <= (16u << 20) && (!q.block || n <= q.block)) {
         int plain = 0; int64_t tr = ktf_encode(src, n, dst, cap, &plain);
         if (tr) return tr;
@@ -3126,8 +3147,9 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     /* Parallelize independent members, or formula discovery within a single
      * member. Never multiply the two thread budgets. Plans remain in input order. */
     plan_job planning = {src, ss, se, plans, p, nseg, nseg > 1 ? 1 : threads,
-                         p->transforms && p->mode == KOLMO_FAST && !p->level && !dict,
+                         p->transforms && p->mode == KOLMO_FAST && !p->level && !dict && !prof,
                          nseg > 1 && p->transforms && p->mode == KOLMO_FAST ? input_fd : -1, native_leaf};
+    planning.prof = prof;
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
     if (!p->block && nseg == 1 && (plans[0].wide || plans[0].experimental_table) && B > (2u << 20)) B = 2u << 20;
@@ -3177,7 +3199,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
     if (!J.out || !J.outlen) goto cleanup;
     J.psum = p->mode == KOLMO_RT;
-    J.dict = dict; J.dictlen = dictlen;
+    J.dict = dict; J.dictlen = dictlen; J.prof = prof;
     J.dst = dst; J.cap = cap; J.wnext = 0; J.wpos = HDR + (size_t)nb * IDX; J.werr = 0;
     if (pthread_mutex_init(&J.wmu, NULL)) goto cleanup;
     mutex_ready = 1;
@@ -3205,6 +3227,7 @@ cleanup:
     if (ret) { free(file_index); zs_trim(); return ret; }
     { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 64) ? 10 : (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
+    else if (prof) { dst[10] |= 4; put32(dst + 6, kp_id(prof)); if (dst[4] < 11) dst[4] = 11; }   /* flag bit 2 = trained profile, its id */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
     if (output_fd >= 0) ret = write_block(output_fd, file_index, HDR + (size_t)nb * IDX, 0);
@@ -3217,12 +3240,15 @@ int64_t kolmo_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, c
 }
 
 /* ------------------------------------------------------------------ decoding */
-typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict; uint32_t dictid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
+typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict, needprof; uint32_t dictid, profid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
 
 static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_limits *limits) {
+    if (n >= 4 && !memcmp(s, "CZC1", 4)) return KOLMO_ERR_PROFILE;   /* compact profile frame: kolmo_decompress_profile */
     if (n < HDR || memcmp(s, "CZN1", 4) || s[4] < 1 || s[4] > KOLMO_MAX_VERSION) return KOLMO_ERR_CORRUPT;
     P->ver = s[4]; P->psum = P->ver >= 3 && (s[10] & 1);
     P->needdict = P->ver >= 3 && (s[10] & 2); P->dictid = P->needdict ? get32(s + 6) : 0;
+    P->needprof = P->ver >= 11 && (s[10] & 4); P->profid = P->needprof ? get32(s + 6) : 0;
+    if (P->needdict && P->needprof) return KOLMO_ERR_CORRUPT;
     P->orig = get64(s + 12); P->nb = get32(s + 20);
     if (limits && ((limits->max_output_bytes && P->orig > limits->max_output_bytes) ||
                    (limits->max_blocks && P->nb > limits->max_blocks))) return KOLMO_ERR_LIMIT;
@@ -3252,7 +3278,8 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_lim
 }
 
 typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
-                 int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen; } djob_t;
+                 int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen;
+                 const struct kolmo_profile *prof; } djob_t;
 
 static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, const uint8_t *pay, uint8_t *tbuf, uint8_t *out) {
     const parsed_t *P = J->P; const uint8_t *e = P->idx + (size_t)i * IDX;
@@ -3383,6 +3410,7 @@ static void *decompress_worker(void *arg) {
     if ((J->input_fd >= 0 && !packed) || !tbuf || (buffered && !rbuf)) { free(packed); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
+    xp->prof = J->prof;
     for (;;) {
         uint32_t i = J->lo + atomic_fetch_add(&J->next, 1); if (i >= J->hi) break;
         if (atomic_load(&J->err)) break;
@@ -3411,13 +3439,24 @@ static void *decompress_worker(void *arg) {
     return NULL;
 }
 
-int64_t kolmo_original_size(const uint8_t *src, size_t n) { return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : KOLMO_ERR_CORRUPT; }
+int64_t kolmo_original_size(const uint8_t *src, size_t n) {
+    if (n >= 4 && !memcmp(src, "CZC1", 4)) return kp_compact_original_size(src, n);
+    return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : KOLMO_ERR_CORRUPT;
+}
 
+static int64_t run_decode_p(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
+                            const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits, const struct kolmo_profile *prof);
 static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
                           const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits) {
+    return run_decode_p(src, input_fd, n, dst, output_fd, threads, lo, hi, range, dict, dictlen, dictid, limits, NULL);
+}
+static int64_t run_decode_p(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
+                            const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits, const struct kolmo_profile *prof) {
     parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
     if (P.needdict && (!dict || dictid != P.dictid)) { free(P.poff); free(P.roff); return KOLMO_ERR_DICT; }
-    djob_t J = {0}; J.src = src; J.P = &P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd; J.dict = dict; J.dictlen = dictlen;
+    if (P.needprof && (!prof || kp_id(prof) != P.profid)) { free(P.poff); free(P.roff); return KOLMO_ERR_PROFILE; }
+    if (!P.needprof) prof = NULL;                          /* a frame without a profile is decoded without one */
+    djob_t J = {0}; J.src = src; J.P = &P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd; J.dict = dict; J.dictlen = dictlen; J.prof = prof;
     for (uint32_t i = 0; i < P.nb; i++) {
         size_t raw = P.roff[i + 1] - P.roff[i], stored = P.poff[i + 1] - P.poff[i];
         if (raw > J.maxraw) J.maxraw = raw;
@@ -3470,6 +3509,8 @@ const char *kolmo_strerror(int64_t c) {
         case KOLMO_ERR_DICT: return "dictionary required or mismatched (compressed with a different dictionary)";
         case KOLMO_ERR_IO: return "file I/O error";
         case KOLMO_ERR_LIMIT: return "decoding resource limit exceeded";
+        case KOLMO_ERR_PROFILE: return "trained profile required, mismatched or damaged (decode with the profile the file was compressed with)";
+        case KOLMO_ERR_TARGET: return "invalid --target or calibration table";
     }
     return c >= 0 ? "ok" : "unknown error";
 }
@@ -3557,3 +3598,9 @@ int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads
 }
 
 #include "stream.inc"
+
+/* rc3 features (features-a lane): trained profiles and --target. Compiled into this unit until the structure lane
+ * splits kolmo.c; see src/plan/profile.h. */
+#include "plan/profile.c"
+#include "plan/target.c"
+#include "api/features.c"

@@ -58,7 +58,7 @@ endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
 BLIBS   := $(LIBS)
 
-KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc
+KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc src/plan/profile.h src/plan/profile.c src/plan/target.c src/plan/target_table.inc src/api/features.c
 
 all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
 
@@ -79,17 +79,20 @@ build/kolmo.o: src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES)
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) -c src/kolmo.c -o $@
 build/libkolmo.a: build/kolmo.o
 	ar rcs $@ $^
-build/kolmo: src/cli.c build/libkolmo.a build/libvendor.a
-	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+build/kolmo: src/cli.c src/cli/train.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(INC) $(filter-out src/cli/train.c,$^) -o $@ $(LIBS) $(CXXLIB)
 build/kolmobench: bench/kolmobench.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(BLIBS) $(CXXLIB)
+# features-a benchmark: trained profiles against untrained Kolmo and zstd dictionaries (benchmark/rc3/features-a)
+build/kpbench: benchmark/rc3/features-a/kpbench.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmotest: tests/kolmotest.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
-build/kolmo-profile: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+build/kolmo-profile: src/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 check: all
@@ -156,7 +159,16 @@ build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
+# Trained profiles and --target (features-a): round trips, damaged profiles and frames, targets, merging.
+build/test-profile: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-profile-asan: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-profile: build/test-profile build/test-profile-asan
+	./build/test-profile
+	KOLMO_SKIP_CALIBRATE=1 ./build/test-profile-asan
+.PHONY: check-profile
+check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-profile
 .PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
