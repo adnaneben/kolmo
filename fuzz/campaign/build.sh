@@ -24,9 +24,10 @@ for t in fuzz_decompress fuzz_limited fuzz_dict fuzz_roundtrip; do
   b $t -Ifuzz fuzz/$t.c src/kolmo.c $LIBS & w
   b ${t}_nocm -DKOLMO_FUZZ_NO_CM -Ifuzz fuzz/$t.c src/kolmo.c $LIBS & w
 done
-# the stream decoders only call kolmo_decompress(_limited) per frame: built fast only (context-mixing frames are
-# covered by the plain frame-decoder targets)
+# the stream decoders only call kolmo_decompress(_limited) per frame: fuzzed fast only (context-mixing frames are
+# covered by the plain frame-decoder targets); fuzz_stream with context mixing is built for replaying campaign 1's corpus
 for t in fuzz_stream fuzz_stream_limited; do b ${t}_nocm -DKOLMO_FUZZ_NO_CM -Ifuzz fuzz/$t.c src/kolmo.c $LIBS & w; done
+b fuzz_stream -Ifuzz fuzz/fuzz_stream.c src/kolmo.c $LIBS & w
 b fuzz_nplane -Ifuzz fuzz/fuzz_nplane.c src/kolmo.c $LIBS & w
 b fuzz_krc   -I$XD fuzz/fuzz_krc.c $XD/krc.c -lpthread -lm & w
 b fuzz_kbcx  -I$XD fuzz/fuzz_kbcx.c $XD/kbc.c $XD/kbx.c $XD/krc.c -lpthread -lm & w

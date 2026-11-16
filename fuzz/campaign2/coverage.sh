@@ -2,12 +2,13 @@
 # Replays each target's corpus through its coverage build (MODE=cov fuzz/campaign/build.sh) and writes llvm-cov
 # reports: $OUT/report.txt (per file), $OUT/functions.txt (per function), $OUT/zero_functions.txt; and, for the frame
 # decoders only (decompress, limited, dict, stream, stream_limited, both builds), $OUT/report_decoders.txt.
+# TARGETS / DECTARGETS override the target lists (e.g. to replay campaign 1's corpora, which include fuzz_stream).
 # Usage: CORPUS=dir-with-one-subdir-per-target OUT=dir fuzz/campaign2/coverage.sh   (from repo root)
 set -u
 C=${CORPUS:?}; OUT=${OUT:?}; B=$PWD/build/fuzzcov; mkdir -p "$OUT/raw"
-ALL="fuzz_decompress fuzz_decompress_nocm fuzz_limited fuzz_limited_nocm fuzz_dict fuzz_dict_nocm fuzz_stream_nocm
-     fuzz_stream_limited_nocm fuzz_roundtrip fuzz_roundtrip_nocm fuzz_nplane fuzz_krc fuzz_kbcx fuzz_fastq"
-DEC="fuzz_decompress fuzz_decompress_nocm fuzz_limited fuzz_limited_nocm fuzz_dict fuzz_dict_nocm fuzz_stream_nocm fuzz_stream_limited_nocm"
+ALL=${TARGETS:-"fuzz_decompress fuzz_decompress_nocm fuzz_limited fuzz_limited_nocm fuzz_dict fuzz_dict_nocm fuzz_stream_nocm
+     fuzz_stream_limited_nocm fuzz_roundtrip fuzz_roundtrip_nocm fuzz_nplane fuzz_krc fuzz_kbcx fuzz_fastq"}
+DEC=${DECTARGETS:-"fuzz_decompress fuzz_decompress_nocm fuzz_limited fuzz_limited_nocm fuzz_dict fuzz_dict_nocm fuzz_stream_nocm fuzz_stream_limited_nocm"}
 for t in $ALL; do
   [ -d "$C/$t" ] || continue
   ls "$C/$t" | split -l 100 - "$OUT/raw/$t.chunk."       # one process per chunk: one bad input cannot end the replay
