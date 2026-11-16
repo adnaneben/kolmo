@@ -3,7 +3,8 @@
  *   profile 0 (fast):   per-frame stereo choice (L/R, L/S, R/S, M/S), least-squares LPC up to order 32 with
  *                       quantised coefficients and history carried across frames, partitioned Rice residuals.
  *   profile 1 (strong): profile 0's stereo and LPC stage, then a cascade of integer NLMS filters (256, 32 with
- *                       cross-channel taps, 16), a sign-sign LMS stage and a bias canceller, with the final
+ *                       cross-channel taps, 16) and a sign-sign LMS stage, whose predictions are combined with
+ *                       weights adapted by sign-sign LMS; the final
  *                       residual coded by an adaptive binary range coder with magnitude contexts.
  *
  * Everything on the decoding path is integer arithmetic. The LPC analysis in the encoder uses doubles, but
@@ -20,6 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#if defined(__AVX2__)
+#include <immintrin.h>
+#endif
 
 #define KAUD_VERSION 1
 #define MAXORD 32
@@ -91,7 +95,7 @@ static void buf_need(Buf *b, size_t extra)
     if (!b->p) { fprintf(stderr, "kaud: out of memory\n"); exit(2); }
     b->cap = c;
 }
-static void buf_add(Buf *b, const void *d, size_t n) { buf_need(b, n); memcpy(b->p + b->len, d, n); b->len += n; }
+static void buf_add(Buf *b, const void *d, size_t n) { if (!n) return; buf_need(b, n); memcpy(b->p + b->len, d, n); b->len += n; }
 
 /* ------------------------------------------------------------------------------------------- bit I/O */
 
@@ -191,17 +195,18 @@ static inline void rce_shift(RCE *e)
 }
 static void rce_finish(RCE *e) { for (int i = 0; i < 5; i++) rce_shift(e); }
 
-/* probability of a 1 bit in 16 bits, with a hit count that sets the adaptation rate */
+/* probability of a 1 bit in 16 bits with a hit count: the adaptation shift grows with log2 of the
+ * count (close to frequency counting while the context is young), up to g_rate_cap */
 typedef struct { uint16_t p; uint16_t n; } Prob;
-static const uint8_t rate_tab[32] = { 1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-                                      6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 };
-static int g_rate_cap = 6;
+static int g_rate_cap = 7;
+static int g_force_stereo = -1;   /* encoder experiment: force one stereo mode */
 static inline void prob_init(Prob *p) { p->p = 1 << 15; p->n = 0; }
+static uint8_t shtab[256];          /* shtab[n] = min(bitlen(n + 2), g_rate_cap) */
+static void shtab_init(void) { for (int n = 0; n < 256; n++) { int b = 32 - __builtin_clz((uint32_t)n + 2); shtab[n] = (uint8_t)(b > g_rate_cap ? g_rate_cap : b); } }
 static inline void prob_upd(Prob *p, int bit)
 {
-    int sh = rate_tab[p->n];
-    if (sh > g_rate_cap) sh = g_rate_cap;
-    if (p->n < 31) p->n++;
+    int sh = shtab[p->n];
+    p->n += p->n < 255;
     if (bit) p->p += (65536 - p->p) >> sh; else p->p -= p->p >> sh;
     if (p->p < 32) p->p = 32;
     if (p->p > 65536 - 32) p->p = 65536 - 32;
@@ -312,6 +317,9 @@ typedef struct {
     int ss_step;     /* sign-sign LMS step */
     int lpc1;        /* max LPC order in profile 1 */
     int depth;       /* block split depth, -1 = from effort */
+    int taps[3];     /* NLMS stage lengths */
+    int cross[2];    /* cross-channel taps in stage 0 and stage 1 */
+    int comb;        /* step of the sign-sign LMS combiner of stage predictions */
 } Opts;
 
 /* -------------------------------------------------------------------------------------- LPC analysis */
@@ -823,17 +831,20 @@ static void make_side_mid(const int32_t *L, const int32_t *R, int n, int32_t *S,
 
 /* ------------------------------------------------------------------------------- profile 1: cascade */
 
-#define WQ 20     /* weight fraction bits */
+#define WQ 20     /* fraction bits of the adapted weights */
+#define PQ 14     /* fraction bits of the int16 weights used for prediction */
 
+/* NLMS filter: int32 weights (Q20) are adapted; an int16 copy (Q14, saturated) predicts. The dot
+ * product of int16 weights and int16 history is summed modulo 2^32, identically in encoder and decoder. */
 typedef struct {
     int n, m;              /* own taps, cross taps */
-    int32_t *w;            /* n + m weights: own then cross */
+    int32_t *w;            /* n + m adapted weights: own then cross */
+    int16_t *w16;          /* prediction weights */
     int16_t *h;            /* own history buffer (sliding) */
     int16_t *hc;           /* cross history buffer (sliding) */
     int pos, posc, cap;
     int64_t pow;
     int mu;                /* step in 1/4096 */
-    int32_t *hw;           /* scratch: contiguous history for the dot product (int32) */
 } Nlms;
 
 #define SLIDE 4096
@@ -842,55 +853,86 @@ static void nlms_init(Nlms *f, int n, int m, int mu)
 {
     f->n = n; f->m = m; f->mu = mu;
     f->w = xcalloc((size_t)(n + m), sizeof(int32_t));
+    f->w16 = xcalloc((size_t)(n + m), sizeof(int16_t));
     f->cap = SLIDE;
     f->h = xcalloc((size_t)(n + SLIDE), sizeof(int16_t));
     f->hc = xcalloc((size_t)(m + SLIDE + 1), sizeof(int16_t));
     f->pos = 0; f->posc = 0; f->pow = 0;
 }
-static void nlms_free(Nlms *f) { free(f->w); free(f->h); free(f->hc); }
+static void nlms_free(Nlms *f) { free(f->w); free(f->w16); free(f->h); free(f->hc); }
 
 static inline int16_t clip16(int32_t v) { return (int16_t)(v > 32767 ? 32767 : v < -32767 ? -32767 : v); }
+
+__attribute__((optimize("wrapv"))) static inline int32_t dot16(const int16_t *restrict a, const int16_t *restrict b, int n)
+{
+    int32_t s = 0;
+    for (int i = 0; i < n; i++) s += a[i] * b[i];
+    return s;
+}
 
 /* own history: h[pos .. pos+n) oldest..newest; cross: hc[posc .. posc+m) */
 static inline int32_t nlms_pred(const Nlms *f)
 {
-    const int16_t *h = f->h + f->pos;
-    const int32_t *w = f->w;
-    int64_t s = 0;
-    for (int i = 0; i < f->n; i++) s += (int64_t)w[i] * h[i];
-    if (f->m) {
-        const int16_t *hc = f->hc + f->posc;
-        const int32_t *wc = f->w + f->n;
-        for (int i = 0; i < f->m; i++) s += (int64_t)wc[i] * hc[i];
-    }
-    s = (s + (1 << (WQ - 1))) >> WQ;
-    if (s > (1 << 20)) s = 1 << 20;
-    if (s < -(1 << 20)) s = -(1 << 20);
-    return (int32_t)s;
+    uint32_t s = (uint32_t)dot16(f->w16, f->h + f->pos, f->n);
+    if (f->m) s += (uint32_t)dot16(f->w16 + f->n, f->hc + f->posc, f->m);
+    return (int32_t)(s + (1u << (PQ - 1))) >> PQ;
 }
+
+/* weight update: w += (g2 * h + 2^14) >> 15 (the rounding of a 16x16 high multiply), then the int16
+ * prediction copy w16 = sat16((w + 32) >> 6). The AVX2 path and the C path give identical results. */
+static inline void upd16(int32_t *restrict w, int16_t *restrict w16, const int16_t *restrict h, int n, int16_t g2, int sh)
+{
+    int i = 0;
+#if defined(__AVX2__)
+    const __m256i g = _mm256_set1_epi16(g2), r = _mm256_set1_epi32(1 << (WQ - PQ - 1));
+    for (; i + 16 <= n; i += 16) {
+        __m256i d = _mm256_mulhrs_epi16(_mm256_loadu_si256((const __m256i *)(h + i)), g);
+        __m256i d0 = _mm256_slli_epi32(_mm256_cvtepi16_epi32(_mm256_castsi256_si128(d)), sh);
+        __m256i d1 = _mm256_slli_epi32(_mm256_cvtepi16_epi32(_mm256_extracti128_si256(d, 1)), sh);
+        __m256i w0 = _mm256_add_epi32(_mm256_loadu_si256((const __m256i *)(w + i)), d0);
+        __m256i w1 = _mm256_add_epi32(_mm256_loadu_si256((const __m256i *)(w + i + 8)), d1);
+        _mm256_storeu_si256((__m256i *)(w + i), w0);
+        _mm256_storeu_si256((__m256i *)(w + i + 8), w1);
+        __m256i q0 = _mm256_srai_epi32(_mm256_add_epi32(w0, r), WQ - PQ);
+        __m256i q1 = _mm256_srai_epi32(_mm256_add_epi32(w1, r), WQ - PQ);
+        __m256i p = _mm256_permute4x64_epi64(_mm256_packs_epi32(q0, q1), 0xD8);
+        p = _mm256_max_epi16(p, _mm256_set1_epi16(-32767));
+        _mm256_storeu_si256((__m256i *)(w16 + i), p);
+    }
+#endif
+    for (; i < n; i++) {
+        int32_t v = (int32_t)((uint32_t)w[i] + ((uint32_t)(((int32_t)g2 * h[i] + (1 << 14)) >> 15) << sh));
+        w[i] = v;
+        int32_t q = (v + (1 << (WQ - PQ - 1))) >> (WQ - PQ);
+        w16[i] = (int16_t)(q > 32767 ? 32767 : q < -32767 ? -32767 : q);
+    }
+}
+
+/* reciprocal table: rtab[i] = round(2^24 / (2048 + i)), so 1/d ~ rtab[(d >> e) - 2048] / 2^(24 + e) */
+static uint32_t rtab[2048];
+static void rtab_init(void) { for (uint32_t i = 0; i < 2048; i++) rtab[i] = ((1u << 25) / (2048 + i) + 1) >> 1; }
 
 static inline void nlms_update(Nlms *f, int32_t err, int32_t in)
 {
     /* g ~ mu * err * 2^WQ / (pow + eps), represented as g / 2^G with |g| < 2^15 */
-    int64_t den = f->pow + 64 * (f->n + f->m) + 1;
     if (err) {
-        int64_t num = (int64_t)err * f->mu;       /* mu / 4096 */
-        int G = 16;
-        /* value = num * 2^(WQ - 12 + G) / den */
-        int64_t g = (num * (1ll << (WQ - 12 + G - 8))) / (den >> 8 ? den >> 8 : 1);
-        while ((g > 32767 || g < -32767) && G > 0) { g >>= 1; G--; }
-        if (g > 32767) g = 32767;
-        if (g < -32767) g = -32767;
-        int32_t gi = (int32_t)g;
-        int32_t rnd = G ? 1 << (G - 1) : 0;
-        int16_t *h = f->h + f->pos;
-        int32_t *w = f->w;
-        for (int i = 0; i < f->n; i++) w[i] += (gi * h[i] + rnd) >> G;
-        if (f->m) {
-            int16_t *hc = f->hc + f->posc;
-            int32_t *wc = f->w + f->n;
-            for (int i = 0; i < f->m; i++) wc[i] += (gi * hc[i] + rnd) >> G;
+        /* g / 2^G = mu/4096 * err * 2^WQ / den, with den >= 2^12 so that e >= 1 */
+        uint64_t den = (uint64_t)f->pow + 4096 + 64 * (uint64_t)(f->n + f->m);
+        int e = 64 - __builtin_clzll(den) - 12;
+        uint32_t r = rtab[(den >> e) - 2048];
+        int64_t num = (int64_t)err * f->mu;                 /* |num| < 2^34 */
+        /* g2 = mu/4096 * err * 2^(WQ+15) / den = num * 2^23 / den = num * r >> (e + 1) */
+        int64_t g = (num * (int64_t)r) >> (e + 1);
+        int sh = 0;
+        uint64_t ag = (uint64_t)(g < 0 ? -g : g);
+        if (ag > 32767) {
+            sh = 64 - __builtin_clzll(ag) - 15;         /* |g >> sh| < 2^15 */
+            if (sh > 8) sh = 8;
+            g >>= sh;
         }
+        int16_t g2 = (int16_t)(g > 32767 ? 32767 : g < -32767 ? -32767 : g);
+        upd16(f->w, f->w16, f->h + f->pos, f->n, g2, sh);
+        if (f->m) upd16(f->w + f->n, f->w16 + f->n, f->hc + f->posc, f->m, g2, sh);
     }
     /* push input */
     int16_t v = clip16(in);
@@ -912,12 +954,15 @@ static inline void nlms_push_cross(Nlms *f, int32_t in)
 }
 
 #define SSN 16
-typedef struct { int32_t w[SSN]; int32_t h[SSN]; int step; } Sslms;
+#define SSLIDE 1024
+/* sign-sign LMS: w += step * sign(err) * sign(h); history and its signs in sliding buffers */
+typedef struct { int32_t w[SSN]; int32_t h[SSN + SSLIDE]; int32_t sg[SSN + SSLIDE]; int pos; int step; } Sslms;
 
 static inline int32_t ss_pred(const Sslms *s)
 {
+    const int32_t *h = s->h + s->pos;
     int64_t a = 0;
-    for (int i = 0; i < SSN; i++) a += (int64_t)s->w[i] * s->h[i];
+    for (int i = 0; i < SSN; i++) a += (int64_t)s->w[i] * h[i];
     a = (a + (1 << (WQ - 1))) >> WQ;
     if (a > (1 << 20)) a = 1 << 20;
     if (a < -(1 << 20)) a = -(1 << 20);
@@ -927,22 +972,32 @@ static inline void ss_update(Sslms *s, int32_t err, int32_t in)
 {
     if (err) {
         int32_t st = err > 0 ? s->step : -s->step;
-        for (int i = 0; i < SSN; i++) s->w[i] += s->h[i] > 0 ? st : s->h[i] < 0 ? -st : 0;
+        const int32_t *sg = s->sg + s->pos;
+        for (int i = 0; i < SSN; i++) s->w[i] += st * sg[i];
     }
-    memmove(s->h, s->h + 1, sizeof(int32_t) * (SSN - 1));
-    s->h[SSN - 1] = in > 32767 ? 32767 : in < -32767 ? -32767 : in;
+    int32_t v = in > 32767 ? 32767 : in < -32767 ? -32767 : in;
+    s->h[s->pos + SSN] = v;
+    s->sg[s->pos + SSN] = (v > 0) - (v < 0);
+    if (++s->pos == SSLIDE) {
+        memmove(s->h, s->h + SSLIDE, sizeof(int32_t) * SSN);
+        memmove(s->sg, s->sg + SSLIDE, sizeof(int32_t) * SSN);
+        s->pos = 0;
+    }
 }
 
+#define KCTX 25
+#define DCTX 9
 typedef struct {
     Nlms f[3];
     Sslms ss;
-    int32_t bias[9];
-    int r1, r2;
+    int32_t cw[4];
+    int comb;                 /* combiner step, 0 = plain sum */
     /* entropy model */
     uint32_t afast, aslow;
     int psign;
-    Prob tree[48 * 3][32];
-    Prob m1[27][16];
+    int kpart;                /* magnitude parameter of the current partition (sent by the encoder) */
+    Prob tree[KCTX * DCTX][28];
+    Prob m1[27][KCTX];
     Prob m2[27][2];
     Prob sg[3];
 } Chan1;
@@ -950,10 +1005,12 @@ typedef struct {
 static void chan1_init(Chan1 *c, const Opts *o, int stereo)
 {
     memset(c, 0, sizeof *c);
-    nlms_init(&c->f[0], 256, 0, o->mu[0]);
-    nlms_init(&c->f[1], 32, stereo ? 8 : 0, o->mu[1]);
-    nlms_init(&c->f[2], 16, 0, o->mu[2]);
+    nlms_init(&c->f[0], o->taps[0], stereo ? o->cross[0] : 0, o->mu[0]);
+    nlms_init(&c->f[1], o->taps[1], stereo ? o->cross[1] : 0, o->mu[1]);
+    nlms_init(&c->f[2], o->taps[2], 0, o->mu[2]);
     c->ss.step = o->ss_step;
+    for (int k = 0; k < 4; k++) c->cw[k] = 1 << 14;
+    c->comb = o->comb;
     for (size_t i = 0; i < sizeof c->tree / sizeof(Prob); i++) prob_init(&c->tree[0][0] + i);
     for (size_t i = 0; i < sizeof c->m1 / sizeof(Prob); i++) prob_init(&c->m1[0][0] + i);
     for (size_t i = 0; i < sizeof c->m2 / sizeof(Prob); i++) prob_init(&c->m2[0][0] + i);
@@ -962,61 +1019,69 @@ static void chan1_init(Chan1 *c, const Opts *o, int stereo)
 }
 static void chan1_free(Chan1 *c) { for (int i = 0; i < 3; i++) nlms_free(&c->f[i]); }
 
-static inline int bias_ctx(const Chan1 *c) { return (c->r1 > 0 ? 2 : c->r1 < 0 ? 0 : 1) * 3 + (c->r2 > 0 ? 2 : c->r2 < 0 ? 0 : 1); }
 
 /* predictions of every stage; returns total, fills p[] */
 typedef struct { int32_t p0, p1, p2, p3, pb; } Preds;
 
 /* The cascade runs stage by stage: each stage's prediction depends only on its own history, but
  * its history is the previous stage's error, so the stages are evaluated in order. */
-static inline int32_t casc_encode(Chan1 *c, int32_t v)
+/* The final prediction combines the stage predictions with adaptive weights cw (Q14, start at 1),
+ * adapted by sign-sign LMS on the final residual; each stage still adapts on its own error. */
+static inline int32_t comb_pred(const Chan1 *c, const int32_t *p)
 {
-    int32_t p0 = nlms_pred(&c->f[0]); int32_t e0 = v - p0;
-    int32_t p1 = nlms_pred(&c->f[1]); int32_t e1 = e0 - p1;
-    int32_t p2 = nlms_pred(&c->f[2]); int32_t e2 = e1 - p2;
-    int32_t p3 = ss_pred(&c->ss);     int32_t e3 = e2 - p3;
-    int bc = bias_ctx(c);
-    int32_t pb = (c->bias[bc] + 8) >> 4;
-    int32_t r = e3 - pb;
+    if (!c->comb) return p[0] + p[1] + p[2] + p[3];
+    int64_t s = 0;
+    for (int k = 0; k < 4; k++) s += (int64_t)c->cw[k] * p[k];
+    s = (s + (1 << 13)) >> 14;
+    if (s > (1 << 21)) s = 1 << 21;
+    if (s < -(1 << 21)) s = -(1 << 21);
+    return (int32_t)s;
+}
+static inline void comb_upd(Chan1 *c, const int32_t *p, int32_t r)
+{
+    if (!c->comb || !r) return;
+    int st = r > 0 ? c->comb : -c->comb;
+    for (int k = 0; k < 4; k++) c->cw[k] += p[k] > 0 ? st : p[k] < 0 ? -st : 0;
+}
+static inline void casc_upd(Chan1 *c, const int32_t *p, int32_t v, int32_t r)
+{
+    int32_t e0 = v - p[0], e1 = e0 - p[1], e2 = e1 - p[2], e3 = e2 - p[3];
     nlms_update(&c->f[0], e0, v);
     nlms_update(&c->f[1], e1, e0);
     nlms_update(&c->f[2], e2, e1);
     ss_update(&c->ss, e3, e2);
-    c->bias[bc] += ((e3 * 16) - c->bias[bc]) >> 5;
-    c->r2 = c->r1; c->r1 = r;
+    comb_upd(c, p, r);
+}
+/* stage k predicts the error of stage k-1 from its own history, so the predictions are taken stage
+ * by stage from the histories alone and do not need the current value */
+static inline int32_t casc_encode(Chan1 *c, int32_t v)
+{
+    int32_t p[4] = { nlms_pred(&c->f[0]), nlms_pred(&c->f[1]), nlms_pred(&c->f[2]), ss_pred(&c->ss) };
+    int32_t r = v - comb_pred(c, p);
+    casc_upd(c, p, v, r);
     return r;
 }
 static inline int32_t casc_decode(Chan1 *c, int32_t r)
 {
-    int32_t p0 = nlms_pred(&c->f[0]);
-    int32_t p1 = nlms_pred(&c->f[1]);
-    int32_t p2 = nlms_pred(&c->f[2]);
-    int32_t p3 = ss_pred(&c->ss);
-    int bc = bias_ctx(c);
-    int32_t pb = (c->bias[bc] + 8) >> 4;
-    int32_t e3 = r + pb, e2 = e3 + p3, e1 = e2 + p2, e0 = e1 + p1, v = e0 + p0;
-    nlms_update(&c->f[0], e0, v);
-    nlms_update(&c->f[1], e1, e0);
-    nlms_update(&c->f[2], e2, e1);
-    ss_update(&c->ss, e3, e2);
-    c->bias[bc] += ((e3 * 16) - c->bias[bc]) >> 5;
-    c->r2 = c->r1; c->r1 = r;
+    int32_t p[4] = { nlms_pred(&c->f[0]), nlms_pred(&c->f[1]), nlms_pred(&c->f[2]), ss_pred(&c->ss) };
+    int32_t v = r + comb_pred(c, p);
+    casc_upd(c, p, v, r);
     return v;
 }
 
 /* note: p1 of the decoder must be computed after f[0]'s prediction only (histories are independent),
  * so evaluating all predictions first is identical to the encoder order. */
 
+/* context: the partition's magnitude parameter k, and where the recent mean |r| sits relative to it */
 static inline int model_ctx(const Chan1 *c)
 {
     uint32_t a = c->afast;   /* Q4 mean |r| */
     int l = bitlen(a);
     int q = l < 2 ? l : 2 * l - 2 + (int)((a >> (l - 2)) & 1);
-    if (q > 47) q = 47;
-    int d = 1;
-    if (c->afast * 3 < c->aslow * 2) d = 0;
-    else if (c->afast * 2 > c->aslow * 3) d = 2;
-    return q * 3 + d;
+    int d = q - 2 * c->kpart;
+    if (d < 0) d = 0;
+    if (d > DCTX - 1) d = DCTX - 1;
+    return c->kpart * DCTX + d;
 }
 static inline void model_upd(Chan1 *c, uint32_t m)
 {
@@ -1025,45 +1090,70 @@ static inline void model_upd(Chan1 *c, uint32_t m)
     c->aslow += (int32_t)(m * 16 - c->aslow) >> 7;
 }
 
-static inline void code_res(RCE *e, Chan1 *c, int32_t r)
+/* The bit length b of |r| is coded as its rank in the order k+1, k, k+2, k-1, k+3, k-2, ... (k is
+ * the partition parameter): one adaptive "is it this one?" decision per rank. Below the MSB, two
+ * mantissa bits are modelled and the rest go to the raw bit stream; the sign is modelled. */
+#define MAXB 26
+static inline int rank_of(int b, int k)
+{
+    int d = b - (k + 1);                       /* 0, -1, +1, -2, +2 ... -> 0, 1, 2, 3, 4 ... */
+    int r;
+    int lo = k + 1, hi = MAXB - (k + 1);       /* available steps below and above */
+    int ad = d < 0 ? -d : d;
+    int m = lo < hi ? lo : hi;                 /* symmetric part */
+    if (ad <= m) r = d == 0 ? 0 : d < 0 ? 2 * ad - 1 : 2 * ad;
+    else r = 2 * m + (ad - m);                  /* only one side left */
+    return r;
+}
+static inline int b_of_rank(int r, int k)
+{
+    int lo = k + 1, hi = MAXB - (k + 1), m = lo < hi ? lo : hi;
+    if (r == 0) return k + 1;
+    if (r <= 2 * m) { int ad = (r + 1) / 2; return r & 1 ? k + 1 - ad : k + 1 + ad; }
+    int ad = m + (r - 2 * m);
+    return lo > hi ? k + 1 - ad : k + 1 + ad;
+}
+
+static inline void code_res(RCE *e, BW *raw, Chan1 *c, int32_t r)
 {
     uint32_t m = r < 0 ? -(uint32_t)r : (uint32_t)r;
     int b = bitlen(m);
     int ctx = model_ctx(c);
     Prob *t = c->tree[ctx];
-    int node = 1;
-    for (int i = 4; i >= 0; i--) { int bit = (b >> i) & 1; rce_bit(e, &t[node], bit); node = node * 2 + bit; }
+    int rk = rank_of(b, c->kpart);
+    for (int i = 0; i < rk; i++) rce_bit(e, &t[i], 0);
+    if (rk < MAXB) rce_bit(e, &t[rk], 1);
     if (b >= 2) {
         int k = b - 1;                      /* bits below the MSB */
         int top = (m >> (k - 1)) & 1;
-        rce_bit(e, &c->m1[b][ctx / 9], top);
+        rce_bit(e, &c->m1[b][c->kpart], top);
         if (k >= 2) {
             int sec = (m >> (k - 2)) & 1;
             rce_bit(e, &c->m2[b][top], sec);
-            if (k > 2) rce_bypass(e, m, k - 2);
+            if (k > 2) bw_put(raw, m, k - 2);
         }
     }
     if (m) { rce_bit(e, &c->sg[c->psign], r < 0); c->psign = r < 0 ? 0 : 2; }
     else c->psign = 1;
     model_upd(c, m);
 }
-static inline int decode_res(RCD *d, Chan1 *c, int32_t *out)
+static inline int decode_res(RCD *d, BR *raw, Chan1 *c, int32_t *out)
 {
     int ctx = model_ctx(c);
     Prob *t = c->tree[ctx];
-    int node = 1;
-    for (int i = 0; i < 5; i++) node = node * 2 + rcd_bit(d, &t[node]);
-    int b = node - 32;
-    if (b > 26) return -1;
+    int rk = 0;
+    while (rk < MAXB && !rcd_bit(d, &t[rk])) rk++;
+    int b = b_of_rank(rk, c->kpart);
+    if (b < 0 || b > MAXB) return -1;
     uint32_t m = b ? 1 : 0;
     if (b >= 2) {
         int k = b - 1;
-        int top = rcd_bit(d, &c->m1[b][ctx / 9]);
+        int top = rcd_bit(d, &c->m1[b][c->kpart]);
         m = (m << 1) | (uint32_t)top;
         if (k >= 2) {
             int sec = rcd_bit(d, &c->m2[b][top]);
             m = (m << 1) | (uint32_t)sec;
-            if (k > 2) m = (m << (k - 2)) | rcd_bypass(d, k - 2);
+            if (k > 2) m = (m << (k - 2)) | br_get(raw, k - 2);
         }
     }
     int32_t r = (int32_t)m;
@@ -1072,6 +1162,38 @@ static inline int decode_res(RCD *d, Chan1 *c, int32_t *out)
     model_upd(c, m);
     *out = r;
     return 0;
+}
+
+/* profile 1 partitions: order po (partitions of n >> po samples, the last takes the rest) and one
+ * magnitude parameter per partition, chosen with the Rice cost estimate */
+#define P1_MAXPO 5
+static int p1_parts(const int32_t *r, int n, uint8_t *ks)
+{
+    int pm = 0;
+    while (pm < P1_MAXPO && (n >> (pm + 1)) >= 128) pm++;
+    int64_t best = INT64_MAX;
+    int bp = 0;
+    uint8_t tk[1 << P1_MAXPO];
+    for (int p = 0; p <= pm; p++) {
+        int cnt = 1 << p, len = n >> p;
+        int64_t tot = 0;
+        for (int i = 0; i < cnt; i++) {
+            int a = i * len, b = i == cnt - 1 ? n : a + len;
+            uint64_t sum = 0;
+            for (int t = a; t < b; t++) sum += zz(r[t]);
+            int cn = b - a;
+            int k0 = bitlen((uint32_t)((sum / cn) > 0xFFFFFFFFu ? 0xFFFFFFFFu : sum / cn));
+            int64_t bb = INT64_MAX; int kb = 0;
+            for (int k = k0 > 2 ? k0 - 2 : 0; k <= k0 + 1 && k < KCTX; k++) {
+                int64_t c = (int64_t)cn * (k + 1) + (int64_t)(sum >> k) - (k ? cn / 2 : 0);
+                if (c < bb) { bb = c; kb = k; }
+            }
+            tk[i] = (uint8_t)kb;
+            tot += 5 + bb;
+        }
+        if (tot < best) { best = tot; bp = p; memcpy(ks, tk, cnt); }
+    }
+    return bp;
 }
 
 /* --------------------------------------------------------------------------------- chunk encoder */
@@ -1085,12 +1207,12 @@ static void range_hdr(RCE *e, const Sub *sb)
     rce_bypass(e, (uint32_t)sb->order, 6);
     if (sb->order) {
         rce_bypass(e, (uint32_t)sb->shift, 5);
+        rce_bypass(e, (uint32_t)sb->kc, 4);
         for (int j = 0; j < sb->order; j++) {
-            /* Elias-gamma of zigzag+1 through bypass bits */
-            uint32_t u = zz(sb->q[j]) + 1;
-            int l = bitlen(u);
-            rce_bypass(e, 0, l - 1);
-            rce_bypass(e, u, l);
+            /* Rice code of the zigzag value through bypass bits, as in profile 0 */
+            uint32_t u = zz(sb->q[j]), q = u >> sb->kc;
+            if (q < RICE_ESC) { rce_bypass(e, 1, (int)q + 1); rce_bypass(e, u, sb->kc); }
+            else { rce_bypass(e, 0, RICE_ESC); rce_bypass(e, u, 25); }
         }
     }
 }
@@ -1111,9 +1233,12 @@ typedef struct {
     Sub sb[4];
     Cov *cov;                 /* [MAXNODE][4] */
     uint8_t split[MAXNODE], mode[MAXNODE];
+    int fixed_mode;           /* profile 1: one stereo mode for the whole chunk, -1 = per block */
+    double est4[4];           /* signal estimates of the last top-level block */
     BW bw;
     RCE rc;
     Chan1 *c1;
+    int32_t *rr[2];
 } Enc;
 
 /* choose the split tree and stereo modes of a block from least-squares estimates; returns est. bits.
@@ -1151,6 +1276,9 @@ static double plan_block(Enc *E, int off, int n, int depth, int idx)
         }
         single += 2;
     }
+    if (idx == 0) memcpy(E->est4, est, sizeof est);
+    if (ns == 4 && g_force_stereo >= 0) mode = g_force_stereo;
+    else if (ns == 4 && E->fixed_mode >= 0) mode = E->fixed_mode;
     E->mode[idx] = (uint8_t)mode;
     E->split[idx] = 0;
     if (!split) return single;
@@ -1168,7 +1296,7 @@ static void emit_leaf(Enc *E, int off, int n, int idx)
         analyse_sub(&E->w, E->sig[0] + off, n, o->effort, E->maxord, &E->sb[0], &E->cov[idx * 4]);
         use[0] = &E->sb[0]; xs[0] = E->sig[0] + off;
     } else {
-        if (o->effort >= 2) {
+        if (o->effort >= 2 && g_force_stereo < 0 && E->fixed_mode < 0) {
             /* exact choice among the four pairs */
             for (int i = 0; i < 4; i++)
                 analyse_sub(&E->w, E->sig[i] + off, n, o->effort, E->maxord, &E->sb[i], &E->cov[idx * 4 + i]);
@@ -1196,11 +1324,28 @@ static void emit_leaf(Enc *E, int off, int n, int idx)
         if (use[c]->type == ST_VERB) { use[c]->type = ST_LPC; use[c]->wasted = 0; use[c]->order = 0; memcpy(use[c]->res, xs[c], sizeof(int32_t) * n); }
         range_hdr(&E->rc, use[c]);
     }
+    /* run the cascade over the block, then choose and send the partition parameters, then code */
     for (int t = 0; t < n; t++)
         for (int c = 0; c < E->ch; c++) {
             int32_t v = use[c]->type == ST_CONST ? 0 : use[c]->res[t];
-            if (use[c]->type != ST_CONST) code_res(&E->rc, &E->c1[c], casc_encode(&E->c1[c], v));
-            if (E->ch == 2) nlms_push_cross(&E->c1[c ^ 1].f[1], v);
+            if (use[c]->type != ST_CONST) E->rr[c][t] = casc_encode(&E->c1[c], v);
+            if (E->ch == 2) { nlms_push_cross(&E->c1[c ^ 1].f[0], v); nlms_push_cross(&E->c1[c ^ 1].f[1], v); }
+        }
+    uint8_t ks[2][1 << P1_MAXPO];
+    int po[2] = { 0, 0 };
+    for (int c = 0; c < E->ch; c++) {
+        if (use[c]->type == ST_CONST) continue;
+        po[c] = p1_parts(E->rr[c], n, ks[c]);
+        rce_bypass(&E->rc, (uint32_t)po[c], 3);
+        for (int i = 0; i < (1 << po[c]); i++) rce_bypass(&E->rc, ks[c][i], 5);
+    }
+    for (int t = 0; t < n; t++)
+        for (int c = 0; c < E->ch; c++) {
+            if (use[c]->type == ST_CONST) continue;
+            int len = n >> po[c], i = t / len;
+            if (i >= (1 << po[c])) i = (1 << po[c]) - 1;
+            E->c1[c].kpart = ks[c][i];
+            code_res(&E->rc, &E->bw, &E->c1[c], E->rr[c][t]);
         }
 }
 
@@ -1218,7 +1363,12 @@ static void emit_block(Enc *E, int off, int n, int depth, int idx)
     emit_leaf(E, off, n, idx);
 }
 
-static int depth_for(const Opts *o) { return o->depth >= 0 ? o->depth : o->effort == 0 ? 0 : o->effort == 1 ? 2 : 3; }
+static int depth_for(const Opts *o)
+{
+    if (o->depth >= 0) return o->depth;
+    if (o->profile == 1) return 0;    /* fewer LPC changes suit the adaptive stages */
+    return o->effort == 0 ? 0 : o->effort == 1 ? 2 : 3;
+}
 
 static void encode_chunk(const Opts *o, int ch, const uint8_t *pcm, uint64_t start, int len, Buf *out)
 {
@@ -1243,9 +1393,25 @@ static void encode_chunk(const Opts *o, int ch, const uint8_t *pcm, uint64_t sta
     for (int i = 0; i < 4; i++) E.sb[i].res = xmalloc(sizeof(int32_t) * F);
     E.cov = xmalloc(sizeof(Cov) * MAXNODE * 4);
     if (o->profile == 1) {
+        E.rr[0] = xmalloc(sizeof(int32_t) * F); E.rr[1] = xmalloc(sizeof(int32_t) * F);
         rce_init(&E.rc);
         E.c1 = xmalloc(sizeof(Chan1) * ch);
         for (int c = 0; c < ch; c++) chan1_init(&E.c1[c], o, ch == 2);
+    }
+    E.fixed_mode = -1;
+    if (o->profile == 1 && ch == 2 && g_force_stereo < 0) {
+        /* one stereo mode per chunk: switching modes disturbs the adaptive filters */
+        double tot[4] = { 0, 0, 0, 0 };
+        int md = E.maxdepth;
+        E.maxdepth = 0;
+        for (int f0 = 0; f0 < len; f0 += F) {
+            int n = len - f0 < F ? len - f0 : F;
+            plan_block(&E, f0, n, 0, 0);
+            for (int i = 0; i < 4; i++) tot[i] += E.est4[i];
+        }
+        E.maxdepth = md;
+        double best = 1e300;
+        for (int m = 0; m < 4; m++) { double c = tot[pairs[m][0]] + tot[pairs[m][1]]; if (c < best) { best = c; E.fixed_mode = m; } }
     }
     for (int f0 = 0; f0 < len; f0 += F) {
         int n = len - f0 < F ? len - f0 : F;
@@ -1255,9 +1421,15 @@ static void encode_chunk(const Opts *o, int ch, const uint8_t *pcm, uint64_t sta
     if (o->profile == 0) { bw_flush(&E.bw); *out = E.bw.b; }
     else {
         rce_finish(&E.rc);
-        *out = E.rc.b;
+        bw_flush(&E.bw);
+        uint8_t l4[4];
+        wr32(l4, (uint32_t)E.rc.b.len);
+        Buf o1 = { 0 };
+        buf_add(&o1, l4, 4); buf_add(&o1, E.rc.b.p, E.rc.b.len); buf_add(&o1, E.bw.b.p, E.bw.b.len);
+        free(E.rc.b.p); free(E.bw.b.p);
+        *out = o1;
         for (int c = 0; c < ch; c++) chan1_free(&E.c1[c]);
-        free(E.c1);
+        free(E.c1); free(E.rr[0]); free(E.rr[1]);
     }
     for (int i = 0; i < 4; i++) { free(E.sig[i] - HIST); free(E.sb[i].res); if (E.sigd[i]) free(E.sigd[i] - HIST); }
     free(E.cov);
@@ -1287,11 +1459,12 @@ static int read_hdr1(RCD *rd, SubHdr *hh)
     if (hh->order) {
         hh->shift = (int)rcd_bypass(rd, 5);
         if (hh->shift > 30) return -1;
+        int kc = (int)rcd_bypass(rd, 4);
         for (int j = 0; j < hh->order; j++) {
-            int l = 1;
-            while (!rcd_bypass(rd, 1)) if (++l > 32) return -1;
-            uint32_t u = (1u << (l - 1)) | (l > 1 ? rcd_bypass(rd, l - 1) : 0);
-            hh->q[j] = unzz(u - 1);
+            uint32_t q = 0;
+            while (q < RICE_ESC && !rcd_bypass(rd, 1)) q++;
+            uint32_t u = q < RICE_ESC ? (q << kc) | rcd_bypass(rd, kc) : rcd_bypass(rd, 25);
+            hh->q[j] = unzz(u);
         }
     }
     return 0;
@@ -1319,18 +1492,29 @@ static int decode_leaf(Dec *D, int f0, int n)
     } else {
         SubHdr h[2];
         for (int c = 0; c < ch; c++) if (read_hdr1(&D->rd, &h[c])) return -1;
+        uint8_t ks[2][1 << P1_MAXPO];
+        int po[2] = { 0, 0 };
+        for (int c = 0; c < ch; c++) {
+            if (h[c].type == ST_CONST) continue;
+            po[c] = (int)rcd_bypass(&D->rd, 3);
+            if (po[c] > P1_MAXPO || (n >> po[c]) < 1) return -1;
+            for (int i = 0; i < (1 << po[c]); i++) { ks[c][i] = (uint8_t)rcd_bypass(&D->rd, 5); if (ks[c][i] >= KCTX) return -1; }
+        }
         int32_t *ev[2] = { D->e, D->e2 };
         for (int t = 0; t < n; t++)
             for (int c = 0; c < ch; c++) {
                 int32_t v = 0;
                 if (h[c].type != ST_CONST) {
                     int32_t r;
-                    if (decode_res(&D->rd, &D->c1[c], &r)) return -1;
+                    int len = n >> po[c], i = t / len;
+                    if (i >= (1 << po[c])) i = (1 << po[c]) - 1;
+                    D->c1[c].kpart = ks[c][i];
+                    if (decode_res(&D->rd, &D->br, &D->c1[c], &r)) return -1;
                     v = casc_decode(&D->c1[c], r);
                     if (v >= MAXRES || v <= -MAXRES) return -1;
                     ev[c][t] = v;
                 }
-                if (ch == 2) nlms_push_cross(&D->c1[c ^ 1].f[1], v);
+                if (ch == 2) { nlms_push_cross(&D->c1[c ^ 1].f[0], v); nlms_push_cross(&D->c1[c ^ 1].f[1], v); }
             }
         for (int c = 0; c < ch; c++) {
             int32_t *x = slot[c];
@@ -1394,7 +1578,10 @@ static int decode_chunk(const Opts *o, int ch, const uint8_t *src, size_t srclen
     D.xs = (int32_t *)xmalloc(sizeof(int32_t) * (F + HIST)) + HIST;
     if (o->profile == 0) br_init(&D.br, src, srclen);
     else {
-        rcd_init(&D.rd, src, srclen);
+        uint32_t rl = srclen >= 4 ? rd32(src) : 0;
+        if (srclen < 4 || rl > srclen - 4) rl = 0, srclen = 4;   /* corrupt: decoding will fail cleanly */
+        rcd_init(&D.rd, src + 4, rl);
+        br_init(&D.br, src + 4 + rl, srclen - 4 - rl);
         D.c1 = xmalloc(sizeof(Chan1) * ch);
         for (int c = 0; c < ch; c++) chan1_init(&D.c1[c], o, ch == 2);
     }
@@ -1403,7 +1590,7 @@ static int decode_chunk(const Opts *o, int ch, const uint8_t *src, size_t srclen
         int n = len - f0 < F ? len - f0 : F;
         rcv = decode_block(&D, f0, n, 0);
         if (!rcv && o->profile == 0 && br_overrun(&D.br)) rcv = -1;
-        if (!rcv && o->profile == 1 && D.rd.over > 5) rcv = -1;
+        if (!rcv && o->profile == 1 && (D.rd.over > 5 || br_overrun(&D.br))) rcv = -1;
     }
     if (!rcv) {
         if (ch == 1) for (int t = 0; t < len; t++) wr16(dst + 2 * (size_t)t, (uint32_t)D.L[t]);
@@ -1489,6 +1676,8 @@ static int kaud_encode(const Opts *o, const uint8_t *in, size_t inlen, Buf *out,
     run_pool(&p, o->threads, enc_worker);
 
     uint8_t h[40];
+    uint8_t hx[7];
+    wr16(hx, (uint32_t)o->taps[0]); hx[2] = (uint8_t)o->taps[1]; hx[3] = (uint8_t)o->taps[2]; hx[4] = (uint8_t)o->cross[0]; hx[5] = (uint8_t)o->cross[1]; hx[6] = (uint8_t)o->comb;
     memcpy(h, "KAU1", 4);
     h[4] = KAUD_VERSION; h[5] = (uint8_t)o->profile; h[6] = (uint8_t)w.ch; h[7] = (uint8_t)o->chunk_log2;
     wr16(h + 8, (uint32_t)o->frame); h[10] = (uint8_t)o->effort; h[11] = (uint8_t)o->lpc1;
@@ -1497,6 +1686,7 @@ static int kaud_encode(const Opts *o, const uint8_t *in, size_t inlen, Buf *out,
     wr32(h + 22, (uint32_t)w.n); wr32(h + 26, (uint32_t)(w.n >> 32));
     out->len = 0;
     buf_add(out, h, 30);
+    buf_add(out, hx, 7);
     uint8_t b4[4];
     wr32(b4, (uint32_t)w.data_off); buf_add(out, b4, 4); buf_add(out, in, w.data_off);
     wr32(b4, (uint32_t)(inlen - w.trl_off)); buf_add(out, b4, 4); buf_add(out, in + w.trl_off, inlen - w.trl_off);
@@ -1514,7 +1704,7 @@ static int kaud_encode(const Opts *o, const uint8_t *in, size_t inlen, Buf *out,
 static int kaud_decode(const uint8_t *in, size_t inlen, int threads, Buf *out, const char **err)
 {
     *err = "corrupt or truncated KAU1 stream";
-    if (inlen < 30 || memcmp(in, "KAU1", 4)) { *err = "not a KAU1 stream"; return -1; }
+    if (inlen < 37 || memcmp(in, "KAU1", 4)) { *err = "not a KAU1 stream"; return -1; }
     if (in[4] != KAUD_VERSION) { *err = "unsupported KAU1 version"; return -1; }
     Opts o = { 0 };
     o.profile = in[5];
@@ -1528,8 +1718,10 @@ static int kaud_decode(const uint8_t *in, size_t inlen, int threads, Buf *out, c
     uint64_t n = rd32(in + 22) | (uint64_t)rd32(in + 26) << 32;
     if (o.profile > 1 || (ch != 1 && ch != 2) || o.chunk_log2 < 8 || o.chunk_log2 > 30 || o.frame < 16 ||
         o.frame > 32768 || rate_cap < 1 || rate_cap > 12 || o.depth > 5) return -1;
-    if (o.profile == 1) g_rate_cap = rate_cap;
-    size_t p = 30;
+    if (o.profile == 1) { g_rate_cap = rate_cap; shtab_init(); }
+    o.taps[0] = rd16(in + 30); o.taps[1] = in[32]; o.taps[2] = in[33]; o.cross[0] = in[34]; o.cross[1] = in[35]; o.comb = in[36];
+    if (o.taps[0] < 1 || o.taps[0] > 4096 || o.taps[1] < 1 || o.taps[2] < 1) return -1;
+    size_t p = 37;
     if (inlen - p < 4) return -1;
     size_t hl = rd32(in + p); p += 4;
     if (hl > inlen - p) return -1;
@@ -1611,8 +1803,9 @@ static void usage(void)
 
 static void opts_default(Opts *o)
 {
-    o->profile = 0; o->effort = 1; o->frame = 4096; o->chunk_log2 = 18; o->threads = 1;
-    o->mu[0] = 8; o->mu[1] = 16; o->mu[2] = 32; o->ss_step = 1 << 8; o->lpc1 = 32; o->depth = -1;
+    o->profile = 0; o->effort = 1; o->frame = 0; o->chunk_log2 = 18; o->threads = 1;
+    o->mu[0] = 256; o->mu[1] = 512; o->mu[2] = 1024; o->ss_step = 1 << 8; o->lpc1 = 16; o->depth = -1;
+    o->taps[0] = 256; o->taps[1] = 32; o->taps[2] = 16; o->cross[0] = 32; o->cross[1] = 8; o->comb = 64;
 }
 
 static int selftest(void);
@@ -1620,6 +1813,7 @@ static int selftest(void);
 int main(int argc, char **argv)
 {
     crc_init();
+    rtab_init();
     Opts o;
     opts_default(&o);
     int decode = 0, bench = 0, runs = 3;
@@ -1640,13 +1834,20 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--mu") && i + 3 < argc) { o.mu[0] = atoi(argv[++i]); o.mu[1] = atoi(argv[++i]); o.mu[2] = atoi(argv[++i]); }
         else if (!strcmp(a, "--ss") && i + 1 < argc) o.ss_step = atoi(argv[++i]);
         else if (!strcmp(a, "--lpc1") && i + 1 < argc) o.lpc1 = atoi(argv[++i]);
+        else if (!strcmp(a, "--taps") && i + 3 < argc) { o.taps[0] = atoi(argv[++i]); o.taps[1] = atoi(argv[++i]); o.taps[2] = atoi(argv[++i]); }
+        else if (!strcmp(a, "--cross") && i + 2 < argc) { o.cross[0] = atoi(argv[++i]); o.cross[1] = atoi(argv[++i]); }
         else if (!strcmp(a, "--rate") && i + 1 < argc) g_rate_cap = atoi(argv[++i]);
+        else if (!strcmp(a, "--comb") && i + 1 < argc) o.comb = atoi(argv[++i]);
+        else if (!strcmp(a, "--stereo") && i + 1 < argc) g_force_stereo = atoi(argv[++i]);
         else if (!strcmp(a, "-h") || !strcmp(a, "--help")) { usage(); return 0; }
         else { usage(); return 1; }
     }
     if (o.threads < 1) o.threads = 1;
-    if (o.chunk_log2 < 8 || o.chunk_log2 > 30 || o.frame < 16 || o.frame > 32768 || o.lpc1 < 0 || o.lpc1 > MAXORD || o.depth > 5 ||
+    if (o.frame <= 0) o.frame = o.profile == 1 ? 32768 : 4096;
+    if (o.chunk_log2 < 8 || o.chunk_log2 > 30 || o.frame < 16 || o.frame > 32768 || o.lpc1 < 0 || o.lpc1 > MAXORD || o.depth > 5 || o.taps[0] < 16 || o.taps[0] > 4096 || o.taps[1] < 1 || o.taps[1] > 255 ||
+        o.taps[2] < 1 || o.taps[2] > 255 || o.cross[0] < 0 || o.cross[0] > 255 || o.cross[1] < 0 || o.cross[1] > 255 || o.comb < 0 || o.comb > 255 ||
         g_rate_cap < 1 || g_rate_cap > 12) { fprintf(stderr, "kaud: option out of range\n"); return 1; }
+    shtab_init();
     if (o.effort < 0) o.effort = 0;
     if (o.effort > 3) o.effort = 3;
     const char *err = "";
@@ -1739,6 +1940,7 @@ static void make_wav(Buf *b, int ch, uint64_t n, int kind, int extensible, int e
 
 static int selftest(void)
 {
+    shtab_init();
     int fails = 0, cases = 0;
     const uint64_t lens[] = { 0, 1, 17, 4095, 4096, 4097, 70000, 300000 };
     for (int prof = 0; prof < 2; prof++)
@@ -1751,7 +1953,9 @@ static int selftest(void)
                     make_wav(&w, ch, lens[li], kind, ext, extra);
                     Opts o;
                     opts_default(&o);
-                    o.profile = prof; o.effort = (int)(li % 4); o.threads = 1 + (int)(li % 3); o.chunk_log2 = li & 2 ? 16 : 18;
+                    o.profile = prof; o.effort = (int)(li % 4);
+                    o.frame = prof == 1 ? (li & 1 ? 32768 : 4096) : (li & 1 ? 4096 : 1024);
+                    if (prof == 1 && (li & 2)) o.depth = 2; o.threads = 1 + (int)(li % 3); o.chunk_log2 = li & 2 ? 16 : 18;
                     const char *err;
                     cases++;
                     if (kaud_encode(&o, w.p, w.len, &enc, &err)) { printf("encode failed p%d ch%d k%d n%llu: %s\n", prof, ch, kind, (unsigned long long)lens[li], err); fails++; continue; }
@@ -1778,6 +1982,7 @@ static int selftest(void)
         make_wav(&w, 2, 100, 2, 0, 0);
         w.p[34] = 24;
         Opts o; opts_default(&o);
+        o.frame = 4096;
         const char *err;
         cases++;
         if (kaud_encode(&o, w.p, w.len, &enc, &err) == 0) { printf("24-bit input was accepted\n"); fails++; }
