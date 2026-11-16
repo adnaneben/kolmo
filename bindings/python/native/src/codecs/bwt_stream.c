@@ -14,6 +14,7 @@
 #include "../algo/lzp.h"
 #include "../algo/qlfc.h"
 #include "../algo/sais/sais.h"
+#include "../algo/qlfc.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -190,4 +191,91 @@ int kolmo_bsc_decompress(const uint8_t *in, int in_size, uint8_t *out, int out_s
         if (r != data_size) return KB_DATA_CORRUPT;
     } else if (lz_size != data_size) return KB_DATA_CORRUPT;
     return adler_data == kolmo_adler32(out, (size_t)data_size) ? KB_OK : KB_DATA_CORRUPT;
+}
+
+/* ---- codec 18: Kolmo's block-sorting stream ----
+   payload: flags u8 | [lzp_hash u8 | lzp_min u8] | primary index u32 | log2 of the index sampling interval u8 |
+            k u8 | k x sampled index u32 | QLFC stream (kolmo_qlfc_compress layout)
+   flags: bits 0-1 coder (1 static, 2 adaptive QLFC), bit 2 LZP. All integers little-endian. The raw size comes from
+   the container, whose block checksum covers the decoded bytes: there are no adler32 fields, no 28-byte header and no
+   stored fallback (the container stores a block that does not shrink). Every stage decoder is bounds-checked. */
+
+int kolmo_bwt_compress(const uint8_t *in, uint8_t *out, size_t cap, int n, const kolmo_bwt_params *p, int threads) {
+    if (n < 2 || !p || (p->coder != KOLMO_QLFC_STATIC && p->coder != KOLMO_QLFC_ADAPTIVE)) return KB_BAD_PARAMETER;
+    if (p->lzp_min && (p->lzp_min < 16 || p->lzp_min > 255 || p->lzp_hash < 10 || p->lzp_hash > 28)) return KB_BAD_PARAMETER;
+    uint8_t *work = (uint8_t *)malloc((size_t)n + 64);
+    if (!work) return KB_NOT_ENOUGH_MEMORY;
+    int lz = KB_NOT_COMPRESSIBLE;
+    if (p->lzp_min && n >= p->lzp_min + 64) lz = kolmo_lzp_compress(in, work, n, p->lzp_hash, p->lzp_min, threads);
+    if (lz == KB_NOT_ENOUGH_MEMORY) { free(work); return lz; }
+    int use_lzp = lz > 0;
+    if (!use_lzp) { memcpy(work, in, (size_t)n); lz = n; }
+
+    int rlog = p->index_log2 > 0 ? p->index_log2 : 0;
+    if (!rlog) { int mod = bwt_mod(lz); rlog = 0; while ((2 << rlog) <= mod + 1) rlog++; if (rlog < 1) rlog = 1; }
+    else if (rlog < 1) rlog = 1;
+    while (rlog < 30 && (((int64_t)lz - 1) >> rlog) > 255) rlog++;        /* at most 255 sampled indexes */
+    int32_t I[256]; int32_t r = (int32_t)1 << rlog;
+    int32_t *A = (int32_t *)malloc((size_t)lz * sizeof(int32_t) + 4);
+    if (!A) { free(work); return KB_NOT_ENOUGH_MEMORY; }
+    int rc = kolmo_sais_bwt_aux(work, work, A, lz, r, I, threads);
+    free(A);
+    if (rc != 0) { free(work); return rc == -2 ? KB_NOT_ENOUGH_MEMORY : KB_BAD_PARAMETER; }
+    int k = (lz - 1) / r;
+
+    size_t head = 1 + (use_lzp ? 2 : 0) + 4 + 1 + 1 + 4 * (size_t)k;
+    if (cap < head + 64) { free(work); return KB_NOT_COMPRESSIBLE; }
+    uint8_t *q = out;
+    *q++ = (uint8_t)(p->coder | (use_lzp ? 4 : 0));
+    if (use_lzp) { *q++ = (uint8_t)p->lzp_hash; *q++ = (uint8_t)p->lzp_min; }
+    kb_st32(q, (uint32_t)I[0]); q += 4;
+    *q++ = (uint8_t)rlog; *q++ = (uint8_t)k;
+    for (int t = 0; t < k; t++) { kb_st32(q, (uint32_t)I[t + 1]); q += 4; }
+    /* the QLFC coder needs lz + 64 bytes of room; code into scratch when the caller's buffer is tighter */
+    int res;
+    if (cap - head >= (size_t)lz + 64) res = kolmo_qlfc_compress_min(work, q, lz, p->coder, p->min_block, threads);
+    else {
+        uint8_t *tmp = (uint8_t *)malloc((size_t)lz + 64);
+        if (!tmp) { free(work); return KB_NOT_ENOUGH_MEMORY; }
+        res = kolmo_qlfc_compress_min(work, tmp, lz, p->coder, p->min_block, threads);
+        if (res > 0 && (size_t)res <= cap - head) memcpy(q, tmp, (size_t)res); else if (res > 0) res = KB_NOT_COMPRESSIBLE;
+        free(tmp);
+    }
+    free(work);
+    if (res < 0) return res;
+    return (int)(head + (size_t)res);
+}
+
+int kolmo_bwt_decompress(const uint8_t *in, size_t in_size, uint8_t *out, int n, int threads) {
+    if (n < 2 || in_size < 7) return KB_DATA_CORRUPT;
+    const uint8_t *q = in, *end = in + in_size;
+    int flags = *q++, coder = flags & 3, use_lzp = (flags >> 2) & 1, lzp_hash = 0, lzp_min = 0;
+    if (flags >> 3 || (coder != KOLMO_QLFC_STATIC && coder != KOLMO_QLFC_ADAPTIVE)) return KB_DATA_CORRUPT;
+    if (use_lzp) { lzp_hash = *q++; lzp_min = *q++; if (lzp_hash < 10 || lzp_hash > 28 || lzp_min < 16) return KB_DATA_CORRUPT; }
+    if (end - q < 6) return KB_DATA_CORRUPT;
+    int32_t I[256]; I[0] = (int32_t)kb_ld32(q); q += 4;
+    int rlog = *q++, k = *q++;
+    if (rlog < 1 || rlog > 30 || end - q < 4 * k + 1) return KB_DATA_CORRUPT;
+    for (int t = 0; t < k; t++) { I[t + 1] = (int32_t)kb_ld32(q); q += 4; }
+    uint8_t *lzbuf = use_lzp ? (uint8_t *)malloc((size_t)n + 64) : out;
+    if (!lzbuf) return KB_NOT_ENOUGH_MEMORY;
+    int lz = kolmo_qlfc_decompress(q, (int)(end - q), lzbuf, n, coder, threads);
+    int r = KB_OK;
+    if (lz < 0) r = lz;
+    else if ((!use_lzp && lz != n) || lz < 2) r = KB_DATA_CORRUPT;
+    else if ((lz - 1) >> rlog != k) r = KB_DATA_CORRUPT;
+    else {
+        int32_t *P = (int32_t *)malloc(((size_t)lz + 1) * sizeof(int32_t));
+        if (!P) r = KB_NOT_ENOUGH_MEMORY;
+        else {
+            if (kolmo_sais_unbwt_aux(lzbuf, lzbuf, P, lz, (int32_t)1 << rlog, I, threads) != 0) r = KB_DATA_CORRUPT;
+            free(P);
+        }
+    }
+    if (r == KB_OK && use_lzp) {
+        int d = kolmo_lzp_decompress(lzbuf, lz, out, n, lzp_hash, lzp_min, threads);
+        if (d != n) r = d < 0 ? d : KB_DATA_CORRUPT;
+    }
+    if (use_lzp) free(lzbuf);
+    return r;
 }

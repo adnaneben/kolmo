@@ -13,6 +13,7 @@
 #include "codecs/bwt_stream.h"
 #include "algo/lzp.h"
 #include "algo/qlfc.h"
+#include "algo/bytes.h"
 #include "algo/sais/sais.h"
 #ifdef GOLDEN_FROM_LIBBSC
 #include "libbsc/libbsc.h"
@@ -119,6 +120,40 @@ static void sais_threads(void) {
     }
 }
 
+/* Codec 18: round trips for several parameter sets, the same bytes for 1 and 4 threads, damaged payloads refused or
+   decoded without a memory error (ASan build). */
+static void codec18(void) {
+    static const kolmo_bwt_params PS[] = {KOLMO_BWT_DEFAULTS, {15, 72, KOLMO_QLFC_STATIC, 0, 0}, {0, 0, KOLMO_QLFC_ADAPTIVE, 3, 0},
+                                          {16, 32, KOLMO_QLFC_STATIC, 12, 1 << 16}};
+    static const int ns[] = {2, 3, 40, 1000, 65536, 300000, 1048576, 3000000};
+    for (int kind = 0; kind < NKIND; kind++) for (unsigned s = 0; s < sizeof(ns) / sizeof(ns[0]); s++) for (unsigned q = 0; q < 4; q++) {
+        int n = ns[s]; if (q && n > 1048576) continue;
+        uint8_t *in = gen(kind, n); size_t cap = (size_t)n + 64 + 4 * 256;
+        uint8_t *a = malloc(cap), *b = malloc(cap), *d = malloc((size_t)n + 1);
+        int ra = kolmo_bwt_compress(in, a, cap, n, &PS[q], 1), rb = kolmo_bwt_compress(in, b, cap, n, &PS[q], 4);
+        /* refusals (KB_NOT_COMPRESSIBLE: the container stores such blocks) must not depend on threads either */
+        CHECK(ra == rb && (ra <= 0 || !memcmp(a, b, (size_t)ra)), "codec 18: threads changed the output (kind %d n %d params %u: %d %d)", kind, n, q, ra, rb);
+        CHECK(ra > 0 || ra == KB_NOT_COMPRESSIBLE, "codec 18: error %d (kind %d n %d params %u)", ra, kind, n, q);
+        if (ra > 0) {
+            for (int th = 1; th <= 4; th += 3) {
+                memset(d, 0x33, (size_t)n);
+                CHECK(kolmo_bwt_decompress(a, (size_t)ra, d, n, th) == 0 && !memcmp(d, in, (size_t)n), "codec 18: round trip (kind %d n %d params %u th %d)", kind, n, q, th);
+            }
+            if (q == 0 && n <= 300000) {
+                uint64_t x = (uint64_t)(kind * 977 + s * 31 + 5);
+                for (int t = 0; t < 40; t++) {
+                    memcpy(b, a, (size_t)ra); int len = ra;
+                    x ^= x << 13; x ^= x >> 7; x ^= x << 17;
+                    if (t % 4 == 3) len = (int)(x % (uint64_t)ra);
+                    else for (int k = 0; k <= t % 3; k++) { x ^= x << 13; x ^= x >> 7; x ^= x << 17; b[x % (uint64_t)ra] ^= (uint8_t)(1 + (x >> 40) % 255); }
+                    (void)kolmo_bwt_decompress(b, (size_t)len, d, n, 1 + (t & 1));
+                }
+            }
+        }
+        free(in); free(a); free(b); free(d);
+    }
+}
+
 int main(int argc, char **argv) {
     int print = argc > 1 && !strcmp(argv[1], "--print");
 #ifdef GOLDEN_FROM_LIBBSC
@@ -149,6 +184,7 @@ int main(int argc, char **argv) {
     }
     if (print) return 0;
     sais_threads();
+    codec18();
     printf(fails ? "BWT TESTS FAILED (%d)\n" : "BWT TESTS PASSED\n", fails);
     return fails != 0;
 }

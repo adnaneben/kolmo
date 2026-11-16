@@ -68,7 +68,7 @@ int main(void) {
         for (int k = 0; k < 6; k++) {
             kolmo_params Q = {modes[k], levels[k], 2, 0, 1};
             int64_t qn = kolmo_compress(in, n, z, 2 * cap + (1u << 20), &Q);
-            int bad = qn <= 0 || z[4] >= 10;
+            int bad = qn <= 0 || z[4] == 10;    /* version 10 is codec 16's; 11 (codec 18, block sorting) is allowed */
             for (uint32_t i = 0; qn > 0 && i < get32(z + 20); i++) bad |= z[HDR + (size_t)i * IDX + 12] == C_FQ;
             if (bad || kolmo_decompress(z, (size_t)qn, b, n, 2) != (int64_t)n || memcmp(in, b, n)) { printf("MODE %d LEVEL %d: CODEC 16 OR ROUND TRIP FAIL\n", modes[k], levels[k]); fails++; }
         }

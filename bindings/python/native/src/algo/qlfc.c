@@ -698,9 +698,14 @@ static void qlfc_enc_task(void *p, int b, int worker) {
 }
 
 int kolmo_qlfc_compress(const uint8_t *in, uint8_t *out, int n, int coder, int threads) {
+    return kolmo_qlfc_compress_min(in, out, n, coder, 0, threads);
+}
+
+int kolmo_qlfc_compress_min(const uint8_t *in, uint8_t *out, int n, int coder, int min_block, int threads) {
     if (coder != KOLMO_QLFC_STATIC && coder != KOLMO_QLFC_ADAPTIVE) return KB_BAD_PARAMETER;
     if (n < 1) return KB_NOT_COMPRESSIBLE;
-    const int nBlocks = kolmo_qlfc_num_blocks(n);
+    int nBlocks = kolmo_qlfc_num_blocks(n);
+    if (min_block > 0 && n / min_block < nBlocks) nBlocks = n / min_block > 1 ? n / min_block : 1;
     if (nBlocks == 1) {
         qlfc_model *m = (qlfc_model *)malloc(sizeof(qlfc_model));
         uint8_t *buf = (uint8_t *)malloc((size_t)n);
