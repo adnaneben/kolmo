@@ -13,7 +13,7 @@
  *   kvid -d in out                                        decompress
  *   kvid -b [-m ...] in.y4m                               in-memory timing (fastest of at least 3 runs), JSON line */
 #include "kolmo.h"
-#include "arch/cpu.h"
+#include "arch/kernels.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,7 +68,8 @@ static int parse(const uint8_t *s, size_t n, layout_t *L, uint8_t **hdr) {
     L->hdr_len = hn; *hdr = hb; return 0;
 }
 
-/* Strip choice and residuals: src/algo/video.c (the reference, the prediction above) and its SIMD kernels in src/arch. */
+/* Strip choice and residuals: src/algo/video.c (the reference, the prediction described above) and its SIMD kernels
+ * in src/arch. */
 static void encode_plane(const uint8_t *cur, const uint8_t *prev, size_t w, size_t h, uint8_t *res, uint8_t *flags) {
     const kolmo_kernels *K = kolmo_kernels_get();
     for (size_t y0 = 0, s = 0; y0 < h; y0 += STRIP, s++)

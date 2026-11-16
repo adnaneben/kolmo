@@ -1,5 +1,5 @@
 /* CPU feature detection and kernel dispatch. Apache-2.0, Kolmo contributors. See cpu.h. */
-#include "arch/cpu.h"
+#include "arch/kernels.h"
 #include "algo/predict.h"
 #include "algo/planes.h"
 #include "algo/mixer.h"

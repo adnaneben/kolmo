@@ -1,6 +1,6 @@
 /* Every dispatched kernel against its C reference, at every ISA level this CPU has, on random and edge-case inputs.
  * make check-kernels (part of check-rc). */
-#include "arch/cpu.h"
+#include "arch/kernels.h"
 #include "algo/predict.h"
 #include "algo/planes.h"
 #include "algo/mixer.h"

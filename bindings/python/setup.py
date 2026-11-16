@@ -6,7 +6,7 @@ it into ``libkolmo`` with the system C/C++ compiler — no ``make``, no system c
 (beyond optional liblzma) — so both the sdist and per-platform wheels build anywhere. The compiled
 library sits next to ``kolmo.py`` and is loaded by ctypes, so the installed package needs no
 toolchain at run time. Portable flags (no ``-march=native``) are used so a wheel built in CI runs
-on any CPU of that architecture; kolmo.c selects SIMD paths at compile time with scalar fallbacks.
+on any CPU of that architecture; faster kernels are chosen at run time (src/arch/), with C references.
 
 Set ``KOLMO_NO_LZMA=1`` to build without liblzma (the max/ultra tiers then use the other coders).
 """
@@ -36,7 +36,7 @@ def _sources():
     for sub in ("common", "dec", "enc"):
         c += sorted(glob.glob(os.path.join(b, sub, "*.c")))
     c += [os.path.join(l4, "lz4.c"), os.path.join(l4, "lz4hc.c")]
-    c += [os.path.join(VENDOR, "xxhash", "kolmo_xxh3.c")]
+    c += [os.path.join(SRC, "arch", "xxh3.c")]          # compiled apart from src/kolmo.c (docs/LAYOUT.md)
     c += [os.path.join(bsc, "libbsc", "bwt", "libsais", "libsais.c")]
     cpp = sorted(glob.glob(os.path.join(bsc, "libbsc", "**", "*.cpp"), recursive=True))
     return c, cpp, z, b, l4, bsc
@@ -85,6 +85,10 @@ def build_library(dest_dir):
     is_x86_64 = target == "x86_64"
     cross = IS_MAC and target != host   # e.g. arm64 wheel built on an Intel runner
     asm = os.path.join(z, "decompress", "huf_decompress_amd64.S")
+    # Kolmo's own assembly kernels for the target ISA (src/arch/<isa>/*.S); KOLMO_NO_ASM=1 builds the C references only.
+    no_asm = os.environ.get("KOLMO_NO_ASM") == "1"
+    isa = "x86_64" if is_x86_64 else "aarch64" if target in ("arm64", "aarch64") else None
+    kasm = [] if no_asm or not isa else sorted(glob.glob(os.path.join(SRC, "arch", isa, "*.S")))
 
     cc = os.environ.get("CC", "cc")
     cxx = os.environ.get("CXX", "c++")
@@ -92,7 +96,9 @@ def build_library(dest_dir):
     os.makedirs(workdir, exist_ok=True)
 
     includes = ["-I" + p for p in (SRC, z, l4, bsc, os.path.join(b, "include"))]
-    defs = ["-DXXH_NAMESPACE=ZSTD_", "-DZSTD_MULTITHREAD", "-DZSTD_LEGACY_SUPPORT=0"]
+    defs = ["-DXXH_NAMESPACE=ZSTD_", "-DZSTD_MULTITHREAD", "-DZSTD_LEGACY_SUPPORT=0", "-DKOLMO_NO_GPU"]
+    if no_asm:
+        defs.append("-DKOLMO_NO_ASM")
     if not is_x86_64:
         defs.append("-DZSTD_DISABLE_ASM")
 
@@ -129,12 +135,14 @@ def build_library(dest_dir):
         compile_one(cc, f, fp)
     if is_x86_64 and os.path.exists(asm):
         compile_one(cc, asm, [])
-    # Kolmo's kernels (docs/LAYOUT.md): C references in src/algo, dispatch in src/arch, x86-64 versions chosen by CPUID
-    for f in sorted(glob.glob(os.path.join(SRC, "algo", "*.c")) + glob.glob(os.path.join(SRC, "arch", "*.c"))):
-        compile_one(cc, f, fp)
-    if is_x86_64:
-        for f in sorted(glob.glob(os.path.join(SRC, "arch", "x86_64", "*.c")) + glob.glob(os.path.join(SRC, "arch", "x86_64", "*.S"))):
-            compile_one(cc, f, fp)
+    for f in kasm:
+        compile_one(cc, f, [])
+    # dispatched kernels (src/arch/cpu.c): C references always, x86-64 versions unless KOLMO_NO_ASM=1 (Makefile: KSRC)
+    for f in ["arch/cpu.c", "algo/predict.c", "algo/planes.c", "algo/mixer.c", "algo/video.c"]:
+        compile_one(cc, os.path.join(SRC, f), fp)
+    if is_x86_64 and not no_asm:
+        for f in ["med8_sse2.c", "planes_sse2.c", "mixer_avx2.c", "video_sse2.c", "img16_sse2.c"]:
+            compile_one(cc, os.path.join(SRC, "arch", "x86_64", f), fp)
     for f in cpp_src:
         compile_one(cxx, f, fp + ["-I" + bsc])
 

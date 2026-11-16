@@ -1,41 +1,55 @@
-/* CPU feature detection and the table of dispatched kernels (docs/LAYOUT.md, "arch").
- *
- * Every kernel has a portable C reference (`*_c`, in src/algo/) that is its specification; an ISA version may only
- * be faster, never write other bytes (tests/test_kernels.c compares them). The table is filled once, at first use,
- * from CPUID; `make NO_ASM=1` (-DKOLMO_NO_ASM) builds the C references only.
- *
- * KOLMO_CPU=c|sse2|sse41|avx2 in the environment lowers the level chosen at start-up (for tests and benchmarks; it
- * never raises it above what the CPU supports). */
-#ifndef KOLMO_ARCH_CPU_H
-#define KOLMO_ARCH_CPU_H
-#include <stddef.h>
-#include <stdint.h>
-
-enum { KOLMO_ISA_C = 0, KOLMO_ISA_SSE2 = 1, KOLMO_ISA_SSE41 = 2, KOLMO_ISA_AVX2 = 3 };
-
-typedef struct {
-    /* IMG8 inverse: rows of W bytes, channel step C (1..4), m bytes (only whole rows are written); see predict.h */
-    void (*med8_inv)(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p);
-    /* byte planes of w-byte words, one channel (T_SHUF); see algo/planes.h */
-    void (*planes_split)(const uint8_t *in, size_t rows, unsigned w, int delta, uint8_t *out);
-    void (*planes_merge)(const uint8_t *in, size_t rows, unsigned w, int delta, uint8_t *out);
-    /* context-mixing mixer: dot products and weight updates of 2 or 4 weight sets; see algo/mixer.h */
-    void (*cm_dot)(const int32_t *x, int n, const int32_t *w1, const int32_t *w2, const int32_t *w3, const int32_t *w4, int64_t s[4]);
-    void (*cm_train)(const int32_t *x, int n, int32_t *w1, int32_t *w2, int32_t *w3, int32_t *w4, const int e[4], int shift);
-    /* video strips (kvid, Y4M): predictor choice and residuals, and their inverse; see algo/video.h */
-    int (*vid_strip_enc)(const uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, uint8_t *res);
-    void (*vid_strip_dec)(uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, int k, const uint8_t *res);
-    /* IMG16 forward prediction and the detector's stride search; see algo/predict.h */
-    void (*img16_fwd)(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi);
-    uint64_t (*sad16)(const uint16_t *x, const uint16_t *y, size_t n);
-} kolmo_kernels;
-
-const kolmo_kernels *kolmo_kernels_get(void);          /* the table for this CPU (thread safe, cheap after the first call) */
-int kolmo_cpu_level(void);                             /* the ISA level the table was filled for */
-int kolmo_cpu_max_level(void);                         /* the highest level this CPU and build support */
-/* the table for a given level (clamped to kolmo_cpu_max_level()); for tests and benchmarks */
-void kolmo_kernels_for_level(int level, kolmo_kernels *k);
-const char *kolmo_isa_name(int level);
-
-#define KOLMO_K (kolmo_kernels_get())
+/* CPU feature detection and the target attributes of the dispatched kernels (x86-64: CPUID at first use). */
+/* ------------------------------------------------------------------ runtime ISA dispatch (x86-64)
+ * Release builds and the Python wheels compile for baseline x86-64 (no -mavx2 / -msse4.2), so the vector paths below
+ * are compiled for their ISA with a target attribute and chosen at first use by CPUID (__builtin_cpu_supports).
+ * When the build already targets the ISA (-mavx2, -march=native) the test folds to a constant and the generic code is
+ * dead. -DKOLMO_NO_DISPATCH restores compile-time selection only. Every path writes the same bytes. */
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__)) && !defined(KOLMO_NO_DISPATCH)
+#define KOLMO_X86_DISPATCH 1
+#include <immintrin.h>
+#if !defined(__AVX2__)
+static int kolmo_have_avx2(void) {
+    static int v = -1; int r = __atomic_load_n(&v, __ATOMIC_RELAXED);
+    if (r < 0) { __builtin_cpu_init(); r = __builtin_cpu_supports("avx2") ? 1 : 0; __atomic_store_n(&v, r, __ATOMIC_RELAXED); }
+    return r;
+}
 #endif
+#if !defined(__SSE4_2__)
+static int kolmo_have_sse42(void) {
+    static int v = -1; int r = __atomic_load_n(&v, __ATOMIC_RELAXED);
+    if (r < 0) { __builtin_cpu_init(); r = __builtin_cpu_supports("sse4.2") ? 1 : 0; __atomic_store_n(&v, r, __ATOMIC_RELAXED); }
+    return r;
+}
+#endif
+#define KOLMO_TARGET_AVX2 __attribute__((target("avx2")))
+#define KOLMO_TARGET_SSE42 __attribute__((target("sse4.2")))
+#endif
+#if defined(__AVX2__)
+#define kolmo_have_avx2() 1
+#endif
+#if defined(__SSE4_2__)
+#define kolmo_have_sse42() 1
+#endif
+#if defined(__AVX2__) || defined(KOLMO_X86_DISPATCH)
+#define KOLMO_FMT_AVX2 1                /* the AVX2 decimal formatters are compiled (and chosen by kolmo_have_avx2) */
+#endif
+#if !defined(KOLMO_TARGET_AVX2)
+#define KOLMO_TARGET_AVX2
+#endif
+
+/* Host byte order for the integer-inverse loops (transforms/graph.c and the arch/ kernels): the loops store whole
+ * words, so they are used on little-endian hosts only. -DKOLMO_FORCE_GENERIC_INT_INV sends every program to the
+ * reference inverse (kg_int_inv). */
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define FI_HOST_LE 0
+#else
+#define FI_HOST_LE 1
+#endif
+#if defined(KOLMO_FORCE_GENERIC_INT_INV)
+#define FI_USE 0
+#else
+#define FI_USE FI_HOST_LE
+#endif
+
+/* the table of kernels with C references (src/algo) and per-ISA versions in separate objects (src/arch/cpu.c) */
+#include "arch/kernels.h"
