@@ -1160,14 +1160,7 @@ static inline uint8_t kg_unzz8(uint8_t z) { return (uint8_t)((z >> 1) ^ (uint8_t
 /* rows of W bytes, channel step C: row 0 predicts from the left, later rows from above for the first C bytes and from
  * the median of left, above and left + above - above-left after that */
 static void kg_img8_fwd(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r) {
-    size_t x = 0;
-    for (; x < C && x < m; x++) r[x] = kg_zz8(p[x]);
-    for (; x < W && x < m; x++) r[x] = kg_zz8((uint8_t)(p[x] - p[x - C]));
-    for (size_t y = W; y + W <= m; y += W) {
-        const uint8_t *q = p + y, *u = q - W; uint8_t *o = r + y;
-        for (x = 0; x < C; x++) o[x] = kg_zz8((uint8_t)(q[x] - u[x]));
-        for (; x < W; x++) o[x] = kg_zz8((uint8_t)(q[x] - kg_med(q[x - C], u[x], u[x - C])));
-    }
+    KOLMO_K->med8_fwd(p, m, W, C, r);     /* reference: kolmo_med8_fwd_c (src/algo/predict.c); SIMD in src/arch */
 }
 static void kg_img8_back(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p) {
     KOLMO_K->med8_inv(r, m, W, C, p);     /* reference: kolmo_med8_inv_c (src/algo/predict.c); SIMD in src/arch */

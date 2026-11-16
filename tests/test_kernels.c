@@ -29,6 +29,11 @@ static void test_med8(int level, const kolmo_kernels *k) {
             fill(r, m, kind); memset(a, 0xA5, m + 64); memset(b, 0xA5, m + 64);
             kolmo_med8_inv_c(r, m, W, C, a); k->med8_inv(r, m, W, C, b);
             CHECK(!memcmp(a, b, m + 64), "med8_inv %s C=%u W=%zu m=%zu kind=%d", kolmo_isa_name(level), C, W, m, kind);
+            memset(a, 0xA5, m + 64); memset(b, 0xA5, m + 64);           /* forward, on the same bytes taken as an image */
+            kolmo_med8_fwd_c(r, m, W, C, a); k->med8_fwd(r, m, W, C, b);
+            CHECK(!memcmp(a, b, m + 64), "med8_fwd %s C=%u W=%zu m=%zu kind=%d", kolmo_isa_name(level), C, W, m, kind);
+            uint8_t *back = malloc(m + 64); memset(back, 0, m + 64); kolmo_med8_inv_c(a, m, W, C, back);
+            CHECK(!memcmp(back, r, m / W * W), "med8 round trip C=%u W=%zu m=%zu", C, W, m); free(back);
             free(r); free(a); free(b);
         }
     }
@@ -66,6 +71,11 @@ static void test_mixer(int level, const kolmo_kernels *k) {
         int64_t a[4], b[4];
         kolmo_cm_dot_c(x, n, w[0], w[1], four ? w[2] : NULL, w[3], a); k->cm_dot(x, n, w[0], w[1], four ? w[2] : NULL, w[3], b);
         CHECK(!memcmp(a, b, four ? 32 : 16), "cm_dot %s n=%d four=%d", kolmo_isa_name(level), n, four);
+        {   uint32_t hh[N], o1[N + 8], o2[N + 8]; uint32_t add = it % 4 ? (uint32_t)rnd() : 0;
+            for (int i = 0; i < N; i++) hh[i] = (uint32_t)rnd();
+            memset(o1, 0x77, sizeof o1); memset(o2, 0x77, sizeof o2);
+            kolmo_cm_hash_c(hh, n, add, o1); k->cm_hash(hh, n, add, o2);
+            CHECK(!memcmp(o1, o2, sizeof o1), "cm_hash %s n=%d", kolmo_isa_name(level), n); }
         if (it % 5 == 0) continue;                                  /* full-range weights could overflow on update */
         memcpy(v, w, sizeof w);
         kolmo_cm_train_c(x, n, w[0], w[1], four ? w[2] : NULL, w[3], e, sh); k->cm_train(x, n, v[0], v[1], four ? v[2] : NULL, v[3], e, sh);

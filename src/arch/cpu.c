@@ -32,18 +32,18 @@ int kolmo_cpu_max_level(void) {
 
 void kolmo_kernels_for_level(int level, kolmo_kernels *k) {
     int mx = kolmo_cpu_max_level(); if (level > mx) level = mx; if (level < 0) level = 0;
-    k->med8_inv = kolmo_med8_inv_c;
+    k->med8_inv = kolmo_med8_inv_c; k->med8_fwd = kolmo_med8_fwd_c;
     k->planes_split = kolmo_planes_split_c; k->planes_merge = kolmo_planes_merge_c;
-    k->cm_dot = kolmo_cm_dot_c; k->cm_train = kolmo_cm_train_c;
+    k->cm_dot = kolmo_cm_dot_c; k->cm_train = kolmo_cm_train_c; k->cm_hash = kolmo_cm_hash_c;
     k->vid_strip_enc = kolmo_vid_strip_enc_c; k->vid_strip_dec = kolmo_vid_strip_dec_c;
     k->img16_fwd = kolmo_img16_fwd_c; k->sad16 = kolmo_sad16_c;
 #if KOLMO_X86_KERNELS
-    if (level >= KOLMO_ISA_SSE2) { k->med8_inv = kolmo_med8_inv_sse2; k->planes_split = kolmo_planes_split_sse2; k->planes_merge = kolmo_planes_merge_sse2;
+    if (level >= KOLMO_ISA_SSE2) { k->med8_inv = kolmo_med8_inv_sse2; k->med8_fwd = kolmo_med8_fwd_sse2; k->planes_split = kolmo_planes_split_sse2; k->planes_merge = kolmo_planes_merge_sse2;
                                    k->vid_strip_enc = kolmo_vid_strip_enc_sse2; k->vid_strip_dec = kolmo_vid_strip_dec_sse2;
                                    k->img16_fwd = kolmo_img16_fwd_sse2; k->sad16 = kolmo_sad16_sse2; }
-    if (level >= KOLMO_ISA_SSE41) { k->med8_inv = kolmo_med8_inv_sse41; k->cm_dot = kolmo_cm_dot_sse41; k->cm_train = kolmo_cm_train_sse41;
+    if (level >= KOLMO_ISA_SSE41) { k->med8_inv = kolmo_med8_inv_sse41; k->cm_dot = kolmo_cm_dot_sse41; k->cm_train = kolmo_cm_train_sse41; k->cm_hash = kolmo_cm_hash_sse41;
                                     k->vid_strip_dec = kolmo_vid_strip_dec_sse41; }
-    if (level >= KOLMO_ISA_AVX2) { k->cm_dot = kolmo_cm_dot_avx2; k->cm_train = kolmo_cm_train_avx2; k->img16_fwd = kolmo_img16_fwd_avx2; k->sad16 = kolmo_sad16_avx2; }
+    if (level >= KOLMO_ISA_AVX2) { k->med8_fwd = kolmo_med8_fwd_avx2; k->cm_dot = kolmo_cm_dot_avx2; k->cm_train = kolmo_cm_train_avx2; k->cm_hash = kolmo_cm_hash_avx2; k->img16_fwd = kolmo_img16_fwd_avx2; k->sad16 = kolmo_sad16_avx2; }
     /* AVX2: the SSE4.1 kernel (the VEX-encoded build of it measured 25-35% slower; benchmark/rc3/simd-x86) */
 #endif
 }

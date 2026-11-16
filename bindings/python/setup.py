@@ -141,7 +141,7 @@ def build_library(dest_dir):
     for f in ["arch/cpu.c", "algo/predict.c", "algo/planes.c", "algo/mixer.c", "algo/video.c"]:
         compile_one(cc, os.path.join(SRC, f), fp)
     if is_x86_64 and not no_asm:
-        for f in ["med8_sse2.c", "planes_sse2.c", "mixer_avx2.c", "video_sse2.c", "img16_sse2.c"]:
+        for f in ["med8_sse2.c", "planes_sse2.c", "mixer_avx2.c", "video_sse2.c", "img16_sse2.c", "med8f_avx2.c"]:
             compile_one(cc, os.path.join(SRC, "arch", "x86_64", f), fp)
     for f in cpp_src:
         compile_one(cxx, f, fp + ["-I" + bsc])

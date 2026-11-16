@@ -91,7 +91,7 @@ endif
 KSRC    := src/arch/cpu.c src/algo/predict.c src/algo/planes.c src/algo/mixer.c src/algo/video.c
 ifeq ($(ASM_ISA)$(NO_ASM),x86_64)
 KSRC    += src/arch/x86_64/med8_sse2.c src/arch/x86_64/planes_sse2.c src/arch/x86_64/mixer_avx2.c src/arch/x86_64/video_sse2.c \
-           src/arch/x86_64/img16_sse2.c
+           src/arch/x86_64/img16_sse2.c src/arch/x86_64/med8f_avx2.c
 endif
 KHDR    := src/arch/kernels.h src/algo/predict.h src/algo/planes.h src/algo/mixer.h src/algo/video.h $(wildcard src/arch/x86_64/*.h)
 ARCHSRC := src/arch/xxh3.c $(KSRC) $(ASMSRC) $(GPUSRC)
