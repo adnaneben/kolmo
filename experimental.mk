@@ -7,6 +7,7 @@
 #   build/kbx          KBX3: KBC1 with longer hashed contexts (profiles 0, 1, 2)      (Codex, 7 Nov 2026)
 #   build/kolmo-fastq  four-line FASTQ prototype (names, bases, qualities as streams) (Codex, 7 Nov 2026)
 #   build/kvid         temporal-prediction front end for raw video frames             (new, 15 Nov 2026)
+#   build/krans        static interleaved rANS, order 0 and 1, AVX2/NEON decoders     (new, 16 Nov 2026)
 #
 # `make experimental-check` builds them and runs their correctness tests, with and without sanitizers.
 
@@ -104,3 +105,36 @@ experimental-check: build/krc-frontier-test build/krctest build/krctest-asan bui
 	./build/kbxtest-asan
 	./build/frontier-reads-test
 .PHONY: experimental-check
+
+# KRANS: static interleaved rANS (src/experimental/KRANS.md). Built for the baseline ISA on purpose: the AVX2 decoder
+# is chosen at run time (with -march=native gcc puts AVX-512 encodings into the AVX2 functions, which is slower here).
+KRANS_CFLAGS ?= -O3 -fno-plt
+KRANS_SRC := $(XD)/krans.c $(XD)/krans.h
+build/krans: $(XD)/krans_cli.c $(KRANS_SRC)
+	@mkdir -p build
+	$(CC) $(KRANS_CFLAGS) -I$(XD) $(XD)/krans_cli.c $(XD)/krans.c -lpthread -lm -o $@
+build/kranstest: tests/kranstest.c $(KRANS_SRC)
+	@mkdir -p build
+	$(CC) $(KRANS_CFLAGS) -I$(XD) tests/kranstest.c $(XD)/krans.c -lpthread -lm -o $@
+build/kranstest-asan: tests/kranstest.c $(KRANS_SRC)
+	@mkdir -p build
+	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -I$(XD) tests/kranstest.c $(XD)/krans.c -lpthread -lm -o $@
+# round trips (random, skewed, one-symbol, empty, 1-byte, 8 MiB inputs; every order/ways/precision/decoder) and
+# corrupted frames, optimised and under ASan + UBSan
+krans-check: build/krans build/kranstest build/kranstest-asan
+	./build/kranstest
+	./build/kranstest-asan
+.PHONY: krans-check
+# NEON decoder: cross-compiled and run under qemu-user (apt: gcc-aarch64-linux-gnu qemu-user), with UBSan
+KRANS_ARM64_CC ?= aarch64-linux-gnu-gcc
+krans-check-arm64: tests/kranstest.c $(KRANS_SRC)
+	@mkdir -p build
+	$(KRANS_ARM64_CC) -O1 -g -static -fsanitize=undefined -fno-sanitize-recover=undefined -I$(XD) tests/kranstest.c $(XD)/krans.c -lpthread -lm -o build/kranstest-arm64
+	qemu-aarch64 ./build/kranstest-arm64
+.PHONY: krans-check-arm64
+# Rival coders on the same streams (zstd's HUF and FSE called directly, lz4, zstd -1/-3). Needs a zstd source tree
+# built outside this repository: ZSTD_DIR=<zstd>/lib containing libzstd.a (bench/krans/build_zstd.sh makes one).
+build/krans-rivals: $(XD)/krans_rivals.c
+	@test -n "$(ZSTD_DIR)" || { echo "set ZSTD_DIR to a built zstd lib/ directory (bench/krans/build_zstd.sh)"; exit 1; }
+	@mkdir -p build
+	$(CC) $(KRANS_CFLAGS) -I$(ZSTD_DIR) -I$(ZSTD_DIR)/common -I$(ZSTD_DIR)/compress $< $(ZSTD_DIR)/libzstd.a -llz4 -o $@
