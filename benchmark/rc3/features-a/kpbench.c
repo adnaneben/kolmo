@@ -10,11 +10,14 @@
  *   zstd-N-dict    the same with a dictionary from ZDICT_trainFromBuffer over the training files (what
  *                  `zstd --train -B16K` runs, default 112640 bytes), compressed and decompressed with prepared
  *                  dictionaries (ZSTD_CDict / ZSTD_DDict), as a server would keep them
+ *   lz4, lz4-dict  (with -m speed) LZ4 acceleration 1 without and with the same dictionary file as LZ4 dictionary
+ *                  (its last 64 KiB, as `lz4 -D`), frames reduced to the block (no frame header or checksum)
  * Output: one JSON object per row on stdout. Build: see Makefile target build/kpbench. */
 #define _GNU_SOURCE
 #include "kolmo.h"
 #include "zstd.h"
 #include "zdict.h"
+#include "lz4.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,7 +83,7 @@ int main(int argc, char **argv) {
         if (kolmo_profile_load(pb, s, &prof)) { fprintf(stderr, "bad profile\n"); return 1; }
         free(pb);
     } else {
-        kolmo_train_params tp = {P, 0, 0, NULL}; tp.params.threads = 0;
+        kolmo_train_params tp = {P, 0, 0, NULL, getenv("KP_QUICK") != NULL}; tp.params.threads = 0;
         size_t pc = kolmo_profile_bound(&tp); uint8_t *pb = malloc(pc);
         double t0 = now(); int64_t pl = kolmo_profile_train(cat, Tr.n, Tr.k, &tp, pb, pc); double t1 = now();
         if (pl < 0 || kolmo_profile_load(pb, pl, &prof)) { fprintf(stderr, "train failed %lld\n", (long long)pl); return 1; }
@@ -96,9 +99,11 @@ int main(int argc, char **argv) {
     if (ZDICT_isError(zdl)) { fprintf(stderr, "zdict: %s\n", ZDICT_getErrorName(zdl)); zdl = 0; }
     else fprintf(stderr, "zstd dictionary %zu bytes in %.2f s\n", zdl, t1 - t0);
 
-    for (int variant = 0; variant < 4; variant++) {
-        if (variant == 3 && !zdl) continue;
-        row_t r = {variant == 0 ? "kolmo" : variant == 1 ? "kolmo-P" : variant == 2 ? "zstd" : "zstd-dict", 0, 1e30, 1e30};
+    int nvar = !strcmp(mode, "speed") ? 6 : 4;
+    for (int variant = 0; variant < nvar; variant++) {
+        if ((variant == 3 || variant == 5) && !zdl) continue;
+        row_t r = {variant == 0 ? "kolmo" : variant == 1 ? "kolmo-P" : variant == 2 ? "zstd" : variant == 3 ? "zstd-dict" : variant == 4 ? "lz4" : "lz4-dict", 0, 1e30, 1e30};
+        size_t l4n = zdl < 65536 ? zdl : 65536; const char *l4d = (const char *)zd + zdl - l4n;
         ZSTD_CCtx *zc = ZSTD_createCCtx(); ZSTD_DCtx *zdx = ZSTD_createDCtx();
         ZSTD_CDict *cd = variant == 3 ? ZSTD_createCDict(zd, zdl, zl) : NULL; ZSTD_DDict *dd = variant == 3 ? ZSTD_createDDict(zd, zdl) : NULL;
         for (int rr = 0; rr < rounds; rr++) {
@@ -107,7 +112,11 @@ int main(int argc, char **argv) {
                 int64_t z;
                 if (variant == 0) z = kolmo_compress(Te.b[i], Te.n[i], o, cap, &P);
                 else if (variant == 1) z = kolmo_compress_profile(Te.b[i], Te.n[i], o, cap, &P, prof);
-                else {
+                else if (variant >= 4) {
+                    LZ4_stream_t st; LZ4_initStream(&st, sizeof st);
+                    if (variant == 5) LZ4_loadDict(&st, l4d, (int)l4n);
+                    int q = LZ4_compress_fast_continue(&st, (const char *)Te.b[i], (char *)o, (int)Te.n[i], (int)cap, 1); z = q > 0 ? q : -1;
+                } else {
                     ZSTD_CCtx_reset(zc, ZSTD_reset_session_and_parameters);
                     ZSTD_CCtx_setParameter(zc, ZSTD_c_checksumFlag, 1);
                     if (cd) ZSTD_CCtx_refCDict(zc, cd); else ZSTD_CCtx_setParameter(zc, ZSTD_c_compressionLevel, zl);
@@ -122,13 +131,17 @@ int main(int argc, char **argv) {
                 int64_t u;
                 if (variant == 0) u = kolmo_decompress(comp[i], cl[i], d, maxn + 1, threads);
                 else if (variant == 1) u = kolmo_decompress_profile(comp[i], cl[i], d, maxn + 1, threads, prof);
-                else { size_t q = dd ? ZSTD_decompress_usingDDict(zdx, d, maxn + 1, comp[i], cl[i], dd) : ZSTD_decompressDCtx(zdx, d, maxn + 1, comp[i], cl[i]); u = ZSTD_isError(q) ? -1 : (int64_t)q; }
+                else if (variant >= 4) {
+                    int q = variant == 5 ? LZ4_decompress_safe_usingDict((const char *)comp[i], (char *)d, (int)cl[i], (int)maxn + 1, l4d, (int)l4n)
+                                         : LZ4_decompress_safe((const char *)comp[i], (char *)d, (int)cl[i], (int)maxn + 1);
+                    u = q;
+                } else { size_t q = dd ? ZSTD_decompress_usingDDict(zdx, d, maxn + 1, comp[i], cl[i], dd) : ZSTD_decompressDCtx(zdx, d, maxn + 1, comp[i], cl[i]); u = ZSTD_isError(q) ? -1 : (int64_t)q; }
                 if (u != (int64_t)Te.n[i] || memcmp(d, Te.b[i], Te.n[i])) { fprintf(stderr, "%s: round trip failed on file %zu\n", r.name, i); return 1; }
             }
             double c = now();
             r.size = size; if (b - a < r.ct) r.ct = b - a; if (c - b < r.dt) r.dt = c - b;
         }
-        char nm[32]; if (variant >= 2) { snprintf(nm, sizeof nm, "%s-%d%s", "zstd", zl, variant == 3 ? "-dict" : ""); r.name = nm; }
+        char nm[32]; if (variant == 2 || variant == 3) { snprintf(nm, sizeof nm, "%s-%d%s", "zstd", zl, variant == 3 ? "-dict" : ""); r.name = nm; }
         report(mode, &Te, r);
         ZSTD_freeCCtx(zc); ZSTD_freeDCtx(zdx); ZSTD_freeCDict(cd); ZSTD_freeDDict(dd);
     }

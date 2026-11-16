@@ -145,6 +145,8 @@ typedef struct {
     int no_dict;           /* 1 = no dictionaries: plans and setting only */
     const char *target;    /* NULL, or a --target expression: the setting is chosen among the candidate settings by
                               measuring them on a held-out fifth of the samples (see kolmo_compress_target) */
+    int quick;             /* 1 = the zstd --train dictionary trainer only (no COVER search, which can take a minute
+                              on tens of MB of samples) */
 } kolmo_train_params;
 
 /* Train: samples laid end to end in `samples`, each length in `sizes`. Writes the serialized profile to dst (at most
@@ -174,15 +176,16 @@ int     kolmo_frame_profile_id(const uint8_t *src, size_t n, uint32_t *id);
  * cut where the analysis would cut blocks), the setting that is cheapest under it. Settings considered: speed (rt),
  * balanced without analysis (fast -n), balanced, eco, hc, ratio -l 1 (BWT), ratio, -x -l 1, -x.
  *   "size"                         smallest output, whatever the time
- *   "decode>=1GB/s", "encode>=50MB/s"   speed floors (one thread, from the calibration table); smallest output that
- *                                  meets them. Several terms are joined with ','.
+ *   "decode>=1GB/s", "encode>=50MB/s"   speed floors (one thread, predicted for the chunk from the calibration
+ *                                  table); smallest output that meets them. Several terms are joined with ','.
  *   "cost:<formula>"               minimise a formula of size (bytes), n (input bytes), enc and dec (seconds, one
  *                                  thread, predicted from the calibration table): + - * / ( ) and numbers. Presets:
  *                                  cost:cloud[=months] (benchmark/TRADEOFFS.md model 3: S3 storage $0.023/GB-month,
  *                                  vCPU $0.054/h, 3.3 reads), cost:link=<rate> (model 2: enc + transfer + dec,
  *                                  e.g. link=1Gbit). The formula must not decrease when size grows.
  * Sizes are predicted from trial compressions of the chunk (the whole chunk up to 1 MiB, three 256 KiB slices above);
- * speeds come from a calibration table (kolmo_calibrate), or a built-in table measured on the reference machine.
+ * times (a fixed cost per call plus bytes over a rate, per setting and class of data) come from a calibration table
+ * (kolmo_calibrate), or a built-in table measured on the reference machine.
  * The output is an ordinary frame; any kolmo decodes it. */
 typedef struct kolmo_target kolmo_target;
 int     kolmo_target_parse(const char *spec, kolmo_target **out);        /* 0 or KOLMO_ERR_TARGET */

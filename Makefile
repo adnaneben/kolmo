@@ -86,6 +86,8 @@ build/kolmobench: bench/kolmobench.c build/libkolmo.a build/libvendor.a
 # features-a benchmark: trained profiles against untrained Kolmo and zstd dictionaries (benchmark/rc3/features-a)
 build/kpbench: benchmark/rc3/features-a/kpbench.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+build/tgbench: benchmark/rc3/features-a/tgbench.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmotest: tests/kolmotest.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a build/libvendor.a

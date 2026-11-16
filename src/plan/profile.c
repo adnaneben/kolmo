@@ -20,6 +20,8 @@
  *   INFO (not critical) UTF-8 summary of the training run
  *   CMPR (critical, reserved) context-mixing priors; no writer yet, so this reader rejects files that carry it */
 #include <math.h>
+#define ZDICT_STATIC_LINKING_ONLY
+#include "zdict.h"
 /* zstd's raw block functions (static API, kept although marked deprecated upstream): a profile leaf of at most
  * KP_ZBLOCK bytes is one raw zstd block, without the 5 to 6 bytes of frame and block header the container repeats */
 #define ZSTD_STATIC_LINKING_ONLY
@@ -52,11 +54,12 @@ struct kolmo_profile {
     uint8_t *zdict, *rdict; size_t zdictlen, rdictlen;
     uint32_t npin; kp_pin *pins;
     char *info;
-    pthread_mutex_t mu;                                   /* guards the lazily prepared zstd dictionaries */
+    pthread_mutex_t mu;                                   /* guards the dictionaries prepared on first use */
     ZSTD_CDict *cdict[KP_ZSTD_LEVELS];
     ZSTD_DDict *ddict;
-    BrotliEncoderPreparedDictionary *bdict;
-    LZ4_stream_t *l4;                                     /* LZ4 dictionary state, loaded once, attached per call */
+    BrotliEncoderPreparedDictionary *bdict;               /* prepared on first use */
+    LZ4_stream_t *l4;                                     /* LZ4 dictionary state, loaded on first use, attached per call */
+    int bdict_failed, l4_failed;
 };
 
 static uint32_t kp_id(const struct kolmo_profile *P) { return P->id; }
@@ -248,6 +251,32 @@ static const ZSTD_CDict *kp_cdict(const struct kolmo_profile *Pc, int level) {
 }
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+static const BrotliEncoderPreparedDictionary *kp_bdict(const struct kolmo_profile *Pc) {
+    struct kolmo_profile *P = (struct kolmo_profile *)Pc;
+    pthread_mutex_lock(&P->mu);
+    if (!P->bdict && !P->bdict_failed) {
+        P->bdict = BrotliEncoderPrepareDictionary(BROTLI_SHARED_DICTIONARY_RAW, P->rdictlen, P->rdict, BROTLI_MAX_QUALITY, NULL, NULL, NULL);
+        P->bdict_failed = !P->bdict;
+    }
+    const BrotliEncoderPreparedDictionary *d = P->bdict;
+    pthread_mutex_unlock(&P->mu);
+    return d;
+}
+static const LZ4_stream_t *kp_l4(const struct kolmo_profile *Pc) {
+    struct kolmo_profile *P = (struct kolmo_profile *)Pc;
+    pthread_mutex_lock(&P->mu);
+    if (!P->l4 && !P->l4_failed) {
+        LZ4_stream_t *l = malloc(sizeof(LZ4_stream_t));
+        if (l && LZ4_initStream(l, sizeof(LZ4_stream_t))) {
+            size_t dl = P->rdictlen < KP_LZ4_DICT ? P->rdictlen : KP_LZ4_DICT;
+            LZ4_loadDict(l, (const char *)P->rdict + P->rdictlen - dl, (int)dl);
+            P->l4 = l;
+        } else { free(l); P->l4_failed = 1; }
+    }
+    const LZ4_stream_t *d = P->l4;
+    pthread_mutex_unlock(&P->mu);
+    return d;
+}
 static size_t kp_codec_compress(const struct kolmo_profile *P, void **zcp, int codec, int level, const uint8_t *in,
                                 size_t n, uint8_t *out, size_t cap, int *handled) {
     *handled = (codec == C_ZSTD || codec == C_BROTLI || codec == C_LZ4) && n <= P->dlim;
@@ -276,13 +305,15 @@ static size_t kp_codec_compress(const struct kolmo_profile *P, void **zcp, int c
         return ZSTD_isError(r) ? 0 : r;
     }
     if (codec == C_BROTLI) {
+        const BrotliEncoderPreparedDictionary *bd = P->rdictlen ? kp_bdict(P) : NULL;
+        if (P->rdictlen && !bd) return 0;
         BrotliEncoderState *s = BrotliEncoderCreateInstance(NULL, NULL, NULL);
         if (!s) return 0;
         size_t avail_in = n, avail_out = cap; const uint8_t *ni = in; uint8_t *no = out;
         int ok = BrotliEncoderSetParameter(s, BROTLI_PARAM_QUALITY, (uint32_t)level) &&
                  BrotliEncoderSetParameter(s, BROTLI_PARAM_LGWIN, 24) &&
                  BrotliEncoderSetParameter(s, BROTLI_PARAM_SIZE_HINT, n > (1u << 30) ? (1u << 30) : (uint32_t)n) &&
-                 (!P->bdict || BrotliEncoderAttachPreparedDictionary(s, P->bdict)) &&
+                 (!bd || BrotliEncoderAttachPreparedDictionary(s, bd)) &&
                  BrotliEncoderCompressStream(s, BROTLI_OPERATION_FINISH, &avail_in, &ni, &avail_out, &no, NULL) &&
                  BrotliEncoderIsFinished(s) && !avail_in;
         BrotliEncoderDestroyInstance(s);
@@ -290,9 +321,11 @@ static size_t kp_codec_compress(const struct kolmo_profile *P, void **zcp, int c
     }
     if (codec == C_LZ4) {
         if (n > LZ4_MAX_INPUT_SIZE || cap > INT32_MAX) return 0;
+        const LZ4_stream_t *l4 = P->rdictlen ? kp_l4(P) : NULL;
+        if (P->rdictlen && !l4) return 0;
         LZ4_stream_t st;
         if (!LZ4_initStream(&st, sizeof st)) return 0;
-        if (P->l4) LZ4_attach_dictionary(&st, P->l4);
+        if (l4) LZ4_attach_dictionary(&st, l4);
         int r = LZ4_compress_fast_continue(&st, (const char *)in, (char *)out, (int)n, (int)cap, level > 0 ? level : 1);
         return r > 0 ? (size_t)r : 0;
     }
@@ -393,18 +426,7 @@ static int kp_load(const uint8_t *s, size_t n, struct kolmo_profile **out) {
     if (!ret && (r.err || r.i != n - 4)) ret = KOLMO_ERR_PROFILE;
     if (!ret && P->zdictlen) {                             /* a dictionary zstd cannot load is a damaged profile */
         P->ddict = ZSTD_createDDict(P->zdict, P->zdictlen);
-        ZSTD_CDict *c = ZSTD_createCDict(P->zdict, P->zdictlen, P->has_parm && P->parm.mode != KOLMO_RT ? 3 : 1);
-        if (!P->ddict || !c || ZSTD_getDictID_fromDDict(P->ddict) != ZSTD_getDictID_fromDict(P->zdict, P->zdictlen)) ret = KOLMO_ERR_PROFILE;
-        ZSTD_freeCDict(c);
-    }
-    if (!ret && P->rdictlen) {
-        P->bdict = BrotliEncoderPrepareDictionary(BROTLI_SHARED_DICTIONARY_RAW, P->rdictlen, P->rdict, BROTLI_MAX_QUALITY, NULL, NULL, NULL);
-        P->l4 = malloc(sizeof(LZ4_stream_t));
-        if (!P->bdict || !P->l4 || !LZ4_initStream(P->l4, sizeof(LZ4_stream_t))) ret = KOLMO_ERR_ALLOC;
-        else {
-            size_t dl = P->rdictlen < KP_LZ4_DICT ? P->rdictlen : KP_LZ4_DICT;
-            LZ4_loadDict(P->l4, (const char *)P->rdict + P->rdictlen - dl, (int)dl);
-        }
+        if (!P->ddict || ZSTD_getDictID_fromDDict(P->ddict) != ZSTD_getDictID_fromDict(P->zdict, P->zdictlen)) ret = KOLMO_ERR_PROFILE;
     }
     if (ret) { kp_free(P); return ret; }
     *out = P; return 0;
@@ -420,38 +442,49 @@ static void kp_finish(kp_buf *b, uint32_t nsec) {
 
 /* ---------------------------------------------------------------- training
  * Plans: every sample of at least 4 KiB is analysed as plan_worker would; samples are grouped by key, and each key
- * whose samples (by bytes) mostly got the same pinnable plan pins it. Dictionaries: ZDICT_trainFromBuffer (the
- * trainer `zstd --train` runs) over the samples, cut into pieces of at most 16 KiB and capped at 32 MiB evenly
- * spaced; the raw dictionary is its content part. */
+ * whose samples (by bytes) mostly got the same pinnable plan pins it. Dictionaries, over the samples cut into pieces of
+ * at most 16 KiB (evenly spaced pieces when there are more than the cap): trainer 0 is ZDICT_trainFromBuffer, what
+ * `zstd --train` runs (fastCover, d=8, 4 steps; 32 MiB cap); trainer 1 is COVER with its parameter search over
+ * 2 steps on one thread (one thread, so the result does not depend on thread timing; 16 MiB cap). The raw
+ * dictionary is the content part of the zstd dictionary. */
 #define KP_PIECE (16u << 10)
 #define KP_TRAIN_CAP ((size_t)32 << 20)
-static int kp_train_dict(const uint8_t *samples, const size_t *sizes, size_t ns, size_t cap, uint8_t **zd, size_t *zl) {
+#define KP_COVER_CAP ((size_t)16 << 20)
+#define KP_TRAINERS 2
+static const char *const KP_TRAINER_NAME[KP_TRAINERS] = {"fastcover (zstd --train)", "cover"};
+static int kp_train_dict(const uint8_t *samples, const size_t *sizes, size_t ns, size_t cap, int trainer, uint8_t **zd, size_t *zl) {
     *zd = NULL; *zl = 0;
+    const size_t CAPB = trainer == 1 ? KP_COVER_CAP : KP_TRAIN_CAP;
     size_t total = 0, pieces = 0;
     for (size_t i = 0; i < ns; i++) { total += sizes[i]; pieces += (sizes[i] + KP_PIECE - 1) / KP_PIECE; }
     if (total < 4096 || pieces < 8) return 0;              /* too little to learn from: no dictionary */
-    size_t step = total > KP_TRAIN_CAP ? (total + KP_TRAIN_CAP - 1) / KP_TRAIN_CAP : 1;   /* keep every step-th piece */
-    size_t *psz = malloc(pieces * sizeof(size_t)); uint8_t *buf = malloc(total < KP_TRAIN_CAP ? total : KP_TRAIN_CAP + KP_PIECE);
+    size_t step = total > CAPB ? (total + CAPB - 1) / CAPB : 1;   /* keep every step-th piece */
+    size_t *psz = malloc(pieces * sizeof(size_t)); uint8_t *buf = malloc(total < CAPB ? total : CAPB + KP_PIECE);
     uint8_t *dict = malloc(cap);
     if (!psz || !buf || !dict) { free(psz); free(buf); free(dict); return KOLMO_ERR_ALLOC; }
     size_t np = 0, off = 0, k = 0, pos = 0;
     for (size_t i = 0; i < ns; i++) {
         for (size_t o = 0; o < sizes[i]; o += KP_PIECE, k++) {
             size_t m = sizes[i] - o < KP_PIECE ? sizes[i] - o : KP_PIECE;
-            if (k % step == 0 && off + m <= (total < KP_TRAIN_CAP ? total : KP_TRAIN_CAP + KP_PIECE)) {
+            if (k % step == 0 && off + m <= (total < CAPB ? total : CAPB + KP_PIECE)) {
                 memcpy(buf + off, samples + pos + o, m); psz[np++] = m; off += m;
             }
         }
         pos += sizes[i];
     }
-    size_t r = ZDICT_trainFromBuffer(dict, cap, buf, psz, (unsigned)np);
+    size_t r;
+    if (trainer == 1) {
+        ZDICT_cover_params_t cp; memset(&cp, 0, sizeof cp);
+        cp.steps = 2; cp.nbThreads = 1; cp.zParams.compressionLevel = 3;
+        r = ZDICT_optimizeTrainFromBuffer_cover(dict, cap, buf, psz, (unsigned)np, &cp);
+    } else r = ZDICT_trainFromBuffer(dict, cap, buf, psz, (unsigned)np);
     free(psz); free(buf);
     if (ZDICT_isError(r)) { free(dict); return 0; }        /* the trainer found nothing to keep: no dictionary */
     *zd = dict; *zl = r; return 0;
 }
 
 static int64_t kp_train(const uint8_t *samples, const size_t *sizes, size_t ns, const kolmo_params *p, size_t dict_size,
-                        int no_dict, uint64_t dlim, const char *note, kp_buf *out) {
+                        int no_dict, int trainer, uint64_t dlim, const char *note, kp_buf *out) {
     kp_pin *pins = calloc(KP_MAX_PINS, sizeof(kp_pin)); uint64_t *pin_bytes = calloc(KP_MAX_PINS, sizeof(uint64_t));
     if (!pins || !pin_bytes) { free(pins); free(pin_bytes); return KOLMO_ERR_ALLOC; }
     /* candidates: per key, up to 4 distinct plans with their byte counts */
@@ -490,7 +523,7 @@ static int64_t kp_train(const uint8_t *samples, const size_t *sizes, size_t ns, 
     }
     free(cand);
     uint8_t *zd = NULL; size_t zl = 0; int64_t ret = 0;
-    if (!no_dict) ret = kp_train_dict(samples, sizes, ns, dict_size, &zd, &zl);
+    if (!no_dict) ret = kp_train_dict(samples, sizes, ns, dict_size, trainer, &zd, &zl);
     if (ret) { free(pins); free(pin_bytes); return ret; }
     size_t content = 0;
     if (zl) { size_t h = ZDICT_getDictHeaderSize(zd, zl); content = ZSTD_isError(h) || h >= zl ? 0 : zl - h; }
@@ -505,9 +538,9 @@ static int64_t kp_train(const uint8_t *samples, const size_t *sizes, size_t ns, 
     char info[1024];
     static const char *const MN[] = {"rt", "fast", "eco", "hc", "max", "ultra"};
     int il = snprintf(info, sizeof info, "trained on %zu samples, %llu bytes (%zu analysed); setting %s level %d analysis %d; "
-                      "%u pinned plan%s; zstd dictionary %zu bytes, raw dictionary %zu bytes%s%s",
+                      "%u pinned plan%s; zstd dictionary %zu bytes (%s), raw dictionary %zu bytes%s%s",
                       ns, (unsigned long long)pos, analysed, MN[p->mode <= KOLMO_ULTRA ? p->mode : 1], p->level, p->transforms,
-                      npin, npin == 1 ? "" : "s", zl, content, note ? "; " : "", note ? note : "");
+                      npin, npin == 1 ? "" : "s", zl, KP_TRAINER_NAME[trainer], content, note ? "; " : "", note ? note : "");
     if (il > 0) { kp_section(&b, "INFO", 0, info, (size_t)il < sizeof info ? (size_t)il : sizeof info - 1); nsec++; }
     kp_finish(&b, nsec);
     free(zd); free(pins); free(pin_bytes);

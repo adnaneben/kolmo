@@ -57,7 +57,7 @@ static kolmo_profile *kc_load_profile(const char *path) {
 
 /* kolmo train [-m mode] [-l level] [-n|-q|-Q] [--dict-size N] [--no-dict] [--max-bytes N] [--target T] -o out.kpf FILES|DIRS... */
 static int kolmo_cli_train(int argc, char **argv) {
-    kolmo_train_params tp = {{KOLMO_FAST, 0, 0, 0, 1}, 0, 0, NULL};
+    kolmo_train_params tp = {{KOLMO_FAST, 0, 0, 0, 1}, 0, 0, NULL, 0};
     const char *outp = NULL; double maxb = 256.0 * 1048576; int speed = 0; kc_files F = {0};
     for (int a = 1; a < argc; a++) {
         const char *s = argv[a];
@@ -76,6 +76,7 @@ static int kolmo_cli_train(int argc, char **argv) {
         else if (!strcmp(s, "-Q")) tp.params.transforms = 3;
         else if (!strcmp(s, "--dict-size") && a + 1 < argc) tp.dict_size = (size_t)kc_size_arg(argv[++a]);
         else if (!strcmp(s, "--no-dict")) tp.no_dict = 1;
+        else if (!strcmp(s, "--quick")) tp.quick = 1;
         else if (!strcmp(s, "--max-bytes") && a + 1 < argc) maxb = kc_size_arg(argv[++a]);
         else if (!strcmp(s, "--target") && a + 1 < argc) tp.target = argv[++a];
         else if (s[0] == '-' && s[1]) { fprintf(stderr, "kolmo train: unknown option '%s'\n", s); kc_free(&F); return 2; }
@@ -84,7 +85,7 @@ static int kolmo_cli_train(int argc, char **argv) {
     if (speed && tp.params.transforms == 1) tp.params.transforms = 3;
     if (!outp || !F.n) {
         fprintf(stderr, "usage: kolmo train [-m speed|balanced|ratio|...] [-l level] [--target T] [--dict-size N] [--no-dict]\n"
-                        "                   [--max-bytes N] -o profile.kpf FILES|DIRS...\n");
+                        "                   [--quick] [--max-bytes N] -o profile.kpf FILES|DIRS...\n");
         kc_free(&F); return 2;
     }
     /* more than --max-bytes of samples: every k-th file, so the sample spans the whole set */

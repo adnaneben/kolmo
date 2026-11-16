@@ -33,7 +33,7 @@ static size_t gen_csv(uint8_t *o, size_t cap, int rows, int cols) {
 }
 
 static uint8_t *train(const uint8_t *s, const size_t *sz, size_t n, kolmo_params p, int no_dict, const char *target, size_t *len) {
-    kolmo_train_params tp = {p, 16u << 10, no_dict, target};
+    kolmo_train_params tp = {p, 16u << 10, no_dict, target, 0};
     size_t cap = kolmo_profile_bound(&tp); uint8_t *o = malloc(cap);
     int64_t r = kolmo_profile_train(s, sz, n, &tp, o, cap);
     if (r < 0) { fprintf(stderr, "train: %s\n", kolmo_strerror(r)); free(o); return NULL; }

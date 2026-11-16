@@ -9,8 +9,8 @@
  *   cost:<formula>               minimise a formula of size, n, enc, dec; presets cost:cloud[=months], cost:link=R
  * and floors may be combined with size or a cost (`cost:cloud,decode>=500MB/s`). The prediction for a chunk and a
  * setting is: size from trial compressions of the chunk (whole up to 1 MiB, else three 256 KiB slices scaled to the
- * chunk), and encode and decode time = chunk bytes / speed of that setting on that class of data, from the
- * calibration table. A setting is tried only if it meets the floors and, for a cost, if its time alone (at size 0)
+ * chunk), and encode and decode time = setup + chunk bytes / rate of that setting on that class of data, from the
+ * calibration table (setup: the fixed cost of a call, which dominates small chunks and the context-mixing settings). A setting is tried only if it meets the floors and, for a cost, if its time alone (at size 0)
  * does not already cost more than the best setting found so far (the formula must not decrease as size grows). */
 
 #define KT_NSET 9
@@ -22,9 +22,10 @@ static const kt_setting KT_SET[KT_NSET] = {
     {"x", KOLMO_ULTRA, 0, 1}};
 static const char *const KT_CLS[KT_NCLS] = {"text", "table", "log", "json", "numeric", "binary"};
 
-/* Built-in speed table (MB/s, one thread, 10^6 bytes): `kolmo calibrate` on the reference cloud VM (x86-64, 4 vCPU),
- * 16 November 2026, on the built-in synthetic data. Replaced by a calibration table when one is given. */
-static const float KT_DEFAULT[KT_NSET][KT_NCLS][2] = {
+/* Built-in speed table {encode MB/s, decode MB/s, encode setup ms, decode setup ms} (one thread, MB = 10^6 bytes):
+ * `kolmo calibrate` on the reference cloud VM (x86-64, 4 vCPU), 16 November 2026, on the built-in synthetic data.
+ * Replaced, entry by entry, by a calibration table when one is given. */
+static const float KT_DEFAULT[KT_NSET][KT_NCLS][4] = {
 #include "target_table.inc"
 };
 
@@ -37,6 +38,7 @@ struct kolmo_target {
     double min_dec, min_enc;       /* bytes per second, 0 = none */
     kt_op code[KT_MAXOP]; int ncode;
     double enc[KT_NSET][KT_NCLS], dec[KT_NSET][KT_NCLS];   /* bytes per second */
+    double encs[KT_NSET][KT_NCLS], decs[KT_NSET][KT_NCLS]; /* fixed seconds per call */
 };
 
 /* ---------------------------------------------------------------- parsing */
@@ -134,8 +136,14 @@ static int kt_check(const kt_op *c, int n) {
 static void kt_free_target(struct kolmo_target *t) { free(t); }
 static void kt_default_table(struct kolmo_target *t) {
     for (int s = 0; s < KT_NSET; s++)
-        for (int c = 0; c < KT_NCLS; c++) { t->enc[s][c] = KT_DEFAULT[s][c][0] * 1e6; t->dec[s][c] = KT_DEFAULT[s][c][1] * 1e6; }
+        for (int c = 0; c < KT_NCLS; c++) {
+            t->enc[s][c] = KT_DEFAULT[s][c][0] * 1e6; t->dec[s][c] = KT_DEFAULT[s][c][1] * 1e6;
+            t->encs[s][c] = KT_DEFAULT[s][c][2] * 1e-3; t->decs[s][c] = KT_DEFAULT[s][c][3] * 1e-3;
+        }
 }
+/* predicted seconds for n bytes */
+static double kt_enc_time(const struct kolmo_target *t, int s, int c, double n) { return t->encs[s][c] + n / t->enc[s][c]; }
+static double kt_dec_time(const struct kolmo_target *t, int s, int c, double n) { return t->decs[s][c] + n / t->dec[s][c]; }
 
 static int kt_parse(const char *spec, struct kolmo_target **out) {
     *out = NULL;
@@ -187,30 +195,32 @@ bad:
     free(t); return KOLMO_ERR_TARGET;
 }
 
-/* calibration table text: "kolmo-calibration 1", then lines "<setting> <class> <encode MB/s> <decode MB/s>";
- * '#' starts a comment; entries not listed keep their built-in values */
+/* calibration table text: "kolmo-calibration 1", then lines
+ * "<setting> <class> <encode MB/s> <decode MB/s> [<encode setup ms> <decode setup ms>]";
+ * '#' starts a comment; entries not listed keep their built-in values; setup times default to 0 */
 static int kt_set_calibration(struct kolmo_target *t, const char *tab, size_t n) {
-    double enc[KT_NSET][KT_NCLS], dec[KT_NSET][KT_NCLS];
-    memcpy(enc, t->enc, sizeof enc); memcpy(dec, t->dec, sizeof dec);
+    double enc[KT_NSET][KT_NCLS], dec[KT_NSET][KT_NCLS], encs[KT_NSET][KT_NCLS], decs[KT_NSET][KT_NCLS];
+    memcpy(enc, t->enc, sizeof enc); memcpy(dec, t->dec, sizeof dec); memcpy(encs, t->encs, sizeof encs); memcpy(decs, t->decs, sizeof decs);
     size_t i = 0; int header = 0;
     while (i < n) {
         size_t e = i; while (e < n && tab[e] != '\n') e++;
         char line[256]; size_t l = e - i < sizeof line - 1 ? e - i : sizeof line - 1;
         memcpy(line, tab + i, l); line[l] = 0; i = e + 1;
         char *h = strchr(line, '#'); if (h) *h = 0;
-        char a[64], b[64], extra[8]; double x, y;
-        int k = sscanf(line, "%63s %63s %lf %lf %7s", a, b, &x, &y, extra);
+        char a[64], b[64], extra[8]; double x, y, xs = 0, ys = 0;
+        int k = sscanf(line, "%63s %63s %lf %lf %lf %lf %7s", a, b, &x, &y, &xs, &ys, extra);
         if (k <= 0) continue;
         if (!header) { if (k == 2 && !strcmp(a, "kolmo-calibration") && !strcmp(b, "1")) { header = 1; continue; } return KOLMO_ERR_TARGET; }
-        if (k != 4 || !isfinite(x) || !isfinite(y) || x <= 0 || y <= 0) return KOLMO_ERR_TARGET;
+        if ((k != 4 && k != 6) || !isfinite(x) || !isfinite(y) || x <= 0 || y <= 0 || !isfinite(xs) || !isfinite(ys) ||
+            xs < 0 || ys < 0 || xs > 1e6 || ys > 1e6) return KOLMO_ERR_TARGET;
         int s = -1, c = -1;
         for (int j = 0; j < KT_NSET; j++) if (!strcmp(a, KT_SET[j].name)) s = j;
         for (int j = 0; j < KT_NCLS; j++) if (!strcmp(b, KT_CLS[j])) c = j;
         if (s < 0 || c < 0) return KOLMO_ERR_TARGET;
-        enc[s][c] = x * 1e6; dec[s][c] = y * 1e6;
+        enc[s][c] = x * 1e6; dec[s][c] = y * 1e6; encs[s][c] = xs * 1e-3; decs[s][c] = ys * 1e-3;
     }
     if (!header) return KOLMO_ERR_TARGET;
-    memcpy(t->enc, enc, sizeof enc); memcpy(t->dec, dec, sizeof dec);
+    memcpy(t->enc, enc, sizeof enc); memcpy(t->dec, dec, sizeof dec); memcpy(t->encs, encs, sizeof encs); memcpy(t->decs, decs, sizeof decs);
     return 0;
 }
 
@@ -218,6 +228,7 @@ static int kt_set_calibration(struct kolmo_target *t, const char *tab, size_t n)
 static int kt_class(const uint8_t *s, size_t n) {
     size_t h = n < 65536 ? n : 65536;
     if (!h) return 0;
+    if (n >= 6 && !memcmp(s, "\x93NUMPY", 6)) return 4;                /* a NumPy array */
     if (kp_is_binary(s, n)) {
         /* numeric arrays repeat their high bytes at a stride of 4 or 8; other binary data mostly does not */
         size_t eq1 = 0, eq4 = 0, eq8 = 0;
@@ -227,11 +238,12 @@ static int kt_class(const uint8_t *s, size_t n) {
     }
     size_t i = 0; while (i < h && (s[i] == ' ' || s[i] == '\t' || s[i] == '\r' || s[i] == '\n')) i++;
     if (i < h && (s[i] == '{' || s[i] == '[')) return 3;
-    /* lines: a fixed count (>= 2) of one delimiter is a table; lines that start like the first one, with a digit or
-     * a bracket (timestamps, levels), are a log */
+    /* lines: a fixed count (>= 2) of one delimiter is a table; lines that start with a digit or a bracket
+     * (timestamps, levels), or whose first 10 bytes have the shape of the first line's (digits as 0, letters as a:
+     * "Dec 10 06:55" and "Dec 11 07:01" match, prose does not), are a log */
     static const uint8_t D[4] = {',', ';', '\t', '|'};
     size_t lines = 0, logl = 0, same[4] = {0}; int k0[4] = {0};
-    size_t p = 0;
+    size_t p = 0; uint8_t shape0[10]; size_t sl0 = 0;
     while (p < h && lines < 2000) {
         const uint8_t *e = memchr(s + p, '\n', h - p); if (!e) break;
         size_t q = (size_t)(e - s);
@@ -240,7 +252,10 @@ static int kt_class(const uint8_t *s, size_t n) {
             if (lines == 1) k0[d] = f;
             if (lines >= 1 && f == k0[d] && f >= 2) same[d]++;
         }
-        if (q > p && ((s[p] >= '0' && s[p] <= '9') || s[p] == '[' || s[p] == '<')) logl++;
+        uint8_t sh[10]; size_t sl = q - p < 10 ? q - p : 10;
+        for (size_t j = 0; j < sl; j++) { uint8_t c = s[p + j]; sh[j] = c >= '0' && c <= '9' ? '0' : ((c | 32) >= 'a' && (c | 32) <= 'z') ? 'a' : c; }
+        if (!lines) { memcpy(shape0, sh, sl); sl0 = sl; }
+        if (q > p && ((s[p] >= '0' && s[p] <= '9') || s[p] == '[' || s[p] == '<' || (sl0 == 10 && sl == 10 && !memcmp(sh, shape0, 10)))) logl++;
         lines++; p = q + 1;
     }
     if (lines >= 4) {
@@ -288,14 +303,15 @@ static void *kt_worker(void *arg) {
         size_t sample = 0; for (int k = 0; k < ns; k++) sample += sl[k];
         /* candidates in decreasing encode speed: cheap ones first, so the time bound prunes the slow ones */
         int order[KT_NSET]; for (int k = 0; k < KT_NSET; k++) order[k] = k;
-        for (int a = 1; a < KT_NSET; a++) for (int b = a; b > 0 && t->enc[order[b]][cls] > t->enc[order[b - 1]][cls]; b--) { int x = order[b]; order[b] = order[b - 1]; order[b - 1] = x; }
+        for (int a = 1; a < KT_NSET; a++)
+            for (int b = a; b > 0 && kt_enc_time(t, order[b], cls, n) < kt_enc_time(t, order[b - 1], cls, n); b--) { int x = order[b]; order[b] = order[b - 1]; order[b - 1] = x; }
         int best = -1, fastest = 0; double bestv = HUGE_VAL, bsize = 0; uint8_t *bframe = NULL; size_t bflen = 0;
-        for (int k = 0; k < KT_NSET; k++) if (t->dec[k][cls] > t->dec[fastest][cls]) fastest = k;
+        for (int k = 0; k < KT_NSET; k++) if (kt_dec_time(t, k, cls, n) < kt_dec_time(t, fastest, cls, n)) fastest = k;
         for (int oi = 0; oi < KT_NSET; oi++) {
             int st = order[oi];
-            if (t->min_dec > 0 && t->dec[st][cls] < t->min_dec) continue;
-            if (t->min_enc > 0 && t->enc[st][cls] < t->min_enc) continue;
-            double enc = n / t->enc[st][cls], dec = n / t->dec[st][cls];
+            double enc = kt_enc_time(t, st, cls, n), dec = kt_dec_time(t, st, cls, n);
+            if (t->min_dec > 0 && n > 0 && n / dec < t->min_dec) continue;     /* floors: the predicted speed on this chunk */
+            if (t->min_enc > 0 && n > 0 && n / enc < t->min_enc) continue;
             if (t->objective == 1 && best >= 0 && kt_eval(t, 0, n, enc, dec) >= bestv) continue;
             double size = 0; uint8_t *frame = NULL; int64_t r = 0;
             for (int k = 0; k < ns && r >= 0; k++) {
@@ -314,7 +330,7 @@ static void *kt_worker(void *arg) {
         if (atomic_load(&J->err)) { free(bframe); break; }
         if (best < 0) best = fastest;                       /* no setting meets the floors: the fastest decoder */
         J->chosen[c] = best; J->pcost[c] = best == fastest && bestv == HUGE_VAL ? 0 : bestv;
-        J->penc[c] = n / t->enc[best][cls]; J->pdec[c] = n / t->dec[best][cls]; J->psize[c] = (uint64_t)bsize;
+        J->penc[c] = kt_enc_time(t, best, cls, n); J->pdec[c] = kt_dec_time(t, best, cls, n); J->psize[c] = (uint64_t)bsize;
         /* the trial of a whole chunk is its frame (the output does not depend on the thread count) */
         if (bframe && ns == 1) { J->frames[c] = bframe; J->flen[c] = bflen; continue; }
         free(bframe);

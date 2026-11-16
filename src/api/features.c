@@ -191,18 +191,19 @@ static int64_t kf_eval(const uint8_t *samples, const size_t *sizes, size_t ns, c
     return 0;
 }
 
-/* Training. With at least five samples, a profile trained on four fifths is measured on the remaining fifth to
+/* Training. With at least five samples, profiles trained on four fifths are measured on the remaining fifth to
  * choose, in order: the setting (only with a target: every candidate setting that is not far below a floor in the
- * built-in table is measured, and the cheapest that meets the floors wins), then the largest leaf that takes the
- * dictionaries (64 KiB to unlimited, the smallest output wins; 256 KiB with fewer than five samples). The profile
- * written is then trained on every sample. */
+ * built-in table is measured, and the cheapest that meets the floors wins), the dictionary trainer (zstd --train's
+ * fastCover or COVER, unless quick; the smaller output wins), then the largest leaf that takes the dictionaries
+ * (64 KiB to unlimited; the smallest output wins). With fewer than five samples: fastCover and 256 KiB. The profile
+ * written is then trained on every sample with the choices made. */
 static const uint64_t KF_DLIM[5] = {(uint64_t)64 << 10, (uint64_t)256 << 10, (uint64_t)1 << 20, (uint64_t)4 << 20, UINT64_MAX};
 int64_t kolmo_profile_train(const uint8_t *samples, const size_t *sizes, size_t nsamples,
                             const kolmo_train_params *tp, uint8_t *dst, size_t cap) {
     if (!samples || !sizes || !nsamples || !dst) return KOLMO_ERR_PROFILE;
-    kolmo_train_params d = {{KOLMO_FAST, 0, 0, 0, 1}, 0, 0, NULL};
+    kolmo_train_params d = {{KOLMO_FAST, 0, 0, 0, 1}, 0, 0, NULL, 0};
     if (!tp) tp = &d;
-    kolmo_params p = tp->params;
+    kolmo_params p = tp->params; int trainer = 0;
     if ((unsigned)p.mode > KOLMO_ULTRA || p.transforms < 0) return KOLMO_ERR_PROFILE;
     p.transforms &= 3; p.threads = 1;
     size_t dsz = tp->dict_size ? tp->dict_size : (110u << 10);
@@ -221,12 +222,11 @@ int64_t kolmo_profile_train(const uint8_t *samples, const size_t *sizes, size_t 
         for (size_t i = 0; i < nsamples; pos += sizes[i], i++)
             if (i % 5 != 4) { memcpy(tbuf + w, samples + pos, sizes[i]); w += sizes[i]; tsz[ntr++] = sizes[i]; }
         kp_buf ib = {0};
-        r = kp_train(tbuf, tsz, ntr, &p, dsz, tp->no_dict, KP_DLIM_DEFAULT, NULL, &ib);
-        free(tbuf); free(tsz);
+        r = kp_train(tbuf, tsz, ntr, &p, dsz, tp->no_dict, 0, KP_DLIM_DEFAULT, NULL, &ib);
         struct kolmo_profile *ip = NULL;
         if (r >= 0) r = kp_load(ib.p, ib.n, &ip);
         free(ib.p);
-        if (r < 0) { kt_free_target(t); return r; }
+        if (r < 0) { free(tbuf); free(tsz); kt_free_target(t); return r; }
         size_t hb = 0; double size, enc, dec;
         if (t) {
             int best = -1, cls = kt_class(samples, sizes[0]); double bestv = HUGE_VAL;
@@ -249,6 +249,22 @@ int64_t kolmo_profile_train(const uint8_t *samples, const size_t *sizes, size_t 
                 if (nl < sizeof note) nl += (size_t)snprintf(note + nl, sizeof note - nl, "; chosen %s", KT_SET[best].name);
             }
         }
+        if (!r && !tp->no_dict && !tp->quick && ip->zdictlen) {   /* the dictionary trainer */
+            double s0 = 0;
+            r = kf_eval(samples, sizes, nsamples, &p, ip, &s0, &enc, &dec, &hb);
+            kp_buf cb = {0}; struct kolmo_profile *cp = NULL;
+            if (!r) r = kp_train(tbuf, tsz, ntr, &p, dsz, 0, 1, KP_DLIM_DEFAULT, NULL, &cb);
+            if (r >= 0) r = kp_load(cb.p, cb.n, &cp);
+            free(cb.p);
+            if (!r && cp->zdictlen) {
+                r = kf_eval(samples, sizes, nsamples, &p, cp, &size, &enc, &dec, &hb);
+                if (!r && size < s0) { trainer = 1; kp_free(ip); ip = cp; cp = NULL; }
+                if (!r && nl < sizeof note)
+                    nl += (size_t)snprintf(note + nl, sizeof note - nl, "%sheld-out bytes with the fastcover dictionary %.0f, with cover %.0f", nl ? "; " : "", s0, size);
+            }
+            kp_free(cp);
+        }
+        free(tbuf); free(tsz);
         if (!r && (ip->zdictlen || ip->rdictlen)) {
             double bests = HUGE_VAL;
             for (int k = 0; k < 5 && !r; k++) {
@@ -268,7 +284,7 @@ int64_t kolmo_profile_train(const uint8_t *samples, const size_t *sizes, size_t 
     if (r) return r;
     p.threads = 0;
     kp_buf b = {0};
-    r = kp_train(samples, sizes, nsamples, &p, dsz, tp->no_dict, dlim, note[0] ? note : NULL, &b);
+    r = kp_train(samples, sizes, nsamples, &p, dsz, tp->no_dict, trainer, dlim, note[0] ? note : NULL, &b);
     if (r < 0) return r;
     if (b.n > cap) { free(b.p); return KOLMO_ERR_DSTSIZE; }
     memcpy(dst, b.p, b.n); free(b.p);
@@ -449,29 +465,40 @@ static int64_t kf_calibrate(const uint8_t *const *files, const size_t *sizes, si
     size_t w = 0;
     w += (size_t)snprintf(out + w, cap - w, "kolmo-calibration 1\n# one thread; MB/s = 10^6 bytes per second; data: ");
     for (int c = 0; c < KT_NCLS && w < cap; c++) w += (size_t)snprintf(out + w, cap - w, "%s%s %s", c ? ", " : "", KT_CLS[c], from_files[c] ? "files" : "built-in");
-    if (w < cap) w += (size_t)snprintf(out + w, cap - w, "\n# setting class encode_MBps decode_MBps\n");
+    if (w < cap) w += (size_t)snprintf(out + w, cap - w, "\n# setting class encode_MBps decode_MBps encode_setup_ms decode_setup_ms\n");
     uint8_t *o = NULL, *b = NULL;
     if (!ret) { o = malloc(kolmo_bound(CN, NULL) + CN); b = malloc(CN); if (!o || !b) ret = KOLMO_ERR_ALLOC; }
+    /* each point: the fastest of repeated runs at 1/8 of the corpus and at all of it; time = setup + bytes / rate */
     for (int st = 0; st < KT_NSET && !ret; st++)
         for (int c = 0; c < KT_NCLS && !ret; c++) {
             kolmo_params q = {KT_SET[st].mode, KT_SET[st].level, 1, 0, KT_SET[st].transforms};
-            size_t oc = kolmo_bound(clen[c], &q) + CN; double be = HUGE_VAL, bd = HUGE_VAL, spent = 0; int64_t z = 0;
-            for (int rep = 0; rep < 1000 && (rep < 1 || spent < seconds_per_point); rep++) {
-                double t0 = kf_now(); z = kolmo_compress(corp[c], clen[c], o, oc, &q); double t1 = kf_now();
-                if (z < 0) { ret = z; break; }
-                if (t1 - t0 < be) be = t1 - t0;
-                spent += t1 - t0;
+            double te[2], td[2]; size_t len[2] = {clen[c] / 8, clen[c]};
+            for (int k = 0; k < 2 && !ret; k++) {
+                size_t oc = kolmo_bound(len[k], &q) + CN; double be = HUGE_VAL, bd = HUGE_VAL, spent = 0; int64_t z = 0;
+                for (int rep = 0; rep < 1000 && (rep < 1 || spent < seconds_per_point); rep++) {
+                    double t0 = kf_now(); z = kolmo_compress(corp[c], len[k], o, oc, &q); double t1 = kf_now();
+                    if (z < 0) { ret = z; break; }
+                    if (t1 - t0 < be) be = t1 - t0;
+                    spent += t1 - t0;
+                }
+                spent = 0;
+                for (int rep = 0; rep < 1000 && !ret && (rep < 1 || spent < seconds_per_point); rep++) {
+                    double t0 = kf_now(); int64_t u = kolmo_decompress(o, (size_t)z, b, CN, 1); double t1 = kf_now();
+                    if (u != (int64_t)len[k] || memcmp(b, corp[c], len[k])) { ret = KOLMO_ERR_CORRUPT; break; }
+                    if (t1 - t0 < bd) bd = t1 - t0;
+                    spent += t1 - t0;
+                }
+                te[k] = be > 1e-9 ? be : 1e-9; td[k] = bd > 1e-9 ? bd : 1e-9;
             }
-            spent = 0;
-            for (int rep = 0; rep < 1000 && !ret && (rep < 1 || spent < seconds_per_point); rep++) {
-                double t0 = kf_now(); int64_t u = kolmo_decompress(o, (size_t)z, b, CN, 1); double t1 = kf_now();
-                if (u != (int64_t)clen[c] || memcmp(b, corp[c], clen[c])) { ret = KOLMO_ERR_CORRUPT; break; }
-                if (t1 - t0 < bd) bd = t1 - t0;
-                spent += t1 - t0;
-            }
-            if (!ret && w < cap)
-                w += (size_t)snprintf(out + w, cap - w, "%s %s %.1f %.1f\n", KT_SET[st].name, KT_CLS[c],
-                                      clen[c] / (be > 1e-9 ? be : 1e-9) / 1e6, clen[c] / (bd > 1e-9 ? bd : 1e-9) / 1e6);
+            if (ret) break;
+            double dn = (double)(len[1] - len[0]);
+            double re = te[1] > te[0] ? dn / (te[1] - te[0]) : len[1] / te[1], rd = td[1] > td[0] ? dn / (td[1] - td[0]) : len[1] / td[1];
+            double se = te[0] - len[0] / re, sd = td[0] - len[0] / rd;
+            if (se < 0) se = 0;
+            if (sd < 0) sd = 0;
+            if (w < cap)
+                w += (size_t)snprintf(out + w, cap - w, "%s %s %.1f %.1f %.3f %.3f\n", KT_SET[st].name, KT_CLS[c],
+                                      re / 1e6, rd / 1e6, se * 1e3, sd * 1e3);
         }
     free(o); free(b);
     for (int c = 0; c < KT_NCLS; c++) free(corp[c]);
