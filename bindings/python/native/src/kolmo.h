@@ -200,7 +200,7 @@ int64_t kolmo_index_info(const uint8_t *src, size_t n, int *kind, uint8_t *delim
  * holds the file table and each file's list of chunks. Any file is extracted by decoding only the blocks its chunks
  * lie in. */
 typedef struct {
-    uint32_t avg_chunk;       /* target chunk size, power of two from 256 B to 4 MiB; 0 = 16 KiB */
+    uint32_t avg_chunk;       /* target chunk size, power of two from 256 B to 4 MiB; 0 = 4 KiB */
     int line_cuts;            /* 1 (default when NULL): in text files, cuts move to the next '\n' (at most 4 KiB on) */
 } kolmo_archive_params;
 typedef struct { const char *name; const uint8_t *data; size_t size; uint32_t mode; int64_t mtime; } kolmo_archive_file;

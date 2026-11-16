@@ -101,7 +101,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
                              const kolmo_params *p, const kolmo_archive_params *ap, kolmo_archive_stats *st) {
     kolmo_archive_stats S0; if (!st) st = &S0; memset(st, 0, sizeof *st);
     kolmo_archive_params A = ap ? *ap : (kolmo_archive_params){0, 1};
-    if (!A.avg_chunk) A.avg_chunk = 16384;
+    if (!A.avg_chunk) A.avg_chunk = 4096;
     if (A.avg_chunk < 256 || A.avg_chunk > (4u << 20) || (A.avg_chunk & (A.avg_chunk - 1))) return KOLMO_ERR_LIMIT;
     dd_init(); dd_cfg C; dd_config(&C, A.avg_chunk, A.line_cuts);
     uint64_t total = 0; for (size_t f = 0; f < nfiles; f++) { if (!files[f].name || (!files[f].data && files[f].size)) return KOLMO_ERR_LIMIT; total += files[f].size; }
