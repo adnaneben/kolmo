@@ -106,7 +106,7 @@ static int prefer_frontier_table(const uint8_t *src, size_t n, const plan_t *pl,
     while (sample && src[sample - 1] != '\n') --sample;
     if (sample < 8192) return 0;
     size_t cap = sample + TSLACK;
-    uint8_t *tmp = malloc(cap + 64);
+    uint8_t *tmp = malloc(sample + TBL_SLACK(sample) + 64);   /* tbl2_encode below may use the table slack */
     size_t bound = ZSTD_compressBound(cap);
     uint8_t *z = malloc(bound);
     ZSTD_CCtx *ctx = ZSTD_createCCtx();

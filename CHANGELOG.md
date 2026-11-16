@@ -20,6 +20,14 @@ FASTQ family blocks add container version 10 for `-x` frames of FASTQ input only
   `bindings/*/native/` carry the dispatch code.
 
 ### Fixed
+- **Tables of short numbers keep the table transform (container version 11).** Two faults turned it off on long-form
+  tables such as daily counts per country (`Date,Country,Confirmed,Recovered,Deaths`, 5.5 MB). (1) The transformed
+  table is a few percent larger than the CSV before coding, and a transform output above block + 16 KiB was refused, so
+  every block of about 400 KiB or more was stored untransformed; table blocks may now use block + 1/8 + 16 KiB, and
+  only files that need it are version 11. (2) The group (entity) column was taken only if some sampled row differed from
+  the row above it, which long groups rarely show; it now only has to take more than one value across the sample.
+  countries-aggregated.csv: `balanced` 4.16× → 15.94×, `ratio` 5.18× → 17.85×, `-x` 15.68× → 18.87× (xz -9e 8.42×).
+  Ported from a separate session's fix on `main` (branch `claude/nice-faraday-7c4fjq`).
 - `kfam` (rc2 research codec): `make kfam-check` failed with LeakSanitizer reports (the command line never freed its
   buffers). A damaged frame could make the decoder decode zeros from an exhausted stream up to the stream's claimed
   length. The family decoder (`src/kfam.inc`, also used for codec-16 blocks in `kolmo`) now reports a stream corrupt

@@ -50,7 +50,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     *starts_out = st; return nb;
 }
 
-static size_t slot_size(uint32_t B, int codec) { size_t a = codec_bound(codec, (size_t)B + TSLACK), b = codec_bound(C_BSC, (size_t)B + TSLACK); return (a > b ? a : b) + 256 * 4 + 64; }
+static size_t slot_size(uint32_t B, int codec) { size_t a = codec_bound(codec, (size_t)B + TBL_SLACK(B)), b = codec_bound(C_BSC, (size_t)B + TBL_SLACK(B)); return (a > b ? a : b) + 256 * 4 + 64; }
 
 /* Speed-tier (rt/fast) default block size: aim for ~8 balanced blocks so decode and
    compress parallelise across cores, with a 1 MiB floor (below it ratio drops faster
@@ -119,7 +119,7 @@ static void *compress_worker(void *arg) {
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
-    uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TSLACK + 64);
+    uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TBL_SLACK(J->B) + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
     if (!tbuf || !slot || (J->input_fd >= 0 && !input)) { free(input); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
@@ -164,7 +164,7 @@ static void *compress_worker(void *arg) {
             meta = 4 * k; in = tbuf;
         } else if (pl.t == T_TBL && len) {
             int64_t tn = tbl2_encode(raw, len, (uint8_t)pl.a, pl.c + 1, pl.b, pl.fs, tbuf, &modes);
-            if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 4; }
+            if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 4; if ((size_t)tn > len + TSLACK) modes |= 128; }
             else modes = 0;
         } else if (pl.t == T_LOG && len) {
             uint8_t *sp = pl.a == 2 && !memchr(raw, '\n', len) ? malloc(2 * len + 64) : NULL;

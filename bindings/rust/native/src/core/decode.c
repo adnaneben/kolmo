@@ -87,7 +87,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     if (meta > cl) return KOLMO_ERR_CORRUPT;
     uint8_t *tgt = (tflag && tflag != 8) ? tbuf : out;
     size_t dlen = len;
-    if ((tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10 || tflag == 12) { dlen = get32(pay); if (dlen > len + TSLACK) return KOLMO_ERR_CORRUPT; }
+    if ((tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10 || tflag == 12) { dlen = get32(pay); if (dlen > len + (tflag == 4 && P->ver >= 11 ? TBL_SLACK(len) : TSLACK)) return KOLMO_ERR_CORRUPT; }
 #ifdef KOLMO_FRONTIER
     if (codec == C_PCM) {
         if (P->ver < 6 || tflag || pl.t != T_NONE || frontier_pcm_decode(pay, cl, out, len)) return KOLMO_ERR_CORRUPT;
@@ -159,7 +159,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
 static void *decompress_worker(void *arg) {
     djob_t *J = arg; tls_t *S = tls_begin();
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
-    uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->maxraw + TSLACK + 64);
+    uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->maxraw + TBL_SLACK(J->maxraw) + 64);
     int buffered = J->clip_hi || J->output_fd >= 0;
     uint8_t *rbuf = buffered ? (S->rbuf = grow(S->rbuf, &S->rbcap, J->maxraw + 64)) : NULL;
     uint8_t *packed = J->input_fd >= 0 ? malloc(J->maxcompressed ? J->maxcompressed : 1) : NULL;

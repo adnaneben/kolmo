@@ -15,7 +15,7 @@ static const double P10D[19] = {1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9
                                 1e16, 1e17, 1e18};
 enum { FM_RATIO = 1, FM_DIFF = 2, FM_PCT = 3 };
 typedef struct { uint16_t y, a, b; uint8_t form; double k; } tformula;   /* b = FM_NONE for lag forms */
-typedef struct { int n, gcol; tformula f[256]; } fset_t;
+typedef struct { int n, gcol, gweak; tformula f[256]; } fset_t;   /* gweak: gcol found only by the varies test (encoder only) */
 #define FM_NONE 0xFFFF
 #define FS_SAMPLE 1024
 #ifndef FS_TOL
@@ -205,7 +205,7 @@ done:
 }
 
 static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs, int threads) {
-    fs->n = 0; fs->gcol = -1;
+    fs->n = 0; fs->gcol = -1; fs->gweak = 0;
     const uint8_t *nl = memchr(s, '\n', n);
     if (!nl || k < 2) return;
     size_t body = (size_t)(nl - s) + 1;
@@ -216,6 +216,9 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
     uint32_t *rl = malloc(4 * k), *ll = malloc(4 * k);
     int *nnum = calloc(k, sizeof(int)), *noth = calloc(k, sizeof(int)), *Smax = calloc(k, sizeof(int));
     int g8 = k < 8 ? k : 8; uint8_t *eq = malloc((size_t)g8 * SM); uint8_t *firstdig = calloc(g8, 1);
+    /* a group column must take more than one value; with long groups the sampled rows may never sit on a boundary
+     * (every row equal to the one before it), so that is checked against the first sampled value instead */
+    uint8_t varies[8] = {0}; size_t v0off[8] = {0}; uint32_t v0len[8] = {0}; int v0n = 0;
     int ns = 0; size_t last = (size_t)-1;
     for (int t = 0; t < SM; t++) {
         size_t p = body + (size_t)(((unsigned __int128)(n - body) * (2 * t + 1)) / (2 * SM));
@@ -236,6 +239,8 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
         for (int j = 0; j < g8; j++)
             eq[(size_t)j * SM + ns] = j < a && j < b && rl[j] == ll[j] && !memcmp(s + ro[j], s + lo[j], rl[j]);
         if (ns == 0) for (int j = 0; j < g8 && j < a; j++) firstdig[j] = rl[j] && (s[ro[j]] == '-' || (s[ro[j]] >= '0' && s[ro[j]] <= '9'));
+        if (ns == 0) { v0n = a < g8 ? a : g8; for (int j = 0; j < v0n; j++) { v0off[j] = ro[j]; v0len[j] = rl[j]; } }
+        else for (int j = 0; j < g8; j++) if (!varies[j]) varies[j] = j >= a || j >= v0n || rl[j] != v0len[j] || memcmp(s + ro[j], s + v0off[j], rl[j]);
         ns++;
     }
     uint8_t *same = malloc(SM + 1);
@@ -245,7 +250,7 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
         for (int j = 0; j < g8 && fs->gcol < 0; j++) {
             if (nnum[j] * 2 >= ns || firstdig[j]) continue;
             int c = 0; for (int i = 0; i < ns; i++) c += eq[(size_t)j * SM + i];
-            if (c * 4 >= ns * 3 && c < ns) fs->gcol = j;
+            if (c * 4 >= ns * 3 && (c < ns || varies[j])) { fs->gcol = j; fs->gweak = c == ns; }
         }
     }
     for (int i = 0; i < ns; i++) same[i] = fs->gcol >= 0 ? eq[(size_t)fs->gcol * SM + i] : 1;
@@ -549,7 +554,7 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
         bput(&out, e, 16);
     }
     bput(&out, exc, 8 * nexc);
-    uint64_t *z = malloc(8 * ((size_t)nr + 2)), *zb = malloc(8 * ((size_t)nr + 2));
+    uint64_t *z = malloc(8 * ((size_t)nr + 2)), *zb = malloc(8 * ((size_t)nr + 2)); int usedg = 0;
     double *la = malloc(sizeof(double) * ((size_t)nr + 1));
     for (int j = 0; j < k; j++) {
         const uint32_t *o = coff + base[j], *l = clen + base[j];
@@ -582,13 +587,17 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
         }
         if (!zready) num_resid(&C[j], bm, gid, NULL, NULL, NULL, NULL, zb);
         if (bm >= 4 && newmodes) *newmodes |= 1u << (bm - 4);
+        usedg |= bm == 2 || bm >= 4 || (bm == 3 && FB[fid].form != FM_RATIO);
         num_col_put(in, o, l, &C[j], bm, bm == 3 ? fid : 0, zb, &out);
         if (!needed[j]) ncol_free(&C[j]);
     }
+    /* a group column found only by the varies test and used by no predictor in this block: written as none, so the
+     * block is the same as when no group column is found (gid is then unused by the decoder) */
+    if (gcol >= 0 && fs->gweak && !usedg) { int32_t none = -1; memcpy(out.p + 16, &none, 4); }
     for (int j = 0; j < k; j++) { if (needed[j]) ncol_free(&C[j]); free(fv[j]); }
     free(fv); free(z); free(zb); free(la); free(gid); free(exc); free(coff); free(clen);
     int64_t total = out.n;
-    if (total > n + TSLACK - 64) { free(out.p); return -1; }
+    if (total > n + TBL_SLACK(n) - 64) { free(out.p); return -1; }   /* above n + TSLACK the file is version 11 */
     memcpy(dst, out.p, total); free(out.p);
     return total;
 }

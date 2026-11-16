@@ -5,7 +5,7 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, const plan_t *pl) {
     if (pl->t != T_TBL && pl->t != T_LOG && pl->t != T_WORD && pl->t != T_TP) return 1;
     size_t m = n < (1u << 20) ? n : (1u << 20); while (m > 0 && s[m - 1] != '\n') m--;
     if (m < 65536) return 1;
-    uint8_t *t = malloc(m + TSLACK + 64), *z = malloc(m + m / 8 + 64); int64_t tn = -1;
+    uint8_t *t = malloc(m + TBL_SLACK(m) + 64), *z = malloc(m + m / 8 + 64); int64_t tn = -1;
     if (!t || !z) { free(t); free(z); return 1; }
     if (pl->t == T_TBL) tn = tbl2_encode(s, m, (uint8_t)pl->a, pl->c + 1, pl->b, pl->fs, t, NULL);
     else if (pl->t == T_LOG) tn = log_encode_m(s, m, t, m + TSLACK, pl->a == 1);

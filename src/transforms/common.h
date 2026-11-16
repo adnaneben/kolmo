@@ -1,6 +1,10 @@
 /* Definitions shared by the structure transforms: transform ids, room a transform may need past the block, and
  * the byte scanners. */
 #define TSLACK 16384            /* table transform may exceed the block by this much (headers, exceptions) */
+/* table transform v2 (flag 4), container version 11: an eighth of the block more. Its typed columns carry a kind and a
+ * scale byte per value and a length byte per text field, so a table of short numbers grows by a few percent before coding
+ * (5.5 MB of daily counts: +4.4%) and a fixed 16 KiB slack turned the transform off on every block of 400 KiB or more. */
+#define TBL_SLACK(n) ((size_t)(n) / 8 + TSLACK)
 #define ONES 0x0101010101010101ull
 #define HIGHS 0x8080808080808080ull
 /* first index of byte a or b in p[0..lim), or lim (SWAR, 8 bytes per step; lowest flagged byte is always exact) */
