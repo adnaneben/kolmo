@@ -6,6 +6,7 @@
  * loop is not used for the rest, fi_vec4 finishes it itself (planes are addressed from the start, so the shipped loop
  * cannot resume at an offset). Measured in benchmark/rc2/SIMD-ASM.md. */
 #if defined(__SSE2__) && FI_USE
+#include <emmintrin.h>
 #define FI_VEC4 1
 static inline __m128i fi_pfx4(__m128i x) { x = _mm_add_epi32(x, _mm_slli_si128(x, 4)); return _mm_add_epi32(x, _mm_slli_si128(x, 8)); }
 static inline __m128i fi_unzz4(__m128i z) { return _mm_xor_si128(_mm_srli_epi32(z, 1), _mm_sub_epi32(_mm_setzero_si128(), _mm_and_si128(z, _mm_set1_epi32(1)))); }
