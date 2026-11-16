@@ -4,24 +4,28 @@ The owner asked: "Can we not execute GPU and CPU in parallel so that we have 20 
 CPU or GPU ones?" Short answer, measured on the owner's Mac: **no, not for Kolmo's work.** The M5's GPU is not ten
 more cores of the same kind. For the one part of Kolmo that a GPU can do with the same output bytes (the suffix sort of
 the BWT codec), it runs at 0.3 to 0.8 times the speed of *one* CPU performance core on text and repetitive data, and
-at 1.5 to 2.2 times on high-entropy binary data that Kolmo does not block-sort. Run beside all ten CPU threads it made
-`-m ratio` 2 to 9% *slower* (shared memory bandwidth, one more thread on the cores, a slower straggler block). It gained
-9% only when Kolmo was limited to two CPU threads. The rest of Kolmo's time is serial by nature (LZ match finders whose
+at 1.05 to 2.2 times on high-entropy binary data that Kolmo does not block-sort. Run beside all ten CPU threads it made
+`-m ratio` 2 to 9% *slower* (shared memory bandwidth, one more thread on the cores, a slower straggler block). Where
+it looked faster (1.09x at `-T 2`, 1.11x to 1.52x with ten one-thread processes), the gain came from the GPU worker
+being one more CPU thread: given that thread instead, the CPU alone was faster (the GPU version ran at 0.92x and
+0.96x). The rest of Kolmo's time is serial by nature (LZ match finders whose
 exact output depends on their search order, context mixing and arithmetic coding) and cannot move to the GPU without
 changing the output.
 
 What did gain is CPU parallelism the profile exposed: kvid's prediction ran on one thread; on ten threads kvid's
-`balanced` compression is 1.7 to 1.9 times faster (same bytes). And the profile shows the bigger lever for the slow
+`balanced` compression is 1.66 to 1.75 times faster (same bytes). And the profile shows the bigger lever for the slow
 modes: `ratio`, `hc` and `-x` keep one core busy on any file smaller than their block (128 MiB), so 9 of the 10 cores
 idle there. That is CPU work for the bwt lane (threaded suffix sorting) and the xmode lane, not GPU work.
 
 Machine: Apple M5 (4 performance + 6 efficiency cores, 10-core GPU, 24 GB unified memory), macOS. **The machine was
-shared** with other local work during every measurement (load average 2 to 3 before the runs; another program kept
-the GPU at about 30% busy during part of the kernel tests). Every end-to-end comparison is interleaved A/B (A and B
+shared** with other local work during every measurement (load average 2 to 3 before the runs; at one check another
+program kept the GPU 32% busy, just before the kernel timings of section 2). Every end-to-end comparison is interleaved A/B (A and B
 alternate, the order flips every round) and reports medians. GPU power could not be measured: `powermetrics` needs
 root (`sudo` asks for a password), so only the GPU's device utilisation (from `ioreg`) is reported.
 
-Branch `claude/rc3-gpu-20261116`, from `claude/release-rc3-20261116` (`2207da1`).
+Branch `claude/rc3-gpu-20261116`, from `claude/release-rc3-20261116` (`2207da1`), with `claude/rc3-structure-20261116`
+(`9ef225d`) merged. Measurements before the merge used the same code in the old layout; the tests in section 7 ran
+after it.
 
 ## 1. Where the time goes (all ten threads, CPU only)
 
@@ -46,7 +50,7 @@ Branch `claude/rc3-gpu-20261116`, from `claude/release-rc3-20261116` (`2207da1`)
 | `ratio`, text | libbsc: libsais suffix sort 55 to 65% of the codec's time, QLFC most of the rest, LZP 3 to 5% (table below) | **the sort, yes**: the suffix array is unique |
 | `-x` | `cm_compress_m`: 97% | no: bit-serial context mixing and arithmetic coding |
 | kvid `balanced` | prediction 39 ms of 67 ms (one thread), then Kolmo | yes, and also on CPU threads |
-| kfam | per-stream models with a binary arithmetic coder (bit-serial) | no (not profiled on FASTQ here: the ENA download did not finish in this session) |
+| kfam (`-x` on FASTQ) | first the CM trial on the whole block (`cm_compress_m`, 97% of the first seconds), then kfam: `kf_dm_code` 69%, `kf_qm_code` 18%, `kf_code16` 13% (model + binary arithmetic coder per symbol); standalone kfam on 64,779 reads (40.9 MB, SRR1770413 prefix) takes 3.87 s at `-T 10` with 2.5 cores busy | no: bit-serial |
 
 libbsc's parts, one thread (`bscprof`, Kolmo's parameters):
 
@@ -101,10 +105,11 @@ Why it is slow on this machine:
 - Kernel profile on dickens (10.2 MB): the first round (eight passes over all suffixes) takes 50 ms; in isolation the
   eight histogram passes take 5.6 ms, the eight scatters 17.6 ms (about 110 GB/s, close to the bandwidth), the scans
   0.7 ms; the rest is the per-round rank, flag, compaction and key kernels, which are random-access.
-- Tried and kept: packing both rank parts into the fewest bits (7 -> 6 passes per round on dickens, 47.8 -> 32 ms for
-  round 2), a scatter that ranks per simdgroup without a barrier per round. Tried and gave nothing: staging the tile
-  in threadgroup memory for coalesced writes (50 -> 53 ms), one atomic per distinct digit and simdgroup in the
-  histogram (no change).
+- Tried and kept: packing both rank parts into the fewest bits (7 -> 6 radix passes per round on dickens) together
+  with a scatter that ranks per simdgroup without a barrier per element round: round 1 59.0 -> 47.8 ms, round 2
+  46.6 -> 32.0 ms, dickens 0.71x -> 0.78x of libsais. Tried and gave nothing: staging the tile in threadgroup memory
+  for coalesced writes (round 1 47.8 -> 50-53 ms), one atomic per distinct digit and simdgroup in the histogram (no
+  change).
 - Memory: about 44 bytes per input byte on the GPU (2 GB for a 41 MB block), against 5 for libsais.
 - The GPU wins only where eight bytes already separate almost every suffix (x-ray, model weights, sao: 2 to 4 rounds).
   Kolmo's `ratio` sends those files to LZMA2 or the graph, not to the BWT, so the GPU's wins land where it is not used.
@@ -139,10 +144,31 @@ threads and the GPU share the same memory bandwidth. The one-block run is 2% slo
 kernels at start (65 ms or more). Default `ratio` and `-x` on a file under 128 MiB is one block, so the GPU worker
 never starts there.
 
-**Answer in numbers:** on this M5, CPU + GPU together gave between 0.91x and 0.98x of CPU-only `-T 10` on block-sorted
-data, 1.09x with two CPU threads, and nothing on every other mode (their work cannot run on the GPU with the same
-bytes). The GPU behaves like at most one extra, slower core for the sort, and it slows the CPU cores it shares memory
-with.
+Many files, one process per core (`benchmark/rc3/gpu/many.py`): ten `kolmo -m ratio -T 1` processes at once on ten
+files of the set (dickens, webster, nci, reymont, xml, chr22.fa, loghub_all.log, api.json, owid-co2-data.csv, samba),
+so every core is busy and the GPU is otherwise idle; median of 4 to 6 interleaved rounds, wall time until the last
+process ends, same bytes in every round:
+
+| A | B | A s | B s | B speed | GPU sorts per round |
+|---|---|---:|---:|---:|---:|
+| `-T 1 -B 4`, CPU only | `-T 1 -B 4 --gpu` | 3.32 | 3.00 | 1.11x | — |
+| `-T 1 -B 8`, CPU only | `-T 1 -B 8 --gpu` | 6.07 | 4.00 | 1.52x | 7 |
+| `-T 2 -B 8`, CPU only | `-T 1 -B 8 --gpu` | 3.86 | 4.01 | **0.96x** | 7 |
+| webster `-T 2 -B 4`, CPU only | webster `-T 2 -B 4 --gpu` | 0.40 | 0.37 | 1.09x | 2 |
+| webster `-T 3 -B 4`, CPU only | webster `-T 2 -B 4 --gpu` | 0.33 | 0.36 | **0.92x** | 2 |
+
+The ten-process gain is a thread count, not the GPU: the slowest process (chr22.fa, 7 blocks) finishes when the other
+processes have left cores free, and its GPU worker is a second thread that takes blocks; the GPU sorted only 7 blocks
+in the whole round (3 of them chr22.fa's, at a third of a core's speed). Giving every process a second CPU thread
+instead is 4% faster than the GPU worker.
+
+**Answer in numbers:** on this M5, CPU + GPU together gave 0.91x to 0.98x of CPU-only `-T 10` on block-sorted data,
+0.92x to 0.96x of a CPU-only run given the same number of threads in every other setting, and nothing on every other
+mode (their work cannot run on the GPU with the same bytes). The GPU behaves like less than one extra core for the
+sort, and it slows the CPU cores it shares memory with. "20 threads" is not on offer: the 10 GPU cores are not cores
+in that sense (each is a wide SIMD unit that only pays off on data-parallel work), and Kolmo's slow modes spend 75 to
+97% of their time (`hc`, `ratio` on binary data, `-x`) in work that is serial per block; the one data-parallel part
+(the suffix sort, 55 to 65% of a `ratio` text block) is faster on one CPU core than on the GPU.
 
 ## 4. kvid: prediction on CPU threads and on the GPU
 
@@ -158,7 +184,13 @@ except `cpu1`):
 | foreman_cif | 39.0 ms | 6.5 ms | 12.7 ms (6.1) | 39.8 ms | 44.8 ms |
 | mobile_cif | 45.5 ms | 7.5 ms | 12.7 ms (6.1) | 38.0 ms | 43.7 ms |
 
-KVID_OLD_ROWS
+Against kvid before this change (prediction on one thread, Kolmo on 10), interleaved, 3 rounds of `kvid -b`:
+
+| clip | before | after (prediction on 10 threads) | speed | same bytes |
+|---|---:|---:|---:|---|
+| akiyo_cif | 64.9 ms | 39.0 ms | 1.66x | yes |
+| foreman_cif | 67.1 ms | 38.9 ms | 1.73x | yes |
+| mobile_cif | 70.4 ms | 40.3 ms | 1.75x | yes |
 
 The GPU kernel alone (6 ms) only matches ten CPU threads, and copying 45 MB in and out of Metal buffers adds 6 ms.
 kvid's layout groups residuals by plane over all frames, so Kolmo cannot start before the last frame is predicted:
@@ -191,9 +223,9 @@ MB, below the GPU's break-even.
 
 | change | where | default build | verdict |
 |---|---|---|---|
-| kvid prediction on `-T` threads (same bytes) | `src/experimental/kvid.c` | yes (research tool) | **kept**: 1.7-1.9x faster kvid `balanced` |
+| kvid prediction on `-T` threads (same bytes) | `src/experimental/kvid.c` | yes (research tool) | **kept**: 1.66-1.75x faster kvid `balanced` |
 | GPU suffix sort and BWT, exact | `src/arch/metal/sa.metal`, `sa_metal.m`, `cubwt_metal.c` | no (`GPU=1`) | kept as research: slower than one core on text |
-| GPU worker beside the CPU pool | `src/core/hetero.c`, hooks in `src/kolmo.c` (3, under `KOLMO_GPU`) | no (`GPU=1`, then `--gpu` / `KOLMO_GPU=1`) | kept off: 0.91-0.98x at 10 threads |
+| GPU worker beside the CPU pool | `src/core/hetero.c`; hooks under `KOLMO_GPU` in `codecs/bwt.c`, `core/blocks.c`, `core/compress.c`, `api/api.c` | no (`GPU=1`, then `--gpu` / `KOLMO_GPU=1`) | kept off: 0.91-0.98x at 10 threads, 0.92-0.96x against one more CPU thread |
 | kvid prediction on the GPU (`--gpu`) | `src/arch/metal/kvid.metal`, `kvid_metal.m` | no (`GPU=1`) | kept as research: slower than 10 threads |
 | `kolmo_set_gpu()`, `--gpu` | `src/kolmo.h`, `src/cli.c` | yes (returns 0 without `GPU=1`; `--gpu` then says so) | API stub |
 | tests | `tests/test_gpu_sa.c`, `make GPU=1 check-gpu` (part of `check-rc`) | prints "built without" otherwise | — |
@@ -203,7 +235,15 @@ same bytes with and without `--gpu` (`test_gpu_sa`, `ab.py`, and the determinism
 
 ## 7. Tests
 
-TESTS_ROWS
+After merging `claude/rc3-structure-20261116` (`9ef225d`), on the M5, with other local test runs on the machine:
+
+| build | `make check` | `check-rc` | `check-sanitizers` | `experimental-check` | `kfam-check` | determinism |
+|---|---|---|---|---|---|---|
+| default (no GPU code linked) | pass | pass | pass | pass | pass | 110 frames OK |
+| `GPU=1` | pass | pass (includes `check-gpu`: 2146 exact sorts, ratio frames identical with 2 GPU sorts) | pass | pass | pass | 110 frames OK, and 110 OK with `KOLMO_GPU=1` |
+
+The first `GPU=1` `check-rc` failed to link `test-dispatch-asan` (it compiles `src/kolmo.c` without the arch archive);
+fixed in the Makefile and re-run.
 
 ## Reproduce
 

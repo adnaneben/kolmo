@@ -211,8 +211,8 @@ check-fqfam: build/test-fqfam-asan
 # Runtime ISA dispatch (x86-64): CRC32C and XXH3 against scalar references, optimised and with sanitizers.
 build/test-dispatch: tests/test_dispatch.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
-build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c src/arch/xxh3.c $(ASMSRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a $(if $(GPUSRC),build/libkolmoarch.a)
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c src/arch/xxh3.c $(ASMSRC) build/libvendor.a $(if $(GPUSRC),build/libkolmoarch.a) -o $@ $(LIBS) $(CXXLIB)
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan
