@@ -354,3 +354,27 @@ allocates and clears its own tables; an in-process implementation would not pay 
 **Recommendation:** for kolmo, take the transform ideas (time and cross-column formulas, previous-field and
 op-above contexts) into the existing CM tier and table transform. GR6+ as a stand-alone codec is an archive-class tool
 (strong ratio, symmetric 1–3 MB/s), and on time-series tables it is the strongest coder measured here.
+
+## 8. GR6+ in kolmo (rc3)
+
+GR6+ mode 2 is now part of kolmo as block codec 15 (container version 9), in `src/gr6.inc`. `ultra` tries it on every
+text block with at least 64 lines and keeps it only when it is smaller than CM, LZMA2 and BWT for that block.
+
+Changes from the research prototype:
+* **Integer-only model.** kolmo's own squash/stretch tables, fixed-point mixer weights (16.16), integer APM and
+  counter rates, so the output is bit-exact on every compiler and CPU, as for `CM`. Ratio is unchanged: COVID 19.48 vs
+  19.49, OWID 13.52 vs 13.59 (tables capped at 2²² entries per model in the library).
+* **Hardened decoder.** Every rank, index, id, length, field count, number format and formula reference is checked
+  against the state, and integer arithmetic wraps instead of overflowing. Allocation failure and corrupt input unwind
+  through one tracked heap (`setjmp`/`longjmp`), so nothing leaks and the library never exits.
+* **Tests.** `kolmotest` builds a time-series table on which `ultra` must choose GR6+ and must never be larger than
+  GR6+ alone. The file is round-tripped with range reads and 300 container corruptions, and 1000 corrupt GR6+ streams
+  are decoded directly. Clean under AddressSanitizer and UndefinedBehaviorSanitizer, leak check included. A separate
+  600-file mutation run of the CLI under the same sanitizers had no crash or hang (587 rejected, 13 harmless).
+
+Measured with `kolmo -x`, single thread: OWID 12.57 → 13.52, COVID 15.41 → 19.48, decoding 4–10× faster where GR6+ is
+chosen. The other five test files are unchanged.
+
+Correction: kolmo's table transform (`src/tbl2.inc`) already found `k·a/b`, `k·(a − lag a)` and percentage-change
+formulas. Section 3 and the first rc3 note implied otherwise. What GR6+ adds is the running-total, copy and product
+types, near-hit scoring and the field-level model.

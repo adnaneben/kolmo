@@ -1,19 +1,29 @@
 # Changelog
 
-## Unreleased: planned for rc3
+## Unreleased (rc3)
 
 ### Ratio
-- **Derived table columns (OWID formulas), to do.** A `DERIVE` kgraph node stores a column as the residual from a
-  formula over columns already decoded: `a / b * k` (OWID: every `*_per_capita` = X / population * 1e6 and every
-  `*_per_gdp` = X / gdp * 1e9), `a - lag(a)`, `100 * (a / lag(a) - 1)`, chosen by a search over column pairs on a
-  sample. Prototype measurement on OWID CO2 (11 derived columns, 72-99% of rows exact, the rest +-1 in the last
-  digit): `balanced` 10.94 -> 11.47 (-4.6%), `ratio` 12.45 -> 13.44 (-7.3%). Must use exact integer arithmetic
-  (128-bit rounded division), not floats, so every platform decodes the same. See `research/FINDINGS.md` section 3
-  and `research/mathred/tabmath.py`.
-- **Time formulas (same `DERIVE` node), to do.** `a - lag(a)` (growth_abs), `100 * (a / lag(a) - 1)` (growth_prct),
-  `lag(t) + a` (cumulative), plus `a` (copy) and `a * b / 10^k`, scored on near-hits (+-2 in the last digit). In the
-  GR6+ prototype these took OWID from 10.42 to 12.66 by themselves; with the other GR6+ steps it reaches 13.59
-  (kolmo -x 12.57). See `research/FINDINGS.md` section 6 and `research/gr6/gr6plus.c` (`fpred`, `find_formulas`).
+- **`ultra`: GR6+ blocks (codec 15, container version 9).** A new per-block candidate for line-structured text
+  (at least 64 lines), kept only when it is smaller than context mixing, LZMA2 and BWT on that block, so no file grows.
+  GR6+ splits lines into fields and codes one decision per field: same as the line above, column and graph
+  move-to-front ranks, column dictionary, numbers as residuals from the best of four column predictors (a derived-column
+  formula, delta, delta of delta, damped trend), or new text with a prefix shared with a reference field. Every value
+  becomes 6-bit units coded by an integer context-mixing model (8 contexts, two mixers, APM). Formula discovery adds
+  three types the table transform does not have: running totals `lag(t) + a`, copies `a`, products `a * b / 10^k`;
+  formulas are scored on near hits (within 2 in the last digit). Single thread, `kolmo -x`:
+
+  | file | before | rc3 | decompression |
+  |---|---|---|---|
+  | OWID CO2 (15.2 MB CSV) | 12.57 | **13.52** (-7.0% size) | 0.6 -> 2.4 MB/s |
+  | COVID countries-aggregated (5.5 MB CSV) | 15.41 | **19.48** (-20.9% size) | 0.3 -> 3.3 MB/s |
+  | diamonds, Titanic, HDFS and Apache logs, Shakespeare | unchanged (GR6+ not chosen) | | |
+
+  Compression in `ultra` is about 10% slower on text blocks, where GR6+ is tried. Decoding a GR6+ block is 4-10x faster
+  than decoding the CM block it replaces. Format: `SPEC.md`, *GR6+ blocks*; code: `src/gr6.inc`; research and
+  measurements: `research/FINDINGS.md` sections 5-8. A version 1.1.0 reader rejects version 9 files.
+- Correction to the earlier rc3 note: the table transform already finds `a / b * k`, `a - lag(a)` and
+  `100 * (a / lag(a) - 1)` formulas. Still to do: the three new formula types and near-hit scoring in the table
+  transform, so that `balanced` and `max` benefit as well.
 
 ## 1.1.0 (2026-11-10)
 

@@ -22,7 +22,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 7 (4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 8) |
+| 4 | 1 | version | 1 to 9 (4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 8; 8 when a block uses line classes, tflag 12; 9 when a block is a GR6+ block, codec 15) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -47,7 +47,7 @@ reader that predates the flag refuses the newer version rather than returning wr
 | 0 | 4 | raw | decoded length of this block |
 | 4 | 4 | comp | stored length of this block's payload |
 | 8 | 4 | checksum | low 32 bits of a block checksum (see below) |
-| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7 |
+| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7, GRAPH=12, GR6=15 |
 | 13 | 1 | tflag | transform applied before the coder (see below) |
 | 14 | 2 | reserved | 0 |
 
@@ -91,6 +91,7 @@ bits are the block length and whose top 4 bits `f` select the model: `f = 0` is 
 size; otherwise `f & 7` is the log2 of the hash-table size minus 15, and `f & 8` selects model 2 (two more sparse
 contexts, three record contexts, four mixers combined by a learned final mixer, and an extra order-2 APM). The arithmetic-coded bytes follow.
 Encoders write model 2; decoders accept both, so files written with model 1 still decode. CM output is bit-exact across compilers and CPUs (integer-only, `-ffp-contract=off`).
+`GR6` (codec 15, version 9) is a transform and coder in one; see *GR6+ blocks* below.
 
 ## Guarantees
 
@@ -173,3 +174,46 @@ The planner uses graphs for delimited tables with more than 256 columns (the lim
 arrays of 16-, 32- and 64-bit integers and float arrays (a `.npy` header becomes the node's head), when a slice codes at least 3%
 smaller than the other candidates. A
 version 1–6 decoder rejects version 7 files.
+
+## GR6+ blocks (version 9)
+
+A block with codec 15 has plan type 0 and tflag 0. Its payload (after the 4-byte plan) is
+
+```
+payload  := version u8 (1) | separator u8 | final newline u8 (0/1) | formulas u8 | lines u64 | table[62] |
+            formula * formulas | arithmetic-coded bytes
+formula  := target column u16 | a u16 | b u16 | k u8 (0-18) | type u8 (0-5)        (a < target, b < target)
+```
+
+The block is read as `lines` lines (`\n`-terminated, the last one only when `final newline` is 1), each split into
+fields at `separator` (one of `,` tab `;` `|` space). Per line the coder codes the field count (0 = same as the line
+above, else count + 1), then per field one op and that op's values:
+
+| op | name | values | field |
+|---|---|---|---|
+| 0 | DITTO | — | the field at the same position in the line above |
+| 1 | EMPTY | — | empty |
+| 2 | NUM | zigzag residual | prediction + residual, in the column's current number format |
+| 3 | RANK | rank | entry `rank` of the column's move-to-front list (256 entries) |
+| 4 | RANK2 | rank | entry `rank` of the move-to-front list of fields that followed the previous field (256 entries) |
+| 5 | CDICT | index from the end | entry of the column's dictionary (distinct values in order of first use) |
+| 6 | GID | id from the end | the block's distinct fields in order of first use (id 0 is the empty field) |
+| 7 | NUMNEW | decimals, zero-padding width (each ≤ 18), zigzag value | a number in a new format |
+| 8 | NEW | shared-prefix length, then characters | prefix of the reference field (the first entry of the RANK2 list, else of the RANK list), then characters: 6-bit codes into `table`, 62 = end, 63 = escape followed by two codes holding one byte |
+
+A number is `-?[0-9]+(\.[0-9]+)?` with at most 18 digits that prints back identically (no `-0`, leading zeros only as a
+fixed width). The NUM prediction is the one of four with the lowest running cost in the column (cost ← cost − cost/16 +
+16 · bit length of the zigzag residual, updated after every number of the column's format): the column's formula, the
+previous value, twice the previous minus the one before, and the previous plus half the last difference. Formula
+types: 0 round(a / b · 10^k), 1 a − lag(a), 2 round(100 · (a / lag(a) − 1)), 3 lag(target) + a, 4 a, 5 round(a · b / 10^k),
+all computed exactly in integers at the target's decimals, rounding half away from zero; `lag` is the column's
+previous number. A formula applies only where its inputs on the same line are numbers.
+
+Values are written as 6-bit units. An op is 5 data bits per unit plus a continuation bit. Any other value is its bit
+length (one unit; 63 = escape, then 11 units of 6 bits) followed by the bits below the top bit, most significant first,
+6 per unit. Every unit is coded as 6 binary decisions with an integer context-mixing model (8 hashed context models
+over the op, column, ops and field above, previous field, residual sizes and characters; two logistic mixers; an APM)
+and the same binary arithmetic coder as `CM`. As for `CM`, the model is defined by the reference implementation
+(`src/gr6.inc`) and is bit-exact across compilers and CPUs. The encoder tries GR6+ in `ultra` on blocks of text with at
+least 64 lines and keeps it only when it is smaller than the block's other candidates. A version 1–8 decoder rejects
+version 9 files.

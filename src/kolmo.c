@@ -9,9 +9,9 @@
 #include "experimental/frontier_pcm.h"
 #include "experimental/frontier_lag.h"
 #include "experimental/frontier_shuffle.h"
-#define KOLMO_MAX_VERSION 8
+#define KOLMO_MAX_VERSION 9
 #else
-#define KOLMO_MAX_VERSION 8   /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12) */
+#define KOLMO_MAX_VERSION 9   /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: GR6+ blocks (codec 15) */
 #endif
 #include <pthread.h>
 #include <stdatomic.h>
@@ -1090,7 +1090,7 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 
 /* ------------------------------------------------------------------ codecs */
 enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
-       C_GRAPH = 12, C_HUF = 13, C_RANS = 14 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0 (graph leaves) */
+       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_GR6 = 15 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0 (graph leaves); 15: GR6+ (ultra) */
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9, T_LINES = 10 };   /* 9: kolmo graph (a=delim b=decimal separator) */
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
  * so repeated calls to one target produce identical bytes. Encoded back to front and decoded front to back (as in
@@ -1497,6 +1497,8 @@ static void *array_resize(void *old, size_t count, size_t width) {
     if (!width || count > SIZE_MAX / width || kolmo_alloc_fail()) return NULL;
     return realloc(old, (count ? count : 1) * width);
 }
+
+#include "gr6.inc"
 
 #ifndef KOLMO_BWT_GAIN_PCT
 #define KOLMO_BWT_GAIN_PCT 3      /* max: least size gain (%) for BWT to replace LZMA2 on a binary block */
@@ -2403,6 +2405,15 @@ static void *compress_worker(void *arg) {
 #endif
                     if (c2 && (!cl || c2 < cl)) { memcpy(sl + meta, alt, c2); cl = c2; codec = alts[k]; }
                 }
+                /* GR6+ (fields, column predictors and formulas, CM over 6-bit units) on the untransformed block: kept
+                 * when smaller than the best so far (OWID CO2 -8%, COVID -21% against CM) */
+                if (gr6_applies(raw, len)) {
+                    size_t g = gr6_compress(raw, len, alt, J->slot);
+                    if (g && (!cl || g < cl + meta)) {
+                        memcpy(sl, alt, g); cl = g; meta = 0; tflag = 0; codec = C_GR6; modes |= 32;
+                        slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
+                    }
+                }
             }
         }
 coded:;
@@ -2848,7 +2859,7 @@ cleanup:
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }
-    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
@@ -2915,6 +2926,12 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     if (codec == C_GRAPH || pl.t == T_KG) {                     /* kolmo graph block (version 7) */
         if (codec != C_GRAPH || pl.t != T_KG || tflag || P->ver < 7) return KOLMO_ERR_CORRUPT;
         int r = kg_decode(x, pay, cl, out, len); if (r) return KOLMO_ERR_CORRUPT;
+        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        return 0;
+    }
+    if (codec == C_GR6) {                                       /* GR6+ block (version 9) */
+        if (P->ver < 9 || tflag || pl.t != T_NONE) return KOLMO_ERR_CORRUPT;
+        int r = gr6_decompress(pay, cl, out, len); if (r) return r;
         if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }

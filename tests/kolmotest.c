@@ -20,6 +20,8 @@ int64_t sci_encode_pub(const uint8_t *in, size_t n, int image, uint8_t *dst, siz
 int sci_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
 int64_t word_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
 int word_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
+size_t gr6_compress_pub(const uint8_t *in, size_t n, uint8_t *out, size_t cap);
+int gr6_decompress_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -458,6 +460,48 @@ int main(void) {
         check("ultra-csv", csv, 400000, KOLMO_ULTRA, 1 << 17, 1);
         check("ultra-random", rndb, 200000, KOLMO_ULTRA, 1 << 17, 1);
         free(u);
+    }
+    /* GR6+ (codec 15): a time-series table with derived columns (per capita, running total, growth) must be coded by
+     * GR6+ in ultra and round-trip; the codec itself must survive corrupt streams (no container checksum in the way) */
+    {
+        size_t gn = 0, gcap = 600000; uint8_t *g = malloc(gcap);
+        gn += sprintf((char *)g, "country,year,population,co2,co2_per_capita,cumulative_co2,co2_growth_abs,price,volume,value,flag\n");
+        const char *cn[] = {"Aland", "Borduria", "Carpathia", "Doria", "Elbonia", "Freedonia", "Genovia", "Hyrkania"};
+        for (int c = 0; gn + 4096 < gcap; c = (c + 1) % 8) {
+            long long pop = 100000 + (long long)(rnd() % 9000000); long long co2 = 1000 + (long long)(rnd() % 90000), cum = 0, prev = -1;
+            for (int y = 1900; y < 2024 && gn + 200 < gcap; y++) {
+                pop += (long long)(rnd() % 20001) - 5000; if (pop < 1000) pop = 1000;
+                co2 += (long long)(rnd() % 2001) - 900; if (co2 < 10) co2 = 10; cum += co2;
+                long long pc = (co2 * 1000000000LL / pop + 500) / 1000;   /* co2 [t, 3 decimals] / pop * 1e6, 3 decimals */
+                gn += sprintf((char *)g + gn, "%s,%d,%lld,%lld.%03lld,%lld.%03lld,%lld.%03lld,", cn[c], y, pop, co2 / 1000, co2 % 1000,
+                              pc / 1000, pc % 1000, cum / 1000, cum % 1000);
+                if (prev >= 0) { long long d = co2 - prev; gn += sprintf((char *)g + gn, "%s%lld.%03lld", d < 0 ? "-" : "", (d < 0 ? -d : d) / 1000, (d < 0 ? -d : d) % 1000); }
+                long long pr = 100 + (long long)(rnd() % 900), vol = 1 + (long long)(rnd() % 500);   /* value = price * volume */
+                gn += sprintf((char *)g + gn, ",%lld.%02lld,%lld,%lld.%02lld,%s\n", pr / 100, pr % 100, vol, pr * vol / 100, pr * vol % 100, rnd() % 40 ? "" : "est"); prev = co2;
+            }
+        }
+        check("ultra-gr6-table", g, gn, KOLMO_ULTRA, 1 << 20, 1);
+        uint8_t *gc = malloc(gn + 65536), *go = malloc(gn + 64), *ge = malloc(gn + 65536);
+        size_t g1 = gr6_compress_pub(g, gn, gc, gn + 65536);
+        kolmo_params up = {KOLMO_ULTRA, 0, 1, 1 << 20, 1}; size_t ucap = kolmo_bound(gn, &up); uint8_t *ud = malloc(ucap);
+        int64_t uc = kolmo_compress(g, gn, ud, ucap, &up);   /* one block: the per-block contest keeps the smallest coder */
+        if (uc < 0 || !g1 || (size_t)uc > g1 + 32 + 16 + 4) { printf("FAIL gr6: ultra %lld larger than GR6+ alone %zu\n", (long long)uc, g1); fails++; }
+        else if (ud[4] != 9) { printf("FAIL gr6: ultra did not choose GR6+ on the derived-column table (version %d)\n", ud[4]); fails++; }
+        else printf("gr6 table: ultra %.2fx with GR6+ blocks (version 9)\n", (double)gn / uc);
+        free(ud);
+        const uint8_t *srcs[2] = {g, csv}; size_t lens[2] = {gn, 400000};
+        for (int t = 0; t < 2; t++) {
+            size_t cl = gr6_compress_pub(srcs[t], lens[t], gc, lens[t] + 65536);
+            if (!cl || gr6_decompress_pub(gc, cl, go, lens[t]) || memcmp(go, srcs[t], lens[t])) { printf("FAIL gr6 codec roundtrip %d (%zu)\n", t, cl); fails++; continue; }
+            if (t == 0) printf("gr6 codec: %.2fx on the table\n", (double)lens[t] / cl);
+            for (int it = 0; it < 500; it++) {
+                memcpy(ge, gc, cl); int nflip = 1 + (int)(rnd() % 4);
+                for (int f = 0; f < nflip; f++) ge[rnd() % 4 ? 74 + rnd() % (cl - 74) : rnd() % cl] ^= (uint8_t)(1 + rnd() % 255);
+                gr6_decompress_pub(ge, rnd() % 8 ? cl : rnd() % cl, go, lens[t]);
+            }
+        }
+        printf("gr6 codec fuzz: 1000 corrupt streams decoded without crashing\n");
+        free(g); free(gc); free(go); free(ge);
     }
     /* table codec fuzz: corrupt the transformed stream itself (bypasses the container CRC) */
     {
