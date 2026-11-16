@@ -104,3 +104,17 @@ experimental-check: build/krc-frontier-test build/krctest build/krctest-asan bui
 	./build/kbxtest-asan
 	./build/frontier-reads-test
 .PHONY: experimental-check
+
+# kbin: numeric-array coder after the pcodec paper (binning, rANS bin indices, raw offset bits); KBIN.md
+build/kbin: $(XD)/kbin.c
+	@mkdir -p build
+	$(CC) $(CFLAGS) -ffp-contract=off $(XD)/kbin.c -lpthread -lm -o $@
+
+build/kbin-asan: $(XD)/kbin.c
+	@mkdir -p build
+	$(CC) $(SANFLAGS) -ffp-contract=off $(XD)/kbin.c -lpthread -lm -o $@
+
+kbin-check: build/kbin-asan build/kbin
+	./build/kbin-asan --selftest
+	./build/kbin --selftest
+.PHONY: kbin-check
