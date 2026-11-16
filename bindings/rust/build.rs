@@ -120,6 +120,13 @@ fn main() {
     cfiles.sort();
     for f in cfiles { jobs.push((cc.clone(), f, vec![])); }
     if is_x86_64 { jobs.push((cc.clone(), zstd.join("decompress/huf_decompress_amd64.S"), vec![])); }
+    // Kolmo's kernels (docs/LAYOUT.md): C references in src/algo, dispatch in src/arch, x86-64 versions chosen by CPUID.
+    let mut kfiles = Vec::new();
+    list(&src.join("algo"), "c", false, &mut kfiles);
+    list(&src.join("arch"), "c", false, &mut kfiles);
+    if is_x86_64 { list(&src.join("arch/x86_64"), "c", false, &mut kfiles); list(&src.join("arch/x86_64"), "S", false, &mut kfiles); }
+    kfiles.sort();
+    for f in kfiles { jobs.push((cc.clone(), f, vec![])); }
     // libbsc C++ sources.
     let mut cpps = Vec::new();
     list(&bsc.join("libbsc"), "cpp", true, &mut cpps);
@@ -182,6 +189,8 @@ fn main() {
     println!("cargo:rerun-if-changed={}", src.join("kolmo.h").display());
     println!("cargo:rerun-if-changed={}", src.join("kgraph.inc").display());
     println!("cargo:rerun-if-changed={}", vendor.join("xxhash/kolmo_xxh3.c").display());
+    println!("cargo:rerun-if-changed={}", src.join("arch").display());
+    println!("cargo:rerun-if-changed={}", src.join("algo").display());
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=KOLMO_NATIVE");
 }

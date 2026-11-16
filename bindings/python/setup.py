@@ -129,6 +129,12 @@ def build_library(dest_dir):
         compile_one(cc, f, fp)
     if is_x86_64 and os.path.exists(asm):
         compile_one(cc, asm, [])
+    # Kolmo's kernels (docs/LAYOUT.md): C references in src/algo, dispatch in src/arch, x86-64 versions chosen by CPUID
+    for f in sorted(glob.glob(os.path.join(SRC, "algo", "*.c")) + glob.glob(os.path.join(SRC, "arch", "*.c"))):
+        compile_one(cc, f, fp)
+    if is_x86_64:
+        for f in sorted(glob.glob(os.path.join(SRC, "arch", "x86_64", "*.c")) + glob.glob(os.path.join(SRC, "arch", "x86_64", "*.S"))):
+            compile_one(cc, f, fp)
     for f in cpp_src:
         compile_one(cxx, f, fp + ["-I" + bsc])
 

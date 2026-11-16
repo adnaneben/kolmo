@@ -1230,14 +1230,7 @@ static void kg_img8_fwd(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_
     }
 }
 static void kg_img8_back(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p) {
-    size_t x = 0;
-    for (; x < C && x < m; x++) p[x] = kg_unzz8(r[x]);
-    for (; x < W && x < m; x++) p[x] = (uint8_t)(p[x - C] + kg_unzz8(r[x]));
-    for (size_t y = W; y + W <= m; y += W) {
-        uint8_t *q = p + y; const uint8_t *u = q - W, *o = r + y;
-        for (x = 0; x < C; x++) q[x] = (uint8_t)(u[x] + kg_unzz8(o[x]));
-        for (; x < W; x++) q[x] = (uint8_t)(kg_med(q[x - C], u[x], u[x - C]) + kg_unzz8(o[x]));
-    }
+    KOLMO_K->med8_inv(r, m, W, C, p);     /* reference: kolmo_med8_inv_c (src/algo/predict.c); SIMD in src/arch */
 }
 static int kg_img8_inv(const uint8_t *par, size_t plen, const kbuf *res, const kbuf *rest, size_t maxs, kbuf *out) {
     size_t pi = 0; uint64_t W, h; if (kg_getuv(par, plen, &pi, &W) || pi >= plen) return -1;

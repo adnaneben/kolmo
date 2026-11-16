@@ -35,10 +35,22 @@ else
 ZASM    :=
 DEFS    += -DZSTD_DISABLE_ASM
 endif
+# Kolmo's kernels (docs/LAYOUT.md): C references in src/algo, CPU-specific versions in src/arch/<isa>, chosen at run
+# time by src/arch/cpu.c. NO_ASM=1 builds the C references only (no intrinsics, no assembly).
+KSRC    := $(wildcard src/algo/*.c src/arch/*.c)
+KASM    :=
+ifeq ($(NO_ASM),1)
+DEFS    += -DKOLMO_NO_ASM
+else ifeq ($(UNAME_M),x86_64)
+KSRC    += $(wildcard src/arch/x86_64/*.c)
+KASM    := $(wildcard src/arch/x86_64/*.S)
+endif
+KHDR    := $(wildcard src/algo/*.h src/arch/*.h src/arch/*/*.h)
+KOBJ    := $(patsubst %.c,build/obj/%.o,$(KSRC)) $(patsubst %.S,build/obj/%.o,$(KASM))
 BSC     := vendor/libbsc/libbsc
 BSRC    := $(shell find $(BSC) -name '*.cpp')
 OBJ     := $(patsubst %.c,build/obj/%.o,$(ZSRC) $(BROSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/obj/%.o,$(ZASM)) \
-           $(patsubst %.cpp,build/obj/%.o,$(BSRC))
+           $(patsubst %.cpp,build/obj/%.o,$(BSRC)) $(KOBJ)
 ifeq ($(NO_LZMA),1)
 DEFS    += -DKOLMO_NO_LZMA
 LZMALIB :=
@@ -77,7 +89,10 @@ build/libvendor.a: $(OBJ)
 build/kolmo.o: src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES)
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) -c src/kolmo.c -o $@
-build/libkolmo.a: build/kolmo.o
+$(KOBJ): $(KHDR)
+# the kernels are in both archives: libkolmo.a for programs that link it alone, libvendor.a for the tests that compile
+# kolmo.c themselves
+build/libkolmo.a: build/kolmo.o $(KOBJ)
 	ar rcs $@ $^
 build/kolmo: src/cli.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
@@ -156,7 +171,17 @@ build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
+# Dispatched kernels (src/arch) against their C references (src/algo), at every ISA level of this CPU; also with
+# sanitizers.
+build/test-kernels: tests/test_kernels.c build/libvendor.a
+	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+build/test-kernels-asan: tests/test_kernels.c $(KSRC) $(KASM) $(KHDR)
+	$(CC) $(SANFLAGS) $(DEFS) $(INC) tests/test_kernels.c $(KSRC) $(KASM) -o $@ -lpthread -lm
+check-kernels: build/test-kernels build/test-kernels-asan
+	./build/test-kernels
+	./build/test-kernels-asan
+.PHONY: check-kernels
+check-rc: check-kernels check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
 .PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
@@ -164,7 +189,7 @@ check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 
 # Shared library for language bindings (Python, Rust): everything rebuilt -fPIC into build/pic.
 SOEXT := $(if $(filter Darwin,$(UNAME_S)),dylib,so)
-PICC  := $(patsubst %.c,build/pic/%.o,$(ZSRC) $(BROSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/pic/%.o,$(ZASM))
+PICC  := $(patsubst %.c,build/pic/%.o,$(ZSRC) $(BROSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c $(KSRC)) $(patsubst %.S,build/pic/%.o,$(ZASM) $(KASM))
 PICPP := $(patsubst %.cpp,build/pic/%.o,$(BSRC))
 build/pic/%.o: %.c
 	@mkdir -p $(dir $@)

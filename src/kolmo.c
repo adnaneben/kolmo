@@ -23,6 +23,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include "arch/cpu.h"          /* dispatched kernels (src/arch), C references in src/algo */
+#include "algo/predict.h"
 #if defined(KOLMO_TRACE) || defined(KOLMO_PROF) || defined(KOLMO_TIMING)
 #include <stdio.h>
 #endif
