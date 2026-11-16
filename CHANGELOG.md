@@ -1,6 +1,30 @@
 # Changelog
 
-## Unreleased (branch claude/kfam-fastq-20261116)
+## Unreleased (on 1.2.0-rc2: branches `claude/kfam-fastq-20261116`, `claude/kbin-20261116`, `claude/simd-dispatch-20261116`)
+
+The SIMD and build changes below change no output and no format (measurements in `benchmark/rc2/SIMD-ASM.md`). The
+FASTQ family blocks add container version 10 for `-x` frames of FASTQ input only.
+
+### Changed
+- **x86-64 runtime ISA dispatch.** Release builds and wheels compile for baseline x86-64, which compiled out the AVX2
+  decimal formatter (table decode), the SSE4.2 CRC32C and xxHash's AVX2 kernel. These are now chosen by CPUID at
+  first use: numeric CSV decode (`-m balanced` = zstd 3 + table transform) is 19–23% faster in a generic build.
+  `-DKOLMO_NO_DISPATCH` restores compile-time selection.
+- **Integer inverse for 32-bit arrays** (all modes' integer graph, order 1/2, factor 1): SSE2 (baseline) and AVX2
+  (dispatched) prefix-sum loops. `-m balanced` decode of an int32 array is 18% faster. Same bytes.
+- **No floating-point contraction in any codec.** `-ffp-contract=off` now applies to every C/C++ file, including the
+  vendored codecs and the rc2 research codecs, in the Makefile, the Python build and the Rust build. With `-mfma`,
+  `-march=native` or on arm64, the Brotli encoder (`-m eco` = Brotli 8) no longer uses FMA in its cost model.
+  Generic x86-64 machine code is unchanged.
+- **Rust crate builds for the target's baseline ISA** (was `-march=native`); `KOLMO_NATIVE=1` opts back in.
+  `bindings/*/native/` carry the dispatch code.
+
+### Fixed
+- `kfam` (rc2 research codec): `make kfam-check` failed with LeakSanitizer reports (the command line never freed its
+  buffers). A damaged frame could make the decoder decode zeros from an exhausted stream up to the stream's claimed
+  length. The family decoder (`src/kfam.inc`, also used for codec-16 blocks in `kolmo`) now reports a stream corrupt
+  once it has read 8 bytes past its end; a valid stream never reads past its end. Damaged-frame test added to
+  `kfam-check`.
 
 ### Added
 - **FASTQ family blocks at `-x`** (block codec 16, container version 10): at `ultra` levels 0 and 2, a block that
@@ -13,6 +37,7 @@
 - `build/kfam`: new quality model (fqzcomp-style contexts, two mixers, a second-layer mixer, two APMs), new base
   model (orders 6 and 12 with forward, reverse-complement and local match models), faster-adapting name model,
   chunked jobs; frame `KFM2`. Results in `src/experimental/KFAM.md`.
+- `make check-dispatch` (part of `check-rc`): CRC32C and XXH3 against scalar references.
 
 ## 1.2.0-rc2 (2026-11-15) — release candidate, not tagged, not published
 

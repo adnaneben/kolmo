@@ -87,7 +87,7 @@ static inline int64_t kf_unzz(uint64_t v) { return (int64_t)(v >> 1) ^ -(int64_t
 
 /* ------------------------------------------------------------------ binary arithmetic coder, 16-bit probabilities */
 typedef struct { uint32_t lo, hi; kf_buf out; int err; } kf_aenc;
-typedef struct { uint32_t lo, hi, x; const uint8_t *in; size_t n, pos; } kf_adec;
+typedef struct { uint32_t lo, hi, x; const uint8_t *in; size_t n, pos, over; } kf_adec;   /* over: bytes read past the end */
 typedef struct { kf_aenc *e; kf_adec *d; } kf_coder;      /* one coder object for both directions */
 static inline void kf_ae_bit(kf_aenc *e, int y, uint32_t p) {          /* p = P(y = 1) in [1, 65535] */
     uint32_t mid = e->lo + (uint32_t)(((uint64_t)(e->hi - e->lo) * p) >> 16);
@@ -95,9 +95,9 @@ static inline void kf_ae_bit(kf_aenc *e, int y, uint32_t p) {          /* p = P(
     while ((e->lo ^ e->hi) < (1u << 24)) { if (kf_byte(&e->out, (uint8_t)(e->hi >> 24))) e->err = 1; e->lo <<= 8; e->hi = (e->hi << 8) | 0xffu; }
 }
 static void kf_ae_end(kf_aenc *e) { for (int k = 0; k < 4; k++) { if (kf_byte(&e->out, (uint8_t)(e->lo >> 24))) e->err = 1; e->lo <<= 8; } }
-static inline uint8_t kf_ad_next(kf_adec *d) { return d->pos < d->n ? d->in[d->pos++] : 0; }
+static inline uint8_t kf_ad_next(kf_adec *d) { if (d->pos < d->n) return d->in[d->pos++]; d->over++; return 0; }
 static void kf_ad_init(kf_adec *d, const uint8_t *in, size_t n) {
-    d->lo = 0; d->hi = 0xffffffffu; d->x = 0; d->in = in; d->n = n; d->pos = 0;
+    d->lo = 0; d->hi = 0xffffffffu; d->x = 0; d->in = in; d->n = n; d->pos = 0; d->over = 0;
     for (int k = 0; k < 4; k++) d->x = (d->x << 8) | kf_ad_next(d);
 }
 static inline int kf_ad_bit(kf_adec *d, uint32_t p) {
@@ -493,6 +493,10 @@ typedef struct {
     const kf_qtree *qt; const uint32_t *lens; size_t nreads, read0; const uint64_t *xs; size_t nx, x0; uint64_t site0;
 } kf_job;
 
+/* The decoder renormalises in step with the encoder, which flushes exactly 4 bytes, so a valid stream is never read
+ * past its end. A damaged one (say, a raw length changed in the frame) would otherwise decode zeros up to its claimed
+ * length; it is reported corrupt once it has read more than KF_OVER_MAX bytes past its end. */
+#define KF_OVER_MAX 8
 static void kf_job_qual(kf_job *j, kf_coder *c, int dec) {
     kf_qmodel m; if (kf_qm_new(&m, j->qt, j->n)) { j->err = 1; return; }
     size_t r = j->read0, x = j->x0, left = 0; uint64_t site = j->site0; const kf_qtree *qt = j->qt;
@@ -504,7 +508,7 @@ static void kf_job_qual(kf_job *j, kf_coder *c, int dec) {
         left--;
         while (x < j->nx && j->xs[x] < site) x++;
         int isn = x < j->nx && j->xs[x] == site;
-        if (dec) j->raw[i] = qt->val[kf_qm_code(&m, c, -1, isn)];
+        if (dec) { j->raw[i] = qt->val[kf_qm_code(&m, c, -1, isn)]; if (c->d->over > KF_OVER_MAX) { j->err = 1; break; } }
         else kf_qm_code(&m, c, qt->rank[j->raw[i] & 127], isn);
     }
     kf_qm_free(&m);
@@ -530,13 +534,16 @@ static void *kf_dec_job(void *arg) {
     size_t n = j->n; uint8_t *o = j->raw;
     if (j->kind == KF_DNA) {
         kf_dmodel m; if (kf_dm_new(&m, n)) { j->err = 1; return NULL; }
-        for (size_t i = 0; i < n; i++) o[i] = (uint8_t)kf_dm_code(&m, &c, 0, o, i);
+        for (size_t i = 0; i < n; i++) { o[i] = (uint8_t)kf_dm_code(&m, &c, 0, o, i); if (d.over > KF_OVER_MAX) { j->err = 1; break; } }
         kf_dm_free(&m);
     } else if (j->kind == KF_QUAL) {
         kf_job_qual(j, &c, 1);
     } else {
         kf_bmodel m; if (kf_bm_new(&m, n)) { j->err = 1; return NULL; }
-        for (size_t i = 0; i < n; i++) o[i] = (uint8_t)kf_bm_code(&m, &c, 0, j->ctxfn ? (uint32_t)j->ctxfn(j->ctxarg, i, o) : 0);
+        for (size_t i = 0; i < n; i++) {
+            o[i] = (uint8_t)kf_bm_code(&m, &c, 0, j->ctxfn ? (uint32_t)j->ctxfn(j->ctxarg, i, o) : 0);
+            if (d.over > KF_OVER_MAX) { j->err = 1; break; }
+        }
         kf_bm_free(&m);
     }
     return NULL;

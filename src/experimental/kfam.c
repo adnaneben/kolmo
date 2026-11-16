@@ -276,15 +276,21 @@ int main(int argc, char **argv) {
         printf("\n"); kf_frame_free(&f); free(c);
         return 0;
     }
-    if (dec) { size_t m; uint8_t *o = kfam_decompress(s, n, threads, &m); if (!o) { fprintf(stderr, "kfam: corrupt input\n"); return 1; } return spit(argv[a + 1], o, m) ? 1 : 0; }
+    if (dec) {
+        size_t m; uint8_t *o = kfam_decompress(s, n, threads, &m); free(s);
+        if (!o) { fprintf(stderr, "kfam: corrupt input\n"); return 1; }
+        int r = spit(argv[a + 1], o, m) ? 1 : 0; free(o); return r;
+    }
     size_t z = 0; int ff = 0; uint8_t *c = NULL; double ce = 1e30, de = 1e30, t0 = now(); int k = 0;
     do { free(c); double t = now(); c = kfam_compress(s, n, fam, threads, chunk, &z, &ff); double e = now() - t; if (e < ce) ce = e; k++; }
     while (bench && c && (k < 3 || now() - t0 < 1.0));
-    if (!c) { fprintf(stderr, "kfam: the input does not fit family %s\n", fam >= 0 ? famname[fam] : "auto"); return 1; }
+    if (!c) { fprintf(stderr, "kfam: the input does not fit family %s\n", fam >= 0 ? famname[fam] : "auto"); free(s); return 1; }
     size_t m = 0; uint8_t *back = NULL; t0 = now(); k = 0;
     do { free(back); double t = now(); back = kfam_decompress(c, z, threads, &m); double e = now() - t; if (e < de) de = e; k++; }
     while (bench && back && (k < 3 || now() - t0 < 1.0));
-    if (!back || m != n || memcmp(back, s, n)) { fprintf(stderr, "kfam: round trip failed\n"); return 1; }
+    int same = back && m == n && !memcmp(back, s, n);
+    free(back); free(s);
+    if (!same) { fprintf(stderr, "kfam: round trip failed\n"); free(c); return 1; }
     if (bench) {
         kf_frame f; int ok = !kf_frame_parse(c, z, &f, 16);
         printf("{\"family\": \"%s\", \"threads\": %d, \"chunk\": %zu, \"bchunk\": %zu, \"input\": %zu, \"compressed\": %zu, \"compress_mbs\": %.3f, \"decompress_mbs\": %.3f, \"jobs\": %d, \"stream_sizes\": [",
@@ -294,8 +300,8 @@ int main(int argc, char **argv) {
             printf("%s[%zu, %zu]", sidx ? ", " : "", f.st[sidx].data.n, cz);
         }
         printf("%s]}\n", ok && f.ns > 12 ? ", ..." : "");
-        kf_frame_free(&f);
+        kf_frame_free(&f); free(c);
         return 0;
     }
-    return spit(argv[a + 1], c, z) ? 1 : 0;
+    int r = spit(argv[a + 1], c, z) ? 1 : 0; free(c); return r;
 }

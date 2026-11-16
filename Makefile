@@ -16,6 +16,11 @@ ARCH    ?= -march=native
 CFLAGS  ?= -O3 $(ARCH) -fno-plt
 endif
 FPFLAGS := -ffp-contract=off
+# No floating-point contraction anywhere: Kolmo, the vendored codecs, the tools and the research codecs.
+# Brotli's encoder (-m eco) chooses block splits and clusters with float costs; with -mfma, -march=native or on arm64
+# the compiler would otherwise fuse those into FMA and could pick other splits on different builds. Kolmo's own
+# frames depend on kolmo.c (always built with FPFLAGS) and on these encoders, so both get it, whatever CFLAGS says.
+override CFLAGS += $(FPFLAGS)
 ZSTD    := vendor/zstd
 LZ4     := vendor/lz4
 BRO     := vendor/brotli
@@ -94,6 +99,7 @@ check: all
 	./build/kolmotest
 
 SANFLAGS ?= -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
+override SANFLAGS += $(FPFLAGS)
 build/kolmoparallel-asan: tests/kolmoparallel.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoparallel.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 build/kolmoresource-asan: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
@@ -142,8 +148,16 @@ build/test-fqfam-asan: tests/test_fqfam.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUD
 check-fqfam: build/test-fqfam-asan
 	./build/test-fqfam-asan
 # Component tests of the features merged for the release candidate. `make check` does not run them; CI does.
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam
-.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam
+# Runtime ISA dispatch (x86-64): CRC32C and XXH3 against scalar references, optimised and with sanitizers.
+build/test-dispatch: tests/test_dispatch.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) vendor/xxhash/kolmo_xxh3.c build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c vendor/xxhash/kolmo_xxh3.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-dispatch: build/test-dispatch build/test-dispatch-asan
+	./build/test-dispatch
+	./build/test-dispatch-asan
+check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
+.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan

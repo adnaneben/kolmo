@@ -83,7 +83,8 @@ build/kfam-asan: $(XD)/kfam.c src/kfam.inc
 	@mkdir -p build
 	$(CC) $(SANFLAGS) -ffp-contract=off $(XD)/kfam.c -lpthread -o $@
 
-# kfam round trips (FASTQ, CSV and one-stream families) under ASan and UBSan, on inputs made from the test files
+# kfam round trips (FASTQ, CSV and one-stream families) under ASan and UBSan, on inputs made from the test files, and
+# damaged frames (no hang, no sanitizer report)
 kfam-check: build/kfam-asan
 	printf '@r1 x/1\nACGTNACGTA\n+\nIIIIIHHHGG\n@r2 x/1\nTTGCA\n+\n#####\n@r3 x/1\nACGTACGTAC\n+r3 x/1\nIIIIIIIIII\n' > build/kfam-t.fastq
 	printf 'country,year,co2,share\nA,2000,1.5,\nA,2001,1.75,0.1\nB,2000,,-0.25\nB,2001,12,3\n' > build/kfam-t.csv
@@ -95,6 +96,7 @@ kfam-check: build/kfam-asan
 	    printf "@x%d:%d %d/1\n%s\n+%s\n%s\n", r, r * 3 + 1, o, s, (r % 11 == 0 ? "x" r ":" (r * 3 + 1) " " o "/1" : ""), q } }' > build/kfam-t2.fastq
 	./build/kfam-asan -T 3 -C 997 -B 5000 -b build/kfam-t2.fastq > /dev/null
 	./build/kfam-asan -T 1 -C 0 -B 0 -b build/kfam-t2.fastq > /dev/null
+	python3 -I tests/kfam_damage.py ./build/kfam-asan build 60
 	@echo "KFAM TESTS PASSED"
 .PHONY: kfam-check
 
