@@ -4,7 +4,7 @@
  * description and measurements in src/experimental/KAUD.md). The tool is built with -fopenmp-simd, which lets the
  * encoder's choices depend on the CPU's vector width; the library port is built without it, so its output is the
  * same on every CPU (the decoded bytes never depended on it). Changes for the library: the command line and the self-test are
- * gone, every file-scope name carries the prefix ka_ (the codecs are still included into src/kolmo.c), the
+ * gone, every file-scope name carries the prefix ka_ (src/kolmo.c includes every part into one translation unit), the
  * probability adaptation cap is fixed at 7 (the stream field must say 7), the tables are built once, and the
  * encoder takes the sample layout from the caller instead of parsing a WAV header, so a Kolmo block that starts or
  * ends inside a file's header or trailer codes too (those bytes travel verbatim, as KAU1's head and tail).

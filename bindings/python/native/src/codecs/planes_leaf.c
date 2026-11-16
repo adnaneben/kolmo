@@ -9,7 +9,7 @@
  * Payload: np u8 (2-8) | per plane: codec u8 | coded length uv | coded bytes. The leaf's raw length is a multiple of
  * np; plane b is bytes [b L, (b + 1) L) with L = raw length / np. A plane's codec is any leaf codec except 12
  * (graph), 15 (native plane leaf), 16, 17, 19, 20 and 21 itself.
- * Included by src/kolmo.c until the structure lane gives codecs their own units (src/codecs/codec.h). */
+ * Part of the single translation unit built from src/kolmo.c; its codec table is at the end of the file. */
 
 typedef size_t (*leaf_sel_fn)(codec_ctx *x, const void *ctx, const uint8_t *p, size_t n, uint8_t *out, size_t cap, int *codec);
 

@@ -13,7 +13,7 @@ static double special(void) {
     double d; uint64_t b = bits[rnd() % (sizeof bits / sizeof bits[0])]; memcpy(&d, &b, 8); return d;
 }
 int main(void) {
-    int fails = 0, coded = 0, rejected = 0; codec_ctx cx = {0};
+    int fails = 0, coded = 0, rejected = 0; codec_ctx cx = {0}; cx.allow_f2 = 1;   /* graph payloads decoded directly: format-2 leaves allowed, as in version-11 frames */
     for (int it = 0; it < 400; it++) {
         size_t cols = it % 4 == 0 ? 0 : 1 + rnd() % (it % 9 == 0 ? 300 : 12), tc = cols ? cols : 1 + rnd() % 6;
         size_t rows = 16 + rnd() % (it % 11 == 0 ? 40000 : 3000), h = it % 3 ? rnd() % 200 : 0, tail = rnd() % 23;

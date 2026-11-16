@@ -167,6 +167,15 @@ int main(void) {
     size_t yn = mk_y4m(y, 64, 48, 30);
     for (kolmo_mode m = KOLMO_FAST; m <= KOLMO_MAX; m++) if (frame_case("y4m", y, yn, m, 11, C_VID)) return 1;
     if (file_case("y4m", y, yn, KOLMO_FAST)) return 1;
+    {   /* a video frame whose nested frame is again a video frame is refused (no recursion) */
+        kolmo_params p = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(yn, &p); uint8_t *f = malloc(cap), *g = malloc(cap + 64), *o = malloc(yn);
+        int64_t z = kolmo_compress(y, yn, f, cap, &p);
+        if (z <= 0 || f[HDR + 12] != C_VID) FAIL("y4m: no video frame");
+        size_t gz = HDR + IDX + 4 + (size_t)z; memcpy(g, f, HDR + IDX); put32(g + HDR + 4, (uint32_t)(4 + z)); memset(g + HDR + IDX, 0, 4);
+        memcpy(g + HDR + IDX + 4, f, (size_t)z); uint32_t hc = kolmo_crc32c(0, g, 28); hc = kolmo_crc32c(hc, g + HDR, IDX); put32(g + 28, hc);
+        if (kolmo_decompress(g, gz, o, yn, 1) >= 0) FAIL("nested video frame accepted");
+        free(f); free(g); free(o);
+    }
     { kolmo_params p = {KOLMO_RT, 0, 1, 0, 1}; size_t cap = kolmo_bound(yn, &p); uint8_t *f = malloc(cap);
       int64_t z = kolmo_compress(y, yn, f, cap, &p); if (z <= 0 || f[HDR + 12] == C_VID) FAIL("y4m at rt took the video route"); free(f); }
     y[yn - 1000] = 0; memcpy(y + 50000, "FRAMX", 5);                  /* not whole frames: no video route, still a round trip */

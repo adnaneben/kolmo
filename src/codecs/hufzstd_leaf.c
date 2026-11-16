@@ -5,7 +5,7 @@
  * chunk, repeated code words at the same bit phase); research S1 "H->Z" on PR #7.
  *
  * Payload: Huffman length uv | zstd frame of the Huffman stream (single frame, no dictionary).
- * Included by src/kolmo.c until the structure lane gives codecs their own units (src/codecs/codec.h). */
+ * Part of the single translation unit built from src/kolmo.c; its codec table is at the end of the file. */
 
 /* code an already Huffman-coded stream (huf, hl bytes) with zstd at `level`; returns the payload length or 0 */
 static size_t hz_compress_huf(codec_ctx *x, int level, const uint8_t *huf, size_t hl, uint8_t *out, size_t cap) {

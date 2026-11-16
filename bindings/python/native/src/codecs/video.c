@@ -8,8 +8,8 @@
  *
  * Layout (kv_transform): u32 header length, the header bytes (stream header and every FRAME line), one predictor byte
  * per strip (frame-major), then the residuals plane by plane. The whole file is one block of codec 20 whose payload is
- * a Kolmo frame of the layout (src/kolmo.c: vid_compress_frame, vid_decode_frame; SPEC.md "Codec 20").
- * File-scope names carry the prefix kv_ (the codecs are still included into src/kolmo.c). */
+ * a Kolmo frame of the layout (core/compress.c: vid_compress_frame, core/decode.c: vid_decode_frame; SPEC.md "Video frames").
+ * File-scope names carry the prefix kv_ (src/kolmo.c includes every part into one translation unit). */
 enum { KV_STRIP = 16, KV_MAXP = 3 };
 typedef struct { size_t w[KV_MAXP], h[KV_MAXP]; int np; size_t frame_bytes, frames, hdr_len; } kv_layout_t;
 

@@ -6,7 +6,7 @@
  * Payload: literal count k uv | runs: codec u8 | raw length uv | coded length uv | coded bytes |
  *          literals: codec u8 | coded length uv | coded bytes (raw length k).
  * The sub-codecs are leaf codecs other than 12, 15, 16, 17, 19, 20, 21 and 23.
- * Included by src/kolmo.c until the structure lane gives codecs their own units (src/codecs/codec.h). */
+ * Part of the single translation unit built from src/kolmo.c; its codec table is at the end of the file. */
 #include "../algo/zerorun.c"
 
 static size_t zrun_put_sub(codec_ctx *x, leaf_sel_fn sel, const void *ctx, const uint8_t *p, size_t m, int with_raw, uint8_t *out, size_t cap) {

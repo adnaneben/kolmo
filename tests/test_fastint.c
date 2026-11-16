@@ -129,7 +129,7 @@ int main(void) {
     }
 
     /* 4. integer arrays through the encoder and kg_decode, which calls the fast inverse; some through kolmo_compress */
-    codec_ctx cx = {0};
+    codec_ctx cx = {0}; cx.allow_f2 = 1;   /* graph payloads decoded directly: format-2 leaves allowed, as in version-11 frames */
     for (int it = 0; it < 320; it++) {
         const int kind = it % 8, w = WS[1 + (it / 8) % 3];                               /* 40 arrays of each kind, 13 or 14 of each width */
         size_t cnt = 16 + rnd() % (it % 13 == 12 ? 300000 : 6000), h = it % 5 ? rnd() % 120 : 0, tail = rnd() % (unsigned)w, n = h + cnt * (size_t)w + tail;

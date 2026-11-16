@@ -207,7 +207,7 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
 static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input_fd, uint8_t *dst, int output_fd, int threads,
                                 uint64_t lo, uint64_t hi, int range) {
     const uint8_t *e = P->idx; size_t raw = get32(e), cl = (size_t)(P->poff[1] - P->poff[0]);
-    if (P->ver < 11 || P->psum || e[13] || cl < 4 + HDR || raw != P->orig) return KOLMO_ERR_CORRUPT;
+    if (P->ver < 11 || P->psum || e[13] || cl < 4 + HDR + IDX || raw != P->orig) return KOLMO_ERR_CORRUPT;
     uint8_t *pb = NULL, *t = NULL, *full = NULL; const uint8_t *pay; int64_t ret = KOLMO_ERR_CORRUPT;
     if (input_fd >= 0) {
         pb = malloc(cl); if (!pb) return KOLMO_ERR_ALLOC;
@@ -215,8 +215,11 @@ static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input
         pay = pb;
     } else pay = src + P->poff[0];
     if (pay[0] != T_NONE || pay[1] || pay[2] || pay[3]) goto out;
+    /* the nested frame is never itself a video frame (no recursion); the layout is the input plus 4 bytes and one
+     * byte per strip, at most one per sample */
+    if (get32(pay + 4 + 20) == 1 && pay[4 + HDR + 12] == C_VID) goto out;
     int64_t tn = kolmo_original_size(pay + 4, cl - 4);
-    if (tn <= 0 || (uint64_t)tn > 2 * (uint64_t)raw + 4096) goto out;   /* the layout is the input, 4 bytes and a byte per strip */
+    if (tn <= 0 || (uint64_t)tn > 2 * (uint64_t)raw + 4096) goto out;
     t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
     if (!t || !full) { ret = KOLMO_ERR_ALLOC; goto out; }
     if (run_decode(pay + 4, -1, cl - 4, t, -1, threads, 0, 0, 0, NULL, 0, 0, NULL) != tn) goto out;
