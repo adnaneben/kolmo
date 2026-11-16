@@ -474,7 +474,53 @@ Frames compared by SHA-256, every one also decoded back to the input. Every opti
 from the table at the top. Full inputs for the four main modes and `-m eco`; 4 MB prefixes of each input for
 `-x` (all three levels) and the opt-in leaves:
 
-(frame comparison running; filled in by the next commit)
+| input | option (backend) | frame bytes | SHA-256 (first 12) | builds agreeing |
+|---|---|---:|---|---:|
+| silesia.tar | `-m speed` (LZ4) | 99,918,100 | `88007657ae0a` | 5/5 |
+| silesia.tar | `-m balanced` (zstd 3 + transforms) | 58,245,943 | `43ef81d7fc5d` | 5/5 |
+| silesia.tar | `-m eco` (Brotli 8 + transforms) | 50,606,726 | `4c2a46db91ac` | 5/5 |
+| silesia.tar | `-m hc` (zstd 19/22 + transforms) | 47,624,828 | `2342befaad9e` | 5/5 |
+| silesia.tar | `-m ratio` (LZMA2 / libbsc BWT + transforms) | 40,687,857 | `649ccb3c09a8` | 5/5 |
+| trades.csv | `-m speed` (LZ4) | 36,817,721 | `849c8ec4a184` | 5/5 |
+| trades.csv | `-m balanced` (zstd 3 + transforms) | 12,085,484 | `f4d6fc81bbd9` | 5/5 |
+| trades.csv | `-m eco` (Brotli 8 + transforms) | 12,182,119 | `285e6e711fc0` | 5/5 |
+| trades.csv | `-m hc` (zstd 19/22 + transforms) | 11,782,261 | `7a690f0d706a` | 5/5 |
+| trades.csv | `-m ratio` (LZMA2 / libbsc BWT + transforms) | 11,615,464 | `ec4d6ac51681` | 5/5 |
+| events.ndjson | `-m speed` (LZ4) | 19,727,354 | `59041f724700` | 5/5 |
+| events.ndjson | `-m balanced` (zstd 3 + transforms) | 6,770,194 | `a2eeaf90fe08` | 5/5 |
+| events.ndjson | `-m eco` (Brotli 8 + transforms) | 5,736,445 | `d1e111b84ab6` | 5/5 |
+| events.ndjson | `-m hc` (zstd 19/22 + transforms) | 5,178,170 | `a47ce72a4fb6` | 5/5 |
+| events.ndjson | `-m ratio` (LZMA2 / libbsc BWT + transforms) | 4,252,578 | `d9a0b7c3b127` | 5/5 |
+| walk_i32.npy | `-m speed` (LZ4) | 67,107,281 | `dc0bd9071ff4` | 5/5 |
+| walk_i32.npy | `-m balanced` (zstd 3 + transforms) | 26,541,943 | `2bcea0bf2142` | 5/5 |
+| walk_i32.npy | `-m eco` (Brotli 8 + transforms) | 26,377,575 | `ab8c1ca0bea8` | 5/5 |
+| walk_i32.npy | `-m hc` (zstd 19/22 + transforms) | 26,541,311 | `8601ab034763` | 5/5 |
+| walk_i32.npy | `-m ratio` (LZMA2 / libbsc BWT + transforms) | 26,377,410 | `5645d7d50063` | 5/5 |
+| first 4 MB of silesia.tar | `-x` (Kolmo CM, best of CM/LZMA2/BWT) | 840,078 | `9131d7c602ae` | 5/5 |
+| first 4 MB of silesia.tar | `-x -l 1` (CM model 1 only) | 853,724 | `87a3f0d7bed8` | 5/5 |
+| first 4 MB of silesia.tar | `-x -l 2` (CM, graph leaves may use CM) | 840,078 | `9131d7c602ae` | 5/5 |
+| first 4 MB of silesia.tar | `--native-leaf` (balanced; plane-context leaves) | 1,457,805 | `048ed8e9e594` | 5/5 |
+| first 4 MB of silesia.tar | `--typed-huf -m fast -T1` (per-plane Huffman for NPY/WAV) | 1,457,805 | `048ed8e9e594` | 5/5 |
+| first 4 MB of trades.csv | `-x` (Kolmo CM, best of CM/LZMA2/BWT) | 856,760 | `73710a090926` | 5/5 |
+| first 4 MB of trades.csv | `-x -l 1` (CM model 1 only) | 859,570 | `1af6f325dae6` | 5/5 |
+| first 4 MB of trades.csv | `-x -l 2` (CM, graph leaves may use CM) | 856,760 | `73710a090926` | 5/5 |
+| first 4 MB of trades.csv | `--native-leaf` (balanced; plane-context leaves) | 924,331 | `bd6d8f503fa6` | 5/5 |
+| first 4 MB of trades.csv | `--typed-huf -m fast -T1` (per-plane Huffman for NPY/WAV) | 924,331 | `bd6d8f503fa6` | 5/5 |
+| first 4 MB of events.ndjson | `-x` (Kolmo CM, best of CM/LZMA2/BWT) | 218,513 | `9960479a5272` | 5/5 |
+| first 4 MB of events.ndjson | `-x -l 1` (CM model 1 only) | 223,205 | `b10bca73fb24` | 5/5 |
+| first 4 MB of events.ndjson | `-x -l 2` (CM, graph leaves may use CM) | 218,513 | `9960479a5272` | 5/5 |
+| first 4 MB of events.ndjson | `--native-leaf` (balanced; plane-context leaves) | 369,739 | `40390b2b6498` | 5/5 |
+| first 4 MB of events.ndjson | `--typed-huf -m fast -T1` (per-plane Huffman for NPY/WAV) | 369,739 | `40390b2b6498` | 5/5 |
+| first 4 MB of walk_i32.npy | `-x` (Kolmo CM, best of CM/LZMA2/BWT) | 1,590,844 | `96441d04813b` | 5/5 |
+| first 4 MB of walk_i32.npy | `-x -l 1` (CM model 1 only) | 1,590,844 | `96441d04813b` | 5/5 |
+| first 4 MB of walk_i32.npy | `-x -l 2` (CM, graph leaves may use CM) | 1,574,315 | `40d2ff0ccd7a` | 5/5 |
+| first 4 MB of walk_i32.npy | `--native-leaf` (balanced; plane-context leaves) | 1,571,446 | `0c16d5397eea` | 5/5 |
+| first 4 MB of walk_i32.npy | `--typed-huf -m fast -T1` (per-plane Huffman for NPY/WAV) | 1,594,094 | `135c813f2e03` | 5/5 |
+| w3m.npy (749,968 int32) | `--typed-huf -m fast -T1` (per-plane Huffman for NPY/WAV) | 1,186,675 | `1ce51b9c9cfd` | 5/5 |
+
+41 cases × 5 builds: every frame identical, every frame decodes back to its input. On the silesia, CSV and JSON
+prefixes `--native-leaf` and `--typed-huf` write the same frame (there is no integer array for them to code); the
+last row is a valid 749,968-value int32 NPY, so `--typed-huf` takes its typed route there.
 
 **Tests on the fixed tree:** `make ARCH= check`, `check-sanitizers` and `check-rc` (with `check-dispatch`);
 `experimental-check` and `kfam-check` (the rc2 research codecs, now built with the flag); `cargo test --release` in
