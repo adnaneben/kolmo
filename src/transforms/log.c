@@ -548,7 +548,11 @@ static int log_decode(const uint8_t *in, size_t tn, uint8_t *out, size_t n) {
                           if (j == C->g) break;
                           uint64_t v = (uint64_t)C->v[(size_t)j * C->m + i]; int pad = C->pad[j];   /* 0 <= v < 10^18, v < 10^pad */
                           if (pad && pad <= 8) { st8(o, swar8(v) >> (8 * (8 - pad))); o += pad; }  /* fixed width, leading zeros */
-                          else if (pad) { st8(o, swar8(v / 100000000) >> (8 * (16 - pad))); st8(o + pad - 8, swar8(v % 100000000)); o += pad; }
+                          else if (pad && pad <= 16) { st8(o, swar8(v / 100000000) >> (8 * (16 - pad))); st8(o + pad - 8, swar8(v % 100000000)); o += pad; }
+                          else if (pad) {                                   /* 17-18 digits: the head is 1-2 digits, then 8 + 8 */
+                              st8(o, swar8(v / 10000000000000000ull) >> (8 * (24 - pad))); o += pad - 16;
+                              st8(o, swar8(v / 100000000 % 100000000)); st8(o + 8, swar8(v % 100000000)); o += 16;
+                          }
                           else if (v < 100000000) { int D = ndigits(v); st8(o, swar8(v) >> (8 * (8 - D))); o += D; }
                           else o = fmt_dec_swar(o, (int64_t)v, 0);
                       }

@@ -236,6 +236,20 @@ int main(void) {
             free(d); }
         free(js);
     }
+    /* JSON lines and logs with fixed-width digit runs of 9 to 19 digits (17 and 18 took a wrong fast path in the decoder) */
+    for (int w = 9; w <= 19; w++) {
+        size_t N = 20000 * 120, q = 0; uint8_t *js = malloc(N + 256); uint64_t x = 0x9E3779B97F4A7C15ull ^ (uint64_t)w;
+        for (int i = 0; i < 20000; i++) {
+            x ^= x << 13; x ^= x >> 7; x ^= x << 17; uint64_t v = x % 1000000000000000000ull;
+            char id[24]; int k = snprintf(id, sizeof id, "%019llu", (unsigned long long)v);
+            q += (size_t)sprintf((char *)js + q, "{\"id\":\"%s\",\"n\":%d,\"msg\":\"event %d\"}\n", id + (k - w), i, i % 37);
+        }
+        for (int m = 1; m < 5; m++) check("json-fixed-width", js, q, (kolmo_mode)m, 1 << 20, 2);
+        uint8_t *t = malloc(q + 65536), *o = malloc(q + 64);
+        int64_t tn = log_encode_json_pub(js, q, t, q + 65536);
+        if (tn > 0 && (log_decode_pub(t, tn, o, q) || memcmp(o, js, q))) { printf("FAIL json codec fixed width %d\n", w); fails++; }
+        free(t); free(o); free(js);
+    }
     /* wide delimited table (300 columns): kolmo graph blocks; odd values, irregular lines, CRLF, no final newline */
     {
         size_t N = 3u << 20, q = 0; uint8_t *w = malloc(N + 65536);

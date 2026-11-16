@@ -20,6 +20,10 @@ FASTQ family blocks add container version 10 for `-x` frames of FASTQ input only
   `bindings/*/native/` carry the dispatch code.
 
 ### Fixed
+- **JSON lines and logs with fixed-width 17- or 18-digit numbers did not decode** (`balanced`, `eco`, `hc`, `ratio`; since
+  after 1.0.1, in rc2). The decoder's fast path wrote the high part of such a run with an 8-digit formatter; the block
+  checksum rejected the result (no silent corruption). Decoder-only fix; output of the encoder is unchanged, so files
+  written by rc2 decode correctly now. Regression test for widths 9 to 19 in `tests/kolmotest.c`.
 - **Tables of short numbers keep the table transform (container version 11).** Two faults turned it off on long-form
   tables such as daily counts per country (`Date,Country,Confirmed,Recovered,Deaths`, 5.5 MB). (1) The transformed
   table is a few percent larger than the CSV before coding, and a transform output above block + 16 KiB was refused, so
