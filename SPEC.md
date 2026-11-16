@@ -210,11 +210,13 @@ The byte layouts of the table, log, record, image and word transforms live with 
 not frozen here:
 
 ```
-src/tbl2.inc   table v2: typed columns, predictors, formula discovery
-src/log.inc    log templates and skeleton columns
-src/sci.inc    fixed records and 16-bit images
-src/word.inc   word dictionary
-src/kolmo.c      container, typed transpose, byte-plane shuffle, x86 filter, coders
+src/transforms/table.c       table v2: typed columns, predictors, formula discovery
+src/transforms/log.c         log templates and skeleton columns
+src/transforms/sci.c         fixed records and 16-bit images
+src/transforms/word.c        word dictionary
+src/transforms/table_v03.c   table v1 (tflag 3); transpose.c, shuffle.c, x86.c: typed transpose, byte-plane shuffle,
+                             x86 filter
+src/core/                    container (container.h, compress.c, decode.c); src/codecs/: the block coders
 ```
 
 ## Kolmo graph blocks (version 7)
@@ -366,7 +368,7 @@ the nested frame, inverts the layout and checks the block checksum; a range read
 
 ## FASTQ family blocks (codec 16, version 10)
 
-A block with codec 16 is FASTQ text coded by stream family (`src/kfam.inc`; the standalone research tool
+A block with codec 16 is FASTQ text coded by stream family (`src/codecs/fastq.c`; the standalone research tool
 `src/experimental/kfam.c` writes the same frame). Its plan prefix is `0, 0, 0, 0` and its tflag 0; a decoder rejects
 anything else, and rejects codec 16 in a file below version 10 or as a graph leaf. The block checksum covers the
 decoded block as usual. `ultra` writes it, at levels 0 and 2 (not at level 1, which is context mixing only), for a
@@ -397,7 +399,7 @@ model with one context byte from the family), 1 bases (2-bit symbols), 2 qualiti
 
 Names and qualities are cut into jobs at record boundaries every 4 Mi symbols, bases every 64 Mi bases; the cut
 points are written in the job table, so a decoder needs no rule for them. The models (their contexts are listed in
-`src/kfam.inc`) are part of the format: bases use orders 6 and 12 and three match models; qualities use the
+`src/codecs/fastq.c`) are part of the format: bases use orders 6 and 12 and three match models; qualities use the
 previous three qualities, the position, a running sum of quality changes, the mean so far and whether the base is
 an exception, six context tables, two mixers, a final mixer and two adaptive probability maps. Like `CM`, the coder
 is integer-only except for its logistic tables, built from IEEE `+ * /` only, so its output is bit-exact across
