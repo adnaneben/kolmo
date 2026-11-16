@@ -370,6 +370,9 @@ static int fi_inverse(const uint8_t *par, size_t plen, const kbuf *res, const kb
         for (int b = 0; b < w; b++) *wp++ = (uint8_t)(v >> (8 * b));
         v2 = v1; v1 = v;
     }
+#if KOLMO_NEON
+    if (w == 4 && !kolmo_force_c && kolmo_int_inv4_neon(res->p, m, ow, ord, g, bias, v1, v2, wp)) {} else
+#endif
 #if defined(FI_VEC4)
     if (w == 4 && g == 1 && ord >= 1 && (ow == 1 || ow == 2)) fi_vec4(res->p, m, ow, ord, v1, v2, wp); else
 #endif

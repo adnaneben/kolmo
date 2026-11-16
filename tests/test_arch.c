@@ -180,8 +180,29 @@ static void test_img16(void) {
     }
 }
 
+/* ---------------------------------------------------------------- integer graph inverse, 32-bit elements */
+static void test_intinv(void) {
+#if KOLMO_NEON
+    for (int it = 0; it < 3000; it++) {
+        static const int OW[4] = {1, 2, 4, 8};
+        int ow = OW[rnd() % 4], ord = (int)(rnd() % 3), sg = (int)(rnd() & 1);
+        size_t m = it < 100 ? (size_t)it : rnd() % (it % 10 ? 500 : 100000);
+        uint64_t g = rnd() % 3 ? 1 : (rnd() % 4 ? 1 + rnd() % 1000 : rnd64()), bias = rnd64(), v1 = rnd64(), v2 = rnd64();
+        uint8_t *r = malloc(m * ow + 16), *a = malloc(4 * m + 64), *b = malloc(4 * m + 64);
+        int kind = (int)(rnd() % 3);
+        for (size_t i = 0; i < m * ow; i++) r[i] = kind == 0 ? (uint8_t)rnd() : kind == 1 ? (uint8_t)(i < m ? rnd() % 8 : 0) : (uint8_t)(rnd() & 1 ? 0xFF : 0);
+        memset(a, 0x33, 4 * m + 64); memset(b, 0x33, 4 * m + 64);
+        fi_pick(4, ow, sg)(r, m, ord, g, bias, v1, v2, a);
+        int ok = kolmo_int_inv4_neon(r, m, ow, ord, g, bias, v1, v2, b);
+        CHECK(ok && !memcmp(a, b, 4 * m + 64), "int inverse ow=%d ord=%d g=%llu m=%zu", ow, ord, (unsigned long long)g, m);
+        free(r); free(a); free(b);
+    }
+#endif
+}
+
 int main(void) {
     printf("kernels: %s\n", KOLMO_NEON ? "NEON" : "none (C references only)");
+    test_intinv();
     test_img8();
     test_img16();
     test_shuffle();

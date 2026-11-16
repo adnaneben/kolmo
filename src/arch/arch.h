@@ -35,6 +35,9 @@ int kolmo_img8_back_neon(const uint8_t *r, size_t m, size_t W, unsigned C, uint8
 int kolmo_img8_fwd_neon(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r);
 int64_t kolmo_img16_fwd_neon(const uint16_t *a, int64_t i, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi);
 uint64_t kolmo_sad_u16_neon(const uint16_t *x, const uint16_t *y, int64_t n, int step);
+/* integer graph inverse for 32-bit elements (fi_inverse in src/kgraph.inc, planar residuals of 1/2/4/8 bytes, any
+ * order and factor); returns 0 for other shapes */
+int kolmo_int_inv4_neon(const uint8_t *r, size_t m, int ow, int ord, uint64_t g, uint64_t bias, uint64_t v1, uint64_t v2, uint8_t *o);
 #endif
 
 #endif
