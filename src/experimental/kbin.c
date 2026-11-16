@@ -101,12 +101,6 @@ static void put_var(Buf *b, u64 v) {
     }
     b->p[b->n++] = (u8)v;
 }
-static int var_len(u64 v) {
-    int n = 1;
-    while (v >= 0x80) v >>= 7, n++;
-    return n;
-}
-
 typedef struct {
     const u8 *p, *end;
     int err;
@@ -162,14 +156,6 @@ static inline u64 to_ord(u64 bits, int t) {
     if (t_float(t)) return (bits & sign) ? (~bits & m) : (bits | sign);
     if (t_signed(t)) return bits ^ sign;
     return bits;
-}
-static inline u64 from_ord(u64 o, int t) {
-    int W = 8 * twidth[t];
-    u64 sign = 1ull << (W - 1), m = mask_bits(W);
-    o &= m;
-    if (t_float(t)) return (o & sign) ? (o ^ sign) : (~o & m);
-    if (t_signed(t)) return o ^ sign;
-    return o;
 }
 static inline double bits_to_double(u64 b, int t) {
     if (t == T_F64) {
@@ -246,6 +232,7 @@ typedef struct {
     int floatdiv; /* allow the float divisor mode */
     int intmult;  /* allow the integer multiplier mode */
     int lookback; /* allow the lookback delta */
+    int ctx;      /* context extension: bin index tables chosen by the previous bin */
     int threads;
     int chunk_log;
 } Opt;
@@ -440,7 +427,117 @@ static void quantize_weights(Bin *b, int nb, size_t n, int S) {
 
 /* ---------------------------------------------------------------- residual stream: bins + rANS + offsets */
 
-static void code_residuals(Buf *o, const u64 *res, size_t n, int level, Scr *sc) {
+/* quantise counts to weights summing to 2^S; zero counts get weight zero */
+static void quantize_counts(const u32 *cnt, int nb, int S, u32 *w) {
+    u32 M = 1u << S;
+    u64 N = 0;
+    for (int i = 0; i < nb; i++) N += cnt[i];
+    if (N == 0) {
+        memset(w, 0, nb * sizeof *w);
+        w[0] = M;
+        return;
+    }
+    Bin tmp[256];
+    Bin *b = nb <= 256 ? tmp : malloc((size_t)nb * sizeof(Bin));
+    if (!b) die("out of memory");
+    int k = 0, map[256];
+    int *mp = nb <= 256 ? map : malloc((size_t)nb * sizeof(int));
+    if (!mp) die("out of memory");
+    for (int i = 0; i < nb; i++)
+        if (cnt[i]) b[k].count = cnt[i], mp[k++] = i;
+    quantize_weights(b, k, (size_t)N, S);
+    memset(w, 0, nb * sizeof *w);
+    for (int i = 0; i < k; i++) w[mp[i]] = b[i].weight;
+    if (b != tmp) free(b);
+    if (mp != map) free(mp);
+}
+
+static double row_cost(const u32 *r, int nb) {
+    double tot = 0, h = 0;
+    for (int b = 0; b < nb; b++) tot += r[b];
+    if (tot == 0) return 0;
+    double lt = log2(tot);
+    for (int b = 0; b < nb; b++)
+        if (r[b]) h += r[b] * (lt - log2((double)r[b]));
+    return h;
+}
+
+/* Context extension (not in the paper): code each bin index with one of up to 8 static tables, picked
+ * by the bin of the previous value. Previous bins are clustered greedily; returns the number of
+ * contexts (1 = plain order 0) and fills cmap. */
+#define CTX_MAX_BINS 64
+#define CTX_MAX 8
+static int choose_contexts(const u16 *idx, size_t n, int nb, u8 *cmap) {
+    if (nb > CTX_MAX_BINS || n < 2048) return 1;
+    static __thread u32 K[CTX_MAX_BINS][CTX_MAX_BINS];
+    static __thread double D[CTX_MAX_BINS][CTX_MAX_BINS];
+    memset(K, 0, sizeof K);
+    for (size_t i = 1; i < n; i++) K[idx[i - 1]][idx[i]]++;
+    int alive[CTX_MAX_BINS], na = 0, owner[CTX_MAX_BINS];
+    double cst[CTX_MAX_BINS];
+    u32 all[CTX_MAX_BINS] = {0};
+    for (int a = 0; a < nb; a++) {
+        owner[a] = a;
+        for (int b = 0; b < nb; b++) all[b] += K[a][b];
+        u64 rs = 0;
+        for (int b = 0; b < nb; b++) rs += K[a][b];
+        if (rs) alive[na++] = a;
+        cst[a] = row_cost(K[a], nb);
+    }
+    double base = row_cost(all, nb);
+    const double HDR = 8.0 * nb; /* bits for one more weight table */
+    u32 tmp[CTX_MAX_BINS];
+    for (int i = 0; i < na; i++)
+        for (int j = i + 1; j < na; j++) {
+            int a = alive[i], b = alive[j];
+            for (int k = 0; k < nb; k++) tmp[k] = K[a][k] + K[b][k];
+            D[a][b] = row_cost(tmp, nb) - cst[a] - cst[b];
+        }
+    while (na > 1) {
+        int bi = -1, bj = -1;
+        double bd = 1e300;
+        for (int i = 0; i < na; i++)
+            for (int j = i + 1; j < na; j++) {
+                int a = alive[i], b = alive[j];
+                double dd = a < b ? D[a][b] : D[b][a];
+                if (dd < bd) bd = dd, bi = i, bj = j;
+            }
+        if (na <= CTX_MAX && bd > HDR) break;
+        int a = alive[bi], b = alive[bj];
+        if (a > b) {
+            int t = a;
+            a = b;
+            b = t;
+        }
+        for (int k = 0; k < nb; k++) K[a][k] += K[b][k];
+        cst[a] = row_cost(K[a], nb);
+        for (int x = 0; x < nb; x++)
+            if (owner[x] == b) owner[x] = a;
+        alive[bj] = alive[--na];
+        for (int i = 0; i < na; i++) {
+            int c = alive[i];
+            if (c == a) continue;
+            for (int k = 0; k < nb; k++) tmp[k] = K[a][k] + K[c][k];
+            double dd = row_cost(tmp, nb) - cst[a] - cst[c];
+            if (a < c) D[a][c] = dd;
+            else D[c][a] = dd;
+        }
+    }
+    double tot = 0;
+    for (int i = 0; i < na; i++) tot += cst[alive[i]];
+    if (na <= 1 || base - tot < HDR * (na - 1) + 8.0 * nb + 64) return 1;
+    /* number the clusters; bins never seen as a previous value join cluster 0 */
+    int id[CTX_MAX_BINS];
+    for (int a = 0; a < nb; a++) id[a] = -1;
+    for (int i = 0; i < na; i++) id[alive[i]] = i;
+    for (int a = 0; a < nb; a++) {
+        int r = owner[a];
+        cmap[a] = (u8)(id[r] >= 0 ? id[r] : 0);
+    }
+    return na;
+}
+
+static void code_residuals(Buf *o, const u64 *res, size_t n, int level, int ctx, Scr *sc) {
     if (n == 0) {
         put_var(o, 0);
         return;
@@ -468,12 +565,6 @@ static void code_residuals(Buf *o, const u64 *res, size_t n, int level, Scr *sc)
     u16 *idx = sc->idx;
     if (nb > 1) {
         int S = choose_ans_log(nb, n);
-        quantize_weights(bins, nb, n, S);
-        put_u8(o, (u8)S);
-        for (int i = 0; i < nb; i++) put_var(o, bins[i].weight - 1);
-        u32 cum[MAX_BINS];
-        u32 c = 0;
-        for (int i = 0; i < nb; i++) cum[i] = c, c += bins[i].weight;
         tb_ = g_debug ? now_s() : 0;
         {
             /* bucket table over the value range, then a short forward scan */
@@ -497,21 +588,49 @@ static void code_residuals(Buf *o, const u64 *res, size_t n, int level, Scr *sc)
             free(tab);
         }
         if (g_debug) g_tm[3] += now_s() - tb_, tb_ = now_s();
+        u8 *cmap = calloc((size_t)nb, 1);
+        if (!cmap) die("out of memory");
+        int C = ctx ? choose_contexts(idx, n, nb, cmap) : 1;
+        u32 *wt = calloc((size_t)C * nb, sizeof(u32)), *cumt = calloc((size_t)C * nb, sizeof(u32));
+        u32 *cnt = calloc((size_t)C * nb, sizeof(u32));
+        if (!wt || !cumt || !cnt) die("out of memory");
+        for (size_t i = 0; i < n; i++) cnt[(size_t)(i ? cmap[idx[i - 1]] : 0) * nb + idx[i]]++;
+        put_u8(o, (u8)S);
+        put_u8(o, (u8)C);
+        if (C > 1)
+            for (int i = 0; i < nb; i++) put_u8(o, cmap[i]);
+        for (int c = 0; c < C; c++) {
+            u32 *w = wt + (size_t)c * nb, acc = 0;
+            if (C == 1) {
+                quantize_weights(bins, nb, n, S);
+                for (int i = 0; i < nb; i++) w[i] = bins[i].weight, put_var(o, w[i] - 1);
+            } else {
+                quantize_counts(cnt + (size_t)c * nb, nb, S, w);
+                for (int i = 0; i < nb; i++) put_var(o, w[i]);
+            }
+            for (int i = 0; i < nb; i++) cumt[(size_t)c * nb + i] = acc, acc += w[i];
+        }
+        if (g_debug && C > 1) fprintf(stderr, "    contexts=%d\n", C);
         /* rANS, four interleaved states, encoded backwards so the decoder reads forwards */
         u32 st[4] = {ANS_L, ANS_L, ANS_L, ANS_L};
         u16 *w = sc->words;
         size_t wp = n;
         for (size_t i = n; i-- > 0;) {
             int b = idx[i];
-            u32 f = bins[b].weight;
+            size_t tix = (size_t)(i ? cmap[idx[i - 1]] : 0) * nb + b;
+            u32 f = wt[tix];
             u32 x = st[i & 3];
             if ((u64)x >= ((u64)f << (32 - S))) {
                 w[--wp] = (u16)x;
                 x >>= 16;
             }
-            x = ((x / f) << S) + (x % f) + cum[b];
+            x = ((x / f) << S) + (x % f) + cumt[tix];
             st[i & 3] = x;
         }
+        free(cmap);
+        free(wt);
+        free(cumt);
+        free(cnt);
         if (g_debug) g_tm[4] += now_s() - tb_;
         size_t nwords = n - wp;
         put_var(o, (u64)nwords);
@@ -604,40 +723,68 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
         if (obs[i] > 64) return -1;
     }
     if (r->err) return -1;
-    int S = 0;
+    int S = 0, nctx = 1;
     DecEnt *tbl = NULL;
     const u8 *words = NULL;
     u64 nwords = 0;
     u32 st[4] = {0};
     if (nb > 1) {
         S = get_u8(r);
-        if (S < 1 || S > ANS_MAX_LOG) return -1;
-        u32 M = 1u << S, sum = 0;
-        u32 wts[MAX_BINS];
-        for (int i = 0; i < nb; i++) {
-            u64 w = get_var(r) + 1;
-            if (r->err || w > M || sum + w > M) return -1;
-            wts[i] = (u32)w;
-            sum += (u32)w;
+        int C = get_u8(r);
+        nctx = C;
+        if (S < 1 || S > ANS_MAX_LOG || C < 1 || C > CTX_MAX || (C > 1 && nb > CTX_MAX_BINS)) return -1;
+        u8 cmap[MAX_BINS] = {0};
+        if (C > 1)
+            for (int i = 0; i < nb; i++) {
+                cmap[i] = get_u8(r);
+                if (cmap[i] >= C) return -1;
+            }
+        u32 M = 1u << S;
+        u32 *wts = malloc((size_t)nb * sizeof(u32));
+        tbl = malloc(sizeof(DecEnt) * M * (size_t)C);
+        if (!wts || !tbl) die("out of memory");
+        for (int c = 0; c < C; c++) {
+            u32 sum = 0;
+            for (int i = 0; i < nb; i++) {
+                u64 w = get_var(r) + (C == 1);
+                if (r->err || w > M || sum + w > M) {
+                    free(wts);
+                    free(tbl);
+                    return -1;
+                }
+                wts[i] = (u32)w;
+                sum += (u32)w;
+            }
+            if (sum != M) {
+                free(wts);
+                free(tbl);
+                return -1;
+            }
+            DecEnt *t = tbl + (size_t)c * M;
+            u32 cc = 0;
+            for (int i = 0; i < nb; i++) {
+                for (u32 j = 0; j < wts[i]; j++) {
+                    t[cc + j].f = (u16)wts[i];
+                    t[cc + j].s = (u16)j;
+                    t[cc + j].b = (u16)i;
+                    t[cc + j].pad = cmap[i];
+                }
+                cc += wts[i];
+            }
         }
-        if (sum != M) return -1;
+        free(wts);
         nwords = get_var(r);
-        if (r->err || nwords > n) return -1;
+        if (r->err || nwords > n) {
+            free(tbl);
+            return -1;
+        }
         const u8 *sp = get_bytes(r, 16 + nwords * 2);
-        if (!sp) return -1;
+        if (!sp) {
+            free(tbl);
+            return -1;
+        }
         for (int k = 0; k < 4; k++) memcpy(&st[k], sp + 4 * k, 4);
         words = sp + 16;
-        tbl = malloc(sizeof(DecEnt) * M);
-        if (!tbl) die("out of memory");
-        u32 c = 0;
-        for (int i = 0; i < nb; i++) {
-            for (u32 j = 0; j < wts[i]; j++) {
-                tbl[c + j].f = (u16)(wts[i] == 65536 ? 0 : wts[i]);
-                tbl[c + j].s = (u16)j;
-                tbl[c + j].b = (u16)i;
-            }
-            c += wts[i];
-        }
     }
     u64 off_len = get_var(r);
     const u8 *bits = get_bytes(r, off_len);
@@ -647,8 +794,22 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
     }
     u64 total_bits = off_len * 8, pos = 0;
     size_t wi = 0;
+    typedef struct {
+        u64 lower, mask;
+        u64 ob;
+    } BinD;
+    BinD *bdt = malloc((size_t)nb * sizeof(BinD));
+    if (!bdt) die("out of memory");
+    int maxob = 0;
+    for (int i = 0; i < nb; i++) {
+        bdt[i].lower = lower[i];
+        bdt[i].mask = mask_bits(obs[i]);
+        bdt[i].ob = obs[i];
+        if (obs[i] > maxob) maxob = obs[i];
+    }
     u16 *idx = sc->idx;
     u32 mask = (1u << S) - 1;
+    const DecEnt *cur = tbl;
     for (size_t base = 0; base < n; base += BATCH) {
         size_t len = n - base < BATCH ? n - base : BATCH;
         if (nb == 1) {
@@ -661,10 +822,61 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
                 for (size_t k = 0; k < len; k++, pos += (u64)ob) res[base + k] = lw + read_bits_any(bits, off_len, pos, ob);
             continue;
         }
+        if (nwords - wi >= len && maxob <= 56 && pos + (u64)maxob * len + 64 <= total_bits) {
+            /* fused fast path: every word and every 8-byte offset load of this batch is in bounds */
+#define DECF(X, K)                                                                                     \
+    do {                                                                                               \
+        const DecEnt e = cur[(X) & mask];                                                              \
+        if (CTXON) cur = tbl + ((size_t)e.pad << S);                                                   \
+        (X) = (u32)e.f * ((X) >> S) + e.s;                                                             \
+        u16 wv;                                                                                        \
+        memcpy(&wv, words + 2 * wi, 2);                                                                \
+        int need = (X) < ANS_L;                                                                        \
+        (X) = need ? ((X) << 16) | wv : (X);                                                           \
+        wi += (size_t)need;                                                                            \
+        const BinD *bd = &bdt[e.b];                                                                    \
+        out[K] = bd->lower + ((load64(bits + (pos >> 3)) >> (pos & 7)) & bd->mask);                   \
+        pos += bd->ob;                                                                                 \
+    } while (0)
+            u32 x0 = st[0], x1 = st[1], x2 = st[2], x3 = st[3];
+            u64 *out = res + base;
+            size_t k = 0;
+#define DECF_BATCH                                                                                     \
+    for (; k + 4 <= len; k += 4) {                                                                     \
+        DECF(x0, k);                                                                                   \
+        DECF(x1, k + 1);                                                                               \
+        DECF(x2, k + 2);                                                                               \
+        DECF(x3, k + 3);                                                                               \
+    }                                                                                                  \
+    if (k < len) {                                                                                     \
+        DECF(x0, k);                                                                                   \
+        k++;                                                                                           \
+    }                                                                                                  \
+    if (k < len) {                                                                                     \
+        DECF(x1, k);                                                                                   \
+        k++;                                                                                           \
+    }                                                                                                  \
+    if (k < len) {                                                                                     \
+        DECF(x2, k);                                                                                   \
+        k++;                                                                                           \
+    }
+            if (nctx > 1) {
+#define CTXON 1
+                DECF_BATCH
+#undef CTXON
+            } else {
+#define CTXON 0
+                DECF_BATCH
+#undef CTXON
+            }
+            st[0] = x0, st[1] = x1, st[2] = x2, st[3] = x3;
+            continue;
+        }
         if (nwords - wi >= len) {
 #define DEC1(X, K)                                                                                     \
     do {                                                                                               \
-        const DecEnt e = tbl[(X) & mask];                                                              \
+        const DecEnt e = cur[(X) & mask];                                                              \
+        cur = tbl + ((size_t)e.pad << S);                                                              \
         idx[K] = e.b;                                                                                  \
         (X) = (u32)e.f * ((X) >> S) + e.s;                                                             \
         u16 wv;                                                                                        \
@@ -697,7 +909,8 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
         } else {
             for (size_t k = 0; k < len; k++) {
                 u32 *x = &st[k & 3];
-                const DecEnt e = tbl[*x & mask];
+                const DecEnt e = cur[*x & mask];
+                cur = tbl + ((size_t)e.pad << S);
                 idx[k] = e.b;
                 *x = (u32)e.f * (*x >> S) + e.s;
                 if (*x < ANS_L) {
@@ -729,9 +942,11 @@ static int decode_residuals(Rd *r, u64 *res, size_t n, Scr *sc) {
     }
     if ((pos + 7) / 8 != off_len) goto bad;
     free(tbl);
+    free(bdt);
     return 0;
 bad:
     free(tbl);
+    free(bdt);
     return -1;
 }
 
@@ -890,18 +1105,17 @@ static double lag_entropy(const u32 *lags, size_t n, int wlog) {
     return bits + 24.0 * (double)used;
 }
 
-/* a sample of up to 8 slices of 4096 contiguous values (all of v when short); returns its length */
-#define SLICE 4096
-static size_t take_sample(const u64 *v, size_t n, u64 *out) {
-    if (n <= 8 * SLICE) {
+/* a sample of up to 8 slices of `slice` contiguous values (all of v when short); returns its length */
+static size_t take_sample(const u64 *v, size_t n, u64 *out, size_t slice) {
+    if (n <= 8 * slice) {
         memcpy(out, v, n * 8);
         return n;
     }
     size_t m = 0;
     for (int k = 0; k < 8; k++) {
-        size_t st = (size_t)((double)(n - SLICE) * k / 7.0);
-        memcpy(out + m, v + st, SLICE * 8);
-        m += SLICE;
+        size_t st = (size_t)((double)(n - slice) * k / 7.0);
+        memcpy(out + m, v + st, slice * 8);
+        m += slice;
     }
     return m;
 }
@@ -916,7 +1130,7 @@ static Delta choose_delta(const u64 *lat, size_t n, int max_order, int allow_lpc
         return d;
     }
     u64 *smp = sc->t3;
-    size_t m = take_sample(lat, n, smp);
+    size_t m = take_sample(lat, n, smp, 2048);
     double scale = (double)n / (double)m;
     u64 *t = sc->t1;
     memcpy(t, smp, m * 8);
@@ -935,7 +1149,13 @@ static Delta choose_delta(const u64 *lat, size_t n, int max_order, int allow_lpc
     }
     d.kind = bo;
     if (allow_lpc && m >= 512) {
-        /* skip when the values are too wide for exact-enough predictions */
+        /* a larger sample for the predictor; skip when the values are too wide for 32-bit predictions */
+        u64 *ls = sc->t4;
+        size_t lm = take_sample(lat, n, ls, 4096);
+        double lscale = (double)n / (double)lm;
+        u64 *smp = ls;
+        size_t m = lm;
+        double base_cost = best * scale / lscale;
         u64 mn = smp[0], mx = smp[0];
         for (size_t i = 0; i < m; i++) {
             if (smp[i] < mn) mn = smp[i];
@@ -957,9 +1177,9 @@ static Delta choose_delta(const u64 *lat, size_t n, int max_order, int allow_lpc
                 lpc_quantize(a[bp], bp, (double)(mx - mn), &l);
                 u64 *out = sc->t1;
                 lpc_residuals(smp, m, &l, sc->t2, out);
-                double c = proxy_cost(out + l.p, m - l.p, 0) + (64.0 * l.p + 16.0 * l.p) / scale;
-                if (c < best * 0.985) {
-                    best = c;
+                double c = proxy_cost(out + l.p, m - l.p, 0) + (64.0 * l.p + 16.0 * l.p) / lscale;
+                if (c < base_cost * 0.985) {
+                    best = c * lscale / scale;
                     d = l;
                 }
             }
@@ -974,7 +1194,7 @@ static Delta choose_delta(const u64 *lat, size_t n, int max_order, int allow_lpc
         u32 *lags = (u32 *)sc->t1;
         u64 *r = sc->t2;
         for (int w = 0; w < 3; w++) {
-            if (w > 0 && ((size_t)1 << wl[w - 1]) >= mb) break;
+            if (w > 0 && (((size_t)1 << wl[w - 1]) >= mb || d.kind != D_LOOKBACK)) break;
             lookback_lags(blk, mb, wl[w], lags);
             for (size_t i = 1; i < mb; i++) r[i] = blk[i] - blk[i - lags[i]];
             double c = proxy_cost(r + 1, mb - 1, 0) + lag_entropy(lags, mb, wl[w]);
@@ -1018,7 +1238,7 @@ static void enc_latent(Buf *o, u64 *lat, size_t n, const Opt *op, Scr *sc, int m
         put_var(o, lat[0]);
         u64 *lg = sc->t4;
         for (size_t i = 1; i < n; i++) lg[i - 1] = lags[i] - 1;
-        code_residuals(o, lg, n - 1, op->level, sc);
+        code_residuals(o, lg, n - 1, op->level, op->ctx, sc);
         for (size_t i = n - 1; i >= 1; i--) lat[i] = lat[i] - lat[i - lags[i]] + TOP64;
     } else {
         int k = d.kind;
@@ -1029,7 +1249,7 @@ static void enc_latent(Buf *o, u64 *lat, size_t n, const Opt *op, Scr *sc, int m
         if (k > 0)
             for (size_t i = warm; i < n; i++) lat[i] += TOP64;
     }
-    code_residuals(o, lat + warm, n - warm, op->level, sc);
+    code_residuals(o, lat + warm, n - warm, op->level, op->ctx, sc);
     if (g_debug)
         fprintf(stderr, "  latent n=%zu delta=%d p=%d proxy=%.0fB bytes=%zu\n", n, d.kind, d.p, c / 8, o->n - o0);
 }
@@ -1073,7 +1293,9 @@ static int dec_latent(Rd *r, u64 *lat, size_t n, Scr *sc) {
         }
         return 0;
     }
+    double td_ = g_debug ? now_s() : 0;
     if (decode_residuals(r, lat + warm, n - warm, sc)) return -1;
+    if (g_debug) g_tm[5] += now_s() - td_, td_ = now_s();
     if (d.kind == D_LPC) {
         if ((size_t)d.p > n) return 0;
         u64 base = lat[0];
@@ -1092,6 +1314,7 @@ static int dec_latent(Rd *r, u64 *lat, size_t n, Scr *sc) {
             for (size_t i = (size_t)pass; i < n; i++) prev = lat[i] += prev;
         }
     }
+    if (g_debug) g_tm[6] += now_s() - td_;
     return 0;
 }
 
@@ -1218,10 +1441,6 @@ typedef struct {
     int mode;
 } Job;
 
-static inline size_t elem_at(const Ctx *c, size_t col, size_t row) {
-    return c->layout == LAY_COLS ? col * c->nrows + row : row * c->ncols + col;
-}
-
 /* xor that maps an ordinal back to raw bits (and raw bits to an ordinal, for non-floats) */
 static inline u64 ord_xor_dec(u64 o, int kind, int W) {
     u64 sign = 1ull << (8 * W - 1), m = mask_bits(8 * W);
@@ -1298,7 +1517,7 @@ static void tbuf_get(size_t n, u64 **a, u64 **b) {
 static void encode_job(Job *j) {
     const Ctx *c = j->cx;
     size_t n = j->r1 - j->r0;
-    int t = c->type, W = c->W;
+    int t = c->type;
     Scr sc;
     scr_init(&sc, n, 0);
     u64 *bits = malloc((n + 1) * 8), *a = malloc((n + 1) * 8), *b = malloc((n + 1) * 8);
@@ -1381,7 +1600,7 @@ static void encode_job(Job *j) {
 static void decode_job(Job *j) {
     const Ctx *c = j->cx;
     size_t n = j->r1 - j->r0;
-    int t = c->type, W = c->W;
+    int t = c->type;
     Scr sc;
     scr_init(&sc, n, 1);
     u64 *a, *b;
@@ -1422,7 +1641,9 @@ static void decode_job(Job *j) {
         goto out;
     }
     if (r.p != r.end) goto out;
+    TM_START;
     store_values(c, j, a, n);
+    TM_END(7);
     j->err = 0;
 out:
     scr_free(&sc);
@@ -1576,9 +1797,10 @@ typedef struct {
     int layout;   /* npy: use 2-D layout */
 } InOpt;
 
+static int g_cputime; /* KBIN_CPUTIME: time with the thread's CPU clock (one thread only) */
 double now_s(void) {
     struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+    clock_gettime(g_cputime ? CLOCK_THREAD_CPUTIME_ID : CLOCK_MONOTONIC, &ts);
     return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
@@ -1853,7 +2075,7 @@ static int roundtrip(const u8 *in, size_t n, const InOpt *io, const Opt *op, con
 
 static int selftest(void) {
     int fails = 0, cases = 0;
-    Opt op = {8, 1, 1, 1, 1, 1, 10};
+    Opt op = {8, 1, 1, 1, 1, 0, 1, 10};
     size_t sizes[] = {0, 1, 2, 3, 5, 17, 300, 1025, 5000};
     for (int t = 0; t < T_COUNT; t++) {
         int W = twidth[t];
@@ -1897,6 +2119,7 @@ static int selftest(void) {
                     snprintf(what, sizeof what, "%s n=%zu pat=%d tail=%d", tname[t], n, pat, extra);
                     op.threads = (pat & 1) ? 3 : 1;
                     op.lpc = pat != 4 || extra;
+                    op.ctx = (int)((si + (size_t)pat + (size_t)extra) & 1);
                     fails += roundtrip(buf, len, &io, &op, what);
                     cases++;
                     io.stride = 3;
@@ -1963,13 +2186,14 @@ static void usage(void) {
             "  -s N      raw input: N interleaved channels (default: detect)\n"
             "  -c N      log2 of the chunk length in values (default 18)\n"
             "  -n        no linear-predictor delta (pcodec's set of delta encodings only)\n"
+            "  -C        context extension: bin indices coded with up to 8 tables picked by the previous bin\n"
             "  -F        no float divisor mode;  -M no integer multiplier mode;  -L no 2-D npy layout\n"
             "  --selftest  run the built-in round-trip and corruption tests\n");
     exit(2);
 }
 
 int main(int argc, char **argv) {
-    Opt op = {8, 1, 1, 1, 1, 1, 18};
+    Opt op = {8, 1, 1, 1, 1, 0, 1, 18};
     InOpt io = {-1, 0, 1};
     int dec = 0, bench = 0, runs = 5;
     const char *inp = NULL, *outp = NULL;
@@ -1995,6 +2219,7 @@ int main(int argc, char **argv) {
             } else if (c == 'd') dec = 1;
             else if (c == 'b') bench = 1;
             else if (c == 'n') op.lpc = 0;
+            else if (c == 'C') op.ctx = 1;
             else if (c == 'F') op.floatdiv = 0;
             else if (c == 'M') op.intmult = 0;
             else if (c == 'L') io.layout = 0;
@@ -2007,6 +2232,7 @@ int main(int argc, char **argv) {
         runs < 1 || io.stride < 0 || io.stride > 64)
         usage();
     g_debug = getenv("KBIN_DEBUG") != NULL;
+    g_cputime = getenv("KBIN_CPUTIME") != NULL && op.threads == 1;
     size_t n;
     u8 *in = read_file(inp, &n);
     if (!in) return 1;
@@ -2038,7 +2264,7 @@ int main(int argc, char **argv) {
                "\"dec_MBps\": %.1f, \"threads\": %d, \"level\": %d, \"lpc\": %d, \"runs\": %d}\n",
                base ? base + 1 : inp, n, c.n, c.n ? (double)n / (double)c.n : 0, n / bc / 1e6, n / bd / 1e6,
                op.threads, op.level, op.lpc, runs);
-        if (g_debug) fprintf(stderr, "times (all runs): delta %.3f sort %.3f bins %.3f find %.3f ans %.3f\n", g_tm[0], g_tm[1], g_tm[2], g_tm[3], g_tm[4]);
+        if (g_debug) fprintf(stderr, "times (all runs): delta %.3f sort %.3f bins %.3f find %.3f ans %.3f | dec res %.3f recon %.3f store %.3f\n", g_tm[0], g_tm[1], g_tm[2], g_tm[3], g_tm[4], g_tm[5], g_tm[6], g_tm[7]);
         free(c.p);
         free(d.p);
         free(in);
