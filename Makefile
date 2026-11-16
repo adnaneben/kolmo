@@ -52,7 +52,15 @@ BSC     := vendor/libbsc/libbsc
 BSRC    := $(shell find $(BSC) -name '*.cpp')
 OBJ     := $(patsubst %.c,build/obj/%.o,$(ZSRC) $(BROSRC) $(XZSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/obj/%.o,$(ZASM)) \
            $(patsubst %.cpp,build/obj/%.o,$(BSRC))
-LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
+# Vendored code is compiled one function per section and the linker drops what Kolmo never calls (the trim measured in
+# benchmark/rc3/deps/RESULTS.md: about 370 KiB of zstd, LZ4, libbsc, xxHash, Brotli and liblzma code). Same bytes out.
+VSECT   := -ffunction-sections -fdata-sections
+ifeq ($(UNAME_S),Darwin)
+LDGC    := -Wl,-dead_strip
+else
+LDGC    := -Wl,--gc-sections
+endif
+LIBS    := $(EXTRA_LIB) $(LZMALIB) $(LDGC) -lpthread -lm
 BLIBS   := $(LIBS)
 
 KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc
@@ -61,13 +69,13 @@ all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolm
 
 build/obj/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(DEFS) $(INC) -c $< -o $@
+	$(CC) $(CFLAGS) $(VSECT) $(DEFS) $(INC) -c $< -o $@
 build/obj/$(XZ)/%.o: $(XZ)/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(XZFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(VSECT) $(XZFLAGS) -c $< -o $@
 build/obj/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CFLAGS) -I$(BSC) -c $< -o $@
+	$(CXX) $(CFLAGS) $(VSECT) -I$(BSC) -c $< -o $@
 build/obj/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEFS) $(INC) -c $< -o $@
