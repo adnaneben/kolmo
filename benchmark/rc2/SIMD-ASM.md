@@ -525,7 +525,11 @@ last row is a valid 749,968-value int32 NPY, so `--typed-huf` takes its typed ro
 **Tests on the fixed tree:** `make ARCH= check`, `check-sanitizers` and `check-rc` (with `check-dispatch`);
 `experimental-check` and `kfam-check` (the rc2 research codecs, now built with the flag); `cargo test --release` in
 `bindings/rust` (4 tests and the doc test); `python3 setup.py build` plus `test_kolmo.py` for the Python package.
-Results: (running; filled in by the next commit)
+Results, all with `ARCH=` on the final tree: `check` ALL PASSED; `check-sanitizers` passed; `check-rc` passed
+(`check-dispatch`: 28,182 checks, 0 mismatches); `experimental-check` passed (KRC, KBC, KBX, frontier reads);
+`kfam-check` passed (it failed at rc2); `make lib` plus `bindings/python/test_kolmo.py` ALL PASSED;
+`tests/test_concurrent_dict.py` passed; `cargo test --release` 4 + 1 passed; `setup.py build` plus `test_kolmo.py`
+ALL PASSED.
 
 ## Reproduce
 
