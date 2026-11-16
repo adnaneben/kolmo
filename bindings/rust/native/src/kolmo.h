@@ -86,6 +86,8 @@ int64_t kolmo_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len,
  * seg_mib = 0 uses the default segment size. Both return total bytes written, or a negative error. */
 int64_t kolmo_stream_compress(int in_fd, int out_fd, const kolmo_params *p, uint32_t seg_mib);
 int64_t kolmo_stream_decompress(int in_fd, int out_fd, int threads);
+/* as kolmo_stream_decompress, with decoding limits per frame and max_output_bytes for the whole stream (NULL: none) */
+int64_t kolmo_stream_decompress_limited(int in_fd, int out_fd, int threads, const kolmo_decode_limits *limits);
 /* One-shot CZN1 file I/O. Input must remain a stable regular file of at least n
  * bytes. Supply an empty seekable output fd without O_APPEND. Workers use
  * offsets starting at zero, without changing the descriptor position. Discard

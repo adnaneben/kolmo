@@ -73,8 +73,12 @@ int64_t kolmo_stream_compress(int in_fd, int out_fd, const kolmo_params *p, uint
     return total + 8;
 }
 
-/* Decompress a CZNS stream from in_fd to out_fd. Returns total bytes written, or a negative KOLMO_ERR_*. */
-int64_t kolmo_stream_decompress(int in_fd, int out_fd, int threads) {
+/* Decompress a CZNS stream from in_fd to out_fd. Returns total bytes written, or a negative KOLMO_ERR_*.
+ * A frame's buffer grows only as its bytes arrive (at most KOLMO_STREAM_STEP ahead of them), so a forged frame
+ * length cannot make the decoder reserve more memory than the input holds. `limits` (may be NULL) bounds each
+ * frame's decoded size, block size and block count, and the stream's total output (max_output_bytes). */
+#define KOLMO_STREAM_STEP (64u << 20)
+int64_t kolmo_stream_decompress_limited(int in_fd, int out_fd, int threads, const kolmo_decode_limits *limits) {
     uint8_t hdr[KOLMO_STREAM_HDR]; size_t got = 0;
     if (io_read_full(in_fd, hdr, KOLMO_STREAM_HDR, &got)) return KOLMO_ERR_ALLOC;
     if (got < KOLMO_STREAM_HDR || memcmp(hdr, "CZNS", 4) || hdr[4] != 1) return KOLMO_ERR_CORRUPT;
@@ -89,18 +93,27 @@ int64_t kolmo_stream_decompress(int in_fd, int out_fd, int threads) {
         uint64_t len = get64(lb);
         if (len == 0) { ret = total; break; }           /* clean end of stream */
         if (len > (1ull << 34)) { ret = KOLMO_ERR_CORRUPT; break; }
-        if (len > fcap) { free(frame); frame = malloc(len); if (!frame) { ret = KOLMO_ERR_ALLOC; break; } fcap = len; }
-        size_t fg = 0;
-        if (io_read_full(in_fd, frame, len, &fg)) { ret = KOLMO_ERR_ALLOC; break; }
-        if (fg < len) { ret = KOLMO_ERR_CORRUPT; break; }
-        int64_t osz = kolmo_original_size(frame, len);
+        size_t have = 0;
+        while (have < len) {
+            size_t want = len - have < KOLMO_STREAM_STEP ? (size_t)(len - have) : KOLMO_STREAM_STEP;
+            if (have + want > fcap) { uint8_t *t = realloc(frame, have + want); if (!t) { ret = KOLMO_ERR_ALLOC; goto done; } frame = t; fcap = have + want; }
+            size_t fg = 0;
+            if (io_read_full(in_fd, frame + have, want, &fg)) { ret = KOLMO_ERR_ALLOC; goto done; }
+            have += fg;
+            if (fg < want) { ret = KOLMO_ERR_CORRUPT; goto done; }
+        }
+        int64_t osz = kolmo_original_size(frame, (size_t)len);
         if (osz < 0) { ret = osz; break; }
+        if (limits && limits->max_output_bytes && (uint64_t)osz > limits->max_output_bytes - (uint64_t)total) { ret = KOLMO_ERR_LIMIT; break; }
         if ((size_t)osz > ocap) { free(out); out = malloc(osz ? (size_t)osz : 1); if (!out) { ret = KOLMO_ERR_ALLOC; break; } ocap = (size_t)osz; }
-        int64_t dl = kolmo_decompress(frame, len, out, (size_t)osz, threads);
+        int64_t dl = limits ? kolmo_decompress_limited(frame, (size_t)len, out, (size_t)osz, threads, limits)
+                            : kolmo_decompress(frame, (size_t)len, out, (size_t)osz, threads);
         if (dl < 0) { ret = dl; break; }
         if (dl > 0 && io_write_full(out_fd, out, (size_t)dl)) { ret = KOLMO_ERR_ALLOC; break; }
         total += dl;
     }
+done:
     free(frame); free(out);
     return ret;
 }
+int64_t kolmo_stream_decompress(int in_fd, int out_fd, int threads) { return kolmo_stream_decompress_limited(in_fd, out_fd, threads, NULL); }
