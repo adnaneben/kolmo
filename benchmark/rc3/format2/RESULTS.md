@@ -260,10 +260,11 @@ itself be a video frame (checked; a crafted frame of that shape is refused by `t
 
 ## Tests
 
-All run on this VM on the final tree (merged with `claude/rc3-structure-20261116`):
+All run on this VM on the final tree (merged with `claude/rc3-structure-20261116` up to `b43f7cc`):
 
-- `make check`: ALL PASSED (22 min). `make check-rc` (now with `check-format2`): passed (6.6 min).
+- `make check`: ALL PASSED (21 min). `make check-rc` (now with `check-asm` and `check-format2`): passed (9.6 min).
   `make check-sanitizers`, `make experimental-check GPU_CHECK=`, `make kfam-check`: passed.
+  `benchmark/determinism/check.py build/kolmo build/determinism`: 122 frames, OK.
 - `benchmark/determinism/check.py`: before regeneration it reported exactly the intended changes: the 10 `walk.wav`
   frames (now codec 19) differ, and the new `video.y4m` input had no digests; every frame decodes and 1 and 4 threads
   give the same frame for every input and setting. `expected.sha256` is regenerated in a commit of its own; the check
