@@ -7,6 +7,7 @@
 #   build/kbx          KBX3: KBC1 with longer hashed contexts (profiles 0, 1, 2)      (Codex, 7 Nov 2026)
 #   build/kolmo-fastq  four-line FASTQ prototype (names, bases, qualities as streams) (Codex, 7 Nov 2026)
 #   build/kvid         temporal-prediction front end for raw video frames             (new, 15 Nov 2026)
+#   build/kbin         KBN1 numeric-array coder after the pcodec paper (KBIN.md)    (new, 16 Nov 2026)
 #
 # `make experimental-check` builds them and runs their correctness tests, with and without sanitizers.
 
@@ -95,7 +96,8 @@ build/kvid: $(XD)/kvid.c src/kolmo.h build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) -Isrc $(XD)/kvid.c build/libkolmo.a build/libvendor.a $(LIBS) $(CXXLIB) -o $@
 
 experimental-check: build/krc-frontier-test build/krctest build/krctest-asan build/kbctest-asan build/kbxtest-asan \
-		build/frontier-reads-test build/krc-cpu build/krc-auto build/kbc build/kbx build/kolmo-fastq $(GPU_CHECK)
+		build/frontier-reads-test build/krc-cpu build/krc-auto build/kbc build/kbx build/kolmo-fastq $(GPU_CHECK) \
+		build/kbin build/kbin-asan
 	$(if $(GPU_CHECK),./build/krcgputest)
 	./build/krc-frontier-test
 	./build/krctest
@@ -103,6 +105,7 @@ experimental-check: build/krc-frontier-test build/krctest build/krctest-asan bui
 	./build/kbctest-asan
 	./build/kbxtest-asan
 	./build/frontier-reads-test
+	./build/kbin-asan --selftest
 .PHONY: experimental-check
 
 # kbin: numeric-array coder after the pcodec paper (binning, rANS bin indices, raw offset bits); KBIN.md
