@@ -1,0 +1,184 @@
+2026-11-15T10:00:00 host0 sshd[1000]: Accepted publickey for user0 from 10.0.0.0 port 40000
+2026-11-15T10:00:01 host1 sshd[1001]: Accepted publickey for user1 from 10.0.1.1 port 40001
+2026-11-15T10:00:02 host2 sshd[1002]: Accepted publickey for user2 from 10.0.2.2 port 40002
+2026-11-15T10:00:03 host0 sshd[1003]: Accepted publickey for user3 from 10.0.3.3 port 40003
+2026-11-15T10:00:04 host1 sshd[1004]: Accepted publickey for user4 from 10.0.0.4 port 40004
+2026-11-15T10:00:05 host2 sshd[1005]: Accepted publickey for user5 from 10.0.1.5 port 40005
+2026-11-15T10:00:06 host0 sshd[1006]: Accepted publickey for user6 from 10.0.2.6 port 40006
+2026-11-15T10:00:07 host1 sshd[1007]: Accepted publickey for user7 from 10.0.3.7 port 40007
+2026-11-15T10:00:08 host2 sshd[1008]: Accepted publickey for user8 from 10.0.0.8 port 40008
+2026-11-15T10:00:09 host0 sshd[1009]: Accepted publickey for user0 from 10.0.1.9 port 40009
+2026-11-15T10:00:10 host1 sshd[1010]: Accepted publickey for user1 from 10.0.2.10 port 40010
+2026-11-15T10:00:11 host2 sshd[1011]: Accepted publickey for user2 from 10.0.3.11 port 40011
+2026-11-15T10:00:12 host0 sshd[1012]: Accepted publickey for user3 from 10.0.0.12 port 40012
+2026-11-15T10:00:13 host1 sshd[1013]: Ak("csv-default-block", csv, ncsv, KOLMO_FAST, 0, 2);
+    /* quoted CSV and short rows exercise the slow and exception paths */
+    {
+        size_t q = 0; uint8_t *qc = malloc(N);
+        while (q + 200 < N) q += sprintf((char *)qc + q, (rnd() % 9) ? "%d,\"name, %d\",%.3f,x\n" : "%d,short\n", (int)(rnd() % 1000), (int)(rnd() % 50), (rnd() % 100000) / 1000.0);
+        for (int m = 0; m < 5; m++) check("quoted-csv", qc, q, (kolmo_mode)m, 1 << 18, 2);
+        free(qc);
+    }
+    /* tables with derived columns (ratio, change, % change inside entity groups) and blanks: formula path */
+    size_t fq = 0; uint8_t *ft = malloc(N);
+    {
+        fq += sprintf((char *)ft, "country,year,pop,gdp,gdp_pc,gdp_chg,gdp_pct,note\n");
+        const char *cn[] = {"Aland", "Borduria", "Carpathia", "Doria", "Elbonia", "Freedonia"};
+        for (int c = 0; fq + 4096 < N; c = (c + 1) % 6) {
+            double pop = 1e5 + rnd() % 900000, gdp = 1e3 + rnd() % 90000, prev = -1;
+            for (int y = 1950; y < 2024 && fq + 300 < N; y++) {
+                pop *= 1 + (rnd() % 40) / 1000.0; gdp = (double)(long)(gdp * (1 + ((int)(rnd() % 80) - 30) / 1000.0) * 100) / 100;
+                int blank = rnd() % 7 == 0;
+                char g[32] = "", pc[32] = "", ch[32] = "", pt[32] = "";
+                if (!blank) { sprintf(g, "%.2f", gdp); sprintf(pc, "%.4f", gdp / pop * 1000); }
+                if (!blank && prev > 0) { sprintf(ch, "%.2f", gdp - prev); sprintf(pt, "%.3f", (gdp - prev) / prev * 100); }
+                fq += sprintf((char *)ft + fq, "%s,%d,%.0f,%s,%s,%s,%s,%s\n", cn[c], y, pop, g, pc, ch, pt, rnd() % 40 ? "" : "rev");
+                prev = blank ? -1 : gdp;
+            }
+        }
+        fset_t fs; fset_discover_pub(ft, fq, ',', 8, 1, 1, &fs);
+        printf("formula table: %d formulas found, group column %d\n", fs.n, fs.gcol);
+        if (fs.n < 2) { printf("FAIL formula discovery\n"); fails++; }
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("formula-table", ft, fq, (kolmo_mode)m, 1 << 18, T);
+        check("formula-table-1block", ft, fq, KOLMO_HC, 0, 1);
+        /* fuzz the v2 stream itself */
+        size_t len = 1 << 18; while (ft[len - 1] != '\n') len--;
+        uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
+        int64_t tn = tbl2_encode_pub(ft, len, ',', 8, 1, &fs, t);
+        if (tn <= 0 || tbl2_decode_pub(t, tn, ',', o, len) || memcmp(o, ft, len)) { printf("FAIL tbl2 roundtrip\n"); fails++; }
+        for (int it = 0; it < 4000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            size_t el = rnd() % 8 ? (size_t)tn : rnd() % tn;
+            tbl2_decode_pub(e, el, ',', o, len);
+        }
+        printf("table-codec v2 fuzz: 4000 corrupt streams decoded without crashing\n");
+        /* columnar decode: every cell matches the source value, and corrupt streams never crash */
+        if (tn > 0) {
+            czcols cols;
+            if (tbl2_columns_pub(t, tn, &cols) < 0) { printf("FAIL columnar decode rejected an aligned table\n"); fails++; }
+            else {
+                long cbad = 0; size_t ci = 0;
+                for (long long rr = 0; rr < cols.nr; rr++) for (int j = 0; j < cols.k; j++) {
+                    size_t f0 = ci; while (ci < len && ft[ci] != ',' && ft[ci] != '\n') ci++;
+                    unsigned flen = (unsigned)(ci - f0); czcol *c = &cols.c[j];
+                    if (c->type == 0) { if (c->len[rr] != flen || memcmp(c->txt + c->off[rr], ft + f0, flen)) cbad++; }
+                    else { int64_t m; int sc;
+                        if (parse_dec_pub(ft + f0, flen, &m, &sc)) { int64_t want = m * kolmo_p10_pub()[c->scale - sc];
+                            if (!c->valid[rr] || c->num[rr] != want) cbad++; }
+                        else if (c->valid[rr]) cbad++; }
+                    if (ci < len && ft[ci] == ',') ci++;
+                    if (j == cols.k - 1 && ci < len && ft[ci] == '\n') ci++;
+                }
+                if (cbad) { printf("FAIL columnar decode: %ld cell mismatches\n", cbad); fails++; }
+                else printf("columnar decode: %lld rows x %d cols, all cells correct\n", cols.nr, cols.k);
+                tbl2_columns_free_pub(&cols);
+            }
+            for (int it = 0; it < 4000; it++) {
+                memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+                for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+                czcols cc; if (tbl2_columns_p, "%s%c", (rnd() % 2) ? "x" : "free-text", i + 1 < w ? ' ' : '\n'); }
+        }
+        lq += sprintf((char *)lg + lq, "partial last line 42");
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("logs", lg, lq, (kolmo_mode)m, 1 << 18, T);
+        check("logs-1block", lg, lq, KOLMO_FAST, 0, 1);
+        size_t len = 1 << 18; uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
+        int64_t tn = log_encode_pub(lg, len, t, len + 65536);
+        if (tn <= 0 || log_decode_pub(t, tn, o, len) || memcmp(o, lg, len)) { printf("FAIL log codec roundtrip (%lld)\n", (long long)tn); fails++; }
+        else printf("log codec: %.2fx before entropy coding\n", (double)len / tn);
+        for (int it = 0; it < 4000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            size_t el = rnd() % 8 ? (size_t)tn : rnd() % tn;
+            log_decode_pub(e, el, o, len);
+        }
+        printf("log codec fuzz: 4000 corrupt streams decoded without crashing\n");
+        free(t); free(o); free(e); free(lg);
+    }
+    /* JSON lines: escapes, nesting, all scalar kinds, odd spacing, a 0x01 line, malformed lines, pretty-printed JSON */
+    {
+        size_t N = 3u << 20, q = 0; uint8_t *js = malloc(N + 4096); long id = 1000;
+        const char *nm[] = {"alpha", "be\\\"ta", "gam ma", "d\\u00e9lta", "\xc3\xa9psilon"};
+        while (q + 2000 < N) {
+            int k = (int)(rnd() % 20); id += 1 + (long)(rnd() % 5);
+            if (k < 12) q += sprintf((char *)js + q, "{\"id\":%ld,\"name\":\"%s\",\"score\":%d.%02d,\"ok\":%s,\"tags\":[\"a\",\"b%d\"],\"geo\":{\"lat\":-%d.%04d,\"lon\":%de%d},\"note\":%s}\n",
+                                     id, nm[rnd() % 5], (int)(rnd() % 1000), (int)(rnd() % 100), rnd() % 2 ? "true" : "false", (int)(rnd() % 9),
+         ub(e, rnd() % 8 ? (int64_t)tn : rnd() % tn, &cc) >= 0) tbl2_columns_free_pub(&cc);
+            }
+            printf("columnar-codec fuzz: 4000 corrupt streams decoded without crashing\n");
+        }
+        free(t); free(o); free(e); free(ft);
+    }
+    /* logs: templates, skeleton columns (timestamps, IPs, padded ids), rare lines, no final newline */
+    {
+        size_t lq = 0; uint8_t *lg = malloc(N); long ts = 1700000000; int ms = 0;
+        const char *lv[] = {"INFO", "WARN", "ERROR"};
+        while (lq + 400 < N) {
+            ts += rnd() % 3; ms = (ms + (int)(rnd() % 997)) % 1000; int k = (int)(rnd() % 10);
+            if (k < 5) lq += sprintf((char *)lg + lq, "2024-01-%02ld %02ld:%02ld:%02ld,%03d %s dfs.DataNode: Receiving block blk_%lld src: /10.%d.%d.%d:%d dest: /10.0.0.%d:50010\n",
+                                     1 + (ts / 86400) % 28, (ts / 3600) % 24, (ts / 60) % 60, ts % 60, ms, lv[rnd() % 3], (long long)(rnd() % 9000000000000ll) - 4500000000000ll,
+                                     (int)(rnd() % 256), (int)(rnd() % 256), (int)(rnd() % 256), (int)(rnd() % 65536), (int)(rnd() % 256));
+            else if (k < 8) lq += sprintf((char *)lg + lq, "2024-01-%02ld %02ld:%02ld:%02ld,%03d INFO session 0x%06x closed  after %d ms\n",
+                                          1 + (ts / 86400) % 28, (ts / 3600) % 24, (ts / 60) % 60, ts % 60, ms, (unsigned)(rnd() % 0xFFFFFF), (int)(rnd() % 5000));
+            else if (k < 9) lq += sprintf((char *)lg + lq, "user%04d logged in from host-%c%c with \x01 marker %d\n", (int)(rnd() % 10000), 'a' + (int)(rnd() % 26), 'a' + (int)(rnd() % 26), (int)(rnd() % 7));
+            else { int w = 1 + (int)(rnd() % 12); for (int i = 0; i < w; i++) lq += sprintf((char *)lg + lq, "%s%c", (rnd() % 2) ? "x" : "free-text", i + 1 < w ? ' ' : '\n'); }
+        }
+        lq += sprintf((char *)lg + lq, "partial last line 42");
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("logs", lg, lq, (kolmo_mode)m, 1 << 18, T);
+        check("logs-1block", lg, lq, KOLMO_FAST, 0, 1);
+        size_t len = 1 << 18; uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
+        int64_t tn = log_encode_pub(lg, len, t, len + 65536);
+        if (tn <= 0 || log_decode_pub(t, tn, o, len) || memcmp(o, lg, len)) { printf("FAIL log codec roundtrip (%lld)\n", (long long)tn); fails++; }
+        else printf("log codec: %.2fx before entropy coding\n", (double)len / tn);
+        for (int it = 0; it < 4000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f = 0; f < nflip; f++) e[rnd() % tn] ^= (uint8_t)(1 + rnd() % 255);
+            size_t el = rnd() % 8 ? (size_t)tn : rnd() % tn;
+            log_decode_pub(e, el, o, len);
+        }
+        printf("log codec fuzz: 4000 corrupt streams decoded without crashing\n");
+        free(t); free(o); free(e); free(lg);
+    }
+    /* JSON lines: escapes, nesting, all scalar kinds, odd spacing, a 0x01 line, malformed lines, pretty-printed JSON */
+    {
+        size_t N = 3u << 20, q = 0; uint8_t *js = malloc(N + 4096); long id = 1000;
+        const char *nm[] = {"alpha", "be\\\"ta", "gam ma", "d\\u00e9lta", "\xc3\xa9psilon"};
+        while (q + 2000 < N) {
+            int k = (int)(rnd() % 20); id += 1 + (long)(rnd() % 5);
+            if (k < 12) q += sprintf((char *)js + q, "{\"id\":%ld,\"name\":\"%s\",\"score\":%d.%02d,\"ok\":%s,\"tags\":[\"a\",\"b%d\"],\"geo\":{\"lat\":-%d.%04d,\"lon\":%de%d},\"note\":%s}\n",
+                                     id, nm[rnd() % 5], (int)(rnd() % 1000), (int)(rnd() % 100), rnd() % 2 ? "true" : "false", (int)(rnd() % 9),
+                                     (int)(rnd() % 90), (int)(rnd() % 10000), (int)(rnd() % 9), (int)(rnd() % 5), rnd() % 3 ? "null" : "\"x: y, z\"");
+            else if (k < 16) q += sprintf((char *)js + q, "{ \"id\" : %ld , \"name\" : \"%s\" , \"vals\" : [ %d, %d, -%d ] }\n", id, nm[rnd() % 5], (int)(rnd() % 50), (int)(rnd() % 50), (int)(rnd() % 50));
+            else if (k < 17) q += sprintf((char *)js + q, "{\"id\":%ld,\"raw\":\"\x01\",\"n\":%d}\n", id, (int)(rnd() % 10));
+            else if (k < 18) q += sprintf((char *)js + q, "{\"id\":%ld,\"broken\":\"unterminated %d\n", id, (int)(rnd() % 10));
+            else if (k < 19) q += sprintf((char *)js + q, "[%ld,\"\\\\\",\"\\\\\\\"\",1.5E+10,-0.0,true]\n", id);
+            else q += sprintf((char *)js + q, "{\n  \"id\": %ld,\n  \"items\": [\n    {\"k\": \"v%d\", \"n\": %d}\n  ]\n}\n", id, (int)(rnd() % 100), (int)(rnd() % 1000));
+        }
+        q += sprintf((char *)js + q, "{\"last\":\"no newline\"}");
+        for (int m = 0; m < 5; m++) for (int T = 1; T <= 4; T += 3) check("json", js, q, (kolmo_mode)m, 1 << 18, T);
+        {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
+            int64_t c0 = kolmo_compress(js, q, d, cap, &p0), c1 = kolmo_compress(js, q, d, cap, &p1);
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0) { printf("FAIL json transform not chosen (%lld vs %lld)\n", (long long)c1, (long long)c0); fails++; }
+            else printf("json lines: fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
+            free(d); }
+        size_t len = 1 << 18; while (len && js[len - 1] != '\n') len--;
+        uint8_t *t = malloc(len + 65536), *o = malloc(len + 64), *e = malloc(len + 65536);
+        int64_t tn = log_encode_json_pub(js, len, t, len + 65536);
+        if (tn <= 0 || log_decode_pub(t, tn, o, len) || memcmp(o, js, len)) { printf("FAIL json codec roundtrip (%lld)\n", (long long)tn); fails++; }
+        for (int it = 0; it < 3000 && tn > 0; it++) {
+            memcpy(e, t, tn); int nflip = 1 + rnd() % 4;
+            for (int f 5T      ;10:02:25 host1 sshd[1145]: Accepted publickey for user1 from 10.0.1.145 port 40145
+2026-11-15T10:02:26 host2 sshd[1146]: Accepted publickey for user2 from 10.0.2.146 port 40146
+2026-11-15T10:02:27 host0 sshd[1147]: Accepted publickey for user3 from 10.0.3.147 port 40147
+2026-11-15T10:02:28 host1 sshd[1148]: Accepted publickey for user4 from 10.0.0.148 port 40148
+2026-11-15T10:02:29 host2 sshd[1149]: Accepted publickey for user5 from 10.0.1.149 port 40149
+2026-11-15T10:02:30 host0 sshd[1150]: Accepted publickey for user6 from 10.0.2.150 port 40150
+2026-11-15T10:02:31 host1 sshd[1151]: Accepted publickey for user7 from 10.0.3.151 port 40151
+2026-11-15T10:02:32 host2 sshd[1152]: Accepted publickey for user8 from 10.0.0.152 port 40152
+2026-11-15T10:02:33 host0 sshd[1153]: Accepted publickey for user0 from 10.0.1.153 port 40153
+2026-11-15T10:02:34 host1 sshd[1154]: Accepted publickey for user1 from 10.0.2.154 port 40154
+2026-11-15T10:02:35 host2 sshd[1155]: Accepted publickey for user2 from 10.0.3.155 port 40155
+2026-11-15T10:02:36 host0 sshd[1156]: Accepted publickey for user3 from 10.0.0.156 port 40156
+2026-11-15T10:02:37 host1 sshd[1157]: Accepted publickey for user4 from 10.0.1.157 port 40157
+2026-11-15T10:02:38 host2 sshd[1158]: Accepted publickey for user5 from 10.0.2.158 port 40158
+2026-11-15T10:02:39 host0 sshd[1159]: Accepted publickey for user6 from 10.0.3.159 port 40159

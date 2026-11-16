@@ -1,0 +1,182 @@
+/* Fast integer inverse (fi_inverse) against the reference (kg_int_inv). On every program, well formed or damaged, the
+ * two must return the same code and, when it is 0, the same bytes. Covered: each fast path (24 functions: element
+ * width 2/4/8 x residual width 1/2/4/8 x sign; in each, order 0/1/2 with a common factor of 1 or larger: 144 cases),
+ * each case left to the reference (width 1, interleaved residuals), short counts, header and tail bytes, values that
+ * wrap, the output limit, damaged parameters and stream lengths, and integer arrays through the encoder, kg_decode
+ * and the public interface.
+ * Run under AddressSanitizer by `make check-fastint`. */
+#include "../src/kolmo.c"
+#include <stdio.h>
+
+static uint64_t rs = 0x9E3779B97F4A7C15ull;
+static uint64_t rnd64(void) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return rs * 0x2545F4914F6CDD1Dull; }
+static uint32_t rnd(void) { return (uint32_t)(rnd64() >> 32); }
+
+static long cases, accepted, fails;
+static int seen[3][4][2][3][2];     /* [width 2/4/8][residual width 1/2/4/8][sign][order][factor > 1]: accepted, with residuals */
+
+/* Both inverses on one program. exact > 0: each gets a buffer of exactly the size it reserves (exact + 16), with the
+ * 16 spare bytes marked: neither writes past its output today, and a store wider than the element would show here.
+ * Returns the reference's code. */
+static int both(const uint8_t *par, size_t plen, const kbuf *res, const kbuf *rest, size_t maxs, size_t exact, const char *what) {
+    kbuf a = {0}, b = {0};
+    if (exact) {
+        a.p = malloc(exact + 16); b.p = malloc(exact + 16); a.cap = b.cap = exact + 16;
+        if (!a.p || !b.p) { printf("out of memory\n"); exit(2); }
+        memset(a.p + exact, 0xC5, 16); memset(b.p + exact, 0xC5, 16);
+    }
+    int ra = kg_int_inv(par, plen, res, rest, maxs, &a), rb = fi_inverse(par, plen, res, rest, maxs, &b);
+    cases++;
+    if (ra != rb || (!ra && (a.n != b.n || memcmp(a.p, b.p, a.n)))) {
+        if (fails++ < 20) printf("MISMATCH (%s): reference returns %d with %zu bytes, fast returns %d with %zu bytes; width %d, flags %d, residual width %d\n",
+                                 what, ra, a.n, rb, b.n, plen > 0 ? par[0] : -1, plen > 1 ? par[1] : -1, plen > 2 ? par[2] : -1);
+    }
+    if (exact && !ra && !rb) {
+        if (a.n != exact || b.n != exact) { if (fails++ < 20) printf("WRONG LENGTH (%s): %zu and %zu bytes, expected %zu\n", what, a.n, b.n, exact); }
+        else for (int i = 0; i < 16; i++) if (a.p[exact + i] != 0xC5 || b.p[exact + i] != 0xC5) {
+            if (fails++ < 20) printf("WROTE PAST THE OUTPUT (%s): width %d, flags %d, residual width %d\n", what, par[0], par[1], par[2]);
+            break;
+        }
+    }
+    accepted += !ra;
+    free(a.p); free(b.p);
+    return ra;
+}
+
+typedef struct { int w, ow, sg, ord, pln; uint64_t g, bz, sd[2], h, cnt; size_t tail; } prog;
+
+/* parameters, residuals (fill 0: any value; 1: small; 2: all ones; 3: zero) and the rest stream of a well-formed program */
+static void build(const prog *P, int fill, kbuf *par, kbuf *res, kbuf *rest) {
+    par->n = res->n = rest->n = 0;
+    size_t m = (size_t)(P->cnt - (uint64_t)P->ord), rn = (size_t)P->h + P->tail;
+    int bad = kb_byte(par, (uint8_t)P->w) || kb_byte(par, (uint8_t)(P->sg | P->ord << 1 | P->pln << 3)) || kb_byte(par, (uint8_t)P->ow)
+              || kb_uv(par, P->h) || kb_uv(par, P->cnt) || kb_uv(par, P->g) || kb_uv(par, P->bz);
+    for (int q = 0; q < P->ord && !bad; q++) bad = kb_uv(par, P->sd[q]);
+    if (bad || kb_res(res, m * (size_t)P->ow + 1) || kb_res(rest, rn + 1)) { printf("out of memory\n"); exit(2); }
+    for (size_t i = 0; i < m; i++) {
+        uint64_t z = fill == 0 ? rnd64() : fill == 1 ? rnd() % 64 : fill == 2 ? UINT64_MAX : 0;
+        for (int b = 0; b < P->ow; b++) res->p[P->pln ? (size_t)b * m + i : i * (size_t)P->ow + (size_t)b] = (uint8_t)(z >> (8 * b));
+    }
+    res->n = m * (size_t)P->ow;
+    for (size_t i = 0; i < rn; i++) rest->p[i] = (uint8_t)rnd();
+    rest->n = rn;
+}
+
+int main(void) {
+    static const int WS[4] = {1, 2, 4, 8};
+    static const uint64_t GS[5] = {1, 3, 1000, 0x100000001ull, UINT64_MAX}, CN[7] = {0, 1, 2, 3, 17, 256, 1021};
+    kbuf par = {0}, res = {0}, rest = {0}; long damaged = 0, arrays = 0, coded[8] = {0};
+
+    /* 1. every kind of well-formed program, its smallest output limit, and damaged copies of one in six */
+    for (int wi = 0; wi < 4; wi++) for (int oi = 0; oi < 4; oi++) for (int sg = 0; sg < 2; sg++) for (int ord = 0; ord < 3; ord++)
+    for (int pln = 0; pln < 2; pln++) for (int gi = 0; gi < 5; gi++) for (int ci = 0; ci < 7; ci++) for (int ht = 0; ht < 2; ht++)
+    for (int fill = 0; fill < 4; fill++) {
+        prog P = {WS[wi], WS[oi], sg, ord, pln, GS[gi], fill == 3 ? 0 : rnd64(), {rnd64(), rnd64()}, ht ? 5 : 0, (uint64_t)ord + CN[ci], ht ? 3 : 0};
+        build(&P, fill, &par, &res, &rest);
+        const size_t exact = (size_t)P.cnt * (size_t)P.w + rest.n, big = exact * 8 + (1u << 20);
+        if (both(par.p, par.n, &res, &rest, big, exact, "well formed")) {
+            if (fails++ < 20) printf("REJECTED a well-formed program: width %d, residual width %d, sign %d, order %d, planes %d\n", P.w, P.ow, sg, ord, pln);
+            continue;
+        }
+        if (P.w > 1 && (pln || P.ow == 1) && CN[ci]) seen[wi - 1][oi][sg][ord][gi > 0]++;
+        if (both(par.p, par.n, &res, &rest, exact, 0, "limit equal to the output")) { if (fails++ < 20) printf("REJECTED at the exact output limit\n"); }
+        if (exact && !both(par.p, par.n, &res, &rest, exact - 1, 0, "limit one byte short")) { if (fails++ < 20) printf("ACCEPTED past the output limit\n"); }
+        if ((wi * 7 + oi * 5 + gi + ci + fill) % 6) continue;
+        for (size_t cut = 0; cut < par.n; cut++, damaged++) both(par.p, cut, &res, &rest, big, 0, "parameters cut short");
+        for (int bit = 0; bit < 24; bit++, damaged++) {                       /* width, flags, residual width */
+            par.p[bit >> 3] ^= (uint8_t)(1u << (bit & 7)); both(par.p, par.n, &res, &rest, big, 0, "one bit changed");
+            par.p[bit >> 3] ^= (uint8_t)(1u << (bit & 7));
+        }
+        for (int k = 0; k < 8; k++, damaged++) {
+            size_t at = rnd() % par.n; uint8_t keep = par.p[at];
+            par.p[at] = (uint8_t)rnd(); both(par.p, par.n, &res, &rest, big, 0, "one byte changed"); par.p[at] = keep;
+        }
+        res.p[res.n] = 0; res.n++; both(par.p, par.n, &res, &rest, big, 0, "one residual byte too many"); res.n--; damaged++;
+        if (res.n) { res.n--; both(par.p, par.n, &res, &rest, big, 0, "one residual byte missing"); res.n++; damaged++; }
+        if (P.h) { size_t keep = rest.n; rest.n = (size_t)P.h - 1; both(par.p, par.n, &res, &rest, big, 0, "rest shorter than the header"); rest.n = keep; damaged++; }
+    }
+
+    /* 2. random programs, many malformed: any width, flags and residual width, wrong lengths, small limits */
+    for (long it = 0; it < 400000; it++) {
+        uint32_t k = rnd();
+        int w = k % 31 == 0 ? (int)(rnd() & 255) : WS[rnd() & 3], ow = k % 37 == 0 ? (int)(rnd() & 255) : WS[rnd() & 3];
+        int fl = k % 41 == 0 ? (int)(rnd() & 255) : (int)(rnd() & 15), ord = (fl >> 1) & 3;
+        uint64_t cnt = rnd() % 300, h = rnd() % 10, g = k % 2 ? 1 : k % 43 == 0 ? 0 : k % 3 ? 1 + rnd() % 1000 : rnd64();
+        size_t m = cnt >= (uint64_t)ord ? (size_t)(cnt - (uint64_t)ord) : 0, rl = m * (size_t)(ow ? ow : 1) + (k % 47 == 0 ? rnd() % 3 : 0);
+        size_t tl = k % 53 == 0 ? rnd() % ((size_t)h + 1) : (size_t)h + rnd() % 10;
+        par.n = res.n = rest.n = 0;
+        int bad = kb_byte(&par, (uint8_t)w) || kb_byte(&par, (uint8_t)fl) || kb_byte(&par, (uint8_t)ow) || kb_uv(&par, h) || kb_uv(&par, cnt)
+                  || kb_uv(&par, g) || kb_uv(&par, k % 5 ? rnd() % 100000 : rnd64());
+        for (int q = 0; q < ord && !bad; q++) bad = kb_uv(&par, k % 7 ? rnd() % 70000 : rnd64());
+        if (!bad && k % 59 == 0) bad = kb_byte(&par, (uint8_t)rnd());
+        if (bad || kb_res(&res, rl + 1) || kb_res(&rest, tl + 1)) { printf("out of memory\n"); return 2; }
+        if (k % 61 == 0) par.n--;
+        const uint8_t mask = (uint8_t)((k >> 9) % 4 == 0 ? 0xFF : (k >> 9) % 4 == 1 ? 0x0F : (k >> 9) % 4 == 2 ? 0x01 : 0);
+        for (size_t i = 0; i < rl; i++) res.p[i] = (uint8_t)rnd() & mask;
+        for (size_t i = 0; i < tl; i++) rest.p[i] = (uint8_t)rnd();
+        res.n = rl; rest.n = tl;
+        both(par.p, par.n, &res, &rest, k % 11 == 0 ? rnd() % 4096 : ((size_t)cnt * 8 + tl + 64) * 4 + (1u << 20), 0, "random");
+    }
+
+    /* 3. long arrays: each fast path over 100,003 elements (whatever the compiler unrolls or vectorises, and the tail) */
+    for (int wi = 1; wi < 4; wi++) for (int oi = 0; oi < 4; oi++) for (int sg = 0; sg < 2; sg++) for (int ord = 0; ord < 3; ord++)
+    for (int gi = 0; gi < 2; gi++) {
+        prog P = {WS[wi], WS[oi], sg, ord, oi ? 1 : (wi + sg + ord + gi) & 1, gi ? 5 : 1, rnd64(), {rnd64(), rnd64()}, 7, (uint64_t)ord + 100003, 3};
+        build(&P, (wi + oi + sg + ord + gi) & 1, &par, &res, &rest);
+        const size_t exact = (size_t)P.cnt * (size_t)P.w + rest.n;
+        if (both(par.p, par.n, &res, &rest, exact * 4 + (1u << 20), exact, "long array")) { if (fails++ < 20) printf("REJECTED a long array\n"); }
+        else seen[wi - 1][oi][sg][ord][gi]++;
+    }
+
+    /* 4. integer arrays through the encoder and kg_decode, which calls the fast inverse; some through kolmo_compress */
+    codec_ctx cx = {0};
+    for (int it = 0; it < 320; it++) {
+        const int kind = it % 8, w = WS[1 + (it / 8) % 3];                               /* 40 arrays of each kind, 13 or 14 of each width */
+        size_t cnt = 16 + rnd() % (it % 13 == 12 ? 300000 : 6000), h = it % 5 ? rnd() % 120 : 0, tail = rnd() % (unsigned)w, n = h + cnt * (size_t)w + tail;
+        uint8_t *in = malloc(n + 8), *z = malloc(n + 4096), *out = malloc(n + 8);
+        if (!in || !z || !out) { printf("out of memory\n"); return 2; }
+        for (size_t i = 0; i < n; i++) in[i] = (uint8_t)rnd();
+        uint64_t v = rnd() % 1000, step = 0;
+        for (size_t q = 0; q < cnt; q++) {
+            uint32_t k = rnd();
+            switch (kind) {
+            case 0: v += (uint64_t)(int64_t)((int)(k % 201) - 100); break;              /* a walk: first differences */
+            case 1: step += (uint64_t)(int64_t)((int)(k % 7) - 3); v += step; break;      /* a smooth curve: second differences */
+            case 2: v = (uint64_t)(k % 5000) * 1000; break;                               /* multiples of 1000: a common factor */
+            case 3: v = k % 200; break;                                                   /* small counts: one-byte residuals */
+            case 4: v = rnd64(); break;                                                   /* noise: residuals as wide as the element */
+            case 5: break;                                                                /* one value repeated */
+            case 6: v = (uint64_t)(int64_t)((int)(k % 2001) - 1000); break;               /* around zero: signed */
+            default: v = (w == 8 ? UINT64_MAX : ((uint64_t)1 << (8 * w)) - 1) - k % 3000; break;   /* just under the unsigned maximum */
+            }
+            for (int b = 0; b < w; b++) in[h + q * (size_t)w + (size_t)b] = (uint8_t)(v >> (8 * b));
+        }
+        size_t zn = kg_encode_num(&cx, C_ZSTD, 3, in, n, w, h, z, n + 4096);
+        if (zn) {
+            arrays++; coded[kind]++; memset(out, 0xA5, n);
+            if (kg_decode(&cx, z, zn, out, n) || memcmp(in, out, n)) { if (fails++ < 20) printf("ROUND TRIP FAIL: array %d, width %d, kind %d, %zu bytes\n", it, w, kind, n); }
+            if (!kg_decode(&cx, z, zn, out, n - 1) || !kg_decode(&cx, z, zn - 1, out, n)) { if (fails++ < 20) printf("LENGTH NOT CHECKED: array %d\n", it); }
+        }
+        if (it % 7 == 0) {
+            kolmo_params kp = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(n, &kp); uint8_t *f = malloc(cap);
+            if (!f) { printf("out of memory\n"); return 2; }
+            int64_t fn = kolmo_compress(in, n, f, cap, &kp);
+            memset(out, 0x5A, n);
+            if (fn <= 0 || kolmo_decompress(f, (size_t)fn, out, n, 1) != (int64_t)n || memcmp(in, out, n)) { if (fails++ < 20) printf("PUBLIC ROUND TRIP FAIL: array %d, width %d, kind %d\n", it, w, kind); }
+            free(f);
+        }
+        free(in); free(z); free(out);
+    }
+    codec_ctx_free(&cx);
+    free(par.p); free(res.p); free(rest.p);
+
+    int loops = 0;
+    for (int a = 0; a < 3; a++) for (int b = 0; b < 4; b++) for (int c = 0; c < 2; c++) for (int d = 0; d < 3; d++) for (int e = 0; e < 2; e++) loops += seen[a][b][c][d][e] > 0;
+    if (loops != 144) { printf("ONLY %d of 144 fast cases were exercised\n", loops); fails++; }
+    /* 40 arrays of each kind; the encoder refuses noise (kind 4), which no integer program makes smaller */
+    for (int k = 0; k < 8; k++) if (k != 4 && coded[k] < 36) { printf("ONLY %ld of 40 arrays of kind %d were coded as integer programs\n", coded[k], k); fails++; }
+    printf(fails ? "FAST INTEGER INVERSE TESTS FAILED (%ld)\n"
+                 : "FAST INTEGER INVERSE TESTS PASSED (%ld programs compared, %ld accepted, %ld damaged; 144 of 144 fast cases; %ld arrays round trip)\n",
+           fails ? fails : cases, accepted, damaged, arrays);
+    return fails != 0;
+}

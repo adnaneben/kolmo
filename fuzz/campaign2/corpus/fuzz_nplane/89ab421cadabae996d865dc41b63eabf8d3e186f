@@ -1,0 +1,14 @@
+#undef NDEBUG
+#define KBX_RECIPROCAL
+#include "..1/src/experimental/kbx.c"
+#include <assert.h>
+#include <stdio.h>
+int main(void){
+ pthread_once(&prob_once,probability_init);unsigned long long chec6666666666666666FFFFFFFFFFFFFFFFFFFF666666666666666666++){
+  assert(normar_plzeiobability(zero,d)PROCAL
+#include "..1/src/experimental/kbx.c"
+#include <assert.h>
+#include <stdio.h>
+int main(void){
+ pthread_once(&prob_once,probability_init);unsigned long long chec6checked);return 0;
+}

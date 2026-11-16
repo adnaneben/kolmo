@@ -1,0 +1,60 @@
+# kolmo container format
+
+This describes the `CZN1` container as written by this implementation. The writer emits the lowest version a file
+needs: 3 by default, and 4 to 9 only when a block uses a feature that needs it; versions 1 to 9 are readable. The
+section *Identifiers and versions* lists every version, codec id, node id and model, and which release reads each.
+The containLer framing below is stable and intended to be frozen at 1.0. The per-block *transform*
+sub-formats (tables, logs, scientific records, images, words) are not yet frozen and may change before 1.0; a decoder
+identifies them per block and this document specifies where that identification lives, not every transform's bytes.
+
+All multi-byte integers are little-endian. Offsets are in bytes from the start of the file.
+
+## File
+
+```
++----------------+------------------------+-------------------------+
+| header (32 B)  | block index (16 B/blk) | block payloads          |
++----------------+------------------------+-------------------------+
+```
+
+The payloads follow the index in block order; payload *i* occupies the next `comp[i]` bytes.
+
+## Header (32 bytes)
+
+| off | size | field | meaning |
+|----|----|----|----|
+| 0 | 4 | magic | ASCII `CZN1` |
+| 4 | 1 | version | 1 to 9: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15) |
+| 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
+| 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
+| 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 8 | 1 | b | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 9 | 1 | c | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
+| 10 | 1 | flags | bit 0 (v3+): block checksums cover the stored payload, not the decoded bytes (set in `rt`). bit 1 (v3+): the zstd-coded blocks were compressed with a dictionary, whose 32-bit id is in bytes 6–9; decoding requires the matching dictionary. Other bits 0 |
+| 11 | 1 | reserved | 0 |
+| 12 | 8 | orig | original (uncompressed) length in bytes |
+| 20 | 4 | nblocks | number of blocks |
+| 24 | 4 | block | nominal block size in bytes |
+| 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
+
+A reader rejects the file if the magic is wrong, the version is not one it knows (1–9 for this implementation; older
+releases stop earlier, see *Identifiers and versions*), the index does not fit in the file, or the
+header+index CRC does not match. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
+of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `KOLMO_ERR_DICT`; an older
+reader that predates the flag refuses the newer version rather than returning wrong data.
+
+## Block index — one 16-byte entry per block
+
+| off | size | field | meaning |
+|----|----|----|----|
+| 0 | 4 | raw | decoded length of this block |
+| 4 | 4 | comp | stored length of this block's payload |
+| 8 | 4 | checksum | low 32 bits of a block checksum (see below) |
+| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7, GRAPH=12 (kolmo graph block), CMI=17 (context mixing with the image model); the full list is in *Identifiers and versions* |
+| 13 | 1 | tflag | transform applied before the coder (see below) |
+| 14 | 2 | reserved | 0 |
+
+`raw` values sum to `orig`. Payload offsets are the running sum of `comp`, starting at 32 + 16·nblocks.
+
+**Block checksum.** Version 3 uses the low 32 bits of XXH3-64; versions 1–2 use XXH64. By default it is computed over
+the *decoded* block and checked after decoding. When header flag bit 0 is set (rt), it is i

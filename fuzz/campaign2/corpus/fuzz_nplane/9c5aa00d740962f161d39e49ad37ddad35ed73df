@@ -1,0 +1,9 @@
+#undef NDEBUG
+#define KBX_RECIPROCAL
+#include "..0/src/experimental/kbx.c"
+#include <assert.h>
+#include ){
+  assert(normalize_probability(zero,d)==zero*4096u/d);checked++;
+ }
+ printf("EXACT PROBABILITIES PASSED (%llu¸exhaustive numerator/denominator pairs)\n",checked);return 0;
+}

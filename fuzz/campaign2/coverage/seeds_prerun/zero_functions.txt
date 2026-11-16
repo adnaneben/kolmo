@@ -1,0 +1,16 @@
+kolmo.c (20): tbl_encode_pub, tbl_decode_pub, kolmo_strerror, kolmo_train_dict, kolmo_compress_dict, kolmo_compress_from_fd, kolmo_decompress_to_fd, kolmo_compress_file, kolmo_decompress_file, exact_div_p10, fmt_run, scan1, default_threads, json_split, array_resize, tls_destroy, tpq_fwd, write_block, read_block, fmt_dec
+cm.inc (1): cm_compress
+kg_int_fwd.inc (2): kgf_scan_8_0, kgf_write_8_0
+kgraph.inc (10): kg_int_plaus, kg_planes_h0, kg_decimal_inv, fi_inv_2_8_0, fi_inv_2_8_1, fi_inv_8_1_0, fi_inv_8_2_0, fi_inv_8_4_0, fi_inv_8_8_0, kg_int_inv
+log.inc (4): log_encode_pub, log_encode_json_pub, log_decode_pub, fnv1a
+sci.inc (4): sci_encode_pub, sci_decode_pub, ldwn, cmp_u64
+stream.inc (1): kolmo_stream_compress
+tbl2.inc (14): tbl2_columns_pub, tbl2_columns_free_pub, tbl2_encode_pub, tbl2_decode_pub, fset_discover_pub, parse_dec_pub, kolmo_p10_pub, tbl2_columns, fm_int, fm_predict, col2_fvals, tbl2_columns_free, ncol_fvals, cmp_fcand
+typed_int_encoder.inc (24): ktf_unique, ktf_rep_score, ktf_forward_g, ktf_c_choose, ktf_c_2_0, ktf_ld2, ktf_c_2_1, ktf_c_4_0, ktf_ld4, ktf_c_4_1, ktf_c_8_1, ktf_ld8, ktf_pass_2_1, ktf_pass_2_0, ktf_pass_4_1, ktf_pass_4_0, ktf_pass_8_1, ktf_pass_8_0, ktf_guard, ktf_free, ktf_payload_rep, ktf_payload_huf, ktf_wrap, ktf_forward
+word.inc (2): word_encode_pub, word_decode_pub
+experimental/krc.c (8): krc_plan_cpu, krc_encode, krc_compress, plan_worker, choose, residue, encode_tiles, wr64
+experimental/kbc.c (6): kbc_compress, arithmetic_encode, emit, putbit, wr64, wr32
+experimental/kbx.c (7): kbx_compress, arithmetic_encode, emit, putbit, byte_encode, wr64, wr32
+experimental/frontier_fastq.c (11): frontier_fastq_probe, frontier_fastq_encode, start_of_records, record, line, byte, var, header, append, encode_bases, put32
+experimental/frontier_entropy.c (3): frontier_entropy_encode, put32, normalize
+experimental/frontier_runs.c (2): frontier_runs_encode, put32

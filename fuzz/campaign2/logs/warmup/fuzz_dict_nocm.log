@@ -1,0 +1,87 @@
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 1063644676
+INFO: Loaded 1 modules   (19163 inline 8-bit counters): 19163 [0x55d4bb583ba0, 0x55d4bb58867b), 
+INFO: Loaded 1 PC tables (19163 PCs): 19163 [0x55d4bb588680,0x55d4bb5d3430), 
+INFO: -fork=1: fuzzing in separate process(s)
+INFO: -fork=1: 197 seed inputs, starting to fuzz in /tmp/libFuzzerTemp.FuzzWithFork25275.dir
+#300: cov: 2365 ft: 2365 corp: 197 exec/s: 150 oom/timeout/crash: 0/0/0 time: 3s job: 1 dft_time: 0
+  NEW_FUNC: 0x55d4bb1ad768 in kolmo_crc32c /home/user/kolmo/src/kolmo.c:82
+  NEW_FUNC: 0x55d4bb1adff8 in crc_init /home/user/kolmo/src/kolmo.c:73
+  NEW_FUNC: 0x55d4bb1fbf28 in kolmo_original_size /home/user/kolmo/src/kolmo.c:3307
+  NEW_FUNC: 0x55d4bb1fc218 in run_decode /home/user/kolmo/src/kolmo.c:3310
+  NEW_FUNC: 0x55d4bb1fe298 in kolmo_decompress_dict /home/user/kolmo/src/kolmo.c:3386
+  NEW_FUNC: 0x55d4bb255828 in kgu_get /home/user/kolmo/src/kolmo.c:1194
+  NEW_FUNC: 0x55d4bb255ae8 in codec_decompress /home/user/kolmo/src/kolmo.c:1393
+  NEW_FUNC: 0x55d4bb25c288 in rans_decompress_all /home/user/kolmo/src/kolmo.c:1313
+  NEW_FUNC: 0x55d4bb25e5a8 in r64_rd /home/user/kolmo/src/kolmo.c:1312
+  NEW_FUNC: 0x55d4bb2666b8 in run_pool /home/user/kolmo/src/kolmo.c:2686
+  NEW_FUNC: 0x55d4bb279ea8 in kb_res /home/user/kolmo/src/kgraph.inc:68
+  NEW_FUNC: 0x55d4bb27da98 in blk_sum /home/user/kolmo/src/kolmo.c:1478
+  NEW_FUNC: 0x55d4bb27db18 in pool_main /home/user/kolmo/src/kolmo.c:2670
+  NEW_FUNC: 0x55d4bb2afe98 in tls_begin /home/user/kolmo/src/kolmo.c:1450
+  NEW_FUNC: 0x55d4bb2b0178 in tls_end /home/user/kolmo/src/kolmo.c:1459
+  NEW_FUNC: 0x55d4bb2bb338 in tls_init /home/user/kolmo/src/kolmo.c:1449
+  NEW_FUNC: 0x55d4bb2bc5b8 in decompress_worker /home/user/kolmo/src/kolmo.c:3269
+  NEW_FUNC: 0x55d4bb2bde38 in decode_block /home/user/kolmo/src/kolmo.c:3156
+  NEW_FUNC: 0x55d4bb2c0308 in kg_decode /home/user/kolmo/src/kgraph.inc:1177
+  NEW_FUNC: 0x55d4bb2c5d08 in lines_decode /home/user/kolmo/src/lines.inc:70
+  NEW_FUNC: 0x55d4bb2cce48 in kg_getuv /home/user/kolmo/src/kgraph.inc:80
+#1449: cov: 2584 ft: 2389 corp: 202 exec/s: 383 oom/timeout/crash: 0/0/0 time: 7s job: 2 dft_time: 0
+  NEW_FUNC: 0x55d4bb1f6558 in np_decompress /home/user/kolmo/src/nplane.inc:158
+  NEW_FUNC: 0x55d4bb256938 in np_ctx_decode /home/user/kolmo/src/nplane.inc:80
+  NEW_FUNC: 0x55d4bb2c7cf8 in tpq_inv_cols /home/user/kolmo/src/kolmo.c:329
+  NEW_FUNC: 0x55d4bb2d6058 in fi_inverse /home/user/kolmo/src/kgraph.inc:288
+  NEW_FUNC: 0x55d4bb2d8928 in fi_pick /home/user/kolmo/src/kgraph.inc:280
+  NEW_FUNC: 0x55d4bb2e2628 in fi_inv_4_8_0 /home/user/kolmo/src/kgraph.inc:278
+#2479: cov: 2729 ft: 2443 corp: 222 exec/s: 257 oom/timeout/crash: 0/0/0 time: 11s job: 3 dft_time: 0
+#3363: cov: 2738 ft: 2464 corp: 228 exec/s: 176 oom/timeout/crash: 0/0/0 time: 17s job: 4 dft_time: 0
+#5746: cov: 2743 ft: 2475 corp: 232 exec/s: 397 oom/timeout/crash: 0/0/0 time: 23s job: 5 dft_time: 0
+  NEW_FUNC: 0x55d4bb2b0078 in grow /home/user/kolmo/src/kolmo.c:1464
+  NEW_FUNC: 0x55d4bb2ca068 in tpq_inv /home/user/kolmo/src/kolmo.c:258
+#7479: cov: 2797 ft: 2530 corp: 247 exec/s: 247 oom/timeout/crash: 0/0/0 time: 31s job: 6 dft_time: 0
+  NEW_FUNC: 0x55d4bb1c5d88 in tbl2_decode /home/user/kolmo/src/tbl2.inc:924
+  NEW_FUNC: 0x55d4bb200bc8 in zs_free /home/user/kolmo/src/kolmo.c:755
+  NEW_FUNC: 0x55d4bb200fd8 in zs_malloc /home/user/kolmo/src/kolmo.c:745
+  NEW_FUNC: 0x55d4bb208bd8 in tbl2_stream /home/user/kolmo/src/tbl2.inc:729
+  NEW_FUNC: 0x55d4bb213518 in fmt_dec_swar /home/user/kolmo/src/kolmo.c:525
+#10187: cov: 2926 ft: 2555 corp: 258 exec/s: 338 oom/timeout/crash: 0/0/0 time: 40s job: 7 dft_time: 0
+#16147: cov: 2938 ft: 2587 corp: 273 exec/s: 662 oom/timeout/crash: 0/0/0 time: 49s job: 8 dft_time: 0
+#21209: cov: 2958 ft: 2609 corp: 291 exec/s: 506 oom/timeout/crash: 0/0/0 time: 59s job: 9 dft_time: 0
+#23683: cov: 2966 ft: 2638 corp: 306 exec/s: 224 oom/timeout/crash: 0/0/0 time: 70s job: 10 dft_time: 0
+  NEW_FUNC: 0x55d4bb25ba68 in huf_decompress_all /home/user/kolmo/src/kolmo.c:1223
+  NEW_FUNC: 0x55d4bb2cd108 in kg_fields_inv /home/user/kolmo/src/kgraph.inc:171
+  NEW_FUNC: 0x55d4bb2d70e8 in kg_put_num /home/user/kolmo/src/kgraph.inc:110
+#26486: cov: 3077 ft: 2757 corp: 328 exec/s: 233 oom/timeout/crash: 0/0/0 time: 83s job: 11 dft_time: 0
+#28689: cov: 3087 ft: 2776 corp: 337 exec/s: 169 oom/timeout/crash: 0/0/0 time: 96s job: 12 dft_time: 0
+  NEW_FUNC: 0x55d4bb234898 in bsc_once /home/user/kolmo/src/kolmo.c:1160
+#34751: cov: 3092 ft: 2780 corp: 341 exec/s: 433 oom/timeout/crash: 0/0/0 time: 111s job: 13 dft_time: 0
+#41915: cov: 3101 ft: 2798 corp: 350 exec/s: 477 oom/timeout/crash: 0/0/0 time: 126s job: 14 dft_time: 0
+  NEW_FUNC: 0x55d4bb1f3a78 in word_decode /home/user/kolmo/src/word.inc:151
+  NEW_FUNC: 0x55d4bb22eae8 in wd_scan_low /home/user/kolmo/src/word.inc:130
+#50379: cov: 3199 ft: 2895 corp: 376 exec/s: 529 oom/timeout/crash: 0/0/0 time: 143s job: 15 dft_time: 0
+#55023: cov: 3209 ft: 2944 corp: 396 exec/s: 273 oom/timeout/crash: 0/0/0 time: 160s job: 16 dft_time: 0
+#63704: cov: 3211 ft: 2984 corp: 405 exec/s: 482 oom/timeout/crash: 0/0/0 time: 179s job: 17 dft_time: 0
+#75035: cov: 3217 ft: 3077 corp: 435 exec/s: 596 oom/timeout/crash: 0/0/0 time: 198s job: 18 dft_time: 0
+#85465: cov: 3225 ft: 3219 corp: 502 exec/s: 521 oom/timeout/crash: 0/0/0 time: 219s job: 19 dft_time: 0
+#93561: cov: 3230 ft: 3294 corp: 538 exec/s: 385 oom/timeout/crash: 0/0/0 time: 241s job: 20 dft_time: 0
+#118012: cov: 3234 ft: 3367 corp: 570 exec/s: 1111 oom/timeout/crash: 0/0/0 time: 264s job: 21 dft_time: 0
+#131486: cov: 3251 ft: 3473 corp: 624 exec/s: 585 oom/timeout/crash: 0/0/0 time: 287s job: 22 dft_time: 0
+#144684: cov: 3255 ft: 3484 corp: 632 exec/s: 549 oom/timeout/crash: 0/0/0 time: 311s job: 23 dft_time: 0
+#154024: cov: 3260 ft: 3501 corp: 642 exec/s: 373 oom/timeout/crash: 0/0/0 time: 336s job: 24 dft_time: 0
+#161998: cov: 3261 ft: 3506 corp: 644 exec/s: 306 oom/timeout/crash: 0/0/0 time: 363s job: 25 dft_time: 0
+#167809: cov: 3262 ft: 3526 corp: 652 exec/s: 215 oom/timeout/crash: 0/0/0 time: 391s job: 26 dft_time: 0
+#185886: cov: 3263 ft: 3548 corp: 663 exec/s: 645 oom/timeout/crash: 0/0/0 time: 420s job: 27 dft_time: 0
+#193652: cov: 3265 ft: 3568 corp: 673 exec/s: 267 oom/timeout/crash: 0/0/0 time: 449s job: 28 dft_time: 0
+#201385: cov: 3265 ft: 3582 corp: 680 exec/s: 257 oom/timeout/crash: 0/0/0 time: 479s job: 29 dft_time: 0
+#213739: cov: 3266 ft: 3602 corp: 693 exec/s: 398 oom/timeout/crash: 0/0/0 time: 511s job: 30 dft_time: 0
+  NEW_FUNC: 0x55d4bb2deff8 in fi_inv_4_1_1 /home/user/kolmo/src/kgraph.inc:278
+#222281: cov: 3278 ft: 3629 corp: 703 exec/s: 266 oom/timeout/crash: 0/0/0 time: 543s job: 31 dft_time: 0
+#250424: cov: 3278 ft: 3635 corp: 706 exec/s: 852 oom/timeout/crash: 0/0/0 time: 576s job: 32 dft_time: 0
+#262092: cov: 3282 ft: 3665 corp: 722 exec/s: 343 oom/timeout/crash: 0/0/0 time: 611s job: 33 dft_time: 0
+==25275== libFuzzer: run interrupted; exiting
+stat::number_of_executed_units: 0
+stat::average_exec_per_sec:     0
+stat::new_units_added:          0
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              166
+No such file or directory: /tmp/libFuzzerTemp.FuzzWithFork25275.dir/C34; exiting

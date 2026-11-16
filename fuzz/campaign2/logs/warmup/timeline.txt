@@ -1,0 +1,21 @@
+## 2026-11-16T10:19:00Z mem_avail_MB=13952
+fuzz_decompress_nocm #698: cov: 2303 ft: 2303 corp: 199 exec/s: 349 oom/timeout/crash: 0/0/0 time: 7s job: 1 dft_time: 0
+fuzz_dict_nocm #1449: cov: 2584 ft: 2389 corp: 202 exec/s: 383 oom/timeout/crash: 0/0/0 time: 7s job: 2 dft_time: 0
+fuzz_limited_nocm #1275: cov: 2413 ft: 2413 corp: 195 exec/s: 637 oom/timeout/crash: 0/0/0 time: 7s job: 1 dft_time: 0
+fuzz_roundtrip_nocm 
+fuzz_stream_limited_nocm #1421: cov: 2105 ft: 1918 corp: 286 exec/s: 159 oom/timeout/crash: 0/0/0 time: 8s job: 2 dft_time: 0
+fuzz_stream_nocm #20496: cov: 2122 ft: 1891 corp: 292 exec/s: 5288 oom/timeout/crash: 0/0/0 time: 7s job: 2 dft_time: 0
+## 2026-11-16T10:24:00Z mem_avail_MB=13062
+fuzz_decompress_nocm #91259: cov: 3010 ft: 2931 corp: 405 exec/s: 166 oom/timeout/crash: 0/0/0 time: 290s job: 22 dft_time: 0
+fuzz_dict_nocm #131486: cov: 3251 ft: 3473 corp: 624 exec/s: 585 oom/timeout/crash: 0/0/0 time: 287s job: 22 dft_time: 0
+fuzz_limited_nocm #71036: cov: 3218 ft: 3211 corp: 475 exec/s: 212 oom/timeout/crash: 0/0/0 time: 296s job: 22 dft_time: 0
+fuzz_roundtrip_nocm #2471: cov: 15698 ft: 13748 corp: 911 exec/s: 13 oom/timeout/crash: 0/0/0 time: 290s job: 16 dft_time: 0
+fuzz_stream_limited_nocm #41467: cov: 2649 ft: 2821 corp: 575 exec/s: 120 oom/timeout/crash: 0/0/0 time: 299s job: 22 dft_time: 0
+fuzz_stream_nocm #70839: cov: 2517 ft: 2622 corp: 543 exec/s: 133 oom/timeout/crash: 0/0/0 time: 300s job: 22 dft_time: 0
+## 2026-11-16T10:29:00Z mem_avail_MB=12810
+fuzz_decompress_nocm #180271: cov: 3039 ft: 3074 corp: 477 exec/s: 205 oom/timeout/crash: 0/0/0 time: 581s job: 32 dft_time: 0
+fuzz_dict_nocm #250424: cov: 3278 ft: 3635 corp: 706 exec/s: 852 oom/timeout/crash: 0/0/0 time: 576s job: 32 dft_time: 0
+fuzz_limited_nocm #134844: cov: 3280 ft: 3372 corp: 546 exec/s: 231 oom/timeout/crash: 0/0/0 time: 585s job: 32 dft_time: 0
+fuzz_roundtrip_nocm #4958: cov: 15921 ft: 15224 corp: 1169 exec/s: 5 oom/timeout/crash: 0/0/0 time: 591s job: 26 dft_time: 0
+fuzz_stream_limited_nocm #75567: cov: 2671 ft: 2947 corp: 652 exec/s: 120 oom/timeout/crash: 0/0/0 time: 592s job: 32 dft_time: 0
+fuzz_stream_nocm #104107: cov: 2520 ft: 2688 corp: 577 exec/s: 133 oom/timeout/crash: 0/0/0 time: 589s job: 32 dft_time: 0

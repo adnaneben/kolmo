@@ -1,0 +1,105 @@
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 3180879918
+INFO: Loaded 1 modules   (837 inline 8-bit counters): 837 [0x55fa8ee70450, 0x55fa8ee70795), 
+INFO: Loaded 1 PC tables (837 PCs): 837 [0x55fa8ee70798,0x55fa8ee73be8), 
+INFO: -fork=1: fuzzing in separate process(s)
+INFO: -fork=1: 148 seed inputs, starting to fuzz in /tmp/libFuzzerTemp.FuzzWithFork1357.dir
+#6080: cov: 659 ft: 659 corp: 148 exec/s: 3040 oom/timeout/crash: 0/0/0 time: 2s job: 1 dft_time: 0
+#23171: cov: 659 ft: 659 corp: 148 exec/s: 5697 oom/timeout/crash: 0/0/0 time: 5s job: 2 dft_time: 0
+#37150: cov: 659 ft: 659 corp: 148 exec/s: 3494 oom/timeout/crash: 0/0/0 time: 9s job: 3 dft_time: 0
+#55840: cov: 659 ft: 659 corp: 148 exec/s: 3738 oom/timeout/crash: 0/0/0 time: 14s job: 4 dft_time: 0
+#95884: cov: 659 ft: 659 corp: 148 exec/s: 6674 oom/timeout/crash: 0/0/0 time: 20s job: 5 dft_time: 0
+#118666: cov: 659 ft: 659 corp: 148 exec/s: 3254 oom/timeout/crash: 0/0/0 time: 27s job: 6 dft_time: 0
+#140285: cov: 659 ft: 659 corp: 148 exec/s: 2702 oom/timeout/crash: 0/0/0 time: 36s job: 7 dft_time: 0
+#162381: cov: 659 ft: 659 corp: 148 exec/s: 2455 oom/timeout/crash: 0/0/0 time: 45s job: 8 dft_time: 0
+#248468: cov: 659 ft: 659 corp: 148 exec/s: 8608 oom/timeout/crash: 0/0/0 time: 55s job: 9 dft_time: 0
+#275672: cov: 659 ft: 659 corp: 148 exec/s: 2473 oom/timeout/crash: 0/0/0 time: 66s job: 10 dft_time: 0
+  NEW_FUNC: 0x55fa8ee201a8 in frontier_fastq_decode /home/user/kolmo/src/experimental/frontier_fastq.c:220
+  NEW_FUNC: 0x55fa8ee22498 in get32 /home/user/kolmo/src/experimental/frontier_fastq.c:13
+  NEW_FUNC: 0x55fa8ee255b8 in contexts /home/user/kolmo/src/experimental/frontier_entropy.c:20
+  NEW_FUNC: 0x55fa8ee25bf8 in frontier_entropy_decode /home/user/kolmo/src/experimental/frontier_entropy.c:116
+  NEW_FUNC: 0x55fa8ee26f98 in get32 /home/user/kolmo/src/experimental/frontier_entropy.c:9
+#309422: cov: 694 ft: 660 corp: 149 exec/s: 2812 oom/timeout/crash: 0/0/0 time: 79s job: 11 dft_time: 0
+#358861: cov: 694 ft: 660 corp: 149 exec/s: 3803 oom/timeout/crash: 0/0/0 time: 92s job: 12 dft_time: 0
+#408915: cov: 694 ft: 660 corp: 149 exec/s: 3575 oom/timeout/crash: 0/0/0 time: 106s job: 13 dft_time: 0
+  NEW_FUNC: 0x55fa8ee22608 in read_var /home/user/kolmo/src/experimental/frontier_fastq.c:61
+#455423: cov: 711 ft: 661 corp: 150 exec/s: 3100 oom/timeout/crash: 0/0/0 time: 121s job: 14 dft_time: 0
+#578515: cov: 711 ft: 661 corp: 150 exec/s: 7693 oom/timeout/crash: 0/0/0 time: 137s job: 15 dft_time: 0
+#623315: cov: 711 ft: 661 corp: 150 exec/s: 2635 oom/timeout/crash: 0/0/0 time: 155s job: 16 dft_time: 0
+#687290: cov: 711 ft: 661 corp: 150 exec/s: 3554 oom/timeout/crash: 0/0/0 time: 173s job: 17 dft_time: 0
+#746694: cov: 711 ft: 661 corp: 150 exec/s: 3126 oom/timeout/crash: 0/0/0 time: 192s job: 18 dft_time: 0
+#820309: cov: 711 ft: 661 corp: 150 exec/s: 3680 oom/timeout/crash: 0/0/0 time: 212s job: 19 dft_time: 0
+#875301: cov: 711 ft: 661 corp: 150 exec/s: 2618 oom/timeout/crash: 0/0/0 time: 233s job: 20 dft_time: 0
+#951281: cov: 711 ft: 661 corp: 150 exec/s: 3453 oom/timeout/crash: 0/0/0 time: 255s job: 21 dft_time: 0
+#1060037: cov: 711 ft: 661 corp: 150 exec/s: 4728 oom/timeout/crash: 0/0/0 time: 279s job: 22 dft_time: 0
+#1126808: cov: 711 ft: 661 corp: 150 exec/s: 2782 oom/timeout/crash: 0/0/0 time: 303s job: 23 dft_time: 0
+#1213673: cov: 711 ft: 661 corp: 150 exec/s: 3474 oom/timeout/crash: 0/0/0 time: 328s job: 24 dft_time: 0
+#1291643: cov: 711 ft: 661 corp: 150 exec/s: 2998 oom/timeout/crash: 0/0/0 time: 354s job: 25 dft_time: 0
+#1381429: cov: 711 ft: 661 corp: 150 exec/s: 3325 oom/timeout/crash: 0/0/0 time: 381s job: 26 dft_time: 0
+#1504184: cov: 711 ft: 661 corp: 150 exec/s: 4384 oom/timeout/crash: 0/0/0 time: 409s job: 27 dft_time: 0
+#1602498: cov: 711 ft: 661 corp: 150 exec/s: 3390 oom/timeout/crash: 0/0/0 time: 439s job: 28 dft_time: 0
+#1714918: cov: 711 ft: 661 corp: 150 exec/s: 3747 oom/timeout/crash: 0/0/0 time: 469s job: 29 dft_time: 0
+#1829485: cov: 711 ft: 661 corp: 150 exec/s: 3695 oom/timeout/crash: 0/0/0 time: 500s job: 30 dft_time: 0
+#1940242: cov: 711 ft: 661 corp: 150 exec/s: 3461 oom/timeout/crash: 0/0/0 time: 532s job: 31 dft_time: 0
+#2058702: cov: 711 ft: 661 corp: 150 exec/s: 3589 oom/timeout/crash: 0/0/0 time: 565s job: 32 dft_time: 0
+#2177768: cov: 711 ft: 661 corp: 150 exec/s: 3501 oom/timeout/crash: 0/0/0 time: 599s job: 33 dft_time: 0
+#2302449: cov: 711 ft: 661 corp: 150 exec/s: 3562 oom/timeout/crash: 0/0/0 time: 634s job: 34 dft_time: 0
+#2590379: cov: 711 ft: 661 corp: 150 exec/s: 7998 oom/timeout/crash: 0/0/0 time: 671s job: 35 dft_time: 0
+#2728162: cov: 711 ft: 661 corp: 150 exec/s: 3723 oom/timeout/crash: 0/0/0 time: 708s job: 36 dft_time: 0
+#2846653: cov: 711 ft: 661 corp: 150 exec/s: 3118 oom/timeout/crash: 0/0/0 time: 746s job: 37 dft_time: 0
+#3009646: cov: 711 ft: 661 corp: 150 exec/s: 4179 oom/timeout/crash: 0/0/0 time: 785s job: 38 dft_time: 0
+#3130085: cov: 711 ft: 661 corp: 150 exec/s: 3010 oom/timeout/crash: 0/0/0 time: 825s job: 39 dft_time: 0
+#3277345: cov: 711 ft: 661 corp: 150 exec/s: 3591 oom/timeout/crash: 0/0/0 time: 867s job: 40 dft_time: 0
+#3375721: cov: 711 ft: 661 corp: 150 exec/s: 2342 oom/timeout/crash: 0/0/0 time: 909s job: 41 dft_time: 0
+#3507499: cov: 711 ft: 661 corp: 150 exec/s: 3064 oom/timeout/crash: 0/0/0 time: 952s job: 42 dft_time: 0
+#3628016: cov: 711 ft: 661 corp: 150 exec/s: 2739 oom/timeout/crash: 0/0/0 time: 996s job: 43 dft_time: 0
+#3925911: cov: 711 ft: 661 corp: 150 exec/s: 6619 oom/timeout/crash: 0/0/0 time: 1042s job: 44 dft_time: 0
+#4091854: cov: 711 ft: 661 corp: 150 exec/s: 3607 oom/timeout/crash: 0/0/0 time: 1088s job: 45 dft_time: 0
+#4301142: cov: 711 ft: 661 corp: 150 exec/s: 4452 oom/timeout/crash: 0/0/0 time: 1135s job: 46 dft_time: 0
+#4693654: cov: 711 ft: 661 corp: 150 exec/s: 8177 oom/timeout/crash: 0/0/0 time: 1183s job: 47 dft_time: 0
+  NEW_FUNC: 0x55fa8ee22938 in restore_header /home/user/kolmo/src/experimental/frontier_fastq.c:195
+  NEW_FUNC: 0x55fa8ee23128 in newline /home/user/kolmo/src/experimental/frontier_fastq.c:215
+  NEW_FUNC: 0x55fa8ee23228 in take /home/user/kolmo/src/experimental/frontier_fastq.c:190
+  NEW_FUNC: 0x55fa8ee23778 in increment /home/user/kolmo/src/experimental/frontier_fastq.c:76
+#4890934: cov: 746 ft: 662 corp: 151 exec/s: 4026 oom/timeout/crash: 0/0/0 time: 1232s job: 48 dft_time: 0
+#5067409: cov: 746 ft: 662 corp: 151 exec/s: 3529 oom/timeout/crash: 0/0/0 time: 1283s job: 49 dft_time: 0
+#5292618: cov: 746 ft: 662 corp: 151 exec/s: 4415 oom/timeout/crash: 0/0/0 time: 1334s job: 50 dft_time: 0
+#5462600: cov: 746 ft: 662 corp: 151 exec/s: 3268 oom/timeout/crash: 0/0/0 time: 1386s job: 51 dft_time: 0
+#5615435: cov: 746 ft: 662 corp: 151 exec/s: 2883 oom/timeout/crash: 0/0/0 time: 1439s job: 52 dft_time: 0
+#5828780: cov: 746 ft: 662 corp: 151 exec/s: 3950 oom/timeout/crash: 0/0/0 time: 1493s job: 53 dft_time: 0
+#5988300: cov: 746 ft: 662 corp: 151 exec/s: 2900 oom/timeout/crash: 0/0/0 time: 1549s job: 54 dft_time: 0
+#6217130: cov: 746 ft: 662 corp: 151 exec/s: 4086 oom/timeout/crash: 0/0/0 time: 1605s job: 55 dft_time: 0
+#6439669: cov: 746 ft: 662 corp: 151 exec/s: 3904 oom/timeout/crash: 0/0/0 time: 1662s job: 56 dft_time: 0
+#6646496: cov: 746 ft: 662 corp: 151 exec/s: 3565 oom/timeout/crash: 0/0/0 time: 1720s job: 57 dft_time: 0
+#6840291: cov: 768 ft: 664 corp: 153 exec/s: 3284 oom/timeout/crash: 0/0/0 time: 1780s job: 58 dft_time: 0
+#6992541: cov: 768 ft: 664 corp: 153 exec/s: 2537 oom/timeout/crash: 0/0/0 time: 1840s job: 59 dft_time: 0
+#7213623: cov: 768 ft: 664 corp: 153 exec/s: 3624 oom/timeout/crash: 0/0/0 time: 1901s job: 60 dft_time: 0
+#7450029: cov: 768 ft: 664 corp: 153 exec/s: 3813 oom/timeout/crash: 0/0/0 time: 1963s job: 61 dft_time: 0
+#7876804: cov: 768 ft: 664 corp: 153 exec/s: 6774 oom/timeout/crash: 0/0/0 time: 2027s job: 62 dft_time: 0
+#8167926: cov: 768 ft: 664 corp: 153 exec/s: 4548 oom/timeout/crash: 0/0/0 time: 2091s job: 63 dft_time: 0
+#8658043: cov: 768 ft: 664 corp: 153 exec/s: 7540 oom/timeout/crash: 0/0/0 time: 2156s job: 64 dft_time: 0
+#8915636: cov: 768 ft: 664 corp: 153 exec/s: 3902 oom/timeout/crash: 0/0/0 time: 2222s job: 65 dft_time: 0
+#9434216: cov: 768 ft: 664 corp: 153 exec/s: 7740 oom/timeout/crash: 0/0/0 time: 2289s job: 66 dft_time: 0
+#9728294: cov: 768 ft: 664 corp: 153 exec/s: 4324 oom/timeout/crash: 0/0/0 time: 2357s job: 67 dft_time: 0
+#10019296: cov: 768 ft: 664 corp: 153 exec/s: 4217 oom/timeout/crash: 0/0/0 time: 2427s job: 68 dft_time: 0
+#10283412: cov: 768 ft: 664 corp: 153 exec/s: 3773 oom/timeout/crash: 0/0/0 time: 2497s job: 69 dft_time: 0
+#10488521: cov: 768 ft: 664 corp: 153 exec/s: 2888 oom/timeout/crash: 0/0/0 time: 2568s job: 70 dft_time: 0
+#10699613: cov: 768 ft: 664 corp: 153 exec/s: 2931 oom/timeout/crash: 0/0/0 time: 2640s job: 71 dft_time: 0
+#10963484: cov: 768 ft: 664 corp: 153 exec/s: 3614 oom/timeout/crash: 0/0/0 time: 2713s job: 72 dft_time: 0
+#11316160: cov: 768 ft: 664 corp: 153 exec/s: 4765 oom/timeout/crash: 0/0/0 time: 2788s job: 73 dft_time: 0
+#11793281: cov: 768 ft: 664 corp: 153 exec/s: 6361 oom/timeout/crash: 0/0/0 time: 2863s job: 74 dft_time: 0
+#12160009: cov: 768 ft: 664 corp: 153 exec/s: 4825 oom/timeout/crash: 0/0/0 time: 2939s job: 75 dft_time: 0
+#12510495: cov: 768 ft: 664 corp: 153 exec/s: 4551 oom/timeout/crash: 0/0/0 time: 3016s job: 76 dft_time: 0
+#12824553: cov: 768 ft: 664 corp: 153 exec/s: 4026 oom/timeout/crash: 0/0/0 time: 3094s job: 77 dft_time: 0
+#13170506: cov: 768 ft: 664 corp: 153 exec/s: 4379 oom/timeout/crash: 0/0/0 time: 3173s job: 78 dft_time: 0
+#13453637: cov: 768 ft: 664 corp: 153 exec/s: 3539 oom/timeout/crash: 0/0/0 time: 3254s job: 79 dft_time: 0
+#13717834: cov: 777 ft: 670 corp: 154 exec/s: 3261 oom/timeout/crash: 0/0/0 time: 3335s job: 80 dft_time: 0
+#14180891: cov: 777 ft: 670 corp: 154 exec/s: 5647 oom/timeout/crash: 0/0/0 time: 3417s job: 81 dft_time: 0
+#14417448: cov: 777 ft: 670 corp: 154 exec/s: 2850 oom/timeout/crash: 0/0/0 time: 3500s job: 82 dft_time: 0
+#14750170: cov: 777 ft: 670 corp: 154 exec/s: 3960 oom/timeout/crash: 0/0/0 time: 3584s job: 83 dft_time: 0
+#15128608: cov: 777 ft: 670 corp: 154 exec/s: 4452 oom/timeout/crash: 0/0/0 time: 3670s job: 84 dft_time: 0
+#15483793: cov: 780 ft: 671 corp: 155 exec/s: 4130 oom/timeout/crash: 0/0/0 time: 3756s job: 85 dft_time: 0
+#15859240: cov: 780 ft: 671 corp: 155 exec/s: 4315 oom/timeout/crash: 0/0/0 time: 3843s job: 86 dft_time: 0
+#16367593: cov: 780 ft: 671 corp: 155 exec/s: 5776 oom/timeout/crash: 0/0/0 time: 3931s job: 87 dft_time: 0
+INFO: fuzzed for 3931 seconds, wrapping up soon
+INFO: exiting: 0 time: 3931s
