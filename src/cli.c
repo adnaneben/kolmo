@@ -5,7 +5,8 @@
  *                    kolmo -s ...                         (streaming: bounded memory, large inputs)
  *                    kolmo -d [-T threads] [-D dict] in out  (auto-detects one-shot vs streamed)
  *                    kolmo -r offset:length in out        (random access read)
- *                    kolmo -t dict.bin sample1 sample2 ...   (train a dictionary from sample files) */
+ *                    kolmo -t dict.bin sample1 sample2 ...   (train a dictionary from sample files)
+ *                    kolmo --index ... / cat / grep / a / x / l   (queryable and deduplicating archives: cli/features.c) */
 #include "kolmo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,7 +92,9 @@ done:
     free(stage);
     return ret;
 }
+int kolmo_cli_features(int argc, char **argv);     /* cli/features.c: cat, grep, a, x, l, --index */
 int main(int argc, char **argv) {
+    { int fr = kolmo_cli_features(argc, argv); if (fr >= 0) return fr; }
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int speed = 0; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
     char *dictpath = NULL, *trainpath = NULL;
     int extreme = 0, native_leaf = 0, typed_huf = 0;

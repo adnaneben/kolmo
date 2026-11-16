@@ -58,7 +58,10 @@ endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
 BLIBS   := $(LIBS)
 
-KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc
+# Container extensions (queryable archives, deduplicating archives): src/core/*.c, compiled into libkolmo
+CORE_SRC := $(wildcard src/core/*.c)
+CORE_OBJ := $(patsubst src/%.c,build/core-obj/%.o,$(CORE_SRC))
+KOLMO_INCLUDES := src/transforms/table_cols.inc src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc
 
 all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
 
@@ -77,9 +80,13 @@ build/libvendor.a: $(OBJ)
 build/kolmo.o: src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES)
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) -c src/kolmo.c -o $@
-build/libkolmo.a: build/kolmo.o
+build/core-obj/%.o: src/%.c src/kolmo.h src/core/features.h
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(FPFLAGS) $(INC) -c $< -o $@
+build/libkolmo.a: build/kolmo.o $(CORE_OBJ)
+	rm -f $@
 	ar rcs $@ $^
-build/kolmo: src/cli.c build/libkolmo.a build/libvendor.a
+build/kolmo: src/cli.c src/cli/features.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
 build/kolmobench: bench/kolmobench.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(BLIBS) $(CXXLIB)
@@ -90,7 +97,7 @@ build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a build/libvendor.a
 build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 build/kolmo-profile: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli.c src/cli/features.c $(CORE_SRC) src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 check: all
 	python3 tests/test_fast_file.py
@@ -156,7 +163,17 @@ build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
+# Queryable archives (IDX1, column-split table blocks) and deduplicating archives (DDP1), with sanitizers and optimised
+build/test-features-b-asan: tests/test_features_b.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(CORE_SRC) src/core/features.h build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_features_b.c src/kolmo.c $(CORE_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-features-b: tests/test_features_b.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+check-features-b: build/test-features-b build/test-features-b-asan build/kolmo
+	./build/test-features-b
+	./build/test-features-b-asan 7
+	sh tests/test_features_b_cli.sh build/kolmo
+.PHONY: check-features-b
+check-rc: check-features-b check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
 .PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
@@ -176,9 +193,9 @@ build/pic/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -fPIC $(DEFS) $(INC) -c $< -o $@
 lib: build/libkolmo.$(SOEXT)
-build/libkolmo.$(SOEXT): src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(PICC) $(PICPP)
+build/libkolmo.$(SOEXT): src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(CORE_SRC) $(PICC) $(PICPP)
 	@mkdir -p build
-	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) $(INC) src/kolmo.c $(PICC) $(PICPP) -o $@ $(LIBS) $(CXXLIB)
+	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) $(INC) src/kolmo.c $(CORE_SRC) $(PICC) $(PICPP) -o $@ $(LIBS) $(CXXLIB)
 
 clean:
 	rm -rf build
@@ -186,11 +203,11 @@ clean:
 
 # Optional lower-memory archive encoder.
 build/kolmo-cm20: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli.c src/cli/features.c $(CORE_SRC) src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 # The compact variant retains the standard Ultra bitstream and table sizes elsewhere.
 build/kolmo-cm-compact: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) -DKOLMO_CM_COMPACT $(DEFS) $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+	$(CC) $(CFLAGS) $(FPFLAGS) -DKOLMO_CM_COMPACT $(DEFS) $(INC) src/cli.c src/cli/features.c $(CORE_SRC) src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 build/cm-reference.o: tests/test_cm_compact.c src/cm.inc
 	@mkdir -p build
@@ -207,7 +224,7 @@ check-cm-compact: build/cm-compact-test
 FRONTIER_SRC := src/experimental/frontier_dna.c src/experimental/frontier_table.c src/experimental/frontier_prefix.c src/experimental/frontier_pcm.c src/experimental/frontier_lag.c src/experimental/frontier_shuffle.c src/experimental/frontier_runs.c
 FRONTIER_HDR := src/experimental/frontier_dna.h src/experimental/frontier_table.h src/experimental/frontier_prefix.h src/experimental/frontier_pcm.h src/experimental/frontier_lag.h src/experimental/frontier_shuffle.h src/experimental/frontier_runs.h
 build/kolmo-frontier: src/cli.c src/kolmo.c src/kolmo.h $(wildcard src/*.inc) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) src/cli.c src/kolmo.c $(FRONTIER_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) src/cli.c src/cli/features.c $(CORE_SRC) src/kolmo.c $(FRONTIER_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
 build/kolmo-tar-file-test: tests/test_tar_file.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) $< $(FRONTIER_SRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)

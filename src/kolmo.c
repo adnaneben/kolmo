@@ -1572,8 +1572,9 @@ static inline void put64(uint8_t *p, uint64_t v) { memcpy(p, &v, 8); }
 static inline uint32_t get32(const uint8_t *p) { uint32_t v; memcpy(&v, p, 4); return v; }
 static inline uint64_t get64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }
 #include "lines.inc"
+#include "transforms/table_cols.inc"    /* column-split table blocks (flag 13) and the column reader of IDX1 queries */
 
-typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw; int verify;   /* kgw: IMG8 or DEC64 row bytes; verify: code graph blocks plainly too, keep the smaller */
+typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw; int verify; int lines;   /* lines: blocks end at line ends (KOLMO_T_COLUMNS); kgw: IMG8 or DEC64 row bytes; verify: code graph blocks plainly too, keep the smaller */
 #ifdef KOLMO_FRONTIER
     frontier_lags lags;
 #endif
@@ -2359,7 +2360,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
         size_t end = B < n - pos ? pos + B : n;
         if (pl.t == T_REC && pos == 0) end = (size_t)pl.rec->h + B < n ? (size_t)pl.rec->h + B : n;
         if (kgnum && pos == 0) end = (size_t)pl.c + B < n ? (size_t)pl.c + B : n;
-        if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG || pl.t == T_LINES || (pl.t == T_KG && !kgnum) || pl.experimental_table) && end < n) {
+        if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG || pl.t == T_LINES || (pl.t == T_KG && !kgnum) || pl.experimental_table || (pl.lines && !kgnum)) && end < n) {
             size_t lo = pos + B / 2, e = end;
             if (fd >= 0 && (pl.wide || pl.experimental_table)) {
                 /* Avoid faulting a sparse page from the planning map at every
@@ -2414,7 +2415,7 @@ size_t kolmo_bound(size_t n, const kolmo_params *p) {
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
     const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
-    int codec, level, default_level, output_fd, native_leaf, fqthreads; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
+    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint64_t *poff;   /* decode: payload offsets */
     uint64_t rlo, rhi; uint8_t *rdst;   /* range read */
@@ -2649,6 +2650,10 @@ static void *compress_worker(void *arg) {
 #ifdef KOLMO_FRONTIER_FAST_PCM
         if (pl.experimental_pcm && !J->dict && J->default_level && codec == C_ZSTD) level = 1;
 #endif
+        if (!cl && tflag == 4 && J->columns) {      /* KOLMO_T_COLUMNS: one coded segment per column (flag 13) */
+            cl = tblc_compress(xp, codec, level, in, inlen, sl, J->slot);
+            if (cl) { tflag = 13; meta = 0; goto coded; }
+        }
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
         if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
@@ -3080,7 +3085,9 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
      * analysis on; elsewhere it is ignored. */
     kolmo_params q = *p; int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0;
     int typed_huf = (q.transforms & KOLMO_T_TYPED_HUF) != 0;
-    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF);
+    int columns = (q.transforms & KOLMO_T_COLUMNS) != 0;
+    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
+    columns = columns && q.transforms && q.mode != KOLMO_RT;
     native_leaf = native_leaf && q.mode == KOLMO_FAST && q.transforms; p = &q;
     if (cap < HDR + IDX) return KOLMO_ERR_DSTSIZE;
     if (n > INT64_MAX) return KOLMO_ERR_CORRUPT;
@@ -3130,6 +3137,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
                          nseg > 1 && p->transforms && p->mode == KOLMO_FAST ? input_fd : -1, native_leaf};
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
+    if (columns) for (uint32_t g = 0; g < nseg; g++) plans[g].lines = 1;   /* queryable archives: line-aligned blocks */
     if (!p->block && nseg == 1 && (plans[0].wide || plans[0].experimental_table) && B > (2u << 20)) B = 2u << 20;
     for (uint32_t g = 0; g < nseg; g++) {
         const uint8_t *s0 = src + ss[g]; size_t len = (size_t)(se[g] - ss[g]);
@@ -3171,7 +3179,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         if (!file_index) goto cleanup;
         dst = file_index;
     }
-    J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2); J.native_leaf = native_leaf;   /* ultra level 2 = default ultra + CM graph leaves */
+    J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2); J.native_leaf = native_leaf; J.columns = columns;   /* ultra level 2 = default ultra + CM graph leaves */
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
     J.fqthreads = threads / (int)(nb < 256 ? nb : 256) > 0 ? threads / (int)(nb < 256 ? nb : 256) : 1;   /* threads left over per block */
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
@@ -3293,6 +3301,12 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         return blk_sum(P->ver, out, len) == get32(e + 8) ? 0 : KOLMO_ERR_CHECKSUM;
     }
 #endif
+    if (pl.t == T_TBL && tflag == 13) {                         /* column-split table (table_cols.inc) */
+        int64_t tn = tblc_decompress(x, codec, pay, cl, tbuf, len + TSLACK);
+        if (tn < 0 || tbl2_decode(tbuf, tn, (uint8_t)pl.a, out, len)) return KOLMO_ERR_CORRUPT;
+        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        return 0;
+    }
     if (tflag && pl.t == T_TP) meta = 4 * (size_t)(pl.c + 1);
     if ((tflag >= 3 && tflag <= 7) || tflag == 9) meta = 4;
     if (tflag == 10) meta = 8;
@@ -3460,9 +3474,33 @@ int64_t kolmo_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len,
     return run_decode(src, -1, n, dst, -1, threads, off, off + len, 1, NULL, 0, 0, NULL);
 }
 
+/* Internal hook for queryable archives (src/core/index.c, declared in src/core/features.h): column col of block i
+ * when the block is a column-split table (plan TBL, flag 13). 0 and *out (one line per row), 1 when the block is
+ * another kind (the caller decodes it whole), or a negative error. */
+int kolmo__block_column(const uint8_t *src, size_t n, uint32_t i, int col, uint8_t **out, size_t *outn,
+                        uint64_t *decoded, uint64_t *read) {
+    *out = NULL; *outn = 0; *decoded = *read = 0;
+    parsed_t P; int r = parse(src, n, &P, NULL); if (r) return r;
+    if (i >= P.nb) { free(P.poff); free(P.roff); return KOLMO_ERR_CORRUPT; }
+    const uint8_t *e = P.idx + (size_t)i * IDX, *pay = src + P.poff[i];
+    size_t len = get32(e), cl = get32(e + 4); int codec = e[12], tflag = e[13];
+    free(P.poff); free(P.roff);
+    if (P.ver < 2 || P.psum || tflag != 13 || cl < 4 || pay[0] != T_TBL) return 1;
+    if (P.needdict) return KOLMO_ERR_DICT;
+    codec_ctx x = {0}; kbuf o = {0};
+    r = tblc_column(&x, codec, pay + 4, cl - 4, len, col, &o, decoded, read);
+    codec_ctx_free(&x);
+    if (r) { free(o.p); return KOLMO_ERR_CORRUPT; }
+    *read += 4;
+    *out = o.p ? o.p : malloc(1); *outn = o.n;
+    if (!*out) return KOLMO_ERR_ALLOC;
+    return 0;
+}
+
 const char *kolmo_strerror(int64_t c) {
     switch (c) {
         case KOLMO_ERR_CORRUPT: return "corrupt or unsupported input";
+        case KOLMO_ERR_QUERY: return "no such column, or a pattern that does not compile";
         case KOLMO_ERR_CHECKSUM: return "checksum mismatch (data corrupted)";
         case KOLMO_ERR_DSTSIZE: return "destination buffer too small";
         case KOLMO_ERR_ALLOC: return "out of memory";
