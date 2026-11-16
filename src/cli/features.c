@@ -255,9 +255,26 @@ static int fc_list(int argc, char **argv) {
     return 0;
 }
 
+/* -T4, -mhc, -l2, -B0.5 and -Cdir as the separate arguments the parsers below read (the main CLI's getopt accepts both) */
+static char **fc_split(int *pargc, char **argv) {
+    int argc = *pargc; char **v = malloc(sizeof(char *) * (size_t)(2 * argc + 1)); int n = 0;
+    if (!v) return argv;
+    for (int a = 0; a < argc; a++) {
+        const char *s = argv[a];
+        if (a && s[0] == '-' && s[1] && strchr("TmlBC", s[1]) && s[2]) { static char opt[5][3] = {"-T", "-m", "-l", "-B", "-C"};
+            v[n++] = opt[strchr("TmlBC", s[1]) - "TmlBC"]; v[n++] = (char *)s + 2; }
+        else v[n++] = argv[a];
+    }
+    v[n] = NULL; *pargc = n; return v;
+}
+
 /* -1 when the arguments are not one of these commands */
 int kolmo_cli_features(int argc, char **argv) {
     if (argc < 2) return -1;
+    int known = !strcmp(argv[1], "cat") || !strcmp(argv[1], "grep") || !strcmp(argv[1], "a") || !strcmp(argv[1], "x") || !strcmp(argv[1], "l");
+    for (int a = 1; a < argc && !known; a++) known = !strcmp(argv[a], "--index");
+    if (!known) return -1;
+    argv = fc_split(&argc, argv);
     if (!strcmp(argv[1], "cat")) return fc_query(argc, argv, 0);
     if (!strcmp(argv[1], "grep")) return fc_query(argc, argv, 1);
     if (!strcmp(argv[1], "a")) return fc_archive(argc, argv);
