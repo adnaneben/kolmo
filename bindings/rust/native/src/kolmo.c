@@ -20,6 +20,18 @@
 #include "arch/x86_64/decimal_avx2.c"
 #include "arch/aarch64/decimal_neon.c"
 #include "arch/decimal.c"
+/* NEON kernels of the simd-arm lane (src/arch/arch.h: KOLMO_NEON, kolmo_force_c); each has its C reference in the
+ * part that calls it, and tests/test_arch.c compares the two */
+#include "arch/arch.h"
+int kolmo_force_c;
+#if KOLMO_NEON
+#include "arch/aarch64/word_neon.c"
+#include "arch/aarch64/shuffle_neon.c"
+#include "arch/aarch64/image_neon.c"
+#include "arch/aarch64/intinv_neon.c"
+#include "arch/aarch64/table_neon.c"
+#include "arch/aarch64/dec64_neon.c"
+#endif
 
 #include "core/memory.c"
 #include "transforms/table_v03.c"

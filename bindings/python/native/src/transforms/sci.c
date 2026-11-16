@@ -31,15 +31,39 @@ static inline int pred16_in(const uint16_t *x, int64_t i, int64_t W, int mode) {
 }
 static void img16_fwd(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi) {
     for (int64_t i = 0; i < n; i++) {
+#if KOLMO_NEON
+        if (i == W + 1 && !kolmo_force_c) { i = kolmo_img16_fwd_neon(a, i, n, W, mode, lo, hi); if (i >= n) break; }
+#endif
         int p = i > W ? pred16_in(a, i, W, mode) : pred16(a, i, W, mode);
         uint16_t r = (uint16_t)(a[i] - p); uint16_t z = (uint16_t)((uint16_t)(r << 1) ^ (uint16_t)-(uint16_t)(r >> 15));
         lo[i] = (uint8_t)z; hi[i] = (uint8_t)(z >> 8);
+    }
+}
+/* MED inverse from sample i (> W) with a shorter dependency chain; same output as the reference loop below.
+ * With d = U - UL, lo = min(U, UL), hi = max(U, UL), the median of L, U and L + d is L + max(d, 0) when L < lo, L +
+ * min(d, 0) when L > hi, and U otherwise (at the boundaries the cases agree). Everything but L is known before the
+ * left neighbour is, so a sample costs two compare-selects and an add after it. Values sit in the top 16 bits of a
+ * 32-bit word: unsigned compares are unchanged and the residual add wraps mod 2^16 without a mask. */
+static void img16_med_inv(const uint8_t *lo, const uint8_t *hi, int64_t i, int64_t n, int64_t W, uint16_t *out) {
+    uint32_t L = (uint32_t)out[i - 1] << 16;
+    for (; i < n; i++) {
+        uint32_t U = (uint32_t)out[i - W] << 16, UL = (uint32_t)out[i - W - 1] << 16, z = (uint32_t)lo[i] | (uint32_t)hi[i] << 8;
+        uint32_t r = ((z >> 1) ^ (0u - (z & 1))) << 16;
+        uint32_t mn = U < UL ? U : UL, mx = U < UL ? UL : U, dp = U >= UL ? U - UL : 0, dn = U >= UL ? 0 : U - UL;
+        uint32_t x = L > mx ? L + dn : U;
+        x = L < mn ? L + dp : x;
+        L = x + r;
+        out[i] = (uint16_t)(L >> 16);
     }
 }
 static void img16_inv(const uint8_t *lo, const uint8_t *hi, int64_t n, int64_t W, int mode, uint16_t *out) {
     int64_t i = 0, head = n < W + 1 ? n : W + 1;
     for (; i < head; i++) { uint16_t z = (uint16_t)(lo[i] | hi[i] << 8); int16_t r = (int16_t)((z >> 1) ^ (uint16_t)-(int16_t)(z & 1)); out[i] = (uint16_t)(pred16(out, i, W, mode) + r); }
     if (i >= n) return;
+#if KOLMO_NEON
+    if (!kolmo_force_c && mode == 0) { kolmo_img16_left_neon(lo, hi, i, n, out); return; }
+#endif
+    if (!kolmo_force_c && mode == 2) { img16_med_inv(lo, hi, i, n, W, out); return; }
     /* one loop per predictor, the left neighbour kept in a register (the serial chain is the decode speed) */
     uint16_t L = out[i - 1];
 #define IMG_R(i) ((uint16_t)(((uint16_t)(lo[i] | hi[i] << 8) >> 1) ^ (uint16_t)-(uint16_t)(lo[i] & 1)))
@@ -97,6 +121,9 @@ static int img16_detect(const uint8_t *s, size_t n, img_plan_t *P) {
             for (int64_t w = 16; w <= IMG_MAXW && w < wl / 2; w++) {
                 uint64_t sc = 0; const uint16_t *x = a + w0 + w, *y = a + w0;
                 int64_t lim = wl - w < CW ? wl - w : CW;
+#if KOLMO_NEON
+                if (!kolmo_force_c) sc = kolmo_sad_u16_neon(x, y, lim, 1); else
+#endif
                 for (int64_t i = 0; i < lim; i++) sc += (uint64_t)abs((int)x[i] - (int)y[i]);
                 sc = sc * CW / (uint64_t)(lim > 0 ? lim : 1);
                 if (nc < NC) { cw[nc] = w; cs[nc] = sc; nc++; }
@@ -105,7 +132,11 @@ static int img16_detect(const uint8_t *s, size_t n, img_plan_t *P) {
             for (int q = 1; q < nc; q++) for (int r = q; r > 0 && cw[r] < cw[r - 1]; r--) { int64_t t = cw[r]; cw[r] = cw[r - 1]; cw[r - 1] = t; uint64_t u = cs[r]; cs[r] = cs[r - 1]; cs[r - 1] = u; }
             for (int q = 0; q < nc; q++) {
                 int64_t w = cw[q];
-                double v = 0; for (int64_t i = w; i < wl; i += 4) v += abs((int)a[w0 + i] - (int)a[w0 + i - w]);
+                double v = 0;                      /* (integer sums below 2^53: the order of the additions does not matter) */
+#if KOLMO_NEON
+                if (!kolmo_force_c) v = (double)kolmo_sad_u16_neon(a + w0 + w, a + w0, wl > w ? (wl - w + 3) / 4 : 0, 4); else
+#endif
+                for (int64_t i = w; i < wl; i += 4) v += abs((int)a[w0 + i] - (int)a[w0 + i - w]);
                 v /= (double)((wl - w + 3) / 4);
                 if (v < wv * 1.5 && (W == 1 || v < wv)) { W = w; wv = v; }
             }

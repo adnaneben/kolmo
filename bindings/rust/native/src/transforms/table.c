@@ -674,6 +674,9 @@ __attribute__((destructor)) static void sp_dump(void) { fprintf(stderr, "vals %.
 #endif
 /* bit j: field j of the row is not empty (n <= 64 lengths) */
 static inline uint64_t row_nonempty(const uint16_t *rl, int n) {
+#if KOLMO_NEON
+    if (!kolmo_force_c) return kolmo_row_nonempty_neon(rl, n);
+#endif
     uint64_t m = 0; int j = 0;
 #if defined(__SSE2__)
     const __m128i z = _mm_setzero_si128();
@@ -682,31 +685,21 @@ static inline uint64_t row_nonempty(const uint16_t *rl, int n) {
         __m128i e = _mm_packs_epi16(_mm_cmpeq_epi16(a, z), _mm_cmpeq_epi16(b, z));
         m |= (uint64_t)(uint16_t)~_mm_movemask_epi8(e) << j;
     }
-#elif defined(__ARM_NEON) && defined(__aarch64__)
-    for (; j + 16 <= n; j += 16) {
-        uint8x16_t e = vcombine_u8(vmovn_u16(vtstq_u16(vld1q_u16(rl + j), vld1q_u16(rl + j))), vmovn_u16(vtstq_u16(vld1q_u16(rl + j + 8), vld1q_u16(rl + j + 8))));
-        uint64_t m4 = vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(vreinterpretq_u16_u8(e), 4)), 0);
-        uint64_t mm = 0; while (m4) { int b = __builtin_ctzll(m4); mm |= 1ull << (b >> 2); m4 &= ~(0xFull << (b & ~3)); }
-        m |= mm << j;
-    }
 #endif
     for (; j < n; j++) m |= (uint64_t)(rl[j] != 0) << j;
     return m;
 }
 /* indices t < R with kd[t] == 1, in order (SIMD masks; R <= 255) */
 static inline int compact_rows(const uint8_t *kd, int R, uint8_t *rows) {
+#if KOLMO_NEON
+    if (!kolmo_force_c) return kolmo_compact_rows_neon(kd, R, rows);    /* (rows has 8 bytes of room: TR + 8) */
+#endif
     int q = 0, t = 0;
 #if defined(__SSE2__)
     const __m128i one = _mm_set1_epi8(1);
     for (; t + 16 <= R; t += 16) {
         uint32_t m = (uint32_t)_mm_movemask_epi8(_mm_cmpeq_epi8(_mm_loadu_si128((const __m128i *)(kd + t)), one));
         while (m) { rows[q++] = (uint8_t)(t + __builtin_ctz(m)); m &= m - 1; }
-    }
-#elif defined(__ARM_NEON) && defined(__aarch64__)
-    for (; t + 16 <= R; t += 16) {
-        uint8x16_t e = vceqq_u8(vld1q_u8(kd + t), vdupq_n_u8(1));
-        uint64_t m = vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(vreinterpretq_u16_u8(e), 4)), 0);
-        while (m) { int b = __builtin_ctzll(m); rows[q++] = (uint8_t)(t + (b >> 2)); m &= ~(0xFull << (b & ~3)); }
     }
 #endif
     for (; t < R; t++) { rows[q] = (uint8_t)t; q += kd[t] == 1; }
@@ -985,6 +978,9 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
                 if (tot > (uint64_t)(c->dend - c->data)) goto out;
             } else {
                 uint32_t n1 = 0, n2 = 0, bad = 0;
+#if KOLMO_NEON
+                if (!kolmo_force_c) bad = (uint32_t)kolmo_kind_count_neon(c->kind, c->cnt, &n1, &n2); else
+#endif
                 for (uint32_t i = 0; i < c->cnt; i++) { uint8_t kd = c->kind[i]; n1 += kd == 1; n2 += kd == 2; bad |= kd > 2; }
                 if (bad || n1 != c->nnum || n2 != c->nexc) goto out;
                 uint8_t mx = 0; for (uint32_t i = 0; i < c->nnum; i++) mx = c->sd[i] > mx ? c->sd[i] : mx;

@@ -55,11 +55,21 @@ static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int
                                       768, 800, 960, 1000, 1024, 1080, 1200, 1280, 1366, 1440, 1536, 1600, 1920, 2048, 2560, 3840, 4096};
         enum { NS = 4096 }; size_t maxlag = 4096 * 4; if (n < 4 * maxlag) maxlag = n / 4;
         size_t span = n - maxlag, stp = span / NS ? span / NS : 1; uint32_t bestc = UINT32_MAX, sum = 0, cnt = 0; size_t bl = 0;
+        /* the candidate lags in order, then their costs with the sample loop outside: for each sampled position the
+         * lagged bytes lie within maxlag before it, so the reads stay in cache (same sums, so the same choice) */
+        enum { NL = sizeof WS / sizeof WS[0] * 3 }; size_t lags[NL]; uint32_t costs[NL]; int nl = 0;
         for (size_t k = 0; k < sizeof WS / sizeof WS[0]; k++) for (unsigned c = 1; c <= 4; c++) {
             size_t lag = (size_t)WS[k] * c; if (c == 2 || lag > maxlag) continue;
-            uint32_t cost = 0; for (size_t q = 0, i = maxlag; q < NS && i < n; q++, i += stp) { int d = s[i] - s[i - lag]; cost += (uint32_t)(d < 0 ? -d : d); }
-            sum += cost / 64; cnt++; if (cost < bestc) { bestc = cost; bl = lag; }
+            lags[nl] = lag; costs[nl] = 0; nl++;
         }
+        if (kolmo_force_c)
+            for (int k = 0; k < nl; k++) { uint32_t cost = 0; size_t lag = lags[k]; for (size_t q = 0, i = maxlag; q < NS && i < n; q++, i += stp) { int d = s[i] - s[i - lag]; cost += (uint32_t)(d < 0 ? -d : d); } costs[k] = cost; }
+        else
+            for (size_t q = 0, i = maxlag; q < NS && i < n; q++, i += stp) {
+                const int x = s[i];
+                for (int k = 0; k < nl; k++) { int d = x - s[i - lags[k]]; costs[k] += (uint32_t)(d < 0 ? -d : d); }
+            }
+        for (int k = 0; k < nl; k++) { uint32_t cost = costs[k]; sum += cost / 64; cnt++; if (cost < bestc) { bestc = cost; bl = lags[k]; } }
         if (!cnt || !bl || (uint64_t)(bestc / 64) * cnt * 2 > sum) return best;     /* rows repeat: one lag at half the average cost or less */
         uint32_t lc[5] = {0};
         for (size_t q = 0, i = maxlag; q < NS && i < n; q++, i += stp) for (unsigned c = 1; c <= 4; c++) { int d = s[i] - s[i - c]; lc[c] += (uint32_t)(d < 0 ? -d : d); }

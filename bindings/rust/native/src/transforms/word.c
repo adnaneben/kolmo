@@ -167,6 +167,9 @@ static int word_decode(const uint8_t *in, size_t tn, uint8_t *out, size_t n) {
     uint8_t special[256] = {0}; special[capb] = 1; for (int k = 0; k < np; k++) special[in[1 + k]] = 2;
     int lowset = capb < 32; for (int k = 0; k < np; k++) lowset &= in[1 + k] < 32;
     uint8_t *o = out, *oe = out + n;
+#if KOLMO_NEON
+    if (!kolmo_force_c) kolmo_wd_dec_neon(&p, end, &o, oe, arena, wl, nw, pidx, capb, special);   /* most tokens */
+#endif
     while (p < end) {
         const uint8_t *s = p;
         if (lowset) p = wd_scan_low(p, end, special);
