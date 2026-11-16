@@ -291,3 +291,8 @@ brackets, irregular and long rows, TSV, JSON lines, logs; every query against a 
 the index and without; damaged, truncated and forged indexes (line counts, flags, filters, section CRCs) must give
 an error or the right answer, never a wrong one; column-split round trips in modes 0–4 and damaged segments; DDP1
 round trips and damage. `tests/test_features_b_cli.sh`: the commands end to end, unsafe archive names refused.
+
+Full plan list on `70354eb` (this lane's last code change), Linux VM above: `make check`, `make check-rc`,
+`make check-sanitizers`, `make experimental-check GPU_CHECK=`, `make kfam-check` and
+`python3 benchmark/determinism/check.py build/kolmo build/determinism` (110 frames, OK) all pass. The same list
+also passed on the merge commit `9ec56f9`.
