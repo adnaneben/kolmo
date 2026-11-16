@@ -58,32 +58,51 @@ static void kr_init_tables(void);
 
 /* ---------------------------------------------------------------- frequency normalisation */
 
-/* Scale counts (present symbols syms[0..ns)) to sum 2^M, every present symbol >= 1. Rounds, then moves the
- * remaining difference one unit at a time to the symbol where it costs the fewest coded bits. */
+/* Scale counts (present symbols syms[0..ns)) to sum 2^M, every present symbol >= 1: floor of the exact share,
+ * then the missing units to the largest remainders (256 remainder buckets, when the floors fall short), or, when the forced ones
+ * overshoot, a cut proportional to f - 1 (equal relative cost for every symbol) and single units from the largest. */
+typedef struct { uint32_t rem; uint8_t s; } kr_rem;
 static void kr_norm(const uint32_t *cnt, const uint8_t *syms, int ns, uint64_t tot, int M, uint32_t *f) {
     const uint32_t T = 1u << M;
-    int64_t sum = 0; int big = syms[0];
+    int64_t sum = 0; kr_rem r[256];
     for (int i = 0; i < ns; i++) {
         int s = syms[i];
-        uint64_t v = ((uint64_t)cnt[s] * T * 2 + tot) / (2 * tot);
+        uint64_t q = (uint64_t)cnt[s] << M, v = q / tot;
+        r[i].s = (uint8_t)s; r[i].rem = v ? (uint32_t)(((q % tot) << 20) / tot) : 0;   /* forced ones get no remainder */
         if (!v) v = 1;
         f[s] = (uint32_t)v; sum += v;
-        if (cnt[s] > cnt[big]) big = s;
     }
     int64_t d = (int64_t)T - sum;
-    if (d != 0 && (int64_t)f[big] > 16 * (d < 0 ? -d : d)) { f[big] = (uint32_t)((int64_t)f[big] + d); return; }
-    while (d != 0) {
+    if (d) {                                      /* usual case: the largest frequency absorbs the difference */
+        int b = syms[0];
+        for (int i = 1; i < ns; i++) if (cnt[syms[i]] > cnt[b]) b = syms[i];
+        if ((int64_t)f[b] > 16 * (d < 0 ? -d : d)) { f[b] = (uint32_t)((int64_t)f[b] + d); return; }
+    }
+    if (d > 8) {          /* floors lost less than one unit each (d < ns): +1 to the d largest remainders */
+        uint16_t hb[256] = {0};
+        for (int i = 0; i < ns; i++) hb[r[i].rem >> 12]++;
+        int cut = 255; int64_t above = 0;
+        while (cut > 0 && above + hb[cut] < d) above += hb[cut--];
+        for (int i = 0; i < ns && d > 0; i++) if ((int)(r[i].rem >> 12) > cut) { f[r[i].s]++; d--; }
+        for (int i = 0; i < ns && d > 0; i++) if ((int)(r[i].rem >> 12) == cut) { f[r[i].s]++; d--; }
+        for (int i = 0; d > 0; i = (i + 1) % ns) { f[r[i].s]++; d--; }   /* not reached for d < ns */
+    } else if (d < -8) {                          /* one proportional pass (rounded up), leaving a few units */
+        int64_t x = 0, need = -d - 8;
+        for (int i = 0; i < ns; i++) x += f[syms[i]] - 1;
+        for (int i = 0; i < ns && need > 0; i++) {
+            uint32_t *fs = &f[syms[i]];
+            int64_t k = ((int64_t)(*fs - 1) * need + x - 1) / x;
+            if (k > need) k = need;
+            if (k > (int64_t)*fs - 1) k = *fs - 1;
+            *fs -= (uint32_t)k; need -= k; d += k;
+        }
+    }
+    while (d != 0) {                              /* last units: where they cost the fewest bits (first order) */
         int b = -1; double bc = 0;
         for (int i = 0; i < ns; i++) {
             int s = syms[i];
-            if (d > 0) {          /* gain of +1 */
-                double g = cnt[s] * log2((f[s] + 1.0) / f[s]);
-                if (b < 0 || g > bc) { bc = g; b = s; }
-            } else {
-                if (f[s] <= 1) continue;
-                double c = cnt[s] * log2((double)f[s] / (f[s] - 1.0));
-                if (b < 0 || c < bc) { bc = c; b = s; }
-            }
+            if (d > 0) { double g = cnt[s] / (f[s] + 0.5); if (b < 0 || g > bc) { bc = g; b = s; } }
+            else if (f[s] > 1) { double c = cnt[s] / (f[s] - 0.5); if (b < 0 || c < bc) { bc = c; b = s; } }
         }
         if (d > 0) { f[b]++; d--; } else { f[b]--; d++; }
     }
@@ -176,19 +195,31 @@ static inline void enc_put(uint32_t *xs, const esym *e, uint16_t **pp) {
     *xs = x + e->bias + q * e->cmpl;
 }
 
+/* order-1 plan for one precision */
+typedef struct o1plan_ {
+    int M; double cost;      /* bytes estimate */
+    uint8_t own[256];        /* context has its own table */
+    int nown, has_shared;
+    uint32_t fs[256];        /* shared table */
+    uint16_t fo[256][256];   /* own tables (normalised once, reused by the encoder) */
+    double ob[256];          /* own coded bits + 8 x own table bytes */
+} o1plan;
+
 typedef struct {
     uint32_t *c1;          /* order-1 counts [256][256], kept zero between blocks */
     uint16_t *w; size_t wcap;
     uint8_t *tb;           /* table scratch */
     esym *es;              /* [KR_MAXTAB][256] */
+    struct o1plan_ *plan;  /* two order-1 plans (one per precision tried) */
 } encws;
 
-static void encws_free(encws *w) { free(w->c1); free(w->w); free(w->tb); free(w->es); memset(w, 0, sizeof *w); }
+static void encws_free(encws *w) { free(w->c1); free(w->w); free(w->tb); free(w->es); free(w->plan); memset(w, 0, sizeof *w); }
 static int encws_init(encws *w, size_t block) {
     memset(w, 0, sizeof *w);
     w->c1 = calloc(256 * 256, 4); w->wcap = block + 64; w->w = malloc(w->wcap * 2);
     w->tb = malloc(KR_MAXTAB * (33 + 256 * 3) + 64); w->es = malloc(sizeof(esym) * KR_MAXTAB * 256);
-    if (!w->c1 || !w->w || !w->tb || !w->es) { encws_free(w); return -1; }
+    w->plan = malloc(2 * sizeof *w->plan);
+    if (!w->c1 || !w->w || !w->tb || !w->es || !w->plan) { encws_free(w); return -1; }
     return 0;
 }
 
@@ -198,13 +229,6 @@ static int present(const uint32_t *cnt, uint8_t *syms) {
     return ns;
 }
 
-/* order-1 plan for one precision */
-typedef struct {
-    int M; double cost;      /* bytes estimate */
-    uint8_t own[256];        /* context has its own table */
-    int nown, has_shared;
-    uint32_t fs[256];        /* shared table */
-} o1plan;
 
 static void o1_plan(encws *w, const uint32_t *h0, const uint32_t *ctot, int M, int N, o1plan *pl) {
     uint8_t syms[256], gs[256]; uint32_t f[256], g[256]; int ng = present(h0, gs);
@@ -220,8 +244,12 @@ static void o1_plan(encws *w, const uint32_t *h0, const uint32_t *ctot, int M, i
         int ns = present(cc, syms);
         double shared = 0; for (int i = 0; i < ns; i++) shared += cc[syms[i]] * gl[syms[i]];
         double own;
-        if (ns == 1) own = 8.0 * 3;   /* alphabet only: 1 run (3 bytes) */
-        else { kr_norm(cc, syms, ns, ctot[c], M, f); own = kr_bits(cc, syms, ns, f, M) + 8.0 * table_size(syms, ns, f); }
+        if (ns == 1) { own = 8.0 * 3; pl->fo[c][syms[0]] = (uint16_t)(1u << M); }   /* alphabet only: 1 run (3 bytes) */
+        else {
+            kr_norm(cc, syms, ns, ctot[c], M, f); own = kr_bits(cc, syms, ns, f, M) + 8.0 * table_size(syms, ns, f);
+            for (int i = 0; i < ns; i++) pl->fo[c][syms[i]] = (uint16_t)f[syms[i]];
+        }
+        pl->ob[c] = own;
         if (own < shared) pl->own[c] = 1;
         else for (int i = 0; i < ns; i++) sc[syms[i]] += cc[syms[i]];
     }
@@ -235,15 +263,7 @@ static void o1_plan(encws *w, const uint32_t *h0, const uint32_t *ctot, int M, i
         else { kr_norm(sc, gs, nsh, tsh, M, pl->fs); bits += kr_bits(sc, gs, nsh, pl->fs, M); }
         bytes += table_size(gs, nsh, pl->fs);
     }
-    for (int c = 0; c < 256; c++) {
-        if (!pl->own[c]) continue;
-        const uint32_t *cc = w->c1 + 256 * c;
-        int ns = present(cc, syms);
-        nown++;
-        if (ns == 1) { bytes += 3; continue; }
-        kr_norm(cc, syms, ns, ctot[c], M, f);
-        bits += kr_bits(cc, syms, ns, f, M); bytes += table_size(syms, ns, f);
-    }
+    for (int c = 0; c < 256; c++) if (pl->own[c]) { nown++; bits += pl->ob[c]; }
     { int k = 0; uint8_t os[256]; for (int c = 0; c < 256; c++) if (pl->own[c]) os[k++] = (uint8_t)c; bytes += put_alpha(w->tb, os, k); }
     pl->nown = nown;
     pl->cost = bytes + bits / 8 + 4.0 * N;
@@ -321,21 +341,21 @@ static size_t enc_block(const uint8_t *in, size_t n, uint8_t *out, size_t cap, c
             if (e < best) { best = e; kind = K_O0; bm = c0[k]; memcpy(f0, f, sizeof f); }
         }
     }
-    o1plan pl = {0}, tp;
+    o1plan *pl = NULL;
     const size_t Ls = n / N;
     uint32_t ctot[256] = {0};
     if (p->order != 0) {
         for (size_t i = 0; i < n; i++) { int c = o1_ctx(in, i, Ls, N); w->c1[256 * c + in[i]]++; ctot[c]++; }
         int c1[2] = {10, 12};
         if (p->prec) c1[0] = c1[1] = p->prec;
-        int have = 0;
         for (int k = 0; k < 2; k++) {
             if (k && c1[1] == c1[0]) break;
-            o1_plan(w, h0, ctot, c1[k], N, &tp);
+            o1plan *tp = &w->plan[k];
+            o1_plan(w, h0, ctot, c1[k], N, tp);
             /* 12-bit order-1 tables are 4x larger to build and keep in cache: take them only for >= 1/256 */
-            if (!have || tp.cost + (k ? tp.cost / 256 : 0) < pl.cost) { pl = tp; have = 1; }
+            if (!pl || tp->cost + (k ? tp->cost / 256 : 0) < pl->cost) pl = tp;
         }
-        if (pl.cost < best || (p->order == 1 && pl.cost < n)) { best = pl.cost; kind = K_O1; bm = pl.M; }
+        if (pl->cost < best || (p->order == 1 && pl->cost < n)) { best = pl->cost; kind = K_O1; bm = pl->M; }
     }
 
     size_t o = 0;
@@ -350,28 +370,28 @@ static size_t enc_block(const uint8_t *in, size_t n, uint8_t *out, size_t cap, c
         if (N == 8) enc_o0(in, n, es, x, &wp, 8); else if (N == 16) enc_o0(in, n, es, x, &wp, 16); else enc_o0(in, n, es, x, &wp, 32);
     } else if (kind == K_O1) {
         const int M = bm; uint8_t os[256]; int no = 0;
-        for (int cx = 0; cx < 256; cx++) if (pl.own[cx]) os[no++] = (uint8_t)cx;
+        for (int cx = 0; cx < 256; cx++) if (pl->own[cx]) os[no++] = (uint8_t)cx;
         tl = put_alpha(tb, os, no);
-        tb[tl++] = (uint8_t)pl.has_shared;
+        tb[tl++] = (uint8_t)pl->has_shared;
         int tmap[256];
         uint8_t ts[256]; uint32_t f[256];
-        if (pl.has_shared) {
-            int k = present(pl.fs, ts);
-            tl += put_table(tb + tl, ts, k, pl.fs);   /* k == 1: alphabet only, frequency implied */
+        if (pl->has_shared) {
+            int k = present(pl->fs, ts);
+            tl += put_table(tb + tl, ts, k, pl->fs);   /* k == 1: alphabet only, frequency implied */
             uint32_t c = 0;
-            for (int i = 0; i < k; i++) { esym_init(&w->es[256 * no + ts[i]], c, pl.fs[ts[i]], M); c += pl.fs[ts[i]]; }
+            for (int i = 0; i < k; i++) { esym_init(&w->es[256 * no + ts[i]], c, pl->fs[ts[i]], M); c += pl->fs[ts[i]]; }
         }
         for (int cx = 0; cx < 256; cx++) tmap[cx] = no;
         for (int t = 0; t < no; t++) {
             int cx = os[t]; const uint32_t *cc = w->c1 + 256 * cx;
             int k = present(cc, ts);
-            if (k == 1) f[ts[0]] = 1u << M; else kr_norm(cc, ts, k, ctot[cx], M, f);
+            for (int i = 0; i < k; i++) f[ts[i]] = pl->fo[cx][ts[i]];
             tl += put_table(tb + tl, ts, k, f);
             uint32_t c = 0;
             for (int i = 0; i < k; i++) { esym_init(&w->es[256 * t + ts[i]], c, f[ts[i]], M); c += f[ts[i]]; }
             tmap[cx] = t;
         }
-        st->o1_tables += no + pl.has_shared;
+        st->o1_tables += no + pl->has_shared;
         const esym *es = w->es;
         for (size_t i = n; i > (size_t)N * Ls;) { i--; enc_put(&x[N - 1], &es[256 * tmap[o1_ctx(in, i, Ls, N)] + in[i]], &wp); }
         if (N == 8) enc_o1(in, Ls, es, tmap, x, &wp, 8); else if (N == 16) enc_o1(in, Ls, es, tmap, x, &wp, 16); else enc_o1(in, Ls, es, tmap, x, &wp, 32);
