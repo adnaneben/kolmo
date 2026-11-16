@@ -127,7 +127,10 @@ regenerated in a commit of their own; 1 and 4 threads give the same frames.
 
 - Hand-written SIMD mixer kernels and a byte-ahead bucket prefetch: no measurable gain (above).
 - Block-parallel text: every split costs 3–11%; plain text over 10 MB remains `-x`'s slowest case. Next candidate: a
-  shared static prior (parts warmed on the same leading bytes), not measured here.
+  shared static prior (parts warmed on the same leading bytes), not measured here. A separate study for the
+  integration lane (branch `claude/dazzling-maxwell-p8y4u0`, `research/FINDINGS.md` section 7, a CM coder for tables)
+  measured exactly that: every block starting from the model state trained on block 0 brought 16 blocks from +7–14%
+  to about +2% (still above this lane's 0.5% budget, but the lead for splitting text), with 3.2–3.5× on 4 cores.
 - The vectorisable part of the per-bit work is the 30 counter and state-map updates (45% of instructions); they are
   gathers and scatters across 30 cache lines, which AVX2 cannot scatter. Not attempted.
 - NEON: the AVX2 loop clone is x86-only; arm64 builds use the generic loops (the simd-arm lane can add the same clone
