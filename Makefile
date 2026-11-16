@@ -137,8 +137,16 @@ check-rc-options: build/test-rc-options build/test-rc-options-asan
 	./build/test-rc-options-asan
 .PHONY: check-rc-options
 # Component tests of the features merged for the release candidate. `make check` does not run them; CI does.
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options
-.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg
+# Runtime ISA dispatch (x86-64): CRC32C and XXH3 against scalar references, optimised and with sanitizers.
+build/test-dispatch: tests/test_dispatch.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS) $(CXXLIB)
+build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) vendor/xxhash/kolmo_xxh3.c build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c vendor/xxhash/kolmo_xxh3.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-dispatch: build/test-dispatch build/test-dispatch-asan
+	./build/test-dispatch
+	./build/test-dispatch-asan
+check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-dispatch
+.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-dispatch
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
