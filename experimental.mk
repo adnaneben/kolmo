@@ -100,13 +100,13 @@ kfam-check: build/kfam-asan
 	@echo "KFAM TESTS PASSED"
 .PHONY: kfam-check
 
-build/kvid: $(XD)/kvid.c src/kolmo.h build/libkolmo.a build/libvendor.a
+build/kvid: $(XD)/kvid.c src/arch/aarch64/kvid_neon.c src/kolmo.h build/libkolmo.a build/libvendor.a
 	@mkdir -p build
-	$(CC) $(CFLAGS) -Isrc $(XD)/kvid.c build/libkolmo.a build/libvendor.a $(LIBS) $(CXXLIB) -o $@
+	$(CC) $(CFLAGS) $(filter -DKOLMO_NO_ASM,$(DEFS)) -Isrc $(XD)/kvid.c src/arch/aarch64/kvid_neon.c build/libkolmo.a build/libvendor.a $(LIBS) $(CXXLIB) -o $@
 
 experimental-check: build/krc-frontier-test build/krctest build/krctest-asan build/kbctest-asan build/kbxtest-asan \
 		build/frontier-reads-test build/krc-cpu build/krc-auto build/kbc build/kbx build/kolmo-fastq $(GPU_CHECK) \
-		build/kbin build/kbin-asan
+		build/kbin build/kbin-asan build/kvid
 	$(if $(GPU_CHECK),./build/krcgputest)
 	./build/krc-frontier-test
 	./build/krctest
@@ -115,6 +115,7 @@ experimental-check: build/krc-frontier-test build/krctest build/krctest-asan bui
 	./build/kbxtest-asan
 	./build/frontier-reads-test
 	./build/kbin-asan --selftest
+	python3 tests/test_kvid_kernels.py build/kvid build/kvid-test
 .PHONY: experimental-check
 
 # kbin: numeric-array coder after the pcodec paper (binning, rANS bin indices, raw offset bits); KBIN.md

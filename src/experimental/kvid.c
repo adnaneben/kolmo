@@ -19,6 +19,15 @@
 #include <time.h>
 
 enum { STRIP = 16, MAXP = 3 };
+/* NEON kernels (src/arch/aarch64/kvid_neon.c, and the median band of image_neon.c in the library); KVID_FORCE_C=1 in
+ * the environment keeps the C code below, which is their reference */
+#if defined(__aarch64__) && defined(__ARM_NEON) && !defined(KOLMO_NO_ASM)
+#define KVID_NEON 1
+uint64_t kolmo_kvid_row_neon(int k, const uint8_t *cur, const uint8_t *prev, size_t w, size_t y, uint8_t *res);
+void kolmo_kvid_add_neon(uint8_t *cur, const uint8_t *prev, const uint8_t *res, size_t n);
+int kolmo_med_band16_neon(const uint8_t *r, size_t W, uint8_t *p, size_t y0);
+static int kvid_c;
+#endif
 typedef struct { size_t w[MAXP], h[MAXP]; int np; size_t frame_bytes, frames, hdr_len; } layout_t;
 
 static void put32(uint8_t *p, uint32_t v) { for (int i = 0; i < 4; i++) p[i] = (uint8_t)(v >> (8 * i)); }
@@ -93,20 +102,37 @@ static void encode_plane(const uint8_t *cur, const uint8_t *prev, size_t w, size
         size_t y1 = y0 + STRIP < h ? y0 + STRIP : h; int best = 0; uint64_t bc = UINT64_MAX;
         for (int k = 0; k < (prev ? 3 : 1); k++) {
             uint64_t c = 0;
-            for (size_t y = y0; y < y1; y++) for (size_t x = 0; x < w; x++) {
-                int8_t r = (int8_t)(uint8_t)(cur[y * w + x] - predict(k, cur, prev, w, x, y)); c += (uint64_t)(r < 0 ? -r : r);
+            for (size_t y = y0; y < y1; y++) {
+#ifdef KVID_NEON
+                if (!kvid_c && y && w >= 17) {
+                    int8_t r = (int8_t)(uint8_t)(cur[y * w] - predict(k, cur, prev, w, 0, y)); c += (uint64_t)(r < 0 ? -r : r);
+                    c += kolmo_kvid_row_neon(k, cur, prev, w, y, NULL);
+                    continue;
+                }
+#endif
+                for (size_t x = 0; x < w; x++) {
+                    int8_t r = (int8_t)(uint8_t)(cur[y * w + x] - predict(k, cur, prev, w, x, y)); c += (uint64_t)(r < 0 ? -r : r);
+                }
             }
             if (c < bc) { bc = c; best = k; }
         }
         flags[s] = (uint8_t)best;
-        for (size_t y = y0; y < y1; y++) for (size_t x = 0; x < w; x++)
-            res[y * w + x] = zz(cur[y * w + x] - predict(best, cur, prev, w, x, y));
+        for (size_t y = y0; y < y1; y++) {
+#ifdef KVID_NEON
+            if (!kvid_c && y && w >= 17) { res[y * w] = zz(cur[y * w] - predict(best, cur, prev, w, 0, y)); kolmo_kvid_row_neon(best, cur, prev, w, y, res); continue; }
+#endif
+            for (size_t x = 0; x < w; x++) res[y * w + x] = zz(cur[y * w + x] - predict(best, cur, prev, w, x, y));
+        }
     }
 }
 static int decode_plane(uint8_t *cur, const uint8_t *prev, size_t w, size_t h, const uint8_t *res, const uint8_t *flags) {
     for (size_t y0 = 0, s = 0; y0 < h; y0 += STRIP, s++) {
         int k = flags[s]; if (k > 2 || (k && !prev)) return -1;
         size_t y1 = y0 + STRIP < h ? y0 + STRIP : h;
+#ifdef KVID_NEON
+        if (!kvid_c && k == 1) { kolmo_kvid_add_neon(cur + y0 * w, prev + y0 * w, res + y0 * w, (y1 - y0) * w); continue; }
+        if (!kvid_c && k == 0 && y1 - y0 == 16 && kolmo_med_band16_neon(res, w, cur, y0)) continue;
+#endif
         for (size_t y = y0; y < y1; y++) for (size_t x = 0; x < w; x++)
             cur[y * w + x] = (uint8_t)(predict(k, cur, prev, w, x, y) + unzz(res[y * w + x]));
     }
@@ -202,6 +228,9 @@ static int dec(const uint8_t *c, size_t cn, uint8_t *out, size_t n) {
 static double now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
 
 int main(int argc, char **argv) {
+#ifdef KVID_NEON
+    kvid_c = getenv("KVID_FORCE_C") && atoi(getenv("KVID_FORCE_C"));
+#endif
     const char *m = "ratio"; int a = 1, bench = 0, d = 0, threads = 1;
     for (; a < argc && argv[a][0] == '-' && argv[a][1]; a++) {
         if (!strcmp(argv[a], "-d")) d = 1; else if (!strcmp(argv[a], "-b")) bench = 1;
