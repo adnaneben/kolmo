@@ -218,14 +218,11 @@ data. A shared library and Python and Rust bindings are in `bindings/`; the form
 ## Layout
 
 ```
-src/kolmo.h, kolmo.c   library: planning, container, codecs, thread pool, table v1, field transposition, shuffle
-src/tbl2.inc       tables: typed columns, predictors, formula discovery
-src/log.inc        logs: templates and skeleton columns
-src/lines.inc      fixed-width text: line classes stored column by column
-src/sci.inc        fixed records and 16-bit images
-src/word.inc       word dictionary for prose
-src/cm.inc         context-mixing coder
-src/cli.c          command line          bench/kolmobench.c   benchmark          tests/kolmotest.c   tests
+src/kolmo.h        the public API      src/kolmo.c   the library: includes the parts below (docs/LAYOUT.md)
+src/api, core      entry points; container, blocks, thread pool, encoder, decoder, streams
+src/plan           analysis and plan per block      src/transforms   table, log, lines, sci, word, graph, ...
+src/codecs         one file per block codec (kolmo_codec table)    src/algo, arch   algorithms; CPU kernels by ISA
+src/cli/cli.c      command line          bench/kolmobench.c   benchmark          tests/kolmotest.c   tests
 tune/ga.py         genetic tuning        mac/              Mac scripts        vendor/           zstd, LZ4, libbsc
 bindings/python    PyPI package kolmoc   bindings/rust     crate kolmo        packaging/homebrew  brew formula
 ```

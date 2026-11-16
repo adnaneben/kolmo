@@ -195,6 +195,15 @@ build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan
+# Assembly kernels (src/arch/<isa>/*.S) against their C references, optimised and with sanitizers; with NO_ASM=1 the
+# references only.
+build/test-asm: tests/test_asm.c src/kolmo.c $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-asm-asan: tests/test_asm.c src/kolmo.c $(KOLMO_INCLUDES) $(ARCHSRC) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< $(ARCHSRC) build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-asm: build/test-asm build/test-asm-asan
+	./build/test-asm
+	./build/test-asm-asan
 # CPU kernels (src/arch) against their C references, and whole frames with the kernels on and off; optimised and
 # with sanitizers.
 build/test-arch: tests/test_arch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
@@ -204,8 +213,8 @@ build/test-arch-asan: tests/test_arch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES
 check-arch: build/test-arch build/test-arch-asan
 	./build/test-arch
 	./build/test-arch-asan
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-arch
-.PHONY: check-rc check-arch check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
+check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-arch
+.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm check-arch
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
