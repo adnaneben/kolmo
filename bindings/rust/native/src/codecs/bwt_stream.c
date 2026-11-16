@@ -13,7 +13,7 @@
 #include "../algo/bytes.h"
 #include "../algo/lzp.h"
 #include "../algo/qlfc.h"
-#include "../algo/sais/libsais.h"
+#include "../algo/sais/sais.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -42,12 +42,12 @@ static int bwt_mod(int n) {            /* sampling interval - 1 for the auxiliar
     return mod;
 }
 
-static int bwt_encode(uint8_t *T, int n, uint8_t *num_indexes, int32_t *indexes) {
+static int bwt_encode(uint8_t *T, int n, uint8_t *num_indexes, int32_t *indexes, int threads) {
     int32_t *A = (int32_t *)malloc((size_t)n * sizeof(int32_t) + 4);
     if (!A) return KB_NOT_ENOUGH_MEMORY;
     int32_t I[256];
     int mod = bwt_mod(n);
-    int index = libsais_bwt_aux(T, T, A, n, 0, NULL, mod + 1, I);
+    int index = kolmo_sais_bwt_aux(T, T, A, n, mod + 1, I, threads);
     if (index == 0) {
         num_indexes[0] = (uint8_t)((n - 1) / (mod + 1));
         index = I[0]; for (int t = 0; t < num_indexes[0]; ++t) indexes[t] = I[t + 1] - 1;
@@ -58,7 +58,7 @@ static int bwt_encode(uint8_t *T, int n, uint8_t *num_indexes, int32_t *indexes)
     return index;
 }
 
-static int bwt_decode(uint8_t *T, int n, int index, uint8_t num_indexes, const int32_t *indexes) {
+static int bwt_decode(uint8_t *T, int n, int index, uint8_t num_indexes, const int32_t *indexes, int threads) {
     if (!T || n < 0 || index <= 0 || index > n) return KB_BAD_PARAMETER;
     if (n <= 1) return KB_OK;
     int32_t *P = (int32_t *)malloc(((size_t)n + 1) * sizeof(int32_t));
@@ -67,8 +67,8 @@ static int bwt_decode(uint8_t *T, int n, int index, uint8_t num_indexes, const i
     if (num_indexes == (uint8_t)((n - 1) / (mod + 1)) && indexes) {
         int32_t I[256]; I[0] = index;
         for (int t = 0; t < num_indexes; ++t) I[t + 1] = indexes[t] + 1;
-        r = libsais_unbwt_aux(T, T, P, n, NULL, mod + 1, I);
-    } else r = libsais_unbwt(T, T, P, n, NULL, index);
+        r = kolmo_sais_unbwt_aux(T, T, P, n, mod + 1, I, threads);
+    } else r = kolmo_sais_unbwt(T, T, P, n, index, threads);
     free(P);
     if (r == -1) return KB_BAD_PARAMETER;
     if (r == -2) return KB_NOT_ENOUGH_MEMORY;
@@ -111,7 +111,7 @@ int kolmo_bsc_compress(const uint8_t *in, uint8_t *out, int n, int lzp_hash, int
     if (mode == (mode & 0xff)) { lz_size = n; memcpy(out, in, (size_t)n); }
 
     int32_t indexes[256]; uint8_t num_indexes = 0;
-    int index = bwt_encode(out, lz_size, &num_indexes, indexes);
+    int index = bwt_encode(out, lz_size, &num_indexes, indexes, threads);
     if (n < 64 * 1024) num_indexes = 0;
     if (index < KB_OK) return index;
 
@@ -178,7 +178,7 @@ int kolmo_bsc_decompress(const uint8_t *in, int in_size, uint8_t *out, int out_s
 
     int lz_size = kolmo_qlfc_decompress(in + KOLMO_BSC_HEADER_SIZE, coded, out, data_size, coder, threads);
     if (lz_size < KB_OK) return lz_size;
-    int r = bwt_decode(out, lz_size, index, num_indexes, indexes);
+    int r = bwt_decode(out, lz_size, index, num_indexes, indexes, threads);
     if (r < KB_OK) return r;
     if (mode != (mode & 0xff)) {
         uint8_t *buffer = (uint8_t *)malloc((size_t)lz_size + 1);

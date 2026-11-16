@@ -13,6 +13,7 @@
 #include "codecs/bwt_stream.h"
 #include "algo/lzp.h"
 #include "algo/qlfc.h"
+#include "algo/sais/sais.h"
 #ifdef GOLDEN_FROM_LIBBSC
 #include "libbsc/libbsc.h"
 #endif
@@ -89,6 +90,35 @@ static void damage(const uint8_t *in, int n, uint64_t seed) {
     free(c); free(d); free(t);
 }
 
+/* Suffix sorter (src/algo/sais): the BWT and its indexes are the same for 2 to 6 threads as for one (one thread is
+   libsais's own code path, pinned to libsais's bytes by the golden hashes above), and both inverses restore the input.
+   Out-of-range indexes must be refused. */
+static void sais_threads(void) {
+    static const int ns[] = {2, 3, 7, 100, 4096, 65536, 70001, 300000, 1000003};
+    for (int kind = 0; kind < 9; kind++) for (unsigned s = 0; s < sizeof(ns) / sizeof(ns[0]); s++) {
+        int n = ns[s]; uint8_t *T = gen(kind, n), *U1 = malloc((size_t)n), *U = malloc((size_t)n), *R = malloc((size_t)n);
+        int32_t *A = malloc(4 * (size_t)n + 8), I1[1024], I[1024];
+        for (int rl = 1; rl <= 19; rl += 9) {
+            int32_t r = 1 << rl;
+            if ((n - 1) / r > 1000) continue;
+            CHECK(kolmo_sais_bwt_aux(T, U1, A, n, r, I1, 1) == 0, "sais: bwt failed (n %d)", n);
+            for (int th = 1; th <= 6; th++) {
+                if (th > 1) {
+                    int rc = kolmo_sais_bwt_aux(T, U, A, n, r, I, th);
+                    CHECK(rc == 0 && !memcmp(U, U1, (size_t)n) && !memcmp(I, I1, 4 * (size_t)((n - 1) / r + 1)),
+                          "sais: %d threads changed the BWT (kind %d n %d r %d)", th, kind, n, r);
+                }
+                memset(R, 0, (size_t)n);
+                CHECK(kolmo_sais_unbwt_aux(U1, R, A, n, r, I1, th) == 0 && !memcmp(R, T, (size_t)n), "sais: unbwt_aux (kind %d n %d th %d)", kind, n, th);
+                memset(R, 0, (size_t)n);
+                CHECK(kolmo_sais_unbwt(U1, R, A, n, I1[0], th) == 0 && !memcmp(R, T, (size_t)n), "sais: unbwt (kind %d n %d th %d)", kind, n, th);
+            }
+            I[0] = n + 1; CHECK(kolmo_sais_unbwt(U1, R, A, n, n + 1, 2) != 0, "sais: index out of range accepted");
+        }
+        free(T); free(U1); free(U); free(R); free(A);
+    }
+}
+
 int main(int argc, char **argv) {
     int print = argc > 1 && !strcmp(argv[1], "--print");
 #ifdef GOLDEN_FROM_LIBBSC
@@ -118,6 +148,7 @@ int main(int argc, char **argv) {
         }
     }
     if (print) return 0;
+    sais_threads();
     printf(fails ? "BWT TESTS FAILED (%d)\n" : "BWT TESTS PASSED\n", fails);
     return fails != 0;
 }
