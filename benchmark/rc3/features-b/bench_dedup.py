@@ -33,9 +33,9 @@ def tools():
         ("kolmo a, balanced, 16 KiB chunks", f"{k} a -T1 {{arc}} {{files}}", f"{k} x -T1 -C {{out}} {{arc}}"),
         ("kolmo a, balanced, 4 KiB chunks", f"{k} a -T1 --chunk 4 {{arc}} {{files}}", f"{k} x -T1 -C {{out}} {{arc}}"),
         ("kolmo a, hc, 4 KiB chunks", f"{k} a -T1 -m hc --chunk 4 {{arc}} {{files}}", f"{k} x -T1 -C {{out}} {{arc}}"),
-        ("kolmo, balanced, no dedup (one frame per file)", f"mkdir -p {{arc}} && for f in {{files}}; do mkdir -p {{arc}}/$(dirname $f) && {k} -T1 $f {{arc}}/$f.kol; done",
+        ("kolmo, balanced, no dedup (one frame per file)", f"mkdir -p {{arc}} && find . -type f | while read f; do mkdir -p {{arc}}/$(dirname $f) && {k} -T1 $f {{arc}}/$f.kol; done",
          f"cd {{arc}} && find . -name '*.kol' | while read f; do mkdir -p {{out}}/$(dirname $f) && {k} -d -T1 $f {{out}}/${{{{f%.kol}}}}; done"),
-        ("zstd -19 --long=27, per file", f"mkdir -p {{arc}} && for f in {{files}}; do mkdir -p {{arc}}/$(dirname $f) && zstd -q -19 --long=27 -T1 $f -o {{arc}}/$f.zst; done",
+        ("zstd -19 --long=27, per file", f"mkdir -p {{arc}} && find . -type f | while read f; do mkdir -p {{arc}}/$(dirname $f) && zstd -q -19 --long=27 -T1 $f -o {{arc}}/$f.zst; done",
          f"cd {{arc}} && find . -name '*.zst' | while read f; do mkdir -p {{out}}/$(dirname $f) && zstd -q -d --long=27 $f -o {{out}}/${{{{f%.zst}}}}; done"),
         ("tar | zstd -3 --long=31", "tar cf - {files} | zstd -q -3 --long=31 -T1 -o {arc}", "zstd -q -d --long=31 -c {arc} | tar xf - -C {out}"),
         ("tar | zstd -19 --long=31", "tar cf - {files} | zstd -q -19 --long=31 -T1 -o {arc}", "zstd -q -d --long=31 -c {arc} | tar xf - -C {out}"),
@@ -59,7 +59,7 @@ for s in SETS:
     base = os.path.join(DATA, s)
     files = sorted(os.path.relpath(os.path.join(r, f), base) for r, _, fs in os.walk(base) for f in fs)
     total = sum(os.path.getsize(os.path.join(base, f)) for f in files)
-    flist = " ".join(files)
+    flist = " ".join(sorted(os.listdir(base)))           # top-level entries: every tool recurses into directories
     res.setdefault(s, {"files": len(files), "bytes": total, "rows": {}})
     for name, c, d in tools():
         if name in res[s]["rows"]: continue

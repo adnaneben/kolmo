@@ -3,7 +3,7 @@
  *   kolmo --index [-m mode] [-l level] [-T n] [-B MiB] [--no-filter] [--token-bits K] [--delim C] [--kind lines|table|json] in out.kol
  *   kolmo cat  [--col NAME|#N] [--rows A-B] [-n] [-c] [--no-index] [--stats] [-T n] file.kol
  *   kolmo grep [-F] [-i] [-w] [-n] [-c] [--col NAME|#N] [--rows A-B] [--no-index] [--stats] [-T n] PATTERN file.kol
- *   kolmo a    [-m mode] [-l level] [-T n] [-B MiB] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files...
+ *   kolmo a    [-m mode] [-l level] [-T n] [-B MiB] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files-or-dirs...
  *   kolmo x    [-T n] [-C dir] archive.kol [names...]
  *   kolmo l    archive.kol
  *
@@ -19,6 +19,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <dirent.h>
 #include <unistd.h>
 
 static double fc_now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
@@ -61,7 +62,7 @@ static void fc_usage(void) {
         "usage: kolmo --index [-m mode] [-B MiB] [--no-filter] [--token-bits K] [--delim C] [--kind lines|table|json] in out.kol\n"
         "       kolmo cat  [--col NAME|#N] [--rows A-B] [-n] [-c] [--no-index] [--stats] file.kol\n"
         "       kolmo grep [-F] [-i] [-w] [-n] [-c] [--col NAME|#N] [--rows A-B] [--no-index] [--stats] PATTERN file.kol\n"
-        "       kolmo a [-m mode] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files...\n"
+        "       kolmo a [-m mode] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files-or-directories...\n"
         "       kolmo x [-C dir] archive.kol [names...]      kolmo l archive.kol\n");
 }
 static void fc_stats(const kolmo_query_stats *s, double t) {
@@ -170,6 +171,31 @@ static int fc_put(void *ctx, const char *name, const uint8_t *data, uint64_t siz
     if (mode & 0777) chmod(path, mode & 0777);
     free(path); X->done++; return 0;
 }
+/* the regular files under path (path itself when it is one), in name order, appended to *list */
+typedef struct { char **v; int n, cap; } fc_list_t;
+static int fc_cmp(const void *a, const void *b) { return strcmp(*(char *const *)a, *(char *const *)b); }
+static int fc_walk(const char *path, fc_list_t *L, int depth) {
+    struct stat st; if (lstat(path, &st)) { perror(path); return -1; }
+    if (S_ISREG(st.st_mode)) {
+        if (L->n == L->cap) { L->cap = L->cap ? L->cap * 2 : 64; char **g = realloc(L->v, sizeof(char *) * (size_t)L->cap); if (!g) return -1; L->v = g; }
+        if (!(L->v[L->n] = strdup(path))) return -1;
+        L->n++; return 0;
+    }
+    if (!S_ISDIR(st.st_mode) || depth > 64) return 0;              /* symlinks and special files are not archived */
+    DIR *d = opendir(path); if (!d) { perror(path); return -1; }
+    fc_list_t sub = {0}; struct dirent *e; int r = 0;
+    while ((e = readdir(d))) {
+        if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..")) continue;
+        size_t l = strlen(path) + strlen(e->d_name) + 2; char *p = malloc(l); if (!p) { r = -1; break; }
+        snprintf(p, l, "%s%s%s", path, path[strlen(path) - 1] == '/' ? "" : "/", e->d_name);
+        if (sub.n == sub.cap) { sub.cap = sub.cap ? sub.cap * 2 : 64; char **g = realloc(sub.v, sizeof(char *) * (size_t)sub.cap); if (!g) { free(p); r = -1; break; } sub.v = g; }
+        sub.v[sub.n++] = p;
+    }
+    closedir(d);
+    if (sub.n) qsort(sub.v, (size_t)sub.n, sizeof(char *), fc_cmp);
+    for (int i = 0; i < sub.n; i++) { if (!r) r = fc_walk(sub.v[i], L, depth + 1); free(sub.v[i]); }
+    free(sub.v); return r;
+}
 static int fc_archive(int argc, char **argv) {
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; kolmo_archive_params A = {0, 1}; int stats = 0, a = 2;
     for (; a < argc && argv[a][0] == '-'; a++) {
@@ -185,14 +211,17 @@ static int fc_archive(int argc, char **argv) {
         else { fc_usage(); return 2; }
     }
     if (argc - a < 2) { fc_usage(); return 2; }
-    const char *out = argv[a++]; int nf = argc - a;
+    const char *out = argv[a++];
+    fc_list_t L = {0};                                       /* directories are archived with the files under them */
+    for (int i = a; i < argc; i++) if (fc_walk(argv[i], &L, 0)) { for (int k = 0; k < L.n; k++) free(L.v[k]); free(L.v); return 1; }
+    int nf = L.n; char **paths = L.v;
     fc_file *F = calloc((size_t)nf, sizeof(fc_file)); kolmo_archive_file *K = calloc((size_t)nf, sizeof(kolmo_archive_file));
-    if (!F || !K) return 1;
+    if (!F || !K) { free(F); free(K); for (int i = 0; i < L.n; i++) free(L.v[i]); free(L.v); return 1; }
     int ret = 1;
     for (int i = 0; i < nf; i++) {
-        if (fc_open(argv[a + i], &F[i])) { nf = i; goto out; }
-        struct stat st; stat(argv[a + i], &st);
-        const char *nm = argv[a + i]; while (nm[0] == '/') nm++;
+        if (fc_open(paths[i], &F[i])) { nf = i; goto out; }
+        struct stat st; stat(paths[i], &st);
+        const char *nm = paths[i]; while (nm[0] == '/') nm++;
         while (!strncmp(nm, "./", 2)) nm += 2;
         K[i] = (kolmo_archive_file){nm, F[i].p, F[i].n, (uint32_t)st.st_mode & 07777, (int64_t)st.st_mtime};
     }
@@ -208,7 +237,8 @@ static int fc_archive(int argc, char **argv) {
         ret = fc_write(out, o, (size_t)r) ? 1 : 0; free(o); }
 out:
     for (int i = 0; i < nf; i++) fc_close(&F[i]);
-    free(F); free(K); return ret;
+    for (int i = 0; i < L.n; i++) free(L.v[i]);
+    free(L.v); free(F); free(K); return ret;
 }
 static int fc_extract(int argc, char **argv) {
     fc_x X = {".", NULL, 0, 0, 0}; int threads = 0, a = 2;
