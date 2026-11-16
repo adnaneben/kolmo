@@ -14,7 +14,7 @@ authors = ["Adnane Aqartit and contributors"]
 exclude = ["native/**/*.o", "native/**/*.a", "native/**/build/**"]
 
 [features]
-# Build the native core without liblzma (the max/ultra modes then use the other coders).
+# Build the native core without the LZMA2 coder (the ratio modes then use the other coders).
 no-lzma = []
 
 [lib]

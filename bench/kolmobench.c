@@ -10,7 +10,7 @@
 #include <brotli/encode.h>
 #include <brotli/decode.h>
 #ifndef KOLMO_NO_LZMA
-#include <lzma.h>
+#include "kolmo_lzma.h"   /* vendored liblzma subset (vendor/xz) */
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,8 +32,11 @@ static size_t comp(const cfg_t *c, const uint8_t *s, size_t n, uint8_t *d, size_
                 { size_t r = ZSTD_compress2(zc, d, cap, s, n); return ZSTD_isError(r) ? 0 : r; }
         case 3: { size_t o = cap; return BrotliEncoderCompress(c->level, 24, BROTLI_MODE_GENERIC, n, s, &o, d) ? o : 0; }
 #ifndef KOLMO_NO_LZMA
-        case 4: { size_t o = 0; uint32_t pr = (uint32_t)c->level | (c->threads < 0 ? LZMA_PRESET_EXTREME : 0);
-                  return lzma_easy_buffer_encode(pr, LZMA_CHECK_CRC64, NULL, s, n, d, &o, cap) == LZMA_OK ? o : 0; }
+        /* xz rival: the same LZMA2 coder as xz -N, raw (no .xz container or CRC64; the vendored liblzma subset holds the
+         * LZMA2 coder only). The container adds about 60 bytes and a CRC64 pass to xz's own figures. */
+        case 4: { size_t o = 0; lzma_options_lzma op; if (lzma_lzma_preset(&op, (uint32_t)c->level | (c->threads < 0 ? LZMA_PRESET_EXTREME : 0))) return 0;
+                  lzma_filter f[2] = {{LZMA_FILTER_LZMA2, &op}, {LZMA_VLI_UNKNOWN, NULL}};
+                  return lzma_raw_buffer_encode(f, NULL, s, n, d, &o, cap) == LZMA_OK ? o : 0; }
 #endif
         default: { kolmo_params p = {(kolmo_mode)(c->kind - 10), c->level, c->threads, 0, 1}; int64_t r = kolmo_compress(s, n, d, cap, &p); return r > 0 ? (size_t)r : 0; }
     }
@@ -44,8 +47,9 @@ static int decomp(const cfg_t *c, const uint8_t *s, size_t cn, uint8_t *d, size_
         case 2: { size_t r = ZSTD_decompressDCtx(zd, d, n, s, cn); return !ZSTD_isError(r) && r == n; }
         case 3: { size_t o = n; return BrotliDecoderDecompress(cn, s, &o, d) == BROTLI_DECODER_RESULT_SUCCESS && o == n; }
 #ifndef KOLMO_NO_LZMA
-        case 4: { uint64_t lim = UINT64_MAX; size_t ip = 0, op = 0;
-                  return lzma_stream_buffer_decode(&lim, 0, NULL, s, &ip, cn, d, &op, n) == LZMA_OK && op == n; }
+        case 4: { size_t ip = 0, op = 0; lzma_options_lzma o; if (lzma_lzma_preset(&o, (uint32_t)c->level | (c->threads < 0 ? LZMA_PRESET_EXTREME : 0))) return 0;
+                  lzma_filter f[2] = {{LZMA_FILTER_LZMA2, &o}, {LZMA_VLI_UNKNOWN, NULL}};
+                  return lzma_raw_buffer_decode(f, NULL, s, &ip, cn, d, &op, n) == LZMA_OK && op == n; }
 #endif
         default: return kolmo_decompress(s, cn, d, n, c->threads) == (int64_t)n;
     }

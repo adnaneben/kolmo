@@ -1,0 +1,87 @@
+/* Written for Kolmo. Renames every external symbol of the vendored liblzma subset to kolmo_lzma_*, so that
+ * libkolmo.so can live in a process that also loads the system liblzma (Python's lzma module does) without either
+ * library binding to the other's functions. Included first by every translation unit of the subset (-include in the
+ * Makefile) and by kolmo_lzma.h. Regenerate with benchmark/rc3/deps/gen_lzma_namespace.sh when the subset changes. */
+#ifndef KOLMO_LZMA_NAMESPACE_H
+#define KOLMO_LZMA_NAMESPACE_H
+#define lzma_alloc kolmo_lzma_alloc
+#define lzma_alloc_zero kolmo_lzma_alloc_zero
+#define lzma_bufcpy kolmo_lzma_bufcpy
+#define lzma_code kolmo_lzma_code
+#define lzma_crc32_table kolmo_lzma_crc32_table
+#define lzma_end kolmo_lzma_end
+#define lzma_fastpos kolmo_lzma_fastpos
+#define lzma_filter_decoder_is_supported kolmo_lzma_filter_decoder_is_supported
+#define lzma_filter_encoder_is_supported kolmo_lzma_filter_encoder_is_supported
+#define lzma_filters_copy kolmo_lzma_filters_copy
+#define lzma_filters_free kolmo_lzma_filters_free
+#define lzma_filters_update kolmo_lzma_filters_update
+#define lzma_free kolmo_lzma_free
+#define lzma_get_check kolmo_lzma_get_check
+#define lzma_get_progress kolmo_lzma_get_progress
+#define lzma_lz_decoder_init kolmo_lzma_lz_decoder_init
+#define lzma_lz_decoder_memusage kolmo_lzma_lz_decoder_memusage
+#define lzma_lz_encoder_init kolmo_lzma_lz_encoder_init
+#define lzma_lz_encoder_memusage kolmo_lzma_lz_encoder_memusage
+#define lzma_lzma2_block_size kolmo_lzma_lzma2_block_size
+#define lzma_lzma2_decoder_init kolmo_lzma_lzma2_decoder_init
+#define lzma_lzma2_decoder_memusage kolmo_lzma_lzma2_decoder_memusage
+#define lzma_lzma2_encoder_init kolmo_lzma_lzma2_encoder_init
+#define lzma_lzma2_encoder_memusage kolmo_lzma_lzma2_encoder_memusage
+#define lzma_lzma2_props_decode kolmo_lzma_lzma2_props_decode
+#define lzma_lzma2_props_encode kolmo_lzma_lzma2_props_encode
+#define lzma_lzma_decoder_create kolmo_lzma_lzma_decoder_create
+#define lzma_lzma_decoder_init kolmo_lzma_lzma_decoder_init
+#define lzma_lzma_decoder_memusage kolmo_lzma_lzma_decoder_memusage
+#define lzma_lzma_decoder_memusage_nocheck kolmo_lzma_lzma_decoder_memusage_nocheck
+#define lzma_lzma_encode kolmo_lzma_lzma_encode
+#define lzma_lzma_encoder_create kolmo_lzma_lzma_encoder_create
+#define lzma_lzma_encoder_init kolmo_lzma_lzma_encoder_init
+#define lzma_lzma_encoder_memusage kolmo_lzma_lzma_encoder_memusage
+#define lzma_lzma_encoder_reset kolmo_lzma_lzma_encoder_reset
+#define lzma_lzma_lclppb_decode kolmo_lzma_lzma_lclppb_decode
+#define lzma_lzma_lclppb_encode kolmo_lzma_lzma_lclppb_encode
+#define lzma_lzma_optimum_fast kolmo_lzma_lzma_optimum_fast
+#define lzma_lzma_optimum_normal kolmo_lzma_lzma_optimum_normal
+#define lzma_lzma_preset kolmo_lzma_lzma_preset
+#define lzma_lzma_props_decode kolmo_lzma_lzma_props_decode
+#define lzma_lzma_props_encode kolmo_lzma_lzma_props_encode
+#define lzma_memlimit_get kolmo_lzma_memlimit_get
+#define lzma_memlimit_set kolmo_lzma_memlimit_set
+#define lzma_memusage kolmo_lzma_memusage
+#define lzma_mf_bt2_find kolmo_lzma_mf_bt2_find
+#define lzma_mf_bt2_skip kolmo_lzma_mf_bt2_skip
+#define lzma_mf_bt3_find kolmo_lzma_mf_bt3_find
+#define lzma_mf_bt3_skip kolmo_lzma_mf_bt3_skip
+#define lzma_mf_bt4_find kolmo_lzma_mf_bt4_find
+#define lzma_mf_bt4_skip kolmo_lzma_mf_bt4_skip
+#define lzma_mf_find kolmo_lzma_mf_find
+#define lzma_mf_hc3_find kolmo_lzma_mf_hc3_find
+#define lzma_mf_hc3_skip kolmo_lzma_mf_hc3_skip
+#define lzma_mf_hc4_find kolmo_lzma_mf_hc4_find
+#define lzma_mf_hc4_skip kolmo_lzma_mf_hc4_skip
+#define lzma_mf_is_supported kolmo_lzma_mf_is_supported
+#define lzma_mode_is_supported kolmo_lzma_mode_is_supported
+#define lzma_mt_block_size kolmo_lzma_mt_block_size
+#define lzma_next_end kolmo_lzma_next_end
+#define lzma_next_filter_init kolmo_lzma_next_filter_init
+#define lzma_next_filter_update kolmo_lzma_next_filter_update
+#define lzma_properties_decode kolmo_lzma_properties_decode
+#define lzma_properties_encode kolmo_lzma_properties_encode
+#define lzma_properties_size kolmo_lzma_properties_size
+#define lzma_raw_buffer_decode kolmo_lzma_raw_buffer_decode
+#define lzma_raw_buffer_encode kolmo_lzma_raw_buffer_encode
+#define lzma_raw_coder_init kolmo_lzma_raw_coder_init
+#define lzma_raw_coder_memusage kolmo_lzma_raw_coder_memusage
+#define lzma_raw_decoder kolmo_lzma_raw_decoder
+#define lzma_raw_decoder_init kolmo_lzma_raw_decoder_init
+#define lzma_raw_decoder_memusage kolmo_lzma_raw_decoder_memusage
+#define lzma_raw_encoder kolmo_lzma_raw_encoder
+#define lzma_raw_encoder_init kolmo_lzma_raw_encoder_init
+#define lzma_raw_encoder_memusage kolmo_lzma_raw_encoder_memusage
+#define lzma_rc_prices kolmo_lzma_rc_prices
+#define lzma_strm_init kolmo_lzma_strm_init
+#define lzma_validate_chain kolmo_lzma_validate_chain
+#define lzma_version_number kolmo_lzma_version_number
+#define lzma_version_string kolmo_lzma_version_string
+#endif

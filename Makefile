@@ -24,7 +24,8 @@ override CFLAGS += $(FPFLAGS)
 ZSTD    := vendor/zstd
 LZ4     := vendor/lz4
 BRO     := vendor/brotli
-INC     := -Isrc -I$(ZSTD) -I$(LZ4) -Ivendor/libbsc -I$(BRO)/include $(EXTRA_INC)
+XZ      := vendor/xz
+INC     := -Isrc -I$(ZSTD) -I$(LZ4) -Ivendor/libbsc -I$(BRO)/include -I$(XZ) $(EXTRA_INC)
 DEFS    := -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0
 ZSRC    := $(wildcard $(ZSTD)/common/*.c $(ZSTD)/compress/*.c $(ZSTD)/decompress/*.c $(ZSTD)/dictBuilder/*.c)
 BROSRC  := $(wildcard $(BRO)/common/*.c $(BRO)/dec/*.c $(BRO)/enc/*.c)
@@ -35,26 +36,22 @@ else
 ZASM    :=
 DEFS    += -DZSTD_DISABLE_ASM
 endif
-BSC     := vendor/libbsc/libbsc
-BSRC    := $(shell find $(BSC) -name '*.cpp')
-OBJ     := $(patsubst %.c,build/obj/%.o,$(ZSRC) $(BROSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/obj/%.o,$(ZASM)) \
-           $(patsubst %.cpp,build/obj/%.o,$(BSRC))
+# liblzma: a pinned, verified subset of xz-utils 5.8.1 (raw LZMA2 encoder and decoder only), vendored in vendor/xz
+# (see vendor/xz/README.kolmo). No system liblzma is needed. Its symbols are renamed to kolmo_lzma_* by a forced
+# include, so the shared library can share a process with the system liblzma. NO_LZMA=1 still builds without it.
+XZSRC   := $(wildcard $(XZ)/*.c $(XZ)/liblzma/*/*.c)
+XZFLAGS := -DHAVE_CONFIG_H -include $(XZ)/kolmo_lzma_namespace.h -I$(XZ) -I$(XZ)/liblzma/api -I$(XZ)/liblzma/common \
+           -I$(XZ)/liblzma/check -I$(XZ)/liblzma/lz -I$(XZ)/liblzma/lzma -I$(XZ)/liblzma/rangecoder -I$(XZ)/liblzma/simple \
+           -I$(XZ)/liblzma/delta -I$(XZ)/common
 ifeq ($(NO_LZMA),1)
 DEFS    += -DKOLMO_NO_LZMA
+XZSRC   :=
+endif
 LZMALIB :=
-else
-LZMALIB := -llzma
-endif
-# macOS: link Homebrew's liblzma statically when its archive is present. A dylib outside the system cache adds
-# start-up time to every run, which shows on small files at the speeds of the fast modes.
-ifeq ($(UNAME_S),Darwin)
-ifneq ($(NO_LZMA),1)
-LZMA_A := $(firstword $(wildcard $(BREW)/lib/liblzma.a $(BREW)/opt/xz/lib/liblzma.a))
-ifneq ($(LZMA_A),)
-LZMALIB := $(LZMA_A)
-endif
-endif
-endif
+BSC     := vendor/libbsc/libbsc
+BSRC    := $(shell find $(BSC) -name '*.cpp')
+OBJ     := $(patsubst %.c,build/obj/%.o,$(ZSRC) $(BROSRC) $(XZSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/obj/%.o,$(ZASM)) \
+           $(patsubst %.cpp,build/obj/%.o,$(BSRC))
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
 BLIBS   := $(LIBS)
 
@@ -65,6 +62,9 @@ all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolm
 build/obj/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEFS) $(INC) -c $< -o $@
+build/obj/$(XZ)/%.o: $(XZ)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(XZFLAGS) -c $< -o $@
 build/obj/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CFLAGS) -I$(BSC) -c $< -o $@
@@ -164,11 +164,14 @@ check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 
 # Shared library for language bindings (Python, Rust): everything rebuilt -fPIC into build/pic.
 SOEXT := $(if $(filter Darwin,$(UNAME_S)),dylib,so)
-PICC  := $(patsubst %.c,build/pic/%.o,$(ZSRC) $(BROSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/pic/%.o,$(ZASM))
+PICC  := $(patsubst %.c,build/pic/%.o,$(ZSRC) $(BROSRC) $(XZSRC) vendor/xxhash/kolmo_xxh3.c $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/pic/%.o,$(ZASM))
 PICPP := $(patsubst %.cpp,build/pic/%.o,$(BSRC))
 build/pic/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -fPIC $(DEFS) $(INC) -c $< -o $@
+build/pic/$(XZ)/%.o: $(XZ)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -fPIC $(XZFLAGS) -c $< -o $@
 build/pic/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CFLAGS) -fPIC -I$(BSC) -c $< -o $@

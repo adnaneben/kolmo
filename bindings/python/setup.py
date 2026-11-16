@@ -1,14 +1,14 @@
 """Builds the kolmo native library from bundled C sources and ships it inside the wheel.
 
 The package carries its own copy of the native core under ``native/`` (src + vendored zstd, lz4,
-brotli, libbsc, xxhash), refreshed from the repo root by ``sync-native.sh``. ``setup.py`` compiles
-it into ``libkolmo`` with the system C/C++ compiler — no ``make``, no system codec libraries
-(beyond optional liblzma) — so both the sdist and per-platform wheels build anywhere. The compiled
+brotli, libbsc, xxhash, the liblzma subset), refreshed from the repo root by ``sync-native.sh``. ``setup.py``
+compiles it into ``libkolmo`` with the system C/C++ compiler — no ``make``, no system codec libraries — so both the
+sdist and per-platform wheels build anywhere. The compiled
 library sits next to ``kolmo.py`` and is loaded by ctypes, so the installed package needs no
 toolchain at run time. Portable flags (no ``-march=native``) are used so a wheel built in CI runs
 on any CPU of that architecture; kolmo.c selects SIMD paths at compile time with scalar fallbacks.
 
-Set ``KOLMO_NO_LZMA=1`` to build without liblzma (the max/ultra tiers then use the other coders).
+Set ``KOLMO_NO_LZMA=1`` to build without the LZMA2 coder (the ratio tiers then use the other coders).
 """
 import glob, os, platform, subprocess, sys, sysconfig
 from setuptools import setup
@@ -42,29 +42,14 @@ def _sources():
     return c, cpp, z, b, l4, bsc
 
 
-def _find_lzma(cc, workdir):
-    """Probe for liblzma. Returns (include_dir_or_None, lib_dir_or_None) if found, else None.
-    A None include/lib means it is on the compiler's default search path."""
-    probe = os.path.join(workdir, "lzma_probe.c")
-    with open(probe, "w") as f:
-        f.write("#include <lzma.h>\nint main(void){return 0;}\n")
-    prefixes = []
-    for args in (["--prefix", "xz"], ["--prefix"]):
-        try:
-            p = subprocess.check_output(["brew"] + args, stderr=subprocess.DEVNULL).decode().strip()
-            if p:
-                prefixes.append(p)
-        except Exception:
-            pass
-    prefixes += ["/opt/homebrew", "/usr/local", "/opt/local"]
-    for inc in [None] + prefixes:   # default path first (typical on Linux with liblzma-dev)
-        cmd = [cc, "-fsyntax-only"]
-        if inc:
-            cmd.append("-I" + os.path.join(inc, "include"))
-        cmd.append(probe)
-        if subprocess.call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0:
-            return (None, None) if inc is None else (os.path.join(inc, "include"), os.path.join(inc, "lib"))
-    return None
+def _xz(vendor):
+    """The vendored liblzma subset (vendor/xz, raw LZMA2 only): its sources and its compile flags."""
+    x = os.path.join(vendor, "xz")
+    srcs = sorted(glob.glob(os.path.join(x, "*.c")) + glob.glob(os.path.join(x, "liblzma", "*", "*.c")))
+    inc = [x] + [os.path.join(x, "liblzma", d) for d in ("api", "common", "check", "lz", "lzma", "rangecoder", "simple", "delta")] \
+        + [os.path.join(x, "common")]
+    flags = ["-DHAVE_CONFIG_H", "-include", os.path.join(x, "kolmo_lzma_namespace.h")] + ["-I" + d for d in inc]
+    return srcs, flags
 
 
 def build_library(dest_dir):
@@ -73,7 +58,7 @@ def build_library(dest_dir):
 
     # Honor cibuildwheel's cross-compile request (ARCHFLAGS, e.g. "-arch arm64" when building an
     # Apple-silicon wheel on an Intel runner). The *target* arch — not the host — decides which
-    # SIMD asm is compiled and whether the host's liblzma can be linked.
+    # SIMD asm is compiled.
     archflags = os.environ.get("ARCHFLAGS", "").split()
     host = "x86_64" if platform.machine().lower() in ("x86_64", "amd64") else platform.machine().lower()
     if "arm64" in archflags and "x86_64" not in archflags:
@@ -83,7 +68,6 @@ def build_library(dest_dir):
     else:
         target = host
     is_x86_64 = target == "x86_64"
-    cross = IS_MAC and target != host   # e.g. arm64 wheel built on an Intel runner
     asm = os.path.join(z, "decompress", "huf_decompress_amd64.S")
 
     cc = os.environ.get("CC", "cc")
@@ -96,22 +80,13 @@ def build_library(dest_dir):
     if not is_x86_64:
         defs.append("-DZSTD_DISABLE_ASM")
 
-    # liblzma powers the max/ultra LZMA path. Detect it (on macOS it lives under the Homebrew/
-    # MacPorts prefix, not the default include path); build without it if absent so the package
-    # still installs with no system deps. When cross-compiling we cannot link the host-arch
-    # liblzma, so that wheel drops it too (max/ultra fall back to BWT/CM — ultra's usual winner,
-    # context-mixing, is unaffected).
-    want_lzma = (not NO_LZMA) and (not cross)
-    found = _find_lzma(cc, workdir) if want_lzma else None
-    use_lzma = found is not None
-    lzma_inc, lzma_libdir = found if use_lzma else (None, None)
-    if not use_lzma:
+    # liblzma: the vendored subset (vendor/xz), built like the other codecs, so every wheel has the LZMA2 path with no
+    # system library, cross-compiled ones included. KOLMO_NO_LZMA=1 still leaves it out.
+    xz_src, xz_flags = _xz(VENDOR)
+    includes.append("-I" + os.path.join(VENDOR, "xz"))
+    if NO_LZMA:
         defs.append("-DKOLMO_NO_LZMA")
-        if want_lzma:
-            sys.stderr.write("kolmo: liblzma not found; building without it (max/ultra use BWT/CM). "
-                             "Install xz (brew install xz / apt install liblzma-dev) for the LZMA path.\n")
-    elif lzma_inc:
-        includes.append("-I" + lzma_inc)
+        xz_src = []
 
     objs = []
 
@@ -127,6 +102,8 @@ def build_library(dest_dir):
     compile_one(cc, c_src[0], fp)  # kolmo.c: deterministic across compilers
     for f in c_src[1:]:
         compile_one(cc, f, fp)
+    for f in xz_src:
+        compile_one(cc, f, fp + xz_flags)
     if is_x86_64 and os.path.exists(asm):
         compile_one(cc, asm, [])
     for f in cpp_src:
@@ -136,17 +113,6 @@ def build_library(dest_dir):
     link = [cxx, "-shared"] + archflags + objs + ["-o", out, "-lpthread", "-lm"]
     if IS_MAC:
         link += ["-install_name", "@loader_path/" + LIBNAME]
-    if use_lzma:
-        # On macOS, prefer the static liblzma.a: linking it into the dylib leaves no external
-        # liblzma reference for delocate to bundle (which otherwise fails to repair the wheel),
-        # while keeping the full LZMA path. On Linux, -llzma + auditwheel bundles it fine.
-        static_a = os.path.join(lzma_libdir, "liblzma.a") if lzma_libdir else None
-        if IS_MAC and static_a and os.path.exists(static_a):
-            link.append(static_a)
-        else:
-            if lzma_libdir:
-                link.append("-L" + lzma_libdir)
-            link.append("-llzma")
     subprocess.check_call(link)
     return out
 

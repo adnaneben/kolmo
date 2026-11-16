@@ -1,6 +1,6 @@
-// Compiles the kolmo native core (kolmo.c + vendored zstd, lz4, brotli, libbsc, xxhash) into a
-// static library and links it, so the published crate is self-contained: it needs a C/C++
-// compiler and (optionally) liblzma, but no `make`, no prebuilt library, and no external Rust
+// Compiles the kolmo native core (kolmo.c + vendored zstd, lz4, brotli, libbsc, xxhash and the liblzma subset) into
+// a static library and links it, so the published crate is self-contained: it needs a C/C++
+// compiler, but no `make`, no system library, no prebuilt library, and no external Rust
 // crates. The C sources live in `native/` inside the crate — refreshed from the repo root by
 // `sync-native.sh` — with a fallback to the repo tree for in-place contributor builds.
 use std::{env, fs, path::{Path, PathBuf}, process::Command, sync::{Arc, Mutex}, thread};
@@ -16,42 +16,6 @@ fn list(dir: &Path, ext: &str, recurse: bool, out: &mut Vec<PathBuf>) {
             }
         }
     }
-}
-
-// Probe for liblzma: compile a tiny `#include <lzma.h>` against each candidate include dir
-// (default search path first, then Homebrew/MacPorts prefixes). Returns the include and matching
-// lib dir to use (both may be None when it is on the default path), or None if liblzma is absent.
-fn find_lzma(cc: &str, out: &Path) -> Option<(Option<String>, Option<String>)> {
-    let probe = out.join("lzma_probe.c");
-    let _ = fs::write(&probe, "#include <lzma.h>\nint main(void){return 0;}\n");
-    let mut prefixes: Vec<String> = Vec::new();
-    for args in [&["--prefix", "xz"][..], &["--prefix"][..]] {
-        if let Ok(o) = Command::new("brew").args(args).output() {
-            if o.status.success() {
-                if let Ok(s) = String::from_utf8(o.stdout) {
-                    let p = s.trim().to_string();
-                    if !p.is_empty() { prefixes.push(p); }
-                }
-            }
-        }
-    }
-    prefixes.extend(["/opt/homebrew".into(), "/usr/local".into(), "/opt/local".into()]);
-    // First try the default include path (no -I): typical on Linux with liblzma-dev.
-    let mut candidates: Vec<Option<String>> = vec![None];
-    candidates.extend(prefixes.into_iter().map(Some));
-    for inc in candidates {
-        let mut cmd = Command::new(cc);
-        cmd.arg("-fsyntax-only");
-        if let Some(dir) = &inc { cmd.arg(format!("-I{dir}/include")); }
-        cmd.arg(&probe);
-        if cmd.status().map_or(false, |s| s.success()) {
-            return Some(match inc {
-                Some(d) => (Some(format!("{d}/include")), Some(format!("{d}/lib"))),
-                None => (None, None),
-            });
-        }
-    }
-    None
 }
 
 fn main() {
@@ -70,6 +34,7 @@ fn main() {
     let brotli = vendor.join("brotli");
     let lz4 = vendor.join("lz4");
     let bsc = vendor.join("libbsc");
+    let xz = vendor.join("xz");
 
     let no_lzma = env::var("CARGO_FEATURE_NO_LZMA").is_ok();
     let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
@@ -79,7 +44,7 @@ fn main() {
     let cxx = env::var("CXX").unwrap_or_else(|_| "c++".into());
 
     let includes = [
-        src.clone(), zstd.clone(), lz4.clone(), bsc.clone(), brotli.join("include"),
+        src.clone(), zstd.clone(), lz4.clone(), bsc.clone(), brotli.join("include"), xz.clone(),
     ];
     let inc_flags: Vec<String> = includes.iter().map(|p| format!("-I{}", p.display())).collect();
     let mut defs = vec![
@@ -88,18 +53,13 @@ fn main() {
         "-DZSTD_LEGACY_SUPPORT=0".to_string(),
     ];
     if !is_x86_64 { defs.push("-DZSTD_DISABLE_ASM".into()); }
-    // liblzma powers the max/ultra LZMA path. Use it when present; otherwise build without it
-    // (those tiers fall back to BWT/context-mixing) so the crate still builds with no system deps.
-    let lzma = if no_lzma { None } else { find_lzma(&cc, &out) };
-    let use_lzma = lzma.is_some();
-    if !use_lzma {
-        defs.push("-DKOLMO_NO_LZMA".into());
-        if !no_lzma {
-            println!("cargo:warning=kolmo: liblzma not found; building without it (max/ultra use BWT/CM). Install xz (brew install xz / apt install liblzma-dev) for the LZMA path.");
-        }
-    } else if let Some((Some(inc), _)) = &lzma {
-        defs.push(format!("-I{inc}"));
+    // liblzma: the vendored subset (vendor/xz, raw LZMA2 only), compiled with its own config and symbol namespace.
+    if no_lzma { defs.push("-DKOLMO_NO_LZMA".into()); }
+    let mut xz_flags = vec!["-DHAVE_CONFIG_H".to_string(), "-include".into(), xz.join("kolmo_lzma_namespace.h").display().to_string()];
+    for d in ["api", "common", "check", "lz", "lzma", "rangecoder", "simple", "delta"] {
+        xz_flags.push(format!("-I{}", xz.join("liblzma").join(d).display()));
     }
+    xz_flags.push(format!("-I{}", xz.join("common").display()));
     // Portable by default: the target's baseline ISA, like the release binaries and the Python wheels. On x86-64 the
     // AVX2/SSE4.2 paths are chosen at run time by CPUID, so baseline builds lose little. KOLMO_NATIVE=1 builds for
     // the host CPU instead (the library then runs only on CPUs like the build machine).
@@ -119,6 +79,12 @@ fn main() {
     cfiles.push(bsc.join("libbsc/bwt/libsais/libsais.c"));
     cfiles.sort();
     for f in cfiles { jobs.push((cc.clone(), f, vec![])); }
+    if !no_lzma {
+        let mut xfiles = Vec::new();
+        list(&xz, "c", true, &mut xfiles);
+        xfiles.sort();
+        for f in xfiles { jobs.push((cc.clone(), f, xz_flags.clone())); }
+    }
     if is_x86_64 { jobs.push((cc.clone(), zstd.join("decompress/huf_decompress_amd64.S"), vec![])); }
     // libbsc C++ sources.
     let mut cpps = Vec::new();
@@ -168,15 +134,11 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}", out.display());
     println!("cargo:rustc-link-lib=static=kolmo_native");
-    // C++ runtime (libbsc/brotli pull it in), plus pthread/m and optional liblzma.
+    // C++ runtime (libbsc pulls it in), plus pthread/m.
     if os == "macos" || os == "ios" { println!("cargo:rustc-link-lib=c++"); }
     else { println!("cargo:rustc-link-lib=stdc++"); }
     println!("cargo:rustc-link-lib=pthread");
     println!("cargo:rustc-link-lib=m");
-    if use_lzma {
-        if let Some((_, Some(libdir))) = &lzma { println!("cargo:rustc-link-search=native={libdir}"); }
-        println!("cargo:rustc-link-lib=lzma");
-    }
 
     println!("cargo:rerun-if-changed={}", src.join("kolmo.c").display());
     println!("cargo:rerun-if-changed={}", src.join("kolmo.h").display());
