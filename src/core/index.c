@@ -11,8 +11,10 @@
  * checked against what is decoded: a block whose line count disagrees with its entry is reported as corrupt.
  *
  * Licence: Apache-2.0. */
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1
-#include "core/features.h"
+#endif
+#include "features.h"
 #include <math.h>
 #include <pthread.h>
 #include <regex.h>

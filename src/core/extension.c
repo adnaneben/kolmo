@@ -7,7 +7,7 @@
  *   trailer := "KEXT" | version u8 (1) | 0 u8 * 3 | count u32 | sections length u64 | crc32c u32 (of the 20 bytes before)
  *
  * Licence: Apache-2.0. */
-#include "core/features.h"
+#include "features.h"
 #include <stdlib.h>
 #include <string.h>
 

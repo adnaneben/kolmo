@@ -2,7 +2,7 @@
  * column and row index (index.c) and the DDP1 deduplicating archive (dedup.c). Not installed. */
 #ifndef KOLMO_CORE_FEATURES_H
 #define KOLMO_CORE_FEATURES_H
-#include "kolmo.h"
+#include "../kolmo.h"
 #include <stddef.h>
 #include <stdint.h>
 

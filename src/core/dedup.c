@@ -10,7 +10,7 @@
  *
  * Own implementation of the published algorithm; the Gear table is generated (splitmix64), not copied.
  * Licence: Apache-2.0. */
-#include "core/features.h"
+#include "features.h"
 #include <stdlib.h>
 #include <string.h>
 
