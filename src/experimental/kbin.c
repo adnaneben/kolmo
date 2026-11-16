@@ -42,7 +42,7 @@ typedef int64_t i64;
 #define ANS_MAX_LOG 15
 #define ANS_L (1u << 16)
 #define MAX_ORDER 7
-#define MAX_LPC 32
+#define MAX_LPC 8 /* higher orders cost decode speed and, on our data, did not pay */
 #define BATCH 256
 #define MAX_LANES 8
 /* interleaved rANS states (lanes) for a stream of n symbols: one for short streams, whose four-byte
@@ -1292,14 +1292,24 @@ static int dec_latent(Rd *r, u64 *lat, size_t n, Scr *sc) {
     if (d.kind == D_LPC) {
         if ((size_t)d.p > n) return 0;
         u64 base = lat[0];
-        u32 *h = (u32 *)sc->t1, crev[MAX_LPC];
-        lpc_rev(&d, crev);
-        for (size_t i = 0; i < warm; i++) h[i] = (u32)(lat[i] - base);
+        /* the last eight values live in registers; unused coefficients are zero */
+        u32 c[8] = {0}, h[8] = {0};
+        for (int j = 0; j < d.p; j++) c[j] = (u32)d.coef[j];
+        for (size_t j = 0; j < warm; j++) h[j] = (u32)(lat[warm - 1 - j] - base);
+        u32 h0 = h[0], h1 = h[1], h2 = h[2], h3 = h[3], h4 = h[4], h5 = h[5], h6 = h[6], h7 = h[7];
+        const int sh = d.shift;
+        /* rest holds the terms that do not need the value just decoded, so the loop-carried chain is
+         * one multiply, two adds and a shift */
+        u32 c0 = c[0], c1 = c[1], c2 = c[2], c3 = c[3], c4 = c[4], c5 = c[5], c6 = c[6], c7 = c[7];
+        u32 rest = c1 * h1 + c2 * h2 + c3 * h3 + c4 * h4 + c5 * h5 + c6 * h6 + c7 * h7;
         for (size_t i = warm; i < n; i++) {
-            u64 v = lat[i] - TOP64 + lpc_pred32(h + i - d.p, crev, d.p, d.shift);
-            h[i] = (u32)v;
+            u32 sum = rest + c0 * h0;
+            u64 v = lat[i] - TOP64 + (u64)(i64)((i32)sum >> sh);
+            rest = c1 * h0 + c2 * h1 + c3 * h2 + c4 * h3 + c5 * h4 + c6 * h5 + c7 * h6;
+            h6 = h5, h5 = h4, h4 = h3, h3 = h2, h2 = h1, h1 = h0, h0 = (u32)v;
             lat[i] = v + base;
         }
+        (void)h7;
     } else if (d.kind > 0) {
         for (size_t i = warm; i < n; i++) lat[i] -= TOP64;
         for (int pass = d.kind; pass >= 1; pass--) {
