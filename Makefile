@@ -181,7 +181,13 @@ check-kernels: build/test-kernels build/test-kernels-asan
 	./build/test-kernels
 	./build/test-kernels-asan
 .PHONY: check-kernels
-check-rc: check-kernels check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
+# Scanner helpers of the table and log transforms (population counts, SWAR decimal parser) against references.
+build/test-scan-asan: tests/test_scan.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_scan.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-scan: build/test-scan-asan
+	./build/test-scan-asan
+.PHONY: check-scan
+check-rc: check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
 .PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
