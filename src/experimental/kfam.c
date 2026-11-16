@@ -11,7 +11,8 @@
  *
  * -C: symbols per chunk of a names or qualities stream (and bytes per chunk of a one-stream input), default 4 Mi;
  * -B: bases per chunk of the bases stream, default 64 Mi; 0 means no chunking. -v: compress once and print the coded
- * size of each stream; -S k: code FASTQ stream k alone (model experiments). The FASTQ family and the frame are in src/kfam.inc, which kolmo uses as block codec
+ * size of each stream; -S k: code FASTQ stream k alone (model experiments); -S 9: code every job alone, measure its
+ * CPU time, and print the speed-up bound of the thread pool's schedule (largest job first) at 4 and 10 threads. The FASTQ family and the frame are in src/kfam.inc, which kolmo uses as block codec
  * 16; this file adds the CSV and one-stream families and the command line. */
 #include <stdio.h>
 #include <time.h>
@@ -165,7 +166,7 @@ static uint8_t *kfam_decompress(const uint8_t *c, size_t cn, int threads, size_t
     pthread_once(&kf_tab_once, kf_tab_init);
     if (cn < 5 || memcmp(c, "KFM2", 4)) return NULL;
     if (c[4] == KF_F_FASTQ) {
-        kf_frame f; if (kf_frame_parse(c, cn, &f)) { kf_frame_free(&f); return NULL; }
+        kf_frame f; if (kf_frame_parse(c, cn, &f, 16)) { kf_frame_free(&f); return NULL; }
         uint64_t n = f.orig; kf_frame_free(&f);
         uint8_t *o = malloc(n ? (size_t)n : 1);
         if (o && kf_fastq_decompress(c, cn, o, (size_t)n, threads)) { free(o); o = NULL; }
@@ -173,7 +174,7 @@ static uint8_t *kfam_decompress(const uint8_t *c, size_t cn, int threads, size_t
         return o;
     }
     kf_frame f; uint8_t *res = NULL; kf_buf out = {0}; numctx *uc = NULL;
-    if (kf_frame_parse(c, cn, &f) || f.fam > KF_F_CSV) goto done;
+    if (kf_frame_parse(c, cn, &f, 16) || f.fam > KF_F_CSV) goto done;
     uint8_t *want = calloc((size_t)f.ns, 1); if (!want) goto done;
     if (f.fam == KF_F_ONE) {
         if (f.ns != 1) { free(want); goto done; }
@@ -209,6 +210,7 @@ static int spit(const char *path, const uint8_t *b, size_t n) {
     int bad = fwrite(b, 1, n, f) != n; if (fclose(f)) bad = 1; if (bad) perror(path); return bad ? -1 : 0;
 }
 static double now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
+static double cpu_now(void) { struct timespec t; clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t); return t.tv_sec + t.tv_nsec * 1e-9; }   /* CPU time: steadier on a shared machine */
 static const char *famname[] = {"one", "fastq", "csv"};
 
 int main(int argc, char **argv) {
@@ -224,6 +226,31 @@ int main(int argc, char **argv) {
     }
     if (argc - a != (bench || verbose || only >= 0 ? 1 : 2)) { fprintf(stderr, "usage: kfam [-T threads] [-C chunk] [-f auto|fastq|csv|one] in out | -d in out | -b in\n"); return 2; }
     size_t n; uint8_t *s = slurp(argv[a], &n); if (!s) return 1;
+    if (only == 9) {                                       /* -S 9: every FASTQ job alone, timed; the schedule bound */
+        pthread_once(&kf_tab_once, kf_tab_init);
+        kf_fq q; memset(&q, 0, sizeof q); kf_cuts cuts[5]; memset(cuts, 0, sizeof cuts);
+        if (kf_fastq_split(s, n, &q) || kf_fq_cuts(&q, chunk, bchunk, cuts)) { fprintf(stderr, "kfam: not FASTQ\n"); return 1; }
+        double tj[4096], sum = 0, mx = 0; size_t zt = 0; int nt = 0; kf_fq_setup_arg sa = {&q};
+        for (int sid = 0; sid < 5; sid++) {
+            int nj = cuts[sid].n ? (int)cuts[sid].n : 1; size_t off = 0;
+            for (int k = 0; k < nj && nt < 4096; k++) {
+                kf_job j; memset(&j, 0, sizeof j); j.sid = sid; j.kind = q.st[sid].kind; j.n = cuts[sid].n ? cuts[sid].v[k] : q.st[sid].data.n;
+                j.raw = q.st[sid].data.p + off; j.ctx = q.st[sid].ctx.n ? q.st[sid].ctx.p + off : NULL; kf_fq_setup(&sa, &j, off); off += j.n;
+                double t = cpu_now(); kf_enc_job(&j); t = cpu_now() - t; zt += j.out.n; free(j.out.p);
+                tj[nt++] = t; sum += t; if (t > mx) mx = t;
+            }
+        }
+        printf("jobs %d, coded %zu, CPU time %.2fs, largest job %.2fs", nt, zt, sum, mx);
+        for (int T = 4; T <= 10; T += 6) {                 /* largest first on T threads, as the pool runs them */
+            double ld[64] = {0}; double v[4096]; memcpy(v, tj, sizeof(double) * (size_t)nt);
+            for (int i = 1; i < nt; i++) { double x = v[i]; int k = i; while (k > 0 && v[k - 1] < x) { v[k] = v[k - 1]; k--; } v[k] = x; }
+            for (int i = 0; i < nt; i++) { int b = 0; for (int t = 1; t < T; t++) if (ld[t] < ld[b]) b = t; ld[b] += v[i]; }
+            double span = 0; for (int t = 0; t < T; t++) if (ld[t] > span) span = ld[t];
+            printf(", T=%d bound %.2fx", T, sum / span);
+        }
+        printf("\n");
+        return 0;
+    }
     if (only >= 0) {                                       /* -S k: code only FASTQ stream k (model experiments) */
         pthread_once(&kf_tab_once, kf_tab_init);
         kf_fq q; memset(&q, 0, sizeof q); kf_cuts cuts[5]; memset(cuts, 0, sizeof cuts);
@@ -240,7 +267,7 @@ int main(int argc, char **argv) {
     }
     if (verbose && !dec && !bench) {                       /* -v: compress once, print the coded size of each stream */
         size_t z = 0; int ff = 0; double t = now(); uint8_t *c = kfam_compress(s, n, fam, threads, chunk, &z, &ff); t = now() - t;
-        kf_frame f; if (!c || kf_frame_parse(c, z, &f)) { fprintf(stderr, "kfam: failed\n"); return 1; }
+        kf_frame f; if (!c || kf_frame_parse(c, z, &f, 16)) { fprintf(stderr, "kfam: failed\n"); return 1; }
         printf("%s %zu %.2fs", famname[ff], z, t);
         for (int sidx = 0; sidx < f.ns && sidx < 12; sidx++) { size_t cz = 0; for (int q = 0; q < f.nj; q++) if (f.jb[q].sid == sidx) cz += f.jb[q].cn; printf(" %zu", cz); }
         printf("\n"); kf_frame_free(&f); free(c);
@@ -256,7 +283,7 @@ int main(int argc, char **argv) {
     while (bench && back && (k < 3 || now() - t0 < 1.0));
     if (!back || m != n || memcmp(back, s, n)) { fprintf(stderr, "kfam: round trip failed\n"); return 1; }
     if (bench) {
-        kf_frame f; int ok = !kf_frame_parse(c, z, &f);
+        kf_frame f; int ok = !kf_frame_parse(c, z, &f, 16);
         printf("{\"family\": \"%s\", \"threads\": %d, \"chunk\": %zu, \"bchunk\": %zu, \"input\": %zu, \"compressed\": %zu, \"compress_mbs\": %.3f, \"decompress_mbs\": %.3f, \"jobs\": %d, \"stream_sizes\": [",
                famname[ff], threads, chunk, bchunk, n, z, n / ce / 1e6, n / de / 1e6, ok ? f.nj : 0);
         for (int sidx = 0; ok && sidx < f.ns && sidx < 12; sidx++) {

@@ -185,8 +185,9 @@ static void kf_bm_free(kf_bmodel *m) { for (int i = 0; i < 5; i++) kf_ctab_free(
 static int kf_bm_new(kf_bmodel *m, size_t len) {
     int b = 10; while (b < 22 && ((size_t)1 << b) < len * 2) b++;
     memset(m, 0, sizeof *m);
-    if (kf_ctab_new(&m->t[0], 16, 60) || kf_ctab_new(&m->t[1], 16, 255) || kf_ctab_new(&m->t[2], b, 255) || kf_ctab_new(&m->t[3], b, 255)
-        || kf_ctab_new(&m->t[4], b, 255) || kf_mixer_new(&m->mx, 6, 256)) { kf_bm_free(m); return -1; }
+    /* counters adapt fast (rate floor 1/17): name fields drift (tiles, lanes); 255 was 30% larger on names */
+    if (kf_ctab_new(&m->t[0], 16, 16) || kf_ctab_new(&m->t[1], 16, 16) || kf_ctab_new(&m->t[2], b, 16) || kf_ctab_new(&m->t[3], b, 16)
+        || kf_ctab_new(&m->t[4], b, 16) || kf_mixer_new(&m->mx, 6, 256)) { kf_bm_free(m); return -1; }
     for (int i = 0; i < 6 * 256; i++) m->mx.w[i] = (1 << 16) / 6;      /* every input, the bias too, starts at 1/6 */
     return 0;
 }
@@ -611,7 +612,9 @@ static void kf_frame_free(kf_frame *f) {
     if (f->st) for (int s = 0; s < f->ns; s++) { free(f->st[s].data.p); free(f->st[s].ctx.p); free(f->st[s].par.p); }
     free(f->st); free(f->jb); f->st = NULL; f->jb = NULL;
 }
-static int kf_frame_parse(const uint8_t *c, size_t cn, kf_frame *f) {
+/* maxmul: the streams may hold at most maxmul * original size + 4096 bytes in all (a bound on what a corrupt frame
+ * can make the decoder allocate) */
+static int kf_frame_parse(const uint8_t *c, size_t cn, kf_frame *f, unsigned maxmul) {
     memset(f, 0, sizeof *f);
     size_t i = 4; uint64_t v, ns, nj;
     if (cn < 6 || memcmp(c, "KFM2", 4)) return -1;
@@ -629,12 +632,13 @@ static int kf_frame_parse(const uint8_t *c, size_t cn, kf_frame *f) {
     if (kf_getvar(c, cn, &i, &nj) || nj > cn || nj > (1u << 24)) return -1;
     f->nj = (int)nj; f->jb = calloc((size_t)(nj ? nj : 1), sizeof *f->jb);
     if (!f->jb) return -1;
-    uint64_t *tot = calloc((size_t)ns, sizeof *tot); int prev = 0;
+    uint64_t *tot = calloc((size_t)ns, sizeof *tot), all = 0, lim = maxmul * f->orig + 4096; int prev = 0;
     if (!tot) return -1;
     for (int k = 0; k < f->nj; k++) {
         uint64_t sid, rn, zn;
         if (kf_getvar(c, cn, &i, &sid) || kf_getvar(c, cn, &i, &rn) || kf_getvar(c, cn, &i, &zn) || sid >= ns || (int)sid < prev
-            || rn > 4 * f->orig + 4096 || tot[sid] + rn > 4 * f->orig + 4096) { free(tot); return -1; }
+            || rn > lim - all) { free(tot); return -1; }
+        all += rn;
         prev = (int)sid; f->jb[k].sid = (int)sid; f->jb[k].kind = f->st[sid].kind; f->jb[k].n = (size_t)rn; f->jb[k].cn = (size_t)zn; tot[sid] += rn;
     }
     for (int k = 0; k < f->nj; k++) { if (f->jb[k].cn > cn - i) { free(tot); return -1; } f->jb[k].cin = c + i; i += f->jb[k].cn; }
@@ -902,7 +906,7 @@ static int kf_fq_layout(kf_fq *q) {
 static int kf_fastq_decompress(const uint8_t *c, size_t cn, uint8_t *out, size_t n, int threads) {
     pthread_once(&kf_tab_once, kf_tab_init);
     kf_frame f; kf_fq q; memset(&q, 0, sizeof q); kf_namectx *nc = NULL; int rc = -1;
-    if (kf_frame_parse(c, cn, &f) || f.fam != KF_F_FASTQ || f.ns != 5 || f.orig != n) goto done;
+    if (kf_frame_parse(c, cn, &f, 4) || f.fam != KF_F_FASTQ || f.ns != 5 || f.orig != n) goto done;
     if (f.st[0].kind != KF_BYTES || f.st[1].kind != KF_BYTES || f.st[2].kind != KF_DNA || f.st[3].kind != KF_BYTES || f.st[4].kind != KF_QUAL) goto done;
     for (int s = 0; s < 5; s++) { q.st[s] = f.st[s]; }
     { uint8_t want[5] = {1, 0, 0, 1, 0}; if (kf_frame_decode(&f, want, threads)) goto done; }

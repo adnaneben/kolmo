@@ -1,7 +1,7 @@
 # kolmo container format
 
 This describes the `CZN1` container as written by this implementation. The writer emits the lowest version a file
-needs: 3 by default, and 4 to 9 only when a block uses a feature that needs it; versions 1 to 9 are readable. The
+needs: 3 by default, and 4 to 10 only when a block uses a feature that needs it; versions 1 to 10 are readable. The
 section *Identifiers and versions* lists every version, codec id, node id and model, and which release reads each.
 The container framing below is stable and intended to be frozen at 1.0. The per-block *transform*
 sub-formats (tables, logs, scientific records, images, words) are not yet frozen and may change before 1.0; a decoder
@@ -24,7 +24,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 9: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15) |
+| 4 | 1 | version | 1 to 10: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -37,7 +37,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | 24 | 4 | block | nominal block size in bytes |
 | 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
 
-A reader rejects the file if the magic is wrong, the version is not one it knows (1–9 for this implementation; older
+A reader rejects the file if the magic is wrong, the version is not one it knows (1–10 for this implementation; older
 releases stop earlier, see *Identifiers and versions*), the index does not fit in the file, or the
 header+index CRC does not match. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
 of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `KOLMO_ERR_DICT`; an older
@@ -50,7 +50,7 @@ reader that predates the flag refuses the newer version rather than returning wr
 | 0 | 4 | raw | decoded length of this block |
 | 4 | 4 | comp | stored length of this block's payload |
 | 8 | 4 | checksum | low 32 bits of a block checksum (see below) |
-| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7, GRAPH=12 (kolmo graph block), CMI=17 (context mixing with the image model); the full list is in *Identifiers and versions* |
+| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7, GRAPH=12 (kolmo graph block), FQFAM=16 (FASTQ family coder), CMI=17 (context mixing with the image model); the full list is in *Identifiers and versions* |
 | 13 | 1 | tflag | transform applied before the coder (see below) |
 | 14 | 2 | reserved | 0 |
 
@@ -99,7 +99,7 @@ Encoders write model 3 for text, model 2 for other data, and model 1 at level 1 
 decoders accept all three, so files written with an older model still decode. `CMI` (codec 17) is the same coder with
 an image model for 8-bit samples: `iw u32 | ih u32 | ich u8` (row width in bytes, bytes before the first pixel,
 interleaved channels), then a size word as above and the coded bytes. CM output is bit-exact across compilers and
-CPUs (integer-only, `-ffp-contract=off`).
+CPUs (integer-only, `-ffp-contract=off`). `FQFAM` (codec 16) is described in *FASTQ family blocks*.
 
 ## Identifiers and versions
 
@@ -118,8 +118,9 @@ version above the highest it knows.
 | 7 | a block is a kolmo graph (codec 12, plan type 9) | 1.1.0 |
 | 8 | a block uses the line-class transform (plan type 10, tflag 12) | 1.1.0 |
 | 9 | a graph leaf uses codec 15; on request only (`--native-leaf`) | 1.2.0 |
+| 10 | a block uses the FASTQ family coder (codec 16); `ultra` only | this branch (after 1.2.0-rc2) |
 
-Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0. (1.1.0 is the state of `main` under that
+Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0-rc1 and rc2; 10 by this branch. (1.1.0 is the state of `main` under that
 version number; it was not tagged or published. 1.2.0 is this build, a release candidate.)
 
 **Block codecs** (index byte 12) and **graph leaf codecs**.
@@ -131,7 +132,7 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 12 | GRAPH | blocks, version 7 or later | 1.1.0 |
 | 13, 14 | HUF (Huffman only), RANS (order-0 rANS) | graph leaves | 1.1.0 |
 | 15 | NPLANE (native plane-context leaf) | graph leaves, version 9 only | 1.2.0 |
-| 16 | not assigned | | |
+| 16 | FQFAM (FASTQ family coder) | blocks, version 10 or later; written by `ultra` (not level 1) | this branch |
 | 17 | CMI (context mixing, image model) | blocks; written by `ultra` | 1.2.0 |
 
 **Graph nodes** (op byte of a node).
@@ -149,16 +150,21 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 2 | `f` = 9–15 | `ultra`, data that is not text | 1.1.0 |
 | 3 | `f` = 8, then one byte | `ultra`, text | 1.2.0 |
 
-**What an older reader does.** Only versions 4 to 9 are announced in the header. Block codec 17, graph node 7 and
+**What an older reader does.** Only versions 4 to 10 are announced in the header. Codec 16 is announced: a frame
+with a codec 16 block has version 10, so every earlier reader (1.2.0-rc2 and before) refuses it at the header with
+`KOLMO_ERR_CORRUPT` ("corrupt or unsupported input") before decoding any block, and returns no bytes; frames without
+codec 16 keep the version they had (the writer's output for them is unchanged). A version 10 reader rejects codec 16
+in a frame of version 9 or lower, and as a graph leaf. The rest of this paragraph is about the identifiers that are
+not announced. Block codec 17, graph node 7 and
 CM models 2 and 3 are written inside frames whose header carries the version the rest of the frame needs (3, 7 or
 8), following the rule in *Kolmo graph blocks*: new identifiers do not raise the container version, and a decoder
 rejects an identifier it does not know. So an older reader refuses such a frame part-way, when it meets the block,
 and reports `KOLMO_ERR_CORRUPT` ("corrupt or unsupported input"); it does not return wrong bytes. Measured on 580
 frames of 35 files written by 1.2.0-rc1: 1.0.1 decoded 403 and refused 177; 1.1.0 decoded 547 and refused 33 (DEC64
 nodes, `ultra` text and `ultra` images); no frame decoded to different bytes. Every frame written by 1.0.1 and
-1.1.0 decodes with 1.2.0-rc1. Whether these three identifiers should instead raise the container version (to 10),
-so that an older reader refuses at the header with a clearer cause, is an open decision for the project owner; it
-would change the bytes of the frames concerned and is not made here.
+1.1.0 decodes with 1.2.0-rc1. Whether these three identifiers should instead raise the container version (to a new
+version of their own), so that an older reader refuses at the header with a clearer cause, is an open decision for
+the project owner; it would change the bytes of the frames concerned and is not made here.
 
 ## Guarantees
 
@@ -262,3 +268,42 @@ The planner uses graphs for delimited tables with more than 256 columns (the lim
 arrays of 16-, 32- and 64-bit integers and float arrays (a `.npy` header becomes the node's head), when a slice codes at least 3%
 smaller than the other candidates. A
 version 1–6 decoder rejects version 7 files.
+
+## FASTQ family blocks (codec 16, version 10)
+
+A block with codec 16 is FASTQ text coded by stream family (`src/kfam.inc`; the standalone research tool
+`src/experimental/kfam.c` writes the same frame). Its plan prefix is `0, 0, 0, 0` and its tflag 0; a decoder rejects
+anything else, and rejects codec 16 in a file below version 10 or as a graph leaf. The block checksum covers the
+decoded block as usual. `ultra` writes it, at levels 0 and 2 (not at level 1, which is context mixing only), for a
+block that is complete FASTQ text (four-line records, `\n` line ends, the plus line bare or repeating the name, at
+most 32 name tokens and 4096 name bytes, qualities 33 to 160) when it is smaller than what the block would be
+otherwise. No other mode writes it.
+
+```
+payload := "KFM2" | family u8 (1 = FASTQ) | original size uv | streams uv (5)
+           | stream * 5 : kind u8 | parameter length uv | parameter bytes
+           | jobs uv | job * jobs : stream uv | raw size uv | coded size uv
+           | the coded bytes of the jobs, in job order
+```
+
+`uv` is an unsigned LEB128 varint. Jobs are listed in stream order; a stream's bytes are its jobs' decoded bytes in
+order. Each job is one binary arithmetic-coded slice (32-bit range, 16-bit probabilities, carry-less: the range is
+renormalised a byte at a time when its top bytes agree; four flush bytes) coded with fresh models, so jobs decode
+independently and in parallel, except that streams 0 and 3 are decoded first. Kinds: 0 bytes (an order-0 to 3 byte
+model with one context byte from the family), 1 bases (2-bit symbols), 2 qualities. The streams:
+
+| # | kind | content |
+|----|----|----|
+| 0 | 0 | layout: per record a flag byte, 0 or 1 (plus line bare, or repeating the name), 2 or 3 when the read length changes, then the length uv |
+| 1 | 0 | names: per name token (maximal runs of digits or of other bytes) an operation: 0 same as the previous name's token, 1 numeric delta (zigzag uv), 2 literal (length uv, bytes); 3 ends the name. Context: token index and operation state |
+| 2 | 1 | bases, one per base: A=0 C=1 G=2 T=3 (any other byte codes as 0) |
+| 3 | 0 | exceptions: per base that is not A, C, G or T, the distance from the previous one (uv) and the byte |
+| 4 | 2 | qualities, one per base: the quality byte minus 33. Parameter: a 16-byte presence mask of the values 0 to 127, then each present value's count (uv); the decoder builds from it the same order-preserving binary code tree as the encoder |
+
+Names and qualities are cut into jobs at record boundaries every 4 Mi symbols, bases every 64 Mi bases; the cut
+points are written in the job table, so a decoder needs no rule for them. The models (their contexts are listed in
+`src/kfam.inc`) are part of the format: bases use orders 6 and 12 and three match models; qualities use the
+previous three qualities, the position, a running sum of quality changes, the mean so far and whether the base is
+an exception, six context tables, two mixers, a final mixer and two adaptive probability maps. Like `CM`, the coder
+is integer-only except for its logistic tables, built from IEEE `+ * /` only, so its output is bit-exact across
+compilers and CPUs.

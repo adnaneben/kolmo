@@ -53,7 +53,7 @@ endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
 BLIBS   := $(LIBS)
 
-KOLMO_INCLUDES := src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc
+KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc
 
 all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
 
@@ -136,9 +136,14 @@ check-rc-options: build/test-rc-options build/test-rc-options-asan
 	./build/test-rc-options
 	./build/test-rc-options-asan
 .PHONY: check-rc-options
+# FASTQ family blocks (codec 16): container round trips at ultra, the modes that must not write it, damaged payloads
+build/test-fqfam-asan: tests/test_fqfam.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fqfam.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-fqfam: build/test-fqfam-asan
+	./build/test-fqfam-asan
 # Component tests of the features merged for the release candidate. `make check` does not run them; CI does.
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options
-.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg
+check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam
+.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
