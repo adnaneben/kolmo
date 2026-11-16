@@ -1,7 +1,7 @@
 """Cross-platform determinism: the same frames on every CPU, compiler and thread count.
 
 usage: python3 benchmark/determinism/check.py KOLMO WORK_DIR [--write]
-Builds a fixed set of inputs from the repository's own sources and from a seeded generator (no third-party data),
+Builds a fixed set of inputs from a seeded generator only (no third-party data, and nothing that changes with the code),
 compresses each at every setting below with 1 and 4 threads, and compares the SHA-256 of every frame with
 benchmark/determinism/expected.sha256. --write regenerates that file (do it only when an encoder change is meant
 to change output, and say so in the commit). Also checks that 1 and 4 threads give the same frame, and that every
@@ -28,8 +28,9 @@ TYPED = [["-m", "fast", "--typed-huf"]]   # one thread only by design
 
 def inputs():
     rnd = random.Random(20261116)
-    src = b"".join(open(os.path.join(ROOT, "src", f), "rb").read() for f in sorted(os.listdir(os.path.join(ROOT, "src"))) if f.endswith((".c", ".inc", ".h")))
-    yield "source.txt", src[:600000], False
+    words = [("w%d" % i) * (1 + i % 3) for i in range(3000)]           # a fixed vocabulary, Zipf-like use
+    text = " ".join(words[min(int(rnd.paretovariate(1.1)) - 1, 2999)] + ("\n" if rnd.random() < 0.08 else "") for _ in range(110000))
+    yield "text.txt", text.encode(), False
     rows = ["country,year,population,co2,share"] + [f"C{i // 40},{1980 + i % 40},{1000000 + i * 37},{rnd.randint(0, 99999) / 100:.2f},{rnd.random():.4f}" for i in range(20000)]
     yield "table.csv", ("\n".join(rows) + "\n").encode(), False
     yield "log.txt", "".join(f"2026-11-16T10:{(i // 60) % 60:02d}:{i % 60:02d}Z host{i % 7} GET /api/item/{rnd.randint(1, 5000)} 200 {rnd.randint(1, 900)}ms\n" for i in range(15000)).encode(), False
