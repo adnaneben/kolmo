@@ -75,11 +75,11 @@ build/frontier-reads-test: tests/frontier_reads.c $(FASTQ_SRC) $(FASTQ_HDR)
 	@mkdir -p build
 	$(CC) $(SANFLAGS) -I$(XD) tests/frontier_reads.c $(FASTQ_SRC) -o $@
 
-build/kfam: $(XD)/kfam.c src/kfam.inc
+build/kfam: $(XD)/kfam.c src/codecs/fastq.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) -ffp-contract=off $(XD)/kfam.c -lpthread -o $@
 
-build/kfam-asan: $(XD)/kfam.c src/kfam.inc
+build/kfam-asan: $(XD)/kfam.c src/codecs/fastq.c
 	@mkdir -p build
 	$(CC) $(SANFLAGS) -ffp-contract=off $(XD)/kfam.c -lpthread -o $@
 
@@ -102,7 +102,7 @@ kfam-check: build/kfam-asan
 
 build/kvid: $(XD)/kvid.c src/kolmo.h build/libkolmo.a build/libvendor.a build/gpu.cfg
 	@mkdir -p build
-	$(CC) $(CFLAGS) $(if $(GPUOBJ),-DKVID_GPU) -Isrc $(XD)/kvid.c build/libkolmo.a build/libvendor.a $(LIBS) $(CXXLIB) -o $@
+	$(CC) $(CFLAGS) $(if $(GPUSRC),-DKVID_GPU) -Isrc $(XD)/kvid.c build/libkolmo.a build/libvendor.a $(LIBS) $(CXXLIB) -o $@
 
 experimental-check: build/krc-frontier-test build/krctest build/krctest-asan build/kbctest-asan build/kbxtest-asan \
 		build/frontier-reads-test build/krc-cpu build/krc-auto build/kbc build/kbx build/kolmo-fastq $(GPU_CHECK) \
