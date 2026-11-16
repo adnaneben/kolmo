@@ -45,6 +45,11 @@ int kolmo_compact_rows_neon(const uint8_t *kd, int R, uint8_t *rows);
 int kolmo_kind_count_neon(const uint8_t *kind, uint32_t cnt, uint32_t *n1, uint32_t *n2);
 /* IMG16 inverse, left predictor (mode 0), from sample i >= 1 */
 void kolmo_img16_left_neon(const uint8_t *lo, const uint8_t *hi, int64_t i, int64_t n, uint16_t *out);
+/* DEC64 inverse (kg_dec64_inv): 8-byte values of one column from stream index q, 16 at a time; returns how many it
+ * wrote (a multiple of 16) and updates the column's running values and exception pointer */
+size_t kolmo_dec64_run_neon(const uint8_t *tag, const uint8_t *const *pl, int np, size_t q, size_t n, double P, int isint,
+                            uint64_t dmask, uint64_t d2mask, uint64_t *prev, uint64_t *pd, uint8_t *w, size_t step,
+                            uint64_t miss, const uint8_t **xp);
 #endif
 
 #endif

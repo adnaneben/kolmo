@@ -244,8 +244,51 @@ static void test_table(void) {
 #endif
 }
 
+/* ---------------------------------------------------------------- whole frames: kernels on and off give the same
+ * frame, and each decoder reads it back (decimal doubles, integer arrays, images, tables, logs, text, PCM) */
+static void test_frames(void) {
+    size_t N = 3 << 20; uint8_t *in = malloc(N), *z1 = malloc(2 * N), *z2 = malloc(2 * N), *back = malloc(N);
+    for (int kind = 0; kind < 7; kind++) {
+        size_t n = 0;
+        if (kind == 0) {                                      /* decimal doubles, 2 or 3 places, a few specials */
+            double v = 100; size_t cnt = 200000; uint8_t hdr[128] = "\x93NUMPY\x01\x00\x76\x00{'descr': '<f8', 'fortran_order': False, 'shape': (200000,), }";
+            memset(hdr + 10 + 63, ' ', 128 - 10 - 63 - 1); hdr[127] = '\n'; memcpy(in, hdr, 128); n = 128;
+            for (size_t i = 0; i < cnt; i++) { v += (int)(rnd() % 2001) - 1000; double d = (i % 997 == 5) ? 1.0 / 3 : v / (i % 3 ? 100.0 : 1000.0); memcpy(in + n, &d, 8); n += 8; }
+        } else if (kind == 1) {                               /* int32 walk */
+            int32_t v = 0; for (size_t i = 0; i < 400000; i++) { v += (int)(rnd() % 801) - 400; memcpy(in + n, &v, 4); n += 4; }
+        } else if (kind == 2) { size_t W = 1536; n = W * 600; fill_img(in, n, W, 1); }
+        else if (kind == 3) {                                 /* CSV */
+            n += (size_t)snprintf((char *)in, N, "id,year,value,share,name\n");
+            for (int r = 0; n + 100 < N && r < 60000; r++) n += (size_t)snprintf((char *)in + n, N - n, "%d,%d,%d.%02d,0.%04u,n%u\n", r, 1990 + r % 30, (int)(rnd() % 100000), (int)(rnd() % 100), rnd() % 10000, rnd() % 50);
+        } else if (kind == 4) {                               /* log lines */
+            for (int r = 0; n + 200 < N && r < 30000; r++) n += (size_t)snprintf((char *)in + n, N - n, "2026-11-16 10:%02d:%02d host%u GET /api/item/%u 200 %ums\n", r / 60 % 60, r % 60, rnd() % 7, rnd() % 5000, rnd() % 900);
+        } else if (kind == 5) n = mk_text(in, 2 << 20, 0, 600);
+        else {                                                /* stereo PCM16 WAV */
+            size_t ns = 400000; uint8_t h[44] = "RIFF....WAVEfmt \x10\0\0\0\x01\0\x02\0\x44\xac\0\0\x10\xb1\x02\0\x04\0\x10\0data....";
+            uint32_t dl = (uint32_t)(ns * 4), rl = dl + 36; memcpy(h + 4, &rl, 4); memcpy(h + 40, &dl, 4); memcpy(in, h, 44); n = 44;
+            for (size_t i = 0; i < ns; i++) { int16_t a = (int16_t)(8000 * sin(i * 0.01) + (int)(rnd() % 61) - 30), b = (int16_t)(a / 2 + (int)(rnd() % 21) - 10); memcpy(in + n, &a, 2); memcpy(in + n + 2, &b, 2); n += 4; }
+        }
+        static const kolmo_mode M[5] = {KOLMO_RT, KOLMO_FAST, KOLMO_ECO, KOLMO_HC, KOLMO_MAX};
+        for (int mi = 0; mi < 5; mi++) {
+            if (M[mi] == KOLMO_MAX && kind == 5) continue;    /* (slow; covered by the determinism check) */
+            kolmo_params P = {M[mi], 0, 1, 0, M[mi] == KOLMO_RT ? 3 : 1};
+            kolmo_force_c = 1; int64_t a = kolmo_compress(in, n, z1, 2 * N, &P);
+            kolmo_force_c = 0; int64_t b = kolmo_compress(in, n, z2, 2 * N, &P);
+            CHECK(a > 0 && a == b && !memcmp(z1, z2, (size_t)a), "frame differs: input %d mode %d (%lld %lld)", kind, (int)M[mi], (long long)a, (long long)b);
+            if (a <= 0) continue;
+            for (int f = 0; f < 2; f++) {
+                kolmo_force_c = f; memset(back, 0, n);
+                int64_t r = kolmo_decompress(z1, (size_t)a, back, n, 1);
+                CHECK(r == (int64_t)n && !memcmp(back, in, n), "round trip: input %d mode %d force_c %d", kind, (int)M[mi], f);
+            }
+        }
+    }
+    free(in); free(z1); free(z2); free(back);
+}
+
 int main(void) {
     printf("kernels: %s\n", KOLMO_NEON ? "NEON" : "none (C references only)");
+    test_frames();
     test_table();
     test_intinv();
     test_img8();

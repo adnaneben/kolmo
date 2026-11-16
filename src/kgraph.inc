@@ -478,6 +478,16 @@ static int kg_dec64_inv(const uint8_t *par, size_t plen, const kbuf *st, uint32_
         else if (w4) { uint32_t u_; memcpy(&u_, xp, 4); bits_ = u_; xp += 4; }                           \
         else { bits_ = kg_ld64(xp); xp += 8; }                                                           \
         if (w4) { uint32_t u_ = (uint32_t)bits_; memcpy(W8, &u_, 4); } else memcpy(W8, &bits_, 8); } while (0)
+#if KOLMO_NEON
+    const uint8_t *PL[8] = {0}; for (int b = 0; b < np; b++) PL[b] = pl[b].p;
+    const int KN = !kolmo_force_c;                  /* tag-0 runs of 8-byte values: src/arch/aarch64/dec64_neon.c */
+#define KG_DEC_RUN(K, Q, W, R, N, STEP) do { if (KN && !dv && !w4 && !((R) & 15)) {                                          \
+            size_t k_ = kolmo_dec64_run_neon(t, PL, np, (Q), (N) - (R), P, isint, dmask, d2mask, &prev, &pd, (W), (STEP), \
+                                             (K)->miss, &xp);                                                          \
+            (R) += k_; (W) += k_ * (STEP); } } while (0)
+#else
+#define KG_DEC_RUN(K, Q, W, R, N, STEP) do { } while (0)
+#endif
     if (segs) {
         uint8_t *w = out->p; const uint8_t *rp = rest->p; size_t qq = 0;
         for (uint64_t c = 0; c < cols; c++) {
@@ -485,7 +495,11 @@ static int kg_dec64_inv(const uint8_t *par, size_t plen, const kbuf *st, uint32_
             const uint64_t *dv = K->dv; const uint64_t nd = K->nd;
             const int isint = K->isint, w4 = K->w == 4; const size_t ws = (size_t)K->w;
             if (K->skip) { memcpy(w, rp, (size_t)K->skip); w += K->skip; rp += K->skip; }
-            for (size_t r = 0; r < (size_t)K->n; r++, qq++, w += ws) KG_DEC_VALUE(K, qq, w);
+            for (size_t r = 0; r < (size_t)K->n; r++, qq++, w += ws) {
+                size_t r0_ = r; KG_DEC_RUN(K, qq, w, r, (size_t)K->n, ws); qq += r - r0_;
+                if (r >= (size_t)K->n) break;
+                KG_DEC_VALUE(K, qq, w);
+            }
         }
         memcpy(w, rp, rest->n - (size_t)skips);
     } else {
@@ -499,13 +513,14 @@ static int kg_dec64_inv(const uint8_t *par, size_t plen, const kbuf *st, uint32_
                 const uint64_t *dv = K->dv; const uint64_t nd = K->nd;
                 const int isint = K->isint, w4 = K->w == 4;
                 uint8_t *w = o + ((size_t)r0 * (size_t)cols + (size_t)c) * ws;
-                for (size_t r = 0; r < rn; r++, w += step) KG_DEC_VALUE(K, q0 + r, w);
+                for (size_t r = 0; r < rn; r++, w += step) { KG_DEC_RUN(K, q0 + r, w, r, rn, step); if (r >= rn) break; KG_DEC_VALUE(K, q0 + r, w); }
                 K->prev = prev; K->pd = pd; K->xp = xp;
             }
         }
         memcpy(o + (size_t)vb, rest->p + h, rest->n - (size_t)h);
     }
 #undef KG_DEC_VALUE
+#undef KG_DEC_RUN
     out->n = (size_t)vb + rest->n;
     rc = 0;
 bad:

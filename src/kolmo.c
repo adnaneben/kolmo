@@ -59,6 +59,7 @@ int kolmo_force_c;
 #include "arch/aarch64/image_neon.c"
 #include "arch/aarch64/intinv_neon.c"
 #include "arch/aarch64/table_neon.c"
+#include "arch/aarch64/dec64_neon.c"
 #endif
 
 /* ------------------------------------------------------------------ runtime ISA dispatch (x86-64)
