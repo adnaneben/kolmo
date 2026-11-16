@@ -98,12 +98,13 @@ $(ARCHOBJ): VSECT := -ffunction-sections -fdata-sections   # arch/xxh3.c carries
 
 all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
 
-build/obj/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(VSECT) $(DEFS) $(INC) -c $< -o $@
+# liblzma first: GNU make 3.81 (macOS) takes the first matching pattern rule, make 4 the most specific one
 build/obj/$(XZ)/%.o: $(XZ)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(VSECT) $(XZFLAGS) -c $< -o $@
+build/obj/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(VSECT) $(DEFS) $(INC) -c $< -o $@
 build/obj/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CFLAGS) $(VSECT) -I$(BSC) -c $< -o $@
@@ -233,12 +234,12 @@ check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 SOEXT := $(if $(filter Darwin,$(UNAME_S)),dylib,so)
 PICC  := $(patsubst %.c,build/pic/%.o,$(ZSRC) $(BROSRC) $(XZSRC) $(LZ4)/lz4.c $(LZ4)/lz4hc.c $(BSC)/bwt/libsais/libsais.c) $(patsubst %.S,build/pic/%.o,$(ZASM))
 PICPP := $(patsubst %.cpp,build/pic/%.o,$(BSRC))
-build/pic/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -fPIC $(DEFS) $(INC) -c $< -o $@
 build/pic/$(XZ)/%.o: $(XZ)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -fPIC $(XZFLAGS) -c $< -o $@
+build/pic/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -fPIC $(DEFS) $(INC) -c $< -o $@
 build/pic/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CFLAGS) -fPIC -I$(BSC) -c $< -o $@
