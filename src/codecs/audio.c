@@ -1,7 +1,9 @@
 /* Codec 19: audio (kaud, container version 11). 16-bit integer PCM, mono or stereo.
  *
- * Ported from the research tool on branch claude/kaud-20261116 (src/experimental/kaud.c at 3d4b7ba, description and
- * measurements in src/experimental/KAUD.md there). Changes for the library: the command line and the self-test are
+ * Ported from the research tool src/experimental/kaud.c (branch claude/kaud-20261116 at 3d4b7ba, merged here;
+ * description and measurements in src/experimental/KAUD.md). The tool is built with -fopenmp-simd, which lets the
+ * encoder's choices depend on the CPU's vector width; the library port is built without it, so its output is the
+ * same on every CPU (the decoded bytes never depended on it). Changes for the library: the command line and the self-test are
  * gone, every file-scope name carries the prefix ka_ (the codecs are still included into src/kolmo.c), the
  * probability adaptation cap is fixed at 7 (the stream field must say 7), the tables are built once, and the
  * encoder takes the sample layout from the caller instead of parsing a WAV header, so a Kolmo block that starts or

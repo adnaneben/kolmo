@@ -24,7 +24,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 10: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16) |
+| 4 | 1 | version | 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 when a block or graph leaf uses codecs 19-23, format 2) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -119,8 +119,9 @@ version above the highest it knows.
 | 8 | a block uses the line-class transform (plan type 10, tflag 12) | 1.1.0 |
 | 9 | a graph leaf uses codec 15; on request only (`--native-leaf`) | 1.2.0 |
 | 10 | a block uses the FASTQ family coder (codec 16); `ultra` only | this branch (after 1.2.0-rc2) |
+| 11 | format 2: a block uses codec 19 (audio) or 20 (video), or a graph leaf uses codec 21, 22 or 23 | rc3 |
 
-Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0-rc1 and rc2; 10 by this branch. (1.1.0 is the state of `main` under that
+Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0-rc1 and rc2; 10 by the FASTQ branch; 11 by rc3. (1.1.0 is the state of `main` under that
 version number; it was not tagged or published. 1.2.0 is this build, a release candidate.)
 
 **Block codecs** (index byte 12) and **graph leaf codecs**.
@@ -134,6 +135,12 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 15 | NPLANE (native plane-context leaf) | graph leaves, version 9 only | 1.2.0 |
 | 16 | FQFAM (FASTQ family coder) | blocks, version 10 or later; written by `ultra` (not level 1) | this branch |
 | 17 | CMI (context mixing, image model) | blocks; written by `ultra` | 1.2.0 |
+| 18 | reserved (BWT in C, rc3 bwt lane) | — | — |
+| 19 | AUD (kaud: 16-bit PCM audio) | blocks, version 11; written for 16-bit PCM WAV files by every mode but `rt` when smaller | rc3 |
+| 20 | VID (kvid layout + nested frame) | the only block of a version 11 frame; written for 8-bit Y4M files by every mode but `rt` | rc3 |
+| 21 | PLANES (per-plane leaf) | graph leaves, version 11 | rc3 |
+| 22 | HZ (Huffman, then zstd) | graph leaves, version 11; also inside codecs 21 and 23 | rc3 |
+| 23 | ZRUN (zero runs and literals) | graph leaves, version 11; also inside codec 21 | rc3 |
 
 **Graph nodes** (op byte of a node).
 
@@ -221,7 +228,7 @@ version stays 7. A decoder rejects any node id it does not know.
 ```
 payload := 'G' | 1 (graph version) | nodes uv | node * nodes | leaves uv | leaf * leaves
 node    := op u8 | nin uv | input index uv * nin | nout uv | param length uv | params
-leaf    := stream index uv | codec u8 (0-7 as for blocks, 13, 14, or 15 from version 9) | raw length uv | coded length uv | coded bytes
+leaf    := stream index uv | codec u8 (0-7 as for blocks, 13, 14, 15 from version 9, 21-23 from version 11) | raw length uv | coded length uv | coded bytes
 ```
 
 **Leaf codec 15: native plane-context leaf (container version 9).** Written only on request (`--native-leaf`,
@@ -274,6 +281,88 @@ The planner uses graphs for delimited tables with more than 256 columns (the lim
 arrays of 16-, 32- and 64-bit integers and float arrays (a `.npy` header becomes the node's head), when a slice codes at least 3%
 smaller than the other candidates. A
 version 1–6 decoder rejects version 7 files.
+
+## Format 2 (container version 11)
+
+rc3 writes version 11 for every frame that uses one of the codecs below; frames without them keep the version they
+had. A reader rejects codecs 19-23 in a frame of version 10 or lower, codecs 21-23 as block codecs, and codecs 19 and
+20 as graph leaves. Backward compatibility is not a goal of format 2: rc2 and earlier refuse version 11 at the header.
+
+**Leaf codec 21: per-plane leaf.** For a leaf of `rl` bytes:
+
+```
+payload := np u8 (2-8; rl is a multiple of np) | plane * np
+plane   := codec u8 | coded length uv | coded bytes      (plane b is raw bytes [b L, (b+1) L), L = rl / np)
+```
+
+A plane's codec is one of 0-7, 13, 14, 22, 23 (not 12, 15-21). The encoder writes it only for the residual stream of
+an `INT` node with byte planes (flag bit 3), choosing per plane the smallest of the block codec, Huffman (13), rANS
+(14; not at the fast levels; at `hc` only when 3% smaller than a non-rANS choice), Huffman then zstd (22), zero runs
+(23, when at least half the plane's bytes are 0) and stored (0), and keeps the leaf only when it is smaller than the
+leaf as a whole.
+
+**Leaf codec 22: Huffman, then zstd.**
+
+```
+payload := h uv (length of the Huffman stream; h <= rl + rl/1024 + 64) | zstd frame of h bytes
+```
+
+The zstd frame (no dictionary) decodes to a codec 13 stream of `h` bytes, which decodes to the `rl` leaf bytes.
+
+**Leaf codec 23: zero runs and literals.**
+
+```
+payload  := k uv (non-zero bytes, k <= rl)
+            | runs: codec u8 | raw length r uv (r <= 10 (k + 1)) | coded length uv | coded bytes
+            | literals: codec u8 | coded length uv | coded bytes      (raw length k; the coded bytes end the payload)
+```
+
+Sub-codecs are 0-7, 13, 14, 22 (not 21 or 23). `runs` holds k + 1 LEB128 varints: the number of zero bytes before
+each non-zero byte, then the number after the last one; `literals` holds the k non-zero bytes. Decoding interleaves
+them; a zero literal, a run past `rl` or bytes left over in either stream is an error (`src/algo/zerorun.c`).
+
+**Plane-aligned Huffman and rANS chunks** (codecs 13 and 14 cut at plane boundaries, one-symbol rANS chunks) are
+ordinary codec 13/14 leaves and need no version; from rc3 the encoder tries them by default at `hc`.
+
+## Audio blocks (codec 19, version 11)
+
+A block with codec 19 has plan prefix `0, 0, 0, 0` and tflag 0; its payload is one **KAU1** stream (the format of the
+kaud research tool; `src/codecs/audio.c` is the library port, `src/experimental/KAUD.md` describes the stream in full):
+
+```
+"KAU1" | version u8 (1) | profile u8 (0, 1) | channels u8 (1, 2) | log2 chunk u8 (8-30) | frame u16 (16-32768)
+| effort u8 | lpc order u8 | mu u16 * 3 | sign-sign step u16 | adaptation cap u8 (must be 7) | split depth u8 (0-5)
+| sample frames u64 | stage-0 taps u16 | stage-1, stage-2 taps u8 * 2 | cross taps u8 * 2 | combiner step u8
+| H u32 | H bytes (block bytes before the first sample) | T u32 | T bytes (after the last sample frame)
+| CRC-32C of the block u32 | per chunk: payload length u32, CRC-32C of its PCM u32 | chunk payloads
+```
+
+The samples are 16-bit little-endian, interleaved; H + 2 x channels x frames + T must equal the block's raw length.
+The encoder writes codec 19 for every block of a 16-bit PCM WAV file (mono or stereo, `WAVE_FORMAT_PCM` or
+extensible PCM) that holds more than 1024 whole sample frames, when it is smaller than the block coded otherwise;
+profile 0 up to `hc`, profile 1 at `max` and `ultra`. Block boundaries need not fall on sample frames: the bytes
+before the first whole frame and after the last are H and T.
+
+## Video frames (codec 20, version 11)
+
+A frame whose only block has codec 20 is an 8-bit YUV4MPEG2 file (C420, C420jpeg, C420mpeg2, C420paldv, C422,
+C444, Cmono) coded by the kvid front end (`src/codecs/video.c`). The block's raw length is the file size (so the file
+is under 4 GiB), its plan prefix `0, 0, 0, 0`, tflag 0, and its checksum is over the file as usual. The payload after
+the plan prefix is a complete Kolmo frame (any version, any number of blocks, not itself codec 20) of the **layout**:
+
+```
+layout := header length u32 | header bytes (stream header line and every FRAME line, in order)
+          | predictor u8 per strip (16 rows of a plane), frames in order, planes in order within a frame
+          | residuals of plane 0 of every frame, then plane 1, then plane 2
+```
+
+Predictor 0 is the LOCO-I median of the left, upper and upper-left samples in the same frame (the first row from the
+left sample, the first column from the upper one, the very first sample from 0); 1 is the same sample of the previous
+frame; 2 is the previous frame's sample plus the median of the differences (current minus previous, as int8) of the
+left, upper and upper-left samples. Predictors 1 and 2 are invalid in the first frame. A residual is
+zigzag((sample - prediction) mod 256 as int8). The writer takes this route for a whole Y4M file in every mode but
+`rt`, coding the layout with the caller's mode and threads, when the result is smaller than the file. A reader decodes
+the nested frame, inverts the layout and checks the block checksum; a range read decodes the whole file first.
 
 ## FASTQ family blocks (codec 16, version 10)
 

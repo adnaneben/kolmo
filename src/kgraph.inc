@@ -564,8 +564,9 @@ static void kg_leaf_bounds(const uint8_t *p, size_t n, int np, double *pbits, do
  * block codec, Huffman, rANS (not at the fast settings; at hc only when 3% smaller than a non-rANS choice, as for
  * whole leaves), Huffman then zstd and (when allowed) the zero-run leaf; the smallest is kept. */
 typedef struct { int codec, level, zr; } kgsel;
-/* zstd level of the Huffman-then-zstd leaf: the leaf's own level with the zstd family, 19 with the slower coders */
-#define KG_HZ_LEVEL(codec, level) ((codec) == C_ZSTD ? (level) : 19)
+/* zstd level of the Huffman-then-zstd leaf (src/codecs/hufzstd_leaf.c: hz_try decides when it is worth running) */
+#define KG_HZ_LEVEL(codec, level) ((codec) == C_ZSTD && (level) > 19 ? (level) : 19)
+#define KG_HZ_PROBE(codec, level) ((codec) == C_ZSTD && (level) <= 9 ? (level) : 1)
 static size_t kg_sel_sub(codec_ctx *x, const void *ctx, const uint8_t *p, size_t n, uint8_t *out, size_t cap, int *pcc) {
     const kgsel *S = ctx; const int codec = S->codec, level = S->level;
     int cc = codec == C_CM || codec == C_STORE ? C_LZMA : codec; size_t z = 0;
@@ -580,7 +581,7 @@ static size_t kg_sel_sub(codec_ctx *x, const void *ctx, const uint8_t *p, size_t
     size_t hz = n >= 64 ? huf_compress_all(p, n, t, cap) : 0;
     if (hz && (!z || hz < z)) { memcpy(out, t, hz); z = hz; cc = C_HUF; }
     if (hz && (KOLMO_F2_MASK & 2) && hz >= 64) {
-        uint8_t *u = malloc(cap); size_t qz = u ? hz_try(x, KG_HZ_LEVEL(codec, level), t, hz, u, cap, z) : 0;
+        uint8_t *u = malloc(cap); size_t qz = u ? hz_try(x, KG_HZ_PROBE(codec, level), KG_HZ_LEVEL(codec, level), t, hz, u, cap, z) : 0;
         if (qz && (!z || qz < z)) { memcpy(out, u, qz); z = qz; cc = C_HZ; }
         free(u);
     }
@@ -690,7 +691,7 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
                 memcpy(o.p + o.n + 20, fb, fz); z = fz; cc = C_PLANES; x->used_f2 = 1;
             }
             if (fb && (KOLMO_F2_MASK & 2) && cc != C_STORE && (fz = huf_compress_all(s->p, s->n, fb, zc)) >= 64) {
-                uint8_t *u = malloc(zc); size_t qz = u ? hz_try(x, KG_HZ_LEVEL(codec, level), fb, fz, u, zc, z) : 0;
+                uint8_t *u = malloc(zc); size_t qz = u ? hz_try(x, KG_HZ_PROBE(codec, level), KG_HZ_LEVEL(codec, level), fb, fz, u, zc, z) : 0;
                 if (qz && (!z || qz < z)) { memcpy(o.p + o.n + 20, u, qz); z = qz; cc = C_HZ; x->used_f2 = 1; }
                 free(u);
             }

@@ -30,13 +30,14 @@ static int hz_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *ou
     free(t); return rc;
 }
 
-/* encoder rule (levels above 3): zstd level 1 over the Huffman stream first (cheap); the given level only when that probe finds
+/* encoder rule: Huffman streams up to 64 KiB take zstd level 19 (or the leaf's higher level) directly; larger ones
+ * zstd at the `probe` level over the Huffman stream first (cheap: the leaf's own zstd level up to 9, else 1); the given level only when that probe finds
  * repeats (at least 1% smaller than the Huffman stream) and comes within 5% of `best` (the leaf's current smallest
  * coding; 0 = none). Returns the smaller payload written to out, or 0. */
-static size_t hz_try(codec_ctx *x, int level, const uint8_t *huf, size_t hl, uint8_t *out, size_t cap, size_t best) {
-    if (level <= 3) return hz_compress_huf(x, level, huf, hl, out, cap);   /* cheap levels: no probe */
-    size_t q1 = hz_compress_huf(x, 1, huf, hl, out, cap);
-    if (!q1 || level <= 1 || (uint64_t)q1 * 100 > (uint64_t)hl * 99 || (best && (uint64_t)q1 * 100 >= (uint64_t)best * 105)) return q1;
+static size_t hz_try(codec_ctx *x, int probe, int level, const uint8_t *huf, size_t hl, uint8_t *out, size_t cap, size_t best) {
+    if (hl <= (64u << 10)) return hz_compress_huf(x, level > 19 ? level : 19, huf, hl, out, cap);   /* small: the strong level at once */
+    size_t q1 = hz_compress_huf(x, probe, huf, hl, out, cap);
+    if (!q1 || level <= probe || (uint64_t)q1 * 100 > (uint64_t)hl * 99 || (best && (uint64_t)q1 * 100 >= (uint64_t)best * 105)) return q1;
     uint8_t *u = malloc(cap); size_t qz = u ? hz_compress_huf(x, level, huf, hl, u, cap) : 0;
     if (qz && qz < q1) { memcpy(out, u, qz); q1 = qz; }
     free(u); return q1;

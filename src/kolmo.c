@@ -1529,6 +1529,7 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
 }
 
 #include "codecs/audio.c"
+#include "codecs/video.c"
 #include "codecs/hufzstd_leaf.c"
 #include "codecs/planes_leaf.c"
 #include "codecs/zrun_leaf.c"
@@ -2441,6 +2442,7 @@ typedef struct {
     pthread_mutex_t wmu; uint32_t wnext; size_t wpos, cap; int werr;   /* blocks are written to dst in order as they finish */
     int psum;               /* checksums over stored bytes (rt) instead of decoded bytes */
     const void *dict; size_t dictlen;   /* optional zstd dictionary, read-only by workers */
+    int aud_prof, aud_ch; uint64_t aud_off, aud_end;   /* format 2: 16-bit PCM WAV (kaud profile, channels, sample bytes [off, end)); aud_prof < 0: none */
 } job_t;
 static void append_bytes(job_t *j, const uint8_t *bytes, size_t size) {
     if (j->werr) return;
@@ -2499,6 +2501,9 @@ static void *compress_worker(void *arg) {
             raw = input;
         } else raw = J->src + J->starts[i];
         const uint8_t *in = raw; size_t meta = 0; int tflag = 0; unsigned modes = 0;
+        /* a block of WAV samples is coded by the audio codec when that is smaller (it was on all 43 WAV files measured,
+         * by 17% or more); the rest of the block's path keeps rc2's leaf rule, without the format-2 leaf trials */
+        xp->no_f2 = J->aud_prof >= 0 && J->starts[i] < J->aud_end && J->starts[i + 1] > J->aud_off;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
 #ifdef KOLMO_FRONTIER
@@ -2758,6 +2763,20 @@ coded:;
                 slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
             }
             free(fq);
+        }
+        if (J->aud_prof >= 0) {                                         /* format 2: audio block (codec 19) */
+            const uint64_t fs = 2 * (uint64_t)J->aud_ch, s0 = J->starts[i], s1 = J->starts[i + 1];
+            const uint64_t a = s0 > J->aud_off ? s0 : J->aud_off, b = s1 < J->aud_end ? s1 : J->aud_end;
+            const uint64_t f0 = a < b ? (a - J->aud_off + fs - 1) / fs : 0, f1 = a < b ? (b - J->aud_off) / fs : 0;
+            if (f1 > f0 + 1024) {
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+                size_t cur = cl && cl + meta < len ? cl + meta : len;
+                size_t az = alt ? aud_compress(J->aud_prof, J->aud_ch, raw, len, (size_t)(J->aud_off + f0 * fs - s0), f1 - f0, alt, J->slot) : 0;
+                if (az && az < cur) {
+                    memcpy(sl, alt, az); cl = az; codec = C_AUD; tflag = 0; meta = 0; modes = 128;
+                    slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
+                }
+            }
         }
         size_t tot = 4 + meta + cl;
         uint8_t *e = J->idx + (size_t)i * IDX;
@@ -3091,6 +3110,33 @@ static void *plan_worker(void *arg) {
 #include "typed_int_encoder.inc"
 
 static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
+                             const void *dict, size_t dictlen, uint32_t dictid);
+static int write_block(int fd, const uint8_t *p, size_t n, off_t off);
+#ifndef KOLMO_VID_MODES
+#define KOLMO_VID_MODES 0x3E   /* modes (bit = kolmo_mode) in which a Y4M file takes the video route (codec 20) */
+#endif
+/* Format 2, video (codec 20): a whole 8-bit YUV4MPEG2 file becomes one block whose payload is a Kolmo frame of the
+ * kvid layout (src/codecs/video.c), coded with the caller's parameters (blocks and threads as usual). Returns the
+ * frame length written to dst (or output_fd), or 0 when the route does not apply or is not smaller than the input. */
+static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *q) {
+    if (n < 4096 || n > UINT32_MAX || memcmp(s, "YUV4MPEG2 ", 10) || !((KOLMO_VID_MODES >> q->mode) & 1)) return 0;
+    size_t tn; uint8_t *t = kv_transform(s, n, &tn); if (!t) return 0;
+    size_t ic = kolmo_bound(tn, q), tot; uint8_t *in = malloc(ic), *f = NULL; int64_t z = -1;
+    if (in) z = compress_impl(t, -1, tn, in, -1, ic, q, NULL, 0, 0);
+    free(t);
+    if (z <= 0 || (tot = HDR + IDX + 4 + (size_t)z) >= n) { free(in); return 0; }
+    f = output_fd >= 0 ? malloc(tot) : tot <= cap ? dst : NULL;
+    if (!f) { free(in); return 0; }
+    memset(f, 0, HDR + IDX + 4); memcpy(f, "CZN1", 4); f[4] = 11; f[5] = (uint8_t)q->mode;
+    put64(f + 12, n); put32(f + 20, 1); put32(f + 24, (uint32_t)n);
+    uint8_t *e = f + HDR; put32(e, (uint32_t)n); put32(e + 4, (uint32_t)(4 + z)); put32(e + 8, blk_sum(3, s, n)); e[12] = C_VID;
+    f[HDR + IDX] = T_NONE; memcpy(f + HDR + IDX + 4, in, (size_t)z); free(in);
+    uint32_t hc = kolmo_crc32c(0, f, 28); hc = kolmo_crc32c(hc, f + HDR, IDX); put32(f + 28, hc);
+    if (output_fd >= 0) { int r = write_block(output_fd, f, tot, 0); free(f); return r ? r : (int64_t)tot; }
+    return (int64_t)tot;
+}
+
+static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen, uint32_t dictid) {
     kolmo_params d = {KOLMO_FAST, 0, 0, 0, 1}; if (!p) p = &d;
     /* KOLMO_T_NATIVE_LEAF and KOLMO_T_TYPED_HUF are opt-in bits of transforms: read them, then clear them so every
@@ -3110,6 +3156,13 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         int plain = 0; int64_t tr = ktf_encode(src, n, dst, cap, &plain);
         if (tr) return tr;
         if (plain) q.transforms = 0;
+    }
+    if (!dictlen && q.mode != KOLMO_RT && n >= 4096 && n <= UINT32_MAX) {   /* format 2: video route (codec 20) */
+        const uint8_t *vs = src; void *vm = MAP_FAILED;
+        if (input_fd >= 0) { vm = mmap(NULL, n, PROT_READ, MAP_PRIVATE, input_fd, 0); vs = vm == MAP_FAILED ? NULL : vm; }
+        int64_t vr = vs && !memcmp(vs, "YUV4MPEG2 ", 10) ? vid_compress_frame(vs, n, dst, output_fd, cap, &q) : 0;
+        if (vm != MAP_FAILED) munmap(vm, n);
+        if (vr) return vr;
     }
     int threads = p->threads > 0 ? p->threads : default_threads();
     uint32_t B = p->block ? p->block : (p->mode >= KOLMO_MAX ? (128u << 20) : p->mode >= KOLMO_ECO ? (16u << 20) : kolmo_fast_block(n));   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
@@ -3179,6 +3232,16 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     if (nb == 0) { starts[0] = 0; rstart[0] = 0; bplan[0] = 0; nb = 1; }
     starts[nb] = n;
     size_t maxb = 0; for (uint32_t i = 0; i < nb; i++) if (starts[i + 1] - starts[i] > maxb) maxb = starts[i + 1] - starts[i];
+    J.aud_prof = -1;
+    if (p->mode != KOLMO_RT && !dictlen && src && n >= 4096) {
+        /* format 2: a 16-bit PCM WAV file (mono or stereo). Every block that holds samples is also coded by the audio
+         * codec (19, kaud: profile 0 up to hc, profile 1 at max and ultra) and the smaller coding is kept */
+        ka_Wav w; const char *werr;
+        pthread_once(&ka_once, ka_init);
+        if (!ka_wav_parse(src, n, &w, &werr) && w.n) {
+            J.aud_prof = p->mode >= KOLMO_MAX ? 1 : 0; J.aud_ch = w.ch; J.aud_off = w.data_off; J.aud_end = w.trl_off;
+        }
+    }
     if (planning_map != MAP_FAILED) {
         munmap(planning_map, n); planning_map = MAP_FAILED; src = NULL;
     }
@@ -3195,6 +3258,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
     if (!J.out || !J.outlen) goto cleanup;
     J.psum = p->mode == KOLMO_RT;
+
     J.dict = dict; J.dictlen = dictlen;
     J.dst = dst; J.cap = cap; J.wnext = 0; J.wpos = HDR + (size_t)nb * IDX; J.werr = 0;
     if (pthread_mutex_init(&J.wmu, NULL)) goto cleanup;
@@ -3439,9 +3503,40 @@ static void *decompress_worker(void *arg) {
 int64_t kolmo_original_size(const uint8_t *src, size_t n) { return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : KOLMO_ERR_CORRUPT; }
 
 static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
+                          const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits);
+/* the single codec-20 block of a frame: the payload's plan bytes are 0, the rest is a Kolmo frame of the kvid layout */
+static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input_fd, uint8_t *dst, int output_fd, int threads,
+                                uint64_t lo, uint64_t hi, int range) {
+    const uint8_t *e = P->idx; size_t raw = get32(e), cl = (size_t)(P->poff[1] - P->poff[0]);
+    if (P->ver < 11 || P->psum || e[13] || cl < 4 + HDR || raw != P->orig) return KOLMO_ERR_CORRUPT;
+    uint8_t *pb = NULL, *t = NULL, *full = NULL; const uint8_t *pay; int64_t ret = KOLMO_ERR_CORRUPT;
+    if (input_fd >= 0) {
+        pb = malloc(cl); if (!pb) return KOLMO_ERR_ALLOC;
+        if (read_block(input_fd, pb, cl, (off_t)P->poff[0])) { free(pb); return KOLMO_ERR_IO; }
+        pay = pb;
+    } else pay = src + P->poff[0];
+    if (pay[0] != T_NONE || pay[1] || pay[2] || pay[3]) goto out;
+    int64_t tn = kolmo_original_size(pay + 4, cl - 4);
+    if (tn <= 0 || (uint64_t)tn > 2 * (uint64_t)raw + 4096) goto out;   /* the layout is the input, 4 bytes and a byte per strip */
+    t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
+    if (!t || !full) { ret = KOLMO_ERR_ALLOC; goto out; }
+    if (run_decode(pay + 4, -1, cl - 4, t, -1, threads, 0, 0, 0, NULL, 0, 0, NULL) != tn) goto out;
+    if (kv_inverse(t, (size_t)tn, full, raw)) goto out;
+    if (blk_sum(P->ver, full, raw) != get32(e + 8)) { ret = KOLMO_ERR_CHECKSUM; goto out; }
+    if (range) { if (hi > raw || lo > hi) goto out; memcpy(dst, full + lo, (size_t)(hi - lo)); ret = (int64_t)(hi - lo); }
+    else if (output_fd >= 0) { int w = write_block(output_fd, full, raw, 0); ret = w ? w : (int64_t)raw; }
+    else ret = (int64_t)raw;
+out:
+    free(pb); free(t); if (full != dst) free(full); return ret;
+}
+static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
                           const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits) {
     parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
     if (P.needdict && (!dict || dictid != P.dictid)) { free(P.poff); free(P.roff); return KOLMO_ERR_DICT; }
+    if (P.nb == 1 && P.idx[12] == C_VID) {                      /* format 2: a video frame, decoded whole (codec 20) */
+        int64_t vr = vid_decode_frame(&P, src, input_fd, dst, output_fd, threads, lo, hi, range);
+        free(P.poff); free(P.roff); return vr;
+    }
     djob_t J = {0}; J.src = src; J.P = &P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd; J.dict = dict; J.dictlen = dictlen;
     for (uint32_t i = 0; i < P.nb; i++) {
         size_t raw = P.roff[i + 1] - P.roff[i], stored = P.poff[i + 1] - P.poff[i];

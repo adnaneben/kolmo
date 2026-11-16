@@ -58,7 +58,7 @@ endif
 LIBS    := $(EXTRA_LIB) $(LZMALIB) -lpthread -lm
 BLIBS   := $(LIBS)
 
-KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc src/codecs/hufzstd_leaf.c src/codecs/planes_leaf.c src/codecs/zrun_leaf.c src/algo/zerorun.c src/codecs/audio.c
+KOLMO_INCLUDES := src/kfam.inc src/tbl2.inc src/log.inc src/lines.inc src/sci.inc src/word.inc src/cm.inc src/stream.inc src/kgraph.inc src/nplane.inc src/typed_int_encoder.inc src/kg_int_fwd.inc src/codecs/hufzstd_leaf.c src/codecs/planes_leaf.c src/codecs/zrun_leaf.c src/algo/zerorun.c src/codecs/audio.c src/codecs/video.c
 
 all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
 
@@ -156,8 +156,16 @@ build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan
-check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
-.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
+# Format 2 (codecs 19-23, container version 11): leaves, audio and video blocks, damaged payloads, file API
+build/test-format2-asan: tests/test_format2.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_format2.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+build/test-format2: tests/test_format2.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_format2.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
+check-format2: build/test-format2 build/test-format2-asan
+	./build/test-format2
+	./build/test-format2-asan
+check-rc: check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-format2
+.PHONY: check-rc check-format2 check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan

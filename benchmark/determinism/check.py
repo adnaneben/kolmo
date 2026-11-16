@@ -50,6 +50,11 @@ def inputs():
     pcm = struct.pack(f"<{len(walk)}h", *walk)
     wav = b"RIFF" + struct.pack("<I", 36 + len(pcm)) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, 1, 44100, 88200, 2, 16) + b"data" + struct.pack("<I", len(pcm)) + pcm
     yield "walk.wav", wav, True
+    y4m = bytearray(b"YUV4MPEG2 W96 H64 F25:1 Ip A1:1 C420jpeg\n")   # format 2: the video route (codec 20)
+    for f in range(12):
+        y4m += b"FRAME\n" + bytes(((x + 2 * f) * 3 + y * 5 + rnd.randint(0, 3)) & 255 for y in range(64) for x in range(96))
+        y4m += bytes((128 + k * 9 + ((x + y + f) & 15)) & 255 for k in range(2) for y in range(32) for x in range(48))
+    yield "video.y4m", bytes(y4m), False
 
 
 def run(args):
