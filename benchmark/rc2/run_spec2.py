@@ -60,7 +60,9 @@ def main():
     for k in ("binding", "lib", "data", "video", "fastq", "audio", "work", "out"):
         ap.add_argument("--" + k, required=True)
     ap.add_argument("--only")
+    ap.add_argument("--threads", type=int, default=1, help="threads for every codec that has them (default 1)")
     a = ap.parse_args()
+    T = a.threads
     os.environ["KOLMO_LIB"] = a.lib
     sys.path.insert(0, a.binding)
     import kolmo
@@ -69,7 +71,7 @@ def main():
     log = open(a.out, "a")
 
     def emit(group, name, label, n, f, ok, extra=None):
-        row = {"type": "row", "group": group, "file": name, "label": label, "input": n, **f, "roundtrip": bool(ok)}
+        row = {"type": "row", "group": group, "file": name, "label": label, "input": n, **f, "roundtrip": bool(ok), "threads_requested": T}
         row["c_mbs"], row["d_mbs"] = n / f["c_s"] / 1e6, n / f["d_s"] / 1e6
         row.update(extra or {})
         log.write(json.dumps(row) + "\n")
@@ -79,10 +81,10 @@ def main():
 
     def kolmo_rows(group, name, raw):
         for label, kw in KOLMO.get(group, []):
-            z, back, f = pair(lambda: kolmo.compress(raw, threads=1, **kw), lambda b: kolmo.decompress(b, threads=1))
+            z, back, f = pair(lambda: kolmo.compress(raw, threads=T, **kw), lambda b: kolmo.decompress(b, threads=T))
             emit(group, name, label, len(raw), f, back == raw)
 
-    log.write(json.dumps({"type": "env", "when": time.strftime("%Y-%m-%d %H:%M:%S"), "lib": a.lib,
+    log.write(json.dumps({"type": "env", "threads": T, "when": time.strftime("%Y-%m-%d %H:%M:%S"), "lib": a.lib,
                           "lib_sha256": hashlib.sha256(open(a.lib, "rb").read()).hexdigest(),
                           "load": os.getloadavg()}) + "\n")
     only = set(a.only.split(",")) if a.only else None
@@ -95,9 +97,9 @@ def main():
             head = raw[:h]
             codecs = [
                 ("JPEG-LS (CharLS)", lambda: ic.jpegls_encode(img), ic.jpegls_decode),
-                ("JPEG 2000 reversible (OpenJPEG)", lambda: ic.jpeg2k_encode(img, level=0, reversible=True, numthreads=1), lambda b: ic.jpeg2k_decode(b, numthreads=1)),
-                ("JPEG XL lossless e7 (libjxl)", lambda: ic.jpegxl_encode(img, lossless=True, effort=7, numthreads=1), lambda b: ic.jpegxl_decode(b, numthreads=1)),
-                ("JPEG XL lossless e9 (libjxl)", lambda: ic.jpegxl_encode(img, lossless=True, effort=9, numthreads=1), lambda b: ic.jpegxl_decode(b, numthreads=1)),
+                ("JPEG 2000 reversible (OpenJPEG)", lambda: ic.jpeg2k_encode(img, level=0, reversible=True, numthreads=T), lambda b: ic.jpeg2k_decode(b, numthreads=T)),
+                ("JPEG XL lossless e7 (libjxl)", lambda: ic.jpegxl_encode(img, lossless=True, effort=7, numthreads=T), lambda b: ic.jpegxl_decode(b, numthreads=T)),
+                ("JPEG XL lossless e9 (libjxl)", lambda: ic.jpegxl_encode(img, lossless=True, effort=9, numthreads=T), lambda b: ic.jpegxl_decode(b, numthreads=T)),
             ]
             for label, enc, dec in codecs:
                 z, back, f = pair(enc, dec)
@@ -110,9 +112,9 @@ def main():
         for name in WEIGHTS:
             raw = open(os.path.join(a.data, name), "rb").read()
             # this zipnn release: byte input, 2 byte groups (bfloat16), zstd on one thread
-            z = ZipNN(method="zstd", input_type="byte", bg_partitions=2, zstd_threads=1)
+            z = ZipNN(method="zstd", input_type="byte", bg_partitions=2, zstd_threads=T)
             zz, back, f = pair(lambda: z.compress(raw), lambda b: z.decompress(b))
-            emit("weights", name, "ZipNN (2 byte groups, zstd, threads 1)", len(raw), f, bytes(back) == raw)
+            emit("weights", name, f"ZipNN (2 byte groups, zstd, threads {T})", len(raw), f, bytes(back) == raw)
             kolmo_rows("weights", name, raw)
 
     if not only or "audio" in only:
@@ -151,8 +153,8 @@ def main():
                 c = av.CodecContext.create("ffv1", "w")
                 c.width, c.height, c.pix_fmt = W, H, "yuv420p"
                 c.time_base = Fraction(1001, 30000)
-                c.thread_count = 1
-                c.options = {"level": "3", "context": "1", "g": "1", "slicecrc": "0"}
+                c.thread_count = T
+                c.options = {"level": "3", "context": "1", "g": "1", "slicecrc": "0", **({"slices": "16"} if T > 1 else {})}
                 pk = []
                 for k, fr in enumerate(frames):
                     vf = av.VideoFrame.from_ndarray(fr, format="yuv420p")
@@ -164,7 +166,7 @@ def main():
             def dec(z):
                 ext, pk = z
                 d = av.CodecContext.create("ffv1", "r")
-                d.width, d.height, d.pix_fmt, d.thread_count = W, H, "yuv420p", 1
+                d.width, d.height, d.pix_fmt, d.thread_count = W, H, "yuv420p", T
                 if ext:
                     d.extradata = ext
                 out = []
@@ -175,7 +177,7 @@ def main():
 
             z, back, f = pair(enc, dec, size_of=lambda z: len(z[0]) + sum(map(len, z[1])))
             ok = len(back) == len(frames) and all(np.array_equal(x, y) for x, y in zip(back, frames))
-            emit("video", name, "FFV1 level 3, context 1 (FFmpeg)", len(raw), f, ok)
+            emit("video", name, "FFV1 level 3, context 1 (FFmpeg)" + (f", {T} threads, 16 slices" if T > 1 else ""), len(raw), f, ok)
 
     if not only or "fastq" in only:
         import pysam
@@ -188,7 +190,7 @@ def main():
             hdr = {"HD": {"VN": "1.6", "SO": "unknown"}}
 
             def enc():
-                with pysam.AlignmentFile(path, "wc", header=hdr, format_options=[b"version=3.1", b"archive"]) as o:
+                with pysam.AlignmentFile(path, "wc", header=hdr, format_options=[b"version=3.1", b"archive"], threads=T) as o:
                     for nm, seq, q in recs:
                         s = pysam.AlignedSegment(o.header)
                         qn, _, co = nm.decode().partition(" ")
@@ -202,7 +204,7 @@ def main():
 
             def dec(_):
                 out = []
-                with pysam.AlignmentFile(path, "rc", check_sq=False) as f:
+                with pysam.AlignmentFile(path, "rc", check_sq=False, threads=T) as f:
                     for s in f.fetch(until_eof=True):
                         nm = s.query_name + (" " + s.get_tag("CO") if s.has_tag("CO") else "")
                         out.append(f"@{nm}\n{s.query_sequence}\n+\n{pysam.qualities_to_qualitystring(s.query_qualities)}\n")

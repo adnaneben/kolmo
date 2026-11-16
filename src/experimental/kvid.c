@@ -9,7 +9,7 @@
  * library in the chosen mode. Frame: "KVD1", u64 input size, then one Kolmo frame. Not a Kolmo frame; `kolmo` never
  * writes it. One thread.
  *
- *   kvid [-m rt|balanced|eco|hc|ratio|x] in.y4m out      compress (default: ratio)
+ *   kvid [-m rt|balanced|eco|hc|ratio|x] [-T threads] in.y4m out   compress (default: ratio, one thread)
  *   kvid -d in out                                        decompress
  *   kvid -b [-m ...] in.y4m                               in-memory timing (fastest of at least 3 runs), JSON line */
 #include "kolmo.h"
@@ -191,23 +191,26 @@ static int64_t enc(const uint8_t *s, size_t n, uint8_t **out, const kolmo_params
     if (z <= 0) { free(o); return -1; }
     *out = o; return z + 12;
 }
+static int dec_threads = 1;
 static int dec(const uint8_t *c, size_t cn, uint8_t *out, size_t n) {
     if (cn < 12 || memcmp(c, "KVD1", 4) || get64(c + 4) != n) return -1;
     int64_t tn = kolmo_original_size(c + 12, cn - 12); if (tn <= 0) return -1;
     uint8_t *t = malloc((size_t)tn); if (!t) return -1;
-    int r = kolmo_decompress(c + 12, cn - 12, t, (size_t)tn, 1) == tn ? inverse(t, (size_t)tn, out, n) : -1;
+    int r = kolmo_decompress(c + 12, cn - 12, t, (size_t)tn, dec_threads) == tn ? inverse(t, (size_t)tn, out, n) : -1;
     free(t); return r;
 }
 static double now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
 
 int main(int argc, char **argv) {
-    const char *m = "ratio"; int a = 1, bench = 0, d = 0;
+    const char *m = "ratio"; int a = 1, bench = 0, d = 0, threads = 1;
     for (; a < argc && argv[a][0] == '-' && argv[a][1]; a++) {
         if (!strcmp(argv[a], "-d")) d = 1; else if (!strcmp(argv[a], "-b")) bench = 1;
         else if (!strcmp(argv[a], "-m") && a + 1 < argc) m = argv[++a];
+        else if (!strcmp(argv[a], "-T") && a + 1 < argc) threads = atoi(argv[++a]);
         else { fprintf(stderr, "kvid: unknown option %s\n", argv[a]); return 2; }
     }
     kolmo_params P; if (mode_of(m, &P)) { fprintf(stderr, "kvid: unknown mode %s\n", m); return 2; }
+    P.threads = threads > 0 ? threads : 1; dec_threads = P.threads;
     if (d) {
         if (argc - a != 2) return 2;
         size_t cn; uint8_t *c = slurp(argv[a], &cn); if (!c || cn < 12) return 1;
