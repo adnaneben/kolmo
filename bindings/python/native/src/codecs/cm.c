@@ -355,7 +355,8 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
 #ifdef KOLMO_CM_COMPACT
         for (int i = 1; i < nm; i++) m->cur[i] = cm_find_model(m, i, bp ? (c0 & 15) : 0, nib);
 #else
-        for (int i = 1; i < nm; i++) m->cur[i] = cm_find(m->t[i], cm_hmix(m->h[i] + nib), m->shi[i]);
+        uint32_t hv[CM_NM3]; m->kk->cm_hash(m->h + 1, nm - 1, nib, hv + 1);       /* the context hashes, 8 at a time */
+        for (int i = 1; i < nm; i++) m->cur[i] = cm_find(m->t[i], hv[i], m->shi[i]);
 #endif
     }
     int node = bp < 4 ? (int)((c0 & ((1u << bp) - 1)) | (1u << bp)) : (int)((c0 & ((1u << (bp - 4)) - 1)) | (1u << (bp - 4)));
@@ -473,7 +474,8 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
 #ifdef KOLMO_CM_COMPACT
             for (int i = 1; i < nm; i++) { uint32_t idx = cm_prefetch_slot(m, i, ((m->c0 << 1) | (uint32_t)b) & 15, nib); __builtin_prefetch(&m->t[i][idx]); }
 #else
-            for (int i = 1; i < nm; i++) { uint32_t idx = cm_hmix(m->h[i] + nib) >> m->shi[i]; __builtin_prefetch(&m->t[i][idx]); }
+            uint32_t hv[CM_NM3]; m->kk->cm_hash(m->h + 1, nm - 1, nib, hv + 1);
+            for (int i = 1; i < nm; i++) { uint32_t idx = hv[i] >> m->shi[i]; __builtin_prefetch(&m->t[i][idx]); }
 #endif
         }
     }
@@ -596,11 +598,14 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
 #undef ICL
             m->i_pred = icp; m->i_cls = ci > 2 ? 2 : ci; m->i_act = act >> 1; m->i_n = N; m->i_med = med; m->i_wn = W << 8 | N;
         }
+#ifndef KOLMO_CM_COMPACT
+        uint32_t hv[CM_NM3]; m->kk->cm_hash(m->h + 1, nm - 1, 0, hv + 1);
+#endif
         for (int i = 1; i < nm; i++) {                        /* prefetch the buckets for the first nibble */
 #ifdef KOLMO_CM_COMPACT
             uint32_t idx = cm_prefetch_slot(m, i, 0, 0);
 #else
-            uint32_t idx = cm_hmix(m->h[i]) >> m->shi[i];
+            uint32_t idx = hv[i] >> m->shi[i];
 #endif
             __builtin_prefetch(&m->t[i][idx]); __builtin_prefetch(&m->t[i][idx ^ 1]);
         }

@@ -21,4 +21,8 @@ uint64_t kolmo_sad16_sse2(const uint16_t *x, const uint16_t *y, size_t n);
 uint64_t kolmo_sad16_avx2(const uint16_t *x, const uint16_t *y, size_t n);
 void kolmo_img16_fwd_sse2(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi);
 void kolmo_img16_fwd_avx2(const uint16_t *a, int64_t n, int64_t W, int mode, uint8_t *lo, uint8_t *hi);
+void kolmo_med8_fwd_sse2(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r);
+void kolmo_med8_fwd_avx2(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r);
+void kolmo_cm_hash_sse41(const uint32_t *h, int n, uint32_t add, uint32_t *out);
+void kolmo_cm_hash_avx2(const uint32_t *h, int n, uint32_t add, uint32_t *out);
 #endif

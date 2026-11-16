@@ -50,6 +50,17 @@ TGT void kolmo_cm_train_avx2(const int32_t *x, int n, int32_t *w1, int32_t *w2, 
     if (i < n) { __m256i m = mask8(n - i), xv = _mm256_maskload_epi32(x + i, m);
         upd8m(w1 + i, xv, e1, sh, m); upd8m(w2 + i, xv, e2, sh, m); if (w3) { upd8m(w3 + i, xv, e3, sh, m); upd8m(w4 + i, xv, e4, sh, m); } }
 }
+TGT void kolmo_cm_hash_avx2(const uint32_t *h, int n, uint32_t add, uint32_t *out) {
+    const __m256i ad = _mm256_set1_epi32((int)add), k1 = _mm256_set1_epi32(0x2C1B3C6D), k2 = _mm256_set1_epi32(0x297A2D39);
+    int i = 0;
+    for (; i < n; i += 8) {
+        __m256i m = mask8(n - i), a = _mm256_add_epi32(_mm256_maskload_epi32((const int *)(h + i), m), ad);
+        a = _mm256_xor_si256(a, _mm256_srli_epi32(a, 15)); a = _mm256_mullo_epi32(a, k1);
+        a = _mm256_xor_si256(a, _mm256_srli_epi32(a, 12)); a = _mm256_mullo_epi32(a, k2);
+        a = _mm256_xor_si256(a, _mm256_srli_epi32(a, 15));
+        _mm256_maskstore_epi32((int *)(out + i), m, a);
+    }
+}
 #undef TGT
 
 #define TGT __attribute__((target("sse4.1")))
@@ -77,5 +88,16 @@ TGT void kolmo_cm_train_sse41(const int32_t *x, int n, int32_t *w1, int32_t *w2,
     for (; i + 4 <= n; i += 4) { __m128i xv = _mm_loadu_si128((const __m128i *)(x + i));
         upd4(w1 + i, xv, e1, sh); upd4(w2 + i, xv, e2, sh); if (w3) { upd4(w3 + i, xv, e3, sh); upd4(w4 + i, xv, e4, sh); } }
     for (; i < n; i++) { w1[i] += (x[i] * e[0]) >> shift; w2[i] += (x[i] * e[1]) >> shift; if (w3) { w3[i] += (x[i] * e[2]) >> shift; w4[i] += (x[i] * e[3]) >> shift; } }
+}
+TGT void kolmo_cm_hash_sse41(const uint32_t *h, int n, uint32_t add, uint32_t *out) {
+    const __m128i ad = _mm_set1_epi32((int)add), k1 = _mm_set1_epi32(0x2C1B3C6D), k2 = _mm_set1_epi32(0x297A2D39);
+    int i = 0;
+    for (; i + 4 <= n; i += 4) {
+        __m128i a = _mm_add_epi32(_mm_loadu_si128((const __m128i *)(h + i)), ad);
+        a = _mm_xor_si128(a, _mm_srli_epi32(a, 15)); a = _mm_mullo_epi32(a, k1);
+        a = _mm_xor_si128(a, _mm_srli_epi32(a, 12)); a = _mm_mullo_epi32(a, k2);
+        _mm_storeu_si128((__m128i *)(out + i), _mm_xor_si128(a, _mm_srli_epi32(a, 15)));
+    }
+    if (i < n) kolmo_cm_hash_c(h + i, n - i, add, out + i);
 }
 #endif

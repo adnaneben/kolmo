@@ -12,6 +12,17 @@ void kolmo_med8_inv_c(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t 
     }
 }
 
+void kolmo_med8_fwd_c(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r) {
+    size_t x = 0;
+    for (; x < C && x < m; x++) r[x] = kolmo_zz8(p[x]);
+    for (; x < W && x < m; x++) r[x] = kolmo_zz8((uint8_t)(p[x] - p[x - C]));
+    for (size_t y = W; y + W <= m; y += W) {
+        const uint8_t *q = p + y, *u = q - W; uint8_t *o = r + y;
+        for (x = 0; x < C; x++) o[x] = kolmo_zz8((uint8_t)(q[x] - u[x]));
+        for (; x < W; x++) o[x] = kolmo_zz8((uint8_t)(q[x] - kolmo_med8(q[x - C], u[x], u[x - C])));
+    }
+}
+
 static inline int pred16(const uint16_t *x, int64_t i, int64_t W, int mode) {
     int L = i >= 1 ? x[i - 1] : 0, U = i >= W ? x[i - W] : 0, UL = i >= W + 1 ? x[i - W - 1] : 0;
     if (mode == 0) return L;

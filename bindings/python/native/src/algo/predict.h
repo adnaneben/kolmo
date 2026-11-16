@@ -14,6 +14,9 @@ static inline uint8_t kolmo_unzz8(uint8_t z) { return (uint8_t)((z >> 1) ^ (uint
  * Row 0 is predicted from the left (the first C bytes from 0), later rows from above for the first C bytes and from
  * the median predictor after that. Only whole rows are reconstructed: a trailing partial row of r is ignored. */
 void kolmo_med8_inv_c(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p);
+/* The IMG8 forward transform: the zigzagged residuals r of p under the same prediction (inverse: kolmo_med8_inv_c). */
+void kolmo_med8_fwd_c(const uint8_t *p, size_t m, size_t W, unsigned C, uint8_t *r);
+static inline uint8_t kolmo_zz8(uint8_t d) { int8_t v = (int8_t)d; return (uint8_t)(((unsigned)v << 1) ^ (unsigned)(v >> 7)); }
 
 /* 16-bit images (IMG16, src/sci.inc). Samples a[0..n), row stride W (>= 1); predictor 0 = left, 1 = (left + up) / 2,
  * 2 = median of left, up and left + up - up-left (absent neighbours are 0). The residual a - p (mod 2^16) is zigzagged

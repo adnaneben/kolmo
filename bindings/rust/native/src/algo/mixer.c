@@ -13,3 +13,11 @@ void kolmo_cm_train_c(const int32_t *x, int n, int32_t *w1, int32_t *w2, int32_t
     if (!w3) { for (int i = 0; i < n; i++) { w1[i] += (x[i] * e1) >> shift; w2[i] += (x[i] * e2) >> shift; } }
     else for (int i = 0; i < n; i++) { w1[i] += (x[i] * e1) >> shift; w2[i] += (x[i] * e2) >> shift; w3[i] += (x[i] * e3) >> shift; w4[i] += (x[i] * e4) >> shift; }
 }
+
+void kolmo_cm_hash_c(const uint32_t *h, int n, uint32_t add, uint32_t *out) {
+    for (int i = 0; i < n; i++) {
+        uint32_t a = h[i] + add;
+        a ^= a >> 15; a *= 0x2C1B3C6Du; a ^= a >> 12; a *= 0x297A2D39u; a ^= a >> 15;
+        out[i] = a;
+    }
+}
