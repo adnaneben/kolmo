@@ -1,4 +1,5 @@
 /* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n|-q] [-D dict] [--native-leaf|--typed-huf] in out
+ *                    (--x-tables=default|scaled|16..22: experimental, -x model table size; see kolmo_set_x_tables)
  *                    (--native-leaf: balanced only; native plane-context leaves for integer series, KOLMO_T_NATIVE_LEAF)
  *                    (--typed-huf: -m fast -T1, integer NPY / PCM16 WAV coded type first, KOLMO_T_TYPED_HUF)
  *                    (ultra/-x: -l 1 = context-mixing model 1 only, faster; -l 2 = maximum ratio, graph leaves may use CM)
@@ -100,6 +101,11 @@ int main(int argc, char **argv) {
             if (!strcmp(argv[a], "--native-leaf")) native_leaf = 1; else typed_huf = 1;
             for (int b = a; b < argc; b++) argv[b] = argv[b + 1];
             argc--; a--;
+        } else if (!strncmp(argv[a], "--x-tables=", 11)) {   /* experimental: -x table sizing (kolmo_set_x_tables) */
+            const char *v = argv[a] + 11; int mode = !strcmp(v, "scaled") ? -1 : !strcmp(v, "default") ? 0 : atoi(v);
+            if (kolmo_set_x_tables(mode)) { fprintf(stderr, "--x-tables: default, scaled or 16..22\n"); return 1; }
+            for (int b = a; b < argc; b++) argv[b] = argv[b + 1];
+            argc--; a--;
         }
     while ((opt = getopt(argc, argv, "m:l:T:B:nqQxdr:sS:D:t:")) != -1) switch (opt) {
         /* three modes: speed, balanced (default), ratio. The older names stay as advanced settings. */
@@ -138,6 +144,8 @@ int main(int argc, char **argv) {
             "            too; on other arrays and on multi-channel data (channels are not split) it is often larger\n"
             "            than balanced and sometimes larger than plain zstd, so compare sizes before relying on it\n"
             "  -x -l 2   maximum ratio: as -x, and numeric graph leaves may also use context mixing\n"
+            "  --x-tables=scaled  with -x (experimental): model tables sized to the block (about 16x its size)\n"
+            "            instead of up to 5.4 GiB; slightly larger output, far less memory to compress and decompress\n"
             "            (smaller integer series; those blocks decode much more slowly)\n"
             "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -Q minimal analysis  -n no transforms\n"
             "          -B blockMiB\n"

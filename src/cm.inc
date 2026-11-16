@@ -176,7 +176,7 @@ static void cm_release(size_t b) { pthread_mutex_lock(&cm_mu); cm_used -= b; pth
 #ifndef CM_BB_MAX
 #define CM_BB_MAX 22
 #endif
-static int cm_bits_for(size_t n) { int b = 16; while (b < CM_BB_MAX && ((size_t)1 << b) < n) b++; return b; }
+static int cm_bits_for(size_t n);
 static size_t cm_mem_for(int bb, int v2) {
     size_t t = (size_t)sizeof(cm_bucket) << bb, ts = bb > 18 ? t >> CM_SMALL : t;
 #ifdef KOLMO_CM_COMPACT
@@ -194,6 +194,22 @@ static size_t cm_mem_for(int bb, int v2) {
 #else
     return (size_t)(CM_NM - 1) * t + (v2 ? (size_t)(CM_NMX - CM_NM) * ts : 0) + (v2 == 3 ? (size_t)(CM_NM3 - 5 - CM_NMX) * ts + 5 * (bb > 18 ? ts >> 1 : t) : 0) + ((size_t)(v2 ? 48 : 16) << 20);
 #endif
+}
+
+/* Table sizing (encoder; the stream header carries the bits, so the decoder needs exactly what the encoder chose):
+ * 0 (default): one bucket per input byte, 2^16 to 2^CM_BB_MAX per model; 16..22: that, capped at 2^bits;
+ * -1 ("scaled", docs/MEMORY-MODEL.md): the largest size whose tables stay within 16 times the block (2^16 at least).
+ * Opt-in through kolmo_set_x_tables() (CLI --x-tables) until the memory model is approved. */
+static int cm_tables_mode;
+int kolmo_set_x_tables(int mode) {
+    if (mode != 0 && mode != -1 && (mode < 16 || mode > CM_BB_MAX)) return -1;
+    __atomic_store_n(&cm_tables_mode, mode, __ATOMIC_RELAXED); return 0;
+}
+static int cm_bits_for(size_t n) {
+    const int mode = __atomic_load_n(&cm_tables_mode, __ATOMIC_RELAXED), cap = mode >= 16 ? mode : CM_BB_MAX;
+    int b = 16; while (b < cap && ((size_t)1 << b) < n) b++;
+    if (mode == -1) while (b > 16 && cm_mem_for(b, 3) > 16 * (n + ((size_t)1 << 20))) b--;
+    return b;
 }
 
 /* Model tables: zeroed, and on Linux backed by transparent huge pages where available (far fewer TLB misses on the
@@ -733,13 +749,17 @@ static void cm_dec_run(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size
 /* model 1 (fewer contexts, about 30% faster, what kolmo 1.0.0 wrote; always for n >= 2^28, whose size word has no room
  * for flags), model 2, or model 3 (about 20% slower than model 2; 1 to 4% smaller on text, no gain on binary data) */
 /* model: 1, 2 or 3 */
-static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model) {
+static size_t cm_compress_mx(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap);
+static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model) { return cm_compress_mx(in, n, out, cap, model, 0); }
+/* bbcap: at most 2^bbcap buckets per model (0: no cap beyond cm_bits_for) */
+static size_t cm_compress_mx(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap) {
     if (cap < 8 || n > 0xFFFFFFF0u) return 0;
     int small = n < ((size_t)1 << 28), v2 = small && model > 1 ? (model == 3 ? 3 : 1) : 0;
     /* exact logistic tables: model 3 always (its header has the model byte anyway); models 1 and 2 from 64 KiB, below
      * which the extra header byte can cost more than the better tables gain */
     int lx = small && (v2 == 3 || n >= ((size_t)1 << 16));
     int bb = small ? cm_bits_for(n) : CM_BB;
+    if (small && bbcap >= 16 && bb > bbcap) bb = bbcap;
     uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new_x(hist, bb, v2, v2 == 3 ? (n + 8) * 4 : 0, lx) : NULL;
     if (!m) { free(hist); return 0; }
     size_t o = 4; int r;

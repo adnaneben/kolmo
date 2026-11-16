@@ -9,9 +9,9 @@
 #include "experimental/frontier_pcm.h"
 #include "experimental/frontier_lag.h"
 #include "experimental/frontier_shuffle.h"
-#define KOLMO_MAX_VERSION 10
+#define KOLMO_MAX_VERSION 11
 #else
-#define KOLMO_MAX_VERSION 10  /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16) */
+#define KOLMO_MAX_VERSION 11  /* 11: context mixing over parts (codec 25); 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16) */
 #endif
 #include <pthread.h>
 #include <stdatomic.h>
@@ -1155,7 +1155,7 @@ static void shuffle_inv(const uint8_t *in, int64_t rows, int w, int c, int delta
 
 /* ------------------------------------------------------------------ codecs */
 enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
-       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_FQ = 16, C_CMI = 17 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head) */
+       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_FQ = 16, C_CMI = 17, C_CMP = 25 };   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head) */
 #include "kfam.inc"
 enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9, T_LINES = 10 };   /* 9: kolmo graph (a=delim b=decimal separator) */
 /* x86 call/jump transform (E8/E9 with a rel32 whose top byte is 00 or FF): the low 24 bits become position-absolute,
@@ -1239,17 +1239,20 @@ static size_t codec_bound(int codec, size_t n) {
         case C_LZMA: return n + n / 8 + 64;
 #endif
         case C_CM: return n + n / 16 + 64;
+        case C_CMP: return n + n / 16 + 64 + 24 * 256;
         case C_NPLANE: return n + 2 + 8 + 16;
         default: return n;
     }
 }
 
 typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *dict; size_t dictlen;
+                 int threads;            /* decoder: threads this block may use (codec 25 parts) */
                  int native_leaf;        /* encoder: graph integer residual leaves may use C_NPLANE (opt-in, balanced) */
                  int used_native_leaf;   /* encoder: set when a C_NPLANE leaf was written (the frame needs version 9) */
                  int allow_nplane;       /* decoder: C_NPLANE leaves are valid (container version 9 or later) */
                  int aligned_leaf;       /* encoder: graph integer residual leaves also try plane-aligned Huffman / rANS chunks
                                           * (opt-in: --native-leaf, --typed-huf; existing leaf ids, any version-7 decoder) */ } codec_ctx;
+#include "codecs/cm_par.inc"
 
 static int kgu_get(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
     uint64_t r = 0; int sh = 0;
@@ -1510,6 +1513,7 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
 #endif
         case C_CM: return cm_decompress(in, cn, out, n);
         case C_CMI: return cm_decompress_img(in, cn, out, n);
+        case C_CMP: return cmp_decompress(in, cn, out, n, x->threads);
         case C_HUF: return huf_decompress_all(in, cn, out, n);
         case C_RANS: return rans_decompress_all(in, cn, out, n);
         case C_NPLANE: return x->allow_nplane ? np_decompress(x, in, cn, out, n) : -1;
@@ -1574,6 +1578,7 @@ static inline uint64_t get64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); r
 #include "lines.inc"
 
 typedef struct { int t, a, b, c; fset_t *fs; img_plan_t img; rec_plan_t *rec; int wide; int experimental_dna, experimental_table, experimental_pcm; uint32_t kgw; int verify;   /* kgw: IMG8 or DEC64 row bytes; verify: code graph blocks plainly too, keep the smaller */
+    int cmp; uint8_t *cmpz; size_t cmpzn, cmpn;   /* ultra: table columns under codec 25 (cmpz: the coded block, when the planner's sample was the whole block) */
 #ifdef KOLMO_FRONTIER
     frontier_lags lags;
 #endif
@@ -2556,7 +2561,7 @@ static void *compress_worker(void *arg) {
              * mixing on every FASTQ input measured (by 10 to 20%), so when it applies the context-mixing, LZMA2 and
              * block-sorting trials are not run (the frame is unchanged; encoding is about 20 times faster). Blocks under
              * 64 KiB still try both. */
-            size_t fz = 0; uint8_t *fq = kf_fastq_compress(raw, len, J->fqthreads, KF_CHUNK, KF_BCHUNK, &fz);
+            size_t fz = 0; uint8_t *fq = kf_fastq_compress(raw, len, J->fqthreads, kf_chunk_for(len), KF_BCHUNK, &fz);
             if (fq && fz < len && fz <= J->slot) {
                 memcpy(sl, fq, fz); cl = fz; codec = C_FQ; tflag = 0; meta = 0; modes = 64; in = raw; inlen = len;
                 slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; free(fq); goto coded;
@@ -2674,6 +2679,25 @@ static void *compress_worker(void *arg) {
             if (in != raw && len >= (64u << 10)) xtrial_start(&xt[XT_A1], C_BSC, 9, raw, len, J->slot, 1);
             if (xfq) xtrial_start(&xt[XT_FQ], C_FQ, 0, raw, len, 0, J->fqthreads - 1);
         }
+        int cmp_used = 0;
+        if (!cl && codec == C_CM && pl.cmp && pl.t == T_TP && tflag && inlen == len) {
+            /* ultra, a table chosen as columns: one context-mixing model per column, in parallel (codec 25) */
+            if (pl.cmpz && rs == 0 && len == pl.cmpn && pl.cmpzn <= J->slot - meta) { memcpy(sl + meta, pl.cmpz, pl.cmpzn); cl = pl.cmpzn; }
+            else {
+                size_t parts[256]; int np = 0;
+                for (int j = 0; j < pl.c + 1; j++) { size_t v = get32(sl + 4 * j); if (v) parts[np++] = v; }
+                cl = cmp_compress_model(in, inlen, parts, np, sl + meta, J->slot - meta, J->fqthreads, level == 1 ? 1 : 2);
+            }
+            cmp_used = cl != 0;
+        }
+        if (!cl && codec == C_CM && level != 1 && inlen >= CMP_SPLIT_MIN && inlen < ((size_t)1 << 29) && !looks_text(in, inlen)) {
+            /* ultra, a large single stream that is not text: two halves, each with its own model at half the table
+             * size, coded and decoded in parallel (codec 25). Measured cost 0.14 to 0.40% on 10 MB of CSV and binary
+             * data, 2x faster both ways; text costs 2.8% and stays whole (benchmark/rc3/xmode/RESULTS.md). */
+            size_t parts[2] = {inlen / 2, inlen - inlen / 2};
+            cl = cmp_compress_cap(in, inlen, parts, 2, sl + meta, J->slot - meta, J->fqthreads, 0, cm_bits_for(parts[1]) - 1);
+            cmp_used = cl != 0;
+        }
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
         if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
@@ -2764,6 +2788,7 @@ static void *compress_worker(void *arg) {
                 }
             }
         }
+        if (cmp_used && codec == C_CM && in != raw) { codec = C_CMP; modes |= 128; }
 coded:;
         if (xfq && codec != C_FQ) {
             /* ultra (not level 1), a block of complete FASTQ records: the family coder (codec 16: layout, names,
@@ -2772,7 +2797,7 @@ coded:;
             size_t fz = 0, cur = cl && cl + meta < len ? cl + meta : len; int hit;
             uint8_t *fq = NULL; fz = xtrial_take(&xt[XT_FQ], C_FQ, raw, len, &hit);
             if (hit) { fq = xt[XT_FQ].out; xt[XT_FQ].out = NULL; }
-            else fq = kf_fastq_compress(raw, len, J->fqthreads, KF_CHUNK, KF_BCHUNK, &fz);
+            else fq = kf_fastq_compress(raw, len, J->fqthreads, kf_chunk_for(len), KF_BCHUNK, &fz);
             if (fq && fz < cur && fz <= J->slot) {
                 memcpy(sl, fq, fz); cl = fz; codec = C_FQ; tflag = 0; meta = 0; modes = 64;
                 slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
@@ -2860,7 +2885,37 @@ static void run_pool(void *(*fn)(void *), void *J, int threads, uint32_t units) 
  * kept only if CM on a 1 MiB transformed sample beats CM on the raw sample */
 typedef struct { const uint8_t *in; size_t n; uint8_t *out; size_t cap, res; } ukt_arg;
 static void *ukt_main(void *a) { ukt_arg *u = a; u->res = cm_compress(u->in, u->n, u->out, u->cap); return NULL; }
-static int ultra_keep_transform(const uint8_t *s, size_t n, const plan_t *pl, int threads) {
+/* ultra, a table (codec 25): the sample's columns, each coded by its own context-mixing model (model 2, model 1 at
+ * level 1), as the block coder will code them. Returns the payload size plus the column sizes the frame carries, 0 if
+ * the transpose does not apply. */
+static size_t ultra_columns(const uint8_t *s, size_t m, const plan_t *pl, int threads, int level, uint8_t **z, size_t *zn) {
+    const int k = pl->c + 1; int64_t colsz[256]; size_t parts[256]; int np = 0, quoted = pl->b && (memchr(s, '"', m) || memchr(s, '[', m) || memchr(s, ']', m));
+    uint8_t *t = malloc(m + TSLACK + 64); uint32_t *pos = quoted ? NULL : malloc((m + 1) * sizeof(uint32_t));
+    *z = NULL; *zn = 0;
+    if (!t || (!quoted && !pos)) { free(t); free(pos); return 0; }
+    if (quoted) transpose_fwd(s, (int64_t)m, (uint8_t)pl->a, k, pl->b, t, colsz); else tpq_fwd(s, m, (uint8_t)pl->a, k, t, colsz, pos);
+    free(pos);
+    size_t tot = 0;
+    for (int j = 0; j < k; j++) { if (colsz[j] < 0) { free(t); return 0; } if (colsz[j]) parts[np++] = (size_t)colsz[j]; tot += (size_t)colsz[j]; }
+    size_t r = 0;
+    if (tot == m && np >= 2) {
+        size_t cap = codec_bound(C_CMP, m); uint8_t *o = malloc(cap);
+        r = o ? cmp_compress_model(t, m, parts, np, o, cap, threads, level == 1 ? 1 : 2) : 0;
+        if (r) { *z = o; *zn = r; r += 4 * (size_t)k; } else free(o);
+    }
+    free(t);
+    return r;
+}
+typedef struct { const uint8_t *s; size_t m; const plan_t *pl; int threads, level; uint8_t *z; size_t zn, res; } ukc_arg;
+static void *ukc_main(void *a) { ukc_arg *u = a; u->res = ultra_columns(u->s, u->m, u->pl, u->threads, u->level, &u->z, &u->zn); return NULL; }
+
+/* ultra: the context-mixing coder models text, logs and CSV directly (column and word contexts), so a text transform is
+ * kept only if CM on a 1 MiB transformed sample beats CM on the raw sample. A table (table or transpose plan) is also
+ * tried as columns, one model per column (codec 25, which codes and decodes the columns in parallel): chosen when the
+ * columns beat the raw sample's model-2 size by 1.5% on text (the margin model 3 gains over model 2 on the raw bytes
+ * of the tables measured) or come within 0.5% of it on binary data, and beat the kept transform. Sets pl->cmp (and
+ * pl->cmpz, the coded block, when the sample is the whole block). */
+static int ultra_keep_transform(const uint8_t *s, size_t n, plan_t *pl, int threads, int level) {
     if (pl->t != T_TBL && pl->t != T_LOG && pl->t != T_WORD && pl->t != T_TP) return 1;
     size_t m = n < (1u << 20) ? n : (1u << 20); while (m > 0 && s[m - 1] != '\n') m--;
     if (m < 65536) return 1;
@@ -2869,17 +2924,28 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, const plan_t *pl, in
     if (pl->t == T_TBL) tn = tbl2_encode(s, m, (uint8_t)pl->a, pl->c + 1, pl->b, pl->fs, t, NULL);
     else if (pl->t == T_LOG) tn = log_encode_m(s, m, t, m + TSLACK, pl->a == 1);
     else if (pl->t == T_WORD) tn = word_encode(s, m, t, m + TSLACK);
+    const int cols = (pl->t == T_TBL || pl->t == T_TP) && !pl->wide && pl->c >= 1;
     int keep = 1;
-    if (tn > 0) {
-        /* the two samples are coded on two threads when there are two (same result) */
-        uint8_t *z2 = threads > 1 ? malloc(m + m / 8 + 64) : NULL; pthread_t th; ukt_arg u = {s, m, z2, m + m / 8 + 64, 0};
-        int par = z2 && !pthread_create(&th, NULL, ukt_main, &u);
-        size_t a = cm_compress(t, (size_t)tn, z, m + m / 8 + 64), b;
+    if (tn > 0 || cols) {
+        /* the samples are coded on separate threads when there are threads to spare (same results) */
+        uint8_t *z2 = threads > 1 ? malloc(m + m / 8 + 64) : NULL; pthread_t th, tc; ukt_arg u = {s, m, z2, m + m / 8 + 64, 0};
+        ukc_arg c = {s, m, pl, threads > 2 ? threads - 2 : 1, level, NULL, 0, 0};
+        int par = z2 && !pthread_create(&th, NULL, ukt_main, &u), parc = cols && threads > 2 && !pthread_create(&tc, NULL, ukc_main, &c);
+        size_t a = tn > 0 ? cm_compress(t, (size_t)tn, z, m + m / 8 + 64) : 0, b;
         if (par) { pthread_join(th, NULL); b = u.res; } else b = cm_compress(s, m, z, m + m / 8 + 64);
+        if (cols) { if (parc) pthread_join(tc, NULL); else ukc_main(&c); }
         free(z2);
-        keep = a && (!b || a < b);
-    }
-    else if (pl->t == T_TP) keep = 0;
+        keep = tn > 0 ? a && (!b || a < b) : pl->t != T_TP;
+        if (cols && c.res && b) {
+            double ref = looks_text(s, m) ? 0.985 * (double)b : 1.005 * (double)b;
+            if (keep && tn > 0 && (double)(a + 4) < ref) ref = (double)(a + 4);
+            if ((double)c.res < ref) {
+                pl->t = T_TP; pl->cmp = 1; keep = 1;
+                if (m == n) { pl->cmpz = c.z; pl->cmpzn = c.zn; pl->cmpn = n; c.z = NULL; }
+            }
+        }
+        free(c.z);
+    } else if (pl->t == T_TP) keep = 0;
     free(t); free(z);
     return keep;
 }
@@ -3108,7 +3174,7 @@ static void *plan_worker(void *arg) {
         }
 #endif
         if (p->mode == KOLMO_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;
-        if (p->mode == KOLMO_ULTRA && !ultra_keep_transform(src, len, &pl, j->threads_per_plan)) {
+        if (p->mode == KOLMO_ULTRA && !ultra_keep_transform(src, len, &pl, j->threads_per_plan, p->level)) {
             free(pl.fs); pl.fs = NULL; pl.t = T_NONE;
         }
         j->plans[g] = pl;
@@ -3248,11 +3314,11 @@ cleanup:
     if (planning_map != MAP_FAILED) munmap(planning_map, n);
     if (J.out) for (uint32_t i = 0; i < nb; i++) free(J.out[i]);
     free(J.outlen); if (mutex_ready) pthread_mutex_destroy(&J.wmu);
-    if (plans) for (uint32_t g = 0; g < nseg; g++) { free(plans[g].fs); free(plans[g].rec); }
+    if (plans) for (uint32_t g = 0; g < nseg; g++) { free(plans[g].fs); free(plans[g].rec); free(plans[g].cmpz); }
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }
-    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 64) ? 10 : (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 128) ? 11 : (nm & 64) ? 10 : (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
@@ -3318,6 +3384,8 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         pl.t = pay[0]; pl.a = pay[1]; pl.b = pay[2]; pl.c = pay[3]; pay += 4; cl -= 4;
         if (pl.t > T_LINES || (pl.t == T_KG && P->ver < 7) || (pl.t == T_LINES && P->ver < 8)) return KOLMO_ERR_CORRUPT;
     }
+    if (codec == C_CMP && P->ver < 11) return KOLMO_ERR_CORRUPT;   /* context mixing over parts (version 11) */
+    x->threads = J->fqthreads;
     if (codec == C_FQ) {                                        /* FASTQ family block (version 10) */
         if (P->ver < 10 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
         if (kf_fastq_decompress(pay, cl, out, len, J->fqthreads)) return KOLMO_ERR_CORRUPT;

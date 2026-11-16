@@ -10,6 +10,13 @@
  * have asked for (a slice test that fails, say) is simply discarded: the cost is CPU that was idle anyway.
  * Each trial is tagged with the input it coded; if the block's input changes before the choice (a marked plan that
  * falls back to the plain bytes), the result is ignored and the trial runs again inline. */
+/* FASTQ family coder: name and quality chunks of a sixteenth of the block, between 1 and 4 MiB (rc3 xmode item 6):
+ * a 10 MB block decodes 1.4x faster on 4 threads for 0.57%; from 64 MiB the chunks stay at 4 MiB. Bases keep 64 MiB
+ * chunks (16 MiB cost 13% on a 100 MB run). The cut depends on the block only, never on the thread count. */
+#ifndef KF_CHUNK_MIN
+#define KF_CHUNK_MIN ((size_t)1 << 20)
+#endif
+static size_t kf_chunk_for(size_t n) { size_t c = n / 16; return c < KF_CHUNK_MIN ? KF_CHUNK_MIN : c > (size_t)KF_CHUNK ? (size_t)KF_CHUNK : c; }
 typedef struct {
     pthread_t th; int started, codec, level, fq_threads;
     const uint8_t *in; size_t n, cap, res;
@@ -17,7 +24,7 @@ typedef struct {
 } xtrial_t;
 static void *xtrial_main(void *a) {
     xtrial_t *t = a;
-    if (t->codec == C_FQ) { t->out = kf_fastq_compress(t->in, t->n, t->fq_threads, KF_CHUNK, KF_BCHUNK, &t->res); if (!t->out) t->res = 0; }
+    if (t->codec == C_FQ) { t->out = kf_fastq_compress(t->in, t->n, t->fq_threads, kf_chunk_for(t->n), KF_BCHUNK, &t->res); if (!t->out) t->res = 0; }
     else {
         codec_ctx x; memset(&x, 0, sizeof x);
         t->res = t->out ? codec_compress(&x, t->codec, t->level, t->in, t->n, t->out, t->cap) : 0;
