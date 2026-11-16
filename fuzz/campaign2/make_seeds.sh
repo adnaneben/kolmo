@@ -1,10 +1,10 @@
 #!/bin/bash
 # Campaign 2 seeds (run from the repo root after `make ARCH= build/kolmo` and MODE=cov fuzz/campaign/build.sh).
 # Writes raw inputs to $WORK/raw*, frames to $WORK/s*, and the per-target seed directories to $SEEDS/<target>.
-# The selection step keeps, for every target decoder function, the 3 smallest frames that enter it (per-seed coverage
-# replay with build/fuzzcov/fuzz_decompress_nocm, seedgen/funchk.sh).
+# The selection step keeps, for every target decoder function, the 2 frames with the smallest original size that enter
+# it (per-seed coverage replay with build/fuzzcov/fuzz_decompress_nocm, seedgen/funchk.sh).
 set -eu
-WORK=${WORK:?}; SEEDS=${SEEDS:?}; G=fuzz/campaign2/seedgen; K=$PWD/build/kolmo; C=fuzz/campaign/corpus
+WORK=${WORK:?}; SEEDS=${SEEDS:?}; G=fuzz/campaign2/seedgen; K=$PWD/build/kolmo; C=${C1CORPUS:?campaign-1 corpus dir: git worktree of claude/rc2-fuzz-20261115, fuzz/campaign/corpus}
 mkdir -p $WORK/raw $WORK/s $WORK/xr $WORK/xs $WORK/st $WORK/dct $WORK/rt $WORK/fc
 python3 $G/gen1_tables_logs_images.py $WORK/raw; python3 $G/gen2_img12.py $WORK/raw; python3 $G/gen3_wide_records.py $WORK/raw
 python3 $G/gen4_ragged_ints.py $WORK/raw; python3 $G/gen5_int_spikes.py $WORK/raw
@@ -25,13 +25,14 @@ for m in re.finditer(r'static const uint8_t (\w+)\[\] = \{(.*?)\};', s, re.S):
 PY
 $G/funchk.sh build/fuzzcov/fuzz_decompress_nocm $WORK/s $WORK/fc
 mkdir -p $WORK/pick; python3 - $WORK <<'PY'
-import os, glob, shutil, collections, sys
+import os, glob, shutil, collections, sys, struct
 W = sys.argv[1]; hits = collections.defaultdict(list)
+orig = lambda p: struct.unpack('<Q', open(p, 'rb').read(20)[12:20])[0]
 for f in glob.glob(W + '/fc/p/*.funcs'):
     seed = W + '/s/' + os.path.basename(f)[:-6]
-    for fn in open(f).read().split(): hits[fn].append((os.path.getsize(seed), seed))
+    for fn in open(f).read().split(): hits[fn].append((orig(seed), os.path.getsize(seed), seed))
 for fn, l in sorted(hits.items()):
-    for sz, s in sorted(l)[:3]: shutil.copy(s, W + '/pick/')
+    for o, sz, s in sorted(l)[:2]: shutil.copy(s, W + '/pick/')
 PY
 # -x seeds (context-mixing targets), dictionary frames, streams, round-trip inputs
 for f in $WORK/xr/*; do for o in "-x" "-x -l 1" "-x -l 2"; do $K $o $f $WORK/xs/$(printf "%s" "$o" | tr -d ' -')__$(basename $f).kolmo; done; done
@@ -45,23 +46,24 @@ for spec in "tbl_1m.csv 300000" "access_600k.log 600000" "x86_tmux.elf 1000000" 
   set -- $spec; for p in 1 3 4 17 41 9; do python3 -c "import sys; d=open('$WORK/raw/$1','rb').read()[:$2]; open('$WORK/rt/p${p}__$1','wb').write(bytes([$p])+d)"; done
 done
 # per-target seed directories
-for t in decompress limited; do mkdir -p $SEEDS/fuzz_${t}_nocm; cp $C/fuzz_$t/* $WORK/pick/* $SEEDS/fuzz_${t}_nocm/; done
-mkdir -p $SEEDS/fuzz_dict_nocm; cp $C/fuzz_dict/* $WORK/dct/* $SEEDS/fuzz_dict_nocm/; cp $WORK/pick/mbalanced__* $SEEDS/fuzz_dict_nocm/
-for t in stream stream_limited; do mkdir -p $SEEDS/fuzz_${t}_nocm; cp $C/fuzz_stream/* $WORK/st/* $SEEDS/fuzz_${t}_nocm/; done
+for t in decompress limited; do mkdir -p $SEEDS/fuzz_${t}_nocm; cp $C/fuzz_$t/* $WORK/pick/* $WORK/s/legacy_v*.kolmo $SEEDS/fuzz_${t}_nocm/; done
+mkdir -p $SEEDS/fuzz_dict_nocm; cp $C/fuzz_dict/* $WORK/dct/* $SEEDS/fuzz_dict_nocm/
+for t in stream stream_limited; do mkdir -p $SEEDS/fuzz_${t}_nocm; cp $C/fuzz_stream/* $SEEDS/fuzz_${t}_nocm/
+  for f in $WORK/st/*; do case $f in *tbl_1m*|*x86_tmux*|*wide300_1m*|*ragged_1m*) ;; *) cp $f $SEEDS/fuzz_${t}_nocm/;; esac; done; done   # streams of >700 KB inputs: too slow
 mkdir -p $SEEDS/fuzz_roundtrip_nocm; cp $C/fuzz_roundtrip/* $WORK/rt/* $SEEDS/fuzz_roundtrip_nocm/
 for t in roundtrip nplane krc kbcx fastq; do mkdir -p $SEEDS/fuzz_$t; cp $C/fuzz_$t/* $SEEDS/fuzz_$t/; done
 # context-mixing targets: up to 60 CM frames of at most 8 KiB from campaign 1's corpus, the -x seeds, minus those
 # slower than 4 s per run under ASan
-python3 - $SEEDS $WORK <<'PY'
+python3 - $SEEDS $WORK $C <<'PY'
 import os, glob, shutil, struct, random, sys
-S, W = sys.argv[1:3]
+S, W, C1 = sys.argv[1:4]
 def is_cm(b):
     if len(b) < 32 or b[:4] != b'CZN1': return False
     nb = struct.unpack('<I', b[20:24])[0]
     return 32 + 16 * nb <= len(b) and nb < 100000 and any(b[32 + 16 * i + 12] in (7, 17) for i in range(nb))
 for t in ['decompress', 'limited', 'dict']:
     d = '%s/fuzz_%s' % (S, t); os.makedirs(d, exist_ok=True)
-    c = sorted(f for f in glob.glob('fuzz/campaign/corpus/fuzz_%s/*' % t) if os.path.getsize(f) <= 8192 and is_cm(open(f, 'rb').read()))
+    c = sorted(f for f in glob.glob(C1 + '/fuzz_%s/*' % t) if os.path.getsize(f) <= 8192 and is_cm(open(f, 'rb').read()))
     random.Random(1).shuffle(c)
     for f in c[:60] + glob.glob(W + '/xs/*'): shutil.copy(f, d)
 PY
