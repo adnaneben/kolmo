@@ -175,8 +175,175 @@ bytes divided by the time. `flac -8` includes FLAC's default 8 KiB padding block
 is `flac -8 --no-padding --no-seektable`, which matters on 5-second clips. The data sets and their licences are
 listed in `bench/kaud/fetch_data.sh`.
 
-RESULTS_PLACEHOLDER
+**Summary.** On the 40 ESC-50 clips, profile 0 (default effort) is 8.2% smaller than `flac -8` (4.0% smaller
+than `flac -8` without its padding and seek table) and smaller on all 40 clips; profile 1 is 12.3% smaller
+(8.2% without FLAC metadata), smaller than every rival on every clip, and 6.7% smaller than `wavpack -hhx6`.
+On the four music tracks, profile 0 is 0.55% smaller than `flac -8` at the same encoding speed, and profile 1 is
+5.4% smaller (smaller on all four tracks, 4.0% to 6.4%) and 4.0% smaller than `wavpack -hhx6`. Kolmo's best
+setting measured here (`-x -l 2`) is 9.7% (ESC) and 13.4% (music) larger than `flac -8`.
+
+Speeds, single thread, whole process: profile 0 encodes at FLAC -8 speed (44 vs 50 MB/s on the short ESC
+files, 32 vs 31 MB/s on music) but **decodes slower than FLAC** (61 vs 88 MB/s on ESC, 80 vs 132 MB/s on music):
+its order-32 reconstruction is a sequential dependency, and FLAC's decoder is more tuned. Profile 1 is a symmetric
+coder at 6.6-9 MB/s per thread, roughly 15x faster than `wavpack -hhx6` to encode but 4x slower to decode.
+With `-T 4` the music set (2^18-sample chunks) codes at 100 / 218 MB/s (profile 0) and 26 / 28 MB/s (profile 1);
+the 5-second ESC clips are one chunk each, so threads do not help them. Kolmo `-m ratio -T 4` ran no faster than
+`-T 1` on these files.
+
+**Cost of chunk restarts** (in-process, same encoder, sizes in bytes):
+
+| setting | chunk 2^16 | chunk 2^18 (default) | one chunk per file |
+|---|---:|---:|---:|
+| profile 0, ESC | 6853836 | 6837986 | 6837986 |
+| profile 0, music | 76088549 | 76015424 | 75991058 (2^18: +0.03%) |
+| profile 1, ESC | 6564482 | 6535502 | 6535502 |
+| profile 1, music | 72566885 | 72307114 | 72144570 (2^18: +0.23%) |
+
+Profile 0 effort settings on the full sets (in-process): effort 0 ESC 6885412 / music 76620860 (about 53 MB/s
+encode on music), effort 1 6837986 / 76015424, effort 2 6813311 / 75736399 (11 MB/s encode).
+
+The raw JSON with per-file sizes is `bench/kaud/results-20261116.json`; `bench/kaud/report.py` prints the tables.
+Kolmo `-x -l 2` on music was run once instead of three times (it takes about 30 minutes per pass).
+
+### esc (40 files, 17641760 bytes)
+
+| tool | bytes | vs flac -8 | ratio | enc MB/s wall | enc MB/s CPU | dec MB/s wall | dec MB/s CPU |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| flac-5 | 7654198 | +2.76% | 0.4339 | 76.35 | 84.23 | 92.22 | 101.63 |
+| flac-8 | 7448556 | +0.00% | 0.4222 | 49.91 | 52.37 | 88.48 | 94.41 |
+| flac-8-nometa | 7119836 | -4.41% | 0.4036 | 51.12 | 53.20 | 89.14 | 96.73 |
+| wavpack-hh | 7142740 | -4.11% | 0.4049 | 27.85 | 28.71 | 30.15 | 31.67 |
+| wavpack-hhx6 | 7005472 | -5.95% | 0.3971 | 0.56 | 0.56 | 31.15 | 33.57 |
+| kolmo-balanced-typedhuf-T1 | 8982932 | +20.60% | 0.5092 | 91.93 | 95.74 | 151.29 | 165.29 |
+| kolmo-ratio-T1 | 8630460 | +15.87% | 0.4892 | 2.10 | 2.13 | 24.88 | 26.34 |
+| kolmo-x-l2-T1 | 8168539 | +9.67% | 0.4630 | 0.15 | 0.16 | 0.17 | 0.18 |
+| kolmo-ratio-T4 | 8630460 | +15.87% | 0.4892 | 2.03 | 2.05 | 24.54 | 25.75 |
+| kaud-0-T1 | 6837986 | -8.20% | 0.3876 | 43.97 | 46.80 | 60.72 | 63.60 |
+| kaud-0-T4 | 6837986 | -8.20% | 0.3876 | 44.54 | 47.36 | 64.82 | 67.97 |
+| kaud-1-T1 | 6535502 | -12.26% | 0.3705 | 8.46 | 8.68 | 9.24 | 9.57 |
+| kaud-1-T4 | 6535502 | -12.26% | 0.3705 | 8.01 | 8.29 | 9.08 | 9.40 |
+
+| kaud setting | rival | kaud smaller | kaud larger | equal |
+|---|---|---:|---:|---:|
+| kaud-0-T1 | flac-5 | 40 | 0 | 0 |
+| kaud-0-T1 | flac-8 | 40 | 0 | 0 |
+| kaud-0-T1 | flac-8-nometa | 40 | 0 | 0 |
+| kaud-0-T1 | wavpack-hh | 38 | 2 | 0 |
+| kaud-0-T1 | wavpack-hhx6 | 36 | 4 | 0 |
+| kaud-0-T1 | kolmo-balanced-typedhuf-T1 | 40 | 0 | 0 |
+| kaud-0-T1 | kolmo-ratio-T1 | 40 | 0 | 0 |
+| kaud-0-T1 | kolmo-x-l2-T1 | 40 | 0 | 0 |
+| kaud-1-T1 | flac-5 | 40 | 0 | 0 |
+| kaud-1-T1 | flac-8 | 40 | 0 | 0 |
+| kaud-1-T1 | flac-8-nometa | 40 | 0 | 0 |
+| kaud-1-T1 | wavpack-hh | 40 | 0 | 0 |
+| kaud-1-T1 | wavpack-hhx6 | 40 | 0 | 0 |
+| kaud-1-T1 | kolmo-balanced-typedhuf-T1 | 40 | 0 | 0 |
+| kaud-1-T1 | kolmo-ratio-T1 | 40 | 0 | 0 |
+| kaud-1-T1 | kolmo-x-l2-T1 | 40 | 0 | 0 |
+
+### music (4 files, 146103320 bytes)
+
+| tool | bytes | vs flac -8 | ratio | enc MB/s wall | enc MB/s CPU | dec MB/s wall | dec MB/s CPU |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| flac-5 | 77088054 | +0.85% | 0.5276 | 75.85 | 77.20 | 142.00 | 144.59 |
+| flac-8 | 76437465 | +0.00% | 0.5232 | 31.49 | 31.66 | 131.98 | 134.99 |
+| flac-8-nometa | 76403171 | -0.04% | 0.5229 | 33.35 | 33.62 | 131.71 | 135.71 |
+| wavpack-hh | 76308678 | -0.17% | 0.5223 | 26.36 | 26.71 | 32.61 | 32.92 |
+| wavpack-hhx6 | 75302732 | -1.48% | 0.5154 | 0.46 | 0.46 | 35.38 | 35.76 |
+| kolmo-balanced-typedhuf-T1 | 96238179 | +25.90% | 0.6587 | 159.64 | 162.26 | 423.31 | 425.01 |
+| kolmo-ratio-T1 | 88516799 | +15.80% | 0.6059 | 1.12 | 1.13 | 36.61 | 37.13 |
+| kolmo-x-l2-T1 | 86684475 | +13.41% | 0.5933 | 0.14 | 0.15 | 0.28 | 0.28 |
+| kolmo-ratio-T4 | 88516799 | +15.80% | 0.6059 | 1.13 | 1.14 | 37.45 | 37.95 |
+| kaud-0-T1 | 76015424 | -0.55% | 0.5203 | 31.96 | 32.13 | 80.26 | 81.31 |
+| kaud-0-T4 | 76015424 | -0.55% | 0.5203 | 100.15 | 31.29 | 217.67 | 76.41 |
+| kaud-1-T1 | 72307114 | -5.40% | 0.4949 | 6.60 | 6.64 | 7.65 | 7.72 |
+| kaud-1-T4 | 72307114 | -5.40% | 0.4949 | 25.70 | 6.94 | 28.03 | 7.67 |
+
+| kaud setting | rival | kaud smaller | kaud larger | equal |
+|---|---|---:|---:|---:|
+| kaud-0-T1 | flac-5 | 4 | 0 | 0 |
+| kaud-0-T1 | flac-8 | 4 | 0 | 0 |
+| kaud-0-T1 | flac-8-nometa | 4 | 0 | 0 |
+| kaud-0-T1 | wavpack-hh | 2 | 2 | 0 |
+| kaud-0-T1 | wavpack-hhx6 | 0 | 4 | 0 |
+| kaud-0-T1 | kolmo-balanced-typedhuf-T1 | 4 | 0 | 0 |
+| kaud-0-T1 | kolmo-ratio-T1 | 4 | 0 | 0 |
+| kaud-0-T1 | kolmo-x-l2-T1 | 4 | 0 | 0 |
+| kaud-1-T1 | flac-5 | 4 | 0 | 0 |
+| kaud-1-T1 | flac-8 | 4 | 0 | 0 |
+| kaud-1-T1 | flac-8-nometa | 4 | 0 | 0 |
+| kaud-1-T1 | wavpack-hh | 4 | 0 | 0 |
+| kaud-1-T1 | wavpack-hhx6 | 4 | 0 | 0 |
+| kaud-1-T1 | kolmo-balanced-typedhuf-T1 | 4 | 0 | 0 |
+| kaud-1-T1 | kolmo-ratio-T1 | 4 | 0 | 0 |
+| kaud-1-T1 | kolmo-x-l2-T1 | 4 | 0 | 0 |
+
+| file | flac-8 | wavpack-hhx6 | kolmo-ratio-T1 | kolmo-x-l2-T1 | kaud-0-T1 | kaud-1-T1 | kaud -1 vs flac -8 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| arrows_voyage_07 | 11779324 | 11685832 | 12870894 | 12433390 | 11742569 | 11307971 | -4.0% |
+| dso_shostakovich5_mvt4 | 23402225 | 22937552 | 29527410 | 29527410 | 23361167 | 21912916 | -6.4% |
+| nin_ghosts_07 | 10225248 | 10103818 | 12316288 | 12155329 | 10178692 | 9665639 | -5.5% |
+| revivalists_amber_live | 31030668 | 30575530 | 33802207 | 32568346 | 30732996 | 29420588 | -5.2% |
+
 
 ## What did not work, and other notes
 
-DIARY_PLACEHOLDER
+Sizes in this section are from in-process `-b` runs on two development subsets: "music-30" (the first
+10 MB of `nin_ghosts_07`, `dso_shostakovich5_mvt4` and `revivalists_amber_live`) and "esc-10" (every fourth ESC
+clip). Lower is better; percentages are relative to the line before unless noted.
+
+**Profile 0.**
+
+- First version (fixed 4096-sample frames, exact stereo choice by coding all four signals, int64 overflow checks):
+  ESC 6.88 MB, music 76.59 MB, 32 MB/s encode and 57 MB/s decode. Already 7.6% under `flac -8` on ESC but 0.2% over
+  it on music: `nin_ghosts_07` (transients) was 2.8% larger than FLAC. Least squares over a long frame is dominated
+  by the loudest stretch; smaller frames fixed it (1024 samples: -2.8% on that track), so frames became split trees.
+- The double-precision autocorrelation row was a serial reduction (no `-ffast-math`), and the Cholesky factorisation
+  was repeated for each candidate: these, not the LPC filtering, were most of the encoder time. Exact integer
+  products in doubles with an OpenMP SIMD reduction, summing children's rows for parents, caching the factorisation
+  and computing coefficients only for the candidate orders took effort 1 from 22 to 39 MB/s on music with identical
+  output.
+- An int64 check that every predictor sum fits in 32 bits cost as much as the residual itself. It is not needed:
+  wrapping arithmetic is identical on both sides, so only the residual bound is checked.
+- Estimating the stereo pair from a second-difference heuristic (effort 0 of the first version) was about as good
+  as the exact choice on ESC and 0.05% worse on music; the final encoder estimates it from the least-squares errors
+  it computes anyway.
+
+**Profile 1.**
+
+- First cascade (LPC order 32 on profile 0's split blocks, NLMS 256/32/16 with int64 dot products, sign-sign LMS,
+  bias canceller, a 5-level binary tree for the bit length with contexts from recent magnitudes): only 0.5% under
+  profile 0 on ESC at 3.7 MB/s. The range coder alone (filters off) was *worse* than profile 0's partitioned Rice
+  coding on ESC (1.728 vs 1.721 MB on esc-10): a backward-adaptive model cannot see the onsets that a forward
+  Rice parameter sees.
+- LPC coefficients were first sent as Elias-gamma bypass bits: 0.29 bits per sample of header on ESC. Rice coding
+  them as in profile 0: esc-10 1.728 -> 1.701 MB, music-30 14.135 -> 13.998 MB.
+- Sending a per-partition magnitude parameter k and using it as the main context made the coder no worse than Rice;
+  ranking the bit length around k (one or two decisions instead of five) made it faster. The coder is now within
+  0.7% (orchestra) to 2.7% (NIN) of a non-causal oracle that knows the local mean |r| over 32 samples.
+- The bias canceller (a context-dependent running mean subtracted from the residual) made files 0.1% larger:
+  removed. A 0.5/0.5 mix of a fast (shift 4) and the slow probability: +0.3%, removed. A third context dimension
+  (bit length of the previous residual): no change, removed. Allowing up to 256 partitions per frame instead of 32:
+  +0.1%, reverted.
+- NLMS step sizes were far too small at first (mu = 8/4096 for 256 taps). Larger steps helped steadily up to about
+  256/4096; the int16 step then saturated in quiet passages, which an exponent on the step fixed (esc-10 -0.4%).
+- Longer stage-0 filters (512, 1024 taps) were worse at every step size tried, on these 2^18-sample chunks.
+- The biggest single gains were structural: profile 0's block splitting *hurts* the cascade (each LPC change
+  disturbs the adaptive filters downstream). No splitting (-0.6%), longer LPC frames (8192: -0.4%, 16384: -0.3%,
+  32768: -0.1%), and a lower LPC order (16 instead of 32: -0.15%). Per-frame stereo switching hurt for the same
+  reason; one stereo pair per chunk (chosen from summed least-squares estimates) beat per-frame choice by 0.1%.
+- Cross-channel taps in stage 0 (32, of the other slot's LPC residual, including the current sample for the
+  second slot): -0.4% on music-30.
+- The 16-tap sign-sign LMS stage as a plain cascade stage gave nothing (0.01%); combining all stage predictions
+  with weights adapted by sign-sign LMS gave -0.3%, and then larger NLMS steps another -0.2%.
+- Speed: the first cascade spent its time in a serial int64 dot product and update, a 64-bit division per stage
+  and sample, a `memmove` per sample in the sign-sign stage and bit-by-bit bypass coding. int16 prediction weights,
+  the reciprocal table, sliding buffers, the `vpmulhrsw` update and a separate raw bit stream for the low mantissa
+  bits took it from 3.7 to about 9-12 MB/s per thread with the same size.
+
+**Not done.** Monkey's Audio and TTA could not be measured (not packaged here; building them from source was
+outside the "packaged" rule). FLAC 1.5's `-j` threads and WavPack 5.7's threads are not in the packaged versions.
+Formats other than 16-bit mono/stereo are refused. Profile 0's decoder could gain from order-specialised
+reconstruction with two interleaved accumulators; profile 1 is single-path per channel and its speed is bounded
+by the 256-tap update. The stream has no per-frame sync or seek table: random access is per chunk.
