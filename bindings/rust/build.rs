@@ -1,4 +1,4 @@
-// Compiles the kolmo native core (kolmo.c + vendored zstd, lz4, brotli, libbsc, xxhash) into a
+// Compiles the kolmo native core (src/kolmo.c, src/arch/xxh3.c and src/arch/<isa>/*.S + vendored zstd, lz4, brotli, libbsc, xxhash) into a
 // static library and links it, so the published crate is self-contained: it needs a C/C++
 // compiler and (optionally) liblzma, but no `make`, no prebuilt library, and no external Rust
 // crates. The C sources live in `native/` inside the crate — refreshed from the repo root by
@@ -86,7 +86,11 @@ fn main() {
         "-DXXH_NAMESPACE=ZSTD_".to_string(),
         "-DZSTD_MULTITHREAD".to_string(),
         "-DZSTD_LEGACY_SUPPORT=0".to_string(),
+        "-DKOLMO_NO_GPU".to_string(),
     ];
+    // KOLMO_NO_ASM=1: no assembly kernels (src/arch/<isa>/*.S), the C references only.
+    let no_asm = env::var("KOLMO_NO_ASM").map_or(false, |v| v == "1");
+    if no_asm { defs.push("-DKOLMO_NO_ASM".into()); }
     if !is_x86_64 { defs.push("-DZSTD_DISABLE_ASM".into()); }
     // liblzma powers the max/ultra LZMA path. Use it when present; otherwise build without it
     // (those tiers fall back to BWT/context-mixing) so the crate still builds with no system deps.
@@ -115,11 +119,19 @@ fn main() {
     for sub in ["common", "dec", "enc"] { list(&brotli.join(sub), "c", false, &mut cfiles); }
     cfiles.push(lz4.join("lz4.c"));
     cfiles.push(lz4.join("lz4hc.c"));
-    cfiles.push(vendor.join("xxhash/kolmo_xxh3.c"));
+    cfiles.push(src.join("arch/xxh3.c"));          // compiled apart from src/kolmo.c (docs/LAYOUT.md)
     cfiles.push(bsc.join("libbsc/bwt/libsais/libsais.c"));
     cfiles.sort();
     for f in cfiles { jobs.push((cc.clone(), f, vec![])); }
     if is_x86_64 { jobs.push((cc.clone(), zstd.join("decompress/huf_decompress_amd64.S"), vec![])); }
+    // Kolmo's own assembly kernels for the target ISA.
+    let isa = if is_x86_64 { Some("x86_64") } else if arch == "aarch64" { Some("aarch64") } else { None };
+    if let (Some(isa), false) = (isa, no_asm) {
+        let mut sfiles = Vec::new();
+        list(&src.join("arch").join(isa), "S", false, &mut sfiles);
+        sfiles.sort();
+        for f in sfiles { jobs.push((cc.clone(), f, vec![])); }
+    }
     // libbsc C++ sources.
     let mut cpps = Vec::new();
     list(&bsc.join("libbsc"), "cpp", true, &mut cpps);
@@ -178,10 +190,8 @@ fn main() {
         println!("cargo:rustc-link-lib=lzma");
     }
 
-    println!("cargo:rerun-if-changed={}", src.join("kolmo.c").display());
-    println!("cargo:rerun-if-changed={}", src.join("kolmo.h").display());
-    println!("cargo:rerun-if-changed={}", src.join("kgraph.inc").display());
-    println!("cargo:rerun-if-changed={}", vendor.join("xxhash/kolmo_xxh3.c").display());
+    println!("cargo:rerun-if-changed={}", src.display());   // the whole tree: src/kolmo.c includes its parts
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=KOLMO_NATIVE");
+    println!("cargo:rerun-if-env-changed=KOLMO_NO_ASM");
 }

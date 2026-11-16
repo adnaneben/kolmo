@@ -101,6 +101,11 @@ int64_t kolmo_compress_file(int input_fd, int output_fd, size_t n, const kolmo_p
                           const void *dict, size_t dictlen);
 int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads,
                             const void *dict, size_t dictlen);
+/* Experimental (rc3, until the memory model of docs/MEMORY-MODEL.md is approved): how ultra (-x) sizes its
+ * context-mixing tables, process-wide. 0 = default (one bucket per input byte, up to 2^22 per model, about 5.4 GiB
+ * from 4 MiB blocks up); 16..22 = that, capped at 2^mode buckets per model; -1 = scaled: tables within about 16 times
+ * the block. Affects encoding only (the decoder allocates what the stream declares). Returns 0, or -1 for a bad mode. */
+int kolmo_set_x_tables(int mode);
 const char *kolmo_strerror(int64_t code);
 uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len);
 
