@@ -19,6 +19,12 @@ typedef struct {
     /* byte planes of w-byte words, one channel (T_SHUF); see algo/planes.h */
     void (*planes_split)(const uint8_t *in, size_t rows, unsigned w, int delta, uint8_t *out);
     void (*planes_merge)(const uint8_t *in, size_t rows, unsigned w, int delta, uint8_t *out);
+    /* context-mixing mixer: dot products and weight updates of 2 or 4 weight sets; see algo/mixer.h */
+    void (*cm_dot)(const int32_t *x, int n, const int32_t *w1, const int32_t *w2, const int32_t *w3, const int32_t *w4, int64_t s[4]);
+    void (*cm_train)(const int32_t *x, int n, int32_t *w1, int32_t *w2, int32_t *w3, int32_t *w4, const int e[4], int shift);
+    /* video strips (kvid, Y4M): predictor choice and residuals, and their inverse; see algo/video.h */
+    int (*vid_strip_enc)(const uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, uint8_t *res);
+    void (*vid_strip_dec)(uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, int k, const uint8_t *res);
 } kolmo_kernels;
 
 const kolmo_kernels *kolmo_kernels_get(void);          /* the table for this CPU (thread safe, cheap after the first call) */

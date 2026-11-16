@@ -13,6 +13,7 @@
  * 1/2/3 with the exact logistic tables, which every encoder since 1.2.0-rc2 writes) | coded bytes.  Image model (codec 17):
  * bit 7 of the channel byte selects the exact tables.  Memory: 2^bits * 64 B per hashed model. */
 #include <math.h>              /* exp, floor: the squash knots (cm_knots_init) */
+#include "arch/cpu.h"          /* mixer dot products and updates: kolmo_cm_dot_c / kolmo_cm_train_c (src/algo/mixer.c) */
 #ifndef CM_NM
 #define CM_NM 16                /* models: 0 = order-1 direct, 1..9 hashed */
 #endif
@@ -150,6 +151,7 @@ typedef struct {
     uint32_t iw, ich, ih, i_pred, i_cls, i_act, i_n, i_med, i_wn;   /* image model: row bytes, channels, head; mixer selectors */
     uint32_t mc[64];
     int mci;
+    const kolmo_kernels *kk;                              /* dispatched kernels (src/arch) */
 } cm_t;
 
 static inline uint32_t cm_hmix(uint32_t a) { a ^= a >> 15; a *= 0x2C1B3C6Du; a ^= a >> 12; a *= 0x297A2D39u; a ^= a >> 15; return a; }
@@ -257,6 +259,7 @@ static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain, int lx) {   /*
     size_t mem = cm_mem_for(bb, v2) + chain; cm_acquire(mem);
     cm_t *m = calloc(1, sizeof(cm_t)); if (!m) { cm_release(mem); return NULL; }
     int nm = CM_NMOD(v2);
+    m->kk = kolmo_kernels_get();
     m->sh = 32 - bb; m->mem = mem; m->v2 = v2; m->sq = lx ? cm_sqx : cm_sq; m->st = lx ? cm_stx : cm_st;
     m->tb = sizeof(cm_bucket) << bb;
     for (int i = 1; i < nm; i++) {                            /* the model-2 contexts (16+) have fewer distinct values */
@@ -385,19 +388,15 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     const int32_t *w1 = m->w1[m->w1i], *w2 = m->w2[m->w2i];
     int st;
     if (!v2) {
-        int64_t s1 = 0, s2 = 0;
-        for (int i = 0; i < ni; i++) { s1 += (int64_t)w1[i] * m->x[i]; s2 += (int64_t)w2[i] * m->x[i]; }
-        int d1 = (int)(s1 >> 16), d2 = (int)(s2 >> 16);
+        int64_t sd[4]; m->kk->cm_dot(m->x, ni, w1, w2, NULL, NULL, sd);
+        int d1 = (int)(sd[0] >> 16), d2 = (int)(sd[1] >> 16);
         m->pr1 = cm_SQ(m->sq, d1); m->pr2 = cm_SQ(m->sq, d2);
         st = (d1 + d2) >> 1;
     } else {                                                  /* four mixers, then a small learned mixer of their outputs */
         m->w3i = (int)((img ? m->i_n : (m->c4 >> 8 & 0xff)) << 3 | (uint32_t)bp); m->w4i = (int)(c0 | (img ? m->i_med : c1) << 8); m->wfi = (int)c0 | ml << 8;
         const int32_t *w3 = m->w3[m->w3i], *w4 = m->w4[m->w4i], *wf = m->wf[m->wfi];
-        int64_t s1 = 0, s2 = 0, s3 = 0, s4 = 0;
-        for (int i = 0; i < ni; i++) {
-            s1 += (int64_t)w1[i] * m->x[i]; s2 += (int64_t)w2[i] * m->x[i]; s3 += (int64_t)w3[i] * m->x[i]; s4 += (int64_t)w4[i] * m->x[i];
-        }
-        int d[4] = {(int)(s1 >> 16), (int)(s2 >> 16), (int)(s3 >> 16), (int)(s4 >> 16)};
+        int64_t sd[4]; m->kk->cm_dot(m->x, ni, w1, w2, w3, w4, sd);
+        int d[4] = {(int)(sd[0] >> 16), (int)(sd[1] >> 16), (int)(sd[2] >> 16), (int)(sd[3] >> 16)};
         int64_t sf = (int64_t)wf[4] * 256;
         for (int k = 0; k < 4; k++) { if (d[k] > 2047) d[k] = 2047; if (d[k] < -2047) d[k] = -2047; m->xf[k] = d[k]; sf += (int64_t)wf[k] * d[k]; }
         m->xf[4] = 256;
@@ -448,15 +447,13 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
     if (m->mci >= 0) { uint32_t *c = &m->mc[m->mci]; *c = (uint32_t)((int64_t)*c + ((((int64_t)y << 16) - (int64_t)*c) >> 6)); }
     int e1 = (y << 12) - m->pr1, e2 = (y << 12) - m->pr2;                  /* learning rate 1/2048 in 16.16 weights */
     int32_t *w1 = m->w1[m->w1i], *w2 = m->w2[m->w2i];
-    if (!v2) for (int i = 0; i < ni; i++) { w1[i] += (m->x[i] * e1) >> CM_LR; w2[i] += (m->x[i] * e2) >> CM_LR; }
+    if (!v2) { const int e[4] = {e1, e2, 0, 0}; m->kk->cm_train(m->x, ni, w1, w2, NULL, NULL, e, CM_LR); }
     else {
         int k = 64 - (int)(m->pos >> CM_LRD); if (k < CM_LRK) k = CM_LRK;
         e1 = e1 * k >> 4; e2 = e2 * k >> 4;
         int e3 = ((y << 12) - m->pr3) * k >> 4, e4 = ((y << 12) - m->pr4) * k >> 4, ef = (y << 12) - m->prf;
         int32_t *w3 = m->w3[m->w3i], *w4 = m->w4[m->w4i], *wf = m->wf[m->wfi];
-        for (int i = 0; i < ni; i++) {
-            w1[i] += (m->x[i] * e1) >> CM_LR; w2[i] += (m->x[i] * e2) >> CM_LR; w3[i] += (m->x[i] * e3) >> CM_LR; w4[i] += (m->x[i] * e4) >> CM_LR;
-        }
+        { const int e[4] = {e1, e2, e3, e4}; m->kk->cm_train(m->x, ni, w1, w2, w3, w4, e, CM_LR); }
         for (int k = 0; k < 5; k++) wf[k] += (m->xf[k] * ef) >> CM_LRF;
         cm_upd_apm(m->a3[m->a3i], m->ai, m->aw, y);
     }

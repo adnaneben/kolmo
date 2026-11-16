@@ -217,12 +217,12 @@ build/kolmo-cm20: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libv
 build/kolmo-cm-compact: src/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) -DKOLMO_CM_COMPACT $(DEFS) $(INC) src/cli.c src/kolmo.c build/libvendor.a -o $@ $(LIBS) $(CXXLIB)
 
-build/cm-reference.o: tests/test_cm_compact.c src/cm.inc
+build/cm-reference.o: tests/test_cm_compact.c src/cm.inc $(KHDR)
 	@mkdir -p build
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(DEFS) -c $< -o $@
 
-build/cm-compact-test: tests/test_cm_compact.c src/cm.inc build/cm-reference.o
-	$(CC) $(CFLAGS) -DKOLMO_CM_COMPACT $< build/cm-reference.o -lpthread -lm -o $@
+build/cm-compact-test: tests/test_cm_compact.c src/cm.inc build/cm-reference.o $(KOBJ)
+	$(CC) $(CFLAGS) $(DEFS) -DKOLMO_CM_COMPACT $< build/cm-reference.o $(KOBJ) -lpthread -lm -o $@
 
 check-cm-compact: build/cm-compact-test
 	./build/cm-compact-test

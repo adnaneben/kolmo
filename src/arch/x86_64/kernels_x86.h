@@ -8,4 +8,13 @@ void kolmo_med8_inv_sse2(const uint8_t *r, size_t m, size_t W, unsigned C, uint8
 void kolmo_med8_inv_sse41(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p);
 void kolmo_planes_split_sse2(const uint8_t *in, size_t rows, unsigned w, int delta, uint8_t *out);
 void kolmo_planes_merge_sse2(const uint8_t *in, size_t rows, unsigned w, int delta, uint8_t *out);
+void kolmo_cm_dot_sse41(const int32_t *x, int n, const int32_t *w1, const int32_t *w2, const int32_t *w3, const int32_t *w4, int64_t s[4]);
+void kolmo_cm_dot_avx2(const int32_t *x, int n, const int32_t *w1, const int32_t *w2, const int32_t *w3, const int32_t *w4, int64_t s[4]);
+void kolmo_cm_train_sse41(const int32_t *x, int n, int32_t *w1, int32_t *w2, int32_t *w3, int32_t *w4, const int e[4], int shift);
+void kolmo_cm_train_avx2(const int32_t *x, int n, int32_t *w1, int32_t *w2, int32_t *w3, int32_t *w4, const int e[4], int shift);
+void kolmo_med8_rows_sse2(const uint8_t *r, size_t W, unsigned C, uint8_t *p, size_t nrows);
+void kolmo_med8_rows_sse41(const uint8_t *r, size_t W, unsigned C, uint8_t *p, size_t nrows);
+int kolmo_vid_strip_enc_sse2(const uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, uint8_t *res);
+void kolmo_vid_strip_dec_sse2(uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, int k, const uint8_t *res);
+void kolmo_vid_strip_dec_sse41(uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, int k, const uint8_t *res);
 #endif

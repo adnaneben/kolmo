@@ -72,18 +72,23 @@ static K_TGT void K_FN(med8_rows)(const uint8_t *r, size_t W, unsigned C, uint8_
     }
 }
 
+/* rows 0 .. nrows - 1 of p (and r), stride W; the row before p is finished */
+K_TGT void K_FN(kolmo_med8_rows_)(const uint8_t *r, size_t W, unsigned C, uint8_t *p, size_t nrows) {
+    size_t y = 0;
+    if (C >= 1 && C <= 4 && W >= 16 * (size_t)C + 16)
+        for (; y + 15 <= nrows; y += 15) K_FN(med8_rows)(r - W, W, C, p - W, y + 1);
+    for (; y < nrows; y++) {
+        uint8_t *q = p + y * W; const uint8_t *u = q - W, *o = r + y * W; size_t x;
+        for (x = 0; x < C; x++) q[x] = (uint8_t)(u[x] + kolmo_unzz8(o[x]));
+        for (; x < W; x++) q[x] = (uint8_t)(kolmo_med8(q[x - C], u[x], u[x - C]) + kolmo_unzz8(o[x]));
+    }
+}
 K_TGT void K_FN(kolmo_med8_inv_)(const uint8_t *r, size_t m, size_t W, unsigned C, uint8_t *p) {
     if (C < 1 || C > 4 || W < 16 * (size_t)C + 16 || m < 17 * W) { kolmo_med8_inv_c(r, m, W, C, p); return; }
     size_t x = 0;
     for (; x < C; x++) p[x] = kolmo_unzz8(r[x]);
     for (; x < W; x++) p[x] = (uint8_t)(p[x - C] + kolmo_unzz8(r[x]));
-    size_t H = m / W, y = 1;
-    for (; y + 15 <= H; y += 15) K_FN(med8_rows)(r, W, C, p, y);
-    for (; y < H; y++) {
-        uint8_t *q = p + y * W; const uint8_t *u = q - W, *o = r + y * W;
-        for (x = 0; x < C; x++) q[x] = (uint8_t)(u[x] + kolmo_unzz8(o[x]));
-        for (; x < W; x++) q[x] = (uint8_t)(kolmo_med8(q[x - C], u[x], u[x - C]) + kolmo_unzz8(o[x]));
-    }
+    K_FN(kolmo_med8_rows_)(r + W, W, C, p + W, m / W - 1);
 }
 #undef K_FN
 #undef K_CAT
