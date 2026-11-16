@@ -48,18 +48,19 @@ RESEARCH = [
 KFAM = [{"label": f"kfam -T {T}", "c": [k("kfam"), "-T", T, "{in}", "{out}"], "d": [k("kfam"), "-d", "-T", T, "{out}", "{back}"]}]
 KVID = [{"label": f"kvid -m {m} -T {T}", "c": [k("kvid"), "-m", m, "-T", T, "{in}", "{out}"], "d": [k("kvid"), "-d", "-T", T, "{out}", "{back}"]} for m in ("balanced", "hc", "ratio", "x")]
 FASTQ1 = [{"label": "kolmo-fastq (one thread)", "c": [k("kolmo-fastq"), "{in}", "{out}"], "d": [k("kolmo-fastq"), "-d", "{out}", "{back}"]}]
+KBIN = [{"label": f"kbin -T {T}", "c": [k("kbin"), "-T", T, "{in}", "{out}"], "d": [k("kbin"), "-d", "-T", T, "{out}", "{back}"]},
+        {"label": f"kbin -C -T {T}", "c": [k("kbin"), "-C", "-T", T, "{in}", "{out}"], "d": [k("kbin"), "-d", "-T", T, "{out}", "{back}"]}]
 EXTRA = []
-if extra:
-    if os.path.exists(f"{extra}/kbin"):
-        EXTRA.append({"label": f"kbin (auto type) -T {T}", "c": [f"{extra}/kbin", "-T", T, "{in}", "{out}"], "d": [f"{extra}/kbin", "-d", "-T", T, "{out}", "{back}"]})
+if extra and os.path.exists(f"{extra}/krans"):
+    EXTRA.append({"label": f"krans order 0/1 auto -T {T} (entropy coding only)", "c": [f"{extra}/krans", "-o", "a", "-T", T, "{in}", "{out}"], "d": [f"{extra}/krans", "-d", "-T", T, "{out}", "{back}"]})
 AUDIO_SET = [kolmo("kolmo -m balanced", "-m", "balanced", threads=1), kolmo("kolmo -m ratio", "-m", "ratio", threads=1),
              kolmo("kolmo -x -l 2", "-x", "-l", "2", threads=1), kolmo("kolmo -m fast --typed-huf", "-m", "fast", "--typed-huf", threads=1),
              {"label": "FLAC level 5 (libsndfile)", "py": "flac5"}, {"label": "FLAC level 8 (libsndfile)", "py": "flac8"}]
 if extra and os.path.exists(f"{extra}/kaud"):
-    AUDIO_SET += [{"label": f"kaud -p {p}", "c": [f"{extra}/kaud", "-p", p, "{in}", "{out}"], "d": [f"{extra}/kaud", "-d", "{out}", "{back}"]} for p in ("0", "1")]
+    AUDIO_SET += [{"label": f"kaud profile {p}", "c": [f"{extra}/kaud", f"-{p}", "{in}", "{out}"], "d": [f"{extra}/kaud", "-d", "{out}", "{back}"]} for p in ("0", "1")]
 
-json.dump({"general": KOLMO + RIVALS + RESEARCH, "structured": KOLMO + KOLMO_X2 + KFAM + RIVALS + RESEARCH[2:],
-           "genomics": KOLMO + KFAM + FASTQ1 + RIVALS + RESEARCH[2:], "numeric": KOLMO + KOLMO_X2 + TYPED + EXTRA + RIVALS + RESEARCH[2:],
+json.dump({"general": KOLMO + RIVALS + RESEARCH + EXTRA, "numeric_npy": KOLMO + KOLMO_X2 + TYPED + KBIN + RIVALS[:3] + RIVALS[5:6], "structured": KOLMO + KOLMO_X2 + KFAM + RIVALS + RESEARCH[2:],
+           "genomics": KOLMO + KFAM + FASTQ1 + RIVALS + RESEARCH[2:], "numeric": KOLMO + KOLMO_X2 + RIVALS + RESEARCH[2:],
            "video": KVID + KOLMO + RIVALS + RESEARCH[2:], "weights": KOLMO + RIVALS, "audio_set": AUDIO_SET},
           open(out, "w"), indent=1)
 print({g: len(v) for g, v in json.load(open(out)).items()})
