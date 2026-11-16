@@ -260,9 +260,12 @@ int main(int argc, char **argv) {
             kf_job *j = &jb[k]; j->sid = only; j->kind = q.st[only].kind; j->n = cuts[only].n ? cuts[only].v[k] : q.st[only].data.n;
             j->raw = q.st[only].data.p + off; j->ctx = q.st[only].ctx.n ? q.st[only].ctx.p + off : NULL; kf_fq_setup(&sa, j, off); off += j->n;
         }
+        struct timespec c0, c1; clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &c0);
         double t = now(); kf_tp_run(kf_enc_job, jb, nj, threads); t = now() - t;
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &c1);
         size_t z = 0; for (int k = 0; k < nj; k++) { z += jb[k].out.n; free(jb[k].out.p); }
-        printf("stream %d: %zu -> %zu  %.2fs  %.3f bits/symbol\n", only, q.st[only].data.n, z, t, q.st[only].data.n ? 8.0 * z / q.st[only].data.n : 0.0);
+        printf("stream %d: %zu -> %zu  %.2fs (CPU %.2fs)  %.3f bits/symbol\n", only, q.st[only].data.n, z, t,
+               (double)(c1.tv_sec - c0.tv_sec) + (c1.tv_nsec - c0.tv_nsec) * 1e-9, q.st[only].data.n ? 8.0 * z / q.st[only].data.n : 0.0);
         return 0;
     }
     if (verbose && !dec && !bench) {                       /* -v: compress once, print the coded size of each stream */

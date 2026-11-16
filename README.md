@@ -91,6 +91,10 @@ is left out of the speed benchmarks because it runs at well under 1 MB/s.
 `-x -l 2` goes further for ratio at the cost of decode speed: numeric graph leaves may also use context mixing when
 that is smaller (measured −11% to −15% on integer series such as sensor and ECG samples, about −2% on a mixed
 numeric corpus), and those blocks then decode at context-mixing speed. Plain `-x` is unchanged; any decoder reads both.
+At `-x` and `-x -l 2`, a FASTQ file of up to 128 MiB is also coded by stream family (names, bases, qualities, each
+with its own model; `src/experimental/KFAM.md`) and that coding is kept when smaller: 25% smaller than `-x` before
+on three Illumina runs, and such files decode in seconds (7 to 25 MB/s) instead of at context-mixing speed. Those
+files need a kolmo that reads container version 10 (this branch); older readers refuse them.
 
 `--native-leaf` (with `balanced`; C API: `transforms |= KOLMO_T_NATIVE_LEAF`) codes integer-series residuals with
 Kolmo's native plane-context leaves when that is smaller: measured −11.3% on 180 MB of ECG and numeric columns from
