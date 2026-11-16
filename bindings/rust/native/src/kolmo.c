@@ -48,7 +48,8 @@ unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);
 #ifndef KOLMO_NO_LZMA
 #include <lzma.h>
 #endif
-#include "libbsc/libbsc.h"
+#include "codecs/bwt.h"          /* LZP + BWT + QLFC in C (was libbsc) */
+#include "algo/qlfc.h"
 
 /* ------------------------------------------------------------------ runtime ISA dispatch (x86-64)
  * Release builds and the Python wheels compile for baseline x86-64 (no -mavx2 / -msse4.2), so the vector paths below
@@ -1215,8 +1216,6 @@ static void e8e9_inv(uint8_t *b, size_t n) {
     }
 }
 
-static void bsc_once(void) { bsc_init(LIBBSC_FEATURE_FASTMODE); }
-static pthread_once_t bsc_init_once = PTHREAD_ONCE_INIT;
 static int looks_text(const uint8_t *s, size_t n) {          /* >= 95% printable in 4 slices of 16 KB */
     if (n < 4096) return 0;
     size_t tot = 0, pr = 0;
@@ -1232,7 +1231,7 @@ static size_t codec_bound(int codec, size_t n) {
         case C_LZ4: case C_LZ4HC: return (size_t)LZ4_compressBound((int)n);
         case C_ZSTD: return ZSTD_compressBound(n);
         case C_BROTLI: return BrotliEncoderMaxCompressedSize(n) ? BrotliEncoderMaxCompressedSize(n) : n + 1024;
-        case C_BSC: return n + LIBBSC_HEADER_SIZE + 64;
+        case C_BSC: return n + KOLMO_BSC_HEADER_SIZE + 64;
 #ifndef KOLMO_NO_LZMA
         case C_LZMA: return lzma_stream_buffer_bound(n) + 64;
 #else
@@ -1249,7 +1248,8 @@ typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *di
                  int used_native_leaf;   /* encoder: set when a C_NPLANE leaf was written (the frame needs version 9) */
                  int allow_nplane;       /* decoder: C_NPLANE leaves are valid (container version 9 or later) */
                  int aligned_leaf;       /* encoder: graph integer residual leaves also try plane-aligned Huffman / rANS chunks
-                                          * (opt-in: --native-leaf, --typed-huf; existing leaf ids, any version-7 decoder) */ } codec_ctx;
+                                          * (opt-in: --native-leaf, --typed-huf; existing leaf ids, any version-7 decoder) */
+                 int threads;            /* threads the block may use inside a codec (BWT); never changes the output */ } codec_ctx;
 
 static int kgu_get(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
     uint64_t r = 0; int sh = 0;
@@ -1451,10 +1451,8 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
             int ok = BrotliEncoderCompress(level, 24, BROTLI_MODE_GENERIC, n, in, &o, out);
             return ok ? o : 0; }
         case C_BSC: {                       /* payload: XXH32 of the bsc stream | bsc stream (checked before decoding) */
-            pthread_once(&bsc_init_once, bsc_once);
-            if (n > 0x7FFFFFF0 || cap < n + LIBBSC_HEADER_SIZE + 4) return 0;
-            int r = bsc_compress(in, out + 4, (int)n, LIBBSC_DEFAULT_LZPHASHSIZE, LIBBSC_DEFAULT_LZPMINLEN, LIBBSC_BLOCKSORTER_BWT,
-                                 LIBBSC_CODER_QLFC_STATIC, LIBBSC_FEATURE_FASTMODE);
+            if (n > 0x7FFFFFF0 || cap < n + KOLMO_BSC_HEADER_SIZE + 4) return 0;
+            int r = kolmo_bsc_compress(in, out + 4, (int)n, 15, 72, KOLMO_QLFC_STATIC, x->threads);   /* libbsc's defaults: LZP 15/72 */
             if (r <= 0) return 0;
             uint32_t h = (uint32_t)XXH64(out + 4, (size_t)r, 0x62736331); memcpy(out, &h, 4);
             return (size_t)r + 4; }
@@ -1489,12 +1487,11 @@ static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t c
             return (!ZSTD_isError(r) && r == n) ? 0 : -1; }
         case C_BROTLI: { size_t o = n; int r = BrotliDecoderDecompress(cn, in, &o, out); return (r == BROTLI_DECODER_RESULT_SUCCESS && o == n) ? 0 : -1; }
         case C_BSC: {
-            pthread_once(&bsc_init_once, bsc_once);
-            if (cn < 4 + LIBBSC_HEADER_SIZE || n > 0x7FFFFFF0 || cn > 0x7FFFFFF0) return -1;
+            if (cn < 4 + KOLMO_BSC_HEADER_SIZE || n > 0x7FFFFFF0 || cn > 0x7FFFFFF0) return -1;
             uint32_t h; memcpy(&h, in, 4); if (h != (uint32_t)XXH64(in + 4, cn - 4, 0x62736331)) return -1;
-            int bs, ds; if (bsc_block_info(in + 4, LIBBSC_HEADER_SIZE, &bs, &ds, LIBBSC_FEATURE_FASTMODE) != LIBBSC_NO_ERROR) return -1;
+            int bs, ds; if (kolmo_bsc_block_info(in + 4, KOLMO_BSC_HEADER_SIZE, &bs, &ds) != 0) return -1;
             if ((size_t)bs != cn - 4 || (size_t)ds != n) return -1;
-            return bsc_decompress(in + 4, (int)(cn - 4), out, (int)n, LIBBSC_FEATURE_FASTMODE) == LIBBSC_NO_ERROR ? 0 : -1; }
+            return kolmo_bsc_decompress(in + 4, (int)(cn - 4), out, (int)n, x->threads) == 0 ? 0 : -1; }
 #ifdef KOLMO_NO_LZMA
         case C_LZMA: return -1;
 #else
@@ -2467,6 +2464,7 @@ static void *compress_worker(void *arg) {
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
+    xp->threads = J->fqthreads;
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TSLACK + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
@@ -3383,6 +3381,7 @@ static void *decompress_worker(void *arg) {
     if ((J->input_fd >= 0 && !packed) || !tbuf || (buffered && !rbuf)) { free(packed); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
+    xp->threads = J->fqthreads;
     for (;;) {
         uint32_t i = J->lo + atomic_fetch_add(&J->next, 1); if (i >= J->hi) break;
         if (atomic_load(&J->err)) break;

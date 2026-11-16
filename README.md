@@ -70,7 +70,7 @@ and lz4 still lead.
 | Decimal doubles | Float64 arrays whose values were written in decimal (`.npy` tables, raw arrays, the columns inside pickle, `.npz` and `.mat` files) are stored as **integers over a power of ten per column**, with missing values as a tag and anything else kept verbatim. |
 | Scientific binary | **Fixed records** (period found by self-similarity; fields of 1/2/4/8 bytes stored raw, as deltas, as dictionary tokens, or as multiples of a discovered quantum with exact bit corrections) and **16-bit images** (byte order, row stride and predictor found automatically). |
 | Executables, archives | x86 call/jump transform; each tar member gets its own model. |
-| Coders | LZ4 (`rt`), zstd (`fast`, `hc`), brotli (`eco`), BWT via libbsc and LZMA2 (`max`), and an integer **context-mixing** coder (`ultra`: orders 1–7, words, columns, indirect contexts, bit histories, neural mixing, APMs), best per block. |
+| Coders | LZ4 (`rt`), zstd (`fast`, `hc`), brotli (`eco`), BWT (LZP + libsais-derived suffix sorting + QLFC, in C) and LZMA2 (`max`), and an integer **context-mixing** coder (`ultra`: orders 1–7, words, columns, indirect contexts, bit histories, neural mixing, APMs), best per block. |
 | Container | Independent blocks with an index, so any byte range decodes alone. XXH3 per block and CRC32C over the header and index: corrupt input is reported, never returned as data. Blocks compress and decompress in parallel, so throughput scales with cores. |
 
 All prediction that must agree between encoder and decoder is integer or plain IEEE double without fused multiply-add
@@ -201,7 +201,7 @@ make check                             # resource failures, concurrent callers, 
 ./build/kolmobench -X -o results.tsv file  # benchmark against LZ4, zstd, brotli and xz built from the same sources
 ```
 
-Requires liblzma (`apt install liblzma-dev`, `brew install xz`); zstd, LZ4, brotli and libbsc are vendored. Build with `make NO_LZMA=1`
+Requires liblzma (`apt install liblzma-dev`, `brew install xz`); zstd, LZ4 and brotli are vendored. Build with `make NO_LZMA=1`
 where liblzma is unavailable (max and ultra then use the other coders).
 
 On a Mac: `bash mac/setup.sh` once, then `bash mac/bench.sh` for the full benchmark and `bash mac/tune.sh` for an
@@ -226,7 +226,7 @@ src/sci.inc        fixed records and 16-bit images
 src/word.inc       word dictionary for prose
 src/cm.inc         context-mixing coder
 src/cli.c          command line          bench/kolmobench.c   benchmark          tests/kolmotest.c   tests
-tune/ga.py         genetic tuning        mac/              Mac scripts        vendor/           zstd, LZ4, libbsc
+tune/ga.py         genetic tuning        mac/              Mac scripts        vendor/           zstd, LZ4, brotli
 bindings/python    PyPI package kolmoc   bindings/rust     crate kolmo        packaging/homebrew  brew formula
 ```
 

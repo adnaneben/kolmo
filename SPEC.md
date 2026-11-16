@@ -88,7 +88,7 @@ blocks that contain no newline). Files with a tflag 10 block are version 6.
 ## Entropy coders
 
 `STORE` is the raw block. `LZ4`/`LZ4HC`, `ZSTD`, `BROTLI` and `LZMA2` are the standard formats from the vendored
-libraries. `BSC` is libbsc's block-sorting stream, prefixed with a 4-byte XXH32 of the stream that is checked before
+libraries. `BSC` is libbsc 3.4.0's block-sorting stream (written and read by Kolmo's C port in `src/codecs/bwt.c`), prefixed with a 4-byte XXH32 of the stream that is checked before
 decoding. `CM` is this project's integer context-mixing coder; its stream starts with a 32-bit size word whose low 28
 bits are the block length and whose top 4 bits `f` select the model: `f = 0` is model 1 with the legacy default table
 size; otherwise `f & 7` is the log2 of the hash-table size minus 15, and `f & 8` selects model 2 (two more sparse

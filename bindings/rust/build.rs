@@ -1,5 +1,5 @@
-// Compiles the kolmo native core (kolmo.c + vendored zstd, lz4, brotli, libbsc, xxhash) into a
-// static library and links it, so the published crate is self-contained: it needs a C/C++
+// Compiles the kolmo native core (kolmo.c + vendored zstd, lz4, brotli, xxhash, and Kolmo's own src/algo and src/codecs) into a
+// static library and links it, so the published crate is self-contained: it needs a C
 // compiler and (optionally) liblzma, but no `make`, no prebuilt library, and no external Rust
 // crates. The C sources live in `native/` inside the crate — refreshed from the repo root by
 // `sync-native.sh` — with a fallback to the repo tree for in-place contributor builds.
@@ -69,17 +69,14 @@ fn main() {
     let zstd = vendor.join("zstd");
     let brotli = vendor.join("brotli");
     let lz4 = vendor.join("lz4");
-    let bsc = vendor.join("libbsc");
 
     let no_lzma = env::var("CARGO_FEATURE_NO_LZMA").is_ok();
     let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
-    let os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let is_x86_64 = arch == "x86_64";
     let cc = env::var("CC").unwrap_or_else(|_| "cc".into());
-    let cxx = env::var("CXX").unwrap_or_else(|_| "c++".into());
 
     let includes = [
-        src.clone(), zstd.clone(), lz4.clone(), bsc.clone(), brotli.join("include"),
+        src.clone(), zstd.clone(), lz4.clone(), brotli.join("include"),
     ];
     let inc_flags: Vec<String> = includes.iter().map(|p| format!("-I{}", p.display())).collect();
     let mut defs = vec![
@@ -106,7 +103,7 @@ fn main() {
     let native = env::var("KOLMO_NATIVE").map_or(false, |v| v == "1");
     let arch_flag: Option<&str> = if !native { None } else if is_x86_64 { Some("-march=native") } else { Some("-mcpu=native") };
 
-    // Gather compile jobs: (compiler, source, extra_flags). Every C and C++ file gets -ffp-contract=off (added below):
+    // Gather compile jobs: (compiler, source, extra_flags). Every C file gets -ffp-contract=off (added below):
     // kolmo.c and Brotli's encoder decide with floats, and FMA contraction would change the frame bytes.
     let mut jobs: Vec<(String, PathBuf, Vec<String>)> = Vec::new();
     jobs.push((cc.clone(), src.join("kolmo.c"), vec![]));
@@ -116,15 +113,11 @@ fn main() {
     cfiles.push(lz4.join("lz4.c"));
     cfiles.push(lz4.join("lz4hc.c"));
     cfiles.push(vendor.join("xxhash/kolmo_xxh3.c"));
-    cfiles.push(bsc.join("libbsc/bwt/libsais/libsais.c"));
+    // Kolmo's own algorithms and codecs (LZP, QLFC, the libsais subset, the BWT codec): plain C, no C++ runtime.
+    for sub in ["algo", "algo/sais", "codecs"] { list(&src.join(sub), "c", false, &mut cfiles); }
     cfiles.sort();
     for f in cfiles { jobs.push((cc.clone(), f, vec![])); }
     if is_x86_64 { jobs.push((cc.clone(), zstd.join("decompress/huf_decompress_amd64.S"), vec![])); }
-    // libbsc C++ sources.
-    let mut cpps = Vec::new();
-    list(&bsc.join("libbsc"), "cpp", true, &mut cpps);
-    cpps.sort();
-    for f in cpps { jobs.push((cxx.clone(), f, vec![])); }
 
     // Compile in parallel; collect object paths.
     let nproc = thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
@@ -136,8 +129,8 @@ fn main() {
         let jobs = Arc::clone(&jobs);
         let objs = Arc::clone(&objs);
         let failed = Arc::clone(&failed);
-        let (out, inc_flags, defs, arch_flag, bsc) =
-            (out.clone(), inc_flags.clone(), defs.clone(), arch_flag.map(str::to_string), bsc.clone());
+        let (out, inc_flags, defs, arch_flag) =
+            (out.clone(), inc_flags.clone(), defs.clone(), arch_flag.map(str::to_string));
         handles.push(thread::spawn(move || loop {
             let job = { jobs.lock().unwrap().pop() };
             let Some((idx, (compiler, file, extra))) = job else { break };
@@ -146,7 +139,6 @@ fn main() {
             cmd.arg("-O3").args(arch_flag.iter()).arg("-fPIC").arg("-c");
             if file.extension().map_or(true, |e| e != "S") { cmd.arg("-ffp-contract=off"); }
             cmd.args(&defs).args(&inc_flags).args(&extra);
-            if file.extension().map_or(false, |e| e == "cpp") { cmd.arg(format!("-I{}", bsc.display())); }
             cmd.arg(&file).arg("-o").arg(&obj);
             match cmd.status() {
                 Ok(s) if s.success() => objs.lock().unwrap().push(obj),
@@ -168,9 +160,7 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}", out.display());
     println!("cargo:rustc-link-lib=static=kolmo_native");
-    // C++ runtime (libbsc/brotli pull it in), plus pthread/m and optional liblzma.
-    if os == "macos" || os == "ios" { println!("cargo:rustc-link-lib=c++"); }
-    else { println!("cargo:rustc-link-lib=stdc++"); }
+    // pthread/m and optional liblzma (no C++ runtime: libbsc was replaced by Kolmo's C code).
     println!("cargo:rustc-link-lib=pthread");
     println!("cargo:rustc-link-lib=m");
     if use_lzma {

@@ -1,8 +1,8 @@
 """Builds the kolmo native library from bundled C sources and ships it inside the wheel.
 
 The package carries its own copy of the native core under ``native/`` (src + vendored zstd, lz4,
-brotli, libbsc, xxhash), refreshed from the repo root by ``sync-native.sh``. ``setup.py`` compiles
-it into ``libkolmo`` with the system C/C++ compiler — no ``make``, no system codec libraries
+brotli, xxhash), refreshed from the repo root by ``sync-native.sh``. ``setup.py`` compiles
+it into ``libkolmo`` with the system C compiler — no ``make``, no system codec libraries
 (beyond optional liblzma) — so both the sdist and per-platform wheels build anywhere. The compiled
 library sits next to ``kolmo.py`` and is loaded by ctypes, so the installed package needs no
 toolchain at run time. Portable flags (no ``-march=native``) are used so a wheel built in CI runs
@@ -29,7 +29,6 @@ NO_LZMA = os.environ.get("KOLMO_NO_LZMA") == "1"
 
 def _sources():
     z, b, l4 = (os.path.join(VENDOR, d) for d in ("zstd", "brotli", "lz4"))
-    bsc = os.path.join(VENDOR, "libbsc")
     c = [os.path.join(SRC, "kolmo.c")]
     for sub in ("common", "compress", "decompress", "dictBuilder"):
         c += sorted(glob.glob(os.path.join(z, sub, "*.c")))
@@ -37,9 +36,9 @@ def _sources():
         c += sorted(glob.glob(os.path.join(b, sub, "*.c")))
     c += [os.path.join(l4, "lz4.c"), os.path.join(l4, "lz4hc.c")]
     c += [os.path.join(VENDOR, "xxhash", "kolmo_xxh3.c")]
-    c += [os.path.join(bsc, "libbsc", "bwt", "libsais", "libsais.c")]
-    cpp = sorted(glob.glob(os.path.join(bsc, "libbsc", "**", "*.cpp"), recursive=True))
-    return c, cpp, z, b, l4, bsc
+    for sub in ("algo", os.path.join("algo", "sais"), "codecs"):   # Kolmo's own LZP, QLFC, libsais subset, BWT codec
+        c += sorted(glob.glob(os.path.join(SRC, sub, "*.c")))
+    return c, z, b, l4
 
 
 def _find_lzma(cc, workdir):
@@ -69,7 +68,7 @@ def _find_lzma(cc, workdir):
 
 def build_library(dest_dir):
     """Compile libkolmo into dest_dir. Returns the full path to the built library."""
-    c_src, cpp_src, z, b, l4, bsc = _sources()
+    c_src, z, b, l4 = _sources()
 
     # Honor cibuildwheel's cross-compile request (ARCHFLAGS, e.g. "-arch arm64" when building an
     # Apple-silicon wheel on an Intel runner). The *target* arch — not the host — decides which
@@ -87,11 +86,10 @@ def build_library(dest_dir):
     asm = os.path.join(z, "decompress", "huf_decompress_amd64.S")
 
     cc = os.environ.get("CC", "cc")
-    cxx = os.environ.get("CXX", "c++")
     workdir = os.path.join(dest_dir, "_kolmo_build")
     os.makedirs(workdir, exist_ok=True)
 
-    includes = ["-I" + p for p in (SRC, z, l4, bsc, os.path.join(b, "include"))]
+    includes = ["-I" + p for p in (SRC, z, l4, os.path.join(b, "include"))]
     defs = ["-DXXH_NAMESPACE=ZSTD_", "-DZSTD_MULTITHREAD", "-DZSTD_LEGACY_SUPPORT=0"]
     if not is_x86_64:
         defs.append("-DZSTD_DISABLE_ASM")
@@ -121,7 +119,7 @@ def build_library(dest_dir):
         subprocess.check_call(cmd)
         objs.append(obj)
 
-    # -ffp-contract=off on every C and C++ file, not only kolmo.c: Brotli's encoder (-m eco) decides with float costs,
+    # -ffp-contract=off on every C file, not only kolmo.c: Brotli's encoder (-m eco) decides with float costs,
     # and FMA contraction (arm64, or x86-64 with FMA enabled) could change its choices and so the frame bytes.
     fp = ["-ffp-contract=off"]
     compile_one(cc, c_src[0], fp)  # kolmo.c: deterministic across compilers
@@ -129,11 +127,9 @@ def build_library(dest_dir):
         compile_one(cc, f, fp)
     if is_x86_64 and os.path.exists(asm):
         compile_one(cc, asm, [])
-    for f in cpp_src:
-        compile_one(cxx, f, fp + ["-I" + bsc])
 
     out = os.path.join(dest_dir, LIBNAME)
-    link = [cxx, "-shared"] + archflags + objs + ["-o", out, "-lpthread", "-lm"]
+    link = [cc, "-shared"] + archflags + objs + ["-o", out, "-lpthread", "-lm"]
     if IS_MAC:
         link += ["-install_name", "@loader_path/" + LIBNAME]
     if use_lzma:
