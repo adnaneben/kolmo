@@ -183,7 +183,7 @@ int     kolmo_frame_profile_id(const uint8_t *src, size_t n, uint32_t *id);
  *                                  cost:cloud[=months] (benchmark/TRADEOFFS.md model 3: S3 storage $0.023/GB-month,
  *                                  vCPU $0.054/h, 3.3 reads), cost:link=<rate> (model 2: enc + transfer + dec,
  *                                  e.g. link=1Gbit). The formula must not decrease when size grows.
- * Sizes are predicted from trial compressions of the chunk (the whole chunk up to 1 MiB, three 256 KiB slices above);
+ * Sizes are predicted from trial compressions of the chunk (the whole chunk up to 256 KiB, three 64 KiB slices above);
  * times (a fixed cost per call plus bytes over a rate, per setting and class of data) come from a calibration table
  * (kolmo_calibrate), or a built-in table measured on the reference machine.
  * The output is an ordinary frame; any kolmo decodes it. */

@@ -8,10 +8,12 @@
  *   decode>=R, encode>=R         speed floors per thread (R: 500MB/s, 1GB/s, 2GiB/s, 800Mbit, ...), joined by ','
  *   cost:<formula>               minimise a formula of size, n, enc, dec; presets cost:cloud[=months], cost:link=R
  * and floors may be combined with size or a cost (`cost:cloud,decode>=500MB/s`). The prediction for a chunk and a
- * setting is: size from trial compressions of the chunk (whole up to 1 MiB, else three 256 KiB slices scaled to the
+ * setting is: size from trial compressions of the chunk (whole up to 256 KiB, else three 64 KiB slices scaled to the
  * chunk), and encode and decode time = setup + chunk bytes / rate of that setting on that class of data, from the
- * calibration table (setup: the fixed cost of a call, which dominates small chunks and the context-mixing settings). A setting is tried only if it meets the floors and, for a cost, if its time alone (at size 0)
- * does not already cost more than the best setting found so far (the formula must not decrease as size grows). */
+ * calibration table (setup: the fixed cost of a call, which dominates small chunks and the context-mixing settings).
+ * A setting is tried only if it meets the floors and, for a cost, if its time alone (at size 0) plus the price of the
+ * trial itself does not already cost more than the best setting found so far (the formula must not decrease as size
+ * or time grow): with a cost, trials are part of what is paid for. */
 
 #define KT_NSET 9
 #define KT_NCLS 6
@@ -283,8 +285,11 @@ static int64_t kt_compress_setting(const uint8_t *s, size_t n, int setting, int 
     *out = d; return r;
 }
 
-#define KT_WHOLE (1u << 20)
-#define KT_SLICE (256u << 10)
+/* trial sample: the whole chunk up to 256 KiB (its trial frame is then the output), else three 64 KiB slices. Larger
+ * samples (1 MiB whole, 256 KiB slices) chose as well but cost more: with a cost target, trials are paid for
+ * (benchmark/rc3/features-a/RESULTS.md) */
+#define KT_WHOLE (256u << 10)
+#define KT_SLICE (64u << 10)
 static void *kt_worker(void *arg) {
     kt_job *J = arg; const struct kolmo_target *t = J->t;
     for (;;) {
@@ -312,7 +317,12 @@ static void *kt_worker(void *arg) {
             double enc = kt_enc_time(t, st, cls, n), dec = kt_dec_time(t, st, cls, n);
             if (t->min_dec > 0 && n > 0 && n / dec < t->min_dec) continue;     /* floors: the predicted speed on this chunk */
             if (t->min_enc > 0 && n > 0 && n / enc < t->min_enc) continue;
-            if (t->objective == 1 && best >= 0 && kt_eval(t, 0, n, enc, dec) >= bestv) continue;
+            if (t->objective == 1 && best >= 0) {
+                /* the trial is paid for too: try only if this setting can still win by more than the trial costs */
+                double tr = kt_enc_time(t, st, cls, (double)sample);
+                double lb = kt_eval(t, 0, n, enc, dec) + (kt_eval(t, 0, n, tr, 0) - kt_eval(t, 0, n, 0, 0));
+                if (lb >= bestv) continue;
+            }
             double size = 0; uint8_t *frame = NULL; int64_t r = 0;
             for (int k = 0; k < ns && r >= 0; k++) {
                 uint8_t *f = NULL;

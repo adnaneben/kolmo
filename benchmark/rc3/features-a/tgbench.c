@@ -1,6 +1,7 @@
 /* tgbench: how well --target meets its targets.
  *
- *   tgbench [-r rounds] [-x maxbytes] [-B chunkMiB] FILE TARGET...
+ *   tgbench [-r rounds] [-x maxbytes] [-B chunkMiB] [-c calibration] [-F] FILE TARGET...
+ * (-c: a `kolmo calibrate` table instead of the built-in one; -F: skip the fixed settings)
  *
  * For the file: every fixed setting (the nine --target chooses from; -x and -x -l 1 only for files up to maxbytes,
  * default 3 MB, as they run at 0.1-0.3 MB/s here) is measured on one thread, in memory, round trip checked: size,
@@ -26,9 +27,12 @@ static const struct { const char *name; kolmo_mode mode; int level, tr; } SET[9]
     {"x", KOLMO_ULTRA, 0, 1}};
 
 int main(int argc, char **argv) {
-    int rounds = 3, opt; double maxx = 3e6; uint32_t chunk = 0;
-    while ((opt = getopt(argc, argv, "r:x:B:")) != -1) switch (opt) {
+    int rounds = 3, opt, nofixed = 0; double maxx = 3e6; uint32_t chunk = 0; char *calib = NULL; size_t calibn = 0; const char *calname = "built-in";
+    while ((opt = getopt(argc, argv, "r:x:B:c:F")) != -1) switch (opt) {
         case 'r': rounds = atoi(optarg); break; case 'x': maxx = atof(optarg); break; case 'B': chunk = (uint32_t)(atof(optarg) * 1048576); break;
+        case 'F': nofixed = 1; break;
+        case 'c': { FILE *cf = fopen(optarg, "rb"); if (!cf) { perror(optarg); return 1; } calib = malloc(1 << 16);
+                    calibn = fread(calib, 1, 1 << 16, cf); fclose(cf); calname = optarg; break; }
         default: return 2; }
     if (argc - optind < 1) { fprintf(stderr, "usage: tgbench [-r rounds] [-x maxbytes] FILE TARGET...\n"); return 2; }
     const char *path = argv[optind];
@@ -38,7 +42,7 @@ int main(int argc, char **argv) {
     const char *base = strrchr(path, '/'); base = base ? base + 1 : path;
     kolmo_params big = {KOLMO_MAX, 0, 1, 0, 1};
     size_t cap = kolmo_bound(n, &big) + (1u << 20); uint8_t *o = malloc(cap), *d = malloc(n ? n : 1);
-    for (int s = 0; s < 9; s++) {
+    for (int s = 0; s < 9 && !nofixed; s++) {
         if (s >= 7 && n > maxx) continue;
         kolmo_params p = {SET[s].mode, SET[s].level, 1, 0, SET[s].tr};
         double be = 1e30, bd = 1e30; int64_t z = 0; int rr = s >= 5 ? 1 : rounds;
@@ -55,6 +59,8 @@ int main(int argc, char **argv) {
     for (int a = optind + 1; a < argc; a++) {
         kolmo_target *t = NULL;
         if (kolmo_target_parse(argv[a], &t)) { fprintf(stderr, "bad target %s\n", argv[a]); return 2; }
+        if (calib && kolmo_target_set_calibration(t, calib, calibn)) { fprintf(stderr, "bad calibration table\n"); return 2; }
+        const char *cb = strrchr(calname, '/'); cb = cb ? cb + 1 : calname;
         kolmo_params p = {KOLMO_FAST, 0, 1, chunk, 1}; kolmo_target_report rep;
         double be = 1e30, bd = 1e30; int64_t z = 0;
         for (int r = 0; r < rounds; r++) {
@@ -68,8 +74,8 @@ int main(int argc, char **argv) {
         char chosen[256] = ""; size_t w = 0;
         for (int s = 0; s < 9; s++) if (rep.per_setting[s]) w += (size_t)snprintf(chosen + w, sizeof chosen - w, "%s%s x%u", w ? ", " : "", kolmo_target_setting_name(s), rep.per_setting[s]);
         printf("{\"file\":\"%s\",\"bytes\":%ld,\"kind\":\"target\",\"target\":\"%s\",\"size\":%lld,\"enc_s\":%.6f,\"dec_s\":%.6f,"
-               "\"predicted_size\":%llu,\"predicted_enc_s\":%.6f,\"predicted_dec_s\":%.6f,\"chunks\":%u,\"chunk_bytes\":%u,\"chosen\":\"%s\"}\n",
-               base, n, argv[a], (long long)z, be, bd, (unsigned long long)rep.predicted_size, rep.predicted_enc_s, rep.predicted_dec_s, rep.chunks, chunk, chosen);
+               "\"predicted_size\":%llu,\"predicted_enc_s\":%.6f,\"predicted_dec_s\":%.6f,\"chunks\":%u,\"chunk_bytes\":%u,\"chosen\":\"%s\",\"calibration\":\"%s\"}\n",
+               base, n, argv[a], (long long)z, be, bd, (unsigned long long)rep.predicted_size, rep.predicted_enc_s, rep.predicted_dec_s, rep.chunks, chunk, chosen, cb);
         fflush(stdout);
         kolmo_target_free(t);
     }

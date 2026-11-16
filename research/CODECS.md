@@ -57,6 +57,23 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | integer residual leaves → kfam coder | stack | −4.1% on that class, −0.03% overall; `-x -l 2` CM leaves smaller still | dropped (CM leaves cover it) |
 | typed-huf planes → kfam coder | stack | −23.8% on that class but at CM speed | research |
 
+## Trained profiles and targets (features-a lane, rc3)
+
+Measured on held-out files of 10 dataset families, one thread, against zstd at the same level with a dictionary from
+`zstd --train -B16K` on the same sample (`benchmark/rc3/features-a/RESULTS.md`).
+
+| technique | what it does | measured impact | verdict |
+|---|---|---|---|
+| trained profile (`kolmo train`, `-P`, `KPF1`) | setting, pinned plans, zstd and raw dictionaries, held-out choices; frames carry the profile id (version 11) | `balanced`: messages −2.4% to −11% vs zstd + dict and −64% to −75% vs untrained; Hadoop logs −25% vs zstd + dict, −39% vs untrained; large CSV/JSON/numeric ±0.2% vs untrained | rc3 |
+| compact profile frame (`CZC1`) | one-block profile frames ≤ 1 MiB with 14–21 bytes of header instead of 52 | part of the message result (GeoJSON features: 2.95 MB untrained → 0.76 MB with magicless frames) | rc3 |
+| raw zstd blocks for profile leaves ≤ 64 KiB | no zstd frame or block header (5–6 bytes) inside the container | GeoJSON features −4.0%, SSH lines −7.3% | rc3 (uses zstd's deprecated block API) |
+| dictionary leaf limit (`DLIM`) chosen on held-out samples | dictionaries only on leaves up to 64 KiB … unlimited | a dictionary on every leaf cost +0.7% on CSV; with the limit −0.1% | rc3 |
+| pinned plans | the planner's choice per file shape and size band, used when the field count fits | Hadoop logs, no dictionary: −1.2% vs untrained (+13% with a majority vote and no band); OpenStack 256 KiB files compress 2.8× faster | rc3 |
+| COVER dictionary trainer (chosen on held-out samples against fastCover) | zstd's COVER with a 2-step parameter search, one thread | SSH lines −7.2%, Hadoop logs −7.0%; rejected on OpenStack lines (+23%) | rc3 (`--quick` skips it) |
+| direct path for profile inputs < 4 KiB | skips block planning and scheduling; same bytes | messages 1.6–2.1× faster to compress | rc3 |
+| `--target` (floors, `cost:`), per-chunk setting from trial compressions and a calibrated speed table | chooses among 9 settings per 16 MiB chunk | median choice regret 0% vs the best fixed setting; floors met with 0–5% size regret in most cases; cost targets pay 11–76% (median) for their trials | rc3 (trial cost to be reduced) |
+| `kolmo calibrate` | measures setup + rate per setting and class | built-in table from the reference VM | rc3 |
+
 ## Research codecs (standalone tools)
 
 | tool | algorithm | best result | verdict |
