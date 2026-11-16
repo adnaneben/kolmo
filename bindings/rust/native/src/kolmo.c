@@ -1189,7 +1189,9 @@ static size_t codec_bound(int codec, size_t n) {
 typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *dict; size_t dictlen;
                  int native_leaf;        /* encoder: graph integer residual leaves may use C_NPLANE (opt-in, balanced) */
                  int used_native_leaf;   /* encoder: set when a C_NPLANE leaf was written (the frame needs version 9) */
-                 int allow_nplane;       /* decoder: C_NPLANE leaves are valid (container version 9 or later) */ } codec_ctx;
+                 int allow_nplane;       /* decoder: C_NPLANE leaves are valid (container version 9 or later) */
+                 int aligned_leaf;       /* encoder: graph integer residual leaves also try plane-aligned Huffman / rANS chunks
+                                          * (opt-in: --native-leaf, --typed-huf; existing leaf ids, any version-7 decoder) */ } codec_ctx;
 
 static int kgu_get(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
     uint64_t r = 0; int sh = 0;
@@ -1277,12 +1279,17 @@ static void r64sym_init(r64sym *e, uint32_t start, uint32_t f) {
     }
 }
 static inline uint64_t r64_mulhi(uint64_t a, uint64_t b) { return (uint64_t)(((unsigned __int128)a * b) >> 64); }
-static size_t rans_compress_all(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
-    size_t o = 0, cw = RANS_CHUNK + 64; uint32_t *tmp = malloc(cw * 4); if (!tmp) return 0;   /* 32-bit words, filled backwards */
+/* single != 0: a chunk of one byte value gets that symbol at frequency RANS_M (research P-18 / P2-20 on PR #7). The
+ * state update is then the identity, the chunk codes as its four initial states (32 bytes), and the decoder below has
+ * always accepted it (frequencies up to RANS_M, sum RANS_M, final states R64_L). Used for plane-aligned leaves only;
+ * whole leaves keep rejecting such chunks (the other codecs code them in a few bytes). */
+static size_t rans_compress_all_x(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int single) {
+    size_t o = 0, cw = (n < RANS_CHUNK ? n : RANS_CHUNK) + 64; uint32_t *tmp = malloc(cw * 4); if (!tmp) return 0;   /* 32-bit words, filled backwards (at most one per symbol) */
     for (size_t i = 0; i < n;) {
         size_t m = n - i < RANS_CHUNK ? n - i : RANS_CHUNK; const uint8_t *src = in + i;
         uint32_t cnt[256], f[256], c = 0; r64sym es[256]; kg_hist(src, m, cnt);
-        if (rans_norm(cnt, m, f)) { free(tmp); return 0; }         /* one symbol: leave it to the other codecs */
+        if (single && cnt[src[0]] == m) { memset(f, 0, sizeof f); f[src[0]] = RANS_M; }
+        else if (rans_norm(cnt, m, f)) { free(tmp); return 0; }    /* one symbol: leave it to the other codecs */
         for (int k = 0; k < 256; k++) { if (f[k]) r64sym_init(&es[k], c, f[k]); c += f[k]; }
         uint32_t *e = tmp + cw; uint64_t x0 = R64_L, x1 = R64_L;   /* states for even and odd positions, back to front */
 #define R64_PUT(X, Q) do { const r64sym *y = &es[src[Q]]; uint64_t xmax = ((R64_L >> RANS_SB) << 32) * y->freq; \
@@ -1308,6 +1315,20 @@ static size_t rans_compress_all(const uint8_t *in, size_t n, uint8_t *out, size_
         o = (size_t)(h - out) + z; i += m;
     }
     free(tmp); return o;
+}
+static size_t rans_compress_all(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return rans_compress_all_x(in, n, out, cap, 0); }
+/* Plane-aligned leaves (research R2/R3 and P2-E11/P2-E13 on PR #7): a stream of np equal byte planes (integer
+ * residuals) coded plane by plane, so that no Huffman or rANS chunk mixes two planes' statistics. The chunks are
+ * concatenated: the unchanged leaf decoders read them as one leaf. Returns 0 when a plane does not code. */
+static size_t leaf_compress_planes(int codec, const uint8_t *in, size_t n, int np, uint8_t *out, size_t cap) {
+    size_t L = n / (size_t)np, o = 0;
+    for (int b = 0; b < np; b++) {
+        size_t r = codec == C_HUF ? huf_compress_all(in + (size_t)b * L, L, out + o, cap - o)
+                                  : rans_compress_all_x(in + (size_t)b * L, L, out + o, cap - o, 1);
+        if (!r) return 0;
+        o += r;
+    }
+    return o;
 }
 static inline uint32_t r64_rd(const uint8_t *p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24; }
 static int rans_decompress_all(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {

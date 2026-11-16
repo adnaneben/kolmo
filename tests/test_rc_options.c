@@ -51,5 +51,19 @@ int main(void) {
         if(i%2==0&&n>=10)memcpy(s,"\x93NUMPY",6);
         (void)ktf_type(s,n,&w,&h);headers++;
     }
-    free(s);printf("RC_OPTIONS roundtrips=%zu headers=%zu forward_differentials=%zu PASSED\n",roundtrips,headers,choices);return 0;
+    /* Plane-aligned leaves: per-plane Huffman / rANS chunks (a constant plane included, which rANS codes as a
+     * one-symbol chunk) are read back by the unchanged whole-leaf decoders; whole leaves still refuse a one-symbol chunk. */
+    size_t aligned=0;
+    for(int np=2;np<=8;np*=2)for(int L=1;L<=70000;L=L*7+3){
+        size_t n=(size_t)np*(size_t)L,cap=n+n/8+4096;uint8_t *a=malloc(n),*z=malloc(cap),*b=malloc(n);if(!a||!z||!b)return 13;
+        for(int k=0;k<np;k++)for(int i=0;i<L;i++){uint64_t x=rv();a[(size_t)k*L+i]=k==np-1?(uint8_t)7:k==0?(uint8_t)x:(uint8_t)(x%5==0?x>>8:0);}
+        for(int c=0;c<2;c++){int codec=c?C_RANS:C_HUF;size_t zn=leaf_compress_planes(codec,a,n,np,z,cap);if(!zn)return 14;
+            memset(b,0xa5,n);int r=codec==C_HUF?huf_decompress_all(z,zn,b,n):rans_decompress_all(z,zn,b,n);
+            if(r||memcmp(a,b,n))return 15;
+            if(zn>1){int r2=codec==C_HUF?huf_decompress_all(z,zn-1,b,n):rans_decompress_all(z,zn-1,b,n);if(!r2)return 16;}
+            aligned++;}
+        if(rans_compress_all(a+(size_t)(np-1)*L,(size_t)L,z,cap))return 17;          /* whole leaf: unchanged refusal */
+        free(a);free(z);free(b);
+    }
+    free(s);printf("RC_OPTIONS roundtrips=%zu headers=%zu forward_differentials=%zu aligned_leaves=%zu PASSED\n",roundtrips,headers,choices,aligned);return 0;
 }

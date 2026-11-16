@@ -471,6 +471,23 @@ static int kgb_concat(kgb *g, const int *idx, int n) {
     return o;
 }
 
+#ifndef KOLMO_ALIGNED_LEAVES
+#define KOLMO_ALIGNED_LEAVES 0      /* 1: plane-aligned residual leaves at every mode (default build: opt-in only) */
+#endif
+/* order-0 entropy (bits) and the prefix-code bound (hbits) of a leaf, per 128 KiB chunk as Huffman codes them; with
+ * np > 1, per chunk of each of np equal byte planes (plane-aligned leaves) */
+static void kg_leaf_bounds(const uint8_t *p, size_t n, int np, double *pbits, double *phbits) {
+    double bits = 0, hbits = 0; size_t L = n / (size_t)np;
+    for (int b = 0; b < np; b++)
+        for (size_t a = 0; a < L; a += 131072) {
+            size_t m = L - a < 131072 ? L - a : 131072; uint32_t hc[256]; double e = 0; int nd = 0;
+            kg_hist(p + (size_t)b * L + a, m, hc);
+            for (int c = 0; c < 256; c++) if (hc[c]) { e -= (double)hc[c] * log2((double)hc[c] / (double)m); nd++; }
+            bits += e; hbits += nd > 1 && e < (double)m ? (double)m : e;   /* a prefix code spends a whole bit per byte */
+        }
+    *pbits = bits; *phbits = hbits;
+}
+
 /* serialize a built program: header, program, leaves (every unconsumed stream, in index order). Returns the payload
  * length, or 0 when it is not smaller than n or does not fit in cap. */
 static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n, uint8_t *dst, size_t cap) {
@@ -517,26 +534,34 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
         }
         int tryh = s->n >= 64 && !flat, tryhuf = 1;
         const int fastleaf = codec == C_ZSTD && level <= CZ_FAST_LEVEL;   /* no rANS at these settings */
+        /* opt-in (--native-leaf, --typed-huf; every mode when built with -DKOLMO_ALIGNED_LEAVES=1): integer residual
+         * planes also try one run of entropy-coder chunks per plane (plane-aligned leaves, research R2/R3 and P2-E13 on
+         * PR #7). Same leaf codec ids, read by every decoder of this container. Not a default: no file of the release
+         * benchmark sets got smaller in any mode (research/STACK-AUDIT.md) */
+        const int np = q == g->nph_q ? g->nph_np : 1;
+        const int al = (KOLMO_ALIGNED_LEAVES || x->aligned_leaf || x->native_leaf) && np > 1 && s->n % (size_t)np == 0;
         if (tryh && z && nohuf && fastleaf) tryh = 0;
         else if (tryh && z) {                                 /* Huffman cannot beat the order-0 entropy: skip when z is below it */
-            double bits = 0, hbits = 0;                       /* per 128 KiB chunk, as Huffman codes them */
-            for (size_t a = 0; a < s->n; a += 131072) {
-                size_t m = s->n - a < 131072 ? s->n - a : 131072; uint32_t hc[256]; double e = 0; int nd = 0;
-                kg_hist(s->p + a, m, hc);
-                for (int c = 0; c < 256; c++) if (hc[c]) { e -= (double)hc[c] * log2((double)hc[c] / (double)m); nd++; }
-                bits += e; hbits += nd > 1 && e < (double)m ? (double)m : e;   /* a prefix code spends a whole bit per byte */
-            }
+            double bits, hbits;                               /* per 128 KiB chunk, as Huffman codes them */
+            kg_leaf_bounds(s->p, s->n, 1, &bits, &hbits);
+            if (al) { double ab, ah; kg_leaf_bounds(s->p, s->n, np, &ab, &ah); if (ab < bits) bits = ab; if (ah < hbits) hbits = ah; }
             if ((double)z * 8 <= bits) tryh = 0;
             tryhuf = (double)z * 8 > hbits && !nohuf;         /* (rANS below is bounded by the entropy alone) */
         }
         if (tryh && (tryhuf || !fastleaf)) {   /* Huffman only, when smaller (skewed bytes without repeats) */
             uint8_t *hb = malloc(zc); size_t hz = hb && tryhuf ? codec_compress(x, C_HUF, 0, s->p, s->n, hb, zc) : 0;
             if (hz && (!z || hz < z)) { memcpy(o.p + o.n + 20, hb, hz); z = hz; cc = C_HUF; }
+            hz = hb && tryhuf && al ? leaf_compress_planes(C_HUF, s->p, s->n, np, hb, zc) : 0;
+            if (hz && (!z || hz < z)) { memcpy(o.p + o.n + 20, hb, hz); z = hz; cc = C_HUF; }
             int slow = !fastleaf;                                                           /* rANS at hc/max/ultra only */
-            size_t rz = hb && slow ? codec_compress(x, C_RANS, 0, s->p, s->n, hb, zc) : 0;   /* rANS: whole-bit loss of Huffman */
             /* rANS decodes about four times slower than Huffman or zstd here: with the zstd family (hc: fast reads) it
-             * must be at least 3% smaller to be taken; max and ultra take any gain */
-            if (rz && (!z || (codec == C_ZSTD ? (uint64_t)rz * 100 <= (uint64_t)z * 97 : rz < z))) { memcpy(o.p + o.n + 20, hb, rz); z = rz; cc = C_RANS; }
+             * must be at least 3% smaller to be taken; max and ultra take any gain (and so does rANS over rANS) */
+#define KG_RANS_TAKES(R) ((R) && (!z || (codec == C_ZSTD && cc != C_RANS ? (uint64_t)(R) * 100 <= (uint64_t)z * 97 : (R) < z)))
+            size_t rz = hb && slow ? codec_compress(x, C_RANS, 0, s->p, s->n, hb, zc) : 0;   /* rANS: whole-bit loss of Huffman */
+            if (KG_RANS_TAKES(rz)) { memcpy(o.p + o.n + 20, hb, rz); z = rz; cc = C_RANS; }
+            rz = hb && slow && al ? leaf_compress_planes(C_RANS, s->p, s->n, np, hb, zc) : 0;
+            if (KG_RANS_TAKES(rz)) { memcpy(o.p + o.n + 20, hb, rz); z = rz; cc = C_RANS; }
+#undef KG_RANS_TAKES
             free(hb);
         }
         if (x->native_leaf && g->nph_np && q == g->nph_q && s->n >= 64) {   /* opt-in (balanced): native plane-context leaf,
