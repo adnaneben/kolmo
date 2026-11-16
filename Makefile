@@ -104,6 +104,11 @@ build/obj/%.o: %.m
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEFS) $(INC) -fobjc-arc -c $< -o $@
 
+# LZ4's decoder loop is sensitive to where the linker places it: on the Apple M5 the same lz4.o decoded 20% slower
+# (-m speed, JSON and logs) after unrelated code grew the binary. 64-byte function and loop alignment makes the
+# speed independent of placement (benchmark/rc3/simd-arm/RESULTS.md). Code placement only: same output.
+LZ4ALIGN := -falign-functions=64 -falign-loops=64
+build/obj/$(LZ4)/lz4.o build/pic/$(LZ4)/lz4.o: override CFLAGS += $(LZ4ALIGN)
 build/libvendor.a: $(OBJ)
 	ar rcs $@ $^
 build/kolmo.o: src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES)
