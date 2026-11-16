@@ -40,6 +40,9 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | technique | what it does | measured impact | verdict |
 |---|---|---|---|
 | table transform (`tbl2`) | typed CSV/TSV columns: delta, entity, delta-of-delta, third-order, formula predictors | structured −57.5% vs zstd -3 (with `balanced`) | in |
+| table transform on long-form tables (session `nice-faraday`, ported to rc3) | (1) table blocks may grow by block/8 + 16 KiB before coding (container version 11; was 16 KiB, which turned the transform off on every block ≥ ~400 KiB of short numbers); (2) a group column only has to take more than one value across the sample (long groups were missed) | countries-aggregated.csv (5.5 MB, daily counts per country): `balanced` 4.16× → 15.94×, `hc` 7.26× → 16.83×, `ratio` 5.18× → 17.85×, `-x` 15.68× → 18.87× (xz -9e 8.42×); 50 other file/mode pairs on the Mac unchanged; 407 of 451 unchanged and 44 smaller in the session's own run | rc3 |
+| more derived-column formulas (from the 6-bit study's GR6+) | running totals `lag(t)+a`, copy `a`, product `a·b/10^k`, kept when ≥ 50% of sampled rows hit within ±2 in the last digit, used per row where recent cost is lowest | +4.6% / +7.3% on OWID on top of Kolmo in the study; GR6+ is 8% smaller than `-x` on OWID and 3% smaller on covid (after the fix above) | rc3 candidate (not yet built in Kolmo) |
+| warm start for block-parallel CM (from the 6-bit study) | every block starts from the model trained on block 0 | 16 blocks: size cost +2% instead of +7–14% | passed to the xmode lane |
 | DEC64 dictionary (R1) | few-distinct-value decimal columns as indices plus a value list | massdata −5.7% balanced, −6.4% ratio; ozl −1.5% to −4.2% at hc/ratio | in |
 | log templates | template mining, typed fields | part of the structured result | in |
 | lines, sci (decimal doubles), word codes, JSON split, fixed records, x86 branch transform, tar members, 16-bit images | structure transforms | per-type gains, rc1/rc2 reports | in |
@@ -68,6 +71,9 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | kfam CSV and one-stream families | family streams | loses to the table transform on CSV; +9.9% vs `-x` on chr22 FASTA | research |
 | kbin | pcodec-style binning, rANS bin indices, offset bits, LPC up to order 8 | beats pcodec 8/12 on all 18 files; ECG −4.4% vs `ratio` at 38× compress speed; equal to `balanced` over all NPY | candidate numeric node (rc3 decision) |
 | krans | 32-way interleaved static rANS, order 0/1, AVX2 | order 0: −0.4% to −0.8% vs HUF leaves, 1.19–1.26× faster decode on x86; order 1: −20–25% at 0.35–0.47× decode; NEON on M5 (simd-arm): order 0 0.43× scalar at 8 ways, 1.2–1.3× at 16–32 ways; order 1 0.38–0.53× | candidate leaf coder on x86 (simd lanes) |
+| 6-bit alphabet K6 (fixed, adaptive, token tables; session `dazzling-maxwell`, `research/sixbit-study/`) | text and CSV in 6-bit units with escape codes | 1.23–2.05× alone: beaten by plain Huffman on every file and it hurts any coder that follows | dropped as a storage format |
+| GR6 / GR6+ (same study) | DITTO, rank, graph and dictionary ops in 6-bit units, column predictors and formulas, then fixed, Huffman or context-mixing coder | GR6+ CM mode: beats xz -9e, zstd -19, brotli -11 on all 7 files; beats `-x` on OWID (+8%) and covid; loses to `-x` by 4–19% on logs, text and small tables; 1–3 MB/s both ways | research (ideas taken: formulas, warm start, previous-field contexts) |
+| bit-level neural coder over 6-bit units (same study) | 6 binary decisions per unit instead of 8 | about 40% faster for 1–3% more size | research |
 
 ## Speed techniques
 
