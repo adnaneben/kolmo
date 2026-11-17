@@ -1,11 +1,14 @@
 """Cross-platform determinism: the same frames on every CPU, compiler and thread count.
 
-usage: python3 benchmark/determinism/check.py KOLMO WORK_DIR [--write]
+usage: python3 benchmark/determinism/check.py KOLMO WORK_DIR [--write] [--budgets 64M,512M,4G,unlimited]
 Builds a fixed set of inputs from a seeded generator only (no third-party data, and nothing that changes with the code),
 compresses each at every setting below with 1 and 4 threads, and compares the SHA-256 of every frame with
 benchmark/determinism/expected.sha256. --write regenerates that file (do it only when an encoder change is meant
 to change output, and say so in the commit). Also checks that 1 and 4 threads give the same frame, and that every
 frame decodes back to its input.
+--budgets runs every encode and decode once per memory budget (KOLMO_MEM_FORCE_BUDGET: the governor behaves as if that
+much memory were available) and requires the same frames each time: memory changes speed, never bytes
+(docs/MEMORY-MODEL.md).
 """
 import hashlib
 import os
@@ -16,6 +19,9 @@ import sys
 
 KOLMO, W = sys.argv[1], sys.argv[2]
 WRITE = "--write" in sys.argv[3:]
+BUDGETS = [None]
+if "--budgets" in sys.argv[3:]:
+    BUDGETS = sys.argv[sys.argv.index("--budgets") + 1].split(",")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 EXPECTED = os.path.join(HERE, "expected.sha256")
@@ -57,8 +63,12 @@ def inputs():
     yield "video.y4m", bytes(y4m), False
 
 
+ENV = dict(os.environ)
+ENV.pop("KOLMO_MEMLIMIT", None)
+
+
 def run(args):
-    r = subprocess.run([KOLMO, *args], capture_output=True)
+    r = subprocess.run([KOLMO, *args], capture_output=True, env=ENV)
     if r.returncode:
         sys.exit(f"kolmo {' '.join(args)} failed: {r.stderr.decode(errors='replace')[:200]}")
 
@@ -69,15 +79,18 @@ for name, data, typed in inputs():
     open(p, "wb").write(data)
     for s in SETTINGS + (TYPED if typed else []):
         digests = []
-        for t in (["1"] if s in TYPED else ["1", "4"]):
-            z, back = p + ".k", p + ".back"
-            run([*s, "-T", t, p, z])
-            run(["-d", z, back])
-            if open(back, "rb").read() != data:
-                bad.append(f"round trip: {name} {' '.join(s)} -T {t}")
-            digests.append(hashlib.sha256(open(z, "rb").read()).hexdigest())
+        for budget in BUDGETS:
+            if budget: ENV["KOLMO_MEM_FORCE_BUDGET"] = budget
+            else: ENV.pop("KOLMO_MEM_FORCE_BUDGET", None)
+            for t in (["1"] if s in TYPED else ["1", "4"]):
+                z, back = p + ".k", p + ".back"
+                run([*s, "-T", t, p, z])
+                run(["-d", z, back])
+                if open(back, "rb").read() != data:
+                    bad.append(f"round trip: {name} {' '.join(s)} -T {t} budget {budget}")
+                digests.append(hashlib.sha256(open(z, "rb").read()).hexdigest())
         if len(set(digests)) != 1:
-            bad.append(f"thread count changes the frame: {name} {' '.join(s)}")
+            bad.append(f"thread count or memory budget changes the frame: {name} {' '.join(s)}")
         lines.append(f"{digests[0]}  {name}  {' '.join(s) or '(default)'}")
 
 if WRITE:
@@ -90,5 +103,5 @@ else:
         bad.append(f"{len(diff)} frame(s) differ from expected.sha256:\n" + "\n".join(diff[:10]))
 for b in bad:
     print("FAIL", b)
-print(f"{len(lines)} frames checked; {'OK' if not bad else 'FAILED'}")
+print(f"{len(lines)} frames checked{' under budgets ' + ','.join(BUDGETS) if BUDGETS != [None] else ''}; {'OK' if not bad else 'FAILED'}")
 sys.exit(1 if bad else 0)

@@ -43,7 +43,7 @@ static uint64_t kmem_enc_codec(int codec, int level, uint64_t n) {
 static uint64_t blk_dec_need(int codec, int tflag, uint64_t raw, const uint8_t *p, size_t cl, int ver, int cm_leaves) {
     uint64_t base = kmem_buffers(raw), slack = raw + TBL_SLACK(raw);
     const uint8_t *s = p; size_t sn = cl;
-    if (ver >= 2) { if (sn < 4) return base; s += 4; sn -= 4; }       /* the plan prefix */
+    if (ver >= 2) { if (sn >= 4) { s += 4; sn -= 4; } else sn = 0; }   /* the plan prefix */
     size_t meta = 0;
     if ((tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 12) meta = 4;
     else if (tflag == 10) meta = 8;

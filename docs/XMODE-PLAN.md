@@ -26,7 +26,7 @@ Status: rc3 xmode lane, 16 November 2026. Measurements: `benchmark/rc3/xmode/RES
 | 4 | codec 25, columns: a table is transposed and each column gets its own CM model, coded and decoded in parallel | new codec, version 11 | encode and decode | CSV/TSV from 64 KiB: smaller *and* up to 4× faster at 4 threads |
 | 5 | codec 25, halves: a non-text single stream from 32 MiB is coded as two halves with half-size tables | new codec | encode and decode | non-text blocks ≥ 32 MiB: 2× faster for 0.14% (100 MB binary); 5 MB halves cost 0.14–2.3%, so smaller blocks stay whole |
 | 6 | family coder: smaller quality and name chunks (see RESULTS) | changed chunking | decode | FASTQ ≥ 4 MiB |
-| 7 | tables sized to the block (`--x-tables=scaled`, opt-in) | smaller tables | memory, small-file speed | every size: decode memory from GiB to the block's ~16× |
+| 7 | tables sized to the block (`--x-tables=scaled`, the default since the memory model was approved; `--x-tables=full` for rc2's sizing) | smaller tables | memory, small-file speed | every size: decode memory from GiB to the block's ~16× |
 
 What was measured and **not** adopted:
 
@@ -58,7 +58,8 @@ peak at 4 threads (the alternative coder and a second planner sample run beside 
 the lever the memory model (`docs/MEMORY-MODEL.md`) needs. Measured (RESULTS): "scaled" (about 16× the block) costs
 0–0.2% on tables, 0.3–2.4% on binary data and up to 5.1% on text (10 MB), and brings decoding of a 10 MB file from
 5.4 GiB to 135–210 MiB; on text a cap of 2^20 buckets per model costs 0.67% at 1.4 GiB. The owner's choice is
-between these per kind of data; the default is unchanged until then.
+between these per kind of data. The owner approved the dynamic memory model (`docs/MEMORY-MODEL.md`) and the memdyn lane
+made scaled tables the default (`benchmark/rc3w2/memdyn/RESULTS.md` repeats the size cost on this build).
 
 ## Bug found by the measurements
 
