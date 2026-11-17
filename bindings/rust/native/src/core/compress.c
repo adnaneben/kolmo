@@ -57,7 +57,12 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
     }
     if (!dictlen && q.mode != KOLMO_RT && n >= 4096 && n <= UINT32_MAX) {   /* format 2: video route (codec 20) */
         const uint8_t *vs = src; void *vm = MAP_FAILED;
-        if (input_fd >= 0) { vm = mmap(NULL, n, PROT_READ, MAP_PRIVATE, input_fd, 0); vs = vm == MAP_FAILED ? NULL : vm; }
+        if (input_fd >= 0) {                                    /* map the file only when it starts like a Y4M file */
+            char m[10];
+            if (pread(input_fd, m, 10, 0) == 10 && !memcmp(m, "YUV4MPEG2 ", 10)) {
+                vm = mmap(NULL, n, PROT_READ, MAP_PRIVATE, input_fd, 0); vs = vm == MAP_FAILED ? NULL : vm;
+            } else vs = NULL;
+        }
         int64_t vr = vs && !memcmp(vs, "YUV4MPEG2 ", 10) ? vid_compress_frame(vs, n, dst, output_fd, cap, &q) : 0;
         if (vm != MAP_FAILED) munmap(vm, n);
         if (vr) return vr;
