@@ -1,5 +1,5 @@
 /* kolmo command line:  kolmo [-m rt|fast|eco|hc|max|ultra] [-l level] [-T threads] [-B MiB] [-n|-q] [-D dict] [--native-leaf|--typed-huf] in out
- *                    (--x-tables=default|scaled|16..22: experimental, -x model table size; see kolmo_set_x_tables)
+ *                    (--x-tables=scaled|full|16..22: -x model table size, scaled by default; see kolmo_set_x_tables)
  *                    (--native-leaf: balanced only; native plane-context leaves for integer series, KOLMO_T_NATIVE_LEAF)
  *                    (--typed-huf: -m fast -T1, integer NPY / PCM16 WAV coded type first, KOLMO_T_TYPED_HUF)
  *                    (ultra/-x: -l 1 = context-mixing model 1 only, faster; -l 2 = maximum ratio, graph leaves may use CM)
@@ -11,7 +11,9 @@
  *                    kolmo -P profile.kpf in out  /  kolmo -d -P profile.kpf in out   (compress, decode with it)
  *                    kolmo --target 'decode>=1GB/s'|size|'cost:...' [--calib table] in out   (per-chunk setting)
  *                    kolmo calibrate [-o table] [FILES]   (speed table for --target)   kolmo profile p.kpf (describe)
- *                    kolmo --index ... / cat / grep / a / x / l   (queryable and deduplicating archives: cli/features.c) */
+ *                    kolmo --index ... / cat / grep / a / x / l   (queryable and deduplicating archives: cli/features.c)
+ *                    -M SIZE | --memlimit SIZE   memory limit for compressing and decompressing: 512M, 8G, 50%, auto
+ *                                         (default, 50% of RAM) or max; also KOLMO_MEMLIMIT (docs/MEMORY-MODEL.md) */
 #include "kolmo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,6 +100,31 @@ done:
     return ret;
 }
 int kolmo_cli_features(int argc, char **argv);     /* cli/features.c: cat, grep, a, x, l, --index */
+
+/* sizes for messages: 4.7 GiB, 512 MiB */
+static const char *mem_str(uint64_t b, char *o, size_t cap) {
+    if (b == UINT64_MAX) snprintf(o, cap, "no limit");
+    else if (b >= (1ull << 30)) snprintf(o, cap, "%.1f GiB", (double)b / (1ull << 30));
+    else snprintf(o, cap, "%.0f MiB", (double)b / (1ull << 20));
+    return o;
+}
+/* the memory error, with the figure the frame declares (decode) or the mode's floor (encode) */
+static void mem_error(const uint8_t *hdr, size_t n, int dec, kolmo_mode mode, uint64_t limit) {
+    char a[32], b[32];
+    uint64_t lim = limit ? limit : kolmo_mem_auto();
+    if (dec) {
+        int64_t need = hdr ? kolmo_decode_memory(hdr, n) : -1;
+        if (need > 0) {
+            uint64_t g = ((uint64_t)need + (1ull << 30) - 1) >> 30;
+            fprintf(stderr, "kolmo: needs %s to decode (limit %s); run with --memlimit %lluG or --memlimit max\n",
+                    mem_str((uint64_t)need, a, sizeof a), mem_str(lim, b, sizeof b), (unsigned long long)(g ? g : 1));
+        } else fprintf(stderr, "kolmo: a frame needs more memory to decode than the limit (%s); run with a larger --memlimit or --memlimit max\n", mem_str(lim, b, sizeof b));
+    } else {
+        static const char *names[] = {"speed", "balanced", "eco", "hc", "ratio", "-x"};
+        fprintf(stderr, "kolmo: --memlimit %s is below the floor of %s (%s)\n", mem_str(lim, a, sizeof a),
+                (unsigned)mode < 6 ? names[mode] : "this mode", mem_str(kolmo_mem_floor(mode), b, sizeof b));
+    }
+}
 #include "cli/train.c"
 
 int main(int argc, char **argv) {
@@ -112,11 +139,16 @@ int main(int argc, char **argv) {
     char *dictpath = NULL, *trainpath = NULL;
     int extreme = 0, native_leaf = 0, typed_huf = 0, verbose = 0, mode_given = 0;
     char *profpath = NULL, *targetspec = NULL, *calibpath = NULL;
-    for (int a = 1; a < argc; a++)                           /* options with a value: --target T, --calib FILE */
-        if ((!strcmp(argv[a], "--target") || !strcmp(argv[a], "--calib")) && a + 1 < argc) {
-            if (argv[a][2] == 't') targetspec = argv[a + 1]; else calibpath = argv[a + 1];
+    const char *memspec = getenv("KOLMO_MEMLIMIT"); int mem_from_env = memspec != NULL;
+    for (int a = 1; a < argc; a++)                           /* options with a value: --target T, --calib FILE, --memlimit SIZE */
+        if ((!strcmp(argv[a], "--target") || !strcmp(argv[a], "--calib") || !strcmp(argv[a], "--memlimit")) && a + 1 < argc) {
+            if (argv[a][2] == 't') targetspec = argv[a + 1]; else if (argv[a][2] == 'c') calibpath = argv[a + 1]; else { memspec = argv[a + 1]; mem_from_env = 0; }
             for (int b = a; b + 2 <= argc; b++) argv[b] = argv[b + 2];
             argc -= 2; a--;
+        } else if (!strncmp(argv[a], "--memlimit=", 11)) {
+            memspec = argv[a] + 11; mem_from_env = 0;
+            for (int b = a; b < argc; b++) argv[b] = argv[b + 1];
+            argc--; a--;
         }
     for (int a = 1; a < argc; a++)                           /* long options, removed before getopt sees the arguments */
         if (!strcmp(argv[a], "--native-leaf") || !strcmp(argv[a], "--typed-huf") || !strcmp(argv[a], "--gpu")) {
@@ -125,12 +157,13 @@ int main(int argc, char **argv) {
             for (int b = a; b < argc; b++) argv[b] = argv[b + 1];
             argc--; a--;
         } else if (!strncmp(argv[a], "--x-tables=", 11)) {   /* experimental: -x table sizing (kolmo_set_x_tables) */
-            const char *v = argv[a] + 11; int mode = !strcmp(v, "scaled") ? -1 : !strcmp(v, "default") ? 0 : atoi(v);
-            if (kolmo_set_x_tables(mode)) { fprintf(stderr, "--x-tables: default, scaled or 16..22\n"); return 1; }
+            const char *v = argv[a] + 11; int mode = !strcmp(v, "scaled") || !strcmp(v, "default") ? -1 : !strcmp(v, "full") ? 0 : atoi(v);
+            if (kolmo_set_x_tables(mode)) { fprintf(stderr, "--x-tables: scaled (the default), full or 16..22\n"); return 1; }
             for (int b = a; b < argc; b++) argv[b] = argv[b + 1];
             argc--; a--;
         }
-    while ((opt = getopt(argc, argv, "m:l:T:B:nqQxdr:sS:D:t:P:v")) != -1) switch (opt) {
+    while ((opt = getopt(argc, argv, "m:l:T:B:nqQxdr:sS:D:t:P:vM:")) != -1) switch (opt) {
+        case 'M': memspec = optarg; mem_from_env = 0; break;
         /* three modes: speed, balanced (default), ratio. The older names stay as advanced settings. */
         case 'P': profpath = optarg; break;
         case 'v': verbose = 1; break;
@@ -169,8 +202,11 @@ int main(int argc, char **argv) {
             "            too; on other arrays and on multi-channel data (channels are not split) it is often larger\n"
             "            than balanced and sometimes larger than plain zstd, so compare sizes before relying on it\n"
             "  -x -l 2   maximum ratio: as -x, and numeric graph leaves may also use context mixing\n"
-            "  --x-tables=scaled  with -x (experimental): model tables sized to the block (about 16x its size)\n"
-            "            instead of up to 5.4 GiB; slightly larger output, far less memory to compress and decompress\n"
+            "  -M SIZE, --memlimit SIZE  memory limit to compress and decompress: 512M, 8G, 50%% of RAM, auto (default:\n"
+            "            50%% of RAM; only how much runs at once) or max. An explicit size also sizes ratio and -x blocks and\n"
+            "            the -x tables so the output decodes within it. Env: KOLMO_MEMLIMIT\n"
+            "  --x-tables=full  with -x: model tables of up to 5.4 GiB (rc2's sizing) instead of about 16x the block\n"
+            "            (scaled, the default); smaller output on text, far more memory to compress and decompress\n"
             "            (smaller integer series; those blocks decode much more slowly)\n"
             "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -Q minimal analysis  -n no transforms\n"
             "          -B blockMiB\n"
@@ -184,6 +220,13 @@ int main(int argc, char **argv) {
 
     }
     if (extreme) { P.mode = KOLMO_ULTRA; mode_given = 1; }
+    uint64_t memlimit = 0;                                     /* 0 = auto */
+    if (memspec && kolmo_mem_parse(memspec, &memlimit)) {
+        fprintf(stderr, "kolmo: %s '%s': a size (512M, 8G), a share of RAM (50%%), auto or max\n", mem_from_env ? "KOLMO_MEMLIMIT" : "--memlimit", memspec); return 2;
+    }
+    P.mem_limit = memlimit;                                    /* explicit: a format decision as well (blocks, -x tables) */
+    if (memlimit) kolmo_set_memlimit(memlimit);                /* decoders and the governor */
+    if (memlimit && memlimit != KOLMO_MEM_MAX && !dec && memlimit < kolmo_mem_floor(P.mode)) { mem_error(NULL, 0, 0, P.mode, memlimit); return 2; }
     if (native_leaf && typed_huf) { fprintf(stderr, "kolmo: choose --native-leaf or --typed-huf, not both\n"); return 2; }
     if (speed && P.transforms == 1) P.transforms = 3;      /* speed: nothing that costs encode time (set before the
                                                             * opt-in bits, so that -m speed with one of them is still speed) */
@@ -228,6 +271,7 @@ int main(int argc, char **argv) {
             if (o < 0) r = o;
             else if (needs == 1 && (!prof || kolmo_profile_id(prof) != id)) {
                 fprintf(stderr, "kolmo: %s needs profile %08x\n", inp, id); r = KOLMO_ERR_PROFILE;
+            } else if ((r = kolmo_check_frame(in, n, NULL)) != 0) {
             } else { out = malloc(o ? (size_t)o : 1); r = out ? kolmo_decompress_profile(in, n, out, (size_t)o, P.threads, prof) : KOLMO_ERR_ALLOC; }
         } else {
             kolmo_params q = P;
@@ -243,7 +287,8 @@ int main(int argc, char **argv) {
                         (unsigned long long)rep.predicted_size, rep.predicted_enc_s, rep.predicted_dec_s, (long long)r);
             }
         }
-        if (r < 0) fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r));
+        if (r == KOLMO_ERR_MEMORY) mem_error(dec ? in : NULL, n, dec, P.mode, memlimit);
+        else if (r < 0) fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r));
         else ret = spit(outp, out, (size_t)r) != 0;
         free(in); free(out); kolmo_target_free(tg); kolmo_profile_free(prof);
         return ret;
@@ -263,6 +308,7 @@ int main(int argc, char **argv) {
         int64_t sr = dec ? kolmo_stream_decompress(ifd, ofd, P.threads)
                          : kolmo_stream_compress(ifd, ofd, &P, (uint32_t)(seg > 0 ? seg : 0));
         close(ifd); close(ofd); free(dict);
+        if (sr == KOLMO_ERR_MEMORY) { mem_error(NULL, 0, dec, P.mode, memlimit); return 1; }
         if (sr < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(sr)); return 1; }
         return 0;
     }
@@ -286,7 +332,10 @@ int main(int argc, char **argv) {
             if (use_file) {
                 int err = process_file(fd, st.st_size, outp, &P, dec, dict, dictlen);
                 fclose(input); free(dict);
-                if (err) fprintf(stderr, "kolmo: %s\n", kolmo_strerror(err));
+                if (err == KOLMO_ERR_MEMORY) {
+                    uint8_t h[32]; int ok = dec && pread(fd, h, sizeof h, 0) == (ssize_t)sizeof h;
+                    mem_error(ok ? h : NULL, sizeof h, dec, P.mode, memlimit);
+                } else if (err) fprintf(stderr, "kolmo: %s\n", kolmo_strerror(err));
                 return err != 0;
             }
         }
@@ -296,14 +345,22 @@ int main(int argc, char **argv) {
         unsigned long long off = strtoull(range, NULL, 10); char *c = strchr(range, ':'); size_t len = c ? strtoull(c + 1, NULL, 10) : 0;
         out = malloc(len ? len : 1); r = kolmo_read_range(in, n, off, len, out, P.threads);
     } else if (dec) {
-        int64_t o = kolmo_original_size(in, n); if (o < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(o)); free(in); free(dict); return 1; }
+        int64_t o = kolmo_original_size(in, n);
+        if (o >= 0) { int c = kolmo_check_frame(in, n, NULL); if (c) o = c; }   /* checked before the output is allocated */
+        if (o < 0) {
+            if (o == KOLMO_ERR_MEMORY) mem_error(in, n, 1, P.mode, memlimit); else fprintf(stderr, "kolmo: %s\n", kolmo_strerror(o));
+            free(in); free(dict); return 1;
+        }
         out = malloc(o ? o : 1);
         r = dict ? kolmo_decompress_dict(in, n, out, o, P.threads, dict, dictlen) : kolmo_decompress(in, n, out, o, P.threads);
     } else {
         size_t cap = kolmo_bound(n, &P); out = malloc(cap);
         r = dict ? kolmo_compress_dict(in, n, out, cap, &P, dict, dictlen) : kolmo_compress(in, n, out, cap, &P);
     }
-    if (r < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r)); free(in); free(out); free(dict); return 1; }
+    if (r < 0) {
+        if (r == KOLMO_ERR_MEMORY) mem_error(in, n, dec || range, P.mode, memlimit); else fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r));
+        free(in); free(out); free(dict); return 1;
+    }
     int failed = spit(outp, out, (size_t)r);
     free(in); free(out); free(dict);
     return failed != 0;

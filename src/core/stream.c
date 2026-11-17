@@ -102,14 +102,37 @@ int64_t kolmo_stream_decompress_limited(int in_fd, int out_fd, int threads, cons
             have += fg;
             if (fg < want) { ret = KOLMO_ERR_CORRUPT; goto done; }
         }
+        /* Rule 1 (docs/MEMORY-MODEL.md): the frame is checked whole (header and index CRC, block sizes that add up
+         * to the claimed size, payloads inside the frame, the declared decode figure against the limit) before any
+         * output memory is reserved, and its output is then decoded in windows of whole blocks (at most one block per
+         * thread, at least 64 MiB), written as they finish. A forged size claims nothing it cannot back. */
         int64_t osz = kolmo_original_size(frame, (size_t)len);
         if (osz < 0) { ret = osz; break; }
         if (limits && limits->max_output_bytes && (uint64_t)osz > limits->max_output_bytes - (uint64_t)total) { ret = KOLMO_ERR_LIMIT; break; }
-        if ((size_t)osz > ocap) { free(out); out = malloc(osz ? (size_t)osz : 1); if (!out) { ret = KOLMO_ERR_ALLOC; break; } ocap = (size_t)osz; }
-        int64_t dl = limits ? kolmo_decompress_limited(frame, (size_t)len, out, (size_t)osz, threads, limits)
-                            : kolmo_decompress(frame, (size_t)len, out, (size_t)osz, threads);
+        if (len < 4 || memcmp(frame, "CZN1", 4)) {             /* a compact profile frame: needs its profile */
+            ret = KOLMO_ERR_CORRUPT; break;
+        }
+        parsed_t P; int pr = parse(frame, (size_t)len, &P, limits);
+        if (pr) { ret = pr; break; }
+        uint64_t maxraw = 0; for (uint32_t i = 0; i < P.nb; i++) if (P.roff[i + 1] - P.roff[i] > maxraw) maxraw = P.roff[i + 1] - P.roff[i];
+        int adm = P.needdict ? KOLMO_ERR_DICT : P.needprof ? KOLMO_ERR_PROFILE : frame_admit(&P, maxraw, kmem_limit_of(limits ? limits->max_memory : 0));
+        if (adm) { free(P.poff); free(P.roff); ret = adm; break; }
+        int nt = threads > 0 ? threads : default_threads();
+        uint64_t win = maxraw * (uint64_t)nt; if (win < KOLMO_STREAM_STEP) win = KOLMO_STREAM_STEP;
+        uint64_t want = maxraw > win ? maxraw : win; if (want > (uint64_t)osz) want = (uint64_t)osz;
+        if (want > ocap) { free(out); ocap = 0; out = malloc(want ? (size_t)want : 1); if (!out) { free(P.poff); free(P.roff); ret = KOLMO_ERR_ALLOC; break; } ocap = (size_t)want; }
+        int64_t dl = 0; uint32_t b = 0;
+        while (b < P.nb && dl >= 0) {
+            uint32_t e = b; uint64_t lo = P.roff[b];
+            while (e < P.nb && (e == b || P.roff[e + 1] - lo <= ocap)) e++;
+            uint64_t hi = P.roff[e];
+            int64_t r = hi > lo ? run_decode(frame, -1, (size_t)len, out, -1, threads, lo, hi, 1, NULL, 0, 0, limits) : 0;
+            if (r < 0) { dl = r; break; }
+            if (r > 0 && io_write_full(out_fd, out, (size_t)r)) { dl = KOLMO_ERR_IO; break; }
+            dl += r; b = e;
+        }
+        free(P.poff); free(P.roff);
         if (dl < 0) { ret = dl; break; }
-        if (dl > 0 && io_write_full(out_fd, out, (size_t)dl)) { ret = KOLMO_ERR_ALLOC; break; }
         total += dl;
     }
 done:
