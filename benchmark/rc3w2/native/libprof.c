@@ -69,7 +69,7 @@ size_t __real_HUF_decompress4X_hufOnly_wksp(HUF_DTable *, void *, size_t, const 
 size_t __wrap_HUF_decompress4X_hufOnly_wksp(HUF_DTable *dt, void *d, size_t dc, const void *s, size_t n, void *w, size_t ws, int fl) {
     unsigned long long t = now(); size_t r = __real_HUF_decompress4X_hufOnly_wksp(dt, d, dc, s, n, w, ws, fl); if (in_zstd) { ACC(P_HUFDN, dc, t); ACZ(P_HUFDN, n); } else if (in_zstd_out(s)) { ACC(P_HUFD22, dc, t); ACZ(P_HUFD22, n); } else { ACC(P_HUFD, dc, t); ACZ(P_HUFD, n); }
     const char *dump = getenv("LIBPROF_DUMP_HUF");   /* experiment: append each decoded Huffman leaf chunk (u32 length, bytes) */
-    if (dump && r == dc) { FILE *o = fopen(dump, "ab"); if (o) { unsigned len = (unsigned)dc; fwrite(&len, 4, 1, o); fwrite(d, 1, dc, o); fclose(o); } }
+    if (dump && r == dc && !in_zstd) { FILE *o = fopen(dump, "ab");   /* Kolmo's leaves only, not zstd's literals */ if (o) { unsigned len = (unsigned)dc; fwrite(&len, 4, 1, o); fwrite(d, 1, dc, o); fclose(o); } }
     return r; }
 int __real_LZ4_compress_fast(const char *, char *, int, int, int);
 int __wrap_LZ4_compress_fast(const char *s, char *d, int n, int c, int a) {

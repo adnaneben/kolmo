@@ -171,8 +171,28 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
         size_t a = (size_t)q * seg < n ? (size_t)q * seg : n, b = a + seg < n ? a + seg : n;
         o[q] = out + a; oe[q] = out + b;
     }
-    /* fast loop: five symbols per stream per refill (5 x 11 <= 56 bits); stream 3 is the shortest */
-    while (oe[3] - o[3] >= 5 && r[0].p + 8 <= ie && r[1].p + 8 <= ie && r[2].p + 8 <= ie && r[3].p + 8 <= ie) {
+    if (n >= 4096) {
+        /* two symbols per lookup: an 11-bit table whose entry holds the first symbol and, when the next code fits in
+         * the remaining bits, the second (low 16 bits: the symbols; bits 16-23: bits used; bits 24-31: 1 or 2).
+         * Five lookups per refill (5 x 11 <= 56 bits), so up to ten bytes; each stream stops ten bytes before the
+         * next stream's start (two-byte stores) and finishes below */
+        uint16_t d1[1 << KHUF_MAXLEN]; uint32_t d2[1 << KHUF_MAXLEN]; const uint32_t M = (1u << KHUF_MAXLEN) - 1;
+        for (int s = 0; s < 256; s++) if (len[s]) for (uint32_t k = code[s]; k < (1u << KHUF_MAXLEN); k += 1u << len[s]) d1[k] = (uint16_t)(s | len[s] << 8);
+        for (uint32_t k = 0; k <= M; k++) {
+            uint32_t e1 = d1[k], l1 = e1 >> 8, e2 = d1[k >> l1], l2 = e2 >> 8;
+            d2[k] = l1 + l2 <= KHUF_MAXLEN ? (e1 & 255) | (e2 & 255) << 8 | (l1 + l2) << 16 | 2u << 24 : (e1 & 255) | l1 << 16 | 1u << 24;
+        }
+#define KH_DEC2(R, O) do { uint32_t e_ = d2[(R).b & M]; uint16_t v_ = (uint16_t)e_; memcpy((O), &v_, 2); (O) += e_ >> 24; (R).b >>= (e_ >> 16) & 255; (R).c -= (int)((e_ >> 16) & 255); } while (0)
+        while (oe[0] - o[0] >= 10 && oe[1] - o[1] >= 10 && oe[2] - o[2] >= 10 && oe[3] - o[3] >= 10 &&
+               r[0].p + 8 <= ie && r[1].p + 8 <= ie && r[2].p + 8 <= ie && r[3].p + 8 <= ie) {
+            KH_REFILL(r[0]); KH_REFILL(r[1]); KH_REFILL(r[2]); KH_REFILL(r[3]);
+            for (int k = 0; k < 5; k++) { KH_DEC2(r[0], o[0]); KH_DEC2(r[1], o[1]); KH_DEC2(r[2], o[2]); KH_DEC2(r[3], o[3]); }
+        }
+#undef KH_DEC2
+    }
+    /* fast loop: five symbols per stream per refill (5 x 11 <= 56 bits); after the two-symbol loop the streams are
+     * at different points, so every stream's room is tested */
+    while (oe[0] - o[0] >= 5 && oe[1] - o[1] >= 5 && oe[2] - o[2] >= 5 && oe[3] - o[3] >= 5 && r[0].p + 8 <= ie && r[1].p + 8 <= ie && r[2].p + 8 <= ie && r[3].p + 8 <= ie) {
         KH_REFILL(r[0]); KH_REFILL(r[1]); KH_REFILL(r[2]); KH_REFILL(r[3]);
         for (int k = 0; k < 5; k++) { KH_DEC(r[0], o[0]); KH_DEC(r[1], o[1]); KH_DEC(r[2], o[2]); KH_DEC(r[3], o[3]); }
     }

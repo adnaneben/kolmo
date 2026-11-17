@@ -4,7 +4,8 @@ usage: python3 benchmark/rc3w2/native/census.py results/libprof-X.tsv [...]
 Per mode: output bytes, compress and decompress wall time, and per library the share of compress time, of decompress
 time, and of the output bytes (compressed bytes read by that library's decoder calls, divided by the output size).
 Libraries: zstd (frames; HUF calls inside zstd are part of zstd), HUF (Kolmo's direct Huffman leaves, codec 13),
-LZ4, Brotli, LZMA2 (liblzma), XXH3 (block checksums), XXH64 (zstd's copy), ZDICT."""
+LZ4, Brotli, LZMA2 (liblzma), XXH3 (block checksums), XXH64 (zstd's copy), ZDICT; a column is shown only when the
+runs of that file reach the library."""
 import sys, collections
 LIB = {"ZSTD_compressCCtx": "zstd", "ZSTD_compress": "zstd", "ZSTD_compress2": "zstd", "ZSTD_compress_usingDict": "zstd",
        "ZSTD_decompressDCtx": "zstd", "ZSTD_decompress_usingDict": "zstd", "HUF_compress4X_repeat": "HUF",
@@ -24,12 +25,13 @@ for path in sys.argv[1:]:
         d[ph][lib] += float(ms)
         if ph == "d": d["z"][lib] += int(zb or 0)
         if ph == "c": d["calls"][lib] += int(calls)
+    used = [l for l in ORDER if any(d["c"][l] + d["d"][l] + d["z"][l] > 0 for d in modes.values())]   # libraries reached
     print(f"\n{path}\n")
-    print("| mode | output bytes | compress s | decompress s | " + " | ".join(f"{l} c/d/bytes" for l in ORDER) + " |")
-    print("|---|---|---|---|" + "---|" * len(ORDER))
+    print("| mode | output bytes | compress s | decompress s | " + " | ".join(f"{l} c / d / bytes" for l in used) + " |")
+    print("|---|---|---|---|" + "---|" * len(used))
     for m, d in modes.items():
         cells = []
-        for l in ORDER:
+        for l in used:
             c = 100 * d["c"][l] / d["wallc"]; dd = 100 * d["d"][l] / d["walld"]; z = 100 * d["z"][l] / d["out"]
             cells.append("—" if c < 0.05 and dd < 0.05 and z < 0.05 else f"{c:.1f}% / {dd:.1f}% / {z:.1f}%")
         print(f"| {m} | {d['out']:,} | {d['wallc'] / 1000:.2f} | {d['walld'] / 1000:.2f} | " + " | ".join(cells) + " |")

@@ -44,6 +44,11 @@ complete.
 The remainder is Kolmo's own code (transforms, planner, CM, rANS, the graph coder), process start (about 1.2 ms per
 process) and file I/O.
 
+*Correction (native lane, rc3 wave 2):* the HUF entries above include zstd's own literal coding. zstd calls
+`HUF_compress4X_repeat` and `HUF_decompress4X_hufOnly_wksp` across object files, so `--wrap` caught those calls; their
+time is also inside the zstd figure. Kolmo's own Huffman leaves are far rarer. They are about 2.5% of the output bytes of
+`balanced` and `hc` on the structured set, and none on Silesia. `docs/NATIVE-PLAN.md` has the corrected census.
+
 How to read the table:
 
 - **Compression** is dominated by the dependencies in every mode except `balanced` on structured data. In each of those

@@ -625,7 +625,7 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
         if (tryh && (tryhuf || !fastleaf)) {   /* Huffman only, when smaller (skewed bytes without repeats) */
             uint8_t *hb = malloc(zc); size_t hz = hb && tryhuf ? codec_compress(x, C_HUF, 0, s->p, s->n, hb, zc) : 0;
             if (hz && (!z || hz < z)) { memcpy(o.p + o.n + 20, hb, hz); z = hz; cc = C_HUF; }
-            hz = hb && tryhuf && al ? leaf_compress_planes(C_HUF, s->p, s->n, np, hb, zc) : 0;
+            hz = hb && tryhuf && al ? leaf_compress_planes(codec_native_id(x, C_HUF), s->p, s->n, np, hb, zc) : 0;   /* 27 when opted in: written as codec_wire(C_HUF) */
             if (hz && (!z || hz < z)) { memcpy(o.p + o.n + 20, hb, hz); z = hz; cc = C_HUF; }
             int slow = !fastleaf;                                                           /* rANS at hc/max/ultra only */
             /* rANS decodes about four times slower than Huffman or zstd here: with the zstd family (hc: fast reads) it

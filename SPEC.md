@@ -151,8 +151,12 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 21 | PLANES (per-plane leaf) | graph leaves, version 11 | rc3 |
 | 22 | HZ (Huffman, then zstd) | graph leaves, version 11; also inside codecs 21 and 23 | rc3 |
 | 23 | ZRUN (zero runs and literals) | graph leaves, version 11; also inside codec 21 | rc3 |
-| 24–25 | reserved for the rc3 lanes (`research/RC3-PLAN.md`) | — | — |
+| 24 | KLZMA (Kolmo's LZMA-class coder) | blocks and graph leaves, version 11 or later; written only with the opt-in `KOLMO_NATIVE=lzma` (or `strong`); payload in `src/algo/klzma.h` | rc3 wave 2 (native lane) |
+| 25 | reserved for the rc3 lanes (`research/RC3-PLAN.md`) | — | — |
 | 26 | GR6 (GR6+ line-structured text) | blocks, version 11 or later; written by `ultra` (not level 1) | rc3 |
+| 27 | KHUF (Kolmo Huffman; codec 13's chunk framing) | graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=huf`; format in `src/algo/khuf.h` | rc3 wave 2 |
+| 28 | KLZ (byte-aligned LZ77) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
+| 29 | KLZH (LZ77 with Huffman-coded streams) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
 
 **Block flags added in rc3**: flag 13 under plan type 3 (column-split table, *Container extensions*), written only with
 `KOLMO_T_COLUMNS`; the container version is not raised (identifiers rule above), readers before rc3 refuse the block.

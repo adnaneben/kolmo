@@ -3,8 +3,9 @@
  * usage: natbench CODEC[,CODEC...] THREADS BLOCK_KIB REPS FILE...
  * Each file is cut into blocks of BLOCK_KIB (the way Kolmo cuts a file), the blocks are coded by THREADS workers (one
  * block per task, as Kolmo's block pool), every block is decoded and compared. Prints per codec: input bytes, output
- * bytes, ratio, compress and decompress MB/s (wall time, best of REPS for decode, one pass for compress when REPS
- * is 1). Codecs:
+ * bytes (a block a coder declines, or does not make smaller, counts as stored: n bytes, a copy to decode), ratio, compress and decompress MB/s (wall time, best of REPS for decode, one pass for compress when REPS
+ * is 1). A FILE ending in .chunks holds records (u32 length, bytes), each coded as one block (Huffman leaf chunks dumped
+ * by the profiler with LIBPROF_DUMP_HUF). Codecs:
  *   lz4            LZ4_compress_fast (acceleration 1)              klz1   Kolmo fast LZ, byte-aligned (codec 28)
  *   zstd1 zstd3 zstd9 zstd19                                       klzh1..klzh9   Kolmo LZ + khuf (codec 29)
  *   huf            zstd HUF_compress4X_repeat in 128 KiB chunks     khuf   Kolmo Huffman chunks (codec 27)
@@ -113,7 +114,7 @@ static int do_d(const codec *c, wctx *w, const uint8_t *in, size_t cn, uint8_t *
     return -1;
 }
 
-typedef struct { const uint8_t *in; size_t n; uint8_t *z; size_t zn, cap; uint8_t *r; } blk;
+typedef struct { const uint8_t *in; size_t n; uint8_t *z; size_t zn, cap; uint8_t *r; int stored; } blk;
 static blk *B; static size_t NB; static const codec *CUR; static int PH; static int next_blk; static pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
 static void *worker(void *a) {
     (void)a; wctx w = {0};
@@ -121,7 +122,9 @@ static void *worker(void *a) {
         pthread_mutex_lock(&mu); int k = next_blk++; pthread_mutex_unlock(&mu);
         if ((size_t)k >= NB) break;
         blk *b = &B[k];
-        if (PH == 0) { b->zn = do_c(CUR, &w, b->in, b->n, b->z, b->cap); if (!b->zn) { fprintf(stderr, "%s: compress failed on block %d\n", CUR->name, k); exit(1); } }
+        /* a coder that declines (output not smaller) stores the block, as Kolmo does: counted as n bytes */
+        if (PH == 0) { b->zn = do_c(CUR, &w, b->in, b->n, b->z, b->cap); b->stored = !b->zn || b->zn >= b->n; if (b->stored) b->zn = b->n; }
+        else if (b->stored) memcpy(b->r, b->in, b->n);
         else if (do_d(CUR, &w, b->z, b->zn, b->r, b->n)) { fprintf(stderr, "%s: decode failed on block %d\n", CUR->name, k); exit(1); }
     }
     if (w.zc) ZSTD_freeCCtx(w.zc);
@@ -151,6 +154,17 @@ int main(int argc, char **argv) {
         FILE *f = fopen(argv[a], "rb"); if (!f) { perror(argv[a]); return 1; }
         fseek(f, 0, SEEK_END); size_t n = (size_t)ftell(f); rewind(f);
         uint8_t *buf = malloc(n ? n : 1); if (fread(buf, 1, n, f) != n) return 1; fclose(f);
+        size_t al = strlen(argv[a]);
+        if (al > 7 && !strcmp(argv[a] + al - 7, ".chunks")) {   /* records u32 length + bytes (libprof LIBPROF_DUMP_HUF): one block each */
+            size_t raw = 0;
+            for (size_t i = 0; i + 4 <= n;) {
+                uint32_t len; memcpy(&len, buf + i, 4); i += 4; if (len > n - i) break;
+                B = realloc(B, (NB + 1) * sizeof *B); blk *b = &B[NB++];
+                b->in = buf + i; b->n = len; b->cap = len + len / 4 + 65536; b->z = malloc(b->cap); b->r = malloc(len ? len : 1);
+                i += len; raw += len;
+            }
+            total += raw; continue;
+        }
         for (size_t i = 0; i < n; i += bs) {
             B = realloc(B, (NB + 1) * sizeof *B); blk *b = &B[NB++];
             b->in = buf + i; b->n = n - i < bs ? n - i : bs; b->cap = b->n + b->n / 4 + 65536;
