@@ -158,3 +158,19 @@ Measured on held-out files of 10 dataset families, one thread, against zstd at t
 | inline popcount (no libgcc call on baseline x86-64) | table scanners, decimal parser | numeric CSV `balanced` compress +4.8% | in (rc3 simd-x86) |
 | IMG16 median inverse as a wavefront | — | not possible: a row's first sample predicts from the previous row's last one (rows are serial) | out |
 | rANS order-0 decode with a packed slot table | eco/hc leaves | −5% to +1% (noise) | out |
+
+## Container extensions and archive features (rc3, features-b lane)
+
+Measured on a 4-vCPU Intel Xeon (2.10 GHz) Linux VM; details, commands and the full tables in
+`benchmark/rc3/features-b/RESULTS.md`. Formats in `SPEC.md` ("Container extensions").
+
+| technique | what it does | measured impact | verdict |
+|---|---|---|---|
+| KEXT trailer | tagged, CRC-checked sections after the CZN1 frame; readers that do not know it ignore it | 24 B + 16 B per section | rc3 |
+| line-aligned blocks (`KOLMO_T_COLUMNS`) | every block of a text plan ends at a line end, so a row never spans two blocks | part of the column-split cost below | rc3 (with `--index`) |
+| column-split table blocks (tflag 13) | the `tbl2` stream of a table block split into a header segment and one coded segment per column, each with its own check | against plain frames with the same 4 MiB blocks: balanced OWID +7.4%, sensor CSV +2.0%; hc +9.3% / −0.3%; max +11.2% / −0.0%. Reading one column decodes 5% of the CSV (OWID) and 8% (sensor) | rc3 (with `--index`) |
+| per-column graph tables (one graph leaf per column) | the planner forced to the graph route so each column is a leaf | +58% on OWID | dropped |
+| IDX1 row index | per-block line counts and line-boundary flags | rows 1,000,000–1,000,100 of a 268 MB log: 4.2 MB decoded, 0.011 s vs 0.232 s for a scan (T1) | rc3 |
+| IDX1 grep filter | per-block bitmap of case-folded trigrams (1 bit) and whole alphanumeric tokens of 3+ characters (4 bits), 1.44 bits per set bit | HDFS log: +3.8% size, a block-id grep rules out 60 of 65 blocks (0.040 s vs 0.571 s scan); sensor CSV +2.4%; JSON lines +27.7% (high-entropy tokens); no gain for frequent words | rc3 (`--no-filter` drops it) |
+| filter token bits k | bits per token key | HDFS index overhead k=1 +1.1%, 3 +2.9%, 4 +3.8%, 6 +5.6% | k=4 default |
+| DDP1 FastCDC dedup | Gear rolling hash, normalised chunking (4 KiB average default; the 16 KiB numbers below with `--chunk 16`), text cuts moved to the next line end, exact dedup by XXH3-64 + memcmp, unique chunks in one Kolmo frame (typed transforms still apply) | daily CSV snapshots 7.45× (4 KiB: 14.1×, hc 36.1×) vs tar\|zstd -19 --long=31 24.1×, borg 2.8×, restic 2.6×; checkpoints 3.50× vs 3.26× and borg 3.15×; growing logs 69.4× vs 55.7×; source trees 40.6× vs 53.7× (tar\|zstd wins); pythia-70m checkpoints 2.20× vs 2.03× | rc3 (`kolmo a` / `kolmo x`) |

@@ -89,6 +89,7 @@ int kolmo_force_c;
 #include "transforms/json.c"
 #include "plan/planner.c"
 #include "core/io.c"
+#include "transforms/table_cols.c"   /* column-split table blocks (flag 13), the column reader of IDX1 queries */
 #include "core/blocks.c"
 #include "transforms/tar.c"
 #include "plan/frontier.c"
@@ -104,3 +105,7 @@ int kolmo_force_c;
 #include "plan/profile.c"
 #include "plan/target.c"
 #include "api/features.c"
+/* container extensions (docs: SPEC.md): KEXT trailer, IDX1 queryable archives, DDP1 deduplicating archives */
+#include "core/extension.c"
+#include "core/index.c"
+#include "core/dedup.c"

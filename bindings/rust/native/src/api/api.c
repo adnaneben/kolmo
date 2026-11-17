@@ -37,9 +37,33 @@ int64_t kolmo_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len,
     return run_decode(src, -1, n, dst, -1, threads, off, off + len, 1, NULL, 0, 0, NULL);
 }
 
+/* Internal hook for queryable archives (src/core/index.c, declared in src/core/features.h): column col of block i
+ * when the block is a column-split table (plan TBL, flag 13). 0 and *out (one line per row), 1 when the block is
+ * another kind (the caller decodes it whole), or a negative error. */
+int kolmo__block_column(const uint8_t *src, size_t n, uint32_t i, int col, uint8_t **out, size_t *outn,
+                        uint64_t *decoded, uint64_t *read) {
+    *out = NULL; *outn = 0; *decoded = *read = 0;
+    parsed_t P; int r = parse(src, n, &P, NULL); if (r) return r;
+    if (i >= P.nb) { free(P.poff); free(P.roff); return KOLMO_ERR_CORRUPT; }
+    const uint8_t *e = P.idx + (size_t)i * IDX, *pay = src + P.poff[i];
+    size_t len = get32(e), cl = get32(e + 4); int codec = e[12], tflag = e[13];
+    free(P.poff); free(P.roff);
+    if (P.ver < 2 || P.psum || tflag != 13 || cl < 4 || pay[0] != T_TBL) return 1;
+    if (P.needdict) return KOLMO_ERR_DICT;
+    codec_ctx x = {0}; kbuf o = {0};
+    r = tblc_column(&x, codec, pay + 4, cl - 4, len, col, &o, decoded, read);
+    codec_ctx_free(&x);
+    if (r) { free(o.p); return KOLMO_ERR_CORRUPT; }
+    *read += 4;
+    *out = o.p ? o.p : malloc(1); *outn = o.n;
+    if (!*out) return KOLMO_ERR_ALLOC;
+    return 0;
+}
+
 const char *kolmo_strerror(int64_t c) {
     switch (c) {
         case KOLMO_ERR_CORRUPT: return "corrupt or unsupported input";
+        case KOLMO_ERR_QUERY: return "no such column, or a pattern that does not compile";
         case KOLMO_ERR_CHECKSUM: return "checksum mismatch (data corrupted)";
         case KOLMO_ERR_DSTSIZE: return "destination buffer too small";
         case KOLMO_ERR_ALLOC: return "out of memory";

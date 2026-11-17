@@ -154,6 +154,11 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 24–25 | reserved for the rc3 lanes (`research/RC3-PLAN.md`) | — | — |
 | 26 | GR6 (GR6+ line-structured text) | blocks, version 11 or later; written by `ultra` (not level 1) | rc3 |
 
+**Block flags added in rc3**: flag 13 under plan type 3 (column-split table, *Container extensions*), written only with
+`KOLMO_T_COLUMNS`; the container version is not raised (identifiers rule above), readers before rc3 refuse the block.
+**Extension tags**: `IDX1` (column and row index), `DDP1` (chunk store); reserved for the features-b lane in
+`research/RC3-PLAN.md`.
+
 **Graph nodes** (op byte of a node).
 
 | id | node | first reader |
@@ -540,3 +545,97 @@ and the same binary arithmetic coder and logistic tables as `CM`. As for `CM`, t
 implementation (`src/codecs/gr6.c`) and is bit-exact across compilers and CPUs. `ultra` (levels 0 and 2) tries GR6+ on
 text blocks with at least 64 lines and keeps it only when it is smaller than the block's other candidates (context
 mixing, LZMA2 or BWT, with or without the planned transform). No other mode writes it.
+
+## Container extensions (rc3, features-b lane)
+
+A frame may be followed by **extension sections**: data about the frame that block decoding does not need. Block
+decoding stops at the last payload (`32 + 16·nblocks + Σ comp`), so every reader decodes a frame with extensions
+exactly as without them; the extensions are found from a fixed trailer at the end of the file.
+
+```
+frame | section * count | trailer
+section := tag[4] | length u64 | body[length] | crc32c u32 (of tag, length and body)
+trailer := "KEXT" | version u8 (1) | 0 u8 * 3 | count u32 | sections length u64 | crc32c u32 (of the 20 bytes before)
+```
+
+The trailer is the last 24 bytes of the file; `sections length` is the number of bytes between the end of the frame and
+the trailer and must equal it exactly. A reader that looks for a tag walks every section, checks each one's length, and
+checks the CRC-32C of the section it uses. A damaged trailer or section is an error for the feature that needs it
+(`KOLMO_ERR_CORRUPT`, `KOLMO_ERR_CHECKSUM`), never for block decoding. Tags in use: `IDX1`, `DDP1`. Written by
+`src/core/extension.c`.
+
+### Column-split table blocks (plan type 3 TBL, block flag 13)
+
+Written only on request (`KOLMO_T_COLUMNS`, set by `kolmo_compress_indexed`), in every mode but `rt`. The table-v2
+stream of flag 4 (`src/tbl2.inc`) is a header (`k`, rows, exception rows, group column, formulas, exception list)
+followed by one section per column (`type u8 | size u32 | section`). Flag 13 codes the header and each column section as
+separate segments, so a reader decodes one column without the others. After the 4-byte plan prefix:
+
+```
+payload := tn u32 | nseg u16 (= k + 1) | entry * nseg | coded segments in order
+entry   := codec u8 (0 stored, or the block's codec) | raw length u32 | coded length u32 | check u32
+```
+
+Segment 0 is the header up to and including the exception list, segment `j + 1` is column `j`'s section with its
+5-byte prefix. `check` is the low 32 bits of XXH3-64 of the raw segment with seed `0x74626c63`, verified on every decode
+(a partial decode cannot verify the block checksum). The raw lengths add up to `tn`, and the reassembled stream must
+split into exactly these segments; it then decodes as flag 4, and the block checksum is verified as usual. To read
+column `j`, a reader decodes segment 0 and segment `j + 1`, and also the segments of the formula inputs `a`, `b` when
+column `j` uses mode 3, and the group column when column `j` or an input uses modes 2, 4, 5 or a lag formula.
+Readers before rc3 refuse flag 13 (`KOLMO_ERR_CORRUPT`). Measured cost against flag 4: +2.0% on a dense numeric CSV and
++9.5% on a wide sparse one at `balanced`, -0.1% to +8.7% at `hc` and `ratio` (`benchmark/rc3/features-b/RESULTS.md`).
+
+### Column and row index (`IDX1`)
+
+Written by `kolmo_compress_indexed` (`src/core/index.c`), which compresses with `KOLMO_T_COLUMNS` (blocks of text end at
+line ends where a line end exists in the second half of the block; delimited tables are column-split) and appends:
+
+```
+body    := "IX" | 1 | kind u8 | delim u8 | filter u8 (0, 1) | 0 u8 * 2 | nblocks u32 | rows u64
+           | names uv | (length uv | bytes) * names
+           | (flags u8 | lines uv) * nblocks
+           | [ 3 | k u8 | (m uv | bitmap[m / 8]) * nblocks ]          (when filter = 1)
+```
+
+`kind` is 1 lines, 2 delimited table (`delim` is `,`, tab, `;` or `|`; 0 otherwise), 3 JSON lines. A row is a physical
+line: a line starts at offset 0 of a non-empty input and after every `\n` that is not the last byte. `lines` counts the
+line starts inside the block, `rows` is their sum, and `nblocks` must equal the frame's. Block `flags`: bit 0, the block
+starts at a line start; bit 1, it ends with `\n` or at the end of the input. `names` are the fields of the first line of
+a table (without a final `\r`; a field in double quotes is stored without them), 0 for other kinds.
+
+Fields of a table line: with `,` and `;`, double quotes and square brackets group fields (as the table transform splits
+them); field `k - 1`, where `k` is the number of names, runs to the end of the line. A JSON column is the raw value of
+a top-level key; a `#N` column of other text is the N-th run of characters other than space, tab and `\r`.
+
+The filter of a block is a bitmap of `m` bits (a multiple of 64; 0 = no filter, the block is always a candidate) over
+the keys of the lines that start in the block, including the rest of the last one when it continues into later blocks:
+every trigram of three bytes none of which is `\n`, ASCII letters folded to lower case, with hash
+`h = (t · 0x9E3779B97F4A7C15) >> 32` for `t = c0 | c1 << 8 | c2 << 16`; and every whole token (a maximal run of ASCII
+letters and digits, at least 3 long, folded), with `h` = FNV-1a 64 of the folded bytes from offset basis
+`0xcbf29ce484222325 ^ 0x746f6b31`, then `h ^= h >> 29; h *= 0xbf58476d1ce4e5b9; h ^= h >> 32`, low 32 bits. A trigram
+sets bit `(h · m) >> 32`; a token sets the bits of `h + j · ((h · 0x9E3779B1) | 1)` (32-bit arithmetic) for `j < k`. Bit
+`i` is bit `i mod 8` of byte `i / 8`. A query rules out a block when a key its literal must contain is missing: the
+trigrams of the literal, the tokens bounded inside the literal on both sides, and with a fixed whole-word pattern every
+token. The CRC detects accidental damage; a deliberately forged index with a valid CRC can make a query skip blocks or
+number rows wrongly, but a reader checks every block it decodes against its `flags` and `lines` and reads nothing outside
+the file.
+
+### Chunk store (`DDP1`)
+
+Written by `kolmo_archive_create` (`src/core/dedup.c`). The frame is the **chunk store**: the distinct chunks of all
+files, in the order first seen, compressed as an ordinary frame. Chunks are cut with a Gear hash (`h = (h << 1) +
+G[byte]`, `G` from splitmix64 seeded `0x6b6f6c6d6f646470`) and FastCDC normalized chunking: for a target `A` (a power of
+two from 256 B to 4 MiB), no cut before `A/4`, then a cut where `h & mask(log2 A + 2) = 0` up to `A`, then where
+`h & mask(log2 A − 2) = 0` up to `8A`; in text files a cut moves on to the next `\n` within 4 KiB. These rules decide
+only how well a writer deduplicates; a reader needs none of them.
+
+```
+body  := "DD" | 1 | flags u8 (bit 0: line cuts) | target u32 | table length u64 | table frame (CZN1)
+table := chunks uv | (length uv | check u32) * chunks | files uv
+         | (name length uv | name | size uv | mode uv | zigzag mtime uv | refs uv | zigzag(id - previous id - 1) uv * refs) * files
+```
+
+Chunk `i` occupies the store bytes after chunks `0 .. i−1`; lengths are at least 1 and add up to the store size.
+`check` is the low 32 bits of XXH3-64 of the chunk with seed `0x64647031`, verified when the chunk is extracted. A file is
+the concatenation of its chunks; their lengths must add up to its size. Names are at most 4096 bytes without NUL; the
+command line extracts only relative names without a `..` component.

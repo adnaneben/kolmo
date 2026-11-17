@@ -9,7 +9,8 @@
  *                    kolmo train [-m mode] [--target T] -o profile.kpf FILES|DIRS   (learn a reusable profile)
  *                    kolmo -P profile.kpf in out  /  kolmo -d -P profile.kpf in out   (compress, decode with it)
  *                    kolmo --target 'decode>=1GB/s'|size|'cost:...' [--calib table] in out   (per-chunk setting)
- *                    kolmo calibrate [-o table] [FILES]   (speed table for --target)   kolmo profile p.kpf (describe) */
+ *                    kolmo calibrate [-o table] [FILES]   (speed table for --target)   kolmo profile p.kpf (describe)
+ *                    kolmo --index ... / cat / grep / a / x / l   (queryable and deduplicating archives: cli/features.c) */
 #include "kolmo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -95,6 +96,7 @@ done:
     free(stage);
     return ret;
 }
+int kolmo_cli_features(int argc, char **argv);     /* cli/features.c: cat, grep, a, x, l, --index */
 #include "cli/train.c"
 
 int main(int argc, char **argv) {
@@ -104,6 +106,7 @@ int main(int argc, char **argv) {
         kolmo_profile *pp = kc_load_profile(argv[2]); if (!pp) return 1;
         char d[65536]; kolmo_profile_describe(pp, d, sizeof d); fputs(d, stdout); kolmo_profile_free(pp); return 0;
     }
+    { int fr = kolmo_cli_features(argc, argv); if (fr >= 0) return fr; }
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int speed = 0; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
     char *dictpath = NULL, *trainpath = NULL;
     int extreme = 0, native_leaf = 0, typed_huf = 0, verbose = 0, mode_given = 0;

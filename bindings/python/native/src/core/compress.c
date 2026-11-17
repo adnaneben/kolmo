@@ -40,7 +40,9 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
      * analysis on; elsewhere it is ignored. */
     kolmo_params q = *p; int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0;
     int typed_huf = (q.transforms & KOLMO_T_TYPED_HUF) != 0;
-    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF);
+    int columns = (q.transforms & KOLMO_T_COLUMNS) != 0;
+    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
+    columns = columns && q.transforms && q.mode != KOLMO_RT;
     native_leaf = native_leaf && q.mode == KOLMO_FAST && q.transforms; p = &q;
     if (cap < HDR + IDX) return KOLMO_ERR_DSTSIZE;
     if (n > INT64_MAX) return KOLMO_ERR_CORRUPT;
@@ -98,6 +100,7 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
     planning.prof = prof;
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
+    if (columns) for (uint32_t g = 0; g < nseg; g++) plans[g].lines = 1;   /* queryable archives: line-aligned blocks */
     if (!p->block && nseg == 1 && (plans[0].wide || plans[0].experimental_table) && B > (2u << 20)) B = 2u << 20;
     for (uint32_t g = 0; g < nseg; g++) {
         const uint8_t *s0 = src + ss[g]; size_t len = (size_t)(se[g] - ss[g]);
@@ -149,7 +152,7 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
         if (!file_index) goto cleanup;
         dst = file_index;
     }
-    J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2); J.native_leaf = native_leaf;   /* ultra level 2 = default ultra + CM graph leaves */
+    J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2); J.native_leaf = native_leaf; J.columns = columns;   /* ultra level 2 = default ultra + CM graph leaves */
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
     J.fqthreads = threads / (int)(nb < 256 ? nb : 256) > 0 ? threads / (int)(nb < 256 ? nb : 256) : 1;   /* threads left over per block */
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);

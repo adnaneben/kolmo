@@ -56,6 +56,12 @@ typedef struct {
  * before relying on it. */
 #define KOLMO_T_TYPED_HUF 32
 
+/* Opt-in bit for kolmo_params.transforms (every mode but rt), set by kolmo_compress_indexed: blocks of text end at line
+ * ends, and a delimited table block (table transform) codes each column as a separate stream (block flag 13), so a
+ * column query (kolmo_query_run, below) decodes only that column's streams. Measured cost: +2% (dense numeric CSV) to
+ * +10% (wide sparse CSV) at balanced, about 0% at hc and ratio on dense data. */
+#define KOLMO_T_COLUMNS 64
+
 #define KOLMO_ERR_CORRUPT   (-1)
 #define KOLMO_ERR_CHECKSUM  (-2)
 #define KOLMO_ERR_DSTSIZE   (-3)
@@ -67,6 +73,7 @@ typedef struct {
 #define KOLMO_ERR_IO        (-8)   /* seekable file read/write failed */
 #define KOLMO_ERR_PROFILE   (-9)   /* trained profile required, mismatched, or damaged */
 #define KOLMO_ERR_TARGET    (-10)  /* --target expression or calibration table invalid */
+#define KOLMO_ERR_QUERY     (-11)  /* a query names no such column, or its pattern does not compile */
 
 /* Zero fields mean no limit. These bound format sizes, not total codec heap
  * memory; a context-mixing block can require much more memory than its bytes. */
@@ -203,6 +210,96 @@ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t
  * them) on one thread, and write the calibration table (text). Returns its length, or a negative error. */
 int64_t kolmo_calibrate(const uint8_t *const *files, const size_t *sizes, size_t nfiles, double seconds_per_point,
                         char *out, size_t cap);
+
+/* --- Queryable archives (container extension IDX1; src/core/index.c, SPEC.md "Column and row index") -------------
+ * kolmo_compress_indexed writes an ordinary CZN1 frame whose text blocks end at line ends, whose delimited tables are
+ * column-split (KOLMO_T_COLUMNS), followed by an IDX1 section: lines per block, the kind of text (table, JSON lines,
+ * other lines), the column names of a table's first line, and optionally a trigram filter per block. Every reader
+ * decodes the file as usual (kolmo_decompress ignores the extension). kolmo_query reads lines, one column, or the lines
+ * matching a pattern, decoding only the blocks (and for column-split tables only the column streams) it needs.
+ * Rows are physical lines, numbered from 0 (the CLI numbers them from 1). */
+typedef struct {
+    int kind;                 /* KOLMO_IDX_AUTO (detect), KOLMO_IDX_LINES, KOLMO_IDX_TABLE, KOLMO_IDX_JSON */
+    uint8_t delim;            /* tables: the delimiter, 0 = detect (',', '\t', ';', '|') */
+    int filter;               /* 1 (default when the struct is NULL): a filter per block for kolmo_query patterns (trigrams
+                                 and whole tokens);
+                                 0: rows and columns only (the index is then a few bytes per block) */
+    int token_bits;           /* filter bits per whole token (1-16, 0 = 4): a one-token query passes a block that lacks it
+                                 with probability about 2^-token_bits; the filter grows about linearly with it */
+} kolmo_index_params;
+#define KOLMO_IDX_AUTO  0
+#define KOLMO_IDX_LINES 1
+#define KOLMO_IDX_TABLE 2
+#define KOLMO_IDX_JSON  3
+/* the capacity kolmo_compress_indexed may need */
+size_t  kolmo_indexed_bound(size_t n, const kolmo_params *p);
+/* as kolmo_compress, plus the index. p->block 0 = 4 MiB blocks (finer blocks skip more and cost some ratio). */
+int64_t kolmo_compress_indexed(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
+                               const kolmo_index_params *ip);
+
+typedef struct {
+    uint64_t row_first, row_count; /* rows [first, first + count); count 0 = to the last row */
+    const char *column;            /* NULL: whole lines. A table's column name (first line) or JSON key, or "#N" for
+                                      field N (from 1): of the table, or the N-th whitespace-separated field of a line */
+    const char *pattern;           /* NULL: every row in range. Otherwise rows whose line matches (POSIX extended regex,
+                                      or a fixed string with KOLMO_Q_FIXED); the column, if any, is printed for them */
+    int flags;                     /* KOLMO_Q_* */
+    int threads;                   /* 0 = all cores */
+} kolmo_query;
+#define KOLMO_Q_FIXED   1   /* pattern is a fixed string */
+#define KOLMO_Q_ICASE   2   /* ASCII case-insensitive */
+#define KOLMO_Q_LINENO  4   /* prefix each output line with its row number from 1 and ':' */
+#define KOLMO_Q_COUNT   8   /* output nothing; the return value counts the rows selected */
+#define KOLMO_Q_NOINDEX 16  /* ignore any index: decode every block in order (also how files without IDX1 are read) */
+#define KOLMO_Q_WORD    32  /* the pattern matches whole words only (no letter, digit or '_' on either side); with a
+                               fixed string, the filter can then rule blocks out by whole tokens (IDs, hosts, names) */
+typedef struct {
+    uint32_t blocks, blocks_decoded;      /* blocks in the file, blocks decoded whole */
+    uint32_t blocks_columnar;             /* column-split blocks read through their column streams only */
+    uint32_t blocks_skipped_filter;       /* blocks the trigram filter ruled out */
+    uint64_t bytes_total;                 /* decoded size of the file */
+    uint64_t bytes_decoded;               /* bytes produced by the block and stream decoders */
+    uint64_t stored_read;                 /* stored (compressed) bytes those decoders read */
+    uint64_t rows_out;                    /* rows written (or counted) */
+    uint64_t index_bytes;                 /* size of the IDX1 section, 0 without one */
+} kolmo_query_stats;
+/* output sink: return 0 to continue, nonzero to stop (kolmo_query then returns KOLMO_ERR_IO) */
+typedef int (*kolmo_sink)(void *ctx, const uint8_t *p, size_t n);
+/* Returns the rows written (or counted), or a negative error: KOLMO_ERR_CORRUPT or KOLMO_ERR_CHECKSUM for a damaged
+ * frame or index (an index that disagrees with the blocks it describes is an error, never a wrong answer). */
+int64_t kolmo_query_run(const uint8_t *src, size_t n, const kolmo_query *q, kolmo_sink out, void *ctx,
+                        kolmo_query_stats *stats);
+/* kind, delimiter and column names of an indexed file: names written to `names` separated by '\n' (up to cap bytes);
+ * returns the number of rows, or 0 for a file without IDX1 (then *kind = 0), or a negative error */
+int64_t kolmo_index_info(const uint8_t *src, size_t n, int *kind, uint8_t *delim, char *names, size_t cap);
+
+/* --- Deduplicating archives (container extension DDP1; src/core/dedup.c, SPEC.md "Chunk store") ------------------
+ * Many files in one frame: each file is cut into content-defined chunks (Gear hash, FastCDC normalized chunking;
+ * text cuts move to the next line end), every distinct chunk is stored once in a chunk store, and the store is
+ * compressed as one ordinary frame, so the structure transforms still apply to the unique data. The DDP1 section
+ * holds the file table and each file's list of chunks. Any file is extracted by decoding only the blocks its chunks
+ * lie in. */
+typedef struct {
+    uint32_t avg_chunk;       /* target chunk size, power of two from 256 B to 4 MiB; 0 = 4 KiB */
+    int line_cuts;            /* 1 (default when NULL): in text files, cuts move to the next '\n' (at most 4 KiB on) */
+} kolmo_archive_params;
+typedef struct { const char *name; const uint8_t *data; size_t size; uint32_t mode; int64_t mtime; } kolmo_archive_file;
+typedef struct { uint64_t files, input_bytes, chunks, unique_chunks, unique_bytes, store_frame, table_bytes; } kolmo_archive_stats;
+/* a bound for the capacity kolmo_archive_create needs */
+size_t  kolmo_archive_bound(const kolmo_archive_file *files, size_t nfiles, const kolmo_params *p);
+int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uint8_t *dst, size_t cap,
+                             const kolmo_params *p, const kolmo_archive_params *ap, kolmo_archive_stats *stats);
+/* number of files in the archive, or a negative error */
+int64_t kolmo_archive_count(const uint8_t *src, size_t n);
+/* file i: its name (NUL-terminated, at most namecap bytes including the NUL), size, mode and mtime; 0 or an error */
+int     kolmo_archive_stat(const uint8_t *src, size_t n, uint64_t i, char *name, size_t namecap, uint64_t *size,
+                           uint32_t *mode, int64_t *mtime);
+/* file i into dst (capacity at least its size); returns its size or a negative error. Each chunk is checked. */
+int64_t kolmo_archive_extract(const uint8_t *src, size_t n, uint64_t i, uint8_t *dst, size_t cap, int threads);
+/* every file: the chunk store is decoded once (memory: the store's size), then fn is called for each file in order with
+ * its bytes; fn returns 0 to continue. Returns the number of files, or a negative error (KOLMO_ERR_IO if fn stopped). */
+typedef int (*kolmo_archive_fn)(void *ctx, const char *name, const uint8_t *data, uint64_t size, uint32_t mode, int64_t mtime);
+int64_t kolmo_archive_extract_all(const uint8_t *src, size_t n, kolmo_archive_fn fn, void *ctx, int threads);
 
 #ifdef __cplusplus
 }

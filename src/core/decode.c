@@ -93,6 +93,12 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         return blk_sum(P->ver, out, len) == get32(e + 8) ? 0 : KOLMO_ERR_CHECKSUM;
     }
 #endif
+    if (pl.t == T_TBL && tflag == 13) {                         /* column-split table (transforms/table_cols.c) */
+        int64_t tn = tblc_decompress(x, codec, pay, cl, tbuf, len + TSLACK);
+        if (tn < 0 || tbl2_decode(tbuf, tn, (uint8_t)pl.a, out, len)) return KOLMO_ERR_CORRUPT;
+        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        return 0;
+    }
     if (tflag && pl.t == T_TP) meta = 4 * (size_t)(pl.c + 1);
     if ((tflag >= 3 && tflag <= 7) || tflag == 9) meta = 4;
     if (tflag == 10) meta = 8;

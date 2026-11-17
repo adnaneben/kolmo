@@ -135,7 +135,7 @@ build/libkolmoarch.a: $(ARCHOBJ)
 	ar rcs $@ $^
 build/libkolmo.a: build/kolmo.o $(ARCHOBJ)
 	ar rcs $@ $^
-build/kolmo: src/cli/cli.c src/cli/train.c build/libkolmo.a build/libvendor.a
+build/kolmo: src/cli/cli.c src/cli/train.c src/cli/features.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $(filter-out src/cli/train.c,$^) -o $@ $(LIBS)
 build/kolmobench: bench/kolmobench.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(BLIBS)
@@ -151,7 +151,7 @@ build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a build/libvendor.a
 build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
 build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
 
 check: all
 	python3 tests/test_fast_file.py
@@ -276,8 +276,18 @@ check-profile: build/test-profile build/test-profile-asan
 	./build/test-profile
 	KOLMO_SKIP_CALIBRATE=1 ./build/test-profile-asan
 .PHONY: check-profile
-check-rc: check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
-.PHONY: check-rc check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm check-arch check-format2
+# Queryable archives (IDX1, column-split table blocks) and deduplicating archives (DDP1), with sanitizers and optimised
+build/test-features-b-asan: tests/test_features_b.c src/kolmo.c $(KOLMO_INCLUDES) $(ARCHSRC) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_features_b.c src/kolmo.c $(ARCHSRC) build/libvendor.a -o $@ $(LIBS)
+build/test-features-b: tests/test_features_b.c build/libkolmo.a build/libvendor.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+check-features-b: build/test-features-b build/test-features-b-asan build/kolmo
+	./build/test-features-b
+	./build/test-features-b-asan 7
+	sh tests/test_features_b_cli.sh build/kolmo
+.PHONY: check-features-b
+check-rc: check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
+.PHONY: check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm check-arch check-format2
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
@@ -308,11 +318,11 @@ clean:
 
 # Optional lower-memory archive encoder.
 build/kolmo-cm20: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+	$(CC) $(CFLAGS) $(FPFLAGS) -DCM_BB_MAX=20 $(DEFS) $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
 
 # The compact variant retains the standard Ultra bitstream and table sizes elsewhere.
 build/kolmo-cm-compact: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) -DKOLMO_CM_COMPACT $(DEFS) $(INC) src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+	$(CC) $(CFLAGS) $(FPFLAGS) -DKOLMO_CM_COMPACT $(DEFS) $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
 
 build/cm-reference.o: tests/test_cm_compact.c src/codecs/cm.c $(KHDR)
 	@mkdir -p build
@@ -329,7 +339,7 @@ check-cm-compact: build/cm-compact-test
 FRONTIER_SRC := src/experimental/frontier_dna.c src/experimental/frontier_table.c src/experimental/frontier_prefix.c src/experimental/frontier_pcm.c src/experimental/frontier_lag.c src/experimental/frontier_shuffle.c src/experimental/frontier_runs.c
 FRONTIER_HDR := src/experimental/frontier_dna.h src/experimental/frontier_table.h src/experimental/frontier_prefix.h src/experimental/frontier_pcm.h src/experimental/frontier_lag.h src/experimental/frontier_shuffle.h src/experimental/frontier_runs.h
 build/kolmo-frontier: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libkolmoarch.a build/libvendor.a
-	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) src/cli/cli.c src/kolmo.c $(FRONTIER_SRC) build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c $(FRONTIER_SRC) build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
 
 build/kolmo-tar-file-test: tests/test_tar_file.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libkolmoarch.a build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_FRONTIER $(INC) $< $(FRONTIER_SRC) build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)

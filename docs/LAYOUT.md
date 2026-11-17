@@ -92,6 +92,9 @@ and the move mechanical:
   for it). The SSE2/NEON scanners inside the transforms (transpose, table, word) were left where they are; they are
   candidates for the simd lanes.
 - **cli/**: `cli.c`.
+- **Container extensions (features-b lane)**: `core/extension.c` (KEXT trailer), `core/index.c` (IDX1 index and
+  queries), `core/dedup.c` (DDP1 archives), `core/features.h`; `transforms/table_cols.c` (column-split table blocks);
+  `cli/features.c` (`cat`, `grep`, `a`, `x`, `l`, `--index`). Formats in `SPEC.md`.
 
 Adding a part: create the file in its directory, add one `#include` line to `src/kolmo.c` after the parts it uses,
 and nothing else (the Makefile and the bindings find it). Adding a codec: a file in `codecs/` defining

@@ -17,7 +17,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
         size_t end = B < n - pos ? pos + B : n;
         if (pl.t == T_REC && pos == 0) end = (size_t)pl.rec->h + B < n ? (size_t)pl.rec->h + B : n;
         if (kgnum && pos == 0) end = (size_t)pl.c + B < n ? (size_t)pl.c + B : n;
-        if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG || pl.t == T_LINES || (pl.t == T_KG && !kgnum) || pl.experimental_table) && end < n) {
+        if ((pl.t == T_TP || pl.t == T_TBL || pl.t == T_LOG || pl.t == T_LINES || (pl.t == T_KG && !kgnum) || pl.experimental_table || (pl.lines && !kgnum)) && end < n) {
             size_t lo = pos + B / 2, e = end;
             if (fd >= 0 && (pl.wide || pl.experimental_table)) {
                 /* Avoid faulting a sparse page from the planning map at every
@@ -66,7 +66,7 @@ static uint32_t kolmo_fast_block(size_t n) {
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
     const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
-    int codec, level, default_level, output_fd, native_leaf, fqthreads; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
+    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint64_t *poff;   /* decode: payload offsets */
     uint64_t rlo, rhi; uint8_t *rdst;   /* range read */
@@ -309,6 +309,10 @@ static void *compress_worker(void *arg) {
 #ifdef KOLMO_FRONTIER_FAST_PCM
         if (pl.experimental_pcm && !J->dict && J->default_level && codec == C_ZSTD) level = 1;
 #endif
+        if (!cl && tflag == 4 && J->columns) {      /* KOLMO_T_COLUMNS: one coded segment per column (flag 13) */
+            cl = tblc_compress(xp, codec, level, in, inlen, sl, J->slot);
+            if (cl) { tflag = 13; meta = 0; goto coded; }
+        }
         int slice_verdict = 0;                        /* max, binary block over 8 MiB: 1 BWT clearly wins, -1 skip BWT */
         if (codec == C_LZMA && !cl && level != 1 && tflag != 8 && tflag != 4 && tflag != 5 && inlen > (8u << 20)) {
             /* A slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the outcome
