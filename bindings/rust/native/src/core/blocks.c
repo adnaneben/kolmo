@@ -338,8 +338,9 @@ static void *compress_worker(void *arg) {
         }
         if (!cl && codec == C_CM && level != 1 && inlen >= CMP_SPLIT_MIN && inlen < ((size_t)1 << 29) && !looks_text(in, inlen)) {
             /* ultra, a large single stream that is not text: two halves, each with its own model at half the table
-             * size, coded and decoded in parallel (codec 25). Measured cost 0.14 to 0.40% on 10 MB of CSV and binary
-             * data, 2x faster both ways; text costs 2.8% and stays whole (benchmark/rc3/xmode/RESULTS.md). */
+             * size, coded and decoded in parallel (codec 25), 2x faster both ways. From 32 MiB: the measured cost was
+             * 0.14% on 100 MB of binary data, but 0.14 to 2.3% for 5 MB halves (CSV, binary, Silesia osdb); text
+             * costs 2.8 to 8.7% and stays whole (benchmark/rc3/xmode/RESULTS.md). */
             size_t parts[2] = {inlen / 2, inlen - inlen / 2};
             cl = cmp_compress_cap(in, inlen, parts, 2, sl + meta, J->slot - meta, J->fqthreads, 0, cm_bits_for(parts[1]) - 1);
             cmp_used = cl != 0;
@@ -348,7 +349,7 @@ static void *compress_worker(void *arg) {
         if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
-            if (a1 && a1 < cl) { memcpy(sl, alt, a1); cl = a1; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
+            if (a1 && a1 < cl) { memcpy(sl, alt, a1); cl = a1; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; cmp_used = 0; }
         }
         if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, kept only when clearly smaller */
             /* BWT decodes about half as fast as LZMA2 here, so it must pay for that: at least KOLMO_BWT_GAIN_PCT smaller. */
@@ -430,11 +431,12 @@ static void *compress_worker(void *arg) {
                         else a3 = len <= (2u << 20) ? codec_compress(xp, C_LZMA, 9, raw, len, alt, J->slot) : 0;
                         if (a3 && a3 < bz) { memcpy(sl, alt, a3); bz = a3; bc = C_LZMA; }
                     }
-                    if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
+                    if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; cmp_used = 0; }
                 }
             }
         }
-        if (cmp_used && codec == C_CM && in != raw) { codec = C_CMP; modes |= 128; }
+        /* the payload is still codec 25's when no later trial replaced it (they clear cmp_used or change codec) */
+        if (cmp_used && codec == C_CM) { codec = C_CMP; modes |= 128; }
 coded:;
         if (xfq && codec != C_FQ) {
             /* ultra (not level 1), a block of complete FASTQ records: the family coder (codec 16: layout, names,

@@ -12,7 +12,7 @@
  * the whole block would. */
 enum { CMP_MAXPARTS = 256 };
 #ifndef CMP_SPLIT_MIN
-#define CMP_SPLIT_MIN ((size_t)8 << 20)   /* single streams from 8 MiB are coded as two halves (not text) */
+#define CMP_SPLIT_MIN ((size_t)32 << 20)   /* single streams from 32 MiB are coded as two halves (not text) */
 #endif
 static size_t cmp_putv(uint8_t *p, uint64_t v) { size_t k = 0; while (v >= 128) { p[k++] = (uint8_t)(v | 128); v >>= 7; } p[k++] = (uint8_t)v; return k; }
 static int cmp_getv(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {

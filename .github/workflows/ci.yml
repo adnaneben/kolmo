@@ -47,8 +47,9 @@ jobs:
       - name: C references only (NO_ASM=1, no assembly kernels): kernel tests and determinism
         run: |
           rm -rf build
-          make -j4 ARCH= NO_ASM=1 build/kolmo build/test-dispatch
+          make -j4 ARCH= NO_ASM=1 build/kolmo build/test-dispatch build/test-asm
           ./build/test-dispatch
+          ./build/test-asm
           python3 benchmark/determinism/check.py build/kolmo build/determinism
   sanitizers:
     runs-on: ubuntu-latest
