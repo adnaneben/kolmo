@@ -13,6 +13,9 @@
 #include <math.h>
 #include <pthread.h>
 #include "zstd.h"
+#define HUF_STATIC_LINKING_ONLY
+#include "common/huf.h"
+#include "common/error_private.h"
 
 enum { K_NF, K_OP, K_RANK, K_RANK2, K_CDICT, K_GID, K_NUM, K_NUMNEW, K_CHAR, K_PFX, K_PHR, NKIND };
 enum { OP_DITTO, OP_EMPTY, OP_NUM, OP_RANK, OP_RANK2, OP_CDICT, OP_GID, OP_NUMNEW, OP_NEW, OP_PHR_R, OP_PHR_G, OP_PHR_M, NOP, OP_COVERED = 12 };
@@ -21,6 +24,7 @@ static const char *opname[NOP] = {"ditto", "empty", "num", "rank", "graph", "cdi
 #define COLCAP 256
 #define PREVCAP 256
 #define PHRCAP 64
+#define NSTREAM (NKIND + 64)   /* Huffman final coder: one stream per kind, ops one per column (first 64) */
 
 /* ------------------------------------------------------------------ numbers */
 typedef struct { uint8_t d, w; } nfmt;
@@ -142,7 +146,7 @@ static inline int squash(float x) { if (x > 15) x = 15; if (x < -15) x = -15; in
 /* ------------------------------------------------------------------ unit I/O */
 typedef struct { int kind, c, uidx, prevu, aux, sel2; uint32_t h[8]; } uctx;
 typedef struct {
-    int mode, enc; uint64_t units, kunits[NKIND];
+    int mode, enc; uint64_t units, kunits[NKIND]; buf st[NSTREAM]; size_t rp[NSTREAM];
     acoder ac; cm *m; double bits[NKIND]; double fbits; int curf;
 } uio;
 
@@ -182,7 +186,10 @@ static int cm_bit(uio *io, uctx *x, int node, int bit) {
 
 static int unit_io(uio *io, uctx *x, int u) {
     io->units++; io->kunits[x->kind]++;
-    {
+    if (io->mode == 1) {                                   /* Huffman final coder: units go to static streams */
+        int s = x->kind == K_OP ? NKIND + x->c : x->kind;
+        if (io->enc) buf_put(&io->st[s], u); else u = io->st[s].p[io->rp[s]++];
+    } else {
         cm *m = io->m;
         uint32_t uh = (uint32_t)x->aux << 16 | (uint32_t)x->uidx << 8 | x->prevu;
         for (int i = 0; i < NM; i++) m->base[i] = (H(x->h[i], uh) >> (32 - m->tb)) & ~63u;
@@ -249,7 +256,7 @@ typedef struct {
     uint8_t table[62]; int code[256];
     uint64_t opcount[NOP], covered;
     const phdict *ph; map64 phmap; mtf *phl; size_t nphl, capphl;   /* phrase graph: previous field -> recent phrases */
-    int lzp, minn, level1; const uint8_t *colL1; uint32_t *hist; size_t nh, caph; map64 hmap;      /* match model: field history, (prev 2 fields) -> next position */
+    int lzp, minn, level1, flat; const uint8_t *colL1; uint32_t *hist; size_t nh, caph; map64 hmap;      /* match model: field history, (prev 2 fields) -> next position */
 } model;
 
 static void model_init(model *M) {
@@ -460,6 +467,7 @@ static int field_io(model *M, uio *io, int f, int nf, const uint8_t *s, int n, b
             x.uidx = k - L < 3 ? k - L : 3; set_char_ctx(&x, hist);
             x.h[2] = H(H(K_CHAR << 6 | x.c, 11), (k < rn ? rs[k] : 256) | (hist & 0xFF) << 9 | (k + 1 < rn ? rs[k + 1] : 256) << 17);
             x.aux = 0; x.prevu = 64;
+            if (M->flat) { for (int i = 0; i < NM; i++) x.h[i] = H(K_CHAR * 977 + 5, i); x.uidx = 0; }
             int u;
             if (io->enc) { u = k == n ? 62 : M->code[s[k]] >= 0 ? M->code[s[k]] : 63; unit_io(io, &x, u); }
             else u = unit_io(io, &x, 0);
@@ -794,8 +802,38 @@ static size_t dict_read(phdict *P, const uint8_t *p) {
     return 20 + cz;
 }
 
+/* ------------------------------------------------------------------ Huffman final coder (huff0, 128 KiB chunks) */
+static void huf_pack(buf *out, const buf *s) {
+    unsigned *wk = xmalloc(HUF_WORKSPACE_SIZE + 256); HUF_CElt *ct = xmalloc(sizeof(HUF_CElt) * HUF_CTABLE_SIZE_ST(255));
+    uint64_t n = s->n; buf_add(out, &n, 8);
+    for (size_t o = 0; o < s->n; o += 128 * 1024) {
+        size_t len = s->n - o < 128 * 1024 ? s->n - o : 128 * 1024; HUF_repeat rep = HUF_repeat_none;
+        buf_reserve(out, len + 1024);
+        size_t c = HUF_compress4X_repeat(out->p + out->n + 5, len + 512, s->p + o, len, 255, 11, wk, HUF_WORKSPACE_SIZE, ct, &rep, 0);
+        uint8_t type; uint32_t cs;
+        if (HUF_isError(c) || c == 0) { type = 0; cs = len; memcpy(out->p + out->n + 5, s->p + o, len); }
+        else if (c == 1) { type = 1; cs = 1; out->p[out->n + 5] = s->p[o]; } else { type = 2; cs = c; }
+        out->p[out->n] = type; memcpy(out->p + out->n + 1, &cs, 4); out->n += 5 + cs;
+    }
+    free(wk); free(ct);
+}
+static size_t huf_unpack(const uint8_t *p, buf *s) {
+    HUF_DTable *dt = xmalloc(sizeof(HUF_DTable) * HUF_DTABLE_SIZE(HUF_TABLELOG_MAX)); unsigned *dwk = xmalloc(HUF_DECOMPRESS_WORKSPACE_SIZE * 4);
+    uint64_t n; memcpy(&n, p, 8); size_t q = 8; s->p = xmalloc(n + 8); s->n = n; s->cap = n + 8;
+    for (size_t o = 0; o < n; o += 128 * 1024) {
+        size_t len = n - o < 128 * 1024 ? n - o : 128 * 1024; uint8_t type = p[q]; uint32_t cs; memcpy(&cs, p + q + 1, 4); q += 5;
+        if (type == 0) memcpy(s->p + o, p + q, len);
+        else if (type == 1) memset(s->p + o, p[q], len);
+        else { dt[0] = (HUF_DTable)(HUF_TABLELOG_MAX) * 0x01000001;
+               if (HUF_isError(HUF_decompress4X_hufOnly_wksp(dt, s->p + o, len, p + q, cs, dwk, HUF_DECOMPRESS_WORKSPACE_SIZE * 4, 0))) { fprintf(stderr, "huf error\n"); exit(1); } }
+        q += cs;
+    }
+    free(dt); free(dwk);
+    return q;
+}
+
 /* ------------------------------------------------------------------ blocks (one model each), coded in parallel */
-typedef struct { uint8_t sep; uint8_t table[62]; int nform; formula_t F[256]; phdict ph; int phrases; int minn; int lzp; uint8_t *colL1; int level1; } shared;
+typedef struct { uint8_t sep; uint8_t table[62]; int nform; formula_t F[256]; phdict ph; int phrases; int minn; int lzp; uint8_t *colL1; int level1; int flat; int coder; } shared;
 typedef struct {
     const shared *S; const uint8_t *d; size_t n;             /* encoder input / decoder output length */
     buf out; const uint8_t *in; size_t inlen;               /* encoder output / decoder input */
@@ -807,13 +845,13 @@ static void model_setup(model *M, const shared *S) {
     model_init(M); memcpy(M->table, S->table, 62);
     for (int i = 0; i < 256; i++) M->code[i] = -1; for (int i = 61; i >= 0; i--) M->code[S->table[i]] = i;
     for (int i = 0; i < S->nform; i++) { colst *c = &M->col[S->F[i].t]; c->fa = S->F[i].a; c->fb = S->F[i].b; c->fke = S->F[i].ke; c->ftype = S->F[i].type; }
-    M->ph = S->phrases ? &S->ph : NULL; M->lzp = S->lzp; M->minn = S->minn; M->level1 = S->level1 || getenv("LEVEL1") != NULL; M->colL1 = S->colL1;
+    M->ph = S->phrases ? &S->ph : NULL; M->lzp = S->lzp; M->minn = S->minn; M->level1 = S->level1 || getenv("LEVEL1") != NULL; M->flat = S->flat; M->colL1 = S->colL1;
 }
 static void *enc_block(void *arg) {
     blockjob *J = arg; const shared *S = J->S; const uint8_t *d = J->d; size_t n = J->n;
     model *M = xmalloc(sizeof(model)); model_setup(M, S);
-    uio *io = xmalloc(sizeof(uio)); memset(io, 0, sizeof *io); io->mode = 2; io->enc = 1;
-    buf cm_out = {0}; io->m = xmalloc(sizeof(cm)); cm_init(io->m, n); io->ac = (acoder){0, 0xffffffffu, 0, &cm_out, NULL, 0, 0};
+    uio *io = xmalloc(sizeof(uio)); memset(io, 0, sizeof *io); io->mode = S->coder; io->enc = 1;
+    buf cm_out = {0}; if (io->mode == 2) { io->m = xmalloc(sizeof(cm)); cm_init(io->m, n); io->ac = (acoder){0, 0xffffffffu, 0, &cm_out, NULL, 0, 0}; }
     uint64_t lines = n && d[n - 1] != '\n'; for (const uint8_t *p = d, *e = d + n; (p = memchr(p, '\n', (size_t)(e - p))) != NULL; p++) lines++;
     uint64_t *fh = NULL; size_t *fo = NULL, cap = 0;
     for (size_t i = 0; i < n;) {
@@ -857,21 +895,24 @@ static void *enc_block(void *arg) {
         J->fields += nf;
         line_end(M, nf); i = e + 1;
     }
-    acoder *a = &io->ac; buf_put(&cm_out, a->x1 >> 24); buf_put(&cm_out, 255); buf_put(&cm_out, 255); buf_put(&cm_out, 255);
+    if (io->mode == 2) { acoder *a = &io->ac; buf_put(&cm_out, a->x1 >> 24); buf_put(&cm_out, 255); buf_put(&cm_out, 255); buf_put(&cm_out, 255); }
+    else for (int k = 0; k < NSTREAM; k++) { huf_pack(&cm_out, &io->st[k]); free(io->st[k].p); }
     uint8_t fl = n && d[n - 1] == '\n'; buf_add(&J->out, &lines, 8); buf_put(&J->out, fl); buf_add(&J->out, cm_out.p, cm_out.n);
     memcpy(J->ops, M->opcount, sizeof J->ops); J->covered = M->covered;
     free(fh); free(fo); free(cm_out.p);
-    for (int i = 0; i < NM; i++) free(io->m->T[i]); free(io->m->apm); free(io->m); free(io);
+    if (io->m) { for (int i = 0; i < NM; i++) free(io->m->T[i]); free(io->m->apm); free(io->m); } free(io);
     return NULL;
 }
 static void *dec_block(void *arg) {
     blockjob *J = arg; const shared *S = J->S;
     model *M = xmalloc(sizeof(model)); model_setup(M, S);
-    uio *io = xmalloc(sizeof(uio)); memset(io, 0, sizeof *io); io->mode = 2; io->enc = 0;
+    uio *io = xmalloc(sizeof(uio)); memset(io, 0, sizeof *io); io->mode = S->coder; io->enc = 0;
     uint64_t lines; memcpy(&lines, J->in, 8); int final_nl = J->in[8];
-    io->m = xmalloc(sizeof(cm)); cm_init(io->m, J->n);
-    io->ac = (acoder){0, 0xffffffffu, 0, NULL, J->in + 9, 0, J->inlen - 9};
-    for (int i = 0; i < 4; i++) io->ac.x = (io->ac.x << 8) | (io->ac.pos < io->ac.n ? io->ac.in[io->ac.pos++] : 0);
+    if (io->mode == 2) {
+        io->m = xmalloc(sizeof(cm)); cm_init(io->m, J->n);
+        io->ac = (acoder){0, 0xffffffffu, 0, NULL, J->in + 9, 0, J->inlen - 9};
+        for (int i = 0; i < 4; i++) io->ac.x = (io->ac.x << 8) | (io->ac.pos < io->ac.n ? io->ac.in[io->ac.pos++] : 0);
+    } else { size_t q = 9; for (int k = 0; k < NSTREAM; k++) q += huf_unpack(J->in + q, &io->st[k]); }
     buf_reserve(&J->out, J->n + 64);
     for (uint64_t l = 0; l < lines; l++) {
         uctx x; set_ctx(M, &x, K_NF, 0, 0); uint64_t v = val_io(io, &x, 0);
@@ -880,7 +921,8 @@ static void *dec_block(void *arg) {
         line_end(M, nf);
         if (l + 1 < lines || final_nl) buf_put(&J->out, '\n');
     }
-    for (int i = 0; i < NM; i++) free(io->m->T[i]); free(io->m->apm); free(io->m); free(io);
+    if (io->m) { for (int i = 0; i < NM; i++) free(io->m->T[i]); free(io->m->apm); free(io->m); }
+    for (int k = 0; k < NSTREAM; k++) free(io->st[k].p); free(io);
     return NULL;
 }
 static void run_jobs(void *(*fn)(void *), blockjob *J, int nb) {
@@ -954,6 +996,7 @@ int main(int argc, char **argv) {
     int minn = getenv("MINN") ? atoi(getenv("MINN")) : 2, maxn = getenv("MAXN") ? atoi(getenv("MAXN")) : 8;
     size_t sample = getenv("SAMPLE") ? (size_t)atoll(getenv("SAMPLE")) : (4u << 20);
     shared *S = xmalloc(sizeof(shared)); memset(S, 0, sizeof *S); S->sep = pick_sep(d, n); S->minn = minn;
+    S->coder = getenv("CODER") && !strcmp(getenv("CODER"), "huf") ? 1 : 2; S->flat = getenv("FLAT") != NULL;
     double t0 = now();
     { size_t cnt[256] = {0}; for (size_t i = 0; i < n; i++) cnt[d[i]]++; int ord[256]; for (int i = 0; i < 256; i++) ord[i] = i;
       for (int i = 1; i < 256; i++) { int x = ord[i], j = i; while (j > 0 && cnt[ord[j - 1]] < cnt[x]) { ord[j] = ord[j - 1]; j--; } ord[j] = x; }
@@ -975,7 +1018,7 @@ int main(int argc, char **argv) {
     double t2 = now();
     if (kept) { dict_build(&S->ph, d, n, S->sep, &C); S->phrases = 1; }
     buf hdr = {0}; buf_add(&hdr, &n, 8); buf_put(&hdr, S->sep); buf_add(&hdr, S->table, 62); buf_put(&hdr, S->nform);
-    buf_add(&hdr, S->F, sizeof(formula_t) * S->nform); buf_put(&hdr, S->lzp); buf_put(&hdr, S->level1 || getenv("LEVEL1") != NULL); buf_put(&hdr, S->phrases); size_t dict0 = hdr.n; if (S->phrases) dict_write(&S->ph, &hdr);
+    buf_add(&hdr, S->F, sizeof(formula_t) * S->nform); buf_put(&hdr, S->coder); buf_put(&hdr, S->flat); buf_put(&hdr, S->lzp); buf_put(&hdr, S->level1 || getenv("LEVEL1") != NULL); buf_put(&hdr, S->phrases); size_t dict0 = hdr.n; if (S->phrases) dict_write(&S->ph, &hdr);
     size_t dictbytes = hdr.n - dict0;
     /* blocks at line boundaries */
     blockjob *J = xmalloc(sizeof(blockjob) * blocks); memset(J, 0, sizeof(blockjob) * blocks);
@@ -990,7 +1033,7 @@ int main(int argc, char **argv) {
     /* decode with fresh jobs (the decoder sees only the header, the dictionary and the coded blocks) */
     shared *S2 = xmalloc(sizeof(shared)); memset(S2, 0, sizeof *S2);
     { size_t q = 8; S2->sep = hdr.p[q++]; memcpy(S2->table, hdr.p + q, 62); q += 62; S2->nform = hdr.p[q++]; memcpy(S2->F, hdr.p + q, sizeof(formula_t) * S2->nform); q += sizeof(formula_t) * S2->nform;
-      S2->lzp = hdr.p[q++]; S2->level1 = hdr.p[q++]; S2->phrases = hdr.p[q++]; S2->minn = minn; if (S2->phrases) q += dict_read(&S2->ph, hdr.p + q); }
+      S2->coder = hdr.p[q++]; S2->flat = hdr.p[q++]; S2->lzp = hdr.p[q++]; S2->level1 = hdr.p[q++]; S2->phrases = hdr.p[q++]; S2->minn = minn; if (S2->phrases) q += dict_read(&S2->ph, hdr.p + q); }
     blockjob *D = xmalloc(sizeof(blockjob) * blocks); memset(D, 0, sizeof(blockjob) * blocks);
     for (int b = 0; b < blocks; b++) { D[b].S = S2; D[b].n = J[b].n; D[b].in = J[b].out.p; D[b].inlen = J[b].out.n; }
     double t5 = now(); run_jobs(dec_block, D, blocks); double t6 = now();
