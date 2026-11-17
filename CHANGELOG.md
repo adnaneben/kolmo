@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased (rc3 wave 2, router lane: `claude/rc3w2-router-20261117`)
+
+### Changed
+- **`-x` tries its alternatives where they can win.** Every block is now also coded by block sorting (binary blocks
+  too; beside context mixing when the block has a spare thread), and LZMA2 is coded in full when a 1 MiB slice comes
+  within 25% of context mixing's rate (it had to be 3% below, and slices code worse than whole blocks). The smallest
+  coding is kept, so frames change only where an alternative is smaller: on 56 public files (25 input types) two
+  changed, Silesia osdb −0.97% (now block sorting, which also decodes 50× faster) and OWID energy CSV −0.98% (table +
+  LZMA2); `-x` is no longer larger than `-m ratio` on any of them. Determinism set: `stamps.i64` at `-x` and `-x -l 2`
+  (28,524 → 28,410 bytes, version 3 → 11). `check-cmpar`'s codec-25 halves case uses a new
+  input, since block sorting now wins on the old one. Compression at one thread takes up to 6% longer (about 2% on text), at four threads no measurable change (`benchmark/rc3/router/RESULTS.md`).
+
+### Fixed
+- **`kolmo calibrate` wrote tables it could not read back** when a point measured under 0.05 MB/s (`-x` on a small
+  corpus on a loaded machine): rates were printed with one decimal, so they read as 0.0, which the table parser
+  refuses. Rates under 0.1 MB/s now keep four decimals (at least 0.0001). Seen as an intermittent `check-profile`
+  failure under `make -j4 check-rc`.
+
+### Added
+- `docs/ROUTING-MAP.md`: every input type (tables, JSON, logs, prose, code, markup, arrays, weights, images, audio,
+  video, FASTQ/FASTA, executables, archives, compressed data) × every level: detection signal, transform and codec,
+  measured ratio and speed against the leaders, and the gaps. `docs/ROUTING-PLAN.md`: what to build next, in order,
+  with expected gains (colour transform for RGB images first: −30% residual entropy, estimated).
+- `benchmark/rc3/router/`: the corpus builder, the matrix runner (every level, general tools, FLAC, FFV1, JPEG XL,
+  JPEG-LS), the frame route reader, and the evaluation of the 6-bit study's GR6-L3 (`lzp` phrases and level race; not
+  ported: no `-x` output would change).
+
 ## Unreleased (rc3, features-a lane: `claude/rc3-features-a-20261116`)
 
 ### Added
