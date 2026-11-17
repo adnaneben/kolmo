@@ -874,11 +874,13 @@ static void ka_nlms_free(ka_Nlms *f) { free(f->w); free(f->w16); free(f->h); fre
 
 static inline int16_t ka_clip16(int32_t v) { return (int16_t)(v > 32767 ? 32767 : v < -32767 ? -32767 : v); }
 
-__attribute__((optimize("wrapv"))) static inline int32_t dot16(const int16_t *restrict a, const int16_t *restrict b, int n)
+/* sum modulo 2^32 (each 16x16 product fits an int; only the sum may wrap): unsigned, so it is defined on every compiler
+ * (clang ignores optimize("wrapv")); same value as the wrapping signed sum */
+static inline int32_t dot16(const int16_t *restrict a, const int16_t *restrict b, int n)
 {
-    int32_t s = 0;
-    for (int i = 0; i < n; i++) s += a[i] * b[i];
-    return s;
+    uint32_t s = 0;
+    for (int i = 0; i < n; i++) s += (uint32_t)(a[i] * b[i]);
+    return (int32_t)s;
 }
 
 /* own history: h[pos .. pos+n) oldest..newest; cross: hc[posc .. posc+m) */
