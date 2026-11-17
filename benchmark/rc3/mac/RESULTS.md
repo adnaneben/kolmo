@@ -132,7 +132,24 @@ and five ESC-50 WAV clips.
 
 Round trips: every row decoded to its input.
 
-*The general group (Silesia files) was still running when this was written; its rows are added when complete.*
+### general
+
+| mode | threads | files | size rc3 vs rc2 | compress speed | decompress speed |
+|---|---|---|---:|---:|---:|
+| speed | 1 | 7 | +0.00% | 0.99x | 1.00x |
+| balanced | 1 | 7 | +0.00% | 1.01x | 1.00x |
+| eco | 1 | 7 | +0.00% | 1.00x | 1.02x |
+| hc | 1 | 7 | +0.00% | 1.00x | 1.04x |
+| ratio | 1 | 7 | -0.53% | 1.08x | 0.76x |
+| -x | 1 | 7 | +0.00% | 0.96x | 1.00x |
+| speed | 10 | 7 | +0.00% | 0.95x | 1.01x |
+| balanced | 10 | 7 | +0.00% | 0.98x | 0.99x |
+| eco | 10 | 7 | +0.00% | 1.02x | 1.03x |
+| hc | 10 | 7 | +0.00% | 1.02x | 1.05x |
+| ratio | 10 | 7 | -0.53% | 1.19x | 1.64x |
+| -x | 10 | 7 | +0.00% | 1.16x | 0.98x |
+
+General (Silesia): only `ratio` changes (codec 18): −0.53%, osdb compresses 5.7× faster (the LZMA2 pass skipped when the slice says BWT wins), decompression 0.76× at one thread and 1.64× at ten. `-x` output is identical; its compression is about 9% slower on plain text (dickens, nci, webster), where GR6+ is tried and loses.
 
 ### What the numbers say
 
