@@ -484,3 +484,276 @@ The model itself (8 table lookups and two 9-input mixers per bit) is latency-bou
 
 The level-3 phrases and the level decision make GR6 better on logs (+10% Apache, +2% HDFS) and on prose and name
 tables (+1–3%). kolmo `-x` stays ahead on those five files and runs 3–10× slower.
+
+## 10. Every option against plain Huffman (single thread and 4 threads)
+
+`research/gr6/bench_matrix.py` runs every combination on the 7 files, decoding and comparing every output.
+* **Plain Huffman:** zstd's huff0 on the raw bytes, 128 KiB chunks spread over the threads.
+* **GR6:** fixed 6-bit units (section 5).
+* **Levels:** L1 = letters (character contexts); L2 = words and numbers (field ops); L3 = phrases. L3 is either `lzp`
+  (dictionary-free) or a dictionary, holding all candidates or only those the neural-net decision maker selected
+  (leave-one-file-out, section 9). "L2 without L1" spells new words with no letter contexts.
+* **Final coder:** neural context mixing (default) or static Huffman over the same 6-bit unit streams.
+* **auto:** the level race (map-reduce over 3 trial encodes).
+* **4 threads:** blocks in parallel (at most one per MiB, so files under 1 MiB stay one block), plus parallel formula
+  search, race and phrase mining.
+
+Ratio = original ÷ compressed; "vs Huffman" = ratio ÷ plain Huffman's ratio on the same file. MB/s are wall clock on
+a 4-core VM.
+
+### Summary (best of each family, single thread)
+
+| file | plain Huffman | GR6 fixed 6-bit | best transform + Huffman final | best transform + neural final | 4-thread neural (ratio, comp/decomp MB/s) |
+|---|---|---|---|---|---|
+| Apache log | 1.60 · 1.2 GB/s | 2.74 (1.7×) | 18.03 (11.3×) · 26 MB/s | **46.86 (29.3×)** · 2.5 MB/s | same (1 block) |
+| HDFS log | 1.53 · 1.1 GB/s | 2.58 (1.7×) | 5.38 (3.5×) · 19 MB/s | **8.00 (5.3×)** · 1.7 MB/s | same (1 block) |
+| Titanic | 1.59 · 1.1 GB/s | 1.42 (0.9×) | 2.38 (1.5×) · 4 MB/s | **4.07 (2.6×)** · 0.5 MB/s | same (1 block) |
+| Shakespeare | 1.66 · 1.1 GB/s | 1.85 (1.1×) | 2.43 (1.5×) · 6 MB/s | **3.32 (2.0×)** · 0.7 MB/s | same (1 block) |
+| diamonds | 1.85 · 1.2 GB/s | 2.20 (1.2×) | 6.49 (3.5×) · 12 MB/s | **10.21 (5.5×)** · 2.1 MB/s | 10.14 · 3.6 / 3.7 |
+| COVID | 1.83 · 0.8 GB/s | 2.30 (1.3×) | 7.17 (3.9×) · 13 MB/s | **19.49 (10.6×)** · 2.2 MB/s | 18.79 · 5.1 / 8.7 |
+| OWID | 2.35 · 1.0 GB/s | 1.86 (0.8×) | 6.86 (2.9×) · 2.4 MB/s | **13.59 (5.8×)** · 1.2 MB/s | 13.20 · 3.9 / 6.4 |
+
+What the matrix shows:
+1. **The neural final coder is the largest single factor.** The same transform codes 1.5–2.8× smaller with the neural
+   coder than with Huffman.
+2. **Level 1 (letters) only pays with the neural coder.** "L1 letters, Huffman final" equals plain Huffman
+   (0.96–1.02×): letters without a context model are just a static code, as section 1 found.
+3. **Level 2 (words, numbers, formulas) is the main transform for structured data.** With Huffman as the final coder,
+   L2 alone takes tables from about 2× to 3.5–3.9× and Apache from 1.6× to 15×. With the neural coder, L2 matters as
+   much as L1 on tables (COVID: L1 6.10, L2 19.44, both 19.49).
+4. **The best level combination depends on the data:**
+   * L1 alone or L1+L3 wins on prose and name tables (Titanic 4.07, Shakespeare 3.32);
+   * L1+L2+L3 `lzp` wins on logs;
+   * L1+L2 wins on numeric tables.
+   * **L2+L3 without letters** is never best, but it is within 0.3% of the best on the numeric tables, and faster.
+   * **The race (`auto`) found the best or near-best everywhere:** 4.03 on Titanic (L1+L3 has 4.07; the race does not
+     try that combination yet).
+5. **Dictionary vs dictionary-free:** "dict all" loses 30–67% against `lzp`. The neural-net-selected dictionary is
+   within ±1% of having none (+0.25% on HDFS when combined with `lzp`, −1.1% on COVID). Dictionary-free `lzp` is the
+   level-3 mode to keep.
+6. **Threads:** files over 1 MiB code 1.7–3.7× faster on 4 threads at a 0.7–3.6% ratio cost. Files under 1 MiB stay
+   one block, unchanged by design. Plain Huffman scales to 2.5–3 GB/s compress and 4–5 GB/s decompress. On the
+   0.06–0.3 MB files it was slower on 4 threads (thread start-up costs more than the work).
+7. **Speed gap:** plain Huffman is 400–2000× faster than the neural options, and 30–500× faster than transform +
+   Huffman (the research transform is not optimised: string interning and move-to-front lists dominate).
+
+### Full tables
+
+#### apache.log
+
+| option | ratio (1 thr) | vs Huffman | MB/s comp / decomp (1 thr) | ratio (4 thr, blocks) | MB/s comp / decomp (4 thr) |
+|---|---|---|---|---|---|
+| plain Huffman (bytes) | 1.60 | 1.00x | 1,155.5 / 1,557.5 | 1.60 (-) | 1,055.0 / 785.5 |
+| GR6 (repeat+graph, fixed 6-bit) | 2.74 | 1.71x | 44.2 / 74.2 | — | — |
+| L1 letters | 19.95 | 12.48x | 0.8 / 0.9 | 19.95 (1) | 0.8 / 0.9 |
+| L2 words (no letter model) | 37.53 | 23.47x | 2.4 / 2.4 | 37.53 (1) | 1.9 / 2.1 |
+| L1+L2 (GR6+) | 42.50 | 26.58x | 2.5 / 2.7 | 42.50 (1) | 2.6 / 2.7 |
+| L1+L3 lzp | 21.83 | 13.65x | 1.1 / 1.1 | 21.83 (1) | 0.8 / 0.9 |
+| L2+L3 lzp | 40.90 | 25.58x | 2.5 / 3.0 | 40.90 (1) | 2.3 / 3.0 |
+| L1+L2+L3 lzp | 46.86 | 29.31x | 2.5 / 2.9 | 46.86 (1) | 2.7 / 3.0 |
+| L1+L2+L3 dict all | 15.28 | 9.56x | 1.4 / 3.4 | 15.28 (1) | 1.1 / 2.8 |
+| L1+L2+L3 dict NN-selected | 42.50 | 26.58x | 1.9 / 2.1 | 42.50 (1) | 1.8 / 2.1 |
+| L1+L2+L3 lzp + dict NN-selected | 46.86 | 29.31x | 2.2 / 2.2 | 46.86 (1) | 2.4 / 2.6 |
+| auto (race) | 46.86 | 29.31x | 0.6 / 2.5 | 46.86 (1) | 0.5 / 2.6 |
+| L1 letters, Huffman final | 1.59 | 1.00x | 13.0 / 14.5 | 1.59 (1) | 16.9 / 18.9 |
+| L1+L2, Huffman final | 15.04 | 9.41x | 21.7 / 26.9 | 15.04 (1) | 28.4 / 38.9 |
+| L1+L2+L3 lzp, Huffman final | 18.03 | 11.28x | 25.5 / 36.8 | 18.03 (1) | 16.4 / 25.5 |
+| auto (race), Huffman final | 18.03 | 11.28x | 11.5 / 29.9 | 18.03 (1) | 7.5 / 26.7 |
+
+#### hdfs.log
+
+| option | ratio (1 thr) | vs Huffman | MB/s comp / decomp (1 thr) | ratio (4 thr, blocks) | MB/s comp / decomp (4 thr) |
+|---|---|---|---|---|---|
+| plain Huffman (bytes) | 1.53 | 1.00x | 1,142.6 / 1,566.4 | 1.53 (-) | 1,222.5 / 1,831.2 |
+| GR6 (repeat+graph, fixed 6-bit) | 2.58 | 1.69x | 58.0 / 75.9 | — | — |
+| L1 letters | 6.65 | 4.36x | 0.8 / 1.0 | 6.65 (1) | 0.9 / 0.9 |
+| L2 words (no letter model) | 6.50 | 4.26x | 2.0 / 1.9 | 6.50 (1) | 1.9 / 2.0 |
+| L1+L2 (GR6+) | 7.83 | 5.13x | 1.5 / 2.0 | 7.83 (1) | 1.8 / 1.9 |
+| L1+L3 lzp | 6.82 | 4.47x | 1.0 / 0.9 | 6.82 (1) | 1.1 / 1.1 |
+| L2+L3 lzp | 6.60 | 4.32x | 2.1 / 2.1 | 6.60 (1) | 1.6 / 1.7 |
+| L1+L2+L3 lzp | 7.98 | 5.23x | 2.0 / 2.0 | 7.98 (1) | 1.5 / 1.5 |
+| L1+L2+L3 dict all | 7.51 | 4.92x | 1.6 / 2.3 | 7.51 (1) | 1.3 / 2.2 |
+| L1+L2+L3 dict NN-selected | 7.85 | 5.14x | 1.4 / 1.9 | 7.85 (1) | 1.3 / 1.8 |
+| L1+L2+L3 lzp + dict NN-selected | 8.00 | 5.25x | 1.7 / 1.9 | 8.00 (1) | 1.9 / 1.7 |
+| auto (race) | 7.98 | 5.23x | 0.6 / 2.1 | 7.98 (1) | 0.6 / 2.2 |
+| L1 letters, Huffman final | 1.52 | 0.99x | 17.2 / 23.4 | 1.52 (1) | 19.9 / 23.4 |
+| L1+L2, Huffman final | 5.24 | 3.43x | 20.2 / 31.0 | 5.24 (1) | 18.6 / 24.5 |
+| L1+L2+L3 lzp, Huffman final | 5.38 | 3.52x | 19.1 / 10.9 | 5.38 (1) | 14.3 / 18.9 |
+| auto (race), Huffman final | 5.38 | 3.52x | 8.3 / 30.8 | 5.38 (1) | 6.9 / 18.9 |
+
+#### titanic.csv
+
+| option | ratio (1 thr) | vs Huffman | MB/s comp / decomp (1 thr) | ratio (4 thr, blocks) | MB/s comp / decomp (4 thr) |
+|---|---|---|---|---|---|
+| plain Huffman (bytes) | 1.59 | 1.00x | 1,126.0 / 1,581.9 | 1.59 (-) | 459.8 / 602.9 |
+| GR6 (repeat+graph, fixed 6-bit) | 1.42 | 0.90x | 13.1 / 18.7 | — | — |
+| L1 letters | 4.03 | 2.53x | 0.5 / 0.5 | 4.03 (1) | 0.6 / 0.5 |
+| L2 words (no letter model) | 2.83 | 1.78x | 0.6 / 0.7 | 2.83 (1) | 0.6 / 0.7 |
+| L1+L2 (GR6+) | 3.90 | 2.46x | 0.5 / 0.6 | 3.90 (1) | 0.7 / 0.6 |
+| L1+L3 lzp | 4.07 | 2.56x | 0.5 / 0.5 | 4.07 (1) | 0.5 / 0.6 |
+| L2+L3 lzp | 2.86 | 1.80x | 0.6 / 0.8 | 2.86 (1) | 0.7 / 0.6 |
+| L1+L2+L3 lzp | 3.96 | 2.49x | 0.7 / 0.7 | 3.96 (1) | 0.5 / 0.6 |
+| L1+L2+L3 dict all | 3.14 | 1.98x | 0.5 / 0.6 | 3.14 (1) | 0.7 / 0.8 |
+| L1+L2+L3 dict NN-selected | 3.86 | 2.43x | 0.6 / 0.8 | 3.86 (1) | 0.6 / 0.5 |
+| L1+L2+L3 lzp + dict NN-selected | 3.92 | 2.47x | 0.5 / 0.7 | 3.92 (1) | 0.7 / 0.8 |
+| auto (race) | 4.03 | 2.53x | 0.3 / 0.7 | 4.03 (1) | 0.3 / 0.7 |
+| L1 letters, Huffman final | 1.56 | 0.98x | 4.0 / 6.5 | 1.56 (1) | 5.5 / 8.4 |
+| L1+L2, Huffman final | 2.34 | 1.47x | 3.8 / 8.5 | 2.34 (1) | 6.9 / 12.3 |
+| L1+L2+L3 lzp, Huffman final | 2.38 | 1.49x | 4.1 / 8.7 | 2.38 (1) | 6.1 / 9.4 |
+| auto (race), Huffman final | 2.38 | 1.49x | 2.8 / 10.7 | 2.38 (1) | 2.9 / 10.8 |
+
+#### shakespeare.txt
+
+| option | ratio (1 thr) | vs Huffman | MB/s comp / decomp (1 thr) | ratio (4 thr, blocks) | MB/s comp / decomp (4 thr) |
+|---|---|---|---|---|---|
+| plain Huffman (bytes) | 1.66 | 1.00x | 1,119.5 / 1,581.1 | 1.66 (-) | 2,988.8 / 4,238.2 |
+| GR6 (repeat+graph, fixed 6-bit) | 1.85 | 1.11x | 16.3 / 36.0 | — | — |
+| L1 letters | 3.30 | 1.99x | 0.7 / 0.7 | 3.30 (1) | 0.7 / 0.7 |
+| L2 words (no letter model) | 2.92 | 1.76x | 0.9 / 0.9 | 2.92 (1) | 0.9 / 0.9 |
+| L1+L2 (GR6+) | 3.26 | 1.96x | 0.8 / 0.9 | 3.26 (1) | 0.8 / 0.9 |
+| L1+L3 lzp | 3.32 | 2.00x | 0.7 / 0.7 | 3.32 (1) | 0.7 / 0.7 |
+| L2+L3 lzp | 2.93 | 1.76x | 0.9 / 0.9 | 2.93 (1) | 0.8 / 0.9 |
+| L1+L2+L3 lzp | 3.27 | 1.97x | 0.9 / 0.9 | 3.27 (1) | 0.8 / 0.8 |
+| L1+L2+L3 dict all | 2.79 | 1.68x | 0.8 / 0.9 | 2.79 (1) | 0.8 / 1.1 |
+| L1+L2+L3 dict NN-selected | 3.26 | 1.96x | 0.8 / 1.0 | 3.26 (1) | 0.8 / 1.0 |
+| L1+L2+L3 lzp + dict NN-selected | 3.27 | 1.97x | 0.8 / 0.9 | 3.27 (1) | 0.8 / 1.0 |
+| auto (race) | 3.30 | 1.99x | 0.5 / 0.6 | 3.30 (1) | 0.5 / 0.7 |
+| L1 letters, Huffman final | 1.60 | 0.96x | 12.0 / 9.8 | 1.60 (1) | 9.5 / 11.8 |
+| L1+L2, Huffman final | 2.42 | 1.46x | 9.6 / 9.9 | 2.42 (1) | 7.5 / 13.5 |
+| L1+L2+L3 lzp, Huffman final | 2.43 | 1.46x | 6.0 / 9.8 | 2.43 (1) | 7.7 / 8.5 |
+| auto (race), Huffman final | 2.43 | 1.46x | 5.0 / 13.2 | 2.43 (1) | 5.0 / 12.8 |
+
+#### diamonds.csv
+
+| option | ratio (1 thr) | vs Huffman | MB/s comp / decomp (1 thr) | ratio (4 thr, blocks) | MB/s comp / decomp (4 thr) |
+|---|---|---|---|---|---|
+| plain Huffman (bytes) | 1.85 | 1.00x | 1,171.2 / 1,645.8 | 1.85 (-) | 2,733.8 / 5,248.5 |
+| GR6 (repeat+graph, fixed 6-bit) | 2.20 | 1.19x | 27.7 / 65.7 | — | — |
+| L1 letters | 8.51 | 4.60x | 0.8 / 0.9 | 8.60 (2) | 1.7 / 1.7 |
+| L2 words (no letter model) | 10.21 | 5.52x | 2.1 / 1.7 | 10.14 (2) | 3.6 / 3.6 |
+| L1+L2 (GR6+) | 10.21 | 5.52x | 2.1 / 2.2 | 10.14 (2) | 3.6 / 3.7 |
+| L1+L3 lzp | 8.50 | 4.60x | 0.9 / 0.8 | 8.59 (2) | 1.6 / 1.7 |
+| L2+L3 lzp | 10.21 | 5.52x | 2.0 / 2.2 | 10.13 (2) | 3.8 / 4.1 |
+| L1+L2+L3 lzp | 10.21 | 5.52x | 2.2 / 2.2 | 10.14 (2) | 3.7 / 3.9 |
+| L1+L2+L3 dict all | 4.97 | 2.69x | 1.2 / 2.5 | 4.95 (2) | 1.5 / 5.0 |
+| L1+L2+L3 dict NN-selected | 10.16 | 5.49x | 1.6 / 2.5 | 10.07 (2) | 2.5 / 4.3 |
+| L1+L2+L3 lzp + dict NN-selected | 10.14 | 5.48x | 1.5 / 2.2 | 10.06 (2) | 2.5 / 4.3 |
+| auto (race) | 10.21 | 5.52x | 1.5 / 1.9 | 10.14 (2) | 2.1 / 3.7 |
+| L1 letters, Huffman final | 1.88 | 1.02x | 15.1 / 16.9 | 1.88 (2) | 27.7 / 33.1 |
+| L1+L2, Huffman final | 6.40 | 3.46x | 18.1 / 26.9 | 6.39 (2) | 25.1 / 37.8 |
+| L1+L2+L3 lzp, Huffman final | 6.49 | 3.51x | 11.8 / 20.1 | 6.49 (2) | 16.7 / 42.6 |
+| auto (race), Huffman final | 6.49 | 3.51x | 12.2 / 23.6 | 6.49 (2) | 16.6 / 44.3 |
+
+#### covid.csv
+
+| option | ratio (1 thr) | vs Huffman | MB/s comp / decomp (1 thr) | ratio (4 thr, blocks) | MB/s comp / decomp (4 thr) |
+|---|---|---|---|---|---|
+| plain Huffman (bytes) | 1.83 | 1.00x | 811.4 / 1,010.3 | 1.83 (-) | 2,596.9 / 4,803.0 |
+| GR6 (repeat+graph, fixed 6-bit) | 2.30 | 1.25x | 22.6 / 58.4 | — | — |
+| L1 letters | 6.10 | 3.32x | 1.0 / 0.9 | 6.13 (4) | 3.6 / 3.5 |
+| L2 words (no letter model) | 19.44 | 10.59x | 2.4 / 2.3 | 18.64 (4) | 5.1 / 6.1 |
+| L1+L2 (GR6+) | 19.49 | 10.62x | 2.2 / 2.3 | 18.79 (4) | 5.1 / 8.7 |
+| L1+L3 lzp | 6.10 | 3.32x | 0.9 / 0.9 | 6.13 (4) | 2.4 / 2.3 |
+| L2+L3 lzp | 19.44 | 10.59x | 2.2 / 2.4 | 18.64 (4) | 4.4 / 6.3 |
+| L1+L2+L3 lzp | 19.49 | 10.62x | 1.8 / 2.1 | 18.79 (4) | 3.6 / 5.3 |
+| L1+L2+L3 dict all | 13.83 | 7.54x | 1.9 / 2.4 | 13.42 (4) | 4.5 / 7.3 |
+| L1+L2+L3 dict NN-selected | 19.27 | 10.50x | 2.1 / 2.2 | 18.56 (4) | 4.2 / 6.7 |
+| L1+L2+L3 lzp + dict NN-selected | 19.27 | 10.50x | 1.8 / 2.3 | 18.56 (4) | 3.9 / 6.5 |
+| auto (race) | 19.49 | 10.62x | 1.6 / 2.2 | 18.79 (4) | 3.3 / 7.7 |
+| L1 letters, Huffman final | 1.86 | 1.01x | 11.3 / 12.8 | 1.86 (4) | 33.8 / 38.2 |
+| L1+L2, Huffman final | 7.17 | 3.91x | 12.5 / 14.8 | 7.09 (4) | 39.0 / 55.2 |
+| L1+L2+L3 lzp, Huffman final | 7.17 | 3.91x | 9.7 / 13.8 | 7.09 (4) | 40.1 / 66.7 |
+| auto (race), Huffman final | 7.17 | 3.91x | 11.9 / 17.6 | 7.09 (4) | 35.9 / 75.6 |
+
+#### owid-co2.csv
+
+| option | ratio (1 thr) | vs Huffman | MB/s comp / decomp (1 thr) | ratio (4 thr, blocks) | MB/s comp / decomp (4 thr) |
+|---|---|---|---|---|---|
+| plain Huffman (bytes) | 2.35 | 1.00x | 1,005.5 / 1,530.2 | 2.35 (-) | 2,510.6 / 4,985.9 |
+| GR6 (repeat+graph, fixed 6-bit) | 1.86 | 0.79x | 11.3 / 20.4 | — | — |
+| L1 letters | 5.58 | 2.37x | 0.6 / 0.8 | 5.55 (4) | 2.5 / 3.0 |
+| L2 words (no letter model) | 13.58 | 5.77x | 1.1 / 1.6 | 13.19 (4) | 4.1 / 5.8 |
+| L1+L2 (GR6+) | 13.59 | 5.77x | 1.2 / 1.6 | 13.20 (4) | 3.9 / 6.4 |
+| L1+L3 lzp | 5.59 | 2.37x | 0.7 / 0.8 | 5.55 (4) | 2.4 / 3.0 |
+| L2+L3 lzp | 13.57 | 5.76x | 1.2 / 1.6 | 13.18 (4) | 4.0 / 6.8 |
+| L1+L2+L3 lzp | 13.58 | 5.77x | 1.2 / 1.7 | 13.19 (4) | 4.3 / 5.8 |
+| L1+L2+L3 dict all | 8.68 | 3.69x | 0.9 / 1.8 | 8.40 (4) | 2.5 / 5.7 |
+| L1+L2+L3 dict NN-selected | 13.59 | 5.77x | 1.1 / 1.8 | 13.20 (4) | 3.5 / 6.4 |
+| L1+L2+L3 lzp + dict NN-selected | 13.58 | 5.77x | 1.1 / 1.6 | 13.19 (4) | 3.0 / 5.6 |
+| auto (race) | 13.59 | 5.77x | 1.0 / 1.5 | 13.20 (4) | 3.0 / 5.9 |
+| L1 letters, Huffman final | 2.40 | 1.02x | 2.3 / 7.1 | 2.40 (4) | 7.2 / 31.9 |
+| L1+L2, Huffman final | 6.83 | 2.90x | 2.3 / 10.6 | 6.81 (4) | 8.4 / 42.9 |
+| L1+L2+L3 lzp, Huffman final | 6.86 | 2.92x | 2.4 / 7.5 | 6.84 (4) | 8.3 / 31.1 |
+| auto (race), Huffman final | 6.83 | 2.90x | 2.5 / 11.5 | 6.81 (4) | 8.5 / 41.3 |
+
+## 11. Using GPU threads with small encoding transforms
+
+No GPU was available for this research, so this section is a design grounded in what the CPU measurements showed,
+not a measurement. The rule that decides everything: **a GPU needs thousands of independent work items and no chain
+of steps where each one waits for the previous one.** The adaptive parts of GR6 (move-to-front lists, phrase history,
+the neural model's per-bit learning) are such chains; the transforms themselves mostly are not.
+
+### Compression as map-reduce on the GPU
+
+| stage | GPU form | why it parallelises |
+|---|---|---|
+| 1. split into fields and lines | each thread scans a fixed chunk for separators and newlines; a prefix sum gives every field its row, column and offset | a scan is the canonical GPU primitive |
+| 2. hash every field | one thread per field | independent |
+| 3. build dictionaries | map: hashes from every chunk; reduce: radix sort by (column, hash), deduplicate, count | sort-and-reduce; replaces the adaptive move-to-front ranks with static ranks by frequency |
+| 4. same-as-above flags | compare each field's hash with the field above | independent |
+| 5. numbers | parse each field in parallel; delta, delta-of-delta and formula residuals per row | each residual reads only input values, never coded output |
+| 6. formula search | one thread block per (target, a, b, formula) candidate over a sample of rows; reduce = best per target | measured 4.2× on 4 CPU threads; ideal for a GPU |
+| 7. phrases (L3) | parallel match finder: hash each position's next k field ids, sort, pick the nearest earlier match; resolve overlaps with a parallel greedy parse | the technique GPU LZ coders use; replaces the sequential `lzp` history |
+| 8. entropy coding | static Huffman or rANS with many interleaved streams (e.g. 32 per warp); one frequency table per (role, column) from a map-reduce histogram | GPU rANS and Huffman coders run at tens to hundreds of GB/s |
+
+### Decompression on the GPU
+Run the same stages backwards, all parallel:
+1. Decode the interleaved entropy streams.
+2. Map ranks and ids back to strings with a parallel gather from the dictionaries.
+3. Undo the number transforms: delta decoding is a prefix sum, delta-of-delta two of them. Formula columns follow their
+   inputs.
+4. Resolve "same as above" and phrase copies by pointer jumping, which takes a logarithmic number of passes.
+5. Compute output offsets with a prefix sum of field lengths, then scatter the bytes.
+
+### What stays on the CPU
+The adaptive neural coder: every bit depends on the model state the previous bit left behind. A GPU can only run it
+as one lane per independent block. That pays only for multi-GB inputs, with the block-start loss that section 7
+measured (+2% with warm start). Keep it as the archive tier on CPU, where it runs at 1–2 MB/s per core and scales
+with cores.
+
+### Recommended plan: two tiers
+* **GPU tier (speed):** static-table transform (stages 1–7) plus interleaved rANS with per-column contexts.
+  "Transform + Huffman final" (2.4–18× ratio here, 1.5–11× better than plain Huffman) is a lower bound for this tier's
+  ratio, since rANS with context-split tables codes tighter than Huffman over mixed streams. Throughput should be
+  limited by memory bandwidth, not compute.
+* **CPU tier (ratio):** the same transform followed by the neural coder (2–29× better than plain Huffman), parallel
+  over blocks.
+* Both tiers share one container format and one transform, so a file can be written by one and read by either
+  implementation. The race (`auto`) decides levels per file in both.
+
+### Small transforms worth fusing into one GPU pass
+Field split, hashing, number parsing, same-as-above flags and delta residuals all read the same bytes once. Fuse them
+into one kernel so the data crosses GPU memory once; then sort-reduce for dictionaries; then encode. The common
+mistake is one kernel per small transform, each re-reading the input.
+
+### Watch-outs
+* **Transfer cost:** PCIe (about 25 GB/s on gen4 ×16) is far slower than GPU memory. A GPU compressor wins when the
+  data is already on the GPU (analytics, ML pipelines) or batches are large; for host files the transfer can cost
+  more than the compression.
+* **Determinism:** floating-point reductions and atomics on a GPU can change order between runs. Use integer
+  arithmetic and deterministic sorts everywhere, as kolmo's coders already do.
+
+## 12. Not yet considered (candidates for next steps)
+* **Shared or pre-trained dictionaries and models** for families of small similar files (logs, JSON, telemetry).
+  Built once and shipped like a zstd dictionary, the phrase dictionary could pay, because its cost is amortised; it
+  does not pay per file (section 9).
+* **More combinations in the race:** L1+L3 (best on Titanic) and L2+L3 (near-best on tables, faster).
+* **Semi-static context models:** map-reduce counts per (role, column, previous unit), then rANS. This sits between
+  Huffman and the neural coder in ratio, decodes fast, and is GPU-friendly.
+* **Asymmetric use:** write-once/read-many favours spending encoder effort (race, formula search) and keeping decode
+  static; the neural coder is symmetric.
+* **Random access and streaming:** block index and range reads, as kolmo has; inputs of unknown length.
+* **Memory:** the neural coder uses about 130 MB of tables per block-thread.
+* **Wider data:** JSON and XML, UTF-8 non-Latin text (the 62-symbol letter table), binary.
+* **Benchmark rigour:** larger corpora (Silesia, enwik8, OWID full set), repeated runs with variance, energy per byte.
+* **Robustness:** decompression-bomb limits, and fuzzing every new decoder, as was done for the shipped GR6+ codec.
