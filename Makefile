@@ -195,8 +195,17 @@ check-bwt: build/test-bwt build/test-bwt-asan
 	./build/test-bwt
 	./build/test-bwt-asan
 .PHONY: check-bwt
-check-rc: check-bwt check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch
-.PHONY: check-rc check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch
+# Assembly kernels (src/arch/<isa>/*.S) against their C references, optimised and with sanitizers; with NO_ASM=1 the
+# references only.
+build/test-asm: tests/test_asm.c src/kolmo.c $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+build/test-asm-asan: tests/test_asm.c src/kolmo.c $(KOLMO_INCLUDES) $(ARCHSRC) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< $(ARCHSRC) build/libvendor.a -o $@ $(LIBS)
+check-asm: build/test-asm build/test-asm-asan
+	./build/test-asm
+	./build/test-asm-asan
+check-rc: check-bwt check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm
+.PHONY: check-rc check-bwt check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan

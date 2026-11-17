@@ -89,7 +89,11 @@ blocks that contain no newline). Files with a tflag 10 block are version 6.
 
 `STORE` is the raw block. `LZ4`/`LZ4HC`, `ZSTD`, `BROTLI` and `LZMA2` are the standard formats from the vendored
 libraries. `BSC` is libbsc 3.4.0's block-sorting stream (written and read by Kolmo's C port in `src/codecs/bwt.c`), prefixed with a 4-byte XXH32 of the stream that is checked before
-decoding. `CM` is this project's integer context-mixing coder; its stream starts with a 32-bit size word whose low 28
+decoding; from rc3 it is read only. `BWT` (codec 18, container version 11) is Kolmo's own block-sorting stream
+(`src/codecs/bwt_stream.c`): flags u8 (bits 0-1 QLFC model, 1 static or 2 adaptive; bit 2 LZP) | LZP table bits u8 and
+minimum match u8 when bit 2 is set | primary index u32 | log2 of the index sampling interval u8 | k u8 | k sampled
+BWT indexes u32 | the QLFC stream (block count u8, per block raw and coded sizes u32, the blocks). All little-endian;
+no header, length or checksum of its own: the raw size and the XXH3 block checksum come from the container. `CM` is this project's integer context-mixing coder; its stream starts with a 32-bit size word whose low 28
 bits are the block length and whose top 4 bits `f` select the model: `f = 0` is model 1 with the legacy default table
 size; otherwise `f & 7` is the log2 of the hash-table size minus 15, and `f & 8` selects model 2 (two more sparse
 contexts, three record contexts, four mixers combined by a learned final mixer, and an extra order-2 APM). The arithmetic-coded bytes follow.
@@ -134,6 +138,7 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 15 | NPLANE (native plane-context leaf) | graph leaves, version 9 only | 1.2.0 |
 | 16 | FQFAM (FASTQ family coder) | blocks, version 10 or later; written by `ultra` (not level 1) | this branch |
 | 17 | CMI (context mixing, image model) | blocks; written by `ultra` | 1.2.0 |
+| 18 | BWT (Kolmo block sorting: LZP, BWT, adaptive QLFC) | blocks and graph leaves, version 11 or later; written instead of BSC (5) by `ratio`, `max -l 1` and `ultra`; BSC stays readable | rc3 (bwt lane) |
 
 **Graph nodes** (op byte of a node).
 
@@ -156,7 +161,7 @@ The exact logistic tables use the logistic curve round(4096 / (1 + e^(-x/256))) 
 33 interpolated knots of the earlier models; stretch is its inverse (the smallest x whose squash reaches p). Readers before
 1.2.0-rc2 refuse these streams (an unknown model nibble or channel count) with `KOLMO_ERR_CORRUPT`; 1.2.0-rc2 reads both kinds.
 
-**What an older reader does.** Only versions 4 to 10 are announced in the header. Codec 16 is announced: a frame
+**What an older reader does.** Only versions 4 to 11 are announced in the header. Codec 18 is announced like codec 16: a frame with a codec 18 block, or a graph block whose leaves may use it, has version 11, which every rc2 reader refuses at the header. Codec 16 is announced: a frame
 with a codec 16 block has version 10, so every earlier reader (1.2.0-rc2 and before) refuses it at the header with
 `KOLMO_ERR_CORRUPT` ("corrupt or unsupported input") before decoding any block, and returns no bytes; frames without
 codec 16 keep the version they had (the writer's output for them is unchanged). A version 10 reader rejects codec 16
@@ -203,11 +208,13 @@ The byte layouts of the table, log, record, image and word transforms live with 
 not frozen here:
 
 ```
-src/tbl2.inc   table v2: typed columns, predictors, formula discovery
-src/log.inc    log templates and skeleton columns
-src/sci.inc    fixed records and 16-bit images
-src/word.inc   word dictionary
-src/kolmo.c      container, typed transpose, byte-plane shuffle, x86 filter, coders
+src/transforms/table.c       table v2: typed columns, predictors, formula discovery
+src/transforms/log.c         log templates and skeleton columns
+src/transforms/sci.c         fixed records and 16-bit images
+src/transforms/word.c        word dictionary
+src/transforms/table_v03.c   table v1 (tflag 3); transpose.c, shuffle.c, x86.c: typed transpose, byte-plane shuffle,
+                             x86 filter
+src/core/                    container (container.h, compress.c, decode.c); src/codecs/: the block coders
 ```
 
 ## Kolmo graph blocks (version 7)
@@ -277,7 +284,7 @@ version 1–6 decoder rejects version 7 files.
 
 ## FASTQ family blocks (codec 16, version 10)
 
-A block with codec 16 is FASTQ text coded by stream family (`src/kfam.inc`; the standalone research tool
+A block with codec 16 is FASTQ text coded by stream family (`src/codecs/fastq.c`; the standalone research tool
 `src/experimental/kfam.c` writes the same frame). Its plan prefix is `0, 0, 0, 0` and its tflag 0; a decoder rejects
 anything else, and rejects codec 16 in a file below version 10 or as a graph leaf. The block checksum covers the
 decoded block as usual. `ultra` writes it, at levels 0 and 2 (not at level 1, which is context mixing only), for a
@@ -308,7 +315,7 @@ model with one context byte from the family), 1 bases (2-bit symbols), 2 qualiti
 
 Names and qualities are cut into jobs at record boundaries every 4 Mi symbols, bases every 64 Mi bases; the cut
 points are written in the job table, so a decoder needs no rule for them. The models (their contexts are listed in
-`src/kfam.inc`) are part of the format: bases use orders 6 and 12 and three match models; qualities use the
+`src/codecs/fastq.c`) are part of the format: bases use orders 6 and 12 and three match models; qualities use the
 previous three qualities, the position, a running sum of quality changes, the mean so far and whether the base is
 an exception, six context tables, two mixers, a final mixer and two adaptive probability maps. Like `CM`, the coder
 is integer-only except for its logistic tables, built from IEEE `+ * /` only, so its output is bit-exact across

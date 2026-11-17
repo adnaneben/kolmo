@@ -81,7 +81,73 @@ LZP parameters tried (adaptive QLFC, same 451 MB): off +0.15%, 16/32 +0.32%, 18/
 
 ## 4. Size and speed against bsc, bzip3 and xz
 
-BENCH_TABLES
+Whole files, `benchmark/rc3/bwt/bench.sh` (wall time of whole processes, one run each; 451 MB: the 12 Silesia
+files, enwik8, the first 64 MB of the UCI power CSV, the USGS quakes CSV, the generated web log and JSON lines). Kolmo
+runs `-m ratio` (the mode that uses block sorting); "rc3 base" is commit 2207da1 (libbsc, codec 5), "codec 18" this
+branch. All round trips verified.
+
+**1 thread** (`-T 1`, `xz -T1`, bsc without OpenMP):
+
+| tool | bytes | ratio | vs kolmo rc3 base | compress MB/s | decompress MB/s |
+|---|---|---|---|---|---|
+| kolmo-rc3base-ratio | 72,217,003 | 16.02% | +0.00% | 3.6 | 44.3 |
+| kolmo-bwt-ratio | 71,813,739 | 15.93% | -0.56% | 3.9 | 30.9 |
+| xz-9 | 88,759,444 | 19.69% | +22.91% | 1.1 | 69.3 |
+| bsc | 83,323,574 | 18.48% | +15.38% | 20.9 | 35.8 |
+
+**4 threads** (all of the VM; `-T 4`, `xz -T4`, bsc with OpenMP over blocks and inside libbsc):
+
+| tool | bytes | ratio | vs kolmo rc3 base | compress MB/s | decompress MB/s |
+|---|---|---|---|---|---|
+| kolmo-rc3base-ratio | 72,217,003 | 16.02% | +0.00% | 4.5 | 47.6 |
+| kolmo-bwt-ratio | 71,813,739 | 15.93% | -0.56% | 5.0 | 68.0 |
+| xz-9 | 88,759,580 | 19.69% | +22.91% | 1.1 | 69.6 |
+| bsc | 83,323,574 | 18.48% | +15.38% | 12.7 | 78.8 |
+
+Per file (sizes; identical at 1 and 4 threads except xz's few header bytes):
+
+| file | rc3 base | codec 18 | change | xz -9 | bsc |
+|---|---|---|---|---|---|
+| dickens | 2,274,350 | 2,254,558 | -0.87% | 2,830,604 | 2,274,294 |
+| mozilla | 13,835,767 | 13,835,767 | +0.00% | 13,374,160 | 16,183,060 |
+| mr | 2,014,182 | 1,989,774 | -1.21% | 2,750,272 | 2,231,054 |
+| nci | 1,225,386 | 1,199,630 | -2.10% | 1,738,884 | 1,283,606 |
+| ooffice | 2,093,384 | 2,093,384 | +0.00% | 2,426,816 | 2,587,434 |
+| osdb | 2,276,454 | 2,206,574 | -3.07% | 2,849,908 | 2,276,398 |
+| reymont | 994,018 | 978,208 | -1.59% | 1,317,152 | 993,962 |
+| samba | 3,739,524 | 3,739,524 | +0.00% | 3,763,616 | 3,968,402 |
+| sao | 2,184,759 | 2,184,759 | +0.00% | 4,415,072 | 4,724,778 |
+| webster | 6,492,700 | 6,439,824 | -0.81% | 8,385,868 | 6,698,930 |
+| x-ray | 3,616,667 | 3,616,667 | +0.00% | 4,489,868 | 3,806,826 |
+| xml | 399,262 | 385,428 | -3.46% | 453,260 | 399,206 |
+| enwik8 | 20,944,968 | 20,798,338 | -0.70% | 24,865,244 | 22,463,202 |
+| power64.txt | 3,326,232 | 3,326,232 | +0.00% | 5,715,572 | 5,976,184 |
+| quakes.csv | 536,920 | 528,404 | -1.59% | 655,576 | 536,864 |
+| web.log | 4,637,422 | 4,637,422 | +0.00% | 5,880,032 | 4,596,506 |
+| events.jsonl | 1,625,008 | 1,599,246 | -1.59% | 2,847,540 | 2,322,868 |
+
+Reading the numbers:
+- codec 18 is smaller on every file where block sorting is used (text, XML, quakes CSV, JSON lines, nci, mr, osdb:
+  −0.7% to −3.5%); files coded with LZMA2 or transformed away from block sorting (mozilla, samba, ooffice, sao,
+  x-ray, the power CSV, the web log) are unchanged.
+- bsc's compress at 4 threads is slower than at 1 on files of one 25 MiB block: OpenMP's active waiting inside
+  libbsc on this 4-vCPU VM (the same effect as in section 2).
+- Compress is faster overall (osdb: 7.4 s → 1.1 s from skipping LZMA2; the rest within noise).
+- Decompress at 1 thread is about 30% slower: the adaptive QLFC model (mixers) costs about 1.5× the static one per
+  symbol. At 4 threads it is 43% faster than the rc3 base (68 against 48 MB/s overall; enwik8 3.8 s → 1.8 s), because
+  rc2 inverted the BWT and decoded QLFC on one thread per block.
+- bsc is much faster to compress (no planner, no trials) and 15% larger; xz -9 is 23% larger.
+
+**BWT stage alone, enwik8 as one 100 MB block** (`m18.c`/`bscdrv.c`, in-memory, times exclude I/O):
+
+| | size | compress 1 thr | decompress 1 thr | compress 4 thr | decompress 4 thr |
+|---|---|---|---|---|---|
+| libbsc 3.4.0 (bsc settings, one block) | 20,944,912 | 14.8 MB/s | 28.6 MB/s | 18.3 MB/s (OpenMP passive; 4.4 MB/s with OpenMP's default active wait) | 105 MB/s |
+| Kolmo port, codec 5 settings (static QLFC) | 20,944,892 | 14.0 MB/s | 26.9 MB/s | 26.7 MB/s | 90.8 MB/s |
+| Kolmo codec 18 (adaptive, LZP 17/96, ≥ 4 MiB coder blocks) | 20,798,286 (−0.70%) | 11.3 MB/s | 17.5 MB/s | 23.4 MB/s | 62.2 MB/s |
+
+The port runs at libbsc's single-thread speed within this VM's noise; with threads it compresses 1.5× faster than
+libbsc+OpenMP and decodes within 15% of it.
 
 bzip3 was not measured: building it from its sources was refused by this session's permission policy (downloaded code
 may not be built and run here). bsc is libbsc 3.4.0 driven as the `bsc` tool drives it (`bscdrv.c`: 25 MiB blocks,
