@@ -39,6 +39,19 @@ FASTQ family blocks add container version 10 for `-x` frames of FASTQ input only
   `kfam-check`.
 
 ### Added
+- **GR6+ blocks at `-x`** (block codec 26, container version 11). In `ultra` (levels 0 and 2) a text block of at
+  least 64 lines is also coded by GR6+: fields as one decision each (same as the line above, column and graph
+  move-to-front ranks, column dictionary, numbers as residuals from the best of four column predictors including a
+  derived-column formula, new text with a prefix shared with a reference field), values as 6-bit units, an integer
+  context-mixing model and the CM arithmetic coder. Formula discovery adds running totals `lag(t) + a`, copies and
+  products `a * b / 10^k` to the ratio and growth formulas, scored on near hits. The block keeps GR6+ only when it is
+  smaller than context mixing, LZMA2 and BWT, so no file grows. Apple M5, one thread, against rc3 `-x`: covid
+  countries-aggregated 18.87× → 19.48×, owid_test 12.23× → 12.70×, OWID CO2 12.84× → 12.93×, and those decode 5–11×
+  faster; energy, wide table, loghub, dickens and api.json unchanged. Compression costs 3–30% more on text, and
+  126% more on a 130-column table where GR6+ is tried and loses (formula search). Frames with a codec 26 block are
+  version 11; every other mode and `-x -l 1` keep their bytes. From branch `claude/dazzling-maxwell-p8y4u0` (commit
+  `12f0c0e`, where it was codec 15 / version 9); code `src/codecs/gr6.c`, format `SPEC.md` *GR6+ blocks*,
+  measurements `benchmark/rc3/gr6/RESULTS.md`.
 - **FASTQ family blocks at `-x`** (block codec 16, container version 10): at `ultra` levels 0 and 2, a block that
   is complete FASTQ text is also coded by the family coder (`src/kfam.inc`: layout, names, bases, base exceptions
   and qualities, each with a model of its own, cut into chunks coded in parallel), and that coding is kept when it

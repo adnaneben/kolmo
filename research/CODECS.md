@@ -34,6 +34,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | 21–23 | stacking leaves | per-plane leaves, Huffman→zstd leaf, zero-run leaf | own | ST-1: −0.67% to −2.0% vs production on integer files (fresh data) | rc3 (format2 lane) |
 | 24 | own LZMA-class coder | — | own | pending | rc3 (deps lane), only if it gains |
 | 25 | parallel CM | stream- or block-parallel context mixing | own | pending | rc3 (xmode lane) |
+| 26 | GR6+ (`-x`, line-structured text) | fields as decisions (repeat, column and graph move-to-front ranks, dictionaries, column predictors with derived-column formulas, shared-prefix text), values as 6-bit units, integer context mixing (8 models, two mixers, APM) with the CM arithmetic coder; tried per ultra text block, kept only when smaller | own (from branch `claude/dazzling-maxwell-p8y4u0`, commit `12f0c0e`) | M5, 1 thread, on top of rc3 `-x`: covid 18.87× → 19.48× (−3.1%), owid_test 12.23× → 12.70× (−3.7%), OWID CO2 12.84× → 12.93× (−0.7%), decode 5–11× faster on those; energy, wide, loghub, dickens, api.json unchanged (not chosen); compression +3% to +30%, +126% on a 130-column table (formula search); other modes byte-identical (`benchmark/rc3/gr6/RESULTS.md`) | rc3 |
 
 ## Transforms and graph techniques
 
@@ -72,7 +73,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | kbin | pcodec-style binning, rANS bin indices, offset bits, LPC up to order 8 | beats pcodec 8/12 on all 18 files; ECG −4.4% vs `ratio` at 38× compress speed; equal to `balanced` over all NPY | candidate numeric node (rc3 decision) |
 | krans | 32-way interleaved static rANS, order 0/1, AVX2 | order 0: −0.4% to −0.8% vs HUF leaves, 1.19–1.26× faster decode on x86; order 1: −20–25% at 0.35–0.47× decode; NEON on M5 (simd-arm): order 0 0.43× scalar at 8 ways, 1.2–1.3× at 16–32 ways; order 1 0.38–0.53× | candidate leaf coder on x86 (simd lanes) |
 | 6-bit alphabet K6 (fixed, adaptive, token tables; session `dazzling-maxwell`, `research/sixbit-study/`) | text and CSV in 6-bit units with escape codes | 1.23–2.05× alone: beaten by plain Huffman on every file and it hurts any coder that follows | dropped as a storage format |
-| GR6 / GR6+ (same study) | DITTO, rank, graph and dictionary ops in 6-bit units, column predictors and formulas, then fixed, Huffman or context-mixing coder | GR6+ CM mode: beats xz -9e, zstd -19, brotli -11 on all 7 files; beats `-x` on OWID (+8%) and covid; loses to `-x` by 4–19% on logs, text and small tables; 1–3 MB/s both ways | research (ideas taken: formulas, warm start, previous-field contexts) |
+| GR6 / GR6+ (same study) | DITTO, rank, graph and dictionary ops in 6-bit units, column predictors and formulas, then fixed, Huffman or context-mixing coder | GR6+ CM mode: beats xz -9e, zstd -19, brotli -11 on all 7 files; beats `-x` on OWID (+8%) and covid; loses to `-x` by 4–19% on logs, text and small tables; 1–3 MB/s both ways | research (ideas taken: formulas, warm start, previous-field contexts); GR6+ itself ported as block codec 26 |
 | bit-level neural coder over 6-bit units (same study) | 6 binary decisions per unit instead of 8 | about 40% faster for 1–3% more size | research |
 
 ## Speed techniques
