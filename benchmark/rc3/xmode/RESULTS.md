@@ -232,14 +232,93 @@ step 4's column trial makes 100 KB CSV encode slower at 1 thread (0.12 → 0.08 
 
 ## 100 MB, before and after
 
-TABLES_100M
+"final" is the branch head after the codec 25 fix (`937ef77`); the text and CSV "final" rows were measured with the
+build just before the fix, whose frames for those two files are the same (text is never split; the CSV takes the column
+path, which the bug did not touch). "final-scaled" adds `--x-tables=scaled`.
+
+| file | T | step | size | ratio | enc MB/s | enc peak MiB | dec MB/s | dec peak MiB |
+|---|---:|---|---:|---:|---:|---:|---:|---:|
+| text_100m | 1 | base | 9,749,249 | 10.257 | 0.237 | 5942 | 0.233 | 5842 |
+| text_100m | 1 | final | 9,749,249 | 10.257 | 0.242 | 5941 | 0.241 | 5842 |
+| text_100m | 4 | base | 9,749,249 | 10.257 | 0.220 | 5942 | 0.228 | 5842 |
+| text_100m | 4 | final | 9,749,249 | 10.257 | 0.243 | 6043 | 0.238 | 5842 |
+| text_100m | 4 | final-scaled | 9,888,003 | 10.113 | 0.213 | 2059 | 0.213 | 1858 |
+| csv_100m | 1 | base | 4,470,924 | 22.367 | 0.302 | 5604 | 0.321 | 5505 |
+| csv_100m | 1 | final | 4,134,795 | 24.185 | 0.455 | 3986 | 0.466 | 3755 |
+| csv_100m | 4 | base | 4,470,924 | 22.367 | 0.325 | 5604 | 0.346 | 5505 |
+| csv_100m | 4 | final | 4,134,795 | 24.185 | 0.822 | 8384 | 0.829 | 7327 |
+| csv_100m | 4 | final-scaled | 4,143,983 | 24.131 | 1.127 | 1517 | 1.339 | 578 |
+| bin_100m | 1 | base | 25,405,325 | 3.936 | 0.246 | 4759 | 0.256 | 4585 |
+| bin_100m | 1 | final | 25,433,340 | 3.932 | 0.281 | 4648 | 0.288 | 4538 |
+| bin_100m | 4 | base | 25,405,325 | 3.936 | 0.351 | 9276 | 0.382 | 9120 |
+| bin_100m | 4 | final | 25,433,340 | 3.932 | 0.428 | 9302 | 0.418 | 9133 |
+| bin_100m | 4 | final-scaled | 26,031,309 | 3.842 | 0.495 | 701 | 0.492 | 533 |
+| fq_100m | 1 | base | 13,978,319 | 7.154 | 0.191 | 5888 | 3.465 | 377 |
+| fq_100m | 1 | final | 13,978,319 | 7.154 | 3.546 | 524 | 3.558 | 377 |
+| fq_100m | 4 | base | 13,978,319 | 7.154 | 0.204 | 5888 | 9.617 | 610 |
+| fq_100m | 4 | final | 13,978,319 | 7.154 | 9.601 | 763 | 9.523 | 610 |
+
+- FASTQ: encode 18.6× faster at 1 thread and 47× at 4 threads, memory 5.9 GiB → 0.5–0.8 GiB, same bytes. Decode is
+  unchanged at 100 MB (the 4 MiB quality chunks were already enough; the single bases job bounds it).
+- CSV: −7.5% (the columns), encode 2.5× and decode 2.4× faster at 4 threads, 1.5× at 1 thread; peak memory at 4
+  threads rises to 8.2 GiB (nine column models in parallel), 1.5 GiB with scaled tables, which are also faster here.
+- Binary (a tar, so several blocks under 32 MiB): 1.1–1.2× faster from step 3, +0.11% (the second-largest block now
+  takes another alternative order; not investigated further).
+- Text: within noise. A single text stream remains one model on one thread — the case this lane did not solve.
+
+### Step 5 on a single non-text stream (Silesia osdb, 10 MB)
+
+The default (halves from 32 MiB) leaves osdb whole. With the rejected 8 MiB threshold (`kolmo-halves8`, the fixed
+code built with `-DCMP_SPLIT_MIN=8388608`) it is 2× faster at 4 threads and half the memory at 1 thread, for +2.26%:
+
+| file | T | step | size | ratio | enc MB/s | enc peak MiB | dec MB/s | dec peak MiB |
+|---|---:|---|---:|---:|---:|---:|---:|---:|
+| osdb_10m | 1 | final | 2,228,102 | 4.527 | 0.274 | 4546 | 0.270 | 4536 |
+| osdb_10m | 1 | halves-from-8MiB | 2,278,470 | 4.427 | 0.268 | 2305 | 0.274 | 2296 |
+| osdb_10m | 4 | final | 2,228,102 | 4.527 | 0.276 | 4670 | 0.269 | 4536 |
+| osdb_10m | 4 | halves-from-8MiB | 2,278,470 | 4.427 | 0.540 | 4713 | 0.540 | 4577 |
+
+### Step 3 on a baseline-ISA build (`-march=x86-64`, what releases ship; 1 thread)
+
+| file | T | step | size | ratio | enc MB/s | enc peak MiB | dec MB/s | dec peak MiB |
+|---|---:|---|---:|---:|---:|---:|---:|---:|
+| text_1m | 1 | base-x86-64 | 216,874 | 4.611 | 0.068 | 1380 | 0.165 | 1377 |
+| text_1m | 1 | s3-x86-64 | 216,874 | 4.611 | 0.089 | 1380 | 0.188 | 1377 |
+| csv_1m | 1 | base-x86-64 | 51,640 | 19.364 | 0.090 | 1377 | 0.194 | 1373 |
+| csv_1m | 1 | s3-x86-64 | 51,640 | 19.364 | 0.109 | 1378 | 0.247 | 1373 |
+| bin_1m | 1 | base-x86-64 | 622,662 | 1.606 | 0.186 | 1167 | 0.199 | 1166 |
+| bin_1m | 1 | s3-x86-64 | 622,662 | 1.606 | 0.258 | 1167 | 0.261 | 1166 |
+
+Encode 1.21–1.39× and decode 1.14–1.31× faster, the same bytes.
+
+### Step 7: table size against output size (opt-in, default unchanged)
+
+| file | default tables | `--x-tables=21` | `--x-tables=20` | `--x-tables=scaled` |
+|---|---|---|---|---|
+| text 100 KB | 28,061 B, 278 MiB | | | +0.07%, 162 MiB |
+| text 1 MB | 216,874 B, 1.4 GiB | | | +1.66%, 169 MiB |
+| text 10 MB | 2,025,970 B, 5.4 GiB | +0.24%, 2.7 GiB | +0.67%, 1.4 GiB | +5.11%, 227 MiB |
+| text 100 MB | 9,749,249 B, 5.9 GiB | | | +1.42%, 2.0 GiB |
+| CSV 1 MB / 10 MB / 100 MB | (columns) | | | 0.00% / +0.08% / +0.22%; 125 MiB / 135 MiB / 578 MiB to decode |
+| binary 1 MB / 10 MB / 100 MB | | | | +0.26% / +1.06% / +2.35%; 126 / 135 / 533 MiB to decode |
+
+Scaled tables are nearly free on tables (CSV) and cost 1–5% on text and binary data. On text, a cap of 2^20 buckets
+per model (1.4 GiB) keeps the cost under 0.7%. A memory model that sizes tables by the kind of data (as the
+integration study also found for its table coder: 3–19% at 2^16 entries, depending on the data) is the natural
+next step; the option is left opt-in, as the plan asks.
 
 ## Tests
 
-Before the push of `53895f8`, on the merged tree: `make check`, `make check-rc`, `make check-sanitizers`,
+Before the push of `f350da9` (after the codec 25 fix and the second structure merge), and before `53895f8`: `make check`, `make check-rc`, `make check-sanitizers`,
 `make experimental-check GPU_CHECK=`, `make kfam-check` all pass. `benchmark/determinism/check.py`: 108 of 110 frames
 unchanged; `table.csv` at `-x` and `-x -l 2` now use codec 25 (78,869 → 77,764 bytes) and the expected digests were
-regenerated in a commit of their own; 1 and 4 threads give the same frames.
+regenerated in a commit of their own; 1 and 4 threads give the same frames. `make check-cmpar` (new, in `check-rc`)
+covers both codec-25 paths; it fails on the code before the fix.
+
+The halves bug: before `937ef77`, a plain (untransformed) non-text block of 8 MiB or more was written as codec 7 with a
+codec-25 payload and could not be decoded. No test input was that large, so every suite passed; the 100 MB binary run
+found it. Frames with that block shape written by `5bd1fbd` up to (not including) `937ef77` are not readable. The branch was
+never merged or released.
 
 ## What failed or is left
 

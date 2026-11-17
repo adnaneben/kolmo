@@ -55,4 +55,12 @@ What was measured and **not** adopted:
 
 Peak memory falls with 2 (FASTQ), 4 and 5 (tables per part follow the part's size) and 7. Step 1 raises the encoder's
 peak at 4 threads (the alternative coder and a second planner sample run beside CM). The opt-in table sizing of 7 is
-the lever the memory model (`docs/MEMORY-MODEL.md`) needs; RESULTS gives its size cost.
+the lever the memory model (`docs/MEMORY-MODEL.md`) needs. Measured (RESULTS): "scaled" (about 16× the block) costs
+0–0.2% on tables, 0.3–2.4% on binary data and up to 5.1% on text (10 MB), and brings decoding of a 10 MB file from
+5.4 GiB to 135–210 MiB; on text a cap of 2^20 buckets per model costs 0.67% at 1.4 GiB. The owner's choice is
+between these per kind of data; the default is unchanged until then.
+
+## Bug found by the measurements
+
+Before `937ef77` the halves path wrote plain non-text blocks of 8 MiB or more as codec 7 with a codec-25 payload
+(undecodable). Fixed, with `make check-cmpar` covering both codec-25 paths.

@@ -87,4 +87,4 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | CM: block-parallel text (2/4/8 parts) | `-x` | +2.8% / +6.4% / +10.9% on 10 MB text, +8.7% for 4 parts on 100 MB | dropped (xmode) |
 | CM: block-parallel binary, 4 or 8 parts | `-x` | +0.90% / +1.3% on 100 MB (3.7× faster) — over the 0.5% budget | dropped (xmode); 2 halves kept |
 | family coder: name/quality chunks of block/16 (1–4 MiB) | `-x` FASTQ decode | 10 MB: 1.4× faster decode at 4 threads, +0.57%; 100 MB unchanged (4 MiB); smaller base chunks +13% | rc3 (xmode) |
-| CM tables sized to the block (`--x-tables=scaled`) | `-x` memory | see `benchmark/rc3/xmode/RESULTS.md` | opt-in until the memory model is approved |
+| CM tables sized to the block (`--x-tables=scaled`, or a cap `16..22`) | `-x` memory | scaled: CSV +0.0–0.2%, text +0.1–5.1%, binary +0.3–2.4%, decode memory 5.4–5.9 GiB → 125–580 MiB (2.0 GiB for 100 MB of text); cap 2^20 on 10 MB text +0.67% at 1.4 GiB | opt-in until the memory model is approved |
