@@ -10,6 +10,14 @@ int64_t kolmo_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, c
     return compress_impl(src, -1, n, dst, -1, cap, p, NULL, 0, 0);
 }
 
+int kolmo_set_gpu(int on) {
+#ifdef KOLMO_GPU
+    return kolmo_gpu_set(on);
+#else
+    (void)on; return 0;
+#endif
+}
+
 int64_t kolmo_original_size(const uint8_t *src, size_t n) {
     if (n >= 4 && !memcmp(src, "CZC1", 4)) return kp_compact_original_size(src, n);
     return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : KOLMO_ERR_CORRUPT;

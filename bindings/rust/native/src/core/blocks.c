@@ -128,6 +128,10 @@ static void *compress_worker(void *arg) {
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
     if (!tbuf || !slot || (J->input_fd >= 0 && !input)) { free(input); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
     for (;;) {
+#ifdef KOLMO_GPU
+        uint32_t nx = atomic_load(&J->next);
+        if (!kolmo_gpu_take(nx < J->nb ? J->nb - nx : 0)) break;          /* GPU worker: only while the CPU has a backlog */
+#endif
         uint32_t i = atomic_fetch_add(&J->next, 1); if (i >= J->nb) break;
         const plan_t pl = J->plans[J->bplan[i]]; const uint64_t rs = J->rstart[i];
         size_t len = J->starts[i + 1] - J->starts[i];

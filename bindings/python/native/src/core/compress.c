@@ -168,6 +168,11 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     double pt1 = prof_now();
 #endif
+#ifdef KOLMO_GPU
+    /* modes whose blocks may be block-sorted (ratio, -x): the GPU worker joins when there are more blocks than threads */
+    if (!ret && (codec == C_LZMA || codec == C_CM) && !dict) kolmo_hetero_run(run_pool, compress_worker, &J, threads, nb);
+    else
+#endif
     if (!ret) run_pool(compress_worker, &J, threads, nb);
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     fprintf(stderr, "compress bytes=%zu threads=%d plan_ms=%.3f blocks_ms=%.3f\n", n, threads, (pt1 - pt0) * 1000, (prof_now() - pt1) * 1000);

@@ -118,8 +118,9 @@ int main(int argc, char **argv) {
             argc -= 2; a--;
         }
     for (int a = 1; a < argc; a++)                           /* long options, removed before getopt sees the arguments */
-        if (!strcmp(argv[a], "--native-leaf") || !strcmp(argv[a], "--typed-huf")) {
-            if (!strcmp(argv[a], "--native-leaf")) native_leaf = 1; else typed_huf = 1;
+        if (!strcmp(argv[a], "--native-leaf") || !strcmp(argv[a], "--typed-huf") || !strcmp(argv[a], "--gpu")) {
+            if (!strcmp(argv[a], "--gpu")) { if (!kolmo_set_gpu(1)) fprintf(stderr, "kolmo: --gpu: this build or machine has no GPU path; the CPU does the work\n"); }
+            else if (!strcmp(argv[a], "--native-leaf")) native_leaf = 1; else typed_huf = 1;
             for (int b = a; b < argc; b++) argv[b] = argv[b + 1];
             argc--; a--;
         }
@@ -170,7 +171,9 @@ int main(int argc, char **argv) {
             "          kolmo -d -P p.kpf in out   (the decoder needs the profile; kolmo profile p.kpf describes it)\n"
             "targets:  --target size | 'decode>=1GB/s' | 'encode>=50MB/s' | 'cost:<formula of size,n,enc,dec>' |\n"
             "          cost:cloud[=months] | cost:link=1Gbit   (floors join with ','; -v reports the choice)\n"
-            "          kolmo calibrate [-o table] [FILES]   speed table (default ~/.config/kolmo/calibration; --calib FILE)\n"); return 2;
+            "          kolmo calibrate [-o table] [FILES]   speed table (default ~/.config/kolmo/calibration; --calib FILE)\n"
+            "          --gpu  macOS builds made with GPU=1: one GPU worker beside the threads in ratio and -x (same output)\n"); return 2;
+
     }
     if (extreme) { P.mode = KOLMO_ULTRA; mode_given = 1; }
     if (native_leaf && typed_huf) { fprintf(stderr, "kolmo: choose --native-leaf or --typed-huf, not both\n"); return 2; }

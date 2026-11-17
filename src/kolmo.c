@@ -6,6 +6,9 @@
  * compiled on their own. Add a new part here and to the layer list in docs/LAYOUT.md. */
 #define _GNU_SOURCE
 #include "core/common.h"
+#ifdef KOLMO_GPU
+#include "core/hetero.h"            /* the GPU worker (make GPU=1, macOS): compiled on its own, off unless asked for */
+#endif
 
 /* arch: CPU features, checksums and the vector kernels with their portable references */
 #include "arch/cpu.h"

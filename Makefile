@@ -60,8 +60,8 @@ BLIBS   := $(LIBS)
 
 # Library sources (docs/LAYOUT.md). src/kolmo.c includes the parts below into one translation unit, so they are listed
 # by directory as its prerequisites. Compiled on their own and archived with it: arch/xxh3.c and the assembly kernels of
-# this machine's ISA, src/arch/<isa>/*.S (NO_ASM=1 drops them and builds the C references only), and on macOS the GPU
-# host code src/arch/metal/*.m (NO_GPU=1 drops it).
+# this machine's ISA, src/arch/<isa>/*.S (NO_ASM=1 drops them and builds the C references only). The GPU
+# worker of the rc3 gpu lane is not built (see below).
 LIBDIRS := api core plan transforms codecs algo arch arch/x86_64 arch/aarch64
 KOLMO_INCLUDES := src/kolmo.h $(foreach d,$(LIBDIRS),$(wildcard src/$(d)/*.c src/$(d)/*.h)) src/plan/target_table.inc
 ifeq ($(UNAME_M),x86_64)
@@ -75,15 +75,13 @@ ASMSRC  :=
 else
 ASMSRC  := $(if $(ASM_ISA),$(wildcard src/arch/$(ASM_ISA)/*.S))
 endif
-ifeq ($(NO_GPU),1)
-DEFS    += -DKOLMO_NO_GPU
+# GPU worker (Metal) from the rc3 gpu lane: research code, not built. Its BWT path plugged into libbsc's GPU hook,
+# which rc3 removed together with libbsc, so GPU=1 needs a port to src/algo/sais first. The lane measured no gain
+# from running GPU and CPU together on the M5, and 0.8 ms more per process start from linking Metal
+# (benchmark/rc3/gpu/RESULTS.md). The sources stay in src/arch/metal and src/core/hetero.c.
 GPUSRC  :=
-else
-GPUSRC  := $(if $(filter Darwin,$(UNAME_S)),$(wildcard src/arch/metal/*.m))
-endif
-ifneq ($(GPUSRC),)
-DEFS    += -DKOLMO_HAVE_METAL
-LIBS    += -framework Foundation -framework Metal
+ifeq ($(GPU),1)
+$(error GPU=1 is not available in rc3: the Metal BWT hook targeted libbsc, which rc3 removed; see benchmark/rc3/gpu/RESULTS.md)
 endif
 # Kernels called through the dispatch table of src/arch/cpu.c (arch/kernels.h), each object on its own: the C
 # references in src/algo, and on x86-64 the SSE2/SSE4.1/AVX2 versions (intrinsics with target attributes, chosen by
