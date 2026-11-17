@@ -101,23 +101,38 @@ compress process and one decompress process per file (1 thread, process start an
 
 What the census says:
 
-- **The library cost is the mode's own setting, not overhead.** `speed` spends 75% of its compress time in LZ4;
-  `balanced` 71% in zstd -3; `eco` 93% in Brotli quality 8; `hc` 98% in zstd -19/-22; `ratio` 81% in LZMA2 9e.
-- **Decode time in the libraries is smaller:** 32% (`speed`), 41–45% (`balanced`, `hc`), 61% (`eco`), 16–37% (`ratio`).
+- **The library cost is the mode's own setting, not overhead.** Share of Silesia compress time spent in the library:
+
+  | mode | library | share |
+  |---|---|---|
+  | `speed` | LZ4 | 71% |
+  | `balanced` | zstd -3 | 74% |
+  | `eco` | Brotli quality 8 | 91% |
+  | `hc` | zstd -19/-22 | 98% |
+  | `ratio` | LZMA2 9e | 81% |
+
+- **Decode time in the libraries is smaller:** 28% (`speed`), 41–47% (`hc`, `balanced`), 61% (`eco`), and 18% (Silesia)
+  to 37% (structured) in `ratio`. On the structured set, every share is lower, because the graph coder and the
+  transforms do more of the work.
 - **Output bytes:**
   - On Silesia, 99–100% of the output of every mode but `ratio` goes through one library.
-  - In `ratio`, 62% of the bytes go through LZMA2 on Silesia, and 88% on the structured set.
-  - On the structured set the graph coder takes a few percent: rANS leaves, raw planes, headers.
-- **Kolmo's direct Huffman leaves (codec 13) are rare:** about 2.5% of the bytes of `balanced` and `hc` on the
+  - In `ratio`, 62% (Silesia) and 88% (structured) of the bytes go through LZMA2. The rest is block sorting, which is
+    Kolmo's own.
+  - On the structured set, the library takes 93% of `balanced`, `eco` and `hc`; the graph coder's rANS leaves, raw
+    planes and headers take the rest.
+- **Kolmo's direct Huffman leaves (codec 13) are rare:** 2.6–2.8% of the bytes of `balanced` and `hc` on the
   structured set, and none on Silesia.
-- **Checksums (XXH3) cost 0.5–2% of decode time.**
-- **Probes:** the planner's zstd probes are 0.2–3.6% of compress time. They write no bytes, but they decide plans.
-- **ZDICT and the profile APIs** are reached only by `-D`/`-t` and `kolmo train`/`-P`, never by the modes above.
+- **Checksums (XXH3) cost 0.3–2% of decode time.**
+- **Probes:** the planner's zstd probes are 0.1–3.6% of compress time. They write no bytes, but they decide plans.
+- **ZDICT, XXH64 and the profile APIs** are not reached by these runs. Only `-D`/`-t`, `kolmo train`/`-P` and old
+  formats reach them.
 
-With `KOLMO_NATIVE=all` (section 2), what is left of the libraries in those runs:
-
+With `KOLMO_NATIVE=all` (section 2), what is left of the libraries in the same runs:
 - **Decoding:** only XXH3.
-- **Encoding:** the planner and transform probes (zstd at 0.4–3.6% of compress time, LZ4 at 0%), and XXH3.
+- **Encoding:** the planner and transform probes (zstd, 0.2–5.9% of compress time; the LZ4 probe is too small to show)
+  and XXH3.
+
+`benchmark/rc3w2/native/RESULTS.md` has the native and `strong` census tables.
 
 ## 2. Prototypes
 

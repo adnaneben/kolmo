@@ -281,6 +281,14 @@ corruption of 64 KiB random blocks (low 32 bits unchanged = undetected), 200000 
   khash  undetected: 1 bit 0, 2 bits 0, 3 bits 0, 8 bits 0, zeroed range 0 (expected ~0.000 each)
 ```
 
+How to read these:
+- **Avalanche.** Each cell is the share of 4,000 keys whose output bit flips when one input bit flips. Its standard
+  deviation is 0.008, and there are 1,536–32,768 cells per length, so worst cells of 0.03–0.04 are what an ideal hash
+  gives. Both hashes stay in that range (XXH3 0.028–0.038, khash64 0.029–0.038).
+- **Collisions.** All are at the birthday expectation; there are no 64-bit collisions.
+- **(\*) Lines.** Equal lines give equal hashes, so the line set is deduplicated by 64-bit value before counting. A true
+  64-bit collision would be hidden there; the other three sets have none.
+
 Speed (best of 7, Kolmo's checksum seed). These figures are from the default `-march=native` (AVX-512) build; XXH3 uses
 its AVX-512 kernel there.
 
@@ -311,15 +319,17 @@ AVX2/NEON kernels are plan item 1.
 
 ## 5. Tests
 
+All of these ran on commit `5a06b1e` (the final source; only documents changed after it), on the VM above.
+
 | test | result |
 |---|---|
 | `make check-native` (part of `make check-rc`) | OK. The round trips, corrupt-payload decodes under ASan/UBSan, complete Huffman codes and pinned khash64 values. Every mode through the CLI with `KOLMO_NATIVE=all` and `all,strong`, at 1 and 4 threads: decoded with no opt-in, identical frames at 1 and 4 threads |
-| `make check` | TEST_CHECK |
-| `make check-rc` | TEST_CHECKRC |
-| `make check-sanitizers` | TEST_SAN |
-| `make experimental-check GPU_CHECK=` | TEST_EXP |
-| `make kfam-check` | TEST_KFAM |
-| determinism (`benchmark/determinism/check.py`) | TEST_DET |
+| `make check` | passed (1,091 s) |
+| `make check-rc` | passed (1,091 s)RC |
+| `make check-sanitizers` | passed |
+| `make experimental-check GPU_CHECK=` | passed (92 s) |
+| `make kfam-check` | passed (155 s) |
+| determinism (`benchmark/determinism/check.py`) | 122 frames OK (default output unchanged) |
 
 ## What did not work, and other notes
 
