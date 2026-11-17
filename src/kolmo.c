@@ -61,6 +61,7 @@ int kolmo_force_c;
 #include "codecs/cm.c"
 #include "codecs/cm_image.c"
 #include "codecs/gr6.c"
+#include "codecs/cm_par.c"
 #include "transforms/shuffle.c"
 #include "codecs/fastq.c"
 #include "transforms/x86.c"
@@ -93,6 +94,7 @@ int kolmo_force_c;
 #include "plan/planner.c"
 #include "core/io.c"
 #include "transforms/table_cols.c"   /* column-split table blocks (flag 13), the column reader of IDX1 queries */
+#include "core/trials.c"
 #include "core/blocks.c"
 #include "transforms/tar.c"
 #include "plan/frontier.c"

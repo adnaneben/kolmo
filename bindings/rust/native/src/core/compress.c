@@ -185,7 +185,7 @@ cleanup:
     if (planning_map != MAP_FAILED) munmap(planning_map, n);
     if (J.out) for (uint32_t i = 0; i < nb; i++) free(J.out[i]);
     free(J.outlen); if (mutex_ready) pthread_mutex_destroy(&J.wmu);
-    if (plans) for (uint32_t g = 0; g < nseg; g++) { free(plans[g].fs); free(plans[g].rec); }
+    if (plans) for (uint32_t g = 0; g < nseg; g++) { free(plans[g].fs); free(plans[g].rec); free(plans[g].cmpz); }
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }

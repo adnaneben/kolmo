@@ -178,7 +178,7 @@ static void cm_release(size_t b) { pthread_mutex_lock(&cm_mu); cm_used -= b; pth
 #ifndef CM_BB_MAX
 #define CM_BB_MAX 22
 #endif
-static int cm_bits_for(size_t n) { int b = 16; while (b < CM_BB_MAX && ((size_t)1 << b) < n) b++; return b; }
+static int cm_bits_for(size_t n);
 static size_t cm_mem_for(int bb, int v2) {
     size_t t = (size_t)sizeof(cm_bucket) << bb, ts = bb > 18 ? t >> CM_SMALL : t;
 #ifdef KOLMO_CM_COMPACT
@@ -196,6 +196,22 @@ static size_t cm_mem_for(int bb, int v2) {
 #else
     return (size_t)(CM_NM - 1) * t + (v2 ? (size_t)(CM_NMX - CM_NM) * ts : 0) + (v2 == 3 ? (size_t)(CM_NM3 - 5 - CM_NMX) * ts + 5 * (bb > 18 ? ts >> 1 : t) : 0) + ((size_t)(v2 ? 48 : 16) << 20);
 #endif
+}
+
+/* Table sizing (encoder; the stream header carries the bits, so the decoder needs exactly what the encoder chose):
+ * 0 (default): one bucket per input byte, 2^16 to 2^CM_BB_MAX per model; 16..22: that, capped at 2^bits;
+ * -1 ("scaled", docs/MEMORY-MODEL.md): the largest size whose tables stay within 16 times the block (2^16 at least).
+ * Opt-in through kolmo_set_x_tables() (CLI --x-tables) until the memory model is approved. */
+static int cm_tables_mode;
+int kolmo_set_x_tables(int mode) {
+    if (mode != 0 && mode != -1 && (mode < 16 || mode > CM_BB_MAX)) return -1;
+    __atomic_store_n(&cm_tables_mode, mode, __ATOMIC_RELAXED); return 0;
+}
+static int cm_bits_for(size_t n) {
+    const int mode = __atomic_load_n(&cm_tables_mode, __ATOMIC_RELAXED), cap = mode >= 16 ? mode : CM_BB_MAX;
+    int b = 16; while (b < cap && ((size_t)1 << b) < n) b++;
+    if (mode == -1) while (b > 16 && cm_mem_for(b, 3) > 16 * (n + ((size_t)1 << 20))) b--;
+    return b;
 }
 
 /* Model tables: zeroed, and on Linux backed by transparent huge pages where available (far fewer TLB misses on the
@@ -443,6 +459,22 @@ static inline void cm_upd_sm(uint32_t *e, int y) {
 }
 static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, const int v2) {
     const int nm = CM_NMOD(v2), ni = 2 * nm + 3;
+    {   /* the next bit's rows of the large selector tables (order-1 mixer, order-1 and order-2 APMs) are known now:
+         * prefetch them so their cache misses overlap this update (memory access only; output unchanged). The image
+         * model's selectors change at the byte's end, after this point, so its last bit is not prefetched. */
+        const int img = v2 == 2, last = m->bitpos == 7;
+        if (!(img && last)) {
+            const uint32_t nc0 = last ? 1 : m->c0 << 1 | (uint32_t)y, c4n = last ? (m->c4 << 8) | ((m->c0 << 1 | (uint32_t)y) & 255) : m->c4;
+            const uint32_t c1 = img ? m->i_pred : c4n & 0xff;
+            const char *a2 = (const char *)m->a2[(nc0 | c1 << 8) & 0xffff]; __builtin_prefetch(a2); __builtin_prefetch(a2 + 64);
+            if (v2) {
+                const char *w4 = (const char *)m->w4[nc0 | (img ? m->i_med : c1) << 8];
+                __builtin_prefetch(w4); __builtin_prefetch(w4 + 64); __builtin_prefetch(w4 + 128); __builtin_prefetch(w4 + 192);
+                const char *a3 = (const char *)m->a3[cm_hmix((img ? m->i_wn : (c4n & 0xffff)) * 0x9E3779B1u + nc0 * 0x85EBCA6Bu) >> 16];
+                __builtin_prefetch(a3); __builtin_prefetch(a3 + 64);
+            }
+        }
+    }
     for (int i = 0; i < nm; i++) { cm_upd_sm(&m->sm[i][m->sst[i]], y); cm_upd_ctr(m->slot[i], y); }
     for (int i = 1; i < nm; i++) if ((m->cur[i]->s[0] & 0xffff) < 0xffff) m->cur[i]->s[0]++;
     if (m->mci >= 0) { uint32_t *c = &m->mc[m->mci]; *c = (uint32_t)((int64_t)*c + ((((int64_t)y << 16) - (int64_t)*c) >> 6)); }
@@ -691,27 +723,56 @@ static inline __attribute__((always_inline)) void cm_dec_loop(cm_t *m, const uin
             for (; cm_ac_settled(&ac); cm_ac_shift(&ac)) code = (code << 8) | (ip < cn ? in[ip++] : 0xffu);
         }
 }
+/* The coding loops are instantiated once per model and, on x86-64 builds for the baseline ISA, a second time for AVX2
+ * (the mixer dot products and weight updates vectorize; integer arithmetic, so both write the same bytes), chosen at
+ * run time by kolmo_have_avx2(). */
+#define CM_LOOPS(SUF, ATTR) \
+    ATTR __attribute__((noinline)) static int cm_enc##SUF(cm_t *m, const uint8_t *in, size_t n, uint8_t *out, size_t cap, size_t *po, int v2) { \
+        switch (v2) { case 0: return cm_enc_loop(m, in, n, out, cap, po, 0); case 1: return cm_enc_loop(m, in, n, out, cap, po, 1); \
+                      case 2: return cm_enc_loop(m, in, n, out, cap, po, 2); default: return cm_enc_loop(m, in, n, out, cap, po, 3); } } \
+    ATTR __attribute__((noinline)) static void cm_dec##SUF(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, int v2) { \
+        switch (v2) { case 0: cm_dec_loop(m, in, cn, out, n, 0); break; case 1: cm_dec_loop(m, in, cn, out, n, 1); break; \
+                      case 2: cm_dec_loop(m, in, cn, out, n, 2); break; default: cm_dec_loop(m, in, cn, out, n, 3); } }
+CM_LOOPS(_gen, )
+#if defined(KOLMO_X86_DISPATCH) && !defined(__AVX2__) && !defined(KOLMO_CM_NO_DISPATCH)
+CM_LOOPS(_avx2, KOLMO_TARGET_AVX2)
+static int cm_enc_run(cm_t *m, const uint8_t *in, size_t n, uint8_t *out, size_t cap, size_t *po, int v2) {
+    return kolmo_have_avx2() ? cm_enc_avx2(m, in, n, out, cap, po, v2) : cm_enc_gen(m, in, n, out, cap, po, v2);
+}
+static void cm_dec_run(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, int v2) {
+    if (kolmo_have_avx2()) cm_dec_avx2(m, in, cn, out, n, v2); else cm_dec_gen(m, in, cn, out, n, v2);
+}
+#else
+#define cm_enc_run cm_enc_gen
+#define cm_dec_run cm_dec_gen
+#endif
+#undef CM_LOOPS
+
 /* model 1 (fewer contexts, about 30% faster, what kolmo 1.0.0 wrote; always for n >= 2^28, whose size word has no room
  * for flags), model 2, or model 3 (about 20% slower than model 2; 1 to 4% smaller on text, no gain on binary data) */
 /* model: 1, 2 or 3 */
-static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model) {
+static size_t cm_compress_mx(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap);
+static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model) { return cm_compress_mx(in, n, out, cap, model, 0); }
+/* bbcap: at most 2^bbcap buckets per model (0: no cap beyond cm_bits_for) */
+static size_t cm_compress_mx(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap) {
     if (cap < 8 || n > 0xFFFFFFF0u) return 0;
     int small = n < ((size_t)1 << 28), v2 = small && model > 1 ? (model == 3 ? 3 : 1) : 0;
     /* exact logistic tables: model 3 always (its header has the model byte anyway); models 1 and 2 from 64 KiB, below
      * which the extra header byte can cost more than the better tables gain */
     int lx = small && (v2 == 3 || n >= ((size_t)1 << 16));
     int bb = small ? cm_bits_for(n) : CM_BB;
+    if (small && bbcap >= 16 && bb > bbcap) bb = bbcap;
     uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new_x(hist, bb, v2, v2 == 3 ? (n + 8) * 4 : 0, lx) : NULL;
     if (!m) { free(hist); return 0; }
     size_t o = 4; int r;
     if (lx || v2 == 3) {      /* extended header: flags 8, then model nibble << 4 | log2 buckets - 15; nibble = model | 4 when exact */
         int base = v2 == 3 ? 3 : v2 ? 2 : 1;
         uint32_t n32 = (uint32_t)n | (uint32_t)8 << 28; memcpy(out, &n32, 4); out[4] = (uint8_t)((base | (lx ? 4 : 0)) << 4 | (bb - 15));
-        r = v2 == 3 ? cm_enc_loop(m, in, n, out + 1, cap - 1, &o, 3) : v2 ? cm_enc_loop(m, in, n, out + 1, cap - 1, &o, 1) : cm_enc_loop(m, in, n, out + 1, cap - 1, &o, 0);
+        r = cm_enc_run(m, in, n, out + 1, cap - 1, &o, v2);
         o++;
     } else {
         uint32_t n32 = (uint32_t)n | (small ? (uint32_t)((bb - 15) | (v2 ? 8 : 0)) << 28 : 0); memcpy(out, &n32, 4);
-        r = v2 ? cm_enc_loop(m, in, n, out, cap, &o, 1) : cm_enc_loop(m, in, n, out, cap, &o, 0);
+        r = cm_enc_run(m, in, n, out, cap, &o, v2 ? 1 : 0);
     }
     cm_free(m); free(hist);
     return r ? 0 : o;
@@ -733,7 +794,7 @@ static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     }
     if (n32 != n || bb < 16 || bb > 22) return -1;
     cm_t *m = cm_new_x(out, bb, v2, v2 == 3 ? (n + 8) * 4 : 0, lx); if (!m) return -1;
-    if (v2 == 3) cm_dec_loop(m, in, cn, out, n, 3); else if (v2) cm_dec_loop(m, in, cn, out, n, 1); else cm_dec_loop(m, in, cn, out, n, 0);
+    cm_dec_run(m, in, cn, out, n, v2 == 3 ? 3 : v2 ? 1 : 0);
     cm_free(m);
     return 0;
 }

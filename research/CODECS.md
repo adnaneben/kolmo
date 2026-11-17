@@ -43,6 +43,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | 24 | own LZMA-class coder | — | own | pending | rc3 (deps lane), only if it gains |
 | 25 | parallel CM | stream- or block-parallel context mixing | own | pending | rc3 (xmode lane) |
 | 26 | GR6+ (`-x`, line-structured text) | fields as decisions (repeat, column and graph move-to-front ranks, dictionaries, column predictors with derived-column formulas, shared-prefix text), values as 6-bit units, integer context mixing (8 models, two mixers, APM) with the CM arithmetic coder; tried per ultra text block, kept only when smaller | own (from branch `claude/dazzling-maxwell-p8y4u0`, commit `12f0c0e`) | M5, 1 thread, on top of rc3 `-x`: covid 18.87× → 19.48× (−3.1%), owid_test 12.23× → 12.70× (−3.7%), OWID CO2 12.84× → 12.93× (−0.7%), decode 5–11× faster on those; energy, wide, loghub, dickens, api.json unchanged (not chosen); compression +3% to +30%, +126% on a 130-column table (formula search); other modes byte-identical (`benchmark/rc3/gr6/RESULTS.md`) | rc3 |
+| 25 | CM over parts | parts each coded by their own context-mixing model (codec 7 streams), in parallel for encoding and decoding; parts from the table's columns (transpose plan) or two halves of a non-text stream ≥ 32 MiB; cuts depend on the input only; container version 11 | own | columns: CSV 1 MB −0.5%, encode 2.1× and decode 4.4× faster at 4 threads; halves: +0.14% on 100 MB of binary data, 2× faster both ways; 5 MB halves +0.14% to +2.3% (Silesia osdb), hence from 32 MiB only (`benchmark/rc3/xmode/RESULTS.md`) | rc3 (xmode lane) |
 
 ## Transforms and graph techniques
 
@@ -181,3 +182,13 @@ Measured on a 4-vCPU Intel Xeon (2.10 GHz) Linux VM; details, commands and the f
 | kvid strip prediction on the GPU (Metal) | kvid encode | same bytes; 6 ms kernel + 6 ms copies = 12.3 ms, slower than 10 CPU threads (6.5 ms) | research (`GPU=1`, `kvid --gpu`) |
 | planner histograms and entropy on the GPU | planning | 64 KiB: 0.235 ms GPU vs 0.022 ms one core; 1 MiB: 0.336 vs 0.236; 16 MiB: 2.27 vs 4.61; plus 65 ms Metal set-up per process | dropped (not built) |
 | GPU LZ match finding, wide interleaved rANS on the GPU | `hc`, `ratio`; leaves | not built: zstd's and liblzma's match finders give output that depends on their sequential search state, so a GPU finder would change the bytes; rANS leaves are a few MB, below the GPU's break-even | dropped (analysis, rc3 gpu lane) |
+| concurrent ultra trials (`core/trials.c`) | `-x` encode | LZMA2 / block sorting, their slice test, plain block sorting and the FASTQ family coder run beside CM when the block has threads to spare; the planner's two CM samples in parallel; frames unchanged | rc3 (xmode) |
+| FASTQ: family coder first at `-x` | `-x` encode | CM and the other trials skipped when codec 16 applies (blocks ≥ 64 KiB); frames unchanged; ~20× faster, 1.4–5.4 GiB → 30–150 MiB | rc3 (xmode) |
+| CM: prefetch of the next bit's mixer and APM rows | `-x` both ways | 20–25% faster on 1 MB inputs (VM); frames unchanged | rc3 (xmode) |
+| CM: AVX2 build of the coding loops, runtime dispatch | `-x` both ways, baseline-ISA builds | 21% faster than the SSE2 build; frames unchanged | rc3 (xmode) |
+| CM: hand-written AVX2 mixer dot product and update | `-x` | 2% over the compiler's AVX2 code (noise): the mixer is 11% of the instructions, counter and state-map updates 45% | dropped (xmode) |
+| CM: byte-ahead prefetch of hashed buckets (both candidates) | `-x` | no gain | dropped (xmode) |
+| CM: block-parallel text (2/4/8 parts) | `-x` | +2.8% / +6.4% / +10.9% on 10 MB text, +8.7% for 4 parts on 100 MB | dropped (xmode) |
+| CM: block-parallel binary, 4 or 8 parts | `-x` | +0.90% / +1.3% on 100 MB (3.7× faster) — over the 0.5% budget | dropped (xmode); 2 halves kept |
+| family coder: name/quality chunks of block/16 (1–4 MiB) | `-x` FASTQ decode | 10 MB: 1.4× faster decode at 4 threads, +0.57%; 100 MB unchanged (4 MiB); smaller base chunks +13% | rc3 (xmode) |
+| CM tables sized to the block (`--x-tables=scaled`, or a cap `16..22`) | `-x` memory | scaled: CSV +0.0–0.2%, text +0.1–5.1%, binary +0.3–2.4%, decode memory 5.4–5.9 GiB → 125–580 MiB (2.0 GiB for 100 MB of text); cap 2^20 on 10 MB text +0.67% at 1.4 GiB | opt-in until the memory model is approved |

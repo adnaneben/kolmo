@@ -191,6 +191,10 @@ build/test-cmimg-asan: tests/test_cmimg.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUD
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmimg.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
 check-cmimg: build/test-cmimg-asan
 	./build/test-cmimg-asan
+build/test-cmpar-asan: tests/test_cmpar.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmpar.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+check-cmpar: build/test-cmpar-asan
+	./build/test-cmpar-asan
 # Opt-in --typed-huf route (ported from the RC1 integration, PR #10): round trips, header parsing, and agreement of
 # the typed route's predictor choice with the graph planner's.
 build/test-rc-options: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
@@ -284,8 +288,8 @@ check-features-b: build/test-features-b build/test-features-b-asan build/kolmo
 	./build/test-features-b-asan 7
 	sh tests/test_features_b_cli.sh build/kolmo
 .PHONY: check-features-b
-check-rc: check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
-.PHONY: check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-fqfam check-dispatch check-asm check-arch check-format2
+check-rc: check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
+.PHONY: check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-fqfam check-dispatch check-asm check-arch check-format2
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan

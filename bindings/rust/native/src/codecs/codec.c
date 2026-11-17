@@ -8,6 +8,7 @@ static const kolmo_codec *const kolmo_codecs[] = {
     [C_RANS] = &codec_rans, [C_NPLANE] = &codec_nplane, [C_FQ] = &codec_fastq, [C_CMI] = &codec_cm_image, [C_BWT] = &codec_bwt,
     [C_AUD] = &codec_audio, [C_VID] = &codec_video, [C_PLANES] = &codec_planes, [C_HZ] = &codec_hz, [C_ZRUN] = &codec_zrun,
     [C_GR6] = &codec_gr6,
+    [C_CMP] = &codec_cm_par,
 };
 static const kolmo_codec codec_graph = { C_GRAPH, "graph", NULL, NULL, NULL, NULL };
 static inline const kolmo_codec *codec_get(int codec) {

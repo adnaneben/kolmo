@@ -9,7 +9,7 @@ static size_t cm_compress_img(const uint8_t *in, size_t n, uint32_t iw, uint32_t
     memcpy(out, &iw, 4); memcpy(out + 4, &ih, 4); out[8] = (uint8_t)(ich | 0x80);   /* bit 7: exact logistic tables */
     uint32_t n32 = (uint32_t)n | (uint32_t)((bb - 15) | 8) << 28; memcpy(out + 9, &n32, 4);
     size_t o = 4;
-    int r = cm_enc_loop(m, in, n, out + 9, cap - 9, &o, 2);
+    int r = cm_enc_run(m, in, n, out + 9, cap - 9, &o, 2);
     cm_free(m); free(hist);
     return r ? 0 : o + 9;
 }
@@ -20,7 +20,7 @@ static int cm_decompress_img(const uint8_t *in, size_t cn, uint8_t *out, size_t 
     if (n32 != n || !(f & 8) || bb < 16 || bb > 22 || !iw || !ich || ich > 4 || iw < ich || ih > n) return -1;
     cm_t *m = cm_new_x(out, bb, 1, 0, lx); if (!m) return -1;
     m->iw = iw; m->ich = ich; m->ih = ih;
-    cm_dec_loop(m, in + 9, cn - 9, out, n, 2);
+    cm_dec_run(m, in + 9, cn - 9, out, n, 2);
     cm_free(m);
     return 0;
 }
