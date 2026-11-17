@@ -73,9 +73,9 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
     uint32_t nseg = 0, nb = 0; size_t bcap = 2;
     plan_t *plans = NULL;
     uint64_t *starts = NULL, *rstart = NULL; uint32_t *bplan = NULL;
-    uint64_t *ss = array_alloc(MAXSEG, sizeof(uint64_t), 0), *se = array_alloc(MAXSEG, sizeof(uint64_t), 0);
+    uint64_t *ss = array_alloc(MAXSEG, sizeof(uint64_t), 0), *se = array_alloc(MAXSEG, sizeof(uint64_t), 0); uint32_t *skind = array_alloc(MAXSEG, sizeof(uint32_t), 1);
     void *planning_map = MAP_FAILED;
-    if (!ss || !se) goto cleanup;
+    if (!ss || !se || !skind) goto cleanup;
     if (input_fd >= 0 && n) {
         planning_map = mmap(NULL, n, PROT_READ, MAP_PRIVATE, input_fd, 0);
         if (planning_map == MAP_FAILED) { ret = KOLMO_ERR_IO; goto cleanup; }
@@ -86,7 +86,7 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     double pt0 = prof_now();
 #endif
-    nseg = segments(src, n, ss, se, MAXSEG);
+    nseg = meta_segments(src, n, ss, se, skind, MAXSEG);   /* members, sections, tensors, packed content (plan/meta.c) */
     plans = array_alloc(nseg, sizeof(plan_t), 1);
     starts = array_alloc(bcap, sizeof(uint64_t), 0);
     bplan = array_alloc(bcap, sizeof(uint32_t), 0);
@@ -97,7 +97,7 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
     plan_job planning = {src, ss, se, plans, p, nseg, nseg > 1 ? 1 : threads,
                          p->transforms && p->mode == KOLMO_FAST && !p->level && !dict && !prof,
                          nseg > 1 && p->transforms && p->mode == KOLMO_FAST ? input_fd : -1, native_leaf};
-    planning.prof = prof;
+    planning.prof = prof; planning.kind = skind;
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
     if (columns) for (uint32_t g = 0; g < nseg; g++) plans[g].lines = 1;   /* queryable archives: line-aligned blocks */
@@ -140,6 +140,9 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
         pthread_once(&ka_once, ka_init);
         if (!ka_wav_parse(src, n, &w, &werr) && w.n) {
             J.aud_prof = p->mode >= KOLMO_MAX ? 1 : 0; J.aud_ch = w.ch; J.aud_off = w.data_off; J.aud_end = w.trl_off;
+        } else {                                                /* AIFF (plan/meta.c): the same, samples byte-swapped */
+            unsigned ach; uint64_t aoff, aend;
+            if (meta_aiff(src, n, &ach, &aoff, &aend)) { J.aud_prof = p->mode >= KOLMO_MAX ? 1 : 0; J.aud_ch = (int)ach; J.aud_off = aoff; J.aud_end = aend; J.aud_be = 1; }
         }
     }
     if (planning_map != MAP_FAILED) {
@@ -186,7 +189,7 @@ cleanup:
     if (J.out) for (uint32_t i = 0; i < nb; i++) free(J.out[i]);
     free(J.outlen); if (mutex_ready) pthread_mutex_destroy(&J.wmu);
     if (plans) for (uint32_t g = 0; g < nseg; g++) { free(plans[g].fs); free(plans[g].rec); free(plans[g].cmpz); }
-    free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
+    free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se); free(skind);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }
     { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 128) ? 11 : (nm & 64) ? 10 : (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;

@@ -54,7 +54,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     if (P->ver >= 2) {                                         /* per-block plan */
         if (cl < 4) return KOLMO_ERR_CORRUPT;
         pl.t = pay[0]; pl.a = pay[1]; pl.b = pay[2]; pl.c = pay[3]; pay += 4; cl -= 4;
-        if (pl.t > T_LINES || (pl.t == T_KG && P->ver < 7) || (pl.t == T_LINES && P->ver < 8)) return KOLMO_ERR_CORRUPT;
+        if (pl.t > T_A64 || (pl.t == T_KG && P->ver < 7) || (pl.t == T_LINES && P->ver < 8) || (pl.t == T_A64 && (P->ver < 11 || pl.b > 15 || pl.c))) return KOLMO_ERR_CORRUPT;
     }
     if (codec == C_CMP && P->ver < 11) return KOLMO_ERR_CORRUPT;   /* context mixing over parts (version 11) */
     x->threads = J->fqthreads;
@@ -66,8 +66,13 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     }
     if (codec == C_VID) return KOLMO_ERR_CORRUPT;                /* video frames are decoded whole, by run_decode */
     if (codec == C_AUD) {                                       /* audio (kaud) block (version 11) */
-        if (P->ver < 11 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
+        if (P->ver < 11 || pl.t != T_NONE || pl.a > 1 || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
         if (aud_decompress(pay, cl, out, len)) return KOLMO_ERR_CORRUPT;
+        if (pl.a == 1) {                                        /* plan prefix 0, 1: big-endian samples (AIFF), swapped back */
+            const uint64_t h = get32(pay + 37), fr = (uint64_t)get32(pay + 22) | (uint64_t)get32(pay + 26) << 32, ch = pay[6];
+            if (h > len || ch < 1 || ch > 2 || fr > (len - h) / (2 * ch)) return KOLMO_ERR_CORRUPT;
+            aud_swap16(out + h, (size_t)(fr * 2 * ch));
+        }
         if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
@@ -105,12 +110,12 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     if ((tflag >= 3 && tflag <= 7) || tflag == 9) meta = 4;
     if (tflag == 10) meta = 8;
     if (tflag == 12) meta = 4;
-    int maxf = pl.t == T_TP ? 2 : pl.t == T_TBL ? 4 : pl.t == T_LOG ? (P->ver >= 6 ? 10 : 5) : pl.t == T_IMG ? 6 : pl.t == T_REC ? 7 : pl.t == T_X86 ? 8 : pl.t == T_WORD ? 9 : pl.t == T_LINES ? 12 : 1;
+    int maxf = pl.t == T_TP ? 2 : pl.t == T_TBL ? 4 : pl.t == T_LOG ? (P->ver >= 6 ? 10 : 5) : pl.t == T_IMG ? 6 : pl.t == T_REC ? 7 : pl.t == T_X86 ? 8 : pl.t == T_WORD ? 9 : pl.t == T_LINES ? 12 : pl.t == T_A64 ? 14 : 1;
     if (tflag > maxf || (pl.t == T_LINES && tflag && tflag != 12) || (pl.t == T_TBL && tflag && tflag < 3) || (pl.t == T_LOG && tflag && tflag != 5 && tflag != 10)
-        || (pl.t == T_IMG && tflag && tflag != 6) || (pl.t == T_REC && tflag && tflag != 7) || (pl.t == T_X86 && tflag && tflag != 8) || (pl.t == T_WORD && tflag && tflag != 9)
+        || (pl.t == T_IMG && tflag && tflag != 6) || (pl.t == T_REC && tflag && tflag != 7) || (pl.t == T_X86 && tflag && tflag != 8) || (pl.t == T_A64 && tflag && tflag != 14) || (tflag == 14 && pl.t != T_A64) || (pl.t == T_WORD && tflag && tflag != 9)
         || (pl.t == T_NONE && tflag)) return KOLMO_ERR_CORRUPT;
     if (meta > cl) return KOLMO_ERR_CORRUPT;
-    uint8_t *tgt = (tflag && tflag != 8) ? tbuf : out;
+    uint8_t *tgt = (tflag && tflag != 8 && tflag != 14) ? tbuf : out;
     size_t dlen = len;
     if ((tflag >= 3 && tflag <= 7) || tflag == 9 || tflag == 10 || tflag == 12) { dlen = get32(pay); if (dlen > len + (tflag == 4 && P->ver >= 11 ? TBL_SLACK(len) : TSLACK)) return KOLMO_ERR_CORRUPT; }
 #ifdef KOLMO_FRONTIER
@@ -150,6 +155,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     else if (tflag == 6) { if (img16_decode(tbuf, dlen, out, len)) return KOLMO_ERR_CORRUPT; }
     else if (tflag == 7) { if (rec_decode(tbuf, dlen, out, len)) return KOLMO_ERR_CORRUPT; }
     else if (tflag == 8) e8e9_inv(out, len);
+    else if (tflag == 14) a64_inv(out, len, (uint32_t)(pl.a | (pl.b & 15) << 8));   /* ARM64 branches; a, b: the block's page phase */
     else if (tflag == 9) { if (word_decode(tbuf, dlen, out, len)) return KOLMO_ERR_CORRUPT; }
     else if (tflag && pl.t == T_TP) {
         int k = pl.c + 1; int64_t colsz[256];

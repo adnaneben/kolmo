@@ -269,6 +269,14 @@ build/test-format2-asan: tests/test_format2.c src/kolmo.c $(KOLMO_INCLUDES) $(AR
 check-format2: build/test-format2 build/test-format2-asan
 	./build/test-format2
 	./build/test-format2-asan
+# Metadata (plan/meta.c: header parsers on valid and mutated files) and the ARM64 branch transform
+build/test-meta: tests/test_meta.c src/kolmo.c $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+build/test-meta-asan: tests/test_meta.c src/kolmo.c $(KOLMO_INCLUDES) $(ARCHSRC) build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< $(ARCHSRC) build/libvendor.a -o $@ $(LIBS)
+check-meta: build/test-meta build/test-meta-asan
+	./build/test-meta
+	./build/test-meta-asan
 # Trained profiles and --target (features-a): round trips, damaged profiles and frames, targets, merging.
 build/test-profile: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
@@ -288,8 +296,8 @@ check-features-b: build/test-features-b build/test-features-b-asan build/kolmo
 	./build/test-features-b-asan 7
 	sh tests/test_features_b_cli.sh build/kolmo
 .PHONY: check-features-b
-check-rc: check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
-.PHONY: check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-fqfam check-dispatch check-asm check-arch check-format2
+check-rc: check-meta check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
+.PHONY: check-meta check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-fqfam check-dispatch check-asm check-arch check-format2
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan

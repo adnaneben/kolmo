@@ -39,21 +39,16 @@ static double kg_plane_h(const uint8_t *p, size_t cnt, int w, int b, int rot) { 
     double hs = 0; for (int k = 0; k < 256; k++) if (c[k]) { double q = (double)c[k] / m; hs -= q * log2(q); }
     return hs;
 }
-/* 8-bit image candidate (IMG8 node): row length and channel step from a .npy uint8 header (shape (H, W) or (H, W, C)),
+/* 8-bit image candidate (IMG8 node): row length and channel step from an image header (NPY uint8 of shape (H, W) or
+ * (H, W, C), binary PGM/PPM, PAM, BMP, uncompressed TIFF: meta_image8),
  * else from common image widths x 1, 3 or 4 channels, keeping the layout whose median-predictor residuals are much
  * smaller than a left-neighbour predictor's on a sample. Scored like the other graph candidates. */
 #define KG_SCREEN ((size_t)32 << 10)   /* graph trials: bytes coded first as a screen */
 #define KG_SCREEN_SLACK 1.25            /* screen passes when within this factor of plain coding (a short run codes worse) */
 static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, size_t *bw, unsigned *bc, size_t *bh) {
     double best = 1e300; size_t h = 0, W = 0; unsigned C = 0;
-    if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
-        size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
-        const uint8_t *d = hl <= n ? memmem(s, hl, "'descr': '", 10) : NULL, *sh = hl <= n ? memmem(s, hl, "'shape': (", 10) : NULL;
-        if (!d || !sh || d + 13 > s + hl || d[11] != 'u' || d[12] != '1' || memmem(s, hl, "'fortran_order': True", 21)) return best;
-        uint64_t dims[4]; int nd = 0; const uint8_t *q = sh + 10;
-        while (q < s + hl && *q != ')' && nd < 4) { while (q < s + hl && (*q == ' ' || *q == ',')) q++; if (q >= s + hl || *q == ')') break; uint64_t v = 0; while (q < s + hl && *q >= '0' && *q <= '9') v = v * 10 + (uint64_t)(*q++ - '0'); dims[nd++] = v; }
-        if (nd == 2) { W = dims[1]; C = 1; } else if (nd == 3 && dims[2] >= 1 && dims[2] <= 4) { W = dims[1] * dims[2]; C = (unsigned)dims[2]; } else return best;
-        h = hl;
+    if (meta_image8(s, n, &W, &C, &h)) {
+        /* the geometry from the header (NPY, PNM/PAM, BMP, TIFF: plan/meta.c) */
     } else {
         /* row length: the lag (width x channels, common widths) at which bytes repeat best, on 4096 sampled positions;
          * it must stand out against the other lags, and the median predictor must not lose to the left neighbour */
@@ -241,7 +236,10 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     const size_t TRIAL = effort ? (1u << 20) : (256u << 10);   /* text-transform trial slice (fast: 256 KiB) */
     size_t h = n < 65536 ? n : 65536, pr = 0;
     for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
-    if (pr * 100 > h * 95) {                                     /* text: field transposition if lines have a fixed field count */
+    size_t ihw; unsigned ihc; size_t ihh;
+    const int imghdr = meta_image8(s, n, &ihw, &ihc, &ihh);   /* an image header: pixels, even where they look like text */
+    const int textlike = pr * 100 > h * 95;
+    if (textlike && !imghdr) {                          /* text: field transposition if lines have a fixed field count */
         if (light == 2 || light == 3) return pl;                 /* minimal analysis: text is coded as it is */
         if (logs && n >= 65536) {                                /* wide delimited table (over 256 columns): kolmo graph */
             static const uint8_t WD[4] = {';', ',', '\t', '|'};
@@ -570,7 +568,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt0 = prof_now();
 #endif
-            const int npy = n > 16 && !memcmp(s, "\x93NUMPY", 6);   /* quick analysis: integer and image trials only for a .npy header */
+            const int npy = (n > 16 && !memcmp(s, "\x93NUMPY", 6)) || imghdr;   /* quick analysis: integer and image trials only for a .npy or image header */
             size_t iw = 0, ih = 0; unsigned ic = 0; double ci = 1e300; int imgdone = 0;
             const size_t Li = light && !npy && Lg > (64u << 10) ? (64u << 10) : Lg;   /* quick analysis: a 64 KiB image trial */
 #define IMG8_TRIAL() do { ci = kg_img8_trial(s, n, st, Li, zl, plain, &iw, &ic, &ih); \
@@ -673,6 +671,9 @@ structured_done:
         }
         free(zb); free(buf);
     }
+    /* an image (by its header) whose bytes look like text: the plain coding the text route would have given can be smaller
+     * under the strong coders (one photograph: 1.7% at hc), so every block is coded both ways and the smaller kept */
+    if (imghdr && textlike && pl.t == T_KG) pl.verify = 1;
     ZSTD_freeCCtx(zc);
     return pl;
 }

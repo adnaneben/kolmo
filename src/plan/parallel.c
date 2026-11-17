@@ -73,6 +73,7 @@ typedef struct {
     plan_t *plans; const kolmo_params *params;
     uint32_t count; int threads_per_plan, allow_frontier, member_fd, native_leaf; atomic_uint next;
     const struct kolmo_profile *prof;   /* trained profile: its pinned plans replace the analysis where they match */
+    const uint32_t *kind;               /* per segment: MK_* | phase << 8 (plan/meta.c), or NULL */
 } plan_job;
 static int kp_plan_pinned(const struct kolmo_profile *P, const uint8_t *s, size_t n, const kolmo_params *p, plan_t *out);
 /* The analysis of one member, as plan_worker runs it (also used by kolmo train to record the plans it pins). */
@@ -114,7 +115,11 @@ static void *plan_worker(void *arg) {
         double mp0_ = prof_now();
 #endif
         plan_t pl;
-        if (!j->prof || !kp_plan_pinned(j->prof, src, len, p, &pl)) pl = plan_for(src, len, p, j->threads_per_plan, j->native_leaf);
+        const uint32_t mk = j->kind ? j->kind[g] : MK_DATA;
+        if ((mk & 0xFF) == MK_PACKED && p->transforms) pl = (plan_t){.t = T_NONE, .packed = 1};   /* compressed content: no analysis */
+        else if ((mk & 0xFF) == MK_A64 && p->transforms && p->mode != KOLMO_RT)   /* ARM64 code: the branch transform, a, b: page phase */
+            pl = (plan_t){.t = T_A64, .a = (int)((mk >> 8) & 0xFF), .b = (int)((mk >> 16) & 0xF)};
+        else if (!j->prof || !kp_plan_pinned(j->prof, src, len, p, &pl)) pl = plan_for(src, len, p, j->threads_per_plan, j->native_leaf);
 #ifdef KOLMO_TIMING
         fprintf(stderr, "mp n=%zu ms=%.3f t=%d\n", len, (prof_now() - mp0_) * 1000, pl.t);
 #endif

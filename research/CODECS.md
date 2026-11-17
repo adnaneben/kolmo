@@ -110,6 +110,13 @@ Measured on held-out files of 10 dataset families, one thread, against zstd at t
 | 6-bit alphabet K6 (fixed, adaptive, token tables; session `dazzling-maxwell`, `research/sixbit-study/`) | text and CSV in 6-bit units with escape codes | 1.23–2.05× alone: beaten by plain Huffman on every file and it hurts any coder that follows | dropped as a storage format |
 | GR6 / GR6+ (same study) | DITTO, rank, graph and dictionary ops in 6-bit units, column predictors and formulas, then fixed, Huffman or context-mixing coder | GR6+ CM mode: beats xz -9e, zstd -19, brotli -11 on all 7 files; beats `-x` on OWID (+8%) and covid; loses to `-x` by 4–19% on logs, text and small tables; 1–3 MB/s both ways | research (ideas taken: formulas, warm start, previous-field contexts); GR6+ itself ported as block codec 26 |
 | bit-level neural coder over 6-bit units (same study) | 6 binary decisions per unit instead of 8 | about 40% faster for 1–3% more size | research |
+| metadata: image geometry from headers (PGM/PPM, PAM, BMP, TIFF; NPY before) (meta lane, rc3 wave 2) | IMG8 row bytes, channels and pixel offset read from the header; a header image never takes the text route; when its bytes look like text, blocks are also coded plain (verify) | photographs with odd widths: −9% to −18% `balanced`, −11% to −30% `hc`, −3% to −12% `max`; standard widths ±0.07% (`benchmark/rc3w2/meta/RESULTS.md`) | **in** (rc3 wave 2) |
+| metadata: executable sections (ELF, Mach-O, universal, PE) | code and data sections planned apart | x86 ELF −0.27% to −4.95% `balanced`, −0.2% to −5.4% `hc` | **in** (rc3 wave 2) |
+| ARM64 branch filter (plan type 11, tflag 14) | BL / ADRP position-absolute (the XZ ARM64 BCJ mapping) on ARM64 code sections, with each block's page phase in the plan prefix; blocks 4096-aligned | ARM64 ELF −4.9% / −7.7% `balanced`, −6.8% / −8.8% `hc`, −6.8% / −9.5% `max`; without the page phase +0.35% | **in** (rc3 wave 2, version 11) |
+| metadata: AIFF to the audio codec | 16-bit AIFF samples byte-swapped into codec 19 (plan prefix 0, 1) | 8 clips: −17% to −45% (equal to the same audio as WAV) | **in** (rc3 wave 2, version 11) |
+| metadata: archive members (tar ≥ 64 KiB with a known header, nested formats; zip / NPZ stored members) | a part per member, cut by its own format | mixed tar −3.6% / −3.9% / −4.5%; mixed NPZ −24% / −24% / −20% (balanced / hc / max); NPZ of one dtype −0.05% / +0.19% | **in** (rc3 wave 2) |
+| metadata: tensor files (safetensors, GGUF) | header and each run of one tensor type planned apart | ±0.05%; `hc` 11.1 s → 1.0 s on mixed fp16/uint8; a plan per tensor ≥ 1 MiB: 0.035% smaller over 4 files at 2× planning time | **in** (type runs); per tensor dropped |
+| tensor exponent / mantissa coder (per-tensor statistics) | entropy bound only | bf16: order-0 exponent + sign/mantissa per tensor 0.76% below `balanced`; column and exponent contexts about 1% more | research (not built: needs a codec id) |
 
 ## Speed techniques
 
@@ -159,6 +166,7 @@ Measured on held-out files of 10 dataset families, one thread, against zstd at t
 | inline popcount (no libgcc call on baseline x86-64) | table scanners, decimal parser | numeric CSV `balanced` compress +4.8% | in (rc3 simd-x86) |
 | IMG16 median inverse as a wavefront | — | not possible: a row's first sample predicts from the previous row's last one (rows are serial) | out |
 | rANS order-0 decode with a packed slot table | eco/hc leaves | −5% to +1% (noise) | out |
+| metadata: packed content stored without coding (meta lane, rc3 wave 2) | magic numbers of compressed formats; a block is stored when every 16 KiB slice has collision entropy ≥ 7.8 bits (integer test) and LZ4 saves < 1% | deflated NPZ: `hc` 1.92 → 0.04 s, `max` 4.30 → 0.03 s; gzip CSV `hc` 0.14 → 0.006 s; size equal (one 6 KB JPEG +65 B) | **in** (rc3 wave 2) |
 
 ## Container extensions and archive features (rc3, features-b lane)
 

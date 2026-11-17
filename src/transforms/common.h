@@ -21,4 +21,4 @@ static inline size_t scan2(const uint8_t *p, size_t lim, uint8_t a, uint8_t b) {
 static inline size_t scan1(const uint8_t *p, size_t lim, uint8_t a) { const uint8_t *q = memchr(p, a, lim); return q ? (size_t)(q - p) : lim; }
 static int has_quotes(const uint8_t *p, size_t n) { return memchr(p, '"', n) || memchr(p, '[', n) || memchr(p, ']', n); }
 
-enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9, T_LINES = 10 };   /* 9: kolmo graph (a=delim b=decimal separator) */
+enum { T_NONE = 0, T_TP = 1, T_SHUF = 2, T_TBL = 3, T_LOG = 4, T_IMG = 5, T_REC = 6, T_X86 = 7, T_WORD = 8, T_KG = 9, T_LINES = 10, T_A64 = 11 };   /* 9: kolmo graph (a=delim b=decimal separator) */

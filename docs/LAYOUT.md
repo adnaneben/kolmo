@@ -36,7 +36,7 @@ src/
               profile.c      trained profiles (KPF1): format, pinned plans, dictionary codecs of profile frames, training
               target.c       --target: parser, cost model, speed table (target_table.inc), per-chunk choice
   transforms/                structure transforms, one per file (format-aware, codec-agnostic)
-              table.c log.c lines.c sci.c word.c json.c x86.c tar.c nplane.c
+              table.c log.c lines.c sci.c word.c json.c x86.c arm64.c nplane.c
               graph.c        integer/decimal graph (was kgraph.inc), graph_fwd.c (was kg_int_fwd.inc)
   codecs/                    one block codec per file, each exporting a `kolmo_codec` table (codec.h)
               codec.h        struct kolmo_codec { id, name, bound(), compress(), decompress(), mem_needed() }
@@ -73,10 +73,12 @@ and the move mechanical:
   `pool.c` (thread pool, per-thread state), `compress.c`, `decode.c`, `io.c`, `memory.c` (scratch cache, checked
   allocation), `stream.c`, `container.h`, `common.h` (system and codec headers). There is no `core/container.c` yet:
   the header layout is in `container.h`, parsing in `decode.c`, CRC32C in `arch/crc32c.c`.
-- **plan/**: `planner.c` (mode, trials, `make_plan`), `detect.c` (text and JSON detection), `parallel.c` (planning
+- **plan/**: `planner.c` (mode, trials, `make_plan`), `detect.c` (text and JSON detection), `meta.c` (structure read
+  from headers: segments of archives, executables and tensor files, image geometry, packed content; wave 2, where the
+  tar segmentation of `transforms/tar.c` moved), `parallel.c` (planning
   of archive members on the pool), `frontier.c` (opt-in research build), `plan.h`, `tunables.h`.
 - **transforms/**: `table.c` (was `tbl2.inc`), `table_v03.c` (the column table of v0.3, tflag 3), `transpose.c`,
-  `shuffle.c`, `log.c`, `lines.c`, `sci.c`, `word.c`, `json.c`, `x86.c`, `tar.c` (archive segments), `graph.c`,
+  `shuffle.c`, `log.c`, `lines.c`, `sci.c`, `word.c`, `json.c`, `x86.c`, `arm64.c` (ARM64 branch filter, wave 2), `graph.c`,
   `graph_fwd.c`, `graph_typed.c` (was `typed_int_encoder.inc`), `common.h` (transform ids, scanners).
 - **codecs/**: one file per codec family with its `kolmo_codec` table: `store.c lz4.c (LZ4, LZ4-HC) zstd.c brotli.c
   bwt.c (block sorting: codec 18, and codec 5 read for rc2 frames; streams in bwt_stream.c, compiled on its own) lzma.c cm.c cm_image.c (codec 17) huf.c rans.c nplane.c (codec 15, a graph leaf codec, so

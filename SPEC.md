@@ -24,7 +24,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 (format 2) when a block or graph leaf uses codecs 19-23, a table block's transformed length exceeds the block length + 16384 (see below), or the frame uses a trained profile (flag bit 2)) |
+| 4 | 1 | version | 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 (format 2) when a block or graph leaf uses codecs 19-23, a block uses the ARM64 branch filter (plan type 11), a table block's transformed length exceeds the block length + 16384 (see below), or the frame uses a trained profile (flag bit 2)) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -68,6 +68,7 @@ In versions 2 and 3 every payload begins with a 4-byte **plan prefix** `t, a, b,
 ```
 T_NONE=0  TP=1 (typed transpose)  SHUF=2 (byte-plane shuffle)  TBL=3 (table v2)  LOG=4 (log templates)
 IMG=5 (16-bit image)  REC=6 (fixed records)  X86=7 (call/jump filter)  WORD=8 (word dictionary)
+KG=9 (kolmo graph)  LINES=10 (line classes)  A64=11 (ARM64 branch filter, version 11)
 ```
 
 `tflag` in the index records which transform actually produced the stored bytes (0 = none; the transform-specific
@@ -153,6 +154,27 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 23 | ZRUN (zero runs and literals) | graph leaves, version 11; also inside codec 21 | rc3 |
 | 24–25 | reserved for the rc3 lanes (`research/RC3-PLAN.md`) | — | — |
 | 26 | GR6 (GR6+ line-structured text) | blocks, version 11 or later; written by `ultra` (not level 1) | rc3 |
+
+**ARM64 branch filter (plan type 11, tflag 14, version 11; rc3 wave 2)**: the plan prefix is `11, a, b, 0`, where
+`a | (b & 15) << 8` is the block's *page phase* P (0-4095). The payload is the coded stream of the filtered block,
+with no transform header (the filtered block has the block's length). To decode, undo the coder, then for every
+4-byte little-endian word w at offsets i = 0, 4, 8, ... of the block (a tail of 1-3 bytes is left as it is), with
+pc = P + i (32-bit arithmetic):
+- BL (`w >> 26 == 0x25`): w = 0x94000000 | ((w - (pc >> 2)) & 0x03FFFFFF);
+- ADRP (`(w & 0x9F000000) == 0x90000000`): s = ((w >> 29) & 3) | ((w >> 3) & 0x001FFFFC); if
+  `(s + 0x00020000) & 0x001C0000` is 0, d = s - (pc >> 12) and w = (w & 0x9000001F) | (d & 3) << 29 |
+  (d & 0x0003FFFC) << 3 | ((0 - (d & 0x00020000)) & 0x00E00000); otherwise w is unchanged.
+The encoder applies the same with + in place of - (the XZ Utils ARM64 BCJ mapping, a bijection on 32-bit words). It
+writes this plan for the code sections of ARM64 executables (ELF `EM_AARCH64`, Mach-O `CPU_TYPE_ARM64`, PE `0xAA64`),
+which it reads from their section tables (`docs/METADATA.md`); P is the block's offset in the executable modulo 4096.
+A decoder rejects tflag 14 under any other plan type, plan type 11 with another non-zero tflag, and plan type 11 in a
+frame below version 11.
+
+**Audio blocks of AIFF files (codec 19, plan prefix `0, 1, 0, 0`; rc3 wave 2)**: as any codec 19 block, except that
+the file's samples are big-endian. The KAU1 stream codes the block with the bytes of every sample in the sample range
+swapped (16-bit little-endian, as for WAV); after decoding it, the decoder swaps back the bytes of the 2 x channels x
+frames bytes that follow the H head bytes (channels at byte 6 of the KAU1 header, frames u64 at bytes 22-29, H u32 at
+bytes 37-40). A plan prefix byte `a` other than 0 or 1 is rejected.
 
 **Block flags added in rc3**: flag 13 under plan type 3 (column-split table, *Container extensions*), written only with
 `KOLMO_T_COLUMNS`; the container version is not raised (identifiers rule above), readers before rc3 refuse the block.
