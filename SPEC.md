@@ -50,7 +50,7 @@ reader that predates the flag refuses the newer version rather than returning wr
 | 0 | 4 | raw | decoded length of this block |
 | 4 | 4 | comp | stored length of this block's payload |
 | 8 | 4 | checksum | low 32 bits of a block checksum (see below) |
-| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7, GRAPH=12 (kolmo graph block), FQFAM=16 (FASTQ family coder), CMI=17 (context mixing with the image model); the full list is in *Identifiers and versions* |
+| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7, GRAPH=12 (kolmo graph block), FQFAM=16 (FASTQ family coder), CMI=17 (context mixing with the image model), GR6=26 (GR6+ line-structured text); the full list is in *Identifiers and versions* |
 | 13 | 1 | tflag | transform applied before the coder (see below) |
 | 14 | 2 | reserved | 0 |
 
@@ -104,7 +104,8 @@ Encoders write model 3 for text, model 2 for other data, and model 1 at level 1 
 decoders accept all three, so files written with an older model still decode. `CMI` (codec 17) is the same coder with
 an image model for 8-bit samples: `iw u32 | ih u32 | ich u8` (row width in bytes, bytes before the first pixel,
 interleaved channels), then a size word as above and the coded bytes. CM output is bit-exact across compilers and
-CPUs (integer-only, `-ffp-contract=off`). `FQFAM` (codec 16) is described in *FASTQ family blocks*.
+CPUs (integer-only, `-ffp-contract=off`). `FQFAM` (codec 16) is described in *FASTQ family blocks*, `GR6` (codec 26) in
+*GR6+ blocks*.
 
 ## Identifiers and versions
 
@@ -124,7 +125,7 @@ version above the highest it knows.
 | 8 | a block uses the line-class transform (plan type 10, tflag 12) | 1.1.0 |
 | 9 | a graph leaf uses codec 15; on request only (`--native-leaf`) | 1.2.0 |
 | 10 | a block uses the FASTQ family coder (codec 16); `ultra` only | this branch (after 1.2.0-rc2) |
-| 11 | format 2: a block uses codec 19 (audio) or 20 (video), a graph leaf uses codec 21, 22 or 23, a table block uses the larger transform slack, or the frame was written with a trained profile (flag bit 2; see *Profile frames*) | rc3 |
+| 11 | format 2: a block uses codec 19 (audio) or 20 (video), a graph leaf uses codec 21, 22 or 23, a table block uses the larger transform slack, the frame was written with a trained profile (flag bit 2; see *Profile frames*), or a block is a GR6+ block (codec 26; `ultra` only) | rc3 |
 
 Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0-rc1 and rc2; 10 by the FASTQ branch; 11 by rc3. (1.1.0 is the state of `main` under that
 version number; it was not tagged or published. 1.2.0 is this build, a release candidate.)
@@ -146,6 +147,8 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 21 | PLANES (per-plane leaf) | graph leaves, version 11 | rc3 |
 | 22 | HZ (Huffman, then zstd) | graph leaves, version 11; also inside codecs 21 and 23 | rc3 |
 | 23 | ZRUN (zero runs and literals) | graph leaves, version 11; also inside codec 21 | rc3 |
+| 24–25 | reserved for the rc3 lanes (`research/RC3-PLAN.md`) | — | — |
+| 26 | GR6 (GR6+ line-structured text) | blocks, version 11 or later; written by `ultra` (not level 1) | rc3 |
 
 **Graph nodes** (op byte of a node).
 
@@ -172,7 +175,8 @@ The exact logistic tables use the logistic curve round(4096 / (1 + e^(-x/256))) 
 with a codec 16 block has version 10, so every earlier reader (1.2.0-rc2 and before) refuses it at the header with
 `KOLMO_ERR_CORRUPT` ("corrupt or unsupported input") before decoding any block, and returns no bytes; frames without
 codec 16 keep the version they had (the writer's output for them is unchanged). A version 10 reader rejects codec 16
-in a frame of version 9 or lower, and as a graph leaf. The rest of this paragraph is about the identifiers that are
+in a frame of version 9 or lower, and as a graph leaf. Codec 26 is announced the same way, by version 11: a reader
+rejects codec 26 in a frame of version 10 or lower, and as a graph leaf. The rest of this paragraph is about the identifiers that are
 not announced. Block codec 17, graph node 7 and
 CM models 2 and 3 are written inside frames whose header carries the version the rest of the frame needs (3, 7 or
 8), following the rule in *Kolmo graph blocks*: new identifiers do not raise the container version, and a decoder
@@ -485,3 +489,50 @@ previous three qualities, the position, a running sum of quality changes, the me
 an exception, six context tables, two mixers, a final mixer and two adaptive probability maps. Like `CM`, the coder
 is integer-only except for its logistic tables, built from IEEE `+ * /` only, so its output is bit-exact across
 compilers and CPUs.
+
+## GR6+ blocks (codec 26, version 11)
+
+A block with codec 26 is line-structured text (tables, logs, delimited records) coded field by field
+(`src/codecs/gr6.c`; ported from branch `claude/dazzling-maxwell-p8y4u0`, commit `12f0c0e`, where it was codec 15 in
+version 9). Its plan prefix is `0, 0, 0, 0` and its tflag 0; a decoder rejects anything else, and rejects codec 26 in a
+file below version 11 or as a graph leaf. The block checksum covers the decoded block as usual. Its payload (after the
+4-byte plan) is
+
+```
+payload  := version u8 (1) | separator u8 | final newline u8 (0/1) | formulas u8 | lines u64 le | table[62] |
+            formula * formulas | arithmetic-coded bytes
+formula  := target column u16 le | a u16 le | b u16 le | k u8 (0-18) | type u8 (0-5)        (a < target, b < target)
+```
+
+The block is read as `lines` lines (`\n`-terminated, the last one only when `final newline` is 1), each split into
+fields at `separator` (one of `,` tab `;` `|` space). Per line the coder codes the field count (0 = same as the line
+above, else count + 1), then per field one op and that op's values:
+
+| op | name | values | field |
+|---|---|---|---|
+| 0 | DITTO | — | the field at the same position in the line above |
+| 1 | EMPTY | — | empty |
+| 2 | NUM | zigzag residual | prediction + residual, in the column's current number format |
+| 3 | RANK | rank | entry `rank` of the column's move-to-front list (256 entries) |
+| 4 | RANK2 | rank | entry `rank` of the move-to-front list of fields that followed the previous field (256 entries) |
+| 5 | CDICT | index from the end | entry of the column's dictionary (distinct values in order of first use) |
+| 6 | GID | id from the end | the block's distinct fields in order of first use (id 0 is the empty field) |
+| 7 | NUMNEW | decimals, zero-padding width (each ≤ 18), zigzag value | a number in a new format |
+| 8 | NEW | shared-prefix length, then characters | prefix of the reference field (the first entry of the RANK2 list, else of the RANK list), then characters: 6-bit codes into `table`, 62 = end, 63 = escape followed by two codes holding one byte |
+
+A number is `-?[0-9]+(\.[0-9]+)?` with at most 18 digits that prints back identically (no `-0`, leading zeros only as a
+fixed width). The NUM prediction is the one of four with the lowest running cost in the column (cost ← cost − cost/16 +
+16 · bit length of the zigzag residual, updated after every number of the column's format): the column's formula, the
+previous value, twice the previous minus the one before, and the previous plus half the last difference. Formula
+types: 0 round(a / b · 10^k), 1 a − lag(a), 2 round(100 · (a / lag(a) − 1)), 3 lag(target) + a, 4 a, 5 round(a · b / 10^k),
+all computed exactly in integers at the target's decimals, rounding half away from zero; `lag` is the column's
+previous number. A formula applies only where its inputs on the same line are numbers.
+
+Values are written as 6-bit units. An op is 5 data bits per unit plus a continuation bit. Any other value is its bit
+length (one unit; 63 = escape, then 11 units of 6 bits) followed by the bits below the top bit, most significant first,
+6 per unit. Every unit is coded as 6 binary decisions with an integer context-mixing model (8 hashed context models
+over the op, column, ops and field above, previous field, residual sizes and characters; two logistic mixers; an APM)
+and the same binary arithmetic coder and logistic tables as `CM`. As for `CM`, the model is defined by the reference
+implementation (`src/codecs/gr6.c`) and is bit-exact across compilers and CPUs. `ultra` (levels 0 and 2) tries GR6+ on
+text blocks with at least 64 lines and keeps it only when it is smaller than the block's other candidates (context
+mixing, LZMA2 or BWT, with or without the planned transform). No other mode writes it.

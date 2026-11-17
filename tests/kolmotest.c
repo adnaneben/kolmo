@@ -23,6 +23,9 @@ int word_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
 size_t np_encode_pub(const uint8_t *s, size_t n, int np, uint8_t *out, size_t cap);
 int np_decode_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 size_t np_bound_pub(size_t n);
+size_t gr6_compress_pub(const uint8_t *in, size_t n, uint8_t *out, size_t cap);
+int gr6_decompress_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len);
 #define NP_GOLDEN_LEN 17372
 #define NP_GOLDEN_HASH 0xe9dace4722cab3f7ull   /* FNV-1a 64 of the codec-15 leaf for the fixed planes in main() */
 #include <math.h>
@@ -491,6 +494,66 @@ int main(void) {
         check("ultra-csv", csv, 400000, KOLMO_ULTRA, 1 << 17, 1);
         check("ultra-random", rndb, 200000, KOLMO_ULTRA, 1 << 17, 1);
         free(u);
+    }
+    /* GR6+ (codec 26, version 11): a time-series table with derived columns (per capita, running total, growth) must be
+     * coded by GR6+ in ultra and round-trip; the codec itself must survive corrupt streams (no container checksum in
+     * the way). Its own random stream, so the tests after it see the same data as before. */
+    {
+        uint64_t rs_saved = rs;
+        size_t gn = 0, gcap = 600000; uint8_t *g = malloc(gcap);
+        gn += sprintf((char *)g, "country,year,population,co2,co2_per_capita,cumulative_co2,co2_growth_abs,price,volume,value,flag\n");
+        const char *cn[] = {"Aland", "Borduria", "Carpathia", "Doria", "Elbonia", "Freedonia", "Genovia", "Hyrkania"};
+        for (int c = 0; gn + 4096 < gcap; c = (c + 1) % 8) {
+            long long pop = 100000 + (long long)(rnd() % 9000000); long long co2 = 1000 + (long long)(rnd() % 90000), cum = 0, prev = -1;
+            for (int y = 1900; y < 2024 && gn + 200 < gcap; y++) {
+                pop += (long long)(rnd() % 20001) - 5000; if (pop < 1000) pop = 1000;
+                co2 += (long long)(rnd() % 2001) - 900; if (co2 < 10) co2 = 10; cum += co2;
+                long long pc = (co2 * 1000000000LL / pop + 500) / 1000;   /* co2 [t, 3 decimals] / pop * 1e6, 3 decimals */
+                gn += sprintf((char *)g + gn, "%s,%d,%lld,%lld.%03lld,%lld.%03lld,%lld.%03lld,", cn[c], y, pop, co2 / 1000, co2 % 1000,
+                              pc / 1000, pc % 1000, cum / 1000, cum % 1000);
+                if (prev >= 0) { long long d = co2 - prev; gn += sprintf((char *)g + gn, "%s%lld.%03lld", d < 0 ? "-" : "", (d < 0 ? -d : d) / 1000, (d < 0 ? -d : d) % 1000); }
+                long long pr = 100 + (long long)(rnd() % 900), vol = 1 + (long long)(rnd() % 500);   /* value = price * volume */
+                gn += sprintf((char *)g + gn, ",%lld.%02lld,%lld,%lld.%02lld,%s\n", pr / 100, pr % 100, vol, pr * vol / 100, pr * vol % 100, rnd() % 40 ? "" : "est"); prev = co2;
+            }
+        }
+        check("ultra-gr6-table", g, gn, KOLMO_ULTRA, 1 << 20, 1);
+        uint8_t *gc = malloc(gn + 65536), *go = malloc(gn + 64), *ge = malloc(gn + 65536);
+        size_t g1 = gr6_compress_pub(g, gn, gc, gn + 65536);
+        kolmo_params up = {KOLMO_ULTRA, 0, 1, 1 << 20, 1}; size_t ucap = kolmo_bound(gn, &up); uint8_t *ud = malloc(ucap);
+        int64_t uc = kolmo_compress(g, gn, ud, ucap, &up);   /* one block: the per-block contest keeps the smallest coder */
+        if (uc < 0 || !g1 || (size_t)uc > g1 + 32 + 16 + 4) { printf("FAIL gr6: ultra %lld larger than GR6+ alone %zu\n", (long long)uc, g1); fails++; }
+        else if (ud[4] != 11 || ud[32 + 12] != 26) { printf("FAIL gr6: ultra did not choose GR6+ on the derived-column table (version %d, codec %d)\n", ud[4], ud[32 + 12]); fails++; }
+        else {
+            printf("gr6 table: ultra %.2fx with a GR6+ block (codec 26, version 11)\n", (double)gn / uc);
+            /* the same frame relabelled as version 10 (header checksum recomputed) must be refused */
+            ud[4] = 10; uint32_t hc = kolmo_crc32c(0, ud, 28); hc = kolmo_crc32c(hc, ud + 32, 16);
+            for (int k = 0; k < 4; k++) ud[28 + k] = (uint8_t)(hc >> (8 * k));
+            if (kolmo_decompress(ud, (size_t)uc, go, gn, 1) >= 0) { printf("FAIL gr6: a version 10 frame with codec 26 was accepted\n"); fails++; }
+            /* the other modes never write codec 26 */
+            static const kolmo_mode om[] = {KOLMO_RT, KOLMO_FAST, KOLMO_ECO, KOLMO_HC, KOLMO_MAX};
+            for (size_t k = 0; k < sizeof om / sizeof om[0]; k++) {
+                kolmo_params op = {om[k], 0, 1, 1 << 20, 1}; size_t oc = kolmo_bound(gn, &op); uint8_t *od = malloc(oc);
+                int64_t ol = kolmo_compress(g, gn, od, oc, &op);
+                if (ol < 0 || od[32 + 12] == 26) { printf("FAIL gr6: mode %d wrote codec 26 (%lld)\n", (int)om[k], (long long)ol); fails++; }
+                free(od);
+            }
+        }
+        free(ud);
+        const uint8_t *srcs[2] = {g, csv}; size_t lens[2] = {gn, 400000};
+        for (int t = 0; t < 2; t++) {
+            size_t cl = gr6_compress_pub(srcs[t], lens[t], gc, lens[t] + 65536);
+            if (!cl || gr6_decompress_pub(gc, cl, go, lens[t]) || memcmp(go, srcs[t], lens[t])) { printf("FAIL gr6 codec roundtrip %d (%zu)\n", t, cl); fails++; continue; }
+            if (t == 0) printf("gr6 codec: %.2fx on the table\n", (double)lens[t] / cl);
+            for (size_t k = 0; k < cl; k += 1 + cl / 64) gr6_decompress_pub(gc, k, go, lens[t]);   /* truncations: no crash */
+            for (int it = 0; it < 500; it++) {
+                memcpy(ge, gc, cl); int nflip = 1 + (int)(rnd() % 4);
+                for (int f = 0; f < nflip; f++) ge[rnd() % 4 ? 74 + rnd() % (cl - 74) : rnd() % cl] ^= (uint8_t)(1 + rnd() % 255);
+                gr6_decompress_pub(ge, rnd() % 8 ? cl : rnd() % cl, go, lens[t]);
+            }
+        }
+        printf("gr6 codec fuzz: 1000 corrupt streams decoded without crashing\n");
+        free(g); free(gc); free(go); free(ge);
+        rs = rs_saved;
     }
     /* native plane-context leaf (codec 15): direct round trips, every truncation rejected, corrupt leaves never
      * crash, and a golden vector (integer-only input; fixes the coded bytes across compilers and architectures) */

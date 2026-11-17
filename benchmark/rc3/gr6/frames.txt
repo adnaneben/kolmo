@@ -1,0 +1,49 @@
+owid-co2-data.csv            -m speed       same 7389182 
+owid-co2-data.csv            -m balanced    same 1344603 
+owid-co2-data.csv            -m eco         same 1211445 
+owid-co2-data.csv            -m hc          same 1196842 
+owid-co2-data.csv            -m ratio       same 1131224 
+owid-co2-data.csv            -x -l 1        same 1167479 
+owid_test.csv                -m speed       same 5379863 
+owid_test.csv                -m balanced    same 1063753 
+owid_test.csv                -m eco         same 915227 
+owid_test.csv                -m hc          same 906634 
+owid_test.csv                -m ratio       same 855265 
+owid_test.csv                -x -l 1        same 875633 
+energy_test.csv              -m speed       same 3466797 
+energy_test.csv              -m balanced    same 735707 
+energy_test.csv              -m eco         same 670650 
+energy_test.csv              -m hc          same 664573 
+energy_test.csv              -m ratio       same 631255 
+energy_test.csv              -x -l 1        same 644461 
+wide_test.csv                -m speed       same 3428706 
+wide_test.csv                -m balanced    same 1174169 
+wide_test.csv                -m eco         same 989642 
+wide_test.csv                -m hc          same 968667 
+wide_test.csv                -m ratio       same 951938 
+wide_test.csv                -x -l 1        same 925251 
+loghub_all.log               -m speed       same 768456 
+loghub_all.log               -m balanced    same 316254 
+loghub_all.log               -m eco         same 275583 
+loghub_all.log               -m hc          same 266825 
+loghub_all.log               -m ratio       same 246107 
+loghub_all.log               -x -l 1        same 198501 
+dickens                      -m speed       same 6437034 
+dickens                      -m balanced    same 3721196 
+dickens                      -m eco         same 2881188 
+dickens                      -m hc          same 2728251 
+dickens                      -m ratio       same 2274350 
+dickens                      -x -l 1        same 2106969 
+api.json                     -m speed       same 650342 
+api.json                     -m balanced    same 365846 
+api.json                     -m eco         same 234912 
+api.json                     -m hc          same 221589 
+api.json                     -m ratio       same 213374 
+api.json                     -x -l 1        same 146974 
+countries-aggregated.csv     -m speed       same 2234807 
+countries-aggregated.csv     -m balanced    same 345917 
+countries-aggregated.csv     -m eco         same 327367 
+countries-aggregated.csv     -m hc          same 327637 
+countries-aggregated.csv     -m ratio       same 308846 
+countries-aggregated.csv     -x -l 1        same 298212 
+frames differing: 0

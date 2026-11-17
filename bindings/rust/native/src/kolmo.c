@@ -57,6 +57,7 @@ int kolmo_force_c;
 /* codecs */
 #include "codecs/cm.c"
 #include "codecs/cm_image.c"
+#include "codecs/gr6.c"
 #include "transforms/shuffle.c"
 #include "codecs/fastq.c"
 #include "transforms/x86.c"
