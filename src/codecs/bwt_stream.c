@@ -241,6 +241,16 @@ int kolmo_bwt_compress(const uint8_t *in, uint8_t *out, size_t cap, int n, const
         if (res > 0 && (size_t)res <= cap - head) memcpy(q, tmp, (size_t)res); else if (res > 0) res = KB_NOT_COMPRESSIBLE;
         free(tmp);
     }
+    /* static QLFC where the adaptive model gains less than static_pct percent (off by default, see bwt_stream.h): its
+       stage decodes 2-2.6x faster. Same stream layout; the flags byte names the coder. */
+    if (res > 0 && p->coder == KOLMO_QLFC_ADAPTIVE && p->static_pct > 0) {
+        uint8_t *tmp = (uint8_t *)malloc((size_t)lz + 64);
+        int rs = tmp ? kolmo_qlfc_compress_min(work, tmp, lz, KOLMO_QLFC_STATIC, p->min_block, threads) : -1;
+        if (rs > 0 && (size_t)rs <= cap - head && (int64_t)res * 100 > (int64_t)rs * (100 - p->static_pct)) {
+            out[0] = (uint8_t)(KOLMO_QLFC_STATIC | (use_lzp ? 4 : 0)); memcpy(q, tmp, (size_t)rs); res = rs;
+        }
+        free(tmp);
+    }
     free(work);
     if (res < 0) return res;
     return (int)(head + (size_t)res);

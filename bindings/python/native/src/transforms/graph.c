@@ -522,6 +522,34 @@ static void kg_leaf_bounds(const uint8_t *p, size_t n, int np, double *pbits, do
  * block codec, Huffman, rANS (not at the fast settings; at hc only when 3% smaller than a non-rANS choice, as for
  * whole leaves), Huffman then zstd and (when allowed) the zero-run leaf; the smallest is kept. */
 typedef struct { int codec, level, zr; } kgsel;
+/* balanced (zstd at the fast levels) runs the format-2 trials only where a cheap estimate says they can win; eco,
+ * hc and above try them on every leaf. Trying them everywhere made balanced 7-10x slower than rc2 on DEC64 float
+ * arrays and wide CSVs (benchmark/rc3w2/regress/RESULTS.md has the gate designs measured and the choice):
+ * - zero-run (23): leaves at most 1/KG_ZR_FAST_DIV non-zero (eco and up: at most half);
+ * - Huffman then zstd (22): leaves up to KG_HZ_FAST_MAX bytes, and larger leaves where the block codec reaches less
+ *   than KG_HZ_FAST_RH of the order-0 entropy while still above 1.5% of the raw size (long repeats that zstd -3
+ *   codes poorly, not a near-constant leaf), see kg_hz_fast_gate; its zstd pass is probed at level 1 first and runs
+ *   at HZ_FAST_LEVEL only when the probe already wins (hz_try);
+ * - per-plane (21): every leaf with planes;
+ * - inside 21 and 23 the sub-streams skip Huffman when the block codec is already below Huffman's bound.
+ * KG_HZ_FAST_RH=0 with KG_HZ_FAST_MAX=65536 is the time-first variant (DEC64 arrays 1.17x rc2's instructions
+ * instead of 1.36x, keeping 31% of the format-2 gain there instead of 67%; wide CSV 2% instead of 78%). */
+#ifndef KG_ZR_FAST_DIV
+#define KG_ZR_FAST_DIV 8
+#endif
+#ifndef KG_HZ_FAST_MAX
+#define KG_HZ_FAST_MAX (192u << 10)
+#endif
+#ifndef KG_HZ_FAST_RH
+#define KG_HZ_FAST_RH 0.30
+#endif
+static int kg_hz_fast_gate(const uint8_t *p, size_t n, size_t z) {
+    if (n <= KG_HZ_FAST_MAX || !z) return 1;
+    if (KG_HZ_FAST_RH <= 0 || (double)z < 0.015 * (double)n) return 0;
+    uint32_t hc[256]; double h0 = 0; kg_hist(p, n, hc);
+    for (int c = 0; c < 256; c++) if (hc[c]) h0 -= (double)hc[c] * log2((double)hc[c] / (double)n);
+    return (double)z * 8 <= KG_HZ_FAST_RH * h0;
+}
 /* zstd level of the Huffman-then-zstd leaf (src/codecs/hufzstd_leaf.c: hz_try decides when it is worth running) */
 #define KG_HZ_LEVEL(codec, level) ((codec) == C_ZSTD && (level) > 19 ? (level) : 19)
 #define KG_HZ_PROBE(codec, level) ((codec) == C_ZSTD && (level) <= 9 ? (level) : 1)
@@ -536,10 +564,16 @@ static size_t kg_sel_sub(codec_ctx *x, const void *ctx, const uint8_t *p, size_t
         size_t cz = codec_compress(x, C_CM, level, p, n, t, cap);
         if (cz && (!z || cz < z)) { memcpy(out, t, cz); z = cz; cc = C_CM; }
     }
-    size_t hz = n >= 64 ? huf_compress_all(p, n, t, cap) : 0;
+    int tryhuf = n >= 64;
+    if (fastleaf && tryhuf && z) {               /* balanced: no Huffman (nor Huffman then zstd) when the block codec is */
+        double bits, hbits;                      /* already below Huffman's bound */
+        kg_leaf_bounds(p, n, 1, &bits, &hbits);
+        if ((double)z * 8 <= hbits) tryhuf = 0;
+    }
+    size_t hz = tryhuf ? huf_compress_all(p, n, t, cap) : 0;
     if (hz && (!z || hz < z)) { memcpy(out, t, hz); z = hz; cc = C_HUF; }
     if (hz && (KOLMO_F2_MASK & 2) && hz >= 64) {
-        uint8_t *u = malloc(cap); size_t qz = u ? hz_try(x, KG_HZ_PROBE(codec, level), KG_HZ_LEVEL(codec, level), t, hz, u, cap, z) : 0;
+        uint8_t *u = malloc(cap); size_t qz = u ? hz_try(x, KG_HZ_PROBE(codec, level), KG_HZ_LEVEL(codec, level), t, hz, u, cap, z, fastleaf) : 0;
         if (qz && (!z || qz < z)) { memcpy(out, u, qz); z = qz; cc = C_HZ; }
         free(u);
     }
@@ -547,7 +581,7 @@ static size_t kg_sel_sub(codec_ctx *x, const void *ctx, const uint8_t *p, size_t
         size_t rz = rans_compress_all_x(p, n, t, cap, 1);
         if (rz && (!z || (codec == C_ZSTD && cc != C_RANS ? (uint64_t)rz * 100 <= (uint64_t)z * 97 : rz < z))) { memcpy(out, t, rz); z = rz; cc = C_RANS; }
     }
-    if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * 2 <= n) {
+    if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
         kgsel S2 = *S; S2.zr = 0;
         size_t zz = zrun_compress(x, p, n, t, cap, kg_sel_sub, &S2);
         if (zz && (!z || zz < z)) { memcpy(out, t, zz); z = zz; cc = C_ZRUN; }
@@ -648,12 +682,12 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
             if (fb && (KOLMO_F2_MASK & 1) && np > 1 && s->n % (size_t)np == 0 && (fz = planes_compress(x, np, s->p, s->n, fb, zc, kg_sel_sub, &S)) && (!z || fz < z)) {
                 memcpy(o.p + o.n + 20, fb, fz); z = fz; cc = C_PLANES; x->used_f2 = 1;
             }
-            if (fb && (KOLMO_F2_MASK & 2) && cc != C_STORE && (fz = huf_compress_all(s->p, s->n, fb, zc)) >= 64) {
-                uint8_t *u = malloc(zc); size_t qz = u ? hz_try(x, KG_HZ_PROBE(codec, level), KG_HZ_LEVEL(codec, level), fb, fz, u, zc, z) : 0;
+            if (fb && (KOLMO_F2_MASK & 2) && cc != C_STORE && (!fastleaf || kg_hz_fast_gate(s->p, s->n, z)) && (fz = huf_compress_all(s->p, s->n, fb, zc)) >= 64) {
+                uint8_t *u = malloc(zc); size_t qz = u ? hz_try(x, KG_HZ_PROBE(codec, level), KG_HZ_LEVEL(codec, level), fb, fz, u, zc, z, fastleaf) : 0;
                 if (qz && (!z || qz < z)) { memcpy(o.p + o.n + 20, u, qz); z = qz; cc = C_HZ; x->used_f2 = 1; }
                 free(u);
             }
-            if (fb && (KOLMO_F2_MASK & 4) && zr_count_nonzero(s->p, s->n) * 2 <= s->n) {
+            if (fb && (KOLMO_F2_MASK & 4) && zr_count_nonzero(s->p, s->n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= s->n) {
                 kgsel S2 = S; S2.zr = 0;
                 if ((fz = zrun_compress(x, s->p, s->n, fb, zc, kg_sel_sub, &S2)) && (!z || fz < z)) { memcpy(o.p + o.n + 20, fb, fz); z = fz; cc = C_ZRUN; x->used_f2 = 1; }
             }

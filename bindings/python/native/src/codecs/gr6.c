@@ -31,6 +31,8 @@ enum { G6_DITTO, G6_EMPTY, G6_NUM, G6_RANK, G6_RANK2, G6_CDICT, G6_GID, G6_NUMNE
 #define G6_PREVCAP 256
 #define G6_NM 8
 #define G6_MAXFORM 255
+#define G6_MAXCOLS 100              /* wider tables are not tried (gr6_applies) */
+#define G6_WORK_CAP ((int64_t)1 << 29)   /* rows scored by the formula search (g6_formulas) */
 
 /* ---- tracked allocation: everything is freed at the end; failure (or corrupt input) unwinds with longjmp */
 typedef struct { void **p; size_t n, cap; jmp_buf jb; } g6_heap;
@@ -545,7 +547,12 @@ static int g6_formulas(g6_heap *H, const uint8_t *d, size_t n, uint8_t sep, g6_f
 #define G6_PRED(ty, a, b, k, r, p) g6_fpred(ty, k, G6_V(a, r), G6_D(a, r), G6_OK(a, (r) - 1), G6_V(a, (r) - 1), G6_D(a, (r) - 1), \
         G6_V(b, r), G6_D(b, r), G6_OK(t, (r) - 1), G6_V(t, (r) - 1), G6_D(t, (r) - 1), G6_D(t, r), p)
 #define G6_NEAR(p, r) ((p) - G6_V(t, r) <= 2 && G6_V(t, r) - (p) <= 2)
-    for (int t = 1; t < K && nout < G6_MAXFORM; t++) {
+    /* work cap (rows scored, screening included): the search is O(columns^2) per target column; a table that
+     * reaches the cap keeps the formulas found so far. Counted in rows, not time, so the output stays the same on
+     * every machine. The files where GR6+ wins need at most 0.34 G (OWID CO2, 79 columns); energy_test.csv (130
+     * columns, never chosen) needed 3.9 G, 7-21 s (benchmark/rc3w2/regress/RESULTS.md) */
+    int64_t work = 0;
+    for (int t = 1; t < K && nout < G6_MAXFORM && work < G6_WORK_CAP; t++) {
         int cnt = 0; for (int r = 0; r < rows; r++) cnt += G6_OK(t, r);
         if (cnt < rows / 10 || cnt < 50) continue;
         int bh = 0, bs = 1, ba = -1, bb = -1, bk = 0, bt = 0;   /* best rate bh/bs, at least one half */
@@ -560,10 +567,11 @@ static int g6_formulas(g6_heap *H, const uint8_t *d, size_t n, uint8_t sep, g6_f
                     if (G6_PRED(ty, a, bc, KE[q], r, &p) && G6_NEAR(p, r)) hit++;
                     else if (++miss > 24 || (miss >= 6 && hit * 2 < miss)) break;
                 }
-                if (seen < 16 || miss > 24 || hit * 2 < miss || hit < seen / 2) continue;
+                work += 64;
+                if (seen < 16 || miss > 24 || hit * 2 < miss || hit < seen / 2 || work >= G6_WORK_CAP) continue;
                 hit = 0; seen = 0;
                 const int lim = rows < 8000 ? rows : 8000;
-                for (int r = 1; r < lim; r++) {
+                for (int r = 1; r < lim; r++, work++) {
                     if ((r & 63) == 0) {
                         /* stop when the formula could not be kept even if every remaining row were a hit: the
                          * best reachable rate is (hit + rem) / (seen + rem). Exact, the formulas found are the same
@@ -594,11 +602,30 @@ static void g6_setup(g6_model *M, const uint8_t *table) {
     for (int i = 61; i >= 0; i--) M->code[table[i]] = i;
 }
 
-/* worth trying: text with at least 64 lines */
+/* the field separator: the most frequent of , TAB ; | and space in the first MiB */
+static uint8_t g6_sep(const uint8_t *d, size_t n) {
+    static const uint8_t SEPS[5] = {',', '\t', ';', '|', ' '};
+    size_t c[5] = {0}, m = n < (1u << 20) ? n : (1u << 20);
+    for (size_t i = 0; i < m; i++) for (int k = 0; k < 5; k++) c[k] += d[i] == SEPS[k];
+    int bsep = 0; for (int k = 1; k < 5; k++) if (c[k] > c[bsep]) bsep = k;
+    return SEPS[bsep];
+}
+
+/* worth trying: a table. Text with at least 64 lines, where at least 90% of the first 256 lines have the same number
+ * of fields, 3 to G6_MAXCOLS. GR6+ was measured to win only on such tables (CSV with derived columns); prose, logs and
+ * JSON never chose it and cost 3-11% more `-x` time, and 130 columns cost +126% for nothing
+ * (benchmark/rc3/gr6/RESULTS.md, benchmark/rc3w2/regress/RESULTS.md) */
 static int gr6_applies(const uint8_t *s, size_t n) {
     if (n < 4096 || !looks_text(s, n)) return 0;
-    size_t lines = 0; for (const uint8_t *p = s, *e = s + n; p < e && lines < 64;) { const uint8_t *q = memchr(p, '\n', (size_t)(e - p)); if (!q) break; lines++; p = q + 1; }
-    return lines >= 64;
+    const uint8_t sep = g6_sep(s, n); uint32_t cnt[G6_MAXCOLS + 2] = {0}; size_t lines = 0;
+    for (const uint8_t *p = s, *e = s + n; p < e && lines < 256;) {
+        const uint8_t *q = memchr(p, '\n', (size_t)(e - p)); if (!q) break;
+        size_t nf = 1; for (const uint8_t *k = p; k < q && nf <= G6_MAXCOLS; k++) nf += *k == sep;
+        cnt[nf <= G6_MAXCOLS ? nf : G6_MAXCOLS + 1]++; lines++; p = q + 1;
+    }
+    if (lines < 64) return 0;
+    uint32_t best = 0; for (int k = 3; k <= G6_MAXCOLS; k++) if (cnt[k] > best) best = cnt[k];
+    return (size_t)best * 10 >= lines * 9;
 }
 
 /* returns the coded size, 0 when it does not fit in cap or memory runs out */
@@ -611,11 +638,7 @@ static size_t gr6_compress(const uint8_t *d, size_t n, uint8_t *out, size_t cap)
     if (!M || !io || !ob || !F) goto done;
     if (setjmp(H->jb)) { ret = 0; goto done; }
     {
-        static const uint8_t SEPS[5] = {',', '\t', ';', '|', ' '};
-        size_t c[5] = {0}, m = n < (1u << 20) ? n : (1u << 20);
-        for (size_t i = 0; i < m; i++) for (int k = 0; k < 5; k++) c[k] += d[i] == SEPS[k];
-        int bsep = 0; for (int k = 1; k < 5; k++) if (c[k] > c[bsep]) bsep = k;
-        uint8_t sep = SEPS[bsep];
+        uint8_t sep = g6_sep(d, n);
         size_t cnt[256] = {0}; for (size_t i = 0; i < n; i++) cnt[d[i]]++;
         int ord[256]; for (int i = 0; i < 256; i++) ord[i] = i;
         for (int i = 1; i < 256; i++) { int x = ord[i], j = i; while (j > 0 && cnt[ord[j - 1]] < cnt[x]) { ord[j] = ord[j - 1]; j--; } ord[j] = x; }
@@ -706,3 +729,4 @@ static const kolmo_codec codec_gr6 = { C_GR6, "gr6", NULL, gr6_codec_compress, N
 /* test hooks */
 size_t gr6_compress_pub(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return gr6_compress(in, n, out, cap); }
 int gr6_decompress_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return gr6_decompress(in, cn, out, n); }
+int gr6_applies_pub(const uint8_t *in, size_t n) { return gr6_applies(in, n); }

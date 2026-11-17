@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased (rc3 wave 2, regress lane: `claude/rc3w2-regress-20261117`)
+
+Fixes for the regressions of rc3 against rc2 measured on the Apple M5 (`benchmark/rc3/mac/RESULTS.md`). Measurements
+in `benchmark/rc3w2/regress/RESULTS.md`. No format change: every frame written here was already valid rc3 output.
+Frames change only in `balanced`, on files whose graph leaves take codecs 21-23.
+
+### Changed
+- **`balanced` tries the format-2 graph leaves (codecs 21-23) only where a cheap estimate says they can win.** Trying
+  them on every leaf made `balanced` 7-10x slower than rc2 on DEC64 float arrays and wide CSVs (and 2-6x on small
+  integer files). Now: the Huffman-then-zstd leaf on leaves up to 192 KiB, and on larger leaves only where zstd -3
+  reaches less than 30% of the order-0 entropy (above 1.5% of the raw size); its zstd pass is probed at level 1 and
+  runs at level 5 (was 19) only when the probe already wins; the zero-run leaf on leaves at most 1/8 non-zero (was
+  1/2); inside per-plane and zero-run leaves, Huffman is skipped when the block codec is already below Huffman's
+  bound. `eco`, `hc` and above keep the full trials. VM, 1 thread: OWID energy (NPY, pickle) 9.3-9.7x -> 1.3-1.5x
+  rc2's compress time, keeping 67% of the format-2 gain (-3.6% instead of -5.4% vs rc2); wide CSV 7.0x -> 1.15x,
+  keeping 78% (-3.5% instead of -4.5%); the small integer files keep all of it (year -34%, timestamps -24%,
+  population -2.6%) at rc2's speed within a few milliseconds. `balanced` frames of such files change.
+- **GR6+ (codec 26, `-x`) is tried only on tables:** at least 90% of the first 256 lines with the same number of
+  fields, 3 to 100. Prose, logs and JSON (never chosen; +3% to +11% `-x` time) and wider tables (+126% on a 130-column
+  CSV) skip it. The formula search stops after 2^29 rows scored (a count, not a time: same output everywhere); the
+  files where GR6+ wins need at most 0.34 G. `-x` frames are unchanged on every file measured; energy_test.csv
+  compresses 1.8x faster, dickens 11% faster.
+- **Video (codec 20) codes and decodes its frames on all threads**, with the SIMD strip kernels: the encoder's
+  prediction runs frames in parallel, the decoder rebuilds frames as a wavefront (each frame one strip behind the
+  previous). Same bytes for every thread count and ISA.
+- `ratio` keeps adaptive QLFC (owner's decision). Static QLFC where adaptive gains under 1% was measured (decode
+  1.35-1.9x faster on the three files it applies to, but two thirds of their adaptive gain given back and +1% to +33%
+  compress time on every file) and left off; `KOLMO_BWT_STATIC_PCT=1` turns it on. `ratio` frames are unchanged.
+- The zero-run split skips zero words 8 bytes at a time (same bytes).
+
 ## Unreleased (rc3, features-a lane: `claude/rc3-features-a-20261116`)
 
 ### Added

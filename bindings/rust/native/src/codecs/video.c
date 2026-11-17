@@ -55,77 +55,74 @@ static int kv_parse(const uint8_t *s, size_t n, kv_layout_t *L, uint8_t **hdr) {
     L->hdr_len = hn; *hdr = hb; return 0;
 }
 
-static inline int kv_med(int a, int b, int c) {
-    int mx = a > b ? a : b, mn = a < b ? a : b;
-    return c >= mx ? mn : c <= mn ? mx : a + b - c;
-}
-/* Prediction of sample (x, y) under predictor k; cur holds the samples decoded so far, prev the previous frame. */
-static inline int kv_predict(int k, const uint8_t *cur, const uint8_t *prev, size_t w, size_t x, size_t y) {
-    size_t i = y * w + x;
-    if (k == 1) return prev[i];
-    int a, b, c;
-    if (k == 0) {
-        a = x ? cur[i - 1] : (y ? cur[i - w] : 0); b = y ? cur[i - w] : a; c = (x && y) ? cur[i - w - 1] : b;
-        return kv_med(a, b, c);
-    }
-#define D(j) ((int)(int8_t)(uint8_t)(cur[j] - prev[j]))
-    a = x ? D(i - 1) : (y ? D(i - w) : 0); b = y ? D(i - w) : a; c = (x && y) ? D(i - w - 1) : b;
-#undef D
-    return prev[i] + kv_med(a, b, c);
-}
-static inline uint8_t kv_zz(int r) { int8_t s = (int8_t)(uint8_t)r; return (uint8_t)(((uint8_t)s << 1) ^ (uint8_t)(s >> 7)); }
-static inline int kv_unzz(uint8_t z) { return (int)((z >> 1) ^ (uint8_t)-(int)(z & 1)); }
-
-static void kv_encode_plane(const uint8_t *cur, const uint8_t *prev, size_t w, size_t h, uint8_t *res, uint8_t *flags) {
-    for (size_t y0 = 0, s = 0; y0 < h; y0 += KV_STRIP, s++) {
-        size_t y1 = y0 + KV_STRIP < h ? y0 + KV_STRIP : h; int best = 0; uint64_t bc = UINT64_MAX;
-        for (int k = 0; k < (prev ? 3 : 1); k++) {
-            uint64_t c = 0;
-            for (size_t y = y0; y < y1; y++) for (size_t x = 0; x < w; x++) {
-                int8_t r = (int8_t)(uint8_t)(cur[y * w + x] - kv_predict(k, cur, prev, w, x, y)); c += (uint64_t)(r < 0 ? -r : r);
-            }
-            if (c < bc) { bc = c; best = k; }
-        }
-        flags[s] = (uint8_t)best;
-        for (size_t y = y0; y < y1; y++) for (size_t x = 0; x < w; x++)
-            res[y * w + x] = kv_zz(cur[y * w + x] - kv_predict(best, cur, prev, w, x, y));
-    }
-}
-static int kv_decode_plane(uint8_t *cur, const uint8_t *prev, size_t w, size_t h, const uint8_t *res, const uint8_t *flags) {
-    for (size_t y0 = 0, s = 0; y0 < h; y0 += KV_STRIP, s++) {
-        int k = flags[s]; if (k > 2 || (k && !prev)) return -1;
-        size_t y1 = y0 + KV_STRIP < h ? y0 + KV_STRIP : h;
-        for (size_t y = y0; y < y1; y++) for (size_t x = 0; x < w; x++)
-            cur[y * w + x] = (uint8_t)(kv_predict(k, cur, prev, w, x, y) + kv_unzz(res[y * w + x]));
-    }
-    return 0;
-}
+/* strip prediction and its inverse: algo/video.c (C reference) and the SIMD kernels of src/arch, through KOLMO_K */
 static size_t kv_strips(size_t h) { return (h + KV_STRIP - 1) / KV_STRIP; }
 
-/* Layout: u32 header length, header bytes, flags (one per strip, frame-major), then residuals plane by plane. */
-static uint8_t *kv_transform(const uint8_t *s, size_t n, size_t *outn) {
+/* Layout: u32 header length, header bytes, flags (one per strip, frame-major), then residuals plane by plane.
+ *
+ * Threads (same bytes for every thread count). The encoder predicts from the source samples only, so the frames are
+ * independent: kolmo_par_for codes them in parallel. The decoder needs frame f - 1 for frames whose strips use the
+ * previous frame, but only the rows that strip covers (and the row above it, already done): frame f decodes strip s
+ * of a plane once frame f - 1 has finished that strip, so frames decode as a wavefront, each a few strips behind the
+ * one before (kv_dec_frame). Frames are handed out in order (kolmo_par_for), so the frame a worker waits for has
+ * always been started by another worker or by itself: no deadlock with any number of threads.
+ * Measured: benchmark/rc3w2/regress/RESULTS.md. */
+typedef struct {
+    kv_layout_t L; const uint8_t *src; uint8_t *out;                        /* encoder: src; decoder: out */
+    uint8_t *fl0, *rs0; const uint8_t *cfl0, *crs0;                         /* flags and residuals, to write or to read */
+    size_t *foff; size_t nfl, plane_off[KV_MAXP];                           /* per frame: sample offset; flags per frame */
+    size_t *prog; int err;                                                  /* decoder: strips finished per frame */
+} kv_par;
+
+static void kv_enc_frame(void *ctx, int f, int worker) {
+    kv_par *P = ctx; (void)worker; const kv_layout_t *L = &P->L;
+    const uint8_t *cur = P->src + P->foff[f], *pp = f ? P->src + P->foff[f - 1] : NULL; uint8_t *fl = P->fl0 + (size_t)f * P->nfl;
+    for (int p = 0; p < L->np; p++) {
+        size_t ps = L->w[p] * L->h[p], w = L->w[p], h = L->h[p]; uint8_t *res = P->rs0 + P->plane_off[p] + (size_t)f * ps;
+        for (size_t y0 = 0, st = 0; y0 < h; y0 += KV_STRIP, st++)       /* KOLMO_K: the SIMD strip kernels (same bytes) */
+            fl[st] = (uint8_t)KOLMO_K->vid_strip_enc(cur, pp, w, y0, y0 + KV_STRIP < h ? y0 + KV_STRIP : h, res);
+        fl += kv_strips(h); cur += ps; if (pp) pp += ps;
+    }
+}
+
+static uint8_t *kv_transform(const uint8_t *s, size_t n, size_t *outn, int threads) {
     kv_layout_t L; uint8_t *hdr;
     if (kv_parse(s, n, &L, &hdr)) return NULL;
-    size_t nflags = 0; for (int p = 0; p < L.np; p++) nflags += kv_strips(L.h[p]); nflags *= L.frames;
+    size_t nfl = 0; for (int p = 0; p < L.np; p++) nfl += kv_strips(L.h[p]);
+    size_t nflags = nfl * L.frames;
     size_t tot = 4 + L.hdr_len + nflags + L.frames * L.frame_bytes;
-    uint8_t *o = malloc(tot); if (!o) { free(hdr); return NULL; }
+    uint8_t *o = malloc(tot); size_t *foff = malloc(L.frames * sizeof *foff);
+    if (!o || !foff || L.frames > INT32_MAX) { free(o); free(foff); free(hdr); return NULL; }
     { uint32_t hv = (uint32_t)L.hdr_len; for (int q = 0; q < 4; q++) o[q] = (uint8_t)(hv >> (8 * q)); }; memcpy(o + 4, hdr, L.hdr_len);
-    uint8_t *fl = o + 4 + L.hdr_len, *rs = fl + nflags;
-    size_t plane_off[KV_MAXP], acc = 0; for (int p = 0; p < L.np; p++) { plane_off[p] = acc; acc += L.frames * L.w[p] * L.h[p]; }
-    const uint8_t *prev = NULL; size_t i = (size_t)((const uint8_t *)memchr(s, '\n', n) - s) + 1;
-    for (size_t f = 0; f < L.frames; f++) {
-        i = (size_t)((const uint8_t *)memchr(s + i, '\n', n - i) - s) + 1;
-        const uint8_t *cur = s + i, *pp = prev;
-        for (int p = 0; p < L.np; p++) {
-            size_t ps = L.w[p] * L.h[p];
-            kv_encode_plane(cur, pp, L.w[p], L.h[p], rs + plane_off[p] + f * ps, fl); fl += kv_strips(L.h[p]);
-            cur += ps; if (pp) pp += ps;
-        }
-        prev = s + i; i += L.frame_bytes;
-    }
-    free(hdr); *outn = tot; return o;
+    kv_par P = {0}; P.L = L; P.src = s; P.fl0 = o + 4 + L.hdr_len; P.rs0 = P.fl0 + nflags; P.foff = foff; P.nfl = nfl;
+    size_t acc = 0; for (int p = 0; p < L.np; p++) { P.plane_off[p] = acc; acc += L.frames * L.w[p] * L.h[p]; }
+    size_t i = (size_t)((const uint8_t *)memchr(s, '\n', n) - s) + 1;
+    for (size_t f = 0; f < L.frames; f++) { i = (size_t)((const uint8_t *)memchr(s + i, '\n', n - i) - s) + 1; foff[f] = i; i += L.frame_bytes; }
+    kolmo_par_for(threads, (int)L.frames, kv_enc_frame, &P);
+    free(foff); free(hdr); *outn = tot; return o;
 }
-static int kv_inverse(const uint8_t *t, size_t tn, uint8_t *out, size_t n) {
+
+static void kv_dec_frame(void *ctx, int f, int worker) {
+    kv_par *P = ctx; (void)worker; const kv_layout_t *L = &P->L;
+    uint8_t *cur = P->out + P->foff[f]; const uint8_t *pp = f ? P->out + P->foff[f - 1] : NULL;
+    const uint8_t *fl = P->cfl0 + (size_t)f * P->nfl; size_t done = 0; int bad = 0;
+    for (int p = 0; p < L->np; p++) {
+        size_t ps = L->w[p] * L->h[p], w = L->w[p], h = L->h[p]; const uint8_t *res = P->crs0 + P->plane_off[p] + (size_t)f * ps;
+        for (size_t y0 = 0, st = 0; y0 < h; y0 += KV_STRIP, st++) {
+            int k = fl[st];
+            if (k > 2 || (k && !pp)) bad = 1;
+            if (!bad) {
+                if (k) while (__atomic_load_n(&P->prog[f - 1], __ATOMIC_ACQUIRE) <= done) sched_yield();   /* frame f - 1 has this strip */
+                KOLMO_K->vid_strip_dec(cur, pp, w, y0, y0 + KV_STRIP < h ? y0 + KV_STRIP : h, k, res);
+            }
+            __atomic_store_n(&P->prog[f], bad ? SIZE_MAX : ++done, __ATOMIC_RELEASE);
+        }
+        fl += kv_strips(h); cur += ps; if (pp) pp += ps;
+    }
+    if (bad) __atomic_store_n(&P->err, 1, __ATOMIC_RELAXED);
+}
+
+static int kv_inverse(const uint8_t *t, size_t tn, uint8_t *out, size_t n, int threads) {
     if (tn < 4) return -1;
     size_t hl = (size_t)t[0] | (size_t)t[1] << 8 | (size_t)t[2] << 16 | (size_t)t[3] << 24; if (hl > tn - 4) return -1;
     kv_layout_t L;
@@ -133,24 +130,21 @@ static int kv_inverse(const uint8_t *t, size_t tn, uint8_t *out, size_t n) {
     if (!e || kv_geometry(h, e, &L)) return -1;
     size_t frames = 0; for (const uint8_t *q = e + 1; q < h + hl; ) { const uint8_t *f = memchr(q, '\n', (size_t)(h + hl - q)); if (!f) return -1; frames++; q = f + 1; }
     L.frames = frames;
-    size_t nflags = 0; for (int p = 0; p < L.np; p++) nflags += kv_strips(L.h[p]); nflags *= L.frames;
-    if (tn != 4 + hl + nflags + L.frames * L.frame_bytes || n != hl + L.frames * L.frame_bytes) return -1;
-    const uint8_t *fl = t + 4 + hl, *rs = fl + nflags;
-    size_t plane_off[KV_MAXP], acc = 0; for (int p = 0; p < L.np; p++) { plane_off[p] = acc; acc += L.frames * L.w[p] * L.h[p]; }
+    size_t nfl = 0; for (int p = 0; p < L.np; p++) nfl += kv_strips(L.h[p]);
+    size_t nflags = nfl * L.frames;
+    if (!frames || frames > INT32_MAX || tn != 4 + hl + nflags + L.frames * L.frame_bytes || n != hl + L.frames * L.frame_bytes) return -1;
+    kv_par P = {0}; P.L = L; P.out = out; P.cfl0 = t + 4 + hl; P.crs0 = P.cfl0 + nflags; P.nfl = nfl;
+    size_t acc = 0; for (int p = 0; p < L.np; p++) { P.plane_off[p] = acc; acc += L.frames * L.w[p] * L.h[p]; }
+    P.foff = malloc(frames * sizeof *P.foff); P.prog = calloc(frames, sizeof *P.prog);
+    if (!P.foff || !P.prog) { free(P.foff); free(P.prog); return -1; }
     size_t o = (size_t)(e - h) + 1, hi = o; memcpy(out, h, o);
-    const uint8_t *prev = NULL;
-    for (size_t f = 0; f < L.frames; f++) {
+    for (size_t f = 0; f < frames; f++) {                       /* FRAME lines in place; sample offsets of each frame */
         const uint8_t *fe = memchr(h + hi, '\n', hl - hi); size_t fl_len = (size_t)(fe - (h + hi)) + 1;
-        memcpy(out + o, h + hi, fl_len); o += fl_len; hi += fl_len;
-        uint8_t *cur = out + o; const uint8_t *pp = prev;
-        for (int p = 0; p < L.np; p++) {
-            size_t ps = L.w[p] * L.h[p];
-            if (kv_decode_plane(cur, pp, L.w[p], L.h[p], rs + plane_off[p] + f * ps, fl)) return -1;
-            fl += kv_strips(L.h[p]); cur += ps; if (pp) pp += ps;
-        }
-        prev = out + o; o += L.frame_bytes;
+        memcpy(out + o, h + hi, fl_len); o += fl_len; hi += fl_len; P.foff[f] = o; o += L.frame_bytes;
     }
-    return o == n ? 0 : -1;
+    if (o == n) kolmo_par_for(threads, (int)frames, kv_dec_frame, &P);
+    free(P.foff); free(P.prog);
+    return o == n && !P.err ? 0 : -1;
 }
 
 
