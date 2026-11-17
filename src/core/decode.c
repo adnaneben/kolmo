@@ -57,6 +57,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         if (pl.t > T_LINES || (pl.t == T_KG && P->ver < 7) || (pl.t == T_LINES && P->ver < 8)) return KOLMO_ERR_CORRUPT;
     }
     if (codec == C_CMP && P->ver < 11) return KOLMO_ERR_CORRUPT;   /* context mixing over parts (version 11) */
+    if (codec_is_native(codec) && P->ver < 11) return KOLMO_ERR_CORRUPT;   /* Kolmo's own coders (version 11) */
     x->threads = J->fqthreads;
     if (codec == C_FQ) {                                        /* FASTQ family block (version 10) */
         if (P->ver < 10 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;

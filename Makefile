@@ -95,6 +95,10 @@ KHDR    := src/arch/kernels.h src/algo/predict.h src/algo/planes.h src/algo/mixe
 # The block-sorting pipeline (LZP, QLFC, the libsais subset, the fork-join helper, the BWT stream formats) is compiled
 # on its own too: these files have public kolmo_* entry points and are not included by src/kolmo.c.
 BWTSRC  := src/algo/lzp.c src/algo/qlfc.c src/algo/par.c $(wildcard src/algo/sais/*.c) src/codecs/bwt_stream.c
+# Kolmo's own LZ, Huffman, LZMA-class coders and block hash (codecs 24, 27-29, opt-in; native lane), compiled on their
+# own like the block-sorting files and listed with them so every build and test that links those links these.
+NATSRC  := src/algo/khuf.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c
+BWTSRC  += $(NATSRC)
 BWTHDR  := $(wildcard src/algo/*.h src/algo/sais/*.h) src/codecs/bwt_stream.h
 ARCHSRC := src/arch/xxh3.c $(KSRC) $(BWTSRC) $(ASMSRC) $(GPUSRC)
 ARCHOBJ := $(addprefix build/obj/,$(addsuffix .o,$(basename $(ARCHSRC))))
@@ -239,6 +243,17 @@ build/test-bwt: tests/test_bwt.c tests/test_bwt_golden.h $(BWTSRC) $(BWTHDR)
 	$(CC) $(CFLAGS) -Isrc tests/test_bwt.c $(BWTSRC) -o $@ -lpthread
 build/test-bwt-asan: tests/test_bwt.c tests/test_bwt_golden.h $(BWTSRC) $(BWTHDR)
 	$(CC) $(SANFLAGS) -Isrc tests/test_bwt.c $(BWTSRC) -o $@ -lpthread
+# Kolmo's own coders (codecs 24, 27-29, src/algo/k*.c): round trips, corrupt payloads under ASan/UBSan, pinned hash
+# values; then every mode through the CLI with KOLMO_NATIVE=all and all,strong (native lane, rc3 wave 2).
+build/test-native: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
+	$(CC) $(CFLAGS) -Isrc tests/test_native.c $(NATSRC) -o $@
+build/test-native-asan: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
+	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -Isrc tests/test_native.c $(NATSRC) -o $@
+check-native: build/test-native build/test-native-asan build/kolmo
+	./build/test-native 3
+	./build/test-native-asan
+	python3 tests/test_native_modes.py build/kolmo build/native-modes
+.PHONY: check-native
 check-bwt: build/test-bwt build/test-bwt-asan
 	./build/test-bwt
 	./build/test-bwt-asan
@@ -288,7 +303,7 @@ check-features-b: build/test-features-b build/test-features-b-asan build/kolmo
 	./build/test-features-b-asan 7
 	sh tests/test_features_b_cli.sh build/kolmo
 .PHONY: check-features-b
-check-rc: check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
+check-rc: check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
 .PHONY: check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-fqfam check-dispatch check-asm check-arch check-format2
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan

@@ -38,6 +38,7 @@ def _sources():
     c += [os.path.join(SRC, "arch", "xxh3.c")]          # compiled apart from src/kolmo.c (docs/LAYOUT.md)
     # the block-sorting pipeline, also compiled on its own (LZP, QLFC, the libsais subset, the BWT stream formats)
     c += [os.path.join(SRC, "algo", f) for f in ("lzp.c", "qlfc.c", "par.c")]
+    c += [os.path.join(SRC, "algo", f) for f in ("khuf.c", "klz.c", "klzma.c", "khash.c")]   # Kolmo's own coders (codecs 24, 27-29)
     c += sorted(glob.glob(os.path.join(SRC, "algo", "sais", "*.c"))) + [os.path.join(SRC, "codecs", "bwt_stream.c")]
     return c, z, b, l4
 
