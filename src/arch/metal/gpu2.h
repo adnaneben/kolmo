@@ -117,6 +117,8 @@ int kg2_metal_formula_screen(const int64_t *V, const uint8_t *D, const uint8_t *
 int kg2_metal_formula_score(const int64_t *V, const uint8_t *D, const uint8_t *OK, uint32_t K, uint32_t R,
                             uint32_t rows, uint32_t lim, const kg2_cand *cand, uint32_t nc, const kg2_score *bound,
                             kg2_score *out);
+/* a new sample follows (the GPU's row-major copy of the last one, GPU2_FM_ROWMAJOR=1, is stale) */
+void kg2_metal_formula_reset(void);
 /* the same on the CPU, for candidates [i0, i1): the reference of both kernels */
 void kg2_ref_formula_screen(const int64_t *V, const uint8_t *D, const uint8_t *OK, uint32_t R, uint32_t rows,
                             const kg2_cand *cand, uint32_t i0, uint32_t i1, kg2_score *out);

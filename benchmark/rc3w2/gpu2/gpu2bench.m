@@ -128,6 +128,22 @@ static void tbx_gpu(void *c) {
         g_gpu += kg2_metal_last_gpu_seconds();
     }
 }
+/* GPU and CPU threads on the same stage: both take chunks from one counter (GPU into slot 1, CPU into slot 0) */
+typedef struct { tbx *X; atomic_size_t next; double gs; } thyb;
+static void *thyb_gpu(void *p) {
+    thyb *H = p; tbx *X = H->X; size_t i;
+    while ((i = atomic_fetch_add(&H->next, 1)) < X->nchunk) {
+        kg2_metal_table(X->d + X->cb[i], X->cb[i + 1] - X->cb[i], X->mode, X->sep, &X->slot[1]); H->gs += kg2_metal_last_gpu_seconds();
+    }
+    return NULL;
+}
+static void tbx_hyb(void *c) {
+    tbx *X = c; thyb H; H.X = X; atomic_store(&H.next, 0); H.gs = 0;
+    pthread_t th; pthread_create(&th, NULL, thyb_gpu, &H);
+    size_t i;
+    while ((i = atomic_fetch_add(&H.next, 1)) < X->nchunk) fe_cpu(T, X->d + X->cb[i], X->cb[i + 1] - X->cb[i], X->mode, X->sep, &X->slot[0]);
+    pthread_join(th, NULL); g_gpu += H.gs;
+}
 /* the coder stage: zstd level 1 of every column's flags and residuals (2 K jobs) */
 typedef struct { tbx *X; int s; size_t *sz; } zjob;
 static void z_one(void *c, uint32_t i) {
@@ -213,8 +229,8 @@ static int cmd_table(int argc, char **argv) {
     for (size_t i = 0; i < X.nchunk; i++) fields += (uint64_t)kg2_ref_count_lines(d + X.cb[i], X.cb[i + 1] - X.cb[i]) * X.K;
     char extra[256]; snprintf(extra, sizeof extra, "\"cols\": %u, \"fields\": %llu, \"chunk_mb\": %zu, \"chunks\": %zu, \"identical\": true",
                               X.K, (unsigned long long)fields, chunk >> 20, X.nchunk);
-    variant v[] = {{"cpu1", tbx_cpu1}, {"cpu10", tbx_cpuT}, {"gpu", tbx_gpu}};
-    bench("table_frontend", n, v, 3, &X, extra);
+    variant v[] = {{"cpu1", tbx_cpu1}, {"cpu10", tbx_cpuT}, {"gpu", tbx_gpu}, {"gpu+cpu10_chunks", tbx_hyb}};
+    bench("table_frontend", n, v, 4, &X, extra);
     /* with the coder stage */
     X.zcap = 2 * X.K * (ZSTD_compressBound((size_t)X.maxrows * 8) + 64);
     X.zout[0] = malloc(X.zcap); X.zout[1] = malloc(X.zcap);
@@ -238,9 +254,30 @@ static void fm_part(void *c, uint32_t i) {
     if (P->score) kg2_ref_formula_score(P->X->S.V, P->X->S.D, P->X->S.OK, G6W_R, P->lim, P->c, i0, i1, P->bound, P->out);
     else kg2_ref_formula_screen(P->X->S.V, P->X->S.D, P->X->S.OK, G6W_R, P->X->S.rows, P->c, i0, i1, P->out);
 }
+typedef struct { fmx *X; int score; uint32_t lim; const kg2_cand *c; uint32_t n; const kg2_score *bound; kg2_score *out; int rc; double gs; } hyb_ctx;
+static void *hyb_gpu(void *p) {
+    hyb_ctx *H = p; fmx *X = H->X;
+    if (!H->n) return NULL;
+    H->rc = H->score ? kg2_metal_formula_score(X->S.V, X->S.D, X->S.OK, X->S.K, G6W_R, X->S.rows, H->lim, H->c, H->n, H->bound, H->out)
+                     : kg2_metal_formula_screen(X->S.V, X->S.D, X->S.OK, X->S.K, G6W_R, X->S.rows, H->c, H->n, H->out);
+    H->gs = kg2_metal_last_gpu_seconds();
+    return NULL;
+}
 static void fm_map(fmx *X, int score, uint32_t lim, const kg2_cand *c, uint32_t n, const kg2_score *bound, kg2_score *out) {
     if (!n) return;
-    if (X->gpu && n >= 1024) {                       /* a few hundred candidates (the seeds): one CPU thread is faster */
+    if (X->gpu == 2 && n >= 1024) {                  /* GPU and CPU threads together: the GPU takes the first share */
+        double share = getenv("GPU2_SPLIT") ? atof(getenv("GPU2_SPLIT")) : 0.5;
+        uint32_t k = (uint32_t)(n * share);
+        hyb_ctx H = {X, score, lim, c, k, bound, out, 0};
+        pthread_t th; pthread_create(&th, NULL, hyb_gpu, &H);
+        fm_par P = {X, score, lim, n - k, c + k, out + k, bound};
+        par_run(T, (n - k + 2047) / 2048, fm_part, &P);
+        pthread_join(th, NULL);
+        if (H.rc) { fprintf(stderr, "gpu formula failed\n"); exit(1); }
+        g_gpu += H.gs;
+        return;
+    }
+    if (X->gpu == 1 && n >= 1024) {                  /* a few hundred candidates (the seeds): one CPU thread is faster */
         int rc = score ? kg2_metal_formula_score(X->S.V, X->S.D, X->S.OK, X->S.K, G6W_R, X->S.rows, lim, c, n, bound, out)
                        : kg2_metal_formula_screen(X->S.V, X->S.D, X->S.OK, X->S.K, G6W_R, X->S.rows, c, n, out);
         if (rc) { fprintf(stderr, "gpu formula failed\n"); exit(1); }
@@ -256,6 +293,7 @@ static void fm_search(fmx *X) {
     g6w_sample_free(&X->S);
     if (g6w_sample(X->d, X->n, X->sep, &X->S) != 1) { X->nf = 0; return; }
     free(X->c); X->nc = g6w_candidates(&X->S, &X->c);
+    if (X->gpu) kg2_metal_formula_reset();
     double t1 = now_s();
     uint32_t K = X->S.K, nc = X->nc, lim = X->S.rows < 8000 ? X->S.rows : 8000;
     X->scr = realloc(X->scr, (size_t)nc * sizeof *X->scr); X->sc = realloc(X->sc, (size_t)nc * sizeof *X->sc);
@@ -293,6 +331,8 @@ static void fm_ref(void *c) { fmx *X = c; g_refn = g6w_reference(X->d, X->n, X->
 static void fm_cpu1(void *c) { fmx *X = c; X->threads = 1; X->gpu = 0; fm_search(X); }
 static void fm_cpuT(void *c) { fmx *X = c; X->threads = T; X->gpu = 0; fm_search(X); }
 static void fm_gpu(void *c) { fmx *X = c; X->threads = 1; X->gpu = 1; fm_search(X); }
+static void fm_hyb(void *c) { fmx *X = c; X->threads = 1; X->gpu = 2; fm_search(X); }
+static void fm_gpu_rm(void *c) { setenv("GPU2_FM_ROWMAJOR", "1", 1); fm_gpu(c); unsetenv("GPU2_FM_ROWMAJOR"); }
 static int fm_same(const g6w_formula *a, int na, const g6w_formula *b, int nb) {
     if (na != nb) return 0;
     for (int i = 0; i < na; i++) if (a[i].t != b[i].t || a[i].a != b[i].a || a[i].b != b[i].b || a[i].ke != b[i].ke || a[i].type != b[i].type) return 0;
@@ -317,8 +357,11 @@ static int cmd_formula(int argc, char **argv) {
     if (!ok1 || !okT || !okG) return 1;
     char extra[256]; snprintf(extra, sizeof extra, "\"cols\": %u, \"rows\": %u, \"candidates\": %u, \"screened_in\": %u, \"formulas\": %d, \"identical\": true",
                               X.S.K, X.S.rows, X.nc, np, g_refn);
-    variant v[] = {{"g6_formulas_1thread", fm_ref}, {"mapreduce_cpu1", fm_cpu1}, {"mapreduce_cpu10", fm_cpuT}, {"mapreduce_gpu", fm_gpu}};
-    bench("formula_search", X.n, v, 4, &X, extra);
+    fm_gpu_rm(&X); if (!fm_same(g_refF, g_refn, X.F, X.nf) || memcmp(cpu_sc, X.sc, (size_t)X.nc * sizeof *cpu_sc)) { fprintf(stderr, "row-major gpu differs\n"); return 1; }
+    variant v[] = {{"g6_formulas_1thread", fm_ref}, {"mapreduce_cpu1", fm_cpu1}, {"mapreduce_cpu10", fm_cpuT}, {"mapreduce_gpu", fm_gpu},
+                   {"mapreduce_gpu_rowmajor", fm_gpu_rm}, {"mapreduce_gpu+cpu10", fm_hyb}};
+    fm_hyb(&X); if (!fm_same(g_refF, g_refn, X.F, X.nf) || memcmp(cpu_sc, X.sc, (size_t)X.nc * sizeof *cpu_sc)) { fprintf(stderr, "hybrid differs\n"); return 1; }
+    bench("formula_search", X.n, v, 6, &X, extra);
     for (int k = 0; k < 3; k++) {   /* stage split of the last runs */
         if (k == 0) fm_cpu1(&X); else if (k == 1) fm_cpuT(&X); else fm_gpu(&X);
         printf("{\"test\": \"formula_stages\", \"file\": \"%s\", \"variant\": \"%s\", \"sample_ms\": %.2f, \"screen_ms\": %.2f, \"seed_ms\": %.2f, \"score_ms\": %.2f}\n",
@@ -346,6 +389,39 @@ static void krw_gpu(void *c) {
     if (kg2_metal_krw_encode(X->d, X->n, X->off, X->nseg, X->L, X->out, X->cap, X->sout)) { fprintf(stderr, "gpu krw failed\n"); exit(1); }
     X->total = X->sout[X->nseg]; g_gpu += kg2_metal_last_gpu_seconds();
 }
+/* GPU and CPU threads together: the GPU codes the first share of the segments, the CPU threads the rest */
+typedef struct { kx *X; uint32_t k; int rc; double gs; } khyb;
+static void *khyb_gpu(void *p) {
+    khyb *H = p; kx *X = H->X;
+    if (H->k) H->rc = kg2_metal_krw_encode(X->d, X->n, X->off, H->k, X->L, X->out, X->cap, X->sout), H->gs = kg2_metal_last_gpu_seconds();
+    return NULL;
+}
+typedef struct { kx *X; uint32_t k; } kcpu;
+static void kcpu_job(void *c, uint32_t i) { kcpu *C = c; krw_seg_job(C->X, C->k + i); }
+static void kcpu_pack(void *c, uint32_t i) { kcpu *C = c; krw_pack_job(C->X, C->k + i); }
+static void krw_hyb(void *c) {
+    kx *X = c; double share = getenv("GPU2_SPLIT") ? atof(getenv("GPU2_SPLIT")) : 0.5;
+    uint32_t k = (uint32_t)(X->nseg * share);
+    khyb H = {X, k, 0, 0}; pthread_t th; pthread_create(&th, NULL, khyb_gpu, &H);
+    kcpu C = {X, k};
+    par_run(T, X->nseg - k, kcpu_job, &C);
+    pthread_join(th, NULL);
+    if (H.rc) { fprintf(stderr, "gpu krw failed\n"); exit(1); }
+    uint64_t o = k ? X->sout[k] : 0;
+    for (uint32_t s = k; s < X->nseg; s++) { X->sout[s] = o; o += X->ssz[s]; }
+    X->sout[X->nseg] = o; X->total = o;
+    par_run(T, X->nseg - k, kcpu_pack, &C);
+    g_gpu += H.gs;
+}
+/* Kolmo's rANS on the same input, cut into T parts (context: other format, other bytes) */
+typedef struct { kx *X; int parts; size_t *zs; uint8_t *buf; size_t pcap; } kr;
+static void kr_job(void *c, uint32_t i) {
+    kr *R = c; size_t per = (R->X->n + R->parts - 1) / R->parts, b = i * per, e = b + per < R->X->n ? b + per : R->X->n;
+    R->zs[i] = b < e ? kw_rans_compress(R->X->d + b, e - b, R->buf + i * R->pcap, R->pcap) : 0;
+}
+static kr g_kr;
+static void kr_cpu1(void *c) { (void)c; g_kr.parts = 1; kr_job(&g_kr, 0); }
+static void kr_cpuT(void *c) { (void)c; g_kr.parts = T; par_run(T, T, kr_job, &g_kr); }
 static void krw_dec_job(void *c, uint32_t s) {
     kx *X = c;
     if (krw_ref_decode_seg(X->out + X->sout[s], X->sout[s + 1] - X->sout[s], X->L, X->dec + X->off[s], (uint32_t)(X->off[s + 1] - X->off[s])))
@@ -381,8 +457,14 @@ static int cmd_krw(int argc, char **argv) {
             T, okT ? "same" : "DIFFERENT", okG ? "same" : "DIFFERENT", okD ? "exact" : "WRONG", okDc ? "exact" : "WRONG");
     if (!okT || !okG || !okD || !okDc) return 1;
     char extra[256]; snprintf(extra, sizeof extra, "\"seg_kb\": %u, \"lanes\": %u, \"coded\": %llu, \"identical\": true", seg >> 10, L, (unsigned long long)t1);
-    variant v[] = {{"cpu1", krw_cpu1}, {"cpu10", krw_cpuT}, {"gpu", krw_gpu}};
-    bench("krw_encode", n, v, 3, &X, extra);
+    krw_hyb(&X); if (X.total != t1 || memcmp(ref, X.out, t1)) { fprintf(stderr, "krw: gpu+cpu differs\n"); return 1; }
+    variant v[] = {{"cpu1", krw_cpu1}, {"cpu10", krw_cpuT}, {"gpu", krw_gpu}, {"gpu+cpu10", krw_hyb}};
+    bench("krw_encode", n, v, 4, &X, extra);
+    g_kr.X = &X; g_kr.pcap = n + n / 8 + (1 << 20); g_kr.buf = malloc(g_kr.pcap * T); g_kr.zs = calloc(T, sizeof(size_t));
+    kr_cpu1(NULL); size_t kz = g_kr.zs[0];
+    char ex2[160]; snprintf(ex2, sizeof ex2, "\"kolmo_rans_coded\": %zu, \"note\": \"Kolmo rans.c, another format\"", kz);
+    variant u[] = {{"kolmo_rans_cpu1", kr_cpu1}, {"kolmo_rans_cpu10", kr_cpuT}};
+    bench("kolmo_rans_encode", n, u, 2, &X, ex2);
     variant w[] = {{"cpu1", krwd_cpu1}, {"cpu10", krwd_cpuT}, {"gpu", krwd_gpu}};
     bench("krw_decode", n, w, 3, &X, extra);
     return 0;

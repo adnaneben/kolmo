@@ -363,7 +363,11 @@ int kg2_metal_kvid(const uint8_t *file, size_t n, const uint64_t *frame_at, uint
 }
 
 /* ---------------- formula search ---------------- */
-typedef struct { uint32_t R, rows, lim, nc; } fm_args;
+typedef struct { uint32_t R, rows, lim, nc, cs, rs; } fm_args;
+/* GPU2_FM_ROWMAJOR=1: the sample is transposed to row-major on the CPU (counted in the call's time) so that the threads
+ * of a SIMD group, which share t and a and differ in b, read neighbouring bytes */
+static struct { const void *src; size_t n; int64_t *V; uint8_t *D, *OK; } RM;
+void kg2_metal_formula_reset(void) { pthread_mutex_lock(&G_mu); RM.src = NULL; pthread_mutex_unlock(&G_mu); }
 static int formula_run(int score, const int64_t *V, const uint8_t *D, const uint8_t *OK, uint32_t K, uint32_t R,
                        uint32_t rows, uint32_t lim, const kg2_cand *cand, uint32_t nc, const kg2_score *bound, kg2_score *out) {
     if (!kg2_metal_available() || !nc) return -1;
@@ -371,8 +375,20 @@ static int formula_run(int score, const int64_t *V, const uint8_t *D, const uint
     pthread_mutex_lock(&G_mu);
     @autoreleasepool {
         G.gpu_s = 0;
-        fm_args A = {R, rows, lim, nc};
+        fm_args A = {R, rows, lim, nc, R, 1};
         size_t F = (size_t)K * R;
+        if (getenv("GPU2_FM_ROWMAJOR")) {
+            uint32_t lr = rows < 8000 ? rows : 8000;      /* rows the kernels read: < 3000 (screen), < lim <= 8000 */
+            if (RM.src != (const void *)V || RM.n != F) {
+                if (RM.V) { kg2_metal_free(RM.V, RM.n * 8); kg2_metal_free(RM.D, RM.n); kg2_metal_free(RM.OK, RM.n); }
+                RM.V = kg2_metal_alloc(F * 8); RM.D = kg2_metal_alloc(F); RM.OK = kg2_metal_alloc(F); RM.src = V; RM.n = F;
+                for (uint32_t r = 0; r < lr; r++) for (uint32_t c = 0; c < K; c++) {
+                    size_t o = (size_t)c * R + r, q = (size_t)r * K + c;
+                    RM.V[q] = V[o]; RM.D[q] = D[o]; RM.OK[q] = OK[o];
+                }
+            }
+            V = RM.V; D = RM.D; OK = RM.OK; A.cs = 1; A.rs = K;
+        }
         bref Vb = ref_of(V, F * 8, 1), Db = ref_of(D, F, 1), Ob = ref_of(OK, F, 1), Cb = ref_of(cand, (size_t)nc * 8, 1),
              Out = ref_of(out, (size_t)nc * 8, 0);
         bref Bb = {nil, 0, 0};

@@ -13,4 +13,6 @@ int g6w_sample(const uint8_t *d, size_t n, uint8_t sep, g6w_sample_t *S);       
 void g6w_sample_free(g6w_sample_t *S);
 uint32_t g6w_candidates(const g6w_sample_t *S, kg2_cand **out);
 int g6w_reduce(const kg2_cand *c, uint32_t nc, const kg2_score *sc, g6w_formula *out);
+size_t kw_rans_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap);   /* Kolmo's rANS (rans.c) */
+int kw_rans_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 #endif

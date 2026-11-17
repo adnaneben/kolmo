@@ -94,3 +94,8 @@ int g6w_reduce(const kg2_cand *c, uint32_t nc, const kg2_score *sc, g6w_formula 
     }
     return nout;
 }
+
+/* Kolmo's own static order-0 rANS (src/codecs/rans.c, graph leaves): 1 MiB chunks, four interleaved 64-bit states.
+ * For context next to krw (another format, so other bytes). */
+size_t kw_rans_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return rans_compress_all(in, n, out, cap); }
+int kw_rans_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return rans_decompress_all(in, cn, out, n); }

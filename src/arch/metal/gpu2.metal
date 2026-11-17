@@ -370,13 +370,14 @@ static inline bool fpred(int type, int ke, long va, int da, bool okl, long vla, 
     }
     return false;
 }
-struct fm_args { uint R, rows, lim, nc; };
+struct fm_args { uint R, rows, lim, nc, cs, rs; };   /* element (c, r) at c * cs + r * rs */
 struct kg2_cand { ushort t, a, b, tq; };
 struct kg2_score { int hit, seen; };
-#define FV(c, r) V[(ulong)(c) * R + (r)]
-#define FD(c, r) (int)D[(ulong)(c) * R + (r)]
-#define FOK(c, r) OK[(ulong)(c) * R + (r)]
-static inline bool fhit(device const long *V, device const uchar *D, device const uchar *OK, uint R, int ty, int t, int a, int b, int ke, uint r) {
+#define FI(c, r) ((ulong)(c) * CS + (ulong)(r) * RS)
+#define FV(c, r) V[FI(c, r)]
+#define FD(c, r) (int)D[FI(c, r)]
+#define FOK(c, r) OK[FI(c, r)]
+static inline bool fhit(device const long *V, device const uchar *D, device const uchar *OK, uint CS, uint RS, int ty, int t, int a, int b, int ke, uint r) {
     long p;
     if (!fpred(ty, ke, FV(a, r), FD(a, r), FOK(a, r - 1) != 0, FV(a, r - 1), FD(a, r - 1), FV(b, r), FD(b, r),
                FOK(t, r - 1) != 0, FV(t, r - 1), FD(t, r - 1), FD(t, r), p)) return false;
@@ -387,14 +388,14 @@ kernel void fm_screen(device const long *V [[buffer(0)]], device const uchar *D 
                       device const kg2_cand *cand [[buffer(3)]], device kg2_score *out [[buffer(4)]], constant fm_args &A [[buffer(5)]],
                       uint i [[thread_position_in_grid]]) {
     if (i >= A.nc) return;
-    const uint R = A.R;
+    const uint CS = A.cs, RS = A.rs;
     kg2_cand c = cand[i];
     int t = c.t, a = c.a, b = c.b, ty = c.tq >> 8, ke = KE[c.tq & 255];
     int hit = 0, miss = 0, seen = 0;
     for (uint r = 1; r < A.rows && r < 3000 && seen < 64; r++) {
         if (!FOK(t, r) || !FOK(a, r) || !FOK(b, r)) continue;
         seen++;
-        if (fhit(V, D, OK, R, ty, t, a, b, ke, r)) hit++;
+        if (fhit(V, D, OK, CS, RS, ty, t, a, b, ke, r)) hit++;
         else if (++miss > 24 || (miss >= 6 && hit * 2 < miss)) break;
     }
     bool fail = seen < 16 || miss > 24 || hit * 2 < miss || hit < seen / 2;
@@ -404,7 +405,7 @@ kernel void fm_score(device const long *V [[buffer(0)]], device const uchar *D [
                      device const kg2_cand *cand [[buffer(3)]], device kg2_score *out [[buffer(4)]], constant fm_args &A [[buffer(5)]],
                      device const kg2_score *bound [[buffer(6)]], uint i [[thread_position_in_grid]]) {
     if (i >= A.nc) return;
-    const uint R = A.R, lim = A.lim;
+    const uint CS = A.cs, RS = A.rs, lim = A.lim;
     kg2_cand c = cand[i];
     int t = c.t, a = c.a, b = c.b, ty = c.tq >> 8, ke = KE[c.tq & 255];
     long bh = bound[t].hit, bs = bound[t].seen;
@@ -417,7 +418,7 @@ kernel void fm_score(device const long *V [[buffer(0)]], device const uchar *D [
         }
         if (!FOK(t, r) || !FOK(a, r) || !FOK(b, r)) continue;
         seen++;
-        hit += fhit(V, D, OK, R, ty, t, a, b, ke, r) ? 1 : 0;
+        hit += fhit(V, D, OK, CS, RS, ty, t, a, b, ke, r) ? 1 : 0;
     }
     kg2_score s; s.hit = cut ? -1 : hit; s.seen = cut ? -1 : seen; out[i] = s;
 }
