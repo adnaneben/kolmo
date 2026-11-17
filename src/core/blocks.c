@@ -273,10 +273,15 @@ static void *compress_worker(void *arg) {
                     /* the slow coders: block sorting of a slice from the middle tells whether plain coding is within
                      * reach (a slice sorts worse than the block, so the limit is loose); otherwise the graph stands */
                     size_t sn = len < (512u << 10) ? len : (512u << 10), so = ((len - sn) / 2) & ~(size_t)63;
-                    size_t cs = codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
                     /* ultra: every numeric graph block comes here, and context mixing over the plain bytes costs 20
-                     * times the graph's time, so plain block sorting must already be within 2% (model weights are not) */
-                    if (!cs || (double)cs / sn > (codec == C_CM ? 1.02 : 1.35) * (double)cl / len) alt = NULL;
+                     * times the graph's time. The slice is coded by the coder in question: a 256 KiB slice under
+                     * context mixing (a slice codes worse than the block, so within 10% of the graph's rate is close
+                     * enough). Block sorting was the probe before rc3w2 and missed the cases that matter: on 10 MB of
+                     * float64 sensor data plain context mixing is 33% smaller than the graph, block sorting is not
+                     * within reach (benchmark/rc3w2/twopass/RESULTS.md). */
+                    if (codec == C_CM) sn = len < (256u << 10) ? len : (256u << 10), so = ((len - sn) / 2) & ~(size_t)63;
+                    size_t cs = codec == C_CM ? cm_compress_m(raw + so, sn, alt, J->slot, 2) : codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
+                    if (!cs || (double)cs / sn > (codec == C_CM ? 1.10 : 1.35) * (double)cl / len) alt = NULL;
                 }
                 if (alt && (codec == C_ZSTD || codec == C_LZ4) && len >= ((size_t)1 << 20)) {
                     /* the fast coders: three 64 KiB slices (start, middle, end) coded plain; the full plain pass costs
