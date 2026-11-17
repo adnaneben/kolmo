@@ -44,7 +44,7 @@ Changes made to the original file (libsais 2.12.1, as vendored by libbsc 3.4.0):
 /* Kolmo: the inverse BWT stores 16-bit values at odd byte offsets (U + k * r); a direct uint16_t store there is
  * undefined behaviour in C (UBSan: misaligned store) although every supported CPU does it. memcpy compiles to the
  * same single store. */
-static inline void kolmo_st16(uint16_t *p, uint16_t v) { memcpy(p, &v, 2); }
+static inline void kolmo_st16(void *p, uint16_t v) { memcpy(p, &v, 2); }   /* void *: no alignment assumed */
 
 #include <limits.h>
 
