@@ -27,8 +27,8 @@ def sh(cmd, **kw):
 def flags():
     if platform.system() == "Darwin":
         brew = subprocess.run("brew --prefix", shell=True, capture_output=True, text=True).stdout.strip()
-        return f"-O3 -mcpu=native -I{brew}/include", f"-L{brew}/lib -lc++"
-    return "-O3 -march=native -fno-plt", "-lstdc++"
+        return f"-O3 -mcpu=native -I{brew}/include", f"-L{brew}/lib"
+    return "-O3 -march=native -fno-plt", ""
 
 
 def build(genome, bindir):
@@ -39,7 +39,7 @@ def build(genome, bindir):
     cf, lf = flags()
     defs = " ".join(f"-D{k}={v}" for k, v in sorted(genome.items()))
     sh(f"cc {cf} -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 {defs} "
-       f"-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include -Ivendor/xz src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a {lf} "
+       f"-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz src/cli/cli.c src/kolmo.c build/libkolmoarch.a build/libvendor.a {lf} "
        f"-lpthread -lm -o {exe}", cwd=ROOT)
     return exe
 

@@ -1,6 +1,6 @@
-// Compiles the kolmo native core (src/kolmo.c, src/arch/xxh3.c and src/arch/<isa>/*.S + vendored zstd, lz4, brotli, libbsc, xxhash and
-// the liblzma subset) into a static library and links it, so the published crate is self-contained: it needs a C/C++
-// compiler, but no `make`, no system library, no prebuilt library, and no external Rust
+// Compiles the kolmo native core (src/kolmo.c, src/arch/xxh3.c and src/arch/<isa>/*.S + vendored zstd, lz4, brotli, xxhash, the
+// liblzma subset, and Kolmo's BWT pipeline) into a static library and links it, so the published crate is self-contained:
+// it needs a C compiler, but no `make`, no system library, no prebuilt library, and no external Rust
 // crates. The C sources live in `native/` inside the crate — refreshed from the repo root by
 // `sync-native.sh` — with a fallback to the repo tree for in-place contributor builds.
 use std::{env, fs, path::{Path, PathBuf}, process::Command, sync::{Arc, Mutex}, thread};
@@ -33,18 +33,15 @@ fn main() {
     let zstd = vendor.join("zstd");
     let brotli = vendor.join("brotli");
     let lz4 = vendor.join("lz4");
-    let bsc = vendor.join("libbsc");
     let xz = vendor.join("xz");
 
     let no_lzma = env::var("CARGO_FEATURE_NO_LZMA").is_ok();
     let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
-    let os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let is_x86_64 = arch == "x86_64";
     let cc = env::var("CC").unwrap_or_else(|_| "cc".into());
-    let cxx = env::var("CXX").unwrap_or_else(|_| "c++".into());
 
     let includes = [
-        src.clone(), zstd.clone(), lz4.clone(), bsc.clone(), brotli.join("include"), xz.clone(),
+        src.clone(), zstd.clone(), lz4.clone(), brotli.join("include"), xz.clone(),
     ];
     let inc_flags: Vec<String> = includes.iter().map(|p| format!("-I{}", p.display())).collect();
     let mut defs = vec![
@@ -70,7 +67,7 @@ fn main() {
     let native = env::var("KOLMO_NATIVE").map_or(false, |v| v == "1");
     let arch_flag: Option<&str> = if !native { None } else if is_x86_64 { Some("-march=native") } else { Some("-mcpu=native") };
 
-    // Gather compile jobs: (compiler, source, extra_flags). Every C and C++ file gets -ffp-contract=off (added below):
+    // Gather compile jobs: (compiler, source, extra_flags). Every C file gets -ffp-contract=off (added below):
     // kolmo.c and Brotli's encoder decide with floats, and FMA contraction would change the frame bytes.
     let mut jobs: Vec<(String, PathBuf, Vec<String>)> = Vec::new();
     jobs.push((cc.clone(), src.join("kolmo.c"), vec![]));
@@ -80,7 +77,9 @@ fn main() {
     cfiles.push(lz4.join("lz4.c"));
     cfiles.push(lz4.join("lz4hc.c"));
     cfiles.push(src.join("arch/xxh3.c"));          // compiled apart from src/kolmo.c (docs/LAYOUT.md)
-    cfiles.push(bsc.join("libbsc/bwt/libsais/libsais.c"));
+    // the block-sorting pipeline, also compiled on its own (LZP, QLFC, the libsais subset, the BWT stream formats)
+    for f in ["algo/lzp.c", "algo/qlfc.c", "algo/par.c", "codecs/bwt_stream.c"] { cfiles.push(src.join(f)); }
+    list(&src.join("algo/sais"), "c", false, &mut cfiles);
     cfiles.sort();
     for f in cfiles { jobs.push((cc.clone(), f, vec![])); }
     if !no_lzma {
@@ -103,11 +102,6 @@ fn main() {
     if is_x86_64 && !no_asm {
         for f in ["med8_sse2.c", "planes_sse2.c", "mixer_avx2.c", "video_sse2.c", "img16_sse2.c", "med8f_avx2.c"] { jobs.push((cc.clone(), src.join("arch/x86_64").join(f), vec![])); }
     }
-    // libbsc C++ sources.
-    let mut cpps = Vec::new();
-    list(&bsc.join("libbsc"), "cpp", true, &mut cpps);
-    cpps.sort();
-    for f in cpps { jobs.push((cxx.clone(), f, vec![])); }
 
     // Compile in parallel; collect object paths.
     let nproc = thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
@@ -119,8 +113,8 @@ fn main() {
         let jobs = Arc::clone(&jobs);
         let objs = Arc::clone(&objs);
         let failed = Arc::clone(&failed);
-        let (out, inc_flags, defs, arch_flag, bsc) =
-            (out.clone(), inc_flags.clone(), defs.clone(), arch_flag.map(str::to_string), bsc.clone());
+        let (out, inc_flags, defs, arch_flag) =
+            (out.clone(), inc_flags.clone(), defs.clone(), arch_flag.map(str::to_string));
         handles.push(thread::spawn(move || loop {
             let job = { jobs.lock().unwrap().pop() };
             let Some((idx, (compiler, file, extra))) = job else { break };
@@ -129,7 +123,6 @@ fn main() {
             cmd.arg("-O3").args(arch_flag.iter()).arg("-fPIC").arg("-c");
             if file.extension().map_or(true, |e| e != "S") { cmd.arg("-ffp-contract=off"); }
             cmd.args(&defs).args(&inc_flags).args(&extra);
-            if file.extension().map_or(false, |e| e == "cpp") { cmd.arg(format!("-I{}", bsc.display())); }
             cmd.arg(&file).arg("-o").arg(&obj);
             match cmd.status() {
                 Ok(s) if s.success() => objs.lock().unwrap().push(obj),
@@ -151,9 +144,7 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}", out.display());
     println!("cargo:rustc-link-lib=static=kolmo_native");
-    // C++ runtime (libbsc pulls it in), plus pthread/m.
-    if os == "macos" || os == "ios" { println!("cargo:rustc-link-lib=c++"); }
-    else { println!("cargo:rustc-link-lib=stdc++"); }
+    // pthread/m (no C++ runtime: libbsc was replaced by Kolmo's C code).
     println!("cargo:rustc-link-lib=pthread");
     println!("cargo:rustc-link-lib=m");
 

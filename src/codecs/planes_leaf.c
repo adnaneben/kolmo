@@ -31,7 +31,7 @@ static size_t planes_compress(codec_ctx *x, int np, const uint8_t *in, size_t n,
 }
 
 static int leaf_sub_codec_ok(int c) {
-    return c == C_STORE || c == C_LZ4 || c == C_LZ4HC || c == C_ZSTD || c == C_BROTLI || c == C_BSC || c == C_LZMA || c == C_CM ||
+    return c == C_STORE || c == C_LZ4 || c == C_LZ4HC || c == C_ZSTD || c == C_BROTLI || c == C_BSC5 || c == C_BWT || c == C_LZMA || c == C_CM ||
            c == C_HUF || c == C_RANS || c == C_HZ || c == C_ZRUN;
 }
 

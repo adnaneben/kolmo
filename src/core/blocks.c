@@ -50,7 +50,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     *starts_out = st; return nb;
 }
 
-static size_t slot_size(uint32_t B, int codec) { size_t a = codec_bound(codec, (size_t)B + TBL_SLACK(B)), b = codec_bound(C_BSC, (size_t)B + TBL_SLACK(B)); return (a > b ? a : b) + 256 * 4 + 64; }
+static size_t slot_size(uint32_t B, int codec) { size_t a = codec_bound(codec, (size_t)B + TBL_SLACK(B)), b = codec_bound(C_BWT, (size_t)B + TBL_SLACK(B)); return (a > b ? a : b) + 256 * 4 + 64; }
 
 /* Speed-tier (rt/fast) default block size: aim for ~8 balanced blocks so decode and
    compress parallelise across cores, with a 1 MiB floor (below it ratio drops faster
@@ -122,6 +122,7 @@ static void *compress_worker(void *arg) {
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
     xp->prof = J->prof;
+    xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TBL_SLACK(J->B) + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
@@ -139,6 +140,7 @@ static void *compress_worker(void *arg) {
         /* a block of WAV samples is coded by the audio codec when that is smaller (it was on all 43 WAV files measured,
          * by 17% or more); the rest of the block's path keeps rc2's leaf rule, without the format-2 leaf trials */
         xp->no_f2 = J->aud_prof >= 0 && J->starts[i] < J->aud_end && J->starts[i + 1] > J->aud_off;
+        xp->used_bwt = 0;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
 #ifdef KOLMO_FRONTIER
@@ -211,7 +213,7 @@ static void *compress_worker(void *arg) {
              * to 30 times the encode time, 18 KB saved per CPU second where the cost model breaks even at 54 (data kept
              * a year) or 652 (30 days). Integer arrays keep LZMA2 (2 to 9% smaller, small inputs). */
             /* max -l 10 keeps LZMA2 on decimal planes: the smallest output without context mixing, whatever it costs */
-            int kgc = codec == C_LZMA && (pl.a || (!(pl.b & 32) && ((pl.b & 16) || ((pl.b & 64) && level < 10)))) ? C_BSC : codec, kgl = kgc != codec ? 9 : level;
+            int kgc = codec == C_LZMA && (pl.a || (!(pl.b & 32) && ((pl.b & 16) || ((pl.b & 64) && level < 10)))) ? C_BWT : codec, kgl = kgc != codec ? 9 : level;
             /* hc: zstd 19 over float planes gives the size of zstd 9 (the planes are coded by Huffman or rANS when that
              * is smaller) at up to 16 times the time. Decimal planes keep zstd 19: zstd 12 was 3 to 36% larger. */
             if (codec == C_ZSTD && level > 9 && !pl.a && !(pl.b & (32 | 64)) && (pl.b & 16)) kgl = 9;
@@ -225,7 +227,7 @@ static void *compress_worker(void *arg) {
                 /* 8-bit images under the slow coders: block-sorted leaves are 5 to 10% smaller than LZMA2 leaves on
                  * colour photographs (the residual planes are noise-like, with no matches to find). Both are coded. */
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
-                size_t c2 = alt ? kg_encode_img8(xp, C_BSC, 9, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, alt, J->slot) : 0;
+                size_t c2 = alt ? kg_encode_img8(xp, C_BWT, 9, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, alt, J->slot) : 0;
                 if (c2 && c2 < cl) { memcpy(sl, alt, c2); cl = c2; }
             }
             if (cl && (pl.b & 32) && !pl.a && codec == C_CM && level != 1 && len < ((size_t)1 << 28)) {
@@ -241,7 +243,7 @@ static void *compress_worker(void *arg) {
                 size_t pc = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (pc && pc < cl) cl = 0;
             }
-            if (cl && !pl.a && len >= (256u << 10) && (pl.verify || codec == C_CM || ((pl.b & 64) && (codec == C_LZMA || codec == C_BSC)))) {
+            if (cl && !pl.a && len >= (256u << 10) && (pl.verify || codec == C_CM || ((pl.b & 64) && (codec == C_LZMA || codec == C_BWT)))) {
                 /* decimal doubles under the slow coders: the plan was scored with zstd, and on small-integer tables
                  * block sorting or context mixing over the plain bytes can still be smaller. Marked plans (the input
                  * is not one kind of data throughout): this block may be the part the graph does not fit. Both are
@@ -251,7 +253,7 @@ static void *compress_worker(void *arg) {
                     /* the slow coders: block sorting of a slice from the middle tells whether plain coding is within
                      * reach (a slice sorts worse than the block, so the limit is loose); otherwise the graph stands */
                     size_t sn = len < (512u << 10) ? len : (512u << 10), so = ((len - sn) / 2) & ~(size_t)63;
-                    size_t cs = codec_compress(xp, C_BSC, 9, raw + so, sn, alt, J->slot);
+                    size_t cs = codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
                     /* ultra: every numeric graph block comes here, and context mixing over the plain bytes costs 20
                      * times the graph's time, so plain block sorting must already be within 2% (model weights are not) */
                     if (!cs || (double)cs / sn > (codec == C_CM ? 1.02 : 1.35) * (double)cl / len) alt = NULL;
@@ -268,17 +270,17 @@ static void *compress_worker(void *arg) {
                 }
                 size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = codec; }
-                size_t a2 = alt && codec == C_LZMA ? codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot) : 0;
-                if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_BSC; }
+                size_t a2 = alt && codec == C_LZMA ? codec_compress(xp, C_BWT, 9, raw, len, alt, J->slot) : 0;
+                if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_BWT; }
                 if (bc) { cl = bz; codec = bc; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; goto coded; }
             }
             if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8 | (xp->used_native_leaf ? 32 : 0) | (xp->used_f2 ? 128 : 0); goto coded; }
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
         }
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
-        if (codec == C_LZMA && level == 1) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
-        else if (codec == C_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BSC;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
-        else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BSC; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
+        if (codec == C_LZMA && level == 1) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
+        else if (codec == C_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
+        else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         if (codec == C_ZSTD && level == 19 && tflag == 9) level = CZ_HC_TEXT_LEVEL;                                  /* hc text: ultra level */
 #ifdef KOLMO_FRONTIER
 #ifdef KOLMO_FRONTIER_PATCHED_PCM
@@ -307,6 +309,17 @@ static void *compress_worker(void *arg) {
 #ifdef KOLMO_FRONTIER_FAST_PCM
         if (pl.experimental_pcm && !J->dict && J->default_level && codec == C_ZSTD) level = 1;
 #endif
+        int slice_verdict = 0;                        /* max, binary block over 8 MiB: 1 BWT clearly wins, -1 skip BWT */
+        if (codec == C_LZMA && !cl && level != 1 && tflag != 8 && tflag != 4 && tflag != 5 && inlen > (8u << 20)) {
+            /* A slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the outcome
+             * (see below). Where the slice already shows BWT at most 90% of LZMA2, BWT won on the whole block by more
+             * (osdb: slice 0.84, block 0.78) and the full LZMA2 pass, the slowest step of this mode, is skipped. */
+            uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+            size_t sn = inlen / 8 < (512u << 10) ? inlen / 8 : (512u << 10), so = ((inlen - sn) / 2) & ~(size_t)63;
+            size_t sb = alt ? codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta) : 0, slz = sb ? codec_compress(xp, C_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
+            if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) slice_verdict = -1;
+            else if ((uint64_t)sb * 100 <= (uint64_t)slz * KOLMO_BWT_SKIP_LZMA_PCT && (uint64_t)slz * 100 <= (uint64_t)sn * 35) { codec = C_BWT; level = 9; slice_verdict = 1; }
+        }
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
         if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
@@ -318,18 +331,19 @@ static void *compress_worker(void *arg) {
             /* BWT is tried only where it has won in tests: not on x86 code, typed table columns or log token streams (4 to 12% larger), and only when LZMA2 already reaches
              * 35% or less (on less compressible binary data BWT was 1.5 to 8% larger) */
             uint8_t *alt = tflag == 8 || tflag == 4 || tflag == 5 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
-            if (alt && inlen > (8u << 20)) {                /* large blocks only: on small ones the slice costs as much as the attempt */
+            if (slice_verdict < 0) alt = NULL;              /* the slice above already ruled BWT out */
+            else if (alt && inlen > (8u << 20) && !slice_verdict) {   /* large blocks only: on small ones the slice costs as much as the attempt */
                 /* a short slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the
                  * outcome: where BWT won on the whole block the slice ratio was at most 1.02, where it lost by 5% or
                  * more it was 1.04 or higher. Above 1.03 the full attempt is skipped. */
                 size_t sn = inlen / 8 < (512u << 10) ? inlen / 8 : (512u << 10), so = ((inlen - sn) / 2) & ~(size_t)63;
-                size_t sb = codec_compress(xp, C_BSC, 9, in + so, sn, alt, J->slot - meta), slz = sb ? codec_compress(xp, C_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
+                size_t sb = codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta), slz = sb ? codec_compress(xp, C_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
                 if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) alt = NULL;
             }
-            size_t c2 = alt ? codec_compress(xp, C_BSC, 9, in, inlen, alt, J->slot - meta) : 0;
-            if (c2 && (uint64_t)c2 * 100 <= (uint64_t)cl * (100 - KOLMO_BWT_GAIN_PCT)) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BSC; }
+            size_t c2 = alt ? codec_compress(xp, C_BWT, 9, in, inlen, alt, J->slot - meta) : 0;
+            if (c2 && (uint64_t)c2 * 100 <= (uint64_t)cl * (100 - KOLMO_BWT_GAIN_PCT)) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BWT; }
         }
-        if ((codec == C_LZMA || codec == C_BSC) && J->codec == C_LZMA && cl && in != raw && len >= (64u << 10)) {
+        if ((codec == C_LZMA || codec == C_BWT) && J->codec == C_LZMA && cl && in != raw && len >= (64u << 10)) {
             /* max, transformed block: the transform was chosen by its zstd score, and under block sorting or LZMA2 the
              * plain bytes can be smaller (Silesia nci: template tokens 1.53 MB, plain block sorting 1.23 MB). Block
              * sorting of the plain block is tried when a slice from the middle comes within 10% of the transformed
@@ -337,13 +351,13 @@ static void *compress_worker(void *arg) {
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             int try_bsc = alt != NULL, bc = 0; size_t bz = cl + meta;
             if (alt && len > (2u << 20)) {
-                size_t sn = 512u << 10, so = ((len - sn) / 2) & ~(size_t)63, cs = codec_compress(xp, C_BSC, 9, raw + so, sn, alt, J->slot);
+                size_t sn = 512u << 10, so = ((len - sn) / 2) & ~(size_t)63, cs = codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
                 /* a slice sorts worse than the whole block, most of all on repetitive text (nci: slice 5.2%, block 3.7%) */
                 const double tol = tflag == 4 || tflag == 5 || tflag == 12 ? 1.25 : 1.10;
                 if (!cs || (double)cs / sn > tol * (double)bz / len) try_bsc = 0;
             }
-            size_t a1 = try_bsc ? codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot) : 0;
-            if (a1 && (uint64_t)a1 * 100 <= (uint64_t)bz * 97) { memcpy(sl, alt, a1); bz = a1; bc = C_BSC; }
+            size_t a1 = try_bsc ? codec_compress(xp, C_BWT, 9, raw, len, alt, J->slot) : 0;
+            if (a1 && (uint64_t)a1 * 100 <= (uint64_t)bz * 97) { memcpy(sl, alt, a1); bz = a1; bc = C_BWT; }
             /* plain LZMA2 only where plain block sorting came within 25% of the transformed block */
             size_t a2 = alt && len <= (2u << 20) && a1 && (double)a1 <= 1.25 * (double)(cl + meta) ? codec_compress(xp, C_LZMA, level, raw, len, alt, J->slot) : 0;
             if (a2 && (uint64_t)a2 * 100 <= (uint64_t)(cl + meta) * 97 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_LZMA; }
@@ -352,10 +366,10 @@ static void *compress_worker(void *arg) {
         if (codec == C_CM && level != 1) {            /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             if (alt) {
-                int alts[2] = {C_LZMA, C_BSC};
+                int alts[2] = {C_LZMA, C_BWT};
                 for (int k = 0; k < 2; k++) {
                     int text = !tflag && looks_text(in, inlen);
-                    if (alts[k] == C_BSC && !text) continue;
+                    if (alts[k] == C_BWT && !text) continue;
                     if (alts[k] == C_LZMA && text) continue;  /* text: BWT always beat LZMA2 in tests; saves ~25% of the time */
                     if (cl && inlen > (2u << 20)) {           /* large block: try the alternative on a 1 MiB slice first */
                         size_t sn = 1u << 20, so = (inlen - sn) / 2;
@@ -374,8 +388,8 @@ static void *compress_worker(void *arg) {
                      * sorting is quick; when it comes within 2% of the transformed block, plain context mixing and,
                      * up to 2 MiB, plain LZMA2 are tried as well. The smallest is kept. */
                     int bc = 0; size_t bz = cl + meta, ref = cl + meta;
-                    size_t a1 = codec_compress(xp, C_BSC, 9, raw, len, alt, J->slot);
-                    if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = C_BSC; }
+                    size_t a1 = codec_compress(xp, C_BWT, 9, raw, len, alt, J->slot);
+                    if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = C_BWT; }
                     if (a1 && (double)a1 <= 1.02 * (double)ref) {
                         size_t a2 = codec_compress(xp, C_CM, level, raw, len, alt, J->slot);
                         if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_CM; }
@@ -430,7 +444,8 @@ coded:;
             emit_block(J, i, h0, raw, tot);
         } else {
             emit_block(J, i, NULL, slot, tot);
-            atomic_fetch_or_explicit(&J->newmodes, modes, memory_order_relaxed);
+            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) ? 128u : 0u), memory_order_relaxed);
+            /* version 11 when the block is codec 18, or a graph block whose leaves may be (leaf trials set used_bwt) */
         }
         put32(e, (uint32_t)len); put32(e + 4, (uint32_t)tot);
         if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)kolmo_xxh3(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)

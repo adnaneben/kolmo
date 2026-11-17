@@ -1,4 +1,6 @@
 /* The encoder: plan, split, code the blocks on the pool, write the container. */
+static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
+                               const void *dict, size_t dictlen, uint32_t dictid, const struct kolmo_profile *prof);
 static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen, uint32_t dictid);
 #ifndef KOLMO_VID_MODES
@@ -26,6 +28,12 @@ static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int 
 }
 static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen, uint32_t dictid) {
+    return compress_impl_p(src, input_fd, n, dst, output_fd, cap, p, dict, dictlen, dictid, NULL);
+}
+/* prof: a trained profile (src/plan/profile.c); its dictionaries code the zstd, Brotli and LZ4 leaves, its pinned plans
+ * replace the analysis where they match, and the frame records its id (version 11, flag bit 2). */
+static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
+                               const void *dict, size_t dictlen, uint32_t dictid, const struct kolmo_profile *prof) {
     kolmo_params d = {KOLMO_FAST, 0, 0, 0, 1}; if (!p) p = &d;
     /* KOLMO_T_NATIVE_LEAF and KOLMO_T_TYPED_HUF are opt-in bits of transforms: read them, then clear them so every
      * other use of transforms sees the analysis level alone. The native leaf applies to balanced (KOLMO_FAST) with
@@ -39,7 +47,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     /* The typed route below produces a whole frame on its own (one block, one thread, at most 16 MiB, buffer API, no
      * dictionary, default level) and returns it; when it does not apply the normal planner runs. A declared integer
      * NPY / PCM16 WAV that the typed route's size guard rejects is compressed with the plain codec (transforms 0). */
-    if (typed_huf && !native_leaf && q.transforms && q.mode == KOLMO_FAST && !q.level && q.threads == 1
+    if (typed_huf && !native_leaf && !prof && q.transforms && q.mode == KOLMO_FAST && !q.level && q.threads == 1
         && input_fd < 0 && output_fd < 0 && !dictlen && n <= (16u << 20) && (!q.block || n <= q.block)) {
         int plain = 0; int64_t tr = ktf_encode(src, n, dst, cap, &plain);
         if (tr) return tr;
@@ -85,8 +93,9 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     /* Parallelize independent members, or formula discovery within a single
      * member. Never multiply the two thread budgets. Plans remain in input order. */
     plan_job planning = {src, ss, se, plans, p, nseg, nseg > 1 ? 1 : threads,
-                         p->transforms && p->mode == KOLMO_FAST && !p->level && !dict,
+                         p->transforms && p->mode == KOLMO_FAST && !p->level && !dict && !prof,
                          nseg > 1 && p->transforms && p->mode == KOLMO_FAST ? input_fd : -1, native_leaf};
+    planning.prof = prof;
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
     if (!p->block && nseg == 1 && (plans[0].wide || plans[0].experimental_table) && B > (2u << 20)) B = 2u << 20;
@@ -146,7 +155,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
     if (!J.out || !J.outlen) goto cleanup;
     J.psum = p->mode == KOLMO_RT;
-    J.dict = dict; J.dictlen = dictlen;
+    J.dict = dict; J.dictlen = dictlen; J.prof = prof;
     J.dst = dst; J.cap = cap; J.wnext = 0; J.wpos = HDR + (size_t)nb * IDX; J.werr = 0;
     if (pthread_mutex_init(&J.wmu, NULL)) goto cleanup;
     mutex_ready = 1;
@@ -174,6 +183,7 @@ cleanup:
     if (ret) { free(file_index); zs_trim(); return ret; }
     { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 128) ? 11 : (nm & 64) ? 10 : (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
+    else if (prof) { dst[10] |= 4; put32(dst + 6, kp_id(prof)); if (dst[4] < 11) dst[4] = 11; }   /* flag bit 2 = trained profile, its id */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);
     if (output_fd >= 0) ret = write_block(output_fd, file_index, HDR + (size_t)nb * IDX, 0);

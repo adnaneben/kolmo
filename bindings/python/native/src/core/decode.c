@@ -184,6 +184,7 @@ static void *decompress_worker(void *arg) {
     codec_ctx *xp = &S->x;
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
     xp->prof = J->prof;
+    xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
     for (;;) {
         uint32_t i = J->lo + atomic_fetch_add(&J->next, 1); if (i >= J->hi) break;
         if (atomic_load(&J->err)) break;

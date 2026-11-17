@@ -61,8 +61,8 @@ jobs:
       - name: address and undefined-behaviour sanitizers
         run: |
           gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
-            -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include -Ivendor/xz \
-            tests/kolmotest.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -lpthread -lm -lstdc++ -o kolmotest_asan
+            -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz \
+            tests/kolmotest.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -lpthread -lm -o kolmotest_asan
           ./kolmotest_asan
         timeout-minutes: 240
   fuzz-smoke:
@@ -76,9 +76,9 @@ jobs:
           for t in fuzz_decompress fuzz_roundtrip fuzz_nplane; do
             gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
               -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 \
-              -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include -Ivendor/xz \
+              -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz \
               fuzz/$t.c fuzz/run_local.c src/kolmo.c build/libkolmoarch.a build/libvendor.a \
-              -lpthread -lm -lstdc++ -o $t
+              -lpthread -lm -o $t
             ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./$t 20000
           done
         timeout-minutes: 60

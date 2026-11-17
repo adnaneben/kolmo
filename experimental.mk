@@ -103,7 +103,7 @@ kfam-check: build/kfam-asan
 
 build/kvid: $(XD)/kvid.c src/arch/aarch64/kvid_neon.c src/kolmo.h build/libkolmo.a build/libvendor.a
 	@mkdir -p build
-	$(CC) $(CFLAGS) $(filter -DKOLMO_NO_ASM,$(DEFS)) -Isrc $(XD)/kvid.c src/arch/aarch64/kvid_neon.c build/libkolmo.a build/libvendor.a $(LIBS) $(CXXLIB) -o $@
+	$(CC) $(CFLAGS) $(filter -DKOLMO_NO_ASM,$(DEFS)) -Isrc $(XD)/kvid.c src/arch/aarch64/kvid_neon.c build/libkolmo.a build/libvendor.a $(LIBS) -o $@
 
 # KAU1 audio coder. Integer decoding path; -ffp-contract=off keeps the encoder's choices reproducible
 build/kaud: $(XD)/kaud.c

@@ -10,7 +10,10 @@ int64_t kolmo_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, c
     return compress_impl(src, -1, n, dst, -1, cap, p, NULL, 0, 0);
 }
 
-int64_t kolmo_original_size(const uint8_t *src, size_t n) { return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : KOLMO_ERR_CORRUPT; }
+int64_t kolmo_original_size(const uint8_t *src, size_t n) {
+    if (n >= 4 && !memcmp(src, "CZC1", 4)) return kp_compact_original_size(src, n);
+    return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : KOLMO_ERR_CORRUPT;
+}
 
 int64_t kolmo_decompress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads) {
     int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
@@ -44,6 +47,8 @@ const char *kolmo_strerror(int64_t c) {
         case KOLMO_ERR_DICT: return "dictionary required or mismatched (compressed with a different dictionary)";
         case KOLMO_ERR_IO: return "file I/O error";
         case KOLMO_ERR_LIMIT: return "decoding resource limit exceeded";
+        case KOLMO_ERR_PROFILE: return "trained profile required, mismatched or damaged (decode with the profile the file was compressed with)";
+        case KOLMO_ERR_TARGET: return "invalid --target or calibration table";
     }
     return c >= 0 ? "ok" : "unknown error";
 }

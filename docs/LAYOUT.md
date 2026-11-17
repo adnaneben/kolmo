@@ -79,12 +79,12 @@ and the move mechanical:
   `shuffle.c`, `log.c`, `lines.c`, `sci.c`, `word.c`, `json.c`, `x86.c`, `tar.c` (archive segments), `graph.c`,
   `graph_fwd.c`, `graph_typed.c` (was `typed_int_encoder.inc`), `common.h` (transform ids, scanners).
 - **codecs/**: one file per codec family with its `kolmo_codec` table: `store.c lz4.c (LZ4, LZ4-HC) zstd.c brotli.c
-  bwt.c (libbsc, codec 5) lzma.c cm.c cm_image.c (codec 17) huf.c rans.c nplane.c (codec 15, a graph leaf codec, so
+  bwt.c (block sorting: codec 18, and codec 5 read for rc2 frames; streams in bwt_stream.c, compiled on its own) lzma.c cm.c cm_image.c (codec 17) huf.c rans.c nplane.c (codec 15, a graph leaf codec, so
   in codecs/ rather than transforms/) fastq.c (was kfam.inc, codec 16)`, `graph_leaf.c` (plane-aligned leaves), and
   `codec.c`, the registry and `codec_bound`/`codec_compress`/`codec_decompress`. `audio.c` and `video.c` come with
   the format2 lane.
 - **algo/**: `decimal.c` (decimal parse and format: the references of the decimal kernels), `hist.c` (byte
-  histogram), `varint.h`. The libbsc and libsais code stays in `vendor/` until the bwt lane takes it over.
+  histogram), `varint.h`; `lzp.c`, `qlfc.c` (+ `qlfc_model.h`, `qlfc_tables.h`, `rangecoder.h`), `par.c` (fork-join and the thread crew) and `sais/` (the libsais subset): ported from libbsc and libsais by the bwt lane, compiled on their own.
 - **arch/**: `cpu.h` (CPUID dispatch, target attributes, host byte order), `crc32c.c` (reference and dispatch),
   `decimal.c` (dispatch of the formatters), `xxh3.c` (was `vendor/xxhash/kolmo_xxh3.c`), `asm.h`;
   `x86_64/`: `crc32c_sse42.c decimal_avx2.c int_inv_sse2.c int_inv_avx2.c hist_x86_64.S`;

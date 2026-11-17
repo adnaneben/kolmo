@@ -1184,7 +1184,7 @@ static size_t kg_encode_dec64(codec_ctx *x, int codec, int level, const uint8_t 
     for (size_t c = 0, q0 = 0; c < nseg; c++) {
         const size_t W = S[c].fl & 8 ? 4 : 8;
         uint32_t nd = 0;
-        int d = kg_dec_code(src + S[c].off, segs ? W : cols * W, S[c].n, S[c].e, S[c].fl & 2, S[c].miss, S[c].fl & 4, S[c].fl & 8, tags + q0, pln, q0, col, &exc, &all, &dic, &nd, x, codec == C_ZSTD && level <= CZ_FAST_LEVEL ? C_ZSTD : codec == C_LZ4 ? C_ZSTD : C_BSC);
+        int d = kg_dec_code(src + S[c].off, segs ? W : cols * W, S[c].n, S[c].e, S[c].fl & 2, S[c].miss, S[c].fl & 4, S[c].fl & 8, tags + q0, pln, q0, col, &exc, &all, &dic, &nd, x, codec == C_ZSTD && level <= CZ_FAST_LEVEL ? C_ZSTD : codec == C_LZ4 ? C_ZSTD : C_BSC5);   /* trial codec of the DEC64 dictionary test: codec 5 keeps rc2's decisions */
         if (d < 0) goto done;
         S[c].fl |= (uint8_t)d; S[c].nd = nd; q0 += S[c].n;
     }

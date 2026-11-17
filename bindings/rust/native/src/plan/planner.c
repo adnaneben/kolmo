@@ -5,6 +5,9 @@
 #ifndef KOLMO_BWT_GAIN_PCT
 #define KOLMO_BWT_GAIN_PCT 3      /* max: least size gain (%) for BWT to replace LZMA2 on a binary block */
 #endif
+#ifndef KOLMO_BWT_SKIP_LZMA_PCT
+#define KOLMO_BWT_SKIP_LZMA_PCT 90 /* max: a slice with BWT at most this % of LZMA2 (preset 1) codes the block with BWT only */
+#endif
 static void mode_codec(const kolmo_params *p, int *codec, int *level) {
     switch (p->mode) {
         case KOLMO_RT:  *codec = C_LZ4;    *level = p->level ? p->level : 1; break;
@@ -267,7 +270,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                     size_t a = kg_encode_table(&cx, C_ZSTD, 1, ts, mm, WD[di], sep, o, mm + 64), b = ZSTD_compressCCtx(zc, z, zcap, ts, mm, 1);
                     int ok = a && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b;
                     if (ok && effort) {                          /* slower settings: the graph must also win with a strong codec (max, */
-                        int cc = strong ? C_BSC : C_ZSTD, lv = 9;     /* ultra: BWT; hc: zstd -9 standing in for zstd -19) */
+                        int cc = strong ? C_BWT : C_ZSTD, lv = 9;     /* ultra: BWT; hc: zstd -9 standing in for zstd -19) */
                         size_t ms = mm; if (ms > (384u << 10)) { ms = 384u << 10; while (ms > 0 && ts[ms - 1] != '\n') ms--; }   /* a shorter run decides the same and costs a third */
                         size_t a2 = ms ? kg_encode_table(&cx, cc, lv, ts, ms, WD[di], sep, o, mm + 64) : 0, b2 = ms ? codec_compress(&cx, cc, lv, ts, ms, z, zcap) : 0;
                         ok = a2 && b2 && a2 * 100 < 97 * b2;

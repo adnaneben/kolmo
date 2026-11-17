@@ -20,6 +20,8 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | 4 | Brotli (`eco`) | Brotli quality 8, window 2^24 | vendored Brotli 1.1.0 | eco vs brotli -11: −2.5% to −47% at 25–86× compress speed | in |
 | 5 | BWT (`ratio` text) | libbsc: LZP + BWT (libsais) + static QLFC | vendored libbsc 3.4.0 (C++) | ratio vs xz -9 general −12.7% | in; replaced by codec 18 in rc3 |
 | 6 | LZMA2 (`ratio` binary) | liblzma preset 9e, raw LZMA2 | vendored liblzma subset, XZ Utils 5.8.1 (rc3; was the system / Homebrew liblzma) | rc3 vendoring: same bytes, LZMA2 decode 1.43× faster than the system 5.4.5 (44.7–45.5 → 63.8–64.9 MB/s), Silesia `ratio` decode −8%; no system library needed (`docs/DEPENDENCIES.md`) | in |
+| 5 | BWT (`ratio` text, rc2) | libbsc block: LZP 15/72 + BWT (libsais) + static QLFC | own C port of libbsc 3.4.0 (rc3; byte-identical to libbsc, 2,826 comparisons) | ratio vs xz -9 general −12.7% (rc2) | read only from rc3 (rc2 frames decode); written by codec 18 instead |
+| 6 | LZMA2 (`ratio` binary) | liblzma preset 9e, raw LZMA2 | system / Homebrew liblzma | — | in; vendoring in rc3 (deps lane) |
 | 7 | context mixing (`-x`) | orders 1–7, word, column, indirect contexts, bit histories, neural mixer, APMs; squash/stretch and coder rewritten from the mathematics (`1641a08`), exact logistic tables (`d5abd6e`, −0.019% over 82 files, none larger) | own (lpaq1-derived parts rewritten) | `-x` vs zpaq -m5: general −7.4%, structured −45.3%, weights −6.8%, FASTQ −24% | in |
 | 8–11 | frontier DNA, DNA prefix, PCM, DNA runs | experimental frontier codecs | own (Codex) | see `research/TRACKER.md` | research (opt-in build) |
 | 12 | graph block | integer/decimal graph: predictors, zig-zag residuals in byte planes, per-leaf coder choice | own | the main source of the numeric and table gains | in |
@@ -28,7 +30,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | 15 | NPLANE native leaf | plane-context Huffman/rANS for integer residuals | own | −5% to −12% on sensor, ECG, numeric columns; 1.5–2.6× slower decode | opt-in (`--native-leaf`) |
 | 16 | FASTQ family | kfam: layout, names, bases, exceptions, qualities, each with its own model; own binary arithmetic coder; parallel chunks | own | 3 FASTQ runs: −25.3% vs rc2 `-x`, −34.3% vs CRAM 3.1; 3.4× CRAM's compress speed, 0.25× its decode | in (at `-x`) |
 | 17 | CM image | context mixing with the image model | own | 16-bit CT: −0.9% vs JPEG-LS; MR +5.9% vs JPEG XL e9 | in |
-| 18 | BWT in C | libbsc ported to C, libsais subset owned, adaptive QLFC, threaded unBWT | own (Apache-2.0 origins kept) | pending | rc3 (bwt lane) |
+| 18 | BWT (`ratio` text, `ultra` alternative) | LZP 17/96 + BWT (libsais subset, pthread crew) + adaptive QLFC, coder blocks ≥ 4 MiB, no libbsc header or adler32s; LZP, sort, QLFC and inverse threaded within a block | own (libbsc and libsais origins, Apache-2.0, kept) | BWT stage alone on 451 MB: −1.29% vs codec 5 (adaptive −1.11%, LZP −0.05%, coder blocks −0.13%); decode about 1.5× slower per thread, faster with the block's threads; `ratio` details in `benchmark/rc3/bwt/RESULTS.md` | rc3 (bwt lane) |
 | 19 | audio | kaud: quantised LPC + partitioned Rice (profile 0); NLMS/sign-sign LMS cascade + binary range coder (profile 1) | own | 40 ESC-50 clips: −4.0% (p0) and −8.2% (p1) vs FLAC -8; p1 −6.7% vs WavPack -hhx6; decodes slower than FLAC | rc3 (format2 lane) |
 | 20 | video | kvid: temporal prediction front end, then Kolmo | own | 3 CIF clips, all threads: −14.0% vs FFV1 (10 threads, 16 slices) at 0.94× compress and 2.1× decompress; `ratio` −16% vs xz -9 | rc3 (format2 lane) |
 | 21–23 | stacking leaves | per-plane leaves, Huffman→zstd leaf, zero-run leaf | own | ST-1: −0.67% to −2.0% vs production on integer files (fresh data) | rc3 (format2 lane) |
@@ -116,6 +118,10 @@ Measured on held-out files of 10 dataset families, one thread, against zstd at t
 | SSE2/AVX2 prefix-sum integer inverse | decode of 32-bit arrays | loop 1.8×, end to end +18% | in (rc2) |
 | `-ffp-contract=off` everywhere | build | Brotli encoder output no longer depends on FMA | in (rc2) |
 | Metal GPU (KRC hybrid) | KRC | no faster than the CPU path | research |
+| libsais OpenMP regions on a pthread crew (spin then sleep) | BWT encode and inverse inside a block | enwik8 32 MB, 4 threads: sort 27 → 58 MB/s, inverse 86 → 355 MB/s (rc2 used one thread per block); equal to OpenMP's active wait, far better under load | rc3 (bwt lane) |
+| block-parallel LZP and QLFC with serial-capacity replay | codec 5 and 18 encode and decode | output independent of threads, byte-identical to libbsc's serial result | rc3 (bwt lane) |
+| `ratio`: slice test skips the full LZMA2 pass when BWT is ≤ 90% on the slice | max/ratio binary blocks over 8 MiB | Silesia osdb: compress 6.8 s → 0.8 s, −3.1% | rc3 (bwt lane) |
+| AVX2 copy of libsais with runtime dispatch | BWT encode | baseline SSE2 build ~7% slower forward, equal inverse (edge of VM noise) | not done; candidate for the SIMD lane |
 | hand-written assembly | — | below a few percent where measured so far (SIMD-ASM.md) | rc3 simd lanes: kept wherever it gains |
 | NEON word-transform decoder (64-byte classification, token walk by count-trailing-zeros) | decode, word transform (eco, hc) | dickens -m hc decode −36%, -m eco −20% (M5, 1 thread) | in (rc3 simd-arm) |
 | NEON byte-plane split/merge with delta (LD2-LD4, UZP/ZIP, prefix sums) | `shuffle` transform | mr -m speed decode −57%, stereo WAV balanced decode −50%, compress −8% | in (rc3 simd-arm) |

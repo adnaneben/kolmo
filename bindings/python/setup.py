@@ -1,8 +1,8 @@
 """Builds the kolmo native library from bundled C sources and ships it inside the wheel.
 
 The package carries its own copy of the native core under ``native/`` (src + vendored zstd, lz4,
-brotli, libbsc, xxhash, the liblzma subset), refreshed from the repo root by ``sync-native.sh``. ``setup.py``
-compiles it into ``libkolmo`` with the system C/C++ compiler — no ``make``, no system codec libraries — so both the
+brotli, xxhash, the liblzma subset), refreshed from the repo root by ``sync-native.sh``. ``setup.py``
+compiles it into ``libkolmo`` with the system C compiler — no ``make``, no system codec libraries — so both the
 sdist and per-platform wheels build anywhere. The compiled
 library sits next to ``kolmo.py`` and is loaded by ctypes, so the installed package needs no
 toolchain at run time. Portable flags (no ``-march=native``) are used so a wheel built in CI runs
@@ -29,7 +29,6 @@ NO_LZMA = os.environ.get("KOLMO_NO_LZMA") == "1"
 
 def _sources():
     z, b, l4 = (os.path.join(VENDOR, d) for d in ("zstd", "brotli", "lz4"))
-    bsc = os.path.join(VENDOR, "libbsc")
     c = [os.path.join(SRC, "kolmo.c")]
     for sub in ("common", "compress", "decompress", "dictBuilder"):
         c += sorted(glob.glob(os.path.join(z, sub, "*.c")))
@@ -37,9 +36,10 @@ def _sources():
         c += sorted(glob.glob(os.path.join(b, sub, "*.c")))
     c += [os.path.join(l4, "lz4.c"), os.path.join(l4, "lz4hc.c")]
     c += [os.path.join(SRC, "arch", "xxh3.c")]          # compiled apart from src/kolmo.c (docs/LAYOUT.md)
-    c += [os.path.join(bsc, "libbsc", "bwt", "libsais", "libsais.c")]
-    cpp = sorted(glob.glob(os.path.join(bsc, "libbsc", "**", "*.cpp"), recursive=True))
-    return c, cpp, z, b, l4, bsc
+    # the block-sorting pipeline, also compiled on its own (LZP, QLFC, the libsais subset, the BWT stream formats)
+    c += [os.path.join(SRC, "algo", f) for f in ("lzp.c", "qlfc.c", "par.c")]
+    c += sorted(glob.glob(os.path.join(SRC, "algo", "sais", "*.c"))) + [os.path.join(SRC, "codecs", "bwt_stream.c")]
+    return c, z, b, l4
 
 
 def _xz(vendor):
@@ -54,7 +54,7 @@ def _xz(vendor):
 
 def build_library(dest_dir):
     """Compile libkolmo into dest_dir. Returns the full path to the built library."""
-    c_src, cpp_src, z, b, l4, bsc = _sources()
+    c_src, z, b, l4 = _sources()
 
     # Honor cibuildwheel's cross-compile request (ARCHFLAGS, e.g. "-arch arm64" when building an
     # Apple-silicon wheel on an Intel runner). The *target* arch — not the host — decides which
@@ -75,11 +75,10 @@ def build_library(dest_dir):
     kasm = [] if no_asm or not isa else sorted(glob.glob(os.path.join(SRC, "arch", isa, "*.S")))
 
     cc = os.environ.get("CC", "cc")
-    cxx = os.environ.get("CXX", "c++")
     workdir = os.path.join(dest_dir, "_kolmo_build")
     os.makedirs(workdir, exist_ok=True)
 
-    includes = ["-I" + p for p in (SRC, z, l4, bsc, os.path.join(b, "include"))]
+    includes = ["-I" + p for p in (SRC, z, l4, os.path.join(b, "include"))]
     defs = ["-DXXH_NAMESPACE=ZSTD_", "-DZSTD_MULTITHREAD", "-DZSTD_LEGACY_SUPPORT=0", "-DKOLMO_NO_GPU"]
     if no_asm:
         defs.append("-DKOLMO_NO_ASM")
@@ -102,7 +101,7 @@ def build_library(dest_dir):
         subprocess.check_call(cmd)
         objs.append(obj)
 
-    # -ffp-contract=off on every C and C++ file, not only kolmo.c: Brotli's encoder (-m eco) decides with float costs,
+    # -ffp-contract=off on every C file, not only kolmo.c: Brotli's encoder (-m eco) decides with float costs,
     # and FMA contraction (arm64, or x86-64 with FMA enabled) could change its choices and so the frame bytes.
     fp = ["-ffp-contract=off"]
     compile_one(cc, c_src[0], fp)  # kolmo.c: deterministic across compilers
@@ -120,11 +119,9 @@ def build_library(dest_dir):
     if is_x86_64 and not no_asm:
         for f in ["med8_sse2.c", "planes_sse2.c", "mixer_avx2.c", "video_sse2.c", "img16_sse2.c", "med8f_avx2.c"]:
             compile_one(cc, os.path.join(SRC, "arch", "x86_64", f), fp)
-    for f in cpp_src:
-        compile_one(cxx, f, fp + ["-I" + bsc])
 
     out = os.path.join(dest_dir, LIBNAME)
-    link = [cxx, "-shared"] + archflags + objs + ["-o", out, "-lpthread", "-lm"]
+    link = [cc, "-shared"] + archflags + objs + ["-o", out, "-lpthread", "-lm"]
     if IS_MAC:
         link += ["-install_name", "@loader_path/" + LIBNAME]
     subprocess.check_call(link)

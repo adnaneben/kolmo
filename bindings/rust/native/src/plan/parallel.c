@@ -21,7 +21,15 @@ typedef struct {
     const uint8_t *src; const uint64_t *starts, *ends;
     plan_t *plans; const kolmo_params *params;
     uint32_t count; int threads_per_plan, allow_frontier, member_fd, native_leaf; atomic_uint next;
+    const struct kolmo_profile *prof;   /* trained profile: its pinned plans replace the analysis where they match */
 } plan_job;
+static int kp_plan_pinned(const struct kolmo_profile *P, const uint8_t *s, size_t n, const kolmo_params *p, plan_t *out);
+/* The analysis of one member, as plan_worker runs it (also used by kolmo train to record the plans it pins). */
+static plan_t plan_for(const uint8_t *src, size_t len, const kolmo_params *p, int threads, int native_leaf) {
+    return p->transforms ? make_plan(src, len, p->mode >= KOLMO_ECO,
+        p->mode != KOLMO_RT && p->transforms != 3, p->mode != KOLMO_RT && p->transforms != 3, threads, p->mode >= KOLMO_MAX,
+        p->transforms == 2 ? 1 : p->transforms == 3 ? (p->mode == KOLMO_RT ? 3 : 2) : p->mode == KOLMO_FAST ? 4 : 0, native_leaf) : (plan_t){0};
+}
 static void *plan_worker(void *arg) {
     plan_job *j = arg; const kolmo_params *p = j->params;
     long page_size = j->member_fd >= 0 ? sysconf(_SC_PAGESIZE) : 0;
@@ -54,9 +62,8 @@ static void *plan_worker(void *arg) {
 #ifdef KOLMO_TIMING
         double mp0_ = prof_now();
 #endif
-        plan_t pl = p->transforms ? make_plan(src, len, p->mode >= KOLMO_ECO,
-            p->mode != KOLMO_RT && p->transforms != 3, p->mode != KOLMO_RT && p->transforms != 3, j->threads_per_plan, p->mode >= KOLMO_MAX,
-            p->transforms == 2 ? 1 : p->transforms == 3 ? (p->mode == KOLMO_RT ? 3 : 2) : p->mode == KOLMO_FAST ? 4 : 0, j->native_leaf) : (plan_t){0};
+        plan_t pl;
+        if (!j->prof || !kp_plan_pinned(j->prof, src, len, p, &pl)) pl = plan_for(src, len, p, j->threads_per_plan, j->native_leaf);
 #ifdef KOLMO_TIMING
         fprintf(stderr, "mp n=%zu ms=%.3f t=%d\n", len, (prof_now() - mp0_) * 1000, pl.t);
 #endif

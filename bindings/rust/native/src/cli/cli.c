@@ -5,7 +5,11 @@
  *                    kolmo -s ...                         (streaming: bounded memory, large inputs)
  *                    kolmo -d [-T threads] [-D dict] in out  (auto-detects one-shot vs streamed)
  *                    kolmo -r offset:length in out        (random access read)
- *                    kolmo -t dict.bin sample1 sample2 ...   (train a dictionary from sample files) */
+ *                    kolmo -t dict.bin sample1 sample2 ...   (train a dictionary from sample files)
+ *                    kolmo train [-m mode] [--target T] -o profile.kpf FILES|DIRS   (learn a reusable profile)
+ *                    kolmo -P profile.kpf in out  /  kolmo -d -P profile.kpf in out   (compress, decode with it)
+ *                    kolmo --target 'decode>=1GB/s'|size|'cost:...' [--calib table] in out   (per-chunk setting)
+ *                    kolmo calibrate [-o table] [FILES]   (speed table for --target)   kolmo profile p.kpf (describe) */
 #include "kolmo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,19 +95,36 @@ done:
     free(stage);
     return ret;
 }
+#include "cli/train.c"
+
 int main(int argc, char **argv) {
+    if (argc >= 2 && !strcmp(argv[1], "train")) return kolmo_cli_train(argc - 1, argv + 1);
+    if (argc >= 2 && !strcmp(argv[1], "calibrate")) return kolmo_cli_calibrate(argc - 1, argv + 1);
+    if (argc == 3 && !strcmp(argv[1], "profile")) {
+        kolmo_profile *pp = kc_load_profile(argv[2]); if (!pp) return 1;
+        char d[65536]; kolmo_profile_describe(pp, d, sizeof d); fputs(d, stdout); kolmo_profile_free(pp); return 0;
+    }
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int speed = 0; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
     char *dictpath = NULL, *trainpath = NULL;
-    int extreme = 0, native_leaf = 0, typed_huf = 0;
+    int extreme = 0, native_leaf = 0, typed_huf = 0, verbose = 0, mode_given = 0;
+    char *profpath = NULL, *targetspec = NULL, *calibpath = NULL;
+    for (int a = 1; a < argc; a++)                           /* options with a value: --target T, --calib FILE */
+        if ((!strcmp(argv[a], "--target") || !strcmp(argv[a], "--calib")) && a + 1 < argc) {
+            if (argv[a][2] == 't') targetspec = argv[a + 1]; else calibpath = argv[a + 1];
+            for (int b = a; b + 2 <= argc; b++) argv[b] = argv[b + 2];
+            argc -= 2; a--;
+        }
     for (int a = 1; a < argc; a++)                           /* long options, removed before getopt sees the arguments */
         if (!strcmp(argv[a], "--native-leaf") || !strcmp(argv[a], "--typed-huf")) {
             if (!strcmp(argv[a], "--native-leaf")) native_leaf = 1; else typed_huf = 1;
             for (int b = a; b < argc; b++) argv[b] = argv[b + 1];
             argc--; a--;
         }
-    while ((opt = getopt(argc, argv, "m:l:T:B:nqQxdr:sS:D:t:")) != -1) switch (opt) {
+    while ((opt = getopt(argc, argv, "m:l:T:B:nqQxdr:sS:D:t:P:v")) != -1) switch (opt) {
         /* three modes: speed, balanced (default), ratio. The older names stay as advanced settings. */
-        case 'm': speed = !strcmp(optarg, "speed");
+        case 'P': profpath = optarg; break;
+        case 'v': verbose = 1; break;
+        case 'm': speed = !strcmp(optarg, "speed"); mode_given = 1;
                   P.mode = !strcmp(optarg, "speed") || !strcmp(optarg, "rt") ? KOLMO_RT :
                            !strcmp(optarg, "balanced") || !strcmp(optarg, "fast") ? KOLMO_FAST :
                            !strcmp(optarg, "ratio") || !strcmp(optarg, "max") ? KOLMO_MAX :
@@ -111,7 +132,7 @@ int main(int argc, char **argv) {
                   if ((int)P.mode < 0) { fprintf(stderr, "kolmo: unknown mode '%s' (speed, balanced or ratio)\n", optarg); return 2; }
                   break;
         case 'x': extreme = 1; break;
-        case 'l': P.level = atoi(optarg); break;
+        case 'l': P.level = atoi(optarg); mode_given = 1; break;
         case 'T': P.threads = atoi(optarg); break;
         case 'B': P.block = (uint32_t)(atof(optarg) * 1048576); break;
         case 'n': P.transforms = 0; break;
@@ -141,9 +162,14 @@ int main(int argc, char **argv) {
             "            (smaller integer series; those blocks decode much more slowly)\n"
             "advanced: -m rt|fast|eco|hc|max|ultra  -l level  -q quick analysis  -Q minimal analysis  -n no transforms\n"
             "          -B blockMiB\n"
-            "          -D dict  -t dict samples...  -s|-S segMiB stream  -r off:len read a range\n"); return 2;
+            "          -D dict  -t dict samples...  -s|-S segMiB stream  -r off:len read a range\n"
+            "profiles: kolmo train [-m mode] [--target T] -o p.kpf FILES|DIRS   then  kolmo -P p.kpf in out,\n"
+            "          kolmo -d -P p.kpf in out   (the decoder needs the profile; kolmo profile p.kpf describes it)\n"
+            "targets:  --target size | 'decode>=1GB/s' | 'encode>=50MB/s' | 'cost:<formula of size,n,enc,dec>' |\n"
+            "          cost:cloud[=months] | cost:link=1Gbit   (floors join with ','; -v reports the choice)\n"
+            "          kolmo calibrate [-o table] [FILES]   speed table (default ~/.config/kolmo/calibration; --calib FILE)\n"); return 2;
     }
-    if (extreme) P.mode = KOLMO_ULTRA;
+    if (extreme) { P.mode = KOLMO_ULTRA; mode_given = 1; }
     if (native_leaf && typed_huf) { fprintf(stderr, "kolmo: choose --native-leaf or --typed-huf, not both\n"); return 2; }
     if (speed && P.transforms == 1) P.transforms = 3;      /* speed: nothing that costs encode time (set before the
                                                             * opt-in bits, so that -m speed with one of them is still speed) */
@@ -170,6 +196,44 @@ int main(int argc, char **argv) {
     const char *inp = argv[optind], *outp = argv[optind + 1];
 
     size_t dictlen = 0; uint8_t *dict = NULL;
+    if ((profpath || targetspec) && (dictpath || stream || range || trainpath)) {
+        fprintf(stderr, "kolmo: -P and --target work on whole files in memory; not with -D, -s, -S or -r\n"); return 2;
+    }
+    if (profpath || targetspec) {                            /* profiles and targets: whole file in memory */
+        kolmo_profile *prof = NULL; kolmo_target *tg = NULL; int ret = 1;
+        if (profpath && !(prof = kc_load_profile(profpath))) return 1;
+        if (targetspec && !dec) {
+            int e = kolmo_target_parse(targetspec, &tg);
+            if (e) { fprintf(stderr, "kolmo: --target '%s': %s\n", targetspec, kolmo_strerror(e)); kolmo_profile_free(prof); return 2; }
+            if (kc_apply_calibration(tg, calibpath)) { kolmo_target_free(tg); kolmo_profile_free(prof); return 2; }
+        }
+        size_t n; uint8_t *in = slurp(inp, &n), *out = NULL; int64_t r;
+        if (dec) {
+            int64_t o = kolmo_original_size(in, n);
+            uint32_t id = 0; int needs = kolmo_frame_profile_id(in, n, &id);
+            if (o < 0) r = o;
+            else if (needs == 1 && (!prof || kolmo_profile_id(prof) != id)) {
+                fprintf(stderr, "kolmo: %s needs profile %08x\n", inp, id); r = KOLMO_ERR_PROFILE;
+            } else { out = malloc(o ? (size_t)o : 1); r = out ? kolmo_decompress_profile(in, n, out, (size_t)o, P.threads, prof) : KOLMO_ERR_ALLOC; }
+        } else {
+            kolmo_params q = P;
+            if (prof && !mode_given) { kolmo_params pp; kolmo_profile_params(prof, &pp); q.mode = pp.mode; q.level = pp.level; if (P.transforms == 1) q.transforms = pp.transforms; if (!P.block) q.block = pp.block; }
+            size_t cap = kolmo_bound(n, &q); out = malloc(cap); kolmo_target_report rep;
+            if (!out) r = KOLMO_ERR_ALLOC;
+            else if (tg) r = kolmo_compress_target(in, n, out, cap, &q, tg, prof, &rep);
+            else r = kolmo_compress_profile(in, n, out, cap, &q, prof);
+            if (tg && r >= 0 && verbose) {
+                fprintf(stderr, "kolmo: target '%s': %u chunk%s:", targetspec, rep.chunks, rep.chunks == 1 ? "" : "s");
+                for (int s = 0; kolmo_target_setting_name(s); s++) if (rep.per_setting[s]) fprintf(stderr, " %s x%u", kolmo_target_setting_name(s), rep.per_setting[s]);
+                fprintf(stderr, "; predicted %llu bytes, encode %.3f s, decode %.3f s (one thread); actual %lld bytes\n",
+                        (unsigned long long)rep.predicted_size, rep.predicted_enc_s, rep.predicted_dec_s, (long long)r);
+            }
+        }
+        if (r < 0) fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r));
+        else ret = spit(outp, out, (size_t)r) != 0;
+        free(in); free(out); kolmo_target_free(tg); kolmo_profile_free(prof);
+        return ret;
+    }
     if (dictpath) dict = slurp(dictpath, &dictlen);
 
     /* Streaming compress, or decode of a streamed (CZNS) file: bounded memory via file descriptors. */
