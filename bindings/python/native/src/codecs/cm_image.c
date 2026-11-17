@@ -14,6 +14,9 @@ static size_t cm_compress_img(const uint8_t *in, size_t n, uint32_t iw, uint32_t
     return r ? 0 : o + 9;
 }
 static int cm_decompress_img(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+#ifdef KOLMO_FUZZ_NO_CM   /* fuzz-only builds: skip context-mixing model setup (~300 ms per call; fuzz/campaign3) */
+    (void)in; (void)cn; (void)out; (void)n; return -1;
+#endif
     if (cn < 17 || n >= ((size_t)1 << 28)) return -1;
     uint32_t iw, ih, n32; memcpy(&iw, in, 4); memcpy(&ih, in + 4, 4); uint32_t ich = in[8] & 0x7f; int lx = in[8] >> 7; memcpy(&n32, in + 9, 4);
     uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu; int bb = (int)(f & 7) + 15;

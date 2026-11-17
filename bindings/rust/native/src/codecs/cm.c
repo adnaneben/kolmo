@@ -780,6 +780,9 @@ static size_t cm_compress_mx(const uint8_t *in, size_t n, uint8_t *out, size_t c
 static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return cm_compress_m(in, n, out, cap, 2); }
 
 static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+#ifdef KOLMO_FUZZ_NO_CM   /* fuzz-only builds: skip context-mixing model setup (~300 ms per call; fuzz/campaign3) */
+    (void)in; (void)cn; (void)out; (void)n; return -1;
+#endif
     if (cn < 8) return -1;
     uint32_t n32; memcpy(&n32, in, 4);
     int bb = CM_BB, v2 = 0, lx = 0;
