@@ -6,7 +6,7 @@
  * The cuts come from the encoder, never from the thread count, so a frame is the same whatever -T is:
  *   - the columns of a table (transpose plan, T_TP): one model per column (rc3 plan, xmode item 4), which on the
  *     tables measured is also smaller than one model over the rows;
- *   - equal slices of a large single stream (xmode item 5), when the measured cost is small (see cmp_slices).
+ *   - two halves of a large non-text stream (xmode item 5, from CMP_SPLIT_MIN, chosen in core/blocks.c).
  * Payload: version u8 (0) | parts uv | per part: raw size uv, coded size uv | the parts' codec-7 streams in order.
  * Table memory per part follows the part's size (cm_bits_for), so parts in parallel need about what one model over
  * the whole block would. */

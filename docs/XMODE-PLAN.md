@@ -20,11 +20,11 @@ Status: rc3 xmode lane, 16 November 2026. Measurements: `benchmark/rc3/xmode/RES
 
 | # | technique | output | helps | where it matters |
 |---|---|---|---|---|
-| 1 | trials on their own threads (`src/core/trials.inc`); the planner's two CM samples in parallel | unchanged | encode, threads > blocks | every file under 128 MiB with `-T` ≥ 2; 1–10 MB text and CSV |
+| 1 | trials on their own threads (`src/core/trials.c`); the planner's two CM samples in parallel | unchanged | encode, threads > blocks | every file under 128 MiB with `-T` ≥ 2; 1–10 MB text and CSV |
 | 2 | FASTQ: the family coder first, CM and the other trials skipped when it applies (blocks ≥ 64 KiB) | unchanged | encode, all thread counts | FASTQ of every size: ~20× faster, memory 1.4–5.4 GiB → 30–150 MiB |
 | 3 | prefetch of the next bit's mixer and APM rows; AVX2 build of the CM loops chosen at run time | unchanged | encode and decode, every size | under 1 MiB too: 20–25% faster on the VM; a further 21% on baseline-ISA (release) builds |
 | 4 | codec 25, columns: a table is transposed and each column gets its own CM model, coded and decoded in parallel | new codec, version 11 | encode and decode | CSV/TSV from 64 KiB: smaller *and* up to 4× faster at 4 threads |
-| 5 | codec 25, halves: a non-text single stream from 8 MiB is coded as two halves with half-size tables | new codec | encode and decode | binary and other non-text data ≥ 8 MiB: 2× faster for 0.14–0.40% |
+| 5 | codec 25, halves: a non-text single stream from 32 MiB is coded as two halves with half-size tables | new codec | encode and decode | non-text blocks ≥ 32 MiB: 2× faster for 0.14% (100 MB binary); 5 MB halves cost 0.14–2.3%, so smaller blocks stay whole |
 | 6 | family coder: smaller quality and name chunks (see RESULTS) | changed chunking | decode | FASTQ ≥ 4 MiB |
 | 7 | tables sized to the block (`--x-tables=scaled`, opt-in) | smaller tables | memory, small-file speed | every size: decode memory from GiB to the block's ~16× |
 
@@ -44,8 +44,9 @@ What was measured and **not** adopted:
 - **Under 1 MiB.** One block, one CM model; the planner's samples are the whole file. What helps: 3 (faster per
   byte), 1 (the planner's samples and the alternative coder overlap CM), 4 for tables (the planner's column trial is
   the block itself and is reused, not coded twice), 2 for FASTQ, 7 for memory (a 100 KB file needs 280 MiB today).
-- **1–16 MiB.** Same, plus 4 (columns decode in parallel) and, from 8 MiB, 5 for non-text data.
-- **16–128 MiB.** One block still: 3, 4 and 5 carry it; text remains one model on one thread (the size cost of
+- **1–32 MiB.** Same, plus 4 (columns decode in parallel). Halves (5) are not used: on 5 MB halves the cost was up
+  to 2.3% (Silesia osdb).
+- **32–128 MiB.** One block still: 3, 4 and 5 carry it; text remains one model on one thread (the size cost of
   splitting text is 3–11%), so plain text above 10 MB is where `-x` stays slowest. A shared static prior (each part
   warmed on the same leading bytes) is the next candidate there; it was not measured in this lane.
 - **Over 128 MiB.** Several blocks, one per thread, as before; 2–5 still apply inside each block.

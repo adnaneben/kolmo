@@ -33,7 +33,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
 | 20 | video | kvid: temporal prediction front end, then Kolmo | own | 3 CIF clips, all threads: −14.0% vs FFV1 (10 threads, 16 slices) at 0.94× compress and 2.1× decompress; `ratio` −16% vs xz -9 | rc3 (format2 lane) |
 | 21–23 | stacking leaves | per-plane leaves, Huffman→zstd leaf, zero-run leaf | own | ST-1: −0.67% to −2.0% vs production on integer files (fresh data) | rc3 (format2 lane) |
 | 24 | own LZMA-class coder | — | own | pending | rc3 (deps lane), only if it gains |
-| 25 | CM over parts | parts each coded by their own context-mixing model (codec 7 streams), in parallel for encoding and decoding; parts from the table's columns (transpose plan) or two halves of a non-text stream ≥ 8 MiB; cuts depend on the input only; container version 11 | own | columns: CSV 1 MB −0.5%, encode 2.1× and decode 4.4× faster at 4 threads; halves: +0.14% (CSV 10 MB, binary 100 MB) to +0.40% (binary 10 MB), 2× faster both ways (`benchmark/rc3/xmode/RESULTS.md`) | rc3 (xmode lane) |
+| 25 | CM over parts | parts each coded by their own context-mixing model (codec 7 streams), in parallel for encoding and decoding; parts from the table's columns (transpose plan) or two halves of a non-text stream ≥ 32 MiB; cuts depend on the input only; container version 11 | own | columns: CSV 1 MB −0.5%, encode 2.1× and decode 4.4× faster at 4 threads; halves: +0.14% on 100 MB of binary data, 2× faster both ways; 5 MB halves +0.14% to +2.3% (Silesia osdb), hence from 32 MiB only (`benchmark/rc3/xmode/RESULTS.md`) | rc3 (xmode lane) |
 
 ## Transforms and graph techniques
 
