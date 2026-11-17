@@ -41,6 +41,11 @@ Changes made to the original file (libsais 2.12.1, as vendored by libbsc 3.4.0):
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+/* Kolmo: the inverse BWT stores 16-bit values at odd byte offsets (U + k * r); a direct uint16_t store there is
+ * undefined behaviour in C (UBSan: misaligned store) although every supported CPU does it. memcpy compiles to the
+ * same single store. */
+static inline void kolmo_st16(uint16_t *p, uint16_t v) { memcpy(p, &v, 2); }
+
 #include <limits.h>
 
 #include "sais.h"
@@ -10215,7 +10220,7 @@ static void libsais_unbwt_decode_1(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P,
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
     }
 
     *i0 = p0;
@@ -10230,8 +10235,8 @@ static void libsais_unbwt_decode_2(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P,
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
     }
 
     *i0 = p0; *i1 = p1;
@@ -10247,9 +10252,9 @@ static void libsais_unbwt_decode_3(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P,
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2;
@@ -10266,10 +10271,10 @@ static void libsais_unbwt_decode_4(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P,
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3;
@@ -10287,11 +10292,11 @@ static void libsais_unbwt_decode_5(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P,
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4;
@@ -10310,12 +10315,12 @@ static void libsais_unbwt_decode_6(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P,
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5;
@@ -10335,13 +10340,13 @@ static void libsais_unbwt_decode_7(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P,
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
-        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; U6[i] = libsais_bswap16(c6);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
+        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; kolmo_st16(&U6[i], libsais_bswap16(c6));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5; *i6 = p6;
@@ -10362,14 +10367,14 @@ static void libsais_unbwt_decode_8(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P,
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
-        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; U6[i] = libsais_bswap16(c6);
-        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; U7[i] = libsais_bswap16(c7);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
+        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; kolmo_st16(&U6[i], libsais_bswap16(c6));
+        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; kolmo_st16(&U7[i], libsais_bswap16(c7));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5; *i6 = p6; *i7 = p7;
@@ -10391,15 +10396,15 @@ static void libsais_unbwt_decode_9(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P,
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
-        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; U6[i] = libsais_bswap16(c6);
-        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; U7[i] = libsais_bswap16(c7);
-        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; U8[i] = libsais_bswap16(c8);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
+        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; kolmo_st16(&U6[i], libsais_bswap16(c6));
+        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; kolmo_st16(&U7[i], libsais_bswap16(c7));
+        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; kolmo_st16(&U8[i], libsais_bswap16(c8));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5; *i6 = p6; *i7 = p7; *i8 = p8;
@@ -10422,16 +10427,16 @@ static void libsais_unbwt_decode_10(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
-        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; U6[i] = libsais_bswap16(c6);
-        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; U7[i] = libsais_bswap16(c7);
-        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; U8[i] = libsais_bswap16(c8);
-        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; U9[i] = libsais_bswap16(c9);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
+        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; kolmo_st16(&U6[i], libsais_bswap16(c6));
+        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; kolmo_st16(&U7[i], libsais_bswap16(c7));
+        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; kolmo_st16(&U8[i], libsais_bswap16(c8));
+        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; kolmo_st16(&U9[i], libsais_bswap16(c9));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5; *i6 = p6; *i7 = p7; *i8 = p8; *i9 = p9;
@@ -10455,17 +10460,17 @@ static void libsais_unbwt_decode_11(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
-        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; U6[i] = libsais_bswap16(c6);
-        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; U7[i] = libsais_bswap16(c7);
-        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; U8[i] = libsais_bswap16(c8);
-        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; U9[i] = libsais_bswap16(c9);
-        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; U10[i] = libsais_bswap16(c10);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
+        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; kolmo_st16(&U6[i], libsais_bswap16(c6));
+        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; kolmo_st16(&U7[i], libsais_bswap16(c7));
+        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; kolmo_st16(&U8[i], libsais_bswap16(c8));
+        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; kolmo_st16(&U9[i], libsais_bswap16(c9));
+        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; kolmo_st16(&U10[i], libsais_bswap16(c10));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5; *i6 = p6; *i7 = p7; *i8 = p8; *i9 = p9; *i10 = p10;
@@ -10490,18 +10495,18 @@ static void libsais_unbwt_decode_12(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
-        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; U6[i] = libsais_bswap16(c6);
-        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; U7[i] = libsais_bswap16(c7);
-        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; U8[i] = libsais_bswap16(c8);
-        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; U9[i] = libsais_bswap16(c9);
-        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; U10[i] = libsais_bswap16(c10);
-        uint16_t c11 = fastbits[p11 >> shift]; if (bucket2[c11] <= p11) { do { c11++; } while (bucket2[c11] <= p11); } p11 = P[p11]; U11[i] = libsais_bswap16(c11);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
+        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; kolmo_st16(&U6[i], libsais_bswap16(c6));
+        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; kolmo_st16(&U7[i], libsais_bswap16(c7));
+        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; kolmo_st16(&U8[i], libsais_bswap16(c8));
+        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; kolmo_st16(&U9[i], libsais_bswap16(c9));
+        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; kolmo_st16(&U10[i], libsais_bswap16(c10));
+        uint16_t c11 = fastbits[p11 >> shift]; if (bucket2[c11] <= p11) { do { c11++; } while (bucket2[c11] <= p11); } p11 = P[p11]; kolmo_st16(&U11[i], libsais_bswap16(c11));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5; *i6 = p6; *i7 = p7; *i8 = p8; *i9 = p9; *i10 = p10; *i11 = p11;
@@ -10527,19 +10532,19 @@ static void libsais_unbwt_decode_13(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
-        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; U6[i] = libsais_bswap16(c6);
-        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; U7[i] = libsais_bswap16(c7);
-        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; U8[i] = libsais_bswap16(c8);
-        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; U9[i] = libsais_bswap16(c9);
-        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; U10[i] = libsais_bswap16(c10);
-        uint16_t c11 = fastbits[p11 >> shift]; if (bucket2[c11] <= p11) { do { c11++; } while (bucket2[c11] <= p11); } p11 = P[p11]; U11[i] = libsais_bswap16(c11);
-        uint16_t c12 = fastbits[p12 >> shift]; if (bucket2[c12] <= p12) { do { c12++; } while (bucket2[c12] <= p12); } p12 = P[p12]; U12[i] = libsais_bswap16(c12);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
+        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; kolmo_st16(&U6[i], libsais_bswap16(c6));
+        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; kolmo_st16(&U7[i], libsais_bswap16(c7));
+        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; kolmo_st16(&U8[i], libsais_bswap16(c8));
+        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; kolmo_st16(&U9[i], libsais_bswap16(c9));
+        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; kolmo_st16(&U10[i], libsais_bswap16(c10));
+        uint16_t c11 = fastbits[p11 >> shift]; if (bucket2[c11] <= p11) { do { c11++; } while (bucket2[c11] <= p11); } p11 = P[p11]; kolmo_st16(&U11[i], libsais_bswap16(c11));
+        uint16_t c12 = fastbits[p12 >> shift]; if (bucket2[c12] <= p12) { do { c12++; } while (bucket2[c12] <= p12); } p12 = P[p12]; kolmo_st16(&U12[i], libsais_bswap16(c12));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5; *i6 = p6; *i7 = p7; *i8 = p8; *i9 = p9; *i10 = p10; *i11 = p11; *i12 = p12;
@@ -10566,20 +10571,20 @@ static void libsais_unbwt_decode_14(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
-        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; U6[i] = libsais_bswap16(c6);
-        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; U7[i] = libsais_bswap16(c7);
-        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; U8[i] = libsais_bswap16(c8);
-        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; U9[i] = libsais_bswap16(c9);
-        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; U10[i] = libsais_bswap16(c10);
-        uint16_t c11 = fastbits[p11 >> shift]; if (bucket2[c11] <= p11) { do { c11++; } while (bucket2[c11] <= p11); } p11 = P[p11]; U11[i] = libsais_bswap16(c11);
-        uint16_t c12 = fastbits[p12 >> shift]; if (bucket2[c12] <= p12) { do { c12++; } while (bucket2[c12] <= p12); } p12 = P[p12]; U12[i] = libsais_bswap16(c12);
-        uint16_t c13 = fastbits[p13 >> shift]; if (bucket2[c13] <= p13) { do { c13++; } while (bucket2[c13] <= p13); } p13 = P[p13]; U13[i] = libsais_bswap16(c13);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
+        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; kolmo_st16(&U6[i], libsais_bswap16(c6));
+        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; kolmo_st16(&U7[i], libsais_bswap16(c7));
+        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; kolmo_st16(&U8[i], libsais_bswap16(c8));
+        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; kolmo_st16(&U9[i], libsais_bswap16(c9));
+        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; kolmo_st16(&U10[i], libsais_bswap16(c10));
+        uint16_t c11 = fastbits[p11 >> shift]; if (bucket2[c11] <= p11) { do { c11++; } while (bucket2[c11] <= p11); } p11 = P[p11]; kolmo_st16(&U11[i], libsais_bswap16(c11));
+        uint16_t c12 = fastbits[p12 >> shift]; if (bucket2[c12] <= p12) { do { c12++; } while (bucket2[c12] <= p12); } p12 = P[p12]; kolmo_st16(&U12[i], libsais_bswap16(c12));
+        uint16_t c13 = fastbits[p13 >> shift]; if (bucket2[c13] <= p13) { do { c13++; } while (bucket2[c13] <= p13); } p13 = P[p13]; kolmo_st16(&U13[i], libsais_bswap16(c13));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5; *i6 = p6; *i7 = p7; *i8 = p8; *i9 = p9; *i10 = p10; *i11 = p11; *i12 = p12; *i13 = p13;
@@ -10607,21 +10612,21 @@ static void libsais_unbwt_decode_15(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
-        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; U6[i] = libsais_bswap16(c6);
-        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; U7[i] = libsais_bswap16(c7);
-        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; U8[i] = libsais_bswap16(c8);
-        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; U9[i] = libsais_bswap16(c9);
-        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; U10[i] = libsais_bswap16(c10);
-        uint16_t c11 = fastbits[p11 >> shift]; if (bucket2[c11] <= p11) { do { c11++; } while (bucket2[c11] <= p11); } p11 = P[p11]; U11[i] = libsais_bswap16(c11);
-        uint16_t c12 = fastbits[p12 >> shift]; if (bucket2[c12] <= p12) { do { c12++; } while (bucket2[c12] <= p12); } p12 = P[p12]; U12[i] = libsais_bswap16(c12);
-        uint16_t c13 = fastbits[p13 >> shift]; if (bucket2[c13] <= p13) { do { c13++; } while (bucket2[c13] <= p13); } p13 = P[p13]; U13[i] = libsais_bswap16(c13);
-        uint16_t c14 = fastbits[p14 >> shift]; if (bucket2[c14] <= p14) { do { c14++; } while (bucket2[c14] <= p14); } p14 = P[p14]; U14[i] = libsais_bswap16(c14);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
+        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; kolmo_st16(&U6[i], libsais_bswap16(c6));
+        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; kolmo_st16(&U7[i], libsais_bswap16(c7));
+        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; kolmo_st16(&U8[i], libsais_bswap16(c8));
+        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; kolmo_st16(&U9[i], libsais_bswap16(c9));
+        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; kolmo_st16(&U10[i], libsais_bswap16(c10));
+        uint16_t c11 = fastbits[p11 >> shift]; if (bucket2[c11] <= p11) { do { c11++; } while (bucket2[c11] <= p11); } p11 = P[p11]; kolmo_st16(&U11[i], libsais_bswap16(c11));
+        uint16_t c12 = fastbits[p12 >> shift]; if (bucket2[c12] <= p12) { do { c12++; } while (bucket2[c12] <= p12); } p12 = P[p12]; kolmo_st16(&U12[i], libsais_bswap16(c12));
+        uint16_t c13 = fastbits[p13 >> shift]; if (bucket2[c13] <= p13) { do { c13++; } while (bucket2[c13] <= p13); } p13 = P[p13]; kolmo_st16(&U13[i], libsais_bswap16(c13));
+        uint16_t c14 = fastbits[p14 >> shift]; if (bucket2[c14] <= p14) { do { c14++; } while (bucket2[c14] <= p14); } p14 = P[p14]; kolmo_st16(&U14[i], libsais_bswap16(c14));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5; *i6 = p6; *i7 = p7; *i8 = p8; *i9 = p9; *i10 = p10; *i11 = p11; *i12 = p12; *i13 = p13; *i14 = p14;
@@ -10650,22 +10655,22 @@ static void libsais_unbwt_decode_16(uint8_t * RESTRICT U, sa_uint_t * RESTRICT P
 
     for (i = 0; i != k; ++i)
     {
-        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; U0[i] = libsais_bswap16(c0);
-        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; U1[i] = libsais_bswap16(c1);
-        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; U2[i] = libsais_bswap16(c2);
-        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; U3[i] = libsais_bswap16(c3);
-        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; U4[i] = libsais_bswap16(c4);
-        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; U5[i] = libsais_bswap16(c5);
-        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; U6[i] = libsais_bswap16(c6);
-        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; U7[i] = libsais_bswap16(c7);
-        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; U8[i] = libsais_bswap16(c8);
-        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; U9[i] = libsais_bswap16(c9);
-        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; U10[i] = libsais_bswap16(c10);
-        uint16_t c11 = fastbits[p11 >> shift]; if (bucket2[c11] <= p11) { do { c11++; } while (bucket2[c11] <= p11); } p11 = P[p11]; U11[i] = libsais_bswap16(c11);
-        uint16_t c12 = fastbits[p12 >> shift]; if (bucket2[c12] <= p12) { do { c12++; } while (bucket2[c12] <= p12); } p12 = P[p12]; U12[i] = libsais_bswap16(c12);
-        uint16_t c13 = fastbits[p13 >> shift]; if (bucket2[c13] <= p13) { do { c13++; } while (bucket2[c13] <= p13); } p13 = P[p13]; U13[i] = libsais_bswap16(c13);
-        uint16_t c14 = fastbits[p14 >> shift]; if (bucket2[c14] <= p14) { do { c14++; } while (bucket2[c14] <= p14); } p14 = P[p14]; U14[i] = libsais_bswap16(c14);
-        uint16_t c15 = fastbits[p15 >> shift]; if (bucket2[c15] <= p15) { do { c15++; } while (bucket2[c15] <= p15); } p15 = P[p15]; U15[i] = libsais_bswap16(c15);
+        uint16_t c0 = fastbits[p0 >> shift]; if (bucket2[c0] <= p0) { do { c0++; } while (bucket2[c0] <= p0); } p0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16(c0));
+        uint16_t c1 = fastbits[p1 >> shift]; if (bucket2[c1] <= p1) { do { c1++; } while (bucket2[c1] <= p1); } p1 = P[p1]; kolmo_st16(&U1[i], libsais_bswap16(c1));
+        uint16_t c2 = fastbits[p2 >> shift]; if (bucket2[c2] <= p2) { do { c2++; } while (bucket2[c2] <= p2); } p2 = P[p2]; kolmo_st16(&U2[i], libsais_bswap16(c2));
+        uint16_t c3 = fastbits[p3 >> shift]; if (bucket2[c3] <= p3) { do { c3++; } while (bucket2[c3] <= p3); } p3 = P[p3]; kolmo_st16(&U3[i], libsais_bswap16(c3));
+        uint16_t c4 = fastbits[p4 >> shift]; if (bucket2[c4] <= p4) { do { c4++; } while (bucket2[c4] <= p4); } p4 = P[p4]; kolmo_st16(&U4[i], libsais_bswap16(c4));
+        uint16_t c5 = fastbits[p5 >> shift]; if (bucket2[c5] <= p5) { do { c5++; } while (bucket2[c5] <= p5); } p5 = P[p5]; kolmo_st16(&U5[i], libsais_bswap16(c5));
+        uint16_t c6 = fastbits[p6 >> shift]; if (bucket2[c6] <= p6) { do { c6++; } while (bucket2[c6] <= p6); } p6 = P[p6]; kolmo_st16(&U6[i], libsais_bswap16(c6));
+        uint16_t c7 = fastbits[p7 >> shift]; if (bucket2[c7] <= p7) { do { c7++; } while (bucket2[c7] <= p7); } p7 = P[p7]; kolmo_st16(&U7[i], libsais_bswap16(c7));
+        uint16_t c8 = fastbits[p8 >> shift]; if (bucket2[c8] <= p8) { do { c8++; } while (bucket2[c8] <= p8); } p8 = P[p8]; kolmo_st16(&U8[i], libsais_bswap16(c8));
+        uint16_t c9 = fastbits[p9 >> shift]; if (bucket2[c9] <= p9) { do { c9++; } while (bucket2[c9] <= p9); } p9 = P[p9]; kolmo_st16(&U9[i], libsais_bswap16(c9));
+        uint16_t c10 = fastbits[p10 >> shift]; if (bucket2[c10] <= p10) { do { c10++; } while (bucket2[c10] <= p10); } p10 = P[p10]; kolmo_st16(&U10[i], libsais_bswap16(c10));
+        uint16_t c11 = fastbits[p11 >> shift]; if (bucket2[c11] <= p11) { do { c11++; } while (bucket2[c11] <= p11); } p11 = P[p11]; kolmo_st16(&U11[i], libsais_bswap16(c11));
+        uint16_t c12 = fastbits[p12 >> shift]; if (bucket2[c12] <= p12) { do { c12++; } while (bucket2[c12] <= p12); } p12 = P[p12]; kolmo_st16(&U12[i], libsais_bswap16(c12));
+        uint16_t c13 = fastbits[p13 >> shift]; if (bucket2[c13] <= p13) { do { c13++; } while (bucket2[c13] <= p13); } p13 = P[p13]; kolmo_st16(&U13[i], libsais_bswap16(c13));
+        uint16_t c14 = fastbits[p14 >> shift]; if (bucket2[c14] <= p14) { do { c14++; } while (bucket2[c14] <= p14); } p14 = P[p14]; kolmo_st16(&U14[i], libsais_bswap16(c14));
+        uint16_t c15 = fastbits[p15 >> shift]; if (bucket2[c15] <= p15) { do { c15++; } while (bucket2[c15] <= p15); } p15 = P[p15]; kolmo_st16(&U15[i], libsais_bswap16(c15));
     }
 
     *i0 = p0; *i1 = p1; *i2 = p2; *i3 = p3; *i4 = p4; *i5 = p5; *i6 = p6; *i7 = p7; *i8 = p8; *i9 = p9; *i10 = p10; *i11 = p11; *i12 = p12; *i13 = p13; *i14 = p14; *i15 = p15;
@@ -11851,7 +11856,7 @@ static void libsais_unbwt_decode_packed_1(uint16_t * RESTRICT U0, const sa_uint_
     fast_uint_t i;
     for (i = 0; i != k; ++i)
     {
-        fast_uint_t q0 = P[p0]; U0[i] = libsais_bswap16((uint16_t)(q0 >> 16)); p0 = q0 & 0xffff;
+        fast_uint_t q0 = P[p0]; kolmo_st16(&U0[i], libsais_bswap16((uint16_t)(q0 >> 16))); p0 = q0 & 0xffff;
     }
 }
 
@@ -11866,18 +11871,18 @@ static void libsais_unbwt_decode_packed_4(uint8_t * RESTRICT U, const sa_uint_t 
     for (i = 0; i != last; ++i)
     {
         fast_uint_t q0 = P[p0], q1 = P[p1], q2 = P[p2], q3 = P[p3];
-        U0[i] = libsais_bswap16((uint16_t)(q0 >> 16)); p0 = q0 & 0xffff;
-        U1[i] = libsais_bswap16((uint16_t)(q1 >> 16)); p1 = q1 & 0xffff;
-        U2[i] = libsais_bswap16((uint16_t)(q2 >> 16)); p2 = q2 & 0xffff;
-        U3[i] = libsais_bswap16((uint16_t)(q3 >> 16)); p3 = q3 & 0xffff;
+        kolmo_st16(&U0[i], libsais_bswap16((uint16_t)(q0 >> 16))); p0 = q0 & 0xffff;
+        kolmo_st16(&U1[i], libsais_bswap16((uint16_t)(q1 >> 16))); p1 = q1 & 0xffff;
+        kolmo_st16(&U2[i], libsais_bswap16((uint16_t)(q2 >> 16))); p2 = q2 & 0xffff;
+        kolmo_st16(&U3[i], libsais_bswap16((uint16_t)(q3 >> 16))); p3 = q3 & 0xffff;
     }
 
     for (; i != k; ++i)
     {
         fast_uint_t q0 = P[p0], q1 = P[p1], q2 = P[p2];
-        U0[i] = libsais_bswap16((uint16_t)(q0 >> 16)); p0 = q0 & 0xffff;
-        U1[i] = libsais_bswap16((uint16_t)(q1 >> 16)); p1 = q1 & 0xffff;
-        U2[i] = libsais_bswap16((uint16_t)(q2 >> 16)); p2 = q2 & 0xffff;
+        kolmo_st16(&U0[i], libsais_bswap16((uint16_t)(q0 >> 16))); p0 = q0 & 0xffff;
+        kolmo_st16(&U1[i], libsais_bswap16((uint16_t)(q1 >> 16))); p1 = q1 & 0xffff;
+        kolmo_st16(&U2[i], libsais_bswap16((uint16_t)(q2 >> 16))); p2 = q2 & 0xffff;
     }
 }
 
@@ -11892,19 +11897,19 @@ static void libsais_unbwt_decode_packed_8(uint8_t * RESTRICT U, const sa_uint_t 
     for (i = 0; i != last; ++i)
     {
         fast_uint_t q0 = P[p0], q1 = P[p1], q2 = P[p2], q3 = P[p3], q4 = P[p4], q5 = P[p5], q6 = P[p6], q7 = P[p7];
-        U0[i] = libsais_bswap16((uint16_t)(q0 >> 16)); p0 = q0 & 0xffff; U1[i] = libsais_bswap16((uint16_t)(q1 >> 16)); p1 = q1 & 0xffff;
-        U2[i] = libsais_bswap16((uint16_t)(q2 >> 16)); p2 = q2 & 0xffff; U3[i] = libsais_bswap16((uint16_t)(q3 >> 16)); p3 = q3 & 0xffff;
-        U4[i] = libsais_bswap16((uint16_t)(q4 >> 16)); p4 = q4 & 0xffff; U5[i] = libsais_bswap16((uint16_t)(q5 >> 16)); p5 = q5 & 0xffff;
-        U6[i] = libsais_bswap16((uint16_t)(q6 >> 16)); p6 = q6 & 0xffff; U7[i] = libsais_bswap16((uint16_t)(q7 >> 16)); p7 = q7 & 0xffff;
+        kolmo_st16(&U0[i], libsais_bswap16((uint16_t)(q0 >> 16))); p0 = q0 & 0xffff; kolmo_st16(&U1[i], libsais_bswap16((uint16_t)(q1 >> 16))); p1 = q1 & 0xffff;
+        kolmo_st16(&U2[i], libsais_bswap16((uint16_t)(q2 >> 16))); p2 = q2 & 0xffff; kolmo_st16(&U3[i], libsais_bswap16((uint16_t)(q3 >> 16))); p3 = q3 & 0xffff;
+        kolmo_st16(&U4[i], libsais_bswap16((uint16_t)(q4 >> 16))); p4 = q4 & 0xffff; kolmo_st16(&U5[i], libsais_bswap16((uint16_t)(q5 >> 16))); p5 = q5 & 0xffff;
+        kolmo_st16(&U6[i], libsais_bswap16((uint16_t)(q6 >> 16))); p6 = q6 & 0xffff; kolmo_st16(&U7[i], libsais_bswap16((uint16_t)(q7 >> 16))); p7 = q7 & 0xffff;
     }
 
     for (; i != k; ++i)
     {
         fast_uint_t q0 = P[p0], q1 = P[p1], q2 = P[p2], q3 = P[p3], q4 = P[p4], q5 = P[p5], q6 = P[p6];
-        U0[i] = libsais_bswap16((uint16_t)(q0 >> 16)); p0 = q0 & 0xffff; U1[i] = libsais_bswap16((uint16_t)(q1 >> 16)); p1 = q1 & 0xffff;
-        U2[i] = libsais_bswap16((uint16_t)(q2 >> 16)); p2 = q2 & 0xffff; U3[i] = libsais_bswap16((uint16_t)(q3 >> 16)); p3 = q3 & 0xffff;
-        U4[i] = libsais_bswap16((uint16_t)(q4 >> 16)); p4 = q4 & 0xffff; U5[i] = libsais_bswap16((uint16_t)(q5 >> 16)); p5 = q5 & 0xffff;
-        U6[i] = libsais_bswap16((uint16_t)(q6 >> 16)); p6 = q6 & 0xffff;
+        kolmo_st16(&U0[i], libsais_bswap16((uint16_t)(q0 >> 16))); p0 = q0 & 0xffff; kolmo_st16(&U1[i], libsais_bswap16((uint16_t)(q1 >> 16))); p1 = q1 & 0xffff;
+        kolmo_st16(&U2[i], libsais_bswap16((uint16_t)(q2 >> 16))); p2 = q2 & 0xffff; kolmo_st16(&U3[i], libsais_bswap16((uint16_t)(q3 >> 16))); p3 = q3 & 0xffff;
+        kolmo_st16(&U4[i], libsais_bswap16((uint16_t)(q4 >> 16))); p4 = q4 & 0xffff; kolmo_st16(&U5[i], libsais_bswap16((uint16_t)(q5 >> 16))); p5 = q5 & 0xffff;
+        kolmo_st16(&U6[i], libsais_bswap16((uint16_t)(q6 >> 16))); p6 = q6 & 0xffff;
     }
 }
 
