@@ -378,3 +378,109 @@ chosen. The other five test files are unchanged.
 Correction: kolmo's table transform (`src/tbl2.inc`) already found `k·a/b`, `k·(a − lag a)` and percentage-change
 formulas. Section 3 and the first rc3 note implied otherwise. What GR6+ adds is the running-total, copy and product
 types, near-hit scoring and the field-level model.
+
+## 9. Three levels of 6-bit encoding, with decision makers (`research/gr6/gr6l3.c`, `l3_research.py`)
+
+**Levels.** Level 1 = letters (fields spelled in 6-bit character codes). Level 2 = whole words and fields (GR6+:
+repeat, column and graph ranks, dictionaries, numbers with predictors and formulas). Level 3 = phrases (runs of ≥ 2
+fields), in two forms:
+* **dictionary phrases:** mined by map-reduce, chosen by a decision policy, and sent in a zstd-compressed dictionary.
+  A use costs one PHRASE op plus a rank in the phrase graph (phrases that followed the same previous field) or an id.
+* **`lzp` phrases, with no dictionary:** the fields that followed the same two previous fields last time are copied.
+  A use costs one op plus the length.
+
+Every decision and value is 6-bit units coded by the same neural context-mixing model. Ratio = original ÷ compressed;
+all runs decoded and compared.
+
+### What each level contributes (single thread)
+
+| file | L1 letters | L1+L2 words | L1+L2+L3 `lzp` (coverage) | L3 dictionary, all candidates |
+|---|---|---|---|---|
+| Apache log | 19.96 | 42.53 | **46.90** (17.4%) | 15.50 |
+| HDFS log | 6.65 | 7.83 | **7.98** (14.7%) | 7.52 |
+| Titanic | **4.03** | 3.90 | 3.96 (7.3%) | 3.16 |
+| Shakespeare | **3.31** | 3.26 | 3.27 (1.2%) | 2.80 |
+| diamonds | 8.51 | **10.22** | 10.21 (3.4%) | 4.97 |
+| COVID | 6.10 | **19.49** | **19.49** (0%) | 13.83 |
+| OWID | 5.58 | **13.59** | 13.58 (1.6%) | 8.69 |
+
+### Should a phrase go in the dictionary? (the deterministic research)
+Ground truth: code each file with `lzp` and log the exact bits spent on every field. For each mined candidate, label =
+the bits its later occurrences cost − 10 bits per use − 3.5 bits per dictionary byte. Train on six files, test on the
+seventh (leave one out), then code with each selection:
+
+| file | `lzp` | all | oracle (true labels) | rule (α tuned) | logistic regression | neural net (8 hidden) |
+|---|---|---|---|---|---|---|
+| Apache log | **46.90** | 15.50 | 46.90 | 46.90 | 46.90 | 46.90 |
+| HDFS log | 7.984 | 7.516 | 8.003 | 7.984 | 7.984 | **8.005** |
+| Titanic | 3.961 | 3.160 | **3.964** | 3.961 | 3.951 | 3.922 |
+| Shakespeare | **3.273** | 2.795 | 3.269 | 3.273 | 3.273 | 3.273 |
+| diamonds | **10.213** | 4.967 | 10.089 | 10.213 | 10.209 | 10.141 |
+| COVID | **19.490** | 13.833 | 19.483 | 19.490 | 19.490 | 19.266 |
+| OWID | **13.577** | 8.686 | 13.572 | 13.577 | 13.577 | 13.577 |
+
+* **A phrase dictionary on top of `lzp` is not worth it.** Even the oracle gains at most 0.25% (HDFS), and it loses on
+  Shakespeare and diamonds, where the labels predicted 11% and 5%. The level-2 model already predicts those words in
+  context, and phrase decisions disturb its contexts; per-phrase accounting cannot see that interaction.
+* The decision makers learned this. The tuned rule (α = 0.05, the smallest tried) and logistic regression keep almost
+  nothing. The neural net keeps a few phrases and is right once (HDFS +0.3%) and wrong twice (COVID −1.2%,
+  diamonds −0.7%).
+* Mining is cheap (0.01–0.9 s), but the dictionary costs more than it saves. Verdict: no dictionary; keep `lzp`, which
+  needs no mining, costs no header, and gains 0.4–10% where repeats are common.
+
+### Decision makers that pay
+1. **Level choice by racing** (deterministic, map-reduce). Letters-only, letters+words and letters+words+phrases each
+   code the same sample (up to 512 KiB) in parallel threads (map); the smallest wins (reduce). Phrases must win by 0.3%
+   to justify their time. It picked the best configuration on **all 7 files** (Apache and HDFS: phrases;
+   Titanic and Shakespeare: letters; tables: words), at a cost of 0.1–0.8 s. Two simpler deciders failed: per-column
+   statistics (distinct ratio ≥ τ → letters) did not reproduce the letters win on Titanic, because the gain comes from
+   unsorted rows overall, not from distinct columns; and a coverage rule cannot tell letters from words.
+2. **Phrase occurrence filter:** skip a phrase whose fields all repeat the line above (already nearly free).
+3. **Block count:** at most one block per MiB. Four blocks cost 11–28% on 0.06–0.3 MB files and 2–4% on 1–15 MB files.
+
+### Single thread vs 4 threads (4-core VM; race on ≤ 512 KiB; MB/s compress / decompress, wall clock)
+
+| file | 1 thread | 4 threads | ratio 1 → 4 threads |
+|---|---|---|---|
+| Apache log | 0.56 / 2.4 | 0.68 / 4.0 (1 block) | 46.89 → 46.89 |
+| HDFS log | 0.67 / 2.3 | 0.74 / 2.5 (1 block) | 7.98 → 7.98 |
+| Titanic | 0.27 / 0.70 | 0.26 / 0.66 (1 block) | 4.03 → 4.03 |
+| Shakespeare | 0.50 / 0.78 | 0.55 / 0.77 (1 block) | 3.31 → 3.31 |
+| diamonds | 1.56 / 2.2 | 2.22 / 3.3 (2 blocks) | 10.22 → 10.14 |
+| COVID | 2.01 / 2.8 | **4.31 / 7.8** | 19.49 → 18.79 |
+| OWID | 1.22 / 1.8 | **3.96 / 6.1** | 13.59 → 13.20 |
+
+Parallel parts:
+* **block coding:** 3.6–4× on 4 cores, at 2–4% ratio cost;
+* **formula search:** map over target columns, reduce = best per column. 4.7 s → 1.1 s on OWID once targets are
+  interleaved across threads; contiguous ranges gave 3.3 s, because later columns have more candidate pairs;
+* **race:** three trials in parallel;
+* **phrase mining:** the map scales 3.7×, but the single-threaded merge then dominates (0.14 → 0.48 s). A partitioned
+  reduce (shuffle keys by hash, one reducer per partition) would fix it; not done, since the dictionary is not used.
+
+For files under 1 MiB, encode time is mostly the race (0.1–0.8 s); a file that small could skip the race and take
+letters+words.
+
+**GPU.** No GPU in this environment, so nothing was measured on one. The parts above that scale on CPU threads are the
+GPU candidates, in order of fit:
+1. formula search (independent column pairs × rows, pure integer arithmetic);
+2. phrase mining (n-gram hashing; sort-and-reduce by key);
+3. the race (independent trial encodes);
+4. block coding (one sequential coder per lane, so a GPU helps only with thousands of blocks, i.e. inputs of GBs).
+
+The model itself (8 table lookups and two 9-input mixers per bit) is latency-bound, so it is a poor GPU fit.
+
+### Against the leaders (single thread, ratio)
+
+| file | GR6-L3 auto | kolmo -x (rc3, with GR6+) | xz -9e |
+|---|---|---|---|
+| Apache log | 46.89 | **52.90** | 25.39 |
+| HDFS log | 7.98 | **9.53** | 6.80 |
+| Titanic | 4.03 | **4.50** | 3.21 |
+| Shakespeare | 3.31 | **4.10** | 3.06 |
+| diamonds | 10.22 | **10.91** | 6.22 |
+| COVID | **19.49** | 19.48 | 8.42 |
+| OWID | **13.59** | 13.52 | 4.83 |
+
+The level-3 phrases and the level decision make GR6 better on logs (+10% Apache, +2% HDFS) and on prose and name
+tables (+1–3%). kolmo `-x` stays ahead on those five files and runs 3–10× slower.
