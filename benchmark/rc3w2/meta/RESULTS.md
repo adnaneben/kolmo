@@ -138,7 +138,28 @@ A tensor file's header shorter than 64 KiB now joins the first tensors (a separa
 boundaries: the 1.2 MB GGUF was +3.47% at `balanced` from that alone), and an image whose header Kolmo reads but
 whose bytes look like text is coded both ways per block (kodim01_odd.bmp was +1.69% at `hc`).
 
-FINALROWS
+| file | mode | input | rc3 base | meta | size | compress s (base → meta) | decompress s (base → meta) |
+|---|---|---:|---:|---:|---:|---|---|
+| bf16.safetensors | balanced | 269,060,552 | 179,452,864 | 179,452,864 | +0.00% | 0.349 → 0.315 | 0.264 → 0.242 |
+| fp16.safetensors | balanced | 166,029,852 | 114,714,481 | 114,687,802 | -0.02% | 1.016 → 0.290 | 0.224 → 0.174 |
+| model.safetensors | balanced | 90,868,376 | 74,649,923 | 74,649,923 | +0.00% | 0.199 → 0.236 | 0.088 → 0.101 |
+| f32small.gguf | balanced | 1,185,376 | 939,237 | 939,237 | +0.00% | 0.042 → 0.027 | 0.008 → 0.006 |
+| q4_0.gguf | balanced | 19,077,344 | 9,026,769 | 9,022,726 | -0.04% | 0.039 → 0.039 | 0.022 → 0.024 |
+| kodim01_odd.bmp | balanced | 1,168,718 | 861,954 | 766,784 | -11.04% | 0.016 → 0.034 | 0.006 → 0.008 |
+| kodim13.ppm | balanced | 1,179,663 | 1,007,568 | 891,889 | -11.48% | 0.017 → 0.026 | 0.007 → 0.008 |
+| kodim01_odd.ppm | balanced | 1,168,170 | 862,757 | 766,767 | -11.13% | 0.021 → 0.036 | 0.007 → 0.008 |
+| kodim13_odd.bmp | balanced | 1,168,718 | 1,007,143 | 889,231 | -11.71% | 0.018 → 0.029 | 0.007 → 0.008 |
+| kodim01_odd.pgm | balanced | 389,400 | 330,520 | 272,128 | -17.67% | 0.011 → 0.014 | 0.004 → 0.005 |
+| bf16.safetensors | hc | 269,060,552 | 179,433,989 | 179,433,989 | +0.00% | 2.081 → 2.166 | 0.480 → 0.381 |
+| fp16.safetensors | hc | 166,029,852 | 114,766,170 | 114,756,041 | -0.01% | 11.161 → 1.031 | 0.278 → 0.255 |
+| model.safetensors | hc | 90,868,376 | 74,417,457 | 74,417,457 | +0.00% | 0.698 → 0.685 | 0.169 → 0.138 |
+| f32small.gguf | hc | 1,185,376 | 868,522 | 868,522 | +0.00% | 0.070 → 0.070 | 0.007 → 0.028 |
+| q4_0.gguf | hc | 19,077,344 | 8,591,209 | 8,588,080 | -0.04% | 3.490 → 1.869 | 0.047 → 0.044 |
+| kodim01_odd.bmp | hc | 1,168,718 | 652,366 | 652,366 | +0.00% | 0.275 → 0.658 | 0.011 → 0.010 |
+| kodim13.ppm | hc | 1,179,663 | 1,012,449 | 790,601 | -21.91% | 0.268 → 0.305 | 0.008 → 0.009 |
+| kodim01_odd.ppm | hc | 1,168,170 | 948,064 | 662,443 | -30.13% | 0.241 → 0.384 | 0.009 → 0.009 |
+| kodim13_odd.bmp | hc | 1,168,718 | 901,942 | 784,167 | -13.06% | 0.219 → 0.312 | 0.011 → 0.010 |
+| kodim01_odd.pgm | hc | 389,400 | 316,966 | 269,694 | -14.91% | 0.063 → 0.072 | 0.005 → 0.005 |
 
 ## Findings
 
@@ -165,8 +186,9 @@ FINALROWS
    entropy, integer arithmetic, + LZ4) keeps blocks with repeats coded. Cost: a 6 KB JPEG that zstd 19 squeezed by 13
    B is now stored (+65 B with the container).
 7. **Tensors (nearly nothing).** Kolmo's float graph already finds bf16/fp16/fp32 element widths and splits the
-   exponent. Measured: a plan per run of one dtype −0.01% to −0.03%; a plan per tensor of 1 MiB or more (−0.06% to
-   −0.28%, but +0.11% on fp16) was 0.035% smaller over 4 files at twice the planning time, so type runs were kept.
+   exponent. Measured (final): checkpoints of one dtype are unchanged (one part after the header joins), the
+   fp16 + uint8 checkpoint −0.02% / −0.01%; a plan per tensor of 1 MiB or more (−0.06% to −0.28%, but +0.11% on
+   fp16) was 0.035% smaller over 4 files at twice the planning time, so type runs were kept.
    Separating the fp16 and uint8 tensors made `hc` 10.7× faster (11.1 s → 1.0 s). The entropy bounds
    (`scripts/ent*.py`) show what a dedicated tensor coder could add: per-tensor order-0 exponent and sign+mantissa
    0.76% below `balanced` on bf16; exponent with a column context −0.3% more; mantissa given the exponent −0.4% more.

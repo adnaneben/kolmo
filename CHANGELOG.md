@@ -21,7 +21,7 @@ the bytes only, never a file name. Frames of other inputs are unchanged (determi
   Matroska, deflated zip members): no analysis, and blocks a probe finds incompressible are stored without running
   the coder: `hc` 16-46× and `max` 50-140× faster to compress on such files, same size.
 - **safetensors / GGUF**: the header and each run of one tensor type are planned apart (`hc` 11.1 s → 1.0 s on a
-  checkpoint mixing fp16 and uint8 tensors; sizes within ±0.05%).
+  checkpoint mixing fp16 and uint8 tensors; sizes within 0.05%, one-dtype files unchanged).
 - `make check-meta`: every parser on 3000 mutations of 18 synthetic files under ASan/UBSan, ARM64 filter bijection,
   frame round trips (part of `check-rc`).
 

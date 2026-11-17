@@ -115,7 +115,7 @@ Measured on held-out files of 10 dataset families, one thread, against zstd at t
 | ARM64 branch filter (plan type 11, tflag 14) | BL / ADRP position-absolute (the XZ ARM64 BCJ mapping) on ARM64 code sections, with each block's page phase in the plan prefix; blocks 4096-aligned | ARM64 ELF −4.9% / −7.7% `balanced`, −6.8% / −8.8% `hc`, −6.8% / −9.5% `max`; without the page phase +0.35% | **in** (rc3 wave 2, version 11) |
 | metadata: AIFF to the audio codec | 16-bit AIFF samples byte-swapped into codec 19 (plan prefix 0, 1) | 8 clips: −17% to −45% (equal to the same audio as WAV) | **in** (rc3 wave 2, version 11) |
 | metadata: archive members (tar ≥ 64 KiB with a known header, nested formats; zip / NPZ stored members) | a part per member, cut by its own format | mixed tar −3.6% / −3.9% / −4.5%; mixed NPZ −24% / −24% / −20% (balanced / hc / max); NPZ of one dtype −0.05% / +0.19% | **in** (rc3 wave 2) |
-| metadata: tensor files (safetensors, GGUF) | header and each run of one tensor type planned apart | ±0.05%; `hc` 11.1 s → 1.0 s on mixed fp16/uint8; a plan per tensor ≥ 1 MiB: 0.035% smaller over 4 files at 2× planning time | **in** (type runs); per tensor dropped |
+| metadata: tensor files (safetensors, GGUF) | header and each run of one tensor type planned apart | one dtype unchanged, fp16 + uint8 −0.02% and `hc` 11.2 s → 1.0 s, GGUF q4_0 −0.04%; a plan per tensor ≥ 1 MiB: 0.035% smaller over 4 files at 2× planning time | **in** (type runs); per tensor dropped |
 | tensor exponent / mantissa coder (per-tensor statistics) | entropy bound only | bf16: order-0 exponent + sign/mantissa per tensor 0.76% below `balanced`; column and exponent contexts about 1% more | research (not built: needs a codec id) |
 
 ## Speed techniques
