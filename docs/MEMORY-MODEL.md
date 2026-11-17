@@ -1,6 +1,7 @@
-# Memory model (proposal for review)
+# Memory model
 
-Status: **proposal**, 16 November 2026. Nothing here is implemented until the owner approves it.
+Status: **approved with the owner's changes of 17 November 2026: the model is dynamic** (section "Dynamic memory",
+below, takes precedence over the static rules where they differ). Being implemented for rc3 (lane `memdyn`).
 
 ## The problem
 
@@ -101,3 +102,58 @@ parallel.
    when the limit is low?
 3. Should the library default (NULL limits) be `auto` (proposed) or unlimited, as today? `auto` is safer for services
    that decode untrusted input.
+
+## Dynamic memory (owner's direction, 17 November 2026)
+
+The owner asked for a dynamic model: use more memory when that makes Kolmo faster and the memory is free; use less when
+the machine gets tight; go back up when memory frees again. This is the right approach, with one rule that makes it
+safe.
+
+### The rule: memory changes speed, never bytes
+
+The compressed output must not depend on how much memory happened to be free. Otherwise the same file compresses to
+different bytes on different machines or at different moments. That would break the determinism check, reproducible
+archives, deduplication, caching by content hash, and trust ("the file I archived yesterday re-encodes identically").
+
+So every decision splits into two classes:
+
+| class | examples | decided by |
+|---|---|---|
+| **format decisions** (change the bytes) | block size, `-x` table bits per block (`bb`), the codec and transform chosen per block, the split into parts (codec 25) | the input, the mode and level, and an explicit `--memlimit` cap only. Fixed before encoding starts; the same on every machine. Never the free memory of the moment. |
+| **execution decisions** (change only speed and peak memory) | threads in flight, how many blocks are coded at once, whether trials run concurrently or one after another, buffer pools, read-ahead, decoder threads | **adapted continuously** to the free memory, as below |
+
+The table sizes of `-x` are a format decision. They follow the block (`--x-tables=scaled` becomes the default, about 16×
+the block, capped by `--memlimit` if given). This makes `-x` both lean and deterministic. Bigger tables would make `-x`
+smaller, not faster; speed comes from concurrency, which is the dynamic part.
+
+### The governor (src/core/memory.c)
+
+- **A budget, sampled continuously.** It is the smaller of:
+  - the user's cap (`--memlimit`, `KOLMO_MEMLIMIT`, the API field; `max` = no cap);
+  - the memory the system reports as available:
+    - macOS: `host_statistics64` free + inactive + purgeable, plus the `DISPATCH_SOURCE_TYPE_MEMORYPRESSURE` events;
+    - Linux: `MemAvailable` from `/proc/meminfo`, the cgroup v2 `memory.max` / `memory.current` and PSI
+      `/proc/pressure/memory`;
+    - elsewhere: physical RAM / 2.
+
+  It is re-read at most every 100 ms and on every pressure event.
+- **Reservations.** Every unit of work, a block job or a trial, reserves its working set before it starts, using its
+  `mem_needed` (the codec table already carries the field). It releases it when done. CM already does this with
+  `cm_acquire`/`cm_release`; the governor generalises it.
+- **Adapting:**
+  - when a reservation does not fit, the job waits, so fewer jobs run at once, down to one;
+  - one job always runs. That is the floor, so a tight machine slows Kolmo down but never stops it;
+  - when memory frees, waiting jobs start again, up to the thread count;
+  - hysteresis: a pressure warning lowers the budget at once, and it only grows again after 1 s without pressure,
+    to avoid oscillation.
+- **Concurrent trials** (xmode's alternative coders, the planner's samples) start only when their reservation fits;
+  otherwise they run after the main coder. The result is the same, it just takes longer.
+- **Decoder.** The same governor sets how many blocks decode at once. A frame that needs more than the cap even for
+  one block fails up front with the figure needed (the static rule 2 above).
+
+### Testing it
+
+- The determinism check runs with forced budgets of 64 MiB, 512 MiB, 4 GiB and unlimited
+  (`KOLMO_MEM_FORCE_BUDGET`); all frames must be identical.
+- A test lowers the budget mid-run and checks that the job count drops and recovers.
+- Peak RSS is measured on the Mac under each budget.
