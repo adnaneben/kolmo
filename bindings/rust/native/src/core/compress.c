@@ -19,6 +19,7 @@ static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int 
     f = output_fd >= 0 ? malloc(tot) : tot <= cap ? dst : NULL;
     if (!f) { free(in); return 0; }
     memset(f, 0, HDR + IDX + 4); memcpy(f, "CZN1", 4); f[4] = 11; f[5] = (uint8_t)q->mode;
+    f[11] = kmem_code(kmem_declared(in[11]) + 2 * (uint64_t)n + tn);   /* the nested frame's figure, the layout and the output */
     put64(f + 12, n); put32(f + 20, 1); put32(f + 24, (uint32_t)n);
     uint8_t *e = f + HDR; put32(e, (uint32_t)n); put32(e + 4, (uint32_t)(4 + z)); put32(e + 8, blk_sum(3, s, n)); e[12] = C_VID;
     f[HDR + IDX] = T_NONE; memcpy(f + HDR + IDX + 4, in, (size_t)z); free(in);
@@ -66,6 +67,11 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
     uint32_t B = p->block ? p->block : (p->mode >= KOLMO_MAX ? (128u << 20) : p->mode >= KOLMO_ECO ? (16u << 20) : kolmo_fast_block(n));   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
     if (B < 4096) B = 4096;
     int codec, level; mode_codec(p, &codec, &level);
+    /* memory (docs/MEMORY-MODEL.md): the governor's limit, and the explicit cap, the only memory figure that may shape
+     * the output (blocks of ratio and -x, the -x tables), so that it decodes within the same limit */
+    const uint64_t xcap = p->mem_limit && p->mem_limit != KOLMO_MEM_MAX ? p->mem_limit : 0, memcap = kmem_limit_of(p->mem_limit);
+    if (xcap && xcap < kmem_floor(p->mode)) return KOLMO_ERR_MEMORY;
+    if (!p->block) B = kmem_block_for_cap(p->mode, codec, level, B, xcap);
     enum { MAXSEG = 4096 };
     int64_t ret = KOLMO_ERR_ALLOC; size_t w = 0;
     uint8_t *file_index = NULL;
@@ -97,7 +103,7 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
     plan_job planning = {src, ss, se, plans, p, nseg, nseg > 1 ? 1 : threads,
                          p->transforms && p->mode == KOLMO_FAST && !p->level && !dict && !prof,
                          nseg > 1 && p->transforms && p->mode == KOLMO_FAST ? input_fd : -1, native_leaf};
-    planning.prof = prof;
+    planning.prof = prof; planning.xcap = xcap;
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
     if (columns) for (uint32_t g = 0; g < nseg; g++) plans[g].lines = 1;   /* queryable archives: line-aligned blocks */
@@ -159,6 +165,7 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
     if (!J.out || !J.outlen) goto cleanup;
     J.psum = p->mode == KOLMO_RT;
     J.dict = dict; J.dictlen = dictlen; J.prof = prof;
+    J.memcap = memcap; J.xcap = xcap; J.cm_leaves = codec == C_CM && level == 2; atomic_init(&J.dneed, 0);
     J.dst = dst; J.cap = cap; J.wnext = 0; J.wpos = HDR + (size_t)nb * IDX; J.werr = 0;
     if (pthread_mutex_init(&J.wmu, NULL)) goto cleanup;
     mutex_ready = 1;
@@ -189,7 +196,8 @@ cleanup:
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }
-    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 128) ? 11 : (nm & 64) ? 10 : (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum; dst[11] = 0;
+    { int nm = atomic_load_explicit(&J.newmodes, memory_order_relaxed); memcpy(dst, "CZN1", 4); dst[4] = (nm & 128) ? 11 : (nm & 64) ? 10 : (nm & 32) ? 9 : (nm & 16) ? 8 : (nm & 8) ? 7 : (nm & 4) ? 6 : (nm & 2) ? 5 : (nm & 1) ? 4 : 3; } dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum;
+    dst[11] = kmem_code(atomic_load(&J.dneed) ? atomic_load(&J.dneed) : blk_dec_floor(maxb));   /* decode working set per block */
     if (dict) { dst[10] |= 2; put32(dst + 6, dictid); }   /* flag bit1 = zstd dictionary; dst[6..9] = dict id for validation */
     else if (prof) { dst[10] |= 4; put32(dst + 6, kp_id(prof)); if (dst[4] < 11) dst[4] = 11; }   /* flag bit 2 = trained profile, its id */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);

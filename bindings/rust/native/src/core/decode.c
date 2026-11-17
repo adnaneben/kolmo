@@ -1,6 +1,7 @@
 /* The decoder: header and index parsing, block decoding on the pool. */
 /* ------------------------------------------------------------------ decoding */
-typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict, needprof; uint32_t dictid, profid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff; } parsed_t;
+typedef struct { uint64_t orig; uint32_t nb; int ver, psum, needdict, needprof; uint32_t dictid, profid; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff;
+                 uint64_t memd; int mode; } parsed_t;   /* memd: the decode working set per block the header declares (0: none) */
 
 static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_limits *limits) {
     if (n >= 4 && !memcmp(s, "CZC1", 4)) return KOLMO_ERR_PROFILE;   /* compact profile frame: kolmo_decompress_profile */
@@ -9,7 +10,7 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_lim
     P->needdict = P->ver >= 3 && (s[10] & 2); P->dictid = P->needdict ? get32(s + 6) : 0;
     P->needprof = P->ver >= 11 && (s[10] & 4); P->profid = P->needprof ? get32(s + 6) : 0;
     if (P->needdict && P->needprof) return KOLMO_ERR_CORRUPT;
-    P->orig = get64(s + 12); P->nb = get32(s + 20);
+    P->orig = get64(s + 12); P->nb = get32(s + 20); P->memd = kmem_declared(s[11]); P->mode = s[5];
     if (limits && ((limits->max_output_bytes && P->orig > limits->max_output_bytes) ||
                    (limits->max_blocks && P->nb > limits->max_blocks))) return KOLMO_ERR_LIMIT;
     P->pl = (plan_t){s[6], s[7], s[8], s[9]};
@@ -30,6 +31,10 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_lim
         if (po > n || cl > n - po || ro > P->orig || raw > P->orig - ro) {
             free(P->poff); free(P->roff); return KOLMO_ERR_CORRUPT;
         }
+        /* a stored block is its bytes (after the plan prefix): its size cannot claim more than the frame holds */
+        if (P->idx[(size_t)i * IDX + 12] == C_STORE && (uint64_t)raw + (P->ver >= 2 ? 4 : 0) != cl) {
+            free(P->poff); free(P->roff); return KOLMO_ERR_CORRUPT;
+        }
         po += cl; ro += raw;
     }
     P->poff[P->nb] = po; P->roff[P->nb] = ro;
@@ -39,7 +44,24 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_lim
 
 typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
                  int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen;
-                 const struct kolmo_profile *prof; } djob_t;
+                 const struct kolmo_profile *prof;
+                 uint64_t memcap; } djob_t;   /* memcap: the call's limit (the governor's cap; old frames' blocks are checked against it) */
+
+/* Rule 1 (docs/MEMORY-MODEL.md): a block's working set, from its index entry and the head of its payload, checked
+ * against what the frame declares before the block allocates anything. Returns the bytes to reserve, or an error. */
+static int64_t blk_dec_admit(const parsed_t *P, uint32_t i, const uint8_t *pay, uint64_t memcap) {
+    const uint8_t *e = P->idx + (size_t)i * IDX; size_t raw = get32(e), cl = (size_t)(P->poff[i + 1] - P->poff[i]);
+    int codec = e[12], tflag = e[13];
+    uint64_t need = codec == C_STORE ? blk_dec_floor(raw) : blk_dec_need(codec, tflag, raw, pay, cl, P->ver, 0);
+    if (!need) return KOLMO_ERR_CORRUPT;                       /* a context-mixing header that no encoder writes */
+    if (P->memd) {
+        if (need > P->memd) return KOLMO_ERR_CORRUPT;          /* more than the frame declares: forged or damaged */
+        if (codec == C_GRAPH && P->mode == KOLMO_ULTRA) {       /* leaves may be context mixing (ultra level 2) */
+            uint64_t w = blk_dec_need(codec, tflag, raw, pay, cl, P->ver, 1); need = w < P->memd ? w : P->memd;
+        }
+    } else if (need > memcap) return KOLMO_ERR_MEMORY;           /* a frame from before rc3: no declaration to hold it to */
+    return (int64_t)need;
+}
 
 static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, const uint8_t *pay, uint8_t *tbuf, uint8_t *out) {
     const parsed_t *P = J->P; const uint8_t *e = P->idx + (size_t)i * IDX;
@@ -193,6 +215,8 @@ static void *decompress_worker(void *arg) {
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
     xp->prof = J->prof;
     xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
+    /* a context-mixing model larger than the frame declares (or, undeclared, than the limit) is refused unallocated */
+    kmem_tls_dec_limit = J->P->memd ? J->P->memd : J->memcap == KMEM_UNLIMITED ? 0 : J->memcap;
     for (;;) {
         uint32_t i = J->lo + atomic_fetch_add(&J->next, 1); if (i >= J->hi) break;
         if (atomic_load(&J->err)) break;
@@ -203,6 +227,11 @@ static void *decompress_worker(void *arg) {
             if (read_block(J->input_fd, packed, bytes, J->P->poff[i])) { atomic_store(&J->err, KOLMO_ERR_IO); break; }
             payload = packed;
         } else payload = J->src + J->P->poff[i];
+        /* the governor: this block's working set is reserved before it decodes (fewer blocks at once when memory is
+         * short, one always); a figure above the frame's declaration is refused */
+        int64_t need = blk_dec_admit(J->P, i, payload, J->memcap);
+        if (need < 0) { atomic_store(&J->err, (int)need); break; }
+        kmem_reserve((uint64_t)need, J->memcap); kmem_tls_job = 1;
         if (!rbuf) r = decode_block(J, i, xp, S, payload, tbuf, J->dst + J->P->roff[i]);
         else {                                               /* range read: decode block, copy the overlap */
             r = decode_block(J, i, xp, S, payload, tbuf, rbuf);
@@ -214,8 +243,10 @@ static void *decompress_worker(void *arg) {
                 memcpy(J->dst + (a - J->clip_lo), rbuf + (a - b0), z - a);
             }
         }
+        kmem_tls_job = 0; kmem_release((uint64_t)need);
         if (r) atomic_store(&J->err, r);
     }
+    kmem_tls_dec_limit = 0;
     free(packed);
     tls_end(S);
     return NULL;
@@ -223,6 +254,15 @@ static void *decompress_worker(void *arg) {
 
 static int64_t run_decode_p(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
                             const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits, const struct kolmo_profile *prof);
+/* Rules 1 and 2 (docs/MEMORY-MODEL.md), before anything is allocated: the index must agree with what the header
+ * declares (no block's buffers above the declared figure), and the declared figure (or, for a frame from before rc3,
+ * the largest block's buffers) must fit the limit. 0, KOLMO_ERR_CORRUPT or KOLMO_ERR_MEMORY. */
+static int frame_admit(const parsed_t *P, uint64_t maxraw, uint64_t memcap) {
+    uint64_t floor = blk_dec_floor(maxraw);
+    if (P->memd && floor > P->memd) return KOLMO_ERR_CORRUPT;
+    if ((P->memd ? P->memd : floor) > memcap) return KOLMO_ERR_MEMORY;
+    return 0;
+}
 static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
                           const void *dict, size_t dictlen, uint32_t dictid, const kolmo_decode_limits *limits);
 /* the single codec-20 block of a frame: the payload's plan bytes are 0, the rest is a Kolmo frame of the kvid layout */
@@ -273,6 +313,11 @@ static int64_t run_decode_p(const uint8_t *src, int input_fd, size_t n, uint8_t 
         if (raw > J.maxraw) J.maxraw = raw;
         if (stored > J.maxcompressed) J.maxcompressed = stored;
     }
+    /* Rule 1 and 2 (docs/MEMORY-MODEL.md), before anything is allocated: the index must agree with what the header
+     * declares, and the declared figure must fit the limit, or the call stops with KOLMO_ERR_MEMORY and
+     * kolmo_decode_memory gives the figure. Within it, the governor sets how many blocks decode at once. */
+    J.memcap = kmem_limit_of(limits ? limits->max_memory : 0);
+    { int a = frame_admit(&P, J.maxraw, J.memcap); if (a) { free(P.poff); free(P.roff); return a; } }
     if (range) {
         uint32_t a = 0, b = P.nb;
         while (a < P.nb && P.roff[a + 1] <= lo) a++;

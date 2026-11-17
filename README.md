@@ -113,8 +113,20 @@ Advanced settings, for tuning between the three:
 | `max` | 128 MiB | BWT for text; LZMA2 otherwise, or BWT where it is at least 3% smaller (`-l 1`: BWT only) | cold archive |
 | `ultra` | 128 MiB | best of context mixing (with an image model for 8-bit images), LZMA2, BWT (`-l 1`: context mixing model 1 only, faster; `-l 2`: maximum ratio, numeric graph leaves may also use context mixing, slower decode) | coldest archive, best ratio |
 
-`ultra` sizes its context-mixing tables to the block (up to about 4.5 GB per thread for blocks of 4 MiB and more, in
-both directions; 3.8 GB with `-l 1`). On Linux the tables use transparent huge pages. Parallel blocks share a budget of 60% of physical memory and wait rather than swap.
+`ultra` sizes its context-mixing tables to the block: about 16 times the block (a 10 MB file decodes in about 200 MiB;
+`--x-tables=full` restores rc2's tables of up to 5.4 GiB, slightly smaller on text). On Linux the tables use transparent
+huge pages.
+
+### Memory
+
+`-M SIZE` / `--memlimit SIZE` (or `KOLMO_MEMLIMIT`) sets one limit for compressing and decompressing: `512M`, `8G`,
+`50%` of RAM, `auto` (the default: 50% of RAM, or of the container's limit) or `max`. Kolmo adapts how much runs at once
+to the memory that is actually free (it waits instead of swapping, and speeds up again when memory frees), but **the
+output never depends on it**: the same input and settings give the same bytes on every machine. Only an explicit size
+changes the output, so that it decodes within that size: `ratio` and `-x` then use smaller blocks and `-x` smaller
+tables. Every file declares what it needs to decode; a decoder with less stops before allocating anything, with the
+figure (`needs 4.7 GiB to decode (limit 2.0 GiB); run with --memlimit 5G or --memlimit max`). Floors: speed and
+balanced 64 MiB, eco and hc 256 MiB, ratio 1 GiB, `-x` 256 MiB. Details: `docs/MEMORY-MODEL.md`.
 
 ### Columnar decode (tables)
 
@@ -198,10 +210,10 @@ input, output buffers, other codecs and worker count.
 ### Decoder limits
 
 C callers can use `kolmo_decompress_limited` with a `kolmo_decode_limits` structure to bound the
-original size, raw block size and block count of a frame. Each zero field disables that limit;
-exceeding a limit returns `KOLMO_ERR_LIMIT`. These are format-size limits, not a cap on total heap
-memory: an `ultra` block can still require gigabytes of context-mixing state. Existing decode
-functions keep their current behavior.
+original size, raw block size and block count of a frame (each zero field disables that limit; exceeding one returns
+`KOLMO_ERR_LIMIT`) and the memory (`max_memory`: 0 = auto, `KOLMO_MEM_MAX` = none; a frame that declares more returns
+`KOLMO_ERR_MEMORY` before anything is allocated, `kolmo_decode_memory` gives its figure). `kolmo_check_frame` runs the
+same checks before the caller allocates the output buffer. Calls without limits use auto.
 
 ## Install
 
@@ -231,7 +243,7 @@ with plain `kolmo`.
 ```bash
 make                                    # build/kolmo, build/kolmobench, build/kolmotest (Linux, macOS; gcc or clang)
 make check                             # resource failures, concurrent callers, round trips, ranges and corruption
-./build/kolmo -m ratio in.csv out.kolmo     # compress: -m speed|balanced|ratio (-x: smallest of all), -T threads; advanced: -m rt|fast|eco|hc|max|ultra, -l level, -q
+./build/kolmo -m ratio in.csv out.kolmo     # compress: -m speed|balanced|ratio (-x: smallest of all), -T threads, -M memlimit; advanced: -m rt|fast|eco|hc|max|ultra, -l level, -q
 ./build/kolmo -d out.kolmo back.csv         # decompress (auto-detects one-shot vs streamed input)
 ./build/kolmo -s huge.csv huge.czs        # streaming compress: bounded memory, any size (-S N for N-MiB segments)
 ./build/kolmo -r 1000000:4096 out.kolmo x   # read 4 KiB at offset 1,000,000 without decoding the rest

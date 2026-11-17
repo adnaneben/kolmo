@@ -77,7 +77,15 @@ typedef struct {
     const void *dict; size_t dictlen;   /* optional zstd dictionary, read-only by workers */
     int aud_prof, aud_ch; uint64_t aud_off, aud_end;   /* format 2: 16-bit PCM WAV (kaud profile, channels, sample bytes [off, end)); aud_prof < 0: none */
     const struct kolmo_profile *prof;   /* optional trained profile, read-only by workers */
+    uint64_t memcap;        /* the call's limit for the governor (explicit, auto or unlimited) */
+    uint64_t xcap;          /* the explicit cap only (0: none): the one memory figure format decisions may read */
+    _Atomic uint64_t dneed; /* the largest block decode figure (blk_dec_need), declared in header byte 11 */
+    int cm_leaves;          /* ultra level 2: graph leaves may be context mixing */
 } job_t;
+static void job_note_need(job_t *j, uint64_t v) {
+    uint64_t cur = atomic_load_explicit(&j->dneed, memory_order_relaxed);
+    while (v > cur && !atomic_compare_exchange_weak_explicit(&j->dneed, &cur, v, memory_order_relaxed, memory_order_relaxed)) {}
+}
 static void append_bytes(job_t *j, const uint8_t *bytes, size_t size) {
     if (j->werr) return;
     if (size > j->cap - j->wpos) { j->werr = KOLMO_ERR_DSTSIZE; return; }
@@ -128,6 +136,7 @@ static void *compress_worker(void *arg) {
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
     if (!tbuf || !slot || (J->input_fd >= 0 && !input)) { free(input); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
+    uint64_t held = 0;
     for (;;) {
 #ifdef KOLMO_GPU
         uint32_t nx = atomic_load(&J->next);
@@ -136,6 +145,11 @@ static void *compress_worker(void *arg) {
         uint32_t i = atomic_fetch_add(&J->next, 1); if (i >= J->nb) break;
         const plan_t pl = J->plans[J->bplan[i]]; const uint64_t rs = J->rstart[i];
         size_t len = J->starts[i + 1] - J->starts[i];
+        /* the governor: this block's working set is reserved before it starts (it waits when memory is short; one
+         * block always runs). Changes when blocks run, never what they write. */
+        const uint64_t resv = kmem_enc_block(J->codec, J->level, len, J->slot);
+        kmem_reserve(resv, J->memcap); held = resv;
+        kmem_tls_job = 1; kmem_tls_cap = J->xcap; kmem_tls_raw = len;
         const uint8_t *raw;
         if (input) {
             if (read_block(J->input_fd, input, len, J->starts[i])) { atomic_store(&J->err, KOLMO_ERR_IO); break; }
@@ -520,7 +534,12 @@ coded:;
                                                    : (uint32_t)kolmo_xxh3(slot + 4, tot - 4, 0x637a6e31u ^ get32(slot)));
         else put32(e + 8, blk_sum(3, raw, len));
         e[12] = (uint8_t)codec; e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
+        /* what decoding this block will need, from the payload as written (the frame declares the largest) */
+        job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec, tflag, len, slot, tot, 11, J->cm_leaves));
+        kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0;
+        kmem_release(resv); held = 0;
     }
+    if (held) { kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0; kmem_release(held); }   /* left the loop on an error */
     free(input);
     tls_end(S);
     return NULL;

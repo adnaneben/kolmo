@@ -94,6 +94,7 @@ int kolmo_force_c;
 #include "plan/planner.c"
 #include "core/io.c"
 #include "transforms/table_cols.c"   /* column-split table blocks (flag 13), the column reader of IDX1 queries */
+#include "core/memneed.c"           /* working-set estimates: frame declaration, reservations (docs/MEMORY-MODEL.md) */
 #include "core/trials.c"
 #include "core/blocks.c"
 #include "transforms/tar.c"

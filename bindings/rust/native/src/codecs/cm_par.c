@@ -15,6 +15,7 @@ enum { CMP_MAXPARTS = 256 };
 #define CMP_SPLIT_MIN ((size_t)32 << 20)   /* single streams from 32 MiB are coded as two halves (not text) */
 #endif
 static size_t cmp_putv(uint8_t *p, uint64_t v) { size_t k = 0; while (v >= 128) { p[k++] = (uint8_t)(v | 128); v >>= 7; } p[k++] = (uint8_t)v; return k; }
+static uint64_t cmp_need(const uint8_t *in, size_t cn, size_t n);
 static int cmp_getv(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
     uint64_t r = 0; int s = 0;
     while (*i < n && s < 64) { uint8_t b = p[(*i)++]; r |= (uint64_t)(b & 127) << s; if (!(b & 128)) { *v = r; return 0; } s += 7; }
@@ -39,11 +40,23 @@ static void *cmp_worker(void *a) {
     }
     return NULL;
 }
-static void cmp_run(cmp_job *j, int threads) {
+/* Extra threads are optional work: each starts only when the governor grants it the largest part's working set (unit),
+ * so under memory pressure the parts run on fewer threads, with the same result. The calling thread always runs. */
+typedef struct { cmp_job *j; kmem_ctx ctx; uint64_t unit; } cmp_helper_arg;
+static void *cmp_helper(void *a) {      /* releases its own reservation when done: the caller may be waiting for it */
+    cmp_helper_arg *h = a; kmem_ctx_set(h->ctx); kmem_tls_job = 1;
+    cmp_worker(h->j);
+    kmem_tls_job = 0; kmem_release(h->unit); return NULL;
+}
+static void cmp_run(cmp_job *j, int threads, uint64_t unit) {
     if (threads > j->np) threads = j->np;
     if (threads > 64) threads = 64;
-    pthread_t th[64]; int started = 0;
-    for (int t = 1; t < threads; t++) { if (pthread_create(&th[started], NULL, cmp_worker, j)) break; started++; }
+    pthread_t th[64]; int started = 0; cmp_helper_arg h = {j, kmem_ctx_get(), unit};
+    for (int t = 1; t < threads; t++) {
+        if (!kmem_try_reserve(unit, h.ctx.cap)) break;
+        if (pthread_create(&th[started], NULL, cmp_helper, &h)) { kmem_release(unit); break; }
+        started++;
+    }
     cmp_worker(j);
     for (int t = 0; t < started; t++) pthread_join(th[t], NULL);
 }
@@ -56,7 +69,8 @@ static size_t cmp_compress_cap(const uint8_t *in, size_t n, const size_t *parts,
     if (o != n) return 0;
     cmp_job j = {in, NULL, parts, rawo, NULL, NULL, res, buf, np, model, 0, bbcap};
     atomic_init(&j.next, 0); atomic_init(&j.err, 0);
-    cmp_run(&j, threads);
+    size_t big = 0; for (int k = 0; k < np; k++) if (parts[k] > big) big = parts[k];
+    cmp_run(&j, threads, cm_need_bound(big) + 2 * (uint64_t)big + cm_bound(big));
     size_t w = 0, tot = 1 + 10;
     for (int k = 0; k < np; k++) tot += 20 + res[k];
     if (!atomic_load(&j.err) && tot <= cap) {
@@ -85,10 +99,28 @@ static int cmp_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n, 
     if (i != cn) return -1;
     cmp_job j = {in, out, rawn, rawo, cl, co, NULL, NULL, (int)np, 0, 1, 0};
     atomic_init(&j.next, 0); atomic_init(&j.err, 0);
-    cmp_run(&j, threads > 0 ? threads : 1);
+    cmp_run(&j, threads > 0 ? threads : 1, cmp_need(in, cn, n));
     return atomic_load(&j.err) ? -1 : 0;
 }
 
+/* the largest part's decode working set (each part is a unit of work of its own); 0 when the payload is not valid */
+static uint64_t cmp_need(const uint8_t *in, size_t cn, size_t n) {
+    size_t i = 1, ro = 0, cl[CMP_MAXPARTS], rn[CMP_MAXPARTS]; uint64_t np, v, best = 0;
+    if (cn < 2 || in[0] != 0 || cmp_getv(in, cn, &i, &np) || np < 1 || np > CMP_MAXPARTS) return 0;
+    for (uint64_t k = 0; k < np; k++) {
+        if (cmp_getv(in, cn, &i, &v) || !v || v > n - ro) return 0;
+        rn[k] = (size_t)v; ro += (size_t)v;
+        if (cmp_getv(in, cn, &i, &v) || v > cn) return 0;
+        cl[k] = (size_t)v;
+    }
+    for (uint64_t k = 0; k < np; k++) {
+        if (cl[k] > cn - i) return 0;
+        uint64_t u = cm_stream_need(in + i, cl[k], rn[k]); if (!u) return 0;
+        if (u > best) best = u;
+        i += cl[k];
+    }
+    return best;
+}
 /* codec 25 table: written at block level (core/blocks.c chooses the parts); decoded with the block's threads */
 static size_t cmp_bound(size_t n) { return n + n / 16 + 64 + 24 * CMP_MAXPARTS; }
 static int cmp_codec_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return cmp_decompress(in, cn, out, n, x->threads); }
