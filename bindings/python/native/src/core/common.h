@@ -11,7 +11,7 @@
 #include "../experimental/frontier_shuffle.h"
 #define KOLMO_MAX_VERSION 11
 #else
-#define KOLMO_MAX_VERSION 11  /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16); 11: table blocks (flag 4) larger than the block plus TSLACK, up to TBL_SLACK */
+#define KOLMO_MAX_VERSION 11  /* 6: minified JSON split (log plan flag 10); 7: kolmo graph blocks; 8: line classes (flag 12); 9: native plane-context graph leaves (codec 15); 10: FASTQ family blocks (codec 16); 11: table blocks (flag 4) larger than the block plus TSLACK, up to TBL_SLACK; GR6+ blocks (codec 26) */
 #endif
 #include <pthread.h>
 #include <stdatomic.h>

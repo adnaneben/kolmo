@@ -378,6 +378,15 @@ static void *compress_worker(void *arg) {
                     }
                     if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
                 }
+                /* GR6+ (codec 26: fields as decisions, column predictors and formulas, CM over 6-bit units) on the
+                 * plain block, kept when smaller than the best so far (codecs/gr6.c; benchmark/rc3/gr6/RESULTS.md) */
+                if (gr6_applies(raw, len)) {
+                    size_t g = codec_compress(xp, C_GR6, level, raw, len, alt, J->slot);
+                    if (g && (!cl || g < cl + meta)) {
+                        memcpy(sl, alt, g); cl = g; codec = C_GR6; in = raw; inlen = len; tflag = 0; meta = 0; modes = 128;
+                        slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
+                    }
+                }
             }
         }
 coded:;

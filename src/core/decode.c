@@ -58,7 +58,13 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
-    if (codec == C_GRAPH || pl.t == T_KG) {                     /* kolmo graph block (version 7) */
+    if (codec == C_GR6) {                                       /* GR6+ block (version 11) */
+        if (P->ver < 11 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
+        int r = gr6_decompress(pay, cl, out, len); if (r) return r;
+        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        return 0;
+    }
+    if (codec == C_GRAPH || pl.t == T_KG) {                    /* kolmo graph block (version 7) */
         if (codec != C_GRAPH || pl.t != T_KG || tflag || P->ver < 7) return KOLMO_ERR_CORRUPT;
         x->allow_nplane = P->ver >= 9;
         int r = kg_decode(x, pay, cl, out, len); x->allow_nplane = 0; if (r) return KOLMO_ERR_CORRUPT;
