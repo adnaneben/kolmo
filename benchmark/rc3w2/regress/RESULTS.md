@@ -152,7 +152,12 @@ GR6+ costs a formula search, O(columns² × 10) candidates per target column, th
 Every frame decoded to its input. The first rows ran while variant builds shared the machine: covid's 44.5 s is high
 (GR6+ is still tried there; nothing changed for it), the others alternate base and new within a minute of each other.
 
-RESULTS_XTEXT
+**`-x` on the text group after the gate.** The M5 run found `-x` about 9% slower than rc2 on dickens, nci and webster,
+all of it GR6+ trying and losing. All three now fail the table gate (separator space, field counts that vary from
+line to line), so `-x` does exactly what it did before GR6+ was added: same frames, and dickens compresses in 81.3 s
+instead of 91.1 s here (−11%; GR6+ alone takes 8.3 s on it). nci and webster were not re-timed with `-x` on this VM
+(minutes per run); their frames cannot change (GR6+ was never chosen on them) and the time GR6+ took on them is now
+skipped. The integration lane's M5 run will show the time.
 
 ## 3. Video (codec 20): frames on all threads
 
@@ -265,7 +270,23 @@ define if the owner prefers decode speed there. `ratio` frames are unchanged.
 
 ## Tests
 
-RESULTS_TESTS
+All on this VM, on the final tree:
+
+| target | result |
+|---|---|
+| `make check` | ALL PASSED (with the new GR6+ gate checks in `kolmotest`: the derived-column table is tried, prose and a 120-column table are not) |
+| `make check-rc` | passed (with `check-format2`: the video layout gives the same bytes on 1-8 threads, the wavefront inverse decodes on 1-8 threads, and a bad predictor byte in frames 0, 3, 11, 16, 22 and 29 fails the inverse on 1 and 4 threads without hanging; also under ASan/UBSan) |
+| `make check-sanitizers` | passed |
+| `make experimental-check GPU_CHECK=` | passed |
+| `make kfam-check` | passed |
+| `python3 benchmark/determinism/check.py build/kolmo build/determinism` | 122 frames checked, OK, unchanged |
+
+The determinism set is unchanged: its seeded inputs do not reach the `balanced` choices that changed (none of their
+leaves is a large DEC64 leaf, and its small integer leaves keep their codecs), video and `-x` frames are byte-identical
+by construction, and `ratio` is unchanged with static QLFC off. So `expected.sha256` was not regenerated. Frames that
+do change (on purpose): `balanced` on `owid_energy.pkl`, `owid_energy_f64.npy`, `wide_test.csv`, `population.i64` and
+`population_i64.npy` of this lane's set (sizes in section 1). The zero-run split was also checked against the old split
+on 20,000 random streams.
 
 ## Commands
 
