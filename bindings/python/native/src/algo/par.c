@@ -114,7 +114,12 @@ static void *crew_main(void *p) {
         if (c->quit) return NULL;
         seen = g;
         if (id < c->n) c->fn(c->ctx, id, c->n, &c->team);
-        if (atomic_fetch_add_explicit(&c->done, 1, memory_order_acq_rel) == c->size - 2 && atomic_load(&c->sleepers)) {
+        /* the last worker always signals under the mutex. Testing `sleepers` first (without the mutex) lost wakeups: the
+         * caller's store to sleepers and its load of done, and this increment and load, are not all sequentially
+         * consistent, so on a weakly ordered CPU both sides could miss each other and the caller slept forever (seen
+         * on Apple M5 under load: 9 of 20 test-bwt runs hung). Under the mutex, the caller either sees the final count
+         * before it waits or is woken by this signal. */
+        if (atomic_fetch_add_explicit(&c->done, 1, memory_order_acq_rel) == c->size - 2) {
             pthread_mutex_lock(&c->m); pthread_cond_signal(&c->done_cv); pthread_mutex_unlock(&c->m);
         }
     }
