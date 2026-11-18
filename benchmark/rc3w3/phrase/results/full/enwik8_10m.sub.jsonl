@@ -1,0 +1,5 @@
+{"file":"enwik8_10m","n":10000000,"variant":"cm","size":2105218,"enc_s":55.393,"dec_s":50.587}
+{"file":"enwik8_10m","n":10000000,"variant":"word+cm","tn":7076475,"size":2156669,"enc_s":28.293,"dec_s":30.475}
+{"file":"enwik8_10m","n":10000000,"variant":"cmx-null","size":2103283,"enc_s":67.088}
+{"file":"enwik8_10m","n":10000000,"variant":"cmx-dict","size":2100263,"body":2100051,"dict_cm":212,"nphr":30,"enc_s":56.159}
+{"file":"enwik8_10m","n":10000000,"variant":"phrase+cm","tn":8669074,"dict":222,"nphr":30,"singles":28,"prefixes":28,"coded":554184,"lit":8109185,"esc":0,"size":2165812,"dict_cm":212,"build_s":4.648,"tenc_s":0.095,"tdec_s":0.024,"enc_s":31.323,"dec_s":38.423,"opts":"sample=8M minc=4 maxl=64 rounds=64 per=512 minuse=3 minlen=2 maxtok=0 singles=-1 order=0 words_only=0 bytes=0 maxcodes=0"}
