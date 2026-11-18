@@ -7,8 +7,8 @@
  * header (codec_wire); the frame is then version 11. Dictionaries and trained profiles keep the library coders.
  *   lz:   LZ4 -> KLZ (28), LZ4-HC -> KLZ level 3, zstd -> KLZH (29), Brotli -> KLZH level 7
  *   huf:  zstd's HUF in the graph leaves (codec 13) -> khuf (27), and Huffman then zstd (22) -> khuf then zstd (30).
- *         The default since wave 4 (benchmark/w4/entropy/RESULTS.md): khuf decodes Kolmo's leaves 1.9x faster than
- *         HUF at a smaller size. KOLMO_NATIVE=libhuf writes zstd's HUF (13, 22) again, for comparisons.
+ *         The default since wave 4 (benchmark/w4/entropy/RESULTS.md): khuf is smaller than HUF and decodes 1.01-1.76x
+ *         as fast. KOLMO_NATIVE=libhuf writes zstd's HUF (13, 22) again, for comparisons.
  *   lzma: raw LZMA2 (codec 6) -> KLZMA (24)
  *   strong: zstd and Brotli -> KLZMA (the optimal parse and range coder, at a slower decode): the candidate for `hc`
  *           and `eco` (zstd levels 19 and 22 -> KLZMA 6, levels 10-18 -> 5, lower levels and Brotli -> 3). The id

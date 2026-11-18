@@ -68,13 +68,35 @@ static void check_khuf4(void) {
     }
     free(in); free(oa); free(ob);
 }
+/* the one-symbol loop: random 2-byte entries (length 1..W | symbol << 8) */
+void kolmo_khuf_dec1_x86_64(kolmo_khuf_st4 *st, size_t R, const uint16_t *d1, int W);
+static void check_khuf1(void) {
+    static uint16_t d1[4096]; uint8_t *in = malloc(1 << 16), *oa = malloc(1 << 16), *ob = malloc(1 << 16);
+    for (int it = 0; it < 4000; it++) {
+        int W = 1 + (int)(rnd() % 12), K = W == 12 ? 4 : 5; size_t R = 1 + rnd() % 300;
+        for (int x = 0; x < (1 << W); x++) d1[x] = (uint16_t)((1 + rnd() % (uint64_t)W) | (rnd() & 255) << 8);
+        for (int i = 0; i < (1 << 16); i++) in[i] = (uint8_t)rnd();
+        kolmo_khuf_st4 a, b; size_t span = R * (size_t)K + 16;
+        for (int q = 0; q < 4; q++) {
+            a.b[q] = (rnd() | rnd() << 32) & ~0ull << (rnd() % 64 | 8); a.c[q] = rnd() % 64 | (uint64_t)rnd() << 8;
+            a.p[q] = in + (size_t)q * (R * 7 + 16); a.o[q] = oa + (size_t)q * span;
+        }
+        b = a; for (int q = 0; q < 4; q++) b.o[q] = ob + (a.o[q] - oa);
+        memset(oa, 0, 1 << 16); memset(ob, 0, 1 << 16);
+        kolmo_khuf_dec1_c(&a, R, d1, W); kolmo_khuf_dec1_x86_64(&b, R, d1, W);
+        int ok = !memcmp(oa, ob, 1 << 16);
+        for (int q = 0; q < 4; q++) ok &= a.b[q] == b.b[q] && a.c[q] == b.c[q] && a.p[q] == b.p[q] && a.o[q] - oa == b.o[q] - ob;
+        if (!ok) { printf("kolmo_khuf_dec1_x86_64: mismatch (W %d, R %zu, iteration %d)\n", W, R, it); fails++; break; }
+    }
+    free(in); free(oa); free(ob);
+}
 #endif
 int main(void) {
     int kernels = 0;
     check_hist("kg_hist (dispatch)", kg_hist);
 #if !defined(KOLMO_NO_ASM) && defined(__x86_64__)
     check_hist("kolmo_hist_x86_64", kolmo_hist_x86_64); kernels++;
-    if (__builtin_cpu_supports("bmi2")) { check_khuf4(); kernels++; } else printf("kolmo_khuf_dec4_x86_64: no BMI2 on this CPU, not checked\n");
+    if (__builtin_cpu_supports("bmi2")) { check_khuf4(); check_khuf1(); kernels += 2; } else printf("kolmo_khuf_dec4_x86_64: no BMI2 on this CPU, not checked\n");
 #endif
 #if !defined(KOLMO_NO_ASM) && defined(__aarch64__)
     check_hist("kolmo_hist_aarch64", kolmo_hist_aarch64); kernels++;

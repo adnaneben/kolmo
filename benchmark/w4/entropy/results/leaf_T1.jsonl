@@ -1,0 +1,42 @@
+{"file": "owid_energy_f64.npy", "mode": "balanced", "tool": "A", "threads": 1, "raw": 7480768, "size": 950778, "c_s": 0.0678, "d_s": 0.0243, "c_rss_kb": 16084, "d_rss_kb": 14052, "ok": true}
+{"file": "owid_energy_f64.npy", "mode": "balanced", "tool": "B", "threads": 1, "raw": 7480768, "size": 950726, "c_s": 0.0742, "d_s": 0.0235, "c_rss_kb": 15660, "d_rss_kb": 14232, "ok": true}
+{"file": "owid_energy_f64.npy", "mode": "balanced", "tool": "zstd -3", "threads": 1, "raw": 7480768, "size": 1286435, "c_s": 0.0431, "d_s": 0.0155, "c_rss_kb": 12756, "d_rss_kb": 10132, "ok": true}
+{"file": "owid_energy_f64.npy", "mode": "hc", "tool": "A", "threads": 1, "raw": 7480768, "size": 899778, "c_s": 0.8775, "d_s": 0.0244, "c_rss_kb": 43160, "d_rss_kb": 19552, "ok": true}
+{"file": "owid_energy_f64.npy", "mode": "hc", "tool": "B", "threads": 1, "raw": 7480768, "size": 899772, "c_s": 0.92, "d_s": 0.0257, "c_rss_kb": 43572, "d_rss_kb": 19768, "ok": true}
+{"file": "owid_energy_f64.npy", "mode": "hc", "tool": "zstd -19", "threads": 1, "raw": 7480768, "size": 1101786, "c_s": 1.9934, "d_s": 0.0138, "c_rss_kb": 94448, "d_rss_kb": 17448, "ok": true}
+{"file": "owid_population_i64.npy", "mode": "balanced", "tool": "A", "threads": 1, "raw": 450280, "size": 76561, "c_s": 0.009, "d_s": 0.0029, "c_rss_kb": 14768, "d_rss_kb": 14768, "ok": true}
+{"file": "owid_population_i64.npy", "mode": "balanced", "tool": "B", "threads": 1, "raw": 450280, "size": 76549, "c_s": 0.0114, "d_s": 0.0029, "c_rss_kb": 14768, "d_rss_kb": 14768, "ok": true}
+{"file": "owid_population_i64.npy", "mode": "balanced", "tool": "zstd -3", "threads": 1, "raw": 450280, "size": 141646, "c_s": 0.0071, "d_s": 0.0044, "c_rss_kb": 17448, "d_rss_kb": 17448, "ok": true}
+{"file": "owid_population_i64.npy", "mode": "hc", "tool": "A", "threads": 1, "raw": 450280, "size": 72566, "c_s": 0.1792, "d_s": 0.0031, "c_rss_kb": 15452, "d_rss_kb": 14768, "ok": true}
+{"file": "owid_population_i64.npy", "mode": "hc", "tool": "B", "threads": 1, "raw": 450280, "size": 72566, "c_s": 0.1756, "d_s": 0.003, "c_rss_kb": 15400, "d_rss_kb": 14768, "ok": true}
+{"file": "owid_population_i64.npy", "mode": "hc", "tool": "zstd -19", "threads": 1, "raw": 450280, "size": 132074, "c_s": 0.1193, "d_s": 0.0048, "c_rss_kb": 17448, "d_rss_kb": 17448, "ok": true}
+{"file": "owid-co2-data.csv", "mode": "balanced", "tool": "A", "threads": 1, "raw": 15242657, "size": 1392694, "c_s": 0.1145, "d_s": 0.0396, "c_rss_kb": 26476, "d_rss_kb": 14772, "ok": true}
+{"file": "owid-co2-data.csv", "mode": "balanced", "tool": "B", "threads": 1, "raw": 15242657, "size": 1392694, "c_s": 0.1043, "d_s": 0.0395, "c_rss_kb": 26452, "d_rss_kb": 14772, "ok": true}
+{"file": "owid-co2-data.csv", "mode": "balanced", "tool": "zstd -3", "threads": 1, "raw": 15242657, "size": 4632733, "c_s": 0.0925, "d_s": 0.027, "c_rss_kb": 21972, "d_rss_kb": 17452, "ok": true}
+{"file": "owid-co2-data.csv", "mode": "hc", "tool": "A", "threads": 1, "raw": 15242657, "size": 1291252, "c_s": 1.0796, "d_s": 0.0519, "c_rss_kb": 153928, "d_rss_kb": 32444, "ok": true}
+{"file": "owid-co2-data.csv", "mode": "hc", "tool": "B", "threads": 1, "raw": 15242657, "size": 1291252, "c_s": 1.0415, "d_s": 0.053, "c_rss_kb": 153760, "d_rss_kb": 32440, "ok": true}
+{"file": "owid-co2-data.csv", "mode": "hc", "tool": "zstd -19", "threads": 1, "raw": 15242657, "size": 3605469, "c_s": 11.665, "d_s": 0.0298, "c_rss_kb": 104596, "d_rss_kb": 25032, "ok": true}
+{"file": "mr", "mode": "balanced", "tool": "A", "threads": 1, "raw": 9970564, "size": 2316612, "c_s": 0.0508, "d_s": 0.0399, "c_rss_kb": 22352, "d_rss_kb": 22352, "ok": true}
+{"file": "mr", "mode": "balanced", "tool": "B", "threads": 1, "raw": 9970564, "size": 2316612, "c_s": 0.047, "d_s": 0.0395, "c_rss_kb": 22352, "d_rss_kb": 22352, "ok": true}
+{"file": "mr", "mode": "balanced", "tool": "zstd -3", "threads": 1, "raw": 9970564, "size": 3548384, "c_s": 0.0633, "d_s": 0.0179, "c_rss_kb": 25032, "d_rss_kb": 25032, "ok": true}
+{"file": "mr", "mode": "hc", "tool": "A", "threads": 1, "raw": 9970564, "size": 2257516, "c_s": 2.128, "d_s": 0.0533, "c_rss_kb": 121156, "d_rss_kb": 35260, "ok": true}
+{"file": "mr", "mode": "hc", "tool": "B", "threads": 1, "raw": 9970564, "size": 2257516, "c_s": 2.4843, "d_s": 0.0549, "c_rss_kb": 120932, "d_rss_kb": 35244, "ok": true}
+{"file": "mr", "mode": "hc", "tool": "zstd -19", "threads": 1, "raw": 9970564, "size": 3112772, "c_s": 4.6896, "d_s": 0.0246, "c_rss_kb": 98960, "d_rss_kb": 25036, "ok": true}
+{"file": "x-ray", "mode": "balanced", "tool": "A", "threads": 1, "raw": 8474240, "size": 3657342, "c_s": 0.0341, "d_s": 0.0202, "c_rss_kb": 22356, "d_rss_kb": 22356, "ok": true}
+{"file": "x-ray", "mode": "balanced", "tool": "B", "threads": 1, "raw": 8474240, "size": 3657342, "c_s": 0.0261, "d_s": 0.0218, "c_rss_kb": 22356, "d_rss_kb": 22356, "ok": true}
+{"file": "x-ray", "mode": "balanced", "tool": "zstd -3", "threads": 1, "raw": 8474240, "size": 6086279, "c_s": 0.0689, "d_s": 0.0184, "c_rss_kb": 25036, "d_rss_kb": 25036, "ok": true}
+{"file": "x-ray", "mode": "hc", "tool": "A", "threads": 1, "raw": 8474240, "size": 3649636, "c_s": 0.7905, "d_s": 0.0302, "c_rss_kb": 118872, "d_rss_kb": 32196, "ok": true}
+{"file": "x-ray", "mode": "hc", "tool": "B", "threads": 1, "raw": 8474240, "size": 3649636, "c_s": 0.9619, "d_s": 0.0314, "c_rss_kb": 118888, "d_rss_kb": 32152, "ok": true}
+{"file": "x-ray", "mode": "hc", "tool": "zstd -19", "threads": 1, "raw": 8474240, "size": 5155753, "c_s": 4.4257, "d_s": 0.0306, "c_rss_kb": 99744, "d_rss_kb": 25036, "ok": true}
+{"file": "floats.f64", "mode": "balanced", "tool": "A", "threads": 1, "raw": 320000, "size": 57922, "c_s": 0.0104, "d_s": 0.003, "c_rss_kb": 22360, "d_rss_kb": 22360, "ok": true}
+{"file": "floats.f64", "mode": "balanced", "tool": "B", "threads": 1, "raw": 320000, "size": 57907, "c_s": 0.0086, "d_s": 0.003, "c_rss_kb": 22360, "d_rss_kb": 22360, "ok": true}
+{"file": "floats.f64", "mode": "balanced", "tool": "zstd -3", "threads": 1, "raw": 320000, "size": 95445, "c_s": 0.0072, "d_s": 0.0053, "c_rss_kb": 25040, "d_rss_kb": 25040, "ok": true}
+{"file": "floats.f64", "mode": "hc", "tool": "A", "threads": 1, "raw": 320000, "size": 57922, "c_s": 0.0671, "d_s": 0.0028, "c_rss_kb": 22360, "d_rss_kb": 22360, "ok": true}
+{"file": "floats.f64", "mode": "hc", "tool": "B", "threads": 1, "raw": 320000, "size": 57907, "c_s": 0.047, "d_s": 0.0028, "c_rss_kb": 22360, "d_rss_kb": 22360, "ok": true}
+{"file": "floats.f64", "mode": "hc", "tool": "zstd -19", "threads": 1, "raw": 320000, "size": 83386, "c_s": 0.099, "d_s": 0.0046, "c_rss_kb": 25040, "d_rss_kb": 25040, "ok": true}
+{"file": "image.u8", "mode": "balanced", "tool": "A", "threads": 1, "raw": 131072, "size": 63632, "c_s": 0.0076, "d_s": 0.0025, "c_rss_kb": 22360, "d_rss_kb": 22360, "ok": true}
+{"file": "image.u8", "mode": "balanced", "tool": "B", "threads": 1, "raw": 131072, "size": 63580, "c_s": 0.0076, "d_s": 0.0025, "c_rss_kb": 22360, "d_rss_kb": 22360, "ok": true}
+{"file": "image.u8", "mode": "balanced", "tool": "zstd -3", "threads": 1, "raw": 131072, "size": 131088, "c_s": 0.0045, "d_s": 0.0043, "c_rss_kb": 25040, "d_rss_kb": 25040, "ok": true}
+{"file": "image.u8", "mode": "hc", "tool": "A", "threads": 1, "raw": 131072, "size": 63632, "c_s": 0.0644, "d_s": 0.0026, "c_rss_kb": 22364, "d_rss_kb": 22364, "ok": true}
+{"file": "image.u8", "mode": "hc", "tool": "B", "threads": 1, "raw": 131072, "size": 63580, "c_s": 0.0535, "d_s": 0.0026, "c_rss_kb": 22364, "d_rss_kb": 22364, "ok": true}
+{"file": "image.u8", "mode": "hc", "tool": "zstd -19", "threads": 1, "raw": 131072, "size": 95190, "c_s": 0.0254, "d_s": 0.0045, "c_rss_kb": 25044, "d_rss_kb": 25044, "ok": true}

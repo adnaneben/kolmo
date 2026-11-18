@@ -1,7 +1,7 @@
 /* ebench: order-0 entropy coders on the same 128 KiB chunks (w4 entropy lane): khuf (codec 27), zstd's HUF (codec 13's
  * framing), zstd's FSE (tANS: FSE_normalizeCount / writeNCount / buildCTable / compress_usingCTable, decoded by
  * FSE_decompress_wksp_bmi2; table log FSE_optimalTableLog up to 12) and Kolmo's rANS leaf (codec 14: 4 x 64-bit
- * states, 16-bit frequencies). Sizes include each coder's chunk headers; decode MB/s best of REPS, every output
+ * states, 16-bit frequencies). Sizes include each coder's chunk headers; compress and decode MB/s best of REPS, every output
  * checked. usage: ebench REPS FILE...  (.chunks files: records u32 length + bytes, as hbench; other files: 128 KiB records) */
 #define FSE_STATIC_LINKING_ONLY
 #define HUF_STATIC_LINKING_ONLY
@@ -60,7 +60,7 @@ static const struct { const char *name; cfn c; dfn d; } C[] = {
     {"FSE", fse_c, fse_d}, {"rANS14", rans_c, rans_decompress_all}};
 int main(int argc, char **argv) {
     int reps = atoi(argv[1]);
-    printf("%-22s %10s | %-28s | %-28s | %-28s | %-28s\n", "file", "bytes", "khuf size, d MB/s", "HUF", "FSE", "rANS14");
+    printf("%-22s %10s | %-30s | %-30s | %-30s | %-30s\n", "file", "bytes", "khuf: size, c MB/s, d MB/s", "HUF (codec 13)", "FSE (zstd tANS)", "rANS (codec 14)");
     for (int a = 2; a < argc; a++) {
         FILE *f = fopen(argv[a], "rb"); fseek(f, 0, SEEK_END); long n = ftell(f); fseek(f, 0, SEEK_SET);
         uint8_t *buf = malloc(n + 8); if (fread(buf, 1, n, f) != (size_t)n) return 1; fclose(f);
@@ -71,11 +71,15 @@ int main(int argc, char **argv) {
         printf("%-22s %10zu", strrchr(argv[a], '/') ? strrchr(argv[a], '/') + 1 : argv[a], tot);
         for (int k = 0; k < 4; k++) {
             uint8_t **z = malloc(nr * sizeof *z); size_t *zn = malloc(nr * 8), S = 0; uint8_t *o = malloc(CH * 8 + 64); int ok = 1;
-            for (int r = 0; r < nr; r++) { z[r] = malloc(rn[r] + rn[r] / 16 + 4096); zn[r] = C[k].c(rp[r], rn[r], z[r], rn[r] + rn[r] / 16 + 4096); S += zn[r] ? zn[r] : rn[r]; }
+            for (int r = 0; r < nr; r++) z[r] = malloc(rn[r] + rn[r] / 16 + 4096);
+            double bc = 1e9;
+            for (int q = 0; q < reps; q++) { double t = now(); S = 0;
+                for (int r = 0; r < nr; r++) { zn[r] = C[k].c(rp[r], rn[r], z[r], rn[r] + rn[r] / 16 + 4096); S += zn[r] ? zn[r] : rn[r]; }
+                t = now() - t; if (t < bc) bc = t; }
             for (int r = 0; r < nr; r++) if (zn[r] && (rn[r] > CH * 8 || C[k].d(z[r], zn[r], o, rn[r]) || memcmp(o, rp[r], rn[r]))) ok = 0;
             double best = 1e9;
             for (int q = 0; q < reps; q++) { double t = now(); for (int r = 0; r < nr; r++) if (zn[r] && rn[r] <= CH * 8) C[k].d(z[r], zn[r], o, rn[r]); t = now() - t; if (t < best) best = t; }
-            printf(" | %10zu %+6.2f%% %7.1f%s", S, 100.0 * ((double)S / tot - 1), tot / best / 1e6, ok ? "" : " BAD");
+            printf(" | %10zu c %7.1f d %7.1f%s", S, tot / bc / 1e6, tot / best / 1e6, ok ? "" : " BAD");
             for (int r = 0; r < nr; r++) free(z[r]);
             free(z); free(zn); free(o);
         }

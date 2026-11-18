@@ -1,20 +1,32 @@
-{"file": "dickens", "mode": "ratio", "tool": "A", "threads": 1, "raw": 10192446, "size": 2254558, "c_s": 1.2365, "d_s": 0.5279, "c_rss_kb": 105896, "d_rss_kb": 55688, "ok": true}
-{"file": "dickens", "mode": "ratio", "tool": "B", "threads": 1, "raw": 10192446, "size": 2255740, "c_s": 1.1827, "d_s": 0.568, "c_rss_kb": 105668, "d_rss_kb": 56024, "ok": true}
-{"file": "dickens", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 10192446, "size": 2259134, "c_s": 0.6258, "d_s": 0.5094, "c_rss_kb": 53940, "d_rss_kb": 54956, "ok": true}
-{"file": "dickens", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 10192446, "size": 2233954, "c_s": 1.5286, "d_s": 1.2697, "c_rss_kb": 89676, "d_rss_kb": 89660, "ok": true}
-{"file": "samba", "mode": "ratio", "tool": "A", "threads": 1, "raw": 21606400, "size": 3975940, "c_s": 6.2088, "d_s": 0.6024, "c_rss_kb": 126576, "d_rss_kb": 29140, "ok": true}
-{"file": "samba", "mode": "ratio", "tool": "B", "threads": 1, "raw": 21606400, "size": 3975940, "c_s": 6.0604, "d_s": 0.5606, "c_rss_kb": 126400, "d_rss_kb": 29332, "ok": true}
-{"file": "samba", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 21606400, "size": 3909928, "c_s": 1.2407, "d_s": 0.9974, "c_rss_kb": 92088, "d_rss_kb": 88768, "ok": true}
-{"file": "samba", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 21606400, "size": 3976068, "c_s": 2.594, "d_s": 1.7051, "c_rss_kb": 101584, "d_rss_kb": 102004, "ok": true}
-{"file": "webster", "mode": "ratio", "tool": "A", "threads": 1, "raw": 41458703, "size": 6439824, "c_s": 2.8625, "d_s": 1.6077, "c_rss_kb": 247736, "d_rss_kb": 213560, "ok": true}
-{"file": "webster", "mode": "ratio", "tool": "B", "threads": 1, "raw": 41458703, "size": 6439824, "c_s": 3.4332, "d_s": 1.6348, "c_rss_kb": 247732, "d_rss_kb": 213544, "ok": true}
-{"file": "webster", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 41458703, "size": 6654026, "c_s": 2.4639, "d_s": 1.829, "c_rss_kb": 132240, "d_rss_kb": 133784, "ok": true}
-{"file": "webster", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 41458703, "size": 6787036, "c_s": 5.4725, "d_s": 4.7052, "c_rss_kb": 102480, "d_rss_kb": 103012, "ok": true}
-{"file": "reymont", "mode": "ratio", "tool": "A", "threads": 1, "raw": 6627202, "size": 978208, "c_s": 0.4309, "d_s": 0.2695, "c_rss_kb": 50256, "d_rss_kb": 37476, "ok": true}
-{"file": "reymont", "mode": "ratio", "tool": "B", "threads": 1, "raw": 6627202, "size": 978208, "c_s": 0.5388, "d_s": 0.2579, "c_rss_kb": 50392, "d_rss_kb": 37212, "ok": true}
-{"file": "reymont", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 6627202, "size": 982364, "c_s": 0.398, "d_s": 0.2532, "c_rss_kb": 36568, "d_rss_kb": 37356, "ok": true}
-{"file": "reymont", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 6627202, "size": 980475, "c_s": 0.753, "d_s": 0.7501, "c_rss_kb": 82640, "d_rss_kb": 82684, "ok": true}
-{"file": "xml", "mode": "ratio", "tool": "A", "threads": 1, "raw": 5345280, "size": 385428, "c_s": 0.2625, "d_s": 0.122, "c_rss_kb": 57536, "d_rss_kb": 28556, "ok": true}
-{"file": "xml", "mode": "ratio", "tool": "B", "threads": 1, "raw": 5345280, "size": 385428, "c_s": 0.2966, "d_s": 0.1132, "c_rss_kb": 57704, "d_rss_kb": 28556, "ok": true}
-{"file": "xml", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 5345280, "size": 393180, "c_s": 0.1517, "d_s": 0.1053, "c_rss_kb": 28556, "d_rss_kb": 28556, "ok": true}
-{"file": "xml", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 5345280, "size": 405877, "c_s": 0.3698, "d_s": 0.2849, "c_rss_kb": 80208, "d_rss_kb": 80100, "ok": true}
+{"file": "dickens", "mode": "ratio", "tool": "A", "threads": 1, "raw": 10192446, "size": 2254558, "c_s": 0.8853, "d_s": 0.5263, "c_rss_kb": 105820, "d_rss_kb": 55936, "ok": true}
+{"file": "dickens", "mode": "ratio", "tool": "B", "threads": 1, "raw": 10192446, "size": 2255740, "c_s": 0.9163, "d_s": 0.5006, "c_rss_kb": 105716, "d_rss_kb": 55896, "ok": true}
+{"file": "dickens", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 10192446, "size": 2259134, "c_s": 0.6241, "d_s": 0.5048, "c_rss_kb": 54032, "d_rss_kb": 54952, "ok": true}
+{"file": "dickens", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 10192446, "size": 2233954, "c_s": 1.1336, "d_s": 1.121, "c_rss_kb": 89680, "d_rss_kb": 89660, "ok": true}
+{"file": "samba", "mode": "ratio", "tool": "A", "threads": 1, "raw": 21606400, "size": 3975940, "c_s": 4.9267, "d_s": 0.5128, "c_rss_kb": 126396, "d_rss_kb": 29440, "ok": true}
+{"file": "samba", "mode": "ratio", "tool": "B", "threads": 1, "raw": 21606400, "size": 3975940, "c_s": 5.1602, "d_s": 0.5334, "c_rss_kb": 126552, "d_rss_kb": 29192, "ok": true}
+{"file": "samba", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 21606400, "size": 3909928, "c_s": 1.0701, "d_s": 0.9205, "c_rss_kb": 92200, "d_rss_kb": 88704, "ok": true}
+{"file": "samba", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 21606400, "size": 3976068, "c_s": 1.8369, "d_s": 1.4704, "c_rss_kb": 101584, "d_rss_kb": 102004, "ok": true}
+{"file": "webster", "mode": "ratio", "tool": "A", "threads": 1, "raw": 41458703, "size": 6439824, "c_s": 2.4267, "d_s": 1.6184, "c_rss_kb": 247596, "d_rss_kb": 213336, "ok": true}
+{"file": "webster", "mode": "ratio", "tool": "B", "threads": 1, "raw": 41458703, "size": 6439824, "c_s": 2.6331, "d_s": 1.535, "c_rss_kb": 247700, "d_rss_kb": 213572, "ok": true}
+{"file": "webster", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 41458703, "size": 6654026, "c_s": 2.0435, "d_s": 1.6635, "c_rss_kb": 132420, "d_rss_kb": 133724, "ok": true}
+{"file": "webster", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 41458703, "size": 6787036, "c_s": 3.9292, "d_s": 4.1076, "c_rss_kb": 102476, "d_rss_kb": 102988, "ok": true}
+{"file": "reymont", "mode": "ratio", "tool": "A", "threads": 1, "raw": 6627202, "size": 978208, "c_s": 0.4433, "d_s": 0.2616, "c_rss_kb": 50444, "d_rss_kb": 37312, "ok": true}
+{"file": "reymont", "mode": "ratio", "tool": "B", "threads": 1, "raw": 6627202, "size": 980456, "c_s": 0.4606, "d_s": 0.264, "c_rss_kb": 50312, "d_rss_kb": 37468, "ok": true}
+{"file": "reymont", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 6627202, "size": 982364, "c_s": 0.3765, "d_s": 0.2381, "c_rss_kb": 36628, "d_rss_kb": 37352, "ok": true}
+{"file": "reymont", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 6627202, "size": 980475, "c_s": 0.7731, "d_s": 0.8095, "c_rss_kb": 82640, "d_rss_kb": 82684, "ok": true}
+{"file": "xml", "mode": "ratio", "tool": "A", "threads": 1, "raw": 5345280, "size": 385428, "c_s": 0.2685, "d_s": 0.1116, "c_rss_kb": 57816, "d_rss_kb": 28656, "ok": true}
+{"file": "xml", "mode": "ratio", "tool": "B", "threads": 1, "raw": 5345280, "size": 385428, "c_s": 0.2703, "d_s": 0.114, "c_rss_kb": 57740, "d_rss_kb": 28656, "ok": true}
+{"file": "xml", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 5345280, "size": 393180, "c_s": 0.149, "d_s": 0.1049, "c_rss_kb": 28656, "d_rss_kb": 28656, "ok": true}
+{"file": "xml", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 5345280, "size": 405877, "c_s": 0.3186, "d_s": 0.3086, "c_rss_kb": 80080, "d_rss_kb": 80176, "ok": true}
+{"file": "nci", "mode": "ratio", "tool": "A", "threads": 1, "raw": 33553445, "size": 1199630, "c_s": 3.8619, "d_s": 0.4845, "c_rss_kb": 331644, "d_rss_kb": 148952, "ok": true}
+{"file": "nci", "mode": "ratio", "tool": "B", "threads": 1, "raw": 33553445, "size": 1199630, "c_s": 4.1453, "d_s": 0.4832, "c_rss_kb": 331528, "d_rss_kb": 148904, "ok": true}
+{"file": "nci", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 33553445, "size": 1266320, "c_s": 1.0681, "d_s": 0.4557, "c_rss_kb": 118032, "d_rss_kb": 115912, "ok": true}
+{"file": "nci", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 33553445, "size": 1425956, "c_s": 1.4217, "d_s": 1.3984, "c_rss_kb": 101840, "d_rss_kb": 102256, "ok": true}
+{"file": "enwik8", "mode": "ratio", "tool": "A", "threads": 1, "raw": 100000000, "size": 20798338, "c_s": 8.9638, "d_s": 5.1513, "c_rss_kb": 679432, "d_rss_kb": 508344, "ok": true}
+{"file": "enwik8", "mode": "ratio", "tool": "B", "threads": 1, "raw": 100000000, "size": 20798338, "c_s": 9.9499, "d_s": 4.6523, "c_rss_kb": 679532, "d_rss_kb": 508248, "ok": true}
+{"file": "enwik8", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 100000000, "size": 22304128, "c_s": 6.2846, "d_s": 5.1361, "c_rss_kb": 161312, "d_rss_kb": 158964, "ok": true}
+{"file": "enwik8", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 100000000, "size": 22677651, "c_s": 11.7809, "d_s": 12.0591, "c_rss_kb": 102480, "d_rss_kb": 102976, "ok": true}
+{"file": "logs.log", "mode": "ratio", "tool": "A", "threads": 1, "raw": 5082764, "size": 83513, "c_s": 0.2276, "d_s": 0.0138, "c_rss_kb": 36220, "d_rss_kb": 28660, "ok": true}
+{"file": "logs.log", "mode": "ratio", "tool": "B", "threads": 1, "raw": 5082764, "size": 83513, "c_s": 0.2296, "d_s": 0.016, "c_rss_kb": 36248, "d_rss_kb": 28660, "ok": true}
+{"file": "logs.log", "mode": "ratio", "tool": "bsc -m0 -e2", "threads": 1, "raw": 5082764, "size": 108688, "c_s": 0.0924, "d_s": 0.0526, "c_rss_kb": 28660, "d_rss_kb": 28660, "ok": true}
+{"file": "logs.log", "mode": "ratio", "tool": "bzip3 -b 16", "threads": 1, "raw": 5082764, "size": 104650, "c_s": 0.1183, "d_s": 0.1047, "c_rss_kb": 79692, "d_rss_kb": 79636, "ok": true}

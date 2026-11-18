@@ -51,4 +51,5 @@ int kolmo_khuf_lengths(const uint32_t *cnt, int nsym, int maxlen, uint8_t *len);
 /* Internal: the decoder's main loop over four streams (src/algo/khuf.c), for the assembly kernels and their test. */
 typedef struct { uint64_t b[4], c[4]; const uint8_t *p[4]; uint8_t *o[4]; } kolmo_khuf_st4;
 void kolmo_khuf_dec4_c(kolmo_khuf_st4 *st, size_t R, const uint64_t *dm, int W);
+void kolmo_khuf_dec1_c(kolmo_khuf_st4 *st, size_t R, const uint16_t *d1, int W);
 #endif

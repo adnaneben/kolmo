@@ -157,7 +157,7 @@ static size_t kh_write_table(const uint8_t len[256], int maxl, uint8_t *o) {
     }
     return best;
 }
-static int kh_read_table(const uint8_t *p, size_t n, size_t *i, uint8_t len[256], int *maxl) {
+static int kh_read_table(const uint8_t *p, size_t n, size_t *i, uint8_t len[256], int *maxl, int *ns) {
     memset(len, 0, 256);
     if (n - *i < 2) return -1;
     int h = p[(*i)++], mode = h >> 4, got = 0, ml = h & 15;
@@ -166,10 +166,12 @@ static int kh_read_table(const uint8_t *p, size_t n, size_t *i, uint8_t len[256]
     if (mode == 0) {
         int m = p[(*i)++] + 1;
         if (m < 2 || n - *i < (size_t)m * 2) return -1;
-        for (int k = 0; k < m; k++) { int s = p[*i], l = p[*i + 1]; *i += 2; if (len[s] || !l || l > ml) return -1; len[s] = (uint8_t)l; }
-        return 0;
+        int last = 0;
+        for (int k = 0; k < m; k++) { int s = p[*i], l = p[*i + 1]; *i += 2; if (len[s] || !l || l > ml) return -1; len[s] = (uint8_t)l; last = s > last ? s : last; }
+        *ns = last + 1; return 0;
     }
     int last = p[(*i)++];
+    *ns = last + 1;
     if (mode == 1) {
         size_t nb = (size_t)(last + 2) / 2;
         if (n - *i < nb) return -1;
@@ -304,12 +306,12 @@ static inline void kh_refill_safe(kh_br *r, const uint8_t *e) {
 #define KH_LEVELS ((2u << KHUF_MAXLEN) - 1)
 #define KH_CAP 6                                /* symbols per multi-symbol entry */
 #define KH_SYMS 0x00FFFFFFFFFF0000ull           /* bytes 2-6: the symbols kept from the rest */
-static void kh_build(const uint8_t len[256], int W, uint16_t *d1, uint64_t *R, uint32_t *C) {
+static void kh_build(const uint8_t len[256], int ns, int W, uint16_t *d1, uint64_t *R, uint32_t *C) {
     uint8_t order[256]; int first[KHUF_MAXLEN + 2] = {0}, cnt[KHUF_MAXLEN + 2] = {0}, no;   /* symbols in canonical order */
-    for (int s = 0; s < 256; s++) cnt[len[s]]++;
+    for (int s = 0; s < ns; s++) cnt[len[s]]++;
     cnt[0] = 0; no = 0;
     for (int l = 1; l <= W; l++) { first[l] = no; no += cnt[l]; }
-    { int f[KHUF_MAXLEN + 2]; memcpy(f, first, sizeof f); for (int s = 0; s < 256; s++) if (len[s]) order[f[len[s]]++] = (uint8_t)s; }
+    { int f[KHUF_MAXLEN + 2]; memcpy(f, first, sizeof f); for (int s = 0; s < ns; s++) if (len[s]) order[f[len[s]]++] = (uint8_t)s; }
     if (!R) {                                   /* one symbol per lookup: d1 only */
         uint32_t x = 0;
         for (int k = 0; k < no; k++) { int s = order[k], l = len[s]; uint16_t v = (uint16_t)(l | s << 8); for (uint32_t e = x + (1u << (W - l)); x < e; x++) d1[x] = v; }
@@ -427,8 +429,28 @@ static void kh_dec_main(kh_br *r, uint8_t **o, uint8_t **oe, const uint8_t *ie, 
    writes one byte at a fixed offset of the round, and a stream's output pointer moves once per round */
 #define KH_LK1(q, k) do { uint32_t e_ = d1[b##q >> sh]; o##q[k] = (uint8_t)(e_ >> 8); b##q <<= (e_ & 63); c##q -= e_; } while (0)
 #define KH_RD1(k) do { KH_LK1(0, k); KH_LK1(1, k); KH_LK1(2, k); KH_LK1(3, k); } while (0)
-static void kh_dec_main1(kh_br *r, uint8_t **o, uint8_t **oe, const uint8_t *ie, const uint16_t *d1, int W, int K) {
+/* R rounds of the one-symbol loop: kolmo_khuf_dec1_c is the reference of kolmo_khuf_dec1_x86_64 (same file as the
+   multi-symbol kernel), compared by tests/test_asm.c; K = 4 lookups per stream and round for W = 12, else 5 */
+void kolmo_khuf_dec1_c(kolmo_khuf_st4 *st, size_t R, const uint16_t *d1, int W) {
     const int sh = 64 - W;
+    uint64_t b0 = st->b[0], b1 = st->b[1], b2 = st->b[2], b3 = st->b[3], c0 = st->c[0], c1 = st->c[1], c2 = st->c[2], c3 = st->c[3];
+    const uint8_t *p0 = st->p[0], *p1 = st->p[1], *p2 = st->p[2], *p3 = st->p[3];
+    uint8_t *o0 = st->o[0], *o1 = st->o[1], *o2 = st->o[2], *o3 = st->o[3];
+    if (W == 12) {
+        do { KH_REF(0); KH_REF(1); KH_REF(2); KH_REF(3); KH_RD1(0); KH_RD1(1); KH_RD1(2); KH_RD1(3); o0 += 4; o1 += 4; o2 += 4; o3 += 4; } while (--R);
+    } else {
+        do { KH_REF(0); KH_REF(1); KH_REF(2); KH_REF(3); KH_RD1(0); KH_RD1(1); KH_RD1(2); KH_RD1(3); KH_RD1(4); o0 += 5; o1 += 5; o2 += 5; o3 += 5; } while (--R);
+    }
+    st->b[0] = b0; st->b[1] = b1; st->b[2] = b2; st->b[3] = b3; st->c[0] = c0; st->c[1] = c1; st->c[2] = c2; st->c[3] = c3;
+    st->p[0] = p0; st->p[1] = p1; st->p[2] = p2; st->p[3] = p3; st->o[0] = o0; st->o[1] = o1; st->o[2] = o2; st->o[3] = o3;
+}
+#if !defined(KOLMO_NO_ASM) && defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+void kolmo_khuf_dec1_x86_64(kolmo_khuf_st4 *st, size_t R, const uint16_t *d1, int W);   /* khuf_x86_64.S */
+#define KH_DEC1(st, R, d1, W) (kh_use_asm() ? kolmo_khuf_dec1_x86_64(st, R, d1, W) : kolmo_khuf_dec1_c(st, R, d1, W))
+#else
+#define KH_DEC1(st, R, d1, W) kolmo_khuf_dec1_c(st, R, d1, W)
+#endif
+static void kh_dec_main1(kh_br *r, uint8_t **o, uint8_t **oe, const uint8_t *ie, const uint16_t *d1, int W, int K) {
     for (;;) {
         size_t R = (size_t)-1;
         for (int q = 0; q < 4; q++) {
@@ -437,34 +459,31 @@ static void kh_dec_main1(kh_br *r, uint8_t **o, uint8_t **oe, const uint8_t *ie,
             if (ri < R) R = ri;
         }
         if (R < 4) return;
-        uint64_t b0 = r[0].b, b1 = r[1].b, b2 = r[2].b, b3 = r[3].b, c0 = r[0].c, c1 = r[1].c, c2 = r[2].c, c3 = r[3].c;
-        const uint8_t *p0 = r[0].p, *p1 = r[1].p, *p2 = r[2].p, *p3 = r[3].p;
-        uint8_t *o0 = o[0], *o1 = o[1], *o2 = o[2], *o3 = o[3];
-        if (K == 4) {
-            do { KH_REF(0); KH_REF(1); KH_REF(2); KH_REF(3); KH_RD1(0); KH_RD1(1); KH_RD1(2); KH_RD1(3); o0 += 4; o1 += 4; o2 += 4; o3 += 4; } while (--R);
-        } else {
-            do { KH_REF(0); KH_REF(1); KH_REF(2); KH_REF(3); KH_RD1(0); KH_RD1(1); KH_RD1(2); KH_RD1(3); KH_RD1(4); o0 += 5; o1 += 5; o2 += 5; o3 += 5; } while (--R);
-        }
-        r[0].b = b0; r[1].b = b1; r[2].b = b2; r[3].b = b3; r[0].c = c0; r[1].c = c1; r[2].c = c2; r[3].c = c3;
-        r[0].p = p0; r[1].p = p1; r[2].p = p2; r[3].p = p3; o[0] = o0; o[1] = o1; o[2] = o2; o[3] = o3;
+        kolmo_khuf_st4 st;
+        for (int q = 0; q < 4; q++) { st.b[q] = r[q].b; st.c[q] = r[q].c; st.p[q] = r[q].p; st.o[q] = o[q]; }
+        KH_DEC1(&st, R, d1, W);
+        for (int q = 0; q < 4; q++) { r[q].b = st.b[q]; r[q].c = st.c[q]; r[q].p = st.p[q]; o[q] = st.o[q]; }
     }
 }
 #ifndef KH_MULTI_T
+#define KH_MULTI_MIN2 2048  /* multi-symbol tables from 2 KiB blocks (their build is 2-5 us; measured on Kolmo's leaves) */
 #define KH_MULTI_T 21   /* multi-symbol lookups when W / (mean code length) >= KH_MULTI_T / 10 */
 #endif
 int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     if (n < 2 || n > KHUF_BLOCK_MAX) return -1;
-    uint8_t len[256]; uint16_t code[256]; size_t i = 0; int maxl;
-    if (kh_read_table(in, cn, &i, len, &maxl)) return -1;
-    if (kh_codes_r(len, 256, maxl, code, 0) < 1) return -1;
+    uint8_t len[256]; size_t i = 0; int maxl, ns;
+    if (kh_read_table(in, cn, &i, len, &maxl, &ns)) return -1;
+    /* the code must be complete (canonical codes need no more: kh_build assigns their ranges in order) */
+    uint32_t bl[KHUF_MAXLEN + 1] = {0}; for (int s = 0; s < ns; s++) bl[len[s]]++;
+    { uint64_t kraft = 0; for (int l = 1; l <= maxl; l++) kraft += (uint64_t)bl[l] << (maxl - l); if (kraft != 1ull << maxl) return -1; }
     const int S = kh_nstreams(n);
     /* multi-symbol tables pay when several codes fit in a lookup: mean code length (weights 2^-l) against the width */
-    uint64_t A = 0; for (int s = 0; s < 256; s++) if (len[s]) A += (uint64_t)len[s] << (KHUF_MAXLEN - len[s]);
+    uint64_t A = 0; for (int l = 1; l <= maxl; l++) A += (uint64_t)bl[l] * (uint64_t)l << (KHUF_MAXLEN - l);
     const int Wm = maxl < 11 ? 11 : maxl;
-    const int multi = S > 1 && (uint64_t)Wm * 10 * (1u << KHUF_MAXLEN) >= (uint64_t)KH_MULTI_T * A;
+    const int multi = S > 1 && n >= KH_MULTI_MIN2 && (uint64_t)Wm * 10 * (1u << KHUF_MAXLEN) >= (uint64_t)KH_MULTI_T * A;
     const int W = multi ? Wm : maxl, K = 56 / W;
     uint16_t d1[multi ? 1 : 1 << KHUF_MAXLEN]; uint64_t Rb[multi ? KH_LEVELS : 1]; uint32_t Cb[multi ? KH_LEVELS : 1];
-    kh_build(len, W, d1, multi ? Rb : NULL, Cb);
+    kh_build(len, ns, W, d1, multi ? Rb : NULL, Cb);
     const uint64_t *dm = multi ? Rb + (1u << W) - 1 : NULL;
     uint64_t L[KHUF_STREAMS]; size_t tot = 0;
     for (int q = 0; q < S - 1; q++) { if (kh_get_uv(in, cn, &i, &L[q]) || L[q] > cn) return -1; tot += L[q]; }
@@ -476,7 +495,7 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
         size_t a = (size_t)q * seg < n ? (size_t)q * seg : n, b = a + seg < n ? a + seg : n;
         o[q] = out + a; oe[q] = out + b;
     }
-    if (multi) kh_dec_main(r, o, oe, ie, dm, W, K); else if (S == 4) kh_dec_main1(r, o, oe, ie, d1, W, K);
+    if (multi) kh_dec_main(r, o, oe, ie, dm, W, K); else if (S == 4) kh_dec_main1(r, o, oe, ie, d1, W, W == 12 ? 4 : 5);
     for (int q = 0; q < S; q++) {
         kh_dec_tail(&r[q], o[q], oe[q], ie, d1, dm, len, W, K);
         int64_t used = (int64_t)(r[q].p - r[q].s) * 8 - (int64_t)(r[q].c & 63);   /* bits consumed */
