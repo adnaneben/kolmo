@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased (wave 4, BWT lane: `claude/w4-bwt-20261118`)
+
+Block-sorting pipeline of `ratio` (codec 18) and codec 5. **No format change:** every frame is byte-identical to rc3.
+Measurements: `benchmark/w4/bwt/RESULTS.md`.
+
+### Changed
+- **Huge pages for the suffix array and the inverse BWT's index array** (arrays of 4 MiB or more, Linux
+  `MADV_HUGEPAGE`; `KOLMO_NO_HUGEPAGE=1` turns it off). enwik8 inverse BWT +33% on 1 thread and +40% on 4; suffix
+  sort about +15% on 1 thread.
+- **Codec 18 works in 4n instead of 5n+.** LZP and the BWT run in the caller's output slot, QLFC codes into the freed
+  suffix array, and the decoder inverts in place in its output. enwik8 `ratio` compress peak RSS 664 → 600 MiB;
+  enwik9 1857 → 1740 MiB (1 thread) and 3888 → 3546 MiB (4 threads), decompress 788 → 666 MiB (1 thread).
+- **Faster LZP encoder** (four positions per 8-byte load), with output identical to the previous loop: 17/96 on
+  enwik8 253 → 357+ MB/s, on dickens 216 → 580+ MB/s.
+- `ratio` no longer runs the word transform on text blocks whose codec discards it (10% of `ratio`'s encode time on
+  dickens; same frames).
+- Result: `ratio` on 1 thread, enwik8 compress 10.1 → 11.0 MB/s, enwik9 9.1 → 12.1 MB/s, dickens 10.4 → 11.5 MB/s;
+  on 4 threads, enwik8 16.6 → 19.2 MB/s and decode 47 → 61 MB/s.
+
 ## Unreleased (rc3 wave 2, regress lane: `claude/rc3w2-regress-20261117`)
 
 Fixes for the regressions of rc3 against rc2 measured on the Apple M5 (`benchmark/rc3/mac/RESULTS.md`). Measurements

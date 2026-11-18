@@ -1,6 +1,6 @@
 /* Per-stage timing of the block-sorting pipeline of codec 18 (LZP 17/96, BWT, adaptive QLFC, >= 4 MiB coder blocks),
    in memory, one block per file. Usage: stages THREADS FILE... ; prints MB/s of each stage relative to the input
-   size, best of KOLMO_REPS (default 2) runs. Build: see benchmark/w4/bwt/README in RESULTS.md. */
+   size, best of KOLMO_REPS (default 2) runs. Build: see "Method" in benchmark/w4/bwt/RESULTS.md. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
