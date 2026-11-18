@@ -497,7 +497,9 @@ static int64_t kf_calibrate(const uint8_t *const *files, const size_t *sizes, si
             if (se < 0) se = 0;
             if (sd < 0) sd = 0;
             if (w < cap)
-                w += (size_t)snprintf(out + w, cap - w, "%s %s %.1f %.1f %.3f %.3f\n", KT_SET[st].name, KT_CLS[c],
+                /* rates with 4 significant digits: -x on the built-in samples codes under 0.05 MB/s, which one decimal
+                 * wrote as 0.0, a rate the table parser rightly refuses */
+                w += (size_t)snprintf(out + w, cap - w, "%s %s %.4g %.4g %.3f %.3f\n", KT_SET[st].name, KT_CLS[c],
                                       re / 1e6, rd / 1e6, se * 1e3, sd * 1e3);
         }
     free(o); free(b);
