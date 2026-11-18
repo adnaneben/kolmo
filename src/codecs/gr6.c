@@ -32,7 +32,7 @@ enum { G6_DITTO, G6_EMPTY, G6_NUM, G6_RANK, G6_RANK2, G6_CDICT, G6_GID, G6_NUMNE
 #define G6_NM 8
 #define G6_MAXFORM 255
 #define G6_MAXCOLS 100              /* wider tables are not tried (gr6_applies) */
-#define G6_WORK_CAP ((int64_t)1 << 29)   /* rows scored by the formula search (g6_formulas) */
+#define G6_WORK_CAP ((int64_t)1 << 31)   /* rows scored by the formula search (g6_formulas); 2^29 cut owid_test short */
 
 /* ---- tracked allocation: everything is freed at the end; failure (or corrupt input) unwinds with longjmp */
 typedef struct { void **p; size_t n, cap; jmp_buf jb; } g6_heap;
@@ -521,9 +521,11 @@ static void g6_line_end(g6_model *M, size_t nf) {
 /* ---- formula discovery (encoder): the search for one target column t. Every target is independent of the others:
  * its best formula depends only on its own candidates. *pw counts the rows scored (screening included) and is
  * compared with G6_WORK_CAP: the search is O(columns^2) per target column, so a table that reaches the cap keeps the
- * formulas found so far. Counted in rows, not time, so the output stays the same on every machine. The files where
- * GR6+ wins need at most 0.34 G (OWID CO2, 79 columns); energy_test.csv (130 columns, never chosen) needed 3.9 G,
- * 7-21 s (benchmark/rc3w2/regress/RESULTS.md). Returns 1 with *f when a formula is kept. */
+ * formulas found so far. Counted in rows, not time, so the output stays the same on every machine. OWID CO2
+ * (79 columns) needs 0.34 G, but owid_test.csv (79 columns) needs between 2^29 and 2^30: the first cap (2^29) cost it
+ * +4.6% at -x and a 5x slower decode (CM chosen instead of GR6+). Tables wider than G6_MAXCOLS are not tried at all
+ * (energy_test.csv, 130 columns, needed 3.9 G), so 2^31 only bounds a pathological table of at most 100 columns.
+ * Returns 1 with *f when a formula is kept. */
 typedef struct { const int64_t *V; const uint8_t *D, *OK; int R, rows; } g6_samp;
 static int g6_target(const g6_samp *S, int t, int64_t *pw, g6_formula *f) {
     static const int KE[5] = {0, 2, 3, 6, 9};
