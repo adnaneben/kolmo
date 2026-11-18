@@ -87,6 +87,10 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
     double pt0 = prof_now();
 #endif
     nseg = segments(src, n, ss, se, MAXSEG);
+    /* not an archive: one segment per homogeneous run (plan/segment.c), for the modes where a plan per kind of data
+     * pays (balanced, eco, hc, ratio; speed keeps its minimal analysis and -x's context mixing adapts on its own) */
+    if (nseg == 1 && src && p->transforms && p->mode >= KOLMO_FAST && p->mode <= KOLMO_MAX && !prof && !dictlen && !columns)
+        nseg = content_segments(src, n, ss, se, MAXSEG);
     plans = array_alloc(nseg, sizeof(plan_t), 1);
     starts = array_alloc(bcap, sizeof(uint64_t), 0);
     bplan = array_alloc(bcap, sizeof(uint32_t), 0);

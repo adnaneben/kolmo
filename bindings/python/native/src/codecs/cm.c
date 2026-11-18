@@ -122,6 +122,20 @@ typedef struct {
     uint16_t pairs[1u << CM_PAIR_BITS];
 } cm_pair_scratch;
 #endif
+/* Per-stream learning settings of models 2 and 3 (docs/TWOPASS.md). The defaults (code 0) are the constants every
+ * stream before format 2 used; an encoder that searched the file for better ones writes them as two bytes after the
+ * model byte (model nibbles 13-15), so the decoder learns at exactly the same rates. Each field takes 2 bits:
+ *   byte 0: mixer rate shift CM_LR + {0,-1,+1,+2} | counter limit {2,1,3,4} << 2 | APM rate shift {13,12,14,15} << 4
+ *           | match-model rate shift {6,5,7,8} << 6
+ *   byte 2: initial mixer weights: 0 = every weight 1/4 (as before), 1 = the shared prior of the model: one row per
+ *           mixer, trained once on other data and compiled in (src/codecs/cm_prior.inc), copied to every row
+ *   byte 1: mixer rate floor {20,12,28,40} | rate decay period 2^{13,12,14,16} << 2 | state-map count limit
+ *           {255,127,511,1023} << 4 | final weights of mixer and APMs (of 8) {2222,4112,1223,3122} << 6 */
+typedef struct { uint8_t b0, b1, b2; } cm_tune_t;   /* b2: initial mixer weights, 0 = 1/4 per input, 1 = the shared prior of the model (cm_prior.inc) */
+static const int8_t cm_tv_lr[4] = {0, -1, 1, 2}, cm_tv_lim[4] = {2, 1, 3, 4}, cm_tv_apm[4] = {13, 12, 14, 15}, cm_tv_mc[4] = {6, 5, 7, 8};
+static const int8_t cm_tv_lrk[4] = {20, 12, 28, 40}, cm_tv_lrd[4] = {13, 12, 14, 16};
+static const uint16_t cm_tv_sm[4] = {255, 127, 511, 1023};
+static const uint8_t cm_tv_fin[4][4] = {{2, 2, 2, 2}, {4, 1, 1, 2}, {1, 2, 2, 3}, {3, 1, 2, 2}};
 typedef struct { uint32_t s[16]; } cm_bucket;          /* s[0] = check << 16 | priority; s[1..15] nibble-tree counters */
 typedef struct {
     cm_bucket *t[CM_NM3];
@@ -152,6 +166,8 @@ typedef struct {
     uint32_t mc[64];
     int mci;
     const kolmo_kernels *kk;                              /* dispatched kernels (src/arch) */
+    /* learning settings (cm_tune_t; the defaults are the compile-time constants, a tuned stream carries its own) */
+    int lr, lrk, lrd, apm_sh, mc_sh; uint32_t smlim; int fw[4]; uint32_t rcp[16];
 } cm_t;
 
 static inline uint32_t cm_hmix(uint32_t a) { a ^= a >> 15; a *= 0x2C1B3C6Du; a ^= a >> 12; a *= 0x297A2D39u; a ^= a >> 15; return a; }
@@ -270,6 +286,25 @@ static size_t cm_build_byte_table(uint32_t map[CM_BYTE_VALUES][CM_NIBBLES], int 
 }
 #endif
 
+#include "cm_prior.inc"   /* cm_prior[model 2 / 3][mixer][input]: weights / 4 */
+/* every row of the five mixers starts from the prior's row for that mixer (weights in 16.16, stored / 4) */
+static void cm_apply_prior(cm_t *m, const int16_t p[5][CM_NIX3]) {
+    for (int j = 0; j < CM_NIX3; j++) {
+        const int32_t a = p[0][j] * 4, b = p[1][j] * 4, c = p[2][j] * 4, d = p[3][j] * 4;
+        for (int i = 0; i < CM_W1; i++) m->w1[i][j] = a;
+        for (int i = 0; i < CM_W2; i++) m->w2[i][j] = b;
+        if (m->v2) { for (int i = 0; i < CM_W3; i++) m->w3[i][j] = c; for (int i = 0; i < CM_W4; i++) m->w4[i][j] = d; }
+    }
+    if (m->v2) for (int i = 0; i < CM_WF; i++) for (int j = 0; j < 5; j++) m->wf[i][j] = p[4][j] * 4;
+}
+static const int16_t (*cm_prior_override)[CM_NIX3];   /* research harnesses only (benchmark/rc3w2/twopass): replaces prior 1 */
+static void cm_set_tune(cm_t *m, cm_tune_t t) {
+    if (t.b2 == 1 && m->v2) cm_apply_prior(m, cm_prior_override ? cm_prior_override : cm_prior[m->v2 == 3]);
+    m->lr = CM_LR + cm_tv_lr[t.b0 & 3]; const int lim = cm_tv_lim[t.b0 >> 2 & 3]; m->apm_sh = cm_tv_apm[t.b0 >> 4 & 3]; m->mc_sh = cm_tv_mc[t.b0 >> 6];
+    m->lrk = cm_tv_lrk[t.b1 & 3]; m->lrd = cm_tv_lrd[t.b1 >> 2 & 3]; m->smlim = cm_tv_sm[t.b1 >> 4 & 3];
+    for (int k = 0; k < 4; k++) m->fw[k] = cm_tv_fin[t.b1 >> 6][k];
+    for (int n = 0; n < 16; n++) m->rcp[n] = cm_rcp[n * lim];
+}
 static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain, int lx) {   /* lx: exact logistic tables */   /* chain: bytes for model 3's match chain (4 per input byte) */
     pthread_once(&cm_once, cm_init_tables);
     size_t mem = cm_mem_for(bb, v2) + chain; cm_acquire(mem);
@@ -310,6 +345,7 @@ static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain, int lx) {   /*
     m->mmask = (1u << 22) - 1; m->mt = cm_big(((size_t)m->mmask + 1) * 4); if (!m->mt) goto fail;
     for (int i = 0; i < 64; i++) m->mc[i] = 1u << 15;
     if (chain) { m->mprev_n = chain; m->mprev = cm_big(chain); if (!m->mprev) goto fail; }
+    cm_set_tune(m, (cm_tune_t){0, 0, 0});
     return m;
 fail:
     cm_free_parts(m); cm_release(mem); return NULL;
@@ -434,28 +470,28 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     else {
         m->a3i = (int)(cm_hmix((img ? m->i_wn : (m->c4 & 0xffff)) * 0x9E3779B1u + c0 * 0x85EBCA6Bu) >> 16);
         int p3 = (m->a3[m->a3i][lo] * (128 - wt) + m->a3[m->a3i][lo + 1] * wt) >> 11;
-        p = (mixed + p1 + p2 + p3 + 2) >> 2;
+        p = (m->fw[0] * mixed + m->fw[1] * p1 + m->fw[2] * p2 + m->fw[3] * p3 + 4) >> 3;   /* default: the plain average */
     }
     if (p < 1) p = 1; if (p > 4095) p = 4095;
     return m->pr = p;
 }
-static inline void cm_upd_apm(uint16_t *a, int lo, int wt, int y) {
+static inline void cm_upd_apm(uint16_t *a, int lo, int wt, int y, int sh) {
     int g = y ? 65535 : 0;
-    a[lo] = (uint16_t)(a[lo] + ((g - a[lo]) * (128 - wt) >> 13));
-    a[lo + 1] = (uint16_t)(a[lo + 1] + ((g - a[lo + 1]) * wt >> 13));
+    a[lo] = (uint16_t)(a[lo] + ((g - a[lo]) * (128 - wt) >> sh));
+    a[lo + 1] = (uint16_t)(a[lo + 1] + ((g - a[lo + 1]) * wt >> sh));
 }
-static inline void cm_upd_ctr(uint32_t *s, int y) {
+static inline void cm_upd_ctr(uint32_t *s, int y, const uint32_t *rcp) {
     uint32_t v = *s; int p = (int)(v >> 16), n = (int)(v & 15); uint8_t st = (uint8_t)(v >> 8);
-    p += (int)(((int64_t)((y ? 65535 : 0) - p) * cm_rcp[n * CM_LIM]) >> 16);
+    p += (int)(((int64_t)((y ? 65535 : 0) - p) * rcp[n]) >> 16);
     if (n < 15) n++;
     if (p < 0) p = 0; if (p > 65535) p = 65535;
     *s = (uint32_t)p << 16 | (uint32_t)bh_next[st][y] << 8 | (uint32_t)n;
 }
-static inline void cm_upd_sm(uint32_t *e, int y) {
+static inline void cm_upd_sm(uint32_t *e, int y, uint32_t lim) {
     uint32_t v = *e, n = v & 1023, p = v >> 10;
     int64_t d = ((int64_t)((uint32_t)y << 22) - (int64_t)p) * cm_srcp[n] >> 16;
     p = (uint32_t)((int64_t)p + d); if (p > (1u << 22) - 1) p = (1u << 22) - 1;
-    *e = p << 10 | (n < SM_LIM ? n + 1 : n);
+    *e = p << 10 | (n < lim ? n + 1 : n);
 }
 static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, const int v2) {
     const int nm = CM_NMOD(v2), ni = 2 * nm + 3;
@@ -475,23 +511,23 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
             }
         }
     }
-    for (int i = 0; i < nm; i++) { cm_upd_sm(&m->sm[i][m->sst[i]], y); cm_upd_ctr(m->slot[i], y); }
+    for (int i = 0; i < nm; i++) { cm_upd_sm(&m->sm[i][m->sst[i]], y, m->smlim); cm_upd_ctr(m->slot[i], y, m->rcp); }
     for (int i = 1; i < nm; i++) if ((m->cur[i]->s[0] & 0xffff) < 0xffff) m->cur[i]->s[0]++;
-    if (m->mci >= 0) { uint32_t *c = &m->mc[m->mci]; *c = (uint32_t)((int64_t)*c + ((((int64_t)y << 16) - (int64_t)*c) >> 6)); }
+    if (m->mci >= 0) { uint32_t *c = &m->mc[m->mci]; *c = (uint32_t)((int64_t)*c + ((((int64_t)y << 16) - (int64_t)*c) >> m->mc_sh)); }
     int e1 = (y << 12) - m->pr1, e2 = (y << 12) - m->pr2;                  /* learning rate 1/2048 in 16.16 weights */
     int32_t *w1 = m->w1[m->w1i], *w2 = m->w2[m->w2i];
-    if (!v2) { const int e[4] = {e1, e2, 0, 0}; m->kk->cm_train(m->x, ni, w1, w2, NULL, NULL, e, CM_LR); }
+    if (!v2) { const int e[4] = {e1, e2, 0, 0}; m->kk->cm_train(m->x, ni, w1, w2, NULL, NULL, e, m->lr); }
     else {
-        int k = 64 - (int)(m->pos >> CM_LRD); if (k < CM_LRK) k = CM_LRK;
+        int k = 64 - (int)(m->pos >> m->lrd); if (k < m->lrk) k = m->lrk;
         e1 = e1 * k >> 4; e2 = e2 * k >> 4;
         int e3 = ((y << 12) - m->pr3) * k >> 4, e4 = ((y << 12) - m->pr4) * k >> 4, ef = (y << 12) - m->prf;
         int32_t *w3 = m->w3[m->w3i], *w4 = m->w4[m->w4i], *wf = m->wf[m->wfi];
-        { const int e[4] = {e1, e2, e3, e4}; m->kk->cm_train(m->x, ni, w1, w2, w3, w4, e, CM_LR); }
+        { const int e[4] = {e1, e2, e3, e4}; m->kk->cm_train(m->x, ni, w1, w2, w3, w4, e, m->lr); }
         for (int k = 0; k < 5; k++) wf[k] += (m->xf[k] * ef) >> CM_LRF;
-        cm_upd_apm(m->a3[m->a3i], m->ai, m->aw, y);
+        cm_upd_apm(m->a3[m->a3i], m->ai, m->aw, y, m->apm_sh);
     }
-    cm_upd_apm(m->a1[m->c0], m->ai, m->aw, y);
-    cm_upd_apm(m->a2[m->a2i], m->ai, m->aw, y);
+    cm_upd_apm(m->a1[m->c0], m->ai, m->aw, y, m->apm_sh);
+    cm_upd_apm(m->a2[m->a2i], m->ai, m->aw, y, m->apm_sh);
     int eb = cm_expected(m);
     if (eb >= 0 && eb != y) {
         /* model 3: a match of 16 or more that breaks is given 8 bytes to pick up again past the difference (an
@@ -751,21 +787,30 @@ static void cm_dec_run(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size
 /* model 1 (fewer contexts, about 30% faster, what kolmo 1.0.0 wrote; always for n >= 2^28, whose size word has no room
  * for flags), model 2, or model 3 (about 20% slower than model 2; 1 to 4% smaller on text, no gain on binary data) */
 /* model: 1, 2 or 3 */
-static size_t cm_compress_mx(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap);
+static size_t cm_compress_t(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap, cm_tune_t tune);
+static size_t cm_compress_mx(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap) { return cm_compress_t(in, n, out, cap, model, bbcap, (cm_tune_t){0, 0, 0}); }
 static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model) { return cm_compress_mx(in, n, out, cap, model, 0); }
-/* bbcap: at most 2^bbcap buckets per model (0: no cap beyond cm_bits_for) */
-static size_t cm_compress_mx(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap) {
+/* bbcap: at most 2^bbcap buckets per model (0: no cap beyond cm_bits_for); tune: learning settings (models 2 and 3;
+ * {0, 0, 0} writes the stream every earlier encoder wrote) */
+static size_t cm_compress_t(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap, cm_tune_t tune) {
     if (cap < 8 || n > 0xFFFFFFF0u) return 0;
     int small = n < ((size_t)1 << 28), v2 = small && model > 1 ? (model == 3 ? 3 : 1) : 0;
+    const int tuned = v2 && (tune.b0 | tune.b1 | tune.b2);
     /* exact logistic tables: model 3 always (its header has the model byte anyway); models 1 and 2 from 64 KiB, below
      * which the extra header byte can cost more than the better tables gain */
-    int lx = small && (v2 == 3 || n >= ((size_t)1 << 16));
+    int lx = small && (v2 == 3 || n >= ((size_t)1 << 16) || tuned);   /* a tuned stream's header always says exact tables */
     int bb = small ? cm_bits_for(n) : CM_BB;
     if (small && bbcap >= 16 && bb > bbcap) bb = bbcap;
     uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new_x(hist, bb, v2, v2 == 3 ? (n + 8) * 4 : 0, lx) : NULL;
     if (!m) { free(hist); return 0; }
     size_t o = 4; int r;
-    if (lx || v2 == 3) {      /* extended header: flags 8, then model nibble << 4 | log2 buckets - 15; nibble = model | 4 when exact */
+    if (tuned) {              /* extended header with learning settings: nibble 8 | 4 | model, then the two tune bytes */
+        cm_set_tune(m, tune);
+        uint32_t n32 = (uint32_t)n | (uint32_t)8 << 28; memcpy(out, &n32, 4); out[4] = (uint8_t)((v2 == 3 ? 15 : 14) << 4 | (bb - 15));
+        out[5] = tune.b0; out[6] = tune.b1; out[7] = tune.b2;
+        r = cm_enc_run(m, in, n, out + 4, cap - 4, &o, v2);
+        o += 4;
+    } else if (lx || v2 == 3) {      /* extended header: flags 8, then model nibble << 4 | log2 buckets - 15; nibble = model | 4 when exact */
         int base = v2 == 3 ? 3 : v2 ? 2 : 1;
         uint32_t n32 = (uint32_t)n | (uint32_t)8 << 28; memcpy(out, &n32, 4); out[4] = (uint8_t)((base | (lx ? 4 : 0)) << 4 | (bb - 15));
         r = cm_enc_run(m, in, n, out + 1, cap - 1, &o, v2);
@@ -779,21 +824,65 @@ static size_t cm_compress_mx(const uint8_t *in, size_t n, uint8_t *out, size_t c
 }
 static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return cm_compress_m(in, n, out, cap, 2); }
 
+/* -x: learning settings chosen per stream by a race (docs/TWOPASS.md). Four presets, each with the shared prior
+ * (byte 2 = 1), code the stream's first CM_RACE_SAMPLE bytes; the smallest wins (the first on a tie) and codes the
+ * whole stream. A stream no longer than the sample is coded whole by every preset and the smallest is kept. Presets:
+ * the prior with the default rates; and three settings that the full search (49 trials per file) found most often on
+ * text, logs, tables, numbers and images: faster APMs, a slower match-model counter, more weight on the APMs, a
+ * faster-settling or slower mixer. The choice depends on the stream's bytes only; threads only run the trials side
+ * by side. Decoding costs the same as before. */
+#ifndef CM_RACE_SAMPLE
+#define CM_RACE_SAMPLE (256u << 10)
+#endif
+enum { CM_NPRESET = 4 };
+static const cm_tune_t cm_presets[CM_NPRESET] = {{0x00, 0x00, 1}, {0x1c, 0xa5, 1}, {0x52, 0x04, 1}, {0xdc, 0xb4, 1}};
+typedef struct { const uint8_t *in; size_t n, cap, z; uint8_t *out; int model, bbcap; cm_tune_t t; } cm_race_job;
+static void *cm_race_run(void *a) { cm_race_job *j = a; j->z = j->out ? cm_compress_t(j->in, j->n, j->out, j->cap, j->model, j->bbcap, j->t) : 0; return NULL; }
+static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap, int threads) {
+    if (model < 2 || n >= ((size_t)1 << 28) || n < 64) return cm_compress_mx(in, n, out, cap, model, bbcap);
+    const size_t L = n <= CM_RACE_SAMPLE ? n : CM_RACE_SAMPLE;
+    cm_race_job j[CM_NPRESET]; pthread_t th[CM_NPRESET]; int started[CM_NPRESET] = {0};
+    for (int k = 0; k < CM_NPRESET; k++) {
+        j[k] = (cm_race_job){in, L, L == n ? cap : L + L / 16 + 64, 0, NULL, model, bbcap, cm_presets[k]};
+        j[k].out = malloc(j[k].cap);
+    }
+    const int par = threads > CM_NPRESET ? CM_NPRESET : threads > 1 ? threads : 1;
+    for (int k0 = 0; k0 < CM_NPRESET; k0 += par) {           /* par trials at a time; the caller runs one of them */
+        for (int k = k0 + 1; k < k0 + par && k < CM_NPRESET; k++) started[k] = !pthread_create(&th[k], NULL, cm_race_run, &j[k]);
+        cm_race_run(&j[k0]);
+        for (int k = k0 + 1; k < k0 + par && k < CM_NPRESET; k++) { if (started[k]) pthread_join(th[k], NULL); else cm_race_run(&j[k]); }
+    }
+    int b = -1; for (int k = 0; k < CM_NPRESET; k++) if (j[k].z && (b < 0 || j[k].z < j[b].z)) b = k;
+    size_t z = 0;
+    if (b >= 0 && L == n) { memcpy(out, j[b].out, j[b].z); z = j[b].z; }
+    for (int k = 0; k < CM_NPRESET; k++) free(j[k].out);
+    if (L == n) return z ? z : cm_compress_mx(in, n, out, cap, model, bbcap);
+    return cm_compress_t(in, n, out, cap, model, bbcap, b >= 0 ? cm_presets[b] : cm_presets[0]);
+}
+
+/* a stream written with learning settings (extended header, model nibble 14 or 15): its frame is version 11 */
+static int cm_stream_tuned(const uint8_t *z, size_t zn) { return zn >= 8 && (z[3] >> 4) == 8 && (z[4] >> 4) >= 14; }
 static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     if (cn < 8) return -1;
     uint32_t n32; memcpy(&n32, in, 4);
-    int bb = CM_BB, v2 = 0, lx = 0;
+    int bb = CM_BB, v2 = 0, lx = 0; cm_tune_t tune = {0, 0, 0};
     if (n < ((size_t)1 << 28)) {
         uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu;
-        if (f == 8) {                                     /* extended header: model nibble 3 (legacy tables) or 5, 6, 7 (exact) */
+        if (f == 8) {                                     /* extended header: model nibble 3 (legacy tables), 5, 6, 7 (exact), 14, 15 (exact, tuned) */
             int mb = cn < 9 ? 0 : in[4] >> 4;
-            if (mb != 3 && mb != 5 && mb != 6 && mb != 7) return -1;
-            lx = mb >= 5; v2 = (mb & 3) == 3 ? 3 : (mb & 3) == 2 ? 1 : 0; bb = (in[4] & 15) + 15; in++; cn--;
+            if (mb != 3 && mb != 5 && mb != 6 && mb != 7 && mb != 14 && mb != 15) return -1;
+            lx = mb >= 5; v2 = (mb & 3) == 3 ? 3 : (mb & 3) == 2 ? 1 : 0; bb = (in[4] & 15) + 15;
+            if (mb >= 14) {                               /* the three tune bytes; the coded bits start after them (cm_dec_loop skips 4) */
+                if (cn < 12 || in[7] > 1) return -1;
+                tune.b0 = in[5]; tune.b1 = in[6]; tune.b2 = in[7]; in += 3; cn -= 3;
+            }
+            in++; cn--;
         }
         else if (f) { bb = (int)(f & 7) + 15; v2 = (int)(f >> 3); }
     }
     if (n32 != n || bb < 16 || bb > 22) return -1;
     cm_t *m = cm_new_x(out, bb, v2, v2 == 3 ? (n + 8) * 4 : 0, lx); if (!m) return -1;
+    cm_set_tune(m, tune);
     cm_dec_run(m, in, cn, out, n, v2 == 3 ? 3 : v2 ? 1 : 0);
     cm_free(m);
     return 0;
@@ -803,7 +892,8 @@ static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
 #ifdef KOLMO_CODEC_REGISTRY
 static size_t cm_bound(size_t n) { return n + n / 16 + 64; }
 static size_t cm_codec_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
-    (void)x; return cm_compress_m(in, n, out, cap, level == 1 ? 1 : looks_text(in, n) ? 3 : 2);
+    /* level 1: model 1, as written before; otherwise model 3 for text, 2 for the rest, with the raced settings */
+    return level == 1 ? cm_compress_m(in, n, out, cap, 1) : cm_compress_raced(in, n, out, cap, looks_text(in, n) ? 3 : 2, 0, x ? x->threads : 1);
 }
 static int cm_codec_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return cm_decompress(in, cn, out, n); }
 static const kolmo_codec codec_cm = { C_CM, "cm", cm_bound, cm_codec_compress, cm_codec_decompress, NULL };

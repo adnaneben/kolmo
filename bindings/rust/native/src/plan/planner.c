@@ -233,12 +233,18 @@ static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int 
 #ifndef SHUF_SCREEN
 #define SHUF_SCREEN 0.97
 #endif
+#ifdef KOLMO_PLAN_HOOK
+static int kolmo_plan_full;   /* research builds only: every trial slice is the whole input (benchmark/rc3w2/twopass) */
+#define PLAN_SLICE(x) (kolmo_plan_full ? ((size_t)1 << 40) : (size_t)(x))
+#else
+#define PLAN_SLICE(x) (x)
+#endif
 static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int structured, int threads, int strong, int light, int native) {
     const int numtrial = light == 4;                      /* balanced: quick analysis of binary data, with the integer trial kept */
     if (light && light != 4) logs = 0;
     plan_t pl = {T_NONE, 0, 0, 0};
     if (n < 4096) return pl;
-    const size_t TRIAL = effort ? (1u << 20) : (256u << 10);   /* text-transform trial slice (fast: 256 KiB) */
+    const size_t TRIAL = PLAN_SLICE(effort ? (1u << 20) : (256u << 10));   /* text-transform trial slice (fast: 256 KiB) */
     size_t h = n < 65536 ? n : 65536, pr = 0;
     for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
     if (pr * 100 > h * 95) {                                     /* text: field transposition if lines have a fixed field count */
@@ -257,7 +263,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                 if (lines < 4 || k0 <= 256 || same * 100 < (lines - 1) * 95) continue;
                 uint8_t sep = '.';
                 if (WD[di] != ',') { size_t dc = 0, cc = 0; for (size_t q = 1; q + 1 < h; q++) if ((uint8_t)(s[q - 1] - '0') < 10 && (uint8_t)(s[q + 1] - '0') < 10) { dc += s[q] == '.'; cc += s[q] == ','; } if (cc > dc) sep = ','; }
-                const size_t TW = effort ? (512u << 10) : TRIAL;      /* wide rows repeat their structure every line: half a MiB decides */
+                const size_t TW = PLAN_SLICE(effort ? (512u << 10) : TRIAL);      /* wide rows repeat their structure every line: half a MiB decides */
                 size_t mm = n < TW ? n : TW; while (mm > 0 && s[mm - 1] != '\n') mm--;
                 if (mm < 16384) continue;
                 const uint8_t *ts = s;                           /* large inputs: trial from the middle (the start may be atypical) */
@@ -450,7 +456,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     }
     /* binary: numeric byte-plane shuffle, chosen by a zstd -1 trial on a 32 KB slice */
     if (light == 4) light = 1;
-    size_t mid = n / 2, sl = n - mid < 32768 ? n - mid : 32768;
+    size_t mid = PLAN_SLICE(32768) > 32768 ? 0 : n / 2, sl = n - mid < PLAN_SLICE(32768) ? n - mid : 32768;
     const uint8_t *smp = s + mid;
     int wonly = 0;                                        /* minimal analysis: at most one word width goes to the trials */
     if (light >= 2 && sl >= 4096) {
@@ -493,7 +499,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     /* structure-aware candidates (16-bit image, fixed records) against the shuffle and plain coding, scored by zstd -3
      * on a slice of up to 1 MiB from the middle of the input; kept only when at least 3% smaller */
     if (structured && n >= (1u << 18)) {
-        size_t LM = light && !numtrial ? (1u << 18) : (1u << 20), L = n / 4 < LM ? n / 4 : LM, st = (n / 2 - L / 2) & ~(size_t)7;
+        size_t LM = PLAN_SLICE(light && !numtrial ? (1u << 18) : (1u << 20)), L = PLAN_SLICE(n / 4) < LM ? n / 4 : LM > n ? n : LM, st = (n / 2 - L / 2) & ~(size_t)7;
         const int zl = light ? 1 : 3;                      /* scoring level */
         /* balanced keeps the 1 MiB slice of the full analysis: on a 47 MB weights file the 256 KiB slice picked a layout
          * that coded 0.8% larger, and the slice costs under a millisecond at level 1 */
@@ -563,7 +569,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             }
         }
         {   /* float arrays first (FLOAT node); integer arrays (INT node) only when the data does not look like floats */
-            const size_t Lg = effort || L <= (256u << 10) ? L : (256u << 10);     /* fast: graph trials on 256 KiB */
+            const size_t Lg = effort || L <= PLAN_SLICE(256u << 10) ? L : (256u << 10);     /* fast: graph trials on 256 KiB */
             double plg = -1;                                    /* a shorter slice is compared by its gain over plain coding of that slice */
 #define KG_ADJ(C) ((C) > 1e299 || Lg == L ? (C) : (C) * plain / (plg > 0 ? plg : (plg = (double)zcost(zc, s + st, Lg, zb, zcap, zl) / Lg)))
             /* the float trial keeps the full slice: its pre-check is cheap, and zstd's plain cost on 256 KiB misleads on float data */

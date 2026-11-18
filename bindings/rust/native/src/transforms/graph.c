@@ -534,7 +534,7 @@ static size_t kg_sel_sub(codec_ctx *x, const void *ctx, const uint8_t *p, size_t
     if (!z) cc = C_STORE;
     if (codec == C_CM && level == 2 && n >= 64) {
         size_t cz = codec_compress(x, C_CM, level, p, n, t, cap);
-        if (cz && (!z || cz < z)) { memcpy(out, t, cz); z = cz; cc = C_CM; }
+        if (cz && (!z || cz < z)) { memcpy(out, t, cz); z = cz; cc = C_CM; if (cm_stream_tuned(t, cz)) x->used_cmt = 1; }
     }
     size_t hz = n >= 64 ? huf_compress_all(p, n, t, cap) : 0;
     if (hz && (!z || hz < z)) { memcpy(out, t, hz); z = hz; cc = C_HUF; }
@@ -598,7 +598,7 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
          * Default ultra keeps LZMA2 leaves. No format change: leaf codec 7 has always been valid. */
         if (codec == C_CM && level == 2 && s->n >= 64 && !flat) {
             uint8_t *cb = malloc(zc); size_t cz = cb ? codec_compress(x, C_CM, level, s->p, s->n, cb, zc) : 0;
-            if (cz && (!z || cz < z)) { memcpy(o.p + o.n + 20, cb, cz); z = cz; cc = C_CM; }
+            if (cz && (!z || cz < z)) { memcpy(o.p + o.n + 20, cb, cz); z = cz; cc = C_CM; if (cm_stream_tuned(cb, cz)) x->used_cmt = 1; }
             free(cb);
         }
         int tryh = s->n >= 64 && !flat, tryhuf = 1;

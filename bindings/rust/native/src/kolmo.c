@@ -97,6 +97,7 @@ int kolmo_force_c;
 #include "core/trials.c"
 #include "core/blocks.c"
 #include "transforms/tar.c"
+#include "plan/segment.c"
 #include "plan/frontier.c"
 #include "plan/parallel.c"
 /* Opt-in typed encoder route ported from the RC1 integration (PR #10). It writes ordinary version 7 graph frames. */
