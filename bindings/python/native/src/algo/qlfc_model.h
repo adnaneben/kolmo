@@ -17,6 +17,7 @@
 #ifndef KOLMO_ALGO_QLFC_MODEL_H
 #define KOLMO_ALGO_QLFC_MODEL_H
 #include <stdint.h>
+#include <string.h>
 #include "qlfc_tables.h"
 
 enum {
@@ -190,12 +191,31 @@ static inline void qm_learn(qlfc_mixer *m, int eps, int lr0, int lr1, int lr2) {
     m->w1 -= qm_mul3(lr1, eps, m->s1) >> 16;
     m->w2 -= qm_mul3(lr2, eps, m->s2) >> 16;
 }
+/* The two APM entries an update moves are adjacent: on x86-64 both in one 16-bit multiply-high. pmulhw gives
+   floor(x * 16ar / 2^16) = floor(x * ar / 2^12), the arithmetic shift of the scalar code, for every |x| < 2^15 (here
+   |x| < 5000) and 16ar < 2^15 (ar <= 1342), and the 16-bit adds wrap as the int16_t stores do: the same values. */
+#if defined(__SSE2__)
+#include <emmintrin.h>
+static inline void qm_apm0(int16_t *p, int th, int ar) {
+    int32_t w; memcpy(&w, p, 4); __m128i v = _mm_cvtsi32_si128(w);
+    v = _mm_add_epi16(v, _mm_mulhi_epi16(_mm_sub_epi16(_mm_set1_epi16((int16_t)(4096 - th)), v), _mm_set1_epi16((int16_t)(ar * 16))));
+    w = _mm_cvtsi128_si32(v); memcpy(p, &w, 4);
+}
+static inline void qm_apm1(int16_t *p, int th, int ar) {
+    int32_t w; memcpy(&w, p, 4); __m128i v = _mm_cvtsi32_si128(w);
+    v = _mm_sub_epi16(v, _mm_mulhi_epi16(_mm_sub_epi16(v, _mm_set1_epi16((int16_t)th)), _mm_set1_epi16((int16_t)(ar * 16))));
+    w = _mm_cvtsi128_si32(v); memcpy(p, &w, 4);
+}
+#else
+static inline void qm_apm0(int16_t *p, int th, int ar) { qc_update_bit0(p, th, ar); qc_update_bit0(p + 1, th, ar); }
+static inline void qm_apm1(int16_t *p, int th, int ar) { qc_update_bit1(p, th, ar); qc_update_bit1(p + 1, th, ar); }
+#endif
 static inline void qm_update0(qlfc_mixer *m, int lr0, int lr1, int lr2, int th, int ar) {
-    qc_update_bit0(&m->map[m->index], th, ar); qc_update_bit0(&m->map[m->index + 1], th, ar);
+    qm_apm0(&m->map[m->index], th, ar);
     qm_learn(m, m->mixed - 4095, lr0, lr1, lr2);
 }
 static inline void qm_update1(qlfc_mixer *m, int lr0, int lr1, int lr2, int th, int ar) {
-    qc_update_bit1(&m->map[m->index], th, ar); qc_update_bit1(&m->map[m->index + 1], th, ar);
+    qm_apm1(&m->map[m->index], th, ar);
     qm_learn(m, m->mixed - 1, lr0, lr1, lr2);
 }
 /* MixupAndUpdateBit0/1 of libbsc: the same arithmetic as mixup followed by update. */

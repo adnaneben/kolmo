@@ -5,6 +5,7 @@
  * chunk, repeated code words at the same bit phase); research S1 "H->Z" on PR #7.
  *
  * Payload: Huffman length uv | zstd frame of the Huffman stream (single frame, no dictionary).
+ * Codec 30 (wave 4) is the same with khuf (codec 27) as the Huffman coder, which the leaves write by default.
  * Part of the single translation unit built from src/kolmo.c; its codec table is at the end of the file. */
 
 /* code an already Huffman-coded stream (huf, hl bytes) with zstd at `level`; returns the payload length or 0 */
@@ -19,16 +20,17 @@ static size_t hz_compress_huf(codec_ctx *x, int level, const uint8_t *huf, size_
     memcpy(out, h, hn); return hn + r;
 }
 
-static int hz_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+static int hz_decompress_x(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n, int khuf) {
     size_t i = 0; uint64_t hl;
     /* a Huffman stream of n bytes is at most n plus a few bytes per 128 KiB chunk */
     if (kgu_get(in, cn, &i, &hl) || hl == 0 || hl > n + n / 1024 + 64) return -1;
     uint8_t *t = malloc((size_t)hl); if (!t) return -1;
     if (!x->zd) x->zd = ZSTD_createDCtx();
     size_t r = x->zd ? ZSTD_decompressDCtx(x->zd, t, (size_t)hl, in + i, cn - i) : (size_t)-1;
-    int rc = !x->zd || ZSTD_isError(r) || r != hl ? -1 : huf_decompress_all(t, (size_t)hl, out, n);
+    int rc = !x->zd || ZSTD_isError(r) || r != hl ? -1 : khuf ? kolmo_khuf_decompress_chunks(t, (size_t)hl, out, n) : huf_decompress_all(t, (size_t)hl, out, n);
     free(t); return rc;
 }
+static int hz_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return hz_decompress_x(x, in, cn, out, n, 0); }
 
 /* encoder rule: Huffman streams up to 64 KiB take zstd level 19 (or the leaf's higher level) directly; larger ones
  * zstd at the `probe` level over the Huffman stream first (cheap: the leaf's own zstd level up to 9, else 1); the given level only when that probe finds
@@ -59,3 +61,6 @@ static size_t hz_try(codec_ctx *x, int probe, int level, const uint8_t *huf, siz
 
 static int hz_dec_tab(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return x->allow_f2 ? hz_decompress(x, in, cn, out, n) : -1; }
 static const kolmo_codec codec_hz = { C_HZ, "hz", NULL, NULL, hz_dec_tab, NULL };   /* written by the graph leaves */
+/* Codec 30: the same with khuf (codec 27's chunks) as the Huffman stream (wave 4: the graph leaves' default) */
+static int khz_dec_tab(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return x->allow_f2 ? hz_decompress_x(x, in, cn, out, n, 1) : -1; }
+static const kolmo_codec codec_khz = { C_KHZ, "khz", NULL, NULL, khz_dec_tab, NULL };

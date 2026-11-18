@@ -67,6 +67,27 @@ static void test_lengths(void) {
         if (present >= 2) CHECK(got == present && kraft == (1ull << KHUF_MAXLEN), "Huffman code not complete (%d symbols)", present);
     }
 }
+/* khuf on garbage: random payloads (some with a valid-looking table byte) for random sizes, and valid blocks with the
+ * table or the stream lengths damaged; the decoder must fail or decode in bounds (ASan in check-native) */
+static void test_khuf_garbage(void) {
+    uint8_t *in = malloc(140000), *out = malloc(KHUF_BLOCK_MAX), *z = malloc(KHUF_BLOCK_MAX + 1024);
+    for (int it = 0; it < 30000; it++) {
+        size_t cn = 1 + rnd() % (it & 7 ? 600 : 70000), n = 2 + rnd() % (it & 3 ? 5000 : KHUF_BLOCK_MAX - 2);
+        for (size_t i = 0; i < cn; i++) in[i] = (uint8_t)rnd();
+        if (it & 1) in[0] = (uint8_t)((1 + rnd() % 12) | (rnd() % 3) << 4);
+        kolmo_khuf_decompress(in, cn, out, n);
+        kolmo_khuf_decompress_chunks(in, cn, out, n);
+    }
+    for (int it = 0; it < 3000; it++) {
+        size_t n = 1024 + rnd() % 60000; for (size_t i = 0; i < n; i++) in[i] = (uint8_t)(rnd() % (2 + it % 200));
+        size_t zn = kolmo_khuf_compress(in, n, z, KHUF_BLOCK_MAX + 1024); if (!zn) continue;
+        uint8_t *y = malloc(zn); memcpy(y, z, zn);
+        for (int f = 0; f < 3; f++) y[rnd() % (zn < 300 ? zn : 300)] = (uint8_t)rnd();   /* the table and the lengths */
+        if (!kolmo_khuf_decompress(y, zn, out, n)) CHECK(1, "accepted");   /* accepting is allowed, crashing is not */
+        free(y);
+    }
+    free(in); free(out); free(z);
+}
 static const struct { size_t n; uint64_t h0, hs; } KH[] = {
 {0, 0x08755A3FB62E0DC1ull, 0x3C9E0A316DBBE692ull},
 {1, 0x31885CA34F45F74Cull, 0x5F3688B8820377ECull},
@@ -101,8 +122,8 @@ static void test_hash(void) {
 }
 int main(int argc, char **argv) {
     int iters = argc > 1 ? atoi(argv[1]) : 1;
-    test_lengths(); test_hash();
-    static const size_t sizes[] = {0, 1, 2, 3, 4, 5, 7, 8, 15, 16, 17, 31, 64, 100, 255, 1000, 4095, 65536, 131071, 131072, 131073, 300000};
+    test_lengths(); test_hash(); test_khuf_garbage();
+    static const size_t sizes[] = {0, 1, 2, 3, 4, 5, 7, 8, 15, 16, 17, 31, 64, 100, 255, 1000, 1023, 1024, 1025, 1031, 4095, 16383, 16384, 65536, 131071, 131072, 131073, 300000};
     for (int it = 0; it < iters; it++)
         for (int k = 0; k < 4; k++)
             for (size_t si = 0; si < sizeof sizes / sizeof *sizes; si++)

@@ -249,11 +249,28 @@ static int qlfc_static_encode(const uint8_t *input, uint8_t *output, uint8_t *bu
 }
 
 /* Shared decoder tail: write a run of `c`, with bounds. */
+/* Runs and move-to-front steps are short: with SSE2, up to 16 bytes move in one vector (a call to memset or memmove
+ * per symbol was 4% of the decoder's instructions); the bytes written are the same. */
+#if defined(__SSE2__)
+#include <emmintrin.h>
+static const uint8_t qlfc_lanes[32] = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255};
+#endif
 static inline int qlfc_put_run(uint8_t *output, int *i, int n, int c, int runSize) {
     if ((unsigned)runSize > (unsigned)(n - *i)) return 0;
+#if defined(__SSE2__)
+    if (runSize <= 16 && n - *i >= 16) { _mm_storeu_si128((__m128i *)(output + *i), _mm_set1_epi8((char)c)); *i += runSize; return 1; }
+#endif
     memset(output + *i, c, (size_t)runSize); *i += runSize; return 1;
 }
 static inline void qlfc_mtf_update(uint8_t *MTFTable, int rank, int currentChar) {
+#if defined(__SSE2__)
+    if (rank < 16) {   /* lanes below rank take the next byte, the others stay (the table has 256 bytes) */
+        __m128i a = _mm_loadu_si128((const __m128i *)MTFTable), b = _mm_loadu_si128((const __m128i *)(MTFTable + 1));
+        __m128i m = _mm_loadu_si128((const __m128i *)(qlfc_lanes + 16 - rank));
+        _mm_storeu_si128((__m128i *)MTFTable, _mm_or_si128(_mm_and_si128(m, b), _mm_andnot_si128(m, a)));
+        MTFTable[rank] = (uint8_t)currentChar; return;
+    }
+#endif
     memmove(MTFTable, MTFTable + 1, (size_t)rank); MTFTable[rank] = (uint8_t)currentChar;
 }
 

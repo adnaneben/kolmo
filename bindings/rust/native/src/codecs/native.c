@@ -6,7 +6,9 @@
  * (same planner, same trials, same levels mapped as below), and writes the new id in the block index or the leaf
  * header (codec_wire); the frame is then version 11. Dictionaries and trained profiles keep the library coders.
  *   lz:   LZ4 -> KLZ (28), LZ4-HC -> KLZ level 3, zstd -> KLZH (29), Brotli -> KLZH level 7
- *   huf:  zstd's HUF in the graph leaves (codec 13) -> khuf (27)
+ *   huf:  zstd's HUF in the graph leaves (codec 13) -> khuf (27), and Huffman then zstd (22) -> khuf then zstd (30).
+ *         The default since wave 4 (benchmark/w4/entropy/RESULTS.md): khuf decodes Kolmo's leaves 1.9x faster than
+ *         HUF at a smaller size. KOLMO_NATIVE=libhuf writes zstd's HUF (13, 22) again, for comparisons.
  *   lzma: raw LZMA2 (codec 6) -> KLZMA (24)
  *   strong: zstd and Brotli -> KLZMA (the optimal parse and range coder, at a slower decode): the candidate for `hc`
  *           and `eco` (zstd levels 19 and 22 -> KLZMA 6, levels 10-18 -> 5, lower levels and Brotli -> 3). The id
@@ -18,7 +20,7 @@
 #include "../algo/klz.h"
 #include "../algo/klzma.h"
 
-enum { KN_LZ = 1, KN_HUF = 2, KN_LZMA = 4, KN_STRONG = 8 };
+enum { KN_LZ = 1, KN_HUF = 2, KN_LZMA = 4, KN_STRONG = 8, KN_LIBHUF = 16 };
 static int kolmo_native_flags(void) {
     static int f = -1; int r = __atomic_load_n(&f, __ATOMIC_RELAXED);
     if (r < 0) {
@@ -30,6 +32,7 @@ static int kolmo_native_flags(void) {
             else if (k == 3 && !strncmp(s, "huf", 3)) r |= KN_HUF;
             else if (k == 4 && !strncmp(s, "lzma", 4)) r |= KN_LZMA;
             else if (k == 6 && !strncmp(s, "strong", 6)) r |= KN_STRONG;
+            else if (k == 6 && !strncmp(s, "libhuf", 6)) r |= KN_LIBHUF;
             s += k; if (*s) s++;
         }
         __atomic_store_n(&f, r, __ATOMIC_RELAXED);
@@ -39,15 +42,16 @@ static int kolmo_native_flags(void) {
 /* the codec the encoder actually codes with (and writes) for library codec c */
 static inline int codec_native_id(const codec_ctx *x, int c) {
     int f = kolmo_native_flags();
-    if (!f || x->dict || x->prof) return c;
+    if (x->dict || x->prof) return c;
+    if ((c == C_HUF || c == C_HZ) && !(f & KN_LIBHUF)) return c == C_HUF ? C_KHUF : C_KHZ;   /* the default */
+    if (!f) return c;
     if ((f & KN_STRONG) && (c == C_ZSTD || c == C_BROTLI)) return C_KLZMA;
     if (f & KN_LZ) { if (c == C_LZ4 || c == C_LZ4HC) return C_KLZ; if (c == C_ZSTD || c == C_BROTLI) return C_KLZH; }
-    if ((f & KN_HUF) && c == C_HUF) return C_KHUF;
     if ((f & KN_LZMA) && c == C_LZMA) return C_KLZMA;
     return c;
 }
 #define codec_wire(x, c) ((uint8_t)codec_native_id((x), (c)))
-static inline int codec_is_native(int c) { return c == C_KLZMA || c == C_KHUF || c == C_KLZ || c == C_KLZH; }
+static inline int codec_is_native(int c) { return c == C_KLZMA || c == C_KHUF || c == C_KLZ || c == C_KLZH || c == C_KHZ; }
 
 /* library level -> native level */
 static int native_level(int c, int level) {

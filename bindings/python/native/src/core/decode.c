@@ -68,7 +68,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     size_t len = get32(e), cl = get32(e + 4); int codec = e[12], tflag = e[13];
     size_t meta = 0;
     x->allow_nplane = 0; x->allow_f2 = 0;
-    if (codec == C_NPLANE || codec == C_PLANES || codec == C_HZ || codec == C_ZRUN) return KOLMO_ERR_CORRUPT;   /* graph leaves only */
+    if (codec == C_NPLANE || codec == C_PLANES || codec == C_HZ || codec == C_ZRUN || codec == C_KHZ) return KOLMO_ERR_CORRUPT;   /* graph leaves only */
     plan_t pl = P->pl;
     if (P->psum) {                                             /* rt: the checksum covers the stored bytes; checked first */
         if (cl < 4 || (uint32_t)kolmo_xxh3(pay + 4, cl - 4, 0x637a6e31u ^ get32(pay)) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;

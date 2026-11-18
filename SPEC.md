@@ -197,9 +197,10 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 24 | KLZMA (Kolmo's LZMA-class coder) | blocks and graph leaves, version 11 or later; written only with the opt-in `KOLMO_NATIVE=lzma` (or `strong`); payload in `src/algo/klzma.h` | rc3 wave 2 (native lane) |
 | 25 | reserved for the rc3 lanes (`research/RC3-PLAN.md`) | — | — |
 | 26 | GR6 (GR6+ line-structured text) | blocks, version 11 or later; written by `ultra` (not level 1) | rc3 |
-| 27 | KHUF (Kolmo Huffman; codec 13's chunk framing) | graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=huf`; format in `src/algo/khuf.h` | rc3 wave 2 |
+| 27 | KHUF (Kolmo Huffman; codec 13's chunk framing) | graph leaves, version 11 or later; written instead of 13 by default since wave 4 (`KOLMO_NATIVE=libhuf`: 13); block format in `src/algo/khuf.h` (changed in wave 4) | rc3 wave 2 |
 | 28 | KLZ (byte-aligned LZ77) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
 | 29 | KLZH (LZ77 with Huffman-coded streams) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
+| 30 | KHZ (khuf, then zstd) | graph leaves, version 11; also inside codecs 21 and 23; written instead of 22 by default | wave 4 |
 
 **ARM64 branch filter (plan type 11, tflag 14, version 11; rc3 wave 2)**: the plan prefix is `11, a, b, 0`, where
 `a | (b & 15) << 8` is the block's *page phase* P (0-4095). The payload is the coded stream of the filtered block,
@@ -460,7 +461,7 @@ payload := np u8 (2-8; rl is a multiple of np) | plane * np
 plane   := codec u8 | coded length uv | coded bytes      (plane b is raw bytes [b L, (b+1) L), L = rl / np)
 ```
 
-A plane's codec is one of 0-7, 13, 14, 22, 23 (not 12, 15-21). The encoder writes it only for the residual stream of
+A plane's codec is one of 0-7, 13, 14, 22, 23, 24, 27-30 (not 12, 15-21). The encoder writes it only for the residual stream of
 an `INT` node with byte planes (flag bit 3), choosing per plane the smallest of the block codec, Huffman (13), rANS
 (14; not at the fast levels; at `hc` only when 3% smaller than a non-rANS choice), Huffman then zstd (22), zero runs
 (23, when at least half the plane's bytes are 0) and stored (0), and keeps the leaf only when it is smaller than the
@@ -474,6 +475,9 @@ payload := h uv (length of the Huffman stream; h <= rl + rl/1024 + 64) | zstd fr
 
 The zstd frame (no dictionary) decodes to a codec 13 stream of `h` bytes, which decodes to the `rl` leaf bytes.
 
+**Leaf codec 30: khuf, then zstd** (wave 4). The same payload, the zstd frame decoding to a codec 27 stream. The
+encoder writes 27 and 30 where it wrote 13 and 22 (not with a dictionary or a trained profile).
+
 **Leaf codec 23: zero runs and literals.**
 
 ```
@@ -482,7 +486,7 @@ payload  := k uv (non-zero bytes, k <= rl)
             | literals: codec u8 | coded length uv | coded bytes      (raw length k; the coded bytes end the payload)
 ```
 
-Sub-codecs are 0-7, 13, 14, 22 (not 21 or 23). `runs` holds k + 1 LEB128 varints: the number of zero bytes before
+Sub-codecs are 0-7, 13, 14, 22, 24, 27-30 (not 21 or 23). `runs` holds k + 1 LEB128 varints: the number of zero bytes before
 each non-zero byte, then the number after the last one; `literals` holds the k non-zero bytes. Decoding interleaves
 them; a zero literal, a run past `rl` or bytes left over in either stream is an error (`src/algo/zerorun.c`).
 

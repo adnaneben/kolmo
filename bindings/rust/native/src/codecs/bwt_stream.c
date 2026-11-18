@@ -231,13 +231,19 @@ int kolmo_bwt_compress(const uint8_t *in, uint8_t *out, size_t cap, int n, const
     kb_st32(q, (uint32_t)I[0]); q += 4;
     *q++ = (uint8_t)rlog; *q++ = (uint8_t)k;
     for (int t = 0; t < k; t++) { kb_st32(q, (uint32_t)I[t + 1]); q += 4; }
+    /* coder blocks: blocks of min_block to 4 x min_block bytes (4 to 16 MiB) are cut into four, so that their QLFC
+       stage decodes on four threads: +0.05% (10 MB of text) to +0.23% (6.6 MB) for 2-4x the 4-thread QLFC speed
+       (benchmark/w4/entropy/RESULTS.md); larger blocks keep min_block, smaller ones stay whole. The split depends on
+       the input size only. */
+    int mb = p->min_block;
+    if (mb > 0 && lz >= mb && lz / 4 < mb) mb = lz / 4;
     /* the QLFC coder needs lz + 64 bytes of room; code into scratch when the caller's buffer is tighter */
     int res;
-    if (cap - head >= (size_t)lz + 64) res = kolmo_qlfc_compress_min(work, q, lz, p->coder, p->min_block, threads);
+    if (cap - head >= (size_t)lz + 64) res = kolmo_qlfc_compress_min(work, q, lz, p->coder, mb, threads);
     else {
         uint8_t *tmp = (uint8_t *)malloc((size_t)lz + 64);
         if (!tmp) { free(work); return KB_NOT_ENOUGH_MEMORY; }
-        res = kolmo_qlfc_compress_min(work, tmp, lz, p->coder, p->min_block, threads);
+        res = kolmo_qlfc_compress_min(work, tmp, lz, p->coder, mb, threads);
         if (res > 0 && (size_t)res <= cap - head) memcpy(q, tmp, (size_t)res); else if (res > 0) res = KB_NOT_COMPRESSIBLE;
         free(tmp);
     }
@@ -245,7 +251,7 @@ int kolmo_bwt_compress(const uint8_t *in, uint8_t *out, size_t cap, int n, const
        stage decodes 2-2.6x faster. Same stream layout; the flags byte names the coder. */
     if (res > 0 && p->coder == KOLMO_QLFC_ADAPTIVE && p->static_pct > 0) {
         uint8_t *tmp = (uint8_t *)malloc((size_t)lz + 64);
-        int rs = tmp ? kolmo_qlfc_compress_min(work, tmp, lz, KOLMO_QLFC_STATIC, p->min_block, threads) : -1;
+        int rs = tmp ? kolmo_qlfc_compress_min(work, tmp, lz, KOLMO_QLFC_STATIC, mb, threads) : -1;
         if (rs > 0 && (size_t)rs <= cap - head && (int64_t)res * 100 > (int64_t)rs * (100 - p->static_pct)) {
             out[0] = (uint8_t)(KOLMO_QLFC_STATIC | (use_lzp ? 4 : 0)); memcpy(q, tmp, (size_t)rs); res = rs;
         }

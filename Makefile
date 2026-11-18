@@ -245,10 +245,13 @@ build/test-bwt-asan: tests/test_bwt.c tests/test_bwt_golden.h $(BWTSRC) $(BWTHDR
 	$(CC) $(SANFLAGS) -Isrc tests/test_bwt.c $(BWTSRC) -o $@ -lpthread
 # Kolmo's own coders (codecs 24, 27-29, src/algo/k*.c): round trips, corrupt payloads under ASan/UBSan, pinned hash
 # values; then every mode through the CLI with KOLMO_NATIVE=all and all,strong (native lane, rc3 wave 2).
-build/test-native: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
-	$(CC) $(CFLAGS) -Isrc tests/test_native.c $(NATSRC) -o $@
-build/test-native-asan: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
-	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -Isrc tests/test_native.c $(NATSRC) -o $@
+# khuf's decode loop has an assembly kernel (src/arch/<isa>/khuf_<isa>.S); without it (NO_ASM=1, other ISAs) the C loop
+NATASM  := $(filter %/khuf_$(ASM_ISA).S,$(ASMSRC))
+NATDEF  := $(if $(NATASM),,-DKOLMO_NO_ASM)
+build/test-native: tests/test_native.c $(NATSRC) $(NATASM) $(wildcard src/algo/k*.h)
+	$(CC) $(CFLAGS) $(NATDEF) -Isrc tests/test_native.c $(NATSRC) $(NATASM) -o $@
+build/test-native-asan: tests/test_native.c $(NATSRC) $(NATASM) $(wildcard src/algo/k*.h)
+	$(CC) $(SANFLAGS) $(NATDEF) -fno-sanitize-recover=undefined -Isrc tests/test_native.c $(NATSRC) $(NATASM) -o $@
 check-native: build/test-native build/test-native-asan build/kolmo
 	./build/test-native 3
 	./build/test-native-asan

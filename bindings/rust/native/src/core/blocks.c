@@ -551,7 +551,7 @@ coded:;
             emit_block(J, i, h0, raw, tot);
         } else {
             emit_block(J, i, NULL, slot, tot);
-            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) || kolmo_native_flags() || (codec == C_CM && cm_stream_tuned(slot + 4 + meta, cl)) ? 128u : 0u), memory_order_relaxed);
+            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) || (kolmo_native_flags() & ~KN_LIBHUF) || (codec == C_CM && cm_stream_tuned(slot + 4 + meta, cl)) ? 128u : 0u), memory_order_relaxed);
             /* version 11 when the block is codec 18, or a graph block whose leaves may be (leaf trials set used_bwt), a
              * native coder is enabled, or a context-mixing stream has learning settings (model nibble 14 or 15) */
         }

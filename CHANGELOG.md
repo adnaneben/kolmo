@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased (wave 4, entropy lane: `claude/w4-entropy-20261118`)
+
+Kolmo's own entropy coders under the tiers. The graph leaves no longer call zstd's Huffman coder: khuf (codec 27, a
+new block format) and khuf-then-zstd (codec 30) are written by default; codecs 13 and 22 stay readable. The `ratio`
+QLFC decoder is faster with the same streams, and blocks of 4 to 16 MiB code their QLFC stage in four independent
+parts so that it decodes on four threads. Measurements in `benchmark/w4/entropy/RESULTS.md`.
+
+### Changed
+- **khuf block format (codec 27, also inside codec 29):** optimal length-limited codes (package-merge, up to 12 bits
+  on blocks of 16 KiB or more), code lengths coded with a canonical length code, codes most significant bit first so
+  that every prefix is a contiguous table range. rc3 frames with codecs 27 or 29 written before this do not decode.
+- **khuf decoder:** a multi-symbol table (up to six symbols per lookup) built level by level with branch-free range
+  fills (2.7-5 µs per 128 KiB block), a 4-stream loop whose rounds are counted ahead (no bounds tests inside), an
+  x86-64 BMI2 assembly kernel for it (`src/arch/x86_64/khuf_x86_64.S`, C reference kept, `KOLMO_CPU` below avx2 or
+  `NO_ASM=1` select the C loop), and a one-symbol 4-stream loop chosen per block when few codes fit in a lookup.
+- **khuf encoder:** per-stream histograms (exact stream sizes known first), four streams coded in one loop from their
+  ends, branch-free package-merge with a Huffman fast path.
+- **Graph leaves write khuf (27) instead of zstd's HUF (13), and khuf then zstd (30) instead of 22**, unless a
+  dictionary or a trained profile is in use. On Kolmo's own Huffman leaf streams khuf decodes 1.9x faster than HUF and
+  compresses 1.2x faster at -0.01% size; on Silesia in 128 KiB chunks it is 0.07% smaller, decodes 1.15x faster on
+  average (0.95-1.6x per file) and compresses 0.75x as fast. `KOLMO_NATIVE=libhuf` writes 13 and 22 again.
+- **QLFC decoder (codec 18, `ratio`):** the two APM entries of each update move in one SSE2 multiply-high, and
+  move-to-front steps and runs of up to 16 bytes are vector moves instead of libc calls: -9.7% instructions, -7% decode
+  time per coder block, the same streams.
+- **QLFC coder blocks:** blocks of 4 to 16 MiB are coded as four QLFC parts (were one to three): dickens `ratio`
+  decodes in 0.166 s at 4 threads (was 0.253 s; bsc -m0 -e2 0.176 s) at +0.05% size; 6.6 MB of text +0.23%.
+
 ## Unreleased (rc3 wave 3, decmap lane: `claude/rc3w3-decmap-20261118`)
 
 Decode maps: prebuilt decoder tables stored in the frame were measured and rejected (Huffman tables cost 4-8 KiB per
