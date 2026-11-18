@@ -1,0 +1,16 @@
+{"frame": "x/countries-aggregated.csv.k", "T": 1, "size": 5512931, "csize": 283038, "A_MBs": 4.15, "B_MBs": 3.45, "gain": -0.1686746987951807}
+{"frame": "x/dickens.k", "T": 1, "size": 10192446, "csize": 2168559, "A_MBs": 0.21, "B_MBs": 0.22, "gain": 0.04761904761904767}
+{"frame": "x/esc5.wav.k", "T": 1, "size": 2205044, "csize": 708505, "A_MBs": 15.59, "B_MBs": 15.56, "gain": -0.0019243104554200752}
+{"frame": "x/logs.log.k", "T": 1, "size": 5050776, "csize": 72971, "A_MBs": 1.59, "B_MBs": 1.52, "gain": -0.04402515723270439}
+{"frame": "x/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1127837, "A_MBs": 2.41, "B_MBs": 2.59, "gain": 0.07468879668049788}
+{"frame": "x/population_i64.npy.k", "T": 1, "size": 353120, "csize": 66301, "A_MBs": 143.87, "B_MBs": 151.68, "gain": 0.054285118509765695}
+{"frame": "x/x-ray.k", "T": 1, "size": 8474240, "csize": 3560964, "A_MBs": 0.44, "B_MBs": 0.44, "gain": 0.0}
+{"frame": "x/xml.k", "T": 1, "size": 5345280, "csize": 300720, "A_MBs": 0.3, "B_MBs": 0.29, "gain": -0.033333333333333326}
+{"frame": "x/countries-aggregated.csv.k", "T": 4, "size": 5512931, "csize": 283038, "A_MBs": 3.98, "B_MBs": 3.93, "gain": -0.012562814070351758}
+{"frame": "x/dickens.k", "T": 4, "size": 10192446, "csize": 2168559, "A_MBs": 0.22, "B_MBs": 0.22, "gain": 0.0}
+{"frame": "x/esc5.wav.k", "T": 4, "size": 2205044, "csize": 708505, "A_MBs": 14.21, "B_MBs": 15.74, "gain": 0.10767065446868407}
+{"frame": "x/logs.log.k", "T": 4, "size": 5050776, "csize": 72971, "A_MBs": 1.6, "B_MBs": 1.58, "gain": -0.012499999999999956}
+{"frame": "x/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1127837, "A_MBs": 2.47, "B_MBs": 2.6, "gain": 0.05263157894736836}
+{"frame": "x/population_i64.npy.k", "T": 4, "size": 353120, "csize": 66301, "A_MBs": 146.56, "B_MBs": 150.09, "gain": 0.024085698689956248}
+{"frame": "x/x-ray.k", "T": 4, "size": 8474240, "csize": 3560964, "A_MBs": 0.45, "B_MBs": 0.43, "gain": -0.04444444444444451}
+{"frame": "x/xml.k", "T": 4, "size": 5345280, "csize": 300720, "A_MBs": 0.28, "B_MBs": 0.28, "gain": 0.0}

@@ -325,15 +325,17 @@ int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
     kz_br br = {0, 0, in + i, in + cn};
     const uint8_t *lp = lit, *le = lit + nl, *llc = st[1], *mlc = st[2], *ofc = st[3];
     uint32_t LB[72]; uint8_t LN[72]; kz_ltab(LB, LN);
-    { unsigned mx = 0, mo = 0; for (size_t k = 0; k < ns; k++) { mx |= llc[k] | mlc[k]; mo = ofc[k] > mo ? ofc[k] : mo; }   /* codes in range */
-      if (mx >= 128 || mo > 26) goto out;
-      for (size_t k = 0; k < ns; k++) if (llc[k] >= 72 || mlc[k] >= 72) goto out; }
+    { unsigned ml = 0, mo = 0;                                  /* codes in range: one pass, maxima only (decmap lane) */
+      for (size_t k = 0; k < ns; k++) { unsigned a = llc[k] > mlc[k] ? llc[k] : mlc[k]; ml = a > ml ? a : ml; mo = ofc[k] > mo ? ofc[k] : mo; }
+      if (ml >= 72 || mo > 26) goto out; }
     uint8_t *op = out, *oe = out + n; uint32_t rep[3] = {1, 4, 8};
     for (size_t k = 0; k < ns; k++) {
         uint32_t ll, ml, off; unsigned oc = ofc[k], a = llc[k], b = mlc[k];
+        /* after a refill at least 56 bits are buffered; the next refill only when the extra bits left need it */
         kz_refill(&br); ll = LB[a] + kz_bget(&br, LN[a]);
-        kz_refill(&br); ml = LB[b] + kz_bget(&br, LN[b]) + 4;
-        if (oc >= 3) { int h = (int)oc - 3; kz_refill(&br); off = (1u << h) | kz_bget(&br, h); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
+        if (br.c < LN[b]) kz_refill(&br);
+        ml = LB[b] + kz_bget(&br, LN[b]) + 4;
+        if (oc >= 3) { int h = (int)oc - 3; if (br.c < h) kz_refill(&br); off = (1u << h) | kz_bget(&br, h); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
         else if (oc == 0) off = rep[0];
         else if (oc == 1) { off = rep[1]; rep[1] = rep[0]; rep[0] = off; }
         else { off = rep[2]; rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
