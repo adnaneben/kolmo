@@ -45,7 +45,7 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_lim
 typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
                  int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen;
                  const struct kolmo_profile *prof;
-                 uint64_t memcap; } djob_t;   /* memcap: the call's limit (the governor's cap; old frames' blocks are checked against it) */
+                 uint64_t memcap; int async_io; } djob_t;   /* async_io: one worker writing a file: writes on a second thread */   /* memcap: the call's limit (the governor's cap; old frames' blocks are checked against it) */
 
 /* Rule 1 (docs/MEMORY-MODEL.md): a block's working set, from its index entry and the head of its payload, checked
  * against what the frame declares before the block allocates anything. Returns the bytes to reserve, or an error. */
@@ -210,7 +210,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     return 0;
 }
 
-/* Output to a file: each worker hands its decoded block to a writer thread of its own and decodes the next block into
+/* Output to a file, one worker: it hands its decoded block to a writer thread and decodes the next block into
  * a second buffer meanwhile (zstd's command line also writes on a second thread). Positional writes: the order of
  * the writes does not matter. One write in flight per worker. */
 typedef struct { pthread_t th; pthread_mutex_t mu; pthread_cond_t cv; const uint8_t *buf; size_t n; uint64_t off; int fd, busy, quit, err; } awriter_t;
@@ -268,7 +268,7 @@ static void *decompress_worker(void *arg) {
     /* a context-mixing model larger than the frame declares (or, undeclared, than the limit) is refused unallocated */
     kmem_tls_dec_limit = J->P->memd ? J->P->memd : J->memcap == KMEM_UNLIMITED ? 0 : J->memcap;
     awriter_t aw; uint8_t *rb2 = NULL; int async = 0, cur = 0;   /* file output: blocks written on a second thread */
-    if (J->output_fd >= 0 && !J->clip_hi && J->hi - J->lo > 1) {
+    if (J->async_io && J->output_fd >= 0 && !J->clip_hi && J->hi - J->lo > 1) {
         rb2 = malloc(J->maxraw + 64);
         if (rb2 && !awriter_start(&aw, J->output_fd)) async = 1; else { free(rb2); rb2 = NULL; }
     }
@@ -388,6 +388,7 @@ static int64_t run_decode_p(const uint8_t *src, int input_fd, size_t n, uint8_t 
     atomic_init(&J.next, 0); atomic_init(&J.err, 0);
     int nt = threads > 0 ? threads : default_threads(), nblk = (int)(J.hi - J.lo < 256 ? J.hi - J.lo : 256);
     J.fqthreads = nblk > 0 && nt / nblk > 0 ? nt / nblk : 1;    /* threads left over per block (FASTQ family blocks) */
+    J.async_io = nt == 1;   /* several workers already overlap their writes; one worker hands them to a writer thread */
     run_pool(decompress_worker, &J, nt, J.hi - J.lo);
     free(P.poff); free(P.roff);
     r = atomic_load(&J.err);

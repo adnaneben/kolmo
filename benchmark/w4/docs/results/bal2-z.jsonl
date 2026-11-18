@@ -1,0 +1,15 @@
+{"file": "enwik8", "tool": "zstd -3", "threads": 1, "input": 100000000, "compressed": 35584688, "c_mbs": 122.76740235556053, "d_mbs": 640.3259658789923, "c_rss": 6832128, "d_rss": 7049216}
+{"file": "dickens", "tool": "zstd -3", "threads": 1, "input": 10192446, "compressed": 3677178, "c_mbs": 116.17347076896395, "d_mbs": 445.80777075306844, "c_rss": 6676480, "d_rss": 6115328}
+{"file": "webster", "tool": "zstd -3", "threads": 1, "input": 41458703, "compressed": 12173030, "c_mbs": 137.33875425633545, "d_mbs": 648.2667960608252, "c_rss": 6688768, "d_rss": 6905856}
+{"file": "reymont", "tool": "zstd -3", "threads": 1, "input": 6627202, "compressed": 1948616, "c_mbs": 134.02286707651137, "d_mbs": 421.7552911437637, "c_rss": 6709248, "d_rss": 6164480}
+{"file": "xml", "tool": "zstd -3", "threads": 1, "input": 5345280, "compressed": 638978, "c_mbs": 245.7603615759546, "d_mbs": 502.522871065043, "c_rss": 6651904, "d_rss": 6033408}
+{"file": "samba", "tool": "zstd -3", "threads": 1, "input": 21606400, "compressed": 4997085, "c_mbs": 197.04480758292326, "d_mbs": 734.9112646792092, "c_rss": 7094272, "d_rss": 6709248}
+{"file": "source.tar", "tool": "zstd -3", "threads": 1, "input": 10280960, "compressed": 2052465, "c_mbs": 193.66890295645868, "d_mbs": 574.0864808344809, "c_rss": 6692864, "d_rss": 6283264}
+{"file": "owid-co2-data.csv", "tool": "zstd -3", "threads": 1, "input": 15242657, "compressed": 4644521, "c_mbs": 135.92623309911355, "d_mbs": 514.5346394569193, "c_rss": 6676480, "d_rss": 6156288}
+{"file": "owid-energy-data.csv", "tool": "zstd -3", "threads": 1, "input": 9229369, "compressed": 2746499, "c_mbs": 131.64965543145695, "d_mbs": 451.6296086453949, "c_rss": 6692864, "d_rss": 6512640}
+{"file": "covid20.csv", "tool": "zstd -3", "threads": 1, "input": 19999710, "compressed": 2436081, "c_mbs": 293.7301767781497, "d_mbs": 898.0197569029228, "c_rss": 6692864, "d_rss": 6692864}
+{"file": "citm_catalog.json", "tool": "zstd -3", "threads": 1, "input": 1727204, "compressed": 15645, "c_mbs": 274.3928603035769, "d_mbs": 302.00699898449693, "c_rss": 5869568, "d_rss": 4460544}
+{"file": "twitter.json", "tool": "zstd -3", "threads": 1, "input": 631515, "compressed": 48458, "c_mbs": 110.18154487430506, "d_mbs": 128.93455423470306, "c_rss": 4710400, "d_rss": 3502080}
+{"file": "github_events.json", "tool": "zstd -3", "threads": 1, "input": 8565751, "compressed": 886119, "c_mbs": 288.7109003765859, "d_mbs": 647.79738703461, "c_rss": 6447104, "d_rss": 6037504}
+{"file": "gharchive.ndjson", "tool": "zstd -3", "threads": 1, "input": 26129991, "compressed": 2984597, "c_mbs": 323.77196275498403, "d_mbs": 981.1464367624385, "c_rss": 6545408, "d_rss": 6291456}
+{"file": "loghub_all.log", "tool": "zstd -3", "threads": 1, "input": 4458875, "compressed": 453010, "c_mbs": 247.3791719470367, "d_mbs": 490.55503802389416, "c_rss": 6676480, "d_rss": 5799936}

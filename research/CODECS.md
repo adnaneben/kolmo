@@ -243,3 +243,25 @@ Is it worth reading the whole file first to choose codecs and to fit the context
 | CM shared prior: mean trained mixer rows, compiled in, one per model | `-x` | 100 KB −1.1% to −4.0%, 1 MB −0.13% to −1.1%, never larger; per-kind priors were worse than one general prior | rc3w2 (twopass), tune byte 2 |
 | CM two-pass weights: the file's own mean rows in the header (8 or 16 bits) | `-x` | −0.8% to +4.9% at 100 KB, −0.7% to +0.9% at 1 MB (header 315–630 bytes; logs and tables lose) | not adopted |
 | semi-static order-0/1/2 context models + static rANS | balanced, hc | larger than zstd -3 on every kind (text 1 MB 442 KB vs 349 KB), decode 50–100 MB/s | not adopted |
+
+## Documents and text (w4 docs lane)
+
+Text, CSV, JSON/NDJSON, XML, logs and source trees at `speed`, `balanced`, `eco` and `hc`, against lz4 -1, zstd -3,
+brotli -11 and zstd -19 --long=27 at one thread. VM x86-64 numbers: `benchmark/w4/docs/RESULTS.md`.
+
+| technique | level | measured impact | verdict |
+|---|---|---|---|
+| plain blocks of up to 6 MiB, split evenly, coded with an 8 MiB window (was n/8 blocks of 1–4 MiB and level 3's 2 MiB window) | balanced | smaller than zstd -3 on every text file (dickens −0.2%, webster −0.5%, enwik8 −0.2%, gharchive NDJSON −0.1%; was +0.0% to +3.4%); peak memory +26% on enwik8 (13.6 vs 10.8 MB; zstd -3 streams in 6.7 MB) | w4 |
+| the same with 32 MiB blocks and zstd's own 4 MiB jobs (nbWorkers ≥ 1: same bytes for any worker count) | balanced | −0.2% to −4.1% vs zstd -3, but peak memory 65 MB on enwik8 and decode 0.89× zstd (a 16 MiB window misses the cache) | dropped |
+| minimum match 6 at level 3 | balanced | prose −0.6%, enwik8 +1.0%, source +0.5% | dropped |
+| level 4/5, or larger hash/chain tables at level 3 | balanced | −2% to −4% at 0.6–0.7× zstd -3's speed | dropped |
+| word transform at balanced | balanced | dickens −7.5%, webster −2.6%, reymont +1.5% vs zstd -3, but the transform encodes at 50–100 MB/s and decodes at 500–1400 MB/s: total 0.3× zstd's compress speed and below its decode | dropped |
+| neighbouring segments with the same plain or word plan coded as one (tar members, content runs) | balanced, eco, hc | samba balanced −1.4%, hc −2.0%; source tar (lua, react-dom, zstd, brotli) balanced −12.5%, hc −10.5% | w4 |
+| prefetch of each column's fields in the table encoder (fields of a column are a row apart) | balanced and up | CSV compress time −8% (OWID CO2) to −12% (covid); same bytes | w4 |
+| block sorting (codec 18) for text blocks ≥ 64 KiB (printable ASCII or bytes ≥ 0x80), and for JSON token streams as at `ratio`; text files up to 32 MiB as one block | eco | vs brotli -11: dickens −20%, webster −20%, reymont −27%, xml −10%, enwik8 −12%, gharchive −0.9%; encode faster than eco's brotli 8; **decode 15–20 MB/s instead of 200 MB/s** | w4 |
+| hc text: level 19 with a 128 MiB window (as zstd -19 --long=27) instead of level 22; plain text blocks also get the 128 MiB block | hc | enwik8 peak memory 942 → 384 MB (zstd -19 --long 187 MB), +3.3% larger (24.39 → 25.18 MB, still −4.9% vs zstd -19 --long); level 20 with chain log 25 would keep −6.5% at about 470 MB | w4 |
+| LZ4 hash table 2^16 or 2^18 (LZ4_MEMORY_USAGE 16/18) | speed | prose −12% at 0.7× lz4 -1's speed; CSV −7% at 0.73×; logs −2%, JSON −4%, XML −5% at 1.0×; decode unchanged | not adopted (speed below lz4 -1) |
+| JSON key-path columns (each key path a stream, the key structure a stream), prototype | balanced | vs whole-file zstd -3: GitHub events NDJSON −4.1%, pretty GitHub API JSON −12.5% (Kolmo's JSON tokens already −11%), twitter −11.6% | not built (small gain over the present transforms) |
+| file decode at one thread: the worker hands each block to a writer thread and decodes the next into a second buffer | all | enwik8 balanced decode 0.40 → 0.22 s (VM); text group decode 0.85× → 0.95× zstd -3 (which also writes on a second thread); +1 block of decode memory; off with several workers (their writes overlap already; on, decode memory at 4 threads was 9× zstd's) | w4 |
+| eco text check that allows NUL (tar headers): ≤ 5% other control bytes, ≤ 25% NUL | eco | samba 4.17 → 3.93 MB (brotli -11 3.77 MB); source.tar unchanged (already block-sorted; block sorting is +2.6% against brotli -11 on source code) | w4 |
+| formula search on wide tables | balanced | 36% of the compress time of a 130-column CSV (cubic in columns) | open |

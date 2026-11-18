@@ -1,0 +1,30 @@
+{"file": "enwik8", "tool": "zstd -3", "threads": 4, "input": 100000000, "compressed": 35487160, "c_mbs": 334.5838505126995, "d_mbs": 539.8171709435316, "c_rss": 88035328, "d_rss": 6942720}
+{"file": "enwik8", "tool": "zstd -19 --long=27", "threads": 4, "input": 100000000, "compressed": 26504540, "c_mbs": 1.4359972936351562, "d_mbs": 396.2263999932987, "c_rss": 309223424, "d_rss": 103800832}
+{"file": "dickens", "tool": "zstd -3", "threads": 4, "input": 10192446, "compressed": 3669252, "c_mbs": 101.32311340099736, "d_mbs": 421.28596377844343, "c_rss": 19927040, "d_rss": 6115328}
+{"file": "dickens", "tool": "zstd -19 --long=27", "threads": 4, "input": 10192446, "compressed": 2849702, "c_mbs": 1.047728571924397, "d_mbs": 317.1621231452339, "c_rss": 102703104, "d_rss": 13885440}
+{"file": "webster", "tool": "zstd -3", "threads": 4, "input": 41458703, "compressed": 12133015, "c_mbs": 303.98444718021665, "d_mbs": 530.2071507056886, "c_rss": 62218240, "d_rss": 6086656}
+{"file": "webster", "tool": "zstd -19 --long=27", "threads": 4, "input": 41458703, "compressed": 8624081, "c_mbs": 1.0458604203209547, "d_mbs": 361.04910846838175, "c_rss": 142733312, "d_rss": 45035520}
+{"file": "reymont", "tool": "zstd -3", "threads": 4, "input": 6627202, "compressed": 1942008, "c_mbs": 97.27207053920768, "d_mbs": 294.01317885166765, "c_rss": 13262848, "d_rss": 6119424}
+{"file": "reymont", "tool": "zstd -19 --long=27", "threads": 4, "input": 6627202, "compressed": 1347617, "c_mbs": 1.2168067148644075, "d_mbs": 325.75520481421574, "c_rss": 96886784, "d_rss": 10756096}
+{"file": "xml", "tool": "zstd -3", "threads": 4, "input": 5345280, "compressed": 639138, "c_mbs": 207.69184232539124, "d_mbs": 479.0336305073738, "c_rss": 10555392, "d_rss": 6004736}
+{"file": "xml", "tool": "zstd -19 --long=27", "threads": 4, "input": 5345280, "compressed": 454681, "c_mbs": 2.5646134165034122, "d_mbs": 423.8799469615049, "c_rss": 94855168, "d_rss": 8753152}
+{"file": "samba", "tool": "zstd -3", "threads": 4, "input": 21606400, "compressed": 4978925, "c_mbs": 362.9550776254995, "d_mbs": 699.4861594544236, "c_rss": 34103296, "d_rss": 6426624}
+{"file": "samba", "tool": "zstd -19 --long=27", "threads": 4, "input": 21606400, "compressed": 3892544, "c_mbs": 2.059438446739078, "d_mbs": 519.7799980297243, "c_rss": 116744192, "d_rss": 25649152}
+{"file": "source.tar", "tool": "zstd -3", "threads": 4, "input": 10280960, "compressed": 2072594, "c_mbs": 180.09732370074778, "d_mbs": 539.5410162686721, "c_rss": 17981440, "d_rss": 6053888}
+{"file": "source.tar", "tool": "zstd -19 --long=27", "threads": 4, "input": 10280960, "compressed": 1425117, "c_mbs": 2.2795590136665544, "d_mbs": 473.6966702241927, "c_rss": 101416960, "d_rss": 14139392}
+{"file": "owid-co2-data.csv", "tool": "zstd -3", "threads": 4, "input": 15242657, "compressed": 4632733, "c_mbs": 214.349843295032, "d_mbs": 460.7434595318586, "c_rss": 26124288, "d_rss": 6152192}
+{"file": "owid-co2-data.csv", "tool": "zstd -19 --long=27", "threads": 4, "input": 15242657, "compressed": 3601964, "c_mbs": 0.946582757654274, "d_mbs": 409.52459633459034, "c_rss": 108482560, "d_rss": 19095552}
+{"file": "owid-energy-data.csv", "tool": "zstd -3", "threads": 4, "input": 9229369, "compressed": 2740771, "c_mbs": 126.61392344740275, "d_mbs": 448.79844356501036, "c_rss": 17948672, "d_rss": 6184960}
+{"file": "owid-energy-data.csv", "tool": "zstd -19 --long=27", "threads": 4, "input": 9229369, "compressed": 2190862, "c_mbs": 1.1578714319987187, "d_mbs": 328.6043939935631, "c_rss": 101081088, "d_rss": 12935168}
+{"file": "covid20.csv", "tool": "zstd -3", "threads": 4, "input": 19999710, "compressed": 2419646, "c_mbs": 368.685371858055, "d_mbs": 912.3303924904176, "c_rss": 29405184, "d_rss": 6914048}
+{"file": "covid20.csv", "tool": "zstd -19 --long=27", "threads": 4, "input": 19999710, "compressed": 1924363, "c_mbs": 1.4651751763574228, "d_mbs": 611.9830840471222, "c_rss": 113008640, "d_rss": 23748608}
+{"file": "citm_catalog.json", "tool": "zstd -3", "threads": 4, "input": 1727204, "compressed": 15645, "c_mbs": 189.86677477678467, "d_mbs": 270.2361791762952, "c_rss": 6021120, "d_rss": 4431872}
+{"file": "citm_catalog.json", "tool": "zstd -19 --long=27", "threads": 4, "input": 1727204, "compressed": 9763, "c_mbs": 11.738595858510427, "d_mbs": 257.63087244368273, "c_rss": 39591936, "d_rss": 4501504}
+{"file": "twitter.json", "tool": "zstd -3", "threads": 4, "input": 631515, "compressed": 48458, "c_mbs": 80.13741939399496, "d_mbs": 113.17126302156609, "c_rss": 4923392, "d_rss": 3379200}
+{"file": "twitter.json", "tool": "zstd -19 --long=27", "threads": 4, "input": 631515, "compressed": 37688, "c_mbs": 4.29714152364698, "d_mbs": 111.04335544561873, "c_rss": 21716992, "d_rss": 3379200}
+{"file": "github_events.json", "tool": "zstd -3", "threads": 4, "input": 8565751, "compressed": 887901, "c_mbs": 260.89437777373814, "d_mbs": 592.562945923014, "c_rss": 14884864, "d_rss": 5996544}
+{"file": "github_events.json", "tool": "zstd -19 --long=27", "threads": 4, "input": 8565751, "compressed": 633004, "c_mbs": 2.4434314660073753, "d_mbs": 525.9479926780994, "c_rss": 98689024, "d_rss": 12062720}
+{"file": "gharchive.ndjson", "tool": "zstd -3", "threads": 4, "input": 26129991, "compressed": 3010404, "c_mbs": 541.8749851372398, "d_mbs": 954.4880367925181, "c_rss": 36986880, "d_rss": 6942720}
+{"file": "gharchive.ndjson", "tool": "zstd -19 --long=27", "threads": 4, "input": 26129991, "compressed": 2100765, "c_mbs": 2.437139546184985, "d_mbs": 637.1231371565158, "c_rss": 118906880, "d_rss": 29753344}
+{"file": "loghub_all.log", "tool": "zstd -3", "threads": 4, "input": 4458875, "compressed": 452343, "c_mbs": 208.77679354526606, "d_mbs": 433.87269725666664, "c_rss": 9527296, "d_rss": 5758976}
+{"file": "loghub_all.log", "tool": "zstd -19 --long=27", "threads": 4, "input": 4458875, "compressed": 333172, "c_mbs": 2.0801607591809166, "d_mbs": 414.6035093394665, "c_rss": 93937664, "d_rss": 7479296}

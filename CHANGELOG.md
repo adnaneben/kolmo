@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased (w4 docs lane: `claude/w4-docs-20261118`)
+
+Documents and text at `balanced`, `eco` and `hc`. Measurements (x86-64 VM, one thread, against lz4 -1, zstd -3,
+brotli -11 and zstd -19 --long=27): `benchmark/w4/docs/RESULTS.md`. No new container fields: every frame is a valid
+rc3 (container version 11) frame. Frames change at `balanced` (plain blocks over 4 MiB, segment merging), `eco` (text
+and JSON token blocks) and `hc` (text blocks).
+
+### Changed
+- **`balanced`, plain blocks:** a segment without a transform is cut into blocks of up to 6 MiB (split evenly) instead
+  of n/8 blocks of 1-4 MiB, and blocks over 4 MiB are coded with an 8 MiB window (level 3 has 2 MiB). Smaller than
+  zstd -3 on every text file measured (was up to +3.4% on GitHub events NDJSON), same compress and decode speed.
+- **Neighbouring segments with the same plain or word plan are coded as one** (`balanced`, `eco`, `hc`): tar members and
+  content runs no longer cut the LZ window. Source tarball: `balanced` −12.5%, `hc` −10.5%; samba −1.4% / −2.0%.
+- **`eco` codes text by block sorting (codec 18)**: blocks of at least 64 KiB of text (ASCII, or UTF-8/Latin-1 with
+  bytes >= 0x80) and JSON token streams (as `ratio` does); text files up to 32 MiB are one block. Against brotli -11:
+  dickens −20%, webster −20%, reymont −27%, Silesia xml −10%, enwik8 −12%, GitHub events NDJSON −0.9%, twitter.json −4.9%
+  (was +2% to +18%), at 24-32x brotli -11's compress speed. Tar members count as text (NUL padding is allowed): samba
+  4.31 -> 3.93 MB (brotli -11: 3.77 MB). **Decoding of such files drops from about 200 MB/s to 15-20 MB/s**
+  (block-sorting speed).
+- **`hc` text uses zstd level 19 with a 128 MiB window instead of level 22**, for word-coded and plain text (plain text
+  blocks also become 128 MiB): enwik8 peak memory 942 -> 384 MB (zstd -19 --long=27: 187 MB), output +3.3%
+  (still −4.9% against zstd -19 --long=27).
+- **File decoding at one thread writes on a second thread:** the worker decodes the next block while the previous one
+  is written (zstd's command line does the same). enwik8 `balanced` decode 0.40 -> 0.22 s; one block more of decode
+  memory. Several workers are unchanged.
+- The table encoder prefetches each column's fields (they are a row apart): CSV compress time −8% to −12%, same bytes.
+- `benchmark/w4/docs/`: `run.py` (size, MB/s and peak RSS per file and tool; RSS from GNU time, since a child forked
+  from Python reports Python's RSS) and `summarize.py`.
+
 ## Unreleased (rc3 wave 2, regress lane: `claude/rc3w2-regress-20261117`)
 
 Fixes for the regressions of rc3 against rc2 measured on the Apple M5 (`benchmark/rc3/mac/RESULTS.md`). Measurements

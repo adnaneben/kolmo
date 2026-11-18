@@ -1,0 +1,15 @@
+{"file": "enwik8", "tool": "kolmo balanced", "threads": 1, "input": 100000000, "compressed": 35518150, "c_mbs": 149.92816888955798, "d_mbs": 615.0552863982563, "c_rss": 13975552, "d_rss": 18702336}
+{"file": "dickens", "tool": "kolmo balanced", "threads": 1, "input": 10192446, "compressed": 3668484, "c_mbs": 117.43287573957825, "d_mbs": 396.9076051215695, "c_rss": 12591104, "d_rss": 15810560}
+{"file": "webster", "tool": "kolmo balanced", "threads": 1, "input": 41458703, "compressed": 12115296, "c_mbs": 154.5325077483779, "d_mbs": 659.3605818578052, "c_rss": 13508608, "d_rss": 17559552}
+{"file": "reymont", "tool": "kolmo balanced", "threads": 1, "input": 6627202, "compressed": 1943476, "c_mbs": 126.99879022663855, "d_mbs": 330.5726429146865, "c_rss": 15269888, "d_rss": 12087296}
+{"file": "xml", "tool": "kolmo balanced", "threads": 1, "input": 5345280, "compressed": 636202, "c_mbs": 233.3914954906884, "d_mbs": 419.56385382317995, "c_rss": 11730944, "d_rss": 9392128}
+{"file": "samba", "tool": "kolmo balanced", "threads": 1, "input": 21606400, "compressed": 4800466, "c_mbs": 158.71025936631554, "d_mbs": 670.7402064436891, "c_rss": 33017856, "d_rss": 18436096}
+{"file": "source.tar", "tool": "kolmo balanced", "threads": 1, "input": 10280960, "compressed": 1987667, "c_mbs": 180.4527853738444, "d_mbs": 434.2786544748423, "c_rss": 12193792, "d_rss": 15306752}
+{"file": "owid-co2-data.csv", "tool": "kolmo balanced", "threads": 1, "input": 15242657, "compressed": 1392694, "c_mbs": 109.15890537104805, "d_mbs": 363.80214856809323, "c_rss": 27525120, "d_rss": 10203136}
+{"file": "owid-energy-data.csv", "tool": "kolmo balanced", "threads": 1, "input": 9229369, "compressed": 946078, "c_mbs": 67.48661267984633, "d_mbs": 339.6512915250814, "c_rss": 23310336, "d_rss": 8343552}
+{"file": "covid20.csv", "tool": "kolmo balanced", "threads": 1, "input": 19999710, "compressed": 2001119, "c_mbs": 263.3821991220501, "d_mbs": 416.1055315466065, "c_rss": 13590528, "d_rss": 14393344}
+{"file": "citm_catalog.json", "tool": "kolmo balanced", "threads": 1, "input": 1727204, "compressed": 11544, "c_mbs": 114.15732629362773, "d_mbs": 262.6973781240508, "c_rss": 12177408, "d_rss": 5931008}
+{"file": "twitter.json", "tool": "kolmo balanced", "threads": 1, "input": 631515, "compressed": 48394, "c_mbs": 69.94100176133603, "d_mbs": 122.11683489708045, "c_rss": 6017024, "d_rss": 4202496}
+{"file": "github_events.json", "tool": "kolmo balanced", "threads": 1, "input": 8565751, "compressed": 787704, "c_mbs": 169.75387172869398, "d_mbs": 481.2410266987002, "c_rss": 14675968, "d_rss": 7557120}
+{"file": "gharchive.ndjson", "tool": "kolmo balanced", "threads": 1, "input": 26129991, "compressed": 2982019, "c_mbs": 393.92875230211035, "d_mbs": 628.8615342351312, "c_rss": 11374592, "d_rss": 15048704}
+{"file": "loghub_all.log", "tool": "kolmo balanced", "threads": 1, "input": 4458875, "compressed": 316254, "c_mbs": 138.4938368429342, "d_mbs": 331.03114599193935, "c_rss": 15519744, "d_rss": 10326016}

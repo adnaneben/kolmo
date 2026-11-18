@@ -1,0 +1,60 @@
+{"file": "enwik8", "tool": "lz4 -1", "threads": 1, "input": 100000000, "compressed": 57285984, "c_mbs": 292.68018020365565, "d_mbs": 767.4523047788371, "c_rss": 8212480, "d_rss": 8462336}
+{"file": "enwik8", "tool": "zstd -3", "threads": 1, "input": 100000000, "compressed": 35584688, "c_mbs": 133.81720994123694, "d_mbs": 665.147487542505, "c_rss": 6668288, "d_rss": 7049216}
+{"file": "enwik8", "tool": "brotli -11", "threads": 1, "input": 100000000, "compressed": 25742001, "c_mbs": 0.3473123259811264, "d_mbs": 176.72215867340645, "c_rss": 213213184, "d_rss": 20258816}
+{"file": "enwik8", "tool": "zstd -19 --long=27", "threads": 1, "input": 100000000, "compressed": 26483993, "c_mbs": 0.9087485327856569, "d_mbs": 336.89930012535274, "c_rss": 196747264, "d_rss": 104439808}
+{"file": "dickens", "tool": "lz4 -1", "threads": 1, "input": 10192446, "compressed": 6431133, "c_mbs": 187.94529025136023, "d_mbs": 436.2939223580871, "c_rss": 8491008, "d_rss": 8605696}
+{"file": "dickens", "tool": "zstd -3", "threads": 1, "input": 10192446, "compressed": 3677178, "c_mbs": 111.60413188697852, "d_mbs": 451.5661553625743, "c_rss": 6594560, "d_rss": 6414336}
+{"file": "dickens", "tool": "brotli -11", "threads": 1, "input": 10192446, "compressed": 2827777, "c_mbs": 0.3881444612936721, "d_mbs": 207.4259177249941, "c_rss": 132321280, "d_rss": 13451264}
+{"file": "dickens", "tool": "zstd -19 --long=27", "threads": 1, "input": 10192446, "compressed": 2849702, "c_mbs": 1.027109295430602, "d_mbs": 315.6942061756073, "c_rss": 99655680, "d_rss": 14123008}
+{"file": "webster", "tool": "lz4 -1", "threads": 1, "input": 41458703, "compressed": 20149249, "c_mbs": 259.41375874827986, "d_mbs": 660.8206227100098, "c_rss": 7819264, "d_rss": 8069120}
+{"file": "webster", "tool": "zstd -3", "threads": 1, "input": 41458703, "compressed": 12173030, "c_mbs": 134.87070688214862, "d_mbs": 586.1116154584672, "c_rss": 6651904, "d_rss": 6164480}
+{"file": "webster", "tool": "brotli -11", "threads": 1, "input": 41458703, "compressed": 8428575, "c_mbs": 0.41880622746455815, "d_mbs": 217.23116408248148, "c_rss": 207724544, "d_rss": 20004864}
+{"file": "webster", "tool": "zstd -19 --long=27", "threads": 1, "input": 41458703, "compressed": 8624384, "c_mbs": 1.0900724528822916, "d_mbs": 369.76523124148036, "c_rss": 133849088, "d_rss": 45608960}
+{"file": "reymont", "tool": "lz4 -1", "threads": 1, "input": 6627202, "compressed": 3182851, "c_mbs": 187.8701495414092, "d_mbs": 401.26181398515513, "c_rss": 7806976, "d_rss": 7950336}
+{"file": "reymont", "tool": "zstd -3", "threads": 1, "input": 6627202, "compressed": 1948616, "c_mbs": 123.93759757299826, "d_mbs": 435.33630099330907, "c_rss": 6647808, "d_rss": 6160384}
+{"file": "reymont", "tool": "brotli -11", "threads": 1, "input": 6627202, "compressed": 1332158, "c_mbs": 0.4902639390217744, "d_mbs": 273.07328911958405, "c_rss": 99246080, "d_rss": 9846784}
+{"file": "reymont", "tool": "zstd -19 --long=27", "threads": 1, "input": 6627202, "compressed": 1347634, "c_mbs": 1.201029225410224, "d_mbs": 355.31474501178934, "c_rss": 95387648, "d_rss": 10227712}
+{"file": "xml", "tool": "lz4 -1", "threads": 1, "input": 5345280, "compressed": 1228106, "c_mbs": 267.0013374318305, "d_mbs": 430.8362314848481, "c_rss": 6635520, "d_rss": 6889472}
+{"file": "xml", "tool": "zstd -3", "threads": 1, "input": 5345280, "compressed": 638978, "c_mbs": 165.19158871488213, "d_mbs": 361.28664570118264, "c_rss": 6545408, "d_rss": 6029312}
+{"file": "xml", "tool": "brotli -11", "threads": 1, "input": 5345280, "compressed": 430566, "c_mbs": 0.7073815495492385, "d_mbs": 340.49193124057854, "c_rss": 71557120, "d_rss": 8486912}
+{"file": "xml", "tool": "zstd -19 --long=27", "threads": 1, "input": 5345280, "compressed": 454693, "c_mbs": 2.5611619248318336, "d_mbs": 446.6549013581463, "c_rss": 94134272, "d_rss": 8839168}
+{"file": "samba", "tool": "lz4 -1", "threads": 1, "input": 21606400, "compressed": 7721752, "c_mbs": 307.11473563523884, "d_mbs": 665.7506884006298, "c_rss": 8200192, "d_rss": 8331264}
+{"file": "samba", "tool": "zstd -3", "threads": 1, "input": 21606400, "compressed": 4997085, "c_mbs": 188.20890184591786, "d_mbs": 706.5864139462842, "c_rss": 7135232, "d_rss": 6549504}
+{"file": "samba", "tool": "brotli -11", "threads": 1, "input": 21606400, "compressed": 3766340, "c_mbs": 0.5267024116576211, "d_mbs": 239.37243616223287, "c_rss": 204283904, "d_rss": 20508672}
+{"file": "samba", "tool": "zstd -19 --long=27", "threads": 1, "input": 21606400, "compressed": 3888797, "c_mbs": 1.9863086010746094, "d_mbs": 359.779938512571, "c_rss": 112193536, "d_rss": 25518080}
+{"file": "source.tar", "tool": "lz4 -1", "threads": 1, "input": 10280960, "compressed": 3999278, "c_mbs": 253.02230050443072, "d_mbs": 443.3535286143203, "c_rss": 7544832, "d_rss": 7557120}
+{"file": "source.tar", "tool": "zstd -3", "threads": 1, "input": 10280960, "compressed": 2052465, "c_mbs": 167.49415389354928, "d_mbs": 541.7635676820057, "c_rss": 6688768, "d_rss": 6123520}
+{"file": "source.tar", "tool": "brotli -11", "threads": 1, "input": 10280960, "compressed": 1330448, "c_mbs": 0.5748955356338704, "d_mbs": 326.22806416483945, "c_rss": 120745984, "d_rss": 13770752}
+{"file": "source.tar", "tool": "zstd -19 --long=27", "threads": 1, "input": 10280960, "compressed": 1425264, "c_mbs": 2.156264835808838, "d_mbs": 476.0801773822955, "c_rss": 99622912, "d_rss": 14655488}
+{"file": "owid-co2-data.csv", "tool": "lz4 -1", "threads": 1, "input": 15242657, "compressed": 7552450, "c_mbs": 245.10252255180993, "d_mbs": 596.6427161159079, "c_rss": 8069120, "d_rss": 8081408}
+{"file": "owid-co2-data.csv", "tool": "zstd -3", "threads": 1, "input": 15242657, "compressed": 4644521, "c_mbs": 131.28191827393502, "d_mbs": 488.30727163888673, "c_rss": 6692864, "d_rss": 6053888}
+{"file": "owid-co2-data.csv", "tool": "brotli -11", "threads": 1, "input": 15242657, "compressed": 3154593, "c_mbs": 0.36824791915529287, "d_mbs": 185.67192237607117, "c_rss": 197586944, "d_rss": 18542592}
+{"file": "owid-co2-data.csv", "tool": "zstd -19 --long=27", "threads": 1, "input": 15242657, "compressed": 3602386, "c_mbs": 1.0266121414104483, "d_mbs": 423.8636989577601, "c_rss": 104603648, "d_rss": 19136512}
+{"file": "owid-energy-data.csv", "tool": "lz4 -1", "threads": 1, "input": 9229369, "compressed": 4582446, "c_mbs": 259.5599980101337, "d_mbs": 429.8768437411822, "c_rss": 7942144, "d_rss": 8200192}
+{"file": "owid-energy-data.csv", "tool": "zstd -3", "threads": 1, "input": 9229369, "compressed": 2746499, "c_mbs": 119.48169620400117, "d_mbs": 439.0741115988961, "c_rss": 6676480, "d_rss": 6025216}
+{"file": "owid-energy-data.csv", "tool": "brotli -11", "threads": 1, "input": 9229369, "compressed": 2070389, "c_mbs": 0.40042346304415705, "d_mbs": 136.08292018117282, "c_rss": 118976512, "d_rss": 15286272}
+{"file": "owid-energy-data.csv", "tool": "zstd -19 --long=27", "threads": 1, "input": 9229369, "compressed": 2191010, "c_mbs": 1.1266632894796569, "d_mbs": 318.0334101899692, "c_rss": 98459648, "d_rss": 12984320}
+{"file": "covid20.csv", "tool": "lz4 -1", "threads": 1, "input": 19999710, "compressed": 4004574, "c_mbs": 524.7800398441457, "d_mbs": 834.2237758857506, "c_rss": 6901760, "d_rss": 7032832}
+{"file": "covid20.csv", "tool": "zstd -3", "threads": 1, "input": 19999710, "compressed": 2436081, "c_mbs": 266.9903330573008, "d_mbs": 800.5322175584232, "c_rss": 6656000, "d_rss": 6782976}
+{"file": "covid20.csv", "tool": "brotli -11", "threads": 1, "input": 19999710, "compressed": 1785621, "c_mbs": 0.34831154556156346, "d_mbs": 352.87644968317113, "c_rss": 197758976, "d_rss": 20140032}
+{"file": "covid20.csv", "tool": "zstd -19 --long=27", "threads": 1, "input": 19999710, "compressed": 1924452, "c_mbs": 1.5067501946292392, "d_mbs": 648.8474145292464, "c_rss": 110239744, "d_rss": 24072192}
+{"file": "citm_catalog.json", "tool": "lz4 -1", "threads": 1, "input": 1727204, "compressed": 43189, "c_mbs": 267.4481154729129, "d_mbs": 277.80616630544097, "c_rss": 3481600, "d_rss": 3481600}
+{"file": "citm_catalog.json", "tool": "zstd -3", "threads": 1, "input": 1727204, "compressed": 15645, "c_mbs": 234.5392777914341, "d_mbs": 290.5552599659682, "c_rss": 5791744, "d_rss": 4595712}
+{"file": "citm_catalog.json", "tool": "brotli -11", "threads": 1, "input": 1727204, "compressed": 9090, "c_mbs": 3.3000689371156118, "d_mbs": 289.4750778795439, "c_rss": 29962240, "d_rss": 4288512}
+{"file": "citm_catalog.json", "tool": "zstd -19 --long=27", "threads": 1, "input": 1727204, "compressed": 9784, "c_mbs": 11.021466681560877, "d_mbs": 268.6127672243058, "c_rss": 39542784, "d_rss": 4485120}
+{"file": "twitter.json", "tool": "lz4 -1", "threads": 1, "input": 631515, "compressed": 80062, "c_mbs": 126.25340765497282, "d_mbs": 122.2634167072896, "c_rss": 2433024, "d_rss": 2560000}
+{"file": "twitter.json", "tool": "zstd -3", "threads": 1, "input": 631515, "compressed": 48458, "c_mbs": 97.73037240765252, "d_mbs": 110.98736513496415, "c_rss": 4685824, "d_rss": 3416064}
+{"file": "twitter.json", "tool": "brotli -11", "threads": 1, "input": 631515, "compressed": 33339, "c_mbs": 1.3574092682951264, "d_mbs": 101.81774622783121, "c_rss": 20393984, "d_rss": 3244032}
+{"file": "twitter.json", "tool": "zstd -19 --long=27", "threads": 1, "input": 631515, "compressed": 37685, "c_mbs": 4.205354565779564, "d_mbs": 118.43762818247866, "c_rss": 21463040, "d_rss": 3477504}
+{"file": "github_events.json", "tool": "lz4 -1", "threads": 1, "input": 8565751, "compressed": 1794799, "c_mbs": 369.1014974050146, "d_mbs": 556.94647398971, "c_rss": 6758400, "d_rss": 6885376}
+{"file": "github_events.json", "tool": "zstd -3", "threads": 1, "input": 8565751, "compressed": 886119, "c_mbs": 266.9344960223701, "d_mbs": 626.549485929012, "c_rss": 6414336, "d_rss": 6037504}
+{"file": "github_events.json", "tool": "brotli -11", "threads": 1, "input": 8565751, "compressed": 564027, "c_mbs": 0.6761409352384492, "d_mbs": 370.3399249402467, "c_rss": 104226816, "d_rss": 11763712}
+{"file": "github_events.json", "tool": "zstd -19 --long=27", "threads": 1, "input": 8565751, "compressed": 633024, "c_mbs": 2.4646290121031558, "d_mbs": 546.5582103146219, "c_rss": 97751040, "d_rss": 12062720}
+{"file": "gharchive.ndjson", "tool": "lz4 -1", "threads": 1, "input": 26129991, "compressed": 5780457, "c_mbs": 445.00738835127635, "d_mbs": 804.069714260287, "c_rss": 6889472, "d_rss": 6901760}
+{"file": "gharchive.ndjson", "tool": "zstd -3", "threads": 1, "input": 26129991, "compressed": 2984597, "c_mbs": 298.7518957865095, "d_mbs": 919.0749804758577, "c_rss": 6545408, "d_rss": 6033408}
+{"file": "gharchive.ndjson", "tool": "brotli -11", "threads": 1, "input": 26129991, "compressed": 1923854, "c_mbs": 0.6554682930419438, "d_mbs": 339.2827464251055, "c_rss": 187949056, "d_rss": 20131840}
+{"file": "gharchive.ndjson", "tool": "zstd -19 --long=27", "threads": 1, "input": 26129991, "compressed": 2101022, "c_mbs": 2.47412642343817, "d_mbs": 596.3723839944985, "c_rss": 116346880, "d_rss": 29745152}
+{"file": "loghub_all.log", "tool": "lz4 -1", "threads": 1, "input": 4458875, "compressed": 764678, "c_mbs": 316.4023862757369, "d_mbs": 392.9755783501584, "c_rss": 6627328, "d_rss": 6639616}
+{"file": "loghub_all.log", "tool": "zstd -3", "threads": 1, "input": 4458875, "compressed": 453010, "c_mbs": 209.8400667134017, "d_mbs": 438.3764024994631, "c_rss": 6520832, "d_rss": 5791744}
+{"file": "loghub_all.log", "tool": "brotli -11", "threads": 1, "input": 4458875, "compressed": 307613, "c_mbs": 0.5238033321349855, "d_mbs": 286.2324494723374, "c_rss": 63496192, "d_rss": 7438336}
+{"file": "loghub_all.log", "tool": "zstd -19 --long=27", "threads": 1, "input": 4458875, "compressed": 333164, "c_mbs": 1.8876211964559177, "d_mbs": 378.3179473374913, "c_rss": 93167616, "d_rss": 7561216}
