@@ -290,5 +290,5 @@ version-11 codec id and its output is deterministic (one parse per block, no thr
 | test | result |
 |---|---|
 | `make check-native` (round trips at every level, corrupt and truncated payloads under ASan/UBSan, every mode with `KOLMO_NATIVE=all` and `all,strong` at 1 and 4 threads) | OK |
-| `make check`, `make check-rc`, `make check-sanitizers`, `make experimental-check GPU_CHECK=`, `make kfam-check` | see the commit that adds this file |
+| `make check`, `make check-rc`, `make check-sanitizers`, `make experimental-check GPU_CHECK=`, `make kfam-check` | all pass on 776ac3c+75d8a51 (x86_64, gcc); determinism check `benchmark/determinism/check.py` passes |
 | `benchmark/determinism/check.py` | default output unchanged (no expected hash regenerated) |
