@@ -210,6 +210,49 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     return 0;
 }
 
+/* Output to a file: each worker hands its decoded block to a writer thread of its own and decodes the next block into
+ * a second buffer meanwhile (zstd's command line also writes on a second thread). Positional writes: the order of
+ * the writes does not matter. One write in flight per worker. */
+typedef struct { pthread_t th; pthread_mutex_t mu; pthread_cond_t cv; const uint8_t *buf; size_t n; uint64_t off; int fd, busy, quit, err; } awriter_t;
+static void *awriter_main(void *arg) {
+    awriter_t *w = arg;
+    pthread_mutex_lock(&w->mu);
+    for (;;) {
+        while (!w->busy && !w->quit) pthread_cond_wait(&w->cv, &w->mu);
+        if (!w->busy) break;
+        const uint8_t *b = w->buf; size_t n = w->n; uint64_t off = w->off;
+        pthread_mutex_unlock(&w->mu);
+        int r = write_block(w->fd, b, n, (off_t)off);
+        pthread_mutex_lock(&w->mu);
+        if (r && !w->err) w->err = r;
+        w->busy = 0; pthread_cond_broadcast(&w->cv);
+    }
+    pthread_mutex_unlock(&w->mu);
+    return NULL;
+}
+static int awriter_wait(awriter_t *w) {           /* the write in flight is done; returns the first write error */
+    pthread_mutex_lock(&w->mu); while (w->busy) pthread_cond_wait(&w->cv, &w->mu); int e = w->err; pthread_mutex_unlock(&w->mu);
+    return e;
+}
+static int awriter_post(awriter_t *w, const uint8_t *b, size_t n, uint64_t off) {
+    int e = awriter_wait(w); if (e) return e;
+    pthread_mutex_lock(&w->mu); w->buf = b; w->n = n; w->off = off; w->busy = 1; pthread_cond_broadcast(&w->cv); pthread_mutex_unlock(&w->mu);
+    return 0;
+}
+static int awriter_start(awriter_t *w, int fd) {
+    memset(w, 0, sizeof *w); w->fd = fd;
+    if (pthread_mutex_init(&w->mu, NULL)) return -1;
+    if (pthread_cond_init(&w->cv, NULL)) { pthread_mutex_destroy(&w->mu); return -1; }
+    if (pthread_create(&w->th, NULL, awriter_main, w)) { pthread_cond_destroy(&w->cv); pthread_mutex_destroy(&w->mu); return -1; }
+    return 0;
+}
+static int awriter_stop(awriter_t *w) {
+    int e = awriter_wait(w);
+    pthread_mutex_lock(&w->mu); w->quit = 1; pthread_cond_broadcast(&w->cv); pthread_mutex_unlock(&w->mu);
+    pthread_join(w->th, NULL); pthread_cond_destroy(&w->cv); pthread_mutex_destroy(&w->mu);
+    return e;
+}
+
 static void *decompress_worker(void *arg) {
     djob_t *J = arg; tls_t *S = tls_begin();
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
@@ -224,6 +267,11 @@ static void *decompress_worker(void *arg) {
     xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
     /* a context-mixing model larger than the frame declares (or, undeclared, than the limit) is refused unallocated */
     kmem_tls_dec_limit = J->P->memd ? J->P->memd : J->memcap == KMEM_UNLIMITED ? 0 : J->memcap;
+    awriter_t aw; uint8_t *rb2 = NULL; int async = 0, cur = 0;   /* file output: blocks written on a second thread */
+    if (J->output_fd >= 0 && !J->clip_hi && J->hi - J->lo > 1) {
+        rb2 = malloc(J->maxraw + 64);
+        if (rb2 && !awriter_start(&aw, J->output_fd)) async = 1; else { free(rb2); rb2 = NULL; }
+    }
     for (;;) {
         uint32_t i = J->lo + atomic_fetch_add(&J->next, 1); if (i >= J->hi) break;
         if (atomic_load(&J->err)) break;
@@ -241,8 +289,12 @@ static void *decompress_worker(void *arg) {
         kmem_reserve((uint64_t)need, J->memcap); kmem_tls_job = 1;
         if (!rbuf) r = decode_block(J, i, xp, S, payload, tbuf, J->dst + J->P->roff[i]);
         else {                                               /* range read: decode block, copy the overlap */
-            r = decode_block(J, i, xp, S, payload, tbuf, rbuf);
-            if (!r && J->output_fd >= 0) {
+            uint8_t *ob = async && cur ? rb2 : rbuf;
+            r = decode_block(J, i, xp, S, payload, tbuf, ob);
+            if (!r && async) {
+                r = awriter_post(&aw, ob, J->P->roff[i + 1] - J->P->roff[i], J->P->roff[i]);
+                cur ^= 1;
+            } else if (!r && J->output_fd >= 0) {
                 r = write_block(J->output_fd, rbuf, J->P->roff[i + 1] - J->P->roff[i], J->P->roff[i]);
             } else if (!r) {
                 uint64_t b0 = J->P->roff[i], b1 = J->P->roff[i + 1];
@@ -254,6 +306,8 @@ static void *decompress_worker(void *arg) {
         if (r) atomic_store(&J->err, r);
     }
     kmem_tls_dec_limit = 0;
+    if (async) { int e = awriter_stop(&aw); if (e) { int z = 0; atomic_compare_exchange_strong(&J->err, &z, e); } }
+    free(rb2);
     free(packed);
     tls_end(S);
     return NULL;
