@@ -543,14 +543,14 @@ coded:;
             emit_block(J, i, h0, raw, tot);
         } else {
             emit_block(J, i, NULL, slot, tot);
-            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) ? 128u : 0u), memory_order_relaxed);
+            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) || kolmo_native_flags() ? 128u : 0u), memory_order_relaxed);
             /* version 11 when the block is codec 18, or a graph block whose leaves may be (leaf trials set used_bwt) */
         }
         put32(e, (uint32_t)len); put32(e + 4, (uint32_t)tot);
         if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)kolmo_xxh3(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)
                                                    : (uint32_t)kolmo_xxh3(slot + 4, tot - 4, 0x637a6e31u ^ get32(slot)));
         else put32(e + 8, blk_sum(3, raw, len));
-        e[12] = (uint8_t)codec; e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
+        e[12] = codec_wire(xp, codec); e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
         /* what decoding this block will need, from the payload as written (the frame declares the largest) */
         job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec, tflag, len, slot, tot, 11, J->cm_leaves));
         kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0;
