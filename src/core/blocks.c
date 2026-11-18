@@ -301,7 +301,7 @@ static void *compress_worker(void *arg) {
                      * float64 sensor data plain context mixing is 33% smaller than the graph, block sorting is not
                      * within reach (benchmark/rc3w2/twopass/RESULTS.md). */
                     if (codec == C_CM) sn = len < (256u << 10) ? len : (256u << 10), so = ((len - sn) / 2) & ~(size_t)63;
-                    size_t cs = codec == C_CM ? cm_compress_m(raw + so, sn, alt, J->slot, 2) : codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
+                    size_t cs = codec == C_CM ? cm_compress_auto(raw + so, sn, alt, J->slot) : codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
                     if (!cs || (double)cs / sn > (codec == C_CM ? 1.10 : 1.35) * (double)cl / len) alt = NULL;
                 }
                 if (alt && (codec == C_ZSTD || codec == C_LZ4) && len >= ((size_t)1 << 20)) {

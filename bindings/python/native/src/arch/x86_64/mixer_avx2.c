@@ -50,6 +50,30 @@ TGT void kolmo_cm_train_avx2(const int32_t *x, int n, int32_t *w1, int32_t *w2, 
     if (i < n) { __m256i m = mask8(n - i), xv = _mm256_maskload_epi32(x + i, m);
         upd8m(w1 + i, xv, e1, sh, m); upd8m(w2 + i, xv, e2, sh, m); if (w3) { upd8m(w3 + i, xv, e3, sh, m); upd8m(w4 + i, xv, e4, sh, m); } }
 }
+/* the 16-bit mixer (model 4): pmaddwd pairs, shifted, summed; updates by pmulhrsw and saturating adds */
+TGT void kolmo_cm_dot16_avx2(const int16_t *x, int n, const int16_t *w1, const int16_t *w2, const int16_t *w3, const int16_t *w4, int32_t s[4]) {
+    __m256i a1 = _mm256_setzero_si256(), a2 = a1, a3 = a1, a4 = a1;
+    for (int i = 0; i < n; i += 16) {
+        const __m256i xv = _mm256_loadu_si256((const __m256i *)(x + i));
+        a1 = _mm256_add_epi32(a1, _mm256_srai_epi32(_mm256_madd_epi16(xv, _mm256_loadu_si256((const __m256i *)(w1 + i))), 8));
+        a2 = _mm256_add_epi32(a2, _mm256_srai_epi32(_mm256_madd_epi16(xv, _mm256_loadu_si256((const __m256i *)(w2 + i))), 8));
+        a3 = _mm256_add_epi32(a3, _mm256_srai_epi32(_mm256_madd_epi16(xv, _mm256_loadu_si256((const __m256i *)(w3 + i))), 8));
+        a4 = _mm256_add_epi32(a4, _mm256_srai_epi32(_mm256_madd_epi16(xv, _mm256_loadu_si256((const __m256i *)(w4 + i))), 8));
+    }
+    /* horizontal sums: a1..a4 -> one lane each */
+    const __m256i p12 = _mm256_hadd_epi32(a1, a2), p34 = _mm256_hadd_epi32(a3, a4), q = _mm256_hadd_epi32(p12, p34);
+    const __m128i r = _mm_add_epi32(_mm256_castsi256_si128(q), _mm256_extracti128_si256(q, 1));
+    _mm_storeu_si128((__m128i *)s, r);
+}
+TGT void kolmo_cm_train16_avx2(const int16_t *x, int n, int16_t *w1, int16_t *w2, int16_t *w3, int16_t *w4, const int e[4]) {
+    const __m256i e1 = _mm256_set1_epi16((int16_t)e[0]), e2 = _mm256_set1_epi16((int16_t)e[1]), e3 = _mm256_set1_epi16((int16_t)e[2]), e4 = _mm256_set1_epi16((int16_t)e[3]);
+    for (int i = 0; i < n; i += 16) {
+        const __m256i xv = _mm256_loadu_si256((const __m256i *)(x + i));
+#define U16(w, ev) _mm256_storeu_si256((__m256i *)((w) + i), _mm256_adds_epi16(_mm256_loadu_si256((const __m256i *)((w) + i)), _mm256_mulhrs_epi16(xv, ev)))
+        U16(w1, e1); U16(w2, e2); U16(w3, e3); U16(w4, e4);
+#undef U16
+    }
+}
 TGT void kolmo_cm_hash_avx2(const uint32_t *h, int n, uint32_t add, uint32_t *out) {
     const __m256i ad = _mm256_set1_epi32((int)add), k1 = _mm256_set1_epi32(0x2C1B3C6D), k2 = _mm256_set1_epi32(0x297A2D39);
     int i = 0;
@@ -88,6 +112,26 @@ TGT void kolmo_cm_train_sse41(const int32_t *x, int n, int32_t *w1, int32_t *w2,
     for (; i + 4 <= n; i += 4) { __m128i xv = _mm_loadu_si128((const __m128i *)(x + i));
         upd4(w1 + i, xv, e1, sh); upd4(w2 + i, xv, e2, sh); if (w3) { upd4(w3 + i, xv, e3, sh); upd4(w4 + i, xv, e4, sh); } }
     for (; i < n; i++) { w1[i] += (x[i] * e[0]) >> shift; w2[i] += (x[i] * e[1]) >> shift; if (w3) { w3[i] += (x[i] * e[2]) >> shift; w4[i] += (x[i] * e[3]) >> shift; } }
+}
+TGT void kolmo_cm_dot16_sse41(const int16_t *x, int n, const int16_t *w1, const int16_t *w2, const int16_t *w3, const int16_t *w4, int32_t s[4]) {
+    __m128i a1 = _mm_setzero_si128(), a2 = a1, a3 = a1, a4 = a1;
+    for (int i = 0; i < n; i += 8) {
+        const __m128i xv = _mm_loadu_si128((const __m128i *)(x + i));
+        a1 = _mm_add_epi32(a1, _mm_srai_epi32(_mm_madd_epi16(xv, _mm_loadu_si128((const __m128i *)(w1 + i))), 8));
+        a2 = _mm_add_epi32(a2, _mm_srai_epi32(_mm_madd_epi16(xv, _mm_loadu_si128((const __m128i *)(w2 + i))), 8));
+        a3 = _mm_add_epi32(a3, _mm_srai_epi32(_mm_madd_epi16(xv, _mm_loadu_si128((const __m128i *)(w3 + i))), 8));
+        a4 = _mm_add_epi32(a4, _mm_srai_epi32(_mm_madd_epi16(xv, _mm_loadu_si128((const __m128i *)(w4 + i))), 8));
+    }
+    _mm_storeu_si128((__m128i *)s, _mm_hadd_epi32(_mm_hadd_epi32(a1, a2), _mm_hadd_epi32(a3, a4)));
+}
+TGT void kolmo_cm_train16_sse41(const int16_t *x, int n, int16_t *w1, int16_t *w2, int16_t *w3, int16_t *w4, const int e[4]) {
+    const __m128i e1 = _mm_set1_epi16((int16_t)e[0]), e2 = _mm_set1_epi16((int16_t)e[1]), e3 = _mm_set1_epi16((int16_t)e[2]), e4 = _mm_set1_epi16((int16_t)e[3]);
+    for (int i = 0; i < n; i += 8) {
+        const __m128i xv = _mm_loadu_si128((const __m128i *)(x + i));
+#define U8(w, ev) _mm_storeu_si128((__m128i *)((w) + i), _mm_adds_epi16(_mm_loadu_si128((const __m128i *)((w) + i)), _mm_mulhrs_epi16(xv, ev)))
+        U8(w1, e1); U8(w2, e2); U8(w3, e3); U8(w4, e4);
+#undef U8
+    }
 }
 TGT void kolmo_cm_hash_sse41(const uint32_t *h, int n, uint32_t add, uint32_t *out) {
     const __m128i ad = _mm_set1_epi32((int)add), k1 = _mm_set1_epi32(0x2C1B3C6D), k2 = _mm_set1_epi32(0x297A2D39);

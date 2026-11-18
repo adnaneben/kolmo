@@ -14,8 +14,12 @@ int main(int argc, char **argv) {
     int model = argc > 2 ? atoi(argv[2]) : 3, pr = argc > 3 ? atoi(argv[3]) : 0, bb = argc > 4 ? atoi(argv[4]) : 0;
     uint32_t mask = argc > 5 ? (uint32_t)strtoul(argv[5], NULL, 16) : CM_MASK3;
     size_t cap = n + n / 8 + 1024; uint8_t *z = malloc(cap), *d = malloc(n + 8);
+    cm_tune_t tu = pr >= 0 ? cm_presets[pr] : cm_presets[0];
+    if (getenv("CMX_B2")) tu.b2 = (uint8_t)atoi(getenv("CMX_B2"));   /* initial weights: 0 = 1/4 each, 1 = the prior */
+    if (getenv("CMX_S")) cm4_s_default = atoi(getenv("CMX_S"));     /* model 4's table size shift */
+    if (getenv("CMX_TUNE")) { unsigned a, b; if (sscanf(getenv("CMX_TUNE"), "%x,%x", &a, &b) == 2) { tu.b0 = (uint8_t)a; tu.b1 = (uint8_t)b; } }   /* learning settings b0,b1 (hex) */
     double t0 = now();
-    size_t zn = pr < 0 ? cm_compress_raced(s, n, z, cap, model, bb, 1) : cm_compress_tm(s, n, z, cap, model, bb, cm_presets[pr], mask);
+    size_t zn = pr < 0 ? cm_compress_raced(s, n, z, cap, model, bb, 1, mask) : cm_compress_tm(s, n, z, cap, model, bb, tu, mask);
     double t1 = now();
     const int dec = !getenv("CMX_NODEC");   /* CMX_NODEC=1: encode only (size studies) */
     int r = dec ? cm_decompress(z, zn, d, n) : 0;

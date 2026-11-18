@@ -30,7 +30,8 @@
 #define CM_MCAND 16              /* model 3: match candidates examined */
 #endif
 #define CM_NMOD(v) ((v) == 3 ? CM_NM3 : (v) ? CM_NMX : CM_NM)
-#define CM5_NIP 64              /* model 5: mixer inputs per row, padded (2 * 30 + 3 at most) */
+#define CM4_NIP 64              /* model 4: mixer inputs per row, padded (2 * 30 + 3 at most) */
+#define CM4_RA2 (CM_W1 + CM_W2 + CM_W3 + CM_W4)   /* model 4: the APM rows' flags after the mixers' */
 #ifndef CM_BB
 #define CM_BB 20                /* log2 buckets per hashed model in legacy streams (no size field) */
 #endif
@@ -56,8 +57,8 @@ _Static_assert(CM_LIM * 15 < 64, "CM_LIM too large for the rate table");
 static int16_t cm_sq[4096], cm_st[4096];      /* the logistic function sampled at 33 knots and interpolated (legacy) */
 static int16_t cm_sqx[4096], cm_stx[4096];    /* the logistic function itself at every point (model nibbles 5-7) */
 static uint32_t cm_rcp[64], cm_srcp[1024];
-static uint8_t cm5_pri[256];   /* model 5: bits seen by a state (bucket replacement priority) */
-static int16_t cm5_dx[256];    /* model 5: second input of a state: its run, signed by the bit (0 when both bits were seen) */
+static uint8_t cm4_pri[256];   /* model 4: bits seen by a state (bucket replacement priority) */
+static int16_t cm4_dx[256];    /* model 4: second input of a state: its run, signed by the bit (0 when both bits were seen) */
 #define SM_LIM 255
 static pthread_once_t cm_once = PTHREAD_ONCE_INIT;
 /* The logistic function in 12-bit fixed point: squash(x) ~ 4096 / (1 + e^(-x/256)), x a stretched probability in
@@ -116,8 +117,8 @@ static void cm_init_tables(void) {
     for (int i = 0; i < 64; i++) cm_rcp[i] = (uint32_t)(655360 / (10 * i + 16));
     for (int st = 0; st < 256; st++) {
         const int n0 = st < bh_ns ? bh_n0[st] : 0, n1 = st < bh_ns ? bh_n1[st] : 0, n = n0 + n1 > 7 ? 7 : n0 + n1;
-        cm5_pri[st] = (uint8_t)(n0 + n1);
-        cm5_dx[st] = (int16_t)(n0 && n1 ? 0 : n1 ? 128 * (n + 1) : n0 ? -128 * (n + 1) : 0);
+        cm4_pri[st] = (uint8_t)(n0 + n1);
+        cm4_dx[st] = (int16_t)(n0 && n1 ? 0 : n1 ? 128 * (n + 1) : n0 ? -128 * (n + 1) : 0);
     }
     for (int i = 0; i < 1024; i++) cm_srcp[i] = (uint32_t)(655360 / (10 * i + 15));
 }
@@ -180,10 +181,15 @@ typedef struct {
      * (t, shi, cur, slot, sm, ...) holds context mid[k]; h[] stays indexed by context, hc[k] = h[mid[k]]. Models 0-3:
      * mid[k] = k and nmod = CM_NMOD(v2). */
     int nmod; uint8_t mid[CM_NM3]; uint32_t hc[CM_NM3], mask;
-    uint8_t *cur5[CM_NM3], *st5[CM_NM3];                  /* model 5: the nibble bucket and the bit's state byte, per slot */
-    /* model 5: the 16-bit mixer (algo/mixer.h): inputs, and the four weight sets' rows of CM5_NIP (4096 = 1.0) */
-    int16_t x16[CM5_NIP];   /* (cm_t comes from calloc: no over-alignment) */
-    int16_t (*q1)[CM5_NIP], (*q2)[CM5_NIP], (*q3)[CM5_NIP], (*q4)[CM5_NIP];                    /* model 5: APM by match state (length class, expected bit) and partial byte */
+    int64_t mwin;                                         /* model 4: the match chain's ring size (0: one entry per byte) */
+    uint32_t nl[CM_NM3];                                  /* model 4: lines per context table */
+    uint8_t *cur4[CM_NM3], *st4[CM_NM3];                  /* model 4: the nibble bucket and the bit's state byte, per slot */
+    /* model 4: the 16-bit mixer (algo/mixer.h): inputs, and the four weight sets' rows of CM4_NIP (4096 = 1.0) */
+    int16_t x16[CM4_NIP];   /* (cm_t comes from calloc: no over-alignment) */
+    int16_t (*q1)[CM4_NIP], (*q2)[CM4_NIP], (*q3)[CM4_NIP], (*q4)[CM4_NIP];
+    /* model 4 initialises a row of the mixers and the two large APMs when it is first used (the same values as setting
+     * every row at the start, without writing megabytes for a short stream): the row templates and the rows' flags */
+    int16_t q0[4][CM4_NIP]; uint16_t a0[33]; uint8_t *rdy;   /* rdy: CM_W1 + CM_W2 + CM_W3 + CM_W4 + 2 * 65536 flags */
 } cm_t;
 
 static inline uint32_t cm_hmix(uint32_t a) { a ^= a >> 15; a *= 0x2C1B3C6Du; a ^= a >> 12; a *= 0x297A2D39u; a ^= a >> 15; return a; }
@@ -223,34 +229,39 @@ static void cm_release(size_t b) { if (b) kmem_release(b); }
 #endif
 static int cm_bits_for(size_t n);
 #define CM_MASK3 ((((uint32_t)1 << CM_NM3) - 1) & ~(uint32_t)1)   /* model 4 masks: a subset of model 3's hashed contexts 1..29 */
+/* model 4's contexts, chosen by backward elimination on 1 MB samples (benchmark/w4/cm/RESULTS.md): text (and logs, CSV,
+ * JSON) and everything else */
+#define CM4_MASK_TEXT 0x3f60f758u   /* orders 3, 4, 5, 7; word, column, words; indirect; orders 12, 20; expected byte; structure */
+#define CM4_MASK_BIN  0x019f74d8u   /* orders 3, 4, 7; word; column; sparse; indirect; record contexts; expected byte */
 /* log2 buckets of hashed context i (1..29) for tables of 2^bb: the model-2 contexts (16+) half, the structure contexts
  * (25+) a quarter, from 2^19 */
 static int cm_ctx_bits(int i, int bb) { return i >= CM_NM && bb > 18 ? bb - CM_SMALL - (i >= CM_NM3 - 5) : bb; }
-/* model 4: the tables of the contexts in mask, plus the fixed tables of model 3 (mixers, APMs, match table) */
-static size_t cm_mem_mask(int bb, uint32_t mask) {
-    size_t b = (size_t)48 << 20;
-    for (int i = 1; i < CM_NM3; i++) if (mask >> i & 1) b += sizeof(cm_bucket) << cm_ctx_bits(i, bb);
+/* Model 4's tables: 64-byte lines of four 16-byte nibble buckets (check byte, 15 bit-history states). Sizes: a context's table has n >> s lines for an n-byte stream (s from the header: s = 2 + its low nibble), half
+ * that for the model-2 contexts (16-24), a quarter for the structure contexts (25+), between 2^12 and 2^22 lines; any
+ * count (the line is h * lines >> 32). */
+enum { CM4_MINL = 1 << 12, CM4_MAXL = 1 << 22 };
+static uint32_t cm4_lines(int i, size_t n, int s) {
+    uint64_t l = (uint64_t)n >> s; l >>= i >= CM_NM3 - 5 ? 2 : i >= CM_NM ? 1 : 0;
+    return (uint32_t)(l < CM4_MINL ? CM4_MINL : l > CM4_MAXL ? CM4_MAXL : l);
+}
+static inline uint32_t cm4_line(uint32_t h, uint32_t nl) { return (uint32_t)(((uint64_t)h * nl) >> 32); }
+static size_t cm_mem4(size_t n, int s, uint32_t mask) {
+    /* model 3's 48 MiB less its 32-bit mixer rows (16.5 MiB) and match table (16 MiB), plus the 16-bit rows (8.6 MiB) and
+     * a match table of 2^16..2^22 slots */
+    size_t b = (size_t)25 << 20; int mb = 16; while (mb < 22 && ((size_t)1 << mb) < n) mb++; b += (size_t)4 << mb;
+    for (int i = 1; i < CM_NM3; i++) if (mask >> i & 1) b += (size_t)64 * cm4_lines(i, n, s);
     return b;
 }
-/* model 5: 64-byte lines of four 16-byte nibble buckets (check byte, 15 bit-history states) */
-#ifndef CM5_DELTA
-#define CM5_DELTA -2
+#ifndef CM4_S
+#define CM4_S 5   /* model 4's size shift for streams up to 48 MiB: n / 32 lines (2 bytes per input byte) per context */
 #endif
-static int cm5_delta = CM5_DELTA;   /* log2 lines per context against model 3's buckets (research: benchmark/w4/cm) */
-static int cm5_ctx_bits(int i, int bb) { int b = cm_ctx_bits(i, bb) + cm5_delta; return b < 12 ? 12 : b; }
-#ifndef CM5_MCAND
-#define CM5_MCAND 16  /* model 5: match candidates examined */
-#endif
-#ifndef CM5_SHARED
-#define CM5_SHARED 0   /* research: log2 lines of one table shared by every context (0: a table per context) */
-#endif
-static int cm5_shared = CM5_SHARED;
-static size_t cm_mem5(int bb, uint32_t mask) {
-    size_t b = (size_t)40 << 20;   /* model 3's 48 MiB less its 32-bit mixer rows, plus the 16-bit ones */
-    if (cm5_shared) { (void)bb; (void)mask; return b + ((size_t)64 << cm5_shared); }
-    for (int i = 1; i < CM_NM3; i++) if (mask >> i & 1) b += (size_t)64 << cm5_ctx_bits(i, bb);
-    return b;
-}
+static int cm4_s_default = CM4_S;   /* research harnesses may change it */
+/* model 4's size shift for an n-byte stream: the default, raised under an explicit memory cap until the decode working
+ * set (tables, match chain, the block's buffers) fits (a format decision from n, the setting and the cap only) */
+static int cm4_shift_for(size_t n, uint32_t mask);
+/* model 4's match chain: one entry per byte up to 2^24 bytes, then a ring of the last 2^24 positions (64 MiB) */
+#define CM4_MWIN ((int64_t)1 << 24)
+static size_t cm4_chain(size_t n) { return 4 * (n + 8 > (size_t)CM4_MWIN ? (size_t)CM4_MWIN : n + 8); }
 static size_t cm_mem_for(int bb, int v2) {
     size_t t = (size_t)sizeof(cm_bucket) << bb, ts = bb > 18 ? t >> CM_SMALL : t;
 #ifdef KOLMO_CM_COMPACT
@@ -295,6 +306,19 @@ static int cm_bits_for(size_t n) {
     }
     return b;
 }
+static int cm4_shift_for(size_t n, uint32_t mask) {
+    /* n / 32 lines per context up to 48 MiB, n / 64 up to 128 MiB, n / 128 beyond: about 26, 13 and 6 table bytes per input
+     * byte with the text contexts, so that -x needs at most about 1.5 times the memory of zpaq -m5, whose need per byte
+     * also falls with the size (benchmark/w4/cm/RESULTS.md) */
+    int s = cm4_s_default + (n > ((size_t)48 << 20)) + (n > ((size_t)128 << 20));
+    if (__atomic_load_n(&cm_tables_mode, __ATOMIC_RELAXED) == 0 && s > 2) s -= 2;   /* --x-tables=full: four times the lines */
+    if (kmem_tls_cap && kmem_tls_cap != KMEM_UNLIMITED) {
+        size_t raw = kmem_tls_raw > n ? kmem_tls_raw : n;
+        uint64_t fixed = kmem_buffers(raw) + cm4_chain(n);
+        while (s < 17 && cm_mem4(n, s, mask) + fixed > kmem_tls_cap) s++;
+    }
+    return s;
+}
 
 /* Model tables: zeroed, and on Linux backed by transparent huge pages where available (far fewer TLB misses on the
  * random lookups that dominate CM time). Contents never depend on how the memory was obtained. */
@@ -316,7 +340,7 @@ static void cm_big_free(void *p, size_t n) { (void)n; free(p); }
 static void cm_free_parts(cm_t *m) {
     for (int i = 1; i < CM_NM3; i++) if (m->tbi[i]) cm_big_free(m->t[i], m->tbi[i]);
     cm_big_free(m->w3, sizeof(*m->w3) * CM_W3); cm_big_free(m->w4, sizeof(*m->w4) * CM_W4);
-    cm_big_free(m->q1, sizeof(*m->q1) * CM_W1); cm_big_free(m->q2, sizeof(*m->q2) * CM_W2); cm_big_free(m->q3, sizeof(*m->q3) * CM_W3); cm_big_free(m->q4, sizeof(*m->q4) * CM_W4);
+    cm_big_free(m->rdy, CM4_RA2 + 2 * 65536); cm_big_free(m->q1, sizeof(*m->q1) * CM_W1); cm_big_free(m->q2, sizeof(*m->q2) * CM_W2); cm_big_free(m->q3, sizeof(*m->q3) * CM_W3); cm_big_free(m->q4, sizeof(*m->q4) * CM_W4);
     cm_big_free(m->a3, sizeof(*m->a3) * CM_A3); cm_big_free(m->mt, ((size_t)m->mmask + 1) * 4); cm_big_free(m->mprev, m->mprev_n); free(m);
 }
 #ifdef KOLMO_CM_COMPACT
@@ -367,13 +391,10 @@ static void cm_apply_prior(cm_t *m, const int16_t p[5][CM_NIX3]) {
     for (int j = 0; j < CM_NIX3; j++) {
         const int q = jm[j]; if (q < 0) continue;
         const int32_t a = p[0][q] * 4, b = p[1][q] * 4, c = p[2][q] * 4, d = p[3][q] * 4;
-        if (m->v2 == 5) {   /* 16-bit rows: 4096 = 1.0 */
-#define CM5_Q(v) (int16_t)((v) >> 4 > 32767 ? 32767 : (v) >> 4 < -32768 ? -32768 : (v) >> 4)
-            for (int i = 0; i < CM_W1; i++) m->q1[i][j] = CM5_Q(a);
-            for (int i = 0; i < CM_W2; i++) m->q2[i][j] = CM5_Q(b);
-            for (int i = 0; i < CM_W3; i++) m->q3[i][j] = CM5_Q(c);
-            for (int i = 0; i < CM_W4; i++) m->q4[i][j] = CM5_Q(d);
-#undef CM5_Q
+        if (m->v2 == 4) {   /* 16-bit row templates: 4096 = 1.0 */
+#define CM4_Q(v) (int16_t)((v) >> 4 > 32767 ? 32767 : (v) >> 4 < -32768 ? -32768 : (v) >> 4)
+            if (j < CM4_NIP) { m->q0[0][j] = CM4_Q(a); m->q0[1][j] = CM4_Q(b); m->q0[2][j] = CM4_Q(c); m->q0[3][j] = CM4_Q(d); }
+#undef CM4_Q
             continue;
         }
         for (int i = 0; i < CM_W1; i++) m->w1[i][j] = a;
@@ -382,18 +403,20 @@ static void cm_apply_prior(cm_t *m, const int16_t p[5][CM_NIX3]) {
     }
     if (m->v2) for (int i = 0; i < CM_WF; i++) for (int j = 0; j < 5; j++) m->wf[i][j] = p[4][j] * 4;
 }
+static const kolmo_kernels *cm_kk_override;            /* tests only (tests/test_cm4.c): the kernels of one ISA level */
 static const int16_t (*cm_prior_override)[CM_NIX3];   /* research harnesses only (benchmark/rc3w2/twopass): replaces prior 1 */
 static void cm_set_tune(cm_t *m, cm_tune_t t) {
-    if (t.b2 == 1 && m->v2) cm_apply_prior(m, cm_prior_override ? cm_prior_override : cm_prior[m->v2 >= 3]);
+    if (m->v2 == 4 && t.b2) cm_apply_prior(m, cm_prior_override ? cm_prior_override : cm_prior4[t.b2 - 1]);   /* model 4: 1 text, 2 binary */
+    else if (t.b2 == 1 && m->v2) cm_apply_prior(m, cm_prior_override ? cm_prior_override : cm_prior[m->v2 >= 3]);
     m->lr = CM_LR + cm_tv_lr[t.b0 & 3]; const int lim = cm_tv_lim[t.b0 >> 2 & 3]; m->apm_sh = cm_tv_apm[t.b0 >> 4 & 3]; m->mc_sh = cm_tv_mc[t.b0 >> 6];
     m->lrk = cm_tv_lrk[t.b1 & 3]; m->lrd = cm_tv_lrd[t.b1 >> 2 & 3]; m->smlim = cm_tv_sm[t.b1 >> 4 & 3];
     for (int k = 0; k < 4; k++) m->fw[k] = cm_tv_fin[t.b1 >> 6][k];
     for (int n = 0; n < 16; n++) m->rcp[n] = cm_rcp[n * lim];
 }
 /* mask: model 4's contexts (v2 = 4), ignored otherwise */
-static cm_t *cm_new_xm(uint8_t *buf, int bb, int v2, size_t chain, int lx, uint32_t mask) {   /* lx: exact logistic tables */   /* chain: bytes for model 3's match chain (4 per input byte) */
+static cm_t *cm_new_xm(uint8_t *buf, int bb, int v2, size_t chain, int lx, uint32_t mask, size_t n) {   /* model 4: bb = the size shift s, n the stream's length */   /* lx: exact logistic tables */   /* chain: bytes for model 3's match chain (4 per input byte) */
     pthread_once(&cm_once, cm_init_tables);
-    size_t mem = (v2 == 4 ? cm_mem_mask(bb, mask) : v2 == 5 ? cm_mem5(bb, mask) : cm_mem_for(bb, v2)) + chain;
+    size_t mem = (v2 == 4 ? cm_mem4(n, bb, mask) : cm_mem_for(bb, v2)) + chain;
     if (kmem_tls_dec_limit && mem > kmem_tls_dec_limit) return NULL;   /* decoding: more than the frame declares */
     size_t resv = cm_acquire(mem);
     atomic_fetch_add_explicit(&cm_models_made, 1, memory_order_relaxed);
@@ -402,40 +425,36 @@ static cm_t *cm_new_xm(uint8_t *buf, int bb, int v2, size_t chain, int lx, uint3
     if (v2 >= 4) { m->mid[nm++] = 0; for (int i = 1; i < CM_NM3; i++) if (mask >> i & 1) m->mid[nm++] = (uint8_t)i; }
     else for (nm = 0; nm < CM_NMOD(v2); nm++) m->mid[nm] = (uint8_t)nm;
     m->nmod = nm; m->mask = mask;
-    m->kk = kolmo_kernels_get();
+    m->kk = cm_kk_override ? cm_kk_override : kolmo_kernels_get();
     m->sh = 32 - bb; m->mem = resv; m->v2 = v2; m->sq = lx ? cm_sqx : cm_sq; m->st = lx ? cm_stx : cm_st;
     m->tb = sizeof(cm_bucket) << bb;
-    if (v2 == 5 && cm5_shared) {
-        m->tbi[1] = (size_t)64 << cm5_shared; m->t[1] = cm_big(m->tbi[1]); if (!m->t[1]) goto fail;
-        for (int i = 1; i < nm; i++) { m->t[i] = m->t[1]; m->shi[i] = (uint8_t)(32 - cm5_shared); }
-    } else
     for (int i = 1; i < nm; i++) {                            /* the model-2 contexts (16+) have fewer distinct values */
-        int b = v2 == 5 ? cm5_ctx_bits(m->mid[i], bb) : cm_ctx_bits(m->mid[i], bb);   /* model 2 and 3 contexts: half; structure contexts: a quarter */
+        int b = cm_ctx_bits(m->mid[i], bb);                   /* model 2 and 3 contexts: half; structure contexts: a quarter */
         m->shi[i] = (uint8_t)(32 - b); m->tbi[i] = sizeof(cm_bucket) << b;
+        if (v2 == 4) { m->nl[i] = cm4_lines(m->mid[i], n, bb); m->tbi[i] = (size_t)64 * m->nl[i]; }
 #ifdef KOLMO_CM_COMPACT
-        if (m->mid[i] == 1 || m->mid[i] == 17) {
+        if (v2 != 4 && (m->mid[i] == 1 || m->mid[i] == 17)) {   /* model 4 has no compact tables */
             m->tbi[i] = cm_build_byte_table(m->one_byte[m->mid[i] == 17], m->mid[i], m->shi[i]);
             if (!m->tbi[i]) goto fail;
         }
 #endif
         m->t[i] = cm_big(m->tbi[i]); if (!m->t[i]) goto fail;
     }
-    if (v2 == 5) {   /* the 16-bit mixer's rows, each weight 1/4 */
+    if (v2 == 4) {   /* the 16-bit mixer's rows, each weight 1/4 (rows are set from the templates when first used) */
         m->q1 = cm_big(sizeof(*m->q1) * CM_W1); m->q2 = cm_big(sizeof(*m->q2) * CM_W2); m->q3 = cm_big(sizeof(*m->q3) * CM_W3); m->q4 = cm_big(sizeof(*m->q4) * CM_W4);
-        if (!m->q1 || !m->q2 || !m->q3 || !m->q4) goto fail;
-        for (int i = 0; i < CM_W1; i++) for (int j = 0; j < CM5_NIP; j++) m->q1[i][j] = 1024;
-        for (int i = 0; i < CM_W2; i++) for (int j = 0; j < CM5_NIP; j++) m->q2[i][j] = 1024;
-        for (int i = 0; i < CM_W3; i++) for (int j = 0; j < CM5_NIP; j++) m->q3[i][j] = 1024;
-        for (int i = 0; i < CM_W4; i++) for (int j = 0; j < CM5_NIP; j++) m->q4[i][j] = 1024;
+        m->rdy = cm_big(CM4_RA2 + 2 * 65536);
+        if (!m->q1 || !m->q2 || !m->q3 || !m->q4 || !m->rdy) goto fail;
+        for (int k = 0; k < 4; k++) for (int j = 0; j < CM4_NIP; j++) m->q0[k][j] = 1024;
+        for (int j = 0; j < 33; j++) m->a0[j] = (uint16_t)(cm_SQ(m->sq, (j - 16) * 128) * 16);
     }
     if (v2) {
-        if (v2 != 5) { m->w3 = cm_big(sizeof(*m->w3) * CM_W3); m->w4 = cm_big(sizeof(*m->w4) * CM_W4); }
+        if (v2 != 4) { m->w3 = cm_big(sizeof(*m->w3) * CM_W3); m->w4 = cm_big(sizeof(*m->w4) * CM_W4); }
         m->a3 = cm_big(sizeof(*m->a3) * CM_A3);
-        if ((v2 != 5 && (!m->w3 || !m->w4)) || !m->a3) goto fail;
-        if (v2 != 5) for (int i = 0; i < CM_W3; i++) for (int j = 0; j < CM_NIX3; j++) m->w3[i][j] = 1 << 14;
-        if (v2 != 5) for (int i = 0; i < CM_W4; i++) for (int j = 0; j < CM_NIX3; j++) m->w4[i][j] = 1 << 14;
+        if ((v2 != 4 && (!m->w3 || !m->w4)) || !m->a3) goto fail;
+        if (v2 != 4) for (int i = 0; i < CM_W3; i++) for (int j = 0; j < CM_NIX3; j++) m->w3[i][j] = 1 << 14;
+        if (v2 != 4) for (int i = 0; i < CM_W4; i++) for (int j = 0; j < CM_NIX3; j++) m->w4[i][j] = 1 << 14;
         for (int i = 0; i < CM_WF; i++) { for (int j = 0; j < 4; j++) m->wf[i][j] = 1 << 14; m->wf[i][4] = 0; }
-        for (int c = 0; c < CM_A3; c++) for (int j = 0; j < 33; j++) m->a3[c][j] = (uint16_t)(cm_SQ(m->sq, (j - 16) * 128) * 16);
+        if (v2 != 4) for (int c = 0; c < CM_A3; c++) for (int j = 0; j < 33; j++) m->a3[c][j] = (uint16_t)(cm_SQ(m->sq, (j - 16) * 128) * 16);
     }
     for (int i = 0; i < 65536; i++) m->o1[i] = 0x80000000u;
     for (int i = 0; i < nm; i++) for (int j = 0; j < 256 * 8; j++) {
@@ -445,18 +464,20 @@ static cm_t *cm_new_xm(uint8_t *buf, int bb, int v2, size_t chain, int lx, uint3
     for (int i = 0; i < CM_W1; i++) for (int j = 0; j < CM_NIX3; j++) m->w1[i][j] = 1 << 14;
     for (int i = 0; i < CM_W2; i++) for (int j = 0; j < CM_NIX3; j++) m->w2[i][j] = 1 << 14;
     for (int c = 0; c < 256; c++) for (int j = 0; j < 33; j++) m->a1[c][j] = (uint16_t)(cm_SQ(m->sq, (j - 16) * 128) * 16);
-
-    for (int c = 0; c < 65536; c++) for (int j = 0; j < 33; j++) m->a2[c][j] = (uint16_t)(cm_SQ(m->sq, (j - 16) * 128) * 16);
+    if (v2 != 4) for (int c = 0; c < 65536; c++) for (int j = 0; j < 33; j++) m->a2[c][j] = (uint16_t)(cm_SQ(m->sq, (j - 16) * 128) * 16);
     m->buf = buf; m->c0 = 1;
-    m->mmask = (1u << 22) - 1; m->mt = cm_big(((size_t)m->mmask + 1) * 4); if (!m->mt) goto fail;
+    m->mmask = (1u << 22) - 1;
+    if (v2 == 4) { int b = 16; while (b < 22 && ((size_t)1 << b) < n) b++; m->mmask = (1u << b) - 1; }   /* model 4: about one slot per byte */
+    m->mt = cm_big(((size_t)m->mmask + 1) * 4); if (!m->mt) goto fail;
     for (int i = 0; i < 64; i++) m->mc[i] = 1u << 15;
     if (chain) { m->mprev_n = chain; m->mprev = cm_big(chain); if (!m->mprev) goto fail; }
+    if (v2 == 4 && n + 8 > CM4_MWIN) m->mwin = CM4_MWIN;   /* model 4: the chain is a ring of the last CM4_MWIN positions */
     cm_set_tune(m, (cm_tune_t){0, 0, 0});
     return m;
 fail:
     cm_free_parts(m); cm_release(resv); return NULL;
 }
-static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain, int lx) { return cm_new_xm(buf, bb, v2, chain, lx, 0); }
+static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain, int lx) { return cm_new_xm(buf, bb, v2, chain, lx, 0, 0); }
 static cm_t *cm_new(uint8_t *buf, int bb, int v2) { return cm_new_x(buf, bb, v2, 0, 0); }
 static void cm_free(cm_t *m) {
     if (!m) return;
@@ -479,6 +500,7 @@ static inline cm_bucket *cm_find(cm_bucket *t, uint32_t h, int sh) {
     return v;
 }
 #ifdef KOLMO_CM_COMPACT
+static inline cm_bucket *cm_find(cm_bucket *t, uint32_t h, int sh) { return cm_find_at(t, h >> sh, h & 0xffff); }   /* (models 1-3 use the compact path) */
 static inline uint32_t cm_byte_entry(const cm_t *m, int o, unsigned nib) {
     unsigned c = o == 1 ? m->c4 & 255 : (m->c4 >> 8) & 255;
     return m->one_byte[o == 17][m->pos ? c : 256][nib];
@@ -498,12 +520,12 @@ static inline uint32_t cm_prefetch_slot(const cm_t *m, int i, unsigned nib, uint
     return cm_hmix(m->h[o] + salt) >> m->shi[i];
 }
 #endif
-/* model 5: the 16-byte bucket of hash h in its 64-byte line: the one with h's check byte, or else the one whose first
+/* model 4: the 16-byte bucket of hash h in its 64-byte line: the one with h's check byte, or else the one whose first
  * state has seen the fewest bits, emptied (lpaq's replacement) */
 /* A line: the four buckets' check bytes, then their 15 states each (bucket j's node k at 4 + 15 j + k - 1). Returns the
  * bucket's base so that base[k] is node k. */
-static inline uint8_t *cm5_find(cm_bucket *t, uint32_t h, int sh) {
-    uint8_t *l = (uint8_t *)&t[h >> sh]; const uint8_t chk = (uint8_t)h;
+static inline uint8_t *cm4_find(cm_bucket *t, uint32_t h, uint32_t nl) {
+    uint8_t *l = (uint8_t *)&t[cm4_line(h, nl)]; const uint8_t chk = (uint8_t)h;
     int j;
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     uint32_t w; memcpy(&w, l, 4); w ^= chk * 0x01010101u;
@@ -512,8 +534,8 @@ static inline uint8_t *cm5_find(cm_bucket *t, uint32_t h, int sh) {
 #else
     for (j = 0; j < 4; j++) if (l[j] == chk) return l + 3 + 15 * j;
 #endif
-    int bp = cm5_pri[l[4]]; j = 0;
-    for (int k = 1; k < 4; k++) { int p = cm5_pri[l[4 + 15 * k]]; if (p < bp) { bp = p; j = k; } }
+    int bp = cm4_pri[l[4]]; j = 0;
+    for (int k = 1; k < 4; k++) { int p = cm4_pri[l[4 + 15 * k]]; if (p < bp) { bp = p; j = k; } }
     uint8_t *v = l + 4 + 15 * j; memset(v, 0, 15); l[j] = chk;
     return v - 1;
 }
@@ -540,6 +562,8 @@ static inline int cm_expected(cm_t *m) {
 static inline int cm_stc(const int16_t *st, uint32_t v) { return st[v >> 20]; }
 
 /* v2 is a compile-time constant at each call site, so model 1 and model 2 each get their own specialized loop. */
+static inline void cm4_row(int16_t *r, const int16_t *t, uint8_t *f) { if (!*f) { *f = 1; memcpy(r, t, CM4_NIP * sizeof *r); } }
+static inline void cm4_apm(uint16_t *r, const uint16_t *t, uint8_t *f) { if (!*f) { *f = 1; memcpy(r, t, 33 * sizeof *r); } }
 #define CM_HON(k) (v2 < 4 || (m->mask >> (k) & 1))       /* context k's hash is needed (model 4: only the stream's) */
 #define CM_HSRC(m, v2) ((v2) >= 4 ? (m)->hc : (m)->h)   /* the context hashes in slot order */
 static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v2) {
@@ -548,22 +572,24 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     if (bp == 0 || bp == 4) {
         uint32_t nib = bp ? (c0 & 15) * 0x5BD1E995u : 0;
 #ifdef KOLMO_CM_COMPACT
-        for (int i = 1; i < nm; i++) m->cur[i] = cm_find_model(m, i, bp ? (c0 & 15) : 0, nib);
-#else
-        uint32_t hv[CM_NM3]; m->kk->cm_hash(CM_HSRC(m, v2) + 1, nm - 1, nib, hv + 1);       /* the context hashes, 8 at a time */
-        if (v2 == 5) for (int i = 1; i < nm; i++) m->cur5[i] = cm5_find(m->t[i], hv[i], m->shi[i]);
-        else for (int i = 1; i < nm; i++) m->cur[i] = cm_find(m->t[i], hv[i], m->shi[i]);
+        if (v2 != 4) for (int i = 1; i < nm; i++) m->cur[i] = cm_find_model(m, i, bp ? (c0 & 15) : 0, nib);
+        else
 #endif
+        {
+        uint32_t hv[CM_NM3]; m->kk->cm_hash(CM_HSRC(m, v2) + 1, nm - 1, nib, hv + 1);       /* the context hashes, 8 at a time */
+        if (v2 == 4) for (int i = 1; i < nm; i++) m->cur4[i] = cm4_find(m->t[i], hv[i], m->nl[i]);
+        else for (int i = 1; i < nm; i++) m->cur[i] = cm_find(m->t[i], hv[i], m->shi[i]);
+        }
     }
     int node = bp < 4 ? (int)((c0 & ((1u << bp) - 1)) | (1u << bp)) : (int)((c0 & ((1u << (bp - 4)) - 1)) | (1u << (bp - 4)));
     const int img = v2 == 2;
     m->slot[0] = &m->o1[c0 | (img ? m->i_pred : (m->c4 & 0xff)) << 8];
-    if (v2 == 5) {
+    if (v2 == 4) {
         {   uint32_t v = *m->slot[0]; uint16_t st = (uint16_t)((v >> 8 & 255) | bp << 8); m->sst[0] = st;
-            m->x[0] = cm_stc(m->st, v); m->x[nm + 3] = m->st[m->sm[0][st] >> 20]; }
+            m->x16[0] = (int16_t)cm_stc(m->st, v); m->x16[nm + 3] = m->st[m->sm[0][st] >> 20]; }
         for (int i = 1; i < nm; i++) {
-            uint8_t *sp = m->st5[i] = m->cur5[i] + node; const uint32_t sv = *sp; const uint16_t st = (uint16_t)(sv | bp << 8); m->sst[i] = st;
-            m->x[nm + 3 + i] = m->st[m->sm[i][st] >> 20]; m->x[i] = cm5_dx[sv];
+            uint8_t *sp = m->st4[i] = m->cur4[i] + node; const uint32_t sv = *sp; const uint16_t st = (uint16_t)(sv | bp << 8); m->sst[i] = st;
+            m->x16[nm + 3 + i] = m->st[m->sm[i][st] >> 20]; m->x16[i] = cm4_dx[sv];
         }
     } else {
     for (int i = 1; i < nm; i++) m->slot[i] = &m->cur[i]->s[node];
@@ -585,13 +611,14 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
         m->x[nm + 1] = eb ? l * 16 : -l * 16;
     } else { m->mci = -1; m->x[nm] = 0; m->x[nm + 1] = 0; }
     m->x[nm + 2] = 64;
+    if (v2 == 4) { m->x16[nm] = (int16_t)m->x[nm]; m->x16[nm + 1] = (int16_t)m->x[nm + 1]; m->x16[nm + 2] = 64; }
     int ml = m->mlen == 0 ? 0 : m->mlen < 16 ? 1 : m->mlen < 32 ? 2 : 3;
     uint32_t c1 = m->c4 & 0xff;
     int cls = ((c1 | 32) >= 'a' && (c1 | 32) <= 'z') ? 0 : (c1 >= '0' && c1 <= '9') ? 1 : 2;
     if (img) { cls = (int)m->i_cls; c1 = m->i_pred; }
     m->w1i = (int)c0 + 256 * cls;
     m->w2i = (ml * 8 + bp) * 4 + (int)(img ? m->i_act : c1 >> 6);
-    const int32_t *w1 = m->w1[m->w1i], *w2 = m->w2[m->w2i];   /* models 1-3 (model 5: q1, q2) */
+    const int32_t *w1 = m->w1[m->w1i], *w2 = m->w2[m->w2i];   /* models 1-3 (model 4: q1, q2) */
     int st;
     if (!v2) {
         int64_t sd[4]; m->kk->cm_dot(m->x, ni, w1, w2, NULL, NULL, sd);
@@ -602,8 +629,9 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
         m->w3i = (int)((img ? m->i_n : (m->c4 >> 8 & 0xff)) << 3 | (uint32_t)bp); m->w4i = (int)(c0 | (img ? m->i_med : c1) << 8); m->wfi = (int)c0 | ml << 8;
         const int32_t *wf = m->wf[m->wfi];
         int d[4];
-        if (v2 == 5) {
-            for (int i = 0; i < ni; i++) m->x16[i] = (int16_t)m->x[i];
+        if (v2 == 4) {
+            cm4_row(m->q1[m->w1i], m->q0[0], m->rdy + m->w1i); cm4_row(m->q2[m->w2i], m->q0[1], m->rdy + CM_W1 + m->w2i);
+            cm4_row(m->q3[m->w3i], m->q0[2], m->rdy + CM_W1 + CM_W2 + m->w3i); cm4_row(m->q4[m->w4i], m->q0[3], m->rdy + CM_W1 + CM_W2 + CM_W3 + m->w4i);
             int32_t s4[4]; m->kk->cm_dot16(m->x16, (ni + 15) & ~15, m->q1[m->w1i], m->q2[m->w2i], m->q3[m->w3i], m->q4[m->w4i], s4);
             for (int k = 0; k < 4; k++) d[k] = s4[k] >> 4;
         } else {
@@ -623,6 +651,7 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     int s = st + 2048;
     m->ai = s >> 7; m->aw = s & 127;
     m->a2i = (int)((c0 | c1 << 8) & 0xffff);
+    if (v2 == 4) cm4_apm(m->a2[m->a2i], m->a0, m->rdy + CM4_RA2 + m->a2i);
     int lo = m->ai, wt = m->aw;
     int p1 = (m->a1[c0][lo] * (128 - wt) + m->a1[c0][lo + 1] * wt) >> 11;
     int p2 = (m->a2[m->a2i][lo] * (128 - wt) + m->a2[m->a2i][lo + 1] * wt) >> 11;
@@ -630,9 +659,9 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
     if (!v2) p = (mixed + p1 + p2) / 3;
     else {
         m->a3i = (int)(cm_hmix((img ? m->i_wn : (m->c4 & 0xffff)) * 0x9E3779B1u + c0 * 0x85EBCA6Bu) >> 16);
+        if (v2 == 4) cm4_apm(m->a3[m->a3i], m->a0, m->rdy + CM4_RA2 + 65536 + m->a3i);
         int p3 = (m->a3[m->a3i][lo] * (128 - wt) + m->a3[m->a3i][lo + 1] * wt) >> 11;
         p = (m->fw[0] * mixed + m->fw[1] * p1 + m->fw[2] * p2 + m->fw[3] * p3 + 4) >> 3;   /* default: the plain average */
-
     }
     if (p < 1) p = 1; if (p > 4095) p = 4095;
     return m->pr = p;
@@ -666,7 +695,7 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
             const uint32_t c1 = img ? m->i_pred : c4n & 0xff;
             const char *a2 = (const char *)m->a2[(nc0 | c1 << 8) & 0xffff]; __builtin_prefetch(a2); __builtin_prefetch(a2 + 64);
             if (v2) {
-                if (v2 == 5) { const char *q4 = (const char *)m->q4[nc0 | c1 << 8]; __builtin_prefetch(q4); __builtin_prefetch(q4 + 64); }
+                if (v2 == 4) { const char *q4 = (const char *)m->q4[nc0 | c1 << 8]; __builtin_prefetch(q4); __builtin_prefetch(q4 + 64); }
                 else { const char *w4 = (const char *)m->w4[nc0 | (img ? m->i_med : c1) << 8];
                        __builtin_prefetch(w4); __builtin_prefetch(w4 + 64); __builtin_prefetch(w4 + 128); __builtin_prefetch(w4 + 192); }
                 const char *a3 = (const char *)m->a3[cm_hmix((img ? m->i_wn : (c4n & 0xffff)) * 0x9E3779B1u + nc0 * 0x85EBCA6Bu) >> 16];
@@ -674,9 +703,9 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
             }
         }
     }
-    if (v2 == 5) {
+    if (v2 == 4) {
         cm_upd_sm(&m->sm[0][m->sst[0]], y, m->smlim); cm_upd_ctr(m->slot[0], y, m->rcp);
-        for (int i = 1; i < nm; i++) { cm_upd_sm(&m->sm[i][m->sst[i]], y, m->smlim); *m->st5[i] = bh_next[*m->st5[i]][y]; }
+        for (int i = 1; i < nm; i++) { cm_upd_sm(&m->sm[i][m->sst[i]], y, m->smlim); *m->st4[i] = bh_next[*m->st4[i]][y]; }
     } else {
     for (int i = 0; i < nm; i++) { cm_upd_sm(&m->sm[i][m->sst[i]], y, m->smlim); cm_upd_ctr(m->slot[i], y, m->rcp); }
     for (int i = 1; i < nm; i++) if ((m->cur[i]->s[0] & 0xffff) < 0xffff) m->cur[i]->s[0]++;
@@ -690,12 +719,11 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
         e1 = e1 * k >> 4; e2 = e2 * k >> 4;
         int e3 = ((y << 12) - m->pr3) * k >> 4, e4 = ((y << 12) - m->pr4) * k >> 4, ef = (y << 12) - m->prf;
         int32_t *wf = m->wf[m->wfi];
-        if (v2 == 5) { const int sh = m->lr - 11, e[4] = {e1 >> sh, e2 >> sh, e3 >> sh, e4 >> sh};   /* (x e) >> (lr + 4) at 4096 = 1.0 */
+        if (v2 == 4) { const int sh = m->lr - 11, e[4] = {e1 >> sh, e2 >> sh, e3 >> sh, e4 >> sh};   /* (x e) >> (lr + 4) at 4096 = 1.0 */
                        m->kk->cm_train16(m->x16, (ni + 15) & ~15, m->q1[m->w1i], m->q2[m->w2i], m->q3[m->w3i], m->q4[m->w4i], e); }
         else { int32_t *w3 = m->w3[m->w3i], *w4 = m->w4[m->w4i]; const int e[4] = {e1, e2, e3, e4}; m->kk->cm_train(m->x, ni, w1, w2, w3, w4, e, m->lr); }
         for (int k = 0; k < 5; k++) wf[k] += (m->xf[k] * ef) >> CM_LRF;
         cm_upd_apm(m->a3[m->a3i], m->ai, m->aw, y, m->apm_sh);
-
     }
     cm_upd_apm(m->a1[m->c0], m->ai, m->aw, y, m->apm_sh);
     cm_upd_apm(m->a2[m->a2i], m->ai, m->aw, y, m->apm_sh);
@@ -717,11 +745,10 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
         for (int b = 0; b < 2; b++) {
             uint32_t nib = (((m->c0 << 1) | (uint32_t)b) & 15) * 0x5BD1E995u;
 #ifdef KOLMO_CM_COMPACT
-            for (int i = 1; i < nm; i++) { uint32_t idx = cm_prefetch_slot(m, i, ((m->c0 << 1) | (uint32_t)b) & 15, nib); __builtin_prefetch(&m->t[i][idx]); }
-#else
-            uint32_t hv[CM_NM3]; m->kk->cm_hash(CM_HSRC(m, v2) + 1, nm - 1, nib, hv + 1);
-            for (int i = 1; i < nm; i++) { uint32_t idx = hv[i] >> m->shi[i]; __builtin_prefetch(&m->t[i][idx]); }
+            if (v2 != 4) { for (int i = 1; i < nm; i++) { uint32_t idx = cm_prefetch_slot(m, i, ((m->c0 << 1) | (uint32_t)b) & 15, nib); __builtin_prefetch(&m->t[i][idx]); } continue; }
 #endif
+            uint32_t hv[CM_NM3]; m->kk->cm_hash(CM_HSRC(m, v2) + 1, nm - 1, nib, hv + 1);
+            for (int i = 1; i < nm; i++) { uint32_t idx = v2 == 4 ? cm4_line(hv[i], m->nl[i]) : hv[i] >> m->shi[i]; __builtin_prefetch(&m->t[i][idx]); }
         }
     }
     if (++m->bitpos == 8) {
@@ -844,16 +871,18 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
             m->i_pred = icp; m->i_cls = ci > 2 ? 2 : ci; m->i_act = act >> 1; m->i_n = N; m->i_med = med; m->i_wn = W << 8 | N;
         }
         if (v2 >= 4) for (int k = 1; k < nm; k++) m->hc[k] = m->h[m->mid[k]];
-#ifndef KOLMO_CM_COMPACT
-        uint32_t hv[CM_NM3]; m->kk->cm_hash(CM_HSRC(m, v2) + 1, nm - 1, 0, hv + 1);
+        uint32_t hv[CM_NM3];
+#ifdef KOLMO_CM_COMPACT
+        if (v2 == 4)
 #endif
+        m->kk->cm_hash(CM_HSRC(m, v2) + 1, nm - 1, 0, hv + 1);
         for (int i = 1; i < nm; i++) {                        /* prefetch the buckets for the first nibble */
 #ifdef KOLMO_CM_COMPACT
-            uint32_t idx = cm_prefetch_slot(m, i, 0, 0);
+            uint32_t idx = v2 != 4 ? cm_prefetch_slot(m, i, 0, 0) : cm4_line(hv[i], m->nl[i]);
 #else
-            uint32_t idx = hv[i] >> m->shi[i];
+            uint32_t idx = v2 == 4 ? cm4_line(hv[i], m->nl[i]) : hv[i] >> m->shi[i];
 #endif
-            __builtin_prefetch(&m->t[i][idx]); if (v2 != 5) __builtin_prefetch(&m->t[i][idx ^ 1]);
+            __builtin_prefetch(&m->t[i][idx]); if (v2 != 4) __builtin_prefetch(&m->t[i][idx ^ 1]);
         }
         if (m->pos >= 6) {
             uint32_t hh = cm_hmix(c4 ^ ((m->c8 & 0xffff) * 0x9E3779B1u)) & m->mmask;
@@ -866,10 +895,10 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
                      * for longest. The most recent one predicts the next byte 88% of the time on a JSON file of
                      * repeated documentation, the longest one 94%: half the misses, and misses are where the bits go. */
                     int best = 0; int64_t bc = 0;
-                    for (int k = 0; cand > 0 && k < (v2 == 5 ? CM5_MCAND : CM_MCAND); k++) {
+                    for (int k = 0; cand > 0 && k < CM_MCAND; k++) {
                         int l = cm_match_len(m->buf, cand, m->pos, cand < 400 ? (int)cand : 400);
                         if (l > best) { best = l; bc = cand; if (l >= 400) break; }
-                        cand = m->mprev[cand];
+                        cand = v2 != 4 || !m->mwin ? m->mprev[cand] : m->pos - cand < m->mwin ? m->mprev[cand & (m->mwin - 1)] : 0;
                     }
                     if (best >= 6) { m->mlen = best; m->mptr = bc; found = 1; }
                 } else if (cand > 0) {
@@ -878,7 +907,7 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
                 }
                 if (v2 >= 3 && !found && m->mrec > 0 && m->mptr + 1 < m->pos) { m->mptr++; m->mlen = 1; }   /* carry on past the difference */
             }
-            if (v2 >= 3) m->mprev[m->pos] = m->mt[hh];
+            if (v2 >= 3) m->mprev[v2 == 4 && m->mwin ? m->pos & (m->mwin - 1) : m->pos] = m->mt[hh];
             m->mt[hh] = (uint32_t)m->pos;
             if (m->mlen && m->mptr >= m->pos) m->mlen = 0;
         }
@@ -943,11 +972,11 @@ static inline __attribute__((always_inline)) void cm_dec_loop(cm_t *m, const uin
     ATTR __attribute__((noinline)) static int cm_enc##SUF(cm_t *m, const uint8_t *in, size_t n, uint8_t *out, size_t cap, size_t *po, int v2) { \
         switch (v2) { case 0: return cm_enc_loop(m, in, n, out, cap, po, 0); case 1: return cm_enc_loop(m, in, n, out, cap, po, 1); \
                       case 2: return cm_enc_loop(m, in, n, out, cap, po, 2); case 3: return cm_enc_loop(m, in, n, out, cap, po, 3); \
-                      case 4: return cm_enc_loop(m, in, n, out, cap, po, 4); default: return cm_enc_loop(m, in, n, out, cap, po, 5); } } \
+                      default: return cm_enc_loop(m, in, n, out, cap, po, 4); } } \
     ATTR __attribute__((noinline)) static void cm_dec##SUF(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, int v2) { \
         switch (v2) { case 0: cm_dec_loop(m, in, cn, out, n, 0); break; case 1: cm_dec_loop(m, in, cn, out, n, 1); break; \
                       case 2: cm_dec_loop(m, in, cn, out, n, 2); break; case 3: cm_dec_loop(m, in, cn, out, n, 3); break; \
-                      case 4: cm_dec_loop(m, in, cn, out, n, 4); break; default: cm_dec_loop(m, in, cn, out, n, 5); } }
+                      default: cm_dec_loop(m, in, cn, out, n, 4); } }
 CM_LOOPS(_gen, )
 #if defined(KOLMO_X86_DISPATCH) && !defined(__AVX2__) && !defined(KOLMO_CM_NO_DISPATCH)
 CM_LOOPS(_avx2, KOLMO_TARGET_AVX2)
@@ -975,23 +1004,27 @@ static size_t cm_compress_m(const uint8_t *in, size_t n, uint8_t *out, size_t ca
 static size_t cm_compress_t(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap, cm_tune_t tune) {
     return cm_compress_tm(in, n, out, cap, model, bbcap, tune, 0);
 }
-/* Model 4 (stream header model nibble 9): model 3 restricted to the hashed contexts in mask (bits 1..29), always exact
- * tables and learning settings: size u32 (flags 8) | 9 << 4 | log2 buckets - 15 | tune b0 b1 b2 | mask u32 LE | coded */
-static size_t cm_compress_m4(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int bbcap, cm_tune_t tune, uint32_t mask, int v) {
-    if (cap < 16 || n >= ((size_t)1 << 28) || (mask & ~CM_MASK3) || tune.b2 > 1) return 0;
-    int bb = cm_bits_for(n); if (bbcap >= 16 && bb > bbcap) bb = bbcap;
-    uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new_xm(hist, bb, v, (n + 8) * 4, 1, mask) : NULL;
+/* Model 4 (stream header model nibble 9): model 3's contexts restricted to those in mask (bits 1..29), 16-byte buckets
+ * of bit-history states, the 16-bit mixer, exact logistic tables and learning settings (SPEC.md, "Model 4"):
+ * size u32 (flags 8) | 9 << 4 | size shift - 2 | tune b0 b1 b2 | mask u32 LE | coded bytes */
+/* model 4's prior for a context set: the binary one for masks that hold the record contexts and not the structure ones */
+static uint8_t cm4_prior_for(uint32_t mask) { return (mask >> 18 & 1) && !(mask >> 29 & 1) ? 2 : 1; }
+static size_t cm_compress_m4(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int bbcap, cm_tune_t tune, uint32_t mask) {
+    if (cap < 16 || n >= ((size_t)1 << 28) || (mask & ~CM_MASK3) || tune.b2 > 2) return 0;
+    int bb = cm4_shift_for(n, mask); (void)bbcap;
+    uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new_xm(hist, bb, 4, cm4_chain(n), 1, mask, n) : NULL;
     if (!m) { free(hist); return 0; }
+    if (tune.b2) tune.b2 = cm4_prior_for(mask);
     cm_set_tune(m, tune);
-    uint32_t n32 = (uint32_t)n | (uint32_t)8 << 28; memcpy(out, &n32, 4); out[4] = (uint8_t)((v == 5 ? 10 : 9) << 4 | (bb - 15));
+    uint32_t n32 = (uint32_t)n | (uint32_t)8 << 28; memcpy(out, &n32, 4); out[4] = (uint8_t)(9 << 4 | (bb - 2));
     out[5] = tune.b0; out[6] = tune.b1; out[7] = tune.b2;
     for (int k = 0; k < 4; k++) out[8 + k] = (uint8_t)(mask >> 8 * k);
-    size_t o = 4; int r = cm_enc_run(m, in, n, out + 8, cap - 8, &o, v);
+    size_t o = 4; int r = cm_enc_run(m, in, n, out + 8, cap - 8, &o, 4);
     cm_free(m); free(hist);
     return r ? 0 : o + 8;
 }
 static size_t cm_compress_tm(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap, cm_tune_t tune, uint32_t mask) {
-    if (model >= 4) return cm_compress_m4(in, n, out, cap, bbcap, tune, mask, model);
+    if (model == 4) return cm_compress_m4(in, n, out, cap, bbcap, tune, mask);
     if (cap < 8 || n > 0xFFFFFFF0u) return 0;
     int small = n < ((size_t)1 << 28), v2 = small && model > 1 ? (model == 3 ? 3 : 1) : 0;
     const int tuned = v2 && (tune.b0 | tune.b1 | tune.b2);
@@ -1039,25 +1072,32 @@ static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap)
 #endif
 enum { CM_NPRESET = 4 };
 static const cm_tune_t cm_presets[CM_NPRESET] = {{0x00, 0x00, 1}, {0x1c, 0xa5, 1}, {0x52, 0x04, 1}, {0xdc, 0xb4, 1}};
-typedef struct { const uint8_t *in; size_t n, cap, z; uint8_t *out; int model, bbcap; cm_tune_t t; kmem_ctx ctx; } cm_race_job;
-static void *cm_race_run(void *a) { cm_race_job *j = a; j->z = j->out ? cm_compress_t(j->in, j->n, j->out, j->cap, j->model, j->bbcap, j->t) : 0; return NULL; }
+static cm_tune_t cm4_tune = {0xdc, 0xb4, 1};   /* model 4's learning settings (research harnesses may change them) */
+typedef struct { const uint8_t *in; size_t n, cap, z; uint8_t *out; int model, bbcap; cm_tune_t t; kmem_ctx ctx; uint32_t mask; } cm_race_job;
+static void *cm_race_run(void *a) { cm_race_job *j = a; j->z = j->out ? cm_compress_tm(j->in, j->n, j->out, j->cap, j->model, j->bbcap, j->t, j->mask) : 0; return NULL; }
 /* a preset on a thread of its own: the caller reserved its tables (kmem_try_reserve), so the thread is a covered unit of
  * work, and it codes under the caller's memory context (the explicit cap sizes the tables: same bytes either way) */
 static void *cm_race_thread(void *a) { cm_race_job *j = a; kmem_ctx_set(j->ctx); kmem_tls_job = 1; return cm_race_run(j); }
 static uint64_t cm_need_bound(size_t n);
-static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap, int threads) {
+static uint64_t cm4_need_bound(size_t n, uint32_t mask);
+/* model 4: mask, the stream's contexts (CM4_MASK_TEXT or CM4_MASK_BIN); streams of 2^28 bytes and more take model 1 */
+static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap, int threads, uint32_t mask) {
+    if (model == 4 && n >= ((size_t)1 << 28)) model = 1;
+    /* model 4 is not raced: the race gained it 0.05-0.15% on 1 MB samples for twice the encoding time at one thread;
+     * one preset (the race's fourth) does nearly as well (benchmark/w4/cm/RESULTS.md) */
+    if (model == 4) return cm_compress_tm(in, n, out, cap, 4, bbcap, cm4_tune, mask);
     if (model < 2 || n >= ((size_t)1 << 28) || n < 64) return cm_compress_mx(in, n, out, cap, model, bbcap);
     /* a prefix tells how the rates do early, not over tens of MB: on 100 MB of doubles the preset that won on the first
      * 256 KiB (slower mixer, faster rate decay) was 1.2% larger over the whole stream than the default rates */
-    if (n > CM_RACE_MAX) return cm_compress_t(in, n, out, cap, model, bbcap, cm_presets[0]);
+    if (n > CM_RACE_MAX) return cm_compress_tm(in, n, out, cap, model, bbcap, cm_presets[0], mask);
     const size_t L = n <= CM_RACE_SAMPLE ? n : CM_RACE_SAMPLE;
     cm_race_job j[CM_NPRESET]; pthread_t th[CM_NPRESET]; int started[CM_NPRESET] = {0};
     for (int k = 0; k < CM_NPRESET; k++) {
-        j[k] = (cm_race_job){in, L, L == n ? cap : L + L / 16 + 64, 0, NULL, model, bbcap, cm_presets[k]};
+        j[k] = (cm_race_job){in, L, L == n ? cap : L + L / 16 + 64, 0, NULL, model, bbcap, cm_presets[k], {0, 0, 0}, mask};
         j[k].out = malloc(j[k].cap);
     }
     const int par = threads > CM_NPRESET ? CM_NPRESET : threads > 1 ? threads : 1;
-    const kmem_ctx ctx = kmem_ctx_get(); const uint64_t need = cm_need_bound(L) + (L + L / 16 + 64);
+    const kmem_ctx ctx = kmem_ctx_get(); const uint64_t need = (model == 4 ? cm4_need_bound(L, mask) : cm_need_bound(L)) + (L + L / 16 + 64);
     uint64_t held[CM_NPRESET] = {0};
     for (int k0 = 0; k0 < CM_NPRESET; k0 += par) {           /* par trials at a time; the caller runs one of them */
         /* an extra thread only when its tables fit the memory budget now (optional work never waits: the caller may
@@ -1077,8 +1117,8 @@ static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_
     size_t z = 0;
     if (b >= 0 && L == n) { memcpy(out, j[b].out, j[b].z); z = j[b].z; }
     for (int k = 0; k < CM_NPRESET; k++) free(j[k].out);
-    if (L == n) return z ? z : cm_compress_mx(in, n, out, cap, model, bbcap);
-    return cm_compress_t(in, n, out, cap, model, bbcap, b >= 0 ? cm_presets[b] : cm_presets[0]);
+    if (L == n) return z ? z : cm_compress_tm(in, n, out, cap, model, bbcap, cm_presets[0], mask);
+    return cm_compress_tm(in, n, out, cap, model, bbcap, b >= 0 ? cm_presets[b] : cm_presets[0], mask);
 }
 
 /* a stream written with learning settings (extended header, model nibble 14 or 15): its frame is version 11 */
@@ -1092,13 +1132,13 @@ static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     int bb = CM_BB, v2 = 0, lx = 0; cm_tune_t tune = {0, 0, 0}; uint32_t mask = 0;
     if (n < ((size_t)1 << 28)) {
         uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu;
-        if (f == 8 && cn >= 16 && (in[4] >> 4 == 9 || in[4] >> 4 == 10)) {      /* model 4: tune bytes and the context mask */
-            v2 = in[4] >> 4 == 10 ? 5 : 4;
-            if (in[7] > 1) return -1;
+        if (f == 8 && cn >= 16 && in[4] >> 4 == 9) {      /* model 4: tune bytes and the context mask */
+            v2 = 4;
+            if (in[7] > 2) return -1;
             tune.b0 = in[5]; tune.b1 = in[6]; tune.b2 = in[7];
             for (int k = 0; k < 4; k++) mask |= (uint32_t)in[8 + k] << 8 * k;
             if (mask & ~CM_MASK3) return -1;
-            lx = 1; bb = (in[4] & 15) + 15; in += 8; cn -= 8;
+            lx = 1; bb = (in[4] & 15) + 2; in += 8; cn -= 8;
         } else if (f == 8) {                              /* extended header: model nibble 3 (legacy tables), 5, 6, 7 (exact), 14, 15 (exact, tuned) */
             int mb = cn < 9 ? 0 : in[4] >> 4;
             if (mb != 3 && mb != 5 && mb != 6 && mb != 7 && mb != 14 && mb != 15) return -1;
@@ -1111,8 +1151,8 @@ static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
         }
         else if (f) { bb = (int)(f & 7) + 15; v2 = (int)(f >> 3); }
     }
-    if (n32 != n || bb < 16 || bb > 22) return -1;
-    cm_t *m = cm_new_xm(out, bb, v2, v2 >= 3 ? (n + 8) * 4 : 0, lx, mask); if (!m) return -1;
+    if (n32 != n || (v2 != 4 && (bb < 16 || bb > 22))) return -1;
+    cm_t *m = cm_new_xm(out, bb, v2, v2 == 4 ? cm4_chain(n) : v2 >= 3 ? (n + 8) * 4 : 0, lx, mask, n); if (!m) return -1;
     cm_set_tune(m, tune);
     cm_dec_run(m, in, cn, out, n, v2 >= 3 ? v2 : v2 ? 1 : 0);
     cm_free(m);
@@ -1128,11 +1168,10 @@ static uint64_t cm_stream_need(const uint8_t *in, size_t cn, size_t n) {
     int bb = CM_BB, v2 = 0;
     if (n < ((size_t)1 << 28)) {
         uint32_t f = n32 >> 28;
-        if (f == 8 && cn >= 16 && (in[4] >> 4 == 9 || in[4] >> 4 == 10)) {      /* model 4 */
+        if (f == 8 && cn >= 16 && in[4] >> 4 == 9) {      /* model 4 */
             uint32_t mask = 0; for (int k = 0; k < 4; k++) mask |= (uint32_t)in[8 + k] << 8 * k;
-            bb = (in[4] & 15) + 15;
-            if (in[7] > 1 || (mask & ~CM_MASK3) || bb < 16 || bb > 22) return 0;
-            return (in[4] >> 4 == 10 ? cm_mem5(bb, mask) : cm_mem_mask(bb, mask)) + ((uint64_t)n + 8) * 4;
+            if (in[7] > 2 || (mask & ~CM_MASK3)) return 0;
+            return cm_mem4(n, (in[4] & 15) + 2, mask) + cm4_chain(n);
         }
         if (f == 8) {
             int mb = cn < 9 ? 0 : in[4] >> 4;   /* the models cm_decompress accepts, the tuned ones (14, 15) included */
@@ -1145,14 +1184,31 @@ static uint64_t cm_stream_need(const uint8_t *in, size_t cn, size_t n) {
     return cm_mem_for(bb, v2) + (v2 == 3 ? ((uint64_t)n + 8) * 4 : 0);
 }
 /* the largest decode working set a codec-7 stream of n bytes can have under the current sizing rules (graph leaves) */
-static uint64_t cm_need_bound(size_t n) { int bb = n < ((size_t)1 << 28) ? cm_bits_for(n) : CM_BB; return cm_mem_for(bb, 3) + ((uint64_t)n + 8) * 4; }
+static uint64_t cm_need_bound(size_t n) {
+    int bb = n < ((size_t)1 << 28) ? cm_bits_for(n) : CM_BB; uint64_t a = cm_mem_for(bb, 3) + ((uint64_t)n + 8) * 4;
+    if (n < ((size_t)1 << 28)) { uint64_t b = cm4_need_bound(n, CM4_MASK_TEXT); if (b > a) a = b; }
+    return a;
+}
+/* model 4 with these contexts, as the encoder sizes it now */
+static uint64_t cm4_need_bound(size_t n, uint32_t mask) { return cm_mem4(n, cm4_shift_for(n, mask), mask) + cm4_chain(n); }
 
 /* Codec 7 table (kolmo builds only: tests/test_cm_compact.c includes this file on its own). Model 3 where it gains: text. */
 #ifdef KOLMO_CODEC_REGISTRY
 static size_t cm_bound(size_t n) { return n + n / 16 + 64; }
+static uint32_t cm4_mask_for(const uint8_t *in, size_t n) { return looks_text(in, n) ? CM4_MASK_TEXT : CM4_MASK_BIN; }
+/* the planner's probe: model 4 with six contexts (orders 3 and 4, word, column, current word, field and byte above), about
+ * three times as fast, to compare a transform with the plain bytes on a sample */
+#define CM4_MASK_PROBE 0x2000145cu
+static size_t cm_compress_probe(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
+    return n < ((size_t)1 << 28) ? cm_compress_tm(in, n, out, cap, 4, 0, cm4_tune, CM4_MASK_PROBE) : cm_compress_m(in, n, out, cap, 1);
+}
+/* model 4 as codec 7 codes a stream at -x: the coder's estimate for the planner's samples */
+static size_t cm_compress_auto(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
+    return n < ((size_t)1 << 28) ? cm_compress_tm(in, n, out, cap, 4, 0, cm4_tune, cm4_mask_for(in, n)) : cm_compress_m(in, n, out, cap, 1);
+}
 static size_t cm_codec_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     /* level 1: model 1, as written before; otherwise model 3 for text, 2 for the rest, with the raced settings */
-    return level == 1 ? cm_compress_m(in, n, out, cap, 1) : cm_compress_raced(in, n, out, cap, looks_text(in, n) ? 3 : 2, 0, x ? x->threads : 1);
+    return level == 1 ? cm_compress_m(in, n, out, cap, 1) : cm_compress_raced(in, n, out, cap, 4, 0, x ? x->threads : 1, cm4_mask_for(in, n));
 }
 static int cm_codec_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return cm_decompress(in, cn, out, n); }
 static const kolmo_codec codec_cm = { C_CM, "cm", cm_bound, cm_codec_compress, cm_codec_decompress, NULL };
