@@ -552,7 +552,7 @@ coded:;
         else put32(e + 8, blk_sum(3, raw, len));
         e[12] = codec_wire(xp, codec); e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
         /* what decoding this block will need, from the payload as written (the frame declares the largest) */
-        job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec, tflag, len, slot, tot, 11, J->cm_leaves));
+        job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec_wire(xp, codec), tflag, len, slot, tot, 11, J->cm_leaves));   /* the codec as written (native ids) */
         kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0;
         kmem_release(resv); held = 0;
     }

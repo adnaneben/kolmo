@@ -143,7 +143,7 @@ static void forged(void) {
     kolmo_set_memlimit(KOLMO_MEM_MAX);
     for (int crc = 0; crc < 2; crc++) {
         if (crc) fix_crc(f, 2); else put32(f + 28, 0x12345678);   /* garbage CRC, then a valid one with stored blocks */
-        int in = memfd_create("in", 0); CHECK(in >= 0); CHECK(write(in, s, sizeof s) == (ssize_t)sizeof s); lseek(in, 0, SEEK_SET);
+        char ip[] = "/tmp/kolmo-memdyn-in-XXXXXX"; int in = mkstemp(ip); CHECK(in >= 0); unlink(ip);   /* portable (memfd_create is Linux only) */ CHECK(write(in, s, sizeof s) == (ssize_t)sizeof s); lseek(in, 0, SEEK_SET);
         int64_t r = kolmo_stream_decompress(in, fd, 1);
         CHECK(r == (crc ? KOLMO_ERR_CORRUPT : KOLMO_ERR_CHECKSUM));
         close(in);
