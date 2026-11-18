@@ -219,7 +219,10 @@ static void *compress_worker(void *arg) {
             shuffle_fwd(raw, rows, pl.a, pl.b, pl.c, tbuf);
             memcpy(tbuf + rows * u, raw + rows * u, len - rows * u);
             in = tbuf; tflag = 1;
-        } else if (pl.t == T_WORD && len) {
+        } else if (pl.t == T_WORD && len && !(J->codec == C_CM ||
+                   (J->codec == C_LZMA && ((pl.wide && J->default_level ? 1 : J->level) == 1 || looks_text(raw, len))))) {
+            /* (ratio/max and ultra drop the word transform of a text block below, coding the plain bytes with block
+             * sorting or context mixing: it is not computed for them; it cost 10% of ratio's encode time on text) */
             int64_t tn = word_encode(raw, len, tbuf, len + TSLACK);
             if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 9; }
         } else if (pl.t == T_X86 && len) {

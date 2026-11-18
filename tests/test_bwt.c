@@ -154,6 +154,33 @@ static void codec18(void) {
     }
 }
 
+/* w4: the unrolled LZP encoder (hash sizes <= 17) writes the bytes of the position-by-position reference, and codec
+   18 writes the same bytes whether it works inside the caller's buffer (cap >= n + 64 + 1029) or in its own copy. */
+extern int kolmo_lzp_force_ref;
+static void lzp_fast_vs_ref(void) {
+    static const int ns[] = {200, 1000, 4096, 65536, 300000, 1048576};
+    static const int hm[][2] = {{10, 16}, {12, 17}, {15, 72}, {16, 24}, {16, 32}, {17, 96}, {17, 255}, {14, 40}, {18, 96}, {20, 64}};
+    for (int kind = 0; kind < NKIND; kind++) for (unsigned s = 0; s < sizeof(ns) / sizeof(ns[0]); s++) {
+        int n = ns[s]; uint8_t *in = gen(kind, n), *a = malloc((size_t)n + 64), *b = malloc((size_t)n + 64);
+        for (unsigned p = 0; p < sizeof(hm) / sizeof(hm[0]); p++) for (int th = 1; th <= 4; th += 3) {
+            kolmo_lzp_force_ref = 1; int rb = kolmo_lzp_compress(in, b, n, hm[p][0], hm[p][1], th);
+            kolmo_lzp_force_ref = 0; int ra = kolmo_lzp_compress(in, a, n, hm[p][0], hm[p][1], th);
+            CHECK(ra == rb && (ra <= 0 || !memcmp(a, b, (size_t)ra)), "lzp fast != reference (kind %d n %d hash %d min %d th %d: %d %d)", kind, n, hm[p][0], hm[p][1], th, ra, rb);
+        }
+        free(in); free(a); free(b);
+    }
+    static const int cs[] = {2, 3, 40, 1000, 65536, 300000, 1048576};
+    static const kolmo_bwt_params P = KOLMO_BWT_DEFAULTS, P2 = {16, 32, KOLMO_QLFC_STATIC, 12, 1 << 16, 0};
+    for (int kind = 0; kind < NKIND; kind++) for (unsigned s = 0; s < sizeof(cs) / sizeof(cs[0]); s++) for (int q = 0; q < 2; q++) {
+        int n = cs[s]; uint8_t *in = gen(kind, n); size_t big = (size_t)n + 4096, small = (size_t)n + 64 + 4 * 256;
+        uint8_t *a = malloc(big), *b = malloc(small);
+        int ra = kolmo_bwt_compress(in, a, big, n, q ? &P2 : &P, 2), rb = kolmo_bwt_compress(in, b, small, n, q ? &P2 : &P, 2);
+        CHECK((ra == rb || (rb == KB_NOT_COMPRESSIBLE && ra > 0 && (size_t)ra > small)) && (rb <= 0 || !memcmp(a, b, (size_t)ra)),
+              "codec 18: in-place and copied encoders differ (kind %d n %d params %d: %d %d)", kind, n, q, ra, rb);
+        free(in); free(a); free(b);
+    }
+}
+
 int main(int argc, char **argv) {
     int print = argc > 1 && !strcmp(argv[1], "--print");
 #ifdef GOLDEN_FROM_LIBBSC
@@ -185,6 +212,7 @@ int main(int argc, char **argv) {
     if (print) return 0;
     sais_threads();
     codec18();
+    lzp_fast_vs_ref();
     printf(fails ? "BWT TESTS FAILED (%d)\n" : "BWT TESTS PASSED\n", fails);
     return fails != 0;
 }
