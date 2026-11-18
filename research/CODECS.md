@@ -242,3 +242,22 @@ Is it worth reading the whole file first to choose codecs and to fit the context
 | CM shared prior: mean trained mixer rows, compiled in, one per model | `-x` | 100 KB −1.1% to −4.0%, 1 MB −0.13% to −1.1%, never larger; per-kind priors were worse than one general prior | rc3w2 (twopass), tune byte 2 |
 | CM two-pass weights: the file's own mean rows in the header (8 or 16 bits) | `-x` | −0.8% to +4.9% at 100 KB, −0.7% to +0.9% at 1 MB (header 315–630 bytes; logs and tables lose) | not adopted |
 | semi-static order-0/1/2 context models + static rANS | balanced, hc | larger than zstd -3 on every kind (text 1 MB 442 KB vs 349 KB), decode 50–100 MB/s | not adopted |
+
+## Per-kind priors and token classes (rc3 wave 3, prior lane)
+
+Does a prebuilt network per kind of file pay, and where do regular expressions add value? Details: `docs/PRIORS.md`,
+`benchmark/rc3w3/prior/RESULTS.md`. Sizes are `-x` against rc3 + the twopass lane (shared prior, preset race).
+
+| technique | level | measured impact | verdict |
+|---|---|---|---|
+| per-kind prior: all rows of mixers w1, w2, w3 and the final mixer, w4's mean row, state maps, order-1 table, match counters of a model-3 coder trained on 1–4 MB of public data of the kind; 4-bit weights, 4-bit stretched probabilities, raw LZMA2 | `-x` (codec 7, prior id 2–9 in tune byte 2) | with model 4: 10 KB −5.8% to −14.7%, 100 KB −1.4% to −10.5%, 1 MB −0.2% to −4.5% (most of it model 4), not used from 4 MiB (it lost 0.2–0.5% there); +388 KB of binary for 8 kinds | rc3w3 (prior) |
+| per-kind mean mixer rows (the twopass method, one row set per kind) | `-x` | no better than the one shared prior (as twopass found); the gain is in the full tables | not adopted |
+| per-kind state of the large tables (w4, APMs a2/a3) | `-x` | 0.3–3 points more at 10 KB for 4–16 MB per table | not adopted (size) |
+| priming text per kind (the coder learns 64 KB of the kind before the stream) | `-x` | ≈ the table prior, 1–6 points more at 10 KB on code and HTML; decode of a 10 KB file 3.2× slower | not adopted (decode) |
+| 5-bit instead of 4-bit prior weights | `-x` | 0.3–0.9% smaller at 10 KB, ≤ 0.3% at 100 KB, for 73 KB more binary | not adopted |
+| SQL-dump prior | `-x` | never used: SQL dumps take the table route (CM over parts) | dropped (46.5 KB) |
+| model 4: model 3 + token-class contexts (hand-written lexer: digit, letter, space, punctuation tokens; the last 8 token classes; the same token of the previous line) | `-x`, raced against model 3 per stream | no prior, 1 MB: −1.2% to −3.2% on logs, JSON, C, JS; prose and tables 0; final build at 10 MB: JS −3.8%, C −2.6%, Python −2.5%, JSON −1.3%, HTML −1.6%, prose −0.8%; decode cost see RESULTS | rc3w3 (prior) |
+| model choice and presets in a two-stage race; streams ≥ 1 MiB judged by the 256 KiB sample's second half | `-x` | the prefix judged whole picked a preset that lost 0.7% on 10 MB of JS with a kind prior; the second half picks the better one | rc3w3 (prior) |
+| text-kind detector (`src/algo/texttype.c`, hand-coded scanners for tags, `"key":`, dates, times, IPv4, keywords) | `-x` | 13 of 14 test sets right at 100 KB | rc3w3 (prior) |
+| UTF-8 text the ASCII test rejects sent to the text models (by the detector) | `-x` | CLDR XML −4.0% (1 MB), −9.8% (10 MB), tweets −5.8% (100 KB); decode up to 1.56× slower (model 3/4 instead of 2) | not adopted (decode > 1.2×) |
+| numbers routed to a typed stream (decimal or per-slot zig-zag deltas) | `-x` | +7% to +154% on logs, JSON, CSV: CM predicts numbers better in their context | not adopted |

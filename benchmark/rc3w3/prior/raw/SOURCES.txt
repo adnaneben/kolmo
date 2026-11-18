@@ -1,0 +1,23 @@
+train markup: 3492622 bytes from 6 files: xml WCAG21.html css-flexbox-1.html css-grid-1.html webauthn-2.html xml.html
+train json: 3052459 bytes from 18 files: apache_builds.json canada.json citm_catalog.json gsoc-2018.json instruments.json marine_ik.json mesh.json npm_express.json npm_lodash.json numbers.json ph_albums.json ph_comments.json ph_photos.json ph_posts.json ph_todos.json ph_users.json random.json update-center.json
+train csv: 2043798 bytes from 6 files: airport-codes.csv co2-mm-mlo.csv constituents.csv country-codes.csv gdp.csv population.csv
+train log: 3563887 bytes from 14 files: Android.log BGL.log HDFS.log HPC.log Hadoop.log HealthApp.log Linux.log Mac.log OpenSSH.log OpenStack.log Proxifier.log Spark.log Thunderbird.log Windows.log
+train c: 1041308 bytes from 52 files: kolmo_crc32_table.c common.c filter_buffer_decoder.c filter_buffer_encoder.c filter_common.c filter_decoder.c filter_encoder.c lz_decoder.c lz_encoder.c lz_encoder_mf.c fastpos_table.c lzma2_decoder.c lzma2_encoder.c lzma_decoder.c lzma_encoder.c lzma_encoder_optimum_fast.c lzma_encoder_optimum_normal.c lzma_encoder_presets.c price_table.c constants.c context.c dictionary.c platform.c shared_dictionary.c transform.c bit_reader.c decode.c huffman.c state.c backward_references.c ...
+train py: 4194304 bytes from 472 files: BdfFontFile.py BlpImagePlugin.py BmpImagePlugin.py BufrStubImagePlugin.py ContainerIO.py CurImagePlugin.py DcxImagePlugin.py DdsImagePlugin.py EpsImagePlugin.py ExifTags.py FitsImagePlugin.py FliImagePlugin.py FontFile.py FpxImagePlugin.py FtexImagePlugin.py GbrImagePlugin.py GdImageFile.py GifImagePlugin.py GimpGradientFile.py GimpPaletteFile.py GribStubImagePlugin.py Hdf5StubImagePlugin.py IcnsImagePlugin.py IcoImagePlugin.py ImImagePlugin.py Image.py ImageChops.py ImageCms.py ImageColor.py ImageDraw.py ...
+train js: 3043521 bytes from 8 files: chart.umd.js d3.js jquery.js lodash.js moment.js react-dom.development.js rxjs.umd.js vue.global.js
+train text: 4194304 bytes from 1 files: dickens
+train sql: 2121421 bytes from 2 files: sakila-data.sql sakila-schema.sql
+test markup/cldr: 11442402 bytes from 29 files: cldr_ar.xml cldr_bg.xml cldr_cs.xml cldr_da.xml cldr_de.xml cldr_el.xml cldr_en.xml cldr_es.xml cldr_fi.xml cldr_fr.xml cldr_he.xml cldr_hi.xml
+test markup/whatwg: 12582912 bytes from 1 files: whatwg.html
+test json/gharchive: 12582912 bytes from 1 files: gh.json
+test json/twitter: 631515 bytes from 1 files: twitter.json
+test csv/power: 12582912 bytes from 1 files: household_power_consumption.txt
+test log/zookeeper: 10426438 bytes from 1 files: Zookeeper.log
+test log/apache: 5135876 bytes from 1 files: Apache.log
+test log/nginx: 6991577 bytes from 1 files: nginx_logs
+test c/sqlite: 10691007 bytes from 3 files: sqlite3.c shell.c sqlite3.h
+test py/stdlib: 10670065 bytes from 572 files: __future__.py __hello__.py _aix_support.py _collections_abc.py _compat_pickle.py _compression.py _distutils_system_mod.py _markupbase.py _osx_support.py _py_abc.py _pydatetime.py _pydecimal.py
+test js/plotly: 10809095 bytes from 1 files: plotly.js
+test js/three: 1272972 bytes from 1 files: three.module.js
+test text/cantlarge: 20289587 bytes from 7 files: bible.txt world192.txt alice29.txt lcet10.txt plrabn12.txt asyoulik.txt webster
+test sql/employees: 12582912 bytes from 2 files: load_employees.dump load_salaries1.dump

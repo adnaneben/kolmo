@@ -80,13 +80,13 @@ and the move mechanical:
 - **transforms/**: `table.c` (was `tbl2.inc`), `table_v03.c` (the column table of v0.3, tflag 3), `transpose.c`,
   `shuffle.c`, `log.c`, `lines.c`, `sci.c`, `word.c`, `json.c`, `x86.c`, `arm64.c` (ARM64 branch filter, wave 2), `graph.c`,
   `graph_fwd.c`, `graph_typed.c` (was `typed_int_encoder.inc`), `common.h` (transform ids, scanners).
-- **codecs/**: one file per codec family with its `kolmo_codec` table: `store.c lz4.c (LZ4, LZ4-HC) zstd.c brotli.c
+- **codecs/**: (`cm_prior.inc` and `cm_kprior.inc` are codec 7's shared and per-kind priors, generated data; `docs/PRIORS.md`) one file per codec family with its `kolmo_codec` table: `store.c lz4.c (LZ4, LZ4-HC) zstd.c brotli.c
   bwt.c (block sorting: codec 18, and codec 5 read for rc2 frames; streams in bwt_stream.c, compiled on its own) lzma.c cm.c cm_image.c (codec 17) huf.c rans.c nplane.c (codec 15, a graph leaf codec, so
   in codecs/ rather than transforms/) fastq.c (was kfam.inc, codec 16)`, `graph_leaf.c` (plane-aligned leaves), and
   `codec.c`, the registry and `codec_bound`/`codec_compress`/`codec_decompress`. `audio.c` and `video.c` come with
   the format2 lane.
 - **algo/**: `decimal.c` (decimal parse and format: the references of the decimal kernels), `hist.c` (byte
-  histogram), `varint.h`; `lzp.c`, `qlfc.c` (+ `qlfc_model.h`, `qlfc_tables.h`, `rangecoder.h`), `par.c` (fork-join and the thread crew) and `sais/` (the libsais subset): ported from libbsc and libsais by the bwt lane, compiled on their own.
+  histogram), `texttype.c` (kinds of text from hand-coded scanners: the CM priors' chooser, rc3 wave 3), `varint.h`; `lzp.c`, `qlfc.c` (+ `qlfc_model.h`, `qlfc_tables.h`, `rangecoder.h`), `par.c` (fork-join and the thread crew) and `sais/` (the libsais subset): ported from libbsc and libsais by the bwt lane, compiled on their own.
 - **arch/**: `cpu.h` (CPUID dispatch, target attributes, host byte order), `crc32c.c` (reference and dispatch),
   `decimal.c` (dispatch of the formatters), `xxh3.c` (was `vendor/xxhash/kolmo_xxh3.c`), `asm.h`;
   `x86_64/`: `crc32c_sse42.c decimal_avx2.c int_inv_sse2.c int_inv_avx2.c hist_x86_64.S`;

@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased (rc3 wave 3, prior lane: `claude/rc3w3-prior-20261118`)
+
+Prebuilt networks per kind of file, and regular-expression classes as context (`docs/PRIORS.md`). Built on the
+twopass lane, merged here. Measurements in `benchmark/rc3w3/prior/RESULTS.md`.
+
+### Added
+- **Per-kind priors for context mixing** (`-x`; format 2, container version 11): markup, JSON, delimited tables, logs,
+  C, Python, JavaScript and prose each have the tables of a coder trained on public data of that kind compiled in
+  (388 KB in all); a hand-written detector (`src/algo/texttype.c`) picks one, and streams under 4 MiB start from it.
+  The prior id is stored in the stream.
+- **Model 4** (`-x`): model 3 plus two contexts from token classes (digits, letters, spaces, punctuation), raced
+  against model 3 per stream. With the priors, against the twopass lane: 10 KB −5.8% to −14.7%, 100 KB −1.4% to
+  −10.5%, 1 MB −1.3% to −4.5% on code, JSON, HTML and logs, 10 MB −1.3% to −3.8% (prose −0.8%). Decoding
+  1.0–1.1× the time (model 4 where it wins), the same elsewhere.
+
+### Fixed
+- `-x` frames with tuned CM streams (from the twopass lane) failed to decode after the merge with memdyn: their
+  decode working set was not recognised.
+
 ## Unreleased (rc3 wave 2, twopass lane: `claude/rc3w2-twopass-20261117`)
 
 Reading the whole file first: what pays and what does not (`docs/TWOPASS.md`).
