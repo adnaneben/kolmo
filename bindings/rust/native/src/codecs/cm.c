@@ -179,6 +179,12 @@ static void cm_release(size_t b) { if (b) kmem_release(b); }
 #ifndef CM_BB_MAX
 #define CM_BB_MAX 22
 #endif
+#ifndef CM_SCALED_BYTES
+#define CM_SCALED_BYTES 4   /* input bytes per bucket in the default ("scaled") sizing; see cm_bits_for */
+#endif
+#ifndef CM_SCALED_MAX
+#define CM_SCALED_MAX 21    /* and at most 2^21 buckets per model there (about 2.5 GiB to decode) */
+#endif
 static int cm_bits_for(size_t n);
 static size_t cm_mem_for(int bb, int v2) {
     size_t t = (size_t)sizeof(cm_bucket) << bb, ts = bb > 18 ? t >> CM_SMALL : t;
@@ -202,7 +208,11 @@ static size_t cm_mem_for(int bb, int v2) {
 /* Table sizing (encoder; the stream header carries the bits, so the decoder needs exactly what the encoder chose).
  * A format decision: it depends on the stream's length, this setting and the call's explicit memory cap only, never on
  * the memory free at the time (docs/MEMORY-MODEL.md, "memory changes speed, never bytes").
- * -1 ("scaled", the default from rc3): the largest size whose tables stay within 16 times the stream (2^16 at least);
+ * -1 ("scaled", the default from rc3): one bucket per CM_SCALED_BYTES input bytes, 2^16 to 2^CM_BB_MAX per model.
+ *    Measured on the M5 (1 thread) against full tables: tables within 16 times the stream (rc3 wave 2's first rule,
+ *    ~200 MiB to decode 10 MB) cost +1.7% (dickens 1 MB), +3.5% (4 MB), +5.1% (10 MB). One bucket per 4 bytes costs
+ *    +0.35%, +0.28%, +0.25% there (samba 1 MB +0.08%, mozilla 4 MB +0.04%), decoding 1 MB in ~0.5 GiB, 4 MB in
+ *    ~1.3 GiB; from 8 MiB the tables stop at 2^21 (~2.5 GiB to decode; 10 MB text +0.25% against 2^22);
  * 0 ("full", rc2's sizing): one bucket per input byte, 2^16 to 2^CM_BB_MAX per model; 16..22: full, capped at 2^bits.
  * Then, with an explicit cap (kmem_tls_cap), the largest size whose decode working set fits the cap (2^16 at least). */
 static int cm_tables_mode = -1;
@@ -211,9 +221,8 @@ int kolmo_set_x_tables(int mode) {
     __atomic_store_n(&cm_tables_mode, mode, __ATOMIC_RELAXED); return 0;
 }
 static int cm_bits_for(size_t n) {
-    const int mode = __atomic_load_n(&cm_tables_mode, __ATOMIC_RELAXED), cap = mode >= 16 ? mode : CM_BB_MAX;
-    int b = 16; while (b < cap && ((size_t)1 << b) < n) b++;
-    if (mode == -1) while (b > 16 && cm_mem_for(b, 3) > 16 * (n + ((size_t)1 << 20))) b--;
+    const int mode = __atomic_load_n(&cm_tables_mode, __ATOMIC_RELAXED), cap = mode >= 16 ? mode : mode == -1 ? CM_SCALED_MAX : CM_BB_MAX;
+    int b = 16; while (b < cap && ((size_t)1 << b) < (mode == -1 ? n / CM_SCALED_BYTES : n)) b++;
     if (kmem_tls_cap && kmem_tls_cap != KMEM_UNLIMITED) {
         size_t raw = kmem_tls_raw > n ? kmem_tls_raw : n;
         uint64_t fixed = kmem_buffers(raw) + 4 * ((uint64_t)n + 8);   /* the block's buffers and model 3's match chain */

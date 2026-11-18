@@ -65,9 +65,11 @@ in their payloads (scaled tables). Measurements: `benchmark/rc3w2/memdyn/RESULTS
   floors.
 
 ### Changed
-- **`-x` model tables are sized to the block by default** (`--x-tables=scaled`, about 16× the stream; was opt-in).
-  `--x-tables=full` (`kolmo_set_x_tables(0)`) restores rc2's sizing. Decoding a 10 MB file with `-x` needs about
-  200 MiB instead of 5.4 GiB; the size cost is in RESULTS.
+- **`-x` model tables are sized to the block by default** (`--x-tables=scaled`: one bucket per 4 input bytes, 2^16 to
+  2^21 per model; was opt-in). `--x-tables=full` (`kolmo_set_x_tables(0)`) restores rc2's sizing (2^22). Decoding a
+  10 MB file with `-x` needs about 2.5 GiB instead of 5.4 GiB, at +0.25% on dickens and +0.8% on enwik8 against full
+  tables. The first rule (tables within 16× the stream, ~200 MiB) cost +1.7% to +5.1% on 1–10 MB text (+2.6% on the
+  text group, +2.4% on Silesia) and was replaced.
 - The context-mixing coders' private memory budget (60% of RAM in `cm.c`) is replaced by the governor.
 - Bindings: `kolmo_params` gained `mem_limit` (Python `_Params`, Rust `Params`); `native/src` resynced.
 ## Unreleased (rc3 wave 2, router lane: `claude/rc3w2-router-20261117`)

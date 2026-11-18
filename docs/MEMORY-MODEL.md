@@ -124,8 +124,10 @@ So every decision splits into two classes:
 | **format decisions** (change the bytes) | block size, `-x` table bits per block (`bb`), the codec and transform chosen per block, the split into parts (codec 25) | the input, the mode and level, and an explicit `--memlimit` cap only. Fixed before encoding starts; the same on every machine. Never the free memory of the moment. |
 | **execution decisions** (change only speed and peak memory) | threads in flight, how many blocks are coded at once, whether trials run concurrently or one after another, buffer pools, read-ahead, decoder threads | **adapted continuously** to the free memory, as below |
 
-The table sizes of `-x` are a format decision. They follow the block (`--x-tables=scaled` becomes the default, about 16×
-the block, capped by `--memlimit` if given). This makes `-x` both lean and deterministic. Bigger tables would make `-x`
+The table sizes of `-x` are a format decision. They follow the block (`--x-tables=scaled` is the default: one bucket per
+4 input bytes, 2^16 to 2^21 per model, capped by `--memlimit` if given; about 0.5 GiB to decode 1 MB, 1.3 GiB for
+4 MB, 2.5 GiB from 8 MiB). The first wave-2 rule (tables within 16× the block) cost 1.7–5.1% on 1–10 MB text and was
+replaced; the measured curve is in `src/codecs/cm.c` (`cm_bits_for`). This makes `-x` both lean and deterministic. Bigger tables would make `-x`
 smaller, not faster; speed comes from concurrency, which is the dynamic part.
 
 ### The governor (src/core/memory.c)
@@ -169,7 +171,7 @@ smaller, not faster; speed comes from concurrency, which is the dynamic part.
 | rule 2 | `kolmo_params.mem_limit`, `kolmo_decode_limits.max_memory`, `kolmo_set_memlimit`, `-M/--memlimit`, `KOLMO_MEMLIMIT` | `512M`, `8G`, `50%`, `auto` (0: 50% of physical memory or of the cgroup limit, whichever is lower), `max`. Decoding stops with `KOLMO_ERR_MEMORY` and the CLI prints `needs X to decode (limit Y); run with --memlimit NG or --memlimit max`. |
 | encoder under an explicit cap | `kmem_block_for_cap`, `cm_bits_for` | ratio halves its 128 MiB blocks down to 64 MiB, -x down to 1 MiB, until a block's estimate fits; -x tables shrink until the block's decode figure fits. Format decisions from (input, mode, level, cap) only. The "lighter mode" step and `--memlimit-strict` were not built: a cap below the mode's floor is refused (rule 3) instead, which is simpler to reason about and never changes the mode behind the user's back. |
 | rule 3 floors | `kolmo_mem_floor` | speed, balanced 64 MiB; eco, hc 256 MiB; ratio 1 GiB; -x 256 MiB, as proposed. |
-| `-x` tables | `cm_bits_for`, `kolmo_set_x_tables`, `--x-tables` | scaled (about 16× the stream) is the default; `--x-tables=full` restores rc2's sizing (up to 2^22 buckets per model). |
+| `-x` tables | `cm_bits_for`, `kolmo_set_x_tables`, `--x-tables` | scaled (one bucket per 4 bytes, at most 2^21; was about 16× the stream in the first wave-2 build) is the default; `--x-tables=full` restores rc2's sizing (up to 2^22 buckets per model). |
 | governor | `src/core/memory.c` | budget = min(cap, available + what Kolmo holds), re-read at most every 100 ms: Linux `MemAvailable`, cgroup v2 `memory.max`/`memory.current` (v1 `limit_in_bytes`/`usage_in_bytes`), PSI `some avg10` ≥ 10% = pressure; macOS `host_statistics64` free + inactive + purgeable and the `DISPATCH_SOURCE_TYPE_MEMORYPRESSURE` source (warning or critical = pressure). Pressure caps the budget at what is held; growth only after 1 s calm. `KOLMO_MEM_FORCE_BUDGET` replaces the sample. |
 | reservations | `compress_worker`, `decompress_worker`, `core/trials.c`, `codecs/cm_par.c`, `plan/parallel.c` | every block job (encode and decode) reserves its estimate and waits when it does not fit (one always runs); concurrent trials, extra codec-25 parts and the planner's second CM sample are optional work: they start only when their reservation fits now, otherwise the owning thread runs them afterwards, with the same result. A thread inside a reserved job does not reserve again (no nested waits, so no deadlock); helpers release their own reservation when they finish. |
 
