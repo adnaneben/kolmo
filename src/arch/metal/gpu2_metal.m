@@ -128,6 +128,16 @@ static bref ref_of(const void *p, size_t n, int in) {
              : [G.dev newBufferWithLength:m options:MTLResourceStorageModeShared];
     return r;
 }
+/* the input of a segmented kernel, bound at a 16-byte aligned offset (the histogram kernel reads 32-bit words aligned
+ * to the bound buffer): *adj receives the segment offsets moved by the difference (free it after the call) */
+static bref ref_segs(const uint8_t *d, size_t n, const uint64_t *off, uint32_t nseg, uint64_t **adj) {
+    bref D = ref_of(d, n, 1);
+    uint64_t a = D.off & 15;
+    *adj = malloc(((size_t)nseg + 1) * 8);
+    for (uint32_t s = 0; s <= nseg; s++) (*adj)[s] = off[s] + a;
+    D.off -= a;
+    return D;
+}
 static void ref_done(bref *r, void *p, size_t n) { if (r->cp && n) memcpy(p, r->b.contents, n); r->b = nil; }
 
 static id<MTLBuffer> scratch(int k, size_t n) {
@@ -213,7 +223,8 @@ int kg2_metal_hist_segs(const uint8_t *d, size_t n, const uint64_t *off, uint32_
     pthread_mutex_lock(&G_mu);
     @autoreleasepool {
         G.gpu_s = 0;
-        bref D = ref_of(d, n, 1), O = ref_of(off, (size_t)(nseg + 1) * 8, 1), H = ref_of(h, (size_t)nseg * 1024, 0),
+        uint64_t *aoff; bref D = ref_segs(d, n, off, nseg, &aoff);
+        bref O = ref_of(aoff, (size_t)(nseg + 1) * 8, 1), H = ref_of(h, (size_t)nseg * 1024, 0),
              B = ref_of(bits, (size_t)nseg * 8, 0);
         id<MTLCommandBuffer> cb = [G.queue commandBuffer];
         id<MTLComputeCommandEncoder> e = [cb computeCommandEncoder];
@@ -224,6 +235,7 @@ int kg2_metal_hist_segs(const uint8_t *d, size_t n, const uint64_t *off, uint32_
         [e dispatchThreadgroups:MTLSizeMake(nseg, 1, 1) threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];
         [e endEncoding];
         if (!run(cb)) { ref_done(&H, h, (size_t)nseg * 1024); ref_done(&B, bits, (size_t)nseg * 8); rc = 0; }
+        free(aoff);
     }
     pthread_mutex_unlock(&G_mu);
     return rc;
@@ -268,7 +280,8 @@ int kg2_metal_krw_encode(const uint8_t *d, size_t n, const uint64_t *off, uint32
     @autoreleasepool {
         G.gpu_s = 0;
         krw_args A = {nseg, L, (uint32_t)((maxseg + L - 1) / L + 2)};
-        bref D = ref_of(d, n, 1), O = ref_of(off, (size_t)(nseg + 1) * 8, 1), OUT = ref_of(out, cap, 0);
+        uint64_t *aoff; bref D = ref_segs(d, n, off, nseg, &aoff);
+        bref O = ref_of(aoff, (size_t)(nseg + 1) * 8, 1), OUT = ref_of(out, cap, 0);
         id<MTLBuffer> h = scratch(3, (size_t)nseg * 1024), bits = scratch(4, (size_t)nseg * 8), ft = scratch(5, (size_t)nseg * 512),
             sc = scratch(6, (size_t)nseg * A.cap * L * 2), st = scratch(7, (size_t)nseg * L * 4), cnt = scratch(8, (size_t)nseg * L * 4),
             lpre = scratch(9, (size_t)nseg * L * 4), ssz = scratch(10, (size_t)nseg * 8), sout = scratch(11, (size_t)(nseg + 1) * 8);
@@ -298,6 +311,7 @@ int kg2_metal_krw_encode(const uint8_t *d, size_t n, const uint64_t *off, uint32
             ref_done(&OUT, out, seg_out[nseg]);
             rc = 0;
         }
+        free(aoff);
     }
     pthread_mutex_unlock(&G_mu);
     return rc;

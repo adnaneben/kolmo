@@ -193,14 +193,14 @@ uint64_t krw_bound(uint64_t n, uint32_t seg, uint32_t L) {
 uint64_t krw_ref_encode_range(const uint8_t *in, uint64_t n, uint32_t seg, uint32_t L, uint32_t s0, uint32_t s1,
                               uint8_t *seg_buf, uint64_t seg_cap, uint64_t *seg_size) {
     uint64_t tot = 0;
-    uint16_t *scratch = (uint16_t *)malloc(((size_t)seg / L + 4) * 2);
+    uint16_t *scratch = (uint16_t *)malloc(((size_t)seg / L + 4) * 2 * L);
     for (uint32_t s = s0; s < s1; s++) {
         uint64_t b = (uint64_t)s * seg; uint32_t m = (uint32_t)(n - b < seg ? n - b : seg);
         uint32_t cnt[256] = {0}; for (uint32_t i = 0; i < m; i++) cnt[in[b + i]]++;
         uint8_t *o = seg_buf + (size_t)s * seg_cap; uint16_t f[256];
         krw_norm(cnt, m, f); memcpy(o, f, 512);
         uint32_t *states = (uint32_t *)(o + 512), *counts = states + L;
-        uint64_t w = krw_ref_encode_seg(in + b, m, L, f, states, counts, (uint16_t *)(counts + L), scratch);
+        uint64_t w = krw_fast_encode_seg(in + b, m, L, f, states, counts, (uint16_t *)(counts + L), scratch);
         seg_size[s] = krw_seg_header(L) + 2 * w; tot += seg_size[s];
     }
     free(scratch);
@@ -229,6 +229,55 @@ int krw_ref_decode_seg(const uint8_t *code, uint64_t code_n, uint32_t L, uint8_t
         }
         if (p != pe || x != KRW_LOW) return -1;
     }
+    return 0;
+}
+
+/* The same bytes, organised for a CPU: all lanes advance together over rows of L symbols (sequential reads and
+ * writes), the division is a multiplication by floor(2^32 / f) and at most two corrections (as on the GPU), and each
+ * lane's words go to its own region of scratch (L * (m / L + 3) words). */
+uint64_t krw_fast_encode_seg(const uint8_t *src, uint32_t m, uint32_t L, const uint16_t f[256], uint32_t *states,
+                             uint32_t *counts, uint16_t *words, uint16_t *scratch) {
+    uint32_t cum[256], rcp[256], c = 0, x[1024], e[1024];
+    if (L > 1024) return 0;
+    for (int s = 0; s < 256; s++) { cum[s] = c; c += f[s]; rcp[s] = f[s] > 1 ? (uint32_t)(0x100000000ull / f[s]) : 0; }
+    uint32_t cap = m / L + 3, rows = m / L, rem = m % L;
+    for (uint32_t l = 0; l < L; l++) { x[l] = KRW_LOW; e[l] = cap; }
+#define KRW_PUT(l, sym) do { uint32_t fs_ = f[sym], xx = x[l]; \
+        if (fs_ < KRW_M && xx >= (fs_ << 20)) { scratch[(size_t)(l) * cap + --e[l]] = (uint16_t)xx; xx >>= 16; } \
+        uint32_t q_ = fs_ > 1 ? (uint32_t)(((uint64_t)xx * rcp[sym]) >> 32) : xx, r_ = xx - q_ * fs_; \
+        while (r_ >= fs_) { q_++; r_ -= fs_; } \
+        x[l] = (q_ << KRW_PROB) + r_ + cum[sym]; } while (0)
+    const uint8_t *row = src + (size_t)rows * L;
+    for (uint32_t l = 0; l < rem; l++) KRW_PUT(l, row[l]);
+    for (uint32_t j = rows; j-- > 0;) { row = src + (size_t)j * L; for (uint32_t l = 0; l < L; l++) KRW_PUT(l, row[l]); }
+#undef KRW_PUT
+    uint64_t tot = 0;
+    for (uint32_t l = 0; l < L; l++) {
+        uint32_t k = cap - e[l];
+        states[l] = x[l]; counts[l] = k;
+        memcpy(words + tot, scratch + (size_t)l * cap + e[l], (size_t)k * 2); tot += k;
+    }
+    return tot;
+}
+int krw_fast_decode_seg(const uint8_t *code, uint64_t code_n, uint32_t L, uint8_t *dst, uint32_t m) {
+    if (code_n < krw_seg_header(L) || L > 1024) return -1;
+    uint16_t f[256]; memcpy(f, code, 512);
+    uint32_t cum[256], c = 0; uint8_t sym[KRW_M];
+    for (int s = 0; s < 256; s++) { cum[s] = c; for (uint32_t k = 0; k < f[s] && c + k < KRW_M; k++) sym[c + k] = (uint8_t)s; c += f[s]; }
+    if (m && c != KRW_M) return -1;
+    const uint32_t *states = (const uint32_t *)(code + 512), *counts = states + L;
+    const uint16_t *w = (const uint16_t *)(counts + L);
+    uint64_t avail = (code_n - krw_seg_header(L)) / 2, at = 0;
+    uint32_t x[1024]; const uint16_t *p[1024];
+    for (uint32_t l = 0; l < L; l++) { x[l] = states[l]; p[l] = w + at; at += counts[l]; }
+    if (at > avail) return -1;
+    uint32_t rows = m / L, rem = m % L;
+#define KRW_GET(l, out) do { uint32_t xx = x[l], slot = xx & (KRW_M - 1); uint8_t s_ = sym[slot]; \
+        xx = f[s_] * (xx >> KRW_PROB) + slot - cum[s_]; if (xx < KRW_LOW) xx = xx << 16 | *p[l]++; x[l] = xx; (out) = s_; } while (0)
+    for (uint32_t j = 0; j < rows; j++) { uint8_t *o = dst + (size_t)j * L; for (uint32_t l = 0; l < L; l++) KRW_GET(l, o[l]); }
+    for (uint32_t l = 0; l < rem; l++) KRW_GET(l, dst[(size_t)rows * L + l]);
+#undef KRW_GET
+    for (uint32_t l = 0, a = 0; l < L; a += counts[l], l++) if (p[l] != w + a + counts[l] || x[l] != KRW_LOW) return -1;
     return 0;
 }
 

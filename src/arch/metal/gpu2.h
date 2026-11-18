@@ -71,13 +71,17 @@ static inline uint64_t krw_seg_header(uint32_t L) { return 512u + 8u * (uint64_t
  * order. scratch holds at least m + 2 * L words. Returns the total words. */
 uint64_t krw_ref_encode_seg(const uint8_t *src, uint32_t m, uint32_t L, const uint16_t f[256], uint32_t *states,
                             uint32_t *counts, uint16_t *words, uint16_t *scratch);
-/* whole-buffer form used by the benchmarks: segments of seg bytes (the last may be shorter), each coded as
+/* whole-buffer form used by the benchmarks (with krw_fast_encode_seg): segments of seg bytes (the last may be shorter), each coded as
  * [f: 256 x u16][states: L x u32][counts: L x u32][words]. Encode returns the coded size (0 on error), out must hold
  * krw_bound(n, seg, L) bytes. seg_out (nseg + 1) receives every segment's offset in out. */
 uint64_t krw_bound(uint64_t n, uint32_t seg, uint32_t L);
 uint64_t krw_ref_encode_range(const uint8_t *in, uint64_t n, uint32_t seg, uint32_t L, uint32_t s0, uint32_t s1,
                               uint8_t *seg_buf, uint64_t seg_cap, uint64_t *seg_size);
 int krw_ref_decode_seg(const uint8_t *code, uint64_t code_n, uint32_t L, uint8_t *dst, uint32_t m);
+/* the same bytes, organised for a CPU (rows of lanes; L <= 1024; scratch holds L * (m / L + 3) words) */
+uint64_t krw_fast_encode_seg(const uint8_t *src, uint32_t m, uint32_t L, const uint16_t f[256], uint32_t *states,
+                             uint32_t *counts, uint16_t *words, uint16_t *scratch);
+int krw_fast_decode_seg(const uint8_t *code, uint64_t code_n, uint32_t L, uint8_t *dst, uint32_t m);
 
 /* ---------------- GPU (Metal) side ---------------- */
 int kg2_metal_available(void);
@@ -96,6 +100,7 @@ int kg2_metal_hist_o1(const uint8_t *d, size_t n, uint32_t *h);
  * receives the segments back to back, seg_out[s] their offsets (seg_out[nseg] = total). Returns 0 or < 0. */
 int kg2_metal_krw_encode(const uint8_t *d, size_t n, const uint64_t *off, uint32_t nseg, uint32_t L, uint8_t *out,
                          size_t cap, uint64_t *seg_out);
+/* code must be 4-byte aligned (in a kg2_metal_alloc block: at a multiple of 4 from its start) */
 int kg2_metal_krw_decode(const uint8_t *code, size_t code_n, const uint64_t *seg_out, const uint64_t *off,
                          uint32_t nseg, uint32_t L, uint8_t *dst, size_t n);
 /* video strip prediction (kvid, src/arch/metal/kvid.metal) without copies: file must come from kg2_metal_alloc */

@@ -414,7 +414,7 @@ static void krw_hyb(void *c) {
     g_gpu += H.gs;
 }
 /* Kolmo's rANS on the same input, cut into T parts (context: other format, other bytes) */
-typedef struct { kx *X; int parts; size_t *zs; uint8_t *buf; size_t pcap; } kr;
+typedef struct { kx *X; int parts; size_t *zs; uint8_t *buf; size_t pcap; uint8_t *dec; } kr;
 static void kr_job(void *c, uint32_t i) {
     kr *R = c; size_t per = (R->X->n + R->parts - 1) / R->parts, b = i * per, e = b + per < R->X->n ? b + per : R->X->n;
     R->zs[i] = b < e ? kw_rans_compress(R->X->d + b, e - b, R->buf + i * R->pcap, R->pcap) : 0;
@@ -422,9 +422,14 @@ static void kr_job(void *c, uint32_t i) {
 static kr g_kr;
 static void kr_cpu1(void *c) { (void)c; g_kr.parts = 1; kr_job(&g_kr, 0); }
 static void kr_cpuT(void *c) { (void)c; g_kr.parts = T; par_run(T, T, kr_job, &g_kr); }
+static void krd_job(void *c, uint32_t i) {
+    kr *R = c; size_t per = (R->X->n + R->parts - 1) / R->parts, b = i * per, e = b + per < R->X->n ? b + per : R->X->n;
+    if (b < e && kw_rans_decompress(R->buf + i * R->pcap, R->zs[i], R->dec + b, e - b)) fprintf(stderr, "kolmo rans decode error\n");
+}
+static void krd_cpuT(void *c) { (void)c; par_run(T, (uint32_t)g_kr.parts, krd_job, &g_kr); }
 static void krw_dec_job(void *c, uint32_t s) {
     kx *X = c;
-    if (krw_ref_decode_seg(X->out + X->sout[s], X->sout[s + 1] - X->sout[s], X->L, X->dec + X->off[s], (uint32_t)(X->off[s + 1] - X->off[s])))
+    if (krw_fast_decode_seg(X->out + X->sout[s], X->sout[s + 1] - X->sout[s], X->L, X->dec + X->off[s], (uint32_t)(X->off[s + 1] - X->off[s])))
         fprintf(stderr, "krw decode error in segment %u\n", s);
 }
 static void krwd_cpu1(void *c) { par_run(1, ((kx *)c)->nseg, krw_dec_job, c); }
@@ -465,6 +470,10 @@ static int cmd_krw(int argc, char **argv) {
     char ex2[160]; snprintf(ex2, sizeof ex2, "\"kolmo_rans_coded\": %zu, \"note\": \"Kolmo rans.c, another format\"", kz);
     variant u[] = {{"kolmo_rans_cpu1", kr_cpu1}, {"kolmo_rans_cpu10", kr_cpuT}};
     bench("kolmo_rans_encode", n, u, 2, &X, ex2);
+    kr_cpuT(NULL);
+    { uint8_t *chk = malloc(n); g_kr.dec = chk; krd_cpuT(NULL); if (memcmp(chk, d, n)) { fprintf(stderr, "kolmo rans round trip failed\n"); return 1; } }
+    variant ud[] = {{"kolmo_rans_cpu10", krd_cpuT}};
+    bench("kolmo_rans_decode", n, ud, 1, &X, ex2);
     variant w[] = {{"cpu1", krwd_cpu1}, {"cpu10", krwd_cpuT}, {"gpu", krwd_gpu}};
     bench("krw_decode", n, w, 3, &X, extra);
     return 0;
@@ -620,8 +629,9 @@ static void bx_krw_job(void *c, uint32_t s) {
     kx *X = c; uint32_t m = (uint32_t)(X->off[s + 1] - X->off[s]); uint8_t *o = X->segbuf + X->sout[s];
     uint32_t cnt[256] = {0}; for (uint32_t i = 0; i < m; i++) cnt[X->d[X->off[s] + i]]++;
     uint16_t f[256]; krw_norm(cnt, m, f); memcpy(o, f, 512);
-    uint32_t *st = (uint32_t *)(o + 512); uint16_t scratch[1 << 16];
-    krw_ref_encode_seg(X->d + X->off[s], m, X->L, f, st, st + X->L, (uint16_t *)(st + 2 * X->L), scratch);
+    uint32_t *st = (uint32_t *)(o + 512); uint16_t *scratch = malloc(((size_t)m / X->L + 3) * X->L * 2);
+    krw_fast_encode_seg(X->d + X->off[s], m, X->L, f, st, st + X->L, (uint16_t *)(st + 2 * X->L), scratch);
+    free(scratch);
 }
 static void bx_pre(kx *X) { uint64_t o = 0; for (uint32_t s = 0; s < X->nseg; s++) { X->sout[s] = o; o += krw_seg_header(X->L) + 2 * (X->off[s + 1] - X->off[s]) + 8; } }
 static void bx_cpu1(void *c) { kx *X = c; par_run(1, X->nseg, hs_job, X); par_run(1, X->nseg, bx_krw_job, X); }
@@ -633,6 +643,18 @@ static void bx_gpu(void *c) {
     g_gpu += kg2_metal_last_gpu_seconds();
     if (kg2_metal_krw_encode(X->d, X->n, X->off, X->nseg, X->L, X->out, X->cap, g_bsout)) exit(1);
     g_gpu += kg2_metal_last_gpu_seconds();
+}
+static int bx_each_check(kx *X) {   /* the per-file GPU calls give the batch's histograms and coded files */
+    uint32_t *h = malloc((size_t)X->nseg * 1024); memcpy(h, X->h, (size_t)X->nseg * 1024);
+    uint8_t *o = malloc(X->cap); uint64_t so[2]; int ok = 1;
+    for (uint32_t s = 0; s < X->nseg && ok; s++) {
+        uint64_t o2[2] = {0, X->off[s + 1] - X->off[s]};
+        if (kg2_metal_hist_segs(X->d + X->off[s], o2[1], o2, 1, X->h + 256 * (size_t)s, X->bits + s)) ok = 0;
+        if (ok && kg2_metal_krw_encode(X->d + X->off[s], o2[1], o2, 1, X->L, o, X->cap, so)) ok = 0;
+        if (ok) ok = so[1] == g_bsout[s + 1] - g_bsout[s] && !memcmp(o, X->out + g_bsout[s], so[1]);
+    }
+    ok = ok && !memcmp(h, X->h, (size_t)X->nseg * 1024);
+    free(h); free(o); return ok;
 }
 static void bx_gpu_each(void *c) {   /* one GPU call per file: the per-call cost */
     kx *X = c; uint64_t so[2];
@@ -681,7 +703,9 @@ static int cmd_batch(int argc, char **argv) {
     uint64_t mn = UINT64_MAX, mx = 0; for (uint32_t s = 0; s < nf; s++) { uint64_t m = off[s + 1] - off[s]; if (m < mn) mn = m; if (m > mx) mx = m; }
     fprintf(stderr, "batch: %u files, %zu bytes (%llu..%llu per file); histograms %s, krw %s\n", nf, tot, (unsigned long long)mn, (unsigned long long)mx,
             okh ? "same" : "DIFFERENT", okk ? "same" : "DIFFERENT");
-    if (!okh || !okk) return 1;
+    int oke = bx_each_check(&X);
+    fprintf(stderr, "batch: one GPU call per file %s\n", oke ? "same" : "DIFFERENT");
+    if (!okh || !okk || !oke) return 1;
     char extra[160]; snprintf(extra, sizeof extra, "\"files\": %u, \"lanes\": %u, \"identical\": true", nf, X.L);
     variant v[] = {{"cpu1", bx_cpu1}, {"cpu10", bx_cpuT}, {"gpu_one_batch", bx_gpu}, {"gpu_call_per_file", bx_gpu_each}};
     int saveR = ROUNDS; if (nf > 2000) ROUNDS = ROUNDS < 3 ? ROUNDS : 3;
@@ -779,6 +803,18 @@ static int cmd_check(int argc, char **argv) {
         uint32_t *h1 = malloc((size_t)nseg * 1024), *h2 = malloc((size_t)nseg * 1024); uint64_t *b1 = malloc(nseg * 8), *b2 = malloc(nseg * 8);
         kg2_ref_hist_segs(d, off, 0, nseg, h1, b1, tab);
         cases++; if (kg2_metal_hist_segs(d, n, off, nseg, h2, b2) || memcmp(h1, h2, (size_t)nseg * 1024) || memcmp(b1, b2, nseg * 8)) { fails++; fprintf(stderr, "hist case %d FAILED\n", it); }
+        if (n > 8) {   /* an input that starts at an unaligned address inside a zero-copy block (one call per file) */
+            size_t k = 1 + (size_t)(it % 7); uint64_t o2[2] = {0, n - k}; uint32_t hh1[256], hh2[256]; uint64_t bb1, bb2;
+            kg2_ref_hist_segs(d + k, o2, 0, 1, hh1, &bb1, tab);
+            uint64_t cap2 = krw_seg_header(32) + 2 * n + 64, so2[2]; uint8_t *g2 = xalloc(cap2), *dd2 = xalloc(n + 64);
+            int bad = kg2_metal_hist_segs(d + k, n - k, o2, 1, hh2, &bb2) || memcmp(hh1, hh2, sizeof hh1) || bb1 != bb2;
+            if (!bad && n - k < (1u << 24)) {
+                bad = kg2_metal_krw_encode(d + k, n - k, o2, 1, 32, g2, cap2, so2) || krw_ref_decode_seg(g2, so2[1], 32, dd2, (uint32_t)(n - k))
+                      || memcmp(dd2, d + k, n - k);
+            }
+            cases++; if (bad) { fails++; fprintf(stderr, "unaligned case %d FAILED\n", it); }
+            kg2_metal_free(g2, cap2); kg2_metal_free(dd2, n + 64);
+        }
         uint32_t *o1 = calloc(65536, 4), *o2 = calloc(65536, 4); kg2_ref_hist_o1(d, 0, n, o1);
         cases++; if (kg2_metal_hist_o1(d, n, o2) || memcmp(o1, o2, 65536 * 4)) { fails++; fprintf(stderr, "o1 case %d FAILED\n", it); }
         static const uint32_t Ls[4] = {32, 64, 256, 1024};
@@ -796,6 +832,14 @@ static int cmd_check(int argc, char **argv) {
                 uint64_t len = krw_seg_header(L) + 2 * w;
                 if (so[s] != o || memcmp(c + o, g + o, len)) bad = 1;
                 if (!bad && krw_ref_decode_seg(c + o, len, L, dec + off[s], m)) bad = 2;
+                if (!bad) {   /* the CPU-organised coder: the same bytes, and it decodes */
+                    uint8_t *fc = malloc(len + 16); uint16_t *fs = malloc(((size_t)m / L + 3) * L * 2 + 16); uint8_t *fd = malloc(m + 1);
+                    memcpy(fc, f, 512); uint32_t *fst = (uint32_t *)(fc + 512);
+                    uint64_t fw = krw_fast_encode_seg(d + off[s], m, L, f, fst, fst + L, (uint16_t *)(fst + 2 * L), fs);
+                    if (fw != w || memcmp(fc, c + o, len)) bad = 5;
+                    else if (krw_fast_decode_seg(c + o, len, L, fd, m) || memcmp(fd, d + off[s], m)) bad = 6;
+                    free(fc); free(fs); free(fd);
+                }
                 o += len;
             }
             if (!bad && (so[nseg] != o || memcmp(dec, d, n))) bad = 3;
