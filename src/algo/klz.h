@@ -2,11 +2,15 @@
 
    Two formats share one match finder (hash table, or hash chains with lazy evaluation), written for Kolmo:
 
-   KLZ (codec 28, the LZ4 role in `speed`): byte-aligned sequences, no entropy stage, decode limited by memory copies.
-     sequence: token u8 = literal length (bits 0-2; 7: extended) | match length - 4 (bits 3-6; 15: extended) |
-     wide (bit 7: 3-byte offset), extension bytes of the literal length (255 = continue), the literals, then unless the
-     output is complete: offset (2 bytes, or 3 when wide, little-endian, 1 .. 2^24 - 1), extension bytes of the match
-     length. The output ends after the literals of the sequence that fills it (its match fields are 0).
+   KLZ (codec 28, the LZ4 role in `speed`): byte-aligned, no entropy stage, decode limited by memory copies. Format
+     of wave 4 (the rc3 wave-2 format, one interleaved stream with 3-byte offsets, is not read any more):
+       header: sequence count S, literal bytes L, extension bytes X (three uv, possibly non-minimal: the encoder
+       writes them at a width fixed by the block size), then four streams:
+       literals (L bytes) | tokens (S bytes) | offsets (S x 2 bytes, little-endian, 1 .. 65535) | extensions (X)
+     token = literal length (bits 0-3; 15: + extension) | match length - 4 (bits 4-7; 15: + extension); an extension
+     is one byte below 255, or 255 then uv (value - 255). Sequence k: its literals from the literal stream, then a
+     match. The literals left after the last sequence end the block. Separate streams let the decoder find each
+     token, offset and literal run without the previous sequence's lengths (the loop carries only pointer adds).
 
    KLZH (codec 29, the zstd role in `balanced`): the same parse with repeat offsets, coded as five streams:
      sequence count uv | literals | literal-length codes | match-length codes | offset codes (each a khuf chunk stream
@@ -16,7 +20,7 @@
      (move to front), else 3 + h for offset o with h = floor(log2 o) and h extra bits. Literals after the last
      sequence are those left in the literal stream.
 
-   Levels: KLZ 1 (hash table, skipping), 2 (larger table, every position), 3 (hash chains, lazy).
+   Levels: KLZ 1 (hash table of 6-byte keys, skipping), 2 (larger table, two positions per match), 3 (hash chains, lazy).
            KLZH 1-3 two hash tables (8- and 5-byte keys), greedy; 4-9 hash chains of growing depth, lazy evaluation from 5,
            two-step lazy from 8. */
 #ifndef KOLMO_ALGO_KLZ_H
@@ -24,7 +28,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define KLZ_WINDOW ((1u << 24) - 1)
+#define KLZ_WIN 0xFFFFu                /* KLZ: 16-bit offsets */
+#define KLZH_WINDOW ((1u << 24) - 1)
 size_t kolmo_klz_bound(size_t n);
 /* Return the coded size, or 0 when it does not fit in cap (kolmo_klz_bound(n) always suffices). */
 size_t kolmo_klz_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);

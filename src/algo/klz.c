@@ -33,20 +33,24 @@ static inline uint32_t kz_h5(const uint8_t *p, int lg) { return (uint32_t)(((kz_
 /* match copy: op is the output position, the match starts off bytes back, ml bytes, the output ends at oe */
 static inline void kz_match(uint8_t *op, size_t off, size_t ml, uint8_t *oe) {
     const uint8_t *m = op - off; uint8_t *e = op + ml;
-    if (off >= 16 && (size_t)(oe - e) >= 16) { while (op < e) { memcpy(op, m, 16); op += 16; m += 16; } return; }
-    if (off < 8) {   /* short period: copy one multiple of the period of at least 8 bytes, then 8 bytes at a time */
-        size_t per = off * ((8 + off - 1) / off);
-        while (op < e && (size_t)(op - (e - ml)) < per) *op++ = *m++;
-        m = op - per;
+    if ((size_t)(oe - e) >= 16) {   /* room for whole-register copies past the end */
+        if (off >= 32) { while (op < e && (size_t)(oe - op) >= 32) { memcpy(op, m, 16); memcpy(op + 16, m + 16, 16); op += 32; m += 32; } if (op < e) memcpy(op, m, 16); return; }
+        if (off >= 16) { while (op < e) { memcpy(op, m, 16); op += 16; m += 16; } return; }
+        if (off < 8) {   /* the first 8 bytes one by one in two halves, then a source at least 8 bytes back */
+            static const uint8_t inc[8] = {0, 1, 2, 1, 0, 4, 4, 4}; static const int8_t adj[8] = {0, 0, 0, 1, 4, -1, -2, -3};
+            op[0] = m[0]; op[1] = m[1]; op[2] = m[2]; op[3] = m[3];
+            m += inc[off]; memcpy(op + 4, m, 4); m += adj[off]; op += 8;
+        }
+        while (op < e) { memcpy(op, m, 8); op += 8; m += 8; }
+        return;
     }
-    if ((size_t)(oe - e) >= 8) { while (op < e) { memcpy(op, m, 8); op += 8; m += 8; } return; }
     while (op < e) *op++ = *m++;
 }
 
 /* ---------------- the parse ---------------- */
 typedef struct { uint32_t ll, ml, off; } kz_seq;
 typedef struct { int hlog, clog, depth, lazy, skip, nice; } kz_par;
-typedef struct { const uint8_t *in; size_t n; uint32_t *head, *chain; uint32_t cmask, ins; kz_par P; } kz_mf;
+typedef struct { const uint8_t *in; size_t n; uint32_t *head, *chain; uint32_t cmask, ins; kz_par P; uint32_t win; } kz_mf;
 #define KZ_NONE 0xFFFFFFFFu
 
 static inline void kz_insert(kz_mf *M, uint32_t p) {
@@ -65,7 +69,7 @@ static size_t kz_find(kz_mf *M, uint32_t pos, uint32_t *off) {
     if (maxl < 4) return 0;
     kz_update(M, pos);
     uint32_t h = kz_h4(ip, M->P.hlog), cand = M->head[h];
-    uint32_t win = M->chain ? M->cmask : KLZ_WINDOW; if (win > KLZ_WINDOW) win = KLZ_WINDOW;
+    uint32_t win = M->chain ? M->cmask : M->win; if (win > M->win) win = M->win;
     if (M->chain) M->chain[pos & M->cmask] = cand;
     M->head[h] = pos; if (M->ins <= pos) M->ins = pos + 1;
     const uint32_t v = kz_r32(ip);
@@ -84,8 +88,8 @@ static size_t kz_find(kz_mf *M, uint32_t pos, uint32_t *off) {
 }
 static inline int kz_gain(size_t l, uint32_t off, uint32_t rep0) { return (int)l * 4 - (off == rep0 ? 0 : kz_hb(off + 1)); }
 
-static size_t kz_parse(const uint8_t *in, size_t n, const kz_par *P, kz_seq *S, size_t *anchor_out, int *err) {
-    kz_mf M = {in, n, NULL, NULL, 0, 0, *P}; size_t ns = 0;
+static size_t kz_parse(const uint8_t *in, size_t n, const kz_par *P, uint32_t win, kz_seq *S, size_t *anchor_out, int *err) {
+    kz_mf M = {in, n, NULL, NULL, 0, 0, *P, win}; size_t ns = 0;
     M.head = malloc(sizeof(uint32_t) << P->hlog);
     if (P->clog) { M.chain = malloc(sizeof(uint32_t) << P->clog); M.cmask = (1u << P->clog) - 1; }
     if (!M.head || (P->clog && !M.chain)) { free(M.head); free(M.chain); *err = 1; return 0; }
@@ -131,11 +135,11 @@ static size_t kz_parse_dfast(const uint8_t *in, size_t n, int hl, int hs, int sk
         tl[hL] = ts[hS] = (uint32_t)pos;
         if (rep0 && pos + 1 > rep0 && kz_r32(in + pos + 1) == kz_r32(in + pos + 1 - rep0)) {   /* repeat, one byte ahead */
             start = pos + 1; off = rep0; ml = 4 + kz_count(in + start + 4, in + start + 4 - off, ie);
-        } else if (cl < pos && pos - cl <= KLZ_WINDOW && kz_r64(in + cl) == kz_r64(in + pos)) {
+        } else if (cl < pos && pos - cl <= KLZH_WINDOW && kz_r64(in + cl) == kz_r64(in + pos)) {
             start = pos; off = (uint32_t)(pos - cl); ml = 8 + kz_count(in + pos + 8, in + cl + 8, ie);
-        } else if (cs < pos && pos - cs <= KLZ_WINDOW && kz_r32(in + cs) == kz_r32(in + pos)) {
+        } else if (cs < pos && pos - cs <= KLZH_WINDOW && kz_r32(in + cs) == kz_r32(in + pos)) {
             const uint32_t h1 = kz_h8(in + pos + 1, hl), c1 = tl[h1]; tl[h1] = (uint32_t)pos + 1;
-            if (c1 < pos + 1 && pos + 1 - c1 <= KLZ_WINDOW && kz_r64(in + c1) == kz_r64(in + pos + 1)) {   /* a long match one byte later */
+            if (c1 < pos + 1 && pos + 1 - c1 <= KLZH_WINDOW && kz_r64(in + c1) == kz_r64(in + pos + 1)) {   /* a long match one byte later */
                 start = pos + 1; off = (uint32_t)(pos + 1 - c1); ml = 8 + kz_count(in + start + 8, in + c1 + 8, ie);
             } else {
                 start = pos; off = (uint32_t)(pos - cs); ml = 4 + kz_count(in + pos + 4, in + cs + 4, ie);
@@ -152,97 +156,210 @@ static size_t kz_parse_dfast(const uint8_t *in, size_t n, int hl, int hs, int sk
     }
     free(tl); free(ts); *anchor_out = anchor; *err = 0; return ns;
 }
-static const kz_par KLZ_LV[4] = {{0}, {14, 0, 1, 0, 6, 64}, {16, 0, 1, 0, 7, 64}, {17, 20, 16, 1, 0, 128}};
+static const kz_par KLZ_LV[4] = {{0}, {0}, {0}, {17, 20, 16, 1, 0, 128}};   /* level 3; levels 1-2: kz_fast */
 /* KLZH: levels 1-3 the fast parse (hlog = long table, clog = short table, skip), 4-9 hash chains */
 static const kz_par KLZH_LV[10] = {{0}, {16, 15, 0, 0, 6, 0}, {17, 16, 0, 0, 7, 0}, {18, 17, 0, 0, 8, 0}, {17, 18, 4, 0, 0, 64},
     {17, 19, 8, 1, 0, 64}, {18, 20, 16, 1, 0, 128}, {18, 21, 32, 1, 0, 128}, {19, 22, 64, 2, 0, 256}, {20, 23, 256, 2, 0, 512}};
 
-/* ---------------- KLZ: byte-aligned format ---------------- */
-size_t kolmo_klz_bound(size_t n) { return n + n / 255 + 32; }
-static uint8_t *kz_emit(uint8_t *op, const uint8_t *lit, size_t ll, size_t off, size_t ml) {
-    uint8_t *tok = op++; unsigned t = ll < 7 ? (unsigned)ll : 7u;
-    if (ll >= 7) { size_t r = ll - 7; while (r >= 255) { *op++ = 255; r -= 255; } *op++ = (uint8_t)r; }
-    memcpy(op, lit, ll); op += ll;
-    if (ml) {
-        size_t m = ml - 4; t |= (unsigned)(m < 15 ? m : 15) << 3;
-        *op++ = (uint8_t)off; *op++ = (uint8_t)(off >> 8); if (off > 0xFFFF) { t |= 128; *op++ = (uint8_t)(off >> 16); }
-        if (m >= 15) { size_t r = m - 15; while (r >= 255) { *op++ = 255; r -= 255; } *op++ = (uint8_t)r; }
-    }
-    *tok = (uint8_t)t; return op;
+/* ---------------- KLZ: byte-aligned streams (format in klz.h) ---------------- */
+size_t kolmo_klz_bound(size_t n) { return n + n / 255 + 64; }
+static size_t kz_uvlen(uint64_t v) { size_t k = 1; while (v >= 128) { v >>= 7; k++; } return k; }
+static void kz_put_uvw(uint8_t *p, uint64_t v, size_t w) {   /* v in exactly w bytes (non-minimal when needed) */
+    for (size_t k = 0; k < w; k++, v >>= 7) p[k] = (uint8_t)((v & 127) | (k + 1 < w ? 128 : 0));
 }
-#define KZ_ROOM(LL) ((size_t)(oe - op) >= (LL) + (LL) / 255 + 16)   /* room for a sequence with LL literals */
+/* the encoder's streams: literals go straight to the output after the header, the others to scratch */
+typedef struct { uint8_t *lp, *le, *tp, *fp, *xp; const uint8_t *ilim; } kz_o;   /* ilim: input end - 16 */
+static inline void kz_ext(kz_o *o, size_t v) { if (v < 255) *o->xp++ = (uint8_t)v; else { *o->xp++ = 255; o->xp += kz_put_uv(o->xp, v - 255); } }
+/* one sequence: ll literals from lit, then a match (1 <= off <= 65535, ml >= 4); 0 when the literals do not fit */
+static inline int kz_seq_out(kz_o *o, const uint8_t *lit, size_t ll, size_t off, size_t ml, int safe) {
+    if ((size_t)(o->le - o->lp) < ll + 32) return 0;
+    if (ll <= 16 && (safe || lit <= o->ilim)) memcpy(o->lp, lit, 16); else memcpy(o->lp, lit, ll);
+    o->lp += ll;
+    size_t m = ml - 4; *o->tp++ = (uint8_t)((ll < 15 ? ll : 15) | (m < 15 ? m : 15) << 4);
+    o->fp[0] = (uint8_t)off; o->fp[1] = (uint8_t)(off >> 8); o->fp += 2;
+    if (ll >= 15) kz_ext(o, ll - 15);
+    if (m >= 15) kz_ext(o, m - 15);
+    return 1;
+}
+/* the greedy parse of levels 1 and 2 (wave 4): one hash table of 6-byte keys (hb), the step grows after every 2^trig
+ * misses (the classic skipping heuristic), the position after each match tried at once; level 2 also inserts the
+ * byte before. The table holds the low 16 bits of positions: with 16-bit offsets that is enough to find the
+ * candidate (the most recent position with these bits, at most 65535 back), and the table is half the size of one
+ * of positions (2^15 entries, 64 KiB at level 1). After a literal run of KZ_LR bytes a match must have KZ_ML bytes
+ * (in data that hardly compresses, short matches cost a sequence each at decode for a byte or two).
+ * Measured (benchmark/w4/lz/RESULTS.md): 6-byte keys against 5 at the same table, 2^15 entries against 2^14, the
+ * literal-run rule, a repeat-offset probe at the next byte (no gain), a decaying step after a match (no gain). */
+#define KZ_LR 64
+#define KZ_ML 7
+#define kz_hf(p, lg) ((uint32_t)(((kz_r64(p) << (64 - 8 * hb)) * 889523592379ull) >> (64 - (lg))))
+static inline __attribute__((always_inline)) int kz_fast(const uint8_t *in, size_t n, kz_o *O, int lg, int trig, int two, int hb, const uint8_t **anchor_out) {
+    const uint8_t *ip = in, *anchor = in, *const ie = in + n;
+    if (n < 20) { *anchor_out = in; return 1; }
+    /* the stream pointers as plain locals (registers); the extension stream, rarely written, stays in O */
+    uint8_t *lp = O->lp, *tp = O->tp, *fp = O->fp; uint8_t *const lle = O->le - 32;
+    uint16_t *ht = calloc((size_t)1 << lg, sizeof(uint16_t)); if (!ht) return -1;
+    const uint8_t *const limit = ie - 16;   /* matches start at most here: literals copy 16 bytes safely (safe = 1) */
+#define KZ_CAND(P, E) ((P) - (size_t)(uint16_t)((size_t)((P) - in) - (E)))
+#define KZ_OK(P, M) ((M) < (P) && kz_r32(M) == kz_r32(P))   /* candidates are never before in */
+    ip++;
+    unsigned att = 1u << trig;
+    for (;;) {
+        const uint8_t *m; size_t ml;
+        {   /* look for a 4-byte match; the hash of the next position is computed before the test of this one */
+            const uint8_t *fip = ip; unsigned step = 1; uint32_t fh = kz_hf(ip, lg);
+            do {
+                uint32_t h = fh; ip = fip; fip += step; step = att++ >> trig;
+                if (fip > limit) goto done;
+                m = KZ_CAND(ip, ht[h]); fh = kz_hf(fip, lg); ht[h] = (uint16_t)(ip - in);
+            } while (!KZ_OK(ip, m) || ((size_t)(ip - anchor) >= KZ_LR && (kz_r64(ip) ^ kz_r64(m)) << (64 - 8 * KZ_ML)));
+        }
+        while (ip > anchor && m > in && ip[-1] == m[-1]) { ip--; m--; }
+        att = 1u << trig;
+        for (;;) {
+            ml = 4 + kz_count(ip + 4, m + 4, ie);
+            {   /* the sequence: literals (16 bytes at once: a match starts at most 16 bytes before the end), token, offset */
+                const size_t ll = (size_t)(ip - anchor), off = (size_t)(ip - m), mm = ml - 4;
+                if (ll > (size_t)(lle - lp)) { free(ht); return 0; }
+                memcpy(lp, anchor, 16); if (ll > 16) memcpy(lp + 16, anchor + 16, ll - 16);
+                lp += ll;
+                *tp++ = (uint8_t)((ll < 15 ? ll : 15) | (mm < 15 ? mm : 15) << 4);
+                fp[0] = (uint8_t)off; fp[1] = (uint8_t)(off >> 8); fp += 2;
+                if (__builtin_expect(ll >= 15 || mm >= 15, 0)) { if (ll >= 15) kz_ext(O, ll - 15); if (mm >= 15) kz_ext(O, mm - 15); }
+            }
+            ip += ml; anchor = ip;
+            if (ip > limit) goto done;
+            if (two) ht[kz_hf(ip - 3, lg)] = (uint16_t)(ip - 3 - in);
+            ht[kz_hf(ip - 2, lg)] = (uint16_t)(ip - 2 - in);
+            uint32_t h = kz_hf(ip, lg); m = KZ_CAND(ip, ht[h]); ht[h] = (uint16_t)(ip - in);   /* a match right after the match */
+            if (!KZ_OK(ip, m)) break;
+        }
+        ip++;
+    }
+#undef KZ_CAND
+#undef KZ_OK
+done:
+    free(ht); O->lp = lp; O->tp = tp; O->fp = fp; *anchor_out = anchor; return 1;
+}
 size_t kolmo_klz_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) {
-    if (n >= 0xFFFFFFF0u || cap < 16) return 0;
-    uint8_t *const oe = out + cap;
+    if (n >= 0xFFFFFFF0u) return 0;
     if (level < 1) level = 1;
     if (level > 3) level = 3;
-    uint8_t *op = out;
+    const size_t w = kz_uvlen(n), H = 3 * w, ms = n / 4 + 2;
+    if (cap < H + 64) return 0;
+    uint8_t *sc = malloc(ms * 15); if (!sc) return 0;   /* tokens, offsets (2 per token), extensions (up to 12) */
+    kz_o o = {out + H, out + cap, sc, sc + ms, sc + 3 * ms, n >= 16 ? in + n - 16 : in - 1};
+    const uint8_t *anchor = in; int ok = 1;
     if (level >= 3) {   /* chains and lazy evaluation */
-        kz_seq *S = malloc((n / 4 + 2) * sizeof *S); if (!S) return 0;
-        size_t anchor; int err; size_t ns = kz_parse(in, n, &KLZ_LV[level], S, &anchor, &err);
-        if (err) { free(S); return 0; }
-        const uint8_t *ip = in;
-        for (size_t k = 0; k < ns; k++) { if (!KZ_ROOM(S[k].ll)) { free(S); return 0; } op = kz_emit(op, ip, S[k].ll, S[k].off, S[k].ml); ip += S[k].ll + S[k].ml; }
-        if (!KZ_ROOM(n - anchor)) { free(S); return 0; }
-        op = kz_emit(op, ip, n - anchor, 0, 0);
-        free(S); return (size_t)(op - out);
-    }
-    const int lg = KLZ_LV[level].hlog, trig = KLZ_LV[level].skip;
-    uint32_t *ht = calloc((size_t)1 << lg, sizeof(uint32_t)); if (!ht) return 0;
-    size_t ip = 0, anchor = 0; const size_t limit = n > 12 ? n - 12 : 0; const uint8_t *ie = in + n;
-    while (ip < limit) {
-        size_t cand, att = (size_t)1 << trig;
-        for (;;) {   /* look for a 4-byte match; the step grows after every 2^trig misses */
-            uint32_t h = kz_h5(in + ip, lg); cand = ht[h]; ht[h] = (uint32_t)ip;
-            if (cand < ip && ip - cand <= KLZ_WINDOW && kz_r32(in + cand) == kz_r32(in + ip)) break;
-            ip += att++ >> trig;
-            if (ip >= limit) goto done;
+        kz_seq *S = malloc(ms * sizeof *S); size_t an; int err;
+        if (!S) { free(sc); return 0; }
+        size_t ns = kz_parse(in, n, &KLZ_LV[level], KLZ_WIN, S, &an, &err);
+        if (err) ok = 0;
+        for (size_t k = 0; ok && k < ns; k++) { ok = kz_seq_out(&o, anchor, S[k].ll, S[k].off, S[k].ml, 0); anchor += S[k].ll + S[k].ml; }
+        free(S);
+    } else if (level == 1) ok = kz_fast(in, n, &o, 15, 6, 0, 6, &anchor);
+    else ok = kz_fast(in, n, &o, 16, 6, 1, 6, &anchor);
+    size_t r = 0;
+    if (ok == 1) {   /* the last literals, then the header and the other streams */
+        size_t ll = (size_t)(in + n - anchor), nt = (size_t)(o.tp - sc), nx = (size_t)(o.xp - (sc + 3 * ms));
+        if ((size_t)(o.le - o.lp) >= ll + 3 * nt + nx) {
+            memcpy(o.lp, anchor, ll); o.lp += ll;
+            size_t nl = (size_t)(o.lp - (out + H));
+            kz_put_uvw(out, nt, w); kz_put_uvw(out + w, nl, w); kz_put_uvw(out + 2 * w, nx, w);
+            memcpy(o.lp, sc, nt); o.lp += nt; memcpy(o.lp, sc + ms, 2 * nt); o.lp += 2 * nt;
+            memcpy(o.lp, sc + 3 * ms, nx); o.lp += nx;
+            r = (size_t)(o.lp - out);
         }
-        while (ip > anchor && cand > 0 && in[ip - 1] == in[cand - 1]) { ip--; cand--; }
-        size_t ml = 4 + kz_count(in + ip + 4, in + cand + 4, ie);
-        if (!KZ_ROOM(ip - anchor)) { free(ht); return 0; }
-        op = kz_emit(op, in + anchor, ip - anchor, ip - cand, ml);
-        ip += ml; anchor = ip;
-        if (ip < limit) { ht[kz_h5(in + ip - 2, lg)] = (uint32_t)(ip - 2); if (level >= 2) ht[kz_h5(in + ip - 1, lg)] = (uint32_t)(ip - 1); }
     }
-done:
-    if (!KZ_ROOM(n - anchor)) { free(ht); return 0; }
-    op = kz_emit(op, in + anchor, n - anchor, 0, 0);
-    free(ht); return (size_t)(op - out);
+    free(sc); return r;
+}
+/* length extension from the ext stream; SIZE_MAX when malformed */
+static inline size_t kz_xget(const uint8_t **xp, const uint8_t *xe) {
+    if (*xp >= xe) return (size_t)-1;
+    size_t v = *(*xp)++;
+    if (v == 255) {
+        uint64_t u; size_t i = 0;
+        if (kz_get_uv(*xp, (size_t)(xe - *xp), &i, &u) || u > 0xFFFFFFFFu) return (size_t)-1;
+        *xp += i; v = 255 + (size_t)u;
+    }
+    return v;
+}
+/* match of ml <= 18 bytes, off >= 1, with room for 32 bytes */
+static inline void kz_m18(uint8_t *op, const uint8_t *m, size_t off) {
+    if (off >= 8) { memcpy(op, m, 8); memcpy(op + 8, m + 8, 8); memcpy(op + 16, m + 16, 2); return; }
+    static const uint8_t inc[8] = {0, 1, 2, 1, 0, 4, 4, 4}; static const int8_t adj[8] = {0, 0, 0, 1, 4, -1, -2, -3};
+    op[0] = m[0]; op[1] = m[1]; op[2] = m[2]; op[3] = m[3];
+    m += inc[off]; memcpy(op + 4, m, 4); m += adj[off];
+    memcpy(op + 8, m, 8); memcpy(op + 16, m + 8, 8);
+}
+/* the decoder's fast loop, kept apart so that its values stay in registers: at most k sequences (the budget: 32 bytes
+ * of output and 16 bytes of input per sequence fit, with 64 and 32 bytes of margin), each short (at most 14 literals
+ * and 18 match bytes: fixed-size copies) or with one extension byte per long length (copied in 32-byte steps and
+ * charged to the budget: (ll + ml) / 32 + ll / 16 slots more). Stops at the first sequence it does not take. A
+ * literal pointer past the literals is caught by the caller at the end (the output then does not add up). Returns
+ * -1 on a bad offset. */
+typedef struct { const uint8_t *tp, *fp, *lp, *xp, *xe; uint8_t *op; } kz_dst;
+static __attribute__((noinline)) int kz_dec_fast(kz_dst *S, size_t k, uint8_t *const out) {
+    const uint8_t *tp = S->tp, *tl = tp + k, *fp = S->fp, *lp = S->lp; uint8_t *op = S->op; int rc = 0;
+    while (tp < tl) {
+        const size_t t = *tp, off = (size_t)fp[0] | (size_t)fp[1] << 8; size_t ll = t & 15, ml = (t >> 4) + 4;
+        if (__builtin_expect(ll == 15 || ml == 19, 0)) {
+            const uint8_t *x = S->xp; size_t a = 0, b = 0;
+            if (ll == 15) { if (x >= S->xe || *x == 255) break; a = *x++; }
+            if (ml == 19) { if (x >= S->xe || *x == 255) break; b = *x++; }
+            ll += a; ml += b;
+            const size_t ch = (ll + ml) / 32 + ll / 16;
+            if (ch >= (size_t)(tl - tp)) break;
+            S->xp = x; tl -= ch;
+            { const uint8_t *s0 = lp; uint8_t *d = op, *de = op + ll; do { memcpy(d, s0, 16); memcpy(d + 16, s0 + 16, 16); d += 32; s0 += 32; } while (d < de); }
+            op += ll; lp += ll;
+            if (off - 1 >= (size_t)(op - out)) { rc = -1; break; }
+            kz_match(op, off, ml, op + ml + 64); op += ml; tp++; fp += 2;
+            continue;
+        }
+        memcpy(op, lp, 16); op += ll; lp += ll;
+        if (off - 1 >= (size_t)(op - out)) { rc = -1; break; }
+        kz_m18(op, op - off, off);
+        op += ml; tp++; fp += 2;
+    }
+    S->tp = tp; S->fp = fp; S->lp = lp; S->op = op;
+    return rc;
 }
 int kolmo_klz_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
-    const uint8_t *ip = in, *ie = in + cn; uint8_t *op = out, *oe = out + n;
-    for (;;) {
-        if (ip >= ie) return -1;
-        unsigned t = *ip++; size_t ll = t & 7, off, ml;
-        if (ie - ip >= 48 && oe - op >= 96) {   /* fast path: whole-register copies, few bounds tests */
-            if (ll == 7) { unsigned b; do { if (ip >= ie) return -1; b = *ip++; ll += b; } while (b == 255); }
-            if (ll <= 32) { memcpy(op, ip, 16); memcpy(op + 16, ip + 16, 16); }   /* ip + 32 <= ie: at most one extension byte */
-            else { if (ll > (size_t)(ie - ip) || ll > (size_t)(oe - op)) return -1; memcpy(op, ip, ll); }
-            op += ll; ip += ll;
-            if (op == oe) return (t >> 3) == 0 && ip == ie ? 0 : -1;
-            if (ie - ip < 3) return -1;
-            off = (size_t)ip[0] | (size_t)ip[1] << 8 | ((size_t)ip[2] << 16 & (size_t)(0 - (t >> 7)));
-            ip += 2 + (t >> 7); ml = (t >> 3) & 15;
-            if (ml < 15 && off >= 16 && off <= (size_t)(op - out) && oe - op >= 32) { memcpy(op, op - off, 16); memcpy(op + 16, op - off + 16, 4); op += ml + 4; continue; }
-        } else {
-            if (ll == 7) { unsigned b; do { if (ip >= ie) return -1; b = *ip++; ll += b; } while (b == 255); }
-            if (ll > (size_t)(ie - ip) || ll > (size_t)(oe - op)) return -1;
-            if (ll <= 16 && ie - ip >= 16 && oe - op >= 16) memcpy(op, ip, 16); else memcpy(op, ip, ll);
-            op += ll; ip += ll;
-            if (op == oe) return (t >> 3) == 0 && ip == ie ? 0 : -1;
-            if (ie - ip < 2 + (t >> 7)) return -1;
-            off = (size_t)ip[0] | (size_t)ip[1] << 8; ip += 2;
-            if (t & 128) off |= (size_t)*ip++ << 16;
-            ml = (t >> 3) & 15;
+    size_t i = 0; uint64_t ns, nl, nx;
+    if (kz_get_uv(in, cn, &i, &ns) || kz_get_uv(in, cn, &i, &nl) || kz_get_uv(in, cn, &i, &nx)) return -1;
+    if (nl > n || ns > n / 4 + 1 || nx > cn || cn - i != nl + 3 * ns + nx) return -1;
+    const uint8_t *lp = in + i, *const le = lp + nl, *tp = le, *const te = tp + ns, *fp = te;   /* literals, tokens, */
+    const uint8_t *xp = fp + 2 * ns, *const xe = xp + nx, *const ie = in + cn;                  /* offsets, extensions */
+    uint8_t *op = out, *const oe = out + n;
+    while (tp < te) {
+        size_t ko = (size_t)(oe - op) >= 64 ? ((size_t)(oe - op) - 64) / 32 : 0, ki = (size_t)(ie - lp) >= 32 ? ((size_t)(ie - lp) - 32) / 16 : 0;
+        size_t k = ko < ki ? ko : ki; if (k > (size_t)(te - tp)) k = (size_t)(te - tp);
+        if (k) {
+            kz_dst S = {tp, fp, lp, xp, xe, op};
+            if (kz_dec_fast(&S, k, out)) return -1;
+            int moved = S.tp != tp; tp = S.tp; fp = S.fp; lp = S.lp; xp = S.xp; op = S.op;
+            if (moved) continue;   /* budget used, or stopped at a sequence: recompute (the general path if again) */
         }
-        if (ml == 15) { unsigned b; do { if (ip >= ie) return -1; b = *ip++; ml += b; } while (b == 255); }
+        /* one sequence with every test: long lengths, or near the end of the output or of the input */
+        const size_t t = *tp++, off = (size_t)fp[0] | (size_t)fp[1] << 8; size_t ll = t & 15, ml = t >> 4; fp += 2;
+        if (lp > le) return -1;
+        if (ll == 15) { size_t x = kz_xget(&xp, xe); if (x == (size_t)-1) return -1; ll += x; }
+        if (ml == 15) { size_t x = kz_xget(&xp, xe); if (x == (size_t)-1) return -1; ml += x; }
         ml += 4;
-        if (!off || off > (size_t)(op - out) || ml > (size_t)(oe - op)) return -1;
-        kz_match(op, off, ml, oe); op += ml;
+        if (ll > (size_t)(le - lp) || ll > (size_t)(oe - op) || ml > (size_t)(oe - op) - ll) return -1;
+        if (ll >= 256) memcpy(op, lp, ll);
+        else if ((size_t)(ie - lp) - ll >= 16 && (size_t)(oe - op) - ll >= 16) {   /* whole-register literal copies */
+            const uint8_t *s0 = lp; uint8_t *d = op, *de = op + ll; do { memcpy(d, s0, 16); d += 16; s0 += 16; } while (d < de);
+        } else memcpy(op, lp, ll);
+        op += ll; lp += ll;
+        if (off - 1 >= (size_t)(op - out)) return -1;
+        kz_match(op, off, ml, oe);
+        op += ml;
     }
+    if (lp > le || (size_t)(le - lp) != (size_t)(oe - op) || xp != xe) return -1;
+    memcpy(op, lp, (size_t)(le - lp));
+    return 0;
 }
-
 /* ---------------- KLZH: entropy-coded streams ---------------- */
 static inline unsigned kz_lcode(uint32_t v, uint32_t *ex, int *nb) {
     if (v < 16) { *nb = 0; *ex = 0; return v; }
@@ -263,7 +380,7 @@ size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap
     kz_seq *S = malloc((n / 4 + 2) * sizeof *S); size_t anchor; int err;
     if (!S) return 0;
     const kz_par *LV = &KLZH_LV[level];
-    size_t ns = level <= 3 ? kz_parse_dfast(in, n, LV->hlog, LV->clog, LV->skip, 4, S, &anchor, &err) : kz_parse(in, n, LV, S, &anchor, &err);
+    size_t ns = level <= 3 ? kz_parse_dfast(in, n, LV->hlog, LV->clog, LV->skip, 4, S, &anchor, &err) : kz_parse(in, n, LV, KLZH_WINDOW, S, &anchor, &err);
     uint8_t *lit = malloc(n + 16), *cd = malloc(3 * (ns + 1)), *xb = malloc(ns * 12 + 64), *tmp = malloc(kolmo_khuf_bound(n) + 64);
     size_t r = 0;
     if (err || !lit || !cd || !xb || !tmp) goto out;
