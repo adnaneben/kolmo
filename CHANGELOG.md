@@ -93,6 +93,33 @@ in their payloads (scaled tables). Measurements: `benchmark/rc3w2/memdyn/RESULTS
 - `benchmark/rc3/router/`: the corpus builder, the matrix runner (every level, general tools, FLAC, FFV1, JPEG XL,
   JPEG-LS), the frame route reader, and the evaluation of the 6-bit study's GR6-L3 (`lzp` phrases and level race; not
   ported: no `-x` output would change).
+## Unreleased (rc3 wave 2, meta lane: `claude/rc3w2-meta-20261117`)
+
+Structure read from the input's own headers (`docs/METADATA.md`, `benchmark/rc3w2/meta/RESULTS.md`). Decisions use
+the bytes only, never a file name. Frames of other inputs are unchanged (determinism check: 122 frames identical).
+
+### Added
+- **Image headers** (binary PGM/PPM, PAM, BMP, uncompressed TIFF, as NPY before): the IMG8 node takes the width,
+  channels and pixel offset from the header instead of a lag search, and such an image is never taken for text.
+  −9% to −18% at `balanced`, −11% to −30% at `hc` on photographs with uncommon widths or misdetected rows.
+- **Executables** (ELF, Mach-O thin and universal, PE): code sections and data are planned apart (x86 ELF −0.3% to
+  −5.4%); ARM64 code takes the new **ARM64 branch filter** (BL and ADRP made position-absolute; plan type 11,
+  tflag 14, container version 11): −4.9% to −7.7% `balanced`, −6.8% to −8.8% `hc`, −6.8% to −9.5% `max`.
+- **AIFF** 16-bit (and AIFF-C `NONE`/`twos`): coded by the audio codec (19) like WAV, samples byte-swapped (codec 19
+  plan prefix `0, 1`, version 11): −17% to −45%.
+- **Archives**: tar members of 64 KiB or more with a known header get their own plan and are cut by their own format
+  (mixed tar −3.6% to −4.5%); zip / NPZ stored members are planned apart, so NPY headers give dtype and shape (mixed
+  NPZ −20% to −24%).
+- **Packed content** (gzip, xz, zstd, bzip2, LZ4, 7z, RAR, PNG, JPEG, WebP, JPEG XL, MP4/HEIF/AVIF, FLAC, Ogg, MP3,
+  Matroska, deflated zip members): no analysis, and blocks a probe finds incompressible are stored without running
+  the coder: `hc` 16-46× and `max` 50-140× faster to compress on such files, same size.
+- **safetensors / GGUF**: the header and each run of one tensor type are planned apart (`hc` 11.1 s → 1.0 s on a
+  checkpoint mixing fp16 and uint8 tensors; sizes within 0.05%, one-dtype files unchanged).
+- `make check-meta`: every parser on 3000 mutations of 18 synthetic files under ASan/UBSan, ARM64 filter bijection,
+  frame round trips (part of `check-rc`).
+
+### Changed
+- `src/transforms/tar.c` moved into `src/plan/meta.c` (tar segmentation is one of the header readers).
 
 ## Unreleased (rc3, features-a lane: `claude/rc3-features-a-20261116`)
 

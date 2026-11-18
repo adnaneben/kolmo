@@ -40,6 +40,7 @@ int kolmo_force_c;
 #include "transforms/table_v03.c"
 #include "plan/tunables.h"
 #include "plan/detect.c"
+#include "plan/meta.c"              /* structure read from the input's own headers (docs/METADATA.md) */
 #include "codecs/codec.h"
 
 /* These transforms take their scratch memory from the per-thread cache (core/memory.c). */
@@ -65,6 +66,7 @@ int kolmo_force_c;
 #include "transforms/shuffle.c"
 #include "codecs/fastq.c"
 #include "transforms/x86.c"
+#include "transforms/arm64.c"         /* ARM64 branch transform (plan type 11, tflag 14; plan/meta.c chooses it) */
 #include "codecs/store.c"
 #include "codecs/lz4.c"
 #include "codecs/zstd.c"
@@ -97,7 +99,6 @@ int kolmo_force_c;
 #include "core/memneed.c"           /* working-set estimates: frame declaration, reservations (docs/MEMORY-MODEL.md) */
 #include "core/trials.c"
 #include "core/blocks.c"
-#include "transforms/tar.c"
 #include "plan/frontier.c"
 #include "plan/parallel.c"
 /* Opt-in typed encoder route ported from the RC1 integration (PR #10). It writes ordinary version 7 graph frames. */

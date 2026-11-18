@@ -1794,6 +1794,7 @@ static size_t aud_compress(int profile, int ch, const uint8_t *in, size_t len, s
     memcpy(out, b.p, b.len); free(b.p); return b.len;
 }
 
+static void aud_swap16(uint8_t *p, size_t n) { for (size_t i = 0; i + 1 < n; i += 2) { uint8_t t = p[i]; p[i] = p[i + 1]; p[i + 1] = t; } }
 static int aud_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     pthread_once(&ka_once, ka_init);
     ka_Buf b = { out, 0, n }; const char *err;

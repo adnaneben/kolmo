@@ -7,6 +7,7 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
     if (!st) return 0;
     if (pl.t == T_SHUF) { uint32_t u = pl.a * pl.b; B = B / u * u; if (!B) B = u; }
     if (pl.t == T_IMG) B &= ~1u;
+    if (pl.t == T_A64) B = B >= 4096 ? B & ~4095u : 4;             /* ARM64 code: instruction words stay aligned in every block */
     if (pl.t == T_REC) { B = B / pl.rec->P * pl.rec->P; if (!B) B = pl.rec->P; }
     int kgnum = pl.t == T_KG && pl.a == 0;                     /* integer graph: width-aligned blocks after the head */
     if (kgnum) {
@@ -75,7 +76,8 @@ typedef struct {
     pthread_mutex_t wmu; uint32_t wnext; size_t wpos, cap; int werr;   /* blocks are written to dst in order as they finish */
     int psum;               /* checksums over stored bytes (rt) instead of decoded bytes */
     const void *dict; size_t dictlen;   /* optional zstd dictionary, read-only by workers */
-    int aud_prof, aud_ch; uint64_t aud_off, aud_end;   /* format 2: 16-bit PCM WAV (kaud profile, channels, sample bytes [off, end)); aud_prof < 0: none */
+    int aud_prof, aud_ch, aud_be; uint64_t aud_off, aud_end;   /* aud_be: AIFF, big-endian samples (swapped for kaud; plan prefix 0, 1) */
+      /* format 2: 16-bit PCM WAV (kaud profile, channels, sample bytes [off, end)); aud_prof < 0: none */
     const struct kolmo_profile *prof;   /* optional trained profile, read-only by workers */
     uint64_t memcap;        /* the call's limit for the governor (explicit, auto or unlimited) */
     uint64_t xcap;          /* the explicit cap only (0: none): the one memory figure format decisions may read */
@@ -222,12 +224,17 @@ static void *compress_worker(void *arg) {
             if (tn > 0) { put32(sl, (uint32_t)tn); meta = 4; in = tbuf; tflag = 9; }
         } else if (pl.t == T_X86 && len) {
             memcpy(tbuf, raw, len); e8e9_fwd(tbuf, len); in = tbuf; tflag = 8;
+        } else if (pl.t == T_A64 && len) {                                  /* ARM64 code: the block's own page phase in a, b */
+            const uint32_t ph = (uint32_t)(pl.a | pl.b << 8) + (uint32_t)rs;
+            slot[1] = (uint8_t)ph; slot[2] = (uint8_t)((ph >> 8) & 15); slot[3] = 0;
+            memcpy(tbuf, raw, len); a64_fwd(tbuf, len, ph & 0xFFF); in = tbuf; tflag = 14; modes |= 128;
         }
-        size_t inlen = (tflag >= 3 && tflag <= 7) || tflag >= 9 ? get32(sl) : len, cl = 0;
+        size_t inlen = (tflag >= 3 && tflag <= 7) || (tflag >= 9 && tflag != 14) ? get32(sl) : len, cl = 0;
         int codec = J->codec, level = (pl.wide || (tflag >= 10 && pl.t == T_TBL)) && J->default_level ? 1 : J->level;
         /* trials run beside context mixing (ultra, core/trials.c), and whether this block is FASTQ for the family coder */
         enum { XT_ALT, XT_ALTS, XT_A1, XT_FQ, XT_ALTB, XT_N }; xtrial_t xt[XT_N]; memset(xt, 0, sizeof xt);
         const int xfq = J->codec == C_CM && J->level != 1 && !J->dict && len >= 64 && kf_fastq_like(raw, len);
+        if (pl.packed && !J->dict && meta_incompressible(raw, len)) { cl = 0; goto coded; }   /* compressed content: stored */
         if (xfq && len >= (64u << 10)) {
             /* ultra, a FASTQ block: the family coder first, with every thread the block has. It has beaten context
              * mixing on every FASTQ input measured (by 10 to 20%), so when it applies the context-mixing, LZMA2 and
@@ -377,7 +384,7 @@ static void *compress_worker(void *arg) {
             cmp_used = cl != 0;
         }
         int slice_verdict = 0;                        /* max, binary block over 8 MiB: 1 BWT clearly wins, -1 skip BWT */
-        if (codec == C_LZMA && !cl && level != 1 && tflag != 8 && tflag != 4 && tflag != 5 && inlen > (8u << 20)) {
+        if (codec == C_LZMA && !cl && level != 1 && tflag != 8 && tflag != 14 && tflag != 4 && tflag != 5 && inlen > (8u << 20)) {
             /* A slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the outcome
              * (see below). Where the slice already shows BWT at most 90% of LZMA2, BWT won on the whole block by more
              * (osdb: slice 0.84, block 0.78) and the full LZMA2 pass, the slowest step of this mode, is skipped. */
@@ -395,9 +402,9 @@ static void *compress_worker(void *arg) {
         }
         if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, kept only when clearly smaller */
             /* BWT decodes about half as fast as LZMA2 here, so it must pay for that: at least KOLMO_BWT_GAIN_PCT smaller. */
-            /* BWT is tried only where it has won in tests: not on x86 code, typed table columns or log token streams (4 to 12% larger), and only when LZMA2 already reaches
+            /* BWT is tried only where it has won in tests: not on x86 or ARM64 code (tflag 14 treated as 8, unmeasured), typed table columns or log token streams (4 to 12% larger), and only when LZMA2 already reaches
              * 35% or less (on less compressible binary data BWT was 1.5 to 8% larger) */
-            uint8_t *alt = tflag == 8 || tflag == 4 || tflag == 5 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
+            uint8_t *alt = tflag == 8 || tflag == 14 || tflag == 4 || tflag == 5 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
             if (slice_verdict < 0) alt = NULL;              /* the slice above already ruled BWT out */
             else if (alt && inlen > (8u << 20) && !slice_verdict) {   /* large blocks only: on small ones the slice costs as much as the attempt */
                 /* a short slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the
@@ -515,10 +522,15 @@ coded:;
             if (f1 > f0 + 1024) {
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
                 size_t cur = cl && cl + meta < len ? cl + meta : len;
-                size_t az = alt ? aud_compress(J->aud_prof, J->aud_ch, raw, len, (size_t)(J->aud_off + f0 * fs - s0), f1 - f0, alt, J->slot) : 0;
+                const size_t ho = (size_t)(J->aud_off + f0 * fs - s0); const uint8_t *ain = raw; uint8_t *sw = NULL;
+                if (J->aud_be && alt && (sw = malloc(len))) {          /* AIFF: the samples little-endian, as kaud reads them */
+                    memcpy(sw, raw, len); aud_swap16(sw + ho, (size_t)(f1 - f0) * (size_t)fs); ain = sw;
+                }
+                size_t az = alt && (!J->aud_be || sw) ? aud_compress(J->aud_prof, J->aud_ch, ain, len, ho, f1 - f0, alt, J->slot) : 0;
+                free(sw);
                 if (az && az < cur) {
                     memcpy(sl, alt, az); cl = az; codec = C_AUD; tflag = 0; meta = 0; modes = 128;
-                    slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
+                    slot[0] = T_NONE; slot[1] = (uint8_t)J->aud_be; slot[2] = slot[3] = 0;
                 }
             }
         }
