@@ -2,20 +2,27 @@
 # Replays each target's final corpus (and its seeds) through its coverage build (MODE=cov fuzz/campaign3/build.sh)
 # and writes llvm-cov reports: $OUT/report.txt (per file, all targets), $OUT/functions.txt, $OUT/zero_functions.txt,
 # and $OUT/report_rc3.txt: the files rc3 added or rewrote (codecs 18-26, the BWT pipeline, extensions, profiles).
-# Usage (repo root): W=campaign-workdir OUT=dir fuzz/campaign3/coverage.sh     ($W/corpus/<t>, $W/seeds/<base>)
+# Usage (repo root): W=campaign-workdir OUT=dir [EXTRA=dir] fuzz/campaign3/coverage.sh
+#   replays $W/corpus/<t>, $W/seeds/<base> and, with EXTRA (campaign 2's corpora, read in place by run.sh), $EXTRA/<t>
+#   and $EXTRA/<base>
 set -u
-W=${W:?}; OUT=${OUT:?}; B=$PWD/build/fuzzcov; mkdir -p "$OUT/raw"
+W=${W:?}; OUT=${OUT:?}; EXTRA=${EXTRA:-}; B=$PWD/build/fuzzcov; mkdir -p "$OUT/raw"
 ALL=${TARGETS:-"fuzz_decompress fuzz_decompress_nocm fuzz_limited_nocm fuzz_dict_nocm fuzz_stream_nocm fuzz_stream_limited_nocm
      fuzz_roundtrip fuzz_roundtrip_nocm fuzz_nplane fuzz_codecs fuzz_codecs_nocm fuzz_ext_nocm fuzz_profile_nocm fuzz_krc fuzz_kbcx fuzz_fastq"}
 for t in $ALL; do
   base=${t%_nocm}
-  for d in "$W/corpus/$t" "$W/seeds/$base"; do
+  k=0; dirs=("$W/corpus/$t" "$W/seeds/$base")
+  [ -n "$EXTRA" ] && dirs+=("$EXTRA/$t") && [ "$t" != "$base" ] && dirs+=("$EXTRA/$base")
+  for d in "${dirs[@]}"; do
     [ -d "$d" ] || continue
-    ls "$d" | split -l 100 - "$OUT/raw/$t.$(basename "$(dirname "$d")").chunk."   # one process per chunk
+    echo "$d" > "$OUT/raw/$t.d$k.dir"
+    ls "$d" | split -l 100 - "$OUT/raw/$t.d$k.chunk."   # one process per chunk: one slow input cannot end the replay
+    k=$((k+1))
   done
-  for ch in "$OUT/raw/$t".*.chunk.*; do
+  for ch in "$OUT/raw/$t".d*.chunk.*; do
     [ -e "$ch" ] || continue
-    case $ch in *.seeds.chunk.*) d="$W/seeds/$base";; *) d="$W/corpus/$t";; esac
+    case $ch in *.log) continue;; esac
+    d=$(cat "${ch%%.chunk.*}.dir")
     ( cd "$d" && LLVM_PROFILE_FILE="$OUT/raw/$t.%p.profraw" timeout 3600 "$B/$t" -runs=1 -timeout=600 -rss_limit_mb=8192 $(cat "$ch") \
         > "$ch.log" 2>&1 ) &
     while [ "$(jobs -rp | wc -l)" -ge "${JOBS:-$(nproc)}" ]; do wait -n; done

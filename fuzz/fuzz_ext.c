@@ -66,7 +66,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         case 0: Q.column = NULL; break;
         case 1: snprintf(col, sizeof col, "#%d", 1 + (sel >> 5 & 3)); Q.column = col; break;
         case 2: { size_t L = 0; if (rows > 0) { while (L < sizeof col - 1 && names[L] && names[L] != '\n') { col[L] = names[L]; L++; } }
-                  col[L] = 0; Q.column = L ? col : "#2"; break; }
+                  col[L] = 0; Q.column = L ? col : kind == KOLMO_IDX_JSON ? ((sel & 8) ? "user" : "id") : "#2"; break; }
         default: Q.column = "nosuchcolumn"; break;
         }
         char pat[16];
