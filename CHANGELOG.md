@@ -15,9 +15,10 @@ graph leaves); every other mode is byte-identical.
   `tests/test_kernels.c`); mixer and APM rows set when first used; tables of any size (`n / 32` lines per context up
   to 48 MiB, `n / 64` to 128 MiB, `n / 128` beyond); a match table that follows the stream and a match chain of the last
   2^24 positions; its own shared priors (`cm_prior4`). Format in `SPEC.md`, *Model 4*. VM, one thread, against zpaq
-  -m5 (full files): text -4.6% (xml -10.5%, reymont -8.5%, enwik8 -5.0%, webster -3.6%, dickens -0.7%), logs -13.8%,
-  CSV -46%, x-ray -2.9%, sao -45.6%, ooffice -4.8%, osdb -1.5%, mozilla +1.2%; compression 0.98-3.3x and decompression
-  0.97-9.8x zpaq's speed; peak memory 0.48-1.58x zpaq's (was 5-7 GB on every file of 4 MB or more).
+  -m5 (full files): Silesia (its 12 files) -7.1%, structured -55%, numeric -22%, text -4.7% (xml -10.6%, reymont -8.6%, enwik8 -5.0%, webster -4.1%, dickens -0.7%), logs -14.0%,
+  CSV -46% and -60%, x-ray -2.9%, mr -11.0%, sao -45.6%, nci -15.6%, ooffice -5.0%, samba -3.8%, osdb -1.6%, mozilla
+  +1.2%; compression 0.98-3.3x and decompression 0.97-9.8x zpaq's speed; peak memory 0.48-1.58x zpaq's (was 5-7 GB on
+  every file of 4 MB or more).
 - `tests/test_cm4.c` (`make check-cm4`, in `check-rc`): model-4 round trips, the same stream at every kernel level,
   the declared decode working set, damaged headers and streams under AddressSanitizer.
 - `benchmark/w4/cm/`: `cmx` (codes one file with one model, times both ways), `cmprior4` (trains the priors),

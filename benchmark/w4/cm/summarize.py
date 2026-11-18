@@ -4,7 +4,8 @@ c_rss, d_rss, ok), as written by the lane's runner (one process per tool and dir
 usage: summarize.py ROWS.jsonl..."""
 import json, sys
 GROUPS = {'text': ['enwik8', 'dickens', 'webster', 'reymont', 'xml'],
-          'Silesia (binary members)': ['mozilla', 'samba', 'nci', 'ooffice', 'osdb'],
+          'Silesia (12 files, each coded alone)': ['dickens', 'mozilla', 'mr', 'nci', 'ooffice', 'osdb', 'reymont', 'samba', 'sao', 'webster', 'x-ray', 'xml'],
+          'Silesia binaries': ['mozilla', 'samba', 'nci', 'ooffice', 'osdb'],
           'structured': ['loghub_all.log', 'countries-aggregated.csv', 'owid-co2-data.csv'],
           'numeric': ['x-ray', 'mr', 'sao']}
 rows = {}
