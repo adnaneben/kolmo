@@ -25,6 +25,13 @@ jobs:
         run: make -j4 ARCH= check-frontier-dna check-cm-compact check-tar-files
       - name: shared library + Python binding round trip
         run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py && python3 tests/test_concurrent_dict.py
+      - name: bindings' native copies match src and vendor (the wheel and the crate build from them)
+        run: |
+          for b in python rust; do
+            diff -r -x experimental src bindings/$b/native/src
+            diff -r vendor bindings/$b/native/vendor
+            for f in src/experimental/frontier_*; do cmp "$f" "bindings/$b/native/$f"; done
+          done
       - name: Rust binding round trip
         run: cargo test --manifest-path bindings/rust/Cargo.toml
       - name: research codecs and kfam (round trips, ASan/UBSan; CI runners have no GPU, so the Metal test is skipped)
@@ -80,5 +87,16 @@ jobs:
               fuzz/$t.c fuzz/run_local.c src/kolmo.c build/libkolmoarch.a build/libvendor.a \
               -lpthread -lm -o $t
             ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./$t 20000
+          done
+      - name: rc3 decoders (codecs 17-26, KEXT/IDX1/DDP1, KPF1 and --target) under ASan/UBSan (bounded)
+        run: |
+          # these harnesses include src/kolmo.c themselves; KOLMO_FUZZ_NO_CM keeps the context-mixing setup out
+          for t in fuzz_codecs fuzz_ext fuzz_profile; do
+            gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FUZZ_NO_CM \
+              -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 \
+              -Isrc -Ifuzz -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz \
+              fuzz/$t.c fuzz/run_local.c build/libkolmoarch.a build/libvendor.a -lpthread -lm -o $t
+            n=20000; [ $t = fuzz_codecs ] && n=5000      # its round trips encode (block sorting, audio, GR6+)
+            ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./$t $n
           done
         timeout-minutes: 60

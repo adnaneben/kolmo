@@ -1,0 +1,75 @@
+	2026-11-17T10:00:00.243Z host0 INFO req=0 took=249ms path=/api/v1/item/260
+2026-11-17T10:00:01.535Z host1 INFO req=1 took=778ms path=/api/v1/item/2842
+2026-11-17T10:00:02.489Z host2 INFO req=2 took=110ms path=/api/v1/item/2751
+2026-11-17T10:00:03.613Z host3 INFO req=3 took=60ms path=/api/v1/item/2522
+2026-11-17T10:00:04.571Z host4 INFO req=4 took=67ms path=/api/v1/item/719
+2026-11-17T10:00:05.375Z host0 INFO req=5 took=142ms path=/api/v1/item/855
+2026-11-17T10:00:06.594Z host1 INFO req=6 took=29ms path=/api/v1/item/2959
+2026-11-17T10:00:07.505Z host2 INFO req=7 took=53ms path=/api/v1/item/1269
+2026-11-17T10:00:08.007Z host3 INFO req=8 took=897ms path=/api/v1/item/3927
+2026-11-17T10:00:09.203Z host4 INFO req=9 took=828ms path=/api/v1/item/2024
+2026-11-17T10:00:10.402Z host0 INFO req=10 took=39ms path=/api/v1/item/2684
+2026-11-17T10:00:11.964Z host1 INFO req=11 took=14ms path=/api/v1/item/1383
+2026-11-17T10:00:12.792Z host2 INFO req=12 took=717ms path=/api/v1/item/1670
+2026-11-17T10:00:13.416Z host3 INFO req=13 took=473ms path=/api/v1/item/1783
+2026-11-17T10:00:14.031Z host4 INFO req=14 took=386ms path=/api/v1/item/642
+2026-11-17T10:00:15.908Z host0 INFO req=15 took=738ms path=/api/v1/item/1539
+2026-11-17T10:00:16.258Z host1 INFO req=16 took=373ms path=/api/v1/item/1429
+2026-11-17T10:00:17.043Z host2 INFO req=17 took=142ms path=/api/v1/item/89
+2026-11-17T10:00:18.659Z host3 INFO req=18 took=146ms path=/api/v1/item/1991
+2026-11-17T10:00:19.808Z host4 INFO req=19 took=17ms path=/api/v1/item/3917
+2026-11-17T10:00:20.615Z host0 INFO req=20 took=786ms path=/api/v1/item/17«9
+2026-11-17T10:00:21.466Z host1 INFO req=21 took=218ms path=/api/v1/item/2359
+2026-11-17T10:00:22.338Z host2 INFO req=22 took=622ms path=/api/v1/item/2607
+2026-11-17T10:00:23.176Z host3 INFO req=23 took=18ms path=/api/v1/item/1657
+2026-11-17T10:00:24.548Z host4 INFO req=24 took=181ms path=/api/v1/item/2970
+2026-11-17T10:00:25.093Z host0 INFO req=25 took=346ms path=/api/v1/item/2387
+2026-11-17T10:00:26.362Z host1 INFO req=26 took=145ms path=/api/v1/item/1852
+2026-11-17T10:00:27.044Z host2 INFO req=27 took=386ms path=/api/v1/item/2218
+2026-11-17T10:00:28.106Z host3 INFO req=28 took=232ms path=/api/v1/item/2252
+2026-11-17T10:00:29.985Z host4 INFO0,name0,0.000,0
+1,name1,14.237,1
+2,name2,28.184,4
+3,name3,41.557,9
+4,name4,54.083,16
+5,name5,65.508,25
+6,name6,75.598,36
+7,name7,84.147,49
+8,name8,90.982,64
+9,name9,95.964,81
+10,name10,98.990,100
+11,name11,100.000,121
+12,name12,98.972,144
+13,name13,95.928,169
+14,name14,90.930,196
+15,name15,84.079,225
+16,name16,75.515,256
+17,name17,65.412,289
+18,name18,53.977,324
+19,name19,41.442,361
+20,name20,28.063,400
+21,name21,14.112,441
+22,name22,-0.126,484
+23,name23,-14.362,529
+24,name24,-28.306,576
+25,name25,-41.672,625
+26,name26,-54.190,676
+27,name27,-65.603,729
+28,name28,-75.680,784
+29,name29,-84.215,841
+30,name30,-91.035,900
+31,name31,-95.999,961
+32,name32,-99.008,24
+33,name33,-100.000,89
+34,name34,-98.954,156
+35,name35,-95.892,225
+36,name36,-90.877,296
+37,name0,-84.010,369
+38,name1,-75.432,444
+39,name2,-65.317,521
+40,name3,-53.871,600
+41,name4,-41.327,681
+42, req=29 took=189ms path=/api/v1/item/3106
+2026-11-17T10:00:3name05,-27.942,764
+43,name6,-13.987,849
+44,name7,0.253.398Z host0 INFO req=30 ,took=106ms93
