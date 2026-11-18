@@ -18,6 +18,9 @@ twopass lane, merged here. Measurements in `benchmark/rc3w3/prior/RESULTS.md`.
 ### Fixed
 - `-x` frames with tuned CM streams (from the twopass lane) failed to decode after the merge with memdyn: their
   decode working set was not recognised.
+- `-x` could hang under a tight memory budget: a race trial thread waited for memory held by the block that was
+  waiting for it (twopass lane's race, found by `test-memdyn`). Extra trial threads now start only when the governor
+  grants their working set at once; otherwise the caller runs the trial. Same bytes.
 
 ## Unreleased (rc3 wave 2, twopass lane: `claude/rc3w2-twopass-20261117`)
 

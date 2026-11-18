@@ -192,6 +192,10 @@ static size_t cm_used;   /* bytes the models hold (tests/test_cm_compact.c check
 static void kmem_reserve(uint64_t b, uint64_t cap) { (void)cap; cm_used += b; }
 static void kmem_release(uint64_t b) { cm_used -= b; }
 static uint64_t kmem_buffers(uint64_t raw) { return 2 * raw + ((uint64_t)1 << 20); }
+static int kmem_try_reserve(uint64_t b, uint64_t cap) { (void)cap; cm_used += b; return 1; }
+typedef struct { uint64_t cap, dec_limit; size_t raw; } kmem_ctx;
+static kmem_ctx kmem_ctx_get(void) { kmem_ctx c = {kmem_tls_cap, kmem_tls_dec_limit, kmem_tls_raw}; return c; }
+static void kmem_ctx_set(kmem_ctx c) { kmem_tls_cap = c.cap; kmem_tls_dec_limit = c.dec_limit; kmem_tls_raw = c.raw; }
 #endif
 static atomic_long cm_models_made;   /* models allocated (tests: a refused model is never allocated) */
 static size_t cm_acquire(size_t b) {
@@ -959,7 +963,7 @@ static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap)
 #endif
 enum { CM_NPRESET = 4 };
 static const cm_tune_t cm_presets[CM_NPRESET] = {{0x00, 0x00, 1}, {0x1c, 0xa5, 1}, {0x52, 0x04, 1}, {0xdc, 0xb4, 1}};
-typedef struct { const uint8_t *in; size_t n, cap, z; uint8_t *out; int model, bbcap; cm_tune_t t; size_t ck_at, score; } cm_race_job;
+typedef struct { const uint8_t *in; size_t n, cap, z; uint8_t *out; int model, bbcap; cm_tune_t t; size_t ck_at, score; kmem_ctx ctx; uint64_t unit; } cm_race_job;
 static void *cm_race_run(void *a) {
     cm_race_job *j = a;
     cm_tls_ck_at = j->ck_at; cm_tls_ck_out = 0;
@@ -967,20 +971,37 @@ static void *cm_race_run(void *a) {
     j->score = j->z && j->ck_at < j->n ? j->z - cm_tls_ck_out : j->z;   /* the bytes coded for the input after ck_at */
     cm_tls_ck_at = SIZE_MAX; return NULL;
 }
+/* a trial on a thread of its own: optional work, started only when the governor grants its working set at once (as
+ * the parts of codec 25); it holds that reservation (its tables are covered by it) and releases it when done. Waiting
+ * for memory here could deadlock: the caller may hold the block's reservation while it joins this thread. */
+static void *cm_race_helper(void *a) {
+    cm_race_job *j = a; kmem_ctx_set(j->ctx); kmem_tls_job = 1;
+    cm_race_run(j);
+    kmem_tls_job = 0; kmem_release(j->unit); return NULL;
+}
+/* runs trials a..e-1, par at a time, the caller running one of each group (and any that could not start) */
+static void cm_race_all(cm_race_job *j, int a, int e, int par) {
+    pthread_t th[8]; int started[8];
+    if (par > 8) par = 8;
+    for (int k0 = a; k0 < e; k0 += par) {
+        for (int k = k0 + 1; k < k0 + par && k < e; k++) {
+            j[k].ctx = kmem_ctx_get(); j[k].unit = cm_mem_for(cm_bits_for(j[k].n), 4) + 6 * ((uint64_t)j[k].n + 8) + j[k].cap;   /* tables, chain, buffers */
+            started[k - k0] = kmem_try_reserve(j[k].unit, j[k].ctx.cap);
+            if (started[k - k0] && pthread_create(&th[k - k0], NULL, cm_race_helper, &j[k])) { kmem_release(j[k].unit); started[k - k0] = 0; }
+        }
+        cm_race_run(&j[k0]);
+        for (int k = k0 + 1; k < k0 + par && k < e; k++) { if (started[k - k0]) pthread_join(th[k - k0], NULL); else cm_race_run(&j[k]); }
+    }
+}
 static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap, int threads) {
     if (model < 2 || n >= ((size_t)1 << 28) || n < 64) return cm_compress_mx(in, n, out, cap, model, bbcap);
     const size_t L = n <= CM_RACE_SAMPLE ? n : CM_RACE_SAMPLE;
-    cm_race_job j[CM_NPRESET]; pthread_t th[CM_NPRESET]; int started[CM_NPRESET] = {0};
+    cm_race_job j[CM_NPRESET];
     for (int k = 0; k < CM_NPRESET; k++) {
-        j[k] = (cm_race_job){in, L, L == n ? cap : L + L / 16 + 64, 0, NULL, model, bbcap, cm_presets[k], SIZE_MAX, 0};
+        j[k] = (cm_race_job){in, L, L == n ? cap : L + L / 16 + 64, 0, NULL, model, bbcap, cm_presets[k], SIZE_MAX, 0, {0, 0, 0}, 0};
         j[k].out = malloc(j[k].cap);
     }
-    const int par = threads > CM_NPRESET ? CM_NPRESET : threads > 1 ? threads : 1;
-    for (int k0 = 0; k0 < CM_NPRESET; k0 += par) {           /* par trials at a time; the caller runs one of them */
-        for (int k = k0 + 1; k < k0 + par && k < CM_NPRESET; k++) started[k] = !pthread_create(&th[k], NULL, cm_race_run, &j[k]);
-        cm_race_run(&j[k0]);
-        for (int k = k0 + 1; k < k0 + par && k < CM_NPRESET; k++) { if (started[k]) pthread_join(th[k], NULL); else cm_race_run(&j[k]); }
-    }
+    cm_race_all(j, 0, CM_NPRESET, threads > CM_NPRESET ? CM_NPRESET : threads > 1 ? threads : 1);   /* par trials at a time */
     int b = -1; for (int k = 0; k < CM_NPRESET; k++) if (j[k].z && (b < 0 || j[k].z < j[b].z)) b = k;
     size_t z = 0;
     if (b >= 0 && L == n) { memcpy(out, j[b].out, j[b].z); z = j[b].z; }
@@ -1005,22 +1026,18 @@ static size_t cm_compress_text(const uint8_t *in, size_t n, uint8_t *out, size_t
     /* the kind's prior below 4 MiB; beyond, where a start matters little, the shared prior was as good or better (RESULTS) */
     const uint8_t pid = (uint8_t)(CM_ABL != 1 && kind > TT_NONE && kind <= CM_NKPRIOR && n < CM_KP_MAXN ? 1 + kind : 1);
     const size_t L = n <= CM_RACE_SAMPLE ? n : CM_RACE_SAMPLE;
-    cm_race_job j[2 + CM_NPRESET - 1]; pthread_t th[CM_NPRESET]; int started[CM_NPRESET] = {0};
+    cm_race_job j[2 + CM_NPRESET - 1];
     for (int k = 0; k < 2 + CM_NPRESET - 1; k++) {
         cm_tune_t t = cm_presets[k < 2 ? 0 : k - 1]; t.b2 = pid;
         /* a stream much longer than the sample is judged by the sample's second half (the rate once the start is past) */
-        j[k] = (cm_race_job){in, L, L == n ? cap : L + L / 16 + 64, 0, NULL, k == 1 && CM_ABL != 2 ? 4 : 3, bbcap, t, n >= 4 * L ? L / 2 : SIZE_MAX, 0};
+        j[k] = (cm_race_job){in, L, L == n ? cap : L + L / 16 + 64, 0, NULL, k == 1 && CM_ABL != 2 ? 4 : 3, bbcap, t, n >= 4 * L ? L / 2 : SIZE_MAX, 0, {0, 0, 0}, 0};
     }
     const int par = threads > 3 ? 3 : threads > 1 ? threads : 1;   /* at most 3 trials per stage */
     for (int st = 0; st < 2; st++) {                       /* stage 0: jobs 0-1; stage 1: jobs 2-4 with the winner's model */
         const int a = st ? 2 : 0, e = st ? 2 + CM_NPRESET - 1 : 2;
         if (st) { const int win = j[1].z && (!j[0].z || j[1].score < j[0].score) ? 4 : 3; for (int k = a; k < e; k++) j[k].model = win; }
         for (int k = a; k < e; k++) j[k].out = malloc(j[k].cap);
-        for (int k0 = a; k0 < e; k0 += par) {
-            for (int k = k0 + 1; k < k0 + par && k < e; k++) started[k - k0] = !pthread_create(&th[k - k0], NULL, cm_race_run, &j[k]);
-            cm_race_run(&j[k0]);
-            for (int k = k0 + 1; k < k0 + par && k < e; k++) { if (started[k - k0]) pthread_join(th[k - k0], NULL); else cm_race_run(&j[k]); }
-        }
+        cm_race_all(j, a, e, par);
     }
     int b = -1; for (int k = 0; k < 2 + CM_NPRESET - 1; k++) if (j[k].z && (b < 0 || j[k].score < j[b].score)) b = k;
     size_t z = 0;

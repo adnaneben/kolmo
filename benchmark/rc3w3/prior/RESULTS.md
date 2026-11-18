@@ -21,6 +21,9 @@ its tuned CM streams, which memdyn's `cm_stream_need` did not know). Design and 
   prior columns for its own two state maps read past a stored row): against full2 they move sizes by −0.3% to +0.44%.
   The kind, m4, full and full2 columns and the timings were measured before those fixes (the fixes change start
   values only, not the work per bit).
+- `test-memdyn` (check-rc) found that the race (twopass's and this lane's) could deadlock under a forced small
+  budget: a trial thread waited in the governor for memory its parent's block job held while the parent joined it.
+  Fixed as codec 25 does it (a trial thread starts only when its working set is granted at once); bytes unchanged.
 
 ## Data: train and test kept apart
 
