@@ -240,9 +240,9 @@ check-scan: build/test-scan-asan
 .PHONY: check-kernels check-scan
 # Block-sorting codec: codec 5 bytes against libbsc's (golden hashes), round trips at 1 and 4 threads, damaged streams.
 build/test-bwt: tests/test_bwt.c tests/test_bwt_golden.h $(BWTSRC) $(BWTHDR)
-	$(CC) $(CFLAGS) -Isrc tests/test_bwt.c $(BWTSRC) -o $@ -lpthread
+	$(CC) $(CFLAGS) $(NATDEF) -Isrc tests/test_bwt.c $(BWTSRC) $(NATASM) -o $@ -lpthread
 build/test-bwt-asan: tests/test_bwt.c tests/test_bwt_golden.h $(BWTSRC) $(BWTHDR)
-	$(CC) $(SANFLAGS) -Isrc tests/test_bwt.c $(BWTSRC) -o $@ -lpthread
+	$(CC) $(SANFLAGS) $(NATDEF) -Isrc tests/test_bwt.c $(BWTSRC) $(NATASM) -o $@ -lpthread
 # Kolmo's own coders (codecs 24, 27-29, src/algo/k*.c): round trips, corrupt payloads under ASan/UBSan, pinned hash
 # values; then every mode through the CLI with KOLMO_NATIVE=all and all,strong (native lane, rc3 wave 2).
 # khuf's decode loop has an assembly kernel (src/arch/<isa>/khuf_<isa>.S); without it (NO_ASM=1, other ISAs) the C loop

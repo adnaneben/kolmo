@@ -195,7 +195,9 @@ on large chunks and `hc` codes every leaf several times).
   `eco`, `hc`, `-x -l 1`, `--native-leaf`; image.u8 at default, `hc`, `--native-leaf`: their Huffman leaves); with
   `KOLMO_NATIVE=libhuf` all nine hash as before, so the Huffman coder is the only change; those 9 lines of
   `expected.sha256` were regenerated. 1- and 4-thread frames are identical.
-- TESTS_PLACEHOLDER
+- `make check`, `make check-rc`, `make check-sanitizers`, `make experimental-check GPU_CHECK=`, `make kfam-check`
+  and `benchmark/determinism/check.py` (122 frames OK) pass on the final code; a `make NO_ASM=1` build passes
+  test-asm/test-native/test-bwt and writes the same frames as the assembly build (checked at `balanced`, `hc`, `ratio`).
 
 ## Not done, next steps
 
