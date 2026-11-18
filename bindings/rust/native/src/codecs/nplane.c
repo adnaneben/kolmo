@@ -134,7 +134,7 @@ static size_t np_compress(codec_ctx *x, const uint8_t *s, size_t n, int np, uint
         for (size_t i = 1; i < L; i++) if (p[i] != p[0]) { con = 0; break; }
         if (con) { if (o + 2 > cap) goto done; out[o++] = 'c'; out[o++] = p[0]; continue; }
         char bt = 's'; size_t bl = L, bcost = 1 + L, cc = L + L / 8 + 4096;
-        size_t h = codec_compress(x, C_HUF, 0, p, L, cand, cc);
+        size_t h = huf_compress_all(p, L, cand, cc);   /* zstd's HUF, always: the 'h' tag is decoded as codec 13 */
         if (h && 1 + np_uvlen(h) + h < bcost) { memcpy(best, cand, h); bt = 'h'; bl = h; bcost = 1 + np_uvlen(h) + h; }
         size_t r = codec_compress(x, C_RANS, 0, p, L, cand, cc);
         if (r && 1 + np_uvlen(r) + r < bcost) { memcpy(best, cand, r); bt = 'r'; bl = r; bcost = 1 + np_uvlen(r) + r; }

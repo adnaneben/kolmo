@@ -287,7 +287,11 @@ static void test_frames(void) {
 }
 
 int main(void) {
+#if defined(KOLMO_WD_AVX2)
+    printf("kernels: %s\n", kolmo_have_avx2() ? "AVX2 word decoder" : "none (C references only)");
+#else
     printf("kernels: %s\n", KOLMO_NEON ? "NEON" : "none (C references only)");
+#endif
     test_frames();
     test_table();
     test_intinv();

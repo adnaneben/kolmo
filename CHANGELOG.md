@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased (rc3 wave 3, decmap lane: `claude/rc3w3-decmap-20261118`)
+
+Decode maps: prebuilt decoder tables stored in the frame were measured and rejected (Huffman tables cost 4-8 KiB per
+block for at most 8% of decode; more inverse-BWT sample points stay inside the noise; GR6+ and CM searches are under
+5% of their decoders). Three decoder-only changes are kept. No format change, no frame changes. Measurements in
+`benchmark/rc3w3/decmap/RESULTS.md`.
+
+### Changed
+- **x86 AVX2 word-transform decoder** (`src/arch/x86_64/word_avx2.c`, chosen by CPUID; the counterpart of the NEON
+  kernel): text `eco`/`hc` decode +14.8% (1 thread) / +12.1% (4 threads), JSON +13.7% / +12.1% on the VM.
+- **khuf (codec 27) builds one decode table instead of two**, with bit reversal from a constant table: khuf decode
+  +7.6% to +8.9% on Silesia; the fixed cost of a 4 KiB block drops by 20%.
+- **KLZH (codec 29) checks its codes in one pass and refills the bit buffer only when needed**: decode +10% to +17%.
+  With `KOLMO_NATIVE=all`, `balanced`/`eco`/`hc` frames decode +16.3% (1 thread) / +14.2% (4 threads) faster.
+
 ## Unreleased (rc3 wave 2, regress lane: `claude/rc3w2-regress-20261117`)
 
 Fixes for the regressions of rc3 against rc2 measured on the Apple M5 (`benchmark/rc3/mac/RESULTS.md`). Measurements
