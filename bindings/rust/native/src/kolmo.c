@@ -40,6 +40,7 @@ int kolmo_force_c;
 #include "transforms/table_v03.c"
 #include "plan/tunables.h"
 #include "plan/detect.c"
+#include "algo/texttype.c"         /* kinds of text (markup, JSON, logs, code, ...) for the per-kind CM priors */
 #include "plan/meta.c"              /* structure read from the input's own headers (docs/METADATA.md) */
 #include "codecs/codec.h"
 

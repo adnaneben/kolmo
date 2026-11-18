@@ -63,7 +63,7 @@ BLIBS   := $(LIBS)
 # this machine's ISA, src/arch/<isa>/*.S (NO_ASM=1 drops them and builds the C references only). The GPU
 # worker of the rc3 gpu lane is not built (see below).
 LIBDIRS := api core plan transforms codecs algo arch arch/x86_64 arch/aarch64
-KOLMO_INCLUDES := src/kolmo.h $(foreach d,$(LIBDIRS),$(wildcard src/$(d)/*.c src/$(d)/*.h)) src/plan/target_table.inc src/codecs/cm_prior.inc
+KOLMO_INCLUDES := src/kolmo.h $(foreach d,$(LIBDIRS),$(wildcard src/$(d)/*.c src/$(d)/*.h)) src/plan/target_table.inc src/codecs/cm_prior.inc src/codecs/cm_kprior.inc
 ifeq ($(UNAME_M),x86_64)
 ASM_ISA := x86_64
 else ifneq ($(filter arm64 aarch64,$(UNAME_M)),)
@@ -199,6 +199,10 @@ build/test-cmpar-asan: tests/test_cmpar.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUD
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmpar.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
 check-cmpar: build/test-cmpar-asan
 	./build/test-cmpar-asan
+build/test-priors-asan: tests/test_priors.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_priors.c build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+check-priors: build/test-priors-asan
+	./build/test-priors-asan
 # Opt-in --typed-huf route (ported from the RC1 integration, PR #10): round trips, header parsing, and agreement of
 # the typed route's predictor choice with the graph planner's.
 build/test-rc-options: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
@@ -320,8 +324,8 @@ check-memdyn: build/test-memdyn build/test-memdyn-asan
 	./build/test-memdyn
 	./build/test-memdyn-asan --quick
 .PHONY: check-memdyn
-check-rc: check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
-.PHONY: check-meta check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-fqfam check-dispatch check-asm check-arch check-format2
+check-rc: check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-priors check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
+.PHONY: check-meta check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-priors check-fqfam check-dispatch check-asm check-arch check-format2
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan

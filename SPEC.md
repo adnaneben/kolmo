@@ -244,6 +244,17 @@ bytes 37-40). A plan prefix byte `a` other than 0 or 1 is rejected.
 | 1, 2, 3 with exact logistic tables | `f` = 8, then one byte whose high nibble is 5, 6 or 7 (model 1, 2, 3) | every `ultra` stream under 2^28 bytes, from 1.2.0-rc2 | 1.2.0-rc2 |
 | image model with exact logistic tables | block codec 17, bit 7 of the channel byte | `ultra`, 8-bit images, from 1.2.0-rc2 | 1.2.0-rc2 |
 | 2, 3 with learning settings and the shared prior | `f` = 8, then one byte whose high nibble is 14 or 15 (model 2, 3), then three bytes | `ultra` streams of codec 7 and 25, and codec 7 graph leaves (`-x -l 2`), from rc3; the frame is version 11 | rc3 |
+| 3 with a per-kind prior; 4 (model 3 and two token-shape contexts) | as the row above with nibble 15; the third byte (prior byte) is the prior id in its low 7 bits and the model in bit 7 | `ultra` codec 7 blocks of text, from rc3 wave 3; version 11 | rc3 |
+
+The three bytes after a nibble 14 or 15 are the learning settings (bytes 0 and 1, `src/codecs/cm.c`, `cm_tune_t`) and the
+prior byte. Prior id (low 7 bits): 0 every mixer weight 1/4; 1 the shared prior of the model (`cm_prior.inc`); 2 to 9 the
+prior of a kind of text, 2 + k - 1 for kind k of `src/algo/texttype.c` (1 markup, 2 JSON, 3 delimited table, 4 log, 5 C,
+6 Python, 7 JavaScript, 8 prose; kind 9, SQL dumps, has no prior and uses 1), the blobs of `src/codecs/cm_kprior.inc` (model-3 layout; the weights of model
+4's two extra models start at 1/4 and its other inputs move after them). Bit 7 set: model 4, allowed with nibble 15 only;
+model 4 adds two hashed contexts to model 3: the classes of the last 8 tokens with the position in the current token,
+and the token index with the two bytes at the same place of the same token of the line before (a token is a run of
+digits, of letters, of spaces, or one punctuation byte). A per-kind prior with model 2, or a prior id above 9, is
+rejected. The prior a writer chooses depends on the stream's bytes only (`text_kind`).
 
 The exact logistic tables use the logistic curve round(4096 / (1 + e^(-x/256))) at every x in [-2048, 2047] instead of the
 33 interpolated knots of the earlier models; stretch is its inverse (the smallest x whose squash reaches p). Readers before
