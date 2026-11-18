@@ -139,7 +139,8 @@ static int ktf_forward_g(const uint8_t *src, size_t n, int w, size_t h, ktf_prog
 
 static size_t ktf_wrap(const uint8_t *src, size_t n, int w, size_t h, const uint8_t *pay, size_t pn, uint8_t *dst) {
     uint8_t *e = dst + HDR, *p = dst + HDR + IDX;
-    memcpy(dst, "CZN1", 4); dst[4] = 7; dst[5] = (uint8_t)KOLMO_FAST; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = 0; dst[11] = 0;
+    memcpy(dst, "CZN1", 4); dst[4] = 7; dst[5] = (uint8_t)KOLMO_FAST; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = 0;
+    dst[11] = kmem_code(blk_dec_need(C_GRAPH, 0, n, NULL, 0, 7, 0));   /* decode working set (graph block, no CM leaves) */
     put64(dst + 12, n); put32(dst + 20, 1); put32(dst + 24, (uint32_t)n);
     p[0] = T_KG; p[1] = 0; p[2] = (uint8_t)w; p[3] = (uint8_t)(h < 255 ? h : 255); memmove(p + 4, pay, pn);
     put32(e, (uint32_t)n); put32(e + 4, (uint32_t)(pn + 4)); put32(e + 8, blk_sum(3, src, n)); e[12] = C_GRAPH; e[13] = 0; e[14] = e[15] = 0;

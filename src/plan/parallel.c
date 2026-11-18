@@ -1,8 +1,13 @@
 /* Planning of segments (archive members) on the pool, and ultra's check of the text transforms. */
 /* ultra: the context-mixing coder models text, logs and CSV directly (column and word contexts), so a text transform is
  * kept only if CM on a 1 MiB transformed sample beats CM on the raw sample */
-typedef struct { const uint8_t *in; size_t n; uint8_t *out; size_t cap, res; } ukt_arg;
-static void *ukt_main(void *a) { ukt_arg *u = a; u->res = cm_compress(u->in, u->n, u->out, u->cap); return NULL; }
+typedef struct { const uint8_t *in; size_t n; uint8_t *out; size_t cap, res; kmem_ctx ctx; uint64_t resv; } ukt_arg;
+/* the helper releases its own reservation as soon as it is done: its parent may be waiting for that memory */
+static void *ukt_main(void *a) {
+    ukt_arg *u = a; kmem_ctx_set(u->ctx); kmem_tls_job = 1;
+    u->res = cm_compress(u->in, u->n, u->out, u->cap);
+    kmem_tls_job = 0; kmem_release(u->resv); return NULL;
+}
 /* ultra, a table (codec 25): the sample's columns, each coded by its own context-mixing model (model 2, model 1 at
  * level 1), as the block coder will code them. Returns the payload size plus the column sizes the frame carries, 0 if
  * the transpose does not apply. */
@@ -24,8 +29,8 @@ static size_t ultra_columns(const uint8_t *s, size_t m, const plan_t *pl, int th
     free(t);
     return r;
 }
-typedef struct { const uint8_t *s; size_t m; const plan_t *pl; int threads, level; uint8_t *z; size_t zn, res; } ukc_arg;
-static void *ukc_main(void *a) { ukc_arg *u = a; u->res = ultra_columns(u->s, u->m, u->pl, u->threads, u->level, &u->z, &u->zn); return NULL; }
+typedef struct { const uint8_t *s; size_t m; const plan_t *pl; int threads, level; uint8_t *z; size_t zn, res; kmem_ctx ctx; } ukc_arg;
+static void *ukc_main(void *a) { ukc_arg *u = a; kmem_ctx_set(u->ctx); u->res = ultra_columns(u->s, u->m, u->pl, u->threads, u->level, &u->z, &u->zn); return NULL; }
 
 /* ultra: the context-mixing coder models text, logs and CSV directly (column and word contexts), so a text transform is
  * kept only if CM on a 1 MiB transformed sample beats CM on the raw sample. A table (table or transpose plan) is also
@@ -46,9 +51,13 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, plan_t *pl, int thre
     int keep = 1;
     if (tn > 0 || cols) {
         /* the samples are coded on separate threads when there are threads to spare (same results) */
-        uint8_t *z2 = threads > 1 ? malloc(m + m / 8 + 64) : NULL; pthread_t th, tc; ukt_arg u = {s, m, z2, m + m / 8 + 64, 0};
-        ukc_arg c = {s, m, pl, threads > 2 ? threads - 2 : 1, level, NULL, 0, 0};
+        /* the second sample is optional work: it starts only when the governor grants its tables now */
+        uint64_t un = cm_need_bound(m) + m + 8;
+        int ures = threads > 1 && kmem_try_reserve(un, kmem_tls_cap);
+        uint8_t *z2 = ures ? malloc(m + m / 8 + 64) : NULL; pthread_t th, tc; ukt_arg u = {s, m, z2, m + m / 8 + 64, 0, kmem_ctx_get(), un};
+        ukc_arg c = {s, m, pl, threads > 2 ? threads - 2 : 1, level, NULL, 0, 0, kmem_ctx_get()};
         int par = z2 && !pthread_create(&th, NULL, ukt_main, &u), parc = cols && threads > 2 && !pthread_create(&tc, NULL, ukc_main, &c);
+        if (ures && !par) { kmem_release(un); ures = 0; }
         size_t a = tn > 0 ? cm_compress(t, (size_t)tn, z, m + m / 8 + 64) : 0, b;
         if (par) { pthread_join(th, NULL); b = u.res; } else b = cm_compress(s, m, z, m + m / 8 + 64);
         if (cols) { if (parc) pthread_join(tc, NULL); else ukc_main(&c); }
@@ -73,6 +82,7 @@ typedef struct {
     plan_t *plans; const kolmo_params *params;
     uint32_t count; int threads_per_plan, allow_frontier, member_fd, native_leaf; atomic_uint next;
     const struct kolmo_profile *prof;   /* trained profile: its pinned plans replace the analysis where they match */
+    uint64_t xcap;                      /* the call's explicit memory cap (0: none): -x samples size tables with it */
 } plan_job;
 static int kp_plan_pinned(const struct kolmo_profile *P, const uint8_t *s, size_t n, const kolmo_params *p, plan_t *out);
 /* The analysis of one member, as plan_worker runs it (also used by kolmo train to record the plans it pins). */
@@ -83,6 +93,7 @@ static plan_t plan_for(const uint8_t *src, size_t len, const kolmo_params *p, in
 }
 static void *plan_worker(void *arg) {
     plan_job *j = arg; const kolmo_params *p = j->params;
+    kmem_tls_cap = j->xcap;                                  /* -x samples size their tables as the blocks will */
     long page_size = j->member_fd >= 0 ? sysconf(_SC_PAGESIZE) : 0;
     for (;;) {
         uint32_t g = atomic_fetch_add(&j->next, 1); if (g >= j->count) break;
@@ -146,6 +157,7 @@ static void *plan_worker(void *arg) {
         j->plans[g] = pl;
         if (member != MAP_FAILED) munmap(member, mapped);
     }
+    kmem_tls_cap = 0;
     zs_trim();
     return NULL;
 }

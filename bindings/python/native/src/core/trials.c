@@ -21,25 +21,34 @@ typedef struct {
     pthread_t th; int started, codec, level, fq_threads;
     const uint8_t *in; size_t n, cap, res;
     uint8_t *out;                                    /* codec trials: their own output buffer; family coder: its frame */
+    uint64_t resv; kmem_ctx ctx;                     /* the trial's reservation with the governor, the call's cap */
 } xtrial_t;
 static void *xtrial_main(void *a) {
     xtrial_t *t = a;
+    kmem_ctx_set(t->ctx); kmem_tls_job = 1;          /* covered by the trial's own reservation */
     if (t->codec == C_FQ) { t->out = kf_fastq_compress(t->in, t->n, t->fq_threads, kf_chunk_for(t->n), KF_BCHUNK, &t->res); if (!t->out) t->res = 0; }
     else {
         codec_ctx x; memset(&x, 0, sizeof x);
         t->res = t->out ? codec_compress(&x, t->codec, t->level, t->in, t->n, t->out, t->cap) : 0;
         codec_ctx_free(&x);
     }
+    kmem_tls_job = 0;
+    if (t->resv) kmem_release(t->resv);             /* released by the trial itself, as soon as it is done */
     return NULL;
 }
-/* starts a trial on its own thread (inline if no thread can be made); codec C_FQ runs the family coder */
+/* Starts a trial on its own thread when the governor grants its working set now (optional work); otherwise, or if no
+ * thread can be made, nothing starts and xtrial_take misses, so the caller codes it inline after its main coder, with
+ * the same result. Codec C_FQ runs the family coder. */
 static void xtrial_start(xtrial_t *t, int codec, int level, const uint8_t *in, size_t n, size_t cap, int fq_threads) {
     memset(t, 0, sizeof *t);
-    t->codec = codec; t->level = level; t->in = in; t->n = n; t->cap = cap; t->fq_threads = fq_threads;
+    uint64_t need = kmem_enc_trial(codec, level, n, cap);
+    if (!kmem_try_reserve(need, kmem_tls_cap)) return;
+    t->codec = codec; t->level = level; t->in = in; t->n = n; t->cap = cap; t->fq_threads = fq_threads; t->resv = need; t->ctx = kmem_ctx_get();
     if (codec != C_FQ) t->out = malloc(cap ? cap : 1);
-    if (pthread_create(&t->th, NULL, xtrial_main, t)) xtrial_main(t); else t->started = 1;
+    if (pthread_create(&t->th, NULL, xtrial_main, t)) { kmem_release(need); t->resv = 0; t->codec = 0; free(t->out); t->out = NULL; }
+    else t->started = 1;
 }
-static void xtrial_join(xtrial_t *t) { if (t->started) { pthread_join(t->th, NULL); t->started = 0; } }
+static void xtrial_join(xtrial_t *t) { if (t->started) { pthread_join(t->th, NULL); t->started = 0; t->resv = 0; } }
 /* the trial's result if it coded exactly (codec, in, n), else 0 with *hit = 0 (the caller codes inline) */
 static size_t xtrial_take(xtrial_t *t, int codec, const uint8_t *in, size_t n, int *hit) {
     *hit = 0;

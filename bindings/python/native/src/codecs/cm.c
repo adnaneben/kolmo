@@ -156,24 +156,25 @@ typedef struct {
 
 static inline uint32_t cm_hmix(uint32_t a) { a ^= a >> 15; a *= 0x2C1B3C6Du; a ^= a >> 12; a *= 0x297A2D39u; a ^= a >> 15; return a; }
 
-/* Concurrent coders share a memory budget (60% of physical memory), so parallel blocks wait instead of swapping.
- * A coder larger than the whole budget still runs when it is alone. */
-static pthread_mutex_t cm_mu = PTHREAD_MUTEX_INITIALIZER; static pthread_cond_t cm_cv = PTHREAD_COND_INITIALIZER;
-static size_t cm_used, cm_budget;
-static void cm_acquire(size_t b) {
-    pthread_mutex_lock(&cm_mu);
-    if (!cm_budget) {
-        long pg = sysconf(_SC_PHYS_PAGES), ps = sysconf(_SC_PAGE_SIZE);
-        cm_budget = (pg > 0 && ps > 0) ? (size_t)((double)pg * (double)ps * 0.6) : ((size_t)4 << 30);
-    }
-#ifdef KOLMO_CM_COMPACT
-    while (cm_used && (b > cm_budget || cm_used > cm_budget - b)) pthread_cond_wait(&cm_cv, &cm_mu);
-#else
-    while (cm_used && cm_used + b > cm_budget) pthread_cond_wait(&cm_cv, &cm_mu);
+/* Memory: a model reserves its tables with the governor (core/memory.c) unless the thread is inside a unit of work
+ * whose reservation already covers it (a block job, a trial, a part). Concurrent coders then wait instead of swapping;
+ * a coder larger than the whole budget still runs when it is alone. When decoding, a model larger than the frame
+ * declares (header byte 11) is refused before anything is allocated. */
+#ifndef KMEM_SAMPLE_NS   /* built on its own (tests/test_cm_compact.c): no governor */
+#include <stdatomic.h>
+#define KMEM_UNLIMITED UINT64_MAX
+static _Thread_local int kmem_tls_job; static _Thread_local uint64_t kmem_tls_cap, kmem_tls_dec_limit; static _Thread_local size_t kmem_tls_raw;
+static size_t cm_used;   /* bytes the models hold (tests/test_cm_compact.c checks it returns to 0) */
+static void kmem_reserve(uint64_t b, uint64_t cap) { (void)cap; cm_used += b; }
+static void kmem_release(uint64_t b) { cm_used -= b; }
+static uint64_t kmem_buffers(uint64_t raw) { return 2 * raw + ((uint64_t)1 << 20); }
 #endif
-    cm_used += b; pthread_mutex_unlock(&cm_mu);
+static atomic_long cm_models_made;   /* models allocated (tests: a refused model is never allocated) */
+static size_t cm_acquire(size_t b) {
+    if (kmem_tls_job) return 0;
+    kmem_reserve(b, kmem_tls_cap); return b;
 }
-static void cm_release(size_t b) { pthread_mutex_lock(&cm_mu); cm_used -= b; pthread_cond_broadcast(&cm_cv); pthread_mutex_unlock(&cm_mu); }
+static void cm_release(size_t b) { if (b) kmem_release(b); }
 /* Hash-table size for an n-byte stream: 1 bucket per byte, between 2^16 and 2^22 per model (3.8 GB at most). */
 #ifndef CM_BB_MAX
 #define CM_BB_MAX 22
@@ -198,11 +199,13 @@ static size_t cm_mem_for(int bb, int v2) {
 #endif
 }
 
-/* Table sizing (encoder; the stream header carries the bits, so the decoder needs exactly what the encoder chose):
- * 0 (default): one bucket per input byte, 2^16 to 2^CM_BB_MAX per model; 16..22: that, capped at 2^bits;
- * -1 ("scaled", docs/MEMORY-MODEL.md): the largest size whose tables stay within 16 times the block (2^16 at least).
- * Opt-in through kolmo_set_x_tables() (CLI --x-tables) until the memory model is approved. */
-static int cm_tables_mode;
+/* Table sizing (encoder; the stream header carries the bits, so the decoder needs exactly what the encoder chose).
+ * A format decision: it depends on the stream's length, this setting and the call's explicit memory cap only, never on
+ * the memory free at the time (docs/MEMORY-MODEL.md, "memory changes speed, never bytes").
+ * -1 ("scaled", the default from rc3): the largest size whose tables stay within 16 times the stream (2^16 at least);
+ * 0 ("full", rc2's sizing): one bucket per input byte, 2^16 to 2^CM_BB_MAX per model; 16..22: full, capped at 2^bits.
+ * Then, with an explicit cap (kmem_tls_cap), the largest size whose decode working set fits the cap (2^16 at least). */
+static int cm_tables_mode = -1;
 int kolmo_set_x_tables(int mode) {
     if (mode != 0 && mode != -1 && (mode < 16 || mode > CM_BB_MAX)) return -1;
     __atomic_store_n(&cm_tables_mode, mode, __ATOMIC_RELAXED); return 0;
@@ -211,6 +214,11 @@ static int cm_bits_for(size_t n) {
     const int mode = __atomic_load_n(&cm_tables_mode, __ATOMIC_RELAXED), cap = mode >= 16 ? mode : CM_BB_MAX;
     int b = 16; while (b < cap && ((size_t)1 << b) < n) b++;
     if (mode == -1) while (b > 16 && cm_mem_for(b, 3) > 16 * (n + ((size_t)1 << 20))) b--;
+    if (kmem_tls_cap && kmem_tls_cap != KMEM_UNLIMITED) {
+        size_t raw = kmem_tls_raw > n ? kmem_tls_raw : n;
+        uint64_t fixed = kmem_buffers(raw) + 4 * ((uint64_t)n + 8);   /* the block's buffers and model 3's match chain */
+        while (b > 16 && cm_mem_for(b, 3) + fixed > kmem_tls_cap) b--;
+    }
     return b;
 }
 
@@ -272,11 +280,14 @@ static size_t cm_build_byte_table(uint32_t map[CM_BYTE_VALUES][CM_NIBBLES], int 
 
 static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain, int lx) {   /* lx: exact logistic tables */   /* chain: bytes for model 3's match chain (4 per input byte) */
     pthread_once(&cm_once, cm_init_tables);
-    size_t mem = cm_mem_for(bb, v2) + chain; cm_acquire(mem);
-    cm_t *m = calloc(1, sizeof(cm_t)); if (!m) { cm_release(mem); return NULL; }
+    size_t mem = cm_mem_for(bb, v2) + chain;
+    if (kmem_tls_dec_limit && mem > kmem_tls_dec_limit) return NULL;   /* decoding: more than the frame declares */
+    size_t resv = cm_acquire(mem);
+    atomic_fetch_add_explicit(&cm_models_made, 1, memory_order_relaxed);
+    cm_t *m = calloc(1, sizeof(cm_t)); if (!m) { cm_release(resv); return NULL; }
     int nm = CM_NMOD(v2);
     m->kk = kolmo_kernels_get();
-    m->sh = 32 - bb; m->mem = mem; m->v2 = v2; m->sq = lx ? cm_sqx : cm_sq; m->st = lx ? cm_stx : cm_st;
+    m->sh = 32 - bb; m->mem = resv; m->v2 = v2; m->sq = lx ? cm_sqx : cm_sq; m->st = lx ? cm_stx : cm_st;
     m->tb = sizeof(cm_bucket) << bb;
     for (int i = 1; i < nm; i++) {                            /* the model-2 contexts (16+) have fewer distinct values */
         int b = i >= CM_NM && bb > 18 ? bb - CM_SMALL - (i >= CM_NM3 - 5) : bb;   /* model 2 and 3 contexts: half; structure contexts: a quarter */
@@ -312,7 +323,7 @@ static cm_t *cm_new_x(uint8_t *buf, int bb, int v2, size_t chain, int lx) {   /*
     if (chain) { m->mprev_n = chain; m->mprev = cm_big(chain); if (!m->mprev) goto fail; }
     return m;
 fail:
-    cm_free_parts(m); cm_release(mem); return NULL;
+    cm_free_parts(m); cm_release(resv); return NULL;
 }
 static cm_t *cm_new(uint8_t *buf, int bb, int v2) { return cm_new_x(buf, bb, v2, 0, 0); }
 static void cm_free(cm_t *m) {
@@ -798,6 +809,27 @@ static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     cm_free(m);
     return 0;
 }
+
+/* The decode working set of a codec-7 stream of n bytes (tables and model 3's match chain), from its header; 0 when the
+ * header is not one cm_decompress accepts. The encoder declares it in the frame (core/blocks.c, blk_dec_need) and the
+ * decoder reserves it per block. */
+static uint64_t cm_stream_need(const uint8_t *in, size_t cn, size_t n) {
+    if (cn < 8) return 0;
+    uint32_t n32; memcpy(&n32, in, 4);
+    int bb = CM_BB, v2 = 0;
+    if (n < ((size_t)1 << 28)) {
+        uint32_t f = n32 >> 28;
+        if (f == 8) {
+            int mb = cn < 9 ? 0 : in[4] >> 4;
+            if (mb != 3 && mb != 5 && mb != 6 && mb != 7) return 0;
+            v2 = (mb & 3) == 3 ? 3 : (mb & 3) == 2 ? 1 : 0; bb = (in[4] & 15) + 15;
+        } else if (f) { bb = (int)(f & 7) + 15; v2 = (int)(f >> 3); }
+    }
+    if (bb < 16 || bb > 22) return 0;
+    return cm_mem_for(bb, v2) + (v2 == 3 ? ((uint64_t)n + 8) * 4 : 0);
+}
+/* the largest decode working set a codec-7 stream of n bytes can have under the current sizing rules (graph leaves) */
+static uint64_t cm_need_bound(size_t n) { int bb = n < ((size_t)1 << 28) ? cm_bits_for(n) : CM_BB; return cm_mem_for(bb, 3) + ((uint64_t)n + 8) * 4; }
 
 /* Codec 7 table (kolmo builds only: tests/test_cm_compact.c includes this file on its own). Model 3 where it gains: text. */
 #ifdef KOLMO_CODEC_REGISTRY

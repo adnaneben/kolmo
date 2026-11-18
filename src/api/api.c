@@ -68,6 +68,29 @@ int kolmo__block_column(const uint8_t *src, size_t n, uint32_t i, int col, uint8
     return 0;
 }
 
+/* ------------------------------------------------------------------ memory limits (docs/MEMORY-MODEL.md) */
+int kolmo_mem_parse(const char *s, uint64_t *out) { uint64_t v; if (!out || kmem_parse_size(s, &v)) return -1; *out = v; return 0; }
+uint64_t kolmo_mem_floor(kolmo_mode mode) { return kmem_floor((int)mode); }
+uint64_t kolmo_mem_auto(void) { return kmem_limit_of(0); }
+int kolmo_check_frame(const uint8_t *src, size_t n, const kolmo_decode_limits *limits) {
+    if (n >= 4 && !memcmp(src, "CZC1", 4)) return 0;              /* compact profile frame: checked when decoded */
+    parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
+    uint64_t maxraw = 0; for (uint32_t i = 0; i < P.nb; i++) if (P.roff[i + 1] - P.roff[i] > maxraw) maxraw = P.roff[i + 1] - P.roff[i];
+    r = frame_admit(&P, maxraw, kmem_limit_of(limits ? limits->max_memory : 0));
+    free(P.poff); free(P.roff); return r;
+}
+void kolmo_set_memlimit(uint64_t limit) { atomic_store_explicit(&kmem_default_limit, limit, memory_order_relaxed); }
+int64_t kolmo_decode_memory(const uint8_t *src, size_t n) {
+    if (!src || n < HDR || memcmp(src, "CZN1", 4)) return KOLMO_ERR_CORRUPT;
+    uint64_t d = kmem_declared(src[11]);
+    if (d) return (int64_t)d;
+    /* a frame from before rc3: the buffers of its largest block, from the index when it is there */
+    uint32_t nb = get32(src + 20); uint64_t maxraw = 0;
+    if ((uint64_t)nb * IDX + HDR > n) return 0;
+    for (uint32_t i = 0; i < nb; i++) { uint64_t r = get32(src + HDR + (size_t)i * IDX); if (r > maxraw) maxraw = r; }
+    return (int64_t)blk_dec_floor(maxraw);
+}
+
 const char *kolmo_strerror(int64_t c) {
     switch (c) {
         case KOLMO_ERR_CORRUPT: return "corrupt or unsupported input";
@@ -81,6 +104,7 @@ const char *kolmo_strerror(int64_t c) {
         case KOLMO_ERR_LIMIT: return "decoding resource limit exceeded";
         case KOLMO_ERR_PROFILE: return "trained profile required, mismatched or damaged (decode with the profile the file was compressed with)";
         case KOLMO_ERR_TARGET: return "invalid --target or calibration table";
+        case KOLMO_ERR_MEMORY: return "memory limit: the frame needs more memory to decode than the limit, or the limit is below the mode's floor";
     }
     return c >= 0 ? "ok" : "unknown error";
 }

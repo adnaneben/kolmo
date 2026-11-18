@@ -29,7 +29,14 @@ typedef struct {
     int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap
                            structure transforms (images, records, executables, tables), for the fastest settings.
                            May be OR-ed with KOLMO_T_NATIVE_LEAF or KOLMO_T_TYPED_HUF (below). */
+    uint64_t mem_limit; /* memory limit (docs/MEMORY-MODEL.md): 0 = auto (50% of physical memory or of the cgroup's
+                           limit; governs only how much runs at once), KOLMO_MEM_MAX = no limit, otherwise bytes: an
+                           explicit cap, which also sizes the blocks of ratio and -x and the -x model tables so that
+                           the output decodes within the same limit. Below the mode's floor (kolmo_mem_floor) the call
+                           fails with KOLMO_ERR_MEMORY. Free memory never changes the output, only speed and peak. */
 } kolmo_params;
+#define KOLMO_MEM_AUTO 0
+#define KOLMO_MEM_MAX UINT64_MAX
 
 /* Opt-in bit for kolmo_params.transforms (balanced / KOLMO_FAST only; ignored elsewhere): integer-series residuals in
  * graph blocks may use Kolmo's native plane-context leaf coder (Huffman/rANS with byte-plane and context modelling)
@@ -74,13 +81,17 @@ typedef struct {
 #define KOLMO_ERR_PROFILE   (-9)   /* trained profile required, mismatched, or damaged */
 #define KOLMO_ERR_TARGET    (-10)  /* --target expression or calibration table invalid */
 #define KOLMO_ERR_QUERY     (-11)  /* a query names no such column, or its pattern does not compile */
+#define KOLMO_ERR_MEMORY    (-12)  /* the frame needs more memory to decode than the limit, or the limit is below the mode's floor */
 
-/* Zero fields mean no limit. These bound format sizes, not total codec heap
- * memory; a context-mixing block can require much more memory than its bytes. */
+/* Zero fields mean no limit, except max_memory: 0 = auto (50% of physical memory or of the cgroup's limit),
+ * KOLMO_MEM_MAX = none, otherwise bytes. Every frame declares what one block needs to decode (header byte 11); a frame
+ * whose figure exceeds max_memory fails with KOLMO_ERR_MEMORY before anything is allocated (kolmo_decode_memory gives
+ * the figure). Within it, fewer blocks decode at once when memory is short. Calls without limits use auto. */
 typedef struct {
     uint64_t max_output_bytes;
     uint32_t max_block_bytes;
     uint32_t max_blocks;
+    uint64_t max_memory;
 } kolmo_decode_limits;
 
 size_t  kolmo_bound(size_t n, const kolmo_params *p);
@@ -110,11 +121,28 @@ int64_t kolmo_compress_file(int input_fd, int output_fd, size_t n, const kolmo_p
                           const void *dict, size_t dictlen);
 int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads,
                             const void *dict, size_t dictlen);
-/* Experimental (rc3, until the memory model of docs/MEMORY-MODEL.md is approved): how ultra (-x) sizes its
- * context-mixing tables, process-wide. 0 = default (one bucket per input byte, up to 2^22 per model, about 5.4 GiB
- * from 4 MiB blocks up); 16..22 = that, capped at 2^mode buckets per model; -1 = scaled: tables within about 16 times
- * the block. Affects encoding only (the decoder allocates what the stream declares). Returns 0, or -1 for a bad mode. */
+/* How ultra (-x) sizes its context-mixing tables, process-wide (docs/MEMORY-MODEL.md). -1 = scaled, the default from
+ * rc3: tables within about 16 times the stream; 0 = full (rc2's sizing: one bucket per input byte, up to 2^22 per model,
+ * about 5.4 GiB from 4 MiB blocks up); 16..22 = full, capped at 2^mode buckets per model. An explicit
+ * kolmo_params.mem_limit shrinks them further to fit. Affects encoding only (the decoder allocates what the stream
+ * declares). Returns 0, or -1 for a bad mode. */
 int kolmo_set_x_tables(int mode);
+/* Memory limits (docs/MEMORY-MODEL.md). kolmo_mem_parse: "512M", "8G", "50%" (of physical memory), "auto" (0) or "max"
+ * (KOLMO_MEM_MAX) into *out; 0 or -1. kolmo_mem_floor: the least a mode accepts as an explicit limit.
+ * kolmo_decode_memory: the bytes one block of the frame needs to decode, as its header declares (0 for frames that
+ * declare nothing, written before rc3), or a negative error. */
+int      kolmo_mem_parse(const char *s, uint64_t *out);
+uint64_t kolmo_mem_floor(kolmo_mode mode);
+uint64_t kolmo_mem_auto(void);
+int64_t  kolmo_decode_memory(const uint8_t *src, size_t n);
+/* What auto (0) means in this process: the limit of decoders called without limits (or with max_memory 0) and of the
+ * governor of encoders whose mem_limit is 0. 0 restores 50% of the machine. Never changes output: only an explicit
+ * kolmo_params.mem_limit is a format decision. */
+void     kolmo_set_memlimit(uint64_t limit);
+/* Checks a CZN1 frame before the caller allocates its output: header and index checksum, block sizes adding up to the
+ * claimed original size, payloads inside the frame, the decode figure against the limit (limits may be NULL: auto).
+ * 0, or KOLMO_ERR_CORRUPT, KOLMO_ERR_CHECKSUM, KOLMO_ERR_LIMIT or KOLMO_ERR_MEMORY. */
+int      kolmo_check_frame(const uint8_t *src, size_t n, const kolmo_decode_limits *limits);
 const char *kolmo_strerror(int64_t code);
 /* GPU worker (macOS builds with Metal): 1 lets the GPU code blocks beside the CPU threads in the modes that block-sort
  * (ratio, -x) when a file has more blocks than threads; 0 (the default) is CPU only. The output is the same bytes

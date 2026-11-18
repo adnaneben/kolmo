@@ -301,12 +301,13 @@ const char *kolmo_target_setting_name(int setting) { return setting >= 0 && sett
  * checksums over decoded bytes (a speed-mode frame checksums its stored bytes; those entries are recomputed). */
 static int64_t kt_merge(uint8_t *const *fr, const size_t *fl, uint32_t k, const uint8_t *src, const uint64_t *starts,
                         uint8_t *dst, size_t cap, const struct kolmo_profile *prof, const int *chosen) {
-    uint64_t nb = 0, pay = 0; int ver = 3, psum_all = 1; uint32_t B = 0; int modes[6] = {0};
+    uint64_t nb = 0, pay = 0; int ver = 3, psum_all = 1; uint32_t B = 0; int modes[6] = {0}; uint8_t memd = 0;
     for (uint32_t c = 0; c < k; c++) {
         const uint8_t *f = fr[c]; uint32_t m = get32(f + 20);
         if (fl[c] < HDR || memcmp(f, "CZN1", 4) || (uint64_t)m * IDX + HDR > fl[c]) return KOLMO_ERR_CORRUPT;
         nb += m; pay += fl[c] - HDR - (size_t)m * IDX;
         if (f[4] > ver) ver = f[4];
+        if (f[11] > memd) memd = f[11];                    /* the largest chunk's decode working set (header byte 11) */
         psum_all &= f[10] & 1;
         if (get32(f + 24) > B) B = get32(f + 24);
         modes[f[5] <= 5 ? f[5] : 1] += (int)chosen[c] >= 0;
@@ -330,7 +331,7 @@ static int64_t kt_merge(uint8_t *const *fr, const size_t *fl, uint32_t k, const 
     }
     int mode = 0; for (int i = 1; i < 6; i++) if (modes[i] > modes[mode]) mode = i;
     memcpy(dst, "CZN1", 4); dst[4] = (uint8_t)ver; dst[5] = (uint8_t)mode; memset(dst + 6, 0, 6);
-    dst[10] = (uint8_t)psum_all;
+    dst[10] = (uint8_t)psum_all; dst[11] = memd;
     if (prof) { dst[10] |= 4; put32(dst + 6, kp_id(prof)); if (dst[4] < 11) dst[4] = 11; }
     put64(dst + 12, starts[k] - starts[0]); put32(dst + 20, (uint32_t)nb); put32(dst + 24, B);
     uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);

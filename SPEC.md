@@ -31,15 +31,16 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | 8 | 1 | b | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
 | 9 | 1 | c | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
 | 10 | 1 | flags | bit 0 (v3+): block checksums cover the stored payload, not the decoded bytes (set in `rt`). bit 1 (v3+): the zstd-coded blocks were compressed with a dictionary, whose 32-bit id is in bytes 6–9; decoding requires the matching dictionary. bit 2 (v11+): the frame was written with a trained profile, whose 32-bit id is in bytes 6–9; decoding requires that profile (*Profile frames*). Bits 1 and 2 are never both set. Other bits 0 |
-| 11 | 1 | reserved | 0 |
+| 11 | 1 | memd | decode working set per block (rc3, `docs/MEMORY-MODEL.md`): 0 = not declared (frames written before rc3); otherwise the most one block needs to decode is at most 2^(memd/8) MiB, rounded up to the byte (`memd` = 1 is 1.09 MiB, 8 is 2 MiB, 80 is 1 GiB, 255 about 3.8 PiB) |
 | 12 | 8 | orig | original (uncompressed) length in bytes |
 | 20 | 4 | nblocks | number of blocks |
 | 24 | 4 | block | nominal block size in bytes |
 | 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
 
 A reader rejects the file if the magic is wrong, the version is not one it knows (1–11 for this implementation; older
-releases stop earlier, see *Identifiers and versions*), the index does not fit in the file, or the
-header+index CRC does not match. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
+releases stop earlier, see *Identifiers and versions*), the index does not fit in the file, the
+header+index CRC does not match, the raw sizes of the index do not add up to `orig`, a stored block (codec 0) is not
+exactly its raw size plus the 4 plan bytes, or (*Decode working set*, below) a block needs more than `memd` declares. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
 of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `KOLMO_ERR_DICT`; an older
 reader that predates the flag refuses the newer version rather than returning wrong data.
 
@@ -110,6 +111,37 @@ an image model for 8-bit samples: `iw u32 | ih u32 | ich u8` (row width in bytes
 interleaved channels), then a size word as above and the coded bytes. CM output is bit-exact across compilers and
 CPUs (integer-only, `-ffp-contract=off`). `FQFAM` (codec 16) is described in *FASTQ family blocks*, `GR6` (codec 26) in
 *GR6+ blocks*.
+
+## Decode working set (header byte 11)
+
+Every frame rc3 writes declares in `memd` what decoding one block needs, so that a reader knows the figure before it
+allocates anything (rule 1 of `docs/MEMORY-MODEL.md`). The figure of block *i* is a function of its index entry and
+the head of its payload, the same on both sides (`blk_dec_need`, `src/core/memneed.c`):
+
+- the buffers every block uses: `2 × raw + raw / 8 + 16384 + 1 MiB` (the decoded block, the transform buffer, small state);
+- plus the codec's working set: 0 for stored, LZ4, Huffman and rANS blocks; 2 MiB for zstd; `min(t, 16 MiB) + 2 MiB`
+  for Brotli; the LZMA2 dictionary for `t` bytes (the power of two at or above `t`, 4 KiB to 64 MiB) + 2 MiB; `5 t + 4 MiB`
+  for block sorting (codecs 5 and 18); for context mixing (codecs 7, 17 and each part of 25) exactly the tables its
+  stream header selects plus model 3's match chain (`4 × (t + 8)`), the largest part for codec 25 (parts are decoded as
+  separate units of work); measured bounds for the FASTQ family coder (`4 raw + 32 MiB`), GR6+ (`6 raw + 64 MiB`), audio
+  (`3 raw + 16 MiB`) and graph blocks (`6 raw + 8 MiB`, plus the context-mixing bound of `2 raw + 64 KiB` bytes when the
+  frame's mode is ultra, whose level 2 may code leaves with context mixing);
+
+where `t` is the codec's output (the block, or the transformed block up to `raw + raw / 8 + 16384`). `memd` codes the
+largest figure of the frame, rounded up. A video frame (codec 20) declares the nested frame's figure plus `2 × orig`
+and the layout.
+
+A reader:
+- rejects a frame whose largest block's buffers exceed `memd` (when `memd` is not 0);
+- before decoding, compares `memd` (or, when it is 0, the largest block's buffers) with its memory limit and stops with
+  `KOLMO_ERR_MEMORY` if it does not fit;
+- rejects a block whose figure exceeds `memd`, and a context-mixing stream whose tables exceed it, before allocating
+  them; in a frame without a declaration it holds them to its memory limit instead.
+
+The field needs no version of its own: a reader that ignores it decodes correctly (it only removes checks), so rc3
+writes it in frames of every version it writes, and format 2 (version 11) readers enforce it. The decoded bytes, and
+every other byte of the frame, do not depend on the memory free when it was written (*Memory changes speed, never
+bytes*, `docs/MEMORY-MODEL.md`): `memd` itself is computed from the payloads.
 
 ## Identifiers and versions
 

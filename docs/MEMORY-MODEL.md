@@ -1,7 +1,9 @@
 # Memory model
 
 Status: **approved with the owner's changes of 17 November 2026: the model is dynamic** (section "Dynamic memory",
-below, takes precedence over the static rules where they differ). Being implemented for rc3 (lane `memdyn`).
+below, takes precedence over the static rules where they differ). Implemented for rc3 by the `memdyn` lane (branch
+`claude/rc3w2-memdyn-20261117`); what was built and measured is in the last section, "As implemented", and in
+`benchmark/rc3w2/memdyn/RESULTS.md`.
 
 ## The problem
 
@@ -157,3 +159,19 @@ smaller, not faster; speed comes from concurrency, which is the dynamic part.
   (`KOLMO_MEM_FORCE_BUDGET`); all frames must be identical.
 - A test lowers the budget mid-run and checks that the job count drops and recovers.
 - Peak RSS is measured on the Mac under each budget.
+
+## As implemented (rc3, memdyn lane)
+
+| piece | where | notes |
+|---|---|---|
+| frame declaration | header byte 11 (`memd`, `SPEC.md` *Decode working set*) | 2^(v/8) MiB, rounded up (9% steps); computed per block from the payload by `blk_dec_need` (`src/core/memneed.c`), the largest declared. Exact for context mixing (the tables follow from the stream header), measured bounds elsewhere. No new version: a reader that ignores it decodes correctly. |
+| rule 1 | `src/core/decode.c` (`frame_admit`, `blk_dec_admit`), `src/core/stream.c`, `src/codecs/cm.c` | before any allocation: CRC, index sums, stored blocks exactly their size, the index against `memd`, `memd` against the limit; per block, its figure against `memd`; a CM model above `memd` is refused unallocated (in a frame without `memd`, above the limit). The stream decoder checks each frame whole and decodes it in windows of whole blocks (at least 64 MiB, at most one block per thread), so a claimed size never becomes one allocation. `kolmo_check_frame` gives callers of the buffer API the same check before they allocate the output; the CLI uses it. |
+| rule 2 | `kolmo_params.mem_limit`, `kolmo_decode_limits.max_memory`, `kolmo_set_memlimit`, `-M/--memlimit`, `KOLMO_MEMLIMIT` | `512M`, `8G`, `50%`, `auto` (0: 50% of physical memory or of the cgroup limit, whichever is lower), `max`. Decoding stops with `KOLMO_ERR_MEMORY` and the CLI prints `needs X to decode (limit Y); run with --memlimit NG or --memlimit max`. |
+| encoder under an explicit cap | `kmem_block_for_cap`, `cm_bits_for` | ratio halves its 128 MiB blocks down to 64 MiB, -x down to 1 MiB, until a block's estimate fits; -x tables shrink until the block's decode figure fits. Format decisions from (input, mode, level, cap) only. The "lighter mode" step and `--memlimit-strict` were not built: a cap below the mode's floor is refused (rule 3) instead, which is simpler to reason about and never changes the mode behind the user's back. |
+| rule 3 floors | `kolmo_mem_floor` | speed, balanced 64 MiB; eco, hc 256 MiB; ratio 1 GiB; -x 256 MiB, as proposed. |
+| `-x` tables | `cm_bits_for`, `kolmo_set_x_tables`, `--x-tables` | scaled (about 16× the stream) is the default; `--x-tables=full` restores rc2's sizing (up to 2^22 buckets per model). |
+| governor | `src/core/memory.c` | budget = min(cap, available + what Kolmo holds), re-read at most every 100 ms: Linux `MemAvailable`, cgroup v2 `memory.max`/`memory.current` (v1 `limit_in_bytes`/`usage_in_bytes`), PSI `some avg10` ≥ 10% = pressure; macOS `host_statistics64` free + inactive + purgeable and the `DISPATCH_SOURCE_TYPE_MEMORYPRESSURE` source (warning or critical = pressure). Pressure caps the budget at what is held; growth only after 1 s calm. `KOLMO_MEM_FORCE_BUDGET` replaces the sample. |
+| reservations | `compress_worker`, `decompress_worker`, `core/trials.c`, `codecs/cm_par.c`, `plan/parallel.c` | every block job (encode and decode) reserves its estimate and waits when it does not fit (one always runs); concurrent trials, extra codec-25 parts and the planner's second CM sample are optional work: they start only when their reservation fits now, otherwise the owning thread runs them afterwards, with the same result. A thread inside a reserved job does not reserve again (no nested waits, so no deadlock); helpers release their own reservation when they finish. |
+
+The macOS sampler and pressure source are written against the documented APIs but were built and tested only on Linux
+in this lane; the integration lane builds them on the Mac.

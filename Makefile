@@ -288,7 +288,16 @@ check-features-b: build/test-features-b build/test-features-b-asan build/kolmo
 	./build/test-features-b-asan 7
 	sh tests/test_features_b_cli.sh build/kolmo
 .PHONY: check-features-b
-check-rc: check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
+# The memory model (docs/MEMORY-MODEL.md): frame declaration, governor, budgets mid-run, forced budgets, forged frames
+build/test-memdyn: tests/test_memdyn.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+build/test-memdyn-asan: tests/test_memdyn.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+check-memdyn: build/test-memdyn build/test-memdyn-asan
+	./build/test-memdyn
+	./build/test-memdyn-asan --quick
+.PHONY: check-memdyn
+check-rc: check-memdyn check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
 .PHONY: check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-fqfam check-dispatch check-asm check-arch check-format2
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan

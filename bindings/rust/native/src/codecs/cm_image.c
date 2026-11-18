@@ -24,6 +24,11 @@ static int cm_decompress_img(const uint8_t *in, size_t cn, uint8_t *out, size_t 
     cm_free(m);
     return 0;
 }
+static uint64_t cm_image_need(const uint8_t *in, size_t cn) {
+    if (cn < 17) return 0;
+    uint32_t n32; memcpy(&n32, in + 9, 4); uint32_t f = n32 >> 28; int bb = (int)(f & 7) + 15;
+    return (f & 8) && bb >= 16 && bb <= 22 ? cm_mem_for(bb, 1) : 0;
+}
 #ifdef KOLMO_CODEC_REGISTRY
 static int cm_image_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return cm_decompress_img(in, cn, out, n); }
 static const kolmo_codec codec_cm_image = { C_CMI, "cm_image", NULL, NULL, cm_image_decompress, NULL };   /* written at block level */

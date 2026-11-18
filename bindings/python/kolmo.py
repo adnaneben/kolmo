@@ -28,7 +28,8 @@ _lib = _load()
 
 class _Params(ctypes.Structure):
     _fields_ = [("mode", ctypes.c_int), ("level", ctypes.c_int), ("threads", ctypes.c_int),
-                ("block", ctypes.c_uint32), ("transforms", ctypes.c_int)]
+                ("block", ctypes.c_uint32), ("transforms", ctypes.c_int),
+                ("mem_limit", ctypes.c_uint64)]   # 0 = auto (docs/MEMORY-MODEL.md); mirrors kolmo_params
 
 _lib.kolmo_bound.restype = ctypes.c_size_t
 _lib.kolmo_bound.argtypes = [ctypes.c_size_t, ctypes.POINTER(_Params)]

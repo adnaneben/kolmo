@@ -29,6 +29,44 @@ Frames change only in `balanced`, on files whose graph leaves take codecs 21-23.
   1.35-1.9x faster on the three files it applies to, but two thirds of their adaptive gain given back and +1% to +33%
   compress time on every file) and left off; `KOLMO_BWT_STATIC_PCT=1` turns it on. `ratio` frames are unchanged.
 - The zero-run split skips zero words 8 bytes at a time (same bytes).
+## Unreleased (rc3, memdyn lane: `claude/rc3w2-memdyn-20261117`)
+
+The memory model of `docs/MEMORY-MODEL.md`, dynamic as the owner approved it: **available memory changes speed and
+peak memory, never the output bytes.** Every frame changes in its header (byte 11 and the CRC); `-x` frames also change
+in their payloads (scaled tables). Measurements: `benchmark/rc3w2/memdyn/RESULTS.md`.
+
+### Added
+- **The frame declares its decode working set** (header byte 11, `memd`: 2^(v/8) MiB, rounded up; `SPEC.md`,
+  *Decode working set*). Decoders check it before allocating anything: the index against it, it against the memory
+  limit, every block and every context-mixing model against it. Frames written before rc3 (byte 11 = 0) are held to
+  the limit instead. **The 8 GiB stream case of fuzzing campaign 2 is refused without any limit**: the stream decoder
+  checks each frame whole before reserving output and decodes it in windows of whole blocks; stored blocks must be
+  exactly their size.
+- **One memory limit for encoding and decoding**: `-M SIZE` / `--memlimit SIZE` (`512M`, `8G`, `50%`, `auto`, `max`),
+  `KOLMO_MEMLIMIT`; API `kolmo_params.mem_limit`, `kolmo_decode_limits.max_memory`, `kolmo_set_memlimit`,
+  `kolmo_mem_parse`, `kolmo_mem_floor`, `kolmo_mem_auto`, `kolmo_decode_memory`, `kolmo_check_frame`, error
+  `KOLMO_ERR_MEMORY` (-12). auto = 50% of physical memory or of the cgroup's limit. A frame that needs more stops with
+  `needs X to decode (limit Y); run with --memlimit NG or --memlimit max`. An explicit limit below the mode's floor
+  (speed and balanced 64 MiB, eco and hc 256 MiB, ratio 1 GiB, -x 256 MiB) is refused. An explicit limit is a format
+  decision: ratio and -x use smaller blocks and -x smaller tables so the output decodes within it; auto and the free
+  memory of the moment never are.
+- **The memory governor** (`src/core/memory.c`): budget = min(limit, available memory + what Kolmo holds), re-read at
+  most every 100 ms (Linux `MemAvailable`, cgroup v2 and v1, PSI; macOS `host_statistics64` and the memory-pressure
+  source), lowered at once on pressure and raised after 1 s of calm. Block jobs of the encoder and the decoder reserve
+  their working set and wait when it does not fit (one always runs); concurrent `-x` trials, codec-25 parts and the
+  planner's second sample start only when their reservation fits, otherwise they run afterwards with the same result.
+  `KOLMO_MEM_FORCE_BUDGET` forces the budget (tests); `benchmark/determinism/check.py --budgets` checks that frames are
+  identical under 64 MiB, 512 MiB, 4 GiB and unlimited.
+- `make check-memdyn` (in `check-rc`): declaration coding, hysteresis and pressure, a budget lowered mid-run (jobs fall
+  to one and recover, same frame), forced budgets in every mode, forged frames refused unallocated, explicit caps and
+  floors.
+
+### Changed
+- **`-x` model tables are sized to the block by default** (`--x-tables=scaled`, about 16× the stream; was opt-in).
+  `--x-tables=full` (`kolmo_set_x_tables(0)`) restores rc2's sizing. Decoding a 10 MB file with `-x` needs about
+  200 MiB instead of 5.4 GiB; the size cost is in RESULTS.
+- The context-mixing coders' private memory budget (60% of RAM in `cm.c`) is replaced by the governor.
+- Bindings: `kolmo_params` gained `mem_limit` (Python `_Params`, Rust `Params`); `native/src` resynced.
 
 ## Unreleased (rc3, features-a lane: `claude/rc3-features-a-20261116`)
 
