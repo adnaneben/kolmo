@@ -157,6 +157,12 @@ cap. Two findings:
 the header CRC), 26 `-x` frames also in the payload (scaled tables). The list per frame is in
 `determinism-changes.txt` (base `1536036` against this branch, one thread).
 
+Correction (18 November): the manifest of `ca0ec66` was written with a stale `build/kolmo` that predated the typed
+route's declaration (`aa8d8ec`), so its `walk.wav -m fast --typed-huf` line held that frame with byte 11 = 0
+(`133388…`). A clean build gives `7dcee998…` (byte 11 = 29) on x86-64 Linux and, as the integration lane found, on
+arm64 macOS; the line is fixed. The frame is in `xplat/walk_typedhuf_linux.k`. No code depends on the platform: the
+declaration is a function of the input length only.
+
 ## What was not done, or differs from the proposal
 
 - **Lighter mode under a cap** (`--memlimit-strict`): not built. A cap below the mode's floor is refused instead
