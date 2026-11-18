@@ -10,10 +10,10 @@ level and file size?
 | technique | what it costs | what it gains | decode | verdict |
 |---|---|---|---|---|
 | 1a. full-file transform trials instead of today's slices | 0.6–7.7 s per 100 MB of planning (vs ≤ 0.09 s) | **nothing**: the same plan in all 101 file × level cases measured | same | not worth it; slices stay |
-| 1b. a plan per homogeneous segment (whole-file scan, 8 KiB probe per 64 KiB) | ≤ 0.02 s per 100 MB | **4.5–10% on files that mix kinds of data** (balanced, hc, ratio); 0 on homogeneous files | same or faster | **implemented** (`src/plan/segment.c`) |
-| 1c. `-x`: the plain-bytes CM trial on numeric graph blocks gated by a CM slice instead of a BWT slice | one 256 KiB CM slice | **33% on 10 MB of doubles** (the graph was larger than `ratio`'s output) | slower where CM now wins, as for every CM block | **implemented** (`src/core/blocks.c`) |
+| 1b. a plan per homogeneous segment (whole-file scan, 8 KiB probe per 64 KiB) | ≤ 0.02 s per 100 MB | **4.2–13.3% on files that mix kinds of data** (balanced, hc, ratio); 0 on homogeneous files (identical frames) | per part: hc and ratio encode faster, ratio decodes slower | **implemented** (`src/plan/segment.c`) |
+| 1c. `-x`: the plain-bytes CM trial on numeric graph blocks gated by a CM slice instead of a BWT slice | one 256 KiB CM slice | **33.6% on 10 MB of doubles** (the graph was larger than `ratio`'s output) | CM speed where CM now wins (0.4 MB/s instead of 170 MB/s), as for every other `-x` block | **implemented** (`src/core/blocks.c`) |
 | 2a. full search of the CM learning settings per file (49 trials) | 49× the CM time | 0.04–1.3% without a prior; 0.6–5.6% with it | same | too slow; 2b gets nearly all of it |
-| 2b. a race of 4 presets on a 256 KiB prefix | 4 CM codings of 256 KiB (in parallel when threads are free) | 0.1–2.1% at 1 MB, 1.2–5.4% at 100 KB (with 3a) | same | **implemented** for `-x` |
+| 2b. a race of 4 presets on a 256 KiB prefix (streams up to 16 MiB) | 4 CM codings of 256 KiB (in parallel when threads are free): `-x` 2–4× slower to encode 100 KB–1 MB at 1 thread, 1.1–1.4× at 4; 0–12% at 10 MB | 0.1–2.2% at 1 MB, 1.6–5.4% at 100 KB, 0.1–0.8% at 10 MB (with 3a) | same | **implemented** for `-x`; above 16 MiB a prefix mispredicted (+1.2% on 100 MB), so long streams take the prior alone |
 | 2c. table size per file | — | < 0.05% | — | not worth it |
 | 3a. a shared prior: mixer weights pre-trained once per model, compiled in | 2 × 1.3 KB of constants | 1.1–4% at 100 KB, 0.13–1.1% at 1 MB, never worse | same | **implemented** (prior id in the stream) |
 | 3b. two-pass: pass 1 trains, the mean rows go in the header | a second CM pass; 315–630 header bytes | −0.7% to +4.9% (header cost wins at 100 KB; logs and tables lose) | same | not worth it; 3a is better and free |
@@ -40,10 +40,12 @@ These are level choices; nothing here says sampling misses them.
 slice. Coding each part with its own plan was 10–13% smaller at `balanced`, 6–8% at `hc` and 5–8% at `ratio` on a file
 of prose, an executable, a CSV export and float64 values (and faster, since each part's analysis is simpler). `-x`
 gains nothing there: context mixing adapts on its own and splitting costs it context (−0.2%). Implemented as content
-segments: the whole file is classified window by window (text, a delimited table with its field count, binary, a
-numeric array of 2/4/8-byte words), runs under 1 MiB are absorbed, and each run becomes a segment with its own
-analysis, exactly as tar members already do. No format change. A 32-probe check returns at once for files of one
-kind, so they pay nothing and their frames are unchanged.
+segments: the whole file is classified window by window (text, a delimited table with its delimiter and field count,
+or binary), runs under 1 MiB are absorbed, and each run becomes a segment with its own analysis, exactly as tar members
+already do. No format change. A 32-probe check returns at once for files of one kind, so they pay nothing and their
+frames are unchanged. End to end: mixed 10 MB −10.0% / −5.4% / −4.2%, mixed 100 MB −13.3% / −7.1% / −12.7% (balanced /
+hc / ratio). A numeric-array class (byte planes more predictable than bytes) was tried and removed: on 8 KiB probes it
+flickered on homogeneous doubles and split them (+1.9% at ratio on 100 MB).
 
 **`-x` had one sampled decision that was badly wrong.** On a numeric graph block, `-x` tried context mixing over the
 plain bytes only when a block-sorting slice came within 2% of the graph. On 10 MB of float64 sensor values block
@@ -62,7 +64,9 @@ or 15 (SPEC.md).
   0.6–5.6% with it. Table size (one bucket per byte today): ±1 or 2 bits changes the size by under 0.05%.
 - **The race** (the 6-bit study's idea): four presets that the full search kept finding, raced on the first 256 KiB.
   It reaches the full search's result within 0.0–0.2 points at 1 MB (text 0.607% vs 0.606%, logs 1.38% vs 1.58%) at
-  4 × 256 KiB of coding instead of 49 × the file. A 128 KiB prefix chose worse on 2 of 6 files.
+  4 × 256 KiB of coding instead of 49 × the file. A 128 KiB prefix chose worse on 2 of 6 files. A prefix cannot see
+  how the rates do over tens of MB: on 100 MB of doubles the prefix's winner was 1.2% larger than the default rates, so
+  streams over 16 MiB are not raced and take the prior with the default rates.
 
 ## 3. Weight initialisation
 
@@ -83,9 +87,11 @@ leaves already use static Huffman and rANS planes where the transform has remove
 
 ## 5. What keeps decoding unchanged
 
-Content segments and the `-x` probe change only the encoder's choices; the race and the prior change initial values and
-rates, not the work per bit. Decode time is unchanged within noise (RESULTS). Encode time grows only where the
-encoder searches: the race at `-x` (below).
+The race and the prior change initial values and rates, not the work per bit: decode time and memory are unchanged
+within noise. Content segments change only which plan each part gets; decode speed then follows that part's plan
+(on the mixed file: hc decodes faster, ratio slower). The `-x` probe lets plain context mixing win where it is smaller,
+and such a block decodes at CM speed, as every other `-x` block does. Encode time grows only where the encoder
+searches: the race at `-x`.
 
 ## Recommendation, by level and size
 
@@ -93,6 +99,6 @@ encoder searches: the race at `-x` (below).
 |---|---|---|---|---|
 | speed | nothing (its minimal analysis is the point) | same | same | same |
 | balanced, hc, ratio | nothing | content segments (mixed files) | content segments | content segments |
-| `-x` | prior + race on the whole stream | prior + race on 256 KiB | same | same |
+| `-x` | prior + race on the whole stream | prior + race on 256 KiB | same | prior only (no race above 16 MiB) |
 
 End-to-end numbers: `benchmark/rc3w2/twopass/RESULTS.md`.

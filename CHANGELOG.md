@@ -132,10 +132,12 @@ Reading the whole file first: what pays and what does not (`docs/TWOPASS.md`).
 ### Added
 - **Content segments** (balanced, eco, hc, ratio): a file that holds several kinds of data (prose, a CSV export, an
   executable, an array of doubles) gets one plan per homogeneous run of 1 MiB or more, as tar members already did.
-  4.5–10% smaller on such files; files of one kind are unchanged. No format change.
+  4.2–13.3% smaller on such files; files of one kind are unchanged (identical frames). No format change.
 - **Per-stream learning settings and a shared prior for context mixing** (`-x`; format 2, container version 11):
   four presets, each starting from mixer weights pre-trained once and compiled in, are raced on the first 256 KiB of
-  each CM stream and the smallest is kept. 1.2–5.4% smaller at 100 KB, 0.1–2.1% at 1 MB; decoding costs the same.
+  each CM stream up to 16 MiB and the smallest is kept (longer streams take the prior alone). 1.6–5.4% smaller at
+  100 KB, 0.1–2.2% at 1 MB, 0.1–0.8% at 10 MB; decoding costs the same; encoding 100 KB–1 MB files is 2–4× slower at
+  1 thread, 1.1–1.4× at 4.
 
 ### Fixed
 - `-x` on numeric arrays: the plain context-mixing trial of a graph block was gated by a block-sorting slice that
