@@ -44,7 +44,7 @@ static size_t tblc_compress(codec_ctx *x, int codec, int level, const uint8_t *t
         size_t z = n >= 32 && cap - pos > 64 ? codec_compress(x, codec, level, seg, n, dst + pos, cap - pos) : 0;
         int cc = codec;
         if (!z || z >= n) { if (cap - pos < n) return 0; memcpy(dst + pos, seg, n); z = n; cc = C_STORE; }
-        e[0] = (uint8_t)cc; put32(e + 1, (uint32_t)n); put32(e + 5, (uint32_t)z); put32(e + 9, (uint32_t)kolmo_xxh3(seg, n, TBLC_SEED));
+        e[0] = codec_wire(x, cc); put32(e + 1, (uint32_t)n); put32(e + 5, (uint32_t)z); put32(e + 9, (uint32_t)kolmo_xxh3(seg, n, TBLC_SEED));
         pos += z;
     }
     return pos;

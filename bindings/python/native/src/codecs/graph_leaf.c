@@ -5,6 +5,7 @@ static size_t leaf_compress_planes(int codec, const uint8_t *in, size_t n, int n
     size_t L = n / (size_t)np, o = 0;
     for (int b = 0; b < np; b++) {
         size_t r = codec == C_HUF ? huf_compress_all(in + (size_t)b * L, L, out + o, cap - o)
+                 : codec == C_KHUF ? kolmo_khuf_compress_chunks(in + (size_t)b * L, L, out + o, cap - o)   /* KOLMO_NATIVE=huf */
                                   : rans_compress_all_x(in + (size_t)b * L, L, out + o, cap - o, 1);
         if (!r) return 0;
         o += r;

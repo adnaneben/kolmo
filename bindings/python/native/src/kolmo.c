@@ -76,6 +76,7 @@ int kolmo_force_c;
 #include "algo/varint.h"
 #include "codecs/huf.c"
 #include "codecs/rans.c"
+#include "codecs/native.c"            /* Kolmo's own LZ, Huffman and LZMA-class coders (codecs 24, 27-29), opt-in */
 #include "codecs/graph_leaf.c"
 #include "codecs/codec.c"
 /* format 2 (container version 11): audio and video blocks, per-plane / Huffman-then-zstd / zero-run graph leaves */
