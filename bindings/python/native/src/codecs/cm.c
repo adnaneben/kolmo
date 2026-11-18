@@ -826,7 +826,8 @@ static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap)
 
 /* -x: learning settings chosen per stream by a race (docs/TWOPASS.md). Four presets, each with the shared prior
  * (byte 2 = 1), code the stream's first CM_RACE_SAMPLE bytes; the smallest wins (the first on a tie) and codes the
- * whole stream. A stream no longer than the sample is coded whole by every preset and the smallest is kept. Presets:
+ * whole stream. A stream no longer than the sample is coded whole by every preset and the smallest is kept; a stream
+ * longer than CM_RACE_MAX takes the first preset without a race. Presets:
  * the prior with the default rates; and three settings that the full search (49 trials per file) found most often on
  * text, logs, tables, numbers and images: faster APMs, a slower match-model counter, more weight on the APMs, a
  * faster-settling or slower mixer. The choice depends on the stream's bytes only; threads only run the trials side
@@ -834,12 +835,18 @@ static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap)
 #ifndef CM_RACE_SAMPLE
 #define CM_RACE_SAMPLE (256u << 10)
 #endif
+#ifndef CM_RACE_MAX
+#define CM_RACE_MAX (16u << 20)  /* longer streams take the first preset (the prior, default rates) without a race */
+#endif
 enum { CM_NPRESET = 4 };
 static const cm_tune_t cm_presets[CM_NPRESET] = {{0x00, 0x00, 1}, {0x1c, 0xa5, 1}, {0x52, 0x04, 1}, {0xdc, 0xb4, 1}};
 typedef struct { const uint8_t *in; size_t n, cap, z; uint8_t *out; int model, bbcap; cm_tune_t t; } cm_race_job;
 static void *cm_race_run(void *a) { cm_race_job *j = a; j->z = j->out ? cm_compress_t(j->in, j->n, j->out, j->cap, j->model, j->bbcap, j->t) : 0; return NULL; }
 static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap, int threads) {
     if (model < 2 || n >= ((size_t)1 << 28) || n < 64) return cm_compress_mx(in, n, out, cap, model, bbcap);
+    /* a prefix tells how the rates do early, not over tens of MB: on 100 MB of doubles the preset that won on the first
+     * 256 KiB (slower mixer, faster rate decay) was 1.2% larger over the whole stream than the default rates */
+    if (n > CM_RACE_MAX) return cm_compress_t(in, n, out, cap, model, bbcap, cm_presets[0]);
     const size_t L = n <= CM_RACE_SAMPLE ? n : CM_RACE_SAMPLE;
     cm_race_job j[CM_NPRESET]; pthread_t th[CM_NPRESET]; int started[CM_NPRESET] = {0};
     for (int k = 0; k < CM_NPRESET; k++) {

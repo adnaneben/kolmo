@@ -2,19 +2,15 @@
  * A file that holds different kinds of data one after the other (prose, then a CSV export, then an array of doubles)
  * gets one plan from its analysis, chosen for whichever kind the planner's slice saw, and every other part is coded
  * with it. Here the whole file is read once, window by window (an 8 KiB probe of each 64 KiB), and each window gets a class: text, a
- * delimited table (its delimiter and field count), binary, or a numeric array (the word width whose byte planes are
- * clearly more predictable than the bytes). Runs shorter than 1 MiB are absorbed by their neighbours; each remaining
+ * delimited table (its delimiter and field count), or binary. Runs shorter than 1 MiB are absorbed by their neighbours; each remaining
  * run of 1 MiB or more becomes a segment, with its own analysis and blocks, exactly as tar members do (no format
  * change: segments are a planning unit only). Measured on a file of four kinds (benchmark/rc3w2/twopass/RESULTS.md):
- * 4.7-10% smaller at balanced, hc and ratio; homogeneous files are left as one segment. The cuts depend on the input
+ * 4.2-13.3% smaller at balanced, hc and ratio; homogeneous files are left as one segment. The cuts depend on the input
  * bytes only. */
 enum { SEG_W = 64u << 10, SEG_P = 8u << 10, SEG_MIN_W = 16 };   /* window; probe classified per window; shortest run kept (16 windows = 1 MiB) */
-static double seg_plane_h(const uint8_t *p, size_t words, int w, int b) {
-    uint32_t c[256] = {0}; for (size_t q = 0; q < words; q++) c[p[q * (size_t)w + b]]++;
-    double h = 0; for (int k = 0; k < 256; k++) if (c[k]) { double f = (double)c[k] / words; h -= f * log2(f); }
-    return h;
-}
-/* class of one window: 1 text, 2 binary, 16 + w numeric array of w-byte words, 256 + delimiter * 256 + fields table */
+/* class of one window: 1 text, 2 binary, 256 + delimiter * 256 + fields: a delimited table. (A numeric-array class, the
+ * word width whose byte planes beat the bytes, was tried: on 8 KiB probes it flickered on homogeneous float64 data and
+ * split it, +1.9% at ratio on 100 MB; binary runs are left to the planner's own analysis.) */
 static uint32_t seg_class(const uint8_t *s, size_t n) {
     size_t pr = 0, zero = 0;
     for (size_t i = 0; i < n; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13 || c >= 128; zero += !c; }
@@ -32,9 +28,7 @@ static uint32_t seg_class(const uint8_t *s, size_t n) {
         }
         return 1;
     }
-    double h1 = seg_plane_h(s, n, 1, 0), hb = 1e9; int bw = 0;
-    for (int w = 2; w <= 8; w *= 2) { double e = 0; for (int b = 0; b < w; b++) e += seg_plane_h(s, n / w, w, b); e /= w; if (e < hb) { hb = e; bw = w; } }
-    return hb < 0.80 * h1 ? 16u + (uint32_t)bw : 2;
+    return 2;
 }
 /* Splits [0, n) into content segments; returns their count (1: the file stays whole). Only for inputs of 2 MiB or more. */
 static uint32_t content_segments(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se, uint32_t maxs) {
