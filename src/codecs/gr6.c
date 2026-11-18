@@ -518,8 +518,78 @@ static void g6_line_end(g6_model *M, size_t nf) {
     M->ppnf = M->pnf; M->pnf = nf;
 }
 
+/* ---- formula discovery (encoder): the search for one target column t. Every target is independent of the others:
+ * its best formula depends only on its own candidates. *pw counts the rows scored (screening included) and is
+ * compared with G6_WORK_CAP: the search is O(columns^2) per target column, so a table that reaches the cap keeps the
+ * formulas found so far. Counted in rows, not time, so the output stays the same on every machine. The files where
+ * GR6+ wins need at most 0.34 G (OWID CO2, 79 columns); energy_test.csv (130 columns, never chosen) needed 3.9 G,
+ * 7-21 s (benchmark/rc3w2/regress/RESULTS.md). Returns 1 with *f when a formula is kept. */
+typedef struct { const int64_t *V; const uint8_t *D, *OK; int R, rows; } g6_samp;
+static int g6_target(const g6_samp *S, int t, int64_t *pw, g6_formula *f) {
+    static const int KE[5] = {0, 2, 3, 6, 9};
+    const int64_t *V = S->V; const uint8_t *D = S->D, *OK = S->OK; const int R = S->R, rows = S->rows;
+    int64_t work = *pw;
+#define G6_V(c, r) V[(size_t)(c) * R + (r)]
+#define G6_D(c, r) D[(size_t)(c) * R + (r)]
+#define G6_OK(c, r) OK[(size_t)(c) * R + (r)]
+#define G6_PRED(ty, a, b, k, r, p) g6_fpred(ty, k, G6_V(a, r), G6_D(a, r), G6_OK(a, (r) - 1), G6_V(a, (r) - 1), G6_D(a, (r) - 1), \
+        G6_V(b, r), G6_D(b, r), G6_OK(t, (r) - 1), G6_V(t, (r) - 1), G6_D(t, (r) - 1), G6_D(t, r), p)
+#define G6_NEAR(p, r) ((p) - G6_V(t, r) <= 2 && G6_V(t, r) - (p) <= 2)
+    int cnt = 0; for (int r = 0; r < rows; r++) cnt += G6_OK(t, r);
+    if (cnt < rows / 10 || cnt < 50) return 0;
+    int bh = 0, bs = 1, ba = -1, bb = -1, bk = 0, bt = 0;   /* best rate bh/bs, at least one half */
+    for (int ty = 0; ty < 6; ty++) {
+        int two = ty == 0 || ty == 5;
+        for (int a = 0; a < t; a++) for (int b = 0; b < (two ? t : 1); b++) for (int q = 0; q < (two ? 5 : 1); q++) {
+            if (two && a == b) continue;
+            int bc = two ? b : a, hit = 0, miss = 0, seen = 0;
+            for (int r = 1; r < rows && r < 3000 && seen < 64; r++) {
+                if (!G6_OK(t, r) || !G6_OK(a, r) || !G6_OK(bc, r)) continue;
+                int64_t p; seen++;
+                if (G6_PRED(ty, a, bc, KE[q], r, &p) && G6_NEAR(p, r)) hit++;
+                else if (++miss > 24 || (miss >= 6 && hit * 2 < miss)) break;
+            }
+            work += 64;
+            if (seen < 16 || miss > 24 || hit * 2 < miss || hit < seen / 2 || work >= G6_WORK_CAP) continue;
+            hit = 0; seen = 0;
+            const int lim = rows < 8000 ? rows : 8000;
+            for (int r = 1; r < lim; r++, work++) {
+                if ((r & 63) == 0) {
+                    /* stop when the formula could not be kept even if every remaining row were a hit: the best
+                     * reachable rate is (hit + rem) / (seen + rem). Exact, the formulas found are the same
+                     * (energy_test.csv, 130 columns: discovery 10.7 s -> see benchmark/rc3/gr6/RESULTS.md) */
+                    int64_t rem = lim - r;
+                    if (2 * hit + rem <= seen || (hit + rem) * bs <= (int64_t)bh * (seen + rem)) break;
+                }
+                if (!G6_OK(t, r) || !G6_OK(a, r) || !G6_OK(bc, r)) continue;
+                int64_t p; seen++;
+                hit += G6_PRED(ty, a, bc, KE[q], r, &p) && G6_NEAR(p, r);
+            }
+            if (seen >= 32 && 2 * hit > seen && (int64_t)hit * bs > (int64_t)bh * seen) { bh = hit; bs = seen; ba = a; bb = bc; bk = KE[q]; bt = ty; }
+        }
+    }
+#undef G6_V
+#undef G6_D
+#undef G6_OK
+#undef G6_PRED
+#undef G6_NEAR
+    *pw = work;
+    if (ba < 0) return 0;
+    *f = (g6_formula){t, ba, bb, bk, bt}; return 1;
+}
+/* Threads (same formulas for every thread count): each target is searched on its own with its work counted from 0;
+ * targets are searched in batches of 4 per thread and merged in target order. While the work so far plus a target's own work stays under the cap, that
+ * target ran exactly as it would have in order (the cap is only compared, never otherwise used); the first target
+ * where the cap could bite, and every one after it, is searched again in order by the one-thread path. */
+typedef struct { g6_formula f; int64_t work; int found; } g6_tres;
+typedef struct { const g6_samp *S; g6_tres *res; int t0, nb; } g6_par;
+static void g6_target_task(void *ctx, int task, int worker) {
+    g6_par *P = ctx; (void)worker; int t = P->t0 + P->nb - 1 - task;  /* widest targets of the batch first */
+    P->res[t].work = 0; P->res[t].found = g6_target(P->S, t, &P->res[t].work, &P->res[t].f);
+}
+
 /* ---- formula discovery (encoder): a sample of up to 20000 rows with the first data row's field count */
-static int g6_formulas(g6_heap *H, const uint8_t *d, size_t n, uint8_t sep, g6_formula *out) {
+static int g6_formulas(g6_heap *H, const uint8_t *d, size_t n, uint8_t sep, g6_formula *out, int threads) {
     size_t i = 0, line = 0; int K = -1; const int R = 20000;
     int64_t *V = NULL; uint8_t *D = NULL, *OK = NULL; int rows = 0;
     while (i < n && rows < R) {
@@ -539,60 +609,22 @@ static int g6_formulas(g6_heap *H, const uint8_t *d, size_t n, uint8_t sep, g6_f
         line++; i = e + 1;
     }
     if (K <= 2 || rows < 50) return 0;
-    static const int KE[5] = {0, 2, 3, 6, 9};
-    int nout = 0;
-#define G6_V(c, r) V[(size_t)(c) * R + (r)]
-#define G6_D(c, r) D[(size_t)(c) * R + (r)]
-#define G6_OK(c, r) OK[(size_t)(c) * R + (r)]
-#define G6_PRED(ty, a, b, k, r, p) g6_fpred(ty, k, G6_V(a, r), G6_D(a, r), G6_OK(a, (r) - 1), G6_V(a, (r) - 1), G6_D(a, (r) - 1), \
-        G6_V(b, r), G6_D(b, r), G6_OK(t, (r) - 1), G6_V(t, (r) - 1), G6_D(t, (r) - 1), G6_D(t, r), p)
-#define G6_NEAR(p, r) ((p) - G6_V(t, r) <= 2 && G6_V(t, r) - (p) <= 2)
-    /* work cap (rows scored, screening included): the search is O(columns^2) per target column; a table that
-     * reaches the cap keeps the formulas found so far. Counted in rows, not time, so the output stays the same on
-     * every machine. The files where GR6+ wins need at most 0.34 G (OWID CO2, 79 columns); energy_test.csv (130
-     * columns, never chosen) needed 3.9 G, 7-21 s (benchmark/rc3w2/regress/RESULTS.md) */
-    int64_t work = 0;
-    for (int t = 1; t < K && nout < G6_MAXFORM && work < G6_WORK_CAP; t++) {
-        int cnt = 0; for (int r = 0; r < rows; r++) cnt += G6_OK(t, r);
-        if (cnt < rows / 10 || cnt < 50) continue;
-        int bh = 0, bs = 1, ba = -1, bb = -1, bk = 0, bt = 0;   /* best rate bh/bs, at least one half */
-        for (int ty = 0; ty < 6; ty++) {
-            int two = ty == 0 || ty == 5;
-            for (int a = 0; a < t; a++) for (int b = 0; b < (two ? t : 1); b++) for (int q = 0; q < (two ? 5 : 1); q++) {
-                if (two && a == b) continue;
-                int bc = two ? b : a, hit = 0, miss = 0, seen = 0;
-                for (int r = 1; r < rows && r < 3000 && seen < 64; r++) {
-                    if (!G6_OK(t, r) || !G6_OK(a, r) || !G6_OK(bc, r)) continue;
-                    int64_t p; seen++;
-                    if (G6_PRED(ty, a, bc, KE[q], r, &p) && G6_NEAR(p, r)) hit++;
-                    else if (++miss > 24 || (miss >= 6 && hit * 2 < miss)) break;
-                }
-                work += 64;
-                if (seen < 16 || miss > 24 || hit * 2 < miss || hit < seen / 2 || work >= G6_WORK_CAP) continue;
-                hit = 0; seen = 0;
-                const int lim = rows < 8000 ? rows : 8000;
-                for (int r = 1; r < lim; r++, work++) {
-                    if ((r & 63) == 0) {
-                        /* stop when the formula could not be kept even if every remaining row were a hit: the
-                         * best reachable rate is (hit + rem) / (seen + rem). Exact, the formulas found are the same
-                         * (energy_test.csv, 130 columns: discovery 10.7 s -> see benchmark/rc3/gr6/RESULTS.md) */
-                        int64_t rem = lim - r;
-                        if (2 * hit + rem <= seen || (hit + rem) * bs <= (int64_t)bh * (seen + rem)) break;
-                    }
-                    if (!G6_OK(t, r) || !G6_OK(a, r) || !G6_OK(bc, r)) continue;
-                    int64_t p; seen++;
-                    hit += G6_PRED(ty, a, bc, KE[q], r, &p) && G6_NEAR(p, r);
-                }
-                if (seen >= 32 && 2 * hit > seen && (int64_t)hit * bs > (int64_t)bh * seen) { bh = hit; bs = seen; ba = a; bb = bc; bk = KE[q]; bt = ty; }
+    g6_samp S = {V, D, OK, R, rows};
+    int nout = 0; int64_t work = 0; int t = 1;
+    g6_tres *res = threads > 1 && K > 8 ? calloc((size_t)K, sizeof *res) : NULL;
+    if (res) {                                       /* batches of targets on threads, merged in order */
+        int stop = 0;
+        while (!stop && t < K && nout < G6_MAXFORM && work < G6_WORK_CAP) {
+            int nb = K - t < 4 * threads ? K - t : 4 * threads;
+            g6_par P = {&S, res, t, nb}; kolmo_par_for(threads, nb, g6_target_task, &P);
+            for (int e = t + nb; t < e && nout < G6_MAXFORM && work < G6_WORK_CAP; t++) {
+                if (work + res[t].work >= G6_WORK_CAP) { stop = 1; break; }   /* the cap may bite here: in order from t */
+                work += res[t].work; if (res[t].found) out[nout++] = res[t].f;
             }
         }
-        if (ba >= 0) out[nout++] = (g6_formula){t, ba, bb, bk, bt};
+        free(res);
     }
-#undef G6_V
-#undef G6_D
-#undef G6_OK
-#undef G6_PRED
-#undef G6_NEAR
+    for (; t < K && nout < G6_MAXFORM && work < G6_WORK_CAP; t++) { g6_formula f; if (g6_target(&S, t, &work, &f)) out[nout++] = f; }
     return nout;
 }
 
@@ -629,7 +661,7 @@ static int gr6_applies(const uint8_t *s, size_t n) {
 }
 
 /* returns the coded size, 0 when it does not fit in cap or memory runs out */
-static size_t gr6_compress(const uint8_t *d, size_t n, uint8_t *out, size_t cap) {
+static size_t gr6_compress(const uint8_t *d, size_t n, uint8_t *out, size_t cap, int threads) {
     pthread_once(&cm_once, cm_init_tables);
     g6_heap *H = calloc(1, sizeof *H); if (!H) return 0;
     g6_model *M = calloc(1, sizeof *M); g6_io *io = calloc(1, sizeof *io); g6_buf *ob = calloc(1, sizeof *ob);
@@ -643,7 +675,7 @@ static size_t gr6_compress(const uint8_t *d, size_t n, uint8_t *out, size_t cap)
         int ord[256]; for (int i = 0; i < 256; i++) ord[i] = i;
         for (int i = 1; i < 256; i++) { int x = ord[i], j = i; while (j > 0 && cnt[ord[j - 1]] < cnt[x]) { ord[j] = ord[j - 1]; j--; } ord[j] = x; }
         uint8_t table[62]; for (int i = 0; i < 62; i++) table[i] = (uint8_t)ord[i];
-        int nform = g6_formulas(H, d, n, sep, F);
+        int nform = g6_formulas(H, d, n, sep, F, threads);
         g6_model_init(H, M); g6_setup(M, table);
         for (int i = 0; i < nform; i++) { g6_col *cc = &M->col[F[i].t]; cc->fa = F[i].a; cc->fb = F[i].b; cc->fke = F[i].ke; cc->ftype = F[i].type; }
         uint64_t lines = n && d[n - 1] != '\n';                  /* newlines, plus an unterminated last line */
@@ -722,11 +754,12 @@ done:
 }
 
 static size_t gr6_codec_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
-    (void)x; (void)level; return gr6_compress(in, n, out, cap);
+    (void)level; return gr6_compress(in, n, out, cap, x ? x->threads : 1);
 }
 static const kolmo_codec codec_gr6 = { C_GR6, "gr6", NULL, gr6_codec_compress, NULL, NULL };   /* decoded at block level (core/decode.c) */
 
 /* test hooks */
-size_t gr6_compress_pub(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return gr6_compress(in, n, out, cap); }
+size_t gr6_compress_pub(const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return gr6_compress(in, n, out, cap, 1); }
+size_t gr6_compress_pub_t(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int threads) { return gr6_compress(in, n, out, cap, threads); }
 int gr6_decompress_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return gr6_decompress(in, cn, out, n); }
 int gr6_applies_pub(const uint8_t *in, size_t n) { return gr6_applies(in, n); }
