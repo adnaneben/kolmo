@@ -1,0 +1,57 @@
+algo/decimal.c (2): exact_div_p10, fmt_dec
+algo/lzp.c (1): lzp_enc_task
+algo/mixer.c (3): kolmo_cm_dot_c, kolmo_cm_hash_c, kolmo_cm_train_c
+algo/predict.c (3): kolmo_img16_fwd_c, kolmo_sad16_c, pred16
+algo/qlfc.c (3): qlfc_dec_task, qlfc_enc_task, qlfc_split_blocks
+algo/sais/sais.c (115): libsais_accumulate_counts_s32, libsais_accumulate_counts_s32_2, libsais_accumulate_counts_s32_3, libsais_accumulate_counts_s32_4, libsais_accumulate_counts_s32_5, libsais_accumulate_counts_s32_6, libsais_accumulate_counts_s32_7, libsais_accumulate_counts_s32_8, libsais_accumulate_counts_s32_9, libsais_compact_and_place_cached_suffixes, libsais_count_and_gather_compacted_lms_suffixes_32s_2k_fs_omp, libsais_count_and_gather_compacted_lms_suffixes_32s_2k_fs_omp_region0, libsais_count_and_gather_lms_suffixes_32s_2k_fs_omp, libsais_count_and_gather_lms_suffixes_32s_2k_fs_omp_region0, libsais_count_and_gather_lms_suffixes_32s_4k_fs_omp, libsais_count_and_gather_lms_suffixes_32s_4k_fs_omp_region0, libsais_count_compacted_lms_suffixes_32s_2k, libsais_count_lms_suffixes_32s_2k_fs_omp, libsais_count_lms_suffixes_32s_2k_fs_omp_region0, libsais_count_lms_suffixes_32s_4k, libsais_count_negative_marked_suffixes, libsais_count_unique_suffixes, libsais_count_zero_marked_suffixes, libsais_final_sorting_scan_32s_block_masks, libsais_final_sorting_scan_left_to_right_32s_block_gather, libsais_final_sorting_scan_left_to_right_32s_block_omp, libsais_final_sorting_scan_left_to_right_32s_block_omp_region0, libsais_final_sorting_scan_left_to_right_32s_block_sort, libsais_final_sorting_scan_left_to_right_32s_block_walk, libsais_final_sorting_scan_right_to_left_32s_block_gather, libsais_final_sorting_scan_right_to_left_32s_block_omp, libsais_final_sorting_scan_right_to_left_32s_block_omp_region0, libsais_final_sorting_scan_right_to_left_32s_block_sort, libsais_final_sorting_scan_right_to_left_32s_block_walk, libsais_find_block_end_left_to_right, libsais_find_block_end_left_to_right_omp, libsais_find_block_end_left_to_right_omp_region0, libsais_find_block_end_right_to_left_omp, libsais_find_block_end_right_to_left_omp_region0, libsais_find_zero_left_to_right, libsais_get_block_size_32s, libsais_get_bucket_stride, libsais_partial_sorting_scan_left_to_right_32s_1k_block_gather, libsais_partial_sorting_scan_left_to_right_32s_1k_block_omp, libsais_partial_sorting_scan_left_to_right_32s_1k_block_omp_region0, libsais_partial_sorting_scan_left_to_right_32s_1k_block_sort, libsais_partial_sorting_scan_left_to_right_32s_4k_block_gather, libsais_partial_sorting_scan_left_to_right_32s_4k_block_omp, libsais_partial_sorting_scan_left_to_right_32s_4k_block_omp_region0, libsais_partial_sorting_scan_left_to_right_32s_4k_block_sort, libsais_partial_sorting_scan_left_to_right_32s_6k_block_gather, libsais_partial_sorting_scan_left_to_right_32s_6k_block_omp, libsais_partial_sorting_scan_left_to_right_32s_6k_block_omp_region0, libsais_partial_sorting_scan_left_to_right_32s_6k_block_sort, libsais_partial_sorting_scan_left_to_right_8u_block_omp, libsais_partial_sorting_scan_left_to_right_8u_block_omp_region0, libsais_partial_sorting_scan_left_to_right_8u_block_place, libsais_partial_sorting_scan_left_to_right_8u_block_prepare, libsais_partial_sorting_scan_right_to_left_32s_1k_block_gather, libsais_partial_sorting_scan_right_to_left_32s_1k_block_omp, libsais_partial_sorting_scan_right_to_left_32s_1k_block_omp_region0, libsais_partial_sorting_scan_right_to_left_32s_1k_block_sort, libsais_partial_sorting_scan_right_to_left_32s_4k_block_gather, libsais_partial_sorting_scan_right_to_left_32s_4k_block_omp, libsais_partial_sorting_scan_right_to_left_32s_4k_block_omp_region0, libsais_partial_sorting_scan_right_to_left_32s_4k_block_sort, libsais_partial_sorting_scan_right_to_left_32s_6k_block_gather, libsais_partial_sorting_scan_right_to_left_32s_6k_block_omp, libsais_partial_sorting_scan_right_to_left_32s_6k_block_omp_region0, libsais_partial_sorting_scan_right_to_left_32s_6k_block_sort, libsais_partial_sorting_scan_right_to_left_8u_block_omp, libsais_partial_sorting_scan_right_to_left_8u_block_omp_region0, libsais_partial_sorting_scan_right_to_left_8u_block_place, libsais_partial_sorting_scan_right_to_left_8u_block_prepare, libsais_place_cached_suffixes, libsais_popcount64, libsais_radix_sort_lms_suffixes_32s_2k_block_omp, libsais_radix_sort_lms_suffixes_32s_2k_block_omp_region0, libsais_radix_sort_lms_suffixes_32s_2k_block_sort, libsais_radix_sort_lms_suffixes_32s_6k_block_omp, libsais_radix_sort_lms_suffixes_32s_6k_block_omp_region0, libsais_radix_sort_lms_suffixes_32s_6k_block_sort, libsais_radix_sort_lms_suffixes_32s_block_gather, libsais_unbwt_calculate_biPSI_marks, libsais_unbwt_calculate_biPSI_marks_symbol_rows, libsais_unbwt_calculate_bigram_starts, libsais_unbwt_calculate_first_symbols, libsais_unbwt_chain_marks, libsais_unbwt_chains_slots, libsais_unbwt_chunk, libsais_unbwt_chunk_size, libsais_unbwt_decode_1, libsais_unbwt_decode_11, libsais_unbwt_decode_12, libsais_unbwt_decode_13, libsais_unbwt_decode_14, libsais_unbwt_decode_15, libsais_unbwt_decode_16, libsais_unbwt_decode_2, libsais_unbwt_decode_chains, libsais_unbwt_decode_chains_large, libsais_unbwt_decode_chains_symbol_rows, libsais_unbwt_decode_chains_symbol_rows_small, libsais_unbwt_decode_split, libsais_unbwt_decode_split_region0, libsais_unbwt_decode_split_region1, libsais_unbwt_decode_split_region2, libsais_unbwt_decode_split_region3, libsais_unbwt_mark_row, libsais_unbwt_next_chain, libsais_unbwt_next_chunk, libsais_unbwt_start_chain, libsais_unbwt_start_chain_symbol_rows, libsais_unbwt_store_symbol_rows, libsais_unbwt_take
+algo/video.c (6): kolmo_vid_strip_dec_c, kolmo_vid_strip_enc_c, med, predict, unzz, zz
+api/api.c (8): kolmo_compress_dict, kolmo_compress_file, kolmo_compress_from_fd, kolmo_decompress_file, kolmo_decompress_to_fd, kolmo_set_gpu, kolmo_strerror, kolmo_train_dict
+api/features.c (13): kf_calibrate, kf_corpus, kf_eval, kf_next, kf_now, kf_unif, kf_word, kf_zipf, kolmo_calibrate, kolmo_compress_target, kolmo_profile_bound, kolmo_profile_train, kt_merge
+arch/cpu.c (2): kolmo_cpu_level, kolmo_isa_name
+arch/crc32c.c (1): crc_init
+arch/decimal.c (1): fmt_run
+arch/x86_64/decimal_avx2.c (1): fmt_run_avx2
+arch/x86_64/img16_sse2.c (5): k2_blend, k2_hsum32, k2_maxu16, k2_minu16, k8_hsum32
+arch/x86_64/img16_tmpl.h (4): kolmo_img16_fwd_avx2, kolmo_img16_fwd_sse2, kolmo_sad16_avx2, kolmo_sad16_sse2
+arch/x86_64/int_inv_sse2.c (3): fi_pfx4, fi_unzz4, fi_vec4_sse2
+arch/x86_64/med8_sse2.c (1): k_blend_sse2
+arch/x86_64/med8_tmpl.h (6): kolmo_med8_inv_sse2, kolmo_med8_rows_sse2, med8_predsse2, med8_rowssse2, med8_tr16sse2, med8_unzzsse2
+arch/x86_64/med8f_avx2.c (3): blend2, kolmo_med8_fwd_sse2, zz2
+arch/x86_64/mixer_avx2.c (6): dot4, hsum2, kolmo_cm_dot_sse41, kolmo_cm_hash_sse41, kolmo_cm_train_sse41, upd4
+arch/x86_64/video_sse2.c (14): absb, blend, dec_body, kolmo_vid_strip_dec_sse2, kolmo_vid_strip_dec_sse41, kolmo_vid_strip_enc_sse2, ld, med, med_s, pred_s, res3, unzz_s, zz_s, zzb
+codecs/audio.c (1): ka_rice_estimate
+codecs/cm.c (5): cm_compress, cm_dec_gen, cm_enc_gen, cm_new, kolmo_set_x_tables
+codecs/cm_par.c (4): cmp_bound, cmp_compress_cap, cmp_compress_model, cmp_putv
+codecs/fastq.c (14): kf_ae_bit, kf_ae_end, kf_byte, kf_cut, kf_enc_job, kf_fastq_split, kf_fq_cuts, kf_fq_setup, kf_frame_encode, kf_line, kf_qcounts_put, kf_tokens, kf_var, kf_zz
+codecs/gr6.c (2): gr6_compress_pub, gr6_decompress_pub
+codecs/lz4.c (1): lz4hc_compress
+codecs/nplane.c (1): nplane_bound
+core/dedup.c (11): dd_config, dd_cut, dd_init, dd_mask, dd_set_add, dd_set_init, dd_split, dd_text, dd_zz, kolmo_archive_bound, kolmo_archive_create
+core/extension.c (3): kx_append, kx_bound, kx_uv
+core/features.h (2): kx_put32, kx_put64
+core/index.c (7): ix_build_worker, ix_distinct, ix_filter, ix_json_field, ix_json_value, kolmo_compress_indexed, kolmo_indexed_bound
+core/io.c (2): read_block, write_block
+core/stream.c (1): kolmo_stream_compress
+core/trials.c (2): xtrial_main, xtrial_start
+experimental/frontier_entropy.c (3): frontier_entropy_encode, normalize, put32
+experimental/frontier_fastq.c (11): append, byte, encode_bases, frontier_fastq_encode, frontier_fastq_probe, header, line, put32, record, start_of_records, var
+experimental/frontier_runs.c (2): frontier_runs_encode, put32
+experimental/kbc.c (6): arithmetic_encode, emit, kbc_compress, putbit, wr32, wr64
+experimental/kbx.c (7): arithmetic_encode, byte_encode, emit, kbx_compress, putbit, wr32, wr64
+experimental/krc.c (8): choose, encode_tiles, krc_compress, krc_encode, krc_plan_cpu, plan_worker, residue, wr64
+plan/detect.c (2): json_lines, json_minified
+plan/parallel.c (3): ukc_main, ukt_main, ultra_columns
+plan/profile.c (14): kp_f64, kp_finish, kp_pin_from_plan, kp_pinnable, kp_pins_write, kp_put, kp_same_plan, kp_section, kp_train, kp_train_dict, kp_u16, kp_u32, kp_u64, kp_u8
+plan/target.c (3): kt_class, kt_compress_setting, kt_worker
+transforms/graph.c (18): fi_inv_2_8_0, fi_inv_2_8_1, fi_inv_4_1_0, fi_inv_4_2_0, fi_inv_4_2_1, fi_inv_8_1_0, fi_inv_8_2_0, fi_inv_8_4_0, fi_inv_8_8_0, kg_decimal_inv, kg_encode_table, kg_int_inv, kg_le64, kg_num, kg_unzz8, kg_uvw, kg_zz8, kgb_concat
+transforms/graph_fwd.c (2): kgf_scan_8_0, kgf_write_8_0
+transforms/graph_typed.c (26): ktf_c_2_0, ktf_c_2_1, ktf_c_4_0, ktf_c_4_1, ktf_c_8_1, ktf_c_choose, ktf_encode, ktf_forward, ktf_forward_g, ktf_free, ktf_guard, ktf_ld2, ktf_ld4, ktf_ld8, ktf_pass_2_0, ktf_pass_2_1, ktf_pass_4_0, ktf_pass_4_1, ktf_pass_8_0, ktf_pass_8_1, ktf_payload_huf, ktf_payload_rep, ktf_rep_score, ktf_type, ktf_unique, ktf_wrap
+transforms/json.c (1): json_split
+transforms/lines.c (1): lines_encode
+transforms/log.c (12): fnv1a, is_var_tok, json_next_value, log_decode_pub, log_encode, log_encode_json_pub, log_encode_m, log_encode_pub, log_same_shape, put_column, put_ints, skel_parse
+transforms/sci.c (21): cmp_u64, find_quantum, h0, img16_detect, img16_encode, img16_fwd, ld_field, ldwn, pfor_put, planes_put, rec_best, rec_detect, rec_encode, rec_field_bound, rec_field_enc, rec_layout, rec_period, sci_decode_pub, sci_encode_pub, sort_u64, zw
+transforms/table.c (12): cmp_fcand, col2_fvals, fset_discover_pub, kolmo_p10_pub, ncol_fvals, parse_dec_pub, tbl2_columns, tbl2_columns_free, tbl2_columns_free_pub, tbl2_columns_pub, tbl2_decode_pub, tbl2_encode_pub
+transforms/table_cols.c (1): tblc_compress
+transforms/table_v03.c (2): tbl_decode_pub, tbl_encode_pub
+transforms/transpose.c (2): tpq_wide_fwd, tpq_wide_pass
+transforms/word.c (6): cap_norm, is_alpha, wd_hash, word_decode_pub, word_encode, word_encode_pub

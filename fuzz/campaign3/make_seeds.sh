@@ -48,7 +48,7 @@ done
 # extensions: indexed files (tables, logs, JSON lines; with and without filters) and archives
 for f in "$R"/table.csv "$R"/app.log "$R"/events.jsonl "$R"/records.txt "$R"/table.tsv; do
   b=$(basename "$f"); head -c 200000 "$f" > "$W/ix.$b"
-  $K --index -B 0.0625 "$W/ix.$b" "$W/ix.$b.kol" 2>/dev/null && for q in 0 5 22 38 70 132; do { printf "\\0\\$(printf %o $q)"; cat "$W/ix.$b.kol"; } > "$S/fuzz_ext/$b.$q"; done
+  $K --index -B 0.0625 "$W/ix.$b" "$W/ix.$b.kol" 2>/dev/null && for q in 0 5 8 22 38 70 72 132; do { printf "\\0\\$(printf %o $q)"; cat "$W/ix.$b.kol"; } > "$S/fuzz_ext/$b.$q"; done
   $K --index -m hc -B 0.0625 "$W/ix.$b" "$W/ix.$b.hc.kol" 2>/dev/null && { printf '\001\026'; cat "$W/ix.$b.hc.kol"; } > "$S/fuzz_ext/$b.hc"
 done
 ( cd "$R/set" && $K a --chunk 1 "$W/arc1.kol" snap0.csv snap1.csv snap2.csv && $K a "$W/arc2.kol" snap3.csv snap4.csv snap5.csv ../small.txt ../empty.bin ) 2>/dev/null

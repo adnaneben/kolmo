@@ -1,4 +1,4 @@
-/* libFuzzer target: the CZNS streaming decoder (kolmo_stream_decompress, src/stream.inc) reading from a memfd and
+/* libFuzzer target: the CZNS streaming decoder (kolmo_stream_decompress, src/core/stream.c) reading from a memfd and
  * writing to /dev/null. Since 9d4496a the decoder grows the frame buffer as bytes arrive, so a forged frame length is
  * rejected after reading what is there. The harness accepts frame-length claims up to 1 GiB (campaign 2; campaign 1
  * skipped anything above 16 MiB). The decoder still allocates each frame's claimed original size without a limit, so

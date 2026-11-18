@@ -1,4 +1,4 @@
-/* libFuzzer target: kolmo_decompress_dict with a fixed small dictionary (fuzz/campaign/dict.bin, embedded via
+/* libFuzzer target: kolmo_decompress_dict with a fixed small dictionary (campaign 1's fuzz/campaign/dict.bin on claude/rc2-fuzz-20261115, embedded via
  * fuzz/fuzz_dict_data.h). Decodes with the right dictionary, with a wrong one and with none; never trusts a claimed
  * size beyond 16 MiB. */
 #include "kolmo.h"

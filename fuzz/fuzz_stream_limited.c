@@ -1,4 +1,4 @@
-/* libFuzzer target: kolmo_stream_decompress_limited (src/stream.inc) with tight limits chosen by the last input byte,
+/* libFuzzer target: kolmo_stream_decompress_limited (src/core/stream.c) with tight limits chosen by the last input byte,
  * and with generous limits (16 MiB). No size from the input is pre-filtered: frame lengths are accepted up to the
  * decoder's own 16 GiB bound, and the claimed original size of every frame must be refused by max_output_bytes
  * before allocation. Invariants: a successful tight decode returns at most max_output_bytes, and when both decodes
