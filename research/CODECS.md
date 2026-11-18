@@ -192,3 +192,21 @@ Measured on a 4-vCPU Intel Xeon (2.10 GHz) Linux VM; details, commands and the f
 | CM: block-parallel binary, 4 or 8 parts | `-x` | +0.90% / +1.3% on 100 MB (3.7× faster) — over the 0.5% budget | dropped (xmode); 2 halves kept |
 | family coder: name/quality chunks of block/16 (1–4 MiB) | `-x` FASTQ decode | 10 MB: 1.4× faster decode at 4 threads, +0.57%; 100 MB unchanged (4 MiB); smaller base chunks +13% | rc3 (xmode) |
 | CM tables sized to the block (`--x-tables=scaled`, or a cap `16..22`) | `-x` memory | scaled: CSV +0.0–0.2%, text +0.1–5.1%, binary +0.3–2.4%, decode memory 5.4–5.9 GiB → 125–580 MiB (2.0 GiB for 100 MB of text); cap 2^20 on 10 MB text +0.67% at 1.4 GiB | opt-in until the memory model is approved |
+
+## Whole-file search (rc3 wave 2, twopass lane)
+
+Is it worth reading the whole file first to choose codecs and to fit the context-mixing networks to it? Details:
+`docs/TWOPASS.md`, `benchmark/rc3w2/twopass/RESULTS.md`.
+
+| technique | level | measured impact | verdict |
+|---|---|---|---|
+| full-file transform trials (every trial slice = the whole input) | all | same plan as the sampled analysis in 101 of 101 file × level cases; planning 0.6–7.7 s per 100 MB instead of ≤ 0.09 s | not adopted |
+| content segments: a plan per homogeneous run (8 KiB probe per 64 KiB window, runs ≥ 1 MiB) | balanced, eco, hc, ratio | mixed file of four kinds, 10 MB: −10.2% / −5.9% / −4.5% (balanced / hc / ratio); homogeneous files unchanged; ≤ 0.02 s per 100 MB | rc3w2 (twopass) |
+| content segments at `-x` | `-x` | +0.2% (CM adapts on its own; a split loses context) | not adopted |
+| `-x`: plain-bytes CM trial of numeric graph blocks gated by a CM slice (was a BWT slice) | `-x` | 10 MB float64: −33.6% (the graph was larger than `ratio`'s output) | rc3w2 (twopass) |
+| CM learning settings per stream, full search (49 codings) | `-x` | 0.04–1.3% (no prior), 0.6–5.6% (with the prior) at 100 KB–1 MB | too slow; the race keeps nearly all of it |
+| CM learning settings, race of 4 presets on a 256 KiB prefix | `-x` | at 1 MB within 0–0.2 points of the full search; a 128 KiB prefix chose worse on 2 of 6 files | rc3w2 (twopass), model nibbles 14/15 |
+| CM hash-table size per file (±1–2 bits) | `-x` | < 0.05% | not adopted |
+| CM shared prior: mean trained mixer rows, compiled in, one per model | `-x` | 100 KB −1.1% to −4.0%, 1 MB −0.13% to −1.1%, never larger; per-kind priors were worse than one general prior | rc3w2 (twopass), tune byte 2 |
+| CM two-pass weights: the file's own mean rows in the header (8 or 16 bits) | `-x` | −0.8% to +4.9% at 100 KB, −0.7% to +0.9% at 1 MB (header 315–630 bytes; logs and tables lose) | not adopted |
+| semi-static order-0/1/2 context models + static rANS | balanced, hc | larger than zstd -3 on every kind (text 1 MB 442 KB vs 349 KB), decode 50–100 MB/s | not adopted |

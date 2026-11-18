@@ -1,0 +1,12 @@
+bin_100k model=2 sample=100000 trials=49 search=13.71s tune=58d0 default=14224 tuned=14188 gain=0.253% enc0=0.27 enc1=0.28 dec0=0.29 dec1=0.27
+image_100k model=2 sample=100000 trials=49 search=15.40s tune=d0b4 default=47164 tuned=47078 gain=0.182% enc0=0.31 enc1=0.32 dec0=0.40 dec1=0.32
+log_100k model=3 sample=99896 trials=49 search=20.20s tune=dcb4 default=4699 tuned=4651 gain=1.021% enc0=0.40 enc1=0.67 dec0=0.43 dec1=0.67
+image_1m model=2 sample=1000000 trials=49 search=158.85s tune=c8a1 default=423078 tuned=422630 gain=0.106% enc0=3.09 enc1=2.93 dec0=3.12 dec1=3.14
+bin_1m model=2 sample=1000000 trials=49 search=183.65s tune=0916 default=622610 tuned=622372 gain=0.038% enc0=3.46 enc1=3.44 dec0=3.90 dec1=3.56
+num_100k model=2 sample=100000 trials=49 search=15.60s tune=dcb4 default=11065 tuned=10926 gain=1.256% enc0=0.32 enc1=0.31 dec0=0.33 dec1=0.30
+table_100k model=3 sample=99998 trials=49 search=25.54s tune=5204 default=6552 tuned=6466 gain=1.313% enc0=0.51 enc1=0.68 dec0=0.61 dec1=0.44
+log_1m model=3 sample=999938 trials=49 search=212.70s tune=d2a9 default=30081 tuned=29824 gain=0.854% enc0=4.98 enc1=5.69 dec0=5.73 dec1=6.49
+text_100k model=3 sample=99807 trials=49 search=29.49s tune=90b4 default=26732 tuned=26631 gain=0.378% enc0=0.42 enc1=0.45 dec0=0.48 dec1=0.45
+num_1m model=2 sample=1000000 trials=50 search=190.92s tune=1ca5 default=71861 tuned=70998 gain=1.201% enc0=4.68 enc1=6.14 dec0=4.36 dec1=8.12
+table_1m model=3 sample=999963 trials=49 search=265.06s tune=da75 default=51588 tuned=50805 gain=1.518% enc0=5.92 enc1=3.56 dec0=3.98 dec1=3.61
+text_1m model=3 sample=999832 trials=49 search=294.08s tune=12f0 default=219908 tuned=219591 gain=0.144% enc0=4.62 enc1=5.14 dec0=4.96 dec1=5.02

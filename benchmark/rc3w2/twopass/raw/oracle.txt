@@ -1,0 +1,479 @@
+/home/user/data/c/text_100k speed default size=56580 enc=0.00s plan=0.001s plan_full=0.001s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=56580 (+0.000%) enc=0.00s
+SUMMARY /home/user/data/c/text_100k speed default=56580 oracle=56580 gain=0.000% best=default candidates=1
+/home/user/data/c/text_100k balanced default size=37295 enc=0.00s plan=0.001s plan_full=0.001s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=37295 (+0.000%) enc=0.00s
+SUMMARY /home/user/data/c/text_100k balanced default=37295 oracle=37295 gain=0.000% best=default candidates=1
+/home/user/data/c/text_100k hc default size=33730 enc=0.05s plan=0.021s plan_full=0.009s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=33730 (+0.000%) enc=0.04s
+SUMMARY /home/user/data/c/text_100k hc default=33730 oracle=33730 gain=0.000% best=default candidates=1
+/home/user/data/c/text_100k ratio default size=29692 enc=0.03s plan=0.022s plan_full=0.009s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=29692 (+0.000%) enc=0.02s
+SUMMARY /home/user/data/c/text_100k ratio default=29692 oracle=29692 gain=0.000% best=default candidates=1
+/home/user/data/c/text_100k x default size=26784 enc=0.59s plan=0.012s plan_full=0.010s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=26784 (+0.000%) enc=0.68s
+SUMMARY /home/user/data/c/text_100k x default=26784 oracle=26784 gain=0.000% best=default candidates=1
+/home/user/data/c/table_100k speed default size=18445 enc=0.00s plan=0.001s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=18445 (+0.000%) enc=0.00s
+  cand none               t=0 a=0 b=0 c=0 size=32302 (+75.126%) enc=0.00s
+SUMMARY /home/user/data/c/table_100k speed default=18445 oracle=18445 gain=0.000% best=default candidates=2
+/home/user/data/c/table_100k balanced default size=11460 enc=0.00s plan=0.001s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=11460 (+0.000%) enc=0.00s
+  cand none               t=0 a=0 b=0 c=0 size=19402 (+69.302%) enc=0.00s
+SUMMARY /home/user/data/c/table_100k balanced default=11460 oracle=11460 gain=0.000% best=default candidates=2
+/home/user/data/c/table_100k hc default size=9863 enc=0.02s plan=0.001s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=9863 (+0.000%) enc=0.01s
+  cand none               t=0 a=0 b=0 c=0 size=13704 (+38.944%) enc=0.05s
+SUMMARY /home/user/data/c/table_100k hc default=9863 oracle=9863 gain=0.000% best=default candidates=2
+/home/user/data/c/table_100k ratio default size=9351 enc=0.10s plan=0.002s plan_full=0.002s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=9351 (+0.000%) enc=0.08s
+  cand none               t=0 a=0 b=0 c=0 size=10854 (+16.073%) enc=0.01s
+SUMMARY /home/user/data/c/table_100k ratio default=9351 oracle=9351 gain=0.000% best=default candidates=2
+/home/user/data/c/table_100k x default size=6604 enc=1.34s plan=0.002s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=6604 (+0.000%) enc=2.23s
+  cand none               t=0 a=0 b=0 c=0 size=6604 (+0.000%) enc=1.29s
+SUMMARY /home/user/data/c/table_100k x default=6604 oracle=6604 gain=0.000% best=default candidates=2
+/home/user/data/c/log_100k speed default size=16686 enc=0.00s plan=0.000s plan_full=0.000s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=16686 (+0.000%) enc=0.00s
+  cand balanced           t=4 a=0 b=0 c=0 size=16686 (+0.000%) enc=0.00s
+SUMMARY /home/user/data/c/log_100k speed default=16686 oracle=16686 gain=0.000% best=default candidates=2
+/home/user/data/c/log_100k balanced default size=7621 enc=0.00s plan=0.001s plan_full=0.001s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=10046 (+31.820%) enc=0.00s
+  cand balanced           t=4 a=0 b=0 c=0 size=7621 (+0.000%) enc=0.00s
+SUMMARY /home/user/data/c/log_100k balanced default=7621 oracle=7621 gain=0.000% best=default candidates=2
+/home/user/data/c/log_100k hc default size=6979 enc=0.01s plan=0.001s plan_full=0.001s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=7862 (+12.652%) enc=0.05s
+  cand balanced           t=4 a=0 b=0 c=0 size=6979 (+0.000%) enc=0.01s
+SUMMARY /home/user/data/c/log_100k hc default=6979 oracle=6979 gain=0.000% best=default candidates=2
+/home/user/data/c/log_100k ratio default size=6291 enc=0.05s plan=0.001s plan_full=0.001s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=7608 (+20.935%) enc=0.00s
+  cand balanced           t=4 a=0 b=0 c=0 size=6291 (+0.000%) enc=0.04s
+SUMMARY /home/user/data/c/log_100k ratio default=6291 oracle=6291 gain=0.000% best=default candidates=2
+/home/user/data/c/log_100k x default size=4751 enc=0.76s plan=0.001s plan_full=0.001s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=4751 (+0.000%) enc=0.92s
+  cand balanced           t=4 a=0 b=0 c=0 size=4751 (+0.000%) enc=1.14s
+SUMMARY /home/user/data/c/log_100k x default=4751 oracle=4751 gain=0.000% best=default candidates=2
+/home/user/data/c/bin_100k speed default size=28513 enc=0.00s plan=0.000s plan_full=0.000s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=28513 (+0.000%) enc=0.00s
+SUMMARY /home/user/data/c/bin_100k speed default=28513 oracle=28513 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_100k balanced default size=19479 enc=0.00s plan=0.002s plan_full=0.002s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=19479 (+0.000%) enc=0.00s
+SUMMARY /home/user/data/c/bin_100k balanced default=19479 oracle=19479 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_100k hc default size=16086 enc=0.04s plan=0.004s plan_full=0.003s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=16086 (+0.000%) enc=0.02s
+SUMMARY /home/user/data/c/bin_100k hc default=16086 oracle=16086 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_100k ratio default size=14520 enc=0.03s plan=0.002s plan_full=0.002s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=14520 (+0.000%) enc=0.03s
+SUMMARY /home/user/data/c/bin_100k ratio default=14520 oracle=14520 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_100k x default size=14276 enc=0.33s plan=0.002s plan_full=0.002s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=14276 (+0.000%) enc=0.29s
+SUMMARY /home/user/data/c/bin_100k x default=14276 oracle=14276 gain=0.000% best=default candidates=1
+/home/user/data/c/num_100k speed default size=32902 enc=0.01s plan=0.003s plan_full=0.000s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=32902 (+0.000%) enc=0.01s
+  cand balanced           t=9 a=0 b=65 c=0 size=15477 (-52.960%) enc=0.01s
+SUMMARY /home/user/data/c/num_100k speed default=32902 oracle=15477 gain=52.960% best=balanced candidates=2
+/home/user/data/c/num_100k balanced default size=13945 enc=0.01s plan=0.004s plan_full=0.004s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=21219 (+52.162%) enc=0.01s
+  cand balanced           t=9 a=0 b=65 c=0 size=13945 (+0.000%) enc=0.01s
+SUMMARY /home/user/data/c/num_100k balanced default=13945 oracle=13945 gain=0.000% best=default candidates=2
+/home/user/data/c/num_100k hc default size=12500 enc=0.06s plan=0.007s plan_full=0.003s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=17764 (+42.112%) enc=0.05s
+  cand balanced           t=9 a=0 b=65 c=0 size=12500 (+0.000%) enc=0.06s
+SUMMARY /home/user/data/c/num_100k hc default=12500 oracle=12500 gain=0.000% best=default candidates=2
+/home/user/data/c/num_100k ratio default size=13213 enc=0.06s plan=0.006s plan_full=0.003s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=13342 (+0.976%) enc=0.04s
+  cand balanced           t=9 a=0 b=65 c=0 size=13213 (+0.000%) enc=0.04s
+SUMMARY /home/user/data/c/num_100k ratio default=13213 oracle=13213 gain=0.000% best=default candidates=2
+/home/user/data/c/num_100k x default size=11117 enc=0.71s plan=0.005s plan_full=0.003s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=11117 (+0.000%) enc=0.33s
+  cand balanced           t=9 a=0 b=65 c=0 size=11117 (+0.000%) enc=0.71s
+SUMMARY /home/user/data/c/num_100k x default=11117 oracle=11117 gain=0.000% best=default candidates=2
+/home/user/data/c/image_100k speed default size=74941 enc=0.00s plan=0.002s plan_full=0.006s plan_t=2 full_t=2
+  cand speed              t=2 a=2 b=1 c=1 size=74941 (+0.000%) enc=0.00s
+  cand balanced           t=9 a=0 b=2 c=0 size=46706 (-37.676%) enc=0.02s
+  cand speed-full         t=2 a=2 b=1 c=0 size=59962 (-19.988%) enc=0.01s
+  cand none               t=0 a=0 b=0 c=0 size=100052 (+33.508%) enc=0.00s
+SUMMARY /home/user/data/c/image_100k speed default=74941 oracle=46706 gain=37.676% best=balanced candidates=4
+/home/user/data/c/image_100k balanced default size=46684 enc=0.02s plan=0.003s plan_full=0.004s plan_t=9 full_t=9
+  cand speed              t=2 a=2 b=1 c=1 size=55687 (+19.285%) enc=0.01s
+  cand balanced           t=9 a=0 b=2 c=0 size=46684 (+0.000%) enc=0.02s
+  cand speed-full         t=2 a=2 b=1 c=0 size=56555 (+21.144%) enc=0.01s
+  cand none               t=0 a=0 b=0 c=0 size=78833 (+68.865%) enc=0.00s
+SUMMARY /home/user/data/c/image_100k balanced default=46684 oracle=46684 gain=0.000% best=default candidates=4
+/home/user/data/c/image_100k hc default size=46658 enc=0.10s plan=0.005s plan_full=0.009s plan_t=9 full_t=9
+  cand speed              t=2 a=2 b=1 c=1 size=53188 (+13.995%) enc=0.04s
+  cand balanced           t=9 a=0 b=2 c=0 size=46658 (+0.000%) enc=0.10s
+  cand speed-full         t=2 a=2 b=1 c=0 size=54171 (+16.102%) enc=0.03s
+  cand none               t=0 a=0 b=0 c=0 size=66779 (+43.124%) enc=0.02s
+SUMMARY /home/user/data/c/image_100k hc default=46658 oracle=46658 gain=0.000% best=default candidates=4
+/home/user/data/c/image_100k ratio default size=45822 enc=0.16s plan=0.007s plan_full=0.013s plan_t=9 full_t=9
+  cand speed              t=2 a=2 b=1 c=1 size=52307 (+14.153%) enc=0.06s
+  cand balanced           t=9 a=0 b=2 c=0 size=45822 (+0.000%) enc=0.16s
+  cand speed-full         t=2 a=2 b=1 c=0 size=49174 (+7.315%) enc=0.07s
+  cand none               t=0 a=0 b=0 c=0 size=55031 (+20.097%) enc=0.02s
+SUMMARY /home/user/data/c/image_100k ratio default=45822 oracle=45822 gain=0.000% best=default candidates=4
+/home/user/data/c/image_100k x default size=45822 enc=0.46s plan=0.005s plan_full=0.010s plan_t=9 full_t=9
+  cand speed              t=2 a=2 b=1 c=1 size=47216 (+3.042%) enc=0.68s
+  cand balanced           t=9 a=0 b=2 c=0 size=45822 (+0.000%) enc=0.55s
+  cand speed-full         t=2 a=2 b=1 c=0 size=47828 (+4.378%) enc=0.40s
+  cand none               t=0 a=0 b=0 c=0 size=47216 (+3.042%) enc=0.33s
+SUMMARY /home/user/data/c/image_100k x default=45822 oracle=45822 gain=0.000% best=default candidates=4
+/home/user/data/c/text_1m speed default size=556522 enc=0.00s plan=0.001s plan_full=0.001s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=556522 (+0.000%) enc=0.00s
+  cand hc                 t=8 a=0 b=0 c=0 size=490033 (-11.947%) enc=0.07s
+SUMMARY /home/user/data/c/text_1m speed default=556522 oracle=490033 gain=11.947% best=hc candidates=2
+/home/user/data/c/text_1m balanced default size=348928 enc=0.01s plan=0.002s plan_full=0.008s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=348928 (+0.000%) enc=0.01s
+  cand hc                 t=8 a=0 b=0 c=0 size=344725 (-1.205%) enc=0.08s
+SUMMARY /home/user/data/c/text_1m balanced default=348928 oracle=344725 gain=1.205% best=hc candidates=2
+/home/user/data/c/text_1m hc default size=300366 enc=0.24s plan=0.051s plan_full=0.035s plan_t=8 full_t=8
+  cand speed              t=0 a=0 b=0 c=0 size=300078 (-0.096%) enc=0.31s
+  cand hc                 t=8 a=0 b=0 c=0 size=300366 (+0.000%) enc=0.24s
+SUMMARY /home/user/data/c/text_1m hc default=300366 oracle=300078 gain=0.096% best=speed candidates=2
+/home/user/data/c/text_1m ratio default size=253740 enc=0.14s plan=0.038s plan_full=0.032s plan_t=8 full_t=8
+  cand speed              t=0 a=0 b=0 c=0 size=253740 (+0.000%) enc=0.09s
+  cand hc                 t=8 a=0 b=0 c=0 size=253740 (+0.000%) enc=0.14s
+SUMMARY /home/user/data/c/text_1m ratio default=253740 oracle=253740 gain=0.000% best=default candidates=2
+/home/user/data/c/text_1m x default size=219960 enc=11.49s plan=0.041s plan_full=0.035s plan_t=8 full_t=8
+  cand speed              t=0 a=0 b=0 c=0 size=219960 (+0.000%) enc=10.75s
+  cand hc                 t=8 a=0 b=0 c=0 size=219960 (+0.000%) enc=16.51s
+SUMMARY /home/user/data/c/text_1m x default=219960 oracle=219960 gain=0.000% best=default candidates=2
+/home/user/data/c/table_1m speed default size=112693 enc=0.01s plan=0.001s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=112693 (+0.000%) enc=0.01s
+  cand none               t=0 a=0 b=0 c=0 size=299625 (+165.877%) enc=0.00s
+SUMMARY /home/user/data/c/table_1m speed default=112693 oracle=112693 gain=0.000% best=default candidates=2
+/home/user/data/c/table_1m balanced default size=71881 enc=0.01s plan=0.002s plan_full=0.002s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=71881 (+0.000%) enc=0.01s
+  cand none               t=0 a=0 b=0 c=0 size=183231 (+154.909%) enc=0.01s
+SUMMARY /home/user/data/c/table_1m balanced default=71881 oracle=71881 gain=0.000% best=default candidates=2
+/home/user/data/c/table_1m hc default size=68372 enc=0.09s plan=0.002s plan_full=0.002s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=68372 (+0.000%) enc=0.07s
+  cand none               t=0 a=0 b=0 c=0 size=121538 (+77.760%) enc=0.51s
+SUMMARY /home/user/data/c/table_1m hc default=68372 oracle=68372 gain=0.000% best=default candidates=2
+/home/user/data/c/table_1m ratio default size=67280 enc=0.21s plan=0.001s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=67280 (+0.000%) enc=0.22s
+  cand none               t=0 a=0 b=0 c=0 size=92682 (+37.756%) enc=0.04s
+SUMMARY /home/user/data/c/table_1m ratio default=67280 oracle=67280 gain=0.000% best=default candidates=2
+/home/user/data/c/table_1m x default size=51395 enc=7.98s plan=0.002s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=51395 (+0.000%) enc=15.16s
+  cand none               t=0 a=0 b=0 c=0 size=51640 (+0.477%) enc=11.07s
+SUMMARY /home/user/data/c/table_1m x default=51395 oracle=51395 gain=0.000% best=default candidates=2
+/home/user/data/c/log_1m speed default size=162659 enc=0.00s plan=0.001s plan_full=0.000s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=162659 (+0.000%) enc=0.00s
+  cand balanced           t=4 a=0 b=0 c=0 size=162659 (+0.000%) enc=0.00s
+SUMMARY /home/user/data/c/log_1m speed default=162659 oracle=162659 gain=0.000% best=default candidates=2
+/home/user/data/c/log_1m balanced default size=53114 enc=0.01s plan=0.003s plan_full=0.009s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=90936 (+71.209%) enc=0.00s
+  cand balanced           t=4 a=0 b=0 c=0 size=53114 (+0.000%) enc=0.01s
+SUMMARY /home/user/data/c/log_1m balanced default=53114 oracle=53114 gain=0.000% best=default candidates=2
+/home/user/data/c/log_1m hc default size=45503 enc=0.10s plan=0.006s plan_full=0.005s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=64264 (+41.230%) enc=0.42s
+  cand balanced           t=4 a=0 b=0 c=0 size=45503 (+0.000%) enc=0.09s
+SUMMARY /home/user/data/c/log_1m hc default=45503 oracle=45503 gain=0.000% best=default candidates=2
+/home/user/data/c/log_1m ratio default size=41994 enc=0.13s plan=0.005s plan_full=0.005s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=53434 (+27.242%) enc=0.03s
+  cand balanced           t=4 a=0 b=0 c=0 size=41994 (+0.000%) enc=0.13s
+SUMMARY /home/user/data/c/log_1m ratio default=41994 oracle=41994 gain=0.000% best=default candidates=2
+/home/user/data/c/log_1m x default size=30133 enc=7.49s plan=0.005s plan_full=0.005s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=30133 (+0.000%) enc=7.32s
+  cand balanced           t=4 a=0 b=0 c=0 size=30133 (+0.000%) enc=10.59s
+SUMMARY /home/user/data/c/log_1m x default=30133 oracle=30133 gain=0.000% best=default candidates=2
+/home/user/data/c/bin_1m speed default size=688643 enc=0.00s plan=0.001s plan_full=0.049s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=688643 (+0.000%) enc=0.00s
+SUMMARY /home/user/data/c/bin_1m speed default=688643 oracle=688643 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_1m balanced default size=651916 enc=0.01s plan=0.004s plan_full=0.005s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=651916 (+0.000%) enc=0.01s
+SUMMARY /home/user/data/c/bin_1m balanced default=651916 oracle=651916 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_1m hc default size=637142 enc=0.15s plan=0.005s plan_full=0.055s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=637142 (+0.000%) enc=0.13s
+SUMMARY /home/user/data/c/bin_1m hc default=637142 oracle=637142 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_1m ratio default size=638106 enc=0.25s plan=0.005s plan_full=0.055s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=638106 (+0.000%) enc=0.23s
+SUMMARY /home/user/data/c/bin_1m ratio default=638106 oracle=638106 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_1m x default size=622662 enc=3.64s plan=0.004s plan_full=0.053s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=622662 (+0.000%) enc=3.50s
+SUMMARY /home/user/data/c/bin_1m x default=622662 oracle=622662 gain=0.000% best=default candidates=1
+/home/user/data/c/num_1m speed default size=301282 enc=0.00s plan=0.000s plan_full=0.003s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=301282 (+0.000%) enc=0.00s
+  cand balanced           t=9 a=0 b=65 c=0 size=146814 (-51.270%) enc=0.02s
+SUMMARY /home/user/data/c/num_1m speed default=301282 oracle=146814 gain=51.270% best=balanced candidates=2
+/home/user/data/c/num_1m balanced default size=126517 enc=0.02s plan=0.005s plan_full=0.011s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=172997 (+36.738%) enc=0.01s
+  cand balanced           t=9 a=0 b=65 c=0 size=126517 (+0.000%) enc=0.02s
+SUMMARY /home/user/data/c/num_1m balanced default=126517 oracle=126517 gain=0.000% best=default candidates=2
+/home/user/data/c/num_1m hc default size=111099 enc=0.09s plan=0.006s plan_full=0.014s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=140740 (+26.680%) enc=0.34s
+  cand balanced           t=9 a=0 b=65 c=0 size=111099 (+0.000%) enc=0.09s
+SUMMARY /home/user/data/c/num_1m hc default=111099 oracle=111099 gain=0.000% best=default candidates=2
+/home/user/data/c/num_1m ratio default size=91478 enc=0.48s plan=0.005s plan_full=0.013s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=91478 (+0.000%) enc=0.44s
+  cand balanced           t=9 a=0 b=65 c=0 size=91478 (+0.000%) enc=0.50s
+SUMMARY /home/user/data/c/num_1m ratio default=91478 oracle=91478 gain=0.000% best=default candidates=2
+/home/user/data/c/num_1m x default size=71913 enc=3.08s plan=0.005s plan_full=0.014s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=71913 (+0.000%) enc=3.52s
+  cand balanced           t=9 a=0 b=65 c=0 size=71913 (+0.000%) enc=2.84s
+SUMMARY /home/user/data/c/num_1m x default=71913 oracle=71913 gain=0.000% best=default candidates=2
+/home/user/data/c/image_1m speed default size=747863 enc=0.00s plan=0.002s plan_full=0.063s plan_t=2 full_t=2
+  cand speed              t=2 a=2 b=1 c=1 size=747863 (+0.000%) enc=0.01s
+  cand balanced           t=5 a=8 b=1 c=0 size=509439 (-31.881%) enc=0.01s
+  cand hc                 t=5 a=2 b=1 c=1 size=509439 (-31.881%) enc=0.02s
+  cand none               t=0 a=0 b=0 c=0 size=984175 (+31.598%) enc=0.00s
+SUMMARY /home/user/data/c/image_1m speed default=747863 oracle=509439 gain=31.881% best=balanced candidates=4
+/home/user/data/c/image_1m balanced default size=429228 enc=0.01s plan=0.011s plan_full=0.033s plan_t=5 full_t=5
+  cand speed              t=2 a=2 b=1 c=1 size=520742 (+21.321%) enc=0.01s
+  cand balanced           t=5 a=8 b=1 c=0 size=429228 (+0.000%) enc=0.02s
+  cand hc                 t=5 a=2 b=1 c=1 size=429228 (+0.000%) enc=0.03s
+  cand none               t=0 a=0 b=0 c=0 size=675795 (+57.444%) enc=0.02s
+SUMMARY /home/user/data/c/image_1m balanced default=429228 oracle=429228 gain=0.000% best=default candidates=4
+/home/user/data/c/image_1m hc default size=429126 enc=0.08s plan=0.019s plan_full=0.119s plan_t=5 full_t=5
+  cand speed              t=2 a=2 b=1 c=1 size=496533 (+15.708%) enc=0.33s
+  cand balanced           t=5 a=8 b=1 c=0 size=429126 (+0.000%) enc=0.08s
+  cand hc                 t=5 a=2 b=1 c=1 size=429126 (+0.000%) enc=0.08s
+  cand none               t=0 a=0 b=0 c=0 size=601657 (+40.205%) enc=0.22s
+SUMMARY /home/user/data/c/image_1m hc default=429126 oracle=429126 gain=0.000% best=default candidates=4
+/home/user/data/c/image_1m ratio default size=426316 enc=0.53s plan=0.015s plan_full=0.085s plan_t=5 full_t=5
+  cand speed              t=2 a=2 b=1 c=1 size=442844 (+3.877%) enc=0.72s
+  cand balanced           t=5 a=8 b=1 c=0 size=426316 (+0.000%) enc=0.55s
+  cand hc                 t=5 a=2 b=1 c=1 size=426316 (+0.000%) enc=0.56s
+  cand none               t=0 a=0 b=0 c=0 size=511810 (+20.054%) enc=0.28s
+SUMMARY /home/user/data/c/image_1m ratio default=426316 oracle=426316 gain=0.000% best=default candidates=4
+/home/user/data/c/image_1m x default size=420190 enc=3.06s plan=0.016s plan_full=0.084s plan_t=5 full_t=5
+  cand speed              t=2 a=2 b=1 c=1 size=423130 (+0.700%) enc=7.13s
+  cand balanced           t=5 a=8 b=1 c=0 size=420190 (+0.000%) enc=2.83s
+  cand hc                 t=5 a=2 b=1 c=1 size=420190 (+0.000%) enc=3.12s
+  cand none               t=0 a=0 b=0 c=0 size=423130 (+0.700%) enc=3.31s
+SUMMARY /home/user/data/c/image_1m x default=420190 oracle=420190 gain=0.000% best=default candidates=4
+/home/user/data/c/mixed_1m speed default size=407325 enc=0.00s plan=0.001s plan_full=0.001s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=407325 (+0.000%) enc=0.00s
+SUMMARY /home/user/data/c/mixed_1m speed default=407325 oracle=407325 gain=0.000% best=default candidates=1
+/home/user/data/c/mixed_1m balanced default size=288684 enc=0.01s plan=0.002s plan_full=0.015s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=288684 (+0.000%) enc=0.01s
+SUMMARY /home/user/data/c/mixed_1m balanced default=288684 oracle=288684 gain=0.000% best=default candidates=1
+/home/user/data/c/mixed_1m hc default size=250638 enc=0.26s plan=0.009s plan_full=0.007s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=250638 (+0.000%) enc=0.25s
+SUMMARY /home/user/data/c/mixed_1m hc default=250638 oracle=250638 gain=0.000% best=default candidates=1
+/home/user/data/c/mixed_1m ratio default size=235904 enc=0.52s plan=0.009s plan_full=0.008s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=235904 (+0.000%) enc=0.47s
+SUMMARY /home/user/data/c/mixed_1m ratio default=235904 oracle=235904 gain=0.000% best=default candidates=1
+/home/user/data/c/mixed_1m x default size=195881 enc=3.55s plan=0.011s plan_full=0.009s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=195881 (+0.000%) enc=3.47s
+SUMMARY /home/user/data/c/mixed_1m x default=195881 oracle=195881 gain=0.000% best=default candidates=1
+/home/user/data/c/text_10m speed default size=5795203 enc=0.029s dec=0.008s plan=0.001s plan_full=0.001s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=5795203 (+0.000%) enc=0.025s dec=0.004s
+  cand hc                 t=8 a=0 b=0 c=0 size=5086969 (-12.221%) enc=0.274s dec=0.015s
+SUMMARY /home/user/data/c/text_10m speed default=5795203 oracle=5086969 gain=12.221% best=hc candidates=2
+/home/user/data/c/text_10m balanced default size=3616498 enc=0.098s dec=0.019s plan=0.002s plan_full=0.063s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=3616498 (+0.000%) enc=0.071s dec=0.013s
+  cand hc                 t=8 a=0 b=0 c=0 size=3581450 (-0.969%) enc=0.322s dec=0.026s
+SUMMARY /home/user/data/c/text_10m balanced default=3616498 oracle=3581450 gain=0.969% best=hc candidates=2
+/home/user/data/c/text_10m hc default size=2710705 enc=3.615s dec=0.028s plan=0.081s plan_full=0.103s plan_t=8 full_t=8
+  cand speed              t=0 a=0 b=0 c=0 size=2794582 (+3.094%) enc=5.488s dec=0.014s
+  cand hc                 t=8 a=0 b=0 c=0 size=2710705 (+0.000%) enc=3.561s dec=0.023s
+SUMMARY /home/user/data/c/text_10m hc default=2710705 oracle=2710705 gain=0.000% best=default candidates=2
+/home/user/data/c/text_10m ratio default size=2317382 enc=1.207s dec=0.608s plan=0.089s plan_full=0.120s plan_t=8 full_t=8
+  cand speed              t=0 a=0 b=0 c=0 size=2317382 (+0.000%) enc=0.736s dec=0.607s
+  cand hc                 t=8 a=0 b=0 c=0 size=2317382 (+0.000%) enc=0.914s dec=0.665s
+SUMMARY /home/user/data/c/text_10m ratio default=2317382 oracle=2317382 gain=0.000% best=default candidates=2
+Killed
+/home/user/data/c/table_10m speed default size=1047643 enc=0.045s dec=0.022s plan=0.002s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=1047643 (+0.000%) enc=0.061s dec=0.019s
+  cand none               t=0 a=0 b=0 c=0 size=2928512 (+179.533%) enc=0.018s dec=0.004s
+SUMMARY /home/user/data/c/table_10m speed default=1047643 oracle=1047643 gain=0.000% best=default candidates=2
+/home/user/data/c/table_10m balanced default size=658705 enc=0.064s dec=0.030s plan=0.002s plan_full=0.002s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=658705 (+0.000%) enc=0.046s dec=0.015s
+  cand none               t=0 a=0 b=0 c=0 size=1752746 (+166.090%) enc=0.032s dec=0.012s
+SUMMARY /home/user/data/c/table_10m balanced default=658705 oracle=658705 gain=0.000% best=default candidates=2
+/home/user/data/c/table_10m hc default size=588282 enc=0.665s dec=0.059s plan=0.002s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=588282 (+0.000%) enc=0.774s dec=0.015s
+  cand none               t=0 a=0 b=0 c=0 size=1116719 (+89.827%) enc=7.856s dec=0.015s
+SUMMARY /home/user/data/c/table_10m hc default=588282 oracle=588282 gain=0.000% best=default candidates=2
+/home/user/data/c/table_10m ratio default size=568016 enc=2.003s dec=0.066s plan=0.004s plan_full=0.002s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=568016 (+0.000%) enc=1.999s dec=0.046s
+  cand none               t=0 a=0 b=0 c=0 size=922858 (+62.470%) enc=0.491s dec=0.320s
+SUMMARY /home/user/data/c/table_10m ratio default=568016 oracle=568016 gain=0.000% best=default candidates=2
+/home/user/data/c/table_10m x default size=449066 enc=34.637s dec=23.942s plan=0.002s plan_full=0.002s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=449066 (+0.000%) enc=39.975s dec=24.066s
+  cand none               t=0 a=0 b=0 c=0 size=452690 (+0.807%) enc=48.933s dec=2.108s
+SUMMARY /home/user/data/c/table_10m x default=449066 oracle=449066 gain=0.000% best=default candidates=2
+/home/user/data/c/log_10m speed default size=1643878 enc=0.015s dec=0.010s plan=0.001s plan_full=0.001s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=1643878 (+0.000%) enc=0.014s dec=0.004s
+  cand balanced           t=4 a=0 b=0 c=0 size=1643878 (+0.000%) enc=0.019s dec=0.004s
+SUMMARY /home/user/data/c/log_10m speed default=1643878 oracle=1643878 gain=0.000% best=default candidates=2
+/home/user/data/c/log_10m balanced default size=492687 enc=0.037s dec=0.012s plan=0.003s plan_full=0.071s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=913873 (+85.488%) enc=0.022s dec=0.007s
+  cand balanced           t=4 a=0 b=0 c=0 size=492687 (+0.000%) enc=0.039s dec=0.010s
+SUMMARY /home/user/data/c/log_10m balanced default=492687 oracle=492687 gain=0.000% best=default candidates=2
+/home/user/data/c/log_10m hc default size=378583 enc=1.004s dec=0.015s plan=0.007s plan_full=0.065s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=589011 (+55.583%) enc=5.242s dec=0.006s
+  cand balanced           t=4 a=0 b=0 c=0 size=378583 (+0.000%) enc=0.955s dec=0.011s
+SUMMARY /home/user/data/c/log_10m hc default=378583 oracle=378583 gain=0.000% best=default candidates=2
+/home/user/data/c/log_10m ratio default size=349403 enc=1.282s dec=0.030s plan=0.005s plan_full=0.054s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=453508 (+29.795%) enc=0.308s dec=0.193s
+  cand balanced           t=4 a=0 b=0 c=0 size=349403 (+0.000%) enc=1.262s dec=0.023s
+SUMMARY /home/user/data/c/log_10m ratio default=349403 oracle=349403 gain=0.000% best=default candidates=2
+/home/user/data/c/log_10m x default size=250740 enc=48.520s dec=44.965s plan=0.007s plan_full=0.063s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=250740 (+0.000%) enc=46.961s dec=44.714s
+  cand balanced           t=4 a=0 b=0 c=0 size=250740 (+0.000%) enc=50.602s dec=44.105s
+SUMMARY /home/user/data/c/log_10m x default=250740 oracle=250740 gain=0.000% best=default candidates=2
+/home/user/data/c/bin_10m speed default size=6299427 enc=0.025s dec=0.007s plan=0.000s plan_full=0.652s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=6299427 (+0.000%) enc=0.028s dec=0.004s
+SUMMARY /home/user/data/c/bin_10m speed default=6299427 oracle=6299427 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_10m balanced default size=5236620 enc=0.056s dec=0.015s plan=0.009s plan_full=0.310s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=5236620 (+0.000%) enc=0.055s dec=0.009s
+SUMMARY /home/user/data/c/bin_10m balanced default=5236620 oracle=5236620 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_10m hc default size=4804630 enc=2.213s dec=0.015s plan=0.009s plan_full=0.712s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=4804630 (+0.000%) enc=2.346s dec=0.012s
+SUMMARY /home/user/data/c/bin_10m hc default=4804630 oracle=4804630 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_10m ratio default size=4621541 enc=3.701s dec=0.170s plan=0.009s plan_full=0.678s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=4621541 (+0.000%) enc=3.603s dec=0.155s
+SUMMARY /home/user/data/c/bin_10m ratio default=4621541 oracle=4621541 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_10m x default size=4333900 enc=38.976s dec=37.195s plan=0.008s plan_full=0.700s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=4333900 (+0.000%) enc=37.840s dec=38.458s
+SUMMARY /home/user/data/c/bin_10m x default=4333900 oracle=4333900 gain=0.000% best=default candidates=1
+/home/user/data/c/num_10m speed default size=2853904 enc=0.022s dec=0.018s plan=0.000s plan_full=0.029s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=2853904 (+0.000%) enc=0.016s dec=0.004s
+  cand balanced           t=9 a=0 b=65 c=0 size=1418431 (-50.299%) enc=0.115s dec=0.016s
+SUMMARY /home/user/data/c/num_10m speed default=2853904 oracle=1418431 gain=50.299% best=balanced candidates=2
+/home/user/data/c/num_10m balanced default size=1191001 enc=0.124s dec=0.020s plan=0.014s plan_full=0.105s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=1588027 (+33.335%) enc=0.035s dec=0.009s
+  cand balanced           t=9 a=0 b=65 c=0 size=1191001 (+0.000%) enc=0.148s dec=0.022s
+SUMMARY /home/user/data/c/num_10m balanced default=1191001 oracle=1191001 gain=0.000% best=default candidates=2
+/home/user/data/c/num_10m hc default size=1001887 enc=0.959s dec=0.024s plan=0.017s plan_full=0.129s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=1175075 (+17.286%) enc=5.245s dec=0.009s
+  cand balanced           t=9 a=0 b=65 c=0 size=1001887 (+0.000%) enc=0.923s dec=0.018s
+SUMMARY /home/user/data/c/num_10m hc default=1001887 oracle=1001887 gain=0.000% best=default candidates=2
+/home/user/data/c/num_10m ratio default size=743054 enc=6.567s dec=0.244s plan=0.015s plan_full=0.115s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=743054 (+0.000%) enc=0.566s dec=0.251s
+  cand balanced           t=9 a=0 b=65 c=0 size=743054 (+0.000%) enc=6.580s dec=0.257s
+SUMMARY /home/user/data/c/num_10m ratio default=743054 oracle=743054 gain=0.000% best=default candidates=2
+/home/user/data/c/num_10m x default size=875955 enc=1.451s dec=0.060s plan=0.013s plan_full=0.114s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=587367 (-32.946%) enc=33.056s dec=29.460s
+  cand balanced           t=9 a=0 b=65 c=0 size=875955 (+0.000%) enc=1.288s dec=0.054s
+SUMMARY /home/user/data/c/num_10m x default=875955 oracle=587367 gain=32.946% best=speed candidates=2
+/home/user/data/c/mixed_10m speed default size=4885090 enc=0.020s dec=0.008s plan=0.001s plan_full=0.001s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=4885090 (+0.000%) enc=0.017s dec=0.004s
+  cand hc                 t=8 a=0 b=0 c=0 size=4703932 (-3.708%) enc=0.152s dec=0.006s
+SUMMARY /home/user/data/c/mixed_10m speed default=4885090 oracle=4703932 gain=3.708% best=hc candidates=2
+/home/user/data/c/mixed_10m balanced default size=3681900 enc=0.039s dec=0.013s plan=0.002s plan_full=0.023s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=3681900 (+0.000%) enc=0.037s dec=0.009s
+  cand hc                 t=8 a=0 b=0 c=0 size=3667807 (-0.383%) enc=0.166s dec=0.011s
+SUMMARY /home/user/data/c/mixed_10m balanced default=3681900 oracle=3667807 gain=0.383% best=hc candidates=2
+/home/user/data/c/mixed_10m hc default size=3231168 enc=3.753s dec=0.017s plan=0.075s plan_full=0.074s plan_t=8 full_t=8
+  cand speed              t=0 a=0 b=0 c=0 size=3231168 (+0.000%) enc=3.411s dec=0.013s
+  cand hc                 t=8 a=0 b=0 c=0 size=3231168 (+0.000%) enc=3.460s dec=0.013s
+SUMMARY /home/user/data/c/mixed_10m hc default=3231168 oracle=3231168 gain=0.000% best=default candidates=2
+/home/user/data/c/mixed_10m ratio default size=3019636 enc=7.745s dec=0.712s plan=0.063s plan_full=0.067s plan_t=8 full_t=8
+  cand speed              t=0 a=0 b=0 c=0 size=3019636 (+0.000%) enc=7.454s dec=0.758s
+  cand hc                 t=8 a=0 b=0 c=0 size=3019636 (+0.000%) enc=7.655s dec=0.694s
+SUMMARY /home/user/data/c/mixed_10m ratio default=3019636 oracle=3019636 gain=0.000% best=default candidates=2
+/home/user/data/c/mixed_10m x default size=2696386 enc=40.548s dec=31.827s plan=0.073s plan_full=0.072s plan_t=8 full_t=8
+  cand speed              t=0 a=0 b=0 c=0 size=2696386 (+0.000%) enc=39.033s dec=34.759s
+  cand hc                 t=8 a=0 b=0 c=0 size=2696386 (+0.000%) enc=51.280s dec=39.509s
+SUMMARY /home/user/data/c/mixed_10m x default=2696386 oracle=2696386 gain=0.000% best=default candidates=2
+/home/user/data/c/image_8m speed default size=6332994 enc=0.021s dec=0.010s plan=0.004s plan_full=0.565s plan_t=2 full_t=2
+  cand speed              t=2 a=2 b=1 c=1 size=6332994 (+0.000%) enc=0.014s dec=0.005s
+  cand balanced           t=5 a=8 b=1 c=0 size=4309050 (-31.959%) enc=0.016s dec=0.007s
+  cand hc                 t=5 a=2 b=1 c=1 size=4309050 (-31.959%) enc=0.033s dec=0.007s
+  cand balanced-full      t=5 a=4 b=1 c=1 size=4309050 (-31.959%) enc=0.290s dec=0.008s
+  cand none               t=0 a=0 b=0 c=0 size=8389978 (+32.480%) enc=0.015s dec=0.004s
+SUMMARY /home/user/data/c/image_8m speed default=6332994 oracle=4309050 gain=31.959% best=balanced candidates=5
+/home/user/data/c/image_8m balanced default size=3657342 enc=0.025s dec=0.016s plan=0.019s plan_full=0.286s plan_t=5 full_t=5
+  cand speed              t=2 a=2 b=1 c=1 size=4538741 (+24.099%) enc=0.031s dec=0.010s
+  cand balanced           t=5 a=8 b=1 c=0 size=3657342 (+0.000%) enc=0.032s dec=0.013s
+  cand hc                 t=5 a=2 b=1 c=1 size=3657342 (+0.000%) enc=0.045s dec=0.011s
+  cand balanced-full      t=5 a=4 b=1 c=1 size=3657342 (+0.000%) enc=0.346s dec=0.017s
+  cand none               t=0 a=0 b=0 c=0 size=6127613 (+67.543%) enc=0.072s dec=0.013s
+SUMMARY /home/user/data/c/image_8m balanced default=3657342 oracle=3657342 gain=0.000% best=default candidates=5
+/home/user/data/c/image_8m hc default size=3649636 enc=0.736s dec=0.019s plan=0.029s plan_full=0.738s plan_t=5 full_t=5
+  cand speed              t=2 a=2 b=1 c=1 size=4316571 (+18.274%) enc=3.864s dec=0.011s
+  cand balanced           t=5 a=8 b=1 c=0 size=3649636 (+0.000%) enc=0.743s dec=0.012s
+  cand hc                 t=5 a=2 b=1 c=1 size=3649636 (+0.000%) enc=0.764s dec=0.013s
+  cand balanced-full      t=5 a=4 b=1 c=1 size=3649636 (+0.000%) enc=0.989s dec=0.012s
+  cand none               t=0 a=0 b=0 c=0 size=5129875 (+40.559%) enc=3.297s dec=0.018s
+SUMMARY /home/user/data/c/image_8m hc default=3649636 oracle=3649636 gain=0.000% best=default candidates=5
+/home/user/data/c/image_8m ratio default size=3616667 enc=2.453s dec=0.148s plan=0.028s plan_full=0.638s plan_t=5 full_t=5
+  cand speed              t=2 a=2 b=1 c=1 size=3750782 (+3.708%) enc=7.040s dec=0.989s
+  cand balanced           t=5 a=8 b=1 c=0 size=3616667 (+0.000%) enc=2.812s dec=0.162s
+  cand hc                 t=5 a=2 b=1 c=1 size=3616667 (+0.000%) enc=2.669s dec=0.141s
+  cand balanced-full      t=5 a=4 b=1 c=1 size=3616667 (+0.000%) enc=2.821s dec=0.147s
+  cand none               t=0 a=0 b=0 c=0 size=4491263 (+24.182%) enc=4.086s dec=0.222s
+SUMMARY /home/user/data/c/image_8m ratio default=3616667 oracle=3616667 gain=0.000% best=default candidates=5
+/home/user/data/c/image_8m x default size=3560794 enc=26.158s dec=27.493s plan=0.029s plan_full=0.721s plan_t=5 full_t=5
+  cand speed              t=2 a=2 b=1 c=1 size=3656787 (+2.696%) enc=60.091s dec=32.379s
+  cand balanced           t=5 a=8 b=1 c=0 size=3560794 (+0.000%) enc=26.401s dec=28.398s
+  cand hc                 t=5 a=2 b=1 c=1 size=3560794 (+0.000%) enc=26.536s dec=24.966s
+  cand balanced-full      t=5 a=4 b=1 c=1 size=3560794 (+0.000%) enc=26.410s dec=24.413s
+  cand none               t=0 a=0 b=0 c=0 size=3656787 (+2.696%) enc=26.711s dec=26.940s
+SUMMARY /home/user/data/c/image_8m x default=3560794 oracle=3560794 gain=0.000% best=default candidates=5
+/home/user/data/c/text_100m speed default size=57286385 enc=0.296s dec=0.090s plan=0.001s plan_full=0.001s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=57286385 (+0.000%) enc=0.265s dec=0.041s
+  cand hc                 t=8 a=0 b=0 c=0 size=48179594 (-15.897%) enc=1.828s dec=0.142s
+SUMMARY /home/user/data/c/text_100m speed default=57286385 oracle=48179594 gain=15.897% best=hc candidates=2
+/home/user/data/c/text_100m balanced default size=35567294 enc=0.581s dec=0.159s plan=0.002s plan_full=0.709s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=35567294 (+0.000%) enc=0.598s dec=0.123s
+  cand hc                 t=8 a=0 b=0 c=0 size=33854150 (-4.817%) enc=2.017s dec=0.189s
+SUMMARY /home/user/data/c/text_100m balanced default=35567294 oracle=33854150 gain=4.817% best=hc candidates=2
+/home/user/data/c/text_100m hc default size=24390220 enc=62.722s dec=0.333s plan=0.088s plan_full=0.778s plan_t=8 full_t=8
+  cand speed              t=0 a=0 b=0 c=0 size=27473898 (+12.643%) enc=53.694s dec=0.169s
+  cand hc                 t=8 a=0 b=0 c=0 size=24390220 (+0.000%) enc=63.595s dec=0.275s
+SUMMARY /home/user/data/c/text_100m hc default=24390220 oracle=24390220 gain=0.000% best=default candidates=2
+/home/user/data/c/text_100m ratio default size=20798338 enc=8.517s dec=5.476s plan=0.065s plan_full=0.577s plan_t=8 full_t=8
+  cand speed              t=0 a=0 b=0 c=0 size=20798338 (+0.000%) enc=7.996s dec=5.638s
+  cand hc                 t=8 a=0 b=0 c=0 size=20798338 (+0.000%) enc=8.560s dec=5.423s
+SUMMARY /home/user/data/c/text_100m ratio default=20798338 oracle=20798338 gain=0.000% best=default candidates=2
+/home/user/data/c/table_100m speed default size=9783590 enc=0.375s dec=0.160s plan=0.001s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=9783590 (+0.000%) enc=0.362s dec=0.124s
+  cand none               t=0 a=0 b=0 c=0 size=29206041 (+198.521%) enc=0.172s dec=0.042s
+SUMMARY /home/user/data/c/table_100m speed default=9783590 oracle=9783590 gain=0.000% best=default candidates=2
+/home/user/data/c/table_100m balanced default size=6207084 enc=0.418s dec=0.184s plan=0.001s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=6207084 (+0.000%) enc=0.446s dec=0.145s
+  cand none               t=0 a=0 b=0 c=0 size=16938917 (+172.897%) enc=0.295s dec=0.114s
+SUMMARY /home/user/data/c/table_100m balanced default=6207084 oracle=6207084 gain=0.000% best=default candidates=2
+/home/user/data/c/table_100m hc default size=5416003 enc=6.886s dec=0.218s plan=0.002s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=5416003 (+0.000%) enc=6.871s dec=0.162s
+  cand none               t=0 a=0 b=0 c=0 size=10102273 (+86.526%) enc=77.568s dec=0.120s
+SUMMARY /home/user/data/c/table_100m hc default=5416003 oracle=5416003 gain=0.000% best=default candidates=2
+/home/user/data/c/table_100m ratio default size=5205672 enc=22.093s dec=0.446s plan=0.002s plan_full=0.001s plan_t=3 full_t=3
+  cand speed              t=3 a=59 b=1 c=8 size=5205672 (+0.000%) enc=22.557s dec=0.452s
+  cand none               t=0 a=0 b=0 c=0 size=9673418 (+85.825%) enc=5.072s dec=3.046s
+SUMMARY /home/user/data/c/table_100m ratio default=5205672 oracle=5205672 gain=0.000% best=default candidates=2
+/home/user/data/c/log_100m speed default size=18229758 enc=0.117s dec=0.070s plan=0.000s plan_full=0.000s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=18229758 (+0.000%) enc=0.110s dec=0.031s
+  cand balanced           t=4 a=0 b=0 c=0 size=18229758 (+0.000%) enc=0.119s dec=0.031s
+SUMMARY /home/user/data/c/log_100m speed default=18229758 oracle=18229758 gain=0.000% best=default candidates=2
+/home/user/data/c/log_100m balanced default size=5314068 enc=0.429s dec=0.139s plan=0.003s plan_full=0.638s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=9778137 (+84.005%) enc=0.171s dec=0.073s
+  cand balanced           t=4 a=0 b=0 c=0 size=5314068 (+0.000%) enc=0.361s dec=0.095s
+SUMMARY /home/user/data/c/log_100m balanced default=5314068 oracle=5314068 gain=0.000% best=default candidates=2
+/home/user/data/c/log_100m hc default size=4464928 enc=8.996s dec=0.169s plan=0.006s plan_full=0.652s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=6390910 (+43.136%) enc=52.200s dec=0.097s
+  cand balanced           t=4 a=0 b=0 c=0 size=4464928 (+0.000%) enc=9.179s dec=0.102s
+SUMMARY /home/user/data/c/log_100m hc default=4464928 oracle=4464928 gain=0.000% best=default candidates=2
+/home/user/data/c/log_100m ratio default size=3917216 enc=19.475s dec=0.367s plan=0.005s plan_full=0.642s plan_t=4 full_t=4
+  cand speed              t=0 a=0 b=0 c=0 size=4945808 (+26.258%) enc=4.182s dec=2.179s
+  cand balanced           t=4 a=0 b=0 c=0 size=3917216 (+0.000%) enc=19.766s dec=0.344s
+SUMMARY /home/user/data/c/log_100m ratio default=3917216 oracle=3917216 gain=0.000% best=default candidates=2
+/home/user/data/c/bin_100m speed default size=52469327 enc=0.343s dec=0.090s plan=0.000s plan_full=7.672s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=52469327 (+0.000%) enc=0.262s dec=0.040s
+SUMMARY /home/user/data/c/bin_100m speed default=52469327 oracle=52469327 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_100m balanced default size=36410609 enc=0.517s dec=0.185s plan=0.010s plan_full=3.113s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=36771643 (+0.992%) enc=0.511s dec=0.113s
+SUMMARY /home/user/data/c/bin_100m balanced default=36410609 oracle=36410609 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_100m hc default size=30786287 enc=29.012s dec=0.178s plan=0.009s plan_full=8.216s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=31131248 (+1.121%) enc=29.382s dec=0.152s
+SUMMARY /home/user/data/c/bin_100m hc default=30786287 oracle=30786287 gain=0.000% best=default candidates=1
+/home/user/data/c/bin_100m ratio default size=27886741 enc=47.623s dec=1.236s plan=0.009s plan_full=8.239s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=28232053 (+1.238%) enc=50.907s dec=1.192s
+SUMMARY /home/user/data/c/bin_100m ratio default=27886741 oracle=27886741 gain=0.000% best=default candidates=1
+/home/user/data/c/num_100m speed default size=28116942 enc=0.166s dec=0.076s plan=0.000s plan_full=0.219s plan_t=0 full_t=0
+  cand speed              t=0 a=0 b=0 c=0 size=28116942 (+0.000%) enc=0.154s dec=0.042s
+  cand balanced           t=9 a=0 b=65 c=0 size=13989426 (-50.246%) enc=1.170s dec=0.168s
+SUMMARY /home/user/data/c/num_100m speed default=28116942 oracle=13989426 gain=50.246% best=balanced candidates=2
+/home/user/data/c/num_100m balanced default size=11455565 enc=1.006s dec=0.179s plan=0.021s plan_full=0.972s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=15196406 (+32.655%) enc=0.314s dec=0.097s
+  cand balanced           t=9 a=0 b=65 c=0 size=11455565 (+0.000%) enc=1.004s dec=0.140s
+SUMMARY /home/user/data/c/num_100m balanced default=11455565 oracle=11455565 gain=0.000% best=default candidates=2
+/home/user/data/c/num_100m hc default size=9734741 enc=8.900s dec=0.243s plan=0.022s plan_full=1.077s plan_t=9 full_t=9
+  cand speed              t=0 a=0 b=0 c=0 size=11286936 (+15.945%) enc=48.865s dec=0.095s
+  cand balanced           t=9 a=0 b=65 c=0 size=9734741 (+0.000%) enc=8.751s dec=0.192s
+SUMMARY /home/user/data/c/num_100m hc default=9734741 oracle=9734741 gain=0.000% best=default candidates=2
