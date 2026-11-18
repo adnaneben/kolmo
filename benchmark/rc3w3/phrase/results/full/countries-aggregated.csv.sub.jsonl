@@ -1,0 +1,5 @@
+{"file":"countries-aggregated.csv","n":5512931,"variant":"cm","size":351922,"enc_s":19.443,"dec_s":25.226}
+{"file":"countries-aggregated.csv","n":5512931,"variant":"word+cm","tn":4961860,"size":353106,"enc_s":20.686,"dec_s":17.986}
+{"file":"countries-aggregated.csv","n":5512931,"variant":"cmx-null","size":352258,"enc_s":20.476}
+{"file":"countries-aggregated.csv","n":5512931,"variant":"cmx-dict","size":352321,"body":352155,"dict_cm":166,"nphr":44,"enc_s":21.849}
+{"file":"countries-aggregated.csv","n":5512931,"variant":"phrase+cm","tn":4338058,"dict":209,"nphr":44,"singles":32,"prefixes":32,"coded":1005853,"lit":3230955,"esc":0,"size":498268,"dict_cm":166,"build_s":2.669,"tenc_s":0.049,"tdec_s":0.013,"enc_s":14.287,"dec_s":14.322,"opts":"sample=8M minc=4 maxl=64 rounds=64 per=512 minuse=3 minlen=2 maxtok=0 singles=-1 order=0 words_only=0 bytes=0 maxcodes=0"}

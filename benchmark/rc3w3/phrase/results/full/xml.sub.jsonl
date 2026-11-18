@@ -1,0 +1,5 @@
+{"file":"xml","n":5345280,"variant":"cm","size":300668,"enc_s":22.225,"dec_s":19.387}
+{"file":"xml","n":5345280,"variant":"word+cm","tn":3673350,"size":329688,"enc_s":10.109,"dec_s":10.368}
+{"file":"xml","n":5345280,"variant":"cmx-null","size":300755,"enc_s":21.762}
+{"file":"xml","n":5345280,"variant":"cmx-dict","size":300923,"body":300814,"dict_cm":109,"nphr":2,"enc_s":21.416}
+{"file":"xml","n":5345280,"variant":"phrase+cm","tn":5318180,"dict":78,"nphr":2,"singles":32,"prefixes":32,"coded":27178,"lit":5290924,"esc":0,"size":301567,"dict_cm":109,"build_s":1.148,"tenc_s":0.028,"tdec_s":0.013,"enc_s":20.479,"dec_s":21.478,"opts":"sample=8M minc=4 maxl=64 rounds=64 per=512 minuse=3 minlen=2 maxtok=0 singles=-1 order=0 words_only=0 bytes=0 maxcodes=0"}
