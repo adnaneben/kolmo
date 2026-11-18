@@ -63,7 +63,7 @@ BLIBS   := $(LIBS)
 # this machine's ISA, src/arch/<isa>/*.S (NO_ASM=1 drops them and builds the C references only). The GPU
 # worker of the rc3 gpu lane is not built (see below).
 LIBDIRS := api core plan transforms codecs algo arch arch/x86_64 arch/aarch64
-KOLMO_INCLUDES := src/kolmo.h $(foreach d,$(LIBDIRS),$(wildcard src/$(d)/*.c src/$(d)/*.h)) src/plan/target_table.inc
+KOLMO_INCLUDES := src/kolmo.h $(foreach d,$(LIBDIRS),$(wildcard src/$(d)/*.c src/$(d)/*.h)) src/plan/target_table.inc src/codecs/cm_prior.inc
 ifeq ($(UNAME_M),x86_64)
 ASM_ISA := x86_64
 else ifneq ($(filter arm64 aarch64,$(UNAME_M)),)

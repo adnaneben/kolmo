@@ -258,7 +258,7 @@ static void *compress_worker(void *arg) {
             /* hc: zstd 19 over float planes gives the size of zstd 9 (the planes are coded by Huffman or rANS when that
              * is smaller) at up to 16 times the time. Decimal planes keep zstd 19: zstd 12 was 3 to 36% larger. */
             if (codec == C_ZSTD && level > 9 && !pl.a && !(pl.b & (32 | 64)) && (pl.b & 16)) kgl = 9;
-            xp->native_leaf = J->native_leaf; xp->used_native_leaf = 0; xp->used_f2 = 0;
+            xp->native_leaf = J->native_leaf; xp->used_native_leaf = 0; xp->used_f2 = 0; xp->used_cmt = 0;
             cl = pl.a ? kg_encode_table(xp, kgc, kgl, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
                       : pl.b & 32 ? kg_encode_img8(xp, kgc, kgl, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 64 ? kg_encode_dec64(xp, kgc, kgl, raw, len, pl.b & 1 ? 0 : pl.b & 2 ? (pl.kgw / 4) | KG_DEC_F32 : pl.kgw / 8, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
@@ -294,10 +294,15 @@ static void *compress_worker(void *arg) {
                     /* the slow coders: block sorting of a slice from the middle tells whether plain coding is within
                      * reach (a slice sorts worse than the block, so the limit is loose); otherwise the graph stands */
                     size_t sn = len < (512u << 10) ? len : (512u << 10), so = ((len - sn) / 2) & ~(size_t)63;
-                    size_t cs = codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
                     /* ultra: every numeric graph block comes here, and context mixing over the plain bytes costs 20
-                     * times the graph's time, so plain block sorting must already be within 2% (model weights are not) */
-                    if (!cs || (double)cs / sn > (codec == C_CM ? 1.02 : 1.35) * (double)cl / len) alt = NULL;
+                     * times the graph's time. The slice is coded by the coder in question: a 256 KiB slice under
+                     * context mixing (a slice codes worse than the block, so within 10% of the graph's rate is close
+                     * enough). Block sorting was the probe before rc3w2 and missed the cases that matter: on 10 MB of
+                     * float64 sensor data plain context mixing is 33% smaller than the graph, block sorting is not
+                     * within reach (benchmark/rc3w2/twopass/RESULTS.md). */
+                    if (codec == C_CM) sn = len < (256u << 10) ? len : (256u << 10), so = ((len - sn) / 2) & ~(size_t)63;
+                    size_t cs = codec == C_CM ? cm_compress_m(raw + so, sn, alt, J->slot, 2) : codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
+                    if (!cs || (double)cs / sn > (codec == C_CM ? 1.10 : 1.35) * (double)cl / len) alt = NULL;
                 }
                 if (alt && (codec == C_ZSTD || codec == C_LZ4) && len >= ((size_t)1 << 20)) {
                     /* the fast coders: three 64 KiB slices (start, middle, end) coded plain; the full plain pass costs
@@ -315,7 +320,7 @@ static void *compress_worker(void *arg) {
                 if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_BWT; }
                 if (bc) { cl = bz; codec = bc; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; goto coded; }
             }
-            if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8 | (xp->used_native_leaf ? 32 : 0) | (xp->used_f2 ? 128 : 0); goto coded; }
+            if (cl) { codec = C_GRAPH; tflag = 0; meta = 0; modes |= 8 | (xp->used_native_leaf ? 32 : 0) | (xp->used_f2 || xp->used_cmt ? 128 : 0); goto coded; }
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
         }
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
@@ -546,8 +551,9 @@ coded:;
             emit_block(J, i, h0, raw, tot);
         } else {
             emit_block(J, i, NULL, slot, tot);
-            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) || kolmo_native_flags() ? 128u : 0u), memory_order_relaxed);
-            /* version 11 when the block is codec 18, or a graph block whose leaves may be (leaf trials set used_bwt) */
+            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) || kolmo_native_flags() || (codec == C_CM && cm_stream_tuned(slot + 4 + meta, cl)) ? 128u : 0u), memory_order_relaxed);
+            /* version 11 when the block is codec 18, or a graph block whose leaves may be (leaf trials set used_bwt), a
+             * native coder is enabled, or a context-mixing stream has learning settings (model nibble 14 or 15) */
         }
         put32(e, (uint32_t)len); put32(e + 4, (uint32_t)tot);
         if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)kolmo_xxh3(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)

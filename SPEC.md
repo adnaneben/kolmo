@@ -24,7 +24,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 (format 2) when a block or graph leaf uses codecs 19-23, a block uses the ARM64 branch filter (plan type 11), a table block's transformed length exceeds the block length + 16384 (see below), or the frame uses a trained profile (flag bit 2)) |
+| 4 | 1 | version | 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 (format 2) when a block or graph leaf uses codecs 19-23, a block uses the ARM64 branch filter (plan type 11), a table block's transformed length exceeds the block length + 16384 (see below), or the frame uses a trained profile (flag bit 2), or a CM stream (block or graph leaf) carries learning settings (model nibble 14 or 15)) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -107,7 +107,17 @@ contexts, three record contexts, four mixers combined by a learned final mixer, 
 `f = 8` exactly is the extended header: one more byte follows the size word, `model << 4 | (log2 of the table size − 15)`;
 it carries model 3 (orders 12 and 20, the byte the match model expects as a context, finer classes for long matches).
 Encoders write model 3 for text, model 2 for other data, and model 1 at level 1 and for blocks of 2^28 bytes or more;
-decoders accept all three, so files written with an older model still decode. `CMI` (codec 17) is the same coder with
+decoders accept all three, so files written with an older model still decode. **Learning settings (format 2, rc3):** a
+model nibble of 14 or 15 (models 2 and 3, exact logistic tables) is followed by three more bytes before the coded bytes:
+`b0 b1 b2`. Each 2-bit field of `b0` and `b1` selects one learning constant (the first value is the constant of every
+other stream): `b0` bits 0-1 mixer rate shift 12, 11, 13, 14; bits 2-3 counter limit 2, 1, 3, 4; bits 4-5 APM rate shift
+13, 12, 14, 15; bits 6-7 match-model rate shift 6, 5, 7, 8; `b1` bits 0-1 floor of the decaying mixer rate (of 64) 20,
+12, 28, 40; bits 2-3 its decay period 2^13, 2^12, 2^14, 2^16 bytes; bits 4-5 state-map count limit 255, 127, 511, 1023;
+bits 6-7 weights (of 8) of the mixer and the three APMs in the final probability 2,2,2,2 / 4,1,1,2 / 1,2,2,3 /
+3,1,2,2. `b2` is the initial mixer weights: 0 = every weight 1/4, 1 = the shared prior of the model (the table
+`cm_prior` in `src/codecs/cm_prior.inc`: one row per mixer, copied to every row of that mixer); other values are
+refused. `-x` writes these streams (the settings are chosen by a race of presets on the stream's first 256 KiB,
+`docs/TWOPASS.md`); a frame that holds one, as a block or as a graph leaf, is version 11. `CMI` (codec 17) is the same coder with
 an image model for 8-bit samples: `iw u32 | ih u32 | ich u8` (row width in bytes, bytes before the first pixel,
 interleaved channels), then a size word as above and the coded bytes. CM output is bit-exact across compilers and
 CPUs (integer-only, `-ffp-contract=off`). `FQFAM` (codec 16) is described in *FASTQ family blocks*, `GR6` (codec 26) in
@@ -233,6 +243,7 @@ bytes 37-40). A plan prefix byte `a` other than 0 or 1 is rejected.
 | 3 | `f` = 8, then one byte | `ultra`, text | 1.2.0 |
 | 1, 2, 3 with exact logistic tables | `f` = 8, then one byte whose high nibble is 5, 6 or 7 (model 1, 2, 3) | every `ultra` stream under 2^28 bytes, from 1.2.0-rc2 | 1.2.0-rc2 |
 | image model with exact logistic tables | block codec 17, bit 7 of the channel byte | `ultra`, 8-bit images, from 1.2.0-rc2 | 1.2.0-rc2 |
+| 2, 3 with learning settings and the shared prior | `f` = 8, then one byte whose high nibble is 14 or 15 (model 2, 3), then three bytes | `ultra` streams of codec 7 and 25, and codec 7 graph leaves (`-x -l 2`), from rc3; the frame is version 11 | rc3 |
 
 The exact logistic tables use the logistic curve round(4096 / (1 + e^(-x/256))) at every x in [-2048, 2047] instead of the
 33 interpolated knots of the earlier models; stretch is its inverse (the smallest x whose squash reaches p). Readers before

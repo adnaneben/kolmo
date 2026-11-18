@@ -85,6 +85,9 @@ typedef struct {
     uint64_t xcap;                      /* the call's explicit memory cap (0: none): -x samples size tables with it */
     const uint32_t *kind;               /* per segment: MK_* | phase << 8 (plan/meta.c), or NULL */
 } plan_job;
+#ifdef KOLMO_PLAN_HOOK
+static void (*kolmo_plan_hook)(const uint8_t *src, size_t len, const kolmo_params *p, plan_t *pl);
+#endif
 static int kp_plan_pinned(const struct kolmo_profile *P, const uint8_t *s, size_t n, const kolmo_params *p, plan_t *out);
 /* The analysis of one member, as plan_worker runs it (also used by kolmo train to record the plans it pins). */
 static plan_t plan_for(const uint8_t *src, size_t len, const kolmo_params *p, int threads, int native_leaf) {
@@ -159,6 +162,9 @@ static void *plan_worker(void *arg) {
         if (p->mode == KOLMO_ULTRA && !ultra_keep_transform(src, len, &pl, j->threads_per_plan, p->level)) {
             free(pl.fs); pl.fs = NULL; pl.t = T_NONE;
         }
+#ifdef KOLMO_PLAN_HOOK
+        if (kolmo_plan_hook) kolmo_plan_hook(src, len, p, &pl);   /* research builds only (benchmark/rc3w2/twopass) */
+#endif
         j->plans[g] = pl;
         if (member != MAP_FAILED) munmap(member, mapped);
     }

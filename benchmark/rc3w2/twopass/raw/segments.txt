@@ -1,0 +1,9 @@
+mixed_1m speed whole=407325 (0.0s) parts=407420 (0.0s) gain=-0.02%
+mixed_1m balanced whole=288684 (0.0s) parts=251437 (0.0s) gain=12.90%
+mixed_1m hc whole=250638 (0.3s) parts=229379 (0.3s) gain=8.48%
+mixed_1m ratio whole=235904 (0.5s) parts=217729 (0.3s) gain=7.70%
+mixed_1m x whole=195881 (3.9s) parts=196250 (6.8s) gain=-0.19%
+mixed_10m speed whole=4885090 (0.0s) parts=4887257 (0.0s) gain=-0.04%
+mixed_10m balanced whole=3681900 (0.0s) parts=3302690 (0.1s) gain=10.30%
+mixed_10m hc whole=3231168 (3.8s) parts=3034417 (1.4s) gain=6.09%
+mixed_10m ratio whole=3019636 (7.9s) parts=2877628 (2.9s) gain=4.70%

@@ -125,6 +125,21 @@ the bytes only, never a file name. Frames of other inputs are unchanged (determi
 
 ### Changed
 - `src/transforms/tar.c` moved into `src/plan/meta.c` (tar segmentation is one of the header readers).
+## Unreleased (rc3 wave 2, twopass lane: `claude/rc3w2-twopass-20261117`)
+
+Reading the whole file first: what pays and what does not (`docs/TWOPASS.md`).
+
+### Added
+- **Content segments** (balanced, eco, hc, ratio): a file that holds several kinds of data (prose, a CSV export, an
+  executable, an array of doubles) gets one plan per homogeneous run of 1 MiB or more, as tar members already did.
+  4.5–10% smaller on such files; files of one kind are unchanged. No format change.
+- **Per-stream learning settings and a shared prior for context mixing** (`-x`; format 2, container version 11):
+  four presets, each starting from mixer weights pre-trained once and compiled in, are raced on the first 256 KiB of
+  each CM stream and the smallest is kept. 1.2–5.4% smaller at 100 KB, 0.1–2.1% at 1 MB; decoding costs the same.
+
+### Fixed
+- `-x` on numeric arrays: the plain context-mixing trial of a graph block was gated by a block-sorting slice that
+  missed the cases where it wins; 10 MB of float64 values were 33.6% larger than needed (and larger than `ratio`).
 
 ## Unreleased (rc3, features-a lane: `claude/rc3-features-a-20261116`)
 
