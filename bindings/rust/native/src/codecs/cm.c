@@ -182,7 +182,11 @@ static inline uint32_t cm_hmix(uint32_t a) { a ^= a >> 15; a *= 0x2C1B3C6Du; a ^
 static _Thread_local int kmem_tls_job; static _Thread_local uint64_t kmem_tls_cap, kmem_tls_dec_limit; static _Thread_local size_t kmem_tls_raw;
 static size_t cm_used;   /* bytes the models hold (tests/test_cm_compact.c checks it returns to 0) */
 static void kmem_reserve(uint64_t b, uint64_t cap) { (void)cap; cm_used += b; }
+static int kmem_try_reserve(uint64_t b, uint64_t cap) { (void)cap; cm_used += b; return 1; }
 static void kmem_release(uint64_t b) { cm_used -= b; }
+typedef struct { uint64_t cap, dec_limit; size_t raw; } kmem_ctx;
+static kmem_ctx kmem_ctx_get(void) { kmem_ctx c = {kmem_tls_cap, kmem_tls_dec_limit, kmem_tls_raw}; return c; }
+static void kmem_ctx_set(kmem_ctx c) { kmem_tls_cap = c.cap; kmem_tls_dec_limit = c.dec_limit; kmem_tls_raw = c.raw; }
 static uint64_t kmem_buffers(uint64_t raw) { return 2 * raw + ((uint64_t)1 << 20); }
 #endif
 static atomic_long cm_models_made;   /* models allocated (tests: a refused model is never allocated) */
@@ -856,8 +860,12 @@ static size_t cm_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap)
 #endif
 enum { CM_NPRESET = 4 };
 static const cm_tune_t cm_presets[CM_NPRESET] = {{0x00, 0x00, 1}, {0x1c, 0xa5, 1}, {0x52, 0x04, 1}, {0xdc, 0xb4, 1}};
-typedef struct { const uint8_t *in; size_t n, cap, z; uint8_t *out; int model, bbcap; cm_tune_t t; } cm_race_job;
+typedef struct { const uint8_t *in; size_t n, cap, z; uint8_t *out; int model, bbcap; cm_tune_t t; kmem_ctx ctx; } cm_race_job;
 static void *cm_race_run(void *a) { cm_race_job *j = a; j->z = j->out ? cm_compress_t(j->in, j->n, j->out, j->cap, j->model, j->bbcap, j->t) : 0; return NULL; }
+/* a preset on a thread of its own: the caller reserved its tables (kmem_try_reserve), so the thread is a covered unit of
+ * work, and it codes under the caller's memory context (the explicit cap sizes the tables: same bytes either way) */
+static void *cm_race_thread(void *a) { cm_race_job *j = a; kmem_ctx_set(j->ctx); kmem_tls_job = 1; return cm_race_run(j); }
+static uint64_t cm_need_bound(size_t n);
 static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int model, int bbcap, int threads) {
     if (model < 2 || n >= ((size_t)1 << 28) || n < 64) return cm_compress_mx(in, n, out, cap, model, bbcap);
     const size_t L = n <= CM_RACE_SAMPLE ? n : CM_RACE_SAMPLE;
@@ -867,10 +875,21 @@ static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_
         j[k].out = malloc(j[k].cap);
     }
     const int par = threads > CM_NPRESET ? CM_NPRESET : threads > 1 ? threads : 1;
+    const kmem_ctx ctx = kmem_ctx_get(); const uint64_t need = cm_need_bound(L) + (L + L / 16 + 64);
+    uint64_t held[CM_NPRESET] = {0};
     for (int k0 = 0; k0 < CM_NPRESET; k0 += par) {           /* par trials at a time; the caller runs one of them */
-        for (int k = k0 + 1; k < k0 + par && k < CM_NPRESET; k++) started[k] = !pthread_create(&th[k], NULL, cm_race_run, &j[k]);
+        /* an extra thread only when its tables fit the memory budget now (optional work never waits: the caller may
+         * hold a reservation the waiting thread needs); otherwise the caller codes that preset after its own */
+        for (int k = k0 + 1; k < k0 + par && k < CM_NPRESET; k++) {
+            j[k].ctx = ctx;
+            if (!kmem_try_reserve(need, ctx.cap)) continue;
+            held[k] = need; started[k] = !pthread_create(&th[k], NULL, cm_race_thread, &j[k]);
+            if (!started[k]) { kmem_release(need); held[k] = 0; }
+        }
         cm_race_run(&j[k0]);
-        for (int k = k0 + 1; k < k0 + par && k < CM_NPRESET; k++) { if (started[k]) pthread_join(th[k], NULL); else cm_race_run(&j[k]); }
+        for (int k = k0 + 1; k < k0 + par && k < CM_NPRESET; k++) {
+            if (started[k]) { pthread_join(th[k], NULL); kmem_release(held[k]); } else cm_race_run(&j[k]);
+        }
     }
     int b = -1; for (int k = 0; k < CM_NPRESET; k++) if (j[k].z && (b < 0 || j[k].z < j[b].z)) b = k;
     size_t z = 0;
