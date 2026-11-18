@@ -10,7 +10,7 @@ done = set()
 if os.path.exists(out):
     for r in csv.DictReader(open(out)): done.add((r['bin'], r['mode'], r['threads'], r['file']))
 new = not os.path.exists(out)
-w = csv.writer(open(out, 'a', newline=''))
+fh = open(out, 'a', newline=''); w = csv.writer(fh)
 if new: w.writerow(['bin', 'mode', 'threads', 'file', 'n', 'size', 'enc_s', 'dec_s', 'enc_mib', 'dec_mib', 'version'])
 tmp = tempfile.mkdtemp(dir=os.environ.get('TMPDIR'))
 def run(cmd):
@@ -30,4 +30,4 @@ for f in files:
             if not ok: raise SystemExit(f'ROUND TRIP FAILED {lab} {m} {f}')
             ver = open(z, 'rb').read(5)[4]
             w.writerow([lab, m, th, os.path.basename(f), os.path.getsize(f), os.path.getsize(z), f'{te:.3f}', f'{td:.3f}', f'{me:.0f}', f'{md:.0f}', ver])
-            sys.stdout.flush(); os.remove(z); os.remove(d)
+            fh.flush(); os.remove(z); os.remove(d)
