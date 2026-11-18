@@ -21,7 +21,7 @@ for f in "$R"/*.*; do
   # small slices only at -x (context-mixing seeds stay small; the CM decode is slow under ASan)
   i=0; for m in "${xmodes[@]}"; do $K $m -T 1 "$W/small/$b" "$F/$b.x$i.kol" 2>/dev/null; i=$((i+1)); done
   # long-form tables and line records also at -x whole (table slack at -x, codec 25 parts, GR6+)
-  case $b in longform.csv|table.csv|records.txt|semi.txt|wide.csv|photo.pgm) $K -x -T 2 "$f" "$F/$b.xfull.kol" 2>/dev/null;; esac
+  case $b in longform.csv|table.csv|records.txt|semi.txt|wide.csv|photo.pgm|fastq.fq) $K -x -T 2 "$f" "$F/$b.xfull.kol" 2>/dev/null;; esac
   # audio (codec 19) only from the small WAV files; the large ones go to the round trips
   case $b in mono.wav|stereo.wav) rm -f "$F/$b".*.kol;; esac
 done
@@ -41,9 +41,9 @@ cc -O1 -g -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc
   fuzz/campaign3/seedgen/codec_seeds.c build/libkolmoarch.a build/libvendor.a -lpthread -lm -o "$W/codec_seeds"
 "$W/codec_seeds" "$S/fuzz_codecs" "$F"/*.kol "$R"/*.y4m
 for f in "$S"/fuzz_codecs/*_nested; do mv "$f" "$S/fuzz_decompress/"; done 2>/dev/null
-for f in "$W"/small/text.txt "$W"/small/records.txt "$W"/small/sparse.u16 "$W"/small/walk.i32 "$W"/small/mono.wav "$W"/small/stereo.wav "$W"/small/semi.txt; do
+for f in "$W"/small/fastq.fq "$W"/small/text.txt "$W"/small/records.txt "$W"/small/sparse.u16 "$W"/small/walk.i32 "$W"/small/mono.wav "$W"/small/stereo.wav "$W"/small/semi.txt; do
   b=$(basename "$f")
-  for sel in 128 129 131 132 133 135; do for fl in 0 2 18 35 66; do { printf "\\$(printf %o $sel)\\0\\0\\0\\$(printf %o $fl)"; cat "$f"; } > "$S/fuzz_codecs/rt_${b}_${sel}_$fl"; done; done
+  for sel in 128 129 131 132 133 135 248; do for fl in 0 2 18 35 66; do { printf "\\$(printf %o $sel)\\0\\0\\0\\$(printf %o $fl)"; cat "$f"; } > "$S/fuzz_codecs/rt_${b}_${sel}_$fl"; done; done
 done
 # extensions: indexed files (tables, logs, JSON lines; with and without filters) and archives
 for f in "$R"/table.csv "$R"/app.log "$R"/events.jsonl "$R"/records.txt "$R"/table.tsv; do

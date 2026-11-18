@@ -1,11 +1,12 @@
 /* libFuzzer target for the block and leaf decoders rc3 added, called directly (no container, no checksum in the way):
  * codec 18 (Kolmo block sorting, LZP + BWT + QLFC in C), 19 (audio, kaud), 20 (video, the kvid inverse layout),
  * 21 (per-plane leaf), 22 (Huffman then zstd leaf), 23 (zero-run leaf), 25 (context mixing over parts), 26 (GR6+),
- * 17 (context mixing with the image model) and the graph block decoder with every format-2 leaf allowed.
+ * 17 (context mixing with the image model), 16 (the FASTQ family coder) and the graph block decoder with every
+ * format-2 leaf allowed.
  *
  * Input: sel u8 | n (3 bytes, little-endian, the decoded length; capped at 1 MiB) | flags u8 | payload.
- *   sel % 12 picks the decoder (below). flags bit 0: 2 threads instead of 1 where the decoder takes threads.
- *   sel & 0x80: round-trip mode where the codec has an encoder here (18, 19, 21, 22, 23, 26): the payload is
+ *   sel % 12 picks the decoder (below); (sel & 0x7f) >= 120 picks decoder 12, codec 16 (FASTQ family). flags bit 0: 2 threads instead of 1 where the decoder takes threads.
+ *   sel & 0x80: round-trip mode where the codec has an encoder here (16, 18, 19, 21, 22, 23, 26): the payload is
  *   encoded (n is then ignored), must decode back exactly (a mismatch traps: a real bug), then the valid stream is
  *   damaged at positions taken from the input and decoded again (any result is allowed, no crash or overread).
  * Built with KOLMO_FUZZ_NO_CM, the context-mixing decoders return at once (see src/codecs/cm.c), so codec 25 only
@@ -39,6 +40,7 @@ static int fz_decode(codec_ctx *x, int which, const uint8_t *in, size_t cn, uint
     case 8: return codec_decompress(x, C_CMI, in, cn, out, n);
     case 9: return kg_decode(x, in, cn, out, n);
     case 10: return kolmo_bwt_decompress(in, cn, out, (int)n, x->threads);
+    case 12: return kf_fastq_decompress(in, cn, out, n, x->threads);
     default: return codec_decompress(x, C_BSC5, in, cn, out, n);   /* codec 5 (rc2 frames), read through the C port */
     }
 }
@@ -60,6 +62,11 @@ static size_t fz_encode(codec_ctx *x, int which, const uint8_t *d, size_t n, uin
               size_t hl = huf_compress_all(d, n, h, hc); size_t z = hl ? hz_compress_huf(x, 3, h, hl, e, cap) : 0; free(h); return z; }
     case 5: fz_sel_codec = fl >> 4; return zrun_compress(x, d, n, e, cap, fz_leaf_sel, NULL);
     case 7: return n <= (256u << 10) ? gr6_compress(d, n, e, cap) : 0;
+    case 12: {                                               /* FASTQ text; the coder declines anything else */
+        size_t z = 0; uint8_t *q = kf_fastq_compress(d, n, 1, kf_chunk_for(n), KF_BCHUNK, &z);
+        if (!q || z > cap) { free(q); return 0; }
+        memcpy(e, q, z); free(q); return z;
+    }
     default: return 0;
     }
 }
@@ -71,7 +78,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (n > FZ_MAXN) n = FZ_MAXN;
     data += 5; size -= 5;
     if (size > (2u << 20)) size = 2u << 20;
-    int which = (sel & 0x7f) % 12;
+    int which = (sel & 0x7f) >= 120 ? 12 : (sel & 0x7f) % 12;
     codec_ctx x; memset(&x, 0, sizeof x);
     x.allow_nplane = 1; x.allow_f2 = 1; x.threads = (fl & 1) ? 2 : 1;
     if (!(sel & 0x80)) {
@@ -86,8 +93,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         size_t z = fz_encode(&x, which, data, m, e, cap, fl, &dec);
         if (z) {
             if (fz_decode(&x, dec, e, z, o, m) || memcmp(o, data, m)) __builtin_trap();   /* lossy round trip */
-            /* damaged valid streams: 16 of them, 2 for the decoders with a costly model setup (audio, GR6+) */
-            size_t kmax = dec == 1 || dec == 7 ? 4 : 32;
+            /* damaged valid streams: 16 of them, 2 for the decoders with a costly model setup (audio, GR6+, FASTQ) */
+            size_t kmax = dec == 1 || dec == 7 || dec == 12 ? 4 : 32;
             for (size_t k = 0; k + 1 < size && k < kmax; k += 2) {
                 e[(data[k] * 131u + k) % z] ^= (uint8_t)(data[k + 1] | 1);
                 fz_decode(&x, dec, e, (fl & 0x40) ? z : (z > 1 ? 1 + data[k] * 257u % (z - 1) : z), o, m);

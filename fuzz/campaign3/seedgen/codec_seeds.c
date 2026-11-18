@@ -1,5 +1,5 @@
 /* Seeds for fuzz/fuzz_codecs.c from real frames: for each block of a CZN1 frame whose codec is one fuzz_codecs decodes
- * directly (17, 18, 19, 25, 26, the graph block 12 and codec 5), write sel | n (3 bytes) | flags | payload after the
+ * directly (16, 17, 18, 19, 25, 26, the graph block 12 and codec 5), write sel | n (3 bytes) | flags | payload after the
  * plan bytes. For a YUV4MPEG2 input file (not a frame) write the kvid layout (decoder 2). Blocks over 1 MiB are skipped.
  * usage: codec_seeds OUTDIR FILE...   (build: see fuzz/campaign3/make_seeds.sh) */
 #include "../../../src/kolmo.c"
@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
             const uint8_t *pay = s + P.poff[i]; size_t cl = (size_t)(P.poff[i + 1] - P.poff[i]);
             if (P.ver >= 2) { if (cl < 4) continue; pay += 4; cl -= 4; }
             int which = codec == C_BWT ? 0 : codec == C_AUD ? 1 : codec == C_CMP ? 6 : codec == C_GR6 ? 7 : codec == C_CMI ? 8 :
-                        codec == C_GRAPH ? 9 : codec == C_BSC5 ? 11 : -1;
+                        codec == C_GRAPH ? 9 : codec == C_BSC5 ? 11 : codec == C_FQ ? 120 : -1;
             /* with a transform flag the codec stream follows 0, 4 or 8 bytes of transform metadata */
             if (which >= 0) for (size_t m = 0; m <= (e[13] ? 8 : 0); m += 4) if (m < cl) emit(argv[1], tag, (int)(i * 4 + m / 4), which, pay + m, cl - m, m == 4 ? get32(pay) : len);
             if (codec == C_VID && P.nb == 1) {      /* the nested frame of a video block */
