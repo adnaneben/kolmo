@@ -910,7 +910,7 @@ static uint64_t cm_stream_need(const uint8_t *in, size_t cn, size_t n) {
         uint32_t f = n32 >> 28;
         if (f == 8) {
             int mb = cn < 9 ? 0 : in[4] >> 4;
-            if (mb != 3 && mb != 5 && mb != 6 && mb != 7) return 0;
+            if (mb != 3 && mb != 5 && mb != 6 && mb != 7 && mb != 14 && mb != 15) return 0;
             v2 = (mb & 3) == 3 ? 3 : (mb & 3) == 2 ? 1 : 0; bb = (in[4] & 15) + 15;
         } else if (f) { bb = (int)(f & 7) + 15; v2 = (int)(f >> 3); }
     }
