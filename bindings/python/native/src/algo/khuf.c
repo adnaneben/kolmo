@@ -4,6 +4,7 @@
    and a table decoder with branchless 64-bit refills. No code from zstd's HUF. */
 #include "khuf.h"
 #include <string.h>
+#define memcpy(d, s, n) __builtin_memcpy((d), (s), (n))   /* not __memcpy_chk under _FORTIFY_SOURCE=3 */
 #include <stdlib.h>
 
 static inline uint64_t kh_rd64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }   /* little-endian hosts */

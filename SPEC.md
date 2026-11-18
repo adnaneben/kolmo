@@ -198,7 +198,7 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 25 | reserved for the rc3 lanes (`research/RC3-PLAN.md`) | — | — |
 | 26 | GR6 (GR6+ line-structured text) | blocks, version 11 or later; written by `ultra` (not level 1) | rc3 |
 | 27 | KHUF (Kolmo Huffman; codec 13's chunk framing) | graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=huf`; format in `src/algo/khuf.h` | rc3 wave 2 |
-| 28 | KLZ (byte-aligned LZ77) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
+| 28 | KLZ (byte-aligned LZ77) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` (wave 4: four streams, 16-bit offsets; the rc3 wave-2 layout is not read any more) | rc3 wave 2, wave 4 |
 | 29 | KLZH (LZ77 with Huffman-coded streams) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
 
 **ARM64 branch filter (plan type 11, tflag 14, version 11; rc3 wave 2)**: the plan prefix is `11, a, b, 0`, where

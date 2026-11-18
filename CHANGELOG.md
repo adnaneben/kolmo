@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased (wave 4, LZ lane: `claude/w4-lz-20261118`)
+
+Kolmo's own LZ coders against the libraries they would replace. Opt-in as before (`KOLMO_NATIVE=lz`, `lzma`): no
+default output changes, the determinism hashes are unchanged. Measurements in `benchmark/w4/lz/RESULTS.md`.
+
+### Changed
+- **KLZ (codec 28) has a new block format**: literals, tokens, 16-bit offsets and length extensions as four streams
+  after a three-field header; a token of 4 + 4 bits. Frames of codec 28 from rc3 wave 2 do not decode any more (the
+  codec was opt-in). The decoder runs short sequences in a budgeted loop with one test each. The fast parse hashes 6
+  bytes into a table of 16-bit positions. Against LZ4 -1 (4 MiB blocks, 19 files): −5.9% size, decode 1.05× (1
+  thread) / 1.06× (4 threads), compress 0.98× / 0.95×.
+- **KLZH (codec 29) parse**: level 1 is a single-table parse with the repeat offset tried one byte ahead; every fast
+  level tries the second most recent offset right after each match. Same format.
+- **KLZ, KLZH and khuf copy through `__builtin_memcpy`**: with `_FORTIFY_SOURCE=3` (the Ubuntu default) 16-byte
+  copies into buffers of run-time known size were calls to `__memcpy_chk` (+13% KLZH compress).
+
+### Measured and not kept
+- KLZMA decoder variants (branch-free normalisation, a padded input, select-based bits): all slower with GCC 13; the
+  same C built with clang decodes 13% faster. An assembly bit decoder is the next step (decode is 0.72-0.74× of
+  liblzma 5.8.1).
+
 ## Unreleased (rc3 wave 3, decmap lane: `claude/rc3w3-decmap-20261118`)
 
 Decode maps: prebuilt decoder tables stored in the frame were measured and rejected (Huffman tables cost 4-8 KiB per
