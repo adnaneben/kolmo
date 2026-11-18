@@ -9,7 +9,7 @@ here, with new targets for every decoder rc3 added.
 
 - **No crashes, ASan/UBSan reports, leaks, harness-invariant traps or out-of-memory kills in 16 targets.**
   - Every target ran at least 65 minutes in libFuzzer fork mode. The ones that matter most ran longer: frame decoder
-    2.9 h, codec decoders 4.0 h, extensions 2.3 h.
+    2.9 h, codec decoders 4.0 h, extensions 2.6 h.
   - In all, 226 M executions.
 - **3 timeouts and 2 slow units, all in `fuzz_decompress` (the build with context mixing).**
   - All 5 are valid context-mixing frames: codec 25 at -x, and codec 7 of an rc2 frame.
@@ -160,7 +160,7 @@ Totals per target (all runs; `fuzz/campaign3/logs/`; `cov` is libFuzzer's edge c
 |---|---:|---:|---:|---|
 | fuzz_decompress_nocm | 10,400 s | 171,788 | 9,590 | 0 / 0 / 0 |
 | fuzz_codecs_nocm | 14,243 s | 71,984 | 23,621 | 0 / 0 / 0 |
-| fuzz_ext_nocm | 8,238 s + H | 2,136,407 + H | 6,602 | 0 / 0 / 0 |
+| fuzz_ext_nocm | 9,484 s | 2,213,547 | 6,749 | 0 / 0 / 0 |
 | fuzz_profile_nocm | 6,478 s | 30,508,240 | 9,540 | 0 / 0 / 0 |
 | fuzz_limited_nocm | 3,984 s | 74,530 | 6,434 | 0 / 0 / 0 |
 | fuzz_dict_nocm | 3,973 s | 85,364 | 7,003 | 0 / 0 / 0 |

@@ -16,3 +16,4 @@
 2026-11-18T06:24:09Z start G: fuzz_codecs_nocm (codec 16 added) and fuzz_decompress_nocm with codec-16 seeds
 2026-11-18T07:30:06Z end G
 2026-11-18T07:48:31Z start H: fuzz_ext_nocm with JSON-column seeds, 1200 s
+2026-11-18T08:09Z end H
