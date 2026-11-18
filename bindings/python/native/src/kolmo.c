@@ -76,6 +76,7 @@ int kolmo_force_c;
 #include "algo/varint.h"
 #include "codecs/huf.c"
 #include "codecs/rans.c"
+#include "codecs/native.c"            /* Kolmo's own LZ, Huffman and LZMA-class coders (codecs 24, 27-29), opt-in */
 #include "codecs/graph_leaf.c"
 #include "codecs/codec.c"
 /* format 2 (container version 11): audio and video blocks, per-plane / Huffman-then-zstd / zero-run graph leaves */
@@ -99,6 +100,7 @@ int kolmo_force_c;
 #include "core/memneed.c"           /* working-set estimates: frame declaration, reservations (docs/MEMORY-MODEL.md) */
 #include "core/trials.c"
 #include "core/blocks.c"
+#include "plan/segment.c"
 #include "plan/frontier.c"
 #include "plan/parallel.c"
 /* Opt-in typed encoder route ported from the RC1 integration (PR #10). It writes ordinary version 7 graph frames. */

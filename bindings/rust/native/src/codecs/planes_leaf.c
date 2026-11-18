@@ -22,7 +22,7 @@ static size_t planes_compress(codec_ctx *x, int np, const uint8_t *in, size_t n,
         if (!t) return 0;
         size_t z = sel(x, ctx, in + (size_t)b * L, L, t, zc, &cc);
         if (!z || z > L) { cc = C_STORE; z = L; memcpy(t, in + (size_t)b * L, L); }
-        uint8_t h[11]; size_t hn = 0; h[hn++] = (uint8_t)cc;
+        uint8_t h[11]; size_t hn = 0; h[hn++] = codec_wire(x, cc);
         for (uint64_t v = z;; v >>= 7) { h[hn++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
         if (cap - o < hn + z) { free(t); return 0; }
         memcpy(out + o, h, hn); memcpy(out + o + hn, t, z); o += hn + z; free(t);
@@ -32,7 +32,7 @@ static size_t planes_compress(codec_ctx *x, int np, const uint8_t *in, size_t n,
 
 static int leaf_sub_codec_ok(int c) {
     return c == C_STORE || c == C_LZ4 || c == C_LZ4HC || c == C_ZSTD || c == C_BROTLI || c == C_BSC5 || c == C_BWT || c == C_LZMA || c == C_CM ||
-           c == C_HUF || c == C_RANS || c == C_HZ || c == C_ZRUN;
+           c == C_HUF || c == C_RANS || c == C_HZ || c == C_ZRUN || codec_is_native(c);
 }
 
 static int planes_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) {

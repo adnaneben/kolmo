@@ -34,7 +34,8 @@ static void *cmp_worker(void *a) {
         } else {
             const uint8_t *p = j->in + j->rawo[k]; const size_t cap = cm_bound(n);
             j->buf[k] = malloc(cap);
-            j->res[k] = j->buf[k] ? cm_compress_mx(p, n, j->buf[k], cap, j->model ? j->model : looks_text(p, n) ? 3 : 2, j->bbcap) : 0;
+            /* each part: the raced learning settings of codec 7 (one thread each: the parts already run side by side) */
+            j->res[k] = j->buf[k] ? cm_compress_raced(p, n, j->buf[k], cap, j->model ? j->model : looks_text(p, n) ? 3 : 2, j->bbcap, 1) : 0;
             if (!j->res[k]) atomic_store(&j->err, 1);
         }
     }

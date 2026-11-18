@@ -15,7 +15,7 @@ static size_t zrun_put_sub(codec_ctx *x, leaf_sel_fn sel, const void *ctx, const
     if (m) z = sel(x, ctx, p, m, t, zc, &cc);
     if (!z || z > m) { cc = C_STORE; z = m; if (m) memcpy(t, p, m); }
     if (cc == C_ZRUN || cc == C_PLANES) { free(t); return 0; }
-    uint8_t h[21]; size_t hn = 0; h[hn++] = (uint8_t)cc;
+    uint8_t h[21]; size_t hn = 0; h[hn++] = codec_wire(x, cc);
     if (with_raw) for (uint64_t v = m;; v >>= 7) { h[hn++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
     for (uint64_t v = z;; v >>= 7) { h[hn++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) break; }
     if (cap < hn + z) { free(t); return 0; }
