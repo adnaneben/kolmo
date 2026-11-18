@@ -200,7 +200,30 @@ Kolmo at one thread (wall seconds, compress / decompress, each run alone on the 
 | citm_catalog.json | 6,578 | 2.7 / 0.3 | 7,734 | 0.04 / 0.00 |
 | gharchive.json | 846,939 | 90.5 / 82.4 | 1,271,326 | 6.08 / 0.04 |
 
-T4_TABLE
+Kolmo at four threads (all vCPUs; wall seconds, compress / decompress, each run alone):
+
+| file | `-x` bytes | `-x` s | `-m hc` bytes | `-m hc` s |
+|---|---:|---:|---:|---:|
+| enwik8_1m | 222,715 | 7.7 / 4.6 | 300,460 | 0.29 / 0.03 |
+| enwik8_10m | 2,105,270 | 57.7 / 50.3 | 2,710,705 | 4.50 / 0.05 |
+| enwik8 | 19,012,531 | 524.8 / 554.7 | 24,390,220 | 81.68 / 0.42 |
+| dickens | 2,168,559 | 58.7 / 54.9 | 2,728,251 | 4.99 / 0.08 |
+| webster | 5,609,529 | 214.3 / 222.6 | 8,858,048 | 12.97 / 0.07 |
+| reymont | 907,685 | 31.7 / 32.5 | 1,348,510 | 4.72 / 0.02 |
+| xml | 300,720 | 26.3 / 23.4 | 443,624 | 2.14 / 0.02 |
+| loghub_all.log | 186,278 | 22.1 / 19.2 | 266,825 | 0.39 / 0.01 |
+| Apache.log | 72,771 | 22.2 / 20.1 | 125,598 | 0.24 / 0.02 |
+| owid-co2-data.csv | 1,127,837 | 36.7 / 6.4 | 1,291,252 | 1.24 / 0.05 |
+| countries-aggregated.csv | 283,038 | 16.7 / 1.5 | 327,637 | 0.22 / 0.02 |
+| twitter.json | 25,522 | 1.7 / 1.9 | 37,755 | 0.16 / 0.00 |
+| citm_catalog.json | 6,578 | 2.7 / 0.3 | 7,734 | 0.05 / 0.00 |
+| gharchive.json | 846,939 | 84.4 / 81.3 | 1,271,326 | 6.08 / 0.05 |
+
+Every frame is byte-identical at one and four threads. Each of these files is one CM stream in `-x` (its size is
+the whole-file CM stream plus 52 bytes), so four threads change little: they run the trials (block sorting, LZMA2
+slices, GR6+) beside CM. Encode is 1–30% faster (enwik8_1m 11.0 → 7.7 s, covid 23.3 → 16.7 s, OWID CO2 49 → 37 s);
+decode is the same within noise. A 100 MB enwik8 `-x` decodes at
+about 0.18 MB/s at either thread count.
 
 The study variants are single-threaded at every thread count (CM is sequential within a stream), so their 1-thread
 and 4-thread figures are the same. From the `--rt` runs (indicative: four study processes shared the machine):
