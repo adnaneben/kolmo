@@ -204,10 +204,20 @@ slower at 4 threads (the CSV and float parts now take their transforms) and rati
 block sorting and graph leaves where they are smaller). A first segmenter with a numeric-array class split the
 homogeneous num 100m into 7 segments (+1.86% at ratio, +0.25% at hc); that class was removed before these rows.
 
+## Tests
+
+On the branch head: `make check`, `make check-rc`, the determinism check (122 frames, 1 and 4 threads; the 17 changed
+`-x` frames are regenerated in `87a4258`). `make check-sanitizers`, `make kfam-check` and
+`make experimental-check GPU_CHECK=` passed on `a45247c` (the head differs from it only in the calibration output
+format).
+
 ## What failed or was not done
 
 - A model-2 tuned stream under 64 KiB was written with legacy logistic tables but a header that says exact: caught by
   `make check` (`ultra-l2-int-series`), fixed before any measurement here.
+- `make check-rc` (`check-profile`) failed after the race: `kolmo calibrate` wrote `-x`'s rate on its 16 KiB samples
+  with one decimal, now under 0.05 MB/s, as `0.0`, which the table parser refuses. Rates are now written with four
+  significant digits (`a305807`).
 - The race on long streams (above) and the numeric segment class (above) were both measured, found to lose, and
   restricted or removed.
 - Not done: tuning GR6+ (codec 26) and the image model (codec 17), whose networks have their own settings; per-segment
