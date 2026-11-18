@@ -22,4 +22,11 @@ int  kolmo_crew_size(const kolmo_crew *crew);
 void kolmo_crew_run(kolmo_crew *crew, int n, kolmo_team_fn fn, void *ctx);
 void kolmo_crew_destroy(kolmo_crew *crew);
 void kolmo_team_barrier(kolmo_team *team);        /* all n workers of the current run meet; no-op for n <= 1 */
+
+/* The machine-wide pool (src/core/jobs.c, docs/CONCURRENCY.md): when set, every thread these helpers start beyond the
+   caller first takes a token from kolmo_par_take (a value >= 0, or -2 when no token is needed; -1 = refused: the
+   helper is not started and the caller's threads do its share) and gives it back with kolmo_par_give when it ends.
+   NULL (the default, and when the library's pool is off): no limit beyond `threads`. Never changes results. */
+extern int (*kolmo_par_take)(void);
+extern void (*kolmo_par_give)(int token);
 #endif

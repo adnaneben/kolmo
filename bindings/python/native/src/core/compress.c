@@ -33,8 +33,17 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
 }
 /* prof: a trained profile (src/plan/profile.c); its dictionaries code the zstd, Brotli and LZ4 leaves, its pinned plans
  * replace the analysis where they match, and the frame records its id (version 11, flag bit 2). */
+static int64_t compress_impl_p0(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
+                                const void *dict, size_t dictlen, uint32_t dictid, const struct kolmo_profile *prof);
+/* kolmo_params.jobs_shared < 0: this call stays out of the machine-wide pool (core/jobs.c), its helpers too */
 static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
                                const void *dict, size_t dictlen, uint32_t dictid, const struct kolmo_profile *prof) {
+    int off = kj_tls_off; if (p && p->jobs_shared < 0) kj_tls_off = 1;
+    int64_t r = compress_impl_p0(src, input_fd, n, dst, output_fd, cap, p, dict, dictlen, dictid, prof);
+    kj_tls_off = off; return r;
+}
+static int64_t compress_impl_p0(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
+                                const void *dict, size_t dictlen, uint32_t dictid, const struct kolmo_profile *prof) {
     kolmo_params d = {KOLMO_FAST, 0, 0, 0, 1}; if (!p) p = &d;
     /* KOLMO_T_NATIVE_LEAF and KOLMO_T_TYPED_HUF are opt-in bits of transforms: read them, then clear them so every
      * other use of transforms sees the analysis level alone. The native leaf applies to balanced (KOLMO_FAST) with
@@ -193,6 +202,7 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
     if (!ret && (codec == C_LZMA || codec == C_CM) && !dict) kolmo_hetero_run(run_pool, compress_worker, &J, threads, nb);
     else
 #endif
+    J.kj = 1;                                                 /* block jobs take machine tokens (core/jobs.c) */
     if (!ret) run_pool(compress_worker, &J, threads, nb);
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     fprintf(stderr, "compress bytes=%zu threads=%d plan_ms=%.3f blocks_ms=%.3f\n", n, threads, (pt1 - pt0) * 1000, (prof_now() - pt1) * 1000);

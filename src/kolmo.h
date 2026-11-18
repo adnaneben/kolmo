@@ -34,6 +34,9 @@ typedef struct {
                            explicit cap, which also sizes the blocks of ratio and -x and the -x model tables so that
                            the output decodes within the same limit. Below the mode's floor (kolmo_mem_floor) the call
                            fails with KOLMO_ERR_MEMORY. Free memory never changes the output, only speed and peak. */
+    int jobs_shared;    /* the machine-wide pool (docs/CONCURRENCY.md): 0 = the process setting (kolmo_jobs_shared, else
+                           KOLMO_JOBS_SHARED, else on), negative = this call stays out of it (in-process governor alone).
+                           Worker tokens and memory are shared by the Kolmo processes of the user; never changes output. */
 } kolmo_params;
 #define KOLMO_MEM_AUTO 0
 #define KOLMO_MEM_MAX UINT64_MAX
@@ -139,6 +142,30 @@ int64_t  kolmo_decode_memory(const uint8_t *src, size_t n);
  * governor of encoders whose mem_limit is 0. 0 restores 50% of the machine. Never changes output: only an explicit
  * kolmo_params.mem_limit is a format decision. */
 void     kolmo_set_memlimit(uint64_t limit);
+/* The machine-wide pool (docs/CONCURRENCY.md): every Kolmo process of the user shares worker tokens (default: the
+ * physical cores; KOLMO_JOBS=N) and the auto memory limit, so concurrent instances divide the machine instead of
+ * oversubscribing it. Each call always runs at least one worker; extra workers take a token per block job. Tokens are
+ * flock'd files in a per-user directory (KOLMO_JOBS_DIR to choose it), released by the kernel when a process dies.
+ * Never changes output. kolmo_jobs_shared sets the process default: 0 = off, 1 = per user (the default), 2 = every user
+ * of the machine (/tmp/kolmo-jobs), -1 = back to KOLMO_JOBS_SHARED (off|on|system). Returns 0, or -1 when the mode is
+ * invalid or tokens are held by running calls. */
+int      kolmo_jobs_shared(int mode);
+typedef struct { int32_t pid, tokens, jobs; uint64_t reserved; } kolmo_jobs_proc;
+typedef struct {
+    int enabled;          /* 1 when this process uses the pool */
+    int mode;             /* 0 off, 1 user, 2 system */
+    int tokens;           /* tokens in the pool (this process's view) */
+    int busy;             /* tokens held now, machine-wide */
+    int held_here;        /* of which this process holds */
+    int processes;        /* other live Kolmo processes in the pool */
+    uint64_t reserved;    /* memory the other processes have reserved */
+    uint64_t limit;       /* the shared memory limit (auto) */
+    char dir[512];        /* the pool's directory */
+    char state[128];      /* "on", or why the pool is off */
+} kolmo_jobs_info;
+/* Fills *info and up to max entries of procs (may be NULL) with the other live processes; returns their number, or -1
+ * when the pool is off (info->state says why). */
+int      kolmo_jobs_status(kolmo_jobs_info *info, kolmo_jobs_proc *procs, int max);
 /* Checks a CZN1 frame before the caller allocates its output: header and index checksum, block sizes adding up to the
  * claimed original size, payloads inside the frame, the decode figure against the limit (limits may be NULL: auto).
  * 0, or KOLMO_ERR_CORRUPT, KOLMO_ERR_CHECKSUM, KOLMO_ERR_LIMIT or KOLMO_ERR_MEMORY. */

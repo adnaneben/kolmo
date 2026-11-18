@@ -217,9 +217,15 @@ static uint64_t kmem_sample_os(int *pressure) {
     return kmem_phys() / 2;
 #endif
 }
+/* fork: the child holds none of the parent's reservations, and the lock may belong to a thread it does not have */
+static void kmem_atfork_child(void) {
+    pthread_mutex_init(&kmem_mu, NULL); pthread_cond_init(&kmem_cv, NULL);
+    kmem_used = 0; kmem_jobs = 0; kmem_jobs_peak = 0;
+}
 static void kmem_init_locked(void) {
     if (kmem_inited) return;
     kmem_inited = 1;
+    pthread_atfork(NULL, NULL, kmem_atfork_child);
     const char *f = getenv("KOLMO_MEM_FORCE_BUDGET"); uint64_t v;
     if (f && !kmem_parse_size(f, &v)) kmem_forced = v ? v : KMEM_UNLIMITED;
 #if defined(__APPLE__)
@@ -245,15 +251,35 @@ static uint64_t kmem_budget_locked(void) {
     } else if (target > kmem_budget_cur && now - kmem_last_pressure_ns >= KMEM_CALM_NS) kmem_budget_cur = target;
     return kmem_budget_cur;
 }
+/* The machine-wide share (core/jobs.c, docs/CONCURRENCY.md): the auto limit (50% of the machine, or what
+ * kolmo_set_memlimit / --memlimit set) covers the reservations of every Kolmo process of the pool, so the room left to
+ * this one is that limit minus what the others hold, re-read with the system sample (at most every 100 ms). The first
+ * job of every process still runs whatever the others hold: no process waits for another to make progress. */
+static uint64_t kmem_limit_of(uint64_t requested);
+static uint64_t kmem_others, kmem_others_ns, kmem_others_lim;
+static uint64_t kmem_shared_room_locked(void) {
+    if (kj_tls_off || __atomic_load_n(&kj_state, __ATOMIC_ACQUIRE) != 1) return KMEM_UNLIMITED;
+    uint64_t now = kmem_clock_ns();
+    if (!kmem_others_ns || now - kmem_others_ns >= KMEM_SAMPLE_NS) {     /* the others and the limit, every 100 ms */
+        uint64_t u; if (kj_scan(&u, NULL, 0) >= 0) kmem_others = u;
+        kmem_others_lim = kmem_others ? kmem_limit_of(0) : KMEM_UNLIMITED;
+        kmem_others_ns = now;
+    }
+    if (!kmem_others || kmem_others_lim == KMEM_UNLIMITED) return KMEM_UNLIMITED;
+    return kmem_others_lim > kmem_others ? kmem_others_lim - kmem_others : 0;
+}
 static int kmem_fits_locked(uint64_t b, uint64_t cap) {
     if (!kmem_jobs) return 1;                                   /* one job always runs */
     uint64_t bud = kmem_budget_locked();
     if (cap && cap < bud) bud = cap;
+    uint64_t room = kmem_shared_room_locked();
+    if (room < bud) bud = room;
     return kmem_used <= bud && b <= bud - kmem_used;
 }
 static void kmem_take_locked(uint64_t b) {
     kmem_used += b; kmem_jobs++;
     if (kmem_jobs > kmem_jobs_peak) kmem_jobs_peak = kmem_jobs;
+    kjob_pub_mem(kmem_used, kmem_jobs);
 }
 /* Reserve b bytes for a unit of work under the call's cap (0 or KMEM_UNLIMITED: none beyond the budget). Waits until
  * it fits; granted at once when nothing else is reserved. */
@@ -278,6 +304,7 @@ static int kmem_try_reserve(uint64_t b, uint64_t cap) {
 static void kmem_release(uint64_t b) {
     pthread_mutex_lock(&kmem_mu);
     kmem_used = kmem_used >= b ? kmem_used - b : 0; if (kmem_jobs) kmem_jobs--;
+    kjob_pub_mem(kmem_used, kmem_jobs);
     pthread_cond_broadcast(&kmem_cv);
     pthread_mutex_unlock(&kmem_mu);
 }
@@ -304,9 +331,9 @@ static _Thread_local uint64_t kmem_tls_cap;
 static _Thread_local uint64_t kmem_tls_dec_limit;   /* decoding: a model larger than this is refused (0: none) */
 static _Thread_local size_t kmem_tls_raw;           /* the block being coded (bytes): the cap covers its buffers too */
 /* What a thread hands to the threads it starts for the same call (trials, parts, planner samples). */
-typedef struct { uint64_t cap, dec_limit; size_t raw; } kmem_ctx;
-static kmem_ctx kmem_ctx_get(void) { kmem_ctx c = {kmem_tls_cap, kmem_tls_dec_limit, kmem_tls_raw}; return c; }
-static void kmem_ctx_set(kmem_ctx c) { kmem_tls_cap = c.cap; kmem_tls_dec_limit = c.dec_limit; kmem_tls_raw = c.raw; }
+typedef struct { uint64_t cap, dec_limit; size_t raw; int kj_off; } kmem_ctx;   /* kj_off: the call left the machine pool */
+static kmem_ctx kmem_ctx_get(void) { kmem_ctx c = {kmem_tls_cap, kmem_tls_dec_limit, kmem_tls_raw, kj_tls_off}; return c; }
+static void kmem_ctx_set(kmem_ctx c) { kmem_tls_cap = c.cap; kmem_tls_dec_limit = c.dec_limit; kmem_tls_raw = c.raw; kj_tls_off = c.kj_off; }
 /* the buffers every block needs besides its codec's own: the decoded block, the transform buffer (block + slack) and
  * the codec's output or input copy, plus 1 MiB of small state. Part of both the encoder's estimate and the figure a
  * frame declares, so the same function is used on both sides. */

@@ -13,7 +13,10 @@
  *                    kolmo calibrate [-o table] [FILES]   (speed table for --target)   kolmo profile p.kpf (describe)
  *                    kolmo --index ... / cat / grep / a / x / l   (queryable and deduplicating archives: cli/features.c)
  *                    -M SIZE | --memlimit SIZE   memory limit for compressing and decompressing: 512M, 8G, 50%, auto
- *                                         (default, 50% of RAM) or max; also KOLMO_MEMLIMIT (docs/MEMORY-MODEL.md) */
+ *                                         (default, 50% of RAM) or max; also KOLMO_MEMLIMIT (docs/MEMORY-MODEL.md)
+ *                    --jobs-shared=on|off|system   machine-wide pool of worker tokens and memory (docs/CONCURRENCY.md);
+ *                                         also KOLMO_JOBS_SHARED, KOLMO_JOBS (tokens), KOLMO_JOBS_DIR
+ *                    kolmo --jobs-status            machine-wide use: tokens busy, processes, memory reserved */
 #include "kolmo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,45 +38,57 @@ static uint8_t *slurp(const char *p, size_t *n) {
     FILE *f = fopen(p, "rb"); if (!f) { perror(p); exit(1); }
     return read_input(f, n);
 }
-/* Returns 0, or -1 after reporting the error, so the caller can release its buffers before it exits. */
-static int spit(const char *p, const uint8_t *b, size_t n) {
-    FILE *f = fopen(p, "wb"); if (!f) { perror(p); return -1; }
-    int failed = fwrite(b, 1, n, f) != n;
-    if (fclose(f)) failed = 1;
-    if (failed) perror(p);
-    return failed ? -1 : 0;
-}
 
-/* Stage the complete frame or verified decoded output in a private file. For a
- * new destination, publish the verified inode. When overwriting, write through
- * the original path to preserve symlink, hard-link and permission semantics. */
-static int process_file(int input_fd, size_t n, const char *path, const kolmo_params *params, int decode,
-                       const void *dict, size_t dictlen) {
+/* Output is staged in a private file next to the destination (unique name from mkstemp) and published only once it
+ * is complete, so a reader never sees a partial file and two instances writing the same path never mix their bytes.
+ * A new destination gets the verified inode (link); an existing plain file is replaced atomically (rename) and keeps
+ * its mode; symlinks, hard links and special files are written through, to keep their semantics. SIGINT, SIGTERM and
+ * SIGHUP remove the staged file before the process ends (the machine pool's tokens are flocks: the kernel releases
+ * them with the process, however it ends; docs/CONCURRENCY.md). After kill -9 a staged file `.kolmo-XXXXXX` may stay
+ * behind; the destination is never partial. */
+#include <signal.h>
+static char *volatile cli_stage;                       /* the staged file being written, for the signal handler */
+static void cli_on_signal(int sig) {
+    char *p = cli_stage; if (p) unlink(p);              /* async-signal-safe */
+    signal(sig, SIG_DFL); raise(sig);
+}
+static void cli_signals(void) {
+    struct sigaction sa; memset(&sa, 0, sizeof sa); sa.sa_handler = cli_on_signal; sigemptyset(&sa.sa_mask);
+    sigaction(SIGINT, &sa, NULL); sigaction(SIGTERM, &sa, NULL); sigaction(SIGHUP, &sa, NULL);
+}
+/* opens a staged file for path: its descriptor, *stage its name (free it), or -1 (*stage NULL) when the directory is
+ * not writable */
+static int stage_open(const char *path, char **stage) {
     const char *slash = strrchr(path, '/');
     size_t dirlen = slash ? (size_t)(slash - path + 1) : 0;
     static const char suffix[] = ".kolmo-XXXXXX";
-    char *stage = malloc(dirlen + sizeof(suffix));
-    if (!stage) return KOLMO_ERR_ALLOC;
-    memcpy(stage, path, dirlen); memcpy(stage + dirlen, suffix, sizeof(suffix));
-    int fd = mkstemp(stage);
-    FILE *anonymous = NULL;
-    if (fd < 0) { /* Existing outputs can be writable even in a read-only directory. */
-        anonymous = tmpfile();
-        if (!anonymous) { free(stage); return KOLMO_ERR_IO; }
-        fd = fileno(anonymous);
-    }
-    int64_t size = decode ? kolmo_decompress_file(input_fd, fd, n, params->threads, dict, dictlen)
-                          : kolmo_compress_file(input_fd, fd, n, params, dict, dictlen);
-    int ret = size < 0 ? (int)size : 0;
+    *stage = malloc(dirlen + sizeof(suffix));
+    if (!*stage) return -1;
+    memcpy(*stage, path, dirlen); memcpy(*stage + dirlen, suffix, sizeof(suffix));
+    sigset_t all, old; sigfillset(&all); sigprocmask(SIG_BLOCK, &all, &old);    /* name and file appear together */
+    int fd = mkstemp(*stage);
+    if (fd >= 0) cli_stage = *stage;
+    sigprocmask(SIG_SETMASK, &old, NULL);
+    if (fd < 0) { free(*stage); *stage = NULL; }
+    return fd;
+}
+static void stage_forget(char *stage) {                 /* the staged name is gone (published or removed) */
+    sigset_t all, old; sigfillset(&all); sigprocmask(SIG_BLOCK, &all, &old);
+    if (cli_stage == stage) cli_stage = NULL;
+    sigprocmask(SIG_SETMASK, &old, NULL);
+}
+/* publishes the staged output (ret 0) or drops it (ret != 0); closes fd and frees stage; returns ret or an I/O error */
+static int stage_publish(int fd, char *stage, FILE *anonymous, const char *path, int ret) {
     if (!ret && !anonymous) {
         struct stat st;
         if (lstat(path, &st) && errno == ENOENT) {
             mode_t mask = umask(0); umask(mask);
             if (!fchmod(fd, 0666 & ~mask) && !link(stage, path)) goto done;
-        } else if (S_ISREG(st.st_mode) && st.st_nlink == 1) {
+        } else if (!ret && S_ISREG(st.st_mode) && st.st_nlink == 1) {
             /* An existing plain file: replace it atomically and keep its mode, instead of copying the staged output
              * over it (a second pass over the whole output). Symlinks, hard links and special files take the copy. */
             if (!fchmod(fd, st.st_mode & 07777) && !rename(stage, path)) {
+                stage_forget(stage);
                 if (close(fd)) ret = KOLMO_ERR_IO;
                 free(stage); return ret;
             }
@@ -81,7 +96,7 @@ static int process_file(int input_fd, size_t n, const char *path, const kolmo_pa
     }
     if (!ret) {
         FILE *out = fopen(path, "wb");
-        if (!out) ret = KOLMO_ERR_IO;
+        if (!out || lseek(fd, 0, SEEK_SET) < 0) { ret = KOLMO_ERR_IO; if (out) fclose(out); }
         else {
             uint8_t buffer[64 * 1024];
             for (;;) {
@@ -95,9 +110,39 @@ static int process_file(int input_fd, size_t n, const char *path, const kolmo_pa
     }
 done:
     if (anonymous) { if (fclose(anonymous)) ret = KOLMO_ERR_IO; }
-    else { if (close(fd)) ret = KOLMO_ERR_IO; unlink(stage); }
+    else { if (close(fd)) ret = KOLMO_ERR_IO; unlink(stage); stage_forget(stage); }
     free(stage);
     return ret;
+}
+/* a staged descriptor for path; *anon set when the directory is read-only (an existing output can still be written) */
+static int stage_any(const char *path, char **stage, FILE **anon) {
+    *anon = NULL;
+    int fd = stage_open(path, stage);
+    if (fd < 0) { *anon = tmpfile(); if (!*anon) return -1; fd = fileno(*anon); }
+    return fd;
+}
+static int process_file(int input_fd, size_t n, const char *path, const kolmo_params *params, int decode,
+                       const void *dict, size_t dictlen) {
+    char *stage; FILE *anonymous;
+    int fd = stage_any(path, &stage, &anonymous);
+    if (fd < 0) return KOLMO_ERR_IO;
+    int64_t size = decode ? kolmo_decompress_file(input_fd, fd, n, params->threads, dict, dictlen)
+                          : kolmo_compress_file(input_fd, fd, n, params, dict, dictlen);
+    return stage_publish(fd, stage, anonymous, path, size < 0 ? (int)size : 0);
+}
+/* Returns 0, or -1 after reporting the error, so the caller can release its buffers before it exits. */
+static int spit(const char *p, const uint8_t *b, size_t n) {
+    char *stage; FILE *anonymous;
+    int fd = stage_any(p, &stage, &anonymous);
+    if (fd < 0) { perror(p); return -1; }
+    int ret = 0;
+    for (size_t o = 0; o < n && !ret; ) {
+        ssize_t w = write(fd, b + o, n - o);
+        if (w < 0 && errno == EINTR) continue;
+        if (w <= 0) ret = KOLMO_ERR_IO; else o += (size_t)w;
+    }
+    if (stage_publish(fd, stage, anonymous, p, ret)) { perror(p); return -1; }
+    return 0;
 }
 int kolmo_cli_features(int argc, char **argv);     /* cli/features.c: cat, grep, a, x, l, --index */
 
@@ -133,6 +178,28 @@ int main(int argc, char **argv) {
     if (argc == 3 && !strcmp(argv[1], "profile")) {
         kolmo_profile *pp = kc_load_profile(argv[2]); if (!pp) return 1;
         char d[65536]; kolmo_profile_describe(pp, d, sizeof d); fputs(d, stdout); kolmo_profile_free(pp); return 0;
+    }
+    cli_signals();
+    for (int a = 1; a < argc; a++)                           /* the machine-wide pool (docs/CONCURRENCY.md) */
+        if (!strncmp(argv[a], "--jobs-shared=", 14)) {
+            const char *v = argv[a] + 14;
+            int m = !strcmp(v, "off") ? 0 : !strcmp(v, "on") || !strcmp(v, "user") ? 1 : !strcmp(v, "system") ? 2 : -9;
+            if (m == -9 || kolmo_jobs_shared(m)) { fprintf(stderr, "kolmo: --jobs-shared=on|off|system\n"); return 2; }
+            for (int b = a; b < argc; b++) argv[b] = argv[b + 1];
+            argc--; a--;
+        }
+    if (argc == 2 && (!strcmp(argv[1], "--jobs-status") || !strcmp(argv[1], "--status"))) {
+        kolmo_jobs_info in; kolmo_jobs_proc pr[256]; char a[32], b[32];
+        int k = kolmo_jobs_status(&in, pr, 256);
+        if (k < 0) { printf("machine-wide pool: off (%s)\n", in.state); return 0; }
+        printf("machine-wide pool: on (%s), %s\n", in.mode == 2 ? "every user" : "this user", in.dir);
+        printf("worker tokens: %d busy of %d\n", in.busy, in.tokens);
+        printf("memory reserved by Kolmo processes: %s (shared limit %s)\n", mem_str(in.reserved, a, sizeof a), mem_str(in.limit, b, sizeof b));
+        printf("processes: %d\n", k);
+        for (int i = 0; i < k && i < 256; i++)
+            printf("  pid %d: %d token%s, %d job%s, %s reserved\n", pr[i].pid, pr[i].tokens, pr[i].tokens == 1 ? "" : "s",
+                   pr[i].jobs, pr[i].jobs == 1 ? "" : "s", mem_str(pr[i].reserved, a, sizeof a));
+        return 0;
     }
     { int fr = kolmo_cli_features(argc, argv); if (fr >= 0) return fr; }
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; int speed = 0; int dec = 0, stream = 0, opt, seg = 0; char *range = NULL;
@@ -216,7 +283,10 @@ int main(int argc, char **argv) {
             "targets:  --target size | 'decode>=1GB/s' | 'encode>=50MB/s' | 'cost:<formula of size,n,enc,dec>' |\n"
             "          cost:cloud[=months] | cost:link=1Gbit   (floors join with ','; -v reports the choice)\n"
             "          kolmo calibrate [-o table] [FILES]   speed table (default ~/.config/kolmo/calibration; --calib FILE)\n"
-            "          --gpu  macOS builds made with GPU=1: one GPU worker beside the threads in ratio and -x (same output)\n"); return 2;
+            "          --gpu  macOS builds made with GPU=1: one GPU worker beside the threads in ratio and -x (same output)\n"
+            "pool:     --jobs-shared=on|off|system  share worker tokens (default: the physical cores; KOLMO_JOBS=N) and\n"
+            "          memory with the other kolmo processes of this user (on, the default) or of every user (system);\n"
+            "          env KOLMO_JOBS_SHARED.  kolmo --jobs-status  shows machine-wide use. Never changes output.\n"); return 2;
 
     }
     if (extreme) { P.mode = KOLMO_ULTRA; mode_given = 1; }
@@ -304,10 +374,13 @@ int main(int argc, char **argv) {
     }
     if ((stream && !dec && !range) || (dec && streamed_in)) {
         int ifd = open(inp, O_RDONLY); if (ifd < 0) { perror(inp); free(dict); return 1; }
-        int ofd = open(outp, O_WRONLY | O_CREAT | O_TRUNC, 0644); if (ofd < 0) { perror(outp); close(ifd); free(dict); return 1; }
+        char *stage; FILE *anon;
+        int ofd = stage_any(outp, &stage, &anon); if (ofd < 0) { perror(outp); close(ifd); free(dict); return 1; }
         int64_t sr = dec ? kolmo_stream_decompress(ifd, ofd, P.threads)
                          : kolmo_stream_compress(ifd, ofd, &P, (uint32_t)(seg > 0 ? seg : 0));
-        close(ifd); close(ofd); free(dict);
+        close(ifd); free(dict);
+        int pr = stage_publish(ofd, stage, anon, outp, sr < 0 ? (int)sr : 0);
+        if (sr >= 0 && pr) { perror(outp); return 1; }
         if (sr == KOLMO_ERR_MEMORY) { mem_error(NULL, 0, dec, P.mode, memlimit); return 1; }
         if (sr < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(sr)); return 1; }
         return 0;

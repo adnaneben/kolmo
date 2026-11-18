@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased (w4, multi-instance lane: `claude/w4-multi-20261118`)
+
+Several Kolmo instances on one machine share it instead of oversubscribing it (`docs/CONCURRENCY.md`). No format
+change: every frame is the same bytes as before, whatever the contention (`benchmark/determinism/check.py`: 122 frames
+unchanged). Measurements: `benchmark/w4/multi/RESULTS.md`.
+
+### Added
+- **A machine-wide pool of worker tokens and memory**, shared by every Kolmo process of the user, in the manner of GNU
+  make's jobserver: tokens default to the physical cores (`KOLMO_JOBS=N`); the auto memory limit (50% of the machine)
+  now covers the reservations of all instances together. A token is an exclusive `flock` on a slot file in a per-user
+  directory (`$XDG_RUNTIME_DIR/kolmo-jobs`, else `$TMPDIR` or `/tmp`/`kolmo-jobs-<uid>`, `KOLMO_JOBS_DIR`), released by
+  the kernel when a process dies, so `kill -9` leaves nothing stale. Each process publishes its reservations in its own
+  locked record. Every instance always runs one worker (never waiting for another process); extra block workers take a
+  token per block job and give it back when the job ends; optional threads (trials, the CM race, codec-25 parts, inner
+  parallel loops, the suffix sorter's crew) only try. Unusable directory: the in-process governor alone, as before.
+- `--jobs-shared=on|off|system`, `KOLMO_JOBS_SHARED`, `kolmo_params.jobs_shared` (per call; negative = out of the
+  pool), `kolmo_jobs_shared()` (per process), `kolmo --jobs-status` and `kolmo_jobs_status()` (tokens busy, live
+  processes, memory reserved). Python: `kolmo.jobs_shared()`, `kolmo.jobs_status()`, `compress(..., jobs_shared=False)`;
+  Rust: `jobs_shared()`, `jobs_status()`. `kolmo_params` gains a trailing field (`jobs_shared`, 0 = default): callers
+  that zero-initialise the struct are unaffected; the bindings' mirrors are updated.
+- `make check-jobs` (part of `check-rc`): `tests/test_jobs.c` (plain and ASan/UBSan/LSan) and `tests/stress_jobs.py`
+  (many CLI instances with random SIGKILL/SIGTERM). `benchmark/w4/multi/run.py`.
+
+### Fixed
+- **A process that forked after using Kolmo with several threads hung in the child** (the pool waited for helper
+  threads that exist only in the parent; Python's `multiprocessing` with the fork start method does this). The pool,
+  the memory governor and the machine pool reset themselves in the child (`pthread_atfork`).
+- **The CLI writes every output through a staged file** (unique `mkstemp` name next to the destination, published by
+  `link`/`rename` when complete); before, only `balanced`/`speed` files of 8 MiB or more were staged, and the in-memory
+  and streaming paths wrote the destination directly, so an interrupted run left a partial file. SIGINT, SIGTERM and
+  SIGHUP remove the staged file.
+
 ## Unreleased (rc3 wave 2, regress lane: `claude/rc3w2-regress-20261117`)
 
 Fixes for the regressions of rc3 against rc2 measured on the Apple M5 (`benchmark/rc3/mac/RESULTS.md`). Measurements

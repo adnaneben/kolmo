@@ -21,6 +21,18 @@ def main():
                     fails += 1; print("FAIL read_range")
         ratio = len(data) / max(1, len(kolmo.compress(data, mode="hc")))
         print(f"len {len(data):>7}: round trips ok in all modes" + (f", hc ratio {ratio:.2f}" if len(data) > 1000 else ""))
+    # the machine-wide pool (docs/CONCURRENCY.md): status, off for one call, off for the process; same bytes each way
+    data = samples[3] * 8
+    st = kolmo.jobs_status()
+    if st["enabled"] and (st["tokens"] < 1 or st["held_here"] != 0): fails += 1; print("FAIL jobs_status", st)
+    a = kolmo.compress(data, mode="balanced", threads=4, block=65536)
+    b = kolmo.compress(data, mode="balanced", threads=4, block=65536, jobs_shared=False)
+    kolmo.jobs_shared("off")
+    c = kolmo.compress(data, mode="balanced", threads=4, block=65536)
+    if kolmo.jobs_status()["enabled"]: fails += 1; print("FAIL jobs_shared off")
+    kolmo.jobs_shared("env")
+    if not (a == b == c): fails += 1; print("FAIL frames depend on the pool")
+    print("machine-wide pool: %s, %d tokens; same frames on and off" % (st["state"], st["tokens"]))
     print("ALL PASSED" if not fails else f"{fails} FAILURES")
     sys.exit(1 if fails else 0)
 

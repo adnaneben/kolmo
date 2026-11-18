@@ -22,6 +22,7 @@ typedef struct {
     const uint8_t *in; size_t n, cap, res;
     uint8_t *out;                                    /* codec trials: their own output buffer; family coder: its frame */
     uint64_t resv; kmem_ctx ctx;                     /* the trial's reservation with the governor, the call's cap */
+    int tok;                                         /* its machine token (core/jobs.c), KJ_NONE when the pool is off */
 } xtrial_t;
 static void *xtrial_main(void *a) {
     xtrial_t *t = a;
@@ -34,6 +35,7 @@ static void *xtrial_main(void *a) {
     }
     kmem_tls_job = 0;
     if (t->resv) kmem_release(t->resv);             /* released by the trial itself, as soon as it is done */
+    kjob_give(t->tok); t->tok = KJ_NONE;
     return NULL;
 }
 /* Starts a trial on its own thread when the governor grants its working set now (optional work); otherwise, or if no
@@ -42,10 +44,13 @@ static void *xtrial_main(void *a) {
 static void xtrial_start(xtrial_t *t, int codec, int level, const uint8_t *in, size_t n, size_t cap, int fq_threads) {
     memset(t, 0, sizeof *t);
     uint64_t need = kmem_enc_trial(codec, level, n, cap);
-    if (!kmem_try_reserve(need, kmem_tls_cap)) return;
+    t->tok = KJ_NONE;
+    int tok = kjob_take(); if (tok == KJ_REFUSED) return;         /* a thread of its own needs a machine token too */
+    if (!kmem_try_reserve(need, kmem_tls_cap)) { kjob_give(tok); return; }
     t->codec = codec; t->level = level; t->in = in; t->n = n; t->cap = cap; t->fq_threads = fq_threads; t->resv = need; t->ctx = kmem_ctx_get();
+    t->tok = tok;
     if (codec != C_FQ) t->out = malloc(cap ? cap : 1);
-    if (pthread_create(&t->th, NULL, xtrial_main, t)) { kmem_release(need); t->resv = 0; t->codec = 0; free(t->out); t->out = NULL; }
+    if (pthread_create(&t->th, NULL, xtrial_main, t)) { kmem_release(need); kjob_give(tok); t->tok = KJ_NONE; t->resv = 0; t->codec = 0; free(t->out); t->out = NULL; }
     else t->started = 1;
 }
 static void xtrial_join(xtrial_t *t) { if (t->started) { pthread_join(t->th, NULL); t->started = 0; t->resv = 0; } }

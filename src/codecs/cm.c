@@ -188,6 +188,10 @@ typedef struct { uint64_t cap, dec_limit; size_t raw; } kmem_ctx;
 static kmem_ctx kmem_ctx_get(void) { kmem_ctx c = {kmem_tls_cap, kmem_tls_dec_limit, kmem_tls_raw}; return c; }
 static void kmem_ctx_set(kmem_ctx c) { kmem_tls_cap = c.cap; kmem_tls_dec_limit = c.dec_limit; kmem_tls_raw = c.raw; }
 static uint64_t kmem_buffers(uint64_t raw) { return 2 * raw + ((uint64_t)1 << 20); }
+#define KJ_NONE (-2)       /* no machine pool either (core/jobs.c) */
+#define KJ_REFUSED (-1)
+static int kjob_take(void) { return KJ_NONE; }
+static void kjob_give(int t) { (void)t; }
 #endif
 static atomic_long cm_models_made;   /* models allocated (tests: a refused model is never allocated) */
 static size_t cm_acquire(size_t b) {
@@ -883,19 +887,20 @@ static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_
     }
     const int par = threads > CM_NPRESET ? CM_NPRESET : threads > 1 ? threads : 1;
     const kmem_ctx ctx = kmem_ctx_get(); const uint64_t need = cm_need_bound(L) + (L + L / 16 + 64);
-    uint64_t held[CM_NPRESET] = {0};
+    uint64_t held[CM_NPRESET] = {0}; int tok[CM_NPRESET];
     for (int k0 = 0; k0 < CM_NPRESET; k0 += par) {           /* par trials at a time; the caller runs one of them */
         /* an extra thread only when its tables fit the memory budget now (optional work never waits: the caller may
          * hold a reservation the waiting thread needs); otherwise the caller codes that preset after its own */
         for (int k = k0 + 1; k < k0 + par && k < CM_NPRESET; k++) {
             j[k].ctx = ctx;
-            if (!kmem_try_reserve(need, ctx.cap)) continue;
+            if ((tok[k] = kjob_take()) == KJ_REFUSED) continue;          /* and a machine token (core/jobs.c) */
+            if (!kmem_try_reserve(need, ctx.cap)) { kjob_give(tok[k]); continue; }
             held[k] = need; started[k] = !pthread_create(&th[k], NULL, cm_race_thread, &j[k]);
-            if (!started[k]) { kmem_release(need); held[k] = 0; }
+            if (!started[k]) { kmem_release(need); kjob_give(tok[k]); held[k] = 0; }
         }
         cm_race_run(&j[k0]);
         for (int k = k0 + 1; k < k0 + par && k < CM_NPRESET; k++) {
-            if (started[k]) { pthread_join(th[k], NULL); kmem_release(held[k]); } else cm_race_run(&j[k]);
+            if (started[k]) { pthread_join(th[k], NULL); kmem_release(held[k]); kjob_give(tok[k]); } else cm_race_run(&j[k]);
         }
     }
     int b = -1; for (int k = 0; k < CM_NPRESET; k++) if (j[k].z && (b < 0 || j[k].z < j[b].z)) b = k;

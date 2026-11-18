@@ -39,6 +39,15 @@ struct Params {
     block: u32,
     transforms: c_int,
     mem_limit: u64, // 0 = auto (docs/MEMORY-MODEL.md); mirrors kolmo_params
+    jobs_shared: c_int, // 0 = process setting, < 0 = out of the machine-wide pool (docs/CONCURRENCY.md)
+}
+
+#[repr(C)]
+struct JobsProc { pid: i32, tokens: i32, jobs: i32, reserved: u64 }
+#[repr(C)]
+struct JobsInfo {
+    enabled: c_int, mode: c_int, tokens: c_int, busy: c_int, held_here: c_int, processes: c_int,
+    reserved: u64, limit: u64, dir: [c_char; 512], state: [c_char; 128],
 }
 
 extern "C" {
@@ -51,6 +60,41 @@ extern "C" {
     fn kolmo_train_dict(samples: *const u8, sizes: *const usize, nsamples: usize, dict: *mut u8, dict_cap: usize) -> i64;
     fn kolmo_compress_dict(src: *const u8, n: usize, dst: *mut u8, cap: usize, p: *const Params, dict: *const u8, dictlen: usize) -> i64;
     fn kolmo_decompress_dict(src: *const u8, n: usize, dst: *mut u8, cap: usize, threads: c_int, dict: *const u8, dictlen: usize) -> i64;
+    fn kolmo_jobs_shared(mode: c_int) -> c_int;
+    fn kolmo_jobs_status(info: *mut JobsInfo, procs: *mut JobsProc, max: c_int) -> c_int;
+}
+
+/// How this process takes part in the machine-wide pool (docs/CONCURRENCY.md): worker tokens (default: the physical
+/// cores) and memory shared by the Kolmo processes of the user, so concurrent instances divide the machine instead of
+/// oversubscribing it. Never changes output.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum JobsShared { Off = 0, User = 1, System = 2, Environment = -1 }
+
+/// Sets the pool mode of this process; fails while calls hold tokens.
+pub fn jobs_shared(mode: JobsShared) -> Result<(), Error> {
+    if unsafe { kolmo_jobs_shared(mode as c_int) } == 0 { Ok(()) }
+    else { Err(Error { code: -1, message: String::from("cannot change the pool while calls hold tokens") }) }
+}
+
+/// Machine-wide use of the pool, as `kolmo --jobs-status` prints it.
+#[derive(Clone, Debug)]
+pub struct JobsStatus {
+    pub enabled: bool, pub tokens: i32, pub busy: i32, pub held_here: i32,
+    /// other live Kolmo processes: (pid, tokens, block jobs, memory reserved)
+    pub processes: Vec<(i32, i32, i32, u64)>,
+    pub reserved: u64, pub limit: u64, pub dir: String, pub state: String,
+}
+
+pub fn jobs_status() -> JobsStatus {
+    let mut info: JobsInfo = unsafe { std::mem::zeroed() };
+    let mut procs: Vec<JobsProc> = (0..256).map(|_| JobsProc { pid: 0, tokens: 0, jobs: 0, reserved: 0 }).collect();
+    let n = unsafe { kolmo_jobs_status(&mut info, procs.as_mut_ptr(), 256) };
+    let s = |b: &[c_char]| unsafe { std::ffi::CStr::from_ptr(b.as_ptr()).to_string_lossy().into_owned() };
+    JobsStatus {
+        enabled: info.enabled != 0, tokens: info.tokens, busy: info.busy, held_here: info.held_here,
+        processes: procs.iter().take(n.max(0) as usize).map(|p| (p.pid, p.tokens, p.jobs, p.reserved)).collect(),
+        reserved: info.reserved, limit: info.limit, dir: s(&info.dir), state: s(&info.state),
+    }
 }
 
 /// An error returned by the native core (corrupt input, checksum mismatch, allocation, …).
@@ -78,7 +122,7 @@ fn err(code: i64) -> Error {
 
 /// Compress `data` in `mode`. `threads` = 0 uses all cores.
 pub fn compress(data: &[u8], mode: Mode, threads: i32) -> Result<Vec<u8>, Error> {
-    let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1, mem_limit: 0 };
+    let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1, mem_limit: 0, jobs_shared: 0 };
     let cap = unsafe { kolmo_bound(data.len(), &p) };
     let mut out = vec![0u8; cap.max(1)];
     let n = unsafe { kolmo_compress(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p) };
@@ -128,7 +172,7 @@ pub fn train_dict(samples: &[&[u8]], dict_cap: usize) -> Result<Vec<u8>, Error> 
 /// Compress `data` against a trained dictionary (see [`train_dict`]). The same dictionary must be
 /// supplied to [`decompress_dict`]; a blob written with a dictionary refuses to decode without it.
 pub fn compress_dict(data: &[u8], mode: Mode, threads: i32, dict: &[u8]) -> Result<Vec<u8>, Error> {
-    let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1, mem_limit: 0 };
+    let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1, mem_limit: 0, jobs_shared: 0 };
     let cap = unsafe { kolmo_bound(data.len(), &p) };
     let mut out = vec![0u8; cap.max(1)];
     let n = unsafe { kolmo_compress_dict(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p, dict.as_ptr(), dict.len()) };
@@ -168,6 +212,19 @@ mod tests {
             let back = decompress(&blob, 1).expect("decompress");
             assert_eq!(back, data, "{:?} round trip", mode);
         }
+    }
+
+    #[test]
+    fn jobs_pool_same_bytes() {
+        let d = sample();
+        let st = jobs_status();
+        if st.enabled { assert!(st.tokens >= 1); }
+        let a = compress(&d, Mode::BALANCED, 4).unwrap();
+        // the other tests run at the same time and may hold tokens: wait until the pool can change
+        while jobs_shared(JobsShared::Off).is_err() { std::thread::sleep(std::time::Duration::from_millis(1)); }
+        let b = compress(&d, Mode::BALANCED, 4).unwrap();
+        while jobs_shared(JobsShared::Environment).is_err() { std::thread::sleep(std::time::Duration::from_millis(1)); }
+        assert_eq!(a, b);
     }
 
     #[test]

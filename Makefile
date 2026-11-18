@@ -320,8 +320,19 @@ check-memdyn: build/test-memdyn build/test-memdyn-asan
 	./build/test-memdyn
 	./build/test-memdyn-asan --quick
 .PHONY: check-memdyn
-check-rc: check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
-.PHONY: check-meta check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-fqfam check-dispatch check-asm check-arch check-format2
+build/test-jobs: tests/test_jobs.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+build/test-jobs-asan: tests/test_jobs.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
+# the machine-wide pool (docs/CONCURRENCY.md): tokens, kill -9, the memory ledger, frames under contention; then many
+# CLI instances at once with random kills (tests/stress_jobs.py)
+check-jobs: build/test-jobs build/test-jobs-asan build/kolmo
+	./build/test-jobs
+	./build/test-jobs-asan --quick
+	python3 tests/stress_jobs.py build/kolmo --quick
+.PHONY: check-jobs
+check-rc: check-jobs check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
+.PHONY: check-meta check-rc check-jobs check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-fqfam check-dispatch check-asm check-arch check-format2
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan

@@ -29,7 +29,16 @@ _lib = _load()
 class _Params(ctypes.Structure):
     _fields_ = [("mode", ctypes.c_int), ("level", ctypes.c_int), ("threads", ctypes.c_int),
                 ("block", ctypes.c_uint32), ("transforms", ctypes.c_int),
-                ("mem_limit", ctypes.c_uint64)]   # 0 = auto (docs/MEMORY-MODEL.md); mirrors kolmo_params
+                ("mem_limit", ctypes.c_uint64),   # 0 = auto (docs/MEMORY-MODEL.md); mirrors kolmo_params
+                ("jobs_shared", ctypes.c_int)]    # 0 = process setting, <0 = out of the machine-wide pool (docs/CONCURRENCY.md)
+
+class _JobsProc(ctypes.Structure):
+    _fields_ = [("pid", ctypes.c_int32), ("tokens", ctypes.c_int32), ("jobs", ctypes.c_int32), ("reserved", ctypes.c_uint64)]
+
+class _JobsInfo(ctypes.Structure):
+    _fields_ = [("enabled", ctypes.c_int), ("mode", ctypes.c_int), ("tokens", ctypes.c_int), ("busy", ctypes.c_int),
+                ("held_here", ctypes.c_int), ("processes", ctypes.c_int), ("reserved", ctypes.c_uint64),
+                ("limit", ctypes.c_uint64), ("dir", ctypes.c_char * 512), ("state", ctypes.c_char * 128)]
 
 _lib.kolmo_bound.restype = ctypes.c_size_t
 _lib.kolmo_bound.argtypes = [ctypes.c_size_t, ctypes.POINTER(_Params)]
@@ -53,10 +62,37 @@ _lib.kolmo_decompress_dict.restype = ctypes.c_int64
 _lib.kolmo_decompress_dict.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t,
                                      ctypes.c_int, ctypes.c_char_p, ctypes.c_size_t]
 
+_lib.kolmo_jobs_shared.restype = ctypes.c_int
+_lib.kolmo_jobs_shared.argtypes = [ctypes.c_int]
+_lib.kolmo_jobs_status.restype = ctypes.c_int
+_lib.kolmo_jobs_status.argtypes = [ctypes.POINTER(_JobsInfo), ctypes.POINTER(_JobsProc), ctypes.c_int]
+
 def _check(code):
     if code < 0:
         raise ValueError("kolmo: " + _lib.kolmo_strerror(code).decode())
     return code
+
+_JOBS_MODES = {"off": 0, "on": 1, "user": 1, "system": 2, "env": -1}
+
+def jobs_shared(mode="on"):
+    """The machine-wide pool (docs/CONCURRENCY.md) for this process: "on" (the default: worker tokens and memory shared
+    with the other Kolmo processes of this user), "off" (in-process governor alone), "system" (every user of the
+    machine) or "env" (back to KOLMO_JOBS_SHARED). Never changes output. Raises ValueError while tokens are held."""
+    if mode not in _JOBS_MODES:
+        raise ValueError("mode must be one of " + ", ".join(_JOBS_MODES))
+    if _lib.kolmo_jobs_shared(_JOBS_MODES[mode]):
+        raise ValueError("kolmo: cannot change the pool while calls hold tokens")
+
+def jobs_status():
+    """Machine-wide use of the pool: a dict with enabled, mode, tokens, busy, held_here, reserved, limit, dir, state and
+    processes (the other live Kolmo processes: pid, tokens, jobs, reserved)."""
+    info = _JobsInfo(); procs = (_JobsProc * 256)()
+    n = _lib.kolmo_jobs_status(ctypes.byref(info), procs, 256)
+    return {"enabled": bool(info.enabled), "mode": ("off", "user", "system")[info.mode], "tokens": info.tokens,
+            "busy": info.busy, "held_here": info.held_here, "reserved": info.reserved, "limit": info.limit,
+            "dir": info.dir.decode(), "state": info.state.decode(),
+            "processes": [{"pid": procs[i].pid, "tokens": procs[i].tokens, "jobs": procs[i].jobs,
+                           "reserved": procs[i].reserved} for i in range(max(n, 0))]}
 
 def original_size(blob):
     """Original byte length recorded in a compressed blob's header."""
@@ -83,7 +119,7 @@ def train_dict(samples, dict_cap=112 * 1024):
     return out.raw[:n]
 
 def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0, dict=None, native_leaf=False,  # noqa: A002
-             typed_huf=False):
+             typed_huf=False, jobs_shared=True):
     """Compress bytes; returns the compressed bytes. mode: speed|balanced|ratio (advanced: rt|fast|eco|hc|max|ultra).
     transforms: True (analyse and transform), False (codec only) or "quick" (cheap transforms only; fastest).
     native_leaf: with mode="balanced", integer series may use Kolmo's native plane-context leaves when smaller
@@ -96,7 +132,8 @@ def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0
     often smaller too; on other arrays and on multi-channel data (channels are not split) it is often larger than
     the default and sometimes larger than plain zstd, so compare sizes before relying on it.
     It applies only without a dictionary; anything else is compressed as usual. typed_huf excludes native_leaf.
-    Pass dict=<bytes from train_dict> to compress small files against a trained dictionary."""
+    Pass dict=<bytes from train_dict> to compress small files against a trained dictionary.
+    jobs_shared=False keeps this call out of the machine-wide pool (see jobs_shared()); the output is the same."""
     if mode not in _MODES:
         raise ValueError("mode must be one of " + ", ".join(_MODES))
     if native_leaf and typed_huf:
@@ -105,7 +142,7 @@ def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0
     tr = 2 if transforms == "quick" else 1 if transforms else 0
     # 16 = KOLMO_T_NATIVE_LEAF, 32 = KOLMO_T_TYPED_HUF
     p = _Params(_MODES[mode], level, threads, block,
-                tr | (16 if native_leaf and tr else 0) | (32 if typed_huf and tr else 0))
+                tr | (16 if native_leaf and tr else 0) | (32 if typed_huf and tr else 0), 0, 0 if jobs_shared else -1)
     cap = _lib.kolmo_bound(len(data), ctypes.byref(p))
     out = ctypes.create_string_buffer(cap)
     if dict:

@@ -36,6 +36,7 @@ int kolmo_force_c;
 #include "arch/aarch64/dec64_neon.c"
 #endif
 
+#include "core/jobs.c"                /* the machine-wide pool: tokens and memory shared by Kolmo processes */
 #include "core/memory.c"
 #include "transforms/table_v03.c"
 #include "plan/tunables.h"

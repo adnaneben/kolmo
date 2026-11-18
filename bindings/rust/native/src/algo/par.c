@@ -18,6 +18,11 @@ static inline void cpu_relax(void) {
 #endif
 }
 
+int (*kolmo_par_take)(void);
+void (*kolmo_par_give)(int token);
+static int par_take(void) { int (*f)(void) = kolmo_par_take; return f ? f() : -2; }
+static void par_give(int t) { void (*f)(int) = kolmo_par_give; if (f && t >= 0) f(t); }
+
 /* ---- kolmo_par_for ---- */
 
 typedef struct { kolmo_par_fn fn; void *ctx; int ntasks; atomic_int next; } par_job;
@@ -38,14 +43,15 @@ void kolmo_par_for(int threads, int ntasks, kolmo_par_fn fn, void *ctx) {
     if (threads > PAR_MAX) threads = PAR_MAX;
     par_job j; j.fn = fn; j.ctx = ctx; j.ntasks = ntasks; atomic_init(&j.next, 0);
     if (threads <= 1) { par_loop(&j, 0); return; }
-    pthread_t th[PAR_MAX]; par_arg arg[PAR_MAX]; int started = 0;
+    pthread_t th[PAR_MAX]; par_arg arg[PAR_MAX]; int tok[PAR_MAX]; int started = 0;
     for (int t = 1; t < threads; t++) {
+        if ((tok[started] = par_take()) == -1) break;       /* no machine token: the threads started share the tasks */
         arg[started].job = &j; arg[started].worker = started + 1;
-        if (pthread_create(&th[started], NULL, par_main, &arg[started])) break;
+        if (pthread_create(&th[started], NULL, par_main, &arg[started])) { par_give(tok[started]); break; }
         started++;
     }
     par_loop(&j, 0);
-    for (int t = 0; t < started; t++) pthread_join(th[t], NULL);
+    for (int t = 0; t < started; t++) { pthread_join(th[t], NULL); par_give(tok[t]); }
 }
 
 /* ---- crew ---- */
@@ -75,6 +81,7 @@ struct kolmo_crew {
     kolmo_team_fn fn; void *ctx; int n;
     kolmo_team team;
     crew_arg arg[PAR_MAX];
+    int tok[PAR_MAX];               /* each worker's machine token, held for the crew's life (-2: none needed) */
 };
 
 void kolmo_team_barrier(kolmo_team *t) {
@@ -136,8 +143,9 @@ kolmo_crew *kolmo_crew_create(int threads) {
     atomic_init(&c->gen, 0); atomic_init(&c->done, 0); atomic_init(&c->sleepers, 0);
     c->size = 1;
     for (int w = 1; w < threads; w++) {
+        if ((c->tok[w] = par_take()) == -1) break;
         c->arg[w].crew = c; c->arg[w].id = w;
-        if (pthread_create(&c->th[w], NULL, crew_main, &c->arg[w])) break;
+        if (pthread_create(&c->th[w], NULL, crew_main, &c->arg[w])) { par_give(c->tok[w]); break; }
         c->size++;
     }
     if (c->size == 1) { kolmo_crew_destroy(c); return NULL; }
@@ -176,7 +184,7 @@ void kolmo_crew_destroy(kolmo_crew *c) {
     atomic_fetch_add(&c->gen, 1);
     pthread_cond_broadcast(&c->wake);
     pthread_mutex_unlock(&c->m);
-    for (int w = 1; w < c->size; w++) pthread_join(c->th[w], NULL);
+    for (int w = 1; w < c->size; w++) { pthread_join(c->th[w], NULL); par_give(c->tok[w]); }
     pthread_cond_destroy(&c->wake); pthread_cond_destroy(&c->done_cv); pthread_mutex_destroy(&c->m);
     pthread_cond_destroy(&c->barrier_cv); pthread_mutex_destroy(&c->barrier_m);
     free(c);

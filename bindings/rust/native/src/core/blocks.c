@@ -67,7 +67,7 @@ static uint32_t kolmo_fast_block(size_t n) {
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
     const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
-    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
+    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns, kj; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint64_t *poff;   /* decode: payload offsets */
     uint64_t rlo, rhi; uint8_t *rdst;   /* range read */
@@ -138,12 +138,15 @@ static void *compress_worker(void *arg) {
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
     if (!tbuf || !slot || (J->input_fd >= 0 && !input)) { free(input); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
-    uint64_t held = 0;
+    uint64_t held = 0; int tok = KJ_NONE;
     for (;;) {
 #ifdef KOLMO_GPU
         uint32_t nx = atomic_load(&J->next);
         if (!kolmo_gpu_take(nx < J->nb ? J->nb - nx : 0)) break;          /* GPU worker: only while the CPU has a backlog */
 #endif
+        /* the machine pool (core/jobs.c): a token per block job; a helper waits for one while blocks remain, the
+         * caller of the run never waits. Changes how many blocks run at once, never what they write. */
+        if (J->kj && (tok = kjob_block_begin(&J->next, J->nb)) == KJ_REFUSED) break;
         uint32_t i = atomic_fetch_add(&J->next, 1); if (i >= J->nb) break;
         const plan_t pl = J->plans[J->bplan[i]]; const uint64_t rs = J->rstart[i];
         size_t len = J->starts[i + 1] - J->starts[i];
@@ -564,8 +567,10 @@ coded:;
         job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec_wire(xp, codec), tflag, len, slot, tot, 11, J->cm_leaves));   /* the codec as written (native ids) */
         kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0;
         kmem_release(resv); held = 0;
+        kjob_give(tok); tok = KJ_NONE;                                     /* lock order: memory, then the token */
     }
     if (held) { kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0; kmem_release(held); }   /* left the loop on an error */
+    kjob_give(tok);
     free(input);
     tls_end(S);
     return NULL;

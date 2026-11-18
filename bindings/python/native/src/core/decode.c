@@ -45,7 +45,7 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_lim
 typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
                  int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi; const void *dict; size_t dictlen;
                  const struct kolmo_profile *prof;
-                 uint64_t memcap; } djob_t;   /* memcap: the call's limit (the governor's cap; old frames' blocks are checked against it) */
+                 uint64_t memcap; int kj; } djob_t;   /* memcap: the call's limit (the governor's cap; old frames' blocks are checked against it) */
 
 /* Rule 1 (docs/MEMORY-MODEL.md): a block's working set, from its index entry and the head of its payload, checked
  * against what the frame declares before the block allocates anything. Returns the bytes to reserve, or an error. */
@@ -224,7 +224,10 @@ static void *decompress_worker(void *arg) {
     xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
     /* a context-mixing model larger than the frame declares (or, undeclared, than the limit) is refused unallocated */
     kmem_tls_dec_limit = J->P->memd ? J->P->memd : J->memcap == KMEM_UNLIMITED ? 0 : J->memcap;
+    int tok = KJ_NONE;
     for (;;) {
+        /* the machine pool (core/jobs.c): a token per block job, as in compress_worker */
+        if (J->kj && (tok = kjob_block_begin(&J->next, J->hi - J->lo)) == KJ_REFUSED) break;
         uint32_t i = J->lo + atomic_fetch_add(&J->next, 1); if (i >= J->hi) break;
         if (atomic_load(&J->err)) break;
         int r;
@@ -251,8 +254,10 @@ static void *decompress_worker(void *arg) {
             }
         }
         kmem_tls_job = 0; kmem_release((uint64_t)need);
+        kjob_give(tok); tok = KJ_NONE;
         if (r) atomic_store(&J->err, r);
     }
+    kjob_give(tok);
     kmem_tls_dec_limit = 0;
     free(packed);
     tls_end(S);
@@ -334,6 +339,7 @@ static int64_t run_decode_p(const uint8_t *src, int input_fd, size_t n, uint8_t 
     atomic_init(&J.next, 0); atomic_init(&J.err, 0);
     int nt = threads > 0 ? threads : default_threads(), nblk = (int)(J.hi - J.lo < 256 ? J.hi - J.lo : 256);
     J.fqthreads = nblk > 0 && nt / nblk > 0 ? nt / nblk : 1;    /* threads left over per block (FASTQ family blocks) */
+    J.kj = 1;
     run_pool(decompress_worker, &J, nt, J.hi - J.lo);
     free(P.poff); free(P.roff);
     r = atomic_load(&J.err);

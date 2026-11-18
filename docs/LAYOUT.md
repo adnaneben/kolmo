@@ -30,6 +30,7 @@ src/
               container.c    frame header, block index, version, checksums (CRC32C, XXH3 wrappers)
               blocks.c       block splitting, block scheduler, thread pool
               stream.c       streaming encoder/decoder
+              jobs.c         machine-wide pool: worker tokens and memory shared by processes (docs/CONCURRENCY.md)
               memory.c       memory model: budgets, limits, accounting (docs/MEMORY-MODEL.md)
   plan/       planner.c      analysis, transform choice, codec choice per block and per leaf, --target cost model
               detect.c       content detection (text, table, FASTQ, WAV, Y4M, NPY, executables, ...)

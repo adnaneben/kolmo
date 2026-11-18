@@ -43,19 +43,22 @@ static void *cmp_worker(void *a) {
 }
 /* Extra threads are optional work: each starts only when the governor grants it the largest part's working set (unit),
  * so under memory pressure the parts run on fewer threads, with the same result. The calling thread always runs. */
-typedef struct { cmp_job *j; kmem_ctx ctx; uint64_t unit; } cmp_helper_arg;
-static void *cmp_helper(void *a) {      /* releases its own reservation when done: the caller may be waiting for it */
+typedef struct { cmp_job *j; kmem_ctx ctx; uint64_t unit; int tok; } cmp_helper_arg;
+static void *cmp_helper(void *a) {      /* releases its own reservation and token when done: others may be waiting */
     cmp_helper_arg *h = a; kmem_ctx_set(h->ctx); kmem_tls_job = 1;
     cmp_worker(h->j);
-    kmem_tls_job = 0; kmem_release(h->unit); return NULL;
+    kmem_tls_job = 0; kmem_release(h->unit); kjob_give(h->tok); return NULL;
 }
 static void cmp_run(cmp_job *j, int threads, uint64_t unit) {
     if (threads > j->np) threads = j->np;
     if (threads > 64) threads = 64;
-    pthread_t th[64]; int started = 0; cmp_helper_arg h = {j, kmem_ctx_get(), unit};
+    pthread_t th[64]; int started = 0; cmp_helper_arg h[64];
     for (int t = 1; t < threads; t++) {
-        if (!kmem_try_reserve(unit, h.ctx.cap)) break;
-        if (pthread_create(&th[started], NULL, cmp_helper, &h)) { kmem_release(unit); break; }
+        /* a helper needs a machine token and its memory now (core/jobs.c, then the governor); else the caller codes */
+        int tok = kjob_take(); if (tok == KJ_REFUSED) break;
+        h[started] = (cmp_helper_arg){j, kmem_ctx_get(), unit, tok};
+        if (!kmem_try_reserve(unit, h[started].ctx.cap)) { kjob_give(tok); break; }
+        if (pthread_create(&th[started], NULL, cmp_helper, &h[started])) { kmem_release(unit); kjob_give(tok); break; }
         started++;
     }
     cmp_worker(j);

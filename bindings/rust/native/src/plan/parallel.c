@@ -1,12 +1,12 @@
 /* Planning of segments (archive members) on the pool, and ultra's check of the text transforms. */
 /* ultra: the context-mixing coder models text, logs and CSV directly (column and word contexts), so a text transform is
  * kept only if CM on a 1 MiB transformed sample beats CM on the raw sample */
-typedef struct { const uint8_t *in; size_t n; uint8_t *out; size_t cap, res; kmem_ctx ctx; uint64_t resv; } ukt_arg;
+typedef struct { const uint8_t *in; size_t n; uint8_t *out; size_t cap, res; kmem_ctx ctx; uint64_t resv; int tok; } ukt_arg;
 /* the helper releases its own reservation as soon as it is done: its parent may be waiting for that memory */
 static void *ukt_main(void *a) {
     ukt_arg *u = a; kmem_ctx_set(u->ctx); kmem_tls_job = 1;
     u->res = cm_compress(u->in, u->n, u->out, u->cap);
-    kmem_tls_job = 0; kmem_release(u->resv); return NULL;
+    kmem_tls_job = 0; kmem_release(u->resv); kjob_give(u->tok); return NULL;
 }
 /* ultra, a table (codec 25): the sample's columns, each coded by its own context-mixing model (model 2, model 1 at
  * level 1), as the block coder will code them. Returns the payload size plus the column sizes the frame carries, 0 if
@@ -53,14 +53,18 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, plan_t *pl, int thre
         /* the samples are coded on separate threads when there are threads to spare (same results) */
         /* the second sample is optional work: it starts only when the governor grants its tables now */
         uint64_t un = cm_need_bound(m) + m + 8;
-        int ures = threads > 1 && kmem_try_reserve(un, kmem_tls_cap);
-        uint8_t *z2 = ures ? malloc(m + m / 8 + 64) : NULL; pthread_t th, tc; ukt_arg u = {s, m, z2, m + m / 8 + 64, 0, kmem_ctx_get(), un};
+        /* each extra thread also needs a machine token (core/jobs.c); refused, the work runs here, same result */
+        int utok = threads > 1 ? kjob_take() : KJ_REFUSED, ctok = cols && threads > 2 ? kjob_take() : KJ_REFUSED;
+        int ures = utok != KJ_REFUSED && kmem_try_reserve(un, kmem_tls_cap);
+        if (!ures) { kjob_give(utok); utok = KJ_REFUSED; }
+        uint8_t *z2 = ures ? malloc(m + m / 8 + 64) : NULL; pthread_t th, tc; ukt_arg u = {s, m, z2, m + m / 8 + 64, 0, kmem_ctx_get(), un, utok};
         ukc_arg c = {s, m, pl, threads > 2 ? threads - 2 : 1, level, NULL, 0, 0, kmem_ctx_get()};
-        int par = z2 && !pthread_create(&th, NULL, ukt_main, &u), parc = cols && threads > 2 && !pthread_create(&tc, NULL, ukc_main, &c);
-        if (ures && !par) { kmem_release(un); ures = 0; }
+        int par = z2 && !pthread_create(&th, NULL, ukt_main, &u), parc = ctok != KJ_REFUSED && !pthread_create(&tc, NULL, ukc_main, &c);
+        if (ures && !par) { kmem_release(un); kjob_give(utok); ures = 0; }
+        if (ctok != KJ_REFUSED && !parc) kjob_give(ctok);
         size_t a = tn > 0 ? cm_compress(t, (size_t)tn, z, m + m / 8 + 64) : 0, b;
         if (par) { pthread_join(th, NULL); b = u.res; } else b = cm_compress(s, m, z, m + m / 8 + 64);
-        if (cols) { if (parc) pthread_join(tc, NULL); else ukc_main(&c); }
+        if (cols) { if (parc) { pthread_join(tc, NULL); kjob_give(ctok); } else ukc_main(&c); }
         free(z2);
         keep = tn > 0 ? a && (!b || a < b) : pl->t != T_TP;
         if (cols && c.res && b) {

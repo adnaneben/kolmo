@@ -177,3 +177,12 @@ smaller, not faster; speed comes from concurrency, which is the dynamic part.
 
 The macOS sampler and pressure source are written against the documented APIs but were built and tested only on Linux
 in this lane; the integration lane builds them on the Mac.
+
+## Several processes (w4)
+
+The governor above works per process. Since the multi-instance lane (`claude/w4-multi-20261118`) every Kolmo process
+of a user also takes part in a machine-wide pool (`src/core/jobs.c`, `docs/CONCURRENCY.md`): worker tokens (default:
+the physical cores) and the auto limit are shared, so the room a process sees is *the auto limit minus what the other
+processes have reserved* (their records are read with the system sample, at most every 100 ms). The rules here are
+unchanged: one job always runs in every process (whatever the others hold), optional work only tries, and memory
+changes speed, never bytes. A process killed with `kill -9` holds nothing afterwards: tokens and records are flocks.
