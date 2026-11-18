@@ -497,9 +497,12 @@ static int64_t kf_calibrate(const uint8_t *const *files, const size_t *sizes, si
             double se = te[0] - len[0] / re, sd = td[0] - len[0] / rd;
             if (se < 0) se = 0;
             if (sd < 0) sd = 0;
+            /* rates under 0.1 MB/s (-x on a small corpus, a loaded machine) keep four decimals: "%.1f" printed them as
+             * 0.0, which the table parser rightly refuses (rates must be positive) */
             if (w < cap)
-                w += (size_t)snprintf(out + w, cap - w, "%s %s %.1f %.1f %.3f %.3f\n", KT_SET[st].name, KT_CLS[c],
-                                      re / 1e6, rd / 1e6, se * 1e3, sd * 1e3);
+                w += (size_t)snprintf(out + w, cap - w, "%s %s %.*f %.*f %.3f %.3f\n", KT_SET[st].name, KT_CLS[c],
+                                      re < 1e5 ? 4 : 1, re > 100 ? re / 1e6 : 1e-4, rd < 1e5 ? 4 : 1, rd > 100 ? rd / 1e6 : 1e-4,
+                                      se * 1e3, sd * 1e3);
         }
     free(o); free(b);
     for (int c = 0; c < KT_NCLS; c++) free(corp[c]);

@@ -37,12 +37,14 @@ int main(void) {
     for (int i = 0; n + 128 < cap - 4096 && i < 9000; i++)
         n += (size_t)snprintf((char *)t + n, cap - n, "C%d,%d,%d,%.2f,%.4f\n", i / 40, 1980 + i % 40, 1000000 + i * 37, (rnd() % 100000) / 100.0, (rnd() % 10000) / 10000.0);
     fails += check("table", t, n, 1);
-    /* a non-text stream above the (lowered) split threshold: the halves path. An order-2 Markov source over 48 byte
-     * values (most of them not printable): no structure transform applies, and context mixing beats LZMA2 on it. */
+    /* a non-text stream above the (lowered) split threshold: the halves path. Each of 48 byte values (most of them not
+     * printable) depends on the symbol two back (a sparse context), with noise: no structure transform applies, and
+     * context mixing beats both LZMA2 (by 28%) and block sorting (by 8%), which `-x` also tries on binary blocks. (An
+     * order-2 Markov source, used before, is coded smaller by block sorting.) */
     size_t m = 256u << 10; uint8_t *b = malloc(m), sym[48], nx[48][48][4];
     for (int k = 0; k < 48; k++) sym[k] = (uint8_t)(k < 16 ? k * 3 : 128 + k * 2);
     for (int x = 0; x < 48; x++) for (int y = 0; y < 48; y++) for (int z2 = 0; z2 < 4; z2++) nx[x][y][z2] = (uint8_t)(rnd() % 48);
-    for (size_t i = 0, p1 = 0, p2 = 0; i < m; i++) { uint32_t r = rnd() % 16; size_t c = r < 13 ? nx[p1][p2][r & 3] : rnd() % 48; b[i] = sym[c]; p1 = p2; p2 = c; }
+    for (size_t i = 0, p1 = 0, p2 = 0; i < m; i++) { uint32_t r = rnd() % 16; size_t c = r < 12 ? nx[p1][1][r & 3] : rnd() % 48; b[i] = sym[c]; p1 = p2; p2 = c; }
     fails += check("halves", b, m, 1);
     /* damaged codec-25 payloads: the halves of b, coded directly, then corrupted */
     size_t parts[2] = {m / 2, m - m / 2}, zc = cmp_bound(m); uint8_t *z = malloc(zc), *o = malloc(m + 1);

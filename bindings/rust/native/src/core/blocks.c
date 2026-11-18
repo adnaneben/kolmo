@@ -226,7 +226,7 @@ static void *compress_worker(void *arg) {
         size_t inlen = (tflag >= 3 && tflag <= 7) || tflag >= 9 ? get32(sl) : len, cl = 0;
         int codec = J->codec, level = (pl.wide || (tflag >= 10 && pl.t == T_TBL)) && J->default_level ? 1 : J->level;
         /* trials run beside context mixing (ultra, core/trials.c), and whether this block is FASTQ for the family coder */
-        enum { XT_ALT, XT_ALTS, XT_A1, XT_FQ, XT_N }; xtrial_t xt[XT_N]; memset(xt, 0, sizeof xt);
+        enum { XT_ALT, XT_ALTS, XT_A1, XT_FQ, XT_ALTB, XT_N }; xtrial_t xt[XT_N]; memset(xt, 0, sizeof xt);
         const int xfq = J->codec == C_CM && J->level != 1 && !J->dict && len >= 64 && kf_fastq_like(raw, len);
         if (xfq && len >= (64u << 10)) {
             /* ultra, a FASTQ block: the family coder first, with every thread the block has. It has beaten context
@@ -351,9 +351,10 @@ static void *compress_worker(void *arg) {
         if (codec == C_CM && level != 1 && !cl && J->fqthreads > 1) {
             const int text = !tflag && looks_text(in, inlen), ak = text ? C_BWT : C_LZMA;
             xtrial_start(&xt[XT_ALT], ak, 9, in, inlen, J->slot - meta, 1);
-            if (inlen > (2u << 20)) xtrial_start(&xt[XT_ALTS], ak, 9, in + (inlen - (1u << 20)) / 2, 1u << 20, J->slot - meta, 1);
+            if (inlen > (2u << 20) && ak == C_LZMA) xtrial_start(&xt[XT_ALTS], ak, 9, in + (inlen - (1u << 20)) / 2, 1u << 20, J->slot - meta, 1);   /* only LZMA2 is gated by a slice */
             if (in != raw && len >= (64u << 10)) xtrial_start(&xt[XT_A1], C_BWT, 9, raw, len, J->slot, 1);
             if (xfq) xtrial_start(&xt[XT_FQ], C_FQ, 0, raw, len, 0, J->fqthreads - 1);
+            if (!text) xtrial_start(&xt[XT_ALTB], C_BWT, 9, in, inlen, J->slot - meta, 1);   /* binary blocks: block sorting too */
         }
         int cmp_used = 0;
         if (!cl && codec == C_CM && pl.cmp && pl.t == T_TP && tflag && inlen == len) {
@@ -435,17 +436,21 @@ static void *compress_worker(void *arg) {
                 int alts[2] = {C_LZMA, C_BWT};
                 for (int k = 0; k < 2; k++) {
                     int text = !tflag && looks_text(in, inlen);
-                    if (alts[k] == C_BWT && !text) continue;
                     if (alts[k] == C_LZMA && text) continue;  /* text: BWT always beat LZMA2 in tests; saves ~25% of the time */
                     int hit;
-                    if (cl && inlen > (2u << 20)) {           /* large block: try the alternative on a 1 MiB slice first */
+                    /* large block: LZMA2 (1-2 MB/s, a tenth of CM's time) is coded in full only when a 1 MiB slice from
+                     * the middle comes within 25% of CM's rate. Slices are pessimistic: on a table stream (owid-energy)
+                     * the slice was 22% worse and the whole block 1% smaller than CM. Block sorting (10-25 MB/s, a few
+                     * percent of CM's time) is always coded in full, on binary blocks too: on Silesia osdb its slice
+                     * was 11% worse than CM and the whole block 1% smaller (benchmark/rc3/router/RESULTS.md). */
+                    if (cl && inlen > (2u << 20) && alts[k] == C_LZMA) {
                         size_t sn = 1u << 20, so = (inlen - sn) / 2;
                         size_t cs = xtrial_take(&xt[XT_ALTS], alts[k], in + so, sn, &hit);
                         if (!hit) cs = codec_compress(xp, alts[k], 9, in + so, sn, alt, J->slot - meta);
-                        if (!cs || (double)cs / sn > 0.97 * (double)cl / inlen) continue;   /* not within reach of CM */
+                        if (!cs || (double)cs / sn > 1.25 * (double)cl / inlen) continue;   /* not within reach of CM */
                     }
-                    size_t c2 = xtrial_take(&xt[XT_ALT], alts[k], in, inlen, &hit);
-                    if (hit) { if (c2) memcpy(alt, xt[XT_ALT].out, c2); }
+                    size_t c2 = xtrial_take(&xt[alts[k] == C_BWT && !text ? XT_ALTB : XT_ALT], alts[k], in, inlen, &hit);
+                    if (hit) { if (c2) memcpy(alt, xt[alts[k] == C_BWT && !text ? XT_ALTB : XT_ALT].out, c2); }
                     else c2 = codec_compress(xp, alts[k], 9, in, inlen, alt, J->slot - meta);
 #if defined(KOLMO_TRACE) || defined(KOLMO_PROF)
                     fprintf(stderr, "len %zu t%d text %d cm %zu alt%d %zu\n", (size_t)inlen, tflag, looks_text(in, inlen), cl, alts[k], c2);

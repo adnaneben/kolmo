@@ -108,7 +108,7 @@ Measured on held-out files of 10 dataset families, one thread, against zstd at t
 | kbin | pcodec-style binning, rANS bin indices, offset bits, LPC up to order 8 | beats pcodec 8/12 on all 18 files; ECG −4.4% vs `ratio` at 38× compress speed; equal to `balanced` over all NPY | candidate numeric node (rc3 decision) |
 | krans | 32-way interleaved static rANS, order 0/1, AVX2 | order 0: −0.4% to −0.8% vs HUF leaves, 1.19–1.26× faster decode on x86; order 1: −20–25% at 0.35–0.47× decode; NEON on M5 (simd-arm): order 0 0.43× scalar at 8 ways, 1.2–1.3× at 16–32 ways; order 1 0.38–0.53× | candidate leaf coder on x86 (simd lanes) |
 | 6-bit alphabet K6 (fixed, adaptive, token tables; session `dazzling-maxwell`, `research/sixbit-study/`) | text and CSV in 6-bit units with escape codes | 1.23–2.05× alone: beaten by plain Huffman on every file and it hurts any coder that follows | dropped as a storage format |
-| GR6 / GR6+ (same study) | DITTO, rank, graph and dictionary ops in 6-bit units, column predictors and formulas, then fixed, Huffman or context-mixing coder | GR6+ CM mode: beats xz -9e, zstd -19, brotli -11 on all 7 files; beats `-x` on OWID (+8%) and covid; loses to `-x` by 4–19% on logs, text and small tables; 1–3 MB/s both ways | research (ideas taken: formulas, warm start, previous-field contexts); GR6+ itself ported as block codec 26 |
+| GR6 / GR6+ (same study) | DITTO, rank, graph and dictionary ops in 6-bit units, column predictors and formulas, then fixed, Huffman or context-mixing coder | GR6+ CM mode: beats xz -9e, zstd -19, brotli -11 on all 7 files; beats `-x` on OWID (+8%) and covid; loses to `-x` by 4–19% on logs, text and small tables; 1–3 MB/s both ways | research (ideas taken: formulas, warm start, previous-field contexts); GR6+ itself ported as block codec 26; GR6-L3 (`lzp` phrases, level race) evaluated in rc3 wave 2: not ported to `-x` (see *Routing*) |
 | bit-level neural coder over 6-bit units (same study) | 6 binary decisions per unit instead of 8 | about 40% faster for 1–3% more size | research |
 
 ## Speed techniques
@@ -159,6 +159,20 @@ Measured on held-out files of 10 dataset families, one thread, against zstd at t
 | inline popcount (no libgcc call on baseline x86-64) | table scanners, decimal parser | numeric CSV `balanced` compress +4.8% | in (rc3 simd-x86) |
 | IMG16 median inverse as a wavefront | — | not possible: a row's first sample predicts from the previous row's last one (rows are serial) | out |
 | rANS order-0 decode with a packed slot table | eco/hc leaves | −5% to +1% (noise) | out |
+
+## Routing (rc3 wave 2, router lane)
+
+Measured on the 4-vCPU VM over 56 public files of 25 input types, every level against zstd, xz, Brotli, bzip2, LZ4,
+FLAC, FFV1, JPEG XL and JPEG-LS (`benchmark/rc3/router/RESULTS.md`; the map: `docs/ROUTING-MAP.md`; the next wave:
+`docs/ROUTING-PLAN.md`).
+
+| technique | what it does | measured impact | verdict |
+|---|---|---|---|
+| `-x` alternatives: block sorting on every block, LZMA2 slice gate within 25% of CM (was 3% below) | the slice test missed close wins (slices code worse than blocks: owid-energy table stream slice +22%, block −1%); binary blocks never tried block sorting | 56 files: two smaller, none changed otherwise: osdb −0.97% (CM → BWT), owid-energy −0.98% (table + CM → table + LZMA2); `-x` no longer larger than `ratio` on any file; determinism set: `stamps.i64` −0.4%; compress time at one thread −1% to +6% (clean A/B; +2% on text), at four threads within noise | **in** (rc3 wave 2) |
+| GR6-L3 `lzp` phrases and level race in codec 26 (from the 6-bit study, §9) | dictionary-free phrase copies after the same two fields; race of letters / words / phrases on a sample | against rc3 `-x`: never smaller where GR6+ is not already chosen (logs, prose, JSON lines +19% to +100%); on covid and OWID CO2 −0.06% and −0.54%, from the word level, not `lzp`. Against `ratio`: −7% to −30% on Apache, Linux, HDFS with `lzp` (GR6+ alone: −19%, +1.7%, −3.2%) | **not ported to `-x`** (no output would change); candidate for GR6 at `ratio` (plan item 3) |
+| IMG8 reversible colour transform (G, R−G, B−G or YCoCg-R) | decorrelate RGB before the median predictor | estimate: order-0 residual entropy −30% on 4 Kodak photographs (IMG8 today matches the plain estimate) | candidate (plan item 1) |
+| codec 16 (FASTQ family) at `ratio` | the `-x` FASTQ route one level down | −10.4% vs `ratio`'s BWT; compress 2.3–3.2×, decode 3.6–4.9× slower (1–2 threads) | owner decision (plan item 4) |
+| one zstd window across `balanced` blocks | ~8 independent blocks lose cross-block matches | bound (one block): −0.8% to −5.3% on text, JSON lines, source; one block decodes 1.6–3.7× slower at 4 threads | candidate: block 0 as a dictionary (plan item 5) |
 
 ## Container extensions and archive features (rc3, features-b lane)
 
