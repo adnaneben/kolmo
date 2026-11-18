@@ -449,12 +449,15 @@ static void *compress_worker(void *arg) {
                      * the middle comes within 25% of CM's rate. Slices are pessimistic: on a table stream (owid-energy)
                      * the slice was 22% worse and the whole block 1% smaller than CM. Block sorting (10-25 MB/s, a few
                      * percent of CM's time) is always coded in full, on binary blocks too: on Silesia osdb its slice
-                     * was 11% worse than CM and the whole block 1% smaller (benchmark/rc3/router/RESULTS.md). */
+                     * was 11% worse than CM and the whole block 1% smaller (benchmark/rc3/router/RESULTS.md).
+                     * The 25% reach applies to transformed streams (tflag), where it was measured; raw blocks keep rc3's
+                     * gate (the slice 3% below CM): on raw video residual planes LZMA2 came 13% short and the 25% reach
+                     * coded it in full for nothing, +25% -x time at one thread (kvid -m x, akiyo: 83 -> 104 s). */
                     if (cl && inlen > (2u << 20) && alts[k] == C_LZMA) {
                         size_t sn = 1u << 20, so = (inlen - sn) / 2;
                         size_t cs = xtrial_take(&xt[XT_ALTS], alts[k], in + so, sn, &hit);
                         if (!hit) cs = codec_compress(xp, alts[k], 9, in + so, sn, alt, J->slot - meta);
-                        if (!cs || (double)cs / sn > 1.25 * (double)cl / inlen) continue;   /* not within reach of CM */
+                        if (!cs || (double)cs / sn > (tflag ? 1.25 : 0.97) * (double)cl / inlen) continue;   /* not within reach of CM */
                     }
                     size_t c2 = xtrial_take(&xt[alts[k] == C_BWT && !text ? XT_ALTB : XT_ALT], alts[k], in, inlen, &hit);
                     if (hit) { if (c2) memcpy(alt, xt[alts[k] == C_BWT && !text ? XT_ALTB : XT_ALT].out, c2); }
