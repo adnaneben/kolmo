@@ -59,7 +59,10 @@ static void tokens_basic(void) {
     CHECK(kj_n == 4);
     int t[5];
     for (int i = 0; i < 4; i++) { t[i] = kjob_take(); CHECK(t[i] >= 0); }
-    CHECK(kjob_take() == KJ_REFUSED);
+    CHECK(kjob_take() == KJ_NONE);                           /* we hold them all: alone, limited by -T only */
+    kjob_give(t[3]);
+    { pid_t c = holder(1, 0, 0); CHECK(kjob_take() == KJ_REFUSED); reap(c, SIGKILL); }   /* another holds one */
+    t[3] = kjob_take(); CHECK(t[3] >= 0);
     kolmo_jobs_info in; CHECK(kolmo_jobs_status(&in, NULL, 0) == 0);
     CHECK(in.enabled && in.tokens == 4 && in.busy == 4 && in.held_here == 4);
     CHECK(kolmo_jobs_shared(1) == -1);                      /* tokens held: cannot restart */

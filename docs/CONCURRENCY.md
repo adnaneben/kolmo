@@ -69,10 +69,17 @@ left locked by a dead owner.
    second CM sample, the inner parallel loops of `src/algo` (`kolmo_par_for`) and the suffix sorter's crew) only *try*
    for a token, as they already only try for memory. Refused, the work runs on the thread that owns it, afterwards,
    with the same result.
-4. **Memory** keeps the governor's rules: a block job waits for its reservation only while this process has another job
+4. **A process that holds every token is alone on the machine** and is limited by its own thread count only, as
+   without the pool: when no token is free and all of them are its own, helpers and optional threads proceed without
+   one. The first measurement showed why: `-x` starts more optional threads than there are cores (codec trials beside
+   the CM preset race beside the parts), and they overlap usefully; with strict tokens, the ones that found every token
+   taken (by their own process) ran inline afterwards, and a single `-x` instance took 7.8 s instead of 4.9 s. As soon
+   as another process holds a token, the limit applies again. A single instance therefore behaves exactly as before,
+   also on SMT machines where `-T 0` (logical CPUs) exceeds the physical cores.
+5. **Memory** keeps the governor's rules: a block job waits for its reservation only while this process has another job
    running, so the wait ends when that job ends; the first reservation of a process is granted whatever the others
    hold.
-5. **No thread waits on another process.** Cross-process state is only polled (tokens with `LOCK_NB`, records with
+6. **No thread waits on another process.** Cross-process state is only polled (tokens with `LOCK_NB`, records with
    `LOCK_SH|LOCK_NB`), and every waiting thread holds nothing another process could need. A cycle of waits through
    another process is therefore impossible; within a process, the order below holds.
 

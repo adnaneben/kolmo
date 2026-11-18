@@ -14,7 +14,8 @@ unchanged). Measurements: `benchmark/w4/multi/RESULTS.md`.
   the kernel when a process dies, so `kill -9` leaves nothing stale. Each process publishes its reservations in its own
   locked record. Every instance always runs one worker (never waiting for another process); extra block workers take a
   token per block job and give it back when the job ends; optional threads (trials, the CM race, codec-25 parts, inner
-  parallel loops, the suffix sorter's crew) only try. Unusable directory: the in-process governor alone, as before.
+  parallel loops, the suffix sorter's crew) only try. A process that holds every token is alone and limited by its
+  own `-T` only, so a single instance runs exactly as before. Unusable directory: the in-process governor alone, as before.
 - `--jobs-shared=on|off|system`, `KOLMO_JOBS_SHARED`, `kolmo_params.jobs_shared` (per call; negative = out of the
   pool), `kolmo_jobs_shared()` (per process), `kolmo --jobs-status` and `kolmo_jobs_status()` (tokens busy, live
   processes, memory reserved). Python: `kolmo.jobs_shared()`, `kolmo.jobs_status()`, `compress(..., jobs_shared=False)`;

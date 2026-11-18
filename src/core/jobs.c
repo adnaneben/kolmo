@@ -22,6 +22,7 @@
  *     it waits (polling, never blocking in the kernel) only as long as blocks remain, holding nothing.
  *   - optional extra threads (trials, parts, inner parallel loops) only try; refused, the work runs on the thread
  *     that owns it, with the same result.
+ *   - a process that holds every token is alone: it is limited by its own thread count only, as without the pool.
  *   - lock order: token (flock, non-blocking) -> kmem_mu (memory.c) -> kj_mu. No path takes kmem_mu while holding
  *     kj_mu, and no thread waits on another process: cross-process state is only polled.
  * Determinism: tokens decide how many threads run, never what they write (the thread counts that reach the format,
@@ -199,13 +200,18 @@ static int kj_take_locked(void) {
     return KJ_REFUSED;
 }
 #endif
-/* optional work: a token if one is free now (KJ_REFUSED otherwise), KJ_NONE when the pool is off for this thread */
+/* No token is free and this process holds all of them: no other process is working, so this one is limited by its
+ * own thread count only, as without the pool (a single instance must cost nothing: -x starts more optional threads
+ * than there are cores, and they overlap usefully). As soon as another process holds a token, the limit applies. */
+static int kj_alone_locked(void) { return kj_nheld >= kj_n; }
+/* optional work: a token if one is free now (KJ_REFUSED otherwise), KJ_NONE when the pool is off for this thread or
+ * this process holds every token */
 static int kjob_take(void) {
     if (kj_tls_off || !kjob_on()) return KJ_NONE;
 #if defined(_WIN32)
     return KJ_NONE;
 #else
-    pthread_mutex_lock(&kj_mu); int t = kj_take_locked(); pthread_mutex_unlock(&kj_mu);
+    pthread_mutex_lock(&kj_mu); int t = kj_take_locked(); if (t < 0 && kj_alone_locked()) t = KJ_NONE; pthread_mutex_unlock(&kj_mu);
     if (t < 0) atomic_fetch_add(&kj_stat_refused, 1);
     return t;
 #endif
@@ -237,7 +243,7 @@ static int kjob_block_begin(atomic_uint *next, uint32_t lim) {
 #else
     pthread_mutex_lock(&kj_mu);
     int t = kj_take_locked();
-    if (t >= 0 || kj_tls_role == 1) { pthread_mutex_unlock(&kj_mu); return t >= 0 ? t : KJ_NONE; }
+    if (t >= 0 || kj_tls_role == 1 || kj_alone_locked()) { pthread_mutex_unlock(&kj_mu); return t >= 0 ? t : KJ_NONE; }
     atomic_fetch_add(&kj_stat_waits, 1);
     kj_waiting++;
     unsigned ms = 1, gen = kj_gen;
@@ -250,7 +256,7 @@ static int kjob_block_begin(atomic_uint *next, uint32_t lim) {
         pthread_cond_timedwait(&kj_cv, &kj_mu, &ts);
         if (poll) { kj_poller = 0; if (ms < 8) ms *= 2; }
         if (atomic_load_explicit(next, memory_order_relaxed) >= lim) { t = KJ_REFUSED; break; }
-        if (poll || gen != kj_gen) { gen = kj_gen; if ((t = kj_take_locked()) >= 0) break; }
+        if (poll || gen != kj_gen) { gen = kj_gen; if ((t = kj_take_locked()) >= 0) break; if (kj_alone_locked()) { t = KJ_NONE; break; } }
     }
     kj_waiting--;
     pthread_mutex_unlock(&kj_mu);
