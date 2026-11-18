@@ -107,7 +107,7 @@ e758cb2b97ec610c49263709a0a180595672964aafe2cf1054274775d6d246cd  walk.wav  -m h
 9eb0dc5a7f8a8f3486d201f964bf8223cea52a07d8a4d48ecd9f1b72c12ac291  walk.wav  -x
 9eb0dc5a7f8a8f3486d201f964bf8223cea52a07d8a4d48ecd9f1b72c12ac291  walk.wav  -x -l 2
 58a6de14f5e36620d5aa78e170a856c1ce2fd236726cc633021dbce9a7a4ad34  walk.wav  -m balanced --native-leaf
-133388340e4dc1bbe0a24d9e3057d0fcdd78a81d79c1444435278033e20f0dcf  walk.wav  -m fast --typed-huf
+7dcee9980322fbbb2d1a891f09f0dd933814d5344ff323b631f6ed08fdf7dac5  walk.wav  -m fast --typed-huf
 8248956e641e0c4eb90cebdf9bcd24a30d9bea8bad8bdcc5dbd20cc477abcf8e  video.y4m  -m speed
 46a9cd6974cf4a871f1cb986fcfbd4709c36098f0aaf1a6a5a2fe585b180ce65  video.y4m  -m rt
 2795d255a05a7d572c6be4771b5aff55b6cc3f24c120709bd9a171138428447c  video.y4m  (default)
