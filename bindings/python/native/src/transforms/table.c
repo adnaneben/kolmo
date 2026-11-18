@@ -351,6 +351,7 @@ static void ncol_parse(const uint8_t *in, size_t n, const uint32_t *off, const u
     int S = 0;
     for (uint32_t i = 0; i < cnt; i++) {
         int64_t m; int s;
+        if (i + 16 < cnt) __builtin_prefetch(in + off[i + 16]);   /* fields of one column are a row apart: fetch ahead */
         if (len[i] == 0) { c->kind[i] = 0; c->nempty++; }
         else if (parse_dec_fast(in + off[i], len[i], n - off[i], &m, &s)) { c->kind[i] = 1; c->m[c->nnum] = m; c->sc[c->nnum] = (uint8_t)s; c->idx[c->nnum] = i; c->nnum++; if (s > S) S = s; }
         else { c->kind[i] = 2; c->nexc++; }

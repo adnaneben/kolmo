@@ -10,6 +10,19 @@ static int looks_text(const uint8_t *s, size_t n) {          /* >= 95% printable
     return pr * 100 >= tot * 95;
 }
 
+/* text in any ASCII-compatible encoding (UTF-8 with many multi-byte characters, Latin-1): >= 95% of the bytes in 4
+ * slices of 16 KB are printable ASCII, tab, newline, carriage return or >= 0x80 (eco's block-sorting route) */
+static int looks_text8(const uint8_t *s, size_t n) {
+    if (n < 4096) return 0;
+    size_t tot = 0, pr = 0;
+    for (int k = 0; k < 4; k++) {
+        size_t st = n / 4 * k, m = n - st < 16384 ? n - st : 16384;
+        for (size_t i = st; i < st + m; i++) { uint8_t c = s[i]; pr += (c >= 32 && c != 127) || c == 9 || c == 10 || c == 13; }
+        tot += m;
+    }
+    return pr * 100 >= tot * 95;
+}
+
 /* minified JSON: no newline in the sample, starts with { or [, and many records (",{" after "}") */
 static int json_minified(const uint8_t *s, size_t h) {
     if (memchr(s, '\n', h)) return 0;
