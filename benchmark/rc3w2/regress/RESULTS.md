@@ -159,6 +159,35 @@ instead of 91.1 s here (−11%; GR6+ alone takes 8.3 s on it). nci and webster w
 (minutes per run); their frames cannot change (GR6+ was never chosen on them) and the time GR6+ took on them is now
 skipped. The integration lane's M5 run will show the time.
 
+**Formula search on threads** (follow-up from the integration lane, after the gpu2 lane measured 5.8x on ten M5
+threads with the same formulas). Each target column's search depends only on its own candidates, so targets are
+searched on the block's spare threads (`codec_ctx.threads`) in batches of 4 per thread, each counting its work from 0,
+and merged in target order. While the work so far plus a target's own work stays under the cap, that target ran
+exactly as in order (the cap is only compared); the first target where the cap could bite, and every later one, is
+searched again in order by the one-thread path. So the formulas are the same for every thread count, by construction.
+GR6+ alone (`g6t`, this VM): the same stream (FNV hash) at 1, 2, 3, 4 and 8 threads on covid, owid_test, OWID CO2
+and energy_test, equal to the stream before the change; owid_test 5.8 → 4.6 s, OWID CO2 8.2 → 6.5 s, energy_test
+(gate bypassed, cap reached) 6.3 → 4.5 s at 4 threads; covid has 5 columns and no formulas (unchanged).
+
+`-x`, previous commit against this one (`x_formula_threads.jsonl`; frames compared by SHA-256, one run each):
+
+| file | threads | `-x` bytes | frames identical | compress s before → after | decode s |
+|---|---:|---:|---|---:|---:|
+| energy_test.csv | 1 | 614,448 | yes | 25.6 → 25.3 | 13.5 |
+| owid-co2-data.csv | 1 | 1,127,837 | yes | 55.0 → 55.9 | 6.0 |
+| owid_test.csv | 1 | 856,504 | yes | 45.3 → 44.1 | 4.5 |
+| countries-aggregated.csv | 1 | 283,038 | yes | 26.5 → 26.4 | 1.6 |
+| energy_test.csv | 4 | 614,448 | yes | 17.5 → 17.9 | 14.2 |
+| owid-co2-data.csv | 4 | 1,127,837 | yes | 43.1 → 41.7 | 6.4 |
+| owid_test.csv | 4 | 856,504 | yes | 35.8 → 32.9 | 4.7 |
+| countries-aggregated.csv | 4 | 283,038 | yes | 22.7 → 22.4 | 1.7 |
+
+One thread is unchanged by design. energy_test.csv does not move because the table gate above already skips GR6+ on
+it (130 columns): that gate took its `-x` from 65.4 to 36.9 s at one thread here, more than the threaded search
+could (the gpu2 estimate of 14.3 → 8.1 s on the M5 assumed GR6+ still ran there). On the 79-column OWID files the
+search is a small part of `-x` (context mixing dominates), so 4 threads save 1.4–2.9 s. (These runs are faster than
+the table above: the machine was quiet.)
+
 ## 3. Video (codec 20): frames on all threads
 
 **Cause.** The video route codes the whole Y4M as one block whose payload is a nested Kolmo frame of the kvid layout.

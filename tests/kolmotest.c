@@ -26,6 +26,7 @@ size_t np_bound_pub(size_t n);
 size_t gr6_compress_pub(const uint8_t *in, size_t n, uint8_t *out, size_t cap);
 int gr6_decompress_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 int gr6_applies_pub(const uint8_t *in, size_t n);
+size_t gr6_compress_pub_t(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int threads);
 uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len);
 #define NP_GOLDEN_LEN 17372
 #define NP_GOLDEN_HASH 0xe9dace4722cab3f7ull   /* FNV-1a 64 of the codec-15 leaf for the fixed planes in main() */
@@ -527,6 +528,13 @@ int main(void) {
             if (gr6_applies_pub(pr, pn)) { printf("FAIL gr6 gate: prose is tried\n"); fails++; }
             if (gr6_applies_pub(wt, wn)) { printf("FAIL gr6 gate: a 120-column table is tried\n"); fails++; }
             free(pr); free(wt);
+        }
+        {   /* the formula search on threads: the same GR6+ stream for every thread count */
+            uint8_t *g1 = malloc(gn + 65536), *g2 = malloc(gn + 65536);
+            size_t l1 = gr6_compress_pub_t(g, gn, g1, gn + 65536, 1);
+            for (int th = 3; th <= 4; th++) { size_t l2 = gr6_compress_pub_t(g, gn, g2, gn + 65536, th);
+                if (!l1 || l1 != l2 || memcmp(g1, g2, l1)) { printf("FAIL gr6: %d threads give another stream\n", th); fails++; } }
+            free(g1); free(g2);
         }
         uint8_t *gc = malloc(gn + 65536), *go = malloc(gn + 64), *ge = malloc(gn + 65536);
         size_t g1 = gr6_compress_pub(g, gn, gc, gn + 65536);

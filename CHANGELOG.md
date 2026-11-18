@@ -22,6 +22,9 @@ Frames change only in `balanced`, on files whose graph leaves take codecs 21-23.
   CSV) skip it. The formula search stops after 2^29 rows scored (a count, not a time: same output everywhere); the
   files where GR6+ wins need at most 0.34 G. `-x` frames are unchanged on every file measured; energy_test.csv
   compresses 1.8x faster, dickens 11% faster.
+- **GR6+'s formula search runs on the block's spare threads**: target columns in parallel, merged in order (the
+  work cap replayed in order), so the formulas and the frame are the same for every thread count. `-x -T 4` on the
+  OWID CO2 tables 1.4-2.9 s faster.
 - **Video (codec 20) codes and decodes its frames on all threads**, with the SIMD strip kernels: the encoder's
   prediction runs frames in parallel, the decoder rebuilds frames as a wavefront (each frame one strip behind the
   previous). Same bytes for every thread count and ISA.
