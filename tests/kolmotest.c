@@ -25,6 +25,7 @@ int np_decode_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 size_t np_bound_pub(size_t n);
 size_t gr6_compress_pub(const uint8_t *in, size_t n, uint8_t *out, size_t cap);
 int gr6_decompress_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+int gr6_applies_pub(const uint8_t *in, size_t n);
 uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len);
 #define NP_GOLDEN_LEN 17372
 #define NP_GOLDEN_HASH 0xe9dace4722cab3f7ull   /* FNV-1a 64 of the codec-15 leaf for the fixed planes in main() */
@@ -517,6 +518,16 @@ int main(void) {
             }
         }
         check("ultra-gr6-table", g, gn, KOLMO_ULTRA, 1 << 20, 1);
+        {   /* the GR6+ gate: tables with 3 to 100 columns on 90% of their first lines; not prose, not wider tables */
+            size_t pn = 0, wn = 0, cap2 = 300000; uint8_t *pr = malloc(cap2), *wt = malloc(cap2);
+            static const char *W[] = {"the", "a", "house,", "of", "river", "quietly", "and,", "said", "who", "under"};
+            while (pn + 200 < cap2) { int k = 3 + (int)(rnd() % 14); for (int j = 0; j < k; j++) pn += sprintf((char *)pr + pn, "%s%s", j ? " " : "", W[rnd() % 10]); pr[pn++] = '\n'; }
+            for (int r = 0; wn + 2000 < cap2; r++) { for (int j = 0; j < 120; j++) wn += sprintf((char *)wt + wn, "%s%d", j ? "," : "", r * 7 + j); wt[wn++] = '\n'; }
+            if (!gr6_applies_pub(g, gn)) { printf("FAIL gr6 gate: the derived-column table is not tried\n"); fails++; }
+            if (gr6_applies_pub(pr, pn)) { printf("FAIL gr6 gate: prose is tried\n"); fails++; }
+            if (gr6_applies_pub(wt, wn)) { printf("FAIL gr6 gate: a 120-column table is tried\n"); fails++; }
+            free(pr); free(wt);
+        }
         uint8_t *gc = malloc(gn + 65536), *go = malloc(gn + 64), *ge = malloc(gn + 65536);
         size_t g1 = gr6_compress_pub(g, gn, gc, gn + 65536);
         kolmo_params up = {KOLMO_ULTRA, 0, 1, 1 << 20, 1}; size_t ucap = kolmo_bound(gn, &up); uint8_t *ud = malloc(ucap);

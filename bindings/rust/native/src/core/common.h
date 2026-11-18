@@ -51,3 +51,5 @@ unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);
 #endif
 #include "codecs/bwt_stream.h"   /* LZP + BWT + QLFC in C (was libbsc): compiled on its own, see the Makefile */
 #include "algo/qlfc.h"
+#include "algo/par.h"              /* kolmo_par_for: the video layout codes frames in parallel */
+#include <sched.h>

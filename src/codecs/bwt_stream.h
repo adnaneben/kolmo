@@ -25,9 +25,16 @@ typedef struct {
     int coder;               /* KOLMO_QLFC_STATIC or KOLMO_QLFC_ADAPTIVE */
     int index_log2;          /* log2 of the BWT index sampling interval; 0: libbsc's choice (8 to 15 indexes) */
     int min_block;           /* smallest QLFC coder block in bytes; 0: libbsc's split */
+    int static_pct;          /* adaptive coder: use the static one when adaptive gains less than this percent; 0: never */
 } kolmo_bwt_params;
-/* Kolmo's defaults for codec 18 (benchmark/rc3/bwt/RESULTS.md). */
-#define KOLMO_BWT_DEFAULTS { 17, 96, 2 /* KOLMO_QLFC_ADAPTIVE */, 0, 4 << 20 }
+/* Kolmo's defaults for codec 18 (benchmark/rc3/bwt/RESULTS.md). Static QLFC where adaptive gains under 1%
+   (KOLMO_BWT_STATIC_PCT=1) was measured and left off: decode 1.35-1.7x faster on the files it applies to, but they
+   give back two thirds of the adaptive gain and every block pays a second QLFC pass, +4% to +33% compress time
+   (benchmark/rc3w2/regress/RESULTS.md). */
+#ifndef KOLMO_BWT_STATIC_PCT
+#define KOLMO_BWT_STATIC_PCT 0
+#endif
+#define KOLMO_BWT_DEFAULTS { 17, 96, 2 /* KOLMO_QLFC_ADAPTIVE */, 0, 4 << 20, KOLMO_BWT_STATIC_PCT }
 /* Returns the payload size, or a negative KB_ error (KB_NOT_COMPRESSIBLE when it does not fit cap). n >= 2. */
 int kolmo_bwt_compress(const uint8_t *in, uint8_t *out, size_t cap, int n, const kolmo_bwt_params *p, int threads);
 /* Decodes exactly n bytes; KB_OK or a negative KB_ error. Safe on any input. */

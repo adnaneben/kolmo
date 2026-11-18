@@ -167,6 +167,22 @@ int main(void) {
     size_t yn = mk_y4m(y, 64, 48, 30);
     for (kolmo_mode m = KOLMO_FAST; m <= KOLMO_MAX; m++) if (frame_case("y4m", y, yn, m, 11, C_VID)) return 1;
     if (file_case("y4m", y, yn, KOLMO_FAST)) return 1;
+    {   /* the layout on threads: the same bytes for 1-8 threads; the wavefront inverse on 1-8 threads; a bad predictor
+         * byte (3, or the previous frame at frame 0) in any frame fails the inverse on every thread count, never hangs */
+        size_t t1n, tn; uint8_t *t1 = kv_transform(y, yn, &t1n, 1), *o = malloc(yn);
+        if (!t1 || !o) FAIL("kv_transform");
+        for (int th = 2; th <= 8; th++) { uint8_t *t = kv_transform(y, yn, &tn, th); if (!t || tn != t1n || memcmp(t, t1, tn)) FAIL("kv_transform: %d threads differ", th); free(t); }
+        for (int th = 1; th <= 8; th++) if (kv_inverse(t1, t1n, o, yn, th) || memcmp(o, y, yn)) FAIL("kv_inverse: %d threads", th);
+        size_t hl = (size_t)t1[0] | (size_t)t1[1] << 8, nfl = 3 + 2 * 2;   /* 48 rows: 3 luma strips, 2 per chroma plane */
+        for (int c = 0; c < 6; c++) {
+            uint8_t *t = malloc(t1n); memcpy(t, t1, t1n);
+            size_t fr = c < 3 ? (size_t)(29 - 13 * c) : (size_t)(c - 3) * 11, at = 4 + hl + fr * nfl + (size_t)c % nfl;
+            t[at] = fr == 0 && c % 2 ? 1 : 3;
+            for (int th = 1; th <= 4; th += 3) if (!kv_inverse(t, t1n, o, yn, th)) FAIL("kv_inverse: bad predictor accepted (frame %zu, %d threads)", fr, th);
+            free(t);
+        }
+        free(t1); free(o);
+    }
     {   /* a video frame whose nested frame is again a video frame is refused (no recursion) */
         kolmo_params p = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(yn, &p); uint8_t *f = malloc(cap), *g = malloc(cap + 64), *o = malloc(yn);
         int64_t z = kolmo_compress(y, yn, f, cap, &p);

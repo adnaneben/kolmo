@@ -11,7 +11,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
  * length written to dst (or output_fd), or 0 when the route does not apply or is not smaller than the input. */
 static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *q) {
     if (n < 4096 || n > UINT32_MAX || memcmp(s, "YUV4MPEG2 ", 10) || !((KOLMO_VID_MODES >> q->mode) & 1)) return 0;
-    size_t tn; uint8_t *t = kv_transform(s, n, &tn); if (!t) return 0;
+    size_t tn; uint8_t *t = kv_transform(s, n, &tn, q->threads > 0 ? q->threads : default_threads()); if (!t) return 0;
     size_t ic = kolmo_bound(tn, q), tot; uint8_t *in = malloc(ic), *f = NULL; int64_t z = -1;
     if (in) z = compress_impl(t, -1, tn, in, -1, ic, q, NULL, 0, 0);
     free(t);

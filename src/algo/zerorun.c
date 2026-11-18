@@ -27,7 +27,11 @@ static inline uint8_t *zr_putv(uint8_t *q, uint64_t v) {
 static int zr_split(const uint8_t *p, size_t n, uint8_t *runs, size_t runcap, size_t *runlen, uint8_t *lits, size_t litcap, size_t *litlen) {
     uint8_t *r = runs, *re = runs + runcap, *l = lits; size_t z = 0;
     for (size_t i = 0; i < n; i++) {
-        if (!p[i]) { z++; continue; }
+        if (!p[i]) {                                   /* zero words 8 bytes at a time (sparse streams) */
+            uint64_t w;
+            while (i + 9 <= n && (memcpy(&w, p + i + 1, 8), w == 0)) { z += 8; i += 8; }
+            z++; continue;
+        }
         if ((size_t)(re - r) < 10 || (size_t)(l - lits) >= litcap) return -1;
         r = zr_putv(r, z); *l++ = p[i]; z = 0;
     }

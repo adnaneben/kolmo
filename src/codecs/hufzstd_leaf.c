@@ -33,8 +33,22 @@ static int hz_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *ou
 /* encoder rule: Huffman streams up to 64 KiB take zstd level 19 (or the leaf's higher level) directly; larger ones
  * zstd at the `probe` level over the Huffman stream first (cheap: the leaf's own zstd level up to 9, else 1); the given level only when that probe finds
  * repeats (at least 1% smaller than the Huffman stream) and comes within 5% of `best` (the leaf's current smallest
- * coding; 0 = none). Returns the smaller payload written to out, or 0. */
-static size_t hz_try(codec_ctx *x, int probe, int level, const uint8_t *huf, size_t hl, uint8_t *out, size_t cap, size_t best) {
+ * coding; 0 = none). Returns the smaller payload written to out, or 0.
+ * `fast` (balanced, zstd at the fast levels): every stream is probed at level 1 first, and level HZ_FAST_LEVEL follows
+ * only when the probe is already no larger than `best`. Level 19 cost 30-60 ms per 64 KiB stream and ran on every
+ * leaf: balanced compressed DEC64 float arrays 9x slower than rc2 (benchmark/rc3w2/regress/RESULTS.md); level 5 keeps
+ * 67% of the format-2 gain on them at 1.36x rc2's instructions, level 9 76% at 1.46x. */
+#ifndef HZ_FAST_LEVEL
+#define HZ_FAST_LEVEL 5
+#endif
+static size_t hz_try(codec_ctx *x, int probe, int level, const uint8_t *huf, size_t hl, uint8_t *out, size_t cap, size_t best, int fast) {
+    if (fast) {
+        size_t q1 = hz_compress_huf(x, 1, huf, hl, out, cap);
+        if (!q1 || (uint64_t)q1 * 100 > (uint64_t)hl * 99 || (best && q1 > best)) return q1;
+        uint8_t *u = malloc(cap); size_t qz = u ? hz_compress_huf(x, HZ_FAST_LEVEL, huf, hl, u, cap) : 0;
+        if (qz && qz < q1) { memcpy(out, u, qz); q1 = qz; }
+        free(u); return q1;
+    }
     if (hl <= (64u << 10)) return hz_compress_huf(x, level > 19 ? level : 19, huf, hl, out, cap);   /* small: the strong level at once */
     size_t q1 = hz_compress_huf(x, probe, huf, hl, out, cap);
     if (!q1 || level <= probe || (uint64_t)q1 * 100 > (uint64_t)hl * 99 || (best && (uint64_t)q1 * 100 >= (uint64_t)best * 105)) return q1;

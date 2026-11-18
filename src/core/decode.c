@@ -245,7 +245,7 @@ static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input
     t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
     if (!t || !full) { ret = KOLMO_ERR_ALLOC; goto out; }
     if (run_decode(pay + 4, -1, cl - 4, t, -1, threads, 0, 0, 0, NULL, 0, 0, NULL) != tn) goto out;
-    if (kv_inverse(t, (size_t)tn, full, raw)) goto out;
+    if (kv_inverse(t, (size_t)tn, full, raw, threads > 0 ? threads : default_threads())) goto out;
     if (blk_sum(P->ver, full, raw) != get32(e + 8)) { ret = KOLMO_ERR_CHECKSUM; goto out; }
     if (range) { if (hi > raw || lo > hi) goto out; memcpy(dst, full + lo, (size_t)(hi - lo)); ret = (int64_t)(hi - lo); }
     else if (output_fd >= 0) { int w = write_block(output_fd, full, raw, 0); ret = w ? w : (int64_t)raw; }
