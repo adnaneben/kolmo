@@ -73,7 +73,17 @@ int kolmo_khuf_lengths(const uint32_t cnt[256], int nsym, int maxlen, uint8_t le
     return m;
 }
 
-static inline uint32_t kh_rev(uint32_t c, int l) { uint32_t r = 0; for (int i = 0; i < l; i++) { r = (r << 1) | (c & 1); c >>= 1; } return r; }
+/* bit reversal of the low l bits (l <= 16) through a byte table (constant data; was a bit loop: decmap lane) */
+static const uint8_t KH_REV8[256] = {
+#define R2(n) n, n + 2 * 64, n + 1 * 64, n + 3 * 64
+#define R4(n) R2(n), R2(n + 2 * 16), R2(n + 1 * 16), R2(n + 3 * 16)
+#define R6(n) R4(n), R4(n + 2 * 4), R4(n + 1 * 4), R4(n + 3 * 4)
+    R6(0), R6(2), R6(1), R6(3)
+#undef R2
+#undef R4
+#undef R6
+};
+static inline uint32_t kh_rev(uint32_t c, int l) { return ((uint32_t)KH_REV8[c & 255] << 8 | KH_REV8[(c >> 8) & 255]) >> (16 - l); }
 /* canonical codes, bit-reversed for least-significant-first output; returns the longest length, or -1 when the Kraft
  * sum is not exactly one */
 static int kh_codes(const uint8_t len[256], int nsym, uint16_t code[256]) {
@@ -159,6 +169,10 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
     uint8_t len[256]; uint16_t code[256]; size_t i = 0;
     if (kh_read_table(in, cn, &i, len)) return -1;
     int T = kh_codes(len, 256, code); if (T < 1) return -1;
+    /* one table of the T-bit codes; with the two-symbol loop (n >= 4096) it is built at 11 bits, the width that loop
+     * needs, and the other loops index it with 11 bits too (they never consume more than the code's length, and the
+     * bits above it are the next codes or zeros), so one table is built instead of two (decmap lane) */
+    if (n >= 4096) T = KHUF_MAXLEN;
     uint16_t dt[1 << KHUF_MAXLEN]; const uint64_t mask = ((uint64_t)1 << T) - 1;
     for (int s = 0; s < 256; s++) if (len[s]) for (uint32_t k = code[s]; k < (1u << T); k += 1u << len[s]) dt[k] = (uint16_t)(s | len[s] << 8);
     uint64_t L[4]; size_t tot = 0;
@@ -176,8 +190,7 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
          * the remaining bits, the second (low 16 bits: the symbols; bits 16-23: bits used; bits 24-31: 1 or 2).
          * Five lookups per refill (5 x 11 <= 56 bits), so up to ten bytes; each stream stops ten bytes before the
          * next stream's start (two-byte stores) and finishes below */
-        uint16_t d1[1 << KHUF_MAXLEN]; uint32_t d2[1 << KHUF_MAXLEN]; const uint32_t M = (1u << KHUF_MAXLEN) - 1;
-        for (int s = 0; s < 256; s++) if (len[s]) for (uint32_t k = code[s]; k < (1u << KHUF_MAXLEN); k += 1u << len[s]) d1[k] = (uint16_t)(s | len[s] << 8);
+        const uint16_t *d1 = dt; uint32_t d2[1 << KHUF_MAXLEN]; const uint32_t M = (1u << KHUF_MAXLEN) - 1;
         for (uint32_t k = 0; k <= M; k++) {
             uint32_t e1 = d1[k], l1 = e1 >> 8, e2 = d1[k >> l1], l2 = e2 >> 8;
             d2[k] = l1 + l2 <= KHUF_MAXLEN ? (e1 & 255) | (e2 & 255) << 8 | (l1 + l2) << 16 | 2u << 24 : (e1 & 255) | l1 << 16 | 1u << 24;

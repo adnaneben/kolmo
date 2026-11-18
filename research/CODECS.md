@@ -171,6 +171,14 @@ Measured on held-out files of 10 dataset families, one thread, against zstd at t
 | IMG16 median inverse as a wavefront | — | not possible: a row's first sample predicts from the previous row's last one (rows are serial) | out |
 | rANS order-0 decode with a packed slot table | eco/hc leaves | −5% to +1% (noise) | out |
 | metadata: packed content stored without coding (meta lane, rc3 wave 2) | magic numbers of compressed formats; a block is stored when every 16 KiB slice has collision entropy ≥ 7.8 bits (integer test) and LZ4 saves < 1% | deflated NPZ: `hc` 1.92 → 0.04 s, `max` 4.30 → 0.03 s; gzip CSV `hc` 0.14 → 0.006 s; size equal (one 6 KB JPEG +65 B) | **in** (rc3 wave 2) |
+| AVX2 word-transform decoder (decmap lane, rc3 wave 3; `src/arch/x86_64/word_avx2.c`) | decode of word-transform blocks (text, JSON) on x86 | 64 bytes classified per step (special-byte bitmap via two in-lane shuffles), tokens by count-trailing-zeros, like the NEON kernel; same frames: text `eco`/`hc` +14.8% (1 thread) / +12.1% (4), JSON `balanced`/`eco`/`hc` +13.7% / +12.1%, hc/dickens +23% (`benchmark/rc3w3/decmap/RESULTS.md`) | **in** (decoder only) |
+| khuf table build: one 11-bit table, constant bit-reversal table (decmap lane) | codec 27 and KLZH decode | per-block fixed cost 7.8 → 6.2 µs (4 KiB blocks); Silesia khuf decode +7.6% to +8.9%; same frames | **in** (decoder only) |
+| KLZH sequence loop: one validation pass, refills on demand (decmap lane) | codec 29 decode | KLZH1 +10%, KLZH3 +10%, KLZH5 +17% (Silesia, 1 thread); with khuf above, `KOLMO_NATIVE=all` frames of `balanced`/`eco`/`hc` +16.3% (1 thread) / +14.2% (4) | **in** (decoder only) |
+| Huffman decode tables shipped in the frame (decmap lane) | codec 27 | 4–8 KiB per ≤ 128 KiB block (+3% to +6% size) to save ≤ 8% of decode; a per-file table reused by all chunks saves ≤ 3% | dropped |
+| more sampled inverse-BWT indexes, 8 → 255 (decmap lane) | codec 18 decode | +32 to +900 B per block; decode within noise at 1 and 4 threads (dickens 19.4 → 19.8–22.0 MB/s, not monotonic; samba +0–3%); the inverse is ~4% of `ratio` text decode, adaptive QLFC 85% | dropped |
+| GR6+ precomputed rank / move-to-front / dictionary tables (decmap lane) | codec 26 decode | all field decisions are 8.5% of the decoder's instructions (CM bit coder 72%): < 5% possible | not built |
+| CM squash/stretch/state tables as constant data (decmap lane) | codec 7, 26 | already built once per process (0.30 ms, 0.01% of a 5 MB `-x` decode) | no change |
+| kaud profile 0: whole-word bit-buffer refill (decmap lane) | codec 19 decode | ±2% on 4 WAV frames (Rice loop and LPC restore are compute-bound) | dropped |
 
 ## Routing (rc3 wave 2, router lane)
 

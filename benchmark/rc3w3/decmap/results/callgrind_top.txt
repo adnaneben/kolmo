@@ -1,0 +1,316 @@
+## balanced.csv.txt
+11,173,876 (18.86%)  src/algo/decimal.c:fmt_dec_swar
+10,898,385 (18.40%)  src/transforms/table.c:tbl2_decode
+10,369,264 (17.50%)  src/transforms/table.c:tbl2_stream
+ 2,124,329 ( 3.59%)  avx2intrin.h:tbl2_stream
+ 1,818,978 ( 3.07%)  src/arch/x86_64/decimal_avx2.c:tbl2_stream
+ 1,641,457 ( 2.77%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+## balanced.json.txt
+30,482,727 (55.42%)  src/transforms/transpose.c:decode_block
+ 5,972,720 (10.86%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+ 2,367,500 ( 4.30%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+ 1,042,828 ( 1.90%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+   751,732 ( 1.37%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:decode_block
+   468,774 ( 0.85%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+## balanced.logs.txt
+ 8,351,051 (26.66%)  src/transforms/log.c:log_decode
+ 2,301,108 ( 7.35%)  src/algo/decimal.c:log_decode
+ 2,025,048 ( 6.46%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+ 1,035,947 ( 3.31%)  src/transforms/log.c:get_ints
+   941,140 ( 3.00%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+   719,031 ( 2.30%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:log_decode
+## balanced.npy.txt
+1,588,428 (25.04%)  src/transforms/graph.c:fi_inv_8_8_0
+  509,555 ( 8.03%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
+  378,004 ( 5.96%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu
+  353,910 ( 5.58%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu
+  230,927 ( 3.64%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+  182,747 ( 2.88%)  src/codecs/../algo/zerorun.c:zrun_dec_tab
+## balanced.samba.txt
+10,336,619 (32.72%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+ 4,859,552 (15.38%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+   758,223 ( 2.40%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
+   688,308 ( 2.18%)  vendor/zstd/decompress/../common/zstd_internal.h:ZSTD_decompressSequences_default.constprop.0
+   675,983 ( 2.14%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_buildFSETable_body_default.isra.0
+   650,028 ( 2.06%)  emmintrin.h:ZSTD_decompressSequences_default.constprop.0
+## balanced.text.txt
+18,902,560 (42.44%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+ 8,971,470 (20.14%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+   962,058 ( 2.16%)  vendor/zstd/decompress/../common/zstd_internal.h:ZSTD_decompressSequences_default.constprop.0
+   958,678 ( 2.15%)  emmintrin.h:ZSTD_decompressSequences_default.constprop.0
+   767,464 ( 1.72%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d6fd
+   560,921 ( 1.26%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_buildFSETable_body_default.isra.0
+## balanced.wav.txt
+52,797,846 (46.31%)  src/codecs/audio.c:ka_decode_leaf
+33,659,315 (29.52%)  src/codecs/audio.c:ka_lpc_restore
+ 9,932,152 ( 8.71%)  src/codecs/audio.c:ka_dec_worker
+ 2,122,794 ( 1.86%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gn
+ 1,103,407 ( 0.97%)  src/codecs/audio.c:decode_block
+   516,814 ( 0.45%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+## balanced.xray.txt
+17,996,304 (41.23%)  src/transforms/sci.c:img16_inv
+ 8,530,968 (19.55%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d6fd
+ 2,066,900 ( 4.74%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+ 1,074,772 ( 2.46%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
+   468,760 ( 1.07%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   296,507 ( 0.68%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+## balanced.y4m.txt
+10,316,206 (30.93%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+ 4,768,726 (14.30%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+   896,950 ( 2.69%)  vendor/zstd/decompress/../common/zstd_internal.h:ZSTD_decompressSequences_default.constprop.0
+   894,534 ( 2.68%)  emmintrin.h:kolmo_vid_strip_dec_sse41
+   855,540 ( 2.57%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   597,102 ( 1.79%)  emmintrin.h:med8_rowssse41
+## eco.csv.txt
+22,455,793 (28.53%)  src/algo/decimal.c:fmt_dec_swar
+21,757,136 (27.64%)  src/transforms/table.c:tbl2_decode
+12,821,483 (16.29%)  vendor/brotli/dec/decode.c:ProcessCommands
+ 3,067,317 ( 3.90%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
+ 3,055,040 ( 3.88%)  src/transforms/table.c:num_decode
+   603,474 ( 0.77%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+## eco.json.txt
+30,482,674 (54.50%)  src/transforms/transpose.c:decode_block
+ 6,445,856 (11.52%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+ 3,191,126 ( 5.71%)  vendor/brotli/dec/decode.c:ProcessCommands
+ 1,002,114 ( 1.79%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
+   812,021 ( 1.45%)  vendor/brotli/dec/decode.c:SafeProcessCommands
+   751,693 ( 1.34%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:decode_block
+## eco.logs.txt
+ 8,375,184 (24.26%)  src/transforms/log.c:log_decode
+ 4,860,799 (14.08%)  vendor/brotli/dec/decode.c:ProcessCommands
+ 2,356,056 ( 6.82%)  src/algo/decimal.c:log_decode
+ 1,647,908 ( 4.77%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
+ 1,159,322 ( 3.36%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+   978,411 ( 2.83%)  src/transforms/log.c:get_ints
+## eco.npy.txt
+1,899,965 (22.29%)  vendor/brotli/dec/decode.c:ProcessCommands
+1,588,428 (18.64%)  src/transforms/graph.c:fi_inv_8_8_0
+1,049,513 (12.31%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
+  444,599 ( 5.22%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu
+  349,671 ( 4.10%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu
+  182,747 ( 2.14%)  src/codecs/../algo/zerorun.c:zrun_dec_tab
+## eco.samba.txt
+19,763,734 (46.70%)  vendor/brotli/dec/decode.c:ProcessCommands
+ 7,083,408 (16.74%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
+   711,646 ( 1.68%)  vendor/brotli/dec/huffman.c:BrotliBuildHuffmanTable
+   563,589 ( 1.33%)  vendor/brotli/dec/decode.c:ReadHuffmanCode
+   468,762 ( 1.11%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   401,991 ( 0.95%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+## eco.text.txt
+25,259,009 (35.86%)  vendor/brotli/dec/decode.c:ProcessCommands
+18,373,086 (26.08%)  src/transforms/word.c:word_decode
+ 9,208,347 (13.07%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
+ 1,318,135 ( 1.87%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:word_decode
+ 1,310,500 ( 1.86%)  emmintrin.h:word_decode
+   469,961 ( 0.67%)  vendor/brotli/dec/huffman.c:BrotliBuildHuffmanTable
+## eco.wav.txt
+52,808,932 (46.32%)  src/codecs/audio.c:ka_decode_leaf
+33,647,961 (29.51%)  src/codecs/audio.c:ka_lpc_restore
+ 9,932,070 ( 8.71%)  src/codecs/audio.c:ka_dec_worker
+ 2,122,698 ( 1.86%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gn
+ 1,102,937 ( 0.97%)  src/codecs/audio.c:decode_block
+   516,818 ( 0.45%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+## eco.xray.txt
+34,797,873 (43.72%)  vendor/brotli/dec/decode.c:ProcessCommands
+17,998,152 (22.61%)  src/transforms/sci.c:img16_inv
+11,961,123 (15.03%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
+   684,637 ( 0.86%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+   468,762 ( 0.59%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   409,598 ( 0.51%)  vendor/brotli/dec/huffman.c:BrotliBuildHuffmanTable
+## eco.y4m.txt
+17,014,948 (43.90%)  vendor/brotli/dec/decode.c:ProcessCommands
+ 5,197,205 (13.41%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
+   894,534 ( 2.31%)  emmintrin.h:kolmo_vid_strip_dec_sse41
+   855,542 ( 2.21%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   597,102 ( 1.54%)  emmintrin.h:med8_rowssse41
+   438,570 ( 1.13%)  src/arch/x86_64/med8_tmpl.h:med8_rowssse41
+## hc.csv.txt
+22,455,793 (33.84%)  src/algo/decimal.c:fmt_dec_swar
+21,757,136 (32.79%)  src/transforms/table.c:tbl2_decode
+ 3,055,033 ( 4.60%)  src/transforms/table.c:num_decode
+ 1,875,435 ( 2.83%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+ 1,338,343 ( 2.02%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
+   854,249 ( 1.29%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+## hc.json.txt
+30,482,674 (57.09%)  src/transforms/transpose.c:decode_block
+ 5,973,150 (11.19%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+ 1,282,480 ( 2.40%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+   751,693 ( 1.41%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:decode_block
+   533,035 ( 1.00%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+   468,762 ( 0.88%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+## hc.logs.txt
+ 8,375,184 (26.49%)  src/transforms/log.c:log_decode
+ 2,466,224 ( 7.80%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+ 2,356,056 ( 7.45%)  src/algo/decimal.c:log_decode
+ 1,157,918 ( 3.66%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+   980,275 ( 3.10%)  src/transforms/log.c:get_ints
+   740,425 ( 2.34%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:log_decode
+## hc.npy.txt
+1,588,428 (25.04%)  src/transforms/graph.c:fi_inv_8_8_0
+  503,966 ( 7.94%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+  354,042 ( 5.58%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu
+  328,835 ( 5.18%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu
+  225,149 ( 3.55%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+  182,747 ( 2.88%)  src/codecs/../algo/zerorun.c:zrun_dec_tab
+## hc.samba.txt
+ 9,872,577 (32.27%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+ 4,631,828 (15.14%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+   865,849 ( 2.83%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_buildFSETable_body_default.isra.0
+   694,019 ( 2.27%)  vendor/zstd/decompress/../common/zstd_internal.h:ZSTD_decompressSequences_default.constprop.0
+   656,606 ( 2.15%)  emmintrin.h:ZSTD_decompressSequences_default.constprop.0
+   468,762 ( 1.53%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+## hc.text.txt
+18,373,086 (30.98%)  src/transforms/word.c:word_decode
+14,753,384 (24.87%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+ 6,995,630 (11.79%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+ 1,318,135 ( 2.22%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:word_decode
+ 1,310,500 ( 2.21%)  emmintrin.h:word_decode
+   782,945 ( 1.32%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
+## hc.wav.txt
+52,808,932 (46.32%)  src/codecs/audio.c:ka_decode_leaf
+33,647,961 (29.51%)  src/codecs/audio.c:ka_lpc_restore
+ 9,932,070 ( 8.71%)  src/codecs/audio.c:ka_dec_worker
+ 2,122,698 ( 1.86%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gn
+ 1,102,937 ( 0.97%)  src/codecs/audio.c:decode_block
+   516,818 ( 0.45%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+## hc.xray.txt
+17,998,152 (42.62%)  src/transforms/sci.c:img16_inv
+ 8,435,546 (19.97%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d6fd
+ 1,070,235 ( 2.53%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
+   468,762 ( 1.11%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   414,889 ( 0.98%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+   281,439 ( 0.67%)  vendor/zstd/decompress/../common/zstd_internal.h:ZSTD_decompressSequences_default.constprop.0
+## hc.y4m.txt
+ 3,407,476 (14.71%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d6fd
+ 1,761,761 ( 7.60%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
+   894,534 ( 3.86%)  emmintrin.h:kolmo_vid_strip_dec_sse41
+   879,260 ( 3.79%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
+   855,542 ( 3.69%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   597,102 ( 2.58%)  emmintrin.h:med8_rowssse41
+## ratio.csv.txt
+51,401,648 (43.95%)  vendor/xz/liblzma/lzma/lzma_decoder.c:lzma_decode
+22,455,793 (19.20%)  src/algo/decimal.c:fmt_dec_swar
+21,757,136 (18.60%)  src/transforms/table.c:tbl2_decode
+ 4,239,484 ( 3.63%)  vendor/xz/liblzma/lz/lz_decoder.h:lzma_decode
+ 3,055,040 ( 2.61%)  src/transforms/table.c:num_decode
+   468,762 ( 0.40%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+## ratio.json.txt
+30,482,674 (44.10%)  src/transforms/transpose.c:decode_block
+16,544,212 (23.93%)  vendor/xz/liblzma/lzma/lzma_decoder.c:lzma_decode
+ 6,192,697 ( 8.96%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+ 1,852,623 ( 2.68%)  vendor/xz/liblzma/lz/lz_decoder.h:lzma_decode
+   751,693 ( 1.09%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:decode_block
+   468,762 ( 0.68%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+## ratio.logs.txt
+24,711,197 (45.92%)  vendor/xz/liblzma/lzma/lzma_decoder.c:lzma_decode
+ 8,375,184 (15.56%)  src/transforms/log.c:log_decode
+ 2,356,056 ( 4.38%)  src/algo/decimal.c:log_decode
+ 1,621,592 ( 3.01%)  vendor/xz/liblzma/lz/lz_decoder.h:lzma_decode
+ 1,057,640 ( 1.97%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+   978,411 ( 1.82%)  src/transforms/log.c:get_ints
+## ratio.npy.txt
+15,163,289 (71.55%)  vendor/xz/liblzma/lzma/lzma_decoder.c:lzma_decode
+ 1,588,428 ( 7.50%)  src/transforms/graph.c:fi_inv_8_8_0
+   972,807 ( 4.59%)  vendor/xz/liblzma/lz/lz_decoder.h:lzma_decode
+   706,704 ( 3.33%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
+    88,244 ( 0.42%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:fi_inv_8_8_0
+## ratio.samba.txt
+466,013,193 (58.16%)  src/algo/qlfc_model.h:qlfc_adaptive_decode
+114,936,684 (14.34%)  src/algo/qlfc.c:qlfc_adaptive_decode
+ 65,617,622 ( 8.19%)  src/algo/qlfc_tables.h:qlfc_adaptive_decode
+ 45,063,909 ( 5.62%)  src/algo/rangecoder.h:qlfc_adaptive_decode
+ 27,045,825 ( 3.38%)  src/algo/sais/sais.c:libsais_unbwt_calculate_biPSI
+ 26,967,644 ( 3.37%)  src/algo/lzp.c:lzp_decode_block
+ 14,317,616 ( 1.79%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_chk_avx_unaligned_erms [/usr/lib/x86_64-lin
+## ratio.text.txt
+553,848,648 (57.66%)  src/algo/qlfc_model.h:qlfc_adaptive_decode
+145,529,592 (15.15%)  src/algo/qlfc.c:qlfc_adaptive_decode
+ 83,346,913 ( 8.68%)  src/algo/qlfc_tables.h:qlfc_adaptive_decode
+ 53,186,429 ( 5.54%)  src/algo/rangecoder.h:qlfc_adaptive_decode
+ 37,806,961 ( 3.94%)  src/algo/sais/sais.c:libsais_unbwt_calculate_biPSI
+ 22,352,237 ( 2.33%)  src/algo/lzp.c:lzp_decode_block
+ 19,972,845 ( 2.08%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_chk_avx_unaligned_erms [/usr/lib/x86_64-lin
+## ratio.wav.txt
+1,121,141,852 (71.51%)  src/codecs/audio.c:ka_decode_leaf
+  292,849,563 (18.68%)  avx2intrin.h:ka_decode_leaf
+   73,697,797 ( 4.70%)  src/codecs/audio.c:ka_lpc_restore
+   51,944,265 ( 3.31%)  avxintrin.h:ka_decode_leaf
+
+--------------------------------------------------------------------------------
+## ratio.xray.txt
+217,021,821 (84.38%)  vendor/xz/liblzma/lzma/lzma_decoder.c:lzma_decode
+ 17,998,152 ( 7.00%)  src/transforms/sci.c:img16_inv
+  8,590,048 ( 3.34%)  vendor/xz/liblzma/lz/lz_decoder.h:lzma_decode
+
+--------------------------------------------------------------------------------
+-- Auto-annotated source: vendor/xz/liblzma/lzma/lzma_decoder.c
+## ratio.y4m.txt
+328,976,153 (55.22%)  src/algo/qlfc_model.h:qlfc_adaptive_decode
+ 91,470,491 (15.35%)  src/algo/qlfc.c:qlfc_adaptive_decode
+ 51,582,841 ( 8.66%)  src/algo/qlfc_tables.h:qlfc_adaptive_decode
+ 30,832,431 ( 5.18%)  src/algo/rangecoder.h:qlfc_adaptive_decode
+ 20,968,457 ( 3.52%)  src/algo/sais/sais.c:libsais_unbwt_calculate_biPSI
+ 19,980,928 ( 3.35%)  src/algo/lzp.c:lzp_decode_block
+ 14,678,133 ( 2.46%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_chk_avx_unaligned_erms [/usr/lib/x86_64-lin
+## speed.csv.txt
+11,173,876 (20.30%)  src/algo/decimal.c:fmt_dec_swar
+10,898,385 (19.80%)  src/transforms/table.c:tbl2_decode
+10,369,264 (18.84%)  src/transforms/table.c:tbl2_stream
+ 2,124,329 ( 3.86%)  avx2intrin.h:tbl2_stream
+ 1,818,978 ( 3.30%)  src/arch/x86_64/decimal_avx2.c:tbl2_stream
+ 1,425,620 ( 2.59%)  src/transforms/table.c:num_decode
+## speed.json.txt
+ 2,415,857 (16.26%)  vendor/lz4/lz4.c:LZ4_decompress_safe
+    42,774 ( 0.29%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+## speed.logs.txt
+ 3,111,089 (19.92%)  vendor/lz4/lz4.c:LZ4_decompress_safe
+    89,686 ( 0.57%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+    32,715 ( 0.21%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
+## speed.npy.txt
+1,584,259 (30.86%)  src/transforms/shuffle.c:shuffle_inv
+  706,640 (13.77%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu
+  308,183 ( 6.00%)  vendor/lz4/lz4.c:LZ4_decompress_safe
+   22,588 ( 0.44%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+## speed.samba.txt
+ 5,884,862 (31.75%)  vendor/lz4/lz4.c:LZ4_decompress_safe
+   193,198 ( 1.04%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+    70,239 ( 0.38%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
+## speed.text.txt
+ 8,557,781 (40.09%)  vendor/lz4/lz4.c:LZ4_decompress_safe
+   294,660 ( 1.38%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   107,018 ( 0.50%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
+
+## speed.wav.txt
+ 3,861,465 (19.48%)  vendor/lz4/lz4.c:LZ4_decompress_safe
+ 1,572,864 ( 7.93%)  emmintrin.h:kolmo_planes_merge_sse2
+   346,092 ( 1.75%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   196,676 ( 0.99%)  src/arch/x86_64/planes_tmpl.h:kolmo_planes_merge_sse2
+   125,762 ( 0.63%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
+## speed.xray.txt
+ 7,080,183 (32.73%)  vendor/lz4/lz4.c:LZ4_decompress_safe
+ 1,500,000 ( 6.93%)  emmintrin.h:kolmo_planes_merge_sse2
+   350,384 ( 1.62%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   187,568 ( 0.87%)  src/arch/x86_64/planes_tmpl.h:kolmo_planes_merge_sse2
+   127,219 ( 0.59%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
+## speed.y4m.txt
+ 5,708,546 (29.92%)  vendor/lz4/lz4.c:LZ4_decompress_safe
+ 1,368,648 ( 7.17%)  emmintrin.h:kolmo_planes_merge_sse2
+   364,882 ( 1.91%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
+   171,484 ( 0.90%)  src/arch/x86_64/planes_tmpl.h:kolmo_planes_merge_sse2
+   132,474 ( 0.69%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
+## x.csv.txt
+3,099,817,914 (72.27%)  src/codecs/gr6.c:g6_bit.isra.0
+  385,417,509 ( 8.99%)  src/codecs/gr6.c:gr6_decompress
+  201,559,067 ( 4.70%)  src/codecs/gr6.c:g6_cm_init
+  158,600,358 ( 3.70%)  src/codecs/gr6.c:g6_set
+  137,633,848 ( 3.21%)  src/codecs/gr6.c:g6_unit
+   68,232,690 ( 1.59%)  src/codecs/gr6.c:g6_val
+   42,514,248 ( 0.99%)  src/codecs/gr6.c:g6_render
+## x.text.txt
+60,352,881,013 (86.67%)  src/codecs/cm.c:cm_dec_gen.isra.0
+ 3,760,000,000 ( 5.40%)  avx2intrin.h:kolmo_cm_dot_avx2
+ 1,808,000,000 ( 2.60%)  avx2intrin.h:kolmo_cm_train_avx2
+   992,000,000 ( 1.42%)  src/arch/x86_64/mixer_avx2.c:kolmo_cm_dot_avx2
+   752,000,000 ( 1.08%)  src/arch/x86_64/mixer_avx2.c:kolmo_cm_train_avx2
+   656,000,000 ( 0.94%)  avxintrin.h:kolmo_cm_train_avx2
+   540,000,000 ( 0.78%)  avx2intrin.h:kolmo_cm_hash_avx2
