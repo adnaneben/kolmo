@@ -63,6 +63,14 @@ KOLMO = [
     ('mix256.bin', D('mix256.bin'), ['-m', 'balanced']), ('bf16x5.bin', D('bf16x5.bin'), ['-m', 'balanced']),
     ('v4k.y4m', D('v4k.y4m'), ['-m', 'balanced']), ('text256.bin', D('text256.bin'), ['-m', 'ratio']),
 ]
+# the replicated inputs above repeat themselves (owid8.csv is one file 8 times), which Kolmo's long-range matching
+# exploits: the original files give the speeds of each level on real tables
+B = '/Users/adnanbenali/Downloads/kolmo-bench/data/'
+for f in ('owid-co2-data.csv', 'energy_test.csv', 'owid_arr.json'):
+    for m in ('speed', 'balanced', 'ratio'):
+        KOLMO.append((f, B + f, ['-m', m]))
+KOLMO.append(('webster', B + 'webster', ['-m', 'ratio']))
+KOLMO.append(('llm_bf16_47mb.safetensors', B + 'llm_bf16_47mb.safetensors', ['-m', 'balanced']))
 
 
 owned = False
@@ -71,8 +79,18 @@ owned = False
 def wait_lock():
     """wait until the lock is free and take it (once); later calls only check that we still hold it"""
     global owned
-    if not lock or owned:
+    if not lock:
         return
+    if owned:
+        try:
+            if open(lock).read().strip() == str(os.getpid()):
+                return
+        except OSError:
+            pass
+        owned = False                   # another benchmark wrote its own id over ours: wait for it to finish
+        sys.stderr.write('lock taken over by another benchmark; waiting\n')
+        while os.path.exists(lock):
+            time.sleep(30)
     while True:
         try:
             fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
