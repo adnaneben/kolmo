@@ -83,6 +83,27 @@ static void test_mixer(int level, const kolmo_kernels *k) {
     }
 }
 
+/* the 16-bit mixer (codec 7 model 4): inputs never -32768, weights over the whole int16 range (saturation) */
+static void test_mixer16(int level, const kolmo_kernels *k) {
+    enum { N = 80 };
+    for (int it = 0; it < 4000; it++) {
+        int n = 16 * (int)(rnd() % 5);
+        int16_t x[N], w[4][N], v[4][N]; int e[4];
+        for (int i = 0; i < N; i++) {
+            int r = (int)(rnd() % 8);
+            x[i] = (int16_t)(r == 0 ? 2047 : r == 1 ? -2047 : r == 2 ? 0 : r == 3 ? (it & 1 ? 32767 : -32767) : (int)(rnd() % 4095) - 2047);
+            for (int s = 0; s < 4; s++) w[s][i] = (int16_t)(it % 5 == 0 ? (rnd() & 1 ? 32767 : -32768) + (int)(rnd() % 3) * (rnd() & 1 ? -1 : 1) : (int)(rnd() % 65536) - 32768);
+        }
+        for (int s = 0; s < 4; s++) e[s] = it % 7 == 0 ? (s & 1 ? 32767 : -32767) : (int)(rnd() % 65535) - 32767;
+        int32_t a[4], b[4];
+        kolmo_cm_dot16_c(x, n, w[0], w[1], w[2], w[3], a); k->cm_dot16(x, n, w[0], w[1], w[2], w[3], b);
+        CHECK(!memcmp(a, b, sizeof a), "cm_dot16 %s n=%d", kolmo_isa_name(level), n);
+        memcpy(v, w, sizeof w);
+        kolmo_cm_train16_c(x, n, w[0], w[1], w[2], w[3], e); k->cm_train16(x, n, v[0], v[1], v[2], v[3], e);
+        CHECK(!memcmp(w, v, sizeof w), "cm_train16 %s n=%d", kolmo_isa_name(level), n);
+    }
+}
+
 static void test_video(int level, const kolmo_kernels *k) {
     static const size_t Ws[] = {1, 2, 15, 16, 17, 18, 31, 32, 33, 48, 49, 64, 176, 177, 352};
     for (size_t wi = 0; wi < sizeof Ws / sizeof Ws[0]; wi++) for (int kind = 0; kind < 5; kind++) for (int hasprev = 0; hasprev < 2; hasprev++) {
@@ -144,7 +165,7 @@ int main(void) {
         long c0 = checks, f0 = fails;
         test_med8(l, &k);
         test_planes(l, &k);
-        test_mixer(l, &k);
+        test_mixer(l, &k); test_mixer16(l, &k);
         test_video(l, &k);
         test_img16(l, &k);
         printf("  %-6s %ld checks, %ld failures\n", kolmo_isa_name(l), checks - c0, fails - f0);
