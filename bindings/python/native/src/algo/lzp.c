@@ -34,6 +34,9 @@
 
 #define LZP_MATCH_FLAG 0xf2
 
+/* tests: 1 runs the position-by-position reference encoder for every hash size (the fast one is checked against it) */
+int kolmo_lzp_force_ref = 0;
+
 int kolmo_lzp_num_blocks(int n) {
     static const int blocks[] = {128, 96, 64, 48, 32, 24, 16, 12, 8, 6, 4, 2};
     for (unsigned i = 0; i < sizeof(blocks) / sizeof(blocks[0]); i++)
@@ -46,7 +49,7 @@ static inline uint32_t lzp_ctx(const uint8_t *p) { return (uint32_t)p[-1] | (uin
 
 /* Encode one block. Returns its size, or KB_NOT_COMPRESSIBLE if it does not fit before out_end - 8. *peak receives
    nothing: the encoder's success for a smaller capacity c is "size < c - 8" (the output pointer only grows). */
-static int lzp_encode_block(const uint8_t *input, const uint8_t *input_end, uint8_t *output, uint8_t *output_end,
+static int lzp_encode_block_ref(const uint8_t *input, const uint8_t *input_end, uint8_t *output, uint8_t *output_end,
                             int32_t *lookup, int hash_size, int min_len) {
     if (input_end - input - min_len < 32) return KB_NOT_COMPRESSIBLE;
     const uint32_t mask = (1u << hash_size) - 1;
@@ -102,6 +105,85 @@ static int lzp_encode_block(const uint8_t *input, const uint8_t *input_end, uint
         if (next == LZP_MATCH_FLAG && value > 0) *output++ = 255;
     }
     return output >= output_eob ? KB_NOT_COMPRESSIBLE : (int)(output - output_start);
+}
+
+/* The encoder for hash_size <= 17 (Kolmo's 17/96 and libbsc's 15/72), the structure of libbsc's
+   bsc_lzp_encode_large_fast_path: one 8-byte load gives the four contexts of a step and one mix their four hashes
+   (for masks of up to 17 bits the bits of (next8 >> s) ^ (next8 >> (s + 3)) ^ (next8 >> (s + 15)) under the mask are
+   those of lzp_hash(ctx)), and the step's four literals are stored at once. The far 8-byte compare comes first, as in
+   libbsc. Same bytes as lzp_encode_block_ref, 1.5-2x faster (benchmark/w4/bwt/RESULTS.md). */
+static int lzp_encode_block_fast(const uint8_t *input, const uint8_t *input_end, uint8_t *output, uint8_t *output_end,
+                                 int32_t *lookup, int hash_size, int min_len) {
+    if (input_end - input - min_len < 32) return KB_NOT_COMPRESSIBLE;
+    const uint32_t mask = (1u << hash_size) - 1;
+    const uint8_t *input_start = input, *output_start = output;
+    const uint8_t *output_eob = output_end - 8, *input_minlen_end = input_end - min_len - 32;
+    const uint8_t *heuristic = input;
+    uint64_t heuristic_v = input < input_minlen_end ? kb_ld64(heuristic) : 0;
+    const long far = min_len - 8;
+    int32_t value;
+
+    for (int i = 0; i < 4; i++) *output++ = *input++;
+
+    while (input < input_minlen_end && output < output_eob) {
+        const uint64_t raw = kb_ld64(input - 4);
+        memcpy(output, input, 4);
+        const uint64_t next8 = __builtin_bswap64(raw), mix = (((next8 >> 12) ^ next8) >> 3) ^ next8;
+        const int32_t pos = (int32_t)(input - input_start);
+#define LZP_POS(K, GOOD, BAD) { \
+            const uint32_t idx = (uint32_t)(mix >> (8 * (4 - K))) & mask; value = lookup[idx]; lookup[idx] = pos + K; \
+            if (kb_ld64(input + K + far) == kb_ld64(input_start + value + far) && value > 0 && kb_ld64(input + K) == kb_ld64(input_start + value)) goto GOOD; \
+            if ((uint8_t)(next8 >> (8 * (3 - K))) == LZP_MATCH_FLAG && value > 0) goto BAD; }
+        LZP_POS(0, good1, bad1)
+        LZP_POS(1, good2, bad2)
+        LZP_POS(2, good3, bad3)
+        LZP_POS(3, good4, bad4)
+#undef LZP_POS
+        input += 4; output += 4;
+        continue;
+    good4: input++; output++;
+    good3: input++; output++;
+    good2: input++; output++;
+    good1: {
+            const uint8_t *reference = input_start + value;
+            if (heuristic > input && heuristic_v != kb_ld64(reference + (heuristic - input))) goto not_found;
+            long len = 8;
+            for (; input + len < input_minlen_end; len += 8) {
+                uint64_t m = kb_ld64(input + len) ^ kb_ld64(reference + len);
+                if (m) { len += kb_bsf64(m) / 8; break; }
+            }
+            if (len < min_len) { heuristic = input + len; heuristic_v = kb_ld64(heuristic); goto not_found; }
+            input += len; len -= min_len;
+            *output++ = LZP_MATCH_FLAG;
+            while (len >= 254) { len -= 254; *output++ = 254; if (output >= output_eob) break; }
+            *output++ = (uint8_t)len;
+            continue;
+        }
+    not_found:
+        input++; if (*output++ == LZP_MATCH_FLAG) *output++ = 255;
+        continue;
+    bad4: input += 4; output += 4; *output++ = 255; continue;
+    bad3: input += 3; output += 3; *output++ = 255; continue;
+    bad2: input += 2; output += 2; *output++ = 255; continue;
+    bad1: input += 1; output += 1; *output++ = 255; continue;
+    }
+
+    uint32_t context = lzp_ctx(input);
+    while (input < input_end && output < output_eob) {
+        const uint32_t idx = lzp_hash(context, mask);
+        const int32_t v = lookup[idx];
+        lookup[idx] = (int32_t)(input - input_start);
+        const uint8_t next = *output++ = *input++;
+        context = context << 8 | next;
+        if (next == LZP_MATCH_FLAG && v > 0) *output++ = 255;
+    }
+    return output >= output_eob ? KB_NOT_COMPRESSIBLE : (int)(output - output_start);
+}
+
+static int lzp_encode_block(const uint8_t *input, const uint8_t *input_end, uint8_t *output, uint8_t *output_end,
+                            int32_t *lookup, int hash_size, int min_len) {
+    return hash_size <= 17 && !kolmo_lzp_force_ref ? lzp_encode_block_fast(input, input_end, output, output_end, lookup, hash_size, min_len)
+                                             : lzp_encode_block_ref(input, input_end, output, output_end, lookup, hash_size, min_len);
 }
 
 /* Decode one block of in[0..in_size) to out (capacity out_cap). */
