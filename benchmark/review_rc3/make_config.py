@@ -8,7 +8,8 @@ usage: make_config.py --corpus MANIFEST.json --kolmo NAME=PATH [--kolmo NAME=PAT
 Thread policy per codec (verified again by `audit.py preflight`, which samples the real thread counts):
   kolmo     -T 1 for encode and decode
   zstd      --single-thread (not -T1: -T1 may run a worker beside I/O) and --no-asyncio, decode --no-asyncio
-  lz4       -T1 (1.11 defaults to -T0 = auto)
+  lz4       -T1 (1.11 defaults to -T0 = auto); preflight on the M5 still observed 2 running threads in encode and
+            decode (no CLI switch for decode threads), so lz4 rows are labelled one-worker-plus-async-io
   xz        -T1, stdin -> stdout (the measured process is xz itself)
   7zz       -mmt=1 for encode and decode; the .7z container bytes count
   bzip3     -j 1
@@ -40,8 +41,8 @@ def rivals():
                   "decode": ["-d", "--no-asyncio", "-q", "{in}", "-o", "{out}"], "ext": ".zst"})
     r.append({"id": "zstd-22", "tool": "zstd", "encode": ["--ultra", "-22", "--single-thread", "--no-asyncio", "-q", "{in}", "-o", "{out}"],
               "decode": ["-d", "--no-asyncio", "-q", "{in}", "-o", "{out}"], "ext": ".zst"})
-    r.append({"id": "lz4-1", "tool": "lz4", "encode": ["-1", "-T1", "-q", "{in}", "{out}"], "decode": ["-d", "-T1", "-q", "{in}", "{out}"], "ext": ".lz4"})
-    r.append({"id": "lz4-9", "tool": "lz4", "encode": ["-9", "-T1", "-q", "{in}", "{out}"], "decode": ["-d", "-T1", "-q", "{in}", "{out}"], "ext": ".lz4"})
+    r.append({"id": "lz4-1", "tool": "lz4", "encode": ["-1", "-T1", "-q", "{in}", "{out}"], "decode": ["-d", "-T1", "-q", "{in}", "{out}"], "ext": ".lz4", "thread_policy": "one-worker-plus-async-io"})
+    r.append({"id": "lz4-9", "tool": "lz4", "encode": ["-9", "-T1", "-q", "{in}", "{out}"], "decode": ["-d", "-T1", "-q", "{in}", "{out}"], "ext": ".lz4", "thread_policy": "one-worker-plus-async-io"})
     r.append({"id": "brotli-11", "tool": "brotli", "encode": ["-q", "11", "-w", "24", "-o", "{out}", "{in}"], "decode": ["-d", "-o", "{out}", "{in}"], "ext": ".br"})
     r.append({"id": "xz-9", "tool": "xz", "encode": ["-9", "-T1", "-c"], "encode_stdin": True, "encode_stdout": True,
               "decode": ["-d", "-T1", "-c"], "decode_stdin": True, "decode_stdout": True, "ext": ".xz"})

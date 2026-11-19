@@ -297,7 +297,10 @@ def cmd_preflight(a):
             r["roundtrip_ok"] = False
         strict = c.get("thread_policy", "strict-T1") == "strict-T1"
         r["thread_policy"] = c.get("thread_policy", "strict-T1")
-        r["strict_t1_observed"] = (e.get("threads_max") == 1 and r.get("dec_threads_max") == 1)
+        # strict T1 = at most one RUNNING thread in every sample (idle helper threads are recorded but allowed);
+        # sampling can miss short-lived helpers, so CPU/wall is recorded beside it
+        r["strict_t1_observed"] = ((e.get("running_max") or 0) <= 1 and (r.get("dec_running_max") or 0) <= 1)
+        r["single_thread_total"] = (e.get("threads_max") == 1 and r.get("dec_threads_max") == 1)
         if not r["roundtrip_ok"] or (strict and not r["strict_t1_observed"]): bad += 1
         log.write(json.dumps(r) + "\n"); log.flush()
         print(f"{iid:28s} {cid:28s} rt={'ok' if r['roundtrip_ok'] else 'FAIL'} thr enc={r['enc_threads_max']} dec={r.get('dec_threads_max')} {'' if r['strict_t1_observed'] else '(not strict T1)'}")
