@@ -155,13 +155,17 @@ def child_env(extra):
     env.update(SINGLE_THREAD_ENV); env.update(extra or {})
     return env
 
-def measure(argv, env, log_prefix, timeout, sample_ms, dar, cwd=None, stdin_path=None, stdout_path=None):
+def measure(argv, env, log_prefix, timeout, sample_ms, dar, cwd=None, stdin_path=None, stdout_path=None, window0=None):
     """run argv as a fresh process; stdout/stderr go to NEW files (no pipe, so no deadlock). stdin_path / stdout_path
     connect the codec's own stdin/stdout to files (no shell in between, so the measured process is the codec).
     Returns a dict with wall, user, sys, kernel peak RSS, sampled RSS trace stats, thread stats, contention."""
     out_f = xopen(stdout_path or (log_prefix + ".stdout"), "wb"); err_f = xopen(log_prefix + ".stderr", "wb")
     in_f = open(stdin_path, "rb") if stdin_path else subprocess.DEVNULL
-    self0 = resource.getrusage(resource.RUSAGE_SELF); ticks0 = dar.cpu_ticks() if dar.ok else None
+    # contention window: from window0 (end of the previous measured step or start of the quiet pre-window) to the end
+    # of this process, so that it is never shorter than ~0.3 s (host ticks are 10 ms per CPU: a 20 ms process alone
+    # cannot be judged). Harness CPU over the whole window is subtracted, as is the process's own CPU.
+    if window0: ticks0, self0, w0 = window0
+    else: self0 = resource.getrusage(resource.RUSAGE_SELF); ticks0 = dar.cpu_ticks() if dar.ok else None; w0 = time.perf_counter()
     t_start = time.perf_counter()
     p = subprocess.Popen(argv, env=env, stdout=out_f, stderr=err_f, stdin=in_f, cwd=cwd,
                          start_new_session=True)
@@ -199,6 +203,7 @@ def measure(argv, env, log_prefix, timeout, sample_ms, dar, cwd=None, stdin_path
     harness = (self1.ru_utime - self0.ru_utime) + (self1.ru_stime - self0.ru_stime)
     busy = busy_seconds(ticks0, ticks1)
     other = None if busy is None else max(0.0, busy - own - harness)
+    t_end = time.perf_counter(); win = t_end - w0
     return {"argv": argv, "exit": p.returncode, "timed_out": timed_out, "wall_s": wall,
             "user_s": ru.ru_utime, "sys_s": ru.ru_stime, "cpu_over_wall": (own / wall if wall > 0 else None),
             "peak_rss_kernel_bytes": maxrss_bytes(ru.ru_maxrss),
@@ -206,7 +211,8 @@ def measure(argv, env, log_prefix, timeout, sample_ms, dar, cwd=None, stdin_path
             "rss_samples": n, "rss_sampled_span_s": span, "rss_coverage": (span / wall if wall > 0 else None),
             "sample_ms": sample_ms, "threads_max": max(threads, default=None), "running_max": max(running, default=None),
             "harness_cpu_s": harness, "host_busy_cpu_s": busy, "other_cpu_s": other,
-            "other_cores": (other / wall if other is not None and wall > 0 else None),
+            "other_cores": (other / win if other is not None and win > 0 else None), "contention_window_s": win,
+            "_window_end": (ticks1, self1, t_end),
             "stdout_bytes": os.path.getsize(stdout_path or (log_prefix + ".stdout")), "stderr_bytes": os.path.getsize(log_prefix + ".stderr"),
             "trace": [(round(t, 5), v) for t, v in samples]}
 
@@ -223,13 +229,13 @@ def fsname(x):
 def fill(argv, **kw):
     return [a.format(**kw) for a in argv]
 
-def run_codec(cfg, c, phase, src, dst, log_prefix, sample_ms, dar, orig=None):
+def run_codec(cfg, c, phase, src, dst, log_prefix, sample_ms, dar, orig=None, window0=None):
     """phase 'encode'|'decode'. c[phase] is the argv after the tool path; c[phase+'_stdin'] / c[phase+'_stdout'] (bool)
     feed src on stdin / take dst from stdout instead of {in} / {out} arguments."""
     t = cfg["tools"][c["tool"]]
     return measure(fill([t["path"], *c[phase]], **{"in": src, "out": dst, "orig": orig or src}), child_env(c.get("env")), log_prefix,
                    c.get("timeout", 7200), sample_ms, dar, stdin_path=src if c.get(phase + "_stdin") else None,
-                   stdout_path=dst if c.get(phase + "_stdout") else None)
+                   stdout_path=dst if c.get(phase + "_stdout") else None, window0=window0)
 
 def codec_map(cfg): return {c["id"]: c for c in cfg["codecs"]}
 def input_map(cfg): return {i["id"]: i for i in cfg["inputs"]}
@@ -317,14 +323,14 @@ def cmd_preflight(a):
 def wait_quiet(cfg, dar, log):
     q = cfg["quiet"]
     for attempt in range(q.get("pre_wait_tries", 60)):
-        t0 = dar.cpu_ticks(); s0 = resource.getrusage(resource.RUSAGE_SELF); time.sleep(q.get("pre_window_s", 1.0))
+        t0 = dar.cpu_ticks(); s0 = resource.getrusage(resource.RUSAGE_SELF); w0 = time.perf_counter(); time.sleep(q.get("pre_window_s", 1.0))
         t1 = dar.cpu_ticks(); s1 = resource.getrusage(resource.RUSAGE_SELF)
         other = busy_seconds(t0, t1) - ((s1.ru_utime - s0.ru_utime) + (s1.ru_stime - s0.ru_stime))
         cores = other / q.get("pre_window_s", 1.0)
-        if cores <= q["max_other_cores"]: return {"pre_other_cores": cores, "pre_attempts": attempt + 1}
+        if cores <= q["max_other_cores"]: return {"pre_other_cores": cores, "pre_attempts": attempt + 1, "_window0": (t0, s0, w0)}
         log.write(json.dumps({"event": "not-quiet", "utc": now_utc(), "other_cores": cores}) + "\n"); log.flush()
         time.sleep(q.get("pre_backoff_s", 5))
-    return {"pre_other_cores": cores, "pre_attempts": q.get("pre_wait_tries", 60), "pre_quiet_failed": True}
+    return {"pre_other_cores": cores, "pre_attempts": q.get("pre_wait_tries", 60), "pre_quiet_failed": True, "_window0": (t0, s0, w0)}
 
 def judge(proc, cfg, state):
     q = cfg["quiet"]; reasons = []
@@ -383,15 +389,15 @@ def cmd_run(a):
             comp = os.path.join(work, "c" + c.get("ext", ".bin")); back = os.path.join(work, "back" + inp.get("ext", ""))
             for p_ in (comp, back):
                 if os.path.lexists(p_): raise SystemExit(f"refusing to let a codec overwrite {p_}")
-            pre = wait_quiet(cfg, dar, events)
+            pre = wait_quiet(cfg, dar, events); window0 = pre.pop("_window0")
             env = child_env(c.get("env"))
             row = {"trial_id": tid, "slot": slot, "round": ri, "role": role, "rep": k, "suite": suite, "input": iid,
                    "codec": cid, "utc": now_utc(), "tool": c["tool"], "tool_path": t["path"], "tool_sha256": ident["tools"][c["tool"]]["sha256"],
                    "input_sha256": inp["sha256"], "input_bytes": inp["bytes"], "input_domain": inp.get("domain"),
                    "env_set": c.get("env", {}), "thread_policy": c.get("thread_policy", "strict-T1"), **pre,
                    "power": {"on_ac": state.get("on_ac"), "thermal_limited": state.get("thermal_limited")}}
-            e = run_codec(cfg, c, "encode", inp["path"], comp, os.path.join(run, "logs", safe + ".enc"), cfg["sample_ms"], dar)
-            row["encode"] = {k_: v for k_, v in e.items() if k_ != "trace"}
+            e = run_codec(cfg, c, "encode", inp["path"], comp, os.path.join(run, "logs", safe + ".enc"), cfg["sample_ms"], dar, window0=window0)
+            row["encode"] = {k_: v for k_, v in e.items() if k_ not in ("trace", "_window_end")}
             json.dump(e["trace"], xopen(os.path.join(run, "traces", safe + ".enc.json")))
             reasons = judge(e, cfg, state) + (["pre-window not quiet"] if pre.get("pre_quiet_failed") else [])
             if e["timed_out"] or e["exit"] != 0 or not os.path.exists(comp):
@@ -403,8 +409,8 @@ def cmd_run(a):
                     dst = os.path.join(run, "artifacts", f"{key}__{ch[:16]}{c.get('ext', '.bin')}")
                     if not os.path.lexists(dst): shutil.copyfile(comp, dst)
                     kept.setdefault(key, set()).add(ch[:16])
-                d = run_codec(cfg, c, "decode", comp, back, os.path.join(run, "logs", safe + ".dec"), cfg["sample_ms"], dar, orig=inp["path"])
-                row["decode"] = {k_: v for k_, v in d.items() if k_ != "trace"}
+                d = run_codec(cfg, c, "decode", comp, back, os.path.join(run, "logs", safe + ".dec"), cfg["sample_ms"], dar, orig=inp["path"], window0=e["_window_end"])
+                row["decode"] = {k_: v for k_, v in d.items() if k_ not in ("trace", "_window_end")}
                 json.dump(d["trace"], xopen(os.path.join(run, "traces", safe + ".dec.json")))
                 reasons += judge(d, cfg, state)
                 if d["timed_out"]: row["status"] = "timeout"
