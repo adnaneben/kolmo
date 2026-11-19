@@ -155,13 +155,15 @@ def child_env(extra):
     env.update(SINGLE_THREAD_ENV); env.update(extra or {})
     return env
 
-def measure(argv, env, log_prefix, timeout, sample_ms, dar, cwd=None):
-    """run argv as a fresh process; stdout/stderr go to NEW files (no pipe, so no deadlock).
+def measure(argv, env, log_prefix, timeout, sample_ms, dar, cwd=None, stdin_path=None, stdout_path=None):
+    """run argv as a fresh process; stdout/stderr go to NEW files (no pipe, so no deadlock). stdin_path / stdout_path
+    connect the codec's own stdin/stdout to files (no shell in between, so the measured process is the codec).
     Returns a dict with wall, user, sys, kernel peak RSS, sampled RSS trace stats, thread stats, contention."""
-    out_f = xopen(log_prefix + ".stdout", "wb"); err_f = xopen(log_prefix + ".stderr", "wb")
+    out_f = xopen(stdout_path or (log_prefix + ".stdout"), "wb"); err_f = xopen(log_prefix + ".stderr", "wb")
+    in_f = open(stdin_path, "rb") if stdin_path else subprocess.DEVNULL
     self0 = resource.getrusage(resource.RUSAGE_SELF); ticks0 = dar.cpu_ticks() if dar.ok else None
     t_start = time.perf_counter()
-    p = subprocess.Popen(argv, env=env, stdout=out_f, stderr=err_f, stdin=subprocess.DEVNULL, cwd=cwd,
+    p = subprocess.Popen(argv, env=env, stdout=out_f, stderr=err_f, stdin=in_f, cwd=cwd,
                          start_new_session=True)
     samples, threads, running = [], [], []
     stop = threading.Event()
@@ -191,6 +193,7 @@ def measure(argv, env, log_prefix, timeout, sample_ms, dar, cwd=None):
     stop.set(); th.join()
     ticks1 = dar.cpu_ticks() if dar.ok else None; self1 = resource.getrusage(resource.RUSAGE_SELF)
     out_f.close(); err_f.close()
+    if stdin_path: in_f.close()
     avg, span, n = time_weighted_avg(samples)
     own = ru.ru_utime + ru.ru_stime
     harness = (self1.ru_utime - self0.ru_utime) + (self1.ru_stime - self0.ru_stime)
@@ -204,7 +207,7 @@ def measure(argv, env, log_prefix, timeout, sample_ms, dar, cwd=None):
             "sample_ms": sample_ms, "threads_max": max(threads, default=None), "running_max": max(running, default=None),
             "harness_cpu_s": harness, "host_busy_cpu_s": busy, "other_cpu_s": other,
             "other_cores": (other / wall if other is not None and wall > 0 else None),
-            "stdout_bytes": os.path.getsize(log_prefix + ".stdout"), "stderr_bytes": os.path.getsize(log_prefix + ".stderr"),
+            "stdout_bytes": os.path.getsize(stdout_path or (log_prefix + ".stdout")), "stderr_bytes": os.path.getsize(log_prefix + ".stderr"),
             "trace": [(round(t, 5), v) for t, v in samples]}
 
 # ------------------------------------------------------------------------------------------------- config
@@ -215,6 +218,14 @@ def load_config(path):
 
 def fill(argv, **kw):
     return [a.format(**kw) for a in argv]
+
+def run_codec(cfg, c, phase, src, dst, log_prefix, sample_ms, dar, orig=None):
+    """phase 'encode'|'decode'. c[phase] is the argv after the tool path; c[phase+'_stdin'] / c[phase+'_stdout'] (bool)
+    feed src on stdin / take dst from stdout instead of {in} / {out} arguments."""
+    t = cfg["tools"][c["tool"]]
+    return measure(fill([t["path"], *c[phase]], **{"in": src, "out": dst, "orig": orig or src}), child_env(c.get("env")), log_prefix,
+                   c.get("timeout", 7200), sample_ms, dar, stdin_path=src if c.get(phase + "_stdin") else None,
+                   stdout_path=dst if c.get(phase + "_stdout") else None)
 
 def codec_map(cfg): return {c["id"]: c for c in cfg["codecs"]}
 def input_map(cfg): return {i["id"]: i for i in cfg["inputs"]}
@@ -273,14 +284,11 @@ def cmd_preflight(a):
         inp = input_map(cfg)[iid]; c = cm[cid]; t = cfg["tools"][c["tool"]]
         d = os.path.join(out, "rt", f"{n:04d}"); os.makedirs(d)
         comp = os.path.join(d, "c" + c.get("ext", ".bin")); back = os.path.join(d, "back" + inp.get("ext", ""))
-        env = child_env(c.get("env"))
-        e = measure(fill([t["path"], *c["encode"]], **{"in": inp["path"], "out": comp}), env, os.path.join(d, "enc"),
-                    c.get("timeout", 7200), cfg.get("preflight_sample_ms", 2), dar)
+        e = run_codec(cfg, c, "encode", inp["path"], comp, os.path.join(d, "enc"), cfg.get("preflight_sample_ms", 2), dar)
         r = {"check": "roundtrip+threads", "input": iid, "codec": cid, "enc_exit": e["exit"], "enc_threads_max": e["threads_max"],
              "enc_running_max": e["running_max"], "enc_cpu_over_wall": e["cpu_over_wall"], "enc_wall_s": e["wall_s"]}
         if e["exit"] == 0 and os.path.exists(comp):
-            dd = measure(fill([t["path"], *c["decode"]], **{"in": comp, "out": back}), env, os.path.join(d, "dec"),
-                         c.get("timeout", 7200), cfg.get("preflight_sample_ms", 2), dar)
+            dd = run_codec(cfg, c, "decode", comp, back, os.path.join(d, "dec"), cfg.get("preflight_sample_ms", 2), dar, orig=inp["path"])
             r.update(dec_exit=dd["exit"], dec_threads_max=dd["threads_max"], dec_running_max=dd["running_max"],
                      dec_cpu_over_wall=dd["cpu_over_wall"], comp_bytes=os.path.getsize(comp), comp_sha256=sha256_file(comp))
             r["roundtrip_ok"] = dd["exit"] == 0 and os.path.exists(back) and sha256_file(back) == inp["sha256"]
@@ -375,8 +383,7 @@ def cmd_run(a):
                    "input_sha256": inp["sha256"], "input_bytes": inp["bytes"], "input_domain": inp.get("domain"),
                    "env_set": c.get("env", {}), "thread_policy": c.get("thread_policy", "strict-T1"), **pre,
                    "power": {"on_ac": state.get("on_ac"), "thermal_limited": state.get("thermal_limited")}}
-            e = measure(fill([t["path"], *c["encode"]], **{"in": inp["path"], "out": comp}), env, os.path.join(run, "logs", safe + ".enc"),
-                        c.get("timeout", 7200), cfg["sample_ms"], dar)
+            e = run_codec(cfg, c, "encode", inp["path"], comp, os.path.join(run, "logs", safe + ".enc"), cfg["sample_ms"], dar)
             row["encode"] = {k_: v for k_, v in e.items() if k_ != "trace"}
             json.dump(e["trace"], xopen(os.path.join(run, "traces", safe + ".enc.json")))
             reasons = judge(e, cfg, state) + (["pre-window not quiet"] if pre.get("pre_quiet_failed") else [])
@@ -389,8 +396,7 @@ def cmd_run(a):
                     dst = os.path.join(run, "artifacts", f"{cid}__{iid}__{ch[:16]}{c.get('ext', '.bin')}")
                     if not os.path.lexists(dst): shutil.copyfile(comp, dst)
                     kept.setdefault(key, set()).add(ch[:16])
-                d = measure(fill([t["path"], *c["decode"]], **{"in": comp, "out": back}), env, os.path.join(run, "logs", safe + ".dec"),
-                            c.get("timeout", 7200), cfg["sample_ms"], dar)
+                d = run_codec(cfg, c, "decode", comp, back, os.path.join(run, "logs", safe + ".dec"), cfg["sample_ms"], dar, orig=inp["path"])
                 row["decode"] = {k_: v for k_, v in d.items() if k_ != "trace"}
                 json.dump(d["trace"], xopen(os.path.join(run, "traces", safe + ".dec.json")))
                 reasons += judge(d, cfg, state)
@@ -524,7 +530,7 @@ def write_html(rep, ident, path):
 FAKE = r'''
 import sys, time, zlib, os
 mode, op, src, dst = sys.argv[1:5]
-data = open(src, "rb").read()
+data = sys.stdin.buffer.read() if src == "-" else open(src, "rb").read()
 if mode == "fail": sys.exit(3)
 if mode == "timeout": time.sleep(60)
 if mode == "noisy": sys.stderr.write("x" * (20 << 20)); sys.stderr.flush()
@@ -537,7 +543,8 @@ if op == "e": out = zlib.compress(data, 6)
 else:
     out = zlib.decompress(data)
     if mode == "corrupt": out = out[:-1] + bytes([out[-1] ^ 1])
-open(dst, "wb").write(out)
+if dst == "-": sys.stdout.buffer.write(out)
+else: open(dst, "wb").write(out)
 '''
 
 def cmd_self_test(a):
@@ -564,10 +571,13 @@ def cmd_self_test(a):
                 "quiet": {"max_other_cores": 64.0, "pre_window_s": 0.05, "pre_wait_tries": 1, "max_retries": 1, "require_ac": False},
                 "tools": {"py": {"path": sys.executable}},
                 "codecs": [{"id": m, "tool": "py", "encode": ["-I", fake, m, "e", "{in}", "{out}"], "decode": ["-I", fake, m, "d", "{in}", "{out}"],
-                            "timeout": 5, "thread_policy": "python-fake"} for m in modes],
+                            "timeout": 5, "thread_policy": "python-fake"} for m in modes if m != "stdio"]
+                          + ([{"id": "stdio", "tool": "py", "encode": ["-I", fake, "ok", "e", "-", "-"], "decode": ["-I", fake, "ok", "d", "-", "-"],
+                               "encode_stdin": True, "encode_stdout": True, "decode_stdin": True, "decode_stdout": True,
+                               "timeout": 5, "thread_policy": "python-fake"}] if "stdio" in modes else []),
                 "inputs": [{"id": "in", "path": src, "sha256": h, "bytes": os.path.getsize(src), "domain": "test"}],
                 "suites": {"t": {"inputs": ["in"], "codecs": modes}}}
-    cpath = os.path.join(fx, "cfg.json"); json.dump(cfg_for(["ok", "fail", "timeout", "noisy", "corrupt", "mem"]), xopen(cpath))
+    cpath = os.path.join(fx, "cfg.json"); json.dump(cfg_for(["ok", "fail", "timeout", "noisy", "corrupt", "mem", "stdio"]), xopen(cpath))
     rdir = os.path.join(out, "run1")
     p = subprocess.run([sys.executable, "-I", os.path.abspath(__file__), "run", "--config", cpath, "--suite", "t", "--new-run", rdir],
                        capture_output=True, text=True, timeout=900)
@@ -575,6 +585,7 @@ def cmd_self_test(a):
     rows = [json.loads(l) for l in open(os.path.join(rdir, "trials.jsonl"))] if os.path.exists(os.path.join(rdir, "trials.jsonl")) else []
     st = lambda c: {r["status"] for r in rows if r["codec"] == c}
     check("ok codec accepted", st("ok") >= {"accepted", "warmup"}, str(st("ok")))
+    check("stdin/stdout codec round-trips without a shell", st("stdio") >= {"accepted", "warmup"}, str(st("stdio")))
     check("failing encoder recorded as encode_failed", st("fail") == {"encode_failed"}, str(st("fail")))
     check("hung child timed out and recorded", st("timeout") == {"timeout"}, str(st("timeout")))
     check("20 MiB stderr does not deadlock; stderr kept", "accepted" in st("noisy") and any(
@@ -599,7 +610,7 @@ def cmd_self_test(a):
                        capture_output=True, text=True, timeout=900)
     rows2 = [json.loads(l) for l in open(os.path.join(rdir, "trials.jsonl"))]
     check("--resume with identical identity appends nothing for completed slots", p.returncode == 0 and len(rows2) == n0 and rows2[:n0] == rows, f"{n0}->{len(rows2)}")
-    cpath2 = os.path.join(fx, "cfg2.json"); json.dump(cfg_for(["ok", "fail", "timeout", "noisy", "corrupt", "mem"], seed=8), xopen(cpath2))
+    cpath2 = os.path.join(fx, "cfg2.json"); json.dump(cfg_for(["ok", "fail", "timeout", "noisy", "corrupt", "mem", "stdio"], seed=8), xopen(cpath2))
     p = subprocess.run([sys.executable, "-I", os.path.abspath(__file__), "run", "--config", cpath2, "--suite", "t", "--new-run", rdir, "--resume"],
                        capture_output=True, text=True, timeout=60)
     check("--resume with a different config refused", p.returncode != 0 and "identity differs" in (p.stdout + p.stderr))
