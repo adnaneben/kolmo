@@ -31,7 +31,7 @@ static int fz_decode(codec_ctx *x, int which, const uint8_t *in, size_t cn, uint
     switch (which) {
     case 0: return codec_decompress(x, C_BWT, in, cn, out, n);
     case 1: return aud_decompress(in, cn, out, n);
-    case 2: return kv_inverse(in, cn, out, n);
+    case 2: return kv_inverse(in, cn, out, n, 1);
     case 3: return codec_decompress(x, C_PLANES, in, cn, out, n);
     case 4: return codec_decompress(x, C_HZ, in, cn, out, n);
     case 5: return codec_decompress(x, C_ZRUN, in, cn, out, n);
@@ -61,7 +61,7 @@ static size_t fz_encode(codec_ctx *x, int which, const uint8_t *d, size_t n, uin
     case 4: { size_t hc = n + n / 1024 + 1024; uint8_t *h = malloc(hc); if (!h) return 0;
               size_t hl = huf_compress_all(d, n, h, hc); size_t z = hl ? hz_compress_huf(x, 3, h, hl, e, cap) : 0; free(h); return z; }
     case 5: fz_sel_codec = fl >> 4; return zrun_compress(x, d, n, e, cap, fz_leaf_sel, NULL);
-    case 7: return n <= (256u << 10) ? gr6_compress(d, n, e, cap) : 0;
+    case 7: return n <= (256u << 10) ? gr6_compress(d, n, e, cap, 1) : 0;
     case 12: {                                               /* FASTQ text; the coder declines anything else */
         size_t z = 0; uint8_t *q = kf_fastq_compress(d, n, 1, kf_chunk_for(n), KF_BCHUNK, &z);
         if (!q || z > cap) { free(q); return 0; }
