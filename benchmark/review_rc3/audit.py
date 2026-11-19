@@ -216,6 +216,10 @@ def load_config(path):
     cfg["_path"] = os.path.abspath(path); cfg["_sha256"] = sha256_file(path)
     return cfg
 
+def fsname(x):
+    """file-name-safe form of a codec/input id (ids may contain '/', '+', ',')"""
+    return "".join(ch if ch.isalnum() or ch in "-._" else "~" for ch in x)
+
 def fill(argv, **kw):
     return [a.format(**kw) for a in argv]
 
@@ -373,7 +377,7 @@ def cmd_run(a):
             attempts[slot] = n_att + 1
             if time.time() - state_t > cfg.get("state_every_s", 300): state = machine_state(); state_t = time.time()
             inp = im[iid]; c = cm[cid]; t = cfg["tools"][c["tool"]]
-            tid = f"{slot}:a{n_att}"; safe = tid.replace(":", "__").replace("/", "_")
+            tid = f"{slot}:a{n_att}"; safe = fsname(tid.replace(":", "__"))
             work = os.path.join(run, "work", safe)
             os.mkdir(work)       # new per attempt; fails if it exists
             comp = os.path.join(work, "c" + c.get("ext", ".bin")); back = os.path.join(work, "back" + inp.get("ext", ""))
@@ -394,9 +398,9 @@ def cmd_run(a):
                 row["status"] = "timeout" if e["timed_out"] else "encode_failed"
             else:
                 cb = os.path.getsize(comp); ch = sha256_file(comp); row.update(comp_bytes=cb, comp_sha256=ch)
-                key = f"{cid}__{iid}"
-                if ch not in kept.get(key, set()):
-                    dst = os.path.join(run, "artifacts", f"{cid}__{iid}__{ch[:16]}{c.get('ext', '.bin')}")
+                key = f"{fsname(cid)}__{fsname(iid)}"
+                if ch[:16] not in kept.get(key, set()):
+                    dst = os.path.join(run, "artifacts", f"{key}__{ch[:16]}{c.get('ext', '.bin')}")
                     if not os.path.lexists(dst): shutil.copyfile(comp, dst)
                     kept.setdefault(key, set()).add(ch[:16])
                 d = run_codec(cfg, c, "decode", comp, back, os.path.join(run, "logs", safe + ".dec"), cfg["sample_ms"], dar, orig=inp["path"])
@@ -575,11 +579,11 @@ def cmd_self_test(a):
                 "tools": {"py": {"path": sys.executable}},
                 "codecs": [{"id": m, "tool": "py", "encode": ["-I", fake, m, "e", "{in}", "{out}"], "decode": ["-I", fake, m, "d", "{in}", "{out}"],
                             "timeout": 5, "thread_policy": "python-fake"} for m in modes if m != "stdio"]
-                          + ([{"id": "stdio", "tool": "py", "encode": ["-I", fake, "ok", "e", "-", "-"], "decode": ["-I", fake, "ok", "d", "-", "-"],
+                          + ([{"id": "py/std+io", "tool": "py", "encode": ["-I", fake, "ok", "e", "-", "-"], "decode": ["-I", fake, "ok", "d", "-", "-"],
                                "encode_stdin": True, "encode_stdout": True, "decode_stdin": True, "decode_stdout": True,
                                "timeout": 5, "thread_policy": "python-fake"}] if "stdio" in modes else []),
                 "inputs": [{"id": "in", "path": src, "sha256": h, "bytes": os.path.getsize(src), "domain": "test"}],
-                "suites": {"t": {"inputs": ["in"], "codecs": modes}}}
+                "suites": {"t": {"inputs": ["in"], "codecs": [m if m != "stdio" else "py/std+io" for m in modes]}}}
     cpath = os.path.join(fx, "cfg.json"); json.dump(cfg_for(["ok", "fail", "timeout", "noisy", "corrupt", "mem", "stdio"]), xopen(cpath))
     rdir = os.path.join(out, "run1")
     p = subprocess.run([sys.executable, "-I", os.path.abspath(__file__), "run", "--config", cpath, "--suite", "t", "--new-run", rdir],
@@ -588,13 +592,13 @@ def cmd_self_test(a):
     rows = [json.loads(l) for l in open(os.path.join(rdir, "trials.jsonl"))] if os.path.exists(os.path.join(rdir, "trials.jsonl")) else []
     st = lambda c: {r["status"] for r in rows if r["codec"] == c}
     check("ok codec accepted", st("ok") >= {"accepted", "warmup"}, str(st("ok")))
-    check("stdin/stdout codec round-trips without a shell", st("stdio") >= {"accepted", "warmup"}, str(st("stdio")))
+    check("stdin/stdout codec round-trips without a shell", st("py/std+io") >= {"accepted", "warmup"} and any("py~std~io" in f for f in os.listdir(os.path.join(rdir, "artifacts"))), str(st("py/std+io")))
     check("failing encoder recorded as encode_failed", st("fail") == {"encode_failed"}, str(st("fail")))
     check("hung child timed out and recorded", st("timeout") == {"timeout"}, str(st("timeout")))
     check("20 MiB stderr does not deadlock; stderr kept", "accepted" in st("noisy") and any(
-        os.path.getsize(os.path.join(rdir, "logs", r["trial_id"].replace(":", "__") + ".enc.stderr")) >= 20 << 20 for r in rows if r["codec"] == "noisy"), str(st("noisy")))
+        os.path.getsize(os.path.join(rdir, "logs", fsname(r["trial_id"].replace(":", "__")) + ".enc.stderr")) >= 20 << 20 for r in rows if r["codec"] == "noisy"), str(st("noisy")))
     check("round-trip mismatch detected and decode kept", st("corrupt") == {"roundtrip_mismatch"} and any(
-        os.path.exists(os.path.join(rdir, "work", r["trial_id"].replace(":", "__"), "back")) for r in rows if r["codec"] == "corrupt"), str(st("corrupt")))
+        os.path.exists(os.path.join(rdir, "work", fsname(r["trial_id"].replace(":", "__")), "back")) for r in rows if r["codec"] == "corrupt"), str(st("corrupt")))
     mem = [r for r in rows if r["codec"] == "mem" and r["status"] in ("accepted", "warmup")]
     if mem:
         e = mem[-1]["encode"]
