@@ -409,10 +409,12 @@ def cmd_run(a):
                     dst = os.path.join(run, "artifacts", f"{key}__{ch[:16]}{c.get('ext', '.bin')}")
                     if not os.path.lexists(dst): shutil.copyfile(comp, dst)
                     kept.setdefault(key, set()).add(ch[:16])
-                d = run_codec(cfg, c, "decode", comp, back, os.path.join(run, "logs", safe + ".dec"), cfg["sample_ms"], dar, orig=inp["path"], window0=e["_window_end"])
+                pre_d = wait_quiet(cfg, dar, events); window0_d = pre_d.pop("_window0")   # own >= 0.3 s window
+                row["decode_pre"] = pre_d
+                d = run_codec(cfg, c, "decode", comp, back, os.path.join(run, "logs", safe + ".dec"), cfg["sample_ms"], dar, orig=inp["path"], window0=window0_d)
                 row["decode"] = {k_: v for k_, v in d.items() if k_ not in ("trace", "_window_end")}
                 json.dump(d["trace"], xopen(os.path.join(run, "traces", safe + ".dec.json")))
-                reasons += judge(d, cfg, state)
+                reasons += judge(d, cfg, state) + (["decode pre-window not quiet"] if pre_d.get("pre_quiet_failed") else [])
                 if d["timed_out"]: row["status"] = "timeout"
                 elif d["exit"] != 0 or not os.path.exists(back): row["status"] = "failed"
                 else:
