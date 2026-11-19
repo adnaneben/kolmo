@@ -45,7 +45,7 @@ jobs:
           ./build/kolmo -m fast -S 2 s.in s.czs
           ./build/kolmo -d s.czs s.out
           cmp s.in s.out
-      - name: C references only (NO_ASM=1, no assembly kernels): kernel tests and determinism
+      - name: 'C references only (NO_ASM=1, no assembly kernels): kernel tests and determinism'
         run: |
           rm -rf build
           make -j4 ARCH= NO_ASM=1 build/kolmo build/test-dispatch build/test-asm
