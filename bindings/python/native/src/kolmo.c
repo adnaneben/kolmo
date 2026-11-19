@@ -35,6 +35,7 @@ int kolmo_force_c;
 #include "arch/aarch64/table_neon.c"
 #include "arch/aarch64/dec64_neon.c"
 #endif
+#include "arch/x86_64/word_avx2.c"      /* x86 AVX2 word decoder (decmap lane), chosen by CPUID; same contract as the NEON one */
 
 #include "core/memory.c"
 #include "transforms/table_v03.c"

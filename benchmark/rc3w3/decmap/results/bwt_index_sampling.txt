@@ -1,0 +1,24 @@
+dickens                      k=  9 bytes=2254506  dec T1 19.4 MB/s  T4 43.1 MB/s
+dickens                      k=  9 bytes=2254506  dec T1 19.4 MB/s  T4 40.9 MB/s
+dickens                      k= 19 bytes=2254546  dec T1 19.8 MB/s  T4 44.3 MB/s
+dickens                      k= 38 bytes=2254622  dec T1 19.9 MB/s  T4 43.0 MB/s
+dickens                      k= 77 bytes=2254778  dec T1 22.0 MB/s  T4 43.8 MB/s
+dickens                      k=154 bytes=2255086  dec T1 20.6 MB/s  T4 43.4 MB/s
+samba                        k=  8 bytes=3885256  dec T1 25.2 MB/s  T4 86.4 MB/s
+samba                        k=  8 bytes=3885256  dec T1 25.9 MB/s  T4 86.5 MB/s
+samba                        k= 16 bytes=3885288  dec T1 25.6 MB/s  T4 88.7 MB/s
+samba                        k= 33 bytes=3885356  dec T1 25.8 MB/s  T4 88.8 MB/s
+samba                        k= 67 bytes=3885492  dec T1 25.9 MB/s  T4 89.4 MB/s
+samba                        k=135 bytes=3885764  dec T1 25.8 MB/s  T4 89.8 MB/s
+webster                      k=  9 bytes=6439772  dec T1 26.1 MB/s  T4 85.2 MB/s
+webster                      k=  9 bytes=6439772  dec T1 26.7 MB/s  T4 84.3 MB/s
+webster                      k= 19 bytes=6439812  dec T1 27.1 MB/s  T4 86.1 MB/s
+webster                      k= 39 bytes=6439892  dec T1 27.4 MB/s  T4 86.3 MB/s
+webster                      k= 79 bytes=6440052  dec T1 26.3 MB/s  T4 81.3 MB/s
+webster                      k=158 bytes=6440368  dec T1 26.3 MB/s  T4 80.7 MB/s
+nci                          k= 13 bytes=1199578  dec T1 71.3 MB/s  T4 208.0 MB/s
+nci                          k= 13 bytes=1199578  dec T1 66.7 MB/s  T4 202.5 MB/s
+nci                          k= 27 bytes=1199634  dec T1 63.1 MB/s  T4 203.8 MB/s
+nci                          k= 55 bytes=1199746  dec T1 66.3 MB/s  T4 200.2 MB/s
+nci                          k=111 bytes=1199970  dec T1 66.2 MB/s  T4 211.2 MB/s
+nci                          k=223 bytes=1200418  dec T1 72.3 MB/s  T4 213.4 MB/s

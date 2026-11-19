@@ -1,0 +1,16 @@
+# Study tools of the rc3w3 phrase lane (not part of the library build). From the repository root:
+#   make && make -f benchmark/rc3w3/phrase/Makefile.study
+# cmx.c and g6x.c are generated from src/codecs/cm.c and src/codecs/gr6.c (renamed study copies), never committed.
+CC ?= cc
+P = benchmark/rc3w3/phrase
+FLAGS = -O3 -march=native -fno-plt -ffp-contract=off -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz
+all: build/phr build/g6census
+$(P)/cmx.c: $(P)/mkcmx.py src/codecs/cm.c
+	python3 $(P)/mkcmx.py
+$(P)/g6x.c: $(P)/mkg6x.py src/codecs/gr6.c
+	python3 $(P)/mkg6x.py
+build/phr: $(P)/phr.c $(P)/cmx.c build/libkolmoarch.a build/libvendor.a src/kolmo.c
+	$(CC) $(FLAGS) $(P)/phr.c build/libkolmoarch.a build/libvendor.a -o $@ -lpthread -lm
+build/g6census: $(P)/g6census.c $(P)/g6x.c build/libkolmoarch.a build/libvendor.a src/kolmo.c
+	$(CC) $(FLAGS) $(P)/g6census.c build/libkolmoarch.a build/libvendor.a -o $@ -lpthread -lm
+.PHONY: all

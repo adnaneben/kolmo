@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased (rc3 wave 3, decmap lane: `claude/rc3w3-decmap-20261118`)
+
+Decode maps: prebuilt decoder tables stored in the frame were measured and rejected (Huffman tables cost 4-8 KiB per
+block for at most 8% of decode; more inverse-BWT sample points stay inside the noise; GR6+ and CM searches are under
+5% of their decoders). Three decoder-only changes are kept. No format change, no frame changes. Measurements in
+`benchmark/rc3w3/decmap/RESULTS.md`.
+
+### Changed
+- **x86 AVX2 word-transform decoder** (`src/arch/x86_64/word_avx2.c`, chosen by CPUID; the counterpart of the NEON
+  kernel): text `eco`/`hc` decode +14.8% (1 thread) / +12.1% (4 threads), JSON +13.7% / +12.1% on the VM.
+- **khuf (codec 27) builds one decode table instead of two**, with bit reversal from a constant table: khuf decode
+  +7.6% to +8.9% on Silesia; the fixed cost of a 4 KiB block drops by 20%.
+- **KLZH (codec 29) checks its codes in one pass and refills the bit buffer only when needed**: decode +10% to +17%.
+  With `KOLMO_NATIVE=all`, `balanced`/`eco`/`hc` frames decode +16.3% (1 thread) / +14.2% (4 threads) faster.
+## Unreleased (rc3 wave 3, phrase lane: `claude/rc3w3-phrase-20261118`)
+
+Research only: no change to the library, the format or any frame. Measurements in `benchmark/rc3w3/phrase/RESULTS.md`.
+
+### Research
+- **Multi-item decisions (one coded decision for a whole phrase) measured and not adopted.** A deterministic per-file
+  phrase dictionary (Re-Pair-style pair merging over word tokens) was tried in three ways: phrases substituted by
+  codes before context mixing; phrase ids as extra CM contexts with the dictionary sent; adaptive phrase contexts
+  learnt by the decoder too. A one-flag-per-row decision was tried in GR6+. Against `-x` no group gains the 0.5%
+  required: JSON −0.38% (one catalogue file −14%), logs −0.09%, prose, XML and tables 0% (substitution is +0.9% to
+  +140% there). The adaptive context gives −0.14% to −0.39% on 1–10 MB of prose and −0.02% on enwik8 100 MB. The GR6+
+  row flag gives −0.07% to +0.29%. Study tools in `benchmark/rc3w3/phrase/` (`phr`, `g6census`, `bench.py`).
+- Found on the way: codec 7's word hash applies the ASCII case fold to bytes ≥ 128, merging UTF-8 bytes. Folding
+  ASCII only makes a Japanese JSON file 4.3% smaller. Recorded as a candidate for the CM owner, not changed (it would
+  change `-x` frames).
+
 ## Unreleased (rc3 wave 2, regress lane: `claude/rc3w2-regress-20261117`)
 
 Fixes for the regressions of rc3 against rc2 measured on the Apple M5 (`benchmark/rc3/mac/RESULTS.md`). Measurements

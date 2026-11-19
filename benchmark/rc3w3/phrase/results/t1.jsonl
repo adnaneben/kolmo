@@ -1,0 +1,28 @@
+{"file": "enwik8_1m", "n": 1000000, "mode": "-x", "threads": 1, "size": 222715, "enc_s": 10.958, "dec_s": 4.571, "ok": true}
+{"file": "enwik8_1m", "n": 1000000, "mode": "-m hc", "threads": 1, "size": 300460, "enc_s": 0.293, "dec_s": 0.007, "ok": true}
+{"file": "enwik8_10m", "n": 10000000, "mode": "-x", "threads": 1, "size": 2105270, "enc_s": 58.562, "dec_s": 50.221, "ok": true}
+{"file": "enwik8_10m", "n": 10000000, "mode": "-m hc", "threads": 1, "size": 2710705, "enc_s": 4.561, "dec_s": 0.069, "ok": true}
+{"file": "dickens", "n": 10192446, "mode": "-x", "threads": 1, "size": 2168559, "enc_s": 61.365, "dec_s": 55.572, "ok": true}
+{"file": "dickens", "n": 10192446, "mode": "-m hc", "threads": 1, "size": 2728251, "enc_s": 5.447, "dec_s": 0.055, "ok": true}
+{"file": "webster", "n": 41458703, "mode": "-x", "threads": 1, "size": 5609529, "enc_s": 228.521, "dec_s": 229.163, "ok": true}
+{"file": "webster", "n": 41458703, "mode": "-m hc", "threads": 1, "size": 8858048, "enc_s": 32.32, "dec_s": 0.095, "ok": true}
+{"file": "reymont", "n": 6627202, "mode": "-x", "threads": 1, "size": 907685, "enc_s": 34.144, "dec_s": 31.689, "ok": true}
+{"file": "reymont", "n": 6627202, "mode": "-m hc", "threads": 1, "size": 1348510, "enc_s": 5.195, "dec_s": 0.023, "ok": true}
+{"file": "xml", "n": 5345280, "mode": "-x", "threads": 1, "size": 300720, "enc_s": 29.794, "dec_s": 21.967, "ok": true}
+{"file": "xml", "n": 5345280, "mode": "-m hc", "threads": 1, "size": 443624, "enc_s": 2.215, "dec_s": 0.018, "ok": true}
+{"file": "loghub_all.log", "n": 4458875, "mode": "-x", "threads": 1, "size": 186278, "enc_s": 23.919, "dec_s": 17.975, "ok": true}
+{"file": "loghub_all.log", "n": 4458875, "mode": "-m hc", "threads": 1, "size": 266825, "enc_s": 0.371, "dec_s": 0.014, "ok": true}
+{"file": "Apache.log", "n": 5135876, "mode": "-x", "threads": 1, "size": 72771, "enc_s": 23.037, "dec_s": 17.993, "ok": true}
+{"file": "Apache.log", "n": 5135876, "mode": "-m hc", "threads": 1, "size": 125598, "enc_s": 0.273, "dec_s": 0.012, "ok": true}
+{"file": "owid-co2-data.csv", "n": 15242657, "mode": "-x", "threads": 1, "size": 1127837, "enc_s": 49.305, "dec_s": 6.026, "ok": true}
+{"file": "owid-co2-data.csv", "n": 15242657, "mode": "-m hc", "threads": 1, "size": 1291252, "enc_s": 1.024, "dec_s": 0.056, "ok": true}
+{"file": "countries-aggregated.csv", "n": 5512931, "mode": "-x", "threads": 1, "size": 283038, "enc_s": 23.32, "dec_s": 1.534, "ok": true}
+{"file": "countries-aggregated.csv", "n": 5512931, "mode": "-m hc", "threads": 1, "size": 327637, "enc_s": 0.238, "dec_s": 0.03, "ok": true}
+{"file": "twitter.json", "n": 631515, "mode": "-x", "threads": 1, "size": 25522, "enc_s": 1.848, "dec_s": 1.635, "ok": true}
+{"file": "twitter.json", "n": 631515, "mode": "-m hc", "threads": 1, "size": 37755, "enc_s": 0.125, "dec_s": 0.002, "ok": true}
+{"file": "citm_catalog.json", "n": 1727204, "mode": "-x", "threads": 1, "size": 6578, "enc_s": 2.675, "dec_s": 0.252, "ok": true}
+{"file": "citm_catalog.json", "n": 1727204, "mode": "-m hc", "threads": 1, "size": 7734, "enc_s": 0.043, "dec_s": 0.003, "ok": true}
+{"file": "gharchive.json", "n": 19998312, "mode": "-x", "threads": 1, "size": 846939, "enc_s": 90.454, "dec_s": 82.351, "ok": true}
+{"file": "gharchive.json", "n": 19998312, "mode": "-m hc", "threads": 1, "size": 1271326, "enc_s": 6.082, "dec_s": 0.045, "ok": true}
+{"file": "enwik8", "n": 100000000, "mode": "-x", "threads": 1, "size": 19012531, "enc_s": 556.076, "dec_s": 549.324, "ok": true}
+{"file": "enwik8", "n": 100000000, "mode": "-m hc", "threads": 1, "size": 24390220, "enc_s": 87.069, "dec_s": 0.517, "ok": true}

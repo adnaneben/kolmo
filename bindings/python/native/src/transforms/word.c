@@ -170,6 +170,9 @@ static int word_decode(const uint8_t *in, size_t tn, uint8_t *out, size_t n) {
 #if KOLMO_NEON
     if (!kolmo_force_c) kolmo_wd_dec_neon(&p, end, &o, oe, arena, wl, nw, pidx, capb, special);   /* most tokens */
 #endif
+#if defined(KOLMO_WD_AVX2)
+    if (!kolmo_force_c && kolmo_have_avx2()) kolmo_wd_dec_avx2(&p, end, &o, oe, arena, wl, nw, pidx, capb, special);   /* most tokens */
+#endif
     while (p < end) {
         const uint8_t *s = p;
         if (lowset) p = wd_scan_low(p, end, special);
