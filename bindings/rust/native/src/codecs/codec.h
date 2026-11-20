@@ -15,6 +15,7 @@ typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *di
                  int aligned_leaf;       /* encoder: graph integer residual leaves also try plane-aligned Huffman / rANS chunks
                                           * (opt-in: --native-leaf, --typed-huf; existing leaf ids, any version-7 decoder) */
                  int threads;            /* threads the block may use inside a codec (BWT, codec 25 parts); never changes the output */
+                 int zwide;              /* encoder, zstd: a large plain block of balanced (4-6 MiB): an 8 MiB window */
                  int used_bwt;           /* encoder: set when codec 18 was written (the frame needs version 11) */
                  int used_f2;            /* encoder: a format-2 leaf (codecs 21-23) was written (the frame needs version 11) */
                  int used_cmt;           /* encoder: a context-mixing leaf with learning settings was written (version 11) */

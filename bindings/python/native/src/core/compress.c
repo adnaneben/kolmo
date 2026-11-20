@@ -116,13 +116,38 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
     planning.prof = prof; planning.xcap = xcap; planning.kind = skind;
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
+    /* balanced, eco, hc: neighbouring segments (tar members, content runs) that got the same plain or word-dictionary
+     * plan are coded as one, so an LZ window spans them (a source tarball repeats across members: samba -4.6% at hc) */
+    if (!p->block && !columns && !prof && p->mode >= KOLMO_FAST && p->mode <= KOLMO_HC && nseg > 1) {
+        uint32_t w = 1;
+        for (uint32_t g = 1; g < nseg; g++) {
+            plan_t *a = &plans[w - 1], *b = &plans[g];
+            if (a->t == b->t && (a->t == T_NONE || a->t == T_WORD) && !a->fs && !b->fs && !a->rec && !b->rec && !a->cmpz && !b->cmpz
+                && a->verify == b->verify && a->packed == b->packed && a->lines == b->lines && !a->wide && !b->wide
+                && !a->experimental_dna && !b->experimental_dna && !a->experimental_table && !b->experimental_table
+                && !a->experimental_pcm && !b->experimental_pcm && skind[w - 1] == skind[g] && se[w - 1] == ss[g]) { se[w - 1] = se[g]; continue; }
+            if (w != g) { plans[w] = plans[g]; memset(&plans[g], 0, sizeof plans[g]); ss[w] = ss[g]; se[w] = se[g]; skind[w] = skind[g]; }
+            w++;
+        }
+        nseg = w;
+    }
     if (columns) for (uint32_t g = 0; g < nseg; g++) plans[g].lines = 1;   /* queryable archives: line-aligned blocks */
     if (!p->block && nseg == 1 && (plans[0].wide || plans[0].experimental_table) && B > (2u << 20)) B = 2u << 20;
     for (uint32_t g = 0; g < nseg; g++) {
         const uint8_t *s0 = src + ss[g]; size_t len = (size_t)(se[g] - ss[g]);
         plan_t pl = plans[g];
         uint32_t Bs = B;
-        if (!p->block && p->mode == KOLMO_HC && pl.t == T_WORD) Bs = 128u << 20;   /* hc text: one large window */
+        if (!p->block && p->mode == KOLMO_HC && (pl.t == T_WORD || (pl.t == T_NONE && src && !p->level && looks_text(s0, len))))
+            Bs = 128u << 20;   /* hc text: one large window */
+        if (!p->block && p->mode == KOLMO_ECO && !p->level && src && (pl.t == T_WORD || (pl.t == T_NONE && !pl.packed && looks_text8(s0, len))))
+            Bs = len <= (32u << 20) ? 32u << 20 : B;   /* eco text up to 32 MiB: one block-sorting block (gharchive NDJSON, 26 MB: 16 MiB
+                                                          * blocks +4.4%, one block -0.9% vs brotli -11); larger files keep 16 MiB (memory) */
+        if (!p->block && p->mode == KOLMO_FAST && !p->level && !dictlen && !prof && pl.t == T_NONE && src && len > KZ_WIDE_MIN) {
+                                                                    /* balanced, plain coding: blocks of up to 6 MiB, */
+            uint64_t k = (len + KZ_WIDE_BLOCK - 1) / KZ_WIDE_BLOCK;        /* split evenly, each coded with an 8 MiB window */
+            uint64_t b = ((len + k - 1) / k + 65535) & ~(uint64_t)65535;  /* (codecs/zstd.c) */
+            Bs = (uint32_t)(b < KZ_WIDE_BLOCK ? b : KZ_WIDE_BLOCK);
+        }
         uint64_t *st; uint32_t m = make_blocks(s0, len, Bs, pl, &st, input_fd, ss[g], &ret);
         if (!st) goto cleanup;
         if (len == 0) m = 0;

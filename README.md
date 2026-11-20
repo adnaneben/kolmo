@@ -55,7 +55,7 @@ exact):
 | `ultra` | **17.01%** | 0.28 MB/s | 0.30 MB/s | — (smallest result on the board) |
 
 From about 350 MB/s down to the slowest tier, the bold settings give the smallest output of any entry at that
-compression speed or faster. `hc` (and `eco`) trade some of that for decode speed: `hc` decompresses 6× faster than
+compression speed or faster. `hc` trades some of that for decode speed (`eco` codes text by block sorting, which decodes at 15–40 MB/s): `hc` decompresses 6× faster than
 xz and 65× faster than bzip3 at a similar ratio. Above 350 MB/s, and on raw decode speed in the LZ4 class, zstd -1
 and lz4 still lead.
 
@@ -66,7 +66,7 @@ and lz4 still lead.
 | Tables (CSV/TSV) | Columns become typed streams. Numeric columns are exact decimals at a common scale, predicted per block by raw, delta, delta within an entity (e.g. country), **delta-of-delta** and **third-order** within an entity (for counters and steady trends), or a discovered **formula of other columns** (`y = k·a/b`, change and % change): 51 formulas on the OWID energy table. Quoted fields, short rows and odd values are lossless. |
 | Logs | Lines are split into **templates and variables**; timestamps, IPs and IDs become integer columns ("skeleton" columns). |
 | Fixed-width text | Lines that come in a few fixed lengths (chemistry and geometry files, fixed-width reports) are stored **column by column per line length**: a line scan and a transpose, several times cheaper than templates. Files that use it carry container version 8. |
-| Prose and markup | Frequent words become 2-byte codes from byte values the block never uses (eco and above); `hc` then uses zstd 22 with a 128 MiB window. |
+| Prose and markup | `balanced`: blocks of up to 6 MiB with an 8 MiB window. `eco`: block sorting (BWT) of the plain text (files up to 32 MiB as one block). `hc`: frequent words become 2-byte codes from byte values the block never uses, then zstd 19 with a 128 MiB window. |
 | Decimal doubles | Float64 arrays whose values were written in decimal (`.npy` tables, raw arrays, the columns inside pickle, `.npz` and `.mat` files) are stored as **integers over a power of ten per column**, with missing values as a tag and anything else kept verbatim. |
 | Scientific binary | **Fixed records** (period found by self-similarity; fields of 1/2/4/8 bytes stored raw, as deltas, as dictionary tokens, or as multiples of a discovered quantum with exact bit corrections) and **16-bit images** (byte order, row stride and predictor found automatically). |
 | Executables, archives | x86 call/jump transform; each tar member gets its own model. |
@@ -108,7 +108,7 @@ Advanced settings, for tuning between the three:
 |---|---|---|---|
 | `rt` | adaptive (≤4 MiB) | LZ4 | decode speed first |
 | `fast` | adaptive (≤4 MiB) | zstd 3 | default (`-q`: quick analysis, cheap transforms only) |
-| `eco` | 16 MiB | brotli 8 | lowest storage cost at moderate CPU |
+| `eco` | 16 MiB (text up to 32 MiB) | brotli 8; BWT for text and JSON token streams (decodes at block-sorting speed) | lowest storage cost at moderate CPU |
 | `hc` | 16 MiB (text 128 MiB) | zstd 19 / 22 | archive with fast reads |
 | `max` | 128 MiB | BWT for text; LZMA2 otherwise, or BWT where it is at least 3% smaller (`-l 1`: BWT only) | cold archive |
 | `ultra` | 128 MiB | best of context mixing (with an image model for 8-bit images), LZMA2, BWT (`-l 1`: context mixing model 1 only, faster; `-l 2`: maximum ratio, numeric graph leaves may also use context mixing, slower decode) | coldest archive, best ratio |

@@ -330,7 +330,15 @@ static void *compress_worker(void *arg) {
         if (codec == C_LZMA && level == 1) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
         else if (codec == C_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
         else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
-        if (codec == C_ZSTD && level == 19 && tflag == 9) level = CZ_HC_TEXT_LEVEL;                                  /* hc text: ultra level */
+        else if (codec == C_BROTLI && J->default_level && !J->dict && !J->prof && len >= (64u << 10)
+                 && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT, level = 9;   /* eco, JSON token streams: as max */
+        else if (codec == C_BROTLI && J->default_level && !J->dict && !J->prof && (!tflag || tflag == 9) && len >= (64u << 10)
+                 && !pl.packed && looks_text8(raw, len)) {   /* eco, text: block sorting of the plain bytes (w4: smaller than brotli -11 on
+                                               * prose and markup, at 10-20x its encode speed; decodes at block-sorting speed) */
+            codec = C_BWT; level = 9; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }
+        }
+        if (codec == C_ZSTD && level == 19 && J->default_level && !J->dict && !J->prof && (tflag == 9 || (!tflag && pl.t == T_NONE && looks_text(raw, len))))
+            level = CZ_HC_TEXT_LEVEL;   /* hc text (word-coded or plain): level 19 with a 128 MiB window (codecs/zstd.c) */
 #ifdef KOLMO_FRONTIER
 #ifdef KOLMO_FRONTIER_PATCHED_PCM
         if (pl.experimental_pcm && !J->dict && J->default_level) {
@@ -402,7 +410,11 @@ static void *compress_worker(void *arg) {
             if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) slice_verdict = -1;
             else if ((uint64_t)sb * 100 <= (uint64_t)slz * KOLMO_BWT_SKIP_LZMA_PCT && (uint64_t)slz * 100 <= (uint64_t)sn * 35) { codec = C_BWT; level = 9; slice_verdict = 1; }
         }
+        /* balanced, a large plain block (compress.c gives plain segments blocks of up to 6 MiB): an 8 MiB window */
+        xp->zwide = codec == C_ZSTD && level == CZ_FAST_LEVEL && J->default_level && !J->dict && !J->prof && !tflag
+                    && pl.t == T_NONE && inlen > KZ_WIDE_MIN;
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
+        xp->zwide = 0;
         if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
