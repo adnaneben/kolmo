@@ -36,7 +36,10 @@ int main(void) {
     n += (size_t)snprintf((char *)t, cap, "country,year,population,co2,share\n");
     for (int i = 0; n + 128 < cap - 4096 && i < 9000; i++)
         n += (size_t)snprintf((char *)t + n, cap - n, "C%d,%d,%d,%.2f,%.4f\n", i / 40, 1980 + i % 40, 1000000 + i * 37, (rnd() % 100000) / 100.0, (rnd() % 10000) / 10000.0);
-    fails += check("table", t, n, 1);
+    /* since w4, -x codes a whole table with codec 7's model 4 when that beats the columns on the 256 KiB sample, and on
+     * this synthetic table it does (36,251 bytes as one model-4 block): the column path is no longer required here, only
+     * that the frame is the same at 1 and 4 threads and round-trips. The halves path below still exercises codec 25. */
+    fails += check("table", t, n, 0);
     /* a non-text stream above the (lowered) split threshold: the halves path. Each of 48 byte values (most of them not
      * printable) depends on the symbol two back (a sparse context), with noise: no structure transform applies, and
      * context mixing beats both LZMA2 (by 28%) and block sorting (by 8%), which `-x` also tries on binary blocks. (An

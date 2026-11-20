@@ -24,6 +24,9 @@ typedef struct {
     void (*cm_dot)(const int32_t *x, int n, const int32_t *w1, const int32_t *w2, const int32_t *w3, const int32_t *w4, int64_t s[4]);
     void (*cm_hash)(const uint32_t *h, int n, uint32_t add, uint32_t *out);
     void (*cm_train)(const int32_t *x, int n, int32_t *w1, int32_t *w2, int32_t *w3, int32_t *w4, const int e[4], int shift);
+    /* the 16-bit mixer of codec 7's model 4 (four weight sets, n a multiple of 16) */
+    void (*cm_dot16)(const int16_t *x, int n, const int16_t *w1, const int16_t *w2, const int16_t *w3, const int16_t *w4, int32_t s[4]);
+    void (*cm_train16)(const int16_t *x, int n, int16_t *w1, int16_t *w2, int16_t *w3, int16_t *w4, const int e[4]);
     /* video strips (kvid, Y4M): predictor choice and residuals, and their inverse; see algo/video.h */
     int (*vid_strip_enc)(const uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, uint8_t *res);
     void (*vid_strip_dec)(uint8_t *cur, const uint8_t *prev, size_t w, size_t y0, size_t y1, int k, const uint8_t *res);
