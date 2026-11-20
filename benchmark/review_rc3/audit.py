@@ -231,8 +231,9 @@ def fill(argv, **kw):
 
 def run_codec(cfg, c, phase, src, dst, log_prefix, sample_ms, dar, orig=None, window0=None):
     """phase 'encode'|'decode'. c[phase] is the argv after the tool path; c[phase+'_stdin'] / c[phase+'_stdout'] (bool)
-    feed src on stdin / take dst from stdout instead of {in} / {out} arguments."""
-    t = cfg["tools"][c["tool"]]
+    feed src on stdin / take dst from stdout instead of {in} / {out} arguments. c['decode_tool'] (optional) names a
+    different tool for the decode phase (cjxl / djxl)."""
+    t = cfg["tools"][c.get("decode_tool", c["tool"]) if phase == "decode" else c["tool"]]
     return measure(fill([t["path"], *c[phase]], **{"in": src, "out": dst, "orig": orig or src}), child_env(c.get("env")), log_prefix,
                    c.get("timeout", 7200), sample_ms, dar, stdin_path=src if c.get(phase + "_stdin") else None,
                    stdout_path=dst if c.get(phase + "_stdout") else None, window0=window0)
@@ -245,7 +246,8 @@ def identity(cfg, suite):
     s = cfg["suites"][suite]; cm, im = codec_map(cfg), input_map(cfg)
     tools = {}
     for cid in s["codecs"]:
-        t = cfg["tools"][cm[cid]["tool"]]; tools[cm[cid]["tool"]] = {"path": t["path"], "sha256": sha256_file(t["path"])}
+        for tn in {cm[cid]["tool"], cm[cid].get("decode_tool", cm[cid]["tool"])}:
+            t = cfg["tools"][tn]; tools[tn] = {"path": t["path"], "sha256": sha256_file(t["path"])}
     return {"harness_version": HARNESS_VERSION, "harness_sha256": sha256_file(os.path.abspath(__file__)),
             "config_sha256": cfg["_sha256"], "suite": suite, "suite_def": s, "tools": tools,
             "inputs": {i: {"path": im[i]["path"], "sha256": im[i]["sha256"], "bytes": im[i]["bytes"]} for i in s["inputs"]},
@@ -392,7 +394,7 @@ def cmd_run(a):
             pre = wait_quiet(cfg, dar, events); window0 = pre.pop("_window0")
             env = child_env(c.get("env"))
             row = {"trial_id": tid, "slot": slot, "round": ri, "role": role, "rep": k, "suite": suite, "input": iid,
-                   "codec": cid, "utc": now_utc(), "tool": c["tool"], "tool_path": t["path"], "tool_sha256": ident["tools"][c["tool"]]["sha256"],
+                   "codec": cid, "utc": now_utc(), "tool": c["tool"], "tool_path": t["path"], "tool_sha256": ident["tools"][c["tool"]]["sha256"], "decode_tool_sha256": ident["tools"][c.get("decode_tool", c["tool"])]["sha256"],
                    "input_sha256": inp["sha256"], "input_bytes": inp["bytes"], "input_domain": inp.get("domain"),
                    "env_set": c.get("env", {}), "thread_policy": c.get("thread_policy", "strict-T1"), **pre,
                    "power": {"on_ac": state.get("on_ac"), "thermal_limited": state.get("thermal_limited")}}
