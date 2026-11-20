@@ -46,8 +46,13 @@ static inline int codec_native_id(const codec_ctx *x, int c) {
     if ((f & KN_LZMA) && c == C_LZMA) return C_KLZMA;
     return c;
 }
-#define codec_wire(x, c) ((uint8_t)codec_native_id((x), (c)))
 static inline int codec_is_native(int c) { return c == C_KLZMA || c == C_KHUF || c == C_KLZ || c == C_KLZH; }
+/* the id written for library codec c; notes on the context when it is a native id, so that the frame is version 11
+ * only when a native id was actually written (KOLMO_NATIVE alone used to make every frame version 11) */
+static inline uint8_t codec_wire_note(codec_ctx *x, int c) {
+    int w = codec_native_id(x, c); if (codec_is_native(w)) x->used_native = 1; return (uint8_t)w;
+}
+#define codec_wire(x, c) codec_wire_note((x), (c))
 
 /* library level -> native level */
 static int native_level(int c, int level) {

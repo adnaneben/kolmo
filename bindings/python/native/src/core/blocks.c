@@ -161,7 +161,7 @@ static void *compress_worker(void *arg) {
         /* a block of WAV samples is coded by the audio codec when that is smaller (it was on all 43 WAV files measured,
          * by 17% or more); the rest of the block's path keeps rc2's leaf rule, without the format-2 leaf trials */
         xp->no_f2 = J->aud_prof >= 0 && J->starts[i] < J->aud_end && J->starts[i + 1] > J->aud_off;
-        xp->used_bwt = 0;
+        xp->used_bwt = 0; xp->used_native = 0; xtrial_native_hit = 0;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
 #ifdef KOLMO_FRONTIER
@@ -554,9 +554,9 @@ coded:;
             emit_block(J, i, h0, raw, tot);
         } else {
             emit_block(J, i, NULL, slot, tot);
-            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) || kolmo_native_flags() || (codec == C_CM && cm_stream_tuned(slot + 4 + meta, cl)) ? 128u : 0u), memory_order_relaxed);
+            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) || (kolmo_native_flags() && (codec_is_native(codec_wire(xp, codec)) || xp->used_native || xtrial_native_hit)) || (codec == C_CM && cm_stream_tuned(slot + 4 + meta, cl)) ? 128u : 0u), memory_order_relaxed);
             /* version 11 when the block is codec 18, or a graph block whose leaves may be (leaf trials set used_bwt), a
-             * native coder is enabled, or a context-mixing stream has learning settings (model nibble 14 or 15) */
+             * native codec id was written (the block's id, or inside its payload: leaves, columns, trials), or a context-mixing stream has learning settings (model nibble 14 or 15) */
         }
         put32(e, (uint32_t)len); put32(e + 4, (uint32_t)tot);
         if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)kolmo_xxh3(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)
