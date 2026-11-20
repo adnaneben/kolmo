@@ -102,3 +102,14 @@ searches: the race at `-x`.
 | `-x` | prior + race on the whole stream | prior + race on 256 KiB | same | prior only (no race above 16 MiB) |
 
 End-to-end numbers: `benchmark/rc3w2/twopass/RESULTS.md`.
+
+## Model 4 (w4)
+
+Since w4, `-x` writes codec 7's model 4 (`benchmark/w4/cm/RESULTS.md`), which is not raced: on 1 MB samples the race
+gained it 0.15% on text and 0.05% on binary data, for twice the encoding time of a 1 MB stream at one thread (the four
+presets run one after another). Model 4 always takes the race's fourth preset (`b0 b1` = `dc b4`), which came within
+0.02% of the race on the same samples, and its own shared priors (`cm_prior4`, trained the same way on model 4: tune byte
+2 = 1 for the text contexts, 2 for the binary ones; 0.11–0.15% smaller than model 3's prior mapped onto model 4's
+inputs). A coordinate search of the eight settings on the training samples found 0.04% more and was not kept. The
+planner's CM samples (`ultra_keep_transform`) also code with model 4, on 256 KiB instead of 1 MiB.
+

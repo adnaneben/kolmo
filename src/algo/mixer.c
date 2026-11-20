@@ -21,3 +21,20 @@ void kolmo_cm_hash_c(const uint32_t *h, int n, uint32_t add, uint32_t *out) {
         out[i] = a;
     }
 }
+
+void kolmo_cm_dot16_c(const int16_t *x, int n, const int16_t *w1, const int16_t *w2, const int16_t *w3, const int16_t *w4, int32_t s[4]) {
+    const int16_t *w[4] = {w1, w2, w3, w4};
+    for (int k = 0; k < 4; k++) {
+        int32_t t = 0;
+        for (int i = 0; i < n; i += 2) t += ((int32_t)x[i] * w[k][i] + (int32_t)x[i + 1] * w[k][i + 1]) >> 8;
+        s[k] = t;
+    }
+}
+void kolmo_cm_train16_c(const int16_t *x, int n, int16_t *w1, int16_t *w2, int16_t *w3, int16_t *w4, const int e[4]) {
+    int16_t *w[4] = {w1, w2, w3, w4};
+    for (int k = 0; k < 4; k++)
+        for (int i = 0; i < n; i++) {
+            int32_t v = w[k][i] + (((int32_t)x[i] * e[k] + 16384) >> 15);
+            w[k][i] = (int16_t)(v < -32768 ? -32768 : v > 32767 ? 32767 : v);
+        }
+}

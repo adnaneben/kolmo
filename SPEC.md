@@ -24,7 +24,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 (format 2) when a block or graph leaf uses codecs 19-23, a block uses the ARM64 branch filter (plan type 11), a table block's transformed length exceeds the block length + 16384 (see below), or the frame uses a trained profile (flag bit 2), or a CM stream (block or graph leaf) carries learning settings (model nibble 14 or 15)) |
+| 4 | 1 | version | 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 (format 2) when a block or graph leaf uses codecs 19-23, a block uses the ARM64 branch filter (plan type 11), a table block's transformed length exceeds the block length + 16384 (see below), or the frame uses a trained profile (flag bit 2), or a CM stream (block or graph leaf) carries learning settings (model nibble 14 or 15) or is model 4 (model nibble 9)) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -117,7 +117,23 @@ bits 6-7 weights (of 8) of the mixer and the three APMs in the final probability
 3,1,2,2. `b2` is the initial mixer weights: 0 = every weight 1/4, 1 = the shared prior of the model (the table
 `cm_prior` in `src/codecs/cm_prior.inc`: one row per mixer, copied to every row of that mixer); other values are
 refused. `-x` writes these streams (the settings are chosen by a race of presets on the stream's first 256 KiB,
-`docs/TWOPASS.md`); a frame that holds one, as a block or as a graph leaf, is version 11. `CMI` (codec 17) is the same coder with
+`docs/TWOPASS.md`); a frame that holds one, as a block or as a graph leaf, is version 11. **Model 4 (format 2, w4):** model
+nibble 9. The low nibble `g` of that byte gives the table size shift `s = g + 2`; then `b0 b1 b2` as above (`b2`: 0 = every
+weight 1/4, 1 = the text prior, 2 = the binary prior, `cm_prior4` in `src/codecs/cm_prior.inc`; other values are refused),
+then a context mask u32 (little-endian): bit `i` (1 to 29) selects hashed context `i` of model 3, bits 0 and 30-31 must be
+clear; the coded bytes follow. Model 4 is model 3 restricted to the contexts of the mask, with these differences: each
+context's table is a list of 64-byte lines (`n >> s` lines for an `n`-byte stream, half that for contexts 16-24, a quarter
+for 25-29, between 2^12 and 2^22; a hash `h` selects line `h * lines >> 32`); a line holds four buckets, their four check
+bytes (`h & 255`) first and then their 15 bit-history states each (one state per node of the nibble's binary tree, no
+direct counter); a lookup takes the first bucket whose check byte matches, or empties the one whose first state has seen
+the fewest bits (the first on a tie). Each context gives the mixers two inputs: a fixed function of its state (its run,
+signed by the bit) and the stretched state-map probability (state and bit position). The four mixers use 16-bit weights
+(4096 = 1.0; dot products summed per pair of inputs and shifted by 8, updates rounded and saturated: `kolmo_cm_dot16_c`,
+`kolmo_cm_train16_c` in `src/algo/mixer.c` are the specification), every row starting from the prior's row of its mixer.
+The match table has 2^16 to 2^22 slots (the smallest power of two not below `n`), and the match chain keeps the last 2^24
+positions. Model 4 is not raced: `-x` writes `b0 b1 b2` = `dc b4 01` (text contexts) or `dc b4 02`. A frame that holds a
+model-4 stream is version 11; rc3 readers before w4 refuse the stream (unknown model nibble) with `KOLMO_ERR_CORRUPT`.
+`CMI` (codec 17) is the same coder with
 an image model for 8-bit samples: `iw u32 | ih u32 | ich u8` (row width in bytes, bytes before the first pixel,
 interleaved channels), then a size word as above and the coded bytes. CM output is bit-exact across compilers and
 CPUs (integer-only, `-ffp-contract=off`). `FQFAM` (codec 16) is described in *FASTQ family blocks*, `GR6` (codec 26) in
@@ -243,7 +259,8 @@ bytes 37-40). A plan prefix byte `a` other than 0 or 1 is rejected.
 | 3 | `f` = 8, then one byte | `ultra`, text | 1.2.0 |
 | 1, 2, 3 with exact logistic tables | `f` = 8, then one byte whose high nibble is 5, 6 or 7 (model 1, 2, 3) | every `ultra` stream under 2^28 bytes, from 1.2.0-rc2 | 1.2.0-rc2 |
 | image model with exact logistic tables | block codec 17, bit 7 of the channel byte | `ultra`, 8-bit images, from 1.2.0-rc2 | 1.2.0-rc2 |
-| 2, 3 with learning settings and the shared prior | `f` = 8, then one byte whose high nibble is 14 or 15 (model 2, 3), then three bytes | `ultra` streams of codec 7 and 25, and codec 7 graph leaves (`-x -l 2`), from rc3; the frame is version 11 | rc3 |
+| 2, 3 with learning settings and the shared prior | `f` = 8, then one byte whose high nibble is 14 or 15 (model 2, 3), then three bytes | `ultra` streams of codec 7 and 25, and codec 7 graph leaves (`-x -l 2`), from rc3 until w4; the frame is version 11 | rc3 |
+| 4 (subset of model 3's contexts, 16-byte buckets, 16-bit mixer) | `f` = 8, then one byte whose high nibble is 9, three tune bytes and a context mask u32 | `ultra` streams of codec 7 and 25 (not level 1), codec 7 graph leaves, from w4; the frame is version 11 | rc3 (w4) |
 
 The exact logistic tables use the logistic curve round(4096 / (1 + e^(-x/256))) at every x in [-2048, 2047] instead of the
 33 interpolated knots of the earlier models; stretch is its inverse (the smallest x whose squash reaches p). Readers before

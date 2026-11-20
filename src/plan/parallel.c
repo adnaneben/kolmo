@@ -5,7 +5,7 @@ typedef struct { const uint8_t *in; size_t n; uint8_t *out; size_t cap, res; kme
 /* the helper releases its own reservation as soon as it is done: its parent may be waiting for that memory */
 static void *ukt_main(void *a) {
     ukt_arg *u = a; kmem_ctx_set(u->ctx); kmem_tls_job = 1;
-    u->res = cm_compress(u->in, u->n, u->out, u->cap);
+    u->res = cm_compress_auto(u->in, u->n, u->out, u->cap);
     kmem_tls_job = 0; kmem_release(u->resv); return NULL;
 }
 /* ultra, a table (codec 25): the sample's columns, each coded by its own context-mixing model (model 2, model 1 at
@@ -33,14 +33,16 @@ typedef struct { const uint8_t *s; size_t m; const plan_t *pl; int threads, leve
 static void *ukc_main(void *a) { ukc_arg *u = a; kmem_ctx_set(u->ctx); u->res = ultra_columns(u->s, u->m, u->pl, u->threads, u->level, &u->z, &u->zn); return NULL; }
 
 /* ultra: the context-mixing coder models text, logs and CSV directly (column and word contexts), so a text transform is
- * kept only if CM on a 1 MiB transformed sample beats CM on the raw sample. A table (table or transpose plan) is also
+ * kept only if CM on a 256 KiB transformed sample beats CM on the raw sample (codec 7's model 4, as the block will be
+ * coded; 1 MiB before model 4: at one thread the three samples cost more than coding a 1 MB file, and on the files
+ * measured 256 KiB took the same decisions, benchmark/w4/cm/RESULTS.md). A table (table or transpose plan) is also
  * tried as columns, one model per column (codec 25, which codes and decodes the columns in parallel): chosen when the
  * columns beat the raw sample's model-2 size by 1.5% on text (the margin model 3 gains over model 2 on the raw bytes
  * of the tables measured) or come within 0.5% of it on binary data, and beat the kept transform. Sets pl->cmp (and
  * pl->cmpz, the coded block, when the sample is the whole block). */
 static int ultra_keep_transform(const uint8_t *s, size_t n, plan_t *pl, int threads, int level) {
     if (pl->t != T_TBL && pl->t != T_LOG && pl->t != T_WORD && pl->t != T_TP) return 1;
-    size_t m = n < (1u << 20) ? n : (1u << 20); while (m > 0 && s[m - 1] != '\n') m--;
+    size_t m = n < (256u << 10) ? n : (256u << 10); while (m > 0 && s[m - 1] != '\n') m--;
     if (m < 65536) return 1;
     uint8_t *t = malloc(m + TBL_SLACK(m) + 64), *z = malloc(m + m / 8 + 64); int64_t tn = -1;
     if (!t || !z) { free(t); free(z); return 1; }
@@ -58,8 +60,8 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, plan_t *pl, int thre
         ukc_arg c = {s, m, pl, threads > 2 ? threads - 2 : 1, level, NULL, 0, 0, kmem_ctx_get()};
         int par = z2 && !pthread_create(&th, NULL, ukt_main, &u), parc = cols && threads > 2 && !pthread_create(&tc, NULL, ukc_main, &c);
         if (ures && !par) { kmem_release(un); ures = 0; }
-        size_t a = tn > 0 ? cm_compress(t, (size_t)tn, z, m + m / 8 + 64) : 0, b;
-        if (par) { pthread_join(th, NULL); b = u.res; } else b = cm_compress(s, m, z, m + m / 8 + 64);
+        size_t a = tn > 0 ? cm_compress_auto(t, (size_t)tn, z, m + m / 8 + 64) : 0, b;
+        if (par) { pthread_join(th, NULL); b = u.res; } else b = cm_compress_auto(s, m, z, m + m / 8 + 64);
         if (cols) { if (parc) pthread_join(tc, NULL); else ukc_main(&c); }
         free(z2);
         keep = tn > 0 ? a && (!b || a < b) : pl->t != T_TP;
@@ -72,7 +74,7 @@ static int ultra_keep_transform(const uint8_t *s, size_t n, plan_t *pl, int thre
             }
         }
         free(c.z);
-    } else if (pl->t == T_TP) keep = 0;
+    } else keep = 0;   /* the transform does not apply to the sample: plain bytes (under model 4 they won on every text file measured) */
     free(t); free(z);
     return keep;
 }

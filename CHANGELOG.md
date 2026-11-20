@@ -48,6 +48,38 @@ Measurements: `benchmark/w4/bwt/RESULTS.md`.
   dickens; same frames).
 - Result: `ratio` on 1 thread, enwik8 compress 10.1 → 11.0 MB/s, enwik9 9.1 → 12.1 MB/s, dickens 10.4 → 11.5 MB/s;
   on 4 threads, enwik8 16.6 → 19.2 MB/s and decode 47 → 61 MB/s.
+## Unreleased (wave 4, CM lane: `claude/w4-cm-20261118`)
+
+`-x` context mixing rebuilt for speed and memory: codec 7's **model 4** (`benchmark/w4/cm/RESULTS.md`). Format 2,
+container version 11; frames of earlier models still decode. `-x` frames change (codec 7, codec 25 parts, `-x -l 2`
+graph leaves); every other mode is byte-identical.
+
+### Added
+- **Codec 7 model 4 (stream model nibble 9).** Model 3's contexts restricted to a mask carried in the stream (17 for
+  text, logs, CSV and JSON, 15 for other data, chosen by backward elimination on 1 MB samples); 16-byte nibble buckets
+  of 15 one-byte bit-history states, four per 64-byte line behind a 4-byte check word (one cache line per context and
+  nibble, a quarter of model 3's memory per bucket); two inputs per context (state map by state and bit position, and
+  the state's run); a 16-bit mixer (`kolmo_cm_dot16`/`kolmo_cm_train16`: C reference, SSE4.1, AVX2; byte-identical,
+  `tests/test_kernels.c`); mixer and APM rows set when first used; tables of any size (`n / 32` lines per context up
+  to 48 MiB, `n / 64` to 128 MiB, `n / 128` beyond); a match table that follows the stream and a match chain of the last
+  2^24 positions; its own shared priors (`cm_prior4`). Format in `SPEC.md`, *Model 4*. VM, one thread, against zpaq
+  -m5 (full files): Silesia (its 12 files) -7.1%, structured -55%, numeric -22%, text -4.7% (xml -10.6%, reymont -8.6%, enwik8 -5.0%, webster -4.1%, dickens -0.7%), logs -14.0%,
+  CSV -46% and -60%, x-ray -2.9%, mr -11.0%, sao -45.6%, nci -15.6%, ooffice -5.0%, samba -3.8%, osdb -1.6%, mozilla
+  +1.2%; compression 0.98-3.3x and decompression 0.97-9.8x zpaq's speed; peak memory 0.48-1.58x zpaq's (was 5-7 GB on
+  every file of 4 MB or more).
+- `tests/test_cm4.c` (`make check-cm4`, in `check-rc`): model-4 round trips, the same stream at every kernel level,
+  the declared decode working set, damaged headers and streams under AddressSanitizer.
+- `benchmark/w4/cm/`: `cmx` (codes one file with one model, times both ways), `cmprior4` (trains the priors),
+  `summarize.py`.
+
+### Changed
+- **`-x` writes model 4** for codec 7 streams and codec-25 parts (level 1 keeps model 1). Model 4 is not raced (the
+  race gained it 0.05-0.15% for twice the encode time of a 1 MB stream at one thread); it takes one preset.
+- **The planner's `-x` transform check codes 256 KiB samples with model 4** (was 1 MiB with model 2): the same
+  decision on every file measured, a third of the time on 1 MB files; a transform that does not apply to the sample
+  leaves the block plain (a 1 MB log slice was 9% larger when it kept the transform untested).
+- Context mixing, every model: the match model compares 8 bytes at a time and prefetches its hash slot one bit
+  ahead; model 4 hashes only the contexts it uses. Models 1-3 write the same bytes as before.
 
 ## Unreleased (rc3 wave 2, regress lane: `claude/rc3w2-regress-20261117`)
 

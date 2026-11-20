@@ -10,6 +10,10 @@ void kolmo_planes_split_sse2(const uint8_t *in, size_t rows, unsigned w, int del
 void kolmo_planes_merge_sse2(const uint8_t *in, size_t rows, unsigned w, int delta, uint8_t *out);
 void kolmo_cm_dot_sse41(const int32_t *x, int n, const int32_t *w1, const int32_t *w2, const int32_t *w3, const int32_t *w4, int64_t s[4]);
 void kolmo_cm_dot_avx2(const int32_t *x, int n, const int32_t *w1, const int32_t *w2, const int32_t *w3, const int32_t *w4, int64_t s[4]);
+void kolmo_cm_dot16_sse41(const int16_t *x, int n, const int16_t *w1, const int16_t *w2, const int16_t *w3, const int16_t *w4, int32_t s[4]);
+void kolmo_cm_dot16_avx2(const int16_t *x, int n, const int16_t *w1, const int16_t *w2, const int16_t *w3, const int16_t *w4, int32_t s[4]);
+void kolmo_cm_train16_sse41(const int16_t *x, int n, int16_t *w1, int16_t *w2, int16_t *w3, int16_t *w4, const int e[4]);
+void kolmo_cm_train16_avx2(const int16_t *x, int n, int16_t *w1, int16_t *w2, int16_t *w3, int16_t *w4, const int e[4]);
 void kolmo_cm_train_sse41(const int32_t *x, int n, int32_t *w1, int32_t *w2, int32_t *w3, int32_t *w4, const int e[4], int shift);
 void kolmo_cm_train_avx2(const int32_t *x, int n, int32_t *w1, int32_t *w2, int32_t *w3, int32_t *w4, const int e[4], int shift);
 void kolmo_med8_rows_sse2(const uint8_t *r, size_t W, unsigned C, uint8_t *p, size_t nrows);

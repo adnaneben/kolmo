@@ -51,6 +51,8 @@ noise. CPU time on this VM moves by up to 25% between passes, so a single-pass s
 
 | Cost | What it buys | Why accepted |
 |---|---|---|
+| `-x` model 4 (w4): webster +0.7%, mozilla +0.6%, dickens +0.8%, samba +0.5%, owid-co2 +1.5%, reymont +1.5% against model 3's `-x` (enwik8 -0.2%, osdb -2.6%, nci -4.1%, xml and loghub within 0.1%; model 3 measured on the M5) | 2-3x faster both ways at one thread on this VM; peak memory 5-7 GB -> 0.15-1.6 GB (0.5-1.6x zpaq -m5) | the owner's wave-4 target is zpaq's speed within about 1.5x its memory; the text group is -4.7% against zpaq -m5 (target -5%), see `benchmark/w4/cm/RESULTS.md` |
+| `-x` model 4 is not raced | 2x faster encoding of 1 MB streams at one thread | the race gained model 4 0.05-0.15% on 1 MB samples |
 | Decimal float64 files: encode 1.7x to 3x, decode 1.2x to 1.9x at balanced | 35 to 57% smaller (26 holdout files: 27.4 -> 13.5 MB) | xz -9 needs 18.9 MB for the same files |
 | Silesia nci at ratio: decode 120 -> 67 MB/s, encode +1.0 s | 20% smaller (1,533,927 -> 1,225,386) | Ratio mode is about size; the block sorter was already accepted from a 3% gain |
 | lfw_subset.npy, skl_digits at ratio: decode about 2x | 16 to 19% smaller | Same rule |
