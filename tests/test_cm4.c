@@ -80,6 +80,20 @@ int main(void) {
     CHECK(cm_decompress(d, zn, out, 50000) != 0 && !cm_stream_need(d, zn, 50000), "mask bit 30 accepted");
     memcpy(d, z, zn); d[7] = 3;                         /* prior 3 does not exist */
     CHECK(cm_decompress(d, zn, out, 50000) != 0 && !cm_stream_need(d, zn, 50000), "prior 3 accepted");
+    /* the model nibble registry (SPEC.md): every unassigned nibble is refused, and nibbles 14/15 refuse b2 values other
+     * than 0 and 1 (W3 prior's token-shape model wrote 15 with bit 7 of b2; it must never decode as anything here) */
+    for (int nb = 0; nb < 16; nb++) {
+        if (nb == 3 || nb == 5 || nb == 6 || nb == 7 || nb == 9 || nb == 14 || nb == 15) continue;
+        memcpy(d, z, zn); d[4] = (uint8_t)(nb << 4 | (d[4] & 15));
+        CHECK(cm_decompress(d, zn, out, 50000) != 0 && !cm_stream_need(d, zn, 50000), "reserved model nibble %d accepted", nb);
+    }
+    for (int nb = 14; nb <= 15; nb++) {
+        const uint8_t b2s[] = {2, 3, 0x80, 0x81, 0xff};
+        for (size_t k = 0; k < sizeof b2s; k++) {
+            memcpy(d, z, zn); d[4] = (uint8_t)(nb << 4 | 3); d[7] = b2s[k];
+            CHECK(cm_decompress(d, zn, out, 50000) != 0 && !cm_stream_need(d, zn, 50000), "nibble %d with b2 %#x accepted", nb, b2s[k]);
+        }
+    }
     for (int it = 0; it < 200; it++) {                  /* altered bytes and truncations: any result, no memory error */
         memcpy(d, z, zn); size_t cut = it % 2 ? zn : 12 + rnd() % (zn - 12);
         for (int k = 0; k < 3; k++) d[12 + rnd() % (zn - 12)] ^= (uint8_t)(1 + rnd() % 255);
