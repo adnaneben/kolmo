@@ -385,6 +385,45 @@ static size_t kz_parse_lazy(const uint8_t *in, size_t n, const kz_par *P, size_t
     free(M.head); free(M.chain);
     *anchor_out = anchor; *err = 0; return ns;
 }
+/* the minimum length of a new offset for the lazy parse, chosen per block: four 32 KiB slices are parsed with 5, 6 and 7
+ * and their streams' entropy estimated (tables favour 6-7; 4 is not tried: it would need 4-byte hash keys, and with
+ * them the estimate chose it where it lost) */
+static uint64_t kz_hcost(const uint32_t *f, int k) {
+    uint32_t s = 0; for (int i = 0; i < k; i++) s += f[i];
+    if (!s) return 0;
+    uint64_t c = 0; const uint32_t ws = ko_w(s);
+    for (int i = 0; i < k; i++) if (f[i]) c += (uint64_t)f[i] * (ws - ko_w(f[i])) + 4 * 256;   /* and about 4 bits of table */
+    return c;
+}
+static uint64_t kz_est(const uint8_t *in, size_t n, const kz_seq *S, size_t ns, size_t anchor) {
+    uint32_t lit[256] = {0}, ll[72] = {0}, ml[72] = {0}, of[32] = {0}, r[3] = {1, 4, 8}, ex; uint64_t xb = 0; size_t p = 0; int nb;
+    for (size_t k = 0; k < ns; k++) {
+        for (uint32_t i = 0; i < S[k].ll; i++) lit[in[p + i]]++;
+        ll[kz_lcode(S[k].ll, &ex, &nb)]++; xb += (uint64_t)nb;
+        ml[kz_lcode(S[k].ml - 4, &ex, &nb)]++; xb += (uint64_t)nb;
+        unsigned c = ko_ofc(S[k].off, r); of[c]++; if (c >= 3) xb += c - 3;
+        ko_rep(r, S[k].off); p += S[k].ll + S[k].ml;
+    }
+    for (size_t i = anchor; i < n; i++) lit[in[i]]++;
+    return kz_hcost(lit, 256) + kz_hcost(ll, 72) + kz_hcost(ml, 72) + kz_hcost(of, 32) + xb * 256;
+}
+static size_t kz_minm(const uint8_t *in, size_t n, const kz_par *P, kz_seq *S) {
+    const size_t sl = 32u << 10;
+    if (n < 4 * sl) return 5;
+    kz_par Q = *P; Q.hlog = 15; Q.clog = 15;
+    uint64_t best = UINT64_MAX; size_t bm = 5;
+    for (size_t m = 5; m <= 7; m++) {
+        uint64_t t = 0;
+        for (int q = 0; q < 4; q++) {
+            const uint8_t *a = in + (size_t)q * (n - sl) / 3; size_t anc; int err;
+            size_t ns = kz_parse_lazy(a, sl, &Q, m, S, &anc, &err);
+            if (err) return 5;
+            t += kz_est(a, sl, S, ns, anc);
+        }
+        if (t < best) { best = t; bm = m; }
+    }
+    return bm;
+}
 /* one sequence: literals in[anchor..start), then ml bytes at off; statistics and repeat offsets follow */
 static void ko_emit(ko_st *T, const uint8_t *in, kz_seq *S, size_t *ns, size_t anchor, size_t start, uint32_t ml, uint32_t off, uint32_t r[3]) {
     uint32_t ll = (uint32_t)(start - anchor), ex; int nb;
@@ -476,7 +515,7 @@ size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap
     const kz_par *LV = &KLZH_LV[level];
     size_t ns = level <= 3 ? kz_parse_dfast(in, n, LV->hlog, LV->clog, LV->skip, 4, S, &anchor, &err)
               : level >= 7 ? ko_parse(in, n, &KO_LV[level], S, &anchor, &err)
-              : level >= 5 ? kz_parse_lazy(in, n, LV, 5, S, &anchor, &err) : kz_parse(in, n, LV, S, &anchor, &err);
+              : level >= 5 ? kz_parse_lazy(in, n, LV, kz_minm(in, n, LV, S), S, &anchor, &err) : kz_parse(in, n, LV, S, &anchor, &err);
     uint8_t *lit = malloc(n + 16), *cd = malloc(3 * (ns + 1)), *xb = malloc(ns * 12 + 64), *tmp = malloc(kolmo_khuf_bound(n) + 64);
     size_t r = 0;
     if (err || !lit || !cd || !xb || !tmp) goto out;
