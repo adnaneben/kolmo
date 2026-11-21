@@ -224,7 +224,9 @@ int kolmo_klz_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
             if (ie - ip < 3) return -1;
             off = (size_t)ip[0] | (size_t)ip[1] << 8 | ((size_t)ip[2] << 16 & (size_t)(0 - (t >> 7)));
             ip += 2 + (t >> 7); ml = (t >> 3) & 15;
-            if (ml < 15 && off >= 16 && off <= (size_t)(op - out) && oe - op >= 32) { memcpy(op, op - off, 16); memcpy(op + 16, op - off + 16, 4); op += ml + 4; continue; }
+            if (ml < 15 && off >= 8 && off <= (size_t)(op - out) && oe - op >= 32) {   /* short match: 3 x 8 bytes (period >= 8) */
+                const uint8_t *m = op - off; memcpy(op, m, 8); memcpy(op + 8, m + 8, 8); memcpy(op + 16, m + 16, 8); op += ml + 4; continue;
+            }
         } else {
             if (ll == 7) { unsigned b; do { if (ip >= ie) return -1; b = *ip++; ll += b; } while (b == 255); }
             if (ll > (size_t)(ie - ip) || ll > (size_t)(oe - op)) return -1;
