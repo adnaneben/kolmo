@@ -555,6 +555,8 @@ static size_t ko_parse(const uint8_t *in, size_t n, const ko_par *P, int v2, kz_
 static const ko_par KO_LV[10] = {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {18, 22, 8, 32, 128, 30, 0}, {19, 23, 24, 64, 0, 30, 1}, {20, 24, 128, 512, 0, 30, 1}};
 
 size_t kolmo_klzh_bound(size_t n) { return n + n / 64 + 1024; }
+#define KZ_SEG (256u << 10)   /* KLZH2: input span of the khuf tables */
+#define KZ_MAXSEG 4096
 #ifndef KZ_RANS_PCT
 #define KZ_RANS_PCT 97   /* KLZH2: rANS only when it is below this % of the khuf size (it decodes about 2x slower per symbol) */
 #endif
@@ -573,8 +575,10 @@ static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
     if (err || !lit || !cd || !xb || !tmp) goto out;
     uint8_t *llc = cd, *mlc = cd + ns, *ofc = cd + 2 * ns; size_t nl = 0; const uint8_t *ip = in;
     uint32_t rep[3] = {1, 4, 8}; kz_bw w = {0, 0, xb, xb + ns * 12 + 64};
+    size_t sgl[KZ_MAXSEG + 1], sgs[KZ_MAXSEG + 1], nseg = 0;   /* KLZH2: literal and sequence counts at each KZ_SEG of input */
     for (size_t k = 0; k < ns; k++) {
         uint32_t ex; int nb;
+        while (v2 && (size_t)(ip - in) >= nseg * KZ_SEG && nseg < KZ_MAXSEG) { sgl[nseg] = nl; sgs[nseg] = k; nseg++; }
         memcpy(lit + nl, ip, S[k].ll); nl += S[k].ll; ip += S[k].ll + S[k].ml;
         llc[k] = (uint8_t)kz_lcode(S[k].ll, &ex, &nb); if (kz_bput(&w, ex, nb)) goto out;
         mlc[k] = (uint8_t)kz_lcode(S[k].ml - mmin, &ex, &nb); if (kz_bput(&w, ex, nb)) goto out;
@@ -590,7 +594,16 @@ static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
     size_t o = kz_put_uv(out, ns); o += kz_put_uv(out + o, nl);
     const uint8_t *st[4] = {lit, llc, mlc, ofc}; size_t sn[4] = {nl, ns, ns, ns};
     for (int q = 0; q < 4; q++) {
-        size_t z = sn[q] ? kolmo_khuf_compress_chunks(st[q], sn[q], tmp, kolmo_khuf_bound(n) + 64) : 0;
+        size_t z = 0;
+        if (v2 && nseg > 1 && sn[q]) {   /* KLZH2: khuf chunks cut where the input crosses each KZ_SEG (local tables, as zstd's
+                                            blocks; the chunk framing already allows any chunk size up to KHUF_BLOCK_MAX) */
+            const size_t *b = q ? sgs : sgl, cap2 = kolmo_khuf_bound(n) + 64;
+            for (size_t g = 0; g < nseg; g++) {
+                size_t a = b[g], e = g + 1 < nseg ? b[g + 1] : sn[q];
+                if (e > a) { size_t y = kolmo_khuf_compress_chunks(st[q] + a, e - a, tmp + z, cap2 - z); if (!y) { z = 0; break; } z += y; }
+            }
+        }
+        if (!z && sn[q]) z = kolmo_khuf_compress_chunks(st[q], sn[q], tmp, kolmo_khuf_bound(n) + 64);
         if (sn[q] && !z) goto out;
         uint8_t mode = 0; const uint8_t *src = tmp;
         if (v2 && q && sn[q] && kolmo_krans_bound(sn[q]) <= kolmo_khuf_bound(n) + 64) {   /* KLZH2: rANS where it is smaller */
