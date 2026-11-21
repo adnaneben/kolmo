@@ -36,7 +36,7 @@ int main(void) {
       while (p + 80 < n) { int w = rnd() % 3 ? 69 : 21; for (int j = 0; j < w; j++) in[p++] = (uint8_t)(j % 10 == 5 ? '.' : j % 10 < 3 ? ' ' : '0' + rnd() % 10); in[p++] = '\n'; }
       n = p; kolmo_params P = {KOLMO_FAST, 0, 1, 0, 1};
       int64_t zn = kolmo_compress(in, n, z, n + (1u << 20), &P);
-      if (zn <= 0 || z[4] != 8 || kolmo_decompress(z, (size_t)zn, b, n, 1) != (int64_t)n || memcmp(in, b, n)) { printf("CONTAINER FAIL zn=%lld ver=%d\n", (long long)zn, zn > 4 ? z[4] : -1); fails++; }
+      if (zn <= 0 || z[4] != 12 || kolmo_decompress(z, (size_t)zn, b, n, 1) != (int64_t)n || memcmp(in, b, n)) { printf("CONTAINER FAIL zn=%lld ver=%d\n", (long long)zn, zn > 4 ? z[4] : -1); fails++; }
       else printf("container: %zu -> %lld bytes, format version %d\n", n, (long long)zn, z[4]);
       free(in); free(z); free(b); }
     printf(fails ? "LINES TESTS FAILED (%d)\n" : "LINES TESTS PASSED (%d inputs coded, 200 damaged copies each)\n", fails ? fails : coded);

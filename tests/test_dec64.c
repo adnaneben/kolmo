@@ -48,7 +48,7 @@ int main(void) {
                 memcpy(in + h + shift + at * 4, &fv, 4);
             } else memcpy(in + h + shift + at * 8, &v, 8);
         }
-        size_t zn = kg_encode_dec64(&cx, C_ZSTD, 3, in, n, cols && f32 ? cols | KG_DEC_F32 : cols, h, z, n + 4096);
+        size_t zn = kg_encode_dec64(&cx, R_LZH, 3, in, n, cols && f32 ? cols | KG_DEC_F32 : cols, h, z, n + 4096);
         if (!zn) { rejected++; free(in); free(z); free(out); continue; }
         coded++;
         memset(out, 0xA5, n);

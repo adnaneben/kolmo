@@ -63,7 +63,6 @@ static size_t fast_sample_bytes(const uint8_t *src, size_t len, const plan_t *pl
     job.slot = slot_size((uint32_t)len, job.codec);
     if (pthread_mutex_init(&job.wmu, NULL)) return 0;
     atomic_init(&job.next, 0);
-    atomic_init(&job.newmodes, 0);
     atomic_init(&job.err, 0);
     compress_worker(&job);
     pthread_mutex_destroy(&job.wmu);

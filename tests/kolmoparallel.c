@@ -38,11 +38,11 @@ int main(void) {
     uint8_t noise[4096]; memset(noise, 'x', sizeof noise);
     kolmo_params p = {KOLMO_FAST, 0, 1, 65536, 1};
     size_t bound = kolmo_bound(n, &p); uint8_t *ref = malloc(bound), *other = malloc(bound); assert(ref && other);
-    int64_t cn = kolmo_compress(input, n, ref, bound, &p); assert(cn > 0 && ref[4] == 5);
+    int64_t cn = kolmo_compress(input, n, ref, bound, &p); assert(cn > 0 && ref[4] == 12);   /* every frame is version 12 */
     p.threads = 4;
     assert(kolmo_compress(input, n, other, bound, &p) == cn && !memcmp(ref, other, cn));
     p.threads = 1; p.transforms = 0;
-    int64_t nn = kolmo_compress(noise, sizeof noise, other, bound, &p); assert(nn > 0 && other[4] == 3);
+    int64_t nn = kolmo_compress(noise, sizeof noise, other, bound, &p); assert(nn > 0 && other[4] == 12);
     atomic_int start; atomic_init(&start, 0);
     call calls[4] = {
         {input, ref, n, cn, 1, 1, &start}, {input, ref, n, cn, 2, 1, &start},

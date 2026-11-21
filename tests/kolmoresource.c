@@ -86,26 +86,43 @@ static void formula_thread_failure(void) {
     }
     free(text); zs_trim();
 }
+/* Frames of earlier versions (1-11, library codecs) are refused with KOLMO_ERR_LEGACY by every entry point that reads
+ * a header: the golden frames of versions 1-5, and a frame of this build with its version byte set to 11 (the header
+ * checksum is not checked first: the version decides). */
 static void legacy_frames(void) {
     const uint8_t *frames[] = {legacy_v1, legacy_v2, legacy_v3, legacy_v4, legacy_v5};
     size_t sizes[] = {sizeof legacy_v1, sizeof legacy_v2, sizeof legacy_v3, sizeof legacy_v4, sizeof legacy_v5};
-    size_t cap = 1 << 20; uint8_t *expected = malloc(cap), *back = malloc(cap); assert(expected && back);
+    size_t cap = 1 << 20; uint8_t *back = malloc(cap); assert(back);
     for (int v = 1; v <= 5; v++) {
-        size_t n;
-        if (v <= 3) { n = strlen("legacy fixture\n"); memcpy(expected, "legacy fixture\n", n); }
-        else {
-            n = snprintf((char *)expected, cap, "entity,index,signal\n");
-            for (int i = 0; i < 20000; i++) {
-                int x = i % 100, y = v == 4 ? 200 + 5 * x : x * x * x;
-                n += snprintf((char *)expected + n, cap - n, "A%d,%d,%d\n", i / 100, x, y);
-            }
-        }
-        for (int threads = 1; threads <= 4; threads += 3) {
-            assert(kolmo_decompress(frames[v - 1], sizes[v - 1], back, cap, threads) == (int64_t)n);
-            assert(!memcmp(back, expected, n));
-        }
+        for (int threads = 1; threads <= 4; threads += 3)
+            assert(kolmo_decompress(frames[v - 1], sizes[v - 1], back, cap, threads) == KOLMO_ERR_LEGACY);
+        assert(kolmo_original_size(frames[v - 1], sizes[v - 1]) == KOLMO_ERR_LEGACY);
+        assert(kolmo_check_frame(frames[v - 1], sizes[v - 1], NULL) == KOLMO_ERR_LEGACY);
     }
-    free(expected); free(back);
+    free(back);
+}
+static void legacy_version_byte(void) {
+    static const char text[] = "entity,index,signal\nA0,1,2\nA0,2,4\nA0,3,6\nA1,4,8\nA1,5,10\n";
+    const size_t n = sizeof text - 1;
+    for (int mode = KOLMO_RT; mode <= KOLMO_ULTRA; mode++) {
+        kolmo_params p = {(kolmo_mode)mode, 0, 1, 0, 1};
+        size_t cap = kolmo_bound(n, &p); uint8_t *f = malloc(cap), back[256]; assert(f);
+        int64_t z = kolmo_compress((const uint8_t *)text, n, f, cap, &p);
+        assert(z > 32 && f[4] == 12);
+        assert(kolmo_decompress(f, (size_t)z, back, sizeof back, 1) == (int64_t)n && !memcmp(back, text, n));
+        f[4] = 11;
+        assert(kolmo_decompress(f, (size_t)z, back, sizeof back, 1) == KOLMO_ERR_LEGACY);
+        assert(kolmo_decompress_limited(f, (size_t)z, back, sizeof back, 1, NULL) == KOLMO_ERR_LEGACY);
+        assert(kolmo_original_size(f, (size_t)z) == KOLMO_ERR_LEGACY);
+        assert(kolmo_check_frame(f, (size_t)z, NULL) == KOLMO_ERR_LEGACY);
+        assert(kolmo_read_range(f, (size_t)z, 0, 4, back, 1) == KOLMO_ERR_LEGACY);
+        assert(kolmo_decode_memory(f, (size_t)z) == KOLMO_ERR_LEGACY);
+        for (int v = 1; v <= 11; v++) { f[4] = (uint8_t)v; assert(kolmo_decompress(f, (size_t)z, back, sizeof back, 1) == KOLMO_ERR_LEGACY); }
+        f[4] = 13; assert(kolmo_decompress(f, (size_t)z, back, sizeof back, 1) == KOLMO_ERR_CORRUPT);
+        f[4] = 0; assert(kolmo_decompress(f, (size_t)z, back, sizeof back, 1) == KOLMO_ERR_CORRUPT);
+        free(f);
+    }
+    assert(!strcmp(kolmo_strerror(KOLMO_ERR_LEGACY), "written by an earlier Kolmo (1.x or a release candidate) that used library codecs; this build reads only Kolmo-native frames"));
 }
 static void seekable_files(void) {
     uint8_t data[12000], restored[sizeof data];
@@ -154,6 +171,7 @@ int main(void) {
     pool_failures();
     formula_thread_failure();
     legacy_frames();
+    legacy_version_byte();
     seekable_files();
     wide_transpose();
     uint8_t input[8192], output[8192], sentinel[64]; memset(input, 'A', sizeof input);

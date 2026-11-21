@@ -7,7 +7,7 @@
 #   and $EXTRA/<base>
 set -u
 W=${W:?}; OUT=${OUT:?}; EXTRA=${EXTRA:-}; B=$PWD/build/fuzzcov; mkdir -p "$OUT/raw"
-ALL=${TARGETS:-"fuzz_decompress fuzz_decompress_nocm fuzz_limited_nocm fuzz_dict_nocm fuzz_stream_nocm fuzz_stream_limited_nocm
+ALL=${TARGETS:-"fuzz_decompress fuzz_decompress_nocm fuzz_limited_nocm fuzz_stream_nocm fuzz_stream_limited_nocm
      fuzz_roundtrip fuzz_roundtrip_nocm fuzz_nplane fuzz_codecs fuzz_codecs_nocm fuzz_ext_nocm fuzz_profile_nocm fuzz_krc fuzz_kbcx fuzz_fastq"}
 for t in $ALL; do
   base=${t%_nocm}

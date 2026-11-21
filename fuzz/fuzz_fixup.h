@@ -1,7 +1,7 @@
 /* Fuzz-only helpers: recompute the checksums that guard headers and sections, so that mutations reach the parsers
- * behind them (the frame header CRC, the KEXT trailer and section CRCs, the CRC and id of a KPF1 profile, the header
+ * behind them (the frame header CRC, the KEXT trailer and section CRCs, the header
  * CRC of the table frame inside a DDP1 section). Block checksums (over decoded bytes) are left alone.
- * Needs kolmo_crc32c (public) and, for profiles, kolmo_xxh3 (include src/kolmo.c first). */
+ * Needs kolmo_crc32c (public). */
 #ifndef KOLMO_FUZZ_FIXUP_H
 #define KOLMO_FUZZ_FIXUP_H
 #include <stdint.h>
@@ -41,12 +41,4 @@ static void fz_fix_kext(uint8_t *s, size_t n) {
     fz_p32(t + 20, kolmo_crc32c(0, t, 20));
 }
 
-#ifdef KP_HDR
-/* KPF1: id (bytes 8..11) = low 32 bits of XXH3-64 of the sections, then the trailing CRC-32C */
-static void fz_fix_profile(uint8_t *s, size_t n) {
-    if (n < KP_HDR + 4 || memcmp(s, "KPF1", 4)) return;
-    fz_p32(s + 8, (uint32_t)kolmo_xxh3(s + KP_HDR, n - 4 - KP_HDR, KP_ID_SEED));
-    fz_p32(s + n - 4, kolmo_crc32c(0, s, n - 4));
-}
-#endif
 #endif

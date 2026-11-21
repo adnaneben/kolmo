@@ -204,9 +204,10 @@ static int roundtrip(const buf *b, const char *what, int expect_v11) {
         int64_t z = kolmo_compress(b->p, b->n, f, cap, &p1), z3 = kolmo_compress(b->p, b->n, g, cap, &p3);
         if (z <= 0 || z3 != z || memcmp(f, g, (size_t)z)) FAIL("%s mode %d: threads change the frame", what, (int)modes[mi]);
         if (kolmo_decompress(f, (size_t)z, o, b->n, 3) != (int64_t)b->n || memcmp(o, b->p, b->n)) FAIL("%s mode %d: round trip", what, (int)modes[mi]);
-        if (expect_v11 && f[4] != 11) FAIL("%s mode %d: version %d, expected 11", what, (int)modes[mi], f[4]);
-        if (f[4] == 11) { f[4] = 10; uint32_t hc = kolmo_crc32c(0, f, 28); hc = kolmo_crc32c(hc, f + HDR, (size_t)get32(f + 20) * IDX); put32(f + 28, hc);
-            if (expect_v11 && kolmo_decompress(f, (size_t)z, o, b->n, 1) >= 0) FAIL("%s mode %d: version 11 content read as version 10", what, (int)modes[mi]); }
+        (void)expect_v11;                                      /* every frame is version 12 now */
+        if (f[4] != 12) FAIL("%s mode %d: version %d, expected 12", what, (int)modes[mi], f[4]);
+        { f[4] = 10; uint32_t hc = kolmo_crc32c(0, f, 28); hc = kolmo_crc32c(hc, f + HDR, (size_t)get32(f + 20) * IDX); put32(f + 28, hc);
+          if (kolmo_decompress(f, (size_t)z, o, b->n, 1) != KOLMO_ERR_LEGACY) FAIL("%s mode %d: a frame labelled version 10 was not refused as legacy", what, (int)modes[mi]); }
         free(f); free(g); free(o);
     }
     return 0;

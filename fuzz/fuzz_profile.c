@@ -1,6 +1,5 @@
-/* libFuzzer target for trained profiles (KPF1, src/plan/profile.c), profile frames (CZN1 with a profile id and the
- * compact CZC1 form, decoded with the profile's dictionaries) and the --target parser, calibration table and cost
- * formula evaluator (src/plan/target.c).
+/* libFuzzer target for the --target parser, calibration table and cost formula evaluator (src/plan/target.c), and the
+ * trained-profile calls, which this build keeps as stubs (profiles needed library codecs; container version 12).
  *
  * Input: sel u8 | L u16 | profile[L] | rest.
  *   sel bit 0: recompute the profile's id and CRC (fuzz/fuzz_fixup.h) so that mutations reach the section parsers.
@@ -36,42 +35,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (size < 3 || size > (4u << 20)) return 0;
     uint8_t sel = data[0];
     if (sel & 4) { fz_target(data + 1, size - 1); return 0; }
-    size_t L = (size_t)data[1] | (size_t)data[2] << 8;
     data += 3; size -= 3;
-    if (L > size) L = size;
-    uint8_t *pb = malloc(L ? L : 1), *rest = malloc(size - L + 1);
-    if (!pb || !rest) { free(pb); free(rest); return 0; }
-    memcpy(pb, data, L); memcpy(rest, data + L, size - L);
-    size_t rn = size - L;
-    if (sel & 1) fz_fix_profile(pb, L);
-    if (sel & 2) fz_fix_frame(rest, rn);
+    /* trained profiles are not available in this build: whatever the bytes, loading reports KOLMO_ERR_UNSUPPORTED, and
+     * the frame calls must not crash (a frame of an earlier version is KOLMO_ERR_LEGACY) */
     kolmo_profile *P = NULL;
-    if (kolmo_profile_load(pb, L, &P) == 0 && P) {
-        char desc[2048]; kolmo_profile_describe(P, desc, (sel & 8) ? 16 : sizeof desc);
-        kolmo_params kp; kolmo_profile_params(P, &kp); (void)kolmo_profile_id(P);
-        uint8_t small[1 << 16]; kolmo_decompress_profile(rest, rn, small, sizeof small, 1, P);
-        int64_t orig = kolmo_original_size(rest, rn);
-        if (orig >= 0 && orig <= (int64_t)(16u << 20)) {
-            uint8_t *o = malloc((size_t)orig + 1);
-            if (o) kolmo_decompress_profile(rest, rn, o, (size_t)orig, 1 + (sel >> 7), P);
-            free(o);
-        }
-        /* round trip with the profile (never ultra: too slow for fuzzing) */
-        size_t m = rn > 16384 ? 16384 : rn;
-        kolmo_params p = kp; if (p.mode == KOLMO_ULTRA || p.mode > KOLMO_ULTRA) p.mode = KOLMO_FAST;
-        p.threads = 1; if (p.level < 0 || p.level > 22) p.level = 0;
-        size_t cap = kolmo_bound(m, &p) + 1024; uint8_t *c = malloc(cap), *r = malloc(m + 1);
-        if (c && r && m) {
-            int64_t k = kolmo_compress_profile(rest, m, c, cap, &p, P);
-            if (k > 0) {
-                int64_t d = kolmo_decompress_profile(c, (size_t)k, r, m, 1, P);
-                if (d != (int64_t)m || memcmp(r, rest, m)) __builtin_trap();   /* lossy round trip with a loaded profile */
-            }
-        }
-        free(c); free(r);
-        kolmo_profile_free(P);
-    }
-    uint32_t id; kolmo_frame_profile_id(rest, rn, &id);
-    free(pb); free(rest);
+    if (kolmo_profile_load(data, size, &P) != KOLMO_ERR_UNSUPPORTED || P) __builtin_trap();
+    uint8_t small[1 << 16];
+    if (kolmo_decompress_profile(data, size, small, sizeof small, 1, NULL) != KOLMO_ERR_UNSUPPORTED) __builtin_trap();
+    uint32_t id; int r = kolmo_frame_profile_id(data, size, &id);
+    if (r > 0) __builtin_trap();                                   /* no frame of this build uses a profile */
     return 0;
 }

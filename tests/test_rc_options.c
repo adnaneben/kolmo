@@ -57,10 +57,10 @@ int main(void) {
     for(int np=2;np<=8;np*=2)for(int L=1;L<=70000;L=L*7+3){
         size_t n=(size_t)np*(size_t)L,cap=n+n/8+4096;uint8_t *a=malloc(n),*z=malloc(cap),*b=malloc(n);if(!a||!z||!b)return 13;
         for(int k=0;k<np;k++)for(int i=0;i<L;i++){uint64_t x=rv();a[(size_t)k*L+i]=k==np-1?(uint8_t)7:k==0?(uint8_t)x:(uint8_t)(x%5==0?x>>8:0);}
-        for(int c=0;c<2;c++){int codec=c?C_RANS:C_HUF;size_t zn=leaf_compress_planes(codec,a,n,np,z,cap);if(!zn)return 14;
-            memset(b,0xa5,n);int r=codec==C_HUF?huf_decompress_all(z,zn,b,n):rans_decompress_all(z,zn,b,n);
+        for(int c=0;c<2;c++){int codec=c?C_RANS:C_KHUF;size_t zn=leaf_compress_planes(codec,a,n,np,z,cap);if(!zn)return 14;   /* khuf (27) replaced zstd's HUF */
+            memset(b,0xa5,n);int r=codec==C_KHUF?kolmo_khuf_decompress_chunks(z,zn,b,n):rans_decompress_all(z,zn,b,n);
             if(r||memcmp(a,b,n))return 15;
-            if(zn>1){int r2=codec==C_HUF?huf_decompress_all(z,zn-1,b,n):rans_decompress_all(z,zn-1,b,n);if(!r2)return 16;}
+            if(zn>1){int r2=codec==C_KHUF?kolmo_khuf_decompress_chunks(z,zn-1,b,n):rans_decompress_all(z,zn-1,b,n);if(!r2)return 16;}
             if(codec==C_RANS&&L<=(int)RANS_CHUNK){for(int q=1;q<=32;q+=31){z[zn-q]^=4;if(!rans_decompress_all(z,zn,b,n))return 18;z[zn-q]^=4;}}   /* one-symbol chunk: its four states must stay R64_L */
             aligned++;}
         if(rans_compress_all(a+(size_t)(np-1)*L,(size_t)L,z,cap))return 17;          /* whole leaf: unchanged refusal */

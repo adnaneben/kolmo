@@ -22,7 +22,7 @@ static int check(const char *name, const uint8_t *in, size_t n, int want25) {
     int c25 = 0; uint32_t nb = 0;                            /* block index: 32-byte header, then 16 bytes per block (codec at 12) */
     while (32 + 16 * (size_t)(nb + 1) <= (size_t)a && nb < 64) { if (z1[32 + 16 * nb + 12] == C_CMP) c25 = 1; uint32_t len; memcpy(&len, z1 + 32 + 16 * nb, 4); nb++; if (len == n) break; }
     if (want25 && !c25) { printf("%s: codec 25 not chosen\n", name); fails++; }
-    if (c25 && z1[4] != 11) { printf("%s: codec 25 without container version 11\n", name); fails++; }
+    if (z1[4] != 12) { printf("%s: container version %d, want 12\n", name, z1[4]); fails++; }
     printf("%s: %zu -> %lld bytes, codec 25 %s\n", name, n, (long long)a, c25 ? "yes" : "no");
 done:
     free(z1); free(z4); free(out);

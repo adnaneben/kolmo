@@ -151,7 +151,7 @@ int main(void) {
             }
             for (int b = 0; b < w; b++) in[h + q * (size_t)w + (size_t)b] = (uint8_t)(v >> (8 * b));
         }
-        size_t zn = kg_encode_num(&cx, C_ZSTD, 3, in, n, w, h, z, n + 4096);
+        size_t zn = kg_encode_num(&cx, R_LZH, 3, in, n, w, h, z, n + 4096);
         if (zn) {
             arrays++; coded[kind]++; memset(out, 0xA5, n);
             if (kg_decode(&cx, z, zn, out, n) || memcmp(in, out, n)) { if (fails++ < 20) printf("ROUND TRIP FAIL: array %d, width %d, kind %d, %zu bytes\n", it, w, kind, n); }

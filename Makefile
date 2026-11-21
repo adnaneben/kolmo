@@ -173,7 +173,8 @@ build/test-fqfam-asan: tests/test_fqfam.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUD
 check-fqfam: build/test-fqfam-asan
 	./build/test-fqfam-asan
 # Component tests of the features merged for the release candidate. `make check` does not run them; CI does.
-# Runtime ISA dispatch (x86-64): CRC32C and XXH3 against scalar references, optimised and with sanitizers.
+# Runtime ISA dispatch (x86-64): CRC32C against a scalar reference, kolmo_khash64 independent of alignment; optimised
+# and with sanitizers.
 build/test-dispatch: tests/test_dispatch.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(KSRC) $(KHDR)
@@ -201,8 +202,8 @@ build/test-bwt: tests/test_bwt.c tests/test_bwt_golden.h $(BWTSRC) $(BWTHDR)
 	$(CC) $(CFLAGS) -Isrc tests/test_bwt.c $(BWTSRC) -o $@ -lpthread
 build/test-bwt-asan: tests/test_bwt.c tests/test_bwt_golden.h $(BWTSRC) $(BWTHDR)
 	$(CC) $(SANFLAGS) -Isrc tests/test_bwt.c $(BWTSRC) -o $@ -lpthread
-# Kolmo's own coders (codecs 24, 27-29, src/algo/k*.c): round trips, corrupt payloads under ASan/UBSan, pinned hash
-# values; then every mode through the CLI with KOLMO_NATIVE=all and all,strong (native lane, rc3 wave 2).
+# Kolmo's own coders (codecs 24, 27-29, 32, src/algo/k*.c): round trips, corrupt payloads under ASan/UBSan, pinned hash
+# values; then every mode through the CLI: version 12, no retired codec id, 1 and 4 threads alike, KOLMO_NATIVE ignored.
 build/test-native: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
 	$(CC) $(CFLAGS) -Isrc tests/test_native.c $(NATSRC) -o $@
 build/test-native-asan: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
@@ -234,7 +235,7 @@ build/test-arch-asan: tests/test_arch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES
 check-arch: build/test-arch build/test-arch-asan
 	./build/test-arch
 	./build/test-arch-asan
-# Format 2 (codecs 19-23, container version 11): leaves, audio and video blocks, damaged payloads, file API
+# Format 2 (codecs 19-21, 23; 22 refused): leaves, audio and video blocks, damaged payloads, file API
 build/test-format2: tests/test_format2.c src/kolmo.c $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
 build/test-format2-asan: tests/test_format2.c src/kolmo.c $(KOLMO_INCLUDES) $(ARCHSRC)
@@ -250,7 +251,8 @@ build/test-meta-asan: tests/test_meta.c src/kolmo.c $(KOLMO_INCLUDES) $(ARCHSRC)
 check-meta: build/test-meta build/test-meta-asan
 	./build/test-meta
 	./build/test-meta-asan
-# Trained profiles and --target (features-a): round trips, damaged profiles and frames, targets, merging.
+# --target (features-a): parsing, calibration, chunk merging; trained profiles and dictionaries report
+# KOLMO_ERR_UNSUPPORTED (not available without library codecs).
 build/test-profile: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
 build/test-profile-asan: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
@@ -323,7 +325,8 @@ check-cm-compact: build/cm-compact-test
 	./build/cm-compact-test
 .PHONY: check-cm-compact
 
-# Research build. Experimental recipes emit v6 frames only when used.
+# Research build (-DKOLMO_FRONTIER, not part of `make all`). Its experimental table/lag blocks are coded with R_LZH
+# (KLZH2, codec 32) since version 12; nothing in it needs a codec library.
 FRONTIER_SRC := src/experimental/frontier_dna.c src/experimental/frontier_table.c src/experimental/frontier_prefix.c src/experimental/frontier_pcm.c src/experimental/frontier_lag.c src/experimental/frontier_shuffle.c src/experimental/frontier_runs.c
 FRONTIER_HDR := src/experimental/frontier_dna.h src/experimental/frontier_table.h src/experimental/frontier_prefix.h src/experimental/frontier_pcm.h src/experimental/frontier_lag.h src/experimental/frontier_shuffle.h src/experimental/frontier_runs.h
 build/kolmo-frontier: src/cli/cli.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(FRONTIER_SRC) $(FRONTIER_HDR) build/libkolmoarch.a
@@ -348,5 +351,7 @@ build/frontier-test: tests/frontier.c $(FRONTIER_SRC) $(FRONTIER_HDR)
 build/libkolmo-frontier.$(SOEXT): src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(FRONTIER_SRC) $(FRONTIER_HDR) $(ARCHPIC)
 	$(CC) $(CFLAGS) $(FPFLAGS) -fPIC -shared $(DEFS) -DKOLMO_FRONTIER $(INC) src/kolmo.c $(FRONTIER_SRC) $(ARCHPIC) -o $@ $(LIBS)
 
-# Standalone research codecs (not part of kolmo): see experimental.mk
+# Standalone research codecs (not part of kolmo): see experimental.mk. None of them uses a codec library. Bench tools
+# that compare against zstd, LZ4, Brotli or xz (benchmark/rc3w2/native/natbench.c and other benchmark/ sources) are
+# not built by this Makefile and are left as they were; they need those libraries from the system to build.
 include experimental.mk
