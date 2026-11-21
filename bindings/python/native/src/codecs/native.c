@@ -50,9 +50,13 @@ static int kolmo_native_flags(void) {
     }
     return r;
 }
+/* Per-job flags (0.0.1 prototype, night 2): with KOLMO_NATIVE unset, hc also codes zstd with KLZH2 (level 19 -> 9:
+ * +0.11% vs zstd on the screening corpus, the same encode time), while balanced keeps zstd (+0.68% native). */
+static int kolmo_native_job_flags(int mode) { return !getenv("KOLMO_NATIVE") && mode == KOLMO_HC ? 1 + (kolmo_native_flags() | KN_LZ) : 0; }
+static inline int native_flags_of(const codec_ctx *x) { return x->natf ? x->natf - 1 : kolmo_native_flags(); }
 /* the codec the encoder actually codes with (and writes) for library codec c */
 static inline int codec_native_id(const codec_ctx *x, int c) {
-    int f = kolmo_native_flags();
+    int f = native_flags_of(x);
     if (!f || x->dict || x->prof) return c;
     if ((f & KN_STRONG) && (c == C_ZSTD || c == C_BROTLI)) return C_KLZMA;
     if ((f & (KN_LZ | KN_KLZ)) && (c == C_LZ4 || c == C_LZ4HC)) return C_KLZ;

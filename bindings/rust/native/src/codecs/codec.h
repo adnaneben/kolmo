@@ -19,7 +19,8 @@ typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *di
                  int used_bwt;           /* encoder: set when codec 18 was written (the frame needs version 11) */
                  int used_f2;            /* encoder: a format-2 leaf (codecs 21-23) was written (the frame needs version 11) */
                  int used_cmt;           /* encoder: a context-mixing leaf with learning settings was written (version 11) */
-                 int used_native;        /* encoder: a Kolmo native codec id (24, 27, 28, 29) was written (version 11) */
+                 int used_native;        /* encoder: a Kolmo native codec id (24, 27, 28, 29, 32) was written (version 11) */
+                 int natf;               /* encoder: native flags of this job + 1 (0: the process flags, native.c) */
                  int no_f2;              /* encoder: do not try codecs 21-23 (planner scores, the --typed-huf route, WAV sample blocks) */
                  int allow_f2;           /* decoder: codecs 21-23 are valid graph leaves (container version 11 or later) */ } codec_ctx;
 

@@ -67,7 +67,7 @@ static uint32_t kolmo_fast_block(size_t n) {
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
     const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
-    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
+    int codec, level, default_level, natf, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint64_t *poff;   /* decode: payload offsets */
     uint64_t rlo, rhi; uint8_t *rdst;   /* range read */
@@ -135,6 +135,7 @@ static void *compress_worker(void *arg) {
     xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
     xp->prof = J->prof;
     xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
+    xp->natf = J->natf; xtrial_natf = J->natf;                             /* native flags of this job, for its trials too (native.c) */
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TBL_SLACK(J->B) + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
@@ -581,7 +582,7 @@ coded:;
             emit_block(J, i, h0, raw, tot);
         } else {
             emit_block(J, i, NULL, slot, tot);
-            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) || (kolmo_native_flags() && (codec_is_native(codec_wire(xp, codec)) || xp->used_native || xtrial_native_hit)) || (codec == C_CM && cm_stream_tuned(slot + 4 + meta, cl)) ? 128u : 0u), memory_order_relaxed);
+            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) || (native_flags_of(xp) && (codec_is_native(codec_wire(xp, codec)) || xp->used_native || xtrial_native_hit)) || (codec == C_CM && cm_stream_tuned(slot + 4 + meta, cl)) ? 128u : 0u), memory_order_relaxed);
             /* version 11 when the block is codec 18, or a graph block whose leaves may be (leaf trials set used_bwt), a
              * native codec id was written (the block's id, or inside its payload: leaves, columns, trials), or a context-mixing stream has learning settings (model nibble 14 or 15) */
         }

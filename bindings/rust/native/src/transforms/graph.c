@@ -575,7 +575,7 @@ static size_t kg_sel_sub(codec_ctx *x, const void *ctx, const uint8_t *p, size_t
     if (hz && cc == C_HUF && codec_native_id(x, C_HUF) != C_HUF) {   /* KOLMO_NATIVE=huf: the leaf as khuf (written as 27) */
         size_t kz = codec_compress(x, C_HUF, 0, p, n, out, cap); if (!kz) { cc = C_STORE; z = 0; } else z = kz;
     }
-    if (hz && (KOLMO_F2_MASK & 2) && hz >= 64 && !(kolmo_native_flags() & KN_LZ)) {   /* codec 22 codes with zstd: not with KOLMO_NATIVE=lz */
+    if (hz && (KOLMO_F2_MASK & 2) && hz >= 64 && !(native_flags_of(x) & KN_LZ)) {   /* codec 22 codes with zstd: not with KOLMO_NATIVE=lz */
         uint8_t *u = malloc(cap); size_t qz = u ? hz_try(x, KG_HZ_PROBE(codec, level), KG_HZ_LEVEL(codec, level), t, hz, u, cap, z, fastleaf) : 0;
         if (qz && (!z || qz < z)) { memcpy(out, u, qz); z = qz; cc = C_HZ; }
         free(u);
@@ -685,7 +685,7 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
             if (fb && (KOLMO_F2_MASK & 1) && np > 1 && s->n % (size_t)np == 0 && (fz = planes_compress(x, np, s->p, s->n, fb, zc, kg_sel_sub, &S)) && (!z || fz < z)) {
                 memcpy(o.p + o.n + 20, fb, fz); z = fz; cc = C_PLANES; x->used_f2 = 1;
             }
-            if (fb && (KOLMO_F2_MASK & 2) && cc != C_STORE && !(kolmo_native_flags() & KN_LZ) && (!fastleaf || kg_hz_fast_gate(s->p, s->n, z)) && (fz = huf_compress_all(s->p, s->n, fb, zc)) >= 64) {
+            if (fb && (KOLMO_F2_MASK & 2) && cc != C_STORE && !(native_flags_of(x) & KN_LZ) && (!fastleaf || kg_hz_fast_gate(s->p, s->n, z)) && (fz = huf_compress_all(s->p, s->n, fb, zc)) >= 64) {
                 uint8_t *u = malloc(zc); size_t qz = u ? hz_try(x, KG_HZ_PROBE(codec, level), KG_HZ_LEVEL(codec, level), fb, fz, u, zc, z, fastleaf) : 0;
                 if (qz && (!z || qz < z)) { memcpy(o.p + o.n + 20, u, qz); z = qz; cc = C_HZ; x->used_f2 = 1; }
                 free(u);

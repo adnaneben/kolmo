@@ -205,7 +205,7 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
         if (!file_index) goto cleanup;
         dst = file_index;
     }
-    J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2); J.native_leaf = native_leaf; J.columns = columns;   /* ultra level 2 = default ultra + CM graph leaves */
+    J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2); J.native_leaf = native_leaf; J.columns = columns; J.natf = kolmo_native_job_flags(p->mode);   /* ultra level 2 = default ultra + CM graph leaves */
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
     J.fqthreads = threads / (int)(nb < 256 ? nb : 256) > 0 ? threads / (int)(nb < 256 ? nb : 256) : 1;   /* threads left over per block */
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
