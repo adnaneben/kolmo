@@ -99,9 +99,39 @@ static void test_hash(void) {
     CHECK(kolmo_khash64(u + 1, 5000, 7) == kolmo_khash64(b, 5000, 7), "khash64 depends on alignment");
     free(u);
 }
+/* KLZH edge cases at every level (the optimal parse of 7-9, the lazy parse of 5-6): empty, 1 and 15 bytes, 1 MiB of
+ * zeros, 1 MiB random, and with big set a match at exactly the 16 MiB window edge (offset 2^24 - 1) next to one just
+ * past it: at level 9 the first must be found (the output shrinks), and every output must decode with the decoder. */
+static size_t klzh_rt(const uint8_t *in, size_t n, int lv) {
+    size_t cap = kolmo_klzh_bound(n); uint8_t *z = malloc(cap), *r = malloc(n + 1);
+    size_t zn = kolmo_klzh_compress(in, n, z, cap, lv);
+    if (zn) CHECK(!kolmo_klzh_decompress(z, zn, r, n) && !memcmp(r, in, n), "klzh edge: level %d n %zu round trip", lv, n);
+    free(z); free(r); return zn ? zn : n;
+}
+static void test_klzh_edges(int big) {
+    static const size_t sz[] = {0, 1, 15};
+    uint8_t *m = malloc(1u << 20);
+    for (int lv = 1; lv <= 9; lv++) {
+        for (size_t k = 0; k < 3; k++) { gen(m, sz[k], 3); klzh_rt(m, sz[k], lv); }
+        memset(m, 0, 1u << 20); CHECK(klzh_rt(m, 1u << 20, lv) < 4096, "klzh level %d: 1 MiB of zeros does not shrink", lv);
+        gen(m, 1u << 20, 0); klzh_rt(m, 1u << 20, lv);
+    }
+    free(m);
+    if (!big) return;
+    const size_t W = (1u << 24) - 1, L = 1u << 16, n = W + 2 * L + 64; uint8_t *a = malloc(n), *b = malloc(n);
+    for (size_t i = 0; i < n; i++) a[i] = (uint8_t)("abcdefghijklmnop"[rnd() & 15]);   /* short matches only */
+    memcpy(b, a, n);
+    memcpy(a + W, a, L);                                   /* a: L bytes at offset exactly 2^24 - 1 */
+    memcpy(a + W + L + 32, a + L - 1 + 32, L);             /* and L bytes at offset 2^24 + ... past the window */
+    for (int lv = 1; lv <= 9; lv++) {
+        size_t za = klzh_rt(a, n, lv);
+        if (lv == 9) { size_t zb = klzh_rt(b, n, lv); CHECK(za + L / 4 < zb, "klzh level 9: the match at the window edge was not used (%zu vs %zu)", za, zb); }
+    }
+    free(a); free(b);
+}
 int main(int argc, char **argv) {
     int iters = argc > 1 ? atoi(argv[1]) : 1;
-    test_lengths(); test_hash();
+    test_lengths(); test_hash(); test_klzh_edges(iters > 1);
     static const size_t sizes[] = {0, 1, 2, 3, 4, 5, 7, 8, 15, 16, 17, 31, 64, 100, 255, 1000, 4095, 65536, 131071, 131072, 131073, 300000};
     for (int it = 0; it < iters; it++)
         for (int k = 0; k < 4; k++)
