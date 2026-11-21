@@ -330,9 +330,9 @@ static void *compress_worker(void *arg) {
         if (codec == C_LZMA && level == 1) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
         else if (codec == C_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
         else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
-        else if (codec == C_BROTLI && J->default_level && !J->dict && !J->prof && len >= (64u << 10)
+        else if (KOLMO_ECO_TEXT_BWT && codec == C_BROTLI && J->default_level && !J->dict && !J->prof && len >= (64u << 10)
                  && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT, level = 9;   /* eco, JSON token streams: as max */
-        else if (codec == C_BROTLI && J->default_level && !J->dict && !J->prof && (!tflag || tflag == 9) && len >= (64u << 10)
+        else if (KOLMO_ECO_TEXT_BWT && codec == C_BROTLI && J->default_level && !J->dict && !J->prof && (!tflag || tflag == 9) && len >= (64u << 10)
                  && !pl.packed && looks_text8(raw, len)) {   /* eco, text: block sorting of the plain bytes (w4: smaller than brotli -11 on
                                                * prose and markup, at 10-20x its encode speed; decodes at block-sorting speed) */
             codec = C_BWT; level = 9; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }
