@@ -139,8 +139,8 @@ static int ktf_forward_g(const uint8_t *src, size_t n, int w, size_t h, ktf_prog
 
 static size_t ktf_wrap(const uint8_t *src, size_t n, int w, size_t h, const uint8_t *pay, size_t pn, uint8_t *dst) {
     uint8_t *e = dst + HDR, *p = dst + HDR + IDX;
-    memcpy(dst, "CZN1", 4); dst[4] = 7; dst[5] = (uint8_t)KOLMO_FAST; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = 0;
-    dst[11] = kmem_code(blk_dec_need(C_GRAPH, 0, n, NULL, 0, 7, 0));   /* decode working set (graph block, no CM leaves) */
+    memcpy(dst, "CZN1", 4); dst[4] = KOLMO_MAX_VERSION; dst[5] = (uint8_t)KOLMO_FAST; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = 0;
+    dst[11] = kmem_code(blk_dec_need(C_GRAPH, 0, n, NULL, 0, KOLMO_MAX_VERSION, 0));   /* decode working set (graph block, no CM leaves) */
     put64(dst + 12, n); put32(dst + 20, 1); put32(dst + 24, (uint32_t)n);
     p[0] = T_KG; p[1] = 0; p[2] = (uint8_t)w; p[3] = (uint8_t)(h < 255 ? h : 255); memmove(p + 4, pay, pn);
     put32(e, (uint32_t)n); put32(e + 4, (uint32_t)(pn + 4)); put32(e + 8, blk_sum(src, n)); e[12] = C_GRAPH; e[13] = 0; e[14] = e[15] = 0;
@@ -150,12 +150,12 @@ static size_t ktf_wrap(const uint8_t *src, size_t n, int w, size_t h, const uint
 static size_t ktf_payload_huf(ktf_prog *P, uint8_t *dst, size_t cap) {
     kbuf o = {0}; size_t out = 0, zc = P->res.n + P->res.n / 8 + 1024 * (size_t)(P->ow + 1);
     uint8_t *hb = malloc(zc); if (!hb) return 0;
-    size_t z = 0; int cc = C_HUF, planes = P->pln ? P->ow : 1; size_t plen = P->pln ? P->m : P->res.n;
-    for (int b = 0; b < planes && cc == C_HUF; b++) {
-        size_t r = plen ? huf_compress_all(P->res.p + (size_t)b * plen, plen, hb + z, zc - z) : 0;
+    size_t z = 0; int cc = C_KHUF, planes = P->pln ? P->ow : 1; size_t plen = P->pln ? P->m : P->res.n;
+    for (int b = 0; b < planes && cc == C_KHUF; b++) {
+        size_t r = plen ? kolmo_khuf_compress_chunks(P->res.p + (size_t)b * plen, plen, hb + z, zc - z) : 0;
         if (plen && !r) cc = C_STORE; else z += r;
     }
-    if (cc != C_HUF || z >= P->res.n) { cc = C_STORE; z = P->res.n; memcpy(hb, P->res.p, z); }
+    if (cc != C_KHUF || z >= P->res.n) { cc = C_STORE; z = P->res.n; memcpy(hb, P->res.p, z); }
     if (kb_byte(&o, 'G') || kb_byte(&o, 1) || kb_uv(&o, 1)                                   /* header, one node */
         || kb_byte(&o, KG_INT) || kb_uv(&o, 1) || kb_uv(&o, 0) || kb_uv(&o, 2) || kb_uv(&o, P->par.n) || kb_put(&o, P->par.p, P->par.n)
         || kb_uv(&o, 2)                                                                         /* two leaves */
@@ -192,7 +192,7 @@ static size_t ktf_payload_rep(ktf_prog *P, size_t n, uint8_t *dst, size_t cap) {
     if (kgb_new(&g) != 0 || kgb_node(&g, KG_INT, (int[]){0}, 1, 2, &P->par) != 1) goto done;
     g.nph_q = 1; g.nph_np = P->pln ? P->ow : 1; cx.aligned_leaf = 1; cx.no_f2 = 1;    /* plane-aligned Huffman chunks too */
     if (kb_put(&g.s[1], P->res.p, P->res.n) || kb_put(&g.s[2], P->rest.p, P->rest.n)) goto done;
-    out = kg_serialize(&cx, C_ZSTD, 3, &g, n, dst, cap);
+    out = kg_serialize(&cx, R_LZH, 3, &g, n, dst, cap);
 done:
     kgb_free(&g); codec_ctx_free(&cx); return out;
 }
@@ -261,10 +261,8 @@ static int ktf_type(const uint8_t *s,size_t n,int *w,size_t *h) {
 typedef struct {const uint8_t *s;size_t n;int oom;} ktf_guard_ctx;
 static int ktf_guard(void *v,double bits) {
     ktf_guard_ctx *g=v;size_t sn=g->n<16384?g->n:16384,off=((g->n-sn)/2)&~(size_t)7;
-    size_t cap=ZSTD_compressBound(sn);uint8_t *z=malloc(cap);
-    if(!z){g->oom=1;return 1;}
-    size_t zn=ZSTD_compress(z,cap,g->s+off,sn,3);free(z);
-    return ZSTD_isError(zn) || bits/8.0>(double)zn*(double)g->n/(double)sn;
+    size_t zn=kprobe_size_l(g->s+off,sn,3);   /* the size probe (core/common.h; zstd -3 before version 12) */
+    return bits/8.0>(double)zn*(double)g->n/(double)sn;
 }
 /* Returns zero to use normal planner; positive accepted frame; negative error.
  * A valid typed declaration rejected by the fixed guard requests a plain fallback. */

@@ -21,19 +21,15 @@ typedef struct {
     pthread_t th; int started, codec, level, fq_threads;
     const uint8_t *in; size_t n, cap, res;
     uint8_t *out;                                    /* codec trials: their own output buffer; family coder: its frame */
-    int used_native;                                 /* codec trials: a native id was written inside the payload */
-    int natf;                                        /* codec trials: the job's native flags (codec_ctx.natf) */
     uint64_t resv; kmem_ctx ctx;                     /* the trial's reservation with the governor, the call's cap */
 } xtrial_t;
-static __thread int xtrial_natf;                  /* the block worker's job native flags, copied into its trials */
 static void *xtrial_main(void *a) {
     xtrial_t *t = a;
     kmem_ctx_set(t->ctx); kmem_tls_job = 1;          /* covered by the trial's own reservation */
     if (t->codec == C_FQ) { t->out = kf_fastq_compress(t->in, t->n, t->fq_threads, kf_chunk_for(t->n), KF_BCHUNK, &t->res); if (!t->out) t->res = 0; }
     else {
-        codec_ctx x; memset(&x, 0, sizeof x); x.natf = t->natf;   /* the same coder the block writes the id of */
+        codec_ctx x; memset(&x, 0, sizeof x);
         t->res = t->out ? codec_compress(&x, t->codec, t->level, t->in, t->n, t->out, t->cap) : 0;
-        t->used_native = x.used_native;
         codec_ctx_free(&x);
     }
     kmem_tls_job = 0;
@@ -47,17 +43,16 @@ static void xtrial_start(xtrial_t *t, int codec, int level, const uint8_t *in, s
     memset(t, 0, sizeof *t);
     uint64_t need = kmem_enc_trial(codec, level, n, cap);
     if (!kmem_try_reserve(need, kmem_tls_cap)) return;
-    t->codec = codec; t->level = level; t->in = in; t->n = n; t->cap = cap; t->fq_threads = fq_threads; t->resv = need; t->ctx = kmem_ctx_get(); t->natf = xtrial_natf;
+    t->codec = codec; t->level = level; t->in = in; t->n = n; t->cap = cap; t->fq_threads = fq_threads; t->resv = need; t->ctx = kmem_ctx_get();
     if (codec != C_FQ) t->out = malloc(cap ? cap : 1);
     if (pthread_create(&t->th, NULL, xtrial_main, t)) { kmem_release(need); t->resv = 0; t->codec = 0; free(t->out); t->out = NULL; }
     else t->started = 1;
 }
 static void xtrial_join(xtrial_t *t) { if (t->started) { pthread_join(t->th, NULL); t->started = 0; t->resv = 0; } }
 /* the trial's result if it coded exactly (codec, in, n), else 0 with *hit = 0 (the caller codes inline) */
-static __thread int xtrial_native_hit;              /* a taken trial wrote a native id (the block worker's thread) */
 static size_t xtrial_take(xtrial_t *t, int codec, const uint8_t *in, size_t n, int *hit) {
     *hit = 0;
     if (!t->codec || t->codec != codec || t->in != in || t->n != n) return 0;
-    xtrial_join(t); *hit = 1; if (t->used_native) xtrial_native_hit = 1; return t->res;
+    xtrial_join(t); *hit = 1; return t->res;
 }
 static void xtrial_free(xtrial_t *t) { xtrial_join(t); free(t->out); memset(t, 0, sizeof *t); }

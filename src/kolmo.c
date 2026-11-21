@@ -70,21 +70,15 @@ int kolmo_force_c;
 #include "transforms/x86.c"
 #include "transforms/arm64.c"         /* ARM64 branch transform (plan type 11, tflag 14; plan/meta.c chooses it) */
 #include "codecs/store.c"
-#include "codecs/lz4.c"
-#include "codecs/zstd.c"
-#include "codecs/brotli.c"
 #include "codecs/bwt.c"
-#include "codecs/lzma.c"
 #include "algo/varint.h"
-#include "codecs/huf.c"
 #include "codecs/rans.c"
-#include "codecs/native.c"            /* Kolmo's own LZ, Huffman and LZMA-class coders (codecs 24, 27-29), opt-in */
+#include "codecs/native.c"            /* Kolmo's LZ, Huffman and LZMA-class coders (codecs 24, 27-29, 32) and the encoder roles */
 #include "codecs/graph_leaf.c"
 #include "codecs/codec.c"
-/* format 2 (container version 11): audio and video blocks, per-plane / Huffman-then-zstd / zero-run graph leaves */
+/* format 2: audio and video blocks, per-plane and zero-run graph leaves */
 #include "codecs/audio.c"
 #include "codecs/video.c"
-#include "codecs/hufzstd_leaf.c"
 #include "codecs/planes_leaf.c"
 #include "codecs/zrun_leaf.c"
 #include "codecs/nplane.c"
@@ -112,8 +106,7 @@ int kolmo_force_c;
 #include "api/api.c"
 #include "core/stream.c"
 
-/* rc3 features (features-a lane): trained profiles (kolmo train, -P) and --target, with the public entry points */
-#include "plan/profile.c"
+/* rc3 features (features-a lane): --target and calibration, with the public entry points (trained profiles: stubs) */
 #include "plan/target.c"
 #include "api/features.c"
 /* container extensions (docs: SPEC.md): KEXT trailer, IDX1 queryable archives, DDP1 deduplicating archives */

@@ -4,7 +4,11 @@
  * text, byte-plane shuffle with delta for numeric arrays) and coded independently, so compression and
  * decompression scale across cores and any byte range can be read by decoding only the blocks it touches.
  *
- * Licence: Apache-2.0 (vendored zstd and LZ4 keep their own BSD licences).
+ * Every coder is Kolmo's own (no zstd, Brotli, LZ4, liblzma or xxHash). This build writes and reads container version
+ * 12 only: frames of earlier versions (Kolmo 1.x and the release candidates, which used library codecs) fail with
+ * KOLMO_ERR_LEGACY.
+ *
+ * Licence: Apache-2.0.
  */
 #ifndef KOLMO_H
 #define KOLMO_H
@@ -18,7 +22,7 @@ extern "C" {
 typedef enum { KOLMO_RT = 0, KOLMO_FAST = 1, KOLMO_ECO = 2, KOLMO_HC = 3, KOLMO_MAX = 4, KOLMO_ULTRA = 5 } kolmo_mode;
 
 typedef struct {
-    kolmo_mode mode;      /* rt: LZ4 | fast: zstd 3 | eco: brotli 8 | hc: zstd 19 | max: BWT (text) or LZMA2 | ultra: context mixing (archive tier) */
+    kolmo_mode mode;      /* rt: KLZ | fast: KLZH2 3 | eco: KLZH2 7 | hc: KLZH2 9 | max: BWT (text) or KLZMA | ultra: context mixing (archive tier) */
     int level;          /* 0 = mode default; otherwise codec level (max: 1 = BWT for every block, 10 = LZMA2 also on
                            decimal-array planes, smaller and about 25 times slower to encode on such files;
                            ultra: 1 = context-mixing model 1 only, faster; 2 = maximum ratio: as the default, and
@@ -42,13 +46,12 @@ typedef struct {
  * graph blocks may use Kolmo's native plane-context leaf coder (Huffman/rANS with byte-plane and context modelling)
  * when it is smaller than the default leaf. Typically 5-12% smaller on sensor, ECG and numeric-column data; such files
  * decode about 1.5-2.6x slower than default balanced (measured: 2.3x over 180 MB of ECG and numeric columns, ~580 MB/s
- * on Apple silicon), since those leaves are entropy coded with context models instead of zstd. Files that use it are
- * written as container version 9 and need a kolmo release that reads version 9; files that do not are unchanged. */
+ * on Apple silicon), since those leaves are entropy coded with context models instead of an LZ coder. */
 #define KOLMO_T_NATIVE_LEAF 16
 
 /* Opt-in bit for kolmo_params.transforms, ported from the RC1 integration (PR #10): a file declared as a little-endian
  * integer NPY array or a PCM16 WAV whose data chunk ends the file is coded type first, as one integer graph node with
- * static Huffman residual planes, in an existing version 7 frame that every reader of version 7 decodes. It applies
+ * static Huffman residual planes (khuf), in an ordinary graph frame. It applies
  * only to KOLMO_FAST at the default level with analysis on, exactly one thread requested, the buffer API, no
  * dictionary, and inputs of at most 16 MiB that fit one block. A file of those types that a sampled zstd estimate
  * predicts would not gain is compressed with the plain codec; other inputs are planned as usual. KOLMO_T_NATIVE_LEAF
@@ -74,14 +77,16 @@ typedef struct {
 #define KOLMO_ERR_DSTSIZE   (-3)
 #define KOLMO_ERR_ALLOC     (-4)
 #define KOLMO_ERR_CODEC     (-5)
-#define KOLMO_ERR_DICT      (-6)   /* input was compressed with a dictionary; a matching one must be supplied to decode */
+#define KOLMO_ERR_DICT      (-6)   /* (earlier versions: dictionary required; not returned by this build) */
 #define KOLMO_ERR_LIMIT     (-7)   /* a caller-specified decoding limit was exceeded */
 
 #define KOLMO_ERR_IO        (-8)   /* seekable file read/write failed */
-#define KOLMO_ERR_PROFILE   (-9)   /* trained profile required, mismatched, or damaged */
+#define KOLMO_ERR_PROFILE   (-9)   /* (earlier versions: trained profile required; not returned by this build) */
 #define KOLMO_ERR_TARGET    (-10)  /* --target expression or calibration table invalid */
 #define KOLMO_ERR_QUERY     (-11)  /* a query names no such column, or its pattern does not compile */
 #define KOLMO_ERR_MEMORY    (-12)  /* the frame needs more memory to decode than the limit, or the limit is below the mode's floor */
+#define KOLMO_ERR_LEGACY    (-13)  /* a frame of an earlier Kolmo (container versions 1-11, library codecs): not readable here */
+#define KOLMO_ERR_UNSUPPORTED (-14) /* not available in this build: dictionaries and trained profiles need library codecs */
 
 /* Zero fields mean no limit, except max_memory: 0 = auto (50% of physical memory or of the cgroup's limit),
  * KOLMO_MEM_MAX = none, otherwise bytes. Every frame declares what one block needs to decode (header byte 11); a frame
@@ -111,7 +116,7 @@ int64_t kolmo_stream_decompress_limited(int in_fd, int out_fd, int threads, cons
 /* One-shot CZN1 file I/O. Input must remain a stable regular file of at least n
  * bytes. Supply an empty seekable output fd without O_APPEND. Workers use
  * offsets starting at zero, without changing the descriptor position. Discard
- * partial output on error. Optional dictionary semantics match the buffer API. */
+ * partial output on error. dict must be NULL (or dictlen 0): a dictionary gives KOLMO_ERR_UNSUPPORTED. */
 int64_t kolmo_compress_from_fd(int fd, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen);
 int64_t kolmo_decompress_to_fd(const uint8_t *src, size_t n, int fd, int threads,
@@ -150,19 +155,10 @@ const char *kolmo_strerror(int64_t code);
 int kolmo_set_gpu(int on);
 uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len);
 
-/* --- Dictionary support (small files) ------------------------------------------------------------
- * For many small, similar inputs (records, log fragments, JSON blobs), a dictionary trained on a
- * representative sample makes each file compress far better. Train once, then compress/decompress
- * with the same dictionary. The dictionary is applied to the zstd-coded blocks (fast/hc modes).
- *
- * kolmo_train_dict: build a dictionary of up to dict_cap bytes from `nsamples` concatenated samples
- *   (samples laid end-to-end in `samples`, each length in `sizes`). Returns the dictionary length
- *   written to `dict`, or a negative error. A few hundred samples and dict_cap ~100 KB are typical.
- * kolmo_compress_dict / kolmo_decompress_dict: as kolmo_compress / kolmo_decompress, with a dictionary.
- *   A file written with a dictionary records its id; decoding without the matching dictionary fails
- *   with KOLMO_ERR_DICT rather than returning wrong data. Independent calls may run concurrently,
- *   including calls with different dictionaries. Inputs and dictionaries must remain immutable
- *   until each call completes, and destination buffers must not overlap. */
+/* --- Dictionaries: not available in this build -----------------------------------------------------
+ * Dictionaries were applied by the zstd, Brotli and LZ4 coders of earlier versions. kolmo_train_dict returns
+ * KOLMO_ERR_UNSUPPORTED; kolmo_compress_dict and kolmo_decompress_dict return it when given a dictionary, and without
+ * one (NULL or dictlen 0) behave as kolmo_compress and kolmo_decompress. */
 int64_t kolmo_train_dict(const uint8_t *samples, const size_t *sizes, size_t nsamples,
                        uint8_t *dict, size_t dict_cap);
 int64_t kolmo_compress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
@@ -170,17 +166,12 @@ int64_t kolmo_compress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t c
 int64_t kolmo_decompress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads,
                             const void *dict, size_t dictlen);
 
-/* --- Trained profiles (kolmo train) ---------------------------------------------------------------
- * A profile is learnt once from a sample of a dataset (files of one source: monthly CSV exports, rotated logs, JSON
- * messages of one API) and then used for every later file of that dataset. It holds the setting to use (mode, level,
- * analysis), the plans the analysis chose for each kind of file in the sample (pinned: matching files skip the
- * analysis), a zstd dictionary and a raw dictionary for Brotli and LZ4, and reserved room for context-mixing priors.
- * The serialized form (a .kpf file) is versioned and checksummed: SPEC.md, "Trained profiles (KPF1)".
- *
- * Frames written with a profile record its 32-bit id; decoding needs the same profile and fails with
- * KOLMO_ERR_PROFILE without it or with another one. A frame of a single block of at most 1 MiB is written in the
- * compact form ("CZC1", 16-17 bytes of header instead of 52), which is what makes small messages pay off.
- * A loaded profile is read-only and may be used by any number of concurrent calls. */
+/* --- Trained profiles (kolmo train): not available in this build ------------------------------------
+ * Profiles held zstd and Brotli dictionaries. The calls remain so that programs link: kolmo_profile_train,
+ * kolmo_profile_load, kolmo_compress_profile and kolmo_decompress_profile return KOLMO_ERR_UNSUPPORTED;
+ * kolmo_profile_bound returns 0, kolmo_profile_free does nothing, kolmo_profile_id returns 0, kolmo_profile_params gives
+ * the defaults, kolmo_profile_describe writes an empty string, and kolmo_frame_profile_id returns 0 for a frame of this
+ * build (no frame uses a profile) or KOLMO_ERR_LEGACY for one of an earlier version. */
 typedef struct kolmo_profile kolmo_profile;
 
 typedef struct {
@@ -240,7 +231,7 @@ void    kolmo_target_free(kolmo_target *t);
 typedef struct { uint32_t chunks; uint32_t per_setting[16]; double predicted_cost, predicted_enc_s, predicted_dec_s;
                  uint64_t predicted_size; } kolmo_target_report;
 const char *kolmo_target_setting_name(int setting);                      /* 0..8, NULL past the end */
-/* p: threads and, if non-zero, the chunk size (block); other fields ignored. prof may be NULL. */
+/* p: threads and, if non-zero, the chunk size (block); other fields ignored. prof must be NULL (KOLMO_ERR_UNSUPPORTED). */
 int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
                               const kolmo_target *t, const kolmo_profile *prof, kolmo_target_report *report);
 /* Measure encode and decode speed of every setting on built-in synthetic data of each class (or, with files, on

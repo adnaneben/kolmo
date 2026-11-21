@@ -1,6 +1,6 @@
 /* Codec 5 (read, and written by --compat tests only): the BWT pipeline (LZP + BWT + QLFC) in libbsc 3.4.0's block format, written and read by Kolmo's C port
    (codecs/bwt_stream.c, algo/lzp.c, algo/qlfc.c, algo/sais/; byte-identical to libbsc with these parameters).
-   Payload: XXH32 of the block | block (the hash is checked before decoding). */
+   Payload: the low 32 bits of kolmo_khash64(block, 0x62736331) | block (the hash is checked before decoding). */
 static size_t bwt_bound(size_t n) { return n + KOLMO_BSC_HEADER_SIZE + 64; }
 static size_t bwt_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     (void)level;
