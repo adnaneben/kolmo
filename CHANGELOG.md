@@ -8,7 +8,7 @@ Built from C2 (`review/c2-integration-J62kQD`, 25bedda8) plus owner decisions A6
 - **New `-x` generation (W4 cm):** CM model nibble 9, with explicit refusal of reserved nibbles (SPEC.md). About 2× faster encode and decode, peak memory about 226 MiB instead of 3 GiB, output about 0.3% larger. Older decoders refuse these frames cleanly.
 - **New block codec 31, kimg (lossless 8-bit images, stream v2):** used by ratio and ultra. About 14% smaller than rc3 on images, within about 3% of JPEG XL lossless (-e7). Image decode is about 0.7× of rc3's. Decoders before rc4 refuse kimg frames cleanly.
 - **Encoder tuning (W4 docs):** balanced uses an 8 MiB window; hc text uses level 19 with a 128 MiB window; table prefetch. Default output bytes change for balanced and hc. The asynchronous decode writer is not included, so -T1 stays single-threaded.
-- **Eco:** text block sorting (BWT) is off by default (KOLMO_ECO_TEXT_BWT=0, owner decision A6), so eco keeps its fast text decode. Eco output for text matches rc3.
+- **Eco:** text block sorting (BWT) is off by default (KOLMO_ECO_TEXT_BWT=0, owner decision A6), so eco keeps its fast text decode. On the test corpus, eco text output is byte-identical to rc3 again.
 - **Memory:** brotli encoder buffers of 1 MiB and above are mmapped, cutting eco encode peak from about 1.08 GB to about 160–230 MiB with identical bytes.
 
 ## Unreleased (rc3 wave 3, decmap lane: `claude/rc3w3-decmap-20261118`)
