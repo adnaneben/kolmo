@@ -106,12 +106,13 @@ static void test_hash(void) {
 /* KLZH edge cases at every level (the optimal parse of 7-9, the lazy parse of 5-6): empty, 1 and 15 bytes, 1 MiB of
  * zeros, 1 MiB random, and with big set a match at exactly the 16 MiB window edge (offset 2^24 - 1) next to one just
  * past it: at level 9 the first must be found (the output shrinks), and every output must decode with the decoder. */
-static size_t klzh_rt(const uint8_t *in, size_t n, int lv) {
+static size_t klzhv_rt(const uint8_t *in, size_t n, int lv, int v2) {
     size_t cap = kolmo_klzh_bound(n); uint8_t *z = malloc(cap), *r = malloc(n + 1);
-    size_t zn = kolmo_klzh_compress(in, n, z, cap, lv);
-    if (zn) CHECK(!kolmo_klzh_decompress(z, zn, r, n) && !memcmp(r, in, n), "klzh edge: level %d n %zu round trip", lv, n);
+    size_t zn = v2 ? kolmo_klzh2_compress(in, n, z, cap, lv) : kolmo_klzh_compress(in, n, z, cap, lv);
+    if (zn) CHECK(!(v2 ? kolmo_klzh2_decompress : kolmo_klzh_decompress)(z, zn, r, n) && !memcmp(r, in, n), "klzh%s edge: level %d n %zu round trip", v2 ? "2" : "", lv, n);
     free(z); free(r); return zn ? zn : n;
 }
+static size_t klzh_rt(const uint8_t *in, size_t n, int lv) { return klzhv_rt(in, n, lv, 0); }
 static void test_klzh_edges(int big) {
     static const size_t sz[] = {0, 1, 15};
     uint8_t *m = malloc(1u << 20);
@@ -130,12 +131,53 @@ static void test_klzh_edges(int big) {
     for (int lv = 1; lv <= 9; lv++) {
         size_t za = klzh_rt(a, n, lv);
         if (lv == 9) { size_t zb = klzh_rt(b, n, lv); CHECK(za + L / 4 < zb, "klzh level 9: the match at the window edge was not used (%zu vs %zu)", za, zb); }
+        /* KLZH2: the copy at offset exactly 2^24 (past KLZH's window) is found too, by the long-distance candidates */
+        size_t z2 = klzhv_rt(a, n, lv, 1);
+        if (lv >= 7) CHECK(z2 + L / 4 < za, "klzh2 level %d: the match at offset 2^24 was not used (%zu vs %zu)", lv, z2, za);
     }
     free(a); free(b);
 }
+/* KLZH2 format edges: hand-built frames (one sequence: 4 literals and a 3-byte match), minimum matches of 3 bytes at
+ * block edges through the encoder, corrupt offset codes, and with big set an offset of 2^25 + 3 (2^30 - 1 would need
+ * a 1 GiB block: the decoder's limit is tested on the code instead) */
+static size_t put_uv_t(uint8_t *p, uint64_t v) { size_t k = 0; for (;; v >>= 7) { p[k++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) return k; } }
+static size_t klzh2_frame(uint8_t *f, uint8_t llc, uint8_t mlc, uint8_t ofc, const uint8_t *xb, size_t xl) {
+    const uint8_t lit[4] = {'a', 'b', 'c', 'd'}; const uint8_t *st[4] = {lit, &llc, &mlc, &ofc}; const size_t sn[4] = {4, 1, 1, 1};
+    size_t o = put_uv_t(f, 1); o += put_uv_t(f + o, 4);
+    for (int q = 0; q < 4; q++) { uint8_t t[256]; size_t z = kolmo_khuf_compress_chunks(st[q], sn[q], t, sizeof t); f[o++] = 0; o += put_uv_t(f + o, z); memcpy(f + o, t, z); o += z; }
+    memcpy(f + o, xb, xl); return o + xl;
+}
+static void test_klzh2_format(int big) {
+    uint8_t f[1024], r[64]; const uint8_t zx[8] = {0};
+    size_t fn = klzh2_frame(f, 4, 0, 0, zx, 0);   /* "abcd", then 3 bytes at offset 1 (the initial repeat offset) */
+    CHECK(!kolmo_klzh2_decompress(f, fn, r, 7) && !memcmp(r, "abcdddd", 7), "klzh2: 3-byte match at the block end");
+    CHECK(kolmo_klzh2_decompress(f, fn, r, 8) != 0, "klzh2: a frame one byte short accepted");
+    fn = klzh2_frame(f, 4, 0, 33, zx, 8); CHECK(kolmo_klzh2_decompress(f, fn, r, 7) != 0, "klzh2: offset code 33 accepted");
+    fn = klzh2_frame(f, 4, 0, 32, zx, 8); CHECK(kolmo_klzh2_decompress(f, fn, r, 7) != 0, "klzh2: offset 2^29 before 4 bytes accepted");
+    { const uint8_t x1[8] = {1}; fn = klzh2_frame(f, 4, 0, 5, x1, 8); CHECK(kolmo_klzh2_decompress(f, fn, r, 7) != 0, "klzh2: offset 5 after 4 bytes accepted"); }
+    { const uint8_t x0[8] = {0}; fn = klzh2_frame(f, 4, 0, 5, x0, 8);   /* offset 4: "abcd" + "abc" */
+      CHECK(!kolmo_klzh2_decompress(f, fn, r, 7) && !memcmp(r, "abcdabc", 7), "klzh2: offset 4, 3 bytes"); }
+    /* through the encoder: 3-byte matches at the start and the end of blocks, at every level */
+    for (int t = 0; t < 200; t++) {
+        size_t n = 16 + rnd() % 300; uint8_t *in = malloc(n);
+        for (size_t i = 0; i < n; i++) in[i] = (uint8_t)rnd();
+        for (int k = 0; k < 6; k++) { size_t a = rnd() % (n - 3), b = rnd() % (n - 3); memmove(in + b, in + a, 3); }
+        memmove(in + n - 3, in + (rnd() % 8), 3); memmove(in + 3, in, 3);
+        for (int lv = 1; lv <= 9; lv++) klzhv_rt(in, n, lv, 1);
+        free(in);
+    }
+    if (!big) return;
+    const size_t D = (1u << 25) + 3, L = 1u << 16, n = D + L + 64; uint8_t *a = malloc(n);
+    for (size_t i = 0; i < n; i++) a[i] = (uint8_t)("abcdefghijklmnop"[rnd() & 15]);
+    size_t z0 = klzhv_rt(a, n, 7, 1);
+    memcpy(a + D + 32, a + 32, L);
+    size_t z1 = klzhv_rt(a, n, 7, 1);
+    CHECK(z1 + L / 4 < z0, "klzh2 level 7: the match at offset 2^25 + 3 was not used (%zu vs %zu)", z1, z0);
+    free(a);
+}
 int main(int argc, char **argv) {
     int iters = argc > 1 ? atoi(argv[1]) : 1;
-    test_lengths(); test_hash(); test_klzh_edges(iters > 1);
+    test_lengths(); test_hash(); test_klzh_edges(iters > 1); test_klzh2_format(iters > 1);
     static const size_t sizes[] = {0, 1, 2, 3, 4, 5, 7, 8, 15, 16, 17, 31, 64, 100, 255, 1000, 4095, 65536, 131071, 131072, 131073, 300000};
     for (int it = 0; it < iters; it++)
         for (int k = 0; k < (int)(sizeof C / sizeof *C); k++)

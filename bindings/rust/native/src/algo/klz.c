@@ -272,12 +272,18 @@ static inline int kz_bput(kz_bw *w, uint32_t v, int nb) {   /* nb <= 30 */
 #define KO_MLT 1024
 #define KO_SPAN (128u << 10)
 typedef struct { uint32_t len, off; } ko_m;
-typedef struct { const uint8_t *in; uint32_t n, *head, *son, bmask, ins, nice; int hlog, depth; } ko_mf;
-typedef struct { int hlog, bwlog, depth, nice, skip; } ko_par;   /* skip: a position whose next node is already within skip of its price is not searched */
+typedef struct {
+    const uint8_t *in; uint32_t n, *head, *son, bmask, ins, nice; int hlog, depth;
+    uint32_t *h3, *ldm, wmax; int ldmlog;   /* KLZH2: 3-byte heads, long-distance table (offsets up to wmax), or NULL */
+} ko_mf;
+/* skip: a position whose next node is already within skip of its price is not searched; KLZH2 only: wlog, the largest
+ * offset 2^wlog - 1 (long-distance candidates past the tree's window), m3: 3-byte matches */
+typedef struct { int hlog, bwlog, depth, nice, skip, wlog, m3; } ko_par;
 typedef struct { uint32_t price, mlen, off, litlen, rep[3]; } ko_node;
 typedef struct {
-    uint32_t lit[256], ll[72], ml[72], of[32], sl, sll, sml, sof, pending;
-    uint32_t pl[256], pll[72], pml[72], pof[32], llp[KO_LLT], mlp[KO_MLT];
+    uint32_t lit[256], ll[72], ml[72], of[33], sl, sll, sml, sof, pending;
+    uint32_t pl[256], pll[72], pml[72], pof[33], llp[KO_LLT], mlp[KO_MLT];
+    uint32_t mmin; int nof;   /* shortest match (4 KLZH, 3 KLZH2) and offset codes (32, 33) */
 } ko_st;
 #define KO_H4(p, lg) ((kz_r32(p) * 2654435761u) >> (32 - (lg)))
 /* binary tree per 4-byte hash bucket over a cyclic window of bmask + 1 positions (as km_bt); inserts p, and when
@@ -301,10 +307,40 @@ static uint32_t ko_bt(ko_mf *M, uint32_t p, ko_m *out, int collect) {
     if (nm && out[nm - 1].len == lim && lim < M->n - p) { ko_m *t = &out[nm - 1]; t->len = lim + (uint32_t)kz_count(s + lim, s + lim - t->off, M->in + M->n); }
     return nm;
 }
+#define KO_H3(p) (((kz_r32(p) & 0xFFFFFFu) * 2654435761u) >> 18)
+#define KO_LDMIN 32   /* long-distance candidates: 32-byte keys, one position in 8 by content */
+static inline uint32_t ko_ldh(const uint8_t *p, int lg) {
+    uint64_t h = kz_r64(p) * 0x9E3779B97F4A7C15ull ^ kz_r64(p + 8) * 0xC2B2AE3D27D4EB4Full ^ kz_r64(p + 16) * 0x165667B19E3779F9ull ^ kz_r64(p + 24) * 0xD6E8FEB86659FD93ull;
+    return (uint32_t)(h >> (64 - lg - 3));   /* the low 3 bits select the positions kept */
+}
+/* KLZH2 extra candidates at p: a 3-byte match (from the latest position with the same 3 bytes, offsets below 2^14:
+ * farther ones cost more than they save, and the parse took them on text) when it is shorter than the tree's first, and a long-distance match past the tree's window when it is longer than the tree's last */
+static uint32_t ko_aux(ko_mf *M, uint32_t p, ko_m *out, uint32_t nm, int collect) {
+    const uint8_t *s = M->in + p, *ie = M->in + M->n;
+    if (M->h3) {
+        uint32_t h = KO_H3(s), c = M->h3[h]; M->h3[h] = p;
+        if (collect && c != KZ_NONE && p - c <= M->bmask && p - c < (1u << 14) && (kz_r32(M->in + c) & 0xFFFFFFu) == (kz_r32(s) & 0xFFFFFFu)) {
+            uint32_t l = 3 + (uint32_t)kz_count(s + 3, M->in + c + 3, s + (M->n - p < M->nice ? M->n - p : M->nice));
+            if (!nm || l < out[0].len) { memmove(out + 1, out, nm * sizeof *out); out[0].len = l; out[0].off = p - c; nm++; }
+        }
+    }
+    if (M->ldm && p + KO_LDMIN <= M->n) {
+        uint32_t h = ko_ldh(s, M->ldmlog);
+        if (!(h & 7)) {
+            h >>= 3; uint32_t c = M->ldm[h]; M->ldm[h] = p;
+            if (collect && c != KZ_NONE && p - c > M->bmask && p - c <= M->wmax) {
+                uint32_t l = (uint32_t)kz_count(s, M->in + c, ie);
+                if (l >= KO_LDMIN && (!nm || l > out[nm - 1].len)) { out[nm].len = l; out[nm].off = p - c; nm++; }
+            }
+        }
+    }
+    return nm;
+}
 static uint32_t ko_find(ko_mf *M, uint32_t p, ko_m *out) {   /* p + 8 <= n, positions searched in increasing order */
-    for (uint32_t q = M->ins; q < p; q++) ko_bt(M, q, NULL, 0);
+    for (uint32_t q = M->ins; q < p; q++) { ko_bt(M, q, NULL, 0); if (M->h3 || M->ldm) ko_aux(M, q, out, 0, 0); }
     M->ins = p + 1;
-    return ko_bt(M, p, out, 1);
+    uint32_t nm = ko_bt(M, p, out, 1);
+    return M->h3 || M->ldm ? ko_aux(M, p, out, nm, 1) : nm;
 }
 static inline uint32_t ko_w(uint32_t x) { x++; int h = kz_hb(x); return (uint32_t)h * 256 + (uint32_t)(((uint64_t)x << 8) >> h); }   /* ~256 (log2(x + 1) + 1) */
 static inline uint32_t ko_cost(uint32_t f, uint32_t ws) { uint32_t c = ws - ko_w(f); return c < 256 ? 256 : c > 11 * 256 ? 11 * 256 : c; }
@@ -312,7 +348,7 @@ static void ko_refresh(ko_st *T) {
     uint32_t w = ko_w(T->sl); for (int s = 0; s < 256; s++) T->pl[s] = ko_cost(T->lit[s], w);
     w = ko_w(T->sll); for (int c = 0; c < 72; c++) T->pll[c] = ko_cost(T->ll[c], w);
     w = ko_w(T->sml); for (int c = 0; c < 72; c++) T->pml[c] = ko_cost(T->ml[c], w);
-    w = ko_w(T->sof); for (int c = 0; c < 32; c++) T->pof[c] = ko_cost(T->of[c], w) + (c >= 3 ? (uint32_t)(c - 3) * 256 : 0);
+    w = ko_w(T->sof); for (int c = 0; c < T->nof; c++) T->pof[c] = ko_cost(T->of[c], w) + (c >= 3 ? (uint32_t)(c - 3) * 256 : 0);
     for (uint32_t v = 0; v < KO_LLT; v++) { uint32_t ex; int nb; unsigned c = kz_lcode(v, &ex, &nb); T->llp[v] = T->pll[c] + (uint32_t)nb * 256; }
     for (uint32_t v = 0; v < KO_MLT; v++) { uint32_t ex; int nb; unsigned c = kz_lcode(v, &ex, &nb); T->mlp[v] = T->pml[c] + (uint32_t)nb * 256; }
     T->pending = 0;
@@ -324,25 +360,26 @@ static uint32_t ko_scale(uint32_t *f, int k, int lg) {   /* f = 1 + f >> shift, 
     return s;
 }
 static void ko_rescale(ko_st *T) {
-    T->sl = ko_scale(T->lit, 256, 12); T->sll = ko_scale(T->ll, 72, 11); T->sml = ko_scale(T->ml, 72, 11); T->sof = ko_scale(T->of, 32, 11);
+    T->sl = ko_scale(T->lit, 256, 12); T->sll = ko_scale(T->ll, 72, 11); T->sml = ko_scale(T->ml, 72, 11); T->sof = ko_scale(T->of, T->nof, 11);
     ko_refresh(T);
 }
-static void ko_init(ko_st *T, const uint8_t *in, size_t n) {
+static void ko_init(ko_st *T, const uint8_t *in, size_t n, int v2) {
+    T->mmin = v2 ? 3 : 4; T->nof = v2 ? 33 : 32;
     static const uint8_t LL0[16] = {4, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, ML0[16] = {6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
         OF0[27] = {6, 2, 1, 1, 1, 1, 2, 3, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1};
     uint32_t c[256] = {0}; size_t m = n < KO_SPAN ? n : KO_SPAN;
     for (size_t i = 0; i < m; i++) c[in[i]]++;
     for (int s = 0; s < 256; s++) T->lit[s] = 1 + (c[s] >> 4);
     for (int k = 0; k < 72; k++) { T->ll[k] = k < 16 ? LL0[k] : 1; T->ml[k] = k < 16 ? ML0[k] : 1; }
-    for (int k = 0; k < 32; k++) T->of[k] = k < 27 ? OF0[k] : 1;
+    for (int k = 0; k < T->nof; k++) T->of[k] = k < 27 ? OF0[k] : 1;
     T->sl = T->sll = T->sml = T->sof = 0;
     for (int s = 0; s < 256; s++) T->sl += T->lit[s];
     for (int k = 0; k < 72; k++) { T->sll += T->ll[k]; T->sml += T->ml[k]; }
-    for (int k = 0; k < 32; k++) T->sof += T->of[k];
+    for (int k = 0; k < T->nof; k++) T->sof += T->of[k];
     ko_refresh(T);
 }
 static inline uint32_t ko_llp(const ko_st *T, uint32_t v) { if (v < KO_LLT) return T->llp[v]; uint32_t ex; int nb; unsigned c = kz_lcode(v, &ex, &nb); return T->pll[c] + (uint32_t)nb * 256; }
-static inline uint32_t ko_mlp(const ko_st *T, uint32_t ml) { uint32_t v = ml - 4; if (v < KO_MLT) return T->mlp[v]; uint32_t ex; int nb; unsigned c = kz_lcode(v, &ex, &nb); return T->pml[c] + (uint32_t)nb * 256; }
+static inline uint32_t ko_mlp(const ko_st *T, uint32_t ml) { uint32_t v = ml - T->mmin; if (v < KO_MLT) return T->mlp[v]; uint32_t ex; int nb; unsigned c = kz_lcode(v, &ex, &nb); return T->pml[c] + (uint32_t)nb * 256; }
 static inline unsigned ko_ofc(uint32_t off, const uint32_t r[3]) { return off == r[0] ? 0u : off == r[1] ? 1u : off == r[2] ? 2u : 3u + (unsigned)kz_hb(off); }
 static inline void ko_rep(uint32_t r[3], uint32_t off) {   /* the encoder's move to front */
     if (off == r[0]) return;
@@ -434,16 +471,24 @@ static void ko_emit(ko_st *T, const uint8_t *in, kz_seq *S, size_t *ns, size_t a
     for (size_t k = anchor; k < start; k++) T->lit[in[k]] += 2;
     T->sl += 2 * ll;
     T->ll[kz_lcode(ll, &ex, &nb)]++; T->sll++;
-    T->ml[kz_lcode(ml - 4, &ex, &nb)]++; T->sml++;
+    T->ml[kz_lcode(ml - T->mmin, &ex, &nb)]++; T->sml++;
     T->of[ko_ofc(off, r)]++; T->sof++;
     ko_rep(r, off); T->pending++;
 }
 static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st *T, kz_seq *S, size_t *anchor_out, int *err) {
     const uint32_t nice = (uint32_t)P->nice; int bw = 4; while (bw < P->bwlog && ((size_t)1 << bw) < n) bw++;
-    ko_mf M = {in, (uint32_t)n, NULL, NULL, (1u << bw) - 1, 0, nice, P->hlog, P->depth};
+    ko_mf M = {in, (uint32_t)n, NULL, NULL, (1u << bw) - 1, 0, nice, P->hlog, P->depth, NULL, NULL, 0, 0};
     M.head = malloc(sizeof(uint32_t) << P->hlog); M.son = malloc(sizeof(uint32_t) * 2 << bw);
-    ko_node *o = malloc((KO_OPT + nice + 8) * sizeof *o); ko_m *mm = malloc((nice + 8) * sizeof *mm); uint32_t *path = malloc((KO_OPT + nice + 8) * sizeof *path);
-    if (!M.head || !M.son || !o || !mm || !path) { free(M.head); free(M.son); free(o); free(mm); free(path); *err = 1; return 0; }
+    const int v2 = T->mmin == 3;
+    if (v2 && P->m3) { M.h3 = malloc(sizeof(uint32_t) << 14); if (M.h3) memset(M.h3, 0xFF, sizeof(uint32_t) << 14); }
+    if (v2 && P->wlog > bw && n > M.bmask + 1) {   /* a block longer than the tree's window */
+        M.wmax = (uint32_t)((1ull << P->wlog) - 1); M.ldmlog = 22; while (M.ldmlog > 16 && ((size_t)8 << M.ldmlog) > n) M.ldmlog--;
+        M.ldm = malloc(sizeof(uint32_t) << M.ldmlog); if (M.ldm) memset(M.ldm, 0xFF, sizeof(uint32_t) << M.ldmlog);
+    }
+    ko_node *o = malloc((KO_OPT + nice + 8) * sizeof *o); ko_m *mm = malloc((nice + 10) * sizeof *mm); uint32_t *path = malloc((KO_OPT + nice + 8) * sizeof *path);
+    if (!M.head || !M.son || !o || !mm || !path || (v2 && P->m3 && !M.h3) || (M.wmax && !M.ldm)) {
+        free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm); *err = 1; return 0;
+    }
     memset(M.head, 0xFF, sizeof(uint32_t) << P->hlog);
     const uint8_t *ie = in + n; size_t pos = 0, anchor = 0, ns = 0, next_scale = KO_SPAN; uint32_t rep[3] = {1, 4, 8};
 #define KO_RELAX(J, PR, ML, OFF, LL) do { uint32_t j_ = (J), p_ = (PR); \
@@ -471,6 +516,7 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
                 for (int k = 0; k < 3; k++) {
                     uint32_t r = c->rep[k];
                     if (r <= abs && kz_r32(in + abs) == kz_r32(in + abs - r)) { rl[k] = 4 + (uint32_t)kz_count(in + abs + 4, in + abs + 4 - r, ie); if (rl[k] > rb) { rb = rl[k]; rk = (uint32_t)k; } }
+                    else if (v2 && r <= abs && ((kz_r32(in + abs) ^ kz_r32(in + abs - r)) & 0xFFFFFFu) == 0) rl[k] = 3;
                 }
                 const uint32_t ml = nm ? mm[nm - 1].len : 0;
                 if (rb >= nice || ml >= nice) {   /* long enough: take it now */
@@ -480,8 +526,8 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
                 KO_RELAX(cur + 1, lb + T->pl[in[abs]] + ko_llp(T, L + 1), 0, 0, L + 1);
                 const uint32_t mb = base + T->llp[0];
                 for (int k = 0; k < 3; k++)
-                    for (uint32_t l = 4; l <= rl[k]; l++) KO_RELAX(cur + l, mb + T->pof[k] + ko_mlp(T, l), l, c->rep[k], 0);
-                uint32_t pl = 3;
+                    for (uint32_t l = T->mmin; l <= rl[k]; l++) KO_RELAX(cur + l, mb + T->pof[k] + ko_mlp(T, l), l, c->rep[k], 0);
+                uint32_t pl = T->mmin - 1;
                 for (uint32_t i = 0; i < nm; i++) {
                     const uint32_t off = mm[i].off, ob = mb + T->pof[ko_ofc(off, c->rep)];
                     for (uint32_t l = pl + 1; l <= mm[i].len; l++) KO_RELAX(cur + l, ob + ko_mlp(T, l), l, off, 0);
@@ -496,19 +542,21 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
         if (fl) { ko_emit(T, in, S, &ns, anchor, pos, fl, foff, rep); pos += fl; anchor = pos; }
     }
 #undef KO_RELAX
-    free(M.head); free(M.son); free(o); free(mm); free(path);
+    free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm);
     *anchor_out = anchor; *err = 0; return ns;
 }
-static size_t ko_parse(const uint8_t *in, size_t n, const ko_par *P, kz_seq *S, size_t *anchor_out, int *err) {
+static size_t ko_parse(const uint8_t *in, size_t n, const ko_par *P, int v2, kz_seq *S, size_t *anchor_out, int *err) {
     ko_st *T = malloc(sizeof *T); if (!T) { *err = 1; return 0; }
-    ko_init(T, in, n);
+    ko_init(T, in, n, v2);
     size_t ns = ko_parse_pass(in, n, P, T, S, anchor_out, err);
     free(T); return ns;
 }
-/* KLZH levels 7-9 (their KLZH_LV entries are unused; 5-6 take KLZH_LV with kz_parse_lazy) */
-static const ko_par KO_LV[10] = {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {18, 22, 8, 32, 128}, {19, 23, 24, 64, 0}, {20, 24, 128, 512, 0}};
+/* KLZH levels 7-9 (their KLZH_LV entries are unused; 5-6 take KLZH_LV with kz_parse_lazy); wlog and m3 apply to KLZH2 */
+static const ko_par KO_LV[10] = {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {18, 22, 8, 32, 128, 30, 0}, {19, 23, 24, 64, 0, 30, 1}, {20, 24, 128, 512, 0, 30, 1}};
 
 size_t kolmo_klzh_bound(size_t n) { return n + n / 64 + 1024; }
+#define KZ_SEG (256u << 10)   /* KLZH2: input span of the khuf tables */
+#define KZ_MAXSEG 4096
 #ifndef KZ_RANS_PCT
 #define KZ_RANS_PCT 97   /* KLZH2: rANS only when it is below this % of the khuf size (it decodes about 2x slower per symbol) */
 #endif
@@ -516,22 +564,24 @@ static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
     if (n < 16 || n >= 0xFFFFFFF0u || cap < 64) return 0;
     if (level < 1) level = 1;
     if (level > 9) level = 9;
-    kz_seq *S = malloc((n / 4 + 2) * sizeof *S); size_t anchor; int err;
+    kz_seq *S = malloc((n / (v2 ? 3 : 4) + 2) * sizeof *S); size_t anchor; int err;
     if (!S) return 0;
-    const kz_par *LV = &KLZH_LV[level];
+    const kz_par *LV = &KLZH_LV[level]; const uint32_t mmin = v2 ? 3 : 4;
     size_t ns = level <= 3 ? kz_parse_dfast(in, n, LV->hlog, LV->clog, LV->skip, 4, S, &anchor, &err)
-              : level >= 7 ? ko_parse(in, n, &KO_LV[level], S, &anchor, &err)
+              : level >= 7 ? ko_parse(in, n, &KO_LV[level], v2, S, &anchor, &err)
               : level >= 5 ? kz_parse_lazy(in, n, LV, kz_minm(in, n, LV, S), S, &anchor, &err) : kz_parse(in, n, LV, S, &anchor, &err);
     uint8_t *lit = malloc(n + 16), *cd = malloc(3 * (ns + 1)), *xb = malloc(ns * 12 + 64), *tmp = malloc(kolmo_khuf_bound(n) + 64);
     size_t r = 0;
     if (err || !lit || !cd || !xb || !tmp) goto out;
     uint8_t *llc = cd, *mlc = cd + ns, *ofc = cd + 2 * ns; size_t nl = 0; const uint8_t *ip = in;
     uint32_t rep[3] = {1, 4, 8}; kz_bw w = {0, 0, xb, xb + ns * 12 + 64};
+    size_t sgl[KZ_MAXSEG + 1], sgs[KZ_MAXSEG + 1], nseg = 0;   /* KLZH2: literal and sequence counts at each KZ_SEG of input */
     for (size_t k = 0; k < ns; k++) {
         uint32_t ex; int nb;
+        while (v2 && (size_t)(ip - in) >= nseg * KZ_SEG && nseg < KZ_MAXSEG) { sgl[nseg] = nl; sgs[nseg] = k; nseg++; }
         memcpy(lit + nl, ip, S[k].ll); nl += S[k].ll; ip += S[k].ll + S[k].ml;
         llc[k] = (uint8_t)kz_lcode(S[k].ll, &ex, &nb); if (kz_bput(&w, ex, nb)) goto out;
-        mlc[k] = (uint8_t)kz_lcode(S[k].ml - 4, &ex, &nb); if (kz_bput(&w, ex, nb)) goto out;
+        mlc[k] = (uint8_t)kz_lcode(S[k].ml - mmin, &ex, &nb); if (kz_bput(&w, ex, nb)) goto out;
         uint32_t o = S[k].off;
         if (o == rep[0]) ofc[k] = 0;
         else if (o == rep[1]) { ofc[k] = 1; rep[1] = rep[0]; rep[0] = o; }
@@ -544,7 +594,16 @@ static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
     size_t o = kz_put_uv(out, ns); o += kz_put_uv(out + o, nl);
     const uint8_t *st[4] = {lit, llc, mlc, ofc}; size_t sn[4] = {nl, ns, ns, ns};
     for (int q = 0; q < 4; q++) {
-        size_t z = sn[q] ? kolmo_khuf_compress_chunks(st[q], sn[q], tmp, kolmo_khuf_bound(n) + 64) : 0;
+        size_t z = 0;
+        if (v2 && nseg > 1 && sn[q]) {   /* KLZH2: khuf chunks cut where the input crosses each KZ_SEG (local tables, as zstd's
+                                            blocks; the chunk framing already allows any chunk size up to KHUF_BLOCK_MAX) */
+            const size_t *b = q ? sgs : sgl, cap2 = kolmo_khuf_bound(n) + 64;
+            for (size_t g = 0; g < nseg; g++) {
+                size_t a = b[g], e = g + 1 < nseg ? b[g + 1] : sn[q];
+                if (e > a) { size_t y = kolmo_khuf_compress_chunks(st[q] + a, e - a, tmp + z, cap2 - z); if (!y) { z = 0; break; } z += y; }
+            }
+        }
+        if (!z && sn[q]) z = kolmo_khuf_compress_chunks(st[q], sn[q], tmp, kolmo_khuf_bound(n) + 64);
         if (sn[q] && !z) goto out;
         uint8_t mode = 0; const uint8_t *src = tmp;
         if (v2 && q && sn[q] && kolmo_krans_bound(sn[q]) <= kolmo_khuf_bound(n) + 64) {   /* KLZH2: rANS where it is smaller */
@@ -582,7 +641,7 @@ static void kz_ltab(uint32_t base[72], uint8_t nb[72]) {
 }
 static int kz_klzh_dec(const uint8_t *in, size_t cn, uint8_t *out, size_t n, int v2) {
     size_t i = 0; uint64_t ns, nl;
-    if (kz_get_uv(in, cn, &i, &ns) || kz_get_uv(in, cn, &i, &nl) || ns > n / 4 + 1 || nl > n) return -1;
+    if (kz_get_uv(in, cn, &i, &ns) || kz_get_uv(in, cn, &i, &nl) || ns > n / (v2 ? 3 : 4) + 1 || nl > n) return -1;
     uint8_t *lit = malloc(nl + 32), *cd = malloc(3 * ns + 1); int rc = -1;
     if (!lit || !cd) goto out;
     uint8_t *st[4] = {lit, cd, cd + ns, cd + 2 * ns}; size_t sn[4] = {nl, ns, ns, ns};
@@ -597,14 +656,14 @@ static int kz_klzh_dec(const uint8_t *in, size_t cn, uint8_t *out, size_t n, int
     uint32_t LB[72]; uint8_t LN[72]; kz_ltab(LB, LN);
     { unsigned ml = 0, mo = 0;                                  /* codes in range: one pass, maxima only (decmap lane) */
       for (size_t k = 0; k < ns; k++) { unsigned a = llc[k] > mlc[k] ? llc[k] : mlc[k]; ml = a > ml ? a : ml; mo = ofc[k] > mo ? ofc[k] : mo; }
-      if (ml >= 72 || mo > 26) goto out; }
-    uint8_t *op = out, *oe = out + n; uint32_t rep[3] = {1, 4, 8};
+      if (ml >= 72 || mo > (v2 ? 32u : 26u)) goto out; }
+    uint8_t *op = out, *oe = out + n; uint32_t rep[3] = {1, 4, 8}; const uint32_t mmin = v2 ? 3 : 4;
     for (size_t k = 0; k < ns; k++) {
         uint32_t ll, ml, off; unsigned oc = ofc[k], a = llc[k], b = mlc[k];
         /* after a refill at least 56 bits are buffered; the next refill only when the extra bits left need it */
         kz_refill(&br); ll = LB[a] + kz_bget(&br, LN[a]);
         if (br.c < LN[b]) kz_refill(&br);
-        ml = LB[b] + kz_bget(&br, LN[b]) + 4;
+        ml = LB[b] + kz_bget(&br, LN[b]) + mmin;
         if (oc >= 3) { int h = (int)oc - 3; if (br.c < h) kz_refill(&br); off = (1u << h) | kz_bget(&br, h); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
         else if (oc == 0) off = rep[0];
         else if (oc == 1) { off = rep[1]; rep[1] = rep[0]; rep[0] = off; }
