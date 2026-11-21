@@ -33,3 +33,8 @@
 - 2026-11-21T03:16:00Z check-in: usage 5h 10%, weekly 7%; timed dom-image (kimg r2) in round 3 of 5
 - 2026-11-21T03:21:58Z published overnight evidence to review branch (4a81929b) and pushed
 - 2026-11-21T03:31:48Z A6(a) branch review/c2-ecoalt-J62kQD 4566725d pushed (check ok, determinism 122/122)
+- 2026-11-21T03:46:01Z check-in: usage 5h 11%, weekly 7%; CI running on c3 r2 commits, ecoalt, review branch; Phase E on f1f3f1c3 starting
+- 2026-11-21T04:16:03Z check-in: usage 5h 11%, weekly 7%; Phase E f1f3f1c3 5/17 pass incl. sanitizers; CI 0260a7aa success; f1f3f1c3, ecoalt, review-branch CI running
+- 2026-11-21T04:19:47Z Phase E f1f3f1c3 17/17 pass
+- 2026-11-21T04:45:58Z check-in: usage 5h 12%, weekly 7%; CI f1f3f1c3 5/5 success; ecoalt + review branch CI running
+- 2026-11-21T05:16:01Z check-in: usage 5h 12%, weekly 7%; all CI green (ecoalt, review branch). Night run complete; final evidence published.

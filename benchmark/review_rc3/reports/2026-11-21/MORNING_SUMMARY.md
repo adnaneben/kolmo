@@ -48,4 +48,4 @@ C2 is C1 plus four changes:
   - Gap to JPEG XL -e7: down from +20.5% to **+2.9%**. It encodes 2.56× faster than cjxl -e9.
   - Speed cost: image decode is 0.69× of C2's (14.8 vs 23.6 MiB/s; djxl 21).
   - Compatibility: clean. Every older decoder refuses kimg frames, and C3 decodes all C2 frames identically.
-  - Validation: Phase E 17/17 and CI 5/5 on cbb40b5d. The round-2 commits pass make check/check-rc/determinism/compat, but CI and sanitizers have not run on them yet.
+  - Validation: Phase E 17/17 and CI 5/5 on cbb40b5d. Round 2: 0260a7aa CI 5/5; f1f3f1c3 Phase E 17/17 (sanitizers included) and CI 5/5.

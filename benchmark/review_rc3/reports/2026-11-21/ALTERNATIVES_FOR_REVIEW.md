@@ -320,6 +320,6 @@ So this option is 0.32% smaller than C1, from the window merges, and keeps C1-le
 
 **Checks:** make check passes, and determinism is 122/122 (text.txt eco returns to C1's frame). Sizes were measured untimed.
 
-**Not run:** a timed eco run and Phase E on this branch. CI was started by the push.
+**Not run:** a timed eco run and Phase E on this branch. CI is green (run 44861578916).
 
 **To choose:** take C2 for the smallest eco, or merge this branch for fast eco decode.

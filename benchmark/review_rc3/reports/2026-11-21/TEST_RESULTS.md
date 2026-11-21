@@ -117,3 +117,10 @@ portable and C-reference builds, and NO_ASM test-dispatch/test-asm.
 Compatibility (`kimg-compat-c3`): C3 decodes all 972 C2 compat frames with the same outcome as C2. The 18 kimg frames round-trip exactly.
 210/210 old-decoder attempts are refused, with 0 misdecodes and 0 crashes.
 CI run 44849402705: **all 5 jobs success** (https://github.com/adnaneben/kolmo/actions/runs/44849402705).
+
+## kimg round 2 (review/c3-image-J62kQD, 2026-11-21)
+- 0260a7aa (same bitstream, faster coder): CI run 44856725041 **all 5 jobs success**.
+- f1f3f1c3 (kimg stream v2): Phase E (`logs/phase-e-c3r3/`) **17/17 exit 0**, including sanitizers, bindings and determinism. The helper's compat
+  runs (`kimg-compat-c3-r2`, `-r3`) are clean, and kimg v1 frames still decode. CI run 44859479881 **all 5 jobs success**.
+- review/c2-ecoalt-J62kQD 4566725d (option A6(a)): CI run 44861578916 **all 5 jobs success**.
+- Review branch 4a81929b and 4b50b4b8 (evidence only): CI success.
