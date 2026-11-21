@@ -62,6 +62,7 @@ int kolmo_force_c;
 /* codecs */
 #include "codecs/cm.c"
 #include "codecs/cm_image.c"
+#include "codecs/kimg.c"             /* codec 31: lossless 8-bit images (ratio, ultra) */
 #include "codecs/gr6.c"
 #include "codecs/cm_par.c"
 #include "transforms/shuffle.c"

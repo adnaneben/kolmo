@@ -186,6 +186,15 @@ static int64_t compress_impl_p(const uint8_t *src, int input_fd, size_t n, uint8
             if (meta_aiff(src, n, &ach, &aoff, &aend)) { J.aud_prof = p->mode >= KOLMO_MAX ? 1 : 0; J.aud_ch = (int)ach; J.aud_off = aoff; J.aud_end = aend; J.aud_be = 1; }
         }
     }
+    J.img_on = 0;
+    if (p->mode >= KOLMO_MAX && !dictlen && !prof && src && n >= (128u << 10)) {
+        /* kimg (codec 31, ratio and ultra): an 8-bit image header (PNM/PAM, NPY, BMP, TIFF: plan/meta.c). Every block
+         * that holds pixels is also coded by the image codec and the smaller coding is kept */
+        size_t iw = 0, ih = 0; unsigned ic = 0;
+        if (meta_image8(src, n, &iw, &ic, &ih) && ic >= 1 && ic <= 4 && iw && iw % ic == 0 && iw < ((size_t)1 << 30) && ih < n && n - ih >= iw) {
+            J.img_on = 1; J.img_w = (uint32_t)iw; J.img_ch = ic; J.img_off = ih; J.img_end = ih + (n - ih) / iw * iw;
+        }
+    }
     if (planning_map != MAP_FAILED) {
         munmap(planning_map, n); planning_map = MAP_FAILED; src = NULL;
     }
