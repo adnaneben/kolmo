@@ -17,8 +17,9 @@
      sequence are those left in the literal stream.
 
    Levels: KLZ 1 (hash table, skipping), 2 (larger table, every position), 3 (hash chains, lazy).
-           KLZH 1-3 two hash tables (8- and 5-byte keys), greedy; 4-9 hash chains of growing depth, lazy evaluation from 5,
-           two-step lazy from 8. */
+           KLZH 1-3 two hash tables (8- and 5-byte keys), greedy; 4 hash chains; 5-6 hash chains on 5-byte keys, the three
+           repeat offsets tried at every position, two-step lazy evaluation; 7-9 a price-based optimal parse over a binary-
+           tree match finder (encoder choices only: every level writes the same format). */
 #ifndef KOLMO_ALGO_KLZ_H
 #define KOLMO_ALGO_KLZ_H
 #include <stddef.h>

@@ -75,7 +75,7 @@ static int native_level(int c, int level) {
         case C_LZ4: return 1;
         case C_LZ4HC: return 3;
         case C_ZSTD: if (kolmo_native_flags() & KN_STRONG) return level >= 19 ? 6 : level >= 10 ? 5 : 3;
-                     return level <= 2 ? 1 : level <= 5 ? 3 : level <= 9 ? 5 : level <= 15 ? 6 : level <= 19 ? 8 : 9;
+                     return level <= 2 ? 1 : level <= 5 ? 3 : level <= 9 ? 5 : level <= 15 ? 6 : level <= 18 ? 8 : 9;   /* zstd -19 -> KLZH 9: the same encode time as zstd -19 (5.6 vs 6.0 MB/s), 1% smaller than KLZH 8 (night 2) */
         case C_BROTLI: return kolmo_native_flags() & KN_STRONG ? 3 : 7;
         case C_LZMA: return level >= 100 ? level : level <= 1 ? 1 : level <= 5 ? 4 : 8;   /* the parse level; >= 100: lc/lp/pb */
     }
