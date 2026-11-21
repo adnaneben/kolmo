@@ -1,0 +1,33 @@
+# NIGHT_LOG
+- 2026-11-20T20:25:36Z start; usage 5h 1%, weekly 3%; CI on C1 running; cron check-in every 30 min (job 2eceb3ff)
+- 2026-11-20T20:32:58Z rivals built (RIVALS_BUILT.md); C2 native-version fix 91ae8cee validated (560 encodes, 0 misdecodes); dict+native probe on C1 300/300 ok
+- 2026-11-20T20:41:17Z domain corpus + config + preflight ok (5 suites); docs branch make check ok; eco-memory helper started; waiting for W4 cm helper before timed runs
+- 2026-11-20T20:45:52Z check-in: usage 5h 6%, weekly 4%; running: size compare docs vs c1, W4 cm helper (compat/sanitizers), eco-memory helper; C1 CI 1/5 done
+- 2026-11-20T20:47:24Z docs encoder tuning (b902e04a on review/c2-docs-J62kQD) sizes on holdout: eco -4.39%, hc -1.04%, balanced -0.14%, speed/ratio identical; 105/105 round trips exact (evidence/size-docs-vs-c1). Candidate for C2 pending timed speed/memory.
+- 2026-11-20T21:06:31Z c2-mem: brotli mmap allocator committed 69f391f8 and pushed (eco peak 1078->157 MiB, 191 frames identical)
+- 2026-11-20T21:15:52Z check-in: usage 5h 10%, weekly 5%; C1 CI: fuzz, ubuntu-latest (x86-64), macos passed; arm+sanitizers running. C2 integration (native+docs+mem) build/check running; W4 cm helper finishing check-rc
+- 2026-11-20T21:16:49Z C2 = 25bedda8 composed (native+docs+mem+cm); pushed review/c2-integration-J62kQD; release build + Phase E C2 running
+- 2026-11-20T21:18:02Z queue armed (tools/night_queue.sh): after Phase E C2 passes -> compat matrix C2 gate -> timed dom-audio/image/numeric/genomics/video (C2 vs specialists) -> holdout-c2 (C2 vs C1) -> holdout-native; abort on any failure
+- 2026-11-20T21:45:54Z check-in: usage 5h 11%, weekly 5%; Phase E C2 5/17 steps passed so far (build, check, check-rc, sanitizers, dna/cm/tar); queue waiting; C1 CI arm+sanitizers still running
+- 2026-11-20T21:49:42Z C1 CI run 44810049864: all 5 jobs success (x86-64 included)
+- 2026-11-20T21:50:12Z Phase E C2 17/17 pass; release c2 31b9e558; queue now running compat matrix C2
+- 2026-11-20T22:15:53Z check-in: usage 5h 11%, weekly 5%; compat matrix C2: 14,580 decodes = 12,174 exact + 2,406 rejected, 0 misdecode/crash/timeout; timed dom-audio running (keeping machine quiet)
+- 2026-11-20T22:46:44Z check-in: usage 5h 11%; domain results C2 (audio/image/numeric/genomics): numeric ratio 37% smaller than pcodec; audio ratio 12.4% smaller than flac-8 (0.13x enc, 0.30x dec); FASTQ ratio ~cram archive (-1.7%); IMAGES ratio 19.7% LARGER than cjxl -e7 -> image-codec helper started (read-only until QUEUE_DONE). dom-video running.
+- 2026-11-20T23:15:54Z check-in: usage 5h 13%, weekly 5%; all 5 domain suites done; timed holdout-c2 (C2 vs C1) running since 23:03Z, then holdout-native
+- 2026-11-20T23:46:00Z check-in: usage 5h 13%, weekly 5%; holdout-c2 754/1050 timed trials accepted (+210 warmups), 7 rejected; est ~30 min left, then holdout-native
+- 2026-11-21T00:16:11Z holdout-c2 done: eco -4.39% (enc peak 1079->233 MiB, dec 0.72x), hc -1.04%, balanced -0.14%, speed/ratio identical. holdout-native running.
+- 2026-11-21T00:32:21Z QUEUE_DONE 00:31Z. PERFORMANCE_REPORT addendum written (C2 vs C1, native lane, 5 domains). Image helper now building.
+- 2026-11-21T00:33:01Z CI green on C2 25bedda8 and all 4 part branches + review branch; compat C2 addendum written
+- 2026-11-21T00:33:42Z MORNING_SUMMARY draft written; ultra-c2 config ready (runs after image helper); waiting on image helper
+- 2026-11-21T00:45:57Z check-in: usage 5h 16%, weekly 5%; image helper had not started building (machine idle) -> told it QUEUE_DONE; it has the machine until ~04:00Z, then ultra-c2 + image timed suites
+- 2026-11-21T01:15:56Z check-in: usage 5h 0% (window reset), weekly 6%; image helper validating (compat clean: 972 C2 frames same outcome, 18 new frames exact, 210 old-decoder refusals); waiting on its check-rc/determinism
+- 2026-11-21T01:20:52Z image helper done: review/c3-image-J62kQD cbb40b5d (kimg, codec 31): ratio images -12.9% vs C2 (3,228,497 vs cjxl-e7 3,097,135, +4.2%); decode 2.6x slower than C2; compat clean. Timed queue2 started: dom-image (c3 vs c2 vs cjxl) then ultra-c2.
+- 2026-11-21T01:46:02Z check-in: usage 5h 3%, weekly 6%; dom-image (c3) done, ultra-c2 running
+- 2026-11-21T01:56:17Z ultra-c2 timed: c2/x vs c1/x -0.28% size, enc 1.98x, dec 1.87x, peak 226 vs 3046 MiB; vs zpaq-m5 7.59% smaller, dec 7.5x. Phase E on C3 (cbb40b5d) starting.
+- 2026-11-21T01:56:51Z reports updated (ultra, kimg); Phase E C3 running; image helper resumed for a 2nd kimg round until 03:45Z (decode speed first)
+- 2026-11-21T02:16:01Z check-in: usage 5h 6%, weekly 6%; Phase E C3 2/17 passed (build, check) so far; image helper round 2 validating
+- 2026-11-21T02:31:16Z Phase E C3 17/17 pass; C3 CI 4/5 green, arm pending
+- 2026-11-21T02:45:50Z check-in: image helper round 2 validating; then publish evidence to review branch
+- 2026-11-21T02:45:56Z usage 5h 8%, weekly 7%; C3 CI 5/5 green
+- 2026-11-21T03:09:23Z kimg round 2: 0260a7aa (same bytes, dec -21%) + f1f3f1c3 (kimg v2, -1.32%): ratio images -14.07% vs C2, +2.87% vs cjxl-e7; timed dom-image on f1f3f1c3 running
+- 2026-11-21T03:16:00Z check-in: usage 5h 10%, weekly 7%; timed dom-image (kimg r2) in round 3 of 5
