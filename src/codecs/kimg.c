@@ -10,15 +10,20 @@
  *         (len - head - npx, stored) | coded pixel bytes.
  * Decoders before this codec refuse id 31 (not in their registry); version bytes other than 1 are refused.
  * Part of the single translation unit built from src/kolmo.c. */
+#define KIMG_ES 12                     /* error entries per byte column: KIMG_NP + the residual, padded */
 #define KIMG_NP 10                     /* predictors: 7 spatial, 3 with the earlier channel's error carried over */
 #define KIMG_NA 12                     /* expected-error buckets */
 #define KIMG_HDR 24
+#ifndef KIMG_SEL_MIN
+#define KIMG_SEL_MIN (256u << 10)      /* pixel bytes from which the transform is chosen on a sample */
+#endif
 static inline void kimg_p32(uint8_t *p, uint32_t v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); p[2] = (uint8_t)(v >> 16); p[3] = (uint8_t)(v >> 24); }
 static inline uint32_t kimg_g32(const uint8_t *p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24; }
 
+#define KIMG_AI __attribute__((always_inline)) static inline
 /* binary range coder (carry-less, 32-bit, 12-bit probabilities of a 1) */
 typedef struct { uint32_t x1, x2, x; const uint8_t *in, *end; uint8_t *out, *oend; int err; } kimg_rc;
-static inline void kimg_put(kimg_rc *r, int p, int bit) {
+KIMG_AI void kimg_put(kimg_rc *r, int p, int bit) {
     uint32_t xm = r->x1 + ((r->x2 - r->x1) >> 12) * (uint32_t)p;
     if (bit) r->x2 = xm; else r->x1 = xm + 1;
     while (((r->x1 ^ r->x2) & 0xff000000u) == 0) {
@@ -26,7 +31,7 @@ static inline void kimg_put(kimg_rc *r, int p, int bit) {
         r->x1 <<= 8; r->x2 = (r->x2 << 8) | 255;
     }
 }
-static inline int kimg_get(kimg_rc *r, int p) {
+KIMG_AI int kimg_get(kimg_rc *r, int p) {
     uint32_t xm = r->x1 + ((r->x2 - r->x1) >> 12) * (uint32_t)p;
     int bit = r->x <= xm;
     if (bit) r->x2 = xm; else r->x1 = xm + 1;
@@ -77,7 +82,7 @@ static const uint16_t *kimg_dt(void) {
     return dt;
 }
 typedef struct { uint16_t p; uint8_t n, lim; } kimg_ctr;
-static inline void kimg_upd(kimg_ctr *c, int bit, const uint16_t *dt) {
+KIMG_AI void kimg_upd(kimg_ctr *c, int bit, const uint16_t *dt) {
     int t = bit ? 65535 : 0; c->p = (uint16_t)(c->p + (((t - (int)c->p) * (int)dt[c->n]) >> 16));
     if (c->n < c->lim) c->n++;
 }
@@ -101,13 +106,13 @@ static void kimg_model_init(kimg_model *m) {
     memset(m->bsum, 0, sizeof m->bsum); memset(m->bcnt, 0, sizeof m->bcnt);
 }
 typedef struct { kimg_ctr *c[4]; int32_t *w; int st[KIMG_NI]; int p; } kimg_mix;
-static inline int kimg_mix_p(kimg_mix *x) {
+KIMG_AI int kimg_mix_p(kimg_mix *x) {
     int64_t dot = (int64_t)x->w[4] * 256; x->st[4] = 256;
     for (int i = 0; i < 4; i++) { x->st[i] = kimg_st[x->c[i]->p >> 4]; dot += (int64_t)x->w[i] * x->st[i]; }
     int p = kimg_squash((int)(dot >> 16)); x->p = p < 1 ? 1 : p > 4094 ? 4094 : p;
     return x->p;
 }
-static inline void kimg_mix_upd(kimg_mix *x, int bit, const uint16_t *dt) {
+KIMG_AI void kimg_mix_upd(kimg_mix *x, int bit, const uint16_t *dt) {
     const int err = ((bit << 12) - x->p) * KIMG_LR;
     for (int i = 0; i < KIMG_NI; i++) x->w[i] += (x->st[i] * err) >> KIMG_LS;
     for (int i = 0; i < 4; i++) kimg_upd(x->c[i], bit, dt);
@@ -118,16 +123,17 @@ static inline int kimg_bucket(uint32_t e) {       /* expected error (sum of neig
     return b;
 }
 static inline int kimg_q8(int v) { v = v < 0 ? -v : v; return v == 0 ? 0 : v <= 1 ? 1 : v <= 2 ? 2 : v <= 4 ? 3 : v <= 8 ? 4 : v <= 16 ? 5 : v <= 32 ? 6 : 7; }
-static inline int kimg_code(int enc, kimg_rc *r, kimg_model *m, const int *cx, int node, int bit, const uint16_t *dt) {
+/* the four context rows and the weight row of one sample; a node indexes into each */
+typedef struct { kimg_ctr *b[4]; int32_t (*w)[KIMG_NI]; } kimg_cx;
+KIMG_AI int kimg_code(int enc, kimg_rc *r, const kimg_cx *X, int node, int bit, const uint16_t *dt) {
     kimg_mix x;
-    x.c[0] = &m->t0[cx[0]][cx[1]][node]; x.c[1] = &m->t1[cx[0]][cx[2]][cx[3]][node];
-    x.c[2] = &m->t2[cx[0]][cx[4]][cx[5]][node]; x.c[3] = &m->t3[cx[0]][cx[6]][cx[7]][node]; x.w = KIMG_WSEL;
+    x.c[0] = X->b[0] + node; x.c[1] = X->b[1] + node; x.c[2] = X->b[2] + node; x.c[3] = X->b[3] + node; x.w = X->w[node];
     const int p = kimg_mix_p(&x);
     if (enc) kimg_put(r, p, bit); else bit = kimg_get(r, p);
     kimg_mix_upd(&x, bit, dt);
     return bit;
 }
-static inline int kimg_code1(int enc, kimg_rc *r, kimg_ctr *c, int bit, const uint16_t *dt) {
+KIMG_AI int kimg_code1(int enc, kimg_rc *r, kimg_ctr *c, int bit, const uint16_t *dt) {
     int p = c->p >> 4; p = p < 1 ? 1 : p > 4094 ? 4094 : p;
     if (enc) kimg_put(r, p, bit); else bit = kimg_get(r, p);
     kimg_upd(c, bit, dt); return bit;
@@ -147,14 +153,15 @@ static inline int kimg_unfold(uint32_t u, int P, int V) {
 }
 
 /* the shared coding loop: enc = 1 codes px[0..npx) into r, enc = 0 decodes into px */
-static int kimg_run(int enc, int16_t *px, size_t npx, uint32_t iw, uint32_t ich, uint32_t phase, const int *V, kimg_rc *r) {
+KIMG_AI int kimg_run_t(const int enc, int16_t *px, size_t npx, uint32_t iw, uint32_t ich, uint32_t phase, const int *V, kimg_rc *r) {
     if (!iw || !ich || ich > 4 || iw % ich || phase >= iw) return -1;
     kimg_model *m = malloc(sizeof *m);
     /* per predictor errors and the residual magnitude for two rows, indexed by byte column */
-    uint16_t *err = calloc((size_t)2 * (KIMG_NP + 1) * iw, sizeof(uint16_t));
+    uint16_t *err = calloc((size_t)2 * KIMG_ES * iw + KIMG_ES, sizeof(uint16_t));   /* + one zero entry (absent neighbours) */
     if (!m || !err) { free(m); free(err); return -1; }
     kimg_model_init(m); kimg_init_tabs(); const uint16_t *dt = kimg_dt();
-#define ER(row, i, x) err[((size_t)(row) * (KIMG_NP + 1) + (i)) * iw + (x)]
+#define EP(row, x) (err + ((size_t)(row) * iw + (x)) * KIMG_ES)   /* the KIMG_NP errors and the residual at one byte column */
+    const uint16_t *const ez = err + (size_t)2 * KIMG_ES * iw;
     int prevres = 0, prevE[3] = {0, 0, 0};   /* the earlier channel of this pixel: its residual, its spatial errors */
     static uint64_t WT[16384]; static int wt_ready;   /* weight of an error sum s: 2^44 / s^KIMG_WP */
     if (!__atomic_load_n(&wt_ready, __ATOMIC_ACQUIRE)) { for (uint64_t s = 1; s < 16384; s++) WT[s] = ((uint64_t)1 << 44) / (KIMG_WP == 3 ? s * s * s : s * s); WT[0] = WT[1]; __atomic_store_n(&wt_ready, 1, __ATOMIC_RELEASE); }
@@ -182,21 +189,19 @@ static int kimg_run(int enc, int16_t *px, size_t npx, uint32_t iw, uint32_t ich,
                                                       * spatial predictor carries over (7-9) */
         /* weights from each predictor's errors at W, N, NW, NE (this channel) */
         const uint32_t prow = row ^ 1;
+        const uint16_t *eW = hasW ? EP(row, x - ich) : ez, *eN = hasN ? EP(prow, x) : ez;
+        const uint16_t *eNW = hasNW ? EP(prow, x - ich) : ez, *eNE = hasNE ? EP(prow, x + ich) : ez;
+        uint32_t sv[KIMG_ES];
+        for (int i = 0; i < KIMG_ES; i++) sv[i] = 1u + KIMG_SW * eW[i] + KIMG_SW * eN[i] + eNW[i] + eNE[i];   /* vectorised */
         int64_t num = 0, den = 0;
         for (int i = 0; i < KIMG_NP; i++) {
-            uint32_t s = 1;
-            if (hasW) s += KIMG_SW * ER(row, i, x - ich);
-            if (hasN) s += KIMG_SW * ER(prow, i, x);
-            if (hasNW) s += ER(prow, i, x - ich);
-            if (hasNE) s += ER(prow, i, x + ich);
-            if (s > 16383) s = 16383;
+            const uint32_t s = sv[i] > 16383 ? 16383 : sv[i];
             const int64_t w = (int64_t)WT[s];
             num += w * (int64_t)P[i]; den += w;
         }
         const int pr0 = (int)((num + (den >> 1)) / den); int pr = pr0;
         /* expected error: residual magnitudes at the neighbours and the earlier channel of this pixel */
-        uint32_t ee = (hasW ? 2u * ER(row, KIMG_NP, x - ich) : 0) + (hasN ? 2u * ER(prow, KIMG_NP, x) : 0)
-                    + (hasNW ? ER(prow, KIMG_NP, x - ich) : 0) + (hasNE ? ER(prow, KIMG_NP, x + ich) : 0);
+        uint32_t ee = 2u * eW[KIMG_NP] + 2u * eN[KIMG_NP] + eNW[KIMG_NP] + eNE[KIMG_NP];
         if (c) ee += 2u * (uint32_t)(prevres < 0 ? -prevres : prevres);
         const int a = kimg_bucket(ee >> 1);
         /* bias context: the sign pattern of the local gradient */
@@ -204,20 +209,19 @@ static int kimg_run(int enc, int16_t *px, size_t npx, uint32_t iw, uint32_t ich,
         int32_t *bs = &m->bsum[c][a][sc], *bc = &m->bcnt[c][a][sc];
         if (*bc) pr += (*bs >= 0 ? (*bs + (*bc >> 1)) : (*bs - (*bc >> 1))) / *bc;
         const int Vc = V[c], Pc = pr < 0 ? 0 : pr > Vc ? Vc : pr;
-        const int rW = hasW ? ER(row, KIMG_NP, x - ich) : 0, rN = hasN ? ER(prow, KIMG_NP, x) : 0;
-        const int rNE = hasNE ? ER(prow, KIMG_NP, x + ich) : 0, rNW = hasNW ? ER(prow, KIMG_NP, x - ich) : 0;
+        const int rW = eW[KIMG_NP], rN = eN[KIMG_NP], rNE = eNE[KIMG_NP], rNW = eNW[KIMG_NP];
         const int g3 = NE - N, tx = (g1 > 0) - (g1 < 0) + 1 + 3 * ((g2 > 0) - (g2 < 0) + 1) + 9 * ((g3 > 0) - (g3 < 0) + 1);
-        const int cx[8] = { (int)c, a, kimg_q8(rW), kimg_q8(rN), tx, a >> 1, c ? kimg_q8(prevres) : kimg_q8(rNW), kimg_q8(rNE) };
+        const kimg_cx X = { { m->t0[c][a], m->t1[c][kimg_q8(rW)][kimg_q8(rN)], m->t2[c][tx][a >> 1], m->t3[c][c ? kimg_q8(prevres) : kimg_q8(rNW)][kimg_q8(rNE)] }, m->w[c][a] };
         uint32_t u = enc ? kimg_fold((int)px[k] - Pc, Pc, Vc) : 0;
-        if (!kimg_code(enc, r, m, cx, 0, u == 0, dt)) {
+        if (!kimg_code(enc, r, &X, 0, u == 0, dt)) {
             const int LM = Vc > 255 ? 8 : 7;
             int L = enc ? 31 - __builtin_clz(u) : 0;                             /* 0..LM */
-            if (enc) { for (int b = 0; b < LM; b++) { kimg_code(1, r, m, cx, 1 + b, L > b, dt); if (L <= b) break; } }
-            else while (L < LM && kimg_code(0, r, m, cx, 1 + L, 0, dt)) L++;
+            if (enc) { for (int b = 0; b < LM; b++) { kimg_code(1, r, &X, 1 + b, L > b, dt); if (L <= b) break; } }
+            else while (L < LM && kimg_code(0, r, &X, 1 + L, 0, dt)) L++;
             if (!enc) u = 1u << L;
             if (L >= 1) {
-                int b1 = kimg_code(enc, r, m, cx, 9 + L, (u >> (L - 1)) & 1, dt); if (!enc) u |= (uint32_t)b1 << (L - 1);
-                if (L >= 2) { int b2 = kimg_code(enc, r, m, cx, 18 + L, (u >> (L - 2)) & 1, dt); if (!enc) u |= (uint32_t)b2 << (L - 2); }
+                int b1 = kimg_code(enc, r, &X, 9 + L, (u >> (L - 1)) & 1, dt); if (!enc) u |= (uint32_t)b1 << (L - 1);
+                if (L >= 2) { int b2 = kimg_code(enc, r, &X, 18 + L, (u >> (L - 2)) & 1, dt); if (!enc) u |= (uint32_t)b2 << (L - 2); }
                 for (int b = L - 3; b >= 0; b--) { int bb = kimg_code1(enc, r, &m->low[c][L][b], (u >> b) & 1, dt); if (!enc) u |= (uint32_t)bb << b; }
             }
         }
@@ -226,18 +230,22 @@ static int kimg_run(int enc, int16_t *px, size_t npx, uint32_t iw, uint32_t ich,
         /* bias update (halved at 64 samples, as LOCO-I) */
         *bs += v - pr0; (*bc)++;
         if (*bc >= 64) { *bs /= 2; *bc /= 2; }
-        for (int i = 0; i < KIMG_NP; i++) { int q = P[i] < 0 ? 0 : P[i] > Vc ? Vc : P[i]; int e = v - q; ER(row, i, x) = (uint16_t)(e < 0 ? -e : e); }
-        ER(row, KIMG_NP, x) = (uint16_t)(res < 0 ? -res : res);
+        uint16_t *eo = EP(row, x);
+        for (int i = 0; i < KIMG_NP; i++) { int q = P[i] < 0 ? 0 : P[i] > Vc ? Vc : P[i]; int e = v - q; eo[i] = (uint16_t)(e < 0 ? -e : e); }
+        eo[KIMG_NP] = (uint16_t)(res < 0 ? -res : res);
         if (c + 1 < ich) { prevE[0] = v - P[0]; prevE[1] = v - P[1]; prevE[2] = v - P[2]; prevres = res; }
         else { prevE[0] = prevE[1] = prevE[2] = 0; prevres = 0; }
     }
-#undef ER
+#undef EP
     free(m); free(err);
     return 0;
 }
 
 /* colour transforms of the first three channels (whole pixels only): 0 none; 1 subtract green (G, R - G, B - G);
  * 2 YCoCg-R (Y, Co, Cg). Shifted to be non-negative: the ranges of the coded channels are in kimg_ranges. */
+static int kimg_run(int enc, int16_t *px, size_t npx, uint32_t iw, uint32_t ich, uint32_t phase, const int *V, kimg_rc *r) {
+    return enc ? kimg_run_t(1, px, npx, iw, ich, phase, V, r) : kimg_run_t(0, px, npx, iw, ich, phase, V, r);   /* two specialised loops */
+}
 static void kimg_ranges(int t, int *V) { for (int c = 0; c < 4; c++) V[c] = 255; if (t) { V[1] = V[2] = 510; } }
 static void kimg_fwd(int t, const uint8_t *p, size_t npx, uint32_t ich, int16_t *s) {
     if (!t) { for (size_t k = 0; k < npx; k++) s[k] = p[k]; return; }
@@ -282,7 +290,21 @@ static size_t kimg_compress(const uint8_t *in, size_t n, uint32_t iw, uint32_t i
     int16_t *sb = malloc((npx ? npx : 1) * sizeof(int16_t)); uint8_t *alt = malloc(cap);
     if (!sb || !alt) { free(sb); free(alt); return 0; }
     const int nt = ich >= 3 && phase % ich == 0 && npx % ich == 0 ? 3 : 1;
-    size_t best = 0;
+    size_t best = 0; int tb = 0;
+    if (nt > 1 && phase == 0 && npx >= (size_t)KIMG_SEL_MIN) {
+        /* the transform from a sample: every eighth band of 16 rows, coded with each transform (3/8 of a full pass
+         * instead of 2 extra passes); the image is then coded once */
+        const size_t rows = npx / iw, band = 16; size_t sn = 0;
+        uint8_t *smp = malloc(npx);
+        if (smp) {
+            for (size_t y = 0; y < rows; y += 8 * band) { size_t h = rows - y < band ? rows - y : band; memcpy(smp + sn, in + head + y * iw, h * iw); sn += h * iw; }
+            size_t bz = 0;
+            for (int t = 0; t < nt; t++) { size_t z = kimg_code_one(t, smp, 0, sn, 0, iw, ich, 0, sb, alt, cap); if (z && (!bz || z < bz)) { bz = z; tb = t; } }
+            free(smp);
+            best = kimg_code_one(tb, in, head, npx, tail, iw, ich, phase, sb, out, cap);
+            free(sb); free(alt); return best;
+        }
+    }
     for (int t = 0; t < nt; t++) {
         size_t z = kimg_code_one(t, in, head, npx, tail, iw, ich, phase, sb, best ? alt : out, cap);
         if (z && (!best || z < best)) { if (best) memcpy(out, alt, z); best = z; }
