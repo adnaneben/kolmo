@@ -34,6 +34,7 @@ The detailed log is `NIGHT2_LOG.md`; the plan forward is `PLAN_FORWARD.md`. Noth
 | **KLZH2 = codec 32**: KLZH plus a new rANS coder (KRANS) for the sequence codes | d25da20f | −0.85% vs KLZH at level 3, decode ~1.0×; KRANS decode 0.62 ns/symbol after 4 rounds (1.37 at first) |
 | **KLZH optimal parse** (levels 7–9) and lazy parse with per-block minimum match (levels 5–6), by a subagent | `review/native-klzh-opt-J62kQD` b0403731, merged as 2e62763c | klzh9 **+12.5% → +2.5%** vs zstd -19, decode as fast |
 | Combined (KLZH2 + optimal parse) | 13eed5bb | klzh2_9 **+1.5%** vs zstd -19 at the same encode speed; klzh2_3 +0.9% vs zstd -3 |
+| **KLZH2 format** (subagent): minimum match 3, offsets up to 2^30 − 1, Huffman tables per 256 KiB of input | `review/native-klzh2-fmt-J62kQD` 1a74a603; `review/native-tune-J62kQD` fast-forwarded to it | klzh2_9 **+0.77%** vs zstd -19; end to end, native hc **−0.32%** vs zstd hc on the screening corpus; KLZH2 decode 4–7% slower; KLZH (29) bytes unchanged |
 | **0.0.1 defaults prototype** | `review/native-defaults-J62kQD` d16cde21 | below |
 
 **Prototype of 0.0.1 defaults** (KOLMO_NATIVE unset: speed → KLZ, ratio → KLZMA, Huffman leaves → khuf):
@@ -42,7 +43,10 @@ The detailed log is `NIGHT2_LOG.md`; the plan forward is `PLAN_FORWARD.md`. Noth
 - **rc4's decoder reads every frame** of this prototype.
 - **Native hc measured and switched off** (decision D9):
   - It was +1.56% vs zstd hc on the holdout: nci +9.1% (KLZH offsets stop at 16 MiB), mozilla +6.8% and sao +3.4% (zstd's minimum match of 3).
-  - Both are format limits of KLZH2, which is unreleased and still free to change. They are the next work item.
+  - Both are format limits of KLZH2, which is unreleased and still free to change, so they were fixed tonight (row above).
+  - **Retested on the holdout** with the new format (315 accepted): **+0.55%** vs zstd hc (4 wins / 13 losses), encode 0.83×, decode 0.95×, encode peak 347 vs 242 MiB.
+    - The worst files are nci (+4.9%), mozilla (+3.3%) and sao (+3.0%).
+    - D9 stands: native hc stays off until it reaches parity on the holdout.
 
 ## 3. Decisions I made (alternatives for you)
 
@@ -53,7 +57,8 @@ The detailed log is `NIGHT2_LOG.md`; the plan forward is `PLAN_FORWARD.md`. Noth
 | D4 | kept the optimal parse at KLZH level 7: smaller, but 3× slower to encode | level 7 back on the lazy parse: ~3× faster encode, ~6% larger |
 | D5 | did not touch system processes (Spotlight); moved scratch files under `.noindex` | — |
 | D7 | `KOLMO_NATIVE` maps zstd -19 to KLZH level 9: zstd -19's encode time, 1% smaller than level 8 | level 8 |
-| D8 → D9 | made hc native in the prototype, measured it, then **switched it off** | ship native hc at +1.6% size |
+| D8 → D9 | made hc native in the prototype, measured it, then **switched it off** (still +0.55% after the format work) | ship native hc at +0.55% size, 0.83× encode, about 100 MiB more encode peak |
+| D10 | accepted the KLZH2 format work, including 256 KiB Huffman spans: smaller, decode 4–7% slower | 512 KiB spans: probably faster decode, slightly larger (not measured) |
 | — | rc4 PR opened as a **draft** | — |
 
 ## 4. For you to decide
@@ -66,7 +71,16 @@ The detailed log is `NIGHT2_LOG.md`; the plan forward is `PLAN_FORWARD.md`. Noth
    - next versions 0.1.0, 0.2.0 (cargo treats every 0.0.x as incompatible with the next).
 4. **The native branches:** merge `review/native-tune-J62kQD` (KLZ decoder, KLZH2, optimal parse) into the rc line after its own compatibility matrix. It adds codec 32 (opt-in only).
 
-## 5. Not done
-- No compatibility matrix yet on the native branches (unit tests, ASan/UBSan, natbench and end-to-end round trips pass).
-- The KLZH2 window beyond 16 MiB and minimum match 3 are not started.
+## 5. Compatibility of the native branch
+The compatibility matrix on `review/native-tune-J62kQD` was run twice, at 13eed5bb and at the final 1a74a603:
+- 22,984 decodes each time, **0 misdecodes or crashes**;
+- it reads everything rc4 reads;
+- every frame it writes decodes exactly;
+- rc4, C2 and rc3 refuse its codec-32 frames cleanly.
+
+Unit tests, ASan/UBSan, natbench and end-to-end round trips pass.
+
+## 6. Not done
+- Native hc's remaining holdout gap (nci, mozilla, sao). The subagent found that sequence and literal counts match zstd's closely, so what is left is probably entropy-stage detail.
+- The encoder memory estimate for KLZH2 (`memneed.c`) is still zstd's figure. It is used for scheduling only and never changes output.
 - A real-music audio set, 1080p video, JPEG/PNG recompression: planned only (`PLAN_FORWARD.md` §4–6).
