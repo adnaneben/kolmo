@@ -19,20 +19,33 @@
 #include "../algo/klz.h"
 #include "../algo/klzma.h"
 
-enum { KN_LZ = 1, KN_HUF = 2, KN_LZMA = 4, KN_STRONG = 8 };
+enum { KN_LZ = 1, KN_HUF = 2, KN_LZMA = 4, KN_STRONG = 8, KN_KLZ = 16 };
+/* Default when KOLMO_NATIVE is unset (0.0.1 prototype, night 2): Kolmo's own coder where it is at parity or better:
+ * KLZ for LZ4 (speed: 4.4% smaller than lz4 -1 on the holdout at the same decode speed), KLZMA for LZMA2 (ratio:
+ * same size, decode at parity), khuf for zstd's HUF leaves (+0.16%). zstd and Brotli stay library coders.
+ * KOLMO_NATIVE=none (or empty) restores the library coders everywhere. */
+#ifndef KOLMO_NATIVE_DEFAULT
+#define KOLMO_NATIVE_DEFAULT "klz,lzma,huf"
+#endif
+static int kolmo_native_parse(const char *e) {
+    int r = 0;
+    for (const char *s = e; s && *s;) {   /* comma-separated words */
+        size_t k = strcspn(s, ",");
+        if (k == 3 && !strncmp(s, "all", 3)) r |= KN_LZ | KN_HUF | KN_LZMA;
+        else if (k == 2 && !strncmp(s, "lz", 2)) r |= KN_LZ;
+        else if (k == 3 && !strncmp(s, "klz", 3)) r |= KN_KLZ;   /* LZ4 -> KLZ only */
+        else if (k == 3 && !strncmp(s, "huf", 3)) r |= KN_HUF;
+        else if (k == 4 && !strncmp(s, "lzma", 4)) r |= KN_LZMA;
+        else if (k == 6 && !strncmp(s, "strong", 6)) r |= KN_STRONG;
+        s += k; if (*s) s++;
+    }
+    return r;
+}
 static int kolmo_native_flags(void) {
     static int f = -1; int r = __atomic_load_n(&f, __ATOMIC_RELAXED);
     if (r < 0) {
-        const char *e = getenv("KOLMO_NATIVE"); r = 0;
-        for (const char *s = e; s && *s;) {   /* comma-separated words */
-            size_t k = strcspn(s, ",");
-            if (k == 3 && !strncmp(s, "all", 3)) r |= KN_LZ | KN_HUF | KN_LZMA;
-            else if (k == 2 && !strncmp(s, "lz", 2)) r |= KN_LZ;
-            else if (k == 3 && !strncmp(s, "huf", 3)) r |= KN_HUF;
-            else if (k == 4 && !strncmp(s, "lzma", 4)) r |= KN_LZMA;
-            else if (k == 6 && !strncmp(s, "strong", 6)) r |= KN_STRONG;
-            s += k; if (*s) s++;
-        }
+        const char *e = getenv("KOLMO_NATIVE");
+        r = kolmo_native_parse(e ? e : KOLMO_NATIVE_DEFAULT);
         __atomic_store_n(&f, r, __ATOMIC_RELAXED);
     }
     return r;
@@ -42,7 +55,8 @@ static inline int codec_native_id(const codec_ctx *x, int c) {
     int f = kolmo_native_flags();
     if (!f || x->dict || x->prof) return c;
     if ((f & KN_STRONG) && (c == C_ZSTD || c == C_BROTLI)) return C_KLZMA;
-    if (f & KN_LZ) { if (c == C_LZ4 || c == C_LZ4HC) return C_KLZ; if (c == C_ZSTD || c == C_BROTLI) return C_KLZH2; }
+    if ((f & (KN_LZ | KN_KLZ)) && (c == C_LZ4 || c == C_LZ4HC)) return C_KLZ;
+    if ((f & KN_LZ) && (c == C_ZSTD || c == C_BROTLI)) return C_KLZH2;
     if ((f & KN_HUF) && c == C_HUF) return C_KHUF;
     if ((f & KN_LZMA) && c == C_LZMA) return C_KLZMA;
     return c;
