@@ -122,7 +122,7 @@ int64_t kolmo_train_dict(const uint8_t *samples, const size_t *sizes, size_t nsa
 int64_t kolmo_compress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
                           const kolmo_params *p, const void *dict, size_t dictlen) {
     if (!dict || !dictlen) return kolmo_compress(src, n, dst, cap, p);
-    uint32_t id = (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u);   /* dictionary id seed, fixed by the format */
+    uint32_t id = (uint32_t)kolmo_khash64(dict, dictlen, 0x637a6e44u);   /* dictionary id seed, fixed by the format */
     return compress_impl(src, -1, n, dst, -1, cap, p, dict, dictlen, id);
 }
 
@@ -131,7 +131,7 @@ int64_t kolmo_decompress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t
     if (!dict || !dictlen) return kolmo_decompress(src, n, dst, cap, threads);
     int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
     if ((uint64_t)o > cap) return KOLMO_ERR_DSTSIZE;
-    uint32_t id = (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u);
+    uint32_t id = (uint32_t)kolmo_khash64(dict, dictlen, 0x637a6e44u);
     return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, dict, dictlen, id, NULL);
 }
 
@@ -141,7 +141,7 @@ int64_t kolmo_compress_from_fd(int fd, size_t n, uint8_t *dst, size_t cap, const
     if (fd < 0 || fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_size < 0 ||
         (uintmax_t)st.st_size < n) return KOLMO_ERR_IO;
     if (!dictlen) dict = NULL;
-    uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
+    uint32_t id = dict ? (uint32_t)kolmo_khash64(dict, dictlen, 0x637a6e44u) : 0;
     return compress_impl((const uint8_t *)"", fd, n, dst, -1, cap, p, dict, dictlen, id);
 }
 
@@ -151,7 +151,7 @@ int64_t kolmo_decompress_to_fd(const uint8_t *src, size_t n, int fd, int threads
     int64_t size = kolmo_original_size(src, n);
     if (size < 0) return size;
     if (!dictlen) dict = NULL;
-    uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
+    uint32_t id = dict ? (uint32_t)kolmo_khash64(dict, dictlen, 0x637a6e44u) : 0;
     return run_decode(src, -1, n, NULL, fd, threads, 0, 0, 0, dict, dictlen, id, NULL);
 }
 
@@ -161,7 +161,7 @@ int64_t kolmo_compress_file(int input_fd, int output_fd, size_t n, const kolmo_p
     if (output_fd < 0 || fstat(input_fd, &st) || !S_ISREG(st.st_mode) ||
         st.st_size < 0 || (uintmax_t)st.st_size < n) return KOLMO_ERR_IO;
     if (!dictlen) dict = NULL;
-    uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
+    uint32_t id = dict ? (uint32_t)kolmo_khash64(dict, dictlen, 0x637a6e44u) : 0;
     return compress_impl((const uint8_t *)"", input_fd, n, NULL, output_fd, INT64_MAX, p, dict, dictlen, id);
 }
 
@@ -183,7 +183,7 @@ int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads
     int64_t ret = read_block(input_fd, index + HDR, index_size - HDR, HDR);
     if (!ret) {
         if (!dictlen) dict = NULL;
-        uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
+        uint32_t id = dict ? (uint32_t)kolmo_khash64(dict, dictlen, 0x637a6e44u) : 0;
         ret = run_decode(index, input_fd, n, NULL, output_fd, threads, 0, 0, 0, dict, dictlen, id, NULL);
     }
     free(index);

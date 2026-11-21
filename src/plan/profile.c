@@ -390,7 +390,7 @@ static int kp_load(const uint8_t *s, size_t n, struct kolmo_profile **out) {
     if ((s[4] | s[5] << 8) != KP_VERSION || s[6] || s[7]) return KOLMO_ERR_PROFILE;
     if (kolmo_crc32c(0, s, n - 4) != get32(s + n - 4)) return KOLMO_ERR_PROFILE;
     uint32_t id = get32(s + 8), cnt = get32(s + 12);
-    if ((uint32_t)kolmo_xxh3(s + KP_HDR, n - 4 - KP_HDR, KP_ID_SEED) != id) return KOLMO_ERR_PROFILE;
+    if ((uint32_t)kolmo_khash64(s + KP_HDR, n - 4 - KP_HDR, KP_ID_SEED) != id) return KOLMO_ERR_PROFILE;
     struct kolmo_profile *P = calloc(1, sizeof *P);
     if (!P) return KOLMO_ERR_ALLOC;
     if (pthread_mutex_init(&P->mu, NULL)) { free(P); return KOLMO_ERR_ALLOC; }
@@ -436,7 +436,7 @@ static int kp_load(const uint8_t *s, size_t n, struct kolmo_profile **out) {
 static void kp_finish(kp_buf *b, uint32_t nsec) {
     if (b->err || b->n < KP_HDR) { b->err = 1; return; }
     memcpy(b->p, KP_MAGIC, 4); b->p[4] = KP_VERSION; b->p[5] = 0; b->p[6] = b->p[7] = 0;
-    put32(b->p + 8, (uint32_t)kolmo_xxh3(b->p + KP_HDR, b->n - KP_HDR, KP_ID_SEED)); put32(b->p + 12, nsec);
+    put32(b->p + 8, (uint32_t)kolmo_khash64(b->p + KP_HDR, b->n - KP_HDR, KP_ID_SEED)); put32(b->p + 12, nsec);
     kp_u32(b, kolmo_crc32c(0, b->p, b->n));
 }
 

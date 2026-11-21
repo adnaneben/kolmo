@@ -143,7 +143,7 @@ static size_t ktf_wrap(const uint8_t *src, size_t n, int w, size_t h, const uint
     dst[11] = kmem_code(blk_dec_need(C_GRAPH, 0, n, NULL, 0, 7, 0));   /* decode working set (graph block, no CM leaves) */
     put64(dst + 12, n); put32(dst + 20, 1); put32(dst + 24, (uint32_t)n);
     p[0] = T_KG; p[1] = 0; p[2] = (uint8_t)w; p[3] = (uint8_t)(h < 255 ? h : 255); memmove(p + 4, pay, pn);
-    put32(e, (uint32_t)n); put32(e + 4, (uint32_t)(pn + 4)); put32(e + 8, blk_sum(3, src, n)); e[12] = C_GRAPH; e[13] = 0; e[14] = e[15] = 0;
+    put32(e, (uint32_t)n); put32(e + 4, (uint32_t)(pn + 4)); put32(e + 8, blk_sum(src, n)); e[12] = C_GRAPH; e[13] = 0; e[14] = e[15] = 0;
     uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, IDX); put32(dst + 28, hc);
     return HDR + IDX + 4 + pn;
 }
@@ -176,12 +176,12 @@ static double ktf_rep_score(const uint8_t *b, size_t n) {
     if (n < 8192) return 0.0;
     size_t half = n / 2, slots = (size_t)1 << HB, stride = 64; while (half / stride > slots / 2) stride *= 2;   /* load <= 50% */
     uint64_t *tab = calloc(slots, sizeof *tab); if (!tab) return 0.0;
-    for (size_t i = 0; i + K <= half; i += stride) { uint64_t x = XXH64(b + i, K, 0) | 1; size_t s = (size_t)(x >> (64 - HB));
+    for (size_t i = 0; i + K <= half; i += stride) { uint64_t x = kolmo_khash64(b + i, K, 0) | 1; size_t s = (size_t)(x >> (64 - HB));
         while (tab[s] && tab[s] != x) s = (s + 1) & (slots - 1); tab[s] = x; }
     int hit = 0;
     for (int j = 0; j < PROBES; j++) {
         size_t q = half + ((size_t)j * (n - half - stride - K)) / PROBES;
-        for (size_t o = 0; o < stride; o++) { uint64_t x = XXH64(b + q + o, K, 0) | 1; size_t s = (size_t)(x >> (64 - HB));
+        for (size_t o = 0; o < stride; o++) { uint64_t x = kolmo_khash64(b + q + o, K, 0) | 1; size_t s = (size_t)(x >> (64 - HB));
             while (tab[s] && tab[s] != x) s = (s + 1) & (slots - 1);
             if (tab[s] == x) { hit++; break; } }
     }

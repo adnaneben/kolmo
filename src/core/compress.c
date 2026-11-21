@@ -21,7 +21,7 @@ static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int 
     memset(f, 0, HDR + IDX + 4); memcpy(f, "CZN1", 4); f[4] = 11; f[5] = (uint8_t)q->mode;
     f[11] = kmem_code(kmem_declared(in[11]) + 2 * (uint64_t)n + tn);   /* the nested frame's figure, the layout and the output */
     put64(f + 12, n); put32(f + 20, 1); put32(f + 24, (uint32_t)n);
-    uint8_t *e = f + HDR; put32(e, (uint32_t)n); put32(e + 4, (uint32_t)(4 + z)); put32(e + 8, blk_sum(3, s, n)); e[12] = C_VID;
+    uint8_t *e = f + HDR; put32(e, (uint32_t)n); put32(e + 4, (uint32_t)(4 + z)); put32(e + 8, blk_sum(s, n)); e[12] = C_VID;
     f[HDR + IDX] = T_NONE; memcpy(f + HDR + IDX + 4, in, (size_t)z); free(in);
     uint32_t hc = kolmo_crc32c(0, f, 28); hc = kolmo_crc32c(hc, f + HDR, IDX); put32(f + 28, hc);
     if (output_fd >= 0) { int r = write_block(output_fd, f, tot, 0); free(f); return r ? r : (int64_t)tot; }

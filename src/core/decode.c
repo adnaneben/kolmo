@@ -71,7 +71,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     if (codec == C_NPLANE || codec == C_PLANES || codec == C_HZ || codec == C_ZRUN) return KOLMO_ERR_CORRUPT;   /* graph leaves only */
     plan_t pl = P->pl;
     if (P->psum) {                                             /* rt: the checksum covers the stored bytes; checked first */
-        if (cl < 4 || (uint32_t)kolmo_xxh3(pay + 4, cl - 4, 0x637a6e31u ^ get32(pay)) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        if (cl < 4 || (uint32_t)kolmo_khash64(pay + 4, cl - 4, 0x637a6e31u ^ get32(pay)) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
     }
     if (P->ver >= 2) {                                         /* per-block plan */
         if (cl < 4) return KOLMO_ERR_CORRUPT;
@@ -84,7 +84,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     if (codec == C_FQ) {                                        /* FASTQ family block (version 10) */
         if (P->ver < 10 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
         if (kf_fastq_decompress(pay, cl, out, len, J->fqthreads)) return KOLMO_ERR_CORRUPT;
-        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        if (!P->psum && blk_sum(out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
     if (codec == C_VID) return KOLMO_ERR_CORRUPT;                /* video frames are decoded whole, by run_decode */
@@ -96,26 +96,26 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
             if (h > len || ch < 1 || ch > 2 || fr > (len - h) / (2 * ch)) return KOLMO_ERR_CORRUPT;
             aud_swap16(out + h, (size_t)(fr * 2 * ch));
         }
-        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        if (!P->psum && blk_sum(out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
     if (codec == C_KIMG) {                                      /* kimg image block (version 11) */
         if (P->ver < 11 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
         if (kimg_decompress(pay, cl, out, len)) return KOLMO_ERR_CORRUPT;
-        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        if (!P->psum && blk_sum(out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
     if (codec == C_GR6) {                                       /* GR6+ block (version 11) */
         if (P->ver < 11 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
         int r = gr6_decompress(pay, cl, out, len); if (r) return r;
-        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        if (!P->psum && blk_sum(out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
     if (codec == C_GRAPH || pl.t == T_KG) {                     /* kolmo graph block (version 7) */
         if (codec != C_GRAPH || pl.t != T_KG || tflag || P->ver < 7) return KOLMO_ERR_CORRUPT;
         x->allow_nplane = P->ver >= 9; x->allow_f2 = P->ver >= 11;
         int r = kg_decode(x, pay, cl, out, len); x->allow_nplane = 0; x->allow_f2 = 0; if (r) return KOLMO_ERR_CORRUPT;
-        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        if (!P->psum && blk_sum(out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
 #ifdef KOLMO_FRONTIER
@@ -126,13 +126,13 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         int error = tflag == 10 ? frontier_table_decode(tbuf, bytes, (uint8_t)pl.a, out, len)
                                 : frontier_lag_decode(tbuf, bytes, out, len);
         if (error) return KOLMO_ERR_CORRUPT;
-        return blk_sum(P->ver, out, len) == get32(e + 8) ? 0 : KOLMO_ERR_CHECKSUM;
+        return blk_sum(out, len) == get32(e + 8) ? 0 : KOLMO_ERR_CHECKSUM;
     }
 #endif
     if (pl.t == T_TBL && tflag == 13) {                         /* column-split table (transforms/table_cols.c) */
         int64_t tn = tblc_decompress(x, codec, pay, cl, tbuf, len + TSLACK);
         if (tn < 0 || tbl2_decode(tbuf, tn, (uint8_t)pl.a, out, len)) return KOLMO_ERR_CORRUPT;
-        if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+        if (!P->psum && blk_sum(out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
     if (tflag && pl.t == T_TP) meta = 4 * (size_t)(pl.c + 1);
@@ -212,7 +212,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         shuffle_inv(tbuf, rows, pl.a, pl.b, pl.c, out);
         memcpy(out + rows * u, tbuf + rows * u, len - rows * u);
     } else if (tflag) return KOLMO_ERR_CORRUPT;
-    if (!P->psum && blk_sum(P->ver, out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
+    if (!P->psum && blk_sum(out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
     return 0;
 }
 
@@ -299,7 +299,7 @@ static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input
     if (!t || !full) { ret = KOLMO_ERR_ALLOC; goto out; }
     if (run_decode(pay + 4, -1, cl - 4, t, -1, threads, 0, 0, 0, NULL, 0, 0, NULL) != tn) goto out;
     if (kv_inverse(t, (size_t)tn, full, raw, threads > 0 ? threads : default_threads())) goto out;
-    if (blk_sum(P->ver, full, raw) != get32(e + 8)) { ret = KOLMO_ERR_CHECKSUM; goto out; }
+    if (blk_sum(full, raw) != get32(e + 8)) { ret = KOLMO_ERR_CHECKSUM; goto out; }
     if (range) { if (hi > raw || lo > hi) goto out; memcpy(dst, full + lo, (size_t)(hi - lo)); ret = (int64_t)(hi - lo); }
     else if (output_fd >= 0) { int w = write_block(output_fd, full, raw, 0); ret = w ? w : (int64_t)raw; }
     else ret = (int64_t)raw;

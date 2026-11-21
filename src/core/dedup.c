@@ -68,7 +68,7 @@ static int dd_set_init(dd_set *S, uint64_t want) {
     return 0;
 }
 static int64_t dd_set_add(dd_set *S, const uint8_t *p, uint32_t len, int *isnew) {
-    uint64_t h = kolmo_xxh3(p, len, 0x63646331);
+    uint64_t h = kolmo_khash64(p, len, 0x63646331);
     for (uint64_t i = h & S->mask;; i = (i + 1) & S->mask) {
         int64_t id = S->slot[i];
         if (id < 0) {
@@ -131,7 +131,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     /* DDP1 table: chunk lengths and checks, then the file table; stored as a frame of its own */
     kx_uv(&tab, D.nc);
     for (uint64_t i = 0; i < D.nc; i++) {
-        uint8_t ck[4]; kx_put32(ck, (uint32_t)kolmo_xxh3(D.c[i].p, D.c[i].len, DD_SEED));
+        uint8_t ck[4]; kx_put32(ck, (uint32_t)kolmo_khash64(D.c[i].p, D.c[i].len, DD_SEED));
         kx_uv(&tab, D.c[i].len); kx_bytes(&tab, ck, 4);
     }
     kx_bytes(&tab, recipes.p, recipes.n);
@@ -219,7 +219,7 @@ static int dd_ids(const dd_arc *A, const dd_entry *e, uint64_t *ids) {
     return tot == e->size ? 0 : KOLMO_ERR_CORRUPT;
 }
 static int dd_check(const dd_arc *A, uint64_t id, const uint8_t *p) {
-    return (uint32_t)kolmo_xxh3(p, (size_t)(A->coff[id + 1] - A->coff[id]), DD_SEED) == kx_get32(A->checks + 4 * id) ? 0 : KOLMO_ERR_CHECKSUM;
+    return (uint32_t)kolmo_khash64(p, (size_t)(A->coff[id + 1] - A->coff[id]), DD_SEED) == kx_get32(A->checks + 4 * id) ? 0 : KOLMO_ERR_CHECKSUM;
 }
 
 int64_t kolmo_archive_count(const uint8_t *src, size_t n) {

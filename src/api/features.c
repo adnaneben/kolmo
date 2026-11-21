@@ -63,7 +63,7 @@ static size_t kc_pack(uint8_t *f, size_t flen, const uint8_t *src, size_t n) {
     const uint8_t *e = f + HDR;
     uint32_t comp = get32(e + 4);
     if ((size_t)comp + HDR + IDX != flen || comp < 4 || e[12] > 31) return flen;
-    uint32_t sum = (f[10] & 1) ? blk_sum(3, src, n) : get32(e + 8);
+    uint32_t sum = (f[10] & 1) ? blk_sum(src, n) : get32(e + 8);
     uint8_t h[32], plan[4]; memcpy(plan, f + HDR + IDX, 4);
     size_t k = kc_header(h, get32(f + 6), e[12], e[13], plan, n, sum), data = comp - 4;
     memmove(f + k, f + HDR + IDX + 4, data);
@@ -85,7 +85,7 @@ static int64_t kc_small_compress(const uint8_t *src, size_t n, uint8_t *dst, siz
     tls_end(S);
     static const uint8_t plan0[4] = {0};
     if (cl == 0 || cl >= n) { codec = C_STORE; cl = n; out = (uint8_t *)src; }
-    uint8_t h[32]; size_t k = kc_header(h, kp_id(prof), codec, 0, plan0, n, blk_sum(3, src, n));
+    uint8_t h[32]; size_t k = kc_header(h, kp_id(prof), codec, 0, plan0, n, blk_sum(src, n));
     memmove(dst + k, out, cl);
     memcpy(dst, h, k);
     return (int64_t)(k + cl);
@@ -105,7 +105,7 @@ static int64_t kc_decode(const uint8_t *s, size_t n, uint8_t *dst, size_t cap, i
         x->prof = NULL;
         tls_end(S);
         if (e) return KOLMO_ERR_CORRUPT;
-        return blk_sum(3, dst, (size_t)orig) == sum ? (int64_t)orig : KOLMO_ERR_CHECKSUM;
+        return blk_sum(dst, (size_t)orig) == sum ? (int64_t)orig : KOLMO_ERR_CHECKSUM;
     }
     size_t fl = HDR + IDX + 4 + data;
     if (data > UINT32_MAX - 4) return KOLMO_ERR_CORRUPT;
@@ -323,7 +323,7 @@ static int64_t kt_merge(uint8_t *const *fr, const size_t *fl, uint32_t k, const 
             memcpy(ix, f + HDR + (size_t)i * IDX, IDX);
             uint32_t len = get32(ix);
             if (raw + len > starts[c + 1]) return KOLMO_ERR_CORRUPT;
-            if (ps && !psum_all) put32(ix + 8, blk_sum(3, src + raw, len));
+            if (ps && !psum_all) put32(ix + 8, blk_sum(src + raw, len));
             raw += len; ix += IDX;
         }
         size_t pl = fl[c] - HDR - (size_t)m * IDX;

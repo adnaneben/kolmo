@@ -48,5 +48,5 @@ void kx_bytes(kx_buf *b, const void *s, size_t n);
 void kx_uv(kx_buf *b, uint64_t v);
 int  kx_getuv(const uint8_t *p, size_t n, size_t *i, uint64_t *v);   /* 0, or -1 when truncated or over 64 bits */
 
-unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);   /* vendor/xxhash/kolmo_xxh3.c */
+#include "../algo/khash.h"   /* kolmo_khash64 (src/algo/khash.c) */
 #endif

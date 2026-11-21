@@ -587,9 +587,9 @@ coded:;
              * native codec id was written (the block's id, or inside its payload: leaves, columns, trials), or a context-mixing stream has learning settings (model nibble 14 or 15) */
         }
         put32(e, (uint32_t)len); put32(e + 4, (uint32_t)tot);
-        if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)kolmo_xxh3(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)
-                                                   : (uint32_t)kolmo_xxh3(slot + 4, tot - 4, 0x637a6e31u ^ get32(slot)));
-        else put32(e + 8, blk_sum(3, raw, len));
+        if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)kolmo_khash64(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)
+                                                   : (uint32_t)kolmo_khash64(slot + 4, tot - 4, 0x637a6e31u ^ get32(slot)));
+        else put32(e + 8, blk_sum(raw, len));
         e[12] = codec_wire(xp, codec); e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
         /* what decoding this block will need, from the payload as written (the frame declares the largest) */
         job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec_wire(xp, codec), tflag, len, slot, tot, 11, J->cm_leaves));   /* the codec as written (native ids) */

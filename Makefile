@@ -100,10 +100,10 @@ BWTSRC  := src/algo/lzp.c src/algo/qlfc.c src/algo/par.c $(wildcard src/algo/sai
 NATSRC  := src/algo/khuf.c src/algo/krans.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c
 BWTSRC  += $(NATSRC)
 BWTHDR  := $(wildcard src/algo/*.h src/algo/sais/*.h) src/codecs/bwt_stream.h
-ARCHSRC := src/arch/xxh3.c $(KSRC) $(BWTSRC) $(ASMSRC) $(GPUSRC)
+ARCHSRC := $(KSRC) $(BWTSRC) $(ASMSRC) $(GPUSRC)
 ARCHOBJ := $(addprefix build/obj/,$(addsuffix .o,$(basename $(ARCHSRC))))
 ARCHPIC := $(addprefix build/pic/,$(addsuffix .o,$(basename $(ARCHSRC))))
-$(ARCHOBJ): VSECT := -ffunction-sections -fdata-sections   # arch/xxh3.c carries xxHash (see VSECT above)
+$(ARCHOBJ): VSECT := -ffunction-sections -fdata-sections
 
 all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
 
@@ -223,7 +223,7 @@ check-fqfam: build/test-fqfam-asan
 build/test-dispatch: tests/test_dispatch.c build/libkolmo.a build/libvendor.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(KSRC) $(KHDR) build/libvendor.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c src/arch/xxh3.c $(KSRC) $(BWTSRC) $(ASMSRC) build/libvendor.a -o $@ $(LIBS)
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c $(KSRC) $(BWTSRC) $(ASMSRC) build/libvendor.a -o $@ $(LIBS)
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan

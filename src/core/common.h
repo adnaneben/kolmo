@@ -37,12 +37,11 @@ static double prof_now(void) {
 #include <x86intrin.h>
 #endif
 #include <stdint.h>
-unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);   /* src/arch/xxh3.c */
+#include "algo/khash.h"   /* kolmo_khash64: block checksums and every other hash of the format (src/algo/khash.c) */
 #include "zstd.h"
 #include "zdict.h"
 #include "lz4.h"
 #include "lz4hc.h"
-#include "common/xxhash.h"
 #include <brotli/encode.h>
 #include <brotli/decode.h>
 #include "plan/profile.h"

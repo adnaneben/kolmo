@@ -2,7 +2,7 @@
  *
  * The library is one translation unit: this file includes the parts of src/ below in dependency order, so the
  * compiler sees all of it at once (inlining across parts, as before the split) and the internal functions stay
- * static (tests include this file to reach them). Assembly kernels (src/arch/<isa>/NAME.S) and arch/xxh3.c are
+ * static (tests include this file to reach them). Assembly kernels (src/arch/<isa>/NAME.S) are
  * compiled on their own. Add a new part here and to the layer list in docs/LAYOUT.md. */
 #define _GNU_SOURCE
 #include "core/common.h"
