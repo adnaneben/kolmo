@@ -13,7 +13,6 @@ on:
     paths:
       - "bindings/python/**"
       - "src/**"
-      - "vendor/**"
       - ".github/workflows/wheels.yml"
 
 jobs:
