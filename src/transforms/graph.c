@@ -633,7 +633,7 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
             hz = hb && tryhuf && al ? leaf_compress_planes(C_KHUF, s->p, s->n, np, hb, zc) : 0;   /* khuf chunks, plane by plane (27) */
             if (hz && (!z || hz < z)) { memcpy(o.p + o.n + 20, hb, hz); z = hz; cc = R_HUF; }
             int slow = !fastleaf;                                                           /* rANS at hc/max/ultra only */
-            /* rANS decodes about four times slower than Huffman or zstd here: with the zstd family (hc: fast reads) it
+            /* rANS decodes about four times slower than Huffman or the LZ coder (R_LZH: KLZH2) at this point: at hc (fast reads) it
              * must be at least 3% smaller to be taken; max and ultra take any gain (and so does rANS over rANS) */
 #define KG_RANS_TAKES(R) ((R) && (!z || (codec == R_LZH && cc != C_RANS ? (uint64_t)(R) * 100 <= (uint64_t)z * 97 : (R) < z)))
             size_t rz = hb && slow ? codec_compress(x, C_RANS, 0, s->p, s->n, hb, zc) : 0;   /* rANS: whole-bit loss of Huffman */

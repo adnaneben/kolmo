@@ -1,5 +1,7 @@
 /* ------------------------------------------------------------------ container layout
- * header (32 B): "CZN1" | ver u8 | mode u8 | transform u8 | a u8 | b u8 | c u8 | flags u8 | reserved u8 |
+ * header (32 B): "CZN1" | ver u8 (12: KOLMO_MAX_VERSION, the only version this build writes or reads; 1-11 are earlier
+ *                Kolmo builds with library codecs, refused with KOLMO_ERR_LEGACY) | mode u8 | transform u8 (0) | a u8 | b u8 |
+ *                c u8 (0) | flags u8 (bit 0: rt checksums; bits 1, 2 retired) | memd u8 (docs/MEMORY-MODEL.md) |
  *                orig u64 | nblocks u32 | block u32 | crc32c(header[0..27] + index) u32
  * index: nblocks x { raw u32 | comp u32 | block checksum u32 | codec u8 | tflag u8 | reserved u16 }
  * block checksum: low 32 bits of kolmo_khash64(raw, seed 0x637a6e31) (src/algo/khash.c; version 12). Flags bit 0 (rt):

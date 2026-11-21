@@ -15,7 +15,7 @@ constraint for rc3: a change that makes Kolmo faster or smaller may break readin
 4. **Runtime dispatch, never compile-time only.** Release builds target the baseline ISA (x86-64, ARMv8.0-A). Faster
    kernels are chosen once at startup from CPU features, as `fc9a356` does for x86.
 5. **Same bytes everywhere.** A kernel may change speed, never output. The determinism check covers every ISA path.
-6. **Third-party code we keep stays in `vendor/` untouched.** Code we take over (port, subset or rewrite) moves to
+6. **Third-party code we keep stays in `vendor/` untouched** (since version 12 there is none). Code we take over (port, subset or rewrite) moves to
    `src/` under our name. The original copyright and licence are kept in the file header and in `NOTICE`.
 
 ## Tree
@@ -60,6 +60,11 @@ src/
 ```
 
 ### The tree as built in rc3 (structure lane)
+
+*Since container version 12 (rc4-native):* there is no `vendor/`; `codecs/` has no `lz4.c zstd.c brotli.c lzma.c
+huf.c hufzstd_leaf.c` (their roles are coded by `native.c`: KLZ, KLZH2, KLZMA, khuf), `arch/xxh3.c` and
+`plan/profile.c` are gone (hashes are `algo/khash.c`; trained profiles are not available), and `api/features.c` keeps
+the profile calls as stubs. The list below is the rc3 tree.
 
 The proposal above is followed with these differences, which the structure lane chose to keep the output byte-identical
 and the move mechanical:

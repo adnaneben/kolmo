@@ -1,5 +1,10 @@
 # Kolmo's dependencies: review and decisions (rc3)
 
+**Status since container version 12 (rc4-native, branch `review/rc4-native-J62kQD`): every dependency below is
+removed.** zstd, Brotli, LZ4, liblzma and xxHash are no longer in the tree, the build or the bindings; Kolmo's own
+coders replace them (KLZ, KLZH2, KLZMA, khuf, `kolmo_khash64`; `docs/NATIVE-PLAN.md`). The review below is kept as the
+record of what they were used for and what they cost.
+
 Written by the deps lane on 16 November 2026 (`claude/rc3-deps-20261116`). The owner asked four questions of every
 external dependency:
 

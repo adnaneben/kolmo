@@ -27,7 +27,7 @@ Set the new version in all four places, then commit:
 - `bindings/python/pyproject.toml` (`version`)
 - `packaging/homebrew/kolmo.rb` (`url`; the sha256 is set in step 5)
 
-If the native core (`src/`, `vendor/`) changed, refresh the copies bundled in both packages and
+If the native core (`src/`) changed, refresh the copies bundled in both packages and
 commit them:
 
 ```sh
@@ -65,9 +65,7 @@ bash bindings/python/build-macos-wheel.sh            # version from pyproject.to
 The script:
 - downloads the release sdist from PyPI and checks its sha256 against PyPI's record, so the wheel
   is built from exactly the published source
-- builds a static liblzma for macOS 11+ from Homebrew's checksum-verified xz source. Homebrew's own
-  liblzma only targets the Mac's current macOS version, and a build without liblzma can't decode
-  `max`/`ultra` files that use LZMA.
+- (no codec library is needed any more: every coder is Kolmo's own; earlier versions built a static liblzma here)
 - builds the wheel (`py3-none-macosx_11_0_arm64`), then checks the architecture, the minimum macOS
   version, that it depends only on system libraries, and `twine check`
 - installs it in a clean venv, runs `test_kolmo.py`, and prints the upload command
