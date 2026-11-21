@@ -77,6 +77,7 @@ typedef struct {
     int psum;               /* checksums over stored bytes (rt) instead of decoded bytes */
     const void *dict; size_t dictlen;   /* optional zstd dictionary, read-only by workers */
     int aud_prof, aud_ch, aud_be; uint64_t aud_off, aud_end;   /* aud_be: AIFF, big-endian samples (swapped for kaud; plan prefix 0, 1) */
+    int img_on; uint32_t img_w, img_ch; uint64_t img_off, img_end;   /* kimg (codec 31): 8-bit image rows of img_w bytes, pixels [off, end) */
       /* format 2: 16-bit PCM WAV (kaud profile, channels, sample bytes [off, end)); aud_prof < 0: none */
     const struct kolmo_profile *prof;   /* optional trained profile, read-only by workers */
     uint64_t memcap;        /* the call's limit for the governor (explicit, auto or unlimited) */
@@ -554,6 +555,20 @@ coded:;
                 if (az && az < cur) {
                     memcpy(sl, alt, az); cl = az; codec = C_AUD; tflag = 0; meta = 0; modes = 128;
                     slot[0] = T_NONE; slot[1] = (uint8_t)J->aud_be; slot[2] = slot[3] = 0;
+                }
+            }
+        }
+        if (J->img_on && J->default_level) {                         /* kimg: the block's image pixels (codec 31) */
+            const uint64_t s0 = J->starts[i], s1 = J->starts[i + 1];
+            const uint64_t p0 = s0 > J->img_off ? s0 : J->img_off, p1 = s1 < J->img_end ? s1 : J->img_end;
+            if (p1 > p0 + (64u << 10)) {
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+                size_t cur = cl && cl + meta < len ? cl + meta : len;
+                size_t kz = alt ? kimg_compress(raw, len, J->img_w, J->img_ch, (uint32_t)((p0 - J->img_off) % J->img_w), (size_t)(p0 - s0),
+                                                (size_t)(p1 - p0), alt, J->slot) : 0;
+                if (kz && kz < cur) {
+                    memcpy(sl, alt, kz); cl = kz; codec = C_KIMG; tflag = 0; meta = 0; modes = 128;
+                    slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
                 }
             }
         }

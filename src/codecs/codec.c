@@ -10,6 +10,7 @@ static const kolmo_codec *const kolmo_codecs[] = {
     [C_GR6] = &codec_gr6,
     [C_CMP] = &codec_cm_par,
     [C_KLZMA] = &codec_klzma, [C_KHUF] = &codec_khuf, [C_KLZ] = &codec_klz, [C_KLZH] = &codec_klzh,
+    [C_KIMG] = &codec_kimg,
 };
 static const kolmo_codec codec_graph = { C_GRAPH, "graph", NULL, NULL, NULL, NULL };
 static inline const kolmo_codec *codec_get(int codec) {

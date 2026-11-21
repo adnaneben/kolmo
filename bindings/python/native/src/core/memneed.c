@@ -31,6 +31,7 @@ static uint64_t kmem_enc_codec(int codec, int level, uint64_t n) {
         case C_CM: case C_CMI: return cm_need_bound((size_t)n) + n + 8;
         case C_FQ: return 5 * n + 32 * KMEM_MIB;
         case C_GR6: return 8 * n + 64 * KMEM_MIB;
+        case C_KIMG: return 6 * n + 4 * KMEM_MIB;              /* samples (int16), the trial output, model */
         case C_AUD: return 4 * n + 16 * KMEM_MIB;
         case C_GRAPH: return 6 * n + 8 * KMEM_MIB;
     }
@@ -64,6 +65,7 @@ static uint64_t blk_dec_need(int codec, int tflag, uint64_t raw, const uint8_t *
         case C_CMP: u = cmp_need(c, cn, (size_t)dn); return u ? base + u : 0;
         case C_FQ: return base + 4 * raw + 32 * KMEM_MIB;
         case C_GR6: return base + 6 * raw + 64 * KMEM_MIB;
+        case C_KIMG: return base + 2 * raw + 4 * KMEM_MIB;     /* samples (int16) and the model */
         case C_AUD: return base + 3 * raw + 16 * KMEM_MIB;
         case C_GRAPH: return base + 6 * raw + 8 * KMEM_MIB + (cm_leaves ? cm_need_bound((size_t)(2 * raw + 65536)) : 0);
     }
