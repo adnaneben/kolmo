@@ -31,3 +31,5 @@
 - 2026-11-21T02:45:56Z usage 5h 8%, weekly 7%; C3 CI 5/5 green
 - 2026-11-21T03:09:23Z kimg round 2: 0260a7aa (same bytes, dec -21%) + f1f3f1c3 (kimg v2, -1.32%): ratio images -14.07% vs C2, +2.87% vs cjxl-e7; timed dom-image on f1f3f1c3 running
 - 2026-11-21T03:16:00Z check-in: usage 5h 10%, weekly 7%; timed dom-image (kimg r2) in round 3 of 5
+- 2026-11-21T03:21:58Z published overnight evidence to review branch (4a81929b) and pushed
+- 2026-11-21T03:31:48Z A6(a) branch review/c2-ecoalt-J62kQD 4566725d pushed (check ok, determinism 122/122)

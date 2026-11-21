@@ -30,7 +30,7 @@ C2 is C1 plus four changes:
 | images | JPEG XL lossless (-e7/-e9) | C2: +20.5% (behind). **kimg branch: +2.9% vs e7, and 2.6× faster encode than e9** |
 
 ## Your decisions (details in ALTERNATIVES_FOR_REVIEW.md)
-- A6: eco text block sorting. It is −4.4% in size, but eco text decode becomes 0.10–0.19×. Keep it, or revert only that rule?
+- A6: eco text block sorting. It is −4.4% in size, but eco text decode becomes 0.10–0.19×. Keep it, or revert only that rule? The revert is ready as branch `review/c2-ecoalt-J62kQD` (4566725d).
 - A7: native KLZ as the speed default. It is −4.4% vs lz4 at the same decode, but it changes the format.
 - W4 cm: output is 2.7% larger on one synthetic table case (codec 25 used to win there); accepted for now, options are listed.
 - Version label: C2 changes default bytes and adds a `-x` generation, so I propose 1.2.0-rc4.

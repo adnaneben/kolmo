@@ -306,3 +306,20 @@ Expect the timed suite to show roughly 15 MiB/s decode against C2's 23.4 and djx
 ## A8 update — kimg round 2 timed (branch head f1f3f1c3)
 The timed run gives ratio images −14.07% vs C2 and +2.87% vs cjxl -e7, with encode at 0.76× and decode at 0.69× of C2. kimg v1 frames (cbb40b5d) still decode.
 The recommendation is unchanged: merge into rc4 if image ratio matters. Decode speed needs a redesign (multi-symbol coding), as noted in A-img round 2.
+
+## A6 update — option (a) is ready as a branch: review/c2-ecoalt-J62kQD @ 4566725d (C2 + one switch)
+The switch is `KOLMO_ECO_TEXT_BWT`, and it defaults to 0. eco text and JSON token streams keep brotli; everything else in C2 is unchanged.
+
+| holdout eco total | bytes |
+|---|---|
+| this option | 131,458,743 |
+| C2 | 126,086,585 |
+| C1 | 131,876,301 |
+
+So this option is 0.32% smaller than C1, from the window merges, and keeps C1-level eco decode on text.
+
+**Checks:** make check passes, and determinism is 122/122 (text.txt eco returns to C1's frame). Sizes were measured untimed.
+
+**Not run:** a timed eco run and Phase E on this branch. CI was started by the push.
+
+**To choose:** take C2 for the smallest eco, or merge this branch for fast eco decode.
