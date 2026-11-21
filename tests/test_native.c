@@ -6,6 +6,7 @@
 #include "algo/khuf.h"
 #include "algo/klz.h"
 #include "algo/klzma.h"
+#include "algo/krans.h"
 #include "algo/khash.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,11 +34,14 @@ static void gen(uint8_t *p, size_t n, int kind) {
 typedef size_t (*cfn)(const uint8_t *, size_t, uint8_t *, size_t, int);
 typedef int (*dfn)(const uint8_t *, size_t, uint8_t *, size_t);
 static size_t khuf_c(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int lv) { (void)lv; return kolmo_khuf_compress_chunks(in, n, out, cap); }
+static size_t krans_c(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int lv) { (void)lv; return kolmo_krans_compress(in, n, out, cap); }
 static const struct { const char *name; cfn c; dfn d; int lo, hi, may_refuse; } C[] = {
     {"khuf", khuf_c, kolmo_khuf_decompress_chunks, 0, 0, 0},
     {"klz", kolmo_klz_compress, kolmo_klz_decompress, 1, 3, 0},
     {"klzh", kolmo_klzh_compress, kolmo_klzh_decompress, 1, 9, 1},
     {"klzma", kolmo_klzma_compress, kolmo_klzma_decompress, 1, 9, 1},
+    {"klzh2", kolmo_klzh2_compress, kolmo_klzh2_decompress, 1, 9, 1},   /* night 2: codec 32 */
+    {"krans", krans_c, kolmo_krans_decompress, 0, 0, 0},
 };
 static void roundtrip(int k, const uint8_t *in, size_t n, int lv, int kind) {
     size_t cap = n + n / 8 + 4096; uint8_t *z = malloc(cap), *r = malloc(n + 1);
@@ -104,19 +108,26 @@ int main(int argc, char **argv) {
     test_lengths(); test_hash();
     static const size_t sizes[] = {0, 1, 2, 3, 4, 5, 7, 8, 15, 16, 17, 31, 64, 100, 255, 1000, 4095, 65536, 131071, 131072, 131073, 300000};
     for (int it = 0; it < iters; it++)
-        for (int k = 0; k < 4; k++)
+        for (int k = 0; k < (int)(sizeof C / sizeof *C); k++)
             for (size_t si = 0; si < sizeof sizes / sizeof *sizes; si++)
                 for (int kind = 0; kind < 7; kind++) {
                     size_t n = sizes[si]; if (k == 3 && n > 65536 && kind != 3) continue;   /* keep the LZMA-class run short */
                     uint8_t *in = malloc(n + 1); gen(in, n, kind);
                     int lv = C[k].lo + (int)((si + (size_t)kind + (size_t)it) % (size_t)(C[k].hi - C[k].lo + 1));
-                    if (k == 0 && n == 0) { free(in); continue; }
+                    if ((k == 0 || k == 5) && n == 0) { free(in); continue; }   /* khuf and krans: n >= 1 */
                     roundtrip(k, in, n, lv, kind);
                     free(in);
                 }
     /* KLZMA with Kolmo's lc/lp/pb digits (codec 6 style), and a long-distance repeat over a 2 MiB block */
     { size_t n = 2u << 20; uint8_t *in = malloc(n); gen(in, n / 2, 0); memcpy(in + n / 2, in, n / 2); in[n - 5] ^= 1;
-      roundtrip(3, in, n, 10 * (100 * (0 + 1) + 10 * 2 + 0) + 4, 9); roundtrip(2, in, n, 5, 9); roundtrip(1, in, n, 1, 9); free(in); }
+      roundtrip(3, in, n, 10 * (100 * (0 + 1) + 10 * 2 + 0) + 4, 9); roundtrip(2, in, n, 5, 9); roundtrip(4, in, n, 5, 9); roundtrip(1, in, n, 1, 9); free(in); }
+    /* KRANS: one symbol, two symbols at the frequency floor, all 256 symbols, and lengths around the 8-way groups */
+    for (size_t n = 1; n < 70; n++) for (int shape = 0; shape < 4; shape++) {
+        uint8_t *in = malloc(n); for (size_t i = 0; i < n; i++) in[i] = shape == 0 ? 7 : shape == 1 ? (uint8_t)(i == n / 2 ? 200 : 3) : shape == 2 ? (uint8_t)rnd() : (uint8_t)(i % 256);
+        roundtrip(5, in, n, 0, 10 + shape); free(in);
+    }
+    { size_t n = 1u << 20; uint8_t *in = malloc(n); for (size_t i = 0; i < n; i++) in[i] = (uint8_t)i; roundtrip(5, in, n, 0, 14);
+      for (size_t i = 0; i < n; i++) in[i] = (rnd() % 1000) ? 0 : (uint8_t)(1 + rnd() % 255); roundtrip(5, in, n, 0, 15); free(in); }
     if (fails) { fprintf(stderr, "test-native: %d failures\n", fails); return 1; }
     printf("test-native: OK\n");
     return 0;

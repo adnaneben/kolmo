@@ -55,7 +55,7 @@ static uint64_t blk_dec_need(int codec, int tflag, uint64_t raw, const uint8_t *
     switch (codec) {
         case C_STORE: case C_LZ4: case C_LZ4HC: case C_HUF: case C_RANS: return base;
         case C_KLZ: case C_KHUF: return base;                         /* Kolmo's own coders (codecs/native.c): as the */
-        case C_ZSTD: case C_KLZH: return base + 2 * KMEM_MIB;         /* library codec each one replaces */
+        case C_ZSTD: case C_KLZH: case C_KLZH2: return base + 2 * KMEM_MIB;         /* library codec each one replaces */
         case C_KLZMA: return base + kmem_pow2_dict(slack) + 2 * KMEM_MIB;
         case C_BROTLI: return base + (dn < 16 * KMEM_MIB ? dn : 16 * KMEM_MIB) + 2 * KMEM_MIB;
         case C_LZMA: return base + kmem_pow2_dict(slack) + 2 * KMEM_MIB;

@@ -1,7 +1,7 @@
 /* The codec registry: every block codec by identifier, and the three calls the container and the graph leaves use.
  * Identifiers 8-11 are the opt-in research codecs of the frontier build (coded at block level in core/), 12 the graph
  * block (transforms/graph.c) and 16 the FASTQ family coder (codecs/fastq.c): their tables carry a name only. 26 (GR6+,
- * codecs/gr6.c) has an encoder here but is decoded at block level. Identifiers 24 and 27-29 are Kolmo's own coders (codecs/native.c, opt-in). */
+ * codecs/gr6.c) has an encoder here but is decoded at block level. Identifiers 24, 27-29 and 32 are Kolmo's own coders (codecs/native.c, opt-in). */
 static const kolmo_codec *const kolmo_codecs[] = {
     [C_STORE] = &codec_store, [C_LZ4] = &codec_lz4, [C_LZ4HC] = &codec_lz4hc, [C_ZSTD] = &codec_zstd, [C_BROTLI] = &codec_brotli,
     [C_BSC5] = &codec_bwt5, [C_LZMA] = &codec_lzma, [C_CM] = &codec_cm, [C_GRAPH] = &codec_graph, [C_HUF] = &codec_huf,
@@ -10,7 +10,7 @@ static const kolmo_codec *const kolmo_codecs[] = {
     [C_GR6] = &codec_gr6,
     [C_CMP] = &codec_cm_par,
     [C_KLZMA] = &codec_klzma, [C_KHUF] = &codec_khuf, [C_KLZ] = &codec_klz, [C_KLZH] = &codec_klzh,
-    [C_KIMG] = &codec_kimg,
+    [C_KIMG] = &codec_kimg, [C_KLZH2] = &codec_klzh2,
 };
 static const kolmo_codec codec_graph = { C_GRAPH, "graph", NULL, NULL, NULL, NULL };
 static inline const kolmo_codec *codec_get(int codec) {

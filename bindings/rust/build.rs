@@ -80,7 +80,7 @@ fn main() {
     // the block-sorting pipeline, also compiled on its own (LZP, QLFC, the libsais subset, the BWT stream formats)
     for f in ["algo/lzp.c", "algo/qlfc.c", "algo/par.c", "codecs/bwt_stream.c"] { cfiles.push(src.join(f)); }
     // Kolmo's own coders (codecs 24, 27-29, opt-in), also compiled on their own
-    for f in ["algo/khuf.c", "algo/klz.c", "algo/klzma.c", "algo/khash.c"] { cfiles.push(src.join(f)); }
+    for f in ["algo/khuf.c", "algo/krans.c", "algo/klz.c", "algo/klzma.c", "algo/khash.c"] { cfiles.push(src.join(f)); }
     list(&src.join("algo/sais"), "c", false, &mut cfiles);
     cfiles.sort();
     for f in cfiles { jobs.push((cc.clone(), f, vec![])); }

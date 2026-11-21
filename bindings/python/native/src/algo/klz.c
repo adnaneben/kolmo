@@ -3,6 +3,7 @@
    literature; the skipping rule on misses and the gain rule of lazy matching are the usual heuristics), byte-aligned
    sequences for KLZ, and Kolmo's Huffman coder (khuf) for the KLZH streams. No code from LZ4 or zstd. */
 #include "klz.h"
+#include "krans.h"
 #include "khuf.h"
 #include <stdlib.h>
 #include <string.h>
@@ -258,7 +259,10 @@ static inline int kz_bput(kz_bw *w, uint32_t v, int nb) {   /* nb <= 30 */
     return 0;
 }
 size_t kolmo_klzh_bound(size_t n) { return n + n / 64 + 1024; }
-size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) {
+#ifndef KZ_RANS_PCT
+#define KZ_RANS_PCT 97   /* KLZH2: rANS only when it is below this % of the khuf size (it decodes about 2x slower per symbol) */
+#endif
+static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int v2) {
     if (n < 16 || n >= 0xFFFFFFF0u || cap < 64) return 0;
     if (level < 1) level = 1;
     if (level > 9) level = 9;
@@ -290,8 +294,16 @@ size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap
     for (int q = 0; q < 4; q++) {
         size_t z = sn[q] ? kolmo_khuf_compress_chunks(st[q], sn[q], tmp, kolmo_khuf_bound(n) + 64) : 0;
         if (sn[q] && !z) goto out;
-        if (cap - o < z + 10) goto out;
-        o += kz_put_uv(out + o, z); memcpy(out + o, tmp, z); o += z;
+        uint8_t mode = 0; const uint8_t *src = tmp;
+        if (v2 && q && sn[q] && kolmo_krans_bound(sn[q]) <= kolmo_khuf_bound(n) + 64) {   /* KLZH2: rANS where it is smaller */
+            uint8_t *t2 = malloc(kolmo_krans_bound(sn[q])); if (!t2) goto out;
+            size_t z2 = kolmo_krans_compress_lim(st[q], sn[q], t2, kolmo_krans_bound(sn[q]), (size_t)((uint64_t)z * KZ_RANS_PCT / 100));
+            if (z2 && (uint64_t)z2 * 100 < (uint64_t)z * KZ_RANS_PCT) { memcpy(tmp, t2, z2); z = z2; mode = 1; }
+            free(t2);
+        }
+        if (cap - o < z + 11) goto out;
+        if (v2) out[o++] = mode;
+        o += kz_put_uv(out + o, z); memcpy(out + o, src, z); o += z;
     }
     size_t xl = (size_t)(w.p - xb);
     if (cap - o < xl || o + xl >= n) goto out;
@@ -299,6 +311,9 @@ size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap
 out:
     free(S); free(lit); free(cd); free(xb); free(tmp); return r;
 }
+
+size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh_enc(in, n, out, cap, level, 0); }
+size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh_enc(in, n, out, cap, level, 1); }
 
 typedef struct { uint64_t b; int c; const uint8_t *p, *e; } kz_br;
 static inline void kz_refill(kz_br *r) {
@@ -313,15 +328,16 @@ static void kz_ltab(uint32_t base[72], uint8_t nb[72]) {
         int h = 4 + (int)(c - 16) / 2; base[c] = (1u << h) | ((c & 1u) << (h - 1)); nb[c] = (uint8_t)(h - 1);
     }
 }
-int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+static int kz_klzh_dec(const uint8_t *in, size_t cn, uint8_t *out, size_t n, int v2) {
     size_t i = 0; uint64_t ns, nl;
     if (kz_get_uv(in, cn, &i, &ns) || kz_get_uv(in, cn, &i, &nl) || ns > n / 4 + 1 || nl > n) return -1;
     uint8_t *lit = malloc(nl + 32), *cd = malloc(3 * ns + 1); int rc = -1;
     if (!lit || !cd) goto out;
     uint8_t *st[4] = {lit, cd, cd + ns, cd + 2 * ns}; size_t sn[4] = {nl, ns, ns, ns};
     for (int q = 0; q < 4; q++) {
+        unsigned mode = 0; if (v2) { if (i >= cn || in[i] > (q ? 1 : 0)) goto out; mode = in[i++]; }
         uint64_t z; if (kz_get_uv(in, cn, &i, &z) || z > cn - i) goto out;
-        if (sn[q] ? kolmo_khuf_decompress_chunks(in + i, z, st[q], sn[q]) : z != 0) goto out;
+        if (sn[q] ? (mode ? kolmo_krans_decompress(in + i, z, st[q], sn[q]) : kolmo_khuf_decompress_chunks(in + i, z, st[q], sn[q])) : z != 0) goto out;
         i += z;
     }
     kz_br br = {0, 0, in + i, in + cn};
@@ -356,3 +372,5 @@ int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
 out:
     free(lit); free(cd); return rc;
 }
+int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return kz_klzh_dec(in, cn, out, n, 0); }
+int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return kz_klzh_dec(in, cn, out, n, 1); }

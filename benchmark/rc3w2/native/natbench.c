@@ -8,6 +8,7 @@
  * by the profiler with LIBPROF_DUMP_HUF). Codecs:
  *   lz4            LZ4_compress_fast (acceleration 1)              klz1   Kolmo fast LZ, byte-aligned (codec 28)
  *   zstd1 zstd3 zstd9 zstd19                                       klzh1..klzh9   Kolmo LZ + khuf (codec 29)
+ *                                                                  klzh2_L (L in 1-3,5,7-9)  KLZH2: rANS sequence codes (codec 32)
  *   huf            zstd HUF_compress4X_repeat in 128 KiB chunks     khuf   Kolmo Huffman chunks (codec 27)
  *   brotli8        Brotli quality 8, window 24
  *   lzma9e         raw LZMA2 preset 9e (liblzma 5.8.1)             klzma1..klzma9  Kolmo LZMA-class (codec 24)
@@ -73,7 +74,7 @@ static int huf_d(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
 }
 
 typedef struct { const char *name; int kind, level; } codec;
-enum { K_LZ4, K_ZSTD, K_HUF, K_BRO, K_LZMA, K_XXH, K_KLZ, K_KLZH, K_KHUF, K_KLZMA, K_KHASH };
+enum { K_LZ4, K_ZSTD, K_HUF, K_BRO, K_LZMA, K_XXH, K_KLZ, K_KLZH, K_KHUF, K_KLZMA, K_KHASH, K_KLZH2 };
 typedef struct { void *zc, *zd; void *ks; } wctx;
 static size_t do_c(const codec *c, wctx *w, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     switch (c->kind) {
@@ -88,6 +89,7 @@ static size_t do_c(const codec *c, wctx *w, const uint8_t *in, size_t n, uint8_t
         return lzma_raw_buffer_encode(f, NULL, in, n, out, &pos, cap) == LZMA_OK ? pos : 0; }
     case K_KLZ: return kolmo_klz_compress(in, n, out, cap, c->level);
     case K_KLZH: return kolmo_klzh_compress(in, n, out, cap, c->level);
+    case K_KLZH2: return kolmo_klzh2_compress(in, n, out, cap, c->level);
     case K_KHUF: return kolmo_khuf_compress_chunks(in, n, out, cap);
     case K_KLZMA: return kolmo_klzma_compress(in, n, out, cap, c->level);
     case K_XXH: { unsigned long long h = kolmo_xxh3(in, n, 0); memcpy(out, &h, 8); return 8; }
@@ -107,6 +109,7 @@ static int do_d(const codec *c, wctx *w, const uint8_t *in, size_t cn, uint8_t *
         return lzma_raw_buffer_decode(f, NULL, in, &ip, cn, out, &op, n) == LZMA_OK && op == n ? 0 : -1; }
     case K_KLZ: return kolmo_klz_decompress(in, cn, out, n);
     case K_KLZH: return kolmo_klzh_decompress(in, cn, out, n);
+    case K_KLZH2: return kolmo_klzh2_decompress(in, cn, out, n);
     case K_KHUF: return kolmo_khuf_decompress_chunks(in, cn, out, n);
     case K_KLZMA: return kolmo_klzma_decompress(in, cn, out, n);
     case K_XXH: case K_KHASH: return 0;
@@ -142,6 +145,7 @@ static const codec CODECS[] = {
     {"huf", K_HUF, 0}, {"brotli8", K_BRO, 8}, {"lzma9e", K_LZMA, 9}, {"xxh3", K_XXH, 0},
     {"klz1", K_KLZ, 1}, {"klz2", K_KLZ, 2}, {"klz3", K_KLZ, 3},
     {"klzh1", K_KLZH, 1}, {"klzh2", K_KLZH, 2}, {"klzh3", K_KLZH, 3}, {"klzh4", K_KLZH, 4}, {"klzh5", K_KLZH, 5}, {"klzh6", K_KLZH, 6}, {"klzh7", K_KLZH, 7}, {"klzh8", K_KLZH, 8}, {"klzh9", K_KLZH, 9},
+    {"klzh2_1", K_KLZH2, 1}, {"klzh2_2", K_KLZH2, 2}, {"klzh2_3", K_KLZH2, 3}, {"klzh2_5", K_KLZH2, 5}, {"klzh2_7", K_KLZH2, 7}, {"klzh2_8", K_KLZH2, 8}, {"klzh2_9", K_KLZH2, 9},
     {"khuf", K_KHUF, 0},
     {"klzma1", K_KLZMA, 1}, {"klzma2", K_KLZMA, 2}, {"klzma3", K_KLZMA, 3}, {"klzma4", K_KLZMA, 4}, {"klzma5", K_KLZMA, 5}, {"klzma6", K_KLZMA, 6}, {"klzma7", K_KLZMA, 7}, {"klzma8", K_KLZMA, 8}, {"klzma9", K_KLZMA, 9},
     {"khash", K_KHASH, 0},

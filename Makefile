@@ -97,7 +97,7 @@ KHDR    := src/arch/kernels.h src/algo/predict.h src/algo/planes.h src/algo/mixe
 BWTSRC  := src/algo/lzp.c src/algo/qlfc.c src/algo/par.c $(wildcard src/algo/sais/*.c) src/codecs/bwt_stream.c
 # Kolmo's own LZ, Huffman, LZMA-class coders and block hash (codecs 24, 27-29, opt-in; native lane), compiled on their
 # own like the block-sorting files and listed with them so every build and test that links those links these.
-NATSRC  := src/algo/khuf.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c
+NATSRC  := src/algo/khuf.c src/algo/krans.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c
 BWTSRC  += $(NATSRC)
 BWTHDR  := $(wildcard src/algo/*.h src/algo/sais/*.h) src/codecs/bwt_stream.h
 ARCHSRC := src/arch/xxh3.c $(KSRC) $(BWTSRC) $(ASMSRC) $(GPUSRC)

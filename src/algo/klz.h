@@ -35,4 +35,10 @@ size_t kolmo_klzh_bound(size_t n);
 /* Return the coded size, or 0 when not smaller than n or cap too small. */
 size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
 int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+
+/* KLZH2 (codec 32): KLZH's parse, sequences and extra bits, with each of the four streams preceded by a mode byte:
+   0 = khuf chunk stream (as KLZH), 1 = KRANS (krans.h; the code streams only). The encoder takes rANS where it is
+   smaller: the literal-length codes of an LZ parse are mostly 0, where Huffman's one-bit floor loses ~14%. */
+size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
+int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 #endif
