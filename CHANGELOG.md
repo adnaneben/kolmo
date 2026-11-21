@@ -1,6 +1,8 @@
 # Changelog
 
-## rc4-native (prototype branch `review/rc4-native-J62kQD`; not tagged)
+## 0.0.1-rc1 (first release candidate of the renumbered, Kolmo-native line; branch `review/rc4-native-J62kQD`; not tagged)
+
+Renumbered: the 1.x line (1.0.0 and 1.0.1 on PyPI, crates.io and Homebrew) used library codecs. 0.0.1 is the first line built only from Kolmo's own codecs, with a new frame format (container version 12) that does not read 1.x files.
 
 - **No third-party codec library:** zstd, Brotli, LZ4, liblzma and xxHash are removed from the code, the build, both
   bindings and the tree (`vendor/`, `bindings/*/native/vendor`). Kolmo's own coders replace them: KLZ (speed),
