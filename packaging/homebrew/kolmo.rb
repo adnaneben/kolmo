@@ -6,8 +6,6 @@ class Kolmo < Formula
   license "Apache-2.0"
   head "https://github.com/adnaneben/kolmo.git", branch: "main"
 
-  depends_on "xz" # liblzma, for the max/ultra tiers
-
   def install
     system "make"
     bin.install "build/kolmo"

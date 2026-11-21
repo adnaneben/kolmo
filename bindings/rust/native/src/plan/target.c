@@ -1,6 +1,6 @@
 /* --target: choose the setting of each chunk by a cost model (benchmark/TRADEOFFS.md) and calibrated speeds.
  *
- * Part of the src/kolmo.c translation unit for now (see src/plan/profile.h). Public entry points are in
+ * Part of the src/kolmo.c translation unit. Public entry points are in
  * src/api/features.c; the cost model, the speed tables, the chunk classifier and the per-chunk choice are here.
  *
  * A target is one of
@@ -227,11 +227,17 @@ static int kt_set_calibration(struct kolmo_target *t, const char *tab, size_t n)
 }
 
 /* ---------------------------------------------------------------- classes of data */
+/* text or binary: at most 5% of the first 4 KiB outside printable ASCII, tabs, line ends and UTF-8 lead bytes is text */
+static int kt_is_binary(const uint8_t *s, size_t n) {
+    size_t h = n < 4096 ? n : 4096, pr = 0;
+    for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13 || c >= 0xC2; }
+    return pr * 100 < h * 95;
+}
 static int kt_class(const uint8_t *s, size_t n) {
     size_t h = n < 65536 ? n : 65536;
     if (!h) return 0;
     if (n >= 6 && !memcmp(s, "\x93NUMPY", 6)) return 4;                /* a NumPy array */
-    if (kp_is_binary(s, n)) {
+    if (kt_is_binary(s, n)) {
         /* numeric arrays repeat their high bytes at a stride of 4 or 8; other binary data mostly does not */
         size_t eq1 = 0, eq4 = 0, eq8 = 0;
         for (size_t i = 8; i < h; i++) { eq1 += s[i] == s[i - 1]; eq4 += s[i] == s[i - 4]; eq8 += s[i] == s[i - 8]; }
@@ -270,17 +276,16 @@ static int kt_class(const uint8_t *s, size_t n) {
 /* ---------------------------------------------------------------- one chunk */
 typedef struct {
     const uint8_t *src; const uint64_t *starts; uint32_t nchunks; int inner_threads;
-    const struct kolmo_target *t; const struct kolmo_profile *prof;
+    const struct kolmo_target *t;
     uint8_t **frames; size_t *flen; int *chosen; double *pcost, *penc, *pdec; uint64_t *psize;
     atomic_uint next; atomic_int err;
 } kt_job;
 
-static int64_t kt_compress_setting(const uint8_t *s, size_t n, int setting, int threads, const struct kolmo_profile *prof,
-                                   uint8_t **out) {
+static int64_t kt_compress_setting(const uint8_t *s, size_t n, int setting, int threads, uint8_t **out) {
     kolmo_params q = {KT_SET[setting].mode, KT_SET[setting].level, threads, 0, KT_SET[setting].transforms};
     size_t cap = kolmo_bound(n, &q); uint8_t *d = malloc(cap ? cap : 1);
     if (!d) return KOLMO_ERR_ALLOC;
-    int64_t r = compress_impl_p(s, -1, n, d, -1, cap, &q, NULL, 0, 0, prof);
+    int64_t r = compress_impl(s, -1, n, d, -1, cap, &q);
     if (r < 0) { free(d); return r; }
     *out = d; return r;
 }
@@ -326,7 +331,7 @@ static void *kt_worker(void *arg) {
             double size = 0; uint8_t *frame = NULL; int64_t r = 0;
             for (int k = 0; k < ns && r >= 0; k++) {
                 uint8_t *f = NULL;
-                r = kt_compress_setting(s + so[k], sl[k], st, 1, J->prof, &f);
+                r = kt_compress_setting(s + so[k], sl[k], st, 1, &f);
                 if (r >= 0) { size += (double)r; if (ns == 1) frame = f; else free(f); }
             }
             if (r < 0) { atomic_store(&J->err, (int)r); free(frame); break; }
@@ -344,7 +349,7 @@ static void *kt_worker(void *arg) {
         /* the trial of a whole chunk is its frame (the output does not depend on the thread count) */
         if (bframe && ns == 1) { J->frames[c] = bframe; J->flen[c] = bflen; continue; }
         free(bframe);
-        int64_t r = kt_compress_setting(s, n, best, J->inner_threads, J->prof, &J->frames[c]);
+        int64_t r = kt_compress_setting(s, n, best, J->inner_threads, &J->frames[c]);
         if (r < 0) { atomic_store(&J->err, (int)r); break; }
         J->flen[c] = (size_t)r;
     }

@@ -420,9 +420,10 @@ static int rec_period(const uint8_t *s, size_t n, int minx) {   /* minx: how far
     return bp;
 }
 
-static size_t zcost(ZSTD_CCtx *zc, const uint8_t *b, size_t n, uint8_t *tmp, size_t cap, int level) { size_t r = ZSTD_compressCCtx(zc, tmp, cap, b, n, level); return ZSTD_isError(r) ? n : r; }
+/* the size probe (core/common.h: KLZH2 at the level on zstd's scale), n when it does not get smaller */
+static size_t zcost(const uint8_t *b, size_t n, int level) { return kprobe_size_l(b, n, level); }
 
-typedef struct { const uint8_t *A; size_t n; int P, level; ZSTD_CCtx *zc; uint8_t *eb, *zb; size_t ecap, zcap; } rsearch_t;
+typedef struct { const uint8_t *A; size_t n; int P, level; uint8_t *eb; size_t ecap; } rsearch_t;
 static size_t rec_best(rsearch_t *S, int o, int w, int *kind, double *qc) {
     size_t best = (size_t)-1; *kind = RK_RAW; *qc = 0;
     int kinds[4] = {RK_RAW, RK_DELTA, -1, -1}, nk = 2;
@@ -441,7 +442,7 @@ static size_t rec_best(rsearch_t *S, int o, int w, int *kind, double *qc) {
     for (int q = 0; q < nk; q++) {
         int64_t e = rec_field_enc(S->A, S->n, S->P, o, w, kinds[q], c, S->eb);
         if (e < 0) continue;
-        size_t z = zcost(S->zc, S->eb, (size_t)e, S->zb, S->zcap, S->level);
+        size_t z = zcost(S->eb, (size_t)e, S->level);
         if (z < best) { best = z; *kind = kinds[q]; *qc = kinds[q] == RK_QUANT ? c : 0; }
     }
     return best;
@@ -459,18 +460,17 @@ static size_t rec_layout(rsearch_t *S, int o, int w, rfield_t *out, double *qout
 /* plan: period, header length (0 or one record), field layout; returns estimated cost or 0 */
 static size_t rec_detect(const uint8_t *s, size_t n, int effort, int minx, rec_plan_t *R) {
     int P = rec_period(s, n, minx); if (!P) return 0;
-    size_t bestc = (size_t)-1; ZSTD_CCtx *zc = ZSTD_createCCtx();
+    size_t bestc = (size_t)-1;
     for (int h = 0; h <= P; h += P) {
         size_t cap_m = effort ? 32768 : 4096, nrec = (n - h) / P, m = nrec < cap_m ? nrec : cap_m;
         if (m < 1024) continue;
-        rsearch_t S = {s + h, m, P, effort ? 3 : 1, zc, NULL, NULL, 0, 0};
-        S.ecap = rec_field_bound(m, 8); S.eb = malloc(S.ecap); S.zcap = ZSTD_compressBound(S.ecap); S.zb = malloc(S.zcap);
+        rsearch_t S = {s + h, m, P, effort ? 3 : 1, NULL, 0};
+        S.ecap = rec_field_bound(m, 8); S.eb = malloc(S.ecap);
         rec_plan_t T = {P, h, 0, {{0}}, {0}}; size_t tot = 0; int o = 0;
         while (o < P) { int w = 8; while (o % w || o + w > P) w /= 2; tot += rec_layout(&S, o, w, T.f, T.quant, &T.nf); o += w; }
         if (tot < bestc) { bestc = tot; *R = T; }
-        free(S.eb); free(S.zb);
+        free(S.eb);
     }
-    ZSTD_freeCCtx(zc);
     return bestc == (size_t)-1 ? 0 : bestc;
 }
 static int64_t rec_encode(const uint8_t *in, size_t len, size_t blockstart, const rec_plan_t *R, uint8_t *dst, size_t cap) {

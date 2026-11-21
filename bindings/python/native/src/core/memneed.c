@@ -19,14 +19,14 @@ static const uint64_t KMEM_MIB = (uint64_t)1 << 20;
 static uint64_t kmem_enc_codec(int codec, int level, uint64_t n) {
     switch (codec) {
         case C_STORE: return 0;
-        case C_LZ4: return KMEM_MIB;
-        case C_LZ4HC: return 2 * KMEM_MIB;
-        case C_ZSTD: {                                          /* window, hash and chain tables of the level */
+        case R_SPEED: return KMEM_MIB;
+        case R_SPEEDHC: return 2 * KMEM_MIB;
+        case R_LZH: {                                          /* window, hash and chain tables of the level */
             uint64_t w = n < 2 * KMEM_MIB ? 2 * KMEM_MIB : n; if (w > 128 * KMEM_MIB) w = 128 * KMEM_MIB;
             return level >= 17 ? w * 6 + 8 * KMEM_MIB : level >= 10 ? w * 3 + 8 * KMEM_MIB : 12 * KMEM_MIB;
         }
-        case C_BROTLI: { uint64_t w = n < (16 * KMEM_MIB) ? n : 16 * KMEM_MIB; return 8 * w + 8 * KMEM_MIB; }
-        case C_LZMA: return 12 * kmem_pow2_dict(n) + 4 * KMEM_MIB;   /* preset 9 extreme: binary-tree match finder */
+        case R_ECO: { uint64_t w = n < (16 * KMEM_MIB) ? n : 16 * KMEM_MIB; return 8 * w + 8 * KMEM_MIB; }
+        case R_LZMA: return 12 * kmem_pow2_dict(n) + 4 * KMEM_MIB;   /* preset 9 extreme: binary-tree match finder */
         case C_BWT: case C_BSC5: return 6 * n + 8 * KMEM_MIB;     /* suffix array, LZP, QLFC buffers */
         case C_CM: case C_CMI: return cm_need_bound((size_t)n) + n + 8;
         case C_FQ: return 5 * n + 32 * KMEM_MIB;
@@ -53,12 +53,12 @@ static uint64_t blk_dec_need(int codec, int tflag, uint64_t raw, const uint8_t *
     const uint8_t *c = s + meta; size_t cn = sn - meta; uint64_t dn = tflag && tflag != 8 ? slack : raw;   /* the codec's output */
     uint64_t u;
     switch (codec) {
-        case C_STORE: case C_LZ4: case C_LZ4HC: case C_HUF: case C_RANS: return base;
+        case C_STORE: case R_SPEED: case R_SPEEDHC: case R_HUF: case C_RANS: return base;
         case C_KLZ: case C_KHUF: return base;                         /* Kolmo's own coders (codecs/native.c): as the */
-        case C_ZSTD: case C_KLZH: case C_KLZH2: return base + 2 * KMEM_MIB;         /* library codec each one replaces */
+        case R_LZH: case C_KLZH: case C_KLZH2: return base + 2 * KMEM_MIB;         /* library codec each one replaces */
         case C_KLZMA: return base + kmem_pow2_dict(slack) + 2 * KMEM_MIB;
-        case C_BROTLI: return base + (dn < 16 * KMEM_MIB ? dn : 16 * KMEM_MIB) + 2 * KMEM_MIB;
-        case C_LZMA: return base + kmem_pow2_dict(slack) + 2 * KMEM_MIB;
+        case R_ECO: return base + (dn < 16 * KMEM_MIB ? dn : 16 * KMEM_MIB) + 2 * KMEM_MIB;
+        case R_LZMA: return base + kmem_pow2_dict(slack) + 2 * KMEM_MIB;
         case C_BWT: case C_BSC5: return base + 5 * slack + 4 * KMEM_MIB;
         case C_CM: u = cm_stream_need(c, cn, (size_t)dn); return u ? base + u : 0;
         case C_CMI: u = cm_image_need(c, cn); return u ? base + u : 0;
@@ -78,9 +78,9 @@ static uint64_t blk_dec_floor(uint64_t raw) { return kmem_buffers(raw); }
  * thread unless they reserve for themselves): the job's reservation */
 static uint64_t kmem_enc_block(int codec, int level, uint64_t len, uint64_t slot) {
     uint64_t buf = 2 * (len + TBL_SLACK(len)) + 2 * slot + 4 * KMEM_MIB, w = kmem_enc_codec(codec, level, len);
-    if (codec == C_LZMA) { uint64_t b = kmem_enc_codec(C_BWT, 9, len); if (b > w) w = b; }
+    if (codec == R_LZMA) { uint64_t b = kmem_enc_codec(C_BWT, 9, len); if (b > w) w = b; }
     if (codec == C_CM && level != 1) {
-        uint64_t a = kmem_enc_codec(C_LZMA, 9, len), b = kmem_enc_codec(C_BWT, 9, len);
+        uint64_t a = kmem_enc_codec(R_LZMA, 9, len), b = kmem_enc_codec(C_BWT, 9, len);
         if (a > w) w = a;
         if (b > w) w = b;
     }
@@ -108,7 +108,7 @@ static uint32_t kmem_block_for_cap(int mode, int codec, int level, uint32_t B, u
     } else if (mode == KOLMO_ULTRA) {
         /* decode: buffers, the smallest tables and the match chain; encode: the same plus the alternative coders */
         while (B > (1u << 20) && (kmem_buffers(B) + cm_mem_for(16, 3) + 4 * ((uint64_t)B + 8) > cap
-                                  || 2 * (B + TBL_SLACK(B)) + 2 * ((uint64_t)B + B / 8) + kmem_enc_codec(C_LZMA, 9, B) > cap)) B >>= 1;
+                                  || 2 * (B + TBL_SLACK(B)) + 2 * ((uint64_t)B + B / 8) + kmem_enc_codec(R_LZMA, 9, B) > cap)) B >>= 1;
     }
     return B;
 }

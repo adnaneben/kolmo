@@ -54,8 +54,9 @@ static int meta_packed(const uint8_t *s, size_t n) {
 
 /* A block of packed content is stored without running its coder when it looks incompressible: on every 16 KiB slice
  * of up to 8 spread over the block, the collision entropy -log2(sum p^2) of the bytes is at least 7.8 bits (in integers:
- * 222 * sum c^2 <= SL^2, so the decision is exact on every platform), and LZ4 finds no matches worth 1% (LZ4 passes over
- * such data at GB/s and would find a repeated member). Under the strong coders this skips seconds of work per MB. */
+ * 222 * sum c^2 <= SL^2, so the decision is exact on every platform), and the size probe (kprobe_size, KLZH2 level 1;
+ * LZ4 before version 12) gains less than 1% (it would find a repeated member). Under the strong coders this skips seconds
+ * of work per MB. */
 static int meta_incompressible(const uint8_t *s, size_t n) {
     if (n < 4096) return 0;
     const size_t SL = n < 16384 ? n : 16384; const int k = n >= 8 * SL ? 8 : (int)(n / SL);
@@ -65,10 +66,8 @@ static int meta_incompressible(const uint8_t *s, size_t n) {
         uint64_t sq = 0; for (int b = 0; b < 256; b++) sq += (uint64_t)c[b] * c[b];
         if (222 * sq > (uint64_t)SL * SL) return 0;
     }
-    if (n > (size_t)LZ4_MAX_INPUT_SIZE) return 1;
-    char *o = malloc((size_t)LZ4_compressBound((int)n)); if (!o) return 0;
-    int z = LZ4_compress_default((const char *)s, o, (int)n, LZ4_compressBound((int)n)); free(o);
-    return z <= 0 || (size_t)z * 100 >= (size_t)n * 99;
+    size_t z = kprobe_size(s, n);
+    return z * 100 >= n * 99;
 }
 
 /* ---- audio ---- */

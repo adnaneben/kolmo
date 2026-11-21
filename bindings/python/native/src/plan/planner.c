@@ -10,11 +10,11 @@
 #endif
 static void mode_codec(const kolmo_params *p, int *codec, int *level) {
     switch (p->mode) {
-        case KOLMO_RT:  *codec = C_LZ4;    *level = p->level ? p->level : 1; break;
-        case KOLMO_FAST:*codec = C_ZSTD;   *level = p->level ? p->level : CZ_FAST_LEVEL; break;
-        case KOLMO_ECO: *codec = C_BROTLI; *level = p->level ? p->level : CZ_ECO_LEVEL; break;
-        case KOLMO_HC:  *codec = C_ZSTD;   *level = p->level ? p->level : 19; break;
-        case KOLMO_MAX: *codec = C_LZMA;   *level = p->level ? p->level : 9; break;     /* max: BWT for text, the better of BWT and LZMA2 for binary (level 1: BWT only) */
+        case KOLMO_RT:  *codec = R_SPEED;    *level = p->level ? p->level : 1; break;
+        case KOLMO_FAST:*codec = R_LZH;   *level = p->level ? p->level : CZ_FAST_LEVEL; break;
+        case KOLMO_ECO: *codec = R_ECO; *level = p->level ? p->level : CZ_ECO_LEVEL; break;
+        case KOLMO_HC:  *codec = R_LZH;   *level = p->level ? p->level : 19; break;
+        case KOLMO_MAX: *codec = R_LZMA;   *level = p->level ? p->level : 9; break;     /* max: BWT for text, the better of BWT and LZMA2 for binary (level 1: BWT only) */
         default:      *codec = C_CM;     *level = p->level == 1 || p->level == 2 ? p->level : 0; break;   /* ultra: context mixing (level 1: model 1, CM only; level 2: maximum ratio, graph leaves may use CM) */
     }
 }
@@ -86,10 +86,10 @@ static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int
     size_t a = h + (st - h) / W * W, l = (n - a < L ? n - a : L) / W * W; if (l < 2 * W) l = (n - a) / W * W < 2 * W ? 0 : 2 * W;
     codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(l + 64);
     if (o && plain < 1e299 && l > KG_SCREEN * 2 && W * 8 <= KG_SCREEN) {   /* screen on a few rows, as for integers */
-        size_t ls = KG_SCREEN / W * W, zs = kg_encode_img8(&cx, C_ZSTD, zl, s + a, ls, W, C, 0, o, l + 64);
+        size_t ls = KG_SCREEN / W * W, zs = kg_encode_img8(&cx, R_LZH, zl, s + a, ls, W, C, 0, o, l + 64);
         if (!zs || (double)zs / ls > plain * KG_SCREEN_SLACK) { free(o); codec_ctx_free(&cx); return best; }
     }
-    size_t z = o && l ? kg_encode_img8(&cx, C_ZSTD, zl, s + a, l, W, C, 0, o, l + 64) : 0;
+    size_t z = o && l ? kg_encode_img8(&cx, R_LZH, zl, s + a, l, W, C, 0, o, l + 64) : 0;
     if (z) { best = (double)z / l; *bw = W; *bc = C; *bh = h; }
     free(o); codec_ctx_free(&cx);
     return best;
@@ -125,7 +125,7 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
             double e = 0; for (int b = 0; b < fw; b++) e += kg_plane_h(s + a, l / fw, fw, b, 1);
             if (e / (8.0 * fw) >= plain) continue;
         }
-        size_t z = l ? kg_encode_float(&cx, C_ZSTD, zl, s + a, l, fw, 0, o, L + 64) : 0;
+        size_t z = l ? kg_encode_float(&cx, R_LZH, zl, s + a, l, fw, 0, o, L + 64) : 0;
         if (z && (double)z / l < best) { best = (double)z / l; *bw = fw; *bh = fh; }
     }
     free(o); codec_ctx_free(&cx);
@@ -180,7 +180,7 @@ static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
     if (l < 16 * rb || l < 512) { a = h; l = (n - h < L ? n - h : L) / rb * rb; if (l < 512) return best; }
     codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(l + 64);
     const size_t ca = cols && f32 ? cols | KG_DEC_F32 : cols;      /* a binary32 table carries the flag in its column count */
-    size_t z = o ? kg_encode_dec64(&cx, C_ZSTD, zl, s + a, l, ca, 0, o, l + 64) : 0;
+    size_t z = o ? kg_encode_dec64(&cx, R_LZH, zl, s + a, l, ca, 0, o, l + 64) : 0;
     if (z) { best = (double)z / l; *bcols = (uint32_t)ca; *bh = h; }
     free(o); codec_ctx_free(&cx);
     return best;
@@ -215,10 +215,10 @@ static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int 
     for (int q = 0; o && q < nw; q++) {
         int w = ws[q]; size_t a = h + (st - h) / w * w, l = (n - a < L ? n - a : L) / w * w;
         if (plain < 1e299 && l > KG_SCREEN * 2) {            /* screen on a short run: far above plain coding means no full trial */
-            size_t zs = kg_encode_num(&cx, C_ZSTD, zl, s + a, KG_SCREEN / w * w, w, 0, o, L + 64);
+            size_t zs = kg_encode_num(&cx, R_LZH, zl, s + a, KG_SCREEN / w * w, w, 0, o, L + 64);
             if (!zs || (double)zs / (KG_SCREEN / w * w) > plain * KG_SCREEN_SLACK) continue;
         }
-        size_t z = l ? kg_encode_num(&cx, C_ZSTD, zl, s + a, l, w, 0, o, L + 64) : 0;
+        size_t z = l ? kg_encode_num(&cx, R_LZH, zl, s + a, l, w, 0, o, L + 64) : 0;
         if (z && (double)z / l < best) { best = (double)z / l; *bw = w; *bh = h; }
     }
     free(o); codec_ctx_free(&cx);
@@ -269,19 +269,19 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                     const uint8_t *m0 = memchr(s + n / 2, '\n', n / 2); size_t st = m0 ? (size_t)(m0 - s) + 1 : 0;
                     if (st && st + mm <= n) { size_t e = mm; while (e > 0 && s[st + e - 1] != '\n') e--; if (e >= 16384) { ts = s + st; mm = e; } }
                 }
-                codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t zcap = ZSTD_compressBound(mm); uint8_t *z = malloc(zcap);
-                if (o && zc && z) {
-                    size_t a = kg_encode_table(&cx, C_ZSTD, 1, ts, mm, WD[di], sep, o, mm + 64), b = ZSTD_compressCCtx(zc, z, zcap, ts, mm, 1);
-                    int ok = a && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b;
+                codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(mm + 64); size_t zcap = kolmo_klzh_bound(mm) + 4096; uint8_t *z = malloc(zcap);
+                if (o && z) {
+                    size_t a = kg_encode_table(&cx, R_LZH, 1, ts, mm, WD[di], sep, o, mm + 64), b = kprobe_size(ts, mm);
+                    int ok = a && a * 100 < CZ_LOG_GAIN_PCT * b;
                     if (ok && effort) {                          /* slower settings: the graph must also win with a strong codec (max, */
-                        int cc = strong ? C_BWT : C_ZSTD, lv = 9;     /* ultra: BWT; hc: zstd -9 standing in for zstd -19) */
+                        int cc = strong ? C_BWT : R_LZH, lv = 9;     /* ultra: BWT; hc: zstd -9 standing in for zstd -19) */
                         size_t ms = mm; if (ms > (384u << 10)) { ms = 384u << 10; while (ms > 0 && ts[ms - 1] != '\n') ms--; }   /* a shorter run decides the same and costs a third */
                         size_t a2 = ms ? kg_encode_table(&cx, cc, lv, ts, ms, WD[di], sep, o, mm + 64) : 0, b2 = ms ? codec_compress(&cx, cc, lv, ts, ms, z, zcap) : 0;
                         ok = a2 && b2 && a2 * 100 < 97 * b2;
                     }
                     if (ok) { pl.t = T_KG; pl.a = WD[di]; pl.b = sep; }
                 }
-                free(o); free(z); ZSTD_freeCCtx(zc); codec_ctx_free(&cx);
+                free(o); free(z); codec_ctx_free(&cx);
             }
             if (pl.t == T_KG) return pl;
         }
@@ -290,8 +290,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #endif
         if (logs && n >= 65536 && json_minified(s, h)) {   /* minified JSON: split into records, then as JSON lines */
             size_t mm = n < TRIAL ? n : TRIAL;             /* (shorter slices were tried: the gain does not show below 256 KiB) */
-            uint8_t *sp = malloc(2 * mm + 64), *o = malloc(2 * mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx();
-            size_t cap = ZSTD_compressBound(2 * mm); uint8_t *z = malloc(cap);
+            uint8_t *sp = malloc(2 * mm + 64), *o = malloc(2 * mm + 64);
             int shaped = 1;
             if (sp && mm >= (64u << 10)) {
                 /* records must share a few key layouts for the template transform to pay: split the first 64 KiB and
@@ -310,48 +309,48 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                 }
                 shaped = lines >= 8 && (ns <= 8 || ns * 16 <= lines);   /* a handful of layouts, or at most one per 16 records */
             }
-            if (sp && o && zc && z && shaped) {
+            if (sp && o && shaped) {
                 size_t sn = json_split(s, mm, sp); int64_t tn = log_encode_m(sp, sn, o, 2 * mm + 64, 1);
                 if (tn > 0) {
-                    size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1), b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1);
-                    if (!ZSTD_isError(a) && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b) { pl.t = T_LOG; pl.a = 2; }
+                    size_t a = kprobe_size(o, (size_t)tn), b = kprobe_size(s, mm);
+                    if (a * 100 < CZ_LOG_GAIN_PCT * b) { pl.t = T_LOG; pl.a = 2; }
                 }
             }
-            free(sp); free(o); free(z); ZSTD_freeCCtx(zc);
+            free(sp); free(o);
             if (pl.t == T_LOG) return pl;
         }
         int js = logs && n >= 65536 ? json_lines(s, h) : 0;
         int logc = 0; size_t loga = 0, logb = 0;  /* the JSON trial's log-token result, reused by the log trial below */
         if (js == 1 && !strong && n > (64u << 10)) {  /* pretty JSON: a 64 KiB look first; no gain there, no full trial */
             size_t m0 = 64u << 10; while (m0 > 0 && s[m0 - 1] != '\n') m0--;
-            uint8_t *o = malloc(m0 + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(m0); uint8_t *z = malloc(cap);
+            uint8_t *o = malloc(m0 + 64);
             int gain = 1;
-            if (o && zc && z && m0 >= 16384) {
-                size_t b = ZSTD_compressCCtx(zc, z, cap, s, m0, 1); gain = 0;
-                for (int jm = 1; jm >= 0 && !gain && !ZSTD_isError(b); jm--) {
+            if (o && m0 >= 16384) {
+                size_t b = kprobe_size(s, m0); gain = 0;
+                for (int jm = 1; jm >= 0 && !gain; jm--) {
                     int64_t tn = log_encode_m(s, m0, o, m0 + 64, jm); if (tn <= 0) continue;
-                    size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1); gain = !ZSTD_isError(a) && a * 100 < b * 100;
+                    size_t a = kprobe_size(o, (size_t)tn); gain = a * 100 < b * 100;
                 }
             }
-            free(o); free(z); ZSTD_freeCCtx(zc);
+            free(o);
             if (!gain) js = 0;
         }
         if (js == 2 || (js == 1 && !strong)) {   /* JSON: values become columns (max/ultra model pretty JSON well raw) */
             size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
             if (mm >= 16384) {                   /* JSON tokens, or log tokens when values hold free text: the smaller */
-                uint8_t *o = malloc(mm + 64); ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm); uint8_t *z = malloc(cap);
-                if (o && zc && z) {
-                    size_t b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1), best = ZSTD_isError(b) ? 0 : b * CZ_LOG_GAIN_PCT / 100;
+                uint8_t *o = malloc(mm + 64);
+                if (o) {
+                    size_t b = kprobe_size(s, mm), best = b * CZ_LOG_GAIN_PCT / 100;
                     for (int jm = 1; jm >= 0; jm--) {
                         int64_t tn = log_encode_m(s, mm, o, mm + 64, jm);
                         if (jm == 0) { logc = 1; loga = (size_t)-1; logb = b; }
                         if (tn <= 0) continue;
-                        size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1);
+                        size_t a = kprobe_size(o, (size_t)tn);
                         if (jm == 0) { loga = a; logc = 2; }
-                        if (!ZSTD_isError(a) && a < best) { best = a; pl.t = T_LOG; pl.a = (uint8_t)jm; }
+                        if (a < best) { best = a; pl.t = T_LOG; pl.a = (uint8_t)jm; }
                     }
                 }
-                free(o); free(z); ZSTD_freeCCtx(zc);
+                free(o);
                 if (pl.t == T_LOG) return pl;
             }
         }
@@ -388,30 +387,25 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             uint8_t *o = malloc(mm + TSLACK);
             if (!o) return pl;
             int64_t tn = tbl_encode(s, mm, (uint8_t)pl.a, pl.c + 1, pl.b, o);
-            ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm + TSLACK); uint8_t *z = malloc(cap);
-            if (!zc || !z) { free(o); free(z); ZSTD_freeCCtx(zc); return pl; }
-            size_t a = tn > 0 ? ZSTD_compressCCtx(zc, z, cap, o, tn, 1) : (size_t)-1, b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1);
-            if (tn > 0 && !ZSTD_isError(a) && !ZSTD_isError(b) && a * 100 < CZ_TBL_GAIN_PCT * b) {
+            size_t a = tn > 0 ? kprobe_size(o, (size_t)tn) : (size_t)-1, b = kprobe_size(s, mm);
+            if (tn > 0 && a * 100 < CZ_TBL_GAIN_PCT * b) {
                 pl.t = T_TBL; pl.fs = malloc(sizeof(fset_t));
                 if (pl.fs) fset_discover(s, n, (uint8_t)pl.a, pl.c + 1, pl.b, effort, pl.fs, threads);
             }
-            free(o); free(z); ZSTD_freeCCtx(zc);
+            free(o);
         }
         size_t logcost = 0;                                /* the template transform's coded size on the trial slice */
         if (logs && pl.t == T_NONE && n >= 65536) {        /* logs: template transform, kept if it helps on a sample */
             size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
             if (mm >= 16384 && logc) {           /* same slice already coded by the JSON trial */
-                if (logc == 2 && !ZSTD_isError(loga) && !ZSTD_isError(logb) && loga * 100 < CZ_LOG_GAIN_PCT * logb) { pl.t = T_LOG; logcost = loga; }
+                if (logc == 2 && loga * 100 < CZ_LOG_GAIN_PCT * logb) { pl.t = T_LOG; logcost = loga; }
             } else if (mm >= 16384) {
                 uint8_t *o = malloc(mm + 64);
                 if (!o) return pl;
                 int64_t tn = log_encode(s, mm, o, mm + 64);
                 if (tn > 0) {
-                    ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm); uint8_t *z = malloc(cap);
-                    if (!zc || !z) { free(o); free(z); ZSTD_freeCCtx(zc); return pl; }
-                    size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 1), b = ZSTD_compressCCtx(zc, z, cap, s, mm, 1);
-                    if (!ZSTD_isError(a) && !ZSTD_isError(b) && a * 100 < CZ_LOG_GAIN_PCT * b) { pl.t = T_LOG; logcost = a; }
-                    free(z); ZSTD_freeCCtx(zc);
+                    size_t a = kprobe_size(o, (size_t)tn), b = kprobe_size(s, mm);
+                    if (a * 100 < CZ_LOG_GAIN_PCT * b) { pl.t = T_LOG; logcost = a; }
                 }
                 free(o);
             }
@@ -424,12 +418,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             uint8_t *o = mm >= 16384 ? malloc(mm + TSLACK) : NULL;
             int64_t tn = o ? lines_encode(s, mm, o, mm + TSLACK) : -1;
             if (tn > 0) {
-                ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm + TSLACK); uint8_t *z = malloc(cap);
-                if (zc && z) {
-                    size_t a = ZSTD_compressCCtx(zc, z, cap, o, (size_t)tn, 1), b = pl.t == T_LOG ? 0 : ZSTD_compressCCtx(zc, z, cap, s, mm, 1);
-                    if (!ZSTD_isError(a) && !ZSTD_isError(b) && (pl.t == T_LOG ? a <= logcost : a * 100 < CZ_LOG_GAIN_PCT * b)) { pl.t = T_LINES; pl.a = pl.b = pl.c = 0; }
-                }
-                free(z); ZSTD_freeCCtx(zc);
+                size_t a = kprobe_size(o, (size_t)tn), b = pl.t == T_LOG ? 0 : kprobe_size(s, mm);
+                if (pl.t == T_LOG ? a <= logcost : a * 100 < CZ_LOG_GAIN_PCT * b) { pl.t = T_LINES; pl.a = pl.b = pl.c = 0; }
             }
             free(o);
         }
@@ -442,11 +432,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (!o) return pl;
             int64_t tn = word_encode(s, mm, o, mm + 64);
             if (tn > 0) {
-                ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(mm); uint8_t *z = malloc(cap);
-                if (!zc || !z) { free(o); free(z); ZSTD_freeCCtx(zc); return pl; }
-                size_t a = ZSTD_compressCCtx(zc, z, cap, o, tn, 3), b = ZSTD_compressCCtx(zc, z, cap, s, mm, 3);
-                if (!ZSTD_isError(a) && !ZSTD_isError(b) && a * 100 < CZ_WORD_GAIN_PCT * b) pl.t = T_WORD;
-                free(z); ZSTD_freeCCtx(zc);
+                size_t a = kprobe_size_l(o, (size_t)tn, 3), b = kprobe_size_l(s, mm, 3);
+                if (a * 100 < CZ_WORD_GAIN_PCT * b) pl.t = T_WORD;
             }
             free(o);
         }
@@ -463,10 +450,10 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         double h1 = kg_plane_h(smp, sl, 1, 0, 0), hb = 1e9;
         for (int w = 2; w <= 8; w *= 2) { double e = 0; for (int b = 0; b < w; b++) e += kg_plane_h(smp, sl / w, w, b, 0); e /= w; if (e < hb) { hb = e; wonly = w; } }
         if (hb > (light == 3 ? 0.75 : 0.93) * h1) return pl;  /* (speed mode asks for a plane a quarter below the byte entropy) */                     /* no plane stands out: plain coding, and no coder was run */
-        if (light == 3) {                                   /* speed mode: LZ4 passes over incompressible input at several GB/s;
-                                                             * a shuffle that makes such data compressible costs most of that speed */
-            char lz[LZ4_COMPRESSBOUND(32768)]; int lc = LZ4_compress_default((const char *)smp, lz, (int)sl, (int)sizeof lz);
-            if (lc <= 0 || (size_t)lc * 100 >= sl * 98) return pl;
+        if (light == 3) {                                   /* speed mode: KLZ passes over incompressible input at several GB/s;
+                                                             * a shuffle that makes such data compressible costs most of that speed.
+                                                             * The test is the size probe (LZ4 before version 12) */
+            if (kprobe_size(smp, sl) * 100 >= sl * 98) return pl;
         }
     }
     int noshuf = 0;
@@ -476,11 +463,10 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         for (int w = 2; w <= 8; w *= 2) { double e = 0; for (int b = 0; b < w; b++) e += kg_plane_h(smp, sl / w, w, b, 0); e /= w; if (e < hb) { hb = e; wonly = w; } }   /* and only at the width whose planes are most predictable */
         noshuf = hb > SHUF_SCREEN * h1;
     }
-    ZSTD_CCtx *zc = ZSTD_createCCtx(); size_t cap = ZSTD_compressBound(sl);
-    uint8_t *o = malloc(cap), *t = malloc(sl);
-    if (!zc || !o || !t) { free(o); free(t); ZSTD_freeCCtx(zc); return pl; }
-    size_t base = noshuf ? 0 : ZSTD_compressCCtx(zc, o, cap, smp, sl, 1);
-    if (!noshuf && !ZSTD_isError(base) && base * 4 >= sl && wonly >= 0) {
+    uint8_t *t = malloc(sl ? sl : 1);
+    if (!t) return pl;
+    size_t base = noshuf ? 0 : kprobe_size(smp, sl);
+    if (!noshuf && base * 4 >= sl && wonly >= 0) {
         double best = base * 0.95;
         for (int w = 2; w <= 8; w *= 2) for (int c = 1; c <= 8; c++) {
             if (wonly && w != wonly) continue;
@@ -488,12 +474,12 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             for (int dl = 1; dl >= 0; dl--) {
                 size_t rows = sl / (w * c); if (!rows) continue;
                 shuffle_fwd(smp, rows, w, c, dl, t);
-                size_t z = ZSTD_compressCCtx(zc, o, cap, t, rows * w * c, 1);
-                if (!ZSTD_isError(z) && z < best) { best = z; pl.t = T_SHUF; pl.a = w; pl.b = c; pl.c = dl; }
+                size_t z = kprobe_size(t, rows * w * c);
+                if (z < best) { best = z; pl.t = T_SHUF; pl.a = w; pl.b = c; pl.c = dl; }
             }
         }
     }
-    free(o); free(t);
+    free(t);
     /* structure-aware candidates (16-bit image, fixed records) against the shuffle and plain coding, scored by zstd -3
      * on a slice of up to 1 MiB from the middle of the input; kept only when at least 3% smaller */
     if (structured && n >= (1u << 18)) {
@@ -501,16 +487,15 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         const int zl = light ? 1 : 3;                      /* scoring level */
         /* balanced keeps the 1 MiB slice of the full analysis: on a 47 MB weights file the 256 KiB slice picked a layout
          * that coded 0.8% larger, and the slice costs under a millisecond at level 1 */
-        size_t bc = L * 2 + 1024; uint8_t *buf = malloc(bc), *zb = malloc(ZSTD_compressBound(bc));
-        if (!buf || !zb) { free(buf); free(zb); ZSTD_freeCCtx(zc); return pl; }
-        size_t zcap = ZSTD_compressBound(bc);
-        double plain = (double)zcost(zc, s + st, L, zb, zcap, zl) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
+        size_t bc = L * 2 + 1024; uint8_t *buf = malloc(bc);
+        if (!buf) return pl;
+        double plain = (double)zcost(s + st, L, zl) / L, best = plain * CZ_STRUCT_GAIN_PCT / 100.0; plan_t keep = pl; int chosen = 0;
         /* Ownership survives replacement of the tentative winning plan (same repair as fix/planner-record-ownership). */
         rec_plan_t *owned_rec = NULL;
         double d64c = 1e300; uint32_t d64cols = 0; size_t d64h = 0;   /* the DEC64 trial's result, kept for a marked plan */
         if (pl.t == T_SHUF) {
             size_t u = (size_t)pl.a * pl.b, rows = L / u; shuffle_fwd(s + st, rows, pl.a, pl.b, pl.c, buf);
-            double c = (double)zcost(zc, buf, rows * u, zb, zcap, zl) / (rows * u);
+            double c = (double)zcost(buf, rows * u, zl) / (rows * u);
             if (c < best) { best = c; chosen = 1; }
         }
         img_plan_t im;
@@ -520,7 +505,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             size_t ej = 0; for (size_t i = 0; i + 4 < L; i++) ej += ((s[st + i] & 0xFE) == 0xE8) & ((uint8_t)(s[st + i + 4] + 1) < 2);
             if (ej * 1000 >= L) {
                 memcpy(buf, s + st, L); e8e9_fwd(buf, L);
-                double c = (double)zcost(zc, buf, L, zb, zcap, zl) / L;
+                double c = (double)zcost(buf, L, zl) / L;
                 if (c < best) { best = c; keep = pl; keep.t = T_X86; chosen = 4; code = 1; }
             }
         }
@@ -530,7 +515,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #endif
         if (img16_detect(s, n, &im)) {
             int64_t e = img16_encode(s + st, L, st, &im, buf);
-            if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / L; if (c < best) { best = c; keep = pl; keep.t = T_IMG; keep.img = im; chosen = 2; } }
+            if (e > 0) { double c = (double)zcost(buf, (size_t)e, zl) / L; if (c < best) { best = c; keep = pl; keep.t = T_IMG; keep.img = im; chosen = 2; } }
         }
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
         double image_ms = (prof_now() - image_start) * 1000;
@@ -547,7 +532,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             size_t rl = L / R->P * R->P; \
             if (rs + rl <= n) { \
                 int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc); \
-                if (e > 0) { double c = (double)zcost(zc, buf, (size_t)e, zb, zcap, zl) / rl; if (c < (BAR)) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } } \
+                if (e > 0) { double c = (double)zcost(buf, (size_t)e, zl) / rl; if (c < (BAR)) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } } \
             } \
         } \
         free(R); \
@@ -561,7 +546,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             size_t ej = 0; for (size_t i = 0; i + 4 < L; i++) ej += ((s[st + i] & 0xFE) == 0xE8) & ((uint8_t)(s[st + i + 4] + 1) < 2);
             if (ej * 1000 >= L) {
             memcpy(buf, s + st, L); e8e9_fwd(buf, L);
-            double c = (double)zcost(zc, buf, L, zb, zcap, zl) / L;
+            double c = (double)zcost(buf, L, zl) / L;
             if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
             else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
             }
@@ -569,7 +554,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         {   /* float arrays first (FLOAT node); integer arrays (INT node) only when the data does not look like floats */
             const size_t Lg = effort || L <= PLAN_SLICE(256u << 10) ? L : (256u << 10);     /* fast: graph trials on 256 KiB */
             double plg = -1;                                    /* a shorter slice is compared by its gain over plain coding of that slice */
-#define KG_ADJ(C) ((C) > 1e299 || Lg == L ? (C) : (C) * plain / (plg > 0 ? plg : (plg = (double)zcost(zc, s + st, Lg, zb, zcap, zl) / Lg)))
+#define KG_ADJ(C) ((C) > 1e299 || Lg == L ? (C) : (C) * plain / (plg > 0 ? plg : (plg = (double)zcost(s + st, Lg, zl) / Lg)))
             /* the float trial keeps the full slice: its pre-check is cheap, and zstd's plain cost on 256 KiB misleads on float data */
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt0 = prof_now();
@@ -578,7 +563,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             size_t iw = 0, ih = 0; unsigned ic = 0; double ci = 1e300; int imgdone = 0;
             const size_t Li = light && !npy && Lg > (64u << 10) ? (64u << 10) : Lg;   /* quick analysis: a 64 KiB image trial */
 #define IMG8_TRIAL() do { ci = kg_img8_trial(s, n, st, Li, zl, plain, &iw, &ic, &ih); \
-                if (ci < 1e299 && Li != Lg) ci = ci * plain / ((double)zcost(zc, s + st, Li, zb, zcap, zl) / Li); else ci = KG_ADJ(ci); imgdone = 1; } while (0)
+                if (ci < 1e299 && Li != Lg) ci = ci * plain / ((double)zcost(s + st, Li, zl) / Li); else ci = KG_ADJ(ci); imgdone = 1; } while (0)
             /* balanced: the image trial first (its pre-check is the cheapest); an image layout that saves a fifth is the
              * answer and the float, integer and decimal trials are not run */
             if (numtrial) IMG8_TRIAL();
@@ -630,7 +615,7 @@ structured_done:
             static const int at16[4] = {1, 5, 11, 15}; const size_t E = 32u << 10;
             for (int q = 0; q < 4 && !keep.verify; q++) {
                 size_t pos = (n / 16 * (size_t)at16[q]) & ~(size_t)7; if (pos + E > n) continue;
-                double pe = (double)zcost(zc, s + pos, E, zb, zcap, zl) / E, c = 1e300; int w3 = 0; size_t h3 = 0, iw3 = 0; unsigned ic3 = 0; uint32_t dc3 = 0;
+                double pe = (double)zcost(s + pos, E, zl) / E, c = 1e300; int w3 = 0; size_t h3 = 0, iw3 = 0; unsigned ic3 = 0; uint32_t dc3 = 0;
                 if (chosen == 5) c = kg_num_trial(s, n, pos, E, zl, 1e300, &w3, &h3, native);
                 else if (chosen == 6) c = kg_float_trial(s, n, pos, E, zl, 1e300, &w3, &h3);
                 else if (chosen == 7) c = kg_img8_trial(s, n, pos, E, zl, 1e300, &iw3, &ic3, &h3);
@@ -649,22 +634,22 @@ structured_done:
             static const int at16[4] = {1, 5, 11, 15}; const size_t u = (size_t)pl.a * pl.b, E = (32u << 10) / u * u;
             for (int q = 0; q < 4 && !pl.verify; q++) {
                 size_t pos = n / 16 * (size_t)at16[q] / u * u; if (pos + E > n || E > bc) continue;
-                double pe = (double)zcost(zc, s + pos, E, zb, zcap, zl) / E;
+                double pe = (double)zcost(s + pos, E, zl) / E;
                 shuffle_fwd(s + pos, E / u, pl.a, pl.b, pl.c, buf);
-                if ((double)zcost(zc, buf, E, zb, zcap, zl) / E > pe * 1.10 && pe < 0.98) pl.verify = 1;
+                if ((double)zcost(buf, E, zl) / E > pe * 1.10 && pe < 0.98) pl.verify = 1;
             }
         }
         if (0) {}
         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
-        free(buf); free(zb);
+        free(buf);
     }
     if (structured && n < (1u << 18)) {                    /* small arrays: the integer graph against plain and shuffle */
-        const int zl = light && !numtrial ? 1 : 3; size_t zcap = ZSTD_compressBound(n); uint8_t *zb = malloc(zcap), *buf = malloc(n);
-        if (zb && buf) {
-            double plain = (double)zcost(zc, s, n, zb, zcap, zl) / n, best = plain * CZ_STRUCT_GAIN_PCT / 100.0;
+        const int zl = light && !numtrial ? 1 : 3; uint8_t *buf = malloc(n ? n : 1);
+        if (buf) {
+            double plain = (double)zcost(s, n, zl) / n, best = plain * CZ_STRUCT_GAIN_PCT / 100.0;
             if (pl.t == T_SHUF) {
                 size_t u = (size_t)pl.a * pl.b, rows = n / u; shuffle_fwd(s, rows, pl.a, pl.b, pl.c, buf);
-                double c = (double)zcost(zc, buf, rows * u, zb, zcap, zl) / (rows * u); if (c < best) best = c;
+                double c = (double)zcost(buf, rows * u, zl) / (rows * u); if (c < best) best = c;
             }
             int w = 0; size_t hh = 0; double c = kg_num_trial(s, n, 0, n, zl, 1e300, &w, &hh, native);   /* small input: no pre-check */
             if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = w; pl.c = (int)hh; }
@@ -675,11 +660,10 @@ structured_done:
             size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, 0, n, zl, 1e300, &iw, &ic, &ih);
             if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = 32 | (int)ic; pl.c = (int)ih; pl.kgw = (uint32_t)iw; }
         }
-        free(zb); free(buf);
+        free(buf);
     }
     /* an image (by its header) whose bytes look like text: the plain coding the text route would have given can be smaller
      * under the strong coders (one photograph: 1.7% at hc), so every block is coded both ways and the smaller kept */
     if (imghdr && textlike && pl.t == T_KG) pl.verify = 1;
-    ZSTD_freeCCtx(zc);
     return pl;
 }

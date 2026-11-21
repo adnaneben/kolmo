@@ -7,7 +7,7 @@ size_t kolmo_bound(size_t n, const kolmo_params *p) {
 }
 
 int64_t kolmo_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p) {
-    return compress_impl(src, -1, n, dst, -1, cap, p, NULL, 0, 0);
+    return compress_impl(src, -1, n, dst, -1, cap, p);
 }
 
 int kolmo_set_gpu(int on) {
@@ -19,14 +19,14 @@ int kolmo_set_gpu(int on) {
 }
 
 int64_t kolmo_original_size(const uint8_t *src, size_t n) {
-    if (n >= 4 && !memcmp(src, "CZC1", 4)) return kp_compact_original_size(src, n);
-    return n >= HDR && !memcmp(src, "CZN1", 4) ? (int64_t)get64(src + 12) : KOLMO_ERR_CORRUPT;
+    int v = frame_version_check(src, n); if (v) return v;     /* KOLMO_ERR_LEGACY for frames of earlier versions */
+    return (int64_t)get64(src + 12);
 }
 
 int64_t kolmo_decompress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads) {
     int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
     if ((uint64_t)o > cap) return KOLMO_ERR_DSTSIZE;
-    return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, NULL, 0, 0, NULL);
+    return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, NULL);
 }
 
 int64_t kolmo_decompress_limited(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
@@ -34,7 +34,7 @@ int64_t kolmo_decompress_limited(const uint8_t *src, size_t n, uint8_t *dst, siz
     int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
     if (limits && limits->max_output_bytes && (uint64_t)o > limits->max_output_bytes) return KOLMO_ERR_LIMIT;
     if ((uint64_t)o > cap) return KOLMO_ERR_DSTSIZE;
-    return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, NULL, 0, 0, limits);
+    return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, limits);
 }
 
 int64_t kolmo_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len, uint8_t *dst, int threads) {
@@ -42,7 +42,7 @@ int64_t kolmo_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len,
     if (off > (uint64_t)o) return KOLMO_ERR_CORRUPT;
     if (len > (uint64_t)o - off) len = (size_t)((uint64_t)o - off);
     if (!len) return 0;
-    return run_decode(src, -1, n, dst, -1, threads, off, off + len, 1, NULL, 0, 0, NULL);
+    return run_decode(src, -1, n, dst, -1, threads, off, off + len, 1, NULL);
 }
 
 /* Internal hook for queryable archives (src/core/index.c, declared in src/core/features.h): column col of block i
@@ -56,8 +56,7 @@ int kolmo__block_column(const uint8_t *src, size_t n, uint32_t i, int col, uint8
     const uint8_t *e = P.idx + (size_t)i * IDX, *pay = src + P.poff[i];
     size_t len = get32(e), cl = get32(e + 4); int codec = e[12], tflag = e[13];
     free(P.poff); free(P.roff);
-    if (P.ver < 2 || P.psum || tflag != 13 || cl < 4 || pay[0] != T_TBL) return 1;
-    if (P.needdict) return KOLMO_ERR_DICT;
+    if (P.psum || tflag != 13 || cl < 4 || pay[0] != T_TBL) return 1;
     codec_ctx x = {0}; kbuf o = {0};
     r = tblc_column(&x, codec, pay + 4, cl - 4, len, col, &o, decoded, read);
     codec_ctx_free(&x);
@@ -73,7 +72,6 @@ int kolmo_mem_parse(const char *s, uint64_t *out) { uint64_t v; if (!out || kmem
 uint64_t kolmo_mem_floor(kolmo_mode mode) { return kmem_floor((int)mode); }
 uint64_t kolmo_mem_auto(void) { return kmem_limit_of(0); }
 int kolmo_check_frame(const uint8_t *src, size_t n, const kolmo_decode_limits *limits) {
-    if (n >= 4 && !memcmp(src, "CZC1", 4)) return 0;              /* compact profile frame: checked when decoded */
     parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
     uint64_t maxraw = 0; for (uint32_t i = 0; i < P.nb; i++) if (P.roff[i + 1] - P.roff[i] > maxraw) maxraw = P.roff[i + 1] - P.roff[i];
     r = frame_admit(&P, maxraw, kmem_limit_of(limits ? limits->max_memory : 0));
@@ -81,10 +79,11 @@ int kolmo_check_frame(const uint8_t *src, size_t n, const kolmo_decode_limits *l
 }
 void kolmo_set_memlimit(uint64_t limit) { atomic_store_explicit(&kmem_default_limit, limit, memory_order_relaxed); }
 int64_t kolmo_decode_memory(const uint8_t *src, size_t n) {
-    if (!src || n < HDR || memcmp(src, "CZN1", 4)) return KOLMO_ERR_CORRUPT;
+    if (!src) return KOLMO_ERR_CORRUPT;
+    { int v = frame_version_check(src, n); if (v) return v; }
     uint64_t d = kmem_declared(src[11]);
     if (d) return (int64_t)d;
-    /* a frame from before rc3: the buffers of its largest block, from the index when it is there */
+    /* a frame that declares nothing: the buffers of its largest block, from the index when it is there */
     uint32_t nb = get32(src + 20); uint64_t maxraw = 0;
     if ((uint64_t)nb * IDX + HDR > n) return 0;
     for (uint32_t i = 0; i < nb; i++) { uint64_t r = get32(src + HDR + (size_t)i * IDX); if (r > maxraw) maxraw = r; }
@@ -105,69 +104,66 @@ const char *kolmo_strerror(int64_t c) {
         case KOLMO_ERR_PROFILE: return "trained profile required, mismatched or damaged (decode with the profile the file was compressed with)";
         case KOLMO_ERR_TARGET: return "invalid --target or calibration table";
         case KOLMO_ERR_MEMORY: return "memory limit: the frame needs more memory to decode than the limit, or the limit is below the mode's floor";
+        case KOLMO_ERR_LEGACY: return "written by an earlier Kolmo (1.x or a release candidate) that used library codecs; this build reads only Kolmo-native frames";
+        case KOLMO_ERR_UNSUPPORTED: return "not available in this build: dictionaries and trained profiles need library codecs";
     }
     return c >= 0 ? "ok" : "unknown error";
 }
 
-/* ------------------------------------------------------------------ dictionary */
+/* ------------------------------------------------------------------ dictionaries (not available in this build)
+ * Dictionaries were applied by the zstd, Brotli and LZ4 coders; with Kolmo's own coders only (container version 12)
+ * there are none. The calls stay: training fails with KOLMO_ERR_UNSUPPORTED, and so does every call that is given a
+ * dictionary; without one they behave as the plain calls. */
 
 int64_t kolmo_train_dict(const uint8_t *samples, const size_t *sizes, size_t nsamples,
                        uint8_t *dict, size_t dict_cap) {
-    if (!samples || !sizes || !nsamples || !dict || dict_cap < 256) return KOLMO_ERR_CORRUPT;
-    size_t r = ZDICT_trainFromBuffer(dict, dict_cap, samples, sizes, (unsigned)nsamples);
-    if (ZDICT_isError(r)) return KOLMO_ERR_CODEC;
-    return (int64_t)r;
+    (void)samples; (void)sizes; (void)nsamples; (void)dict; (void)dict_cap;
+    return KOLMO_ERR_UNSUPPORTED;
 }
 
 int64_t kolmo_compress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
                           const kolmo_params *p, const void *dict, size_t dictlen) {
-    if (!dict || !dictlen) return kolmo_compress(src, n, dst, cap, p);
-    uint32_t id = (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u);   /* dictionary id seed, fixed by the format */
-    return compress_impl(src, -1, n, dst, -1, cap, p, dict, dictlen, id);
+    if (dict && dictlen) return KOLMO_ERR_UNSUPPORTED;
+    return kolmo_compress(src, n, dst, cap, p);
 }
 
 int64_t kolmo_decompress_dict(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads,
                             const void *dict, size_t dictlen) {
-    if (!dict || !dictlen) return kolmo_decompress(src, n, dst, cap, threads);
-    int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
-    if ((uint64_t)o > cap) return KOLMO_ERR_DSTSIZE;
-    uint32_t id = (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u);
-    return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, dict, dictlen, id, NULL);
+    if (dict && dictlen) return KOLMO_ERR_UNSUPPORTED;
+    return kolmo_decompress(src, n, dst, cap, threads);
 }
 
 int64_t kolmo_compress_from_fd(int fd, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
                              const void *dict, size_t dictlen) {
     struct stat st;
+    if (dict && dictlen) return KOLMO_ERR_UNSUPPORTED;
     if (fd < 0 || fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_size < 0 ||
         (uintmax_t)st.st_size < n) return KOLMO_ERR_IO;
-    if (!dictlen) dict = NULL;
-    uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
-    return compress_impl((const uint8_t *)"", fd, n, dst, -1, cap, p, dict, dictlen, id);
+    return compress_impl((const uint8_t *)"", fd, n, dst, -1, cap, p);
 }
 
 int64_t kolmo_decompress_to_fd(const uint8_t *src, size_t n, int fd, int threads,
                              const void *dict, size_t dictlen) {
+    if (dict && dictlen) return KOLMO_ERR_UNSUPPORTED;
     if (fd < 0) return KOLMO_ERR_IO;
     int64_t size = kolmo_original_size(src, n);
     if (size < 0) return size;
-    if (!dictlen) dict = NULL;
-    uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
-    return run_decode(src, -1, n, NULL, fd, threads, 0, 0, 0, dict, dictlen, id, NULL);
+    return run_decode(src, -1, n, NULL, fd, threads, 0, 0, 0, NULL);
 }
 
 int64_t kolmo_compress_file(int input_fd, int output_fd, size_t n, const kolmo_params *p,
                           const void *dict, size_t dictlen) {
     struct stat st;
+    if (dict && dictlen) return KOLMO_ERR_UNSUPPORTED;
     if (output_fd < 0 || fstat(input_fd, &st) || !S_ISREG(st.st_mode) ||
         st.st_size < 0 || (uintmax_t)st.st_size < n) return KOLMO_ERR_IO;
-    if (!dictlen) dict = NULL;
-    uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
-    return compress_impl((const uint8_t *)"", input_fd, n, NULL, output_fd, INT64_MAX, p, dict, dictlen, id);
+    return compress_impl((const uint8_t *)"", input_fd, n, NULL, output_fd, INT64_MAX, p);
 }
 
 int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads,
                             const void *dict, size_t dictlen) {
     uint8_t header[HDR];
+    if (dict && dictlen) return KOLMO_ERR_UNSUPPORTED;
     if (n < HDR) return KOLMO_ERR_CORRUPT;
     struct stat st;
     if (output_fd < 0 || fstat(input_fd, &st) || !S_ISREG(st.st_mode) ||
@@ -175,17 +171,14 @@ int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads
     if (read_block(input_fd, header, HDR, 0)) return KOLMO_ERR_IO;
     int64_t size = kolmo_original_size(header, HDR);
     uint32_t nb = get32(header + 20);
-    if (size < 0 || header[4] < 1 || header[4] > KOLMO_MAX_VERSION || nb > (n - HDR) / IDX) return KOLMO_ERR_CORRUPT;
+    if (size < 0) return size;                                   /* KOLMO_ERR_LEGACY for frames of earlier versions */
+    if (nb > (n - HDR) / IDX) return KOLMO_ERR_CORRUPT;
     size_t index_size = HDR + (size_t)nb * IDX;
     uint8_t *index = malloc(index_size);
     if (!index) return KOLMO_ERR_ALLOC;
     memcpy(index, header, HDR);
     int64_t ret = read_block(input_fd, index + HDR, index_size - HDR, HDR);
-    if (!ret) {
-        if (!dictlen) dict = NULL;
-        uint32_t id = dict ? (uint32_t)kolmo_xxh3(dict, dictlen, 0x637a6e44u) : 0;
-        ret = run_decode(index, input_fd, n, NULL, output_fd, threads, 0, 0, 0, dict, dictlen, id, NULL);
-    }
+    if (!ret) ret = run_decode(index, input_fd, n, NULL, output_fd, threads, 0, 0, 0, NULL);
     free(index);
     zs_trim();
     return ret;

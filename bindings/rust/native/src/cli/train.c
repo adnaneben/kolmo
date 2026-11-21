@@ -1,4 +1,4 @@
-/* kolmo train | calibrate | profile: the command-line side of trained profiles and --target (src/api/features.c).
+/* kolmo calibrate (and the retired kolmo train): the command-line side of --target (src/api/features.c).
  * Included by src/cli.c until the structure lane moves the CLI to src/cli/. */
 #include <dirent.h>
 
@@ -42,78 +42,11 @@ static int kc_collect(kc_files *F, const char *path, int depth) {
 }
 static void kc_free(kc_files *F) { for (size_t i = 0; i < F->n; i++) free(F->path[i]); free(F->path); free(F->size); }
 
-static double kc_size_arg(const char *s) {
-    char *e; double v = strtod(s, &e);
-    if (*e == 'k' || *e == 'K') v *= 1024; else if (*e == 'm' || *e == 'M') v *= 1048576; else if (*e == 'g' || *e == 'G') v *= 1073741824.0;
-    return v;
-}
-
-static kolmo_profile *kc_load_profile(const char *path) {
-    size_t n; uint8_t *b = slurp(path, &n); kolmo_profile *P = NULL;
-    int r = kolmo_profile_load(b, n, &P); free(b);
-    if (r) { fprintf(stderr, "kolmo: %s: %s\n", path, kolmo_strerror(r)); return NULL; }
-    return P;
-}
-
-/* kolmo train [-m mode] [-l level] [-n|-q|-Q] [--dict-size N] [--no-dict] [--max-bytes N] [--target T] -o out.kpf FILES|DIRS... */
+/* kolmo train and kolmo profile: trained profiles were built on zstd and Brotli dictionaries and are not available in
+ * this build (container version 12, Kolmo's own coders only). */
 static int kolmo_cli_train(int argc, char **argv) {
-    kolmo_train_params tp = {{KOLMO_FAST, 0, 0, 0, 1}, 0, 0, NULL, 0};
-    const char *outp = NULL; double maxb = 256.0 * 1048576; int speed = 0; kc_files F = {0};
-    for (int a = 1; a < argc; a++) {
-        const char *s = argv[a];
-        if (!strcmp(s, "-o") && a + 1 < argc) outp = argv[++a];
-        else if (!strcmp(s, "-m") && a + 1 < argc) {
-            const char *m = argv[++a]; speed = !strcmp(m, "speed");
-            tp.params.mode = !strcmp(m, "speed") || !strcmp(m, "rt") ? KOLMO_RT : !strcmp(m, "balanced") || !strcmp(m, "fast") ? KOLMO_FAST :
-                             !strcmp(m, "ratio") || !strcmp(m, "max") ? KOLMO_MAX : !strcmp(m, "eco") ? KOLMO_ECO : !strcmp(m, "hc") ? KOLMO_HC :
-                             !strcmp(m, "ultra") ? KOLMO_ULTRA : (kolmo_mode)-1;
-            if ((int)tp.params.mode < 0) { fprintf(stderr, "kolmo train: unknown mode '%s'\n", m); kc_free(&F); return 2; }
-        }
-        else if (!strcmp(s, "-x")) tp.params.mode = KOLMO_ULTRA;
-        else if (!strcmp(s, "-l") && a + 1 < argc) tp.params.level = atoi(argv[++a]);
-        else if (!strcmp(s, "-n")) tp.params.transforms = 0;
-        else if (!strcmp(s, "-q")) tp.params.transforms = 2;
-        else if (!strcmp(s, "-Q")) tp.params.transforms = 3;
-        else if (!strcmp(s, "--dict-size") && a + 1 < argc) tp.dict_size = (size_t)kc_size_arg(argv[++a]);
-        else if (!strcmp(s, "--no-dict")) tp.no_dict = 1;
-        else if (!strcmp(s, "--quick")) tp.quick = 1;
-        else if (!strcmp(s, "--max-bytes") && a + 1 < argc) maxb = kc_size_arg(argv[++a]);
-        else if (!strcmp(s, "--target") && a + 1 < argc) tp.target = argv[++a];
-        else if (s[0] == '-' && s[1]) { fprintf(stderr, "kolmo train: unknown option '%s'\n", s); kc_free(&F); return 2; }
-        else if (kc_collect(&F, s, 0)) { kc_free(&F); return 1; }
-    }
-    if (speed && tp.params.transforms == 1) tp.params.transforms = 3;
-    if (!outp || !F.n) {
-        fprintf(stderr, "usage: kolmo train [-m speed|balanced|ratio|...] [-l level] [--target T] [--dict-size N] [--no-dict]\n"
-                        "                   [--quick] [--max-bytes N] -o profile.kpf FILES|DIRS...\n");
-        kc_free(&F); return 2;
-    }
-    /* more than --max-bytes of samples: every k-th file, so the sample spans the whole set */
-    size_t tot = 0; for (size_t i = 0; i < F.n; i++) tot += F.size[i];
-    size_t step = maxb > 0 && tot > maxb ? (size_t)(tot / maxb) + 1 : 1, use = 0, bytes = 0;
-    for (size_t i = 0; i < F.n; i += step) { use++; bytes += F.size[i]; }
-    uint8_t *buf = malloc(bytes ? bytes : 1); size_t *sz = malloc(use * sizeof(size_t)), k = 0, off = 0;
-    if (!buf || !sz) { fprintf(stderr, "kolmo train: out of memory\n"); free(buf); free(sz); kc_free(&F); return 1; }
-    for (size_t i = 0; i < F.n; i += step) {
-        FILE *f = fopen(F.path[i], "rb"); if (!f) { perror(F.path[i]); free(buf); free(sz); kc_free(&F); return 1; }
-        size_t got = fread(buf + off, 1, F.size[i], f); fclose(f);
-        sz[k++] = got; off += got;
-    }
-    size_t cap = kolmo_profile_bound(&tp); uint8_t *out = malloc(cap);
-    int64_t r = out ? kolmo_profile_train(buf, sz, k, &tp, out, cap) : KOLMO_ERR_ALLOC;
-    free(buf); free(sz);
-    if (r < 0) { fprintf(stderr, "kolmo train: %s\n", kolmo_strerror(r)); free(out); kc_free(&F); return 1; }
-    int failed = spit(outp, out, (size_t)r);
-    if (!failed) {
-        kolmo_profile *P = NULL;
-        if (!kolmo_profile_load(out, (size_t)r, &P)) {
-            char d[8192]; kolmo_profile_describe(P, d, sizeof d);
-            fprintf(stderr, "kolmo: wrote %lld-byte profile from %zu file%s (%zu bytes) to %s\n%s", (long long)r, k, k == 1 ? "" : "s", off, outp, d);
-            kolmo_profile_free(P);
-        }
-    }
-    free(out); kc_free(&F);
-    return failed != 0;
+    (void)argc; (void)argv;
+    fprintf(stderr, "kolmo train: %s\n", kolmo_strerror(KOLMO_ERR_UNSUPPORTED)); return 2;
 }
 
 static char *kc_default_calibration_path(void) {
