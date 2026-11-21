@@ -3,7 +3,7 @@
 int64_t tbl_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, uint8_t *dst);
 int tbl_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n);
 typedef struct { uint16_t y, a, b; uint8_t form; double k; } tformula;
-typedef struct { int n, gcol; tformula f[256]; } fset_t;
+typedef struct { int n, gcol, gweak; tformula f[256]; } fset_t;
 int64_t tbl2_encode_pub(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, const fset_t *fs, uint8_t *dst);
 int tbl2_decode_pub(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n);
 void fset_discover_pub(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs);
@@ -20,6 +20,16 @@ int64_t sci_encode_pub(const uint8_t *in, size_t n, int image, uint8_t *dst, siz
 int sci_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
 int64_t word_encode_pub(const uint8_t *in, size_t n, uint8_t *dst, size_t cap);
 int word_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
+size_t np_encode_pub(const uint8_t *s, size_t n, int np, uint8_t *out, size_t cap);
+int np_decode_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+size_t np_bound_pub(size_t n);
+size_t gr6_compress_pub(const uint8_t *in, size_t n, uint8_t *out, size_t cap);
+int gr6_decompress_pub(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+int gr6_applies_pub(const uint8_t *in, size_t n);
+size_t gr6_compress_pub_t(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int threads);
+uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len);
+#define NP_GOLDEN_LEN 17372
+#define NP_GOLDEN_HASH 0xe9dace4722cab3f7ull   /* FNV-1a 64 of the codec-15 leaf for the fixed planes in main() */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,10 +37,21 @@ int word_decode_pub(const uint8_t *in, size_t tn, uint8_t *out, size_t n);
 static uint64_t rs = 88172645463325252ull;
 static uint64_t rnd(void) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return rs; }
 static int fails = 0;
+static int64_t check_p(const char *name, const uint8_t *s, size_t n, kolmo_params p, uint8_t **frame);
+static int64_t check_lvl(const char *name, const uint8_t *s, size_t n, kolmo_mode m, int level, uint32_t B, int T);
 static void check(const char *name, const uint8_t *s, size_t n, kolmo_mode m, uint32_t B, int T) {
-    kolmo_params p = {m, 0, T, B, 1}; size_t cap = kolmo_bound(n, &p); uint8_t *d = malloc(cap), *b = malloc(n + 1);
+    kolmo_params p = {m, 0, T, B, 1}; check_p(name, s, n, p, NULL);
+}
+/* as check, at an explicit level; returns the compressed size (or a negative error) */
+static int64_t check_lvl(const char *name, const uint8_t *s, size_t n, kolmo_mode m, int level, uint32_t B, int T) {
+    kolmo_params p = {m, level, T, B, 1}; return check_p(name, s, n, p, NULL);
+}
+/* as check, with explicit parameters; returns the compressed size (or a negative error); *frame keeps the output */
+static int64_t check_p(const char *name, const uint8_t *s, size_t n, kolmo_params p, uint8_t **frame) {
+    int T = p.threads; kolmo_mode m = p.mode;
+    size_t cap = kolmo_bound(n, &p); uint8_t *d = malloc(cap), *b = malloc(n + 1);
     int64_t c = kolmo_compress(s, n, d, cap, &p);
-    if (c < 0) { printf("FAIL compress %s: %s\n", name, kolmo_strerror(c)); fails++; return; }
+    if (c < 0) { printf("FAIL compress %s: %s\n", name, kolmo_strerror(c)); fails++; free(d); free(b); return c; }
     int64_t r = kolmo_decompress(d, c, b, n, T);
     if (r != (int64_t)n || memcmp(b, s, n)) { printf("FAIL roundtrip %s mode %d T %d: %lld\n", name, m, T, (long long)r); fails++; }
     for (int k = 0; k < 20 && n; k++) {                      /* range reads */
@@ -47,7 +68,9 @@ static void check(const char *name, const uint8_t *s, size_t n, kolmo_mode m, ui
         free(e);
     }
     if (silent) { printf("FAIL %s: %d silent corruptions\n", name, silent); fails++; }
-    free(d); free(b);
+    if (frame) *frame = d; else free(d);
+    free(b);
+    return c;
 }
 int main(void) {
     size_t N = 3 << 20;
@@ -218,6 +241,20 @@ int main(void) {
             free(d); }
         free(js);
     }
+    /* JSON lines and logs with fixed-width digit runs of 9 to 19 digits (17 and 18 took a wrong fast path in the decoder) */
+    for (int w = 9; w <= 19; w++) {
+        size_t N = 20000 * 120, q = 0; uint8_t *js = malloc(N + 256); uint64_t x = 0x9E3779B97F4A7C15ull ^ (uint64_t)w;
+        for (int i = 0; i < 20000; i++) {
+            x ^= x << 13; x ^= x >> 7; x ^= x << 17; uint64_t v = x % 1000000000000000000ull;
+            char id[24]; int k = snprintf(id, sizeof id, "%019llu", (unsigned long long)v);
+            q += (size_t)sprintf((char *)js + q, "{\"id\":\"%s\",\"n\":%d,\"msg\":\"event %d\"}\n", id + (k - w), i, i % 37);
+        }
+        for (int m = 1; m < 5; m++) check("json-fixed-width", js, q, (kolmo_mode)m, 1 << 20, 2);
+        uint8_t *t = malloc(q + 65536), *o = malloc(q + 64);
+        int64_t tn = log_encode_json_pub(js, q, t, q + 65536);
+        if (tn > 0 && (log_decode_pub(t, tn, o, q) || memcmp(o, js, q))) { printf("FAIL json codec fixed width %d\n", w); fails++; }
+        free(t); free(o); free(js);
+    }
     /* wide delimited table (300 columns): kolmo graph blocks; odd values, irregular lines, CRLF, no final newline */
     {
         size_t N = 3u << 20, q = 0; uint8_t *w = malloc(N + 65536);
@@ -244,7 +281,8 @@ int main(void) {
         for (int m = 1; m < 5; m++) { check("wide", w, q, (kolmo_mode)m, 1 << 20, 1); check("wide-odd", w, q, (kolmo_mode)m, 300001, 4); }
         {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
             int64_t c0 = kolmo_compress(w, q, d, cap, &p0), c1 = kolmo_compress(w, q, d, cap, &p1);
-            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 7) { printf("FAIL wide table graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            /* version 7, or 11 when a format-2 leaf (codecs 21-23) is smaller (rc3) */
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || (d[4] != 7 && d[4] != 11)) { printf("FAIL wide table graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("wide table graph: fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             /* graph decoder fuzz: corrupt payload bytes of every block, decoding must fail cleanly or round-trip */
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
@@ -269,7 +307,7 @@ int main(void) {
         q = 30000 * 8;                                       /* a small array: the planner picks the graph */
         {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
             int64_t c0 = kolmo_compress(a, q, d, cap, &p0), c1 = kolmo_compress(a, q, d, cap, &p1);
-            if (c1 <= 0 || c0 <= 0 || c1 * 2 >= c0 || d[4] != 7) { printf("FAIL integer graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            if (c1 <= 0 || c0 <= 0 || c1 * 2 >= c0 || (d[4] != 7 && d[4] != 11)) { printf("FAIL integer graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("integer graph: timestamps fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
             for (int it = 0; it < 400; it++) {
@@ -308,7 +346,7 @@ int main(void) {
         for (int m = 0; m < 5; m++) { check("float32", a, q, (kolmo_mode)m, 1 << 20, 1); check("float32-odd", a, q, (kolmo_mode)m, 262147, 3); }
         {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
             int64_t c0 = kolmo_compress(a, q, d, cap, &p0), c1 = kolmo_compress(a, q, d, cap, &p1);
-            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 7) { printf("FAIL float graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || (d[4] != 7 && d[4] != 11)) { printf("FAIL float graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("float graph: float32 fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
             for (int it = 0; it < 300; it++) {
@@ -337,7 +375,7 @@ int main(void) {
         for (int m = 0; m < 5; m++) { check("img8-rgb", a, q, (kolmo_mode)m, 1 << 20, 1); check("img8-rgb-odd", a, q, (kolmo_mode)m, 100003, 3); }
         {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
             int64_t c0 = kolmo_compress(a, q, d, cap, &p0), c1 = kolmo_compress(a, q, d, cap, &p1);
-            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 7) { printf("FAIL image graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || (d[4] != 7 && d[4] != 11)) { printf("FAIL image graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("image graph: 8-bit RGB fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
             for (int it = 0; it < 300; it++) {
@@ -457,6 +495,155 @@ int main(void) {
         check("ultra-text", u, un - 8, KOLMO_ULTRA, 1 << 17, 2);
         check("ultra-csv", csv, 400000, KOLMO_ULTRA, 1 << 17, 1);
         check("ultra-random", rndb, 200000, KOLMO_ULTRA, 1 << 17, 1);
+        free(u);
+    }
+    /* GR6+ (codec 26, version 11): a time-series table with derived columns (per capita, running total, growth) must be
+     * coded by GR6+ in ultra and round-trip; the codec itself must survive corrupt streams (no container checksum in
+     * the way). Its own random stream, so the tests after it see the same data as before. */
+    {
+        uint64_t rs_saved = rs;
+        size_t gn = 0, gcap = 600000; uint8_t *g = malloc(gcap);
+        gn += sprintf((char *)g, "country,year,population,co2,co2_per_capita,cumulative_co2,co2_growth_abs,price,volume,value,flag\n");
+        const char *cn[] = {"Aland", "Borduria", "Carpathia", "Doria", "Elbonia", "Freedonia", "Genovia", "Hyrkania"};
+        for (int c = 0; gn + 4096 < gcap; c = (c + 1) % 8) {
+            long long pop = 100000 + (long long)(rnd() % 9000000); long long co2 = 1000 + (long long)(rnd() % 90000), cum = 0, prev = -1;
+            for (int y = 1900; y < 2024 && gn + 200 < gcap; y++) {
+                pop += (long long)(rnd() % 20001) - 5000; if (pop < 1000) pop = 1000;
+                co2 += (long long)(rnd() % 2001) - 900; if (co2 < 10) co2 = 10; cum += co2;
+                long long pc = (co2 * 1000000000LL / pop + 500) / 1000;   /* co2 [t, 3 decimals] / pop * 1e6, 3 decimals */
+                gn += sprintf((char *)g + gn, "%s,%d,%lld,%lld.%03lld,%lld.%03lld,%lld.%03lld,", cn[c], y, pop, co2 / 1000, co2 % 1000,
+                              pc / 1000, pc % 1000, cum / 1000, cum % 1000);
+                if (prev >= 0) { long long d = co2 - prev; gn += sprintf((char *)g + gn, "%s%lld.%03lld", d < 0 ? "-" : "", (d < 0 ? -d : d) / 1000, (d < 0 ? -d : d) % 1000); }
+                long long pr = 100 + (long long)(rnd() % 900), vol = 1 + (long long)(rnd() % 500);   /* value = price * volume */
+                gn += sprintf((char *)g + gn, ",%lld.%02lld,%lld,%lld.%02lld,%s\n", pr / 100, pr % 100, vol, pr * vol / 100, pr * vol % 100, rnd() % 40 ? "" : "est"); prev = co2;
+            }
+        }
+        check("ultra-gr6-table", g, gn, KOLMO_ULTRA, 1 << 20, 1);
+        {   /* the GR6+ gate: tables with 3 to 100 columns on 90% of their first lines; not prose, not wider tables */
+            size_t pn = 0, wn = 0, cap2 = 300000; uint8_t *pr = malloc(cap2), *wt = malloc(cap2);
+            static const char *W[] = {"the", "a", "house,", "of", "river", "quietly", "and,", "said", "who", "under"};
+            while (pn + 200 < cap2) { int k = 3 + (int)(rnd() % 14); for (int j = 0; j < k; j++) pn += sprintf((char *)pr + pn, "%s%s", j ? " " : "", W[rnd() % 10]); pr[pn++] = '\n'; }
+            for (int r = 0; wn + 2000 < cap2; r++) { for (int j = 0; j < 120; j++) wn += sprintf((char *)wt + wn, "%s%d", j ? "," : "", r * 7 + j); wt[wn++] = '\n'; }
+            if (!gr6_applies_pub(g, gn)) { printf("FAIL gr6 gate: the derived-column table is not tried\n"); fails++; }
+            if (gr6_applies_pub(pr, pn)) { printf("FAIL gr6 gate: prose is tried\n"); fails++; }
+            if (gr6_applies_pub(wt, wn)) { printf("FAIL gr6 gate: a 120-column table is tried\n"); fails++; }
+            free(pr); free(wt);
+        }
+        {   /* the formula search on threads: the same GR6+ stream for every thread count */
+            uint8_t *g1 = malloc(gn + 65536), *g2 = malloc(gn + 65536);
+            size_t l1 = gr6_compress_pub_t(g, gn, g1, gn + 65536, 1);
+            for (int th = 3; th <= 4; th++) { size_t l2 = gr6_compress_pub_t(g, gn, g2, gn + 65536, th);
+                if (!l1 || l1 != l2 || memcmp(g1, g2, l1)) { printf("FAIL gr6: %d threads give another stream\n", th); fails++; } }
+            free(g1); free(g2);
+        }
+        uint8_t *gc = malloc(gn + 65536), *go = malloc(gn + 64), *ge = malloc(gn + 65536);
+        size_t g1 = gr6_compress_pub(g, gn, gc, gn + 65536);
+        kolmo_params up = {KOLMO_ULTRA, 0, 1, 1 << 20, 1}; size_t ucap = kolmo_bound(gn, &up); uint8_t *ud = malloc(ucap);
+        int64_t uc = kolmo_compress(g, gn, ud, ucap, &up);   /* one block: the per-block contest keeps the smallest coder */
+        if (uc < 0 || !g1 || (size_t)uc > g1 + 32 + 16 + 4) { printf("FAIL gr6: ultra %lld larger than GR6+ alone %zu\n", (long long)uc, g1); fails++; }
+        else if (ud[4] != 11 || ud[32 + 12] != 26) { printf("FAIL gr6: ultra did not choose GR6+ on the derived-column table (version %d, codec %d)\n", ud[4], ud[32 + 12]); fails++; }
+        else {
+            printf("gr6 table: ultra %.2fx with a GR6+ block (codec 26, version 11)\n", (double)gn / uc);
+            /* the same frame relabelled as version 10 (header checksum recomputed) must be refused */
+            ud[4] = 10; uint32_t hc = kolmo_crc32c(0, ud, 28); hc = kolmo_crc32c(hc, ud + 32, 16);
+            for (int k = 0; k < 4; k++) ud[28 + k] = (uint8_t)(hc >> (8 * k));
+            if (kolmo_decompress(ud, (size_t)uc, go, gn, 1) >= 0) { printf("FAIL gr6: a version 10 frame with codec 26 was accepted\n"); fails++; }
+            /* the other modes never write codec 26 */
+            static const kolmo_mode om[] = {KOLMO_RT, KOLMO_FAST, KOLMO_ECO, KOLMO_HC, KOLMO_MAX};
+            for (size_t k = 0; k < sizeof om / sizeof om[0]; k++) {
+                kolmo_params op = {om[k], 0, 1, 1 << 20, 1}; size_t oc = kolmo_bound(gn, &op); uint8_t *od = malloc(oc);
+                int64_t ol = kolmo_compress(g, gn, od, oc, &op);
+                if (ol < 0 || od[32 + 12] == 26) { printf("FAIL gr6: mode %d wrote codec 26 (%lld)\n", (int)om[k], (long long)ol); fails++; }
+                free(od);
+            }
+        }
+        free(ud);
+        const uint8_t *srcs[2] = {g, csv}; size_t lens[2] = {gn, 400000};
+        for (int t = 0; t < 2; t++) {
+            size_t cl = gr6_compress_pub(srcs[t], lens[t], gc, lens[t] + 65536);
+            if (!cl || gr6_decompress_pub(gc, cl, go, lens[t]) || memcmp(go, srcs[t], lens[t])) { printf("FAIL gr6 codec roundtrip %d (%zu)\n", t, cl); fails++; continue; }
+            if (t == 0) printf("gr6 codec: %.2fx on the table\n", (double)lens[t] / cl);
+            for (size_t k = 0; k < cl; k += 1 + cl / 64) gr6_decompress_pub(gc, k, go, lens[t]);   /* truncations: no crash */
+            for (int it = 0; it < 500; it++) {
+                memcpy(ge, gc, cl); int nflip = 1 + (int)(rnd() % 4);
+                for (int f = 0; f < nflip; f++) ge[rnd() % 4 ? 74 + rnd() % (cl - 74) : rnd() % cl] ^= (uint8_t)(1 + rnd() % 255);
+                gr6_decompress_pub(ge, rnd() % 8 ? cl : rnd() % cl, go, lens[t]);
+            }
+        }
+        printf("gr6 codec fuzz: 1000 corrupt streams decoded without crashing\n");
+        free(g); free(gc); free(go); free(ge);
+        rs = rs_saved;
+    }
+    /* native plane-context leaf (codec 15): direct round trips, every truncation rejected, corrupt leaves never
+     * crash, and a golden vector (integer-only input; fixes the coded bytes across compilers and architectures) */
+    {
+        size_t L = 20000, np = 4, n = L * np, bad = 0; uint8_t *src = malloc(n), *o = malloc(n + 64);
+        size_t cap = np_bound_pub(n); uint8_t *e = malloc(cap), *f = malloc(cap); uint32_t s = 777;
+        for (size_t i = 0; i < L; i++) {                        /* plane 0 noisy, 1 sparse, 2 runs, 3 constant */
+            s = s * 1103515245u + 12345u; uint32_t r = (s >> 16) & 0x7fff;
+            src[i] = (uint8_t)((r % 23) * 2 + (i & 1)); src[L + i] = r % 97 == 0 ? (uint8_t)(1 + r % 3) : 0;
+            src[2 * L + i] = (uint8_t)((i / 300) & 7); src[3 * L + i] = 0;
+        }
+        for (size_t k = 1; k <= 4; k <<= 1) {
+            size_t z = np_encode_pub(src, n, (int)k, e, cap);
+            if (!z || z >= n || np_decode_pub(e, z, o, n) || memcmp(o, src, n)) { printf("FAIL native leaf roundtrip np=%zu (%zu)\n", k, z); fails++; }
+        }
+        size_t z = np_encode_pub(src, n, (int)np, e, cap);
+        uint64_t hsh = 1469598103934665603ull; for (size_t i = 0; i < z; i++) hsh = (hsh ^ e[i]) * 1099511628211ull;
+        if (z != NP_GOLDEN_LEN || hsh != NP_GOLDEN_HASH) { printf("FAIL native leaf golden vector: %zu %016llx\n", z, (unsigned long long)hsh); fails++; }
+        for (size_t l = 0; l < z; l++) if (!np_decode_pub(e, l, o, n)) bad++;          /* every truncation must be rejected */
+        if (bad) { printf("FAIL native leaf: %zu truncations accepted\n", bad); fails++; }
+        for (int it = 0; it < 3000; it++) {                     /* corrupt leaves: must not crash (the frame checksum catches the rest) */
+            memcpy(f, e, z); int nf = 1 + rnd() % 4;
+            for (int q = 0; q < nf; q++) f[rnd() % z] ^= (uint8_t)(1 + rnd() % 255);
+            np_decode_pub(f, rnd() % 8 ? z : rnd() % z, o, n);
+        }
+        printf("native leaf: %zu -> %zu bytes; %zu truncations rejected; 3000 corrupt leaves decoded without crashing\n", n, z, z);
+        free(src); free(o); free(e); free(f);
+    }
+    /* native leaf in balanced frames: smaller on an integer series, version 9 only when used, round trip and corruption
+     * like every mode, default output unaffected, and a reader must refuse the codec-15 leaf below version 9 */
+    {
+        size_t cnt = 65536, un = cnt * 2; uint8_t *u = malloc(un); uint32_t s = 12345;
+        for (size_t i = 0; i < cnt; i++) {
+            int g = 0; for (int k = 0; k < 4; k++) { s = (s * 1103515245u + 12345u) & 0x7fffffffu; g += (int)((s >> 16) & 0x7fff); }
+            g = g / 64 - 1024; int ph = (int)(i % 148), tri = ph < 74 ? ph * 4000 / 74 - 2000 : 2000 - (ph - 74) * 4000 / 74;
+            int16_t v = (int16_t)(tri + g / 4); memcpy(u + 2 * i, &v, 2);
+        }
+        kolmo_params pd = {KOLMO_FAST, 0, 1, 0, 1}, pn = {KOLMO_FAST, 0, 1, 0, 1 | KOLMO_T_NATIVE_LEAF};
+        uint8_t *fd = NULL, *fn = NULL;
+        int64_t cd = check_p("balanced-int16-series", u, un, pd, &fd), cn = check_p("balanced-native-leaf-int16-series", u, un, pn, &fn);
+        if (cd > 0 && cn > 0) {
+            if (cn >= cd) { printf("FAIL native leaf not smaller: %lld >= %lld\n", (long long)cn, (long long)cd); fails++; }
+            if (fd[4] == 9 || fd[4] == 10 || fn[4] != 9) { printf("FAIL native leaf versions: default %d, native %d\n", fd[4], fn[4]); fails++; }
+            uint8_t *b = malloc(un + 1);
+            for (int v = 7; v <= 8; v++) {                      /* the same frame labelled as an older version must be refused */
+                fn[4] = (uint8_t)v; int64_t r = kolmo_decompress(fn, (size_t)cn, b, un, 1);
+                if (r >= 0) { printf("FAIL native leaf accepted in a version %d frame\n", v); fails++; }
+            }
+            fn[4] = 9; free(b);
+            printf("native leaf int16 series: %lld -> %lld bytes (version %d)\n", (long long)cd, (long long)cn, fn[4]);
+        }
+        kolmo_params pr = {KOLMO_MAX, 0, 1, 0, 1 | KOLMO_T_NATIVE_LEAF}; uint8_t *fr = NULL, *fr0 = NULL;   /* ignored outside balanced */
+        kolmo_params pr0 = {KOLMO_MAX, 0, 1, 0, 1};
+        int64_t a = check_p("max-native-flag-ignored", u, un, pr, &fr), a0 = check_p("max-default", u, un, pr0, &fr0);
+        if (a > 0 && a0 > 0 && (a != a0 || memcmp(fr, fr0, (size_t)a))) { printf("FAIL native flag changed a non-balanced mode\n"); fails++; }
+        free(fd); free(fn); free(fr); free(fr0); free(u);
+    }
+    /* ultra level 2 (maximum ratio): integer graph leaves may also use context mixing. On an integer series where
+     * the graph is chosen it must round-trip, survive corruption like every mode, and be strictly smaller than
+     * default ultra (which proves the CM-leaf path ran); default ultra is unaffected by the option. */
+    {
+        size_t cnt = 40000, un = cnt * 4; uint8_t *u = malloc(un); uint32_t s = 12345;
+        for (size_t i = 0; i < cnt; i++) {
+            s = (s * 1103515245u + 12345u) & 0x7fffffffu;
+            uint32_t v = (uint32_t)(((uint64_t)i * i) % 100003u) + ((s >> 16) % 16u);
+            memcpy(u + 4 * i, &v, 4);
+        }
+        int64_t c0 = check_lvl("ultra-int-series", u, un, KOLMO_ULTRA, 0, 1 << 17, 1);
+        int64_t c2 = check_lvl("ultra-l2-int-series", u, un, KOLMO_ULTRA, 2, 1 << 17, 1);
+        if (c0 > 0 && c2 > 0 && c2 >= c0) { printf("FAIL ultra level 2 not smaller on an integer series: %lld >= %lld\n", (long long)c2, (long long)c0); fails++; }
+        else if (c0 > 0 && c2 > 0) printf("ultra level 2 integer series: %lld -> %lld bytes\n", (long long)c0, (long long)c2);
         free(u);
     }
     /* table codec fuzz: corrupt the transformed stream itself (bypasses the container CRC) */

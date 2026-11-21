@@ -1,0 +1,32 @@
+== sys
+dickens        10192446    2831149  c    0.98 MB/s  d    78.1 MB/s
+osdb           10085684    2844493  c    1.48 MB/s  d    54.0 MB/s
+ooffice         6152192    2427163  c    1.83 MB/s  d    44.0 MB/s
+sao             7251944    4425604  c    1.72 MB/s  d    25.8 MB/s
+x-ray           8474240    4491203  c    1.49 MB/s  d    28.3 MB/s
+xml             5345280     434830  c    2.83 MB/s  d   212.0 MB/s
+TOTAL          47501786   17454442  c    1.47 MB/s  d    44.7 MB/s
+== vend
+dickens        10192446    2831149  c    0.97 MB/s  d    96.6 MB/s
+osdb           10085684    2844493  c    1.45 MB/s  d    81.3 MB/s
+ooffice         6152192    2427163  c    1.82 MB/s  d    61.4 MB/s
+sao             7251944    4425604  c    1.59 MB/s  d    44.5 MB/s
+x-ray           8474240    4491203  c    1.54 MB/s  d    36.3 MB/s
+xml             5345280     434830  c    2.49 MB/s  d   287.6 MB/s
+TOTAL          47501786   17454442  c    1.44 MB/s  d    63.8 MB/s
+== sys
+dickens        10192446    2831149  c    1.01 MB/s  d    83.8 MB/s
+osdb           10085684    2844493  c    1.58 MB/s  d    56.4 MB/s
+ooffice         6152192    2427163  c    1.77 MB/s  d    42.2 MB/s
+sao             7251944    4425604  c    1.67 MB/s  d    25.4 MB/s
+x-ray           8474240    4491203  c    1.50 MB/s  d    29.6 MB/s
+xml             5345280     434830  c    2.72 MB/s  d   196.2 MB/s
+TOTAL          47501786   17454442  c    1.49 MB/s  d    45.5 MB/s
+== vend
+dickens        10192446    2831149  c    0.98 MB/s  d   100.3 MB/s
+osdb           10085684    2844493  c    1.35 MB/s  d    75.5 MB/s
+ooffice         6152192    2427163  c    1.64 MB/s  d    60.0 MB/s
+sao             7251944    4425604  c    1.58 MB/s  d    40.2 MB/s
+x-ray           8474240    4491203  c    1.47 MB/s  d    44.2 MB/s
+xml             5345280     434830  c    2.92 MB/s  d   251.8 MB/s
+TOTAL          47501786   17454442  c    1.40 MB/s  d    64.9 MB/s

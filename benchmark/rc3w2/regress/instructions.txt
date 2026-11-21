@@ -1,0 +1,216 @@
+owid_energy_f64.npy        CFG=E_nof2 HZG=2 ZRG=2 PLG=2                          553.7M   1576921
+owid_energy_f64.npy        CFG=rc2                                               539.1M   1576921
+owid_energy_f64.npy        CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1            1123.8M   1518131
+owid_energy_f64.npy        CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1         858.6M   1540077
+owid_energy_f64.npy        CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1         822.1M   1544383
+owid_energy_f64.npy        CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                  673.5M   1557022
+owid_energy_f64.npy        CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1    735.7M   1550199
+owid_energy.pkl            CFG=rc2                                               548.6M   1561534
+owid_energy.pkl            CFG=E_nof2 HZG=2 ZRG=2 PLG=2                          563.2M   1561534
+owid_energy.pkl            CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1            1132.4M   1503533
+owid_energy.pkl            CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1         880.6M   1522714
+owid_energy.pkl            CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1         838.5M   1527385
+owid_energy_f64.npy        CFG=full                                             5674.5M   1491287
+owid_energy.pkl            CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                  682.2M   1542429
+owid_energy.pkl            CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1    747.1M   1535293
+wide_test.csv              CFG=rc2                                               633.1M   1803332
+wide_test.csv              CFG=E_nof2 HZG=2 ZRG=2 PLG=2                          639.6M   1803332
+owid_energy.pkl            CFG=full                                             5707.0M   1477137
+wide_test.csv              CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1             880.9M   1730709
+wide_test.csv              CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1         833.9M   1733191
+wide_test.csv              CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1         811.2M   1735956
+wide_test.csv              CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                  705.5M   1770524
+population.i64             CFG=rc2                                                50.9M     72669
+population.i64             CFG=E_nof2 HZG=2 ZRG=2 PLG=2                           51.5M     72669
+population.i64             CFG=full                                              221.0M     70789
+population.i64             CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1              72.3M     70842
+population.i64             CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1          75.9M     70842
+population.i64             CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1          75.9M     70842
+population.i64             CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                   64.9M     70842
+wide_test.csv              CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1    780.6M   1755018
+population_i64.npy         CFG=rc2                                                35.1M     72759
+population.i64             CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1     65.1M     70842
+population_i64.npy         CFG=E_nof2 HZG=2 ZRG=2 PLG=2                           35.7M     72759
+population_i64.npy         CFG=full                                              205.4M     70879
+population_i64.npy         CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1              56.6M     70932
+population_i64.npy         CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1          60.2M     70932
+population_i64.npy         CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1          60.2M     70932
+population_i64.npy         CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                   49.1M     70932
+year.i32                   CFG=rc2                                                21.2M      1349
+population_i64.npy         CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1     49.3M     70932
+year.i32                   CFG=full                                               21.2M      1349
+year.i32                   CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1              21.2M      1349
+year.i32                   CFG=E_nof2 HZG=2 ZRG=2 PLG=2                           21.2M      1349
+year.i32                   CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1          21.2M      1349
+year.i32                   CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1          21.2M      1349
+wide_test.csv              CFG=full                                             4783.6M   1721446
+year.i32                   CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                   21.2M      1349
+year_i32.npy               CFG=rc2                                                17.5M      1198
+year.i32                   CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1     21.2M      1349
+year_i32.npy               CFG=E_nof2 HZG=2 ZRG=2 PLG=2                           17.7M      1198
+year_i32.npy               CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1              23.5M       884
+year_i32.npy               CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1          22.7M       884
+year_i32.npy               CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1          22.7M       884
+year_i32.npy               CFG=full                                              218.7M       793
+year_i32.npy               CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                   22.0M       884
+year_i32.npy               CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1     22.7M       884
+log_timestamps_ms.i64      CFG=rc2                                                26.0M      7545
+log_timestamps_ms.i64      CFG=E_nof2 HZG=2 ZRG=2 PLG=2                           26.1M      7545
+log_timestamps_ms.i64      CFG=full                                               55.6M      5697
+log_timestamps_ms.i64      CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1              29.7M      5697
+log_timestamps_ms.i64      CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1          29.6M      5697
+log_timestamps_ms.i64      CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                   29.1M      5697
+log_timestamps_ms.i64      CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1          29.6M      5697
+log_timestamps_ms.i64      CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1     29.6M      5697
+log_timestamps_ms_i64.npy  CFG=rc2                                                14.1M      7634
+log_timestamps_ms_i64.npy  CFG=E_nof2 HZG=2 ZRG=2 PLG=2                           14.1M      7634
+log_timestamps_ms_i64.npy  CFG=full                                               43.7M      5786
+log_timestamps_ms_i64.npy  CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1              17.8M      5786
+log_timestamps_ms_i64.npy  CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1          17.6M      5786
+log_timestamps_ms_i64.npy  CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1          17.6M      5786
+log_timestamps_ms_i64.npy  CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1     17.6M      5786
+log_timestamps_ms_i64.npy  CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                   17.1M      5786
+mitdb-100.i16              CFG=E_nof2 HZG=2 ZRG=2 PLG=2                          227.3M    864758
+mitdb-100.i16              CFG=full                                              227.3M    864758
+mitdb-100.i16              CFG=rc2                                               257.5M    864758
+mitdb-100.i16              CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1             227.4M    864758
+mitdb-100.i16              CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1         227.4M    864758
+mitdb-100.i16              CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1         227.4M    864758
+mitdb-100.i16              CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                  227.4M    864758
+mitdb-100.i16              CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1    227.4M    864758
+countries-aggregated.csv   CFG=full                                              304.8M    345917
+countries-aggregated.csv   CFG=rc2                                               404.8M   1325878
+countries-aggregated.csv   CFG=E_nof2 HZG=2 ZRG=2 PLG=2                          304.8M    345917
+countries-aggregated.csv   CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1             304.8M    345917
+countries-aggregated.csv   CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1         304.8M    345917
+countries-aggregated.csv   CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1         304.8M    345917
+countries-aggregated.csv   CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                  304.8M    345917
+countries-aggregated.csv   CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1    304.8M    345917
+energy_test.csv            CFG=rc2                                               820.5M    740789
+energy_test.csv            CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1             823.7M    740789
+energy_test.csv            CFG=E_nof2 HZG=2 ZRG=2 PLG=2                          823.7M    740789
+energy_test.csv            CFG=full                                              823.7M    740789
+energy_test.csv            CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1         823.7M    740789
+energy_test.csv            CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1         823.7M    740789
+energy_test.csv            CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1    823.7M    740789
+energy_test.csv            CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                  823.7M    740789
+owid_test.csv              CFG=full                                              819.0M   1061293
+owid_test.csv              CFG=rc2                                               813.9M   1061293
+owid_test.csv              CFG=E_nof2 HZG=2 ZRG=2 PLG=2                          819.0M   1061293
+owid_test.csv              CFG=A_probe HZL=9 HZM=0 ZRG=1 ZRM=0 ZRS=1             819.0M   1061293
+owid_test.csv              CFG=B_smp9 G3=1 G3M=0 G3Z=0 HZL=9 HZM=0 ZRS=1         819.0M   1061293
+owid_test.csv              CFG=C_smp5 G3=1 G3M=0 G3Z=0 HZL=5 HZM=0 ZRS=1         819.0M   1061293
+owid_test.csv              CFG=F_hzonly G3=1 G3M=0 G3Z=-1000 HZL=9 HZM=0 ZRS=1    819.0M   1061293
+owid_test.csv              CFG=D_zronly HZG=2 ZRG=3 ZRM=0 ZRS=1                  819.0M   1061293
+owid_energy_f64.npy        CFG=T8                                                672.4M   1550192
+owid_energy_f64.npy        CFG=S8                                                831.2M   1511786
+owid_energy_f64.npy        CFG=T4                                                779.3M   1544492
+owid_energy_f64.npy        CFG=T2                                                824.9M   1542726
+owid_energy.pkl            CFG=T8                                                680.7M   1535811
+owid_energy_f64.npy        CFG=S8l                                               774.7M   1519559
+owid_energy.pkl            CFG=T4                                                789.2M   1529980
+owid_energy_f64.npy        CFG=S4                                                937.0M   1506086
+owid_energy.pkl            CFG=S8                                                841.0M   1497482
+owid_energy.pkl            CFG=T2                                                835.8M   1528146
+owid_energy.pkl            CFG=S8l                                               783.9M   1504914
+owid_energy.pkl            CFG=S4                                                947.7M   1491651
+wide_test.csv              CFG=T4                                                647.7M   1801367
+wide_test.csv              CFG=T8                                                647.7M   1801367
+wide_test.csv              CFG=T2                                                695.0M   1768559
+population.i64             CFG=T8                                                 62.9M     70798
+wide_test.csv              CFG=S8                                                742.4M   1765235
+population.i64             CFG=T2                                                 72.5M     70798
+population.i64             CFG=T4                                                 72.5M     70798
+population.i64             CFG=S8                                                 64.1M     70798
+population.i64             CFG=S4                                                 73.6M     70798
+wide_test.csv              CFG=S4                                                742.4M   1765235
+wide_test.csv              CFG=S8l                                               713.4M   1772405
+population.i64             CFG=S8l                                                63.9M     70800
+population_i64.npy         CFG=T4                                                 56.8M     70888
+population_i64.npy         CFG=T8                                                 47.2M     70888
+population_i64.npy         CFG=T2                                                 56.8M     70888
+population_i64.npy         CFG=S4                                                 57.9M     70888
+population_i64.npy         CFG=S8                                                 48.3M     70888
+population_i64.npy         CFG=S8l                                                48.2M     70890
+year_i32.npy               CFG=T8                                                 20.7M       793
+year_i32.npy               CFG=T2                                                 20.7M       793
+year_i32.npy               CFG=T4                                                 20.7M       793
+year_i32.npy               CFG=S8                                                 20.7M       793
+year_i32.npy               CFG=S4                                                 20.7M       793
+year_i32.npy               CFG=S8l                                                20.7M       793
+log_timestamps_ms.i64      CFG=T8                                                 28.7M      5697
+log_timestamps_ms.i64      CFG=T4                                                 28.7M      5697
+log_timestamps_ms.i64      CFG=S8                                                 28.7M      5697
+log_timestamps_ms.i64      CFG=T2                                                 31.1M      5697
+log_timestamps_ms.i64      CFG=S4                                                 28.7M      5697
+log_timestamps_ms_i64.npy  CFG=T8                                                 16.8M      5786
+log_timestamps_ms_i64.npy  CFG=T4                                                 16.8M      5786
+log_timestamps_ms.i64      CFG=S8l                                                28.7M      5697
+log_timestamps_ms_i64.npy  CFG=T2                                                 19.2M      5786
+log_timestamps_ms_i64.npy  CFG=S8                                                 16.8M      5786
+log_timestamps_ms_i64.npy  CFG=S4                                                 16.8M      5786
+log_timestamps_ms_i64.npy  CFG=S8l                                                16.8M      5786
+mitdb-100.i16              CFG=T8                                                227.3M    864758
+mitdb-100.i16              CFG=T4                                                227.3M    864758
+mitdb-100.i16              CFG=S8                                                227.3M    864758
+mitdb-100.i16              CFG=T2                                                227.3M    864758
+mitdb-100.i16              CFG=S8l                                               227.3M    864758
+mitdb-100.i16              CFG=S4                                                227.3M    864758
+countries-aggregated.csv   CFG=T4                                                304.8M    345917
+countries-aggregated.csv   CFG=T8                                                304.8M    345917
+countries-aggregated.csv   CFG=S4                                                304.8M    345917
+countries-aggregated.csv   CFG=S8                                                304.8M    345917
+countries-aggregated.csv   CFG=T2                                                304.8M    345917
+countries-aggregated.csv   CFG=S8l                                               304.8M    345917
+energy_test.csv            CFG=T4                                                823.7M    740789
+energy_test.csv            CFG=T2                                                823.7M    740789
+energy_test.csv            CFG=T8                                                823.7M    740789
+energy_test.csv            CFG=S8                                                823.7M    740789
+energy_test.csv            CFG=S4                                                823.7M    740789
+energy_test.csv            CFG=S8l                                               823.7M    740789
+owid_test.csv              CFG=T8                                                819.0M   1061293
+owid_test.csv              CFG=T4                                                819.0M   1061293
+owid_test.csv              CFG=T2                                                819.0M   1061293
+owid_test.csv              CFG=S4                                                819.0M   1061293
+owid_test.csv              CFG=S8                                                819.0M   1061293
+owid_test.csv              CFG=S8l                                               819.0M   1061293
+owid_energy_f64.npy        CFG=S8z                                               787.3M   1511786
+owid_energy_f64.npy        CFG=T8z                                               628.6M   1550192
+owid_energy_f64.npy        CFG=S8lz                                              730.9M   1519559
+owid_energy_f64.npy        CFG=S8mz                                              787.3M   1511786
+owid_energy.pkl            CFG=T8z                                               636.9M   1535811
+owid_energy_f64.npy        CFG=S8mlz                                             730.9M   1519559
+owid_energy.pkl            CFG=S8lz                                              740.1M   1504914
+owid_energy.pkl            CFG=S8z                                               797.1M   1497482
+owid_energy.pkl            CFG=S8mz                                              797.1M   1497482
+owid_energy.pkl            CFG=S8mlz                                             740.1M   1504914
+wide_test.csv              CFG=T8z                                               647.7M   1801367
+wide_test.csv              CFG=S8z                                               742.4M   1765235
+wide_test.csv              CFG=S8lz                                              713.4M   1772405
+wide_test.csv              CFG=S8mz                                              796.9M   1730822
+population.i64             CFG=T8z                                                61.4M     70798
+population.i64             CFG=S8z                                                62.6M     70798
+population.i64             CFG=S8lz                                               62.4M     70800
+wide_test.csv              CFG=S8mlz                                             749.0M   1739739
+population.i64             CFG=S8mz                                               62.6M     70798
+population_i64.npy         CFG=T8z                                                45.7M     70888
+population.i64             CFG=S8mlz                                              62.4M     70800
+population_i64.npy         CFG=S8z                                                46.8M     70888
+population_i64.npy         CFG=S8lz                                               46.7M     70890
+population_i64.npy         CFG=S8mz                                               46.8M     70888
+population_i64.npy         CFG=S8mlz                                              46.7M     70890
+year_i32.npy               CFG=T8z                                                19.4M       793
+year_i32.npy               CFG=S8z                                                19.4M       793
+year_i32.npy               CFG=S8lz                                               19.4M       793
+year_i32.npy               CFG=S8mz                                               20.9M       793
+year_i32.npy               CFG=S8mlz                                              20.9M       793
+log_timestamps_ms.i64      CFG=T8z                                                28.6M      5697
+log_timestamps_ms.i64      CFG=S8lz                                               28.7M      5697
+log_timestamps_ms.i64      CFG=S8z                                                28.6M      5697
+log_timestamps_ms.i64      CFG=S8mz                                               28.7M      5697
+log_timestamps_ms.i64      CFG=S8mlz                                              28.7M      5697
+log_timestamps_ms_i64.npy  CFG=T8z                                                16.7M      5786
+log_timestamps_ms_i64.npy  CFG=S8z                                                16.7M      5786
+log_timestamps_ms_i64.npy  CFG=S8lz                                               16.7M      5786
+log_timestamps_ms_i64.npy  CFG=S8mz                                               16.7M      5786
+log_timestamps_ms_i64.npy  CFG=S8mlz                                              16.7M      5786

@@ -1,0 +1,10 @@
+/* fnv-1a of libbsc 3.4.0 bsc_compress(LZP 15/72, BWT, static QLFC) output, printed by tests/test_bwt.c built with -DGOLDEN_FROM_LIBBSC */
+    {0xa8a236de0485b21aull, 0x6a75f3dc7f31b234ull, 0x2d00894877c1ceb6ull, 0x8c791bd060a1d82cull, 0x18b0a32d111b3ecbull, 0xf8ca184d96ccee42ull, 0x1e129d01458ca97dull},
+    {0x618cf202519d89f6ull, 0xb72952cb4870bb25ull, 0xde1bafd83e41ae88ull, 0x068276befdb07f85ull, 0x4e69d5aa2865372bull, 0xb8e6d6fb7d30bd2dull, 0xabad5650714058beull},
+    {0x21e04dd1b0ea5cdcull, 0xebaf84042cd4e1f7ull, 0x8075c671edd242ddull, 0x49a7da077f7ef2eaull, 0x8bebb7007dc7eda5ull, 0x4d8411c24f77f750ull, 0xed8d642a095dbc7aull},
+    {0xf3b2d17ff8240054ull, 0x92fc8e97ba811851ull, 0xaeb7edc783fdb2ecull, 0x41123d341d0b7c7eull, 0x6f112807371753baull, 0xa65c79b305e59023ull, 0x35fb3e203597062eull},
+    {0xce23580df2dc1ee4ull, 0x5ea10b58ea00f6ebull, 0x20bd9931d79b7404ull, 0x1819763fa2eff125ull, 0xe95020edcc319ef0ull, 0x2e732c3e3bd7b4cbull, 0x2a7a4b967b7885baull},
+    {0xa8a236de0485b21aull, 0x6a75f3dc7f31b234ull, 0xe4360dc340cba82cull, 0xd5047260e1f526f2ull, 0x06b9c8e148dc2099ull, 0x7412cc57fe681bf4ull, 0xfd912b37705363daull},
+    {0x2458066fe0d2f2c0ull, 0x3d65112c9de8b540ull, 0x7dcf8a26bb40aac2ull, 0xe94a004078989ee3ull, 0x36a24bad2936f527ull, 0x7457cbb273f9e352ull, 0x2bc1032ee0cbe86cull},
+    {0xba8a3cb3b8b83c67ull, 0xd18e86857f35e84bull, 0x3f3f1c8fedd82091ull, 0xd840d509bea77198ull, 0x8f7a9ed6da0c9065ull, 0xe5ec2b75535a89abull, 0x916b134c75542c23ull},
+    {0x61c78bac3eb0662dull, 0x2353424c9a1c9fb7ull, 0x72b49194f84a5326ull, 0x282ce3cc229dc627ull, 0x606b2e140051f629ull, 0x39f6abf3f6d29627ull, 0x7b6fd8918fc60510ull},

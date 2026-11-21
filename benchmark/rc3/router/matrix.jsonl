@@ -1,0 +1,751 @@
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "kolmo-speed", "size": 37721580, "c": 0.1963, "d": 0.1113, "ok": true, "route": "v3 lz4:100%"}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "kolmo-balanced", "size": 8405152, "c": 0.7287, "d": 0.206, "ok": true, "route": "v11 vid:100%"}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "kolmo-eco", "size": 7696442, "c": 5.3644, "d": 0.2983, "ok": true, "route": "v11 vid:100%"}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "kolmo-hc", "size": 6985316, "c": 24.4345, "d": 0.2051, "ok": true, "route": "v11 vid:100%"}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "kolmo-ratio", "size": 6156698, "c": 61.4374, "d": 2.2828, "ok": true, "route": "v11 vid:100%"}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "zstd-3", "size": 15198558, "c": 0.3181, "d": 0.0894, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "zstd-19", "size": 11759430, "c": 30.4073, "d": 0.1331, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "zstd-22", "size": 11603573, "c": 39.4856, "d": 0.1077, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "xz-9e", "size": 9417400, "c": 36.8749, "d": 0.8279, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "brotli-11", "size": 10561411, "c": 102.3727, "d": 0.2363, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "lz4-1", "size": 37721387, "c": 0.1801, "d": 0.0722, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "bzip2-9", "size": 14736112, "c": 3.3104, "d": 2.2361, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "kolmo-speed", "size": 40484097, "c": 0.0934, "d": 0.0372, "ok": true, "route": "v3 lz4:100%"}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "kolmo-balanced", "size": 22450230, "c": 1.0483, "d": 0.4484, "ok": true, "route": "v11 vid:100%"}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "kolmo-eco", "size": 21885486, "c": 15.4772, "d": 0.6254, "ok": true, "route": "v11 vid:100%"}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "kolmo-hc", "size": 21153522, "c": 42.2832, "d": 0.4743, "ok": true, "route": "v11 vid:100%"}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "kolmo-ratio", "size": 20664224, "c": 65.7806, "d": 1.4728, "ok": true, "route": "v11 vid:100%"}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "zstd-3", "size": 33660180, "c": 0.4673, "d": 0.1099, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "zstd-19", "size": 26876411, "c": 34.6949, "d": 0.2136, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "zstd-22", "size": 26725824, "c": 43.8272, "d": 0.2132, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "xz-9e", "size": 24779940, "c": 48.2785, "d": 1.6984, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "brotli-11", "size": 25664666, "c": 127.392, "d": 0.3358, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "lz4-1", "size": 40483904, "c": 0.1127, "d": 0.0547, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "bzip2-9", "size": 24100490, "c": 3.3992, "d": 2.9062, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "kolmo-speed", "size": 45440148, "c": 0.0328, "d": 0.038, "ok": true, "route": "v3 store:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "kolmo-balanced", "size": 30220260, "c": 0.128, "d": 0.0596, "ok": true, "route": "v11 kg:float2+graph/tf0:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "kolmo-eco", "size": 30115933, "c": 6.404, "d": 0.2017, "ok": true, "route": "v7 kg:float2+graph/tf0:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "kolmo-hc", "size": 30214999, "c": 1.3451, "d": 0.1363, "ok": true, "route": "v11 kg:float2+graph/tf0:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "kolmo-ratio", "size": 30120753, "c": 6.5958, "d": 0.2396, "ok": true, "route": "v11 kg:float2+graph/tf0:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "zstd-3", "size": 35454167, "c": 0.2494, "d": 0.0889, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "zstd-19", "size": 35440718, "c": 23.5166, "d": 0.0952, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "zstd-22", "size": 35447291, "c": 30.9846, "d": 0.0921, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "xz-9e", "size": 32112928, "c": 39.7647, "d": 1.9361, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "brotli-11", "size": 32588876, "c": 119.8933, "d": 0.5488, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "lz4-1", "size": 45439955, "c": 0.0482, "d": 0.0341, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "bzip2-9", "size": 31632329, "c": 4.1914, "d": 2.6079, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "kolmo-speed", "size": 25068164, "c": 0.0281, "d": 0.0216, "ok": true, "route": "v3 store:88% lz4:12%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "kolmo-balanced", "size": 20105294, "c": 0.1156, "d": 0.0391, "ok": true, "route": "v11 kg:float4+graph/tf0:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "kolmo-eco", "size": 20038002, "c": 1.6578, "d": 0.1016, "ok": true, "route": "v7 kg:float4+graph/tf0:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "kolmo-hc", "size": 20098151, "c": 0.4562, "d": 0.0599, "ok": true, "route": "v11 kg:float4+graph/tf0:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "kolmo-ratio", "size": 20012152, "c": 3.888, "d": 2.7336, "ok": true, "route": "v11 kg:float4+graph/tf0:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "zstd-3", "size": 22554000, "c": 0.1246, "d": 0.045, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "zstd-19", "size": 22433941, "c": 7.3914, "d": 0.0558, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "zstd-22", "size": 22434029, "c": 5.5113, "d": 0.0709, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "xz-9e", "size": 22132448, "c": 9.903, "d": 1.3897, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "brotli-11", "size": 22113259, "c": 62.9537, "d": 0.2943, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "lz4-1", "size": 25072123, "c": 0.0298, "d": 0.0269, "ok": true}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "bzip2-9", "size": 22870119, "c": 2.5016, "d": 1.7425, "ok": true}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "kolmo-speed", "size": 13128048, "c": 0.0959, "d": 0.0305, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "kolmo-balanced", "size": 8270396, "c": 0.1721, "d": 0.0397, "ok": true, "route": "v3 zstd:100% store:0%"}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "kolmo-eco", "size": 7490462, "c": 4.6875, "d": 0.1117, "ok": true, "route": "v3 brotli:100%"}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "kolmo-hc", "size": 6728215, "c": 18.7267, "d": 0.0542, "ok": true, "route": "v3 zstd:100%"}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "kolmo-ratio", "size": 5479320, "c": 2.0771, "d": 1.5323, "ok": true, "route": "v11 bwt:100%"}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "zstd-3", "size": 8283373, "c": 0.1932, "d": 0.0602, "ok": true}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "zstd-19", "size": 6695684, "c": 20.9795, "d": 0.0588, "ok": true}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "zstd-22", "size": 6670652, "c": 28.2719, "d": 0.0611, "ok": true}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "xz-9e", "size": 6415844, "c": 34.2464, "d": 0.3872, "ok": true}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "brotli-11", "size": 6610114, "c": 71.4364, "d": 0.1294, "ok": true}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "lz4-1", "size": 13127573, "c": 0.0803, "d": 0.0349, "ok": true}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "bzip2-9", "size": 6487027, "c": 1.5589, "d": 0.9996, "ok": true}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "kolmo-speed", "size": 9516973, "c": 0.0551, "d": 0.0197, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "kolmo-balanced", "size": 5603542, "c": 0.1002, "d": 0.0253, "ok": true, "route": "v3 zstd:100% store:0%"}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "kolmo-eco", "size": 4965756, "c": 3.5743, "d": 0.0897, "ok": true, "route": "v3 brotli:100%"}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "kolmo-hc", "size": 4456059, "c": 16.1078, "d": 0.053, "ok": true, "route": "v3 zstd:100%"}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "kolmo-ratio", "size": 4040462, "c": 1.2609, "d": 0.978, "ok": true, "route": "v11 bwt:100%"}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "zstd-3", "size": 5603636, "c": 0.1264, "d": 0.0316, "ok": true}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "zstd-19", "size": 4458809, "c": 16.5138, "d": 0.0449, "ok": true}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "zstd-22", "size": 4454372, "c": 17.7367, "d": 0.0554, "ok": true}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "xz-9e", "size": 4315224, "c": 19.4603, "d": 0.228, "ok": true}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "brotli-11", "size": 4398414, "c": 52.8527, "d": 0.097, "ok": true}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "lz4-1", "size": 9513423, "c": 0.0656, "d": 0.0263, "ok": true}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "bzip2-9", "size": 4661818, "c": 1.3068, "d": 0.783, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "kolmo-speed", "size": 9370942, "c": 0.0391, "d": 0.0171, "ok": true, "route": "v3 lz4:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "kolmo-balanced", "size": 7141523, "c": 0.0924, "d": 0.0254, "ok": true, "route": "v3 zstd:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "kolmo-eco", "size": 6626914, "c": 1.4141, "d": 0.0811, "ok": true, "route": "v3 brotli:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "kolmo-hc", "size": 6380427, "c": 4.2347, "d": 0.0356, "ok": true, "route": "v3 zstd:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "kolmo-ratio", "size": 5985902, "c": 6.9413, "d": 0.2516, "ok": true, "route": "v3 lzma2:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "zstd-3", "size": 7191761, "c": 0.0881, "d": 0.025, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "zstd-19", "size": 6339751, "c": 5.6686, "d": 0.0524, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "zstd-22", "size": 6337372, "c": 6.6148, "d": 0.0391, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "xz-9e", "size": 5937932, "c": 6.9198, "d": 0.4196, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "brotli-11", "size": 6012411, "c": 45.1474, "d": 0.0844, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "lz4-1", "size": 9370380, "c": 0.0404, "d": 0.0231, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "bzip2-9", "size": 7256936, "c": 1.1905, "d": 0.6294, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "kolmo-speed", "size": 6292511, "c": 0.0367, "d": 0.0235, "ok": true, "route": "v3 lz4:100%"}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "kolmo-balanced", "size": 4207152, "c": 0.0726, "d": 0.0199, "ok": true, "route": "v3 zstd:100%"}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "kolmo-eco", "size": 3508100, "c": 1.2863, "d": 0.07, "ok": true, "route": "v3 brotli:100%"}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "kolmo-hc", "size": 3265899, "c": 5.9384, "d": 0.0529, "ok": true, "route": "v3 zstd:100%"}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "kolmo-ratio", "size": 3138595, "c": 11.0036, "d": 0.1865, "ok": true, "route": "v3 lzma2:100%"}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "zstd-3", "size": 4079724, "c": 0.1219, "d": 0.0276, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "zstd-19", "size": 3275208, "c": 6.2159, "d": 0.0294, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "zstd-22", "size": 3259791, "c": 10.0088, "d": 0.0304, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "xz-9e", "size": 3138596, "c": 9.9292, "d": 0.2111, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "brotli-11", "size": 3160176, "c": 26.5872, "d": 0.0568, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "lz4-1", "size": 6287373, "c": 0.0408, "d": 0.0244, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "bzip2-9", "size": 3815275, "c": 1.1136, "d": 0.4368, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "kolmo-speed", "size": 2794636, "c": 0.0287, "d": 0.0106, "ok": true, "route": "v3 lz4:100%"}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "kolmo-balanced", "size": 1049515, "c": 0.0509, "d": 0.025, "ok": true, "route": "v8 lines+zstd/tf12:100% lines+zstd/tf0:0%"}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "kolmo-eco", "size": 901608, "c": 0.3892, "d": 0.0539, "ok": true, "route": "v3 log+brotli/tf5:100%"}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "kolmo-hc", "size": 823342, "c": 1.0241, "d": 0.0532, "ok": true, "route": "v3 log+zstd/tf5:100%"}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "kolmo-ratio", "size": 627204, "c": 1.9028, "d": 0.2632, "ok": true, "route": "v11 bwt:100%"}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "zstd-3", "size": 1435617, "c": 0.0528, "d": 0.0264, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "zstd-19", "size": 855808, "c": 7.6964, "d": 0.0214, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "zstd-22", "size": 841611, "c": 12.4696, "d": 0.0323, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "xz-9e", "size": 760668, "c": 10.3278, "d": 0.0624, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "brotli-11", "size": 783171, "c": 32.3101, "d": 0.0261, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "lz4-1", "size": 2790733, "c": 0.0312, "d": 0.0181, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "bzip2-9", "size": 900382, "c": 1.8665, "d": 0.4847, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "kolmo-speed", "size": 8156947, "c": 0.0489, "d": 0.0126, "ok": true, "route": "v3 lz4:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "kolmo-balanced", "size": 4951204, "c": 0.0861, "d": 0.0211, "ok": true, "route": "v3 zstd:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "kolmo-eco", "size": 3980731, "c": 1.7767, "d": 0.0726, "ok": true, "route": "v3 brotli:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "kolmo-hc", "size": 3575428, "c": 10.0592, "d": 0.036, "ok": true, "route": "v3 zstd:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "kolmo-ratio", "size": 2721034, "c": 1.0613, "d": 0.7282, "ok": true, "route": "v11 bwt:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "zstd-3", "size": 4919903, "c": 0.1115, "d": 0.0284, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "zstd-19", "size": 3581469, "c": 10.4379, "d": 0.0446, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "zstd-22", "size": 3559443, "c": 12.0221, "d": 0.0399, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "xz-9e", "size": 3525268, "c": 12.511, "d": 0.1908, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "brotli-11", "size": 3503237, "c": 32.9521, "d": 0.048, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "lz4-1", "size": 8152402, "c": 0.0533, "d": 0.0215, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "bzip2-9", "size": 3498752, "c": 1.4589, "d": 0.5606, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "kolmo-speed", "size": 2781804, "c": 0.0235, "d": 0.0105, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "kolmo-balanced", "size": 795324, "c": 0.0603, "d": 0.0214, "ok": true, "route": "v3 log+zstd/tf5:100% log+zstd/tf0:0%"}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "kolmo-eco", "size": 696066, "c": 0.2571, "d": 0.0403, "ok": true, "route": "v3 log+brotli/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "kolmo-hc", "size": 635728, "c": 1.8609, "d": 0.0347, "ok": true, "route": "v3 log+zstd/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "kolmo-ratio", "size": 595667, "c": 2.2523, "d": 0.0754, "ok": true, "route": "v3 log+lzma2/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "zstd-3", "size": 1516967, "c": 0.0522, "d": 0.0201, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "zstd-19", "size": 995209, "c": 9.7159, "d": 0.0288, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "zstd-22", "size": 993234, "c": 10.7418, "d": 0.0309, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "xz-9e", "size": 922428, "c": 11.6227, "d": 0.0818, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "brotli-11", "size": 956638, "c": 35.7737, "d": 0.0265, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "lz4-1", "size": 2778467, "c": 0.0335, "d": 0.0216, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "bzip2-9", "size": 1047817, "c": 2.1363, "d": 0.4225, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "kolmo-speed", "size": 1866090, "c": 0.0179, "d": 0.0106, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "kolmo-balanced", "size": 295337, "c": 0.066, "d": 0.0323, "ok": true, "route": "v3 log+zstd/tf5:100% log+zstd/tf0:0%"}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "kolmo-eco", "size": 234567, "c": 0.1811, "d": 0.068, "ok": true, "route": "v3 log+brotli/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "kolmo-hc", "size": 218231, "c": 0.592, "d": 0.0541, "ok": true, "route": "v3 log+zstd/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "kolmo-ratio", "size": 208322, "c": 1.1154, "d": 0.0439, "ok": true, "route": "v3 log+lzma2/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "zstd-3", "size": 1155960, "c": 0.0564, "d": 0.0193, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "zstd-19", "size": 638503, "c": 9.0833, "d": 0.018, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "zstd-22", "size": 637255, "c": 15.5989, "d": 0.0211, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "xz-9e", "size": 469332, "c": 17.3562, "d": 0.0557, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "brotli-11", "size": 571596, "c": 32.4077, "d": 0.0233, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "lz4-1", "size": 1864949, "c": 0.0225, "d": 0.0162, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "bzip2-9", "size": 758685, "c": 1.4772, "d": 0.2264, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "kolmo-speed", "size": 9720302, "c": 0.0496, "d": 0.0177, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "kolmo-balanced", "size": 6045983, "c": 0.0953, "d": 0.0256, "ok": true, "route": "v3 zstd:100% store:0%"}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "kolmo-eco", "size": 4845677, "c": 2.3616, "d": 0.1012, "ok": true, "route": "v3 word+brotli/tf9:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "kolmo-hc", "size": 4444177, "c": 7.056, "d": 0.0659, "ok": true, "route": "v3 word+zstd/tf9:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "kolmo-ratio", "size": 3801264, "c": 1.4624, "d": 1.0244, "ok": true, "route": "v11 word+bwt/tf0:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "zstd-3", "size": 6004400, "c": 0.1287, "d": 0.0333, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "zstd-19", "size": 4627581, "c": 11.22, "d": 0.0426, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "zstd-22", "size": 4591939, "c": 12.4464, "d": 0.0633, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "xz-9e", "size": 4480908, "c": 12.9676, "d": 0.2479, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "brotli-11", "size": 4464760, "c": 38.7638, "d": 0.0845, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "lz4-1", "size": 9715566, "c": 0.056, "d": 0.0245, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "bzip2-9", "size": 4909901, "c": 1.1866, "d": 0.6558, "ok": true}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "kolmo-speed", "size": 3718480, "c": 0.0366, "d": 0.013, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "kolmo-balanced", "size": 2043341, "c": 0.0525, "d": 0.023, "ok": true, "route": "v3 zstd:100% store:0%"}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "kolmo-eco", "size": 1449518, "c": 0.7911, "d": 0.0667, "ok": true, "route": "v3 word+brotli/tf9:100%"}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "kolmo-hc", "size": 1395835, "c": 5.1476, "d": 0.058, "ok": true, "route": "v3 word+zstd/tf9:100%"}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "kolmo-ratio", "size": 1276112, "c": 0.7984, "d": 0.4136, "ok": true, "route": "v11 word+bwt/tf0:100%"}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "zstd-3", "size": 1947615, "c": 0.0638, "d": 0.018, "ok": true}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "zstd-19", "size": 1437763, "c": 5.8784, "d": 0.0228, "ok": true}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "zstd-22", "size": 1412707, "c": 9.906, "d": 0.0247, "ok": true}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "xz-9e", "size": 1349440, "c": 6.5219, "d": 0.0976, "ok": true}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "brotli-11", "size": 1282820, "c": 23.8465, "d": 0.032, "ok": true}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "lz4-1", "size": 3714068, "c": 0.0349, "d": 0.0188, "ok": true}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "bzip2-9", "size": 1865162, "c": 1.6863, "d": 0.4302, "ok": true}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "kolmo-speed", "size": 9581569, "c": 0.0441, "d": 0.0195, "ok": true, "route": "v3 lz4:81% shuf+lz4/tf1:19%"}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "kolmo-balanced", "size": 5221874, "c": 0.154, "d": 0.0341, "ok": true, "route": "v7 zstd:22% tbl+zstd/tf4:19% x86+zstd/tf8:19% img16+zstd/tf6:19% log/json1+zstd/tf5:13% kg:img8+graph/tf0:7%"}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "kolmo-eco", "size": 4764354, "c": 1.0952, "d": 0.0829, "ok": true, "route": "v7 word+brotli/tf9:19% tbl+brotli/tf4:19% x86+brotli/tf8:19% img16+brotli/tf6:19% log/json1+brotli/tf5:13% kg:img8+graph/tf0:7% brotli:3%"}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "kolmo-hc", "size": 4625647, "c": 2.891, "d": 0.0543, "ok": true, "route": "v7 word+zstd/tf9:19% tbl+zstd/tf4:19% x86+zstd/tf8:19% img16+zstd/tf6:19% log/json1+zstd/tf5:13% kg:img8+graph/tf0:7% zstd:3%"}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "kolmo-ratio", "size": 4266857, "c": 5.9579, "d": 0.4455, "ok": true, "route": "v11 word+bwt/tf0:19% tbl+lzma2/tf4:19% x86+lzma2/tf8:19% img16+lzma2/tf6:19% log/json1+bwt/tf5:13% kg:img8+graph/tf0:7% lzma2:3%"}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "zstd-3", "size": 7004125, "c": 0.1273, "d": 0.0308, "ok": true}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "zstd-19", "size": 5789430, "c": 6.5144, "d": 0.0522, "ok": true}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "zstd-22", "size": 5788755, "c": 7.5941, "d": 0.0422, "ok": true}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "xz-9e", "size": 5324580, "c": 8.4324, "d": 0.3278, "ok": true}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "brotli-11", "size": 5481466, "c": 32.4319, "d": 0.1102, "ok": true}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "lz4-1", "size": 10341952, "c": 0.0424, "d": 0.0207, "ok": true}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "bzip2-9", "size": 5323050, "c": 1.2478, "d": 0.6144, "ok": true}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "kolmo-speed", "size": 4058905, "c": 0.0215, "d": 0.0096, "ok": true, "route": "v3 lz4:100%"}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "kolmo-balanced", "size": 2052341, "c": 0.0641, "d": 0.0478, "ok": true, "route": "v3 tp+zstd/tf2:100%"}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "kolmo-eco", "size": 1931344, "c": 0.9457, "d": 0.1092, "ok": true, "route": "v3 tp+brotli/tf2:100%"}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "kolmo-hc", "size": 1660785, "c": 3.5102, "d": 0.093, "ok": true, "route": "v3 tp+zstd/tf2:100%"}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "kolmo-ratio", "size": 1607022, "c": 6.8511, "d": 0.4825, "ok": true, "route": "v11 bwt:100%"}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "zstd-3", "size": 2386599, "c": 0.0868, "d": 0.0262, "ok": true}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "zstd-19", "size": 1732308, "c": 9.4945, "d": 0.0213, "ok": true}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "zstd-22", "size": 1731991, "c": 10.1517, "d": 0.0242, "ok": true}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "xz-9e", "size": 1725468, "c": 10.3188, "d": 0.1509, "ok": true}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "brotli-11", "size": 1754332, "c": 29.8028, "d": 0.0437, "ok": true}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "lz4-1", "size": 4057211, "c": 0.0265, "d": 0.0176, "ok": true}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "bzip2-9", "size": 1649849, "c": 2.6851, "d": 0.5141, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "kolmo-speed", "size": 5777070, "c": 0.0328, "d": 0.0123, "ok": true, "route": "v3 lz4:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "kolmo-balanced", "size": 2742942, "c": 0.1864, "d": 0.0316, "ok": true, "route": "v11 kg:dec64+graph/tf0:62% zstd:38%"}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "kolmo-eco", "size": 2321409, "c": 2.1019, "d": 0.0722, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "kolmo-hc", "size": 2327184, "c": 3.0919, "d": 0.0542, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "kolmo-ratio", "size": 2052029, "c": 10.0311, "d": 0.1354, "ok": true, "route": "v3 lzma2:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "zstd-3", "size": 2915091, "c": 0.0728, "d": 0.0236, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "zstd-19", "size": 2580050, "c": 6.2016, "d": 0.0302, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "zstd-22", "size": 2579583, "c": 7.5999, "d": 0.0306, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "xz-9e", "size": 2052032, "c": 8.2656, "d": 0.1478, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "brotli-11", "size": 2341335, "c": 31.2647, "d": 0.0452, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "lz4-1", "size": 5774491, "c": 0.0367, "d": 0.0217, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "bzip2-9", "size": 3343174, "c": 1.0652, "d": 0.4657, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "kolmo-speed", "size": 7554712, "c": 0.0523, "d": 0.0162, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "kolmo-balanced", "size": 1392694, "c": 0.1194, "d": 0.037, "ok": true, "route": "v5 tbl+zstd/tf4:100%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "kolmo-eco", "size": 1309130, "c": 0.4297, "d": 0.0745, "ok": true, "route": "v5 tbl+brotli/tf4:100%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "kolmo-hc", "size": 1291252, "c": 1.1825, "d": 0.045, "ok": true, "route": "v5 tbl+zstd/tf4:100%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "kolmo-ratio", "size": 1223833, "c": 5.1674, "d": 0.1146, "ok": true, "route": "v5 tbl+lzma2/tf4:100%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "zstd-3", "size": 4632729, "c": 0.1093, "d": 0.0322, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "zstd-19", "size": 3605465, "c": 11.1801, "d": 0.0312, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "zstd-22", "size": 3623835, "c": 12.7035, "d": 0.0358, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "xz-9e", "size": 3158244, "c": 15.6534, "d": 0.2307, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "brotli-11", "size": 3154593, "c": 34.7316, "d": 0.0685, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "lz4-1", "size": 7552450, "c": 0.0497, "d": 0.0211, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "bzip2-9", "size": 3580670, "c": 0.9949, "d": 0.5328, "ok": true}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "kolmo-speed", "size": 7542610, "c": 0.0494, "d": 0.016, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "kolmo-balanced", "size": 1392694, "c": 0.1164, "d": 0.0361, "ok": true, "route": "v5 tbl+zstd/tf4:100%"}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "kolmo-eco", "size": 1309130, "c": 0.457, "d": 0.0715, "ok": true, "route": "v5 tbl+brotli/tf4:100%"}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "kolmo-hc", "size": 1291252, "c": 1.1342, "d": 0.0492, "ok": true, "route": "v5 tbl+zstd/tf4:100%"}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "kolmo-ratio", "size": 1223833, "c": 5.2331, "d": 0.1193, "ok": true, "route": "v5 tbl+lzma2/tf4:100%"}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "zstd-3", "size": 4634532, "c": 0.1086, "d": 0.0288, "ok": true}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "zstd-19", "size": 3607008, "c": 10.6421, "d": 0.0321, "ok": true}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "zstd-22", "size": 3623756, "c": 12.1762, "d": 0.034, "ok": true}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "xz-9e", "size": 3147012, "c": 14.9897, "d": 0.2263, "ok": true}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "brotli-11", "size": 3143740, "c": 35.4825, "d": 0.0722, "ok": true}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "lz4-1", "size": 7539925, "c": 0.0477, "d": 0.0207, "ok": true}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "bzip2-9", "size": 3580614, "c": 1.0076, "d": 0.4816, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "kolmo-speed", "size": 2490972, "c": 0.0237, "d": 0.0077, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "kolmo-balanced", "size": 1063143, "c": 0.0559, "d": 0.015, "ok": true, "route": "v3 log/json1+zstd/tf5:100% log/json1+zstd/tf0:0%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "kolmo-eco", "size": 830270, "c": 0.2896, "d": 0.0418, "ok": true, "route": "v3 log/json1+brotli/tf5:100%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "kolmo-hc", "size": 773365, "c": 2.2612, "d": 0.033, "ok": true, "route": "v3 log/json1+zstd/tf5:100%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "kolmo-ratio", "size": 755924, "c": 2.7767, "d": 0.0806, "ok": true, "route": "v3 log+lzma2/tf5:100%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "zstd-3", "size": 1243572, "c": 0.042, "d": 0.018, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "zstd-19", "size": 863178, "c": 4.3294, "d": 0.0172, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "zstd-22", "size": 858560, "c": 5.7872, "d": 0.0173, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "xz-9e", "size": 814908, "c": 4.6425, "d": 0.0632, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "brotli-11", "size": 766974, "c": 17.3092, "d": 0.0233, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "lz4-1", "size": 2485591, "c": 0.0245, "d": 0.0149, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "bzip2-9", "size": 1052290, "c": 1.0016, "d": 0.2892, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "kolmo-speed", "size": 6437034, "c": 0.0354, "d": 0.0101, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "kolmo-balanced", "size": 3721196, "c": 0.0643, "d": 0.0158, "ok": true, "route": "v3 zstd:100% store:0%"}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "kolmo-eco", "size": 2881188, "c": 1.3283, "d": 0.0557, "ok": true, "route": "v3 word+brotli/tf9:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "kolmo-hc", "size": 2728251, "c": 3.8281, "d": 0.0367, "ok": true, "route": "v3 word+zstd/tf9:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "kolmo-ratio", "size": 2254558, "c": 0.9029, "d": 0.6158, "ok": true, "route": "v11 word+bwt/tf0:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "zstd-3", "size": 3669248, "c": 0.0865, "d": 0.0209, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "zstd-19", "size": 2850277, "c": 7.4034, "d": 0.0302, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "zstd-22", "size": 2849378, "c": 8.0632, "d": 0.0293, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "xz-9e", "size": 2831212, "c": 8.2695, "d": 0.1333, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "brotli-11", "size": 2827777, "c": 20.3706, "d": 0.0344, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "lz4-1", "size": 6431133, "c": 0.0366, "d": 0.0133, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "bzip2-9", "size": 2799520, "c": 0.7927, "d": 0.4171, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "kolmo-speed", "size": 5273313, "c": 0.0247, "d": 0.008, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "kolmo-balanced", "size": 3533740, "c": 0.0556, "d": 0.0124, "ok": true, "route": "v3 zstd:100% store:0%"}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "kolmo-eco", "size": 3152826, "c": 1.4027, "d": 0.0552, "ok": true, "route": "v3 brotli:100%"}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "kolmo-hc", "size": 3100225, "c": 4.4503, "d": 0.0337, "ok": true, "route": "v3 zstd:100%"}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "kolmo-ratio", "size": 2206574, "c": 0.9993, "d": 0.6189, "ok": true, "route": "v11 bwt:100%"}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "zstd-3", "size": 3506592, "c": 0.0689, "d": 0.0167, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "zstd-19", "size": 3098469, "c": 4.9049, "d": 0.0234, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "zstd-22", "size": 3098441, "c": 5.2814, "d": 0.0258, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "xz-9e", "size": 2844556, "c": 5.4417, "d": 0.1967, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "brotli-11", "size": 2816278, "c": 18.1903, "d": 0.0464, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "lz4-1", "size": 5261242, "c": 0.0276, "d": 0.0139, "ok": true}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "bzip2-9", "size": 2802792, "c": 0.6881, "d": 0.4322, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "kolmo-speed", "size": 4426100, "c": 0.0223, "d": 0.0077, "ok": true, "route": "v3 shuf+lz4/tf1:100% store:0%"}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "kolmo-balanced", "size": 2316612, "c": 0.0484, "d": 0.0404, "ok": true, "route": "v3 img16+zstd/tf6:100% store:0%"}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "kolmo-eco", "size": 2265155, "c": 0.9593, "d": 0.087, "ok": true, "route": "v3 img16+brotli/tf6:100%"}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "kolmo-hc", "size": 2257516, "c": 2.0863, "d": 0.062, "ok": true, "route": "v3 img16+zstd/tf6:100%"}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "kolmo-ratio", "size": 1989774, "c": 4.3953, "d": 0.5368, "ok": true, "route": "v11 img16+bwt/tf6:100%"}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "zstd-3", "size": 3548380, "c": 0.0822, "d": 0.0176, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "zstd-19", "size": 3112768, "c": 4.1286, "d": 0.0373, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "zstd-22", "size": 3105658, "c": 5.8658, "d": 0.0269, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "xz-9e", "size": 2751892, "c": 7.4469, "d": 0.1853, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "brotli-11", "size": 2823136, "c": 20.671, "d": 0.0453, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "lz4-1", "size": 5442522, "c": 0.0279, "d": 0.0136, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "bzip2-9", "size": 2441280, "c": 0.5407, "d": 0.2857, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "kolmo-speed", "size": 2039097, "c": 0.0204, "d": 0.0059, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "kolmo-balanced", "size": 1155446, "c": 0.0207, "d": 0.008, "ok": true, "route": "v3 zstd:100% store:0%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "kolmo-eco", "size": 829026, "c": 0.3645, "d": 0.0357, "ok": true, "route": "v3 word+brotli/tf9:100%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "kolmo-hc", "size": 806156, "c": 2.5342, "d": 0.0297, "ok": true, "route": "v3 word+zstd/tf9:100%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "kolmo-ratio", "size": 731286, "c": 0.4666, "d": 0.2347, "ok": true, "route": "v11 word+bwt/tf0:100%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "zstd-3", "size": 1066768, "c": 0.0402, "d": 0.0122, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "zstd-19", "size": 816332, "c": 3.2191, "d": 0.0156, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "zstd-22", "size": 815571, "c": 5.3463, "d": 0.0178, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "xz-9e", "size": 783580, "c": 3.26, "d": 0.0568, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "brotli-11", "size": 741799, "c": 12.8219, "d": 0.0184, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "lz4-1", "size": 2032487, "c": 0.02, "d": 0.0107, "ok": true}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "bzip2-9", "size": 1019043, "c": 0.8784, "d": 0.2004, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "kolmo-speed", "size": 4585681, "c": 0.0284, "d": 0.0076, "ok": true, "route": "v3 lz4:100% store:0%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "kolmo-balanced", "size": 946078, "c": 0.1139, "d": 0.0248, "ok": true, "route": "v5 tbl+zstd/tf4:100%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "kolmo-eco", "size": 875539, "c": 0.3651, "d": 0.044, "ok": true, "route": "v5 tbl+brotli/tf4:100%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "kolmo-hc", "size": 864398, "c": 0.9245, "d": 0.0299, "ok": true, "route": "v5 tbl+zstd/tf4:100%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "kolmo-ratio", "size": 823712, "c": 3.2234, "d": 0.0677, "ok": true, "route": "v5 tbl+lzma2/tf4:100%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "zstd-3", "size": 2740767, "c": 0.064, "d": 0.0179, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "zstd-19", "size": 2190941, "c": 6.1315, "d": 0.0206, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "zstd-22", "size": 2190756, "c": 7.2009, "d": 0.0215, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "xz-9e", "size": 2087660, "c": 9.646, "d": 0.1325, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "brotli-11", "size": 2070389, "c": 20.1703, "d": 0.056, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "lz4-1", "size": 4582446, "c": 0.0275, "d": 0.0128, "ok": true}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "bzip2-9", "size": 2125141, "c": 0.6339, "d": 0.3047, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "kolmo-speed", "size": 8389978, "c": 0.0145, "d": 0.0056, "ok": true, "route": "v3 lz4:88% store:12%"}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "kolmo-balanced", "size": 3657342, "c": 0.0288, "d": 0.0161, "ok": true, "route": "v3 img16+zstd/tf6:100%"}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "kolmo-eco", "size": 3625650, "c": 0.1648, "d": 0.0585, "ok": true, "route": "v3 img16+brotli/tf6:100%"}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "kolmo-hc", "size": 3649636, "c": 0.763, "d": 0.0278, "ok": true, "route": "v3 img16+zstd/tf6:100%"}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "kolmo-ratio", "size": 3616667, "c": 2.6089, "d": 0.1702, "ok": true, "route": "v3 img16+lzma2/tf6:100%"}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "zstd-3", "size": 6086275, "c": 0.0869, "d": 0.019, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "zstd-19", "size": 5155749, "c": 3.7533, "d": 0.0317, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "zstd-22", "size": 5155749, "c": 4.1737, "d": 0.058, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "xz-9e", "size": 4491264, "c": 4.1624, "d": 0.3002, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "brotli-11", "size": 4682753, "c": 21.854, "d": 0.0869, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "lz4-1", "size": 8406634, "c": 0.0164, "d": 0.0151, "ok": true}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "bzip2-9", "size": 4051112, "c": 0.58, "d": 0.3613, "ok": true}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "kolmo-speed", "size": 6791955, "c": 0.0279, "d": 0.0117, "ok": true, "route": "v3 lz4:100%"}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "kolmo-balanced", "size": 2302435, "c": 0.0653, "d": 0.0139, "ok": true, "route": "v3 rec+zstd/tf7:100%"}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "kolmo-eco", "size": 2213186, "c": 0.4295, "d": 0.0321, "ok": true, "route": "v3 rec+brotli/tf7:100%"}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "kolmo-hc", "size": 2214262, "c": 0.9143, "d": 0.0246, "ok": true, "route": "v3 rec+zstd/tf7:100%"}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "kolmo-ratio", "size": 2184759, "c": 1.4191, "d": 0.0863, "ok": true, "route": "v3 rec+lzma2/tf7:100%"}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "zstd-3", "size": 5551154, "c": 0.0673, "d": 0.0167, "ok": true}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "zstd-19", "size": 5000512, "c": 2.6156, "d": 0.0221, "ok": true}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "zstd-22", "size": 5000512, "c": 2.837, "d": 0.0236, "ok": true}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "xz-9e", "size": 4425664, "c": 3.4114, "d": 0.3081, "ok": true}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "brotli-11", "size": 4586092, "c": 15.9368, "d": 0.0537, "ok": true}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "lz4-1", "size": 6790464, "c": 0.0226, "d": 0.0117, "ok": true}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "bzip2-9", "size": 4940524, "c": 0.6561, "d": 0.4003, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "kolmo-speed", "size": 3189095, "c": 0.0301, "d": 0.0097, "ok": true, "route": "v3 lz4:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "kolmo-balanced", "size": 1967300, "c": 0.0419, "d": 0.0152, "ok": true, "route": "v3 zstd:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "kolmo-eco", "size": 1557137, "c": 0.608, "d": 0.0247, "ok": true, "route": "v3 brotli:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "kolmo-hc", "size": 1348510, "c": 3.763, "d": 0.0154, "ok": true, "route": "v3 zstd:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "kolmo-ratio", "size": 978208, "c": 0.4226, "d": 0.2699, "ok": true, "route": "v11 bwt:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "zstd-3", "size": 1942004, "c": 0.0607, "d": 0.0127, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "zstd-19", "size": 1347632, "c": 4.0999, "d": 0.0158, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "zstd-22", "size": 1347553, "c": 4.7391, "d": 0.0164, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "xz-9e", "size": 1315592, "c": 4.7204, "d": 0.0734, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "brotli-11", "size": 1332158, "c": 12.2886, "d": 0.0191, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "lz4-1", "size": 3182851, "c": 0.0276, "d": 0.0102, "ok": true}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "bzip2-9", "size": 1246230, "c": 0.5623, "d": 0.2681, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "kolmo-speed", "size": 4341291, "c": 0.0242, "d": 0.0103, "ok": true, "route": "v3 lz4:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "kolmo-balanced", "size": 2793733, "c": 0.0488, "d": 0.0163, "ok": true, "route": "v3 x86+zstd/tf8:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "kolmo-eco", "size": 2408003, "c": 0.8701, "d": 0.0371, "ok": true, "route": "v3 x86+brotli/tf8:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "kolmo-hc", "size": 2246133, "c": 2.2373, "d": 0.0188, "ok": true, "route": "v3 x86+zstd/tf8:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "kolmo-ratio", "size": 2093384, "c": 2.7978, "d": 0.1018, "ok": true, "route": "v3 x86+lzma2/tf8:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "zstd-3", "size": 3143604, "c": 0.0547, "d": 0.0138, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "zstd-19", "size": 2598906, "c": 2.3499, "d": 0.0205, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "zstd-22", "size": 2598805, "c": 2.6844, "d": 0.0214, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "xz-9e", "size": 2427224, "c": 3.1093, "d": 0.1614, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "brotli-11", "size": 2478855, "c": 17.3482, "d": 0.0546, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "lz4-1", "size": 4339335, "c": 0.0192, "d": 0.0099, "ok": true}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "bzip2-9", "size": 2862526, "c": 0.4637, "d": 0.2901, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "kolmo-speed", "size": 2234807, "c": 0.0207, "d": 0.009, "ok": true, "route": "v3 lz4:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "kolmo-balanced", "size": 345917, "c": 0.0333, "d": 0.0174, "ok": true, "route": "v11 tbl+zstd/tf4:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "kolmo-eco", "size": 327367, "c": 0.0952, "d": 0.0297, "ok": true, "route": "v11 tbl+brotli/tf4:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "kolmo-hc", "size": 327637, "c": 0.2463, "d": 0.0186, "ok": true, "route": "v11 tbl+zstd/tf4:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "kolmo-ratio", "size": 308846, "c": 1.2744, "d": 0.0411, "ok": true, "route": "v11 tbl+lzma2/tf4:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "zstd-3", "size": 1358988, "c": 0.0491, "d": 0.0125, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "zstd-19", "size": 840246, "c": 4.0875, "d": 0.0128, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "zstd-22", "size": 840027, "c": 5.7907, "d": 0.0134, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "xz-9e", "size": 654740, "c": 5.2978, "d": 0.0861, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "brotli-11", "size": 662106, "c": 10.6629, "d": 0.0186, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "lz4-1", "size": 2234450, "c": 0.0183, "d": 0.0083, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "bzip2-9", "size": 1131191, "c": 0.3464, "d": 0.1408, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "kolmo-speed", "size": 1232806, "c": 0.0126, "d": 0.0077, "ok": true, "route": "v3 lz4:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "kolmo-balanced", "size": 652714, "c": 0.0154, "d": 0.0068, "ok": true, "route": "v3 zstd:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "kolmo-eco", "size": 468409, "c": 0.2252, "d": 0.0219, "ok": true, "route": "v3 word+brotli/tf9:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "kolmo-hc", "size": 443624, "c": 2.4175, "d": 0.0204, "ok": true, "route": "v3 word+zstd/tf9:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "kolmo-ratio", "size": 385428, "c": 0.3538, "d": 0.1299, "ok": true, "route": "v11 word+bwt/tf0:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "zstd-3", "size": 639134, "c": 0.0286, "d": 0.0095, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "zstd-19", "size": 454861, "c": 2.2588, "d": 0.009, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "zstd-22", "size": 453172, "c": 3.8654, "d": 0.0092, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "xz-9e", "size": 434892, "c": 2.0172, "d": 0.0321, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "brotli-11", "size": 430566, "c": 7.3265, "d": 0.0106, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "lz4-1", "size": 1228106, "c": 0.0138, "d": 0.0083, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "bzip2-9", "size": 441186, "c": 0.5371, "d": 0.1349, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "kolmo-speed", "size": 455171, "c": 0.0095, "d": 0.0077, "ok": true, "route": "v3 lz4:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "kolmo-balanced", "size": 151840, "c": 0.0472, "d": 0.0147, "ok": true, "route": "v3 log/json1+zstd/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "kolmo-eco", "size": 132573, "c": 0.0788, "d": 0.0126, "ok": true, "route": "v3 log/json1+brotli/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "kolmo-hc", "size": 125598, "c": 0.303, "d": 0.0127, "ok": true, "route": "v3 log/json1+zstd/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "kolmo-ratio", "size": 122934, "c": 0.0795, "d": 0.0439, "ok": true, "route": "v11 log/json1+bwt/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "zstd-3", "size": 269927, "c": 0.0269, "d": 0.0069, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "zstd-19", "size": 178235, "c": 2.3522, "d": 0.0096, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "zstd-22", "size": 177631, "c": 4.3259, "d": 0.0082, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "xz-9e", "size": 157260, "c": 3.4315, "d": 0.0179, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "brotli-11", "size": 166650, "c": 7.5976, "d": 0.0119, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "lz4-1", "size": 453970, "c": 0.0092, "d": 0.0071, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "bzip2-9", "size": 173827, "c": 0.5377, "d": 0.0716, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "kolmo-speed", "size": 3668653, "c": 0.012, "d": 0.0109, "ok": true, "route": "v3 lz4:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "kolmo-balanced", "size": 1798990, "c": 0.1711, "d": 0.0573, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "kolmo-eco", "size": 1798928, "c": 0.6357, "d": 0.0454, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "kolmo-hc", "size": 1798928, "c": 1.6111, "d": 0.0449, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "kolmo-ratio", "size": 1732416, "c": 3.8817, "d": 0.4336, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "zstd-3", "size": 3001329, "c": 0.0331, "d": 0.0094, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "zstd-19", "size": 2892471, "c": 0.9883, "d": 0.0138, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "zstd-22", "size": 2892471, "c": 1.3341, "d": 0.0195, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "xz-9e", "size": 2644360, "c": 1.2643, "d": 0.1926, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "brotli-11", "size": 2516000, "c": 11.1317, "d": 0.0391, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "lz4-1", "size": 3668387, "c": 0.0106, "d": 0.008, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "bzip2-9", "size": 2566897, "c": 0.3453, "d": 0.1977, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "flac-8", "size": 1880706, "c": 0.0635, "d": 0.0327, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "kolmo-speed", "size": 1040970, "c": 0.0114, "d": 0.0055, "ok": true, "route": "v3 lz4:100%"}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "kolmo-balanced", "size": 645677, "c": 0.0255, "d": 0.0073, "ok": true, "route": "v3 zstd:100%"}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "kolmo-eco", "size": 521477, "c": 0.1787, "d": 0.0151, "ok": true, "route": "v3 brotli:100%"}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "kolmo-hc", "size": 487641, "c": 1.0594, "d": 0.0077, "ok": true, "route": "v3 zstd:100%"}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "kolmo-ratio", "size": 454750, "c": 1.3098, "d": 0.127, "ok": true, "route": "v11 bwt:100%"}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "zstd-3", "size": 638928, "c": 0.0218, "d": 0.0073, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "zstd-19", "size": 487636, "c": 1.0749, "d": 0.0088, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "zstd-22", "size": 487210, "c": 1.8458, "d": 0.0072, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "xz-9e", "size": 470024, "c": 1.2638, "d": 0.0325, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "brotli-11", "size": 467728, "c": 5.6679, "d": 0.014, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "lz4-1", "size": 1039760, "c": 0.011, "d": 0.0061, "ok": true}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "bzip2-9", "size": 520784, "c": 0.2008, "d": 0.0871, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "kolmo-speed", "size": 371785, "c": 0.0067, "d": 0.0042, "ok": true, "route": "v3 lz4:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "kolmo-balanced", "size": 106108, "c": 0.0218, "d": 0.0075, "ok": true, "route": "v3 log+zstd/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "kolmo-eco", "size": 84978, "c": 0.0505, "d": 0.0076, "ok": true, "route": "v3 log+brotli/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "kolmo-hc", "size": 81836, "c": 0.2279, "d": 0.0099, "ok": true, "route": "v3 log+zstd/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "kolmo-ratio", "size": 75652, "c": 0.3113, "d": 0.0144, "ok": true, "route": "v3 log+lzma2/tf5:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "zstd-3", "size": 191142, "c": 0.0114, "d": 0.007, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "zstd-19", "size": 120520, "c": 1.4424, "d": 0.005, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "zstd-22", "size": 120483, "c": 1.7511, "d": 0.0073, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "xz-9e", "size": 104032, "c": 1.4071, "d": 0.0118, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "brotli-11", "size": 112126, "c": 4.5345, "d": 0.0085, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "lz4-1", "size": 370886, "c": 0.0057, "d": 0.0039, "ok": true}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "bzip2-9", "size": 159641, "c": 0.2923, "d": 0.05, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "kolmo-speed", "size": 819454, "c": 0.0104, "d": 0.005, "ok": true, "route": "v3 lz4:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "kolmo-balanced", "size": 244711, "c": 0.0216, "d": 0.0113, "ok": true, "route": "v4 tbl+zstd/tf4:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "kolmo-eco", "size": 240183, "c": 0.062, "d": 0.0195, "ok": true, "route": "v4 tbl+brotli/tf4:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "kolmo-hc", "size": 228084, "c": 0.1927, "d": 0.0116, "ok": true, "route": "v4 tbl+zstd/tf4:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "kolmo-ratio", "size": 217509, "c": 0.5018, "d": 0.0311, "ok": true, "route": "v4 tbl+lzma2/tf4:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "zstd-3", "size": 494138, "c": 0.0244, "d": 0.0064, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "zstd-19", "size": 315927, "c": 1.165, "d": 0.0063, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "zstd-22", "size": 315716, "c": 1.5926, "d": 0.0067, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "xz-9e", "size": 278740, "c": 1.0792, "d": 0.0258, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "brotli-11", "size": 278933, "c": 3.796, "d": 0.0093, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "lz4-1", "size": 819021, "c": 0.0084, "d": 0.0045, "ok": true}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "bzip2-9", "size": 395449, "c": 0.1324, "d": 0.0608, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "kolmo-speed", "size": 326037, "c": 0.0052, "d": 0.0027, "ok": true, "route": "v3 lz4:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "kolmo-balanced", "size": 184175, "c": 0.0077, "d": 0.0029, "ok": true, "route": "v3 zstd:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "kolmo-eco", "size": 142101, "c": 0.0752, "d": 0.0051, "ok": true, "route": "v3 brotli:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "kolmo-hc", "size": 138812, "c": 0.4383, "d": 0.0044, "ok": true, "route": "v3 zstd:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "kolmo-ratio", "size": 129038, "c": 0.081, "d": 0.0482, "ok": true, "route": "v11 bwt:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "zstd-3", "size": 171428, "c": 0.011, "d": 0.0035, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "zstd-19", "size": 138758, "c": 0.4816, "d": 0.0045, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "zstd-22", "size": 138618, "c": 0.8992, "d": 0.0041, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "xz-9e", "size": 129828, "c": 0.4937, "d": 0.0104, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "brotli-11", "size": 125601, "c": 1.8968, "d": 0.0077, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "lz4-1", "size": 324661, "c": 0.0057, "d": 0.0037, "ok": true}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "bzip2-9", "size": 162930, "c": 0.1171, "d": 0.0369, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "kolmo-speed", "size": 1088431, "c": 0.005, "d": 0.0027, "ok": true, "route": "v3 lz4:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "kolmo-balanced", "size": 768541, "c": 0.0282, "d": 0.0057, "ok": true, "route": "v7 kg:img8+graph/tf0:89% zstd:11%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "kolmo-eco", "size": 691150, "c": 0.1606, "d": 0.0118, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "kolmo-hc", "size": 664416, "c": 0.4019, "d": 0.006, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "kolmo-ratio", "size": 562944, "c": 0.5937, "d": 0.1673, "ok": true, "route": "v11 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "zstd-3", "size": 862314, "c": 0.0225, "d": 0.0046, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "zstd-19", "size": 653201, "c": 0.3091, "d": 0.0055, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "zstd-22", "size": 653191, "c": 0.6421, "d": 0.0057, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "xz-9e", "size": 631460, "c": 0.4654, "d": 0.041, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "brotli-11", "size": 687041, "c": 2.4567, "d": 0.0115, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "lz4-1", "size": 1088225, "c": 0.0047, "d": 0.0031, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "bzip2-9", "size": 580846, "c": 0.1423, "d": 0.0708, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "jxl-e9", "size": 454757, "c": 1.9411, "d": 0.1321, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "jpegls", "size": 773539, "c": 0.0269, "d": 0.0202, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "webp-ll", "size": 502444, "c": 1.8838, "d": 0.0088, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "kolmo-speed", "size": 1125776, "c": 0.0043, "d": 0.0024, "ok": true, "route": "v3 lz4:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "kolmo-balanced", "size": 798665, "c": 0.0215, "d": 0.0047, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "kolmo-eco", "size": 730211, "c": 0.1555, "d": 0.0152, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "kolmo-hc", "size": 727237, "c": 0.3582, "d": 0.0079, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "kolmo-ratio", "size": 625062, "c": 0.5795, "d": 0.1637, "ok": true, "route": "v11 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "zstd-3", "size": 963346, "c": 0.021, "d": 0.0057, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "zstd-19", "size": 806372, "c": 0.3093, "d": 0.006, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "zstd-22", "size": 806366, "c": 0.7216, "d": 0.0132, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "xz-9e", "size": 767468, "c": 0.3975, "d": 0.0993, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "brotli-11", "size": 807495, "c": 3.8579, "d": 0.0137, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "lz4-1", "size": 1125360, "c": 0.0042, "d": 0.003, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "bzip2-9", "size": 753637, "c": 0.0937, "d": 0.0714, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "jxl-e9", "size": 485059, "c": 2.3026, "d": 0.1519, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "jpegls", "size": 762585, "c": 0.0348, "d": 0.0316, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "webp-ll", "size": 568636, "c": 0.6349, "d": 0.0103, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "kolmo-speed", "size": 1133921, "c": 0.0049, "d": 0.0028, "ok": true, "route": "v3 lz4:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "kolmo-balanced", "size": 786963, "c": 0.0241, "d": 0.0057, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "kolmo-eco", "size": 717628, "c": 0.2075, "d": 0.0185, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "kolmo-hc", "size": 709069, "c": 0.4678, "d": 0.0061, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "kolmo-ratio", "size": 610278, "c": 0.7956, "d": 0.1434, "ok": true, "route": "v11 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "zstd-3", "size": 1011835, "c": 0.0168, "d": 0.0048, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "zstd-19", "size": 820990, "c": 0.43, "d": 0.0089, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "zstd-22", "size": 820990, "c": 0.655, "d": 0.0061, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "xz-9e", "size": 774880, "c": 0.3992, "d": 0.0601, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "brotli-11", "size": 813690, "c": 4.0132, "d": 0.0148, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "lz4-1", "size": 1133600, "c": 0.0056, "d": 0.0037, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "bzip2-9", "size": 758075, "c": 0.0946, "d": 0.1616, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "jxl-e9", "size": 501647, "c": 2.3263, "d": 0.1396, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "jpegls", "size": 777168, "c": 0.0423, "d": 0.0373, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "webp-ll", "size": 551410, "c": 0.7903, "d": 0.0128, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "kolmo-speed", "size": 890361, "c": 0.0059, "d": 0.0028, "ok": true, "route": "v3 lz4:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "kolmo-balanced", "size": 576589, "c": 0.097, "d": 0.0089, "ok": true, "route": "v7 kg:img8+graph/tf0:89% zstd:11%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "kolmo-eco", "size": 547050, "c": 0.1746, "d": 0.0102, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "kolmo-hc", "size": 525305, "c": 0.4983, "d": 0.0081, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "kolmo-ratio", "size": 458370, "c": 0.8627, "d": 0.1223, "ok": true, "route": "v11 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "zstd-3", "size": 646893, "c": 0.0263, "d": 0.0061, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "zstd-19", "size": 508011, "c": 0.3809, "d": 0.0063, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "zstd-22", "size": 508011, "c": 0.7252, "d": 0.0061, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "xz-9e", "size": 474884, "c": 0.4527, "d": 0.0383, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "brotli-11", "size": 500024, "c": 2.5447, "d": 0.0141, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "lz4-1", "size": 889342, "c": 0.0057, "d": 0.004, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "bzip2-9", "size": 454585, "c": 0.1489, "d": 0.0567, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "jxl-e9", "size": 352104, "c": 2.3774, "d": 0.1447, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "jpegls", "size": 564858, "c": 0.029, "d": 0.0189, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "webp-ll", "size": 402342, "c": 1.6664, "d": 0.0107, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "kolmo-speed", "size": 618047, "c": 0.0029, "d": 0.002, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "kolmo-balanced", "size": 618047, "c": 0.0071, "d": 0.0019, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "kolmo-eco", "size": 618047, "c": 0.0209, "d": 0.0027, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "kolmo-hc", "size": 618047, "c": 0.09, "d": 0.0037, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "kolmo-ratio", "size": 616652, "c": 0.1502, "d": 0.0147, "ok": true, "route": "v3 lzma2:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "zstd-3", "size": 618020, "c": 0.0074, "d": 0.0027, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "zstd-19", "size": 618023, "c": 0.2115, "d": 0.0045, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "zstd-22", "size": 618023, "c": 0.4713, "d": 0.0029, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "xz-9e", "size": 616648, "c": 0.194, "d": 0.0273, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "brotli-11", "size": 618000, "c": 0.3189, "d": 0.0069, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "lz4-1", "size": 618014, "c": 0.003, "d": 0.0023, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "bzip2-9", "size": 617597, "c": 0.0702, "d": 0.0409, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "kolmo-speed", "size": 132318, "c": 0.0029, "d": 0.0017, "ok": true, "route": "v3 lz4:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "kolmo-balanced", "size": 46724, "c": 0.0265, "d": 0.0029, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "kolmo-eco", "size": 46474, "c": 0.0547, "d": 0.0036, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "kolmo-hc", "size": 46055, "c": 0.161, "d": 0.0035, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "kolmo-ratio", "size": 46666, "c": 0.0842, "d": 0.0177, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "zstd-3", "size": 97715, "c": 0.007, "d": 0.003, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "zstd-19", "size": 87300, "c": 0.1261, "d": 0.0026, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "zstd-22", "size": 87185, "c": 0.4567, "d": 0.0027, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "xz-9e", "size": 70752, "c": 0.1654, "d": 0.0079, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "brotli-11", "size": 73934, "c": 0.4296, "d": 0.0028, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "lz4-1", "size": 132285, "c": 0.0022, "d": 0.0017, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "bzip2-9", "size": 70762, "c": 0.0915, "d": 0.0113, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "kolmo-speed", "size": 113863, "c": 0.0034, "d": 0.0026, "ok": true, "route": "v3 shuf+lz4/tf1:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "kolmo-balanced", "size": 76521, "c": 0.0344, "d": 0.003, "ok": true, "route": "v11 kg:int8+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "kolmo-eco", "size": 75150, "c": 0.0724, "d": 0.005, "ok": true, "route": "v11 kg:int8+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "kolmo-hc", "size": 72566, "c": 0.2236, "d": 0.0066, "ok": true, "route": "v11 kg:int8+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "kolmo-ratio", "size": 70949, "c": 0.3817, "d": 0.0055, "ok": true, "route": "v11 kg:int8+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "zstd-3", "size": 141643, "c": 0.0069, "d": 0.0028, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "zstd-19", "size": 132071, "c": 0.2531, "d": 0.008, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "zstd-22", "size": 131079, "c": 0.6097, "d": 0.0037, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "xz-9e", "size": 116944, "c": 0.2847, "d": 0.0185, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "brotli-11", "size": 118339, "c": 0.791, "d": 0.0047, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "lz4-1", "size": 225698, "c": 0.0023, "d": 0.0018, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "bzip2-9", "size": 157981, "c": 0.0284, "d": 0.0224, "ok": true}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "kolmo-speed", "size": 132239, "c": 0.0036, "d": 0.0024, "ok": true, "route": "v3 lz4:100%"}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "kolmo-balanced", "size": 46634, "c": 0.041, "d": 0.0037, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "kolmo-eco", "size": 46390, "c": 0.0757, "d": 0.0063, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "kolmo-hc", "size": 45966, "c": 0.2135, "d": 0.0052, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "kolmo-ratio", "size": 46566, "c": 0.1157, "d": 0.0262, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "zstd-3", "size": 97636, "c": 0.0109, "d": 0.0052, "ok": true}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "zstd-19", "size": 87187, "c": 0.1621, "d": 0.0039, "ok": true}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "zstd-22", "size": 87155, "c": 0.6035, "d": 0.0036, "ok": true}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "xz-9e", "size": 70924, "c": 0.1797, "d": 0.0078, "ok": true}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "brotli-11", "size": 73868, "c": 0.5048, "d": 0.0039, "ok": true}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "lz4-1", "size": 132206, "c": 0.0023, "d": 0.0018, "ok": true}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "bzip2-9", "size": 70690, "c": 0.1189, "d": 0.0203, "ok": true}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "kolmo-speed", "size": 112479, "c": 0.0047, "d": 0.0028, "ok": true, "route": "v3 shuf+lz4/tf1:100%"}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "kolmo-balanced", "size": 76431, "c": 0.0459, "d": 0.0039, "ok": true, "route": "v11 kg:int8+graph/tf0:100%"}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "kolmo-eco", "size": 75066, "c": 0.0757, "d": 0.0048, "ok": true, "route": "v11 kg:int8+graph/tf0:100%"}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "kolmo-hc", "size": 72477, "c": 0.2373, "d": 0.0098, "ok": true, "route": "v11 kg:int8+graph/tf0:100%"}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "kolmo-ratio", "size": 70856, "c": 0.3841, "d": 0.0059, "ok": true, "route": "v11 kg:int8+graph/tf0:100%"}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "zstd-3", "size": 141555, "c": 0.0084, "d": 0.0036, "ok": true}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "zstd-19", "size": 132279, "c": 0.2498, "d": 0.0041, "ok": true}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "zstd-22", "size": 132386, "c": 0.5992, "d": 0.0037, "ok": true}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "xz-9e", "size": 116404, "c": 0.2811, "d": 0.0139, "ok": true}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "brotli-11", "size": 119105, "c": 0.6859, "d": 0.0087, "ok": true}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "lz4-1", "size": 225619, "c": 0.0024, "d": 0.002, "ok": true}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "bzip2-9", "size": 157957, "c": 0.0278, "d": 0.0206, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "kolmo-speed", "size": 31589, "c": 0.003, "d": 0.0021, "ok": true, "route": "v3 lz4:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "kolmo-balanced", "size": 14433, "c": 0.0154, "d": 0.0028, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "kolmo-eco", "size": 14433, "c": 0.0287, "d": 0.0032, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "kolmo-hc", "size": 14433, "c": 0.0368, "d": 0.0031, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "kolmo-ratio", "size": 13945, "c": 0.072, "d": 0.0103, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "zstd-3", "size": 26496, "c": 0.0059, "d": 0.0026, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "zstd-19", "size": 25510, "c": 0.0632, "d": 0.0045, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "zstd-22", "size": 25510, "c": 0.4165, "d": 0.0035, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "xz-9e", "size": 24568, "c": 0.0624, "d": 0.0079, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "brotli-11", "size": 22027, "c": 0.1553, "d": 0.0056, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "lz4-1", "size": 31556, "c": 0.0017, "d": 0.0017, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "bzip2-9", "size": 25770, "c": 0.0104, "d": 0.0037, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "flac-8", "size": 24629, "c": 0.0034, "d": 0.0027, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "kolmo-speed", "size": 441096, "c": 0.0025, "d": 0.0019, "ok": true, "route": "v3 store:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "kolmo-balanced", "size": 218968, "c": 0.0264, "d": 0.0074, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "kolmo-eco", "size": 218968, "c": 0.0693, "d": 0.0081, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "kolmo-hc", "size": 218968, "c": 0.1025, "d": 0.0089, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "kolmo-ratio", "size": 209134, "c": 0.4328, "d": 0.0696, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "zstd-3", "size": 385718, "c": 0.0062, "d": 0.0034, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "zstd-19", "size": 385110, "c": 0.196, "d": 0.004, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "zstd-22", "size": 385110, "c": 0.5148, "d": 0.0038, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "xz-9e", "size": 364000, "c": 0.159, "d": 0.0273, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "brotli-11", "size": 329010, "c": 1.0132, "d": 0.0092, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "lz4-1", "size": 441063, "c": 0.0022, "d": 0.0016, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "bzip2-9", "size": 344546, "c": 0.0408, "d": 0.0274, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "flac-8", "size": 238684, "c": 0.0088, "d": 0.0043, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "kolmo-speed", "size": 441096, "c": 0.0023, "d": 0.0018, "ok": true, "route": "v3 store:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "kolmo-balanced", "size": 338155, "c": 0.0212, "d": 0.0071, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "kolmo-eco", "size": 338155, "c": 0.0459, "d": 0.0093, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "kolmo-hc", "size": 338155, "c": 0.103, "d": 0.0096, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "kolmo-ratio", "size": 324615, "c": 0.1978, "d": 0.0636, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "zstd-3", "size": 436577, "c": 0.0064, "d": 0.0081, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "zstd-19", "size": 436709, "c": 0.1399, "d": 0.0041, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "zstd-22", "size": 436709, "c": 0.4797, "d": 0.0029, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "xz-9e", "size": 431456, "c": 0.2222, "d": 0.0383, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "brotli-11", "size": 414057, "c": 1.1733, "d": 0.007, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "lz4-1", "size": 441063, "c": 0.0028, "d": 0.0021, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "bzip2-9", "size": 428982, "c": 0.0594, "d": 0.0362, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "flac-8", "size": 356382, "c": 0.0081, "d": 0.0046, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "kolmo-speed", "size": 321314, "c": 0.0039, "d": 0.0025, "ok": true, "route": "v3 shuf+lz4/tf1:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "kolmo-balanced", "size": 152412, "c": 0.0332, "d": 0.0064, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "kolmo-eco", "size": 152412, "c": 0.0934, "d": 0.0079, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "kolmo-hc", "size": 152412, "c": 0.1307, "d": 0.0107, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "kolmo-ratio", "size": 143503, "c": 0.4153, "d": 0.0447, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "zstd-3", "size": 297636, "c": 0.01, "d": 0.0027, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "zstd-19", "size": 289678, "c": 0.1523, "d": 0.0033, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "zstd-22", "size": 289678, "c": 0.4863, "d": 0.0031, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "xz-9e", "size": 229948, "c": 0.1677, "d": 0.0181, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "brotli-11", "size": 230902, "c": 1.15, "d": 0.0105, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "lz4-1", "size": 439734, "c": 0.0022, "d": 0.0019, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "bzip2-9", "size": 200562, "c": 0.0322, "d": 0.0199, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "flac-8", "size": 164628, "c": 0.0085, "d": 0.0045, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "kolmo-speed", "size": 258317, "c": 0.002, "d": 0.0016, "ok": true, "route": "v3 lz4:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "kolmo-balanced", "size": 96737, "c": 0.016, "d": 0.0043, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "kolmo-eco", "size": 96737, "c": 0.0301, "d": 0.0045, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "kolmo-hc", "size": 96737, "c": 0.0725, "d": 0.0064, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "kolmo-ratio", "size": 92568, "c": 0.0987, "d": 0.0281, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "zstd-3", "size": 216825, "c": 0.0078, "d": 0.0035, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "zstd-19", "size": 201926, "c": 0.1191, "d": 0.003, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "zstd-22", "size": 201926, "c": 0.4111, "d": 0.0028, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "xz-9e", "size": 168912, "c": 0.123, "d": 0.0132, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "brotli-11", "size": 166558, "c": 1.2828, "d": 0.005, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "lz4-1", "size": 258284, "c": 0.002, "d": 0.0019, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "bzip2-9", "size": 162794, "c": 0.0275, "d": 0.0129, "ok": true}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "flac-8", "size": 107401, "c": 0.0065, "d": 0.0036, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "kolmo-speed", "size": 345278, "c": 0.0029, "d": 0.0017, "ok": true, "route": "v3 lz4:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "kolmo-balanced", "size": 195200, "c": 0.0085, "d": 0.0022, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "kolmo-eco", "size": 192898, "c": 0.0625, "d": 0.0042, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "kolmo-hc", "size": 195200, "c": 0.1196, "d": 0.0051, "ok": true, "route": "v7 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "kolmo-ratio", "size": 181264, "c": 0.1976, "d": 0.047, "ok": true, "route": "v11 kg:img8+graph/tf0:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "zstd-3", "size": 267106, "c": 0.0132, "d": 0.0025, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "zstd-19", "size": 229483, "c": 0.1694, "d": 0.0045, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "zstd-22", "size": 229483, "c": 0.5354, "d": 0.0035, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "xz-9e", "size": 207848, "c": 0.1782, "d": 0.0161, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "brotli-11", "size": 215133, "c": 1.1401, "d": 0.0101, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "lz4-1", "size": 345245, "c": 0.0025, "d": 0.0019, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "bzip2-9", "size": 200243, "c": 0.028, "d": 0.0198, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "jxl-e9", "size": 158454, "c": 0.5646, "d": 0.0383, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "jpegls", "size": 170272, "c": 0.009, "d": 0.0081, "ok": true}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "tool": "webp-ll", "error": "ossless=True, level=100)}[c]\n                      ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"imagecodecs/_webp.pyx\", line 144, in imagecodecs._webp.webp_encode\n  File \"imagecodecs/_shared.pyx\", line 937, in imagecodecs._shared._image_layout\nValueError: photometric 1 not supported by codec\n"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "kolmo-speed", "size": 262957, "c": 0.0074, "d": 0.008, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "kolmo-balanced", "size": 262957, "c": 0.0156, "d": 0.0073, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "kolmo-eco", "size": 260797, "c": 0.0349, "d": 0.0069, "ok": true, "route": "v3 brotli:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "kolmo-hc", "size": 257421, "c": 0.0567, "d": 0.0022, "ok": true, "route": "v3 zstd:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "kolmo-ratio", "size": 259153, "c": 0.048, "d": 0.0099, "ok": true, "route": "v3 lzma2:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "zstd-3", "size": 262924, "c": 0.0064, "d": 0.002, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "zstd-19", "size": 257371, "c": 0.0912, "d": 0.0024, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "zstd-22", "size": 257371, "c": 0.4148, "d": 0.0024, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "xz-9e", "size": 259152, "c": 0.1212, "d": 0.0283, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "brotli-11", "size": 257653, "c": 0.9992, "d": 0.006, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "lz4-1", "size": 262924, "c": 0.0025, "d": 0.002, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "bzip2-9", "size": 261869, "c": 0.0393, "d": 0.0222, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "kolmo-speed", "size": 64392, "c": 0.0027, "d": 0.002, "ok": true, "route": "v3 lz4:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "kolmo-balanced", "size": 46554, "c": 0.0467, "d": 0.0032, "ok": true, "route": "v11 kg:int4+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "kolmo-eco", "size": 45888, "c": 0.0704, "d": 0.0045, "ok": true, "route": "v11 kg:int4+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "kolmo-hc", "size": 46140, "c": 0.3022, "d": 0.0035, "ok": true, "route": "v11 kg:int4+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "kolmo-ratio", "size": 45323, "c": 0.5381, "d": 0.0057, "ok": true, "route": "v11 kg:int4+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "zstd-3", "size": 57249, "c": 0.0063, "d": 0.0019, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "zstd-19", "size": 57009, "c": 0.0823, "d": 0.0051, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "zstd-22", "size": 56835, "c": 0.7968, "d": 0.0029, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "xz-9e", "size": 55980, "c": 0.1409, "d": 0.0109, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "brotli-11", "size": 53994, "c": 0.4724, "d": 0.0054, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "lz4-1", "size": 64359, "c": 0.002, "d": 0.0018, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "bzip2-9", "size": 59045, "c": 0.0115, "d": 0.0064, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "kolmo-speed", "size": 3107, "c": 0.0022, "d": 0.0017, "ok": true, "route": "v3 lz4:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "kolmo-balanced", "size": 793, "c": 0.0351, "d": 0.0021, "ok": true, "route": "v11 kg:int4+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "kolmo-eco", "size": 683, "c": 0.0433, "d": 0.0025, "ok": true, "route": "v11 kg:int4+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "kolmo-hc", "size": 667, "c": 0.0643, "d": 0.0057, "ok": true, "route": "v11 kg:int4+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "kolmo-ratio", "size": 679, "c": 0.2664, "d": 0.0022, "ok": true, "route": "v11 kg:int4+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "zstd-3", "size": 1374, "c": 0.006, "d": 0.0022, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "zstd-19", "size": 1184, "c": 0.0709, "d": 0.0045, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "zstd-22", "size": 1059, "c": 0.3964, "d": 0.0025, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "xz-9e", "size": 872, "c": 0.0177, "d": 0.002, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "brotli-11", "size": 941, "c": 0.0184, "d": 0.0015, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "lz4-1", "size": 3074, "c": 0.0017, "d": 0.0017, "ok": true}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "bzip2-9", "size": 1355, "c": 0.0573, "d": 0.004, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "kolmo-speed", "size": 79274, "c": 0.0017, "d": 0.0013, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "kolmo-balanced", "size": 79274, "c": 0.0036, "d": 0.0013, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "kolmo-eco", "size": 79274, "c": 0.0114, "d": 0.0012, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "kolmo-hc", "size": 79274, "c": 0.0099, "d": 0.0013, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "kolmo-ratio", "size": 79274, "c": 0.0294, "d": 0.0015, "ok": true, "route": "v3 store:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "zstd-3", "size": 79235, "c": 0.0024, "d": 0.0015, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "zstd-19", "size": 79235, "c": 0.0707, "d": 0.0018, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "zstd-22", "size": 79235, "c": 0.4191, "d": 0.0027, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "xz-9e", "size": 79288, "c": 0.0923, "d": 0.0019, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "brotli-11", "size": 79227, "c": 0.0418, "d": 0.0015, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "lz4-1", "size": 79241, "c": 0.0014, "d": 0.0011, "ok": true}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "bzip2-9", "size": 79464, "c": 0.0127, "d": 0.0064, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "kolmo-x", "size": 6035723, "c": 108.2048, "d": 103.8378, "ok": true, "route": "v11 vid:100%"}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "kolmo-x", "size": 18759914, "c": 127.833, "d": 127.2999, "ok": true, "route": "v11 vid:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_bf16.safetensors", "n": 45439896, "tool": "kolmo-x", "size": 29899782, "c": 208.6416, "d": 171.103, "ok": true, "route": "v3 cm:100%"}
+{"type": "weights", "file": "/home/user/corpus/weights/minilm_f32_24M.safetensors", "n": 25165824, "tool": "kolmo-x", "size": 20009018, "c": 11.7644, "d": 0.1124, "ok": true, "route": "v11 kg:float4+graph/tf0:100%"}
+{"type": "fastq", "file": "/home/user/corpus/fastq/SRR062634_24M.fastq", "n": 25165762, "tool": "kolmo-x", "size": 4908324, "c": 5.9567, "d": 6.7171, "ok": true, "route": "v10 fqfam:100%"}
+{"type": "fasta", "file": "/home/user/corpus/fasta/chr22_16M.fa", "n": 16777268, "tool": "kolmo-x", "size": 3629491, "c": 82.3458, "d": 81.2083, "ok": true, "route": "v3 cm:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/mozilla16", "n": 16777216, "tool": "kolmo-x", "size": 5467578, "c": 60.1292, "d": 61.1664, "ok": true, "route": "v3 cm:100%"}
+{"type": "source", "file": "/home/user/corpus/source/samba16", "n": 16777216, "tool": "kolmo-x", "size": 2510310, "c": 63.0895, "d": 56.2133, "ok": true, "route": "v3 cm:100%"}
+{"type": "other", "file": "/home/user/corpus/other/nci16", "n": 16777200, "tool": "kolmo-x", "size": 546499, "c": 66.8425, "d": 57.7898, "ok": true, "route": "v3 cm:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/webster16", "n": 16777192, "tool": "kolmo-x", "size": 2269432, "c": 92.8087, "d": 81.7071, "ok": true, "route": "v3 cm:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/hdfs16.log", "n": 16777178, "tool": "kolmo-x", "size": 423756, "c": 74.8352, "d": 67.001, "ok": true, "route": "v3 cm:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/ssh16.log", "n": 16777073, "tool": "kolmo-x", "size": 165670, "c": 72.9231, "d": 72.0138, "ok": true, "route": "v3 cm:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/enwik8_16", "n": 16776986, "tool": "kolmo-x", "size": 3323948, "c": 102.594, "d": 94.4156, "ok": true, "route": "v3 cm:100%"}
+{"type": "jsonl", "file": "/home/user/corpus/jsonl/gharchive16.jsonl", "n": 16776519, "tool": "kolmo-x", "size": 875177, "c": 90.5113, "d": 94.7105, "ok": true, "route": "v3 cm:100%"}
+{"type": "archive", "file": "/home/user/corpus/archive/mixed.tar", "n": 16312320, "tool": "kolmo-x", "size": 3640586, "c": 128.3282, "d": 75.235, "ok": true, "route": "v11 cm:35% gr6:19% x86+cm/tf8:19% img16+cm/tf6:19% cmimg:7% lzma2:0%"}
+{"type": "csv_num", "file": "/home/user/corpus/csv_num/hdfs_events16.csv", "n": 16000000, "tool": "kolmo-x", "size": 1451800, "c": 79.2167, "d": 65.7805, "ok": true, "route": "v3 cm:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/elf_so16", "n": 16000000, "tool": "kolmo-x", "size": 1943620, "c": 4.0192, "d": 0.1598, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-co2.csv", "n": 15242657, "tool": "kolmo-x", "size": 1127837, "c": 58.4539, "d": 5.5373, "ok": true, "route": "v11 gr6:100%"}
+{"type": "tsv", "file": "/home/user/corpus/tsv/owid-co2.tsv", "n": 15242657, "tool": "kolmo-x", "size": 1127837, "c": 53.5247, "d": 5.7613, "ok": true, "route": "v11 gr6:100%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_pretty.json", "n": 11924023, "tool": "kolmo-x", "size": 509951, "c": 74.7025, "d": 64.2622, "ok": true, "route": "v3 cm:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/dickens", "n": 10192446, "tool": "kolmo-x", "size": 2062661, "c": 81.5604, "d": 74.7523, "ok": true, "route": "v3 cm:100%"}
+{"type": "other", "file": "/home/user/corpus/other/osdb", "n": 10085684, "tool": "kolmo-x", "size": 2228102, "c": 54.282, "d": 43.152, "ok": true, "route": "v3 cm:100%"}
+{"type": "img16", "file": "/home/user/corpus/img16/mr", "n": 9970564, "tool": "kolmo-x", "size": 1939193, "c": 27.9839, "d": 32.8841, "ok": true, "route": "v3 img16+cm/tf6:100%"}
+{"type": "json", "file": "/home/user/corpus/json/gharchive_min.json", "n": 9345070, "tool": "kolmo-x", "size": 502354, "c": 68.6865, "d": 60.0684, "ok": true, "route": "v3 word+cm/tf0:100%"}
+{"type": "csv_wide", "file": "/home/user/corpus/csv_wide/owid-energy.csv", "n": 9229369, "tool": "kolmo-x", "size": 831895, "c": 60.7916, "d": 26.957, "ok": true, "route": "v5 tbl+cm/tf4:100%"}
+{"type": "img16", "file": "/home/user/corpus/img16/x-ray", "n": 8474240, "tool": "kolmo-x", "size": 3560794, "c": 37.0821, "d": 33.635, "ok": true, "route": "v3 img16+cm/tf6:100%"}
+{"type": "float", "file": "/home/user/corpus/float/sao", "n": 7251944, "tool": "kolmo-x", "size": 2119867, "c": 21.5936, "d": 18.8434, "ok": true, "route": "v3 rec+cm/tf7:100%"}
+{"type": "prose", "file": "/home/user/corpus/prose/reymont", "n": 6627202, "tool": "kolmo-x", "size": 861592, "c": 49.1626, "d": 60.5274, "ok": true, "route": "v3 cm:100%"}
+{"type": "exe", "file": "/home/user/corpus/exe/ooffice", "n": 6152192, "tool": "kolmo-x", "size": 1674702, "c": 34.664, "d": 35.7489, "ok": true, "route": "v3 x86+cm/tf8:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/covid-countries.csv", "n": 5512931, "tool": "kolmo-x", "size": 283038, "c": 40.3288, "d": 2.1294, "ok": true, "route": "v11 gr6:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/xml", "n": 5345280, "tool": "kolmo-x", "size": 292792, "c": 60.0532, "d": 46.2145, "ok": true, "route": "v3 cm:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/apache.log", "n": 5135876, "tool": "kolmo-x", "size": 72636, "c": 48.5421, "d": 39.0078, "ok": true, "route": "v3 cm:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/esc_joined.wav", "n": 4410044, "tool": "kolmo-x", "size": 1732416, "c": 27.8018, "d": 0.5004, "ok": true, "route": "v11 aud:100%"}
+{"type": "source", "file": "/home/user/corpus/source/kolmo_src.tar", "n": 2867200, "tool": "kolmo-x", "size": 340932, "c": 15.5557, "d": 18.0738, "ok": true, "route": "v3 cm:100%"}
+{"type": "logs", "file": "/home/user/corpus/logs/linux.log", "n": 2349686, "tool": "kolmo-x", "size": 53799, "c": 37.5965, "d": 16.5154, "ok": true, "route": "v3 cm:100%"}
+{"type": "csv_long", "file": "/home/user/corpus/csv_long/owid-co2-long.csv", "n": 2302225, "tool": "kolmo-x", "size": 150487, "c": 23.1536, "d": 9.883, "ok": true, "route": "v11 tp+cmpar/tf2:100%"}
+{"type": "xml", "file": "/home/user/corpus/xml/wiki3.html", "n": 1192064, "tool": "kolmo-x", "size": 84894, "c": 12.498, "d": 13.399, "ok": true, "route": "v3 cm:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim01.ppm", "n": 1179663, "tool": "kolmo-x", "size": 392295, "c": 10.3331, "d": 8.4771, "ok": true, "route": "v3 cmimg:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim05.ppm", "n": 1179663, "tool": "kolmo-x", "size": 457638, "c": 6.6471, "d": 6.1664, "ok": true, "route": "v3 cmimg:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim08.ppm", "n": 1179663, "tool": "kolmo-x", "size": 465427, "c": 6.6717, "d": 5.9136, "ok": true, "route": "v3 cmimg:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim12.ppm", "n": 1179663, "tool": "kolmo-x", "size": 294598, "c": 6.6078, "d": 6.4712, "ok": true, "route": "v3 cmimg:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim02.png", "n": 617995, "tool": "kolmo-x", "size": 606618, "c": 3.5414, "d": 3.9358, "ok": true, "route": "v3 cm:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/co2_f64.npy", "n": 450280, "tool": "kolmo-x", "size": 45067, "c": 0.305, "d": 0.0083, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/population_i64.npy", "n": 450280, "tool": "kolmo-x", "size": 70949, "c": 0.5283, "d": 0.0073, "ok": true, "route": "v11 kg:int8+graph/tf0:100%"}
+{"type": "raw_float", "file": "/home/user/corpus/raw_float/co2.f64", "n": 450152, "tool": "kolmo-x", "size": 44974, "c": 0.2935, "d": 0.0054, "ok": true, "route": "v11 kg:dec64+graph/tf0:100%"}
+{"type": "raw_int", "file": "/home/user/corpus/raw_int/population.i64", "n": 450152, "tool": "kolmo-x", "size": 70856, "c": 0.4518, "d": 0.0067, "ok": true, "route": "v11 kg:int8+graph/tf0:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100032-A-0.wav", "n": 441044, "tool": "kolmo-x", "size": 13945, "c": 0.0696, "d": 0.0105, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100038-A-14.wav", "n": 441044, "tool": "kolmo-x", "size": 209134, "c": 2.7934, "d": 0.0523, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-100210-A-36.wav", "n": 441044, "tool": "kolmo-x", "size": 324615, "c": 0.2838, "d": 0.0535, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101296-A-19.wav", "n": 441044, "tool": "kolmo-x", "size": 143503, "c": 4.756, "d": 0.0525, "ok": true, "route": "v11 aud:100%"}
+{"type": "audio", "file": "/home/user/corpus/audio/1-101336-A-30.wav", "n": 441044, "tool": "kolmo-x", "size": 92568, "c": 0.1684, "d": 0.0394, "ok": true, "route": "v11 aud:100%"}
+{"type": "img8", "file": "/home/user/corpus/img8/kodim03_grey.pgm", "n": 393231, "tool": "kolmo-x", "size": 152441, "c": 2.0623, "d": 1.9535, "ok": true, "route": "v3 cmimg:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/apache.tar.gz", "n": 262905, "tool": "kolmo-x", "size": 257790, "c": 1.5669, "d": 2.0186, "ok": true, "route": "v3 cm:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/gdp_per_cap_f32.npy", "n": 225204, "tool": "kolmo-x", "size": 45323, "c": 1.459, "d": 0.0054, "ok": true, "route": "v11 kg:int4+graph/tf0:100%"}
+{"type": "npy", "file": "/home/user/corpus/npy/year_i32.npy", "n": 225204, "tool": "kolmo-x", "size": 636, "c": 2.2399, "d": 1.1713, "ok": true, "route": "v3 cm:100%"}
+{"type": "compressed", "file": "/home/user/corpus/compressed/kodim03.jpg", "n": 79222, "tool": "kolmo-x", "size": 78808, "c": 0.6669, "d": 0.424, "ok": true, "route": "v3 cm:100%"}
+{"type": "video", "file": "/home/user/corpus/video/akiyo_cif.y4m", "n": 45621044, "tool": "ffv1", "size": 15753997, "c": 1.5102, "d": 1.6091, "ok": true}
+{"type": "video", "file": "/home/user/corpus/video/foreman_cif.y4m", "n": 45621044, "tool": "ffv1", "size": 20622057, "c": 1.6179, "d": 1.7905, "ok": true}

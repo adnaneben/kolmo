@@ -58,7 +58,9 @@ LIB="$WORK/unz/libkolmo.dylib"
 otool -l "$LIB" | grep -A3 LC_BUILD_VERSION | grep -q "minos $MINOS" || { echo "minimum macOS is not $MINOS" >&2; exit 1; }
 DEPS="$("$WORK/venv/bin/delocate-listdeps" --all "$WHEEL")"
 echo "$DEPS" | grep -qv '^/usr/lib/' && { echo "non-system dependency:" >&2; echo "$DEPS" >&2; exit 1; }
-nm -gU "$LIB" | grep -q ' _lzma_raw_buffer_encode$' || { echo "liblzma is not linked in" >&2; exit 1; }
+# From 1.2.0-rc3 the sdist carries its own liblzma subset (vendor/xz, symbols kolmo_lzma_*) and step 2 is not needed;
+# earlier sdists link the static archive of step 2.
+nm -gU "$LIB" | grep -Eq ' _(kolmo_)?lzma_raw_buffer_encode$' || { echo "liblzma is not linked in" >&2; exit 1; }
 "$WORK/venv/bin/twine" check "$WHEEL" 2>/dev/null | tail -1
 
 # 6. Install in a clean venv and run the tests from an empty directory, so the import is the wheel.

@@ -1,0 +1,55 @@
+mode	phase	entry	calls	bytes	ms	out_bytes
+speed	c	_total_	12	28714555	123.76	13814249
+speed	c	LZ4_compress_fast	28	28714555	68.47	
+speed	c	kolmo_xxh3	28	13813305	0.61	
+speed	c	ZSTD_compressCCtx	9	294896	0.28	
+speed	c	LZ4_compress_default	1	32768	0.06	
+speed	c	HUF_compress4X_repeat	9	46119	0.05	
+speed	c	zstd_level_1	9	0	0.0	
+speed	d	_total_	12	28714555	75.36	13814249
+speed	d	LZ4_decompress_safe	25	28583481	14.52	
+speed	d	kolmo_xxh3	28	13813305	0.82	
+balanced	c	_total_	12	28714555	443.42	3199789
+balanced	c	ZSTD_compressCCtx	165	25704146	54.61	
+balanced	c	HUF_compress4X_repeat	336	4280982	5.87	
+balanced	c	kolmo_xxh3	4226	28834928	1.96	
+balanced	c	zstd_level_3	34	0	0.0	
+balanced	c	zstd_level_1	131	0	0.0	
+balanced	d	_total_	12	28714555	115.55	3199789
+balanced	d	ZSTD_decompressDCtx	26	21942511	12.72	
+balanced	d	HUF_decompress4X_hufOnly_wksp	165	1786592	2.52	
+balanced	d	kolmo_xxh3	28	28714555	1.58	
+eco	c	_total_	12	28714555	1489.12	2981479
+eco	c	BrotliEncoderCompress	15	22754959	669.47	
+eco	c	ZSTD_compressCCtx	299	16517162	44.55	
+eco	c	HUF_compress4X_repeat	257	8487362	11.45	
+eco	c	kolmo_xxh3	7484	28929700	3.25	
+eco	c	zstd_level_3	201	0	0.0	
+eco	c	zstd_level_1	98	0	0.0	
+eco	d	_total_	12	28714555	200.9	2981479
+eco	d	BrotliDecoderDecompress	10	22372815	69.92	
+eco	d	kolmo_xxh3	12	28714555	2.7	
+hc	c	_total_	12	28714555	3743.8	2923408
+hc	c	ZSTD_compressCCtx	314	39272121	2926.64	
+hc	c	HUF_compress4X_repeat	647	10871147	17.93	
+hc	c	kolmo_xxh3	7484	28929700	3.62	
+hc	c	zstd_level_3	201	0	0.0	
+hc	c	zstd_level_22	1	0	0.0	
+hc	c	zstd_level_1	98	0	0.0	
+hc	c	zstd_level_19	14	0	0.0	
+hc	d	_total_	12	28714555	137.93	2923408
+hc	d	ZSTD_decompressDCtx	10	22372815	19.47	
+hc	d	HUF_decompress4X_hufOnly_wksp	277	1705632	3.28	
+hc	d	kolmo_xxh3	12	28714555	2.58	
+ratio	c	_total_	12	28714555	11895.13	2756925
+ratio	c	kolmo_lzma_raw_buffer_encode	12	23065026	10894.27	
+ratio	c	bsc_compress	14	5310933	184.69	
+ratio	c	ZSTD_compressCCtx	299	16517162	34.19	
+ratio	c	HUF_compress4X_repeat	258	8618434	9.42	
+ratio	c	kolmo_xxh3	7484	28929700	4.13	
+ratio	c	zstd_level_3	201	0	0.0	
+ratio	c	zstd_level_1	98	0	0.0	
+ratio	d	_total_	12	28714555	300.56	2756925
+ratio	d	kolmo_lzma_raw_buffer_decode	7	21168151	137.04	
+ratio	d	bsc_decompress	3	1423227	19.69	
+ratio	d	kolmo_xxh3	12	28714555	2.94	

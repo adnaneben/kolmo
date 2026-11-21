@@ -1,0 +1,5 @@
+{"file":"Apache.log","n":5135876,"variant":"cm","size":72719,"enc_s":18.849,"dec_s":23.438}
+{"file":"Apache.log","n":5135876,"variant":"word+cm","tn":3826806,"size":78087,"enc_s":10.957,"dec_s":11.026}
+{"file":"Apache.log","n":5135876,"variant":"cmx-null","size":72875,"enc_s":20.033}
+{"file":"Apache.log","n":5135876,"variant":"cmx-dict","size":73029,"body":72875,"dict_cm":154,"nphr":3,"enc_s":19.733}
+{"file":"Apache.log","n":5135876,"variant":"phrase+cm","tn":4951994,"dict":118,"nphr":3,"singles":32,"prefixes":32,"coded":14017,"lit":4937859,"esc":0,"size":72539,"dict_cm":154,"build_s":0.728,"tenc_s":0.028,"tdec_s":0.010,"enc_s":19.357,"dec_s":26.232,"opts":"sample=8M minc=4 maxl=64 rounds=64 per=512 minuse=3 minlen=2 maxtok=0 singles=-1 order=0 words_only=0 bytes=0 maxcodes=0"}

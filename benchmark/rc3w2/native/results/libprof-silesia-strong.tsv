@@ -1,0 +1,17 @@
+mode	phase	entry	calls	bytes	ms	out_bytes	zbytes
+eco	c	_total_	12	211938580	86386.57	45862036	
+eco	c	ZSTD_compressCCtx	813	72651082	345.98		38040708
+eco	c	HUF_compress_inside_zstd	1290	32527771	40.78		21969228
+eco	c	kolmo_xxh3	306883	223711136	39.8		0
+eco	c	zstd_level_3	342	0	0.0		0
+eco	c	zstd_level_1	471	0	0.0		0
+eco	d	_total_	12	211938580	3684.26	45862036	
+eco	d	kolmo_xxh3	28	211938580	25.54		0
+hc	c	_total_	12	211938580	102789.73	45348556	
+hc	c	ZSTD_compressCCtx	813	72651082	360.64		38040708
+hc	c	HUF_compress_inside_zstd	1290	32527771	47.17		21969228
+hc	c	kolmo_xxh3	306883	223711136	40.03		0
+hc	c	zstd_level_3	342	0	0.0		0
+hc	c	zstd_level_1	471	0	0.0		0
+hc	d	_total_	12	211938580	3765.45	45348556	
+hc	d	kolmo_xxh3	28	211938580	20.58		0

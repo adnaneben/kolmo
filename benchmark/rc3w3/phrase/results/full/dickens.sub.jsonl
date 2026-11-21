@@ -1,0 +1,5 @@
+{"file":"dickens","n":10192446,"variant":"cm","size":2168507,"enc_s":65.282,"dec_s":79.415}
+{"file":"dickens","n":10192446,"variant":"word+cm","tn":6801765,"size":2232364,"enc_s":26.649,"dec_s":29.834}
+{"file":"dickens","n":10192446,"variant":"cmx-null","size":2168065,"enc_s":68.218}
+{"file":"dickens","n":10192446,"variant":"cmx-dict","size":2165567,"body":2165362,"dict_cm":205,"nphr":29,"enc_s":55.616}
+{"file":"dickens","n":10192446,"variant":"phrase+cm","tn":8348170,"dict":207,"nphr":29,"singles":32,"prefixes":32,"coded":847754,"lit":7500209,"esc":0,"size":2249688,"dict_cm":205,"build_s":9.930,"tenc_s":0.260,"tdec_s":0.057,"enc_s":26.942,"dec_s":27.190,"opts":"sample=8M minc=4 maxl=64 rounds=64 per=512 minuse=3 minlen=2 maxtok=0 singles=-1 order=0 words_only=0 bytes=0 maxcodes=0"}

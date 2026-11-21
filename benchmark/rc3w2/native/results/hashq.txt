@@ -1,0 +1,32 @@
+speed (best of 7), seed 0x637a6e31:
+        16 B:  xxh3     5922 MB/s  khash     4352 MB/s
+        64 B:  xxh3    11947 MB/s  khash    12328 MB/s
+       256 B:  xxh3    10520 MB/s  khash     7644 MB/s
+      1024 B:  xxh3    30721 MB/s  khash    14593 MB/s
+      4096 B:  xxh3    43669 MB/s  khash    23977 MB/s
+     65536 B:  xxh3    55663 MB/s  khash    28336 MB/s
+   1048576 B:  xxh3    59827 MB/s  khash    26004 MB/s
+  67108864 B:  xxh3    28304 MB/s  khash    22773 MB/s
+avalanche (worst bias over input bit x output bit; 4000 keys each; noise ~0.025):
+  len     3:  xxh3 0.0292  khash 0.0373
+  len     8:  xxh3 0.0277  khash 0.0312
+  len    16:  xxh3 0.0302  khash 0.0292
+  len    24:  xxh3 0.0297  khash 0.0325
+  len    40:  xxh3 0.0325  khash 0.0318
+  len    64:  xxh3 0.0300  khash 0.0337
+  len    65:  xxh3 0.0375  khash 0.0380
+  len   200:  xxh3 0.0325  khash 0.0353
+  len  1024:  xxh3 0.0367  khash 0.0353
+  len  4100:  xxh3 0.0317  khash 0.0368
+collisions:
+  xxh3   counter in a 4 KiB zero block      keys   4194304  collisions 64-bit 0  low 32-bit   2035 (expected 2048.0)
+  xxh3   1 and 2 bits set in 256 zero bytes keys   2098176  collisions 64-bit 0  low 32-bit    546 (expected 512.5)
+  xxh3   zero blocks of length 0..65536     keys     65537  collisions 64-bit 0  low 32-bit      2 (expected 0.5)
+  xxh3   distinct lines of the text file (*) keys    657657  collisions 64-bit 0  low 32-bit     48 (expected 50.4)
+  khash  counter in a 4 KiB zero block      keys   4194304  collisions 64-bit 0  low 32-bit   2060 (expected 2048.0)
+  khash  1 and 2 bits set in 256 zero bytes keys   2098176  collisions 64-bit 0  low 32-bit    541 (expected 512.5)
+  khash  zero blocks of length 0..65536     keys     65537  collisions 64-bit 0  low 32-bit      1 (expected 0.5)
+  khash  distinct lines of the text file (*) keys    657657  collisions 64-bit 0  low 32-bit     46 (expected 50.4)
+corruption of 64 KiB random blocks (low 32 bits unchanged = undetected), 200000 trials each:
+  xxh3   undetected: 1 bit 0, 2 bits 0, 3 bits 0, 8 bits 0, zeroed range 0 (expected ~0.000 each)
+  khash  undetected: 1 bit 0, 2 bits 0, 3 bits 0, 8 bits 0, zeroed range 0 (expected ~0.000 each)

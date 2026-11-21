@@ -1,0 +1,90 @@
+== base bal_struct
+chunks 165 raw 1786592 (avg 10828) cpu bmi2 1 build baseline
+enc tlog  8: 1555859
+enc tlog  9: 1555183
+enc tlog 10: 1554390
+enc tlog 11: 1554289
+enc tlog 12: 1554241
+enc tlog 11 optimalDepth: 1553719
+enc tlog 11 repeat previous table when smaller: 1554289
+dec hufOnly flags=0 (rc2)            2.20 ms    810.4 MB/s
+dec hufOnly bmi2                     1.89 ms    946.0 MB/s
+dec hufOnly bmi2 disableAsm          1.70 ms   1052.6 MB/s
+dec hufOnly flags=0 disableFast      2.27 ms    787.2 MB/s
+dec X1 forced bmi2                   1.99 ms    898.3 MB/s
+dec X2 forced bmi2                   1.98 ms    903.0 MB/s
+== base bal_silesia
+chunks 1937 raw 23520408 (avg 12143) cpu bmi2 1 build baseline
+enc tlog  8: 19285525
+enc tlog  9: 19250653
+enc tlog 10: 18975215
+enc tlog 11: 18916839
+enc tlog 12: 18899942
+enc tlog 11 optimalDepth: 18914148
+enc tlog 11 repeat previous table when smaller: 18916839
+dec hufOnly flags=0 (rc2)           33.97 ms    692.4 MB/s
+dec hufOnly bmi2                    31.01 ms    758.4 MB/s
+dec hufOnly bmi2 disableAsm         31.07 ms    757.0 MB/s
+dec hufOnly flags=0 disableFast     34.43 ms    683.0 MB/s
+dec X1 forced bmi2                  29.10 ms    808.3 MB/s
+dec X2 forced bmi2                  27.94 ms    841.9 MB/s
+== base hc_struct
+chunks 277 raw 1705632 (avg 6158) cpu bmi2 1 build baseline
+enc tlog  8: 1494925
+enc tlog  9: 1493831
+enc tlog 10: 1492816
+enc tlog 11: 1492656
+enc tlog 12: 1492604
+enc tlog 11 optimalDepth: 1491250
+enc tlog 11 repeat previous table when smaller: 1492656
+dec hufOnly flags=0 (rc2)            3.37 ms    506.6 MB/s
+dec hufOnly bmi2                     2.38 ms    715.5 MB/s
+dec hufOnly bmi2 disableAsm          2.34 ms    729.0 MB/s
+dec hufOnly flags=0 disableFast      3.33 ms    511.5 MB/s
+dec X1 forced bmi2                   2.50 ms    682.9 MB/s
+dec X2 forced bmi2                   2.55 ms    669.8 MB/s
+== native bal_struct
+chunks 165 raw 1786592 (avg 10828) cpu bmi2 1 build bmi2
+enc tlog  8: 1555859
+enc tlog  9: 1555183
+enc tlog 10: 1554390
+enc tlog 11: 1554289
+enc tlog 12: 1554241
+enc tlog 11 optimalDepth: 1553719
+enc tlog 11 repeat previous table when smaller: 1554289
+dec hufOnly flags=0 (rc2)            2.15 ms    832.8 MB/s
+dec hufOnly bmi2                     2.17 ms    824.3 MB/s
+dec hufOnly bmi2 disableAsm          2.05 ms    869.7 MB/s
+dec hufOnly flags=0 disableFast      2.40 ms    743.8 MB/s
+dec X1 forced bmi2                   2.32 ms    771.5 MB/s
+dec X2 forced bmi2                   2.09 ms    853.4 MB/s
+== native bal_silesia
+chunks 1937 raw 23520408 (avg 12143) cpu bmi2 1 build bmi2
+enc tlog  8: 19285525
+enc tlog  9: 19250653
+enc tlog 10: 18975215
+enc tlog 11: 18916839
+enc tlog 12: 18899942
+enc tlog 11 optimalDepth: 18914148
+enc tlog 11 repeat previous table when smaller: 18916839
+dec hufOnly flags=0 (rc2)           27.59 ms    852.6 MB/s
+dec hufOnly bmi2                    32.38 ms    726.3 MB/s
+dec hufOnly bmi2 disableAsm         33.89 ms    693.9 MB/s
+dec hufOnly flags=0 disableFast     36.52 ms    644.1 MB/s
+dec X1 forced bmi2                  28.21 ms    833.8 MB/s
+dec X2 forced bmi2                  27.87 ms    844.0 MB/s
+== native hc_struct
+chunks 277 raw 1705632 (avg 6158) cpu bmi2 1 build bmi2
+enc tlog  8: 1494925
+enc tlog  9: 1493831
+enc tlog 10: 1492816
+enc tlog 11: 1492656
+enc tlog 12: 1492604
+enc tlog 11 optimalDepth: 1491250
+enc tlog 11 repeat previous table when smaller: 1492656
+dec hufOnly flags=0 (rc2)            2.10 ms    812.1 MB/s
+dec hufOnly bmi2                     2.07 ms    823.4 MB/s
+dec hufOnly bmi2 disableAsm          1.85 ms    921.9 MB/s
+dec hufOnly flags=0 disableFast      2.21 ms    770.7 MB/s
+dec X1 forced bmi2                   2.19 ms    778.4 MB/s
+dec X2 forced bmi2                   2.11 ms    809.4 MB/s

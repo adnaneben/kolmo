@@ -1,0 +1,24 @@
+L3 auto    race on 641984 B: letters 41152, words 19690, phrases 17718 -> phrases (1.08s)
+L3 lzp apache.log threads 1 blocks 1 policy lzp minn 2: 5135876 -> 86242 ratio 59.552 | dict 0 B, 0 phrases (0 candidates), 21592 uses, 12.7% fields covered | prep 0.00s mine 0.00s (map 0.00 reduce 0.00) enc 1.03s dec 0.81s | enc 4.97 MB/s dec 6.34 MB/s | OK
+L3 none apache.log threads 1 blocks 1 policy none minn 2: 5135876 -> 99413 ratio 51.662 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.01s mine 0.00s (map 0.00 reduce 0.00) enc 0.94s dec 0.91s | enc 5.45 MB/s dec 5.65 MB/s | OK
+G6 hash a6aef894d6b680ec /home/user/corpus/logs/apache.log off 0 len 5135876: gr6 99500 (51.617x) enc 0.64s dec 0.63s rt ok
+L3 auto    race on 293710 B: letters 32734, words 14244, phrases 13231 -> phrases (0.39s)
+L3 lzp linux.log threads 1 blocks 1 policy lzp minn 2: 2349686 -> 70322 ratio 33.413 | dict 0 B, 0 phrases (0 candidates), 6364 uses, 7.7% fields covered | prep 0.00s mine 0.00s (map 0.00 reduce 0.00) enc 0.61s dec 0.58s | enc 3.86 MB/s dec 4.04 MB/s | OK
+L3 none linux.log threads 1 blocks 1 policy none minn 2: 2349686 -> 76880 ratio 30.563 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.00s mine 0.00s (map 0.00 reduce 0.00) enc 0.57s dec 0.56s | enc 4.13 MB/s dec 4.17 MB/s | OK
+G6 hash 186088bed2c18671 /home/user/corpus/logs/linux.log off 0 len 2349686: gr6 76948 (30.536x) enc 0.46s dec 0.43s rt ok
+L3 auto    race on 1274055 B: letters 384145, words 380675, phrases 377082 -> phrases (2.78s)
+L3 lzp dickens threads 1 blocks 1 policy lzp minn 2: 10192446 -> 2924467 ratio 3.485 | dict 0 B, 0 phrases (0 candidates), 14132 uses, 2.4% fields covered | prep 0.02s mine 0.00s (map 0.00 reduce 0.00) enc 9.68s dec 10.26s | enc 1.05 MB/s dec 0.99 MB/s | OK
+L3 none dickens threads 1 blocks 1 policy none minn 2: 10192446 -> 2952651 ratio 3.452 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.01s mine 0.00s (map 0.00 reduce 0.00) enc 10.07s dec 9.54s | enc 1.01 MB/s dec 1.07 MB/s | OK
+G6 hash d967265d714362c7 /home/user/corpus/prose/dickens off 0 len 10192446: gr6 2958996 (3.445x) enc 8.73s dec 8.14s rt ok
+L3 auto    race on 689116 B: letters 116247, words 40004, phrases 40004 -> words (0.99s)
+L3 lzp covid-countries.csv threads 1 blocks 1 policy lzp minn 2: 5512931 -> 282868 ratio 19.489 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.01s mine 0.00s (map 0.00 reduce 0.00) enc 2.26s dec 2.25s | enc 2.43 MB/s dec 2.45 MB/s | OK
+L3 none covid-countries.csv threads 1 blocks 1 policy none minn 2: 5512931 -> 282868 ratio 19.489 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.01s mine 0.00s (map 0.00 reduce 0.00) enc 2.04s dec 2.02s | enc 2.70 MB/s dec 2.73 MB/s | OK
+G6 hash c01e27af451be13b /home/user/corpus/csv_long/covid-countries.csv off 0 len 5512931: gr6 282986 (19.481x) enc 1.98s dec 1.46s rt ok
+L3 auto    race on 1905332 B: letters 334154, words 141927, phrases 142180 -> words (3.31s)
+L3 lzp owid-co2.csv threads 1 blocks 1 policy lzp minn 2: 15242657 -> 1122680 ratio 13.577 | dict 0 B, 0 phrases (0 candidates), 4377 uses, 1.6% fields covered | prep 3.65s mine 0.00s (map 0.00 reduce 0.00) enc 8.23s dec 8.12s | enc 1.28 MB/s dec 1.88 MB/s | OK
+L3 none owid-co2.csv threads 1 blocks 1 policy none minn 2: 15242657 -> 1121777 ratio 13.588 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 3.41s mine 0.00s (map 0.00 reduce 0.00) enc 8.12s dec 7.27s | enc 1.32 MB/s dec 2.10 MB/s | OK
+G6 hash 9a1010fe2771d924 /home/user/corpus/csv_wide/owid-co2.csv off 0 len 15242657: gr6 1127785 (13.516x) enc 7.90s dec 5.49s rt ok
+L3 auto    race on 2097064 B: letters 318388, words 237292, phrases 232771 -> phrases (2.13s)
+L3 lzp gharchive16.jsonl threads 1 blocks 1 policy lzp minn 2: 16776519 -> 1751462 ratio 9.579 | dict 0 B, 0 phrases (0 candidates), 10645 uses, 32.0% fields covered | prep 0.02s mine 0.00s (map 0.00 reduce 0.00) enc 7.02s dec 7.66s | enc 2.38 MB/s dec 2.19 MB/s | OK
+L3 none gharchive16.jsonl threads 1 blocks 1 policy none minn 2: 16776519 -> 1804490 ratio 9.297 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.02s mine 0.00s (map 0.00 reduce 0.00) enc 7.56s dec 7.55s | enc 2.21 MB/s dec 2.22 MB/s | OK
+G6 hash 18cd1b5ed10899d1 /home/user/corpus/jsonl/gharchive16.jsonl off 0 len 16776519: gr6 1844824 (9.094x) enc 5.11s dec 5.39s rt ok

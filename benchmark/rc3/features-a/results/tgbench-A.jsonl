@@ -1,0 +1,124 @@
+{"file":"chunk004.log","bytes":1048552,"kind":"fixed","setting":"speed","size":128915,"enc_s":0.000773,"dec_s":0.000194}
+{"file":"chunk004.log","bytes":1048552,"kind":"fixed","setting":"balanced-n","size":79698,"enc_s":0.001512,"dec_s":0.000557}
+{"file":"chunk004.log","bytes":1048552,"kind":"fixed","setting":"balanced","size":31756,"enc_s":0.006466,"dec_s":0.001167}
+{"file":"chunk004.log","bytes":1048552,"kind":"fixed","setting":"eco","size":27929,"enc_s":0.012929,"dec_s":0.001213}
+{"file":"chunk004.log","bytes":1048552,"kind":"fixed","setting":"hc","size":26994,"enc_s":0.055060,"dec_s":0.000993}
+{"file":"chunk004.log","bytes":1048552,"kind":"fixed","setting":"ratio-l1","size":28294,"enc_s":0.025872,"dec_s":0.004944}
+{"file":"chunk004.log","bytes":1048552,"kind":"fixed","setting":"ratio","size":25402,"enc_s":0.096246,"dec_s":0.002545}
+{"file":"chunk004.log","bytes":1048552,"kind":"fixed","setting":"x-l1","size":16692,"enc_s":6.430164,"dec_s":1.991851}
+{"file":"chunk004.log","bytes":1048552,"kind":"fixed","setting":"x","size":15126,"enc_s":8.366686,"dec_s":4.299610}
+{"file":"chunk004.log","bytes":1048552,"kind":"target","target":"decode>=1GB/s","size":26994,"enc_s":0.060222,"dec_s":0.001032,"predicted_size":26994,"predicted_enc_s":0.306608,"predicted_dec_s":0.000685,"chunks":1,"chunk_bytes":0,"chosen":"hc x1"}
+{"file":"chunk004.log","bytes":1048552,"kind":"target","target":"decode>=500MB/s","size":26994,"enc_s":0.075029,"dec_s":0.001001,"predicted_size":26994,"predicted_enc_s":0.306608,"predicted_dec_s":0.000685,"chunks":1,"chunk_bytes":0,"chosen":"hc x1"}
+{"file":"chunk004.log","bytes":1048552,"kind":"target","target":"encode>=100MB/s","size":31756,"enc_s":0.007142,"dec_s":0.000997,"predicted_size":31756,"predicted_enc_s":0.004828,"predicted_dec_s":0.000830,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"chunk004.log","bytes":1048552,"kind":"target","target":"cost:cloud","size":31756,"enc_s":0.018689,"dec_s":0.000909,"predicted_size":31756,"predicted_enc_s":0.004828,"predicted_dec_s":0.000830,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"chunk004.log","bytes":1048552,"kind":"target","target":"cost:cloud=12","size":27929,"enc_s":0.099971,"dec_s":0.001279,"predicted_size":27929,"predicted_enc_s":0.034652,"predicted_dec_s":0.001445,"chunks":1,"chunk_bytes":0,"chosen":"eco x1"}
+{"file":"chunk004.log","bytes":1048552,"kind":"target","target":"cost:link=100Mbit","size":31756,"enc_s":0.006774,"dec_s":0.000933,"predicted_size":31756,"predicted_enc_s":0.004828,"predicted_dec_s":0.000830,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"chunk004.log","bytes":1048552,"kind":"target","target":"cost:link=1Gbit","size":128915,"enc_s":0.000742,"dec_s":0.000171,"predicted_size":128915,"predicted_enc_s":0.001615,"predicted_dec_s":0.000245,"chunks":1,"chunk_bytes":0,"chosen":"speed x1"}
+{"file":"chunk004.log","bytes":1048552,"kind":"target","target":"size","size":15126,"enc_s":14.014190,"dec_s":4.070185,"predicted_size":15126,"predicted_enc_s":10.485520,"predicted_dec_s":5.272390,"chunks":1,"chunk_bytes":0,"chosen":"x x1"}
+{"file":"chunk0100.log","bytes":262084,"kind":"fixed","setting":"speed","size":41016,"enc_s":0.000223,"dec_s":0.000048}
+{"file":"chunk0100.log","bytes":262084,"kind":"fixed","setting":"balanced-n","size":24626,"enc_s":0.000344,"dec_s":0.000107}
+{"file":"chunk0100.log","bytes":262084,"kind":"fixed","setting":"balanced","size":17565,"enc_s":0.003063,"dec_s":0.000168}
+{"file":"chunk0100.log","bytes":262084,"kind":"fixed","setting":"eco","size":16525,"enc_s":0.003892,"dec_s":0.000295}
+{"file":"chunk0100.log","bytes":262084,"kind":"fixed","setting":"hc","size":16883,"enc_s":0.018938,"dec_s":0.000176}
+{"file":"chunk0100.log","bytes":262084,"kind":"fixed","setting":"ratio-l1","size":17182,"enc_s":0.115267,"dec_s":0.002208}
+{"file":"chunk0100.log","bytes":262084,"kind":"fixed","setting":"ratio","size":14887,"enc_s":0.017453,"dec_s":0.001139}
+{"file":"chunk0100.log","bytes":262084,"kind":"fixed","setting":"x-l1","size":13902,"enc_s":1.329547,"dec_s":0.173772}
+{"file":"chunk0100.log","bytes":262084,"kind":"fixed","setting":"x","size":13192,"enc_s":1.479995,"dec_s":0.264109}
+{"file":"chunk0100.log","bytes":262084,"kind":"target","target":"decode>=1GB/s","size":17565,"enc_s":0.003039,"dec_s":0.000171,"predicted_size":17565,"predicted_enc_s":0.002211,"predicted_dec_s":0.000213,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"chunk0100.log","bytes":262084,"kind":"target","target":"decode>=500MB/s","size":16883,"enc_s":0.020896,"dec_s":0.000166,"predicted_size":16883,"predicted_enc_s":0.050665,"predicted_dec_s":0.000415,"chunks":1,"chunk_bytes":0,"chosen":"hc x1"}
+{"file":"chunk0100.log","bytes":262084,"kind":"target","target":"encode>=100MB/s","size":17565,"enc_s":0.002865,"dec_s":0.000149,"predicted_size":17565,"predicted_enc_s":0.002211,"predicted_dec_s":0.000213,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"chunk0100.log","bytes":262084,"kind":"target","target":"cost:cloud","size":17565,"enc_s":0.006477,"dec_s":0.000156,"predicted_size":17565,"predicted_enc_s":0.002211,"predicted_dec_s":0.000213,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"chunk0100.log","bytes":262084,"kind":"target","target":"cost:cloud=12","size":14887,"enc_s":0.145609,"dec_s":0.001125,"predicted_size":14887,"predicted_enc_s":0.023808,"predicted_dec_s":0.006117,"chunks":1,"chunk_bytes":0,"chosen":"ratio x1"}
+{"file":"chunk0100.log","bytes":262084,"kind":"target","target":"cost:link=100Mbit","size":24626,"enc_s":0.002924,"dec_s":0.000116,"predicted_size":24626,"predicted_enc_s":0.001202,"predicted_dec_s":0.000213,"chunks":1,"chunk_bytes":0,"chosen":"balanced-n x1"}
+{"file":"chunk0100.log","bytes":262084,"kind":"target","target":"cost:link=1Gbit","size":41016,"enc_s":0.000249,"dec_s":0.000042,"predicted_size":41016,"predicted_enc_s":0.000862,"predicted_dec_s":0.000102,"chunks":1,"chunk_bytes":0,"chosen":"speed x1"}
+{"file":"chunk0100.log","bytes":262084,"kind":"target","target":"size","size":13192,"enc_s":2.847352,"dec_s":0.258626,"predicted_size":13192,"predicted_enc_s":2.620840,"predicted_dec_s":1.310420,"chunks":1,"chunk_bytes":0,"chosen":"x x1"}
+{"file":"2007-02.npy","bytes":1129088,"kind":"fixed","setting":"speed","size":484877,"enc_s":0.002444,"dec_s":0.000339}
+{"file":"2007-02.npy","bytes":1129088,"kind":"fixed","setting":"balanced-n","size":338902,"enc_s":0.004999,"dec_s":0.001364}
+{"file":"2007-02.npy","bytes":1129088,"kind":"fixed","setting":"balanced","size":133194,"enc_s":0.013401,"dec_s":0.001508}
+{"file":"2007-02.npy","bytes":1129088,"kind":"fixed","setting":"eco","size":123012,"enc_s":0.036893,"dec_s":0.002530}
+{"file":"2007-02.npy","bytes":1129088,"kind":"fixed","setting":"hc","size":119563,"enc_s":0.135608,"dec_s":0.001492}
+{"file":"2007-02.npy","bytes":1129088,"kind":"fixed","setting":"ratio-l1","size":121001,"enc_s":0.053895,"dec_s":0.016199}
+{"file":"2007-02.npy","bytes":1129088,"kind":"fixed","setting":"ratio","size":121001,"enc_s":0.048325,"dec_s":0.015591}
+{"file":"2007-02.npy","bytes":1129088,"kind":"fixed","setting":"x-l1","size":118063,"enc_s":0.244622,"dec_s":0.009482}
+{"file":"2007-02.npy","bytes":1129088,"kind":"fixed","setting":"x","size":118063,"enc_s":0.232636,"dec_s":0.008677}
+{"file":"2007-02.npy","bytes":1129088,"kind":"target","target":"decode>=1GB/s","size":484877,"enc_s":0.004015,"dec_s":0.000316,"predicted_size":468614,"predicted_enc_s":0.000187,"predicted_dec_s":0.000045,"chunks":1,"chunk_bytes":0,"chosen":"speed x1"}
+{"file":"2007-02.npy","bytes":1129088,"kind":"target","target":"decode>=500MB/s","size":119563,"enc_s":0.283077,"dec_s":0.001457,"predicted_size":181878,"predicted_enc_s":0.282272,"predicted_dec_s":0.001785,"chunks":1,"chunk_bytes":0,"chosen":"hc x1"}
+{"file":"2007-02.npy","bytes":1129088,"kind":"target","target":"encode>=100MB/s","size":338902,"enc_s":0.009463,"dec_s":0.001272,"predicted_size":310515,"predicted_enc_s":0.001397,"predicted_dec_s":0.001148,"chunks":1,"chunk_bytes":0,"chosen":"balanced-n x1"}
+{"file":"2007-02.npy","bytes":1129088,"kind":"target","target":"cost:cloud","size":133194,"enc_s":0.202310,"dec_s":0.001496,"predicted_size":205428,"predicted_enc_s":0.039805,"predicted_dec_s":0.001795,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"2007-02.npy","bytes":1129088,"kind":"target","target":"cost:cloud=12","size":121001,"enc_s":0.764657,"dec_s":0.015894,"predicted_size":167008,"predicted_enc_s":0.242041,"predicted_dec_s":0.066230,"chunks":1,"chunk_bytes":0,"chosen":"ratio-l1 x1"}
+{"file":"2007-02.npy","bytes":1129088,"kind":"target","target":"cost:link=100Mbit","size":338902,"enc_s":0.009544,"dec_s":0.001284,"predicted_size":310515,"predicted_enc_s":0.001397,"predicted_dec_s":0.001148,"chunks":1,"chunk_bytes":0,"chosen":"balanced-n x1"}
+{"file":"2007-02.npy","bytes":1129088,"kind":"target","target":"cost:link=1Gbit","size":484877,"enc_s":0.007595,"dec_s":0.000333,"predicted_size":468614,"predicted_enc_s":0.000187,"predicted_dec_s":0.000045,"chunks":1,"chunk_bytes":0,"chosen":"speed x1"}
+{"file":"2020-02.csv","bytes":2330117,"kind":"fixed","setting":"speed","size":1108923,"enc_s":0.005411,"dec_s":0.000822}
+{"file":"2020-02.csv","bytes":2330117,"kind":"fixed","setting":"balanced-n","size":677038,"enc_s":0.010563,"dec_s":0.002230}
+{"file":"2020-02.csv","bytes":2330117,"kind":"fixed","setting":"balanced","size":604583,"enc_s":0.015881,"dec_s":0.005862}
+{"file":"2020-02.csv","bytes":2330117,"kind":"fixed","setting":"eco","size":513490,"enc_s":0.151379,"dec_s":0.010320}
+{"file":"2020-02.csv","bytes":2330117,"kind":"fixed","setting":"hc","size":465439,"enc_s":0.541004,"dec_s":0.005908}
+{"file":"2020-02.csv","bytes":2330117,"kind":"fixed","setting":"ratio-l1","size":404092,"enc_s":0.188474,"dec_s":0.053614}
+{"file":"2020-02.csv","bytes":2330117,"kind":"fixed","setting":"ratio","size":404092,"enc_s":1.014440,"dec_s":0.053382}
+{"file":"2020-02.csv","bytes":2330117,"kind":"fixed","setting":"x-l1","size":336194,"enc_s":6.503782,"dec_s":5.231449}
+{"file":"2020-02.csv","bytes":2330117,"kind":"fixed","setting":"x","size":306171,"enc_s":11.403594,"dec_s":11.452920}
+{"file":"2020-02.csv","bytes":2330117,"kind":"target","target":"decode>=1GB/s","size":1108923,"enc_s":0.007798,"dec_s":0.000762,"predicted_size":1108227,"predicted_enc_s":0.005080,"predicted_dec_s":0.000669,"chunks":1,"chunk_bytes":0,"chosen":"speed x1"}
+{"file":"2020-02.csv","bytes":2330117,"kind":"target","target":"decode>=500MB/s","size":465439,"enc_s":0.726033,"dec_s":0.005878,"predicted_size":524041,"predicted_enc_s":0.152948,"predicted_dec_s":0.003580,"chunks":1,"chunk_bytes":0,"chosen":"hc x1"}
+{"file":"2020-02.csv","bytes":2330117,"kind":"target","target":"encode>=100MB/s","size":604583,"enc_s":0.029987,"dec_s":0.006607,"predicted_size":661770,"predicted_enc_s":0.010819,"predicted_dec_s":0.003593,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"2020-02.csv","bytes":2330117,"kind":"target","target":"cost:cloud","size":404092,"enc_s":1.152581,"dec_s":0.051077,"predicted_size":462332,"predicted_enc_s":0.102645,"predicted_dec_s":0.020665,"chunks":1,"chunk_bytes":0,"chosen":"ratio-l1 x1"}
+{"file":"2020-02.csv","bytes":2330117,"kind":"target","target":"cost:cloud=12","size":404092,"enc_s":1.158566,"dec_s":0.052096,"predicted_size":462332,"predicted_enc_s":0.102645,"predicted_dec_s":0.020665,"chunks":1,"chunk_bytes":0,"chosen":"ratio-l1 x1"}
+{"file":"2020-02.csv","bytes":2330117,"kind":"target","target":"cost:link=100Mbit","size":604583,"enc_s":0.070252,"dec_s":0.006186,"predicted_size":661770,"predicted_enc_s":0.010819,"predicted_dec_s":0.003593,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"2020-02.csv","bytes":2330117,"kind":"target","target":"cost:link=1Gbit","size":1108923,"enc_s":0.019820,"dec_s":0.000898,"predicted_size":1108227,"predicted_enc_s":0.005080,"predicted_dec_s":0.000669,"chunks":1,"chunk_bytes":0,"chosen":"speed x1"}
+{"file":"2007-02.txt","bytes":2594096,"kind":"fixed","setting":"speed","size":747718,"enc_s":0.005293,"dec_s":0.001393}
+{"file":"2007-02.txt","bytes":2594096,"kind":"fixed","setting":"balanced-n","size":443770,"enc_s":0.011314,"dec_s":0.004064}
+{"file":"2007-02.txt","bytes":2594096,"kind":"fixed","setting":"balanced","size":169109,"enc_s":0.012320,"dec_s":0.003612}
+{"file":"2007-02.txt","bytes":2594096,"kind":"fixed","setting":"eco","size":166873,"enc_s":0.038715,"dec_s":0.005716}
+{"file":"2007-02.txt","bytes":2594096,"kind":"fixed","setting":"hc","size":152587,"enc_s":0.144680,"dec_s":0.003797}
+{"file":"2007-02.txt","bytes":2594096,"kind":"fixed","setting":"ratio-l1","size":154892,"enc_s":0.051887,"dec_s":0.025022}
+{"file":"2007-02.txt","bytes":2594096,"kind":"fixed","setting":"ratio","size":148064,"enc_s":0.547503,"dec_s":0.013512}
+{"file":"2007-02.txt","bytes":2594096,"kind":"fixed","setting":"x-l1","size":120711,"enc_s":11.175924,"dec_s":5.070704}
+{"file":"2007-02.txt","bytes":2594096,"kind":"fixed","setting":"x","size":117425,"enc_s":16.794005,"dec_s":10.477773}
+{"file":"2007-02.txt","bytes":2594096,"kind":"target","target":"decode>=1GB/s","size":747718,"enc_s":0.005502,"dec_s":0.000984,"predicted_size":721668,"predicted_enc_s":0.005655,"predicted_dec_s":0.000744,"chunks":1,"chunk_bytes":0,"chosen":"speed x1"}
+{"file":"2007-02.txt","bytes":2594096,"kind":"target","target":"decode>=500MB/s","size":152587,"enc_s":0.224024,"dec_s":0.004003,"predicted_size":163634,"predicted_enc_s":0.169762,"predicted_dec_s":0.003986,"chunks":1,"chunk_bytes":0,"chosen":"hc x1"}
+{"file":"2007-02.txt","bytes":2594096,"kind":"target","target":"encode>=100MB/s","size":169109,"enc_s":0.021992,"dec_s":0.003597,"predicted_size":195303,"predicted_enc_s":0.011850,"predicted_dec_s":0.003999,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"2007-02.txt","bytes":2594096,"kind":"target","target":"cost:cloud","size":169109,"enc_s":0.136555,"dec_s":0.003739,"predicted_size":195303,"predicted_enc_s":0.011850,"predicted_dec_s":0.003999,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"2007-02.txt","bytes":2594096,"kind":"target","target":"cost:cloud=12","size":166873,"enc_s":0.321621,"dec_s":0.007212,"predicted_size":166729,"predicted_enc_s":0.054702,"predicted_dec_s":0.005488,"chunks":1,"chunk_bytes":0,"chosen":"eco x1"}
+{"file":"2007-02.txt","bytes":2594096,"kind":"target","target":"cost:link=100Mbit","size":169109,"enc_s":0.020926,"dec_s":0.003774,"predicted_size":195303,"predicted_enc_s":0.011850,"predicted_dec_s":0.003999,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"2007-02.txt","bytes":2594096,"kind":"target","target":"cost:link=1Gbit","size":747718,"enc_s":0.006002,"dec_s":0.001057,"predicted_size":721668,"predicted_enc_s":0.005655,"predicted_dec_s":0.000744,"chunks":1,"chunk_bytes":0,"chosen":"speed x1"}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"fixed","setting":"speed","size":96143,"enc_s":0.000820,"dec_s":0.000310}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"fixed","setting":"balanced-n","size":38691,"enc_s":0.001472,"dec_s":0.000566}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"fixed","setting":"balanced","size":21899,"enc_s":0.009847,"dec_s":0.001659}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"fixed","setting":"eco","size":13140,"enc_s":0.026844,"dec_s":0.004895}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"fixed","setting":"hc","size":13433,"enc_s":0.048755,"dec_s":0.002316}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"fixed","setting":"ratio-l1","size":14168,"enc_s":0.020566,"dec_s":0.007510}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"fixed","setting":"ratio","size":12811,"enc_s":0.263773,"dec_s":0.004086}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"target","target":"decode>=1GB/s","size":13433,"enc_s":0.079324,"dec_s":0.002488,"predicted_size":69858,"predicted_enc_s":1.449058,"predicted_dec_s":0.003291,"chunks":1,"chunk_bytes":0,"chosen":"hc x1"}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"target","target":"decode>=500MB/s","size":13140,"enc_s":0.054131,"dec_s":0.004840,"predicted_size":67900,"predicted_enc_s":0.165753,"predicted_dec_s":0.006954,"chunks":1,"chunk_bytes":0,"chosen":"eco x1"}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"target","target":"encode>=100MB/s","size":21899,"enc_s":0.014217,"dec_s":0.001825,"predicted_size":78725,"predicted_enc_s":0.020626,"predicted_dec_s":0.003996,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"target","target":"cost:cloud","size":21899,"enc_s":0.013851,"dec_s":0.001719,"predicted_size":78725,"predicted_enc_s":0.020626,"predicted_dec_s":0.003996,"chunks":1,"chunk_bytes":0,"chosen":"balanced x1"}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"target","target":"cost:cloud=12","size":13140,"enc_s":0.027659,"dec_s":0.004146,"predicted_size":67900,"predicted_enc_s":0.165753,"predicted_dec_s":0.006954,"chunks":1,"chunk_bytes":0,"chosen":"eco x1"}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"target","target":"cost:link=100Mbit","size":38691,"enc_s":0.001986,"dec_s":0.000542,"predicted_size":108078,"predicted_enc_s":0.011662,"predicted_dec_s":0.002992,"chunks":1,"chunk_bytes":0,"chosen":"balanced-n x1"}
+{"file":"application_1445144423722_0020_container_1445144423722_0020_01_000001.log","bytes":5047127,"kind":"target","target":"cost:link=1Gbit","size":96143,"enc_s":0.001039,"dec_s":0.000299,"predicted_size":192966,"predicted_enc_s":0.007772,"predicted_dec_s":0.001181,"chunks":1,"chunk_bytes":0,"chosen":"speed x1"}
+{"file":"2020-02.json","bytes":9001625,"kind":"fixed","setting":"speed","size":1733789,"enc_s":0.011499,"dec_s":0.002228}
+{"file":"2020-02.json","bytes":9001625,"kind":"fixed","setting":"balanced-n","size":1027033,"enc_s":0.015502,"dec_s":0.005501}
+{"file":"2020-02.json","bytes":9001625,"kind":"fixed","setting":"balanced","size":978644,"enc_s":0.040750,"dec_s":0.021967}
+{"file":"2020-02.json","bytes":9001625,"kind":"fixed","setting":"eco","size":703247,"enc_s":0.254107,"dec_s":0.012829}
+{"file":"2020-02.json","bytes":9001625,"kind":"fixed","setting":"hc","size":631261,"enc_s":1.933297,"dec_s":0.009455}
+{"file":"2020-02.json","bytes":9001625,"kind":"fixed","setting":"ratio-l1","size":541558,"enc_s":0.397582,"dec_s":0.124685}
+{"file":"2020-02.json","bytes":9001625,"kind":"fixed","setting":"ratio","size":541558,"enc_s":0.387387,"dec_s":0.112324}
+{"file":"2020-02.json","bytes":9001625,"kind":"target","target":"decode>=1GB/s","size":1027033,"enc_s":0.019884,"dec_s":0.005300,"predicted_size":1083843,"predicted_enc_s":0.018174,"predicted_dec_s":0.005247,"chunks":1,"chunk_bytes":0,"chosen":"balanced-n x1"}
+{"file":"2020-02.json","bytes":9001625,"kind":"target","target":"decode>=500MB/s","size":631261,"enc_s":2.146786,"dec_s":0.008139,"predicted_size":829480,"predicted_enc_s":1.216436,"predicted_dec_s":0.009103,"chunks":1,"chunk_bytes":0,"chosen":"hc x1"}
+{"file":"2020-02.json","bytes":9001625,"kind":"target","target":"encode>=100MB/s","size":1027033,"enc_s":0.030978,"dec_s":0.006271,"predicted_size":1083843,"predicted_enc_s":0.018174,"predicted_dec_s":0.005247,"chunks":1,"chunk_bytes":0,"chosen":"balanced-n x1"}
+{"file":"2020-02.json","bytes":9001625,"kind":"target","target":"cost:cloud","size":703247,"enc_s":1.284844,"dec_s":0.015245,"predicted_size":898381,"predicted_enc_s":0.168919,"predicted_dec_s":0.012116,"chunks":1,"chunk_bytes":0,"chosen":"eco x1"}
+{"file":"2020-02.json","bytes":9001625,"kind":"target","target":"cost:cloud=12","size":541558,"enc_s":1.364806,"dec_s":0.108025,"predicted_size":708654,"predicted_enc_s":0.363641,"predicted_dec_s":0.060320,"chunks":1,"chunk_bytes":0,"chosen":"ratio-l1 x1"}
+{"file":"2020-02.json","bytes":9001625,"kind":"target","target":"cost:link=100Mbit","size":1027033,"enc_s":0.027140,"dec_s":0.005331,"predicted_size":1083843,"predicted_enc_s":0.018174,"predicted_dec_s":0.005247,"chunks":1,"chunk_bytes":0,"chosen":"balanced-n x1"}
+{"file":"2020-02.json","bytes":9001625,"kind":"target","target":"cost:link=1Gbit","size":1733789,"enc_s":0.013660,"dec_s":0.002013,"predicted_size":1750924,"predicted_enc_s":0.012723,"predicted_dec_s":0.002125,"chunks":1,"chunk_bytes":0,"chosen":"speed x1"}
+{"file":"mixed.bin","bytes":23024406,"kind":"fixed","setting":"speed","size":4623246,"enc_s":0.038667,"dec_s":0.008455}
+{"file":"mixed.bin","bytes":23024406,"kind":"fixed","setting":"balanced-n","size":2779521,"enc_s":0.055810,"dec_s":0.016202}
+{"file":"mixed.bin","bytes":23024406,"kind":"fixed","setting":"balanced","size":2634049,"enc_s":0.088533,"dec_s":0.043693}
+{"file":"mixed.bin","bytes":23024406,"kind":"fixed","setting":"eco","size":2215447,"enc_s":1.007674,"dec_s":0.064093}
+{"file":"mixed.bin","bytes":23024406,"kind":"fixed","setting":"hc","size":1913361,"enc_s":7.331181,"dec_s":0.051778}
+{"file":"mixed.bin","bytes":23024406,"kind":"fixed","setting":"ratio-l1","size":1613448,"enc_s":1.184827,"dec_s":0.307508}
+{"file":"mixed.bin","bytes":23024406,"kind":"fixed","setting":"ratio","size":1613448,"enc_s":13.300745,"dec_s":0.293655}
+{"file":"mixed.bin","bytes":23024406,"kind":"target","target":"decode>=1GB/s","size":3395923,"enc_s":1.033377,"dec_s":0.012512,"predicted_size":3614248,"predicted_enc_s":1.100756,"predicted_dec_s":0.013266,"chunks":11,"chunk_bytes":2097152,"chosen":"speed x2, balanced-n x6, balanced x1, hc x2"}
+{"file":"mixed.bin","bytes":23024406,"kind":"target","target":"decode>=500MB/s","size":1894171,"enc_s":6.142988,"dec_s":0.024070,"predicted_size":2246396,"predicted_enc_s":2.756852,"predicted_dec_s":0.027062,"chunks":11,"chunk_bytes":2097152,"chosen":"eco x1, hc x10"}
+{"file":"mixed.bin","bytes":23024406,"kind":"target","target":"encode>=100MB/s","size":2639173,"enc_s":0.206939,"dec_s":0.022219,"predicted_size":2838920,"predicted_enc_s":0.094838,"predicted_dec_s":0.019785,"chunks":11,"chunk_bytes":2097152,"chosen":"balanced-n x5, balanced x6"}
+{"file":"mixed.bin","bytes":23024406,"kind":"target","target":"cost:cloud","size":1903768,"enc_s":10.750276,"dec_s":0.121151,"predicted_size":2300190,"predicted_enc_s":0.426096,"predicted_dec_s":0.057679,"chunks":11,"chunk_bytes":2097152,"chosen":"balanced-n x1, balanced x3, eco x5, ratio-l1 x2"}
+{"file":"mixed.bin","bytes":23024406,"kind":"target","target":"cost:cloud=12","size":1631074,"enc_s":17.116581,"dec_s":0.237344,"predicted_size":1988972,"predicted_enc_s":0.806574,"predicted_dec_s":0.194329,"chunks":11,"chunk_bytes":2097152,"chosen":"balanced x2, ratio-l1 x9"}
+{"file":"mixed.bin","bytes":23024406,"kind":"target","target":"cost:link=100Mbit","size":2660385,"enc_s":0.296299,"dec_s":0.021399,"predicted_size":2919314,"predicted_enc_s":0.072506,"predicted_dec_s":0.017734,"chunks":11,"chunk_bytes":2097152,"chosen":"speed x1, balanced-n x7, balanced x3"}
+{"file":"mixed.bin","bytes":23024406,"kind":"target","target":"cost:link=1Gbit","size":4633772,"enc_s":0.062030,"dec_s":0.005953,"predicted_size":4884029,"predicted_enc_s":0.041795,"predicted_dec_s":0.005963,"chunks":11,"chunk_bytes":2097152,"chosen":"speed x11"}

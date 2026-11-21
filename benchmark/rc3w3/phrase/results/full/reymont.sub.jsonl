@@ -1,0 +1,4 @@
+{"file":"reymont","n":6627202,"variant":"cm","size":907633,"enc_s":46.182,"dec_s":44.576}
+{"file":"reymont","n":6627202,"variant":"cmx-null","size":908498,"enc_s":39.146}
+{"file":"reymont","n":6627202,"variant":"cmx-dict","size":907443,"body":907324,"dict_cm":119,"nphr":6,"enc_s":51.475}
+{"file":"reymont","n":6627202,"variant":"phrase+cm","tn":5511824,"dict":75,"nphr":6,"singles":8,"prefixes":8,"coded":306587,"lit":5202820,"esc":2342,"size":915896,"dict_cm":119,"build_s":3.591,"tenc_s":0.099,"tdec_s":0.017,"enc_s":26.872,"dec_s":28.121,"opts":"sample=8M minc=4 maxl=64 rounds=64 per=512 minuse=3 minlen=2 maxtok=0 singles=-1 order=0 words_only=0 bytes=0 maxcodes=0"}

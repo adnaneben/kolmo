@@ -1,0 +1,20 @@
+L3 auto    race on 2097147 B: letters 206474, words 77523, phrases 74829 -> phrases (2.32s)
+L3 lzp hdfs16.log threads 1 blocks 1 policy lzp minn 2: 16777178 -> 540345 ratio 31.049 | dict 0 B, 0 phrases (0 candidates), 68060 uses, 12.4% fields covered | prep 0.02s mine 0.00s (map 0.00 reduce 0.00) enc 2.94s dec 4.01s | enc 5.67 MB/s dec 4.18 MB/s | OK
+L3 none hdfs16.log threads 1 blocks 1 policy none minn 2: 16777178 -> 575200 ratio 29.168 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.02s mine 0.00s (map 0.00 reduce 0.00) enc 2.90s dec 2.91s | enc 5.76 MB/s dec 5.76 MB/s | OK
+G6 hash 3671b958367597eb /home/user/corpus/logs/hdfs16.log off 0 len 16777178: gr6 576757 (29.089x) enc 2.00s dec 1.98s rt ok
+L3 auto    race on 2097134 B: letters 104736, words 27957, phrases 24056 -> phrases (2.25s)
+L3 lzp ssh16.log threads 1 blocks 1 policy lzp minn 2: 16777073 -> 215155 ratio 77.977 | dict 0 B, 0 phrases (0 candidates), 185634 uses, 43.1% fields covered | prep 0.01s mine 0.00s (map 0.00 reduce 0.00) enc 3.09s dec 2.58s | enc 5.40 MB/s dec 6.50 MB/s | OK
+L3 none ssh16.log threads 1 blocks 1 policy none minn 2: 16777073 -> 245677 ratio 68.289 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.01s mine 0.00s (map 0.00 reduce 0.00) enc 3.92s dec 3.67s | enc 4.27 MB/s dec 4.57 MB/s | OK
+G6 hash 8b156332dd0ccb0d /home/user/corpus/logs/ssh16.log off 0 len 16777073: gr6 248117 (67.618x) enc 2.48s dec 2.81s rt ok
+L3 auto    race on 828400 B: letters 175634, words 172442, phrases 172277 -> words (1.26s)
+L3 lzp reymont threads 1 blocks 1 policy lzp minn 2: 6627202 -> 1331228 ratio 4.978 | dict 0 B, 0 phrases (0 candidates), 6223 uses, 13.7% fields covered | prep 0.01s mine 0.00s (map 0.00 reduce 0.00) enc 5.04s dec 5.26s | enc 1.31 MB/s dec 1.26 MB/s | OK
+L3 none reymont threads 1 blocks 1 policy none minn 2: 6627202 -> 1332417 ratio 4.974 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.01s mine 0.00s (map 0.00 reduce 0.00) enc 5.72s dec 5.70s | enc 1.16 MB/s dec 1.16 MB/s | OK
+G6 hash 200c9318f4271300 /home/user/corpus/prose/reymont off 0 len 6627202: gr6 1336217 (4.960x) enc 3.64s dec 3.94s rt ok
+L3 auto    race on 287778 B: letters 38062, words 23991, phrases 23991 -> words (0.45s)
+L3 lzp owid-co2-long.csv threads 1 blocks 1 policy lzp minn 2: 2302225 -> 181592 ratio 12.678 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.00s mine 0.00s (map 0.00 reduce 0.00) enc 0.84s dec 0.86s | enc 2.74 MB/s dec 2.69 MB/s | OK
+L3 none owid-co2-long.csv threads 1 blocks 1 policy none minn 2: 2302225 -> 181592 ratio 12.678 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 0.00s mine 0.00s (map 0.00 reduce 0.00) enc 0.81s dec 0.88s | enc 2.82 MB/s dec 2.62 MB/s | OK
+G6 hash 91c45fa7a2d49aad /home/user/corpus/csv_long/owid-co2-long.csv off 0 len 2302225: gr6 181715 (12.669x) enc 0.62s dec 0.66s rt ok
+L3 auto    race on 1153671 B: letters 225822, words 126847, phrases 124673 -> phrases (1.90s)
+L3 lzp owid-energy.csv threads 1 blocks 1 policy lzp minn 2: 9229369 -> 987812 ratio 9.343 | dict 0 B, 0 phrases (0 candidates), 13899 uses, 2.9% fields covered | prep 5.92s mine 0.00s (map 0.00 reduce 0.00) enc 5.31s dec 5.38s | enc 0.82 MB/s dec 1.72 MB/s | OK
+L3 none owid-energy.csv threads 1 blocks 1 policy none minn 2: 9229369 -> 1007262 ratio 9.163 | dict 0 B, 0 phrases (0 candidates), 0 uses, 0.0% fields covered | prep 6.01s mine 0.00s (map 0.00 reduce 0.00) enc 5.35s dec 5.07s | enc 0.81 MB/s dec 1.82 MB/s | OK
+G6 hash 825579bb1bf20ea0 /home/user/corpus/csv_wide/owid-energy.csv off 0 len 9229369: gr6 1014237 (9.100x) enc 9.32s dec 3.71s rt ok

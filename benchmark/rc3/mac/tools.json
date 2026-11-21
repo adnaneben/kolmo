@@ -1,0 +1,3826 @@
+{
+ "general": [
+  {
+   "label": "rc2 speed -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 speed -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ],
+ "structured": [
+  {
+   "label": "rc2 speed -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 speed -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ],
+ "numeric": [
+  {
+   "label": "rc2 speed -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 speed -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ],
+ "numeric_npy": [
+  {
+   "label": "rc2 speed -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 speed -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ],
+ "weights": [
+  {
+   "label": "rc2 speed -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 speed -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ],
+ "genomics": [
+  {
+   "label": "rc2 speed -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 speed -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ],
+ "video": [
+  {
+   "label": "rc2 speed -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 speed -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ],
+ "audio": [
+  {
+   "label": "rc2 speed -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 1",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 1",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "1",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "1",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 speed -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 eco -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 hc -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc2 x -T 10",
+   "c": [
+    "bin/kolmo-rc2",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc2",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 speed -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "speed",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 balanced -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "balanced",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 eco -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "eco",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 hc -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "hc",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 ratio -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-m",
+    "ratio",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  },
+  {
+   "label": "rc3 x -T 10",
+   "c": [
+    "bin/kolmo-rc3",
+    "-x",
+    "-T",
+    "10",
+    "{in}",
+    "{out}"
+   ],
+   "d": [
+    "bin/kolmo-rc3",
+    "-d",
+    "-T",
+    "10",
+    "{out}",
+    "{back}"
+   ]
+  }
+ ]
+}
