@@ -37,9 +37,15 @@ size_t kolmo_klzh_bound(size_t n);
 size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
 int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 
-/* KLZH2 (codec 32): KLZH's parse, sequences and extra bits, with each of the four streams preceded by a mode byte:
-   0 = khuf chunk stream (as KLZH), 1 = KRANS (krans.h; the code streams only). The encoder takes rANS where it is
-   smaller: the literal-length codes of an LZ parse are mostly 0, where Huffman's one-bit floor loses ~14%. */
+/* KLZH2 (codec 32, unreleased): KLZH's layout with three differences.
+   - Each of the four streams is preceded by a mode byte: 0 = khuf chunk stream (as KLZH), 1 = KRANS (krans.h; the code
+     streams only). The encoder takes rANS where it is smaller: the literal-length codes of an LZ parse are mostly 0,
+     where Huffman's one-bit floor loses ~14%.
+   - Matches are at least 3 bytes: the match-length code codes v = match length - 3 (KLZH: - 4); the sequence count is
+     at most n / 3 + 1.
+   - Offsets go up to 2^30 - 1: offset codes 3 + h for h up to 29 (codes 0..32; KLZH: up to 2^24 - 1, codes 0..26).
+   Encoder: levels 8-9 add 3-byte matches at offsets below 2^14, and levels 7-9 long-distance candidates past the
+   binary tree's window (32-byte keys) when the block is longer than that window. */
 size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
 int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 #endif
