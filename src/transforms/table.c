@@ -1017,7 +1017,7 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
         }
     } else for (int64_t r = 0; r < nr; r++) gid[r] = 0;
     PROF_T(2);
-    if (aligned && nr > 0 && !getenv("KOLMO_OLDTBL")) { ret = tbl2_stream(C, k, nr, gid, FB, nform, delim, (int)noNL, out, n); goto out; }
+    if (aligned && nr > 0) { ret = tbl2_stream(C, k, nr, gid, FB, nform, delim, (int)noNL, out, n); goto out; }
     /* numeric columns: non-formula first, then formula targets (sources are never targets) */
     size_t totnum = 0; for (int j = 0; j < k; j++) if (C[j].type == 2) totnum += C[j].nnum;
     vals = malloc(8 * (totnum + 1)); fv = calloc(k, sizeof(double *)); la = malloc(sizeof(double) * ((size_t)nr + 1));
@@ -1073,7 +1073,7 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
             for (int j = 0; j < k; j++) if (C[j].type == 2) xbytes += (size_t)(C[j].dend - C[j].edata);
             size_t acap = (size_t)RC * 24 * k + xbytes + 64;
             bm = malloc(8 * (size_t)RC * W); RL = malloc(2 * (size_t)RC * k); arena = malloc(acap); lv = malloc(RC);
-            uint32_t rowtot[RC]; int dense_rows = getenv("KOLMO_DENSE") ? atoi(getenv("KOLMO_DENSE")) : 1;
+            uint32_t rowtot[RC]; const int dense_rows = 1;
             const uint8_t *src[256], *se[256];
             uint8_t dl[32]; memset(dl, delim, 32);
             int okp = bm && RL && arena && lv;
