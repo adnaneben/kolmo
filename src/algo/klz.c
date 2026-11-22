@@ -393,7 +393,7 @@ static inline uint32_t ko_w(uint32_t x) { x++; int h = kz_hb(x); return (uint32_
 static inline uint32_t ko_cost(uint32_t f, uint32_t ws) { uint32_t c = ws - ko_w(f); return c < 256 ? 256 : c > 11 * 256 ? 11 * 256 : c; }
 static void ko_refresh(ko_st *T) {
     uint32_t w = ko_w(T->sl); for (int s = 0; s < 256; s++) T->pl[s] = ko_cost(T->lit[s], w);
-    if (T->mmin == 3) for (int s = 0; s < 256; s++) if (T->pl[s] < 2 * 256) T->pl[s] = 2 * 256;   /* KLZH2: see ko_init */
+    if (T->mmin == 3) for (int s = 0; s < 256; s++) if (T->pl[s] < 256) T->pl[s] = 256;   /* KLZH2: see ko_init */
     w = ko_w(T->sll); for (int c = 0; c < 72; c++) T->pll[c] = ko_cost(T->ll[c], w);
     w = ko_w(T->sml); for (int c = 0; c < 72; c++) T->pml[c] = ko_cost(T->ml[c], w);
     w = ko_w(T->sof); for (int c = 0; c < T->nof; c++) T->pof[c] = ko_cost(T->of[c], w) + (c >= 3 ? (uint32_t)(c - 3) * 256 : 0);
@@ -411,7 +411,7 @@ static void ko_rescale(ko_st *T) {
     T->sl = ko_scale(T->lit, 256, 12); T->sll = ko_scale(T->ll, 72, 11); T->sml = ko_scale(T->ml, 72, 11); T->sof = ko_scale(T->of, T->nof, 11);
     ko_refresh(T);
 }
-/* KLZH2 prices a literal at 2 bits or more: the first statistics are those of the raw bytes, so a byte that later
+/* KLZH2 prices a literal at 1 bit or more (2 bits cost raw video 2.8% end to end under hc, night 3): the first statistics are those of the raw bytes, so a byte that later
  * matches mostly (the zero bytes of 64-bit integers) starts at under a bit, the parse leaves it to the literals and
  * its statistics stay low (population.i64: 70.3 KB at level 9 against 63.7 KB at level 3; 60.0 KB with the floor) */
 static void ko_init(ko_st *T, const uint8_t *in, size_t n, int v2) {
