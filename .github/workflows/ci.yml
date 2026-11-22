@@ -61,7 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: build the separately compiled arch objects
-        run: make -j4 ARCH= build/libkolmoarch.a
+        run: make -j4 ARCH= build/libkolmoarch-asan.a
       - name: resource and concurrency regressions under ASan and UBSan
         run: make -j4 ARCH= check-sanitizers
       - name: component tests of the merged features under ASan and UBSan
@@ -70,7 +70,7 @@ jobs:
         run: |
           gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
             -Isrc \
-            tests/kolmotest.c src/kolmo.c build/libkolmoarch.a -lpthread -lm -o kolmotest_asan
+            tests/kolmotest.c src/kolmo.c build/libkolmoarch-asan.a -lpthread -lm -o kolmotest_asan
           ./kolmotest_asan
         timeout-minutes: 240
   fuzz-smoke:
@@ -78,23 +78,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: build the separately compiled arch objects
-        run: make -j4 ARCH= build/libkolmoarch.a
+        run: make -j4 ARCH= build/libkolmoarch-asan.a
       - name: build and run fuzz targets under ASan/UBSan (bounded)
         run: |
-          for t in fuzz_decompress fuzz_roundtrip fuzz_nplane; do
+          for t in fuzz_decompress fuzz_roundtrip fuzz_nplane fuzz_limited; do
             gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
-              -Isrc \
-              fuzz/$t.c fuzz/run_local.c src/kolmo.c build/libkolmoarch.a \
+              -Isrc -Ifuzz \
+              fuzz/$t.c fuzz/run_local.c src/kolmo.c build/libkolmoarch-asan.a \
               -lpthread -lm -o $t
             ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./$t 20000
           done
+          # version-12 frames of every mode (the frame target recomputes the header CRC after mutation, so the
+          # mutations reach the block decoders): a bounded mutation campaign over the seeds
+          ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./fuzz_decompress -300 fuzz/corpus/v12/* tests/v12/*.kolmo
+          gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -Isrc \
+            fuzz/fuzz_native.c fuzz/run_local.c build/libkolmoarch-asan.a -lpthread -lm -o fuzz_native
+          ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./fuzz_native -120 fuzz/corpus/native/*
       - name: rc3 decoders (codecs 17-26, KEXT/IDX1/DDP1, KPF1 and --target) under ASan/UBSan (bounded)
         run: |
           # these harnesses include src/kolmo.c themselves; KOLMO_FUZZ_NO_CM keeps the context-mixing setup out
           for t in fuzz_codecs fuzz_ext fuzz_profile; do
             gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FUZZ_NO_CM \
               -Isrc -Ifuzz \
-              fuzz/$t.c fuzz/run_local.c build/libkolmoarch.a -lpthread -lm -o $t
+              fuzz/$t.c fuzz/run_local.c build/libkolmoarch-asan.a -lpthread -lm -o $t
             n=20000; [ $t = fuzz_codecs ] && n=5000      # its round trips encode (block sorting, audio, GR6+)
             ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./$t $n
           done

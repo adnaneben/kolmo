@@ -1,0 +1,491 @@
+**The Project Gutenberg Etext of A Child's History of England**
+#11 in our series by Charles Dickens
+
+
+Copyright laws are changing all over the world, be sure to check
+the copyright laws for your country before posting these files!!
+
+Please take a look at the important information in this header.
+We encourage you to keep this file on your own disk, keeping an
+electronic path open for the next readers.  Do not remove this.
+
+
+**Welcome To The World of Free Plain Vanilla Electronic Texts**
+
+**Etexts Readable By Both Humans and By Computers, Since 1971**
+
+*These Etexts Prepared By Hundreds of Volunteers and Donations*
+
+Information on contacting Project Gutenberg to get Etexts, and
+further information is included below.  We need your donations.
+
+
+A Child's History of England
+
+by Charles Dickens
+
+October, 1996  [Etext #699]
+
+
+**The Project Gutenberg Etext of A Child's History of England**
+*****This file should be named achoe10.txt or achoe10.zip******
+
+Corrected EDITIONS of our etexts get a new NUMBER, achoe11.txt.
+VERSIONS based on separate sources get new LETTER, achoe10a.txt.
+
+
+We are now trying to release all our books one month in advance
+of the official release dates, for time for better editing.
+
+Please note:  neither this list nor its contents are final till
+midnight of the last day of the month of any such announcement.
+The official release date of all Project Gutenberg Etexts is at
+Midnight, Central Time, of the last day of the stated month.  A
+preliminary version may often be posted for suggestion, comment
+and editing by those who wish to do so.  To be sure you have an
+up to date first edition [xxxxx10x.xxx] please check file sizes
+in the first week of the next month.  Since our ftp program has
+a bug in it that scrambles the date [tried to fix and failed] a
+look at the file size will have to do, but we will try to see a
+new copy has at least one byte more or less.
+
+
+Information about Project Gutenberg (one page)
+
+We produce about two million dollars for each hour we work.  The
+fifty hours is one conservative estimate for how long it we take
+to get any etext selected, entered, proofread, edited, copyright
+searched and analyzed, the copyright letters written, etc.  This
+projected audience is one hundred million readers.  If our value
+per text is nominally estimated at one dollar then we produce $2
+million dollars per hour this year as we release thirty-two text
+files per month:  or 400 more Etexts in 1996 for a total of 800.
+If these reach just 10% of the computerized population, then the
+total should reach 80 billion Etexts.
+
+The Goal of Project Gutenberg is to Give Away One Trillion Etext
+Files by the December 31, 2001.  [10,000 x 100,000,000=Trillion]
+This is ten thousand titles each to one hundred million readers,
+which is only 10% of the present number of computer users.  2001
+should have at least twice as many computer users as that, so it
+will require us reaching less than 5% of the users in 2001.
+
+
+We need your donations more than ever!
+
+
+All donations should be made to "Project Gutenberg/BU":  and are
+tax deductible to the extent allowable by law. (BU = Benedictine
+University).  (Subscriptions to our paper newsletter go to BU.)
+
+For these and other matters, please mail to:
+
+Project Gutenberg
+P. O. Box  2782
+Champaign, IL 61825
+
+When all other email fails try our Executive Director:
+Michael S. Hart <hart@pobox.com>
+
+We would prefer to send you this information by email
+(Internet, Bitnet, Compuserve, ATTMAIL or MCImail).
+
+******
+If you have an FTP program (or emulator), please
+FTP directly to the Project Gutenberg archives:
+[Mac users, do NOT point and click. . .type]
+
+ftp uiarchive.cso.uiuc.edu
+login:  anonymous
+password:  your@login
+cd etext/etext90 through /etext96
+or cd etext/articles [get suggest gut for more information]
+dir [to see files]
+get or mget [to get files. . .set bin for zip files]
+GET INDEX?00.GUT
+for a list of books
+and
+GET NEW GUT for general information
+and
+MGET GUT* for newsletters.
+
+**Information prepared by the Project Gutenberg legal advisor**
+(Three Pages)
+
+
+***START**THE SMALL PRINT!**FOR PUBLIC DOMAIN ETEXTS**START***
+Why is this "Small Print!" statement here?  You know: lawyers.
+They tell us you might sue us if there is something wrong with
+your copy of this etext, even if you got it for free from
+someone other than us, and even if what's wrong is not our
+fault.  So, among other things, this "Small Print!" statement
+disclaims most of our liability to you.  It also tells you how
+you can distribute copies of this etext if you want to.
+
+*BEFORE!* YOU USE OR READ THIS ETEXT
+By using or reading any part of this PROJECT GUTENBERG-tm
+etext, you indicate that you understand, agree to and accept
+this "Small Print!" statement.  If you do not, you can receive
+a refund of the money (if any) you paid for this etext by
+sending a request within 30 days of receiving it to the person
+you got it from.  If you received this etext on a physical
+medium (such as a disk), you must return it with your request.
+
+ABOUT PROJECT GUTENBERG-TM ETEXTS
+This PROJECT GUTENBERG-tm etext, like most PROJECT GUTENBERG-
+tm etexts, is a "public domain" work distributed by Professor
+Michael S. Hart through the Project Gutenberg Association at
+Benedictine University (the "Project").  Among other
+things, this means that no one owns a United States copyright
+on or for this work, so the Project (and you!) can copy and
+distribute it in the United States without permission and
+without paying copyright royalties.  Special rules, set forth
+below, apply if you wish to copy and distribute this etext
+under the Project's "PROJECT GUTENBERG" trademark.
+
+To create these etexts, the Project expends considerable
+efforts to identify, transcribe and proofread public domain
+works.  Despite these efforts, the Project's etexts and any
+medium they may be on may contain "Defects".  Among other
+things, Defects may take the form of incomplete, inaccurate or
+corrupt data, transcription errors, a copyright or other
+intellectual property infringement, a defective or damaged
+disk or other etext medium, a computer virus, or computer
+codes that damage or cannot be read by your equipment.
+
+LIMITED WARRANTY; DISCLAIMER OF DAMAGES
+But for the "Right of Replacement or Refund" described below,
+[1] the Project (and any other party you may receive this
+etext from as a PROJECT GUTENBERG-tm etext) disclaims all
+liability to you for damages, costs and expenses, including
+legal fees, and [2] YOU HAVE NO REMEDIES FOR NEGLIGENCE OR
+UNDER STRICT LIABILITY, OR FOR BREACH OF WARRANTY OR CONTRACT,
+INCLUDING BUT NOT LIMITED TO INDIRECT, CONSEQUENTIAL, PUNITIVE
+OR INCIDENTAL DAMAGES, EVEN IF YOU GIVE NOTICE OF THE
+POSSIBILITY OF SUCH DAMAGES.
+
+If you discover a Defect in this etext within 90 days of
+receiving it, you can receive a refund of the money (if any)
+you paid for it by sending an explanatory note within that
+time to the person you received it from.  If you received it
+on a physical medium, you must return it with your note, and
+such person may choose to alternatively give you a replacement
+copy.  If you received it electronically, such person may
+choose to alternatively give you a second opportunity to
+receive it electronically.
+
+THIS ETEXT IS OTHERWISE PROVIDED TO YOU "AS-IS".  NO OTHER
+WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, ARE MADE TO YOU AS
+TO THE ETEXT OR ANY MEDIUM IT MAY BE ON, INCLUDING BUT NOT
+LIMITED TO WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+Some states do not allow disclaimers of implied warranties or
+the exclusion or limitation of consequential damages, so the
+above disclaimers and exclusions may not apply to you, and you
+may have other legal rights.
+
+INDEMNITY
+You will indemnify and hold the Project, its directors,
+officers, members and agents harmless from all liability, cost
+and expense, including legal fees, that arise directly or
+indirectly from any of the following that you do or cause:
+[1] distribution of this etext, [2] alteration, modification,
+or addition to the etext, or [3] any Defect.
+
+DISTRIBUTION UNDER "PROJECT GUTENBERG-tm"
+You may distribute copies of this etext electronically, or by
+disk, book or any other medium if you either delete this
+"Small Print!" and all other references to Project Gutenberg,
+or:
+
+[1]  Only give exact copies of it.  Among other things, this
+     requires that you do not remove, alter or modify the
+     etext or this "small print!" statement.  You may however,
+     if you wish, distribute this etext in machine readable
+     binary, compressed, mark-up, or proprietary form,
+     including any form resulting from conversion by word pro-
+     cessing or hypertext software, but only so long as
+     *EITHER*:
+
+     [*]  The etext, when displayed, is clearly readable, and
+          does *not* contain characters other than those
+          intended by the author of the work, although tilde
+          (~), asterisk (*) and underline (_) characters may
+          be used to convey punctuation intended by the
+          author, and additional characters may be used to
+          indicate hypertext links; OR
+
+     [*]  The etext may be readily converted by the reader at
+          no expense into plain ASCII, EBCDIC or equivalent
+          form by the program that displays the etext (as is
+          the case, for instance, with most word processors);
+          OR
+
+     [*]  You provide, or agree to also provide on request at
+          no additional cost, fee or expense, a copy of the
+          etext in its original plain ASCII form (or in EBCDIC
+          or other equivalent proprietary form).
+
+[2]  Honor the etext refund and replacement provisions of this
+     "Small Print!" statement.
+
+[3]  Pay a trademark license fee to the Project of 20% of the
+     net profits you derive calculated using the method you
+     already use to calculate your applicable taxes.  If you
+     don't derive profits, no royalty is due.  Royalties are
+     payable to "Project Gutenberg Association / Benedictine
+     University" within the 60 days following each
+     date you prepare (or were legally required to prepare)
+     your annual (or equivalent periodic) tax return.
+
+WHAT IF YOU *WANT* TO SEND MONEY EVEN IF YOU DON'T HAVE TO?
+The Project gratefully accepts contributions in money, time,
+scanning machines, OCR software, public domain etexts, royalty
+free copyright licenses, and every other sort of contribution
+you can think of.  Money should be paid to "Project Gutenberg
+Association / Benedictine University".
+
+*END*THE SMALL PRINT! FOR PUBLIC DOMAIN ETEXTS*Ver.04.29.93*END*
+
+
+
+
+
+A Child's History of England by Charles Dickens
+Scanned and Proofed by David Price, email ccx074@coventry.ac.uk
+
+
+
+
+
+A Child's History of England
+
+
+
+
+CHAPTER I - ANCIENT ENGLAND AND THE ROMANS
+
+
+
+IF you look at a Map of the World, you will see, in the left-hand 
+upper corner of the Eastern Hemisphere, two Islands lying in the 
+sea.  They are England and Scotland, and Ireland.  England and 
+Scotland form the greater part of these Islands.  Ireland is the 
+next in size.  The little neighbouring islands, which are so small 
+upon the Map as to be mere dots, are chiefly little bits of 
+Scotland, - broken off, I dare say, in the course of a great length 
+of time, by the power of the restless water.
+
+In the old days, a long, long while ago, before Our Saviour was 
+born on earth and lay asleep in a manger, these Islands were in the 
+same place, and the stormy sea roared round them, just as it roars 
+now.  But the sea was not alive, then, with great ships and brave 
+sailors, sailing to and from all parts of the world.  It was very 
+lonely.  The Islands lay solitary, in the great expanse of water.  
+The foaming waves dashed against their cliffs, and the bleak winds 
+blew over their forests; but the winds and waves brought no 
+adventurers to land upon the Islands, and the savage Islanders knew 
+nothing of the rest of the world, and the rest of the world knew 
+nothing of them.
+
+It is supposed that the Phoenicians, who were an ancient people, 
+famous for carrying on trade, came in ships to these Islands, and 
+found that they produced tin and lead; both very useful things, as 
+you know, and both produced to this very hour upon the sea-coast. 
+The most celebrated tin mines in Cornwall are, still, close to the 
+sea.  One of them, which I have seen, is so close to it that it is 
+hollowed out underneath the ocean; and the miners say, that in 
+stormy weather, when they are at work down in that deep place, they 
+can hear the noise of the waves thundering above their heads.  So, 
+the Phoenicians, coasting about the Islands, would come, without 
+much difficulty, to where the tin and lead were.
+
+The Phoenicians traded with the Islanders for these metals, and 
+gave the Islanders some other useful things in exchange.  The 
+Islanders were, at first, poor savages, going almost naked, or only 
+dressed in the rough skins of beasts, and staining their bodies, as 
+other savages do, with coloured earths and the juices of plants.  
+But the Phoenicians, sailing over to the opposite coasts of France 
+and Belgium, and saying to the people there, 'We have been to those 
+white cliffs across the water, which you can see in fine weather, 
+and from that country, which is called BRITAIN, we bring this tin 
+and lead,' tempted some of the French and Belgians to come over 
+also.  These people settled themselves on the south coast of 
+England, which is now called Kent; and, although they were a rough 
+people too, they taught the savage Britons some useful arts, and 
+improved that part of the Islands.  It is probable that other 
+people came over from Spain to Ireland, and settled there.
+
+Thus, by little and little, strangers became mixed with the 
+Islanders, and the savage Britons grew into a wild, bold people; 
+almost savage, still, especially in the interior of the country 
+away from the sea where the foreign settlers seldom went; but 
+hardy, brave, and strong.
+
+The whole country was covered with forests, and swamps.  The 
+greater part of it was very misty and cold.  There were no roads, 
+no bridges, no streets, no houses that you would think deserving of 
+the name.  A town was nothing but a collection of straw-covered 
+huts, hidden in a thick wood, with a ditch all round, and a low 
+wall, made of mud, or the trunks of trees placed one upon another.  
+The people planted little or no corn, but lived upon the flesh of 
+their flocks and cattle.  They made no coins, but used metal rings 
+for money.  They were clever in basket-work, as savage people often 
+are; and they could make a coarse kind of cloth, and some very bad 
+earthenware.  But in building fortresses they were much more 
+clever.
+
+They made boats of basket-work, covered with the skins of animals, 
+but seldom, if ever, ventured far from the shore.  They made 
+swords, of copper mixed with tin; but, these swords were of an 
+awkward shape, and so soft that a heavy blow would bend one.  They 
+made light shields, short pointed daggers, and spears - which they 
+jerked back after they had thrown them at an enemy, by a long strip 
+of leather fastened to the stem.  The butt-end was a rattle, to 
+frighten an enemy's horse.  The ancient Britons, being divided into 
+as many as thirty or forty tribes, each commanded by its own little 
+king, were constantly fighting with one another, as savage people 
+usually do; and they always fought with these weapons.
+
+They were very fond of horses.  The standard of Kent was the 
+picture of a white horse.  They could break them in and manage them 
+wonderfully well.  Indeed, the horses (of which they had an 
+abundance, though they were rather small) were so well taught in 
+those days, that they can scarcely be said to have improved since; 
+though the men are so much wiser.  They understood, and obeyed, 
+every word of command; and would stand still by themselves, in all 
+the din and noise of battle, while their masters went to fight on 
+foot.  The Britons could not have succeeded in their most 
+remarkable art, without the aid of these sensible and trusty 
+animals.  The art I mean, is the construction and management of 
+war-chariots or cars, for which they have ever been celebrated in 
+history.  Each of the best sort of these chariots, not quite breast 
+high in front, and open at the back, contained one man to drive, 
+and two or three others to fight - all standing up.  The horses who 
+drew them were so well trained, that they would tear, at full 
+gallop, over the most stony ways, and even through the woods; 
+dashing down their masters' enemies beneath their hoofs, and 
+cutting them to pieces with the blades of swords, or scythes, which 
+were fastened to the wheels, and stretched out beyond the car on 
+each side, for that cruel purpose.  In a moment, while at full 
+speed, the horses would stop, at the driver's command.  The men 
+within would leap out, deal blows about them with their swords like 
+hail, leap on the horses, on the pole, spring back into the 
+chariots anyhow; and, as soon as they were safe, the horses tore 
+away again.
+
+The Britons had a strange and terrible religion, called the 
+Religion of the Druids.  It seems to have been brought over, in 
+very early times indeed, from the opposite country of France, 
+anciently called Gaul, and to have mixed up the worship of the 
+Serpent, and of the Sun and Moon, with the worship of some of the 
+Heathen Gods and Goddesses.  Most of its ceremonies were kept 
+secret by the priests, the Druids, who pretended to be enchanters, 
+and who carried magicians' wands, and wore, each of them, about his 
+neck, what he told the ignorant people was a Serpent's egg in a 
+golden case.  But it is certain that the Druidical ceremonies 
+included the sacrifice of human victims, the torture of some 
+suspected criminals, and, on particular occasions, even the burning 
+alive, in immense wicker cages, of a number of men and animals 
+together.  The Druid Priests had some kind of veneration for the 
+Oak, and for the mistletoe - the same plant that we hang up in 
+houses at Christmas Time now - when its white berries grew upon the 
+Oak.  They met together in dark woods, which they called Sacred 
+Groves; and there they instructed, in their mysterious arts, young 
+men who came to them as pupils, and who sometimes stayed with them 
+as long as twenty years.
+
+These Druids built great Temples and altars, open to the sky, 
+fragments of some of which are yet remaining.  Stonehenge, on 
+Salisbury Plain, in Wiltshire, is the most extraordinary of these.  
+Three curious stones, called Kits Coty House, on Bluebell Hill, 
+near Maidstone, in Kent, form another.  We know, from examination 
+of the great blocks of which such buildings are made, that they 
+could not have been raised without the aid of some ingenious 
+machines, which are common now, but which the ancient Britons 
+certainly did not use in making their own uncomfortable houses.  I 
+should not wonder if the Druids, and their pupils who stayed with 
+them twenty years, knowing more than the rest of the Britons, kept 
+the people out of sight while they made these buildings, and then 
+pretended that they built them by magic.  Perhaps they had a hand 
+in the fortresses too; at all events, as they were very powerful, 
+and very much believed in, and as they made and executed the laws, 
+and paid no taxes, I don't wonder that they liked their trade.  
+And, as they persuaded the people the more Druids there were, the 
+better off the people would be, I don't wonder that there were a 
+good many of them.  But it is pleasant to think that there are no 
+Druids, NOW, who go on in that way, and pretend to carry 
+Enchanters' Wands and Serpents' Eggs - and of course there is 
+nothing of the kind, anywhere.
+
+Such was the improved condition of the ancient Britons, fifty-five 
+years before the birth of Our Saviour, when the Romans, under their 
+great General, Julius Caesar, were masters of all the rest of the 
+known world.  Julius Caesar had then just conquered Gaul; and 
+hearing, in Gaul, a good deal about the opposite Island with the 
+white cliffs, and about the bravery of the Britons who inhabited it 
+- some of whom had been fetched over to help the Gauls in the war 
+against him - he resolved, as he was so near, to come and conquer 
+Britain next.
+
+So, Julius Caesar came sailing over to this Island of ours, with 
+eighty vessels and twelve thousand men.  And he came from the 
+French coast between Calais and Boulogne, 'because thence was the 
+shortest passage into Britain;' just for the same reason as our 
+steam-boats now take the same track, every day.  He expected to 
+conquer Britain easily:  but it was not such easy work as he 
+supposed - for the bold Britons fought most bravely; and, what with 
+not having his horse-soldiers with him (for they had been driven 
+back by a storm), and what with having some of his vessels dashed 
+to pieces by a high tide after they were drawn ashore, he ran great 
+risk of being totally defeated.  However, for once that the bold 
+Britons beat him, he beat them twice; though not so soundly but 
+that he was very glad to accept their proposals of peace, and go 
+away.
+
+But, in the spring of the next year, he came back; this time, with 
+eight hundred vessels and thirty thousand men.  The British tribes 
+chose, as their general-in-chief, a Briton, whom the Romans in 
+their Latin language called CASSIVELLAUNUS, but whose British name 
+is supposed to have been CASWALLON.  A brave general he was, and 
+well he and his soldiers fought the Roman army!  So well, that 
+whenever in that war the Roman soldiers saw a great cloud of dust, 
+and heard the rattle of the rapid British chariots, they trembled 
+in their hearts.  Besides a number of smaller battles, there was a 
+battle fought near Canterbury, in Kent; there was a battle fought 
+near Chertsey, in Surrey; there was a battle fought near a marshy 
+little town in a wood, the capital of that part of Britain which 
+belonged to CASSIVELLAUNUS, and which was probably near what is now 
+Saint Albans, in Hertfordshire.  However, brave CASSIVELLAUNUS had 
+the worst of it, on the whole; though he and his men always fought 
+like lions.  As the other British chiefs were jealous of him, and 
+were always quarrelling with him, and with one another, he gave up, 
+and proposed peace.  Julius Caesar was very glad to grant peace 
+easily, and to go away again with all his remaining ships and men.  
+He had expected to find pearls in Britain, and he may have found a 
+few for anything I know; but, at all events, he found delicious 
+oysters, and I am sure he found tough Britons - of whom, I dare 
+say, he made the same complaint as Napoleon Bonaparte the great 
+French General did, eighteen hundred years afterwards, when he said 
+they were such unreasonable fellows that they never knew when they 
+were beaten.  They never DID know, I believe, and never will.
+
+Nearly a hundred years passed on, and all that time, there was 
+peace in Britain.  The Britons improved their towns and mode of 
+life:  became more civilised, travelled, and learnt a great deal 
+from the Gauls and Romans.  At last, the Roman Emperor, Claudius, 
+sent AULUS PLAUTIUS, a skilful general, with a mighty force, to 
+subdue the Island, and shortly afterwards arrived himself.  They 
+did little; and OSTORIUS SCAPULA, another general, came.  Some of 
+the British Chiefs of Tribes submitted.  Others resolved to fight 
+to the death.  Of these brave men, the bravest was CARACTACUS, or 
+CARADOC, who gave battle to the Romans, with his army, among the 
+mountains of North Wales.  'This day,' said he to his soldiers, 
+'decides the fate of Britain!  Your liberty, or your eternal 
+slavery, dates from this hour.  Remember your brave ancestors, who 
+drove the great Caesar himself across the sea!'  On hearing these 
+words, his men, with a great shout, rushed upon the Romans.  But 
+the strong Roman swords and armour were too much for the weaker 
+British weapons in close conflict.  The Britons lost the day.  The 
+wife and daughter of the brave CARACTACUS were taken prison
