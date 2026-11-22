@@ -1,0 +1,12 @@
+settings -m speed  files 24  input 240653135  same bytes: True
+  build/kolmo_nogc             out   113752595  c   0.701s    343.4 MB/s  d   0.356s    676.4 MB/s
+  build/kolmo                  out   113752595  c   0.700s    343.9 MB/s  d   0.372s    647.1 MB/s
+settings -m balanced  files 24  input 240653135  same bytes: True
+  build/kolmo_nogc             out    61687628  c   1.625s    148.1 MB/s  d   0.554s    434.4 MB/s
+  build/kolmo                  out    61687628  c   1.653s    145.6 MB/s  d   0.571s    421.8 MB/s
+settings -m speed  files 24  input 240653135  same bytes: True
+  build/kolmo                  out   113752595  c   0.690s    348.9 MB/s  d   0.370s    650.1 MB/s
+  build/kolmo_nogc             out   113752595  c   0.712s    338.1 MB/s  d   0.379s    635.2 MB/s
+settings -m balanced  files 24  input 240653135  same bytes: True
+  build/kolmo                  out    61687628  c   1.698s    141.7 MB/s  d   0.558s    431.4 MB/s
+  build/kolmo_nogc             out    61687628  c   1.629s    147.7 MB/s  d   0.606s    397.3 MB/s

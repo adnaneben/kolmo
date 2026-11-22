@@ -38,6 +38,7 @@ struct Params {
     threads: c_int,
     block: u32,
     transforms: c_int,
+    mem_limit: u64, // 0 = auto (docs/MEMORY-MODEL.md); mirrors kolmo_params
 }
 
 extern "C" {
@@ -77,7 +78,7 @@ fn err(code: i64) -> Error {
 
 /// Compress `data` in `mode`. `threads` = 0 uses all cores.
 pub fn compress(data: &[u8], mode: Mode, threads: i32) -> Result<Vec<u8>, Error> {
-    let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1 };
+    let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1, mem_limit: 0 };
     let cap = unsafe { kolmo_bound(data.len(), &p) };
     let mut out = vec![0u8; cap.max(1)];
     let n = unsafe { kolmo_compress(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p) };
@@ -127,7 +128,7 @@ pub fn train_dict(samples: &[&[u8]], dict_cap: usize) -> Result<Vec<u8>, Error> 
 /// Compress `data` against a trained dictionary (see [`train_dict`]). The same dictionary must be
 /// supplied to [`decompress_dict`]; a blob written with a dictionary refuses to decode without it.
 pub fn compress_dict(data: &[u8], mode: Mode, threads: i32, dict: &[u8]) -> Result<Vec<u8>, Error> {
-    let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1 };
+    let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1, mem_limit: 0 };
     let cap = unsafe { kolmo_bound(data.len(), &p) };
     let mut out = vec![0u8; cap.max(1)];
     let n = unsafe { kolmo_compress_dict(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p, dict.as_ptr(), dict.len()) };

@@ -13,9 +13,16 @@
 static void *test_calloc(size_t count, size_t size);
 #define calloc test_calloc
 #endif
-#include "../src/cm.inc"
+#ifndef KOLMO_CM_COMPACT
+/* cm.c defines the public kolmo_set_x_tables (rc3, xmode); the reference object and the compact driver both include
+ * cm.c and are linked together, so the reference copy takes another name */
+#define kolmo_set_x_tables kolmo_set_x_tables_reference
+#endif
+#include "../src/codecs/cm.c"
 #ifdef KOLMO_CM_COMPACT
 #undef calloc
+#else
+#undef kolmo_set_x_tables
 #endif
 
 static size_t encode(const uint8_t *data, size_t n, uint8_t *out, size_t cap, int model) {

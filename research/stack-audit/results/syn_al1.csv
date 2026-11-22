@@ -1,0 +1,12 @@
+syn_const_plane_u32.npy,fast,69583,66742,0.038,0.339,1,0
+syn_sparse_spikes_i32.npy,fast,81904,81904,0.025,0.033,1,1
+syn_two_planes_u16.npy,fast,38541,35554,0.044,0.067,1,0
+syn_const_plane_u32.npy,eco,69578,65704,0.168,0.160,1,0
+syn_sparse_spikes_i32.npy,eco,78986,64108,0.058,0.069,1,0
+syn_two_planes_u16.npy,eco,37886,33879,0.111,0.116,1,0
+syn_const_plane_u32.npy,hc,69582,66741,0.178,0.133,1,0
+syn_sparse_spikes_i32.npy,hc,71597,64111,0.178,0.203,1,0
+syn_two_planes_u16.npy,hc,36492,33884,0.195,0.204,1,0
+syn_const_plane_u32.npy,max,69585,65711,0.090,0.131,1,0
+syn_sparse_spikes_i32.npy,max,68434,64114,0.245,0.221,1,0
+syn_two_planes_u16.npy,max,36817,33887,0.098,0.108,1,0

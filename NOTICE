@@ -4,5 +4,14 @@ Third-party code vendored unmodified under vendor/:
   zstd 1.5.7  (vendor/zstd)  BSD-3-Clause, Copyright (c) Meta Platforms, Inc. and affiliates
   LZ4 1.10.0  (vendor/lz4)   BSD-2-Clause, Copyright (c) Yann Collet
   brotli 1.1.0 (vendor/brotli: common, dec, enc, include) MIT, Copyright (c) the Brotli Authors
-  libbsc 3.4.0 (vendor/libbsc, including libsais) Apache-2.0, Copyright (c) 2009-2026 Ilya Grebnov
-Linked from the system: liblzma from XZ Utils (0BSD)
+  xxHash 0.8.2 (vendor/xxhash/xxhash.h) BSD-2-Clause, Copyright (c) Yann Collet
+  liblzma from XZ Utils 5.8.1, LZMA2 subset (vendor/xz, files unmodified; see vendor/xz/README.kolmo) 0BSD,
+    by Lasse Collin, Igor Pavlov and the XZ Utils contributors. Kolmo adds config.h, kolmo_crc32_table.c,
+    kolmo_lzma.h and kolmo_lzma_namespace.h there.
+
+Code taken over from third parties (ported or adapted, with the original copyright and licence in each file header):
+  libbsc 3.4.0, Apache-2.0, Copyright (c) 2009-2026 Ilya Grebnov: ported from C++ to C in src/algo/lzp.c,
+    src/algo/qlfc.c, src/algo/qlfc_model.h, src/algo/qlfc_tables.h, src/algo/rangecoder.h, src/codecs/bwt.c,
+    src/codecs/bwt_stream.c
+  libsais 2.12.1, Apache-2.0 WITH LLVM-exception, Copyright (c) 2021-2026 Ilya Grebnov: the subset Kolmo uses, in
+    src/algo/sais/ (licence in src/algo/sais/LICENSE, changes in src/algo/sais/README.md)

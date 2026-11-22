@@ -55,7 +55,7 @@ exact):
 | `ultra` | **17.01%** | 0.28 MB/s | 0.30 MB/s | — (smallest result on the board) |
 
 From about 350 MB/s down to the slowest tier, the bold settings give the smallest output of any entry at that
-compression speed or faster. `hc` (and `eco`) trade some of that for decode speed: `hc` decompresses 6× faster than
+compression speed or faster. `hc` trades some of that for decode speed (`eco` codes text by block sorting, which decodes at 15–40 MB/s): `hc` decompresses 6× faster than
 xz and 65× faster than bzip3 at a similar ratio. Above 350 MB/s, and on raw decode speed in the LZ4 class, zstd -1
 and lz4 still lead.
 
@@ -66,10 +66,11 @@ and lz4 still lead.
 | Tables (CSV/TSV) | Columns become typed streams. Numeric columns are exact decimals at a common scale, predicted per block by raw, delta, delta within an entity (e.g. country), **delta-of-delta** and **third-order** within an entity (for counters and steady trends), or a discovered **formula of other columns** (`y = k·a/b`, change and % change): 51 formulas on the OWID energy table. Quoted fields, short rows and odd values are lossless. |
 | Logs | Lines are split into **templates and variables**; timestamps, IPs and IDs become integer columns ("skeleton" columns). |
 | Fixed-width text | Lines that come in a few fixed lengths (chemistry and geometry files, fixed-width reports) are stored **column by column per line length**: a line scan and a transpose, several times cheaper than templates. Files that use it carry container version 8. |
-| Prose and markup | Frequent words become 2-byte codes from byte values the block never uses (eco and above); `hc` then uses zstd 22 with a 128 MiB window. |
+| Prose and markup | `balanced`: blocks of up to 6 MiB with an 8 MiB window. `eco`: block sorting (BWT) of the plain text (files up to 32 MiB as one block). `hc`: frequent words become 2-byte codes from byte values the block never uses, then zstd 19 with a 128 MiB window. |
+| Decimal doubles | Float64 arrays whose values were written in decimal (`.npy` tables, raw arrays, the columns inside pickle, `.npz` and `.mat` files) are stored as **integers over a power of ten per column**, with missing values as a tag and anything else kept verbatim. |
 | Scientific binary | **Fixed records** (period found by self-similarity; fields of 1/2/4/8 bytes stored raw, as deltas, as dictionary tokens, or as multiples of a discovered quantum with exact bit corrections) and **16-bit images** (byte order, row stride and predictor found automatically). |
 | Executables, archives | x86 call/jump transform; each tar member gets its own model. |
-| Coders | LZ4 (`rt`), zstd (`fast`, `hc`), brotli (`eco`), BWT via libbsc and LZMA2 (`max`), and an integer **context-mixing** coder (`ultra`: orders 1–7, words, columns, indirect contexts, bit histories, neural mixing, APMs), best per block. |
+| Coders | LZ4 (`rt`), zstd (`fast`, `hc`), brotli (`eco`), BWT (LZP + libsais-derived suffix sorting + QLFC, in C) and LZMA2 (`max`), and an integer **context-mixing** coder (`ultra`: orders 1–7, words, columns, indirect contexts, bit histories, neural mixing, APMs), best per block. |
 | Container | Independent blocks with an index, so any byte range decodes alone. XXH3 per block and CRC32C over the header and index: corrupt input is reported, never returned as data. Blocks compress and decompress in parallel, so throughput scales with cores. |
 
 All prediction that must agree between encoder and decoder is integer or plain IEEE double without fused multiply-add
@@ -87,6 +88,19 @@ Three modes cover almost every use:
 
 `-x` asks for the smallest output of all (`ultra`): context mixing, very slow, large memory. It was never removed; it
 is left out of the speed benchmarks because it runs at well under 1 MB/s.
+`-x -l 2` goes further for ratio at the cost of decode speed: numeric graph leaves may also use context mixing when
+that is smaller (measured −11% to −15% on integer series such as sensor and ECG samples, about −2% on a mixed
+numeric corpus), and those blocks then decode at context-mixing speed. Plain `-x` is unchanged; any decoder reads both.
+At `-x` and `-x -l 2`, a FASTQ file of up to 128 MiB is also coded by stream family (names, bases, qualities, each
+with its own model; `src/experimental/KFAM.md`) and that coding is kept when smaller: 25% smaller than `-x` before
+on three Illumina runs, and such files decode in seconds (7 to 25 MB/s) instead of at context-mixing speed. Those
+files need a kolmo that reads container version 10 (this branch); older readers refuse them.
+
+`--native-leaf` (with `balanced`; C API: `transforms |= KOLMO_T_NATIVE_LEAF`) codes integer-series residuals with
+Kolmo's native plane-context leaves when that is smaller: measured −11.3% on 180 MB of ECG and numeric columns from
+the holdout sources (ECG −11.9%, power −9.8%), and such files decode about 1.5–2.6× slower than default `balanced`
+(2.3× on that data, about 580 MB/s on Apple silicon). Files that use it are container version 9; files that do not
+are unchanged.
 
 Advanced settings, for tuning between the three:
 
@@ -94,13 +108,25 @@ Advanced settings, for tuning between the three:
 |---|---|---|---|
 | `rt` | adaptive (≤4 MiB) | LZ4 | decode speed first |
 | `fast` | adaptive (≤4 MiB) | zstd 3 | default (`-q`: quick analysis, cheap transforms only) |
-| `eco` | 16 MiB | brotli 8 | lowest storage cost at moderate CPU |
+| `eco` | 16 MiB (text up to 32 MiB) | brotli 8; BWT for text and JSON token streams (decodes at block-sorting speed) | lowest storage cost at moderate CPU |
 | `hc` | 16 MiB (text 128 MiB) | zstd 19 / 22 | archive with fast reads |
 | `max` | 128 MiB | BWT for text; LZMA2 otherwise, or BWT where it is at least 3% smaller (`-l 1`: BWT only) | cold archive |
-| `ultra` | 128 MiB | best of context mixing, LZMA2, BWT (`-l 1`: context mixing model 1 only, faster) | coldest archive, best ratio |
+| `ultra` | 128 MiB | best of context mixing (with an image model for 8-bit images), LZMA2, BWT (`-l 1`: context mixing model 1 only, faster; `-l 2`: maximum ratio, numeric graph leaves may also use context mixing, slower decode) | coldest archive, best ratio |
 
-`ultra` sizes its context-mixing tables to the block (up to about 4.5 GB per thread for blocks of 4 MiB and more, in
-both directions; 3.8 GB with `-l 1`). On Linux the tables use transparent huge pages. Parallel blocks share a budget of 60% of physical memory and wait rather than swap.
+`ultra` sizes its context-mixing tables to the block: about 16 times the block (a 10 MB file decodes in about 200 MiB;
+`--x-tables=full` restores rc2's tables of up to 5.4 GiB, slightly smaller on text). On Linux the tables use transparent
+huge pages.
+
+### Memory
+
+`-M SIZE` / `--memlimit SIZE` (or `KOLMO_MEMLIMIT`) sets one limit for compressing and decompressing: `512M`, `8G`,
+`50%` of RAM, `auto` (the default: 50% of RAM, or of the container's limit) or `max`. Kolmo adapts how much runs at once
+to the memory that is actually free (it waits instead of swapping, and speeds up again when memory frees), but **the
+output never depends on it**: the same input and settings give the same bytes on every machine. Only an explicit size
+changes the output, so that it decodes within that size: `ratio` and `-x` then use smaller blocks and `-x` smaller
+tables. Every file declares what it needs to decode; a decoder with less stops before allocating anything, with the
+figure (`needs 4.7 GiB to decode (limit 2.0 GiB); run with --memlimit 5G or --memlimit max`). Floors: speed and
+balanced 64 MiB, eco and hc 256 MiB, ratio 1 GiB, `-x` 256 MiB. Details: `docs/MEMORY-MODEL.md`.
 
 ### Columnar decode (tables)
 
@@ -128,6 +154,44 @@ dictionary (`KOLMO_ERR_DICT`) rather than returning wrong data. The API is `kolm
 `kolmo_decompress_dict` (C), `kolmo.train_dict` + `compress(..., dict=d)` (Python), and `train_dict` / `compress_dict`
 / `decompress_dict` (Rust). Dictionaries apply to the zstd-coded blocks (`fast`, `hc`).
 
+### Trained profiles (`kolmo train`)
+
+A dictionary helps small files; a **profile** carries everything Kolmo learns from a sample of one dataset — the
+setting, the plan the analysis picks for each kind of file (so later files skip the analysis), a zstd dictionary and
+a raw dictionary for Brotli and LZ4 — and the frames written with it drop their per-file framing to 14–16 bytes.
+
+```bash
+./build/kolmo train -o logs.kpf samples/            # learn a profile (files or directories)
+./build/kolmo train --target 'cost:cloud' -o logs.kpf samples/   # also pick the setting, measured on held-out samples
+./build/kolmo -P logs.kpf today.log today.kolmo      # compress with it (its setting unless -m is given)
+./build/kolmo -d -P logs.kpf today.kolmo today.log   # the decoder needs the same profile
+./build/kolmo profile logs.kpf                       # what it contains
+```
+
+On held-out files of the same sources (one thread, `balanced`, against zstd level 3 with a dictionary trained by
+`zstd --train -B16K` on the same sample; `benchmark/rc3/features-a/RESULTS.md`): single JSON, OpenStack and SSH
+messages 2.4–11% smaller than zstd with its dictionary and 64–75% smaller than untrained Kolmo, at the same speed or
+faster; Hadoop application logs 25% smaller than zstd with a dictionary and 39% smaller than untrained Kolmo. The
+profile id is recorded in every frame; decoding without the profile, or with another, fails with `KOLMO_ERR_PROFILE`.
+The file format is in `SPEC.md` (*Trained profiles*, *Profile frames*); the C API is `kolmo_profile_train`,
+`kolmo_profile_load`, `kolmo_compress_profile`, `kolmo_decompress_profile`.
+
+### Targets (`--target`)
+
+Instead of a mode, say what matters; Kolmo picks the setting per 16 MiB chunk that is cheapest under it, from trial
+compressions of the chunk and a table of calibrated speeds:
+
+```bash
+./build/kolmo --target 'decode>=1GB/s' in out        # smallest output that decodes at 1 GB/s per core
+./build/kolmo --target 'cost:cloud=12' in out        # storage for a year + CPU, benchmark/TRADEOFFS.md model 3
+./build/kolmo --target 'cost:link=100Mbit' in out    # compress + transfer + decompress time
+./build/kolmo --target 'cost:size/1e9*0.02 + enc*1e-5' -v in out   # any formula of size, n, enc, dec
+./build/kolmo calibrate                              # measure this machine (~/.config/kolmo/calibration)
+```
+
+The output is an ordinary frame. How close the choices come to the best fixed setting is measured in
+`benchmark/rc3/features-a/RESULTS.md`.
+
 ### Streaming (large inputs)
 
 For inputs too large to hold in memory, `-s` (or `-S <segMiB>`) compresses a stream of
@@ -146,10 +210,10 @@ input, output buffers, other codecs and worker count.
 ### Decoder limits
 
 C callers can use `kolmo_decompress_limited` with a `kolmo_decode_limits` structure to bound the
-original size, raw block size and block count of a frame. Each zero field disables that limit;
-exceeding a limit returns `KOLMO_ERR_LIMIT`. These are format-size limits, not a cap on total heap
-memory: an `ultra` block can still require gigabytes of context-mixing state. Existing decode
-functions keep their current behavior.
+original size, raw block size and block count of a frame (each zero field disables that limit; exceeding one returns
+`KOLMO_ERR_LIMIT`) and the memory (`max_memory`: 0 = auto, `KOLMO_MEM_MAX` = none; a frame that declares more returns
+`KOLMO_ERR_MEMORY` before anything is allocated, `kolmo_decode_memory` gives its figure). `kolmo_check_frame` runs the
+same checks before the caller allocates the output buffer. Calls without limits use auto.
 
 ## Install
 
@@ -179,7 +243,7 @@ with plain `kolmo`.
 ```bash
 make                                    # build/kolmo, build/kolmobench, build/kolmotest (Linux, macOS; gcc or clang)
 make check                             # resource failures, concurrent callers, round trips, ranges and corruption
-./build/kolmo -m ratio in.csv out.kolmo     # compress: -m speed|balanced|ratio (-x: smallest of all), -T threads; advanced: -m rt|fast|eco|hc|max|ultra, -l level, -q
+./build/kolmo -m ratio in.csv out.kolmo     # compress: -m speed|balanced|ratio (-x: smallest of all), -T threads, -M memlimit; advanced: -m rt|fast|eco|hc|max|ultra, -l level, -q
 ./build/kolmo -d out.kolmo back.csv         # decompress (auto-detects one-shot vs streamed input)
 ./build/kolmo -s huge.csv huge.czs        # streaming compress: bounded memory, any size (-S N for N-MiB segments)
 ./build/kolmo -r 1000000:4096 out.kolmo x   # read 4 KiB at offset 1,000,000 without decoding the rest
@@ -187,8 +251,9 @@ make check                             # resource failures, concurrent callers, 
 ./build/kolmobench -X -o results.tsv file  # benchmark against LZ4, zstd, brotli and xz built from the same sources
 ```
 
-Requires liblzma (`apt install liblzma-dev`, `brew install xz`); zstd, LZ4, brotli and libbsc are vendored. Build with `make NO_LZMA=1`
-where liblzma is unavailable (max and ultra then use the other coders).
+Needs only a C compiler: zstd, LZ4, Brotli, xxHash and a liblzma subset (LZMA2 only, XZ Utils 5.8.1, `vendor/xz`)
+are vendored; the BWT coder (ported from libbsc) and its suffix sorter (taken over from libsais) are Kolmo's own C
+sources (`src/algo`). `make NO_LZMA=1` builds without the LZMA2 coder (the ratio modes then use the other coders).
 
 On a Mac: `bash mac/setup.sh` once, then `bash mac/bench.sh` for the full benchmark and `bash mac/tune.sh` for an
 overnight genetic search of the build-time settings (`tune/ga.py`).
@@ -204,15 +269,12 @@ data. A shared library and Python and Rust bindings are in `bindings/`; the form
 ## Layout
 
 ```
-src/kolmo.h, kolmo.c   library: planning, container, codecs, thread pool, table v1, field transposition, shuffle
-src/tbl2.inc       tables: typed columns, predictors, formula discovery
-src/log.inc        logs: templates and skeleton columns
-src/lines.inc      fixed-width text: line classes stored column by column
-src/sci.inc        fixed records and 16-bit images
-src/word.inc       word dictionary for prose
-src/cm.inc         context-mixing coder
-src/cli.c          command line          bench/kolmobench.c   benchmark          tests/kolmotest.c   tests
-tune/ga.py         genetic tuning        mac/              Mac scripts        vendor/           zstd, LZ4, libbsc
+src/kolmo.h        the public API      src/kolmo.c   the library: includes the parts below (docs/LAYOUT.md)
+src/api, core      entry points; container, blocks, thread pool, encoder, decoder, streams
+src/plan           analysis and plan per block      src/transforms   table, log, lines, sci, word, graph, ...
+src/codecs         one file per block codec (kolmo_codec table)    src/algo, arch   algorithms; CPU kernels by ISA
+src/cli/cli.c      command line          bench/kolmobench.c   benchmark          tests/kolmotest.c   tests
+tune/ga.py         genetic tuning        mac/              Mac scripts        vendor/           zstd, LZ4, brotli
 bindings/python    PyPI package kolmoc   bindings/rust     crate kolmo        packaging/homebrew  brew formula
 ```
 

@@ -1,0 +1,1134 @@
+{
+ "owid": {
+  "file": "owid-co2-data.csv",
+  "bytes": 15242657,
+  "sizes": {
+   "plain balanced": {
+    "size": 1392694,
+    "c_s_T4": 0.08175088099960703,
+    "d_s_T1": 0.0619712649995563,
+    "d_s_T4": 0.02550236800016137
+   },
+   "indexed balanced": {
+    "size": 1557302,
+    "c_s_T4": 0.1998345350002637,
+    "d_s_T1": 0.053909121000287996,
+    "d_s_T4": 0.02961100999982591
+   },
+   "indexed balanced, no filter": {
+    "size": 1480072,
+    "c_s_T4": 0.12789529000019684
+   },
+   "zstd -19": {
+    "size": 3605469,
+    "c_s_T4": 12.446563567999874,
+    "d_s_T1": 0.029093502999785414
+   }
+  },
+  "queries": {
+   "column co2, all rows": {
+    "cmd": "cat --col co2",
+    "index_T1": {
+     "s": 0.007709169000008842,
+     "decoded": 795866,
+     "stored_read": 56193,
+     "blocks": [
+      4,
+      0,
+      4,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 228258
+    },
+    "scan_T1": {
+     "s": 0.10972594500071864,
+     "decoded": 15242657,
+     "stored_read": 1478231,
+     "blocks": [
+      4,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 228258
+    },
+    "index_T4": {
+     "s": 0.004917008000120404,
+     "decoded": 795866,
+     "stored_read": 56193,
+     "blocks": [
+      4,
+      0,
+      4,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 228258
+    },
+    "scan_T4": {
+     "s": 0.08990036799968948,
+     "decoded": 15242657,
+     "stored_read": 1478231,
+     "blocks": [
+      4,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 228258
+    },
+    "same_answer": true
+   },
+   "column co2, rows 50000-51000": {
+    "cmd": "cat --col co2 --rows 50000-51000",
+    "index_T1": {
+     "s": 0.0029108629996699165,
+     "decoded": 129987,
+     "stored_read": 10652,
+     "blocks": [
+      4,
+      0,
+      1,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 3387
+    },
+    "scan_T1": {
+     "s": 0.10298306200002116,
+     "decoded": 15242657,
+     "stored_read": 1478231,
+     "blocks": [
+      4,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 3387
+    },
+    "index_T4": {
+     "s": 0.0029339259999687783,
+     "decoded": 129987,
+     "stored_read": 10652,
+     "blocks": [
+      4,
+      0,
+      1,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 3387
+    },
+    "scan_T4": {
+     "s": 0.08030080300068221,
+     "decoded": 15242657,
+     "stored_read": 1478231,
+     "blocks": [
+      4,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 3387
+    },
+    "same_answer": true
+   },
+   "rows 30000-30100": {
+    "cmd": "cat --rows 30000-30100",
+    "index_T1": {
+     "s": 0.018293496999831405,
+     "decoded": 4194249,
+     "stored_read": 425008,
+     "blocks": [
+      4,
+      1,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 25886
+    },
+    "scan_T1": {
+     "s": 0.033132069000203046,
+     "decoded": 8388541,
+     "stored_read": 823398,
+     "blocks": [
+      4,
+      2,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 25886
+    },
+    "index_T4": {
+     "s": 0.019423093000114022,
+     "decoded": 4194249,
+     "stored_read": 425008,
+     "blocks": [
+      4,
+      1,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 25886
+    },
+    "scan_T4": {
+     "s": 0.027226217000134056,
+     "decoded": 15242657,
+     "stored_read": 1478231,
+     "blocks": [
+      4,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 25886
+    },
+    "same_answer": true
+   },
+   "grep -F -w Morocco": {
+    "cmd": "grep -F -w Morocco",
+    "index_T1": {
+     "s": 0.018714539000029617,
+     "decoded": 4194226,
+     "stored_read": 378821,
+     "blocks": [
+      4,
+      1,
+      0,
+      3
+     ],
+     "rc": 0,
+     "out_bytes": 70218
+    },
+    "scan_T1": {
+     "s": 0.05331226999987848,
+     "decoded": 15242657,
+     "stored_read": 1478231,
+     "blocks": [
+      4,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 70218
+    },
+    "index_T4": {
+     "s": 0.018556783000349242,
+     "decoded": 4194226,
+     "stored_read": 378821,
+     "blocks": [
+      4,
+      1,
+      0,
+      3
+     ],
+     "rc": 0,
+     "out_bytes": 70218
+    },
+    "scan_T4": {
+     "s": 0.02811139599998569,
+     "decoded": 15242657,
+     "stored_read": 1478231,
+     "blocks": [
+      4,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 70218
+    },
+    "same_answer": true,
+    "zstdcat_grep_T1": 0.030884777999744983
+   },
+   "grep -c -E '^Mor[a-z]+,20[12][0-9],'": {
+    "cmd": "grep -c -E '^Mor[a-z]+,20[12][0-9],'",
+    "index_T1": {
+     "s": 0.034895215001597535,
+     "decoded": 8388518,
+     "stored_read": 777211,
+     "blocks": [
+      4,
+      2,
+      0,
+      2
+     ],
+     "rc": 0,
+     "out_bytes": 3
+    },
+    "scan_T1": {
+     "s": 0.05777226600002905,
+     "decoded": 15242657,
+     "stored_read": 1478231,
+     "blocks": [
+      4,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 3
+    },
+    "index_T4": {
+     "s": 0.021456964999742922,
+     "decoded": 8388518,
+     "stored_read": 777211,
+     "blocks": [
+      4,
+      2,
+      0,
+      2
+     ],
+     "rc": 0,
+     "out_bytes": 3
+    },
+    "scan_T4": {
+     "s": 0.03097674299897335,
+     "decoded": 15242657,
+     "stored_read": 1478231,
+     "blocks": [
+      4,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 3
+    },
+    "same_answer": true,
+    "zstdcat_grep_T1": 0.02672979900125938
+   }
+  }
+ },
+ "sensor": {
+  "file": "sensor.csv",
+  "bytes": 153379795,
+  "sizes": {
+   "plain balanced": {
+    "size": 15973611,
+    "c_s_T4": 1.1239930849997108,
+    "d_s_T1": 0.3667528330006462,
+    "d_s_T4": 0.22313393900003575
+   },
+   "indexed balanced": {
+    "size": 16678431,
+    "c_s_T4": 0.620182654999553,
+    "d_s_T1": 0.410765213000559,
+    "d_s_T4": 0.22230712500004302
+   },
+   "indexed balanced, no filter": {
+    "size": 16288294,
+    "c_s_T4": 0.2500468260004709
+   },
+   "zstd -19": {
+    "size": 26424390,
+    "c_s_T4": 40.42138658899967,
+    "d_s_T1": 0.2491466949995811
+   }
+  },
+  "queries": {
+   "column co2, all rows": {
+    "cmd": "cat --col co2",
+    "index_T1": {
+     "s": 0.16727125899979,
+     "decoded": 12001923,
+     "stored_read": 3401394,
+     "blocks": [
+      37,
+      0,
+      37,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 18730364
+    },
+    "scan_T1": {
+     "s": 0.5851679910001621,
+     "decoded": 153379795,
+     "stored_read": 16287398,
+     "blocks": [
+      37,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 18730364
+    },
+    "index_T4": {
+     "s": 0.0815406929996243,
+     "decoded": 12001923,
+     "stored_read": 3401394,
+     "blocks": [
+      37,
+      0,
+      37,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 18730364
+    },
+    "scan_T4": {
+     "s": 0.575585597999634,
+     "decoded": 153379795,
+     "stored_read": 16287398,
+     "blocks": [
+      37,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 18730364
+    },
+    "same_answer": true
+   },
+   "column co2, 10k rows": {
+    "cmd": "cat --col co2 --rows 1000000-1010000",
+    "index_T1": {
+     "s": 0.005981385999803024,
+     "decoded": 330773,
+     "stored_read": 91298,
+     "blocks": [
+      37,
+      0,
+      1,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 60631
+    },
+    "scan_T1": {
+     "s": 0.14904092800043145,
+     "decoded": 54525626,
+     "stored_read": 5883027,
+     "blocks": [
+      37,
+      13,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 60631
+    },
+    "index_T4": {
+     "s": 0.005433108000033826,
+     "decoded": 330773,
+     "stored_read": 91298,
+     "blocks": [
+      37,
+      0,
+      1,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 60631
+    },
+    "scan_T4": {
+     "s": 0.1456969119999485,
+     "decoded": 67108403,
+     "stored_read": 7221089,
+     "blocks": [
+      37,
+      16,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 60631
+    },
+    "same_answer": true
+   },
+   "rows 2500000-2500100": {
+    "cmd": "cat --rows 2500000-2500100",
+    "index_T1": {
+     "s": 0.018370501999925182,
+     "decoded": 4194263,
+     "stored_read": 443018,
+     "blocks": [
+      37,
+      1,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 5269
+    },
+    "scan_T1": {
+     "s": 0.34095093500036455,
+     "decoded": 130022626,
+     "stored_read": 13825785,
+     "blocks": [
+      37,
+      31,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 5269
+    },
+    "index_T4": {
+     "s": 0.016409517000283813,
+     "decoded": 4194263,
+     "stored_read": 443018,
+     "blocks": [
+      37,
+      1,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 5269
+    },
+    "scan_T4": {
+     "s": 0.24995968600069318,
+     "decoded": 134216892,
+     "stored_read": 14270679,
+     "blocks": [
+      37,
+      32,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 5269
+    },
+    "same_answer": true
+   },
+   "grep -c -F -w fault": {
+    "cmd": "grep -c -F -w fault",
+    "index_T1": {
+     "s": 0.439335820999986,
+     "decoded": 153379795,
+     "stored_read": 16287398,
+     "blocks": [
+      37,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 5
+    },
+    "scan_T1": {
+     "s": 0.48392789700028516,
+     "decoded": 153379795,
+     "stored_read": 16287398,
+     "blocks": [
+      37,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 5
+    },
+    "index_T4": {
+     "s": 0.21733271299945045,
+     "decoded": 153379795,
+     "stored_read": 16287398,
+     "blocks": [
+      37,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 5
+    },
+    "scan_T4": {
+     "s": 0.3732889780003461,
+     "decoded": 153379795,
+     "stored_read": 16287398,
+     "blocks": [
+      37,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 5
+    },
+    "same_answer": true,
+    "zstdcat_grep_T1": 0.2607358169998406
+   },
+   "grep -c -F 1700012345 (a timestamp)": {
+    "cmd": "grep -c -F 1700012345",
+    "index_T1": {
+     "s": 0.45594869700016716,
+     "decoded": 153379795,
+     "stored_read": 16287398,
+     "blocks": [
+      37,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 2
+    },
+    "scan_T1": {
+     "s": 0.4830788970002686,
+     "decoded": 153379795,
+     "stored_read": 16287398,
+     "blocks": [
+      37,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 2
+    },
+    "index_T4": {
+     "s": 0.2129376519997095,
+     "decoded": 153379795,
+     "stored_read": 16287398,
+     "blocks": [
+      37,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 2
+    },
+    "scan_T4": {
+     "s": 0.3755599390005955,
+     "decoded": 153379795,
+     "stored_read": 16287398,
+     "blocks": [
+      37,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 2
+    },
+    "same_answer": true,
+    "zstdcat_grep_T1": 0.38005999899996823
+   }
+  }
+ },
+ "hdfs": {
+  "file": "hdfs256.log",
+  "bytes": 268435415,
+  "sizes": {
+   "plain balanced": {
+    "size": 15545055,
+    "c_s_T4": 0.6447529219994976,
+    "d_s_T1": 0.35972854000010557,
+    "d_s_T4": 0.3007186779996118
+   },
+   "indexed balanced": {
+    "size": 16139162,
+    "c_s_T4": 1.360017572000288,
+    "d_s_T1": 0.472307042000466,
+    "d_s_T4": 0.26355845899979613
+   },
+   "indexed balanced, no filter": {
+    "size": 15545374,
+    "c_s_T4": 0.44715731700034667
+   },
+   "zstd -19": {
+    "size": 18317969,
+    "c_s_T4": 81.86897287899956,
+    "d_s_T1": 0.19216573100038659
+   }
+  },
+  "queries": {
+   "rows 1000000-1000100": {
+    "cmd": "cat --rows 1000000-1000100",
+    "index_T1": {
+     "s": 0.011423613999795634,
+     "decoded": 4194270,
+     "stored_read": 191624,
+     "blocks": [
+      65,
+      1,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 13528
+    },
+    "scan_T1": {
+     "s": 0.23226227699979063,
+     "decoded": 142604043,
+     "stored_read": 7181374,
+     "blocks": [
+      65,
+      34,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 13528
+    },
+    "index_T4": {
+     "s": 0.014804142999309988,
+     "decoded": 4194270,
+     "stored_read": 191624,
+     "blocks": [
+      65,
+      1,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 13528
+    },
+    "scan_T4": {
+     "s": 0.1759533829999782,
+     "decoded": 150992534,
+     "stored_read": 7580202,
+     "blocks": [
+      65,
+      36,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 13528
+    },
+    "same_answer": true
+   },
+   "field 4, 100k rows": {
+    "cmd": "cat --col '#4' --rows 1000000-1100000",
+    "index_T1": {
+     "s": 0.0328474930001903,
+     "decoded": 16776973,
+     "stored_read": 776887,
+     "blocks": [
+      65,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 500005
+    },
+    "scan_T1": {
+     "s": 0.2404735330001131,
+     "decoded": 155186746,
+     "stored_read": 7766637,
+     "blocks": [
+      65,
+      37,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 500005
+    },
+    "index_T4": {
+     "s": 0.02458486600062315,
+     "decoded": 16776973,
+     "stored_read": 776887,
+     "blocks": [
+      65,
+      4,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 500005
+    },
+    "scan_T4": {
+     "s": 0.209131730000081,
+     "decoded": 167769395,
+     "stored_read": 8333739,
+     "blocks": [
+      65,
+      40,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 500005
+    },
+    "same_answer": true
+   },
+   "grep -F -w (a block id)": {
+    "cmd": "grep -F -w 1660256537217386052",
+    "index_T1": {
+     "s": 0.03978538299998036,
+     "decoded": 20971022,
+     "stored_read": 1288737,
+     "blocks": [
+      65,
+      5,
+      0,
+      60
+     ],
+     "rc": 0,
+     "out_bytes": 2540
+    },
+    "scan_T1": {
+     "s": 0.571052485999644,
+     "decoded": 268435415,
+     "stored_read": 15543983,
+     "blocks": [
+      65,
+      65,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 2540
+    },
+    "index_T4": {
+     "s": 0.03151403499941807,
+     "decoded": 20971022,
+     "stored_read": 1288737,
+     "blocks": [
+      65,
+      5,
+      0,
+      60
+     ],
+     "rc": 0,
+     "out_bytes": 2540
+    },
+    "scan_T4": {
+     "s": 0.40197034399989207,
+     "decoded": 268435415,
+     "stored_read": 15543983,
+     "blocks": [
+      65,
+      65,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 2540
+    },
+    "same_answer": true,
+    "zstdcat_grep_T1": 0.24042576700048812
+   },
+   "grep -c -F WARN": {
+    "cmd": "grep -c -F WARN",
+    "index_T1": {
+     "s": 0.538837600000079,
+     "decoded": 243265769,
+     "stored_read": 14384502,
+     "blocks": [
+      65,
+      58,
+      0,
+      7
+     ],
+     "rc": 0,
+     "out_bytes": 7
+    },
+    "scan_T1": {
+     "s": 0.48461104099988006,
+     "decoded": 268435415,
+     "stored_read": 15543983,
+     "blocks": [
+      65,
+      65,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 7
+    },
+    "index_T4": {
+     "s": 0.21154065999962768,
+     "decoded": 243265769,
+     "stored_read": 14384502,
+     "blocks": [
+      65,
+      58,
+      0,
+      7
+     ],
+     "rc": 0,
+     "out_bytes": 7
+    },
+    "scan_T4": {
+     "s": 0.4586508980000872,
+     "decoded": 268435415,
+     "stored_read": 15543983,
+     "blocks": [
+      65,
+      65,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 7
+    },
+    "same_answer": true,
+    "zstdcat_grep_T1": 0.24064066299979459
+   },
+   "grep -c -E 'blk_-?16089[0-9]+'": {
+    "cmd": "grep -c -E 'blk_-?16089[0-9]+'",
+    "index_T1": {
+     "s": 0.42945903000145336,
+     "decoded": 268431288,
+     "stored_read": 15543525,
+     "blocks": [
+      65,
+      64,
+      0,
+      1
+     ],
+     "rc": 0,
+     "out_bytes": 4
+    },
+    "scan_T1": {
+     "s": 0.4799331419999362,
+     "decoded": 268435415,
+     "stored_read": 15543983,
+     "blocks": [
+      65,
+      65,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 4
+    },
+    "index_T4": {
+     "s": 0.1487505549994239,
+     "decoded": 268431288,
+     "stored_read": 15543525,
+     "blocks": [
+      65,
+      64,
+      0,
+      1
+     ],
+     "rc": 0,
+     "out_bytes": 4
+    },
+    "scan_T4": {
+     "s": 0.3418939479997789,
+     "decoded": 268435415,
+     "stored_read": 15543983,
+     "blocks": [
+      65,
+      65,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 4
+    },
+    "same_answer": true,
+    "zstdcat_grep_T1": 0.2884072990000277
+   }
+  }
+ },
+ "json": {
+  "file": "sensor.jsonl",
+  "bytes": 87542646,
+  "sizes": {
+   "plain balanced": {
+    "size": 2631383,
+    "c_s_T4": 0.1942509609998524,
+    "d_s_T1": 0.14018572799977846,
+    "d_s_T4": 0.09485913600019558
+   },
+   "indexed balanced": {
+    "size": 3361817,
+    "c_s_T4": 0.5689570419999654,
+    "d_s_T1": 0.1626916839995829,
+    "d_s_T4": 0.09449560700068105
+   },
+   "indexed balanced, no filter": {
+    "size": 2631528,
+    "c_s_T4": 0.1841044039992994
+   },
+   "zstd -19": {
+    "size": 6180457,
+    "c_s_T4": 24.633595296999374,
+    "d_s_T1": 0.08102520300053584
+   }
+  },
+  "queries": {
+   "key co2, all rows": {
+    "cmd": "cat --col co2",
+    "index_T1": {
+     "s": 0.2329527040001267,
+     "decoded": 87542646,
+     "stored_read": 2631015,
+     "blocks": [
+      21,
+      21,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 6639282
+    },
+    "scan_T1": {
+     "s": 0.2676591949993963,
+     "decoded": 87542646,
+     "stored_read": 2631015,
+     "blocks": [
+      21,
+      21,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 6639282
+    },
+    "index_T4": {
+     "s": 0.1210279860006267,
+     "decoded": 87542646,
+     "stored_read": 2631015,
+     "blocks": [
+      21,
+      21,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 6639282
+    },
+    "scan_T4": {
+     "s": 0.22009119900030782,
+     "decoded": 87542646,
+     "stored_read": 2631015,
+     "blocks": [
+      21,
+      21,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 6639282
+    },
+    "same_answer": true
+   },
+   "key co2, 10k rows": {
+    "cmd": "cat --col co2 --rows 400000-410000",
+    "index_T1": {
+     "s": 0.013241935000223748,
+     "decoded": 4194295,
+     "stored_read": 125856,
+     "blocks": [
+      21,
+      1,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 70007
+    },
+    "scan_T1": {
+     "s": 0.07372225899962359,
+     "decoded": 37748442,
+     "stored_read": 1143208,
+     "blocks": [
+      21,
+      9,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 70007
+    },
+    "index_T4": {
+     "s": 0.013677208999979484,
+     "decoded": 4194295,
+     "stored_read": 125856,
+     "blocks": [
+      21,
+      1,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 70007
+    },
+    "scan_T4": {
+     "s": 0.08434610099993733,
+     "decoded": 50331279,
+     "stored_read": 1517713,
+     "blocks": [
+      21,
+      12,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 70007
+    },
+    "same_answer": true
+   },
+   "grep -c -F -w maint": {
+    "cmd": "grep -c -F -w maint",
+    "index_T1": {
+     "s": 0.16590668200024083,
+     "decoded": 87542646,
+     "stored_read": 2631015,
+     "blocks": [
+      21,
+      21,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 4
+    },
+    "scan_T1": {
+     "s": 0.1597538780006289,
+     "decoded": 87542646,
+     "stored_read": 2631015,
+     "blocks": [
+      21,
+      21,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 4
+    },
+    "index_T4": {
+     "s": 0.07771758699982456,
+     "decoded": 87542646,
+     "stored_read": 2631015,
+     "blocks": [
+      21,
+      21,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 4
+    },
+    "scan_T4": {
+     "s": 0.15349399000024277,
+     "decoded": 87542646,
+     "stored_read": 2631015,
+     "blocks": [
+      21,
+      21,
+      0,
+      0
+     ],
+     "rc": 0,
+     "out_bytes": 4
+    },
+    "same_answer": true,
+    "zstdcat_grep_T1": 0.11223289200006548
+   }
+  }
+ }
+}

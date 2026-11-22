@@ -1,0 +1,97 @@
+# Profiles of this branch (7a09380, ARCH= plus -g), 6 runs per file and direction, one thread; same sampler and inputs as profile_base.txt.
+
+## mspeed c
+
+total 585
+ 50.60%     296  LZ4_compress_generic_validated (vendor/lz4)
+ 14.02%      82  LZ4_hash5 (vendor/lz4)
+ 11.97%      70  [libc.so.6]
+  7.35%      43  LZ4_count (vendor/lz4)
+  3.25%      19  LZ4_getIndexOnHash (vendor/lz4)
+  2.91%      17  LZ4_wildCopy8 (vendor/lz4)
+  2.74%      16  LZ4_read_ARCH (vendor/lz4)
+  2.39%      14  LZ4_NbCommonBytes (vendor/lz4)
+  2.39%      14  LZ4_putIndexOnHash (vendor/lz4)
+  0.68%       4  LZ4_write32 (vendor/lz4)
+  0.51%       3  XXH3_accumulate_512_avx2 (vendor/xxhash)
+  0.51%       3  pl_split_wsse2 (kolmo)
+  0.34%       2  XXH3_accumulate_avx2 (vendor/xxhash)
+  0.17%       1  LZ4_compress_fast (vendor/lz4)
+  0.17%       1  compress_worker (kolmo)
+vendor 87.4%  sys/other 12.0%  kolmo 0.7%
+
+## mspeed d
+
+total 142
+ 55.63%      79  [libc.so.6]
+ 30.28%      43  LZ4_decompress_generic (vendor/lz4)
+  5.63%       8  LZ4_wildCopy32 (vendor/lz4)
+  2.82%       4  LZ4_memcpy_using_offset (vendor/lz4)
+  1.41%       2  pl_roundsse2 (kolmo)
+  0.70%       1  XXH3_accumulate_avx2 (vendor/xxhash)
+  0.70%       1  XXH3_scrambleAcc_avx2 (vendor/xxhash)
+  0.70%       1  XXH3_accumulate_512_avx2 (vendor/xxhash)
+  0.70%       1  LZ4_read16 (vendor/lz4)
+  0.70%       1  read_variable_length (vendor/lz4)
+  0.70%       1  [sampler.so]
+sys/other 56.3%  vendor 42.3%  kolmo 1.4%
+
+## mbalanced c
+
+total 1513
+ 25.12%     380  ZSTD_compressBlock_doubleFast_noDict_generic (vendor/zstd)
+  8.26%     125  [libc.so.6]
+  4.10%      62  HIST_count_parallel_wksp (vendor/zstd)
+  3.97%      60  ZSTD_selectAddr (vendor/zstd)
+  3.24%      49  kg_img8_trial (kolmo)
+  3.24%      49  ZSTD_count (vendor/zstd)
+  2.05%      31  ZSTD_hash5 (vendor/zstd)
+  1.92%      29  kg_hist (kolmo)
+  1.78%      27  FSE_encodeSymbol (vendor/zstd)
+  1.72%      26  ZSTD_encodeSequences_body (vendor/zstd)
+  1.72%      26  ZSTD_hash8 (vendor/zstd)
+  1.72%      26  HUF_addBits (vendor/zstd)
+  1.65%      25  ZSTD_compressBlock_fast_noDict_generic (vendor/zstd)
+  1.59%      24  sort_u64 (kolmo)
+  1.45%      22  kg_dec_fit (kolmo)
+  1.32%      20  BIT_addBits (vendor/zstd)
+  1.26%      19  MEM_readST (vendor/zstd)
+  1.19%      18  parse_dec_fast (kolmo)
+  1.12%      17  rec_period (kolmo)
+  1.06%      16  img16_detect (kolmo)
+  1.06%      16  kg_zz (kolmo)
+  1.06%      16  BIT_getLowerBits (vendor/zstd)
+  1.06%      16  ZSTD_storeSeqOnly (vendor/zstd)
+  0.99%      15  ZSTD_storeSeq (vendor/zstd)
+  0.99%      15  HUF_flushBits (vendor/zstd)
+vendor 64.8%  kolmo 26.7%  sys/other 8.5%
+
+## mbalanced d
+
+total 456
+ 29.17%     133  [libc.so.6]
+  6.14%      28  ZSTD_decodeSequence (vendor/zstd)
+  5.48%      25  img16_inv (kolmo)
+  4.17%      19  ZSTD_wildcopy (vendor/zstd)
+  4.17%      19  tpq_inv_cols (kolmo)
+  3.95%      18  HUF_decodeSymbolX2 (vendor/zstd)
+  3.51%      16  tbl2_stream (kolmo)
+  3.29%      15  med8_rowssse41 (kolmo)
+  2.85%      13  BIT_getMiddleBits (vendor/zstd)
+  2.41%      11  _HUF_decompress4X1_usingDTable_internal_fast_asm_loop (vendor/zstd)
+  2.19%      10  memcpy (?)
+  2.19%      10  kg_dec64_inv (kolmo)
+  1.97%       9  HUF_decompress4X2_usingDTable_internal_fast_asm_loop (vendor/zstd)
+  1.97%       9  ZSTD_updateFseStateWithDInfo (vendor/zstd)
+  1.97%       9  BIT_lookBitsFast (vendor/zstd)
+  1.97%       9  ZSTD_execSequence (vendor/zstd)
+  1.75%       8  BIT_reloadDStream_internal (vendor/zstd)
+  1.54%       7  med8_predsse41 (kolmo)
+  1.54%       7  scan_terms (kolmo)
+  1.54%       7  ZSTD_copy16 (vendor/zstd)
+  1.54%       7  swar8 (kolmo)
+  1.32%       6  rec_field_dec (kolmo)
+  1.32%       6  fmt_slots_avx2 (kolmo)
+  1.10%       5  HUF_decompress4X2_usingDTable_internal_body (vendor/zstd)
+  0.88%       4  BIT_reloadDStream (vendor/zstd)
+vendor 37.5%  sys/other 31.8%  kolmo 30.7%

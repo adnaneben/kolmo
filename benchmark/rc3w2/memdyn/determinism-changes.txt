@@ -1,0 +1,122 @@
+text.txt     -m speed                         header
+text.txt     -m rt                            header
+text.txt     (default)                        header
+text.txt     -m fast -q                       header
+text.txt     -m eco                           header
+text.txt     -m hc                            header
+text.txt     -m ratio                         header
+text.txt     -m max -l 1                      header
+text.txt     -x -l 1                          payload (44666 -> 44670 bytes)
+text.txt     -x                               payload (44843 -> 44838 bytes)
+text.txt     -x -l 2                          payload (44843 -> 44838 bytes)
+text.txt     -m balanced --native-leaf        header
+table.csv    -m speed                         header
+table.csv    -m rt                            header
+table.csv    (default)                        header
+table.csv    -m fast -q                       header
+table.csv    -m eco                           header
+table.csv    -m hc                            header
+table.csv    -m ratio                         header
+table.csv    -m max -l 1                      header
+table.csv    -x -l 1                          payload (79848 -> 79983 bytes)
+table.csv    -x                               payload (77764 -> 77769 bytes)
+table.csv    -x -l 2                          payload (77764 -> 77769 bytes)
+table.csv    -m balanced --native-leaf        header
+log.txt      -m speed                         header
+log.txt      -m rt                            header
+log.txt      (default)                        header
+log.txt      -m fast -q                       header
+log.txt      -m eco                           header
+log.txt      -m hc                            header
+log.txt      -m ratio                         header
+log.txt      -m max -l 1                      header
+log.txt      -x -l 1                          payload (43620 -> 43638 bytes)
+log.txt      -x                               payload (43551 -> 43551 bytes)
+log.txt      -x -l 2                          payload (43551 -> 43551 bytes)
+log.txt      -m balanced --native-leaf        header
+walk.i16     -m speed                         header
+walk.i16     -m rt                            header
+walk.i16     (default)                        header
+walk.i16     -m fast -q                       header
+walk.i16     -m eco                           header
+walk.i16     -m hc                            header
+walk.i16     -m ratio                         header
+walk.i16     -m max -l 1                      header
+walk.i16     -x -l 1                          payload (90093 -> 90087 bytes)
+walk.i16     -x                               payload (89168 -> 89124 bytes)
+walk.i16     -x -l 2                          payload (89168 -> 89124 bytes)
+walk.i16     -m balanced --native-leaf        header
+stamps.i64   -m speed                         header
+stamps.i64   -m rt                            header
+stamps.i64   (default)                        header
+stamps.i64   -m fast -q                       header
+stamps.i64   -m eco                           header
+stamps.i64   -m hc                            header
+stamps.i64   -m ratio                         header
+stamps.i64   -m max -l 1                      header
+stamps.i64   -x -l 1                          payload (28467 -> 28467 bytes)
+stamps.i64   -x                               payload (28524 -> 28525 bytes)
+stamps.i64   -x -l 2                          payload (28524 -> 28525 bytes)
+stamps.i64   -m balanced --native-leaf        header
+floats.f64   -m speed                         header
+floats.f64   -m rt                            header
+floats.f64   (default)                        header
+floats.f64   -m fast -q                       header
+floats.f64   -m eco                           header
+floats.f64   -m hc                            header
+floats.f64   -m ratio                         header
+floats.f64   -m max -l 1                      header
+floats.f64   -x -l 1                          header
+floats.f64   -x                               payload (57358 -> 57363 bytes)
+floats.f64   -x -l 2                          payload (57358 -> 57363 bytes)
+floats.f64   -m balanced --native-leaf        header
+image.u8     -m speed                         header
+image.u8     -m rt                            header
+image.u8     (default)                        header
+image.u8     -m fast -q                       header
+image.u8     -m eco                           header
+image.u8     -m hc                            header
+image.u8     -m ratio                         header
+image.u8     -m max -l 1                      header
+image.u8     -x -l 1                          payload (60065 -> 60095 bytes)
+image.u8     -x                               payload (60111 -> 60144 bytes)
+image.u8     -x -l 2                          payload (60111 -> 60144 bytes)
+image.u8     -m balanced --native-leaf        header
+walk.npy     -m speed                         header
+walk.npy     -m rt                            header
+walk.npy     (default)                        header
+walk.npy     -m fast -q                       header
+walk.npy     -m eco                           header
+walk.npy     -m hc                            header
+walk.npy     -m ratio                         header
+walk.npy     -m max -l 1                      header
+walk.npy     -x -l 1                          payload (90164 -> 90156 bytes)
+walk.npy     -x                               payload (89231 -> 89187 bytes)
+walk.npy     -x -l 2                          payload (89231 -> 89187 bytes)
+walk.npy     -m balanced --native-leaf        header
+walk.npy     -m fast --typed-huf              header
+walk.wav     -m speed                         header
+walk.wav     -m rt                            header
+walk.wav     (default)                        header
+walk.wav     -m fast -q                       header
+walk.wav     -m eco                           header
+walk.wav     -m hc                            header
+walk.wav     -m ratio                         header
+walk.wav     -m max -l 1                      header
+walk.wav     -x -l 1                          header
+walk.wav     -x                               header
+walk.wav     -x -l 2                          header
+walk.wav     -m balanced --native-leaf        header
+walk.wav     -m fast --typed-huf              header
+video.y4m    -m speed                         header
+video.y4m    -m rt                            header
+video.y4m    (default)                        header
+video.y4m    -m fast -q                       header
+video.y4m    -m eco                           header
+video.y4m    -m hc                            header
+video.y4m    -m ratio                         header
+video.y4m    -m max -l 1                      header
+video.y4m    -x -l 1                          payload (30867 -> 30867 bytes)
+video.y4m    -x                               payload (28705 -> 28705 bytes)
+video.y4m    -x -l 2                          payload (28705 -> 28705 bytes)
+video.y4m    -m balanced --native-leaf        header

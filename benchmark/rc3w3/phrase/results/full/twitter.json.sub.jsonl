@@ -1,0 +1,5 @@
+{"file":"twitter.json","n":631515,"variant":"cm","size":25470,"enc_s":2.098,"dec_s":2.241}
+{"file":"twitter.json","n":631515,"variant":"word+cm","tn":494798,"size":26132,"enc_s":1.266,"dec_s":1.224}
+{"file":"twitter.json","n":631515,"variant":"cmx-null","size":24441,"enc_s":2.385}
+{"file":"twitter.json","n":631515,"variant":"cmx-dict","size":24566,"body":24440,"dict_cm":126,"nphr":2,"enc_s":2.850}
+{"file":"twitter.json","n":631515,"variant":"phrase+cm","tn":628627,"dict":84,"nphr":2,"singles":32,"prefixes":32,"coded":1232,"lit":627311,"esc":0,"size":25644,"dict_cm":126,"build_s":0.047,"tenc_s":0.003,"tdec_s":0.001,"enc_s":2.464,"dec_s":1.665,"opts":"sample=8M minc=4 maxl=64 rounds=64 per=512 minuse=3 minlen=2 maxtok=0 singles=-1 order=0 words_only=0 bytes=0 maxcodes=0"}

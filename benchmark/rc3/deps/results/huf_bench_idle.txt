@@ -1,0 +1,32 @@
+== base bal_struct (round 1)
+chunks 165 raw 1786592 (avg 10828) cpu bmi2 1 build baseline
+dec hufOnly flags=0 (rc2)            2.19 ms    814.8 MB/s
+dec hufOnly bmi2                     1.82 ms    979.3 MB/s
+== base bal_silesia (round 1)
+chunks 1937 raw 23520408 (avg 12143) cpu bmi2 1 build baseline
+dec hufOnly flags=0 (rc2)           31.20 ms    753.8 MB/s
+dec hufOnly bmi2                    27.23 ms    863.8 MB/s
+== base hc_struct (round 1)
+chunks 277 raw 1705632 (avg 6158) cpu bmi2 1 build baseline
+dec hufOnly flags=0 (rc2)            2.40 ms    711.9 MB/s
+dec hufOnly bmi2                     2.07 ms    822.8 MB/s
+== base hc_silesia (round 1)
+chunks 2213 raw 11742474 (avg 5306) cpu bmi2 1 build baseline
+dec hufOnly flags=0 (rc2)           19.32 ms    607.9 MB/s
+dec hufOnly bmi2                    16.24 ms    723.0 MB/s
+== base bal_struct (round 2)
+chunks 165 raw 1786592 (avg 10828) cpu bmi2 1 build baseline
+dec hufOnly flags=0 (rc2)            3.54 ms    505.2 MB/s
+dec hufOnly bmi2                     2.28 ms    783.5 MB/s
+== base bal_silesia (round 2)
+chunks 1937 raw 23520408 (avg 12143) cpu bmi2 1 build baseline
+dec hufOnly flags=0 (rc2)           34.02 ms    691.3 MB/s
+dec hufOnly bmi2                    27.09 ms    868.3 MB/s
+== base hc_struct (round 2)
+chunks 277 raw 1705632 (avg 6158) cpu bmi2 1 build baseline
+dec hufOnly flags=0 (rc2)            2.44 ms    699.7 MB/s
+dec hufOnly bmi2                     2.09 ms    815.3 MB/s
+== base hc_silesia (round 2)
+chunks 2213 raw 11742474 (avg 5306) cpu bmi2 1 build baseline
+dec hufOnly flags=0 (rc2)           20.20 ms    581.2 MB/s
+dec hufOnly bmi2                    15.99 ms    734.5 MB/s

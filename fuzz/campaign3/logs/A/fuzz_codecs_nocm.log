@@ -1,0 +1,344 @@
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 3537077164
+INFO: Loaded 1 modules   (52785 inline 8-bit counters): 52785 [0x56516ad77d00, 0x56516ad84b31), 
+INFO: Loaded 1 PC tables (52785 PCs): 52785 [0x56516ad84b38,0x56516ae52e48), 
+INFO: -fork=1: fuzzing in separate process(s)
+INFO: -fork=1: 1407 seed inputs, starting to fuzz in /tmp/libFuzzerTemp.FuzzWithFork246.dir
+#38: cov: 15154 ft: 15154 corp: 1407 exec/s: 2 oom/timeout/crash: 0/0/0 time: 699s job: 1 dft_time: 0
+#76: cov: 15154 ft: 15154 corp: 1407 exec/s: 1 oom/timeout/crash: 0/0/0 time: 723s job: 2 dft_time: 0
+#114: cov: 15154 ft: 15154 corp: 1407 exec/s: 1 oom/timeout/crash: 0/0/0 time: 753s job: 3 dft_time: 0
+#152: cov: 15154 ft: 15154 corp: 1407 exec/s: 2 oom/timeout/crash: 0/0/0 time: 772s job: 4 dft_time: 0
+#190: cov: 15154 ft: 15154 corp: 1407 exec/s: 1 oom/timeout/crash: 0/0/0 time: 796s job: 5 dft_time: 0
+#228: cov: 15154 ft: 15154 corp: 1407 exec/s: 2 oom/timeout/crash: 0/0/0 time: 815s job: 6 dft_time: 0
+#266: cov: 15154 ft: 15154 corp: 1407 exec/s: 1 oom/timeout/crash: 0/0/0 time: 836s job: 7 dft_time: 0
+#304: cov: 15154 ft: 15154 corp: 1407 exec/s: 2 oom/timeout/crash: 0/0/0 time: 856s job: 8 dft_time: 0
+#342: cov: 15154 ft: 15154 corp: 1407 exec/s: 1 oom/timeout/crash: 0/0/0 time: 877s job: 9 dft_time: 0
+#380: cov: 15154 ft: 15154 corp: 1407 exec/s: 2 oom/timeout/crash: 0/0/0 time: 895s job: 10 dft_time: 0
+#418: cov: 15154 ft: 15154 corp: 1407 exec/s: 2 oom/timeout/crash: 0/0/0 time: 912s job: 11 dft_time: 0
+#456: cov: 15154 ft: 15154 corp: 1407 exec/s: 1 oom/timeout/crash: 0/0/0 time: 936s job: 12 dft_time: 0
+#494: cov: 15154 ft: 15154 corp: 1407 exec/s: 2 oom/timeout/crash: 0/0/0 time: 950s job: 13 dft_time: 0
+#532: cov: 15154 ft: 15154 corp: 1407 exec/s: 1 oom/timeout/crash: 0/0/0 time: 972s job: 14 dft_time: 0
+#580: cov: 15154 ft: 15154 corp: 1407 exec/s: 3 oom/timeout/crash: 0/0/0 time: 989s job: 15 dft_time: 0
+  NEW_FUNC: 0x56516a711228 in gr6_compress /home/user/kolmo/fuzz/../src/codecs/gr6.c:605
+  NEW_FUNC: 0x56516a715ff8 in gr6_decompress /home/user/kolmo/fuzz/../src/codecs/gr6.c:657
+  NEW_FUNC: 0x56516a718708 in codec_ctx_free /home/user/kolmo/fuzz/../src/codecs/codec.c:31
+  NEW_FUNC: 0x56516a763568 in LLVMFuzzerTestOneInput /home/user/kolmo/fuzz/fuzz_codecs.c:67
+  NEW_FUNC: 0x56516a764268 in fz_decode /home/user/kolmo/fuzz/fuzz_codecs.c:29
+  NEW_FUNC: 0x56516a794498 in cm_init_tables /home/user/kolmo/fuzz/../src/codecs/cm.c:98
+  NEW_FUNC: 0x56516a7958a8 in g6_model_init /home/user/kolmo/fuzz/../src/codecs/gr6.c:317
+  NEW_FUNC: 0x56516a795b78 in g6_setup /home/user/kolmo/fuzz/../src/codecs/gr6.c:591
+  NEW_FUNC: 0x56516a795d98 in g6_put /home/user/kolmo/fuzz/../src/codecs/gr6.c:59
+  NEW_FUNC: 0x56516a796058 in g6_cm_init /home/user/kolmo/fuzz/../src/codecs/gr6.c:218
+  NEW_FUNC: 0x56516a796a98 in g6_cap /home/user/kolmo/fuzz/../src/codecs/gr6.c:323
+  NEW_FUNC: 0x56516a796ea8 in g6_set /home/user/kolmo/fuzz/../src/codecs/gr6.c:355
+  NEW_FUNC: 0x56516a798598 in g6_val /home/user/kolmo/fuzz/../src/codecs/gr6.c:279
+  NEW_FUNC: 0x56516a798eb8 in g6_field /home/user/kolmo/fuzz/../src/codecs/gr6.c:380
+  NEW_FUNC: 0x56516a79e8a8 in g6_line_end /home/user/kolmo/fuzz/../src/codecs/gr6.c:513
+  NEW_FUNC: 0x56516a79ea58 in g6_free_all /home/user/kolmo/fuzz/../src/codecs/gr6.c:56
+  NEW_FUNC: 0x56516a79ec88 in cm_squash_i /home/user/kolmo/fuzz/../src/codecs/cm.c:72
+  NEW_FUNC: 0x56516a79ee88 in g6_alloc /home/user/kolmo/fuzz/../src/codecs/gr6.c:38
+  NEW_FUNC: 0x56516a79f278 in g6_parse /home/user/kolmo/fuzz/../src/codecs/gr6.c:164
+  NEW_FUNC: 0x56516a7a0338 in g6_render /home/user/kolmo/fuzz/../src/codecs/gr6.c:153
+  NEW_FUNC: 0x56516a7a1518 in g6_map_init /home/user/kolmo/fuzz/../src/codecs/gr6.c:106
+  NEW_FUNC: 0x56516a7a1778 in g6_intern_get /home/user/kolmo/fuzz/../src/codecs/gr6.c:76
+  NEW_FUNC: 0x56516a7a2dd8 in g6_realloc /home/user/kolmo/fuzz/../src/codecs/gr6.c:49
+  NEW_FUNC: 0x56516a7a30d8 in g6_unit /home/user/kolmo/fuzz/../src/codecs/gr6.c:269
+  NEW_FUNC: 0x56516a7a5b88 in g6_predict /home/user/kolmo/fuzz/../src/codecs/gr6.c:338
+  NEW_FUNC: 0x56516a7a69a8 in g6_choose /home/user/kolmo/fuzz/../src/codecs/gr6.c:351
+  NEW_FUNC: 0x56516a7a6c48 in g6_find /home/user/kolmo/fuzz/../src/codecs/gr6.c:134
+  NEW_FUNC: 0x56516a7a6ea8 in g6_plist /home/user/kolmo/fuzz/../src/codecs/gr6.c:330
+  NEW_FUNC: 0x56516a7a72d8 in g6_map_slot /home/user/kolmo/fuzz/../src/codecs/gr6.c:112
+  NEW_FUNC: 0x56516a7a8038 in g6_str /home/user/kolmo/fuzz/../src/codecs/gr6.c:102
+  NEW_FUNC: 0x56516a7a8248 in g6_front /home/user/kolmo/fuzz/../src/codecs/gr6.c:135
+  NEW_FUNC: 0x56516a7a86c8 in codec_compress /home/user/kolmo/fuzz/../src/codecs/codec.c:21
+  NEW_FUNC: 0x56516a802088 in huf_codec_compress /home/user/kolmo/fuzz/../src/codecs/huf.c:52
+  NEW_FUNC: 0x56516a8020c8 in huf_codec_decompress /home/user/kolmo/fuzz/../src/codecs/huf.c:55
+  NEW_FUNC: 0x56516a802108 in huf_compress_all /home/user/kolmo/fuzz/../src/codecs/huf.c:15
+  NEW_FUNC: 0x56516a802ae8 in huf_flags /home/user/kolmo/fuzz/../src/codecs/huf.c:10
+  NEW_FUNC: 0x56516a802b88 in huf_decompress_all /home/user/kolmo/fuzz/../src/codecs/huf.c:35
+  NEW_FUNC: 0x56516a8033b8 in kgu_get /home/user/kolmo/fuzz/../src/algo/varint.h:2
+  NEW_FUNC: 0x56516a809528 in bwt18_compress /home/user/kolmo/fuzz/../src/codecs/bwt.c:26
+  NEW_FUNC: 0x56516a8096f8 in bwt18_decompress /home/user/kolmo/fuzz/../src/codecs/bwt.c:35
+  NEW_FUNC: 0x56516a80a018 in leaf_sub_codec_ok /home/user/kolmo/fuzz/../src/codecs/planes_leaf.c:33
+  NEW_FUNC: 0x56516a80a1a8 in codec_decompress /home/user/kolmo/fuzz/../src/codecs/codec.c:26
+  NEW_FUNC: 0x56516a80b318 in zrun_dec_tab /home/user/kolmo/fuzz/../src/codecs/zrun_leaf.c:53
+  NEW_FUNC: 0x56516a80bcb8 in zr_join /home/user/kolmo/fuzz/../src/codecs/../algo/zerorun.c:39
+  NEW_FUNC: 0x56516a843238 in zrun_compress /home/user/kolmo/fuzz/../src/codecs/zrun_leaf.c:25
+  NEW_FUNC: 0x56516a843e68 in zrun_put_sub /home/user/kolmo/fuzz/../src/codecs/zrun_leaf.c:12
+  NEW_FUNC: 0x56516a878d58 in codec_bound /home/user/kolmo/fuzz/../src/codecs/codec.c:17
+  NEW_FUNC: 0x56516a8fc198 in fz_leaf_sel /home/user/kolmo/fuzz/fuzz_codecs.c:19
+  NEW_FUNC: 0x56516a8fc5d8 in kolmo_lzp_compress /home/user/kolmo/src/algo/lzp.c:181
+  NEW_FUNC: 0x56516a8fd7e8 in lzp_encode_block /home/user/kolmo/src/algo/lzp.c:50
+  NEW_FUNC: 0x56516a8ffc38 in kolmo_lzp_decompress /home/user/kolmo/src/algo/lzp.c:249
+  NEW_FUNC: 0x56516a9008a8 in lzp_decode_block /home/user/kolmo/src/algo/lzp.c:109
+  NEW_FUNC: 0x56516a9062a8 in kolmo_crew_destroy /home/user/kolmo/src/algo/par.c:172
+  NEW_FUNC: 0x56516a906548 in kolmo_crew_size /home/user/kolmo/src/algo/par.c:147
+  NEW_FUNC: 0x56516a9065e8 in kolmo_crew_run /home/user/kolmo/src/algo/par.c:149
+  NEW_FUNC: 0x56516a909cd8 in kolmo_qlfc_compress_min /home/user/kolmo/src/algo/qlfc.c:704
+  NEW_FUNC: 0x56516a90bcf8 in qlfc_encode_block /home/user/kolmo/src/algo/qlfc.c:685
+  NEW_FUNC: 0x56516a914b68 in kolmo_qlfc_decompress /home/user/kolmo/src/algo/qlfc.c:785
+  NEW_FUNC: 0x56516a915648 in qlfc_decode_block /home/user/kolmo/src/algo/qlfc.c:762
+  NEW_FUNC: 0x56516a91db38 in qlfc_init_model /home/user/kolmo/src/algo/qlfc.c:39
+  NEW_FUNC: 0x56516a91e058 in qlfc_transform /home/user/kolmo/src/algo/qlfc.c:63
+  NEW_FUNC: 0x56516a91f4e8 in rc_init_encoder /home/user/kolmo/src/algo/rangecoder.h:63
+  NEW_FUNC: 0x56516a91f7b8 in qlfc_encode_header /home/user/kolmo/src/algo/qlfc.c:90
+  NEW_FUNC: 0x56516a91fdb8 in rc_check_eob /home/user/kolmo/src/algo/rangecoder.h:61
+  NEW_FUNC: 0x56516a91ffc8 in rc_finish_encoder /home/user/kolmo/src/algo/rangecoder.h:67
+  NEW_FUNC: 0x56516a920188 in qm_init /home/user/kolmo/src/algo/qlfc_model.h:174
+  NEW_FUNC: 0x56516a920608 in rc_encode_flat /home/user/kolmo/src/algo/rangecoder.h:87
+  NEW_FUNC: 0x56516a920908 in rc_shift_low /home/user/kolmo/src/algo/rangecoder.h:50
+  NEW_FUNC: 0x56516a920c28 in rc_shift_low_slow /home/user/kolmo/src/algo/rangecoder.h:39
+  NEW_FUNC: 0x56516a921108 in qm_mixup /home/user/kolmo/src/algo/qlfc_model.h:178
+  NEW_FUNC: 0x56516a921938 in qm_update0 /home/user/kolmo/src/algo/qlfc_model.h:193
+  NEW_FUNC: 0x56516a921ca8 in qm_learn /home/user/kolmo/src/algo/qlfc_model.h:188
+  NEW_FUNC: 0x56516a921f58 in qm_update1 /home/user/kolmo/src/algo/qlfc_model.h:197
+  NEW_FUNC: 0x56516a9222b8 in rc_init_decoder /home/user/kolmo/src/algo/rangecoder.h:90
+  NEW_FUNC: 0x56516a9228e8 in qlfc_decode_header /home/user/kolmo/src/algo/qlfc.c:107
+  NEW_FUNC: 0x56516a923058 in rc_decode_bit /home/user/kolmo/src/algo/rangecoder.h:100
+  NEW_FUNC: 0x56516a9239e8 in kolmo_sais_bwt_aux /home/user/kolmo/src/algo/sais/sais.c:12028
+  NEW_FUNC: 0x56516a923f78 in libsais_main /home/user/kolmo/src/algo/sais/sais.c:8792
+  NEW_FUNC: 0x56516a924888 in libsais_bwt_copy_8u_omp /home/user/kolmo/src/algo/sais/sais.c:8860
+  NEW_FUNC: 0x56516a924b48 in kolmo_sais_unbwt_aux /home/user/kolmo/src/algo/sais/sais.c:12056
+  NEW_FUNC: 0x56516a925038 in libsais_unbwt_main /home/user/kolmo/src/algo/sais/sais.c:11950
+  NEW_FUNC: 0x56516a92c898 in libsais_alloc_aligned /home/user/kolmo/src/algo/sais/sais.c:351
+  NEW_FUNC: 0x56516a92c9d8 in libsais_main_8u /home/user/kolmo/src/algo/sais/sais.c:8748
+  NEW_FUNC: 0x56516a935e48 in libsais_omp_entry /home/user/kolmo/src/algo/sais/sais.c:80
+  NEW_FUNC: 0x56516a936178 in libsais_count_and_gather_lms_suffixes_8u /home/user/kolmo/src/algo/sais/sais.c:1862
+  NEW_FUNC: 0x56516a937dc8 in libsais_classify_suffixes_8u /home/user/kolmo/src/algo/sais/sais.c:1354
+  NEW_FUNC: 0x56516a938098 in libsais_count_indexed_suffixes_8u /home/user/kolmo/src/algo/sais/sais.c:1251
+  NEW_FUNC: 0x56516a9389e8 in libsais_store_lms_suffixes /home/user/kolmo/src/algo/sais/sais.c:1342
+  NEW_FUNC: 0x56516a9397a8 in libsais_radix_sort_lms_suffixes_8u /home/user/kolmo/src/algo/sais/sais.c:2932
+  NEW_FUNC: 0x56516a93b2d8 in libsais_partial_sorting_scan_left_to_right_8u /home/user/kolmo/src/algo/sais/sais.c:3596
+  NEW_FUNC: 0x56516a941338 in libsais_partial_sorting_shift_markers_8u_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:4462
+  NEW_FUNC: 0x56516a948978 in libsais_resolve_nonunique_lms_suffixes_omp /home/user/kolmo/src/algo/sais/sais.c:6374
+  NEW_FUNC: 0x56516a94b568 in libsais_renumber_lms_suffixes_8u_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:5717
+  NEW_FUNC: 0x56516a94bc38 in libsais_renumber_lms_suffixes_8u /home/user/kolmo/src/algo/sais/sais.c:5651
+  NEW_FUNC: 0x56516a94cf28 in libsais_gather_nonunique_lms_suffixes_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:6077
+  NEW_FUNC: 0x56516a94dde8 in libsais_gather_nonunique_lms_suffixes_8u /home/user/kolmo/src/algo/sais/sais.c:5971
+  NEW_FUNC: 0x56516a9543f8 in libsais_sort_nonunique_lms_suffixes_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:6276
+  NEW_FUNC: 0x56516a955638 in libsais_sort_nonunique_lms_suffixes_group /home/user/kolmo/src/algo/sais/sais.c:5887
+  NEW_FUNC: 0x56516a958698 in libsais_sort_nonunique_lms_suffixes /home/user/kolmo/src/algo/sais/sais.c:5949
+  NEW_FUNC: 0x56516a95a4b8 in libsais_advance_equal_nonunique_lms_suffixes /home/user/kolmo/src/algo/sais/sais.c:5851
+  NEW_FUNC: 0x56516a95a788 in libsais_advance_nonunique_lms_suffixes /home/user/kolmo/src/algo/sais/sais.c:5838
+  NEW_FUNC: 0x56516a9dbdb8 in libsais_final_bwt_aux_scan_left_to_right_8u /home/user/kolmo/src/algo/sais/sais.c:6972
+  NEW_FUNC: 0x56516a9e1a48 in libsais_final_bwt_aux_scan_right_to_left_8u /home/user/kolmo/src/algo/sais/sais.c:7468
+  NEW_FUNC: 0x56516a9e7aa8 in libsais_bwt_copy_8u_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:8842
+  NEW_FUNC: 0x56516a9e8758 in libsais_unbwt_compute_histogram /home/user/kolmo/src/algo/sais/sais.c:8920
+  NEW_FUNC: 0x56516a9eaed8 in libsais_unbwt_scatter_packed_rows /home/user/kolmo/src/algo/sais/sais.c:11766
+  NEW_FUNC: 0x56516a9edfc8 in libsais_unbwt_uniform_block /home/user/kolmo/src/algo/sais/sais.c:8898
+  NEW_FUNC: 0x56516a9ee1a8 in libsais_unbwt_add_rows /home/user/kolmo/src/algo/sais/sais.c:9329
+  NEW_FUNC: 0x56516aa87d58 in kolmo_bwt_compress /home/user/kolmo/src/codecs/bwt_stream.c:203
+  NEW_FUNC: 0x56516aa88c88 in kolmo_bwt_decompress /home/user/kolmo/src/codecs/bwt_stream.c:249
+#630: cov: 16416 ft: 15161 corp: 1410 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1009s job: 16 dft_time: 0
+#668: cov: 16416 ft: 15161 corp: 1410 exec/s: 1 oom/timeout/crash: 0/0/0 time: 1042s job: 17 dft_time: 0
+#730: cov: 16416 ft: 15161 corp: 1410 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1062s job: 18 dft_time: 0
+#820: cov: 16416 ft: 15161 corp: 1410 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1083s job: 19 dft_time: 0
+  NEW_FUNC: 0x56516a8276b8 in ka_init /home/user/kolmo/fuzz/../src/codecs/audio.c:1779
+  NEW_FUNC: 0x56516a87d408 in ka_rd32 /home/user/kolmo/fuzz/../src/codecs/audio.c:75
+  NEW_FUNC: 0x56516a87d578 in ka_rd16 /home/user/kolmo/fuzz/../src/codecs/audio.c:76
+  NEW_FUNC: 0x56516a8824f8 in aud_compress /home/user/kolmo/fuzz/../src/codecs/audio.c:1783
+  NEW_FUNC: 0x56516a897c68 in ka_run_pool /home/user/kolmo/fuzz/../src/codecs/audio.c:1666
+  NEW_FUNC: 0x56516a898008 in ka_enc_worker /home/user/kolmo/fuzz/../src/codecs/audio.c:1644
+  NEW_FUNC: 0x56516a89a638 in ka_buf_add /home/user/kolmo/fuzz/../src/codecs/audio.c:109
+  NEW_FUNC: 0x56516a89a7d8 in ka_crc32_buf /home/user/kolmo/fuzz/../src/codecs/audio.c:64
+  NEW_FUNC: 0x56516a89a968 in ka_chunk_len /home/user/kolmo/fuzz/../src/codecs/audio.c:1639
+  NEW_FUNC: 0x56516a89ab58 in ka_xmalloc /home/user/kolmo/fuzz/../src/codecs/audio.c:85
+  NEW_FUNC: 0x56516a89abd8 in ka_pool_take /home/user/kolmo/fuzz/../src/codecs/audio.c:1632
+  NEW_FUNC: 0x56516a89b638 in ka_plan_block /home/user/kolmo/fuzz/../src/codecs/audio.c:1260
+  NEW_FUNC: 0x56516a89d118 in ka_emit_block /home/user/kolmo/fuzz/../src/codecs/audio.c:1366
+  NEW_FUNC: 0x56516a89d828 in ka_bw_flush /home/user/kolmo/fuzz/../src/codecs/audio.c:130
+  NEW_FUNC: 0x56516a89e378 in ka_cov_fill /home/user/kolmo/fuzz/../src/codecs/audio.c:555
+  NEW_FUNC: 0x56516a89ebb8 in ka_cov_solve /home/user/kolmo/fuzz/../src/codecs/audio.c:580
+  NEW_FUNC: 0x56516a89f768 in ka_bw_put /home/user/kolmo/fuzz/../src/codecs/audio.c:116
+  NEW_FUNC: 0x56516a89fc38 in ka_emit_leaf /home/user/kolmo/fuzz/../src/codecs/audio.c:1303
+  NEW_FUNC: 0x56516a8a6f58 in ka_buf_need /home/user/kolmo/fuzz/../src/codecs/audio.c:101
+  NEW_FUNC: 0x56516a8a7528 in ka_analyse_sub /home/user/kolmo/fuzz/../src/codecs/audio.c:639
+  NEW_FUNC: 0x56516a8ad788 in ka_coef_bits /home/user/kolmo/fuzz/../src/codecs/audio.c:504
+  NEW_FUNC: 0x56516a8ba318 in aud_decompress /home/user/kolmo/fuzz/../src/codecs/audio.c:1797
+  NEW_FUNC: 0x56516a8cf148 in ka_dec_worker /home/user/kolmo/fuzz/../src/codecs/audio.c:1652
+  NEW_FUNC: 0x56516a8d0fb8 in ka_br_init /home/user/kolmo/fuzz/../src/codecs/audio.c:153
+  NEW_FUNC: 0x56516a8d1208 in ka_decode_block /home/user/kolmo/fuzz/../src/codecs/audio.c:1568
+  NEW_FUNC: 0x56516a8d16e8 in ka_br_overrun /home/user/kolmo/fuzz/../src/codecs/audio.c:183
+  NEW_FUNC: 0x56516a8d18a8 in ka_br_get /home/user/kolmo/fuzz/../src/codecs/audio.c:164
+  NEW_FUNC: 0x56516a8d20f8 in ka_decode_leaf /home/user/kolmo/fuzz/../src/codecs/audio.c:1487
+  NEW_FUNC: 0x56516a8d8d08 in ka_br_fill /home/user/kolmo/fuzz/../src/codecs/audio.c:155
+  NEW_FUNC: 0x56516a8d8ff8 in ka_lpc_restore /home/user/kolmo/fuzz/../src/codecs/audio.c:753
+  NEW_FUNC: 0x56516a8daa48 in ka_br_rice /home/user/kolmo/fuzz/../src/codecs/audio.c:173
+  NEW_FUNC: 0x56516a9517e8 in libsais_gather_nonunique_lms_suffixes_32s /home/user/kolmo/src/algo/sais/sais.c:6018
+  NEW_FUNC: 0x56516a959108 in libsais_rank_nonunique_lms_suffixes_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:6176
+  NEW_FUNC: 0x56516a95ac58 in libsais_gather_marked_lms_suffixes_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:5778
+  NEW_FUNC: 0x56516a95b788 in libsais_gather_marked_lms_suffixes /home/user/kolmo/src/algo/sais/sais.c:5681
+  NEW_FUNC: 0x56516a95c6c8 in libsais_main_32s_recursion /home/user/kolmo/src/algo/sais/sais.c:8537
+  NEW_FUNC: 0x56516a96af08 in libsais_renumber_and_mark_distinct_lms_suffixes_32s_4k_omp /home/user/kolmo/src/algo/sais/sais.c:6607
+  NEW_FUNC: 0x56516a96ca68 in libsais_count_lms_suffixes_32s_2k_omp /home/user/kolmo/src/algo/sais/sais.c:2701
+  NEW_FUNC: 0x56516a96cf38 in libsais_initialize_buckets_start_and_end_32s_4k /home/user/kolmo/src/algo/sais/sais.c:2789
+  NEW_FUNC: 0x56516a96d288 in libsais_place_lms_suffixes_histogram_32s_4k /home/user/kolmo/src/algo/sais/sais.c:6930
+  NEW_FUNC: 0x56516a96d838 in libsais_count_and_gather_lms_suffixes_32s_2k_omp /home/user/kolmo/src/algo/sais/sais.c:2665
+  NEW_FUNC: 0x56516a96df18 in libsais_radix_sort_lms_suffixes_32s_2k_omp /home/user/kolmo/src/algo/sais/sais.c:3312
+  NEW_FUNC: 0x56516a96e4b8 in libsais_initialize_buckets_start_and_end_32s_2k /home/user/kolmo/src/algo/sais/sais.c:2812
+  NEW_FUNC: 0x56516a96e838 in libsais_renumber_and_mark_distinct_lms_suffixes_32s_1k_omp /home/user/kolmo/src/algo/sais/sais.c:6621
+  NEW_FUNC: 0x56516a9714e8 in libsais_count_suffixes_32s /home/user/kolmo/src/algo/sais/sais.c:2717
+  NEW_FUNC: 0x56516a97b508 in libsais_gather_lms_suffixes_32s /home/user/kolmo/src/algo/sais/sais.c:1610
+  NEW_FUNC: 0x56516a97c238 in libsais_classify_suffixes_32s /home/user/kolmo/src/algo/sais/sais.c:1392
+  NEW_FUNC: 0x56516a990c98 in libsais_renumber_distinct_lms_suffixes_32s_4k_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:6490
+  NEW_FUNC: 0x56516a991388 in libsais_renumber_distinct_lms_suffixes_32s_4k /home/user/kolmo/src/algo/sais/sais.c:6407
+  NEW_FUNC: 0x56516a9993b8 in libsais_count_and_gather_lms_suffixes_32s_2k /home/user/kolmo/src/algo/sais/sais.c:2080
+  NEW_FUNC: 0x56516a9a4418 in libsais_count_lms_suffixes_32s_2k /home/user/kolmo/src/algo/sais/sais.c:1771
+  NEW_FUNC: 0x56516a9a65b8 in libsais_place_lms_suffixes_bucket_32s /home/user/kolmo/src/algo/sais/sais.c:6801
+  NEW_FUNC: 0x56516a9a6b48 in libsais_final_sorting_scan_left_to_right_32s_omp /home/user/kolmo/src/algo/sais/sais.c:7448
+  NEW_FUNC: 0x56516a9a7478 in libsais_final_sorting_scan_right_to_left_32s_omp /home/user/kolmo/src/algo/sais/sais.c:7879
+  NEW_FUNC: 0x56516a9a79b8 in libsais_final_sorting_scan_left_to_right_32s /home/user/kolmo/src/algo/sais/sais.c:6994
+  NEW_FUNC: 0x56516a9afe58 in libsais_final_sorting_scan_right_to_left_32s /home/user/kolmo/src/algo/sais/sais.c:7494
+  NEW_FUNC: 0x56516a9b78c8 in libsais_count_and_gather_lms_suffixes_32s_2k_nofs_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:2554
+  NEW_FUNC: 0x56516a9b7d38 in libsais_radix_sort_lms_suffixes_32s_2k /home/user/kolmo/src/algo/sais/sais.c:3063
+  NEW_FUNC: 0x56516a9bbf08 in libsais_radix_sort_set_markers_32s_4k_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:3509
+  NEW_FUNC: 0x56516a9bd2e8 in libsais_partial_sorting_scan_left_to_right_32s_4k /home/user/kolmo/src/algo/sais/sais.c:3939
+  NEW_FUNC: 0x56516a9c36e8 in libsais_partial_sorting_scan_right_to_left_32s_4k /home/user/kolmo/src/algo/sais/sais.c:4936
+  NEW_FUNC: 0x56516a9c9ae8 in libsais_partial_sorting_gather_lms_suffixes_32s_4k_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:5495
+  NEW_FUNC: 0x56516a9ca338 in libsais_partial_sorting_gather_lms_suffixes_32s_4k /home/user/kolmo/src/algo/sais/sais.c:5441
+  NEW_FUNC: 0x56516a9cb088 in libsais_partial_sorting_scan_left_to_right_32s_1k_omp /home/user/kolmo/src/algo/sais/sais.c:4432
+  NEW_FUNC: 0x56516a9cba78 in libsais_partial_sorting_scan_right_to_left_32s_1k_omp /home/user/kolmo/src/algo/sais/sais.c:5423
+  NEW_FUNC: 0x56516a9cc068 in libsais_partial_sorting_scan_left_to_right_32s_1k /home/user/kolmo/src/algo/sais/sais.c:3984
+  NEW_FUNC: 0x56516a9d1368 in libsais_partial_sorting_scan_right_to_left_32s_1k /home/user/kolmo/src/algo/sais/sais.c:4981
+  NEW_FUNC: 0x56516a9d6688 in libsais_partial_sorting_gather_lms_suffixes_32s_1k_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:5553
+  NEW_FUNC: 0x56516a9d6ed8 in libsais_partial_sorting_gather_lms_suffixes_32s_1k /home/user/kolmo/src/algo/sais/sais.c:5464
+  NEW_FUNC: 0x56516a9d7c18 in libsais_clamp_lms_suffixes_length_32s_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:6582
+  NEW_FUNC: 0x56516a9d8928 in libsais_place_lms_suffixes_gap_32s /home/user/kolmo/src/algo/sais/sais.c:6824
+  NEW_FUNC: 0x56516a9d8b68 in libsais_gather_lms_suffixes_8u_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:1539
+  NEW_FUNC: 0x56516a9d9848 in libsais_gather_lms_suffixes_8u /home/user/kolmo/src/algo/sais/sais.c:1423
+  NEW_FUNC: 0x56516a9da878 in libsais_reconstruct_lms_suffixes_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:6738
+#878: cov: 17329 ft: 15183 corp: 1421 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1109s job: 20 dft_time: 0
+#948: cov: 17339 ft: 15197 corp: 1424 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1133s job: 21 dft_time: 0
+  NEW_FUNC: 0x56516a96b4e8 in libsais_compact_lms_suffixes_32s_omp /home/user/kolmo/src/algo/sais/sais.c:8211
+  NEW_FUNC: 0x56516a96bba8 in libsais_reconstruct_compacted_lms_suffixes_32s_2k_omp /home/user/kolmo/src/algo/sais/sais.c:8481
+  NEW_FUNC: 0x56516a973cc8 in libsais_count_and_gather_lms_suffixes_32s_4k /home/user/kolmo/src/algo/sais/sais.c:2029
+  NEW_FUNC: 0x56516a97a138 in libsais_count_and_gather_lms_suffixes_32s_4k_nofs_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:2503
+  NEW_FUNC: 0x56516a97cb78 in libsais_radix_sort_lms_suffixes_32s_6k /home/user/kolmo/src/algo/sais/sais.c:3032
+  NEW_FUNC: 0x56516a983938 in libsais_radix_sort_set_markers_32s_6k_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:3475
+  NEW_FUNC: 0x56516a984ce8 in libsais_partial_sorting_scan_left_to_right_32s_6k /home/user/kolmo/src/algo/sais/sais.c:3908
+  NEW_FUNC: 0x56516a98a3b8 in libsais_partial_sorting_shift_markers_32s_6k_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:4517
+  NEW_FUNC: 0x56516a98b288 in libsais_partial_sorting_scan_right_to_left_32s_6k /home/user/kolmo/src/algo/sais/sais.c:4905
+  NEW_FUNC: 0x56516a992538 in libsais_mark_distinct_lms_suffixes_32s_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:6549
+  NEW_FUNC: 0x56516a9931e8 in libsais_renumber_unique_and_nonunique_lms_suffixes_32s_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:8077
+  NEW_FUNC: 0x56516a994958 in libsais_renumber_unique_and_nonunique_lms_suffixes_32s /home/user/kolmo/src/algo/sais/sais.c:7976
+  NEW_FUNC: 0x56516a996828 in libsais_compact_unique_and_nonunique_lms_suffixes_32s_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:8140
+  NEW_FUNC: 0x56516a997768 in libsais_compact_unique_and_nonunique_lms_suffixes_32s /home/user/kolmo/src/algo/sais/sais.c:8011
+  NEW_FUNC: 0x56516a998ee8 in libsais_merge_compacted_lms_suffixes_32s_omp /home/user/kolmo/src/algo/sais/sais.c:8475
+  NEW_FUNC: 0x56516a99c418 in libsais_count_and_gather_compacted_lms_suffixes_32s_2k /home/user/kolmo/src/algo/sais/sais.c:2131
+  NEW_FUNC: 0x56516a99e658 in libsais_count_and_gather_compacted_lms_suffixes_32s_2k_nofs_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:2605
+  NEW_FUNC: 0x56516a9a07a8 in libsais_merge_unique_lms_suffixes_32s_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:8379
+  NEW_FUNC: 0x56516a9a0d38 in libsais_merge_unique_lms_suffixes_32s /home/user/kolmo/src/algo/sais/sais.c:8289
+  NEW_FUNC: 0x56516a9a2738 in libsais_merge_nonunique_lms_suffixes_32s_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:8432
+  NEW_FUNC: 0x56516a9a2f08 in libsais_merge_nonunique_lms_suffixes_32s /home/user/kolmo/src/algo/sais/sais.c:8331
+#1042: cov: 17608 ft: 15206 corp: 1430 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1158s job: 22 dft_time: 0
+  NEW_FUNC: 0x56516a89ad98 in ka_chan1_init /home/user/kolmo/fuzz/../src/codecs/audio.c:1019
+  NEW_FUNC: 0x56516a89dbd8 in ka_chan1_free /home/user/kolmo/fuzz/../src/codecs/audio.c:1033
+  NEW_FUNC: 0x56516a89dd38 in ka_nlms_init /home/user/kolmo/fuzz/../src/codecs/audio.c:864
+  NEW_FUNC: 0x56516a8a7158 in ka_rce_shift /home/user/kolmo/fuzz/../src/codecs/audio.c:196
+  NEW_FUNC: 0x56516a8ad118 in ka_nlms_push_cross /home/user/kolmo/fuzz/../src/codecs/audio.c:959
+  NEW_FUNC: 0x56516a8ada38 in ka_nlms_pred /home/user/kolmo/fuzz/../src/codecs/audio.c:888
+  NEW_FUNC: 0x56516a8ae1f8 in ka_ss_pred /home/user/kolmo/fuzz/../src/codecs/audio.c:975
+  NEW_FUNC: 0x56516a8ae518 in ka_comb_pred /home/user/kolmo/fuzz/../src/codecs/audio.c:1044
+  NEW_FUNC: 0x56516a8ae9b8 in ka_casc_upd /home/user/kolmo/fuzz/../src/codecs/audio.c:1060
+  NEW_FUNC: 0x56516a8af618 in ka_nlms_update /home/user/kolmo/fuzz/../src/codecs/audio.c:929
+  NEW_FUNC: 0x56516a8b05d8 in ka_upd16 /home/user/kolmo/fuzz/../src/codecs/audio.c:897
+  NEW_FUNC: 0x56516a8b09a8 in ka_model_ctx /home/user/kolmo/fuzz/../src/codecs/audio.c:1090
+  NEW_FUNC: 0x56516a8b0c78 in ka_rce_bit /home/user/kolmo/fuzz/../src/codecs/audio.c:226
+  NEW_FUNC: 0x56516a8b0f38 in ka_prob_upd /home/user/kolmo/fuzz/../src/codecs/audio.c:218
+  NEW_FUNC: 0x56516a8d1b68 in ka_rcd_bypass /home/user/kolmo/fuzz/../src/codecs/audio.c:258
+  NEW_FUNC: 0x56516a8dae78 in ka_rcd_bit /home/user/kolmo/fuzz/../src/codecs/audio.c:248
+#1134: cov: 17944 ft: 15277 corp: 1434 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1183s job: 23 dft_time: 0
+  NEW_FUNC: 0x56516a844448 in kv_geometry /home/user/kolmo/fuzz/../src/codecs/video.c:20
+  NEW_FUNC: 0x56516a8b3498 in kv_inverse /home/user/kolmo/fuzz/../src/codecs/video.c:128
+#1257: cov: 18063 ft: 15306 corp: 1445 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1212s job: 24 dft_time: 0
+  NEW_FUNC: 0x56516a7abfb8 in store_decompress /home/user/kolmo/fuzz/../src/codecs/store.c:2
+  NEW_FUNC: 0x56516a815d78 in kb_res /home/user/kolmo/fuzz/../src/transforms/graph.c:68
+  NEW_FUNC: 0x56516a8bc238 in kg_decode /home/user/kolmo/fuzz/../src/transforms/graph.c:1304
+  NEW_FUNC: 0x56516a8db3d8 in kg_getuv /home/user/kolmo/fuzz/../src/transforms/graph.c:80
+#1355: cov: 18134 ft: 15356 corp: 1456 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1242s job: 25 dft_time: 0
+#1484: cov: 18137 ft: 15365 corp: 1463 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1273s job: 26 dft_time: 0
+  NEW_FUNC: 0x56516a7ac058 in lz4_bound /home/user/kolmo/fuzz/../src/codecs/lz4.c:2
+  NEW_FUNC: 0x56516a7ac088 in lz4_compress /home/user/kolmo/fuzz/../src/codecs/lz4.c:3
+  NEW_FUNC: 0x56516a7ac138 in lz4_decompress /home/user/kolmo/fuzz/../src/codecs/lz4.c:12
+#1624: cov: 18151 ft: 15381 corp: 1471 exec/s: 5 oom/timeout/crash: 0/0/0 time: 1303s job: 27 dft_time: 0
+  NEW_FUNC: 0x56516a7ac318 in zstd_bound /home/user/kolmo/fuzz/../src/codecs/zstd.c:2
+  NEW_FUNC: 0x56516a7ac348 in zstd_compress /home/user/kolmo/fuzz/../src/codecs/zstd.c:3
+  NEW_FUNC: 0x56516a7ac588 in zstd_decompress /home/user/kolmo/fuzz/../src/codecs/zstd.c:10
+  NEW_FUNC: 0x56516a8094e8 in cm_image_decompress /home/user/kolmo/fuzz/../src/codecs/cm_image.c:31
+  NEW_FUNC: 0x56516a809878 in planes_dec_tab /home/user/kolmo/fuzz/../src/codecs/planes_leaf.c:53
+  NEW_FUNC: 0x56516a841ce8 in planes_compress /home/user/kolmo/fuzz/../src/codecs/planes_leaf.c:16
+#1780: cov: 18199 ft: 15465 corp: 1487 exec/s: 5 oom/timeout/crash: 0/0/0 time: 1337s job: 28 dft_time: 0
+#1907: cov: 18208 ft: 15484 corp: 1498 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1371s job: 29 dft_time: 0
+  NEW_FUNC: 0x56516a7a02a8 in g6_fail /home/user/kolmo/fuzz/../src/codecs/gr6.c:37
+  NEW_FUNC: 0x56516a8036b8 in rans_codec_decompress /home/user/kolmo/fuzz/../src/codecs/rans.c:122
+  NEW_FUNC: 0x56516a809228 in r64_rd /home/user/kolmo/fuzz/../src/codecs/rans.c:78
+#2037: cov: 18240 ft: 15513 corp: 1508 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1407s job: 30 dft_time: 0
+  NEW_FUNC: 0x56516a718a08 in np_decompress /home/user/kolmo/fuzz/../src/codecs/nplane.c:158
+  NEW_FUNC: 0x56516a8093b8 in nplane_decompress /home/user/kolmo/fuzz/../src/codecs/nplane.c:193
+#2212: cov: 18258 ft: 15523 corp: 1516 exec/s: 5 oom/timeout/crash: 0/0/0 time: 1443s job: 31 dft_time: 0
+#2349: cov: 18268 ft: 15560 corp: 1533 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1480s job: 32 dft_time: 0
+#2461: cov: 18283 ft: 15594 corp: 1544 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1519s job: 33 dft_time: 0
+#2610: cov: 18289 ft: 15614 corp: 1550 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1560s job: 34 dft_time: 0
+#2712: cov: 18294 ft: 15642 corp: 1564 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1601s job: 35 dft_time: 0
+  NEW_FUNC: 0x56516a972388 in libsais_reconstruct_compacted_lms_suffixes_32s_1k_omp /home/user/kolmo/src/algo/sais/sais.c:8509
+  NEW_FUNC: 0x56516a99f9d8 in libsais_gather_compacted_lms_suffixes_32s /home/user/kolmo/src/algo/sais/sais.c:1669
+#2886: cov: 18314 ft: 15660 corp: 1570 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1644s job: 36 dft_time: 0
+#3072: cov: 18337 ft: 15693 corp: 1586 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1686s job: 37 dft_time: 0
+#3201: cov: 18346 ft: 15728 corp: 1596 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1727s job: 38 dft_time: 0
+#3355: cov: 18361 ft: 15765 corp: 1604 exec/s: 3 oom/timeout/crash: 0/0/0 time: 1772s job: 39 dft_time: 0
+#3457: cov: 18373 ft: 15790 corp: 1616 exec/s: 2 oom/timeout/crash: 0/0/0 time: 1821s job: 40 dft_time: 0
+#3626: cov: 18378 ft: 15820 corp: 1624 exec/s: 4 oom/timeout/crash: 0/0/0 time: 1872s job: 41 dft_time: 0
+#3897: cov: 18383 ft: 15833 corp: 1633 exec/s: 6 oom/timeout/crash: 0/0/0 time: 1917s job: 42 dft_time: 0
+  NEW_FUNC: 0x56516a80e3f8 in np_ctx_decode /home/user/kolmo/fuzz/../src/codecs/nplane.c:80
+#4158: cov: 18451 ft: 15890 corp: 1656 exec/s: 5 oom/timeout/crash: 0/0/0 time: 1965s job: 43 dft_time: 0
+#4288: cov: 18453 ft: 15909 corp: 1669 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2014s job: 44 dft_time: 0
+#4465: cov: 18460 ft: 15960 corp: 1683 exec/s: 3 oom/timeout/crash: 0/0/0 time: 2064s job: 45 dft_time: 0
+#4629: cov: 18463 ft: 15991 corp: 1690 exec/s: 3 oom/timeout/crash: 0/0/0 time: 2114s job: 46 dft_time: 0
+#4807: cov: 18464 ft: 16001 corp: 1699 exec/s: 3 oom/timeout/crash: 0/0/0 time: 2167s job: 47 dft_time: 0
+  NEW_FUNC: 0x56516a9ee718 in libsais_unbwt_init /home/user/kolmo/src/algo/sais/sais.c:11731
+  NEW_FUNC: 0x56516a9eec48 in libsais_unbwt_touch_region0 /home/user/kolmo/src/algo/sais/sais.c:11706
+  NEW_FUNC: 0x56516a9ef0a8 in libsais_unbwt_init_single /home/user/kolmo/src/algo/sais/sais.c:9978
+  NEW_FUNC: 0x56516a9f5368 in libsais_unbwt_compute_bigram_histogram /home/user/kolmo/src/algo/sais/sais.c:9120
+  NEW_FUNC: 0x56516a9f8628 in libsais_unbwt_calculate_fastbits /home/user/kolmo/src/algo/sais/sais.c:9228
+  NEW_FUNC: 0x56516aa04db8 in libsais_unbwt_calculate_biPSI /home/user/kolmo/src/algo/sais/sais.c:9392
+  NEW_FUNC: 0x56516aa15998 in libsais_unbwt_decode_omp_region0 /home/user/kolmo/src/algo/sais/sais.c:10816
+  NEW_FUNC: 0x56516aa161a8 in libsais_unbwt_decode /home/user/kolmo/src/algo/sais/sais.c:10680
+  NEW_FUNC: 0x56516aa21ac8 in libsais_unbwt_decode_8 /home/user/kolmo/src/algo/sais/sais.c:10356
+  NEW_FUNC: 0x56516aa2a6e8 in libsais_unbwt_decode_7 /home/user/kolmo/src/algo/sais/sais.c:10330
+#5002: cov: 18618 ft: 16039 corp: 1710 exec/s: 3 oom/timeout/crash: 0/0/0 time: 2224s job: 48 dft_time: 0
+#5132: cov: 18626 ft: 16098 corp: 1723 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2278s job: 49 dft_time: 0
+#5308: cov: 18633 ft: 16128 corp: 1731 exec/s: 3 oom/timeout/crash: 0/0/0 time: 2334s job: 50 dft_time: 0
+#5436: cov: 18652 ft: 16175 corp: 1743 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2393s job: 51 dft_time: 0
+#5587: cov: 18656 ft: 16212 corp: 1749 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2448s job: 52 dft_time: 0
+#5760: cov: 18656 ft: 16235 corp: 1757 exec/s: 3 oom/timeout/crash: 0/0/0 time: 2505s job: 53 dft_time: 0
+#6007: cov: 18663 ft: 16288 corp: 1764 exec/s: 4 oom/timeout/crash: 0/0/0 time: 2563s job: 54 dft_time: 0
+  NEW_FUNC: 0x56516a80ae58 in hz_dec_tab /home/user/kolmo/fuzz/../src/codecs/hufzstd_leaf.c:46
+#6203: cov: 18677 ft: 16378 corp: 1790 exec/s: 3 oom/timeout/crash: 0/0/0 time: 2626s job: 55 dft_time: 0
+#6468: cov: 18678 ft: 16391 corp: 1799 exec/s: 4 oom/timeout/crash: 0/0/0 time: 2685s job: 56 dft_time: 0
+#6651: cov: 18679 ft: 16404 corp: 1806 exec/s: 3 oom/timeout/crash: 0/0/0 time: 2747s job: 57 dft_time: 0
+#6797: cov: 18681 ft: 16419 corp: 1818 exec/s: 2 oom/timeout/crash: 0/0/0 time: 2811s job: 58 dft_time: 0
+#7155: cov: 18682 ft: 16432 corp: 1826 exec/s: 5 oom/timeout/crash: 0/0/0 time: 2875s job: 59 dft_time: 0
+#7424: cov: 18688 ft: 16449 corp: 1837 exec/s: 4 oom/timeout/crash: 0/0/0 time: 2939s job: 60 dft_time: 0
+  NEW_FUNC: 0x56516aa27288 in libsais_unbwt_decode_5 /home/user/kolmo/src/algo/sais/sais.c:10284
+  NEW_FUNC: 0x56516aa28a58 in libsais_unbwt_decode_6 /home/user/kolmo/src/algo/sais/sais.c:10306
+  NEW_FUNC: 0x56516aa2c7d8 in libsais_unbwt_decode_9 /home/user/kolmo/src/algo/sais/sais.c:10384
+  NEW_FUNC: 0x56516aa2f248 in libsais_unbwt_decode_10 /home/user/kolmo/src/algo/sais/sais.c:10414
+#7684: cov: 18790 ft: 16564 corp: 1858 exec/s: 4 oom/timeout/crash: 0/0/0 time: 3005s job: 61 dft_time: 0
+#7858: cov: 18793 ft: 16586 corp: 1876 exec/s: 2 oom/timeout/crash: 0/0/0 time: 3078s job: 62 dft_time: 0
+#8061: cov: 18795 ft: 16625 corp: 1893 exec/s: 3 oom/timeout/crash: 0/0/0 time: 3150s job: 63 dft_time: 0
+#8352: cov: 18796 ft: 16640 corp: 1903 exec/s: 4 oom/timeout/crash: 0/0/0 time: 3223s job: 64 dft_time: 0
+#8504: cov: 18801 ft: 16665 corp: 1920 exec/s: 2 oom/timeout/crash: 0/0/0 time: 3294s job: 65 dft_time: 0
+  NEW_FUNC: 0x56516a79fc58 in g6_fpred /home/user/kolmo/fuzz/../src/codecs/gr6.c:190
+  NEW_FUNC: 0x56516a7a0c58 in g6_ratio /home/user/kolmo/fuzz/../src/codecs/gr6.c:176
+  NEW_FUNC: 0x56516a7a1178 in g6_rescale /home/user/kolmo/fuzz/../src/codecs/gr6.c:185
+#8783: cov: 18847 ft: 16678 corp: 1929 exec/s: 4 oom/timeout/crash: 0/0/0 time: 3366s job: 66 dft_time: 0
+#9014: cov: 18847 ft: 16700 corp: 1942 exec/s: 3 oom/timeout/crash: 0/0/0 time: 3438s job: 67 dft_time: 0
+#9235: cov: 18847 ft: 16742 corp: 1963 exec/s: 3 oom/timeout/crash: 0/0/0 time: 3513s job: 68 dft_time: 0
+#9600: cov: 18848 ft: 16759 corp: 1972 exec/s: 5 oom/timeout/crash: 0/0/0 time: 3587s job: 69 dft_time: 0
+#9780: cov: 18858 ft: 16883 corp: 2002 exec/s: 2 oom/timeout/crash: 0/0/0 time: 3667s job: 70 dft_time: 0
+#9953: cov: 18858 ft: 16888 corp: 2005 exec/s: 2 oom/timeout/crash: 0/0/0 time: 3743s job: 71 dft_time: 0
+#10172: cov: 18859 ft: 16937 corp: 2016 exec/s: 3 oom/timeout/crash: 0/0/0 time: 3822s job: 72 dft_time: 0
+#10396: cov: 18861 ft: 16951 corp: 2025 exec/s: 3 oom/timeout/crash: 0/0/0 time: 3900s job: 73 dft_time: 0
+  NEW_FUNC: 0x56516a843bf8 in hz_compress_huf /home/user/kolmo/fuzz/../src/codecs/hufzstd_leaf.c:11
+INFO: fuzzed for 3904 seconds, wrapping up soon
+INFO: exiting: 0 time: 3904s

@@ -1,0 +1,5 @@
+{"file":"owid-co2-data.csv","n":15242657,"variant":"cm","size":2128172,"enc_s":82.453,"dec_s":68.572}
+{"file":"owid-co2-data.csv","n":15242657,"variant":"word+cm","tn":15123879,"size":2131995,"enc_s":95.555,"dec_s":84.835}
+{"file":"owid-co2-data.csv","n":15242657,"variant":"cmx-null","size":2129008,"enc_s":87.037}
+{"file":"owid-co2-data.csv","n":15242657,"variant":"cmx-dict","size":2128673,"body":2128484,"dict_cm":189,"nphr":53,"enc_s":67.097}
+{"file":"owid-co2-data.csv","n":15242657,"variant":"phrase+cm","tn":10209759,"dict":274,"nphr":53,"singles":32,"prefixes":32,"coded":2335663,"lit":7387489,"esc":0,"size":2712076,"dict_cm":189,"build_s":6.890,"tenc_s":0.302,"tdec_s":0.101,"enc_s":31.646,"dec_s":29.418,"opts":"sample=8M minc=4 maxl=64 rounds=64 per=512 minuse=3 minlen=2 maxtok=0 singles=-1 order=0 words_only=0 bytes=0 maxcodes=0"}

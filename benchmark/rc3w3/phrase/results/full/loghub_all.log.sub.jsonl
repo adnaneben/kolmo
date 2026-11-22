@@ -1,0 +1,5 @@
+{"file":"loghub_all.log","n":4458875,"variant":"cm","size":186226,"enc_s":20.371,"dec_s":22.215}
+{"file":"loghub_all.log","n":4458875,"variant":"word+cm","tn":3168367,"size":205633,"enc_s":11.530,"dec_s":11.791}
+{"file":"loghub_all.log","n":4458875,"variant":"cmx-null","size":186469,"enc_s":24.069}
+{"file":"loghub_all.log","n":4458875,"variant":"cmx-dict","size":186567,"body":186469,"dict_cm":98,"nphr":0,"enc_s":19.788}
+{"file":"loghub_all.log","n":4458875,"variant":"phrase+cm","tn":4458947,"dict":72,"nphr":0,"singles":32,"prefixes":32,"coded":0,"lit":4458875,"esc":0,"size":186322,"dict_cm":98,"build_s":1.353,"tenc_s":0.021,"tdec_s":0.008,"enc_s":19.137,"dec_s":17.744,"opts":"sample=8M minc=4 maxl=64 rounds=64 per=512 minuse=3 minlen=2 maxtok=0 singles=-1 order=0 words_only=0 bytes=0 maxcodes=0"}

@@ -1,0 +1,5 @@
+{"file":"webster","n":41458703,"variant":"cm","size":5609477,"enc_s":204.427,"dec_s":204.767}
+{"file":"webster","n":41458703,"variant":"word+cm","tn":33500563,"size":6006731,"enc_s":105.983,"dec_s":106.692}
+{"file":"webster","n":41458703,"variant":"cmx-null","size":5612345,"enc_s":215.008}
+{"file":"webster","n":41458703,"variant":"cmx-dict","size":5589787,"body":5589589,"dict_cm":198,"nphr":21,"enc_s":219.688}
+{"file":"webster","n":41458703,"variant":"phrase+cm","tn":34801180,"dict":209,"nphr":21,"singles":32,"prefixes":32,"coded":2656053,"lit":32144918,"esc":0,"size":6022372,"dict_cm":198,"build_s":5.577,"tenc_s":0.357,"tdec_s":0.109,"enc_s":113.444,"dec_s":120.615,"opts":"sample=8M minc=4 maxl=64 rounds=64 per=512 minuse=3 minlen=2 maxtok=0 singles=-1 order=0 words_only=0 bytes=0 maxcodes=0"}

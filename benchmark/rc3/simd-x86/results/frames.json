@@ -1,0 +1,1583 @@
+{
+ "builds": [
+  [
+   "base",
+   "/tmp/claude-0/-home-user-kolmo/883ec4d5-33ae-5fcd-a4ca-449b4a838928/scratchpad/bin/kolmo-base",
+   {}
+  ],
+  [
+   "noasm",
+   "/tmp/claude-0/-home-user-kolmo/883ec4d5-33ae-5fcd-a4ca-449b4a838928/scratchpad/m_noasm/build/kolmo",
+   {}
+  ],
+  [
+   "generic-c",
+   "/tmp/claude-0/-home-user-kolmo/883ec4d5-33ae-5fcd-a4ca-449b4a838928/scratchpad/m_generic/build/kolmo",
+   {
+    "KOLMO_CPU": "c"
+   }
+  ],
+  [
+   "generic-sse2",
+   "/tmp/claude-0/-home-user-kolmo/883ec4d5-33ae-5fcd-a4ca-449b4a838928/scratchpad/m_generic/build/kolmo",
+   {
+    "KOLMO_CPU": "sse2"
+   }
+  ],
+  [
+   "generic-sse41",
+   "/tmp/claude-0/-home-user-kolmo/883ec4d5-33ae-5fcd-a4ca-449b4a838928/scratchpad/m_generic/build/kolmo",
+   {
+    "KOLMO_CPU": "sse41"
+   }
+  ],
+  [
+   "generic",
+   "/tmp/claude-0/-home-user-kolmo/883ec4d5-33ae-5fcd-a4ca-449b4a838928/scratchpad/m_generic/build/kolmo",
+   {}
+  ],
+  [
+   "avx2",
+   "/tmp/claude-0/-home-user-kolmo/883ec4d5-33ae-5fcd-a4ca-449b4a838928/scratchpad/m_avx2/build/kolmo",
+   {}
+  ],
+  [
+   "native",
+   "/tmp/claude-0/-home-user-kolmo/883ec4d5-33ae-5fcd-a4ca-449b4a838928/scratchpad/m_native/build/kolmo",
+   {}
+  ]
+ ],
+ "cases": [
+  {
+   "file": "audio_esc.wav",
+   "setting": "-m speed",
+   "bytes": 2205044,
+   "frame": "b31ffe3dc8b1195d",
+   "size": 1130408,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "audio_esc.wav",
+   "setting": "-m balanced",
+   "bytes": 2205044,
+   "frame": "5ba66c15fd23d1fe",
+   "size": 650022,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "audio_esc.wav",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 2205044,
+   "frame": "5ba66c15fd23d1fe",
+   "size": 650022,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "audio_esc.wav",
+   "setting": "-m fast --typed-huf",
+   "bytes": 2205044,
+   "frame": "26166bb96567a9af",
+   "size": 649878,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "audio_esc.wav",
+   "setting": "-m eco",
+   "bytes": 2205044,
+   "frame": "1a990975eb7d6b3b",
+   "size": 645550,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "audio_esc.wav",
+   "setting": "-m hc",
+   "bytes": 2205044,
+   "frame": "24e622e7351e7f06",
+   "size": 636493,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "audio_esc.wav",
+   "setting": "-m ratio",
+   "bytes": 2205044,
+   "frame": "bf949f0bfd0755ce",
+   "size": 621676,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "audio_esc.wav",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "29dcd333189eddda",
+   "size": 65106,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "audio_esc.wav",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "051264df895ef63a",
+   "size": 66062,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "audio_esc.wav",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "29dcd333189eddda",
+   "size": 65106,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "bin_mozilla",
+   "setting": "-m speed",
+   "bytes": 16777216,
+   "frame": "d6355249ab726565",
+   "size": 9370942,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "bin_mozilla",
+   "setting": "-m balanced",
+   "bytes": 16777216,
+   "frame": "7b7db6163cea9443",
+   "size": 7141523,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "bin_mozilla",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 16777216,
+   "frame": "7b7db6163cea9443",
+   "size": 7141523,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "bin_mozilla",
+   "setting": "-m fast --typed-huf",
+   "bytes": 16777216,
+   "frame": "7b7db6163cea9443",
+   "size": 7141523,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "bin_mozilla",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "f524d306dee23b43",
+   "size": 3258067,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "bin_mozilla",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "6567f59c08a1a297",
+   "size": 3235162,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "bin_mozilla",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "1d36213707495ab0",
+   "size": 3244235,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "bin_mozilla",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "21d009705b8976f3",
+   "size": 362784,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "bin_mozilla",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "88cefc5701afa554",
+   "size": 365588,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "bin_mozilla",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "21d009705b8976f3",
+   "size": 362784,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_mr.npy",
+   "setting": "-m speed",
+   "bytes": 9970692,
+   "frame": "e387941a5215f898",
+   "size": 4426300,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_mr.npy",
+   "setting": "-m balanced",
+   "bytes": 9970692,
+   "frame": "2a76144986fb12ff",
+   "size": 2316287,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_mr.npy",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 9970692,
+   "frame": "2a76144986fb12ff",
+   "size": 2316287,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_mr.npy",
+   "setting": "-m fast --typed-huf",
+   "bytes": 9970692,
+   "frame": "2a76144986fb12ff",
+   "size": 2316287,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_mr.npy",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "697e104509ffd3d0",
+   "size": 907920,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_mr.npy",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "a3d2f1a89ccd8a65",
+   "size": 913928,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_mr.npy",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "6ac9cce4d8fc48a9",
+   "size": 811798,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_mr.npy",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "bcfa56b7668384cf",
+   "size": 100922,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_mr.npy",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "f80b69a559e05ff6",
+   "size": 101407,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_mr.npy",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "bcfa56b7668384cf",
+   "size": 100922,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_xray.npy",
+   "setting": "-m speed",
+   "bytes": 8474368,
+   "frame": "9327d028c574abc5",
+   "size": 8392533,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_xray.npy",
+   "setting": "-m balanced",
+   "bytes": 8474368,
+   "frame": "8484c7dbef1530a6",
+   "size": 3657595,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_xray.npy",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 8474368,
+   "frame": "8484c7dbef1530a6",
+   "size": 3657595,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_xray.npy",
+   "setting": "-m fast --typed-huf",
+   "bytes": 8474368,
+   "frame": "8484c7dbef1530a6",
+   "size": 3657595,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_xray.npy",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "a8b5fe25eca3384c",
+   "size": 1801510,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_xray.npy",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "428f50038bdccf8c",
+   "size": 1813111,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_xray.npy",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "6186291aee98836d",
+   "size": 1800908,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_xray.npy",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "c983a565e362ba8d",
+   "size": 224771,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_xray.npy",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "c983a565e362ba8d",
+   "size": 224771,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img16_xray.npy",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "c3d6e9a317674f21",
+   "size": 221523,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_grey.npy",
+   "setting": "-m speed",
+   "bytes": 1572992,
+   "frame": "200d43a0f0544333",
+   "size": 1540003,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_grey.npy",
+   "setting": "-m balanced",
+   "bytes": 1572992,
+   "frame": "9e694f80db76e7ca",
+   "size": 1048496,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_grey.npy",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 1572992,
+   "frame": "9e694f80db76e7ca",
+   "size": 1048496,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_grey.npy",
+   "setting": "-m fast --typed-huf",
+   "bytes": 1572992,
+   "frame": "9e694f80db76e7ca",
+   "size": 1048496,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_grey.npy",
+   "setting": "-m eco",
+   "bytes": 1572992,
+   "frame": "4c2e0b81965fa2df",
+   "size": 1049442,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_grey.npy",
+   "setting": "-m hc",
+   "bytes": 1572992,
+   "frame": "598aabb67fe0a95b",
+   "size": 1049446,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_grey.npy",
+   "setting": "-m ratio",
+   "bytes": 1572992,
+   "frame": "65d8e13725c047bb",
+   "size": 1029356,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_grey.npy",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "f599494cd51f4054",
+   "size": 319822,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_grey.npy",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "f170597842570e90",
+   "size": 351233,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_grey.npy",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "f599494cd51f4054",
+   "size": 319822,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_rgb.npy",
+   "setting": "-m speed",
+   "bytes": 4718720,
+   "frame": "e1da45b8febbab65",
+   "size": 4376001,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_rgb.npy",
+   "setting": "-m balanced",
+   "bytes": 4718720,
+   "frame": "9bcc5073b5ae34e5",
+   "size": 3034257,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_rgb.npy",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 4718720,
+   "frame": "9bcc5073b5ae34e5",
+   "size": 3034257,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_rgb.npy",
+   "setting": "-m fast --typed-huf",
+   "bytes": 4718720,
+   "frame": "9bcc5073b5ae34e5",
+   "size": 3034257,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_rgb.npy",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "4e0c947412a6c21c",
+   "size": 2512014,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_rgb.npy",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "1d93d1009145b5b0",
+   "size": 2459566,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_rgb.npy",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "1a2b5cc874405261",
+   "size": 2133311,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_rgb.npy",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "143d4814339f92d5",
+   "size": 192017,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_rgb.npy",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "314a386c1ea8e307",
+   "size": 255634,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "img8_rgb.npy",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "143d4814339f92d5",
+   "size": 192017,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "log_access.log",
+   "setting": "-m speed",
+   "bytes": 28033058,
+   "frame": "696efc6010cbdde1",
+   "size": 11851596,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "log_access.log",
+   "setting": "-m balanced",
+   "bytes": 28033058,
+   "frame": "64fa3123b6a9a938",
+   "size": 5837292,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "log_access.log",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 28033058,
+   "frame": "64fa3123b6a9a938",
+   "size": 5837292,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "log_access.log",
+   "setting": "-m fast --typed-huf",
+   "bytes": 28033058,
+   "frame": "64fa3123b6a9a938",
+   "size": 5837292,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "log_access.log",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "2073793ac63bf61f",
+   "size": 819772,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "log_access.log",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "dd2018bf53fff89c",
+   "size": 699299,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "log_access.log",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "f8e4ee5b7b3b74e3",
+   "size": 672025,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "log_access.log",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "380f3f97d373cac9",
+   "size": 69339,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "log_access.log",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "76779b67492bfe7d",
+   "size": 73250,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "log_access.log",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "380f3f97d373cac9",
+   "size": 69339,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_f64.npy",
+   "setting": "-m speed",
+   "bytes": 16000128,
+   "frame": "0f5bbabb45ad01d8",
+   "size": 8072628,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_f64.npy",
+   "setting": "-m balanced",
+   "bytes": 16000128,
+   "frame": "bf9617fe309c1456",
+   "size": 2307895,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_f64.npy",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 16000128,
+   "frame": "bf9617fe309c1456",
+   "size": 2307895,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_f64.npy",
+   "setting": "-m fast --typed-huf",
+   "bytes": 16000128,
+   "frame": "bf9617fe309c1456",
+   "size": 2307895,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_f64.npy",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "bc85fbeecefacb66",
+   "size": 573276,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_f64.npy",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "8a0771c9ffb46f77",
+   "size": 577343,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_f64.npy",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "ff9da517728ec4a3",
+   "size": 573397,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_f64.npy",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "24cdd63d384a61b8",
+   "size": 72312,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_f64.npy",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "24cdd63d384a61b8",
+   "size": 72312,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_f64.npy",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "c9ba9da6b3c74db1",
+   "size": 72302,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_sao.bin",
+   "setting": "-m speed",
+   "bytes": 7251944,
+   "frame": "b1cea4f4cdcf967a",
+   "size": 6791955,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_sao.bin",
+   "setting": "-m balanced",
+   "bytes": 7251944,
+   "frame": "6352a48e12287cd3",
+   "size": 2302435,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_sao.bin",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 7251944,
+   "frame": "6352a48e12287cd3",
+   "size": 2302435,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_sao.bin",
+   "setting": "-m fast --typed-huf",
+   "bytes": 7251944,
+   "frame": "6352a48e12287cd3",
+   "size": 2302435,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_sao.bin",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "db477e1823a02550",
+   "size": 1271105,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_sao.bin",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "4695e05ee3355319",
+   "size": 1274663,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_sao.bin",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "f2e4a0b6143ee069",
+   "size": 1257454,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_sao.bin",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "b0b8a75338de8b16",
+   "size": 156948,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_sao.bin",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "0062eb2624a312f6",
+   "size": 157337,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_sao.bin",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "b0b8a75338de8b16",
+   "size": 156948,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_walk_i32.npy",
+   "setting": "-m speed",
+   "bytes": 16000128,
+   "frame": "03174b941252ae8e",
+   "size": 7403184,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_walk_i32.npy",
+   "setting": "-m balanced",
+   "bytes": 16000128,
+   "frame": "c6e657029d90c016",
+   "size": 4890101,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_walk_i32.npy",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 16000128,
+   "frame": "55e750499ae76efc",
+   "size": 4646518,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_walk_i32.npy",
+   "setting": "-m fast --typed-huf",
+   "bytes": 16000128,
+   "frame": "c6e657029d90c016",
+   "size": 4890101,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_walk_i32.npy",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "7efd1ade7377f758",
+   "size": 1236507,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_walk_i32.npy",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "d7db01217f2915ec",
+   "size": 1255055,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_walk_i32.npy",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "e93b14fce2c7952e",
+   "size": 1236513,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_walk_i32.npy",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "87bdab2e10c7d517",
+   "size": 157044,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_walk_i32.npy",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "87bdab2e10c7d517",
+   "size": 157044,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "num_walk_i32.npy",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "8231ae9c02d4f7f6",
+   "size": 155451,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_osdb.bin",
+   "setting": "-m speed",
+   "bytes": 10085684,
+   "frame": "071d5f4e796f3733",
+   "size": 5273313,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_osdb.bin",
+   "setting": "-m balanced",
+   "bytes": 10085684,
+   "frame": "b7ac4a8e563c6c63",
+   "size": 3533740,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_osdb.bin",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 10085684,
+   "frame": "b7ac4a8e563c6c63",
+   "size": 3533740,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_osdb.bin",
+   "setting": "-m fast --typed-huf",
+   "bytes": 10085684,
+   "frame": "b7ac4a8e563c6c63",
+   "size": 3533740,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_osdb.bin",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "7a6b6ecc28100a0f",
+   "size": 1318264,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_osdb.bin",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "1b67959b69119ac8",
+   "size": 1315030,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_osdb.bin",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "78dee98f39182bd7",
+   "size": 988696,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_osdb.bin",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "2f933a6baa5afc2e",
+   "size": 133202,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_osdb.bin",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "c9ef24d0e00b32fe",
+   "size": 137923,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_osdb.bin",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "2f933a6baa5afc2e",
+   "size": 133202,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_trades.csv",
+   "setting": "-m speed",
+   "bytes": 13916983,
+   "frame": "0101379a04e65191",
+   "size": 6271971,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_trades.csv",
+   "setting": "-m balanced",
+   "bytes": 13916983,
+   "frame": "bf4263717ff49d11",
+   "size": 1900821,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_trades.csv",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 13916983,
+   "frame": "bf4263717ff49d11",
+   "size": 1900821,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_trades.csv",
+   "setting": "-m fast --typed-huf",
+   "bytes": 13916983,
+   "frame": "bf4263717ff49d11",
+   "size": 1900821,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_trades.csv",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "c500b02330003349",
+   "size": 565238,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_trades.csv",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "2edcb7d4224b2aec",
+   "size": 528922,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_trades.csv",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "c8a7601b8d582c50",
+   "size": 519244,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_trades.csv",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "b3b12e7a81aa4a9d",
+   "size": 61014,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_trades.csv",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "e6da2eb14ea9457d",
+   "size": 61392,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "table_trades.csv",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "b3b12e7a81aa4a9d",
+   "size": 61014,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_dickens.txt",
+   "setting": "-m speed",
+   "bytes": 10192446,
+   "frame": "326e7b3a8768bad1",
+   "size": 6437034,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_dickens.txt",
+   "setting": "-m balanced",
+   "bytes": 10192446,
+   "frame": "7dbf303c7db239ab",
+   "size": 3721196,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_dickens.txt",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 10192446,
+   "frame": "7dbf303c7db239ab",
+   "size": 3721196,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_dickens.txt",
+   "setting": "-m fast --typed-huf",
+   "bytes": 10192446,
+   "frame": "7dbf303c7db239ab",
+   "size": 3721196,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_dickens.txt",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "11d0bf92580a9418",
+   "size": 1213135,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_dickens.txt",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "4af5a36b85394897",
+   "size": 1165692,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_dickens.txt",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "5f743713a75118e2",
+   "size": 976682,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_dickens.txt",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "3d27dffe9ea1d30f",
+   "size": 120117,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_dickens.txt",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "e5e2d64881a2c67c",
+   "size": 121144,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_dickens.txt",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "3d27dffe9ea1d30f",
+   "size": 120117,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_webster.txt",
+   "setting": "-m speed",
+   "bytes": 16777216,
+   "frame": "50ac56ad40d05882",
+   "size": 8156991,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_webster.txt",
+   "setting": "-m balanced",
+   "bytes": 16777216,
+   "frame": "6b54af2633afc458",
+   "size": 4951136,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_webster.txt",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 16777216,
+   "frame": "6b54af2633afc458",
+   "size": 4951136,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_webster.txt",
+   "setting": "-m fast --typed-huf",
+   "bytes": 16777216,
+   "frame": "6b54af2633afc458",
+   "size": 4951136,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_webster.txt",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "17de140e2c5137b5",
+   "size": 1022084,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_webster.txt",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "b1e85c4aa484f0ec",
+   "size": 940562,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_webster.txt",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "8488707475c32809",
+   "size": 736570,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_webster.txt",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "f3d81c9daac99ce8",
+   "size": 89011,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_webster.txt",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "6681ce2cb5d77ba4",
+   "size": 92807,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_webster.txt",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "f3d81c9daac99ce8",
+   "size": 89011,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_xml.xml",
+   "setting": "-m speed",
+   "bytes": 5345280,
+   "frame": "f0a52fbc4d36626e",
+   "size": 1232806,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_xml.xml",
+   "setting": "-m balanced",
+   "bytes": 5345280,
+   "frame": "9d1ced15ee422d3d",
+   "size": 652714,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_xml.xml",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 5345280,
+   "frame": "9d1ced15ee422d3d",
+   "size": 652714,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_xml.xml",
+   "setting": "-m fast --typed-huf",
+   "bytes": 5345280,
+   "frame": "9d1ced15ee422d3d",
+   "size": 652714,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_xml.xml",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "05812a92eb4e499e",
+   "size": 302583,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_xml.xml",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "fff3041e63ad24da",
+   "size": 284498,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_xml.xml",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "16ba1274a730593a",
+   "size": 238170,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_xml.xml",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "ebfddbe0b0b143e0",
+   "size": 10706,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_xml.xml",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "eeb069ac86cc7d4d",
+   "size": 13182,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "text_xml.xml",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "ebfddbe0b0b143e0",
+   "size": 10706,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_akiyo.y4m",
+   "setting": "-m speed",
+   "bytes": 9124244,
+   "frame": "55f2856bdc891e81",
+   "size": 7543277,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_akiyo.y4m",
+   "setting": "-m balanced",
+   "bytes": 9124244,
+   "frame": "de21278e67d1cab6",
+   "size": 3620584,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_akiyo.y4m",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 9124244,
+   "frame": "de21278e67d1cab6",
+   "size": 3620584,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_akiyo.y4m",
+   "setting": "-m fast --typed-huf",
+   "bytes": 9124244,
+   "frame": "de21278e67d1cab6",
+   "size": 3620584,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_akiyo.y4m",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "274604ca4a41abba",
+   "size": 1253007,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_akiyo.y4m",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "ed361a35722a99a6",
+   "size": 1223044,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_akiyo.y4m",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "7ec30205f8b51948",
+   "size": 1060871,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_akiyo.y4m",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "2be6fd03ef012e78",
+   "size": 107524,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_akiyo.y4m",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "478dce8f6e7f001a",
+   "size": 132952,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_akiyo.y4m",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "2be6fd03ef012e78",
+   "size": 107524,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_foreman.y4m",
+   "setting": "-m speed",
+   "bytes": 9124244,
+   "frame": "d53e1550506b4ee3",
+   "size": 7958851,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_foreman.y4m",
+   "setting": "-m balanced",
+   "bytes": 9124244,
+   "frame": "97b810261889131e",
+   "size": 4442288,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_foreman.y4m",
+   "setting": "-m balanced --native-leaf",
+   "bytes": 9124244,
+   "frame": "97b810261889131e",
+   "size": 4442288,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_foreman.y4m",
+   "setting": "-m fast --typed-huf",
+   "bytes": 9124244,
+   "frame": "97b810261889131e",
+   "size": 4442288,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_foreman.y4m",
+   "setting": "-m eco",
+   "bytes": 4194304,
+   "frame": "4ffc648e5f5ced93",
+   "size": 1991422,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_foreman.y4m",
+   "setting": "-m hc",
+   "bytes": 4194304,
+   "frame": "ed3a6723c56c8740",
+   "size": 2033161,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_foreman.y4m",
+   "setting": "-m ratio",
+   "bytes": 4194304,
+   "frame": "03dc95ce587608dc",
+   "size": 1854782,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_foreman.y4m",
+   "setting": "-x",
+   "bytes": 524288,
+   "frame": "fd04901c4c1a0021",
+   "size": 223426,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_foreman.y4m",
+   "setting": "-x -l 1",
+   "bytes": 524288,
+   "frame": "81ee423d609fd200",
+   "size": 282799,
+   "same": true,
+   "decoded": true
+  },
+  {
+   "file": "video_foreman.y4m",
+   "setting": "-x -l 2",
+   "bytes": 524288,
+   "frame": "fd04901c4c1a0021",
+   "size": 223426,
+   "same": true,
+   "decoded": true
+  }
+ ],
+ "bad": 0
+}

@@ -1,0 +1,6 @@
+settings -m balanced  files 12  input 28714555  same bytes: True
+  /tmp/claude-0/-home-user-kolmo/3ae9f39a-7849-50a9-87a8-d6f6876842ce/scratchpad/var/oldhuf/build/kolmo out     3199789  c   0.428s     67.0 MB/s  d   0.111s    258.4 MB/s
+  /tmp/claude-0/-home-user-kolmo/3ae9f39a-7849-50a9-87a8-d6f6876842ce/scratchpad/var/new/build/kolmo out     3199789  c   0.429s     66.9 MB/s  d   0.115s    250.0 MB/s
+settings -m hc  files 12  input 28714555  same bytes: True
+  /tmp/claude-0/-home-user-kolmo/3ae9f39a-7849-50a9-87a8-d6f6876842ce/scratchpad/var/oldhuf/build/kolmo out     2923408  c   3.880s      7.4 MB/s  d   0.138s    207.5 MB/s
+  /tmp/claude-0/-home-user-kolmo/3ae9f39a-7849-50a9-87a8-d6f6876842ce/scratchpad/var/new/build/kolmo out     2923408  c   4.120s      7.0 MB/s  d   0.148s    193.7 MB/s
