@@ -312,7 +312,12 @@ static inline int kz_bput(kz_bw *w, uint32_t v, int nb) {   /* nb <= 30 */
  * that improves on the last) and the three repeat offsets of its own best path; every length of every candidate is
  * priced. Prices (1/256 bit) come from adaptive statistics of the literals and of the three code streams, rescaled
  * every 128 KiB of input (the khuf tables are per 128 KiB chunk) and refreshed as sequences are chosen. A node's price
- * includes the price of its pending literal length. A candidate of the nice length or longer is taken at once. */
+ * includes the price of its pending literal length. A candidate of the nice length or longer is taken at once.
+ * KLZH2 keeps two states per position: the best path that ends with a match there (priced without the literal length
+ * of the next sequence) and the best that ends inside a literal run. With one state, the path that ends with a match
+ * carries the price of a literal length of 0 and loses the position to a literal run whenever 0 is a rare length,
+ * though a literal and the next match would follow it more cheaply: on bf16 weights, where nearly every sequence has
+ * one literal, the parse priced 3% higher than the best under its own prices. Matches start from the cheaper state. */
 #define KO_OPT 4096
 #define KO_INF 0x3FFFFFFFu
 #define KO_LLT 1024
@@ -321,12 +326,12 @@ static inline int kz_bput(kz_bw *w, uint32_t v, int nb) {   /* nb <= 30 */
 typedef struct { uint32_t len, off; } ko_m;
 typedef struct {
     const uint8_t *in; uint32_t n, *head, *son, bmask, ins, nice; int hlog, depth;
-    uint32_t *h3, *ldm, wmax; int ldmlog;   /* KLZH2: 3-byte heads, long-distance table (offsets up to wmax), or NULL */
+    uint32_t *h3, *ldm, wmax; int ldmlog, h3log;   /* KLZH2: 3-byte heads (2^h3log), long-distance table (offsets up to wmax), or NULL */
 } ko_mf;
 /* skip: a position whose next node is already within skip of its price is not searched; KLZH2 only: wlog, the largest
  * offset 2^wlog - 1 (long-distance candidates past the tree's window), m3: 3-byte matches */
 typedef struct { int hlog, bwlog, depth, nice, skip, wlog, m3; } ko_par;
-typedef struct { uint32_t price, mlen, off, litlen, rep[3]; } ko_node;
+typedef struct { uint32_t price, mlen, off, litlen, rep[3], src; } ko_node;
 typedef struct {
     uint32_t lit[256], ll[72], ml[72], of[33], sl, sll, sml, sof, pending;
     uint32_t pl[256], pll[72], pml[72], pof[33], llp[KO_LLT], mlp[KO_MLT];
@@ -354,19 +359,22 @@ static uint32_t ko_bt(ko_mf *M, uint32_t p, ko_m *out, int collect) {
     if (nm && out[nm - 1].len == lim && lim < M->n - p) { ko_m *t = &out[nm - 1]; t->len = lim + (uint32_t)kz_count(s + lim, s + lim - t->off, M->in + M->n); }
     return nm;
 }
-#define KO_H3(p) (((kz_r32(p) & 0xFFFFFFu) * 2654435761u) >> 18)
+#define KO_H3(p, lg) (((kz_r32(p) & 0xFFFFFFu) * 2654435761u) >> (32 - (lg)))
 #define KO_LDMIN 32   /* long-distance candidates: 32-byte keys, one position in 8 by content */
 static inline uint32_t ko_ldh(const uint8_t *p, int lg) {
     uint64_t h = kz_r64(p) * 0x9E3779B97F4A7C15ull ^ kz_r64(p + 8) * 0xC2B2AE3D27D4EB4Full ^ kz_r64(p + 16) * 0x165667B19E3779F9ull ^ kz_r64(p + 24) * 0xD6E8FEB86659FD93ull;
     return (uint32_t)(h >> (64 - lg - 3));   /* the low 3 bits select the positions kept */
 }
-/* KLZH2 extra candidates at p: a 3-byte match (from the latest position with the same 3 bytes, offsets below 2^14:
- * farther ones cost more than they save, and the parse took them on text) when it is shorter than the tree's first, and a long-distance match past the tree's window when it is longer than the tree's last */
+/* KLZH2 extra candidates at p: a 3-byte match (from the latest position with the same 3 bytes, up to 2^20 back; one
+ * head per position of the block, up to 2^20) when it is shorter than the tree's first, and a long-distance match past
+ * the tree's window when it is longer than the tree's last. bf16 weights: zstd -19 takes 833,000 matches of 3 bytes in
+ * the first 4 MiB, the latest occurrence each time, mostly 2^11 to 2^16 back; a 2^14-entry table limited to 2^14 back
+ * offered too few of them for the parse to code the data that way */
 static uint32_t ko_aux(ko_mf *M, uint32_t p, ko_m *out, uint32_t nm, int collect) {
     const uint8_t *s = M->in + p, *ie = M->in + M->n;
     if (M->h3) {
-        uint32_t h = KO_H3(s), c = M->h3[h]; M->h3[h] = p;
-        if (collect && c != KZ_NONE && p - c <= M->bmask && p - c < (1u << 14) && (kz_r32(M->in + c) & 0xFFFFFFu) == (kz_r32(s) & 0xFFFFFFu)) {
+        uint32_t h = KO_H3(s, M->h3log), c = M->h3[h]; M->h3[h] = p;
+        if (collect && c != KZ_NONE && p - c <= M->bmask && p - c < (1u << 20) && (kz_r32(M->in + c) & 0xFFFFFFu) == (kz_r32(s) & 0xFFFFFFu)) {
             uint32_t l = 3 + (uint32_t)kz_count(s + 3, M->in + c + 3, s + (M->n - p < M->nice ? M->n - p : M->nice));
             if (!nm || l < out[0].len) { memmove(out + 1, out, nm * sizeof *out); out[0].len = l; out[0].off = p - c; nm++; }
         }
@@ -391,12 +399,19 @@ static uint32_t ko_find(ko_mf *M, uint32_t p, ko_m *out) {   /* p + 8 <= n, posi
 }
 static inline uint32_t ko_w(uint32_t x) { x++; int h = kz_hb(x); return (uint32_t)h * 256 + (uint32_t)(((uint64_t)x << 8) >> h); }   /* ~256 (log2(x + 1) + 1) */
 static inline uint32_t ko_cost(uint32_t f, uint32_t ws) { uint32_t c = ws - ko_w(f); return c < 256 ? 256 : c > 11 * 256 ? 11 * 256 : c; }
+static inline uint32_t ko_cost4(uint32_t f, uint32_t ws) { uint32_t w = ko_w(f), c = ws > w ? ws - w : 0; return c < 64 ? 64 : c > 11 * 256 ? 11 * 256 : c; }
 static void ko_refresh(ko_st *T) {
     uint32_t w = ko_w(T->sl); for (int s = 0; s < 256; s++) T->pl[s] = ko_cost(T->lit[s], w);
     if (T->mmin == 3) for (int s = 0; s < 256; s++) if (T->pl[s] < 256) T->pl[s] = 256;   /* KLZH2: see ko_init */
-    w = ko_w(T->sll); for (int c = 0; c < 72; c++) T->pll[c] = ko_cost(T->ll[c], w);
-    w = ko_w(T->sml); for (int c = 0; c < 72; c++) T->pml[c] = ko_cost(T->ml[c], w);
-    w = ko_w(T->sof); for (int c = 0; c < T->nof; c++) T->pof[c] = ko_cost(T->of[c], w) + (c >= 3 ? (uint32_t)(c - 3) * 256 : 0);
+    if (T->mmin == 3) {   /* KLZH2 codes a skewed code stream with rANS, below a bit a code: code prices from 1/4 bit */
+        w = ko_w(T->sll); for (int c = 0; c < 72; c++) T->pll[c] = ko_cost4(T->ll[c], w);
+        w = ko_w(T->sml); for (int c = 0; c < 72; c++) T->pml[c] = ko_cost4(T->ml[c], w);
+        w = ko_w(T->sof); for (int c = 0; c < T->nof; c++) T->pof[c] = ko_cost4(T->of[c], w) + (c >= 3 ? (uint32_t)(c - 3) * 256 : 0);
+    } else {
+        w = ko_w(T->sll); for (int c = 0; c < 72; c++) T->pll[c] = ko_cost(T->ll[c], w);
+        w = ko_w(T->sml); for (int c = 0; c < 72; c++) T->pml[c] = ko_cost(T->ml[c], w);
+        w = ko_w(T->sof); for (int c = 0; c < T->nof; c++) T->pof[c] = ko_cost(T->of[c], w) + (c >= 3 ? (uint32_t)(c - 3) * 256 : 0);
+    }
     for (uint32_t v = 0; v < KO_LLT; v++) { uint32_t ex; int nb; unsigned c = kz_lcode(v, &ex, &nb); T->llp[v] = T->pll[c] + (uint32_t)nb * 256; }
     for (uint32_t v = 0; v < KO_MLT; v++) { uint32_t ex; int nb; unsigned c = kz_lcode(v, &ex, &nb); T->mlp[v] = T->pml[c] + (uint32_t)nb * 256; }
     T->pending = 0;
@@ -531,14 +546,14 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
     ko_mf M = {in, (uint32_t)n, NULL, NULL, (1u << bw) - 1, 0, nice, P->hlog, P->depth, NULL, NULL, 0, 0};
     M.head = malloc(sizeof(uint32_t) << P->hlog); M.son = malloc(sizeof(uint32_t) * 2 << bw);
     const int v2 = T->mmin == 3;
-    if (v2 && P->m3) { M.h3 = malloc(sizeof(uint32_t) << 14); if (M.h3) memset(M.h3, 0xFF, sizeof(uint32_t) << 14); }
+    if (v2 && P->m3) { M.h3log = 14; while (M.h3log < 20 && ((size_t)1 << M.h3log) < n) M.h3log++; M.h3 = malloc(sizeof(uint32_t) << M.h3log); if (M.h3) memset(M.h3, 0xFF, sizeof(uint32_t) << M.h3log); }
     if (v2 && P->wlog > bw && n > M.bmask + 1) {   /* a block longer than the tree's window */
         M.wmax = (uint32_t)((1ull << P->wlog) - 1); M.ldmlog = 22; while (M.ldmlog > 16 && ((size_t)8 << M.ldmlog) > n) M.ldmlog--;
         M.ldm = malloc(sizeof(uint32_t) << M.ldmlog); if (M.ldm) memset(M.ldm, 0xFF, sizeof(uint32_t) << M.ldmlog);
     }
-    ko_node *o = malloc((KO_OPT + nice + 8) * sizeof *o); ko_m *mm = malloc((nice + 10) * sizeof *mm); uint32_t *path = malloc((KO_OPT + nice + 8) * sizeof *path);
-    if (!M.head || !M.son || !o || !mm || !path || (v2 && P->m3 && !M.h3) || (M.wmax && !M.ldm)) {
-        free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm); *err = 1; return 0;
+    ko_node *o = malloc((KO_OPT + nice + 8) * sizeof *o), *mo = v2 ? malloc((KO_OPT + nice + 8) * sizeof *mo) : NULL; ko_m *mm = malloc((nice + 10) * sizeof *mm); uint32_t *path = malloc((KO_OPT + nice + 8) * sizeof *path);
+    if (!M.head || !M.son || !o || !mm || !path || (v2 && (!mo || (P->m3 && !M.h3))) || (M.wmax && !M.ldm)) {
+        free(M.head); free(M.son); free(o); free(mo); free(mm); free(path); free(M.h3); free(M.ldm); *err = 1; return 0;
     }
     memset(M.head, 0xFF, sizeof(uint32_t) << P->hlog);
     const uint8_t *ie = in + n; size_t pos = 0, anchor = 0, ns = 0, next_scale = KO_SPAN; uint32_t rep[3] = {1, 4, 8};
@@ -548,6 +563,73 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
     while (pos + 8 <= n) {
         if (pos >= next_scale) { ko_rescale(T); next_scale = pos + KO_SPAN; }
         else if (T->pending >= 32) ko_refresh(T);
+        if (v2) {   /* KLZH2: two states per position, see the note above ko_parse_pass */
+            uint32_t last = 0, end = 0, cur, fl = 0, foff = 0, ekind = 0; const uint32_t L0 = (uint32_t)(pos - anchor);
+            if (L0) { o[0].litlen = L0; o[0].price = ko_llp(T, L0); memcpy(o[0].rep, rep, sizeof rep); mo[0].price = KO_INF; }
+            else { o[0].price = KO_INF; mo[0].price = 0; memcpy(mo[0].rep, rep, sizeof rep); }
+#define KO_EXT(J) do { uint32_t e_ = (J); if (e_ > last) { for (uint32_t k_ = last + 1; k_ <= e_; k_++) o[k_].price = mo[k_].price = KO_INF; last = e_; } } while (0)
+#define KO_RL(J, PR, LL) do { uint32_t j_ = (J), p_ = (PR); KO_EXT(j_); if (p_ < o[j_].price) { o[j_].price = p_; o[j_].litlen = (LL); } } while (0)
+#define KO_RM(J, PR, ML, OFF, SRC) do { uint32_t j_ = (J), p_ = (PR); KO_EXT(j_); \
+        if (p_ < mo[j_].price) { mo[j_].price = p_; mo[j_].mlen = (ML); mo[j_].off = (OFF); mo[j_].src = (SRC); } } while (0)
+            for (cur = 0;; cur++) {
+                if (cur > 0) {
+                    if (cur >= last) { end = last; break; }
+                    if (cur >= KO_OPT) { end = cur; break; }
+                    ko_node *a = &o[cur], *b = &mo[cur];
+                    if (a->price != KO_INF) memcpy(a->rep, a->litlen == 1 ? mo[cur - 1].rep : o[cur - 1].rep, sizeof a->rep);
+                    if (b->price != KO_INF) { memcpy(b->rep, b->src ? o[cur - b->mlen].rep : mo[cur - b->mlen].rep, sizeof b->rep); ko_rep(b->rep, b->off); }
+                }
+                const size_t abs = pos + cur;
+                if (abs >= n) continue;
+                const uint32_t Pp = o[cur].price, L = o[cur].litlen, Mp = mo[cur].price, bM = Mp == KO_INF ? KO_INF : Mp + T->llp[0];
+                const uint32_t kind = bM <= Pp ? 0u : 1u, base = kind ? Pp : bM; const uint32_t *crep = kind ? o[cur].rep : mo[cur].rep;
+                if (base >= KO_INF) continue;
+                if (P->skip && cur > 0 && cur + 1 < last) {   /* unpromising position */
+                    uint32_t nx = o[cur + 1].price; if (mo[cur + 1].price != KO_INF && mo[cur + 1].price + T->llp[0] < nx) nx = mo[cur + 1].price + T->llp[0];
+                    if (nx <= base + (uint32_t)P->skip) continue;
+                }
+                const uint32_t plit = T->pl[in[abs]];
+                if (abs + 8 <= n) {
+                    uint32_t nm = ko_find(&M, (uint32_t)abs, mm), rl[3] = {0, 0, 0}, rb = 0, rk = 0;
+                    for (int k = 0; k < 3; k++) {
+                        uint32_t r = crep[k];
+                        if (r <= abs && kz_r32(in + abs) == kz_r32(in + abs - r)) { rl[k] = 4 + (uint32_t)kz_count(in + abs + 4, in + abs + 4 - r, ie); if (rl[k] > rb) { rb = rl[k]; rk = (uint32_t)k; } }
+                        else if (r <= abs && ((kz_r32(in + abs) ^ kz_r32(in + abs - r)) & 0xFFFFFFu) == 0) rl[k] = 3;
+                    }
+                    const uint32_t ml = nm ? mm[nm - 1].len : 0;
+                    if (rb >= nice || ml >= nice) {   /* long enough: take it now */
+                        if (rb >= nice && (rb + 1 >= ml || rb >= ml)) { fl = rb; foff = crep[rk]; } else { fl = ml; foff = mm[nm - 1].off; }
+                        end = cur; ekind = kind; break;
+                    }
+                    if (Pp != KO_INF) KO_RL(cur + 1, Pp - ko_llp(T, L) + plit + ko_llp(T, L + 1), L + 1);
+                    if (Mp != KO_INF) KO_RL(cur + 1, Mp + plit + T->llp[1], 1);
+                    for (int k = 0; k < 3; k++)
+                        for (uint32_t l = 3; l <= rl[k]; l++) KO_RM(cur + l, base + T->pof[k] + ko_mlp(T, l), l, crep[k], kind);
+                    uint32_t pl = 2;
+                    for (uint32_t i = 0; i < nm; i++) {
+                        const uint32_t off = mm[i].off, ob = base + T->pof[ko_ofc(off, crep)];
+                        for (uint32_t l = pl + 1; l <= mm[i].len; l++) KO_RM(cur + l, ob + ko_mlp(T, l), l, off, kind);
+                        pl = mm[i].len;
+                    }
+                } else {
+                    if (Pp != KO_INF) KO_RL(cur + 1, Pp - ko_llp(T, L) + plit + ko_llp(T, L + 1), L + 1);
+                    if (Mp != KO_INF) KO_RL(cur + 1, Mp + plit + T->llp[1], 1);
+                }
+            }
+            if (!fl) ekind = mo[end].price != KO_INF && mo[end].price + T->llp[0] <= o[end].price ? 0u : 1u;
+            uint32_t np = 0;
+            for (uint32_t j = end, k = ekind; j > 0;) {   /* a match state goes back to its source state, a literal run to the match before it */
+                if (!k) { path[np++] = j; k = mo[j].src; j -= mo[j].mlen; }
+                else { if (o[j].litlen == 1) k = 0; j--; }
+            }
+            while (np) { uint32_t j = path[--np]; size_t st = pos + j - mo[j].mlen; ko_emit(T, in, S, &ns, anchor, st, mo[j].mlen, mo[j].off, rep); anchor = st + mo[j].mlen; }
+            pos += end;
+            if (fl) { ko_emit(T, in, S, &ns, anchor, pos, fl, foff, rep); pos += fl; anchor = pos; }
+            continue;
+#undef KO_EXT
+#undef KO_RL
+#undef KO_RM
+        }
         uint32_t last = 0, end = 0, cur, fl = 0, foff = 0;
         o[0].litlen = (uint32_t)(pos - anchor); o[0].price = ko_llp(T, o[0].litlen); o[0].mlen = 0; memcpy(o[0].rep, rep, sizeof rep);
         for (cur = 0;; cur++) {
@@ -593,12 +675,51 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
         if (fl) { ko_emit(T, in, S, &ns, anchor, pos, fl, foff, rep); pos += fl; anchor = pos; }
     }
 #undef KO_RELAX
-    free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm);
+    free(M.head); free(M.son); free(o); free(mo); free(mm); free(path); free(M.h3); free(M.ldm);
     *anchor_out = anchor; *err = 0; return ns;
+}
+/* KLZH2 levels 8-9 (3-byte candidates): two starting statistics, the usual ones and ones that favour sequences of one
+ * literal and 3 bytes at offsets of 2^9 to 2^17 (KO_SEED). The parse keeps to the kind of sequences its statistics price low, so a
+ * start decides the regime: on bf16 weights the usual start ends with 29,000 long sequences and 4.09 M literals in the
+ * first 4 MiB, the seeded one with 870,000 short ones, 3% smaller; on text the seeded start costs 6%. The first
+ * KO_TRIAL bytes are parsed from both starts and the start whose parse the model prices lower past KO_TRIAL / 2 is kept
+ * (less than about 200 KiB does not settle the regime on bf16 weights; shorter blocks take the usual start) */
+#define KO_TRIAL (256u << 10)
+#define KO_SEED 100
+static void ko_seed(ko_st *T) {
+    T->ml[0] += 6 * KO_SEED; T->ll[1] += 6 * KO_SEED; for (int k = 12; k <= 19; k++) T->of[k] += KO_SEED;
+    T->sll += 6 * KO_SEED; T->sml += 6 * KO_SEED; T->sof += 8 * KO_SEED; ko_refresh(T);
+}
+static uint64_t ko_model(const uint8_t *in, size_t n, ko_st T, const kz_seq *S, size_t ns, size_t anchor, size_t from) {
+    uint32_t rep[3] = {1, 4, 8}; size_t pos = 0, next = KO_SPAN, dn; uint64_t c = 0; kz_seq D[1];   /* statistics as ko_parse_pass */
+    for (size_t k = 0; k < ns; k++) {
+        if (pos >= next) { ko_rescale(&T); next = pos + KO_SPAN; } else if (T.pending >= 32) ko_refresh(&T);
+        if (pos >= from) { for (uint32_t i = 0; i < S[k].ll; i++) c += T.pl[in[pos + i]]; c += ko_llp(&T, S[k].ll) + ko_mlp(&T, S[k].ml) + T.pof[ko_ofc(S[k].off, rep)]; }
+        dn = 0; ko_emit(&T, in, D, &dn, pos, pos + S[k].ll, S[k].ml, S[k].off, rep); pos += S[k].ll + S[k].ml;
+    }
+    for (size_t i = anchor > from ? anchor : from; i < n; i++) c += T.pl[in[i]];
+    return c;
 }
 static size_t ko_parse(const uint8_t *in, size_t n, const ko_par *P, int v2, kz_seq *S, size_t *anchor_out, int *err) {
     ko_st *T = malloc(sizeof *T); if (!T) { *err = 1; return 0; }
     ko_init(T, in, n, v2);
+    if (v2 && P->m3 && n > KO_TRIAL) {   /* a block of up to 2 KO_TRIAL is parsed whole from both starts, the cheaper parse kept */
+        const size_t m = n <= 2 * KO_TRIAL ? n : KO_TRIAL;
+        ko_st *U = malloc(sizeof *U); kz_seq *S2 = m == n ? malloc((n / 3 + 2) * sizeof *S2) : S; uint64_t c[2] = {0, 0}; size_t a[2], ns2[2];
+        if (!U || !S2) { free(U); free(T); *err = 1; return 0; }
+        for (int t = 0; t < 2; t++) {
+            *U = *T; if (t) ko_seed(U);
+            const ko_st V = *U; ns2[t] = ko_parse_pass(in, m, P, U, t ? S2 : S, &a[t], err);
+            if (*err) { free(U); free(T); if (S2 != S) free(S2); return 0; }
+            c[t] = ko_model(in, m, V, t ? S2 : S, ns2[t], a[t], m / 2);
+        }
+        free(U);
+        if (m == n) {
+            if (c[1] < c[0]) { memcpy(S, S2, ns2[1] * sizeof *S); ns2[0] = ns2[1]; a[0] = a[1]; }
+            free(S2); free(T); *anchor_out = a[0]; return ns2[0];
+        }
+        if (c[1] < c[0]) ko_seed(T);
+    }
     size_t ns = ko_parse_pass(in, n, P, T, S, anchor_out, err);
     free(T); return ns;
 }
