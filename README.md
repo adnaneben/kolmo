@@ -38,7 +38,7 @@ in [`benchmark/TRADEOFFS.md`](benchmark/TRADEOFFS.md).
 |---|---|
 | Tables (CSV/TSV) | Columns become typed streams. Numeric columns are exact decimals at a common scale, predicted per block by raw, delta, delta within an entity (e.g. country), **delta-of-delta** and **third-order** within an entity (for counters and steady trends), or a discovered **formula of other columns** (`y = k·a/b`, change and % change): 51 formulas on the OWID energy table. Quoted fields, short rows and odd values are lossless. |
 | Logs | Lines are split into **templates and variables**; timestamps, IPs and IDs become integer columns ("skeleton" columns). |
-| Fixed-width text | Lines that come in a few fixed lengths (chemistry and geometry files, fixed-width reports) are stored **column by column per line length**: a line scan and a transpose, several times cheaper than templates. Files that use it carry container version 8. |
+| Fixed-width text | Lines that come in a few fixed lengths (chemistry and geometry files, fixed-width reports) are stored **column by column per line length**: a line scan and a transpose, several times cheaper than templates. |
 | Prose and markup | `balanced`: blocks of up to 6 MiB, each coded with KLZH2 over the whole block. `eco`: KLZH2 level 7 (block sorting of the plain text with `-DKOLMO_ECO_TEXT_BWT=1`). `hc`: frequent words become 2-byte codes from byte values the block never uses, then KLZH2 level 9 over blocks of up to 128 MiB. |
 | Decimal doubles | Float64 arrays whose values were written in decimal (`.npy` tables, raw arrays, the columns inside pickle, `.npz` and `.mat` files) are stored as **integers over a power of ten per column**, with missing values as a tag and anything else kept verbatim. |
 | Scientific binary | **Fixed records** (period found by self-similarity; fields of 1/2/4/8 bytes stored raw, as deltas, as dictionary tokens, or as multiples of a discovered quantum with exact bit corrections) and **16-bit images** (byte order, row stride and predictor found automatically). |
@@ -66,14 +66,14 @@ that is smaller (measured −11% to −15% on integer series such as sensor and 
 numeric corpus), and those blocks then decode at context-mixing speed. Plain `-x` is unchanged; any decoder reads both.
 At `-x` and `-x -l 2`, a FASTQ file of up to 128 MiB is also coded by stream family (names, bases, qualities, each
 with its own model; `src/experimental/KFAM.md`) and that coding is kept when smaller: 25% smaller than `-x` before
-on three Illumina runs, and such files decode in seconds (7 to 25 MB/s) instead of at context-mixing speed. Those
-files need a kolmo that reads container version 10 (this branch); older readers refuse them.
+on three Illumina runs, and such files decode in seconds (7 to 25 MB/s) instead of at context-mixing speed. Any
+0.0.x decoder reads them.
 
 `--native-leaf` (with `balanced`; C API: `transforms |= KOLMO_T_NATIVE_LEAF`) codes integer-series residuals with
 Kolmo's native plane-context leaves when that is smaller: measured −11.3% on 180 MB of ECG and numeric columns from
 the holdout sources (ECG −11.9%, power −9.8%), and such files decode about 1.5–2.6× slower than default `balanced`
-(2.3× on that data, about 580 MB/s on Apple silicon). Files that use it are container version 9; files that do not
-are unchanged.
+(2.3× on that data, about 580 MB/s on Apple silicon). Any 0.0.x decoder reads
+them; files that do not use it are unchanged.
 
 Advanced settings, for tuning between the three:
 

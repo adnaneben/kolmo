@@ -30,6 +30,7 @@ STALE = [
     (r"depends_on \"xz\"", "an xz dependency"),
     (r"-t \S+\.dict|-D \S+\.dict|kolmo train\b", "dictionaries or profiles as a working example"),
     (r"\b1\.0\.[01]\b|\b1\.[12]\.0\b", "a 1.x version"),
+    (r"container version (?:[0-9]|1[01])\b", "a container version 0.0.x does not write (it writes 12)"),
     (r"^keywords\s*=.*\b(zstd|brotli|lz4|lzma|xz)\b", "a library name as a package keyword"),
 ]
 ALLOW = re.compile(r"\bno\b|\bnot\b|removed|no longer|were\b|was\b|earlier|history|yanked|1\.x|stays installable|"
