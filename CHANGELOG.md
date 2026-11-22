@@ -10,7 +10,7 @@ and ultra write the same bytes as 0.0.2's `speed`, `balanced`, `eco`, `hc`, `rat
 - **Levels.** One scale from `-1` (fastest) to `-9` (max), `-3` (light) the default, and `-U` (ultra) outside it.
   Named anchors with letters: `-F --fastest` (1), `-L --light` (3), `-B --balanced` (5), `-C --compact` (7),
   `-X --max` (9), `-U --ultra`; `--level N|ultra`; the last level option wins. Levels 2, 4, 6 and 8 are new settings
-  (KLZH2 1 with minimal analysis, KLZH2 5 with hc's planning, KLZH2 8, block sorting for every block); the table will be retuned by
+  (the fast KLZH2 parse with minimal analysis, KLZH2 5 with hc's planning, KLZH2 8, block sorting for every block); the table will be retuned by
   measurement, never moved across the scale.
 - **Library:** `kolmo_params_for_level(level, &params)` and `KOLMO_LEVEL_MIN/MAX/DEFAULT/ULTRA/FASTEST/LIGHT/
   BALANCED/COMPACT/MAX_RATIO`; a level outside 1..10 returns the new `KOLMO_ERR_PARAM` (-15). The command line and both

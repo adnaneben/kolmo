@@ -53,7 +53,7 @@ strictly ordered on the screening corpus; final numbers from the timed holdout):
 | level | engine (0.1.0)                                                           |
 |------:|---------------------------------------------------------------------------|
 | 1     | fast LZ (KLZ, or the new fast KLZH2 setting if it measures better), minimal analysis |
-| 2     | KLZH2 1, quick analysis                                                    |
+| 2     | fast KLZH2 parse (KLZH2 level 0), minimal analysis                         |
 | 3     | KLZH2 3 with analysis (the 0.0.x "balanced" default)                       |
 | 4     | KLZH2 5                                                                    |
 | 5     | KLZH2 7 (0.0.x "eco")                                                      |
@@ -154,7 +154,7 @@ Recorded by the 0.1.0 implementation (lane 1). zstd's behaviour was followed unl
 
 Levels and library
 - Internal table (`src/api/api.c`, `kolmo_level_table`), in 0.0.x knobs: 1 = rt with minimal analysis (exactly 0.0.x
-  `-m speed`), 2 = fast at codec level 1 (KLZH2 1) with minimal analysis, 3 = fast (0.0.x balanced), 4 = hc's planning
+  `-m speed`), 2 = fast at codec level -1 (the fast KLZH2 parse, KLZH2 level 0) with minimal analysis, 3 = fast (0.0.x balanced), 4 = hc's planning
   at codec level 6 (KLZH2 5) (lane 3's measured rows for 2 and 4), 5 = eco, 6 = hc at codec level 16 (KLZH2 8), 7 = hc, 8 = max at codec level 1 (BWT for every
   block), 9 = max (0.0.x ratio), ultra = ultra. Levels 1, 3, 5, 7, 9 and ultra therefore write the same bytes as 0.0.2's
   `speed`, `balanced`, `eco`, `hc`, `ratio` and `-x`. On small inputs neighbouring levels can coincide (6 and 7 did on a
