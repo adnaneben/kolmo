@@ -154,6 +154,51 @@ static size_t kz_parse_dfast(const uint8_t *in, size_t n, int hl, int hs, int sk
     }
     free(tl); free(ts); *anchor_out = anchor; *err = 0; return ns;
 }
+static inline void kz_mtf(uint32_t r[3], uint32_t off) {   /* the KLZH repeat offsets' move to front */
+    if (off == r[0]) return;
+    if (off != r[1]) r[2] = r[1];
+    r[1] = r[0]; r[0] = off;
+}
+/* KLZH2 level 3: the fast parse with the decoder's three repeat offsets tried one byte ahead, and both tables of 2^20
+ * entries (fewer for short blocks). Measured on the screening binaries at 4 MiB blocks against kz_parse_dfast (tables
+ * 2^18 / 2^17, skip 8): three repeats -0.1%, 2^20 tables -2.1% (x-ray -11%: 2^17 short slots for 4 MiB of 16-bit
+ * samples overwrite each other), the step after every 2^9 literals instead of 2^8 a further -1.3% on x-ray; about 10%
+ * slower. */
+static size_t kz_parse_dfast3(const uint8_t *in, size_t n, int lg, int skip, kz_seq *S, size_t *anchor_out, int *err) {
+    uint32_t *tl = calloc((size_t)1 << lg, 4), *ts = calloc((size_t)1 << lg, 4); size_t ns = 0;
+    if (!tl || !ts) { free(tl); free(ts); *err = 1; return 0; }
+    const uint8_t *ie = in + n; size_t pos = 1, anchor = 0; uint32_t rep[3] = {1, 4, 8};
+    while (pos + 9 <= n) {
+        size_t ml = 0, start = pos + 1; uint32_t off = 0;
+        const uint32_t hL = kz_h8(in + pos, lg), hS = kz_h5(in + pos, lg), cl = tl[hL], cs = ts[hS];
+        tl[hL] = ts[hS] = (uint32_t)pos;
+        const uint32_t v1 = kz_r32(in + pos + 1);
+        for (int k = 0; k < 3; k++) {   /* repeats, one byte ahead; a later one is taken when 2 bytes longer */
+            const uint32_t r = rep[k];
+            if (pos + 1 >= r && kz_r32(in + pos + 1 - r) == v1) {
+                size_t l = 4 + kz_count(in + pos + 5, in + pos + 5 - r, ie);
+                if (l > ml + 1) { ml = l; off = r; }
+            }
+        }
+        if (ml) {
+        } else if (cl < pos && pos - cl <= KLZ_WINDOW && kz_r64(in + cl) == kz_r64(in + pos)) {
+            start = pos; off = (uint32_t)(pos - cl); ml = 8 + kz_count(in + pos + 8, in + cl + 8, ie);
+        } else if (cs < pos && pos - cs <= KLZ_WINDOW && kz_r32(in + cs) == kz_r32(in + pos)) {
+            const uint32_t h1 = kz_h8(in + pos + 1, lg), c1 = tl[h1]; tl[h1] = (uint32_t)pos + 1;
+            if (c1 < pos + 1 && pos + 1 - c1 <= KLZ_WINDOW && kz_r64(in + c1) == kz_r64(in + pos + 1)) {   /* a long match one byte later */
+                off = (uint32_t)(pos + 1 - c1); ml = 8 + kz_count(in + start + 8, in + c1 + 8, ie);
+            } else { start = pos; off = (uint32_t)(pos - cs); ml = 4 + kz_count(in + pos + 4, in + cs + 4, ie); }
+        } else { pos += 1 + ((pos - anchor) >> skip); continue; }
+        while (start > anchor && start > off && in[start - 1] == in[start - 1 - off]) { start--; ml++; }
+        S[ns].ll = (uint32_t)(start - anchor); S[ns].ml = (uint32_t)ml; S[ns].off = off; ns++;
+        kz_mtf(rep, off); pos = start + ml; anchor = pos;
+        if (pos + 9 <= n) {
+            size_t a = start + 2; tl[kz_h8(in + a, lg)] = (uint32_t)a; ts[kz_h5(in + a, lg)] = (uint32_t)a;
+            tl[kz_h8(in + pos - 2, lg)] = (uint32_t)(pos - 2); ts[kz_h5(in + pos - 1, lg)] = (uint32_t)(pos - 1);
+        }
+    }
+    free(tl); free(ts); *anchor_out = anchor; *err = 0; return ns;
+}
 static const kz_par KLZ_LV[4] = {{0}, {14, 0, 1, 0, 6, 64}, {16, 0, 1, 0, 7, 64}, {17, 20, 16, 1, 0, 128}};
 /* KLZH: levels 1-3 the fast parse (hlog = long table, clog = short table, skip), 4-9 hash chains */
 static const kz_par KLZH_LV[10] = {{0}, {16, 15, 0, 0, 6, 0}, {17, 16, 0, 0, 7, 0}, {18, 17, 0, 0, 8, 0}, {17, 18, 4, 0, 0, 64},
@@ -567,7 +612,9 @@ static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
     kz_seq *S = malloc((n / (v2 ? 3 : 4) + 2) * sizeof *S); size_t anchor; int err;
     if (!S) return 0;
     const kz_par *LV = &KLZH_LV[level]; const uint32_t mmin = v2 ? 3 : 4;
-    size_t ns = level <= 3 ? kz_parse_dfast(in, n, LV->hlog, LV->clog, LV->skip, 4, S, &anchor, &err)
+    int lg3 = 12; while (lg3 < 20 && ((size_t)1 << lg3) < n) lg3++;   /* KLZH2 level 3: about one slot per position */
+    size_t ns = level == 3 && v2 ? kz_parse_dfast3(in, n, lg3, 9, S, &anchor, &err)
+              : level <= 3 ? kz_parse_dfast(in, n, LV->hlog, LV->clog, LV->skip, 4, S, &anchor, &err)
               : level >= 7 ? ko_parse(in, n, &KO_LV[level], v2, S, &anchor, &err)
               : level >= 5 ? kz_parse_lazy(in, n, LV, kz_minm(in, n, LV, S), S, &anchor, &err) : kz_parse(in, n, LV, S, &anchor, &err);
     uint8_t *lit = malloc(n + 16), *cd = malloc(3 * (ns + 1)), *xb = malloc(ns * 12 + 64), *tmp = malloc(kolmo_khuf_bound(n) + 64);
