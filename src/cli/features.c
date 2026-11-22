@@ -1,12 +1,13 @@
 /* Command line for queryable and deduplicating archives (called from cli.c before its own option parsing):
  *
- *   kolmo --index [-m mode] [-l level] [-T n] [-B MiB] [--no-filter] [--token-bits K] [--delim C] [--kind lines|table|json] in out.kol
+ *   kolmo --index [LEVEL] [-T n] [--block-size MiB] [--no-filter] [--token-bits K] [--delim C] [--kind lines|table|json] in out.kol
  *   kolmo cat  [--col NAME|#N] [--rows A-B] [-n] [-c] [--no-index] [--stats] [-T n] file.kol
  *   kolmo grep [-F] [-i] [-w] [-n] [-c] [--col NAME|#N] [--rows A-B] [--no-index] [--stats] [-T n] PATTERN file.kol
- *   kolmo a    [-m mode] [-l level] [-T n] [-B MiB] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files-or-dirs...
- *   kolmo x    [-T n] [-C dir] archive.kol [names...]
- *   kolmo l    archive.kol
+ *   kolmo archive  [LEVEL] [-T n] [--block-size MiB] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files-or-dirs...
+ *   kolmo extract  [-T n] [-C dir] archive.kol [names...]
+ *   kolmo contents archive.kol
  *
+ * LEVEL: -1 .. -9, -F -L -B -C -X -U, --level N|ultra (default 3, light), --codec-level N, as in the main command line.
  * Rows are numbered from 1 here (line 1 is the first line of the file); A-B is inclusive, A- runs to the end.
  * Licence: Apache-2.0. */
 #define _GNU_SOURCE 1
@@ -50,20 +51,55 @@ static int fc_write(const char *path, const uint8_t *p, size_t n) {
 }
 static int fc_sink(void *ctx, const uint8_t *p, size_t n) { return fwrite(p, 1, n, (FILE *)ctx) != n; }
 
-static int fc_mode(const char *s, kolmo_params *P) {
-    P->mode = !strcmp(s, "speed") || !strcmp(s, "rt") ? KOLMO_RT : !strcmp(s, "balanced") || !strcmp(s, "fast") ? KOLMO_FAST :
-              !strcmp(s, "ratio") || !strcmp(s, "max") ? KOLMO_MAX : !strcmp(s, "eco") ? KOLMO_ECO : !strcmp(s, "hc") ? KOLMO_HC :
-              !strcmp(s, "ultra") ? KOLMO_ULTRA : (kolmo_mode)-1;
-    if ((int)P->mode < 0) { fprintf(stderr, "kolmo: unknown mode '%s'\n", s); return -1; }
-    return 0;
+/* Level options of --index and a, as in the main command line (docs/LEVELS.md): -1..-9, -F -L -B -C -X -U,
+ * --level N|ultra, --fastest .. --ultra, --codec-level N, --block-size MiB. The 0.0.x forms (-m, -x, -l N, -B MiB)
+ * fail with the hint of the main command line. Returns 1 when s (with a value in argv[*a + 1]) was a level option,
+ * 0 when it was not, or -2 after reporting a usage error (exit status 2). */
+static int fc_level_opt(const char *s, int argc, char **argv, int *a, int *level, int *codec_level, uint32_t *block) {
+    static const char *const names[] = {"fastest", "light", "balanced", "compact", "max", "ultra"};
+    static const int nlv[] = {1, 3, 5, 7, 9, KOLMO_LEVEL_ULTRA};
+    if (s[0] == '-' && s[1] >= '1' && s[1] <= '9' && !s[2]) { *level = s[1] - '0'; return 1; }
+    if (s[0] == '-' && s[1] && !s[2] && strchr("FLBCXU", s[1])) {
+        if (s[1] == 'B' && *a + 1 < argc && argv[*a + 1][0] >= '0' && argv[*a + 1][0] <= '9' && strspn(argv[*a + 1], "0123456789.") == strlen(argv[*a + 1])) {
+            fprintf(stderr, "kolmo: -B MiB was removed in 0.1.0; -B is now --balanced (level 5); use --block-size MiB\n"); return -2;
+        }
+        static const int lv[] = {1, 3, 5, 7, 9, KOLMO_LEVEL_ULTRA};
+        *level = lv[strchr("FLBCXU", s[1]) - "FLBCXU"]; return 1;
+    }
+    if (!strcmp(s, "-m")) { fprintf(stderr, "kolmo: -m was removed in 0.1.0; use a level: -1 (fastest) .. -9 (max), -3 light is the default, -U ultra\n"); return -2; }
+    if (!strcmp(s, "-x")) { fprintf(stderr, "kolmo: -x was removed in 0.1.0; use -U (--ultra)\n"); return -2; }
+    if (!strcmp(s, "-l")) { fprintf(stderr, "kolmo: -l LEVEL was removed in 0.1.0; use a level -1 .. -9 (expert: --codec-level N)\n"); return -2; }
+    if (strncmp(s, "--", 2)) return 0;
+    for (int i = 0; i < 6; i++) if (!strcmp(s + 2, names[i])) { *level = nlv[i]; return 1; }
+    const char *eq = strchr(s, '='), *v = eq ? eq + 1 : NULL;
+    size_t nl = eq ? (size_t)(eq - s) : strlen(s);
+    int which = nl == 7 && !strncmp(s, "--level", 7) ? 0 : nl == 13 && !strncmp(s, "--codec-level", 13) ? 1 :
+                nl == 12 && !strncmp(s, "--block-size", 12) ? 2 : -1;
+    if (which < 0) return 0;
+    if (!v) { if (*a + 1 >= argc) { fprintf(stderr, "kolmo: %.*s needs a value\n", (int)nl, s); return -2; } v = argv[++*a]; }
+    char *e; double d = strtod(v, &e);
+    if (which == 0 && !strcmp(v, "ultra")) { *level = KOLMO_LEVEL_ULTRA; return 1; }
+    if (which == 0) for (int i = 0; i < 6; i++) if (!strcmp(v, names[i])) { *level = nlv[i]; return 1; }
+    if (*e || !*v || (which == 0 && (d < 1 || d > 9 || d != (int)d)) || (which == 1 && (d < 1 || d > 1000 || d != (int)d)) ||
+        (which == 2 && !(d > 0 && d <= 4095))) {
+        fprintf(stderr, "kolmo: %.*s: bad value '%s'\n", (int)nl, s, v); return -2;
+    }
+    if (which == 0) *level = (int)d; else if (which == 1) *codec_level = (int)d; else *block = (uint32_t)(d * 1048576);
+    return 1;
+}
+/* the parameters of a level and the expert overrides */
+static void fc_params(kolmo_params *P, int level, int codec_level, uint32_t block) {
+    kolmo_params_for_level(level, P);
+    if (codec_level) P->level = codec_level;
+    if (block) P->block = block;
 }
 static void fc_usage(void) {
     fprintf(stderr,
-        "usage: kolmo --index [-m mode] [-B MiB] [--no-filter] [--token-bits K] [--delim C] [--kind lines|table|json] in out.kol\n"
+        "usage: kolmo --index [LEVEL] [--block-size MiB] [--no-filter] [--token-bits K] [--delim C] [--kind lines|table|json] in out.kol\n"
         "       kolmo cat  [--col NAME|#N] [--rows A-B] [-n] [-c] [--no-index] [--stats] file.kol\n"
         "       kolmo grep [-F] [-i] [-w] [-n] [-c] [--col NAME|#N] [--rows A-B] [--no-index] [--stats] PATTERN file.kol\n"
-        "       kolmo a [-m mode] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files-or-directories...\n"
-        "       kolmo x [-C dir] archive.kol [names...]      kolmo l archive.kol\n");
+        "       kolmo archive [LEVEL] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files-or-directories...\n"
+        "       kolmo extract [-C dir] archive.kol [names...]      kolmo contents archive.kol\n");
 }
 static void fc_stats(const kolmo_query_stats *s, double t) {
     fprintf(stderr, "kolmo: %u blocks, %u decoded whole, %u read by column, %u ruled out by the filter; "
@@ -115,15 +151,13 @@ static int fc_query(int argc, char **argv, int grep) {
 
 static int fc_index(int argc, char **argv) {
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; kolmo_index_params I = {KOLMO_IDX_AUTO, 0, 1, 0};
-    const char *in = NULL, *out = NULL;
+    const char *in = NULL, *out = NULL; int level = KOLMO_LEVEL_DEFAULT, clevel = 0; uint32_t block = 0;
     for (int a = 1; a < argc; a++) {
-        const char *s = argv[a];
+        const char *s = argv[a]; int lo;
         if (!strcmp(s, "--index")) continue;
-        if (!strcmp(s, "-m") && a + 1 < argc) { if (fc_mode(argv[++a], &P)) return 2; }
-        else if (!strcmp(s, "-x")) P.mode = KOLMO_ULTRA;
-        else if (!strcmp(s, "-l") && a + 1 < argc) P.level = atoi(argv[++a]);
+        if ((lo = fc_level_opt(s, argc, argv, &a, &level, &clevel, &block)) < 0) return 2;
+        else if (lo) ;
         else if (!strcmp(s, "-T") && a + 1 < argc) P.threads = atoi(argv[++a]);
-        else if (!strcmp(s, "-B") && a + 1 < argc) P.block = (uint32_t)(atof(argv[++a]) * 1048576);
         else if (!strcmp(s, "--no-filter")) I.filter = 0;
         else if (!strcmp(s, "--token-bits") && a + 1 < argc) I.token_bits = atoi(argv[++a]);
         else if (!strcmp(s, "--delim") && a + 1 < argc) { const char *d = argv[++a]; I.delim = !strcmp(d, "\\t") || !strcmp(d, "tab") ? '\t' : (uint8_t)d[0]; if (!I.kind) I.kind = KOLMO_IDX_TABLE; }
@@ -136,6 +170,7 @@ static int fc_index(int argc, char **argv) {
         else if (!in) in = s; else if (!out) out = s; else { fc_usage(); return 2; }
     }
     if (!in || !out) { fc_usage(); return 2; }
+    fc_params(&P, level, clevel, block);
     fc_file f; if (fc_open(in, &f)) return 1;
     size_t cap = kolmo_indexed_bound(f.n, &P); uint8_t *o = malloc(cap ? cap : 1);
     if (!o) { fc_close(&f); fprintf(stderr, "kolmo: out of memory\n"); return 1; }
@@ -199,19 +234,19 @@ static int fc_walk(const char *path, fc_list_t *L, int depth) {
 }
 static int fc_archive(int argc, char **argv) {
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; kolmo_archive_params A = {0, 1}; int stats = 0, a = 2;
+    int level = KOLMO_LEVEL_DEFAULT, clevel = 0; uint32_t block = 0;
     for (; a < argc && argv[a][0] == '-'; a++) {
-        const char *s = argv[a];
-        if (!strcmp(s, "-m") && a + 1 < argc) { if (fc_mode(argv[++a], &P)) return 2; }
-        else if (!strcmp(s, "-x")) P.mode = KOLMO_ULTRA;
-        else if (!strcmp(s, "-l") && a + 1 < argc) P.level = atoi(argv[++a]);
+        const char *s = argv[a]; int lo;
+        if ((lo = fc_level_opt(s, argc, argv, &a, &level, &clevel, &block)) < 0) return 2;
+        else if (lo) ;
         else if (!strcmp(s, "-T") && a + 1 < argc) P.threads = atoi(argv[++a]);
-        else if (!strcmp(s, "-B") && a + 1 < argc) P.block = (uint32_t)(atof(argv[++a]) * 1048576);
         else if (!strcmp(s, "--chunk") && a + 1 < argc) A.avg_chunk = (uint32_t)atoi(argv[++a]) * 1024;
         else if (!strcmp(s, "--no-line-cuts")) A.line_cuts = 0;
         else if (!strcmp(s, "--stats")) stats = 1;
         else { fc_usage(); return 2; }
     }
     if (argc - a < 2) { fc_usage(); return 2; }
+    fc_params(&P, level, clevel, block);
     const char *out = argv[a++];
     fc_list_t L = {0};                                       /* directories are archived with the files under them */
     for (int i = a; i < argc; i++) if (fc_walk(argv[i], &L, 0)) { for (int k = 0; k < L.n; k++) free(L.v[k]); free(L.v); return 1; }
@@ -286,14 +321,17 @@ static int fc_list(int argc, char **argv) {
     return 0;
 }
 
-/* -T4, -mhc, -l2, -B0.5 and -Cdir as the separate arguments the parsers below read (the main CLI's getopt accepts both) */
+/* -T4 and -Cdir (kolmo x) as the separate arguments the parsers below read (the main command line accepts both) */
 static char **fc_split(int *pargc, char **argv) {
     int argc = *pargc; char **v = malloc(sizeof(char *) * (size_t)(2 * argc + 1)); int n = 0;
     if (!v) return argv;
     for (int a = 0; a < argc; a++) {
         const char *s = argv[a];
-        if (a && s[0] == '-' && s[1] && strchr("TmlBC", s[1]) && s[2]) { static char opt[5][3] = {"-T", "-m", "-l", "-B", "-C"};
-            v[n++] = opt[strchr("TmlBC", s[1]) - "TmlBC"]; v[n++] = (char *)s + 2; }
+        if (a && s[0] == '-' && (s[1] == 'T' || (s[1] == 'C' && !strcmp(argv[1], "extract"))) && s[2]) { static char opt[2][3] = {"-T", "-C"};
+            v[n++] = opt[s[1] == 'C']; v[n++] = (char *)s + 2; }
+        else if (a && s[0] == '-' && s[1] && s[1] != '-' && strchr("mlBx", s[1]) && s[2] && strcmp(argv[1], "cat") && strcmp(argv[1], "grep")) {
+            static char opt[4][3] = {"-m", "-l", "-B", "-x"};   /* 0.0.x clusters (-mhc, -l2, -B0.5): refused by fc_level_opt */
+            v[n++] = opt[strchr("mlBx", s[1]) - "mlBx"]; v[n++] = (char *)s + 2; }
         else v[n++] = argv[a];
     }
     v[n] = NULL; *pargc = n; return v;
@@ -302,15 +340,21 @@ static char **fc_split(int *pargc, char **argv) {
 /* -1 when the arguments are not one of these commands */
 int kolmo_cli_features(int argc, char **argv) {
     if (argc < 2) return -1;
-    int known = !strcmp(argv[1], "cat") || !strcmp(argv[1], "grep") || !strcmp(argv[1], "a") || !strcmp(argv[1], "x") || !strcmp(argv[1], "l");
-    for (int a = 1; a < argc && !known; a++) known = !strcmp(argv[a], "--index");
+    /* subcommands are recognised only as the first argument (a file of that name: kolmo -- NAME or kolmo ./NAME) */
+    static const char *const old[3][2] = {{"a", "archive"}, {"x", "extract"}, {"l", "contents"}};
+    for (int i = 0; i < 3; i++) if (!strcmp(argv[1], old[i][0])) {
+        fprintf(stderr, "kolmo: 'kolmo %s' was removed in 0.1.0; use 'kolmo %s' (a file named %s: kolmo ./%s)\n", old[i][0], old[i][1], old[i][0], old[i][0]);
+        return 2;
+    }
+    int known = !strcmp(argv[1], "cat") || !strcmp(argv[1], "grep") || !strcmp(argv[1], "archive") || !strcmp(argv[1], "extract") || !strcmp(argv[1], "contents");
+    for (int a = 1; a < argc && !known && strcmp(argv[a], "--"); a++) known = !strcmp(argv[a], "--index");
     if (!known) return -1;
     argv = fc_split(&argc, argv);
     if (!strcmp(argv[1], "cat")) return fc_query(argc, argv, 0);
     if (!strcmp(argv[1], "grep")) return fc_query(argc, argv, 1);
-    if (!strcmp(argv[1], "a")) return fc_archive(argc, argv);
-    if (!strcmp(argv[1], "x")) return fc_extract(argc, argv);
-    if (!strcmp(argv[1], "l")) return fc_list(argc, argv);
-    for (int a = 1; a < argc; a++) if (!strcmp(argv[a], "--index")) return fc_index(argc, argv);
+    if (!strcmp(argv[1], "archive")) return fc_archive(argc, argv);
+    if (!strcmp(argv[1], "extract")) return fc_extract(argc, argv);
+    if (!strcmp(argv[1], "contents")) return fc_list(argc, argv);
+    for (int a = 1; a < argc && strcmp(argv[a], "--"); a++) if (!strcmp(argv[a], "--index")) return fc_index(argc, argv);
     return -1;
 }

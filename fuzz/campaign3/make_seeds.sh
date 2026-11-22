@@ -13,25 +13,25 @@ for t in fuzz_decompress fuzz_limited fuzz_stream fuzz_stream_limited fuzz_round
 # under ASan+UBSan with comparison tracing a 48 KiB GR6+ or audio frame takes about 3 s per fuzz input
 mkdir -p "$W/slices" "$W/small"
 for f in "$R"/*.*; do b=$(basename "$f"); head -c 49152 "$f" > "$W/slices/$b"; head -c 8192 "$f" > "$W/small/$b"; done
-modes=("-m speed" "-m rt" "" "-q" "-m eco" "-m hc" "-m ratio" "-m max -l 1" "--native-leaf")
-xmodes=("-x -l 1" "-x" "-x -l 2")
+modes=("-1" "-1 --analysis full" "" "--analysis quick" "-5" "-7" "-9" "-8" "--native-leaf")   # 0.1.0 levels (the 0.0.x modes)
+xmodes=("-U --codec-level 1" "-U" "-U --codec-level 2")
 for f in "$R"/*.*; do
   b=$(basename "$f"); i=0
-  for m in "${modes[@]}"; do $K $m -T 1 "$f" "$F/$b.m$i.kol" 2>/dev/null; i=$((i+1)); done
+  for m in "${modes[@]}"; do $K $m -f -T 1 "$f" -o "$F/$b.m$i.kol" 2>/dev/null; i=$((i+1)); done
   # small slices only at -x (context-mixing seeds stay small; the CM decode is slow under ASan)
-  i=0; for m in "${xmodes[@]}"; do $K $m -T 1 "$W/small/$b" "$F/$b.x$i.kol" 2>/dev/null; i=$((i+1)); done
+  i=0; for m in "${xmodes[@]}"; do $K $m -f -T 1 "$W/small/$b" -o "$F/$b.x$i.kol" 2>/dev/null; i=$((i+1)); done
   # long-form tables and line records also at -x whole (table slack at -x, codec 25 parts, GR6+)
-  case $b in longform.csv|table.csv|records.txt|semi.txt|wide.csv|photo.pgm|fastq.fq) $K -x -T 2 "$f" "$F/$b.xfull.kol" 2>/dev/null;; esac
+  case $b in longform.csv|table.csv|records.txt|semi.txt|wide.csv|photo.pgm|fastq.fq) $K -U -f -T 2 "$f" -o "$F/$b.xfull.kol" 2>/dev/null;; esac
   # audio (codec 19) only from the small WAV files; the large ones go to the round trips
   case $b in mono.wav|stereo.wav) rm -f "$F/$b".*.kol;; esac
 done
-$K -m fast --typed-huf -T 1 "$R/mono.wav" "$F/mono.wav.typed.kol" 2>/dev/null
+$K -3 --typed-huf -f -T 1 "$R/mono.wav" -o "$F/mono.wav.typed.kol" 2>/dev/null
 # frames: at most 2 MiB each
 for f in "$F"/*.kol; do [ "$(stat -c %s "$f")" -le 2097152 ] && cp "$f" "$S/fuzz_decompress/"; done
 cp "$S"/fuzz_decompress/* "$S/fuzz_limited/"
 # streams
 for f in "$R"/table.csv "$R"/app.log "$R"/text.txt "$W"/slices/*.wav; do
-  b=$(basename "$f"); $K -s "$f" "$S/fuzz_stream/$b.czs" 2>/dev/null; $K -S 1 -m hc "$f" "$S/fuzz_stream/$b.s1.czs" 2>/dev/null
+  b=$(basename "$f"); $K --stream -f "$f" -o "$S/fuzz_stream/$b.czs" 2>/dev/null; $K --stream=1 -7 -f "$f" -o "$S/fuzz_stream/$b.s1.czs" 2>/dev/null
 done
 cp "$S"/fuzz_stream/* "$S/fuzz_stream_limited/"
 # round trips: mode byte + slice (mode byte bits: see fuzz/fuzz_roundtrip.c)
@@ -48,12 +48,13 @@ done
 # extensions: indexed files (tables, logs, JSON lines; with and without filters) and archives
 for f in "$R"/table.csv "$R"/app.log "$R"/events.jsonl "$R"/records.txt "$R"/table.tsv; do
   b=$(basename "$f"); head -c 200000 "$f" > "$W/ix.$b"
-  $K --index -B 0.0625 "$W/ix.$b" "$W/ix.$b.kol" 2>/dev/null && for q in 0 5 8 22 38 70 72 132; do { printf "\\0\\$(printf %o $q)"; cat "$W/ix.$b.kol"; } > "$S/fuzz_ext/$b.$q"; done
-  $K --index -m hc -B 0.0625 "$W/ix.$b" "$W/ix.$b.hc.kol" 2>/dev/null && { printf '\001\026'; cat "$W/ix.$b.hc.kol"; } > "$S/fuzz_ext/$b.hc"
+  $K --index --block-size 0.0625 "$W/ix.$b" "$W/ix.$b.kol" 2>/dev/null && for q in 0 5 8 22 38 70 72 132; do { printf "\\0\\$(printf %o $q)"; cat "$W/ix.$b.kol"; } > "$S/fuzz_ext/$b.$q"; done
+  $K --index -7 --block-size 0.0625 "$W/ix.$b" "$W/ix.$b.hc.kol" 2>/dev/null && { printf '\001\026'; cat "$W/ix.$b.hc.kol"; } > "$S/fuzz_ext/$b.hc"
 done
-( cd "$R/set" && $K a --chunk 1 "$W/arc1.kol" snap0.csv snap1.csv snap2.csv && $K a "$W/arc2.kol" snap3.csv snap4.csv snap5.csv ../small.txt ../empty.bin ) 2>/dev/null
+( cd "$R/set" && $K archive --chunk 1 "$W/arc1.kol" snap0.csv snap1.csv snap2.csv && $K archive "$W/arc2.kol" snap3.csv snap4.csv snap5.csv ../small.txt ../empty.bin ) 2>/dev/null
 for a in arc1 arc2; do for q in 0 1 8 129; do { printf "\\0\\$(printf %o $q)"; cat "$W/$a.kol"; } > "$S/fuzz_ext/$a.$q"; done; done
-# profiles: trained on the snapshot set (balanced and hc), with frames written with them (CZN1 and compact CZC1)
+# profiles: trained on the snapshot set (balanced and hc), with frames written with them (CZN1 and compact CZC1).
+# kolmo train and -P were removed (0.1.0; not available since 0.0.1), so this loop writes nothing; kept for the history.
 for m in fast hc; do
   $K train -m $m -o "$W/p.$m.kpf" "$R/set" 2>/dev/null || continue
   L=$(stat -c %s "$W/p.$m.kpf")

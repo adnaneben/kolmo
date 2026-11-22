@@ -26,7 +26,7 @@ jobs:
       - name: FASTA, compact ultra and tar file compatibility
         run: make -j4 ARCH= check-frontier-dna check-cm-compact check-tar-files
       - name: shared library + Python binding round trip
-        run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py && python3 tests/test_concurrent_dict.py
+        run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py && python3 tests/test_concurrent.py
       - name: bindings' native copies match src (the wheel and the crate build from them)
         run: |
           for b in python rust; do
@@ -43,8 +43,8 @@ jobs:
         run: |
           cat $(find src -name '*.[ch]' | sort) README.md > s.in
           for i in 1 2 3 4; do cat s.in s.in > s2.in && mv s2.in s.in; done
-          ./build/kolmo -m fast -S 2 s.in s.czs
-          ./build/kolmo -d s.czs s.out
+          ./build/kolmo --stream=2 s.in -o s.czs
+          ./build/kolmo -d s.czs -o s.out
           cmp s.in s.out
       - name: 'C references only (NO_ASM=1, no assembly kernels): kernel tests and determinism'
         run: |
