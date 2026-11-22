@@ -18,7 +18,8 @@ let part = kolmo::read_range(&blob, 1_000_000, 4096, 0)?;     // decode only the
 Levels: one scale, `Level::new(1..=9)`, from `Level::FASTEST` (1) through `Level::LIGHT` (3, the default),
 `Level::BALANCED` (5) and `Level::COMPACT` (7) to `Level::MAX` (9); `Level::ULTRA` is the context-mixing tier
 outside the scale. A level gives the same bytes as `kolmo -N` on the command line. `compress_limited` and
-`decompress_limited` take a memory limit; `decompress` checks the frame before it allocates the output.
+`decompress_limited` take a memory limit (and `decompress_limited` an optional bound on the decoded size, advisable
+for untrusted input); `decompress` checks the frame before it allocates the output.
 
 **Since 0.1.0:** `Mode` was replaced by `Level` (`Mode::SPEED` is now `Level::FASTEST`, `BALANCED` `Level::LIGHT`,
 `RATIO` `Level::MAX`; `Eco` level 5, `Hc` level 7, `Ultra` `Level::ULTRA`), and the dictionary functions were removed.

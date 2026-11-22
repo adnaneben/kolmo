@@ -132,8 +132,8 @@ pub fn original_size(blob: &[u8]) -> Result<usize, Error> {
 
 /// Header, index checksum, block sizes against the claimed size, and the memory the frame declares, before anything
 /// is allocated from the header.
-fn check_frame(blob: &[u8], mem_limit: u64) -> Result<(), Error> {
-    let lim = Limits { max_output_bytes: 0, max_block_bytes: 0, max_blocks: 0, max_memory: mem_limit };
+fn check_frame(blob: &[u8], mem_limit: u64, max_output: u64) -> Result<(), Error> {
+    let lim = Limits { max_output_bytes: max_output, max_block_bytes: 0, max_blocks: 0, max_memory: mem_limit };
     let r = unsafe { kolmo_check_frame(blob.as_ptr(), blob.len(), &lim) };
     if r < 0 { Err(err(r as i64)) } else { Ok(()) }
 }
@@ -141,16 +141,24 @@ fn check_frame(blob: &[u8], mem_limit: u64) -> Result<(), Error> {
 /// Decompress a whole blob. `threads` = 0 uses all cores. The frame is checked before the output is allocated, so a
 /// damaged or hostile blob is an error, not a huge allocation.
 pub fn decompress(blob: &[u8], threads: i32) -> Result<Vec<u8>, Error> {
-    decompress_limited(blob, threads, 0)
+    decompress_limited(blob, threads, 0, None)
 }
 
 /// As [`decompress`], with a memory limit in bytes (0 = auto, `u64::MAX` = none): a frame that needs more fails with
-/// code -12 (`KOLMO_ERR_MEMORY`) before anything is allocated.
-pub fn decompress_limited(blob: &[u8], threads: i32, mem_limit: u64) -> Result<Vec<u8>, Error> {
+/// code -12 (`KOLMO_ERR_MEMORY`) before anything is allocated. `max_output` bounds the decoded size: a valid frame can
+/// claim well over 100,000 times its own size (long runs), so callers decoding untrusted input should pass
+/// `Some(bytes)`; a frame that claims more fails with code -7 (`KOLMO_ERR_LIMIT`) before anything is allocated.
+/// `None` accepts any size the frame validly claims.
+pub fn decompress_limited(blob: &[u8], threads: i32, mem_limit: u64, max_output: Option<u64>) -> Result<Vec<u8>, Error> {
     let o = original_size(blob)?;
-    check_frame(blob, mem_limit)?;
+    let max_output = match max_output {
+        Some(0) if o > 0 => return Err(err(-7)),   // the library reads 0 as "no limit"
+        Some(m) => m,
+        None => 0,
+    };
+    check_frame(blob, mem_limit, max_output)?;
     let mut out = vec![0u8; o.max(1)];
-    let lim = Limits { max_output_bytes: 0, max_block_bytes: 0, max_blocks: 0, max_memory: mem_limit };
+    let lim = Limits { max_output_bytes: max_output, max_block_bytes: 0, max_blocks: 0, max_memory: mem_limit };
     let got = unsafe { kolmo_decompress_limited(blob.as_ptr(), blob.len(), out.as_mut_ptr(), o, threads as c_int, &lim) };
     if got < 0 { return Err(err(got)); }
     out.truncate(got as usize);
@@ -160,7 +168,7 @@ pub fn decompress_limited(blob: &[u8], threads: i32, mem_limit: u64) -> Result<V
 /// Return bytes `[off, off + len)` of the original (clamped to its end), decoding only the overlapping blocks.
 pub fn read_range(blob: &[u8], off: u64, len: usize, threads: i32) -> Result<Vec<u8>, Error> {
     let total = original_size(blob)? as u64;
-    check_frame(blob, 0)?;
+    check_frame(blob, 0, 0)?;
     if off > total { return Err(err(-1)); }
     let len = (len as u64).min(total - off) as usize;
     let mut out = vec![0u8; len.max(1)];
@@ -237,7 +245,9 @@ mod tests {
     fn memory_limit() {
         let data = sample();
         let blob = compress_limited(&data, Level::MAX, 1, 4 << 30).unwrap();
-        assert_eq!(decompress_limited(&blob, 1, u64::MAX).unwrap(), data);
+        assert_eq!(decompress_limited(&blob, 1, u64::MAX, None).unwrap(), data);
+        assert_eq!(decompress_limited(&blob, 1, 0, Some(data.len() as u64)).unwrap(), data);
+        assert_eq!(decompress_limited(&blob, 1, 0, Some(data.len() as u64 - 1)).unwrap_err().code, -7);
         assert_eq!(compress_limited(&data, Level::MAX, 1, 1 << 20).unwrap_err().code, -12);
     }
 

@@ -10,7 +10,7 @@ and ultra write the same bytes as 0.0.2's `speed`, `balanced`, `eco`, `hc`, `rat
 - **Levels.** One scale from `-1` (fastest) to `-9` (max), `-3` (light) the default, and `-U` (ultra) outside it.
   Named anchors with letters: `-F --fastest` (1), `-L --light` (3), `-B --balanced` (5), `-C --compact` (7),
   `-X --max` (9), `-U --ultra`; `--level N|ultra`; the last level option wins. Levels 2, 4, 6 and 8 are new settings
-  (KLZH2 1 with quick analysis, KLZH2 5, KLZH2 8, block sorting for every block); the table will be retuned by
+  (KLZH2 1 with minimal analysis, KLZH2 5 with hc's planning, KLZH2 8, block sorting for every block); the table will be retuned by
   measurement, never moved across the scale.
 - **Library:** `kolmo_params_for_level(level, &params)` and `KOLMO_LEVEL_MIN/MAX/DEFAULT/ULTRA/FASTEST/LIGHT/
   BALANCED/COMPACT/MAX_RATIO`; a level outside 1..10 returns the new `KOLMO_ERR_PARAM` (-15). The command line and both
@@ -35,7 +35,8 @@ and ultra write the same bytes as 0.0.2's `speed`, `balanced`, `eco`, `hc`, `rat
   `"ultra"`; Rust `Level` (`Level::new(1..=9)`, `FASTEST`, `LIGHT`, `BALANCED`, `COMPACT`, `MAX`, `ULTRA`,
   `Default` = light) with `compress_limited`/`decompress_limited`. `mode` / `Mode` and the dictionary calls are
   removed. Both check the frame (`kolmo_check_frame`) before allocating the output, so a hostile header cannot ask for
-  a huge allocation. Tests cross-check that the CLI, Python and Rust give the same bytes at every level.
+  a huge allocation, and take an optional bound on the decoded size (Python `max_output_size`, Rust
+  `decompress_limited(..., Some(bytes))`), advisable for untrusted input. Tests cross-check that the CLI, Python and Rust give the same bytes at every level.
 
 Upgrading from 0.0.x:
 

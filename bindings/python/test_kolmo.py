@@ -48,6 +48,13 @@ def main():
             pass
     for name in ("train_dict",):
         if hasattr(kolmo, name): fail(f"kolmo.{name} still exists")
+    # output bound: a frame that claims more than max_output_size is refused before allocation
+    blob = kolmo.compress(data)
+    if kolmo.decompress(blob, max_output_size=len(data)) != data: fail("max_output_size equal to the size")
+    try:
+        kolmo.decompress(blob, max_output_size=len(data) - 1); fail("max_output_size exceeded but accepted")
+    except ValueError as e:
+        if "limit" not in str(e): fail(f"max_output_size message {e}")
     # memory limit
     if kolmo.decompress(kolmo.compress(data, level=9, memlimit="4G"), memlimit="max") != data: fail("memlimit round trip")
     try:

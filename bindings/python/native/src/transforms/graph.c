@@ -1305,7 +1305,7 @@ done:
 /* ---- decoder ---- */
 typedef struct { uint8_t op; uint32_t nin, nout, firstout; const uint32_t *in; const uint8_t *par; size_t plen; } kgnode;
 static int kg_decode(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *out, size_t len) {
-    const uint64_t maxs = (uint64_t)len * 4 + (1u << 20);    /* no stream of a valid program is larger */
+    const uint64_t maxs = (uint64_t)len * 4 + (1u << 20);    /* no stream of a valid program is larger, nor all its leaves */
     size_t i = 0; uint64_t v, nn;
     if (n < 3 || p[0] != 'G' || p[1] != 1) return -1;
     i = 2; if (kg_getuv(p, n, &i, &nn) || nn > KG_MAXSTREAMS) return -1;
@@ -1336,9 +1336,14 @@ static int kg_decode(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *out, siz
     if (nn && !cons[0]) goto out;
     /* leaves */
     uint64_t nl; if (kg_getuv(p, n, &i, &nl) || nl > ns) goto out;
+    uint64_t leaf_total = 0;                                 /* every leaf is decoded before any inverse runs */
     for (uint64_t q = 0; q < nl; q++) {
         uint64_t id, rl, zl; if (kg_getuv(p, n, &i, &id) || id >= ns || cons[id] || have[id] || i >= n) goto out;
         int cc = p[i++]; if (kg_getuv(p, n, &i, &rl) || kg_getuv(p, n, &i, &zl) || zl > n - i || rl > maxs) goto out;
+        /* the leaves together, not only each one, are bounded like a stream: valid programs stay near len (at most
+         * 1.007 len over the test corpus in balanced, hc, ratio and ultra level 2), so 4 len + 1 MiB is never reached by
+         * one, and a forged program of many large leaves cannot reserve many times the block's declared working set */
+        leaf_total += rl; if (leaf_total > maxs) goto out;
         if (kb_res(&s[id], (size_t)rl + 1)) goto out;
         if (codec_decompress(x, cc, p + i, (size_t)zl, s[id].p, (size_t)rl)) goto out;
         s[id].n = (size_t)rl; have[id] = 1; i += zl;

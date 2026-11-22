@@ -36,7 +36,7 @@ KIMG_AI int kimg_get(kimg_rc *r, int p) {
     int bit = r->x <= xm;
     if (bit) r->x2 = xm; else r->x1 = xm + 1;
     while (((r->x1 ^ r->x2) & 0xff000000u) == 0) {
-        r->x1 <<= 8; r->x2 = (r->x2 << 8) | 255; r->x = (r->x << 8) | (r->in < r->end ? *r->in++ : 0);
+        r->x1 <<= 8; r->x2 = (r->x2 << 8) | 255; r->x = (r->x << 8) | (r->in < r->end ? *r->in++ : (r->err++, 0));   /* err: bytes read past the end */
     }
     return bit;
 }
@@ -227,7 +227,7 @@ KIMG_AI int kimg_run_t(const int enc, const int ver, int16_t *px, size_t npx, ui
                 for (int b = L - 3; b >= 0; b--) { int bb = kimg_code1(enc, r, &m->low[c][L][b], (u >> b) & 1, dt); if (!enc) u |= (uint32_t)bb << b; }
             }
         }
-        if (!enc) { if ((int)u > Vc) { free(m); free(err); return -1; } px[k] = (int16_t)(Pc + kimg_unfold(u, Pc, Vc)); }
+        if (!enc) { if ((int)u > Vc || r->err > 8) { free(m); free(err); return -1; } px[k] = (int16_t)(Pc + kimg_unfold(u, Pc, Vc)); }
         const int v = px[k], res = v - Pc;
         /* bias update (halved at 64 samples, as LOCO-I) */
         *bs += v - pr0; (*bc)++;

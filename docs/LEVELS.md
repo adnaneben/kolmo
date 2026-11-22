@@ -154,11 +154,12 @@ Recorded by the 0.1.0 implementation (lane 1). zstd's behaviour was followed unl
 
 Levels and library
 - Internal table (`src/api/api.c`, `kolmo_level_table`), in 0.0.x knobs: 1 = rt with minimal analysis (exactly 0.0.x
-  `-m speed`), 2 = fast at codec level 1 (KLZH2 1) with quick analysis, 3 = fast (0.0.x balanced), 4 = fast at codec
-  level 6 (KLZH2 5), 5 = eco, 6 = hc at codec level 16 (KLZH2 8), 7 = hc, 8 = max at codec level 1 (BWT for every
+  `-m speed`), 2 = fast at codec level 1 (KLZH2 1) with minimal analysis, 3 = fast (0.0.x balanced), 4 = hc's planning
+  at codec level 6 (KLZH2 5) (lane 3's measured rows for 2 and 4), 5 = eco, 6 = hc at codec level 16 (KLZH2 8), 7 = hc, 8 = max at codec level 1 (BWT for every
   block), 9 = max (0.0.x ratio), ultra = ultra. Levels 1, 3, 5, 7, 9 and ultra therefore write the same bytes as 0.0.2's
   `speed`, `balanced`, `eco`, `hc`, `ratio` and `-x`. On small inputs neighbouring levels can coincide (6 and 7 did on a
   200 KB test file); making every level measurably distinct is the measuring lane's job.
+  `benchmark/determinism/expected.sha256` pins every level, 2, 4, 6 and 8 included.
 - An out-of-range level returns a new error code, `KOLMO_ERR_PARAM` (-15).
 - `-10`, `-19`: a run of digits is read as one number (as zstd), then refused (levels are 1..9; ultra is `-U`).
 

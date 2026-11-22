@@ -411,9 +411,7 @@ int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
     for (int k = 0; k < 5; k++) code = (code << 8) | *ip++;
     uint32_t pos = 0, reps[4] = {0, 0, 0, 0}; int st = 0; const uint32_t pbm = (1u << pb) - 1, lpm = (1u << lp) - 1;
     while (pos < n) {
-        /* past the end the coder reads zeros; the end test below fails once ip passes ie + 4 (ip only grows), so
-         * stop there instead of decoding the rest of a block from padding */
-        if (ip > ie + 4) goto out;
+        if (ip > ie + 4) goto out;   /* past what the end check below accepts: truncated or forged, stop now */
         const uint32_t ps = pos & pbm; unsigned b;
         KD_BIT(&P->is_match[st][ps], b);
         if (!b) {   /* literal */

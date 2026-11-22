@@ -24,9 +24,18 @@ static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int 
     if (output_fd >= 0) { int r = write_block(output_fd, f, tot, 0); free(f); return r ? r : (int64_t)tot; }
     return (int64_t)tot;
 }
+/* The parameters the library defines (kolmo.h): mode rt..ultra; level 0..22 (max also 100..999, KLZMA's lc/lp/pb
+ * digits); transforms 0..3 with the opt-in bits KOLMO_T_NATIVE_LEAF, KOLMO_T_TYPED_HUF and KOLMO_T_COLUMNS. */
+static int kolmo_params_valid(const kolmo_params *p) {
+    if ((unsigned)p->mode > KOLMO_ULTRA) return 0;
+    if (p->level < 0 || (p->level > 22 && !(p->mode == KOLMO_MAX && p->level >= 100 && p->level <= 999))) return 0;
+    int t = p->transforms & ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
+    return t >= 0 && t <= 3;
+}
 /* Every frame written is version 12 (KOLMO_MAX_VERSION): Kolmo's own coders only, no dictionary, no profile. */
 static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p) {
     kolmo_params d = {KOLMO_FAST, 0, 0, 0, 1}; if (!p) p = &d;
+    if (!kolmo_params_valid(p)) return KOLMO_ERR_PARAM;
     /* KOLMO_T_NATIVE_LEAF and KOLMO_T_TYPED_HUF are opt-in bits of transforms: read them, then clear them so every
      * other use of transforms sees the analysis level alone. The native leaf applies to balanced (KOLMO_FAST) with
      * analysis on; elsewhere it is ignored. */

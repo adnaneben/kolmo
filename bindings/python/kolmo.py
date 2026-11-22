@@ -133,14 +133,22 @@ def compress(data, level=3, threads=0, memlimit=None, block=0, native_leaf=False
     n = _check(_lib.kolmo_compress(data, len(data), out, cap, ctypes.byref(p)))
     return out.raw[:n]
 
-def decompress(blob, threads=0, memlimit=None):
+def decompress(blob, threads=0, memlimit=None, max_output_size=None):
     """Decompress a whole blob; returns the original bytes. The frame (header, index checksum, block sizes against
     the claimed size, the memory it declares) is checked before the output is allocated, so a damaged or hostile
     blob fails with ValueError instead of a huge allocation. memlimit as in compress (None = auto). Blobs of earlier
-    Kolmo versions raise ValueError (KOLMO_ERR_LEGACY)."""
+    Kolmo versions raise ValueError (KOLMO_ERR_LEGACY).
+    max_output_size: None (the default) accepts any size the frame validly claims; a valid frame can claim well over
+    100,000 times its own size (long runs), so a caller decoding untrusted input should set a bound in bytes: a frame
+    that claims more raises ValueError (KOLMO_ERR_LIMIT) before anything is allocated."""
     blob = bytes(blob)
     n = original_size(blob)
-    lim = _Limits(0, 0, 0, _memlimit(memlimit))
+    if max_output_size is not None and (isinstance(max_output_size, bool) or not isinstance(max_output_size, int) or max_output_size < 0):
+        raise ValueError("max_output_size must be a number of bytes")
+    # max_output_bytes 0 means no limit in the library; a bound of 0 bytes is kept as 0 by refusing any non-empty claim
+    if max_output_size == 0 and n:
+        raise ValueError("kolmo: " + _lib.kolmo_strerror(-7).decode())
+    lim = _Limits(max_output_size or 0, 0, 0, _memlimit(memlimit))
     _check(_lib.kolmo_check_frame(blob, len(blob), ctypes.byref(lim)))
     out = ctypes.create_string_buffer(n if n else 1)
     got = _check(_lib.kolmo_decompress_limited(blob, len(blob), out, n, threads, ctypes.byref(lim)))

@@ -60,9 +60,9 @@ One scale, each level smaller and slower than the one before (levels 8-9 decompr
 | Level | Name | Letter | Long option | What it is for | 0.1.0 engine |
 |---|---|---|---|---|---|
 | `-1` | fastest | `-F` | `--fastest` | data that is read or sent right away | KLZ, minimal analysis |
-| `-2` | | | | | KLZH2 1, quick analysis |
+| `-2` | | | | | KLZH2 1, minimal analysis |
 | `-3` | light | `-L` | `--light` | **the default**: everyday storage and transfer | KLZH2 3 with analysis |
-| `-4` | | | | | KLZH2 5 |
+| `-4` | | | | | KLZH2 5 with hc's planning |
 | `-5` | balanced | `-B` | `--balanced` | lowest storage cost at moderate CPU | KLZH2 7 |
 | `-6` | | | | | KLZH2 8 |
 | `-7` | compact | `-C` | `--compact` | archives with fast reads | KLZH2 9 |

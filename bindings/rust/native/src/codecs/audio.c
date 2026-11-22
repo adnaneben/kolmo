@@ -916,7 +916,7 @@ static inline void ka_upd16(int32_t *restrict w, int16_t *restrict w16, const in
     for (; i < n; i++) {
         int32_t v = (int32_t)((uint32_t)w[i] + ((uint32_t)(((int32_t)g2 * h[i] + (1 << 14)) >> 15) << sh));
         w[i] = v;
-        int32_t q = (v + (1 << (KA_WQ - KA_PQ - 1))) >> (KA_WQ - KA_PQ);
+        int32_t q = (int32_t)((uint32_t)v + (1u << (KA_WQ - KA_PQ - 1))) >> (KA_WQ - KA_PQ);   /* wraps like the AVX2 add (forged streams can drive w to the limit) */
         w16[i] = (int16_t)(q > 32767 ? 32767 : q < -32767 ? -32767 : q);
     }
 }

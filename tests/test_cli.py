@@ -178,7 +178,8 @@ with tempfile.TemporaryDirectory() as tmp:
     expect(run("-t", T / "trail.kolmo"), 1, "-t with trailing garbage")
     expect(run("--range", "0:10", cat), 1, "--range of concatenated frames")
     expect(run("--range", "0:99999999999", T / "lv3.0.kolmo"), 0, "--range longer than the file")
-    expect(run("--range", "99999999999:10", T / "lv3.0.kolmo"), 1, "--range past the end")
+    r = run("--range", "99999999999:10", T / "lv3.0.kolmo")
+    expect(r, 1, "--range past the end", "outside the decoded data")
     # the output is never the input file, in any path, even with -f
     same = T / "same.txt"; same.write_bytes(payload[:5000])
     for args in (["-f", "-o", same, same], ["-f", "--stream", "-o", same, same], ["-9", "-f", "-o", same, same]):
@@ -349,6 +350,20 @@ with tempfile.TemporaryDirectory() as tmp:
     r = run("--range=0:10", T / "lv9.0.kolmo", "-o", rt / "range.out")
     check(r.returncode == 0 and (rt / "range.out").read_bytes() == payload[:10], "--range -o")
     expect(run("--range", "0:10", rt / "s.kolmo"), 1, "--range of a stream")
+
+    # ---- inputs of 8 MiB and more take the seekable file path (header and index read, not the whole frame), both ways
+    big = rt / "big.csv"
+    big.write_bytes(b"".join(b"%d,%d,%d.%02d\n" % (i, i * 7 % 1000, i % 97, i % 100) for i in range(700_000)))
+    check(big.stat().st_size >= 8 << 20, "big input is under 8 MiB")
+    r = run("-vv", "-T", "2", big)
+    check(r.returncode == 0 and b"[file path]" in r.stderr, f"compressing 8+ MiB at level 3 did not use the file path: {r.stderr!r}")
+    big.rename(rt / "big.orig")
+    r = run("-vv", "-d", rt / "big.csv.kolmo")
+    check(r.returncode == 0 and b"[file path]" in r.stderr, f"decoding 8+ MiB did not use the file path: {r.stderr!r}")
+    check(big.read_bytes() == (rt / "big.orig").read_bytes(), "file-path round trip")
+    (rt / "big2.kolmo").write_bytes((rt / "big.csv.kolmo").read_bytes() + frames[1])
+    r = run("-vv", "-dc", rt / "big2.kolmo")
+    check(r.returncode == 0 and r.stdout == (rt / "big.orig").read_bytes() + payload, "8+ MiB frame followed by a second frame")
 
     # ---- failures never clobber an existing destination, even with -f, and leave no staging file
     dest = rt / "keep.out"

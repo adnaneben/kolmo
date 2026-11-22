@@ -35,6 +35,7 @@ SETTINGS = [["-1"],                                  # [-m speed]
             ["-3", "--analysis", "quick"],           # [-m fast -q]
             ["-5"], ["-7"], ["-9"],                  # [-m eco], [-m hc], [-m ratio]
             ["-8"],                                  # [-m max -l 1]
+            ["-2"], ["-4"], ["-6"],                  # levels new in 0.1.0 (lane 3's measured table)
             ["-U", "--codec-level", "1"], ["-U"], ["-U", "--codec-level", "2"],   # [-x -l 1], [-x], [-x -l 2]
             ["-3", "--native-leaf"]]                 # [-m balanced --native-leaf]
 TYPED = [["-3", "--typed-huf"]]   # one thread only by design [-m fast --typed-huf]

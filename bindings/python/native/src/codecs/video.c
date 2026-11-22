@@ -17,13 +17,18 @@ typedef struct { size_t w[KV_MAXP], h[KV_MAXP]; int np; size_t frame_bytes, fram
 /* Parses the stream header and checks that the file is whole frames. Header bytes (the stream header and every
  * FRAME line) are returned in *hdr, in order; the sample bytes stay where they are. */
 /* Plane kv_geometry from the stream header line [h, e) (e points at its newline). */
+/* decimal digits at p, stopping at e (the header is not NUL-terminated); 0 when there are none, capped above 16384 */
+static size_t kv_num(const uint8_t *p, const uint8_t *e) {
+    size_t v = 0; while (p < e && *p >= '0' && *p <= '9') { v = v * 10 + (size_t)(*p++ - '0'); if (v > 1000000) return v; }
+    return v;
+}
 static int kv_geometry(const uint8_t *h, const uint8_t *e, kv_layout_t *L) {
     if (e - h < 10 || memcmp(h, "YUV4MPEG2 ", 10)) return -1;
     size_t W = 0, H = 0; char cs[32] = "420";
     for (const uint8_t *p = h + 9; p + 1 < e; p++) {
         if (*p != ' ') continue;
-        if (p[1] == 'W') W = strtoul((const char *)p + 2, NULL, 10);
-        else if (p[1] == 'H') H = strtoul((const char *)p + 2, NULL, 10);
+        if (p[1] == 'W') W = kv_num(p + 2, e);
+        else if (p[1] == 'H') H = kv_num(p + 2, e);
         else if (p[1] == 'C') { size_t k = 0; while (p + 2 + k < e && p[2 + k] != ' ' && k < 31) { cs[k] = (char)p[2 + k]; k++; } cs[k] = 0; }
     }
     if (!W || !H || W > 16384 || H > 16384) return -1;
