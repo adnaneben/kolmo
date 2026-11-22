@@ -163,7 +163,7 @@ static inline void kz_mtf(uint32_t r[3], uint32_t off) {   /* the KLZH repeat of
  * entries (fewer for short blocks). Measured on the screening binaries at 4 MiB blocks against kz_parse_dfast (tables
  * 2^18 / 2^17, skip 8): three repeats -0.1%, 2^20 tables -2.1% (x-ray -11%: 2^17 short slots for 4 MiB of 16-bit
  * samples overwrite each other), the step after every 2^9 literals instead of 2^8 a further -1.3% on x-ray; about 10%
- * slower. */
+ * slower. A 3-byte match at rep0 where nothing else is found: ooffice -0.5%, x-ray +0.1%, no slower. */
 static size_t kz_parse_dfast3(const uint8_t *in, size_t n, int lg, int skip, kz_seq *S, size_t *anchor_out, int *err) {
     uint32_t *tl = calloc((size_t)1 << lg, 4), *ts = calloc((size_t)1 << lg, 4); size_t ns = 0;
     if (!tl || !ts) { free(tl); free(ts); *err = 1; return 0; }
@@ -188,6 +188,8 @@ static size_t kz_parse_dfast3(const uint8_t *in, size_t n, int lg, int skip, kz_
             if (c1 < pos + 1 && pos + 1 - c1 <= KLZ_WINDOW && kz_r64(in + c1) == kz_r64(in + pos + 1)) {   /* a long match one byte later */
                 off = (uint32_t)(pos + 1 - c1); ml = 8 + kz_count(in + start + 8, in + c1 + 8, ie);
             } else { start = pos; off = (uint32_t)(pos - cs); ml = 4 + kz_count(in + pos + 4, in + cs + 4, ie); }
+        } else if (pos + 1 >= rep[0] && ((kz_r32(in + pos + 1 - rep[0]) ^ v1) & 0xFFFFFFu) == 0) {   /* 3 bytes of rep0 */
+            ml = 3; off = rep[0];
         } else { pos += 1 + ((pos - anchor) >> skip); continue; }
         while (start > anchor && start > off && in[start - 1] == in[start - 1 - off]) { start--; ml++; }
         S[ns].ll = (uint32_t)(start - anchor); S[ns].ml = (uint32_t)ml; S[ns].off = off; ns++;
