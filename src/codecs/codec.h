@@ -19,7 +19,8 @@ enum { C_STORE = 0, R_SPEED = 1, R_SPEEDHC = 2, R_LZH = 3, R_ECO = 4, C_BSC5 = 5
        C_GRAPH = 12, R_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_FQ = 16, C_CMI = 17, C_BWT = 18,
        C_AUD = 19, C_VID = 20, C_PLANES = 21, C_ZRUN = 23, C_KLZMA = 24, C_CMP = 25, C_GR6 = 26,
        C_KHUF = 27, C_KLZ = 28, C_KLZH = 29, C_KIMG = 31, C_KLZH2 = 32 };
-/* R_SPEED: KLZ level 1 (speed); R_SPEEDHC: KLZ level 3; R_LZH: KLZH2, levels on zstd's scale (balanced 3, hc 19 -> 9);
+/* R_SPEED: KLZ level 1 (speed); R_SPEEDHC: KLZ level 3; R_LZH: KLZH2, levels on zstd's scale (balanced 3, hc 19 -> 9;
+ * 0 and below, zstd's --fast levels -> KLZH2 level 0, the fast parse);
  * R_ECO: KLZH2 level 7 (eco); R_LZMA: KLZMA (ratio's LZ coder; levels 1-9 and the lc/lp/pb form >= 100); R_HUF: khuf. */
 
 typedef struct { int native_leaf;        /* encoder: graph integer residual leaves may use C_NPLANE (opt-in, balanced) */

@@ -2,7 +2,7 @@
  * mapping from the encoder roles (codecs/codec.h) to them. Every encoder path codes with these coders and writes
  * their ids; there is no other choice and no environment switch (container version 12).
  *   speed (R_SPEED) -> KLZ level 1, R_SPEEDHC -> KLZ level 3
- *   balanced and hc (R_LZH) -> KLZH2, levels on zstd's scale: 1-2 -> 1, 3-5 -> 3, 6-9 -> 5, 10-15 -> 6, 16-18 -> 8,
+ *   balanced and hc (R_LZH) -> KLZH2, levels on zstd's scale: 0 and below (zstd's --fast levels) -> 0, the fast parse; 1-2 -> 1, 3-5 -> 3, 6-9 -> 5, 10-15 -> 6, 16-18 -> 8,
  *     19 and up -> 9
  *   eco (R_ECO) -> KLZH2 level 7
  *   ratio's LZ coder (R_LZMA) -> KLZMA (level 1 -> 1, 2-5 -> 4, 6-9 -> 8; >= 100: lc/lp/pb digits, algo/klzma.h)
@@ -32,7 +32,7 @@ static int native_level(int c, int level) {
     switch (c) {
         case R_SPEED: return 1;
         case R_SPEEDHC: return 3;
-        case R_LZH: return level <= 2 ? 1 : level <= 5 ? 3 : level <= 9 ? 5 : level <= 15 ? 6 : level <= 18 ? 8 : 9;   /* hc's 19 -> 9 */
+        case R_LZH: return level <= 0 ? 0 : level <= 2 ? 1 : level <= 5 ? 3 : level <= 9 ? 5 : level <= 15 ? 6 : level <= 18 ? 8 : 9;   /* hc's 19 -> 9 */
         case R_ECO: return 7;
         case R_LZMA: return level >= 100 ? level : level <= 1 ? 1 : level <= 5 ? 4 : 8;   /* the parse level; >= 100: lc/lp/pb */
     }
