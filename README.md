@@ -55,7 +55,7 @@ All prediction that must agree between encoder and decoder is integer or plain I
 
 ## Levels
 
-One scale, each level slower and smaller than the one before (the full contract is `docs/LEVELS.md`):
+One scale, each level smaller and slower than the one before (levels 8-9 decompress about 10x more slowly) (the full contract is `docs/LEVELS.md`):
 
 | Level | Name | Letter | Long option | What it is for | 0.1.0 engine |
 |---|---|---|---|---|---|

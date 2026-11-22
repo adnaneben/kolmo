@@ -6,8 +6,13 @@ may improve between releases; what it *promises* (its place on the speed/size sc
 
 ## 1. The scale
 
-One scale, 1 to 9, from fastest to smallest. Each step is slower and smaller than the one before. Every level on the
-scale decompresses at a practical speed; the extreme tier (ultra) is outside the scale on purpose.
+One scale, 1 to 9, from fastest to smallest. Each step gives smaller output than the one before, and costs more time.
+The scale has two decode tiers. Levels 1-7 decompress at LZ speed (hundreds of MiB/s; about 700-1500 MiB/s on one
+Apple M5 core) and spend more *compress* time at each step. Levels 8 and 9 use block sorting: smaller again, but they
+decompress about ten times more slowly (about 50-60 MiB/s per core), even though they compress faster than levels 6-7.
+No engine exists that is both smaller than level 7 and slower to compress but faster to decode than level 8, so the
+step from 7 to 8 trades decode speed, not compress speed (decision of 2026-11-23, measured on the screening corpus).
+Every level on the scale decompresses at a practical speed; the extreme tier (ultra) is outside the scale on purpose.
 
 | level | name     | letter | long option  | promise (contract)                                                          |
 |------:|----------|--------|--------------|------------------------------------------------------------------------------|
@@ -15,10 +20,10 @@ scale decompresses at a practical speed; the extreme tier (ultra) is outside the
 | 2     |          |        |              | between 1 and 3                                                              |
 | 3     | light    | `-L`   | `--light`    | **default**; zstd -3 class speed, smaller output                             |
 | 4     |          |        |              | between 3 and 5                                                              |
-| 5     | balanced | `-B`   | `--balanced` | the middle; markedly smaller than light at about half its compress speed     |
+| 5     | balanced | `-B`   | `--balanced` | the middle; markedly smaller than light, much slower to compress, same fast decode |
 | 6     |          |        |              | between 5 and 7                                                              |
-| 7     | compact  | `-C`   | `--compact`  | small output, still fast to decompress (LZ class decode)                     |
-| 8     |          |        |              | between 7 and 9                                                              |
+| 7     | compact  | `-C`   | `--compact`  | the smallest output that still decompresses at LZ speed                      |
+| 8     |          |        |              | block-sorting tier: smaller than 7, decompresses ~10x slower                 |
 | 9     | max      | `-X`   | `--max`      | the smallest output that still decompresses at practical speed               |
 | —     | ultra    | `-U`   | `--ultra`    | extreme: decompresses about as slowly as it compresses, ~1 GB+ of memory     |
 

@@ -95,7 +95,7 @@ def level_table(help_text):
         elif name:
             pat = rf"^\s*-{num}\s+{re.escape(letter)}\s+{re.escape(long_)}\b"
         else:
-            pat = rf"^\s*-{num}\s*$"
+            pat = rf"^\s*-{num}(\s*$|\s{{3,}}\S)"   # an unnamed level: bare, or with a note
         if not any(re.search(pat, l) for l in lines):
             bad.append(f"kolmo -h: no line for level {num} {name} {letter or ''} {long_ or ''} as docs/LEVELS.md has it")
     return bad
