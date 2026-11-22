@@ -26,6 +26,7 @@ Set the new version in all four places, then commit:
 - `bindings/rust/Cargo.toml` (`version`)
 - `bindings/python/pyproject.toml` (`version`)
 - `packaging/homebrew/kolmo.rb` (`url`; the sha256 is set in step 5)
+- `src/cli/cli.c` (`KOLMO_VERSION_STR`, printed by `kolmo -V`)
 
 If the native core (`src/`) changed, refresh the copies bundled in both packages and
 commit them:

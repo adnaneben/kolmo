@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.1 (2026-11-22)
+
+First release of the renumbered, Kolmo-native line; supersedes 1.0.x. Same code and output as 0.0.1-rc1 below, plus:
+
+- `kolmo -V` / `kolmo --version` prints the release and the container version.
+- Homebrew formula: `version_scheme 1`, so `brew upgrade` moves 1.0.1 installs to 0.0.1.
+
 ## 0.0.1-rc1 (first release candidate of the renumbered, Kolmo-native line; branch `review/rc4-native-J62kQD`; not tagged)
 
 Renumbered: the 1.x line (1.0.0 and 1.0.1 on PyPI, crates.io and Homebrew) used library codecs. 0.0.1 is the first line built only from Kolmo's own codecs, with a new frame format (container version 12) that does not read 1.x files.
