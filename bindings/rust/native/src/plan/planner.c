@@ -6,7 +6,11 @@
 #define KOLMO_BWT_GAIN_PCT 3      /* max: least size gain (%) for BWT to replace LZMA2 on a binary block */
 #endif
 #ifndef KOLMO_BWT_SKIP_LZMA_PCT
-#define KOLMO_BWT_SKIP_LZMA_PCT 90 /* max: a slice with BWT at most this % of LZMA2 (preset 1) codes the block with BWT only */
+#define KOLMO_BWT_SKIP_LZMA_PCT 98 /* max: a slice with BWT at most this % of LZMA2 (preset 1) codes the block with BWT only.
+                                    * 90 until 0.1.0: akiyo_cif.y4m (45 MB) has slice 0.976 and BWT 9.6% smaller on the block,
+                                    * and ran the full LZMA2 pass first (65 s of its 68; 62% of max's time on the screening
+                                    * corpus) for an output it then discarded. The block ratio sits 6-7 points below the slice
+                                    * ratio (osdb 0.84 -> 0.78, akiyo 0.976 -> 0.904), so 98 still means a clear BWT win. */
 #endif
 static void mode_codec(const kolmo_params *p, int *codec, int *level) {
     switch (p->mode) {
