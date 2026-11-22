@@ -75,7 +75,7 @@ ARCHOBJ := $(addprefix build/obj/,$(addsuffix .o,$(basename $(ARCHSRC))))
 ARCHPIC := $(addprefix build/pic/,$(addsuffix .o,$(basename $(ARCHSRC))))
 $(ARCHOBJ): VSECT := -ffunction-sections -fdata-sections   # Kolmo's coders: unused functions are dropped at link time
 
-all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
+all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource build/test-levels
 
 build/obj/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -102,6 +102,10 @@ build/kolmobench: bench/kolmobench.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(BLIBS)
 build/kolmotest: tests/kolmotest.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+build/test-levels: tests/test_levels.c build/libkolmo.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+build/test-levels-asan: tests/test_levels.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_levels.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
@@ -110,6 +114,7 @@ build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOL
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 
 check: all
+	./build/test-levels
 	python3 tests/test_fast_file.py
 	./build/kolmoresource
 	./build/kolmoparallel
@@ -282,7 +287,8 @@ check-memdyn: build/test-memdyn build/test-memdyn-asan
 .PHONY: check-memdyn
 check-rc: check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
 .PHONY: check-meta check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-fqfam check-dispatch check-asm check-arch check-format2
-check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
+check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan build/test-levels-asan
+	./build/test-levels-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
 
