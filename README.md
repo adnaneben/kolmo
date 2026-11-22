@@ -194,14 +194,16 @@ same checks before the caller allocates the output buffer. Calls without limits 
 | Python 3.8+ | `pip install kolmoc` | [kolmoc on PyPI](https://pypi.org/project/kolmoc/) |
 | Rust | `cargo add kolmo` | [kolmo on crates.io](https://crates.io/crates/kolmo) |
 
-- **Homebrew** builds the `kolmo` command from source in a few seconds and pulls in `xz` for liblzma.
+- **Homebrew** builds the `kolmo` command from source in a few seconds. From 0.0.1 it needs nothing else: Kolmo has
+  no third-party codec library.
 - **Python:** the package is published as `kolmoc` because `kolmo` was already taken on PyPI, but you still
   `import kolmo`. Prebuilt wheels cover Linux (x86-64, aarch64) and, from 1.0.1, Apple silicon Macs
   (macOS 11 or later). Other platforms, Intel Macs included, build the sdist, which needs a C compiler and
   takes about a minute.
 - **Rust:** the crate compiles the C core in `build.rs` and links it statically. It needs a C compiler at
   build time.
-- **liblzma** is optional for both packages. If it isn't found, `max` and `ultra` use the other coders.
+- **No codec libraries.** From 0.0.1 every coder is Kolmo's own (KLZ, KLZH2, KLZMA, khuf, BWT, context mixing,
+  kimg and the audio, video and FASTQ coders). The packages need only a C compiler.
 
 Usage for each binding is in [`bindings/python`](bindings/python/README.md) and
 [`bindings/rust`](bindings/rust/README.md). To build the CLI and library from source, see below.
@@ -231,7 +233,27 @@ overnight genetic search of the build-time settings (`tune/ga.py`).
 
 ## Status
 
-1.x. The container is version 5 (a stream uses v4/v5 only when the delta-of-delta or third-order predictor is selected, else v3); versions 1–3 remain readable, and an older decoder reports an error on a newer version rather than returning wrong data. Output is byte-identical across
+0.0.1-rc1, the first release candidate of the renumbered line. The 1.x line (1.0.0 and 1.0.1) used library coders
+(zstd, Brotli, LZ4, liblzma); 0.0.1 uses only Kolmo's own and writes container version 12 (`SPEC.md`).
+
+### Files written by Kolmo 1.x
+
+0.0.1 does not read them: it reports `KOLMO_ERR_LEGACY` ("written by an earlier Kolmo (1.x or a release candidate)
+that used library codecs") rather than returning wrong data. To move such a file to 0.0.1, decompress it with a 1.x
+build and compress the result again:
+
+```bash
+kolmo-1 -d old.kz plain && kolmo -m balanced plain new.kz
+```
+
+1.0.1 stays installable for this (`pip install kolmoc==1.0.1`, `cargo add kolmo@1.0.1`). Dictionaries (`-D`),
+`kolmo train` and trained profiles are not available in 0.0.1 (`KOLMO_ERR_UNSUPPORTED`): they relied on library
+coders.
+
+### Earlier history
+
+The 1.x container was version 5 (a stream used v4/v5 only when the delta-of-delta or third-order predictor was
+selected, else v3); an older decoder reports an error on a newer version rather than returning wrong data. Output is byte-identical across
 x86-64 and Apple silicon (verified: rt/fast/hc on tables, logs and scientific data hash the same on both). The decoder
 is fuzzed (OSS-Fuzz harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never returned as
 data. A shared library and Python and Rust bindings are in `bindings/`; the format is documented in `SPEC.md`.
