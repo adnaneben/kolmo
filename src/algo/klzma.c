@@ -411,6 +411,9 @@ int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
     for (int k = 0; k < 5; k++) code = (code << 8) | *ip++;
     uint32_t pos = 0, reps[4] = {0, 0, 0, 0}; int st = 0; const uint32_t pbm = (1u << pb) - 1, lpm = (1u << lp) - 1;
     while (pos < n) {
+        /* past the end the coder reads zeros; the end test below fails once ip passes ie + 4 (ip only grows), so
+         * stop there instead of decoding the rest of a block from padding */
+        if (ip > ie + 4) goto out;
         const uint32_t ps = pos & pbm; unsigned b;
         KD_BIT(&P->is_match[st][ps], b);
         if (!b) {   /* literal */
@@ -448,7 +451,7 @@ int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
             if (!b) {
                 KD_BIT(&P->is_rep0_long[st][ps], b);
                 if (!b) {   /* short rep */
-                    if (reps[0] + 1 > pos) goto out;
+                    if (reps[0] >= pos) goto out;   /* reps[0] + 1 wrapped to 0 for 0xFFFFFFFF */
                     out[pos] = out[pos - reps[0] - 1]; pos++; st = st_short(st); continue;
                 }
             } else {
@@ -459,8 +462,8 @@ int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
             }
             KD_LEN(&P->rlen, ps, len); len += 2; st = st_rep(st);
         }
+        if (reps[0] >= pos || len > n - pos) goto out;   /* not dist > pos: reps[0] = 0xFFFFFFFF made dist 0 */
         uint32_t dist = reps[0] + 1;
-        if (dist > pos || len > n - pos) goto out;
         uint8_t *o = out + pos; const uint8_t *s = o - dist;
         if (dist >= 8 && n - pos - len >= 8) { for (uint32_t k = 0; k < len; k += 8) memcpy(o + k, s + k, 8); }
         else for (uint32_t k = 0; k < len; k++) o[k] = s[k];
