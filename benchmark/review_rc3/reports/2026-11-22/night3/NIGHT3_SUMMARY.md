@@ -24,7 +24,7 @@ What it is:
 | gate | result |
 |---|---|
 | Phase E (17 steps) | 17/17 |
-| GitHub CI | 5/5 on 9a830edc; the later commits are re-checked by the PR's CI |
+| GitHub CI | 5/5 on 9a830edc and on f3144860 (the tuned build); the wheels workflow also passes |
 | Round trips | all presets, screening corpus, `-T 1` and `-T 4` |
 | Determinism | 122 frames OK; reference regenerated for the intended encoder changes |
 
@@ -66,6 +66,8 @@ What it is:
 | D17 | Under ratio, float graph blocks are also checked against plain KLZMA (gated by a KLZMA slice) | Accept the +12.7% on bf16 weights |
 | D18 | Took the KLZH2 encoder tuning: −3.6% at level 3 for −12% encode speed | Keep the faster level 3 |
 | D19 | Literal price floor of 1 bit, not 2 | 2 bits (raw video +2.8%) |
+| D20 | Last lead (bf16 parse gap at level 9) given to a time-boxed subagent on the screening bf16 file | Stop for the night |
+| D21 | Its fix is kept on `review/klzh2-bf16-J62kQD`, **not** in PR #12: bf16 −2.85% at levels 8–9 (1.5% below zstd -19), tuning set −0.5%, but bf16 decode 1,730 → 634 MB/s (zstd 884) | Take it into hc (smaller, slower to decode), or use it only for a slower setting |
 | — | The holdout/CI fix: the concurrency test now checks the refusal instead of using dictionaries | — |
 
 ## 4. For you to decide
@@ -75,7 +77,11 @@ What it is:
    - yank 1.0.0 and 1.0.1 only after 0.0.1 is up;
    - next versions 0.1.0, 0.2.0.
    - The README should say plainly that 0.0.1 does not read 1.x files.
-3. **Whether a small separate tool should convert 1.x files.** It would be built from rc4, with the libraries, and would decompress old files so users can recompress them with 0.0.1.
+3. **D21: the bf16 parse fix** (`review/klzh2-bf16-J62kQD`, e06a5e00).
+   - It makes model weights 2.85% smaller under hc.
+   - It decodes them 2.7× slower.
+   - Take it into hc, keep it for a slower setting only, or leave it.
+4. **Whether a small separate tool should convert 1.x files.** It would be built from rc4, with the libraries, and would decompress old files so users can recompress them with 0.0.1.
 
 ## 5. Final holdout re-run (f3144860; balanced, hc, ratio vs rc4; 630 accepted, byte-verified)
 | preset | vs rc4 now | before tonight's tuning | encode | decode |
