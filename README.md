@@ -233,7 +233,7 @@ overnight genetic search of the build-time settings (`tune/ga.py`).
 
 ## Status
 
-0.0.1-rc1, the first release candidate of the renumbered line. The 1.x line (1.0.0 and 1.0.1) used library coders
+0.0.1, the first release of the renumbered line. The 1.x line (1.0.0 and 1.0.1) used library coders
 (zstd, Brotli, LZ4, liblzma); 0.0.1 uses only Kolmo's own and writes container version 12 (`SPEC.md`).
 
 ### Files written by Kolmo 1.x

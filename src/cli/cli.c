@@ -125,7 +125,15 @@ static void mem_error(const uint8_t *hdr, size_t n, int dec, kolmo_mode mode, ui
 }
 #include "cli/train.c"
 
+/* Release label, kept in step with VERSION (RELEASING.md step 1). */
+#ifndef KOLMO_VERSION_STR
+#define KOLMO_VERSION_STR "0.0.1"
+#endif
+
 int main(int argc, char **argv) {
+    if (argc == 2 && (!strcmp(argv[1], "-V") || !strcmp(argv[1], "--version"))) {
+        printf("kolmo %s (container version 12, Kolmo-native codecs)\n", KOLMO_VERSION_STR); return 0;
+    }
     if (argc >= 2 && !strcmp(argv[1], "train")) return kolmo_cli_train(argc - 1, argv + 1);
     if (argc >= 2 && !strcmp(argv[1], "calibrate")) return kolmo_cli_calibrate(argc - 1, argv + 1);
     if (argc == 3 && !strcmp(argv[1], "profile")) { fprintf(stderr, "kolmo profile: %s\n", kolmo_strerror(KOLMO_ERR_UNSUPPORTED)); return 2; }
