@@ -402,8 +402,9 @@ static void *compress_worker(void *arg) {
         int slice_verdict = 0;                        /* max, binary block over 8 MiB: 1 BWT clearly wins, -1 skip BWT */
         if (codec == R_LZMA && !cl && level != 1 && tflag != 8 && tflag != 14 && tflag != 4 && tflag != 5 && inlen > (8u << 20)) {
             /* A slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the outcome
-             * (see below). Where the slice already shows BWT at most 90% of LZMA2, BWT won on the whole block by more
-             * (osdb: slice 0.84, block 0.78) and the full LZMA2 pass, the slowest step of this mode, is skipped. */
+             * (see below). Where the slice already shows BWT at most KOLMO_BWT_SKIP_LZMA_PCT (98%) of LZMA2, BWT won on
+             * the whole block by more (osdb: slice 0.84, block 0.78; akiyo_cif.y4m: slice 0.976, block 0.904) and the
+             * full LZMA2 pass, the slowest step of this mode, is skipped. */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             size_t sn = inlen / 8 < (512u << 10) ? inlen / 8 : (512u << 10), so = ((inlen - sn) / 2) & ~(size_t)63;
             size_t sb = alt ? codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta) : 0, slz = sb ? codec_compress(xp, R_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
