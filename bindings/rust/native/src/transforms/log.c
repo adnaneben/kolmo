@@ -330,7 +330,9 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
     uint32_t *vpos = malloc(4 * 1024);
     uint8_t *keys2 = malloc((size_t)kp + nl + 16); size_t k2 = 0;
     uint32_t *k2off = malloc(4 * ((size_t)nt + 1)), *k2len = malloc(4 * ((size_t)nt + 1));
-    uint8_t *keep = malloc((size_t)nt * 1024 + 1);                    /* per template and placeholder: 1 = column */
+    /* per template and placeholder: 1 = column. Indexed like tfl (tfo[t] + q: a template's placeholder flags are
+     * contiguous, one per variable token of its key), so fp bytes instead of 1 KiB per template */
+    uint8_t *keep = malloc(fp + 1);
     if (!tk || !vpos || !keys2 || !k2off || !k2len || !keep) { free(vpos); free(keys2); free(k2off); free(k2len); free(keep); goto done; }
 #define LOG_TOK(i, q) do { uint32_t l_ = rows[rstart[tt] + (i)]; const uint8_t *p_ = in + lstart[l_]; uint32_t len_ = lstart[l_ + 1] - lstart[l_] - 1; \
         uint32_t nt_ = (l_ + 1 < L ? tokb[l_ + 1] : (uint32_t)ntok) - tokb[l_], tix_ = vpos[q] < nt_ ? vpos[q] : nt_ - 1; \
@@ -349,7 +351,7 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
         for (uint32_t i = 0; i < kl; i++) {
             if (k[i] != 1) { keys2[k2++] = k[i]; continue; }
             int same = tfl[tfo[t] + q]; LOG_TOK(0, q); tok_t t0 = tk[0];     /* flag from the first pass */
-            keep[(size_t)t * 1024 + q] = (uint8_t)!same;
+            keep[(size_t)tfo[t] + q] = (uint8_t)!same;
             if (same) { memcpy(keys2 + k2, t0.p, t0.len); k2 += t0.len; } else keys2[k2++] = 1;
             q++;
         }
@@ -382,7 +384,7 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
         /* the template's kept columns, in placeholder order. Rows are read once per group of columns (row-major, at
          * most 64 MiB of token refs) instead of once per column; the columns and their order are unchanged. */
         uint32_t kq[1024], nk = 0;
-        for (uint32_t q = 0; q < np; q++) if (keep[(size_t)t * 1024 + q]) kq[nk++] = q;
+        for (uint32_t q = 0; q < np; q++) if (keep[(size_t)tfo[t] + q]) kq[nk++] = q;
         if (!nk) continue;
         uint32_t G = (uint32_t)((64u << 20) / (sizeof(tok_t) * (size_t)m)); if (G < 1) G = 1; if (G > nk) G = nk;
         if ((size_t)G * m > tkg_cap) { free(tkg); tkg_cap = (size_t)G * m; tkg = malloc(sizeof(tok_t) * tkg_cap); if (!tkg) tkg_cap = 0; }
@@ -455,8 +457,11 @@ static int log_decode(const uint8_t *in, size_t tn, uint8_t *out, size_t n) {
     }
     if (d != de) goto done;
     colbase[T + 1] = ncols;
-    /* columns */
+    /* columns: each takes at least 5 bytes below (type 0: type + size; type 1: type, g, 2 prefixes, a pad and a
+     * width), so the count is bounded by the bytes left before the per-column arrays are allocated */
+    if ((uint64_t)ncols * 5 > (uint64_t)(end - p)) goto done;
     cols = calloc((size_t)ncols + 1, sizeof(lcol_t));
+    if (!cols) goto done;
     size_t totv = 0;
     { uint32_t c = 0;
       for (uint32_t t = 1; t <= T; t++) for (uint32_t q = colbase[t]; q < colbase[t + 1]; q++, c++) {

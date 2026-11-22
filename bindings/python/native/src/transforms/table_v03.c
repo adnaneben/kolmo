@@ -107,7 +107,8 @@ typedef struct { int type; uint32_t cnt, nnum, nexc, nlong; int S, w;
 static int tbl_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out, int64_t n) {
     if (tn < 16) return -1;
     uint32_t h[4]; memcpy(h, in, 16); int k = h[0]; int64_t nr = h[1], nexc = h[2], noNL = h[3];
-    if (k < 1 || k > 256 || 16 + 8 * nexc > tn) return -1;
+    /* every row but the last ends in a newline, so nr <= n + 1; checked before the 9 * nr bytes of row arrays */
+    if (k < 1 || k > 256 || 16 + 8 * nexc > tn || nr > n + 1 || nexc > nr) return -1;
     const uint8_t *exc = in + 16, *p = in + 16 + 8 * nexc, *end = in + tn;
     Col C[256];
     for (int j = 0; j < k; j++) {
@@ -130,6 +131,8 @@ static int tbl_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *out
         }
         p = qe;
     }
+    /* each row takes a field of column 0 (a row has 1..k fields), so a row count above it cannot decode */
+    if (nr > (int64_t)C[0].cnt) return -1;
     /* numeric columns decoded column-at-a-time (sequential plane reads), mantissas ready for formatting */
     size_t totnum = 0; for (int j = 0; j < k; j++) if (C[j].type == 1) totnum += C[j].nnum;
     int64_t *vals = malloc(8 * (totnum + 1)), *vp = vals;

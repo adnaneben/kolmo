@@ -180,8 +180,12 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
     if (tot > cn - i) return -1;
     L[3] = cn - i - tot;
     const uint8_t *ie = in + cn; kh_br r[4]; size_t seg = (n + 3) / 4; uint8_t *o[4], *oe[4];
-    for (int q = 0, st = (int)i; q < 4; q++) {
-        r[q].b = 0; r[q].c = 0; r[q].s = r[q].p = in + st; st += (int)L[q];
+    /* a stream codes at most seg symbols of at most KHUF_MAXLEN bits, and the end check below needs its last byte
+     * used, so a longer stream is corrupt; offsets in size_t (a coded length of 2^31 or more wrapped an int) */
+    for (int q = 0; q < 4; q++) if (L[q] > (uint64_t)seg * KHUF_MAXLEN / 8 + 2) return -1;
+    size_t st = i;
+    for (int q = 0; q < 4; q++) {
+        r[q].b = 0; r[q].c = 0; r[q].s = r[q].p = in + st; st += (size_t)L[q];
         size_t a = (size_t)q * seg < n ? (size_t)q * seg : n, b = a + seg < n ? a + seg : n;
         o[q] = out + a; oe[q] = out + b;
     }
