@@ -154,6 +154,7 @@ static size_t kz_parse_dfast(const uint8_t *in, size_t n, int hl, int hs, int sk
     }
     free(tl); free(ts); *anchor_out = anchor; *err = 0; return ns;
 }
+static inline uint32_t kz_h6(const uint8_t *p, int lg) { return (uint32_t)(((kz_r64(p) << 16) * 0xCF1BBCDCB7A56463ull) >> (64 - lg)); }
 static inline void kz_mtf(uint32_t r[3], uint32_t off) {   /* the KLZH repeat offsets' move to front */
     if (off == r[0]) return;
     if (off != r[1]) r[2] = r[1];
@@ -611,25 +612,100 @@ size_t kolmo_klzh_bound(size_t n) { return n + n / 64 + 1024; }
 #ifndef KZ_RANS_PCT
 #define KZ_RANS_PCT 97   /* KLZH2: rANS only when it is below this % of the khuf size (it decodes about 2x slower per symbol) */
 #endif
+/* ---------------- KLZH2 level 0: the fast parse ----------------
+ * Encoder only (the format of every KLZH2 level). One hash table of 2^KZ_FAST_LG entries (fewer for short blocks) on
+ * 6-byte keys, one candidate per position, greedy, no lazy step; at each step the last offset is tried one byte ahead,
+ * then the candidates of the position and of the next one; on a miss the step (2) grows by one every 2^KZ_FAST_SKIP
+ * literals of the current run; the start and the end of each match inserted. The
+ * sequences go straight into the streams (no sequence array, no second pass), with the same chunk cuts as
+ * kz_klzh_enc's loop; rANS is tried on the literal-length codes only. */
+#ifndef KZ_FAST_LG
+#define KZ_FAST_LG 15
+#endif
+#ifndef KZ_FAST_SKIP
+#define KZ_FAST_SKIP 6
+#endif
+typedef struct { uint8_t *lit, *llc, *mlc, *ofc; size_t nl, ns; uint32_t rep[3]; size_t *sgl, *sgs, nseg; kz_bw w; } kz_sq;
+/* one sequence: literals in[anchor..start), then ml bytes at off; the streams as kz_klzh_enc's loop writes them */
+static inline int kz_sq_put(kz_sq *E, const uint8_t *in, size_t n, size_t anchor, size_t start, uint32_t ml, uint32_t off) {
+    const size_t ll = start - anchor, pe = start + ml, nl = E->nl, k = E->ns;
+    for (; E->nseg < KZ_MAXSEG && E->nseg * KZ_SEG < pe; E->nseg++) {
+        const size_t B = E->nseg * KZ_SEG;
+        if (B <= anchor) { E->sgl[E->nseg] = nl; E->sgs[E->nseg] = k; }
+        else if (B < start) { E->sgl[E->nseg] = nl + (B - anchor); E->sgs[E->nseg] = k; }
+        else { E->sgl[E->nseg] = nl + ll; E->sgs[E->nseg] = k + 1; }
+    }
+    uint8_t *d = E->lit + nl; const uint8_t *s = in + anchor;
+    if (anchor + ll + 16 <= n) { size_t i = 0; do { memcpy(d + i, s + i, 16); i += 16; } while (i < ll); }   /* lit: 32 bytes of slack */
+    else memcpy(d, s, ll);
+    uint32_t ex; int nb;
+    E->llc[k] = (uint8_t)kz_lcode((uint32_t)ll, &ex, &nb); if (kz_bput(&E->w, ex, nb)) return -1;
+    E->mlc[k] = (uint8_t)kz_lcode(ml - 3, &ex, &nb); if (kz_bput(&E->w, ex, nb)) return -1;
+    uint32_t *r = E->rep;
+    if (off == r[0]) E->ofc[k] = 0;
+    else if (off == r[1]) { E->ofc[k] = 1; r[1] = r[0]; r[0] = off; }
+    else if (off == r[2]) { E->ofc[k] = 2; r[2] = r[1]; r[1] = r[0]; r[0] = off; }
+    else { int h = kz_hb(off); E->ofc[k] = (uint8_t)(3 + h); if (kz_bput(&E->w, off - (1u << h), h)) return -1; r[2] = r[1]; r[1] = r[0]; r[0] = off; }
+    E->nl = nl + ll; E->ns = k + 1; return 0;
+}
+static int kz_fast_seqs(const uint8_t *in, size_t n, int lg, int skip, kz_sq *E0) {
+    uint32_t *t = calloc((size_t)1 << lg, 4);
+    if (!t) return -1;
+    kz_sq L = *E0, *const E = &L;   /* a local copy: the byte stores into the streams cannot alias it */
+    const uint8_t *ie = in + n; size_t pos = 1, anchor = 0; uint32_t rep0 = 1; int rc = 0;
+    while (pos + 9 <= n) {   /* every position in t is below pos (it starts at 0, and pos only grows) */
+        size_t ml, start; uint32_t off;
+        const uint32_t h = kz_h6(in + pos, lg), c = t[h]; t[h] = (uint32_t)pos;
+        const uint32_t v1 = kz_r32(in + pos + 1);
+        if (pos + 1 >= rep0 && kz_r32(in + pos + 1 - rep0) == v1) {   /* the last offset, one byte ahead */
+            start = pos + 1; off = rep0; ml = 4 + kz_count(in + start + 4, in + start + 4 - off, ie);
+        } else if (pos - c <= KLZ_WINDOW && kz_r32(in + c) == kz_r32(in + pos)) {
+            start = pos; off = (uint32_t)(pos - c); ml = 4 + kz_count(in + pos + 4, in + c + 4, ie);
+        } else if (pos + 10 <= n) {   /* the next position too, before the step (+3-6% speed, same size) */
+            const uint32_t h1 = kz_h6(in + pos + 1, lg), c1 = t[h1]; t[h1] = (uint32_t)pos + 1;
+            if (pos + 1 - c1 <= KLZ_WINDOW && kz_r32(in + c1) == v1) { start = pos + 1; off = (uint32_t)(pos + 1 - c1); ml = 4 + kz_count(in + start + 4, in + c1 + 4, ie); }
+            else { pos += 2 + ((pos - anchor) >> skip); continue; }
+        } else { pos += 1 + ((pos - anchor) >> skip); continue; }
+        while (start > anchor && start > off && in[start - 1] == in[start - 1 - off]) { start--; ml++; }
+        if (kz_sq_put(E, in, n, anchor, start, (uint32_t)ml, off)) { rc = -1; break; }
+        rep0 = off; pos = start + ml; anchor = pos;
+        if (pos + 9 <= n) { t[kz_h6(in + start + 2, lg)] = (uint32_t)(start + 2); t[kz_h6(in + pos - 2, lg)] = (uint32_t)(pos - 2); }
+    }
+    free(t);
+    if (rc) return rc;
+    for (; E->nseg < KZ_MAXSEG && E->nseg * KZ_SEG < n; E->nseg++) { E->sgl[E->nseg] = E->nl + (E->nseg * KZ_SEG - anchor); E->sgs[E->nseg] = E->ns; }
+    memcpy(E->lit + E->nl, in + anchor, n - anchor); E->nl += n - anchor;
+    *E0 = L; return 0;
+}
 static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int v2) {
     if (n < 16 || n >= 0xFFFFFFF0u || cap < 64) return 0;
-    if (level < 1) level = 1;
+    if (level < (v2 ? 0 : 1)) level = v2 ? 0 : 1;   /* KLZH2 level 0: the fast parse (kz_fast_seqs) */
     if (level > 9) level = 9;
-    kz_seq *S = malloc((n / (v2 ? 3 : 4) + 2) * sizeof *S); size_t anchor; int err;
+    kz_seq *S = NULL; uint8_t *lit = NULL, *cd = NULL, *xb = NULL, *tmp = NULL, *trial = NULL, *llc, *mlc, *ofc; size_t r = 0, ns = 0, nl = 0;
+    kz_bw w; size_t sgl[KZ_MAXSEG + 1], sgs[KZ_MAXSEG + 1], nseg = 0;   /* KLZH2: literal and sequence counts at each KZ_SEG of input */
+    if (v2 && level == 0) {   /* the fast parse writes the streams itself (at most n / 4 + 1 sequences: matches of 4 bytes or more) */
+        const size_t c1 = n / 4 + 2, xcap = c1 * 12 + 64;
+        lit = malloc(n + 32); cd = malloc(3 * c1); xb = malloc(xcap); tmp = malloc(kolmo_khuf_bound(n) + 64);
+        if (!lit || !cd || !xb || !tmp) goto out;
+        llc = cd; mlc = cd + c1; ofc = cd + 2 * c1; w = (kz_bw){0, 0, xb, xb + xcap};
+        int lg = 12; while (lg < KZ_FAST_LG && ((size_t)1 << lg) < n) lg++;
+        kz_sq E = {lit, llc, mlc, ofc, 0, 0, {1, 4, 8}, sgl, sgs, 0, w};
+        if (kz_fast_seqs(in, n, lg, KZ_FAST_SKIP, &E)) goto out;
+        ns = E.ns; nl = E.nl; nseg = E.nseg; w = E.w;
+    } else {
+    S = malloc((n / (v2 ? 3 : 4) + 2) * sizeof *S); size_t anchor; int err;
     if (!S) return 0;
     const kz_par *LV = &KLZH_LV[level]; const uint32_t mmin = v2 ? 3 : 4;
     ko_par KO9 = KO_LV[level]; if (v2 && level == 9) KO9.nice = 1024;   /* KLZH2: owid_energy_f64.npy -0.4%, 4% slower */
     int lg3 = 12; while (lg3 < 20 && ((size_t)1 << lg3) < n) lg3++;   /* KLZH2 level 3: about one slot per position */
-    size_t ns = level == 3 && v2 ? kz_parse_dfast3(in, n, lg3, 9, S, &anchor, &err)
+    ns = level == 3 && v2 ? kz_parse_dfast3(in, n, lg3, 9, S, &anchor, &err)
               : level <= 3 ? kz_parse_dfast(in, n, LV->hlog, LV->clog, LV->skip, 4, S, &anchor, &err)
               : level >= 7 ? ko_parse(in, n, &KO9, v2, S, &anchor, &err)
               : level >= 5 ? kz_parse_lazy(in, n, LV, kz_minm(in, n, LV, S), S, &anchor, &err) : kz_parse(in, n, LV, S, &anchor, &err);
-    uint8_t *lit = malloc(n + 16), *cd = malloc(3 * (ns + 1)), *xb = malloc(ns * 12 + 64), *tmp = malloc(kolmo_khuf_bound(n) + 64), *trial = NULL;
-    size_t r = 0;
+    lit = malloc(n + 16); cd = malloc(3 * (ns + 1)); xb = malloc(ns * 12 + 64); tmp = malloc(kolmo_khuf_bound(n) + 64);
     if (err || !lit || !cd || !xb || !tmp) goto out;
-    uint8_t *llc = cd, *mlc = cd + ns, *ofc = cd + 2 * ns; size_t nl = 0; const uint8_t *ip = in;
-    uint32_t rep[3] = {1, 4, 8}; kz_bw w = {0, 0, xb, xb + ns * 12 + 64};
-    size_t sgl[KZ_MAXSEG + 1], sgs[KZ_MAXSEG + 1], nseg = 0;   /* KLZH2: literal and sequence counts at each KZ_SEG of input */
+    llc = cd; mlc = cd + ns; ofc = cd + 2 * ns; const uint8_t *ip = in;
+    uint32_t rep[3] = {1, 4, 8}; w = (kz_bw){0, 0, xb, xb + ns * 12 + 64};
     for (size_t k = 0; k < ns; k++) {
         uint32_t ex; int nb;
         if (v2) {   /* the literal stream is cut at the input position itself, the code streams at the next sequence */
@@ -652,6 +728,7 @@ static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
     }
     for (; v2 && nseg < KZ_MAXSEG && nseg * KZ_SEG < n; nseg++) { sgl[nseg] = nl + (nseg * KZ_SEG - anchor); sgs[nseg] = ns; }
     memcpy(lit + nl, ip, n - anchor); nl += n - anchor;
+    }
     if (w.p + 8 > w.e) goto out;
     kz_w64(w.p, w.b); w.p += (w.c + 7) >> 3;
     size_t o = kz_put_uv(out, ns); o += kz_put_uv(out + o, nl);
@@ -682,7 +759,8 @@ static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
         if (!z && sn[q]) z = kolmo_khuf_compress_chunks(st[q], sn[q], tmp, kolmo_khuf_bound(n) + 64);
         if (sn[q] && !z) goto out;
         uint8_t mode = 0; const uint8_t *src = tmp;
-        if (v2 && q && sn[q] && kolmo_krans_bound(sn[q]) <= kolmo_khuf_bound(n) + 64) {   /* KLZH2: rANS where it is smaller */
+        if (v2 && q && (q == 1 || level) && sn[q] && kolmo_krans_bound(sn[q]) <= kolmo_khuf_bound(n) + 64) {   /* KLZH2: rANS where it is smaller
+                                                                                    (level 0: the literal-length codes only) */
             uint8_t *t2 = malloc(kolmo_krans_bound(sn[q])); if (!t2) goto out;
             size_t z2 = kolmo_krans_compress_lim(st[q], sn[q], t2, kolmo_krans_bound(sn[q]), (size_t)((uint64_t)z * KZ_RANS_PCT / 100));
             if (z2 && (uint64_t)z2 * 100 < (uint64_t)z * KZ_RANS_PCT) { memcpy(tmp, t2, z2); z = z2; mode = 1; }

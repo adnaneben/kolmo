@@ -114,7 +114,7 @@ int64_t kolmo_decode_memory(const uint8_t *src, size_t n) {
  * bindings read nothing else. Changing a row changes the output of that level (benchmark/determinism/expected.sha256). */
 static const struct { kolmo_mode mode; int level; int transforms; } kolmo_level_table[KOLMO_LEVEL_ULTRA + 1] = {
     [1]  = {KOLMO_RT,    0,  3},   /* fastest: KLZ, minimal analysis (0.0.x CLI "-m speed", exactly) */
-    [2]  = {KOLMO_FAST,  1,  3},   /* KLZH2 1 (zstd-scale 1), minimal analysis; screening 3.295, 326 / 835 MiB/s */
+    [2]  = {KOLMO_FAST, -1,  3},   /* fast KLZH2 parse (KLZH2 level 0), minimal analysis; screening 3.211, 433 / 835 MiB/s (KLZH2 1 was 3.295, 328) */
     [3]  = {KOLMO_FAST,  0,  1},   /* light, the default: KLZH2 3 with full analysis (0.0.x "balanced") */
     [4]  = {KOLMO_HC,    6,  1},   /* KLZH2 5 (zstd-scale 6) with hc's planning: smaller and faster than fast -l 6; 4.136, 67 / 713 */
     [5]  = {KOLMO_ECO,   0,  1},   /* balanced: KLZH2 7 (0.0.x "eco") */
