@@ -19,11 +19,13 @@ static int kh_get_uv(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
     return -1;
 }
 
-static void kh_hist(const uint8_t *p, size_t n, uint32_t c[256]) {
-    uint32_t h[4][256]; memset(h, 0, sizeof h); size_t i = 0;
-    for (; i + 4 <= n; i += 4) { h[0][p[i]]++; h[1][p[i + 1]]++; h[2][p[i + 2]]++; h[3][p[i + 3]]++; }
-    for (; i < n; i++) h[0][p[i]]++;
-    for (int s = 0; s < 256; s++) c[s] = h[0][s] + h[1][s] + h[2][s] + h[3][s];
+/* histograms of the four quarters [min(n, q * seg), min(n, (q + 1) * seg)) (the four streams), counted side by side */
+static void kh_hist4(const uint8_t *p, size_t n, size_t seg, uint32_t h[4][256]) {
+    memset(h, 0, 4 * 256 * sizeof(uint32_t));
+    size_t m[4]; for (int q = 0; q < 4; q++) { size_t a = (size_t)q * seg < n ? (size_t)q * seg : n, e = a + seg < n ? a + seg : n; m[q] = e - a; }
+    const uint8_t *p1 = p + seg, *p2 = p + 2 * seg, *p3 = p + 3 * seg; size_t i = 0;
+    for (; i < m[3]; i++) { h[0][p[i]]++; h[1][p1[i]]++; h[2][p2[i]]++; h[3][p3[i]]++; }   /* m[3] <= m[2] <= m[1] <= m[0] */
+    for (int q = 0; q < 3; q++) for (size_t k = i; k < m[q]; k++) h[q][p[(size_t)q * seg + k]]++;
 }
 
 /* ---- code lengths ---- */
@@ -124,36 +126,58 @@ static int kh_read_table(const uint8_t *p, size_t n, size_t *i, uint8_t len[256]
 }
 
 /* ---- encoder ---- */
-/* ce[s] = code | length << 16. kolmo_khuf_compress checks once that all four streams fit, so the loop has no bounds
+/* ce[s] = code | length << 16. kolmo_khuf_compress checks once that all four streams fit, so the loops have no bounds
  * test. */
-#define KH_PUT(S) do { uint32_t e_ = ce[S]; b |= (uint64_t)(e_ & 0xFFFF) << c; c += (int)(e_ >> 16); } while (0)
-#define KH_FLUSH() do { kh_wr64(p, b); p += c >> 3; b >>= c & ~7; c &= 7; } while (0)
-static size_t kh_stream(const uint8_t *s, size_t m, const uint32_t ce[256], uint8_t *o) {
-    uint64_t b = 0; int c = 0; uint8_t *p = o; size_t i = 0;
-    for (; i + 4 <= m; i += 4) { KH_PUT(s[i]); KH_PUT(s[i + 1]); KH_PUT(s[i + 2]); KH_PUT(s[i + 3]); KH_FLUSH(); }
-    for (; i < m; i++) { KH_PUT(s[i]); KH_FLUSH(); }
-    if (c) { kh_wr64(p, b); p++; }
-    return (size_t)(p - o);
-}
+/* The four streams, interleaved (four independent bit buffers per loop iteration), each written in place at its final
+ * position: the stream lengths are known beforehand from the quarter histograms (a stream of b bits takes ceil(b / 8)
+ * bytes). A store writes 8 bytes at the stream's pointer; while 72 or more symbols of a stream remain (72 bits or
+ * more) the store stays inside the stream. The last symbols of each stream are coded afterwards, stream 3 first: the
+ * store past the end of stream q lands on bytes already final, which are saved and put back. */
+typedef struct { uint64_t b; int c; uint8_t *p; } kh_bw;
+#define KH_PUT4(W, S) do { uint32_t e_ = ce[S]; (W).b |= (uint64_t)(e_ & 0xFFFF) << (W).c; (W).c += (int)(e_ >> 16); } while (0)
+#define KH_FLUSH4(W) do { kh_wr64((W).p, (W).b); (W).p += (W).c >> 3; (W).b >>= (W).c & ~7; (W).c &= 7; } while (0)
 size_t kolmo_khuf_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     if (n < 2 || n > KHUF_BLOCK_MAX || cap < n + 600) return 0;
-    uint32_t cnt[256]; uint8_t len[256]; uint16_t code[256];
-    kh_hist(in, n, cnt);
+    uint32_t hq[4][256], cnt[256]; uint8_t len[256]; uint16_t code[256];
+    const size_t seg = (n + 3) / 4;
+    kh_hist4(in, n, seg, hq);
+    for (int s = 0; s < 256; s++) cnt[s] = hq[0][s] + hq[1][s] + hq[2][s] + hq[3][s];
     int m = kolmo_khuf_lengths(cnt, 256, KHUF_MAXLEN, len);
     if (m < 2 || kh_codes(len, 256, code) < 0) return 0;
-    uint64_t bits = 0; for (int s = 0; s < 256; s++) bits += (uint64_t)cnt[s] * len[s];
+    uint64_t bits = 0, bq[4] = {0, 0, 0, 0};
+    for (int s = 0; s < 256; s++) if (len[s]) for (int q = 0; q < 4; q++) bq[q] += (uint64_t)hq[q][s] * len[s];
+    bits = bq[0] + bq[1] + bq[2] + bq[3];
     if (bits / 8 + 16 >= n) return 0;
     uint32_t ce[256]; for (int s = 0; s < 256; s++) ce[s] = len[s] ? (uint32_t)code[s] | (uint32_t)len[s] << 16 : 0;
-    size_t h = kh_write_table(len, out), seg = (n + 3) / 4, q0 = h + 3 * 5, o = q0, sl[4];
-    if (cap - q0 < bits / 8 + 64) return 0;   /* the four streams take at most bits / 8 + 4 bytes, the stores 8 more */
+    size_t sl[4], o = kh_write_table(len, out);
+    for (int q = 0; q < 4; q++) sl[q] = (size_t)((bq[q] + 7) / 8);
+    if (cap - o < 3 * 5 + bits / 8 + 64) return 0;   /* the four streams take at most bits / 8 + 4 bytes, the stores 8 more */
+    for (int q = 0; q < 3; q++) o += kh_put_uv(out + o, sl[q]);
+    size_t a[4], e[4]; kh_bw w[4]; uint8_t *qe[4];
     for (int q = 0; q < 4; q++) {
-        size_t a = (size_t)q * seg < n ? (size_t)q * seg : n, b = a + seg < n ? a + seg : n;
-        sl[q] = kh_stream(in + a, b - a, ce, out + o);
-        o += sl[q];
+        a[q] = (size_t)q * seg < n ? (size_t)q * seg : n; e[q] = a[q] + seg < n ? a[q] + seg : n;
+        w[q].b = 0; w[q].c = 0; w[q].p = out + o; o += sl[q]; qe[q] = out + o;
     }
-    size_t hp = h; for (int q = 0; q < 3; q++) hp += kh_put_uv(out + hp, sl[q]);
-    memmove(out + hp, out + q0, o - q0);
-    o = hp + (o - q0);
+    size_t i = 0;
+    if (e[3] - a[3] >= 72) {   /* every stream has 72 symbols or more (stream 3 is the shortest) */
+        const uint8_t *s0 = in + a[0], *s1 = in + a[1], *s2 = in + a[2], *s3 = in + a[3];
+        for (const size_t lim = e[3] - a[3] - 72; i + 4 <= lim; i += 4) {
+            KH_PUT4(w[0], s0[i]); KH_PUT4(w[1], s1[i]); KH_PUT4(w[2], s2[i]); KH_PUT4(w[3], s3[i]);
+            KH_PUT4(w[0], s0[i + 1]); KH_PUT4(w[1], s1[i + 1]); KH_PUT4(w[2], s2[i + 1]); KH_PUT4(w[3], s3[i + 1]);
+            KH_PUT4(w[0], s0[i + 2]); KH_PUT4(w[1], s1[i + 2]); KH_PUT4(w[2], s2[i + 2]); KH_PUT4(w[3], s3[i + 2]);
+            KH_PUT4(w[0], s0[i + 3]); KH_PUT4(w[1], s1[i + 3]); KH_PUT4(w[2], s2[i + 3]); KH_PUT4(w[3], s3[i + 3]);
+            KH_FLUSH4(w[0]); KH_FLUSH4(w[1]); KH_FLUSH4(w[2]); KH_FLUSH4(w[3]);
+        }
+    }
+    for (int q = 3; q >= 0; q--) {   /* the rest of each stream, the last first */
+        uint8_t keep[8]; memcpy(keep, qe[q], 8);   /* inside cap: o + 8 <= cap (checked above) */
+        size_t k = a[q] + i;
+        for (; k + 4 <= e[q]; k += 4) { KH_PUT4(w[q], in[k]); KH_PUT4(w[q], in[k + 1]); KH_PUT4(w[q], in[k + 2]); KH_PUT4(w[q], in[k + 3]); KH_FLUSH4(w[q]); }
+        for (; k < e[q]; k++) { KH_PUT4(w[q], in[k]); KH_FLUSH4(w[q]); }
+        if (w[q].c) { kh_wr64(w[q].p, w[q].b); w[q].p++; }
+        if (w[q].p != qe[q]) return 0;   /* cannot happen: the length from the histogram is exact */
+        memcpy(qe[q], keep, 8);
+    }
     return o < n ? o : 0;
 }
 
@@ -223,17 +247,23 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
 
 /* ---- chunked framing (codec 27) ---- */
 size_t kolmo_khuf_bound(size_t n) { return n + n / KHUF_BLOCK_MAX * 8 + 16; }
+/* Each chunk is coded in place, 3 bytes past its header (room for the coded length, under 2^21), and moved down by
+ * the bytes the length does not take; through a scratch buffer only when out has no room for that. */
 size_t kolmo_khuf_compress_chunks(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
-    size_t o = 0; uint8_t *tmp = malloc(KHUF_BLOCK_MAX + 1024); if (!tmp) return 0;
+    size_t o = 0; uint8_t *tmp = NULL;
     for (size_t i = 0; i < n;) {
         size_t m = n - i < KHUF_BLOCK_MAX ? n - i : KHUF_BLOCK_MAX;
         if (cap - o < m + 16) { free(tmp); return 0; }
         uint8_t *h = out + o; size_t hp = 1 + kh_put_uv(h + 1, m);
         int one = 1; for (size_t k = 1; k < m; k++) if (in[i + k] != in[i]) { one = 0; break; }
-        size_t z = one ? 0 : kolmo_khuf_compress(in + i, m, tmp, KHUF_BLOCK_MAX + 1024);
+        size_t z = 0; uint8_t *zp = NULL;
+        if (!one) {
+            if (cap - o - hp - 3 >= m + 600) { zp = h + hp + 3; z = kolmo_khuf_compress(in + i, m, zp, cap - o - hp - 3); }
+            else { if (!tmp && !(tmp = malloc(KHUF_BLOCK_MAX + 1024))) return 0; zp = tmp; z = kolmo_khuf_compress(in + i, m, tmp, KHUF_BLOCK_MAX + 1024); }
+        }
         if (one) { h[0] = 1; h[hp] = in[i]; o += hp + 1; }
         else if (!z || z + 4 >= m) { h[0] = 0; memcpy(h + hp, in + i, m); o += hp + m; }
-        else { if (cap - o < hp + 10 + z) { free(tmp); return 0; } h[0] = 2; hp += kh_put_uv(h + hp, z); memcpy(h + hp, tmp, z); o += hp + z; }
+        else { if (cap - o < hp + 10 + z) { free(tmp); return 0; } h[0] = 2; hp += kh_put_uv(h + hp, z); memmove(h + hp, zp, z); o += hp + z; }
         i += m;
     }
     free(tmp); return o;
