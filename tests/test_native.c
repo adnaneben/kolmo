@@ -166,6 +166,23 @@ static void test_klzh2_format(int big) {
         for (int lv = 1; lv <= 9; lv++) klzhv_rt(in, n, lv, 1);
         free(in);
     }
+    /* khuf chunks cut at 64 KiB x 2^j of input, the literal stream inside literal runs: 1.3 MB of random runs (one
+     * across five 64 KiB edges) between records that repeat at three alternating offsets */
+    {
+        const size_t n = 1300000; uint8_t *in = malloc(n); size_t p = 0;
+        while (p < n) {
+            size_t run = p < 400000 && p + 330000 > 400000 ? 330000 : rnd() % 3000;
+            for (size_t i = 0; i < run && p < n; i++) in[p++] = (uint8_t)rnd();
+            for (size_t r = 0, nr = rnd() % 200; r < nr && p + 24 <= n; r++) {
+                static const size_t O[3] = {24, 240, 2400}; const size_t o = O[rnd() % 3];
+                if (p >= o) memcpy(in + p, in + p - o, 20); else memset(in + p, 7, 20);
+                for (int i = 20; i < 24; i++) in[p + i] = (uint8_t)rnd();
+                p += 24;
+            }
+        }
+        for (int lv = 1; lv <= 9; lv++) CHECK(klzhv_rt(in, n, lv, 1) < n - n / 8, "klzh2 level %d: records at three offsets do not shrink", lv);
+        free(in);
+    }
     if (!big) return;
     const size_t D = (1u << 25) + 3, L = 1u << 16, n = D + L + 64; uint8_t *a = malloc(n);
     for (size_t i = 0; i < n; i++) a[i] = (uint8_t)("abcdefghijklmnop"[rnd() & 15]);
