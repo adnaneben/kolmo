@@ -22,11 +22,12 @@ cores. Apache-2.0.
 Every coder is Kolmo's own (KLZ, KLZH2, KLZMA, khuf, BWT, context mixing): no third-party codec
 library is built, bundled or needed.
 
-**From 1.x:** 0.0.1 writes container version 12 and cannot read files written by kolmoc 1.0.x
+**From 1.x:** since 0.0.1, kolmoc writes container version 12 and cannot read files written by kolmoc 1.0.x
 (`decompress` raises `ValueError`: "written by an earlier Kolmo (1.x or a release candidate)…"; it
 never returns wrong data).
-Dictionaries and trained profiles are removed. `pip install -U` does not move from 1.0.1 to
-0.0.1; install it with `pip install kolmoc==0.0.1`.
+Dictionaries and trained profiles are removed. `pip install -U` does not move from 1.0.1 to the
+0.0.x line; use `pip install "kolmoc<1"`. To convert old files, see "Files written by Kolmo 1.x" in the
+[project README](https://github.com/adnaneben/kolmo#files-written-by-kolmo-1x).
 
 Prebuilt wheels cover Linux (x86-64 and aarch64) and Apple silicon Macs running macOS 11 or
 later. Other platforms, Intel Macs included, build the sdist, which needs a C compiler and takes

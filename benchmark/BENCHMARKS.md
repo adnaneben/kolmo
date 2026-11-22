@@ -1,5 +1,10 @@
 # kolmo benchmarks
 
+> **These are figures of the 1.x line**, measured with its library coders (zstd, Brotli, LZ4, liblzma) and with rivals
+> built from the vendored sources that 0.0.1 removed. They do not describe 0.0.x. The current figures (Kolmo's own
+> coders, 21 held-out files, Apple M5, one thread) are in the README's Results section. `benchmark/bench.sh` now runs
+> kolmo's modes only; measure rivals with their own command-line tools.
+
 All competitors are built from the **same vendored sources** (`vendor/`) with the **same
 compiler and flags** as kolmo, so this is apples-to-apples — not a comparison against
 whatever system packages are installed. Every output is decompressed and compared

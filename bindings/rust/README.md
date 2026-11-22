@@ -19,10 +19,10 @@ Modes: `Mode::SPEED` (fastest), `Mode::BALANCED` (the usual choice), `Mode::RATI
 practical speed). The underlying settings are `Rt` · `Fast` · `Eco` · `Hc` · `Max` · `Ultra`
 (context-mixing archive tier).
 
-**From 1.x:** 0.0.1 writes container version 12 and cannot read blobs written by kolmo 1.0.x
+**From 1.x:** since 0.0.1, kolmo writes container version 12 and cannot read blobs written by kolmo 1.0.x
 (they fail with code -13, `KOLMO_ERR_LEGACY`; never wrong data). Dictionaries and trained
-profiles are removed. A dependency written as `kolmo = "1"` will not resolve to 0.0.1; use
-`kolmo = "0.0.1"`. The `no-lzma` feature no longer exists.
+profiles are removed. A dependency written as `kolmo = "1"` will not resolve to the 0.0.x line; switch
+it to the current version with `cargo remove kolmo && cargo add kolmo`. The `no-lzma` feature no longer exists.
 
 For the command-line tool, use `brew install adnaneben/kolmo/kolmo`. The Python package is
 `pip install kolmoc`.

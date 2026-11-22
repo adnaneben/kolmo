@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.0.2 (2026-11-22)
+
+Documentation release: the code and the output are the same as 0.0.1. 0.0.1's PyPI and crates.io pages still described
+1.x (a bundled liblzma, `KOLMO_NO_LZMA`, the `no-lzma` feature, "from 1.0.1"), and those pages cannot be changed after
+publishing.
+
+- Package READMEs (PyPI, crates.io) rewritten for the Kolmo-native line; `zstd` removed from the PyPI keywords.
+- README: results re-stated for 0.0.x (21 held-out files, Apple M5, one thread; the 1.x tables are in
+  `benchmark/BENCHMARKS.md`, marked as 1.x); build, install, status and layout sections corrected; a tested recipe to
+  convert 1.x files.
+- SPEC: the decode working set listed per native codec. Design notes written before 0.0.1 carry a banner mapping the
+  old coder names to the native ones.
+- New CI check, `tests/check_release_docs.py`: release-facing files must not describe removed libraries, switches or
+  1.x versions as current, and every version label must match `VERSION`.
+
 ## 0.0.1 (2026-11-22)
 
 First release of the renumbered, Kolmo-native line; supersedes 1.0.x. Same code and output as 0.0.1-rc1 below, plus:

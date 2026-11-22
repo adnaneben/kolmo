@@ -1,5 +1,11 @@
 # Routing map: input type × level
 
+> **Since 0.0.1 (container version 12)** Kolmo has no library coders. This document was written before that, and its
+> coder names map as follows in 0.0.x (`src/codecs/native.c`): LZ4 → KLZ level 1 and LZ4-HC → KLZ level 3 (28); zstd
+> level 1-2 / 3-5 / 6-9 / 10-15 / 16-18 / 19+ → KLZH2 (32) level 1 / 3 / 5 / 6 / 8 / 9; Brotli → KLZH2 level 7; LZMA2 →
+> KLZMA (24); zstd's Huffman (HUF) → khuf (27); XXH3/XXH64 → `kolmo_khash64`. Dictionaries
+> and trained profiles are removed. Figures below were measured with the library coders.
+
 Status: rc3 wave 2, router lane, 17 November 2026 (branch `claude/rc3w2-router-20261117`). What Kolmo detects, which
 transform and codec each level then uses, how that compares with the best tool for the type, and where Kolmo is not
 the best. The ordered list of what to build next is `docs/ROUTING-PLAN.md`.

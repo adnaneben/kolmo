@@ -2,66 +2,35 @@
 
 kolmo reads the structure of its input — tables, logs, prose, scientific records and images, executables, archives — and
 stores it in a form that entropy coders compress far better, then encodes independent, checksummed blocks on every core.
-It has six modes, from LZ4-speed `rt` to the context-mixing archive tier `ultra`. In every mode the goal is the same:
+It has six modes, from the fastest, `rt`, to the context-mixing archive tier `ultra`. In every mode the goal is the same:
 **at the speed of the leading compressor of that class, produce smaller files.**
 
 ## Results
 
-> **This build (container version 12)** uses Kolmo's own coders only: no zstd, Brotli, LZ4, liblzma or xxHash, in the
-> code, the build or the bindings. It does not read files written by earlier Kolmo versions (`KOLMO_ERR_LEGACY`). The
-> figures below were measured before that change, with the library coders, and have not been re-measured yet.
+Every coder is Kolmo's own: no zstd, Brotli, LZ4, liblzma or xxHash in the code, the build or the bindings (container
+version 12). Kolmo does not read files written by its 1.x versions (`KOLMO_ERR_LEGACY`; see Status).
 
-Single core, in memory, best of repeated runs; every output decoded and compared byte for byte. Each cell is the
-compression ratio (original size / compressed size). Machine: 2-core Intel Xeon VM, 2.1 GHz, gcc 13, `-O3 -march=native`.
-The leaders were built from the same sources with the same flags (OpenZL: its own CLI, best profile, trained on the
-tables). Full per-mode tables, speeds, and a one-command way to reproduce all of this on your own machine are in
-[`benchmark/BENCHMARKS.md`](benchmark/BENCHMARKS.md). How we decide whether a ratio gain is worth a speed loss (or
-the reverse), with the research and industry figures behind it, is in [`benchmark/TRADEOFFS.md`](benchmark/TRADEOFFS.md).
+21 files held out from all tuning (364 MB: the Silesia corpus files mozilla, mr, nci, osdb, reymont, samba and sao, an
+OWID CSV table, a server log, a 47 MB bf16 model-weights file, a FASTQ run, two raw CIF videos, four photos and four
+audio clips). Apple M5, one thread (`-T 1`), every output decoded and compared byte for byte. Ratio = total input /
+total output; speeds in MiB/s are total input over total time, compress / decompress. Sizes are from this release's
+code; speeds are medians of 5 timed runs of its release candidates, with the same coders (eco's speed was measured
+before a final encoder tuning that made its output 0.2% smaller).
 
-| Data | kolmo fast | kolmo eco | kolmo hc | kolmo max | kolmo ultra | zstd -19 | brotli -11 | xz -9e | OpenZL |
-|---|---|---|---|---|---|---|---|---|---|
-| Tables: OWID CO2 + energy, 23.6 MB | 10.31 | 10.58 | 10.82 | 11.38 | 11.44 | 4.20 | 4.56 | 4.54 | 4.82 |
-| Logs: 16 Loghub logs, 4.5 MB | 14.10 | 15.79 | 16.27 | 17.67 | 22.42 | 13.48 | 14.50 | 14.67 | 9.84 |
-| Text: enwik8, 100 MB | 2.81 | 3.48 | 4.10 | 4.62 | 5.11 | 3.71 | 3.88 | 4.03 | 3.06 |
-| Scientific: star catalogue + X-ray, 15.7 MB | 2.64 | 2.69 | 2.68 | 2.71 | 2.76 | 1.55 | 1.70 | 1.76 | 2.56 |
-| Mixed: Silesia corpus, 212 MB | 3.64 | 4.19 | 4.45 | 5.08 | 5.58 | 4.01 | 4.27 | 4.38 | 3.35 |
+| kolmo mode | Ratio | MiB/s | Nearest rival | Ratio | MiB/s | kolmo size vs rival |
+|---|---|---|---|---|---|---|
+| `speed` | 1.66 | 413.8 / 733.7 | lz4 -1 | 1.50 | 496.8 / 757.8 | **-9.8%** |
+| `balanced` | 2.59 | 163.3 / 397.1 | zstd -3 | 2.04 | 266.9 / 498.7 | **-21.2%** |
+| `eco` | 2.79 | 13.3 / 382.5 | zstd -9 | 2.20 | 87.8 / 491.5 | **-21.0%** |
+| `hc` | 2.87 | 4.9 / 387.7 | zstd -19 | 2.41 | 5.0 / 451.1 | **-16.0%** |
+| `ratio` | 3.15 | 4.3 / 60.7 | xz -9 | 2.77 | 3.7 / 76.4 | **-12.2%** |
 
-Speeds (single core, MB/s, compress / decompress) for the same runs are in `results_*.tsv`. In short: `fast` compresses
-at 100–190 MB/s and decompresses at 500–1100 MB/s on this machine (2.3–3.3× faster on Apple M5 cores); `hc` decompresses
-at 460–1030 MB/s, 4–10× faster than xz; `max` and `ultra` are archive tiers (`ultra` runs at well under 1 MB/s per core).
-
-Blocks are independent, so both directions scale with cores while the single-stream LZ coders do not. The speed modes
-(`rt`, `fast`) size blocks adaptively (~1 MiB, ≥8 per input) so decode and compress parallelise; the archive modes keep
-large windows for ratio. On a 4-core Apple-silicon build, `kolmo fast` **decompresses faster than `zstd -3` on every data
-type — tables 3.6 GB/s vs 1.6, scientific 6.4 vs 1.2, logs 8.5 vs 4.1 — and compresses tables faster too (759 vs 600
-MB/s)**, all while holding the ratio lead, because `zstd` is flat with cores and kolmo scales ~3.7×. On a single core kolmo
-leads decode on scientific and trades 1.2–2× decode speed on tables/logs for 2–4× the ratio, making it back across cores.
-
-### lzbench: Silesia, one thread
-
-kolmo also runs inside [lzbench](https://github.com/inikep/lzbench) as an ordinary codec (same harness, same flags,
-one thread, round trips verified; see [`benchmark/lzbench`](benchmark/lzbench)). Each lzbench level is a plain CLI
-setting. On the 212 MB Silesia corpus (2-core 2.1 GHz Xeon VM; speeds vary by about ±15% between runs, ratios are
-exact):
-
-| kolmo setting | Ratio | Compress | Decompress | Best rival at that speed |
-|---|---|---|---|---|
-| `rt` | 46.58% | 540 MB/s | 2.5 GB/s | lz4: 47.59%, 539 MB/s, 3.3 GB/s |
-| `fast -l1 -q` | **30.33%** | 355 MB/s | 1.2 GB/s | zstd -2: 32.70%, 372 MB/s |
-| `fast -l2 -q` | **28.89%** | 294–337 MB/s | 1.1 GB/s | zstd -3: 31.20%, 210–232 MB/s |
-| `fast -q` | **27.87%** | 194–234 MB/s | 0.9–1.1 GB/s | zstd -3: 31.20% |
-| `fast` (default) | 27.49% | 132–188 MB/s | 0.8–1.0 GB/s | zstd -5: 29.60%, 110 MB/s |
-| `hc -l 9` | **24.70%** | 48.6 MB/s | 672 MB/s | brotli -5: 28.10%, 41 MB/s |
-| `max -l 1` | **20.93%** | 19–22 MB/s | 33 MB/s | bsc: 23.26%, 15 MB/s; bzip3 -5: 22.29%, 9.4 MB/s |
-| `hc` | 22.47% | 2.6 MB/s | **631 MB/s** | xz -9: 23.00%, 99 MB/s decode; bzip3 -5: 22.29%, 9.7 MB/s decode |
-| `max` | **19.34%** | 2.7 MB/s | 54 MB/s | kanzi -9: 19.73%, 1.7 MB/s |
-| `ultra -l 1` | **17.99%** | 0.43 MB/s | 0.45 MB/s | zpaq -5: 19.09%, 0.39 MB/s |
-| `ultra` | **17.01%** | 0.28 MB/s | 0.30 MB/s | — (smallest result on the board) |
-
-From about 350 MB/s down to the slowest tier, the bold settings give the smallest output of any entry at that
-compression speed or faster. `hc` trades some of that for decode speed (`eco` codes text by block sorting, which decodes at 15–40 MB/s): `hc` decompresses 6× faster than
-xz and 65× faster than bzip3 at a similar ratio. Above 350 MB/s, and on raw decode speed in the LZ4 class, zstd -1
-and lz4 still lead.
+The rivals are their command-line tools (lz4, zstd, xz) on the same machine and files. In short: each kolmo mode is
+9.8–21.2% smaller than the rival of its class; it compresses 0.6–1.2× as fast as that rival (eco 0.15×) and decompresses
+0.8–1.0× as fast. Blocks are independent, so with more threads both directions scale with cores; these figures are
+single-thread only. Figures for the 1.x line (measured with its library coders, on other data) are in
+[`benchmark/BENCHMARKS.md`](benchmark/BENCHMARKS.md), marked as such. How we weigh a ratio gain against a speed loss is
+in [`benchmark/TRADEOFFS.md`](benchmark/TRADEOFFS.md).
 
 ## How it works
 
@@ -75,7 +44,7 @@ and lz4 still lead.
 | Scientific binary | **Fixed records** (period found by self-similarity; fields of 1/2/4/8 bytes stored raw, as deltas, as dictionary tokens, or as multiples of a discovered quantum with exact bit corrections) and **16-bit images** (byte order, row stride and predictor found automatically). |
 | Executables, archives | x86 call/jump transform; each tar member gets its own model. |
 | Coders | All Kolmo's own (no zstd, Brotli, LZ4, liblzma or xxHash): KLZ (`rt`), KLZH2 (`fast`, `eco`, `hc`), BWT (LZP + libsais-derived suffix sorting + QLFC, in C) and KLZMA (`max`), khuf Huffman leaves, and an integer **context-mixing** coder (`ultra`: orders 1–7, words, columns, indirect contexts, bit histories, neural mixing, APMs), best per block. |
-| Container | Independent blocks with an index, so any byte range decodes alone. XXH3 per block and CRC32C over the header and index: corrupt input is reported, never returned as data. Blocks compress and decompress in parallel, so throughput scales with cores. |
+| Container | Independent blocks with an index, so any byte range decodes alone. a 64-bit checksum per block (`kolmo_khash64`, Kolmo's own) and CRC32C over the header and index: corrupt input is reported, never returned as data. Blocks compress and decompress in parallel, so throughput scales with cores. |
 
 All prediction that must agree between encoder and decoder is integer or plain IEEE double without fused multiply-add
 (`-ffp-contract=off`), so **Intel and Apple-silicon builds produce byte-identical files** and decode each other's output.
@@ -194,10 +163,10 @@ same checks before the caller allocates the output buffer. Calls without limits 
 | Python 3.8+ | `pip install kolmoc` | [kolmoc on PyPI](https://pypi.org/project/kolmoc/) |
 | Rust | `cargo add kolmo` | [kolmo on crates.io](https://crates.io/crates/kolmo) |
 
-- **Homebrew** builds the `kolmo` command from source in a few seconds. From 0.0.1 it needs nothing else: Kolmo has
+- **Homebrew** builds the `kolmo` command from source in a few seconds. It needs nothing else: Kolmo has
   no third-party codec library.
 - **Python:** the package is published as `kolmoc` because `kolmo` was already taken on PyPI, but you still
-  `import kolmo`. Prebuilt wheels cover Linux (x86-64, aarch64) and, from 1.0.1, Apple silicon Macs
+  `import kolmo`. Prebuilt wheels cover Linux (x86-64, aarch64) and Apple silicon Macs
   (macOS 11 or later). Other platforms, Intel Macs included, build the sdist, which needs a C compiler and
   takes about a minute.
 - **Rust:** the crate compiles the C core in `build.rs` and links it statically. It needs a C compiler at
@@ -220,44 +189,40 @@ make check                             # resource failures, concurrent callers, 
 ./build/kolmo -d out.kolmo back.csv         # decompress (auto-detects one-shot vs streamed input)
 ./build/kolmo -s huge.csv huge.czs        # streaming compress: bounded memory, any size (-S N for N-MiB segments)
 ./build/kolmo -r 1000000:4096 out.kolmo x   # read 4 KiB at offset 1,000,000 without decoding the rest
-./build/kolmo -t s.dict samples/*.csv     # train a dictionary; then -D s.dict to compress/decompress small files
-./build/kolmobench -X -o results.tsv file  # benchmark against LZ4, zstd, brotli and xz built from the same sources
+./build/kolmo -V                            # version and container version
+./build/kolmobench -o results.tsv file      # in-memory benchmark of kolmo's modes (compare rivals with their own CLIs)
 ```
 
-Needs only a C compiler: zstd, LZ4, Brotli, xxHash and a liblzma subset (LZMA2 only, XZ Utils 5.8.1, `vendor/xz`)
-are vendored; the BWT coder (ported from libbsc) and its suffix sorter (taken over from libsais) are Kolmo's own C
-sources (`src/algo`). `make NO_LZMA=1` builds without the LZMA2 coder (the ratio modes then use the other coders).
+Needs only a C compiler. There is no third-party codec library and no `vendor/` directory: every coder is in
+`src/algo` and `src/codecs`. The BWT coder is ported from libbsc and its suffix sorter is taken over from libsais;
+both are Apache-2.0 and listed in `NOTICE`.
 
 On a Mac: `bash mac/setup.sh` once, then `bash mac/bench.sh` for the full benchmark and `bash mac/tune.sh` for an
 overnight genetic search of the build-time settings (`tune/ga.py`).
 
 ## Status
 
-0.0.1, the first release of the renumbered line. The 1.x line (1.0.0 and 1.0.1) used library coders
-(zstd, Brotli, LZ4, liblzma); 0.0.1 uses only Kolmo's own and writes container version 12 (`SPEC.md`).
+0.0.2, the second release of the renumbered line (0.0.1 had the same code; 0.0.2 corrects the package
+documentation). The 1.x line (1.0.0 and 1.0.1, now yanked) used library coders (zstd, Brotli, LZ4, liblzma); 0.0.x
+uses only Kolmo's own and writes container version 12 (`SPEC.md`). Output is byte-identical across x86-64 and Apple
+silicon. The decoder is fuzzed (harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never
+returned as data. `RELEASING.md` describes how to cut a release.
 
 ### Files written by Kolmo 1.x
 
-0.0.1 does not read them: it reports `KOLMO_ERR_LEGACY` ("written by an earlier Kolmo (1.x or a release candidate)
-that used library codecs") rather than returning wrong data. To move such a file to 0.0.1, decompress it with a 1.x
-build and compress the result again:
+0.0.x does not read them: it reports `KOLMO_ERR_LEGACY` ("written by an earlier Kolmo (1.x or a release candidate)
+that used library codecs") rather than returning wrong data. To move such a file, decompress it with kolmoc 1.0.1,
+which stays installable from PyPI by its exact version (pip warns that it is yanked; that is expected), then
+compress it again:
 
 ```bash
-kolmo-1 -d old.kz plain && kolmo -m balanced plain new.kz
+python3 -m venv kolmo1 && kolmo1/bin/pip install kolmoc==1.0.1
+kolmo1/bin/python -c 'import kolmo,sys; open(sys.argv[2],"wb").write(kolmo.decompress(open(sys.argv[1],"rb").read()))' old.kolmo plain
+kolmo -m balanced plain new.kolmo
 ```
 
-1.0.1 stays installable for this (`pip install kolmoc==1.0.1`, `cargo add kolmo@1.0.1`). Dictionaries (`-D`),
-`kolmo train` and trained profiles are not available in 0.0.1 (`KOLMO_ERR_UNSUPPORTED`): they relied on library
-coders.
-
-### Earlier history
-
-The 1.x container was version 5 (a stream used v4/v5 only when the delta-of-delta or third-order predictor was
-selected, else v3); an older decoder reports an error on a newer version rather than returning wrong data. Output is byte-identical across
-x86-64 and Apple silicon (verified: rt/fast/hc on tables, logs and scientific data hash the same on both). The decoder
-is fuzzed (OSS-Fuzz harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never returned as
-data. A shared library and Python and Rust bindings are in `bindings/`; the format is documented in `SPEC.md`.
-1.0.0 is published on Homebrew, PyPI and crates.io (see Install); `RELEASING.md` describes how to cut a release.
+Dictionaries (`-D`), `kolmo train` and trained profiles are not available in 0.0.x (`KOLMO_ERR_UNSUPPORTED`): they
+relied on library coders.
 
 ## Layout
 
@@ -267,10 +232,10 @@ src/api, core      entry points; container, blocks, thread pool, encoder, decode
 src/plan           analysis and plan per block      src/transforms   table, log, lines, sci, word, graph, ...
 src/codecs         one file per block codec (kolmo_codec table)    src/algo, arch   algorithms; CPU kernels by ISA
 src/cli/cli.c      command line          bench/kolmobench.c   benchmark          tests/kolmotest.c   tests
-tune/ga.py         genetic tuning        mac/              Mac scripts        vendor/           zstd, LZ4, brotli
+tune/ga.py         genetic tuning        mac/              Mac scripts
 bindings/python    PyPI package kolmoc   bindings/rust     crate kolmo        packaging/homebrew  brew formula
 ```
 
 ## Licence
 
-Apache-2.0 (see LICENSE). Vendored code keeps its own licence (see NOTICE).
+Apache-2.0 (see LICENSE). Code ported from libbsc and libsais keeps its original copyright and licence (see NOTICE).

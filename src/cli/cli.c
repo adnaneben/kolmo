@@ -127,7 +127,7 @@ static void mem_error(const uint8_t *hdr, size_t n, int dec, kolmo_mode mode, ui
 
 /* Release label, kept in step with VERSION (RELEASING.md step 1). */
 #ifndef KOLMO_VERSION_STR
-#define KOLMO_VERSION_STR "0.0.1"
+#define KOLMO_VERSION_STR "0.0.2"
 #endif
 
 int main(int argc, char **argv) {
