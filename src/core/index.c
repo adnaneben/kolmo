@@ -335,6 +335,11 @@ static int ix_load(const uint8_t *s, size_t n, const kx_frame *f, ix_index *X) {
         if (i >= L) { ix_free(X); return KOLMO_ERR_CORRUPT; }
         X->flags[b] = p[i++];
         if (X->flags[b] > 3 || kx_getuv(p, (size_t)L, &i, &v)) { ix_free(X); return KOLMO_ERR_CORRUPT; }
+        /* line boundaries chain: a block starts a line exactly when the one before ends one; the first block starts
+         * one and the last ends one (the encoder's rule). Without this, forged flags make every block's last line
+         * "continue" into all the blocks after it, and a query decodes the file once per block. */
+        if ((b == 0 && !(X->flags[b] & IX_BF_START)) || (b + 1 == X->nb && !(X->flags[b] & IX_BF_END)) ||
+            (b > 0 && !(X->flags[b] & IX_BF_START) != !(X->flags[b - 1] & IX_BF_END))) { ix_free(X); return KOLMO_ERR_CORRUPT; }
         uint64_t raw = f->roff[b + 1] - f->roff[b];
         if (v > raw + 1) { ix_free(X); return KOLMO_ERR_CORRUPT; }   /* a block holds at most raw line starts (+0) */
         X->lines[b] = v; X->row0[b] = r; r += v;
