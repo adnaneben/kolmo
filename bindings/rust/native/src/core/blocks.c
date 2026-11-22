@@ -284,7 +284,8 @@ static void *compress_worker(void *arg) {
                 size_t pc = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (pc && pc < cl) cl = 0;
             }
-            if (cl && !pl.a && len >= (256u << 10) && (pl.verify || codec == C_CM || ((pl.b & 64) && (codec == R_LZMA || codec == C_BWT)))) {
+            const int kgfl = (pl.b & 16) && !(pl.b & (32 | 64)) && codec == R_LZMA;   /* max, float planes (0.0.1: see below) */
+            if (cl && !pl.a && len >= (256u << 10) && (pl.verify || kgfl || codec == C_CM || ((pl.b & 64) && (codec == R_LZMA || codec == C_BWT)))) {
                 /* decimal doubles under the slow coders: the plan was scored with zstd, and on small-integer tables
                  * block sorting or context mixing over the plain bytes can still be smaller. Marked plans (the input
                  * is not one kind of data throughout): this block may be the part the graph does not fit. Both are
@@ -301,7 +302,11 @@ static void *compress_worker(void *arg) {
                      * float64 sensor data plain context mixing is 33% smaller than the graph, block sorting is not
                      * within reach (benchmark/rc3w2/twopass/RESULTS.md). */
                     if (codec == C_CM) sn = len < (256u << 10) ? len : (256u << 10), so = ((len - sn) / 2) & ~(size_t)63;
-                    size_t cs = codec == C_CM ? cm_compress_auto(raw + so, sn, alt, J->slot) : codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
+                    /* max, float planes: the plan was scored with the fast probe, and plain KLZMA can be smaller (0.0.1-rc1 holdout:
+                     * a 47 MB bf16 weights file was 12.7% larger as a float graph than as one plain KLZMA block). Block
+                     * sorting is a poor probe on floats, so the slice is coded by KLZMA itself. */
+                    size_t cs = codec == C_CM ? cm_compress_auto(raw + so, sn, alt, J->slot)
+                              : codec_compress(xp, kgfl ? R_LZMA : C_BWT, 9, raw + so, sn, alt, J->slot);
                     if (!cs || (double)cs / sn > (codec == C_CM ? 1.10 : 1.35) * (double)cl / len) alt = NULL;
                 }
                 if (alt && (codec == R_LZH || codec == R_SPEED) && len >= ((size_t)1 << 20)) {
