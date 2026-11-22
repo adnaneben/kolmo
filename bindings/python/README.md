@@ -10,14 +10,19 @@ pip install kolmoc   # the distribution is "kolmoc" ("kolmo" was taken on PyPI);
 
 ```python
 import kolmo
-blob = kolmo.compress(open("data.csv", "rb").read(), mode="balanced")  # speed | balanced | ratio
-data = kolmo.decompress(blob)                                           # whole file
-part = kolmo.read_range(blob, 1_000_000, 4096)                          # decode only the overlapping blocks
+blob = kolmo.compress(open("data.csv", "rb").read(), level=7)  # 1 (fastest) .. 9 (max), or "ultra"
+data = kolmo.decompress(blob)                                    # whole file
+part = kolmo.read_range(blob, 1_000_000, 4096)                   # decode only the overlapping blocks
 ```
 
-Modes: `speed` (fastest), `balanced` (the default), `ratio` (smallest at practical speed).
-Advanced settings: `rt`, `fast`, `eco`, `hc`, `max`, `ultra`. `threads=0` (the default) uses all
-cores. Apache-2.0.
+Levels: one scale from `1` (fastest) to `9` (max), `3` (light) the default, and `"ultra"` (context mixing,
+outside the scale: about as slow to decompress as to compress). Names work too: `"fastest"` (1), `"light"` (3),
+`"balanced"` (5), `"compact"` (7), `"max"` (9). A level gives the same bytes as `kolmo -N` on the command line.
+`threads=0` (the default) uses all cores; `memlimit` takes bytes or `"512M"`, `"8G"`, `"50%"`, `"max"`.
+`decompress` checks the frame before it allocates the output. Apache-2.0.
+
+**Since 0.1.0:** `mode=` was replaced by `level=` (`speed` is now `1`, `balanced` `3`, `ratio` `9`,
+`ultra` `"ultra"`; `eco` `5`, `hc` `7`), and the dictionary calls (`train_dict`, `dict=`) were removed.
 
 Every coder is Kolmo's own (KLZ, KLZH2, KLZMA, khuf, BWT, context mixing): no third-party codec
 library is built, bundled or needed.

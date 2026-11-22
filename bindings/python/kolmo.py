@@ -1,7 +1,7 @@
 """kolmo — Python binding for the kolmo compressor (ctypes over libkolmo).
 
     import kolmo
-    blob = kolmo.compress(open("data.csv","rb").read(), mode="hc")
+    blob = kolmo.compress(open("data.csv","rb").read(), level=7)   # or level="compact"
     data = kolmo.decompress(blob)                 # whole file
     part = kolmo.read_range(blob, 1_000_000, 4096) # bytes [off, off+len) without decoding the rest
 
@@ -9,8 +9,10 @@ Build the library first:  make lib   (produces build/libkolmo.so / .dylib).
 """
 import ctypes, os, sys
 
-_MODES = {"speed": 0, "balanced": 1, "ratio": 4,                 # the three modes
-          "rt": 0, "fast": 1, "eco": 2, "hc": 3, "max": 4, "ultra": 5}   # advanced settings
+# Levels (docs/LEVELS.md): 1 (fastest) .. 9 (max), 3 (light) the default, "ultra" outside the scale. The library's
+# table (kolmo_params_for_level) turns a level into settings, so the same level gives the same bytes as `kolmo -N`.
+LEVEL_NAMES = {"fastest": 1, "light": 3, "balanced": 5, "compact": 7, "max": 9, "ultra": 10}
+_ULTRA = 10
 
 def _load():
     here = os.path.dirname(os.path.abspath(__file__))
@@ -31,6 +33,12 @@ class _Params(ctypes.Structure):
                 ("block", ctypes.c_uint32), ("transforms", ctypes.c_int),
                 ("mem_limit", ctypes.c_uint64)]   # 0 = auto (docs/MEMORY-MODEL.md); mirrors kolmo_params
 
+class _Limits(ctypes.Structure):
+    _fields_ = [("max_output_bytes", ctypes.c_uint64), ("max_block_bytes", ctypes.c_uint32),
+                ("max_blocks", ctypes.c_uint32), ("max_memory", ctypes.c_uint64)]   # mirrors kolmo_decode_limits
+
+_lib.kolmo_mem_parse.restype = ctypes.c_int
+_lib.kolmo_mem_parse.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_uint64)]
 _lib.kolmo_bound.restype = ctypes.c_size_t
 _lib.kolmo_bound.argtypes = [ctypes.c_size_t, ctypes.POINTER(_Params)]
 _lib.kolmo_compress.restype = ctypes.c_int64
@@ -39,19 +47,17 @@ _lib.kolmo_original_size.restype = ctypes.c_int64
 _lib.kolmo_original_size.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
 _lib.kolmo_decompress.restype = ctypes.c_int64
 _lib.kolmo_decompress.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_int]
+_lib.kolmo_decompress_limited.restype = ctypes.c_int64
+_lib.kolmo_decompress_limited.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_int,
+                                         ctypes.POINTER(_Limits)]
 _lib.kolmo_read_range.restype = ctypes.c_int64
 _lib.kolmo_read_range.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_uint64, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_int]
 _lib.kolmo_strerror.restype = ctypes.c_char_p
 _lib.kolmo_strerror.argtypes = [ctypes.c_int64]
-_lib.kolmo_train_dict.restype = ctypes.c_int64
-_lib.kolmo_train_dict.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t), ctypes.c_size_t,
-                                ctypes.c_char_p, ctypes.c_size_t]
-_lib.kolmo_compress_dict.restype = ctypes.c_int64
-_lib.kolmo_compress_dict.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t,
-                                   ctypes.POINTER(_Params), ctypes.c_char_p, ctypes.c_size_t]
-_lib.kolmo_decompress_dict.restype = ctypes.c_int64
-_lib.kolmo_decompress_dict.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t,
-                                     ctypes.c_int, ctypes.c_char_p, ctypes.c_size_t]
+_lib.kolmo_params_for_level.restype = ctypes.c_int
+_lib.kolmo_params_for_level.argtypes = [ctypes.c_int, ctypes.POINTER(_Params)]
+_lib.kolmo_check_frame.restype = ctypes.c_int
+_lib.kolmo_check_frame.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.POINTER(_Limits)]
 
 def _check(code):
     if code < 0:
@@ -66,64 +72,76 @@ def original_size(blob):
 def read_range(blob, off, length, threads=0):
     """Return bytes [off, off+length) of the original, decoding only the blocks that overlap."""
     blob = bytes(blob)
+    total = original_size(blob)
+    _check(_lib.kolmo_check_frame(blob, len(blob), None))          # before allocating anything from the header
+    if off < 0 or length < 0:
+        raise ValueError("read_range: off and length must be >= 0")
+    if off > total:
+        raise ValueError("kolmo: " + _lib.kolmo_strerror(-1).decode() + " (offset past the end)")
+    length = min(length, total - off)
     out = ctypes.create_string_buffer(length if length else 1)
     got = _check(_lib.kolmo_read_range(blob, len(blob), off, length, out, threads))
     return out.raw[:got]
 
-def train_dict(samples, dict_cap=112 * 1024):
-    """Dictionaries are not available in this build (they needed library codecs): raises ValueError with the
-    library's KOLMO_ERR_UNSUPPORTED message. Kept so that existing callers fail clearly."""
-    samples = [bytes(s) for s in samples]
-    if not samples:
-        raise ValueError("train_dict: need at least one sample")
-    blob = b"".join(samples)
-    sizes = (ctypes.c_size_t * len(samples))(*[len(s) for s in samples])
-    out = ctypes.create_string_buffer(dict_cap)
-    n = _check(_lib.kolmo_train_dict(blob, sizes, len(samples), out, dict_cap))
-    return out.raw[:n]
+def _level(level):
+    """1..9, "ultra", or a name (fastest, light, balanced, compact, max) -> the library's level number."""
+    if isinstance(level, str):
+        if level not in LEVEL_NAMES:
+            raise ValueError("level must be 1..9, 'ultra' or one of " + ", ".join(LEVEL_NAMES))
+        return LEVEL_NAMES[level]
+    if isinstance(level, bool) or not isinstance(level, int) or not 1 <= level <= 9:
+        raise ValueError("level must be 1..9, 'ultra' or one of " + ", ".join(LEVEL_NAMES))
+    return level
 
-def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0, dict=None, native_leaf=False,  # noqa: A002
-             typed_huf=False):
-    """Compress bytes; returns the compressed bytes. mode: speed|balanced|ratio (advanced: rt|fast|eco|hc|max|ultra).
-    transforms: True (analyse and transform), False (codec only) or "quick" (cheap transforms only; fastest).
-    native_leaf: with mode="balanced", integer series may use Kolmo's native plane-context leaves when smaller
-    (sensor/ECG/numeric columns, typically 5-12% smaller; such files decode ~1.5-2.6x slower).
-    level: 0 = mode default; with mode="ultra", 1 = model 1 only (faster) and 2 = maximum ratio (numeric graph
-    leaves may also use context mixing: smaller integer series, much slower decoding of those blocks).
-    typed_huf: opt-in, with mode="balanced" (or "fast"), threads=1 and the default level: a little-endian integer
-    NPY array or a PCM16 WAV of at most 16 MiB is coded type first (integer prediction, Huffman planes). A speed
-    option: several times faster to compress. On single-channel 16-bit signals (ECG, mono audio) the output is
-    often smaller too; on other arrays and on multi-channel data (channels are not split) it is often larger than
-    the default, so compare sizes before relying on it. typed_huf excludes native_leaf.
-    dict: dictionaries are not available in this build; a non-empty dict raises ValueError (KOLMO_ERR_UNSUPPORTED).
+def _memlimit(memlimit):
+    """None/0 = auto; an int = bytes; a string as the CLI's --memlimit (512M, 8G, 50%, auto, max)."""
+    if memlimit is None:
+        return 0
+    if isinstance(memlimit, str):
+        v = ctypes.c_uint64()
+        if _lib.kolmo_mem_parse(memlimit.encode(), ctypes.byref(v)):
+            raise ValueError("memlimit: a size (512M, 8G), a share of RAM (50%), auto or max")
+        return v.value
+    if isinstance(memlimit, bool) or not isinstance(memlimit, int) or memlimit < 0:
+        raise ValueError("memlimit must be bytes (int) or a string such as '512M'")
+    return memlimit
+
+def compress(data, level=3, threads=0, memlimit=None, block=0, native_leaf=False, typed_huf=False):
+    """Compress bytes; returns the compressed bytes, the same bytes as `kolmo -N` at the same level.
+    level: 1 (fastest) .. 9 (max), 3 ("light") is the default; "ultra" is the extreme tier outside the scale (about as
+    slow to decompress as to compress, ~1 GB+ of memory). Names: "fastest" (1), "light" (3), "balanced" (5),
+    "compact" (7), "max" (9), "ultra".
+    threads: 0 = all cores (never changes the output).
+    block: expert, bytes per block (0 = the level's choice), as `kolmo --block-size`.
+    memlimit: None (auto), bytes, or "512M" / "8G" / "50%" / "max" as `kolmo --memlimit`: an explicit limit also sizes
+    the blocks of levels 8, 9 and ultra so that the output decodes within it.
+    native_leaf: level 3 only; integer series may use Kolmo's native plane-context leaves when smaller (sensor/ECG/
+    numeric columns, typically 5-12% smaller; such files decode ~1.5-2.6x slower).
+    typed_huf: opt-in, level 3 with threads=1: a little-endian integer NPY array or a PCM16 WAV of at most 16 MiB is
+    coded type first. Several times faster to compress, sometimes larger: compare sizes. Excludes native_leaf.
     Every blob is container version 12; blobs of earlier Kolmo versions are refused by decompress (KOLMO_ERR_LEGACY)."""
-    if mode not in _MODES:
-        raise ValueError("mode must be one of " + ", ".join(_MODES))
+    lv = _ULTRA if level == "ultra" else _level(level)
     if native_leaf and typed_huf:
         raise ValueError("choose native_leaf or typed_huf, not both")
     data = bytes(data)
-    tr = 2 if transforms == "quick" else 1 if transforms else 0
-    # 16 = KOLMO_T_NATIVE_LEAF, 32 = KOLMO_T_TYPED_HUF
-    p = _Params(_MODES[mode], level, threads, block,
-                tr | (16 if native_leaf and tr else 0) | (32 if typed_huf and tr else 0))
+    p = _Params(0, 0, threads, block, 0, _memlimit(memlimit))
+    _check(_lib.kolmo_params_for_level(lv, ctypes.byref(p)))
+    if p.transforms:   # 16 = KOLMO_T_NATIVE_LEAF, 32 = KOLMO_T_TYPED_HUF
+        p.transforms |= (16 if native_leaf else 0) | (32 if typed_huf else 0)
     cap = _lib.kolmo_bound(len(data), ctypes.byref(p))
     out = ctypes.create_string_buffer(cap)
-    if dict:
-        d = bytes(dict)
-        n = _check(_lib.kolmo_compress_dict(data, len(data), out, cap, ctypes.byref(p), d, len(d)))
-    else:
-        n = _check(_lib.kolmo_compress(data, len(data), out, cap, ctypes.byref(p)))
+    n = _check(_lib.kolmo_compress(data, len(data), out, cap, ctypes.byref(p)))
     return out.raw[:n]
 
-def decompress(blob, threads=0, dict=None):  # noqa: A002
-    """Decompress a whole blob; returns the original bytes. Blobs of earlier Kolmo versions (library codecs) raise
-    ValueError (KOLMO_ERR_LEGACY). dict: not available in this build (a non-empty dict raises ValueError)."""
+def decompress(blob, threads=0, memlimit=None):
+    """Decompress a whole blob; returns the original bytes. The frame (header, index checksum, block sizes against
+    the claimed size, the memory it declares) is checked before the output is allocated, so a damaged or hostile
+    blob fails with ValueError instead of a huge allocation. memlimit as in compress (None = auto). Blobs of earlier
+    Kolmo versions raise ValueError (KOLMO_ERR_LEGACY)."""
     blob = bytes(blob)
     n = original_size(blob)
+    lim = _Limits(0, 0, 0, _memlimit(memlimit))
+    _check(_lib.kolmo_check_frame(blob, len(blob), ctypes.byref(lim)))
     out = ctypes.create_string_buffer(n if n else 1)
-    if dict:
-        d = bytes(dict)
-        got = _check(_lib.kolmo_decompress_dict(blob, len(blob), out, n, threads, d, len(d)))
-    else:
-        got = _check(_lib.kolmo_decompress(blob, len(blob), out, n, threads))
+    got = _check(_lib.kolmo_decompress_limited(blob, len(blob), out, n, threads, ctypes.byref(lim)))
     return out.raw[:got]

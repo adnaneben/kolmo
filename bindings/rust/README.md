@@ -10,14 +10,18 @@ cargo add kolmo
 ```
 
 ```rust
-let blob = kolmo::compress(data, kolmo::Mode::BALANCED, 0)?; // 0 threads = all cores
+let blob = kolmo::compress(data, kolmo::Level::COMPACT, 0)?; // 0 threads = all cores
 let back = kolmo::decompress(&blob, 0)?;
-let part = kolmo::read_range(&blob, 1_000_000, 4096, 0)?;    // decode only the overlapping blocks
+let part = kolmo::read_range(&blob, 1_000_000, 4096, 0)?;     // decode only the overlapping blocks
 ```
 
-Modes: `Mode::SPEED` (fastest), `Mode::BALANCED` (the usual choice), `Mode::RATIO` (smallest at
-practical speed). The underlying settings are `Rt` · `Fast` · `Eco` · `Hc` · `Max` · `Ultra`
-(context-mixing archive tier).
+Levels: one scale, `Level::new(1..=9)`, from `Level::FASTEST` (1) through `Level::LIGHT` (3, the default),
+`Level::BALANCED` (5) and `Level::COMPACT` (7) to `Level::MAX` (9); `Level::ULTRA` is the context-mixing tier
+outside the scale. A level gives the same bytes as `kolmo -N` on the command line. `compress_limited` and
+`decompress_limited` take a memory limit; `decompress` checks the frame before it allocates the output.
+
+**Since 0.1.0:** `Mode` was replaced by `Level` (`Mode::SPEED` is now `Level::FASTEST`, `BALANCED` `Level::LIGHT`,
+`RATIO` `Level::MAX`; `Eco` level 5, `Hc` level 7, `Ultra` `Level::ULTRA`), and the dictionary functions were removed.
 
 **From 1.x:** since 0.0.1, kolmo writes container version 12 and cannot read blobs written by kolmo 1.0.x
 (they fail with code -13, `KOLMO_ERR_LEGACY`; never wrong data). Dictionaries and trained

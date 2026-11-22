@@ -90,6 +90,32 @@ int64_t kolmo_decode_memory(const uint8_t *src, size_t n) {
     return (int64_t)blk_dec_floor(maxraw);
 }
 
+/* The level table (docs/LEVELS.md section 1). One row per level, in today's knobs: mode, codec level (0 = the mode's
+ * default; R_LZH levels are on zstd's scale and map to KLZH2 settings in codecs/native.c: 1-2 -> 1, 3-5 -> 3,
+ * 6-9 -> 5, 10-15 -> 6, 16-18 -> 8, 19+ -> 9) and transforms (1 = full analysis, 2 = quick, 3 = minimal, 0 = none).
+ * The initial 0.1.0 assignment; another lane measures and retunes it. Edit the rows here only: the CLI and the
+ * bindings read nothing else. Changing a row changes the output of that level (benchmark/determinism/expected.sha256). */
+static const struct { kolmo_mode mode; int level; int transforms; } kolmo_level_table[KOLMO_LEVEL_ULTRA + 1] = {
+    [1]  = {KOLMO_RT,    0,  3},   /* fastest: KLZ, minimal analysis (0.0.x CLI "-m speed", exactly) */
+    [2]  = {KOLMO_FAST,  1,  2},   /* KLZH2 1 (zstd-scale 1), quick analysis */
+    [3]  = {KOLMO_FAST,  0,  1},   /* light, the default: KLZH2 3 with full analysis (0.0.x "balanced") */
+    [4]  = {KOLMO_FAST,  6,  1},   /* KLZH2 5 (zstd-scale 6), full analysis */
+    [5]  = {KOLMO_ECO,   0,  1},   /* balanced: KLZH2 7 (0.0.x "eco") */
+    [6]  = {KOLMO_HC,    16, 1},   /* KLZH2 8 (zstd-scale 16), hc's 16 MiB blocks */
+    [7]  = {KOLMO_HC,    0,  1},   /* compact: KLZH2 9 (0.0.x "hc") */
+    [8]  = {KOLMO_MAX,   1,  1},   /* ratio tier, fast variant: BWT for every block (0.0.x "ratio -l 1") */
+    [9]  = {KOLMO_MAX,   0,  1},   /* max: BWT for text, the better of BWT and KLZMA for binary (0.0.x "ratio") */
+    [10] = {KOLMO_ULTRA, 0,  1},   /* ultra: context mixing (0.0.x "-x") */
+};
+
+int kolmo_params_for_level(int level, kolmo_params *p) {
+    if (!p || level < KOLMO_LEVEL_MIN || level > KOLMO_LEVEL_ULTRA) return KOLMO_ERR_PARAM;
+    p->mode = kolmo_level_table[level].mode;
+    p->level = kolmo_level_table[level].level;
+    p->transforms = kolmo_level_table[level].transforms;
+    return 0;
+}
+
 const char *kolmo_strerror(int64_t c) {
     switch (c) {
         case KOLMO_ERR_CORRUPT: return "corrupt or unsupported input";
@@ -106,6 +132,7 @@ const char *kolmo_strerror(int64_t c) {
         case KOLMO_ERR_MEMORY: return "memory limit: the frame needs more memory to decode than the limit, or the limit is below the mode's floor";
         case KOLMO_ERR_LEGACY: return "written by an earlier Kolmo (1.x or a release candidate) that used library codecs; this build reads only Kolmo-native frames";
         case KOLMO_ERR_UNSUPPORTED: return "not available in this build: dictionaries and trained profiles need library codecs";
+        case KOLMO_ERR_PARAM: return "argument out of range (levels are 1 to 9, and 10 for ultra)";
     }
     return c >= 0 ? "ok" : "unknown error";
 }

@@ -31,7 +31,8 @@ typedef struct {
     int threads;        /* 0 = all cores */
     uint32_t block;     /* bytes per block, 0 = adaptive rt/fast, 16 MiB eco/hc (larger for text), 128 MiB max/ultra */
     int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap
-                           structure transforms (images, records, executables, tables), for the fastest settings.
+                           structure transforms (images, records, executables, tables), for the fastest settings;
+                           3 = minimal analysis (level 1). kolmo_params_for_level sets mode, level and transforms.
                            May be OR-ed with KOLMO_T_NATIVE_LEAF or KOLMO_T_TYPED_HUF (below). */
     uint64_t mem_limit; /* memory limit (docs/MEMORY-MODEL.md): 0 = auto (50% of physical memory or of the cgroup's
                            limit; governs only how much runs at once), KOLMO_MEM_MAX = no limit, otherwise bytes: an
@@ -87,6 +88,24 @@ typedef struct {
 #define KOLMO_ERR_MEMORY    (-12)  /* the frame needs more memory to decode than the limit, or the limit is below the mode's floor */
 #define KOLMO_ERR_LEGACY    (-13)  /* a frame of an earlier Kolmo (container versions 1-11, library codecs): not readable here */
 #define KOLMO_ERR_UNSUPPORTED (-14) /* not available in this build: dictionaries and trained profiles need library codecs */
+#define KOLMO_ERR_PARAM     (-15)  /* an argument out of range (kolmo_params_for_level: no such level) */
+
+/* --- Levels (docs/LEVELS.md; 0.1.0) ------------------------------------------------------------------------------
+ * One scale from 1 (fastest) to 9 (smallest at practical decode speed), and ultra outside it. The level numbers and
+ * names are a long-term contract; what each level runs may improve between releases. kolmo_params_for_level fills
+ * mode, level and transforms of *p for a level (KOLMO_LEVEL_MIN..KOLMO_LEVEL_MAX or KOLMO_LEVEL_ULTRA) and leaves the
+ * other fields (threads, block, mem_limit) as the caller set them. The command line and the Python and Rust bindings
+ * all use it, so the same level gives the same bytes everywhere. Returns 0, or KOLMO_ERR_PARAM for another level or a
+ * NULL p (then *p is unchanged). */
+#define KOLMO_LEVEL_MIN       1
+#define KOLMO_LEVEL_MAX       9
+#define KOLMO_LEVEL_DEFAULT   3
+#define KOLMO_LEVEL_ULTRA     10
+#define KOLMO_LEVEL_FASTEST   1
+#define KOLMO_LEVEL_LIGHT     3
+#define KOLMO_LEVEL_BALANCED  5
+#define KOLMO_LEVEL_COMPACT   7
+#define KOLMO_LEVEL_MAX_RATIO 9
 
 /* Zero fields mean no limit, except max_memory: 0 = auto (50% of physical memory or of the cgroup's limit),
  * KOLMO_MEM_MAX = none, otherwise bytes. Every frame declares what one block needs to decode (header byte 11); a frame
@@ -149,6 +168,7 @@ void     kolmo_set_memlimit(uint64_t limit);
  * 0, or KOLMO_ERR_CORRUPT, KOLMO_ERR_CHECKSUM, KOLMO_ERR_LIMIT or KOLMO_ERR_MEMORY. */
 int      kolmo_check_frame(const uint8_t *src, size_t n, const kolmo_decode_limits *limits);
 const char *kolmo_strerror(int64_t code);
+int kolmo_params_for_level(int level, kolmo_params *p);
 /* GPU worker (macOS builds with Metal): 1 lets the GPU code blocks beside the CPU threads in the modes that block-sort
  * (ratio, -x) when a file has more blocks than threads; 0 (the default) is CPU only. The output is the same bytes
  * either way. Returns 1 when this build and machine have a GPU path. KOLMO_GPU=1 in the environment also turns it on. */
