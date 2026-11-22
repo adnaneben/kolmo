@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.1.0 (unreleased)
+
+The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22). **The frame format is
+unchanged** (container version 12): 0.0.x reads 0.1.0 output and 0.1.0 reads 0.0.x output, and levels 1, 3, 5, 7, 9
+and ultra write the same bytes as 0.0.2's `speed`, `balanced`, `eco`, `hc`, `ratio` and `-x`
+(`benchmark/determinism/expected.sha256` is unchanged).
+
+- **Levels.** One scale from `-1` (fastest) to `-9` (max), `-3` (light) the default, and `-U` (ultra) outside it.
+  Named anchors with letters: `-F --fastest` (1), `-L --light` (3), `-B --balanced` (5), `-C --compact` (7),
+  `-X --max` (9), `-U --ultra`; `--level N|ultra`; the last level option wins. Levels 2, 4, 6 and 8 are new settings
+  (KLZH2 1 with quick analysis, KLZH2 5, KLZH2 8, block sorting for every block); the table will be retuned by
+  measurement, never moved across the scale.
+- **Library:** `kolmo_params_for_level(level, &params)` and `KOLMO_LEVEL_MIN/MAX/DEFAULT/ULTRA/FASTEST/LIGHT/
+  BALANCED/COMPACT/MAX_RATIO`; a level outside 1..10 returns the new `KOLMO_ERR_PARAM` (-15). The command line and both
+  bindings use this one table, so a level gives the same bytes everywhere.
+- **Command line** (gzip/xz/zstd conventions): `kolmo FILE` writes `FILE.kolmo` and keeps `FILE` (`--rm` removes it);
+  `kolmo -d FILE.kolmo` writes `FILE`; no FILE or `-` is standard input to standard output; several files in one run
+  (processing continues after an error); `-c`, `-o FILE` (one input), `-k`, `-f` (an existing output is never
+  overwritten without it), `-t` test, `-l` list, `-q`, `-v`, `-T`, `-M`; combined short options (`-dc`, `-9T4`),
+  `--opt=value`, `--`. Compressed data is not written to (or read from) a terminal without `-f`. Every output is staged
+  and published atomically with the input's permissions and mtime, and a failed run never touches an existing file;
+  the output is never the input file. `-d` decodes concatenated frames in order (as zstd) and fails on trailing data.
+  Exit status 0, 1 (error) or 2 (usage). Expert options: `--block-size`, `--analysis`, `--stream[=SEGMiB]`,
+  `--range`, `--codec-level`, with `--target`, `--calib`, `--memlimit`, `--native-leaf`, `--typed-huf`, `--gpu` and
+  `--x-tables` as before.
+- **Archive subcommands renamed:** `kolmo a`, `x`, `l` are now `kolmo archive`, `extract`, `contents` (recognised only
+  as the first argument; a file of that name is `kolmo ./NAME` or `kolmo -- NAME`). `--index`, `archive` take levels.
+- **Removed** (each prints a one-line hint naming the replacement and exits with status 2): `-m MODE`, `-x`, the old
+  `-l LEVEL`, `-B MiB`, `-Q`, `-n`, `-s`, `-S`, `-r`, `-D`, `-t DICT`, `-P`, `kolmo train`, `kolmo profile`,
+  `kolmo a|x|l` and the two-positional `kolmo IN OUT` / `kolmo -d IN OUT`. The old analysis option `-q` now means
+  `--quiet` and cannot be detected.
+- **Bindings:** Python `compress(data, level=3, threads=0, memlimit=None, block=0, ...)` with `level` 1..9, a name or
+  `"ultra"`; Rust `Level` (`Level::new(1..=9)`, `FASTEST`, `LIGHT`, `BALANCED`, `COMPACT`, `MAX`, `ULTRA`,
+  `Default` = light) with `compress_limited`/`decompress_limited`. `mode` / `Mode` and the dictionary calls are
+  removed. Both check the frame (`kolmo_check_frame`) before allocating the output, so a hostile header cannot ask for
+  a huge allocation. Tests cross-check that the CLI, Python and Rust give the same bytes at every level.
+
+Upgrading from 0.0.x:
+
+| 0.0.x | 0.1.0 |
+|---|---|
+| `-m speed` | `-1` / `-F` |
+| `-m balanced` (default) | `-3` / `-L` (default) |
+| `-m eco` | `-5` / `-B` |
+| `-m hc` | `-7` / `-C` |
+| `-m ratio` | `-9` / `-X` |
+| `-m max -l 1` | `-8` |
+| `-x` | `-U` |
+| `-x -l 1`, `-x -l 2` | `-U --codec-level 1`, `-U --codec-level 2` |
+| `-m rt` | `-1 --analysis full` |
+| `-q` / `-Q` / `-n` (analysis) | `--analysis quick` / `minimal` / `none` |
+| `-l N`, `-B MiB` | `--codec-level N`, `--block-size MiB` |
+| `-s`, `-S N`, `-r OFF:LEN` | `--stream`, `--stream=N`, `--range OFF:LEN` |
+| `kolmo in out` | `kolmo in -o out` |
+| `kolmo -d in out` | `kolmo -d in -o out` |
+| `kolmo a`, `kolmo x`, `kolmo l` | `kolmo archive`, `kolmo extract`, `kolmo contents` |
+| Python `mode="speed"` / `"balanced"` / `"ratio"` | `level=1` / `3` / `9` |
+| Rust `Mode::SPEED` / `BALANCED` / `RATIO` | `Level::FASTEST` / `LIGHT` / `MAX` |
+
 ## 0.0.2 (2026-11-22)
 
 Documentation release: the code and the output are the same as 0.0.1. 0.0.1's PyPI and crates.io pages still described

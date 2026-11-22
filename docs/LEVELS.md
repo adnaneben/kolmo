@@ -142,3 +142,72 @@ removed in 0.1.0 with the same mapping.
 ### Frame format
 
 Unchanged (container version 12). Every 0.0.x decoder reads 0.1.0 output, and 0.1.0 reads 0.0.x output.
+
+## 3. Implementation notes (decisions where this specification was silent)
+
+Recorded by the 0.1.0 implementation (lane 1). zstd's behaviour was followed unless noted.
+
+Levels and library
+- Internal table (`src/api/api.c`, `kolmo_level_table`), in 0.0.x knobs: 1 = rt with minimal analysis (exactly 0.0.x
+  `-m speed`), 2 = fast at codec level 1 (KLZH2 1) with quick analysis, 3 = fast (0.0.x balanced), 4 = fast at codec
+  level 6 (KLZH2 5), 5 = eco, 6 = hc at codec level 16 (KLZH2 8), 7 = hc, 8 = max at codec level 1 (BWT for every
+  block), 9 = max (0.0.x ratio), ultra = ultra. Levels 1, 3, 5, 7, 9 and ultra therefore write the same bytes as 0.0.2's
+  `speed`, `balanced`, `eco`, `hc`, `ratio` and `-x`. On small inputs neighbouring levels can coincide (6 and 7 did on a
+  200 KB test file); making every level measurably distinct is the measuring lane's job.
+- An out-of-range level returns a new error code, `KOLMO_ERR_PARAM` (-15).
+- `-10`, `-19`: a run of digits is read as one number (as zstd), then refused (levels are 1..9; ultra is `-U`).
+
+Letters whose meaning changed
+- `-B`, `-l`, `-t` and `-q` mean `--balanced`, `--list`, `--test` and `--quiet` now. The 0.0.x forms are recognised
+  where they are unambiguous and get the removed-form hint: `-B` or `-l` followed (in the same argument or as the next
+  argument) by a number that is not an existing file (`-B 0.5`, `-B4`, `-l 9`, `-l9`), and `-t` followed by a name
+  ending in `.dict`. The old analysis option `-q` cannot be told from `--quiet`.
+- The two-positional form is recognised when exactly two names are given without `-o`/`-c`, and the second does not
+  exist yet, or (compressing) ends in `.kolmo`, or (decompressing) does not. Otherwise two names are two inputs.
+
+Files and output
+- No prompting, ever: an existing output is refused without `-f` (exit 1, the message names the file), also on a
+  terminal (zstd asks there).
+- The output is never the input file (same device and inode), in every path, even with `-f`: exit 1, input untouched.
+  `kolmo -c FILE >> FILE` is refused the same way.
+- Compressing a name that already ends in `.kolmo` is refused unless `-f` (gzip). Decompressing a name without the
+  suffix, without `-o` or `-c`, is an error for that file (exit 1).
+- Directories are refused ("is a directory"; there is no recursive mode). Other non-regular inputs (FIFOs, devices)
+  are refused unless `-c` or `-f` (gzip).
+- Staging: every output, streamed and from standard input included, is written to a private file in the output's
+  directory and published only on success, by `link` (never replacing a file that appeared meanwhile) or, with `-f`
+  over a plain file, by `rename`. A failed run never touches an existing file and leaves no staging file. Over a
+  symlink or hard link with `-f`, the content is written through the existing path, so the link and the target's mode
+  are kept (0.0.x behaviour).
+- Metadata: permission bits `mode & 0777` (setuid, setgid and sticky are dropped), access and modification times;
+  ownership is not changed. Outputs from standard input get `0666 & ~umask` and the current time.
+- `--rm` removes the input after its output is published (decoded outputs are verified before publishing; compressed
+  frames carry block checksums; there is no extra verification pass). It is ignored, with a warning, with standard
+  output, `-t` and `-l`.
+- `-c` with several inputs writes their frames one after another; `-d` decodes concatenated frames in order (as zstd)
+  and fails (exit 1) on trailing bytes that are not a frame. `-l` reports such a file as one entry with `N frames`.
+  `--range` needs a file of exactly one frame.
+- Terminals: compressed data is not written to a terminal without `-f` (exit 1, as zstd); `-d` and `-t` do not read
+  compressed data from a terminal without `-f`; compressing from a terminal prints a notice and reads until end of file.
+- A streamed (CZNS) file read from a pipe is buffered (in memory, then a temporary file) before decoding, so nothing
+  read by the format check is lost.
+
+Options
+- Long options must be spelled in full (no abbreviations, unlike getopt_long). `--stream` takes its segment size only
+  as `--stream=SEGMiB`. `-o -` is standard output. `-c` with `-o`, and `-o` with `-t` or `-l`, are usage errors.
+- Ranges checked (exit 2 otherwise): `-T` 0..4096, `--level` 1..9 or a name or `ultra`, `--codec-level` 1..1000,
+  `--block-size` above 0 and at most 4095 MiB, `--range OFF:LEN` digits only. `--range` implies decompression, writes
+  standard output unless `-o`, and clamps LEN to the end of the data; an offset past the end is an error (exit 1).
+- Messages: silent by default; `-v` prints sizes, ratio and speed per file on standard error; `-q` silences warnings
+  (not errors).
+- `-l`: compressed size, original size, ratio, the header CRC-32C of the (first) frame, and the engine: the tier
+  recorded in header byte 5 (`rt`, `fast`, `eco`, `hc`, `max`, `ultra`; the frame does not record the level) and the
+  block codecs used. It does not read standard input (`-l` without FILE is a usage error).
+
+Subcommands
+- `calibrate`, `cat`, `grep`, `archive`, `extract`, `contents` are recognised only as the first argument; a file of
+  that name is `kolmo -- NAME` or `kolmo ./NAME`. `kolmo a`, `x` and `l` (0.0.x names, owner decision during review)
+  print the removed-form hint naming `archive`, `extract` and `contents`. `--index` is recognised anywhere before `--`
+  and keeps its `in out.kol` positional form. `--index` and `archive` take the level options of the main command line
+  (`-1`..`-9`, letters, `--level`, `--codec-level`, `--block-size`); their 0.0.x `-m`, `-x`, `-l N` and `-B MiB` get
+  the removed-form hint.
