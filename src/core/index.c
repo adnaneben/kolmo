@@ -29,7 +29,8 @@
 #define IX_BF_END 2                      /* block ends at a line end (or at the end of the input) */
 
 static const uint8_t *ix_memrchr(const uint8_t *p, uint8_t c, size_t n) { while (n) { if (p[--n] == c) return p + n; } return NULL; }
-static int ix_threads(int t) { if (t > 0) return t; long n = sysconf(_SC_NPROCESSORS_ONLN); return n > 0 ? (int)(n > 64 ? 64 : n) : 1; }
+/* at most 64: the callers keep their worker handles in pthread_t th[64] */
+static int ix_threads(int t) { if (t > 0) return t > 64 ? 64 : t; long n = sysconf(_SC_NPROCESSORS_ONLN); return n > 0 ? (int)(n > 64 ? 64 : n) : 1; }
 static inline uint8_t ix_lc(uint8_t c) { return (uint8_t)(c >= 'A' && c <= 'Z' ? c + 32 : c); }
 
 /* ------------------------------------------------------------------ fields */

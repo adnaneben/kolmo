@@ -104,9 +104,12 @@ static int qlfc_encode_header(kolmo_rc *coder, const uint8_t *MTFTable) {
     return maxRank;
 }
 
-static int qlfc_decode_header(kolmo_rc *coder, uint8_t *MTFTable) {
+/* *lastRank receives the highest table index the header set; the rest of the table is filled with that entry so a
+   crafted rank never reads uninitialised bytes, and the decoders reject ranks above *lastRank (the encoder never
+   writes one: ranks count distinct symbols, and the table holds them all plus one repeat). */
+static int qlfc_decode_header(kolmo_rc *coder, uint8_t *MTFTable, int *lastRank) {
     uint8_t usedChar[256]; memset(usedChar, 0, sizeof(usedChar));
-    int prevChar = -1, maxRank = 7;
+    int prevChar = -1, maxRank = 7; *lastRank = 255;
     for (int rank = 0; rank < 256; ++rank) {
         int currentChar = 0;
         for (int bit = 7; bit >= 0; --bit) {
@@ -117,7 +120,11 @@ static int qlfc_decode_header(kolmo_rc *coder, uint8_t *MTFTable) {
             else { if (bit0) currentChar += currentChar + 0; if (bit1) currentChar += currentChar + 1; }
         }
         MTFTable[rank] = (uint8_t)currentChar;
-        if (currentChar == prevChar) { maxRank = rank > 1 ? kb_bsr32((uint32_t)(rank - 1)) : 0; break; }
+        if (currentChar == prevChar) {
+            maxRank = rank > 1 ? kb_bsr32((uint32_t)(rank - 1)) : 0; *lastRank = rank;
+            for (int r = rank + 1; r < 256; ++r) MTFTable[r] = (uint8_t)currentChar;
+            break;
+        }
         prevChar = currentChar; usedChar[currentChar] = 1;
     }
     return maxRank;
@@ -266,7 +273,7 @@ static int qlfc_static_decode(const uint8_t *input, const uint8_t *inputEnd, uin
     rc_init_decoder(&coder, input, inputEnd);
     int n = (int)rc_decode_word(&coder);
     if (n < 0 || n > outCap) return KB_DATA_CORRUPT;
-    const int maxRank = qlfc_decode_header(&coder, MTFTable);
+    int lastRank; const int maxRank = qlfc_decode_header(&coder, MTFTable, &lastRank);
 
     for (int i = 0; i < n;) {
         int currentChar = MTFTable[0], history = rankHistory[currentChar];
@@ -320,6 +327,7 @@ static int qlfc_static_decode(const uint8_t *input, const uint8_t *inputEnd, uin
             if (rank == 0) return KB_DATA_CORRUPT;               /* the encoder never writes rank 0 here */
             rankHistory[currentChar] = (uint8_t)kb_bsr32((uint32_t)rank);
         }
+        if (rank > lastRank) return KB_DATA_CORRUPT;
         qlfc_mtf_update(MTFTable, rank, currentChar);
 
         avgRank = (avgRank * 124 + rank * 4) >> 7;
@@ -520,7 +528,7 @@ static int qlfc_adaptive_decode(const uint8_t *input, const uint8_t *inputEnd, u
     rc_init_decoder(&coder, input, inputEnd);
     int n = (int)rc_decode_word(&coder);
     if (n < 0 || n > outCap) return KB_DATA_CORRUPT;
-    const int maxRank = qlfc_decode_header(&coder, MTFTable);
+    int lastRank; const int maxRank = qlfc_decode_header(&coder, MTFTable, &lastRank);
 
     for (int i = 0; i < n;) {
         int currentChar = MTFTable[0], history = rankHistory[currentChar];
@@ -588,6 +596,7 @@ static int qlfc_adaptive_decode(const uint8_t *input, const uint8_t *inputEnd, u
             if (rank == 0) return KB_DATA_CORRUPT;
             rankHistory[currentChar] = (uint8_t)kb_bsr32((uint32_t)rank);
         }
+        if (rank > lastRank) return KB_DATA_CORRUPT;
         qlfc_mtf_update(MTFTable, rank, currentChar);
 
         avgRank = (avgRank * 124 + rank * 4) >> 7;

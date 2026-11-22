@@ -113,12 +113,22 @@ build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src
 build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 
-check: all
+check: all build/test-decoder-hardening
 	./build/test-levels
 	python3 tests/test_fast_file.py
 	./build/kolmoresource
 	./build/kolmoparallel
 	./build/kolmotest
+	./build/test-decoder-hardening
+
+# decoder memory-safety and DoS regressions (review r1 of 0.0.2). The ASan build compiles the separately built coders
+# (qlfc, khuf, klzma, ...) with the sanitizers instead of taking them from libkolmoarch.a.
+build/test-decoder-hardening: tests/test_decoder_hardening.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_decoder_hardening.c build/libkolmoarch.a -o $@ $(LIBS)
+build/test-decoder-hardening-asan: tests/test_decoder_hardening.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(BWTSRC) $(BWTHDR) build/libkolmoarch.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_decoder_hardening.c $(BWTSRC) build/libkolmoarch.a -o $@ $(LIBS)
+check-decoder-hardening: build/test-decoder-hardening-asan
+	./build/test-decoder-hardening-asan
 
 SANFLAGS ?= -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
 override SANFLAGS += $(FPFLAGS)
@@ -285,7 +295,7 @@ check-memdyn: build/test-memdyn build/test-memdyn-asan
 	./build/test-memdyn
 	./build/test-memdyn-asan --quick
 .PHONY: check-memdyn
-check-rc: check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
+check-rc: check-decoder-hardening check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
 .PHONY: check-meta check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-fqfam check-dispatch check-asm check-arch check-format2
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan build/test-levels-asan
 	./build/test-levels-asan
