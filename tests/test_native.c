@@ -40,7 +40,7 @@ static const struct { const char *name; cfn c; dfn d; int lo, hi, may_refuse; } 
     {"klz", kolmo_klz_compress, kolmo_klz_decompress, 1, 3, 0},
     {"klzh", kolmo_klzh_compress, kolmo_klzh_decompress, 1, 9, 1},
     {"klzma", kolmo_klzma_compress, kolmo_klzma_decompress, 1, 9, 1},
-    {"klzh2", kolmo_klzh2_compress, kolmo_klzh2_decompress, 1, 9, 1},   /* night 2: codec 32 */
+    {"klzh2", kolmo_klzh2_compress, kolmo_klzh2_decompress, 0, 9, 1},   /* night 2: codec 32 (level 0: the fast parse) */
     {"krans", krans_c, kolmo_krans_decompress, 0, 0, 0},
 };
 static void roundtrip(int k, const uint8_t *in, size_t n, int lv, int kind) {
@@ -163,7 +163,7 @@ static void test_klzh2_format(int big) {
         for (size_t i = 0; i < n; i++) in[i] = (uint8_t)rnd();
         for (int k = 0; k < 6; k++) { size_t a = rnd() % (n - 3), b = rnd() % (n - 3); memmove(in + b, in + a, 3); }
         memmove(in + n - 3, in + (rnd() % 8), 3); memmove(in + 3, in, 3);
-        for (int lv = 1; lv <= 9; lv++) klzhv_rt(in, n, lv, 1);
+        for (int lv = 0; lv <= 9; lv++) klzhv_rt(in, n, lv, 1);
         free(in);
     }
     /* khuf chunks cut at 64 KiB x 2^j of input, the literal stream inside literal runs: 1.3 MB of random runs (one
@@ -180,7 +180,7 @@ static void test_klzh2_format(int big) {
                 p += 24;
             }
         }
-        for (int lv = 1; lv <= 9; lv++) CHECK(klzhv_rt(in, n, lv, 1) < n - n / 8, "klzh2 level %d: records at three offsets do not shrink", lv);
+        for (int lv = 0; lv <= 9; lv++) CHECK(klzhv_rt(in, n, lv, 1) < n - n / 8, "klzh2 level %d: records at three offsets do not shrink", lv);
         free(in);
     }
     if (!big) return;
@@ -192,9 +192,50 @@ static void test_klzh2_format(int big) {
     CHECK(z1 + L / 4 < z0, "klzh2 level 7: the match at offset 2^25 + 3 was not used (%zu vs %zu)", z1, z0);
     free(a);
 }
+/* KLZH2 level 0 (the fast parse, encoder only): adversarial inputs, each decoded by the one KLZH2 decoder: empty,
+ * 1 byte and the shortest blocks, zeros, random, long repeats at every period 1..40, a block cut inside a match and
+ * inside a literal run (the same data coded as two blocks), matches that end exactly at the block end, a 4 MiB block
+ * whose literal stream crosses every 256 KiB span, and a match at offset 2^24 - 1 (the parse's window). Level 0 must
+ * not change the bytes of level 1 (checked against a second call). */
+static void test_klzh2_fast(int big) {
+    static const size_t sz[] = {0, 1, 2, 8, 9, 10, 15, 16, 17, 31, 64, 255, 4096};
+    const size_t M = (size_t)4 << 20; uint8_t *m = malloc(M + 64);
+    for (size_t k = 0; k < sizeof sz / sizeof *sz; k++) for (int kind = 0; kind < 7; kind++) { gen(m, sz[k], kind); klzhv_rt(m, sz[k], 0, 1); }
+    memset(m, 0, 1u << 20); CHECK(klzhv_rt(m, 1u << 20, 0, 1) < 4096, "klzh2 level 0: 1 MiB of zeros does not shrink");
+    gen(m, 1u << 20, 0); CHECK(klzhv_rt(m, 1u << 20, 0, 1) == (1u << 20), "klzh2 level 0: random data coded");
+    for (size_t per = 1; per <= 40; per++) {   /* long repeats: period per, with a short random head */
+        size_t n = 70000 + per * 13; for (size_t i = 0; i < n; i++) m[i] = i < per ? (uint8_t)rnd() : m[i - per];
+        CHECK(klzhv_rt(m, n, 0, 1) < 2048, "klzh2 level 0: period %zu does not shrink", per);
+        m[n / 2] ^= 1; klzhv_rt(m, n, 0, 1);
+    }
+    for (int t = 0; t < 300; t++) {   /* short random blocks with copied pieces, the last bytes a match */
+        size_t n = 9 + rnd() % 400; for (size_t i = 0; i < n; i++) m[i] = (uint8_t)rnd();
+        for (int k = 0; k < 8; k++) { size_t l = 4 + rnd() % 12; if (l + 1 >= n) continue; size_t a = rnd() % (n - l), b = rnd() % (n - l); memmove(m + b, m + a, l); }
+        if (n > 24) memcpy(m + n - 8, m + rnd() % (n - 16), 8);
+        klzhv_rt(m, n, 0, 1);
+    }
+    { /* text-like data cut into two blocks at every kind of point, and a 4 MiB block over all its 256 KiB spans */
+        gen(m, M, 3); for (size_t i = 0; i < M; i += 1 + rnd() % 5000) m[i] = (uint8_t)rnd();
+        for (int t = 0; t < 20; t++) { size_t c = 1 + rnd() % 100000; klzhv_rt(m, c, 0, 1); klzhv_rt(m + c, 100000 - c + 9, 0, 1); }
+        CHECK(klzhv_rt(m, M, 0, 1) < M / 2, "klzh2 level 0: 4 MiB of words does not shrink");
+        size_t cap = kolmo_klzh_bound(M); uint8_t *a = malloc(cap), *b = malloc(cap);
+        size_t za = kolmo_klzh2_compress(m, M, a, cap, 1), zb = kolmo_klzh2_compress(m, M, b, cap, 1);
+        CHECK(za && za == zb && !memcmp(a, b, za), "klzh2 level 1 not deterministic");
+        size_t z0 = kolmo_klzh2_compress(m, M, a, cap, 0), z1 = kolmo_klzh2_compress(m, M, b, cap, -5);
+        CHECK(z0 && z0 == z1 && !memcmp(a, b, z0), "klzh2 levels below 0 are not level 0");
+        free(a); free(b);
+    }
+    free(m);
+    if (!big) return;
+    const size_t W = (1u << 24) - 1, L = 1u << 16, n = W + 2 * L + 64; uint8_t *a = malloc(n);
+    memset(a, 0, n); for (size_t i = 0; i < L; i++) a[i] = (uint8_t)rnd();
+    memcpy(a + W, a, L);   /* L random bytes, zeros, and the L bytes again at offset exactly 2^24 - 1 */
+    CHECK(klzhv_rt(a, n, 0, 1) + L / 2 < n, "klzh2 level 0: the match at offset 2^24 - 1 was not used");
+    free(a);
+}
 int main(int argc, char **argv) {
     int iters = argc > 1 ? atoi(argv[1]) : 1;
-    test_lengths(); test_hash(); test_klzh_edges(iters > 1); test_klzh2_format(iters > 1);
+    test_lengths(); test_hash(); test_klzh_edges(iters > 1); test_klzh2_format(iters > 1); test_klzh2_fast(iters > 1);
     static const size_t sizes[] = {0, 1, 2, 3, 4, 5, 7, 8, 15, 16, 17, 31, 64, 100, 255, 1000, 4095, 65536, 131071, 131072, 131073, 300000};
     for (int it = 0; it < iters; it++)
         for (int k = 0; k < (int)(sizeof C / sizeof *C); k++)

@@ -28,7 +28,7 @@ static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int 
  * digits); transforms 0..3 with the opt-in bits KOLMO_T_NATIVE_LEAF, KOLMO_T_TYPED_HUF and KOLMO_T_COLUMNS. */
 static int kolmo_params_valid(const kolmo_params *p) {
     if ((unsigned)p->mode > KOLMO_ULTRA) return 0;
-    if (p->level < 0 || (p->level > 22 && !(p->mode == KOLMO_MAX && p->level >= 100 && p->level <= 999))) return 0;
+    if (p->level < (p->mode == KOLMO_FAST ? -1 : 0) || (p->level > 22 && !(p->mode == KOLMO_MAX && p->level >= 100 && p->level <= 999))) return 0;
     int t = p->transforms & ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
     return t >= 0 && t <= 3;
 }
