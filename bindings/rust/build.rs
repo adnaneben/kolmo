@@ -1,5 +1,5 @@
-// Compiles the kolmo native core (src/kolmo.c, src/arch/xxh3.c and src/arch/<isa>/*.S + vendored zstd, lz4, brotli, xxhash, the
-// liblzma subset, and Kolmo's BWT pipeline) into a static library and links it, so the published crate is self-contained:
+// Compiles the kolmo native core (src/kolmo.c, src/arch/<isa>/*.S, Kolmo's own coders and BWT pipeline; no third-party
+// codec library) into a static library and links it, so the published crate is self-contained:
 // it needs a C compiler, but no `make`, no system library, no prebuilt library, and no external Rust
 // crates. The C sources live in `native/` inside the crate — refreshed from the repo root by
 // `sync-native.sh` — with a fallback to the repo tree for in-place contributor builds.
@@ -29,38 +29,15 @@ fn main() {
         manifest.parent().unwrap().parent().unwrap().to_path_buf()
     };
     let src = base.join("src");
-    let vendor = base.join("vendor");
-    let zstd = vendor.join("zstd");
-    let brotli = vendor.join("brotli");
-    let lz4 = vendor.join("lz4");
-    let xz = vendor.join("xz");
-
-    let no_lzma = env::var("CARGO_FEATURE_NO_LZMA").is_ok();
     let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
     let is_x86_64 = arch == "x86_64";
     let cc = env::var("CC").unwrap_or_else(|_| "cc".into());
 
-    let includes = [
-        src.clone(), zstd.clone(), lz4.clone(), brotli.join("include"), xz.clone(),
-    ];
-    let inc_flags: Vec<String> = includes.iter().map(|p| format!("-I{}", p.display())).collect();
-    let mut defs = vec![
-        "-DXXH_NAMESPACE=ZSTD_".to_string(),
-        "-DZSTD_MULTITHREAD".to_string(),
-        "-DZSTD_LEGACY_SUPPORT=0".to_string(),
-        "-DKOLMO_NO_GPU".to_string(),
-    ];
+    let inc_flags: Vec<String> = vec![format!("-I{}", src.display())];
+    let mut defs = vec!["-DKOLMO_NO_GPU".to_string()];
     // KOLMO_NO_ASM=1: no assembly kernels (src/arch/<isa>/*.S), the C references only.
     let no_asm = env::var("KOLMO_NO_ASM").map_or(false, |v| v == "1");
     if no_asm { defs.push("-DKOLMO_NO_ASM".into()); }
-    if !is_x86_64 { defs.push("-DZSTD_DISABLE_ASM".into()); }
-    // liblzma: the vendored subset (vendor/xz, raw LZMA2 only), compiled with its own config and symbol namespace.
-    if no_lzma { defs.push("-DKOLMO_NO_LZMA".into()); }
-    let mut xz_flags = vec!["-DHAVE_CONFIG_H".to_string(), "-include".into(), xz.join("kolmo_lzma_namespace.h").display().to_string()];
-    for d in ["api", "common", "check", "lz", "lzma", "rangecoder", "simple", "delta"] {
-        xz_flags.push(format!("-I{}", xz.join("liblzma").join(d).display()));
-    }
-    xz_flags.push(format!("-I{}", xz.join("common").display()));
     // Portable by default: the target's baseline ISA, like the release binaries and the Python wheels. On x86-64 the
     // AVX2/SSE4.2 paths are chosen at run time by CPUID, so baseline builds lose little. KOLMO_NATIVE=1 builds for
     // the host CPU instead (the library then runs only on CPUs like the build machine).
@@ -68,29 +45,17 @@ fn main() {
     let arch_flag: Option<&str> = if !native { None } else if is_x86_64 { Some("-march=native") } else { Some("-mcpu=native") };
 
     // Gather compile jobs: (compiler, source, extra_flags). Every C file gets -ffp-contract=off (added below):
-    // kolmo.c and Brotli's encoder decide with floats, and FMA contraction would change the frame bytes.
+    // some encoder choices are made with float costs, and FMA contraction would change the frame bytes.
     let mut jobs: Vec<(String, PathBuf, Vec<String>)> = Vec::new();
     jobs.push((cc.clone(), src.join("kolmo.c"), vec![]));
     let mut cfiles = Vec::new();
-    for sub in ["common", "compress", "decompress", "dictBuilder"] { list(&zstd.join(sub), "c", false, &mut cfiles); }
-    for sub in ["common", "dec", "enc"] { list(&brotli.join(sub), "c", false, &mut cfiles); }
-    cfiles.push(lz4.join("lz4.c"));
-    cfiles.push(lz4.join("lz4hc.c"));
-    cfiles.push(src.join("arch/xxh3.c"));          // compiled apart from src/kolmo.c (docs/LAYOUT.md)
     // the block-sorting pipeline, also compiled on its own (LZP, QLFC, the libsais subset, the BWT stream formats)
     for f in ["algo/lzp.c", "algo/qlfc.c", "algo/par.c", "codecs/bwt_stream.c"] { cfiles.push(src.join(f)); }
-    // Kolmo's own coders (codecs 24, 27-29, opt-in), also compiled on their own
-    for f in ["algo/khuf.c", "algo/klz.c", "algo/klzma.c", "algo/khash.c"] { cfiles.push(src.join(f)); }
+    // Kolmo's own coders (codecs 24, 27-29, 32) and kolmo_khash64, also compiled on their own
+    for f in ["algo/khuf.c", "algo/krans.c", "algo/klz.c", "algo/klzma.c", "algo/khash.c"] { cfiles.push(src.join(f)); }
     list(&src.join("algo/sais"), "c", false, &mut cfiles);
     cfiles.sort();
     for f in cfiles { jobs.push((cc.clone(), f, vec![])); }
-    if !no_lzma {
-        let mut xfiles = Vec::new();
-        list(&xz, "c", true, &mut xfiles);
-        xfiles.sort();
-        for f in xfiles { jobs.push((cc.clone(), f, xz_flags.clone())); }
-    }
-    if is_x86_64 { jobs.push((cc.clone(), zstd.join("decompress/huf_decompress_amd64.S"), vec![])); }
     // Kolmo's own assembly kernels for the target ISA.
     let isa = if is_x86_64 { Some("x86_64") } else if arch == "aarch64" { Some("aarch64") } else { None };
     if let (Some(isa), false) = (isa, no_asm) {

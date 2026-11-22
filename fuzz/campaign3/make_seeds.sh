@@ -8,7 +8,7 @@ set -u
 W=${W:?}; K=$PWD/build/kolmo; R=$W/raw; S=$W/seeds; F=$W/frames
 mkdir -p "$R" "$S" "$F"
 python3 -I fuzz/campaign3/seedgen/gen_inputs.py "$R"
-for t in fuzz_decompress fuzz_limited fuzz_dict fuzz_stream fuzz_stream_limited fuzz_roundtrip fuzz_codecs fuzz_ext fuzz_profile fuzz_nplane; do mkdir -p "$S/$t"; done
+for t in fuzz_decompress fuzz_limited fuzz_stream fuzz_stream_limited fuzz_roundtrip fuzz_codecs fuzz_ext fuzz_profile fuzz_nplane; do mkdir -p "$S/$t"; done
 # slices: the first 48 KiB of each input for the round trips, and 8 KiB for the slow modes (context mixing, GR6+, audio):
 # under ASan+UBSan with comparison tracing a 48 KiB GR6+ or audio frame takes about 3 s per fuzz input
 mkdir -p "$W/slices" "$W/small"
@@ -28,7 +28,7 @@ done
 $K -m fast --typed-huf -T 1 "$R/mono.wav" "$F/mono.wav.typed.kol" 2>/dev/null
 # frames: at most 2 MiB each
 for f in "$F"/*.kol; do [ "$(stat -c %s "$f")" -le 2097152 ] && cp "$f" "$S/fuzz_decompress/"; done
-cp "$S"/fuzz_decompress/* "$S/fuzz_limited/"; cp "$S"/fuzz_decompress/* "$S/fuzz_dict/"
+cp "$S"/fuzz_decompress/* "$S/fuzz_limited/"
 # streams
 for f in "$R"/table.csv "$R"/app.log "$R"/text.txt "$W"/slices/*.wav; do
   b=$(basename "$f"); $K -s "$f" "$S/fuzz_stream/$b.czs" 2>/dev/null; $K -S 1 -m hc "$f" "$S/fuzz_stream/$b.s1.czs" 2>/dev/null
@@ -37,8 +37,8 @@ cp "$S"/fuzz_stream/* "$S/fuzz_stream_limited/"
 # round trips: mode byte + slice (mode byte bits: see fuzz/fuzz_roundtrip.c)
 for f in "$W"/slices/*; do b=$(basename "$f"); for mb in 0 1 2 3 4 9 17 33; do { printf "\\$(printf %o $mb)"; head -c 32768 "$f"; } > "$S/fuzz_roundtrip/$b.$mb"; done; done
 # codecs: payloads cut out of the frames, Y4M layouts, and round-trip seeds (sel | 0x80)
-cc -O1 -g -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz \
-  fuzz/campaign3/seedgen/codec_seeds.c build/libkolmoarch.a build/libvendor.a -lpthread -lm -o "$W/codec_seeds"
+cc -O1 -g -Isrc \
+  fuzz/campaign3/seedgen/codec_seeds.c build/libkolmoarch.a -lpthread -lm -o "$W/codec_seeds"
 "$W/codec_seeds" "$S/fuzz_codecs" "$F"/*.kol "$R"/*.y4m
 for f in "$S"/fuzz_codecs/*_nested; do mv "$f" "$S/fuzz_decompress/"; done 2>/dev/null
 for f in "$W"/small/fastq.fq "$W"/small/text.txt "$W"/small/records.txt "$W"/small/sparse.u16 "$W"/small/walk.i32 "$W"/small/mono.wav "$W"/small/stereo.wav "$W"/small/semi.txt; do

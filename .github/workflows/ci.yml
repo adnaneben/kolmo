@@ -25,11 +25,10 @@ jobs:
         run: make -j4 ARCH= check-frontier-dna check-cm-compact check-tar-files
       - name: shared library + Python binding round trip
         run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py && python3 tests/test_concurrent_dict.py
-      - name: bindings' native copies match src and vendor (the wheel and the crate build from them)
+      - name: bindings' native copies match src (the wheel and the crate build from them)
         run: |
           for b in python rust; do
             diff -r -x experimental src bindings/$b/native/src
-            diff -r vendor bindings/$b/native/vendor
             for f in src/experimental/frontier_*; do cmp "$f" "bindings/$b/native/$f"; done
           done
       - name: Rust binding round trip
@@ -59,8 +58,8 @@ jobs:
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
       - uses: actions/checkout@v4
-      - name: build vendor libraries and the separately compiled arch objects
-        run: make -j4 ARCH= build/libvendor.a build/libkolmoarch.a
+      - name: build the separately compiled arch objects
+        run: make -j4 ARCH= build/libkolmoarch.a
       - name: resource and concurrency regressions under ASan and UBSan
         run: make -j4 ARCH= check-sanitizers
       - name: component tests of the merged features under ASan and UBSan
@@ -68,23 +67,22 @@ jobs:
       - name: address and undefined-behaviour sanitizers
         run: |
           gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
-            -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz \
-            tests/kolmotest.c src/kolmo.c build/libkolmoarch.a build/libvendor.a -lpthread -lm -o kolmotest_asan
+            -Isrc \
+            tests/kolmotest.c src/kolmo.c build/libkolmoarch.a -lpthread -lm -o kolmotest_asan
           ./kolmotest_asan
         timeout-minutes: 240
   fuzz-smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: build vendor libraries and the separately compiled arch objects
-        run: make -j4 ARCH= build/libvendor.a build/libkolmoarch.a
+      - name: build the separately compiled arch objects
+        run: make -j4 ARCH= build/libkolmoarch.a
       - name: build and run fuzz targets under ASan/UBSan (bounded)
         run: |
           for t in fuzz_decompress fuzz_roundtrip fuzz_nplane; do
             gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off \
-              -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 \
-              -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz \
-              fuzz/$t.c fuzz/run_local.c src/kolmo.c build/libkolmoarch.a build/libvendor.a \
+              -Isrc \
+              fuzz/$t.c fuzz/run_local.c src/kolmo.c build/libkolmoarch.a \
               -lpthread -lm -o $t
             ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./$t 20000
           done
@@ -93,9 +91,8 @@ jobs:
           # these harnesses include src/kolmo.c themselves; KOLMO_FUZZ_NO_CM keeps the context-mixing setup out
           for t in fuzz_codecs fuzz_ext fuzz_profile; do
             gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FUZZ_NO_CM \
-              -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 \
-              -Isrc -Ifuzz -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz \
-              fuzz/$t.c fuzz/run_local.c build/libkolmoarch.a build/libvendor.a -lpthread -lm -o $t
+              -Isrc -Ifuzz \
+              fuzz/$t.c fuzz/run_local.c build/libkolmoarch.a -lpthread -lm -o $t
             n=20000; [ $t = fuzz_codecs ] && n=5000      # its round trips encode (block sorting, audio, GR6+)
             ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./$t $n
           done

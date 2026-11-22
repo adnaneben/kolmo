@@ -1,21 +1,17 @@
 [package]
 name = "kolmo"
-version = "1.2.0-rc.4"
+version = "0.0.1-rc.1"
 edition = "2021"
 description = "Structure-aware lossless compressor: best ratio across tables, logs and scientific data, with decode that scales across cores."
 license = "Apache-2.0"
 repository = "https://github.com/adnaneben/kolmo"
 homepage = "https://github.com/adnaneben/kolmo"
 readme = "README.md"
-keywords = ["compression", "lossless", "columnar", "zstd", "simd"]
+keywords = ["compression", "lossless", "columnar", "entropy", "simd"]
 categories = ["compression", "encoding"]
 authors = ["Adnane Aqartit and contributors"]
 # Keep build artifacts out of the published crate; the C sources under native/ are shipped.
 exclude = ["native/**/*.o", "native/**/*.a", "native/**/build/**"]
-
-[features]
-# Build the native core without the LZMA2 coder (the ratio modes then use the other coders).
-no-lzma = []
 
 [lib]
 name = "kolmo"

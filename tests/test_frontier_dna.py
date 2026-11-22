@@ -25,9 +25,10 @@ def check(stock, frontier, folder):
         "280a0000a0020000384330bb0800000000000000080000005000000020000000"
         "00000000000102003e76312e312e300a"
     ) + b"\xb4" * 640
+    # a version 6 frame: container version 12 builds refuse it as an earlier version (KOLMO_ERR_LEGACY)
     experimental.write_bytes(legacy)
-    run(frontier, "-d", experimental, restored)
-    assert restored.read_bytes() == b">v1.1.0\n" + (b"ACGT" * 20 + b"\n") * 32
+    r = subprocess.run([frontier, "-d", str(experimental), str(restored)], capture_output=True)
+    assert r.returncode != 0 and b"written by an earlier Kolmo" in r.stderr, r
 
     rng = random.Random(81793)
     seq = bytes(rng.choices(b"ACGT", k=256 * 1024))

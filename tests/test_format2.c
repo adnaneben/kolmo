@@ -1,11 +1,11 @@
-/* Format 2 (container version 11): codecs 19-23.
+/* Format 2: codecs 19-21 and 23 (container version 12; codec 22, Huffman then zstd, was removed with the library
+ * coders and must be refused).
  *   - zero-run split and join (src/algo/zerorun.c) on edge cases and random streams, and rejection of bad splits;
- *   - leaf codecs 21 (per-plane), 22 (Huffman then zstd) and 23 (zero runs): round trips through codec_decompress,
- *     refusal without version 11, and damaged payloads (no crash; a decode that succeeds is caught by the block
- *     checksum at container level);
+ *   - leaf codecs 21 (per-plane) and 23 (zero runs): round trips through codec_decompress, refusal outside a graph
+ *     block, and damaged payloads (no crash; a decode that succeeds is caught by the block checksum at container level);
  *   - whole frames of integer arrays (graph leaves), a 16-bit PCM WAV (codec 19) and an 8-bit Y4M video (codec 20) in
- *     every mode: version 11, determinism, round trip, range reads, file API, damaged frames;
- *   - a version-11 frame whose header says version 10 is refused. */
+ *     every mode: version 12, determinism, round trip, range reads, file API, damaged frames;
+ *   - the same frame whose header says version 10 is refused as an earlier version (KOLMO_ERR_LEGACY). */
 #include "../src/kolmo.c"
 #include <stdio.h>
 #include <fcntl.h>
@@ -24,18 +24,15 @@ static int zr_case(const uint8_t *p, size_t n) {
 }
 
 typedef size_t (*enc_fn)(codec_ctx *, const uint8_t *, size_t, uint8_t *, size_t);
-static size_t enc_planes(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *o, size_t c) { kgsel S = {C_ZSTD, 19, 1}; return planes_compress(x, 4, p, n, o, c, kg_sel_sub, &S); }
-static size_t enc_zrun(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *o, size_t c) { kgsel S = {C_LZMA, 9, 0}; return zrun_compress(x, p, n, o, c, kg_sel_sub, &S); }
-static size_t enc_hz(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *o, size_t c) {
-    uint8_t *h = malloc(c); size_t hl = h ? huf_compress_all(p, n, h, c) : 0, z = hl ? hz_compress_huf(x, 19, h, hl, o, c) : 0; free(h); return z;
-}
+static size_t enc_planes(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *o, size_t c) { kgsel S = {R_LZH, 19, 1}; return planes_compress(x, 4, p, n, o, c, kg_sel_sub, &S); }
+static size_t enc_zrun(codec_ctx *x, const uint8_t *p, size_t n, uint8_t *o, size_t c) { kgsel S = {R_LZMA, 9, 0}; return zrun_compress(x, p, n, o, c, kg_sel_sub, &S); }
 
 static int leaf_case(int codec, enc_fn enc, const uint8_t *p, size_t n) {
     codec_ctx x = {0}; size_t cap = n + n / 8 + 4096; uint8_t *c = malloc(cap), *o = malloc(n + 1), *d = malloc(cap); int rc = 1;
     if (!c || !o || !d) goto out;
     size_t z = enc(&x, p, n, c, cap);
     if (!z) { fprintf(stderr, "codec %d: no output\n", codec); goto out; }
-    if (!codec_decompress(&x, codec, c, z, o, n)) { fprintf(stderr, "codec %d: accepted without version 11\n", codec); goto out; }
+    if (!codec_decompress(&x, codec, c, z, o, n)) { fprintf(stderr, "codec %d: accepted outside a graph block\n", codec); goto out; }
     x.allow_f2 = 1;
     if (codec_decompress(&x, codec, c, z, o, n) || memcmp(o, p, n)) { fprintf(stderr, "codec %d: round trip\n", codec); goto out; }
     for (int t = 0; t < 200; t++) {                             /* damage: no crash, no read or write out of bounds */
@@ -87,8 +84,9 @@ static int frame_case(const char *what, const uint8_t *s, size_t n, kolmo_mode m
     if (kolmo_decompress(f, (size_t)z, o, n, 3) != (int64_t)n || memcmp(o, s, n)) FAIL("%s mode %d: round trip", what, m);
     uint8_t rr[100]; uint64_t off = n / 3;
     if (kolmo_read_range(f, (size_t)z, off, 100, rr, 2) != 100 || memcmp(rr, s + off, 100)) FAIL("%s mode %d: range read", what, m);
-    if (f[4] == 11) { memcpy(g, f, (size_t)z); g[4] = 10; uint32_t hc = kolmo_crc32c(0, g, 28); hc = kolmo_crc32c(hc, g + HDR, (size_t)get32(g + 20) * IDX); put32(g + 28, hc);
-        if (kolmo_decompress(g, (size_t)z, o, n, 1) >= 0) FAIL("%s mode %d: version 11 content read as version 10", what, m); }
+    if (f[4] != 12) FAIL("%s mode %d: version %d, want 12", what, m, f[4]);
+    { memcpy(g, f, (size_t)z); g[4] = 10; uint32_t hc = kolmo_crc32c(0, g, 28); hc = kolmo_crc32c(hc, g + HDR, (size_t)get32(g + 20) * IDX); put32(g + 28, hc);
+      if (kolmo_decompress(g, (size_t)z, o, n, 1) != KOLMO_ERR_LEGACY) FAIL("%s mode %d: a frame labelled version 10 was not refused as legacy", what, m); }
     for (int t = 0; t < 40; t++) {
         memcpy(g, f, (size_t)z); size_t q = HDR + (size_t)(rv() % (uint64_t)(z - HDR)); g[q] ^= (uint8_t)(1 + rv() % 255);
         int64_t got = kolmo_decompress(g, (size_t)z, o, n, 1);
@@ -125,7 +123,11 @@ int main(void) {
     for (size_t i = 0; i < L; i++) { p[i] = (uint8_t)(rv() % 23); p[L + i] = i % 97 == 0 ? (uint8_t)(rv() % 4) : 0; p[2 * L + i] = 0; p[3 * L + i] = i % 5000 == 0; }
     if (leaf_case(C_PLANES, enc_planes, p, n)) return 1;
     if (leaf_case(C_ZRUN, enc_zrun, p + L, 3 * L)) return 1;
-    if (leaf_case(C_HZ, enc_hz, p, n)) return 1;
+    {   /* codec 22 (Huffman then zstd) is gone: no table, refused as a leaf even inside a graph block */
+        codec_ctx x = {0}; x.allow_f2 = 1; uint8_t junk[64] = {5, 1, 2, 3}, o[256];
+        if (codec_get(22) || codec_decompress(&x, 22, junk, sizeof junk, o, sizeof o) != -1) FAIL("codec 22 still decodes");
+        for (int c = 1; c <= 13; c++) if ((c <= 4 || c == 6 || c == 13) && codec_get(c)) FAIL("retired library codec %d still registered", c);
+    }
     free(p);
     /* frames: integer arrays whose leaves take codecs 21-23 */
     size_t cnt = 60000; uint8_t *s = malloc(128 + cnt * 8);
@@ -134,20 +136,24 @@ int main(void) {
     for (kolmo_mode m = KOLMO_RT; m <= KOLMO_MAX; m++) if (frame_case("i64 npy", s, h + cnt * 8, m, 0, -1)) return 1;
     h = mk_npy(s, 4, cnt);
     for (size_t i = 0; i < cnt; i++) { int32_t y = 1950 + (int32_t)(i / 70) % 70; memcpy(s + h + i * 4, &y, 4); }
-    int v11 = 0;
-    for (kolmo_mode m = KOLMO_FAST; m <= KOLMO_MAX; m++) {
+    for (kolmo_mode m = KOLMO_FAST; m <= KOLMO_MAX; m++)
         if (frame_case("year npy", s, h + cnt * 4, m, 0, C_GRAPH)) return 1;
-        kolmo_params q = {m, 0, 1, 0, 1}; size_t cap = kolmo_bound(h + cnt * 4, &q); uint8_t *f = malloc(cap);
-        if (kolmo_compress(s, h + cnt * 4, f, cap, &q) > 0 && f[4] == 11) v11++;
-        free(f);
+    {   /* the graph encoder writes a format-2 leaf (codec 21 or 23) on this array at the balanced and ratio settings
+         * (the frame no longer says so: every frame is version 12, so the encoder's own flag is read) */
+        static const int role[2] = {R_LZH, R_LZMA}, lvl[2] = {3, 9};
+        for (int k = 0; k < 2; k++) {
+            codec_ctx x = {0}; size_t cap = 2 * cnt * 4 + 65536; uint8_t *f = malloc(cap);
+            size_t z = kg_encode_num(&x, role[k], lvl[k], s + h, cnt * 4, 4, 0, f, cap);
+            if (!z || !x.used_f2) FAIL("year npy: no format-2 leaf (role %d, %zu bytes)", role[k], z);
+            free(f);
+        }
     }
-    if (!v11) FAIL("year npy: no mode wrote a format-2 leaf");
     free(s);
     /* audio: mono and stereo, odd data chunk with a trailing chunk; small blocks so blocks start inside samples */
     uint8_t *w = malloc(44 + 2 * 2 * 300000 + 64);
     for (int ch = 1; ch <= 2; ch++) {
         size_t wn = mk_wav(w, ch, 150000 + 77 * (size_t)ch, ch == 1);
-        for (kolmo_mode m = KOLMO_FAST; m <= KOLMO_MAX; m += 3) if (frame_case("wav", w, wn, m, 11, C_AUD)) return 1;
+        for (kolmo_mode m = KOLMO_FAST; m <= KOLMO_MAX; m += 3) if (frame_case("wav", w, wn, m, 12, C_AUD)) return 1;
         kolmo_params p = {KOLMO_FAST, 0, 3, 65537, 1}; size_t cap = kolmo_bound(wn, &p); uint8_t *f = malloc(cap), *o = malloc(wn);
         int64_t z = kolmo_compress(w, wn, f, cap, &p);
         if (z <= 0 || kolmo_decompress(f, (size_t)z, o, wn, 3) != (int64_t)wn || memcmp(o, w, wn)) FAIL("wav, odd blocks");
@@ -165,7 +171,7 @@ int main(void) {
     /* video */
     uint8_t *y = malloc(200000);
     size_t yn = mk_y4m(y, 64, 48, 30);
-    for (kolmo_mode m = KOLMO_FAST; m <= KOLMO_MAX; m++) if (frame_case("y4m", y, yn, m, 11, C_VID)) return 1;
+    for (kolmo_mode m = KOLMO_FAST; m <= KOLMO_MAX; m++) if (frame_case("y4m", y, yn, m, 12, C_VID)) return 1;
     if (file_case("y4m", y, yn, KOLMO_FAST)) return 1;
     {   /* the layout on threads: the same bytes for 1-8 threads; the wavefront inverse on 1-8 threads; a bad predictor
          * byte (3, or the previous frame at frame 0) in any frame fails the inverse on every thread count, never hangs */
@@ -197,6 +203,6 @@ int main(void) {
     y[yn - 1000] = 0; memcpy(y + 50000, "FRAMX", 5);                  /* not whole frames: no video route, still a round trip */
     if (frame_case("bad y4m", y, yn, KOLMO_FAST, 0, -1)) return 1;
     free(y);
-    printf("FORMAT2 zero-run, leaves 21-23, integer frames, audio (codec 19), video (codec 20) PASSED\n");
+    printf("FORMAT2 zero-run, leaves 21 and 23 (22 refused), integer frames, audio (codec 19), video (codec 20) PASSED\n");
     return 0;
 }

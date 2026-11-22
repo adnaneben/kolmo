@@ -71,8 +71,8 @@ def read_range(blob, off, length, threads=0):
     return out.raw[:got]
 
 def train_dict(samples, dict_cap=112 * 1024):
-    """Train a dictionary from an iterable of sample bytes (small, similar files). Returns the
-    dictionary bytes. Use it with compress(..., dict=d) / decompress(..., dict=d)."""
+    """Dictionaries are not available in this build (they needed library codecs): raises ValueError with the
+    library's KOLMO_ERR_UNSUPPORTED message. Kept so that existing callers fail clearly."""
     samples = [bytes(s) for s in samples]
     if not samples:
         raise ValueError("train_dict: need at least one sample")
@@ -87,16 +87,16 @@ def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0
     """Compress bytes; returns the compressed bytes. mode: speed|balanced|ratio (advanced: rt|fast|eco|hc|max|ultra).
     transforms: True (analyse and transform), False (codec only) or "quick" (cheap transforms only; fastest).
     native_leaf: with mode="balanced", integer series may use Kolmo's native plane-context leaves when smaller
-    (sensor/ECG/numeric columns, typically 5-12% smaller; such files decode ~1.5-2.6x slower and are container version 9).
+    (sensor/ECG/numeric columns, typically 5-12% smaller; such files decode ~1.5-2.6x slower).
     level: 0 = mode default; with mode="ultra", 1 = model 1 only (faster) and 2 = maximum ratio (numeric graph
     leaves may also use context mixing: smaller integer series, much slower decoding of those blocks).
     typed_huf: opt-in, with mode="balanced" (or "fast"), threads=1 and the default level: a little-endian integer
     NPY array or a PCM16 WAV of at most 16 MiB is coded type first (integer prediction, Huffman planes). A speed
     option: several times faster to compress. On single-channel 16-bit signals (ECG, mono audio) the output is
     often smaller too; on other arrays and on multi-channel data (channels are not split) it is often larger than
-    the default and sometimes larger than plain zstd, so compare sizes before relying on it.
-    It applies only without a dictionary; anything else is compressed as usual. typed_huf excludes native_leaf.
-    Pass dict=<bytes from train_dict> to compress small files against a trained dictionary."""
+    the default, so compare sizes before relying on it. typed_huf excludes native_leaf.
+    dict: dictionaries are not available in this build; a non-empty dict raises ValueError (KOLMO_ERR_UNSUPPORTED).
+    Every blob is container version 12; blobs of earlier Kolmo versions are refused by decompress (KOLMO_ERR_LEGACY)."""
     if mode not in _MODES:
         raise ValueError("mode must be one of " + ", ".join(_MODES))
     if native_leaf and typed_huf:
@@ -116,7 +116,8 @@ def compress(data, mode="balanced", threads=0, block=0, transforms=True, level=0
     return out.raw[:n]
 
 def decompress(blob, threads=0, dict=None):  # noqa: A002
-    """Decompress a whole blob; returns the original bytes. Pass the same dict used to compress."""
+    """Decompress a whole blob; returns the original bytes. Blobs of earlier Kolmo versions (library codecs) raise
+    ValueError (KOLMO_ERR_LEGACY). dict: not available in this build (a non-empty dict raises ValueError)."""
     blob = bytes(blob)
     n = original_size(blob)
     out = ctypes.create_string_buffer(n if n else 1)

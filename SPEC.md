@@ -1,13 +1,39 @@
 # kolmo container format
 
-This describes the `CZN1` container as written by this implementation. The writer emits the lowest version a file
-needs: 3 by default, and 4 to 10 only when a block uses a feature that needs it; versions 1 to 10 are readable. The
-section *Identifiers and versions* lists every version, codec id, node id and model, and which release reads each.
+This describes the `CZN1` container as written by this implementation: **container version 12**, Kolmo's own coders
+only. Every frame this build writes has version byte 12, and it reads version 12 only (see *Version 12* below).
+Versions 1 to 11 were written by Kolmo 1.x and the 1.2.0 release candidates, whose coders included zstd, Brotli, LZ4,
+liblzma (LZMA2) and zstd's Huffman coder, with XXH3-64/XXH64 checksums, zstd dictionaries and trained profiles; this
+build refuses them with `KOLMO_ERR_LEGACY` (-13). The rest of this document keeps their description where it explains
+an identifier, marked as history. The section *Identifiers and versions* lists every version, codec id, node id and
+model.
 The container framing below is stable and intended to be frozen at 1.0. The per-block *transform*
 sub-formats (tables, logs, scientific records, images, words) are not yet frozen and may change before 1.0; a decoder
 identifies them per block and this document specifies where that identification lives, not every transform's bytes.
 
 All multi-byte integers are little-endian. Offsets are in bytes from the start of the file.
+
+## Version 12
+
+What version 12 changes against version 11 (everything else in this document applies as written):
+
+- **Version byte.** Every frame, nested frames (the video route's inner frame) and merged `--target` frames included,
+  has byte 4 = 12. A reader returns `KOLMO_ERR_LEGACY` for byte 4 in 1..11 (before any checksum is checked: the version
+  decides) and `KOLMO_ERR_CORRUPT` for 0 or anything above 12. The compact profile form `CZC1` is also
+  `KOLMO_ERR_LEGACY`. Inside a version 12 frame every feature that earlier versions gated by version (graph blocks,
+  line classes, codecs 15-32, the ARM64 filter, the larger table slack) is allowed.
+- **Codecs.** Ids 1 (LZ4), 2 (LZ4-HC), 3 (zstd), 4 (Brotli), 6 (LZMA2), 13 (zstd's HUF) and 22 (Huffman then zstd) are
+  retired: no encoder writes them and no decoder reads them (a block or leaf naming one fails as corrupt). Their roles
+  are coded by Kolmo's coders: `speed` by KLZ (28, level 1), `balanced` and `hc` by KLZH2 (32; levels 3 and 9),
+  `eco` by KLZH2 level 7, `ratio`'s LZ coder by KLZMA (24), Huffman leaves and plane-aligned Huffman chunks by khuf
+  (27). Codec 5 (libbsc 3.4.0's block format, Kolmo's own C port) stays readable. The nplane leaf's `h` tag (codec 15)
+  holds a khuf chunk stream (codec 27) instead of a codec 13 stream.
+- **Checksums and hashes.** Every hash of the format is `kolmo_khash64` (`src/algo/khash.h`, Kolmo's own 64-bit hash)
+  with the seeds earlier versions used for XXH3-64/XXH64: block checksums (low 32 bits, seed `0x637a6e31`; rt: the
+  stored payload, seed `0x637a6e31 ^ plan bytes`), codec 5's payload hash (seed `0x62736331`), column-split table
+  segments (`0x74626c63`), DDP1 chunk checks (`0x64647031`).
+- **Flags.** Header flag bits 1 (dictionary) and 2 (trained profile) are retired; a version 12 frame with either set is
+  corrupt. Bytes 6-9 are 0.
 
 ## File
 
@@ -24,7 +50,7 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | off | size | field | meaning |
 |----|----|----|----|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 (format 2) when a block or graph leaf uses codecs 19-23, a block uses the ARM64 branch filter (plan type 11), a table block's transformed length exceeds the block length + 16384 (see below), or the frame uses a trained profile (flag bit 2), or a CM stream (block or graph leaf) carries learning settings (model nibble 14 or 15) or is model 4 (model nibble 9)) |
+| 4 | 1 | version | 12 (this build; see *Version 12*). History: 1 to 11: the highest version any block needs (3 when none needs more; 4 or 5 only when a table column uses the delta-of-delta or third-order predictor; 6 only when a block uses the minified-JSON split, tflag 10; 7 when a block is a kolmo graph, codec 12; 8 when a block uses the line-class transform, plan type 10; 9 only when a graph leaf uses codec 15; 10 only when a block uses the FASTQ family coder, codec 16; 11 (format 2) when a block or graph leaf uses codecs 19-23, a block uses the ARM64 branch filter (plan type 11), a table block's transformed length exceeds the block length + 16384 (see below), or the frame uses a trained profile (flag bit 2), or a CM stream (block or graph leaf) carries learning settings (model nibble 14 or 15) or is model 4 (model nibble 9)) |
 | 5 | 1 | mode | the `kolmo_mode` used (rt=0 … ultra=5); informational |
 | 6 | 1 | transform | file-level plan type for version 1; 0 in versions 2–5, unless a dictionary is used (then bytes 6–9 hold the dictionary id) |
 | 7 | 1 | a | plan parameter (v1); part of the dictionary id when flag bit 1 is set |
@@ -37,8 +63,8 @@ The payloads follow the index in block order; payload *i* occupies the next `com
 | 24 | 4 | block | nominal block size in bytes |
 | 28 | 4 | crc32c | CRC-32C (Castagnoli) of header bytes 0..27 followed by the whole block index |
 
-A reader rejects the file if the magic is wrong, the version is not one it knows (1–11 for this implementation; older
-releases stop earlier, see *Identifiers and versions*), the index does not fit in the file, the
+A reader rejects the file if the magic is wrong, the version is not one it knows (12 for this implementation, with
+`KOLMO_ERR_LEGACY` for 1–11; older releases read 1 to their own highest, see *Identifiers and versions*), the index does not fit in the file, the
 header+index CRC does not match, the raw sizes of the index do not add up to `orig`, a stored block (codec 0) is not
 exactly its raw size plus the 4 plan bytes, or (*Decode working set*, below) a block needs more than `memd` declares. If flag bit 1 is set, the reader must be given a dictionary whose id (the low 32 bits
 of XXH3 of the dictionary bytes, seed `0x637a6e44`) equals bytes 6–9, or decoding fails with `KOLMO_ERR_DICT`; an older
@@ -51,13 +77,14 @@ reader that predates the flag refuses the newer version rather than returning wr
 | 0 | 4 | raw | decoded length of this block |
 | 4 | 4 | comp | stored length of this block's payload |
 | 8 | 4 | checksum | low 32 bits of a block checksum (see below) |
-| 12 | 1 | codec | entropy coder: STORE=0, LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, BSC=5, LZMA2=6, CM=7, GRAPH=12 (kolmo graph block), FQFAM=16 (FASTQ family coder), CMI=17 (context mixing with the image model), GR6=26 (GR6+ line-structured text); the full list is in *Identifiers and versions* |
+| 12 | 1 | codec | entropy coder (version 12: STORE=0, BSC=5, CM=7, KLZMA=24, KHUF=27, KLZ=28, KLZH2=32 and the others below; history: LZ4=1, LZ4HC=2, ZSTD=3, BROTLI=4, LZMA2=6), CM=7, GRAPH=12 (kolmo graph block), FQFAM=16 (FASTQ family coder), CMI=17 (context mixing with the image model), GR6=26 (GR6+ line-structured text); the full list is in *Identifiers and versions* |
 | 13 | 1 | tflag | transform applied before the coder (see below) |
 | 14 | 2 | reserved | 0 |
 
 `raw` values sum to `orig`. Payload offsets are the running sum of `comp`, starting at 32 + 16·nblocks.
 
-**Block checksum.** Version 3 uses the low 32 bits of XXH3-64; versions 1–2 use XXH64. By default it is computed over
+**Block checksum.** Version 12 uses the low 32 bits of `kolmo_khash64` (seed `0x637a6e31`). History: versions 3–11
+used the low 32 bits of XXH3-64, versions 1–2 XXH64. By default it is computed over
 the *decoded* block and checked after decoding. When header flag bit 0 is set (rt), it is instead computed over the
 stored payload after its 4-byte plan prefix, seeded with those 4 bytes, and checked *before* decoding.
 
@@ -94,13 +121,15 @@ blocks that contain no newline). Files with a tflag 10 block are version 6.
 
 ## Entropy coders
 
-`STORE` is the raw block. `LZ4`/`LZ4HC`, `ZSTD`, `BROTLI` and `LZMA2` are the standard formats from the vendored
-libraries. `BSC` is libbsc 3.4.0's block-sorting stream (written and read by Kolmo's C port in `src/codecs/bwt.c`), prefixed with a 4-byte XXH32 of the stream that is checked before
+`STORE` is the raw block. KLZ (28), KLZH (29), KLZH2 (32), KLZMA (24) and khuf (27) are Kolmo's own LZ, LZMA-class and
+Huffman coders; their formats are in `src/algo/klz.h`, `src/algo/klzma.h`, `src/algo/khuf.h` and `src/algo/krans.h`.
+(History: versions 1–11 also had `LZ4`/`LZ4HC`, `ZSTD`, `BROTLI` and `LZMA2`, the standard formats of the vendored
+libraries; version 12 does not read them.) `BSC` is libbsc 3.4.0's block-sorting stream (written and read by Kolmo's C port in `src/codecs/bwt.c`), prefixed with the low 32 bits of `kolmo_khash64` of the stream (seed `0x62736331`; XXH64 before version 12), checked before
 decoding; from rc3 it is read only. `BWT` (codec 18, container version 11) is Kolmo's own block-sorting stream
 (`src/codecs/bwt_stream.c`): flags u8 (bits 0-1 QLFC model, 1 static or 2 adaptive; bit 2 LZP) | LZP table bits u8 and
 minimum match u8 when bit 2 is set | primary index u32 | log2 of the index sampling interval u8 | k u8 | k sampled
 BWT indexes u32 | the QLFC stream (block count u8, per block raw and coded sizes u32, the blocks). All little-endian;
-no header, length or checksum of its own: the raw size and the XXH3 block checksum come from the container. `CM` is this project's integer context-mixing coder; its stream starts with a 32-bit size word whose low 28
+no header, length or checksum of its own: the raw size and the block checksum come from the container. `CM` is this project's integer context-mixing coder; its stream starts with a 32-bit size word whose low 28
 bits are the block length and whose top 4 bits `f` select the model: `f = 0` is model 1 with the legacy default table
 size; otherwise `f & 7` is the log2 of the hash-table size minus 15, and `f & 8` selects model 2 (two more sparse
 contexts, three record contexts, four mixers combined by a learned final mixer, and an extra order-2 APM). The arithmetic-coded bytes follow.
@@ -182,8 +211,8 @@ bytes*, `docs/MEMORY-MODEL.md`): `memd` itself is computed from the payloads.
 One table of every identifier a frame can carry, the first build that writes it, and what an older reader does with
 it. A new identifier is claimed here first, so that two lines of work do not take the same number.
 
-**Container versions** (header byte 4). The writer emits the highest version any block needs; a reader refuses a
-version above the highest it knows.
+**Container versions** (header byte 4). This build writes 12 and reads 12 only. Up to version 11 the writer emitted
+the highest version any block needed and a reader refused a version above the highest it knew.
 
 | version | written when | first reader |
 |----|----|----|
@@ -196,15 +225,16 @@ version above the highest it knows.
 | 9 | a graph leaf uses codec 15; on request only (`--native-leaf`) | 1.2.0 |
 | 10 | a block uses the FASTQ family coder (codec 16); `ultra` only | this branch (after 1.2.0-rc2) |
 | 11 | format 2: a block uses codec 19 (audio) or 20 (video), a graph leaf uses codec 21, 22 or 23, a table block uses the larger transform slack, the frame was written with a trained profile (flag bit 2; see *Profile frames*), or a block is a GR6+ block (codec 26; `ultra` only) | rc3 |
+| 12 | every frame: Kolmo's own coders only, `kolmo_khash64` checksums, no dictionary or profile (see *Version 12*); versions 1–11 are refused with `KOLMO_ERR_LEGACY` | rc4-native |
 
-Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0-rc1 and rc2; 10 by the FASTQ branch; 11 by rc3. (1.1.0 is the state of `main` under that
+Highest version read: 5 by 1.0.0 and 1.0.1; 8 by 1.1.0; 9 by 1.2.0-rc1 and rc2; 10 by the FASTQ branch; 11 by rc3; 12 (only) by rc4-native. (1.1.0 is the state of `main` under that
 version number; it was not tagged or published. 1.2.0 is this build, a release candidate.)
 
 **Block codecs** (index byte 12) and **graph leaf codecs**.
 
 | id | name | where | first reader |
 |----|----|----|----|
-| 0–7 | STORE, LZ4, LZ4HC, ZSTD, BROTLI, BSC, LZMA2, CM | blocks and graph leaves | 1.0.0 |
+| 0–7 | STORE, LZ4, LZ4HC, ZSTD, BROTLI, BSC, LZMA2, CM | blocks and graph leaves | 1.0.0; version 12 keeps 0, 5 and 7 and retires 1–4 and 6 (not read) |
 | 8–11 | DNA, DNA_PREFIX, PCM, DNA_RUNS | blocks; experimental, read and written only by builds made with `-DKOLMO_FRONTIER` | none (not in release builds) |
 | 12 | GRAPH | blocks, version 7 or later | 1.1.0 |
 | 13, 14 | HUF (Huffman only), RANS (order-0 rANS) | graph leaves | 1.1.0 |
@@ -215,14 +245,15 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
 | 19 | AUD (kaud: 16-bit PCM audio) | blocks, version 11; written for 16-bit PCM WAV files by every mode but `rt` when smaller | rc3 |
 | 20 | VID (kvid layout + nested frame) | the only block of a version 11 frame; written for 8-bit Y4M files by every mode but `rt` | rc3 |
 | 21 | PLANES (per-plane leaf) | graph leaves, version 11 | rc3 |
-| 22 | HZ (Huffman, then zstd) | graph leaves, version 11; also inside codecs 21 and 23 | rc3 |
+| 22 | HZ (Huffman, then zstd) | graph leaves, version 11; also inside codecs 21 and 23. Retired in version 12 (not read) | rc3 |
 | 23 | ZRUN (zero runs and literals) | graph leaves, version 11; also inside codec 21 | rc3 |
-| 24 | KLZMA (Kolmo's LZMA-class coder) | blocks and graph leaves, version 11 or later; written only with the opt-in `KOLMO_NATIVE=lzma` (or `strong`); payload in `src/algo/klzma.h` | rc3 wave 2 (native lane) |
+| 24 | KLZMA (Kolmo's LZMA-class coder) | blocks and graph leaves; version 12: `ratio`'s LZ coder (and its trials), the role of LZMA2; payload in `src/algo/klzma.h` | rc3 wave 2 (native lane) |
 | 25 | reserved for the rc3 lanes (`research/RC3-PLAN.md`) | — | — |
 | 26 | GR6 (GR6+ line-structured text) | blocks, version 11 or later; written by `ultra` (not level 1) | rc3 |
-| 27 | KHUF (Kolmo Huffman; codec 13's chunk framing) | graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=huf`; format in `src/algo/khuf.h` | rc3 wave 2 |
-| 28 | KLZ (byte-aligned LZ77) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
-| 29 | KLZH (LZ77 with Huffman-coded streams) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
+| 27 | KHUF (Kolmo Huffman; codec 13's chunk framing) | graph leaves; version 12: every Huffman leaf, the role of codec 13; format in `src/algo/khuf.h` | rc3 wave 2 |
+| 28 | KLZ (byte-aligned LZ77) | blocks and graph leaves; version 12: `speed` (level 1; level 3 for the LZ4-HC role); format in `src/algo/klz.h` | rc3 wave 2 |
+| 29 | KLZH (LZ77 with Huffman-coded streams) | blocks and graph leaves; read, not written by version 12 (KLZH2 is); format in `src/algo/klz.h` | rc3 wave 2 |
+| 32 | KLZH2 (KLZH with a mode byte per stream: Huffman, or KRANS static rANS for the sequence-code streams) | blocks and graph leaves; version 12: `balanced` (level 3), `hc` (level 9) and `eco` (level 7), the roles of zstd and Brotli; formats in `src/algo/klz.h` and `src/algo/krans.h` | night 2 (2026-11-21) |
 
 **ARM64 branch filter (plan type 11, tflag 14, version 11; rc3 wave 2)**: the plan prefix is `11, a, b, 0`, where
 `a | (b & 15) << 8` is the block's *page phase* P (0-4095). The payload is the coded stream of the filtered block,
@@ -299,7 +330,11 @@ the project owner; it would change the bytes of the frames concerned and is not 
   never returned as data.
 - **Portable.** For a given mode and input, the bytes are identical across Intel and Apple-silicon builds.
 
-## Trained profiles (`KPF1`)
+## Trained profiles (`KPF1`) — history, not in version 12
+
+Trained profiles and profile frames were built on zstd and Brotli dictionaries. Version 12 has neither: `kolmo train`,
+`-P` and the `kolmo_*profile*` calls report `KOLMO_ERR_UNSUPPORTED` (-14), and a `CZC1` frame is `KOLMO_ERR_LEGACY`.
+The two sections below describe the format of versions 11 and earlier.
 
 A profile (`kolmo train`, `kolmo_profile_train`) is a file learnt from a sample of a dataset and needed again to
 decode the frames written with it. All integers little-endian.
@@ -417,7 +452,7 @@ version stays 7. A decoder rejects any node id it does not know.
 ```
 payload := 'G' | 1 (graph version) | nodes uv | node * nodes | leaves uv | leaf * leaves
 node    := op u8 | nin uv | input index uv * nin | nout uv | param length uv | params
-leaf    := stream index uv | codec u8 (0-7 as for blocks, 13, 14, 15 from version 9, 21-23 from version 11) | raw length uv | coded length uv | coded bytes
+leaf    := stream index uv | codec u8 (version 12: 0, 5, 7, 14, 15, 18, 21, 23, 24, 27, 28, 29, 32; history: 0-7 as for blocks, 13, 14, 15 from version 9, 21-23 from version 11) | raw length uv | coded length uv | coded bytes
 ```
 
 **Leaf codec 15: native plane-context leaf (container version 9).** Written only on request (`--native-leaf`,
@@ -461,7 +496,8 @@ words`. The table gives each byte's frequency (scaled to 2^16) as a uv, a 0 bein
 further absent symbols. The words are 32-bit little-endian: four 64-bit states (position mod 4, low word first), then
 the renormalisation words, read forwards (rans64). The encoder tries it at hc, max and ultra.
 
-Leaf codec 13 is Huffman-only coding (zstd's Huffman coder, no matches), for skewed byte streams without repeats such
+Leaf codec 27 (khuf, version 12) is Huffman-only coding with Kolmo's own canonical, length-limited codes in the same
+chunk framing as codec 13 (`src/algo/khuf.h`). History: leaf codec 13 was Huffman-only coding (zstd's Huffman coder, no matches), for skewed byte streams without repeats such
 as an exponent plane: chunks of at most 128 KiB, each `mode u8 | raw length uv` then for mode 0 the raw bytes, for
 mode 1 one byte repeated, for mode 2 `coded length uv | zstd HUF 4-stream data`. The encoder keeps, per leaf, the
 smallest of the block codec, Huffman-only and stored.
@@ -670,7 +706,7 @@ entry   := codec u8 (0 stored, or the block's codec) | raw length u32 | coded le
 ```
 
 Segment 0 is the header up to and including the exception list, segment `j + 1` is column `j`'s section with its
-5-byte prefix. `check` is the low 32 bits of XXH3-64 of the raw segment with seed `0x74626c63`, verified on every decode
+5-byte prefix. `check` is the low 32 bits of `kolmo_khash64` (XXH3-64 before version 12) of the raw segment with seed `0x74626c63`, verified on every decode
 (a partial decode cannot verify the block checksum). The raw lengths add up to `tn`, and the reassembled stream must
 split into exactly these segments; it then decodes as flag 4, and the block checksum is verified as usual. To read
 column `j`, a reader decodes segment 0 and segment `j + 1`, and also the segments of the formula inputs `a`, `b` when
@@ -729,6 +765,6 @@ table := chunks uv | (length uv | check u32) * chunks | files uv
 ```
 
 Chunk `i` occupies the store bytes after chunks `0 .. i−1`; lengths are at least 1 and add up to the store size.
-`check` is the low 32 bits of XXH3-64 of the chunk with seed `0x64647031`, verified when the chunk is extracted. A file is
+`check` is the low 32 bits of `kolmo_khash64` (XXH3-64 before version 12) of the chunk with seed `0x64647031`, verified when the chunk is extracted. A file is
 the concatenation of its chunks; their lengths must add up to its size. Names are at most 4096 bytes without NUL; the
 command line extracts only relative names without a `..` component.

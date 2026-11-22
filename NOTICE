@@ -1,13 +1,7 @@
 kolmo — native core of the kolmo compressor. Copyright 2026 Adnane Aqartit and contributors. Apache-2.0.
 
-Third-party code vendored unmodified under vendor/:
-  zstd 1.5.7  (vendor/zstd)  BSD-3-Clause, Copyright (c) Meta Platforms, Inc. and affiliates
-  LZ4 1.10.0  (vendor/lz4)   BSD-2-Clause, Copyright (c) Yann Collet
-  brotli 1.1.0 (vendor/brotli: common, dec, enc, include) MIT, Copyright (c) the Brotli Authors
-  xxHash 0.8.2 (vendor/xxhash/xxhash.h) BSD-2-Clause, Copyright (c) Yann Collet
-  liblzma from XZ Utils 5.8.1, LZMA2 subset (vendor/xz, files unmodified; see vendor/xz/README.kolmo) 0BSD,
-    by Lasse Collin, Igor Pavlov and the XZ Utils contributors. Kolmo adds config.h, kolmo_crc32_table.c,
-    kolmo_lzma.h and kolmo_lzma_namespace.h there.
+No third-party codec library is vendored or linked (zstd, LZ4, Brotli, xxHash and liblzma were removed with container
+version 12; their licences no longer apply to this tree).
 
 Code taken over from third parties (ported or adapted, with the original copyright and licence in each file header):
   libbsc 3.4.0, Apache-2.0, Copyright (c) 2009-2026 Ilya Grebnov: ported from C++ to C in src/algo/lzp.c,

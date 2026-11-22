@@ -41,7 +41,7 @@ int main(void) {
     /* ultra: the block must be a codec 16 block in a version 10 frame and round trip, whole and by range */
     kolmo_params P = {KOLMO_ULTRA, 0, 4, 0, 1};
     int64_t zn = kolmo_compress(in, n, z, 2 * cap + (1u << 20), &P);
-    if (zn <= 0 || z[4] != 10 || z[HDR + 12] != C_FQ) { printf("ULTRA DID NOT WRITE CODEC 16 (zn %lld version %d codec %d)\n", (long long)zn, zn > 0 ? z[4] : -1, zn > 0 ? z[HDR + 12] : -1); fails++; }
+    if (zn <= 0 || z[4] != 12 || z[HDR + 12] != C_FQ) { printf("ULTRA DID NOT WRITE CODEC 16 (zn %lld version %d codec %d)\n", (long long)zn, zn > 0 ? z[4] : -1, zn > 0 ? z[HDR + 12] : -1); fails++; }
     else printf("ultra: %zu -> %lld bytes, codec 16, version 10\n", n, (long long)zn);
     for (int t = 1; zn > 0 && t <= 8; t *= 2) {
         memset(b, 0, n);
@@ -56,11 +56,11 @@ int main(void) {
         int64_t z1n = kolmo_compress(in, n, z1, 2 * cap + (1u << 20), &P1);
         if (z1n != zn || memcmp(z, z1, (size_t)zn)) { printf("OUTPUT DEPENDS ON THREADS\n"); fails++; }
         free(z1); }
-    /* a version 9 frame may not carry codec 16: patch the version, fix the header checksum, expect a refusal */
+    /* the same frame labelled version 9 (header checksum fixed) is refused as an earlier version */
     if (zn > 0) {
         uint8_t *d = malloc((size_t)zn); memcpy(d, z, (size_t)zn); d[4] = 9;
         uint32_t nb = get32(d + 20), hc = kolmo_crc32c(0, d, 28); hc = kolmo_crc32c(hc, d + HDR, (size_t)nb * IDX); put32(d + 28, hc);
-        if (kolmo_decompress(d, (size_t)zn, b, n, 2) != KOLMO_ERR_CORRUPT) { printf("CODEC 16 ACCEPTED IN VERSION 9\n"); fails++; }
+        if (kolmo_decompress(d, (size_t)zn, b, n, 2) != KOLMO_ERR_LEGACY) { printf("VERSION 9 FRAME NOT REFUSED AS LEGACY\n"); fails++; }
         free(d);
     }
     /* modes and levels that must not write codec 16 */
@@ -68,7 +68,7 @@ int main(void) {
         for (int k = 0; k < 6; k++) {
             kolmo_params Q = {modes[k], levels[k], 2, 0, 1};
             int64_t qn = kolmo_compress(in, n, z, 2 * cap + (1u << 20), &Q);
-            int bad = qn <= 0 || z[4] == 10;    /* version 10 is codec 16's; 11 (codec 18, block sorting) is allowed */
+            int bad = qn <= 0 || z[4] != 12;    /* every frame is version 12 */
             for (uint32_t i = 0; qn > 0 && i < get32(z + 20); i++) bad |= z[HDR + (size_t)i * IDX + 12] == C_FQ;
             if (bad || kolmo_decompress(z, (size_t)qn, b, n, 2) != (int64_t)n || memcmp(in, b, n)) { printf("MODE %d LEVEL %d: CODEC 16 OR ROUND TRIP FAIL\n", modes[k], levels[k]); fails++; }
         }

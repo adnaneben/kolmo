@@ -17,8 +17,9 @@
      sequence are those left in the literal stream.
 
    Levels: KLZ 1 (hash table, skipping), 2 (larger table, every position), 3 (hash chains, lazy).
-           KLZH 1-3 two hash tables (8- and 5-byte keys), greedy; 4-9 hash chains of growing depth, lazy evaluation from 5,
-           two-step lazy from 8. */
+           KLZH 1-3 two hash tables (8- and 5-byte keys), greedy; 4 hash chains; 5-6 hash chains on 5-byte keys, the three
+           repeat offsets tried at every position, two-step lazy evaluation; 7-9 a price-based optimal parse over a binary-
+           tree match finder (encoder choices only: every level writes the same format). */
 #ifndef KOLMO_ALGO_KLZ_H
 #define KOLMO_ALGO_KLZ_H
 #include <stddef.h>
@@ -35,4 +36,18 @@ size_t kolmo_klzh_bound(size_t n);
 /* Return the coded size, or 0 when not smaller than n or cap too small. */
 size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
 int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+
+/* KLZH2 (codec 32, unreleased): KLZH's layout with three differences.
+   - Each of the four streams is preceded by a mode byte: 0 = khuf chunk stream (as KLZH), 1 = KRANS (krans.h; the code
+     streams only). The encoder takes rANS where it is smaller: the literal-length codes of an LZ parse are mostly 0,
+     where Huffman's one-bit floor loses ~14%.
+   - Matches are at least 3 bytes: the match-length code codes v = match length - 3 (KLZH: - 4); the sequence count is
+     at most n / 3 + 1.
+   - Offsets go up to 2^30 - 1: offset codes 3 + h for h up to 29 (codes 0..32; KLZH: up to 2^24 - 1, codes 0..26).
+   Encoder: levels 8-9 add 3-byte matches at offsets below 2^14, and levels 7-9 long-distance candidates past the
+   binary tree's window (32-byte keys) when the block is longer than that window. Every level cuts the khuf chunks of
+   each stream where the input crosses a multiple of 256 KiB, so each table covers 256 KiB of input (KLZH's decoder
+   already reads chunks of any size up to KHUF_BLOCK_MAX). */
+size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
+int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 #endif

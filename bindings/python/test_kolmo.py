@@ -21,6 +21,21 @@ def main():
                     fails += 1; print("FAIL read_range")
         ratio = len(data) / max(1, len(kolmo.compress(data, mode="hc")))
         print(f"len {len(data):>7}: round trips ok in all modes" + (f", hc ratio {ratio:.2f}" if len(data) > 1000 else ""))
+    # container version 12 only: a blob of this build relabelled as version 11 is refused as legacy
+    blob = bytearray(kolmo.compress(samples[3], mode="fast"))
+    if blob[:5] != b"CZN1\x0c": fails += 1; print("FAIL version byte", blob[:5])
+    blob[4] = 11
+    try:
+        kolmo.decompress(bytes(blob)); fails += 1; print("FAIL version 11 blob accepted")
+    except ValueError as e:
+        if "earlier Kolmo" not in str(e): fails += 1; print("FAIL legacy message", e)
+    # dictionaries are not available in this build
+    for call in (lambda: kolmo.train_dict([b"abc"] * 8), lambda: kolmo.compress(b"abc" * 100, dict=b"xyz" * 100)):
+        try:
+            call(); fails += 1; print("FAIL dictionary call accepted")
+        except ValueError as e:
+            if "not available in this build" not in str(e): fails += 1; print("FAIL unsupported message", e)
+    print("legacy frames and dictionaries refused as expected")
     print("ALL PASSED" if not fails else f"{fails} FAILURES")
     sys.exit(1 if fails else 0)
 

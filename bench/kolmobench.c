@@ -1,17 +1,10 @@
-/* kolmobench: in-memory benchmark of kolmo against zstd, LZ4 and brotli built from the same sources and flags.
+/* kolmobench: in-memory benchmark of kolmo's modes.
  *   kolmobench [-T threads] [-x] [-o results.tsv] file...
- *   -x adds the slow settings (zstd -19 whole-file, brotli -11).
+ * The library rivals (zstd, LZ4, brotli, xz) were removed with the vendored codecs (container version 12): compare
+ * against their command-line tools instead. -x and -X are accepted for compatibility.
  * Timing: best of repeated runs (>= 2 runs or >= 0.5 s), every output decoded and compared byte for byte. */
 #define _GNU_SOURCE
 #include "kolmo.h"
-#include "zstd.h"
-#include "lz4.h"
-#include "lz4hc.h"
-#include <brotli/encode.h>
-#include <brotli/decode.h>
-#ifndef KOLMO_NO_LZMA
-#include "kolmo_lzma.h"   /* vendored liblzma subset (vendor/xz) */
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,57 +12,25 @@
 #include <unistd.h>
 
 static double now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
-typedef struct { const char *name; int kind, level, threads; } cfg_t;   /* kind: 0 lz4 1 lz4hc 2 zstd 3 brotli 10+ kolmo mode */
-static ZSTD_CCtx *zc; static ZSTD_DCtx *zd;
+typedef struct { const char *name; int kind, level, threads; } cfg_t;   /* kind: 10 + kolmo mode */
 
 static size_t comp(const cfg_t *c, const uint8_t *s, size_t n, uint8_t *d, size_t cap) {
-    switch (c->kind) {
-        case 0: return LZ4_compress_default((const char *)s, (char *)d, (int)n, (int)cap);
-        case 1: return LZ4_compress_HC((const char *)s, (char *)d, (int)n, (int)cap, c->level);
-        case 2: ZSTD_CCtx_reset(zc, ZSTD_reset_session_and_parameters);
-                ZSTD_CCtx_setParameter(zc, ZSTD_c_compressionLevel, c->level);
-                ZSTD_CCtx_setParameter(zc, ZSTD_c_nbWorkers, c->threads > 1 ? c->threads : 0);
-                { size_t r = ZSTD_compress2(zc, d, cap, s, n); return ZSTD_isError(r) ? 0 : r; }
-        case 3: { size_t o = cap; return BrotliEncoderCompress(c->level, 24, BROTLI_MODE_GENERIC, n, s, &o, d) ? o : 0; }
-#ifndef KOLMO_NO_LZMA
-        /* xz rival: the same LZMA2 coder as xz -N, raw (no .xz container or CRC64; the vendored liblzma subset holds the
-         * LZMA2 coder only). The container adds about 60 bytes and a CRC64 pass to xz's own figures. */
-        case 4: { size_t o = 0; lzma_options_lzma op; if (lzma_lzma_preset(&op, (uint32_t)c->level | (c->threads < 0 ? LZMA_PRESET_EXTREME : 0))) return 0;
-                  lzma_filter f[2] = {{LZMA_FILTER_LZMA2, &op}, {LZMA_VLI_UNKNOWN, NULL}};
-                  return lzma_raw_buffer_encode(f, NULL, s, n, d, &o, cap) == LZMA_OK ? o : 0; }
-#endif
-        default: { kolmo_params p = {(kolmo_mode)(c->kind - 10), c->level, c->threads, 0, 1}; int64_t r = kolmo_compress(s, n, d, cap, &p); return r > 0 ? (size_t)r : 0; }
-    }
+    kolmo_params p = {(kolmo_mode)(c->kind - 10), c->level, c->threads, 0, 1}; int64_t r = kolmo_compress(s, n, d, cap, &p); return r > 0 ? (size_t)r : 0;
 }
 static int decomp(const cfg_t *c, const uint8_t *s, size_t cn, uint8_t *d, size_t n) {
-    switch (c->kind) {
-        case 0: case 1: return LZ4_decompress_safe((const char *)s, (char *)d, (int)cn, (int)n) == (int)n;
-        case 2: { size_t r = ZSTD_decompressDCtx(zd, d, n, s, cn); return !ZSTD_isError(r) && r == n; }
-        case 3: { size_t o = n; return BrotliDecoderDecompress(cn, s, &o, d) == BROTLI_DECODER_RESULT_SUCCESS && o == n; }
-#ifndef KOLMO_NO_LZMA
-        case 4: { size_t ip = 0, op = 0; lzma_options_lzma o; if (lzma_lzma_preset(&o, (uint32_t)c->level | (c->threads < 0 ? LZMA_PRESET_EXTREME : 0))) return 0;
-                  lzma_filter f[2] = {{LZMA_FILTER_LZMA2, &o}, {LZMA_VLI_UNKNOWN, NULL}};
-                  return lzma_raw_buffer_decode(f, NULL, s, &ip, cn, d, &op, n) == LZMA_OK && op == n; }
-#endif
-        default: return kolmo_decompress(s, cn, d, n, c->threads) == (int64_t)n;
-    }
+    return kolmo_decompress(s, cn, d, n, c->threads) == (int64_t)n;
 }
 int main(int argc, char **argv) {
     int T = (int)sysconf(_SC_NPROCESSORS_ONLN), slow = 0, vslow = 0, opt, status = 0, measured = 0; const char *outp = NULL, *only = NULL;
     while ((opt = getopt(argc, argv, "T:xXo:c:")) != -1) { if (opt == 'c') only = optarg; if (opt == 'T') T = atoi(optarg); else if (opt == 'x') slow = 1; else if (opt == 'X') slow = vslow = 1; else if (opt == 'o') outp = optarg; }
     if (optind == argc) { fprintf(stderr, "kolmobench: supply at least one input file\n"); return 1; }
-    zc = ZSTD_createCCtx(); zd = ZSTD_createDCtx();
-    if (!zc || !zd) { ZSTD_freeCCtx(zc); ZSTD_freeDCtx(zd); return 1; }
     cfg_t C[] = {
-        {"lz4", 0, 0, 1}, {"lz4hc -9", 1, 9, 1},
-        {"zstd -1", 2, 1, 1}, {"zstd -3", 2, 3, 1}, {"zstd -3 -T", 2, 3, T}, {"zstd -9", 2, 9, 1}, {"zstd -19", 2, 19, 1}, {"zstd -19 -T", 2, 19, T},
-        {"brotli -8", 3, 8, 1}, {"brotli -11", 3, 11, 1}, {"xz -6", 4, 6, 1}, {"xz -9e", 4, 9, -1},
         {"kolmo rt", 10, 0, 1}, {"kolmo rt -T", 10, 0, T}, {"kolmo fast", 11, 0, 1}, {"kolmo fast -T", 11, 0, T},
         {"kolmo eco", 12, 0, 1}, {"kolmo eco -T", 12, 0, T}, {"kolmo hc", 13, 0, 1}, {"kolmo hc -T", 13, 0, T},
         {"kolmo max", 14, 0, 1}, {"kolmo max -T", 14, 0, T}, {"kolmo ultra", 15, 0, 1}, {"kolmo ultra -T", 15, 0, T},
     };
     FILE *o = outp ? fopen(outp, "a") : NULL;
-    if (outp && !o) { perror(outp); ZSTD_freeCCtx(zc); ZSTD_freeDCtx(zd); return 1; }
+    if (outp && !o) { perror(outp); return 1; }
     for (int a = optind; a < argc; a++) {
         FILE *f = fopen(argv[a], "rb"); if (!f) { perror(argv[a]); status = 1; continue; }
         long length;
@@ -84,20 +45,13 @@ int main(int argc, char **argv) {
         }
         fclose(f);
         kolmo_params bp = {KOLMO_RT, 0, 0, 0, 1}; size_t cap = kolmo_bound(n, &bp);
-        if (cap < ZSTD_compressBound(n) + 4096) cap = ZSTD_compressBound(n) + 4096;
-        if (cap < BrotliEncoderMaxCompressedSize(n)) cap = BrotliEncoderMaxCompressedSize(n) + 4096;
+        cap += 4096;
         uint8_t *d = malloc(cap);
         if (!d) { free(s); free(back); status = 1; continue; }
         const char *base = strrchr(argv[a], '/') ? strrchr(argv[a], '/') + 1 : argv[a];
         for (size_t k = 0; k < sizeof C / sizeof *C; k++) {
             const cfg_t *c = &C[k];
-            if (!vslow && !strcmp(c->name, "brotli -11")) continue;
-            if (!slow && !strcmp(c->name, "zstd -19")) continue;
             if (c->threads > 1 && T <= 1) continue;
-            if (!vslow && !strcmp(c->name, "xz -9e")) continue;
-#ifdef KOLMO_NO_LZMA
-            if (c->kind == 4) continue;                       /* built without liblzma: no xz baseline */
-#endif
             if (only) {                                       /* -c "name1;name2": run only these settings */
                 char buf[512]; snprintf(buf, sizeof buf, ";%s;", only); char key[64]; snprintf(key, sizeof key, ";%s;", c->name);
                 if (!strstr(buf, key)) continue;
@@ -128,6 +82,6 @@ int main(int argc, char **argv) {
     }
     if (o && fclose(o)) status = 1;
     if (!measured) { fprintf(stderr, "kolmobench: no settings measured\n"); status = 1; }
-    ZSTD_freeCCtx(zc); ZSTD_freeDCtx(zd);
+    (void)slow; (void)vslow;
     return status;
 }

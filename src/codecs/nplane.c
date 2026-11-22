@@ -7,7 +7,7 @@
  *   plane := tag u8 | body
  *     'c' value u8                       L copies of value
  *     's' L raw bytes
- *     'h' len uv | existing Huffman stream (huf_compress_all)
+ *     'h' len uv | khuf chunk stream (kolmo_khuf_compress_chunks, codec 27)
  *     'r' len uv | existing rANS stream (rans_compress_all)
  *     'l' len uv | lanes context stream (previous-byte context in 4 independent lanes; L >= 8)
  *     'p' len uv | cross-plane context stream (context = same index in plane k-1; k >= 1)
@@ -134,7 +134,7 @@ static size_t np_compress(codec_ctx *x, const uint8_t *s, size_t n, int np, uint
         for (size_t i = 1; i < L; i++) if (p[i] != p[0]) { con = 0; break; }
         if (con) { if (o + 2 > cap) goto done; out[o++] = 'c'; out[o++] = p[0]; continue; }
         char bt = 's'; size_t bl = L, bcost = 1 + L, cc = L + L / 8 + 4096;
-        size_t h = huf_compress_all(p, L, cand, cc);   /* zstd's HUF, always: the 'h' tag is decoded as codec 13 */
+        size_t h = kolmo_khuf_compress_chunks(p, L, cand, cc);   /* the 'h' tag is decoded as codec 27 */
         if (h && 1 + np_uvlen(h) + h < bcost) { memcpy(best, cand, h); bt = 'h'; bl = h; bcost = 1 + np_uvlen(h) + h; }
         size_t r = codec_compress(x, C_RANS, 0, p, L, cand, cc);
         if (r && 1 + np_uvlen(r) + r < bcost) { memcpy(best, cand, r); bt = 'r'; bl = r; bcost = 1 + np_uvlen(r) + r; }
@@ -166,7 +166,7 @@ static int np_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *ou
         if (tag == 'c') { if (i >= cn) goto done; memset(o, in[i++], L); continue; }
         if (tag == 's') { if (cn - i < L) goto done; memcpy(o, in + i, L); i += L; continue; }
         if (kgu_get(in, cn, &i, &len) || len > cn - i) goto done;
-        if (tag == 'h') { if (codec_decompress(x, C_HUF, in + i, (size_t)len, o, L)) goto done; }
+        if (tag == 'h') { if (codec_decompress(x, C_KHUF, in + i, (size_t)len, o, L)) goto done; }
         else if (tag == 'r') { if (codec_decompress(x, C_RANS, in + i, (size_t)len, o, L)) goto done; }
         else if (tag == 'l' || (tag == 'p' && k > 0)) {
             if (!D) { D = malloc(sizeof *D); if (!D) goto done; D->sym = malloc((size_t)NP_CK * RANS_M); if (!D->sym) goto done; }

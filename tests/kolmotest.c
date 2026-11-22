@@ -281,8 +281,8 @@ int main(void) {
         for (int m = 1; m < 5; m++) { check("wide", w, q, (kolmo_mode)m, 1 << 20, 1); check("wide-odd", w, q, (kolmo_mode)m, 300001, 4); }
         {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
             int64_t c0 = kolmo_compress(w, q, d, cap, &p0), c1 = kolmo_compress(w, q, d, cap, &p1);
-            /* version 7, or 11 when a format-2 leaf (codecs 21-23) is smaller (rc3) */
-            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || (d[4] != 7 && d[4] != 11)) { printf("FAIL wide table graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            /* version 12 (every frame of this build) */
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 12) { printf("FAIL wide table graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("wide table graph: fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             /* graph decoder fuzz: corrupt payload bytes of every block, decoding must fail cleanly or round-trip */
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
@@ -307,7 +307,7 @@ int main(void) {
         q = 30000 * 8;                                       /* a small array: the planner picks the graph */
         {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
             int64_t c0 = kolmo_compress(a, q, d, cap, &p0), c1 = kolmo_compress(a, q, d, cap, &p1);
-            if (c1 <= 0 || c0 <= 0 || c1 * 2 >= c0 || (d[4] != 7 && d[4] != 11)) { printf("FAIL integer graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            if (c1 <= 0 || c0 <= 0 || c1 * 2 >= c0 || d[4] != 12) { printf("FAIL integer graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("integer graph: timestamps fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
             for (int it = 0; it < 400; it++) {
@@ -346,7 +346,7 @@ int main(void) {
         for (int m = 0; m < 5; m++) { check("float32", a, q, (kolmo_mode)m, 1 << 20, 1); check("float32-odd", a, q, (kolmo_mode)m, 262147, 3); }
         {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
             int64_t c0 = kolmo_compress(a, q, d, cap, &p0), c1 = kolmo_compress(a, q, d, cap, &p1);
-            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || (d[4] != 7 && d[4] != 11)) { printf("FAIL float graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 12) { printf("FAIL float graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("float graph: float32 fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
             for (int it = 0; it < 300; it++) {
@@ -375,7 +375,7 @@ int main(void) {
         for (int m = 0; m < 5; m++) { check("img8-rgb", a, q, (kolmo_mode)m, 1 << 20, 1); check("img8-rgb-odd", a, q, (kolmo_mode)m, 100003, 3); }
         {   kolmo_params p0 = {KOLMO_FAST, 0, 1, 0, 0}, p1 = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(q, &p0); uint8_t *d = malloc(cap);
             int64_t c0 = kolmo_compress(a, q, d, cap, &p0), c1 = kolmo_compress(a, q, d, cap, &p1);
-            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || (d[4] != 7 && d[4] != 11)) { printf("FAIL image graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
+            if (c1 <= 0 || c0 <= 0 || c1 >= c0 || d[4] != 12) { printf("FAIL image graph not chosen (%lld vs %lld, version %d)\n", (long long)c1, (long long)c0, d[4]); fails++; }
             else printf("image graph: 8-bit RGB fast %.1f%% of fast without transforms\n", 100.0 * c1 / c0);
             uint8_t *bk = malloc(q + 64), *e = malloc(c1);
             for (int it = 0; it < 300; it++) {
@@ -541,13 +541,13 @@ int main(void) {
         kolmo_params up = {KOLMO_ULTRA, 0, 1, 1 << 20, 1}; size_t ucap = kolmo_bound(gn, &up); uint8_t *ud = malloc(ucap);
         int64_t uc = kolmo_compress(g, gn, ud, ucap, &up);   /* one block: the per-block contest keeps the smallest coder */
         if (uc < 0 || !g1 || (size_t)uc > g1 + 32 + 16 + 4) { printf("FAIL gr6: ultra %lld larger than GR6+ alone %zu\n", (long long)uc, g1); fails++; }
-        else if (ud[4] != 11 || ud[32 + 12] != 26) { printf("FAIL gr6: ultra did not choose GR6+ on the derived-column table (version %d, codec %d)\n", ud[4], ud[32 + 12]); fails++; }
+        else if (ud[4] != 12 || ud[32 + 12] != 26) { printf("FAIL gr6: ultra did not choose GR6+ on the derived-column table (version %d, codec %d)\n", ud[4], ud[32 + 12]); fails++; }
         else {
-            printf("gr6 table: ultra %.2fx with a GR6+ block (codec 26, version 11)\n", (double)gn / uc);
-            /* the same frame relabelled as version 10 (header checksum recomputed) must be refused */
+            printf("gr6 table: ultra %.2fx with a GR6+ block (codec 26, version 12)\n", (double)gn / uc);
+            /* the same frame relabelled as version 10 (header checksum recomputed) must be refused: an earlier version */
             ud[4] = 10; uint32_t hc = kolmo_crc32c(0, ud, 28); hc = kolmo_crc32c(hc, ud + 32, 16);
             for (int k = 0; k < 4; k++) ud[28 + k] = (uint8_t)(hc >> (8 * k));
-            if (kolmo_decompress(ud, (size_t)uc, go, gn, 1) >= 0) { printf("FAIL gr6: a version 10 frame with codec 26 was accepted\n"); fails++; }
+            if (kolmo_decompress(ud, (size_t)uc, go, gn, 1) != KOLMO_ERR_LEGACY) { printf("FAIL gr6: a version 10 frame was not refused as legacy\n"); fails++; }
             /* the other modes never write codec 26 */
             static const kolmo_mode om[] = {KOLMO_RT, KOLMO_FAST, KOLMO_ECO, KOLMO_HC, KOLMO_MAX};
             for (size_t k = 0; k < sizeof om / sizeof om[0]; k++) {
@@ -601,8 +601,8 @@ int main(void) {
         printf("native leaf: %zu -> %zu bytes; %zu truncations rejected; 3000 corrupt leaves decoded without crashing\n", n, z, z);
         free(src); free(o); free(e); free(f);
     }
-    /* native leaf in balanced frames: smaller on an integer series, version 9 only when used, round trip and corruption
-     * like every mode, default output unaffected, and a reader must refuse the codec-15 leaf below version 9 */
+    /* native leaf in balanced frames: smaller on an integer series, round trip and corruption like every mode, default
+     * output unaffected; every frame is version 12, and the same frame labelled as an earlier version is refused */
     {
         size_t cnt = 65536, un = cnt * 2; uint8_t *u = malloc(un); uint32_t s = 12345;
         for (size_t i = 0; i < cnt; i++) {
@@ -615,13 +615,13 @@ int main(void) {
         int64_t cd = check_p("balanced-int16-series", u, un, pd, &fd), cn = check_p("balanced-native-leaf-int16-series", u, un, pn, &fn);
         if (cd > 0 && cn > 0) {
             if (cn >= cd) { printf("FAIL native leaf not smaller: %lld >= %lld\n", (long long)cn, (long long)cd); fails++; }
-            if (fd[4] == 9 || fd[4] == 10 || fn[4] != 9) { printf("FAIL native leaf versions: default %d, native %d\n", fd[4], fn[4]); fails++; }
+            if (fd[4] != 12 || fn[4] != 12) { printf("FAIL native leaf versions: default %d, native %d\n", fd[4], fn[4]); fails++; }
             uint8_t *b = malloc(un + 1);
             for (int v = 7; v <= 8; v++) {                      /* the same frame labelled as an older version must be refused */
                 fn[4] = (uint8_t)v; int64_t r = kolmo_decompress(fn, (size_t)cn, b, un, 1);
-                if (r >= 0) { printf("FAIL native leaf accepted in a version %d frame\n", v); fails++; }
+                if (r != KOLMO_ERR_LEGACY) { printf("FAIL native leaf frame labelled version %d not refused as legacy\n", v); fails++; }
             }
-            fn[4] = 9; free(b);
+            fn[4] = 12; free(b);
             printf("native leaf int16 series: %lld -> %lld bytes (version %d)\n", (long long)cd, (long long)cn, fn[4]);
         }
         kolmo_params pr = {KOLMO_MAX, 0, 1, 0, 1 | KOLMO_T_NATIVE_LEAF}; uint8_t *fr = NULL, *fr0 = NULL;   /* ignored outside balanced */

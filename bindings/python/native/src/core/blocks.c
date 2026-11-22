@@ -67,7 +67,7 @@ static uint32_t kolmo_fast_block(size_t n) {
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
     const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
-    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next, newmodes; atomic_int err; size_t B;
+    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next; atomic_int err; size_t B;
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint64_t *poff;   /* decode: payload offsets */
     uint64_t rlo, rhi; uint8_t *rdst;   /* range read */
@@ -75,11 +75,9 @@ typedef struct {
     size_t *outlen;         /* their sizes */
     pthread_mutex_t wmu; uint32_t wnext; size_t wpos, cap; int werr;   /* blocks are written to dst in order as they finish */
     int psum;               /* checksums over stored bytes (rt) instead of decoded bytes */
-    const void *dict; size_t dictlen;   /* optional zstd dictionary, read-only by workers */
     int aud_prof, aud_ch, aud_be; uint64_t aud_off, aud_end;   /* aud_be: AIFF, big-endian samples (swapped for kaud; plan prefix 0, 1) */
     int img_on; uint32_t img_w, img_ch; uint64_t img_off, img_end;   /* kimg (codec 31): 8-bit image rows of img_w bytes, pixels [off, end) */
       /* format 2: 16-bit PCM WAV (kaud profile, channels, sample bytes [off, end)); aud_prof < 0: none */
-    const struct kolmo_profile *prof;   /* optional trained profile, read-only by workers */
     uint64_t memcap;        /* the call's limit for the governor (explicit, auto or unlimited) */
     uint64_t xcap;          /* the explicit cap only (0: none): the one memory figure format decisions may read */
     _Atomic uint64_t dneed; /* the largest block decode figure (blk_dec_need), declared in header byte 11 */
@@ -132,8 +130,6 @@ static void *compress_worker(void *arg) {
     job_t *J = arg; tls_t *S = tls_begin();
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     codec_ctx *xp = &S->x;
-    xp->dict = J->dict; xp->dictlen = J->dictlen;                          /* per-call dictionary (read-only) */
-    xp->prof = J->prof;
     xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TBL_SLACK(J->B) + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
@@ -162,12 +158,12 @@ static void *compress_worker(void *arg) {
         /* a block of WAV samples is coded by the audio codec when that is smaller (it was on all 43 WAV files measured,
          * by 17% or more); the rest of the block's path keeps rc2's leaf rule, without the format-2 leaf trials */
         xp->no_f2 = J->aud_prof >= 0 && J->starts[i] < J->aud_end && J->starts[i + 1] > J->aud_off;
-        xp->used_bwt = 0; xp->used_native = 0; xtrial_native_hit = 0;
+        xp->used_bwt = 0;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
 #ifdef KOLMO_FRONTIER
         size_t trial_len = 0;
-        if (!J->dict && J->default_level) {
+        if (J->default_level) {
             if (pl.experimental_table)
                 trial_len = frontier_table_encode(raw, len, pl.experimental_table, tbuf, len + TSLACK);
             else if (pl.lags.near)
@@ -221,7 +217,7 @@ static void *compress_worker(void *arg) {
             memcpy(tbuf + rows * u, raw + rows * u, len - rows * u);
             in = tbuf; tflag = 1;
         } else if (pl.t == T_WORD && len && !(J->codec == C_CM ||
-                   (J->codec == C_LZMA && ((pl.wide && J->default_level ? 1 : J->level) == 1 || looks_text(raw, len))))) {
+                   (J->codec == R_LZMA && ((pl.wide && J->default_level ? 1 : J->level) == 1 || looks_text(raw, len))))) {
             /* (ratio/max and ultra drop the word transform of a text block below, coding the plain bytes with block
              * sorting or context mixing: it is not computed for them; it cost 10% of ratio's encode time on text) */
             int64_t tn = word_encode(raw, len, tbuf, len + TSLACK);
@@ -237,8 +233,8 @@ static void *compress_worker(void *arg) {
         int codec = J->codec, level = (pl.wide || (tflag >= 10 && pl.t == T_TBL)) && J->default_level ? 1 : J->level;
         /* trials run beside context mixing (ultra, core/trials.c), and whether this block is FASTQ for the family coder */
         enum { XT_ALT, XT_ALTS, XT_A1, XT_FQ, XT_ALTB, XT_N }; xtrial_t xt[XT_N]; memset(xt, 0, sizeof xt);
-        const int xfq = J->codec == C_CM && J->level != 1 && !J->dict && len >= 64 && kf_fastq_like(raw, len);
-        if (pl.packed && !J->dict && meta_incompressible(raw, len)) { cl = 0; goto coded; }   /* compressed content: stored */
+        const int xfq = J->codec == C_CM && J->level != 1 && len >= 64 && kf_fastq_like(raw, len);
+        if (pl.packed && meta_incompressible(raw, len)) { cl = 0; goto coded; }   /* compressed content: stored */
         if (xfq && len >= (64u << 10)) {
             /* ultra, a FASTQ block: the family coder first, with every thread the block has. It has beaten context
              * mixing on every FASTQ input measured (by 10 to 20%), so when it applies the context-mixing, LZMA2 and
@@ -258,17 +254,17 @@ static void *compress_worker(void *arg) {
              * to 30 times the encode time, 18 KB saved per CPU second where the cost model breaks even at 54 (data kept
              * a year) or 652 (30 days). Integer arrays keep LZMA2 (2 to 9% smaller, small inputs). */
             /* max -l 10 keeps LZMA2 on decimal planes: the smallest output without context mixing, whatever it costs */
-            int kgc = codec == C_LZMA && (pl.a || (!(pl.b & 32) && ((pl.b & 16) || ((pl.b & 64) && level < 10)))) ? C_BWT : codec, kgl = kgc != codec ? 9 : level;
+            int kgc = codec == R_LZMA && (pl.a || (!(pl.b & 32) && ((pl.b & 16) || ((pl.b & 64) && level < 10)))) ? C_BWT : codec, kgl = kgc != codec ? 9 : level;
             /* hc: zstd 19 over float planes gives the size of zstd 9 (the planes are coded by Huffman or rANS when that
              * is smaller) at up to 16 times the time. Decimal planes keep zstd 19: zstd 12 was 3 to 36% larger. */
-            if (codec == C_ZSTD && level > 9 && !pl.a && !(pl.b & (32 | 64)) && (pl.b & 16)) kgl = 9;
+            if (codec == R_LZH && level > 9 && !pl.a && !(pl.b & (32 | 64)) && (pl.b & 16)) kgl = 9;
             xp->native_leaf = J->native_leaf; xp->used_native_leaf = 0; xp->used_f2 = 0; xp->used_cmt = 0;
             cl = pl.a ? kg_encode_table(xp, kgc, kgl, raw, len, (uint8_t)pl.a, (uint8_t)pl.b, sl, J->slot)
                       : pl.b & 32 ? kg_encode_img8(xp, kgc, kgl, raw, len, pl.kgw, (unsigned)(pl.b & 15), rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 64 ? kg_encode_dec64(xp, kgc, kgl, raw, len, pl.b & 1 ? 0 : pl.b & 2 ? (pl.kgw / 4) | KG_DEC_F32 : pl.kgw / 8, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : pl.b & 16 ? kg_encode_float(xp, kgc, kgl, raw, len, pl.b & 15, rs == 0 ? (size_t)pl.c : 0, sl, J->slot)
                       : kg_encode_num(xp, kgc, kgl, raw, len, pl.b, rs == 0 ? (size_t)pl.c : 0, sl, J->slot);
-            if (cl && (pl.b & 32) && !pl.a && (codec == C_LZMA || codec == C_CM)) {
+            if (cl && (pl.b & 32) && !pl.a && (codec == R_LZMA || codec == C_CM)) {
                 /* 8-bit images under the slow coders: block-sorted leaves are 5 to 10% smaller than LZMA2 leaves on
                  * colour photographs (the residual planes are noise-like, with no matches to find). Both are coded. */
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
@@ -288,13 +284,14 @@ static void *compress_worker(void *arg) {
                 size_t pc = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (pc && pc < cl) cl = 0;
             }
-            if (cl && !pl.a && len >= (256u << 10) && (pl.verify || codec == C_CM || ((pl.b & 64) && (codec == C_LZMA || codec == C_BWT)))) {
+            const int kgfl = (pl.b & 16) && !(pl.b & (32 | 64)) && codec == R_LZMA;   /* max, float planes (0.0.1: see below) */
+            if (cl && !pl.a && len >= (256u << 10) && (pl.verify || kgfl || codec == C_CM || ((pl.b & 64) && (codec == R_LZMA || codec == C_BWT)))) {
                 /* decimal doubles under the slow coders: the plan was scored with zstd, and on small-integer tables
                  * block sorting or context mixing over the plain bytes can still be smaller. Marked plans (the input
                  * is not one kind of data throughout): this block may be the part the graph does not fit. Both are
                  * coded; the smaller one is kept. */
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4); int bc = 0; size_t bz = cl;
-                if (alt && codec != C_ZSTD && codec != C_LZ4) {
+                if (alt && codec != R_LZH && codec != R_SPEED) {
                     /* the slow coders: block sorting of a slice from the middle tells whether plain coding is within
                      * reach (a slice sorts worse than the block, so the limit is loose); otherwise the graph stands */
                     size_t sn = len < (512u << 10) ? len : (512u << 10), so = ((len - sn) / 2) & ~(size_t)63;
@@ -305,10 +302,14 @@ static void *compress_worker(void *arg) {
                      * float64 sensor data plain context mixing is 33% smaller than the graph, block sorting is not
                      * within reach (benchmark/rc3w2/twopass/RESULTS.md). */
                     if (codec == C_CM) sn = len < (256u << 10) ? len : (256u << 10), so = ((len - sn) / 2) & ~(size_t)63;
-                    size_t cs = codec == C_CM ? cm_compress_auto(raw + so, sn, alt, J->slot) : codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
+                    /* max, float planes: the plan was scored with the fast probe, and plain KLZMA can be smaller (0.0.1-rc1 holdout:
+                     * a 47 MB bf16 weights file was 12.7% larger as a float graph than as one plain KLZMA block). Block
+                     * sorting is a poor probe on floats, so the slice is coded by KLZMA itself. */
+                    size_t cs = codec == C_CM ? cm_compress_auto(raw + so, sn, alt, J->slot)
+                              : codec_compress(xp, kgfl ? R_LZMA : C_BWT, 9, raw + so, sn, alt, J->slot);
                     if (!cs || (double)cs / sn > (codec == C_CM ? 1.10 : 1.35) * (double)cl / len) alt = NULL;
                 }
-                if (alt && (codec == C_ZSTD || codec == C_LZ4) && len >= ((size_t)1 << 20)) {
+                if (alt && (codec == R_LZH || codec == R_SPEED) && len >= ((size_t)1 << 20)) {
                     /* the fast coders: three 64 KiB slices (start, middle, end) coded plain; the full plain pass costs
                      * as much as the graph, so it runs only when the slices come within 35% of the graph's rate */
                     const size_t sn = 64u << 10; size_t cs = 0;
@@ -320,7 +321,7 @@ static void *compress_worker(void *arg) {
                 }
                 size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
                 if (a1 && a1 < bz) { memcpy(sl, alt, a1); bz = a1; bc = codec; }
-                size_t a2 = alt && codec == C_LZMA ? codec_compress(xp, C_BWT, 9, raw, len, alt, J->slot) : 0;
+                size_t a2 = alt && codec == R_LZMA ? codec_compress(xp, C_BWT, 9, raw, len, alt, J->slot) : 0;
                 if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_BWT; }
                 if (bc) { cl = bz; codec = bc; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; goto coded; }
             }
@@ -328,21 +329,19 @@ static void *compress_worker(void *arg) {
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
         }
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
-        if (codec == C_LZMA && level == 1) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
-        else if (codec == C_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
-        else if (codec == C_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
-        else if (KOLMO_ECO_TEXT_BWT && codec == C_BROTLI && J->default_level && !J->dict && !J->prof && len >= (64u << 10)
+        if (codec == R_LZMA && level == 1) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
+        else if (codec == R_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
+        else if (codec == R_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
+        else if (KOLMO_ECO_TEXT_BWT && codec == R_ECO && J->default_level && len >= (64u << 10)
                  && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT, level = 9;   /* eco, JSON token streams: as max */
-        else if (KOLMO_ECO_TEXT_BWT && codec == C_BROTLI && J->default_level && !J->dict && !J->prof && (!tflag || tflag == 9) && len >= (64u << 10)
+        else if (KOLMO_ECO_TEXT_BWT && codec == R_ECO && J->default_level && (!tflag || tflag == 9) && len >= (64u << 10)
                  && !pl.packed && looks_text8(raw, len)) {   /* eco, text: block sorting of the plain bytes (w4: smaller than brotli -11 on
                                                * prose and markup, at 10-20x its encode speed; decodes at block-sorting speed) */
             codec = C_BWT; level = 9; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }
         }
-        if (codec == C_ZSTD && level == 19 && J->default_level && !J->dict && !J->prof && (tflag == 9 || (!tflag && pl.t == T_NONE && looks_text(raw, len))))
-            level = CZ_HC_TEXT_LEVEL;   /* hc text (word-coded or plain): level 19 with a 128 MiB window (codecs/zstd.c) */
 #ifdef KOLMO_FRONTIER
 #ifdef KOLMO_FRONTIER_PATCHED_PCM
-        if (pl.experimental_pcm && !J->dict && J->default_level) {
+        if (pl.experimental_pcm && J->default_level) {
             cl = frontier_pcm_encode(raw, len, pl.experimental_pcm, sl, J->slot);
             if (cl) {
                 codec = C_PCM; tflag = 0; meta = 0; modes |= 4;
@@ -350,7 +349,7 @@ static void *compress_worker(void *arg) {
             }
         }
 #endif
-        if (pl.experimental_dna && !J->dict && J->default_level) {
+        if (pl.experimental_dna && J->default_level) {
             size_t packed = frontier_dna_encode(raw, len, tbuf, J->B + TSLACK);
             if (packed) {
                 cl = frontier_runs_encode(tbuf, packed, sl, J->slot);
@@ -365,7 +364,7 @@ static void *compress_worker(void *arg) {
         }
 #endif
 #ifdef KOLMO_FRONTIER_FAST_PCM
-        if (pl.experimental_pcm && !J->dict && J->default_level && codec == C_ZSTD) level = 1;
+        if (pl.experimental_pcm && J->default_level && codec == R_LZH) level = 1;
 #endif
         if (!cl && tflag == 4 && J->columns) {      /* KOLMO_T_COLUMNS: one coded segment per column (flag 13) */
             cl = tblc_compress(xp, codec, level, in, inlen, sl, J->slot);
@@ -373,9 +372,9 @@ static void *compress_worker(void *arg) {
         }
         /* ultra with threads to spare: the alternative coders start now, beside context mixing (core/trials.c) */
         if (codec == C_CM && level != 1 && !cl && J->fqthreads > 1) {
-            const int text = !tflag && looks_text(in, inlen), ak = text ? C_BWT : C_LZMA;
+            const int text = !tflag && looks_text(in, inlen), ak = text ? C_BWT : R_LZMA;
             xtrial_start(&xt[XT_ALT], ak, 9, in, inlen, J->slot - meta, 1);
-            if (inlen > (2u << 20) && ak == C_LZMA) xtrial_start(&xt[XT_ALTS], ak, 9, in + (inlen - (1u << 20)) / 2, 1u << 20, J->slot - meta, 1);   /* only LZMA2 is gated by a slice */
+            if (inlen > (2u << 20) && ak == R_LZMA) xtrial_start(&xt[XT_ALTS], ak, 9, in + (inlen - (1u << 20)) / 2, 1u << 20, J->slot - meta, 1);   /* only LZMA2 is gated by a slice */
             if (in != raw && len >= (64u << 10)) xtrial_start(&xt[XT_A1], C_BWT, 9, raw, len, J->slot, 1);
             if (xfq) xtrial_start(&xt[XT_FQ], C_FQ, 0, raw, len, 0, J->fqthreads - 1);
             if (!text) xtrial_start(&xt[XT_ALTB], C_BWT, 9, in, inlen, J->slot - meta, 1);   /* binary blocks: block sorting too */
@@ -401,27 +400,23 @@ static void *compress_worker(void *arg) {
             cmp_used = cl != 0;
         }
         int slice_verdict = 0;                        /* max, binary block over 8 MiB: 1 BWT clearly wins, -1 skip BWT */
-        if (codec == C_LZMA && !cl && level != 1 && tflag != 8 && tflag != 14 && tflag != 4 && tflag != 5 && inlen > (8u << 20)) {
+        if (codec == R_LZMA && !cl && level != 1 && tflag != 8 && tflag != 14 && tflag != 4 && tflag != 5 && inlen > (8u << 20)) {
             /* A slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the outcome
              * (see below). Where the slice already shows BWT at most 90% of LZMA2, BWT won on the whole block by more
              * (osdb: slice 0.84, block 0.78) and the full LZMA2 pass, the slowest step of this mode, is skipped. */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             size_t sn = inlen / 8 < (512u << 10) ? inlen / 8 : (512u << 10), so = ((inlen - sn) / 2) & ~(size_t)63;
-            size_t sb = alt ? codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta) : 0, slz = sb ? codec_compress(xp, C_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
+            size_t sb = alt ? codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta) : 0, slz = sb ? codec_compress(xp, R_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
             if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) slice_verdict = -1;
             else if ((uint64_t)sb * 100 <= (uint64_t)slz * KOLMO_BWT_SKIP_LZMA_PCT && (uint64_t)slz * 100 <= (uint64_t)sn * 35) { codec = C_BWT; level = 9; slice_verdict = 1; }
         }
-        /* balanced, a large plain block (compress.c gives plain segments blocks of up to 6 MiB): an 8 MiB window */
-        xp->zwide = codec == C_ZSTD && level == CZ_FAST_LEVEL && J->default_level && !J->dict && !J->prof && !tflag
-                    && pl.t == T_NONE && inlen > KZ_WIDE_MIN;
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
-        xp->zwide = 0;
         if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             size_t a1 = alt ? codec_compress(xp, codec, level, raw, len, alt, J->slot) : 0;
             if (a1 && a1 < cl) { memcpy(sl, alt, a1); cl = a1; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; cmp_used = 0; }
         }
-        if (codec == C_LZMA && cl) {                  /* max, binary block: BWT too, kept only when clearly smaller */
+        if (codec == R_LZMA && cl) {                  /* max, binary block: BWT too, kept only when clearly smaller */
             /* BWT decodes about half as fast as LZMA2 here, so it must pay for that: at least KOLMO_BWT_GAIN_PCT smaller. */
             /* BWT is tried only where it has won in tests: not on x86 or ARM64 code (tflag 14 treated as 8, unmeasured), typed table columns or log token streams (4 to 12% larger), and only when LZMA2 already reaches
              * 35% or less (on less compressible binary data BWT was 1.5 to 8% larger) */
@@ -432,13 +427,13 @@ static void *compress_worker(void *arg) {
                  * outcome: where BWT won on the whole block the slice ratio was at most 1.02, where it lost by 5% or
                  * more it was 1.04 or higher. Above 1.03 the full attempt is skipped. */
                 size_t sn = inlen / 8 < (512u << 10) ? inlen / 8 : (512u << 10), so = ((inlen - sn) / 2) & ~(size_t)63;
-                size_t sb = codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta), slz = sb ? codec_compress(xp, C_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
+                size_t sb = codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta), slz = sb ? codec_compress(xp, R_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
                 if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) alt = NULL;
             }
             size_t c2 = alt ? codec_compress(xp, C_BWT, 9, in, inlen, alt, J->slot - meta) : 0;
             if (c2 && (uint64_t)c2 * 100 <= (uint64_t)cl * (100 - KOLMO_BWT_GAIN_PCT)) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BWT; }
         }
-        if ((codec == C_LZMA || codec == C_BWT) && J->codec == C_LZMA && cl && in != raw && len >= (64u << 10)) {
+        if ((codec == R_LZMA || codec == C_BWT) && J->codec == R_LZMA && cl && in != raw && len >= (64u << 10)) {
             /* max, transformed block: the transform was chosen by its zstd score, and under block sorting or LZMA2 the
              * plain bytes can be smaller (Silesia nci: template tokens 1.53 MB, plain block sorting 1.23 MB). Block
              * sorting of the plain block is tried when a slice from the middle comes within 10% of the transformed
@@ -454,17 +449,17 @@ static void *compress_worker(void *arg) {
             size_t a1 = try_bsc ? codec_compress(xp, C_BWT, 9, raw, len, alt, J->slot) : 0;
             if (a1 && (uint64_t)a1 * 100 <= (uint64_t)bz * 97) { memcpy(sl, alt, a1); bz = a1; bc = C_BWT; }
             /* plain LZMA2 only where plain block sorting came within 25% of the transformed block */
-            size_t a2 = alt && len <= (2u << 20) && a1 && (double)a1 <= 1.25 * (double)(cl + meta) ? codec_compress(xp, C_LZMA, level, raw, len, alt, J->slot) : 0;
-            if (a2 && (uint64_t)a2 * 100 <= (uint64_t)(cl + meta) * 97 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_LZMA; }
+            size_t a2 = alt && len <= (2u << 20) && a1 && (double)a1 <= 1.25 * (double)(cl + meta) ? codec_compress(xp, R_LZMA, level, raw, len, alt, J->slot) : 0;
+            if (a2 && (uint64_t)a2 * 100 <= (uint64_t)(cl + meta) * 97 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = R_LZMA; }
             if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; }
         }
         if (codec == C_CM && level != 1) {            /* ultra: best of context mixing, LZMA2 and (text) BWT per block */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             if (alt) {
-                int alts[2] = {C_LZMA, C_BWT};
+                int alts[2] = {R_LZMA, C_BWT};
                 for (int k = 0; k < 2; k++) {
                     int text = !tflag && looks_text(in, inlen);
-                    if (alts[k] == C_LZMA && text) continue;  /* text: BWT always beat LZMA2 in tests; saves ~25% of the time */
+                    if (alts[k] == R_LZMA && text) continue;  /* text: BWT always beat LZMA2 in tests; saves ~25% of the time */
                     int hit;
                     /* large block: LZMA2 (1-2 MB/s, a tenth of CM's time) is coded in full only when a 1 MiB slice from
                      * the middle comes within 25% of CM's rate. Slices are pessimistic: on a table stream (owid-energy)
@@ -474,7 +469,7 @@ static void *compress_worker(void *arg) {
                      * The 25% reach applies to transformed streams (tflag), where it was measured; raw blocks keep rc3's
                      * gate (the slice 3% below CM): on raw video residual planes LZMA2 came 13% short and the 25% reach
                      * coded it in full for nothing, +25% -x time at one thread (kvid -m x, akiyo: 83 -> 104 s). */
-                    if (cl && inlen > (2u << 20) && alts[k] == C_LZMA) {
+                    if (cl && inlen > (2u << 20) && alts[k] == R_LZMA) {
                         size_t sn = 1u << 20, so = (inlen - sn) / 2;
                         size_t cs = xtrial_take(&xt[XT_ALTS], alts[k], in + so, sn, &hit);
                         if (!hit) cs = codec_compress(xp, alts[k], 9, in + so, sn, alt, J->slot - meta);
@@ -501,13 +496,13 @@ static void *compress_worker(void *arg) {
                     if (a1 && (double)a1 <= 1.02 * (double)ref) {
                         /* plain LZMA2 (up to 2 MiB) beside plain context mixing when a thread is free */
                         xtrial_t *x3 = &xt[XT_A1]; xtrial_free(x3);
-                        if (len <= (2u << 20) && J->fqthreads > 1) xtrial_start(x3, C_LZMA, 9, raw, len, J->slot, 1);
+                        if (len <= (2u << 20) && J->fqthreads > 1) xtrial_start(x3, R_LZMA, 9, raw, len, J->slot, 1);
                         size_t a2 = codec_compress(xp, C_CM, level, raw, len, alt, J->slot);
                         if (a2 && a2 < bz) { memcpy(sl, alt, a2); bz = a2; bc = C_CM; }
-                        size_t a3 = xtrial_take(x3, C_LZMA, raw, len, &hit);
+                        size_t a3 = xtrial_take(x3, R_LZMA, raw, len, &hit);
                         if (hit) { if (a3) memcpy(alt, x3->out, a3); }
-                        else a3 = len <= (2u << 20) ? codec_compress(xp, C_LZMA, 9, raw, len, alt, J->slot) : 0;
-                        if (a3 && a3 < bz) { memcpy(sl, alt, a3); bz = a3; bc = C_LZMA; }
+                        else a3 = len <= (2u << 20) ? codec_compress(xp, R_LZMA, 9, raw, len, alt, J->slot) : 0;
+                        if (a3 && a3 < bz) { memcpy(sl, alt, a3); bz = a3; bc = R_LZMA; }
                     }
                     if (bc) { cl = bz; codec = bc; in = raw; inlen = len; tflag = 0; meta = 0; slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0; cmp_used = 0; }
                 }
@@ -572,6 +567,7 @@ coded:;
                 }
             }
         }
+        (void)modes;   /* the format features this block used (once the frame's version); every frame is version 12 */
         for (int k = 0; k < XT_N; k++) xtrial_free(&xt[k]);
         size_t tot = 4 + meta + cl;
         uint8_t *e = J->idx + (size_t)i * IDX;
@@ -581,17 +577,14 @@ coded:;
             emit_block(J, i, h0, raw, tot);
         } else {
             emit_block(J, i, NULL, slot, tot);
-            atomic_fetch_or_explicit(&J->newmodes, modes | (codec == C_BWT || (codec == C_GRAPH && xp->used_bwt) || (kolmo_native_flags() && (codec_is_native(codec_wire(xp, codec)) || xp->used_native || xtrial_native_hit)) || (codec == C_CM && cm_stream_tuned(slot + 4 + meta, cl)) ? 128u : 0u), memory_order_relaxed);
-            /* version 11 when the block is codec 18, or a graph block whose leaves may be (leaf trials set used_bwt), a
-             * native codec id was written (the block's id, or inside its payload: leaves, columns, trials), or a context-mixing stream has learning settings (model nibble 14 or 15) */
         }
         put32(e, (uint32_t)len); put32(e + 4, (uint32_t)tot);
-        if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)kolmo_xxh3(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)
-                                                   : (uint32_t)kolmo_xxh3(slot + 4, tot - 4, 0x637a6e31u ^ get32(slot)));
-        else put32(e + 8, blk_sum(3, raw, len));
+        if (J->psum) put32(e + 8, codec == C_STORE ? (uint32_t)kolmo_khash64(raw, len, 0x637a6e31u ^ (uint32_t)T_NONE)
+                                                   : (uint32_t)kolmo_khash64(slot + 4, tot - 4, 0x637a6e31u ^ get32(slot)));
+        else put32(e + 8, blk_sum(raw, len));
         e[12] = codec_wire(xp, codec); e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
         /* what decoding this block will need, from the payload as written (the frame declares the largest) */
-        job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec_wire(xp, codec), tflag, len, slot, tot, 11, J->cm_leaves));   /* the codec as written (native ids) */
+        job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec_wire(xp, codec), tflag, len, slot, tot, KOLMO_MAX_VERSION, J->cm_leaves));   /* the codec as written (native ids) */
         kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0;
         kmem_release(resv); held = 0;
     }

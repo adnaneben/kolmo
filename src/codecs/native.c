@@ -1,68 +1,40 @@
-/* Kolmo's own coders in place of the libraries (rc3 wave 2, native lane): codec tables for 24 (KLZMA), 27 (khuf
- * leaf), 28 (KLZ) and 29 (KLZH), and the opt-in that substitutes them for the library coders.
- *
- * Opt-in: KOLMO_NATIVE=lz,huf,lzma (or "all"), read once per process. Without it nothing changes: no default output
- * uses these ids. With it, the encoder codes with Kolmo's coder wherever it would have called the library coder
- * (same planner, same trials, same levels mapped as below), and writes the new id in the block index or the leaf
- * header (codec_wire); the frame is then version 11. Dictionaries and trained profiles keep the library coders.
- *   lz:   LZ4 -> KLZ (28), LZ4-HC -> KLZ level 3, zstd -> KLZH (29), Brotli -> KLZH level 7
- *   huf:  zstd's HUF in the graph leaves (codec 13) -> khuf (27)
- *   lzma: raw LZMA2 (codec 6) -> KLZMA (24)
- *   strong: zstd and Brotli -> KLZMA (the optimal parse and range coder, at a slower decode): the candidate for `hc`
- *           and `eco` (zstd levels 19 and 22 -> KLZMA 6, levels 10-18 -> 5, lower levels and Brotli -> 3). The id
- *           written cannot depend on the level (ids are written where the level is not known), so strong maps every
- *           zstd call of the process: use it for `hc` and `eco` runs. Measurements: benchmark/rc3w2/native/RESULTS.md
+/* Kolmo's own coders: codec tables for 24 (KLZMA), 27 (khuf leaf), 28 (KLZ), 29 (KLZH) and 32 (KLZH2), and the
+ * mapping from the encoder roles (codecs/codec.h) to them. Every encoder path codes with these coders and writes
+ * their ids; there is no other choice and no environment switch (container version 12).
+ *   speed (R_SPEED) -> KLZ level 1, R_SPEEDHC -> KLZ level 3
+ *   balanced and hc (R_LZH) -> KLZH2, levels on zstd's scale: 1-2 -> 1, 3-5 -> 3, 6-9 -> 5, 10-15 -> 6, 16-18 -> 8,
+ *     19 and up -> 9
+ *   eco (R_ECO) -> KLZH2 level 7
+ *   ratio's LZ coder (R_LZMA) -> KLZMA (level 1 -> 1, 2-5 -> 4, 6-9 -> 8; >= 100: lc/lp/pb digits, algo/klzma.h)
+ *   Huffman leaves (R_HUF) -> khuf
  * The algorithms are in src/algo/khuf.c, klz.c, klzma.c (compiled on their own); formats in their headers.
  * Part of the single translation unit built from src/kolmo.c. */
 #include "../algo/khuf.h"
 #include "../algo/klz.h"
 #include "../algo/klzma.h"
 
-enum { KN_LZ = 1, KN_HUF = 2, KN_LZMA = 4, KN_STRONG = 8 };
-static int kolmo_native_flags(void) {
-    static int f = -1; int r = __atomic_load_n(&f, __ATOMIC_RELAXED);
-    if (r < 0) {
-        const char *e = getenv("KOLMO_NATIVE"); r = 0;
-        for (const char *s = e; s && *s;) {   /* comma-separated words */
-            size_t k = strcspn(s, ",");
-            if (k == 3 && !strncmp(s, "all", 3)) r |= KN_LZ | KN_HUF | KN_LZMA;
-            else if (k == 2 && !strncmp(s, "lz", 2)) r |= KN_LZ;
-            else if (k == 3 && !strncmp(s, "huf", 3)) r |= KN_HUF;
-            else if (k == 4 && !strncmp(s, "lzma", 4)) r |= KN_LZMA;
-            else if (k == 6 && !strncmp(s, "strong", 6)) r |= KN_STRONG;
-            s += k; if (*s) s++;
-        }
-        __atomic_store_n(&f, r, __ATOMIC_RELAXED);
+/* the codec the encoder codes with, and writes, for role (or id) c */
+static inline int codec_native_id(int c) {
+    switch (c) {
+        case R_SPEED: case R_SPEEDHC: return C_KLZ;
+        case R_LZH: case R_ECO: return C_KLZH2;
+        case R_HUF: return C_KHUF;
+        case R_LZMA: return C_KLZMA;
     }
-    return r;
-}
-/* the codec the encoder actually codes with (and writes) for library codec c */
-static inline int codec_native_id(const codec_ctx *x, int c) {
-    int f = kolmo_native_flags();
-    if (!f || x->dict || x->prof) return c;
-    if ((f & KN_STRONG) && (c == C_ZSTD || c == C_BROTLI)) return C_KLZMA;
-    if (f & KN_LZ) { if (c == C_LZ4 || c == C_LZ4HC) return C_KLZ; if (c == C_ZSTD || c == C_BROTLI) return C_KLZH; }
-    if ((f & KN_HUF) && c == C_HUF) return C_KHUF;
-    if ((f & KN_LZMA) && c == C_LZMA) return C_KLZMA;
     return c;
 }
-static inline int codec_is_native(int c) { return c == C_KLZMA || c == C_KHUF || c == C_KLZ || c == C_KLZH; }
-/* the id written for library codec c; notes on the context when it is a native id, so that the frame is version 11
- * only when a native id was actually written (KOLMO_NATIVE alone used to make every frame version 11) */
-static inline uint8_t codec_wire_note(codec_ctx *x, int c) {
-    int w = codec_native_id(x, c); if (codec_is_native(w)) x->used_native = 1; return (uint8_t)w;
-}
-#define codec_wire(x, c) codec_wire_note((x), (c))
+static inline int codec_is_native(int c) { return c == C_KLZMA || c == C_KHUF || c == C_KLZ || c == C_KLZH || c == C_KLZH2; }
+/* the id written for role c (the context is kept for the callers; nothing is noted on it) */
+#define codec_wire(x, c) ((void)(x), (uint8_t)codec_native_id(c))
 
-/* library level -> native level */
+/* role level -> native level */
 static int native_level(int c, int level) {
     switch (c) {
-        case C_LZ4: return 1;
-        case C_LZ4HC: return 3;
-        case C_ZSTD: if (kolmo_native_flags() & KN_STRONG) return level >= 19 ? 6 : level >= 10 ? 5 : 3;
-                     return level <= 2 ? 1 : level <= 5 ? 3 : level <= 9 ? 5 : level <= 15 ? 6 : level <= 19 ? 8 : 9;
-        case C_BROTLI: return kolmo_native_flags() & KN_STRONG ? 3 : 7;
-        case C_LZMA: return level >= 100 ? level : level <= 1 ? 1 : level <= 5 ? 4 : 8;   /* the parse level; >= 100: lc/lp/pb */
+        case R_SPEED: return 1;
+        case R_SPEEDHC: return 3;
+        case R_LZH: return level <= 2 ? 1 : level <= 5 ? 3 : level <= 9 ? 5 : level <= 15 ? 6 : level <= 18 ? 8 : 9;   /* hc's 19 -> 9 */
+        case R_ECO: return 7;
+        case R_LZMA: return level >= 100 ? level : level <= 1 ? 1 : level <= 5 ? 4 : 8;   /* the parse level; >= 100: lc/lp/pb */
     }
     return level;
 }
@@ -87,3 +59,6 @@ static const kolmo_codec codec_klzma = { C_KLZMA, "klzma", klzma_c_bound, klzma_
 static const kolmo_codec codec_khuf = { C_KHUF, "khuf", khuf_c_bound, khuf_c_compress, khuf_c_decompress, NULL };
 static const kolmo_codec codec_klz = { C_KLZ, "klz", klz_c_bound, klz_c_compress, klz_c_decompress, NULL };
 static const kolmo_codec codec_klzh = { C_KLZH, "klzh", klzh_c_bound, klzh_c_compress, klzh_c_decompress, NULL };
+static size_t klzh2_c_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) { (void)x; return kolmo_klzh2_compress(in, n, out, cap, level); }
+static int klzh2_c_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return kolmo_klzh2_decompress(in, cn, out, n); }
+static const kolmo_codec codec_klzh2 = { C_KLZH2, "klzh2", klzh_c_bound, klzh2_c_compress, klzh2_c_decompress, NULL };

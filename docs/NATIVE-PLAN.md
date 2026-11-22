@@ -1,5 +1,10 @@
 # Kolmo without its rivals' libraries: census, prototypes and plan (rc3 wave 2)
 
+**Done in container version 12 (rc4-native):** the libraries are gone. Every encoder path writes Kolmo's own ids
+(KLZ 28, KLZH2 32, KLZMA 24, khuf 27), the probes use KLZH2 (`kprobe_size`, `src/core/common.h`), every hash is
+`kolmo_khash64`, dictionaries and trained profiles are not available (`KOLMO_ERR_UNSUPPORTED`), and frames of versions
+1-11 are refused (`KOLMO_ERR_LEGACY`). The census below describes the tree before that change.
+
 Written by the native lane on 17 November 2026 (`claude/rc3w2-native-20261117`).
 
 The owner does not want Kolmo to depend on the libraries of the tools it competes with: zstd (including the HUF and FSE

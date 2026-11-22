@@ -1,27 +1,38 @@
 /* Block codecs: identifiers, the per-thread codec context and the codec table (struct kolmo_codec). Each codec
- * file defines one table (or two for one family, as LZ4 and LZ4-HC) and codecs/codec.c lists them by identifier.
+ * file defines one table and codecs/codec.c lists them by identifier.
  * Part of the single translation unit built from src/kolmo.c (docs/LAYOUT.md). */
 #define KOLMO_CODEC_REGISTRY 1
-enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC5 = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
-       C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_FQ = 16, C_CMI = 17, C_BWT = 18,
-       C_AUD = 19, C_VID = 20, C_PLANES = 21, C_HZ = 22, C_ZRUN = 23, C_KLZMA = 24, C_CMP = 25, C_GR6 = 26,
-       C_KHUF = 27, C_KLZ = 28, C_KLZH = 29, C_KIMG = 31 };   /* 31: kimg lossless 8-bit images (ratio, ultra; version 11; codecs/kimg.c). 30 is held for W4 entropy's khuf v2 (not merged) */   /* 24, 27-29: Kolmo's own coders, opt-in (KOLMO_NATIVE, codecs/native.c; version 11) */   /* 18: Kolmo block sorting (BWT in C); 19-23: container version 11 (format 2): 19 audio (kaud), 20 video (kvid), 21 per-plane leaf, 22 Huffman then zstd leaf, 23 zero-run leaf (21-23: graph leaves only), 25 context mixing over parts (columns or halves, coded in parallel), 26 GR6+ line-structured text (ultra blocks only) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head); 5: libbsc block sorting (read only since rc3); 18: Kolmo block sorting (codecs/bwt.c; version 11) */
+/* Wire ids: the codec byte of the block index and of graph leaves. Every coder is Kolmo's own (container version 12).
+ *   0 stored; 5 block sorting in libbsc 3.4.0's block format (Kolmo's C port; read, and written by tests only); 7 context
+ *   mixing; 8-11 experimental frontier codecs (opt-in build); 12 kolmo graph block; 14 rANS order 0; 15 native
+ *   plane-context leaf (graph leaves only); 16 FASTQ family coder (blocks only; ultra); 17 context mixing with the
+ *   image model; 18 Kolmo block sorting (codecs/bwt.c); 19 audio (kaud); 20 video (kvid); 21 per-plane leaf and
+ *   23 zero-run leaf (graph leaves only); 24 KLZMA; 25 context mixing over parts; 26 GR6+ (ultra blocks only);
+ *   27 khuf; 28 KLZ; 29 KLZH; 31 kimg (8-bit images); 32 KLZH2 (codecs/native.c, algo/k*.h).
+ * Ids 1-4, 6, 13 and 22 named library codecs (LZ4, LZ4-HC, zstd, Brotli, LZMA2, zstd's HUF, Huffman then zstd) in
+ * earlier versions; they have no table here, so a frame naming them fails to decode (codec_get returns NULL).
+ * Encoder roles (R_*): the planner, the block coder and the graph leaves choose a role and a level on the scale of the
+ * coder the role was written for; codec_compress codes it with Kolmo's coder (codec_native_id, native_level) and the
+ * id written is always the native one (codec_wire). Roles reuse the retired ids 1-4, 6 and 13, so a role id that
+ * reached a frame by mistake could never be decoded as something else. 30 is held for khuf v2 (not merged). */
+enum { C_STORE = 0, R_SPEED = 1, R_SPEEDHC = 2, R_LZH = 3, R_ECO = 4, C_BSC5 = 5, R_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
+       C_GRAPH = 12, R_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_FQ = 16, C_CMI = 17, C_BWT = 18,
+       C_AUD = 19, C_VID = 20, C_PLANES = 21, C_ZRUN = 23, C_KLZMA = 24, C_CMP = 25, C_GR6 = 26,
+       C_KHUF = 27, C_KLZ = 28, C_KLZH = 29, C_KIMG = 31, C_KLZH2 = 32 };
+/* R_SPEED: KLZ level 1 (speed); R_SPEEDHC: KLZ level 3; R_LZH: KLZH2, levels on zstd's scale (balanced 3, hc 19 -> 9);
+ * R_ECO: KLZH2 level 7 (eco); R_LZMA: KLZMA (ratio's LZ coder; levels 1-9 and the lc/lp/pb form >= 100); R_HUF: khuf. */
 
-typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *dict; size_t dictlen;
-                 const struct kolmo_profile *prof;   /* trained profile: its dictionaries for zstd, Brotli and LZ4 (src/plan/profile.c) */
-                 int native_leaf;        /* encoder: graph integer residual leaves may use C_NPLANE (opt-in, balanced) */
-                 int used_native_leaf;   /* encoder: set when a C_NPLANE leaf was written (the frame needs version 9) */
-                 int allow_nplane;       /* decoder: C_NPLANE leaves are valid (container version 9 or later) */
+typedef struct { int native_leaf;        /* encoder: graph integer residual leaves may use C_NPLANE (opt-in, balanced) */
+                 int used_native_leaf;   /* encoder: set when a C_NPLANE leaf was written */
+                 int allow_nplane;       /* decoder: C_NPLANE leaves are valid (graph blocks) */
                  int aligned_leaf;       /* encoder: graph integer residual leaves also try plane-aligned Huffman / rANS chunks
-                                          * (opt-in: --native-leaf, --typed-huf; existing leaf ids, any version-7 decoder) */
+                                          * (opt-in: --native-leaf, --typed-huf; existing leaf ids) */
                  int threads;            /* threads the block may use inside a codec (BWT, codec 25 parts); never changes the output */
-                 int zwide;              /* encoder, zstd: a large plain block of balanced (4-6 MiB): an 8 MiB window */
-                 int used_bwt;           /* encoder: set when codec 18 was written (the frame needs version 11) */
-                 int used_f2;            /* encoder: a format-2 leaf (codecs 21-23) was written (the frame needs version 11) */
-                 int used_cmt;           /* encoder: a context-mixing leaf with learning settings was written (version 11) */
-                 int used_native;        /* encoder: a Kolmo native codec id (24, 27, 28, 29) was written (version 11) */
-                 int no_f2;              /* encoder: do not try codecs 21-23 (planner scores, the --typed-huf route, WAV sample blocks) */
-                 int allow_f2;           /* decoder: codecs 21-23 are valid graph leaves (container version 11 or later) */ } codec_ctx;
+                 int used_bwt;           /* encoder: set when codec 18 was written */
+                 int used_f2;            /* encoder: a format-2 leaf (codecs 21, 23) was written */
+                 int used_cmt;           /* encoder: a context-mixing leaf with learning settings was written */
+                 int no_f2;              /* encoder: do not try codecs 21 and 23 (planner scores, the --typed-huf route, WAV sample blocks) */
+                 int allow_f2;           /* decoder: codecs 21 and 23 are valid graph leaves (graph blocks) */ } codec_ctx;
 
 /* One block codec. Missing functions keep the behaviour of the rc2 dispatch: bound NULL -> n, compress NULL -> 0
  * (not written by codec_compress), decompress NULL -> -1 (refused by codec_decompress). mem_needed: bytes of working
@@ -36,6 +47,6 @@ typedef struct kolmo_codec {
 } kolmo_codec;
 
 /* tentative definitions: each codec file defines its table, codecs/codec.c lists them */
-static const kolmo_codec codec_store, codec_lz4, codec_lz4hc, codec_zstd, codec_brotli, codec_bwt, codec_bwt5, codec_lzma, codec_cm,
-    codec_graph, codec_huf, codec_rans, codec_nplane, codec_fastq, codec_cm_image,
-    codec_audio, codec_video, codec_planes, codec_hz, codec_zrun, codec_gr6, codec_cm_par, codec_klzma, codec_khuf, codec_klz, codec_klzh, codec_kimg;
+static const kolmo_codec codec_store, codec_bwt, codec_bwt5, codec_cm,
+    codec_graph, codec_rans, codec_nplane, codec_fastq, codec_cm_image,
+    codec_audio, codec_video, codec_planes, codec_zrun, codec_gr6, codec_cm_par, codec_klzma, codec_khuf, codec_klz, codec_klzh, codec_kimg, codec_klzh2;

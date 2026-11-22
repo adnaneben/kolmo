@@ -63,7 +63,6 @@ static size_t fast_sample_bytes(const uint8_t *src, size_t len, const plan_t *pl
     job.slot = slot_size((uint32_t)len, job.codec);
     if (pthread_mutex_init(&job.wmu, NULL)) return 0;
     atomic_init(&job.next, 0);
-    atomic_init(&job.newmodes, 0);
     atomic_init(&job.err, 0);
     compress_worker(&job);
     pthread_mutex_destroy(&job.wmu);
@@ -107,15 +106,11 @@ static int prefer_frontier_table(const uint8_t *src, size_t n, const plan_t *pl,
     if (sample < 8192) return 0;
     size_t cap = sample + TSLACK;
     uint8_t *tmp = malloc(sample + TBL_SLACK(sample) + 64);   /* tbl2_encode below may use the table slack */
-    size_t bound = ZSTD_compressBound(cap);
-    uint8_t *z = malloc(bound);
-    ZSTD_CCtx *ctx = ZSTD_createCCtx();
     int keep = 0;
-    if (!tmp || !z || !ctx) goto done;
+    if (!tmp) goto done;
     size_t trial = frontier_table_encode(src, sample, delim, tmp, cap);
     if (!trial) goto done;
-    size_t candidate = ZSTD_compressCCtx(ctx, z, bound, tmp, trial, 1);
-    if (ZSTD_isError(candidate)) goto done;
+    size_t candidate = kprobe_size(tmp, trial);
     const uint8_t *previous = src;
     size_t bytes = sample;
     if (pl->t == T_TBL) {
@@ -127,11 +122,10 @@ static int prefer_frontier_table(const uint8_t *src, size_t n, const plan_t *pl,
         else transpose_fwd(src, sample, pl->a, pl->c + 1, pl->b, tmp, sizes);
         previous = tmp;
     } else if (pl->t != T_NONE) goto done;
-    size_t reference = ZSTD_compressCCtx(ctx, z, bound, previous, bytes, pl->wide ? 1 : 3);
-    if (!ZSTD_isError(reference))
-        keep = 100 * (candidate + 4) < 97 * (reference + (pl->t == T_TP ? 4 * (pl->c + 1) : 4));
+    size_t reference = kprobe_size_l(previous, bytes, pl->wide ? 1 : 3);
+    keep = 100 * (candidate + 4) < 97 * (reference + (pl->t == T_TP ? 4 * (pl->c + 1) : 4));
 done:
-    ZSTD_freeCCtx(ctx); free(tmp); free(z);
+    free(tmp);
     return keep;
 }
 #endif

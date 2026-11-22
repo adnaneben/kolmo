@@ -136,7 +136,7 @@ static void forged(void) {
     /* 1. the fuzzing case: a stream whose frame claims 8 GiB, with no limit at all */
     uint8_t s[12 + 8 + HDR + 2 * IDX + 16] = {'C', 'Z', 'N', 'S', 1, 0, 0, 0}; put32(s + 8, 64u << 20);
     uint8_t *f = s + 20; put64(s + 12, HDR + 2 * IDX + 16);
-    memcpy(f, "CZN1", 4); f[4] = 3; f[5] = 1; put64(f + 12, (uint64_t)8 << 30); put32(f + 20, 2); put32(f + 24, 1u << 30);
+    memcpy(f, "CZN1", 4); f[4] = KOLMO_MAX_VERSION; f[5] = 1; put64(f + 12, (uint64_t)8 << 30); put32(f + 20, 2); put32(f + 24, 1u << 30);
     for (int i = 0; i < 2; i++) { uint8_t *e = f + HDR + i * IDX; put32(e, (uint32_t)((4ull << 30) - (i ? 0 : 0)) ); put32(e + 4, 8); e[12] = C_STORE; }
     put32(f + HDR, 0xFFFFFFFFu); put32(f + HDR + IDX, (uint32_t)((8ull << 30) - 0xFFFFFFFFull));
     char path[] = "/tmp/kolmo-memdyn-XXXXXX"; int fd = mkstemp(path); CHECK(fd >= 0); unlink(path);
@@ -150,7 +150,7 @@ static void forged(void) {
     }
     /* 2. a context-mixing block whose stream asks for 2^22-bucket tables (5 GiB) in a frame that declares 16 MiB */
     size_t raw = 1u << 20; uint8_t g[HDR + IDX + 4 + 16] = {0};
-    memcpy(g, "CZN1", 4); g[4] = 3; g[5] = KOLMO_ULTRA; g[11] = kmem_code(16 * MiB); put64(g + 12, raw); put32(g + 20, 1); put32(g + 24, (uint32_t)raw);
+    memcpy(g, "CZN1", 4); g[4] = KOLMO_MAX_VERSION; g[5] = KOLMO_ULTRA; g[11] = kmem_code(16 * MiB); put64(g + 12, raw); put32(g + 20, 1); put32(g + 24, (uint32_t)raw);
     uint8_t *e = g + HDR; put32(e, (uint32_t)raw); put32(e + 4, 4 + 16); e[12] = C_CM;
     uint8_t *pay = g + HDR + IDX + 4; put32(pay, (uint32_t)raw | 8u << 28); pay[4] = (uint8_t)(3 << 4 | (22 - 15));
     fix_crc(g, 1);

@@ -1,18 +1,14 @@
-/* Runtime ISA dispatch: the CRC32C and XXH3 entry points must give the reference result on every path, for every
- * length (through the long-input kernels), alignment and seed. The references here are scalar: a bitwise CRC32C and
- * xxHash compiled with XXH_VECTOR=XXH_SCALAR in its own namespace. Reports which paths this CPU takes. */
+/* Runtime ISA dispatch: the CRC32C entry point must give the reference result (a bitwise CRC32C) on every path, for
+ * every length (through the long-input kernels) and alignment. The block hash kolmo_khash64 (src/algo/khash.c; it
+ * replaced XXH3-64 with container version 12) has no hand-written kernels: its value must not depend on the
+ * alignment of its input (compared with an aligned copy), for every length and seed; its pinned values are checked by
+ * tests/test_native.c. Reports which paths this CPU takes. */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "kolmo.h"
-#define XXH_STATIC_LINKING_ONLY
-#define XXH_IMPLEMENTATION
-#define XXH_VECTOR 0                      /* XXH_SCALAR */
-#undef XXH_NAMESPACE
-#define XXH_NAMESPACE KOLMOREF_
-#include "../vendor/xxhash/xxhash.h"
-unsigned long long kolmo_xxh3(const void *p, size_t n, unsigned long long seed);
+#include "algo/khash.h"
 
 static uint32_t crc_ref(uint32_t crc, const uint8_t *p, size_t n) {
     uint32_t c = ~crc;
@@ -21,7 +17,7 @@ static uint32_t crc_ref(uint32_t crc, const uint8_t *p, size_t n) {
 }
 int main(void) {
     enum { N = 1 << 17 };
-    uint8_t *buf = malloc(N + 64); uint64_t x = 0x9E3779B97F4A7C15ull;
+    uint8_t *buf = malloc(N + 64), *al = malloc(N + 64); uint64_t x = 0x9E3779B97F4A7C15ull;
     for (size_t i = 0; i < N + 64; i++) { x ^= x << 13; x ^= x >> 7; x ^= x << 17; buf[i] = (uint8_t)x; }
     const unsigned long long seeds[] = {0, 1, 0x637a6e31ull, 0x637a6e44ull, 0xFFFFFFFFFFFFFFFFull};
     long bad = 0, n_checks = 0;
@@ -30,9 +26,10 @@ int main(void) {
             const uint8_t *p = buf + off;
             if (kolmo_crc32c(0, p, len) != crc_ref(0, p, len)) { if (bad++ < 5) printf("crc32c differs: len %zu off %d\n", len, off); }
             if (kolmo_crc32c(0x12345678u, p, len) != crc_ref(0x12345678u, p, len)) bad++;
+            memcpy(al, p, len);
             for (unsigned s = 0; s < sizeof seeds / sizeof *seeds; s++)
-                if (kolmo_xxh3(p, len, seeds[s]) != KOLMOREF_XXH3_64bits_withSeed(p, len, seeds[s])) {
-                    if (bad++ < 5) printf("xxh3 differs: len %zu off %d seed %llx\n", len, off, seeds[s]);
+                if (kolmo_khash64(p, len, seeds[s]) != kolmo_khash64(al, len, seeds[s])) {
+                    if (bad++ < 5) printf("khash64 depends on alignment: len %zu off %d seed %llx\n", len, off, seeds[s]);
                 }
             n_checks += 7;
         }
@@ -43,6 +40,6 @@ int main(void) {
 #else                                     /* no x86 dispatch on this target: the portable paths are checked */
     printf("test_dispatch: %ld checks, %ld mismatches (not x86: portable paths)\n", n_checks, bad);
 #endif
-    free(buf);
+    free(buf); free(al);
     return bad != 0;
 }

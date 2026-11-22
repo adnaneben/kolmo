@@ -10,7 +10,8 @@
 
 use std::os::raw::{c_int, c_char};
 
-/// Compression mode. `Rt` is LZ4-speed; `Ultra` is the context-mixing archive tier.
+/// Compression mode. `Rt` is the fastest (KLZ); `Ultra` is the context-mixing archive tier. Every coder is Kolmo's own;
+/// blobs are container version 12, and blobs of earlier Kolmo versions fail with code -13 (`KOLMO_ERR_LEGACY`).
 #[repr(i32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
@@ -112,9 +113,8 @@ pub fn read_range(blob: &[u8], off: u64, len: usize, threads: i32) -> Result<Vec
     Ok(out)
 }
 
-/// Train a dictionary from a set of small, similar samples (records, log lines, JSON blobs).
-/// `dict_cap` bounds the dictionary size (~112 KiB is typical). Use the result with
-/// [`compress_dict`] / [`decompress_dict`].
+/// Dictionaries are not available in this build (they needed library codecs): always fails with code -14
+/// (`KOLMO_ERR_UNSUPPORTED`). Kept so that existing callers fail clearly.
 pub fn train_dict(samples: &[&[u8]], dict_cap: usize) -> Result<Vec<u8>, Error> {
     let mut blob = Vec::new();
     let sizes: Vec<usize> = samples.iter().map(|s| { blob.extend_from_slice(s); s.len() }).collect();
@@ -125,8 +125,8 @@ pub fn train_dict(samples: &[&[u8]], dict_cap: usize) -> Result<Vec<u8>, Error> 
     Ok(dict)
 }
 
-/// Compress `data` against a trained dictionary (see [`train_dict`]). The same dictionary must be
-/// supplied to [`decompress_dict`]; a blob written with a dictionary refuses to decode without it.
+/// Dictionaries are not available in this build: a non-empty `dict` fails with code -14 (`KOLMO_ERR_UNSUPPORTED`);
+/// an empty one compresses as [`compress`] would.
 pub fn compress_dict(data: &[u8], mode: Mode, threads: i32, dict: &[u8]) -> Result<Vec<u8>, Error> {
     let p = Params { mode: mode as c_int, level: 0, threads: threads as c_int, block: 0, transforms: 1, mem_limit: 0 };
     let cap = unsafe { kolmo_bound(data.len(), &p) };
@@ -137,7 +137,8 @@ pub fn compress_dict(data: &[u8], mode: Mode, threads: i32, dict: &[u8]) -> Resu
     Ok(out)
 }
 
-/// Decompress a blob written by [`compress_dict`], supplying the same dictionary.
+/// Dictionaries are not available in this build: a non-empty `dict` fails with code -14 (`KOLMO_ERR_UNSUPPORTED`);
+/// an empty one decompresses as [`decompress`] would.
 pub fn decompress_dict(blob: &[u8], threads: i32, dict: &[u8]) -> Result<Vec<u8>, Error> {
     let o = original_size(blob)?;
     let mut out = vec![0u8; o.max(1)];
@@ -188,19 +189,28 @@ mod tests {
     }
 
     #[test]
-    fn dictionary_round_trip() {
-        // Many small, similar records: train on some, test on others.
-        let recs: Vec<Vec<u8>> = (0..600u32)
-            .map(|i| format!("id,{},status,OK,region,eu-west-{},ts,2024-01-{:02}T00:00:00Z\n", i, i % 4, 1 + i % 28).into_bytes())
-            .collect();
-        let samples: Vec<&[u8]> = recs[..400].iter().map(|v| v.as_slice()).collect();
-        let dict = train_dict(&samples, 64 * 1024).expect("train");
-        assert!(!dict.is_empty());
-        for r in &recs[400..] {
-            let blob = compress_dict(r, Mode::Fast, 1, &dict).unwrap();
-            assert_eq!(decompress_dict(&blob, 1, &dict).unwrap(), *r);
-            // A dictionary blob must not decode without the dictionary.
-            assert!(decompress(&blob, 1).is_err());
-        }
+    fn dictionaries_unsupported() {
+        // Dictionaries needed library codecs: every call that is given one fails with KOLMO_ERR_UNSUPPORTED (-14).
+        let recs: Vec<Vec<u8>> = (0..64u32).map(|i| format!("id,{},status,OK\n", i).into_bytes()).collect();
+        let samples: Vec<&[u8]> = recs.iter().map(|v| v.as_slice()).collect();
+        let e = train_dict(&samples, 64 * 1024).unwrap_err();
+        assert_eq!(e.code, -14);
+        assert!(e.message.contains("not available in this build"), "{}", e.message);
+        assert_eq!(compress_dict(&recs[0], Mode::Fast, 1, b"some dictionary bytes").unwrap_err().code, -14);
+        let blob = compress(&recs[0], Mode::Fast, 1).unwrap();
+        assert_eq!(decompress_dict(&blob, 1, b"some dictionary bytes").unwrap_err().code, -14);
+        assert_eq!(decompress_dict(&blob, 1, b"").unwrap(), recs[0]);
+    }
+
+    #[test]
+    fn legacy_version_refused() {
+        // Every blob is container version 12; the same blob relabelled as version 11 is refused as legacy (-13).
+        let data = sample();
+        let mut blob = compress(&data, Mode::Fast, 1).unwrap();
+        assert_eq!(&blob[..5], b"CZN1\x0c");
+        blob[4] = 11;
+        let e = decompress(&blob, 1).unwrap_err();
+        assert_eq!(e.code, -13);
+        assert!(e.message.contains("written by an earlier Kolmo"), "{}", e.message);
     }
 }

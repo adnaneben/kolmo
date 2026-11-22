@@ -44,7 +44,7 @@ static size_t tblc_compress(codec_ctx *x, int codec, int level, const uint8_t *t
         size_t z = n >= 32 && cap - pos > 64 ? codec_compress(x, codec, level, seg, n, dst + pos, cap - pos) : 0;
         int cc = codec;
         if (!z || z >= n) { if (cap - pos < n) return 0; memcpy(dst + pos, seg, n); z = n; cc = C_STORE; }
-        e[0] = codec_wire(x, cc); put32(e + 1, (uint32_t)n); put32(e + 5, (uint32_t)z); put32(e + 9, (uint32_t)kolmo_xxh3(seg, n, TBLC_SEED));
+        e[0] = codec_wire(x, cc); put32(e + 1, (uint32_t)n); put32(e + 5, (uint32_t)z); put32(e + 9, (uint32_t)kolmo_khash64(seg, n, TBLC_SEED));
         pos += z;
     }
     return pos;
@@ -72,7 +72,7 @@ static int tblc_segment(codec_ctx *x, const tblc_dir *D, int s, uint8_t *out) {
     const uint8_t *e = D->dir + (size_t)s * TBLC_ENTRY;
     if (e[0] == C_STORE) memcpy(out, D->data + D->at[s], D->raw[s]);
     else if (codec_decompress(x, e[0], D->data + D->at[s], D->z[s], out, D->raw[s])) return -1;
-    return (uint32_t)kolmo_xxh3(out, D->raw[s], TBLC_SEED) == get32(e + 9) ? 0 : -1;
+    return (uint32_t)kolmo_khash64(out, D->raw[s], TBLC_SEED) == get32(e + 9) ? 0 : -1;
 }
 /* full decode: the table-v2 stream into t (capacity maxtn); returns its length or -1 */
 static int64_t tblc_decompress(codec_ctx *x, int codec, const uint8_t *pay, size_t cl, uint8_t *t, size_t maxtn) {

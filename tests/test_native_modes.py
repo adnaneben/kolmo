@@ -1,7 +1,7 @@
-"""Kolmo's own coders in the CLI (native lane, rc3 wave 2): every mode with KOLMO_NATIVE=all and all,strong, 1 and 4
-threads, on generated inputs (text, CSV, log, integers, floats, an image, random bytes, zeros). Each frame must decode
-to its input with KOLMO_NATIVE unset (the decoder needs no opt-in), and the output with 1 and 4 threads must be the
-same. The default output (KOLMO_NATIVE unset) is covered by the determinism check.
+"""Kolmo's own coders in the CLI: every mode, 1 and 4 threads, on generated inputs (text, CSV, log, integers, floats,
+an image, random bytes, zeros). Every frame must be container version 12, name only codecs this build has (no retired
+library id: 1-4, 6, 13, 22) in its block index, decode to its input, give the same bytes with 1 and 4 threads, and
+not depend on the environment: the KOLMO_NATIVE switch of earlier builds is gone, so setting it changes nothing.
 
 usage: python3 tests/test_native_modes.py build/kolmo WORK_DIR"""
 import os, random, struct, subprocess, sys
@@ -21,18 +21,27 @@ files = {
     "tiny.txt": b"a",
 }
 bad = 0
+RETIRED = {1, 2, 3, 4, 6, 13, 22}
 env0 = {k: v for k, v in os.environ.items() if k != "KOLMO_NATIVE"}
+def frame_codecs(f):
+    nb = struct.unpack_from("<I", f, 20)[0]
+    return [f[32 + 16 * i + 12] for i in range(nb)]
 for name, data in files.items():
     src = os.path.join(W, name); open(src, "wb").write(data)
-    for nat in ("all", "all,strong"):
-        for mode in ("speed", "balanced", "eco", "hc", "ratio"):
-            outs = []
-            for t in ("1", "4"):
-                z = os.path.join(W, f"{name}.{mode}.{t}.k"); r = z + ".out"
-                subprocess.run([K, "-m", mode, "-T", t, src, z], check=True, env={**env0, "KOLMO_NATIVE": nat})
-                subprocess.run([K, "-d", z, r], check=True, env=env0)
-                fz = open(z, "rb").read(); outs.append(fz)
-                if open(r, "rb").read() != data: print("MISMATCH", name, nat, mode, t); bad += 1
-            if outs[0] != outs[1]: print("THREADS DIFFER", name, nat, mode); bad += 1
+    for mode in ("speed", "balanced", "eco", "hc", "ratio", "ultra"):
+        outs = []
+        for t in ("1", "4"):
+            z = os.path.join(W, f"{name}.{mode}.{t}.k"); r = z + ".out"
+            subprocess.run([K, "-m", mode, "-T", t, src, z], check=True, env=env0)
+            subprocess.run([K, "-d", z, r], check=True, env=env0)
+            fz = open(z, "rb").read(); outs.append(fz)
+            if fz[:5] != b"CZN1\x0c": print("NOT VERSION 12", name, mode, t, fz[:5]); bad += 1
+            if RETIRED & set(frame_codecs(fz)): print("RETIRED CODEC ID", name, mode, t, frame_codecs(fz)); bad += 1
+            if open(r, "rb").read() != data: print("MISMATCH", name, mode, t); bad += 1
+        if outs[0] != outs[1]: print("THREADS DIFFER", name, mode); bad += 1
+        for nat in ("none", "all,strong", "lz"):                 # the retired switch must not change the output
+            z = os.path.join(W, f"{name}.{mode}.env.k")
+            subprocess.run([K, "-m", mode, "-T", "1", src, z], check=True, env={**env0, "KOLMO_NATIVE": nat})
+            if open(z, "rb").read() != outs[0]: print("KOLMO_NATIVE CHANGED THE OUTPUT", name, mode, nat); bad += 1
 print("test_native_modes:", "OK" if not bad else f"{bad} failures")
 sys.exit(1 if bad else 0)

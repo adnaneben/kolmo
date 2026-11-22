@@ -1,12 +1,12 @@
 /* libFuzzer target for the block and leaf decoders rc3 added, called directly (no container, no checksum in the way):
  * codec 18 (Kolmo block sorting, LZP + BWT + QLFC in C), 19 (audio, kaud), 20 (video, the kvid inverse layout),
- * 21 (per-plane leaf), 22 (Huffman then zstd leaf), 23 (zero-run leaf), 25 (context mixing over parts), 26 (GR6+),
+ * 21 (per-plane leaf), 27 (khuf leaf; codec 22 was removed), 23 (zero-run leaf), 25 (context mixing over parts), 26 (GR6+),
  * 17 (context mixing with the image model), 16 (the FASTQ family coder) and the graph block decoder with every
  * format-2 leaf allowed.
  *
  * Input: sel u8 | n (3 bytes, little-endian, the decoded length; capped at 1 MiB) | flags u8 | payload.
  *   sel % 12 picks the decoder (below); (sel & 0x7f) >= 120 picks decoder 12, codec 16 (FASTQ family). flags bit 0: 2 threads instead of 1 where the decoder takes threads.
- *   sel & 0x80: round-trip mode where the codec has an encoder here (16, 18, 19, 21, 22, 23, 26): the payload is
+ *   sel & 0x80: round-trip mode where the codec has an encoder here (16, 18, 19, 21, 23, 26, 27): the payload is
  *   encoded (n is then ignored), must decode back exactly (a mismatch traps: a real bug), then the valid stream is
  *   damaged at positions taken from the input and decoded again (any result is allowed, no crash or overread).
  * Built with KOLMO_FUZZ_NO_CM, the context-mixing decoders return at once (see src/codecs/cm.c), so codec 25 only
@@ -19,7 +19,7 @@
 static size_t fz_sel_codec;   /* sub-codec used by the planes / zero-run round trips */
 static size_t fz_leaf_sel(codec_ctx *x, const void *ctx, const uint8_t *p, size_t n, uint8_t *out, size_t cap, int *codec) {
     (void)ctx;
-    static const int cs[] = { C_STORE, C_ZSTD, C_HUF, C_RANS, C_LZ4, C_BWT };
+    static const int cs[] = { C_STORE, R_LZH, R_HUF, C_RANS, R_SPEED, C_BWT };
     int c = cs[fz_sel_codec % (sizeof cs / sizeof cs[0])];
     if (c == C_STORE) { if (n > cap) return 0; memcpy(out, p, n); *codec = C_STORE; return n; }
     if (codec_bound(c, n) > cap) return 0;
@@ -33,7 +33,7 @@ static int fz_decode(codec_ctx *x, int which, const uint8_t *in, size_t cn, uint
     case 1: return aud_decompress(in, cn, out, n);
     case 2: return kv_inverse(in, cn, out, n, 1);
     case 3: return codec_decompress(x, C_PLANES, in, cn, out, n);
-    case 4: return codec_decompress(x, C_HZ, in, cn, out, n);
+    case 4: return codec_decompress(x, C_KHUF, in, cn, out, n);
     case 5: return codec_decompress(x, C_ZRUN, in, cn, out, n);
     case 6: return codec_decompress(x, C_CMP, in, cn, out, n);
     case 7: return gr6_decompress(in, cn, out, n);
@@ -58,8 +58,7 @@ static size_t fz_encode(codec_ctx *x, int which, const uint8_t *d, size_t n, uin
     }
     case 3: { int np = 2 + (fl >> 1) % 7; size_t m = n / (size_t)np * (size_t)np; (void)m;
               if (n % (size_t)np || !n) return 0; fz_sel_codec = fl >> 4; *dec = 3; return planes_compress(x, np, d, n, e, cap, fz_leaf_sel, NULL); }
-    case 4: { size_t hc = n + n / 1024 + 1024; uint8_t *h = malloc(hc); if (!h) return 0;
-              size_t hl = huf_compress_all(d, n, h, hc); size_t z = hl ? hz_compress_huf(x, 3, h, hl, e, cap) : 0; free(h); return z; }
+    case 4: return kolmo_khuf_bound(n) <= cap ? kolmo_khuf_compress_chunks(d, n, e, cap) : 0;
     case 5: fz_sel_codec = fl >> 4; return zrun_compress(x, d, n, e, cap, fz_leaf_sel, NULL);
     case 7: return n <= (256u << 10) ? gr6_compress(d, n, e, cap, 1) : 0;
     case 12: {                                               /* FASTQ text; the coder declines anything else */

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.1-rc1 (first release candidate of the renumbered, Kolmo-native line; branch `review/rc4-native-J62kQD`; not tagged)
+
+Renumbered: the 1.x line (1.0.0 and 1.0.1 on PyPI, crates.io and Homebrew) used library codecs. 0.0.1 is the first line built only from Kolmo's own codecs, with a new frame format (container version 12) that does not read 1.x files.
+
+- **No third-party codec library:** zstd, Brotli, LZ4, liblzma and xxHash are removed from the code, the build, both
+  bindings and the tree (`vendor/`, `bindings/*/native/vendor`). Kolmo's own coders replace them: KLZ (speed),
+  KLZH2 (balanced level 3, eco level 7, hc level 9), KLZMA (ratio's LZ coder and the -x trials), khuf (Huffman
+  leaves), `kolmo_khash64` (every checksum and hash).
+- **Format: container version 12.** Every frame is version 12; the decoder reads only version 12 and refuses
+  versions 1-11 with the new `KOLMO_ERR_LEGACY` (-13). **Files written by earlier Kolmo versions cannot be read.**
+  Codec ids 1-4, 6, 13 and 22 are retired.
+- **Removed features:** dictionaries (`-D`, `-t`, `kolmo_train_dict`, `kolmo_*_dict` with a dictionary) and trained
+  profiles (`kolmo train`, `kolmo profile`, `-P`, the `kolmo_*profile*` calls, CZC1 frames). The calls remain and
+  return the new `KOLMO_ERR_UNSUPPORTED` (-14).
+- **Planner:** the size probes use KLZH2 (level 1; level 3 where zstd -3 was used) instead of zstd and LZ4; the
+  thresholds were not retuned. The zstd wide-window and hc 128 MiB-window paths are gone.
+
 ## 1.2.0-rc4 (release candidate; not tagged)
 
 Built from C2 (`review/c2-integration-J62kQD`, 25bedda8) plus owner decisions A6 and A8 of the RC3 review (2026-11-21).
