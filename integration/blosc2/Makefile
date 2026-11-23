@@ -76,9 +76,17 @@ build/test_dynamic_load: tests/test_dynamic_load.c | check-blosc2
 
 # LIBPATH_VAR: where dlopen looks for a bare library name.
 LIBPATH_VAR := $(if $(filter Darwin,$(UNAME_S)),DYLD_LIBRARY_PATH,LD_LIBRARY_PATH)
-test: build/test_blosc2_kolmo build/test_dynamic_load $(PLUGIN)
+# The blosc2_kolmo locator package with the library beside it, as a wheel would install it. c-blosc2 3.x first tries
+# dlopen("libblosc2_kolmo.so") (the library path); 2.x only asks `python -c "import blosc2_kolmo; ..."` (PYTHONPATH).
+build/python/blosc2_kolmo/libblosc2_kolmo.so: $(PLUGIN) python/blosc2_kolmo/__init__.py
+	@mkdir -p build/python/blosc2_kolmo
+	cp python/blosc2_kolmo/__init__.py build/python/blosc2_kolmo/
+	cp $(PLUGIN) $@
+
+test: build/test_blosc2_kolmo build/test_dynamic_load $(PLUGIN) build/python/blosc2_kolmo/libblosc2_kolmo.so
 	./build/test_blosc2_kolmo $(PLUGIN)
 	$(LIBPATH_VAR)=$(CURDIR)/build/plugin ./build/test_dynamic_load
+	PYTHONPATH=$(CURDIR)/build/python ./build/test_dynamic_load
 
 bench: build/bench_blosc2
 	./build/bench_blosc2 $(BENCH_ARGS)
