@@ -16,7 +16,7 @@ report and case study needs the owner's approval before it leaves the repository
 | [`sample_report.py`](sample_report.py) | Runs Kolmo -3/-6/-9, zstd -3/-19 and xz -9 (and gzip -6) on a directory of sample files, one thread, verifies every round trip, and writes the per-file and total report with the projected yearly storage cost |
 | [`sample-report-template.md`](sample-report-template.md) | The report we send: generated sections and the hand-written ones around them |
 | [`case-study-template.md`](case-study-template.md) | The structure of a published case study: before/after, method, costs, limits, quotes, approval record |
-| [`evidence/`](evidence/) | Raw results behind CLAIMS.md: lzbench CSVs (Silesia, one thread) and the structured-data panel JSON with its script |
+| [`evidence/`](evidence/) | Raw results behind CLAIMS.md: lzbench CSVs (Silesia, one thread), the structured-data panel JSON with its script, the holdout report, and [`first-wave/`](evidence/first-wave/README.md): Kolmo on five candidates' own public files |
 
 ## Workflow
 

@@ -27,13 +27,13 @@ How to read it:
 
 | # | Candidate | Data | Volume (source) | Route | Priority |
 |---|---|---|---|---|---|
-| 1 | NOAA NCEI GHCN-Daily | gzip CSV | ~175 MB gzip per recent year file, 1763-2026 [V] | CLI, `tar -I` | **High** |
-| 2 | ESA Gaia Archive DR3 | gzip ECSV | gaia_source 757 GB compressed, 1.81 bn rows [V] | CLI, kolmoc | **High** |
+| 1 | NOAA NCEI GHCN-Daily | gzip CSV | ~175 MB gzip per recent year file, 1763-2026 [V] | CLI, `tar -I` | **High** (measured) |
+| 2 | ESA Gaia Archive DR3 | gzip ECSV | gaia_source 757 GB compressed, 1.81 bn rows [V] | CLI, kolmoc | Medium (measured: weak) |
 | 3 | GH Archive | gzip JSON lines | hourly since 2011; total not stated [V] | CLI | **High** |
-| 4 | Loghub (logpai) | raw logs, zip / tar.gz | ~83 GiB raw [V] | CLI, `tar -I` | **High** |
+| 4 | Loghub (logpai) | raw logs, zip / tar.gz | ~83 GiB raw [V] | CLI, `tar -I` | **High** (measured) |
 | 5 | Pangeo CMIP6 cloud | Zarr, NetCDF | ~100 TB in cloud (2019) [S] | numcodecs/Zarr | **High** |
-| 6 | Wikimedia pageview dumps | bz2 text lines | ~0.9 GB/day compressed [V] | CLI | Medium-High |
-| 7 | Backblaze Drive Stats | zipped CSV | >90 GB raw CSV, ~300 M rows [V] | CLI, kolmoc | Medium-High |
+| 6 | Wikimedia pageview dumps | bz2 text lines | ~0.9 GB/day compressed [V] | CLI | Low (measured: weak) |
+| 7 | Backblaze Drive Stats | zipped CSV | >90 GB raw CSV, ~300 M rows [V] | CLI, kolmoc | **High** (measured) |
 | 8 | ARCO-ERA5 | Zarr | ~5 PB; one set 53.2 TB [V] | numcodecs/Zarr | Medium-High |
 | 9 | Source Cooperative / data.gov archive | mixed, much CSV | >5 PB; data.gov archive 16 TB [V] | CLI, Zarr | Medium |
 | 10 | scverse / AnnData | Zarr, HDF5 (h5ad) | user-held | numcodecs, HDF5 filter | Medium |
@@ -54,13 +54,13 @@ How to read it:
 
 Section numbers below match this table; sections are grouped by kind of data.
 
-**Suggested first wave**, once the owner approves:
+**Measured on their own public files** (2026-11-23, `CLAIMS.md` claim 3b, `evidence/first-wave/`): GHCN-Daily,
+Backblaze and Loghub are strong; Gaia and Wikimedia are weak and were demoted.
 
-- Run `sample_report.py` on a public file from each of #1-#4 and #7. GHCN-Daily (#1) and GH Archive (#3) are already
-  measured in `CLAIMS.md` claim 3.
-- Then post on the public route of #1, #2, #4 and #5.
-- C1 and C2 are registrations for the integration sessions (PR #21, #23), not outreach. Like everything here, they wait
-  for the owner.
+**Suggested first wave**, once the owner approves: GHCN-Daily (#1), Backblaze Drive Stats (#7) and Loghub (#4), each
+with its own measured numbers; then Pangeo (#5) once the Zarr codec is merged, with a measurement on a CMIP6 variable
+through the codec. C1 and C2 are registrations for the integration sessions (PR #21, #23), not outreach. Like
+everything here, they wait for the owner.
 
 ---
 
@@ -84,10 +84,12 @@ Section numbers below match this table; sections are grouped by kind of data.
   decompress, so the realistic first step is an additional `.kolmo` copy of the tarball, not a replacement.
 - **Public contact:** the data-questions route named on the AWS registry entry (NOAA GHCN site), and the NOAA Open
   Data Dissemination (NODD) program's generic contact listed there [V]. The NCEI contact form is on ncei.noaa.gov.
+- **Measured** on their main product (first 100 MB of `by_year/2024.csv`, `evidence/first-wave/ghcn-by-year.md`):
+  Kolmo -3 13.53, -6 22.29, -9 28.99 against 7.87 for their gzip and 13.26 for xz -9.
 - **Priority: High.** Pure gzip CSV, updated daily, and we already have their numbers. A US agency is slow to adopt;
   aim first at a published comparison they can link.
 
-### 2. ESA Gaia Archive, DR3 bulk files: High
+### 2. ESA Gaia Archive, DR3 bulk files: Medium (measured: weak)
 
 - **What and how much:**
   - `gaia_source`: 1,811,709,771 rows, 757 GB compressed [V]
@@ -103,10 +105,13 @@ Section numbers below match this table; sections are grouped by kind of data.
 - **Integration:** CLI (`.csv.kolmo`); `kolmoc` for Python readers.
 - **Public contact:** Gaia Helpdesk ticket system [S] <https://www.cosmos.esa.int/web/gaia/gaia-helpdesk>; mirror
   operators (Flatiron) via their public pages.
-- **Priority: High.** The size is real and the format is the best fit. Before writing, measure one HEALPix file of
-  `gaia_source`.
+- **Measured** (first 100 MB of `GaiaSource_000000-003111.csv`, `evidence/first-wave/gaia.md`): level 3 ties zstd -3
+  (2.77), level 6 ties zstd -19 (3.29 against 3.35), and only level 9 wins (3.78 against 2.87 for gzip -6 and 3.38 for
+  xz -9) while decoding at 21 MiB/s. The ECSV float columns carry full-precision values with little decimal
+  structure.
+- **Priority: Medium.** The volume is real but the gain is small; not a first-wave partner.
 
-### 6. Wikimedia pageview dumps: Medium-High
+### 6. Wikimedia pageview dumps: Low (measured: weak)
 
 - **What and how much:**
   - Daily "user" and "automated" files from 2007 to now.
@@ -116,14 +121,16 @@ Section numbers below match this table; sections are grouped by kind of data.
 - **Why Kolmo fits:**
   - Count lines (project, title, counts) are tabular text.
   - bzip2 decodes slowly; Kolmo levels 1-7 decode at LZ speed.
-  - Not yet measured: run `sample_report.py` on one day first, since titles are text-heavy.
+  - **Measured** (first 100 MB of 2025-01-15 automated, `evidence/first-wave/wikimedia.md`): level 6 is 8% larger
+    than bzip2 -9 (it decodes 22x faster); level 9 is 11% smaller with no decode advantage (36 against 41 MiB/s).
+    The lines are mostly page titles, i.e. text.
 - **Integration:** CLI.
 - **Public contact:**
   - the Analytics public mailing list, named on <https://meta.wikimedia.org/wiki/Research:Data> [S];
   - Phabricator, including the dumps-future consultation <https://phabricator.wikimedia.org/T337887> [S].
-- **Priority: Medium-High.** Open, cost-aware community with an open dumps redesign.
+- **Priority: Low.** A good community, but the measured gain is too small to lead with.
 
-### 7. Backblaze Drive Stats: Medium-High
+### 7. Backblaze Drive Stats: High (measured)
 
 - **What and how much:** nearly 300 M records, over 90 GB of raw CSV. Q1 2022 was 6.63 GB of CSV zipped to 1.06 GB [V]
   <https://www.backblaze.com/blog/storing-and-querying-analytical-data-in-backblaze-b2/>. Download page:
@@ -134,7 +141,10 @@ Section numbers below match this table; sections are grouped by kind of data.
 - **Integration:** CLI, `kolmoc`.
 - **Public contact:** the dataset's Hugging Face discussions <https://huggingface.co/datasets/backblaze/Drive_Stats>
   [S]; comments on the Drive Stats blog posts.
-- **Priority: Medium-High.**
+- **Measured** (whole file `2025-12-31.csv`, 133 MB, `evidence/first-wave/backblaze.md`): Kolmo -3 has ratio 18.03
+  against 10.49 for Backblaze's own zip and 13.60 for zstd -19, compressing at 106 MiB/s; level 9 reaches 22.72.
+  Decoding is 200-300 MiB/s, slower than their zip.
+- **Priority: High.**
 
 ### 15. OpenAQ archive: Medium
 
@@ -266,6 +276,8 @@ every tool (`CLAIMS.md` claim 3).
   1.4x smaller than zstd -3 at level 3, 1.6x at level 5). The log-compression research community reads it.
 - **Integration:** CLI, `tar -I kolmo`.
 - **Public contact:** GitHub issues [V].
+- **Measured** (first 100 MB of `BGL.log`, `evidence/first-wave/loghub-bgl.md`): Kolmo -3 15.45, -6 24.02, -9 33.59,
+  against 12.93 for their zip, 22.64 for zstd -19 and 23.18 for xz -9.
 - **Priority: High** for credibility (a published comparison), less as a storage-cost partner.
 
 ### 3. GH Archive: High

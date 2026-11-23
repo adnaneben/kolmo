@@ -73,6 +73,23 @@ kolmo -9 9 / 316-327, zstd -19 2.7 / 988-1880, xz -9 7-8 / 300-352, gzip -6 136 
   helps there only as the HDF5 filter or Zarr codec, on uncompressed chunks. Ask partners for uncompressed arrays, or
   measure through the filter.
 
+## Claim 3b: the first-wave candidates' own public files
+
+`sample_report.py` on 100 MB samples of five candidates' published files (Backblaze: one whole day), one thread, 35 of
+35 round trips verified. Summary, per-candidate reports and download provenance:
+[`evidence/first-wave/`](evidence/first-wave/README.md).
+
+| Candidate file | As published | kolmo -3 | kolmo -6 | kolmo -9 | Say |
+|---|---:|---:|---:|---:|---|
+| NOAA GHCN-Daily `by_year/2024.csv` | 7.87 (gzip) | 13.53 | 22.29 | 28.99 | "Kolmo's default level is 1.8x smaller than gzip -6 on your 2024 file; level 6 is 2.9x smaller" |
+| Backblaze Drive Stats `2025-12-31.csv` | 10.49 (zip) | 18.03 | 20.18 | 22.72 | "the default level is 1.7x smaller than your zip, 1.3x smaller than zstd -19" |
+| Loghub `BGL.log` | 12.93 (zip) | 15.45 | 24.02 | 33.59 | "level 6 is as small as xz -9 and decodes 4.5x faster; level 9 is 2.6x smaller than your zip" |
+| ESA Gaia DR3 `gaia_source` ECSV | 2.87 (gzip) | 2.77 | 3.29 | 3.78 | no lead claim: only level 9 wins (1.3x over gzip), decoding at 21 MiB/s |
+| Wikimedia pageviews (automated) | 5.50 (bzip2) | 4.29 | 5.40 | 6.57 | no lead claim: level 9 is 11% smaller than bzip2 with no decode advantage |
+
+"As published" is the publisher's whole-file ratio; the Kolmo columns are on the sample. Compare against it only as a
+guide, and quote the measured gzip -6 / bzip2 -9 row from the report when exactness matters.
+
 ## Claim 4: on many cores Kolmo's decoder scales and zstd's does not (Silesia, CLI)
 
 | Setting | Decompress MiB/s, 1 thread | all 10 cores |

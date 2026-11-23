@@ -39,8 +39,8 @@ Links used below (they resolve once the outreach kit is merged to main):
 > - One-thread speeds, compress / decompress: \<from the report\>.
 > - Every output was decompressed and compared byte for byte. Method and command: \<CLAIMS.md link\>.
 >
-> On NOAA's public GHCN-Daily station CSVs, which Kolmo was never tuned on, Kolmo -6 is 2.1x smaller than gzip -6
-> and 1.4x smaller than zstd -19 (\<CLAIMS.md link, claim 3\>).
+> For comparison, on NOAA's GHCN-Daily `by_year/2024.csv`, which Kolmo was never tuned on, Kolmo's default level
+> is 1.8x smaller than gzip -6, and level 6 is 2.9x smaller (\<CLAIMS.md link, claim 3b\>).
 >
 > The offer: if you point me at a representative sample, I'll send a free report with per-file sizes, one-thread
 > speeds and the projected storage and egress saving for your total volume. Or you can run the script yourself

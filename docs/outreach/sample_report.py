@@ -10,9 +10,9 @@ For every regular file under SAMPLE_DIR (recursively) and every tool setting bel
      (a mismatch or a tool error stops the run: nothing unverified is reported);
   3. keeps the best (fastest) of --repeat timed runs; sizes do not vary between runs.
 
-Settings: kolmo -3 / -6 / -9 (-T 1), zstd -3 / -19 (-T1), xz -9 (-T1); --gzip adds gzip -6 and --current names the
-setting the data is stored with today (gzip, zstd-3, ... or none = uncompressed), which the savings are computed
-against.
+Settings: kolmo -3 / -6 / -9 (-T 1), zstd -3 / -19 (-T1), xz -9 (-T1); --gzip adds gzip -6, --bzip2 adds
+bzip2 -9, and --current names the setting the data is stored with today (gzip, bzip2, zstd-3, ... or none =
+uncompressed), which the savings are computed against.
 
 Ratio = original bytes / compressed bytes. Speeds are MiB/s of original data over wall time, process start-up and
 file I/O included (CLI-process timing, as in docs/outreach/CLAIMS.md), so small files understate every tool's speed.
@@ -21,12 +21,15 @@ Projection: --volume is the stated total volume of this kind of data, UNCOMPRESS
 stored today with the --current setting). The yearly cost of each setting is volume / total sample ratio x $/GB-month
 x 12. It assumes the sample is representative of the whole volume; say so in the report you send.
 
+--from-json re-renders a report from an earlier --json file without measuring again.
+
 Outputs a Markdown report (sections match docs/outreach/sample-report-template.md) and, with --json, the raw numbers.
 Needs Python 3.8+ and the kolmo, zstd and xz command lines (gzip with --gzip). Standard library only.
 """
 import argparse
 import datetime
 import filecmp
+import fnmatch
 import json
 import os
 import platform
@@ -42,7 +45,7 @@ UNITS = {"B": 1, "KB": 1e3, "MB": 1e6, "GB": 1e9, "TB": 1e12, "PB": 1e15,
          "KIB": 2**10, "MIB": 2**20, "GIB": 2**30, "TIB": 2**40, "PIB": 2**50}
 
 
-def settings(kolmo, levels, gzip):
+def settings(kolmo, levels, gzip, bzip2=False):
     """(name, compress argv, decompress argv) for each setting; argv read stdin and write stdout."""
     s = [(f"kolmo -{lv}", [kolmo, f"-{lv}", "-T", "1", "-c", "-q"], [kolmo, "-d", "-T", "1", "-c", "-q"])
          for lv in levels]
@@ -51,6 +54,8 @@ def settings(kolmo, levels, gzip):
           ("xz -9", ["xz", "-9", "-T1", "-c", "-q"], ["xz", "-d", "-T1", "-c", "-q"])]
     if gzip:
         s.append(("gzip -6", ["gzip", "-6", "-c", "-n"], ["gzip", "-d", "-c"]))
+    if bzip2:
+        s.append(("bzip2 -9", ["bzip2", "-9", "-c"], ["bzip2", "-d", "-c"]))
     return s
 
 
@@ -71,12 +76,15 @@ def human(n):
 def tool_version(argv0):
     for flag in ("--version", "-V"):
         try:
-            out = subprocess.run([argv0, flag], capture_output=True, text=True, timeout=10)
+            out = subprocess.run([argv0, flag], stdin=subprocess.DEVNULL, capture_output=True, timeout=10,
+                                 text=True, errors="replace")
         except (OSError, subprocess.TimeoutExpired):
             continue
-        text = (out.stdout or out.stderr).strip().splitlines()
+        # bzip2 prints its version on stderr (and compresses empty input to stdout): take the first readable line
+        lines = [ln.strip("* ") for ln in (out.stdout + "\n" + out.stderr).splitlines()]
+        text = [ln for ln in lines if ln.isprintable() and re.search(r"[0-9]+\.[0-9]+", ln)]
         if out.returncode == 0 and text:
-            return text[0].strip("* ")
+            return text[0]
     return "unknown"
 
 
@@ -198,70 +206,15 @@ def report_md(r, a):
     L.append("- Reproduce: `python3 docs/outreach/sample_report.py SAMPLE_DIR"
              + (f" --volume {a.volume_text} --price {a.price}" if a.volume else "")
              + (f" --current {cur.replace(' ', '')}" if cur != "none" else "")
-             + (" --volume-is current" if a.volume_is == "current" else "") + (" --gzip" if a.gzip else "")
+             + (" --volume-is current" if a.volume_is == "current" else "")
+             + (" --gzip" if a.gzip else "") + (" --bzip2" if a.bzip2 else "")
              + "` in a checkout of github.com/adnaneben/kolmo.")
     return "\n".join(L) + "\n"
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0],
-                                 formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__.split("\n\n", 1)[1])
-    ap.add_argument("sample_dir")
-    ap.add_argument("--volume", help="stated total volume, e.g. 40TB or 2.5PiB (see --volume-is)")
-    ap.add_argument("--volume-is", choices=["uncompressed", "current"], default="uncompressed",
-                    help="whether --volume is uncompressed or as stored today with --current (default uncompressed)")
-    ap.add_argument("--price", type=float, default=0.023, help="$ per GB-month (default 0.023, S3 Standard)")
-    ap.add_argument("--current", default="none",
-                    help="setting the data is stored with today: gzip (= gzip-6), zstd-3, zstd-19, xz-9, kolmo-N, "
-                         "or none = uncompressed (the default)")
-    ap.add_argument("--gzip", action="store_true", help="also measure gzip -6")
-    ap.add_argument("--levels", default="3,6,9", help="Kolmo levels (default 3,6,9)")
-    ap.add_argument("--kolmo", default=os.environ.get("KOLMO", "kolmo"), help="kolmo binary (default: kolmo on PATH)")
-    ap.add_argument("--repeat", type=int, default=1, help="timed runs per file and setting, best kept (default 1)")
-    ap.add_argument("--title", default=None, help="report title (default: the sample directory's name)")
-    ap.add_argument("--out", help="write the Markdown report here (default: standard output)")
-    ap.add_argument("--json", help="also write the raw numbers here")
-    a = ap.parse_args()
-    a.volume_text = a.volume or ""
-    try:
-        a.volume = parse_size(a.volume) if a.volume else None
-    except argparse.ArgumentTypeError as e:
-        ap.error(str(e))
-    a.title = a.title or os.path.basename(os.path.abspath(a.sample_dir))
-    a.current = {"gzip": "gzip -6"}.get(a.current, a.current.replace("-", " -", 1).replace("  ", " "))
-    if a.current.startswith("gzip"):
-        a.gzip = True
-
-    levels = [x.strip() for x in a.levels.split(",") if x.strip()]
-    setts = settings(a.kolmo, levels, a.gzip)
-    names = [s[0] for s in setts]
-    if a.current != "none" and a.current not in names:
-        ap.error(f"--current must be none or one of: {', '.join(names)}")
-    if a.volume_is == "current" and a.current == "none":
-        ap.error("--volume-is current needs --current")
-    for argv0 in {s[1][0] for s in setts}:
-        if not shutil.which(argv0):
-            ap.error(f"{argv0} not found (set --kolmo or PATH)")
-    files = collect(a.sample_dir)
-    if not files:
-        ap.error(f"no files under {a.sample_dir}")
-
-    res = {"date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "settings": names,
-           "machine": f"{platform.system()} {platform.release()}, {platform.machine()}, {os.cpu_count()} cores",
-           "versions": {n: tool_version(n) for n in dict.fromkeys(s[1][0] for s in setts)},
-           "files": [], "verified": 0}
-    with tempfile.TemporaryDirectory(prefix="kolmo-sample-") as work:
-        for i, path in enumerate(files, 1):
-            n = os.path.getsize(path)
-            entry = {"name": os.path.relpath(path, a.sample_dir), "bytes": n, "by": {}}
-            for s in setts:
-                print(f"[{i}/{len(files)}] {entry['name']}: {s[0]}", file=sys.stderr)
-                m = measure(path, s, work, a.repeat)
-                m.update(ratio=ratio(n, m["size"]), enc_mibs=mibs(n, m["enc_s"]), dec_mibs=mibs(n, m["dec_s"]))
-                entry["by"][s[0]] = m
-                res["verified"] += 1
-            res["files"].append(entry)
-
+def summarize(res, a):
+    """Totals, best Kolmo setting and the cost projection, from the per-file measurements."""
+    names = res["settings"]
     total = sum(f["bytes"] for f in res["files"])
     by = {}
     for nm in names:
@@ -270,8 +223,9 @@ def main():
         dec = sum(f["by"][nm]["dec_s"] for f in res["files"])
         by[nm] = {"size": size, "ratio": ratio(total, size), "enc_mibs": mibs(total, enc), "dec_mibs": mibs(total, dec)}
     res["total"] = {"bytes": total, "by": by}
+    res["verified"] = len(res["files"]) * len(names)
     res["best_kolmo"] = max((nm for nm in names if nm.startswith("kolmo")), key=lambda nm: by[nm]["ratio"])
-
+    res.pop("projection", None)
     if a.volume:
         cur_ratio = 1.0 if a.current == "none" else by[a.current]["ratio"]
         vol = a.volume * cur_ratio if a.volume_is == "current" else a.volume
@@ -286,6 +240,97 @@ def main():
             "by": {nm: {"stored_bytes": b, "yearly": b / gb * a.price * months,
                         "saving": base_cost - b / gb * a.price * months,
                         "saving_pct": 100 * (1 - b / rows[base])} for nm, b in rows.items()}}
+    return res
+
+
+def excluded(name, patterns):
+    base = os.path.basename(name)
+    return base.startswith(".") or any(fnmatch.fnmatch(base, p) or fnmatch.fnmatch(name, p) for p in patterns)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], epilog=__doc__.split("\n\n", 1)[1],
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("sample_dir", nargs="?", help="directory of sample files (not needed with --from-json)")
+    ap.add_argument("--volume", help="stated total volume, e.g. 40TB or 2.5PiB (see --volume-is)")
+    ap.add_argument("--volume-is", choices=["uncompressed", "current"], default="uncompressed",
+                    help="whether --volume is uncompressed or as stored today with --current (default uncompressed)")
+    ap.add_argument("--price", type=float, default=0.023, help="$ per GB-month (default 0.023, S3 Standard)")
+    ap.add_argument("--current", default="none",
+                    help="setting the data is stored with today: gzip (= gzip-6), bzip2 (= bzip2-9), zstd-3, "
+                         "zstd-19, xz-9, kolmo-N, or none = uncompressed (the default)")
+    ap.add_argument("--gzip", action="store_true", help="also measure gzip -6")
+    ap.add_argument("--bzip2", action="store_true", help="also measure bzip2 -9")
+    ap.add_argument("--levels", default="3,6,9", help="Kolmo levels (default 3,6,9)")
+    ap.add_argument("--kolmo", default=os.environ.get("KOLMO", "kolmo"), help="kolmo binary (default: kolmo on PATH)")
+    ap.add_argument("--repeat", type=int, default=1, help="timed runs per file and setting, best kept (default 1)")
+    ap.add_argument("--exclude", action="append", default=[], metavar="GLOB",
+                    help="skip files matching GLOB (name or relative path; repeatable); hidden files are always "
+                         "skipped")
+    ap.add_argument("--from-json", metavar="FILE",
+                    help="re-render a report from an earlier --json output instead of measuring (e.g. with another "
+                         "--volume, --price, --current or --exclude)")
+    ap.add_argument("--title", default=None, help="report title (default: the sample directory's name)")
+    ap.add_argument("--out", help="write the Markdown report here (default: standard output)")
+    ap.add_argument("--json", help="also write the raw numbers here")
+    a = ap.parse_args()
+    if not a.sample_dir and not a.from_json:
+        ap.error("give SAMPLE_DIR, or --from-json FILE")
+    a.volume_text = a.volume or ""
+    try:
+        a.volume = parse_size(a.volume) if a.volume else None
+    except argparse.ArgumentTypeError as e:
+        ap.error(str(e))
+    short = {"gzip": "gzip -6", "bzip2": "bzip2 -9"}
+    a.current = short.get(a.current, a.current.replace("-", " -", 1).replace("  ", " "))
+    if a.current.startswith("gzip"):
+        a.gzip = True
+    if a.current.startswith("bzip2"):
+        a.bzip2 = True
+
+    if a.from_json:
+        with open(a.from_json) as f:
+            res = json.load(f)
+        names = res["settings"]
+        a.gzip, a.bzip2 = "gzip -6" in names, "bzip2 -9" in names
+        a.title = a.title or res.get("title") or os.path.splitext(os.path.basename(a.from_json))[0]
+        res["files"] = [f for f in res["files"] if not excluded(f["name"], a.exclude)]
+    else:
+        a.title = a.title or os.path.basename(os.path.abspath(a.sample_dir))
+        levels = [x.strip() for x in a.levels.split(",") if x.strip()]
+        setts = settings(a.kolmo, levels, a.gzip, a.bzip2)
+        names = [s[0] for s in setts]
+        for argv0 in {s[1][0] for s in setts}:
+            if not shutil.which(argv0):
+                ap.error(f"{argv0} not found (set --kolmo or PATH)")
+    if a.current != "none" and a.current not in names:
+        ap.error(f"--current must be none or one of: {', '.join(names)}")
+    if a.volume_is == "current" and a.current == "none":
+        ap.error("--volume-is current needs --current")
+
+    if not a.from_json:
+        files = [p for p in collect(a.sample_dir) if not excluded(os.path.relpath(p, a.sample_dir), a.exclude)]
+        if not files:
+            ap.error(f"no files under {a.sample_dir}")
+        res = {"date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "settings": names,
+               "machine": f"{platform.system()} {platform.release()}, {platform.machine()}, {os.cpu_count()} cores",
+               "versions": {n: tool_version(n) for n in dict.fromkeys(s[1][0] for s in setts)},
+               "repeat": a.repeat, "files": []}
+        with tempfile.TemporaryDirectory(prefix="kolmo-sample-") as work:
+            for i, path in enumerate(files, 1):
+                n = os.path.getsize(path)
+                entry = {"name": os.path.relpath(path, a.sample_dir), "bytes": n, "by": {}}
+                for s in setts:
+                    print(f"[{i}/{len(files)}] {entry['name']}: {s[0]}", file=sys.stderr)
+                    m = measure(path, s, work, a.repeat)
+                    m.update(ratio=ratio(n, m["size"]), enc_mibs=mibs(n, m["enc_s"]), dec_mibs=mibs(n, m["dec_s"]))
+                    entry["by"][s[0]] = m
+                res["files"].append(entry)
+    if not res["files"]:
+        ap.error("no files left after --exclude")
+    a.repeat = res.get("repeat", a.repeat)
+    res["title"] = a.title
+    summarize(res, a)
 
     md = report_md(res, a)
     if a.out:

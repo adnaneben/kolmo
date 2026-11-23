@@ -1,0 +1,13 @@
+{
+ "url": "https://f001.backblazeb2.com/file/Backblaze-Hard-Drive-Data/data_Q4_2025.zip",
+ "kind": "zip-range",
+ "archive_bytes": 1157851346,
+ "member": "data_Q4_2025/2025-12-31.csv",
+ "member_compressed": 12716171,
+ "member_bytes": 133373544,
+ "member_crc32": "55573830",
+ "uncompressed_total": 133373544,
+ "sample_bytes": 133373544,
+ "sample_sha256": "7dbdb9a77ca0ef017a2dbd3e9dc8cd7bac59ae6b00f64bd477d42de5052a2e00",
+ "sample_is": "whole file"
+}

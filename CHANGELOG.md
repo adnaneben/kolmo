@@ -31,9 +31,13 @@
   one follow-up. `CLAIMS.md` lists the only claims they may make, each with its numbers, method and raw data in
   `docs/outreach/evidence/`, and the claims to avoid. Its new held-out measurement: on NOAA GHCN-Daily station CSVs, level 6 is 2.1x smaller
   than gzip -6; on NASA HTTP logs, level 9 is 1.8x smaller than gzip -6, while level 3 only ties zstd -3.
+  Measured before any contact on five candidates' own public files (`docs/outreach/evidence/first-wave/`): NOAA
+  GHCN-Daily 2024 (level 3 1.8x and level 6 2.9x smaller than gzip -6), Backblaze Drive Stats and Loghub BGL are
+  strong; ESA Gaia ECSV and Wikimedia pageviews are weak and were demoted.
 - **`docs/outreach/sample_report.py`**: runs Kolmo -3/-6/-9, zstd -3/-19 and xz -9 (and gzip -6) on a directory of
   sample files, one thread each, verifies every round trip byte for byte, and writes the per-file and total report
-  with the projected yearly storage cost for a stated volume and $/GB-month. Templates for the report
+  with the projected yearly storage cost for a stated volume and $/GB-month. `--from-json` re-renders a report
+  without measuring again; `--exclude` skips files; `--bzip2` adds bzip2 -9. Templates for the report
   (`sample-report-template.md`) and a published case study (`case-study-template.md`).
 
 ## 0.0.2 (2026-11-23)
