@@ -88,11 +88,6 @@ The owner will set the concrete thresholds (number of pull requests, time) befor
 
 How to report a vulnerability, and how the project handles it, is in `SECURITY.md`.
 
-## Code of conduct
-
-Everyone taking part follows [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). The owner enforces it until there are other
-maintainers; then any maintainer may act on a report, and a report about a maintainer goes to the owner.
-
 ## Changing this document
 
 Changes to this document are made by pull request and need the owner's approval.

@@ -147,7 +147,3 @@ Look at `git log` for the style. In short:
 Kolmo is licensed under the Apache License 2.0 (`LICENSE`). By submitting a contribution you agree that it is
 licensed under the same terms (section 5 of the license). Do not submit code you cannot license that way, and name
 the origin and license of any code you adapted, as `NOTICE` does for the code Kolmo already adapts.
-
-## Conduct
-
-Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
