@@ -366,8 +366,11 @@ The level numbers and their \emph{promises} (each level smaller than the one bef
 are a contract; the engine behind a level may change between releases. Two promises do not hold today
 (\S\ref{sec:limits}): level~7 is not always smaller than level~6 on small inputs, and levels~8 and~9 give identical
 output on plain text.
-\todo{Replace Table~\ref{tab:levels} and the level discussion with the tuned assignment from the weak-levels lane
-(new level-1 parse; KLZH2 decode loop) once merged; regenerate all tables.}
+\todo{An encoder change under review (PR~\#32, not merged) gives level~1 a new KLZ parse, improves levels 2--3 on
+small inputs, speeds up the KLZH2 decoder and gives level~8 32\,MiB blocks so that it no longer equals level~9 on
+text. The tables in this draft measure the 0.0.2 release. When the next release is cut, rerun every benchmark on it
+and regenerate all tables and Table~\ref{tab:levels}; until then the effect of PR~\#32 is stated in
+\S\ref{sec:limits} from its own paired runs.}
 
 % ======================================================================
 \section{Determinism}\label{sec:determinism}
@@ -579,14 +582,24 @@ speeds}
 
 \paragraph*{Decode speed} At levels 2--7 Kolmo decodes 30--40\% more slowly than zstd on one thread
 (\numSilKThreeD{} against \numSilzstdThreeD\,MiB/s at level~3 on Silesia). Its speed advantage is against LZMA and
-block sorting, and on many cores. Kolmo is not a replacement for zstd on latency-sensitive paths.
+block sorting, and on many cores. Kolmo is not a replacement for zstd on latency-sensitive paths. A branch-free
+repeat-offset update in the KLZH2 decoder, pending review, raises decode speed at levels 2--7 by
+\numDevSilDecGainMin--\numDevSilDecGainMax\% (level~3: \numDevSilThreeD\,MiB/s) with identical output, which
+narrows the gap without closing it\src{pr32/*-silesia.tar.csv}.
 
 \paragraph*{Fast tier and level ordering} Level~1 is beaten by lzav~\cite{lzav} on ratio and decode speed. Level~7 is not
 smaller than level~6 on Canterbury, the result of an optimal parse that is unstable on heterogeneous small inputs;
-levels 8 and 9 coincide on text. These violate the level promises of \S\ref{sec:levels}.
+levels 8 and 9 coincide on text. These violate the level promises of \S\ref{sec:levels}. The pending encoder change
+(PR~\#32) addresses three of these: level~1 reaches \numDevSilOneR{} on Silesia (still below lzav's
+\numSillzavOneR, a limit of KLZ's byte-aligned format), level~3 on Canterbury reaches \numDevCantThreeR{} against
+\numCantZThree{} for \texttt{zstd -3}, and level~8 on enwik8 gives \numDevEnwEightR{} against level~9's
+\numDevEnwNineR\src{pr32/*.csv}. Level~7 stays below level~6 on Canterbury (\numDevCantSevenR{} against
+\numDevCantSixR): fixing the parse's price model is open work.
 
 \paragraph*{Memory} The ratio-oriented levels use much more memory than their rivals when compressing (above), and
-ultra needs about 26 table bytes per input byte with its text contexts, comparable to \texttt{zpaq -m5}.
+ultra needs about 26 table bytes per input byte with its text contexts, comparable to \texttt{zpaq -m5}. Level~9's
+footprint comes from the block-sorting and KLZMA working sets on segments of up to 64\,MiB; halving it with
+16\,MiB blocks would cost about 2\% on Silesia, a trade-off not yet made\src{PR\#32, evidence/weak-levels/bs.out}.
 
 \paragraph*{Trained format-aware compression} On CSV a trained OpenZL plan is smaller than every Kolmo level short
 of ultra, and the default level~3 loses to OpenZL on every held-out file. Kolmo's case is zero configuration, not

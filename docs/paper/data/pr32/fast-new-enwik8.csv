@@ -1,0 +1,5 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo 0.0.2 -1,555.04,3559.96,100000000,48788158,48.79,enwik8
+kolmo 0.0.2 -2,443.56,1844.20,100000000,38851551,38.85,enwik8
+kolmo 0.0.2 -3,236.23,1675.06,100000000,34585937,34.59,enwik8
+kolmo 0.0.2 -4,62.29,1224.74,100000000,29501791,29.50,enwik8

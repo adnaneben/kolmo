@@ -440,6 +440,33 @@ def tab_holdout(nums):
         nums[f"Mem{key}OZ"] = fmt_ratio(max(x["ratio"] for x in oz))
 
 
+def dev_levels(nums):
+    """Before/after of the unmerged encoder change (PR #32), from its own paired lzbench runs in data/pr32/
+    (old = the 0.0.2 library, new = the branch, same machine and session). Macros only; the tables stay on 0.0.2."""
+    D = os.path.join(DATA, "pr32")
+    if not os.path.isdir(D):
+        return
+    def load(ver, stem):
+        out = {}
+        for tier in ("fast", "slow"):
+            with open(os.path.join(D, f"{tier}-{ver}-{stem}.csv")) as f:
+                for r in csv.DictReader(f):
+                    lvl = r["Compressor name"].split()[-1]
+                    out[lvl] = dict(ratio=int(r["Original size"]) / int(r["Compressed size"]),
+                                    d=float(r["Decompression speed"]))
+        return out
+    lv = {"-1": "One", "-2": "Two", "-3": "Three", "-7": "Seven", "-6": "Six", "-8": "Eight", "-9": "Nine"}
+    for stem, key in (("silesia.tar", "Sil"), ("enwik8", "Enw"), ("canterbury.tar", "Cant")):
+        old, new = load("old", stem), load("new", stem)
+        for l, name in lv.items():
+            if l in new:
+                nums[f"Dev{key}{name}R"] = fmt_ratio(new[l]["ratio"])
+                nums[f"Dev{key}{name}D"] = fmt_speed(new[l]["d"])
+        if key == "Sil":
+            g = [(new[l]["d"] / old[l]["d"] - 1) * 100 for l in ("-2", "-3", "-4", "-5", "-6", "-7")]
+            nums["DevSilDecGainMin"], nums["DevSilDecGainMax"] = f"{min(g):.0f}", f"{max(g):.0f}"
+
+
 def macro_name(k):
     digits = "Zero One Two Three Four Five Six Seven Eight Nine".split()
     out = "".join(digits[int(ch)] if ch.isdigit() else ch for ch in k if ch.isalnum())
@@ -455,6 +482,7 @@ def main():
     tab_structured(nums)
     tab_mt(nums)
     tab_holdout(nums)
+    dev_levels(nums)
     body = "".join(f"\\newcommand{{\\{macro_name(k)}}}{{{v}}}\n" for k, v in sorted(nums.items()))
     write("numbers.tex", body, "lzb-*.csv, openzl.json, mt-result.json")
     print(f"wrote {len(os.listdir(OUT))} files to {os.path.relpath(OUT)}; {len(nums)} number macros")
