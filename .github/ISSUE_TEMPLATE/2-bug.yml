@@ -1,0 +1,51 @@
+name: Bug report
+description: Something else does not work as documented (command line, library, bindings, build, packaging).
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If Kolmo returned **wrong bytes** or **could not decompress** a file, use the *wrong output or decode
+        failure* template instead. Security problems go through `SECURITY.md`.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands or a minimal program, and their output.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Kolmo version
+      description: "`kolmo -V`, or the kolmoc / kolmo crate version."
+    validations:
+      required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Interface
+      multiple: true
+      options:
+        - Command line (kolmo)
+        - C library
+        - Python (kolmoc)
+        - Rust (kolmo crate)
+        - Build from source
+        - Packaging (Homebrew, PyPI, crates.io)
+    validations:
+      required: true
+  - type: textarea
+    id: platform
+    attributes:
+      label: Platform
+      description: OS, CPU, compiler, and how you installed Kolmo.
+    validations:
+      required: true

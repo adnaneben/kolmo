@@ -1,0 +1,28 @@
+name: Feature request
+description: A new option, API, transform or data type you would like Kolmo to handle.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do, and what is missing or awkward today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Data it would help
+      description: For a new transform or coder, a public sample of the data and the size you get today (kolmo and other tools, one thread) helps most.
+  - type: checkboxes
+    id: format
+    attributes:
+      label: Format
+      options:
+        - label: I understand that changes to the compressed format follow `COMPATIBILITY.md` (new identifiers only; existing frames always decode to the same bytes).

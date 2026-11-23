@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Project
+
+- **Contributor and governance documents.** `CONTRIBUTING.md` (build, tests, sanitizers, fuzzing, the format rules,
+  the benchmark rules, commit and pull request conventions), `GOVERNANCE.md` (maintainers, decisions, becoming a
+  maintainer, release policy; the parts not yet decided are marked as proposals), `CODE_OF_CONDUCT.md` (Contributor
+  Covenant 2.1), issue templates (wrong output or decode failure, bug, performance, feature, integration) and a pull
+  request template.
+- **Launch drafts** in `docs/launch/`, marked as drafts and not published: a technical post on structure detection,
+  Show HN and encode.su texts, and a proposed top of the README.
+
 ## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and

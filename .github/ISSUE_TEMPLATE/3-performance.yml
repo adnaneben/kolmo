@@ -1,0 +1,44 @@
+name: Performance or ratio
+description: Kolmo is slower, larger or uses more memory than expected, or a level is out of order.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Numbers are only comparable when they are measured the same way. Please follow the benchmark rules in
+        `CONTRIBUTING.md`: **one thread for every tool** (`kolmo -T1`, `zstd -T1`, `xz -T1`, ...), each output
+        decoded and compared, and the method stated. Reports of where Kolmo loses are as welcome as reports of where
+        it wins.
+  - type: textarea
+    id: what
+    attributes:
+      label: What you measured
+      description: Which level(s), against which tool(s) and options, and what surprised you.
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Results
+      description: Sizes, times (compress and decompress), memory if relevant. A table is ideal.
+      placeholder: |
+        | tool | options | size (B) | compress s | decompress s |
+        |---|---|---|---|---|
+        | kolmo 0.0.2 | -6 -T1 | | | |
+        | xz 5.x | -9 -T1 | | | |
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: Method
+      description: Machine and OS, how Kolmo was built or installed (generic `make ARCH=`, native, Homebrew, pip), tool versions, number of runs and best or median, whether outputs were decoded and compared.
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Data
+      description: What the input is and where it can be downloaded, if it is public.
+    validations:
+      required: true
