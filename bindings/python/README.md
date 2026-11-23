@@ -22,7 +22,7 @@ outside the scale: about as slow to decompress as to compress). Names work too: 
 `decompress` checks the frame before it allocates the output; for untrusted input pass `max_output_size` (bytes),
 since a valid frame can claim well over 100,000 times its own size. Apache-2.0.
 
-**Since 0.1.0:** `mode=` was replaced by `level=` (`speed` is now `1`, `balanced` `3`, `ratio` `9`,
+**Since 0.0.2:** `mode=` was replaced by `level=` (`speed` is now `1`, `balanced` `3`, `ratio` `9`,
 `ultra` `"ultra"`; `eco` `5`, `hc` `7`), and the dictionary calls (`train_dict`, `dict=`) were removed.
 
 Every coder is Kolmo's own (KLZ, KLZH2, KLZMA, khuf, BWT, context mixing): no third-party codec

@@ -18,11 +18,11 @@ with tempfile.TemporaryDirectory() as directory:
     source, frame, output, bad, alias = [root / f for f in ("source", "frame", "out", "bad", "link")]
     data = (b"date,load,output\n" + b"2018-01-01,123.05,321.5\n" * 410000)
     source.write_bytes(data)
-    # dictionaries (-D) were removed in 0.1.0: the CLI refuses them with exit status 2 and a hint
+    # dictionaries (-D) were removed in 0.0.2: the CLI refuses them with exit status 2 and a hint
     dictionary = root / "dict"
     dictionary.write_bytes(data[:4096])
     r = subprocess.run([CLI, "-3", "-D", dictionary, source, "-o", frame], capture_output=True)
-    assert r.returncode == 2 and b"removed in 0.1.0" in r.stderr, r
+    assert r.returncode == 2 and b"removed in 0.0.2" in r.stderr, r
     assert not frame.exists()
     run("-3", "-T", "1", source, "-o", frame)
     serial = hashlib.sha256(frame.read_bytes()).digest()
@@ -54,7 +54,7 @@ with tempfile.TemporaryDirectory() as directory:
     r = subprocess.run([CLI, "-d", "-f", bad, "-o", symlink], capture_output=True)
     assert r.returncode != 0 and b"written by an earlier Kolmo" in r.stderr, r
     assert output.read_bytes() == b"keep" and not list(root.glob(".kolmo-*"))
-    # The output is never the input file, in any path, even with -f (0.1.0): refused, the input untouched.
+    # The output is never the input file, in any path, even with -f (0.0.2): refused, the input untouched.
     before = frame.read_bytes()
     run("-d", "-f", frame, "-o", frame, success=False)
     run("-f", "--stream", source, "-o", source, success=False)

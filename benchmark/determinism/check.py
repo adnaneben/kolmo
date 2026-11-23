@@ -27,7 +27,7 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 EXPECTED = os.path.join(HERE, "expected.sha256")
 os.makedirs(W, exist_ok=True)
 
-# 0.1.0 levels (docs/LEVELS.md). The frames are those of the 0.0.x settings they replace (in brackets): the level
+# 0.0.2 levels (docs/LEVELS.md). The frames are those of the 0.0.1 settings they replace (in brackets): the level
 # table maps onto the same encoder settings, so these digests did not change with the command line.
 SETTINGS = [["-1"],                                  # [-m speed]
             ["-1", "--analysis", "full"],            # [-m rt]
@@ -35,7 +35,7 @@ SETTINGS = [["-1"],                                  # [-m speed]
             ["-3", "--analysis", "quick"],           # [-m fast -q]
             ["-5"], ["-7"], ["-9"],                  # [-m eco], [-m hc], [-m ratio]
             ["-8"],                                  # [-m max -l 1]
-            ["-2"], ["-4"], ["-6"],                  # levels new in 0.1.0 (lane 3's measured table)
+            ["-2"], ["-4"], ["-6"],                  # levels new in 0.0.2 (lane 3's measured table)
             ["-U", "--codec-level", "1"], ["-U"], ["-U", "--codec-level", "2"],   # [-x -l 1], [-x], [-x -l 2]
             ["-3", "--native-leaf"]]                 # [-m balanced --native-leaf]
 TYPED = [["-3", "--typed-huf"]]   # one thread only by design [-m fast --typed-huf]

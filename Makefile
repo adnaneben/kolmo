@@ -124,7 +124,7 @@ check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus
 	./build/kolmotest
 	./build/test-decoder-hardening
 
-# decoder memory-safety and DoS regressions (review r1 of 0.0.2). The ASan build compiles the separately built coders
+# decoder memory-safety and DoS regressions (review r1 of 0.0.1). The ASan build compiles the separately built coders
 # (qlfc, khuf, klzma, ...) with the sanitizers instead of taking them from libkolmoarch.a.
 build/test-decoder-hardening: tests/test_decoder_hardening.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_decoder_hardening.c build/libkolmoarch.a -o $@ $(LIBS)

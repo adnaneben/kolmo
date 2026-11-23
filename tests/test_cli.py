@@ -1,9 +1,9 @@
-"""The 0.1.0 command line (docs/LEVELS.md): every option, the gzip/xz/zstd conventions, every removed 0.0.x form, exit
+"""The 0.0.2 command line (docs/LEVELS.md): every option, the gzip/xz/zstd conventions, every removed 0.0.1 form, exit
 codes, standard input and output, several files, overwrite protection, and round trips at every level.
 
 usage: python3 tests/test_cli.py [build/kolmo]
-Environment: KOLMO_REF=path/to/kolmo-0.0.2 also checks that the 0.0.2 binary decodes every level of this one, and that
-this one decodes 0.0.2's modes (frame format unchanged). Without it those checks are skipped."""
+Environment: KOLMO_REF=path/to/kolmo-0.0.1 also checks that the 0.0.1 binary decodes every level of this one, and that
+this one decodes 0.0.1's modes (frame format unchanged). Without it those checks are skipped."""
 import os
 import pty
 import select
@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory() as tmp:
     small.write_bytes(payload[:40_000])
 
     # ---- version and help
-    r = run("-V"); expect(r, 0, "-V"); check(r.stdout.startswith(b"kolmo 0.1.0 "), f"-V prints {r.stdout!r}")
+    r = run("-V"); expect(r, 0, "-V"); check(r.stdout.startswith(b"kolmo 0.0.2 "), f"-V prints {r.stdout!r}")
     expect(run("--version"), 0, "--version")
     r = run("-h"); expect(r, 0, "-h")
     h = r.stdout.decode()
@@ -281,7 +281,7 @@ with tempfile.TemporaryDirectory() as tmp:
         expect(run(*args), 2, what)
     expect(run(src, env={**ENV, "KOLMO_MEMLIMIT": "lots"}), 2, "KOLMO_MEMLIMIT=lots", "KOLMO_MEMLIMIT")
 
-    # ---- removed in 0.1.0: exit 2 and a one-line hint
+    # ---- removed in 0.0.2: exit 2 and a one-line hint
     exists2 = T / "out_existing.kolmo"
     exists2.write_bytes(b"x")
     removed = [(["-m", "speed", src], "-m was removed", "-1 (fastest)"), (["-mspeed", src], "-m was removed", None),
@@ -301,7 +301,7 @@ with tempfile.TemporaryDirectory() as tmp:
         r = run(*args)
         if expect(r, 2, f"removed {args[:2]}", msg):
             line = r.stderr.decode().strip()
-            check("\n" not in line and "0.1.0" in line, f"removed {args[:2]}: not one line: {line!r}")
+            check("\n" not in line and "0.0.2" in line, f"removed {args[:2]}: not one line: {line!r}")
             if hint:
                 check(hint in line, f"removed {args[:2]}: hint lacks {hint!r}: {line!r}")
     check(not (T / "newout").exists(), "a removed form wrote output")
@@ -383,25 +383,25 @@ with tempfile.TemporaryDirectory() as tmp:
     for old, new in (("a", "archive"), ("x", "extract"), ("l", "contents")):
         r = run(old, src); expect(r, 2, f"kolmo {old}", f"use 'kolmo {new}'")
 
-    # ---- the frame format: 0.0.2 decodes every level, and 0.1.0 decodes 0.0.2 output
+    # ---- the frame format: 0.0.1 decodes every level, and 0.0.2 decodes 0.0.1 output
     if REF and os.path.exists(REF):
         for lv in LEVEL_FORMS:
             inp = small if lv == "U" else src
             z, o = T / f"lv{lv}.0.kolmo", T / f"ref{lv}.out"
             rr = subprocess.run([REF, "-d", z, o], capture_output=True)
-            check(rr.returncode == 0 and o.read_bytes() == inp.read_bytes(), f"kolmo-0.0.2 decodes level {lv}: {rr.stderr[:200]!r}")
+            check(rr.returncode == 0 and o.read_bytes() == inp.read_bytes(), f"kolmo-0.0.1 decodes level {lv}: {rr.stderr[:200]!r}")
         for mode in ("speed", "balanced", "eco", "hc", "ratio", "x"):
             inp = small if mode == "x" else src
             z, o = T / f"ref.{mode}.kolmo", T / f"ref.{mode}.out"
             rr = subprocess.run([REF, *(["-x"] if mode == "x" else ["-m", mode]), inp, z], capture_output=True)
-            check(rr.returncode == 0, f"kolmo-0.0.2 -m {mode}")
-            expect(run("-d", z, "-o", o), 0, f"0.1.0 decodes 0.0.2 {mode}")
-            check(o.exists() and o.read_bytes() == inp.read_bytes(), f"0.1.0 decodes 0.0.2 {mode}: content")
+            check(rr.returncode == 0, f"kolmo-0.0.1 -m {mode}")
+            expect(run("-d", z, "-o", o), 0, f"0.0.2 decodes 0.0.1 {mode}")
+            check(o.exists() and o.read_bytes() == inp.read_bytes(), f"0.0.2 decodes 0.0.1 {mode}: content")
             same = {"speed": 1, "balanced": 3, "eco": 5, "hc": 7, "ratio": 9, "x": "U"}[mode]
-            check(z.read_bytes() == frames[same], f"0.0.2 -m {mode} and 0.1.0 level {same} give different bytes")
+            check(z.read_bytes() == frames[same], f"0.0.1 -m {mode} and 0.0.2 level {same} give different bytes")
         print("frame format: checked against", REF)
     else:
-        print("frame format: KOLMO_REF not set, 0.0.2 cross-check skipped")
+        print("frame format: KOLMO_REF not set, 0.0.1 cross-check skipped")
 
 print("test_cli:", "OK" if not fails else f"{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

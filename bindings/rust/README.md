@@ -21,7 +21,7 @@ outside the scale. A level gives the same bytes as `kolmo -N` on the command lin
 `decompress_limited` take a memory limit (and `decompress_limited` an optional bound on the decoded size, advisable
 for untrusted input); `decompress` checks the frame before it allocates the output.
 
-**Since 0.1.0:** `Mode` was replaced by `Level` (`Mode::SPEED` is now `Level::FASTEST`, `BALANCED` `Level::LIGHT`,
+**Since 0.0.2:** `Mode` was replaced by `Level` (`Mode::SPEED` is now `Level::FASTEST`, `BALANCED` `Level::LIGHT`,
 `RATIO` `Level::MAX`; `Eco` level 5, `Hc` level 7, `Ultra` `Level::ULTRA`), and the dictionary functions were removed.
 
 **From 1.x:** since 0.0.1, kolmo writes container version 12 and cannot read blobs written by kolmo 1.0.x

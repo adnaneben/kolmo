@@ -52,7 +52,7 @@ static int fc_write(const char *path, const uint8_t *p, size_t n) {
 static int fc_sink(void *ctx, const uint8_t *p, size_t n) { return fwrite(p, 1, n, (FILE *)ctx) != n; }
 
 /* Level options of --index and a, as in the main command line (docs/LEVELS.md): -1..-9, -F -L -B -C -X -U,
- * --level N|ultra, --fastest .. --ultra, --codec-level N, --block-size MiB. The 0.0.x forms (-m, -x, -l N, -B MiB)
+ * --level N|ultra, --fastest .. --ultra, --codec-level N, --block-size MiB. The 0.0.1 forms (-m, -x, -l N, -B MiB)
  * fail with the hint of the main command line. Returns 1 when s (with a value in argv[*a + 1]) was a level option,
  * 0 when it was not, or -2 after reporting a usage error (exit status 2). */
 static int fc_level_opt(const char *s, int argc, char **argv, int *a, int *level, int *codec_level, uint32_t *block) {
@@ -61,14 +61,14 @@ static int fc_level_opt(const char *s, int argc, char **argv, int *a, int *level
     if (s[0] == '-' && s[1] >= '1' && s[1] <= '9' && !s[2]) { *level = s[1] - '0'; return 1; }
     if (s[0] == '-' && s[1] && !s[2] && strchr("FLBCXU", s[1])) {
         if (s[1] == 'B' && *a + 1 < argc && argv[*a + 1][0] >= '0' && argv[*a + 1][0] <= '9' && strspn(argv[*a + 1], "0123456789.") == strlen(argv[*a + 1])) {
-            fprintf(stderr, "kolmo: -B MiB was removed in 0.1.0; -B is now --balanced (level 5); use --block-size MiB\n"); return -2;
+            fprintf(stderr, "kolmo: -B MiB was removed in 0.0.2; -B is now --balanced (level 5); use --block-size MiB\n"); return -2;
         }
         static const int lv[] = {1, 3, 5, 7, 9, KOLMO_LEVEL_ULTRA};
         *level = lv[strchr("FLBCXU", s[1]) - "FLBCXU"]; return 1;
     }
-    if (!strcmp(s, "-m")) { fprintf(stderr, "kolmo: -m was removed in 0.1.0; use a level: -1 (fastest) .. -9 (max), -3 light is the default, -U ultra\n"); return -2; }
-    if (!strcmp(s, "-x")) { fprintf(stderr, "kolmo: -x was removed in 0.1.0; use -U (--ultra)\n"); return -2; }
-    if (!strcmp(s, "-l")) { fprintf(stderr, "kolmo: -l LEVEL was removed in 0.1.0; use a level -1 .. -9 (expert: --codec-level N)\n"); return -2; }
+    if (!strcmp(s, "-m")) { fprintf(stderr, "kolmo: -m was removed in 0.0.2; use a level: -1 (fastest) .. -9 (max), -3 light is the default, -U ultra\n"); return -2; }
+    if (!strcmp(s, "-x")) { fprintf(stderr, "kolmo: -x was removed in 0.0.2; use -U (--ultra)\n"); return -2; }
+    if (!strcmp(s, "-l")) { fprintf(stderr, "kolmo: -l LEVEL was removed in 0.0.2; use a level -1 .. -9 (expert: --codec-level N)\n"); return -2; }
     if (strncmp(s, "--", 2)) return 0;
     for (int i = 0; i < 6; i++) if (!strcmp(s + 2, names[i])) { *level = nlv[i]; return 1; }
     const char *eq = strchr(s, '='), *v = eq ? eq + 1 : NULL;
@@ -330,7 +330,7 @@ static char **fc_split(int *pargc, char **argv) {
         if (a && s[0] == '-' && (s[1] == 'T' || (s[1] == 'C' && !strcmp(argv[1], "extract"))) && s[2]) { static char opt[2][3] = {"-T", "-C"};
             v[n++] = opt[s[1] == 'C']; v[n++] = (char *)s + 2; }
         else if (a && s[0] == '-' && s[1] && s[1] != '-' && strchr("mlBx", s[1]) && s[2] && strcmp(argv[1], "cat") && strcmp(argv[1], "grep")) {
-            static char opt[4][3] = {"-m", "-l", "-B", "-x"};   /* 0.0.x clusters (-mhc, -l2, -B0.5): refused by fc_level_opt */
+            static char opt[4][3] = {"-m", "-l", "-B", "-x"};   /* 0.0.1 clusters (-mhc, -l2, -B0.5): refused by fc_level_opt */
             v[n++] = opt[strchr("mlBx", s[1]) - "mlBx"]; v[n++] = (char *)s + 2; }
         else v[n++] = argv[a];
     }
@@ -343,7 +343,7 @@ int kolmo_cli_features(int argc, char **argv) {
     /* subcommands are recognised only as the first argument (a file of that name: kolmo -- NAME or kolmo ./NAME) */
     static const char *const old[3][2] = {{"a", "archive"}, {"x", "extract"}, {"l", "contents"}};
     for (int i = 0; i < 3; i++) if (!strcmp(argv[1], old[i][0])) {
-        fprintf(stderr, "kolmo: 'kolmo %s' was removed in 0.1.0; use 'kolmo %s' (a file named %s: kolmo ./%s)\n", old[i][0], old[i][1], old[i][0], old[i][0]);
+        fprintf(stderr, "kolmo: 'kolmo %s' was removed in 0.0.2; use 'kolmo %s' (a file named %s: kolmo ./%s)\n", old[i][0], old[i][1], old[i][0], old[i][0]);
         return 2;
     }
     int known = !strcmp(argv[1], "cat") || !strcmp(argv[1], "grep") || !strcmp(argv[1], "archive") || !strcmp(argv[1], "extract") || !strcmp(argv[1], "contents");

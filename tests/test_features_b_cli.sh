@@ -32,19 +32,19 @@ mkdir one; "$K" extract -C one arc.kol src/c.csv; cmp src/c.csv one/src/c.csv ||
 mkdir -p deep/x; cp t.csv deep/evil.csv; (cd deep/x && "$K" archive ../../arc2.kol ../evil.csv)
 mkdir safe; if (cd safe && "$K" extract ../arc2.kol 2> /dev/null); then fail "unsafe name extracted"; fi
 [ ! -e evil.csv ] || fail "unsafe name written outside the directory"
-# levels as in the main command line; the 0.0.x options are refused with exit status 2
+# levels as in the main command line; the 0.0.1 options are refused with exit status 2
 "$K" --index -9 --block-size 0.5 t.csv t9.kol && "$K" -d t9.kol -o back9.csv && cmp t.csv back9.csv || fail "--index -9"
 "$K" archive --level 1 arc1.kol src/a.csv && mkdir o1 && "$K" extract -C o1 arc1.kol && cmp src/a.csv o1/src/a.csv || fail "archive --level 1"
 for old in "-m hc" "-x" "-l 9" "-B 0.25" "-mhc" "-B0.5"; do
     set +e; "$K" --index $old t.csv told.kol 2> err.txt; rc=$?; set -e
-    [ $rc = 2 ] && grep -q "removed in 0.1.0" err.txt || fail "--index $old: exit $rc"
+    [ $rc = 2 ] && grep -q "removed in 0.0.2" err.txt || fail "--index $old: exit $rc"
     set +e; "$K" archive $old arcold.kol src/a.csv 2> err.txt; rc=$?; set -e
-    [ $rc = 2 ] && grep -q "removed in 0.1.0" err.txt || fail "archive $old: exit $rc"
+    [ $rc = 2 ] && grep -q "removed in 0.0.2" err.txt || fail "archive $old: exit $rc"
 done
-# the 0.0.x single-letter archive commands are refused; a file of that name is compressed with ./NAME or -- NAME
+# the 0.0.1 single-letter archive commands are refused; a file of that name is compressed with ./NAME or -- NAME
 for old in a x l; do
     set +e; "$K" $old arc.kol 2> err.txt; rc=$?; set -e
-    [ $rc = 2 ] && grep -q "removed in 0.1.0" err.txt || fail "kolmo $old: exit $rc"
+    [ $rc = 2 ] && grep -q "removed in 0.0.2" err.txt || fail "kolmo $old: exit $rc"
 done
 cp t.csv a; "$K" ./a && [ -f a.kolmo ] || fail "kolmo ./a"
 cp t.csv x; "$K" -- x && [ -f x.kolmo ] || fail "kolmo -- x"

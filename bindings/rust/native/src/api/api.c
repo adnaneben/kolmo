@@ -110,19 +110,19 @@ int64_t kolmo_decode_memory(const uint8_t *src, size_t n) {
 /* The level table (docs/LEVELS.md section 1). One row per level, in today's knobs: mode, codec level (0 = the mode's
  * default; R_LZH levels are on zstd's scale and map to KLZH2 settings in codecs/native.c: 1-2 -> 1, 3-5 -> 3,
  * 6-9 -> 5, 10-15 -> 6, 16-18 -> 8, 19+ -> 9) and transforms (1 = full analysis, 2 = quick, 3 = minimal, 0 = none).
- * The initial 0.1.0 assignment; another lane measures and retunes it. Edit the rows here only: the CLI and the
+ * The initial 0.0.2 assignment; another lane measures and retunes it. Edit the rows here only: the CLI and the
  * bindings read nothing else. Changing a row changes the output of that level (benchmark/determinism/expected.sha256). */
 static const struct { kolmo_mode mode; int level; int transforms; } kolmo_level_table[KOLMO_LEVEL_ULTRA + 1] = {
-    [1]  = {KOLMO_RT,    0,  3},   /* fastest: KLZ, minimal analysis (0.0.x CLI "-m speed", exactly) */
+    [1]  = {KOLMO_RT,    0,  3},   /* fastest: KLZ, minimal analysis (0.0.1 CLI "-m speed", exactly) */
     [2]  = {KOLMO_FAST, -1,  3},   /* fast KLZH2 parse (KLZH2 level 0), minimal analysis; screening 3.211, 433 / 835 MiB/s (KLZH2 1 was 3.295, 328) */
-    [3]  = {KOLMO_FAST,  0,  1},   /* light, the default: KLZH2 3 with full analysis (0.0.x "balanced") */
+    [3]  = {KOLMO_FAST,  0,  1},   /* light, the default: KLZH2 3 with full analysis (0.0.1 "balanced") */
     [4]  = {KOLMO_HC,    6,  1},   /* KLZH2 5 (zstd-scale 6) with hc's planning: smaller and faster than fast -l 6; 4.136, 67 / 713 */
-    [5]  = {KOLMO_ECO,   0,  1},   /* balanced: KLZH2 7 (0.0.x "eco") */
+    [5]  = {KOLMO_ECO,   0,  1},   /* balanced: KLZH2 7 (0.0.1 "eco") */
     [6]  = {KOLMO_HC,    16, 1},   /* KLZH2 8 (zstd-scale 16), hc's 16 MiB blocks */
-    [7]  = {KOLMO_HC,    0,  1},   /* compact: KLZH2 9 (0.0.x "hc") */
-    [8]  = {KOLMO_MAX,   1,  1},   /* ratio tier, fast variant: BWT for every block (0.0.x "ratio -l 1") */
-    [9]  = {KOLMO_MAX,   0,  1},   /* max: BWT for text, the better of BWT and KLZMA for binary (0.0.x "ratio") */
-    [10] = {KOLMO_ULTRA, 0,  1},   /* ultra: context mixing (0.0.x "-x") */
+    [7]  = {KOLMO_HC,    0,  1},   /* compact: KLZH2 9 (0.0.1 "hc") */
+    [8]  = {KOLMO_MAX,   1,  1},   /* ratio tier, fast variant: BWT for every block (0.0.1 "ratio -l 1") */
+    [9]  = {KOLMO_MAX,   0,  1},   /* max: BWT for text, the better of BWT and KLZMA for binary (0.0.1 "ratio") */
+    [10] = {KOLMO_ULTRA, 0,  1},   /* ultra: context mixing (0.0.1 "-x") */
 };
 
 int kolmo_params_for_level(int level, kolmo_params *p) {

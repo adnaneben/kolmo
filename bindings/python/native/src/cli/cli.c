@@ -1,4 +1,4 @@
-/* kolmo command line (0.1.0; docs/LEVELS.md):
+/* kolmo command line (0.0.2; docs/LEVELS.md):
  *
  *   kolmo [OPTIONS] [FILE...]
  *
@@ -10,8 +10,8 @@
  * existing file without -f, with the input's permissions and mtime. Exit status: 0 success, 1 error (I/O, corrupt
  * data, memory), 2 usage error; with several files processing continues after an error and the status is 1.
  *
- * The options of 0.0.x (-m, -x, -l LEVEL, -B MiB, -Q, -n, -s, -S, -r, -D, -t DICT, -P, kolmo train, kolmo profile and
- * the two-positional `kolmo IN OUT`) were removed in 0.1.0: each fails with exit status 2 and a one-line hint.
+ * The options of 0.0.1 (-m, -x, -l LEVEL, -B MiB, -Q, -n, -s, -S, -r, -D, -t DICT, -P, kolmo train, kolmo profile and
+ * the two-positional `kolmo IN OUT`) were removed in 0.0.2: each fails with exit status 2 and a one-line hint.
  * Subcommands: kolmo calibrate (cli/train.c), and kolmo --index / cat / grep / archive / extract / contents (cli/features.c); subcommands are recognised only as the first argument. */
 #include "kolmo.h"
 #include <stdio.h>
@@ -26,7 +26,7 @@
 
 /* Release label, kept in step with VERSION (RELEASING.md step 1). */
 #ifndef KOLMO_VERSION_STR
-#define KOLMO_VERSION_STR "0.1.0"
+#define KOLMO_VERSION_STR "0.0.2"
 #endif
 #define SUFFIX ".kolmo"
 
@@ -210,9 +210,9 @@ static void usage_hint(void) { fprintf(stderr, "Try 'kolmo -h' for help.\n"); }
 static int usage_error(const char *fmt, const char *arg) {
     fprintf(stderr, "kolmo: "); fprintf(stderr, fmt, arg); fprintf(stderr, "\n"); usage_hint(); return 2;
 }
-/* a form removed in 0.1.0: one line naming the replacement, exit status 2 */
+/* a form removed in 0.0.2: one line naming the replacement, exit status 2 */
 static int removed(const char *what, const char *instead) {
-    fprintf(stderr, "kolmo: %s was removed in 0.1.0; %s\n", what, instead); return 2;
+    fprintf(stderr, "kolmo: %s was removed in 0.0.2; %s\n", what, instead); return 2;
 }
 #define HINT_LEVEL "use a level: -1 (fastest) .. -9 (max), -3 light is the default, -U ultra"
 
@@ -282,7 +282,7 @@ static void help(void) {
 "  Subcommands are recognised only as the first argument; a file of that name: kolmo -- NAME or kolmo ./NAME\n"
 "\n"
 "Exit status: 0 success, 1 error, 2 usage error.\n"
-"The 0.0.x options (-m MODE, -x, kolmo IN OUT, ...) were removed in 0.1.0; CHANGELOG.md has the mapping.\n");
+"The 0.0.1 options (-m MODE, -x, kolmo IN OUT, ...) were removed in 0.0.2; CHANGELOG.md has the mapping.\n");
 }
 
 /* ---- options -------------------------------------------------------------------------------------------------- */
@@ -403,16 +403,16 @@ static int short_options(opts_t *o, int argc, char **argv, int *a) {
         switch (c) {
             case 'F': o->level = 1; break;  case 'L': o->level = 3; break;  case 'C': o->level = 7; break;
             case 'X': o->level = 9; break;  case 'U': o->level = KOLMO_LEVEL_ULTRA; break;
-            case 'B':                                       /* 0.0.x: -B MiB (block size); now --balanced */
+            case 'B':                                       /* 0.0.1: -B MiB (block size); now --balanced */
                 if ((*s >= '0' && *s <= '9') || *s == '.' ||
                     (!*s && *a + 1 < argc && is_number(argv[*a + 1], 1) && !exists(argv[*a + 1])))
                     return removed("-B MiB", "-B is now --balanced (level 5); use --block-size MiB");
                 o->level = 5; break;
-            case 'l':                                       /* 0.0.x: -l LEVEL (codec level); now --list */
+            case 'l':                                       /* 0.0.1: -l LEVEL (codec level); now --list */
                 if ((*s >= '0' && *s <= '9') || (!*s && *a + 1 < argc && is_number(argv[*a + 1], 0) && !exists(argv[*a + 1])))
                     return removed("-l LEVEL", "-l now lists; " HINT_LEVEL " (expert: --codec-level N)");
                 o->op = OP_LIST; break;
-            case 't':                                       /* 0.0.x: -t DICT (train a dictionary); now --test */
+            case 't':                                       /* 0.0.1: -t DICT (train a dictionary); now --test */
                 if (!*s && *a + 1 < argc) { size_t L = strlen(argv[*a + 1]);
                     if (L > 5 && !strcmp(argv[*a + 1] + L - 5, ".dict")) return removed("-t DICT", "-t now tests; dictionaries are not available (Kolmo-native codecs only)"); }
                 o->op = OP_TEST; break;
@@ -428,7 +428,7 @@ static int short_options(opts_t *o, int argc, char **argv, int *a) {
             case 'o': o->outpath = val; break;
             case 'T': if (parse_int(val, 0, 4096, &o->threads)) return usage_error("-T: a number of threads (0 = all cores), got '%s'", val); break;
             case 'M': o->memspec = val; o->mem_from_env = 0; break;
-            /* removed in 0.1.0 */
+            /* removed in 0.0.2 */
             case 'm': return removed("-m", HINT_LEVEL);
             case 'x': return removed("-x", "use -U (--ultra)");
             case 'Q': return removed("-Q", "use --analysis minimal");
@@ -796,7 +796,7 @@ int main(int argc, char **argv) {
         if (r) { free(files); return r; }
     }
 
-    /* the two-positional form of 0.0.x: `kolmo IN OUT` and `kolmo -d IN OUT` (a second name that does not exist yet,
+    /* the two-positional form of 0.0.1: `kolmo IN OUT` and `kolmo -d IN OUT` (a second name that does not exist yet,
      * or that has the wrong suffix to be a second input) */
     if (nf == 2 && (o.op == OP_COMPRESS || o.op == OP_DECOMPRESS) && !o.outpath && !o.to_stdout && !o.range &&
         strcmp(files[0], "-") && strcmp(files[1], "-") &&

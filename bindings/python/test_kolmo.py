@@ -40,7 +40,7 @@ def main():
             kolmo.compress(b"abc", level=bad); fail(f"level {bad!r} accepted")
         except ValueError:
             pass
-    # the 0.0.x keywords are gone
+    # the 0.0.1 keywords are gone
     for kw in ({"mode": "speed"}, {"dict": b"x"}, {"transforms": False}):
         try:
             kolmo.compress(b"abc", **kw); fail(f"{kw} accepted")

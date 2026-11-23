@@ -94,7 +94,7 @@ typedef struct {
 #define KOLMO_ERR_PARAM     (-15)  /* an argument out of range: kolmo_params mode, level or transforms, or no such level */
 #define KOLMO_ERR_RANGE     (-16)  /* kolmo_read_range: the offset is past the end of the decoded data */
 
-/* --- Levels (docs/LEVELS.md; 0.1.0) ------------------------------------------------------------------------------
+/* --- Levels (docs/LEVELS.md; 0.0.2) ------------------------------------------------------------------------------
  * One scale from 1 (fastest) to 9 (smallest at practical decode speed), and ultra outside it. The level numbers and
  * names are a long-term contract; what each level runs may improve between releases. kolmo_params_for_level fills
  * mode, level and transforms of *p for a level (KOLMO_LEVEL_MIN..KOLMO_LEVEL_MAX or KOLMO_LEVEL_ULTRA) and leaves the

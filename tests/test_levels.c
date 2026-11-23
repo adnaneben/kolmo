@@ -1,6 +1,6 @@
 /* The level table (kolmo_params_for_level, docs/LEVELS.md): every level 1..9 and ultra round-trips on several kinds
  * of input, gives the same bytes on repeated calls and with 1 and 4 threads, keeps the caller's threads, block and
- * memory limit, rejects other levels, and level 1 is exactly the 0.0.x CLI's "-m speed" (rt, transforms 3). */
+ * memory limit, rejects other levels, and level 1 is exactly the 0.0.1 CLI's "-m speed" (rt, transforms 3). */
 #include "kolmo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,10 +41,10 @@ int main(void) {
     p.threads = 7; p.block = 1u << 20; p.mem_limit = 123456789; p.mode = KOLMO_MAX;
     CHECK(kolmo_params_for_level(0, &p) && p.mode == KOLMO_MAX, "a rejected level changed the params");
     CHECK(!kolmo_params_for_level(KOLMO_LEVEL_FASTEST, &p), "level 1 rejected");
-    CHECK(p.mode == KOLMO_RT && p.level == 0 && p.transforms == 3, "level 1 is not the 0.0.x '-m speed' (rt, transforms 3)");
+    CHECK(p.mode == KOLMO_RT && p.level == 0 && p.transforms == 3, "level 1 is not the 0.0.1 '-m speed' (rt, transforms 3)");
     CHECK(p.threads == 7 && p.block == (1u << 20) && p.mem_limit == 123456789, "level changed threads, block or mem_limit");
     CHECK(!kolmo_params_for_level(KOLMO_LEVEL_DEFAULT, &p) && p.mode == KOLMO_FAST && p.level == 0 && p.transforms == 1,
-          "the default level is not 0.0.x balanced");
+          "the default level is not 0.0.1 balanced");
     CHECK(KOLMO_LEVEL_DEFAULT == KOLMO_LEVEL_LIGHT && KOLMO_LEVEL_MAX_RATIO == KOLMO_LEVEL_MAX && KOLMO_LEVEL_ULTRA == 10,
           "level constants");
     CHECK(!kolmo_params_for_level(KOLMO_LEVEL_ULTRA, &p) && p.mode == KOLMO_ULTRA, "ultra is not context mixing");

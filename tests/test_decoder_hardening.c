@@ -1,4 +1,4 @@
-/* Regression tests for decoder memory-safety and DoS fixes (review r1 of 0.0.2: D1, D2, D4, D5, D7, E1, E2).
+/* Regression tests for decoder memory-safety and DoS fixes (review r1 of 0.0.1: D1, D2, D4, D5, D7, E1, E2).
  * One translation unit with the library, like kolmoresource.c, to reach internal decoders and helpers.
  * The ASan build compiles the separately built coders (qlfc, khuf, klzma, ...) with the sanitizers too. */
 #undef NDEBUG

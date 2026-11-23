@@ -11,7 +11,7 @@ It fails when:
      version as current. Lines that describe the removal or the history (they contain one of ALLOW) are accepted.
   2. the version labels disagree: VERSION, pyproject.toml, Cargo.toml, the CLI's KOLMO_VERSION_STR, the Homebrew
      formula's url, the top CHANGELOG heading and the README's Status line.
-  3. (0.1.0) a release-facing file or `kolmo -h` shows an option removed in 0.1.0 as current usage (-m MODE, -x, -s,
+  3. (0.0.2) a release-facing file or `kolmo -h` shows an option removed in 0.0.2 as current usage (-m MODE, -x, -s,
      -S, -r, -l N, -B MiB, -D, -P, kolmo train/profile, kolmo a/x/l, the two-positional `kolmo IN OUT`, the bindings'
      mode=/Mode::). Lines that describe the removal (ALLOW) and the sections on upgrading from 0.0.x are accepted.
   4. the level table of docs/LEVELS.md (levels, names, letters, long options) and the one `kolmo -h` prints disagree.
@@ -37,17 +37,17 @@ STALE = [
     (r"^keywords\s*=.*\b(zstd|brotli|lz4|lzma|xz)\b", "a library name as a package keyword"),
 ]
 REMOVED = [
-    (r"(?<![\w-])-m\s*(speed|balanced|ratio|rt|fast|eco|hc|max|ultra)\b", "-m MODE (removed in 0.1.0; use a level)"),
-    (r"(?<![\w-])-x\b(?!-)", "-x (removed in 0.1.0; use -U)"),
-    (r"(?<![\w-])-[sS](\s+\d+)?\s+[\w./]+\.\w+", "-s/-S (removed in 0.1.0; use --stream)"),
-    (r"(?<![\w-])-r\s*\d+:\d+", "-r OFF:LEN (removed in 0.1.0; use --range)"),
-    (r"(?<![\w-])-l\s*\d", "-l LEVEL (removed in 0.1.0; use --codec-level)"),
-    (r"(?<![\w-])-B\s*\d", "-B MiB (removed in 0.1.0; use --block-size)"),
+    (r"(?<![\w-])-m\s*(speed|balanced|ratio|rt|fast|eco|hc|max|ultra)\b", "-m MODE (removed in 0.0.2; use a level)"),
+    (r"(?<![\w-])-x\b(?!-)", "-x (removed in 0.0.2; use -U)"),
+    (r"(?<![\w-])-[sS](\s+\d+)?\s+[\w./]+\.\w+", "-s/-S (removed in 0.0.2; use --stream)"),
+    (r"(?<![\w-])-r\s*\d+:\d+", "-r OFF:LEN (removed in 0.0.2; use --range)"),
+    (r"(?<![\w-])-l\s*\d", "-l LEVEL (removed in 0.0.2; use --codec-level)"),
+    (r"(?<![\w-])-B\s*\d", "-B MiB (removed in 0.0.2; use --block-size)"),
     (r"(?<![\w-])-[DP]\s+\S", "-D/-P (removed)"),
     (r"\bkolmo\s+(train|profile)\b", "kolmo train/profile (removed)"),
-    (r"\bkolmo\s+(a|x|l)\s", "kolmo a/x/l (renamed archive/extract/contents in 0.1.0)"),
-    (r"\bkolmo(\s+-[\w-]+)*\s+(?!-)[\w./]+\.\w+\s+(?!-)[\w./]+\.\w+(\s|`|$)", "the two-positional form kolmo IN OUT (removed in 0.1.0; use -o)"),
-    (r"\bmode\s*=\s*[\"']|Mode::", "the bindings' mode (replaced by level in 0.1.0)"),
+    (r"\bkolmo\s+(a|x|l)\s", "kolmo a/x/l (renamed archive/extract/contents in 0.0.2)"),
+    (r"\bkolmo(\s+-[\w-]+)*\s+(?!-)[\w./]+\.\w+\s+(?!-)[\w./]+\.\w+(\s|`|$)", "the two-positional form kolmo IN OUT (removed in 0.0.2; use -o)"),
+    (r"\bmode\s*=\s*[\"']|Mode::", "the bindings' mode (replaced by level in 0.0.2)"),
 ]
 ALLOW = re.compile(r"\bno\b|\bnot\b|removed|no longer|were\b|was\b|earlier|history|yanked|1\.x|stays installable|"
                    r"rival|vs\b|than\b|compare|kolmoc==1\.0\.1|older|replace|instead|before", re.I)
@@ -64,7 +64,7 @@ def stale_lines():
 
 
 def removed_usage():
-    """Removed 0.1.0 options shown as current usage in a user-facing document (sections about upgrading are skipped)."""
+    """Removed 0.0.2 options shown as current usage in a user-facing document (sections about upgrading are skipped)."""
     bad = []
     for rel in ["README.md", "bindings/python/README.md", "bindings/rust/README.md", "RELEASING.md", "packaging/homebrew/kolmo.rb"]:
         skip = False

@@ -1,6 +1,6 @@
-# Kolmo levels and command line (0.1.0 specification)
+# Kolmo levels and command line (0.0.2 specification)
 
-Status: specification for 0.1.0, owner decisions of 2026-11-22. The level numbers, names and letters below are a
+Status: specification for 0.0.2, owner decisions of 2026-11-22. The level numbers, names and letters below are a
 long-term contract: they are not renamed or renumbered later. What a level *does* inside (which coder, which setting)
 may improve between releases; what it *promises* (its place on the speed/size scale) does not change.
 
@@ -45,23 +45,23 @@ Python: `kolmo.compress(data, level=3)` with `level` 1..9 or `"ultra"`, or one o
 `"balanced"`, `"compact"`, `"max"`. Rust: `Level::new(1..=9)`, `Level::FASTEST`, `Level::LIGHT`, `Level::BALANCED`,
 `Level::COMPACT`, `Level::MAX`, `Level::ULTRA`; `Level::default()` is light.
 
-### What each level runs (0.1.0 table; free to improve later, never to move across the scale)
+### What each level runs (0.0.2 table; free to improve later, never to move across the scale)
 
 Initial assignment, to be finalised by measurement (each level must be measurably distinct from its neighbours and
 strictly ordered on the screening corpus; final numbers from the timed holdout):
 
-| level | engine (0.1.0)                                                           |
+| level | engine (0.0.2)                                                           |
 |------:|---------------------------------------------------------------------------|
 | 1     | fast LZ (KLZ, or the new fast KLZH2 setting if it measures better), minimal analysis |
 | 2     | fast KLZH2 parse (KLZH2 level 0), minimal analysis                         |
-| 3     | KLZH2 3 with analysis (the 0.0.x "balanced" default)                       |
+| 3     | KLZH2 3 with analysis (the 0.0.1 "balanced" default)                       |
 | 4     | KLZH2 5                                                                    |
-| 5     | KLZH2 7 (0.0.x "eco")                                                      |
+| 5     | KLZH2 7 (0.0.1 "eco")                                                      |
 | 6     | KLZH2 8                                                                    |
 | 7     | KLZH2 9 or a faster ratio-tier setting, whichever is smaller at LZ decode speed |
 | 8     | ratio tier, fast variant (BWT-only measured ~3x faster than ratio at the same size) |
-| 9     | ratio tier (KLZMA/BWT, 0.0.x "ratio")                                      |
-| ultra | context mixing (0.0.x `-x`)                                                |
+| 9     | ratio tier (KLZMA/BWT, 0.0.1 "ratio")                                      |
+| ultra | context mixing (0.0.1 `-x`)                                                |
 
 ## 2. Command line
 
@@ -89,7 +89,7 @@ Behaviour follows gzip/xz/zstd conventions:
 | `-1`…`-9` | `--level N`         | level on the scale                                                      |
 | `-F -L -B -C -X` | `--fastest --light --balanced --compact --max` | named anchors 1, 3, 5, 7, 9           |
 | `-U`  | `--ultra`               | extreme tier                                                            |
-| `-d`  | `--decompress`          | decompress (`unkolmo` / `kolmocat` aliases are out of scope for 0.1.0)  |
+| `-d`  | `--decompress`          | decompress (`unkolmo` / `kolmocat` aliases are out of scope for 0.0.2)  |
 | `-z`  | `--compress`            | compress (the default)                                                  |
 | `-c`  | `--stdout`              | write to standard output, keep inputs                                   |
 | `-o FILE` | `--output FILE`     | output path (one input only)                                            |
@@ -117,20 +117,20 @@ Combined short options work (`-dc`, `-9T4`, `-kf`). Long options accept `--opt=v
 
 Subcommands keep working: `kolmo calibrate`, and the archive/query commands `kolmo a|x|l|cat|grep` and `--index`.
 
-### Removed in 0.1.0 (owner decision: clean break)
+### Removed in 0.0.2 (owner decision: clean break)
 
 `-m speed|balanced|eco|hc|ratio|rt|fast|max|ultra`, `-x`, the old `-l LEVEL`, `-B MiB`, `-q`/`-Q` (analysis), `-n`,
 `-s`, `-S`, `-r`, `-D`, `-t DICT`, `-P`, `kolmo train`, `kolmo profile`, and the two-positional form `kolmo IN OUT`.
 Each removed form fails with exit status 2 and a one-line hint naming the replacement, for example:
 
 ```
-kolmo: -m was removed in 0.1.0; use a level: -1 (fastest) .. -9 (max), -3 light is the default, -U ultra
-kolmo: 'kolmo IN OUT' was removed in 0.1.0; use 'kolmo IN -o OUT'
+kolmo: -m was removed in 0.0.2; use a level: -1 (fastest) .. -9 (max), -3 light is the default, -U ultra
+kolmo: 'kolmo IN OUT' was removed in 0.0.2; use 'kolmo IN -o OUT'
 ```
 
-### Mapping for people upgrading from 0.0.x
+### Mapping for people upgrading from 0.0.1
 
-| 0.0.x            | 0.1.0                         |
+| 0.0.1            | 0.0.2                         |
 |------------------|-------------------------------|
 | `-m speed`       | `-1` / `-F`                   |
 | `-m balanced` (default) | `-3` / `-L` (default)  |
@@ -142,29 +142,30 @@ kolmo: 'kolmo IN OUT' was removed in 0.1.0; use 'kolmo IN -o OUT'
 | `kolmo -d in out`| `kolmo -d in -o out`          |
 
 Bindings: Python `mode="speed"|"balanced"|"ratio"` and Rust `Mode::*` are replaced by `level`; the old names are
-removed in 0.1.0 with the same mapping.
+removed in 0.0.2 with the same mapping.
 
 ### Frame format
 
-Unchanged (container version 12). Every 0.0.x decoder reads 0.1.0 output, and 0.1.0 reads 0.0.x output.
+Unchanged (container version 12). Every 0.0.1 decoder reads 0.0.2 output, and 0.0.2 reads 0.0.1 output.
 
 ## 3. Implementation notes (decisions where this specification was silent)
 
-Recorded by the 0.1.0 implementation (lane 1). zstd's behaviour was followed unless noted.
+Recorded by the 0.0.2 implementation (lane 1). zstd's behaviour was followed unless noted.
 
 Levels and library
-- Internal table (`src/api/api.c`, `kolmo_level_table`), in 0.0.x knobs: 1 = rt with minimal analysis (exactly 0.0.x
-  `-m speed`), 2 = fast at codec level -1 (the fast KLZH2 parse, KLZH2 level 0) with minimal analysis, 3 = fast (0.0.x balanced), 4 = hc's planning
+- Internal table (`src/api/api.c`, `kolmo_level_table`), in 0.0.1 knobs: 1 = rt with minimal analysis (exactly 0.0.1
+  `-m speed`), 2 = fast at codec level -1 (the fast KLZH2 parse, KLZH2 level 0) with minimal analysis, 3 = fast (0.0.1 balanced), 4 = hc's planning
   at codec level 6 (KLZH2 5) (lane 3's measured rows for 2 and 4), 5 = eco, 6 = hc at codec level 16 (KLZH2 8), 7 = hc, 8 = max at codec level 1 (BWT for every
-  block), 9 = max (0.0.x ratio), ultra = ultra. Levels 1, 3, 5, 7, 9 and ultra therefore write the same bytes as 0.0.2's
-  `speed`, `balanced`, `eco`, `hc`, `ratio` and `-x`. On small inputs neighbouring levels can coincide (6 and 7 did on a
+  block), 9 = max (0.0.1 ratio), ultra = ultra. Levels 1, 3, 5, 7 and ultra therefore write the same bytes as 0.0.1's
+  `speed`, `balanced`, `eco`, `hc` and `-x`. Level 9 writes the same bytes as 0.0.1's `ratio` except where block sorting now
+  wins on a binary block (the gate was widened in 0.0.2: two raw videos of the 21 held-out files, 2.2% smaller in all). On small inputs neighbouring levels can coincide (6 and 7 did on a
   200 KB test file); making every level measurably distinct is the measuring lane's job.
   `benchmark/determinism/expected.sha256` pins every level, 2, 4, 6 and 8 included.
 - An out-of-range level returns a new error code, `KOLMO_ERR_PARAM` (-15).
 - `-10`, `-19`: a run of digits is read as one number (as zstd), then refused (levels are 1..9; ultra is `-U`).
 
 Letters whose meaning changed
-- `-B`, `-l`, `-t` and `-q` mean `--balanced`, `--list`, `--test` and `--quiet` now. The 0.0.x forms are recognised
+- `-B`, `-l`, `-t` and `-q` mean `--balanced`, `--list`, `--test` and `--quiet` now. The 0.0.1 forms are recognised
   where they are unambiguous and get the removed-form hint: `-B` or `-l` followed (in the same argument or as the next
   argument) by a number that is not an existing file (`-B 0.5`, `-B4`, `-l 9`, `-l9`), and `-t` followed by a name
   ending in `.dict`. The old analysis option `-q` cannot be told from `--quiet`.
@@ -184,7 +185,7 @@ Files and output
   directory and published only on success, by `link` (never replacing a file that appeared meanwhile) or, with `-f`
   over a plain file, by `rename`. A failed run never touches an existing file and leaves no staging file. Over a
   symlink or hard link with `-f`, the content is written through the existing path, so the link and the target's mode
-  are kept (0.0.x behaviour).
+  are kept (0.0.1 behaviour).
 - Metadata: permission bits `mode & 0777` (setuid, setgid and sticky are dropped), access and modification times;
   ownership is not changed. Outputs from standard input get `0666 & ~umask` and the current time.
 - `--rm` removes the input after its output is published (decoded outputs are verified before publishing; compressed
@@ -212,8 +213,8 @@ Options
 
 Subcommands
 - `calibrate`, `cat`, `grep`, `archive`, `extract`, `contents` are recognised only as the first argument; a file of
-  that name is `kolmo -- NAME` or `kolmo ./NAME`. `kolmo a`, `x` and `l` (0.0.x names, owner decision during review)
+  that name is `kolmo -- NAME` or `kolmo ./NAME`. `kolmo a`, `x` and `l` (0.0.1 names, owner decision during review)
   print the removed-form hint naming `archive`, `extract` and `contents`. `--index` is recognised anywhere before `--`
   and keeps its `in out.kol` positional form. `--index` and `archive` take the level options of the main command line
-  (`-1`..`-9`, letters, `--level`, `--codec-level`, `--block-size`); their 0.0.x `-m`, `-x`, `-l N` and `-B MiB` get
+  (`-1`..`-9`, letters, `--level`, `--codec-level`, `--block-size`); their 0.0.1 `-m`, `-x`, `-l N` and `-B MiB` get
   the removed-form hint.

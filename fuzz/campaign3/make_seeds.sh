@@ -13,7 +13,7 @@ for t in fuzz_decompress fuzz_limited fuzz_stream fuzz_stream_limited fuzz_round
 # under ASan+UBSan with comparison tracing a 48 KiB GR6+ or audio frame takes about 3 s per fuzz input
 mkdir -p "$W/slices" "$W/small"
 for f in "$R"/*.*; do b=$(basename "$f"); head -c 49152 "$f" > "$W/slices/$b"; head -c 8192 "$f" > "$W/small/$b"; done
-modes=("-1" "-1 --analysis full" "" "--analysis quick" "-5" "-7" "-9" "-8" "--native-leaf")   # 0.1.0 levels (the 0.0.x modes)
+modes=("-1" "-1 --analysis full" "" "--analysis quick" "-5" "-7" "-9" "-8" "--native-leaf")   # 0.0.2 levels (the 0.0.1 modes)
 xmodes=("-U --codec-level 1" "-U" "-U --codec-level 2")
 for f in "$R"/*.*; do
   b=$(basename "$f"); i=0
@@ -54,7 +54,7 @@ done
 ( cd "$R/set" && $K archive --chunk 1 "$W/arc1.kol" snap0.csv snap1.csv snap2.csv && $K archive "$W/arc2.kol" snap3.csv snap4.csv snap5.csv ../small.txt ../empty.bin ) 2>/dev/null
 for a in arc1 arc2; do for q in 0 1 8 129; do { printf "\\0\\$(printf %o $q)"; cat "$W/$a.kol"; } > "$S/fuzz_ext/$a.$q"; done; done
 # profiles: trained on the snapshot set (balanced and hc), with frames written with them (CZN1 and compact CZC1).
-# kolmo train and -P were removed (0.1.0; not available since 0.0.1), so this loop writes nothing; kept for the history.
+# kolmo train and -P were removed (0.0.2; not available since 0.0.1), so this loop writes nothing; kept for the history.
 for m in fast hc; do
   $K train -m $m -o "$W/p.$m.kpf" "$R/set" 2>/dev/null || continue
   L=$(stat -c %s "$W/p.$m.kpf")

@@ -13,26 +13,30 @@ version 12). Kolmo does not read files written by its 1.x versions (`KOLMO_ERR_L
 
 21 files held out from all tuning (364 MB: the Silesia corpus files mozilla, mr, nci, osdb, reymont, samba and sao, an
 OWID CSV table, a server log, a 47 MB bf16 model-weights file, a FASTQ run, two raw CIF videos, four photos and four
-audio clips). Apple M5, one thread (`-T 1`), every output decoded and compared byte for byte. Ratio = total input /
-total output; speeds in MiB/s are total input over total time, compress / decompress. Sizes are from this release's
-code; speeds are medians of 5 timed runs of its release candidates, with the same coders (eco's speed was measured
-before a final encoder tuning that made its output 0.2% smaller).
+audio clips). Apple M5, one thread (`-T 1`), best of 5 timed runs, every output decoded and compared byte for byte.
+Ratio = total input / total output; speeds in MiB/s are total input over total time, compress / decompress. The nearest
+rival is the one closest in compress speed.
 
 | kolmo level | Ratio | MiB/s | Nearest rival | Ratio | MiB/s | kolmo size vs rival |
 |---|---|---|---|---|---|---|
-| `-1` fastest | 1.66 | 413.8 / 733.7 | lz4 -1 | 1.50 | 496.8 / 757.8 | **-9.8%** |
-| `-3` light | 2.59 | 163.3 / 397.1 | zstd -3 | 2.04 | 266.9 / 498.7 | **-21.2%** |
-| `-5` balanced | 2.79 | 13.3 / 382.5 | zstd -9 | 2.20 | 87.8 / 491.5 | **-21.0%** |
-| `-7` compact | 2.87 | 4.9 / 387.7 | zstd -19 | 2.41 | 5.0 / 451.1 | **-16.0%** |
-| `-9` max | 3.15 | 4.3 / 60.7 | xz -9 | 2.77 | 3.7 / 76.4 | **-12.2%** |
+| `-1` fastest | 1.67 | 769 / 1971 | lz4 -1 | 1.50 | 956 / 1845 | **-9.8%** |
+| `-2` | 2.34 | 420 / 774 | zstd -3 | 2.08 | 418 / 1013 | **-11.1%** |
+| `-3` light (default) | 2.59 | 212 / 684 | zstd -6 | 2.15 | 153 / 1013 | **-17.0%** |
+| `-4` | 2.71 | 47.8 / 696 | zstd -12 | 2.24 | 52.2 / 962 | **-17.3%** |
+| `-5` balanced | 2.79 | 12.4 / 670 | bzip3 | 2.79 | 13.8 / 19.9 | +0.1% |
+| `-6` | 2.85 | 6.6 / 687 | zstd -19 | 2.41 | 4.8 / 838 | **-15.4%** |
+| `-7` compact | 2.87 | 5.0 / 685 | zstd -19 | 2.41 | 4.8 / 838 | **-16.2%** |
+| `-8` | 3.15 | 14.8 / 34.4 | bzip3 | 2.79 | 13.8 / 19.9 | **-11.5%** |
+| `-9` max | 3.22 | 8.0 / 40.7 | xz -9 | 2.77 | 3.7 / 84.8 | **-14.1%** |
+| `-U` ultra | 3.39 | 1.4 / 1.4 | — | | | |
 
-These were measured with 0.0.2's modes `speed`, `balanced`, `eco`, `hc` and `ratio`; levels 1, 3, 5, 7 and 9 of 0.1.0
-run the same settings and write the same bytes. Levels 2, 4, 6 and 8 are new and not yet in this table.
-
-The rivals are their command-line tools (lz4, zstd, xz) on the same machine and files. In short: each kolmo level is
-9.8–21.2% smaller than the rival of its class; it compresses 0.6–1.2× as fast as that rival (level 5 0.15×) and decompresses
-0.8–1.0× as fast. Blocks are independent, so with more threads both directions scale with cores; these figures are
-single-thread only. Figures for the 1.x line (measured with its library coders, on other data) are in
+The rivals are their command-line tools (lz4, zstd, bzip3, xz) on the same machine and files. In short: at every level
+but 5, kolmo is 9.8-17.3% smaller than the rival of its speed class, and compresses 0.8-2.2x as fast as that rival.
+Level 5 matches bzip3's ratio and decompresses 34x faster. Levels 1-7 decompress at 670-1971 MiB/s; levels 8 and 9
+use block sorting and decompress at 34-41 MiB/s (xz: 85). Blocks are independent, and since 0.0.2 the match finders
+of levels 4-9 also use several threads inside a block, so both directions scale with cores: on 10 cores level 3
+compresses at 433 MiB/s, level 7 at 13.0 and level 9 at 22.0 (xz -9 -T0: 3.7), with output identical at any thread
+count. Figures for the 1.x line (measured with its library coders, on other data) are in
 [`benchmark/BENCHMARKS.md`](benchmark/BENCHMARKS.md), marked as such. How we weigh a ratio gain against a speed loss is
 in [`benchmark/TRADEOFFS.md`](benchmark/TRADEOFFS.md).
 
@@ -57,7 +61,7 @@ All prediction that must agree between encoder and decoder is integer or plain I
 
 One scale, each level smaller and slower than the one before (levels 8-9 decompress about 10x more slowly) (the full contract is `docs/LEVELS.md`):
 
-| Level | Name | Letter | Long option | What it is for | 0.1.0 engine |
+| Level | Name | Letter | Long option | What it is for | 0.0.2 engine |
 |---|---|---|---|---|---|
 | `-1` | fastest | `-F` | `--fastest` | data that is read or sent right away | KLZ, minimal analysis |
 | `-2` | | | | | fast KLZH2 parse, minimal analysis |
@@ -118,7 +122,7 @@ faster than full row decode on its own. The default lossless round trip is uncha
 
 Dictionaries and trained profiles were built on the zstd and Brotli dictionaries of earlier versions. This build has
 only Kolmo's own coders (container version 12), so they are not available: their command-line options were removed in
-0.1.0 (each prints a one-line hint and exits with status 2), the Python and Rust dictionary calls were removed, and
+0.0.2 (each prints a one-line hint and exits with status 2), the Python and Rust dictionary calls were removed, and
 the C calls report `KOLMO_ERR_UNSUPPORTED`.
 
 ### Targets (`--target`)
@@ -209,11 +213,11 @@ permissions and modification time, combined short options work (`-dc`, `-9T4`), 
 option. Subcommands (`calibrate`, `cat`, `grep`, `archive`, `extract`, `contents`, and `--index`) are recognised only
 as the first argument; a file of that name is compressed with `kolmo -- NAME` or `kolmo ./NAME`.
 
-### Upgrading from 0.0.x
+### Upgrading from 0.0.1
 
-0.1.0 replaced the modes with levels and removed the old options (each prints a one-line hint and exits with status 2):
+0.0.2 replaced the modes with levels and removed the old options (each prints a one-line hint and exits with status 2):
 
-| 0.0.x | 0.1.0 |
+| 0.0.1 | 0.0.2 |
 |---|---|
 | `kolmo -m speed in out` | `kolmo -1 in -o out` (`-F`) |
 | `kolmo in out` (balanced, the default) | `kolmo in -o out` (level 3, `-L`, the default) |
@@ -225,7 +229,7 @@ as the first argument; a file of that name is compressed with `kolmo -- NAME` or
 | `kolmo a` / `x` / `l` | `kolmo archive` / `extract` / `contents` |
 
 `-B`, `-l`, `-q` and `-t` now mean `--balanced`, `--list`, `--quiet` and `--test`. Files are unchanged: container
-version 12, so 0.0.x reads 0.1.0 output and 0.1.0 reads 0.0.x output.
+version 12, so 0.0.1 reads 0.0.2 output and 0.0.2 reads 0.0.1 output.
 
 Needs only a C compiler. There is no third-party codec library and no `vendor/` directory: every coder is in
 `src/algo` and `src/codecs`. The BWT coder is ported from libbsc and its suffix sorter is taken over from libsais;
@@ -236,8 +240,9 @@ overnight genetic search of the build-time settings (`tune/ga.py`).
 
 ## Status
 
-0.1.0, not yet released: the level model and the new command line (`docs/LEVELS.md`, `CHANGELOG.md`); the frame
-format is that of 0.0.2, the second release of the renumbered line. The 1.x line (1.0.0 and 1.0.1, now yanked) used library coders (zstd, Brotli, LZ4, liblzma); 0.0.x
+0.0.2, the second release of the renumbered line: the level model and the new command line (`docs/LEVELS.md`,
+`CHANGELOG.md`), decoder hardening and threaded match finders. The frame format is unchanged from 0.0.1 (container
+version 12). The 1.x line (1.0.0 and 1.0.1, now yanked) used library coders (zstd, Brotli, LZ4, liblzma); 0.0.x
 uses only Kolmo's own and writes container version 12 (`SPEC.md`). Output is byte-identical across x86-64 and Apple
 silicon. The decoder is fuzzed (harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never
 returned as data. `RELEASING.md` describes how to cut a release.

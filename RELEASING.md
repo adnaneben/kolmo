@@ -34,7 +34,7 @@ Then check what users will read (the PyPI and crates.io pages are frozen once pu
 python3 tests/check_release_docs.py build/kolmo     # stale claims in release-facing files; all labels = VERSION
 ```
 
-It also fails when a user-facing document or `kolmo -h` shows an option removed in 0.1.0 as current usage, and when
+It also fails when a user-facing document or `kolmo -h` shows an option removed in 0.0.2 as current usage, and when
 the level table of `docs/LEVELS.md` and the one `kolmo -h` prints disagree.
 
 and read `bindings/python/README.md` and `bindings/rust/README.md` in full: they are the package pages.
