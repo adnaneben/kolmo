@@ -38,7 +38,6 @@
 - **`site/`: a static benchmark page** (`python3 site/build.py`) generated from the JSON: Pareto charts of ratio
   against decode and compress speed, tables, method and caveats. Wins and losses are computed from the data, and
   losses are shown next to wins. Not published; GitHub Pages can serve `site/` as is.
-- `tests/check_release_docs.py` skips a `## Unreleased` heading when it reads the version from the changelog.
 
 ## 0.0.2 (2026-11-23)
 
