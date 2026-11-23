@@ -14,12 +14,14 @@ class Kolmo < Formula
 
   test do
     # round-trip a file and confirm it comes back byte-identical
-    (testpath/"in.csv").write (1..500).map { |i| "row,#{i},#{i * 2},ok\n" }.join
+    rows = (1..500).map { |i| [i, i * 2] }
+    (testpath/"in.csv").write rows.map { |a, b| "row,#{a},#{b},ok\n" }.join
     system bin/"kolmo", "-9", "in.csv"
     assert_path_exists testpath/"in.csv.kolmo"
     system bin/"kolmo", "-d", "in.csv.kolmo", "-o", "back.csv"
     assert_equal (testpath/"in.csv").read, (testpath/"back.csv").read
     # standard input to standard output, level 1
-    assert_equal (testpath/"in.csv").read, pipe_output("#{bin}/kolmo -dc", pipe_output("#{bin}/kolmo -1", (testpath/"in.csv").read))
+    packed = pipe_output("#{bin}/kolmo -1", (testpath/"in.csv").read)
+    assert_equal (testpath/"in.csv").read, pipe_output("#{bin}/kolmo -dc", packed)
   end
 end
