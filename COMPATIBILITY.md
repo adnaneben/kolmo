@@ -44,19 +44,20 @@ it covers is specified in [FORMAT.md](FORMAT.md).
 
 ## How the promise is checked
 
-- **`tests/v12/` is the frozen corpus.** It holds 350 frames with their originals, and frames are added to it, never
+- **`tests/v12/` is the frozen corpus.** It holds 356 frames with their originals, and frames are added to it, never
   rewritten:
   - the top level: 84 frames in the six modes of 0.0.1;
-  - `r0.0.2/`: 266 frames written by the 0.0.2 release binary. These cover every level 1 to 9 and ultra, the options
+  - `r0.0.2/`: 272 frames written by the 0.0.2 release binary. These cover every level 1 to 9 and ultra, the options
     that change the format (`--native-leaf`, `--typed-huf`, `--codec-level 1`, `--stream`), and inputs that reach
     every block codec 0.0.2 writes (0, 7, 12, 16-20, 24-26, 28, 31 and 32) and every tflag it writes by default
-    (1, 2, 4-10, 12 and 14). The last 20 frames were added after the release, from the 0.0.2 tag binary:
+    (1, 2, 4-10, 12 and 14). The last 26 frames were added after the release, from the 0.0.2 tag binary:
     - eleven for codecs 25, 26 and 31 and tflags 2, 6 and 8, and one for tflag 1 under plan 1 (quote-aware transpose);
-    - six for the table transform's numeric modes, formulas, group column and short rows;
+    - six for the table transform's numeric modes, formulas, group column and short rows, and six queryable archives
+      (`kolmo --index`) with column-split tables (tflag 13);
     - two (`longfield.csv.*`) that 0.0.2 writes but cannot read itself. Releases from the fix on (CHANGELOG,
       Unreleased) read them, and the corpus tests check that they do.
-  - **Not in the corpus:** the column-split table (tflag 13), which is written only on request (FORMAT.md 8.3), and
-    the read-only codecs 5 and 29. The promise covers them all the same.
+  - **Not in the corpus:** table v1 (tflag 3), which no release writes (FORMAT.md 20.9 has test vectors instead),
+    and the read-only codecs 5 and 29. The promise covers them all the same.
 - **Four tests run in CI on Linux x86-64, Linux ARM64 and macOS, on every push and pull request** (all part of `make check`):
   - `test-v12-corpus` decodes each frame through the library: whole buffer, 1 and 4 threads, and a range read;
   - `tests/check_v12_frames.py` decodes each frame and stream through the CLI, and fails if any frozen frame file has

@@ -804,6 +804,105 @@ def table_inv(t, n, delim):
     return bytes(out)
 
 
+# ---- table v1 (FORMAT.md 20.9)
+def table1_inv(t, n, delim):
+    need(len(t) >= 16, "table1 header")
+    k, nr, nexc, noNL = struct.unpack_from("<4I", t, 0)
+    need(1 <= k <= 256 and 16 + 8 * nexc <= len(t) and nr <= n + 1 and nexc <= nr, "table1 header fields")
+    exc = [struct.unpack_from("<II", t, 16 + 8 * e) for e in range(nexc)]
+    p = 16 + 8 * nexc; cols = []
+    for j in range(k):
+        need(len(t) - p >= 5, "table1 column header")
+        ty = t[p]; size = struct.unpack_from("<I", t, p + 1)[0]; p += 5
+        need(ty <= 1 and size <= len(t) - p, "table1 column")
+        b = t[p:p + size]; p += size
+        if ty == 0:
+            need(size >= 8, "table1 text column"); cnt, nlong = struct.unpack_from("<II", b, 0)
+            q = 8 + cnt + 4 * nlong; need(q <= size, "table1 text column size")
+            vals = []; li = 0; d = q
+            for x in b[8:8 + cnt]:
+                if x == 255:
+                    need(li < nlong, "table1 long count"); x = struct.unpack_from("<I", b, 8 + cnt + 4 * li)[0]; li += 1
+                vals.append((d, x)); d += x
+            need(d <= size, "table1 text bytes")
+            cols.append([b[a:a + x] for a, x in vals])
+        else:
+            need(size >= 14, "table1 numeric column")
+            cnt, nnum, nx = struct.unpack_from("<3I", b, 0); S, w = b[12], b[13]
+            need(S <= 18 and 1 <= w <= 8, "table1 numeric fields")
+            q = 14; kind = b[q:q + cnt]; q += cnt; sd = b[q:q + nnum]; q += nnum
+            pl = b[q:q + nnum * w]; q += nnum * w; elen = b[q:q + 4 * nx]; q += 4 * nx
+            need(q <= size, "table1 numeric column size")
+            ed = q; acc = 0; nums = []
+            for i in range(nnum):
+                z = sum(pl[bb * nnum + i] << (8 * bb) for bb in range(w))
+                acc = s64(acc + unzz(z)); ds = sd[i]
+                need(ds <= S, "table1 digits")
+                nums.append(fmt_fixed(exact_div_p10(acc, ds) if ds else acc, S - ds).encode())
+            vals = []; ni = xi = 0
+            for kd in kind:
+                if kd == 1:
+                    need(ni < nnum, "table1 number count"); vals.append(nums[ni]); ni += 1
+                elif kd == 2:
+                    need(xi < nx, "table1 text count"); L_ = struct.unpack_from("<I", elen, 4 * xi)[0]; xi += 1
+                    need(ed + L_ <= size, "table1 text bytes"); vals.append(b[ed:ed + L_]); ed += L_
+                else:
+                    need(kd == 0, "table1 kind"); vals.append(b"")
+            cols.append(vals)
+    need(nr <= len(cols[0]), "table1 rows")
+    last = []; e = 0
+    for r in range(nr):
+        cnt = k
+        if e < nexc and exc[e][0] == r:
+            cnt = exc[e][1]; e += 1; need(1 <= cnt <= k, "table1 exception")
+        last.append(cnt - 1)
+    pos = [0] * k
+    for j in range(k):
+        need(sum(1 for x in last if x >= j) == len(cols[j]), "table1 column count")
+    out = bytearray()
+    for r in range(nr):
+        out += bytes([delim]).join(cols[j][pos[j] + 0] for j in range(last[r] + 1))
+        for j in range(last[r] + 1): pos[j] += 1
+        if not (noNL and r == nr - 1): out.append(10)
+    need(len(out) == n, "table1 length")
+    return bytes(out)
+
+
+# ---- column-split table (FORMAT.md 20.10)
+def table_cols_inv(pay, n, delim, codec):
+    """pay: the payload after the plan prefix"""
+    need(len(pay) >= 6, "columns header")
+    tn = struct.unpack_from("<I", pay, 0)[0]; nseg = pay[4] | pay[5] << 8
+    need(tn <= n + 16384 and 2 <= nseg <= 257, "columns header fields")
+    d0 = 6 + 13 * nseg; need(d0 <= len(pay), "columns directory")
+    segs = []; at = d0; tot = 0
+    for sgi in range(nseg):
+        cc, raw, z, ck = struct.unpack_from("<BIII", pay, 6 + 13 * sgi)
+        need(cc in (0, codec) and z <= len(pay) - at and (cc != 0 or z == raw), "columns entry")
+        tot += raw; need(tot <= tn, "columns sizes")
+        segs.append((cc, raw, pay[at:at + z], ck)); at += z
+    need(at == len(pay) and tot == tn, "columns: sizes do not add up")
+    stream = bytearray()
+    for cc, raw, z, ck in segs:
+        d = z if cc == 0 else decode(cc, z, raw)
+        need((khash64(d, 0x74626c63) & 0xFFFFFFFF) == ck, "columns segment check")
+        stream += d
+    # the stream must split into the header and k column sections, matching the segments
+    need(tn >= 24, "columns split")
+    k, _, nexc = struct.unpack_from("<3I", stream, 0); nform = struct.unpack_from("<I", stream, 20)[0]
+    need(1 <= k <= 256 and nform <= 256 and nexc <= tn, "columns split header")
+    q = 24 + 16 * nform + 8 * nexc; need(q <= tn, "columns split header size")
+    bounds = [q]
+    for _ in range(k):
+        need(q + 5 <= tn, "columns split column"); q += 5 + struct.unpack_from("<I", stream, q + 1)[0]
+        need(q <= tn, "columns split column size"); bounds.append(q)
+    need(q == tn and k + 1 == nseg, "columns split end")
+    prev = 0
+    for sgi, b in enumerate(bounds):
+        need(b - prev == segs[sgi][1], "columns segment boundary"); prev = b
+    return table_inv(bytes(stream), n, delim)
+
+
 # ---- typed transpose (FORMAT.md 20.6)
 def transpose_inv(t, n, delim, k, quotes, sizes):
     off, end, pos = [], [], 0
@@ -961,6 +1060,11 @@ META = {3: 4, 4: 4, 5: 4, 6: 4, 7: 4, 9: 4, 10: 8, 12: 4}
 
 def check_block(raw, ck, codec, tflag, pay, orig, rt, stats):
     t, a, b, c = pay[:4]
+    if tflag == 13 and codec in NATIVE:
+        d = table_cols_inv(pay[4:], raw, a, codec)
+        need(orig is None or d == orig, "column-split table: bytes differ from the original")
+        stats["block %d, tflag 13 inverse checked against the original" % codec] += 1
+        return
     if codec == 12:
         for sid, cc, rl, z in graph_leaves(pay[4:]):
             if cc in NATIVE:
@@ -980,11 +1084,12 @@ def check_block(raw, ck, codec, tflag, pay, orig, rt, stats):
         d = shuffle_inv(d, raw, a, b, c)
         need(rt or (khash64(d, 0x637a6e31) & 0xFFFFFFFF) == ck, "shuffle inverse: checksum")
         kind = "block %d, shuffle inverse checked" % codec
-    elif tflag in (2, 4, 5, 6, 7, 9, 10, 12) or (tflag == 1 and t == 1):
+    elif tflag in (2, 3, 4, 5, 6, 7, 9, 10, 12) or (tflag == 1 and t == 1):
         if tflag in (1, 2): d = transpose_inv(d, raw, a, c + 1, b if tflag == 1 else 0, struct.unpack_from("<%dI" % (c + 1), pay, 4))
         elif tflag == 6: d = img16_inv(d, raw)
         elif tflag == 7: d = rec_inv(d, raw)
         elif tflag == 4: d = table_inv(d, raw, a)
+        elif tflag == 3: d = table1_inv(d, raw, a)
         elif tflag == 5: d = log_inv(d, raw)
         elif tflag == 9: d = word_inv(d, raw)
         elif tflag == 12: d = lines_inv(d, raw)
@@ -1032,6 +1137,12 @@ def main():
             sys.exit("coder reference accepted a broken stream: " + name)
         except Corrupt:
             pass
+    vec = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vectors", "table_v1")
+    for fn in sorted(os.listdir(vec)):
+        if fn.endswith(".t"):
+            want = open(os.path.join(vec, fn[:-2] + ".csv"), "rb").read()
+            if table1_inv(open(os.path.join(vec, fn), "rb").read(), len(want), ord(",")) != want:
+                sys.exit("table v1 vector failed: " + fn)
     from collections import Counter
     stats = Counter(); bad = []; nframes = 0
     rels = sorted(d for d in os.listdir(root) if d.startswith("r") and os.path.isdir(os.path.join(root, d)))

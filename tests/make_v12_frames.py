@@ -452,6 +452,8 @@ def main():
                 jobs.append((name, data, "L3-typed-huf", ["-3", "-T1", "--typed-huf"]))
             if name in ("text.txt", "values.f64"):
                 jobs.append((name, data, "U-codec-level1", ["-U", "--codec-level", "1"]))
+            if name in ("table.csv", "stations.csv", "derived.csv"):   # queryable archives: column-split tables (tflag 13)
+                for lv in ("3", "9"): jobs.append((name, data, "index" + lv, ["--index", "-" + lv]))
         for name, data, tag, opts in jobs:
             fn = "%s.%s.kolmo" % (name, tag)
             if fn in have: continue
@@ -459,7 +461,8 @@ def main():
             if os.path.exists(orig): data = open(orig, "rb").read()   # the compiler that built them)
             else: open(orig, "wb").write(data)
             dst = os.path.join(out, fn)
-            r = subprocess.run([a.kolmo] + opts + ["-q", "-f", "-T1", orig, "-o", dst], capture_output=True, text=True)
+            cmd = [a.kolmo] + opts + [orig, dst] if opts[0] == "--index" else [a.kolmo] + opts + ["-q", "-f", "-T1", orig, "-o", dst]
+            r = subprocess.run(cmd, capture_output=True, text=True)
             if r.returncode:
                 print("skip", fn, r.stderr.strip()[:200]); continue
             back = os.path.join(tmp, "back")

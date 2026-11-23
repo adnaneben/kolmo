@@ -186,7 +186,7 @@ A decoder must refuse `t > 11`, and plan type 11 with `b > 15` or `c ≠ 0`.
 | 0 | none | 0 | — | — |
 | 1 | typed transpose of delimited text (a: delimiter, c + 1: columns) | 0, 1, 2 | `4·(c+1)`: column sizes, `u32` each (tflag 1 or 2) | raw |
 | 2 | byte-plane shuffle (a: element width 2, 4 or 8; b: channels 1-8; c: delta) | 0, 1 | — | raw |
-| 3 | table | 0, 3 (table v1), 4 (table v2), 13 (column-split, §8.3) | 4: transformed length | raw + 16384 (tflag 3); raw + ⌊raw/8⌋ + 16384 (tflag 4) |
+| 3 | table | 0, 3 (table v1), 4 (table v2), 13 (column-split, §20.10) | 4: transformed length | raw + 16384 (tflag 3); raw + ⌊raw/8⌋ + 16384 (tflag 4) |
 | 4 | log templates (a: tokenizer, 0 words, 1 JSON, 2 minified JSON) | 0, 5, 10 | 4 (tflag 5); 8 (tflag 10) | raw + 16384 |
 | 5 | 16-bit image | 0, 6 | 4 | raw + 16384 |
 | 6 | fixed-size records | 0, 7 | 4 | raw + 16384 |
@@ -297,7 +297,7 @@ A decoder must refuse a value that section does not assign.
 ### 8.3 Column-split table blocks
 
 Plan type 3 with tflag 13 is written only on request (`KOLMO_T_COLUMNS`, used by indexed archives). Its payload is
-specified in SPEC.md, *Column-split table blocks*.
+specified in §20.10.
 
 ## 9. Container extensions
 
@@ -367,7 +367,7 @@ Errors fall into five classes:
 
 | File | Contents |
 |---|---|
-| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 266 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
+| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 272 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
 | `tests/khash64_vectors.txt` | the khash64 vectors |
 | `tests/format_reference.py` | the container layer in Python, checked against both of the above |
 | `tests/coder_reference.py` | the coders and transforms of sections 14 to 21 in Python, decoding every corpus block and leaf that uses them |
@@ -378,16 +378,15 @@ These payloads are specified here only by the reference implementation at tag `v
 and the frozen corpus pins their behaviour on real data. Writing each one out as prose is the next step of the format
 work, in this order (most frames first):
 
-1. table v1 (tflag 3) and the column-split table (tflag 13);
-2. the BWT stream's QLFC coder (18);
-3. kimg (31);
-4. CMP (25).
+1. the BWT stream's QLFC coder (18);
+2. kimg (31);
+3. CMP (25).
 
 Written out so far:
 - sections 14 to 18: KLZH2 (32) with krans, KLZ (28), KLZH (29) and khuf (27);
 - section 19: the byte-plane shuffle (plan 2, tflag 1) and x86 filter (plan 7, tflag 8) inverses;
-- section 20: the line-class, word, log-template, minified-JSON, table v2, transpose, 16-bit image and record inverses
-  (tflags 12, 9, 5, 10, 4, 1, 2, 6, 7);
+- section 20: every transform inverse except the ARM64 filter (SPEC.md) and the shuffle and x86 filter (section 19):
+  tflags 1-7, 9, 10, 12 and 13;
 - section 21: KLZMA (24).
 
 Until a payload has its own section, a change to its decoder that changes the decoded bytes of any version-12 frame is
@@ -951,7 +950,7 @@ those files. Its fast path kept field lengths in 16 bits and never fell back to 
 decode them by the rules above, to the original. `tests/v12/r0.0.2/longfield.csv.*` are two such frames written by
 0.0.2.
 
-Table v1 (tflag 3) and the column-split table (tflag 13) are not written out yet (§13).
+Table v1 (tflag 3) is in §20.9 and the column-split table (tflag 13) in §20.10.
 
 ### 20.6 Typed transpose (plan type 1, tflags 1 and 2)
 
@@ -1040,6 +1039,88 @@ little-endian unsigned `w`-byte integers.
 
 Copy the `pre` bytes to the start and the `tail` bytes to the end of the block. Each field writes its values into its
 bytes of each record.
+
+### 20.9 Table v1 (plan type 3, tflag 3)
+
+The table layout of earlier releases. No 0.0.1 or 0.0.2 encoder writes it, but decoders accept it. Its checks are
+looser than table v2's, and a decoder must reproduce them exactly. In particular, exception entries that do not match
+are skipped, unused numbers are allowed, and bytes after the last column are ignored.
+
+```
+t := k u32 | nr u32 | nexc u32 | noNL u32 | exception × nexc | column × k
+exception := row u32 | fields u32
+column    := type u8 | size u32 | body
+```
+
+**Header.** Refuse when:
+- `t` is shorter than 16 bytes;
+- `k` is 0 or above 256;
+- `16 + 8·nexc > |t|`;
+- `nr > n + 1`, or `nexc > nr`.
+
+**Columns.** Refuse a `type` above 1, or a body that does not fit. Bytes after the last column are ignored.
+- **Type 0, text:** `cnt u32 | nlong u32 | lens u8 × cnt | long u32 × nlong | data`, as in §20.5.
+  - Refuse when the body is shorter than 8 bytes, or the arrays do not fit.
+  - Refuse when a length byte 255 finds no `long` left, or the lengths add up to more than `data`.
+  - Unused `long` values are allowed.
+- **Type 1, numeric:** `cnt u32 | nnum u32 | nx u32 | S u8 | w u8 | kind u8 × cnt | sd u8 × nnum | planes | xlen u32 × nx | xdata`.
+  - Refuse when the body is shorter than 14 bytes, `S > 18`, `w` is 0 or above 8, or the arrays do not fit.
+  - The `nnum` numbers are decoded from the planes as residuals `zigzag⁻¹(z)`. Number `i` is the running sum
+    (wrapping) of residuals 0 to `i`. Refuse when any `sd[i] > S`, even for a number that no entry uses.
+  - Number `i` is printed as `exact(m, sd[i])` (§20.5) in fixed point with `S − sd[i]` decimals (§20.5, step 1,
+    with no characters dropped).
+  - The entries in order:
+    - kind 0 is empty;
+    - kind 1 takes the next number;
+    - kind 2 takes the next text exception, with its length from `xlen`.
+
+    Refuse a kind above 2, a kind 1 with no number left, a kind 2 with no `xlen` left, or exception text past the
+    body. Unused numbers and exceptions are allowed.
+
+**Rows.** Refuse when `nr` exceeds column 0's entry count.
+- Walk the rows 0 to `nr − 1` with an exception cursor `e` starting at 0. Row `r` has `k` fields, unless `e < nexc`
+  and exception `e`'s row is `r`: then the row has that exception's `fields` fields, and `e` advances. Refuse a
+  `fields` of 0 or above `k`.
+- Exceptions that are never matched this way are ignored.
+- Each column `j` must have exactly as many entries as there are rows with more than `j` fields; refuse otherwise.
+
+Write the rows as in §20.5. Fields are separated by the delimiter, every row ends with a newline except the last one
+when `noNL` is non-zero, and the output must be exactly `n` bytes.
+
+`tests/vectors/table_v1/` holds transforms made by the 0.0.2 sources' table-v1 encoder, with their originals.
+
+### 20.10 Column-split table (plan type 3, tflag 13)
+
+The table-v2 stream of §20.5, cut into a header segment and one segment per column, each coded on its own, so a
+reader can decode one column without the others. `kolmo --index` writes it. The payload after the plan prefix is:
+
+```
+payload := tn u32 | nseg u16 | entry × nseg | coded segments, in order
+entry   := codec u8 | raw u32 | coded u32 | check u32
+```
+
+**Directory.** Refuse when:
+- the payload is shorter than 6 bytes;
+- `tn > raw + 16384`, where `raw` is the block's length;
+- `nseg` is below 2 or above 257;
+- the directory does not fit;
+- an entry's codec is neither 0 (stored) nor the block's codec;
+- a stored segment's `coded ≠ raw`;
+- a segment's coded bytes run past the payload;
+- the running sum of `raw` exceeds `tn`;
+- the coded lengths do not add up to exactly the bytes after the directory, or the raw lengths to exactly `tn`.
+
+**Segments.** Decode each segment to its `raw` bytes. Refuse unless `check` equals the low 32 bits of
+`khash64(segment, 0x74626c63)`. Concatenate the segments into the stream `t`.
+
+**Split.** Refuse unless `t` splits exactly as follows:
+- `tn ≥ 24`, `k = u32 t[0..4)` is 1 to 256, `nform = u32 t[20..24)` is at most 256, and `nexc = u32 t[8..12)` is at
+  most `tn`;
+- the header (24 bytes, the formulas and the exceptions) fits;
+- each of the `k` columns' `type u8 | size u32` prefixes and bodies fits, and the last column ends exactly at `tn`;
+- `nseg = k + 1`, segment 0 is the header, and segment `j + 1` is column `j`'s section with its 5-byte prefix.
+
+Then decode `t` by §20.5.
 
 ## 21. KLZMA (codec 24)
 
@@ -1130,12 +1211,13 @@ The encoder ends with 5 flush bytes.
 ### 21.4 Test coverage of sections 20 and 21
 
 `tests/coder_reference.py` decodes all of the following:
-- **Section 20**, compared with the original: 40 corpus blocks coded by KLZH2 or KLZMA under its transforms. These
-  are 2 transpose, 1 16-bit image, 1 record, 15 table, 11 log-template, 5 minified-JSON, 4 word and 1 line-class block.
+- **Section 20**, compared with the original: 46 corpus blocks coded by KLZH2 or KLZMA under its transforms. These
+  are 6 column-split table, 2 transpose, 1 16-bit image, 1 record, 15 table, 11 log-template, 5 minified-JSON, 4 word and 1 line-class block.
   - The table blocks reach numeric modes 0-5, ratio and difference formulas, a group column, short rows, text
     exceptions, empty fields, long-text lengths, fields over 65535 bytes and dropped trailing digits.
   - No corpus block uses the percent-change formula.
   - Blocks under these transforms coded by CM or BWT are not decoded, because those coders are not written out yet.
+- **Table v1** (§20.9): the five vectors of `tests/vectors/table_v1/`, compared with their originals.
 - **Section 21**: 15 KLZMA blocks and 8 KLZMA graph leaves.
   - 6 blocks have no transform and 5 are under the table or log transform; all 11 are compared with the original;
   - 4 are checked through the shuffle or x86 inverse and their block checksum.
