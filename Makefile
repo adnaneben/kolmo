@@ -118,6 +118,8 @@ check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus
 	python3 tests/test_cli.py build/kolmo
 	python3 tests/test_fast_file.py
 	./build/test-v12-corpus tests/v12
+	python3 tests/check_v12_frames.py build/kolmo tests/v12
+	python3 tests/format_reference.py tests/v12
 	./build/test-harden
 	./build/kolmoresource
 	./build/kolmoparallel

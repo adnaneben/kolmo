@@ -1,0 +1,2500 @@
+1790000000.554 WARN [svc-0] worker 28083 finished job 13551 in 5020 ms
+1790000001.332 WARN [svc-1] worker 23817 finished job 19973 in 58626 ms
+1790000001.599 INFO [svc-2] cache miss for key user:8695 shard 28185
+1790000001.952 ERROR [svc-1] request /api/v2/items/17350 took 26974 ms status 5517
+1790000002.805 INFO [svc-1] accepted connection from 10.55561.16968.15353 port 59892
+1790000003.510 DEBUG [svc-0] worker 37548 finished job 18817 in 35648 ms
+1790000003.718 ERROR [svc-3] worker 40677 finished job 52968 in 42470 ms
+1790000004.214 INFO [svc-0] worker 19601 finished job 14628 in 36066 ms
+1790000004.232 INFO [svc-0] request /api/v2/items/57772 took 28915 ms status 49616
+1790000005.066 WARN [svc-2] accepted connection from 10.55682.15378.3753 port 44152
+1790000005.310 DEBUG [svc-0] worker 39989 finished job 1259 in 52275 ms
+1790000006.117 INFO [svc-2] worker 21888 finished job 22736 in 303 ms
+1790000006.439 INFO [svc-0] request /api/v2/items/11982 took 39613 ms status 16541
+1790000006.929 INFO [svc-1] accepted connection from 10.34078.7387.2861 port 36783
+1790000007.700 INFO [svc-1] worker 48835 finished job 3958 in 44550 ms
+1790000008.539 INFO [svc-3] worker 8428 finished job 30050 in 28304 ms
+1790000009.121 INFO [svc-2] worker 29933 finished job 16903 in 32337 ms
+1790000009.561 DEBUG [svc-1] request /api/v2/items/40500 took 40971 ms status 57666
+1790000010.108 DEBUG [svc-0] accepted connection from 10.47141.10936.28440 port 28145
+1790000010.746 DEBUG [svc-0] cache miss for key user:30300 shard 49674
+1790000010.829 WARN [svc-1] accepted connection from 10.11743.43056.40707 port 41240
+1790000011.548 WARN [svc-0] worker 45536 finished job 47780 in 2301 ms
+1790000011.976 INFO [svc-0] accepted connection from 10.2026.12376.57642 port 32289
+1790000012.733 WARN [svc-1] worker 4140 finished job 46826 in 41870 ms
+1790000013.281 WARN [svc-3] cache miss for key user:58825 shard 25468
+1790000014.023 INFO [svc-2] accepted connection from 10.4178.25712.8453 port 19705
+1790000014.601 INFO [svc-3] worker 32044 finished job 32293 in 49470 ms
+1790000015.299 ERROR [svc-3] worker 42190 finished job 26159 in 21034 ms
+1790000016.134 INFO [svc-1] worker 47677 finished job 15458 in 15895 ms
+1790000016.884 WARN [svc-1] request /api/v2/items/13542 took 51945 ms status 31081
+1790000017.428 INFO [svc-2] cache miss for key user:43233 shard 56571
+1790000017.823 INFO [svc-0] cache miss for key user:52062 shard 25729
+1790000018.297 ERROR [svc-1] request /api/v2/items/46834 took 43127 ms status 27334
+1790000018.581 INFO [svc-3] request /api/v2/items/1562 took 2298 ms status 41277
+1790000018.965 INFO [svc-0] worker 27604 finished job 39057 in 43910 ms
+1790000019.746 INFO [svc-0] accepted connection from 10.7683.5083.41252 port 51358
+1790000020.461 INFO [svc-1] request /api/v2/items/25510 took 28158 ms status 52034
+1790000020.583 ERROR [svc-1] accepted connection from 10.23345.53925.52119 port 26752
+1790000021.064 DEBUG [svc-0] request /api/v2/items/43243 took 28763 ms status 46364
+1790000021.081 DEBUG [svc-1] cache miss for key user:14674 shard 11266
+1790000021.760 WARN [svc-2] request /api/v2/items/23599 took 50461 ms status 13675
+1790000022.368 INFO [svc-1] request /api/v2/items/28431 took 18969 ms status 51652
+1790000023.166 ERROR [svc-1] accepted connection from 10.21708.49252.48543 port 13474
+1790000023.888 ERROR [svc-3] accepted connection from 10.44263.41014.31234 port 22102
+1790000024.483 INFO [svc-0] cache miss for key user:31640 shard 5589
+1790000025.001 INFO [svc-1] request /api/v2/items/41408 took 20063 ms status 10828
+1790000025.251 INFO [svc-0] worker 42621 finished job 58970 in 13371 ms
+1790000025.996 INFO [svc-2] accepted connection from 10.11771.57533.12140 port 11158
+1790000026.117 INFO [svc-3] worker 59761 finished job 18403 in 10977 ms
+1790000026.512 INFO [svc-0] accepted connection from 10.57641.4102.47008 port 5631
+1790000026.975 DEBUG [svc-1] accepted connection from 10.7952.12031.53686 port 34617
+1790000027.558 ERROR [svc-2] cache miss for key user:27553 shard 24144
+1790000027.920 DEBUG [svc-1] request /api/v2/items/51215 took 29591 ms status 26821
+1790000028.488 WARN [svc-0] worker 11736 finished job 36784 in 43761 ms
+1790000029.086 INFO [svc-0] worker 35911 finished job 13701 in 38399 ms
+1790000029.515 INFO [svc-2] cache miss for key user:7307 shard 40071
+1790000029.875 INFO [svc-3] cache miss for key user:37252 shard 22912
+1790000030.240 INFO [svc-0] accepted connection from 10.56488.10362.27115 port 32312
+1790000030.413 ERROR [svc-3] worker 1392 finished job 16586 in 30773 ms
+1790000031.079 INFO [svc-2] cache miss for key user:5155 shard 44799
+1790000031.664 DEBUG [svc-2] accepted connection from 10.37570.30727.15082 port 51641
+1790000032.306 ERROR [svc-3] cache miss for key user:45532 shard 51224
+1790000033.100 INFO [svc-3] accepted connection from 10.36500.39931.47240 port 16547
+1790000033.391 WARN [svc-1] request /api/v2/items/18236 took 16738 ms status 27265
+1790000034.113 INFO [svc-0] accepted connection from 10.50816.28156.53550 port 59998
+1790000034.347 DEBUG [svc-1] cache miss for key user:59211 shard 28325
+1790000034.602 ERROR [svc-3] worker 265 finished job 45900 in 46441 ms
+1790000034.810 INFO [svc-0] cache miss for key user:39557 shard 52258
+1790000035.300 DEBUG [svc-0] request /api/v2/items/53579 took 39714 ms status 2732
+1790000035.451 INFO [svc-2] cache miss for key user:26384 shard 50291
+1790000036.336 DEBUG [svc-3] accepted connection from 10.57683.18738.51728 port 40902
+1790000036.680 INFO [svc-1] request /api/v2/items/2598 took 8197 ms status 40625
+1790000037.290 INFO [svc-1] cache miss for key user:53818 shard 19416
+1790000037.449 INFO [svc-1] worker 41764 finished job 44315 in 57445 ms
+1790000038.132 DEBUG [svc-2] request /api/v2/items/3243 took 21279 ms status 59652
+1790000039.002 INFO [svc-2] worker 48233 finished job 25752 in 47400 ms
+1790000039.383 INFO [svc-2] cache miss for key user:15205 shard 24540
+1790000039.653 WARN [svc-1] worker 37706 finished job 14227 in 30161 ms
+1790000039.774 INFO [svc-1] worker 14052 finished job 31009 in 18875 ms
+1790000040.352 ERROR [svc-3] accepted connection from 10.41365.59465.18446 port 50793
+1790000041.006 ERROR [svc-1] accepted connection from 10.31198.27634.55020 port 20908
+1790000041.167 INFO [svc-1] worker 17746 finished job 10816 in 1350 ms
+1790000041.680 INFO [svc-2] accepted connection from 10.54012.41350.12820 port 20320
+1790000041.696 DEBUG [svc-0] accepted connection from 10.15412.42516.28345 port 34429
+1790000042.401 INFO [svc-2] accepted connection from 10.50786.58702.46968 port 4648
+1790000043.075 DEBUG [svc-2] cache miss for key user:40692 shard 50672
+1790000043.299 INFO [svc-3] request /api/v2/items/9276 took 59730 ms status 26660
+1790000043.682 ERROR [svc-0] worker 6978 finished job 12282 in 26165 ms
+1790000043.720 DEBUG [svc-3] accepted connection from 10.55956.47771.7428 port 25255
+1790000043.784 ERROR [svc-1] request /api/v2/items/21137 took 17488 ms status 23360
+1790000044.466 INFO [svc-1] cache miss for key user:21950 shard 20017
+1790000044.673 DEBUG [svc-1] request /api/v2/items/26769 took 46989 ms status 14432
+1790000045.433 DEBUG [svc-2] request /api/v2/items/11621 took 15634 ms status 34841
+1790000045.923 WARN [svc-1] request /api/v2/items/53975 took 58225 ms status 29468
+1790000046.013 DEBUG [svc-0] accepted connection from 10.54597.4537.47630 port 2896
+1790000046.490 DEBUG [svc-1] cache miss for key user:39080 shard 6465
+1790000046.962 DEBUG [svc-0] worker 24009 finished job 22439 in 50135 ms
+1790000047.685 INFO [svc-3] cache miss for key user:1488 shard 10463
+1790000047.773 INFO [svc-2] worker 8903 finished job 42145 in 29232 ms
+1790000048.523 WARN [svc-0] worker 42314 finished job 38869 in 26689 ms
+1790000049.156 INFO [svc-3] cache miss for key user:51459 shard 17000
+1790000049.860 DEBUG [svc-2] cache miss for key user:17992 shard 41009
+1790000050.662 ERROR [svc-3] cache miss for key user:31405 shard 13218
+1790000051.208 WARN [svc-2] cache miss for key user:39967 shard 54240
+1790000051.773 WARN [svc-2] cache miss for key user:53903 shard 30417
+1790000052.382 INFO [svc-0] worker 32296 finished job 57759 in 11137 ms
+1790000053.116 INFO [svc-0] request /api/v2/items/5829 took 59556 ms status 36703
+1790000053.341 WARN [svc-2] request /api/v2/items/33262 took 20879 ms status 33870
+1790000053.880 ERROR [svc-2] worker 12101 finished job 57082 in 8610 ms
+1790000054.654 DEBUG [svc-3] accepted connection from 10.42828.9827.35346 port 27412
+1790000055.346 INFO [svc-0] request /api/v2/items/45091 took 14854 ms status 49491
+1790000056.092 ERROR [svc-3] request /api/v2/items/46317 took 6974 ms status 12413
+1790000056.569 INFO [svc-2] worker 6322 finished job 33935 in 1947 ms
+1790000056.643 DEBUG [svc-0] worker 8230 finished job 53593 in 46916 ms
+1790000057.061 INFO [svc-1] worker 13067 finished job 42564 in 7250 ms
+1790000057.226 INFO [svc-2] request /api/v2/items/29365 took 618 ms status 37681
+1790000057.983 DEBUG [svc-2] accepted connection from 10.48914.50721.23355 port 51771
+1790000058.540 INFO [svc-1] accepted connection from 10.27994.13065.51159 port 47591
+1790000059.068 ERROR [svc-0] accepted connection from 10.30147.57750.10000 port 26517
+1790000059.332 ERROR [svc-0] worker 38572 finished job 46230 in 20937 ms
+1790000059.724 INFO [svc-0] accepted connection from 10.58934.7906.59714 port 25853
+1790000059.940 WARN [svc-2] cache miss for key user:41476 shard 304
+1790000060.736 INFO [svc-3] request /api/v2/items/49630 took 43872 ms status 47885
+1790000061.483 INFO [svc-3] request /api/v2/items/42077 took 31170 ms status 35366
+1790000061.790 INFO [svc-0] cache miss for key user:53190 shard 39858
+1790000061.806 INFO [svc-0] cache miss for key user:32883 shard 10023
+1790000061.822 DEBUG [svc-2] cache miss for key user:41270 shard 42551
+1790000062.582 INFO [svc-0] worker 45461 finished job 16478 in 34164 ms
+1790000063.195 INFO [svc-2] accepted connection from 10.29182.27977.7721 port 14296
+1790000063.318 WARN [svc-1] cache miss for key user:49920 shard 56709
+1790000064.018 INFO [svc-3] request /api/v2/items/56512 took 42510 ms status 56529
+1790000064.098 ERROR [svc-1] cache miss for key user:34951 shard 50256
+1790000064.407 WARN [svc-1] request /api/v2/items/41262 took 17022 ms status 27357
+1790000064.821 INFO [svc-3] worker 58116 finished job 52521 in 6396 ms
+1790000064.887 INFO [svc-0] cache miss for key user:39165 shard 29730
+1790000065.180 INFO [svc-2] worker 43528 finished job 54988 in 37203 ms
+1790000065.444 INFO [svc-1] worker 37264 finished job 22645 in 14318 ms
+1790000066.036 ERROR [svc-1] worker 38564 finished job 27130 in 40147 ms
+1790000066.924 INFO [svc-0] worker 46799 finished job 47040 in 15567 ms
+1790000067.196 INFO [svc-3] request /api/v2/items/54106 took 40285 ms status 29903
+1790000068.047 WARN [svc-0] worker 53268 finished job 15548 in 13083 ms
+1790000068.494 WARN [svc-2] worker 30009 finished job 37542 in 41372 ms
+1790000069.135 DEBUG [svc-1] worker 55422 finished job 22952 in 28655 ms
+1790000069.801 INFO [svc-1] request /api/v2/items/40356 took 58621 ms status 44406
+1790000070.511 INFO [svc-2] accepted connection from 10.31852.30452.56674 port 20827
+1790000070.747 INFO [svc-2] worker 48189 finished job 27565 in 26686 ms
+1790000071.234 DEBUG [svc-1] request /api/v2/items/25399 took 30316 ms status 38806
+1790000072.101 WARN [svc-2] accepted connection from 10.31138.59287.1195 port 24738
+1790000072.114 INFO [svc-1] accepted connection from 10.30.33819.31844 port 56833
+1790000072.861 WARN [svc-0] worker 27210 finished job 40488 in 26627 ms
+1790000073.726 ERROR [svc-2] cache miss for key user:54209 shard 33702
+1790000073.855 WARN [svc-2] accepted connection from 10.24158.25097.28107 port 55266
+1790000074.421 INFO [svc-2] request /api/v2/items/48431 took 37073 ms status 38261
+1790000074.678 WARN [svc-3] request /api/v2/items/49131 took 33937 ms status 42741
+1790000075.486 ERROR [svc-3] cache miss for key user:25238 shard 48393
+1790000075.521 INFO [svc-0] request /api/v2/items/9141 took 13588 ms status 47161
+1790000075.623 WARN [svc-2] worker 43716 finished job 1245 in 43859 ms
+1790000075.821 WARN [svc-3] request /api/v2/items/982 took 34188 ms status 3202
+1790000076.323 INFO [svc-3] accepted connection from 10.21194.51059.48116 port 4684
+1790000076.573 INFO [svc-3] request /api/v2/items/15420 took 20877 ms status 16696
+1790000076.753 DEBUG [svc-0] cache miss for key user:17455 shard 28778
+1790000077.166 ERROR [svc-2] cache miss for key user:38167 shard 7896
+1790000078.014 INFO [svc-2] request /api/v2/items/52969 took 27555 ms status 26853
+1790000078.465 INFO [svc-1] cache miss for key user:17732 shard 15834
+1790000079.252 INFO [svc-1] worker 23235 finished job 59736 in 39759 ms
+1790000079.366 ERROR [svc-2] cache miss for key user:46022 shard 17513
+1790000080.068 INFO [svc-0] cache miss for key user:43173 shard 53072
+1790000080.890 ERROR [svc-0] request /api/v2/items/45374 took 18082 ms status 9670
+1790000081.237 INFO [svc-1] worker 21094 finished job 53015 in 18566 ms
+1790000081.656 ERROR [svc-0] request /api/v2/items/45120 took 16879 ms status 32547
+1790000081.678 INFO [svc-0] accepted connection from 10.31728.5473.58229 port 9862
+1790000081.718 WARN [svc-2] cache miss for key user:34757 shard 25173
+1790000082.436 INFO [svc-2] accepted connection from 10.43608.35056.31309 port 611
+1790000082.525 ERROR [svc-2] request /api/v2/items/30215 took 48336 ms status 32064
+1790000082.575 DEBUG [svc-2] cache miss for key user:3916 shard 25380
+1790000082.883 DEBUG [svc-3] request /api/v2/items/36855 took 16130 ms status 27980
+1790000083.480 INFO [svc-1] accepted connection from 10.15492.26110.4069 port 15347
+1790000083.691 ERROR [svc-2] request /api/v2/items/55395 took 7219 ms status 42907
+1790000084.315 DEBUG [svc-0] worker 46467 finished job 50947 in 24117 ms
+1790000084.777 ERROR [svc-2] cache miss for key user:17376 shard 45881
+1790000085.584 ERROR [svc-1] cache miss for key user:23512 shard 28567
+1790000085.685 ERROR [svc-3] cache miss for key user:58100 shard 5219
+1790000086.100 DEBUG [svc-2] request /api/v2/items/28876 took 29129 ms status 31463
+1790000086.481 INFO [svc-2] accepted connection from 10.33850.37575.33189 port 33152
+1790000086.898 WARN [svc-3] accepted connection from 10.54086.26258.57068 port 52334
+1790000086.997 DEBUG [svc-3] cache miss for key user:54076 shard 3331
+1790000087.318 INFO [svc-2] worker 24518 finished job 15355 in 24970 ms
+1790000087.349 INFO [svc-3] worker 13800 finished job 13423 in 46860 ms
+1790000087.522 INFO [svc-2] worker 57697 finished job 16876 in 46451 ms
+1790000087.817 INFO [svc-2] accepted connection from 10.24766.56992.10447 port 38068
+1790000087.842 WARN [svc-3] request /api/v2/items/4200 took 59229 ms status 51832
+1790000088.456 WARN [svc-1] cache miss for key user:10906 shard 30449
+1790000089.120 INFO [svc-1] worker 14059 finished job 4962 in 52360 ms
+1790000089.379 INFO [svc-3] request /api/v2/items/55231 took 24000 ms status 56020
+1790000089.560 INFO [svc-2] cache miss for key user:35735 shard 48285
+1790000090.113 WARN [svc-0] accepted connection from 10.24643.15693.26465 port 45086
+1790000090.523 DEBUG [svc-1] worker 24375 finished job 27598 in 57130 ms
+1790000090.762 ERROR [svc-1] worker 29707 finished job 53860 in 20040 ms
+1790000091.113 INFO [svc-0] accepted connection from 10.33621.57281.6874 port 5711
+1790000091.539 ERROR [svc-3] cache miss for key user:24831 shard 48305
+1790000091.573 INFO [svc-3] worker 13298 finished job 10636 in 51287 ms
+1790000092.057 DEBUG [svc-0] cache miss for key user:18124 shard 27282
+1790000092.646 INFO [svc-1] worker 42156 finished job 41810 in 12603 ms
+1790000092.741 DEBUG [svc-2] cache miss for key user:4500 shard 47709
+1790000093.311 DEBUG [svc-2] accepted connection from 10.8777.1486.22356 port 48782
+1790000093.528 ERROR [svc-0] worker 9388 finished job 46637 in 58442 ms
+1790000094.351 WARN [svc-1] accepted connection from 10.18597.7043.59862 port 27762
+1790000094.505 INFO [svc-2] worker 46059 finished job 3419 in 52762 ms
+1790000094.649 WARN [svc-1] request /api/v2/items/49130 took 13987 ms status 48138
+1790000094.846 WARN [svc-0] accepted connection from 10.17538.25890.27782 port 7101
+1790000094.871 INFO [svc-0] worker 38428 finished job 14680 in 47220 ms
+1790000094.952 INFO [svc-0] worker 20453 finished job 34453 in 12513 ms
+1790000095.386 WARN [svc-3] accepted connection from 10.44860.6599.12788 port 8557
+1790000095.431 INFO [svc-0] worker 23815 finished job 34073 in 33041 ms
+1790000096.135 INFO [svc-2] accepted connection from 10.46489.54304.5875 port 12157
+1790000097.010 INFO [svc-0] worker 4482 finished job 30659 in 23344 ms
+1790000097.798 ERROR [svc-3] accepted connection from 10.45954.57155.9929 port 9588
+1790000097.938 INFO [svc-2] cache miss for key user:40426 shard 40335
+1790000098.292 INFO [svc-1] cache miss for key user:58002 shard 47145
+1790000099.056 INFO [svc-3] accepted connection from 10.38473.54835.28994 port 30946
+1790000099.117 INFO [svc-1] worker 40094 finished job 17229 in 12227 ms
+1790000099.612 WARN [svc-2] request /api/v2/items/301 took 35301 ms status 45255
+1790000099.641 WARN [svc-0] cache miss for key user:39093 shard 27369
+1790000099.762 DEBUG [svc-0] request /api/v2/items/30096 took 10132 ms status 41457
+1790000100.074 ERROR [svc-2] accepted connection from 10.43871.53778.40926 port 10284
+1790000100.833 ERROR [svc-2] cache miss for key user:59503 shard 31231
+1790000101.097 ERROR [svc-3] worker 2086 finished job 55063 in 9174 ms
+1790000101.760 WARN [svc-2] cache miss for key user:58153 shard 56442
+1790000101.863 INFO [svc-0] accepted connection from 10.31898.10534.44495 port 58347
+1790000102.750 DEBUG [svc-3] worker 7721 finished job 52510 in 26249 ms
+1790000103.320 ERROR [svc-3] cache miss for key user:22398 shard 53889
+1790000103.530 INFO [svc-3] worker 9589 finished job 40259 in 49234 ms
+1790000104.143 DEBUG [svc-2] worker 34465 finished job 38011 in 36167 ms
+1790000104.573 INFO [svc-1] request /api/v2/items/49478 took 7868 ms status 46534
+1790000104.986 INFO [svc-2] cache miss for key user:36125 shard 11596
+1790000104.989 WARN [svc-2] request /api/v2/items/18799 took 9029 ms status 36187
+1790000105.841 INFO [svc-3] worker 14960 finished job 12992 in 45896 ms
+1790000106.314 WARN [svc-3] cache miss for key user:37103 shard 33852
+1790000106.655 INFO [svc-3] accepted connection from 10.15577.31645.32140 port 25312
+1790000107.509 DEBUG [svc-3] request /api/v2/items/43679 took 12884 ms status 16173
+1790000108.146 INFO [svc-1] cache miss for key user:29008 shard 38204
+1790000108.947 DEBUG [svc-0] cache miss for key user:23601 shard 54068
+1790000109.349 DEBUG [svc-0] accepted connection from 10.6235.18974.35801 port 34760
+1790000109.960 WARN [svc-2] worker 53819 finished job 44222 in 48391 ms
+1790000110.169 INFO [svc-0] worker 47747 finished job 46923 in 49005 ms
+1790000110.640 INFO [svc-0] request /api/v2/items/15262 took 23404 ms status 30651
+1790000111.015 INFO [svc-2] worker 19438 finished job 25116 in 10659 ms
+1790000111.767 WARN [svc-2] accepted connection from 10.31858.53945.6652 port 49093
+1790000112.272 INFO [svc-2] cache miss for key user:18449 shard 10096
+1790000112.627 INFO [svc-0] cache miss for key user:51423 shard 17783
+1790000112.653 INFO [svc-0] worker 16240 finished job 28567 in 3285 ms
+1790000113.520 INFO [svc-0] request /api/v2/items/20286 took 48790 ms status 35437
+1790000114.342 ERROR [svc-0] cache miss for key user:9804 shard 15551
+1790000114.395 INFO [svc-3] accepted connection from 10.20376.15501.52740 port 57135
+1790000114.654 DEBUG [svc-3] request /api/v2/items/16231 took 26160 ms status 50296
+1790000115.294 DEBUG [svc-2] cache miss for key user:13940 shard 55505
+1790000115.456 ERROR [svc-0] accepted connection from 10.19853.53757.38584 port 45936
+1790000116.351 WARN [svc-2] cache miss for key user:56042 shard 21179
+1790000117.055 ERROR [svc-1] cache miss for key user:18610 shard 9877
+1790000117.146 ERROR [svc-2] cache miss for key user:29315 shard 50066
+1790000117.750 INFO [svc-1] accepted connection from 10.53315.42561.29408 port 34888
+1790000118.635 INFO [svc-0] worker 8011 finished job 56980 in 3149 ms
+1790000119.273 WARN [svc-3] accepted connection from 10.55009.24370.123 port 52691
+1790000119.577 ERROR [svc-3] request /api/v2/items/23377 took 20356 ms status 12988
+1790000119.917 INFO [svc-1] cache miss for key user:39826 shard 28398
+1790000119.935 ERROR [svc-1] cache miss for key user:17188 shard 29716
+1790000120.036 INFO [svc-1] worker 309 finished job 48386 in 38657 ms
+1790000120.791 INFO [svc-0] worker 31773 finished job 25796 in 58193 ms
+1790000121.321 ERROR [svc-3] worker 2932 finished job 38174 in 22637 ms
+1790000121.796 INFO [svc-2] request /api/v2/items/31993 took 35614 ms status 13551
+1790000122.438 DEBUG [svc-3] cache miss for key user:29425 shard 4260
+1790000123.236 INFO [svc-3] cache miss for key user:18706 shard 6273
+1790000124.061 INFO [svc-2] cache miss for key user:30054 shard 25170
+1790000124.197 WARN [svc-2] request /api/v2/items/15585 took 18693 ms status 40340
+1790000124.227 INFO [svc-1] cache miss for key user:40341 shard 57940
+1790000124.983 WARN [svc-0] worker 23512 finished job 26630 in 38428 ms
+1790000125.471 INFO [svc-3] accepted connection from 10.19257.19457.93 port 16511
+1790000126.343 INFO [svc-3] cache miss for key user:20314 shard 55073
+1790000127.236 ERROR [svc-3] accepted connection from 10.52402.22207.2313 port 28510
+1790000127.509 INFO [svc-2] cache miss for key user:577 shard 42150
+1790000128.132 INFO [svc-0] cache miss for key user:55614 shard 37748
+1790000128.559 DEBUG [svc-0] cache miss for key user:41612 shard 55524
+1790000128.998 INFO [svc-0] worker 53754 finished job 13251 in 36801 ms
+1790000129.594 INFO [svc-1] worker 48142 finished job 7784 in 42293 ms
+1790000130.317 DEBUG [svc-2] worker 54537 finished job 45601 in 41463 ms
+1790000130.843 WARN [svc-2] accepted connection from 10.31475.46483.44978 port 15518
+1790000130.970 DEBUG [svc-0] cache miss for key user:9007 shard 22783
+1790000131.387 INFO [svc-0] worker 28525 finished job 2788 in 45192 ms
+1790000131.944 WARN [svc-1] request /api/v2/items/59560 took 32438 ms status 28297
+1790000132.121 INFO [svc-0] worker 43309 finished job 40886 in 34509 ms
+1790000132.138 INFO [svc-0] worker 49347 finished job 14792 in 27673 ms
+1790000132.726 ERROR [svc-0] worker 23260 finished job 42973 in 29077 ms
+1790000133.533 ERROR [svc-0] accepted connection from 10.42688.14491.9668 port 51284
+1790000133.897 WARN [svc-1] cache miss for key user:7513 shard 7861
+1790000133.951 INFO [svc-3] cache miss for key user:53415 shard 48207
+1790000134.408 INFO [svc-0] accepted connection from 10.2763.5855.50120 port 43384
+1790000135.055 INFO [svc-2] cache miss for key user:33210 shard 11176
+1790000135.651 INFO [svc-2] accepted connection from 10.41395.39335.2871 port 13698
+1790000136.024 WARN [svc-0] cache miss for key user:54908 shard 9331
+1790000136.116 INFO [svc-3] accepted connection from 10.2999.319.52772 port 29011
+1790000136.654 DEBUG [svc-0] accepted connection from 10.38072.26874.10633 port 11442
+1790000137.247 ERROR [svc-0] request /api/v2/items/58696 took 16584 ms status 46399
+1790000137.919 DEBUG [svc-2] cache miss for key user:41712 shard 33085
+1790000138.465 INFO [svc-2] worker 9477 finished job 15285 in 17926 ms
+1790000138.531 INFO [svc-0] cache miss for key user:54612 shard 3175
+1790000138.920 WARN [svc-3] accepted connection from 10.38734.40622.52421 port 51874
+1790000139.749 DEBUG [svc-2] accepted connection from 10.1041.55861.32975 port 20039
+1790000140.344 INFO [svc-2] accepted connection from 10.37669.43005.22389 port 31829
+1790000140.476 INFO [svc-3] worker 471 finished job 27553 in 35092 ms
+1790000140.512 DEBUG [svc-3] accepted connection from 10.8628.57837.3444 port 49106
+1790000141.343 INFO [svc-0] worker 45836 finished job 46711 in 19640 ms
+1790000142.144 ERROR [svc-1] request /api/v2/items/59067 took 48008 ms status 4168
+1790000142.949 WARN [svc-0] request /api/v2/items/45126 took 11253 ms status 32690
+1790000143.158 DEBUG [svc-2] request /api/v2/items/51563 took 28979 ms status 41983
+1790000143.381 INFO [svc-1] request /api/v2/items/27855 took 51289 ms status 33021
+1790000143.714 INFO [svc-1] cache miss for key user:46418 shard 38402
+1790000144.006 INFO [svc-0] request /api/v2/items/41231 took 13127 ms status 24182
+1790000144.538 INFO [svc-0] worker 14748 finished job 22874 in 56202 ms
+1790000144.623 INFO [svc-1] cache miss for key user:23266 shard 18865
+1790000144.716 INFO [svc-2] cache miss for key user:20848 shard 33286
+1790000145.212 INFO [svc-1] accepted connection from 10.59574.18143.42735 port 9668
+1790000145.398 INFO [svc-0] cache miss for key user:30015 shard 54073
+1790000145.456 ERROR [svc-3] accepted connection from 10.14219.15914.44364 port 25960
+1790000145.574 INFO [svc-2] request /api/v2/items/50953 took 15362 ms status 27918
+1790000146.377 WARN [svc-1] worker 12182 finished job 35852 in 27793 ms
+1790000146.886 INFO [svc-2] accepted connection from 10.23902.46443.56033 port 619
+1790000147.116 INFO [svc-0] cache miss for key user:56924 shard 25054
+1790000147.396 DEBUG [svc-1] accepted connection from 10.27678.43941.52106 port 39471
+1790000147.856 DEBUG [svc-0] request /api/v2/items/21328 took 52184 ms status 58894
+1790000148.146 INFO [svc-1] worker 20364 finished job 11127 in 48366 ms
+1790000148.458 INFO [svc-0] accepted connection from 10.31105.24837.4467 port 31922
+1790000148.791 INFO [svc-1] request /api/v2/items/7370 took 45134 ms status 4027
+1790000149.524 WARN [svc-1] request /api/v2/items/26055 took 50218 ms status 23158
+1790000149.843 INFO [svc-1] worker 6347 finished job 35828 in 49085 ms
+1790000150.423 INFO [svc-1] request /api/v2/items/49139 took 19322 ms status 38560
+1790000150.825 INFO [svc-0] worker 21622 finished job 40854 in 29693 ms
+1790000150.924 WARN [svc-1] accepted connection from 10.38387.38120.41791 port 32934
+1790000151.213 INFO [svc-2] accepted connection from 10.5480.2289.29998 port 45107
+1790000151.726 INFO [svc-3] worker 31931 finished job 26467 in 24327 ms
+1790000152.492 INFO [svc-2] accepted connection from 10.6089.24564.54761 port 39110
+1790000153.089 ERROR [svc-0] accepted connection from 10.27639.27457.10617 port 41840
+1790000153.639 ERROR [svc-2] request /api/v2/items/19065 took 16612 ms status 37586
+1790000154.003 ERROR [svc-2] worker 6160 finished job 35670 in 7647 ms
+1790000154.037 INFO [svc-3] accepted connection from 10.24200.45614.59027 port 26881
+1790000154.335 INFO [svc-2] accepted connection from 10.21936.11090.53119 port 43591
+1790000155.085 DEBUG [svc-0] cache miss for key user:12092 shard 31073
+1790000155.329 INFO [svc-3] cache miss for key user:57855 shard 27704
+1790000156.025 DEBUG [svc-1] cache miss for key user:30416 shard 37624
+1790000156.515 WARN [svc-2] accepted connection from 10.53497.20214.20475 port 50281
+1790000157.142 ERROR [svc-0] cache miss for key user:20345 shard 11391
+1790000157.322 INFO [svc-0] worker 52440 finished job 33443 in 8460 ms
+1790000158.003 INFO [svc-0] accepted connection from 10.38568.26109.26698 port 52417
+1790000158.618 INFO [svc-2] worker 13367 finished job 12900 in 48594 ms
+1790000158.645 ERROR [svc-2] cache miss for key user:47706 shard 9272
+1790000158.959 WARN [svc-2] request /api/v2/items/31989 took 56571 ms status 35402
+1790000159.640 WARN [svc-1] worker 14228 finished job 22385 in 18295 ms
+1790000159.901 INFO [svc-3] cache miss for key user:47507 shard 40477
+1790000160.094 INFO [svc-1] request /api/v2/items/8059 took 59226 ms status 29186
+1790000160.869 INFO [svc-1] worker 22591 finished job 34894 in 4718 ms
+1790000161.672 DEBUG [svc-0] accepted connection from 10.7849.37950.44683 port 21582
+1790000162.261 INFO [svc-2] request /api/v2/items/35823 took 29583 ms status 20893
+1790000162.670 WARN [svc-1] worker 41210 finished job 45566 in 41170 ms
+1790000162.728 INFO [svc-3] worker 4550 finished job 2396 in 55333 ms
+1790000163.566 DEBUG [svc-2] request /api/v2/items/55042 took 33300 ms status 46672
+1790000164.399 INFO [svc-0] worker 3226 finished job 23094 in 10136 ms
+1790000165.158 WARN [svc-1] accepted connection from 10.49564.40374.47383 port 59195
+1790000165.528 INFO [svc-1] request /api/v2/items/51618 took 50276 ms status 45942
+1790000165.774 DEBUG [svc-3] accepted connection from 10.8067.50874.48598 port 27120
+1790000165.820 ERROR [svc-2] accepted connection from 10.25824.53507.32570 port 12048
+1790000166.702 INFO [svc-2] accepted connection from 10.48115.6965.23839 port 33261
+1790000166.721 DEBUG [svc-0] worker 11200 finished job 2265 in 46868 ms
+1790000167.193 INFO [svc-2] accepted connection from 10.39216.30941.10679 port 14434
+1790000167.923 ERROR [svc-3] cache miss for key user:3393 shard 51995
+1790000168.680 ERROR [svc-0] cache miss for key user:36238 shard 7455
+1790000168.937 INFO [svc-3] accepted connection from 10.46117.24665.52327 port 52790
+1790000169.168 WARN [svc-2] cache miss for key user:49202 shard 14138
+1790000169.364 INFO [svc-3] cache miss for key user:50014 shard 47725
+1790000169.634 DEBUG [svc-2] request /api/v2/items/47446 took 14686 ms status 2585
+1790000169.969 INFO [svc-1] accepted connection from 10.1002.43414.58259 port 49729
+1790000170.708 INFO [svc-0] cache miss for key user:1889 shard 18172
+1790000170.806 INFO [svc-3] worker 28728 finished job 57069 in 18662 ms
+1790000171.629 INFO [svc-3] worker 46893 finished job 41538 in 57215 ms
+1790000172.267 WARN [svc-2] request /api/v2/items/29775 took 15611 ms status 11136
+1790000172.352 DEBUG [svc-3] request /api/v2/items/22837 took 14461 ms status 49510
+1790000173.158 INFO [svc-0] worker 6366 finished job 22553 in 12374 ms
+1790000173.841 INFO [svc-2] accepted connection from 10.36145.59044.37948 port 479
+1790000174.172 INFO [svc-0] request /api/v2/items/12535 took 6533 ms status 24120
+1790000174.221 ERROR [svc-1] worker 59250 finished job 22862 in 28083 ms
+1790000174.290 INFO [svc-2] accepted connection from 10.14441.26246.6479 port 1542
+1790000175.087 WARN [svc-0] request /api/v2/items/38531 took 50268 ms status 51587
+1790000175.942 INFO [svc-2] cache miss for key user:12827 shard 12832
+1790000176.290 WARN [svc-0] cache miss for key user:11177 shard 45244
+1790000176.698 INFO [svc-1] cache miss for key user:30406 shard 16445
+1790000176.799 INFO [svc-2] worker 26002 finished job 32922 in 26531 ms
+1790000177.182 INFO [svc-0] cache miss for key user:3146 shard 12476
+1790000178.007 INFO [svc-1] worker 34522 finished job 9136 in 589 ms
+1790000178.773 DEBUG [svc-1] worker 52395 finished job 17407 in 1802 ms
+1790000179.487 INFO [svc-3] worker 23247 finished job 52582 in 56241 ms
+1790000180.069 INFO [svc-1] cache miss for key user:53775 shard 3003
+1790000180.473 INFO [svc-0] accepted connection from 10.31710.21823.4381 port 40645
+1790000180.689 INFO [svc-0] accepted connection from 10.30605.7617.49271 port 46624
+1790000181.387 WARN [svc-0] worker 1961 finished job 27257 in 19854 ms
+1790000181.552 WARN [svc-1] worker 25492 finished job 36077 in 7303 ms
+1790000182.072 DEBUG [svc-1] accepted connection from 10.46565.19249.8590 port 25079
+1790000182.305 INFO [svc-0] accepted connection from 10.36544.30526.11667 port 45420
+1790000182.558 INFO [svc-0] cache miss for key user:57164 shard 34729
+1790000182.827 WARN [svc-3] cache miss for key user:39199 shard 34342
+1790000182.950 WARN [svc-1] accepted connection from 10.39836.57541.46400 port 9151
+1790000183.471 ERROR [svc-1] worker 55601 finished job 1263 in 45372 ms
+1790000184.181 DEBUG [svc-3] request /api/v2/items/2943 took 21917 ms status 48077
+1790000184.951 DEBUG [svc-0] cache miss for key user:26404 shard 53179
+1790000185.539 INFO [svc-2] cache miss for key user:57098 shard 30217
+1790000185.821 INFO [svc-2] worker 30505 finished job 28689 in 10461 ms
+1790000186.424 DEBUG [svc-0] cache miss for key user:31195 shard 53518
+1790000187.298 INFO [svc-2] cache miss for key user:36510 shard 33325
+1790000187.528 INFO [svc-2] cache miss for key user:26261 shard 26660
+1790000188.115 ERROR [svc-2] accepted connection from 10.20447.45752.49261 port 10336
+1790000188.386 INFO [svc-0] accepted connection from 10.4620.10225.42011 port 53511
+1790000188.940 INFO [svc-2] cache miss for key user:20538 shard 19024
+1790000189.059 DEBUG [svc-3] accepted connection from 10.802.50730.30404 port 37627
+1790000189.615 INFO [svc-3] worker 7662 finished job 33572 in 14978 ms
+1790000189.661 INFO [svc-2] request /api/v2/items/26931 took 2943 ms status 55261
+1790000190.424 WARN [svc-0] worker 49356 finished job 57399 in 42804 ms
+1790000190.990 INFO [svc-1] request /api/v2/items/7828 took 11901 ms status 54292
+1790000191.081 INFO [svc-0] request /api/v2/items/35287 took 18254 ms status 52919
+1790000191.311 DEBUG [svc-2] accepted connection from 10.22870.12258.53118 port 34423
+1790000191.608 ERROR [svc-3] cache miss for key user:19339 shard 52534
+1790000191.719 INFO [svc-0] cache miss for key user:39149 shard 26027
+1790000191.876 WARN [svc-1] accepted connection from 10.26002.891.47389 port 49788
+1790000192.012 WARN [svc-0] worker 876 finished job 58407 in 21167 ms
+1790000192.469 ERROR [svc-0] cache miss for key user:1053 shard 6916
+1790000192.791 ERROR [svc-1] worker 30155 finished job 32284 in 30864 ms
+1790000193.284 DEBUG [svc-2] accepted connection from 10.40901.13266.51438 port 4432
+1790000193.373 INFO [svc-1] accepted connection from 10.20054.43842.27969 port 47832
+1790000194.244 WARN [svc-0] cache miss for key user:975 shard 46028
+1790000194.340 DEBUG [svc-2] request /api/v2/items/30731 took 27276 ms status 11963
+1790000194.503 INFO [svc-1] request /api/v2/items/28267 took 10461 ms status 42853
+1790000194.767 INFO [svc-3] cache miss for key user:9704 shard 50676
+1790000195.073 INFO [svc-0] worker 26816 finished job 3367 in 44459 ms
+1790000195.435 INFO [svc-2] request /api/v2/items/31116 took 52426 ms status 2776
+1790000195.745 INFO [svc-1] request /api/v2/items/29218 took 21749 ms status 23533
+1790000196.231 WARN [svc-1] request /api/v2/items/53864 took 3564 ms status 38114
+1790000196.268 WARN [svc-0] worker 34292 finished job 10694 in 48127 ms
+1790000196.655 INFO [svc-0] request /api/v2/items/11340 took 1535 ms status 58565
+1790000196.660 WARN [svc-3] cache miss for key user:22729 shard 48929
+1790000197.152 DEBUG [svc-2] accepted connection from 10.46292.1674.39004 port 46249
+1790000197.315 ERROR [svc-1] accepted connection from 10.33455.47174.39091 port 43879
+1790000197.673 INFO [svc-2] accepted connection from 10.34864.19350.53186 port 34853
+1790000198.250 ERROR [svc-1] accepted connection from 10.6064.19702.54080 port 20545
+1790000198.806 INFO [svc-1] accepted connection from 10.36319.47829.19327 port 32181
+1790000199.066 DEBUG [svc-2] request /api/v2/items/56856 took 25118 ms status 519
+1790000199.302 INFO [svc-0] request /api/v2/items/42977 took 54322 ms status 41416
+1790000199.951 INFO [svc-1] worker 13203 finished job 16556 in 36215 ms
+1790000200.706 INFO [svc-3] cache miss for key user:53011 shard 32243
+1790000200.858 DEBUG [svc-2] request /api/v2/items/29896 took 11529 ms status 5146
+1790000201.083 INFO [svc-2] accepted connection from 10.3228.48348.12673 port 17198
+1790000201.124 INFO [svc-1] cache miss for key user:57162 shard 39371
+1790000201.272 INFO [svc-2] cache miss for key user:13841 shard 55201
+1790000201.472 WARN [svc-0] request /api/v2/items/19865 took 5454 ms status 23409
+1790000202.109 WARN [svc-2] worker 32138 finished job 2671 in 19153 ms
+1790000202.270 INFO [svc-2] accepted connection from 10.32070.12291.50111 port 11929
+1790000203.066 WARN [svc-2] cache miss for key user:34077 shard 58687
+1790000203.321 DEBUG [svc-2] worker 50064 finished job 59393 in 38971 ms
+1790000203.440 INFO [svc-2] accepted connection from 10.59765.28765.11096 port 40927
+1790000203.459 INFO [svc-0] worker 55766 finished job 25243 in 5589 ms
+1790000203.891 INFO [svc-2] worker 14727 finished job 17849 in 35338 ms
+1790000204.358 INFO [svc-1] cache miss for key user:20583 shard 1310
+1790000204.899 DEBUG [svc-3] accepted connection from 10.9412.24522.7041 port 10467
+1790000205.788 ERROR [svc-1] accepted connection from 10.55057.57474.33800 port 12974
+1790000205.836 DEBUG [svc-0] cache miss for key user:33900 shard 20145
+1790000206.153 INFO [svc-0] worker 26144 finished job 26084 in 50632 ms
+1790000206.373 INFO [svc-1] accepted connection from 10.31588.46535.186 port 36100
+1790000206.777 INFO [svc-0] cache miss for key user:7368 shard 49402
+1790000207.511 DEBUG [svc-3] accepted connection from 10.32049.2007.5891 port 22522
+1790000207.721 ERROR [svc-1] cache miss for key user:19117 shard 31152
+1790000207.880 DEBUG [svc-0] accepted connection from 10.27732.8017.20155 port 2883
+1790000208.048 ERROR [svc-1] accepted connection from 10.51581.10092.31168 port 28458
+1790000208.294 ERROR [svc-3] worker 21014 finished job 1475 in 3009 ms
+1790000209.077 INFO [svc-2] request /api/v2/items/56376 took 1933 ms status 4063
+1790000209.740 INFO [svc-2] worker 14508 finished job 34432 in 47279 ms
+1790000210.631 INFO [svc-0] cache miss for key user:44190 shard 24549
+1790000211.054 INFO [svc-3] accepted connection from 10.53728.29681.30164 port 20324
+1790000211.840 DEBUG [svc-2] worker 8054 finished job 57281 in 43018 ms
+1790000212.150 INFO [svc-1] cache miss for key user:56755 shard 18039
+1790000212.648 INFO [svc-3] cache miss for key user:41618 shard 46235
+1790000212.983 INFO [svc-3] accepted connection from 10.20919.40042.54923 port 17734
+1790000213.294 DEBUG [svc-1] cache miss for key user:56081 shard 42007
+1790000213.857 INFO [svc-0] accepted connection from 10.21394.55369.53555 port 56604
+1790000214.659 WARN [svc-1] worker 16898 finished job 13385 in 21764 ms
+1790000215.394 WARN [svc-3] cache miss for key user:5759 shard 31472
+1790000215.948 WARN [svc-0] worker 18130 finished job 32738 in 30638 ms
+1790000216.549 INFO [svc-0] accepted connection from 10.11338.53121.22427 port 53238
+1790000217.156 WARN [svc-2] worker 40398 finished job 40428 in 41908 ms
+1790000217.961 INFO [svc-3] request /api/v2/items/11276 took 54962 ms status 39495
+1790000218.186 ERROR [svc-1] worker 40982 finished job 55105 in 12011 ms
+1790000218.838 INFO [svc-0] accepted connection from 10.26687.55676.15686 port 3712
+1790000219.459 ERROR [svc-0] cache miss for key user:43992 shard 24241
+1790000219.717 WARN [svc-0] cache miss for key user:33503 shard 35484
+1790000219.749 INFO [svc-3] cache miss for key user:31437 shard 33338
+1790000220.347 WARN [svc-2] worker 944 finished job 38880 in 15638 ms
+1790000220.444 DEBUG [svc-0] cache miss for key user:22714 shard 51802
+1790000221.059 INFO [svc-2] cache miss for key user:53206 shard 3897
+1790000221.765 ERROR [svc-1] request /api/v2/items/14915 took 33433 ms status 9597
+1790000222.105 WARN [svc-3] worker 37735 finished job 35816 in 19329 ms
+1790000222.684 WARN [svc-3] cache miss for key user:52353 shard 46035
+1790000223.358 DEBUG [svc-3] accepted connection from 10.42039.47709.20847 port 16801
+1790000224.037 ERROR [svc-3] accepted connection from 10.13402.10539.56245 port 15482
+1790000224.562 ERROR [svc-3] cache miss for key user:14162 shard 58359
+1790000224.781 INFO [svc-0] worker 34417 finished job 48638 in 32836 ms
+1790000225.091 ERROR [svc-3] cache miss for key user:19575 shard 53619
+1790000225.350 INFO [svc-3] worker 29248 finished job 45864 in 15023 ms
+1790000225.359 WARN [svc-3] cache miss for key user:42188 shard 38833
+1790000226.112 INFO [svc-0] accepted connection from 10.50553.58575.19252 port 49415
+1790000226.130 INFO [svc-2] request /api/v2/items/23767 took 1861 ms status 59939
+1790000226.912 INFO [svc-1] accepted connection from 10.30047.57148.27266 port 10568
+1790000227.080 ERROR [svc-1] accepted connection from 10.48296.59518.56317 port 35157
+1790000227.754 INFO [svc-3] worker 47444 finished job 53376 in 38356 ms
+1790000228.484 WARN [svc-1] cache miss for key user:45437 shard 5416
+1790000228.655 DEBUG [svc-1] accepted connection from 10.12711.17659.42832 port 15949
+1790000229.279 DEBUG [svc-0] request /api/v2/items/55915 took 55538 ms status 31784
+1790000229.648 INFO [svc-1] accepted connection from 10.1011.54288.15847 port 54640
+1790000229.764 INFO [svc-2] worker 21376 finished job 42835 in 1095 ms
+1790000229.914 ERROR [svc-2] accepted connection from 10.30001.30650.37055 port 32076
+1790000230.238 INFO [svc-2] cache miss for key user:32418 shard 51205
+1790000230.521 INFO [svc-3] cache miss for key user:37522 shard 55388
+1790000230.958 DEBUG [svc-0] request /api/v2/items/38693 took 22636 ms status 22476
+1790000231.236 ERROR [svc-2] cache miss for key user:45186 shard 34242
+1790000231.442 INFO [svc-1] accepted connection from 10.43891.51543.9598 port 1975
+1790000231.984 WARN [svc-0] worker 32401 finished job 58079 in 17229 ms
+1790000232.056 DEBUG [svc-3] worker 195 finished job 40827 in 22279 ms
+1790000232.393 ERROR [svc-1] worker 7809 finished job 51312 in 19808 ms
+1790000232.883 INFO [svc-1] worker 50633 finished job 55251 in 20653 ms
+1790000233.160 INFO [svc-2] request /api/v2/items/16782 took 11359 ms status 17406
+1790000233.504 WARN [svc-3] cache miss for key user:39630 shard 29442
+1790000233.879 INFO [svc-3] cache miss for key user:13744 shard 44320
+1790000234.225 ERROR [svc-0] accepted connection from 10.36712.41872.51456 port 42411
+1790000234.734 INFO [svc-2] accepted connection from 10.37862.53424.27116 port 9038
+1790000235.025 INFO [svc-1] worker 56258 finished job 11564 in 53610 ms
+1790000235.829 INFO [svc-3] request /api/v2/items/30357 took 46354 ms status 3607
+1790000236.703 WARN [svc-0] worker 34445 finished job 17164 in 45976 ms
+1790000236.986 DEBUG [svc-2] accepted connection from 10.43282.12837.40 port 9976
+1790000237.048 DEBUG [svc-2] worker 38710 finished job 4342 in 24419 ms
+1790000237.906 INFO [svc-1] worker 5647 finished job 3209 in 45664 ms
+1790000238.122 INFO [svc-0] worker 16084 finished job 56855 in 7900 ms
+1790000238.193 INFO [svc-1] worker 409 finished job 27112 in 13205 ms
+1790000238.878 INFO [svc-2] accepted connection from 10.48426.39946.54296 port 14523
+1790000239.064 INFO [svc-2] worker 50376 finished job 30617 in 31683 ms
+1790000239.880 WARN [svc-0] request /api/v2/items/34968 took 28256 ms status 57644
+1790000240.246 INFO [svc-2] cache miss for key user:31851 shard 48263
+1790000241.079 ERROR [svc-3] request /api/v2/items/33295 took 47525 ms status 40763
+1790000241.660 WARN [svc-2] request /api/v2/items/58830 took 26474 ms status 35283
+1790000242.402 ERROR [svc-0] accepted connection from 10.24371.48595.24438 port 29647
+1790000242.643 DEBUG [svc-2] cache miss for key user:42716 shard 46924
+1790000243.245 INFO [svc-1] worker 2944 finished job 43450 in 22176 ms
+1790000243.777 ERROR [svc-2] cache miss for key user:54889 shard 9225
+1790000243.833 WARN [svc-3] request /api/v2/items/58735 took 19810 ms status 41108
+1790000244.499 ERROR [svc-3] request /api/v2/items/31001 took 43402 ms status 6363
+1790000245.379 INFO [svc-3] cache miss for key user:55101 shard 7228
+1790000246.260 INFO [svc-2] cache miss for key user:6698 shard 37468
+1790000246.721 INFO [svc-2] cache miss for key user:54239 shard 29425
+1790000247.227 INFO [svc-3] worker 25543 finished job 23834 in 46425 ms
+1790000247.986 INFO [svc-2] cache miss for key user:7510 shard 38233
+1790000248.029 DEBUG [svc-3] worker 40021 finished job 44412 in 48222 ms
+1790000248.133 INFO [svc-0] cache miss for key user:34474 shard 9007
+1790000248.991 WARN [svc-1] accepted connection from 10.48571.28042.18902 port 52095
+1790000249.683 INFO [svc-3] cache miss for key user:18479 shard 18957
+1790000250.484 DEBUG [svc-1] worker 5065 finished job 5725 in 41677 ms
+1790000251.028 WARN [svc-2] request /api/v2/items/51122 took 26221 ms status 6456
+1790000251.302 DEBUG [svc-2] request /api/v2/items/46127 took 48091 ms status 52787
+1790000251.585 INFO [svc-2] cache miss for key user:52528 shard 21077
+1790000252.024 INFO [svc-3] accepted connection from 10.44047.13059.4073 port 23420
+1790000252.218 INFO [svc-2] accepted connection from 10.23948.2051.17686 port 21745
+1790000252.855 WARN [svc-3] cache miss for key user:23871 shard 23163
+1790000253.236 WARN [svc-3] cache miss for key user:15317 shard 39600
+1790000253.781 ERROR [svc-1] cache miss for key user:42314 shard 13898
+1790000254.575 DEBUG [svc-2] cache miss for key user:11137 shard 58628
+1790000254.799 ERROR [svc-1] cache miss for key user:22684 shard 16388
+1790000255.025 ERROR [svc-0] cache miss for key user:20352 shard 28780
+1790000255.557 INFO [svc-0] cache miss for key user:35986 shard 17366
+1790000256.042 WARN [svc-3] cache miss for key user:4665 shard 2560
+1790000256.791 INFO [svc-3] accepted connection from 10.24204.48504.1925 port 29923
+1790000256.907 ERROR [svc-3] accepted connection from 10.54943.15577.31612 port 23260
+1790000257.339 INFO [svc-3] cache miss for key user:51425 shard 5646
+1790000257.850 INFO [svc-3] cache miss for key user:46289 shard 35044
+1790000258.546 INFO [svc-0] cache miss for key user:11252 shard 43205
+1790000259.172 INFO [svc-0] cache miss for key user:35643 shard 53320
+1790000259.382 DEBUG [svc-3] accepted connection from 10.9101.44392.7864 port 25849
+1790000259.930 WARN [svc-3] cache miss for key user:15148 shard 36721
+1790000260.508 INFO [svc-3] accepted connection from 10.29435.24052.11592 port 44385
+1790000261.144 INFO [svc-3] accepted connection from 10.50678.16078.39761 port 29931
+1790000261.477 DEBUG [svc-2] request /api/v2/items/11225 took 38542 ms status 8901
+1790000261.750 ERROR [svc-3] cache miss for key user:36538 shard 7760
+1790000262.015 ERROR [svc-3] cache miss for key user:45527 shard 41179
+1790000262.872 INFO [svc-3] worker 28032 finished job 9581 in 57489 ms
+1790000263.502 INFO [svc-1] worker 50191 finished job 30971 in 14305 ms
+1790000264.156 INFO [svc-0] accepted connection from 10.45389.324.23308 port 38202
+1790000264.649 ERROR [svc-2] cache miss for key user:32744 shard 28975
+1790000265.068 INFO [svc-1] request /api/v2/items/19466 took 3027 ms status 2947
+1790000265.447 INFO [svc-3] worker 7281 finished job 12685 in 41981 ms
+1790000266.002 INFO [svc-3] accepted connection from 10.57811.14339.22069 port 40089
+1790000266.573 WARN [svc-1] cache miss for key user:35637 shard 21924
+1790000266.986 INFO [svc-0] accepted connection from 10.22838.11932.33735 port 26624
+1790000267.446 INFO [svc-3] worker 58563 finished job 13703 in 760 ms
+1790000268.236 ERROR [svc-1] accepted connection from 10.40139.12119.10206 port 51458
+1790000268.672 DEBUG [svc-3] worker 8271 finished job 47152 in 37926 ms
+1790000269.013 DEBUG [svc-2] accepted connection from 10.55309.55636.32398 port 16386
+1790000269.407 INFO [svc-1] worker 6250 finished job 32852 in 14462 ms
+1790000270.239 INFO [svc-1] accepted connection from 10.7479.44468.14233 port 39506
+1790000270.717 WARN [svc-2] request /api/v2/items/43374 took 8180 ms status 46072
+1790000270.992 DEBUG [svc-0] worker 28767 finished job 21768 in 49560 ms
+1790000271.137 INFO [svc-2] accepted connection from 10.46215.15943.58863 port 51860
+1790000271.209 INFO [svc-0] request /api/v2/items/40678 took 37571 ms status 28384
+1790000271.302 INFO [svc-2] request /api/v2/items/47949 took 38421 ms status 21075
+1790000272.153 WARN [svc-1] cache miss for key user:13370 shard 55295
+1790000272.258 WARN [svc-2] worker 56851 finished job 7616 in 48370 ms
+1790000272.265 INFO [svc-2] request /api/v2/items/45104 took 38778 ms status 10499
+1790000272.583 WARN [svc-0] accepted connection from 10.25498.49379.7819 port 8522
+1790000272.694 INFO [svc-1] cache miss for key user:50766 shard 34426
+1790000273.542 INFO [svc-1] request /api/v2/items/56152 took 54008 ms status 4318
+1790000274.403 INFO [svc-3] worker 40488 finished job 56643 in 35995 ms
+1790000275.063 INFO [svc-0] accepted connection from 10.57170.9271.38768 port 32209
+1790000275.526 INFO [svc-0] worker 52327 finished job 38127 in 15621 ms
+1790000276.106 INFO [svc-1] accepted connection from 10.57486.20211.37539 port 17852
+1790000276.262 ERROR [svc-3] worker 59946 finished job 38825 in 48282 ms
+1790000276.581 INFO [svc-2] cache miss for key user:32956 shard 47476
+1790000277.346 INFO [svc-2] accepted connection from 10.15740.2422.58908 port 36526
+1790000278.217 DEBUG [svc-2] cache miss for key user:52917 shard 18613
+1790000278.982 INFO [svc-3] accepted connection from 10.39777.55155.910 port 26250
+1790000279.306 INFO [svc-3] request /api/v2/items/48396 took 57972 ms status 50156
+1790000279.940 INFO [svc-2] worker 57821 finished job 29067 in 24517 ms
+1790000280.795 INFO [svc-2] accepted connection from 10.845.43692.37757 port 48974
+1790000281.630 INFO [svc-1] worker 58208 finished job 10310 in 35046 ms
+1790000282.522 INFO [svc-1] cache miss for key user:35710 shard 14954
+1790000282.811 ERROR [svc-2] cache miss for key user:5672 shard 15722
+1790000283.294 ERROR [svc-1] request /api/v2/items/18738 took 45946 ms status 55455
+1790000284.001 ERROR [svc-3] accepted connection from 10.49869.28820.8791 port 40210
+1790000284.513 INFO [svc-3] worker 45107 finished job 55404 in 10246 ms
+1790000285.105 DEBUG [svc-2] cache miss for key user:35215 shard 385
+1790000285.461 WARN [svc-0] accepted connection from 10.53149.8674.46183 port 40683
+1790000285.527 DEBUG [svc-1] worker 15750 finished job 11195 in 55121 ms
+1790000285.744 INFO [svc-3] cache miss for key user:19823 shard 35969
+1790000286.334 DEBUG [svc-1] cache miss for key user:37927 shard 32229
+1790000286.873 INFO [svc-0] accepted connection from 10.3523.23373.19794 port 331
+1790000287.115 WARN [svc-0] worker 39919 finished job 53685 in 32518 ms
+1790000287.626 WARN [svc-3] accepted connection from 10.26056.20605.14371 port 11507
+1790000287.978 WARN [svc-3] cache miss for key user:17951 shard 16474
+1790000288.545 INFO [svc-3] worker 5414 finished job 34009 in 42969 ms
+1790000288.587 WARN [svc-0] worker 53963 finished job 31315 in 57478 ms
+1790000289.023 INFO [svc-2] accepted connection from 10.12178.15825.34495 port 19637
+1790000289.526 WARN [svc-1] accepted connection from 10.52902.34663.8981 port 22184
+1790000289.924 WARN [svc-2] cache miss for key user:28276 shard 41474
+1790000290.142 INFO [svc-3] request /api/v2/items/24727 took 52320 ms status 5085
+1790000290.355 INFO [svc-3] accepted connection from 10.44802.15086.58923 port 7917
+1790000290.510 DEBUG [svc-0] cache miss for key user:4801 shard 2100
+1790000290.838 ERROR [svc-0] worker 52586 finished job 791 in 42714 ms
+1790000291.525 WARN [svc-0] worker 16046 finished job 27218 in 41706 ms
+1790000292.390 ERROR [svc-1] request /api/v2/items/13860 took 23944 ms status 12885
+1790000292.485 WARN [svc-1] worker 34900 finished job 5258 in 43811 ms
+1790000292.548 ERROR [svc-1] worker 33077 finished job 49441 in 24028 ms
+1790000292.668 DEBUG [svc-2] cache miss for key user:25737 shard 50211
+1790000292.870 INFO [svc-1] accepted connection from 10.12506.45504.39399 port 48915
+1790000293.646 WARN [svc-0] accepted connection from 10.27217.8560.20509 port 14380
+1790000294.415 INFO [svc-3] cache miss for key user:38210 shard 6810
+1790000295.092 INFO [svc-3] cache miss for key user:51194 shard 13855
+1790000295.110 ERROR [svc-2] worker 46913 finished job 34319 in 14403 ms
+1790000295.415 INFO [svc-1] accepted connection from 10.26747.11502.6067 port 44295
+1790000295.594 INFO [svc-2] cache miss for key user:10239 shard 45844
+1790000295.936 ERROR [svc-3] worker 15902 finished job 53318 in 12324 ms
+1790000296.131 ERROR [svc-1] request /api/v2/items/10604 took 47763 ms status 39402
+1790000296.159 INFO [svc-0] request /api/v2/items/3361 took 23440 ms status 46811
+1790000296.481 WARN [svc-2] cache miss for key user:15582 shard 4770
+1790000297.252 WARN [svc-3] accepted connection from 10.11328.32439.26439 port 20563
+1790000297.917 INFO [svc-1] accepted connection from 10.25228.8270.55728 port 46002
+1790000298.775 INFO [svc-0] cache miss for key user:41426 shard 48189
+1790000298.849 WARN [svc-1] cache miss for key user:29737 shard 46831
+1790000299.596 INFO [svc-2] cache miss for key user:58353 shard 21801
+1790000300.127 INFO [svc-0] request /api/v2/items/18074 took 45297 ms status 44392
+1790000300.196 INFO [svc-0] cache miss for key user:16942 shard 15148
+1790000300.890 WARN [svc-0] request /api/v2/items/40362 took 29955 ms status 34572
+1790000301.783 INFO [svc-3] accepted connection from 10.1302.43866.37402 port 33126
+1790000301.835 DEBUG [svc-2] request /api/v2/items/51040 took 39332 ms status 6054
+1790000302.648 WARN [svc-0] accepted connection from 10.24664.39414.35343 port 26894
+1790000302.789 ERROR [svc-0] accepted connection from 10.17172.36518.27741 port 20265
+1790000302.953 ERROR [svc-0] worker 725 finished job 29735 in 48213 ms
+1790000303.302 ERROR [svc-0] worker 9110 finished job 3175 in 55950 ms
+1790000303.559 INFO [svc-1] request /api/v2/items/11410 took 19702 ms status 35146
+1790000303.573 ERROR [svc-3] worker 9827 finished job 4878 in 57889 ms
+1790000303.984 ERROR [svc-1] accepted connection from 10.32795.29304.40021 port 20817
+1790000304.708 ERROR [svc-3] request /api/v2/items/32552 took 1951 ms status 35263
+1790000304.784 DEBUG [svc-2] accepted connection from 10.48938.37138.29379 port 3017
+1790000305.220 DEBUG [svc-3] accepted connection from 10.52456.11084.3518 port 21949
+1790000305.448 INFO [svc-3] cache miss for key user:4311 shard 10584
+1790000305.469 DEBUG [svc-1] cache miss for key user:34082 shard 29544
+1790000305.978 INFO [svc-3] worker 29206 finished job 33109 in 25135 ms
+1790000306.133 DEBUG [svc-3] accepted connection from 10.39516.49916.20864 port 45215
+1790000306.799 WARN [svc-0] worker 18080 finished job 10379 in 2609 ms
+1790000307.150 INFO [svc-0] cache miss for key user:10084 shard 49290
+1790000307.374 WARN [svc-2] accepted connection from 10.10685.20907.3599 port 16706
+1790000308.039 INFO [svc-1] cache miss for key user:41261 shard 3785
+1790000308.275 WARN [svc-1] worker 36475 finished job 32040 in 53801 ms
+1790000308.512 WARN [svc-0] request /api/v2/items/44964 took 30404 ms status 30356
+1790000308.570 DEBUG [svc-0] worker 6962 finished job 11225 in 20886 ms
+1790000309.076 INFO [svc-2] request /api/v2/items/37378 took 7092 ms status 6629
+1790000309.793 DEBUG [svc-2] accepted connection from 10.43284.40007.49325 port 46925
+1790000310.373 INFO [svc-0] worker 343 finished job 45902 in 52764 ms
+1790000311.208 INFO [svc-1] cache miss for key user:43359 shard 27409
+1790000311.839 INFO [svc-1] accepted connection from 10.41334.9070.2355 port 18722
+1790000312.401 ERROR [svc-0] worker 45891 finished job 55654 in 6688 ms
+1790000312.910 INFO [svc-0] worker 44574 finished job 24698 in 48427 ms
+1790000313.608 DEBUG [svc-0] worker 37830 finished job 27198 in 59346 ms
+1790000314.302 INFO [svc-1] request /api/v2/items/30613 took 38083 ms status 53881
+1790000314.732 ERROR [svc-2] cache miss for key user:56111 shard 37150
+1790000315.081 INFO [svc-0] worker 26782 finished job 24825 in 39586 ms
+1790000315.739 ERROR [svc-1] worker 49474 finished job 53165 in 38958 ms
+1790000315.909 INFO [svc-3] accepted connection from 10.55474.48588.44568 port 42846
+1790000316.592 INFO [svc-1] request /api/v2/items/39217 took 20999 ms status 28596
+1790000316.697 INFO [svc-2] accepted connection from 10.24329.23645.16904 port 52740
+1790000317.580 INFO [svc-2] cache miss for key user:30280 shard 37238
+1790000317.850 ERROR [svc-2] cache miss for key user:345 shard 36276
+1790000318.228 WARN [svc-1] worker 23770 finished job 47234 in 18972 ms
+1790000318.987 WARN [svc-0] accepted connection from 10.58166.20156.12935 port 21915
+1790000319.175 DEBUG [svc-1] request /api/v2/items/59377 took 43301 ms status 18783
+1790000319.507 INFO [svc-1] request /api/v2/items/51783 took 26871 ms status 57518
+1790000320.398 INFO [svc-1] worker 889 finished job 43591 in 37895 ms
+1790000320.538 INFO [svc-2] cache miss for key user:32621 shard 42328
+1790000321.022 INFO [svc-2] worker 39652 finished job 14546 in 33647 ms
+1790000321.501 DEBUG [svc-3] request /api/v2/items/51919 took 56225 ms status 23353
+1790000322.292 INFO [svc-3] accepted connection from 10.16987.7172.15276 port 39109
+1790000322.832 INFO [svc-2] worker 1672 finished job 19106 in 9735 ms
+1790000323.302 WARN [svc-0] request /api/v2/items/44435 took 39239 ms status 2836
+1790000323.475 WARN [svc-1] accepted connection from 10.42097.40490.25237 port 15758
+1790000324.247 ERROR [svc-1] worker 41811 finished job 33335 in 59655 ms
+1790000325.078 INFO [svc-3] accepted connection from 10.36656.30270.44477 port 13877
+1790000325.836 WARN [svc-2] accepted connection from 10.8842.55000.20195 port 37915
+1790000326.490 INFO [svc-2] worker 6096 finished job 14917 in 42995 ms
+1790000327.159 INFO [svc-2] cache miss for key user:22192 shard 4550
+1790000327.197 ERROR [svc-1] accepted connection from 10.12793.45407.55288 port 236
+1790000327.911 INFO [svc-3] worker 19319 finished job 18375 in 3538 ms
+1790000327.959 INFO [svc-1] request /api/v2/items/8677 took 18454 ms status 25490
+1790000328.453 WARN [svc-2] request /api/v2/items/57542 took 12507 ms status 51607
+1790000328.583 ERROR [svc-2] cache miss for key user:56886 shard 48140
+1790000329.074 WARN [svc-1] cache miss for key user:42535 shard 14036
+1790000329.355 ERROR [svc-2] accepted connection from 10.5846.59806.53257 port 19193
+1790000329.652 INFO [svc-1] cache miss for key user:23694 shard 30586
+1790000329.883 INFO [svc-2] request /api/v2/items/32309 took 20818 ms status 4987
+1790000330.609 INFO [svc-1] accepted connection from 10.39645.45749.26172 port 7226
+1790000330.843 WARN [svc-0] request /api/v2/items/6186 took 32349 ms status 35220
+1790000331.737 INFO [svc-3] cache miss for key user:18206 shard 44363
+1790000332.429 ERROR [svc-1] worker 38496 finished job 37884 in 3079 ms
+1790000332.591 ERROR [svc-3] worker 6884 finished job 40653 in 35131 ms
+1790000332.847 INFO [svc-2] worker 7396 finished job 49367 in 26399 ms
+1790000332.959 INFO [svc-1] request /api/v2/items/55208 took 51785 ms status 25599
+1790000333.760 ERROR [svc-2] accepted connection from 10.9981.50215.5960 port 55605
+1790000334.545 WARN [svc-3] cache miss for key user:36735 shard 55521
+1790000334.624 INFO [svc-1] accepted connection from 10.13850.48625.2343 port 5910
+1790000335.182 WARN [svc-2] request /api/v2/items/35571 took 41628 ms status 31297
+1790000335.818 INFO [svc-1] request /api/v2/items/32110 took 57235 ms status 27015
+1790000336.007 ERROR [svc-0] cache miss for key user:19147 shard 45135
+1790000336.371 WARN [svc-0] accepted connection from 10.41199.55673.18238 port 3636
+1790000336.539 INFO [svc-3] cache miss for key user:57393 shard 53238
+1790000337.409 INFO [svc-3] request /api/v2/items/15588 took 16179 ms status 59105
+1790000337.966 DEBUG [svc-2] worker 58705 finished job 1147 in 39322 ms
+1790000338.642 ERROR [svc-1] accepted connection from 10.25095.8279.50581 port 4026
+1790000339.375 INFO [svc-0] cache miss for key user:53530 shard 48491
+1790000339.706 INFO [svc-0] accepted connection from 10.56260.19585.54122 port 11265
+1790000340.460 ERROR [svc-0] cache miss for key user:36667 shard 5225
+1790000341.264 WARN [svc-1] worker 24999 finished job 2375 in 13684 ms
+1790000342.156 ERROR [svc-0] request /api/v2/items/41974 took 7452 ms status 25054
+1790000342.976 INFO [svc-0] accepted connection from 10.15816.54693.46380 port 59588
+1790000343.552 WARN [svc-2] worker 42088 finished job 21733 in 11347 ms
+1790000344.380 WARN [svc-3] cache miss for key user:20563 shard 15563
+1790000345.136 ERROR [svc-0] cache miss for key user:41962 shard 59991
+1790000345.727 INFO [svc-3] worker 48729 finished job 31496 in 15137 ms
+1790000346.041 WARN [svc-0] accepted connection from 10.13208.47917.38628 port 57569
+1790000346.808 INFO [svc-3] accepted connection from 10.39570.47055.52019 port 12929
+1790000347.076 ERROR [svc-2] cache miss for key user:15910 shard 29494
+1790000347.925 INFO [svc-0] worker 58032 finished job 26675 in 44973 ms
+1790000348.802 DEBUG [svc-3] worker 55488 finished job 16697 in 59782 ms
+1790000349.600 INFO [svc-3] cache miss for key user:46350 shard 14958
+1790000349.700 DEBUG [svc-1] worker 2762 finished job 33716 in 9414 ms
+1790000350.500 ERROR [svc-0] request /api/v2/items/16990 took 6637 ms status 47336
+1790000350.618 DEBUG [svc-0] accepted connection from 10.22041.18435.50425 port 46351
+1790000351.288 INFO [svc-0] request /api/v2/items/24732 took 3123 ms status 51700
+1790000351.927 WARN [svc-0] worker 57048 finished job 56794 in 57783 ms
+1790000352.120 INFO [svc-2] request /api/v2/items/24326 took 11696 ms status 16238
+1790000352.863 INFO [svc-2] worker 10742 finished job 7366 in 41297 ms
+1790000352.989 DEBUG [svc-2] accepted connection from 10.41376.18003.59368 port 48412
+1790000353.805 DEBUG [svc-3] worker 36838 finished job 7132 in 39100 ms
+1790000354.593 ERROR [svc-3] request /api/v2/items/39798 took 24415 ms status 16000
+1790000354.601 ERROR [svc-2] request /api/v2/items/18511 took 29659 ms status 49332
+1790000354.978 INFO [svc-3] accepted connection from 10.43332.43397.34849 port 51635
+1790000355.402 INFO [svc-0] accepted connection from 10.41044.54577.59370 port 40371
+1790000355.835 WARN [svc-2] worker 36339 finished job 28668 in 55266 ms
+1790000356.456 INFO [svc-3] request /api/v2/items/3497 took 34644 ms status 40557
+1790000356.469 ERROR [svc-0] accepted connection from 10.15143.34882.55988 port 58319
+1790000356.741 DEBUG [svc-1] worker 40070 finished job 33154 in 54709 ms
+1790000357.031 INFO [svc-1] cache miss for key user:8335 shard 14115
+1790000357.379 INFO [svc-1] accepted connection from 10.53468.22134.24033 port 54252
+1790000357.796 INFO [svc-1] accepted connection from 10.35917.11031.54257 port 59705
+1790000358.311 WARN [svc-1] accepted connection from 10.15525.2960.59768 port 53544
+1790000358.605 INFO [svc-0] cache miss for key user:21327 shard 24977
+1790000359.114 WARN [svc-2] accepted connection from 10.42522.30960.315 port 18334
+1790000359.883 INFO [svc-0] worker 44698 finished job 32652 in 24428 ms
+1790000360.055 ERROR [svc-3] request /api/v2/items/15283 took 5537 ms status 54536
+1790000360.452 INFO [svc-2] accepted connection from 10.41922.2499.35308 port 20338
+1790000361.111 DEBUG [svc-2] cache miss for key user:46979 shard 36960
+1790000361.950 INFO [svc-1] cache miss for key user:50961 shard 8050
+1790000362.569 DEBUG [svc-2] cache miss for key user:40477 shard 54755
+1790000362.816 INFO [svc-0] worker 44845 finished job 59345 in 26986 ms
+1790000363.144 INFO [svc-1] request /api/v2/items/56802 took 43190 ms status 23672
+1790000363.794 INFO [svc-2] request /api/v2/items/31772 took 21235 ms status 16541
+1790000364.325 ERROR [svc-1] request /api/v2/items/55102 took 21006 ms status 25246
+1790000364.456 WARN [svc-2] accepted connection from 10.41725.41889.38954 port 15267
+1790000364.560 WARN [svc-0] request /api/v2/items/22573 took 41080 ms status 17943
+1790000365.123 INFO [svc-2] accepted connection from 10.56869.53168.10744 port 51116
+1790000365.376 ERROR [svc-1] accepted connection from 10.5793.40354.19958 port 6394
+1790000365.859 INFO [svc-3] request /api/v2/items/35942 took 11883 ms status 49525
+1790000366.576 INFO [svc-0] request /api/v2/items/32734 took 49796 ms status 30986
+1790000367.382 INFO [svc-3] accepted connection from 10.45566.40198.23358 port 23461
+1790000367.426 DEBUG [svc-1] cache miss for key user:55770 shard 49198
+1790000367.512 INFO [svc-2] request /api/v2/items/124 took 27290 ms status 49791
+1790000368.284 INFO [svc-1] cache miss for key user:159 shard 37332
+1790000368.477 DEBUG [svc-3] worker 7848 finished job 52410 in 56 ms
+1790000368.916 ERROR [svc-3] accepted connection from 10.43861.17014.6262 port 32922
+1790000369.120 DEBUG [svc-3] worker 49039 finished job 25262 in 7809 ms
+1790000369.207 INFO [svc-1] cache miss for key user:13072 shard 42306
+1790000369.291 INFO [svc-2] request /api/v2/items/14011 took 51663 ms status 41443
+1790000369.670 INFO [svc-2] accepted connection from 10.6760.53195.32345 port 26965
+1790000370.378 ERROR [svc-1] cache miss for key user:57391 shard 53057
+1790000370.637 INFO [svc-3] worker 18699 finished job 58852 in 26682 ms
+1790000370.873 DEBUG [svc-1] accepted connection from 10.53688.5716.9175 port 21123
+1790000371.450 ERROR [svc-2] request /api/v2/items/39517 took 42645 ms status 33962
+1790000372.311 INFO [svc-3] cache miss for key user:13756 shard 48566
+1790000372.913 INFO [svc-2] accepted connection from 10.15911.40840.22055 port 26287
+1790000373.601 INFO [svc-0] cache miss for key user:10702 shard 9518
+1790000374.088 ERROR [svc-2] accepted connection from 10.5964.31081.26185 port 38505
+1790000374.812 INFO [svc-1] request /api/v2/items/39852 took 19391 ms status 25653
+1790000375.342 ERROR [svc-3] cache miss for key user:22676 shard 7027
+1790000376.021 DEBUG [svc-2] worker 40051 finished job 54082 in 40875 ms
+1790000376.777 INFO [svc-1] accepted connection from 10.4450.20914.38301 port 2535
+1790000377.487 WARN [svc-0] request /api/v2/items/16475 took 1200 ms status 35418
+1790000378.068 ERROR [svc-1] request /api/v2/items/48697 took 35072 ms status 35193
+1790000378.767 INFO [svc-0] request /api/v2/items/49250 took 9232 ms status 26930
+1790000378.886 DEBUG [svc-0] accepted connection from 10.49327.59701.12784 port 48014
+1790000379.465 INFO [svc-3] accepted connection from 10.32527.16155.2467 port 11612
+1790000379.751 DEBUG [svc-0] accepted connection from 10.29516.44234.20407 port 35590
+1790000379.947 INFO [svc-1] request /api/v2/items/33208 took 36472 ms status 53579
+1790000380.362 DEBUG [svc-3] accepted connection from 10.29467.35315.20838 port 49330
+1790000381.090 INFO [svc-1] request /api/v2/items/12973 took 46287 ms status 10025
+1790000381.459 DEBUG [svc-3] worker 27682 finished job 35662 in 59776 ms
+1790000381.708 WARN [svc-2] cache miss for key user:22401 shard 878
+1790000382.443 ERROR [svc-1] accepted connection from 10.15860.42238.45898 port 55526
+1790000382.602 WARN [svc-0] worker 21761 finished job 50893 in 59114 ms
+1790000382.723 INFO [svc-1] accepted connection from 10.6388.2651.36874 port 19283
+1790000383.614 ERROR [svc-1] request /api/v2/items/39222 took 44495 ms status 50662
+1790000384.270 INFO [svc-0] accepted connection from 10.49816.37214.17292 port 41977
+1790000384.887 ERROR [svc-0] request /api/v2/items/24031 took 58360 ms status 49783
+1790000385.370 INFO [svc-2] cache miss for key user:3044 shard 53961
+1790000385.949 DEBUG [svc-0] worker 26804 finished job 26174 in 53343 ms
+1790000386.426 DEBUG [svc-1] request /api/v2/items/32924 took 7095 ms status 52381
+1790000387.231 INFO [svc-2] request /api/v2/items/24937 took 31608 ms status 22253
+1790000387.301 INFO [svc-0] cache miss for key user:10392 shard 13309
+1790000387.681 WARN [svc-3] cache miss for key user:13430 shard 57071
+1790000388.412 INFO [svc-0] cache miss for key user:43315 shard 27301
+1790000388.912 WARN [svc-2] accepted connection from 10.5572.6884.58952 port 58228
+1790000389.720 ERROR [svc-2] worker 32481 finished job 30238 in 51138 ms
+1790000390.128 ERROR [svc-0] worker 22224 finished job 6473 in 5252 ms
+1790000391.026 DEBUG [svc-2] request /api/v2/items/43471 took 13129 ms status 51366
+1790000391.588 INFO [svc-1] request /api/v2/items/38446 took 23986 ms status 14054
+1790000392.444 INFO [svc-1] request /api/v2/items/23408 took 2465 ms status 4772
+1790000393.029 INFO [svc-1] request /api/v2/items/41694 took 28215 ms status 11136
+1790000393.654 WARN [svc-0] accepted connection from 10.47896.37205.49030 port 17546
+1790000394.482 INFO [svc-2] accepted connection from 10.44803.57920.48181 port 49125
+1790000395.221 INFO [svc-3] accepted connection from 10.27490.8299.48950 port 9424
+1790000395.547 INFO [svc-2] worker 40624 finished job 37759 in 4990 ms
+1790000395.889 INFO [svc-2] request /api/v2/items/45598 took 31150 ms status 25746
+1790000396.460 INFO [svc-1] request /api/v2/items/32618 took 2263 ms status 28330
+1790000397.177 ERROR [svc-1] cache miss for key user:49371 shard 48121
+1790000397.568 INFO [svc-1] request /api/v2/items/4786 took 30729 ms status 28443
+1790000397.870 DEBUG [svc-1] request /api/v2/items/21412 took 42315 ms status 58836
+1790000398.259 WARN [svc-3] request /api/v2/items/29380 took 14652 ms status 29370
+1790000398.603 INFO [svc-2] cache miss for key user:22936 shard 20992
+1790000398.768 ERROR [svc-3] request /api/v2/items/36700 took 42869 ms status 31356
+1790000399.408 INFO [svc-0] accepted connection from 10.7194.28207.25298 port 57154
+1790000400.252 INFO [svc-1] accepted connection from 10.16224.51799.19783 port 22500
+1790000400.707 INFO [svc-1] request /api/v2/items/24111 took 424 ms status 49033
+1790000401.539 INFO [svc-2] request /api/v2/items/58372 took 27129 ms status 46979
+1790000402.035 ERROR [svc-1] cache miss for key user:19890 shard 34085
+1790000402.746 DEBUG [svc-2] accepted connection from 10.43366.45341.8713 port 5357
+1790000402.981 INFO [svc-3] cache miss for key user:48643 shard 2506
+1790000403.795 ERROR [svc-3] cache miss for key user:30640 shard 50348
+1790000404.023 INFO [svc-1] cache miss for key user:39232 shard 9664
+1790000404.743 ERROR [svc-1] accepted connection from 10.49627.47930.19651 port 31707
+1790000405.231 INFO [svc-2] accepted connection from 10.33523.15541.43998 port 57857
+1790000405.602 DEBUG [svc-1] accepted connection from 10.24137.6631.4022 port 42428
+1790000405.698 INFO [svc-0] cache miss for key user:28409 shard 19310
+1790000406.381 INFO [svc-1] accepted connection from 10.28296.8736.21608 port 26007
+1790000407.279 WARN [svc-2] worker 53700 finished job 55067 in 6609 ms
+1790000408.163 INFO [svc-2] worker 54761 finished job 43691 in 20079 ms
+1790000408.942 INFO [svc-3] worker 33935 finished job 35748 in 7723 ms
+1790000409.318 INFO [svc-0] cache miss for key user:10000 shard 48934
+1790000409.609 ERROR [svc-2] request /api/v2/items/33820 took 59653 ms status 25064
+1790000409.720 INFO [svc-1] accepted connection from 10.33631.47502.21816 port 37189
+1790000409.823 DEBUG [svc-0] request /api/v2/items/45123 took 2 ms status 7764
+1790000410.199 INFO [svc-0] accepted connection from 10.49737.7235.43089 port 32628
+1790000410.586 INFO [svc-0] request /api/v2/items/16017 took 32699 ms status 53754
+1790000410.954 INFO [svc-3] cache miss for key user:40750 shard 21325
+1790000411.329 INFO [svc-3] worker 5614 finished job 45402 in 46955 ms
+1790000411.349 INFO [svc-1] accepted connection from 10.56397.17219.51466 port 19514
+1790000411.717 INFO [svc-0] accepted connection from 10.24810.2923.22114 port 12887
+1790000412.192 WARN [svc-3] accepted connection from 10.31288.13496.26329 port 30962
+1790000412.327 INFO [svc-1] worker 42439 finished job 2740 in 47079 ms
+1790000412.997 ERROR [svc-0] accepted connection from 10.23316.6849.21439 port 25355
+1790000413.083 WARN [svc-3] request /api/v2/items/10489 took 34512 ms status 40820
+1790000413.606 INFO [svc-3] accepted connection from 10.22837.25108.48929 port 40651
+1790000413.803 WARN [svc-0] cache miss for key user:57971 shard 17833
+1790000414.397 WARN [svc-1] accepted connection from 10.53567.28124.33127 port 47885
+1790000414.540 ERROR [svc-3] accepted connection from 10.55280.7578.40449 port 24921
+1790000414.750 INFO [svc-0] cache miss for key user:13490 shard 6064
+1790000414.762 DEBUG [svc-1] worker 28740 finished job 49191 in 28987 ms
+1790000415.048 DEBUG [svc-3] cache miss for key user:10155 shard 55172
+1790000415.894 INFO [svc-3] request /api/v2/items/27830 took 57016 ms status 46603
+1790000416.106 ERROR [svc-0] accepted connection from 10.22311.44485.8496 port 4467
+1790000416.235 INFO [svc-1] request /api/v2/items/36110 took 49698 ms status 37317
+1790000416.452 ERROR [svc-1] accepted connection from 10.59285.9325.50339 port 49468
+1790000416.598 DEBUG [svc-2] request /api/v2/items/32825 took 27068 ms status 58334
+1790000416.855 INFO [svc-1] request /api/v2/items/47085 took 38693 ms status 26048
+1790000417.439 DEBUG [svc-2] cache miss for key user:38366 shard 23537
+1790000417.666 INFO [svc-1] request /api/v2/items/50931 took 26623 ms status 25719
+1790000417.835 DEBUG [svc-2] accepted connection from 10.5511.9979.13695 port 7839
+1790000418.405 INFO [svc-2] request /api/v2/items/25686 took 6779 ms status 1148
+1790000419.256 ERROR [svc-2] accepted connection from 10.33511.24322.45917 port 685
+1790000419.558 WARN [svc-2] request /api/v2/items/20270 took 39154 ms status 15066
+1790000419.651 DEBUG [svc-0] request /api/v2/items/14526 took 53301 ms status 23769
+1790000420.366 INFO [svc-0] worker 29161 finished job 42832 in 23460 ms
+1790000420.717 WARN [svc-0] worker 23041 finished job 40901 in 11447 ms
+1790000420.845 INFO [svc-1] request /api/v2/items/22326 took 30582 ms status 23765
+1790000421.730 INFO [svc-1] worker 10072 finished job 9642 in 4968 ms
+1790000422.004 ERROR [svc-1] accepted connection from 10.37046.46953.40815 port 26067
+1790000422.827 INFO [svc-0] request /api/v2/items/4855 took 21021 ms status 29798
+1790000423.054 INFO [svc-2] cache miss for key user:52303 shard 9318
+1790000423.418 DEBUG [svc-2] accepted connection from 10.27132.44973.26475 port 38529
+1790000423.438 ERROR [svc-2] worker 59130 finished job 32596 in 2506 ms
+1790000424.022 WARN [svc-0] worker 12295 finished job 21330 in 21826 ms
+1790000424.629 ERROR [svc-2] cache miss for key user:29019 shard 34359
+1790000424.920 DEBUG [svc-3] accepted connection from 10.17702.33813.9856 port 26026
+1790000425.509 INFO [svc-1] worker 8932 finished job 7004 in 1575 ms
+1790000425.967 INFO [svc-2] cache miss for key user:16865 shard 11815
+1790000426.686 INFO [svc-1] accepted connection from 10.20387.15642.57465 port 30345
+1790000427.432 DEBUG [svc-1] request /api/v2/items/14585 took 54584 ms status 34648
+1790000427.783 WARN [svc-2] worker 1090 finished job 19128 in 6838 ms
+1790000427.815 WARN [svc-3] worker 38339 finished job 45059 in 32133 ms
+1790000428.356 INFO [svc-1] request /api/v2/items/36264 took 39264 ms status 56485
+1790000428.786 DEBUG [svc-0] request /api/v2/items/5987 took 31706 ms status 44121
+1790000429.136 INFO [svc-1] cache miss for key user:43703 shard 16303
+1790000429.161 INFO [svc-3] cache miss for key user:12617 shard 53443
+1790000429.221 DEBUG [svc-3] cache miss for key user:5592 shard 18304
+1790000429.631 WARN [svc-0] worker 32460 finished job 54182 in 50310 ms
+1790000430.008 WARN [svc-2] cache miss for key user:15737 shard 53238
+1790000430.694 INFO [svc-2] accepted connection from 10.11527.7192.51297 port 24558
+1790000431.239 INFO [svc-0] request /api/v2/items/44403 took 48861 ms status 59675
+1790000431.934 INFO [svc-2] request /api/v2/items/26583 took 20466 ms status 35866
+1790000431.963 ERROR [svc-2] worker 48477 finished job 6554 in 47853 ms
+1790000432.457 DEBUG [svc-3] cache miss for key user:9932 shard 39788
+1790000432.686 INFO [svc-2] cache miss for key user:12052 shard 21789
+1790000433.573 INFO [svc-2] cache miss for key user:46123 shard 29334
+1790000434.166 INFO [svc-3] worker 38233 finished job 20955 in 43266 ms
+1790000434.586 INFO [svc-2] cache miss for key user:46592 shard 8639
+1790000435.476 INFO [svc-0] cache miss for key user:21380 shard 26955
+1790000436.220 ERROR [svc-0] accepted connection from 10.50458.14608.59415 port 2648
+1790000436.303 INFO [svc-0] cache miss for key user:32697 shard 42384
+1790000437.041 INFO [svc-0] worker 37045 finished job 142 in 16965 ms
+1790000437.084 DEBUG [svc-0] request /api/v2/items/44820 took 11255 ms status 36607
+1790000437.550 DEBUG [svc-0] request /api/v2/items/23458 took 34593 ms status 11172
+1790000438.288 INFO [svc-2] cache miss for key user:15770 shard 5139
+1790000438.872 INFO [svc-1] accepted connection from 10.12139.23700.28837 port 18400
+1790000439.658 ERROR [svc-3] request /api/v2/items/6491 took 36165 ms status 39031
+1790000440.546 INFO [svc-2] worker 52164 finished job 4858 in 45791 ms
+1790000440.723 INFO [svc-1] accepted connection from 10.9847.31875.55804 port 39303
+1790000441.578 INFO [svc-3] cache miss for key user:10025 shard 9390
+1790000441.896 INFO [svc-1] cache miss for key user:39176 shard 40292
+1790000442.789 ERROR [svc-0] accepted connection from 10.34554.40207.3120 port 25367
+1790000442.876 INFO [svc-1] worker 438 finished job 57985 in 51796 ms
+1790000442.972 DEBUG [svc-0] cache miss for key user:45762 shard 25219
+1790000443.476 DEBUG [svc-2] request /api/v2/items/51735 took 33593 ms status 46701
+1790000443.730 INFO [svc-1] request /api/v2/items/10878 took 29382 ms status 38387
+1790000444.396 ERROR [svc-2] accepted connection from 10.3677.48820.20456 port 7526
+1790000445.080 INFO [svc-1] accepted connection from 10.11223.57267.21826 port 55438
+1790000445.810 INFO [svc-0] accepted connection from 10.49280.43530.19246 port 13963
+1790000445.837 ERROR [svc-0] cache miss for key user:31808 shard 51033
+1790000445.941 INFO [svc-3] accepted connection from 10.11919.12535.48325 port 6573
+1790000446.042 INFO [svc-1] request /api/v2/items/54266 took 5726 ms status 29698
+1790000446.890 WARN [svc-1] request /api/v2/items/33440 took 29452 ms status 49967
+1790000447.784 DEBUG [svc-1] worker 25102 finished job 14429 in 33762 ms
+1790000447.853 ERROR [svc-2] accepted connection from 10.21717.35136.46334 port 45838
+1790000448.606 WARN [svc-1] cache miss for key user:58622 shard 21055
+1790000449.036 INFO [svc-1] accepted connection from 10.3634.9905.16066 port 25893
+1790000449.758 INFO [svc-2] accepted connection from 10.42239.15186.29535 port 55214
+1790000450.554 WARN [svc-3] cache miss for key user:6366 shard 14063
+1790000451.150 WARN [svc-2] accepted connection from 10.48476.15617.38541 port 44902
+1790000451.390 ERROR [svc-1] worker 16550 finished job 55223 in 47892 ms
+1790000451.917 WARN [svc-3] worker 16823 finished job 19180 in 19155 ms
+1790000452.633 INFO [svc-0] cache miss for key user:25331 shard 11336
+1790000453.017 DEBUG [svc-3] accepted connection from 10.8991.17212.33776 port 55643
+1790000453.645 ERROR [svc-0] cache miss for key user:22544 shard 51862
+1790000453.682 INFO [svc-3] cache miss for key user:17816 shard 40323
+1790000454.225 DEBUG [svc-0] cache miss for key user:56674 shard 874
+1790000454.409 WARN [svc-1] cache miss for key user:16416 shard 56485
+1790000454.832 INFO [svc-0] cache miss for key user:4730 shard 3032
+1790000454.838 ERROR [svc-1] worker 25893 finished job 14890 in 58211 ms
+1790000455.097 WARN [svc-2] worker 7320 finished job 26519 in 33766 ms
+1790000455.411 INFO [svc-1] request /api/v2/items/409 took 17470 ms status 8093
+1790000455.785 ERROR [svc-0] cache miss for key user:16918 shard 50898
+1790000455.787 INFO [svc-3] cache miss for key user:31545 shard 22855
+1790000456.400 INFO [svc-1] request /api/v2/items/1915 took 45571 ms status 26060
+1790000457.197 DEBUG [svc-2] accepted connection from 10.22156.17688.18290 port 9887
+1790000457.454 INFO [svc-2] cache miss for key user:1504 shard 49824
+1790000457.691 DEBUG [svc-0] cache miss for key user:4514 shard 18595
+1790000458.390 INFO [svc-0] accepted connection from 10.2670.4395.26200 port 4259
+1790000459.108 ERROR [svc-2] cache miss for key user:50979 shard 27603
+1790000459.744 INFO [svc-1] accepted connection from 10.3435.3758.39691 port 28051
+1790000460.416 ERROR [svc-1] request /api/v2/items/20876 took 31167 ms status 51831
+1790000460.905 INFO [svc-0] cache miss for key user:6223 shard 59947
+1790000461.379 WARN [svc-3] cache miss for key user:28346 shard 20667
+1790000461.743 ERROR [svc-0] worker 47602 finished job 20621 in 52005 ms
+1790000462.138 INFO [svc-0] request /api/v2/items/44279 took 14805 ms status 7349
+1790000462.404 INFO [svc-1] worker 13412 finished job 14525 in 20468 ms
+1790000463.064 INFO [svc-3] worker 17221 finished job 44139 in 46184 ms
+1790000463.445 ERROR [svc-1] worker 19257 finished job 57451 in 14373 ms
+1790000463.997 WARN [svc-3] cache miss for key user:44483 shard 34400
+1790000464.287 WARN [svc-0] request /api/v2/items/38201 took 14642 ms status 44463
+1790000464.499 INFO [svc-2] worker 23955 finished job 3626 in 46898 ms
+1790000464.727 WARN [svc-0] worker 18733 finished job 46637 in 56775 ms
+1790000465.135 INFO [svc-1] accepted connection from 10.9112.35190.18806 port 16627
+1790000465.152 DEBUG [svc-1] worker 35079 finished job 13193 in 43973 ms
+1790000465.331 INFO [svc-1] request /api/v2/items/24051 took 32654 ms status 23041
+1790000466.199 INFO [svc-3] worker 26472 finished job 52023 in 27111 ms
+1790000466.548 INFO [svc-0] accepted connection from 10.16021.30250.28264 port 35128
+1790000467.190 ERROR [svc-2] request /api/v2/items/58804 took 24351 ms status 27014
+1790000467.850 INFO [svc-1] cache miss for key user:51388 shard 57634
+1790000467.989 DEBUG [svc-3] worker 26039 finished job 30579 in 14863 ms
+1790000468.310 ERROR [svc-3] worker 26622 finished job 38032 in 32050 ms
+1790000468.690 WARN [svc-0] accepted connection from 10.364.39291.28359 port 21520
+1790000469.289 INFO [svc-0] request /api/v2/items/46967 took 35026 ms status 48958
+1790000469.461 INFO [svc-2] worker 48473 finished job 3041 in 39913 ms
+1790000470.211 ERROR [svc-1] accepted connection from 10.45611.7782.4493 port 861
+1790000470.677 INFO [svc-2] cache miss for key user:47768 shard 6220
+1790000471.066 INFO [svc-1] worker 42790 finished job 14564 in 55998 ms
+1790000471.868 INFO [svc-3] accepted connection from 10.48451.36368.44451 port 26260
+1790000472.224 DEBUG [svc-3] cache miss for key user:48747 shard 41823
+1790000472.270 DEBUG [svc-2] cache miss for key user:12883 shard 16609
+1790000472.274 INFO [svc-0] request /api/v2/items/7013 took 55727 ms status 30475
+1790000472.970 DEBUG [svc-0] cache miss for key user:56747 shard 29330
+1790000473.416 INFO [svc-2] request /api/v2/items/54143 took 52810 ms status 861
+1790000473.842 INFO [svc-1] worker 42959 finished job 5903 in 11881 ms
+1790000474.431 INFO [svc-2] worker 42571 finished job 20647 in 4643 ms
+1790000474.620 INFO [svc-2] request /api/v2/items/22090 took 26247 ms status 43385
+1790000475.253 DEBUG [svc-0] cache miss for key user:53205 shard 40955
+1790000475.983 INFO [svc-0] cache miss for key user:48517 shard 6592
+1790000476.270 DEBUG [svc-2] accepted connection from 10.4522.17816.49541 port 56509
+1790000476.653 DEBUG [svc-1] request /api/v2/items/37075 took 50309 ms status 2013
+1790000477.317 INFO [svc-2] request /api/v2/items/24075 took 34235 ms status 23567
+1790000477.999 WARN [svc-3] accepted connection from 10.38168.17437.51751 port 19498
+1790000478.340 INFO [svc-3] accepted connection from 10.37743.788.21056 port 12565
+1790000479.097 ERROR [svc-2] worker 2936 finished job 44435 in 40655 ms
+1790000479.137 INFO [svc-1] accepted connection from 10.49015.8463.17368 port 33962
+1790000479.337 INFO [svc-0] request /api/v2/items/13326 took 35267 ms status 14143
+1790000480.171 INFO [svc-3] accepted connection from 10.52030.27645.24523 port 46042
+1790000480.909 DEBUG [svc-3] accepted connection from 10.6703.35118.7079 port 37266
+1790000481.154 INFO [svc-3] accepted connection from 10.52565.57023.9423 port 3698
+1790000481.202 WARN [svc-1] worker 51157 finished job 21202 in 4832 ms
+1790000482.020 WARN [svc-2] cache miss for key user:53226 shard 29335
+1790000482.794 INFO [svc-1] request /api/v2/items/15681 took 49305 ms status 52435
+1790000483.394 INFO [svc-2] cache miss for key user:16996 shard 50440
+1790000484.152 INFO [svc-0] request /api/v2/items/58353 took 7291 ms status 5510
+1790000484.303 INFO [svc-3] worker 17911 finished job 35745 in 20124 ms
+1790000484.623 DEBUG [svc-0] accepted connection from 10.4452.3503.42605 port 54920
+1790000484.759 INFO [svc-2] worker 26097 finished job 10671 in 8228 ms
+1790000485.231 INFO [svc-3] cache miss for key user:11071 shard 28973
+1790000485.267 INFO [svc-1] worker 44917 finished job 58807 in 32457 ms
+1790000485.669 WARN [svc-3] request /api/v2/items/54892 took 47421 ms status 47492
+1790000486.358 INFO [svc-2] request /api/v2/items/53445 took 6314 ms status 3775
+1790000486.623 DEBUG [svc-3] cache miss for key user:22589 shard 48414
+1790000487.319 WARN [svc-3] cache miss for key user:28398 shard 30156
+1790000487.881 DEBUG [svc-0] request /api/v2/items/37837 took 13018 ms status 50210
+1790000487.984 INFO [svc-0] request /api/v2/items/42357 took 22749 ms status 7721
+1790000488.121 DEBUG [svc-3] cache miss for key user:45985 shard 43109
+1790000488.705 INFO [svc-3] cache miss for key user:14039 shard 57413
+1790000489.189 WARN [svc-3] request /api/v2/items/11781 took 16653 ms status 38887
+1790000490.083 ERROR [svc-3] accepted connection from 10.25821.17095.35386 port 47351
+1790000490.172 INFO [svc-3] request /api/v2/items/18123 took 34190 ms status 57701
+1790000490.831 WARN [svc-2] worker 10158 finished job 40590 in 46017 ms
+1790000491.493 WARN [svc-2] accepted connection from 10.44739.50358.26690 port 47889
+1790000492.075 ERROR [svc-0] accepted connection from 10.20715.54442.17755 port 53169
+1790000492.097 DEBUG [svc-1] cache miss for key user:54931 shard 3487
+1790000492.210 DEBUG [svc-1] request /api/v2/items/10757 took 49913 ms status 37856
+1790000492.645 WARN [svc-3] cache miss for key user:1345 shard 44769
+1790000493.268 INFO [svc-2] request /api/v2/items/42095 took 50605 ms status 38313
+1790000493.308 INFO [svc-1] accepted connection from 10.19970.32612.2846 port 34736
+1790000494.085 ERROR [svc-2] request /api/v2/items/28561 took 56827 ms status 34494
+1790000494.768 DEBUG [svc-0] worker 14264 finished job 34818 in 30642 ms
+1790000494.974 INFO [svc-3] worker 15412 finished job 10327 in 46414 ms
+1790000495.327 INFO [svc-0] worker 58558 finished job 29562 in 11269 ms
+1790000495.377 INFO [svc-2] accepted connection from 10.549.37757.34844 port 52411
+1790000495.483 DEBUG [svc-0] cache miss for key user:58398 shard 43682
+1790000496.271 WARN [svc-3] cache miss for key user:12391 shard 48180
+1790000496.313 INFO [svc-0] worker 45808 finished job 14433 in 26618 ms
+1790000496.716 INFO [svc-1] accepted connection from 10.42710.50270.18734 port 8979
+1790000497.276 ERROR [svc-0] accepted connection from 10.36757.2051.20329 port 44022
+1790000497.542 INFO [svc-2] accepted connection from 10.19054.14395.54872 port 56705
+1790000497.881 INFO [svc-3] cache miss for key user:20458 shard 16461
+1790000498.125 ERROR [svc-3] cache miss for key user:34405 shard 32531
+1790000498.235 DEBUG [svc-0] cache miss for key user:10685 shard 33427
+1790000498.760 INFO [svc-2] cache miss for key user:31706 shard 43462
+1790000499.132 INFO [svc-1] request /api/v2/items/31924 took 30895 ms status 54708
+1790000499.318 ERROR [svc-3] worker 4953 finished job 14171 in 37234 ms
+1790000500.076 DEBUG [svc-1] worker 4772 finished job 16657 in 27581 ms
+1790000500.358 ERROR [svc-1] worker 47904 finished job 20694 in 53064 ms
+1790000500.819 INFO [svc-0] accepted connection from 10.27468.7082.27588 port 45459
+1790000500.996 INFO [svc-2] worker 51019 finished job 30751 in 5745 ms
+1790000501.152 INFO [svc-0] worker 41606 finished job 4344 in 32521 ms
+1790000501.529 WARN [svc-3] cache miss for key user:29194 shard 32073
+1790000502.276 WARN [svc-1] request /api/v2/items/36141 took 34283 ms status 13568
+1790000502.872 INFO [svc-1] request /api/v2/items/51876 took 25880 ms status 27093
+1790000503.333 ERROR [svc-1] request /api/v2/items/52746 took 28116 ms status 40925
+1790000503.437 WARN [svc-3] cache miss for key user:35970 shard 20031
+1790000504.187 INFO [svc-0] request /api/v2/items/54064 took 3396 ms status 29543
+1790000504.567 INFO [svc-2] accepted connection from 10.32069.591.31733 port 20425
+1790000504.870 ERROR [svc-3] accepted connection from 10.1118.11715.23489 port 421
+1790000505.159 ERROR [svc-3] request /api/v2/items/18719 took 36180 ms status 18842
+1790000505.321 DEBUG [svc-2] worker 43954 finished job 31249 in 51142 ms
+1790000505.458 INFO [svc-3] request /api/v2/items/51043 took 4679 ms status 54106
+1790000505.562 DEBUG [svc-3] accepted connection from 10.20287.9760.16465 port 28361
+1790000506.334 INFO [svc-1] cache miss for key user:32146 shard 25605
+1790000506.697 ERROR [svc-2] accepted connection from 10.13142.30578.59905 port 13828
+1790000507.234 INFO [svc-1] accepted connection from 10.8582.14400.8270 port 37554
+1790000508.064 WARN [svc-0] cache miss for key user:38763 shard 59045
+1790000508.692 INFO [svc-1] request /api/v2/items/14506 took 36315 ms status 43400
+1790000508.862 ERROR [svc-3] accepted connection from 10.14546.55150.36280 port 49253
+1790000509.637 WARN [svc-3] accepted connection from 10.33409.13544.21883 port 40668
+1790000509.812 WARN [svc-0] request /api/v2/items/9947 took 15274 ms status 3317
+1790000510.455 INFO [svc-3] request /api/v2/items/56234 took 25018 ms status 14827
+1790000511.085 DEBUG [svc-2] request /api/v2/items/48169 took 17580 ms status 22288
+1790000511.945 INFO [svc-3] cache miss for key user:31362 shard 41255
+1790000512.075 INFO [svc-2] request /api/v2/items/35934 took 53992 ms status 56950
+1790000512.080 INFO [svc-3] request /api/v2/items/38649 took 14376 ms status 30551
+1790000512.277 INFO [svc-2] request /api/v2/items/11876 took 46773 ms status 46196
+1790000512.835 WARN [svc-1] request /api/v2/items/33744 took 8204 ms status 50405
+1790000513.150 WARN [svc-2] request /api/v2/items/2179 took 8877 ms status 14621
+1790000513.847 INFO [svc-3] cache miss for key user:18586 shard 8790
+1790000513.913 INFO [svc-2] cache miss for key user:42567 shard 12544
+1790000514.434 INFO [svc-2] accepted connection from 10.8912.32287.56264 port 19445
+1790000514.991 WARN [svc-3] cache miss for key user:19603 shard 50768
+1790000515.446 DEBUG [svc-1] request /api/v2/items/8042 took 24236 ms status 41530
+1790000515.899 WARN [svc-2] cache miss for key user:37090 shard 15150
+1790000516.764 DEBUG [svc-3] request /api/v2/items/33251 took 38888 ms status 42878
+1790000517.631 INFO [svc-0] cache miss for key user:4080 shard 13299
+1790000517.828 ERROR [svc-2] worker 8551 finished job 5822 in 17717 ms
+1790000517.849 WARN [svc-0] request /api/v2/items/10487 took 49676 ms status 4279
+1790000518.641 WARN [svc-2] accepted connection from 10.39889.18594.38154 port 43643
+1790000518.692 INFO [svc-1] accepted connection from 10.33333.35403.48915 port 24912
+1790000519.197 WARN [svc-1] cache miss for key user:54253 shard 45923
+1790000519.885 INFO [svc-1] worker 25086 finished job 51311 in 5551 ms
+1790000520.187 WARN [svc-1] worker 54313 finished job 51812 in 32781 ms
+1790000521.063 INFO [svc-2] cache miss for key user:34140 shard 43746
+1790000521.588 INFO [svc-1] accepted connection from 10.54571.30186.9135 port 46066
+1790000521.604 INFO [svc-3] worker 38526 finished job 21185 in 36879 ms
+1790000522.238 ERROR [svc-2] worker 42389 finished job 45172 in 18574 ms
+1790000522.606 INFO [svc-0] accepted connection from 10.53404.47358.27995 port 3805
+1790000522.842 WARN [svc-2] accepted connection from 10.41285.21227.6800 port 48814
+1790000523.345 INFO [svc-1] request /api/v2/items/31535 took 454 ms status 465
+1790000523.554 ERROR [svc-0] request /api/v2/items/49554 took 39604 ms status 49362
+1790000523.976 WARN [svc-1] worker 58355 finished job 17024 in 22444 ms
+1790000524.762 INFO [svc-3] accepted connection from 10.39744.53886.26474 port 14454
+1790000525.041 WARN [svc-1] request /api/v2/items/59159 took 10771 ms status 49702
+1790000525.830 INFO [svc-1] worker 35946 finished job 10050 in 51516 ms
+1790000525.873 WARN [svc-3] cache miss for key user:20393 shard 50569
+1790000526.703 INFO [svc-1] accepted connection from 10.36576.4598.8332 port 32940
+1790000526.830 ERROR [svc-1] worker 9488 finished job 24630 in 32578 ms
+1790000527.158 INFO [svc-1] request /api/v2/items/42637 took 46789 ms status 19324
+1790000527.481 WARN [svc-2] worker 11554 finished job 55971 in 43510 ms
+1790000527.660 DEBUG [svc-1] cache miss for key user:55864 shard 56937
+1790000527.951 DEBUG [svc-2] request /api/v2/items/51917 took 13008 ms status 47556
+1790000528.246 INFO [svc-1] accepted connection from 10.45100.53383.28906 port 20020
+1790000528.294 ERROR [svc-2] request /api/v2/items/23156 took 35586 ms status 13879
+1790000528.523 INFO [svc-3] accepted connection from 10.56200.39847.35295 port 50106
+1790000529.233 INFO [svc-0] worker 49299 finished job 22562 in 48803 ms
+1790000529.764 ERROR [svc-3] request /api/v2/items/51130 took 13845 ms status 15811
+1790000529.855 INFO [svc-3] request /api/v2/items/6908 took 46829 ms status 933
+1790000530.253 WARN [svc-2] cache miss for key user:20895 shard 34863
+1790000530.967 INFO [svc-3] worker 43048 finished job 52969 in 47064 ms
+1790000531.449 INFO [svc-2] request /api/v2/items/22508 took 35912 ms status 25973
+1790000531.478 DEBUG [svc-2] accepted connection from 10.23498.56007.12245 port 47105
+1790000532.044 ERROR [svc-2] cache miss for key user:11737 shard 29837
+1790000532.267 WARN [svc-3] accepted connection from 10.9920.39817.27031 port 8159
+1790000532.600 INFO [svc-0] accepted connection from 10.42978.59062.18974 port 38217
+1790000532.639 INFO [svc-1] request /api/v2/items/8846 took 48449 ms status 3990
+1790000532.822 INFO [svc-2] worker 13844 finished job 16160 in 46896 ms
+1790000533.167 DEBUG [svc-3] accepted connection from 10.9277.15113.29353 port 24080
+1790000533.774 INFO [svc-0] cache miss for key user:21242 shard 10094
+1790000533.937 ERROR [svc-0] cache miss for key user:30529 shard 46531
+1790000534.541 ERROR [svc-0] accepted connection from 10.42517.6457.24310 port 57365
+1790000535.055 INFO [svc-3] worker 31025 finished job 31492 in 55346 ms
+1790000535.068 WARN [svc-1] worker 1219 finished job 15081 in 33741 ms
+1790000535.180 INFO [svc-2] request /api/v2/items/46886 took 25610 ms status 20557
+1790000535.403 DEBUG [svc-0] request /api/v2/items/40365 took 9716 ms status 3022
+1790000535.863 INFO [svc-2] cache miss for key user:972 shard 2068
+1790000536.299 INFO [svc-3] worker 36272 finished job 29742 in 58964 ms
+1790000536.716 ERROR [svc-1] worker 58032 finished job 740 in 58940 ms
+1790000537.358 WARN [svc-2] worker 13647 finished job 33590 in 30833 ms
+1790000538.071 INFO [svc-0] request /api/v2/items/42908 took 12453 ms status 56238
+1790000538.937 INFO [svc-3] request /api/v2/items/13623 took 21752 ms status 26648
+1790000539.583 ERROR [svc-0] accepted connection from 10.52733.32974.43654 port 12566
+1790000540.108 INFO [svc-1] request /api/v2/items/53215 took 41164 ms status 12711
+1790000540.930 WARN [svc-3] worker 17624 finished job 20450 in 24310 ms
+1790000541.560 ERROR [svc-2] accepted connection from 10.56520.35093.58641 port 8248
+1790000542.129 INFO [svc-0] accepted connection from 10.25626.41497.56127 port 12728
+1790000542.463 INFO [svc-1] worker 28706 finished job 21765 in 37541 ms
+1790000542.520 INFO [svc-1] worker 2386 finished job 50408 in 49895 ms
+1790000542.631 INFO [svc-0] cache miss for key user:46689 shard 42702
+1790000542.900 DEBUG [svc-3] accepted connection from 10.39296.24781.39879 port 20638
+1790000543.425 INFO [svc-2] cache miss for key user:57175 shard 8024
+1790000544.316 ERROR [svc-3] accepted connection from 10.57121.18869.8567 port 18479
+1790000544.417 WARN [svc-0] request /api/v2/items/9616 took 28257 ms status 20257
+1790000544.683 INFO [svc-3] worker 46611 finished job 14105 in 49739 ms
+1790000545.308 DEBUG [svc-2] cache miss for key user:20084 shard 39246
+1790000545.444 INFO [svc-1] accepted connection from 10.27554.53777.42979 port 21225
+1790000545.527 INFO [svc-2] request /api/v2/items/12045 took 49596 ms status 21557
+1790000546.160 ERROR [svc-2] accepted connection from 10.12394.12722.49882 port 53559
+1790000546.423 WARN [svc-2] worker 46791 finished job 41533 in 58772 ms
+1790000546.922 INFO [svc-1] request /api/v2/items/54625 took 51644 ms status 13685
+1790000547.193 ERROR [svc-2] worker 28515 finished job 2011 in 35010 ms
+1790000547.623 INFO [svc-1] worker 14181 finished job 52563 in 11276 ms
+1790000548.093 ERROR [svc-3] request /api/v2/items/20160 took 42829 ms status 48535
+1790000548.492 DEBUG [svc-0] worker 52093 finished job 13399 in 39913 ms
+1790000549.371 INFO [svc-0] accepted connection from 10.6308.25448.11170 port 167
+1790000550.177 INFO [svc-0] request /api/v2/items/22938 took 56989 ms status 16391
+1790000550.872 ERROR [svc-2] worker 41306 finished job 31122 in 41678 ms
+1790000551.766 ERROR [svc-2] worker 19890 finished job 56782 in 40733 ms
+1790000551.935 INFO [svc-3] accepted connection from 10.51273.38933.35151 port 16152
+1790000552.428 WARN [svc-2] request /api/v2/items/27687 took 50286 ms status 34432
+1790000553.177 INFO [svc-2] cache miss for key user:34278 shard 18256
+1790000553.202 INFO [svc-0] accepted connection from 10.5850.14625.9127 port 16579
+1790000553.858 INFO [svc-1] request /api/v2/items/3388 took 38752 ms status 53426
+1790000554.467 INFO [svc-3] cache miss for key user:12824 shard 9012
+1790000554.732 INFO [svc-1] cache miss for key user:58737 shard 16623
+1790000555.630 WARN [svc-2] accepted connection from 10.34450.19412.11583 port 40607
+1790000556.294 WARN [svc-0] worker 56274 finished job 52860 in 24990 ms
+1790000556.461 INFO [svc-1] request /api/v2/items/17988 took 27054 ms status 25189
+1790000556.751 INFO [svc-3] worker 50848 finished job 42767 in 49913 ms
+1790000557.422 INFO [svc-1] accepted connection from 10.6719.25051.56011 port 54301
+1790000558.066 ERROR [svc-3] worker 13477 finished job 3497 in 25345 ms
+1790000558.566 INFO [svc-1] request /api/v2/items/50067 took 40265 ms status 49706
+1790000558.852 DEBUG [svc-3] accepted connection from 10.48893.11367.39256 port 44871
+1790000559.289 DEBUG [svc-2] request /api/v2/items/28831 took 48270 ms status 46546
+1790000559.783 INFO [svc-2] worker 23844 finished job 20193 in 52165 ms
+1790000560.266 INFO [svc-0] accepted connection from 10.48139.40421.54037 port 29963
+1790000560.289 INFO [svc-0] worker 22486 finished job 26361 in 9069 ms
+1790000560.894 INFO [svc-1] worker 56262 finished job 57985 in 32795 ms
+1790000561.202 INFO [svc-1] cache miss for key user:20514 shard 11729
+1790000561.646 INFO [svc-2] worker 27780 finished job 59782 in 14450 ms
+1790000561.934 WARN [svc-0] cache miss for key user:39340 shard 44024
+1790000562.330 INFO [svc-0] request /api/v2/items/523 took 4345 ms status 2457
+1790000562.628 INFO [svc-0] worker 58991 finished job 20049 in 40005 ms
+1790000562.814 INFO [svc-1] request /api/v2/items/21517 took 25810 ms status 20996
+1790000562.957 INFO [svc-1] cache miss for key user:58327 shard 48932
+1790000562.974 INFO [svc-2] request /api/v2/items/35720 took 58430 ms status 46330
+1790000563.306 INFO [svc-2] accepted connection from 10.15752.43278.28541 port 37821
+1790000563.549 INFO [svc-3] accepted connection from 10.6528.25363.24726 port 58038
+1790000563.787 INFO [svc-3] cache miss for key user:17222 shard 32249
+1790000564.103 INFO [svc-2] request /api/v2/items/18497 took 12846 ms status 42722
+1790000564.313 ERROR [svc-0] worker 10015 finished job 57934 in 41910 ms
+1790000564.760 WARN [svc-1] accepted connection from 10.57723.25991.46195 port 25742
+1790000565.601 ERROR [svc-0] accepted connection from 10.6130.34077.39475 port 27408
+1790000566.232 INFO [svc-1] worker 47650 finished job 8082 in 52376 ms
+1790000566.861 INFO [svc-1] request /api/v2/items/24079 took 5942 ms status 20422
+1790000567.217 INFO [svc-0] cache miss for key user:26443 shard 19428
+1790000567.649 WARN [svc-2] request /api/v2/items/18442 took 23889 ms status 19706
+1790000567.877 INFO [svc-1] accepted connection from 10.37865.30516.57926 port 46583
+1790000568.278 INFO [svc-2] cache miss for key user:42849 shard 54668
+1790000568.599 ERROR [svc-2] cache miss for key user:18580 shard 44186
+1790000569.169 WARN [svc-2] worker 22542 finished job 8924 in 38830 ms
+1790000569.423 WARN [svc-0] accepted connection from 10.29318.29491.58615 port 25912
+1790000569.511 WARN [svc-3] request /api/v2/items/3069 took 12642 ms status 17682
+1790000569.757 ERROR [svc-1] cache miss for key user:58376 shard 42084
+1790000570.153 INFO [svc-0] cache miss for key user:14014 shard 58230
+1790000570.367 INFO [svc-2] cache miss for key user:42470 shard 42986
+1790000570.493 INFO [svc-3] cache miss for key user:15256 shard 4128
+1790000570.590 WARN [svc-0] cache miss for key user:11893 shard 9138
+1790000570.900 DEBUG [svc-0] worker 19096 finished job 19416 in 42305 ms
+1790000571.307 WARN [svc-0] cache miss for key user:10019 shard 620
+1790000571.595 ERROR [svc-3] accepted connection from 10.49833.8105.17650 port 43500
+1790000572.436 INFO [svc-0] cache miss for key user:43227 shard 22180
+1790000572.779 INFO [svc-1] worker 37798 finished job 7013 in 54327 ms
+1790000573.364 INFO [svc-2] cache miss for key user:15780 shard 53281
+1790000573.559 ERROR [svc-2] request /api/v2/items/25702 took 3707 ms status 11566
+1790000574.041 WARN [svc-3] request /api/v2/items/40327 took 21836 ms status 45773
+1790000574.304 INFO [svc-3] cache miss for key user:33760 shard 24310
+1790000574.946 DEBUG [svc-1] accepted connection from 10.38108.39975.17390 port 50789
+1790000575.787 INFO [svc-1] accepted connection from 10.34698.55437.40028 port 36352
+1790000576.413 ERROR [svc-3] request /api/v2/items/28875 took 48083 ms status 2523
+1790000577.305 WARN [svc-1] accepted connection from 10.10135.30050.19196 port 28773
+1790000577.868 INFO [svc-0] request /api/v2/items/47943 took 17479 ms status 40647
+1790000578.138 INFO [svc-2] request /api/v2/items/56516 took 37270 ms status 30325
+1790000578.975 INFO [svc-0] worker 14307 finished job 39415 in 17359 ms
+1790000579.523 INFO [svc-1] request /api/v2/items/59194 took 18568 ms status 5729
+1790000580.188 INFO [svc-3] request /api/v2/items/28393 took 33972 ms status 20307
+1790000581.019 ERROR [svc-1] worker 26278 finished job 13886 in 39005 ms
+1790000581.349 ERROR [svc-1] cache miss for key user:42696 shard 8086
+1790000582.180 ERROR [svc-0] request /api/v2/items/51630 took 7411 ms status 55610
+1790000582.750 ERROR [svc-3] request /api/v2/items/34864 took 3094 ms status 24804
+1790000583.148 DEBUG [svc-1] cache miss for key user:45998 shard 1242
+1790000583.469 INFO [svc-2] cache miss for key user:17529 shard 28005
+1790000584.122 WARN [svc-2] accepted connection from 10.13348.54348.57765 port 50783
+1790000584.980 INFO [svc-0] worker 34879 finished job 12754 in 34486 ms
+1790000585.027 INFO [svc-2] accepted connection from 10.54665.43953.13640 port 55329
+1790000585.329 ERROR [svc-1] accepted connection from 10.26449.45464.7975 port 38059
+1790000585.992 ERROR [svc-3] cache miss for key user:27559 shard 7376
+1790000586.386 WARN [svc-1] accepted connection from 10.492.40561.18914 port 47514
+1790000586.823 DEBUG [svc-2] worker 41537 finished job 35506 in 24199 ms
+1790000587.419 ERROR [svc-3] cache miss for key user:44572 shard 26660
+1790000587.516 DEBUG [svc-3] request /api/v2/items/18635 took 23500 ms status 14437
+1790000588.096 WARN [svc-0] accepted connection from 10.40249.26.26518 port 39659
+1790000588.273 DEBUG [svc-3] accepted connection from 10.20886.28471.49048 port 39632
+1790000588.330 ERROR [svc-0] cache miss for key user:6356 shard 9535
+1790000588.772 INFO [svc-1] cache miss for key user:17031 shard 3827
+1790000588.845 WARN [svc-0] accepted connection from 10.2355.42051.40888 port 43812
+1790000589.378 ERROR [svc-0] worker 18378 finished job 39691 in 44081 ms
+1790000589.558 WARN [svc-1] request /api/v2/items/54072 took 24964 ms status 19162
+1790000590.387 WARN [svc-3] request /api/v2/items/36491 took 15369 ms status 21568
+1790000591.247 INFO [svc-0] cache miss for key user:7715 shard 40729
+1790000592.063 INFO [svc-3] cache miss for key user:30281 shard 12182
+1790000592.482 DEBUG [svc-1] request /api/v2/items/25676 took 42334 ms status 17365
+1790000593.033 DEBUG [svc-1] worker 24775 finished job 27545 in 59503 ms
+1790000593.750 INFO [svc-2] worker 26858 finished job 59865 in 57466 ms
+1790000593.785 ERROR [svc-1] worker 5364 finished job 786 in 40801 ms
+1790000593.906 INFO [svc-2] accepted connection from 10.40321.49720.30670 port 2219
+1790000594.797 WARN [svc-2] cache miss for key user:240 shard 25301
+1790000595.196 ERROR [svc-2] cache miss for key user:1388 shard 13074
+1790000595.389 INFO [svc-1] request /api/v2/items/39266 took 19173 ms status 3887
+1790000595.492 INFO [svc-2] cache miss for key user:48451 shard 39284
+1790000596.134 ERROR [svc-0] cache miss for key user:33080 shard 21552
+1790000596.721 ERROR [svc-2] cache miss for key user:55744 shard 8411
+1790000597.312 WARN [svc-0] request /api/v2/items/35132 took 7895 ms status 32594
+1790000598.180 INFO [svc-0] worker 26993 finished job 21845 in 12920 ms
+1790000598.830 WARN [svc-2] request /api/v2/items/796 took 42997 ms status 45943
+1790000598.851 INFO [svc-1] accepted connection from 10.17493.42980.28632 port 26002
+1790000599.685 ERROR [svc-2] worker 41651 finished job 39204 in 7719 ms
+1790000600.199 INFO [svc-2] request /api/v2/items/52436 took 3472 ms status 15233
+1790000600.638 DEBUG [svc-3] cache miss for key user:26706 shard 27092
+1790000600.789 INFO [svc-1] request /api/v2/items/19469 took 37794 ms status 2123
+1790000600.948 DEBUG [svc-3] cache miss for key user:47527 shard 45849
+1790000601.604 INFO [svc-1] accepted connection from 10.38949.36905.9128 port 51203
+1790000601.851 WARN [svc-3] worker 21447 finished job 55029 in 22630 ms
+1790000602.141 INFO [svc-0] worker 6470 finished job 28440 in 39333 ms
+1790000602.468 WARN [svc-1] accepted connection from 10.18903.21141.22593 port 26020
+1790000603.261 ERROR [svc-0] worker 36287 finished job 8114 in 47349 ms
+1790000604.136 INFO [svc-0] worker 31934 finished job 41382 in 410 ms
+1790000605.010 DEBUG [svc-1] cache miss for key user:11458 shard 58928
+1790000605.495 ERROR [svc-2] cache miss for key user:16955 shard 34057
+1790000605.635 INFO [svc-2] cache miss for key user:33319 shard 3440
+1790000605.925 WARN [svc-2] cache miss for key user:25376 shard 3240
+1790000606.267 WARN [svc-0] request /api/v2/items/8895 took 1987 ms status 34426
+1790000606.590 INFO [svc-1] worker 39694 finished job 10143 in 36484 ms
+1790000606.959 WARN [svc-1] cache miss for key user:9089 shard 47673
+1790000607.196 ERROR [svc-0] accepted connection from 10.41256.8180.42223 port 58986
+1790000607.843 WARN [svc-3] worker 29983 finished job 43903 in 1759 ms
+1790000607.891 INFO [svc-3] accepted connection from 10.3589.17301.10284 port 32422
+1790000608.778 DEBUG [svc-0] cache miss for key user:9362 shard 1186
+1790000609.247 INFO [svc-3] cache miss for key user:25568 shard 5623
+1790000609.740 DEBUG [svc-2] accepted connection from 10.9009.7862.56475 port 31011
+1790000609.752 INFO [svc-3] cache miss for key user:26161 shard 2185
+1790000609.929 ERROR [svc-0] worker 49280 finished job 43378 in 22915 ms
+1790000610.618 DEBUG [svc-0] request /api/v2/items/21642 took 45764 ms status 31768
+1790000610.674 DEBUG [svc-1] worker 16316 finished job 19721 in 49388 ms
+1790000610.819 INFO [svc-1] accepted connection from 10.22244.31359.33054 port 12217
+1790000611.164 DEBUG [svc-2] accepted connection from 10.39718.25006.22805 port 8579
+1790000611.359 INFO [svc-3] cache miss for key user:49824 shard 28574
+1790000611.392 ERROR [svc-1] accepted connection from 10.40436.4644.12896 port 42060
+1790000611.881 ERROR [svc-0] request /api/v2/items/8245 took 30826 ms status 35368
+1790000611.917 ERROR [svc-1] cache miss for key user:28446 shard 47919
+1790000612.138 DEBUG [svc-2] request /api/v2/items/42757 took 3021 ms status 59667
+1790000612.254 INFO [svc-2] request /api/v2/items/1977 took 37444 ms status 7116
+1790000612.806 WARN [svc-2] accepted connection from 10.25457.34297.14218 port 15733
+1790000613.573 INFO [svc-2] worker 35434 finished job 24327 in 41248 ms
+1790000613.618 INFO [svc-0] worker 20173 finished job 37326 in 13862 ms
+1790000614.406 INFO [svc-1] cache miss for key user:17275 shard 59499
+1790000614.924 WARN [svc-3] accepted connection from 10.42207.54985.30996 port 38818
+1790000615.371 ERROR [svc-0] worker 29777 finished job 43221 in 9125 ms
+1790000615.514 WARN [svc-1] cache miss for key user:11592 shard 13848
+1790000615.887 INFO [svc-1] cache miss for key user:30094 shard 45080
+1790000616.374 WARN [svc-2] worker 35990 finished job 46630 in 43 ms
+1790000617.139 DEBUG [svc-0] request /api/v2/items/50923 took 4698 ms status 31158
+1790000617.263 INFO [svc-3] accepted connection from 10.23496.57947.16249 port 4871
+1790000618.150 DEBUG [svc-2] worker 37003 finished job 51479 in 52984 ms
+1790000618.990 INFO [svc-0] worker 45559 finished job 8051 in 7434 ms
+1790000619.849 INFO [svc-0] accepted connection from 10.35145.36265.47944 port 10511
+1790000620.189 INFO [svc-1] accepted connection from 10.18648.55932.28880 port 34893
+1790000621.056 INFO [svc-0] worker 38239 finished job 40682 in 40909 ms
+1790000621.220 DEBUG [svc-1] worker 26972 finished job 59898 in 56512 ms
+1790000621.331 INFO [svc-1] accepted connection from 10.7186.25682.21347 port 29482
+1790000621.746 INFO [svc-1] accepted connection from 10.24500.12295.44273 port 15399
+1790000622.243 INFO [svc-0] cache miss for key user:45571 shard 53336
+1790000622.945 WARN [svc-2] request /api/v2/items/3356 took 37732 ms status 35655
+1790000623.673 ERROR [svc-3] accepted connection from 10.13855.56519.4619 port 40427
+1790000624.068 INFO [svc-0] request /api/v2/items/37227 took 54339 ms status 5128
+1790000624.342 INFO [svc-0] accepted connection from 10.6693.24030.57 port 27595
+1790000624.570 WARN [svc-1] accepted connection from 10.35338.20032.27040 port 543
+1790000624.756 INFO [svc-1] cache miss for key user:36307 shard 25590
+1790000624.757 INFO [svc-3] request /api/v2/items/32606 took 6634 ms status 31075
+1790000625.345 WARN [svc-0] request /api/v2/items/15360 took 59899 ms status 17221
+1790000625.711 WARN [svc-1] accepted connection from 10.49384.42745.35366 port 717
+1790000626.007 INFO [svc-0] request /api/v2/items/42517 took 38168 ms status 59736
+1790000626.302 WARN [svc-1] accepted connection from 10.56063.41312.47238 port 22547
+1790000626.830 INFO [svc-3] request /api/v2/items/17903 took 11153 ms status 38301
+1790000627.096 INFO [svc-1] cache miss for key user:7058 shard 14320
+1790000627.438 INFO [svc-2] accepted connection from 10.44113.17112.20616 port 16792
+1790000628.011 WARN [svc-1] cache miss for key user:52744 shard 38415
+1790000628.259 DEBUG [svc-0] cache miss for key user:7999 shard 11300
+1790000629.076 INFO [svc-0] worker 32547 finished job 21098 in 59861 ms
+1790000629.725 DEBUG [svc-1] cache miss for key user:56186 shard 49643
+1790000630.192 ERROR [svc-2] worker 15410 finished job 25943 in 16628 ms
+1790000630.783 ERROR [svc-2] request /api/v2/items/35830 took 57757 ms status 50397
+1790000631.379 INFO [svc-1] request /api/v2/items/39950 took 7167 ms status 36275
+1790000631.570 INFO [svc-3] cache miss for key user:1685 shard 45562
+1790000632.096 INFO [svc-3] request /api/v2/items/47467 took 54195 ms status 29574
+1790000632.774 WARN [svc-0] accepted connection from 10.47000.54889.46469 port 50070
+1790000633.162 INFO [svc-1] cache miss for key user:9475 shard 37345
+1790000633.909 INFO [svc-2] accepted connection from 10.38438.21528.28366 port 15867
+1790000634.403 ERROR [svc-3] cache miss for key user:16520 shard 52771
+1790000634.453 INFO [svc-0] worker 34501 finished job 37771 in 36954 ms
+1790000635.297 ERROR [svc-2] request /api/v2/items/40012 took 44189 ms status 47903
+1790000635.894 INFO [svc-0] request /api/v2/items/38390 took 42073 ms status 7932
+1790000636.549 WARN [svc-2] worker 37293 finished job 8456 in 53031 ms
+1790000637.343 WARN [svc-3] accepted connection from 10.41841.55623.146 port 27552
+1790000638.022 ERROR [svc-0] accepted connection from 10.13381.25038.55207 port 11269
+1790000638.328 INFO [svc-1] worker 25916 finished job 27127 in 44504 ms
+1790000638.541 INFO [svc-3] accepted connection from 10.35974.29580.41914 port 41712
+1790000638.579 WARN [svc-3] cache miss for key user:729 shard 52370
+1790000638.857 WARN [svc-2] cache miss for key user:451 shard 48070
+1790000639.240 ERROR [svc-2] accepted connection from 10.35163.43762.57234 port 33893
+1790000639.814 WARN [svc-2] request /api/v2/items/23972 took 19745 ms status 11698
+1790000640.622 INFO [svc-3] worker 10562 finished job 14668 in 28702 ms
+1790000640.706 WARN [svc-2] request /api/v2/items/36712 took 46291 ms status 46175
+1790000641.049 INFO [svc-2] cache miss for key user:47524 shard 9935
+1790000641.883 DEBUG [svc-1] worker 18117 finished job 43796 in 56127 ms
+1790000641.908 WARN [svc-1] accepted connection from 10.43714.46892.8126 port 55173
+1790000642.507 INFO [svc-1] cache miss for key user:34258 shard 48384
+1790000642.986 INFO [svc-1] cache miss for key user:4331 shard 52180
+1790000643.095 WARN [svc-0] request /api/v2/items/22387 took 3075 ms status 8151
+1790000643.630 DEBUG [svc-1] accepted connection from 10.54538.36173.52804 port 14701
+1790000644.000 INFO [svc-2] cache miss for key user:15011 shard 54174
+1790000644.088 INFO [svc-3] accepted connection from 10.58831.26354.34848 port 42828
+1790000644.884 WARN [svc-0] worker 42947 finished job 6489 in 12909 ms
+1790000645.660 INFO [svc-1] cache miss for key user:27200 shard 45771
+1790000646.382 INFO [svc-2] cache miss for key user:45799 shard 55995
+1790000646.495 INFO [svc-2] request /api/v2/items/23488 took 12998 ms status 53949
+1790000646.822 INFO [svc-0] worker 55129 finished job 49086 in 8891 ms
+1790000647.271 INFO [svc-2] accepted connection from 10.37182.20019.25193 port 37564
+1790000647.345 DEBUG [svc-0] worker 40885 finished job 40548 in 44835 ms
+1790000647.979 INFO [svc-3] cache miss for key user:7349 shard 3695
+1790000648.584 INFO [svc-0] accepted connection from 10.7528.5035.50383 port 46955
+1790000648.607 WARN [svc-3] request /api/v2/items/13855 took 14399 ms status 20222
+1790000649.091 DEBUG [svc-0] worker 46692 finished job 57036 in 52328 ms
+1790000649.920 INFO [svc-1] cache miss for key user:31325 shard 48468
+1790000649.960 DEBUG [svc-3] request /api/v2/items/10472 took 38723 ms status 16115
+1790000649.965 WARN [svc-1] request /api/v2/items/16989 took 42893 ms status 472
+1790000650.400 INFO [svc-1] cache miss for key user:7806 shard 56093
+1790000650.691 INFO [svc-1] cache miss for key user:12460 shard 1750
+1790000651.467 INFO [svc-0] accepted connection from 10.52226.13731.15289 port 9229
+1790000651.834 INFO [svc-3] accepted connection from 10.42983.42945.9726 port 22110
+1790000652.369 INFO [svc-3] cache miss for key user:59818 shard 38923
+1790000652.863 INFO [svc-0] request /api/v2/items/54120 took 50912 ms status 45860
+1790000653.670 INFO [svc-1] accepted connection from 10.29071.25909.33447 port 45409
+1790000654.295 WARN [svc-0] worker 50913 finished job 2466 in 30756 ms
+1790000654.886 ERROR [svc-0] worker 51948 finished job 29272 in 38895 ms
+1790000655.541 INFO [svc-0] accepted connection from 10.58875.31343.39760 port 29199
+1790000656.004 WARN [svc-2] accepted connection from 10.24754.4746.8477 port 59622
+1790000656.397 INFO [svc-1] accepted connection from 10.8587.51088.11941 port 25647
+1790000656.950 DEBUG [svc-0] cache miss for key user:30323 shard 33464
+1790000657.390 ERROR [svc-0] cache miss for key user:29215 shard 5369
+1790000657.633 INFO [svc-1] worker 3059 finished job 7273 in 1475 ms
+1790000658.179 INFO [svc-3] accepted connection from 10.57378.58444.20740 port 40505
+1790000658.527 INFO [svc-3] accepted connection from 10.41259.2619.28775 port 6667
+1790000658.594 INFO [svc-1] worker 10838 finished job 17550 in 47408 ms
+1790000658.763 INFO [svc-1] worker 33185 finished job 34831 in 37542 ms
+1790000659.649 INFO [svc-0] request /api/v2/items/19014 took 27710 ms status 39989
+1790000660.157 INFO [svc-0] accepted connection from 10.1895.18319.30155 port 6167
+1790000660.386 INFO [svc-3] request /api/v2/items/26534 took 19570 ms status 36297
+1790000660.786 ERROR [svc-2] request /api/v2/items/45757 took 27828 ms status 19792
+1790000660.985 INFO [svc-1] worker 38531 finished job 45068 in 20607 ms
+1790000661.226 INFO [svc-2] worker 37954 finished job 57676 in 18434 ms
+1790000661.502 INFO [svc-1] worker 29766 finished job 4948 in 49508 ms
+1790000662.337 INFO [svc-3] request /api/v2/items/50325 took 28367 ms status 47864
+1790000662.820 DEBUG [svc-0] worker 52088 finished job 52615 in 32303 ms
+1790000663.628 ERROR [svc-1] accepted connection from 10.15970.19548.59029 port 23854
+1790000664.149 INFO [svc-3] cache miss for key user:38683 shard 32104
+1790000664.538 INFO [svc-2] accepted connection from 10.46918.54509.43781 port 42936
+1790000664.970 ERROR [svc-3] request /api/v2/items/21176 took 18588 ms status 11027
+1790000665.205 INFO [svc-2] request /api/v2/items/12966 took 50987 ms status 16512
+1790000665.431 DEBUG [svc-2] request /api/v2/items/35398 took 58775 ms status 43990
+1790000665.571 ERROR [svc-2] accepted connection from 10.9779.44727.52224 port 37473
+1790000666.128 WARN [svc-3] accepted connection from 10.31069.16434.11991 port 11252
+1790000666.667 INFO [svc-3] cache miss for key user:59038 shard 39878
+1790000667.435 WARN [svc-3] request /api/v2/items/41554 took 39431 ms status 41537
+1790000667.587 WARN [svc-2] cache miss for key user:43779 shard 6099
+1790000667.738 ERROR [svc-3] worker 33730 finished job 27304 in 54853 ms
+1790000668.037 DEBUG [svc-3] request /api/v2/items/28272 took 6671 ms status 53289
+1790000668.451 INFO [svc-3] cache miss for key user:29375 shard 46448
+1790000668.688 INFO [svc-1] accepted connection from 10.4087.34917.15207 port 23537
+1790000669.264 WARN [svc-1] request /api/v2/items/24116 took 38244 ms status 19091
+1790000670.096 DEBUG [svc-2] request /api/v2/items/42307 took 35545 ms status 16945
+1790000670.814 WARN [svc-1] worker 3720 finished job 19344 in 12829 ms
+1790000670.834 INFO [svc-0] accepted connection from 10.57172.23023.49817 port 30583
+1790000671.694 INFO [svc-2] accepted connection from 10.35082.1916.26781 port 15089
+1790000671.703 INFO [svc-0] request /api/v2/items/26006 took 43250 ms status 36348
+1790000672.283 ERROR [svc-3] request /api/v2/items/33813 took 51723 ms status 37455
+1790000672.658 INFO [svc-3] request /api/v2/items/45028 took 26362 ms status 52189
+1790000672.871 WARN [svc-2] request /api/v2/items/17864 took 45185 ms status 23281
+1790000672.932 INFO [svc-3] request /api/v2/items/41426 took 58801 ms status 23188
+1790000673.144 INFO [svc-2] worker 25669 finished job 29185 in 54045 ms
+1790000673.530 INFO [svc-0] worker 46835 finished job 4524 in 28454 ms
+1790000673.582 INFO [svc-0] worker 24584 finished job 22964 in 17294 ms
+1790000674.019 WARN [svc-2] worker 19882 finished job 59741 in 29067 ms
+1790000674.526 INFO [svc-0] worker 9480 finished job 10035 in 20828 ms
+1790000675.067 INFO [svc-1] request /api/v2/items/18103 took 53897 ms status 23380
+1790000675.617 INFO [svc-3] request /api/v2/items/29924 took 16308 ms status 35742
+1790000675.791 ERROR [svc-2] cache miss for key user:49452 shard 2544
+1790000676.007 WARN [svc-3] accepted connection from 10.50644.36413.47644 port 55311
+1790000676.542 INFO [svc-3] worker 14594 finished job 40453 in 12437 ms
+1790000677.035 INFO [svc-2] worker 7014 finished job 59409 in 42516 ms
+1790000677.040 ERROR [svc-1] cache miss for key user:57481 shard 31859
+1790000677.189 WARN [svc-0] cache miss for key user:32846 shard 55168
+1790000677.389 ERROR [svc-2] accepted connection from 10.22454.38778.28213 port 48895
+1790000677.678 WARN [svc-3] accepted connection from 10.22450.8395.34243 port 26869
+1790000678.503 DEBUG [svc-3] accepted connection from 10.50186.52516.56002 port 24914
+1790000678.952 ERROR [svc-1] request /api/v2/items/45243 took 25322 ms status 43546
+1790000679.605 WARN [svc-2] worker 19413 finished job 29458 in 32604 ms
+1790000680.302 INFO [svc-2] worker 17175 finished job 55603 in 7454 ms
+1790000680.578 INFO [svc-3] accepted connection from 10.51573.27814.6487 port 1618
+1790000680.724 INFO [svc-1] worker 27510 finished job 41434 in 45937 ms
+1790000681.439 WARN [svc-0] request /api/v2/items/55052 took 18743 ms status 58110
+1790000681.651 INFO [svc-2] request /api/v2/items/45236 took 49812 ms status 29665
+1790000682.055 INFO [svc-0] request /api/v2/items/16801 took 58467 ms status 9089
+1790000682.108 WARN [svc-2] cache miss for key user:53981 shard 47101
+1790000682.600 DEBUG [svc-0] accepted connection from 10.48446.45542.56671 port 50985
+1790000682.802 ERROR [svc-2] request /api/v2/items/51299 took 14789 ms status 57452
+1790000683.119 DEBUG [svc-3] worker 53516 finished job 43973 in 33532 ms
+1790000683.222 INFO [svc-1] cache miss for key user:5875 shard 2375
+1790000683.239 DEBUG [svc-1] accepted connection from 10.5843.25380.12608 port 39931
+1790000683.708 DEBUG [svc-0] cache miss for key user:623 shard 39110
+1790000684.010 DEBUG [svc-1] cache miss for key user:10724 shard 22935
+1790000684.233 INFO [svc-0] accepted connection from 10.23183.18612.41661 port 9585
+1790000685.032 INFO [svc-2] accepted connection from 10.13296.9541.1793 port 38620
+1790000685.228 INFO [svc-0] worker 3460 finished job 29021 in 16369 ms
+1790000685.639 INFO [svc-1] cache miss for key user:2926 shard 33401
+1790000686.195 INFO [svc-3] request /api/v2/items/33822 took 43784 ms status 11380
+1790000687.016 INFO [svc-0] accepted connection from 10.5489.41900.8813 port 694
+1790000687.551 ERROR [svc-1] worker 12030 finished job 56742 in 56757 ms
+1790000688.016 INFO [svc-1] cache miss for key user:17487 shard 59515
+1790000688.527 WARN [svc-1] accepted connection from 10.185.4020.18136 port 56323
+1790000689.114 WARN [svc-3] request /api/v2/items/5383 took 33883 ms status 23418
+1790000690.000 INFO [svc-3] accepted connection from 10.55505.7106.29499 port 22413
+1790000690.531 DEBUG [svc-0] accepted connection from 10.21279.178.24512 port 6370
+1790000690.764 DEBUG [svc-1] cache miss for key user:43647 shard 9671
+1790000691.059 ERROR [svc-3] worker 29715 finished job 41961 in 28659 ms
+1790000691.287 WARN [svc-1] request /api/v2/items/47315 took 58199 ms status 16071
+1790000691.460 WARN [svc-2] accepted connection from 10.21494.3085.13563 port 50537
+1790000691.542 DEBUG [svc-0] request /api/v2/items/17540 took 8370 ms status 39001
+1790000691.964 ERROR [svc-1] cache miss for key user:14363 shard 58462
+1790000692.199 WARN [svc-0] cache miss for key user:42737 shard 55196
+1790000692.439 WARN [svc-1] worker 53335 finished job 31704 in 43402 ms
+1790000692.699 DEBUG [svc-1] request /api/v2/items/18951 took 11240 ms status 26065
+1790000693.548 INFO [svc-1] request /api/v2/items/58775 took 13598 ms status 48262
+1790000694.168 WARN [svc-1] worker 11110 finished job 939 in 30354 ms
+1790000694.970 ERROR [svc-2] cache miss for key user:51727 shard 2946
+1790000695.494 INFO [svc-0] worker 16534 finished job 32452 in 12413 ms
+1790000696.280 DEBUG [svc-0] request /api/v2/items/2052 took 30549 ms status 23418
+1790000696.422 DEBUG [svc-2] accepted connection from 10.48791.55194.42822 port 2566
+1790000697.055 DEBUG [svc-1] worker 38533 finished job 38169 in 5673 ms
+1790000697.442 INFO [svc-2] accepted connection from 10.17765.18259.58899 port 25639
+1790000698.317 INFO [svc-1] request /api/v2/items/4592 took 36980 ms status 1424
+1790000698.512 ERROR [svc-3] cache miss for key user:25885 shard 48172
+1790000699.410 DEBUG [svc-0] accepted connection from 10.24268.29607.27391 port 14055
+1790000700.292 INFO [svc-1] worker 28422 finished job 41708 in 25096 ms
+1790000700.523 INFO [svc-1] accepted connection from 10.38750.21280.50986 port 2870
+1790000701.093 INFO [svc-0] cache miss for key user:34870 shard 16021
+1790000701.765 ERROR [svc-3] cache miss for key user:41675 shard 53384
+1790000702.628 INFO [svc-0] cache miss for key user:1086 shard 47138
+1790000702.802 INFO [svc-1] worker 909 finished job 15304 in 51604 ms
+1790000703.254 DEBUG [svc-1] worker 1300 finished job 3319 in 49668 ms
+1790000703.381 ERROR [svc-0] cache miss for key user:34544 shard 47493
+1790000703.621 INFO [svc-0] accepted connection from 10.30710.18072.7975 port 21571
+1790000703.999 INFO [svc-2] worker 41482 finished job 52517 in 40490 ms
+1790000704.712 ERROR [svc-3] accepted connection from 10.37559.58479.28591 port 45579
+1790000704.863 INFO [svc-3] cache miss for key user:55543 shard 16037
+1790000705.160 WARN [svc-3] accepted connection from 10.14298.25150.4663 port 9550
+1790000705.342 DEBUG [svc-2] cache miss for key user:45841 shard 52015
+1790000705.519 INFO [svc-0] request /api/v2/items/7650 took 51084 ms status 6996
+1790000706.149 WARN [svc-0] cache miss for key user:8855 shard 10970
+1790000706.914 WARN [svc-1] accepted connection from 10.23326.43467.31096 port 2020
+1790000707.552 WARN [svc-1] worker 8228 finished job 48673 in 26911 ms
+1790000707.772 INFO [svc-3] accepted connection from 10.59978.1496.57950 port 39151
+1790000707.928 WARN [svc-2] request /api/v2/items/43745 took 29029 ms status 6750
+1790000708.744 INFO [svc-0] cache miss for key user:54092 shard 30530
+1790000709.514 INFO [svc-1] request /api/v2/items/45635 took 32817 ms status 29197
+1790000709.931 INFO [svc-0] accepted connection from 10.54920.37911.19344 port 55373
+1790000709.941 ERROR [svc-1] request /api/v2/items/3670 took 48398 ms status 39634
+1790000710.109 INFO [svc-2] accepted connection from 10.34528.28377.58668 port 54430
+1790000710.397 INFO [svc-2] request /api/v2/items/50669 took 22600 ms status 30684
+1790000711.196 DEBUG [svc-3] accepted connection from 10.18661.50394.8942 port 43918
+1790000711.267 ERROR [svc-2] worker 50422 finished job 32062 in 33706 ms
+1790000711.679 INFO [svc-0] worker 53161 finished job 1563 in 15460 ms
+1790000712.326 DEBUG [svc-0] request /api/v2/items/9905 took 2532 ms status 4628
+1790000712.744 WARN [svc-1] worker 46792 finished job 14512 in 52023 ms
+1790000713.109 INFO [svc-2] request /api/v2/items/12202 took 12416 ms status 45709
+1790000713.924 WARN [svc-0] worker 55427 finished job 39527 in 31231 ms
+1790000714.468 DEBUG [svc-3] accepted connection from 10.15674.14325.9826 port 35928
+1790000715.281 WARN [svc-1] request /api/v2/items/25286 took 20200 ms status 43196
+1790000715.431 ERROR [svc-3] request /api/v2/items/19702 took 36418 ms status 56040
+1790000715.590 INFO [svc-1] accepted connection from 10.23301.25575.33829 port 32947
+1790000716.051 INFO [svc-1] accepted connection from 10.53864.24253.6433 port 47661
+1790000716.623 INFO [svc-1] request /api/v2/items/21051 took 29668 ms status 38344
+1790000717.341 INFO [svc-1] cache miss for key user:10815 shard 2369
+1790000717.898 DEBUG [svc-0] accepted connection from 10.48566.52545.37676 port 12285
+1790000718.681 WARN [svc-3] accepted connection from 10.1442.2433.30185 port 24721
+1790000719.509 INFO [svc-0] worker 6277 finished job 17182 in 12559 ms
+1790000720.172 ERROR [svc-2] accepted connection from 10.25971.26346.45212 port 5904
+1790000720.261 INFO [svc-2] worker 30887 finished job 10314 in 41587 ms
+1790000720.676 INFO [svc-3] worker 27430 finished job 20978 in 23184 ms
+1790000721.511 WARN [svc-1] request /api/v2/items/55076 took 20168 ms status 52955
+1790000721.986 INFO [svc-0] accepted connection from 10.55100.3481.53344 port 22176
+1790000722.027 ERROR [svc-2] cache miss for key user:29018 shard 24032
+1790000722.336 INFO [svc-3] cache miss for key user:54128 shard 55926
+1790000722.549 ERROR [svc-3] worker 14822 finished job 44316 in 44216 ms
+1790000722.830 ERROR [svc-3] request /api/v2/items/24781 took 31238 ms status 16341
+1790000723.421 INFO [svc-1] cache miss for key user:29432 shard 27471
+1790000724.245 DEBUG [svc-1] accepted connection from 10.3744.15714.26652 port 15163
+1790000724.627 INFO [svc-3] accepted connection from 10.41647.6498.48501 port 35145
+1790000725.030 INFO [svc-0] worker 54284 finished job 20829 in 41588 ms
+1790000725.855 INFO [svc-2] accepted connection from 10.21133.28542.14196 port 22560
+1790000725.943 WARN [svc-1] request /api/v2/items/46965 took 45396 ms status 53290
+1790000726.364 INFO [svc-2] worker 20059 finished job 18132 in 36695 ms
+1790000726.526 DEBUG [svc-1] accepted connection from 10.56548.38579.33497 port 8143
+1790000727.127 DEBUG [svc-0] accepted connection from 10.24595.7862.44906 port 54278
+1790000727.824 INFO [svc-2] accepted connection from 10.28608.55003.2869 port 22129
+1790000728.610 ERROR [svc-3] request /api/v2/items/25568 took 10358 ms status 58471
+1790000728.906 INFO [svc-2] accepted connection from 10.27568.29826.23575 port 15778
+1790000729.141 WARN [svc-2] accepted connection from 10.23664.26525.6523 port 19986
+1790000729.694 WARN [svc-3] accepted connection from 10.53964.39308.22683 port 51147
+1790000730.308 DEBUG [svc-3] accepted connection from 10.39379.34285.37051 port 15626
+1790000730.627 INFO [svc-2] cache miss for key user:35412 shard 42302
+1790000731.123 INFO [svc-3] worker 33821 finished job 48540 in 27163 ms
+1790000731.693 INFO [svc-0] worker 29207 finished job 48947 in 8516 ms
+1790000731.726 INFO [svc-0] accepted connection from 10.29771.53586.14724 port 17877
+1790000732.471 DEBUG [svc-1] cache miss for key user:40514 shard 17057
+1790000732.904 ERROR [svc-3] cache miss for key user:56310 shard 29964
+1790000733.777 ERROR [svc-3] request /api/v2/items/41830 took 44024 ms status 41221
+1790000734.449 INFO [svc-0] accepted connection from 10.2149.58424.8187 port 594
+1790000735.304 INFO [svc-3] worker 24504 finished job 7703 in 15361 ms
+1790000736.050 INFO [svc-3] cache miss for key user:59117 shard 41749
+1790000736.792 ERROR [svc-0] accepted connection from 10.57404.22726.35666 port 54953
+1790000737.664 INFO [svc-0] accepted connection from 10.59440.33709.38743 port 47899
+1790000738.353 ERROR [svc-0] request /api/v2/items/44622 took 56298 ms status 27269
+1790000738.756 DEBUG [svc-3] cache miss for key user:17475 shard 52238
+1790000739.170 INFO [svc-2] worker 29835 finished job 1450 in 8907 ms
+1790000739.197 DEBUG [svc-3] worker 28505 finished job 45394 in 1287 ms
+1790000739.357 INFO [svc-3] request /api/v2/items/38540 took 27751 ms status 36247
+1790000739.550 INFO [svc-1] request /api/v2/items/43616 took 26041 ms status 56857
+1790000739.853 WARN [svc-1] worker 23881 finished job 39170 in 49817 ms
+1790000739.981 INFO [svc-2] accepted connection from 10.57683.31867.6146 port 24009
+1790000740.753 INFO [svc-2] accepted connection from 10.46243.53708.4432 port 35363
+1790000741.557 INFO [svc-2] worker 9500 finished job 19160 in 8175 ms
+1790000742.405 WARN [svc-1] cache miss for key user:56920 shard 18998
+1790000742.742 ERROR [svc-2] accepted connection from 10.2188.42478.56534 port 27501
+1790000743.474 WARN [svc-1] worker 25487 finished job 43398 in 25102 ms
+1790000743.632 INFO [svc-1] worker 8393 finished job 20045 in 32645 ms
+1790000743.961 INFO [svc-1] request /api/v2/items/20230 took 48432 ms status 14197
+1790000744.687 INFO [svc-1] cache miss for key user:8962 shard 28034
+1790000744.788 DEBUG [svc-1] worker 31001 finished job 55176 in 46506 ms
+1790000745.540 INFO [svc-2] request /api/v2/items/29329 took 31757 ms status 13157
+1790000745.557 INFO [svc-3] cache miss for key user:9002 shard 44077
+1790000745.712 INFO [svc-3] cache miss for key user:58594 shard 3467
+1790000746.192 ERROR [svc-1] cache miss for key user:16098 shard 3446
+1790000746.730 WARN [svc-3] accepted connection from 10.6320.56383.2320 port 4754
+1790000746.979 ERROR [svc-0] worker 58655 finished job 50827 in 38035 ms
+1790000747.613 DEBUG [svc-1] accepted connection from 10.6332.30269.8180 port 30304
+1790000748.393 INFO [svc-3] worker 22783 finished job 287 in 19174 ms
+1790000748.566 WARN [svc-0] accepted connection from 10.48453.50001.55908 port 44328
+1790000748.577 INFO [svc-3] cache miss for key user:24084 shard 19585
+1790000748.851 DEBUG [svc-2] worker 4453 finished job 57233 in 51372 ms
+1790000749.701 ERROR [svc-2] cache miss for key user:26548 shard 30776
+1790000749.931 INFO [svc-3] accepted connection from 10.36823.39021.11850 port 16130
+1790000750.494 INFO [svc-1] accepted connection from 10.51264.8470.24683 port 53286
+1790000751.230 ERROR [svc-0] worker 28425 finished job 54056 in 13278 ms
+1790000751.301 INFO [svc-3] accepted connection from 10.15566.32808.23476 port 4991
+1790000751.727 WARN [svc-1] request /api/v2/items/7912 took 5279 ms status 25749
+1790000752.401 ERROR [svc-0] cache miss for key user:2902 shard 30663
+1790000752.462 WARN [svc-1] request /api/v2/items/19232 took 34861 ms status 43086
+1790000752.866 INFO [svc-3] request /api/v2/items/34177 took 14655 ms status 37395
+1790000753.064 INFO [svc-2] request /api/v2/items/3217 took 26550 ms status 2245
+1790000753.490 INFO [svc-3] cache miss for key user:56144 shard 3392
+1790000754.187 DEBUG [svc-0] accepted connection from 10.4934.27610.50452 port 31724
+1790000754.559 INFO [svc-2] cache miss for key user:14028 shard 33962
+1790000755.332 ERROR [svc-0] worker 51151 finished job 33969 in 49868 ms
+1790000755.653 INFO [svc-2] request /api/v2/items/26826 took 26221 ms status 39942
+1790000756.090 WARN [svc-1] accepted connection from 10.51194.4653.19045 port 573
+1790000756.719 INFO [svc-2] cache miss for key user:40249 shard 29463
+1790000757.380 INFO [svc-2] worker 15897 finished job 13287 in 33084 ms
+1790000758.112 INFO [svc-1] request /api/v2/items/38621 took 58344 ms status 46244
+1790000758.397 WARN [svc-0] accepted connection from 10.13904.53095.45430 port 6386
+1790000759.233 INFO [svc-1] worker 49435 finished job 40454 in 59574 ms
+1790000759.394 ERROR [svc-3] worker 23697 finished job 35034 in 11606 ms
+1790000760.249 INFO [svc-3] accepted connection from 10.31143.39728.58217 port 6341
+1790000761.115 ERROR [svc-3] accepted connection from 10.15782.44416.31441 port 35035
+1790000761.958 WARN [svc-0] request /api/v2/items/20897 took 48255 ms status 47625
+1790000762.430 DEBUG [svc-0] cache miss for key user:54725 shard 41634
+1790000762.861 INFO [svc-0] worker 53007 finished job 10509 in 27646 ms
+1790000763.710 DEBUG [svc-3] worker 20763 finished job 53560 in 41927 ms
+1790000764.384 DEBUG [svc-3] cache miss for key user:25774 shard 51017
+1790000765.271 INFO [svc-1] request /api/v2/items/13124 took 8732 ms status 16720
+1790000765.506 DEBUG [svc-3] accepted connection from 10.16255.20753.57556 port 1725
+1790000766.130 DEBUG [svc-0] cache miss for key user:4138 shard 26676
+1790000766.432 DEBUG [svc-1] cache miss for key user:3296 shard 49699
+1790000766.956 WARN [svc-3] request /api/v2/items/43651 took 24694 ms status 2390
+1790000767.493 ERROR [svc-0] worker 23163 finished job 22590 in 53538 ms
+1790000767.598 DEBUG [svc-2] accepted connection from 10.12122.52738.14364 port 15619
+1790000767.827 INFO [svc-0] cache miss for key user:36078 shard 48013
+1790000768.341 INFO [svc-0] accepted connection from 10.59432.16203.42970 port 4200
+1790000769.083 INFO [svc-0] worker 40401 finished job 10257 in 16013 ms
+1790000769.810 INFO [svc-3] request /api/v2/items/19650 took 5741 ms status 36417
+1790000770.551 INFO [svc-0] accepted connection from 10.28697.1658.9 port 4443
+1790000771.052 DEBUG [svc-3] cache miss for key user:29539 shard 7112
+1790000771.554 INFO [svc-3] request /api/v2/items/31514 took 24295 ms status 3415
+1790000771.954 WARN [svc-2] worker 30118 finished job 46253 in 26778 ms
+1790000772.121 WARN [svc-3] worker 16269 finished job 36351 in 47457 ms
+1790000772.322 INFO [svc-3] worker 4173 finished job 8097 in 1194 ms
+1790000772.672 INFO [svc-2] cache miss for key user:31706 shard 33397
+1790000772.682 INFO [svc-2] worker 22389 finished job 46072 in 1606 ms
+1790000773.295 INFO [svc-2] accepted connection from 10.35250.58276.17200 port 33293
+1790000773.932 ERROR [svc-0] cache miss for key user:35986 shard 24300
+1790000774.678 WARN [svc-1] accepted connection from 10.17803.34082.45699 port 11599
+1790000775.561 INFO [svc-2] accepted connection from 10.44910.37643.7458 port 47321
+1790000775.866 INFO [svc-0] request /api/v2/items/15003 took 54729 ms status 51675
+1790000776.441 DEBUG [svc-3] worker 14333 finished job 32771 in 13006 ms
+1790000776.518 INFO [svc-2] accepted connection from 10.56338.11354.42453 port 33002
+1790000776.730 ERROR [svc-0] cache miss for key user:29321 shard 14447
+1790000776.783 INFO [svc-2] worker 51741 finished job 22476 in 31445 ms
+1790000777.446 INFO [svc-2] cache miss for key user:40274 shard 56797
+1790000777.789 INFO [svc-3] request /api/v2/items/40137 took 12219 ms status 57068
+1790000777.869 ERROR [svc-1] cache miss for key user:44821 shard 716
+1790000778.472 INFO [svc-0] cache miss for key user:15758 shard 50085
+1790000778.808 ERROR [svc-3] worker 33706 finished job 25116 in 33628 ms
+1790000779.392 INFO [svc-3] cache miss for key user:24210 shard 49107
+1790000779.531 INFO [svc-3] request /api/v2/items/57953 took 24720 ms status 10254
+1790000780.088 DEBUG [svc-1] request /api/v2/items/36191 took 31474 ms status 33439
+1790000780.825 INFO [svc-3] accepted connection from 10.20543.42651.13094 port 54396
+1790000781.179 ERROR [svc-2] cache miss for key user:56171 shard 1912
+1790000782.064 INFO [svc-3] cache miss for key user:16512 shard 44442
+1790000782.205 DEBUG [svc-1] accepted connection from 10.16174.29642.58493 port 55245
+1790000783.089 INFO [svc-2] cache miss for key user:12553 shard 18959
+1790000783.275 INFO [svc-1] request /api/v2/items/8933 took 29059 ms status 8190
+1790000783.673 DEBUG [svc-3] cache miss for key user:9526 shard 6501
+1790000783.807 INFO [svc-0] request /api/v2/items/44596 took 17926 ms status 29622
+1790000783.832 ERROR [svc-3] cache miss for key user:1290 shard 41835
+1790000784.625 INFO [svc-2] accepted connection from 10.35974.25973.28711 port 15247
+1790000784.778 INFO [svc-0] cache miss for key user:11404 shard 55451
+1790000784.947 INFO [svc-3] cache miss for key user:26886 shard 30466
+1790000785.685 ERROR [svc-2] cache miss for key user:25555 shard 40235
+1790000785.855 WARN [svc-0] request /api/v2/items/12971 took 38310 ms status 34349
+1790000785.863 INFO [svc-0] accepted connection from 10.5748.2597.33693 port 3169
+1790000786.417 DEBUG [svc-3] cache miss for key user:12051 shard 57522
+1790000786.626 INFO [svc-3] request /api/v2/items/44716 took 34147 ms status 30304
+1790000787.210 DEBUG [svc-0] request /api/v2/items/1406 took 31767 ms status 3340
+1790000787.938 WARN [svc-1] worker 21113 finished job 17211 in 39359 ms
+1790000788.159 WARN [svc-3] accepted connection from 10.18471.47113.59331 port 27956
+1790000789.014 INFO [svc-3] cache miss for key user:30809 shard 471
+1790000789.575 DEBUG [svc-2] accepted connection from 10.53394.32477.34987 port 3898
+1790000790.384 ERROR [svc-3] request /api/v2/items/41577 took 56251 ms status 28222
+1790000790.782 DEBUG [svc-2] request /api/v2/items/49877 took 16621 ms status 31966
+1790000791.429 WARN [svc-1] request /api/v2/items/36621 took 9230 ms status 34664
+1790000791.493 ERROR [svc-0] cache miss for key user:39767 shard 23795
+1790000791.849 INFO [svc-3] request /api/v2/items/40451 took 25723 ms status 46745
+1790000792.697 INFO [svc-0] accepted connection from 10.13960.21309.50224 port 9883
+1790000793.229 INFO [svc-0] cache miss for key user:59253 shard 20871
+1790000793.325 INFO [svc-0] request /api/v2/items/56707 took 55111 ms status 3297
+1790000794.090 WARN [svc-3] accepted connection from 10.13976.16767.38182 port 43523
+1790000794.137 INFO [svc-2] request /api/v2/items/8582 took 57381 ms status 20592
+1790000794.935 INFO [svc-3] worker 51508 finished job 51071 in 39113 ms
+1790000794.986 ERROR [svc-3] cache miss for key user:22926 shard 53424
+1790000795.819 INFO [svc-0] request /api/v2/items/26348 took 41734 ms status 29799
+1790000796.460 INFO [svc-1] request /api/v2/items/25747 took 34916 ms status 48756
+1790000796.802 INFO [svc-2] cache miss for key user:57094 shard 58822
+1790000797.407 INFO [svc-0] worker 23750 finished job 55882 in 41430 ms
+1790000797.727 WARN [svc-2] accepted connection from 10.30244.39680.17474 port 9089
+1790000798.552 WARN [svc-2] cache miss for key user:24676 shard 57789
+1790000799.308 INFO [svc-2] worker 12152 finished job 537 in 9178 ms
+1790000800.002 INFO [svc-3] accepted connection from 10.41849.51294.50048 port 28745
+1790000800.426 DEBUG [svc-0] accepted connection from 10.33363.30115.46425 port 1069
+1790000800.921 WARN [svc-1] cache miss for key user:39266 shard 53858
+1790000801.754 INFO [svc-0] worker 41605 finished job 49261 in 56932 ms
+1790000801.814 ERROR [svc-1] worker 35679 finished job 57725 in 43339 ms
+1790000802.425 DEBUG [svc-3] worker 24510 finished job 19063 in 8108 ms
+1790000803.046 WARN [svc-0] worker 52262 finished job 33239 in 41495 ms
+1790000803.351 INFO [svc-0] cache miss for key user:5211 shard 716
+1790000803.376 INFO [svc-1] worker 23302 finished job 18522 in 41497 ms
+1790000803.682 INFO [svc-1] cache miss for key user:45191 shard 28845
+1790000804.029 WARN [svc-2] accepted connection from 10.46047.4480.4457 port 29136
+1790000804.053 INFO [svc-2] cache miss for key user:56010 shard 28675
+1790000804.819 DEBUG [svc-1] cache miss for key user:19318 shard 5397
+1790000804.907 ERROR [svc-3] cache miss for key user:37915 shard 35793
+1790000805.494 ERROR [svc-3] worker 56439 finished job 13564 in 6071 ms
+1790000806.025 INFO [svc-3] cache miss for key user:46977 shard 30204
+1790000806.256 DEBUG [svc-0] worker 39895 finished job 28961 in 48970 ms
+1790000806.276 INFO [svc-0] worker 8820 finished job 41184 in 42806 ms
+1790000807.165 ERROR [svc-2] cache miss for key user:30020 shard 55439
+1790000807.462 DEBUG [svc-3] accepted connection from 10.45911.35184.9524 port 25334
+1790000807.524 ERROR [svc-0] accepted connection from 10.44290.5956.19388 port 40631
+1790000808.254 INFO [svc-3] cache miss for key user:44708 shard 55625
+1790000808.341 INFO [svc-0] request /api/v2/items/29750 took 56136 ms status 16330
+1790000808.343 WARN [svc-0] accepted connection from 10.41796.7770.15625 port 43479
+1790000808.607 ERROR [svc-3] worker 44918 finished job 40115 in 36849 ms
+1790000809.163 INFO [svc-3] cache miss for key user:7559 shard 12999
+1790000809.675 INFO [svc-2] cache miss for key user:42542 shard 21328
+1790000810.197 INFO [svc-0] cache miss for key user:6477 shard 43473
+1790000810.252 INFO [svc-3] cache miss for key user:32853 shard 16134
+1790000810.623 INFO [svc-1] accepted connection from 10.3212.53774.13425 port 15169
+1790000811.149 INFO [svc-0] worker 18528 finished job 50113 in 10421 ms
+1790000811.215 INFO [svc-2] request /api/v2/items/37031 took 31970 ms status 1179
+1790000811.898 INFO [svc-2] cache miss for key user:25200 shard 23781
+1790000812.599 ERROR [svc-0] accepted connection from 10.19569.34131.8259 port 7191
+1790000813.466 INFO [svc-3] worker 53403 finished job 15633 in 25517 ms
+1790000814.113 WARN [svc-2] accepted connection from 10.47387.56194.40034 port 16179
+1790000814.288 INFO [svc-0] worker 34768 finished job 35259 in 44963 ms
+1790000814.525 INFO [svc-0] accepted connection from 10.12374.21395.57511 port 16377
+1790000814.840 WARN [svc-3] accepted connection from 10.17883.35029.54209 port 3645
+1790000815.020 DEBUG [svc-3] accepted connection from 10.8659.3980.10840 port 40567
+1790000815.120 INFO [svc-2] cache miss for key user:52959 shard 59202
+1790000816.015 INFO [svc-3] cache miss for key user:22316 shard 25971
+1790000816.684 INFO [svc-0] worker 42885 finished job 44639 in 37175 ms
+1790000817.567 WARN [svc-3] request /api/v2/items/6058 took 21370 ms status 56958
+1790000818.330 INFO [svc-2] accepted connection from 10.15428.13418.35651 port 33081
+1790000818.593 ERROR [svc-1] request /api/v2/items/16720 took 12926 ms status 38033
+1790000818.827 INFO [svc-0] cache miss for key user:58111 shard 14529
+1790000819.711 INFO [svc-2] cache miss for key user:20717 shard 32987
+1790000820.065 DEBUG [svc-2] request /api/v2/items/13747 took 21821 ms status 58572
+1790000820.771 WARN [svc-2] accepted connection from 10.21739.36322.30088 port 5765
+1790000821.209 WARN [svc-3] accepted connection from 10.13396.29596.1579 port 3986
+1790000821.503 WARN [svc-2] accepted connection from 10.24870.5667.39415 port 31049
+1790000821.873 INFO [svc-3] accepted connection from 10.43066.29296.26272 port 25391
+1790000821.954 INFO [svc-1] request /api/v2/items/53118 took 8284 ms status 29478
+1790000822.706 ERROR [svc-3] worker 38441 finished job 56970 in 56699 ms
+1790000822.914 WARN [svc-2] accepted connection from 10.27239.51224.7047 port 44907
+1790000823.286 WARN [svc-3] request /api/v2/items/35316 took 42279 ms status 19890
+1790000824.078 INFO [svc-1] worker 34080 finished job 12363 in 38656 ms
+1790000824.267 ERROR [svc-1] cache miss for key user:44689 shard 29406
+1790000825.069 ERROR [svc-3] cache miss for key user:52994 shard 53569
+1790000825.636 WARN [svc-0] cache miss for key user:16356 shard 55598
+1790000826.440 INFO [svc-3] accepted connection from 10.41026.49084.23634 port 39021
+1790000826.465 INFO [svc-1] accepted connection from 10.23920.21333.22091 port 45127
+1790000826.561 INFO [svc-2] accepted connection from 10.32177.40330.27470 port 4489
+1790000826.645 WARN [svc-0] accepted connection from 10.9942.28173.25203 port 5848
+1790000827.227 WARN [svc-1] worker 19283 finished job 9712 in 16058 ms
+1790000827.688 ERROR [svc-2] request /api/v2/items/11287 took 19422 ms status 54386
+1790000827.851 INFO [svc-3] request /api/v2/items/58975 took 24903 ms status 7259
+1790000828.175 DEBUG [svc-0] worker 20310 finished job 46488 in 35086 ms
+1790000828.442 DEBUG [svc-2] accepted connection from 10.43839.15142.54587 port 56729
+1790000829.027 INFO [svc-1] cache miss for key user:34458 shard 6781
+1790000829.322 INFO [svc-3] accepted connection from 10.53295.22673.36829 port 54069
+1790000829.947 ERROR [svc-2] cache miss for key user:21260 shard 15719
+1790000830.059 DEBUG [svc-3] cache miss for key user:30489 shard 4616
+1790000830.839 WARN [svc-2] accepted connection from 10.24314.33469.28629 port 37156
+1790000831.116 WARN [svc-0] cache miss for key user:31758 shard 29297
+1790000831.456 DEBUG [svc-2] request /api/v2/items/52527 took 57360 ms status 10785
+1790000832.098 INFO [svc-0] accepted connection from 10.30265.31131.8665 port 40423
+1790000832.429 INFO [svc-2] accepted connection from 10.25357.17836.3358 port 28568
+1790000832.784 INFO [svc-1] request /api/v2/items/28893 took 6148 ms status 56131
+1790000833.109 DEBUG [svc-3] worker 40100 finished job 35357 in 14661 ms
+1790000833.233 INFO [svc-1] accepted connection from 10.3800.10352.39095 port 57985
+1790000834.013 INFO [svc-1] request /api/v2/items/50588 took 3438 ms status 39942
+1790000834.256 INFO [svc-0] worker 58215 finished job 31592 in 10599 ms
+1790000834.889 DEBUG [svc-0] cache miss for key user:49286 shard 45372
+1790000835.412 INFO [svc-0] worker 16269 finished job 7770 in 54525 ms
+1790000835.552 INFO [svc-1] accepted connection from 10.19199.33737.3196 port 46057
+1790000836.013 DEBUG [svc-1] request /api/v2/items/25712 took 47927 ms status 976
+1790000836.712 INFO [svc-3] cache miss for key user:55458 shard 59988
+1790000837.408 INFO [svc-2] worker 27022 finished job 28023 in 29805 ms
+1790000837.575 INFO [svc-1] worker 11658 finished job 5808 in 43191 ms
+1790000838.288 INFO [svc-0] request /api/v2/items/35495 took 52366 ms status 46599
+1790000838.723 INFO [svc-0] worker 26929 finished job 1957 in 11046 ms
+1790000839.135 INFO [svc-3] accepted connection from 10.46585.10299.54898 port 29837
+1790000839.709 WARN [svc-0] worker 52051 finished job 14579 in 24298 ms
+1790000840.219 WARN [svc-1] request /api/v2/items/36034 took 22669 ms status 50292
+1790000840.984 INFO [svc-2] request /api/v2/items/5098 took 36414 ms status 31043
+1790000841.187 WARN [svc-2] cache miss for key user:26226 shard 31272
+1790000842.080 INFO [svc-1] accepted connection from 10.59366.32794.34467 port 7582
+1790000842.374 DEBUG [svc-1] cache miss for key user:1557 shard 5699
+1790000843.144 INFO [svc-3] request /api/v2/items/59783 took 50233 ms status 45835
+1790000843.232 WARN [svc-3] cache miss for key user:13598 shard 25571
+1790000843.932 INFO [svc-2] accepted connection from 10.879.51546.13702 port 16671
+1790000844.666 WARN [svc-0] worker 10661 finished job 46415 in 4499 ms
+1790000845.460 INFO [svc-1] request /api/v2/items/48359 took 52381 ms status 40795
+1790000845.908 WARN [svc-0] accepted connection from 10.49286.33107.59904 port 12677
+1790000846.014 ERROR [svc-0] worker 36064 finished job 4166 in 5098 ms
+1790000846.208 WARN [svc-1] accepted connection from 10.18191.7429.4249 port 1241
+1790000846.298 WARN [svc-1] accepted connection from 10.19528.293.36786 port 40322
+1790000847.194 INFO [svc-0] request /api/v2/items/1216 took 38857 ms status 22999
+1790000848.037 ERROR [svc-3] request /api/v2/items/42707 took 35885 ms status 4001
+1790000848.914 ERROR [svc-3] accepted connection from 10.25650.30371.57583 port 20332
+1790000849.086 WARN [svc-3] cache miss for key user:23910 shard 20200
+1790000849.565 INFO [svc-2] request /api/v2/items/23527 took 26858 ms status 21339
+1790000849.823 DEBUG [svc-1] accepted connection from 10.2772.27195.34474 port 50288
+1790000850.368 INFO [svc-1] cache miss for key user:13915 shard 6923
+1790000851.262 INFO [svc-2] worker 46547 finished job 10157 in 34542 ms
+1790000851.550 INFO [svc-2] cache miss for key user:33886 shard 9395
+1790000851.634 INFO [svc-1] cache miss for key user:26132 shard 39673
+1790000852.271 WARN [svc-3] worker 17451 finished job 14735 in 19490 ms
+1790000852.663 ERROR [svc-1] accepted connection from 10.19578.37918.2938 port 54590
+1790000853.020 INFO [svc-2] worker 2753 finished job 19648 in 18700 ms
+1790000853.904 INFO [svc-0] request /api/v2/items/32839 took 48486 ms status 15063
+1790000854.722 INFO [svc-0] accepted connection from 10.55438.117.44961 port 8176
+1790000855.112 INFO [svc-3] worker 16198 finished job 1867 in 647 ms
+1790000855.621 DEBUG [svc-0] worker 48040 finished job 39697 in 59985 ms
+1790000855.830 INFO [svc-3] worker 52166 finished job 1867 in 25523 ms
+1790000856.093 INFO [svc-3] cache miss for key user:34682 shard 52077
+1790000856.423 WARN [svc-1] cache miss for key user:54238 shard 12670
+1790000857.051 INFO [svc-0] request /api/v2/items/7591 took 39206 ms status 27637
+1790000857.656 WARN [svc-2] worker 10496 finished job 11811 in 17818 ms
+1790000857.967 INFO [svc-2] request /api/v2/items/42767 took 35579 ms status 38877
+1790000858.795 ERROR [svc-0] worker 27559 finished job 2835 in 19511 ms
+1790000859.286 INFO [svc-2] accepted connection from 10.44705.25470.800 port 58000
+1790000860.088 DEBUG [svc-2] worker 27409 finished job 56503 in 29479 ms
+1790000860.908 WARN [svc-3] worker 6143 finished job 46021 in 11272 ms
+1790000861.117 INFO [svc-1] worker 38212 finished job 1815 in 37261 ms
+1790000861.645 INFO [svc-2] cache miss for key user:49461 shard 15811
+1790000862.224 WARN [svc-0] worker 26758 finished job 25452 in 54064 ms
+1790000862.610 INFO [svc-0] cache miss for key user:44428 shard 15381
+1790000863.279 DEBUG [svc-0] accepted connection from 10.26264.59464.28467 port 21950
+1790000863.952 DEBUG [svc-1] worker 36202 finished job 18826 in 450 ms
+1790000864.103 INFO [svc-1] accepted connection from 10.47427.12549.10870 port 15809
+1790000864.905 ERROR [svc-2] request /api/v2/items/33995 took 10260 ms status 43407
+1790000864.928 DEBUG [svc-0] cache miss for key user:31923 shard 10116
+1790000865.286 ERROR [svc-2] worker 17390 finished job 25603 in 5657 ms
+1790000865.415 DEBUG [svc-1] request /api/v2/items/20847 took 46316 ms status 31786
+1790000865.836 INFO [svc-0] request /api/v2/items/12292 took 22876 ms status 41741
+1790000866.512 DEBUG [svc-2] worker 3092 finished job 8568 in 57873 ms
+1790000866.844 INFO [svc-3] request /api/v2/items/13518 took 44921 ms status 8023
+1790000867.033 INFO [svc-3] worker 24307 finished job 23345 in 8687 ms
+1790000867.788 INFO [svc-2] accepted connection from 10.42024.49747.7467 port 46328
+1790000868.147 INFO [svc-1] accepted connection from 10.25788.46727.51526 port 37596
+1790000868.462 INFO [svc-0] request /api/v2/items/48614 took 35045 ms status 32811
+1790000869.227 INFO [svc-2] accepted connection from 10.6503.7348.55001 port 31928
+1790000869.463 WARN [svc-3] request /api/v2/items/12175 took 31385 ms status 4445
+1790000870.049 INFO [svc-3] cache miss for key user:53861 shard 12409
+1790000870.313 DEBUG [svc-1] cache miss for key user:20113 shard 27263
+1790000870.329 INFO [svc-0] accepted connection from 10.15240.27787.16049 port 8671
+1790000870.984 ERROR [svc-3] accepted connection from 10.25179.24560.21227 port 59250
+1790000871.194 ERROR [svc-1] cache miss for key user:46944 shard 52602
+1790000871.691 INFO [svc-0] cache miss for key user:13528 shard 24910
+1790000872.424 DEBUG [svc-3] request /api/v2/items/56860 took 36598 ms status 10358
+1790000873.003 INFO [svc-1] worker 19655 finished job 34590 in 29834 ms
+1790000873.189 ERROR [svc-0] worker 40088 finished job 37400 in 20170 ms
+1790000873.570 INFO [svc-1] request /api/v2/items/15885 took 5974 ms status 23970
+1790000874.327 INFO [svc-3] accepted connection from 10.52385.25936.1230 port 8035
+1790000875.063 INFO [svc-3] cache miss for key user:4014 shard 28101
+1790000875.511 INFO [svc-3] accepted connection from 10.53988.54015.39408 port 51953
+1790000876.269 DEBUG [svc-0] request /api/v2/items/12170 took 6542 ms status 35165
+1790000876.621 INFO [svc-0] worker 18098 finished job 23229 in 17645 ms
+1790000877.229 WARN [svc-2] accepted connection from 10.34774.52754.43695 port 50307
+1790000877.616 ERROR [svc-1] cache miss for key user:41142 shard 32791
+1790000878.368 DEBUG [svc-2] worker 53025 finished job 22283 in 10138 ms
+1790000879.129 WARN [svc-3] accepted connection from 10.53541.18200.19186 port 28305
+1790000879.429 DEBUG [svc-0] request /api/v2/items/3686 took 1468 ms status 26390
+1790000879.731 INFO [svc-0] cache miss for key user:16016 shard 45235
+1790000880.243 INFO [svc-3] cache miss for key user:59322 shard 11857
+1790000881.090 INFO [svc-3] cache miss for key user:12253 shard 1477
+1790000881.234 INFO [svc-1] cache miss for key user:48368 shard 1813
+1790000881.871 ERROR [svc-2] accepted connection from 10.59730.53113.16052 port 6190
+1790000882.430 INFO [svc-2] cache miss for key user:16960 shard 50104
+1790000882.450 INFO [svc-1] cache miss for key user:33129 shard 47264
+1790000883.255 INFO [svc-0] cache miss for key user:4536 shard 44245
+1790000883.402 INFO [svc-3] request /api/v2/items/5365 took 13628 ms status 45508
+1790000883.842 INFO [svc-0] worker 25471 finished job 25029 in 40544 ms
+1790000884.636 INFO [svc-0] cache miss for key user:8170 shard 26854
+1790000885.134 INFO [svc-2] cache miss for key user:32105 shard 34743
+1790000885.607 INFO [svc-2] request /api/v2/items/7296 took 8831 ms status 37670
+1790000886.273 INFO [svc-1] accepted connection from 10.8864.7120.198 port 23170
+1790000886.856 INFO [svc-2] accepted connection from 10.41519.41086.4538 port 14637
+1790000887.640 DEBUG [svc-0] accepted connection from 10.22085.57298.24944 port 45555
+1790000887.994 DEBUG [svc-3] cache miss for key user:54301 shard 34313
+1790000888.330 INFO [svc-3] worker 3020 finished job 43912 in 11960 ms
+1790000888.707 DEBUG [svc-1] worker 42843 finished job 39740 in 55906 ms
+1790000889.473 INFO [svc-3] accepted connection from 10.50914.43300.28904 port 9804
+1790000889.850 DEBUG [svc-1] cache miss for key user:45935 shard 39350
+1790000890.551 INFO [svc-1] request /api/v2/items/12043 took 55900 ms status 10974
+1790000891.389 DEBUG [svc-2] worker 54001 finished job 23801 in 28480 ms
+1790000892.092 INFO [svc-2] cache miss for key user:11558 shard 54468
+1790000892.193 INFO [svc-3] accepted connection from 10.12616.10844.26842 port 35342
+1790000892.806 INFO [svc-2] request /api/v2/items/50931 took 42547 ms status 59839
+1790000893.099 INFO [svc-0] request /api/v2/items/46096 took 35468 ms status 18234
+1790000893.643 WARN [svc-0] request /api/v2/items/12669 took 18919 ms status 41535
+1790000893.967 INFO [svc-1] cache miss for key user:4625 shard 51715
+1790000894.030 INFO [svc-1] worker 5361 finished job 46398 in 38044 ms
+1790000894.198 INFO [svc-1] accepted connection from 10.44939.12334.55873 port 4745
+1790000894.435 INFO [svc-3] cache miss for key user:9121 shard 33527
+1790000894.702 WARN [svc-2] accepted connection from 10.8653.6484.51547 port 57582
+1790000895.597 ERROR [svc-3] request /api/v2/items/28370 took 1798 ms status 59149
+1790000895.941 WARN [svc-3] cache miss for key user:58159 shard 54873
+1790000896.593 INFO [svc-0] request /api/v2/items/23913 took 41795 ms status 49141
+1790000897.086 INFO [svc-0] cache miss for key user:57645 shard 43511
+1790000897.733 WARN [svc-3] request /api/v2/items/27402 took 51072 ms status 741
+1790000898.380 DEBUG [svc-0] cache miss for key user:21846 shard 50398
+1790000898.840 WARN [svc-0] accepted connection from 10.25166.14226.36190 port 52705
+1790000899.732 WARN [svc-3] accepted connection from 10.21139.41234.38194 port 17497
+1790000900.593 ERROR [svc-1] request /api/v2/items/31795 took 18559 ms status 56072
+1790000900.931 INFO [svc-0] cache miss for key user:22302 shard 275
+1790000901.722 DEBUG [svc-2] cache miss for key user:28805 shard 16473
+1790000901.970 INFO [svc-1] cache miss for key user:41521 shard 10042
+1790000902.660 INFO [svc-2] cache miss for key user:40520 shard 31281
+1790000902.907 ERROR [svc-1] cache miss for key user:34744 shard 57624
+1790000903.109 WARN [svc-3] worker 15534 finished job 28469 in 36749 ms
+1790000903.165 INFO [svc-1] request /api/v2/items/40572 took 44445 ms status 269
+1790000903.652 INFO [svc-2] worker 43107 finished job 40232 in 25431 ms
+1790000904.385 DEBUG [svc-0] worker 3566 finished job 3543 in 52567 ms
+1790000904.781 ERROR [svc-1] worker 25770 finished job 29061 in 31699 ms
+1790000904.793 INFO [svc-0] worker 841 finished job 58672 in 36639 ms
+1790000905.266 DEBUG [svc-2] request /api/v2/items/50365 took 57781 ms status 39385
+1790000905.429 DEBUG [svc-1] request /api/v2/items/33660 took 53813 ms status 18084
+1790000906.328 INFO [svc-2] cache miss for key user:10961 shard 7244
+1790000906.946 WARN [svc-3] cache miss for key user:12052 shard 19903
+1790000907.828 WARN [svc-2] worker 19692 finished job 35471 in 27508 ms
+1790000908.098 ERROR [svc-1] request /api/v2/items/54778 took 29515 ms status 47762
+1790000908.825 DEBUG [svc-1] accepted connection from 10.37062.21338.24013 port 3999
+1790000909.094 WARN [svc-1] accepted connection from 10.39264.18370.5172 port 38712
+1790000909.272 INFO [svc-3] cache miss for key user:41036 shard 28892
+1790000909.404 INFO [svc-1] accepted connection from 10.28340.30065.53885 port 46012
+1790000909.525 INFO [svc-0] accepted connection from 10.18792.31518.28797 port 30114
+1790000909.855 ERROR [svc-1] worker 34004 finished job 23334 in 5577 ms
+1790000910.584 INFO [svc-2] accepted connection from 10.52447.8821.42018 port 52162
+1790000911.238 WARN [svc-2] request /api/v2/items/29701 took 7241 ms status 56994
+1790000911.735 WARN [svc-3] worker 59980 finished job 28739 in 36015 ms
+1790000911.804 INFO [svc-3] request /api/v2/items/44843 took 41553 ms status 23647
+1790000912.420 INFO [svc-1] request /api/v2/items/16578 took 47338 ms status 38918
+1790000912.551 ERROR [svc-2] worker 168 finished job 30995 in 29788 ms
+1790000912.855 WARN [svc-0] cache miss for key user:18712 shard 49692
+1790000913.003 ERROR [svc-1] request /api/v2/items/36110 took 14498 ms status 14759
+1790000913.187 INFO [svc-3] worker 45453 finished job 15397 in 54246 ms
+1790000913.943 INFO [svc-1] accepted connection from 10.1750.42022.2351 port 2686
+1790000914.088 ERROR [svc-2] accepted connection from 10.9487.12232.54716 port 30959
+1790000914.443 INFO [svc-1] accepted connection from 10.25124.20922.14274 port 4759
+1790000914.854 INFO [svc-0] worker 39667 finished job 35600 in 43759 ms
+1790000915.067 INFO [svc-2] accepted connection from 10.59660.28419.35802 port 15102
+1790000915.271 INFO [svc-2] request /api/v2/items/6118 took 45507 ms status 7191
+1790000915.871 WARN [svc-3] cache miss for key user:18138 shard 33420
+1790000916.292 WARN [svc-2] worker 42278 finished job 15276 in 11736 ms
+1790000916.448 DEBUG [svc-0] worker 30962 finished job 17868 in 10469 ms
+1790000917.152 INFO [svc-3] accepted connection from 10.11994.53525.12530 port 8438
+1790000917.642 INFO [svc-1] accepted connection from 10.13084.16428.42668 port 58167
+1790000918.352 ERROR [svc-0] worker 52475 finished job 53347 in 40358 ms
+1790000918.680 DEBUG [svc-1] accepted connection from 10.9647.28835.36397 port 22552
+1790000919.207 DEBUG [svc-1] request /api/v2/items/33737 took 34157 ms status 59717
+1790000919.413 INFO [svc-3] worker 49737 finished job 22234 in 46401 ms
+1790000920.086 WARN [svc-3] accepted connection from 10.47500.59532.45257 port 7855
+1790000920.166 INFO [svc-3] accepted connection from 10.33879.33936.24469 port 318
+1790000921.061 ERROR [svc-2] worker 54431 finished job 18636 in 23505 ms
+1790000921.825 INFO [svc-0] cache miss for key user:29214 shard 32008
+1790000922.090 ERROR [svc-2] request /api/v2/items/1293 took 17002 ms status 37834
+1790000922.816 INFO [svc-3] worker 24858 finished job 34982 in 37468 ms
+1790000923.488 INFO [svc-2] cache miss for key user:53076 shard 15792
+1790000923.709 INFO [svc-2] cache miss for key user:11828 shard 39422
+1790000924.370 INFO [svc-1] cache miss for key user:29495 shard 42437
+1790000924.403 ERROR [svc-2] accepted connection from 10.49036.24113.45324 port 46227
+1790000925.166 INFO [svc-2] cache miss for key user:8259 shard 11289
+1790000925.830 ERROR [svc-2] accepted connection from 10.42532.5410.23550 port 491
+1790000926.078 INFO [svc-0] cache miss for key user:21397 shard 24136
+1790000926.560 WARN [svc-2] accepted connection from 10.56411.10426.51534 port 22117
+1790000927.290 DEBUG [svc-2] request /api/v2/items/18229 took 29255 ms status 9290
+1790000927.428 WARN [svc-0] cache miss for key user:42456 shard 24546
+1790000927.895 WARN [svc-0] request /api/v2/items/35721 took 11691 ms status 7054
+1790000928.701 ERROR [svc-1] request /api/v2/items/26739 took 49887 ms status 16811
+1790000929.401 INFO [svc-1] accepted connection from 10.2188.30764.13048 port 57062
+1790000930.074 INFO [svc-1] worker 41078 finished job 5684 in 9397 ms
+1790000930.887 DEBUG [svc-0] cache miss for key user:56530 shard 58718
+1790000931.339 INFO [svc-2] cache miss for key user:6455 shard 49298
+1790000931.777 INFO [svc-1] cache miss for key user:31240 shard 47852
+1790000931.842 INFO [svc-3] accepted connection from 10.20407.59778.9686 port 4060
+1790000932.449 DEBUG [svc-1] request /api/v2/items/39101 took 37985 ms status 48854
+1790000932.692 INFO [svc-1] worker 3301 finished job 47364 in 29714 ms
+1790000933.105 ERROR [svc-3] request /api/v2/items/32572 took 56840 ms status 18255
+1790000933.868 DEBUG [svc-1] worker 37629 finished job 13271 in 9697 ms
+1790000934.420 DEBUG [svc-0] worker 13237 finished job 24594 in 22929 ms
+1790000934.484 INFO [svc-0] request /api/v2/items/57687 took 30206 ms status 24056
+1790000934.899 INFO [svc-3] cache miss for key user:17357 shard 16134
+1790000935.026 INFO [svc-3] accepted connection from 10.35499.39531.54033 port 47451
+1790000935.057 INFO [svc-1] cache miss for key user:54760 shard 32133
+1790000935.179 INFO [svc-2] accepted connection from 10.2689.28461.30596 port 29791
+1790000935.199 DEBUG [svc-0] cache miss for key user:28419 shard 43965
+1790000935.993 WARN [svc-3] worker 16960 finished job 773 in 51598 ms
+1790000936.095 WARN [svc-2] worker 10314 finished job 48497 in 21224 ms
+1790000936.683 ERROR [svc-1] request /api/v2/items/50491 took 56123 ms status 14568
+1790000937.517 INFO [svc-3] cache miss for key user:21742 shard 47515
+1790000937.865 INFO [svc-2] accepted connection from 10.35884.11989.25546 port 20955
+1790000938.256 WARN [svc-1] request /api/v2/items/28158 took 58809 ms status 2048
+1790000939.136 INFO [svc-0] request /api/v2/items/23208 took 16599 ms status 18588
+1790000939.645 INFO [svc-0] accepted connection from 10.45942.53241.54985 port 55968
+1790000940.309 INFO [svc-0] worker 54608 finished job 51053 in 23997 ms
+1790000941.153 INFO [svc-2] cache miss for key user:44434 shard 5003
+1790000941.568 DEBUG [svc-2] worker 50235 finished job 53339 in 6723 ms
+1790000942.235 DEBUG [svc-0] accepted connection from 10.13743.22512.9135 port 14198
+1790000942.449 DEBUG [svc-2] worker 37088 finished job 56443 in 19027 ms
+1790000942.473 DEBUG [svc-1] accepted connection from 10.34786.52706.19193 port 12080
+1790000943.370 INFO [svc-3] cache miss for key user:27459 shard 53610
+1790000944.023 INFO [svc-1] worker 2522 finished job 50405 in 49803 ms
+1790000944.144 INFO [svc-0] cache miss for key user:36182 shard 27019
+1790000944.549 INFO [svc-3] cache miss for key user:25416 shard 49060
+1790000945.338 INFO [svc-1] accepted connection from 10.17005.48567.16688 port 55189
+1790000945.936 ERROR [svc-0] accepted connection from 10.21557.17896.8811 port 43633
+1790000946.021 ERROR [svc-3] cache miss for key user:37344 shard 44225
+1790000946.651 ERROR [svc-0] cache miss for key user:41264 shard 22636
+1790000947.018 DEBUG [svc-3] worker 46404 finished job 36554 in 1489 ms
+1790000947.878 INFO [svc-3] cache miss for key user:47216 shard 21908
+1790000948.545 INFO [svc-3] cache miss for key user:15480 shard 27403
+1790000948.762 WARN [svc-3] worker 23009 finished job 3255 in 53945 ms
+1790000949.559 INFO [svc-3] worker 2156 finished job 21328 in 24111 ms
+1790000950.048 INFO [svc-1] request /api/v2/items/3800 took 31424 ms status 58361
+1790000950.672 INFO [svc-0] accepted connection from 10.14217.18005.177 port 2405
+1790000951.030 INFO [svc-3] accepted connection from 10.482.54204.4429 port 19601
+1790000951.183 INFO [svc-0] cache miss for key user:42231 shard 43798
+1790000951.582 DEBUG [svc-3] worker 51528 finished job 35387 in 47942 ms
+1790000952.332 DEBUG [svc-2] request /api/v2/items/50624 took 47456 ms status 32997
+1790000952.442 INFO [svc-1] request /api/v2/items/1204 took 1999 ms status 50520
+1790000952.934 INFO [svc-2] cache miss for key user:8652 shard 34422
+1790000953.574 INFO [svc-2] cache miss for key user:6390 shard 37282
+1790000954.066 WARN [svc-1] worker 25354 finished job 34001 in 29948 ms
+1790000954.402 INFO [svc-1] accepted connection from 10.46312.30986.55750 port 16729
+1790000955.055 DEBUG [svc-0] worker 28130 finished job 44058 in 13027 ms
+1790000955.119 ERROR [svc-0] worker 8686 finished job 53819 in 28568 ms
+1790000955.325 INFO [svc-1] accepted connection from 10.41326.22293.19224 port 36169
+1790000955.504 INFO [svc-1] request /api/v2/items/52103 took 9976 ms status 46863
+1790000956.191 INFO [svc-1] cache miss for key user:10970 shard 39671
+1790000956.864 WARN [svc-2] cache miss for key user:23405 shard 16788
+1790000957.590 DEBUG [svc-2] request /api/v2/items/22814 took 30422 ms status 28719
+1790000958.278 INFO [svc-0] accepted connection from 10.34274.8480.27999 port 51581
+1790000958.910 INFO [svc-1] request /api/v2/items/16390 took 11546 ms status 52629
+1790000959.605 INFO [svc-0] accepted connection from 10.13288.12065.25765 port 13757
+1790000960.056 ERROR [svc-0] cache miss for key user:53745 shard 12129
+1790000960.127 INFO [svc-2] worker 34668 finished job 37195 in 38813 ms
+1790000960.886 WARN [svc-2] request /api/v2/items/52148 took 21442 ms status 42884
+1790000961.355 INFO [svc-3] cache miss for key user:9414 shard 10468
+1790000961.630 INFO [svc-0] request /api/v2/items/36843 took 1632 ms status 52408
+1790000961.727 INFO [svc-3] accepted connection from 10.58167.49102.32079 port 12907
+1790000962.412 DEBUG [svc-2] accepted connection from 10.36206.49545.47926 port 46332
+1790000962.651 ERROR [svc-2] cache miss for key user:39703 shard 46890
+1790000963.303 INFO [svc-2] request /api/v2/items/28759 took 46343 ms status 13671
+1790000963.706 INFO [svc-3] cache miss for key user:4517 shard 56538
+1790000963.993 INFO [svc-1] cache miss for key user:49206 shard 25994
+1790000964.537 ERROR [svc-0] request /api/v2/items/56422 took 11182 ms status 17850
+1790000965.368 INFO [svc-0] accepted connection from 10.44720.23734.12966 port 21261
+1790000965.656 DEBUG [svc-0] accepted connection from 10.5644.10202.8842 port 29326
+1790000966.042 INFO [svc-3] worker 52989 finished job 18328 in 57420 ms
+1790000966.933 ERROR [svc-1] request /api/v2/items/8942 took 43554 ms status 35641
+1790000967.636 INFO [svc-2] worker 45008 finished job 30506 in 36789 ms
+1790000968.256 INFO [svc-0] accepted connection from 10.38025.53169.19132 port 7893
+1790000968.510 INFO [svc-1] request /api/v2/items/18617 took 41559 ms status 55131
+1790000969.382 ERROR [svc-3] worker 51142 finished job 31909 in 51419 ms
+1790000969.952 INFO [svc-0] request /api/v2/items/59150 took 9646 ms status 16958
+1790000970.542 DEBUG [svc-3] worker 53860 finished job 3804 in 47201 ms
+1790000971.375 INFO [svc-2] accepted connection from 10.52078.54570.52950 port 44606
+1790000971.415 DEBUG [svc-3] accepted connection from 10.13778.21198.23492 port 45202
+1790000971.812 INFO [svc-2] worker 445 finished job 8760 in 57097 ms
+1790000972.463 INFO [svc-0] cache miss for key user:19487 shard 7737
+1790000973.272 INFO [svc-0] worker 34384 finished job 17073 in 17775 ms
+1790000973.680 ERROR [svc-2] worker 19589 finished job 19651 in 9472 ms
+1790000973.877 DEBUG [svc-0] worker 55534 finished job 4203 in 17885 ms
+1790000974.387 DEBUG [svc-1] worker 23972 finished job 49085 in 58904 ms
+1790000975.089 INFO [svc-1] accepted connection from 10.57014.55642.50829 port 7798
+1790000975.307 INFO [svc-2] request /api/v2/items/16776 took 8933 ms status 3971
+1790000975.329 WARN [svc-2] accepted connection from 10.17481.41993.405 port 29960
+1790000975.989 INFO [svc-3] request /api/v2/items/37560 took 36014 ms status 55109
+1790000976.558 INFO [svc-2] worker 26182 finished job 2903 in 7901 ms
+1790000976.789 INFO [svc-0] accepted connection from 10.41562.6420.31884 port 37183
+1790000977.377 INFO [svc-0] worker 40008 finished job 53488 in 9383 ms
+1790000978.094 INFO [svc-3] worker 27334 finished job 35514 in 50869 ms
+1790000978.787 INFO [svc-1] request /api/v2/items/30118 took 53207 ms status 31402
+1790000979.099 INFO [svc-3] accepted connection from 10.26173.3809.45279 port 22199
+1790000979.790 DEBUG [svc-3] request /api/v2/items/54534 took 41857 ms status 20445
+1790000980.018 DEBUG [svc-2] worker 18418 finished job 9096 in 10478 ms
+1790000980.551 INFO [svc-1] worker 49915 finished job 42251 in 34761 ms
+1790000980.946 INFO [svc-2] accepted connection from 10.49736.10454.10685 port 47855
+1790000981.710 DEBUG [svc-2] cache miss for key user:14281 shard 39834
+1790000981.829 ERROR [svc-1] cache miss for key user:10419 shard 40073
+1790000981.940 INFO [svc-2] worker 47847 finished job 29535 in 6020 ms
+1790000982.570 ERROR [svc-1] cache miss for key user:55948 shard 43500
+1790000982.951 ERROR [svc-3] worker 39965 finished job 35929 in 41683 ms
+1790000983.199 WARN [svc-0] accepted connection from 10.3055.57962.29159 port 40517
+1790000983.971 ERROR [svc-2] worker 13056 finished job 22491 in 9876 ms
+1790000984.181 INFO [svc-3] cache miss for key user:56163 shard 31420
+1790000984.600 INFO [svc-3] accepted connection from 10.26274.11268.19430 port 57982
+1790000984.996 WARN [svc-2] accepted connection from 10.28975.33.51957 port 32955
+1790000985.682 WARN [svc-0] request /api/v2/items/40784 took 48982 ms status 57372
+1790000986.294 DEBUG [svc-3] request /api/v2/items/27942 took 38426 ms status 49428
+1790000986.304 ERROR [svc-2] cache miss for key user:51478 shard 56155
+1790000987.183 ERROR [svc-0] worker 55026 finished job 7488 in 26344 ms
+1790000987.483 ERROR [svc-0] accepted connection from 10.56078.58245.11577 port 47293
+1790000987.595 INFO [svc-2] cache miss for key user:51947 shard 41524
+1790000988.173 ERROR [svc-0] request /api/v2/items/6238 took 18537 ms status 58144
+1790000988.223 INFO [svc-3] worker 3063 finished job 15590 in 14669 ms
+1790000988.813 INFO [svc-1] request /api/v2/items/1254 took 50896 ms status 2187
+1790000988.919 INFO [svc-1] worker 41422 finished job 5113 in 51116 ms
+1790000989.761 WARN [svc-1] cache miss for key user:44700 shard 39724
+1790000990.375 WARN [svc-1] accepted connection from 10.12933.25667.32676 port 27969
+1790000990.803 INFO [svc-2] request /api/v2/items/56057 took 41623 ms status 52556
+1790000991.626 WARN [svc-0] cache miss for key user:32491 shard 17536
+1790000992.378 INFO [svc-3] accepted connection from 10.10474.33219.55353 port 7899
+1790000992.671 WARN [svc-3] accepted connection from 10.8673.40210.20343 port 1592
+1790000993.472 INFO [svc-0] worker 3781 finished job 27058 in 13608 ms
+1790000993.655 DEBUG [svc-3] cache miss for key user:50509 shard 23141
+1790000994.104 ERROR [svc-2] request /api/v2/items/40340 took 13432 ms status 11584
+1790000994.827 WARN [svc-3] cache miss for key user:55164 shard 11303
+1790000995.645 INFO [svc-3] cache miss for key user:42125 shard 59637
+1790000996.246 INFO [svc-2] request /api/v2/items/477 took 54981 ms status 54410
+1790000996.685 INFO [svc-2] accepted connection from 10.6199.27309.28126 port 25710
+1790000997.344 INFO [svc-0] cache miss for key user:37377 shard 51901
+1790000998.074 WARN [svc-3] request /api/v2/items/44286 took 34280 ms status 5886
+1790000998.198 DEBUG [svc-2] cache miss for key user:11726 shard 21501
+1790000998.490 INFO [svc-1] cache miss for key user:33462 shard 31852
+1790000998.651 WARN [svc-0] accepted connection from 10.46074.10843.12461 port 11217
+1790000999.072 WARN [svc-2] cache miss for key user:57262 shard 1653
+1790000999.658 INFO [svc-2] accepted connection from 10.55108.48320.29325 port 29246
+1790001000.208 WARN [svc-3] accepted connection from 10.26763.13477.7371 port 44651
+1790001000.618 DEBUG [svc-3] worker 16050 finished job 48627 in 23201 ms
+1790001000.647 INFO [svc-3] cache miss for key user:4182 shard 338
+1790001001.439 INFO [svc-0] worker 29138 finished job 48275 in 29653 ms
+1790001002.217 DEBUG [svc-3] cache miss for key user:22000 shard 28899
+1790001002.891 DEBUG [svc-0] accepted connection from 10.39963.11169.29428 port 44061
+1790001003.352 ERROR [svc-0] cache miss for key user:23985 shard 5226
+1790001003.923 DEBUG [svc-0] accepted connection from 10.58159.22671.19698 port 58147
+1790001004.617 INFO [svc-2] cache miss for key user:59131 shard 7141
+1790001004.744 INFO [svc-2] accepted connection from 10.56780.53073.2582 port 38918
+1790001004.778 DEBUG [svc-1] accepted connection from 10.17078.25819.1179 port 15142
+1790001005.041 INFO [svc-2] worker 46518 finished job 57502 in 55170 ms
+1790001005.555 DEBUG [svc-0] request /api/v2/items/56415 took 9985 ms status 9337
+1790001005.787 ERROR [svc-0] worker 56507 finished job 26354 in 42707 ms
+1790001006.219 WARN [svc-0] cache miss for key user:31278 shard 10525
+1790001006.268 INFO [svc-0] accepted connection from 10.5076.56994.43721 port 57574
+1790001006.963 ERROR [svc-3] accepted connection from 10.46048.2676.48427 port 26033
+1790001007.359 WARN [svc-1] worker 3127 finished job 14918 in 37032 ms
+1790001008.210 INFO [svc-1] accepted connection from 10.20809.10569.39866 port 27227
+1790001008.673 INFO [svc-1] cache miss for key user:40421 shard 17199
+1790001008.905 INFO [svc-3] cache miss for key user:40711 shard 16386
+1790001009.080 WARN [svc-0] accepted connection from 10.6897.7650.58789 port 57656
+1790001009.483 ERROR [svc-2] worker 16932 finished job 45073 in 11670 ms
+1790001009.799 INFO [svc-1] request /api/v2/items/20346 took 21668 ms status 1061
+1790001009.829 INFO [svc-2] cache miss for key user:52977 shard 16569
+1790001010.167 WARN [svc-1] accepted connection from 10.34167.30578.30355 port 15783
+1790001010.948 DEBUG [svc-0] cache miss for key user:21835 shard 21593
+1790001011.259 INFO [svc-1] accepted connection from 10.3388.20593.6974 port 32931
+1790001011.382 INFO [svc-2] request /api/v2/items/1610 took 32567 ms status 6849
+1790001011.817 WARN [svc-3] cache miss for key user:31818 shard 51969
+1790001011.960 INFO [svc-0] request /api/v2/items/59366 took 11789 ms status 4847
+1790001012.543 INFO [svc-0] accepted connection from 10.43872.47304.31299 port 420
+1790001013.419 WARN [svc-1] accepted connection from 10.2996.38878.22786 port 32638
+1790001014.226 INFO [svc-0] accepted connection from 10.31202.28087.36496 port 47460
+1790001014.337 WARN [svc-0] request /api/v2/items/48902 took 54012 ms status 49854
+1790001015.072 INFO [svc-1] accepted connection from 10.32853.21699.55412 port 36986
+1790001015.657 INFO [svc-0] cache miss for key user:86 shard 19347
+1790001016.409 INFO [svc-3] request /api/v2/items/38909 took 9541 ms status 40510
+1790001016.502 WARN [svc-3] cache miss for key user:48624 shard 58130
+1790001016.624 INFO [svc-0] worker 47142 finished job 59576 in 32332 ms
+1790001017.406 INFO [svc-3] cache miss for key user:13890 shard 31353
+1790001018.158 DEBUG [svc-2] worker 9299 finished job 28233 in 45576 ms
+1790001018.671 INFO [svc-0] request /api/v2/items/35528 took 51789 ms status 2437
+1790001019.111 WARN [svc-3] request /api/v2/items/5078 took 49997 ms status 26904
+1790001019.920 INFO [svc-3] accepted connection from 10.31360.30774.20878 port 21722
+1790001020.775 WARN [svc-1] cache miss for key user:7668 shard 23724
+1790001021.135 ERROR [svc-3] cache miss for key user:31115 shard 24828
+1790001021.649 INFO [svc-3] worker 19142 finished job 35097 in 49888 ms
+1790001021.940 INFO [svc-3] request /api/v2/items/5383 took 49709 ms status 57440
+1790001022.635 INFO [svc-2] worker 8971 finished job 59190 in 45469 ms
+1790001023.511 INFO [svc-0] accepted connection from 10.38463.14373.41389 port 38878
+1790001024.079 DEBUG [svc-1] request /api/v2/items/7369 took 28175 ms status 43316
+1790001024.919 INFO [svc-3] accepted connection from 10.4714.53460.550 port 24691
+1790001025.622 ERROR [svc-3] request /api/v2/items/10706 took 26960 ms status 36148
+1790001026.370 INFO [svc-2] accepted connection from 10.42106.59793.1641 port 45668
+1790001026.727 INFO [svc-2] accepted connection from 10.42242.3629.56726 port 19747
+1790001026.764 DEBUG [svc-2] accepted connection from 10.1442.19009.53951 port 35968
+1790001026.941 INFO [svc-2] worker 15229 finished job 44636 in 30465 ms
+1790001027.188 DEBUG [svc-3] request /api/v2/items/17283 took 1133 ms status 19201
+1790001027.440 WARN [svc-0] request /api/v2/items/44637 took 22260 ms status 41370
+1790001027.804 ERROR [svc-2] cache miss for key user:40030 shard 59964
+1790001028.349 DEBUG [svc-3] accepted connection from 10.41476.39068.36715 port 17668
+1790001028.771 INFO [svc-2] request /api/v2/items/54409 took 9973 ms status 53860
+1790001028.785 DEBUG [svc-3] request /api/v2/items/1212 took 21928 ms status 2970
+1790001029.165 ERROR [svc-2] request /api/v2/items/4407 took 52896 ms status 6808
+1790001029.319 WARN [svc-2] accepted connection from 10.231.10727.20113 port 36962
+1790001029.971 INFO [svc-3] accepted connection from 10.50067.22793.23187 port 47062
+1790001030.057 INFO [svc-2] cache miss for key user:5562 shard 19086
+1790001030.114 INFO [svc-0] worker 54135 finished job 52272 in 25861 ms
+1790001030.844 WARN [svc-2] worker 53621 finished job 18615 in 58159 ms
+1790001031.715 WARN [svc-3] worker 6483 finished job 3365 in 7976 ms
+1790001031.850 INFO [svc-0] cache miss for key user:56766 shard 18138
+1790001032.331 WARN [svc-1] worker 17005 finished job 17011 in 26370 ms
+1790001032.571 DEBUG [svc-2] request /api/v2/items/22553 took 19463 ms status 12803
+1790001032.844 INFO [svc-0] cache miss for key user:36519 shard 20299
+1790001033.020 INFO [svc-0] accepted connection from 10.57143.59889.40120 port 21710
+1790001033.700 INFO [svc-1] request /api/v2/items/24114 took 45500 ms status 22092
+1790001033.850 INFO [svc-1] cache miss for key user:12357 shard 24046
+1790001034.289 INFO [svc-3] accepted connection from 10.16784.21447.9007 port 18370
+1790001035.149 ERROR [svc-1] cache miss for key user:256 shard 1092
+1790001035.177 ERROR [svc-1] cache miss for key user:24184 shard 10211
+1790001035.434 INFO [svc-0] cache miss for key user:17004 shard 43715
+1790001035.485 INFO [svc-0] request /api/v2/items/18900 took 57844 ms status 5125
+1790001036.015 INFO [svc-0] request /api/v2/items/47931 took 20194 ms status 44746
+1790001036.454 INFO [svc-3] request /api/v2/items/4088 took 29605 ms status 29966
+1790001037.108 INFO [svc-1] accepted connection from 10.45386.59748.24975 port 15562
+1790001037.866 DEBUG [svc-2] accepted connection from 10.34627.57026.24874 port 7221
+1790001038.150 DEBUG [svc-1] worker 27665 finished job 53961 in 17282 ms
+1790001038.613 WARN [svc-1] request /api/v2/items/58289 took 11189 ms status 49550
+1790001038.941 INFO [svc-3] cache miss for key user:1029 shard 18168
+1790001039.233 INFO [svc-3] cache miss for key user:54356 shard 57004
+1790001039.324 ERROR [svc-2] worker 38958 finished job 21147 in 43324 ms
+1790001039.964 ERROR [svc-0] cache miss for key user:43045 shard 33879
+1790001040.009 INFO [svc-0] accepted connection from 10.24863.28960.55003 port 25941
+1790001040.016 WARN [svc-0] worker 17817 finished job 678 in 44497 ms
+1790001040.272 INFO [svc-1] request /api/v2/items/47033 took 51108 ms status 27831
+1790001040.745 WARN [svc-3] worker 6754 finished job 53736 in 45096 ms
+1790001040.926 WARN [svc-1] request /api/v2/items/55410 took 9487 ms status 18249
+1790001041.673 DEBUG [svc-3] cache miss for key user:17544 shard 42016
+1790001041.708 INFO [svc-1] worker 33012 finished job 1532 in 23772 ms
+1790001042.464 DEBUG [svc-0] request /api/v2/items/57509 took 39989 ms status 42857
+1790001042.936 INFO [svc-2] request /api/v2/items/40935 took 33802 ms status 12629
+1790001043.481 INFO [svc-3] worker 7604 finished job 56332 in 41701 ms
+1790001043.804 INFO [svc-2] cache miss for key user:26289 shard 50463
+1790001044.038 INFO [svc-0] accepted connection from 10.42415.42478.54526 port 6229
+1790001044.787 ERROR [svc-3] cache miss for key user:41722 shard 13187
+1790001045.171 WARN [svc-3] worker 43191 finished job 34627 in 54053 ms
+1790001045.956 INFO [svc-2] cache miss for key user:50646 shard 24940
+1790001046.674 ERROR [svc-0] cache miss for key user:9429 shard 53589
+1790001047.048 INFO [svc-2] accepted connection from 10.38814.11301.46007 port 52327
+1790001047.761 INFO [svc-3] request /api/v2/items/25434 took 23612 ms status 7978
+1790001048.225 INFO [svc-3] accepted connection from 10.8299.49895.5390 port 4677
+1790001048.671 INFO [svc-1] request /api/v2/items/11509 took 42558 ms status 59079
+1790001049.490 INFO [svc-0] accepted connection from 10.21435.50550.8138 port 15635
+1790001050.311 ERROR [svc-1] cache miss for key user:36692 shard 49937
+1790001050.362 INFO [svc-2] request /api/v2/items/36481 took 43516 ms status 37433
+1790001050.964 INFO [svc-3] request /api/v2/items/39005 took 59341 ms status 7594
+1790001051.284 ERROR [svc-1] accepted connection from 10.149.40984.43503 port 51243
+1790001051.770 INFO [svc-3] worker 41156 finished job 28877 in 47545 ms
+1790001052.342 WARN [svc-2] request /api/v2/items/26043 took 8997 ms status 37965
+1790001052.495 INFO [svc-3] accepted connection from 10.27763.45098.41226 port 58650
+1790001052.933 WARN [svc-2] request /api/v2/items/44859 took 15191 ms status 33290
+1790001053.755 INFO [svc-3] request /api/v2/items/28625 took 58801 ms status 3624
+1790001054.624 INFO [svc-3] worker 42459 finished job 10331 in 22097 ms
+1790001054.628 INFO [svc-1] cache miss for key user:15449 shard 21602
+1790001055.522 INFO [svc-0] accepted connection from 10.52776.38654.43557 port 55650
+1790001055.694 WARN [svc-0] cache miss for key user:37201 shard 30843
+1790001056.252 INFO [svc-0] accepted connection from 10.41661.10581.39825 port 35186
+1790001057.083 INFO [svc-1] cache miss for key user:45743 shard 9409
+1790001057.643 INFO [svc-1] cache miss for key user:16369 shard 20046
+1790001058.265 INFO [svc-1] cache miss for key user:2440 shard 28904
+1790001058.431 INFO [svc-1] worker 12832 finished job 9384 in 32830 ms
+1790001058.971 ERROR [svc-2] accepted connection from 10.53442.8814.14406 port 49674
+1790001059.012 INFO [svc-3] request /api/v2/items/16843 took 13507 ms status 41159
+1790001059.743 INFO [svc-1] cache miss for key user:10029 shard 51419
+1790001060.595 ERROR [svc-1] request /api/v2/items/57239 took 5540 ms status 51827
+1790001060.948 INFO [svc-1] cache miss for key user:24235 shard 55020
+1790001061.490 INFO [svc-3] worker 22850 finished job 24622 in 9878 ms
+1790001062.148 WARN [svc-1] request /api/v2/items/13522 took 54418 ms status 38394
+1790001062.482 WARN [svc-0] accepted connection from 10.9448.26857.52171 port 51131
+1790001062.664 WARN [svc-3] worker 13712 finished job 55298 in 30026 ms
+1790001063.225 ERROR [svc-3] accepted connection from 10.16803.41515.6048 port 9169
+1790001063.845 WARN [svc-1] request /api/v2/items/37442 took 15987 ms status 23322
+1790001064.180 WARN [svc-3] accepted connection from 10.58005.19552.3948 port 52037
+1790001064.804 WARN [svc-2] cache miss for key user:49316 shard 5102
+1790001065.660 WARN [svc-0] worker 28647 finished job 45327 in 16285 ms
+1790001066.478 DEBUG [svc-2] request /api/v2/items/35191 took 8469 ms status 43725
+1790001067.282 INFO [svc-3] accepted connection from 10.54735.31980.22452 port 7698
+1790001068.071 ERROR [svc-0] cache miss for key user:36708 shard 8495
+1790001068.508 INFO [svc-2] request /api/v2/items/43775 took 55875 ms status 39339
+1790001068.801 ERROR [svc-3] cache miss for key user:4972 shard 632
+1790001069.341 INFO [svc-2] cache miss for key user:31216 shard 33668
+1790001069.619 WARN [svc-1] worker 47811 finished job 54646 in 47850 ms
+1790001070.144 ERROR [svc-1] worker 47956 finished job 31205 in 34132 ms
+1790001070.233 INFO [svc-2] request /api/v2/items/43704 took 38529 ms status 38599
+1790001070.485 WARN [svc-2] accepted connection from 10.9220.46329.52031 port 385
+1790001070.710 DEBUG [svc-2] accepted connection from 10.30877.41157.20356 port 16559
+1790001071.398 INFO [svc-2] cache miss for key user:35016 shard 35840
+1790001071.484 INFO [svc-0] cache miss for key user:49030 shard 20485
+1790001072.055 INFO [svc-3] cache miss for key user:23175 shard 47855
+1790001072.358 INFO [svc-2] accepted connection from 10.40221.40448.4552 port 53156
+1790001072.860 INFO [svc-1] worker 54129 finished job 41003 in 54384 ms
+1790001073.083 ERROR [svc-0] worker 12898 finished job 6579 in 58595 ms
+1790001073.425 INFO [svc-3] cache miss for key user:52105 shard 47952
+1790001073.758 INFO [svc-2] worker 11762 finished job 5896 in 43034 ms
+1790001074.622 INFO [svc-3] request /api/v2/items/51603 took 38839 ms status 57571
+1790001075.054 INFO [svc-3] accepted connection from 10.13807.52718.31122 port 10769
+1790001075.654 INFO [svc-2] worker 26984 finished job 36725 in 13588 ms
+1790001076.356 INFO [svc-3] request /api/v2/items/19610 took 35284 ms status 9750
+1790001076.829 INFO [svc-1] worker 9357 finished job 41482 in 5244 ms
+1790001077.013 ERROR [svc-1] cache miss for key user:37379 shard 11698
+1790001077.193 INFO [svc-3] accepted connection from 10.45130.17518.32229 port 25135
+1790001077.434 WARN [svc-1] request /api/v2/items/31568 took 46620 ms status 54217
+1790001077.544 INFO [svc-1] worker 54212 finished job 23631 in 26402 ms
+1790001077.658 WARN [svc-2] request /api/v2/items/11576 took 9540 ms status 54794
+1790001078.351 ERROR [svc-3] accepted connection from 10.32043.45284.2851 port 2909
+1790001078.953 ERROR [svc-1] accepted connection from 10.48415.8603.22920 port 14887
+1790001078.990 DEBUG [svc-0] request /api/v2/items/10205 took 30052 ms status 33655
+1790001079.380 ERROR [svc-2] request /api/v2/items/47132 took 6 ms status 10849
+1790001080.111 ERROR [svc-0] accepted connection from 10.43841.9360.32689 port 51821
+1790001080.538 INFO [svc-0] accepted connection from 10.11815.13516.5458 port 3824
+1790001081.217 DEBUG [svc-3] accepted connection from 10.58119.2191.36586 port 54938
+1790001081.332 ERROR [svc-0] cache miss for key user:30453 shard 2163
+1790001082.192 INFO [svc-2] request /api/v2/items/11256 took 15543 ms status 51408
+1790001082.560 WARN [svc-3] cache miss for key user:36957 shard 6014
+1790001082.698 DEBUG [svc-0] accepted connection from 10.46120.11989.18430 port 57731
+1790001083.052 INFO [svc-0] worker 32298 finished job 5685 in 34043 ms
+1790001083.420 WARN [svc-3] cache miss for key user:3566 shard 28856
+1790001083.632 INFO [svc-3] worker 2442 finished job 24224 in 50557 ms
+1790001084.302 INFO [svc-2] worker 13164 finished job 34140 in 38426 ms
+1790001084.702 DEBUG [svc-1] worker 34324 finished job 12322 in 44563 ms
+1790001085.133 DEBUG [svc-3] worker 42992 finished job 25758 in 42944 ms
+1790001085.305 INFO [svc-3] worker 48592 finished job 19422 in 40043 ms
+1790001086.059 WARN [svc-3] request /api/v2/items/21418 took 20916 ms status 53044
+1790001086.609 INFO [svc-1] worker 27755 finished job 43991 in 34627 ms
+1790001087.211 INFO [svc-3] request /api/v2/items/51996 took 33871 ms status 9552
+1790001087.300 DEBUG [svc-2] request /api/v2/items/8131 took 24234 ms status 5497
+1790001087.893 INFO [svc-1] request /api/v2/items/34708 took 56952 ms status 55012
+1790001088.109 INFO [svc-3] request /api/v2/items/42639 took 28259 ms status 51681
+1790001088.626 INFO [svc-0] request /api/v2/items/21972 took 20435 ms status 44447
+1790001088.634 ERROR [svc-2] accepted connection from 10.11241.26788.41070 port 23597
+1790001088.920 ERROR [svc-0] cache miss for key user:39749 shard 38181
+1790001089.490 DEBUG [svc-1] worker 57144 finished job 52736 in 6905 ms
+1790001089.492 WARN [svc-2] cache miss for key user:21070 shard 28473
+1790001090.381 ERROR [svc-0] worker 41846 finished job 15547 in 26068 ms
+1790001090.882 DEBUG [svc-3] worker 47757 finished job 50972 in 17101 ms
+1790001091.121 DEBUG [svc-0] cache miss for key user:45719 shard 25354
+1790001091.340 INFO [svc-2] cache miss for key user:51438 shard 12191
+1790001091.639 INFO [svc-0] cache miss for key user:23463 shard 6124
+1790001092.419 DEBUG [svc-2] worker 8684 finished job 11317 in 58936 ms
+1790001093.155 WARN [svc-2] request /api/v2/items/47863 took 56353 ms status 23589
+1790001093.509 INFO [svc-0] cache miss for key user:5579 shard 17826
+1790001094.113 DEBUG [svc-3] cache miss for key user:56141 shard 10235
+1790001094.222 INFO [svc-0] worker 27818 finished job 49205 in 41819 ms
+1790001094.966 DEBUG [svc-0] accepted connection from 10.46769.5965.56410 port 38806
+1790001095.584 INFO [svc-1] request /api/v2/items/54979 took 11705 ms status 6138
+1790001095.637 INFO [svc-1] cache miss for key user:17440 shard 41755
+1790001096.138 INFO [svc-1] request /api/v2/items/15445 took 53324 ms status 26185
+1790001096.448 WARN [svc-2] worker 38482 finished job 14788 in 22439 ms
+1790001097.013 WARN [svc-1] request /api/v2/items/1196 took 47209 ms status 44603
+1790001097.574 WARN [svc-2] cache miss for key user:30616 shard 30518
+1790001098.380 ERROR [svc-3] worker 6436 finished job 54679 in 48640 ms
+1790001099.091 INFO [svc-1] cache miss for key user:51493 shard 37760
+1790001099.114 DEBUG [svc-1] worker 47457 finished job 44736 in 23149 ms
+1790001099.850 ERROR [svc-0] request /api/v2/items/58145 took 45594 ms status 43124
+1790001100.563 INFO [svc-1] cache miss for key user:15264 shard 52570
+1790001101.347 INFO [svc-2] accepted connection from 10.23918.27091.14991 port 42128
+1790001102.022 DEBUG [svc-3] worker 8033 finished job 23401 in 17303 ms
+1790001102.337 INFO [svc-1] worker 5979 finished job 24848 in 37271 ms
+1790001103.224 DEBUG [svc-3] cache miss for key user:53559 shard 50011
+1790001103.232 ERROR [svc-0] worker 14725 finished job 36726 in 55810 ms
+1790001104.072 INFO [svc-2] request /api/v2/items/9986 took 11176 ms status 56753
+1790001104.967 INFO [svc-3] accepted connection from 10.29414.16117.50549 port 9167
+1790001105.684 INFO [svc-3] worker 39172 finished job 18571 in 55884 ms
+1790001106.204 WARN [svc-1] worker 24419 finished job 6859 in 56774 ms
+1790001106.491 WARN [svc-3] worker 35615 finished job 3936 in 55284 ms
+1790001106.694 INFO [svc-2] cache miss for key user:39644 shard 6263
+1790001107.088 INFO [svc-2] cache miss for key user:43590 shard 27300
+1790001107.092 INFO [svc-2] accepted connection from 10.59875.53148.46826 port 9581
+1790001107.569 ERROR [svc-0] accepted connection from 10.14424.52250.33919 port 17705
+1790001107.628 WARN [svc-2] worker 26385 finished job 16006 in 46434 ms
+1790001107.948 INFO [svc-1] request /api/v2/items/34586 took 2216 ms status 36097
+1790001108.806 INFO [svc-0] worker 40711 finished job 12202 in 41125 ms
+1790001109.620 INFO [svc-2] request /api/v2/items/14906 took 34747 ms status 36332
+1790001109.855 INFO [svc-3] worker 5399 finished job 10185 in 14158 ms
+1790001110.518 DEBUG [svc-1] cache miss for key user:12063 shard 56826
+1790001110.987 INFO [svc-2] accepted connection from 10.39356.57451.345 port 39894
+1790001111.166 DEBUG [svc-2] request /api/v2/items/52579 took 34870 ms status 26410
+1790001111.419 INFO [svc-1] accepted connection from 10.36330.4163.17655 port 48266
+1790001111.714 DEBUG [svc-2] worker 3633 finished job 51590 in 21609 ms
+1790001112.370 DEBUG [svc-2] cache miss for key user:46687 shard 29843
+1790001112.721 INFO [svc-2] cache miss for key user:38502 shard 43764
+1790001112.928 INFO [svc-1] worker 5841 finished job 37911 in 35846 ms
+1790001112.967 INFO [svc-0] worker 34018 finished job 8642 in 29646 ms
+1790001113.214 DEBUG [svc-3] request /api/v2/items/17107 took 4172 ms status 9585
+1790001113.250 ERROR [svc-3] cache miss for key user:59747 shard 18372
+1790001113.654 INFO [svc-0] accepted connection from 10.36425.25534.16726 port 31536
+1790001113.915 INFO [svc-1] request /api/v2/items/14856 took 8024 ms status 21308
+1790001114.176 ERROR [svc-2] worker 19538 finished job 31120 in 52393 ms
+1790001114.406 INFO [svc-0] cache miss for key user:55544 shard 14349
+1790001114.528 INFO [svc-0] accepted connection from 10.3349.23905.20356 port 56701
+1790001114.773 ERROR [svc-1] accepted connection from 10.44284.46945.48447 port 40061
+1790001115.405 ERROR [svc-0] cache miss for key user:55449 shard 10197
+1790001116.042 INFO [svc-2] accepted connection from 10.26882.41413.25172 port 25723
+1790001116.472 INFO [svc-1] cache miss for key user:1673 shard 47268
+1790001116.740 ERROR [svc-0] cache miss for key user:35705 shard 37594
+1790001117.573 INFO [svc-1] request /api/v2/items/51127 took 54484 ms status 35622
+1790001118.362 INFO [svc-1] worker 39764 finished job 645 in 8231 ms
+1790001119.222 ERROR [svc-1] worker 33800 finished job 39738 in 16058 ms
+1790001119.402 INFO [svc-2] accepted connection from 10.12915.51551.58406 port 53949
+1790001119.977 ERROR [svc-1] request /api/v2/items/37318 took 53611 ms status 50838

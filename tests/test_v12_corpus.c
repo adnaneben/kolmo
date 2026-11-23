@@ -1,7 +1,8 @@
-/* Frozen container-version-12 decode corpus: tests/v12 holds small frames written by the kolmo 0.0.1 release in every
- * mode (rt, fast, eco, hc, max, ultra) and their originals; tests/v12/MANIFEST lists "frame original" pairs. Every
- * decoder of version 12 must keep decoding them to the same bytes, through the whole-buffer call, the frame check and a
- * range read. Do not regenerate these frames with a newer encoder: they are the compatibility record.
+/* Frozen container-version-12 decode corpus (COMPATIBILITY.md): tests/v12 holds frames in the six modes of 0.0.1 (top
+ * level) and the frames of each release from 0.0.2 on (r<version>/, written by tests/make_v12_frames.py), with their
+ * originals; tests/v12/MANIFEST lists "frame original" pairs. Every decoder of version 12 must keep decoding them to the
+ * same bytes, through the whole-buffer call, the frame check and a range read. Do not regenerate these frames with a
+ * newer encoder: they are the compatibility record.
  * Usage: test-v12-corpus [dir] (default tests/v12). */
 #include "kolmo.h"
 #include <stdio.h>
