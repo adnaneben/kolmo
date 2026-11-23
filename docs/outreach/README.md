@@ -12,6 +12,7 @@ report and case study needs the owner's approval before it leaves the repository
 |---|---|
 | [`candidates.md`](candidates.md) | 20 candidate data owners and 4 channels (registries, catalogues) from public sources: what they store and how much, why Kolmo fits, the integration they would use, a public contact route, and a priority |
 | [`CLAIMS.md`](CLAIMS.md) | The only claims the messages may make, each with its numbers, method, raw data and reproduce command; and the claims to avoid |
+| [`drafts/`](drafts/README.md) | Final first-wave messages (Loghub, GHCN-Daily, Backblaze) with their own numbers and route; approved on the owner's behalf, **not posted** |
 | [`message-templates.md`](message-templates.md) | First message per audience (open-data maintainer, scientific-data engineer, observability team), one follow-up, and the steps after a yes |
 | [`sample_report.py`](sample_report.py) | Runs Kolmo -3/-6/-9, zstd -3/-19 and xz -9 (and gzip -6) on a directory of sample files, one thread, verifies every round trip, and writes the per-file and total report with the projected yearly storage cost |
 | [`sample-report-template.md`](sample-report-template.md) | The report we send: generated sections and the hand-written ones around them |

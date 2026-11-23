@@ -33,7 +33,8 @@
   than gzip -6; on NASA HTTP logs, level 9 is 1.8x smaller than gzip -6, while level 3 only ties zstd -3.
   Measured before any contact on five candidates' own public files (`docs/outreach/evidence/first-wave/`): NOAA
   GHCN-Daily 2024 (level 3 1.8x and level 6 2.9x smaller than gzip -6), Backblaze Drive Stats and Loghub BGL are
-  strong; ESA Gaia ECSV and Wikimedia pageviews are weak and were demoted.
+  strong; ESA Gaia ECSV and Wikimedia pageviews are weak and were demoted. Final first-wave messages for Loghub, GHCN-Daily and
+  Backblaze are in `docs/outreach/drafts/` (not posted).
 - **`docs/outreach/sample_report.py`**: runs Kolmo -3/-6/-9, zstd -3/-19 and xz -9 (and gzip -6) on a directory of
   sample files, one thread each, verifies every round trip byte for byte, and writes the per-file and total report
   with the projected yearly storage cost for a stated volume and $/GB-month. `--from-json` re-renders a report
