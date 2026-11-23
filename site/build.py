@@ -442,7 +442,7 @@ One thread per tool unless a row says otherwise. x86-64 results come from the <c
 <p class="src">Source: {E(data["panel"]["source"])}.</p>
 <p>OpenZL is Meta’s format-aware framework; its best results come from training (<code>zli train</code>) on samples of the data. Here OpenZL gets
 its matching profile at levels 6 and 9 (<i>untrained</i>), and a compressor <b>trained on a separate training split</b> of the same kind of data (<i>trained</i>);
-the training files are never measured. Kolmo gets no profile, no schema and no training. The holdout sets are public data new to Kolmo’s development.</p>
+the training files are never measured. Kolmo gets no profile, no schema and no training. The holdout sets are public data new to Kolmo’s development. <b>“Kolmo best” is often <code>-9</code> or <code>-U</code>, which decode at 1–400 MiB/s</b>; compare the -3 and -5 columns for everyday use.</p>
 {rematch_chart(data["panel"])}{tbl}
 <details><summary>OpenZL training runs</summary><ul>{trl or "<li>none</li>"}</ul></details>""")
         parts.append(f'<h2 id="weights">ML weights</h2><p>Model files compress poorly with every general tool: the gain comes from the exponent bits. '
