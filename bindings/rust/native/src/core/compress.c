@@ -69,7 +69,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         if (vr) return vr;
     }
     int threads = p->threads > 0 ? p->threads : default_threads();
-    uint32_t B = p->block ? p->block : (p->mode >= KOLMO_MAX ? (128u << 20) : p->mode >= KOLMO_ECO ? (16u << 20) : kolmo_fast_block(n));   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
+    uint32_t B = p->block ? p->block : kolmo_default_block(p, n);   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
     if (B < 4096) B = 4096;
     int codec, level; mode_codec(p, &codec, &level);
     /* memory (docs/MEMORY-MODEL.md): the governor's limit, and the explicit cap, the only memory figure that may shape
