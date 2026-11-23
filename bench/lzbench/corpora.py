@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch and assemble the three lzbench corpora used by Kolmo's market benchmark, checking sha256 at every step.
 
-    python3 -I corpora.py <out-dir> [--from-dir <dir with silesia.zip, enwik8.zip, cantrbry.tgz>]
+    python3 -I corpora.py <out-dir> [--from-dir <dir with silesia.zip, enwik8.zip, cantrbry.tar.gz>]
 
 Writes <out-dir>/silesia.tar, <out-dir>/enwik8, <out-dir>/canterbury.tar and <out-dir>/silesia/<file> (the twelve
 Silesia files, for the per-file run).
@@ -12,16 +12,16 @@ Silesia files, for the per-file run).
   machines byte for byte.
 - enwik8 is the canonical file from Matt Mahoney's site.
 - canterbury.tar: the Mac copy was made with macOS tar and carries AppleDouble (._*) members and a user name, so it
-  cannot be rebuilt elsewhere. This script writes a neutral tar instead (the eleven files of cantrbry.tgz, sorted,
+  cannot be rebuilt elsewhere. This script writes a neutral tar instead (the eleven files of cantrbry.tar.gz, sorted,
   uid/gid 0, no names, mtime 0, POSIX ustar). Its sha256 is CANTERBURY_TAR below; results on it are compared with
   a Mac run on the same neutral tar, not with the original report.
 """
-import hashlib, io, os, shutil, sys, tarfile, urllib.request, zipfile
+import hashlib, io, os, subprocess, sys, tarfile, zipfile
 
 URLS = {
     "silesia.zip": "https://sun.aei.polsl.pl/~sdeor/corpus/silesia.zip",
     "enwik8.zip": "https://mattmahoney.net/dc/enwik8.zip",
-    "cantrbry.tgz": "https://corpus.canterbury.ac.nz/resources/cantrbry.tgz",
+    "cantrbry.tar.gz": "https://corpus.canterbury.ac.nz/resources/cantrbry.tar.gz",
 }
 
 # sha256 of every file the corpora are made of (checked after extraction, so a re-packed archive still passes).
@@ -72,9 +72,11 @@ def fetch(name, from_dir):
     if from_dir and os.path.exists(os.path.join(from_dir, name)):
         with open(os.path.join(from_dir, name), "rb") as f:
             return f.read()
-    req = urllib.request.Request(URLS[name], headers={"User-Agent": "kolmo-bench"})
-    with urllib.request.urlopen(req, timeout=300) as r:
-        return r.read()
+    r = subprocess.run(["curl", "-fsSL", "--retry", "4", "--retry-all-errors", "--max-time", "900", URLS[name]],
+                       capture_output=True)
+    if r.returncode != 0:
+        sys.exit(f"corpora: cannot download {URLS[name]}: curl exit {r.returncode}: {r.stderr.decode().strip()}")
+    return r.stdout
 
 
 def oct_field(v, width):  # width-1 octal digits and a NUL
@@ -121,10 +123,10 @@ def main():
     with open(os.path.join(out, "enwik8"), "wb") as f:
         f.write(data)
 
-    src = tarfile.open(fileobj=io.BytesIO(fetch("cantrbry.tgz", from_dir)), mode="r:gz")
+    src = tarfile.open(fileobj=io.BytesIO(fetch("cantrbry.tar.gz", from_dir)), mode="r:gz")
     files = {os.path.basename(m.name): src.extractfile(m).read() for m in src.getmembers() if m.isfile()}
     if sorted(files) != sorted(CANTERBURY):
-        sys.exit(f"corpora: cantrbry.tgz holds {sorted(files)}, want {sorted(CANTERBURY)}")
+        sys.exit(f"corpora: cantrbry.tar.gz holds {sorted(files)}, want {sorted(CANTERBURY)}")
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w", format=tarfile.USTAR_FORMAT) as t:
         for name in sorted(files):
