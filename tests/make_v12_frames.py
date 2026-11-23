@@ -246,6 +246,43 @@ def derived_csv(rng, cap):  # a time series with derived columns (per capita, ru
     return "".join(rows).encode()
 
 
+def ragged_csv(rng, rows):  # short rows, text in numeric columns, empty fields, long text: the table's exceptions
+    out = ["id,price,qty,total,label,comment"]
+    for i in range(rows):
+        pr, q = rng.below(10000), 1 + rng.below(9)
+        f = ["%d" % i, "%d.%02d" % (pr // 100, pr % 100), "%d" % q, "%d.%02d" % (pr * q // 100, pr * q % 100), rng.pick(WORDS),
+             " ".join(rng.pick(WORDS) for _ in range(60)) if rng.below(50) == 0 else rng.pick(WORDS)]
+        if rng.below(40) == 0: f = f[:3]
+        if rng.below(30) == 0: f[2] = ""
+        if rng.below(60) == 0: f[1] = "n/a"
+        out.append(",".join(f))
+    return ("\n".join(out) + "\n").encode()
+
+
+def stations_csv(rng):  # grouped series (a group column): the table's grouped delta modes 2, 4 and 5
+    out = ["station,day,tmin,tmax,rain,count"]
+    for s in range(20):
+        tmin = rng.below(100); tmax = tmin + 50; c = 1000; acc = 0
+        for d in range(200):
+            tmin += rng.below(5) - 2; tmax += rng.below(5) - 2; acc += rng.below(7); c += acc
+            out.append("ST%03d,%d,%d.%d,%d.%d,%d.%d0,%d" % (s, 20260101 + d, tmin // 10, tmin % 10, tmax // 10, tmax % 10,
+                                                          rng.below(30) // 10, rng.below(10), c))
+    return ("\n".join(out) + "\n").encode()
+
+
+def growth_csv(rng):  # raw-value columns (mode 0) and values whose trailing zeros the table drops
+    out = ["region,month,sales,growth_pct,code,price"]
+    for s in range(12):
+        v, prev = 10000 + rng.below(90000), None
+        for m in range(240):
+            v = max(100, v + rng.below(2001) - 900); p = rng.below(100000)
+            gp = "" if prev is None else "%.2f" % ((v - prev) / prev * 100)
+            out.append("R%02d,%d,%d,%s,%d,%s" % (s, m, v, gp, rng.below(1 << 30) - (1 << 29),
+                                                 ("%d.%d" % (p // 10, p % 10)) if rng.below(3) else "%d.50" % (p // 10)))
+            prev = v
+    return ("\n".join(out) + "\n").encode()
+
+
 C_SOURCE = r"""
 #include <stdio.h>
 #include <string.h>
@@ -330,6 +367,9 @@ def inputs():
     d["names.csv"] = names_csv(r(26), 4000)
     d["pairs.csv"] = pairs_csv(r(27), 9000)
     d["derived.csv"] = derived_csv(r(28), 300000)
+    d["ragged.csv"] = ragged_csv(r(29), 4000)
+    d["stations.csv"] = stations_csv(r(30))
+    d["growth.csv"] = growth_csv(r(31))
     mixed = d["text.txt"] + d["table.csv"] + d["series.i32"] + d["gray.pgm"] + d["service.log"] + d["records.bin"]
     d["mixed.bin"] = (mixed * 3)[: 3 << 20]   # 2.3 MiB: several blocks at level 3, several segments with --stream=1
     return d
@@ -341,7 +381,8 @@ LEVELS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "U"]
 SOME = {"bigprog-arm64": ["3", "9"], "bigprog-x86_64": ["3", "9"], "gray-big.pgm": ["U"],
         "gray16-big.pgm": ["3", "U"], "mixed.bin": ["3"], "bundle.tar": ["3", "9"],
         "gray12.pgm": ["3", "9"], "photo.pgm": ["9", "U"], "code.x86": ["3", "9"], "names.csv": ["2", "3"],
-        "pairs.csv": ["3", "U"], "derived.csv": ["U"]}
+        "pairs.csv": ["3", "U"], "derived.csv": ["3", "9", "U"], "ragged.csv": ["3"], "stations.csv": ["3", "9"],
+        "growth.csv": ["3"]}
 
 
 def frame_summary(f):

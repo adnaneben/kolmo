@@ -29,6 +29,23 @@
   - One 0.0.2 behaviour is recorded as it is: KLZH2 computes a match length modulo 2^32. Match-length code 71 with
     extra bits of at least 2^30 − 3 then gives a match of 0, 1 or 2 bytes, which the decoder accepts. No encoder
     writes it (FORMAT.md 18.3).
+- **FORMAT.md section 20: the text and table transforms.** The inverses of the line-class (tflag 12), word dictionary
+  (9), log template (5), minified-JSON (10) and table v2 (4) transforms are written out, with every refusal rule. For
+  the table this includes the numeric modes, the group column, formulas evaluated in IEEE doubles, short rows and
+  printing. 34 corpus blocks under them now decode to their originals in `tests/coder_reference.py`.
+  - **Known defect, reported and not fixed:** 0.0.2 writes table blocks it cannot read. Any CSV whose rows all have
+    the same field count, with one field longer than 65,535 bytes, is affected at levels 3-9. The aligned-table decoder
+    refuses fields over 64 KiB, and the general path is never reached. FORMAT.md 20.5 records the limit; the fix is
+    an owner decision.
+- **Six more 0.0.2 frames for the table transform** (`tests/v12/r0.0.2/`, from the 0.0.2 tag binary). The inputs are
+  the derived-column series at levels 3 and 9, and three new inputs: a ragged CSV (short rows, text in numeric
+  columns, long fields), grouped station series (modes 2, 4 and 5) and a growth table (mode 0, dropped trailing
+  digits).
+- **FORMAT.md section 21: KLZMA (codec 24)**, the LZMA-class coder of levels 8-9. It covers the range decoder (which
+  differs from LZMA's at the start and the end), contexts, literals, matches and repeat matches. 12 corpus blocks and
+  8 graph leaves decode in the Python reference.
+- The new decoders agreed with the 0.0.2 C decoders on about 15,000 further mutated streams. `make check` now spends
+  about 30 s in `tests/coder_reference.py`. Table v1 (tflag 3), the column-split table (13) and the QLFC coder are next in FORMAT.md section 13.
 - **`tests/coder_reference.py`**: an independent Python decoder for those sections, written from the prose, in
   `make check` (about 10 s). It decodes every corpus block that uses KLZ or KLZH2:
   - blocks without a transform are compared with the original;

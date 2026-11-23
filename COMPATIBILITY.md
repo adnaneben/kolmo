@@ -44,14 +44,15 @@ it covers is specified in [FORMAT.md](FORMAT.md).
 
 ## How the promise is checked
 
-- **`tests/v12/` is the frozen corpus.** It holds 341 frames with their originals, and frames are added to it, never
+- **`tests/v12/` is the frozen corpus.** It holds 347 frames with their originals, and frames are added to it, never
   rewritten:
   - the top level: 84 frames in the six modes of 0.0.1;
-  - `r0.0.2/`: 257 frames written by the 0.0.2 release binary. These cover every level 1 to 9 and ultra, the options
+  - `r0.0.2/`: 263 frames written by the 0.0.2 release binary. These cover every level 1 to 9 and ultra, the options
     that change the format (`--native-leaf`, `--typed-huf`, `--codec-level 1`, `--stream`), and inputs that reach
     every block codec 0.0.2 writes (0, 7, 12, 16-20, 24-26, 28, 31 and 32) and every tflag it writes by default
-    (1, 2, 4-10, 12 and 14). The last 11 frames were added after the release, from the 0.0.2 tag binary, for codecs
-    25, 26 and 31 and tflags 2, 6 and 8.
+    (1, 2, 4-10, 12 and 14). The last 17 frames were added after the release, from the 0.0.2 tag binary. Eleven are for
+    codecs 25, 26 and 31 and tflags 2, 6 and 8. Six cover the table transform's numeric modes, formulas, group column
+    and short rows.
   - **Not in the corpus:** the column-split table (tflag 13), which is written only on request (FORMAT.md 8.3), and
     the read-only codecs 5 and 29. The promise covers them all the same.
 - **Four tests run in CI on Linux x86-64, Linux ARM64 and macOS, on every push and pull request** (all part of `make check`):
@@ -61,7 +62,8 @@ it covers is specified in [FORMAT.md](FORMAT.md).
   - `tests/format_reference.py` re-checks every frame against FORMAT.md with an independent Python implementation of
     the container layer;
   - `tests/coder_reference.py` decodes every block and graph leaf that uses Kolmo's own LZ and Huffman coders (KLZ,
-    KLZH2, khuf, with krans) with an independent Python decoder written from FORMAT.md sections 14 to 19.
+    KLZH2, KLZMA, khuf, with krans), and the text transforms over them, with an independent Python decoder written from
+    FORMAT.md sections 14 to 21.
 - **Fuzzing and hardening tests** (`test-decoder-hardening`, `test-harden`) check that damaged input is refused.
 
 ## Rules for changing the format

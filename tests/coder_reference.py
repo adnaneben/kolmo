@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
-"""Independent decoders for Kolmo's own coders, FORMAT.md sections 14-19 (container version 12), in plain Python.
+"""Independent decoders for Kolmo's own coders and simpler transforms, FORMAT.md sections 14-21 (container
+version 12), in plain Python.
 
 usage: python3 tests/coder_reference.py [tests/v12]
 
-Written from the prose of FORMAT.md (khuf 15, krans 16, KLZ 17, KLZH and KLZH2 18, the byte-plane shuffle 19.1, the
-x86 filter 19.3) and
-SPEC.md (the ARM64 branch filter), not from the C sources. It takes khash64 from tests/format_reference.py (FORMAT.md
-2.2) and walks the container itself.
+Written from the prose of FORMAT.md (khuf 15, krans 16, KLZ 17, KLZH and KLZH2 18, the byte-plane shuffle 19.1 and
+x86 filter 19.3, the line-class, word, log, minified-JSON and table inverses 20, KLZMA 21) and SPEC.md (the ARM64 branch
+filter), not from the C sources. It takes khash64 from tests/format_reference.py (FORMAT.md 2.2) and walks the
+container itself.
 
 For every frame of the frozen corpus it decodes:
-  - every block whose codec is 28 (KLZ), 29 (KLZH) or 32 (KLZH2). A block without a transform (tflag 0) must give the
-    original's bytes for that block. A block under the byte-plane shuffle (plan 2, tflag 1), the x86 filter (tflag 8)
-    or the ARM64 filter (tflag 14) must match its block checksum after the inverse. A block under any other transform
-    must decode to exactly its transformed length, using all of its stream;
-  - every graph leaf (FORMAT.md 7.4) whose codec is 27, 28, 29 or 32, to exactly its raw length.
-It also checks that one stream for each refusal rule is refused.
+  - every block whose codec is 24 (KLZMA), 28 (KLZ), 29 (KLZH) or 32 (KLZH2). A block without a transform, or under
+    the line-class, word, log, minified-JSON or table transform (tflags 12, 9, 5, 10, 4), must give the original's bytes for
+    that block. A block under the byte-plane shuffle (plan 2, tflag 1), the x86 filter (tflag 8) or the ARM64 filter
+    (tflag 14) must match its block checksum after the inverse. A block under any other transform must decode to
+    exactly its transformed length, using all of its stream;
+  - every graph leaf (FORMAT.md 7.4) whose codec is 24, 27, 28, 29 or 32, to exactly its raw length.
+It also checks that one stream for each of several refusal rules is refused.
 """
 import json, os, struct, sys
 
@@ -293,7 +295,118 @@ def klzh(p, n, v2):
     return bytes(out)
 
 
+# ---- KLZMA (FORMAT.md 21)
+def klzma(p, n):
+    need(len(p) >= 6, "klzma size")
+    pr = p[0]; lc, lp, pb = pr % 9, (pr // 9) % 5, pr // 45
+    need(pb <= 4 and lc + lp <= 4, "klzma properties")
+    M32 = 0xFFFFFFFF
+    end = len(p)
+    st = {"range": M32, "code": 0, "ip": 1}
+    code = 0
+    for k in range(5): code = ((code << 8) | p[1 + k]) & M32
+    rng_ = M32; ip = 6
+    probs = {}
+
+    def new(nm, size): probs[nm] = [1024] * size; return probs[nm]
+    is_match = new("m", 12 * 16); is_rep = new("r", 12); is_rep0 = new("r0", 12); is_rep1 = new("r1", 12)
+    is_rep2 = new("r2", 12); is_rep0_long = new("rl", 12 * 16); slot = new("s", 4 * 64); spec = new("sp", 14 * 32)
+    align = new("a", 16); lit = [1024] * (0x300 << (lc + lp))
+    lens = [{"c": [1024], "c2": [1024], "low": [1024] * 128, "mid": [1024] * 128, "high": [1024] * 256} for _ in range(2)]
+    state = [rng_, code, ip]
+
+    def bit(arr, i):
+        r, c, ip_ = state
+        pv = arr[i]; bd = (r >> 11) * pv
+        if c < bd: r = bd; arr[i] = pv + ((2048 - pv) >> 5); b = 0
+        else: c -= bd; r -= bd; arr[i] = pv - (pv >> 5); b = 1
+        if r < 1 << 24:
+            r = (r << 8) & M32; c = ((c << 8) | (p[ip_] if ip_ < end else 0)) & M32; ip_ += 1
+        state[0], state[1], state[2] = r, c, ip_
+        return b
+
+    def tree(arr, base, nb):
+        m = 1
+        for _ in range(nb): m = m << 1 | bit(arr, base + m)
+        return m - (1 << nb)
+
+    def rtree(arr, base, nb):
+        m = 1; v = 0
+        for i in range(nb):
+            b = bit(arr, base + m); m = m << 1 | b; v |= b << i
+        return v
+
+    def length(L, ps):
+        if not bit(L["c"], 0): return tree(L["low"], 8 * ps, 3)
+        if not bit(L["c2"], 0): return 8 + tree(L["mid"], 8 * ps, 3)
+        return 16 + tree(L["high"], 0, 8)
+    out = bytearray(); reps = [0, 0, 0, 0]; s_ = 0
+    pbm, lpm = (1 << pb) - 1, (1 << lp) - 1
+    while len(out) < n:
+        pos = len(out)
+        need(state[2] <= end + 4, "klzma: input overrun")
+        ps = pos & pbm
+        if not bit(is_match, s_ * 16 + ps):
+            prev = out[-1] if pos else 0
+            base = 0x300 * (((pos & lpm) << lc) + (prev >> (8 - lc)))
+            sym = 1
+            if s_ >= 7:
+                mb = out[pos - reps[0] - 1]; matched = True
+                for i in range(7, -1, -1):
+                    if matched:
+                        mbit = (mb >> i) & 1
+                        b = bit(lit, base + 0x100 + (mbit << 8) + sym)
+                        matched = b == mbit
+                    else:
+                        b = bit(lit, base + sym)
+                    sym = sym << 1 | b
+            else:
+                for _ in range(8): sym = sym << 1 | bit(lit, base + sym)
+            out.append(sym & 255)
+            s_ = 0 if s_ < 4 else (s_ - 3 if s_ < 10 else s_ - 6)
+            continue
+        if not bit(is_rep, s_):
+            ln = length(lens[0], ps) + 2
+            ls = min(ln - 2, 3)
+            sl = tree(slot, 64 * ls, 6)
+            if sl < 4: d = sl
+            else:
+                nb = (sl >> 1) - 1; d = (2 | (sl & 1)) << nb
+                if sl < 14: d += rtree(spec, 32 * sl, nb)
+                else:
+                    x = 0
+                    for _ in range(nb - 4):
+                        r, c, ip_ = state
+                        r >>= 1; b = 1 if c >= r else 0
+                        if b: c -= r
+                        x = x << 1 | b
+                        if r < 1 << 24:
+                            r = (r << 8) & M32; c = ((c << 8) | (p[ip_] if ip_ < end else 0)) & M32; ip_ += 1
+                        state[0], state[1], state[2] = r, c, ip_
+                    d = (d + (x << 4) + rtree(align, 0, 4)) & M32
+            reps = [d, reps[0], reps[1], reps[2]]
+            s_ = 7 if s_ < 7 else 10
+        else:
+            if not bit(is_rep0, s_):
+                if not bit(is_rep0_long, s_ * 16 + ps):
+                    need(reps[0] < pos, "klzma short rep distance")
+                    out.append(out[pos - reps[0] - 1])
+                    s_ = 9 if s_ < 7 else 11
+                    continue
+            else:
+                if not bit(is_rep1, s_): d = reps[1]; reps = [d, reps[0], reps[2], reps[3]]
+                elif not bit(is_rep2, s_): d = reps[2]; reps = [d, reps[0], reps[1], reps[3]]
+                else: d = reps[3]; reps = [d, reps[0], reps[1], reps[2]]
+            ln = length(lens[1], ps) + 2
+            s_ = 8 if s_ < 7 else 11
+        need(reps[0] < pos and ln <= n - pos, "klzma match")
+        lz_copy(out, reps[0] + 1, ln)
+    need(state[2] <= end + 4, "klzma: input overrun")
+    return bytes(out)
+
+
 def decode(codec, p, n):
+    if codec == 24: return klzma(p, n)
     if codec == 27: return khuf_chunks(p, n)
     if codec == 28: return klz(p, n)
     if codec == 29: return klzh(p, n, False)
@@ -301,7 +414,7 @@ def decode(codec, p, n):
     raise KeyError(codec)
 
 
-NATIVE = (27, 28, 29, 32)
+NATIVE = (24, 27, 28, 29, 32)
 
 
 # ---- in-place and simple inverses used to check transformed blocks against their checksums
@@ -516,6 +629,186 @@ def json_inv(t, n, k):
     return d
 
 
+# ---- table v2 (FORMAT.md 20.5)
+def s64(x): x &= M64; return x - (1 << 64) if x >> 63 else x
+
+
+def fmt_fixed(m, S):
+    """m / 10^S in decimal with exactly S decimals and at least one integer digit"""
+    a = -m if m < 0 else m
+    ds = str(a).rjust(S + 1, "0")
+    t = ds[:len(ds) - S] + ("." + ds[len(ds) - S:] if S else "")
+    return ("-" if m < 0 else "") + t
+
+
+def exact_div_p10(v, k):
+    """(v >> k) times the inverse of 5^k modulo 2^64, as a signed value (exact when 10^k divides v)"""
+    return s64((v >> k) * pow(5 ** k, -1, 1 << 64))
+
+
+def fdiv(x, y):
+    """IEEE 754 division (Python raises on a zero divisor)"""
+    import math
+    if y != 0 or math.isnan(y): return x / y
+    if x == 0 or math.isnan(x): return math.nan
+    return math.copysign(math.inf, x) * math.copysign(1.0, y)
+
+
+def table_inv(t, n, delim):
+    import math
+    need(len(t) >= 24, "table header")
+    k, nr, nexc, noNL = struct.unpack_from("<4I", t, 0)
+    gcol, nform = struct.unpack_from("<iI", t, 16)
+    need(1 <= k <= 256 and nform <= 256 and -1 <= gcol < k, "table header fields")
+    need(24 + 16 * nform + 8 * nexc <= len(t), "table formulas and exceptions")
+    need(nr <= n + 1, "table rows")
+    forms = []
+    for q in range(nform):
+        y, a, b, form = struct.unpack_from("<HHHB", t, 24 + 16 * q); kk = struct.unpack_from("<d", t, 32 + 16 * q)[0]
+        need(1 <= form <= 3 and y < k and a < k and (form != 1 or b < k), "table formula")
+        forms.append((y, a, b, form, kk))
+    ex = 24 + 16 * nform; p = ex + 8 * nexc
+    cols = []
+    for j in range(k):
+        need(len(t) - p >= 5, "table column header")
+        ty = t[p]; size = struct.unpack_from("<I", t, p + 1)[0]; p += 5
+        need(ty in (0, 2) and size <= len(t) - p, "table column")
+        body = t[p:p + size]; p += size
+        if ty == 0:
+            need(size >= 8, "table text column")
+            cnt, nlong = struct.unpack_from("<II", body, 0)
+            need(cnt <= size and nlong <= size, "table text counts")
+            q = 8 + cnt + 4 * nlong; need(q <= size, "table text column size")
+            cols.append({"type": 0, "cnt": cnt, "nlong": nlong, "lens": body[8:8 + cnt],
+                         "longs": body[8 + cnt:q], "data": body[q:]})
+        else:
+            need(size >= 16, "table numeric column")
+            cnt, nnum, nx = struct.unpack_from("<3I", body, 0); S, w, mode, fid = body[12:16]
+            need(S <= 18 and 1 <= w <= 8 and mode <= 5 and cnt <= size and nnum <= cnt and nx <= cnt, "table numeric fields")
+            q = 16; kind = body[q:q + cnt]; q += cnt; sd = body[q:q + nnum]; q += nnum
+            pl = body[q:q + nnum * w]; q += nnum * w; elen = body[q:q + 4 * nx]; q += 4 * nx
+            need(q <= size, "table numeric column size")
+            cols.append({"type": 2, "cnt": cnt, "nnum": nnum, "nexc": nx, "S": S, "w": w, "mode": mode, "fid": fid,
+                         "kind": kind, "sd": sd, "pl": pl, "elen": elen, "edata": body[q:]})
+    # validation
+    want = [nr] * k; exc = {}; prev = -1
+    for e in range(nexc):
+        er, cc = struct.unpack_from("<II", t, ex + 8 * e)
+        need(1 <= cc <= k and er < nr and er > prev, "table exception")
+        prev = er; exc[er] = cc
+        for j in range(cc, k): want[j] -= 1
+    for j, c in enumerate(cols):
+        need(c["cnt"] == want[j], "table column count")
+        if c["type"] == 0:
+            nl = sum(1 for x in c["lens"] if x == 255); need(nl == c["nlong"], "table long count")
+            tot = sum(x for x in c["lens"] if x != 255) + sum(struct.unpack_from("<I", c["longs"], 4 * i)[0] for i in range(nl))
+            need(tot <= len(c["data"]), "table text bytes")
+        else:
+            need(all(x <= 2 for x in c["kind"]), "table kind")
+            need(sum(1 for x in c["kind"] if x == 1) == c["nnum"] and sum(1 for x in c["kind"] if x == 2) == c["nexc"], "table kind counts")
+            need(all(x <= c["S"] for x in c["sd"]), "table digits")
+            need(sum(struct.unpack_from("<I", c["elen"], 4 * i)[0] for i in range(c["nexc"])) <= len(c["edata"]), "table exception bytes")
+    aligned = nexc == 0 and all(c["cnt"] == nr for c in cols)
+    # text column values
+    for c in cols:
+        if c["type"] == 0:
+            vals = []; li = 0; d = 0
+            for x in c["lens"]:
+                if x == 255: x = struct.unpack_from("<I", c["longs"], 4 * li)[0]; li += 1
+                vals.append(c["data"][d:d + x]); d += x
+            c["vals"] = vals
+    gid = [0] * nr
+    if gcol >= 0:
+        need(cols[gcol]["type"] == 0 and aligned, "table group column")
+        g = 0
+        for r in range(1, nr):
+            if cols[gcol]["vals"][r] != cols[gcol]["vals"][r - 1]: g += 1
+            gid[r] = g
+    # numeric values: plain columns first, then formula targets
+    fv = {}
+
+    def fvals(c):
+        out = [math.nan] * nr; ni = 0
+        for r in range(nr):
+            if c["kind"][r] == 1:
+                ds = c["sd"][ni]; mm = exact_div_p10(c["vals"][ni], ds) if ds else c["vals"][ni]
+                out[r] = mm / (10.0 ** (c["S"] - ds)); ni += 1
+        return out
+    for ps in (0, 1):
+        for j, c in enumerate(cols):
+            if c["type"] != 2 or (c["mode"] == 3) != ps: continue
+            need(c["mode"] in (0, 1) or aligned, "table mode needs an aligned table")
+            m, w = c["nnum"], c["w"]
+            z = [unzz(sum(c["pl"][b * m + i] << (8 * b) for b in range(w))) for i in range(m)]
+            rows = [r for r in range(c["cnt"]) if c["kind"][r] == 1]
+            v = []
+            if c["mode"] == 0: v = [s64(x) for x in z]
+            elif c["mode"] == 1:
+                acc = 0
+                for x in z: acc = s64(acc + x); v.append(acc)
+            elif c["mode"] in (2, 4, 5):
+                pv = d1 = d2 = 0; pg = None; nd = 0
+                for i, x in enumerate(z):
+                    g = gid[rows[i]]; same = i > 0 and g == pg
+                    if not same: val = s64(x); nd = 0
+                    elif c["mode"] == 2: val = s64(pv + x)
+                    elif c["mode"] == 4:
+                        dd = s64(x + d1) if nd else s64(x); val = s64(pv + dd); d1 = dd; nd = 1
+                    else:
+                        if nd == 0: dd = s64(x); nd = 1
+                        else:
+                            d2n = s64(x + d2) if nd >= 2 else s64(x); dd = s64(d2n + d1); d2 = d2n; nd = 2
+                        val = s64(pv + dd); d1 = dd
+                    v.append(val); pv = val; pg = g
+            else:
+                need(c["fid"] < nform, "table formula id")
+                y, a, b, form, kk = forms[c["fid"]]
+                need(y == j, "table formula target")
+                A = cols[a]; B = cols[b] if form == 1 else None
+                need(A["type"] == 2 and A["mode"] != 3 and (B is None or (B["type"] == 2 and B["mode"] != 3)), "table formula sources")
+                if a not in fv: fv[a] = fvals(A)
+                if B is not None and b not in fv: fv[b] = fvals(B)
+                fa = fv[a]; fb = fv[b] if B is not None else None
+                for i, x in enumerate(z):
+                    r = rows[i]
+                    if form == 1: pr = fdiv(fa[r], fb[r]) * kk
+                    else:
+                        la = fa[r - 1] if r > 0 and gid[r] == gid[r - 1] else math.nan
+                        pr = (fa[r] - la) * kk if form == 2 else fdiv(fa[r] - la, la) * 100.0 * kk
+                    pp = pr * (10.0 ** c["S"]) if c["S"] else pr
+                    v.append(s64(x + int(round(pp))) if abs(pp) < 4611686018427387904.0 else s64(x))
+            c["vals"] = v
+    # rows
+    if aligned and nr > 0:
+        for c in cols:
+            if c["type"] == 0: need(all(len(x) <= 65535 for x in c["vals"]), "table field over 65535 bytes (0.0.2)")
+            else: need(all(struct.unpack_from("<I", c["elen"], 4 * i)[0] <= 65535 for i in range(c["nexc"])), "table field over 65535 bytes (0.0.2)")
+    out = bytearray(); cur = [0] * k; ni = [0] * k; xi = [[0, 0] for _ in range(k)]
+    D = bytes([delim])
+    for r in range(nr):
+        last = exc[r] - 1 if r in exc else k - 1
+        fields = []
+        for j in range(last + 1):
+            c = cols[j]; i = cur[j]; cur[j] += 1
+            if c["type"] == 0: fields.append(c["vals"][i])
+            else:
+                kd = c["kind"][i]
+                if kd == 1:
+                    q = ni[j]; ni[j] += 1; ds = c["sd"][q]
+                    f = fmt_fixed(c["vals"][q], c["S"]).encode()
+                    cut = ds + (1 if ds == c["S"] and ds else 0)
+                    fields.append(f[:len(f) - cut] if cut else f)
+                elif kd == 2:
+                    L_ = struct.unpack_from("<I", c["elen"], 4 * xi[j][0])[0]; xi[j][0] += 1
+                    fields.append(c["edata"][xi[j][1]:xi[j][1] + L_]); xi[j][1] += L_
+                else: fields.append(b"")
+        out += D.join(fields)
+        if not (noNL and r == nr - 1): out.append(10)
+        need(len(out) <= n, "table output")
+    need(len(out) == n, "table length")
+    return bytes(out)
+
+
 # ---- the graph program (SPEC.md, Kolmo graph blocks): only the leaves are needed here
 def graph_leaves(p):
     need(len(p) >= 3 and p[0] == ord("G") and p[1] == 1, "graph header")
@@ -582,8 +875,9 @@ def check_block(raw, ck, codec, tflag, pay, orig, rt, stats):
         d = shuffle_inv(d, raw, a, b, c)
         need(rt or (khash64(d, 0x637a6e31) & 0xFFFFFFFF) == ck, "shuffle inverse: checksum")
         kind = "block %d, shuffle inverse checked" % codec
-    elif tflag in (5, 9, 10, 12):
-        if tflag == 5: d = log_inv(d, raw)
+    elif tflag in (4, 5, 9, 10, 12):
+        if tflag == 4: d = table_inv(d, raw, a)
+        elif tflag == 5: d = log_inv(d, raw)
         elif tflag == 9: d = word_inv(d, raw)
         elif tflag == 12: d = lines_inv(d, raw)
         else: d = json_inv(d, raw, struct.unpack_from("<I", pay, 8)[0])
