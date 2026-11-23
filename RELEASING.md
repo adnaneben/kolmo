@@ -47,6 +47,15 @@ commit them:
 (cd bindings/python && ./sync-native.sh)
 ```
 
+Freeze this release's frames (COMPATIBILITY.md): build the release binary, add its frames to the corpus and commit
+them with the version bump. Existing frames are never regenerated.
+
+```sh
+make -j4 ARCH= build/kolmo
+python3 tests/make_v12_frames.py --kolmo build/kolmo --release X.Y.Z    # adds tests/v12/rX.Y.Z/ and MANIFEST lines
+make check                                                               # the corpus tests include the new frames
+```
+
 ## 2. Tag and create the GitHub release
 
 ```sh
