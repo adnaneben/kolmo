@@ -267,7 +267,7 @@ with tempfile.TemporaryDirectory() as tmp:
     # ---- usage errors: exit 2
     for args, what in [(["--bogus"], "unknown long option"), (["-j"], "unknown short option"), (["-o"], "-o without value"),
                        (["-T"], "-T without value"), (["-T", "abc", src], "-T abc"), (["-T", "-5", src], "-T -5"),
-                       (["--threads=x", src], "--threads=x"), (["--level", "99", src], "--level 99"), (["-0", src], "-0"),
+                       (["--threads=x", src], "--threads=x"), (["--level", "99", src], "--level 99"), (["-00", src], "-00 (-0 alone is xz's -0: level 1)"),
                        (["-10", src], "-10"), (["--level", "0", src], "--level 0"), (["--level=fast", src], "--level=fast"),
                        (["--codec-level", "0", src], "--codec-level 0"), (["--codec-level", "x", src], "--codec-level x"),
                        (["--analysis", "lots", src], "--analysis lots"), (["--block-size", "-1", src], "--block-size -1"),

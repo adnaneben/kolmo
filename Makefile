@@ -116,6 +116,7 @@ build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOL
 check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus
 	./build/test-levels
 	python3 tests/test_cli.py build/kolmo
+	sh tests/test_filter.sh build/kolmo
 	python3 tests/test_fast_file.py
 	./build/test-v12-corpus tests/v12
 	python3 tests/check_v12_frames.py build/kolmo tests/v12

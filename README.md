@@ -238,6 +238,38 @@ both are Apache-2.0 and listed in `NOTICE`.
 On a Mac: `bash mac/setup.sh` once, then `bash mac/bench.sh` for the full benchmark and `bash mac/tune.sh` for an
 overnight genetic search of the build-time settings (`tune/ga.py`).
 
+## Use with tar
+
+Kolmo works as tar's compression program and in pipes written for xz or gzip:
+
+```bash
+tar -I 'kolmo -6' -cf src.tar.kolmo src/             # GNU tar: create
+tar -I kolmo -xf src.tar.kolmo                       # GNU tar: extract (tar adds -d)
+tar --use-compress-program='kolmo -6' -cf src.tar.kolmo src/   # bsdtar (macOS): create
+tar --use-compress-program='kolmo -d' -xf src.tar.kolmo        # bsdtar: extract (bsdtar adds nothing)
+tar -cf - src/ | kolmo -6 | ssh host 'kolmo -dc | tar -xf -'   # pipes
+```
+
+Level 6 is the xz replacement. On Silesia (211,947,520 bytes as one tar), it is smaller than `xz -9` and decodes
+8.6x faster:
+
+| | Ratio | Compress | Decompress |
+|---|---|---|---|
+| `kolmo -6` | **4.367** | **8.8 MiB/s** | **1463 MiB/s** |
+| `xz -9` | 4.346 | 5.1 MiB/s | 169 MiB/s |
+
+Method: lzbench 2.4.1, one thread, Apple M5 (arm64), every round trip checked byte for byte; Kolmo through a plugin
+whose output matches the CLI byte for byte. `tar -cf - silesia | kolmo -6` writes the same 48,535,166 bytes as
+`kolmo -6 silesia.tar`. x86-64 runs are pending. On all cores, Kolmo's decoder scales further; xz's barely does.
+On the same machine on 2026-11-23, `xz -9 -T1` (XZ Utils 5.8.4) wrote 48,755,768 bytes: Kolmo's file is 220,602 bytes
+(0.45%) smaller.
+
+The xz and gzip flags that scripts pass (`-c -d -k -f -t -q -v -T -M`, `-dc`, `-0`, `-9e`, `--best`, `--fast`,
+`--stdout`, `--decompress`, `-dcf` pass-through, `-` for standard input) and the few that differ are in
+[`docs/XZ-COMPAT.md`](docs/XZ-COMPAT.md). Two differences matter most: inputs are kept by default (`--rm` removes them,
+as xz and gzip do), and the default level is 3, not 6. A pipe larger than 256 MiB is compressed in 256 MiB segments,
+so `tar -I kolmo` of a large tree runs in bounded memory.
+
 ## Status
 
 0.0.2, the second release of the renumbered line: the level model and the new command line (`docs/LEVELS.md`,
