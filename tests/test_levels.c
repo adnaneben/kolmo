@@ -1,6 +1,6 @@
 /* The level table (kolmo_params_for_level, docs/LEVELS.md): every level 1..9 and ultra round-trips on several kinds
  * of input, gives the same bytes on repeated calls and with 1 and 4 threads, keeps the caller's threads, block and
- * memory limit, rejects other levels, and level 1 is exactly the 0.0.1 CLI's "-m speed" (rt, transforms 3). */
+ * memory limit, rejects other levels, writes no table block 0.0.2 cannot read (a field over 65535 bytes), and level 1 is exactly the 0.0.1 CLI's "-m speed" (rt, transforms 3). */
 #include "kolmo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,9 +28,22 @@ int main(void) {
     size_t in_ = 200000; uint8_t *ints = malloc(in_);
     for (size_t i = 0; i < in_ / 4; i++) { uint32_t v = 1000 + (uint32_t)i * 3 + rnd() % 7; memcpy(ints + 4 * i, &v, 4); }
     size_t rn = 50000; uint8_t *rb = malloc(rn); for (size_t i = 0; i < rn; i++) rb[i] = (uint8_t)rnd();
+    /* aligned CSV (every row 3 fields) with one 70,000-byte field, in a text column and in a numeric column: 0.0.2 wrote
+     * table blocks for these at levels 3-9 that no decoder of 0.0.2 could read (CHANGELOG, Unreleased) */
+    uint8_t *lcsv[2]; size_t lcn[2];
+    for (int v = 0; v < 2; v++) {
+        size_t cap = 200000, m = 0; uint8_t *d = lcsv[v] = malloc(cap);
+        for (int i = 0; i < 3000; i++) {
+            m += (size_t)snprintf((char *)d + m, cap - m, "%d,%s,", i, w[rnd() % 6]);
+            if (i == 2500 - 700 * v) { for (int t = 0; t < 70000; t++) d[m++] = (uint8_t)"kolmo field "[t % 12]; }
+            else m += (size_t)snprintf((char *)d + m, cap - m, "%u.%02u", rnd() % 100, rnd() % 100);
+            d[m++] = '\n';
+        }
+        lcn[v] = m;
+    }
     struct { const char *name; const uint8_t *p; size_t n; } in[] = {
         {"text", text, tn}, {"csv", csv, cn}, {"ints", ints, in_}, {"random", rb, rn}, {"empty", (const uint8_t *)"", 0},
-        {"one", (const uint8_t *)"x", 1}};
+        {"one", (const uint8_t *)"x", 1}, {"csv-long-field", lcsv[0], lcn[0]}, {"csv-long-number-field", lcsv[1], lcn[1]}};
 
     /* the table itself */
     kolmo_params p; memset(&p, 0, sizeof p);
@@ -66,11 +79,18 @@ int main(void) {
                 uint8_t *o = malloc(in[k].n + 1);
                 int64_t r = kolmo_decompress(a, (size_t)na, o, in[k].n, 2);
                 CHECK(r == (int64_t)in[k].n && !memcmp(o, in[k].p, in[k].n), "level %d %s: round trip", lv, in[k].name);
+                if (!strncmp(in[k].name, "csv-long", 8) && na >= 32) {   /* no table block (tflag 4): 0.0.2 reads it */
+                    uint32_t nbk; memcpy(&nbk, a + 20, 4);
+                    for (uint32_t i = 0; i < nbk && 32 + 16 * (size_t)i + 14 <= (size_t)na; i++)
+                        CHECK(a[32 + 16 * i + 13] != 4, "level %d %s: block %u is a table block with a field over 65535 bytes",
+                              lv, in[k].name, i);
+                }
                 free(o);
             }
             free(a); free(b); free(c);
         }
     }
+    free(lcsv[0]); free(lcsv[1]);
     /* each level differs from its neighbours somewhere (the table has ten distinct rows) */
     int distinct = 0;
     for (int lv = KOLMO_LEVEL_MIN; lv < KOLMO_LEVEL_ULTRA; lv++) {
