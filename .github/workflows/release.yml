@@ -103,24 +103,32 @@ jobs:
         run: |
           cat a/README.md a/src/kolmo.h > in.txt
           ./a/build/kolmo -9 in.txt -o in.kolmo && ./a/build/kolmo -d in.kolmo -o back.txt && cmp in.txt back.txt
-      - name: package
+      - name: package, once from each build
         run: |
-          mkdir -p "$PKG" dist
-          cp a/build/kolmo a/LICENSE a/NOTICE a/README.md "$PKG/"
           # fixed order, owner, mode and mtime (the commit time), ustar format, no extended attributes: the archive is
-          # reproducible too
+          # reproducible too, and the two packages are compared
           T=$(git -C a log -1 --format=%ct)
-          chmod 755 "$PKG" "$PKG/kolmo"; chmod 644 "$PKG/LICENSE" "$PKG/NOTICE" "$PKG/README.md"
-          FILES="$PKG $PKG/LICENSE $PKG/NOTICE $PKG/README.md $PKG/kolmo"
-          if [ "$RUNNER_OS" = macOS ]; then
-            TZ=UTC touch -t "$(TZ=UTC date -r "$T" +%Y%m%d%H%M.%S)" $FILES
-            COPYFILE_DISABLE=1 tar --format ustar --no-recursion --no-xattrs --no-acls --no-fflags \
-              --uid 0 --gid 0 --uname root --gname root -cf - $FILES | gzip -n -9 > "dist/$PKG.tar.gz"
-          else
-            tar --format=ustar --no-recursion --mtime="@$T" --owner=root:0 --group=root:0 \
-              -cf - $FILES | gzip -n -9 > "dist/$PKG.tar.gz"
-          fi
-          shasum -a 256 dist/*
+          pack() {   # pack SOURCE_CHECKOUT OUTPUT
+            local w; w=$(mktemp -d); mkdir "$w/$PKG"
+            cp "$1/build/kolmo" "$1/LICENSE" "$1/NOTICE" "$1/README.md" "$w/$PKG/"
+            chmod 755 "$w/$PKG" "$w/$PKG/kolmo"; chmod 644 "$w/$PKG/LICENSE" "$w/$PKG/NOTICE" "$w/$PKG/README.md"
+            local files="$PKG $PKG/LICENSE $PKG/NOTICE $PKG/README.md $PKG/kolmo"
+            if [ "$RUNNER_OS" = macOS ]; then
+              (cd "$w" && TZ=UTC touch -t "$(TZ=UTC date -r "$T" +%Y%m%d%H%M.%S)" $files &&
+               COPYFILE_DISABLE=1 tar --format ustar --no-recursion --no-xattrs --no-acls --no-fflags \
+                 --uid 0 --gid 0 --uname root --gname root -cf - $files) | gzip -n -9 > "$2"
+            else
+              (cd "$w" && tar --format=ustar --no-recursion --mtime="@$T" --owner=root:0 --group=root:0 \
+                 -cf - $files) | gzip -n -9 > "$2"
+            fi
+            rm -rf "$w"
+          }
+          mkdir -p dist
+          pack a "dist/$PKG.tar.gz"
+          pack build-two/b second.tar.gz
+          shasum -a 256 "dist/$PKG.tar.gz" second.tar.gz
+          cmp "dist/$PKG.tar.gz" second.tar.gz
+          tar -tvzf "dist/$PKG.tar.gz"
       - uses: actions/attest-build-provenance@v2
         if: github.event_name != 'pull_request'
         with:

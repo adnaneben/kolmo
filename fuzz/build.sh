@@ -48,9 +48,11 @@ for t in fuzz_codecs fuzz_ext fuzz_profile; do
 done
 
 # Seed corpora (zip -j stores flat names).
+# fuzz/regressions/TARGET/ holds inputs that once failed TARGET; they join its seeds, so every run replays them first.
 seeds() {   # seeds NAME FILE... : $OUT/NAME_seed_corpus.zip
-  local z="$OUT/$1_seed_corpus.zip"; shift
+  local t=$1 z="$OUT/$1_seed_corpus.zip"; shift
   rm -f "$z"
+  if [ -d "fuzz/regressions/$t" ]; then set -- "$@" fuzz/regressions/"$t"/*; fi
   [ $# -gt 0 ] && printf '%s\n' "$@" | zip -q -j -@ "$z"
   return 0
 }
@@ -67,9 +69,10 @@ seeds fuzz_stream "${FRAMES_FLAT[@]}"            # single frames are rejected ea
 seeds fuzz_stream_limited "${FRAMES_FLAT[@]}"
 seeds fuzz_roundtrip "${RAW[@]}"
 seeds fuzz_native "${NATIVE[@]}"
+for t in fuzz_nplane fuzz_codecs fuzz_ext fuzz_profile; do seeds $t; done
 rm -rf "$tmp"
-# fuzz_nplane, fuzz_codecs, fuzz_ext and fuzz_profile take their own input layouts and start from random inputs (their
-# round-trip modes make valid streams). Every target: inputs up to 1 MiB, 2.5 GiB of memory, 60 s per input.
+# fuzz_nplane, fuzz_codecs, fuzz_ext and fuzz_profile take their own input layouts and start from their regressions
+# and random inputs (their round-trip modes make valid streams). Every target: inputs up to 1 MiB, 2.5 GiB of memory, 60 s per input.
 for t in fuzz_decompress fuzz_limited fuzz_stream fuzz_stream_limited fuzz_roundtrip fuzz_native fuzz_nplane \
          fuzz_codecs fuzz_ext fuzz_profile; do
   printf '[libfuzzer]\nmax_len = 1048576\nrss_limit_mb = 2560\ntimeout = 60\n' > "$OUT/$t.options"
