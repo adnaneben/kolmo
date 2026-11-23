@@ -40,10 +40,11 @@ static int native_level(int c, int level) {
 }
 
 static size_t klzma_c_bound(size_t n) { return kolmo_klzma_bound(n); }
+/* x->threads: the threads this block may use (the 4-byte match finder splits over them; same output) */
 static size_t klzma_c_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
-    (void)x; if (level >= 100) level = level * 10 + 8;   /* lc/lp/pb digits, then parse level 8 (algo/klzma.h) */
+    if (level >= 100) level = level * 10 + 8;   /* lc/lp/pb digits, then parse level 8 (algo/klzma.h) */
     else if (level > 9) level = 9;
-    return kolmo_klzma_compress(in, n, out, cap, level);
+    return kolmo_klzma_compress_mt(in, n, out, cap, level, x && x->threads > 1 ? x->threads : 1);
 }
 static int klzma_c_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return kolmo_klzma_decompress(in, cn, out, n); }
 static size_t khuf_c_bound(size_t n) { return kolmo_khuf_bound(n); }

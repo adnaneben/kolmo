@@ -27,6 +27,9 @@ size_t kolmo_klzma_bound(size_t n);
    lc/lp/pb digits, then the level).
    Returns the payload size, or 0 when not smaller than n + 16 or out of memory. */
 size_t kolmo_klzma_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
+/* The same output as kolmo_klzma_compress, on up to `threads` threads (the 4-byte match finder split by hash bucket,
+   klzma.c km_mt); the result never depends on threads. */
+size_t kolmo_klzma_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads);
 /* 0 when in[0..cn) decodes to exactly n bytes, else -1 (bounds-checked; reads past the end count as corrupt). */
 int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 #endif
