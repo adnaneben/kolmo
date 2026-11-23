@@ -15,13 +15,37 @@
   version 12 is never removed.
 - **Frozen corpus of 0.0.2 frames.** `tests/v12/r0.0.2/` adds 246 frames written by the 0.0.2 release binary, with
   their originals: every level, the format-changing options, the stream wrapper, and inputs that reach most block
-  codecs and transforms 0.0.2 writes. Block codecs 25, 26 and 31 and tflags 2, 6 and 8 are not yet reached
-  (COMPATIBILITY.md).
+  codecs and transforms 0.0.2 writes (COMPATIBILITY.md).
   - `make check` decodes them through the library (`test-v12-corpus`) and the CLI (`tests/check_v12_frames.py`, which
     also fails if a frozen frame changes).
   - It re-checks every frame of the corpus against FORMAT.md with an independent Python implementation of the
     container layer (`tests/format_reference.py`).
   - `tests/make_v12_frames.py` adds each release's frames (RELEASING.md).
+- **FORMAT.md: Kolmo's own coders written out** (sections 14 to 19), so an independent decoder can be written from
+  the text: varints and match copy, khuf (codec 27), krans (static rANS inside KLZH2), KLZ (28), KLZH2 (32) and the
+  read-only KLZH (29). Every field, bit order, table construction and refusal rule is given. Section 19 adds the
+  inverses of the byte-plane shuffle (plan 2, tflag 1) and the x86 call/jump filter (plan 7, tflag 8). The registry
+  and section 13 point to the new sections. No decoder changed and no frame changed.
+  - One 0.0.2 behaviour is recorded as it is: KLZH2 computes a match length modulo 2^32. Match-length code 71 with
+    extra bits of at least 2^30 − 3 then gives a match of 0, 1 or 2 bytes, which the decoder accepts. No encoder
+    writes it (FORMAT.md 18.3).
+- **`tests/coder_reference.py`**: an independent Python decoder for those sections, written from the prose, in
+  `make check` (about 10 s). It decodes every corpus block that uses KLZ or KLZH2:
+  - blocks without a transform are compared with the original;
+  - blocks under the shuffle, x86 or ARM64 filter are checked against their block checksum;
+  - blocks under other transforms are checked to decode to their transformed length.
+
+  It also decodes every khuf and KLZH2 graph leaf, and checks that broken streams are refused. On about 26,000
+  mutated corpus streams it agreed with the 0.0.2 C decoders on every accept, refusal and output byte.
+- **The 0.0.2 corpus reaches every block codec and default transform 0.0.2 writes.** 11 frames were added to
+  `tests/v12/r0.0.2/`, written by the 0.0.2 tag binary from six new synthetic inputs in `tests/make_v12_frames.py`.
+  No existing frame changed. The new inputs:
+  - a 12-bit image (16-bit image transform, tflag 6);
+  - a smooth 8-bit image (kimg, codec 31, level 9);
+  - 1 MiB of x86-like code (x86 filter, tflag 8);
+  - a words CSV (typed transpose, tflag 2);
+  - a two-column CSV (CM over columns, codec 25, ultra);
+  - a derived-column time series (GR6+, codec 26, ultra).
 
 ## 0.0.2 (2026-11-23)
 

@@ -16,7 +16,7 @@ This document has three parts.
   Several payloads are specified in [SPEC.md](SPEC.md). For the others, the reference implementation at tag `v0.0.2`
   is normative until their sections are written (section 13 lists them).
 - **Kolmo's own coders** (sections 14 to 19): khuf (27), krans, KLZ (28), KLZH (29), KLZH2 (32), and the byte-plane
-  shuffle inverse. `tests/coder_reference.py` is an independent Python decoder written from these sections. It decodes
+  shuffle and x86 filter inverses. `tests/coder_reference.py` is an independent Python decoder written from these sections. It decodes
   every block and graph leaf of the frozen corpus that uses them.
 
 Throughout, *must* and *must not* are requirements on a conforming decoder or encoder.
@@ -209,7 +209,8 @@ A decoder must refuse `t > 11`, and plan type 11 with `b > 15` or `c ≠ 0`.
 2. Decode the coded stream with the block's codec (§8), to the transformed length or, with no transform, to `raw` bytes.
 3. Undo the transform named by `tflag`, giving exactly `raw` bytes.
    - tflags 8 and 14 work in place on the decoded block.
-   - The ARM64 inverse is specified in SPEC.md, *ARM64 branch filter*, and the byte-plane shuffle in §19.1.
+   - The ARM64 inverse is specified in SPEC.md, *ARM64 branch filter*, the byte-plane shuffle in §19.1 and the x86
+     filter in §19.3.
    - The other inverses are in the reference implementation (§13).
 4. Verify the checksum (§5.1).
 
@@ -365,7 +366,7 @@ Errors fall into five classes:
 
 | File | Contents |
 |---|---|
-| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 246 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
+| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 257 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
 | `tests/khash64_vectors.txt` | the khash64 vectors |
 | `tests/format_reference.py` | the container layer in Python, checked against both of the above |
 | `tests/coder_reference.py` | the coders of sections 14 to 19 in Python, decoding every corpus block and leaf that uses them |
@@ -379,13 +380,12 @@ work, in this order (most frames first):
 1. the table, log, line-class and word transforms (tflags 4, 5, 9, 10, 12);
 2. KLZMA (24);
 3. the BWT stream's QLFC coder (18);
-4. the typed and quote-aware transposes (plan 1, tflags 1 and 2), and the record, 16-bit image and x86 inverses
-   (tflags 6, 7, 8);
+4. the typed transposes (plan 1, tflags 1 and 2), and the record and 16-bit image inverses (tflags 7, 6);
 5. kimg (31);
 6. CMP (25).
 
 Written out so far: KLZH2 (32) with krans, KLZ (28), KLZH (29) and khuf (27) in sections 14 to 18, and the byte-plane
-shuffle (plan 2, tflag 1) in section 19.
+shuffle (plan 2, tflag 1) and x86 filter (plan 7, tflag 8) inverses in section 19.
 
 Until a payload has its own section, a change to its decoder that changes the decoded bytes of any version-12 frame is
 a format change (COMPATIBILITY.md), whether or not the corpus catches it.
@@ -565,8 +565,9 @@ token    := bits 0-2: literal length (7: extended) | bits 3-6: match length − 
 6. **Match.** Copy the match (§14.2), then continue with the next sequence. Refuse when there is no byte left for the
    next token.
 
-When `n` = 0 the stream is the single token `0x00`. The output can only end in step 3, so a stream must end with a
-sequence whose literals complete the output. When a match completes it, that sequence is a token `0x00`.
+The output can only end in step 3, so the last sequence of a stream is one whose literals complete the output. When a
+match completes the output, a last sequence with no literals follows: the single token `0x00`. When `n` = 0 the
+stream is that token alone.
 
 ## 18. KLZH (codec 29) and KLZH2 (codec 32): LZ77 with entropy-coded streams
 
@@ -643,18 +644,20 @@ is an encoder choice; §15 decodes any chunk sizes.
 
 ### 18.4 Test coverage
 
-The 0.0.2 corpus (`tests/v12/r0.0.2`) has the following material for these coders, all of which
+The corpus (`tests/v12`, both releases) has the following material for these coders, all of which
 `tests/coder_reference.py` decodes:
-- 93 KLZH2 blocks and 29 KLZ blocks:
-  - 73 KLZH2 and 22 KLZ blocks have no transform and are compared with the original;
-  - 20 KLZH2 and 7 KLZ blocks have the byte-plane shuffle (§19.1), and 2 KLZH2 blocks the ARM64 filter. These are
-    checked through the block checksum after the inverse;
-  - the remaining KLZH2 blocks, under the table, log, record, word and line transforms, are checked to decode to their
-    transformed length;
+- 126 KLZH2 blocks and 29 KLZ blocks:
+  - 74 KLZH2 and 22 KLZ blocks have no transform and are compared with the original;
+  - 23 KLZH2 and 7 KLZ blocks have an inverse in section 19 or SPEC.md and are checked through the block checksum
+    after it: 20 + 7 under the byte-plane shuffle, 2 under the ARM64 filter, 1 under the x86 filter;
+  - the other 29 KLZH2 blocks, under the table, log, record, 16-bit image, word, line-class and transpose transforms,
+    are checked to decode to exactly their transformed length;
 - 17 KLZH2 graph leaves and 47 khuf graph leaves, checked to decode to their raw length;
-- 29 krans streams inside them.
+- more than 40 krans streams inside them.
 
-The test also checks that one stream for each refusal rule above is refused. No frame uses KLZH (29).
+The test also checks that one stream for each of several refusal rules above is refused. The decoders were also
+compared with the 0.0.2 C decoders on about 26,000 mutated corpus streams. Both refused the same streams and decoded
+the others to the same bytes. No frame uses KLZH (29).
 
 ### 18.5 KLZH (codec 29, read only)
 
@@ -683,3 +686,17 @@ copied unchanged.
 ### 19.2 ARM64 branch filter (plan type 11, tflag 14)
 
 Specified in SPEC.md, *ARM64 branch filter*. `tests/coder_reference.py` implements it from that text.
+
+### 19.3 x86 call/jump filter (plan type 7, tflag 8)
+
+The plan is `7, 0, 0, 0`. There is no meta, and the coded stream decodes to `raw` bytes, which the inverse changes in
+place. For each position `i` from 0 to `raw − 5`, in increasing order, look at the block's bytes as they are at that
+moment, including changes made at earlier positions. If both of these hold:
+- `b[i]` is `0xE8` or `0xE9`;
+- `b[i+4]` is `0x00` or `0xFF`;
+
+then replace the 24-bit little-endian value in `b[i+1..i+3]` by that value minus `i`, modulo 2^24. Then continue at
+`i + 1`, not after the four bytes. A block shorter than 5 bytes is unchanged. `i` is the offset in the block, not in the
+file.
+
+The encoder applies the same rule with `+ i`, from the last position to the first.

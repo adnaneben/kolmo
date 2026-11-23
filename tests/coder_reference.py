@@ -3,15 +3,16 @@
 
 usage: python3 tests/coder_reference.py [tests/v12]
 
-Written from the prose of FORMAT.md (khuf 15, krans 16, KLZ 17, KLZH and KLZH2 18, the byte-plane shuffle 19.1) and
+Written from the prose of FORMAT.md (khuf 15, krans 16, KLZ 17, KLZH and KLZH2 18, the byte-plane shuffle 19.1, the
+x86 filter 19.3) and
 SPEC.md (the ARM64 branch filter), not from the C sources. It takes khash64 from tests/format_reference.py (FORMAT.md
 2.2) and walks the container itself.
 
 For every frame of the frozen corpus it decodes:
   - every block whose codec is 28 (KLZ), 29 (KLZH) or 32 (KLZH2). A block without a transform (tflag 0) must give the
-    original's bytes for that block. A block under the byte-plane shuffle (plan 2, tflag 1) or the ARM64 filter
-    (tflag 14) must match its block checksum after the inverse. A block under any other transform must decode to
-    exactly its transformed length, using all of its stream;
+    original's bytes for that block. A block under the byte-plane shuffle (plan 2, tflag 1), the x86 filter (tflag 8)
+    or the ARM64 filter (tflag 14) must match its block checksum after the inverse. A block under any other transform
+    must decode to exactly its transformed length, using all of its stream;
   - every graph leaf (FORMAT.md 7.4) whose codec is 27, 28, 29 or 32, to exactly its raw length.
 It also checks that one stream for each refusal rule is refused.
 """
@@ -320,6 +321,16 @@ def a64_inv(b, phase):
     return bytes(b)
 
 
+def x86_inv(b):
+    """plan 7, tflag 8 (FORMAT.md 19.3), in place, front to back"""
+    b = bytearray(b)
+    for i in range(len(b) - 4):
+        if b[i] & 0xFE == 0xE8 and b[i + 4] in (0, 255):
+            a = (b[i + 1] | b[i + 2] << 8 | b[i + 3] << 16) - i
+            b[i + 1:i + 4] = (a & 0xFFFFFF).to_bytes(3, "little")
+    return bytes(b)
+
+
 def shuffle_inv(t, n, width, ch, delta):
     """plan 2, tflag 1: plane b * ch + c holds byte b of channel c's values; delta adds each value to the previous one
     of its channel, modulo 2^(8 width)"""
@@ -404,6 +415,10 @@ def check_block(raw, ck, codec, tflag, pay, orig, rt, stats):
         d = shuffle_inv(d, raw, a, b, c)
         need(rt or (khash64(d, 0x637a6e31) & 0xFFFFFFFF) == ck, "shuffle inverse: checksum")
         kind = "block %d, shuffle inverse checked" % codec
+    elif tflag == 8:
+        d = x86_inv(d)
+        need(rt or (khash64(d, 0x637a6e31) & 0xFFFFFFFF) == ck, "x86 inverse: checksum")
+        kind = "block %d, x86 inverse checked" % codec
     elif tflag == 14:
         d = a64_inv(d, a | (b & 15) << 8)
         need(rt or (khash64(d, 0x637a6e31) & 0xFFFFFFFF) == ck, "ARM64 inverse: checksum")

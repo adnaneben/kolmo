@@ -180,6 +180,72 @@ def records(rng, n):  # fixed 24-byte records: id u32, time u32, x f32, y f32, k
                     for i in range(n))
 
 
+def image12(rng, w, h):  # 12-bit samples in 16-bit big-endian words: the 16-bit image transform (tflag 6)
+    return b"".join(struct.pack(">H", ((x * 4 + y * 3) // 2 + ((x // 40 + y // 40) % 2) * 300 + rng.below(9)) & 0x0FFF)
+                    for y in range(h) for x in range(w))
+
+
+def photo8(rng, w, h):  # a smooth field (bilinear over a coarse random grid) with a disc and mild noise: kimg (codec 31)
+    gw, gh, cell = w // 32 + 2, h // 32 + 2, 32
+    grid = [[40 + rng.below(176) for _ in range(gw)] for _ in range(gh)]
+    px = bytearray()
+    for y in range(h):
+        gy, fy = y // cell, y % cell
+        for x in range(w):
+            gx, fx = x // cell, x % cell
+            top = grid[gy][gx] * (cell - fx) + grid[gy][gx + 1] * fx
+            bot = grid[gy + 1][gx] * (cell - fx) + grid[gy + 1][gx + 1] * fx
+            v = (top * (cell - fy) + bot * fy) // (cell * cell)
+            if (x - w // 2) ** 2 + (y - h // 2) ** 2 < (h // 4) ** 2: v = 230 - (x - w // 2) // 3
+            px.append(max(0, min(255, v + rng.below(3) - 1)))
+    return bytes(px)
+
+
+def x86_code(rng, n):  # instruction-like bytes with many E8 rel32 calls to a few hundred functions: the x86 filter (tflag 8)
+    funcs = [0x1000 + 64 * rng.below(20000) for _ in range(300)]
+    ops = [b"\x55\x48\x89\xe5", b"\x48\x83\xec\x20", b"\x89\x7d\xfc", b"\x8b\x45\xfc", b"\x48\x8b\x45\xf0", b"\x01\xd0",
+           b"\x83\xc0\x01", b"\x5d\xc3", b"\x48\x89\xc7", b"\x31\xc0", b"\x0f\xaf\xc2", b"\x39\xc8"]
+    out = bytearray()
+    while len(out) < n:
+        k = rng.below(10)
+        if k < 3: out += b"\xe8" + struct.pack("<I", (rng.pick(funcs) - (len(out) + 5)) & 0xFFFFFFFF)
+        elif k == 3: out += b"\x0f\x84" + struct.pack("<i", rng.below(200) - 100)
+        else: out += rng.pick(ops)
+    return bytes(out[:n])
+
+
+def names_csv(rng, rows):  # delimited text the table transform does not help: the typed transpose (plan 1, tflag 2)
+    out = ["name,city,word,note,code\n"]
+    for _ in range(rows):
+        out.append("%s %s,%s,%s,%s %s %s,%s%s\n" % (rng.pick(WORDS).capitalize(), rng.pick(WORDS).capitalize(), rng.pick(WORDS),
+                   rng.pick(WORDS), rng.pick(WORDS), rng.pick(WORDS), rng.pick(WORDS), rng.pick("ABCDEFGH"), rng.pick(WORDS)))
+    return "".join(out).encode()
+
+
+def pairs_csv(rng, rows):  # two columns (too few for GR6+): ultra codes the columns with one model each (codec 25)
+    return "".join("%s %s,%d\n" % (rng.pick(WORDS), rng.pick(WORDS), 100000 + i * 7 + rng.below(5)) for i in range(rows)).encode()
+
+
+def derived_csv(rng, cap):  # a time series with derived columns (per capita, running total, growth, price x volume): GR6+
+    rows = ["country,year,population,co2,co2_per_capita,cumulative_co2,co2_growth_abs,price,volume,value,flag\n"]
+    n, c = len(rows[0]), 0
+    names = ["Aland", "Borduria", "Carpathia", "Doria", "Elbonia", "Freedonia", "Genovia", "Hyrkania"]
+    while n + 4096 < cap:
+        pop, co2, cum, prev = 100000 + rng.below(9000000), 1000 + rng.below(90000), 0, -1
+        for y in range(1900, 2024):
+            if n + 200 >= cap: break
+            pop = max(1000, pop + rng.below(20001) - 5000); co2 = max(10, co2 + rng.below(2001) - 900); cum += co2
+            pc = (co2 * 1000000000 // pop + 500) // 1000
+            s = "%s,%d,%d,%d.%03d,%d.%03d,%d.%03d," % (names[c], y, pop, co2 // 1000, co2 % 1000, pc // 1000, pc % 1000, cum // 1000, cum % 1000)
+            if prev >= 0:
+                d = co2 - prev; s += "%s%d.%03d" % ("-" if d < 0 else "", abs(d) // 1000, abs(d) % 1000)
+            pr, vol = 100 + rng.below(900), 1 + rng.below(500)
+            s += ",%d.%02d,%d,%d.%02d,%s\n" % (pr // 100, pr % 100, vol, pr * vol // 100, pr * vol % 100, "" if rng.below(40) else "est")
+            prev = co2; rows.append(s); n += len(s)
+        c = (c + 1) % 8
+    return "".join(rows).encode()
+
+
 C_SOURCE = r"""
 #include <stdio.h>
 #include <string.h>
@@ -256,6 +322,14 @@ def inputs():
     d["gray16-big.pgm"] = pgm(image16(r(22), 512, 384), 512, 384, 65535)
     d["bundle.tar"] = tar_of([("a/text.txt", d["text.txt"][:70000]), ("a/table.csv", d["table.csv"]),
                               ("b/series.i32", d["series.i32"]), ("b/service.log", d["service.log"][:90000])])
+    # inputs added after 0.0.2 shipped, written by the 0.0.2 tag binary: the block codecs and transforms the inputs above
+    # do not reach (FORMAT.md 18.4, COMPATIBILITY.md)
+    d["gray12.pgm"] = pgm(image12(r(23), 512, 384), 512, 384, 4095)
+    d["photo.pgm"] = pgm(photo8(r(24), 640, 480), 640, 480)
+    d["code.x86"] = x86_code(r(25), 1 << 20)
+    d["names.csv"] = names_csv(r(26), 4000)
+    d["pairs.csv"] = pairs_csv(r(27), 9000)
+    d["derived.csv"] = derived_csv(r(28), 300000)
     mixed = d["text.txt"] + d["table.csv"] + d["series.i32"] + d["gray.pgm"] + d["service.log"] + d["records.bin"]
     d["mixed.bin"] = (mixed * 3)[: 3 << 20]   # 2.3 MiB: several blocks at level 3, several segments with --stream=1
     return d
@@ -265,7 +339,9 @@ LEVELS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "U"]
 # larger inputs, at the levels where they take a route the small ones do not (executable code sections, the image
 # model, 16-bit samples as fixed records, several blocks)
 SOME = {"bigprog-arm64": ["3", "9"], "bigprog-x86_64": ["3", "9"], "gray-big.pgm": ["U"],
-        "gray16-big.pgm": ["3", "U"], "mixed.bin": ["3"], "bundle.tar": ["3", "9"]}
+        "gray16-big.pgm": ["3", "U"], "mixed.bin": ["3"], "bundle.tar": ["3", "9"],
+        "gray12.pgm": ["3", "9"], "photo.pgm": ["9", "U"], "code.x86": ["3", "9"], "names.csv": ["2", "3"],
+        "pairs.csv": ["3", "U"], "derived.csv": ["U"]}
 
 
 def frame_summary(f):
