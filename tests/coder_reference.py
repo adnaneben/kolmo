@@ -349,6 +349,173 @@ def shuffle_inv(t, n, width, ch, delta):
     return bytes(out)
 
 
+# ---- line classes (FORMAT.md 20.1)
+def lines_inv(t, n):
+    need(len(t) >= 14 and t[0] == 1, "lines header")
+    K = t[1]; need(1 <= K <= 8, "lines class count")
+    L, tail, other = struct.unpack_from("<III", t, 2)
+    hdr = 14 + 8 * K; need(len(t) >= hdr, "lines classes")
+    klen, kcnt = [], []
+    for k in range(K):
+        a, b = struct.unpack_from("<II", t, 14 + 8 * k)
+        need(1 <= a <= 4096, "lines class length"); klen.append(a); kcnt.append(b)
+    covered = sum(a * b for a, b in zip(klen, kcnt)); lines = sum(kcnt)
+    need(L <= n and lines <= L and hdr + L + other + tail + covered == len(t) and covered + lines + other + tail == n, "lines sizes")
+    cls = t[hdr:hdr + L]; op = hdr + L; oe = op + other; tp = oe; cp = tp + tail
+    out = bytearray(); places = [[] for _ in range(K)]
+    for c in cls:
+        if c:
+            need(c <= K and len(places[c - 1]) < kcnt[c - 1], "lines class id")
+            need(n - len(out) >= klen[c - 1] + 1, "lines output")
+            places[c - 1].append(len(out)); out += bytes(klen[c - 1]) + b"\n"
+        else:
+            e = t.find(b"\n", op, oe); need(e >= 0, "lines other line")
+            need(e + 1 - op <= n - len(out), "lines output")
+            out += t[op:e + 1]; op = e + 1
+    need(all(len(places[k]) == kcnt[k] for k in range(K)), "lines class counts")
+    need(op == oe and n - len(out) == tail, "lines tail")
+    out += t[tp:tp + tail]
+    for k in range(K):
+        m = kcnt[k]
+        for j in range(klen[k]):
+            col = t[cp + j * m:cp + (j + 1) * m]
+            for r, pos in enumerate(places[k]): out[pos + j] = col[r]
+        cp += klen[k] * m
+    return bytes(out)
+
+
+# ---- word dictionary (FORMAT.md 20.2)
+def word_inv(t, n):
+    need(len(t) >= 6, "word header")
+    np_ = t[0]; need(1 <= np_ <= 64 and len(t) >= np_ + 6, "word prefixes")
+    pre = list(t[1:1 + np_]); need(len(set(pre)) == np_, "word prefix twice")
+    capb = t[1 + np_]; need(capb not in pre, "word cap byte is a prefix")
+    nw = struct.unpack_from("<I", t, 2 + np_)[0]; need(nw <= np_ * 256 and nw <= 64 * 256, "word count")
+    p = 6 + np_; words = []
+    for _ in range(nw):
+        e = t.find(b"\n", p); need(e >= 0 and 3 <= e - p <= 48, "word entry")
+        words.append(t[p:e]); p = e + 1
+    pidx = {b: k for k, b in enumerate(pre)}
+    out = bytearray()
+    while p < len(t):
+        s = p
+        while p < len(t) and t[p] != capb and t[p] not in pidx: p += 1
+        need(p - s <= n - len(out), "word output"); out += t[s:p]
+        if p >= len(t): break
+        cap = t[p] == capb
+        if cap:
+            p += 1; need(p < len(t) and t[p] in pidx, "word cap byte not before a code")
+        need(len(t) - p >= 2, "word code"); code = pidx[t[p]] << 8 | t[p + 1]; p += 2
+        need(code < nw, "word code above the dictionary"); w = bytearray(words[code])
+        need(len(w) <= n - len(out), "word output")
+        if cap: w[0] &= 0xDF
+        out += w
+    need(len(out) == n, "word length")
+    return bytes(out)
+
+
+# ---- log templates (FORMAT.md 20.3)
+def unzz(z): return (z >> 1) ^ -(z & 1)
+
+
+def get_ints(t, p, m):
+    need(len(t) - p >= 2, "log ints header")
+    mode, w = t[p], t[p + 1]; p += 2
+    need(mode <= 1 and 1 <= w <= 8 and len(t) - p >= m * w, "log ints")
+    planes = [t[p + b * m:p + (b + 1) * m] for b in range(w)]
+    v = []; acc = 0
+    for i in range(m):
+        z = 0
+        for b in range(w): z |= planes[b][i] << (8 * b)
+        x = unzz(z)
+        if mode: acc = (acc + x) & M64; v.append(acc)
+        else: v.append(x & M64)
+    return v, p + m * w
+
+
+M64 = (1 << 64) - 1
+
+
+def log_inv(t, n):
+    need(len(t) >= 21 and t[0] == 1, "log header")
+    L, T, tail, dlen, rlen = struct.unpack_from("<5I", t, 1)
+    need(L <= n and T <= L and tail <= n, "log counts")
+    lid, p = get_ints(t, 21, L)
+    need(all(x <= T for x in lid), "log template id")
+    cnt = [0] * (T + 1)
+    for x in lid: cnt[x] += 1
+    need(len(t) - p >= dlen + rlen + tail, "log sections")
+    dict_ = t[p:p + dlen]; rare = t[p + dlen:p + dlen + rlen]; tailb = t[p + dlen + rlen:p + dlen + rlen + tail]
+    p += dlen + rlen + tail
+    tpl = [None]; ncols = 0; d = 0
+    for _ in range(T):
+        e = dict_.find(b"\n", d); need(e >= 0, "log template")
+        parts = dict_[d:e].split(b"\x01")
+        tpl.append((parts, list(range(ncols, ncols + len(parts) - 1)))); ncols += len(parts) - 1; d = e + 1
+    need(d == dlen, "log dictionary: bytes left")
+    need(ncols * 5 <= len(t) - p, "log columns")
+    cols = []
+    for tt in range(1, T + 1):
+        for _ in tpl[tt][1]:
+            m = cnt[tt]
+            need(p < len(t), "log column type"); ty = t[p]; p += 1
+            if ty == 0:
+                need(len(t) - p >= 4, "log text column"); size = struct.unpack_from("<I", t, p)[0]; p += 4
+                need(size <= len(t) - p, "log text column size"); cols.append(["t", t[p:p + size], 0]); p += size
+            elif ty == 1:
+                need(p < len(t), "log skeleton"); g = t[p]; p += 1; need(1 <= g <= 12, "log skeleton runs")
+                pieces = []
+                for _ in range(g + 1):
+                    need(p < len(t), "log piece"); l = t[p]; p += 1; need(l <= len(t) - p, "log piece"); pieces.append(t[p:p + l]); p += l
+                runs = []
+                for _ in range(g):
+                    need(p < len(t), "log pad"); pad = t[p]; p += 1; need(pad <= 18, "log pad")
+                    need(len(t) - p >= 2, "log run"); w = t[p + 1]
+                    need(1 <= w <= 8 and t[p] <= 1 and len(t) - p - 2 >= m * w, "log run")
+                    v, p = get_ints(t, p, m)
+                    lim = 10 ** pad if 1 <= pad < 18 else 10 ** 18
+                    need(all(x < lim for x in v), "log run value")
+                    runs.append((pad, v))
+                cols.append(["s", pieces, runs, 0])
+            else:
+                raise Corrupt("log column type %d" % ty)
+    need(p == len(t), "log: bytes left")
+    out = bytearray(); rp = 0
+    for x in lid:
+        if x == 0:
+            e = rare.find(b"\n", rp); need(e >= 0, "log rare line"); need(e + 1 - rp <= n - len(out), "log output")
+            out += rare[rp:e + 1]; rp = e + 1; continue
+        parts, cidx = tpl[x]
+        for k, lit in enumerate(parts):
+            need(len(lit) <= n - len(out), "log output"); out += lit
+            if k == len(cidx): break
+            C = cols[cidx[k]]
+            if C[0] == "t":
+                e = C[1].find(b"\n", C[2]); need(e >= 0, "log text value")
+                need(e - C[2] <= n - len(out), "log output"); out += C[1][C[2]:e]; C[2] = e + 1
+            else:
+                i = C[3]; C[3] += 1
+                for j, pc in enumerate(C[1]):
+                    need(len(pc) <= n - len(out), "log output"); out += pc
+                    if j == len(C[2]): break
+                    pad, v = C[2][j]
+                    ds = str(v[i]).encode().rjust(pad, b"0")
+                    need(len(ds) <= n - len(out), "log output"); out += ds
+        need(len(out) < n, "log output"); out.append(10)
+    need(rp == len(rare), "log rare lines left")
+    need(all(C[2] == len(C[1]) for C in cols if C[0] == "t"), "log text values left")
+    need(n - len(out) == tail, "log tail")
+    return bytes(out + tailb)
+
+
+def json_inv(t, n, k):
+    """tflag 10: the log stream decodes to n + k bytes; every newline is removed"""
+    need(k <= n, "json newline count")
+    d = log_inv(t, n + k).replace(b"\n", b"")
+    need(len(d) == n, "json length")
+    return d
+
+
 # ---- the graph program (SPEC.md, Kolmo graph blocks): only the leaves are needed here
 def graph_leaves(p):
     need(len(p) >= 3 and p[0] == ord("G") and p[1] == 1, "graph header")
@@ -415,6 +582,13 @@ def check_block(raw, ck, codec, tflag, pay, orig, rt, stats):
         d = shuffle_inv(d, raw, a, b, c)
         need(rt or (khash64(d, 0x637a6e31) & 0xFFFFFFFF) == ck, "shuffle inverse: checksum")
         kind = "block %d, shuffle inverse checked" % codec
+    elif tflag in (5, 9, 10, 12):
+        if tflag == 5: d = log_inv(d, raw)
+        elif tflag == 9: d = word_inv(d, raw)
+        elif tflag == 12: d = lines_inv(d, raw)
+        else: d = json_inv(d, raw, struct.unpack_from("<I", pay, 8)[0])
+        need(orig is None or d == orig, "inverse transform: bytes differ from the original")
+        kind = "block %d, tflag %d inverse checked against the original" % (codec, tflag)
     elif tflag == 8:
         d = x86_inv(d)
         need(rt or (khash64(d, 0x637a6e31) & 0xFFFFFFFF) == ck, "x86 inverse: checksum")

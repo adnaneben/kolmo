@@ -700,3 +700,138 @@ then replace the 24-bit little-endian value in `b[i+1..i+3]` by that value minus
 file.
 
 The encoder applies the same rule with `+ i`, from the last position to the first.
+
+## 20. Text transforms
+
+These inverses take the coder's output `t` (the *transformed bytes*, of the transformed length in the block's meta,
+§6.1) and produce the block's `raw` bytes, called `n` here. Each one either produces exactly `n` bytes or refuses
+the block as corrupt. `u32` fields are little-endian.
+
+### 20.1 Line classes (plan type 10, tflag 12)
+
+Fixed-width lines stored column by column.
+
+```
+t := 1 u8 | K u8 | L u32 | tail u32 | other u32 | K × (len u32, count u32) | class u8 × L | other lines | tail | columns
+```
+
+- `L` is the number of lines and `K` (1-8) the number of classes. Class `k` (1-based) holds `count` lines of `len`
+  bytes, not counting their newline.
+- `class` gives each line in order its class: 0 for an *other* line, else 1 to K.
+- *Other lines* is `other` bytes: the other lines in order, each with its newline.
+- *Tail* is the `tail` bytes after the last newline of the block.
+- *Columns* holds the classes in order 1 to K. Class `k` is `len` columns of `count` bytes: column `j` holds byte `j`
+  of each of the class's lines, in line order.
+
+Let `covered = Σ len·count` and `lines = Σ count`, computed exactly. Refuse when:
+- `t` is shorter than 14 bytes, or its first byte is not 1;
+- K is 0 or above 8, or `t` is shorter than `14 + 8K`;
+- a `len` is 0 or above 4096;
+- `L > n` or `lines > L`;
+- `14 + 8K + L + other + tail + covered ≠ |t|`, or `covered + lines + other + tail ≠ n`.
+
+Decode the lines in order:
+- A class-`k` line is `len` bytes from the class's columns, then a newline.
+- An *other* line is the next bytes of the other-lines area, up to and including the next newline.
+
+Refuse when:
+- a class id is above K;
+- a class has more lines than its `count`, or fewer at the end;
+- no newline is left in the other-lines area;
+- the output would pass `n`;
+- the other-lines area is not used up exactly;
+- the bytes left to produce are not exactly `tail`.
+
+Then append the tail. Class column bytes are copied as they are and are not checked, so they may hold newlines.
+
+### 20.2 Word dictionary (plan type 8, tflag 9)
+
+Frequent words are replaced by two-byte codes whose first byte is a *prefix* byte.
+
+```
+t := np u8 | prefix u8 × np | cap u8 | nw u32 | word × nw | text
+word := 3 to 48 bytes | '\n'
+```
+
+Refuse when:
+- `t` is shorter than 6 bytes;
+- `np` is 0 or above 64, or `t` is shorter than `np + 6`;
+- two prefixes are equal, or `cap` equals a prefix;
+- `nw > 256·np` or `nw > 16384`;
+- a word is missing its newline, or is shorter than 3 or longer than 48 bytes. A word may hold any byte except
+  newline.
+
+The **text** is the rest of `t`. Read it from the start:
+- A byte that is neither a prefix nor `cap` is copied to the output.
+- A prefix byte `P` and the next byte `x` are the code `256·index(P) + x`, where `index(P)` is P's position in the
+  prefix list (0-based). They are replaced by word number `code`.
+- `cap` must be followed by a prefix byte. The code after it is replaced by its word with bit 5 of the word's first
+  byte cleared (`& 0xDF`).
+
+Refuse when:
+- `cap` is not followed by a prefix byte;
+- a prefix byte is the last byte of the text;
+- `code ≥ nw`;
+- the output would pass `n`, or ends shorter than `n`.
+
+### 20.3 Log templates (plan type 4, tflag 5)
+
+Lines that share a *template* are stored once as the template plus one column per variable token.
+
+```
+t := 1 u8 | L u32 | T u32 | tail u32 | dict u32 | rare u32 | ids | dict bytes | rare bytes | tail bytes | columns
+```
+
+**Integer arrays.** An integer array of `m` values is `mode u8 | w u8 | w planes of m bytes`.
+- Plane `b` holds byte `b` (from the least significant) of each value's unsigned `w`-byte code `z`.
+- The value is `zigzag⁻¹(z) = (z >> 1) XOR −(z & 1)`.
+- With `mode` 1, values are deltas: each value is the running sum of the decoded deltas, modulo 2^64, starting from 0.
+- Refuse `mode > 1`, `w` = 0 or above 8, or fewer than `m·w` bytes left.
+- Values are then read as unsigned 64-bit numbers.
+
+**Header and ids.** Refuse when:
+- `t` is shorter than 21 bytes, or its first byte is not 1;
+- `L > n`, `T > L` or `tail > n`.
+
+`ids` is an integer array of `L` values, the template id of each line. Refuse an id above T, where 0 means a
+*rare* line. Then `dict`, `rare` and `tail` bytes follow; refuse when they do not fit. `m_t` is the number of lines with
+id `t`.
+
+**Templates.** The dictionary holds templates 1 to T, each ending in a newline.
+- Byte `0x01` in a template is a placeholder.
+- A template with `p` placeholders is `p + 1` literal pieces separated by them.
+- Placeholders are numbered as *columns* in order: template 1's first, and so on.
+- Refuse when a template has no newline, or bytes are left after template T.
+
+**Columns.** The total number of columns times 5 must not exceed the bytes left; refuse otherwise. Then each column of
+template `t` follows, in column order, and has `m_t` values:
+- **Type 0, text:** `size u32 | size bytes`. The values in order, each ending in a newline.
+- **Type 1, skeleton:** `g u8 (1-12) | g + 1 pieces (len u8 | len bytes) | g runs`, where a run is
+  `pad u8 (0-18) | integer array of m_t values`. Every value of a run must be below `10^pad` when `1 ≤ pad ≤ 17`,
+  and below `10^18` when `pad` is 0 or 18.
+- Any other type, a value outside those ranges, or bytes left after the last column are refused.
+
+**Output.** For each line, in order:
+- **Id 0:** copy the next line of the rare area, up to and including its newline. Refuse when the rare area has no
+  newline left.
+- **Id `t`:** write the template's pieces. In place of each placeholder, write the next value of its column:
+  - for a **text** column, the bytes up to the next newline of its area, without the newline. Refuse when there is
+    none.
+  - for a **skeleton** column, piece 0, run 0's value, piece 1, … , run `g−1`'s value, piece `g`. A run value is
+    written in decimal. When `pad` > 0 it is left-padded with `0` to `pad` digits.
+
+  Then write a newline.
+
+Refuse when:
+- the output would pass `n`;
+- the rare area is not used up;
+- a text column's area is not used up;
+- the bytes left to produce are not exactly `tail`.
+
+Then append the tail.
+
+### 20.4 Minified JSON (plan type 4, tflag 10)
+
+The meta is 8 bytes: the transformed length, then `k u32`, the number of newlines the encoder inserted. Refuse
+`k > n`. The transformed bytes decode by §20.3 to `n + k` bytes, not `n`. Remove every newline from them, and refuse
+unless exactly `n` bytes remain. The encoder uses this only on blocks without newlines.
