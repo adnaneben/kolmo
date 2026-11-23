@@ -1,0 +1,18 @@
+[
+ {
+  "file": "qwen2.5-0.5b-bf16.safetensors",
+  "bytes": 988097824,
+  "bf16_bytes": 988065536,
+  "other_bytes": 0,
+  "dfloat11_method_bytes": 657827812,
+  "ratio": 1.5020614908267211
+ },
+ {
+  "file": "smollm2-135m-bf16.safetensors",
+  "bytes": 269060552,
+  "bf16_bytes": 269030016,
+  "other_bytes": 0,
+  "dfloat11_method_bytes": 179217382,
+  "ratio": 1.5013083496555037
+ }
+]

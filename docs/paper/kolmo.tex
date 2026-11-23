@@ -77,17 +77,18 @@ five coder families selected by a single compression level. All choices are reco
 version-12 layout is specified and frozen, whose blocks decode independently, and whose header declares the memory a
 decoder needs before it allocates anything. On one thread of an Apple M5, Kolmo's level~6 is
 \numSilKSixR{} on Silesia against \numSilxzNineR{} for \texttt{xz -9}, and decodes \numSilSixVsXzDec{} times faster;
-on a panel of \numPanelFiles{} structured files it matches or beats the best untrained OpenZL profile on every file at
-its strongest level, without being told the format. We also report where the approach does not help: small inputs,
-plain text at fast levels, model weights, decode speed relative to zstd, and memory use.
-\todoin{update with x86-64 rerun, trained-OpenZL rematch and tuned levels}
+on public held-out data, against OpenZL trained on samples of the same kind, Kolmo without training is smaller on
+JSON and web logs from level~5 and on numeric grids at level~9, but trained OpenZL is smaller than every practical
+Kolmo level on CSV. We also report where the approach does not help: the default level on structured text, small
+inputs, model weights, decode speed relative to zstd, and memory use.
+\todoin{update with the x86-64 rerun and tuned levels}
 \end{abstract}
 
 \ifdraft
 \todo{Draft of 2026-11-23 for DCC 2028. Every number in the running text is a macro from
 \texttt{generated/numbers.tex}; a grey tag gives its data file in \texttt{docs/paper/data/}. Three measurement lanes
-still running will replace numbers: (1) the x86-64 rerun of all lzbench tables (\S\ref{sec:setup}); (2) the
-OpenZL rematch with \texttt{zli train} on public held-out data (\S\ref{sec:openzl}); (3) the encoder tuning of
+still running will replace numbers: (1) the x86-64 rerun of all lzbench tables (\S\ref{sec:setup}); (2) done: the
+OpenZL rematch on held-out data (\S\ref{sec:openzl}, PR~\#29 not merged yet); (3) the encoder tuning of
 levels 1--3 and 5--7 (\S\ref{sec:levels}). Nothing here has been submitted.}
 \fi
 
@@ -123,7 +124,8 @@ set, and a written compatibility promise backed by a frozen corpus of frames (\S
 \item A determinism discipline: the same input and level give the same bytes on every CPU, thread count and memory
 budget, which we test in continuous integration (\S\ref{sec:determinism}).
 \item A single-thread evaluation against 50-odd general-purpose codec settings on the standard corpora and against
-OpenZL 0.3.0's format profiles on \numPanelFiles{} structured files, including the cases where Kolmo loses
+OpenZL 0.3.0, trained and untrained, on public data held out from Kolmo's development, including the cases where
+Kolmo loses
 (\S\ref{sec:eval}, \S\ref{sec:limits}).
 \end{enumerate}
 
@@ -470,54 +472,79 @@ structured files, level~3 is smaller than \texttt{zstd -19} and \texttt{xz -9}.
 
 \subsection{Structured data against OpenZL}\label{sec:openzl}
 
+\IfFileExists{generated/tab-holdout.tex}{%
 \begin{table*}[t]
-\caption{Structured panel, ratio, one thread, command-line tools, best of three. OpenZL 0.3.0 (\texttt{zli}) ran
-with the matching format profile at levels 6 and 9 (the generic \texttt{serial} profile where none matches) and
-\emph{without training}; the best of its runs is shown. Kolmo ran with no option but the level. Bold: best of
-OpenZL and Kolmo. Lvl: Kolmo's best level. Source: \texttt{data/openzl.json}.
-\todoin{trained-OpenZL rematch on public held-out data}}\label{tab:structured}
+\caption{Held-out panel: public data new to Kolmo, each type split into a training and a test half; ratios on the
+four test files of each type, one thread, best of three, every round trip verified. OpenZL ``trained'':
+\texttt{zli train} with the matching profile on the training half (greedy trainer, 20-minute cap); ``untrained'':
+the same profiles at levels 6 and 9. Kolmo had no training and no option but the level; ultra (\texttt{-U}) ran on
+files up to 12\,MB only. Bold: best of OpenZL and Kolmo. Source: \texttt{data/holdout-panel.json}
+(\texttt{bench/repro}, PR~\#29).}\label{tab:holdout}
+\centering\scriptsize
+\input{generated/tab-holdout.tex}
+\end{table*}
+
+The main comparison (Table~\ref{tab:holdout}) uses public data that played no part in Kolmo's development: NOAA
+GHCN-Daily station records (CSV), GH Archive events (JSON lines), the 1995 NASA web server logs, and NCEP/NCAR
+reanalysis grids (float32 NumPy). Each type is split into a training half (other stations, earlier hours, July
+instead of August, 2022 instead of 2023) and a test half. OpenZL is given what it is designed to use: the profile
+for the format and a plan trained on the training half. Kolmo is given nothing.
+
+Training matters a great deal for OpenZL: it gains \numHoldGainghcncsvMin--\numHoldGainghcncsvMax\% on CSV,
+\numHoldGainnasalogsMin--\numHoldGainnasalogsMax\% on logs and about \numHoldGaingharchivejsonMax\% on JSON, but
+nothing on three of the four grids. Against the better of trained and untrained OpenZL per file, counting results
+within 1\% as ties (wins/ties/losses):
+\begin{center}\footnotesize
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Set & Kolmo -3 & Kolmo -5 & Kolmo -9 & Kolmo best \\ \midrule
+CSV (GHCN) & \numHoldghcncsvThree & \numHoldghcncsvFive & \numHoldghcncsvNine & \numHoldghcncsvBest \\
+JSON (GH Archive) & \numHoldgharchivejsonThree & \numHoldgharchivejsonFive & \numHoldgharchivejsonNine & \numHoldgharchivejsonBest \\
+Logs (NASA) & \numHoldnasalogsThree & \numHoldnasalogsFive & \numHoldnasalogsNine & \numHoldnasalogsBest \\
+Grids (NCEP) & \numHoldncepnpyThree & \numHoldncepnpyFive & \numHoldncepnpyNine & \numHoldncepnpyBest \\
+\bottomrule
+\end{tabular}
+\end{center}
+On JSON and logs Kolmo's level~5 and above are smaller than trained OpenZL on every file, and on logs ultra
+reaches about three times OpenZL's ratio, because the log transform separates templates from typed fields. On the
+grids Kolmo needs level~9. On CSV, trained OpenZL is smaller than every practical Kolmo level (3 to 9) on all four
+files, by a factor of \numHoldCsvNineFactorMin--\numHoldCsvNineFactorMax{} against level~9; only ultra, at about 1\,MiB/s, wins on two files and ties
+on one\src{holdout-panel.json}. The default level~3 loses or ties on all \numHoldFiles{} test files, and on CSV, JSON
+and logs it is also larger than \texttt{zstd -19}: its analysis is light, and its gain shows against \texttt{zstd
+-3} rather than against slow general coders. On four Silesia files with a matching OpenZL profile (untrained, and
+files that were in Kolmo's earlier tuning sets), Kolmo's best level leads: \texttt{sao} \numMemsaoK{} against
+\numMemsaoOZ, \texttt{x-ray} \numMemxrayK{} against \numMemxrayOZ, \texttt{mr} \numMemmrK{} against \numMemmrOZ{}
+and \texttt{nci} \numMemnciK{} against \numMemnciOZ.
+}{\todo{Held-out panel missing: copy bench/repro's panel.json to data/holdout-panel.json.}}
+
+\begin{table*}[t]
+\caption{Development panel, ratio, one thread, command-line tools, best of three. OpenZL 0.3.0 \emph{untrained},
+with the matching format profile at levels 6 and 9 (the generic \texttt{serial} profile where none matches); the
+best of its runs is shown. These files come from data used while developing Kolmo. Bold: best of OpenZL and Kolmo.
+Lvl: Kolmo's best level. Source: \texttt{data/openzl.json}.}\label{tab:structured}
 \centering\scriptsize
 \input{generated/tab-structured.tex}
 \end{table*}
 
-The second experiment (Table~\ref{tab:structured}) compares Kolmo with OpenZL~0.3.0 on \numPanelFiles{} files:
-CSV, integer columns, raw images, NumPy arrays, a pandas pickle, model files (ONNX, safetensors, GGUF), the SAO
-catalogue, JSON, logs, a FASTA genome and English text. OpenZL ran with the profile that matches each file's format,
-which the user must know; Kolmo ran with no option but the level. Counting results within 1\% as ties, Kolmo's
-level~3 wins on \numPanelThreeWin{}, ties on \numPanelThreeTie{} and loses on \numPanelThreeLoss{} files; level~5
-wins on \numPanelFiveWin, ties on \numPanelFiveTie{} and loses on \numPanelFiveLoss; Kolmo's best level wins on
-\numPanelBestWin{} and ties on \numPanelBestTie, all four ties being model-weight files\src{openzl.json}.
-OpenZL's CSV profile scores below \texttt{xz -9} on two of the three CSV files, while Kolmo's table transform with
-inter-column formulas reaches 2--3 times OpenZL's ratio there. OpenZL leads level~3 and~5 on the integer column
-\texttt{year.i32}, the NumPy image stack and the ONNX model. On model weights every tool, Kolmo included, lands at
-about 1.2 (float32) and 1.5 (bfloat16); this is the exponent redundancy that ZipNN and DFloat11 also
-exploit~\cite{zipnn,dfloat11}, and Kolmo has no edge there.
+Table~\ref{tab:structured} covers a wider range of types, \numPanelFiles{} files from Kolmo's development data
+(integer columns, raw images, NumPy arrays, a pandas pickle, model files, a FASTA genome, English text), against
+untrained profiles only. Kolmo's best level wins on \numPanelBestWin{} and ties on \numPanelBestTie{} (all model
+weights); level~5 wins on \numPanelFiveWin, ties on \numPanelFiveTie{} and loses on \numPanelFiveLoss{} (an int32
+column, a NumPy image stack and an ONNX model)\src{openzl.json}. Given the held-out results, these counts say
+more about untrained profiles than about OpenZL, and the CSV rows in particular would not survive training.
 
-This comparison is favourable to Kolmo in two ways that we state plainly. OpenZL ran untrained, and its trained
-plans are its intended mode of use. And the panel's files come from data used while developing Kolmo, so some tuning
-bias is possible.
-
-\todo{Trained-OpenZL rematch (lane bench-page, \texttt{bench/repro/}): replace Table~\ref{tab:structured} by a panel
-on public data new to Kolmo---NOAA GHCN-Daily CSV, GH Archive JSON, NASA HTTP logs (1995), NCEP/NCAR reanalysis
-float32 grids, GPT-2 / SmolLM2-135M / Qwen2.5-0.5B weights---split into train and test halves by station, hour,
-month or year, with OpenZL trained by \texttt{zli train} on the train half (greedy trainer, 20-minute cap per
-profile) and every tool measured on the test half on one thread. Add ZipNN (run) and DFloat11 (its published method
-computed on the CPU, labelled as such) on the weights. Keep the untrained table as a second column group. Rewrite the
-paragraph above from the new counts.}
-
-\IfFileExists{generated/tab-holdout.tex}{%
-\begin{table*}[t]
-\caption{Held-out panel: public data new to Kolmo, split into train and test halves; ratios on the test half, one
-thread. OpenZL ``trained'' is \texttt{zli train} on the train half (best profile); ``untrained'' is its best format
-profile at levels 6 and 9. Bold: best of OpenZL and Kolmo. Source: \texttt{data/holdout-panel.json}
-(\texttt{bench/repro}).}\label{tab:holdout}
-\centering\scriptsize
-\input{generated/tab-holdout.tex}
-\end{table*}
-On the held-out panel (Table~\ref{tab:holdout}), Kolmo's best level against \emph{trained} OpenZL wins on
-\numHoldTrainedWin{}, ties on \numHoldTrainedTie{} and loses on \numHoldTrainedLoss{} of \numHoldFiles{} files, and
-against untrained OpenZL wins on \numHoldUntrainedWin, ties on \numHoldUntrainedTie{} and loses on
-\numHoldUntrainedLoss\src{holdout-panel.json}. \todoin{rewrite this paragraph from the final counts}
+\IfFileExists{generated/tab-weights.tex}{%
+\begin{table}[t]
+\caption{Model weights (safetensors), ratio, one thread. DFloat11$^*$: its published method computed on the CPU (the
+decoder needs CUDA), not a run of DFloat11. Source: \texttt{data/holdout-panel.json},
+\texttt{data/holdout-dfloat11.json}.}\label{tab:weights}
+\centering\scriptsize\setlength{\tabcolsep}{2.6pt}
+\input{generated/tab-weights.tex}
+\end{table}
+On model weights (Table~\ref{tab:weights}) every weight-aware tool lands within about 1\% of the others: the gain is
+the redundancy of the exponent byte, which ZipNN and DFloat11 exploit by design~\cite{zipnn,dfloat11} and Kolmo's
+float graph finds by sampling. ZipNN reaches Kolmo's ratio faster: \numWtQwenZipC{} against \numWtQwenKThreeC\,MiB/s
+to compress Qwen2.5-0.5B and \numWtQwenZipD{} against \numWtQwenKThreeD\,MiB/s to decode\src{holdout-panel.json}.
 }{}
 
 \subsection{Threads and memory}
@@ -561,12 +588,17 @@ levels 8 and 9 coincide on text. These violate the level promises of \S\ref{sec:
 \paragraph*{Memory} The ratio-oriented levels use much more memory than their rivals when compressing (above), and
 ultra needs about 26 table bytes per input byte with its text contexts, comparable to \texttt{zpaq -m5}.
 
-\paragraph*{Model weights and plain text} Kolmo has no specific model for either beyond the float graph and the
-general coders; its results there are at parity with the general tools.
+\paragraph*{Trained format-aware compression} On CSV a trained OpenZL plan is smaller than every Kolmo level short
+of ultra, and the default level~3 loses to OpenZL on every held-out file. Kolmo's case is zero configuration, not
+the smallest output.
 
-\paragraph*{Evaluation scope} One machine (an ARM64 laptop); a structured panel that is not independent of
-development; OpenZL untrained; ZipNN, DFloat11, cmix, paq8 and NNCP not run. \todoin{each of these is addressed by a
-running lane or must stay listed here}.
+\paragraph*{Model weights and plain text} Kolmo has no specific model for either beyond the float graph and the
+general coders. On weights it is at parity with ZipNN and slower; on plain text it is at parity with the general
+tools.
+
+\paragraph*{Evaluation scope} One machine (an ARM64 laptop) \todoin{x86-64 rerun}; OpenZL trained once per type,
+with a 20-minute cap and four training files; DFloat11 computed, not run; cmix, paq8 and NNCP not run; no Parquet
+data (its host was unreachable).
 
 \paragraph*{Project} Kolmo is maintained by one person, is at version 0.0.2, and has no published production users.
 The format promise and the specification reduce the risk of storing data with it, but adoption risk remains.
@@ -574,14 +606,15 @@ The format promise and the specification reduce the risk of storing data with it
 % ======================================================================
 \section{Conclusion}
 
-Kolmo shows that per-block detection and trial-based routing, with no user input, recover a large part of what
-format-specific configuration buys on tables, logs, numeric arrays, images and executables, while staying a
+Kolmo shows that per-block detection and trial-based routing, with no user input, recover much of what
+format-specific configuration buys on logs, JSON, numeric arrays, images and executables, and on these held-out
+logs and JSON more than a trained OpenZL plan, while staying a
 competitive general-purpose coder on Silesia: archive-class ratios at LZ-class decode speed at levels 4--7, and
 ratios at or above the block-sorting and context-mixing archivers at levels 8--9. It does so inside a container
 whose decisions are recorded per block, whose decode memory is declared up front, and whose output is deterministic
 across platforms. It does not help on small inputs, plain text at fast levels or model weights, and it decodes more
-slowly than zstd on one core. The open question we most want to answer is how much of the gap to a \emph{trained}
-format-aware compressor remains, which our next measurements address.
+slowly than zstd on one core. On delimited tables a trained format-aware plan is clearly better; closing that gap
+without giving up zero configuration is the next problem.
 
 \section*{Availability}
 Source, format specification, benchmark scripts and the raw data behind every table:

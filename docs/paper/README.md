@@ -41,10 +41,10 @@ on one thread unless the file name says otherwise. The files were copied from th
 | `lzb-silesia-files.csv` | lzbench, Silesia file by file |
 | `openzl.json` | Structured panel: Kolmo -3/-5/-7/-9/-U, OpenZL 0.3.0 `zli` (format profile, levels 6 and 9, untrained), zstd -3/-19, xz -9. Command line, best of 3 |
 | `mt-result.json` | Silesia on the command line, one thread and all cores, with peak RSS |
+| `holdout-panel.json` | Trained-OpenZL rematch (bench/repro, PR #29, 2026-11-24): held-out GHCN CSV, GH Archive JSON, NASA logs and NCEP grids (OpenZL trained and untrained), four Silesia members, three model checkpoints with ZipNN. Workspace paths cut to relative |
+| `holdout-dfloat11.json` | DFloat11's published method computed on the CPU for the two bf16 checkpoints (not a run of DFloat11) |
 
-**Held-out panel (pending).** When the trained-OpenZL rematch is final, copy `bench/repro`'s `results/panel.json` to
-`data/holdout-panel.json`. The table (Table VII) and its counts then appear on the next build; without the file
-they are left out.
+Removing `holdout-panel.json` drops the held-out and weights tables from the next build.
 
 The M5 lzbench run used a small plugin that calls libkolmo; `bench/lzbench/` (x86-bench lane) is its successor in the
 repository. The OpenZL panel script is `openzl_panel.py` in the same workspace; `bench/repro/` (bench-page lane)
@@ -53,9 +53,7 @@ replaces it.
 ## Open TODOs (red boxes in the draft)
 
 1. **x86-64 rerun.** Replace the lzbench tables, Fig. 1 and Table VII. Keep the M5 as a second platform.
-2. **Trained-OpenZL rematch** on public held-out data (GHCN-Daily, GH Archive, NASA logs, NCEP reanalysis, three
-   model checkpoints). Also add ZipNN and DFloat11 (method computed on the CPU) on the model weights. This replaces
-   Table VI and its paragraph.
+2. ~~Trained-OpenZL rematch~~: done (Tables VI and VIII). The marker stays until PR #29 is merged.
 3. **Tuned levels** from the weak-levels lane: the new level-1 parse and a faster KLZH2 decode. Regenerate every
    table and update Table II and the limitations.
 4. **Smaller items:**

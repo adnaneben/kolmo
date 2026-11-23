@@ -339,56 +339,105 @@ def tab_mt(nums):
 
 
 def tab_holdout(nums):
-    """Held-out panel with trained OpenZL (bench/repro results/panel.json, copied as data/holdout-panel.json).
-    Written only when that file exists; kolmo.tex includes the table only if this output exists."""
+    """Held-out panel (bench/repro results/panel.json, copied as data/holdout-panel.json; PR #29). Three outputs:
+    tab-holdout.tex (sets with a trained OpenZL), tab-weights.tex (model weights with ZipNN and DFloat11's method from
+    data/holdout-dfloat11.json) and macros for the Silesia members. Nothing is written when the file is absent, and
+    kolmo.tex includes each table only if it exists."""
     path = os.path.join(DATA, "holdout-panel.json")
-    out = os.path.join(OUT, "tab-holdout.tex")
+    for f in ("tab-holdout.tex", "tab-weights.tex"):
+        if os.path.exists(os.path.join(OUT, f)):
+            os.remove(os.path.join(OUT, f))
     if not os.path.exists(path):
-        if os.path.exists(out):
-            os.remove(out)
         return
     d = json.load(open(path))
     TIE = 0.01
-    sets, score = {}, {"untrained": [0, 0, 0], "trained": [0, 0, 0]}
-    lines = [r"\begin{tabular}{@{}lrrrrrrrl@{}}", r"\toprule",
-             r" & & & \multicolumn{2}{c}{OpenZL 0.3.0} & \multicolumn{4}{c}{Kolmo 0.0.2} \\",
-             r"\cmidrule(lr){4-5}\cmidrule(l){6-9}",
-             r"File & zstd -19 & xz -9 & untrained & trained & -3 & -5 & best & Lvl \\", r"\midrule"]
+    levels = ("-3", "-5", "-9", "best")
+    score = {lv: [0, 0, 0] for lv in levels}
+    per_set = {}
+    sets = []
+    lines = [r"\begin{tabular}{@{}lrrrrrrrrl@{}}", r"\toprule",
+             r" & & & \multicolumn{2}{c}{OpenZL 0.3.0} & \multicolumn{5}{c}{Kolmo 0.0.2 (no training)} \\",
+             r"\cmidrule(lr){4-5}\cmidrule(l){6-10}",
+             r"Test file & zstd -19 & xz -9 & untrained & trained & -3 & -5 & -9 & best & Lvl \\", r"\midrule"]
+    weights, members = [], []
     for fn, v in d.items():
         if fn.startswith("_"):
             continue
         r = {x["tool"]: x for x in v["rows"]}
+        kl = {t.split()[1]: x for t, x in r.items() if t.startswith("kolmo")}
         oz = [x for t, x in r.items() if t.startswith("openzl") and "trained" not in t]
         tr = [x for t, x in r.items() if t.startswith("openzl trained")]
-        kl = {t.split()[1]: x for t, x in r.items() if t.startswith("kolmo")}
-        if not oz or not tr or "-3" not in kl:
+        if any(t.startswith("zipnn") for t in r):
+            weights.append((fn, v, r, kl, oz))
             continue
-        ozb, trb = max(x["ratio"] for x in oz), max(x["ratio"] for x in tr)
+        if not tr:
+            members.append((fn, v, r, kl, oz))
+            continue
+        ozu, ozt = max(x["ratio"] for x in oz), max(x["ratio"] for x in tr)
+        ozb = max(ozu, ozt)
         kb_lvl, kb = max(kl.items(), key=lambda kv: kv[1]["ratio"])
-        for key, o in (("untrained", ozb), ("trained", trb)):
-            k = kb["ratio"]
-            score[key][1 if abs(k / o - 1) <= TIE else (0 if k > o else 2)] += 1
-        name = os.path.basename(fn).replace("_", r"\_")
         st = v.get("set", "")
+        ps = per_set.setdefault(st, {lv: [0, 0, 0] for lv in levels})
+        for lv in levels:
+            k = (kb if lv == "best" else kl[lv])["ratio"]
+            i = 1 if abs(k / ozb - 1) <= TIE else (0 if k > ozb else 2)
+            score[lv][i] += 1
+            ps[lv][i] += 1
         if st not in sets:
             if sets:
                 lines.append(r"\midrule")
-            lines.append(r"\multicolumn{9}{@{}l}{\emph{%s}} \\" % v.get("area", st).replace("_", " ").replace("&", r"\&"))
-            sets[st] = 0
-        sets[st] += 1
-        vals = [r["zstd -19"]["ratio"], r["xz -9"]["ratio"], ozb, trb, kl["-3"]["ratio"],
-                kl.get("-5", kl["-3"])["ratio"], kb["ratio"]]
+            lines.append(r"\multicolumn{10}{@{}l}{\emph{%s}} \\" % v.get("area", st).replace("&", r"\&"))
+            sets.append(st)
+        vals = [r["zstd -19"]["ratio"], r["xz -9"]["ratio"], ozu, ozt, kl["-3"]["ratio"], kl["-5"]["ratio"],
+                kl["-9"]["ratio"], kb["ratio"]]
         top = max(vals[2:])
-        cells = [(r"\textbf{%s}" if x == top and i >= 2 else "%s") % (f"{x:.2f}" if x < 100 else f"{x:.1f}")
+        cells = [(r"\textbf{%s}" if abs(x - top) < 5e-3 and i >= 2 else "%s") % (f"{x:.2f}" if x < 100 else f"{x:.1f}")
                  for i, x in enumerate(vals)]
+        name = os.path.basename(fn).replace("_", r"\_")
         lines.append(f"{name} & " + " & ".join(cells) + f" & {kb_lvl} \\\\")
+        if st == "ghcn-csv":
+            f9 = ozb / kl["-9"]["ratio"]
+            nums["HoldCsvNineFactorMin"] = f"{min(f9, float(nums.get('HoldCsvNineFactorMin', 1e9))):.2f}"
+            nums["HoldCsvNineFactorMax"] = f"{max(f9, float(nums.get('HoldCsvNineFactorMax', 0))):.2f}"
+        tg = ozt / ozu - 1
+        key = "".join(ch for ch in st if ch.isalpha())
+        nums[f"HoldGain{key}Max"] = f"{max(tg * 100, float(nums.get(f'HoldGain{key}Max', -1e9))):.0f}"
+        nums[f"HoldGain{key}Min"] = f"{min(tg * 100, float(nums.get(f'HoldGain{key}Min', 1e9))):.0f}"
     lines += [r"\bottomrule", r"\end{tabular}"]
-    for key, (w, t, l) in score.items():
-        k = key.capitalize()
-        nums[f"Hold{k}Win"], nums[f"Hold{k}Tie"], nums[f"Hold{k}Loss"] = str(w), str(t), str(l)
-    nums["HoldFiles"] = str(sum(sets.values()))
+    lvname = {"-3": "Three", "-5": "Five", "-9": "Nine", "best": "Best"}
+    for lv, (w, t, l) in score.items():
+        nums[f"Hold{lvname[lv]}Win"], nums[f"Hold{lvname[lv]}Tie"], nums[f"Hold{lvname[lv]}Loss"] = str(w), str(t), str(l)
+    for st, ps in per_set.items():
+        key = "".join(ch for ch in st if ch.isalpha())
+        for lv, (w, t, l) in ps.items():
+            nums[f"Hold{key}{lvname[lv]}"] = f"{w}/{t}/{l}"
+    nums["HoldFiles"] = str(sum(sum(v) for v in [score["best"]]))
     nums["HoldSets"] = str(len(sets))
     write("tab-holdout.tex", "\n".join(lines) + "\n", "holdout-panel.json")
+
+    df = {}
+    dpath = os.path.join(DATA, "holdout-dfloat11.json")
+    if os.path.exists(dpath):
+        df = {x["file"]: x["ratio"] for x in json.load(open(dpath))}
+    wl = [r"\begin{tabular}{@{}lrrrrrrl@{}}", r"\toprule",
+          r"Model & xz -9 & OpenZL & ZipNN & DFloat11$^*$ & Kolmo -3 & Kolmo best & \\", r"\midrule"]
+    for fn, v, r, kl, oz in weights:
+        z = next(x for t, x in r.items() if t.startswith("zipnn"))
+        kb_lvl, kb = max(kl.items(), key=lambda kv: kv[1]["ratio"])
+        name = os.path.basename(fn).replace(".safetensors", "").replace("_", r"\_")
+        d11 = df.get(os.path.basename(fn))
+        wl.append(f"{name} & {r['xz -9']['ratio']:.3f} & {max(x['ratio'] for x in oz):.3f} & {z['ratio']:.3f} & "
+                  f"{'%.3f' % d11 if d11 else 'n/a'} & {kl['-3']['ratio']:.3f} & {kb['ratio']:.3f} & {kb_lvl} \\\\")
+        if "qwen" in fn:
+            nums["WtQwenZipC"], nums["WtQwenZipD"] = fmt_speed(z["enc_mibs"]), fmt_speed(z["dec_mibs"])
+            nums["WtQwenKThreeC"], nums["WtQwenKThreeD"] = fmt_speed(kl["-3"]["enc_mibs"]), fmt_speed(kl["-3"]["dec_mibs"])
+    wl += [r"\bottomrule", r"\end{tabular}"]
+    if weights:
+        write("tab-weights.tex", "\n".join(wl) + "\n", "holdout-panel.json, holdout-dfloat11.json")
+    for fn, v, r, kl, oz in members:
+        key = "".join(ch for ch in os.path.basename(fn) if ch.isalpha())
+        nums[f"Mem{key}K"] = fmt_ratio(max(x["ratio"] for x in kl.values()))
+        nums[f"Mem{key}OZ"] = fmt_ratio(max(x["ratio"] for x in oz))
 
 
 def macro_name(k):
