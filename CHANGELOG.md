@@ -51,11 +51,14 @@
   the derived-column series at levels 3 and 9, and three new inputs: a ragged CSV (short rows, text in numeric
   columns, long fields), grouped station series (modes 2, 4 and 5) and a growth table (mode 0, dropped trailing
   digits).
+- **FORMAT.md sections 20.6-20.8: the typed transposes (plan 1, tflags 1 and 2), the 16-bit image (tflag 6) and
+  fixed records (tflag 7)**, with Python decoders. Every corpus block under them decodes to its original. One more
+  0.0.2 frame (`quoted.csv.L3`) reaches the quote-aware transpose.
 - **FORMAT.md section 21: KLZMA (codec 24)**, the LZMA-class coder of levels 8-9. It covers the range decoder (which
   differs from LZMA's at the start and the end), contexts, literals, matches and repeat matches. 12 corpus blocks and
   8 graph leaves decode in the Python reference.
 - The new decoders agreed with the 0.0.2 C decoders on about 15,000 further mutated streams. `make check` now spends
-  about 30 s in `tests/coder_reference.py`. Table v1 (tflag 3), the column-split table (13) and the QLFC coder are next in FORMAT.md section 13.
+  about 30 s in `tests/coder_reference.py`. Left in FORMAT.md section 13: table v1 (tflag 3), the column-split table (13), the QLFC coder, kimg and CMP.
 - **`tests/coder_reference.py`**: an independent Python decoder for those sections, written from the prose, in
   `make check` (about 10 s). It decodes every corpus block that uses KLZ or KLZH2:
   - blocks without a transform are compared with the original;

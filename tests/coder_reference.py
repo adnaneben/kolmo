@@ -5,16 +5,15 @@ version 12), in plain Python.
 usage: python3 tests/coder_reference.py [tests/v12]
 
 Written from the prose of FORMAT.md (khuf 15, krans 16, KLZ 17, KLZH and KLZH2 18, the byte-plane shuffle 19.1 and
-x86 filter 19.3, the line-class, word, log, minified-JSON and table inverses 20, KLZMA 21) and SPEC.md (the ARM64 branch
+x86 filter 19.3, the inverses of tflags 1, 2, 4-7, 9, 10 and 12 in 20, KLZMA 21) and SPEC.md (the ARM64 branch
 filter), not from the C sources. It takes khash64 from tests/format_reference.py (FORMAT.md 2.2) and walks the
 container itself.
 
 For every frame of the frozen corpus it decodes:
   - every block whose codec is 24 (KLZMA), 28 (KLZ), 29 (KLZH) or 32 (KLZH2). A block without a transform, or under
-    the line-class, word, log, minified-JSON or table transform (tflags 12, 9, 5, 10, 4), must give the original's bytes for
-    that block. A block under the byte-plane shuffle (plan 2, tflag 1), the x86 filter (tflag 8) or the ARM64 filter
-    (tflag 14) must match its block checksum after the inverse. A block under any other transform must decode to
-    exactly its transformed length, using all of its stream;
+    a transform of FORMAT.md section 20 (tflags 1, 2, 4-7, 9, 10, 12), must give the original's bytes for that block.
+    A block under the byte-plane shuffle (plan 2, tflag 1), the x86 filter (tflag 8) or the ARM64 filter
+    (tflag 14) must match its block checksum after the inverse;
   - every graph leaf (FORMAT.md 7.4) whose codec is 24, 27, 28, 29 or 32, to exactly its raw length.
 It also checks that one stream for each of several refusal rules is refused.
 """
@@ -805,6 +804,116 @@ def table_inv(t, n, delim):
     return bytes(out)
 
 
+# ---- typed transpose (FORMAT.md 20.6)
+def transpose_inv(t, n, delim, k, quotes, sizes):
+    off, end, pos = [], [], 0
+    for z in sizes:
+        need(z <= n - pos, "transpose column size"); off.append(pos); pos += z; end.append(pos)
+    need(pos == n, "transpose sizes")
+    special = {10, delim} | ({34, 91, 93} if quotes else set())
+    out = bytearray(); j = inq = inbr = 0
+    while len(out) < n:
+        a = off[j]; r = a
+        while r < end[j] and t[r] not in special: r += 1
+        if r < end[j]: r += 1
+        need(r > a and len(out) + (r - a) <= n, "transpose field")
+        out += t[a:r]; off[j] = r
+        c = out[-1]
+        if c not in special: continue
+        if quotes:
+            if c == 34 and not inbr: inq ^= 1
+            elif c == 91 and not inq: inbr = 1
+            elif c == 93 and not inq: inbr = 0
+        if c == 10: j = 0; inq = inbr = 0
+        elif c == delim and not inq and not inbr and j < k - 1: j += 1
+    return bytes(out)
+
+
+# ---- 16-bit image (FORMAT.md 20.7)
+def img16_inv(t, n):
+    need(len(t) >= 12, "image header")
+    be, skip, mode = t[0], t[1], t[2]; W, N = struct.unpack_from("<II", t, 4)
+    need(be <= 1 and skip <= 1 and mode <= 2 and 1 <= W <= 4096 and skip + 2 * N <= n, "image fields")
+    tail = n - skip - 2 * N
+    need(12 + skip + 2 * N + tail == len(t), "image size")
+    lo = t[12 + skip:12 + skip + N]; hi = t[12 + skip + N:12 + skip + 2 * N]
+    x = [0] * N
+    for i in range(N):
+        z = lo[i] | hi[i] << 8; r = (z >> 1) ^ -(z & 1)
+        L = x[i - 1] if i >= 1 else 0; U = x[i - W] if i >= W else 0; UL = x[i - W - 1] if i >= W + 1 else 0
+        if mode == 0: pr = L
+        elif mode == 1: pr = (L + U) >> 1
+        else:
+            mx, mn = max(L, U), min(L, U)
+            pr = mn if UL >= mx else mx if UL <= mn else L + U - UL
+        x[i] = (pr + r) & 0xFFFF
+    body = b"".join(v.to_bytes(2, "big" if be else "little") for v in x)
+    return bytes(t[12:12 + skip]) + body + bytes(t[12 + skip + 2 * N:])
+
+
+# ---- fixed-size records (FORMAT.md 20.8)
+def planes(p, m, w):
+    return [sum(p[b * m + i] << (8 * b) for b in range(w)) for i in range(m)]
+
+
+def pfor(p, i, e, m):
+    need(e - i >= 5, "records pfor header")
+    w = p[i]; ne = struct.unpack_from("<I", p, i + 1)[0]; i += 5
+    need(1 <= w <= 8 and e - i >= m * w + 12 * ne, "records pfor size")
+    z = planes(p[i:i + m * w], m, w); i += m * w
+    for _ in range(ne):
+        ix, v = struct.unpack_from("<IQ", p, i); i += 12
+        need(ix < m, "records pfor index"); z[ix] = v
+    return z, i
+
+
+def rec_inv(t, n):
+    need(len(t) >= 16, "records header")
+    P, nf = struct.unpack_from("<HB", t, 0); nrec, pre, tail = struct.unpack_from("<3I", t, 4)
+    need(2 <= P <= 64 and 1 <= nf <= 64 and pre <= n and tail <= n and nrec * P + pre + tail == n, "records sizes")
+    need(16 + 8 * nf + pre + tail <= len(t), "records header size")
+    p = 16 + 8 * nf
+    out = bytearray(n); out[:pre] = t[p:p + pre]; p += pre
+    out[pre + nrec * P:] = t[p:p + tail]; p += tail
+    cover = [0] * P
+    for f in range(nf):
+        o, w, kind = t[16 + 8 * f:19 + 8 * f]; sz = struct.unpack_from("<I", t, 20 + 8 * f)[0]
+        need(w in (1, 2, 4, 8) and o + w <= P and sz <= len(t) - p, "records field")
+        for b in range(o, o + w):
+            need(not cover[b], "records byte covered twice"); cover[b] = 1
+        body = t[p:p + sz]; p += sz; mask = (1 << (8 * w)) - 1
+        if kind in (0, 1):
+            need(sz == nrec * w, "records field size"); v = planes(body, nrec, w)
+            if kind == 1:
+                acc = 0
+                for i in range(nrec): acc = (acc + v[i]) & mask; v[i] = acc
+        elif kind == 2:
+            need(sz >= 5, "records dictionary"); kk = struct.unpack_from("<I", body, 0)[0]; iw = body[4]
+            need(iw in (1, 2, 4) and kk >= 1 and 5 + kk * w + nrec * iw == sz, "records dictionary size")
+            u = planes(body[5:5 + kk * w], kk, w); acc = 0
+            for i in range(kk): acc = (acc + u[i]) & mask; u[i] = acc
+            idx = planes(body[5 + kk * w:], nrec, iw)
+            need(all(x < kk for x in idx), "records dictionary index"); v = [u[x] for x in idx]
+        elif kind == 3 and w == 8:
+            import math
+            need(sz >= 19, "records quantum"); c = struct.unpack_from("<d", body, 0)[0]; dm = body[8]
+            need(dm <= 1 and c > 0 and math.isfinite(c), "records quantum fields")
+            q, i = pfor(body, 9, sz, nrec); acc = 0
+            for k_ in range(nrec):
+                d = unzz(q[k_])
+                if dm: acc = s64(acc + d); q[k_] = acc
+                else: q[k_] = s64(d)
+            z, i = pfor(body, i, sz, nrec); need(i == sz, "records quantum: bytes left")
+            v = [(struct.unpack("<Q", struct.pack("<d", float(q[k_]) * c))[0] + unzz(z[k_])) & M64 for k_ in range(nrec)]
+        else:
+            raise Corrupt("records field kind %d" % kind)
+        for i in range(nrec):
+            a = pre + i * P + o; out[a:a + w] = v[i].to_bytes(w, "little")
+    need(all(cover), "records bytes not covered")
+    need(p == len(t), "records: bytes left")
+    return bytes(out)
+
+
 # ---- the graph program (SPEC.md, Kolmo graph blocks): only the leaves are needed here
 def graph_leaves(p):
     need(len(p) >= 3 and p[0] == ord("G") and p[1] == 1, "graph header")
@@ -871,8 +980,11 @@ def check_block(raw, ck, codec, tflag, pay, orig, rt, stats):
         d = shuffle_inv(d, raw, a, b, c)
         need(rt or (khash64(d, 0x637a6e31) & 0xFFFFFFFF) == ck, "shuffle inverse: checksum")
         kind = "block %d, shuffle inverse checked" % codec
-    elif tflag in (4, 5, 9, 10, 12):
-        if tflag == 4: d = table_inv(d, raw, a)
+    elif tflag in (2, 4, 5, 6, 7, 9, 10, 12) or (tflag == 1 and t == 1):
+        if tflag in (1, 2): d = transpose_inv(d, raw, a, c + 1, b if tflag == 1 else 0, struct.unpack_from("<%dI" % (c + 1), pay, 4))
+        elif tflag == 6: d = img16_inv(d, raw)
+        elif tflag == 7: d = rec_inv(d, raw)
+        elif tflag == 4: d = table_inv(d, raw, a)
         elif tflag == 5: d = log_inv(d, raw)
         elif tflag == 9: d = word_inv(d, raw)
         elif tflag == 12: d = lines_inv(d, raw)

@@ -2885,6 +2885,30 @@
    }
   },
   {
+   "file": "quoted.csv.L3.kolmo",
+   "input": "in/quoted.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "2655d22b5fc50e5bee53f37c6462ceeb0cc7d07ba80939228a30e3c64d9f3675",
+   "frame_bytes": 63849,
+   "decoded_sha256": "795e6b62efaa4e6c0e84fa921b7c01b7115985175b52a6008f4be15e084620ac",
+   "decoded_bytes": 188814,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 188814,
+    "blocks": [
+     [
+      32,
+      1,
+      1
+     ]
+    ]
+   }
+  },
+  {
    "file": "ragged.csv.L3.kolmo",
    "input": "in/ragged.csv",
    "options": "-3",

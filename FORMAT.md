@@ -211,7 +211,7 @@ A decoder must refuse `t > 11`, and plan type 11 with `b > 15` or `c ≠ 0`.
 3. Undo the transform named by `tflag`, giving exactly `raw` bytes.
    - tflags 8 and 14 work in place on the decoded block.
    - The ARM64 inverse is specified in SPEC.md, *ARM64 branch filter*, the byte-plane shuffle in §19.1, the x86
-     filter in §19.3, and the line-class, word, log and minified-JSON inverses (tflags 12, 9, 5, 10) in §20.
+     filter in §19.3, and the inverses of tflags 1, 2, 4, 5, 6, 7, 9, 10 and 12 in §20.
    - The other inverses are in the reference implementation (§13).
 4. Verify the checksum (§5.1).
 
@@ -367,7 +367,7 @@ Errors fall into five classes:
 
 | File | Contents |
 |---|---|
-| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 265 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
+| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 266 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
 | `tests/khash64_vectors.txt` | the khash64 vectors |
 | `tests/format_reference.py` | the container layer in Python, checked against both of the above |
 | `tests/coder_reference.py` | the coders and transforms of sections 14 to 21 in Python, decoding every corpus block and leaf that uses them |
@@ -380,14 +380,14 @@ work, in this order (most frames first):
 
 1. table v1 (tflag 3) and the column-split table (tflag 13);
 2. the BWT stream's QLFC coder (18);
-3. the typed transposes (plan 1, tflags 1 and 2), and the record and 16-bit image inverses (tflags 7, 6);
-4. kimg (31);
-5. CMP (25).
+3. kimg (31);
+4. CMP (25).
 
 Written out so far:
 - sections 14 to 18: KLZH2 (32) with krans, KLZ (28), KLZH (29) and khuf (27);
 - section 19: the byte-plane shuffle (plan 2, tflag 1) and x86 filter (plan 7, tflag 8) inverses;
-- section 20: the line-class, word, log-template, minified-JSON and table v2 inverses (tflags 12, 9, 5, 10, 4);
+- section 20: the line-class, word, log-template, minified-JSON, table v2, transpose, 16-bit image and record inverses
+  (tflags 12, 9, 5, 10, 4, 1, 2, 6, 7);
 - section 21: KLZMA (24).
 
 Until a payload has its own section, a change to its decoder that changes the decoded bytes of any version-12 frame is
@@ -649,13 +649,11 @@ is an encoder choice; §15 decodes any chunk sizes.
 
 The corpus (`tests/v12`, both releases) has the following material for these coders, all of which
 `tests/coder_reference.py` decodes:
-- 131 KLZH2 blocks and 29 KLZ blocks:
+- 132 KLZH2 blocks and 29 KLZ blocks:
   - 74 KLZH2 and 22 KLZ blocks have no transform and are compared with the original;
-  - 31 KLZH2 blocks are under a transform of section 20 and are compared with the original after its inverse;
+  - 35 KLZH2 blocks are under a transform of section 20 and are compared with the original after its inverse;
   - 23 KLZH2 and 7 KLZ blocks have an inverse in section 19 or SPEC.md and are checked through the block checksum
     after it: 20 + 7 under the byte-plane shuffle, 2 under the ARM64 filter, 1 under the x86 filter;
-  - the other 3 KLZH2 blocks, under the transpose, 16-bit image and record transforms, are checked to decode to
-    exactly their transformed length;
 - 17 KLZH2 graph leaves and 47 khuf graph leaves, checked to decode to their raw length;
 - more than 40 krans streams inside them.
 
@@ -955,6 +953,94 @@ decode them by the rules above, to the original. `tests/v12/r0.0.2/longfield.csv
 
 Table v1 (tflag 3) and the column-split table (tflag 13) are not written out yet (§13).
 
+### 20.6 Typed transpose (plan type 1, tflags 1 and 2)
+
+Delimited text stored field column by field column. The plan is `1, delim, quotes, c`, with `k = c + 1` columns.
+- The meta is `k` sizes, `u32` each.
+- The coded stream decodes to `raw` bytes: column 0's bytes, then column 1's, and so on, each of its size.
+- Refuse when the sizes do not add up to exactly `raw`.
+
+A byte is a **terminator** when it is a newline or `delim`. With tflag 1 and `quotes` non-zero, `"`, `[` and `]` are
+terminators too. With tflag 2 the quote rule is off whatever `quotes` holds.
+
+Rebuild the text with a current column `j` (starting at 0) and the flags `inq` and `inbr` (starting clear). Until the
+output has `raw` bytes:
+1. Copy bytes from column `j`'s next unread position up to and including its next terminator, or to the end of the
+   column when it has none left. Refuse when this copies nothing or would pass `raw`.
+2. If the last byte copied is a terminator:
+   - with quotes on, `"` toggles `inq` when `inbr` is clear; `[` sets `inbr` when `inq` is clear; `]` clears `inbr`
+     when `inq` is clear;
+   - a newline sets `j = 0` and clears both flags;
+   - `delim` with both flags clear moves to the next column, `j = j + 1`, unless `j` is already `k − 1`.
+
+### 20.7 16-bit image (plan type 5, tflag 6)
+
+```
+t := be u8 | skip u8 | mode u8 | 1 byte (ignored) | W u32 | N u32 | skip bytes | lo × N | hi × N | tail
+```
+
+**Header.** Refuse when:
+- `t` is shorter than 12 bytes;
+- `be > 1`, `skip > 1` or `mode > 2`;
+- `W` is 0 or above 4096;
+- `skip + 2N > raw`;
+- `|t|` is not exactly `12 + skip + 2N + tail`, where `tail = raw − skip − 2N`.
+
+**Samples.** Sample `i` (0 to N−1) is predicted from the samples already decoded. Let `L = x[i−1]`, `U = x[i−W]` and
+`UL = x[i−W−1]`, each 0 when its index is negative. The prediction is:
+- mode 0: `L`;
+- mode 1: `⌊(L + U) / 2⌋`;
+- mode 2: `min(L, U)` if `UL ≥ max(L, U)`; `max(L, U)` if `UL ≤ min(L, U)`; otherwise `L + U − UL`.
+
+The residual is `zigzag⁻¹(lo[i] + 256·hi[i])` (§20.3) and `x[i] = (prediction + residual) mod 2^16`.
+
+**Output.** The `skip` bytes, then the N samples, each written as 2 bytes (big-endian when `be` is 1, else
+little-endian), then the tail.
+
+### 20.8 Fixed-size records (plan type 6, tflag 7)
+
+```
+t := P u16 | nf u8 | 1 byte (ignored) | nrec u32 | pre u32 | tail u32 | field × nf | pre bytes | tail bytes | bodies
+field := o u8 | w u8 | kind u8 | 1 byte (ignored) | size u32
+```
+
+The block is `pre` bytes, `nrec` records of `P` bytes, then `tail` bytes. Each field covers bytes `o .. o + w − 1` of
+every record, and its body (`size` bytes, in field order) holds those bytes for all records. Field values are
+little-endian unsigned `w`-byte integers.
+
+**Header.** Refuse when:
+- `t` is shorter than 16 bytes;
+- `P` is below 2 or above 64, or `nf` is 0 or above 64;
+- `pre > raw`, `tail > raw`, or `nrec·P + pre + tail ≠ raw`;
+- `16 + 8·nf + pre + tail > |t|`.
+
+**Fields.** Refuse when:
+- `w` is not 1, 2, 4 or 8;
+- `o + w > P`;
+- `size` is larger than what is left;
+- a record byte is covered by two fields, or any byte `0 .. P−1` is covered by none;
+- bytes are left after the last body.
+
+**Bodies.** *Planes* of `m` values of `w` bytes are `w` arrays of `m` bytes, array `b` holding byte `b` of each value.
+- **kind 0, raw:** planes of the `nrec` values. Refuse unless `size = nrec·w`.
+- **kind 1, delta:** the same, then each value is the running sum modulo `2^(8w)`.
+- **kind 2, dictionary:** `count u32 | iw u8 | planes of count values (w bytes) | planes of nrec indices (iw bytes)`.
+  - The dictionary values are running sums modulo `2^(8w)` of the stored ones.
+  - Each record's value is the dictionary entry at its index.
+  - Refuse when `iw` is not 1, 2 or 4, `count` is 0, `size ≠ 5 + count·w + nrec·iw`, or an index is `≥ count`.
+- **kind 3, quantised doubles** (only with `w = 8`): `c f64 | delta u8 | pfor (nrec values) | pfor (nrec values)`.
+  - A **pfor** is `pw u8 (1-8) | ne u32 | planes of nrec values (pw bytes) | ne × (index u32, value u64)`. Each pair
+    replaces value `index`. Refuse a `pw` outside 1-8, an `index ≥ nrec`, or a pfor that does not fit.
+  - The first pfor holds zigzag codes of integers `q`. With `delta` 1, `q` is their running sum, wrapping modulo 2^64.
+  - The second pfor holds zigzag codes of corrections `e`, and must end exactly at the end of the body.
+  - The value is the bit pattern of the double `q · c`, computed in IEEE 754 round-to-nearest from `q` converted to a
+    double, plus `e`, modulo 2^64.
+  - Refuse when `size < 19`, `delta > 1`, or `c` is not a finite number above 0.
+- Any other kind, or kind 3 with `w ≠ 8`, is refused.
+
+Copy the `pre` bytes to the start and the `tail` bytes to the end of the block. Each field writes its values into its
+bytes of each record.
+
 ## 21. KLZMA (codec 24)
 
 KLZMA is an LZ77 coder with an adaptive binary range coder, in the family of LZMA. It is **not** bit-compatible with
@@ -1044,8 +1130,8 @@ The encoder ends with 5 flush bytes.
 ### 21.4 Test coverage of sections 20 and 21
 
 `tests/coder_reference.py` decodes all of the following:
-- **Section 20**, compared with the original: 36 corpus blocks coded by KLZH2 or KLZMA under its transforms. These
-  are 15 table, 11 log-template, 5 minified-JSON, 4 word and 1 line-class block.
+- **Section 20**, compared with the original: 40 corpus blocks coded by KLZH2 or KLZMA under its transforms. These
+  are 2 transpose, 1 16-bit image, 1 record, 15 table, 11 log-template, 5 minified-JSON, 4 word and 1 line-class block.
   - The table blocks reach numeric modes 0-5, ratio and difference formulas, a group column, short rows, text
     exceptions, empty fields, long-text lengths, fields over 65535 bytes and dropped trailing digits.
   - No corpus block uses the percent-change formula.

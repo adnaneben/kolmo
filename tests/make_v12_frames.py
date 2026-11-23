@@ -293,6 +293,15 @@ def long_field_csv(rng, rows):  # a table with one text field and one text-in-a-
     return ("\n".join(out) + "\n").encode()
 
 
+def quoted_csv(rng, rows):  # quoted fields and brackets holding the delimiter: the quote-aware transpose (plan 1, tflag 1)
+    out = ["name,city,word,note,code\n"]
+    for _ in range(rows):
+        out.append('"%s %s",%s,"%s, %s",[%s %s],%s%s\n' % (rng.pick(WORDS).capitalize(), rng.pick(WORDS).capitalize(),
+                   rng.pick(WORDS), rng.pick(WORDS), rng.pick(WORDS), rng.pick(WORDS), rng.pick(WORDS), rng.pick("ABCDEFGH"),
+                   rng.pick(WORDS)))
+    return "".join(out).encode()
+
+
 C_SOURCE = r"""
 #include <stdio.h>
 #include <string.h>
@@ -381,6 +390,7 @@ def inputs():
     d["stations.csv"] = stations_csv(r(30))
     d["growth.csv"] = growth_csv(r(31))
     d["longfield.csv"] = long_field_csv(r(32), 3000)
+    d["quoted.csv"] = quoted_csv(r(33), 4000)
     mixed = d["text.txt"] + d["table.csv"] + d["series.i32"] + d["gray.pgm"] + d["service.log"] + d["records.bin"]
     d["mixed.bin"] = (mixed * 3)[: 3 << 20]   # 2.3 MiB: several blocks at level 3, several segments with --stream=1
     return d
@@ -393,7 +403,7 @@ SOME = {"bigprog-arm64": ["3", "9"], "bigprog-x86_64": ["3", "9"], "gray-big.pgm
         "gray16-big.pgm": ["3", "U"], "mixed.bin": ["3"], "bundle.tar": ["3", "9"],
         "gray12.pgm": ["3", "9"], "photo.pgm": ["9", "U"], "code.x86": ["3", "9"], "names.csv": ["2", "3"],
         "pairs.csv": ["3", "U"], "derived.csv": ["3", "9", "U"], "ragged.csv": ["3"], "stations.csv": ["3", "9"],
-        "growth.csv": ["3"], "longfield.csv": ["3", "9"]}
+        "growth.csv": ["3"], "longfield.csv": ["3", "9"], "quoted.csv": ["3"]}
 
 
 def frame_summary(f):
