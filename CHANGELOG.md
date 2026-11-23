@@ -247,6 +247,10 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   with `gh attestation verify <file> --repo adnaneben/kolmo` (RELEASING.md, section 7, which also states what is
   reproducible).
 - **`SECURITY.md`**: reporting through GitHub private advisories, supported versions, fuzzing status.
+- **Fix (found by the new fuzzing): the index, query and archive functions refuse frames the decoder refuses.**
+  `kolmo_query_run`, `kolmo_index_info` and the DDP1 archive calls accepted a frame header of any version; a
+  header of an unknown version with a valid CRC could claim a block of up to 4 GiB, which the query allocated before
+  the decoder refused the frame. They now apply the decoder's version check. No frame Kolmo writes is affected.
 
 ## 0.0.2 (2026-11-23)
 
