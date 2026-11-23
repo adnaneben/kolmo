@@ -209,12 +209,21 @@ corpus in continuous integration on Linux x86-64, Linux ARM64 and macOS. The pro
 every later release decodes every version-12 frame to the same bytes, that identifiers never change meaning, and that
 a new feature uses an identifier older decoders refuse, so that an old decoder fails rather than returning wrong
 data. The corpus holds 341 frames written by the 0.0.1 and 0.0.2 release binaries
-\todoin{count after the format-prose PR merges; was 330 at PR~\#18}. Coder payloads are specified in part; for the
-rest the 0.0.2 source is normative until their sections are written.
+and an independent Python decoder of the KLZ, KLZH2 and Huffman payloads checks them against the C decoders
+\todoin{341 frames and the coder sections come with PR~\#22, not merged yet; main has 330}. Coder payloads are
+specified in part; for the rest the 0.0.2 source is normative until their sections are written.
 
 \paragraph*{Integrity} Block checksums are the low 32 bits of a 64-bit hash written for Kolmo and specified in full
-in \texttt{FORMAT.md}. A decoder never returns the bytes of a block whose checksum fails. The decoder has been fuzzed
-with libFuzzer \todoin{cite the CI fuzz workflow and OSS-Fuzz status once PR~\#19 lands}.
+in \texttt{FORMAT.md}. A decoder never returns the bytes of a block whose checksum fails. The decoders are fuzzed
+with libFuzzer under AddressSanitizer and UndefinedBehaviorSanitizer on every pull request, seeded with frames of
+every level and the frozen corpus; an OSS-Fuzz application is prepared but not submitted
+\todoin{PR~\#19, not merged yet}.
+
+\todo{Correctness bug found on 2026-11-23 (shared notes, \emph{BUG-table-long-field-data-loss}): in 0.0.2 and main,
+a table block (plan 3, tflag 4) with a field longer than 65,535 bytes is written but does not decode, at levels 3--9.
+None of the paper's inputs hit it, and every round trip in \S\ref{sec:eval} was verified. Before this paper goes
+out, the decoder fix (option (a) in the note) must have landed. If a release shipped the bug, say so here in one
+sentence: it bears directly on the claim that the routing is safe.}
 
 \subsection{Decode working set}\label{sec:memd}
 Many formats declare a window or dictionary size so that a reader can refuse a stream it cannot afford before
@@ -516,9 +525,12 @@ somewhat different speeds from lzbench because it includes file I/O and process 
 wide tables and FASTQ need 64\,KiB, and the text trials need enough lines to see a regular layout. A small input
 gets little more than the general coders. On Canterbury, level~3 is
 \numCantKThree{} against \numCantZThree{} for \texttt{zstd -3}, and level~2 is \numCantKTwo{} against
-\numCantZOne{} for \texttt{zstd -1}. In chunked array stores (HDF5 with 1\,MiB chunks, Blosc2 with its automatic
-block size) level~1 sometimes does not compress an array at all \todoin{numbers from the hdf5-blosc lane once its PR
-lands}.
+\numCantZOne{} for \texttt{zstd -1}. Chunked array stores show the same effect at level~1, which runs only
+minimal analysis: in HDF5 with 1\,MiB chunks, a synthetic int16 waveform is stored uncompressed at level~1
+(ratio 1.00) against 1.57 for shuffle with zstd~3 and 1.75 at level~3, and a float32 grid reaches 1.70 at level~1
+against 2.76 for plain zstd~3\src{PR\#23 integration/hdf5/bench/RESULTS.md}. Level~3 leads in both cases.
+\todoin{PR~\#23 is not merged yet; those runs shared the machine with other jobs, so quote their ratios, not their
+speeds}
 
 \paragraph*{Decode speed} At levels 2--7 Kolmo decodes 30--40\% more slowly than zstd on one thread
 (\numSilKThreeD{} against \numSilzstdThreeD\,MiB/s at level~3 on Silesia). Its speed advantage is against LZMA and
