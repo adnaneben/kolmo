@@ -1,0 +1,201 @@
+name: bench-x86
+# x86-64 run of the market benchmark (lzbench with the kolmo plugin of bench/lzbench, plus the command-line
+# comparison), to check on x86-64 what was measured on Apple silicon. Manual, plus pushes to the bench-x86 branches
+# so the workflow can be tried before it is merged.
+#
+# Fairness: every codec in lzbench runs on one thread and is built by lzbench with the same flags; kolmo is built
+# generic (make ARCH=, no -march=native) and lzbench without MOREFLAGS. Shared runners are noisy and their CPU
+# varies between jobs: every lzbench setting runs RUNS times on the same runner, and the summary gives the median
+# with the min-max spread. Compressed sizes do not depend on the machine and must be the same in every run.
+on:
+  workflow_dispatch:
+    inputs:
+      kolmo_ref:
+        description: kolmo tag or commit to benchmark
+        default: v0.0.2
+      runs:
+        description: runs per lzbench setting (at least 3)
+        default: "3"
+      cli:
+        description: also run the command-line comparison (one thread and all cores)
+        type: boolean
+        default: true
+  push:
+    branches: ["claude/x86-bench*", "bench-x86*"]
+    paths: [".github/workflows/bench-x86.yml", "bench/lzbench/**"]
+
+permissions:
+  contents: read
+
+env:
+  KOLMO_REF: ${{ inputs.kolmo_ref || 'v0.0.2' }}
+  RUNS: ${{ inputs.runs || '3' }}
+  # lzbench 2.4.1 at the commit the Mac run used (no 2.4.1 tag exists upstream)
+  LZBENCH_COMMIT: 9be0e25505b1317cde1afe70d2114164eb4faf8f
+  # the codecs of the report's settings (queue.sh); everything else is left out of the build
+  LZBENCH_CODECS: KOLMO ZSTD XZ ZPAQ LZ4 SNAPPY LIBDEFLATE BROTLI LZAV ZXC KANZI OPENZL BZIP2 BZIP3 BSC PPMD
+  FAST: memcpy/lz4/lz4hc,9,12/snappy/libdeflate,6,12/zstd,1,3,6,9,12/brotli,1,5/lzav,1,2/zxc,3,7/kanzi,1,2,3,4/openzl_generic/kolmo,1,2,3,4
+  SLOW: zstd,15,19/zstd22,22/brotli,9,11/brotli24,11/xz,6,9/bzip2,9/bzip3,5,10/bsc0/bsc1/ppmd8,6,9/zpaq,4,5/kanzi,5,7,9/kolmo,5,6,7,8,9,10
+  FILES: zstd,3,19/xz,9/bzip3,5/brotli,11/openzl_generic/kolmo,3,7,9
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: kolmo
+      - name: corpora (canonical URLs, sha256 checked)
+        id: corpora
+        uses: actions/cache@v4
+        with:
+          path: corpora
+          key: corpora-${{ hashFiles('kolmo/bench/lzbench/corpora.py') }}
+      - if: steps.corpora.outputs.cache-hit != 'true'
+        run: python3 -I kolmo/bench/lzbench/corpora.py corpora
+      - name: kolmo command line at ${{ env.KOLMO_REF }} (generic)
+        run: |
+          git -C kolmo worktree add -q --detach ../kolmo-ref "$KOLMO_REF"
+          make -C kolmo-ref -j"$(nproc)" ARCH= build/kolmo
+          kolmo-ref/build/kolmo --version || true
+      - name: lzbench ${{ env.LZBENCH_COMMIT }} with kolmo ${{ env.KOLMO_REF }}
+        run: |
+          git init -q lzbench
+          git -C lzbench fetch -q --depth 1 https://github.com/inikep/lzbench "$LZBENCH_COMMIT"
+          git -C lzbench checkout -q FETCH_HEAD
+          python3 -I kolmo/bench/lzbench/install.py lzbench --ref "$KOLMO_REF"
+          git -C lzbench diff --stat
+          make -C lzbench -j"$(nproc)" BUILD_ONLY="$LZBENCH_CODECS" > lzbench-build.log 2>&1 || { tail -50 lzbench-build.log; exit 1; }
+          ./lzbench/lzbench -ekolmo,1,3,9 -i1,1 -t0,0 -o4 corpora/canterbury.tar
+      - name: environment
+        run: |
+          { echo "kolmo_ref: $KOLMO_REF ($(git -C kolmo-ref rev-parse HEAD))"; echo "lzbench: $LZBENCH_COMMIT"
+            gcc --version | head -1; uname -a; lscpu; } > build-env.txt
+          cat build-env.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin
+          path: |
+            lzbench/lzbench
+            kolmo-ref/build/kolmo
+            build-env.txt
+            lzbench-build.log
+          retention-days: 30
+
+  lzbench:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        corpus: [silesia.tar, enwik8, canterbury.tar]
+        tier: [fast, slow]
+        include:
+          - corpus: silesia
+            tier: files
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kolmo
+      - uses: actions/cache/restore@v4
+        with:
+          path: corpora
+          key: corpora-${{ hashFiles('kolmo/bench/lzbench/corpora.py') }}
+          fail-on-cache-miss: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: bin
+      - name: ${{ matrix.tier }} settings on ${{ matrix.corpus }}, ${{ env.RUNS }} runs on this runner
+        run: |
+          chmod +x lzbench/lzbench
+          mkdir -p out
+          lscpu > "out/env-${{ matrix.tier }}-${{ matrix.corpus }}.txt"
+          for k in $(seq 1 "$RUNS"); do
+            case "${{ matrix.tier }}" in
+              fast)  set -- -t3,3 -e"$FAST" "corpora/${{ matrix.corpus }}" ;;
+              slow)  set -- -i1,1 -t0,0 -e"$SLOW" "corpora/${{ matrix.corpus }}" ;;
+              files) set -- -i1,1 -t0,0 -r -e"$FILES" corpora/silesia ;;
+            esac
+            echo "run $k: lzbench $*"
+            ./lzbench/lzbench -o4 "$@" > "out/lzb-${{ matrix.tier }}-${{ matrix.corpus }}.run$k.csv" \
+              2> "out/lzb-${{ matrix.tier }}-${{ matrix.corpus }}.run$k.err"
+            # the per-file run measures ratios; one run is enough
+            [ "${{ matrix.tier }}" = files ] && break
+          done
+          cat out/*.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lzb-${{ matrix.tier }}-${{ matrix.corpus }}
+          path: out
+          retention-days: 90
+
+  cli:
+    needs: build
+    if: ${{ github.event_name == 'push' || inputs.cli }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kolmo
+      - uses: actions/cache/restore@v4
+        with:
+          path: corpora
+          key: corpora-${{ hashFiles('kolmo/bench/lzbench/corpora.py') }}
+          fail-on-cache-miss: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: bin
+      - name: zstd, xz, bzip3 (Ubuntu packages; versions recorded)
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q zstd xz-utils bzip3
+          mkdir -p out
+          { zstd --version; xz --version | head -1; bzip3 --version 2>&1 | head -1; lscpu; } > out/env-cli.txt
+      - name: Silesia, one thread and all cores, ${{ env.RUNS }} runs each
+        run: |
+          chmod +x kolmo-ref/build/kolmo
+          python3 -I kolmo/bench/lzbench/cli_bench.py "$PWD/kolmo-ref/build/kolmo" corpora/silesia.tar "$RUNNER_TEMP/cli" "$RUNS" out/cli-silesia.json | tee out/cli-silesia.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli
+          path: out
+          retention-days: 90
+
+  summary:
+    needs: [lzbench, cli]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kolmo
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - name: summary (median and spread over the runs; sizes identical in every run)
+        run: |
+          mkdir -p all && cp art/lzb-*/*.csv all/ 2>/dev/null || true
+          python3 -I kolmo/bench/lzbench/summarize.py all --out summary.md
+          {
+            echo "Shared GitHub runner (x86-64): speeds are noisy, see the spread columns; each lzbench job ran on its own runner, whose CPU is in env-*.txt."
+            cat summary.md
+            if [ -f art/cli/cli-silesia.md ]; then
+              echo; echo "## Command line, Silesia (best of $RUNS; spread = (max - min) / best)"; echo
+              echo "| setting | compressed B | ratio | compress MiB/s | spread | decompress MiB/s | spread | RSS MB c / d |"
+              echo "|---|---:|---:|---:|---:|---:|---:|---|"
+              cat art/cli/cli-silesia.md
+            fi
+          } > report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: summary
+          path: |
+            report.md
+            all
+            art/*/env-*.txt
+            art/bin/build-env.txt
+          retention-days: 90
