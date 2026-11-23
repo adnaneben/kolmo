@@ -27,9 +27,18 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 EXPECTED = os.path.join(HERE, "expected.sha256")
 os.makedirs(W, exist_ok=True)
 
-SETTINGS = [["-m", "speed"], ["-m", "rt"], [], ["-m", "fast", "-q"], ["-m", "eco"], ["-m", "hc"], ["-m", "ratio"],
-            ["-m", "max", "-l", "1"], ["-x", "-l", "1"], ["-x"], ["-x", "-l", "2"], ["-m", "balanced", "--native-leaf"]]
-TYPED = [["-m", "fast", "--typed-huf"]]   # one thread only by design
+# 0.0.2 levels (docs/LEVELS.md). The frames are those of the 0.0.1 settings they replace (in brackets): the level
+# table maps onto the same encoder settings, so these digests did not change with the command line.
+SETTINGS = [["-1"],                                  # [-m speed]
+            ["-1", "--analysis", "full"],            # [-m rt]
+            [],                                      # level 3, the default [balanced]
+            ["-3", "--analysis", "quick"],           # [-m fast -q]
+            ["-5"], ["-7"], ["-9"],                  # [-m eco], [-m hc], [-m ratio]
+            ["-8"],                                  # [-m max -l 1]
+            ["-2"], ["-4"], ["-6"],                  # levels new in 0.0.2 (lane 3's measured table)
+            ["-U", "--codec-level", "1"], ["-U"], ["-U", "--codec-level", "2"],   # [-x -l 1], [-x], [-x -l 2]
+            ["-3", "--native-leaf"]]                 # [-m balanced --native-leaf]
+TYPED = [["-3", "--typed-huf"]]   # one thread only by design [-m fast --typed-huf]
 
 
 def inputs():
@@ -84,8 +93,8 @@ for name, data, typed in inputs():
             else: ENV.pop("KOLMO_MEM_FORCE_BUDGET", None)
             for t in (["1"] if s in TYPED else ["1", "4"]):
                 z, back = p + ".k", p + ".back"
-                run([*s, "-T", t, p, z])
-                run(["-d", z, back])
+                run([*s, "-f", "-T", t, p, "-o", z])
+                run(["-d", "-f", z, "-o", back])
                 if open(back, "rb").read() != data:
                     bad.append(f"round trip: {name} {' '.join(s)} -T {t} budget {budget}")
                 digests.append(hashlib.sha256(open(z, "rb").read()).hexdigest())

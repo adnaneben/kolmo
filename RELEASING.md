@@ -8,7 +8,7 @@ kolmo ships in three places, all at the same version:
 | PyPI (Python) | `kolmoc` (imports as `kolmo`) | `pip install kolmoc` | `bindings/python`; published by `.github/workflows/wheels.yml`; Apple silicon wheel built by hand (step 3b) |
 | crates.io (Rust) | `kolmo` | `cargo add kolmo` | `bindings/rust`; published by hand with `cargo publish` |
 
-1.0.0 is live on all three. The one-time setup is done: the PyPI Trusted Publisher and `pypi`
+0.0.x is live on all three (1.0.0 and 1.0.1 are yanked on PyPI and crates.io). The one-time setup is done: the PyPI Trusted Publisher and `pypi`
 environment, the crates.io owner, and the tap repo. The steps below are what each release needs.
 
 ## Rules
@@ -27,6 +27,17 @@ Set the new version in all four places, then commit:
 - `bindings/python/pyproject.toml` (`version`)
 - `packaging/homebrew/kolmo.rb` (`url`; the sha256 is set in step 5)
 - `src/cli/cli.c` (`KOLMO_VERSION_STR`, printed by `kolmo -V`)
+
+Then check what users will read (the PyPI and crates.io pages are frozen once published):
+
+```sh
+python3 tests/check_release_docs.py build/kolmo     # stale claims in release-facing files; all labels = VERSION
+```
+
+It also fails when a user-facing document or `kolmo -h` shows an option removed in 0.0.2 as current usage, and when
+the level table of `docs/LEVELS.md` and the one `kolmo -h` prints disagree.
+
+and read `bindings/python/README.md` and `bindings/rust/README.md` in full: they are the package pages.
 
 If the native core (`src/`) changed, refresh the copies bundled in both packages and
 commit them:

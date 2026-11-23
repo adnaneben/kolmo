@@ -23,16 +23,20 @@ typedef enum { KOLMO_RT = 0, KOLMO_FAST = 1, KOLMO_ECO = 2, KOLMO_HC = 3, KOLMO_
 
 typedef struct {
     kolmo_mode mode;      /* rt: KLZ | fast: KLZH2 3 | eco: KLZH2 7 | hc: KLZH2 9 | max: BWT (text) or KLZMA | ultra: context mixing (archive tier) */
-    int level;          /* 0 = mode default; otherwise codec level (max: 1 = BWT for every block, 10 = LZMA2 also on
+    int level;          /* 0 = mode default; otherwise codec level (fast: zstd's scale, and below 0 (e.g. -1) the fast
+                           KLZH2 parse, KLZH2 level 0, the fastest KLZH2 setting; max: 1 = BWT for every block, 10 = KLZMA also on
                            decimal-array planes, smaller and about 25 times slower to encode on such files;
                            ultra: 1 = context-mixing model 1 only, faster; 2 = maximum ratio: as the default, and
                            integer/table graph leaves may also use context mixing when smaller, so those blocks
-                           decode up to ~100x slower; any decoder reads the output) */
+                           decode up to ~100x slower; any decoder reads the output). Accepted: 0..22, and for max also
+                           100..999 (KLZMA lc/lp/pb digits); other values fail with KOLMO_ERR_PARAM */
     int threads;        /* 0 = all cores */
     uint32_t block;     /* bytes per block, 0 = adaptive rt/fast, 16 MiB eco/hc (larger for text), 128 MiB max/ultra */
     int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap
-                           structure transforms (images, records, executables, tables), for the fastest settings.
-                           May be OR-ed with KOLMO_T_NATIVE_LEAF or KOLMO_T_TYPED_HUF (below). */
+                           structure transforms (images, records, executables, tables), for the fastest settings;
+                           3 = minimal analysis (level 1). kolmo_params_for_level sets mode, level and transforms.
+                           May be OR-ed with KOLMO_T_NATIVE_LEAF, KOLMO_T_TYPED_HUF or KOLMO_T_COLUMNS
+                           (below); other values fail with KOLMO_ERR_PARAM, and so does a mode outside rt..ultra. */
     uint64_t mem_limit; /* memory limit (docs/MEMORY-MODEL.md): 0 = auto (50% of physical memory or of the cgroup's
                            limit; governs only how much runs at once), KOLMO_MEM_MAX = no limit, otherwise bytes: an
                            explicit cap, which also sizes the blocks of ratio and -x and the -x model tables so that
@@ -53,7 +57,7 @@ typedef struct {
  * integer NPY array or a PCM16 WAV whose data chunk ends the file is coded type first, as one integer graph node with
  * static Huffman residual planes (khuf), in an ordinary graph frame. It applies
  * only to KOLMO_FAST at the default level with analysis on, exactly one thread requested, the buffer API, no
- * dictionary, and inputs of at most 16 MiB that fit one block. A file of those types that a sampled zstd estimate
+ * dictionary, and inputs of at most 16 MiB that fit one block. A file of those types that a sampled estimate
  * predicts would not gain is compressed with the plain codec; other inputs are planned as usual. KOLMO_T_NATIVE_LEAF
  * takes precedence when both bits are set. Not chosen by default.
  * It is a speed option, not a ratio option. Measured on this branch (Apple silicon, one thread, in memory, 12 inputs):
@@ -80,13 +84,32 @@ typedef struct {
 #define KOLMO_ERR_DICT      (-6)   /* (earlier versions: dictionary required; not returned by this build) */
 #define KOLMO_ERR_LIMIT     (-7)   /* a caller-specified decoding limit was exceeded */
 
-#define KOLMO_ERR_IO        (-8)   /* seekable file read/write failed */
+#define KOLMO_ERR_IO        (-8)   /* file or stream read/write failed (errno is left as the failing call set it) */
 #define KOLMO_ERR_PROFILE   (-9)   /* (earlier versions: trained profile required; not returned by this build) */
 #define KOLMO_ERR_TARGET    (-10)  /* --target expression or calibration table invalid */
 #define KOLMO_ERR_QUERY     (-11)  /* a query names no such column, or its pattern does not compile */
 #define KOLMO_ERR_MEMORY    (-12)  /* the frame needs more memory to decode than the limit, or the limit is below the mode's floor */
 #define KOLMO_ERR_LEGACY    (-13)  /* a frame of an earlier Kolmo (container versions 1-11, library codecs): not readable here */
 #define KOLMO_ERR_UNSUPPORTED (-14) /* not available in this build: dictionaries and trained profiles need library codecs */
+#define KOLMO_ERR_PARAM     (-15)  /* an argument out of range: kolmo_params mode, level or transforms, or no such level */
+#define KOLMO_ERR_RANGE     (-16)  /* kolmo_read_range: the offset is past the end of the decoded data */
+
+/* --- Levels (docs/LEVELS.md; 0.0.2) ------------------------------------------------------------------------------
+ * One scale from 1 (fastest) to 9 (smallest at practical decode speed), and ultra outside it. The level numbers and
+ * names are a long-term contract; what each level runs may improve between releases. kolmo_params_for_level fills
+ * mode, level and transforms of *p for a level (KOLMO_LEVEL_MIN..KOLMO_LEVEL_MAX or KOLMO_LEVEL_ULTRA) and leaves the
+ * other fields (threads, block, mem_limit) as the caller set them. The command line and the Python and Rust bindings
+ * all use it, so the same level gives the same bytes everywhere. Returns 0, or KOLMO_ERR_PARAM for another level or a
+ * NULL p (then *p is unchanged). */
+#define KOLMO_LEVEL_MIN       1
+#define KOLMO_LEVEL_MAX       9
+#define KOLMO_LEVEL_DEFAULT   3
+#define KOLMO_LEVEL_ULTRA     10
+#define KOLMO_LEVEL_FASTEST   1
+#define KOLMO_LEVEL_LIGHT     3
+#define KOLMO_LEVEL_BALANCED  5
+#define KOLMO_LEVEL_COMPACT   7
+#define KOLMO_LEVEL_MAX_RATIO 9
 
 /* Zero fields mean no limit, except max_memory: 0 = auto (50% of physical memory or of the cgroup's limit),
  * KOLMO_MEM_MAX = none, otherwise bytes. Every frame declares what one block needs to decode (header byte 11); a frame
@@ -101,7 +124,20 @@ typedef struct {
 
 size_t  kolmo_bound(size_t n, const kolmo_params *p);
 int64_t kolmo_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p);
+/* The decoded size a frame claims, after checking its header and index (the version, the header and index checksum,
+ * and the block sizes adding up to the claim); src must hold at least the header and the whole index (32 + 16 x blocks
+ * bytes), the payloads need not be there. KOLMO_ERR_CORRUPT, KOLMO_ERR_CHECKSUM or KOLMO_ERR_LEGACY otherwise.
+ * The claim is consistent, not small: valid frames code long runs at well over 100,000:1 (a 92-byte block can hold
+ * 128 MiB), so a caller that allocates the claimed size must bound it itself (kolmo_decode_limits.max_output_bytes
+ * with kolmo_check_frame, or its own limit). */
 int64_t kolmo_original_size(const uint8_t *src, size_t n);
+/* The bytes of the first frame in src[0..n): header, index and payloads, plus the container extensions after them when
+ * they end the buffer (indexed and deduplicating archives). With concatenated frames, the next frame starts at src +
+ * kolmo_frame_size(src, n). Needs the header and index only (the result may exceed n when the payloads are not all
+ * there). Errors as kolmo_original_size. The decoders (kolmo_decompress, kolmo_decompress_limited, kolmo_read_range,
+ * kolmo_check_frame, kolmo_decompress_to_fd, kolmo_decompress_file) take exactly one frame: other bytes after it are
+ * KOLMO_ERR_CORRUPT. */
+int64_t kolmo_frame_size(const uint8_t *src, size_t n);
 int64_t kolmo_decompress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads);
 int64_t kolmo_decompress_limited(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
                                int threads, const kolmo_decode_limits *limits);
@@ -130,8 +166,15 @@ int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads
  * rc3: tables within about 16 times the stream; 0 = full (rc2's sizing: one bucket per input byte, up to 2^22 per model,
  * about 5.4 GiB from 4 MiB blocks up); 16..22 = full, capped at 2^mode buckets per model. An explicit
  * kolmo_params.mem_limit shrinks them further to fit. Affects encoding only (the decoder allocates what the stream
- * declares). Returns 0, or -1 for a bad mode. */
+ * declares). Returns 0, or -1 for a bad mode. The setting is process-global and is read when each ultra call
+ * starts coding: it changes the frames of every caller in the process, concurrent ones included, so a program in which
+ * several components use Kolmo should set it once at start-up (or not at all) rather than per call. */
 int kolmo_set_x_tables(int mode);
+/* Frees the scratch memory the library keeps between calls: the per-thread buffers and coder contexts of the calling
+ * thread and of the worker pool's idle threads (they are kept so that the next call of similar size does not fault in
+ * fresh pages; after ratio or ultra calls they can reach hundreds of MiB). The next call allocates them again. Safe to
+ * call at any time; a pool busy with another caller's call is left as it is. */
+void kolmo_release_buffers(void);
 /* Memory limits (docs/MEMORY-MODEL.md). kolmo_mem_parse: "512M", "8G", "50%" (of physical memory), "auto" (0) or "max"
  * (KOLMO_MEM_MAX) into *out; 0 or -1. kolmo_mem_floor: the least a mode accepts as an explicit limit.
  * kolmo_decode_memory: the bytes one block of the frame needs to decode, as its header declares (0 for frames that
@@ -144,11 +187,16 @@ int64_t  kolmo_decode_memory(const uint8_t *src, size_t n);
  * governor of encoders whose mem_limit is 0. 0 restores 50% of the machine. Never changes output: only an explicit
  * kolmo_params.mem_limit is a format decision. */
 void     kolmo_set_memlimit(uint64_t limit);
-/* Checks a CZN1 frame before the caller allocates its output: header and index checksum, block sizes adding up to the
- * claimed original size, payloads inside the frame, the decode figure against the limit (limits may be NULL: auto).
- * 0, or KOLMO_ERR_CORRUPT, KOLMO_ERR_CHECKSUM, KOLMO_ERR_LIMIT or KOLMO_ERR_MEMORY. */
+/* Checks a CZN1 frame before the caller allocates its output: header and index checksum (before anything is
+ * allocated), block sizes adding up to the claimed original size, payloads inside the frame and nothing after them but
+ * container extensions, the limits (max_output_bytes, max_block_bytes, max_blocks) and the decode figure against
+ * max_memory (limits may be NULL: auto, and no size limit). It reads the header and index only, not the payloads.
+ * 0, or KOLMO_ERR_CORRUPT, KOLMO_ERR_CHECKSUM, KOLMO_ERR_LEGACY, KOLMO_ERR_LIMIT or KOLMO_ERR_MEMORY. A frame's claimed
+ * size can be very large for its own size (see kolmo_original_size): a caller that allocates it should pass
+ * max_output_bytes. */
 int      kolmo_check_frame(const uint8_t *src, size_t n, const kolmo_decode_limits *limits);
 const char *kolmo_strerror(int64_t code);
+int kolmo_params_for_level(int level, kolmo_params *p);
 /* GPU worker (macOS builds with Metal): 1 lets the GPU code blocks beside the CPU threads in the modes that block-sort
  * (ratio, -x) when a file has more blocks than threads; 0 (the default) is CPU only. The output is the same bytes
  * either way. Returns 1 when this build and machine have a GPU path. KOLMO_GPU=1 in the environment also turns it on. */
@@ -176,12 +224,11 @@ typedef struct kolmo_profile kolmo_profile;
 
 typedef struct {
     kolmo_params params;   /* setting the profile is trained for (and records as its default) */
-    size_t dict_size;      /* 0 = 110 KiB; dictionary budget for zstd (the raw dictionary is its content part) */
+    size_t dict_size;      /* 0 = 110 KiB; (earlier versions: the dictionary budget; unused by this build) */
     int no_dict;           /* 1 = no dictionaries: plans and setting only */
     const char *target;    /* NULL, or a --target expression: the setting is chosen among the candidate settings by
                               measuring them on a held-out fifth of the samples (see kolmo_compress_target) */
-    int quick;             /* 1 = the zstd --train dictionary trainer only (no COVER search, which can take a minute
-                              on tens of MB of samples) */
+    int quick;             /* (earlier versions: the fast dictionary trainer only; unused by this build) */
 } kolmo_train_params;
 
 /* Train: samples laid end to end in `samples`, each length in `sizes`. Writes the serialized profile to dst (at most

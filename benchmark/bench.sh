@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # Reproducible benchmark for kolmo.
 #
-# Compares kolmo against LZ4, zstd, brotli and xz — all built from the SAME vendored
-# sources with the SAME compiler and flags (so the comparison is apples-to-apples, not
-# against whatever system packages happen to be installed). Every output is decompressed
-# and compared byte-for-byte; speeds are best-of-repeated in-memory runs.
+# Runs kolmo's modes in memory (build/kolmobench). Every output is decompressed and compared
+# byte-for-byte; speeds are best-of-repeated runs. The vendored rivals (LZ4, zstd, brotli, xz)
+# were removed in 0.0.1: measure them with their own command-line tools.
 #
 # Usage:
 #   make -j                      # build build/kolmobench (and the rest)
-#   benchmark/bench.sh FILE...   # benchmark each FILE; add -x for slower modes, -X for the archive tiers
+#   benchmark/bench.sh FILE...   # benchmark each FILE; -x / -X are accepted for compatibility
 #
 # Suggested public corpora (download yourself; not bundled):
 #   - Silesia corpus            http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia

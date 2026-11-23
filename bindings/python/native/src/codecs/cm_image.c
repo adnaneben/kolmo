@@ -23,9 +23,9 @@ static int cm_decompress_img(const uint8_t *in, size_t cn, uint8_t *out, size_t 
     if (n32 != n || !(f & 8) || bb < 16 || bb > 22 || !iw || !ich || ich > 4 || iw < ich || ih > n) return -1;
     cm_t *m = cm_new_x(out, bb, 1, 0, lx); if (!m) return -1;
     m->iw = iw; m->ich = ich; m->ih = ih;
-    cm_dec_run(m, in + 9, cn - 9, out, n, 2);
+    int r = cm_dec_run(m, in + 9, cn - 9, out, n, 2);
     cm_free(m);
-    return 0;
+    return r;
 }
 static uint64_t cm_image_need(const uint8_t *in, size_t cn) {
     if (cn < 17) return 0;

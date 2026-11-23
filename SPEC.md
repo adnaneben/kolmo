@@ -182,8 +182,9 @@ allocates anything (rule 1 of `docs/MEMORY-MODEL.md`). The figure of block *i* i
 the head of its payload, the same on both sides (`blk_dec_need`, `src/core/memneed.c`):
 
 - the buffers every block uses: `2 × raw + raw / 8 + 16384 + 1 MiB` (the decoded block, the transform buffer, small state);
-- plus the codec's working set: 0 for stored, LZ4, Huffman and rANS blocks; 2 MiB for zstd; `min(t, 16 MiB) + 2 MiB`
-  for Brotli; the LZMA2 dictionary for `t` bytes (the power of two at or above `t`, 4 KiB to 64 MiB) + 2 MiB; `5 t + 4 MiB`
+- plus the codec's working set: 0 for stored, KLZ (28), khuf (27), Huffman and rANS blocks; 2 MiB for KLZH (29) and
+  KLZH2 (32); for KLZMA (24) the dictionary for `t` bytes (the power of two at or above `t`, 4 KiB to 64 MiB) + 2 MiB
+  (versions 1-11 also had LZ4: 0; zstd: 2 MiB; Brotli: `min(t, 16 MiB) + 2 MiB`; LZMA2: as KLZMA); `5 t + 4 MiB`
   for block sorting (codecs 5 and 18); for context mixing (codecs 7, 17 and each part of 25) exactly the tables its
   stream header selects plus model 3's match chain (`4 × (t + 8)`), the largest part for codec 25 (parts are decoded as
   separate units of work); measured bounds for the FASTQ family coder (`4 raw + 32 MiB`), GR6+ (`6 raw + 64 MiB`), audio

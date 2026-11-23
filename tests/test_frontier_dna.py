@@ -27,7 +27,7 @@ def check(stock, frontier, folder):
     ) + b"\xb4" * 640
     # a version 6 frame: container version 12 builds refuse it as an earlier version (KOLMO_ERR_LEGACY)
     experimental.write_bytes(legacy)
-    r = subprocess.run([frontier, "-d", str(experimental), str(restored)], capture_output=True)
+    r = subprocess.run([frontier, "-d", "-f", str(experimental), "-o", str(restored)], capture_output=True)
     assert r.returncode != 0 and b"written by an earlier Kolmo" in r.stderr, r
 
     rng = random.Random(81793)
@@ -45,11 +45,11 @@ def check(stock, frontier, folder):
     )
     for label, data, expect_dna in cases:
         src.write_bytes(data)
-        run(stock, "-m", "fast", "-T", 1, src, regular)
-        run(frontier, "-d", regular, restored)
+        run(stock, "-3", "-f", "-T", 1, src, "-o", regular)
+        run(frontier, "-d", "-f", regular, "-o", restored)
         assert restored.read_bytes() == data, (label, "stock frame")
-        run(frontier, "-m", "fast", "-T", 1, src, experimental)
-        run(frontier, "-d", experimental, restored)
+        run(frontier, "-3", "-f", "-T", 1, src, "-o", experimental)
+        run(frontier, "-d", "-f", experimental, "-o", restored)
         assert restored.read_bytes() == data, (label, "opt-in frame")
         packed = experimental.read_bytes()
         if expect_dna:
@@ -57,7 +57,7 @@ def check(stock, frontier, folder):
             assert len(packed) < 0.8 * regular.stat().st_size, label
         else:
             assert packed == regular.read_bytes(), (label, "regular frame")
-            run(stock, "-d", experimental, restored)
+            run(stock, "-d", "-f", experimental, "-o", restored)
             assert restored.read_bytes() == data, (label, "stock decoder")
             if label == "DNA-like CSV":
                 blocks = struct.unpack_from("<I", packed, 20)[0]
@@ -66,10 +66,10 @@ def check(stock, frontier, folder):
     # Over 8 MiB exercises the seekable-file path and more than one worker.
     data = fasta(seq[:half] + seq[half:].lower()) * 36
     src.write_bytes(data)
-    run(frontier, "-m", "fast", "-T", 1, src, regular)
-    run(frontier, "-m", "fast", "-T", 4, src, experimental)
+    run(frontier, "-3", "-f", "-T", 1, src, "-o", regular)
+    run(frontier, "-3", "-f", "-T", 4, src, "-o", experimental)
     assert regular.read_bytes() == experimental.read_bytes(), "thread-dependent frame"
-    run(frontier, "-d", "-T", 4, experimental, restored)
+    run(frontier, "-d", "-f", "-T", 4, experimental, "-o", restored)
     assert restored.read_bytes() == data
 
 

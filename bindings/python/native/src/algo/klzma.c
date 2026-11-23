@@ -2,6 +2,7 @@
    Format and design in klzma.h. Written for Kolmo; no code from liblzma or the LZMA SDK. Prices use integer
    arithmetic only, so the parse (and the output) is the same on every CPU and compiler. */
 #include "klzma.h"
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -89,7 +90,11 @@ static uint32_t km_price_of(uint32_t w) {   /* about 16 * -log2(w / 2048), w in 
 
 /* ---------------- match finder: hash chains with 2-, 3- and 4-byte heads ---------------- */
 typedef struct { uint32_t len, dist; } km_m;
-typedef struct { const uint8_t *in; uint32_t n; uint32_t *h4, *chain, *h3, *h2, *son; int hlog, depth, bt; uint32_t nice; } km_mf;
+struct km_mt;
+typedef struct {
+    const uint8_t *in; uint32_t n; uint32_t *h4, *chain, *h3, *h2, *son; int hlog, depth, bt; uint32_t nice;
+    struct km_mt *mt; int mterr;   /* the threaded 4-byte finder (km_mt), or NULL; mterr: a worker failed (no output) */
+} km_mf;
 static inline uint32_t km_r32(const uint8_t *p) { uint32_t v; memcpy(&v, p, 4); return v; }
 static inline uint64_t km_r64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }
 static inline uint32_t km_count(const uint8_t *a, const uint8_t *b, uint32_t lim) {
@@ -123,10 +128,123 @@ static uint32_t km_bt(km_mf *M, uint32_t p, uint32_t lim, uint32_t best, km_m *o
     }
     return nm;
 }
+/* ---- the threaded 4-byte finder (same matches, so the same output, at any thread count) ----
+ * As KLZH2's ko_mt (klz.c): the binary tree (or hash chain) of a 4-byte bucket holds only the positions of that bucket,
+ * and inserting position p reads and writes only the head of p's bucket and the nodes (chain links) of positions in it;
+ * son[] and chain[] are indexed by the absolute position, so there is no window to wrap. The buckets are split among K
+ * workers (bucket h to worker h % K), each inserting every one of its positions in increasing order exactly as the
+ * one-thread finder does, so every tree and chain evolves as on one thread. What a walk finds does not depend on
+ * whether the parse asked for it (km_bt's collect and best only filter what is reported), so a worker records for
+ * each position the matches longer than the last (from 1 byte for trees, 2 for chains, a chain stopping at the first
+ * that reaches the nice or the largest length) and the parse keeps those longer than its 2- and 3-byte candidates:
+ * exactly the list the one-thread walk reports with that starting length. The 2- and 3-byte heads and the nice-length
+ * extension stay on the parse thread. Workers run up to KM_MTR chunks of KM_MTC positions ahead of the parse. */
+#define KM_MTC (64u << 10)
+#define KM_MTR 4
+#define KM_MTMAXK 16
+#ifndef KM_MT_MIN
+#define KM_MT_MIN (1u << 20)   /* the threaded finder from inputs of this size (it starts K threads per call) */
+#endif
+typedef struct { km_m *m; size_t len, cap; } km_ar;
+typedef struct { struct km_mt *Q; int t; } km_mtarg;
+typedef struct km_mt {
+    km_mf *M; uint32_t np, nch; int K, nth, go, err, stop;   /* np: positions with 4 bytes; nth: workers started; go: all started */
+    uint32_t released, done[KM_MTR], ready;   /* chunks below released are consumed; ready: chunks complete, in order */
+    km_ar ar[KM_MTMAXK][KM_MTR];   /* per worker and slot: for each of its positions {offset in chunk, count}, the matches */
+    uint32_t cj, cur[KM_MTMAXK];   /* the parse: its chunk (complete) and read position per worker */
+    pthread_mutex_t mu; pthread_cond_t cv;
+    pthread_t th[KM_MTMAXK]; km_mtarg arg[KM_MTMAXK];
+} km_mt;
+/* a worker: insert p (p + 4 <= n) into its tree or chain; out: the matches longer than the last */
+static uint32_t km_ins(km_mf *M, uint32_t p, km_m *out) {
+    const uint8_t *s = M->in + p; uint32_t maxl = M->n - p; if (maxl > KM_MAXLEN) maxl = KM_MAXLEN;
+    const uint32_t lim = maxl < M->nice ? maxl : M->nice;
+    if (M->bt) return km_bt(M, p, lim, 0, out, 0, 1);
+    uint32_t h = KM_H4(M, s), c = M->h4[h], best = 1, nm = 0; M->chain[p] = c; M->h4[h] = p;
+    for (int d = 0; d < M->depth && c != KM_NONE && best < lim; d++) {   /* km_find's chain walk from best = 1 */
+        const uint8_t *q = M->in + c;
+        if (q[best] == s[best]) {
+            uint32_t l = km_count(s, q, maxl);
+            if (l > best) { best = l; out[nm].len = l; out[nm].dist = p - c; nm++; }
+        }
+        c = M->chain[c];
+    }
+    return nm;
+}
+static void *km_mt_worker(void *a) {
+    km_mt *Q = ((km_mtarg *)a)->Q; const int t = ((km_mtarg *)a)->t;
+    km_mf *M = Q->M; const uint32_t K = (uint32_t)Q->K, dmax = (uint32_t)M->depth + 2;
+    for (uint32_t j = 0; j < Q->nch; j++) {
+        pthread_mutex_lock(&Q->mu);
+        /* chunk j reuses chunk j - KM_MTR's slot: that chunk must be complete (ready) and consumed (released) */
+        while (!Q->stop && (!Q->go || j >= (Q->released < Q->ready ? Q->released : Q->ready) + KM_MTR)) pthread_cond_wait(&Q->cv, &Q->mu);
+        const int stop = Q->stop; pthread_mutex_unlock(&Q->mu);
+        if (stop) break;
+        const int sl = (int)(j % KM_MTR); km_ar *A = &Q->ar[t][sl]; A->len = 0;
+        const uint32_t c0 = j * KM_MTC, c1 = c0 + KM_MTC < Q->np ? c0 + KM_MTC : Q->np;
+        int bad = 0;
+        for (uint32_t p = c0; p < c1; p++) {
+            if (KM_H4(M, M->in + p) % K != (uint32_t)t) continue;
+            if (A->len + dmax + 1 > A->cap) {
+                size_t nc = A->cap ? 2 * A->cap : (size_t)KM_MTC; while (nc < A->len + dmax + 1) nc *= 2;
+                km_m *g = realloc(A->m, nc * sizeof *g); if (!g) { bad = 1; break; }
+                A->m = g; A->cap = nc;
+            }
+            km_m *e = A->m + A->len;   /* each worker writes only its own arena */
+            const uint32_t nm = km_ins(M, p, e + 1);
+            e->len = p - c0; e->dist = nm; A->len += 1 + nm;
+        }
+        pthread_mutex_lock(&Q->mu);
+        if (bad) { Q->err = 1; Q->stop = 1; pthread_cond_broadcast(&Q->cv); pthread_mutex_unlock(&Q->mu); break; }
+        if (++Q->done[sl] == K) { Q->done[sl] = 0; Q->ready = j + 1; pthread_cond_broadcast(&Q->cv); }
+        pthread_mutex_unlock(&Q->mu);
+    }
+    return NULL;
+}
+static void km_mt_end(km_mt *Q) {
+    if (!Q) return;
+    pthread_mutex_lock(&Q->mu); Q->stop = 1; pthread_cond_broadcast(&Q->cv); pthread_mutex_unlock(&Q->mu);
+    for (int t = 0; t < Q->nth; t++) pthread_join(Q->th[t], NULL);
+    for (int r = 0; r < KM_MTR; r++) for (int t = 0; t < KM_MTMAXK; t++) free(Q->ar[t][r].m);
+    pthread_mutex_destroy(&Q->mu); pthread_cond_destroy(&Q->cv); free(Q);
+}
+/* K workers for M (tables initialised, nothing inserted); NULL when they cannot start: the parse then runs on one thread */
+static km_mt *km_mt_start(km_mf *M, int K) {
+    km_mt *Q = calloc(1, sizeof *Q); if (!Q) return NULL;
+    Q->M = M; Q->K = K; Q->np = M->n >= 4 ? M->n - 3 : 0; Q->nch = (Q->np + KM_MTC - 1) / KM_MTC; Q->cj = UINT32_MAX;
+    if (pthread_mutex_init(&Q->mu, NULL)) { free(Q); return NULL; }
+    if (pthread_cond_init(&Q->cv, NULL)) { pthread_mutex_destroy(&Q->mu); free(Q); return NULL; }
+    for (int t = 0; t < K; t++) {
+        Q->arg[t].Q = Q; Q->arg[t].t = t;
+        if (pthread_create(&Q->th[t], NULL, km_mt_worker, &Q->arg[t])) { km_mt_end(Q); return NULL; }   /* none touched a table */
+        Q->nth = t + 1;
+    }
+    pthread_mutex_lock(&Q->mu); Q->go = 1; pthread_cond_broadcast(&Q->cv); pthread_mutex_unlock(&Q->mu);
+    return Q;
+}
+/* the parse: p's matches from its worker (p + 4 <= n, positions taken in increasing order), those longer than best */
+static uint32_t km_mt_take(km_mf *M, uint32_t p, km_m *out, uint32_t nm, uint32_t best) {
+    km_mt *Q = M->mt; const uint32_t j = p / KM_MTC; const int sl = (int)(j % KM_MTR);
+    if (j != Q->cj) {   /* a new chunk: release the earlier ones, wait until this one is complete */
+        pthread_mutex_lock(&Q->mu);
+        if (Q->released < j) { Q->released = j; pthread_cond_broadcast(&Q->cv); }
+        while (Q->ready <= j && !Q->err) pthread_cond_wait(&Q->cv, &Q->mu);
+        const int err = Q->err; pthread_mutex_unlock(&Q->mu);
+        if (err) { M->mterr = 1; return nm; }
+        Q->cj = j; memset(Q->cur, 0, sizeof Q->cur);
+    }
+    const uint32_t t = KM_H4(M, M->in + p) % (uint32_t)Q->K, k = p - j * KM_MTC;
+    const km_m *a = Q->ar[t][sl].m; uint32_t c = Q->cur[t];
+    while (a[c].len < k) c += 1 + a[c].dist;   /* the worker's positions before p (skipped by the parse) */
+    const uint32_t cnt = a[c].dist; const km_m *e = a + c + 1; Q->cur[t] = c + 1 + cnt;
+    for (uint32_t i = 0; i < cnt; i++) if (e[i].len > best) out[nm++] = e[i];   /* ascending: the walk's report from best */
+    return nm;
+}
 static void km_skip(km_mf *M, uint32_t p) {
     const uint8_t *s = M->in + p;
     if (p + 4 <= M->n) {
         M->h2[KM_H2(s)] = p; M->h3[KM_H3(s)] = p;
+        if (M->mt) return;   /* the workers insert p */
         if (M->bt) { uint32_t lim = M->n - p; if (lim > M->nice) lim = M->nice; km_bt(M, p, lim, 0, NULL, 0, 0); }
         else { uint32_t h = KM_H4(M, s); M->chain[p] = M->h4[h]; M->h4[h] = p; }
     }
@@ -147,12 +265,13 @@ static uint32_t km_find(km_mf *M, uint32_t p, km_m *out) {
     if (best < maxl && c3 != KM_NONE && c3 != c2) { uint32_t l = km_count(s, M->in + c3, maxl); if (l > best) { best = l; out[nm].len = l; out[nm].dist = p - c3; nm++; } }
     if (M->bt) {
         uint32_t lim = maxl < M->nice ? maxl : M->nice;
-        nm = km_bt(M, p, lim, best, out, nm, 1);
+        nm = M->mt ? km_mt_take(M, p, out, nm, best) : km_bt(M, p, lim, best, out, nm, 1);
         if (nm && out[nm - 1].len == lim && lim < maxl) {   /* at the nice length: the full length of that match */
             km_m *t = &out[nm - 1]; t->len = lim + km_count(s + lim, s + lim - t->dist, maxl - lim);
         }
         return nm;
     }
+    if (M->mt) return best < maxl && best < M->nice ? km_mt_take(M, p, out, nm, best) : nm;   /* the chain walk below runs only then */
     uint32_t h = KM_H4(M, s), c = M->h4[h]; M->chain[p] = c; M->h4[h] = p;
     for (int d = 0; d < M->depth && c != KM_NONE && best < maxl && best < M->nice; d++) {
         const uint8_t *q = M->in + c;
@@ -323,7 +442,8 @@ static uint32_t km_optimal(km_enc *E, uint32_t pos) {
 static const struct { int depth, nice, bt; } KM_LV[10] = {{0, 0, 0}, {4, 16, 0}, {8, 32, 0}, {16, 48, 1}, {24, 64, 1}, {32, 64, 1},
     {48, 96, 1}, {64, 128, 1}, {96, 192, 1}, {152, 273, 1}};
 size_t kolmo_klzma_bound(size_t n) { return n + n / 64 + 1024; }
-size_t kolmo_klzma_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) {
+size_t kolmo_klzma_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kolmo_klzma_compress_mt(in, n, out, cap, level, 1); }
+size_t kolmo_klzma_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads) {
     int lc = 3, lp = 0, pb = 2;
     if (level >= 1000) { int q = level / 10; lc = (q / 100) % 10 - 1; lp = (q / 10) % 10; pb = q % 10; level %= 10; }
     if (level < 1) level = 1;
@@ -337,6 +457,10 @@ size_t kolmo_klzma_compress(const uint8_t *in, size_t n, uint8_t *out, size_t ca
     M->h4 = malloc(sizeof(uint32_t) << hlog); M->h3 = malloc(sizeof(uint32_t) << 16); M->h2 = malloc(sizeof(uint32_t) << 16); if (M->bt) M->son = malloc(sizeof(uint32_t) * 2 * (n + 1)); else M->chain = malloc(sizeof(uint32_t) * (n + 1));
     if (!M->h4 || !M->h3 || !M->h2 || !(M->bt ? (void *)M->son : (void *)M->chain) || km_model_init(&E->m, lc, lp, pb)) goto out;
     memset(M->h4, 0xFF, sizeof(uint32_t) << hlog); memset(M->h3, 0xFF, sizeof(uint32_t) << 16); memset(M->h2, 0xFF, sizeof(uint32_t) << 16);
+    {   /* K workers beside the parse (not with two threads: one worker beside the parse gained nothing in KLZH2) */
+        int K = threads >= 3 ? threads - 1 : 0; if (K > KM_MTMAXK) K = KM_MTMAXK;
+        if (K > 0 && n >= KM_MT_MIN) M->mt = km_mt_start(M, K);
+    }
     for (uint32_t i = 0; i < (KM_ONE >> 4); i++) E->ptab[i] = (uint16_t)km_price_of((i << 4) + 8);
     out[0] = (uint8_t)(lc + 9 * (lp + 5 * pb));
     km_rce *R = &E->rc; R->low = 0; R->range = 0xFFFFFFFFu; R->cache = 0; R->csize = 1; R->p = out + 1; R->e = out + cap;
@@ -380,11 +504,12 @@ size_t kolmo_klzma_compress(const uint8_t *in, size_t n, uint8_t *out, size_t ca
             }
             pos += d->len;
         }
-        if (R->err) goto out;
+        if (R->err || M->mterr) goto out;
     }
     for (int k = 0; k < 5; k++) rce_shift(R);
     if (!R->err && (size_t)(R->p - out) < n + 16) r = (size_t)(R->p - out);
 out:
+    km_mt_end(M->mt);
     free(M->h4); free(M->h3); free(M->h2); free(M->chain); free(M->son); free(E->m.lit); free(E);
     return r;
 }
@@ -411,6 +536,7 @@ int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
     for (int k = 0; k < 5; k++) code = (code << 8) | *ip++;
     uint32_t pos = 0, reps[4] = {0, 0, 0, 0}; int st = 0; const uint32_t pbm = (1u << pb) - 1, lpm = (1u << lp) - 1;
     while (pos < n) {
+        if (ip > ie + 4) goto out;   /* past what the end check below accepts: truncated or forged, stop now */
         const uint32_t ps = pos & pbm; unsigned b;
         KD_BIT(&P->is_match[st][ps], b);
         if (!b) {   /* literal */
@@ -448,7 +574,7 @@ int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
             if (!b) {
                 KD_BIT(&P->is_rep0_long[st][ps], b);
                 if (!b) {   /* short rep */
-                    if (reps[0] + 1 > pos) goto out;
+                    if (reps[0] >= pos) goto out;   /* reps[0] + 1 wrapped to 0 for 0xFFFFFFFF */
                     out[pos] = out[pos - reps[0] - 1]; pos++; st = st_short(st); continue;
                 }
             } else {
@@ -459,8 +585,8 @@ int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
             }
             KD_LEN(&P->rlen, ps, len); len += 2; st = st_rep(st);
         }
+        if (reps[0] >= pos || len > n - pos) goto out;   /* not dist > pos: reps[0] = 0xFFFFFFFF made dist 0 */
         uint32_t dist = reps[0] + 1;
-        if (dist > pos || len > n - pos) goto out;
         uint8_t *o = out + pos; const uint8_t *s = o - dist;
         if (dist >= 8 && n - pos - len >= 8) { for (uint32_t k = 0; k < len; k += 8) memcpy(o + k, s + k, 8); }
         else for (uint32_t k = 0; k < len; k++) o[k] = s[k];

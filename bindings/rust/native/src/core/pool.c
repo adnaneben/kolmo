@@ -54,10 +54,28 @@ static void *pool_main(void *a) {
     }
     return NULL;
 }
+/* fork(): only the calling thread exists in the child, so the pool's workers are gone while pool_n still counts them,
+ * and a lock held by another thread at the fork stays held. The prepare handler takes the pool's bookkeeping lock and
+ * the memory governor's lock (always in this order; no thread takes them the other way round), so neither is mid-update
+ * at the fork; the parent releases them; the child starts both afresh: no workers (the next call creates them), no
+ * reservations (the threads that held them do not exist in the child), and new locks and condition variables. pool_job
+ * is not taken in prepare (a fork does not wait for a running call to finish); in the child it is re-created unlocked. */
+static void pool_fork_prepare(void) { pthread_mutex_lock(&pool_mu); pthread_mutex_lock(&kmem_mu); }
+static void pool_fork_parent(void) { pthread_mutex_unlock(&kmem_mu); pthread_mutex_unlock(&pool_mu); }
+static void pool_fork_child(void) {
+    pthread_mutex_init(&pool_mu, NULL); pthread_mutex_init(&pool_job, NULL);
+    pthread_cond_init(&pool_go, NULL); pthread_cond_init(&pool_done, NULL);
+    pool_n = pool_want = pool_active = 0;
+    pthread_mutex_init(&kmem_mu, NULL); pthread_cond_init(&kmem_cv, NULL);
+    kmem_used = 0; kmem_jobs = 0;
+}
+static pthread_once_t pool_fork_once = PTHREAD_ONCE_INIT;
+static void pool_fork_register(void) { pthread_atfork(pool_fork_prepare, pool_fork_parent, pool_fork_child); }
 static void run_pool(void *(*fn)(void *), void *J, int threads, uint32_t units) {
     if (threads > 256) threads = 256;
     if ((uint32_t)threads > units) threads = (int)units;
     if (threads <= 1) { fn(J); return; }
+    pthread_once(&pool_fork_once, pool_fork_register);
     if (pthread_mutex_trylock(&pool_job)) {               /* pool busy (concurrent caller): private threads */
         pthread_t th[255]; int started = 0;
         for (int t = 1; t < threads; t++) {
@@ -86,4 +104,24 @@ static void run_pool(void *(*fn)(void *), void *J, int threads, uint32_t units) 
     while (pool_active) pthread_cond_wait(&pool_done, &pool_mu);
     pthread_mutex_unlock(&pool_mu);
     pthread_mutex_unlock(&pool_job);
+}
+
+/* kolmo_release_buffers: each thread frees its own buffers (thread-local), so the pool's idle workers are given a job
+ * that does it, and the caller does it for itself. */
+static void tls_release_self(void) {
+    tls_t *s = TLS;
+    if (s) {
+        codec_ctx_free(&s->x); memset(&s->x, 0, sizeof s->x);
+        free(s->tbuf); free(s->slot); free(s->rbuf); free(s->pos); free(s->rowbuf);
+        s->tbuf = s->slot = s->rbuf = NULL; s->pos = s->rowbuf = NULL; s->tcap = s->scap = s->rbcap = s->pcap = s->rcap = 0;
+    }
+    zs_trim();
+}
+static void *tls_release_job(void *arg) { (void)arg; tls_release_self(); return NULL; }   /* each worker runs a job once */
+void kolmo_release_buffers(void) {
+    tls_release_self();
+    if (pthread_mutex_trylock(&pool_job)) return;            /* busy with a call: its threads keep their buffers */
+    pthread_mutex_lock(&pool_mu); int n = pool_n; pthread_mutex_unlock(&pool_mu);
+    pthread_mutex_unlock(&pool_job);
+    if (n > 0) run_pool(tls_release_job, NULL, n + 1, (uint32_t)n + 1);
 }

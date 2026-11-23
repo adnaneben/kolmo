@@ -22,6 +22,13 @@ typedef struct { int n, gcol, gweak; tformula f[256]; } fset_t;   /* gweak: gcol
 #define FS_TOL 5e-2
 #endif
 #define SCREEN 256
+/* full-sample checks of ratio pairs per target column. Identical or constant columns pass the screen for every pair,
+ * which made discovery cubic with a full-sample pass per triple (256 equal columns: 13 s for 1.4 MB). The screening
+ * corpus needs at most 37 per target (energy_test.csv), so 1024 leaves normal tables unchanged. */
+#define FS_EXACT_MAX 1024
+#ifdef KOLMO_TESTING
+static long fs_exact_checks;                       /* full-sample checks made, for tests/test_decoder_hardening.c */
+#endif
 
 static inline double fm_predict(int form, double k, double fa, double fb, double la) {
     if (form == FM_RATIO) return fa / fb * k;
@@ -88,10 +95,10 @@ static void *fs_worker(void *arg) {
             if (c->vc[yi] < 100) continue;
             int Ty = c->keys[yi];
             /* W->ratio screen: exact masked moments of (Ly - La + Lb) on a row subsample, every (a, b) pair (float SIMD) */
-            int ta[32], tb[32], tf[32], nt = 0; double tv[12]; int tva[12], tvb[12], ntv = 0;
+            int ta[32], tb[32], tf[32], nt = 0; double tv[12]; int tva[12], tvb[12], ntv = 0, nexact = 0;
             {
                 const float *ly = c->Lf + (size_t)yi * c->SS; const float *vy = c->Vf + (size_t)yi * c->SS;
-                for (int a = 0; a < c->m; a++) {
+                for (int a = 0; a < c->m && nexact < FS_EXACT_MAX; a++) {
                     if (a == yi) continue;
                     const float *la = c->Lf + (size_t)a * c->SS, *va = c->Vf + (size_t)a * c->SS;
                     uint64_t wb[SCREEN / 64]; int wc = 0;
@@ -121,6 +128,10 @@ static void *fs_worker(void *arg) {
                         double mu = s1 / cnt, var = s2 / cnt - mu * mu;
                         if (!(var < 4 * FS_TOL * FS_TOL)) continue;
                         /* exact variance on the full sample */
+                        if (nexact++ == FS_EXACT_MAX) break;
+#ifdef KOLMO_TESTING
+                        __atomic_fetch_add(&fs_exact_checks, 1, __ATOMIC_RELAXED);
+#endif
                         const uint8_t *Vy = c->V + (size_t)yi * c->ns, *Va = c->V + (size_t)a * c->ns, *Vb = c->V + (size_t)b * c->ns;
                         const double *Ly = c->L + (size_t)yi * c->ns, *La = c->L + (size_t)a * c->ns, *Lb = c->L + (size_t)b * c->ns;
                         double e1 = 0, e2 = 0; int ec = 0;
@@ -1017,7 +1028,7 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
         }
     } else for (int64_t r = 0; r < nr; r++) gid[r] = 0;
     PROF_T(2);
-    if (aligned && nr > 0 && !getenv("KOLMO_OLDTBL")) { ret = tbl2_stream(C, k, nr, gid, FB, nform, delim, (int)noNL, out, n); goto out; }
+    if (aligned && nr > 0) { ret = tbl2_stream(C, k, nr, gid, FB, nform, delim, (int)noNL, out, n); goto out; }
     /* numeric columns: non-formula first, then formula targets (sources are never targets) */
     size_t totnum = 0; for (int j = 0; j < k; j++) if (C[j].type == 2) totnum += C[j].nnum;
     vals = malloc(8 * (totnum + 1)); fv = calloc(k, sizeof(double *)); la = malloc(sizeof(double) * ((size_t)nr + 1));
@@ -1073,7 +1084,7 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
             for (int j = 0; j < k; j++) if (C[j].type == 2) xbytes += (size_t)(C[j].dend - C[j].edata);
             size_t acap = (size_t)RC * 24 * k + xbytes + 64;
             bm = malloc(8 * (size_t)RC * W); RL = malloc(2 * (size_t)RC * k); arena = malloc(acap); lv = malloc(RC);
-            uint32_t rowtot[RC]; int dense_rows = getenv("KOLMO_DENSE") ? atoi(getenv("KOLMO_DENSE")) : 1;
+            uint32_t rowtot[RC]; const int dense_rows = 1;
             const uint8_t *src[256], *se[256];
             uint8_t dl[32]; memset(dl, delim, 32);
             int okp = bm && RL && arena && lv;

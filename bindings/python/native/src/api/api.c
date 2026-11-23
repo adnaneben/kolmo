@@ -18,28 +18,44 @@ int kolmo_set_gpu(int on) {
 #endif
 }
 
+/* the header and index checked (decode.c, frame_head): KOLMO_ERR_LEGACY for frames of earlier versions */
 int64_t kolmo_original_size(const uint8_t *src, size_t n) {
-    int v = frame_version_check(src, n); if (v) return v;     /* KOLMO_ERR_LEGACY for frames of earlier versions */
-    return (int64_t)get64(src + 12);
+    if (!src) return KOLMO_ERR_CORRUPT;
+    uint64_t o, e; int r = frame_head(src, n, &o, &e); if (r) return r;
+    return (int64_t)o;
+}
+int64_t kolmo_frame_size(const uint8_t *src, size_t n) {
+    if (!src) return KOLMO_ERR_CORRUPT;
+    uint64_t o, e; int r = frame_head(src, n, &o, &e); if (r) return r;
+    if (e > (uint64_t)INT64_MAX) return KOLMO_ERR_CORRUPT;
+    if (e < n && frame_tail_ok(src, n, e)) return (int64_t)n;   /* container extensions ending the buffer belong to it */
+    return (int64_t)e;
+}
+/* the public decoders take one whole frame: nothing after its last payload but container extensions */
+static int64_t whole_frame(const uint8_t *src, size_t n) {
+    if (!src) return KOLMO_ERR_CORRUPT;
+    uint64_t o, e; int r = frame_head(src, n, &o, &e); if (r) return r;
+    if (!frame_tail_ok(src, n, e)) return KOLMO_ERR_CORRUPT;
+    return (int64_t)o;
 }
 
 int64_t kolmo_decompress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads) {
-    int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
+    int64_t o = whole_frame(src, n); if (o < 0) return o;
     if ((uint64_t)o > cap) return KOLMO_ERR_DSTSIZE;
     return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, NULL);
 }
 
 int64_t kolmo_decompress_limited(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
                                int threads, const kolmo_decode_limits *limits) {
-    int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
+    int64_t o = whole_frame(src, n); if (o < 0) return o;
     if (limits && limits->max_output_bytes && (uint64_t)o > limits->max_output_bytes) return KOLMO_ERR_LIMIT;
     if ((uint64_t)o > cap) return KOLMO_ERR_DSTSIZE;
     return run_decode(src, -1, n, dst, -1, threads, 0, 0, 0, limits);
 }
 
 int64_t kolmo_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len, uint8_t *dst, int threads) {
-    int64_t o = kolmo_original_size(src, n); if (o < 0) return o;
-    if (off > (uint64_t)o) return KOLMO_ERR_CORRUPT;
+    int64_t o = whole_frame(src, n); if (o < 0) return o;
+    if (off > (uint64_t)o) return KOLMO_ERR_RANGE;
     if (len > (uint64_t)o - off) len = (size_t)((uint64_t)o - off);
     if (!len) return 0;
     return run_decode(src, -1, n, dst, -1, threads, off, off + len, 1, NULL);
@@ -72,6 +88,7 @@ int kolmo_mem_parse(const char *s, uint64_t *out) { uint64_t v; if (!out || kmem
 uint64_t kolmo_mem_floor(kolmo_mode mode) { return kmem_floor((int)mode); }
 uint64_t kolmo_mem_auto(void) { return kmem_limit_of(0); }
 int kolmo_check_frame(const uint8_t *src, size_t n, const kolmo_decode_limits *limits) {
+    int64_t w = whole_frame(src, n); if (w < 0) return (int)w;   /* no allocation before the header checks pass */
     parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
     uint64_t maxraw = 0; for (uint32_t i = 0; i < P.nb; i++) if (P.roff[i + 1] - P.roff[i] > maxraw) maxraw = P.roff[i + 1] - P.roff[i];
     r = frame_admit(&P, maxraw, kmem_limit_of(limits ? limits->max_memory : 0));
@@ -90,6 +107,32 @@ int64_t kolmo_decode_memory(const uint8_t *src, size_t n) {
     return (int64_t)blk_dec_floor(maxraw);
 }
 
+/* The level table (docs/LEVELS.md section 1). One row per level, in today's knobs: mode, codec level (0 = the mode's
+ * default; R_LZH levels are on zstd's scale and map to KLZH2 settings in codecs/native.c: 1-2 -> 1, 3-5 -> 3,
+ * 6-9 -> 5, 10-15 -> 6, 16-18 -> 8, 19+ -> 9) and transforms (1 = full analysis, 2 = quick, 3 = minimal, 0 = none).
+ * The initial 0.0.2 assignment; another lane measures and retunes it. Edit the rows here only: the CLI and the
+ * bindings read nothing else. Changing a row changes the output of that level (benchmark/determinism/expected.sha256). */
+static const struct { kolmo_mode mode; int level; int transforms; } kolmo_level_table[KOLMO_LEVEL_ULTRA + 1] = {
+    [1]  = {KOLMO_RT,    0,  3},   /* fastest: KLZ, minimal analysis (0.0.1 CLI "-m speed", exactly) */
+    [2]  = {KOLMO_FAST, -1,  3},   /* fast KLZH2 parse (KLZH2 level 0), minimal analysis; screening 3.211, 433 / 835 MiB/s (KLZH2 1 was 3.295, 328) */
+    [3]  = {KOLMO_FAST,  0,  1},   /* light, the default: KLZH2 3 with full analysis (0.0.1 "balanced") */
+    [4]  = {KOLMO_HC,    6,  1},   /* KLZH2 5 (zstd-scale 6) with hc's planning: smaller and faster than fast -l 6; 4.136, 67 / 713 */
+    [5]  = {KOLMO_ECO,   0,  1},   /* balanced: KLZH2 7 (0.0.1 "eco") */
+    [6]  = {KOLMO_HC,    16, 1},   /* KLZH2 8 (zstd-scale 16), hc's 16 MiB blocks */
+    [7]  = {KOLMO_HC,    0,  1},   /* compact: KLZH2 9 (0.0.1 "hc") */
+    [8]  = {KOLMO_MAX,   1,  1},   /* ratio tier, fast variant: BWT for every block (0.0.1 "ratio -l 1") */
+    [9]  = {KOLMO_MAX,   0,  1},   /* max: BWT for text, the better of BWT and KLZMA for binary (0.0.1 "ratio") */
+    [10] = {KOLMO_ULTRA, 0,  1},   /* ultra: context mixing (0.0.1 "-x") */
+};
+
+int kolmo_params_for_level(int level, kolmo_params *p) {
+    if (!p || level < KOLMO_LEVEL_MIN || level > KOLMO_LEVEL_ULTRA) return KOLMO_ERR_PARAM;
+    p->mode = kolmo_level_table[level].mode;
+    p->level = kolmo_level_table[level].level;
+    p->transforms = kolmo_level_table[level].transforms;
+    return 0;
+}
+
 const char *kolmo_strerror(int64_t c) {
     switch (c) {
         case KOLMO_ERR_CORRUPT: return "corrupt or unsupported input";
@@ -106,6 +149,8 @@ const char *kolmo_strerror(int64_t c) {
         case KOLMO_ERR_MEMORY: return "memory limit: the frame needs more memory to decode than the limit, or the limit is below the mode's floor";
         case KOLMO_ERR_LEGACY: return "written by an earlier Kolmo (1.x or a release candidate) that used library codecs; this build reads only Kolmo-native frames";
         case KOLMO_ERR_UNSUPPORTED: return "not available in this build: dictionaries and trained profiles need library codecs";
+        case KOLMO_ERR_PARAM: return "invalid parameter (mode, level or transforms out of range; levels are 1 to 9, and 10 for ultra)";
+        case KOLMO_ERR_RANGE: return "range outside the decoded data";
     }
     return c >= 0 ? "ok" : "unknown error";
 }
@@ -146,7 +191,7 @@ int64_t kolmo_decompress_to_fd(const uint8_t *src, size_t n, int fd, int threads
                              const void *dict, size_t dictlen) {
     if (dict && dictlen) return KOLMO_ERR_UNSUPPORTED;
     if (fd < 0) return KOLMO_ERR_IO;
-    int64_t size = kolmo_original_size(src, n);
+    int64_t size = whole_frame(src, n);
     if (size < 0) return size;
     return run_decode(src, -1, n, NULL, fd, threads, 0, 0, 0, NULL);
 }
@@ -169,15 +214,23 @@ int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads
     if (output_fd < 0 || fstat(input_fd, &st) || !S_ISREG(st.st_mode) ||
         st.st_size < 0 || (uintmax_t)st.st_size < n) return KOLMO_ERR_IO;
     if (read_block(input_fd, header, HDR, 0)) return KOLMO_ERR_IO;
-    int64_t size = kolmo_original_size(header, HDR);
+    { int v = frame_version_check(header, HDR); if (v) return v; }  /* KOLMO_ERR_LEGACY for frames of earlier versions */
     uint32_t nb = get32(header + 20);
-    if (size < 0) return size;                                   /* KOLMO_ERR_LEGACY for frames of earlier versions */
     if (nb > (n - HDR) / IDX) return KOLMO_ERR_CORRUPT;
     size_t index_size = HDR + (size_t)nb * IDX;
     uint8_t *index = malloc(index_size);
     if (!index) return KOLMO_ERR_ALLOC;
     memcpy(index, header, HDR);
     int64_t ret = read_block(input_fd, index + HDR, index_size - HDR, HDR);
+    uint64_t orig, end;
+    if (!ret) ret = frame_head(index, index_size, &orig, &end);
+    if (!ret && end != n) {                                     /* after the last payload: container extensions only */
+        uint8_t t[24];
+        if (end > n || n - end < 24) ret = KOLMO_ERR_CORRUPT;
+        else if (read_block(input_fd, t, 24, (off_t)(n - 24))) ret = KOLMO_ERR_IO;
+        else if (memcmp(t, "KEXT", 4) || t[4] != 1 || t[5] || t[6] || t[7] || kolmo_crc32c(0, t, 20) != get32(t + 20) ||
+                 get64(t + 12) != n - 24 - end) ret = KOLMO_ERR_CORRUPT;
+    }
     if (!ret) ret = run_decode(index, input_fd, n, NULL, output_fd, threads, 0, 0, 0, NULL);
     free(index);
     zs_trim();

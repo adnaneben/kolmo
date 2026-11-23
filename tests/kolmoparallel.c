@@ -9,6 +9,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
 typedef struct {
     const uint8_t *input, *reference; size_t size, reference_size;
     int threads, transforms; atomic_int *start;
@@ -26,6 +29,51 @@ static void *exercise(void *arg) {
         assert(!memcmp(back, c->input, c->size));
     }
     free(blob); free(back); return NULL;
+}
+/* fork() after a multi-threaded call: the child has none of the pool's worker threads; its calls must create new ones
+ * (the pool reset at fork) instead of waiting for workers that do not exist. Also forks while another thread of the
+ * parent is in the middle of threaded calls. Each child round trips with 4 threads under an alarm. */
+static int fork_round_trip(const uint8_t *in, size_t n, const uint8_t *ref, int64_t refn) {
+    pid_t c = fork(); assert(c >= 0);
+    if (c == 0) {
+        alarm(120);
+        kolmo_params q = {KOLMO_RT, 0, 4, 1u << 16, 0};
+        size_t cap = kolmo_bound(n, &q); uint8_t *z = malloc(cap), *back = malloc(n);
+        if (!z || !back) _exit(3);
+        for (int i = 0; i < 3; i++) {
+            int64_t zn = kolmo_compress(in, n, z, cap, &q);
+            if (zn != refn || memcmp(z, ref, (size_t)zn)) _exit(4);
+            if (kolmo_decompress(z, (size_t)zn, back, n, 4) != (int64_t)n || memcmp(back, in, n)) _exit(5);
+        }
+        _exit(0);
+    }
+    int st = 0; assert(waitpid(c, &st, 0) == c);
+    if (WIFSIGNALED(st)) { fprintf(stderr, "fork test: child killed by signal %d (14: hung)\n", WTERMSIG(st)); return 1; }
+    return WEXITSTATUS(st);
+}
+typedef struct { const uint8_t *in; size_t n; atomic_int *stop; } busy_arg;
+static void *busy(void *a) {
+    busy_arg *b = a; kolmo_params q = {KOLMO_RT, 0, 4, 1u << 16, 0};
+    size_t cap = kolmo_bound(b->n, &q); uint8_t *z = malloc(cap), *back = malloc(b->n); assert(z && back);
+    while (!atomic_load(b->stop)) {
+        int64_t zn = kolmo_compress(b->in, b->n, z, cap, &q); assert(zn > 0);
+        assert(kolmo_decompress(z, (size_t)zn, back, b->n, 4) == (int64_t)b->n && !memcmp(back, b->in, b->n));
+    }
+    free(z); free(back); return NULL;
+}
+static void fork_tests(void) {
+    size_t n = 4u << 20; uint8_t *in = malloc(n); assert(in);
+    for (size_t i = 0; i < n; i++) in[i] = (uint8_t)(((i * 2654435761u) >> 13) & 0x3f);
+    kolmo_params q = {KOLMO_RT, 0, 4, 1u << 16, 0};
+    size_t cap = kolmo_bound(n, &q); uint8_t *ref = malloc(cap); assert(ref);
+    int64_t refn = kolmo_compress(in, n, ref, cap, &q); assert(refn > 0);   /* starts the pool's workers */
+    assert(fork_round_trip(in, n, ref, refn) == 0);
+    atomic_int stop; atomic_init(&stop, 0); busy_arg b = {in, n, &stop}; pthread_t t;
+    assert(!pthread_create(&t, NULL, busy, &b));
+    for (int i = 0; i < 4; i++) { usleep(20000); assert(fork_round_trip(in, n, ref, refn) == 0); }
+    atomic_store(&stop, 1); assert(!pthread_join(t, NULL));
+    assert(fork_round_trip(in, n, ref, refn) == 0);
+    free(in); free(ref);
 }
 int main(void) {
     size_t cap = 1 << 20, n = 0; uint8_t *input = malloc(cap); assert(input);
@@ -79,6 +127,7 @@ int main(void) {
     atomic_store(&start, 1);
     for (int i = 0; i < 2; i++) assert(!pthread_join(threads[i], NULL));
     free(archive); free(ref);
-    puts("PARALLEL TESTS PASSED (144 concurrent table, archive and plain round trips)");
+    fork_tests();
+    puts("PARALLEL TESTS PASSED (144 concurrent table, archive and plain round trips; fork after threaded calls)");
     return 0;
 }

@@ -29,7 +29,8 @@
 #define IX_BF_END 2                      /* block ends at a line end (or at the end of the input) */
 
 static const uint8_t *ix_memrchr(const uint8_t *p, uint8_t c, size_t n) { while (n) { if (p[--n] == c) return p + n; } return NULL; }
-static int ix_threads(int t) { if (t > 0) return t; long n = sysconf(_SC_NPROCESSORS_ONLN); return n > 0 ? (int)(n > 64 ? 64 : n) : 1; }
+/* at most 64: the callers keep their worker handles in pthread_t th[64] */
+static int ix_threads(int t) { if (t > 0) return t > 64 ? 64 : t; long n = sysconf(_SC_NPROCESSORS_ONLN); return n > 0 ? (int)(n > 64 ? 64 : n) : 1; }
 static inline uint8_t ix_lc(uint8_t c) { return (uint8_t)(c >= 'A' && c <= 'Z' ? c + 32 : c); }
 
 /* ------------------------------------------------------------------ fields */
@@ -335,6 +336,11 @@ static int ix_load(const uint8_t *s, size_t n, const kx_frame *f, ix_index *X) {
         if (i >= L) { ix_free(X); return KOLMO_ERR_CORRUPT; }
         X->flags[b] = p[i++];
         if (X->flags[b] > 3 || kx_getuv(p, (size_t)L, &i, &v)) { ix_free(X); return KOLMO_ERR_CORRUPT; }
+        /* line boundaries chain: a block starts a line exactly when the one before ends one; the first block starts
+         * one and the last ends one (the encoder's rule). Without this, forged flags make every block's last line
+         * "continue" into all the blocks after it, and a query decodes the file once per block. */
+        if ((b == 0 && !(X->flags[b] & IX_BF_START)) || (b + 1 == X->nb && !(X->flags[b] & IX_BF_END)) ||
+            (b > 0 && !(X->flags[b] & IX_BF_START) != !(X->flags[b - 1] & IX_BF_END))) { ix_free(X); return KOLMO_ERR_CORRUPT; }
         uint64_t raw = f->roff[b + 1] - f->roff[b];
         if (v > raw + 1) { ix_free(X); return KOLMO_ERR_CORRUPT; }   /* a block holds at most raw line starts (+0) */
         X->lines[b] = v; X->row0[b] = r; r += v;

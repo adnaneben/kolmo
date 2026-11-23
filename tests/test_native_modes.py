@@ -1,4 +1,4 @@
-"""Kolmo's own coders in the CLI: every mode, 1 and 4 threads, on generated inputs (text, CSV, log, integers, floats,
+"""Kolmo's own coders in the CLI: every level, 1 and 4 threads, on generated inputs (text, CSV, log, integers, floats,
 an image, random bytes, zeros). Every frame must be container version 12, name only codecs this build has (no retired
 library id: 1-4, 6, 13, 22) in its block index, decode to its input, give the same bytes with 1 and 4 threads, and
 not depend on the environment: the KOLMO_NATIVE switch of earlier builds is gone, so setting it changes nothing.
@@ -28,12 +28,12 @@ def frame_codecs(f):
     return [f[32 + 16 * i + 12] for i in range(nb)]
 for name, data in files.items():
     src = os.path.join(W, name); open(src, "wb").write(data)
-    for mode in ("speed", "balanced", "eco", "hc", "ratio", "ultra"):
+    for mode in ("-1", "-2", "-3", "-4", "-5", "-6", "-7", "-8", "-9", "-U"):
         outs = []
         for t in ("1", "4"):
             z = os.path.join(W, f"{name}.{mode}.{t}.k"); r = z + ".out"
-            subprocess.run([K, "-m", mode, "-T", t, src, z], check=True, env=env0)
-            subprocess.run([K, "-d", z, r], check=True, env=env0)
+            subprocess.run([K, mode, "-f", "-T", t, src, "-o", z], check=True, env=env0)
+            subprocess.run([K, "-d", "-f", z, "-o", r], check=True, env=env0)
             fz = open(z, "rb").read(); outs.append(fz)
             if fz[:5] != b"CZN1\x0c": print("NOT VERSION 12", name, mode, t, fz[:5]); bad += 1
             if RETIRED & set(frame_codecs(fz)): print("RETIRED CODEC ID", name, mode, t, frame_codecs(fz)); bad += 1
@@ -41,7 +41,7 @@ for name, data in files.items():
         if outs[0] != outs[1]: print("THREADS DIFFER", name, mode); bad += 1
         for nat in ("none", "all,strong", "lz"):                 # the retired switch must not change the output
             z = os.path.join(W, f"{name}.{mode}.env.k")
-            subprocess.run([K, "-m", mode, "-T", "1", src, z], check=True, env={**env0, "KOLMO_NATIVE": nat})
+            subprocess.run([K, mode, "-f", "-T", "1", src, "-o", z], check=True, env={**env0, "KOLMO_NATIVE": nat})
             if open(z, "rb").read() != outs[0]: print("KOLMO_NATIVE CHANGED THE OUTPUT", name, mode, nat); bad += 1
 print("test_native_modes:", "OK" if not bad else f"{bad} failures")
 sys.exit(1 if bad else 0)

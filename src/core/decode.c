@@ -1,4 +1,5 @@
 /* The decoder: header and index parsing, block decoding on the pool. */
+#include "features.h"         /* kx_find: container extensions after the last payload */
 /* ------------------------------------------------------------------ decoding */
 typedef struct { uint64_t orig; uint32_t nb; int ver, psum; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff;
                  uint64_t memd; int mode; } parsed_t;   /* memd: the decode working set per block the header declares (0: none) */
@@ -11,11 +12,43 @@ static int frame_version_check(const uint8_t *s, size_t n) {
     if (s[4] >= 1 && s[4] < KOLMO_MAX_VERSION) return KOLMO_ERR_LEGACY;
     return s[4] == KOLMO_MAX_VERSION ? 0 : KOLMO_ERR_CORRUPT;
 }
+/* The header and index of a frame, checked without allocating anything (kolmo_original_size, kolmo_frame_size and the
+ * public decoders before they allocate): the version, the flags, the index inside the n bytes given, the header and
+ * index checksum, block sizes adding up to the claimed original size (which must fit in int64_t), and stored blocks
+ * of the size their index entry says. The block payloads need not be inside the n bytes (a caller may have read the
+ * header and index only). 0 with *orig and *end (the offset just past the last payload), or a KOLMO_ERR_* code.
+ * A frame's claimed size has no upper bound relative to its own size: one KLZH2 block of 29 bytes codes 16 MiB of
+ * zeros, a 92-byte BWT block 128 MiB; so the claim is checked for consistency here, and against the caller's limits
+ * (kolmo_decode_limits.max_output_bytes) by the callers. */
+static int frame_head(const uint8_t *s, size_t n, uint64_t *orig, uint64_t *end) {
+    { int v = frame_version_check(s, n); if (v) return v; }
+    if (s[10] & ~1) return KOLMO_ERR_CORRUPT;
+    uint64_t o = get64(s + 12); uint32_t nb = get32(s + 20);
+    if (o > (uint64_t)INT64_MAX || (uint64_t)nb * IDX + HDR > n) return KOLMO_ERR_CORRUPT;
+    uint32_t hc = kolmo_crc32c(0, s, 28); hc = kolmo_crc32c(hc, s + HDR, (size_t)nb * IDX);
+    if (hc != get32(s + 28)) return KOLMO_ERR_CHECKSUM;
+    uint64_t po = HDR + (uint64_t)nb * IDX, ro = 0;
+    for (uint32_t i = 0; i < nb; i++) {
+        const uint8_t *e = s + HDR + (size_t)i * IDX; uint32_t raw = get32(e), cl = get32(e + 4);
+        if (raw > o - ro || (e[12] == C_STORE && (uint64_t)raw + 4 != cl)) return KOLMO_ERR_CORRUPT;
+        ro += raw; po += cl;
+    }
+    if (ro != o) return KOLMO_ERR_CORRUPT;
+    *orig = o; *end = po; return 0;
+}
+/* bytes after a frame's last payload: none, or container extensions ending in their trailer (core/extension.c) */
+static int frame_tail_ok(const uint8_t *s, size_t n, uint64_t end) {
+    if (end == n) return 1;
+    if (end > n || n - end < 24 || memcmp(s + n - 24, "KEXT", 4)) return 0;
+    uint64_t len; int err; kx_find(s, n, end, "\0\0\0\0", &len, &err);
+    return !err;
+}
 static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_limits *limits) {
     { int v = frame_version_check(s, n); if (v) return v; }
     P->ver = s[4]; P->psum = s[10] & 1;
     if (s[10] & ~1) return KOLMO_ERR_CORRUPT;                  /* flag bits 1 and 2 (dictionary, profile) are retired */
     P->orig = get64(s + 12); P->nb = get32(s + 20); P->memd = kmem_declared(s[11]); P->mode = s[5];
+    if (P->orig > (uint64_t)INT64_MAX) return KOLMO_ERR_CORRUPT;
     if (limits && ((limits->max_output_bytes && P->orig > limits->max_output_bytes) ||
                    (limits->max_blocks && P->nb > limits->max_blocks))) return KOLMO_ERR_LIMIT;
     P->pl = (plan_t){s[6], s[7], s[8], s[9]};
@@ -278,7 +311,7 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
                           const kolmo_decode_limits *limits);
 /* the single codec-20 block of a frame: the payload's plan bytes are 0, the rest is a Kolmo frame of the kvid layout */
 static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input_fd, uint8_t *dst, int output_fd, int threads,
-                                uint64_t lo, uint64_t hi, int range) {
+                                uint64_t lo, uint64_t hi, int range, const kolmo_decode_limits *limits) {
     const uint8_t *e = P->idx; size_t raw = get32(e), cl = (size_t)(P->poff[1] - P->poff[0]);
     if (P->psum || e[13] || cl < 4 + HDR + IDX || raw != P->orig) return KOLMO_ERR_CORRUPT;
     uint8_t *pb = NULL, *t = NULL, *full = NULL; const uint8_t *pay; int64_t ret = KOLMO_ERR_CORRUPT;
@@ -295,7 +328,11 @@ static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input
     if (tn <= 0 || (uint64_t)tn > 2 * (uint64_t)raw + 4096) goto out;
     t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
     if (!t || !full) { ret = KOLMO_ERR_ALLOC; goto out; }
-    if (run_decode(pay + 4, -1, cl - 4, t, -1, threads, 0, 0, 0, NULL) != tn) goto out;
+    {   /* the caller's limits apply inside (the size limit to the outer frame, already checked: tn is bounded by raw) */
+        kolmo_decode_limits in = limits ? *limits : (kolmo_decode_limits){0}; in.max_output_bytes = 0;
+        int64_t d = run_decode(pay + 4, -1, cl - 4, t, -1, threads, 0, 0, 0, limits ? &in : NULL);
+        if (d != tn) { if (d == KOLMO_ERR_LIMIT || d == KOLMO_ERR_MEMORY || d == KOLMO_ERR_ALLOC) ret = d; goto out; }
+    }
     if (kv_inverse(t, (size_t)tn, full, raw, threads > 0 ? threads : default_threads())) goto out;
     if (blk_sum(full, raw) != get32(e + 8)) { ret = KOLMO_ERR_CHECKSUM; goto out; }
     if (range) { if (hi > raw || lo > hi) goto out; memcpy(dst, full + lo, (size_t)(hi - lo)); ret = (int64_t)(hi - lo); }
@@ -308,7 +345,7 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
                           const kolmo_decode_limits *limits) {
     parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
     if (P.nb == 1 && P.idx[12] == C_VID) {                      /* format 2: a video frame, decoded whole (codec 20) */
-        int64_t vr = vid_decode_frame(&P, src, input_fd, dst, output_fd, threads, lo, hi, range);
+        int64_t vr = vid_decode_frame(&P, src, input_fd, dst, output_fd, threads, lo, hi, range, limits);
         free(P.poff); free(P.roff); return vr;
     }
     djob_t J = {0}; J.src = src; J.P = &P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd;

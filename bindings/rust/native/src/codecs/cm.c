@@ -951,19 +951,27 @@ static inline __attribute__((always_inline)) int cm_enc_loop(cm_t *m, const uint
     out[o++] = (uint8_t)(ac.low >> 24); out[o++] = 0xff; out[o++] = 0xff; out[o++] = 0xff;
     *po = o; return 0;
 }
-static inline __attribute__((always_inline)) void cm_dec_loop(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, const int v2) {
+/* The decoder consumes exactly the bytes the encoder wrote (4 at the start for the 4 it writes at the end, then one per
+ * shift on both sides), so a valid stream never reads past cn. Past it, the decoder reads 0xff; more than CM_TAIL_SLACK
+ * such bytes means the stream is truncated or forged, and decoding stops (-1) instead of modelling padding until the
+ * claimed size, which for a forged size costs the full decode time and memory of that size. */
+#define CM_TAIL_SLACK 8
+static inline __attribute__((always_inline)) int cm_dec_loop(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, const int v2) {
     (void)out;
-    cm_ac ac = {0, 0xffffffffu}; uint32_t code = 0; size_t ip = 4;      /* code: the next 32 bits of the stream */
-    for (int k = 0; k < 4; k++) code = (code << 8) | (ip < cn ? in[ip++] : 0xffu);
-    for (size_t i = 0; i < n; i++)
+    cm_ac ac = {0, 0xffffffffu}; uint32_t code = 0; size_t ip = 4, pad = 0;   /* code: the next 32 bits of the stream */
+    for (int k = 0; k < 4; k++) code = (code << 8) | (ip < cn ? in[ip++] : (pad++, 0xffu));
+    for (size_t i = 0; i < n; i++) {
+        if (pad > CM_TAIL_SLACK) return -1;
         for (int b = 7; b >= 0; b--) {
             int p = cm_predict(m, v2);
             uint32_t mid = cm_ac_mid(&ac, p);
             int y = code <= mid;
             if (y) ac.high = mid; else ac.low = mid + 1;
             cm_update(m, y, v2);
-            for (; cm_ac_settled(&ac); cm_ac_shift(&ac)) code = (code << 8) | (ip < cn ? in[ip++] : 0xffu);
+            for (; cm_ac_settled(&ac); cm_ac_shift(&ac)) code = (code << 8) | (ip < cn ? in[ip++] : (pad++, 0xffu));
         }
+    }
+    return pad > CM_TAIL_SLACK ? -1 : 0;
 }
 /* The coding loops are instantiated once per model and, on x86-64 builds for the baseline ISA, a second time for AVX2
  * (the mixer dot products and weight updates vectorize; integer arithmetic, so both write the same bytes), chosen at
@@ -973,18 +981,18 @@ static inline __attribute__((always_inline)) void cm_dec_loop(cm_t *m, const uin
         switch (v2) { case 0: return cm_enc_loop(m, in, n, out, cap, po, 0); case 1: return cm_enc_loop(m, in, n, out, cap, po, 1); \
                       case 2: return cm_enc_loop(m, in, n, out, cap, po, 2); case 3: return cm_enc_loop(m, in, n, out, cap, po, 3); \
                       default: return cm_enc_loop(m, in, n, out, cap, po, 4); } } \
-    ATTR __attribute__((noinline)) static void cm_dec##SUF(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, int v2) { \
-        switch (v2) { case 0: cm_dec_loop(m, in, cn, out, n, 0); break; case 1: cm_dec_loop(m, in, cn, out, n, 1); break; \
-                      case 2: cm_dec_loop(m, in, cn, out, n, 2); break; case 3: cm_dec_loop(m, in, cn, out, n, 3); break; \
-                      default: cm_dec_loop(m, in, cn, out, n, 4); } }
+    ATTR __attribute__((noinline)) static int cm_dec##SUF(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, int v2) { \
+        switch (v2) { case 0: return cm_dec_loop(m, in, cn, out, n, 0); case 1: return cm_dec_loop(m, in, cn, out, n, 1); \
+                      case 2: return cm_dec_loop(m, in, cn, out, n, 2); case 3: return cm_dec_loop(m, in, cn, out, n, 3); \
+                      default: return cm_dec_loop(m, in, cn, out, n, 4); } }
 CM_LOOPS(_gen, )
 #if defined(KOLMO_X86_DISPATCH) && !defined(__AVX2__) && !defined(KOLMO_CM_NO_DISPATCH)
 CM_LOOPS(_avx2, KOLMO_TARGET_AVX2)
 static int cm_enc_run(cm_t *m, const uint8_t *in, size_t n, uint8_t *out, size_t cap, size_t *po, int v2) {
     return kolmo_have_avx2() ? cm_enc_avx2(m, in, n, out, cap, po, v2) : cm_enc_gen(m, in, n, out, cap, po, v2);
 }
-static void cm_dec_run(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, int v2) {
-    if (kolmo_have_avx2()) cm_dec_avx2(m, in, cn, out, n, v2); else cm_dec_gen(m, in, cn, out, n, v2);
+static int cm_dec_run(cm_t *m, const uint8_t *in, size_t cn, uint8_t *out, size_t n, int v2) {
+    return kolmo_have_avx2() ? cm_dec_avx2(m, in, cn, out, n, v2) : cm_dec_gen(m, in, cn, out, n, v2);
 }
 #else
 #define cm_enc_run cm_enc_gen
@@ -1154,9 +1162,9 @@ static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     if (n32 != n || (v2 != 4 && (bb < 16 || bb > 22))) return -1;
     cm_t *m = cm_new_xm(out, bb, v2, v2 == 4 ? cm4_chain(n) : v2 >= 3 ? (n + 8) * 4 : 0, lx, mask, n); if (!m) return -1;
     cm_set_tune(m, tune);
-    cm_dec_run(m, in, cn, out, n, v2 >= 3 ? v2 : v2 ? 1 : 0);
+    int r = cm_dec_run(m, in, cn, out, n, v2 >= 3 ? v2 : v2 ? 1 : 0);
     cm_free(m);
-    return 0;
+    return r;
 }
 
 /* The decode working set of a codec-7 stream of n bytes (tables and model 3's match chain), from its header; 0 when the

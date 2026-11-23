@@ -2,7 +2,7 @@
  * mapping from the encoder roles (codecs/codec.h) to them. Every encoder path codes with these coders and writes
  * their ids; there is no other choice and no environment switch (container version 12).
  *   speed (R_SPEED) -> KLZ level 1, R_SPEEDHC -> KLZ level 3
- *   balanced and hc (R_LZH) -> KLZH2, levels on zstd's scale: 1-2 -> 1, 3-5 -> 3, 6-9 -> 5, 10-15 -> 6, 16-18 -> 8,
+ *   balanced and hc (R_LZH) -> KLZH2, levels on zstd's scale: 0 and below (zstd's --fast levels) -> 0, the fast parse; 1-2 -> 1, 3-5 -> 3, 6-9 -> 5, 10-15 -> 6, 16-18 -> 8,
  *     19 and up -> 9
  *   eco (R_ECO) -> KLZH2 level 7
  *   ratio's LZ coder (R_LZMA) -> KLZMA (level 1 -> 1, 2-5 -> 4, 6-9 -> 8; >= 100: lc/lp/pb digits, algo/klzma.h)
@@ -32,7 +32,7 @@ static int native_level(int c, int level) {
     switch (c) {
         case R_SPEED: return 1;
         case R_SPEEDHC: return 3;
-        case R_LZH: return level <= 2 ? 1 : level <= 5 ? 3 : level <= 9 ? 5 : level <= 15 ? 6 : level <= 18 ? 8 : 9;   /* hc's 19 -> 9 */
+        case R_LZH: return level <= 0 ? 0 : level <= 2 ? 1 : level <= 5 ? 3 : level <= 9 ? 5 : level <= 15 ? 6 : level <= 18 ? 8 : 9;   /* hc's 19 -> 9 */
         case R_ECO: return 7;
         case R_LZMA: return level >= 100 ? level : level <= 1 ? 1 : level <= 5 ? 4 : 8;   /* the parse level; >= 100: lc/lp/pb */
     }
@@ -40,10 +40,11 @@ static int native_level(int c, int level) {
 }
 
 static size_t klzma_c_bound(size_t n) { return kolmo_klzma_bound(n); }
+/* x->threads: the threads this block may use (the 4-byte match finder splits over them; same output) */
 static size_t klzma_c_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
-    (void)x; if (level >= 100) level = level * 10 + 8;   /* lc/lp/pb digits, then parse level 8 (algo/klzma.h) */
+    if (level >= 100) level = level * 10 + 8;   /* lc/lp/pb digits, then parse level 8 (algo/klzma.h) */
     else if (level > 9) level = 9;
-    return kolmo_klzma_compress(in, n, out, cap, level);
+    return kolmo_klzma_compress_mt(in, n, out, cap, level, x && x->threads > 1 ? x->threads : 1);
 }
 static int klzma_c_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return kolmo_klzma_decompress(in, cn, out, n); }
 static size_t khuf_c_bound(size_t n) { return kolmo_khuf_bound(n); }
@@ -59,6 +60,7 @@ static const kolmo_codec codec_klzma = { C_KLZMA, "klzma", klzma_c_bound, klzma_
 static const kolmo_codec codec_khuf = { C_KHUF, "khuf", khuf_c_bound, khuf_c_compress, khuf_c_decompress, NULL };
 static const kolmo_codec codec_klz = { C_KLZ, "klz", klz_c_bound, klz_c_compress, klz_c_decompress, NULL };
 static const kolmo_codec codec_klzh = { C_KLZH, "klzh", klzh_c_bound, klzh_c_compress, klzh_c_decompress, NULL };
-static size_t klzh2_c_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) { (void)x; return kolmo_klzh2_compress(in, n, out, cap, level); }
+/* x->threads: the threads this block may use (the match finder of levels 7-9 splits over them; same output) */
+static size_t klzh2_c_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return kolmo_klzh2_compress_mt(in, n, out, cap, level, x && x->threads > 1 ? x->threads : 1); }
 static int klzh2_c_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return kolmo_klzh2_decompress(in, cn, out, n); }
 static const kolmo_codec codec_klzh2 = { C_KLZH2, "klzh2", klzh_c_bound, klzh2_c_compress, klzh2_c_decompress, NULL };

@@ -206,7 +206,7 @@ static int g6_fpred(int type, int ke, int64_t va, int da, int okl, int64_t vla, 
 }
 
 /* ---- context-mixing coder over 6-bit units (integer only) */
-typedef struct { uint32_t x1, x2, x; g6_buf *out; const uint8_t *in; size_t pos, n; } g6_ac;
+typedef struct { uint32_t x1, x2, x; g6_buf *out; const uint8_t *in; size_t pos, n, pad; } g6_ac;   /* pad: decoder reads past n */
 typedef struct {
     uint32_t *T[G6_NM]; int32_t (*W)[G6_NM + 1], (*W2)[G6_NM + 1]; uint16_t (*apm)[33];
     uint32_t rcp[1024]; uint32_t base[G6_NM]; uint32_t *slot[G6_NM]; int st[G6_NM + 1]; int tb;
@@ -252,7 +252,7 @@ static int g6_bit(g6_io *io, g6_ctx *x, int node, int bit) {
     } else {
         bit = c->x <= xm;
         if (bit) c->x2 = xm; else c->x1 = xm + 1;
-        while (((c->x1 ^ c->x2) & 0xff000000u) == 0) { c->x1 <<= 8; c->x2 = (c->x2 << 8) | 255; c->x = (c->x << 8) | (c->pos < c->n ? c->in[c->pos++] : 0); }
+        while (((c->x1 ^ c->x2) & 0xff000000u) == 0) { c->x1 <<= 8; c->x2 = (c->x2 << 8) | 255; c->x = (c->x << 8) | (c->pos < c->n ? c->in[c->pos++] : (c->pad++, 0)); }
     }
     for (int i = 0; i < G6_NM; i++) {
         uint32_t v = *m->slot[i], cnt = v & 1023, pr = v >> 10;
@@ -736,6 +736,9 @@ static int gr6_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
         g6_cm_init(H, &io->m, n);
         size_t o = 0;
         for (uint64_t l = 0; l < lines; l++) {
+            /* the encoder's 4 tail bytes are all the decoder reads: past them the stream is truncated or forged, and
+             * decoding stops instead of running to the claimed size on padding */
+            if (io->ac.pad > 8) g6_fail(H, 2);
             g6_ctx x; g6_set(M, &x, G6K_NF, 0); uint64_t v = g6_val(io, &x, 0);
             uint64_t nf = v == 0 ? M->pnf : v - 1;
             if (nf == 0 || nf - 1 > n - o || nf > INT32_MAX) g6_fail(H, 2);

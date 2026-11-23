@@ -75,7 +75,7 @@ ARCHOBJ := $(addprefix build/obj/,$(addsuffix .o,$(basename $(ARCHSRC))))
 ARCHPIC := $(addprefix build/pic/,$(addsuffix .o,$(basename $(ARCHSRC))))
 $(ARCHOBJ): VSECT := -ffunction-sections -fdata-sections   # Kolmo's coders: unused functions are dropped at link time
 
-all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource
+all: build/kolmo build/kolmobench build/kolmotest build/kolmoparallel build/kolmoresource build/test-levels
 
 build/obj/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -102,6 +102,10 @@ build/kolmobench: bench/kolmobench.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(BLIBS)
 build/kolmotest: tests/kolmotest.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+build/test-levels: tests/test_levels.c build/libkolmo.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+build/test-levels-asan: tests/test_levels.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_levels.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
@@ -109,28 +113,60 @@ build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src
 build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 
-check: all
+check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus
+	./build/test-levels
+	python3 tests/test_cli.py build/kolmo
 	python3 tests/test_fast_file.py
+	./build/test-v12-corpus tests/v12
+	./build/test-harden
 	./build/kolmoresource
 	./build/kolmoparallel
 	./build/kolmotest
+	./build/test-decoder-hardening
+
+# decoder memory-safety and DoS regressions (review r1 of 0.0.1). The ASan build compiles the separately built coders
+# (qlfc, khuf, klzma, ...) with the sanitizers instead of taking them from libkolmoarch.a.
+build/test-decoder-hardening: tests/test_decoder_hardening.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_decoder_hardening.c build/libkolmoarch.a -o $@ $(LIBS)
+build/test-decoder-hardening-asan: tests/test_decoder_hardening.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(BWTSRC) $(BWTHDR) build/libkolmoarch.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_decoder_hardening.c $(BWTSRC) build/libkolmoarch.a -o $@ $(LIBS)
+check-decoder-hardening: build/test-decoder-hardening-asan
+	./build/test-decoder-hardening-asan
+
+build/test-harden: tests/test_harden.c build/libkolmo.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+build/test-v12-corpus: tests/test_v12_corpus.c build/libkolmo.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 
 SANFLAGS ?= -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
 override SANFLAGS += $(FPFLAGS)
-build/kolmoparallel-asan: tests/kolmoparallel.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoparallel.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
-build/kolmoresource-asan: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libkolmoarch.a -o $@ $(LIBS)
-build/test-lines-asan: tests/test_lines.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_lines.c build/libkolmoarch.a -o $@ $(LIBS)
+# The coders compiled on their own (ARCHSRC: KLZ, KLZH2, KLZMA, khuf, krans, the block-sorting pipeline, the kernels)
+# are instrumented too in every sanitizer build: they are archived from objects built with SANFLAGS, not CFLAGS.
+ARCHASAN := $(addprefix build/asan/,$(addsuffix .o,$(basename $(ARCHSRC))))
+build/asan/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(SANFLAGS) $(DEFS) $(INC) -c $< -o $@
+build/asan/%.o: %.S
+	@mkdir -p $(dir $@)
+	$(CC) $(SANFLAGS) $(DEFS) $(INC) -c $< -o $@
+$(ARCHASAN): $(KHDR)
+$(patsubst %.c,build/asan/%.o,$(BWTSRC)): $(BWTHDR)
+build/libkolmoarch-asan.a: $(ARCHASAN)
+	ar rcs $@ $^
+build/kolmoparallel-asan: tests/kolmoparallel.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoparallel.c src/kolmo.c build/libkolmoarch-asan.a -o $@ $(LIBS)
+build/kolmoresource-asan: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libkolmoarch-asan.a -o $@ $(LIBS)
+build/test-lines-asan: tests/test_lines.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_lines.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-lines: build/test-lines-asan
 	./build/test-lines-asan
-build/test-dec64-asan: tests/test_dec64.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dec64.c build/libkolmoarch.a -o $@ $(LIBS)
+build/test-dec64-asan: tests/test_dec64.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dec64.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-dec64: build/test-dec64-asan
 	./build/test-dec64-asan
-build/test-fastint-asan: tests/test_fastint.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fastint.c build/libkolmoarch.a -o $@ $(LIBS)
+build/test-fastint-asan: tests/test_fastint.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fastint.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 # The same test in the optimised build (the loops a release runs), and in the control build that sends every program
 # to the generic inverse (-DKOLMO_FORCE_GENERIC_INT_INV).
 build/test-fastint: tests/test_fastint.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
@@ -141,35 +177,35 @@ check-fastint: build/test-fastint-asan build/test-fastint build/test-fastint-gen
 	./build/test-fastint-asan
 	./build/test-fastint
 	./build/test-fastint-generic
-build/test-planner-ownership-asan: tests/test_planner_ownership.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_planner_ownership.c build/libkolmoarch.a -o $@ $(LIBS)
+build/test-planner-ownership-asan: tests/test_planner_ownership.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_planner_ownership.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-planner-ownership: build/test-planner-ownership-asan
 	./build/test-planner-ownership-asan
-build/test-cmimg-asan: tests/test_cmimg.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmimg.c build/libkolmoarch.a -o $@ $(LIBS)
+build/test-cmimg-asan: tests/test_cmimg.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmimg.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-cmimg: build/test-cmimg-asan
 	./build/test-cmimg-asan
-build/test-cmpar-asan: tests/test_cmpar.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmpar.c build/libkolmoarch.a -o $@ $(LIBS)
+build/test-cmpar-asan: tests/test_cmpar.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cmpar.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-cmpar: build/test-cmpar-asan
 	./build/test-cmpar-asan
-build/test-cm4-asan: tests/test_cm4.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cm4.c build/libkolmoarch.a -o $@ $(LIBS)
+build/test-cm4-asan: tests/test_cm4.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cm4.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-cm4: build/test-cm4-asan
 	./build/test-cm4-asan
 # Opt-in --typed-huf route (ported from the RC1 integration, PR #10): round trips, header parsing, and agreement of
 # the typed route's predictor choice with the graph planner's.
 build/test-rc-options: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
-build/test-rc-options-asan: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
+build/test-rc-options-asan: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-rc-options: build/test-rc-options build/test-rc-options-asan
 	./build/test-rc-options
 	./build/test-rc-options-asan
 .PHONY: check-rc-options
 # FASTQ family blocks (codec 16): container round trips at ultra, the modes that must not write it, damaged payloads
-build/test-fqfam-asan: tests/test_fqfam.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fqfam.c build/libkolmoarch.a -o $@ $(LIBS)
+build/test-fqfam-asan: tests/test_fqfam.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_fqfam.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-fqfam: build/test-fqfam-asan
 	./build/test-fqfam-asan
 # Component tests of the features merged for the release candidate. `make check` does not run them; CI does.
@@ -192,8 +228,8 @@ check-kernels: build/test-kernels build/test-kernels-asan
 	./build/test-kernels
 	./build/test-kernels-asan
 # Scanner helpers of the table and log transforms (population counts, SWAR decimal parser) against references.
-build/test-scan-asan: tests/test_scan.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_scan.c build/libkolmoarch.a -o $@ $(LIBS)
+build/test-scan-asan: tests/test_scan.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_scan.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-scan: build/test-scan-asan
 	./build/test-scan-asan
 .PHONY: check-kernels check-scan
@@ -230,8 +266,8 @@ check-asm: build/test-asm build/test-asm-asan
 # with sanitizers.
 build/test-arch: tests/test_arch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
-build/test-arch-asan: tests/test_arch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
+build/test-arch-asan: tests/test_arch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-arch: build/test-arch build/test-arch-asan
 	./build/test-arch
 	./build/test-arch-asan
@@ -255,8 +291,8 @@ check-meta: build/test-meta build/test-meta-asan
 # KOLMO_ERR_UNSUPPORTED (not available without library codecs).
 build/test-profile: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
-build/test-profile-asan: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
+build/test-profile-asan: tests/test_profile.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-profile: build/test-profile build/test-profile-asan
 	./build/test-profile
 	KOLMO_SKIP_CALIBRATE=1 ./build/test-profile-asan
@@ -274,17 +310,24 @@ check-features-b: build/test-features-b build/test-features-b-asan build/kolmo
 # The memory model (docs/MEMORY-MODEL.md): frame declaration, governor, budgets mid-run, forced budgets, forged frames
 build/test-memdyn: tests/test_memdyn.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
-build/test-memdyn-asan: tests/test_memdyn.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
+build/test-memdyn-asan: tests/test_memdyn.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-memdyn: build/test-memdyn build/test-memdyn-asan
 	./build/test-memdyn
 	./build/test-memdyn-asan --quick
 .PHONY: check-memdyn
-check-rc: check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
+check-rc: check-decoder-hardening check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
 .PHONY: check-meta check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-fqfam check-dispatch check-asm check-arch check-format2
-check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
+check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan build/test-levels-asan build/test-harden-asan build/test-v12-corpus-asan
+	./build/test-levels-asan
+	./build/test-v12-corpus-asan tests/v12
+	./build/test-harden-asan
 	./build/kolmoresource-asan
 	./build/kolmoparallel-asan
+build/test-harden-asan: tests/test_harden.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_harden.c src/kolmo.c build/libkolmoarch-asan.a -o $@ $(LIBS)
+build/test-v12-corpus-asan: tests/test_v12_corpus.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_v12_corpus.c src/kolmo.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 
 # Shared library for language bindings (Python, Rust): everything rebuilt -fPIC into build/pic.
 SOEXT := $(if $(filter Darwin,$(UNAME_S)),dylib,so)

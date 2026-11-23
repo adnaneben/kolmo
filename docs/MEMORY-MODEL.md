@@ -1,5 +1,11 @@
 # Memory model
 
+> **Since 0.0.1 (container version 12)** Kolmo has no library coders. This document was written before that, and its
+> coder names map as follows in 0.0.x (`src/codecs/native.c`): LZ4 → KLZ level 1 and LZ4-HC → KLZ level 3 (28); zstd
+> level 1-2 / 3-5 / 6-9 / 10-15 / 16-18 / 19+ → KLZH2 (32) level 1 / 3 / 5 / 6 / 8 / 9; Brotli → KLZH2 level 7; LZMA2 →
+> KLZMA (24); zstd's Huffman (HUF) → khuf (27); XXH3/XXH64 → `kolmo_khash64`. Dictionaries
+> and trained profiles are removed. Figures below were measured with the library coders.
+
 Status: **approved with the owner's changes of 17 November 2026: the model is dynamic** (section "Dynamic memory",
 below, takes precedence over the static rules where they differ). Implemented for rc3 by the `memdyn` lane (branch
 `claude/rc3w2-memdyn-20261117`); what was built and measured is in the last section, "As implemented", and in

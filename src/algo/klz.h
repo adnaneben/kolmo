@@ -44,10 +44,15 @@ int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
    - Matches are at least 3 bytes: the match-length code codes v = match length - 3 (KLZH: - 4); the sequence count is
      at most n / 3 + 1.
    - Offsets go up to 2^30 - 1: offset codes 3 + h for h up to 29 (codes 0..32; KLZH: up to 2^24 - 1, codes 0..26).
-   Encoder: levels 8-9 add 3-byte matches at offsets below 2^14, and levels 7-9 long-distance candidates past the
+   Encoder: level 0 (fast; levels below 0 are level 0) is the fast parse: one 6-byte hash table, greedy, the sequences
+   written straight into the streams, rANS tried on the literal-length codes only (any KLZH2 decoder reads it: the
+   format is the same at every level). Levels 8-9 add 3-byte matches at offsets below 2^14, and levels 7-9 long-distance candidates past the
    binary tree's window (32-byte keys) when the block is longer than that window. Every level cuts the khuf chunks of
    each stream where the input crosses a multiple of 256 KiB, so each table covers 256 KiB of input (KLZH's decoder
    already reads chunks of any size up to KHUF_BLOCK_MAX). */
 size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
+/* The same output as kolmo_klzh2_compress, on up to `threads` threads at levels 7-9 (the binary-tree match finder
+   split by hash bucket, klz.c ko_mt); the result never depends on threads. */
+size_t kolmo_klzh2_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads);
 int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 #endif

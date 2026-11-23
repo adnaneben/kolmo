@@ -165,10 +165,11 @@ static int dd_open(const uint8_t *s, size_t n, dd_arc *A) {
     uint64_t L; int err; const uint8_t *b = kx_find(s, n, A->f.end, "DDP1", &L, &err);
     if (!b) { dd_close(A); return err ? err : KOLMO_ERR_CORRUPT; }
     if (L < 16 || b[0] != 'D' || b[1] != 'D' || b[2] != 1 || b[3] > 1) { dd_close(A); return KOLMO_ERR_CORRUPT; }
+    size_t tz = (size_t)L - 16;                                      /* the section: 16 bytes, then the table's frame */
     L = kx_get64(b + 8);                                             /* the table, decoded from its own frame */
-    if (L > (uint64_t)(n - 16) * 64 + (1u << 20) || kolmo_original_size(b + 16, (size_t)(n - (size_t)(b + 16 - s))) != (int64_t)L) { dd_close(A); return KOLMO_ERR_CORRUPT; }
+    if (L > (uint64_t)(n - 16) * 64 + (1u << 20) || kolmo_original_size(b + 16, tz) != (int64_t)L) { dd_close(A); return KOLMO_ERR_CORRUPT; }
     A->tab = malloc((size_t)L + 1); if (!A->tab) { dd_close(A); return KOLMO_ERR_ALLOC; }
-    {   int64_t g = kolmo_decompress(b + 16, (size_t)(n - (size_t)(b + 16 - s)), A->tab, (size_t)L, 0);
+    {   int64_t g = kolmo_decompress(b + 16, tz, A->tab, (size_t)L, 0);
         if (g != (int64_t)L) { dd_close(A); return g < 0 ? (int)g : KOLMO_ERR_CORRUPT; } }
     const uint8_t *t = A->tab; size_t i = 0; uint64_t v;
     if (kx_getuv(t, (size_t)L, &i, &A->nc) || A->nc > L / 5) { dd_close(A); return KOLMO_ERR_CORRUPT; }

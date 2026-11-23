@@ -5,6 +5,7 @@
 #include "klz.h"
 #include "krans.h"
 #include "khuf.h"
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -154,6 +155,7 @@ static size_t kz_parse_dfast(const uint8_t *in, size_t n, int hl, int hs, int sk
     }
     free(tl); free(ts); *anchor_out = anchor; *err = 0; return ns;
 }
+static inline uint32_t kz_h6(const uint8_t *p, int lg) { return (uint32_t)(((kz_r64(p) << 16) * 0xCF1BBCDCB7A56463ull) >> (64 - lg)); }
 static inline void kz_mtf(uint32_t r[3], uint32_t off) {   /* the KLZH repeat offsets' move to front */
     if (off == r[0]) return;
     if (off != r[1]) r[2] = r[1];
@@ -322,6 +324,8 @@ typedef struct { uint32_t len, off; } ko_m;
 typedef struct {
     const uint8_t *in; uint32_t n, *head, *son, bmask, ins, nice; int hlog, depth;
     uint32_t *h3, *ldm, wmax; int ldmlog;   /* KLZH2: 3-byte heads, long-distance table (offsets up to wmax), or NULL */
+    uint32_t smod;   /* 0: position p's tree node is slot p & bmask; else slot p % smod (the threaded finder, ko_mt) */
+    struct ko_mt *mt;   /* the threaded finder, or NULL */
 } ko_mf;
 /* skip: a position whose next node is already within skip of its price is not searched; KLZH2 only: wlog, the largest
  * offset 2^wlog - 1 (long-distance candidates past the tree's window), m3: 3-byte matches */
@@ -333,16 +337,25 @@ typedef struct {
     uint32_t mmin; int nof;   /* shortest match (4 KLZH, 3 KLZH2) and offset codes (32, 33) */
 } ko_st;
 #define KO_H4(p, lg) ((kz_r32(p) * 2654435761u) >> (32 - (lg)))
+/* a last match of the nice length (or of the block's end) continued to its full length */
+static inline uint32_t ko_ext(const ko_mf *M, uint32_t p, ko_m *out, uint32_t nm) {
+    const uint32_t lim = M->n - p < M->nice ? M->n - p : M->nice;
+    if (nm && out[nm - 1].len == lim && lim < M->n - p) { ko_m *t = &out[nm - 1]; const uint8_t *s = M->in + p; t->len = lim + (uint32_t)kz_count(s + lim, s + lim - t->off, M->in + M->n); }
+    return nm;
+}
 /* binary tree per 4-byte hash bucket over a cyclic window of bmask + 1 positions (as km_bt); inserts p, and when
  * collect is set reports in out every match longer than the last (from 4 bytes) */
-static uint32_t ko_bt(ko_mf *M, uint32_t p, ko_m *out, int collect) {
+static inline __attribute__((always_inline)) uint32_t ko_bt_at(ko_mf *M, uint32_t p, ko_m *out, int collect, int mod, int ext) {
     const uint8_t *s = M->in + p; uint32_t lim = M->n - p; if (lim > M->nice) lim = M->nice;
     uint32_t h = KO_H4(s, M->hlog), cur = M->head[h], low = p > M->bmask ? p - M->bmask : 0, best = 3, nm = 0;
     M->head[h] = p;
-    uint32_t *lt = &M->son[2 * (size_t)(p & M->bmask)], *gt = lt + 1, l0 = 0, l1 = 0;
+    /* slot of a node: p & bmask, or (threaded finder) p % smod, smod > bmask, reached from p's slot by the distance */
+    const uint32_t S = M->smod, sp = mod ? p % S : p & M->bmask;
+    uint32_t *lt = &M->son[2 * (size_t)sp], *gt = lt + 1, l0 = 0, l1 = 0;
     for (int d = M->depth;; d--) {
         if (cur == KZ_NONE || cur < low || d == 0) { *lt = *gt = KZ_NONE; break; }
-        const uint8_t *q = M->in + cur; uint32_t l = l0 < l1 ? l0 : l1, *cs = &M->son[2 * (size_t)(cur & M->bmask)];
+        const uint32_t dc = p - cur, sc = mod ? (sp >= dc ? sp - dc : sp + S - dc) : cur & M->bmask;
+        const uint8_t *q = M->in + cur; uint32_t l = l0 < l1 ? l0 : l1, *cs = &M->son[2 * (size_t)sc];
         if (q[l] == s[l]) {
             l += 1 + (uint32_t)kz_count(s + l + 1, q + l + 1, s + lim);
             if (collect && l > best) { best = l; out[nm].len = l; out[nm].off = p - cur; nm++; }
@@ -351,9 +364,11 @@ static uint32_t ko_bt(ko_mf *M, uint32_t p, ko_m *out, int collect) {
         if (q[l] < s[l]) { *lt = cur; lt = cs + 1; cur = *lt; l0 = l; }
         else { *gt = cur; gt = cs; cur = *gt; l1 = l; }
     }
-    if (nm && out[nm - 1].len == lim && lim < M->n - p) { ko_m *t = &out[nm - 1]; t->len = lim + (uint32_t)kz_count(s + lim, s + lim - t->off, M->in + M->n); }
+    if (ext) nm = ko_ext(M, p, out, nm);
     return nm;
 }
+/* the one-thread finder; ko_mt's workers insert with mod set (smod slots, when smod is set) and leave ko_ext to the parse */
+static uint32_t ko_bt(ko_mf *M, uint32_t p, ko_m *out, int collect) { return ko_bt_at(M, p, out, collect, 0, 1); }
 #define KO_H3(p) (((kz_r32(p) & 0xFFFFFFu) * 2654435761u) >> 18)
 #define KO_LDMIN 32   /* long-distance candidates: 32-byte keys, one position in 8 by content */
 static inline uint32_t ko_ldh(const uint8_t *p, int lg) {
@@ -383,7 +398,107 @@ static uint32_t ko_aux(ko_mf *M, uint32_t p, ko_m *out, uint32_t nm, int collect
     }
     return nm;
 }
+/* ---- the threaded binary-tree finder (same matches, so the same output, at any thread count) ----
+ * Each binary tree holds the positions of one 4-byte hash bucket, and inserting position p reads and writes only the
+ * head of p's bucket and the nodes of positions in that bucket. So the buckets are split among K workers (bucket h to
+ * worker h % K), each inserting its own positions in increasing order exactly as the one-thread finder does, and every
+ * tree evolves as it would on one thread. A position's matches depend only on its tree, never on whether the parse
+ * asked for them (ko_bt's collect changes nothing in the tree), so the workers search every position ahead of the
+ * parse, KO_MTC positions per chunk, at most KO_MTR chunks ahead of it and of the slowest worker; the parse takes the matches of the positions it
+ * searches and keeps the 3-byte and long-distance candidates (ko_aux) on its own thread, in its own order. The workers
+ * drift apart by at most KO_MTR + 1 chunks (the parse may jump chunks on a long match: the slowest worker's
+ * chunk bounds them too); when the block is longer than the tree's window the node slots repeat every
+ * smod = window + (KO_MTR + 2) chunks instead of every window, so a worker ahead never overwrites a node another still
+ * reads. */
+#define KO_MTC (64u << 10)
+#define KO_MTR 4
+#define KO_MTMAXK 16
+typedef struct { ko_m *m; size_t len, cap; } ko_ar;
+struct ko_mt;
+typedef struct { struct ko_mt *Q; int t; } ko_mtarg;
+typedef struct ko_mt {
+    ko_mf *M; uint32_t np, nch; int K, nth, go, err, stop;   /* nth: workers started; go: all started (none touches a tree before) */
+    uint32_t released, done[KO_MTR], ready;   /* chunks below released are free; ready: chunks complete, in order */
+    ko_ar ar[KO_MTMAXK][KO_MTR];   /* per worker and slot: for each of its positions {offset in chunk, count}, the matches */
+    uint32_t cj, cur[KO_MTMAXK];   /* the parse: its chunk (known complete when cj < ready) and read position per worker */
+    pthread_mutex_t mu; pthread_cond_t cv;
+    pthread_t th[KO_MTMAXK]; ko_mtarg arg[KO_MTMAXK];
+} ko_mt;
+static void *ko_mt_worker(void *a) {
+    ko_mt *Q = ((ko_mtarg *)a)->Q; const int t = ((ko_mtarg *)a)->t;
+    ko_mf *M = Q->M; const uint32_t K = (uint32_t)Q->K, dmax = (uint32_t)M->depth + 2;
+    for (uint32_t j = 0; j < Q->nch; j++) {
+        pthread_mutex_lock(&Q->mu);
+        /* chunk j reuses chunk j - KO_MTR's slot: that chunk must be complete (ready) and consumed (released) */
+        while (!Q->stop && (!Q->go || j >= (Q->released < Q->ready ? Q->released : Q->ready) + KO_MTR)) pthread_cond_wait(&Q->cv, &Q->mu);
+        const int stop = Q->stop; pthread_mutex_unlock(&Q->mu);
+        if (stop) break;
+        const int sl = (int)(j % KO_MTR); ko_ar *A = &Q->ar[t][sl]; A->len = 0;
+        const uint32_t c0 = j * KO_MTC, c1 = c0 + KO_MTC < Q->np ? c0 + KO_MTC : Q->np;
+        int bad = 0;
+        for (uint32_t p = c0; p < c1; p++) {
+            if (KO_H4(M->in + p, M->hlog) % K != (uint32_t)t) continue;
+            if (A->len + dmax + 1 > A->cap) {
+                size_t nc = A->cap ? 2 * A->cap : (size_t)KO_MTC; while (nc < A->len + dmax + 1) nc *= 2;
+                ko_m *g = realloc(A->m, nc * sizeof *g); if (!g) { bad = 1; break; }
+                A->m = g; A->cap = nc;
+            }
+            ko_m *e = A->m + A->len;   /* each worker writes only its own arena (no shared cache lines) */
+            const uint32_t nm = M->smod ? ko_bt_at(M, p, e + 1, 1, 1, 0) : ko_bt_at(M, p, e + 1, 1, 0, 0);
+            e->len = p - c0; e->off = nm; A->len += 1 + nm;
+        }
+        pthread_mutex_lock(&Q->mu);
+        if (bad) { Q->err = 1; Q->stop = 1; pthread_cond_broadcast(&Q->cv); pthread_mutex_unlock(&Q->mu); break; }
+        if (++Q->done[sl] == K) { Q->done[sl] = 0; Q->ready = j + 1; pthread_cond_broadcast(&Q->cv); }
+        pthread_mutex_unlock(&Q->mu);
+    }
+    return NULL;
+}
+static void ko_mt_end(ko_mt *Q) {
+    if (!Q) return;
+    pthread_mutex_lock(&Q->mu); Q->stop = 1; pthread_cond_broadcast(&Q->cv); pthread_mutex_unlock(&Q->mu);
+    for (int t = 0; t < Q->nth; t++) pthread_join(Q->th[t], NULL);
+    for (int r = 0; r < KO_MTR; r++) for (int t = 0; t < KO_MTMAXK; t++) free(Q->ar[t][r].m);
+    pthread_mutex_destroy(&Q->mu); pthread_cond_destroy(&Q->cv); free(Q);
+}
+/* K workers for M (whose son array must have room for M->smod slots when M->smod is set); NULL when they cannot start */
+static ko_mt *ko_mt_start(ko_mf *M, int K) {
+    ko_mt *Q = calloc(1, sizeof *Q); if (!Q) return NULL;
+    Q->M = M; Q->K = K; Q->np = M->n - 7; Q->nch = (Q->np + KO_MTC - 1) / KO_MTC; Q->cj = UINT32_MAX;
+    if (pthread_mutex_init(&Q->mu, NULL)) { free(Q); return NULL; }
+    if (pthread_cond_init(&Q->cv, NULL)) { pthread_mutex_destroy(&Q->mu); free(Q); return NULL; }
+    for (int t = 0; t < K; t++) {
+        Q->arg[t].Q = Q; Q->arg[t].t = t;
+        if (pthread_create(&Q->th[t], NULL, ko_mt_worker, &Q->arg[t])) {
+            ko_mt_end(Q); return NULL;   /* the workers started stop before touching a tree; the parse runs on one thread */
+        }
+        Q->nth = t + 1;
+    }
+    pthread_mutex_lock(&Q->mu); Q->go = 1; pthread_cond_broadcast(&Q->cv); pthread_mutex_unlock(&Q->mu);
+    return Q;
+}
 static uint32_t ko_find(ko_mf *M, uint32_t p, ko_m *out) {   /* p + 8 <= n, positions searched in increasing order */
+    if (M->mt) {
+        ko_mt *Q = M->mt;
+        if (M->h3 || M->ldm) for (uint32_t q = M->ins; q < p; q++) ko_aux(M, q, out, 0, 0);
+        M->ins = p + 1;
+        const uint32_t j = p / KO_MTC; const int sl = (int)(j % KO_MTR);
+        if (j != Q->cj) {   /* a new chunk: release the earlier ones, wait until this one is complete */
+            pthread_mutex_lock(&Q->mu);
+            if (Q->released < j) { Q->released = j; pthread_cond_broadcast(&Q->cv); }
+            while (Q->ready <= j && !Q->err) pthread_cond_wait(&Q->cv, &Q->mu);
+            const int err = Q->err; pthread_mutex_unlock(&Q->mu);
+            if (err) return 0;   /* ko_parse_pass reports the failure */
+            Q->cj = j; memset(Q->cur, 0, sizeof Q->cur);
+        }
+        const uint32_t t = KO_H4(M->in + p, M->hlog) % (uint32_t)Q->K, k = p - j * KO_MTC;
+        const ko_m *a = Q->ar[t][sl].m; uint32_t c = Q->cur[t];
+        while (a[c].len < k) c += 1 + a[c].off;   /* the worker's positions before p (not searched by the parse) */
+        uint32_t nm = a[c].off;
+        memcpy(out, a + c + 1, nm * sizeof *out); Q->cur[t] = c + 1 + nm;
+        nm = ko_ext(M, p, out, nm);   /* here, not in the workers: on long runs every position would scan to the run's end */
+        return M->h3 || M->ldm ? ko_aux(M, p, out, nm, 1) : nm;
+    }
     for (uint32_t q = M->ins; q < p; q++) { ko_bt(M, q, NULL, 0); if (M->h3 || M->ldm) ko_aux(M, q, out, 0, 0); }
     M->ins = p + 1;
     uint32_t nm = ko_bt(M, p, out, 1);
@@ -526,10 +641,18 @@ static void ko_emit(ko_st *T, const uint8_t *in, kz_seq *S, size_t *ns, size_t a
     T->of[ko_ofc(off, r)]++; T->sof++;
     ko_rep(r, off); T->pending++;
 }
-static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st *T, kz_seq *S, size_t *anchor_out, int *err) {
+#ifndef KO_MT_MIN
+#define KO_MT_MIN (1u << 20)   /* the threaded finder from blocks of this size (it starts K threads per block) */
+#endif
+static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st *T, kz_seq *S, size_t *anchor_out, int *err, int threads) {
     const uint32_t nice = (uint32_t)P->nice; int bw = 4; while (bw < P->bwlog && ((size_t)1 << bw) < n) bw++;
-    ko_mf M = {in, (uint32_t)n, NULL, NULL, (1u << bw) - 1, 0, nice, P->hlog, P->depth, NULL, NULL, 0, 0};
-    M.head = malloc(sizeof(uint32_t) << P->hlog); M.son = malloc(sizeof(uint32_t) * 2 << bw);
+    ko_mf M = {in, (uint32_t)n, NULL, NULL, (1u << bw) - 1, 0, nice, P->hlog, P->depth, NULL, NULL, 0, 0, 0, NULL};
+    /* K workers beside the parse; not with two threads (one worker beside the parse measured no faster on the M5) */
+    int K = threads >= 3 ? threads - 1 : 0; if (K > KO_MTMAXK) K = KO_MTMAXK;
+    if (n < KO_MT_MIN) K = 0;
+    size_t nslots = (size_t)1 << bw;
+    if (K > 0 && n > nslots) { M.smod = (uint32_t)(nslots + (KO_MTR + 2) * (size_t)KO_MTC); nslots = M.smod; }   /* see ko_mt */
+    M.head = malloc(sizeof(uint32_t) << P->hlog); M.son = malloc(sizeof(uint32_t) * 2 * nslots);
     const int v2 = T->mmin == 3;
     if (v2 && P->m3) { M.h3 = malloc(sizeof(uint32_t) << 14); if (M.h3) memset(M.h3, 0xFF, sizeof(uint32_t) << 14); }
     if (v2 && P->wlog > bw && n > M.bmask + 1) {   /* a block longer than the tree's window */
@@ -541,6 +664,8 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
         free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm); *err = 1; return 0;
     }
     memset(M.head, 0xFF, sizeof(uint32_t) << P->hlog);
+    if (K > 0) M.mt = ko_mt_start(&M, K);
+    if (!M.mt && M.smod) M.smod = 0;   /* one thread after all: the usual slots (the array is larger than they need) */
     const uint8_t *ie = in + n; size_t pos = 0, anchor = 0, ns = 0, next_scale = KO_SPAN; uint32_t rep[3] = {1, 4, 8};
 #define KO_RELAX(J, PR, ML, OFF, LL) do { uint32_t j_ = (J), p_ = (PR); \
         if (j_ > last) { for (uint32_t k_ = last + 1; k_ <= j_; k_++) o[k_].price = KO_INF; last = j_; } \
@@ -593,13 +718,16 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
         if (fl) { ko_emit(T, in, S, &ns, anchor, pos, fl, foff, rep); pos += fl; anchor = pos; }
     }
 #undef KO_RELAX
+    int mterr = 0;
+    if (M.mt) { mterr = M.mt->err; ko_mt_end(M.mt); }
+    if (mterr) { free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm); *err = 1; return 0; }
     free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm);
     *anchor_out = anchor; *err = 0; return ns;
 }
-static size_t ko_parse(const uint8_t *in, size_t n, const ko_par *P, int v2, kz_seq *S, size_t *anchor_out, int *err) {
+static size_t ko_parse(const uint8_t *in, size_t n, const ko_par *P, int v2, kz_seq *S, size_t *anchor_out, int *err, int threads) {
     ko_st *T = malloc(sizeof *T); if (!T) { *err = 1; return 0; }
     ko_init(T, in, n, v2);
-    size_t ns = ko_parse_pass(in, n, P, T, S, anchor_out, err);
+    size_t ns = ko_parse_pass(in, n, P, T, S, anchor_out, err, threads);
     free(T); return ns;
 }
 /* KLZH levels 7-9 (their KLZH_LV entries are unused; 5-6 take KLZH_LV with kz_parse_lazy); wlog and m3 apply to KLZH2 */
@@ -611,25 +739,100 @@ size_t kolmo_klzh_bound(size_t n) { return n + n / 64 + 1024; }
 #ifndef KZ_RANS_PCT
 #define KZ_RANS_PCT 97   /* KLZH2: rANS only when it is below this % of the khuf size (it decodes about 2x slower per symbol) */
 #endif
-static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int v2) {
+/* ---------------- KLZH2 level 0: the fast parse ----------------
+ * Encoder only (the format of every KLZH2 level). One hash table of 2^KZ_FAST_LG entries (fewer for short blocks) on
+ * 6-byte keys, one candidate per position, greedy, no lazy step; at each step the last offset is tried one byte ahead,
+ * then the candidates of the position and of the next one; on a miss the step (2) grows by one every 2^KZ_FAST_SKIP
+ * literals of the current run; the start and the end of each match inserted. The
+ * sequences go straight into the streams (no sequence array, no second pass), with the same chunk cuts as
+ * kz_klzh_enc's loop; rANS is tried on the literal-length codes only. */
+#ifndef KZ_FAST_LG
+#define KZ_FAST_LG 15
+#endif
+#ifndef KZ_FAST_SKIP
+#define KZ_FAST_SKIP 6
+#endif
+typedef struct { uint8_t *lit, *llc, *mlc, *ofc; size_t nl, ns; uint32_t rep[3]; size_t *sgl, *sgs, nseg; kz_bw w; } kz_sq;
+/* one sequence: literals in[anchor..start), then ml bytes at off; the streams as kz_klzh_enc's loop writes them */
+static inline int kz_sq_put(kz_sq *E, const uint8_t *in, size_t n, size_t anchor, size_t start, uint32_t ml, uint32_t off) {
+    const size_t ll = start - anchor, pe = start + ml, nl = E->nl, k = E->ns;
+    for (; E->nseg < KZ_MAXSEG && E->nseg * KZ_SEG < pe; E->nseg++) {
+        const size_t B = E->nseg * KZ_SEG;
+        if (B <= anchor) { E->sgl[E->nseg] = nl; E->sgs[E->nseg] = k; }
+        else if (B < start) { E->sgl[E->nseg] = nl + (B - anchor); E->sgs[E->nseg] = k; }
+        else { E->sgl[E->nseg] = nl + ll; E->sgs[E->nseg] = k + 1; }
+    }
+    uint8_t *d = E->lit + nl; const uint8_t *s = in + anchor;
+    if (anchor + ll + 16 <= n) { size_t i = 0; do { memcpy(d + i, s + i, 16); i += 16; } while (i < ll); }   /* lit: 32 bytes of slack */
+    else memcpy(d, s, ll);
+    uint32_t ex; int nb;
+    E->llc[k] = (uint8_t)kz_lcode((uint32_t)ll, &ex, &nb); if (kz_bput(&E->w, ex, nb)) return -1;
+    E->mlc[k] = (uint8_t)kz_lcode(ml - 3, &ex, &nb); if (kz_bput(&E->w, ex, nb)) return -1;
+    uint32_t *r = E->rep;
+    if (off == r[0]) E->ofc[k] = 0;
+    else if (off == r[1]) { E->ofc[k] = 1; r[1] = r[0]; r[0] = off; }
+    else if (off == r[2]) { E->ofc[k] = 2; r[2] = r[1]; r[1] = r[0]; r[0] = off; }
+    else { int h = kz_hb(off); E->ofc[k] = (uint8_t)(3 + h); if (kz_bput(&E->w, off - (1u << h), h)) return -1; r[2] = r[1]; r[1] = r[0]; r[0] = off; }
+    E->nl = nl + ll; E->ns = k + 1; return 0;
+}
+static int kz_fast_seqs(const uint8_t *in, size_t n, int lg, int skip, kz_sq *E0) {
+    uint32_t *t = calloc((size_t)1 << lg, 4);
+    if (!t) return -1;
+    kz_sq L = *E0, *const E = &L;   /* a local copy: the byte stores into the streams cannot alias it */
+    const uint8_t *ie = in + n; size_t pos = 1, anchor = 0; uint32_t rep0 = 1; int rc = 0;
+    while (pos + 9 <= n) {   /* every position in t is below pos (it starts at 0, and pos only grows) */
+        size_t ml, start; uint32_t off;
+        const uint32_t h = kz_h6(in + pos, lg), c = t[h]; t[h] = (uint32_t)pos;
+        const uint32_t v1 = kz_r32(in + pos + 1);
+        if (pos + 1 >= rep0 && kz_r32(in + pos + 1 - rep0) == v1) {   /* the last offset, one byte ahead */
+            start = pos + 1; off = rep0; ml = 4 + kz_count(in + start + 4, in + start + 4 - off, ie);
+        } else if (pos - c <= KLZ_WINDOW && kz_r32(in + c) == kz_r32(in + pos)) {
+            start = pos; off = (uint32_t)(pos - c); ml = 4 + kz_count(in + pos + 4, in + c + 4, ie);
+        } else if (pos + 10 <= n) {   /* the next position too, before the step (+3-6% speed, same size) */
+            const uint32_t h1 = kz_h6(in + pos + 1, lg), c1 = t[h1]; t[h1] = (uint32_t)pos + 1;
+            if (pos + 1 - c1 <= KLZ_WINDOW && kz_r32(in + c1) == v1) { start = pos + 1; off = (uint32_t)(pos + 1 - c1); ml = 4 + kz_count(in + start + 4, in + c1 + 4, ie); }
+            else { pos += 2 + ((pos - anchor) >> skip); continue; }
+        } else { pos += 1 + ((pos - anchor) >> skip); continue; }
+        while (start > anchor && start > off && in[start - 1] == in[start - 1 - off]) { start--; ml++; }
+        if (kz_sq_put(E, in, n, anchor, start, (uint32_t)ml, off)) { rc = -1; break; }
+        rep0 = off; pos = start + ml; anchor = pos;
+        if (pos + 9 <= n) { t[kz_h6(in + start + 2, lg)] = (uint32_t)(start + 2); t[kz_h6(in + pos - 2, lg)] = (uint32_t)(pos - 2); }
+    }
+    free(t);
+    if (rc) return rc;
+    for (; E->nseg < KZ_MAXSEG && E->nseg * KZ_SEG < n; E->nseg++) { E->sgl[E->nseg] = E->nl + (E->nseg * KZ_SEG - anchor); E->sgs[E->nseg] = E->ns; }
+    memcpy(E->lit + E->nl, in + anchor, n - anchor); E->nl += n - anchor;
+    *E0 = L; return 0;
+}
+static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int v2, int threads) {
     if (n < 16 || n >= 0xFFFFFFF0u || cap < 64) return 0;
-    if (level < 1) level = 1;
+    if (level < (v2 ? 0 : 1)) level = v2 ? 0 : 1;   /* KLZH2 level 0: the fast parse (kz_fast_seqs) */
     if (level > 9) level = 9;
-    kz_seq *S = malloc((n / (v2 ? 3 : 4) + 2) * sizeof *S); size_t anchor; int err;
+    kz_seq *S = NULL; uint8_t *lit = NULL, *cd = NULL, *xb = NULL, *tmp = NULL, *trial = NULL, *llc, *mlc, *ofc; size_t r = 0, ns = 0, nl = 0;
+    kz_bw w; size_t sgl[KZ_MAXSEG + 1], sgs[KZ_MAXSEG + 1], nseg = 0;   /* KLZH2: literal and sequence counts at each KZ_SEG of input */
+    if (v2 && level == 0) {   /* the fast parse writes the streams itself (at most n / 4 + 1 sequences: matches of 4 bytes or more) */
+        const size_t c1 = n / 4 + 2, xcap = c1 * 12 + 64;
+        lit = malloc(n + 32); cd = malloc(3 * c1); xb = malloc(xcap); tmp = malloc(kolmo_khuf_bound(n) + 64);
+        if (!lit || !cd || !xb || !tmp) goto out;
+        llc = cd; mlc = cd + c1; ofc = cd + 2 * c1; w = (kz_bw){0, 0, xb, xb + xcap};
+        int lg = 12; while (lg < KZ_FAST_LG && ((size_t)1 << lg) < n) lg++;
+        kz_sq E = {lit, llc, mlc, ofc, 0, 0, {1, 4, 8}, sgl, sgs, 0, w};
+        if (kz_fast_seqs(in, n, lg, KZ_FAST_SKIP, &E)) goto out;
+        ns = E.ns; nl = E.nl; nseg = E.nseg; w = E.w;
+    } else {
+    S = malloc((n / (v2 ? 3 : 4) + 2) * sizeof *S); size_t anchor; int err;
     if (!S) return 0;
     const kz_par *LV = &KLZH_LV[level]; const uint32_t mmin = v2 ? 3 : 4;
     ko_par KO9 = KO_LV[level]; if (v2 && level == 9) KO9.nice = 1024;   /* KLZH2: owid_energy_f64.npy -0.4%, 4% slower */
     int lg3 = 12; while (lg3 < 20 && ((size_t)1 << lg3) < n) lg3++;   /* KLZH2 level 3: about one slot per position */
-    size_t ns = level == 3 && v2 ? kz_parse_dfast3(in, n, lg3, 9, S, &anchor, &err)
+    ns = level == 3 && v2 ? kz_parse_dfast3(in, n, lg3, 9, S, &anchor, &err)
               : level <= 3 ? kz_parse_dfast(in, n, LV->hlog, LV->clog, LV->skip, 4, S, &anchor, &err)
-              : level >= 7 ? ko_parse(in, n, &KO9, v2, S, &anchor, &err)
+              : level >= 7 ? ko_parse(in, n, &KO9, v2, S, &anchor, &err, threads)
               : level >= 5 ? kz_parse_lazy(in, n, LV, kz_minm(in, n, LV, S), S, &anchor, &err) : kz_parse(in, n, LV, S, &anchor, &err);
-    uint8_t *lit = malloc(n + 16), *cd = malloc(3 * (ns + 1)), *xb = malloc(ns * 12 + 64), *tmp = malloc(kolmo_khuf_bound(n) + 64), *trial = NULL;
-    size_t r = 0;
+    lit = malloc(n + 16); cd = malloc(3 * (ns + 1)); xb = malloc(ns * 12 + 64); tmp = malloc(kolmo_khuf_bound(n) + 64);
     if (err || !lit || !cd || !xb || !tmp) goto out;
-    uint8_t *llc = cd, *mlc = cd + ns, *ofc = cd + 2 * ns; size_t nl = 0; const uint8_t *ip = in;
-    uint32_t rep[3] = {1, 4, 8}; kz_bw w = {0, 0, xb, xb + ns * 12 + 64};
-    size_t sgl[KZ_MAXSEG + 1], sgs[KZ_MAXSEG + 1], nseg = 0;   /* KLZH2: literal and sequence counts at each KZ_SEG of input */
+    llc = cd; mlc = cd + ns; ofc = cd + 2 * ns; const uint8_t *ip = in;
+    uint32_t rep[3] = {1, 4, 8}; w = (kz_bw){0, 0, xb, xb + ns * 12 + 64};
     for (size_t k = 0; k < ns; k++) {
         uint32_t ex; int nb;
         if (v2) {   /* the literal stream is cut at the input position itself, the code streams at the next sequence */
@@ -652,6 +855,7 @@ static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
     }
     for (; v2 && nseg < KZ_MAXSEG && nseg * KZ_SEG < n; nseg++) { sgl[nseg] = nl + (nseg * KZ_SEG - anchor); sgs[nseg] = ns; }
     memcpy(lit + nl, ip, n - anchor); nl += n - anchor;
+    }
     if (w.p + 8 > w.e) goto out;
     kz_w64(w.p, w.b); w.p += (w.c + 7) >> 3;
     size_t o = kz_put_uv(out, ns); o += kz_put_uv(out + o, nl);
@@ -682,7 +886,8 @@ static size_t kz_klzh_enc(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
         if (!z && sn[q]) z = kolmo_khuf_compress_chunks(st[q], sn[q], tmp, kolmo_khuf_bound(n) + 64);
         if (sn[q] && !z) goto out;
         uint8_t mode = 0; const uint8_t *src = tmp;
-        if (v2 && q && sn[q] && kolmo_krans_bound(sn[q]) <= kolmo_khuf_bound(n) + 64) {   /* KLZH2: rANS where it is smaller */
+        if (v2 && q && (q == 1 || level) && sn[q] && kolmo_krans_bound(sn[q]) <= kolmo_khuf_bound(n) + 64) {   /* KLZH2: rANS where it is smaller
+                                                                                    (level 0: the literal-length codes only) */
             uint8_t *t2 = malloc(kolmo_krans_bound(sn[q])); if (!t2) goto out;
             size_t z2 = kolmo_krans_compress_lim(st[q], sn[q], t2, kolmo_krans_bound(sn[q]), (size_t)((uint64_t)z * KZ_RANS_PCT / 100));
             if (z2 && (uint64_t)z2 * 100 < (uint64_t)z * KZ_RANS_PCT) { memcpy(tmp, t2, z2); z = z2; mode = 1; }
@@ -699,8 +904,9 @@ out:
     free(S); free(lit); free(cd); free(xb); free(tmp); free(trial); return r;
 }
 
-size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh_enc(in, n, out, cap, level, 0); }
-size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh_enc(in, n, out, cap, level, 1); }
+size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh_enc(in, n, out, cap, level, 0, 1); }
+size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh_enc(in, n, out, cap, level, 1, 1); }
+size_t kolmo_klzh2_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads) { return kz_klzh_enc(in, n, out, cap, level, 1, threads); }
 
 typedef struct { uint64_t b; int c; const uint8_t *p, *e; } kz_br;
 static inline void kz_refill(kz_br *r) {

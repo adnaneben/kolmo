@@ -2,11 +2,21 @@
 #define KOLMO_F2_PLAN 0   /* 1: the planner's graph scores also try codecs 21-23 (measured: no decision changes) */
 #endif
 /* The planner: codec per mode, the candidate trials, and the file-level analysis (make_plan). */
+#ifndef KOLMO_BWT_REACH_PCT
+#define KOLMO_BWT_REACH_PCT 100  /* max: BWT is tried on a binary block only where LZMA2 reaches this % or less. Was 35;
+                                    * on raw video residual planes (holdout foreman/mobile_cif.y4m, LZMA2 about 45%) BWT is
+                                    * 5-6% smaller and, with the slice skip, about 8x faster to code. No other file of either
+                                    * corpus, nor four outside binaries, changed by a byte (evidence/NIGHT4_SUMMARY.md). */
+#endif
 #ifndef KOLMO_BWT_GAIN_PCT
 #define KOLMO_BWT_GAIN_PCT 3      /* max: least size gain (%) for BWT to replace LZMA2 on a binary block */
 #endif
 #ifndef KOLMO_BWT_SKIP_LZMA_PCT
-#define KOLMO_BWT_SKIP_LZMA_PCT 90 /* max: a slice with BWT at most this % of LZMA2 (preset 1) codes the block with BWT only */
+#define KOLMO_BWT_SKIP_LZMA_PCT 98 /* max: a slice with BWT at most this % of LZMA2 (preset 1) codes the block with BWT only.
+                                    * 90 until 0.0.2: akiyo_cif.y4m (45 MB) has slice 0.976 and BWT 9.6% smaller on the block,
+                                    * and ran the full LZMA2 pass first (65 s of its 68; 62% of max's time on the screening
+                                    * corpus) for an output it then discarded. The block ratio sits 6-7 points below the slice
+                                    * ratio (osdb 0.84 -> 0.78, akiyo 0.976 -> 0.904), so 98 still means a clear BWT win. */
 #endif
 static void mode_codec(const kolmo_params *p, int *codec, int *level) {
     switch (p->mode) {

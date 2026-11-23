@@ -1,5 +1,112 @@
 # Changelog
 
+## 0.0.2 (2026-11-23)
+
+The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and
+match finders that use several threads inside a block. **The frame format is unchanged** (container version 12):
+0.0.1 reads 0.0.2 output and 0.0.2 reads 0.0.1 output. Levels 1, 3, 5, 7 and ultra write the same bytes as 0.0.1's
+`speed`, `balanced`, `eco`, `hc` and `-x`; level 9 writes the same bytes as 0.0.1's `ratio` except where block sorting
+now wins on a binary block (see Performance). **The command line breaks**: 0.0.1's options are refused with a hint.
+
+### Levels and command line
+
+- **Levels.** One scale from `-1` (fastest) to `-9` (max), `-3` (light) the default, and `-U` (ultra) outside it.
+  Named anchors with letters: `-F --fastest` (1), `-L --light` (3), `-B --balanced` (5), `-C --compact` (7),
+  `-X --max` (9), `-U --ultra`; `--level N|ultra`; the last level option wins. Levels 2, 4, 6 and 8 are new settings
+  (the fast KLZH2 parse with minimal analysis, KLZH2 5 with hc's planning, KLZH2 8, block sorting for every block); the table will be retuned by
+  measurement, never moved across the scale.
+- **Library:** `kolmo_params_for_level(level, &params)` and `KOLMO_LEVEL_MIN/MAX/DEFAULT/ULTRA/FASTEST/LIGHT/
+  BALANCED/COMPACT/MAX_RATIO`; a level outside 1..10 returns the new `KOLMO_ERR_PARAM` (-15). The command line and both
+  bindings use this one table, so a level gives the same bytes everywhere.
+- **Command line** (gzip/xz/zstd conventions): `kolmo FILE` writes `FILE.kolmo` and keeps `FILE` (`--rm` removes it);
+  `kolmo -d FILE.kolmo` writes `FILE`; no FILE or `-` is standard input to standard output; several files in one run
+  (processing continues after an error); `-c`, `-o FILE` (one input), `-k`, `-f` (an existing output is never
+  overwritten without it), `-t` test, `-l` list, `-q`, `-v`, `-T`, `-M`; combined short options (`-dc`, `-9T4`),
+  `--opt=value`, `--`. Compressed data is not written to (or read from) a terminal without `-f`. Every output is staged
+  and published atomically with the input's permissions and mtime, and a failed run never touches an existing file;
+  the output is never the input file. `-d` decodes concatenated frames in order (as zstd) and fails on trailing data.
+  Exit status 0, 1 (error) or 2 (usage). Expert options: `--block-size`, `--analysis`, `--stream[=SEGMiB]`,
+  `--range`, `--codec-level`, with `--target`, `--calib`, `--memlimit`, `--native-leaf`, `--typed-huf`, `--gpu` and
+  `--x-tables` as before.
+- **Archive subcommands renamed:** `kolmo a`, `x`, `l` are now `kolmo archive`, `extract`, `contents` (recognised only
+  as the first argument; a file of that name is `kolmo ./NAME` or `kolmo -- NAME`). `--index`, `archive` take levels.
+- **Removed** (each prints a one-line hint naming the replacement and exits with status 2): `-m MODE`, `-x`, the old
+  `-l LEVEL`, `-B MiB`, `-Q`, `-n`, `-s`, `-S`, `-r`, `-D`, `-t DICT`, `-P`, `kolmo train`, `kolmo profile`,
+  `kolmo a|x|l` and the two-positional `kolmo IN OUT` / `kolmo -d IN OUT`. The old analysis option `-q` now means
+  `--quiet` and cannot be detected.
+- **Bindings:** Python `compress(data, level=3, threads=0, memlimit=None, block=0, ...)` with `level` 1..9, a name or
+  `"ultra"`; Rust `Level` (`Level::new(1..=9)`, `FASTEST`, `LIGHT`, `BALANCED`, `COMPACT`, `MAX`, `ULTRA`,
+  `Default` = light) with `compress_limited`/`decompress_limited`. `mode` / `Mode` and the dictionary calls are
+  removed. Both check the frame (`kolmo_check_frame`) before allocating the output, so a hostile header cannot ask for
+  a huge allocation, and take an optional bound on the decoded size (Python `max_output_size`, Rust
+  `decompress_limited(..., Some(bytes))`), advisable for untrusted input. Tests cross-check that the CLI, Python and Rust give the same bytes at every level.
+
+Upgrading from 0.0.1:
+
+| 0.0.1 | 0.0.2 |
+|---|---|
+| `-m speed` | `-1` / `-F` |
+| `-m balanced` (default) | `-3` / `-L` (default) |
+| `-m eco` | `-5` / `-B` |
+| `-m hc` | `-7` / `-C` |
+| `-m ratio` | `-9` / `-X` |
+| `-m max -l 1` | `-8` |
+| `-x` | `-U` |
+| `-x -l 1`, `-x -l 2` | `-U --codec-level 1`, `-U --codec-level 2` |
+| `-m rt` | `-1 --analysis full` |
+| `-q` / `-Q` / `-n` (analysis) | `--analysis quick` / `minimal` / `none` |
+| `-l N`, `-B MiB` | `--codec-level N`, `--block-size MiB` |
+| `-s`, `-S N`, `-r OFF:LEN` | `--stream`, `--stream=N`, `--range OFF:LEN` |
+| `kolmo in out` | `kolmo in -o out` |
+| `kolmo -d in out` | `kolmo -d in -o out` |
+| `kolmo a`, `kolmo x`, `kolmo l` | `kolmo archive`, `kolmo extract`, `kolmo contents` |
+| Python `mode="speed"` / `"balanced"` / `"ratio"` | `level=1` / `3` / `9` |
+| Rust `Mode::SPEED` / `BALANCED` / `RATIO` | `Level::FASTEST` / `LIGHT` / `MAX` |
+
+### Decoder hardening and library
+
+From five independent reviews of 0.0.1 (memory safety, denial of service, API). No valid frame decodes differently.
+
+- **Memory safety:** query/index threads clamped to 64 (a stack array overflowed); table v1 row counts bounded before
+  allocation; KLZMA rejects a wrapped repeat distance and checks its end bound at every symbol; QLFC rejects ranks
+  past its MTF table; khuf uses size_t stream offsets and bounds stream lengths; the log decoder bounds its column
+  count; the Y4M header parse stays inside the header line.
+- **Denial of service:** CM, GR6 and kimg stop decoding 8 bytes past the end of their input (a forged 6 KB frame cost
+  17 s of CPU); graph leaves are bounded together like one stream (a forged block reserved 329 MiB, now 13 MiB); IDX1
+  block flags must chain; table formula checks are capped.
+- **Frames:** `kolmo_original_size` and `kolmo_check_frame` check the header and index (CRCs, block sizes) before
+  any allocation (`kolmo_check_frame` takes an optional bound on the decoded size); a forged header's size claim is no longer
+  returned. The decoders take exactly one frame: trailing bytes other than container extensions are
+  `KOLMO_ERR_CORRUPT` (concatenations used to be truncated silently). The new `kolmo_frame_size` walks concatenated
+  frames. New errors: `KOLMO_ERR_PARAM` (-15) for an out-of-range mode, level or transforms value, `KOLMO_ERR_RANGE`
+  for a range read past the end; stream read/write failures are `KOLMO_ERR_IO`.
+- **Threads:** after a threaded call, a forked child no longer hangs (`pthread_atfork` resets the worker pool and the
+  memory governor). `kolmo_release_buffers` frees the per-thread buffers of the caller and the idle workers.
+- **Tests:** a frozen corpus of 84 version-12 frames decoded in `make check`; hardening tests under ASan/UBSan, which
+  now also instrument the native coders; fuzzing with version-12 seeds, a native-coder target and timed campaigns in CI.
+
+### Performance
+
+- **Threads inside a block:** the match finders of levels 4-9 (KLZH2's binary tree, KLZMA's binary tree and hash chain)
+  split their work by hash bucket across threads, with output identical at any thread count. On 10 cores (Apple M5,
+  21 held-out files): level 5 19.1 -> 30.5 MiB/s, level 7 6.7 -> 13.0, level 8 22.6 -> 32.7, level 9 11.8 -> 22.0.
+  Compress memory at 10 threads rises by up to about 60 MB. One-thread speed and all decoders are unchanged.
+- **Level 9:** block sorting is now tried on every binary block LZMA2 codes (it was tried only where LZMA2 reached 35%
+  or less), and the full LZMA2 pass is skipped when a slice already shows block sorting ahead. On the 21 held-out files
+  level 9 is 2.2% smaller and compresses 1.8x faster at one thread; only two raw videos change.
+- **khuf:** the four-stream Huffman encoder codes its streams interleaved and in place (same bytes).
+
+### Documentation
+
+- Package READMEs (PyPI, crates.io) rewritten for the Kolmo-native line; `zstd` removed from the PyPI keywords.
+- README: results re-stated for 0.0.x (21 held-out files, Apple M5, one thread; the 1.x tables are in
+  `benchmark/BENCHMARKS.md`, marked as 1.x); build, install, status and layout sections corrected; a tested recipe to
+  convert 1.x files.
+- SPEC: the decode working set listed per native codec. Design notes written before 0.0.1 carry a banner mapping the
+  old coder names to the native ones.
+- New CI check, `tests/check_release_docs.py`: release-facing files must not describe removed libraries, switches or
+  1.x versions as current, and every version label must match `VERSION`.
+
 ## 0.0.1 (2026-11-22)
 
 First release of the renumbered, Kolmo-native line; supersedes 1.0.x. Same code and output as 0.0.1-rc1 below, plus:
