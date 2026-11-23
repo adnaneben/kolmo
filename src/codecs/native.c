@@ -59,6 +59,7 @@ static const kolmo_codec codec_klzma = { C_KLZMA, "klzma", klzma_c_bound, klzma_
 static const kolmo_codec codec_khuf = { C_KHUF, "khuf", khuf_c_bound, khuf_c_compress, khuf_c_decompress, NULL };
 static const kolmo_codec codec_klz = { C_KLZ, "klz", klz_c_bound, klz_c_compress, klz_c_decompress, NULL };
 static const kolmo_codec codec_klzh = { C_KLZH, "klzh", klzh_c_bound, klzh_c_compress, klzh_c_decompress, NULL };
-static size_t klzh2_c_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) { (void)x; return kolmo_klzh2_compress(in, n, out, cap, level); }
+/* x->threads: the threads this block may use (the match finder of levels 7-9 splits over them; same output) */
+static size_t klzh2_c_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return kolmo_klzh2_compress_mt(in, n, out, cap, level, x && x->threads > 1 ? x->threads : 1); }
 static int klzh2_c_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return kolmo_klzh2_decompress(in, cn, out, n); }
 static const kolmo_codec codec_klzh2 = { C_KLZH2, "klzh2", klzh_c_bound, klzh2_c_compress, klzh2_c_decompress, NULL };

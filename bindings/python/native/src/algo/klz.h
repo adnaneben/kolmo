@@ -51,5 +51,8 @@ int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
    each stream where the input crosses a multiple of 256 KiB, so each table covers 256 KiB of input (KLZH's decoder
    already reads chunks of any size up to KHUF_BLOCK_MAX). */
 size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
+/* The same output as kolmo_klzh2_compress, on up to `threads` threads at levels 7-9 (the binary-tree match finder
+   split by hash bucket, klz.c ko_mt); the result never depends on threads. */
+size_t kolmo_klzh2_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads);
 int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 #endif
