@@ -50,7 +50,7 @@ On the numeric arrays we measured, at one thread, its output is 1.1-3x smaller t
 | `cd_values[2]` | threads per chunk; 0 = 1 | 0 |
 | `cd_values[3]` | `cd_values` layout version, written by `set_local` (currently 1) | 1 |
 
-`can_apply` rejects levels outside 0-10. The filter is built as a dynamically loadable plugin (`H5PLget_plugin_type` / `H5PLget_plugin_info`, `H5Z_class2_t`). It does not link libhdf5, so the same plugin file works with the C library and with h5py.
+`can_apply` rejects levels outside 0-10. The filter is built as a dynamically loadable plugin (`H5PLget_plugin_type` / `H5PLget_plugin_info`, `H5Z_class2_t`). On macOS it does not link libhdf5, so the same file works with the C library and with h5py's bundled HDF5. On Linux it links the libhdf5 it is built against.
 
 **Documentation:**
 - Plugin usage and benchmarks: https://github.com/adnaneben/kolmo/blob/main/integration/hdf5/README.md

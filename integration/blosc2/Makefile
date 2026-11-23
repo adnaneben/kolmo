@@ -64,7 +64,7 @@ build/bench_blosc2: bench/bench_blosc2.c $(STATIC)
 
 build/test_dynamic_load: tests/test_dynamic_load.c | check-blosc2
 	@mkdir -p build
-	$(CC) -O2 -Wall -Wextra $(BLOSC2_CFLAGS) tests/test_dynamic_load.c $(BLOSC2_LIBS) -o $@
+	$(CC) -O2 -Wall -Wextra $(BLOSC2_CFLAGS) tests/test_dynamic_load.c $(BLOSC2_LIBS) -lm -o $@
 
 # LIBPATH_VAR: where dlopen looks for a bare library name.
 LIBPATH_VAR := $(if $(filter Darwin,$(UNAME_S)),DYLD_LIBRARY_PATH,LD_LIBRARY_PATH)

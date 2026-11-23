@@ -26,7 +26,7 @@
 ### Integrations
 
 - **HDF5 filter plugin** (`integration/hdf5/`): a dynamically loadable filter, found through `HDF5_PLUGIN_PATH`, that
-  works from C, h5py and the HDF5 tools. One self-contained file with Kolmo linked in; it does not link libhdf5.
+  works from C, h5py and the HDF5 tools. One self-contained file with Kolmo linked in. On macOS it does not link libhdf5 and works inside h5py's bundled HDF5; on Linux it links the system libhdf5.
   - `cd_values`: level, element size (filled in from the dataset type), threads per chunk, layout version.
   - The filter ID is the testing-range placeholder 480 until The HDF Group registers one (`FILTER-ID-REQUEST.md`,
     draft, not sent). Draft hdf5plugin contribution: `HDF5PLUGIN-CONTRIBUTION.md`.

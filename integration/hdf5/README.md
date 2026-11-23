@@ -21,8 +21,14 @@ This builds `build/plugin/libH5Zkolmo.dylib` (`.so` on Linux), a single file wit
 `pkg-config` (`hdf5`, or `hdf5-serial` on Debian and Ubuntu); otherwise pass `HDF5_DIR=/prefix`. Kolmo is compiled
 portable by default; `KOLMO_ARCH=-mcpu=native` (or `-march=native`) tunes it for the build machine only.
 
-The plugin does not link libhdf5. Its HDF5 calls resolve to the HDF5 already loaded in the process, so the same file
-works with a C program, with h5py's bundled HDF5 and with the HDF5 command-line tools.
+How the plugin finds HDF5:
+- **macOS:** it does not link libhdf5. Its HDF5 calls resolve to the HDF5 already loaded in the process, so the same
+  file works with a C program, with h5py's bundled HDF5 (tested with h5py 3.16.0 and HDF5 2.0.0) and with the HDF5
+  tools.
+- **Linux:** it links the libhdf5 it was built against, because Python loads h5py's HDF5 privately (`RTLD_LOCAL`).
+  It works with C programs, the HDF5 tools, and an h5py that uses the same system HDF5, such as Debian/Ubuntu
+  `python3-h5py`. h5py wheels from PyPI carry their own HDF5: for them, build the plugin against that HDF5, or wait
+  for the hdf5plugin package.
 
 ## Use
 

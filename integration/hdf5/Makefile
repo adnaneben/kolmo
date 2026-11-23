@@ -3,7 +3,8 @@
 #   make test       C round-trip test, then the h5py test if h5py is installed (skipped otherwise)
 #   make bench      single-thread benchmark (see README.md); BENCH_ARGS="file:dtype ..." picks the inputs
 # HDF5 is found with pkg-config (hdf5, or hdf5-serial on Debian/Ubuntu) or HDF5_DIR=/prefix.
-# The plugin does not link libhdf5: its HDF5 symbols resolve to the HDF5 already loaded in the process.
+# macOS: the plugin does not link libhdf5; its HDF5 symbols resolve to the HDF5 already loaded in the process.
+# Linux: it links the libhdf5 it is built against (see SO_LDFLAGS).
 ROOT    := ../..
 UNAME_S := $(shell uname -s)
 CC      ?= cc
@@ -29,8 +30,11 @@ SO_LDFLAGS  := -dynamiclib -undefined dynamic_lookup -Wl,-exported_symbol,_H5PLg
 PLUGIN_LDFLAGS := $(SO_LDFLAGS) -Wl,-exported_symbol,_H5Z_kolmo_register
 else
 SOEXT       := so
-SO_LDFLAGS  := -shared
-PLUGIN_LDFLAGS := -shared -Wl,--version-script=exports.map
+# Linux: the plugin links the libhdf5 it is built against. Python loads h5py's HDF5 with RTLD_LOCAL, so its symbols are
+# not visible to a plugin that leaves them undefined; with the same libhdf5 (system HDF5, as Debian's python3-h5py
+# uses) the dynamic loader reuses the copy already loaded. macOS resolves them at run time (dynamic_lookup).
+SO_LDFLAGS  := -shared $(HDF5_LIBS)
+PLUGIN_LDFLAGS := -shared -Wl,--version-script=exports.map $(HDF5_LIBS)
 endif
 PLUGIN   := build/plugin/libH5Zkolmo.$(SOEXT)
 ZSTDPLUG := build/bench-plugins/libH5Zzstd_bench.$(SOEXT)
@@ -53,7 +57,7 @@ $(PLUGIN): H5Zkolmo.c H5Zkolmo.h build/kolmo_pic.o exports.map | check-hdf5
 
 build/test_h5zkolmo: tests/test_h5zkolmo.c H5Zkolmo.h | check-hdf5
 	@mkdir -p build
-	$(CC) -O2 -Wall -Wextra $(HDF5_CFLAGS) tests/test_h5zkolmo.c -o $@ $(HDF5_LIBS)
+	$(CC) -O2 -Wall -Wextra $(HDF5_CFLAGS) tests/test_h5zkolmo.c -o $@ $(HDF5_LIBS) -lm
 
 # A minimal zstd filter (ID 32015, as hdf5plugin's) for the benchmark only.
 $(ZSTDPLUG): bench/H5Zzstd_bench.c | check-hdf5
@@ -63,7 +67,7 @@ $(ZSTDPLUG): bench/H5Zzstd_bench.c | check-hdf5
 
 build/bench_hdf5: bench/bench_hdf5.c H5Zkolmo.h | check-hdf5
 	@mkdir -p build
-	$(CC) -O2 -Wall $(HDF5_CFLAGS) bench/bench_hdf5.c -o $@ $(HDF5_LIBS)
+	$(CC) -O2 -Wall $(HDF5_CFLAGS) bench/bench_hdf5.c -o $@ $(HDF5_LIBS) -lm
 
 test: $(PLUGIN) build/test_h5zkolmo
 	HDF5_PLUGIN_PATH=$(CURDIR)/build/plugin ./build/test_h5zkolmo

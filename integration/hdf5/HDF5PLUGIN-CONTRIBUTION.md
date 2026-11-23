@@ -70,5 +70,5 @@ class Kolmo(_FilterRefClass):
 ## Notes for the PR text
 
 - The benchmark table in [README.md](README.md#benchmark), at one thread against deflate, zstd (their filter ID 32015) and shuffle.
-- The filter does not link libhdf5: it uses the HDF5 symbols of the process, as their plugins do through `lib/hdf5_dl.c`. If their build needs it, list the functions the plugin calls in `hdf5_dl.c`: `H5Pget_filter_by_id2`, `H5Pmodify_filter`, `H5Tget_size`, `H5Epush2`, `H5allocate_memory`, `H5free_memory` and `H5Zregister`.
+- On macOS the standalone build does not link libhdf5; on Linux it links it. For hdf5plugin, build it without linking libhdf5 and use their `lib/hdf5_dl.c`, as their other plugins do. If their build needs it, list the functions the plugin calls in `hdf5_dl.c`: `H5Pget_filter_by_id2`, `H5Pmodify_filter`, `H5Tget_size`, `H5Epush2`, `H5allocate_memory`, `H5free_memory` and `H5Zregister`. The error macros also read the data symbols `H5E_ERR_CLS_g`, `H5E_PLINE_g` and the minor error classes; `hdf5_dl.c` resolves functions, so `PUSH_ERR` may need to become a function pointer to `H5Epush2` with the classes fetched through `H5Eget_class_name`-style calls, or be compiled out in their build.
 - Licence: Apache-2.0, which is compatible with hdf5plugin's MIT licence and with the other bundled filters.

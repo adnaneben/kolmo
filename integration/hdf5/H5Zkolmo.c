@@ -1,8 +1,9 @@
 /* H5Zkolmo: HDF5 filter plugin for the Kolmo compressor (see H5Zkolmo.h for the filter ID and client data).
  *
  * Built as a dynamically loadable plugin (H5PLget_plugin_type / H5PLget_plugin_info), found by HDF5 through
- * HDF5_PLUGIN_PATH. The plugin does not link libhdf5: its HDF5 symbols resolve to the HDF5 library already loaded in
- * the process (the C library of an application, or the one inside h5py), the same way the plugins of hdf5plugin do.
+ * HDF5_PLUGIN_PATH. On macOS the plugin does not link libhdf5: its HDF5 symbols resolve to the HDF5 library already
+ * loaded in the process (the C library of an application, or the one inside h5py). On Linux it links the libhdf5 it
+ * was built against, because Python loads h5py's HDF5 privately (RTLD_LOCAL); see the Makefile.
  *
  * Licence: Apache-2.0.
  */
