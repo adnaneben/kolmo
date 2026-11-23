@@ -19,6 +19,14 @@ BLOSC2_OK     := $(shell pkg-config --exists blosc2 2>/dev/null && echo 1)
 BLOSC2_CFLAGS ?= $(if $(BLOSC2_OK),$(shell pkg-config --cflags blosc2))
 BLOSC2_LIBDIR := $(if $(BLOSC2_OK),$(patsubst -L%,%,$(filter -L%,$(shell pkg-config --libs blosc2))))
 BLOSC2_LIBS   ?= $(if $(BLOSC2_OK),$(shell pkg-config --libs blosc2) $(addprefix -Wl$(comma)-rpath$(comma),$(BLOSC2_LIBDIR)))
+# Some packages (Debian/Ubuntu libblosc2-dev) install no blosc2.pc: fall back to the header in a standard place.
+ifeq ($(strip $(BLOSC2_CFLAGS)),)
+BLOSC2_HDR    := $(firstword $(wildcard /usr/include/blosc2.h /usr/local/include/blosc2.h))
+ifneq ($(BLOSC2_HDR),)
+BLOSC2_CFLAGS := -I$(patsubst %/,%,$(dir $(BLOSC2_HDR)))
+BLOSC2_LIBS   := -lblosc2
+endif
+endif
 endif
 
 ifeq ($(UNAME_S),Darwin)
