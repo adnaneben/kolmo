@@ -23,6 +23,19 @@
     container layer (`tests/format_reference.py`).
   - `tests/make_v12_frames.py` adds each release's frames (RELEASING.md).
 
+### Outreach
+
+- **Design-partner outreach kit in `docs/outreach/` (drafts; nothing sent).** `candidates.md` lists 20 public
+  candidates (open-data portals, HDF5/Zarr science archives, log archives, dataset hosts) and 4 channels, with sources,
+  fit, integration route, public contact route and priority. `message-templates.md` drafts a first message per audience and
+  one follow-up. `CLAIMS.md` lists the only claims they may make, each with its numbers, method and raw data in
+  `docs/outreach/evidence/`, and the claims to avoid. Its new held-out measurement: on NOAA GHCN-Daily station CSVs, level 6 is 2.1x smaller
+  than gzip -6; on NASA HTTP logs, level 9 is 1.8x smaller than gzip -6, while level 3 only ties zstd -3.
+- **`docs/outreach/sample_report.py`**: runs Kolmo -3/-6/-9, zstd -3/-19 and xz -9 (and gzip -6) on a directory of
+  sample files, one thread each, verifies every round trip byte for byte, and writes the per-file and total report
+  with the projected yearly storage cost for a stated volume and $/GB-month. Templates for the report
+  (`sample-report-template.md`) and a published case study (`case-study-template.md`).
+
 ## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and
