@@ -409,7 +409,7 @@ static void *compress_worker(void *arg) {
             size_t sn = inlen / 8 < (512u << 10) ? inlen / 8 : (512u << 10), so = ((inlen - sn) / 2) & ~(size_t)63;
             size_t sb = alt ? codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta) : 0, slz = sb ? codec_compress(xp, R_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
             if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) slice_verdict = -1;
-            else if ((uint64_t)sb * 100 <= (uint64_t)slz * KOLMO_BWT_SKIP_LZMA_PCT && (uint64_t)slz * 100 <= (uint64_t)sn * 35) { codec = C_BWT; level = 9; slice_verdict = 1; }
+            else if ((uint64_t)sb * 100 <= (uint64_t)slz * KOLMO_BWT_SKIP_LZMA_PCT && (uint64_t)slz * 100 <= (uint64_t)sn * KOLMO_BWT_REACH_PCT) { codec = C_BWT; level = 9; slice_verdict = 1; }
         }
         if (!cl) cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
         if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
@@ -420,8 +420,9 @@ static void *compress_worker(void *arg) {
         if (codec == R_LZMA && cl) {                  /* max, binary block: BWT too, kept only when clearly smaller */
             /* BWT decodes about half as fast as LZMA2 here, so it must pay for that: at least KOLMO_BWT_GAIN_PCT smaller. */
             /* BWT is tried only where it has won in tests: not on x86 or ARM64 code (tflag 14 treated as 8, unmeasured), typed table columns or log token streams (4 to 12% larger), and only when LZMA2 already reaches
-             * 35% or less (on less compressible binary data BWT was 1.5 to 8% larger) */
-            uint8_t *alt = tflag == 8 || tflag == 14 || tflag == 4 || tflag == 5 || (uint64_t)cl * 100 > (uint64_t)inlen * 35 ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
+             * KOLMO_BWT_REACH_PCT or less (was 35%: on less compressible binary data BWT was 1.5 to 8% larger, but the
+             * 3% gain rule below already refuses those; raw video residual planes gained 5-6%) */
+            uint8_t *alt = tflag == 8 || tflag == 14 || tflag == 4 || tflag == 5 || (uint64_t)cl * 100 > (uint64_t)inlen * KOLMO_BWT_REACH_PCT ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
             if (slice_verdict < 0) alt = NULL;              /* the slice above already ruled BWT out */
             else if (alt && inlen > (8u << 20) && !slice_verdict) {   /* large blocks only: on small ones the slice costs as much as the attempt */
                 /* a short slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the

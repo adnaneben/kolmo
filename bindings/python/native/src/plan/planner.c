@@ -2,6 +2,12 @@
 #define KOLMO_F2_PLAN 0   /* 1: the planner's graph scores also try codecs 21-23 (measured: no decision changes) */
 #endif
 /* The planner: codec per mode, the candidate trials, and the file-level analysis (make_plan). */
+#ifndef KOLMO_BWT_REACH_PCT
+#define KOLMO_BWT_REACH_PCT 100  /* max: BWT is tried on a binary block only where LZMA2 reaches this % or less. Was 35;
+                                    * on raw video residual planes (holdout foreman/mobile_cif.y4m, LZMA2 about 45%) BWT is
+                                    * 5-6% smaller and, with the slice skip, about 8x faster to code. No other file of either
+                                    * corpus, nor four outside binaries, changed by a byte (evidence/NIGHT4_SUMMARY.md). */
+#endif
 #ifndef KOLMO_BWT_GAIN_PCT
 #define KOLMO_BWT_GAIN_PCT 3      /* max: least size gain (%) for BWT to replace LZMA2 on a binary block */
 #endif
