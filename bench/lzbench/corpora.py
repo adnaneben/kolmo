@@ -18,10 +18,13 @@ Silesia files, for the per-file run).
 """
 import hashlib, io, os, subprocess, sys, tarfile, zipfile
 
+# Canonical sites first. The Canterbury site refuses some cloud IP ranges (GitHub's runners get 403), so the
+# Internet Archive's unmodified copy (id_) is the fallback; every file is checked by sha256 whatever its source.
+CANT = "corpus.canterbury.ac.nz/resources/cantrbry.tar.gz"
 URLS = {
-    "silesia.zip": "https://sun.aei.polsl.pl/~sdeor/corpus/silesia.zip",
-    "enwik8.zip": "https://mattmahoney.net/dc/enwik8.zip",
-    "cantrbry.tar.gz": "https://corpus.canterbury.ac.nz/resources/cantrbry.tar.gz",
+    "silesia.zip": ["https://sun.aei.polsl.pl/~sdeor/corpus/silesia.zip"],
+    "enwik8.zip": ["https://mattmahoney.net/dc/enwik8.zip"],
+    "cantrbry.tar.gz": ["https://" + CANT, "http://" + CANT, "https://web.archive.org/web/2025id_/https://" + CANT],
 }
 
 # sha256 of every file the corpora are made of (checked after extraction, so a re-packed archive still passes).
@@ -72,11 +75,13 @@ def fetch(name, from_dir):
     if from_dir and os.path.exists(os.path.join(from_dir, name)):
         with open(os.path.join(from_dir, name), "rb") as f:
             return f.read()
-    r = subprocess.run(["curl", "-fsSL", "--retry", "4", "--retry-all-errors", "--max-time", "900", URLS[name]],
-                       capture_output=True)
-    if r.returncode != 0:
-        sys.exit(f"corpora: cannot download {URLS[name]}: curl exit {r.returncode}: {r.stderr.decode().strip()}")
-    return r.stdout
+    for url in URLS[name]:
+        r = subprocess.run(["curl", "-fsSL", "--retry", "3", "--max-time", "900", url], capture_output=True)
+        if r.returncode == 0:
+            print(f"fetched {url}")
+            return r.stdout
+        print(f"corpora: {url}: curl exit {r.returncode}: {r.stderr.decode().strip()}", file=sys.stderr)
+    sys.exit(f"corpora: cannot download {name}")
 
 
 def oct_field(v, width):  # width-1 octal digits and a NUL
