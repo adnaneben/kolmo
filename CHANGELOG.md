@@ -33,6 +33,8 @@
   - Tests: C API round trips (with h5py when installed). Single-thread benchmark against gzip, szip, zstd and shuffle:
     Kolmo 3 is 1.04-2.0x smaller than the best of them on six numeric inputs; it compresses 3-35x more slowly than
     shuffle + zstd 3 and decompresses in the same range.
+  - `bench/bench_h5py.py` repeats the comparison inside h5py against hdf5plugin 7.1.0 (Zstd, LZ4, Bitshuffle, Blosc,
+    Blosc2): Kolmo 3 is again 1.04-2.0x smaller than the best of them on each input.
 - **Blosc2 codec plugin** (`integration/blosc2/`): `blosc2_kolmo_register()` for applications, and
   `libblosc2_kolmo.so` with the `info` symbol, which c-blosc2 loads itself for a registered external codec. A
   `blosc2_kolmo` locator package (`print_libpath`) is drafted and not published.
