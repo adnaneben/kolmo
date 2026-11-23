@@ -179,3 +179,14 @@ What it shows:
   It is not the choice for write-heavy streaming at GB/s.
 - **Level 1** is fast but often larger than shuffle + zstd 3, and it does not compress i16_wave at all. The level-1
   engine is being reworked on main ("weak levels").
+
+### Through h5py, against hdf5plugin
+
+[bench/bench_h5py.py](bench/bench_h5py.py) runs the same inputs inside h5py's own HDF5 (h5py 3.14.0, HDF5 1.14.6). It
+compares hdf5plugin 7.1.0's filters (Zstd, LZ4, Bitshuffle, Blosc and Blosc2 with shuffle or bitshuffle, one thread)
+with Kolmo loaded from `HDF5_PLUGIN_PATH`. Full output: [bench/RESULTS_h5py.md](bench/RESULTS_h5py.md).
+
+The ratios agree with the C benchmark. The best hdf5plugin setting per input is Zstd 3 (owid_energy, f32_grid), Blosc
+zstd 5 + bitshuffle (esc50), and shuffle + Zstd 19 or Blosc2 zstd 9 + shuffle (population, i64_ticks, i16_wave). Kolmo 3
+is 1.04-2.0x smaller than each of them, for example 15.38 against 8.49 on owid_energy and 5.49 against 2.76 on f32_grid.
+Speeds in that run are lower for every filter: the machine was more loaded (load average 11-16).

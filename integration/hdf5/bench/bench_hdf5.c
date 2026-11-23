@@ -51,13 +51,30 @@ int main(int argc, char **argv) {
     size_t chunk_bytes = 1 << 20;
     const char *defaults[] = {"synth:f32_grid", "synth:i64_ticks", "synth:i16_wave"};
     const char **inputs = defaults;
+    const char *dump = NULL;
     int ninputs = 3, a = 1;
     for (; a < argc && argv[a][0] == '-'; a++) {
         if (!strcmp(argv[a], "-r") && a + 1 < argc) runs = atoi(argv[++a]);
+        else if (!strcmp(argv[a], "-w") && a + 1 < argc) dump = argv[++a];
         else if (!strcmp(argv[a], "-c") && a + 1 < argc) chunk_bytes = (size_t)atol(argv[++a]);
-        else { fprintf(stderr, "usage: %s [-r runs] [-c chunk_bytes] [path:type[:skip] | synth:NAME ...]\n", argv[0]); return 2; }
+        else { fprintf(stderr, "usage: %s [-r runs] [-c chunk_bytes] [-w dump_dir] [path:type[:skip] | synth:NAME ...]\n", argv[0]); return 2; }
     }
     if (a < argc) { inputs = (const char **)(argv + a); ninputs = argc - a; }
+    if (dump) {   /* -w DIR: write each input as DIR/<name>.<type> (raw, headers dropped) for bench_h5py.py, and stop */
+        for (int k = 0; k < ninputs; k++) {
+            bench_input in;
+            char path[1400], *c;
+            if (bench_load(inputs[k], &in) != 0) return 1;
+            for (c = in.name; *c; c++) if (*c == ':' || *c == '/') *c = '_';
+            snprintf(path, sizeof path, "%s/%s.%s", dump, in.name, in.type);
+            FILE *f = fopen(path, "wb");
+            if (!f || fwrite(in.data, 1, in.bytes, f) != in.bytes) { perror(path); return 1; }
+            fclose(f);
+            printf("%s\n", path);
+            free(in.data);
+        }
+        return 0;
+    }
 
     printf("%s; filters on one thread, %zu-byte chunks, best of %d; MB/s of uncompressed data\n\n",
            H5_VERS_INFO, chunk_bytes, runs);
