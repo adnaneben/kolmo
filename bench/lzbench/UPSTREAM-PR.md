@@ -79,8 +79,10 @@ lzbench>`
    RISC-V where they build it) would use Kolmo's C-only path (`KOLMO_NO_ASM`), which Kolmo's own CI tests only on
    x86-64 and AArch64: run the PR branch on their pipeline first (a draft PR, or Azure on a fork), and if those
    targets fail, add them to the `DONT_BUILD_KOLMO` conditions rather than patching Kolmo's sources.
-5. **Compiler warnings.** Apple clang 21 reports two harmless warnings in Kolmo (`unknown attribute 'optimize'` in
-   `codecs/audio.c`, a constant `&&` in `transforms/graph.c`). Fixing them in Kolmo before the release avoids noise in
-   lzbench's logs.
+5. **Compiler warnings.** Apple clang 21 reports two warnings in Kolmo (`unknown attribute 'optimize'` in
+   `codecs/audio.c`, a constant `&&` in `transforms/graph.c`), and GCC on x86-64 one (`-Wpsabi`: "AVX vector return
+   without AVX enabled changes the ABI" in `transforms/table.c:70`). Check the last one is only a note about a
+   `static` function inside a target-attribute region, then fix all three in Kolmo before the release, so lzbench's
+   logs stay clean.
 6. **Numbers.** Fill the table above from the latest x86-64 run (`bench-x86` workflow) and the Mac run, and link the
    reproduction (`bench/lzbench/README.md`).
