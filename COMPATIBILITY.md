@@ -66,7 +66,7 @@ it covers is specified in [FORMAT.md](FORMAT.md).
     the container layer;
   - `tests/coder_reference.py` decodes every block and graph leaf that uses Kolmo's own LZ and Huffman coders (KLZ,
     KLZH2, KLZMA, khuf, with krans), and the transforms of FORMAT.md section 20 over them, with an independent Python decoder written from
-    FORMAT.md sections 14 to 21.
+    FORMAT.md sections 14 to 21, and `tests/bwt_reference.py` the block-sorting coder of section 22.
 - **Fuzzing and hardening tests** (`test-decoder-hardening`, `test-harden`) check that damaged input is refused.
 
 ## Rules for changing the format

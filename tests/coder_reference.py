@@ -404,7 +404,11 @@ def klzma(p, n):
     return bytes(out)
 
 
+BWT = None   # set by tests/bwt_reference.py: the codec 18 decoder of FORMAT.md section 22
+
+
 def decode(codec, p, n):
+    if codec == 18 and BWT: return BWT(p, n)
     if codec == 24: return klzma(p, n)
     if codec == 27: return khuf_chunks(p, n)
     if codec == 28: return klz(p, n)

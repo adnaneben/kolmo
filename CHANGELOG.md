@@ -61,11 +61,18 @@
     in `tests/vectors/table_v1/`.
   - `tests/format_reference.py` no longer refuses tflag 13 under plan 3, which FORMAT.md 6.1 allows. No frame had
     used it before.
+- **FORMAT.md section 22: the BWT stream (codec 18)**, the block-sorting coder of levels 8-9 and ultra. It covers the
+  stream header, the QLFC range decoder, counters, mixers and both models, the MTF header, the inverse BWT and LZP.
+  libbsc's QLFC tables and constants are normative data in `tests/format_tables/qlfc.json`.
+  - `tests/bwt_reference.py`, in `make check` (about 25 s), decodes all 34 codec-18 blocks and leaves of the corpus.
+  - On mutated streams it agrees with the C decoder, except where a stream's sampled BWT indexes no longer match its
+    text. FORMAT.md 22.6 makes such samples a decoding aid: a decoder either produces the text or fails the block
+    checksum.
 - **FORMAT.md section 21: KLZMA (codec 24)**, the LZMA-class coder of levels 8-9. It covers the range decoder (which
   differs from LZMA's at the start and the end), contexts, literals, matches and repeat matches. 12 corpus blocks and
   8 graph leaves decode in the Python reference.
 - The new decoders agreed with the 0.0.2 C decoders on about 15,000 further mutated streams. `make check` now spends
-  about 30 s in `tests/coder_reference.py`. Left in FORMAT.md section 13: the QLFC coder, kimg and CMP.
+  about 30 s in `tests/coder_reference.py`. Left in FORMAT.md section 13: kimg and CMP, which build on the context-mixing coder.
 - **`tests/coder_reference.py`**: an independent Python decoder for those sections, written from the prose, in
   `make check` (about 10 s). It decodes every corpus block that uses KLZ or KLZH2:
   - blocks without a transform are compared with the original;

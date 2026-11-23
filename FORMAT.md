@@ -263,7 +263,7 @@ refused (corrupt).
 | 15 | NPLANE | leaf | written (`--native-leaf`) | SPEC.md *Leaf codec 15* |
 | 16 | FQFAM (FASTQ family) | block | written (ultra) | SPEC.md *FASTQ family blocks*; `src/codecs/fastq.c` |
 | 17 | CMI (context mixing, image model) | block | written (ultra) | SPEC.md *Entropy coders*; `src/codecs/cm_image.c` |
-| 18 | BWT (Kolmo block sorting) | block, leaf | written | SPEC.md *Entropy coders* (stream header); `src/codecs/bwt_stream.c`, `src/algo/qlfc.c`, `src/algo/lzp.c` |
+| 18 | BWT (Kolmo block sorting) | block, leaf | written | **§22** |
 | 19 | AUD (kaud, 16-bit PCM) | block | written | SPEC.md *Audio blocks*; `src/codecs/audio.c` |
 | 20 | VID (kvid layout + nested frame) | block | written | §7.3; SPEC.md *Video frames*; `src/codecs/video.c` |
 | 21 | PLANES | leaf | written | SPEC.md *Format 2*; `src/codecs/planes_leaf.c` |
@@ -378,16 +378,19 @@ These payloads are specified here only by the reference implementation at tag `v
 and the frozen corpus pins their behaviour on real data. Writing each one out as prose is the next step of the format
 work, in this order (most frames first):
 
-1. the BWT stream's QLFC coder (18);
-2. kimg (31);
-3. CMP (25).
+1. kimg (31);
+2. CMP (25).
+
+Both build on the context-mixing coder (codec 7), whose model is described in SPEC.md, *Entropy coders*, but not
+written out bit by bit.
 
 Written out so far:
 - sections 14 to 18: KLZH2 (32) with krans, KLZ (28), KLZH (29) and khuf (27);
 - section 19: the byte-plane shuffle (plan 2, tflag 1) and x86 filter (plan 7, tflag 8) inverses;
 - section 20: every transform inverse except the ARM64 filter (SPEC.md) and the shuffle and x86 filter (section 19):
   tflags 1-7, 9, 10, 12 and 13;
-- section 21: KLZMA (24).
+- section 21: KLZMA (24);
+- section 22: the BWT stream (18): LZP, inverse BWT and QLFC with libbsc's tables as normative data.
 
 Until a payload has its own section, a change to its decoder that changes the decoded bytes of any version-12 frame is
 a format change (COMPATIBILITY.md), whether or not the corpus catches it.
@@ -1225,3 +1228,194 @@ The encoder ends with 5 flush bytes.
 The decoders of sections 20 and 21 were also compared with the 0.0.2 C decoders on mutated corpus streams: about
 6,000 transform streams and 8,700 KLZMA streams. Both refused the same streams and decoded the others to the same
 bytes.
+
+## 22. BWT stream (codec 18)
+
+Kolmo's block-sorting coder: optional LZP, the Burrows-Wheeler transform and QLFC entropy coding. The LZP, BWT and
+QLFC stages are those of libbsc 3.4.0, and the QLFC models use libbsc's tables and constants. Those are normative data
+here, in `tests/format_tables/qlfc.json`:
+- `bsc_stretch_table` and `bsc_squash_table`, 4097 entries each;
+- `model_rank_state_table` (32768) and `model_run_state_table` (8192);
+- the counter and mixer constants. A constant is named `{M|F}_{RANK|RUN}_{XY}_{TH0|AR0|TH1|AR1|LR0|LR1|LR2}`, where
+  `M` is the adaptive model and `F` the static one.
+
+`stretch(p)` is `bsc_stretch_table[p]` and `squash(s)` is `bsc_squash_table[2048 + s]`. Arithmetic is on 32-bit
+signed integers with `>>` arithmetic. Where a value is stored as 16 bits it wraps to a signed 16-bit value, and the
+mixer products wrap modulo 2^32. `tests/bwt_reference.py` is the independent decoder.
+
+### 22.1 Stream
+
+```
+stream := flags u8 | [lzp_bits u8 | lzp_min u8] | index u32 | rlog u8 | k u8 | sample u32 × k | qlfc
+```
+
+- `flags` bits 0-1 select the QLFC model: 1 static, 2 adaptive. Bit 2 means LZP was applied. Refuse other bits, and a
+  model other than 1 or 2.
+- With LZP, refuse `lzp_bits` outside 10-28 and `lzp_min` below 16.
+- Refuse when `n < 2`, the stream is shorter than 7 bytes, the header does not fit, `rlog` is outside 1-30, or fewer
+  than `4k + 1` bytes follow the header.
+
+**Decoding.**
+1. Decode the QLFC part (§22.4) to `m` bytes, at most `n`. Refuse unless `m ≥ 2`, `m = n` when there is no LZP, and
+   `⌊(m − 1) / 2^rlog⌋ = k`.
+2. Refuse unless `1 ≤ index ≤ m` and every sample is in `1..m`.
+3. Invert the BWT (§22.6).
+4. With LZP, undo it (§22.7) to exactly `n` bytes.
+
+### 22.2 Range decoder
+
+- Input is read as 16-bit little-endian words. When one byte is left, the word is that byte, and past the end words
+  are 0.
+- **Start:** `range = 2^32 − 1`, and `code` is three words shifted in 16 bits at a time, modulo 2^32.
+- **Decoding a bit** with `p`, the 12-bit probability of a 0:
+  1. If `range < 2^16`, set `range <<= 16` and shift the next word into `code`.
+  2. Let `r = (range >> 12) · p`.
+  3. If `code ≥ r`, the bit is 1, `range −= r` and `code −= r`. Otherwise the bit is 0 and `range = r`.
+- A **word** is 32 bits decoded with `p = 2048`, most significant first.
+
+### 22.3 Counters and mixers
+
+**Counters** are signed 16-bit cells starting at 2048. With constants `TH0, AR0, TH1, AR1`:
+- after a 0: `c += ((4096 − TH0 − c) · AR0) >> 12`;
+- after a 1: `c −= ((c − TH1) · AR1) >> 12`.
+
+Two places of the static model (the mantissa and escape bits, §22.5) use the *rounded* form instead:
+- after a 0: `c −= (c·AR0 − ((4096 − TH0)·AR0 − 4095)) >> 12`;
+- after a 1: `c −= (c·AR1 − TH1·AR1) >> 12`.
+
+**Static model.** The probability is `(c·LR0 + s·LR1 + p·LR2) >> 5` for the char, state and static counters `c, s, p`.
+
+**Adaptive model.** The probability comes from a **mixer**, which has:
+- weights `w0 = w1 = 65536` and `w2 = 0`;
+- inputs `s0, s1, s2`;
+- an index;
+- 17 map cells, cell `i` starting at `squash((i − 8)·256)`.
+
+To mix `p0, p1, p2`:
+1. `sj = stretch(pj)`.
+2. `x = (s0·w0 + s1·w1 + s2·w2) >> 17`, wrapped to 16 bits and clamped to −2047..2047.
+3. `index = (x + 2048) >> 8` and `mapped = map[index] + ((map[index+1] − map[index]) · (x & 255) >> 8)`.
+4. The probability is `mixed = (3·squash(x) + mapped) >> 2`.
+
+After the bit is decoded:
+- Update `map[index]` and `map[index+1]` as counters, with the mixer's `TH`/`AR` constants for that bit value.
+- Then `wj −= (LRj · e · sj mod 2^32) >> 16` for j = 0, 1, 2, where `e = mixed − 4095` after a 0 and `mixed − 1` after
+  a 1.
+
+The counters of the same step are updated too, with the plain form.
+
+### 22.4 QLFC framing
+
+`qlfc := nblocks u8 | …`
+- **One block:** a coded block follows (§22.5).
+- **Several blocks:** `nblocks` pairs `(out i32, in i32)` follow, then the blocks' bytes in order.
+  - Refuse 0 blocks, a table that does not fit, or a negative size.
+  - Refuse a block whose input runs past the stream, or a running output total above the limit.
+  - A block with `in = out` is stored. Any other block is coded and must decode to exactly `out` bytes.
+  - Bytes after the last block are ignored.
+- A coded block decodes on its own: every model starts fresh.
+
+### 22.5 QLFC coded block
+
+A coded block starts with a word, the output length `n'`. Refuse it when it is negative or above the limit.
+
+**MTF header.** Build the MTF table `T[0..255]` rank by rank. Each rank's byte is decoded bit by bit, from bit 7 down
+to bit 0, keeping the bits found so far as a prefix:
+- A bit is coded (`p = 2048`) only when the candidates under the current prefix include both a 0 and a 1 at that bit.
+  A candidate is a byte not yet in the table, or the previous rank's byte.
+- Otherwise the bit is the one the candidates allow, and nothing is read.
+
+When a rank's byte equals the previous rank's byte, the table ends:
+- `lastRank` is that rank;
+- `maxRank` is `⌊log2(rank − 1)⌋` (0 when `rank ≤ 1`);
+- the rest of `T` is filled with that byte.
+
+Without such a repeat, `lastRank = 255` and `maxRank = 7`.
+
+**Symbols.** Repeat until `n'` bytes are out. The state is:
+- `ch = T[0]`;
+- per-byte histories `rankHist[ch]` and `runHist[ch]`, starting at 0;
+- the contexts `cR0`, `cR4`, `cRun` and `avg`, starting at 0.
+
+Steps:
+1. **Rank state:** `st = model_rank_state_table[cRun << 11 | cR4 << 3 | rankHist[ch]]`.
+2. **Rank.**
+   - If `avg < 32`, decode the *rank flag*.
+     - If it is 0, `rank = 1` and `rankHist[ch] = 0`.
+     - Otherwise:
+       1. Decode exponent bits with `size` starting at 1. Stop when `size = maxRank` or a 0 is decoded. Each 1
+          increments `size`; refuse `size > 7`.
+       2. Set `rankHist[ch] = size`.
+       3. Decode `size` mantissa bits, most significant first, into `rank`, which starts at 1: `rank = 2·rank + bit`.
+   - If `avg ≥ 32`, decode the `maxRank + 1` *escape* bits directly into `rank`, which starts at 0. Refuse `rank = 0`,
+     and set `rankHist[ch] = ⌊log2 rank⌋`.
+   - Refuse `rank > lastRank`.
+3. **MTF update.** Move `ch` to position `rank`, shifting `T[1..rank]` down one place. Then
+   `avg = (avg·124 + rank·4) >> 7` and `r = rank − 1`.
+4. **Run state:** `st = model_run_state_table[cR0 << 10 | cRun << 6 | min(r,7) << 3 | min(runHist[ch],7)]`.
+5. **Run.** Decode the *run flag*.
+   - **0:** output one `ch`, and set `runHist[ch] = (runHist[ch] + 2) >> 2` and `cRun = (cRun << 1 | 1) & 15`.
+   - **1:**
+     1. Decode exponent bits, `size` from 1 until a 0; refuse `size > 30`.
+     2. Set `runHist[ch] = (runHist[ch] + 3·size + 3) >> 2`.
+     3. Decode `size` mantissa bits into `run`, which starts at 1.
+     4. Set `cRun = (cRun << 1 | (run < 3)) & 15`.
+     5. Refuse when `run` passes `n'`; otherwise output `run` copies of `ch`.
+6. In both cases `cR0 = (cR0 << 1 | (r = 0)) & 7` and `cR4 = (cR4 << 2 | min(r, 3)) & 255`.
+
+**Cells of each bit.** Every bit takes three counters, in the order *char, state, static*: the cell of `ch`, the cell
+of `st`, and the shared cell. The adaptive model also takes one mixer. Each counter set has its constant pair `XY`; a
+mixer set's constants are those of the same name. `i` is the bit's index within its group.
+
+| Bit | Counter cells (char, state, static) | Constants | Adaptive mixer |
+|---|---|---|---|
+| rank flag | `RankChar[ch]`, `RankState[st]`, `RankStatic` | `RANK_TC, TS, TP`; probability `TM` | `mixRank[ch]` |
+| rank exponent, `size` | `RankExp*[·][size − 1]` | `RANK_EC, ES, EP`; `EM` | `mixRankExp[max(rankHist, size)][size]`, with the history before this symbol |
+| rank mantissa, tree node `j` | `RankMant[size]*[·][j]` | `RANK_MC, MS, MP`; `MM`; static: rounded form | `mixRankMant[size]` |
+| escape, tree node `j` | `RankEsc*[·][j]` | `RANK_PC, PS, PP`; `PM`; static: rounded form | `mixRankEsc[j]` |
+| run flag | `RunChar[ch]`, `RunState[st]`, `RunStatic` | `RUN_TC, TS, TP`; `TM` | `mixRun[ch]` |
+| run exponent, `size` | `RunExp*[·][size − 1]` | `RUN_EC, ES, EP`; `EM` | `mixRunExp[max(runHist, size)][size]`, with the history before this symbol |
+| run mantissa | `RunMant[size]*[·][j]` | `RUN_MC, MS, MP`; `MM`; static: rounded form | `mixRunMant[size]` |
+
+- The mantissa and escape tree node `j` starts at 1 and becomes `2j + bit`.
+- For run mantissas with `size > 5`, `j` instead counts 1, 2, 3, … .
+- The adaptive model updates every counter with the plain form.
+
+### 22.6 Inverse BWT
+
+`t` is the QLFC output of `m` bytes, and `index` is the row of the end-of-text marker in the full BWT.
+1. Insert the marker at position `index` to get `m + 1` rows. The marker sorts before every byte.
+2. With the usual LF mapping, the text's last byte is the byte of row 0. Each earlier byte is the byte of the row
+   reached by LF from the previous one.
+
+The samples are a decoding aid. Sample `t` is the row of the suffix that starts at text position `(t + 1)·2^rlog`,
+which lets a decoder start `k + 1` chains in parallel. They are only range-checked, and a decoder may ignore them.
+When they do not match the text, a decoder that ignores them produces the text, and one that uses them (as 0.0.2 does
+on some inputs) produces other bytes, which fail the block checksum. Either way such a frame never decodes to wrong
+bytes.
+
+### 22.7 LZP
+
+`lzp := nblocks u8 | …`. The block table works as in §22.4: one block follows directly, or `nblocks` `(out, in)`
+pairs, with `in = out` meaning stored. Each coded block starts with an empty hash table of `2^lzp_bits` entries.
+1. Copy 4 bytes. Refuse a block shorter than 4 bytes.
+2. Let `ctx` be the last 4 output bytes, big-endian, and `h = ((ctx >> 15) ^ ctx ^ (ctx >> 3)) mod 2^lzp_bits`.
+3. At each input byte: let `v = table[h]`, then set `table[h]` to the current output length.
+   - If the byte is `0xF2` and `v > 0`, read the next byte (refuse when there is none).
+     - If it is 255, output `0xF2`.
+     - Otherwise it starts a length: `len = lzp_min + bytes`, adding bytes while each one is 254. Refuse when the length
+       passes the output limit. Copy `len` bytes from output position `v`, byte by byte (overlap allowed), and recompute
+       `ctx` from the last 4 output bytes.
+   - Otherwise copy the byte.
+4. Refuse when the output would pass its limit.
+
+The LZP output must be exactly `n` bytes.
+
+### 22.8 Test coverage
+
+`tests/bwt_reference.py` decodes every codec-18 block and graph leaf of the corpus: 34 in all, with both QLFC models
+and with and without LZP. Blocks without a transform, or under a section-20 transform, are compared with the original.
+Blocks under the shuffle are checked against the block checksum.
+
+On mutated corpus streams it agreed with the 0.0.2 C decoder on every accept, refusal and output byte. The exception is
+streams whose sampled indexes no longer match the text, as §22.6 allows.
