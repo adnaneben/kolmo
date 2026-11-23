@@ -90,8 +90,18 @@ rc() { set +e; "$@" > /dev/null 2>&1; r=$?; set -e; echo $r; }
 [ "$(rc kolmo -10 -c in.bin)" = 2 ] || fail "-10: exit 2"
 # a reader that stops early ends the writer with SIGPIPE, as for xz and gzip (no error message, no hang)
 cat in.bin in.bin in.bin in.bin in.bin in.bin in.bin in.bin > big.bin
-kolmo -1 -c big.bin | kolmo -d 2> sp.err | head -c 10 > /dev/null
-[ ! -s sp.err ] || fail "early close: kolmo -d printed $(cat sp.err)"
+kolmo -1 -c big.bin > big.kolmo
+kolmo --stream=1 -1 -c big.bin > bigs.kolmo
+for f in big.kolmo bigs.kolmo; do
+    # SIGPIPE as the shell left it (CI runners may start with it ignored), then default, then ignored: no message
+    kolmo -dc $f 2> sp.err | head -c 10 > /dev/null
+    [ ! -s sp.err ] || fail "early close ($f): kolmo -d printed $(cat sp.err)"
+    sh -c 'trap - PIPE; exec "$0" -dc "$1"' kolmo $f 2> sp.err | head -c 10 > /dev/null
+    [ ! -s sp.err ] || fail "early close ($f, SIGPIPE default): kolmo -d printed $(cat sp.err)"
+    sh -c 'trap "" PIPE; kolmo -dc "$0"; echo $? > sp.rc' $f 2> sp.err | head -c 10 > /dev/null
+    [ ! -s sp.err ] || fail "early close ($f, SIGPIPE ignored): kolmo -d printed $(cat sp.err)"
+    [ "$(cat sp.rc)" = 1 ] || fail "early close ($f, SIGPIPE ignored): exit $(cat sp.rc), expected 1"
+done
 # a stream decoder that stops before its pipe ends (data after the end, or a damaged segment) exits 0 or 1, never by
 # the SIGPIPE of the thread that feeds it
 kolmo --stream=1 -1 -c big.bin > s.kolmo

@@ -90,6 +90,6 @@ the letter already means something else in Kolmo; the table says what happens.
 | Exit status | 0 success, 1 error, 2 warning | 0 success, 1 error, 2 usage error. With several files, processing continues and the status is 1 |
 | Compressed data to a terminal | refused without `-f` | same; reading compressed data from a terminal is refused too |
 | Concatenated files (`cat a b \| … -d`) | decoded one after the other | same |
-| A reader that stops early (`… -d \| head`) | ended by SIGPIPE (status 141 in the shell) | same |
+| A reader that stops early (`… -d \| head`) | ended by SIGPIPE (status 141 in the shell) | same; where SIGPIPE is ignored (some CI runners), exit 1 with no message |
 | SIGINT, SIGTERM, SIGHUP | the partial output file is removed | same: the private staging file is removed and no output appears (added) |
 | Output files | | written to a staging file and published atomically with the input's mode and mtime; never over an existing file without `-f` |

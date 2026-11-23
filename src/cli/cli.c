@@ -592,8 +592,12 @@ static int64_t code_buffer(const opts_t *o, const uint8_t *in, size_t n, uint8_t
     return r;
 }
 
+/* a reader that closed standard output early (kolmo -d | head) when SIGPIPE is ignored, as on some CI runners and
+ * under some shells: the run fails (status 1) without a message, as xz and gzip end quietly by the signal */
+static void write_error(const char *where) { if (errno != EPIPE) fprintf(stderr, "kolmo: %s: %s\n", where, strerror(errno)); }
 static void report_error(const opts_t *o, const char *name, int64_t e, const uint8_t *hdr, size_t hn) {
     int dec = o->op != OP_COMPRESS || o->range;
+    if (e == KOLMO_ERR_IO && errno == EPIPE) return;
     if (e == KOLMO_ERR_MEMORY) { fprintf(stderr, "kolmo: %s:\n", name); mem_error(hdr, hn, dec, o->P.mode, o->level, o->memlimit); }
     else fprintf(stderr, "kolmo: %s: %s\n", name, kolmo_strerror(e));
 }
@@ -755,7 +759,7 @@ static int process(const opts_t *o, const char *in) {
         }
         if (!streamed && !is_kolmo_magic(hdr, hn) && o->op == OP_DECOMPRESS && o->force && to_stdout && !o->range) {
             if (buffered) {
-                if (write_all(1, buf, bn)) { fprintf(stderr, "kolmo: (stdout): %s\n", strerror(errno)); ret = 1; goto out; }
+                if (write_all(1, buf, bn)) { write_error("(stdout)"); ret = 1; goto out; }
             } else if (lseek(ifd, 0, SEEK_SET) < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out; }
             uint8_t b[1 << 16];
             for (;;) {
@@ -763,7 +767,7 @@ static int process(const opts_t *o, const char *in) {
                 if (g < 0 && errno == EINTR) continue;
                 if (g < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; break; }
                 if (!g) break;
-                if (write_all(1, b, (size_t)g)) { fprintf(stderr, "kolmo: (stdout): %s\n", strerror(errno)); ret = 1; break; }
+                if (write_all(1, b, (size_t)g)) { write_error("(stdout)"); ret = 1; break; }
             }
             goto out;
         }
@@ -825,7 +829,7 @@ static int process(const opts_t *o, const char *in) {
         r = code_buffer(o, buf, bn, &obuf, name);
         if (r >= 0) {
             insize = (int64_t)bn; outsize = r;
-            if (write_all(ofd, obuf, (size_t)r)) { fprintf(stderr, "kolmo: %s: %s\n", to_stdout ? "(stdout)" : outp, strerror(errno)); ret = 1; goto out; }
+            if (write_all(ofd, obuf, (size_t)r)) { write_error(to_stdout ? "(stdout)" : outp); ret = 1; goto out; }
         }
     }
     if (r < 0) { report_error(o, name, r, dec ? hdr : NULL, dec ? hn : 0); ret = 1; goto out; }
