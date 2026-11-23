@@ -1,5 +1,10 @@
 # kolmo container format
 
+**The normative specification of container version 12 is [FORMAT.md](FORMAT.md)**, and the compatibility promise is
+[COMPATIBILITY.md](COMPATIBILITY.md). This document keeps the history of versions 1 to 11 and the detailed sections
+FORMAT.md refers to (graph blocks, CM models, FASTQ family, GR6+, audio, video, format 2, extensions). Where the two
+disagree about version 12, FORMAT.md is right and this document is to be fixed.
+
 This describes the `CZN1` container as written by this implementation: **container version 12**, Kolmo's own coders
 only. Every frame this build writes has version byte 12, and it reads version 12 only (see *Version 12* below).
 Versions 1 to 11 were written by Kolmo 1.x and the 1.2.0 release candidates, whose coders included zstd, Brotli, LZ4,
@@ -7,9 +12,9 @@ liblzma (LZMA2) and zstd's Huffman coder, with XXH3-64/XXH64 checksums, zstd dic
 build refuses them with `KOLMO_ERR_LEGACY` (-13). The rest of this document keeps their description where it explains
 an identifier, marked as history. The section *Identifiers and versions* lists every version, codec id, node id and
 model.
-The container framing below is stable and intended to be frozen at 1.0. The per-block *transform*
-sub-formats (tables, logs, scientific records, images, words) are not yet frozen and may change before 1.0; a decoder
-identifies them per block and this document specifies where that identification lives, not every transform's bytes.
+Version 12 is frozen as a whole, transform sub-formats included: every later release decodes every version-12 frame to
+the same bytes (COMPATIBILITY.md). Transforms whose bytes are not written out here are specified by the reference
+implementation at tag `v0.0.2` until they are (FORMAT.md section 13).
 
 All multi-byte integers are little-endian. Offsets are in bytes from the start of the file.
 

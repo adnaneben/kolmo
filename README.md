@@ -243,8 +243,9 @@ overnight genetic search of the build-time settings (`tune/ga.py`).
 0.0.2, the second release of the renumbered line: the level model and the new command line (`docs/LEVELS.md`,
 `CHANGELOG.md`), decoder hardening and threaded match finders. The frame format is unchanged from 0.0.1 (container
 version 12). The 1.x line (1.0.0 and 1.0.1, now yanked) used library coders (zstd, Brotli, LZ4, liblzma); 0.0.x
-uses only Kolmo's own and writes container version 12 (`SPEC.md`). Output is byte-identical across x86-64 and Apple
-silicon. The decoder is fuzzed (harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never
+uses only Kolmo's own and writes container version 12, specified in `FORMAT.md`. **Every later release reads what
+0.0.1 and later write** (`COMPATIBILITY.md`, checked in CI against a frozen corpus of 330 frames). Output is
+byte-identical across x86-64 and Apple silicon. The decoder is fuzzed (harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never
 returned as data. `RELEASING.md` describes how to cut a release.
 
 ### Files written by Kolmo 1.x
