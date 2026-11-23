@@ -219,11 +219,13 @@ with libFuzzer under AddressSanitizer and UndefinedBehaviorSanitizer on every pu
 every level and the frozen corpus; an OSS-Fuzz application is prepared but not submitted
 \todoin{PR~\#19, not merged yet}.
 
-\todo{Correctness bug found on 2026-11-23 (shared notes, \emph{BUG-table-long-field-data-loss}): in 0.0.2 and main,
-a table block (plan 3, tflag 4) with a field longer than 65,535 bytes is written but does not decode, at levels 3--9.
-None of the paper's inputs hit it, and every round trip in \S\ref{sec:eval} was verified. Before this paper goes
-out, the decoder fix (option (a) in the note) must have landed. If a release shipped the bug, say so here in one
-sentence: it bears directly on the claim that the routing is safe.}
+One defect bears directly on this promise. Kolmo 0.0.2, at levels 3--9, writes table blocks (plan 3) containing a
+field longer than 65,535 bytes that its own decoder then refuses as corrupt. No data is returned wrongly, but such
+files cannot be read by 0.0.2. The fix is in the decoder only: later releases read these frames, the format is
+unchanged, and two frames written by 0.0.2 were added to the frozen corpus as regression tests
+\todoin{fix in PR~\#22 (56a0f826), not merged yet; also decide whether the encoder should refuse the table transform
+for such fields}. None of the inputs in \S\ref{sec:eval} contain such a field, and every round trip there was
+verified.
 
 \subsection{Decode working set}\label{sec:memd}
 Many formats declare a window or dictionary size so that a reader can refuse a stream it cannot afford before
@@ -380,7 +382,8 @@ block---depends only on the input, the level and an explicit memory cap.
 
 A determinism test compresses a fixed, seeded set of inputs at every level with one and four threads and under forced
 budgets of 64\,MiB, 512\,MiB, 4\,GiB and unlimited, and compares the SHA-256 of every frame with a checked-in list
-(152 digests). The release binaries are also bit-for-bit reproducible across checkout paths on the three CI
+(152 digests). The same holds between architectures: on an x86-64 GitHub runner (AMD EPYC), levels 3, 7 and 9
+give exactly the same compressed sizes of Silesia as on the Apple M5\src{x86 run 45250622103 cli-silesia.md}. The release binaries are also bit-for-bit reproducible across checkout paths on the three CI
 platforms. Determinism is not a compression result, but it is what makes compressed output usable as a cache or
 deduplication key within a release and what makes regressions visible.
 
@@ -501,6 +504,21 @@ month or year, with OpenZL trained by \texttt{zli train} on the train half (gree
 profile) and every tool measured on the test half on one thread. Add ZipNN (run) and DFloat11 (its published method
 computed on the CPU, labelled as such) on the weights. Keep the untrained table as a second column group. Rewrite the
 paragraph above from the new counts.}
+
+\IfFileExists{generated/tab-holdout.tex}{%
+\begin{table*}[t]
+\caption{Held-out panel: public data new to Kolmo, split into train and test halves; ratios on the test half, one
+thread. OpenZL ``trained'' is \texttt{zli train} on the train half (best profile); ``untrained'' is its best format
+profile at levels 6 and 9. Bold: best of OpenZL and Kolmo. Source: \texttt{data/holdout-panel.json}
+(\texttt{bench/repro}).}\label{tab:holdout}
+\centering\scriptsize
+\input{generated/tab-holdout.tex}
+\end{table*}
+On the held-out panel (Table~\ref{tab:holdout}), Kolmo's best level against \emph{trained} OpenZL wins on
+\numHoldTrainedWin{}, ties on \numHoldTrainedTie{} and loses on \numHoldTrainedLoss{} of \numHoldFiles{} files, and
+against untrained OpenZL wins on \numHoldUntrainedWin, ties on \numHoldUntrainedTie{} and loses on
+\numHoldUntrainedLoss\src{holdout-panel.json}. \todoin{rewrite this paragraph from the final counts}
+}{}
 
 \subsection{Threads and memory}
 

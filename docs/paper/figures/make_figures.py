@@ -338,6 +338,59 @@ def tab_mt(nums):
     write("tab-mt.tex", "\n".join(lines) + "\n", "mt-result.json")
 
 
+def tab_holdout(nums):
+    """Held-out panel with trained OpenZL (bench/repro results/panel.json, copied as data/holdout-panel.json).
+    Written only when that file exists; kolmo.tex includes the table only if this output exists."""
+    path = os.path.join(DATA, "holdout-panel.json")
+    out = os.path.join(OUT, "tab-holdout.tex")
+    if not os.path.exists(path):
+        if os.path.exists(out):
+            os.remove(out)
+        return
+    d = json.load(open(path))
+    TIE = 0.01
+    sets, score = {}, {"untrained": [0, 0, 0], "trained": [0, 0, 0]}
+    lines = [r"\begin{tabular}{@{}lrrrrrrrl@{}}", r"\toprule",
+             r" & & & \multicolumn{2}{c}{OpenZL 0.3.0} & \multicolumn{4}{c}{Kolmo 0.0.2} \\",
+             r"\cmidrule(lr){4-5}\cmidrule(l){6-9}",
+             r"File & zstd -19 & xz -9 & untrained & trained & -3 & -5 & best & Lvl \\", r"\midrule"]
+    for fn, v in d.items():
+        if fn.startswith("_"):
+            continue
+        r = {x["tool"]: x for x in v["rows"]}
+        oz = [x for t, x in r.items() if t.startswith("openzl") and "trained" not in t]
+        tr = [x for t, x in r.items() if t.startswith("openzl trained")]
+        kl = {t.split()[1]: x for t, x in r.items() if t.startswith("kolmo")}
+        if not oz or not tr or "-3" not in kl:
+            continue
+        ozb, trb = max(x["ratio"] for x in oz), max(x["ratio"] for x in tr)
+        kb_lvl, kb = max(kl.items(), key=lambda kv: kv[1]["ratio"])
+        for key, o in (("untrained", ozb), ("trained", trb)):
+            k = kb["ratio"]
+            score[key][1 if abs(k / o - 1) <= TIE else (0 if k > o else 2)] += 1
+        name = os.path.basename(fn).replace("_", r"\_")
+        st = v.get("set", "")
+        if st not in sets:
+            if sets:
+                lines.append(r"\midrule")
+            lines.append(r"\multicolumn{9}{@{}l}{\emph{%s}} \\" % v.get("area", st).replace("_", " ").replace("&", r"\&"))
+            sets[st] = 0
+        sets[st] += 1
+        vals = [r["zstd -19"]["ratio"], r["xz -9"]["ratio"], ozb, trb, kl["-3"]["ratio"],
+                kl.get("-5", kl["-3"])["ratio"], kb["ratio"]]
+        top = max(vals[2:])
+        cells = [(r"\textbf{%s}" if x == top and i >= 2 else "%s") % (f"{x:.2f}" if x < 100 else f"{x:.1f}")
+                 for i, x in enumerate(vals)]
+        lines.append(f"{name} & " + " & ".join(cells) + f" & {kb_lvl} \\\\")
+    lines += [r"\bottomrule", r"\end{tabular}"]
+    for key, (w, t, l) in score.items():
+        k = key.capitalize()
+        nums[f"Hold{k}Win"], nums[f"Hold{k}Tie"], nums[f"Hold{k}Loss"] = str(w), str(t), str(l)
+    nums["HoldFiles"] = str(sum(sets.values()))
+    nums["HoldSets"] = str(len(sets))
+    write("tab-holdout.tex", "\n".join(lines) + "\n", "holdout-panel.json")
+
+
 def macro_name(k):
     digits = "Zero One Two Three Four Five Six Seven Eight Nine".split()
     out = "".join(digits[int(ch)] if ch.isdigit() else ch for ch in k if ch.isalnum())
@@ -352,6 +405,7 @@ def main():
     tab_silesia_files(nums)
     tab_structured(nums)
     tab_mt(nums)
+    tab_holdout(nums)
     body = "".join(f"\\newcommand{{\\{macro_name(k)}}}{{{v}}}\n" for k, v in sorted(nums.items()))
     write("numbers.tex", body, "lzb-*.csv, openzl.json, mt-result.json")
     print(f"wrote {len(os.listdir(OUT))} files to {os.path.relpath(OUT)}; {len(nums)} number macros")

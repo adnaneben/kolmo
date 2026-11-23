@@ -4,7 +4,8 @@ ENGINE ?= tectonic
 
 all: kolmo.pdf
 
-generated/numbers.tex: figures/make_figures.py $(wildcard data/*)
+# always regenerate (under a second): a data file removed must also remove its table
+generated/numbers.tex: FORCE
 	python3 figures/make_figures.py
 
 kolmo.pdf: kolmo.tex refs.bib generated/numbers.tex
@@ -17,4 +18,5 @@ endif
 clean:
 	rm -rf generated kolmo.pdf kolmo.aux kolmo.bbl kolmo.blg kolmo.log kolmo.out kolmo.fdb_latexmk kolmo.fls
 
-.PHONY: all clean
+.PHONY: all clean FORCE
+FORCE:

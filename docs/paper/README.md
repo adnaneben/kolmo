@@ -42,6 +42,10 @@ on one thread unless the file name says otherwise. The files were copied from th
 | `openzl.json` | Structured panel: Kolmo -3/-5/-7/-9/-U, OpenZL 0.3.0 `zli` (format profile, levels 6 and 9, untrained), zstd -3/-19, xz -9. Command line, best of 3 |
 | `mt-result.json` | Silesia on the command line, one thread and all cores, with peak RSS |
 
+**Held-out panel (pending).** When the trained-OpenZL rematch is final, copy `bench/repro`'s `results/panel.json` to
+`data/holdout-panel.json`. The table (Table VII) and its counts then appear on the next build; without the file
+they are left out.
+
 The M5 lzbench run used a small plugin that calls libkolmo; `bench/lzbench/` (x86-bench lane) is its successor in the
 repository. The OpenZL panel script is `openzl_panel.py` in the same workspace; `bench/repro/` (bench-page lane)
 replaces it.
