@@ -1,0 +1,488 @@
+% refs.bib -- every entry checked against the source named on its
+% "% verified:" line on 2026-11-23. Fields that could not be confirmed
+% from a primary source were left out (see notes beside entries).
+
+% ---------------------------------------------------------------------
+% General-purpose codecs and their specifications
+% ---------------------------------------------------------------------
+
+% verified: https://datatracker.ietf.org/doc/rfc8878/bibtex/
+@misc{zstd_rfc8878,
+  author       = {Y. Collet and M. Kucherawy},
+  title        = {{Zstandard Compression and the `application/zstd' Media Type}},
+  howpublished = {RFC 8878},
+  series       = {Request for Comments},
+  number       = {8878},
+  publisher    = {RFC Editor},
+  year         = {2021},
+  month        = feb,
+  doi          = {10.17487/RFC8878},
+  url          = {https://www.rfc-editor.org/info/rfc8878}
+}
+
+% verified: https://github.com/meta/zstd
+% (github.com/facebook/zstd now redirects here; LICENSE: Meta Platforms, Inc. and affiliates)
+@misc{zstd_web,
+  author       = {{Meta Platforms, Inc.}},
+  title        = {{Zstandard} -- Fast real-time compression algorithm},
+  howpublished = {\url{https://github.com/meta/zstd}},
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://datatracker.ietf.org/doc/rfc7932/bibtex/
+@misc{brotli_rfc7932,
+  author       = {Jyrki Alakuijala and Zoltan Szabadka},
+  title        = {{Brotli Compressed Data Format}},
+  howpublished = {RFC 7932},
+  series       = {Request for Comments},
+  number       = {7932},
+  publisher    = {RFC Editor},
+  year         = {2016},
+  month        = jul,
+  doi          = {10.17487/RFC7932},
+  url          = {https://www.rfc-editor.org/info/rfc7932}
+}
+
+% verified: https://doi.org/10.1145/3231935 (Crossref record: vol 37, issue 1,
+% online 2018-12-06, issue dated 2019-01). ACM article number could not be
+% confirmed (ACM DL refused automated access), so it is omitted.
+@article{brotli_tois,
+  author    = {Jyrki Alakuijala and Andrea Farruggia and Paolo Ferragina and
+               Eugene Kliuchnikov and Robert Obryk and Zoltan Szabadka and
+               Lode Vandevenne},
+  title     = {{Brotli}: A General-Purpose Data Compressor},
+  journal   = {ACM Transactions on Information Systems},
+  volume    = {37},
+  number    = {1},
+  year      = {2019},
+  doi       = {10.1145/3231935}
+}
+
+% verified: https://tukaani.org/xz/
+@misc{lzma_xz,
+  title        = {{XZ Utils}},
+  howpublished = {\url{https://tukaani.org/xz/}},
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://www.7-zip.org/sdk.html
+@misc{lzma_sdk,
+  author       = {Igor Pavlov},
+  title        = {{LZMA SDK} (Software Development Kit)},
+  howpublished = {\url{https://www.7-zip.org/sdk.html}},
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://doi.org/10.1109/TIT.1977.1055714
+@article{lz77,
+  author    = {J. Ziv and A. Lempel},
+  title     = {A universal algorithm for sequential data compression},
+  journal   = {IEEE Transactions on Information Theory},
+  volume    = {23},
+  number    = {3},
+  pages     = {337--343},
+  year      = {1977},
+  month     = may,
+  doi       = {10.1109/TIT.1977.1055714}
+}
+
+% verified: https://www.cl.cam.ac.uk/teaching/0304/DSAlgs/SRC-124.pdf (cover page)
+@techreport{bwt,
+  author      = {M. Burrows and D. J. Wheeler},
+  title       = {A Block-sorting Lossless Data Compression Algorithm},
+  institution = {Digital Systems Research Center},
+  address     = {Palo Alto, California},
+  type        = {SRC Research Report},
+  number      = {124},
+  year        = {1994},
+  month       = may
+}
+
+% verified: https://github.com/IlyaGrebnov/libbsc
+@misc{bsc,
+  author       = {Ilya Grebnov},
+  title        = {libbsc: High performance block-sorting data compression library},
+  howpublished = {\url{https://github.com/IlyaGrebnov/libbsc}},
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://github.com/iczelia/bzip3
+% (github.com/kspalaiologos/bzip3 now redirects here; owner profile: Kamila Szewczyk)
+@misc{bzip3,
+  author       = {Kamila Szewczyk},
+  title        = {bzip3: A better and stronger spiritual successor to bzip2},
+  howpublished = {\url{https://github.com/iczelia/bzip3}},
+  note         = {Accessed 2026-11-23}
+}
+
+% ---------------------------------------------------------------------
+% Context mixing and neural compressors
+% ---------------------------------------------------------------------
+
+% verified: https://repository.fit.edu/ces_faculty/166
+@techreport{paq,
+  author      = {Matthew V. Mahoney},
+  title       = {Adaptive Weighing of Context Models for Lossless Data Compression},
+  institution = {Florida Institute of Technology},
+  type        = {Technical Report},
+  number      = {CS-2005-16},
+  year        = {2005},
+  month       = dec,
+  url         = {https://cs.fit.edu/media/TechnicalReports/cs-2005-16.pdf}
+}
+
+% verified: https://mattmahoney.net/dc/dce.html
+@misc{dce_book,
+  author       = {Matt Mahoney},
+  title        = {Data Compression Explained},
+  howpublished = {\url{https://mattmahoney.net/dc/dce.html}},
+  year         = {2013},
+  note         = {Online book, copyright 2010--2012 Dell, Inc.; last update Apr.~15, 2013. Accessed 2026-11-23}
+}
+
+% verified: https://www.byronknoll.com/cmix.html and https://github.com/byronknoll/cmix
+@misc{cmix,
+  author       = {Byron Knoll},
+  title        = {cmix},
+  howpublished = {\url{https://www.byronknoll.com/cmix.html}},
+  note         = {Source: \url{https://github.com/byronknoll/cmix}. Accessed 2026-11-23}
+}
+
+% verified: https://bellard.org/nncp/
+@misc{nncp,
+  author       = {Fabrice Bellard},
+  title        = {{NNCP}: Lossless Data Compression with Neural Networks},
+  howpublished = {\url{https://bellard.org/nncp/}},
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://bellard.org/nncp/nncp_v2.1.pdf (first page: title, author, "Feb 6, 2021")
+@misc{nncp_v2,
+  author       = {Fabrice Bellard},
+  title        = {{NNCP} v2: Lossless Data Compression with Transformer},
+  howpublished = {\url{https://bellard.org/nncp/nncp_v2.1.pdf}},
+  year         = {2021},
+  month        = feb,
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://mattmahoney.net/dc/zpaq.html
+% (the spec PDF zpaq206.pdf is linked from this page, dated Mar. 22, 2016 in the
+% page history; its printed title could not be extracted, so the page is cited)
+@misc{zpaq,
+  author       = {Matt Mahoney},
+  title        = {{ZPAQ}: Incremental Journaling Backup Utility and Archiver},
+  howpublished = {\url{https://mattmahoney.net/dc/zpaq.html}},
+  note         = {Format specification: \url{https://mattmahoney.net/dc/zpaq206.pdf} (Mar.~22, 2016). Accessed 2026-11-23}
+}
+
+% ---------------------------------------------------------------------
+% Benchmarks and corpora
+% ---------------------------------------------------------------------
+
+% verified: https://mattmahoney.net/dc/text.html
+@misc{ltcb,
+  author       = {Matt Mahoney},
+  title        = {Large Text Compression Benchmark},
+  howpublished = {\url{https://mattmahoney.net/dc/text.html}},
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://sun.aei.polsl.pl/~sdeor/index.php?page=publications
+% (listed as "PhD dissertation 2003"; abstract says the algorithm is
+% evaluated on the Calgary and Silesia corpora)
+@phdthesis{silesia,
+  author = {Sebastian Deorowicz},
+  title  = {Universal lossless data compression algorithms},
+  school = {Silesian University of Technology},
+  year   = {2003}
+}
+
+% verified: https://sun.aei.polsl.pl/~sdeor/index.php?page=silesia
+@misc{silesia_web,
+  author       = {Sebastian Deorowicz},
+  title        = {Silesia compression corpus},
+  howpublished = {\url{https://sun.aei.polsl.pl/~sdeor/index.php?page=silesia}},
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://doi.org/10.1109/DCC.1997.582019
+@inproceedings{canterbury,
+  author    = {R. Arnold and T. Bell},
+  title     = {A corpus for the evaluation of lossless compression algorithms},
+  booktitle = {Proceedings {DCC} '97. Data Compression Conference},
+  publisher = {IEEE Computer Society Press},
+  pages     = {201--210},
+  year      = {1997},
+  doi       = {10.1109/DCC.1997.582019}
+}
+
+% verified: https://corpus.canterbury.ac.nz/
+@misc{canterbury_web,
+  title        = {The {Canterbury} Corpus},
+  howpublished = {\url{https://corpus.canterbury.ac.nz/}},
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://github.com/inikep/lzbench (owner profile: Przemyslaw Skibinski)
+@misc{lzbench,
+  author       = {Przemyslaw Skibinski},
+  title        = {lzbench: an in-memory benchmark of open-source compressors},
+  howpublished = {\url{https://github.com/inikep/lzbench}},
+  note         = {Accessed 2026-11-23}
+}
+
+% ---------------------------------------------------------------------
+% Format-aware and columnar compression
+% ---------------------------------------------------------------------
+
+% verified: https://arxiv.org/abs/2510.03203
+@misc{openzl,
+  author        = {Yann Collet and Nick Terrell and W. Felix Handte and
+                   Danielle Rozenblit and Victor Zhang and Kevin Zhang and
+                   Yaelle Goldschlag and Jennifer Lee and Elliot Gorokhovsky and
+                   Yonatan Komornik and Daniel Riegel and Stan Angelov and
+                   Nadav Rotem},
+  title         = {{OpenZL}: A Graph-Based Model for Compression},
+  year          = {2025},
+  eprint        = {2510.03203},
+  archivePrefix = {arXiv},
+  howpublished  = {arXiv:2510.03203},
+  url           = {https://arxiv.org/abs/2510.03203}
+}
+
+% verified: https://arxiv.org/abs/2605.09928
+% (a second, later OpenZL paper by the same authors; optional)
+@misc{openzl2026,
+  author        = {Yann Collet and Nick Terrell and W. Felix Handte and
+                   Danielle Rozenblit and Victor Zhang and Kevin Zhang and
+                   Yaelle Goldschlag and Jennifer Lee and Elliot Gorokhovsky and
+                   Yonatan Komornik and Daniel Riegel and Stan Angelov and
+                   Nadav Rotem},
+  title         = {{OpenZL}: Using Graphs to Compress Smaller and Faster},
+  year          = {2026},
+  eprint        = {2605.09928},
+  archivePrefix = {arXiv},
+  howpublished  = {arXiv:2605.09928},
+  url           = {https://arxiv.org/abs/2605.09928}
+}
+
+% verified: https://github.com/meta/openzl and https://openzl.org
+% (github.com/facebook/openzl now redirects to meta/openzl)
+@misc{openzl_web,
+  author       = {{Meta Platforms, Inc.}},
+  title        = {{OpenZL}},
+  howpublished = {\url{https://openzl.org}},
+  note         = {Source: \url{https://github.com/meta/openzl}. Accessed 2026-11-23}
+}
+
+% verified: https://parquet.apache.org/docs/file-format/ and https://github.com/apache/parquet-format
+@misc{parquet,
+  author       = {{Apache Software Foundation}},
+  title        = {{Apache Parquet} File Format},
+  howpublished = {\url{https://parquet.apache.org/docs/file-format/}},
+  note         = {Specification source: \url{https://github.com/apache/parquet-format}. Accessed 2026-11-23}
+}
+
+% verified: https://doi.org/10.1145/3626717 (Crossref: vol 1, issue 4, Dec 2023)
+% and author version https://ir.cwi.nl/pub/33334 (presented at SIGMOD '24).
+% ACM article number could not be confirmed, so it is omitted.
+@article{alp,
+  author    = {Azim Afroozeh and Leonardo X. Kuff{\'o} and Peter Boncz},
+  title     = {{ALP}: Adaptive Lossless floating-Point Compression},
+  journal   = {Proceedings of the ACM on Management of Data},
+  volume    = {1},
+  number    = {4},
+  year      = {2023},
+  month     = dec,
+  doi       = {10.1145/3626717}
+}
+
+% verified: https://doi.org/10.14778/2824032.2824078
+@article{gorilla,
+  author    = {Tuomas Pelkonen and Scott Franklin and Justin Teller and
+               Paul Cavallaro and Qi Huang and Justin Meza and
+               Kaushik Veeraraghavan},
+  title     = {{Gorilla}: A Fast, Scalable, In-Memory Time Series Database},
+  journal   = {Proceedings of the VLDB Endowment},
+  volume    = {8},
+  number    = {12},
+  pages     = {1816--1827},
+  year      = {2015},
+  month     = aug,
+  doi       = {10.14778/2824032.2824078}
+}
+
+% verified: https://doi.org/10.1145/3589263 and author version
+% https://www.cs.cit.tum.de/fileadmin/w00cfj/dis/papers/btrblocks.pdf
+% ("Proc. ACM Manag. Data 1, 2, Article 118 (June 2023)")
+@article{btrblocks,
+  author    = {Maximilian Kuschewski and David Sauerwein and Adnan Alhomssi and
+               Viktor Leis},
+  title     = {{BtrBlocks}: Efficient Columnar Compression for Data Lakes},
+  journal   = {Proceedings of the ACM on Management of Data},
+  volume    = {1},
+  number    = {2},
+  articleno = {118},
+  year      = {2023},
+  month     = jun,
+  doi       = {10.1145/3589263}
+}
+
+% verified: https://doi.org/10.1101/gr.114819.110
+@article{cram,
+  author    = {Markus Hsi-Yang Fritz and Rasko Leinonen and Guy Cochrane and
+               Ewan Birney},
+  title     = {Efficient storage of high throughput {DNA} sequencing data using
+               reference-based compression},
+  journal   = {Genome Research},
+  volume    = {21},
+  number    = {5},
+  pages     = {734--740},
+  year      = {2011},
+  doi       = {10.1101/gr.114819.110}
+}
+
+% verified: https://doi.org/10.1093/bioinformatics/btac010
+@article{cram31,
+  author    = {James K. Bonfield},
+  title     = {{CRAM} 3.1: advances in the {CRAM} file format},
+  journal   = {Bioinformatics},
+  volume    = {38},
+  number    = {6},
+  pages     = {1497--1503},
+  year      = {2022},
+  doi       = {10.1093/bioinformatics/btac010}
+}
+
+% ---------------------------------------------------------------------
+% Model-weight compression
+% ---------------------------------------------------------------------
+
+% verified: https://doi.org/10.1109/CLOUD67622.2025.00028 and https://arxiv.org/abs/2411.05239
+@inproceedings{zipnn,
+  author    = {Moshik Hershcovitch and Andrew Wood and Leshem Choshen and
+               Guy Girmonsky and Roy Leibovitz and Or Ozeri and Ilias Ennmouri and
+               Michal Malka and Peter Chin and Swaminathan Sundararaman and
+               Danny Harnik},
+  title     = {{ZipNN}: Lossless Compression for {AI} Models},
+  booktitle = {2025 IEEE 18th International Conference on Cloud Computing (CLOUD)},
+  publisher = {IEEE},
+  pages     = {186--198},
+  year      = {2025},
+  month     = jul,
+  doi       = {10.1109/CLOUD67622.2025.00028},
+  note      = {Preprint: arXiv:2411.05239}
+}
+
+% verified: https://doi.org/10.52202/085713-3306 and https://arxiv.org/abs/2504.11651
+@inproceedings{dfloat11,
+  author    = {Tianyi Zhang and Mohsen Hariri and Shaochen Zhong and
+               Vipin Chaudhary and Yang Sui and Xia Hu and Anshumali Shrivastava},
+  title     = {70\% Size, 100\% Accuracy: Lossless {LLM} Compression for Efficient
+               {GPU} Inference via Dynamic-Length Float ({DFloat11})},
+  booktitle = {Advances in Neural Information Processing Systems 38 (NeurIPS 2025)},
+  publisher = {Neural Information Processing Systems Foundation, Inc.},
+  pages     = {109696--109724},
+  year      = {2025},
+  doi       = {10.52202/085713-3306},
+  note      = {Preprint: arXiv:2504.11651}
+}
+
+% ---------------------------------------------------------------------
+% Entropy coding
+% ---------------------------------------------------------------------
+
+% verified: https://doi.org/10.1109/JRPROC.1952.273898
+% (middle initial from the Crossref record of the 2006 Resonance reprint, 10.1007/BF02837279)
+@article{huffman,
+  author    = {David A. Huffman},
+  title     = {A Method for the Construction of Minimum-Redundancy Codes},
+  journal   = {Proceedings of the IRE},
+  volume    = {40},
+  number    = {9},
+  pages     = {1098--1101},
+  year      = {1952},
+  month     = sep,
+  doi       = {10.1109/JRPROC.1952.273898}
+}
+
+% verified: https://arxiv.org/abs/1311.2540
+@misc{ans,
+  author        = {Jarek Duda},
+  title         = {Asymmetric numeral systems: entropy coding combining speed of
+                   {Huffman} coding with compression rate of arithmetic coding},
+  year          = {2013},
+  eprint        = {1311.2540},
+  archivePrefix = {arXiv},
+  howpublished  = {arXiv:1311.2540},
+  url           = {https://arxiv.org/abs/1311.2540}
+}
+
+% ---------------------------------------------------------------------
+% Scientific array containers and fast codecs
+% ---------------------------------------------------------------------
+
+% verified: https://www.blosc.org/ and https://github.com/Blosc/c-blosc2
+@misc{blosc,
+  title        = {Blosc},
+  howpublished = {\url{https://www.blosc.org/}},
+  note         = {C library: \url{https://github.com/Blosc/c-blosc2}. Accessed 2026-11-23}
+}
+
+% verified: https://www.hdfgroup.org/solutions/hdf5/
+@misc{hdf5,
+  author       = {{The HDF Group}},
+  title        = {The {HDF5} Library \& File Format},
+  howpublished = {\url{https://www.hdfgroup.org/solutions/hdf5/}},
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://zarr-specs.readthedocs.io/en/latest/specs.html (copyright: Zarr Developers)
+@misc{zarr,
+  author       = {{Zarr Developers}},
+  title        = {Zarr Format Specification},
+  howpublished = {\url{https://zarr-specs.readthedocs.io/en/latest/specs.html}},
+  note         = {Project: \url{https://zarr.dev/}. Accessed 2026-11-23}
+}
+
+% verified: https://github.com/avaneev/lzav (owner profile: Aleksey Vaneev)
+@misc{lzav,
+  author       = {Aleksey Vaneev},
+  title        = {{LZAV}: Fast Data Compression Algorithm},
+  howpublished = {\url{https://github.com/avaneev/lzav}},
+  note         = {Accessed 2026-11-23}
+}
+
+% ---------------------------------------------------------------------
+% Suffix sorting and further context-mixing references
+% ---------------------------------------------------------------------
+
+% verified: https://doi.org/10.1109/DCC.2009.42
+@inproceedings{sais,
+  author    = {Ge Nong and Sen Zhang and Wai Hong Chan},
+  title     = {Linear Suffix Array Construction by Almost Pure Induced-Sorting},
+  booktitle = {2009 Data Compression Conference},
+  publisher = {IEEE},
+  pages     = {193--202},
+  year      = {2009},
+  month     = mar,
+  doi       = {10.1109/DCC.2009.42}
+}
+
+% verified: https://github.com/IlyaGrebnov/libsais
+@misc{libsais,
+  author       = {Ilya Grebnov},
+  title        = {libsais},
+  howpublished = {\url{https://github.com/IlyaGrebnov/libsais}},
+  note         = {Accessed 2026-11-23}
+}
+
+% verified: https://mattmahoney.net/dc/#lpaq ("lpaq1 (July 24, 2007)")
+@misc{lpaq,
+  author       = {Matt Mahoney},
+  title        = {{LPAQ}1},
+  howpublished = {\url{https://mattmahoney.net/dc/#lpaq}},
+  year         = {2007},
+  note         = {Data Compression Programs page. Accessed 2026-11-23}
+}

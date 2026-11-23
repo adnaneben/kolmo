@@ -1,0 +1,13 @@
+# build outputs (make -C docs/paper regenerates them)
+/generated/
+/kolmo.pdf
+/*.aux
+/*.log
+/*.bbl
+/*.blg
+/*.out
+/*.xdv
+/*.fls
+/*.fdb_latexmk
+# the raw measurements are kept, despite the top-level data/ rule
+!/data/
