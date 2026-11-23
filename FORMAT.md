@@ -274,7 +274,7 @@ refused (corrupt).
 | 27 | KHUF (Kolmo Huffman) | leaf | written | **§15** |
 | 28 | KLZ (byte-aligned LZ77) | block, leaf | written (level 1) | **§17** |
 | 29 | KLZH (LZ77 + Huffman) | block, leaf | read only | **§18.5** |
-| 31 | KIMG (8-bit images) | block | written (levels 8, 9, ultra) | `src/codecs/kimg.c` |
+| 31 | KIMG (8-bit images) | block | written (levels 8, 9, ultra) | **§23** |
 | 32 | KLZH2 (LZ77 + Huffman or static rANS per stream) | block, leaf | written (levels 2-7) | **§18**, with krans §16 and khuf §15 |
 
 **Retired ids, never valid in version 12:**
@@ -367,7 +367,7 @@ Errors fall into five classes:
 
 | File | Contents |
 |---|---|
-| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 272 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
+| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 274 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
 | `tests/khash64_vectors.txt` | the khash64 vectors |
 | `tests/format_reference.py` | the container layer in Python, checked against both of the above |
 | `tests/coder_reference.py` | the coders and transforms of sections 14 to 21 in Python, decoding every corpus block and leaf that uses them |
@@ -378,11 +378,8 @@ These payloads are specified here only by the reference implementation at tag `v
 and the frozen corpus pins their behaviour on real data. Writing each one out as prose is the next step of the format
 work, in this order (most frames first):
 
-1. kimg (31);
-2. CMP (25).
-
-Both build on the context-mixing coder (codec 7), whose model is described in SPEC.md, *Entropy coders*, but not
-written out bit by bit.
+1. CMP (25), which runs the context-mixing coder (codec 7) over parts of a block. The CM model itself is described in
+   SPEC.md, *Entropy coders*, but is not yet written out bit by bit; CMP's section depends on it.
 
 Written out so far:
 - sections 14 to 18: KLZH2 (32) with krans, KLZ (28), KLZH (29) and khuf (27);
@@ -390,7 +387,8 @@ Written out so far:
 - section 20: every transform inverse except the ARM64 filter (SPEC.md) and the shuffle and x86 filter (section 19):
   tflags 1-7, 9, 10, 12 and 13;
 - section 21: KLZMA (24);
-- section 22: the BWT stream (18): LZP, inverse BWT and QLFC with libbsc's tables as normative data.
+- section 22: the BWT stream (18): LZP, inverse BWT and QLFC with libbsc's tables as normative data;
+- section 23: kimg (31).
 
 Until a payload has its own section, a change to its decoder that changes the decoded bytes of any version-12 frame is
 a format change (COMPATIBILITY.md), whether or not the corpus catches it.
@@ -1419,3 +1417,151 @@ Blocks under the shuffle are checked against the block checksum.
 
 On mutated corpus streams it agreed with the 0.0.2 C decoder on every accept, refusal and output byte. The exception is
 streams whose sampled indexes no longer match the text, as §22.6 allows.
+
+## 23. kimg (codec 31)
+
+A lossless coder for 8-bit images: each sample is predicted from its neighbours and the residual is coded bit by bit
+with adaptive binary contexts mixed by a small logistic mixer. All arithmetic is on integers. "Divide" means C
+division, which truncates toward zero. `tests/kimg_reference.py` is the independent decoder.
+
+### 23.1 Stream
+
+```
+kimg := version u8 | ich u8 | t u8 | 0 u8 | iw u32 | phase u32 | head u32 | npx u32 | 0 u32 | head bytes | tail bytes | coded bytes
+```
+
+- `version` is 1 or 2. 0.0.2 writes 2; 1 is read only.
+- `ich` is the number of interleaved channels (1-4).
+- `t` is the colour transform: 0 none, 1 subtract green, 2 YCoCg-R.
+- `iw` is the row length in bytes, and `phase` is the byte column of the first pixel byte.
+- The block is `head` stored bytes, `npx` coded pixel bytes, then `tail = n − head − npx` stored bytes.
+
+Refuse when:
+- the stream is shorter than 24 bytes;
+- `version` is not 1 or 2, `t > 2`, or byte 3 or the last `u32` is not 0;
+- `ich` is outside 1-4, `iw` is 0 or not a multiple of `ich`, or `phase ≥ iw`;
+- `head > n` or `npx > n − head`;
+- `t ≠ 0` and `ich < 3`, or `phase` or `npx` is not a multiple of `ich`;
+- the stored bytes do not fit.
+
+The coded bytes decode to `npx` samples `s`. With `t = 0` they are the pixel bytes. Otherwise channels 1 and 2 range
+over 0-510, and every whole pixel `k` (a multiple of `ich`) is inverted:
+- **t = 1:** `G = s0`, `R = s1 − 255 + G`, `B = s2 − 255 + G`.
+- **t = 2:** `Co = s1 − 255`, `Cg = s2 − 255`, `tt = s0 − (Cg >> 1)`, `G = Cg + tt`, `B = tt − (Co >> 1)`, `R = B + Co`.
+
+Refuse a pixel with `R`, `G` or `B` outside 0-255. Channels 3 and up are copied as they are. `V[c]`, the largest value
+of channel `c`, is 510 for channels 1 and 2 under a transform, else 255.
+
+### 23.2 Primitives
+
+**Range decoder.** `x1 = 0`, `x2 = 2^32 − 1`, and `x` is the first 4 coded bytes, big-endian. A byte past the end reads
+as 0 and increments an overrun count. To decode a bit with `p`, the 12-bit probability of a 1:
+1. Let `xm = x1 + ((x2 − x1) >> 12)·p`.
+2. The bit is 1 when `x ≤ xm`; then `x2 = xm`. Otherwise `x1 = xm + 1`.
+3. While the top bytes of `x1` and `x2` are equal, shift all three left by 8: `x2` takes 255 as its new low byte and
+   `x` takes the next byte.
+
+All values are modulo 2^32.
+
+**Squash and stretch.**
+- `squash(d)` clamps `d` to ±2047, and for `i = d + 2048` interpolates 33 points:
+  `t = 1, 2, 3, 6, 10, 16, 27, 45, 73, 120, 194, 310, 488, 747, 1101, 1546, 2047, 2549, 2994, 3348, 3607, 3785, 3901,
+  3975, 4024, 4050, 4068, 4079, 4085, 4089, 4092, 4093, 4094`.
+  With `w = (i − 2048) & 127` and `j = ((i − 2048) >> 7) + 16`, `squash = 4095` when `j ≥ 32`, else
+  `(t[j]·(128 − w) + t[j+1]·w + 64) >> 7`.
+- `stretch[p]`, for `p` in 0-4095, is the smallest `d` in −2047..2047 with `squash(d) ≥ p`, and 2047 when there is none.
+
+**Counters** hold a 16-bit probability `q` (start 32768), a count `m` (start 0) and a limit: 255 for the low-mantissa
+counters, 250 for all others. `dt[m] = ⌊131072 / (2m + 3)⌋`. After bit `b`:
+- `q += ((65535·b − q) · dt[m]) >> 16`, kept to 16 bits;
+- then `m += 1` if `m <` the limit.
+
+**Mixed bit.** A *node* of a sample has four counters and a weight row `w[0..4]`.
+1. `st[i] = stretch[q_i >> 4]` for i = 0..3, and `st[4] = 256`.
+2. `p = squash((Σ w[i]·st[i]) >> 16)`, with a 64-bit sum and arithmetic shift, clamped to 1..4094.
+3. Decode the bit with `p`.
+4. Then `w[i] += (st[i] · ((b << 12) − p)) >> 12` for all five, and update the four counters.
+
+Weights start at 19660 (`⌊0.3·65536⌋`) for i = 0..3 and 0 for i = 4.
+
+A **direct bit** uses one counter: `p = q >> 4` clamped to 1..4094. Decode, then update the counter.
+
+### 23.3 Sample loop
+
+Samples are numbered `k = 0 … npx − 1`. Sample 0 sits at byte column `x = phase` and channel `c = phase mod ich`, and
+row parity starts at 0. After each sample, `x` advances. At `x = iw`, `x` returns to 0, the parity flips and `c`
+returns to 0; otherwise `c` advances modulo `ich`.
+
+**Neighbours.** Each is a sample already decoded.
+- `W = s[k−ich]` if `x ≥ ich` and `k ≥ ich`.
+- `N = s[k−iw]` if `k ≥ iw`.
+- `NW = s[k−iw−ich]` if N exists, `x ≥ ich` and `k ≥ iw+ich`.
+- `NE = s[k−iw+ich]` if `k+ich ≥ iw`, `x+ich < iw` and `k ≥ iw−ich`.
+- `WW = s[k−2ich]` if `x ≥ 2ich` and `k ≥ 2ich`.
+- `NN = s[k−2iw]` if `k ≥ 2iw`.
+- `NNE = s[k−2iw+ich]` if both NN and NE exist.
+
+Missing neighbours default as follows:
+- `N` is `W` (or 0 when W is missing too);
+- `W` is `N`, and so are `NW` and `NE`;
+- `WW` is `W`, `NN` is `N`, and `NNE` is `NE`.
+
+**Predictors.**
+- `P0 = W + N − NW`.
+- `P1` is the median predictor of LOCO-I: `min(W,N)` if `NW ≥ max(W,N)`, `max(W,N)` if `NW ≤ min(W,N)`, else `P0`.
+- `P2 = (3W + 3N − 2NW + NE − NN + WW + 2) >> 2`.
+- `P3 = N + NE − NNE`, `P4 = W + NE − N`, `P5 = N`, `P6 = W`.
+- `P7 = P0 + E0`, `P8 = P1 + E1`, `P9 = P2 + E2`. `E0..E2` are, for channel `c > 0` of the same pixel, the
+  previous channel's `v − P0`, `v − P1` and `v − P2`, and 0 for the first channel of a pixel.
+
+**Error memory.** For each byte column and row parity the decoder keeps 11 values: the 10 predictors' absolute errors
+and the residual's magnitude, all 0 at the start.
+- `eW` is the current parity's entry at `x − ich`, and `eWW` its entry at `x − 2ich`.
+- `eN`, `eNW` and `eNE` are the other parity's entries at `x`, `x − ich` and `x + ich`.
+- Each is all zeros when its neighbour is missing. `eWW` is all zeros in version 1.
+
+**Prediction.**
+1. For predictor `i`, `s_i = o + eW[i] + eN[i] + eNW[i] + eNE[i] + eWW[i]`, where `o` is 4 in version 2 and 1 in
+   version 1. Its weight is `⌊2^44 / s²⌋` with `s = min(s_i, 16383)`; for `s = 0` it is the weight of 1.
+2. `pr0 = (Σ weight·P_i + ⌊Σ weight / 2⌋) / Σ weight`.
+3. **Expected error:** `ee = 2·eW[10] + 2·eN[10] + eNW[10] + eNE[10]`, plus `2·|r'|` when `c > 0`, where `r'` is the
+   previous channel's residual. The bucket `a` is the number of thresholds `1, 3, 6, 10, 16, 24, 36, 54, 80, 120, 200`
+   that are `≤ ⌊ee / 2⌋` (0-11).
+4. **Bias.** Let `g1 = N − NW`, `g2 = W − NW` and `sc = sgn(g1) + 1 + 3·(sgn(g2) + 1)`. With the bias cell
+   `(sum, count)` of `(c, a, sc)`, add `(sum ± ⌊count/2⌋) / count` to `pr` when `count > 0` (`+` when `sum ≥ 0`).
+5. `P = clamp(pr, 0, V[c])`.
+
+**Contexts.** `q8(v)` maps `|v|` to 0, 1, 2, 3, 4, 5, 6, 7 for 0, 1, 2, ≤4, ≤8, ≤16, ≤32 and above.
+`tx = sc + 9·(sgn(NE − N) + 1)`. The four counter rows of the sample are:
+- `T0[c][a]`;
+- `T1[c][q8(eW[10])][q8(eN[10])]`;
+- `T2[c][tx][a >> 1]`;
+- `T3[c][q8(r') if c > 0 else q8(eNW[10])][q8(eNE[10])]`.
+
+Each row has 27 nodes, and the weight row is `Wt[c][a][node]`.
+
+**Residual.** Decode a folded value `u`:
+1. Node 0 gives 1 for `u = 0`.
+2. Otherwise decode the bit length `L` from 0, while `L < LM` and node `1 + L` gives 1. `LM` is 8 when `V[c] > 255`,
+   else 7. Then `u = 2^L`.
+3. If `L ≥ 1`, node `9 + L` gives bit `L − 1`. If `L ≥ 2`, node `18 + L` gives bit `L − 2`.
+4. Bits `L − 3` down to 0 are direct bits with counter `Low[c][L][bit]`.
+5. Refuse `u > V[c]`, or an overrun count above 8.
+
+**Unfold.** Let `m = min(P, V − P)`.
+- `u = 0` gives 0.
+- `u ≤ 2m` gives `+(u+1)/2` for odd `u` and `−u/2` for even `u`.
+- Larger `u` gives `u − m`, positive when `P < V − P`, else negative.
+
+The sample is `v = P + unfold(u)`.
+
+**Updates.**
+- Bias cell: `sum += v − pr0` and `count += 1`. When `count` reaches 512 (64 in version 1), divide both by 2.
+- Error memory at the current parity and `x`: `|v − clamp(P_i, 0, V[c])|` for i = 0..9, and `|v − P|` for entry 10.
+- For the next channel of the same pixel, `E0..E2` and `r' = v − P`. After the last channel all four become 0.
+
+### 23.4 Test coverage
+
+`tests/kimg_reference.py` decodes the three kimg blocks of the corpus to their originals: one channel, three channels,
+and three channels with transform 1. Against the 0.0.2 C decoder, mutated streams covering 1-4 channels, transforms
+0-2 and version 1 were decoded identically.

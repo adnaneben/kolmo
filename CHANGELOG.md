@@ -68,11 +68,20 @@
   - On mutated streams it agrees with the C decoder, except where a stream's sampled BWT indexes no longer match its
     text. FORMAT.md 22.6 makes such samples a decoding aid: a decoder either produces the text or fails the block
     checksum.
+- **FORMAT.md section 23: kimg (codec 31)**, the image coder of level 9 and ultra. It covers the header, colour
+  transforms, range decoder, counters, mixer, the ten predictors and their error weights, the bias, contexts and the
+  folded residual.
+  - `tests/kimg_reference.py` is in `make check`.
+  - Two 0.0.2 frames of three-channel images (`rgb.ppm`, `rgb-corr.ppm`, the second with the subtract-green
+    transform) join the corpus.
+  - All three kimg blocks of the corpus decode to their originals.
+  - On mutated streams covering 1-4 channels, transforms 0-2 and the read-only version 1, the decoder agrees with
+    the 0.0.2 C decoder.
 - **FORMAT.md section 21: KLZMA (codec 24)**, the LZMA-class coder of levels 8-9. It covers the range decoder (which
   differs from LZMA's at the start and the end), contexts, literals, matches and repeat matches. 12 corpus blocks and
   8 graph leaves decode in the Python reference.
 - The new decoders agreed with the 0.0.2 C decoders on about 15,000 further mutated streams. `make check` now spends
-  about 30 s in `tests/coder_reference.py`. Left in FORMAT.md section 13: kimg and CMP, which build on the context-mixing coder.
+  about 30 s in `tests/coder_reference.py`. Left in FORMAT.md section 13: CMP (codec 25), which needs the context-mixing coder written out first.
 - **`tests/coder_reference.py`**: an independent Python decoder for those sections, written from the prose, in
   `make check` (about 10 s). It decodes every corpus block that uses KLZ or KLZH2:
   - blocks without a transform are compared with the original;
