@@ -10,7 +10,7 @@ CC      ?= cc
 comma   := ,
 # Kolmo is built portable (ARCH empty) by default, as for the Python wheels; KOLMO_ARCH=-mcpu=native for this CPU only.
 KOLMO_ARCH ?=
-KMAKE    = $(MAKE) -s -C $(ROOT) -f Makefile -f integration/common/kolmo-objs.mk ARCH="$(KOLMO_ARCH)"
+KMAKE    = $(MAKE) -s --no-print-directory -C $(ROOT) -f Makefile -f integration/common/kolmo-objs.mk ARCH="$(KOLMO_ARCH)"
 
 ifdef HDF5_DIR
 HDF5_CFLAGS ?= -I$(HDF5_DIR)/include

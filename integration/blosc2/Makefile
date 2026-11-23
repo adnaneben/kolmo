@@ -9,7 +9,7 @@ UNAME_S := $(shell uname -s)
 CC      ?= cc
 comma   := ,
 KOLMO_ARCH ?=
-KMAKE    = $(MAKE) -s -C $(ROOT) -f Makefile -f integration/common/kolmo-objs.mk ARCH="$(KOLMO_ARCH)"
+KMAKE    = $(MAKE) -s --no-print-directory -C $(ROOT) -f Makefile -f integration/common/kolmo-objs.mk ARCH="$(KOLMO_ARCH)"
 
 ifdef BLOSC2_DIR
 BLOSC2_CFLAGS ?= -I$(BLOSC2_DIR)/include
