@@ -10,7 +10,7 @@ It fails when:
      feature that no longer exists, XXH3/xxHash checksums, dictionary training as a working example, or a 1.x / 1.2
      version as current. Lines that describe the removal or the history (they contain one of ALLOW) are accepted.
   2. the version labels disagree: VERSION, pyproject.toml, Cargo.toml, the CLI's KOLMO_VERSION_STR, the Homebrew
-     formula's url, the top CHANGELOG heading and the README's Status line.
+     formula's url, the top released CHANGELOG heading (after any Unreleased section) and the README's Status line.
   3. (0.0.2) a release-facing file or `kolmo -h` shows an option removed in 0.0.2 as current usage (-m MODE, -x, -s,
      -S, -r, -l N, -B MiB, -D, -P, kolmo train/profile, kolmo a/x/l, the two-positional `kolmo IN OUT`, the bindings'
      mode=/Mode::). Lines that describe the removal (ALLOW) and the sections on upgrading from 0.0.x are accepted.
@@ -108,7 +108,7 @@ def labels():
         "Cargo.toml": re.search(r'^version = "(.*)"', (ROOT / "bindings/rust/Cargo.toml").read_text(), re.M),
         "cli.c KOLMO_VERSION_STR": re.search(r'#define KOLMO_VERSION_STR "(.*)"', (ROOT / "src/cli/cli.c").read_text()),
         "formula url": re.search(r'refs/tags/v([^"]*)\.tar\.gz', (ROOT / "packaging/homebrew/kolmo.rb").read_text()),
-        # the newest released section: work merged to main between releases sits above it under "## Unreleased"
+        # the first released section: an "## Unreleased" section above it collects changes between releases
         "CHANGELOG top": re.search(r"^## (?!Unreleased\b)(\S+)", (ROOT / "CHANGELOG.md").read_text(), re.M),
         "README Status": re.search(r"^## Status\n\n(\S+?),", (ROOT / "README.md").read_text(), re.M),
     }
