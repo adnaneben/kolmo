@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
             seeds[ns] = s; sn[ns] = n; ns++;
             LLVMFuzzerTestOneInput(s, n);
         }
-        if (!ns) { fprintf(stderr, "run_local: a campaign needs seed files\n"); return 1; }
+        if (!ns) { fprintf(stderr, "run_local: a campaign needs seed files\n"); free(seeds); free(sn); free(buf); return 1; }
         uint8_t *m = malloc(MAXSEED + 64); long execs = 0;
         while (now() - t0 < budget) {
             for (int i = 0; i < ns && now() - t0 < budget; i++) {
@@ -62,7 +62,8 @@ int main(int argc, char **argv) {
             }
         }
         printf("local fuzz campaign done: %ld execs over %d seeds in %.0f s\n", execs, ns, now() - t0);
-        return 0;
+        for (int i = 0; i < ns; i++) free(seeds[i]);         /* LeakSanitizer runs at exit: the driver frees its own */
+        free(seeds); free(sn); free(m); free(buf); return 0;
     }
     /* seed corpus: any files passed after the count */
     for (int a = 2; a < argc; a++) {
