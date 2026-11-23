@@ -1,0 +1,11 @@
+prefix=/usr
+libdir=${prefix}/lib/@MULTIARCH@
+includedir=${prefix}/include
+
+Name: kolmo
+Description: Structure-aware lossless compressor
+URL: https://github.com/adnaneben/kolmo
+Version: @VERSION@
+Libs: -L${libdir} -lkolmo
+Libs.private: -lpthread -lm
+Cflags: -I${includedir}

@@ -1,0 +1,80 @@
+# conda-forge staged-recipes draft: `kolmoc`, the Python binding (PyPI name kolmoc, import name `kolmo`).
+# Copy this folder to staged-recipes/recipes/kolmoc/ (packaging/README.md). For a new release, change `version` and
+# `sha256` only: sha256 is `curl -sL <url> | shasum -a 256`.
+#
+# Source: the GitHub tag tarball, not the PyPI sdist. The 0.0.2 sdist has no LICENSE or NOTICE file, and conda-forge
+# requires the licence text in the package. Once an sdist ships them (bindings/python/MANIFEST.in), the source can be
+#   https://pypi.org/packages/source/k/kolmoc/kolmoc-${{ version }}.tar.gz
+# with `script: python -m pip install . -vv --no-deps --no-build-isolation` run from the sdist root.
+schema_version: 1
+
+context:
+  name: kolmoc
+  version: "0.0.2"
+  sha256: fab2a448988068c6755755af56415bb92de4f52c14f02ef10d52cd7781c12fec
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  url: https://github.com/adnaneben/kolmo/archive/refs/tags/v${{ version }}.tar.gz
+  sha256: ${{ sha256 }}
+
+build:
+  number: 0
+  # Not noarch: the package carries libkolmo, compiled by setup.py from the bundled C sources and loaded with ctypes.
+  # It does not use the Python C API, so the build is the same for every Python version.
+  skip:
+    - win
+  script:
+    - cd bindings/python
+    - ${{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+    # setup.py 0.0.2 leaves its object files in the wheel (site-packages/_kolmo_build/); drop this line once
+    # bindings/python/setup.py builds them outside build_lib.
+    - rm -rf "${SP_DIR}/_kolmo_build"
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ stdlib('c') }}
+  host:
+    - python
+    - pip
+    - setuptools >=61
+    - wheel
+  run:
+    - python
+
+tests:
+  - python:
+      imports:
+        - kolmo
+      pip_check: true
+  - script:
+      - python -c "import kolmo; d = b'row,1234,5678,ok\n' * 4096; assert kolmo.decompress(kolmo.compress(d, level=9)) == d; assert kolmo.decompress(kolmo.compress(d, level='fastest')) == d"
+    requirements:
+      run:
+        - python
+
+about:
+  homepage: https://github.com/adnaneben/kolmo
+  repository: https://github.com/adnaneben/kolmo
+  documentation: https://github.com/adnaneben/kolmo/blob/main/bindings/python/README.md
+  summary: Python binding of Kolmo, a structure-aware lossless compressor
+  description: |
+    Kolmo is a lossless compressor that detects the structure of its input (columns, records, numeric fields, images,
+    audio) and chooses a model for each part. This package is the Python binding: `import kolmo`, then
+    kolmo.compress, kolmo.decompress and kolmo.read_range (random access to a byte range without decoding the rest).
+  # src/algo/sais/ is libsais (Apache-2.0 WITH LLVM-exception); the rest, including the libbsc ports, is Apache-2.0.
+  license: Apache-2.0 AND Apache-2.0 WITH LLVM-exception
+  license_file:
+    - LICENSE
+    - NOTICE
+    - src/algo/sais/LICENSE
+
+extra:
+  recipe-maintainers:
+    # GitHub handles; each listed maintainer must agree in the staged-recipes PR.
+    - adnaneben
+    - MAINTAINER_PLACEHOLDER

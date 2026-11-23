@@ -1,0 +1,103 @@
+# conda-forge staged-recipes draft: the `kolmo` command line and the `libkolmo` shared library.
+# Copy this folder to staged-recipes/recipes/kolmo/ (packaging/README.md). For a new release, change `version` and
+# `sha256` only: sha256 is `curl -sL <url> | shasum -a 256`.
+schema_version: 1
+
+context:
+  version: "0.0.2"
+  sha256: fab2a448988068c6755755af56415bb92de4f52c14f02ef10d52cd7781c12fec
+
+recipe:
+  name: kolmo-split
+  version: ${{ version }}
+
+source:
+  url: https://github.com/adnaneben/kolmo/archive/refs/tags/v${{ version }}.tar.gz
+  sha256: ${{ sha256 }}
+
+build:
+  number: 0
+  # The Makefile and the threading layer are POSIX only.
+  skip:
+    - win
+
+outputs:
+  - package:
+      name: libkolmo
+    build:
+      script: build-lib.sh
+    requirements:
+      build:
+        - ${{ compiler('c') }}
+        - ${{ stdlib('c') }}
+        - make
+      run_exports:
+        # 0.0.x: the C ABI is not yet stable, so every patch release is its own ABI.
+        - ${{ pin_subpackage('libkolmo', upper_bound='x.x.x') }}
+    tests:
+      - package_contents:
+          include:
+            - kolmo.h
+          lib:
+            - kolmo
+      - script:
+          - test -f $PREFIX/lib/libkolmo${SHLIB_EXT}
+          - $CC $CFLAGS -I$PREFIX/include test_lib.c -o test_lib $LDFLAGS -L$PREFIX/lib -lkolmo
+          - ./test_lib
+        requirements:
+          build:
+            - ${{ compiler('c') }}
+        files:
+          recipe:
+            - test_lib.c
+    about:
+      summary: Structure-aware lossless compressor (C library)
+
+  - package:
+      name: kolmo
+    build:
+      script: build-cli.sh
+    requirements:
+      build:
+        - ${{ compiler('c') }}
+        - ${{ stdlib('c') }}
+        - make
+      # The CLI links the library statically, as the upstream Makefile builds it, so it has no run dependency on
+      # libkolmo.
+    tests:
+      - script:
+          - kolmo --version
+          - python -c "open('in.csv','w').write(''.join('row,%d,%d,ok\n' % (i, 2*i) for i in range(5000)))"
+          - kolmo -9 in.csv
+          - kolmo -d in.csv.kolmo -o back.csv
+          - cmp in.csv back.csv
+          - kolmo -1 -c in.csv > in1.kolmo
+          - kolmo -dc in1.kolmo | cmp - in.csv
+        requirements:
+          run:
+            - python
+    about:
+      summary: Structure-aware lossless compressor (command line)
+
+about:
+  homepage: https://github.com/adnaneben/kolmo
+  repository: https://github.com/adnaneben/kolmo
+  documentation: https://github.com/adnaneben/kolmo/blob/main/README.md
+  summary: Structure-aware lossless compressor for tables, logs and scientific data
+  description: |
+    Kolmo is a lossless compressor that detects the structure of its input (columns, records, numeric fields, images,
+    audio) and chooses a model for each part. It has levels 1 (fastest) to 9 (max) and an ultra mode, random-access
+    reads of a byte range, and decoding that scales across cores. Every coder is Kolmo's own: no third-party codec
+    library is linked.
+  # src/algo/sais/ is libsais (Apache-2.0 WITH LLVM-exception); the rest, including the libbsc ports, is Apache-2.0.
+  license: Apache-2.0 AND Apache-2.0 WITH LLVM-exception
+  license_file:
+    - LICENSE
+    - NOTICE
+    - src/algo/sais/LICENSE
+
+extra:
+  recipe-maintainers:
+    # GitHub handles; each listed maintainer must agree in the staged-recipes PR.
+    - adnaneben
+    - MAINTAINER_PLACEHOLDER

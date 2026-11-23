@@ -1,0 +1,17 @@
+pkgbase = kolmo
+	pkgdesc = Structure-aware lossless compressor for tables, logs and scientific data
+	pkgver = 0.0.2
+	pkgrel = 1
+	url = https://github.com/adnaneben/kolmo
+	arch = x86_64
+	arch = aarch64
+	license = Apache-2.0
+	license = Apache-2.0 WITH LLVM-exception
+	checkdepends = python
+	depends = glibc
+	provides = libkolmo.so
+	options = !lto
+	source = kolmo-0.0.2.tar.gz::https://github.com/adnaneben/kolmo/archive/refs/tags/v0.0.2.tar.gz
+	sha256sums = fab2a448988068c6755755af56415bb92de4f52c14f02ef10d52cd7781c12fec
+
+pkgname = kolmo

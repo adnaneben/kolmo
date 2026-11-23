@@ -1,0 +1,15 @@
+#!/bin/sh
+# Round-trips a generated table through the installed kolmo at levels 1, 3 and 9, by file and by pipe.
+set -eu
+cd "${AUTOPKGTEST_TMP:-$(mktemp -d)}"
+i=0
+while [ $i -lt 5000 ]; do echo "row,$i,$((i * 2)),ok"; i=$((i + 1)); done > in.csv
+kolmo --version
+for level in 1 3 9; do
+  kolmo -$level -f in.csv
+  kolmo -d -f in.csv.kolmo -o back.csv
+  cmp in.csv back.csv
+done
+kolmo -1 < in.csv > piped.kolmo
+kolmo -dc piped.kolmo | cmp - in.csv
+echo ok

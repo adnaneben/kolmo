@@ -1,0 +1,56 @@
+Source: kolmo
+Section: utils
+Priority: optional
+Maintainer: Adnane Aqartit <MAINTAINER_EMAIL>
+Build-Depends:
+ debhelper-compat (= 13),
+ help2man,
+ python3 <!nocheck>,
+Standards-Version: 4.7.0
+Homepage: https://github.com/adnaneben/kolmo
+Vcs-Browser: https://github.com/adnaneben/kolmo
+Vcs-Git: https://github.com/adnaneben/kolmo.git
+Rules-Requires-Root: no
+
+Package: kolmo
+Architecture: any
+Multi-Arch: foreign
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Description: structure-aware lossless compressor
+ Kolmo is a lossless compressor that detects the structure of its input
+ (columns, records, numeric fields, images, audio) and chooses a model for
+ each part. It has levels 1 (fastest) to 9 (max) and an ultra mode,
+ random-access reads of a byte range, and decoding that scales across cores.
+ .
+ This package contains the kolmo command-line tool.
+
+Package: libkolmo0
+Section: libs
+Architecture: any
+Multi-Arch: same
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Description: structure-aware lossless compressor - shared library
+ Kolmo is a lossless compressor that detects the structure of its input
+ (columns, records, numeric fields, images, audio) and chooses a model for
+ each part.
+ .
+ This package contains the shared library.
+
+Package: libkolmo-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends:
+ libkolmo0 (= ${binary:Version}),
+ ${misc:Depends},
+Description: structure-aware lossless compressor - development files
+ Kolmo is a lossless compressor that detects the structure of its input
+ (columns, records, numeric fields, images, audio) and chooses a model for
+ each part.
+ .
+ This package contains the header, the unversioned library symlink and the
+ pkg-config file.

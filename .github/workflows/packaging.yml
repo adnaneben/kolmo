@@ -1,0 +1,161 @@
+name: packaging
+# Builds the distribution drafts in packaging/ (packaging/README.md) the way each channel would: from the release
+# tarball they name (0.0.2), and for Debian also from this checkout, so a change on main that breaks a recipe shows
+# up before a release. Nothing is uploaded or submitted anywhere.
+on:
+  pull_request:
+    paths:
+      - "packaging/**"
+      - ".github/workflows/packaging.yml"
+      - "Makefile"
+      - "src/**"
+  push:
+    branches: [main]
+    paths:
+      - "packaging/**"
+      - ".github/workflows/packaging.yml"
+      - "Makefile"
+      - "src/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debian:
+    name: debian (${{ matrix.source }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [release, checkout]
+    steps:
+      - uses: actions/checkout@v4
+      - name: build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential debhelper devscripts help2man lintian \
+            python3 pkgconf
+      - name: source tree with debian/
+        run: |
+          set -eu
+          VERSION=$(sed -n '1s/.*(\(.*\)-[^-]*).*/\1/p' packaging/debian/debian/changelog)
+          mkdir ../deb
+          if [ "${{ matrix.source }}" = release ]; then
+            curl -sSfL -o "../deb/kolmo_${VERSION}.orig.tar.gz" \
+              "https://github.com/adnaneben/kolmo/archive/refs/tags/v${VERSION}.tar.gz"
+          else
+            git archive --prefix="kolmo-${VERSION}/" -o "../deb/kolmo_${VERSION}.orig.tar.gz" HEAD
+          fi
+          tar xzf "../deb/kolmo_${VERSION}.orig.tar.gz" -C ../deb
+          cp -r packaging/debian/debian "../deb/kolmo-${VERSION}/debian"
+          echo "SRCDIR=$(cd ../deb/kolmo-${VERSION} && pwd)" >> "$GITHUB_ENV"
+      - name: dpkg-buildpackage (source and binary)
+        working-directory: ${{ env.SRCDIR }}
+        run: dpkg-buildpackage -us -uc
+      - name: lintian (report only)
+        working-directory: ${{ env.SRCDIR }}
+        run: lintian --info --display-info --pedantic ../*.changes || true
+      - name: install the packages and run debian/tests
+        working-directory: ${{ env.SRCDIR }}
+        run: |
+          set -eu
+          ls -l ../*.deb
+          sudo apt-get install -y ../kolmo_*.deb ../libkolmo0_*.deb ../libkolmo-dev_*.deb
+          dpkg -L libkolmo0 libkolmo-dev
+          objdump -p /usr/lib/x86_64-linux-gnu/libkolmo.so.0 | grep SONAME
+          man -P cat kolmo | head -20
+          AUTOPKGTEST_TMP=$(mktemp -d) debian/tests/cli-roundtrip
+          AUTOPKGTEST_TMP=$(mktemp -d) debian/tests/lib-link
+
+  arch:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - uses: actions/checkout@v4
+      - name: makepkg as an unprivileged user
+        run: |
+          set -eu
+          pacman -Syu --noconfirm --needed python namcap
+          useradd -m builder
+          cp packaging/aur/PKGBUILD packaging/aur/.SRCINFO /home/builder/
+          chown builder: /home/builder/PKGBUILD /home/builder/.SRCINFO
+          cd /home/builder
+          su builder -c 'makepkg --printsrcinfo | diff -u .SRCINFO -'
+          su builder -c 'makepkg --cleanbuild --noconfirm'
+          namcap PKGBUILD || true
+          namcap kolmo-*.pkg.tar.zst || true
+          pacman -U --noconfirm kolmo-*.pkg.tar.zst
+          pacman -Ql kolmo
+          kolmo --version
+          seq 1 20000 | sed 's/.*/row,&,ok/' > /tmp/in.csv
+          kolmo -9 -c /tmp/in.csv | kolmo -dc | cmp - /tmp/in.csv
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install Nix (single-user, official installer)
+        run: |
+          sh <(curl -sSfL https://nixos.org/nix/install) --no-daemon
+          echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
+      - name: nix-build packaging/nix
+        run: |
+          nix-build packaging/nix -I nixpkgs=channel:nixpkgs-unstable
+          ls -lR result*
+          ./result/bin/kolmo --version
+      - name: hash for a fetchFromGitHub source (reviewers may ask for it)
+        run: |
+          VERSION=$(sed -n 's/^  version = "\(.*\)";/\1/p' packaging/nix/package.nix)
+          h=$(nix-prefetch-url --unpack "https://github.com/adnaneben/kolmo/archive/refs/tags/v${VERSION}.tar.gz")
+          nix --extra-experimental-features nix-command hash convert --hash-algo sha256 --to sri "$h"
+
+  conda:
+    name: conda (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: install rattler-build (release binary, pinned)
+        run: |
+          set -eu
+          case "$(uname -s)-$(uname -m)" in
+            Linux-x86_64) t=x86_64-unknown-linux-musl ;;
+            Darwin-arm64) t=aarch64-apple-darwin ;;
+            *) echo "no rattler-build binary for $(uname -sm)"; exit 1 ;;
+          esac
+          mkdir -p "$HOME/bin"
+          curl -sSfL -o "$HOME/bin/rattler-build" \
+            "https://github.com/prefix-dev/rattler-build/releases/download/v0.81.0/rattler-build-$t"
+          chmod +x "$HOME/bin/rattler-build"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+      - name: build and test libkolmo and kolmo
+        run: >-
+          rattler-build build --recipe packaging/conda-forge/kolmo/recipe.yaml
+          -m packaging/conda-forge/local-variants.yaml -c conda-forge --output-dir out
+      - name: build and test kolmoc
+        run: >-
+          rattler-build build --recipe packaging/conda-forge/kolmoc/recipe.yaml
+          -m packaging/conda-forge/local-variants.yaml -c conda-forge --output-dir out
+
+  homebrew-core:
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_FROM_API: 1
+    steps:
+      - uses: actions/checkout@v4
+      - name: install from a local tap, test and audit
+        run: |
+          set -eu
+          brew tap-new --no-git local/kolmo-core
+          cp packaging/homebrew-core/kolmo.rb "$(brew --repository)/Library/Taps/local/homebrew-kolmo-core/Formula/kolmo.rb"
+          brew install --build-from-source --verbose local/kolmo-core/kolmo
+          brew test --verbose local/kolmo-core/kolmo
+          brew linkage --test local/kolmo-core/kolmo
+          brew audit --strict --online --formula local/kolmo-core/kolmo
+      - name: new-formula audit (report only; notability fails until 225 stars)
+        run: brew audit --new --formula local/kolmo-core/kolmo || true

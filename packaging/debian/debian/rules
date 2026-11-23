@@ -1,0 +1,53 @@
+#!/usr/bin/make -f
+# Builds the kolmo CLI and the libkolmo shared library from the upstream Makefile, which has no install target or
+# soname: the soname (libkolmo.so.0) and the install layout are set here.
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+include /usr/share/dpkg/default.mk
+include /usr/share/dpkg/buildflags.mk
+
+SOVERSION := 0
+LIBDIR    := usr/lib/$(DEB_HOST_MULTIARCH)
+# ARCH= drops the Makefile's -march=native default (packages must run on the architecture baseline). The Makefile
+# appends -ffp-contract=off to any CFLAGS: frames must not depend on FMA contraction.
+MAKEVARS  := ARCH= CC="$(CC)" CFLAGS="$(CFLAGS) $(CPPFLAGS) -O3"
+LINKLIBS  := $(LDFLAGS) -Wl,--gc-sections -lpthread -lm
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	dh_auto_build -- $(MAKEVARS) LIBS="$(LINKLIBS)" build/kolmo
+	dh_auto_build -- $(MAKEVARS) LIBS="-Wl,-soname,libkolmo.so.$(SOVERSION) $(LINKLIBS)" lib
+	help2man --no-info --no-discard-stderr --version-string="$(DEB_VERSION_UPSTREAM)" \
+	  --name="structure-aware lossless compressor" --output=debian/kolmo.1 build/kolmo
+
+# The fast part of `make check`: levels, CLI, the frozen frames of earlier releases, hardening, resource and threading
+# tests. `make check` also runs kolmotest and the decoder fuzz regressions, which take tens of minutes on amd64 and far
+# longer on slower buildds.
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	dh_auto_build -- $(MAKEVARS) LIBS="$(LINKLIBS)" \
+	  build/test-levels build/test-v12-corpus build/test-harden build/kolmoresource build/kolmoparallel
+	./build/test-levels
+	python3 tests/test_cli.py build/kolmo
+	./build/test-v12-corpus tests/v12
+	./build/test-harden
+	./build/kolmoresource
+	./build/kolmoparallel
+endif
+
+override_dh_auto_install:
+	install -D -m 755 build/kolmo debian/tmp/usr/bin/kolmo
+	install -D -m 644 src/kolmo.h debian/tmp/usr/include/kolmo.h
+	install -D -m 644 build/libkolmo.so debian/tmp/$(LIBDIR)/libkolmo.so.$(SOVERSION).$(DEB_VERSION_UPSTREAM)
+	ln -s libkolmo.so.$(SOVERSION).$(DEB_VERSION_UPSTREAM) debian/tmp/$(LIBDIR)/libkolmo.so.$(SOVERSION)
+	ln -s libkolmo.so.$(SOVERSION) debian/tmp/$(LIBDIR)/libkolmo.so
+	install -d debian/tmp/$(LIBDIR)/pkgconfig
+	sed -e 's/@MULTIARCH@/$(DEB_HOST_MULTIARCH)/' -e 's/@VERSION@/$(DEB_VERSION_UPSTREAM)/' \
+	  debian/kolmo.pc.in > debian/tmp/$(LIBDIR)/pkgconfig/kolmo.pc
+	install -D -m 644 debian/kolmo.1 debian/tmp/kolmo.1
+
+override_dh_auto_clean:
+	rm -rf build
+	rm -f debian/kolmo.1

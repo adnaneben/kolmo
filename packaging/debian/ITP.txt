@@ -1,0 +1,40 @@
+To: submit@bugs.debian.org
+Subject: ITP: kolmo -- structure-aware lossless compressor
+
+Package: wnpp
+Severity: wishlist
+Owner: Adnane Aqartit <MAINTAINER_EMAIL>
+X-Debbugs-Cc: debian-devel@lists.debian.org
+
+* Package name    : kolmo
+  Version         : 0.0.2
+  Upstream Contact: Adnane Aqartit <MAINTAINER_EMAIL>
+* URL             : https://github.com/adnaneben/kolmo
+* License         : Apache-2.0, Apache-2.0 WITH LLVM-exception
+  Programming Lang: C
+  Description     : structure-aware lossless compressor
+
+ Kolmo is a lossless compressor that detects the structure of its input
+ (columns, records, numeric fields, images, audio) and chooses a model for
+ each part. It has levels 1 (fastest) to 9 (max) and an ultra mode,
+ random-access reads of a byte range, and decoding that scales across cores.
+
+ Binary packages: kolmo (command line), libkolmo0 (shared library),
+ libkolmo-dev (header, pkg-config file).
+
+ Why it is useful: on tables, logs and scientific arrays Kolmo produces
+ smaller output than general-purpose compressors at comparable speeds (the
+ upstream benchmark pages give the measurements and the method). Its frame
+ format is specified (FORMAT.md) and upstream promises that every release
+ reads every frame written since 0.0.1 (COMPATIBILITY.md).
+
+ Related packages: zstd, xz-utils, brotli, bzip2 and lz4 are general-purpose
+ compressors; none of them models the structure of the input. Kolmo links no
+ third-party codec library; it includes ported code from libbsc and a subset
+ of libsais (both by Ilya Grebnov, Apache-2.0), which are not packaged in
+ Debian as libraries.
+
+ Maintenance: I am the upstream author and will maintain the package. I am
+ not a Debian Developer and will need a sponsor; the packaging will be kept
+ on Salsa (https://salsa.debian.org/debian/kolmo) and the package sent to
+ debian-mentors for sponsorship.

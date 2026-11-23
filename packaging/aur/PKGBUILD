@@ -1,0 +1,54 @@
+# Maintainer: Adnane Aqartit <MAINTAINER_EMAIL>
+# AUR draft. For a new release, change pkgver and sha256sums (`curl -sL <url> | sha256sum`), reset pkgrel to 1 and
+# regenerate .SRCINFO with `makepkg --printsrcinfo > .SRCINFO`.
+pkgname=kolmo
+pkgver=0.0.2
+pkgrel=1
+pkgdesc='Structure-aware lossless compressor for tables, logs and scientific data'
+arch=('x86_64' 'aarch64')
+url='https://github.com/adnaneben/kolmo'
+license=('Apache-2.0' 'Apache-2.0 WITH LLVM-exception')
+depends=('glibc')
+checkdepends=('python')
+provides=('libkolmo.so')
+# No LTO: the static library is archived with plain `ar`, and the frames must not depend on how the compiler
+# optimises floating point across files (the Makefile pins -ffp-contract=off per file).
+options=('!lto')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/adnaneben/kolmo/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('fab2a448988068c6755755af56415bb92de4f52c14f02ef10d52cd7781c12fec')
+
+# ARCH= drops the Makefile's -march=native default; makepkg's CFLAGS set the target CPU baseline. The Makefile has
+# no install target or soname: both are set here.
+_linklibs="-Wl,--gc-sections -lpthread -lm"
+
+build() {
+  cd "$pkgname-$pkgver"
+  make ARCH= CFLAGS="$CFLAGS -O3" LIBS="$LDFLAGS $_linklibs" build/kolmo
+  make ARCH= CFLAGS="$CFLAGS -O3" LIBS="$LDFLAGS -Wl,-soname,libkolmo.so.0 $_linklibs" lib
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  # The fast part of `make check`; `make check` itself also runs kolmotest and the decoder fuzz regressions, which
+  # take tens of minutes.
+  make ARCH= CFLAGS="$CFLAGS -O3" LIBS="$LDFLAGS $_linklibs" \
+    build/test-levels build/test-v12-corpus build/test-harden build/kolmoresource build/kolmoparallel
+  ./build/test-levels
+  python tests/test_cli.py build/kolmo
+  ./build/test-v12-corpus tests/v12
+  ./build/test-harden
+  ./build/kolmoresource
+  ./build/kolmoparallel
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm755 build/kolmo "$pkgdir/usr/bin/kolmo"
+  install -Dm644 src/kolmo.h "$pkgdir/usr/include/kolmo.h"
+  install -Dm755 build/libkolmo.so "$pkgdir/usr/lib/libkolmo.so.$pkgver"
+  ln -s "libkolmo.so.$pkgver" "$pkgdir/usr/lib/libkolmo.so.0"
+  ln -s libkolmo.so.0 "$pkgdir/usr/lib/libkolmo.so"
+  install -Dm644 README.md docs/LEVELS.md -t "$pkgdir/usr/share/doc/$pkgname"
+  install -Dm644 src/algo/sais/LICENSE "$pkgdir/usr/share/licenses/$pkgname/libsais-LICENSE"
+  install -Dm644 LICENSE NOTICE -t "$pkgdir/usr/share/licenses/$pkgname"
+}
