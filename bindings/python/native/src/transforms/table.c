@@ -531,6 +531,10 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
     free(rec);
     }
     int aligned = nexc == 0 && nr > 0;
+    /* 0.0.2's decoder (tbl2_stream) refuses an aligned block holding a field over 65535 bytes: none is written, the
+     * block is then stored without the table transform, so every file stays readable by 0.0.2 */
+    if (aligned) for (int j = 0; j < k; j++) for (int64_t r = 0; r < nr; r++)
+        if (clen[base[j] + r] > 65535) { free(exc); free(coff); free(clen); return -1; }
     int gcol = aligned && fs && fs->gcol >= 0 && fs->gcol < k ? fs->gcol : -1;
     /* entity groups: gid increases where the group column changes */
     uint32_t *gid = malloc(4 * ((size_t)nr + 1));
