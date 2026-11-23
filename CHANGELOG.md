@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.0.2 (unreleased)
+## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and
 match finders that use several threads inside a block. **The frame format is unchanged** (container version 12):
