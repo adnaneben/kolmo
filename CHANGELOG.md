@@ -12,8 +12,16 @@
   - Fix: it now falls back to the row path, which decodes them to the original. No frame that decoded before decodes
     differently, and the format is unchanged.
   - Files written by 0.0.2 become readable with the next release. They stay unreadable with 0.0.2 itself.
+  - **0.0.1 is affected the same way.** Its `balanced`, `eco`, `hc` and `ratio` write these blocks (byte-identical to
+    0.0.2's levels 3, 5, 7 and 9) and it cannot read them. This build reads them.
+  - **Space-separated logs are affected too.** The planner can treat them as tables, and the last field runs to the
+    end of the line, so a single log line over 64 KiB in a block of otherwise regular lines is enough.
+  - **The encoder no longer writes such blocks:** a block with a field over 65,535 bytes is compressed without the
+    table transform. Files written from now on stay readable by 0.0.1 and 0.0.2. Output on other inputs is
+    unchanged.
   - Two such 0.0.2 frames are in the corpus (`tests/v12/r0.0.2/longfield.csv.*`), so `make check` covers the fix
-    (FORMAT.md 20.5).
+    (FORMAT.md 20.5). `test-levels` round-trips such tables at every level, with the long field in a text column and
+    in a numeric column, and checks that none is written as a table block.
 
 ### Format
 
