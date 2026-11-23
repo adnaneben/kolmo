@@ -1,0 +1,1 @@
+{ global: H5PLget_plugin_type; H5PLget_plugin_info; H5Z_kolmo_register; local: *; };

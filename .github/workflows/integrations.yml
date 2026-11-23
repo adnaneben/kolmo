@@ -1,0 +1,32 @@
+name: integrations
+# The HDF5 filter plugin and the Blosc2 codec plugin (integration/), built against the HDF5 and c-blosc2 of each OS.
+on:
+  push:
+    paths: ["integration/**", "src/**", "Makefile", ".github/workflows/integrations.yml"]
+  pull_request:
+    paths: ["integration/**", "src/**", "Makefile", ".github/workflows/integrations.yml"]
+jobs:
+  plugins:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: install HDF5, c-blosc2 (and h5py on Linux, for the h5py test)
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends libhdf5-dev libblosc2-dev libzstd-dev pkg-config python3-h5py python3-numpy
+          else
+            brew install hdf5 c-blosc2
+          fi
+      - name: HDF5 filter plugin (C API round trips; h5py where installed)
+        run: make -C integration/hdf5 test
+      - name: Blosc2 codec plugin (in-process and dynamically loaded by Blosc2)
+        run: make -C integration/blosc2 test
+      - name: benchmarks build and run (one quick pass, numbers not kept)
+        run: |
+          make -C integration/hdf5 bench BENCH_ARGS="-r 1 synth:i16_wave"
+          make -C integration/blosc2 bench BENCH_ARGS="-r 1 synth:i16_wave"
