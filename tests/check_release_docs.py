@@ -108,7 +108,8 @@ def labels():
         "Cargo.toml": re.search(r'^version = "(.*)"', (ROOT / "bindings/rust/Cargo.toml").read_text(), re.M),
         "cli.c KOLMO_VERSION_STR": re.search(r'#define KOLMO_VERSION_STR "(.*)"', (ROOT / "src/cli/cli.c").read_text()),
         "formula url": re.search(r'refs/tags/v([^"]*)\.tar\.gz', (ROOT / "packaging/homebrew/kolmo.rb").read_text()),
-        "CHANGELOG top": re.search(r"^## (\S+)", (ROOT / "CHANGELOG.md").read_text(), re.M),
+        # the newest released section: work merged to main between releases sits above it under "## Unreleased"
+        "CHANGELOG top": re.search(r"^## (?!Unreleased\b)(\S+)", (ROOT / "CHANGELOG.md").read_text(), re.M),
         "README Status": re.search(r"^## Status\n\n(\S+?),", (ROOT / "README.md").read_text(), re.M),
     }
     bad = []

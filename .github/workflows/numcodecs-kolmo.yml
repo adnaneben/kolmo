@@ -1,0 +1,46 @@
+name: numcodecs-kolmo
+
+# Builds the Python binding (kolmoc) from this repository, installs integration/numcodecs-kolmo on top and runs its
+# tests: numcodecs round trips, the entry points, and Zarr stores (zarr 3 with the v3 and v2 formats; zarr 2 on an
+# older Python). Nothing is published.
+on:
+  push:
+    paths:
+      - "integration/numcodecs-kolmo/**"
+      - "bindings/python/**"
+      - "src/**"
+      - ".github/workflows/numcodecs-kolmo.yml"
+  pull_request:
+    paths:
+      - "integration/numcodecs-kolmo/**"
+      - "bindings/python/**"
+      - "src/**"
+      - ".github/workflows/numcodecs-kolmo.yml"
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.12", zarr: "zarr>=3" }
+          - { os: macos-latest, python: "3.12", zarr: "zarr>=3" }
+          - { os: ubuntu-latest, python: "3.10", zarr: "zarr<3" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: build and install the binding from the repo, then the package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ./bindings/python
+          python -m pip install "./integration/numcodecs-kolmo" pytest "${{ matrix.zarr }}"
+          python -c "import kolmo, numcodecs, zarr; print('kolmo', kolmo.__file__, 'numcodecs', numcodecs.__version__, 'zarr', zarr.__version__)"
+      - name: tests
+        working-directory: integration/numcodecs-kolmo
+        run: python -m pytest -q tests
+      - name: benchmark smoke run (1 MiB arrays; checks every codec round trips)
+        working-directory: integration/numcodecs-kolmo
+        run: python bench.py --mib 1 --repeat 1
