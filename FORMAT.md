@@ -367,7 +367,7 @@ Errors fall into five classes:
 
 | File | Contents |
 |---|---|
-| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 263 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
+| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 265 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
 | `tests/khash64_vectors.txt` | the khash64 vectors |
 | `tests/format_reference.py` | the container layer in Python, checked against both of the above |
 | `tests/coder_reference.py` | the coders and transforms of sections 14 to 21 in Python, decoding every corpus block and leaf that uses them |
@@ -649,9 +649,9 @@ is an encoder choice; §15 decodes any chunk sizes.
 
 The corpus (`tests/v12`, both releases) has the following material for these coders, all of which
 `tests/coder_reference.py` decodes:
-- 130 KLZH2 blocks and 29 KLZ blocks:
+- 131 KLZH2 blocks and 29 KLZ blocks:
   - 74 KLZH2 and 22 KLZ blocks have no transform and are compared with the original;
-  - 30 KLZH2 blocks are under a transform of section 20 and are compared with the original after its inverse;
+  - 31 KLZH2 blocks are under a transform of section 20 and are compared with the original after its inverse;
   - 23 KLZH2 and 7 KLZ blocks have an inverse in section 19 or SPEC.md and are checked through the block checksum
     after it: 20 + 7 under the byte-plane shuffle, 2 under the ARM64 filter, 1 under the x86 filter;
   - the other 3 KLZH2 blocks, under the transpose, 16-bit image and record transforms, are checked to decode to
@@ -946,10 +946,12 @@ A field is:
 
 Refuse when the output would pass `n`, or ends shorter.
 
-**0.0.2 limit.** In an aligned table with `nr > 0`, 0.0.2 refuses a block in which any text value or text exception
-is longer than 65535 bytes. The 0.0.2 encoder writes such blocks: a CSV row with a field longer than 64 KiB, at
-levels 3-9. They are therefore not readable by 0.0.2. This is a known defect. A decoder that decodes them by the rules
-above produces the original. Until a release fixes it, a conforming decoder may refuse them as 0.0.2 does.
+**Fields over 65535 bytes.** A conforming decoder must decode a table whose text values or text exceptions are longer
+than 65535 bytes. The 0.0.2 encoder writes such blocks: any CSV whose rows all have the same field count, with one
+field longer than 64 KiB, at levels 3-9. The 0.0.2 decoder refused them in aligned tables, so 0.0.2 could not read
+those files. Its fast path kept field lengths in 16 bits and never fell back to the row path. Releases after 0.0.2
+decode them by the rules above, to the original. `tests/v12/r0.0.2/longfield.csv.*` are two such frames written by
+0.0.2.
 
 Table v1 (tflag 3) and the column-split table (tflag 13) are not written out yet (§13).
 
@@ -1042,14 +1044,14 @@ The encoder ends with 5 flush bytes.
 ### 21.4 Test coverage of sections 20 and 21
 
 `tests/coder_reference.py` decodes all of the following:
-- **Section 20**, compared with the original: 34 corpus blocks coded by KLZH2 or KLZMA under its transforms. These
-  are 13 table, 11 log-template, 5 minified-JSON, 4 word and 1 line-class block.
+- **Section 20**, compared with the original: 36 corpus blocks coded by KLZH2 or KLZMA under its transforms. These
+  are 15 table, 11 log-template, 5 minified-JSON, 4 word and 1 line-class block.
   - The table blocks reach numeric modes 0-5, ratio and difference formulas, a group column, short rows, text
-    exceptions, empty fields, long-text lengths and dropped trailing digits.
+    exceptions, empty fields, long-text lengths, fields over 65535 bytes and dropped trailing digits.
   - No corpus block uses the percent-change formula.
   - Blocks under these transforms coded by CM or BWT are not decoded, because those coders are not written out yet.
-- **Section 21**: 14 KLZMA blocks and 8 KLZMA graph leaves.
-  - 6 blocks have no transform and 4 are under the table or log transform; all 10 are compared with the original;
+- **Section 21**: 15 KLZMA blocks and 8 KLZMA graph leaves.
+  - 6 blocks have no transform and 5 are under the table or log transform; all 11 are compared with the original;
   - 4 are checked through the shuffle or x86 inverse and their block checksum.
 
 The decoders of sections 20 and 21 were also compared with the 0.0.2 C decoders on mutated corpus streams: about

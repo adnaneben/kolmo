@@ -854,7 +854,7 @@ static int tbl2_stream(Col2 *C, int k, int64_t nr, const uint32_t *gid, const tf
                 const uint8_t *l8 = u->lens + r0, *p = u->p;
                 for (int t = 0; t < R; t++) {
                     uint32_t L = l8[t];
-                    if (L == 255) { L = rd32(u->longs + 4ull * u->li++); if (L > 65535) goto done; }
+                    if (L == 255) { L = rd32(u->longs + 4ull * u->li++); if (L > 65535) { ret = -2; goto done; } }
                     rl[(size_t)t * k] = (uint16_t)L; sp[(size_t)t * k] = p; p += L;
                 }
                 ttot += (size_t)(p - u->p); u->p = p;
@@ -873,7 +873,7 @@ static int tbl2_stream(Col2 *C, int k, int64_t nr, const uint32_t *gid, const tf
                 for (int t = 0; t < R; t++) {
                     uint32_t L = 0; sp[(size_t)t * k] = ap;
                     if (kd[t] == 1) { int ds = u->sd[u->ni + q]; uint8_t *e2 = fmt_dec_swar(ap, u->cv[q], u->S) - ds - (ds == u->S && ds); L = (uint32_t)(e2 - ap); ap = e2; q++; }
-                    else if (kd[t] == 2) { L = rd32(u->elen + 4ull * u->xi++); if (L > 65535) goto done; memcpy(ap, u->x, L); u->x += L; ap += L; }
+                    else if (kd[t] == 2) { L = rd32(u->elen + 4ull * u->xi++); if (L > 65535) { ret = -2; goto done; } memcpy(ap, u->x, L); u->x += L; ap += L; }
                     rl[(size_t)t * k] = (uint16_t)L;
                 }
                 ap += 32;                                               /* keep 16-byte reads inside the arena */
@@ -1028,7 +1028,13 @@ static int tbl2_decode(const uint8_t *in, int64_t tn, uint8_t delim, uint8_t *ou
         }
     } else for (int64_t r = 0; r < nr; r++) gid[r] = 0;
     PROF_T(2);
-    if (aligned && nr > 0) { ret = tbl2_stream(C, k, nr, gid, FB, nform, delim, (int)noNL, out, n); goto out; }
+    if (aligned && nr > 0) {
+        /* -2: a field longer than 65535 bytes (the stream keeps lengths in 16 bits). 0.0.2 refused the block here, so
+         * aligned tables with such a field were written but not read; the row path below decodes them */
+        ret = tbl2_stream(C, k, nr, gid, FB, nform, delim, (int)noNL, out, n);
+        if (ret != -2) goto out;
+        ret = -1;
+    }
     /* numeric columns: non-formula first, then formula targets (sources are never targets) */
     size_t totnum = 0; for (int j = 0; j < k; j++) if (C[j].type == 2) totnum += C[j].nnum;
     vals = malloc(8 * (totnum + 1)); fv = calloc(k, sizeof(double *)); la = malloc(sizeof(double) * ((size_t)nr + 1));

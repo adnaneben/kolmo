@@ -779,10 +779,6 @@ def table_inv(t, n, delim):
                     v.append(s64(x + int(round(pp))) if abs(pp) < 4611686018427387904.0 else s64(x))
             c["vals"] = v
     # rows
-    if aligned and nr > 0:
-        for c in cols:
-            if c["type"] == 0: need(all(len(x) <= 65535 for x in c["vals"]), "table field over 65535 bytes (0.0.2)")
-            else: need(all(struct.unpack_from("<I", c["elen"], 4 * i)[0] <= 65535 for i in range(c["nexc"])), "table field over 65535 bytes (0.0.2)")
     out = bytearray(); cur = [0] * k; ni = [0] * k; xi = [[0, 0] for _ in range(k)]
     D = bytes([delim])
     for r in range(nr):

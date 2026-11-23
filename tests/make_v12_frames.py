@@ -283,6 +283,16 @@ def growth_csv(rng):  # raw-value columns (mode 0) and values whose trailing zer
     return ("\n".join(out) + "\n").encode()
 
 
+def long_field_csv(rng, rows):  # a table with one text field and one text-in-a-number field over 64 KiB: 0.0.2 wrote
+    out = ["id,date,city,temp,note"]  # such blocks but its decoder refused them (fixed after 0.0.2; FORMAT.md 20.5)
+    for i in range(rows):
+        out.append("%d,2026-01-%02d,%s,%d.%02d,%s" % (i, 1 + i % 28, rng.pick(["Lyon", "Oslo", "Porto"]), rng.below(30),
+                                                     rng.below(100), rng.pick(WORDS)))
+    out[rows - 500] = "%d,2026-01-01,Lyon,1.25,%s" % (rows - 501, "x" * 70000)
+    out[rows - 300] = "%d,2026-01-02,Oslo,%s,ok" % (rows - 301, "y" * 70000)
+    return ("\n".join(out) + "\n").encode()
+
+
 C_SOURCE = r"""
 #include <stdio.h>
 #include <string.h>
@@ -370,6 +380,7 @@ def inputs():
     d["ragged.csv"] = ragged_csv(r(29), 4000)
     d["stations.csv"] = stations_csv(r(30))
     d["growth.csv"] = growth_csv(r(31))
+    d["longfield.csv"] = long_field_csv(r(32), 3000)
     mixed = d["text.txt"] + d["table.csv"] + d["series.i32"] + d["gray.pgm"] + d["service.log"] + d["records.bin"]
     d["mixed.bin"] = (mixed * 3)[: 3 << 20]   # 2.3 MiB: several blocks at level 3, several segments with --stream=1
     return d
@@ -382,7 +393,7 @@ SOME = {"bigprog-arm64": ["3", "9"], "bigprog-x86_64": ["3", "9"], "gray-big.pgm
         "gray16-big.pgm": ["3", "U"], "mixed.bin": ["3"], "bundle.tar": ["3", "9"],
         "gray12.pgm": ["3", "9"], "photo.pgm": ["9", "U"], "code.x86": ["3", "9"], "names.csv": ["2", "3"],
         "pairs.csv": ["3", "U"], "derived.csv": ["3", "9", "U"], "ragged.csv": ["3"], "stations.csv": ["3", "9"],
-        "growth.csv": ["3"]}
+        "growth.csv": ["3"], "longfield.csv": ["3", "9"]}
 
 
 def frame_summary(f):
@@ -408,6 +419,8 @@ def frame_summary(f):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--kolmo", required=True); ap.add_argument("--release", required=True)
+    ap.add_argument("--check-with", help="decoder for the round-trip check (default: --kolmo). For frames a release "
+                    "writes but cannot read itself (FORMAT.md 20.5), name a build that has the fix")
     a = ap.parse_args()
     rel = "r" + a.release; out = os.path.join(CORPUS, rel); ind = os.path.join(out, "in")
     os.makedirs(ind, exist_ok=True)
@@ -440,7 +453,7 @@ def main():
             if r.returncode:
                 print("skip", fn, r.stderr.strip()[:200]); continue
             back = os.path.join(tmp, "back")
-            r = subprocess.run([a.kolmo, "-d", "-q", "-f", dst, "-o", back], capture_output=True)
+            r = subprocess.run([a.check_with or a.kolmo, "-d", "-q", "-f", dst, "-o", back], capture_output=True)
             if r.returncode or open(back, "rb").read() != data:
                 sys.exit("round trip failed: " + fn)
             f = open(dst, "rb").read()

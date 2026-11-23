@@ -1880,6 +1880,56 @@
    }
   },
   {
+   "file": "longfield.csv.L3.kolmo",
+   "input": "in/longfield.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "984c25533ec3a3122b9f70fc85057bdd3b143d4e32b6411dfbe3cb4aeca48414",
+   "frame_bytes": 16503,
+   "decoded_sha256": "5b0db520f1cb9d4cefd3ddf1d10b3dc28554d9049589005fb657eb2b30e459bd",
+   "decoded_bytes": 234645,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 234645,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   },
+   "note": "0.0.2 writes this frame but refuses to read it (a table field over 65535 bytes); read since the fix after 0.0.2, FORMAT.md 20.5"
+  },
+  {
+   "file": "longfield.csv.L9.kolmo",
+   "input": "in/longfield.csv",
+   "options": "-9",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "d69f8f57786086481845e589773496dd6af9b03d97c1c01f73a0133e02dd7e6a",
+   "frame_bytes": 12462,
+   "decoded_sha256": "5b0db520f1cb9d4cefd3ddf1d10b3dc28554d9049589005fb657eb2b30e459bd",
+   "decoded_bytes": 234645,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 16,
+    "orig": 234645,
+    "blocks": [
+     [
+      24,
+      4,
+      3
+     ]
+    ]
+   },
+   "note": "0.0.2 writes this frame but refuses to read it (a table field over 65535 bytes); read since the fix after 0.0.2, FORMAT.md 20.5"
+  },
+  {
    "file": "minified.json.L1.kolmo",
    "input": "in/minified.json",
    "options": "-1",

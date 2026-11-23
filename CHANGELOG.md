@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Tables with a field over 64 KiB now decompress.** 0.0.2 compressed them without error but could not decompress
+  them ("corrupt or unsupported input"). This affected any CSV or TSV whose rows all have the same number of fields
+  and that holds one field longer than 65,535 bytes, at levels 3 to 9 (the table transform).
+  - Cause: the decoder's fast path for such tables kept field lengths in 16 bits and refused longer fields, and the
+    general row path was never tried (`src/transforms/table.c`).
+  - Fix: it now falls back to the row path, which decodes them to the original. No frame that decoded before decodes
+    differently, and the format is unchanged.
+  - Files written by 0.0.2 become readable with the next release. They stay unreadable with 0.0.2 itself.
+  - Two such 0.0.2 frames are in the corpus (`tests/v12/r0.0.2/longfield.csv.*`), so `make check` covers the fix
+    (FORMAT.md 20.5).
+
 ### Format
 
 - **`FORMAT.md`: the specification of container version 12.** It is complete for the container layer: header, index,
@@ -33,10 +46,7 @@
   (9), log template (5), minified-JSON (10) and table v2 (4) transforms are written out, with every refusal rule. For
   the table this includes the numeric modes, the group column, formulas evaluated in IEEE doubles, short rows and
   printing. 34 corpus blocks under them now decode to their originals in `tests/coder_reference.py`.
-  - **Known defect, reported and not fixed:** 0.0.2 writes table blocks it cannot read. Any CSV whose rows all have
-    the same field count, with one field longer than 65,535 bytes, is affected at levels 3-9. The aligned-table decoder
-    refuses fields over 64 KiB, and the general path is never reached. FORMAT.md 20.5 records the limit; the fix is
-    an owner decision.
+
 - **Six more 0.0.2 frames for the table transform** (`tests/v12/r0.0.2/`, from the 0.0.2 tag binary). The inputs are
   the derived-column series at levels 3 and 9, and three new inputs: a ragged CSV (short rows, text in numeric
   columns, long fields), grouped station series (modes 2, 4 and 5) and a growth table (mode 0, dropped trailing
