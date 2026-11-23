@@ -39,8 +39,9 @@ def main():
                 d = f[name]
                 back = d[()]
                 ok = back.dtype == a.dtype and np.array_equal(back, a)
-                opts = d.compression_opts
-                ok = ok and opts is not None and opts[1] == a.dtype.itemsize
+                # h5py reports compression_opts only for filters it knows: read the stored cd_values from the dcpl
+                _flags, opts, _name = d.id.get_create_plist().get_filter_by_id(FILTER_ID)
+                ok = ok and len(opts) == 4 and opts[1] == a.dtype.itemsize and opts[3] == 1
                 stored = d.id.get_storage_size()
                 print(f"{'ok ' if ok else 'FAIL'} {name:12s} {a.nbytes:>9d} -> {stored:>8d} bytes ({a.nbytes / stored:.2f}x) cd_values={opts}")
                 failures += not ok
