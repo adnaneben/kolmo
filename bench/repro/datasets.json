@@ -1,0 +1,502 @@
+{
+ "_comment": "Every input of the public benchmark. fetch.py downloads each source from its own URL, checks sha256, and derives the measured files deterministically; derived files are checked against derived_sha256 too. A null sha256 is pinned on the first fetch with --pin. 'volatile' sources are re-published upstream (only the derived, date-cut file is pinned). Nothing here is redistributed by the kolmo repository. The three standard corpora (Silesia, enwik8, Canterbury) are fetched by bench/lzbench/corpora.py, which rebuilds the exact silesia.tar of the Apple M5 run.",
+ "sources": [
+  {
+   "id": "ghcn-USW00094728",
+   "group": "holdout",
+   "volatile": true,
+   "url": "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/USW00094728.csv",
+   "licence": "NOAA NCEI GHCN-Daily, US government public data",
+   "derive": [
+    {
+     "op": "csv-cut-date",
+     "before": "2026-01-01",
+     "out": "holdout/ghcn-csv/train/USW00094728.csv"
+    }
+   ]
+  },
+  {
+   "id": "ghcn-USW00023174",
+   "group": "holdout",
+   "volatile": true,
+   "url": "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/USW00023174.csv",
+   "licence": "NOAA NCEI GHCN-Daily, US government public data",
+   "derive": [
+    {
+     "op": "csv-cut-date",
+     "before": "2026-01-01",
+     "out": "holdout/ghcn-csv/train/USW00023174.csv"
+    }
+   ]
+  },
+  {
+   "id": "ghcn-USW00014739",
+   "group": "holdout",
+   "volatile": true,
+   "url": "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/USW00014739.csv",
+   "licence": "NOAA NCEI GHCN-Daily, US government public data",
+   "derive": [
+    {
+     "op": "csv-cut-date",
+     "before": "2026-01-01",
+     "out": "holdout/ghcn-csv/train/USW00014739.csv"
+    }
+   ]
+  },
+  {
+   "id": "ghcn-USW00094846",
+   "group": "holdout",
+   "volatile": true,
+   "url": "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/USW00094846.csv",
+   "licence": "NOAA NCEI GHCN-Daily, US government public data",
+   "derive": [
+    {
+     "op": "csv-cut-date",
+     "before": "2026-01-01",
+     "out": "holdout/ghcn-csv/train/USW00094846.csv"
+    }
+   ]
+  },
+  {
+   "id": "ghcn-USW00012839",
+   "group": "holdout",
+   "volatile": true,
+   "url": "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/USW00012839.csv",
+   "licence": "NOAA NCEI GHCN-Daily, US government public data",
+   "derive": [
+    {
+     "op": "csv-cut-date",
+     "before": "2026-01-01",
+     "out": "holdout/ghcn-csv/test/USW00012839.csv"
+    }
+   ]
+  },
+  {
+   "id": "ghcn-USW00024233",
+   "group": "holdout",
+   "volatile": true,
+   "url": "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/USW00024233.csv",
+   "licence": "NOAA NCEI GHCN-Daily, US government public data",
+   "derive": [
+    {
+     "op": "csv-cut-date",
+     "before": "2026-01-01",
+     "out": "holdout/ghcn-csv/test/USW00024233.csv"
+    }
+   ]
+  },
+  {
+   "id": "ghcn-USW00013874",
+   "group": "holdout",
+   "volatile": true,
+   "url": "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/USW00013874.csv",
+   "licence": "NOAA NCEI GHCN-Daily, US government public data",
+   "derive": [
+    {
+     "op": "csv-cut-date",
+     "before": "2026-01-01",
+     "out": "holdout/ghcn-csv/test/USW00013874.csv"
+    }
+   ]
+  },
+  {
+   "id": "ghcn-USW00023183",
+   "group": "holdout",
+   "volatile": true,
+   "url": "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/USW00023183.csv",
+   "licence": "NOAA NCEI GHCN-Daily, US government public data",
+   "derive": [
+    {
+     "op": "csv-cut-date",
+     "before": "2026-01-01",
+     "out": "holdout/ghcn-csv/test/USW00023183.csv"
+    }
+   ]
+  },
+  {
+   "id": "gharchive-2015-01-01-12",
+   "group": "holdout",
+   "url": "https://data.gharchive.org/2015-01-01-12.json.gz",
+   "sha256": "b53693d6cb31d15b7ad028832bcc90623bcacf9f632eb65f1649cc472a918b28",
+   "licence": "GH Archive (public GitHub event data)",
+   "derive": [
+    {
+     "op": "gunzip",
+     "out": "holdout/gharchive-json/train/2015-01-01-12.json"
+    }
+   ]
+  },
+  {
+   "id": "gharchive-2015-01-01-13",
+   "group": "holdout",
+   "url": "https://data.gharchive.org/2015-01-01-13.json.gz",
+   "sha256": "1ceb98b428f7e0e6c5e4aa40dbb29d269bc84080deafb980f8648340758b75ab",
+   "licence": "GH Archive (public GitHub event data)",
+   "derive": [
+    {
+     "op": "gunzip",
+     "out": "holdout/gharchive-json/train/2015-01-01-13.json"
+    }
+   ]
+  },
+  {
+   "id": "gharchive-2015-01-01-14",
+   "group": "holdout",
+   "url": "https://data.gharchive.org/2015-01-01-14.json.gz",
+   "sha256": "b30e445f1868b0216439b45a43f964694af2df7b315deb8c949dcbcc027d23bf",
+   "licence": "GH Archive (public GitHub event data)",
+   "derive": [
+    {
+     "op": "gunzip",
+     "out": "holdout/gharchive-json/train/2015-01-01-14.json"
+    }
+   ]
+  },
+  {
+   "id": "gharchive-2015-01-01-15",
+   "group": "holdout",
+   "url": "https://data.gharchive.org/2015-01-01-15.json.gz",
+   "sha256": "dc50a9e7cf6fd56cfbb7fa11381a6bcf3657a1e279131b66888ebbfb58652e76",
+   "licence": "GH Archive (public GitHub event data)",
+   "derive": [
+    {
+     "op": "gunzip",
+     "out": "holdout/gharchive-json/train/2015-01-01-15.json"
+    }
+   ]
+  },
+  {
+   "id": "gharchive-2015-01-01-16",
+   "group": "holdout",
+   "url": "https://data.gharchive.org/2015-01-01-16.json.gz",
+   "sha256": "1dd342a77a340b837c5e3cb74fa824a62000f43115a5ed4c1182432315b3570f",
+   "licence": "GH Archive (public GitHub event data)",
+   "derive": [
+    {
+     "op": "gunzip",
+     "out": "holdout/gharchive-json/test/2015-01-01-16.json"
+    }
+   ]
+  },
+  {
+   "id": "gharchive-2015-01-01-17",
+   "group": "holdout",
+   "url": "https://data.gharchive.org/2015-01-01-17.json.gz",
+   "sha256": "7ada482e740660a0e413a16334526ac4f92234351a5d73561fef327078ab8ee3",
+   "licence": "GH Archive (public GitHub event data)",
+   "derive": [
+    {
+     "op": "gunzip",
+     "out": "holdout/gharchive-json/test/2015-01-01-17.json"
+    }
+   ]
+  },
+  {
+   "id": "gharchive-2015-01-01-18",
+   "group": "holdout",
+   "url": "https://data.gharchive.org/2015-01-01-18.json.gz",
+   "sha256": "7f1d357384ac0725c131fdc59375179ab9f58b2750fdf35f695009cffd7c8593",
+   "licence": "GH Archive (public GitHub event data)",
+   "derive": [
+    {
+     "op": "gunzip",
+     "out": "holdout/gharchive-json/test/2015-01-01-18.json"
+    }
+   ]
+  },
+  {
+   "id": "gharchive-2015-01-01-19",
+   "group": "holdout",
+   "url": "https://data.gharchive.org/2015-01-01-19.json.gz",
+   "sha256": "4038c138061ae70143eafaca6610bb896345d3b731666921d82ba33e7d61d979",
+   "licence": "GH Archive (public GitHub event data)",
+   "derive": [
+    {
+     "op": "gunzip",
+     "out": "holdout/gharchive-json/test/2015-01-01-19.json"
+    }
+   ]
+  },
+  {
+   "id": "nasa-http-jul95",
+   "group": "holdout",
+   "url": "ftp://ita.ee.lbl.gov/traces/NASA_access_log_Jul95.gz",
+   "sha256": "199109ed0f273e095da6ccd5fc9dc4cd8bb58daa06d62135e62090fea9d27488",
+   "licence": "Internet Traffic Archive, freely redistributable",
+   "derive": [
+    {
+     "op": "log-split-days",
+     "days": [
+      "01/Jul/1995",
+      "02/Jul/1995",
+      "03/Jul/1995",
+      "04/Jul/1995"
+     ],
+     "out": "holdout/nasa-logs/train"
+    }
+   ]
+  },
+  {
+   "id": "nasa-http-aug95",
+   "group": "holdout",
+   "url": "ftp://ita.ee.lbl.gov/traces/NASA_access_log_Aug95.gz",
+   "sha256": "14995aed0ba4558ab832613ebea9a3ef2d87cb4297fc67f5694e0032bbb6b788",
+   "licence": "Internet Traffic Archive, freely redistributable",
+   "derive": [
+    {
+     "op": "log-split-days",
+     "days": [
+      "04/Aug/1995",
+      "05/Aug/1995",
+      "06/Aug/1995",
+      "07/Aug/1995"
+     ],
+     "out": "holdout/nasa-logs/test"
+    }
+   ]
+  },
+  {
+   "id": "ncep-air-2022",
+   "group": "holdout",
+   "url": "https://downloads.psl.noaa.gov/Datasets/ncep.reanalysis/surface/air.sig995.2022.nc",
+   "sha256": "8f3105cdd83737cdd44b3c881085624289c82baa747f46cb21d86d89d97a73ec",
+   "licence": "NOAA PSL NCEP/NCAR Reanalysis 1, public",
+   "derive": [
+    {
+     "op": "netcdf-to-npy",
+     "var": "air",
+     "out": "holdout/ncep-npy/train/air.2022.npy"
+    }
+   ]
+  },
+  {
+   "id": "ncep-slp-2022",
+   "group": "holdout",
+   "url": "https://downloads.psl.noaa.gov/Datasets/ncep.reanalysis/surface/slp.2022.nc",
+   "sha256": "384d4b9f5e4453d844fc6eef65aff4e0fa976cd7064f409da77d02fe0b6130c5",
+   "licence": "NOAA PSL NCEP/NCAR Reanalysis 1, public",
+   "derive": [
+    {
+     "op": "netcdf-to-npy",
+     "var": "slp",
+     "out": "holdout/ncep-npy/train/slp.2022.npy"
+    }
+   ]
+  },
+  {
+   "id": "ncep-rhum-2022",
+   "group": "holdout",
+   "url": "https://downloads.psl.noaa.gov/Datasets/ncep.reanalysis/surface/rhum.sig995.2022.nc",
+   "sha256": "24f95cf6ead38e30660302060bcff1763d0ba8f579314c8f19c3f4dd97f647aa",
+   "licence": "NOAA PSL NCEP/NCAR Reanalysis 1, public",
+   "derive": [
+    {
+     "op": "netcdf-to-npy",
+     "var": "rhum",
+     "out": "holdout/ncep-npy/train/rhum.2022.npy"
+    }
+   ]
+  },
+  {
+   "id": "ncep-uwnd-2022",
+   "group": "holdout",
+   "url": "https://downloads.psl.noaa.gov/Datasets/ncep.reanalysis/surface/uwnd.sig995.2022.nc",
+   "sha256": "0b6ab901ddc7f628618bc2fbdc38d29f094922353cb2d459324f2cc8316f4ef0",
+   "licence": "NOAA PSL NCEP/NCAR Reanalysis 1, public",
+   "derive": [
+    {
+     "op": "netcdf-to-npy",
+     "var": "uwnd",
+     "out": "holdout/ncep-npy/train/uwnd.2022.npy"
+    }
+   ]
+  },
+  {
+   "id": "ncep-air-2023",
+   "group": "holdout",
+   "url": "https://downloads.psl.noaa.gov/Datasets/ncep.reanalysis/surface/air.sig995.2023.nc",
+   "sha256": "595a3a33eaf7d0868a1af6808d598cbb8cac9ea87633091ba89cab60ec8c1279",
+   "licence": "NOAA PSL NCEP/NCAR Reanalysis 1, public",
+   "derive": [
+    {
+     "op": "netcdf-to-npy",
+     "var": "air",
+     "out": "holdout/ncep-npy/test/air.2023.npy"
+    }
+   ]
+  },
+  {
+   "id": "ncep-slp-2023",
+   "group": "holdout",
+   "url": "https://downloads.psl.noaa.gov/Datasets/ncep.reanalysis/surface/slp.2023.nc",
+   "sha256": "ce97b775139415f707a47207e73e0445d92e87be2d67a08018def15509f51e58",
+   "licence": "NOAA PSL NCEP/NCAR Reanalysis 1, public",
+   "derive": [
+    {
+     "op": "netcdf-to-npy",
+     "var": "slp",
+     "out": "holdout/ncep-npy/test/slp.2023.npy"
+    }
+   ]
+  },
+  {
+   "id": "ncep-rhum-2023",
+   "group": "holdout",
+   "url": "https://downloads.psl.noaa.gov/Datasets/ncep.reanalysis/surface/rhum.sig995.2023.nc",
+   "sha256": "f8cd17f460a5f2affb97613fc5895012b5a7f97dd609311012340419ceeed52e",
+   "licence": "NOAA PSL NCEP/NCAR Reanalysis 1, public",
+   "derive": [
+    {
+     "op": "netcdf-to-npy",
+     "var": "rhum",
+     "out": "holdout/ncep-npy/test/rhum.2023.npy"
+    }
+   ]
+  },
+  {
+   "id": "ncep-uwnd-2023",
+   "group": "holdout",
+   "url": "https://downloads.psl.noaa.gov/Datasets/ncep.reanalysis/surface/uwnd.sig995.2023.nc",
+   "sha256": "40fae4c23529aef54b3630051c41798f1ef9b4b93b2de51d34f99b5568f32d1f",
+   "licence": "NOAA PSL NCEP/NCAR Reanalysis 1, public",
+   "derive": [
+    {
+     "op": "netcdf-to-npy",
+     "var": "uwnd",
+     "out": "holdout/ncep-npy/test/uwnd.2023.npy"
+    }
+   ]
+  },
+  {
+   "id": "tlc-yellow-2024-01",
+   "group": "holdout-optional",
+   "url": "https://d37ci6vzurbu9u.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet",
+   "sha256": null,
+   "licence": "NYC TLC trip records, public",
+   "derive": [
+    {
+     "op": "parquet-plain",
+     "out": "holdout/tlc-parquet/train/yellow-2024-01.parquet"
+    }
+   ]
+  },
+  {
+   "id": "tlc-yellow-2024-02",
+   "group": "holdout-optional",
+   "url": "https://d37ci6vzurbu9u.cloudfront.net/trip-data/yellow_tripdata_2024-02.parquet",
+   "sha256": null,
+   "licence": "NYC TLC trip records, public",
+   "derive": [
+    {
+     "op": "parquet-plain",
+     "out": "holdout/tlc-parquet/train/yellow-2024-02.parquet"
+    }
+   ]
+  },
+  {
+   "id": "tlc-yellow-2024-03",
+   "group": "holdout-optional",
+   "url": "https://d37ci6vzurbu9u.cloudfront.net/trip-data/yellow_tripdata_2024-03.parquet",
+   "sha256": null,
+   "licence": "NYC TLC trip records, public",
+   "derive": [
+    {
+     "op": "parquet-plain",
+     "out": "holdout/tlc-parquet/test/yellow-2024-03.parquet"
+    }
+   ]
+  },
+  {
+   "id": "tlc-yellow-2024-04",
+   "group": "holdout-optional",
+   "url": "https://d37ci6vzurbu9u.cloudfront.net/trip-data/yellow_tripdata_2024-04.parquet",
+   "sha256": null,
+   "licence": "NYC TLC trip records, public",
+   "derive": [
+    {
+     "op": "parquet-plain",
+     "out": "holdout/tlc-parquet/test/yellow-2024-04.parquet"
+    }
+   ]
+  },
+  {
+   "id": "gpt2",
+   "group": "weights",
+   "url": "https://huggingface.co/openai-community/gpt2/resolve/607a30d783dfa663caf39e06633721c8d4cfcd7e/model.safetensors",
+   "sha256": "248dfc3911869ec493c76e65bf2fcf7f615828b0254c12b473182f0f81d3a707",
+   "licence": "MIT",
+   "dtype": "f32",
+   "derive": [
+    {
+     "op": "copy",
+     "out": "weights/gpt2-f32.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "smollm2-135m",
+   "group": "weights",
+   "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/model.safetensors",
+   "sha256": "80521b40281d6ce74e35c9282c22539e75aa0ac8578892b2a59955ef78d55da1",
+   "licence": "Apache-2.0",
+   "dtype": "bf16",
+   "derive": [
+    {
+     "op": "copy",
+     "out": "weights/smollm2-135m-bf16.safetensors"
+    }
+   ]
+  },
+  {
+   "id": "qwen2.5-0.5b",
+   "group": "weights",
+   "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B/resolve/060db6499f32faf8b98477b0a26969ef7d8b9987/model.safetensors",
+   "sha256": "88c142557820ccad55bb59756bfcfcf891de9cc6202816bd346445188a0ed342",
+   "licence": "Apache-2.0",
+   "dtype": "bf16",
+   "derive": [
+    {
+     "op": "copy",
+     "out": "weights/qwen2.5-0.5b-bf16.safetensors"
+    }
+   ]
+  }
+ ],
+ "derived_sha256": {
+  "holdout/gharchive-json/test/2015-01-01-16.json": "5c4c157fcb8976b17374538deae867bf8bcf58c992869de893d93f7212d8c5bc",
+  "holdout/gharchive-json/test/2015-01-01-17.json": "1eede40bda724fc9fdf5613e05b1663c2cbd692a27a0053f831811e0685a1787",
+  "holdout/gharchive-json/test/2015-01-01-18.json": "4040f6df083595a6f0bd1739f20ceaef2b768c17631915683339b30c925e2116",
+  "holdout/gharchive-json/test/2015-01-01-19.json": "b6b6681aae1e8490606d1996231fa03eb004df27d34c07d6c8be0548c4c7764d",
+  "holdout/gharchive-json/train/2015-01-01-12.json": "af508ece4c555727562641d3c0d7c3bd992b7e58e730a308e52631bbfac0a30a",
+  "holdout/gharchive-json/train/2015-01-01-13.json": "0610c9adbc567f7321ae0681f71bb378ceb666f7d4dfaad1b82be7dc27447e00",
+  "holdout/gharchive-json/train/2015-01-01-14.json": "47f280c81e81a56f03f03941f59a430543686a8c23e0fef40e526bb0552fcbb3",
+  "holdout/gharchive-json/train/2015-01-01-15.json": "472b030e957bccc9f322e1191f0e877636fb2cf22decce39bfd9ee30b89e080f",
+  "holdout/ghcn-csv/test/USW00012839.csv": "728e10647be26bdbe1178976ac74ead6425327d45e1a8d87c77d4090e880ba04",
+  "holdout/ghcn-csv/test/USW00013874.csv": "a24a0360e2c877a9acaf7eb3bc388a352331c39d65ba5f8f65c9d264126cb0a3",
+  "holdout/ghcn-csv/test/USW00023183.csv": "b89ac621857cc99a4e7433f7a0cbb95fbe236f745deb2b1f665c4f472247cd88",
+  "holdout/ghcn-csv/test/USW00024233.csv": "1a19d51f22b7fdaee9e560fa517f12c964d3a21af4d428a54ea911d7c00bdadc",
+  "holdout/ghcn-csv/train/USW00014739.csv": "865ef2d20904af799ca4ccf357ea306b549d0ff9d4eddc59a9c4b4b3d408b69d",
+  "holdout/ghcn-csv/train/USW00023174.csv": "61be4ce5904ea898ca412fc5c27141e6206eff11ddb96944943049deb5d30e31",
+  "holdout/ghcn-csv/train/USW00094728.csv": "7a39ba9528773b3b7c4754b8438f96e3f09d2b0fca67ff5da4f11cd76027e57e",
+  "holdout/ghcn-csv/train/USW00094846.csv": "95adebdda8fd40401277b3a7cffe2fa29ebfeb81b4c4786e5619311ceea40df6",
+  "holdout/nasa-logs/test/04-Aug-1995.log": "222f7496f13393ad363683995bc1b6e922676b18abb0304781b4225cd834dc96",
+  "holdout/nasa-logs/test/05-Aug-1995.log": "0eac528d7351d5bb11cb7e02ee124c6b74096845acd3d5300f92c35c93f57f04",
+  "holdout/nasa-logs/test/06-Aug-1995.log": "077e5ab455707d43c19d2e3be50144081db144f5c1068d24834c5aa660bef3b3",
+  "holdout/nasa-logs/test/07-Aug-1995.log": "911e9f63fb536c002fd59f7c0acfacaf8c14db93806c52c1121ed250f64b5f79",
+  "holdout/nasa-logs/train/01-Jul-1995.log": "bce918028ff1d806f8bd99a0e1fb49ed3bef414641f0f2dd55b57f64097a50c5",
+  "holdout/nasa-logs/train/02-Jul-1995.log": "95b4865112194c734c36772a1d507c48ec4978c1d1d43bf739413ee7e9a40f72",
+  "holdout/nasa-logs/train/03-Jul-1995.log": "ba93eab6b211e44af1b0eb90ccbe99bd94a3af4605a473dc7bab808cd44af5f5",
+  "holdout/nasa-logs/train/04-Jul-1995.log": "d37012de140723feab50a3b29edcba3416f1b364dc696a7c5f0e2230d7a51960",
+  "holdout/ncep-npy/test/air.2023.npy": "2b11d724fd01c656d92122e45919136081949b83fc7b3861e46d0bbab48c1d32",
+  "holdout/ncep-npy/test/rhum.2023.npy": "23f5ff7fbe64e3ecf7c61a57415ad9534604abd2ce444fa52d037980c8625b06",
+  "holdout/ncep-npy/test/slp.2023.npy": "6fe02f26c77b44d537086f2a57d79e54f13b6b79f9428291ce0ec44800256ff9",
+  "holdout/ncep-npy/test/uwnd.2023.npy": "6597423efa73f6a77b2be83c05eed97dcf1f72eebd01bde557e62132434a1a0b",
+  "holdout/ncep-npy/train/air.2022.npy": "97d6e1b3d57974955d1740f10a64f89e478c38e5eddd87777d965fa842def267",
+  "holdout/ncep-npy/train/rhum.2022.npy": "42449438e22e526604b5bc6178386a293e5c9e9946753080834676b7f0b93426",
+  "holdout/ncep-npy/train/slp.2022.npy": "cf48de5d729cd61ef97ed7879f84a8622a06aed2e68b73a18672e5ac55bd5f63",
+  "holdout/ncep-npy/train/uwnd.2022.npy": "637e21eebc6fc2d962f003042595a75900c79a1867931133778d3b37c013f771",
+  "weights/gpt2-f32.safetensors": "248dfc3911869ec493c76e65bf2fcf7f615828b0254c12b473182f0f81d3a707",
+  "weights/qwen2.5-0.5b-bf16.safetensors": "88c142557820ccad55bb59756bfcfcf891de9cc6202816bd346445188a0ed342",
+  "weights/smollm2-135m-bf16.safetensors": "80521b40281d6ce74e35c9282c22539e75aa0ac8578892b2a59955ef78d55da1"
+ }
+}

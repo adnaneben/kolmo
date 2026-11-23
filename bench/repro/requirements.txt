@@ -1,0 +1,6 @@
+# Python packages for bench/repro (install into a virtual environment, not system-wide).
+# fetch.py: h5py + numpy (NetCDF4 -> .npy), pyarrow (optional Parquet set). panel.py: zipnn (weights sets).
+numpy==2.5.5
+h5py==3.16.0
+pyarrow==26.0.1
+zipnn==0.5.4

@@ -23,6 +23,23 @@
     container layer (`tests/format_reference.py`).
   - `tests/make_v12_frames.py` adds each release's frames (RELEASING.md).
 
+### Benchmarks
+
+- **`bench/repro/`: the public benchmark in one command** (`sh bench/repro/run.sh WORK`). It fetches every input
+  from its source with sha256 checks (`datasets.json`), builds Kolmo (`make ARCH=`), lzbench 2.4.1 and OpenZL at
+  pinned commits, runs the single-thread lzbench comparison, the structured-data panel and the one-thread/all-core
+  command-line run, and writes JSON. Needs `bench/lzbench/` (plugin and corpora) from the x86 benchmark change.
+- **Fair OpenZL rematch** (`panel.py`, `suite.json`): OpenZL untrained *and* trained with `zli train` on a separate
+  training split, against Kolmo with no configuration, on public holdout data new to Kolmo (NOAA GHCN-Daily CSV,
+  GH Archive JSON, NASA HTTP logs, NCEP/NCAR reanalysis float32 grids; NYC TLC Parquet optional).
+- **ML weights head-to-head**: Kolmo against ZipNN, OpenZL's safetensors profile, zstd and xz on GPT-2 (f32),
+  SmolLM2-135M and Qwen2.5-0.5B (bf16); DFloat11's size computed from its method (`dfloat11_tool.py`; its decoder
+  needs CUDA).
+- **`site/`: a static benchmark page** (`python3 site/build.py`) generated from the JSON: Pareto charts of ratio
+  against decode and compress speed, tables, method and caveats. Wins and losses are computed from the data, and
+  losses are shown next to wins. Not published; GitHub Pages can serve `site/` as is.
+- `tests/check_release_docs.py` skips a `## Unreleased` heading when it reads the version from the changelog.
+
 ## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and
