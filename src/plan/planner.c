@@ -420,7 +420,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         fprintf(stderr, "text: json_ms=%.3f js=%d\n", (prof_now() - tx0) * 1000, js); tx0 = prof_now();
 #endif
         static const struct { uint8_t d; int q; } D[] = {{',', 1}, {'\t', 0}, {';', 1}, {'|', 0}, {' ', 1}};
-        int *cnt = malloc(4001 * sizeof(int)); size_t head = n < (1 << 16) ? n : (1 << 16);
+        int *cnt = malloc(4001 * sizeof(int)); size_t head = n < (1 << 16) ? n : (1 << 16), thead = head;   /* thead: the head the table was found on */
         if (!cnt) return pl;
         for (int di = 0; di < 5 && pl.t == T_NONE; di++) {
             int L = tp_fieldcounts(s, (int64_t)head, D[di].d, D[di].q, cnt, 4000);
@@ -438,10 +438,19 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                     return (plan_t){.t=T_TP, .a=D[di].d, .c=255, .wide=1};
                 }
             }
+            if (L >= 2 && L < 51 && n > head) {
+                /* long rows (a few hundred columns, or long fields): fewer than 51 lines in the 64 KiB head, so no table
+                 * was ever found (200-column CSV -5: +60% against the same data in 40 columns). The count is taken
+                 * again on up to 1 MiB */
+                size_t h2 = n < (1u << 20) ? n : (1u << 20);
+                L = tp_fieldcounts(s, (int64_t)h2, D[di].d, D[di].q, cnt, 4000);
+                if (L >= 51) thead = h2;
+            }
             if (L < 51) continue;
             int best = 0, bc = 0;
             for (int i = 1; i < L; i++) { int k = cnt[i], c = 0; if (k == best) continue; for (int j = 1; j < L; j++) c += cnt[j] == k; if (c > bc) { bc = c; best = k; } }
             if (best >= 2 && best <= 256 && bc * 100 > (L - 1) * 95) { pl.t = T_TP; pl.a = D[di].d; pl.b = D[di].q; pl.c = best - 1; }
+            else thead = head;
         }
         free(cnt);
         size_t logcost = 0;                                /* the template transform's coded size on the trial slice */
@@ -464,7 +473,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             free(o); free(o2);
         }
         if (pl.t == T_TP) {                       /* typed table transform, kept only if it helps on a sample */
-            size_t mm = head; while (mm > 0 && s[mm - 1] != '\n') mm--; if (!mm) mm = head;
+            size_t mm = thead; while (mm > 0 && s[mm - 1] != '\n') mm--; if (!mm) mm = head;
             uint8_t *o = malloc(mm + TSLACK);
             if (!o) return pl;
             int64_t tn = tbl_encode(s, mm, (uint8_t)pl.a, pl.c + 1, pl.b, o);
