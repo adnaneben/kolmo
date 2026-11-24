@@ -580,6 +580,9 @@ coded:;
                 }
             }
         }
+#ifdef KOLMO_IMPACT
+        impact_block(i, xp, S, J->slot, level, raw, len, slot, &codec, &tflag, &meta, &cl, in, inlen);   /* research build only */
+#endif
         (void)modes;   /* the format features this block used (once the frame's version); every frame is version 12 */
         for (int k = 0; k < XT_N; k++) xtrial_free(&xt[k]);
         size_t tot = 4 + meta + cl;
