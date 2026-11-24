@@ -282,7 +282,18 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     if (strong) { pr = 0; for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; } }
     size_t ihw; unsigned ihc; size_t ihh;
     const int imghdr = meta_image8(s, n, &ihw, &ihc, &ihh);   /* an image header: pixels, even where they look like text */
-    const int textlike = pr * 100 > h * 95;
+    /* text by its first 64 KiB. A text prefix (a README, a script header, 128-512 KiB of prose) before megabytes of
+     * machine code planned the whole file as text, with no x86 trial (text-headed executables: -9 +12-16%): for inputs
+     * of 256 KiB or more whose four spread slices are not all text (looks_text), the binary route is taken when the
+     * middle 1 MiB holds x86 call/jump opcodes at the density of the x86 trial. Other mixtures keep the text route: a
+     * tar of text, a table, an int32 series and a log coded 63-78% larger as binary, a shuffle chosen on the series
+     * applied to everything */
+    int textlike = pr * 100 > h * 95;
+    if (textlike && n >= (256u << 10) && !looks_text(s, n)) {
+        size_t L = n / 4 < (1u << 20) ? n / 4 : (1u << 20), st = n / 2 - L / 2, ej = 0;
+        for (size_t i = st; i + 4 < st + L; i++) ej += ((s[i] & 0xFE) == 0xE8) & ((uint8_t)(s[i + 4] + 1) < 2);
+        if (ej * 1000 >= L) textlike = 0;
+    }
     if (textlike && !imghdr) {                          /* text: field transposition if lines have a fixed field count */
         if (light == 2 || light == 3) return pl;                 /* minimal analysis: text is coded as it is */
         if (logs && n >= 65536) {                                /* wide delimited table (over 256 columns): kolmo graph */
