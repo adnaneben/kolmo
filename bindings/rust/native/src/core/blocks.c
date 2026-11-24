@@ -151,6 +151,10 @@ static void emit_block(job_t *j, uint32_t i, const uint8_t *header, const uint8_
  * started or the call failed. A worker that finds the window full of started blocks waits for the next write; it
  * gives its threads to the budget meanwhile (helpers of the running blocks use them) and takes them back after. */
 static int64_t claim_block(job_t *J, int own) {
+    if (!J->started) {                               /* a job built without dispatch state (plan/frontier.c): input order */
+        uint32_t i = atomic_fetch_add(&J->next, 1);
+        return i < J->nb ? (int64_t)i : -1;
+    }
     pthread_mutex_lock(&J->wmu);
     int lent = 0; int64_t got = -1;
     for (;;) {
