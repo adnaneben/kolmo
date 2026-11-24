@@ -327,6 +327,19 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                         size_t ms = mm; if (ms > (384u << 10)) { ms = 384u << 10; while (ms > 0 && ts[ms - 1] != '\n') ms--; }   /* a shorter run decides the same and costs a third */
                         size_t a2 = ms ? kg_encode_table(&cx, cc, lv, ts, ms, WD[di], sep, o, mm + 64) : 0, b2 = ms ? codec_compress(&cx, cc, lv, ts, ms, z, zcap) : 0;
                         ok = a2 && b2 && a2 * 100 < 97 * b2;
+                        if (!ok && a2 && b2 && n >= (1u << 20)) {
+                            /* a veto on the short run is checked on a 2 MiB run from the same place: the strong coder's
+                             * context grows with the run while the graph's columns pay their tables early, so the
+                             * short run favours the strong coder (wide3.csv: 512 KiB vetoed the graph that is 14%
+                             * smaller on 2 MiB, and -9 came out 25.8% larger than -7) */
+                            size_t ml = (size_t)(s + n - ts) < (2u << 20) ? (size_t)(s + n - ts) : (2u << 20); while (ml > 0 && ts[ml - 1] != '\n') ml--;
+                            if (ml > 2 * ms) {
+                                size_t zc2 = kolmo_klzh_bound(ml) + 4096; uint8_t *o3 = malloc(ml + 64), *z3 = malloc(zc2);
+                                size_t a3 = o3 && z3 ? kg_encode_table(&cx, cc, lv, ts, ml, WD[di], sep, o3, ml + 64) : 0, b3 = a3 ? codec_compress(&cx, cc, lv, ts, ml, z3, zc2) : 0;
+                                ok = a3 && b3 && a3 * 100 < 97 * b3;
+                                free(o3); free(z3);
+                            }
+                        }
                     }
                     if (ok) { pl.t = T_KG; pl.a = WD[di]; pl.b = sep; }
                 }
