@@ -340,7 +340,20 @@ static void *compress_worker(void *arg) {
             slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;               /* did not apply: plain block */
         }
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
-        if (codec == R_LZMA && level == 1) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max -l 1: BWT for every block */
+        int l8lz = 0;   /* level 8 (max -l 1), a binary block: KLZMA level 1, because a slice found BWT not 2% smaller */
+        if (codec == R_LZMA && level == 1) {   /* level 8: BWT for text, JSON token and log streams; other blocks by a slice */
+            /* BWT for every block made -8 larger than -7 on executables and weights (mozilla +2.8%, bf16 +6.2%) and
+             * slower to decode than -9. A 512 KiB slice from the middle (blocks of up to 2 MiB: the whole block) is coded
+             * both ways, and BWT is kept only where it is at least 2% smaller than KLZMA 1 */
+            int textish = tflag == 9 || tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1) || (!tflag && looks_text(raw, len));
+            if (!textish && inlen >= (64u << 10)) {   /* blocks of up to 2 MiB are coded both ways whole: a slice of an eighth of them misjudged a 1.2 MB executable and a 135 KB table by 12% */
+                uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+                size_t sn = inlen <= (2u << 20) ? inlen : 512u << 10, so = ((inlen - sn) / 2) & ~(size_t)63;
+                size_t sb = alt ? codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta) : 0, slz = sb ? codec_compress(xp, R_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
+                if (sb && slz && (uint64_t)sb * 100 > (uint64_t)slz * 98) l8lz = 1;
+            }
+            if (!l8lz) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }
+        }
         else if (codec == R_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
         else if (codec == R_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         else if (KOLMO_ECO_TEXT_BWT && codec == R_ECO && J->default_level && len >= (64u << 10)
@@ -417,7 +430,7 @@ static void *compress_worker(void *arg) {
              * the whole block by more (osdb: slice 0.84, block 0.78; akiyo_cif.y4m: slice 0.976, block 0.904) and the
              * full LZMA2 pass, the slowest step of this mode, is skipped. */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
-            size_t sn = inlen / 8 < (512u << 10) ? inlen / 8 : (512u << 10), so = ((inlen - sn) / 2) & ~(size_t)63;
+            size_t sn = inlen <= (2u << 20) ? inlen : 512u << 10, so = ((inlen - sn) / 2) & ~(size_t)63;
             size_t sb = alt ? codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta) : 0, slz = sb ? codec_compress(xp, R_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
             if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) slice_verdict = -1;
             else if ((uint64_t)sb * 100 <= (uint64_t)slz * KOLMO_BWT_SKIP_LZMA_PCT && (uint64_t)slz * 100 <= (uint64_t)sn * KOLMO_BWT_REACH_PCT) { codec = C_BWT; level = 9; slice_verdict = 1; }
@@ -434,12 +447,12 @@ static void *compress_worker(void *arg) {
              * KOLMO_BWT_REACH_PCT or less (was 35%: on less compressible binary data BWT was 1.5 to 8% larger, but the
              * 3% gain rule below already refuses those; raw video residual planes gained 5-6%) */
             uint8_t *alt = tflag == 8 || tflag == 14 || tflag == 4 || tflag == 5 || (uint64_t)cl * 100 > (uint64_t)inlen * KOLMO_BWT_REACH_PCT ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
-            if (slice_verdict < 0) alt = NULL;              /* the slice above already ruled BWT out */
+            if (slice_verdict < 0 || l8lz) alt = NULL;     /* a slice above already ruled BWT out */
             else if (alt && inlen > (8u << 20) && !slice_verdict) {   /* large blocks only: on small ones the slice costs as much as the attempt */
                 /* a short slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the
                  * outcome: where BWT won on the whole block the slice ratio was at most 1.02, where it lost by 5% or
                  * more it was 1.04 or higher. Above 1.03 the full attempt is skipped. */
-                size_t sn = inlen / 8 < (512u << 10) ? inlen / 8 : (512u << 10), so = ((inlen - sn) / 2) & ~(size_t)63;
+                size_t sn = inlen <= (2u << 20) ? inlen : 512u << 10, so = ((inlen - sn) / 2) & ~(size_t)63;
                 size_t sb = codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta), slz = sb ? codec_compress(xp, R_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
                 if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) alt = NULL;
             }
@@ -454,7 +467,7 @@ static void *compress_worker(void *arg) {
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
             int try_bsc = alt != NULL, bc = 0; size_t bz = cl + meta;
             if (alt && len > (2u << 20)) {
-                size_t sn = 512u << 10, so = ((len - sn) / 2) & ~(size_t)63, cs = codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
+                size_t sn = inlen <= (2u << 20) ? inlen : 512u << 10, so = ((len - sn) / 2) & ~(size_t)63, cs = codec_compress(xp, C_BWT, 9, raw + so, sn, alt, J->slot);
                 /* a slice sorts worse than the whole block, most of all on repetitive text (nci: slice 5.2%, block 3.7%) */
                 const double tol = tflag == 4 || tflag == 5 || tflag == 12 ? 1.25 : 1.10;
                 if (!cs || (double)cs / sn > tol * (double)bz / len) try_bsc = 0;
