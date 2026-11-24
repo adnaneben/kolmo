@@ -105,15 +105,18 @@ static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int
     return best;
 }
 
-static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh) {
-    double best = 1e300; int w = 4; size_t h = 0; int fixed = 0;
+/* *weak (optional): set when a width passed only through the relaxed mantissa test below (the caller then also runs
+ * the integer trial, which the float trial otherwise pre-empts) */
+static double kg_float_trial_w(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh, int *weak) {
+    double best = 1e300; int w = 4; size_t h = 0; int fixed = 0, wk[2] = {0, 0};
     if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
         size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
         const uint8_t *d = hl <= n ? memmem(s, hl, "'descr': '", 10) : NULL;
         if (!d || d + 13 > s + hl || d[10] == '>' || d[11] != 'f' || (d[12] != '2' && d[12] != '4' && d[12] != '8')) return best;
         h = hl; w = d[12] - '0'; fixed = 1;
         if (n < h + 4096) return best;                       /* same shape test as raw data: predictable exponent, random mantissa */
-        if (kg_plane_h(s + h, (n - h) / w, w, w - 1, 1) > 6.0 || kg_plane_h(s + h, (n - h) / w, w, w - 2, 1) < 7.0) return best;
+        if (kg_plane_h(s + h, (n - h) / w, w, w - 1, 1) > 6.0) return best;
+        wk[0] = kg_plane_h(s + h, (n - h) / w, w, w - 2, 1) < 7.0;
     }
     if (n < h + 4096) return best;
     int ws[2] = {w, 0}; size_t hs[2] = {h, 0}; int nw = 1;
@@ -123,7 +126,11 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
             double he = 1e9; size_t ph = 0;
             for (size_t k = 0; k < (size_t)fw; k++) { double e = kg_plane_h(s + k, (n - k) / fw, fw, fw - 1, 1); if (e < he) { he = e; ph = k; } }
             double hm = kg_plane_h(s + ph, (n - ph) / fw, fw, fw - 2, 1);
-            if (he <= 6.0 && hm >= 7.0) { ws[nw] = fw; hs[nw] = ph; nw++; }   /* exponent predictable, mantissa near random */
+            /* exponent predictable. The mantissa used to have to look random (its upper byte at 7 bits or more), which
+             * turned away floats whose low mantissa bits are zero or few (fp16 converted from bf16, f32 upcast from
+             * bf16, quantised values): fp16 weights coded 12-14% larger. Such widths are now tried too, and scored
+             * by the order-0 screen and the trial below like any other */
+            if (he <= 6.0) { wk[nw] = hm < 7.0; ws[nw] = fw; hs[nw] = ph; nw++; }
         }
         if (!nw) return best;
     }
@@ -136,10 +143,13 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
             if (e / (8.0 * fw) >= plain) continue;
         }
         size_t z = l ? kg_encode_float(&cx, R_LZH, zl, s + a, l, fw, 0, o, L + 64) : 0;
-        if (z && (double)z / l < best) { best = (double)z / l; *bw = fw; *bh = fh; }
+        if (z && (double)z / l < best) { best = (double)z / l; *bw = fw; *bh = fh; if (weak) *weak = wk[q]; }
     }
     free(o); codec_ctx_free(&cx);
     return best;
+}
+static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh) {
+    return kg_float_trial_w(s, n, st, L, zl, plain, bw, bh, NULL);
 }
 
 /* Binary64 values that were written in decimal (DEC64). A row-major .npy '<f8' table gives its row length; any other
@@ -194,6 +204,21 @@ static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
     if (z) { best = (double)z / l; *bcols = (uint32_t)ca; *bh = h; }
     free(o); codec_ctx_free(&cx);
     return best;
+}
+
+/* A record layout that wins on the middle slice must also win elsewhere: columnar containers (Arrow IPC, ORC,
+ * dictionary Parquet) hold one column buffer in the middle that reads as records, and the records transform then
+ * codes the whole file 35-65% larger. The layout is scored again on up to 8 slices of at most 256 KiB at the odd
+ * sixteenths of the input and must be 3% smaller than plain coding on 7 of every 8. */
+static int rec_spread_ok(const uint8_t *s, size_t n, size_t rl, const rec_plan_t *R, uint8_t *buf, size_t bc, int zl) {
+    int wins = 0, tries = 0; size_t sl = (rl < ((size_t)256 << 10) ? rl : ((size_t)256 << 10)) / R->P * R->P;
+    for (int q = 1; q < 16; q += 2) {
+        size_t st = n / 16 * (size_t)q, rs = (size_t)R->h + (st > (size_t)R->h ? (st - R->h) / R->P * R->P : 0);
+        if (!sl || rs + sl > n) continue;
+        int64_t e = rec_encode(s + rs, sl, rs, R, buf, bc); tries++;
+        if (e > 0 && (double)zcost(buf, (size_t)e, zl) < (double)zcost(s + rs, sl, zl) * 0.97) wins++;
+    }
+    return wins * 8 >= tries * 7;
 }
 
 static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh, int native) {
@@ -251,10 +276,24 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     if (n < 4096) return pl;
     const size_t TRIAL = PLAN_SLICE(effort ? (1u << 20) : (256u << 10));   /* text-transform trial slice (fast: 256 KiB) */
     size_t h = n < 65536 ? n : 65536, pr = 0;
-    for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
+    /* printable ASCII and whole UTF-8 sequences (plan/detect.c). Max and ultra (strong) keep the ASCII count: their
+     * coders model UTF-8 text well as it is, and the text route's transforms cost a pageviews dump 0.9% at -8/-9 */
+    pr = text_bytes(s, h, 0);
+    if (strong) { pr = 0; for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; } }
     size_t ihw; unsigned ihc; size_t ihh;
     const int imghdr = meta_image8(s, n, &ihw, &ihc, &ihh);   /* an image header: pixels, even where they look like text */
-    const int textlike = pr * 100 > h * 95;
+    /* text by its first 64 KiB. A text prefix (a README, a script header, 128-512 KiB of prose) before megabytes of
+     * machine code planned the whole file as text, with no x86 trial (text-headed executables: -9 +12-16%): for inputs
+     * of 256 KiB or more whose four spread slices are not all text (looks_text), the binary route is taken when the
+     * middle 1 MiB holds x86 call/jump opcodes at the density of the x86 trial. Other mixtures keep the text route: a
+     * tar of text, a table, an int32 series and a log coded 63-78% larger as binary, a shuffle chosen on the series
+     * applied to everything */
+    int textlike = pr * 100 > h * 95;
+    if (textlike && n >= (256u << 10) && !looks_text(s, n)) {
+        size_t L = n / 4 < (1u << 20) ? n / 4 : (1u << 20), st = n / 2 - L / 2, ej = 0;
+        for (size_t i = st; i + 4 < st + L; i++) ej += ((s[i] & 0xFE) == 0xE8) & ((uint8_t)(s[i + 4] + 1) < 2);
+        if (ej * 1000 >= L) textlike = 0;
+    }
     if (textlike && !imghdr) {                          /* text: field transposition if lines have a fixed field count */
         if (light == 2 || light == 3) return pl;                 /* minimal analysis: text is coded as it is */
         if (logs && n >= 65536) {                                /* wide delimited table (over 256 columns): kolmo graph */
@@ -288,6 +327,19 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                         size_t ms = mm; if (ms > (384u << 10)) { ms = 384u << 10; while (ms > 0 && ts[ms - 1] != '\n') ms--; }   /* a shorter run decides the same and costs a third */
                         size_t a2 = ms ? kg_encode_table(&cx, cc, lv, ts, ms, WD[di], sep, o, mm + 64) : 0, b2 = ms ? codec_compress(&cx, cc, lv, ts, ms, z, zcap) : 0;
                         ok = a2 && b2 && a2 * 100 < 97 * b2;
+                        if (!ok && a2 && b2 && n >= (1u << 20)) {
+                            /* a veto on the short run is checked on a 2 MiB run from the same place: the strong coder's
+                             * context grows with the run while the graph's columns pay their tables early, so the
+                             * short run favours the strong coder (wide3.csv: 512 KiB vetoed the graph that is 14%
+                             * smaller on 2 MiB, and -9 came out 25.8% larger than -7) */
+                            size_t ml = (size_t)(s + n - ts) < (2u << 20) ? (size_t)(s + n - ts) : (2u << 20); while (ml > 0 && ts[ml - 1] != '\n') ml--;
+                            if (ml > 2 * ms) {
+                                size_t zc2 = kolmo_klzh_bound(ml) + 4096; uint8_t *o3 = malloc(ml + 64), *z3 = malloc(zc2);
+                                size_t a3 = o3 && z3 ? kg_encode_table(&cx, cc, lv, ts, ml, WD[di], sep, o3, ml + 64) : 0, b3 = a3 ? codec_compress(&cx, cc, lv, ts, ml, z3, zc2) : 0;
+                                ok = a3 && b3 && a3 * 100 < 97 * b3;
+                                free(o3); free(z3);
+                            }
+                        }
                     }
                     if (ok) { pl.t = T_KG; pl.a = WD[di]; pl.b = sep; }
                 }
@@ -368,7 +420,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         fprintf(stderr, "text: json_ms=%.3f js=%d\n", (prof_now() - tx0) * 1000, js); tx0 = prof_now();
 #endif
         static const struct { uint8_t d; int q; } D[] = {{',', 1}, {'\t', 0}, {';', 1}, {'|', 0}, {' ', 1}};
-        int *cnt = malloc(4001 * sizeof(int)); size_t head = n < (1 << 16) ? n : (1 << 16);
+        int *cnt = malloc(4001 * sizeof(int)); size_t head = n < (1 << 16) ? n : (1 << 16), thead = head;   /* thead: the head the table was found on */
         if (!cnt) return pl;
         for (int di = 0; di < 5 && pl.t == T_NONE; di++) {
             int L = tp_fieldcounts(s, (int64_t)head, D[di].d, D[di].q, cnt, 4000);
@@ -386,14 +438,42 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                     return (plan_t){.t=T_TP, .a=D[di].d, .c=255, .wide=1};
                 }
             }
+            if (L >= 2 && L < 51 && n > head) {
+                /* long rows (a few hundred columns, or long fields): fewer than 51 lines in the 64 KiB head, so no table
+                 * was ever found (200-column CSV -5: +60% against the same data in 40 columns). The count is taken
+                 * again on up to 1 MiB */
+                size_t h2 = n < (1u << 20) ? n : (1u << 20);
+                L = tp_fieldcounts(s, (int64_t)h2, D[di].d, D[di].q, cnt, 4000);
+                if (L >= 51) thead = h2;
+            }
             if (L < 51) continue;
             int best = 0, bc = 0;
             for (int i = 1; i < L; i++) { int k = cnt[i], c = 0; if (k == best) continue; for (int j = 1; j < L; j++) c += cnt[j] == k; if (c > bc) { bc = c; best = k; } }
             if (best >= 2 && best <= 256 && bc * 100 > (L - 1) * 95) { pl.t = T_TP; pl.a = D[di].d; pl.b = D[di].q; pl.c = best - 1; }
+            else thead = head;
         }
         free(cnt);
+        size_t logcost = 0;                                /* the template transform's coded size on the trial slice */
+        if (logs && pl.t == T_TP && pl.a == ' ' && n >= 65536) {
+            /* a log whose head splits into space-separated fields looks like a table, and the table plan used to end the
+             * search before the template transform was tried: Loghub BGL coded 2.5x larger at -3. For space-separated
+             * fields (the only delimiter where a log reads as a table) both transforms are
+             * scored on the same slice, and the template transform replaces the table only when it is at least 10%
+             * smaller (the block codes a table with its field set, which the probe here does not see) */
+            size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
+            uint8_t *o = mm >= 16384 ? malloc(mm + TSLACK) : NULL, *o2 = o ? malloc(mm + TSLACK) : NULL;
+            if (o && o2) {
+                int64_t tl = log_encode(s, mm, o, mm + 64);
+                int64_t tt = tbl_encode(s, mm, (uint8_t)pl.a, pl.c + 1, pl.b, o2);
+                size_t a = tl > 0 ? kprobe_size(o, (size_t)tl) : (size_t)-1, b = tt > 0 ? kprobe_size(o2, (size_t)tt) : kprobe_size(s, mm);
+                if (tl > 0 && a * 100 < CZ_LOG_GAIN_PCT * kprobe_size(s, mm) && a * 100 < 90 * (uint64_t)b) {
+                    pl.t = T_LOG; pl.a = pl.b = pl.c = 0; pl.wide = 0; logcost = a;
+                }
+            }
+            free(o); free(o2);
+        }
         if (pl.t == T_TP) {                       /* typed table transform, kept only if it helps on a sample */
-            size_t mm = head; while (mm > 0 && s[mm - 1] != '\n') mm--; if (!mm) mm = head;
+            size_t mm = thead; while (mm > 0 && s[mm - 1] != '\n') mm--; if (!mm) mm = head;
             uint8_t *o = malloc(mm + TSLACK);
             if (!o) return pl;
             int64_t tn = tbl_encode(s, mm, (uint8_t)pl.a, pl.c + 1, pl.b, o);
@@ -404,7 +484,6 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             }
             free(o);
         }
-        size_t logcost = 0;                                /* the template transform's coded size on the trial slice */
         if (logs && pl.t == T_NONE && n >= 65536) {        /* logs: template transform, kept if it helps on a sample */
             size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
             if (mm >= 16384 && logc) {           /* same slice already coded by the JSON trial */
@@ -443,7 +522,11 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             int64_t tn = word_encode(s, mm, o, mm + 64);
             if (tn > 0) {
                 size_t a = kprobe_size_l(o, (size_t)tn, 3), b = kprobe_size_l(s, mm, 3);
-                if (a * 100 < CZ_WORD_GAIN_PCT * b) pl.t = T_WORD;
+                /* text with 5% or more bytes >= 0x80 is tokenized with UTF-8 letters (transforms/word.c); there the
+                 * dictionary must save 15% on the probe: markup-heavy UTF-8 (dictionary XML in 8 scripts, probe 0.82-0.98)
+                 * coded 2-7% larger at levels 6-7, prose (probe 0.75) 7-24% smaller at levels 4-7 */
+                size_t hi = 0; for (size_t q = 0; q < mm; q++) hi += s[q] >= 0x80;
+                if (a * 100 < (hi * 20 >= mm ? 85u : CZ_WORD_GAIN_PCT) * b) pl.t = T_WORD;
             }
             free(o);
         }
@@ -542,7 +625,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             size_t rl = L / R->P * R->P; \
             if (rs + rl <= n) { \
                 int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc); \
-                if (e > 0) { double c = (double)zcost(buf, (size_t)e, zl) / rl; if (c < (BAR)) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } } \
+                if (e > 0) { double c = (double)zcost(buf, (size_t)e, zl) / rl; if (c < (BAR) && rec_spread_ok(s, n, rl, R, buf, bc, zl)) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } } \
             } \
         } \
         free(R); \
@@ -580,11 +663,11 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (imgdone && ci < best && ci < plain * 0.80 && !native) {   /* native leaf: the integer graph may still win */
                 best = ci; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7;
             } else {
-            int w = 0; size_t hh = 0; double c = kg_float_trial(s, n, st, L, zl, plain, &w, &hh), cf = c; int fw = w; size_t fh = hh;
+            int w = 0, fweak = 0; size_t hh = 0; double c = kg_float_trial_w(s, n, st, L, zl, plain, &w, &hh, &fweak), cf = c; int fw = w; size_t fh = hh;
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt1 = prof_now();
 #endif
-            if (cf > 1e299 && (!light || npy || numtrial)) {
+            if ((cf > 1e299 || fweak) && (!light || npy || numtrial)) {   /* a float layout found only by the relaxed mantissa test: integers are tried too */
                 w = 0; hh = 0; c = kg_num_trial(s, n, st, Lg, zl, plain, &w, &hh, native); c = KG_ADJ(c);
                 if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
             }
@@ -606,7 +689,10 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #undef IMG8_TRIAL
         }
 #undef KG_ADJ
-        if (numtrial && !(chosen >= 5 && best < plain * 0.80)) {
+        /* a typed plan that saves a fifth skips the record search, except a decimal one: DEC64 scores well on a slice of
+         * exact decimals even where the input mixes them with computed values (NCEP air float32: DEC64 17.5 MB at -3,
+         * the record layout 13.7 MB), and the record trial keeps DEC64's 7% margin below */
+        if (numtrial && !(chosen >= 5 && chosen != 8 && best < plain * 0.80)) {
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double rt0 = prof_now();
 #endif
@@ -668,7 +754,17 @@ structured_done:
             { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, 0, n, zl, &dc, &dh);
               if (c < best * 0.93) { best = c; pl.t = T_KG; pl.a = 0; pl.b = DEC_B(dc); pl.c = (int)dh; pl.kgw = DEC_KGW(dc); } }
             size_t iw = 0, ih = 0; unsigned ic = 0; c = kg_img8_trial(s, n, 0, n, zl, 1e300, &iw, &ic, &ih);
-            if (c < best) { pl.t = T_KG; pl.a = 0; pl.b = 32 | (int)ic; pl.c = (int)ih; pl.kgw = (uint32_t)iw; }
+            if (c < best) { best = c; pl.t = T_KG; pl.a = 0; pl.b = 32 | (int)ic; pl.c = (int)ih; pl.kgw = (uint32_t)iw; }
+            {   /* small executables (and their code sections): the call/jump transform, with the same opcode density
+                 * test as the large-input trial; until 0.0.3 only inputs of 256 KiB or more were tried (75 x86-64
+                 * tools of 32-256 KiB: -9 +4.1% against the filtered files) */
+                size_t ej = 0; for (size_t i = 0; i + 4 < n; i++) ej += ((s[i] & 0xFE) == 0xE8) & ((uint8_t)(s[i + 4] + 1) < 2);
+                if (ej * 1000 >= n) {
+                    memcpy(buf, s, n); e8e9_fwd(buf, n);
+                    c = (double)zcost(buf, n, zl) / n;
+                    if (c < best) { best = c; pl = (plan_t){T_NONE, 0, 0, 0}; pl.t = T_X86; }
+                }
+            }
         }
         free(buf);
     }

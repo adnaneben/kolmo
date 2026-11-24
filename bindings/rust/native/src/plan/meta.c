@@ -179,7 +179,7 @@ static int meta_image8(const uint8_t *s, size_t n, size_t *W, unsigned *C, size_
 
 /* ---- segments ---- */
 
-typedef struct { uint64_t *ss, *se; uint32_t *kind; uint32_t k, maxs; } mt_segs;   /* kind: MK_* | phase << 8 */
+typedef struct { uint64_t *ss, *se; uint32_t *kind; uint32_t k, maxs; size_t exemin; } mt_segs;   /* kind: MK_* | phase << 8; exemin: least executable size cut into parts */
 /* append part [a, b) of a kind; a part shorter than META_MINSEG, or one that may join and has the previous part's
  * kind, extends the previous part. Parts must come in order; a gap becomes a data part. */
 static void mt_emit(mt_segs *g, uint64_t a, uint64_t b, uint32_t kind, int join) {
@@ -217,7 +217,7 @@ static int mt_tar(const uint8_t *s, size_t n, mt_segs *g) {
         const int known = reg && size >= META_MINSEG && mt_known(m, size);
         if (reg && (size >= (1u << 20) || known)) {
             if (off + 512 > last) { g->ss[g->k] = last; g->se[g->k] = off + 512; g->kind[g->k] = MK_DATA; g->k++; }
-            uint32_t k0 = g->k; mt_segs t = {g->ss + k0, g->se + k0, g->kind + k0, 0, g->maxs - k0 - 1};
+            uint32_t k0 = g->k; mt_segs t = {g->ss + k0, g->se + k0, g->kind + k0, 0, g->maxs - k0 - 1, g->exemin};
             if (known && t.maxs >= 4 && mt_nested(m, size, &t) && t.k) {     /* the member cut by its own format */
                 t.se[t.k - 1] = size;
                 for (uint32_t i = 0; i < t.k; i++) { t.ss[i] += off + 512; t.se[i] += off + 512; }
@@ -301,7 +301,7 @@ static int mt_code_parts(const uint8_t *s, size_t n, mt_segs *g, mt_part *P, siz
 }
 /* ELF, 32 and 64-bit little-endian: sections with SHF_EXECINSTR */
 static int mt_elf(const uint8_t *s, size_t n, mt_segs *g) {
-    if (n < (1u << 20) || memcmp(s, "\x7F" "ELF", 4) || s[5] != 1 || (s[4] != 1 && s[4] != 2)) return 0;
+    if (n < g->exemin || memcmp(s, "\x7F" "ELF", 4) || s[5] != 1 || (s[4] != 1 && s[4] != 2)) return 0;
     const int is64 = s[4] == 2; const unsigned mach = mt_le16(s + 18);
     uint64_t shoff = is64 ? mt_le64(s + 0x28) : mt_le32(s + 0x20);
     unsigned shes = mt_le16(s + (is64 ? 0x3A : 0x2E)), shn = mt_le16(s + (is64 ? 0x3C : 0x30));
@@ -319,7 +319,7 @@ static int mt_elf(const uint8_t *s, size_t n, mt_segs *g) {
 }
 /* Mach-O 64-bit (thin): sections of LC_SEGMENT_64 commands with S_ATTR_PURE_INSTRUCTIONS or S_ATTR_SOME_INSTRUCTIONS */
 static int mt_macho(const uint8_t *s, size_t n, mt_segs *g) {
-    if (n < (1u << 20) || mt_le32(s) != 0xFEEDFACFu) return 0;
+    if (n < g->exemin || mt_le32(s) != 0xFEEDFACFu) return 0;
     const uint32_t cpu = mt_le32(s + 4), ncmd = mt_le32(s + 16), cmdsz = mt_le32(s + 20);
     if (ncmd > 4096 || cmdsz > n - 32) return 0;
     size_t cap = 64, np = 0; mt_part *P = malloc(cap * sizeof *P); if (!P) return 0;
@@ -345,7 +345,7 @@ static int mt_macho(const uint8_t *s, size_t n, mt_segs *g) {
 }
 /* Mach-O universal (fat) file: each architecture's slice is a part, cut by its own sections */
 static int mt_fat(const uint8_t *s, size_t n, mt_segs *g) {
-    if (n < (1u << 20) || (mt_be32(s) != 0xCAFEBABEu && mt_be32(s) != 0xCAFEBABFu)) return 0;
+    if (n < g->exemin || (mt_be32(s) != 0xCAFEBABEu && mt_be32(s) != 0xCAFEBABFu)) return 0;
     const int f64 = mt_be32(s) == 0xCAFEBABFu; uint32_t na = mt_be32(s + 4);
     if (na == 0 || na > 32 || 8 + (uint64_t)na * (f64 ? 32 : 20) > n) return 0;   /* (Java class files share the magic: they fail below) */
     mt_part P[32]; size_t np = 0;
@@ -360,7 +360,7 @@ static int mt_fat(const uint8_t *s, size_t n, mt_segs *g) {
     for (size_t i = 0; i < np; i++) {
         if (g->k && P[i].a < g->se[g->k - 1]) continue;
         mt_emit(g, g->k ? g->se[g->k - 1] : 0, P[i].a, MK_HEADER, 1);
-        uint32_t k0 = g->k; mt_segs t = {g->ss + k0, g->se + k0, g->kind + k0, 0, g->maxs - k0 - 1};
+        uint32_t k0 = g->k; mt_segs t = {g->ss + k0, g->se + k0, g->kind + k0, 0, g->maxs - k0 - 1, g->exemin};
         if (t.maxs >= 4 && mt_macho(s + P[i].a, (size_t)(P[i].b - P[i].a), &t) && t.k) {
             t.se[t.k - 1] = P[i].b - P[i].a;
             for (uint32_t q = 0; q < t.k; q++) { t.ss[q] += P[i].a; t.se[q] += P[i].a; }
@@ -372,7 +372,7 @@ static int mt_fat(const uint8_t *s, size_t n, mt_segs *g) {
 }
 /* PE / COFF (Windows executables and DLLs): sections with IMAGE_SCN_CNT_CODE or IMAGE_SCN_MEM_EXECUTE */
 static int mt_pe(const uint8_t *s, size_t n, mt_segs *g) {
-    if (n < (1u << 20) || s[0] != 'M' || s[1] != 'Z') return 0;
+    if (n < g->exemin || s[0] != 'M' || s[1] != 'Z') return 0;
     uint32_t pe = mt_le32(s + 0x3C); if (pe > n - 24 || memcmp(s + pe, "PE\0\0", 4)) return 0;
     const unsigned mach = mt_le16(s + pe + 4), nsec = mt_le16(s + pe + 6), opt = mt_le16(s + pe + 20);
     uint64_t st = (uint64_t)pe + 24 + opt; if (nsec > 96 || st + 40 * (uint64_t)nsec > n) return 0;
@@ -503,8 +503,14 @@ static int mt_nested(const uint8_t *s, size_t n, mt_segs *g) {
 
 /* The input cut into segments (each planned on its own) by the first format whose headers parse; one segment
  * otherwise. kind[i] (may be NULL): MK_PACKED marks compressed content. */
-static uint32_t meta_segments(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se, uint32_t *kind, uint32_t maxs) {
-    uint32_t kk[1]; mt_segs g = {ss, se, kind, 0, maxs};
+/* exemin: executables are cut into code and data down to this size. 1 MiB until 0.0.3 kept every smaller executable
+ * from its branch filter (75 x86-64 and 75 arm64 tools of 32-256 KiB: -9 +4.1% and +4.5% against the filtered files);
+ * the header reads are bounds-checked at any size. Level 1 (speed), which applies no branch filter, keeps 1 MiB: the
+ * cut alone cost those tools 0.5% there. */
+#define MT_EXE_MIN ((size_t)4 << 10)
+#define MT_EXE_MIN_SPEED ((size_t)1 << 20)
+static uint32_t meta_segments_x(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se, uint32_t *kind, uint32_t maxs, size_t exemin) {
+    uint32_t kk[1]; mt_segs g = {ss, se, kind, 0, maxs, exemin};
     if (!kind) { g.kind = kk; g.maxs = 1; }
     if (s && n && kind && maxs >= 4) {
         if (mt_tar(s, n, &g)) return g.k;
@@ -519,4 +525,7 @@ static uint32_t meta_segments(const uint8_t *s, size_t n, uint64_t *ss, uint64_t
     }
     ss[0] = 0; se[0] = n; g.kind[0] = s && n && meta_packed(s, n) ? MK_PACKED : MK_DATA;
     return 1;
+}
+static uint32_t meta_segments(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se, uint32_t *kind, uint32_t maxs) {
+    return meta_segments_x(s, n, ss, se, kind, maxs, MT_EXE_MIN);
 }
