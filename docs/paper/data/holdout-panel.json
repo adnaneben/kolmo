@@ -1,0 +1,2472 @@
+{
+ "_training": {
+  "ghcn-csv/-p csv": {
+   "seconds": 941.5706188750919,
+   "args": [
+    "train",
+    "-p",
+    "csv",
+    "bench-page/data/holdout/ghcn-csv/train",
+    "-o",
+    "bench-page/results/work-panel/ghcn-csv-p_csv.zlc",
+    "-f",
+    "--max-time-secs",
+    "1200"
+   ],
+   "ok": true,
+   "compressor_bytes": 36560
+  },
+  "gharchive-json/-p serial": {
+   "seconds": 1252.223841165891,
+   "args": [
+    "train",
+    "-p",
+    "serial",
+    "bench-page/data/holdout/gharchive-json/train",
+    "-o",
+    "bench-page/results/work-panel/gharchive-json-p_serial.zlc",
+    "-f",
+    "--max-time-secs",
+    "1200"
+   ],
+   "ok": true,
+   "compressor_bytes": 564
+  },
+  "gharchive-json/-p lz": {
+   "seconds": 1070.412580040982,
+   "args": [
+    "train",
+    "-p",
+    "lz",
+    "bench-page/data/holdout/gharchive-json/train",
+    "-o",
+    "bench-page/results/work-panel/gharchive-json-p_lz.zlc",
+    "-f",
+    "--max-time-secs",
+    "1200"
+   ],
+   "ok": true,
+   "compressor_bytes": 656
+  },
+  "nasa-logs/-p serial": {
+   "seconds": 1207.968897209037,
+   "args": [
+    "train",
+    "-p",
+    "serial",
+    "bench-page/data/holdout/nasa-logs/train",
+    "-o",
+    "bench-page/results/work-panel/nasa-logs-p_serial.zlc",
+    "-f",
+    "--max-time-secs",
+    "1200"
+   ],
+   "ok": true,
+   "compressor_bytes": 564
+  },
+  "nasa-logs/-p lz": {
+   "seconds": 258.29353633290157,
+   "args": [
+    "train",
+    "-p",
+    "lz",
+    "bench-page/data/holdout/nasa-logs/train",
+    "-o",
+    "bench-page/results/work-panel/nasa-logs-p_lz.zlc",
+    "-f",
+    "--max-time-secs",
+    "1200"
+   ],
+   "ok": true,
+   "compressor_bytes": 438
+  },
+  "ncep-npy/-p numpy": {
+   "seconds": 1234.7372603330296,
+   "args": [
+    "train",
+    "-p",
+    "numpy",
+    "bench-page/data/holdout/ncep-npy/train",
+    "-o",
+    "bench-page/results/work-panel/ncep-npy-p_numpy.zlc",
+    "-f",
+    "--max-time-secs",
+    "1200"
+   ],
+   "ok": true,
+   "compressor_bytes": 3912
+  }
+ },
+ "holdout/ghcn-csv/test/USW00012839.csv": {
+  "set": "ghcn-csv",
+  "area": "CSV: NOAA GHCN-Daily weather stations",
+  "bytes": 10134321,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 574094,
+    "ratio": 17.65272063459991,
+    "enc_mibs": 257.4033550122536,
+    "dec_mibs": 664.8881210184069,
+    "cpu_per_wall": 0.9697860248132045
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 399933,
+    "ratio": 25.340046957865443,
+    "enc_mibs": 33.57388055032059,
+    "dec_mibs": 671.6554407869107,
+    "cpu_per_wall": 0.9934407584303042
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 347259,
+    "ratio": 29.18375333684656,
+    "enc_mibs": 8.100009010991926,
+    "dec_mibs": 682.6076066563213,
+    "cpu_per_wall": 0.9978759717216747
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 308081,
+    "ratio": 32.89498865558084,
+    "enc_mibs": 11.250504101179466,
+    "dec_mibs": 408.5958673447406,
+    "cpu_per_wall": 0.9977806609404646
+   },
+   {
+    "tool": "kolmo -U",
+    "size": 227213,
+    "ratio": 44.602733998494806,
+    "enc_mibs": 1.16045467702569,
+    "dec_mibs": 1.1629205696771983,
+    "cpu_per_wall": 0.999109766522034
+   },
+   {
+    "tool": "openzl -l 6 [-p csv]",
+    "size": 444756,
+    "ratio": 22.78624908938834,
+    "enc_mibs": 106.56930825513037,
+    "dec_mibs": 328.96129319096167,
+    "cpu_per_wall": 0.9896522899318762
+   },
+   {
+    "tool": "openzl -l 9 [-p csv]",
+    "size": 400887,
+    "ratio": 25.279744666202696,
+    "enc_mibs": 43.869614381906395,
+    "dec_mibs": 313.1339955697803,
+    "cpu_per_wall": 0.9942809325644747
+   },
+   {
+    "tool": "openzl trained [-p csv]",
+    "size": 240234,
+    "ratio": 42.18520692324983,
+    "enc_mibs": 84.74524142871059,
+    "dec_mibs": 271.3147456974771,
+    "cpu_per_wall": 0.987619531074997,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 921373,
+    "ratio": 10.999151266642283,
+    "enc_mibs": 838.2979296392174,
+    "dec_mibs": 1252.003583652541,
+    "cpu_per_wall": 1.0071883130170385
+   },
+   {
+    "tool": "zstd -19",
+    "size": 500604,
+    "ratio": 20.24418702207733,
+    "enc_mibs": 4.029800714867433,
+    "dec_mibs": 1443.0881249203455,
+    "cpu_per_wall": 1.0066693784148737
+   },
+   {
+    "tool": "xz -9",
+    "size": 535712,
+    "ratio": 18.91747991458097,
+    "enc_mibs": 8.746310997639505,
+    "dec_mibs": 297.08190261566926,
+    "cpu_per_wall": 0.997138323007605
+   }
+  ]
+ },
+ "holdout/ghcn-csv/test/USW00013874.csv": {
+  "set": "ghcn-csv",
+  "area": "CSV: NOAA GHCN-Daily weather stations",
+  "bytes": 13415135,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 629987,
+    "ratio": 21.294304485648116,
+    "enc_mibs": 270.02257769273086,
+    "dec_mibs": 712.1210468560712,
+    "cpu_per_wall": 0.9729843839120806
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 451758,
+    "ratio": 29.69540107756808,
+    "enc_mibs": 39.58697686879053,
+    "dec_mibs": 704.8756754080221,
+    "cpu_per_wall": 0.9933728625499431
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 389049,
+    "ratio": 34.48186475225486,
+    "enc_mibs": 7.510368933739681,
+    "dec_mibs": 721.9479727134312,
+    "cpu_per_wall": 0.9980123274405057
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 350032,
+    "ratio": 38.325453101430725,
+    "enc_mibs": 14.392962301854347,
+    "dec_mibs": 452.7417172620676,
+    "cpu_per_wall": 0.9962984319800645
+   },
+   {
+    "tool": "openzl -l 6 [-p csv]",
+    "size": 498682,
+    "ratio": 26.90118151447215,
+    "enc_mibs": 109.26580995842282,
+    "dec_mibs": 320.2968281887359,
+    "cpu_per_wall": 0.972633618645797
+   },
+   {
+    "tool": "openzl -l 9 [-p csv]",
+    "size": 445253,
+    "ratio": 30.129241128077744,
+    "enc_mibs": 43.80282400704968,
+    "dec_mibs": 306.4113504596692,
+    "cpu_per_wall": 0.9948434861860678
+   },
+   {
+    "tool": "openzl trained [-p csv]",
+    "size": 266885,
+    "ratio": 50.26560128894468,
+    "enc_mibs": 83.47272413954643,
+    "dec_mibs": 244.91898569534123,
+    "cpu_per_wall": 0.9790135650112346,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 1060172,
+    "ratio": 12.65373448836604,
+    "enc_mibs": 952.6157488857103,
+    "dec_mibs": 1475.2776364432102,
+    "cpu_per_wall": 1.0268957280460937
+   },
+   {
+    "tool": "zstd -19",
+    "size": 567336,
+    "ratio": 23.645837739893114,
+    "enc_mibs": 4.193666994617379,
+    "dec_mibs": 1801.9781267891183,
+    "cpu_per_wall": 1.0487309107602467
+   },
+   {
+    "tool": "xz -9",
+    "size": 600072,
+    "ratio": 22.35587562825794,
+    "enc_mibs": 9.991930023094671,
+    "dec_mibs": 338.3856223177036,
+    "cpu_per_wall": 0.9973795301654464
+   }
+  ]
+ },
+ "holdout/ghcn-csv/test/USW00023183.csv": {
+  "set": "ghcn-csv",
+  "area": "CSV: NOAA GHCN-Daily weather stations",
+  "bytes": 10951595,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 533618,
+    "ratio": 20.523286320926207,
+    "enc_mibs": 253.21963855580222,
+    "dec_mibs": 647.5936014576588,
+    "cpu_per_wall": 0.9791049726042076
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 378124,
+    "ratio": 28.96297246405941,
+    "enc_mibs": 38.07567671584831,
+    "dec_mibs": 641.6834963796265,
+    "cpu_per_wall": 0.9922964319529974
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 327865,
+    "ratio": 33.402757232397484,
+    "enc_mibs": 7.160864932494714,
+    "dec_mibs": 661.3863145385543,
+    "cpu_per_wall": 0.9979426899644779
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 293654,
+    "ratio": 37.29421359831639,
+    "enc_mibs": 13.730280581758883,
+    "dec_mibs": 417.2715576254445,
+    "cpu_per_wall": 0.9959521585186014
+   },
+   {
+    "tool": "kolmo -U",
+    "size": 206714,
+    "ratio": 52.97945470553518,
+    "enc_mibs": 1.1857620772161142,
+    "dec_mibs": 1.172092503750348,
+    "cpu_per_wall": 0.9991701107392619
+   },
+   {
+    "tool": "openzl -l 6 [-p csv]",
+    "size": 422641,
+    "ratio": 25.91228726034625,
+    "enc_mibs": 100.296460598949,
+    "dec_mibs": 275.2580788110086,
+    "cpu_per_wall": 0.9754634278007029
+   },
+   {
+    "tool": "openzl -l 9 [-p csv]",
+    "size": 390582,
+    "ratio": 28.03916975180628,
+    "enc_mibs": 38.738201279153756,
+    "dec_mibs": 268.5968683291793,
+    "cpu_per_wall": 0.9877963173207832
+   },
+   {
+    "tool": "openzl trained [-p csv]",
+    "size": 235215,
+    "ratio": 46.559934527985035,
+    "enc_mibs": 75.60096836015765,
+    "dec_mibs": 211.75061222315094,
+    "cpu_per_wall": 0.9809979482191135,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 863877,
+    "ratio": 12.677261925019419,
+    "enc_mibs": 906.0196661849668,
+    "dec_mibs": 1390.975330119065,
+    "cpu_per_wall": 1.0123080689420318
+   },
+   {
+    "tool": "zstd -19",
+    "size": 485434,
+    "ratio": 22.560420160104155,
+    "enc_mibs": 3.971465217935082,
+    "dec_mibs": 1512.144289182444,
+    "cpu_per_wall": 1.0092781118294964
+   },
+   {
+    "tool": "xz -9",
+    "size": 528180,
+    "ratio": 20.734588587224053,
+    "enc_mibs": 9.212271344172937,
+    "dec_mibs": 313.1569752064738,
+    "cpu_per_wall": 0.9977515897690703
+   }
+  ]
+ },
+ "holdout/ghcn-csv/test/USW00024233.csv": {
+  "set": "ghcn-csv",
+  "area": "CSV: NOAA GHCN-Daily weather stations",
+  "bytes": 10532150,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 584948,
+    "ratio": 18.00527568262478,
+    "enc_mibs": 251.61265197632764,
+    "dec_mibs": 642.3278296525874,
+    "cpu_per_wall": 0.966398549215497
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 408423,
+    "ratio": 25.787357714918112,
+    "enc_mibs": 35.44950115496243,
+    "dec_mibs": 639.2973830614482,
+    "cpu_per_wall": 0.9925921920959643
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 353377,
+    "ratio": 29.804288337950688,
+    "enc_mibs": 6.821285947745301,
+    "dec_mibs": 672.1684705136215,
+    "cpu_per_wall": 0.9978478843702531
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 297546,
+    "ratio": 35.39671176893657,
+    "enc_mibs": 11.07811936954069,
+    "dec_mibs": 164.0598152135309,
+    "cpu_per_wall": 0.9972196914287003
+   },
+   {
+    "tool": "kolmo -U",
+    "size": 232711,
+    "ratio": 45.258496590191264,
+    "enc_mibs": 1.1821151065600009,
+    "dec_mibs": 1.1776393474372948,
+    "cpu_per_wall": 0.9993530142778199
+   },
+   {
+    "tool": "openzl -l 6 [-p csv]",
+    "size": 450323,
+    "ratio": 23.38799039800321,
+    "enc_mibs": 101.71898290322305,
+    "dec_mibs": 301.5892351183489,
+    "cpu_per_wall": 0.9731125641379573
+   },
+   {
+    "tool": "openzl -l 9 [-p csv]",
+    "size": 403672,
+    "ratio": 26.090860896965854,
+    "enc_mibs": 41.42251122640791,
+    "dec_mibs": 295.02765165740306,
+    "cpu_per_wall": 0.9920997819827626
+   },
+   {
+    "tool": "openzl trained [-p csv]",
+    "size": 232694,
+    "ratio": 45.26180305465547,
+    "enc_mibs": 79.16406514297891,
+    "dec_mibs": 234.80539332859036,
+    "cpu_per_wall": 0.9759843357672299,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 941232,
+    "ratio": 11.189749179798392,
+    "enc_mibs": 821.9958543593392,
+    "dec_mibs": 1293.4233979115288,
+    "cpu_per_wall": 1.010350112962976
+   },
+   {
+    "tool": "zstd -19",
+    "size": 495045,
+    "ratio": 21.275136603743093,
+    "enc_mibs": 4.049964676789656,
+    "dec_mibs": 1501.1194242785875,
+    "cpu_per_wall": 1.0014695297159781
+   },
+   {
+    "tool": "xz -9",
+    "size": 532432,
+    "ratio": 19.781211497430657,
+    "enc_mibs": 9.003899623327303,
+    "dec_mibs": 304.40398860468014,
+    "cpu_per_wall": 0.9970595279882317
+   }
+  ]
+ },
+ "holdout/gharchive-json/test/2015-01-01-16.json": {
+  "set": "gharchive-json",
+  "area": "JSON lines: GH Archive events",
+  "bytes": 26367600,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 3122683,
+    "ratio": 8.443892639758824,
+    "enc_mibs": 338.653985853666,
+    "dec_mibs": 992.1475195923792,
+    "cpu_per_wall": 0.9584113687143949
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 2371530,
+    "ratio": 11.118391924200832,
+    "enc_mibs": 14.463466269435244,
+    "dec_mibs": 828.9844346560824,
+    "cpu_per_wall": 0.992782388369939
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 2195781,
+    "ratio": 12.008301374317384,
+    "enc_mibs": 4.47062046560639,
+    "dec_mibs": 867.2041899567571,
+    "cpu_per_wall": 0.992810298321134
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 1995724,
+    "ratio": 13.2120473572498,
+    "enc_mibs": 43.812714239325054,
+    "dec_mibs": 71.89258441390358,
+    "cpu_per_wall": 0.9909776540025017
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 3088849,
+    "ratio": 8.536383617328008,
+    "enc_mibs": 114.11481486914373,
+    "dec_mibs": 699.9091499733115,
+    "cpu_per_wall": 0.9840672072784603
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 2953558,
+    "ratio": 8.927402136677188,
+    "enc_mibs": 96.25517497937135,
+    "dec_mibs": 715.196579697386,
+    "cpu_per_wall": 0.9918974489849345
+   },
+   {
+    "tool": "openzl trained [-p serial]",
+    "size": 2761150,
+    "ratio": 9.549499302826721,
+    "enc_mibs": 102.95087459965772,
+    "dec_mibs": 898.1071739429257,
+    "cpu_per_wall": 0.988411965547983,
+    "trained": true
+   },
+   {
+    "tool": "openzl -l 6 [-p lz]",
+    "size": 3088849,
+    "ratio": 8.536383617328008,
+    "enc_mibs": 110.9320821310538,
+    "dec_mibs": 636.147857957568,
+    "cpu_per_wall": 0.984448718801826
+   },
+   {
+    "tool": "openzl -l 9 [-p lz]",
+    "size": 2953558,
+    "ratio": 8.927402136677188,
+    "enc_mibs": 84.52852781247752,
+    "dec_mibs": 647.1211510360373,
+    "cpu_per_wall": 0.9746383856071072
+   },
+   {
+    "tool": "openzl trained [-p lz]",
+    "size": 2560273,
+    "ratio": 10.298745485344726,
+    "enc_mibs": 72.63430676891247,
+    "dec_mibs": 901.2307640622531,
+    "cpu_per_wall": 0.9852009346120878,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 3175673,
+    "ratio": 8.302995931885935,
+    "enc_mibs": 617.87641954386,
+    "dec_mibs": 1385.1263331520172,
+    "cpu_per_wall": 1.185041481120886
+   },
+   {
+    "tool": "zstd -19",
+    "size": 2283401,
+    "ratio": 11.547511803664797,
+    "enc_mibs": 4.421099423582231,
+    "dec_mibs": 1334.4738326131405,
+    "cpu_per_wall": 1.1787644742274135
+   },
+   {
+    "tool": "xz -9",
+    "size": 2191184,
+    "ratio": 12.033494220476236,
+    "enc_mibs": 5.800057892715864,
+    "dec_mibs": 197.08457495281394,
+    "cpu_per_wall": 0.9953648829593523
+   }
+  ]
+ },
+ "holdout/gharchive-json/test/2015-01-01-17.json": {
+  "set": "gharchive-json",
+  "area": "JSON lines: GH Archive events",
+  "bytes": 28692958,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 3347106,
+    "ratio": 8.572467678047841,
+    "enc_mibs": 457.06210900518323,
+    "dec_mibs": 1269.899313819268,
+    "cpu_per_wall": 0.9762020589985314
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 2514661,
+    "ratio": 11.410268819534721,
+    "enc_mibs": 14.886494882851663,
+    "dec_mibs": 792.026893007516,
+    "cpu_per_wall": 0.9894082516086159
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 2321378,
+    "ratio": 12.360312710812284,
+    "enc_mibs": 4.333918179277456,
+    "dec_mibs": 874.6296864577496,
+    "cpu_per_wall": 0.987914610056075
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 2114314,
+    "ratio": 13.570812093189565,
+    "enc_mibs": 45.361857318242,
+    "dec_mibs": 75.95407461639357,
+    "cpu_per_wall": 0.9841532176345038
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 3304097,
+    "ratio": 8.684054372495723,
+    "enc_mibs": 113.24872414052555,
+    "dec_mibs": 735.3850085018662,
+    "cpu_per_wall": 0.9759498434101158
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 3158387,
+    "ratio": 9.084687215341248,
+    "enc_mibs": 95.69651665042325,
+    "dec_mibs": 760.9907452808402,
+    "cpu_per_wall": 0.9831788951541478
+   },
+   {
+    "tool": "openzl trained [-p serial]",
+    "size": 2952151,
+    "ratio": 9.71933955952795,
+    "enc_mibs": 101.77951728933806,
+    "dec_mibs": 1024.5728839481667,
+    "cpu_per_wall": 0.9883885845870617,
+    "trained": true
+   },
+   {
+    "tool": "openzl -l 6 [-p lz]",
+    "size": 3304097,
+    "ratio": 8.684054372495723,
+    "enc_mibs": 121.95417422089822,
+    "dec_mibs": 726.223467539406,
+    "cpu_per_wall": 0.9845206741102602
+   },
+   {
+    "tool": "openzl -l 9 [-p lz]",
+    "size": 3158387,
+    "ratio": 9.084687215341248,
+    "enc_mibs": 102.06382666767303,
+    "dec_mibs": 702.9004070483534,
+    "cpu_per_wall": 0.9833827058251907
+   },
+   {
+    "tool": "openzl trained [-p lz]",
+    "size": 2727531,
+    "ratio": 10.519755045863823,
+    "enc_mibs": 75.65654633485194,
+    "dec_mibs": 1065.764921314357,
+    "cpu_per_wall": 0.9881203733215812,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 3409150,
+    "ratio": 8.416455128111112,
+    "enc_mibs": 603.9415784927274,
+    "dec_mibs": 1639.5288898327976,
+    "cpu_per_wall": 1.2374475763360586
+   },
+   {
+    "tool": "zstd -19",
+    "size": 2439636,
+    "ratio": 11.761163550628044,
+    "enc_mibs": 4.846662720504767,
+    "dec_mibs": 1475.2931445898766,
+    "cpu_per_wall": 1.2066530145634262
+   },
+   {
+    "tool": "xz -9",
+    "size": 2321204,
+    "ratio": 12.361239253421932,
+    "enc_mibs": 5.5093342209774585,
+    "dec_mibs": 189.9138501539532,
+    "cpu_per_wall": 0.9820009454964975
+   }
+  ]
+ },
+ "holdout/gharchive-json/test/2015-01-01-18.json": {
+  "set": "gharchive-json",
+  "area": "JSON lines: GH Archive events",
+  "bytes": 29838064,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 3487142,
+    "ratio": 8.556595630461851,
+    "enc_mibs": 393.9345282787463,
+    "dec_mibs": 1506.810098794268,
+    "cpu_per_wall": 0.9828381524848462
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 2616191,
+    "ratio": 11.40515505175272,
+    "enc_mibs": 13.364624222605755,
+    "dec_mibs": 883.484827329982,
+    "cpu_per_wall": 0.9818659338303747
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 2418334,
+    "ratio": 12.338272546306673,
+    "enc_mibs": 4.075399654652174,
+    "dec_mibs": 745.2770433069878,
+    "cpu_per_wall": 0.9804164467255767
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 2219998,
+    "ratio": 13.44058147800133,
+    "enc_mibs": 45.3336096173826,
+    "dec_mibs": 77.06445203187862,
+    "cpu_per_wall": 0.9941221035550433
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 3460795,
+    "ratio": 8.621736913050325,
+    "enc_mibs": 116.01962578621408,
+    "dec_mibs": 779.3394704280822,
+    "cpu_per_wall": 0.9844492631941141
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 3304160,
+    "ratio": 9.030453731054186,
+    "enc_mibs": 96.14317278424055,
+    "dec_mibs": 784.6176980825898,
+    "cpu_per_wall": 0.9933503255930954
+   },
+   {
+    "tool": "openzl trained [-p serial]",
+    "size": 3083621,
+    "ratio": 9.67630717263892,
+    "enc_mibs": 99.9105387026883,
+    "dec_mibs": 1055.6500729331144,
+    "cpu_per_wall": 0.9887022260721341,
+    "trained": true
+   },
+   {
+    "tool": "openzl -l 6 [-p lz]",
+    "size": 3460795,
+    "ratio": 8.621736913050325,
+    "enc_mibs": 112.58692048230883,
+    "dec_mibs": 713.3864282779704,
+    "cpu_per_wall": 0.9844745527881343
+   },
+   {
+    "tool": "openzl -l 9 [-p lz]",
+    "size": 3304160,
+    "ratio": 9.030453731054186,
+    "enc_mibs": 93.72747880199803,
+    "dec_mibs": 750.1923341501353,
+    "cpu_per_wall": 0.9899262127944439
+   },
+   {
+    "tool": "openzl trained [-p lz]",
+    "size": 2838733,
+    "ratio": 10.511049823988378,
+    "enc_mibs": 73.24290223328121,
+    "dec_mibs": 996.0055625580168,
+    "cpu_per_wall": 0.9903141859244681,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 3574971,
+    "ratio": 8.346379313286738,
+    "enc_mibs": 577.604777815213,
+    "dec_mibs": 1481.770383108333,
+    "cpu_per_wall": 1.197047463338902
+   },
+   {
+    "tool": "zstd -19",
+    "size": 2531980,
+    "ratio": 11.784478550383493,
+    "enc_mibs": 5.108477016788581,
+    "dec_mibs": 1754.0628615815835,
+    "cpu_per_wall": 1.2247584242130223
+   },
+   {
+    "tool": "xz -9",
+    "size": 2409904,
+    "ratio": 12.381432621382428,
+    "enc_mibs": 5.890992164987771,
+    "dec_mibs": 195.62356683852985,
+    "cpu_per_wall": 0.9948789363239505
+   }
+  ]
+ },
+ "holdout/gharchive-json/test/2015-01-01-19.json": {
+  "set": "gharchive-json",
+  "area": "JSON lines: GH Archive events",
+  "bytes": 29726331,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 3478837,
+    "ratio": 8.544904805830225,
+    "enc_mibs": 446.3594687195843,
+    "dec_mibs": 1383.2467673739352,
+    "cpu_per_wall": 0.9591899760757823
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 2638947,
+    "ratio": 11.26446684984579,
+    "enc_mibs": 15.760291338047093,
+    "dec_mibs": 882.8123512703189,
+    "cpu_per_wall": 0.9938579245386612
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 2440527,
+    "ratio": 12.180291797632233,
+    "enc_mibs": 4.553693101445683,
+    "dec_mibs": 747.2985754792292,
+    "cpu_per_wall": 0.9829312676231268
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 2227270,
+    "ratio": 13.346532301876287,
+    "enc_mibs": 42.58062024301333,
+    "dec_mibs": 73.11045084715819,
+    "cpu_per_wall": 0.980723366035121
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 3459707,
+    "ratio": 8.592152745882816,
+    "enc_mibs": 116.39304647230462,
+    "dec_mibs": 717.7506806865405,
+    "cpu_per_wall": 0.9764330345652705
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 3301768,
+    "ratio": 9.003155582100257,
+    "enc_mibs": 91.4511104865041,
+    "dec_mibs": 622.7647598839806,
+    "cpu_per_wall": 0.9812410212700119
+   },
+   {
+    "tool": "openzl trained [-p serial]",
+    "size": 3084324,
+    "ratio": 9.63787559283655,
+    "enc_mibs": 93.15859095132205,
+    "dec_mibs": 983.0216466749998,
+    "cpu_per_wall": 0.9800086998617151,
+    "trained": true
+   },
+   {
+    "tool": "openzl -l 6 [-p lz]",
+    "size": 3459707,
+    "ratio": 8.592152745882816,
+    "enc_mibs": 110.42617669276322,
+    "dec_mibs": 669.1427988452053,
+    "cpu_per_wall": 0.9916692876643097
+   },
+   {
+    "tool": "openzl -l 9 [-p lz]",
+    "size": 3301768,
+    "ratio": 9.003155582100257,
+    "enc_mibs": 94.61102065273418,
+    "dec_mibs": 705.5991225931754,
+    "cpu_per_wall": 0.9905460233291539
+   },
+   {
+    "tool": "openzl trained [-p lz]",
+    "size": 2852990,
+    "ratio": 10.419360390327341,
+    "enc_mibs": 75.45909917395937,
+    "dec_mibs": 982.6880174088218,
+    "cpu_per_wall": 0.988878800235323,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 3570837,
+    "ratio": 8.324751591853675,
+    "enc_mibs": 739.2857873908508,
+    "dec_mibs": 1644.1052793514743,
+    "cpu_per_wall": 1.2170185599213459
+   },
+   {
+    "tool": "zstd -19",
+    "size": 2553365,
+    "ratio": 11.642021802601665,
+    "enc_mibs": 4.99669427569417,
+    "dec_mibs": 1347.472010892652,
+    "cpu_per_wall": 1.179010270528914
+   },
+   {
+    "tool": "xz -9",
+    "size": 2435740,
+    "ratio": 12.204229926018376,
+    "enc_mibs": 6.707940950379958,
+    "dec_mibs": 224.57807075779348,
+    "cpu_per_wall": 0.9945491567982595
+   }
+  ]
+ },
+ "holdout/nasa-logs/test/04-Aug-1995.log": {
+  "set": "nasa-logs",
+  "area": "Web server logs: NASA HTTP 1995",
+  "bytes": 6374393,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 633464,
+    "ratio": 10.062754947400325,
+    "enc_mibs": 266.4672502792549,
+    "dec_mibs": 482.75842183684034,
+    "cpu_per_wall": 0.9388245404747568
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 466433,
+    "ratio": 13.666256461270965,
+    "enc_mibs": 24.175989570548676,
+    "dec_mibs": 494.23202367421163,
+    "cpu_per_wall": 0.9920114259028576
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 385046,
+    "ratio": 16.554886948572378,
+    "enc_mibs": 6.435657959270599,
+    "dec_mibs": 557.7748485258459,
+    "cpu_per_wall": 0.997748552075779
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 332089,
+    "ratio": 19.19483331275652,
+    "enc_mibs": 5.380872828912262,
+    "dec_mibs": 289.04256137439364,
+    "cpu_per_wall": 0.9975106764556294
+   },
+   {
+    "tool": "kolmo -U",
+    "size": 173217,
+    "ratio": 36.800042720980045,
+    "enc_mibs": 1.0116151662031734,
+    "dec_mibs": 1.0460701043953489,
+    "cpu_per_wall": 0.9988795832247036
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 602567,
+    "ratio": 10.578729004409468,
+    "enc_mibs": 137.42622678535153,
+    "dec_mibs": 649.6841813686267,
+    "cpu_per_wall": 0.9694890604896715
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 573930,
+    "ratio": 11.106568745317373,
+    "enc_mibs": 113.93567489164465,
+    "dec_mibs": 666.9605092761093,
+    "cpu_per_wall": 0.9707569984327867
+   },
+   {
+    "tool": "openzl trained [-p serial]",
+    "size": 520519,
+    "ratio": 12.246225401954588,
+    "enc_mibs": 129.7255265180708,
+    "dec_mibs": 801.0228042339584,
+    "cpu_per_wall": 0.9661936149297454,
+    "trained": true
+   },
+   {
+    "tool": "openzl -l 6 [-p lz]",
+    "size": 602567,
+    "ratio": 10.578729004409468,
+    "enc_mibs": 137.90424358380372,
+    "dec_mibs": 643.1713606199903,
+    "cpu_per_wall": 0.9655414875036912
+   },
+   {
+    "tool": "openzl -l 9 [-p lz]",
+    "size": 573930,
+    "ratio": 11.106568745317373,
+    "enc_mibs": 114.28615506567782,
+    "dec_mibs": 678.2937823799738,
+    "cpu_per_wall": 0.9821630443756567
+   },
+   {
+    "tool": "openzl trained [-p lz]",
+    "size": 524360,
+    "ratio": 12.156520329544588,
+    "enc_mibs": 111.59566565303916,
+    "dec_mibs": 677.537740164809,
+    "cpu_per_wall": 0.9695207873738384,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 646459,
+    "ratio": 9.860475296963921,
+    "enc_mibs": 633.2115462394792,
+    "dec_mibs": 937.7280494192963,
+    "cpu_per_wall": 0.9167166775186313
+   },
+   {
+    "tool": "zstd -19",
+    "size": 415378,
+    "ratio": 15.346005325269996,
+    "enc_mibs": 5.8758575476456505,
+    "dec_mibs": 1040.384183777905,
+    "cpu_per_wall": 0.9980765812184226
+   },
+   {
+    "tool": "xz -9",
+    "size": 421504,
+    "ratio": 15.122971549498937,
+    "enc_mibs": 8.301785553597158,
+    "dec_mibs": 220.21450918791936,
+    "cpu_per_wall": 0.995504826961834
+   }
+  ]
+ },
+ "holdout/nasa-logs/test/05-Aug-1995.log": {
+  "set": "nasa-logs",
+  "area": "Web server logs: NASA HTTP 1995",
+  "bytes": 3461412,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 353146,
+    "ratio": 9.801645778233365,
+    "enc_mibs": 238.53025129307449,
+    "dec_mibs": 416.2377143109455,
+    "cpu_per_wall": 0.8991009093503767
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 254549,
+    "ratio": 13.598214882007001,
+    "enc_mibs": 27.069839214557756,
+    "dec_mibs": 401.67018038343593,
+    "cpu_per_wall": 0.9876417389678652
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 214205,
+    "ratio": 16.159342685744964,
+    "enc_mibs": 6.649310155923206,
+    "dec_mibs": 426.8335899924616,
+    "cpu_per_wall": 0.9968892250138236
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 184350,
+    "ratio": 18.776305939788447,
+    "enc_mibs": 5.5189373743822685,
+    "dec_mibs": 238.05860990042652,
+    "cpu_per_wall": 0.9975160276961454
+   },
+   {
+    "tool": "kolmo -U",
+    "size": 98766,
+    "ratio": 35.04659498207885,
+    "enc_mibs": 0.9218698095962456,
+    "dec_mibs": 1.0680762149153042,
+    "cpu_per_wall": 0.9993223666433582
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 335340,
+    "ratio": 10.322096976203257,
+    "enc_mibs": 126.53233134821004,
+    "dec_mibs": 487.99455817472096,
+    "cpu_per_wall": 0.9501444059617439
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 332129,
+    "ratio": 10.421890289616384,
+    "enc_mibs": 107.02176984548404,
+    "dec_mibs": 501.668148842822,
+    "cpu_per_wall": 0.9578615522007743
+   },
+   {
+    "tool": "openzl trained [-p serial]",
+    "size": 286808,
+    "ratio": 12.068742852361162,
+    "enc_mibs": 123.12907566092973,
+    "dec_mibs": 583.4193659624265,
+    "cpu_per_wall": 0.9542050971408469,
+    "trained": true
+   },
+   {
+    "tool": "openzl -l 6 [-p lz]",
+    "size": 335340,
+    "ratio": 10.322096976203257,
+    "enc_mibs": 127.25914082719723,
+    "dec_mibs": 499.4165015294471,
+    "cpu_per_wall": 0.9539058499255106
+   },
+   {
+    "tool": "openzl -l 9 [-p lz]",
+    "size": 332129,
+    "ratio": 10.421890289616384,
+    "enc_mibs": 110.11194317660568,
+    "dec_mibs": 510.0426440949054,
+    "cpu_per_wall": 0.9586939686480294
+   },
+   {
+    "tool": "openzl trained [-p lz]",
+    "size": 289129,
+    "ratio": 11.97186031148726,
+    "enc_mibs": 110.0414346070001,
+    "dec_mibs": 515.8040491252015,
+    "cpu_per_wall": 0.9567934535395284,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 355449,
+    "ratio": 9.738139648725978,
+    "enc_mibs": 529.6915191036409,
+    "dec_mibs": 690.5501912609546,
+    "cpu_per_wall": 0.8830171745775751
+   },
+   {
+    "tool": "zstd -19",
+    "size": 231503,
+    "ratio": 14.951909910454724,
+    "enc_mibs": 6.690728101252821,
+    "dec_mibs": 646.9283035590598,
+    "cpu_per_wall": 0.9969818593663298
+   },
+   {
+    "tool": "xz -9",
+    "size": 230376,
+    "ratio": 15.025054693197209,
+    "enc_mibs": 9.152804780414963,
+    "dec_mibs": 193.8967460569282,
+    "cpu_per_wall": 0.9924778675074303
+   }
+  ]
+ },
+ "holdout/nasa-logs/test/06-Aug-1995.log": {
+  "set": "nasa-logs",
+  "area": "Web server logs: NASA HTTP 1995",
+  "bytes": 3534988,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 364449,
+    "ratio": 9.699540950860065,
+    "enc_mibs": 247.74545776094791,
+    "dec_mibs": 439.4434320004645,
+    "cpu_per_wall": 0.908306560506664
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 264952,
+    "ratio": 13.341994021558621,
+    "enc_mibs": 27.717583046716598,
+    "dec_mibs": 427.4161941889058,
+    "cpu_per_wall": 0.9899221180451836
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 222305,
+    "ratio": 15.901522682800657,
+    "enc_mibs": 6.958242385265383,
+    "dec_mibs": 437.8738786394744,
+    "cpu_per_wall": 0.9962949328836516
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 175002,
+    "ratio": 20.199700574850574,
+    "enc_mibs": 5.277276703476476,
+    "dec_mibs": 117.65311020561575,
+    "cpu_per_wall": 0.9968167849086788
+   },
+   {
+    "tool": "kolmo -U",
+    "size": 101705,
+    "ratio": 34.75726857086672,
+    "enc_mibs": 0.9745868689877489,
+    "dec_mibs": 1.123453366268746,
+    "cpu_per_wall": 0.9989893017017366
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 344143,
+    "ratio": 10.271857919527639,
+    "enc_mibs": 126.95901002542537,
+    "dec_mibs": 489.31053465769327,
+    "cpu_per_wall": 0.9547005927661277
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 340885,
+    "ratio": 10.370030948853719,
+    "enc_mibs": 106.38869656820681,
+    "dec_mibs": 472.6323183930781,
+    "cpu_per_wall": 0.9603686017103222
+   },
+   {
+    "tool": "openzl trained [-p serial]",
+    "size": 294866,
+    "ratio": 11.988455773130847,
+    "enc_mibs": 118.44435314742361,
+    "dec_mibs": 564.9825579866309,
+    "cpu_per_wall": 0.9516528630286198,
+    "trained": true
+   },
+   {
+    "tool": "openzl -l 6 [-p lz]",
+    "size": 344143,
+    "ratio": 10.271857919527639,
+    "enc_mibs": 123.84239460187732,
+    "dec_mibs": 491.88068961150174,
+    "cpu_per_wall": 0.9467004449636036
+   },
+   {
+    "tool": "openzl -l 9 [-p lz]",
+    "size": 340885,
+    "ratio": 10.370030948853719,
+    "enc_mibs": 104.93044485589411,
+    "dec_mibs": 500.32126258900865,
+    "cpu_per_wall": 0.9550485676103418
+   },
+   {
+    "tool": "openzl trained [-p lz]",
+    "size": 297101,
+    "ratio": 11.898270285189211,
+    "enc_mibs": 107.29302311547026,
+    "dec_mibs": 503.6944983645848,
+    "cpu_per_wall": 0.9674180254997562,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 365375,
+    "ratio": 9.674958604173794,
+    "enc_mibs": 506.1966717313215,
+    "dec_mibs": 645.7207502115973,
+    "cpu_per_wall": 0.8780891657886638
+   },
+   {
+    "tool": "zstd -19",
+    "size": 237438,
+    "ratio": 14.888046563734532,
+    "enc_mibs": 6.502171125282595,
+    "dec_mibs": 639.0800820021143,
+    "cpu_per_wall": 0.9975058361579698
+   },
+   {
+    "tool": "xz -9",
+    "size": 235896,
+    "ratio": 14.985366432665243,
+    "enc_mibs": 9.115185053547776,
+    "dec_mibs": 190.61738733956474,
+    "cpu_per_wall": 0.9943371642442
+   }
+  ]
+ },
+ "holdout/nasa-logs/test/07-Aug-1995.log": {
+  "set": "nasa-logs",
+  "area": "Web server logs: NASA HTTP 1995",
+  "bytes": 6137221,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 609379,
+    "ratio": 10.071270916785776,
+    "enc_mibs": 292.02312746346036,
+    "dec_mibs": 515.2077600794129,
+    "cpu_per_wall": 0.9408448233857368
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 448840,
+    "ratio": 13.673516175028963,
+    "enc_mibs": 26.36715671556008,
+    "dec_mibs": 528.5410734434934,
+    "cpu_per_wall": 0.9925743883394516
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 371305,
+    "ratio": 16.528786307752387,
+    "enc_mibs": 6.576699984909571,
+    "dec_mibs": 544.3744560111662,
+    "cpu_per_wall": 0.9977737283694776
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 293438,
+    "ratio": 20.914881508189122,
+    "enc_mibs": 5.008753868555435,
+    "dec_mibs": 123.08128711240848,
+    "cpu_per_wall": 0.99776715001384
+   },
+   {
+    "tool": "kolmo -U",
+    "size": 168435,
+    "ratio": 36.43673227060884,
+    "enc_mibs": 1.0121385284033855,
+    "dec_mibs": 1.0882324398026473,
+    "cpu_per_wall": 0.9992834484495068
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 579365,
+    "ratio": 10.593013040138773,
+    "enc_mibs": 137.1435610980021,
+    "dec_mibs": 618.9134785645376,
+    "cpu_per_wall": 0.9653621076209414
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 553734,
+    "ratio": 11.08333784813647,
+    "enc_mibs": 115.25324020396339,
+    "dec_mibs": 638.9901349481663,
+    "cpu_per_wall": 0.9704921508322958
+   },
+   {
+    "tool": "openzl trained [-p serial]",
+    "size": 502086,
+    "ratio": 12.223445784188366,
+    "enc_mibs": 129.91863015943898,
+    "dec_mibs": 769.0066849099102,
+    "cpu_per_wall": 0.9636279273375407,
+    "trained": true
+   },
+   {
+    "tool": "openzl -l 6 [-p lz]",
+    "size": 579365,
+    "ratio": 10.593013040138773,
+    "enc_mibs": 139.46638122486522,
+    "dec_mibs": 626.6778693619189,
+    "cpu_per_wall": 0.964651339384175
+   },
+   {
+    "tool": "openzl -l 9 [-p lz]",
+    "size": 553734,
+    "ratio": 11.08333784813647,
+    "enc_mibs": 115.70426677176776,
+    "dec_mibs": 643.5393553833168,
+    "cpu_per_wall": 0.9691946447423019
+   },
+   {
+    "tool": "openzl trained [-p lz]",
+    "size": 505111,
+    "ratio": 12.15024222398641,
+    "enc_mibs": 114.66626243609302,
+    "dec_mibs": 650.0976169856896,
+    "cpu_per_wall": 0.9711324260585558,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 622958,
+    "ratio": 9.851741208877645,
+    "enc_mibs": 619.5249738382036,
+    "dec_mibs": 956.8268809200864,
+    "cpu_per_wall": 0.9124188200976815
+   },
+   {
+    "tool": "zstd -19",
+    "size": 400927,
+    "ratio": 15.307577189862494,
+    "enc_mibs": 6.0646680289941655,
+    "dec_mibs": 1014.4424842928842,
+    "cpu_per_wall": 0.9984579787714504
+   },
+   {
+    "tool": "xz -9",
+    "size": 407052,
+    "ratio": 15.077240745654118,
+    "enc_mibs": 8.65228836000566,
+    "dec_mibs": 233.15812241821652,
+    "cpu_per_wall": 0.9952276798963641
+   }
+  ]
+ },
+ "holdout/ncep-npy/test/air.2023.npy": {
+  "set": "ncep-npy",
+  "area": "float32 grids: NCEP/NCAR reanalysis (NumPy)",
+  "bytes": 61390208,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 19270063,
+    "ratio": 3.1857813853540593,
+    "enc_mibs": 91.2907683804906,
+    "dec_mibs": 763.2611584349742,
+    "cpu_per_wall": 0.8962440729865632
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 12553490,
+    "ratio": 4.8902901105588965,
+    "enc_mibs": 19.46808355497214,
+    "dec_mibs": 682.954050027919,
+    "cpu_per_wall": 0.9968853375404565
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 12302780,
+    "ratio": 4.98994601220212,
+    "enc_mibs": 10.12160328879118,
+    "dec_mibs": 726.8384893586563,
+    "cpu_per_wall": 0.9989323447600102
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 10439792,
+    "ratio": 5.880405280105197,
+    "enc_mibs": 46.61877524621988,
+    "dec_mibs": 51.47827023879139,
+    "cpu_per_wall": 0.9903574397180852
+   },
+   {
+    "tool": "openzl -l 6 [-p numpy]",
+    "size": 11935555,
+    "ratio": 5.143473261193132,
+    "enc_mibs": 87.63845096432705,
+    "dec_mibs": 563.0224466489584,
+    "cpu_per_wall": 0.9777617276487278
+   },
+   {
+    "tool": "openzl -l 9 [-p numpy]",
+    "size": 11935555,
+    "ratio": 5.143473261193132,
+    "enc_mibs": 89.28118664683443,
+    "dec_mibs": 559.0098324538629,
+    "cpu_per_wall": 0.9937729194021615
+   },
+   {
+    "tool": "openzl trained [-p numpy]",
+    "size": 11935555,
+    "ratio": 5.143473261193132,
+    "enc_mibs": 121.93586225899229,
+    "dec_mibs": 555.3839767789541,
+    "cpu_per_wall": 0.9913257897363191,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 21832120,
+    "ratio": 2.8119215174705894,
+    "enc_mibs": 304.80489984477714,
+    "dec_mibs": 899.764712119442,
+    "cpu_per_wall": 1.0100753018906126
+   },
+   {
+    "tool": "zstd -19",
+    "size": 15570363,
+    "ratio": 3.9427602298032487,
+    "enc_mibs": 3.983546877840667,
+    "dec_mibs": 1085.4698578345822,
+    "cpu_per_wall": 1.1082139945554677
+   },
+   {
+    "tool": "xz -9",
+    "size": 13085688,
+    "ratio": 4.691400864822698,
+    "enc_mibs": 2.5659956566514848,
+    "dec_mibs": 134.75907323047312,
+    "cpu_per_wall": 0.9992158257456439
+   }
+  ]
+ },
+ "holdout/ncep-npy/test/rhum.2023.npy": {
+  "set": "ncep-npy",
+  "area": "float32 grids: NCEP/NCAR reanalysis (NumPy)",
+  "bytes": 61390208,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 9410237,
+    "ratio": 6.523768529953071,
+    "enc_mibs": 166.91597413855672,
+    "dec_mibs": 1467.003217935795,
+    "cpu_per_wall": 0.780617886682769
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 9137334,
+    "ratio": 6.71861267192378,
+    "enc_mibs": 11.403742581421607,
+    "dec_mibs": 1014.9370757745424,
+    "cpu_per_wall": 0.9986985092311269
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 9070945,
+    "ratio": 6.767785274852841,
+    "enc_mibs": 3.1349000854726086,
+    "dec_mibs": 1336.624404725917,
+    "cpu_per_wall": 0.9993664607944525
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 8669480,
+    "ratio": 7.081186876260168,
+    "enc_mibs": 2.8193779693841647,
+    "dec_mibs": 249.3917632296348,
+    "cpu_per_wall": 0.9993657700085651
+   },
+   {
+    "tool": "openzl -l 6 [-p numpy]",
+    "size": 8620349,
+    "ratio": 7.121545542993677,
+    "enc_mibs": 95.19018081357902,
+    "dec_mibs": 1035.4908565720777,
+    "cpu_per_wall": 0.994185453528362
+   },
+   {
+    "tool": "openzl -l 9 [-p numpy]",
+    "size": 8584944,
+    "ratio": 7.150915369977952,
+    "enc_mibs": 88.38783563429065,
+    "dec_mibs": 1051.488459767188,
+    "cpu_per_wall": 0.9973380671851435
+   },
+   {
+    "tool": "openzl trained [-p numpy]",
+    "size": 8620349,
+    "ratio": 7.121545542993677,
+    "enc_mibs": 135.39879649749878,
+    "dec_mibs": 1039.9889586780087,
+    "cpu_per_wall": 0.995821662262222,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 14270543,
+    "ratio": 4.301883116851265,
+    "enc_mibs": 549.2696635205043,
+    "dec_mibs": 1146.219496753729,
+    "cpu_per_wall": 1.096897302163496
+   },
+   {
+    "tool": "zstd -19",
+    "size": 10091607,
+    "ratio": 6.08329357256976,
+    "enc_mibs": 3.9616339697101126,
+    "dec_mibs": 1654.5795936223162,
+    "cpu_per_wall": 1.1446012572056696
+   },
+   {
+    "tool": "xz -9",
+    "size": 8788788,
+    "ratio": 6.985059600937012,
+    "enc_mibs": 2.7759984442514405,
+    "dec_mibs": 193.38495835399686,
+    "cpu_per_wall": 0.9992590484229844
+   }
+  ]
+ },
+ "holdout/ncep-npy/test/slp.2023.npy": {
+  "set": "ncep-npy",
+  "area": "float32 grids: NCEP/NCAR reanalysis (NumPy)",
+  "bytes": 61390208,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 9632512,
+    "ratio": 6.373229330002392,
+    "enc_mibs": 179.09636113203197,
+    "dec_mibs": 1988.0814237838727,
+    "cpu_per_wall": 0.9484992879150858
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 9363849,
+    "ratio": 6.5560869253658405,
+    "enc_mibs": 11.91825330803278,
+    "dec_mibs": 728.6204741089736,
+    "cpu_per_wall": 0.9987830172381024
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 9409380,
+    "ratio": 6.524362710401748,
+    "enc_mibs": 3.9920288981593357,
+    "dec_mibs": 1636.8393367055662,
+    "cpu_per_wall": 0.999290949152696
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 8991480,
+    "ratio": 6.827597681360577,
+    "enc_mibs": 3.0270054888911835,
+    "dec_mibs": 224.19514722395263,
+    "cpu_per_wall": 0.9992516882370992
+   },
+   {
+    "tool": "openzl -l 6 [-p numpy]",
+    "size": 9627813,
+    "ratio": 6.37633988113396,
+    "enc_mibs": 93.18521731980076,
+    "dec_mibs": 632.0724595801274,
+    "cpu_per_wall": 0.9936310755618087
+   },
+   {
+    "tool": "openzl -l 9 [-p numpy]",
+    "size": 9627843,
+    "ratio": 6.376320012696509,
+    "enc_mibs": 93.62545055883281,
+    "dec_mibs": 642.9148609451562,
+    "cpu_per_wall": 0.9933886300326679
+   },
+   {
+    "tool": "openzl trained [-p numpy]",
+    "size": 9627813,
+    "ratio": 6.37633988113396,
+    "enc_mibs": 130.71467614812238,
+    "dec_mibs": 650.0926892204088,
+    "cpu_per_wall": 0.9909965600398073,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 19800019,
+    "ratio": 3.100512580316211,
+    "enc_mibs": 375.7758221848102,
+    "dec_mibs": 1134.8337884686066,
+    "cpu_per_wall": 1.1130221775710665
+   },
+   {
+    "tool": "zstd -19",
+    "size": 14862813,
+    "ratio": 4.130456865735981,
+    "enc_mibs": 4.28786777326989,
+    "dec_mibs": 1249.3378831807784,
+    "cpu_per_wall": 1.0530744457790726
+   },
+   {
+    "tool": "xz -9",
+    "size": 12736848,
+    "ratio": 4.819890132943409,
+    "enc_mibs": 2.7570151303674826,
+    "dec_mibs": 163.0372191382764,
+    "cpu_per_wall": 0.9989296518469815
+   }
+  ]
+ },
+ "holdout/ncep-npy/test/uwnd.2023.npy": {
+  "set": "ncep-npy",
+  "area": "float32 grids: NCEP/NCAR reanalysis (NumPy)",
+  "bytes": 61390208,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 17194265,
+    "ratio": 3.5703886150411197,
+    "enc_mibs": 190.35344882782687,
+    "dec_mibs": 1183.0177200750366,
+    "cpu_per_wall": 0.9606999664452313
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 15712477,
+    "ratio": 3.9070993071302507,
+    "enc_mibs": 22.351927029576306,
+    "dec_mibs": 1005.9697332417435,
+    "cpu_per_wall": 0.9968263071616427
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 15418543,
+    "ratio": 3.9815829550172155,
+    "enc_mibs": 11.434626271341308,
+    "dec_mibs": 1023.0650918234783,
+    "cpu_per_wall": 0.9982094943956579
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 10746568,
+    "ratio": 5.712540785113908,
+    "enc_mibs": 21.148836673219513,
+    "dec_mibs": 48.99111343491606,
+    "cpu_per_wall": 0.9964992316776339
+   },
+   {
+    "tool": "openzl -l 6 [-p numpy]",
+    "size": 17835896,
+    "ratio": 3.4419469590986624,
+    "enc_mibs": 140.0907768215314,
+    "dec_mibs": 750.4159618465134,
+    "cpu_per_wall": 0.9853448638491688
+   },
+   {
+    "tool": "openzl -l 9 [-p numpy]",
+    "size": 17835891,
+    "ratio": 3.4419479239921347,
+    "enc_mibs": 138.30052282062348,
+    "dec_mibs": 742.7615992953075,
+    "cpu_per_wall": 0.9858539044207623
+   },
+   {
+    "tool": "openzl trained [-p numpy]",
+    "size": 12977799,
+    "ratio": 4.73040212751022,
+    "enc_mibs": 144.30113339865525,
+    "dec_mibs": 595.9291535301824,
+    "cpu_per_wall": 0.9901389996316644,
+    "trained": true
+   },
+   {
+    "tool": "zstd -3",
+    "size": 22410327,
+    "ratio": 2.73937136214032,
+    "enc_mibs": 308.2263781863939,
+    "dec_mibs": 994.8578417433746,
+    "cpu_per_wall": 1.0970812974034874
+   },
+   {
+    "tool": "zstd -19",
+    "size": 16131912,
+    "ratio": 3.8055134444075818,
+    "enc_mibs": 4.0794766654379595,
+    "dec_mibs": 1130.2294789102666,
+    "cpu_per_wall": 1.1098963156947053
+   },
+   {
+    "tool": "xz -9",
+    "size": 13736948,
+    "ratio": 4.468984522617396,
+    "enc_mibs": 2.8034706634097466,
+    "dec_mibs": 150.7822303886891,
+    "cpu_per_wall": 0.9994204194650667
+   }
+  ]
+ },
+ "corpus/silesia/sao": {
+  "set": "silesia-sao",
+  "area": "Silesia sao (binary star catalog)",
+  "bytes": 7251944,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 2472753,
+    "ratio": 2.932740957143718,
+    "enc_mibs": 170.71186473952744,
+    "dec_mibs": 758.9254493286833,
+    "cpu_per_wall": 0.9548371889642777
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 2251051,
+    "ratio": 3.221581385761584,
+    "enc_mibs": 24.3951687892798,
+    "dec_mibs": 732.3645276536253,
+    "cpu_per_wall": 0.9930235093658218
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 2258602,
+    "ratio": 3.210810935259953,
+    "enc_mibs": 18.952319393846384,
+    "dec_mibs": 741.068647682239,
+    "cpu_per_wall": 0.993509368094844
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 2190606,
+    "ratio": 3.310473905394215,
+    "enc_mibs": 10.404860338039807,
+    "dec_mibs": 98.06557170758477,
+    "cpu_per_wall": 0.9962935039937889
+   },
+   {
+    "tool": "kolmo -U",
+    "size": 2121744,
+    "ratio": 3.417916581830796,
+    "enc_mibs": 1.9290916480734395,
+    "dec_mibs": 2.5058952122916613,
+    "cpu_per_wall": 0.9982937567658436
+   },
+   {
+    "tool": "openzl -l 6 [-p sao]",
+    "size": 3475261,
+    "ratio": 2.0867336295029353,
+    "enc_mibs": 143.67336289984985,
+    "dec_mibs": 418.51696169491356,
+    "cpu_per_wall": 0.9517019973328881
+   },
+   {
+    "tool": "openzl -l 9 [-p sao]",
+    "size": 2367470,
+    "ratio": 3.0631619408060082,
+    "enc_mibs": 53.98738119348809,
+    "dec_mibs": 420.7480052264379,
+    "cpu_per_wall": 0.9819062843507387
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 5294308,
+    "ratio": 1.3697623938765935,
+    "enc_mibs": 92.20268478824603,
+    "dec_mibs": 265.00637392698,
+    "cpu_per_wall": 0.9750884105926056
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 5250148,
+    "ratio": 1.381283727620631,
+    "enc_mibs": 77.08589953352799,
+    "dec_mibs": 260.3818917946378,
+    "cpu_per_wall": 0.9765598872995672
+   },
+   {
+    "tool": "zstd -3",
+    "size": 5531939,
+    "ratio": 1.3109226258640958,
+    "enc_mibs": 265.469212499122,
+    "dec_mibs": 648.8913798721828,
+    "cpu_per_wall": 0.9775081066112614
+   },
+   {
+    "tool": "zstd -19",
+    "size": 5000576,
+    "ratio": 1.4502217344561907,
+    "enc_mibs": 9.05431430003576,
+    "dec_mibs": 638.3011246074569,
+    "cpu_per_wall": 0.9988314849292658
+   },
+   {
+    "tool": "xz -9",
+    "size": 4415072,
+    "ratio": 1.6425426357712853,
+    "enc_mibs": 6.30112263208898,
+    "dec_mibs": 53.74439886230723,
+    "cpu_per_wall": 0.9966471352220773
+   }
+  ]
+ },
+ "corpus/silesia/x-ray": {
+  "set": "silesia-xray",
+  "area": "Silesia x-ray (12-bit medical image)",
+  "bytes": 8474240,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 3675863,
+    "ratio": 2.3053742753742457,
+    "enc_mibs": 471.0681562815284,
+    "dec_mibs": 786.4251519658619,
+    "cpu_per_wall": 0.919967441691178
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 3666933,
+    "ratio": 2.310988501835185,
+    "enc_mibs": 21.331442685655382,
+    "dec_mibs": 669.7234719521199,
+    "cpu_per_wall": 0.9885090363599495
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 3662648,
+    "ratio": 2.313692170254963,
+    "enc_mibs": 4.084307076645079,
+    "dec_mibs": 691.9628957596946,
+    "cpu_per_wall": 0.9982869680913614
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 3619134,
+    "ratio": 2.341510427632688,
+    "enc_mibs": 8.285890134000528,
+    "dec_mibs": 68.88934904890557,
+    "cpu_per_wall": 0.9965564590934817
+   },
+   {
+    "tool": "kolmo -U",
+    "size": 3562410,
+    "ratio": 2.3787941309394482,
+    "enc_mibs": 1.149278420839747,
+    "dec_mibs": 1.249951391131195,
+    "cpu_per_wall": 0.9992925027714282
+   },
+   {
+    "tool": "openzl -l 6 [-p le-u16]",
+    "size": 5179590,
+    "ratio": 1.636083164883707,
+    "enc_mibs": 47.77647251759816,
+    "dec_mibs": 324.6224298513024,
+    "cpu_per_wall": 0.9842307871360911
+   },
+   {
+    "tool": "openzl -l 9 [-p le-u16]",
+    "size": 3756931,
+    "ratio": 2.2556283306773532,
+    "enc_mibs": 55.47085929237769,
+    "dec_mibs": 273.8128096749054,
+    "cpu_per_wall": 0.9855693767584403
+   },
+   {
+    "tool": "openzl -l 6 [-p be-u16]",
+    "size": 5179301,
+    "ratio": 1.6361744567461902,
+    "enc_mibs": 47.33174687798397,
+    "dec_mibs": 322.02413048535266,
+    "cpu_per_wall": 0.9915360222573012
+   },
+   {
+    "tool": "openzl -l 9 [-p be-u16]",
+    "size": 5669626,
+    "ratio": 1.4946735463679615,
+    "enc_mibs": 71.13878188036907,
+    "dec_mibs": 331.5894961296521,
+    "cpu_per_wall": 0.9821379072180568
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 5737250,
+    "ratio": 1.4770560808749837,
+    "enc_mibs": 89.1317113635213,
+    "dec_mibs": 247.130915405918,
+    "cpu_per_wall": 0.9789343896459319
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 5588729,
+    "ratio": 1.5163089854598424,
+    "enc_mibs": 77.85395102932279,
+    "dec_mibs": 231.58900756415397,
+    "cpu_per_wall": 0.9806998785990917
+   },
+   {
+    "tool": "zstd -3",
+    "size": 6086002,
+    "ratio": 1.3924149219799797,
+    "enc_mibs": 261.0718839875706,
+    "dec_mibs": 625.3101766082834,
+    "cpu_per_wall": 0.989995120808819
+   },
+   {
+    "tool": "zstd -19",
+    "size": 5129827,
+    "ratio": 1.6519543446591864,
+    "enc_mibs": 7.42617399298426,
+    "dec_mibs": 573.810360601606,
+    "cpu_per_wall": 0.9989697240843538
+   },
+   {
+    "tool": "xz -9",
+    "size": 4489868,
+    "ratio": 1.8874140620615127,
+    "enc_mibs": 6.168627624724444,
+    "dec_mibs": 56.41903714795252,
+    "cpu_per_wall": 0.9964553589589844
+   }
+  ]
+ },
+ "corpus/silesia/mr": {
+  "set": "silesia-mr",
+  "area": "Silesia mr (16-bit MRI image)",
+  "bytes": 9970564,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 2341188,
+    "ratio": 4.258762645289486,
+    "enc_mibs": 257.3739785705822,
+    "dec_mibs": 666.9124371923509,
+    "cpu_per_wall": 0.959373132346811
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 2279841,
+    "ratio": 4.373359370236784,
+    "enc_mibs": 22.198518872520864,
+    "dec_mibs": 586.0235051797581,
+    "cpu_per_wall": 0.9944644931428065
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 2289260,
+    "ratio": 4.355365489284747,
+    "enc_mibs": 5.851592654085645,
+    "dec_mibs": 603.0439013078601,
+    "cpu_per_wall": 0.9978138587703739
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 1989774,
+    "ratio": 5.010902745738964,
+    "enc_mibs": 38.25021043950362,
+    "dec_mibs": 45.49549755223734,
+    "cpu_per_wall": 0.990822957771611
+   },
+   {
+    "tool": "kolmo -U",
+    "size": 1941087,
+    "ratio": 5.136587901521158,
+    "enc_mibs": 1.1478284385287345,
+    "dec_mibs": 1.3127662456094764,
+    "cpu_per_wall": 0.9990008259115519
+   },
+   {
+    "tool": "openzl -l 6 [-p le-u16]",
+    "size": 3137351,
+    "ratio": 3.178019928277072,
+    "enc_mibs": 72.5534040859581,
+    "dec_mibs": 507.242952183748,
+    "cpu_per_wall": 0.9804395686798836
+   },
+   {
+    "tool": "openzl -l 9 [-p le-u16]",
+    "size": 2730044,
+    "ratio": 3.6521623827308276,
+    "enc_mibs": 38.95200289739799,
+    "dec_mibs": 387.83329966651473,
+    "cpu_per_wall": 0.9872292488516466
+   },
+   {
+    "tool": "openzl -l 6 [-p be-u16]",
+    "size": 3136882,
+    "ratio": 3.1784950788713124,
+    "enc_mibs": 70.55550143096035,
+    "dec_mibs": 500.338935892628,
+    "cpu_per_wall": 0.9801981715763497
+   },
+   {
+    "tool": "openzl -l 9 [-p be-u16]",
+    "size": 3329430,
+    "ratio": 2.9946759655556656,
+    "enc_mibs": 64.62786488549891,
+    "dec_mibs": 310.0291254868062,
+    "cpu_per_wall": 0.9825896132613937
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 3375035,
+    "ratio": 2.954210548927641,
+    "enc_mibs": 86.93353762744299,
+    "dec_mibs": 332.9808514749007,
+    "cpu_per_wall": 0.9818646015949286
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 3322026,
+    "ratio": 3.0013503807616195,
+    "enc_mibs": 69.38246884858242,
+    "dec_mibs": 332.00037990348295,
+    "cpu_per_wall": 0.9848871945935435
+   },
+   {
+    "tool": "zstd -3",
+    "size": 3548071,
+    "ratio": 2.810136550255054,
+    "enc_mibs": 331.05255001607907,
+    "dec_mibs": 841.2333465349487,
+    "cpu_per_wall": 0.991625319779801
+   },
+   {
+    "tool": "zstd -19",
+    "size": 3106737,
+    "ratio": 3.209336355153333,
+    "enc_mibs": 7.227231858543524,
+    "dec_mibs": 818.3754492435924,
+    "cpu_per_wall": 0.9988412433749576
+   },
+   {
+    "tool": "xz -9",
+    "size": 2750272,
+    "ratio": 3.6253010611314083,
+    "enc_mibs": 5.890725738114293,
+    "dec_mibs": 102.20315678424261,
+    "cpu_per_wall": 0.9971481073473178
+   }
+  ]
+ },
+ "corpus/silesia/nci": {
+  "set": "silesia-nci",
+  "area": "Silesia chemical database (text records)",
+  "bytes": 33553445,
+  "rows": [
+   {
+    "tool": "kolmo -3",
+    "size": 2117620,
+    "ratio": 15.8448848235283,
+    "enc_mibs": 502.81395160480895,
+    "dec_mibs": 1217.8789326622086,
+    "cpu_per_wall": 0.9677556975671959
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 1759679,
+    "ratio": 19.06793511771181,
+    "enc_mibs": 67.59793273774726,
+    "dec_mibs": 983.2678497339383,
+    "cpu_per_wall": 0.9931718430325918
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 1702545,
+    "ratio": 19.70781682716169,
+    "enc_mibs": 33.726907913677465,
+    "dec_mibs": 991.3018675227609,
+    "cpu_per_wall": 0.9962357387353608
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 1199630,
+    "ratio": 27.969828197027418,
+    "enc_mibs": 19.832758678626995,
+    "dec_mibs": 160.4939619069217,
+    "cpu_per_wall": 0.9950945531395061
+   },
+   {
+    "tool": "openzl -l 6 [-p serial]",
+    "size": 2723890,
+    "ratio": 12.318208517965116,
+    "enc_mibs": 155.6869173898172,
+    "dec_mibs": 999.3889112603516,
+    "cpu_per_wall": 0.9878313027719189
+   },
+   {
+    "tool": "openzl -l 9 [-p serial]",
+    "size": 2581745,
+    "ratio": 12.996421025314273,
+    "enc_mibs": 129.75153500031686,
+    "dec_mibs": 1043.7992589115383,
+    "cpu_per_wall": 0.9894630901521544
+   },
+   {
+    "tool": "zstd -3",
+    "size": 2835400,
+    "ratio": 11.833760668688722,
+    "enc_mibs": 1007.5653609104253,
+    "dec_mibs": 1845.0040747586177,
+    "cpu_per_wall": 1.095157445062097
+   },
+   {
+    "tool": "zstd -19",
+    "size": 1664988,
+    "ratio": 20.152364461485607,
+    "enc_mibs": 4.937966033918783,
+    "dec_mibs": 2262.776843480643,
+    "cpu_per_wall": 1.0746384756991423
+   },
+   {
+    "tool": "xz -9",
+    "size": 1738884,
+    "ratio": 19.29596511325655,
+    "enc_mibs": 8.1717364913372,
+    "dec_mibs": 328.25102457329825,
+    "cpu_per_wall": 0.9986528580553091
+   }
+  ]
+ },
+ "weights/qwen2.5-0.5b-bf16.safetensors": {
+  "set": "weights-bf16",
+  "area": "ML weights, bf16 safetensors",
+  "bytes": 988097824,
+  "rows": [
+   {
+    "tool": "kolmo -1",
+    "size": 984727837,
+    "ratio": 1.0034222521933236,
+    "enc_mibs": 2083.0571886759235,
+    "dec_mibs": 4949.6590642960655,
+    "cpu_per_wall": 0.8712768838014102
+   },
+   {
+    "tool": "kolmo -3",
+    "size": 657982926,
+    "ratio": 1.5017073923282926,
+    "enc_mibs": 919.0350913014819,
+    "dec_mibs": 2489.329973648411,
+    "cpu_per_wall": 0.9944893190043921
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 651148808,
+    "ratio": 1.5174685292520722,
+    "enc_mibs": 9.074933954875547,
+    "dec_mibs": 671.4423929524036,
+    "cpu_per_wall": 0.9988878660063036
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 656133731,
+    "ratio": 1.5059396847256432,
+    "enc_mibs": 30.613340267934547,
+    "dec_mibs": 1416.4632999027692,
+    "cpu_per_wall": 0.9989300772411328
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 651766013,
+    "ratio": 1.516031527099588,
+    "enc_mibs": 1.5814091299915483,
+    "dec_mibs": 61.81982424439752,
+    "cpu_per_wall": 0.9995747929318378
+   },
+   {
+    "tool": "openzl -l 6 [-p safetensors]",
+    "size": 656071205,
+    "ratio": 1.506083206319046,
+    "enc_mibs": 311.36829952795745,
+    "dec_mibs": 441.18076789622387,
+    "cpu_per_wall": 0.987626808488296
+   },
+   {
+    "tool": "openzl -l 9 [-p safetensors]",
+    "size": 656071116,
+    "ratio": 1.5060834106283076,
+    "enc_mibs": 306.26223009191426,
+    "dec_mibs": 426.22150449662774,
+    "cpu_per_wall": 0.991595021185659
+   },
+   {
+    "tool": "zstd -3",
+    "size": 769017547,
+    "ratio": 1.2848833265959274,
+    "enc_mibs": 1088.954823123262,
+    "dec_mibs": 1252.3918342671795,
+    "cpu_per_wall": 1.195523066637051
+   },
+   {
+    "tool": "zstd -19",
+    "size": 749791174,
+    "ratio": 1.317830695083642,
+    "enc_mibs": 4.816374492006027,
+    "dec_mibs": 617.6380263025293,
+    "cpu_per_wall": 1.0984473546059303
+   },
+   {
+    "tool": "xz -9",
+    "size": 692155576,
+    "ratio": 1.4275660823398466,
+    "enc_mibs": 1.653653374075112,
+    "dec_mibs": 53.00978682424403,
+    "cpu_per_wall": 0.9993693851912724
+   },
+   {
+    "tool": "zipnn [bfloat16]",
+    "size": 658274365,
+    "ratio": 1.5010425386988904,
+    "enc_mibs": 1544.7414767264531,
+    "dec_mibs": 3474.9021003736066,
+    "cpu_per_wall": 0.9405864309794802,
+    "timing": "in-process (interpreter start-up excluded)"
+   }
+  ]
+ },
+ "weights/smollm2-135m-bf16.safetensors": {
+  "set": "weights-bf16",
+  "area": "ML weights, bf16 safetensors",
+  "bytes": 269060552,
+  "rows": [
+   {
+    "tool": "kolmo -1",
+    "size": 269041195,
+    "ratio": 1.0000719480895852,
+    "enc_mibs": 2146.7465231300034,
+    "dec_mibs": 4745.577335570355,
+    "cpu_per_wall": 0.9027829251977693
+   },
+   {
+    "tool": "kolmo -3",
+    "size": 179493188,
+    "ratio": 1.4990014662840576,
+    "enc_mibs": 776.6821480513888,
+    "dec_mibs": 2366.6463538329717,
+    "cpu_per_wall": 0.9902785894714167
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 178409829,
+    "ratio": 1.5081038612508282,
+    "enc_mibs": 12.52840207445493,
+    "dec_mibs": 652.732782577295,
+    "cpu_per_wall": 0.9992253142680958
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 179472591,
+    "ratio": 1.4991734977515314,
+    "enc_mibs": 31.79751879703348,
+    "dec_mibs": 2186.4213911996417,
+    "cpu_per_wall": 0.9987332125146879
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 178408755,
+    "ratio": 1.508112939861051,
+    "enc_mibs": 1.5821808363448107,
+    "dec_mibs": 625.0915251817339,
+    "cpu_per_wall": 0.9995320441686079
+   },
+   {
+    "tool": "openzl -l 6 [-p safetensors]",
+    "size": 178728584,
+    "ratio": 1.5054142207046188,
+    "enc_mibs": 271.0995456245686,
+    "dec_mibs": 427.42298100648105,
+    "cpu_per_wall": 0.9805807106243799
+   },
+   {
+    "tool": "openzl -l 9 [-p safetensors]",
+    "size": 178728538,
+    "ratio": 1.5054146081584352,
+    "enc_mibs": 292.6405668649841,
+    "dec_mibs": 421.9392027754881,
+    "cpu_per_wall": 0.9851935359120639
+   },
+   {
+    "tool": "zstd -3",
+    "size": 210452790,
+    "ratio": 1.2784841293859777,
+    "enc_mibs": 1048.5105697077304,
+    "dec_mibs": 1182.339012484979,
+    "cpu_per_wall": 1.168671695814824
+   },
+   {
+    "tool": "zstd -19",
+    "size": 203790254,
+    "ratio": 1.3202817441897885,
+    "enc_mibs": 4.9174045633448555,
+    "dec_mibs": 584.9421584345597,
+    "cpu_per_wall": 1.0915102890747148
+   },
+   {
+    "tool": "xz -9",
+    "size": 189398532,
+    "ratio": 1.4206052663597202,
+    "enc_mibs": 1.6775565742273413,
+    "dec_mibs": 53.39623246681063,
+    "cpu_per_wall": 0.999012429939874
+   },
+   {
+    "tool": "zipnn [bfloat16]",
+    "size": 179418148,
+    "ratio": 1.4996284099421202,
+    "enc_mibs": 1690.703769946619,
+    "dec_mibs": 3569.9008064614222,
+    "cpu_per_wall": 0.9931535425102562,
+    "timing": "in-process (interpreter start-up excluded)"
+   }
+  ]
+ },
+ "weights/gpt2-f32.safetensors": {
+  "set": "weights-f32",
+  "area": "ML weights, f32 safetensors",
+  "bytes": 548105171,
+  "rows": [
+   {
+    "tool": "kolmo -1",
+    "size": 498244992,
+    "ratio": 1.1000716109556,
+    "enc_mibs": 2177.2118619641383,
+    "dec_mibs": 5518.787795861712,
+    "cpu_per_wall": 0.9816678776114779
+   },
+   {
+    "tool": "kolmo -3",
+    "size": 417207579,
+    "ratio": 1.3137469178142616,
+    "enc_mibs": 1020.406182784702,
+    "dec_mibs": 2889.3903236205792,
+    "cpu_per_wall": 0.9916106323524226
+   },
+   {
+    "tool": "kolmo -5",
+    "size": 414178004,
+    "ratio": 1.3233565416477309,
+    "enc_mibs": 15.265955322660476,
+    "dec_mibs": 1357.6579846262844,
+    "cpu_per_wall": 0.9970969398650621
+   },
+   {
+    "tool": "kolmo -7",
+    "size": 415783251,
+    "ratio": 1.3182473552788687,
+    "enc_mibs": 32.64338760526148,
+    "dec_mibs": 2603.845385942099,
+    "cpu_per_wall": 0.9992318202951724
+   },
+   {
+    "tool": "kolmo -9",
+    "size": 415002602,
+    "ratio": 1.3207270710076175,
+    "enc_mibs": 2.6782708888160807,
+    "dec_mibs": 37.38587517527371,
+    "cpu_per_wall": 0.9993908563704609
+   },
+   {
+    "tool": "openzl -l 6 [-p safetensors]",
+    "size": 414068638,
+    "ratio": 1.32370607358097,
+    "enc_mibs": 297.7043211633702,
+    "dec_mibs": 419.2501953426125,
+    "cpu_per_wall": 0.9872006047907508
+   },
+   {
+    "tool": "openzl -l 9 [-p safetensors]",
+    "size": 414068658,
+    "ratio": 1.32370600964442,
+    "enc_mibs": 300.52205447024363,
+    "dec_mibs": 428.9322401367247,
+    "cpu_per_wall": 0.9915487954235038
+   },
+   {
+    "tool": "zstd -3",
+    "size": 462257873,
+    "ratio": 1.1857130035295256,
+    "enc_mibs": 1072.6799779601279,
+    "dec_mibs": 1388.4601494382193,
+    "cpu_per_wall": 1.2050184999319822
+   },
+   {
+    "tool": "zstd -19",
+    "size": 462114840,
+    "ratio": 1.186080003403483,
+    "enc_mibs": 12.351760962453225,
+    "dec_mibs": 1386.327404138354,
+    "cpu_per_wall": 1.216742634914927
+   },
+   {
+    "tool": "xz -9",
+    "size": 451677688,
+    "ratio": 1.213487372880814,
+    "enc_mibs": 3.6010384795980075,
+    "dec_mibs": 39.76504964261308,
+    "cpu_per_wall": 0.9994001797856561
+   },
+   {
+    "tool": "zipnn [float32]",
+    "size": 420468954,
+    "ratio": 1.3035568162304796,
+    "enc_mibs": 1853.6362037824995,
+    "dec_mibs": 4833.924677721672,
+    "cpu_per_wall": 0.9901510136593766,
+    "timing": "in-process (interpreter start-up excluded)"
+   }
+  ]
+ }
+}

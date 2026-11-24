@@ -1,0 +1,27 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+zstd 1.5.7 -15,27.37,2118.96,2846208,589019,20.69,canterbury.tar
+zstd 1.5.7 -19,8.09,1673.58,2846208,514715,18.08,canterbury.tar
+zstd 1.5.7 -d22 -22,4.69,1609.54,2846208,515752,18.12,canterbury.tar
+brotli 1.2.0 -9,43.20,819.07,2846208,588724,20.68,canterbury.tar
+brotli 1.2.0 -11,1.11,749.31,2846208,500156,17.57,canterbury.tar
+brotli 1.2.0 -d24 -11,1.10,743.76,2846208,500156,17.57,canterbury.tar
+xz 5.8.4 -6,8.04,195.46,2846208,488268,17.16,canterbury.tar
+xz 5.8.4 -9,8.21,195.72,2846208,488268,17.16,canterbury.tar
+bzip2 1.0.8 -9,36.32,99.52,2846208,565774,19.88,canterbury.tar
+bzip3 1.5.4 -5,14.57,33.89,2846208,468895,16.47,canterbury.tar
+bzip3 1.5.4 -10,14.54,33.79,2846208,468895,16.47,canterbury.tar
+bsc 3.3.12 -m0 -e2,47.03,51.74,2846208,470198,16.52,canterbury.tar
+bsc 3.3.12 -m0 -e1,59.97,71.77,2846208,507210,17.82,canterbury.tar
+ppmd8 26.03 -6,25.08,23.68,2846208,519459,18.25,canterbury.tar
+ppmd8 26.03 -9,21.03,20.78,2846208,561305,19.72,canterbury.tar
+zpaq 7.15 -4,2.82,2.62,2846208,403451,14.18,canterbury.tar
+zpaq 7.15 -5,0.65,0.64,2846208,362256,12.73,canterbury.tar
+kanzi 2.6.0 -5,53.04,85.26,2846208,584492,20.54,canterbury.tar
+kanzi 2.6.0 -7,30.34,37.55,2846208,466705,16.40,canterbury.tar
+kanzi 2.6.0 -9,6.58,6.58,2846208,411373,14.45,canterbury.tar
+kolmo 0.0.2 -5,21.96,1041.69,2846208,556689,19.56,canterbury.tar
+kolmo 0.0.2 -6,15.00,1021.96,2846208,545181,19.15,canterbury.tar
+kolmo 0.0.2 -7,7.32,1035.11,2846208,554104,19.47,canterbury.tar
+kolmo 0.0.2 -8,35.99,53.70,2846208,471188,16.55,canterbury.tar
+kolmo 0.0.2 -9,8.15,77.87,2846208,438414,15.40,canterbury.tar
+kolmo 0.0.2 -10,1.31,1.31,2846208,348394,12.24,canterbury.tar

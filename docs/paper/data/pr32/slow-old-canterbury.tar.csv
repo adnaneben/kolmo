@@ -1,0 +1,6 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo 0.0.2 -5,23.29,1084.61,2846208,556689,19.56,canterbury.tar
+kolmo 0.0.2 -6,15.62,1063.32,2846208,545181,19.15,canterbury.tar
+kolmo 0.0.2 -7,7.63,1058.84,2846208,554104,19.47,canterbury.tar
+kolmo 0.0.2 -8,35.19,54.92,2846208,471188,16.55,canterbury.tar
+kolmo 0.0.2 -9,8.45,81.81,2846208,438414,15.40,canterbury.tar

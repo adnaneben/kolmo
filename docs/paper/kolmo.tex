@@ -1,0 +1,667 @@
+% Kolmo: DCC-style paper draft. Build: make -C docs/paper   (see docs/paper/README.md)
+% DRAFT. Numbers come from docs/paper/generated/*.tex, which figures/make_figures.py writes from docs/paper/data/.
+% \drafttrue prints a source tag after each number in the running text and shows TODO boxes; \draftfalse hides both.
+\documentclass[conference]{IEEEtran}
+\usepackage{iftex}
+\ifXeTeX
+  \usepackage{fontspec}
+  \setmainfont{texgyretermes}[Extension=.otf, UprightFont=*-regular, BoldFont=*-bold, ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+\else
+  \usepackage[T1]{fontenc}
+  \usepackage{newtxtext,newtxmath}
+\fi
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{cite}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+
+\newif\ifdraft
+\drafttrue
+\ifdraft
+  \newcommand{\src}[1]{\textsuperscript{\tiny\color{gray}\texttt{[#1]}}}
+  \newcommand{\todo}[1]{\noindent\fcolorbox{red}{red!6}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\footnotesize\textbf{TODO:} #1}}}
+  \newcommand{\todoin}[1]{{\color{red}\footnotesize[TODO: #1]}}
+\else
+  \newcommand{\src}[1]{}
+  \newcommand{\todo}[1]{}
+  \newcommand{\todoin}[1]{}
+\fi
+
+\input{generated/numbers.tex}
+
+% ---- plot styles (figures/make_figures.py writes the coordinates)
+\definecolor{ckolmo}{HTML}{C0392B}
+\definecolor{czstd}{HTML}{1F5FA8}
+\definecolor{cxz}{HTML}{2E8B57}
+\definecolor{cbrotli}{HTML}{8E44AD}
+\definecolor{cother}{HTML}{555555}
+\pgfplotsset{
+  paretoaxis/.style={width=\columnwidth, height=0.62\columnwidth, ymin=1.9, ymax=6.2, grid=major,
+    grid style={gray!20}, tick label style={font=\scriptsize}, label style={font=\footnotesize},
+    legend style={font=\scriptsize, draw=none, legend columns=4, /tikz/every even column/.append style={column sep=4pt}}},
+  frontier/.style={gray!60, dashed, thick, mark=none},
+  ppkolmo/.style={ckolmo, very thick, mark=*, mark size=1.8pt},
+  ppzstd/.style={czstd, thick, mark=square*, mark size=1.4pt},
+  ppbrotli/.style={cbrotli, thick, mark=diamond*, mark size=1.8pt},
+  ppxz/.style={cxz, thick, mark=triangle*, mark size=2pt},
+  ppkanzi/.style={orange!80!black, thick, mark=pentagon*, mark size=1.6pt},
+  pplzfour/.style={cother, mark=o, mark size=1.6pt},
+  pplzav/.style={teal, mark=x, mark size=2.2pt, thick},
+  ppdeflate/.style={brown, mark=+, mark size=2.2pt, thick},
+  ppbwt/.style={black, mark=star, mark size=2.2pt},
+  ppcm/.style={magenta!70!black, mark=asterisk, mark size=2.2pt},
+}
+\tikzset{kolmolabel/.style={font=\tiny\bfseries, text=ckolmo, anchor=south east, inner sep=1pt}}
+
+\begin{document}
+
+\title{Kolmo: Zero-Configuration, Structure-Aware\\Block Routing in a Stable Container}
+
+\author{\IEEEauthorblockN{Adnane Aqartit}
+\IEEEauthorblockA{Independent \todoin{affiliation and contact}}}
+
+\maketitle
+
+\begin{abstract}
+General-purpose lossless compressors treat their input as a byte stream; format-aware systems such as OpenZL obtain
+much smaller output on structured data but need the user to name a format profile or train a compression plan. We
+describe Kolmo, a compressor that sits between the two. For every block it detects structure from the bytes alone
+(delimited tables, logs, JSON, integer and floating-point arrays, images, executables, genomic reads), chooses a
+reversible transform or a small typed transform graph by trial coding on samples, and codes the result with one of
+five coder families selected by a single compression level. All choices are recorded per block in a container whose
+version-12 layout is specified and frozen, whose blocks decode independently, and whose header declares the memory a
+decoder needs before it allocates anything. On one thread of an Apple M5, Kolmo's level~6 is
+\numSilKSixR{} on Silesia against \numSilxzNineR{} for \texttt{xz -9}, and decodes \numSilSixVsXzDec{} times faster;
+on public held-out data, against OpenZL trained on samples of the same kind, Kolmo without training is smaller on
+JSON and web logs from level~5 and on numeric grids at level~9, but trained OpenZL is smaller than every practical
+Kolmo level on CSV. The compressed sizes are the same on x86-64, and the Silesia comparisons hold there with
+smaller speed factors. We also report where the approach does not help: the default level on structured text, small
+inputs, model weights, decode speed relative to zstd, and memory use.
+\todoin{update with the tuned levels}
+\end{abstract}
+
+\ifdraft
+\todo{Draft of 2026-11-23 for DCC 2028. Every number in the running text is a macro from
+\texttt{generated/numbers.tex}; a grey tag gives its data file in \texttt{docs/paper/data/}. Three measurement lanes
+changed or will change numbers: (1) done: the x86-64 check (\S\ref{sec:x86}, PR~\#33 not merged yet); (2) done: the
+OpenZL rematch on held-out data (\S\ref{sec:openzl}, PR~\#29 not merged yet); (3) the encoder tuning of
+levels 1--3 and 5--7 (\S\ref{sec:levels}). Nothing here has been submitted.}
+\fi
+
+% ======================================================================
+\section{Introduction}
+
+Most data that is stored at scale is not prose. It is CSV and JSON exports, server logs, columns of integers and
+timestamps, scientific arrays, images and executables. General-purpose compressors---zstd~\cite{zstd_rfc8878},
+xz/LZMA~\cite{lzma_xz,lzma_sdk}, brotli~\cite{brotli_rfc7932}, the block-sorting coders~\cite{bwt,bsc,bzip3}---model such
+data as a sequence of bytes. They capture repeats and local byte statistics, but not the fact that the fourth column
+of a table is a monotone timestamp or that every fourth byte of an array is a floating-point exponent. Domain systems
+capture exactly that: columnar formats with their encodings~\cite{parquet,alp,btrblocks,gorilla}, genomic formats
+such as CRAM~\cite{cram,cram31}, coders for neural-network weights~\cite{zipnn,dfloat11}. Each works for one kind of
+data and must be chosen and configured by whoever stores it.
+
+OpenZL~\cite{openzl,openzl2026,openzl_web} recently made the case for a middle ground: a general framework in which a compressor
+is a graph of typed transforms and codecs, described by a self-describing frame so that one universal decoder reads
+every configuration. Its best results come from a format profile chosen by the user, or a plan trained on samples of
+the data.
+
+This paper describes Kolmo, a compressor built on a narrower premise: \emph{that a useful part of that gain can be had
+with no configuration at all}, if the encoder detects structure per block from the bytes, tries a small set of
+candidate transforms on samples, and records the outcome in a fixed, specified container. Kolmo is a single-maintainer
+open-source project in C (Apache-2.0); version 0.0.2 was released on 2026-11-23.
+
+\paragraph*{Contributions} We do not claim new transforms or a new entropy coder; most of Kolmo's building blocks are
+known, and we cite their origins. The contributions are:
+\begin{enumerate}
+\item A per-block \emph{routing} design that maps detected structure to transforms and coders without user input,
+using only the content (never file names), with trial coding on samples as the arbiter (\S\ref{sec:detect}).
+\item A container that carries the routing decision per block, with independent blocks, a declared decode working
+set, and a written compatibility promise backed by a frozen corpus of frames (\S\ref{sec:container}).
+\item A determinism discipline: the same input and level give the same bytes on every CPU, thread count and memory
+budget, which we test in continuous integration (\S\ref{sec:determinism}).
+\item A single-thread evaluation against 50-odd general-purpose codec settings on the standard corpora and against
+OpenZL 0.3.0, trained and untrained, on public data held out from Kolmo's development, including the cases where
+Kolmo loses
+(\S\ref{sec:eval}, \S\ref{sec:limits}).
+\end{enumerate}
+
+% ======================================================================
+\section{Related work}\label{sec:related}
+
+\paragraph*{General-purpose coders} LZ77~\cite{lz77} with entropy coding is the basis of deflate, zstd and brotli.
+Zstandard~\cite{zstd_rfc8878,zstd_web} pairs an LZ parse with Huffman-coded literals and finite-state-entropy coded
+sequences, a form of asymmetric numeral systems~\cite{ans}; its decoder runs at memory speed and is the default
+choice of most storage systems. Brotli~\cite{brotli_rfc7932,brotli_tois} adds context modelling of literals and a
+static dictionary. LZMA, as used by xz~\cite{lzma_xz} and 7-Zip~\cite{lzma_sdk}, codes an optimal parse with an adaptive
+binary range coder; it compresses well and decodes slowly. Block sorting~\cite{bwt}, with modern suffix
+sorting~\cite{sais,libsais} and coders such as libbsc~\cite{bsc} and bzip3~\cite{bzip3}, sits between LZMA and
+context mixing on text. Kolmo reimplements an LZ4-class coder, a zstd-class coder and an LZMA-class coder from their
+published descriptions and ports libbsc's QLFC and LZP stages and libsais to C (\S\ref{sec:coders}).
+
+\paragraph*{Context mixing} The PAQ family~\cite{paq,dce_book} predicts bits by mixing many context models with
+online-trained neural networks; lpaq~\cite{lpaq}, zpaq~\cite{zpaq}, cmix~\cite{cmix} and NNCP~\cite{nncp,nncp_v2} explore
+the speed and ratio trade-off from practical to extreme, and lead the Large Text Compression
+Benchmark~\cite{ltcb}. Kolmo's ultra tier is an lpaq-style integer mixer; it is far from the top of that table and
+is not a contribution of this paper.
+
+\paragraph*{Format-aware compression} Columnar formats apply per-column encodings (dictionary, delta, run length,
+bit packing) before a general codec~\cite{parquet}; BtrBlocks~\cite{btrblocks} chooses among them per block by
+sampling, which is the closest precedent for Kolmo's trial-based selection. Gorilla~\cite{gorilla} and
+ALP~\cite{alp} target time series and floating-point columns. CRAM~\cite{cram,cram31} compresses sequencing reads
+against a reference; ZipNN~\cite{zipnn} and DFloat11~\cite{dfloat11} exploit the skewed exponents of model weights.
+Array containers such as HDF5~\cite{hdf5}, Zarr~\cite{zarr} and Blosc~\cite{blosc} expose byte shuffling and
+pluggable codecs, again configured by the user.
+
+\paragraph*{OpenZL} OpenZL~\cite{openzl} is the most direct comparison. It models compression as a directed graph of
+codecs over typed streams, serialises the graph into the frame so a single decoder reads any configuration, and
+offers format profiles (CSV, little-endian integer arrays, NumPy, pickle, SAO, Parquet, model formats) plus a trainer
+that searches for a graph on sample data. Kolmo's graph blocks (\S\ref{sec:graph}) share the idea of a small program
+of typed nodes whose inverses the decoder runs, but differ in three ways: the graph is chosen by the encoder per block
+without a profile; the set of node types is closed and versioned with the container rather than open; and the
+container makes promises about stability, determinism and decode memory that we describe below. OpenZL's design is
+more general; Kolmo's is narrower and requires nothing from the user.
+
+% ======================================================================
+\section{Container}\label{sec:container}
+
+A Kolmo frame is a 32-byte header, an index of 16-byte block entries, the block payloads, and optional extensions.
+The header holds the original length, the block count, a nominal block size, a flag byte, and a one-byte
+declaration of the decode working set (\S\ref{sec:memd}); a CRC-32C covers the header and the whole index. Each
+index entry gives a block's decoded and stored lengths, a 32-bit checksum, a codec identifier and a transform flag.
+Blocks are independent: a decoder may decode them in any order, in parallel, or only those overlapping a requested
+byte range.
+
+Every payload starts with a four-byte \emph{plan prefix} $(t,a,b,c)$: a plan type and three parameters (for example,
+the delimiter and column count of a table, or the element width and channel count of a byte-plane shuffle). Twelve
+plan types are defined (Table~\ref{tab:plans}). The transform flag in the index says which transform actually
+produced the stored bytes; it may be zero when the planner chose a plan but the trial found no gain. A decoder reads
+the plan and any transform metadata, decodes the coded stream with the block's codec, undoes the transform, and
+checks the block checksum. Every length the format carries is bounded before allocation (for example, a transformed
+block may exceed its raw length by at most a fixed margin that depends on the transform).
+
+\begin{table}[t]
+\caption{Plan types of container version 12 (FORMAT.md \S6.1).}\label{tab:plans}
+\centering\footnotesize
+\begin{tabular}{@{}rl@{}}
+\toprule
+$t$ & Plan \\ \midrule
+0 & none \\
+1 & typed transpose of delimited text \\
+2 & byte-plane shuffle (width 2/4/8, channels, delta) \\
+3 & typed table with inter-column formulas \\
+4 & log templates (word, JSON, minified-JSON tokenisers) \\
+5 & 16-bit image predictor \\
+6 & fixed-size records \\
+7 & x86 call/jump filter \\
+8 & word dictionary \\
+9 & transform graph (codec 12, \S\ref{sec:graph}) \\
+10 & line classes \\
+11 & ARM64 branch filter with page phase \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph*{Specification and stability} The container layer of version 12 is specified in a normative document
+(\texttt{FORMAT.md}) from which an independent Python implementation was written; it checks every frame of a frozen
+corpus in continuous integration on Linux x86-64, Linux ARM64 and macOS. The project's compatibility promise is that
+every later release decodes every version-12 frame to the same bytes, that identifiers never change meaning, and that
+a new feature uses an identifier older decoders refuse, so that an old decoder fails rather than returning wrong
+data. The corpus holds 350 frames written by the 0.0.1 and 0.0.2 release binaries (84 and 266)\src{tests/v12 at 4c191a5c},
+and an independent Python decoder of the KLZ, KLZH2 and Huffman payloads checks them against the C decoders. Coder
+payloads are specified in part; for the rest the 0.0.2 source is normative until their sections are written
+\todoin{the table, BWT and image sections are in PR~\#31, not merged yet}.
+
+\paragraph*{Integrity} Block checksums are the low 32 bits of a 64-bit hash written for Kolmo and specified in full
+in \texttt{FORMAT.md}. A decoder never returns the bytes of a block whose checksum fails. The decoders are fuzzed
+with libFuzzer under AddressSanitizer and UndefinedBehaviorSanitizer on every pull request, seeded with frames of
+every level and the frozen corpus; an OSS-Fuzz application is prepared but not submitted
+\todoin{PR~\#19, not merged yet}.
+
+One defect bears directly on this promise. Kolmo 0.0.1 and 0.0.2, at levels 3--9, write table blocks (plan 3)
+containing a field longer than 65,535 bytes that their own decoders then refuse as corrupt; in a space-separated log
+one line over 64\,KiB is enough. No data is returned wrongly, but such files cannot be read by those releases. The
+decoder on the main branch reads them: the format is unchanged, and two frames written by 0.0.2 were added to the
+frozen corpus as regression tests. The encoder will also stop writing such blocks, so that new files stay readable
+by 0.0.1 and 0.0.2 \todoin{encoder half in PR~\#30, not merged yet; the 0.0.3 patch release is an owner decision}. None of the inputs in \S\ref{sec:eval} contain such a field, and every round trip there was
+verified.
+
+\subsection{Decode working set}\label{sec:memd}
+Many formats declare a window or dictionary size so that a reader can refuse a stream it cannot afford before
+allocating (zstd's window descriptor, xz's dictionary size). Kolmo generalises this to all of its coders. The
+working set of block $i$ is a function of its index entry and the head of its payload only: the decoded block,
+the transform buffer and small state ($2r + r/8 + 16\,\text{KiB} + 1\,\text{MiB}$ for raw length $r$), plus a
+codec-specific term (none for the LZ and Huffman coders, the dictionary for the LZMA-class coder, $5t$ for block
+sorting, exactly the hash tables named in the stream header for context mixing). The header byte \texttt{memd}
+encodes the largest figure in the frame. A reader rejects a frame whose blocks exceed their declaration, compares
+the declaration with its memory limit before decoding, and refuses context-mixing tables larger than declared before
+allocating them. The declaration is computed from the payloads, not from the free memory of the encoder.
+
+% ======================================================================
+\section{Detection and planning}\label{sec:detect}
+
+\paragraph*{Principle} Every decision comes from the bytes; file names and extensions are never read, so identical
+bytes always give identical frames. Structure stated in a header (image geometry, executable sections, tar members,
+NumPy dtype and shape, safetensors and GGUF tensor tables) is used as a \emph{hint} that moves block boundaries or
+fixes a parameter, never as a dependency: each block carries its full plan and the decoder reads no metadata. Header
+parsers treat their input as untrusted, bound every offset and count, and treat an unparsable header as absent; they
+are tested on thousands of mutated inputs under sanitizers.
+
+\paragraph*{Segmentation} Before planning, the input is cut into parts that deserve separate plans: tar members
+(those of at least 64\,KiB with a recognised header, or at least 1\,MiB otherwise), stored ZIP and NPZ members, the
+code and data sections of ELF, Mach-O and PE files, runs of one dtype in tensor files, and the sample chunks of WAV
+and AIFF audio. Already-compressed content (gzip, xz, zstd, PNG, JPEG, media containers) is recognised by its magic
+number and tested with a cheap entropy and LZ probe, and stored blocks are emitted without running the slow coders.
+
+\paragraph*{Text} A part whose first 64\,KiB are at least 95\% printable is planned as text. The planner tests, in
+order: very wide delimited tables (more than 256 columns), which go to a transform graph; minified JSON; JSON lines and
+pretty-printed JSON; delimited tables of 2--256 fields with at least 95\% of lines alike (comma, tab, semicolon, bar
+or space); log lines, by a template trial; and, at higher levels, a word dictionary. Each candidate is kept only if a
+trial coding of a sample with a fast coder is smaller than the plain coding by a fixed margin (3\% for tables, 8\% for
+JSON and log templates, 1\% for the word dictionary).
+
+\paragraph*{Binary} For a binary part the planner first checks byte-plane widths whose planes are more predictable
+than the bytes. For parts of at least 256\,KiB it scores a set of candidates on a 1\,MiB slice from the middle of the
+part: x86 code (density of E8/E9 call and jump opcodes), 16-bit images, fixed-size records, float32 and float16
+arrays (an exponent byte far more predictable than the mantissa), integer arrays of width 2, 4 and 8, decimal-valued
+doubles, and 8-bit images (by a search for the row length). The cheapest candidate wins if it is at least 3\% below
+plain coding of the slice. Four further 32\,KiB probes elsewhere in the part detect mixed content, in which case the
+choice is verified per block.
+
+\paragraph*{Per-block coding} The plan is file- or part-level, but its application is per block: a block whose
+transform does not pay is stored with the plan's transform flag cleared, a block that does not shrink is stored raw,
+and at the higher levels several coders are tried per block and the smallest kept. Blocks are 2--16\,MiB at the LZ
+levels (about eight balanced blocks per input at the default level) and up to 128\,MiB at the block-sorting levels.
+
+\todo{Add a small figure: the decision flow from part to plan to per-block coder (from docs/ROUTING-MAP.md
+\emph{How the router decides}).}
+
+% ======================================================================
+\section{Transforms and graph blocks}\label{sec:transforms}
+
+\paragraph*{Typed tables} The table transform (plan 3) splits delimited text into columns and types each value as an
+integer, a decimal with a scale, or text. Numeric columns are coded as differences within a group (for example,
+consecutive rows of the same entity, found by a column whose value changes rarely) or as residuals against a
+\emph{formula} of other columns (a lag, a sum, a ratio with a fitted constant), found by testing candidate formulas
+on row subsets and rejecting early those that fail. Irregular rows are kept verbatim with their positions. The
+typed transpose (plan 1) is a cheaper variant for sparse integer matrices.
+
+\paragraph*{Logs and JSON} The log transform (plan 4) separates each line into a template of constant tokens and a
+stream of variable fields, which are typed and coded per field position. The JSON tokenisers treat keys and
+punctuation as the template and every scalar as a field; minified JSON is first split into records.
+
+\paragraph*{Executables and images} The x86 filter converts relative call and jump targets to absolute ones, in the
+manner of the BCJ filters of XZ Utils; the ARM64 filter does the same for BL and ADRP and carries the page phase of
+each block in the plan, since ADRP arithmetic depends on the address modulo 4096 (without the phase the output was
+0.35\% larger\src{docs/METADATA.md}). Image planes are predicted by the median edge detector of
+LOCO-I~\todoin{cite LOCO-I / JPEG-LS}.
+
+\subsection{Graph blocks}\label{sec:graph}
+For structures that no single transform covers, a block may hold a \emph{graph program} (codec 12). Stream 0 is the
+block's bytes. Each node consumes earlier streams and appends its outputs to the stream table; every stream that no
+node consumes is a leaf and is coded by an ordinary codec. The decoder decodes the leaves, then runs the nodes'
+inverses from last to first. Version 12 defines six node types:
+\begin{itemize}
+\item \textsc{Fields}: split delimited text into a shape stream and $k$ column streams;
+\item \textsc{Decimal}: split a column into tags, scales and mantissas, optionally as differences from the previous
+value;
+\item \textsc{Concat}: join several streams;
+\item \textsc{Int}: integers of width 1--8, with order-0/1/2 prediction, a common divisor, a bias and optional byte
+planes;
+\item \textsc{Float}: rotate each float word left by one bit so that sign and exponent share the top byte, and
+split the words into byte planes;
+\item \textsc{Img8}: LOCO-I prediction over rows of a given length and channel step.
+\end{itemize}
+Leaves are coded by any block coder or by order-0 rANS~\cite{ans}, Huffman-only coding, or a plane-context rANS coder;
+the encoder keeps, per leaf, the smallest of these. The planner uses graphs for tables wider than 256 columns, for
+integer and float arrays, and for 8-bit images, when a slice codes at least 3\% smaller than the other candidates.
+This is close in spirit to OpenZL's graphs, but the node set is closed: a decoder refuses any node or leaf codec it
+does not know, and a new node type is a new identifier under the compatibility promise.
+
+% ======================================================================
+\section{Coders and levels}\label{sec:coders}\label{sec:levels}
+
+All coders in version 12 are Kolmo's own code or C ports with attribution; no compression library is linked. Five
+families serve one level scale (Table~\ref{tab:levels}):
+\begin{itemize}
+\item \textbf{KLZ}: byte-aligned LZ77 sequences with no entropy stage (the LZ4 role).
+\item \textbf{KLZH2}: an LZ77 parse with three repeat offsets, coded as four streams (literals, literal-length codes,
+match-length codes, offset codes) each with canonical length-limited Huffman~\cite{huffman} or rANS~\cite{ans}, chosen per stream, plus raw
+extra bits (the zstd role). Levels 0--6 use greedy or lazy parses; levels 7--9 a price-based optimal parse over a
+binary-tree match finder. Every level writes the same format.
+\item \textbf{KLZMA}: an LZMA-class adaptive binary range coder over an optimal parse, written from the published
+descriptions of LZMA and not bit-compatible with it.
+\item \textbf{BWT}: suffix sorting by libsais~\cite{libsais,sais}, with libbsc's LZP preprocessing and QLFC
+second stage~\cite{bsc}, ported to C.
+\item \textbf{CM}: an lpaq-style~\cite{lpaq} integer context-mixing coder (hashed contexts of orders 1--20, word,
+sparse and record contexts, a match model, small gated mixers and adaptive probability maps), plus image and FASTQ
+variants. Integer arithmetic only.
+\end{itemize}
+
+\begin{table}[t]
+\caption{Level scale of 0.0.2 (docs/LEVELS.md; src/api/api.c). Levels 1--7 decode at LZ speed; 8--9 use block
+sorting; ultra is outside the scale.}\label{tab:levels}
+\centering\footnotesize
+\begin{tabular}{@{}lll@{}}
+\toprule
+Level & Engine & Analysis \\ \midrule
+1 fastest & KLZ (fast parse) & minimal \\
+2 & KLZH2 fast parse & minimal \\
+3 light (default) & KLZH2 3 & full \\
+4 & KLZH2 5 & full \\
+5 balanced & KLZH2 7 & full \\
+6 & KLZH2 8, 16\,MiB blocks & full \\
+7 compact & KLZH2 9 & full \\
+8 & BWT for every block & full \\
+9 max & BWT (text); BWT or KLZMA (binary) & full \\
+U ultra & context mixing & full \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The level numbers and their \emph{promises} (each level smaller than the one before; levels 1--7 decode at LZ speed)
+are a contract; the engine behind a level may change between releases. Two promises do not hold today
+(\S\ref{sec:limits}): level~7 is not always smaller than level~6 on small inputs, and levels~8 and~9 give identical
+output on plain text.
+\todo{An encoder change under review (PR~\#32, not merged) gives level~1 a new KLZ parse, improves levels 2--3 on
+small inputs, speeds up the KLZH2 decoder and gives level~8 32\,MiB blocks so that it no longer equals level~9 on
+text. The tables in this draft measure the 0.0.2 release. When the next release is cut, rerun every benchmark on it
+and regenerate all tables and Table~\ref{tab:levels}; until then the effect of PR~\#32 is stated in
+\S\ref{sec:limits} from its own paired runs.}
+
+% ======================================================================
+\section{Determinism}\label{sec:determinism}
+
+For a given input, level and release, Kolmo's output is identical across CPUs (x86-64 and ARM64), compilers, thread
+counts and memory budgets. Three rules make this hold. First, every coder and planner decision uses integer
+arithmetic or floating point that is evaluated identically everywhere (context mixing is integer-only; the build
+disables floating-point contraction, and the lzbench integration turns off \texttt{-ffast-math} for Kolmo's objects).
+Second, multi-threaded encoding splits work only in ways whose result does not depend on scheduling: blocks are
+independent, and the multi-threaded optimal parse of KLZH2 partitions its match finder by hash bucket. Third,
+\emph{memory changes speed, never bytes}: a memory governor adapts the number of blocks and trials in flight to the
+memory available, but every format decision---block size, table sizes of context mixing, the codec and transform per
+block---depends only on the input, the level and an explicit memory cap.
+
+A determinism test compresses a fixed, seeded set of inputs at every level with one and four threads and under forced
+budgets of 64\,MiB, 512\,MiB, 4\,GiB and unlimited, and compares the SHA-256 of every frame with a checked-in list
+(152 digests). The same holds between architectures: on x86-64 GitHub runners (AMD EPYC 7763, 9V45 and 9V74, and
+an Intel Xeon 6975P-C), all 30 lzbench settings of Kolmo (levels 1--10 on three corpora) and the 12 Silesia files at
+levels 3, 7 and 9 give exactly the same compressed sizes as on the Apple M5\src{x86 runs 45250622103, 45295174961}.
+In the same runs the only other codec whose sizes changed was brotli at its top levels, which lzbench builds with
+\texttt{-ffast-math}; Kolmo's build turns floating-point contraction and fast math off. The release binaries are also bit-for-bit reproducible across checkout paths on the three CI
+platforms. Determinism is not a compression result, but it is what makes compressed output usable as a cache or
+deduplication key within a release and what makes regressions visible.
+
+% ======================================================================
+\section{Evaluation}\label{sec:eval}
+
+\subsection{Setup}\label{sec:setup}
+All measurements were taken on 2026-11-23 on an Apple M5 (10 cores, on AC power) under macOS, with Kolmo built from
+tag \texttt{v0.0.2} with generic compiler flags. Every tool ran on one thread, and every round trip was checked byte
+for byte; there were no mismatches. For the standard corpora we used lzbench~2.4.1~\cite{lzbench}, the in-memory
+harness most codec authors use, with Kolmo added through a plugin that calls the library (its sizes match the
+command line byte for byte) and all codecs built with lzbench's flags. Fast codecs were measured best of three
+(\texttt{-t3,3}), slow ones once. The corpora are Silesia~\cite{silesia,silesia_web} as one 212\,MB tar and file by file,
+enwik8~\cite{ltcb} (100\,MB of Wikipedia), and Canterbury~\cite{canterbury,canterbury_web} as one 2.8\,MB tar. Speeds are in MiB/s
+and ratios are original over compressed size.
+
+The tables and figures below are from the M5. Section~\ref{sec:x86} repeats the Silesia comparisons on x86-64.
+
+\subsection{Standard corpora}
+
+\begin{figure*}[t]
+\centering
+\input{generated/fig-pareto.tex}
+\ref{paretolegend}
+\caption{Silesia (212\,MB tar), one thread, Apple M5: compression ratio against compression speed (left) and
+decompression speed (right) for 50-odd codec settings in lzbench~2.4.1. Kolmo's levels are labelled; the dashed line
+is the Pareto front of all points. Source: \texttt{data/lzb-fast-silesia.tar.csv},
+\texttt{data/lzb-slow-silesia.tar.csv}.}\label{fig:pareto}
+\end{figure*}
+
+\begin{table}[t]
+\caption{Silesia, one thread, lzbench 2.4.1, Apple M5. C and D: compression and decompression speed in MiB/s.
+Source: \texttt{data/lzb-\{fast,slow\}-silesia.tar.csv}. \todoin{tuned levels}}\label{tab:silesia}
+\centering\scriptsize\setlength{\tabcolsep}{3.2pt}
+\input{generated/tab-silesia.tex}
+\end{table}
+
+Table~\ref{tab:silesia} and Fig.~\ref{fig:pareto} place each Kolmo level next to its nearest rival on Silesia. At
+the default level~3 Kolmo reaches the ratio of \texttt{zstd -12} (\numSilKThreeR{} against
+\numSilzstdOneTwoR{})\src{lzb-*-silesia} and is \numSilThreeVsZstdPct\% smaller than \texttt{zstd -3}, but it
+compresses at \numSilKThreeC{} against \numSilzstdThreeC{}\,MiB/s and decodes at \numSilThreeDecFrac{} of zstd's
+speed. Level~4 comes within \numSilFourVsZnineteenPct\% of \texttt{zstd -19}'s ratio at
+\numSilFourVsZnineteenEnc{} times its compression speed. Level~6 is slightly smaller than \texttt{xz -9}
+(\numSilKSixR{} against \numSilxzNineR{}), compresses \numSilSixVsXzEnc{} times faster and decodes
+\numSilSixVsXzDec{} times faster\src{lzb-slow-silesia}. Level~9 matches \texttt{zpaq -5}'s ratio
+(\numSilKNineR{} against \numSilzpaqFiveR{}) at \numSilNineVsZpaqEnc{} times its compression speed and
+\numSilNineVsZpaqDec{} times its decompression speed. Ultra has the highest ratio of the lineup, \numSilKOneZeroR,
+at about \numSilKOneZeroC\,MiB/s each way. The fast tier is weak: level~1 is beaten by \texttt{lzav -1} on ratio
+(\numSilKOneR{} against \numSillzavOneR) at the same compression speed.
+
+\begin{table}[t]
+\caption{enwik8 and Canterbury, one thread, lzbench 2.4.1, Apple M5. Source:
+\texttt{data/lzb-\{fast,slow\}-\{enwik8,canterbury.tar\}.csv}.}\label{tab:corpora}
+\centering\scriptsize\setlength{\tabcolsep}{3pt}
+\input{generated/tab-corpora.tex}
+\end{table}
+
+On enwik8 (Table~\ref{tab:corpora}) there is little structure to find. Level~3 is \numEnwKThree{} against
+\numEnwZThree{} for \texttt{zstd -3}; levels 8 and 9 choose the same block-sorting route and give identical output
+(\numEnwKNineBytes\,B), tying libbsc; ultra reaches \numEnwKUBytes\,B (ratio \numEnwKU)\src{lzb-slow-enwik8}, ahead
+of the lzbench lineup but well behind the context-mixing leaders of the Large Text Compression
+Benchmark~\cite{ltcb}. On Canterbury's small files the low levels lose: level~3 gives \numCantKThree{} against
+\numCantZThree{} for \texttt{zstd -3}, and level~7 (\numCantKSeven) is below level~6
+(\numCantKSix)\src{lzb-*-canterbury.tar}. Levels 9 and ultra still lead their rivals.
+
+\subsection{A second platform}\label{sec:x86}
+
+\begin{table}[t]
+\caption{The four Silesia comparisons on two machines, one thread, lzbench 2.4.1. Size: Kolmo's output against the
+rival's (negative is smaller), identical on both machines. C$\times$, D$\times$: Kolmo's compression and
+decompression speed over the rival's. On x86-64 each pair ran in one GitHub job on one CPU, median of three runs.
+Sources: \texttt{data/lzb-*-silesia.tar.csv}, \texttt{data/x86/claims-silesia.tar.run\{1,2,3\}.csv}.}\label{tab:x86}
+\centering\scriptsize\setlength{\tabcolsep}{3.4pt}
+\input{generated/tab-x86.tex}
+\end{table}
+
+We repeated the lzbench runs on x86-64 GitHub runners (Ubuntu 24.04, 4 vCPUs, GCC 13.3, the same generic build) with
+the plugin in \texttt{bench/lzbench/} \todoin{PR~\#33, not merged yet}. The runners draw different CPUs from job to job, so speeds from different jobs
+cannot be compared; for Table~\ref{tab:x86} each Kolmo level and its rival ran in the same job, on an Intel Xeon
+6975P-C. Every Kolmo size was the same as on the M5 (\numXSizesSame{} of \numXSizesTotal{} settings in these runs,
+and all others, \S\ref{sec:determinism})\src{x86/claims-*.csv}. All four comparisons keep their direction, with
+smaller factors on the Xeon: level~6 decodes \numXSixD{} times faster than \texttt{xz -9}, level~4 compresses
+\numXFourC{} times faster than \texttt{zstd -19}, level~9 decodes \numXNineD{} times faster than \texttt{zpaq -5},
+and level~3 compresses \numXThreeC{} times faster than \texttt{zstd -12}. Kolmo's decoders gain more from the M5
+than xz's and zpaq's do. None of the four comparisons holds on enwik8 or Canterbury, on either machine, except
+level~9 against \texttt{zpaq -5} on enwik8, within 1\%.
+
+\subsection{Where the gain comes from}
+
+\begin{table}[t]
+\caption{Silesia file by file, ratio, one thread. $\Delta_3$: Kolmo -3 against zstd -3. Source:
+\texttt{data/lzb-silesia-files.csv}.}\label{tab:files}
+\centering\scriptsize\setlength{\tabcolsep}{2.6pt}
+\input{generated/tab-silesia-files.tex}
+\end{table}
+
+Table~\ref{tab:files} splits Silesia by file. The gain of level~3 over \texttt{zstd -3} is concentrated where the
+planner finds structure: the SAO star catalogue (fixed records, $+\numFilesaoGain$\%), the 12-bit X-ray and MRI
+images ($+\numFilexrayGain$\% and $+\numFilemrGain$\%), the chemical database (a delimited table,
+$+\numFilenciGain$\%) and the x86 DLL ($+\numFileoofficeGain$\%)\src{lzb-silesia-files}. On text, markup and
+databases without a regular layout, level~3 is within 3\% of zstd, and on \texttt{xml} it is 1\% larger. On the
+structured files, level~3 is smaller than \texttt{zstd -19} and \texttt{xz -9}.
+
+\subsection{Structured data against OpenZL}\label{sec:openzl}
+
+\IfFileExists{generated/tab-holdout.tex}{%
+\begin{table*}[t]
+\caption{Held-out panel: public data new to Kolmo, each type split into a training and a test half; ratios on the
+four test files of each type, one thread, best of three, every round trip verified. OpenZL ``trained'':
+\texttt{zli train} with the matching profile on the training half (greedy trainer, 20-minute cap); ``untrained'':
+the same profiles at levels 6 and 9. Kolmo had no training and no option but the level; ultra (\texttt{-U}) ran on
+files up to 12\,MB only. Bold: best of OpenZL and Kolmo. Source: \texttt{data/holdout-panel.json}
+(\texttt{bench/repro}, PR~\#29).}\label{tab:holdout}
+\centering\scriptsize
+\input{generated/tab-holdout.tex}
+\end{table*}
+
+The main comparison (Table~\ref{tab:holdout}) uses public data that played no part in Kolmo's development: NOAA
+GHCN-Daily station records (CSV), GH Archive events (JSON lines), the 1995 NASA web server logs, and NCEP/NCAR
+reanalysis grids (float32 NumPy). Each type is split into a training half (other stations, earlier hours, July
+instead of August, 2022 instead of 2023) and a test half. OpenZL is given what it is designed to use: the profile
+for the format and a plan trained on the training half. Kolmo is given nothing.
+
+Training matters a great deal for OpenZL: it gains \numHoldGainghcncsvMin--\numHoldGainghcncsvMax\% on CSV,
+\numHoldGainnasalogsMin--\numHoldGainnasalogsMax\% on logs and about \numHoldGaingharchivejsonMax\% on JSON, but
+nothing on three of the four grids. Against the better of trained and untrained OpenZL per file, counting results
+within 1\% as ties (wins/ties/losses):
+\begin{center}\footnotesize
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Set & Kolmo -3 & Kolmo -5 & Kolmo -9 & Kolmo best \\ \midrule
+CSV (GHCN) & \numHoldghcncsvThree & \numHoldghcncsvFive & \numHoldghcncsvNine & \numHoldghcncsvBest \\
+JSON (GH Archive) & \numHoldgharchivejsonThree & \numHoldgharchivejsonFive & \numHoldgharchivejsonNine & \numHoldgharchivejsonBest \\
+Logs (NASA) & \numHoldnasalogsThree & \numHoldnasalogsFive & \numHoldnasalogsNine & \numHoldnasalogsBest \\
+Grids (NCEP) & \numHoldncepnpyThree & \numHoldncepnpyFive & \numHoldncepnpyNine & \numHoldncepnpyBest \\
+\bottomrule
+\end{tabular}
+\end{center}
+On JSON and logs Kolmo's level~5 and above are smaller than trained OpenZL on every file, and on logs ultra
+reaches about three times OpenZL's ratio, because the log transform separates templates from typed fields. On the
+grids Kolmo needs level~9. On CSV, trained OpenZL is smaller than every practical Kolmo level (3 to 9) on all four
+files, by a factor of \numHoldCsvNineFactorMin--\numHoldCsvNineFactorMax{} against level~9; only ultra, at about 1\,MiB/s, wins on two files and ties
+on one\src{holdout-panel.json}. The default level~3 loses or ties on all \numHoldFiles{} test files, and on CSV, JSON
+and logs it is also larger than \texttt{zstd -19}: its analysis is light, and its gain shows against \texttt{zstd
+-3} rather than against slow general coders. On four Silesia files with a matching OpenZL profile (untrained, and
+files that were in Kolmo's earlier tuning sets), Kolmo's best level leads: \texttt{sao} \numMemsaoK{} against
+\numMemsaoOZ, \texttt{x-ray} \numMemxrayK{} against \numMemxrayOZ, \texttt{mr} \numMemmrK{} against \numMemmrOZ{}
+and \texttt{nci} \numMemnciK{} against \numMemnciOZ.
+}{\todo{Held-out panel missing: copy bench/repro's panel.json to data/holdout-panel.json.}}
+
+\begin{table*}[t]
+\caption{Development panel, ratio, one thread, command-line tools, best of three. OpenZL 0.3.0 \emph{untrained},
+with the matching format profile at levels 6 and 9 (the generic \texttt{serial} profile where none matches); the
+best of its runs is shown. These files come from data used while developing Kolmo. Bold: best of OpenZL and Kolmo.
+Lvl: Kolmo's best level. Source: \texttt{data/openzl.json}.}\label{tab:structured}
+\centering\scriptsize
+\input{generated/tab-structured.tex}
+\end{table*}
+
+Table~\ref{tab:structured} covers a wider range of types, \numPanelFiles{} files from Kolmo's development data
+(integer columns, raw images, NumPy arrays, a pandas pickle, model files, a FASTA genome, English text), against
+untrained profiles only. Kolmo's best level wins on \numPanelBestWin{} and ties on \numPanelBestTie{} (all model
+weights); level~5 wins on \numPanelFiveWin, ties on \numPanelFiveTie{} and loses on \numPanelFiveLoss{} (an int32
+column, a NumPy image stack and an ONNX model)\src{openzl.json}. Given the held-out results, these counts say
+more about untrained profiles than about OpenZL, and the CSV rows in particular would not survive training.
+
+\IfFileExists{generated/tab-weights.tex}{%
+\begin{table}[t]
+\caption{Model weights (safetensors), ratio, one thread. DFloat11$^*$: its published method computed on the CPU (the
+decoder needs CUDA), not a run of DFloat11. Source: \texttt{data/holdout-panel.json},
+\texttt{data/holdout-dfloat11.json}.}\label{tab:weights}
+\centering\scriptsize\setlength{\tabcolsep}{2.6pt}
+\input{generated/tab-weights.tex}
+\end{table}
+On model weights (Table~\ref{tab:weights}) every weight-aware tool lands within about 1\% of the others: the gain is
+the redundancy of the exponent byte, which ZipNN and DFloat11 exploit by design~\cite{zipnn,dfloat11} and Kolmo's
+float graph finds by sampling. ZipNN reaches Kolmo's ratio faster: \numWtQwenZipC{} against \numWtQwenKThreeC\,MiB/s
+to compress Qwen2.5-0.5B and \numWtQwenZipD{} against \numWtQwenKThreeD\,MiB/s to decode\src{holdout-panel.json}.
+}{}
+
+\subsection{Threads and memory}
+
+\begin{table}[t]
+\caption{Silesia with command-line tools, one thread and all ten cores, best of three, with peak resident memory.
+Source: \texttt{data/mt-result.json}.}\label{tab:mt}
+\centering\scriptsize\setlength{\tabcolsep}{2.4pt}
+\input{generated/tab-mt.tex}
+\end{table}
+
+Because Kolmo's blocks are independent, decoding scales with cores, which zstd's single-frame decoder does not
+(Table~\ref{tab:mt}): on ten cores level~3 decodes at \numMtKolmoThreeDecAll{} against \numMtZstdThreeDecAll\,MiB/s
+for \texttt{zstd -3}, \numMtThreeVsZstdDecAll{} times faster\src{mt-result.json}. The price is memory: level~9
+compresses Silesia with \numMtKolmoNineEncRss\,MB of resident memory on one thread, against
+\numMtXzNineEncRss\,MB for \texttt{xz -9}, and level~7 with \numMtKolmoSevenEncRss\,MB. The command line runs at
+somewhat different speeds from lzbench because it includes file I/O and process start-up. On a 4-vCPU x86-64
+runner (AMD EPYC 9V45), all cores speed up level~3's decoding \numXCliThreeDecScale{} times but its compression only
+\numXCliThreeEncScale{} times, against \numXCliZstdEncScale{} for \texttt{zstd -3}; levels 7 and 9 compress
+\numXCliKSevenEncScale{} and \numXCliKNineEncScale{} times faster\src{x86/cli-silesia.json}. Multi-threaded
+compression at the fast levels is weak.
+
+% ======================================================================
+\section{Limitations}\label{sec:limits}
+
+\paragraph*{Small inputs} Detection needs data: the binary candidates are scored only on parts of at least 256\,KiB,
+wide tables and FASTQ need 64\,KiB, and the text trials need enough lines to see a regular layout. A small input
+gets little more than the general coders. On Canterbury, level~3 is
+\numCantKThree{} against \numCantZThree{} for \texttt{zstd -3}, and level~2 is \numCantKTwo{} against
+\numCantZOne{} for \texttt{zstd -1}. Chunked array stores show the same effect at level~1, which runs only
+minimal analysis: in HDF5 with 1\,MiB chunks, a synthetic int16 waveform is stored uncompressed at level~1
+(ratio 1.00) against 1.57 for shuffle with zstd~3 and 1.75 at level~3, and a float32 grid reaches 1.70 at level~1
+against 2.76 for plain zstd~3\src{PR\#23 integration/hdf5/bench/RESULTS.md}. Level~3 leads in both cases.
+\todoin{PR~\#23 is not merged yet; those runs shared the machine with other jobs, so quote their ratios, not their
+speeds}
+
+\paragraph*{Decode speed} At levels 2--7 Kolmo decodes 30--40\% more slowly than zstd on one thread
+(\numSilKThreeD{} against \numSilzstdThreeD\,MiB/s at level~3 on Silesia). Its speed advantage is against LZMA and
+block sorting, and on many cores. Kolmo is not a replacement for zstd on latency-sensitive paths. A branch-free
+repeat-offset update in the KLZH2 decoder, pending review, raises decode speed at levels 2--7 by
+\numDevSilDecGainMin--\numDevSilDecGainMax\% (level~3: \numDevSilThreeD\,MiB/s) with identical output, which
+narrows the gap without closing it\src{pr32/*-silesia.tar.csv}.
+
+\paragraph*{Fast tier and level ordering} Level~1 is beaten by lzav~\cite{lzav} on ratio and decode speed. Level~7 is not
+smaller than level~6 on Canterbury, the result of an optimal parse that is unstable on heterogeneous small inputs;
+levels 8 and 9 coincide on text. These violate the level promises of \S\ref{sec:levels}. The pending encoder change
+(PR~\#32) addresses three of these: level~1 reaches \numDevSilOneR{} on Silesia (still below lzav's
+\numSillzavOneR, a limit of KLZ's byte-aligned format), level~3 on Canterbury reaches \numDevCantThreeR{} against
+\numCantZThree{} for \texttt{zstd -3}, and level~8 on enwik8 gives \numDevEnwEightR{} against level~9's
+\numDevEnwNineR\src{pr32/*.csv}. Level~7 stays below level~6 on Canterbury (\numDevCantSevenR{} against
+\numDevCantSixR): fixing the parse's price model is open work.
+
+\paragraph*{Memory} The ratio-oriented levels use much more memory than their rivals when compressing (above), and
+ultra needs about 26 table bytes per input byte with its text contexts, comparable to \texttt{zpaq -m5}. Level~9's
+footprint comes from the block-sorting and KLZMA working sets on segments of up to 64\,MiB; halving it with
+16\,MiB blocks would cost about 2\% on Silesia, a trade-off not yet made\src{PR\#32, evidence/weak-levels/bs.out}.
+
+\paragraph*{Trained format-aware compression} On CSV a trained OpenZL plan is smaller than every Kolmo level short
+of ultra, and the default level~3 loses to OpenZL on every held-out file. Kolmo's case is zero configuration, not
+the smallest output.
+
+\paragraph*{Model weights and plain text} Kolmo has no specific model for either beyond the float graph and the
+general coders. On weights it is at parity with ZipNN and slower; on plain text it is at parity with the general
+tools.
+
+\paragraph*{Evaluation scope} The full tables come from one ARM64 laptop; on x86-64 we checked sizes and the four
+Silesia comparisons on one Xeon only, and speed factors on AMD cores may differ; OpenZL trained once per type,
+with a 20-minute cap and four training files; DFloat11 computed, not run; cmix, paq8 and NNCP not run; no Parquet
+data (its host was unreachable).
+
+\paragraph*{Project} Kolmo is maintained by one person, is at version 0.0.2, and has no published production users.
+The format promise and the specification reduce the risk of storing data with it, but adoption risk remains.
+
+% ======================================================================
+\section{Conclusion}
+
+Kolmo shows that per-block detection and trial-based routing, with no user input, recover much of what
+format-specific configuration buys on logs, JSON, numeric arrays, images and executables, and on these held-out
+logs and JSON more than a trained OpenZL plan, while staying a
+competitive general-purpose coder on Silesia: archive-class ratios at LZ-class decode speed at levels 4--7, and
+ratios at or above the block-sorting and context-mixing archivers at levels 8--9. It does so inside a container
+whose decisions are recorded per block, whose decode memory is declared up front, and whose output is deterministic
+across platforms. It does not help on small inputs, plain text at fast levels or model weights, and it decodes more
+slowly than zstd on one core. On delimited tables a trained format-aware plan is clearly better; closing that gap
+without giving up zero configuration is the next problem.
+
+\section*{Availability}
+Source, format specification, benchmark scripts and the raw data behind every table:
+\url{https://github.com/adnaneben/kolmo} (tag \texttt{v0.0.2}; this paper in \texttt{docs/paper/}).
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

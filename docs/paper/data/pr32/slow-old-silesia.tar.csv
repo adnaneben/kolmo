@@ -1,0 +1,6 @@
+Compressor name,Compression speed,Decompression speed,Original size,Compressed size,Ratio,Filename
+kolmo 0.0.2 -5,16.02,1433.45,211947520,50978808,24.05,silesia.tar
+kolmo 0.0.2 -6,8.62,1467.59,211947520,48535166,22.90,silesia.tar
+kolmo 0.0.2 -7,6.24,1464.12,211947520,48030711,22.66,silesia.tar
+kolmo 0.0.2 -8,39.83,46.63,211947520,43283360,20.42,silesia.tar
+kolmo 0.0.2 -9,10.18,86.24,211947520,40507982,19.11,silesia.tar
