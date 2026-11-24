@@ -1,7 +1,7 @@
 From 7c81f9f4f4442cf576a678ae0c1c2f42ccc4307f Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 02:54:16 +0000
-Subject: [PATCH 3/5] klzh2: four tANS states over two bit streams for chunks
+Subject: [PATCH 3/8] klzh2: four tANS states over two bit streams for chunks
  from 256 symbols, split penalty, branchy loop kept
 
 Decode of the code streams was the cost of the tANS stage: chunks of 256 symbols or more now

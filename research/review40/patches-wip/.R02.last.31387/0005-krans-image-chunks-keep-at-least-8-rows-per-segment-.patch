@@ -1,0 +1,42 @@
+From e1482a9bf881f5d21748f54cf75b3c6bdff6f84b Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 03:08:04 +0000
+Subject: [PATCH 5/6] krans: image chunks keep at least 8 rows per segment
+ (fewer states on short chunks)
+
+A segment's first row has no row above it, so its bytes are coded under the left neighbour
+alone; chunks of a few rows per segment (a 32 KiB sample of a 3000-byte row) now use fewer
+states. coins.pgm residual leaf (116,352 bytes, rows of 384): 68,390 bytes.
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ src/algo/krans.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/algo/krans.c b/src/algo/krans.c
+index e3123586..feedf395 100644
+--- a/src/algo/krans.c
++++ b/src/algo/krans.c
+@@ -486,15 +486,15 @@ static KR_COLD size_t kr_chunk(kr_enc *E, const kolmo_krans_params *pp, const ui
+         else if (E->oom) return 0; } while (0)
+ #define KR_SET(LS, PP, MB, EQ, BQ, MK, PF, NL) do { memset(&cur->c, 0, offsetof(kr_ctx, N)); cur->c.ls = (LS); cur->c.P = (PP); cur->c.mb = (MB); cur->c.eq = (EQ); \
+         cur->c.bq = (BQ); cur->c.mk = (MK); cur->c.pf = (PF); cur->c.nlag = (NL); } while (0)
+-    const unsigned ls = kr_default_ls(m), mb = 0, step = pp->step ? pp->step : 1; const int ref = pp->effort >= 2 ? 2 : 1;
+-    const size_t sl = m >> ls;
++    unsigned ls = kr_default_ls(m); const unsigned mb = 0, step = pp->step ? pp->step : 1; const int ref = pp->effort >= 2 ? 2 : 1;
+     if (pp->force && (pp->P > 1 || pp->eq || pp->bq) && !E->ctx) return 0;
+     if (pp->force) {
+         KR_SET(pp->ls, pp->P, pp->mb, pp->eq, pp->bq, pp->mk, pp->pf, pp->nlag); memcpy(cur->c.lag, pp->lag, sizeof cur->c.lag);
+         KR_TRY(ref);
+     } else {
+         KR_SET(ls, 1, mb, 0, 0, 0, 0, 0); KR_TRY(0);                                    /* order 0 */
+-        const int img = pp->stride && step <= 8 && pp->stride % step == 0 && pp->stride >= 2 * step && sl >= 2 * (size_t)pp->stride;
++        const int img = pp->stride && step <= 8 && pp->stride % step == 0 && pp->stride >= 2 * step && m >= 2 * (size_t)pp->stride;
++        if (img) while (ls && (m >> ls) < 8 * (size_t)pp->stride) ls--;      /* a segment's first row has no row above: at least 8 rows each */
+         if (img && m >= KR_CTX_MIN) {
+             /* image residuals: the magnitudes of the left, upper, upper-left and upper-right neighbours of the same
+              * channel, with the sign and magnitude of the previous byte (the previous channel of the pixel; the left
+-- 
+2.43.0
+

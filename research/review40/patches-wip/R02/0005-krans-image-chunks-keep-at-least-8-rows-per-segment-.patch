@@ -1,7 +1,7 @@
 From e1482a9bf881f5d21748f54cf75b3c6bdff6f84b Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 03:08:04 +0000
-Subject: [PATCH 5/5] krans: image chunks keep at least 8 rows per segment
+Subject: [PATCH 5/6] krans: image chunks keep at least 8 rows per segment
  (fewer states on short chunks)
 
 A segment's first row has no row above it, so its bytes are coded under the left neighbour

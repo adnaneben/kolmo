@@ -1,0 +1,817 @@
+From 7a6c0f9a9edbe855502ba1293fb744a9d6f8e0d1 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 02:42:15 +0000
+Subject: [PATCH 1/6] krans: static context rANS coder (src/algo/krans.c), the
+ kernel of graph leaf codec 33
+
+Kolmo's own static rANS with static context modelling: 32-bit states in [2^16, 2^32), 12-bit
+totals, 16-bit renormalisation words, 1-32 states over contiguous segments of a chunk (a byte's
+context only looks back inside its segment, so the chains are independent). Context of a byte =
+(bin of the summed magnitudes at up to four lags, bin of the previous byte with or without its
+sign, phase); a run-coded context map sends the contexts onto at most 255 frequency tables, which
+are coded as classes against the previous symbol with a few mantissa bits and one symbol taking
+the rest of 2^12. The encoder merges contexts greedily on exact counts, reassigns them once to
+the tables as built, and keeps the context set with the smallest exact score. The format is in
+krans.h. tests/test_krans.c: round trips for every context set, truncated and corrupted payloads,
+invalid headers, a tight output buffer and one pinned stream.
+
+Review R02, claim ctx-rans-leaf (#11).
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ src/algo/krans.c          | 514 ++++++++++++++++++++++++++++++++++++++
+ src/algo/krans.h          |  77 ++++++
+ tests/test_krans.c        | 166 ++++++++++++
+ tests/test_krans_golden.h |   1 +
+ 4 files changed, 758 insertions(+)
+ create mode 100644 src/algo/krans.c
+ create mode 100644 src/algo/krans.h
+ create mode 100644 tests/test_krans.c
+ create mode 100644 tests/test_krans_golden.h
+
+diff --git a/src/algo/krans.c b/src/algo/krans.c
+new file mode 100644
+index 00000000..1074530f
+--- /dev/null
++++ b/src/algo/krans.c
+@@ -0,0 +1,514 @@
++/* Kolmo context rANS (krans): static rANS with static context modelling, the coder of graph leaf codec 33.
++   Format, method and references: krans.h. Compiled on its own (NATSRC in the Makefile), no dependency on the rest
++   of the library. Copyright 2026 Adnane Aqartit and contributors, Apache-2.0. */
++#include "krans.h"
++#include <math.h>
++#include <stdlib.h>
++#include <string.h>
++
++#define KR_SB 12
++#define KR_M (1u << KR_SB)
++#define KR_L (1u << 16)
++#define KR_EMAX 1020                    /* four lags of magnitude 255 */
++#define KR_MAXT 255
++#define KR_REST 14                      /* class of the symbol that takes the rest of 2^12 */
++#define KR_CTX_MIN 2048                 /* encoder: chunks below this are coded order 0 */
++
++static const uint16_t kr_edges1[16] = {1, 2, 4, 6, 8, 11, 14, 18, 23, 29, 37, 47, 60, 80, 110, 160};
++static const uint16_t kr_edges2[8] = {1, 3, 6, 11, 18, 29, 47, 80};
++static const uint16_t kr_edgesb[5] = {1, 3, 6, 12, 25};
++static const uint8_t kr_mbits[4] = {3, 4, 6, 12};
++
++/* ---- the context function (shared by the encoder and the decoder) ---- */
++typedef struct {
++    unsigned ls, P, mb, eq, bq, mk, pf, nlag; uint32_t lag[4];          /* the header fields */
++    unsigned N, mbits; uint32_t maxlag;                                  /* derived */
++    uint8_t mag[256]; uint16_t qe[KR_EMAX + 1], qb[256], pm[8];          /* qe: bin * NB * P; qb: bin * P; pm: prev mask by phase */
++} kr_ctx;
++static unsigned kr_bin(unsigned v, const uint16_t *edges, unsigned n) { unsigned b = 0; while (b < n && edges[b] <= v) b++; return b; }
++static int kr_ctx_init(kr_ctx *c) {
++    if (c->ls > 5 || c->P < 1 || c->P > 8 || c->mb > 3 || c->eq > 2 || c->mk > 2 || c->nlag > 4) return -1;
++    if ((c->eq == 0) != (c->nlag == 0) || (c->pf && (!c->bq || c->P < 2))) return -1;
++    const unsigned ne = c->eq == 1 ? 17 : c->eq == 2 ? 9 : 1, nb = c->bq == 1 ? 256 : c->bq == 2 ? 6 : c->bq == 3 ? 11 : 1;
++    c->N = ne * nb * c->P; c->mbits = kr_mbits[c->mb]; c->maxlag = 1;
++    if (c->N > KRANS_NCTX_MAX) return -1;
++    for (unsigned q = 0; q < c->nlag; q++) { if (c->lag[q] < 1 || c->lag[q] > KRANS_CHUNK_MAX) return -1; if (c->lag[q] > c->maxlag) c->maxlag = c->lag[q]; }
++    for (unsigned b = 0; b < 256; b++) {
++        c->mag[b] = (uint8_t)(c->mk == 0 ? (b + 1) >> 1 : c->mk == 1 ? (b < 128 ? b : 256 - b) : b);
++        const unsigned neg = c->mk == 0 ? b & 1 : c->mk == 1 ? b >> 7 : 0, sb = kr_bin(c->mag[b], kr_edgesb, 5);   /* bq 3: bin and sign */
++        const unsigned v = c->bq == 1 ? b : c->bq == 2 ? sb : c->bq == 3 ? (sb ? 2 * sb - 1 + neg : 0) : 0;
++        c->qb[b] = (uint16_t)(v * c->P);
++    }
++    for (unsigned e = 0; e <= KR_EMAX; e++)
++        c->qe[e] = (uint16_t)((c->eq == 1 ? kr_bin(e, kr_edges1, 16) : c->eq == 2 ? kr_bin(e, kr_edges2, 8) : 0) * nb * c->P);
++    for (unsigned ph = 0; ph < 8; ph++) c->pm[ph] = c->pf && ph == 0 ? 0 : 0xFFFF;
++    return 0;
++}
++/* context of byte i of a segment in phase ph: any i (lags before the segment start count 0) */
++static inline unsigned kr_ctx_at(const kr_ctx *c, const uint8_t *seg, size_t i, unsigned ph) {
++    unsigned e = 0;
++    for (unsigned q = 0; q < c->nlag; q++) if (c->lag[q] <= i) e += c->mag[seg[i - c->lag[q]]];
++    return (unsigned)c->qe[e] + (c->qb[i ? seg[i - 1] : 0] & c->pm[ph]) + ph;
++}
++/* the same for i >= maxlag, q = the byte's address */
++static inline unsigned kr_ctx_in(const kr_ctx *c, const uint8_t *q, unsigned ph) {
++    unsigned e = 0;
++    for (unsigned l = 0; l < c->nlag; l++) e += c->mag[*(q - c->lag[l])];
++    return (unsigned)c->qe[e] + (c->qb[q[-1]] & c->pm[ph]) + ph;
++}
++
++static inline uint32_t kr_rd32(const uint8_t *p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24; }
++static inline uint32_t kr_rd16(const uint8_t *p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8; }
++static int kr_uv_get(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
++    uint64_t r = 0;
++    for (unsigned s = 0; s < 35; s += 7) { if (*i >= n) return -1; const uint8_t b = p[(*i)++]; r |= (uint64_t)(b & 127) << s; if (b < 128) { *v = r; return 0; } }
++    return -1;
++}
++static size_t kr_uv_put(uint8_t *p, uint64_t v) { size_t k = 0; for (;; v >>= 7) { p[k++] = (uint8_t)(v | (v >= 128 ? 128 : 0)); if (v < 128) return k; } }
++static inline unsigned kr_bitlen(uint32_t v) { return v ? 32u - (unsigned)__builtin_clz(v) : 0; }
++
++/* ================================================= decoder ================================================= */
++typedef struct { uint8_t sym[KR_M]; struct { uint16_t f, c; } fc[256]; } kr_dtab;   /* slot -> symbol; symbol -> frequency, start */
++typedef struct { const uint8_t *p, *e; uint64_t acc; unsigned nb; int bad; } kr_br;
++static inline uint32_t kr_get(kr_br *r, unsigned n) {                     /* n <= 16 */
++    while (r->nb < n) { if (r->p < r->e) r->acc |= (uint64_t)*r->p++ << r->nb; else r->bad = 1; r->nb += 8; }
++    const uint32_t v = (uint32_t)r->acc & ((1u << n) - 1); r->acc >>= n; r->nb -= n; return v;
++}
++static int kr_dec_table(kr_br *r, unsigned mbits, kr_dtab *t) {
++    uint16_t f[256]; const unsigned lo = kr_get(r, 8), hi = kr_get(r, 8); int pc = 0, rest = -1; uint32_t sum = 0;
++    if (lo > hi) return -1;
++    for (unsigned s = lo; s <= hi; s++) {
++        int e;
++        if (!kr_get(r, 1)) e = pc;
++        else if (!kr_get(r, 1)) e = pc - 1;
++        else if (!kr_get(r, 1)) e = pc + 1;
++        else if (!kr_get(r, 1)) e = pc - 2;
++        else if (!kr_get(r, 1)) e = pc + 2;
++        else {
++            e = (int)kr_get(r, 4);
++            if (e == KR_REST) { if (rest >= 0) return -1; rest = (int)s; f[s] = 1; continue; }
++        }
++        if (e < 0 || e > 12) return -1;
++        pc = e; f[s] = 0;
++        if (e) { const unsigned nm = (unsigned)e - 1 < mbits ? (unsigned)e - 1 : mbits; f[s] = (uint16_t)((1u << (e - 1)) | kr_get(r, nm) << ((unsigned)e - 1 - nm)); sum += f[s]; }
++    }
++    if (r->bad || rest < 0 || sum >= KR_M || !f[lo] || !f[hi]) return -1;
++    f[rest] = (uint16_t)(KR_M - sum);
++    uint32_t c = 0;
++    for (unsigned s = lo; s <= hi; s++) if (f[s]) { t->fc[s].f = f[s]; t->fc[s].c = (uint16_t)c; memset(t->sym + c, (int)s, f[s]); c += f[s]; }
++    return 0;
++}
++#define KR_SYM(X, TB, O) do { const uint32_t sl_ = (X) & (KR_M - 1); const kr_dtab *t_ = (TB); const uint8_t s_ = t_->sym[sl_]; (O) = s_; \
++        (X) = (uint32_t)t_->fc[s_].f * ((X) >> KR_SB) + sl_ - t_->fc[s_].c; } while (0)
++#define KR_FILL(X) do { const uint32_t k_ = 0u - (uint32_t)((X) < KR_L), y_ = ((X) << 16) | kr_rd16(p); (X) ^= ((X) ^ y_) & k_; p += k_ & 2; } while (0)   /* no branch; two readable bytes at p */
++#define KR_FILL_CK(X) do { if ((X) < KR_L) { if (pe - p < 2) return -1; (X) = ((X) << 16) | kr_rd16(p); p += 2; } } while (0)
++/* the symbols of one chunk: p[0..pe) = states and words, o[0..m) the output, ct[context] = its table. S and NL (the
++ * number of lags) are constants at the call sites below, so each call compiles to a loop with the states in
++ * registers; any other shape takes the general call. */
++static inline __attribute__((always_inline)) int kr_dec_body(const kr_ctx *c, const kr_dtab *const *ct, const uint8_t *p, const uint8_t *pe,
++                                                             uint8_t *o, size_t m, const unsigned S, const unsigned NL) {
++    const unsigned P = c->P; const size_t sl = m / S;
++    uint32_t x[32]; uint8_t *sb[32]; unsigned sp[32]; size_t lg[4] = {1, 1, 1, 1};
++    if ((size_t)(pe - p) < 4 * (size_t)S) return -1;
++    for (unsigned k = 0; k < S; k++) { x[k] = kr_rd32(p); p += 4; if (x[k] < KR_L) return -1; sb[k] = o + (size_t)k * sl; sp[k] = (unsigned)(((size_t)k * sl) % P); }
++    for (unsigned l = 0; l < NL; l++) lg[l] = c->lag[l];
++    size_t i = 0;
++    if (c->N == 1) {                                                        /* order 0: one table */
++        const kr_dtab *t = ct[0];
++        for (; i < sl && (size_t)(pe - p) >= 2 * (size_t)S; i++) for (unsigned k = 0; k < S; k++) { KR_SYM(x[k], t, sb[k][i]); KR_FILL(x[k]); }
++        for (; i < sl; i++) for (unsigned k = 0; k < S; k++) { KR_SYM(x[k], t, sb[k][i]); KR_FILL_CK(x[k]); }
++    } else {
++        const size_t head = c->maxlag < sl ? c->maxlag : sl; unsigned pi = 0;
++        const uint8_t *mag = c->mag; const uint16_t *qe = c->qe, *qb = c->qb, *pm = c->pm;
++        for (; i < sl; i++) {
++            if (i >= head && (size_t)(pe - p) >= 2 * (size_t)S) {
++                for (unsigned k = 0; k < S; k++) {
++                    uint8_t *q = sb[k] + i; unsigned ph = sp[k] + pi, e = 0; if (ph >= P) ph -= P;
++                    for (unsigned l = 0; l < NL; l++) e += mag[*(q - lg[l])];
++                    const unsigned cx = (unsigned)qe[e] + (qb[q[-1]] & pm[ph]) + ph;
++                    KR_SYM(x[k], ct[cx], *q); KR_FILL(x[k]);
++                }
++            } else {
++                for (unsigned k = 0; k < S; k++) {
++                    unsigned ph = sp[k] + pi; if (ph >= P) ph -= P;
++                    const unsigned cx = kr_ctx_at(c, sb[k], i, ph);
++                    KR_SYM(x[k], ct[cx], sb[k][i]); KR_FILL_CK(x[k]);
++                }
++            }
++            if (++pi == P) pi = 0;
++        }
++    }
++    {   /* the bytes left over belong to the last segment */
++        uint8_t *seg = sb[S - 1]; const size_t len = m - (size_t)(S - 1) * sl; uint32_t y = x[S - 1];
++        for (; i < len; i++) {
++            const unsigned cx = c->N == 1 ? 0 : kr_ctx_at(c, seg, i, (unsigned)((sp[S - 1] + i) % P));
++            KR_SYM(y, ct[cx], seg[i]); KR_FILL_CK(y);
++        }
++        x[S - 1] = y;
++    }
++    for (unsigned k = 0; k < S; k++) if (x[k] != KR_L) return -1;           /* back where the encoder started */
++    return p == pe ? 0 : -1;
++}
++static int kr_dec_syms(const kr_ctx *c, const kr_dtab *const *ct, const uint8_t *p, const uint8_t *pe, uint8_t *o, size_t m) {
++    const unsigned S = 1u << c->ls;
++    if (S == 8 && c->nlag == 0) return kr_dec_body(c, ct, p, pe, o, m, 8, 0);
++    if (S == 8 && c->nlag == 4) return kr_dec_body(c, ct, p, pe, o, m, 8, 4);
++    if (S == 4 && c->nlag == 0) return kr_dec_body(c, ct, p, pe, o, m, 4, 0);
++    return kr_dec_body(c, ct, p, pe, o, m, S, c->nlag);
++}
++int kolmo_krans_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
++    size_t i = 0, o = 0; kr_dtab *T = NULL; unsigned tcap = 0; int rc = -1;
++    kr_ctx *c = malloc(sizeof *c); const kr_dtab **ct = malloc(KRANS_NCTX_MAX * sizeof *ct); uint8_t *cmap = malloc(KRANS_NCTX_MAX);
++    if (!c || !ct || !cmap) goto out;
++    while (o < n) {
++        uint64_t m, z; if (i >= cn) goto out;
++        const uint8_t kind = in[i++];
++        if (kr_uv_get(in, cn, &i, &m) || m == 0 || m > KRANS_CHUNK_MAX || m > n - o) goto out;
++        if (kind == 0) { if (m > cn - i) goto out; memcpy(out + o, in + i, (size_t)m); i += (size_t)m; o += (size_t)m; continue; }
++        if (kind == 1) { if (i >= cn) goto out; memset(out + o, in[i++], (size_t)m); o += (size_t)m; continue; }
++        if (kind != 2 || cn - i < 3) goto out;
++        const uint8_t b0 = in[i++], b1 = in[i++];
++        memset(c, 0, offsetof(kr_ctx, N));
++        c->ls = b0 & 7; c->P = ((b0 >> 3) & 7) + 1u; c->mb = b0 >> 6;
++        c->eq = b1 & 3; c->bq = (b1 >> 2) & 3; c->mk = (b1 >> 4) & 3; c->pf = (b1 >> 6) & 1;
++        if (b1 >> 7 || c->eq == 3) goto out;
++        if (c->eq) {
++            if (i >= cn) goto out;
++            c->nlag = in[i++]; if (c->nlag < 1 || c->nlag > 4) goto out;
++            for (unsigned q = 0; q < c->nlag; q++) { uint64_t v; if (kr_uv_get(in, cn, &i, &v) || v < 1 || v > KRANS_CHUNK_MAX) goto out; c->lag[q] = (uint32_t)v; }
++        }
++        if (kr_ctx_init(c) || i >= cn) goto out;
++        const unsigned nt = in[i++] + 1u;
++        if (nt > KR_MAXT || nt > c->N || nt > 1 + m / 16) goto out;
++        if (nt > tcap) { kr_dtab *q = realloc(T, (size_t)nt * sizeof *T); if (!q) goto out; T = q; tcap = nt; }
++        kr_br r = {in + i, in + cn, 0, 0, 0}; const unsigned w = kr_bitlen(nt - 1);
++        for (unsigned q = 0, pv = 0; q < c->N; q++) { if (w && !kr_get(&r, 1)) { pv = kr_get(&r, w); if (pv >= nt) goto out; } cmap[q] = (uint8_t)pv; }
++        for (unsigned t = 0; t < nt; t++) if (kr_dec_table(&r, c->mbits, &T[t])) goto out;
++        if (r.bad || r.acc) goto out;                                       /* the padding bits are zero */
++        i = (size_t)(r.p - in);
++        if (kr_uv_get(in, cn, &i, &z) || z > cn - i || (z & 1)) goto out;
++        for (unsigned q = 0; q < c->N; q++) ct[q] = &T[cmap[q]];
++        if (kr_dec_syms(c, ct, in + i, in + i + z, out + o, (size_t)m)) goto out;
++        i += (size_t)z; o += (size_t)m;
++    }
++    rc = i == cn ? 0 : -1;
++out:
++    free(T); free(c); free(ct); free(cmap); return rc;
++}
++
++/* ================================================= encoder ================================================= */
++typedef struct { uint64_t acc, bits; unsigned nb; uint8_t *p, *e; } kr_bw;     /* p NULL: count only */
++static inline void kr_put(kr_bw *w, uint32_t v, unsigned n) {
++    w->bits += n; if (!w->p) return;
++    w->acc |= (uint64_t)v << w->nb; w->nb += n;
++    while (w->nb >= 8) { if (w->p < w->e) *w->p++ = (uint8_t)w->acc; w->acc >>= 8; w->nb -= 8; }
++}
++static inline void kr_put_flush(kr_bw *w) { const unsigned pad = (unsigned)(-(int64_t)w->bits & 7); if (pad) kr_put(w, 0, pad); }
++
++typedef struct { uint64_t rcp; uint32_t bias; uint16_t cmpl, f; } kr_esym;
++typedef struct {
++    kr_ctx c; unsigned T; double bits;                 /* bits: header + ideal payload + states, the encoder's score */
++    uint8_t *cmap; uint16_t *f; uint8_t *rest;          /* N entries; T x 256 frequencies; the rest symbol of each table */
++    uint8_t *hdr; size_t hn; uint16_t *ctx;             /* b0 .. end of the bit stream; context of every byte (N > 1) */
++} kr_plan;
++typedef struct {
++    size_t mcap, hcap; unsigned maxT, lim; int oom;   /* lim: tables allowed in this chunk */
++    kr_plan pl[2];
++    uint32_t *hist; size_t histn;                       /* contexts x 256 counts */
++    uint32_t *ch; uint64_t ctot[KR_MAXT];               /* tables x 256 counts */
++    double *cphi;                                       /* tables x 256: x log2 x of ch (clustering) */
++    double *phi; int phi_ok;                            /* x log2 x for x < 4096 */
++    float *len;                                         /* tables x 256 code lengths in bits (absent: huge) */
++    uint64_t *ord; uint8_t *cmap2, *used; uint16_t *words; kr_esym *es;
++    uint32_t h0[256];
++} kr_enc;
++static void kr_enc_free(kr_enc *E) {
++    for (int q = 0; q < 2; q++) { free(E->pl[q].cmap); free(E->pl[q].f); free(E->pl[q].rest); free(E->pl[q].hdr); free(E->pl[q].ctx); }
++    free(E->hist); free(E->ch); free(E->cphi); free(E->phi); free(E->len); free(E->ord); free(E->cmap2); free(E->used); free(E->words); free(E->es);
++}
++/* buffers for chunks of up to mcap bytes and maxT tables; ctxs = 0: order 0 only (one context, no context arrays) */
++static int kr_enc_init(kr_enc *E, size_t mcap, unsigned maxT, int ctxs) {
++    const size_t ncap = ctxs ? KRANS_NCTX_MAX : 1;
++    memset(E, 0, sizeof *E); E->mcap = mcap; E->maxT = maxT; E->hcap = ncap * 2 + 64 + (size_t)maxT * 700;
++    for (int q = 0; q < 2; q++) {
++        kr_plan *p = &E->pl[q];
++        p->cmap = malloc(ncap); p->f = malloc((size_t)maxT * 256 * sizeof(uint16_t)); p->rest = malloc(maxT); p->hdr = malloc(E->hcap);
++        p->ctx = ctxs ? malloc((mcap + 1) * sizeof(uint16_t)) : NULL;
++        if (!p->cmap || !p->f || !p->rest || !p->hdr || (ctxs && !p->ctx)) return -1;
++    }
++    E->ch = malloc((size_t)maxT * 256 * sizeof(uint32_t)); E->cphi = malloc((size_t)maxT * 256 * sizeof(double)); E->len = malloc((size_t)maxT * 256 * sizeof(float));
++    E->ord = malloc(ncap * sizeof(uint64_t)); E->cmap2 = malloc(ncap); E->used = malloc(ncap); E->words = malloc((mcap + 64) * sizeof(uint16_t));
++    E->es = malloc((size_t)maxT * 256 * sizeof(kr_esym));
++    return E->ch && E->cphi && E->len && E->ord && E->cmap2 && E->used && E->words && E->es ? 0 : -1;
++}
++static inline double kr_phi(const kr_enc *E, uint64_t x) { return x < 4096 ? E->phi[x] : (double)x * log2((double)x); }
++
++/* nearest frequency with at most mbits bits below its top bit, v >= 1 */
++static inline uint32_t kr_quant(double v, unsigned mbits) {
++    const uint32_t iv = v >= KR_M - 1 ? KR_M - 1 : (uint32_t)v;
++    const unsigned e = kr_bitlen(iv), sh = e - 1 > mbits ? e - 1 - mbits : 0;
++    const uint32_t lo = (iv >> sh) << sh, hi = lo + (1u << sh);
++    return hi < KR_M && v - (double)lo > (double)hi - v ? hi : lo;
++}
++/* frequencies of one table from its counts: every present symbol >= 1, coded ones representable, the most frequent
++ * symbol takes the rest. The others are scaled so the rest lands where the same scale puts the top symbol. */
++static void kr_norm(const uint32_t *cnt, uint64_t tot, unsigned mbits, uint16_t *f, uint8_t *rest) {
++    unsigned big = 0, nz = 0;
++    for (unsigned s = 0; s < 256; s++) { f[s] = 0; if (cnt[s]) { nz++; if (cnt[s] > cnt[big] || !cnt[big]) big = s; } }
++    *rest = (uint8_t)big;
++    if (nz < 2) { f[big] = KR_M; return; }
++    const double base = (double)KR_M / (double)tot; double scale = 1.0; uint32_t sum = 0;
++    for (int it = 0;; it++) {
++        sum = 0;
++        for (unsigned s = 0; s < 256; s++) if (cnt[s] && s != big) { double v = cnt[s] * base * scale; if (v < 1) v = 1; f[s] = (uint16_t)kr_quant(v, mbits); sum += f[s]; }
++        const double rb = cnt[big] * base * scale;
++        if (it >= 4) { if (sum < KR_M) break; scale *= 0.97; continue; }   /* always ends: at a small scale the others are all 1 */
++        scale *= (double)KR_M / ((double)sum + rb);
++    }
++    f[big] = (uint16_t)(KR_M - sum);
++}
++/* the table part of the header for frequencies f (0 = absent) */
++static void kr_put_table(kr_bw *w, const uint16_t *f, unsigned rest, unsigned mbits) {
++    unsigned lo = 0, hi = 255; while (!f[lo]) lo++;
++    while (!f[hi]) hi--;
++    kr_put(w, lo, 8); kr_put(w, hi, 8);
++    int pc = 0;
++    for (unsigned s = lo; s <= hi; s++) {
++        if (s == rest) { kr_put(w, 31, 5); kr_put(w, KR_REST, 4); continue; }
++        const int e = (int)kr_bitlen(f[s]), d = e - pc;
++        if (d == 0) kr_put(w, 0, 1); else if (d == -1) kr_put(w, 1, 2); else if (d == 1) kr_put(w, 3, 3); else if (d == -2) kr_put(w, 7, 4);
++        else if (d == 2) kr_put(w, 15, 5); else { kr_put(w, 31, 5); kr_put(w, (uint32_t)e, 4); }
++        if (e) { const unsigned nm = (unsigned)e - 1 < mbits ? (unsigned)e - 1 : mbits; kr_put(w, ((uint32_t)f[s] >> ((unsigned)e - 1 - nm)) & ((1u << nm) - 1), nm); }
++        pc = e;
++    }
++}
++static void kr_put_header(kr_bw *w, const kr_plan *pl) {
++    const kr_ctx *c = &pl->c;
++    kr_put(w, c->ls | (c->P - 1) << 3 | c->mb << 6, 8); kr_put(w, c->eq | c->bq << 2 | c->mk << 4 | c->pf << 6, 8);
++    if (c->eq) {
++        kr_put(w, c->nlag, 8);
++        for (unsigned q = 0; q < c->nlag; q++) { uint8_t t[8]; const size_t k = kr_uv_put(t, c->lag[q]); for (size_t a = 0; a < k; a++) kr_put(w, t[a], 8); }
++    }
++    kr_put(w, pl->T - 1, 8);
++    const unsigned wd = kr_bitlen(pl->T - 1);
++    if (wd) for (unsigned q = 0, pv = 0; q < c->N; q++) { if (pl->cmap[q] == pv) kr_put(w, 1, 1); else { pv = pl->cmap[q]; kr_put(w, 0, 1); kr_put(w, pv, wd); } }
++    for (unsigned t = 0; t < pl->T; t++) kr_put_table(w, pl->f + (size_t)t * 256, pl->rest[t], c->mbits);
++    kr_put_flush(w);
++}
++/* tables, code lengths and the exact score of a plan from its context map: counts per table (empty tables are
++ * dropped and the map renumbered), frequencies, then header bits + sum of counts x code lengths */
++static double kr_eval(kr_enc *E, kr_plan *pl, const uint32_t *hist) {
++    const unsigned N = pl->c.N; unsigned T = pl->T; uint8_t ren[KR_MAXT];
++    memset(E->ch, 0, (size_t)T * 256 * sizeof(uint32_t)); memset(E->ctot, 0, T * sizeof(uint64_t));
++    for (unsigned q = 0; q < N; q++) {
++        const uint32_t *h = hist + (size_t)q * 256; uint32_t *d = E->ch + (size_t)pl->cmap[q] * 256; uint64_t t = 0;
++        for (unsigned s = 0; s < 256; s++) { d[s] += h[s]; t += h[s]; }
++        E->ctot[pl->cmap[q]] += t; E->used[q] = t != 0;
++    }
++    unsigned nt = 0;
++    for (unsigned t = 0; t < T; t++) {
++        ren[t] = (uint8_t)nt; if (!E->ctot[t]) { ren[t] = 0; continue; }
++        if (nt != t) { memcpy(E->ch + (size_t)nt * 256, E->ch + (size_t)t * 256, 256 * sizeof(uint32_t)); E->ctot[nt] = E->ctot[t]; }
++        nt++;
++    }
++    if (nt != T) { for (unsigned q = 0; q < N; q++) pl->cmap[q] = ren[pl->cmap[q]]; pl->T = T = nt; }
++    for (unsigned q = 0; q < N; q++) if (!E->used[q]) pl->cmap[q] = q ? pl->cmap[q - 1] : 0;   /* unused contexts cost one bit */
++    double bits = 0;
++    for (unsigned t = 0; t < T; t++) {
++        const uint32_t *h = E->ch + (size_t)t * 256; uint16_t *f = pl->f + (size_t)t * 256; float *ln = E->len + (size_t)t * 256;
++        kr_norm(h, E->ctot[t], pl->c.mbits, f, &pl->rest[t]);
++        for (unsigned s = 0; s < 256; s++) { ln[s] = f[s] ? (float)(KR_SB - log2((double)f[s])) : 1e30f; if (h[s]) bits += (double)h[s] * ln[s]; }
++    }
++    kr_bw w = {0}; kr_put_header(&w, pl);
++    return bits + (double)w.bits + 32.0 * (1u << pl->c.ls);
++}
++static int kr_cmp64(const void *a, const void *b) { const uint64_t x = *(const uint64_t *)a, y = *(const uint64_t *)b; return x < y ? 1 : x > y ? -1 : 0; }
++/* contexts -> tables, greedily from the most used context down: a context joins the table where the extra code
++ * length is smallest, or opens a table when that costs less than the table's own bits (tbit per symbol) */
++static void kr_cluster(kr_enc *E, kr_plan *pl, const uint32_t *hist, double tbit) {
++    const unsigned N = pl->c.N; unsigned na = 0, T = 0;
++    memset(pl->cmap, 0, N);
++    for (unsigned q = 0; q < N; q++) {
++        const uint32_t *h = hist + (size_t)q * 256; uint64_t t = 0;
++        for (unsigned s = 0; s < 256; s++) t += h[s];
++        if (t) E->ord[na++] = t << 12 | q;
++    }
++    qsort(E->ord, na, sizeof(uint64_t), kr_cmp64);
++    for (unsigned a = 0; a < na; a++) {
++        const unsigned q = (unsigned)(E->ord[a] & 4095); const uint64_t C = E->ord[a] >> 12; const uint32_t *h = hist + (size_t)q * 256;
++        uint8_t ss[256]; uint32_t sc[256]; double sp[256]; unsigned ns = 0;
++        for (unsigned s = 0; s < 256; s++) if (h[s]) { ss[ns] = (uint8_t)s; sc[ns] = h[s]; sp[ns] = kr_phi(E, h[s]); ns++; }
++        double best = T < E->lim ? ns * tbit + 25.0 : 1e300; int bk = -1; const double phiC = kr_phi(E, C);
++        for (unsigned k = 0; k < T; k++) {
++            const uint32_t *kh = E->ch + (size_t)k * 256; const double *kp = E->cphi + (size_t)k * 256; const uint64_t K = E->ctot[k];
++            double d = kr_phi(E, K + C) - kr_phi(E, K) - phiC; unsigned nw = 0;
++            for (unsigned b = 0; b < ns; b++) { const uint32_t ks = kh[ss[b]]; if (ks) d -= kr_phi(E, (uint64_t)ks + sc[b]) - kp[ss[b]] - sp[b]; else nw++; }
++            d += nw * tbit;
++            if (d < best) { best = d; bk = (int)k; }
++        }
++        if (bk < 0) { bk = (int)T++; memset(E->ch + (size_t)bk * 256, 0, 256 * sizeof(uint32_t)); memset(E->cphi + (size_t)bk * 256, 0, 256 * sizeof(double)); E->ctot[bk] = 0; }
++        uint32_t *kh = E->ch + (size_t)bk * 256; double *kp = E->cphi + (size_t)bk * 256;
++        for (unsigned b = 0; b < ns; b++) { kh[ss[b]] += sc[b]; kp[ss[b]] = kr_phi(E, kh[ss[b]]); }
++        E->ctot[bk] += C; pl->cmap[q] = (uint8_t)bk;
++    }
++    pl->T = T ? T : 1;
++}
++/* every context to the table that codes it shortest with the tables as built; returns the number moved */
++static unsigned kr_reassign(kr_enc *E, kr_plan *pl, const uint32_t *hist) {
++    const unsigned N = pl->c.N, T = pl->T; unsigned moved = 0;
++    for (unsigned q = 0; q < N; q++) {
++        const uint32_t *h = hist + (size_t)q * 256; uint8_t ss[256]; float sc[256]; unsigned ns = 0;
++        for (unsigned s = 0; s < 256; s++) if (h[s]) { ss[ns] = (uint8_t)s; sc[ns] = (float)h[s]; ns++; }
++        if (!ns) continue;
++        unsigned bk = pl->cmap[q]; float best = 0;
++        { const float *ln = E->len + (size_t)bk * 256; for (unsigned b = 0; b < ns; b++) best += sc[b] * ln[ss[b]]; }
++        for (unsigned k = 0; k < T; k++) {
++            if (k == pl->cmap[q]) continue;
++            const float *ln = E->len + (size_t)k * 256; float d = 0;
++            for (unsigned b = 0; b < ns && d < best; b++) d += sc[b] * ln[ss[b]];
++            if (d < best) { best = d; bk = k; }
++        }
++        if (bk != pl->cmap[q]) { pl->cmap[q] = (uint8_t)bk; moved++; }
++    }
++    return moved;
++}
++static void kr_fill_ctx(const kr_ctx *c, const uint8_t *in, size_t m, uint16_t *ctx) {
++    const unsigned S = 1u << c->ls; const size_t sl = m / S;
++    for (unsigned k = 0; k < S; k++) {
++        const size_t b = (size_t)k * sl, len = k == S - 1 ? m - b : sl, head = c->maxlag < len ? c->maxlag : len;
++        const uint8_t *seg = in + b; unsigned ph = (unsigned)(b % c->P); size_t i = 0;
++        for (; i < head; i++) { ctx[b + i] = (uint16_t)kr_ctx_at(c, seg, i, ph); if (++ph == c->P) ph = 0; }
++        for (; i < len; i++) { ctx[b + i] = (uint16_t)kr_ctx_in(c, seg + i, ph); if (++ph == c->P) ph = 0; }
++    }
++}
++/* build a plan whose context fields are set: contexts, counts, tables, header. Returns 0, or -1 when the fields
++ * are not valid or memory ran out (E->oom) */
++static int kr_plan_build(kr_enc *E, kr_plan *pl, const uint8_t *in, size_t m, int refine) {
++    kr_ctx *c = &pl->c; const uint32_t *hist = E->h0;
++    if (kr_ctx_init(c)) return -1;
++    if (c->N > 1) {
++        if (c->N > E->histn) { free(E->hist); E->hist = malloc((size_t)c->N * 256 * sizeof(uint32_t)); E->histn = E->hist ? c->N : 0; if (!E->hist) { E->oom = 1; return -1; } }
++        memset(E->hist, 0, (size_t)c->N * 256 * sizeof(uint32_t));
++        kr_fill_ctx(c, in, m, pl->ctx);
++        for (size_t j = 0; j < m; j++) E->hist[(size_t)pl->ctx[j] * 256 + in[j]]++;
++        hist = E->hist;
++        if (!E->phi_ok) {
++            if (!E->phi && !(E->phi = malloc(4096 * sizeof(double)))) { E->oom = 1; return -1; }
++            E->phi[0] = 0; for (unsigned v = 1; v < 4096; v++) E->phi[v] = v * log2((double)v);
++            E->phi_ok = 1;
++        }
++        kr_cluster(E, pl, hist, 3.0 + 0.5 * (c->mbits > 6 ? 6 : c->mbits));
++    } else { pl->cmap[0] = 0; pl->T = 1; }
++    pl->bits = kr_eval(E, pl, hist);
++    for (int it = 0; it < refine && pl->T > 1; it++) {
++        const unsigned T0 = pl->T; memcpy(E->cmap2, pl->cmap, c->N);
++        if (!kr_reassign(E, pl, hist)) break;
++        const double b2 = kr_eval(E, pl, hist);
++        if (b2 >= pl->bits) { memcpy(pl->cmap, E->cmap2, c->N); pl->T = T0; pl->bits = kr_eval(E, pl, hist); break; }
++        pl->bits = b2;
++    }
++    kr_bw w = {0, 0, 0, pl->hdr, pl->hdr + E->hcap}; kr_put_header(&w, pl);
++    pl->hn = (size_t)(w.bits >> 3);
++    return pl->hn <= E->hcap ? 0 : -1;
++}
++static inline uint64_t kr_mulhi(uint64_t a, uint64_t b) { return (uint64_t)(((unsigned __int128)a * b) >> 64); }
++/* the coded chunk of plan pl after the kind byte and m: header, z, states and words. Returns its size or 0 (cap). */
++static size_t kr_emit(kr_enc *E, const kr_plan *pl, const uint8_t *in, size_t m, uint8_t *out, size_t cap) {
++    const kr_ctx *c = &pl->c; const unsigned S = 1u << c->ls; const size_t sl = m / S;
++    for (unsigned t = 0; t < pl->T; t++) {
++        const uint16_t *f = pl->f + (size_t)t * 256; kr_esym *e = E->es + (size_t)t * 256; uint32_t cum = 0;
++        for (unsigned s = 0; s < 256; s++) {
++            if (!f[s]) continue;
++            e[s].f = f[s]; e[s].cmpl = (uint16_t)(KR_M - f[s]);
++            if (f[s] == 1) { e[s].rcp = ~0ull; e[s].bias = cum + KR_M - 1; }      /* mulhi gives x - 1: x + bias + (x - 1)(M - 1) = x M + cum */
++            else { e[s].rcp = ~0ull / f[s] + 1; e[s].bias = cum; }                /* ceil(2^64 / f): exact quotient for 32-bit x */
++            cum += f[s];
++        }
++    }
++    uint16_t *we = E->words + E->mcap + 64, *w = we; uint32_t x[32];
++    for (unsigned k = 0; k < S; k++) x[k] = KR_L;
++    const uint16_t *ctx = pl->ctx; const uint8_t *cmap = pl->cmap; const int one = c->N == 1;
++#define KR_ENC(X, J) do { const kr_esym *y_ = E->es + (size_t)(one ? 0 : cmap[ctx[J]]) * 256 + in[J]; \
++        if (((X) >> 20) >= y_->f) { *--w = (uint16_t)(X); (X) >>= 16; } \
++        (X) = (X) + y_->bias + (uint32_t)kr_mulhi((X), y_->rcp) * y_->cmpl; } while (0)
++    { uint32_t y = x[S - 1]; for (size_t j = m; j-- > (size_t)S * sl;) KR_ENC(y, j); x[S - 1] = y; }
++    for (size_t i = sl; i-- > 0;) for (unsigned k = S; k-- > 0;) KR_ENC(x[k], (size_t)k * sl + i);
++#undef KR_ENC
++    const size_t nw = (size_t)(we - w), z = 4 * (size_t)S + 2 * nw; uint8_t zb[8]; const size_t zn = kr_uv_put(zb, z);
++    if (cap < pl->hn + zn + z) return 0;
++    memcpy(out, pl->hdr, pl->hn); memcpy(out + pl->hn, zb, zn);
++    uint8_t *o = out + pl->hn + zn;
++    for (unsigned k = 0; k < S; k++) { o[0] = (uint8_t)x[k]; o[1] = (uint8_t)(x[k] >> 8); o[2] = (uint8_t)(x[k] >> 16); o[3] = (uint8_t)(x[k] >> 24); o += 4; }
++    for (size_t q = 0; q < nw; q++) { o[0] = (uint8_t)w[q]; o[1] = (uint8_t)(w[q] >> 8); o += 2; }
++    return pl->hn + zn + z;
++}
++static unsigned kr_default_ls(size_t m) { return m >= 32768 ? 3 : m >= 4096 ? 2 : m >= 512 ? 1 : 0; }
++/* one chunk. Returns the bytes written, 0 when cap is too small or memory ran out. */
++static size_t kr_chunk(kr_enc *E, const kolmo_krans_params *pp, const uint8_t *in, size_t m, uint8_t *out, size_t cap) {
++    uint8_t hb[8]; size_t hn = kr_uv_put(hb, m); unsigned nz = 0;
++    memset(E->h0, 0, sizeof E->h0);
++    for (size_t j = 0; j < m; j++) E->h0[in[j]]++;
++    for (unsigned s = 0; s < 256; s++) nz += E->h0[s] != 0;
++    if (nz == 1) { if (cap < 2 + hn) return 0; out[0] = 1; memcpy(out + 1, hb, hn); out[1 + hn] = in[0]; return 2 + hn; }
++    kr_plan *best = NULL, *cur = &E->pl[0];
++    E->lim = 1 + m / 16 < E->maxT ? (unsigned)(1 + m / 16) : E->maxT;
++#define KR_TRY(REFINE) do { if (!kr_plan_build(E, cur, in, m, (REFINE))) { if (!best || cur->bits < best->bits) { best = cur; cur = &E->pl[best == &E->pl[0]]; } } \
++        else if (E->oom) return 0; } while (0)
++#define KR_SET(LS, PP, MB, EQ, BQ, MK, PF, NL) do { memset(&cur->c, 0, offsetof(kr_ctx, N)); cur->c.ls = (LS); cur->c.P = (PP); cur->c.mb = (MB); cur->c.eq = (EQ); \
++        cur->c.bq = (BQ); cur->c.mk = (MK); cur->c.pf = (PF); cur->c.nlag = (NL); } while (0)
++    const unsigned ls = kr_default_ls(m), mb = 0, step = pp->step ? pp->step : 1; const int ref = pp->effort >= 2 ? 2 : 1;
++    const size_t sl = m >> ls;
++    if (pp->force && (pp->P > 1 || pp->eq || pp->bq) && !cur->ctx) return 0;
++    if (pp->force) {
++        KR_SET(pp->ls, pp->P, pp->mb, pp->eq, pp->bq, pp->mk, pp->pf, pp->nlag); memcpy(cur->c.lag, pp->lag, sizeof cur->c.lag);
++        KR_TRY(ref);
++    } else {
++        KR_SET(ls, 1, mb, 0, 0, 0, 0, 0); KR_TRY(0);                                    /* order 0 */
++        const int img = pp->stride && step <= 8 && pp->stride % step == 0 && pp->stride >= 2 * step && sl >= 2 * (size_t)pp->stride;
++        if (img && m >= KR_CTX_MIN) {
++            /* image residuals: the magnitudes of the left, upper, upper-left and upper-right neighbours of the same
++             * channel, with the sign and magnitude of the previous byte (the previous channel of the pixel; the left
++             * neighbour of a one-channel image) */
++            const unsigned pf = step > 1;
++#define KR_IMG(EQ, BQ, PF) do { KR_SET(ls, step, mb, (EQ), (BQ), 0, (PF), 4); cur->c.lag[0] = step; cur->c.lag[1] = pp->stride; \
++                cur->c.lag[2] = pp->stride + step; cur->c.lag[3] = pp->stride - step; KR_TRY(ref); } while (0)
++            KR_IMG(1, 3, pf);
++            if (pp->effort >= 2) { if (pf) KR_IMG(1, 3, 0); KR_IMG(2, 3, pf); }
++#undef KR_IMG
++        } else if (m >= KR_CTX_MIN) {
++            KR_SET(ls, 1, mb, 0, 1, 0, 0, 0); KR_TRY(ref);                               /* order 1 */
++        }
++    }
++#undef KR_TRY
++#undef KR_SET
++    size_t z = 0;
++    if (best && best->bits / 8 + 1 + hn < (double)m && cap >= 1 + hn) { out[0] = 2; memcpy(out + 1, hb, hn); z = kr_emit(E, best, in, m, out + 1 + hn, cap - 1 - hn); if (z) z += 1 + hn; }
++    if (!z || z >= 1 + hn + m) { if (cap < 1 + hn + m) return 0; out[0] = 0; memcpy(out + 1, hb, hn); memcpy(out + 1 + hn, in, m); z = 1 + hn + m; }
++    return z;
++}
++size_t kolmo_krans_bound(size_t n) { return n + (n / 4096 + 1) * 6 + 16; }
++size_t kolmo_krans_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, const kolmo_krans_params *pp) {
++    static const kolmo_krans_params def = {0}; if (!pp) pp = &def;
++    const unsigned step = pp->step ? pp->step : 1;
++    size_t chunk = pp->chunk ? pp->chunk : pp->stride ? (1u << 20) : (128u << 10), o = 0;
++    if (chunk > KRANS_CHUNK_MAX) chunk = KRANS_CHUNK_MAX;
++    if (chunk < 4096) chunk = 4096;
++    if (pp->stride && pp->stride % step == 0) {                 /* whole rows per segment where the chunk allows it */
++        const size_t unit = (size_t)pp->stride << kr_default_ls(chunk);
++        if (chunk >= 2 * unit) chunk = chunk / unit * unit;
++    }
++    if (chunk > n) chunk = n;
++    if (!n) return 0;
++    const int ctxs = pp->force || chunk >= KR_CTX_MIN;
++    kr_enc E; unsigned maxT = pp->max_tables ? pp->max_tables : 64; if (maxT > KR_MAXT) maxT = KR_MAXT;
++    if (maxT > 1 + chunk / 16) maxT = (unsigned)(1 + chunk / 16);
++    if (!ctxs) maxT = 1;
++    if (kr_enc_init(&E, chunk, maxT, ctxs)) { kr_enc_free(&E); return 0; }
++    for (size_t i = 0; i < n;) {
++        const size_t mm = n - i < chunk ? n - i : chunk;
++        const size_t z = kr_chunk(&E, pp, in + i, mm, out + o, cap - o);
++        if (!z) { o = 0; break; }
++        o += z; i += mm;
++    }
++    kr_enc_free(&E); return o;
++}
+diff --git a/src/algo/krans.h b/src/algo/krans.h
+new file mode 100644
+index 00000000..0e356a22
+--- /dev/null
++++ b/src/algo/krans.h
+@@ -0,0 +1,77 @@
++/* Kolmo context rANS (krans): Kolmo's own static rANS coder with static context modelling, the entropy coder of
++   graph leaf codec 33. Copyright 2026 Adnane Aqartit and contributors, Apache-2.0.
++
++   The method is Jarek Duda's asymmetric numeral systems (range variant, "Asymmetric numeral systems: entropy coding
++   combining speed of Huffman coding with compression rate of arithmetic coding", arXiv:1311.2540); interleaving
++   several states in one word stream follows Fabian Giesen, "Interleaved entropy coders", arXiv:1402.3392; contexts
++   mapped onto a smaller set of shared tables is the idea of the context maps of Brotli and JPEG XL. All code here
++   was written for Kolmo.
++
++   CODER. 32-bit states in [2^16, 2^32), totals 2^12, renormalisation by 16-bit little-endian words (at most one per
++   symbol in either direction). A chunk of m bytes is cut into S = 1, 2, 4, 8, 16 or 32 contiguous segments of
++   floor(m / S) bytes (the last one takes the m mod S bytes left over); segment k is coded by state k, and the
++   decoder takes byte i of every segment in turn (i = 0, 1, ...; segment 0 first), then the left-over bytes with
++   state S - 1. A byte's context only looks at earlier bytes of its own segment, so the S chains are independent.
++   The encoder starts every state at 2^16 and codes backwards; the decoder must end with every state at 2^16 and the
++   word stream used up exactly, which is the integrity check of a chunk.
++
++   CONTEXTS. Byte j of a chunk (position i in its segment) is coded under
++       context = (QE[e] * NB + QB[prev]) * P + phase
++     phase = j mod P, P = 1..8 (channel of an interleaved image, byte of a word);
++     e     = sum of MAG[byte at i - lag] over the 0..4 lags of the header (lags that reach before the segment start
++             count 0), quantised by QE into NE bins: eq 0: none (NE 1, no lags); eq 1: 17 bins with edges
++             1 2 4 6 8 11 14 18 23 29 37 47 60 80 110 160; eq 2: 9 bins with edges 1 3 6 11 18 29 47 80;
++     prev  = the byte at i - 1 (0 at the segment start), quantised by QB into NB bins: bq 0: none (NB 1); bq 1: the
++             byte itself (NB 256, order 1); bq 2: the bin k of MAG[prev] with edges 1 3 6 12 25 (NB 6); bq 3: the
++             same bin with the sign: 0 for k = 0, else 2k - 1 for a positive and 2k for a negative byte (NB 11).
++             With the header's pf bit the term is 0 in phase 0 (the previous byte belongs to another pixel).
++     MAG   = mk 0: (b + 1) >> 1, negative when b is odd (zigzag residuals); mk 1: min(b, 256 - b), negative when
++             b >= 128 (two's complement); mk 2: b, never negative.
++   A bin index is the number of edges <= the value. N = NE * NB * P <= 4096 contexts; a context map sends each to one
++   of T <= 255 frequency tables (the encoder merges contexts whose tables do not pay for themselves).
++
++   LEAF (codec 33) = chunks until the raw length is reached; every chunk is independent. Chunk:
++     kind u8: 0 stored: m uv, m bytes | 1 fill: m uv, the byte | 2 coded:
++       m uv (1 .. 2^24)
++       b0: bits 0-2 log2 S (0..5), bits 3-5 P - 1, bits 6-7 mantissa bits MB of the tables (0..3 -> 3, 4, 6, 12)
++       b1: bits 0-1 eq, bits 2-3 bq, bits 4-5 mk, bit 6 pf (only with bq != 0 and P > 1), bit 7 zero
++       if eq != 0: lag count u8 (1..4), each lag uv (1 .. 2^24)
++       T - 1 u8 (T <= N, T <= 1 + m / 16)
++       a bit stream, least significant bit first, zero-padded to a whole byte:
++         context map (T > 1 only): per context one bit, 1 = the table of the context before it (table 0 before
++           the first), 0 = followed by the table index in ceil(log2 T) bits;
++         T tables: lo 8 bits, hi 8 bits (first and last present symbol), then for each symbol lo..hi its class by a
++           prefix code against the previous class pc (0 at lo): 0 same, 10 pc - 1, 110 pc + 1, 1110 pc - 2,
++           11110 pc + 2, 11111 + 4 bits: the class itself (0..12), or 14 for the one symbol of the table that takes
++           what the others leave of 2^12 (pc is not changed by it). Class 0 is an absent symbol; class e >= 1 is a
++           frequency in [2^(e-1), 2^e) and is followed by min(e - 1, MB) bits: the bits below its top bit, the rest 0.
++       z uv, then z bytes: S states (4 bytes each, little-endian, segment 0 first), then the 16-bit words.
++   uv is LEB128. A decoder refuses anything else (reserved values, a table whose coded frequencies leave nothing for
++   the class-14 symbol, lo or hi absent, a context map entry >= T, non-zero padding, a short or long word stream). */
++#ifndef KOLMO_ALGO_KRANS_H
++#define KOLMO_ALGO_KRANS_H
++#include <stddef.h>
++#include <stdint.h>
++
++#define KRANS_CHUNK_MAX (1u << 24)
++#define KRANS_NCTX_MAX 4096
++
++/* Encoder choices. Zero-initialise for the defaults. */
++typedef struct {
++    uint32_t stride;     /* row length in bytes of an image-like leaf (0: unknown): enables the neighbour contexts */
++    uint8_t step;        /* bytes per pixel (channel step, 1..8) when stride is set; 0 = 1 */
++    uint8_t effort;      /* 0/1: order 0, then the image contexts (stride set) or order 1; 2: more image context sets tried */
++    uint32_t chunk;      /* chunk size in bytes (0: chosen from the leaf) */
++    /* tests and experiments: force one context set on every coded chunk (force = 1) */
++    uint8_t force, ls, P, mb, eq, bq, mk, pf, nlag;
++    uint32_t lag[4];
++    uint8_t max_tables;  /* 0 = 64 */
++} kolmo_krans_params;
++
++size_t kolmo_krans_bound(size_t n);
++/* Returns the coded size, or 0 when cap is too small (cap >= kolmo_krans_bound(n) always suffices) or memory ran out. */
++size_t kolmo_krans_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, const kolmo_krans_params *p);
++/* Decodes exactly n bytes from in[0..cn); 0 on success, -1 when the payload is not a valid leaf. Every read and
++   write is bounds-checked. Working memory: at most 255 tables of 5120 bytes, allocated as the chunks ask. */
++int kolmo_krans_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
++#endif
+diff --git a/tests/test_krans.c b/tests/test_krans.c
+new file mode 100644
+index 00000000..75711e17
+--- /dev/null
++++ b/tests/test_krans.c
+@@ -0,0 +1,166 @@
++/* Context rANS (src/algo/krans.c, graph leaf codec 33): round trips for every context set of the format on edge-case
++ * and generated inputs (with and without image geometry, every state count, every table precision), decoders on
++ * truncated and corrupted payloads and on hand-made invalid headers (they must fail cleanly, never read or write out
++ * of bounds: run under ASan/UBSan by make check-krans), a tight output buffer, and one pinned stream (the format is
++ * a decision: a stream written today must keep decoding to the same bytes).
++ * usage: test-krans [ITERATIONS]   (make check-krans) */
++#include "algo/krans.h"
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++static uint64_t rs = 0x9E3779B97F4A7C15ull;
++static uint32_t rnd(void) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return (uint32_t)(rs >> 16); }
++static int fails; static unsigned long ncase, ncoded;
++#define CHECK(c, ...) do { if (!(c)) { fails++; fprintf(stderr, "FAIL %s:%d: ", __FILE__, __LINE__); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } } while (0)
++
++/* inputs: 0 random, 1 zeros, 2 small alphabet, 3 text-like words, 4 periodic with noise, 5 two bytes, 6 long runs,
++ * 7 zigzagged residuals of a smooth image with noise (rows of W bytes, C channels), 8 skewed (geometric) bytes */
++static void gen(uint8_t *p, size_t n, int kind, size_t W, unsigned C) {
++    static const char *w[] = {"the ", "kolmo ", "compress ", "of ", "and ", "block ", "x", "\n", "1234 ", "data "};
++    size_t i = 0;
++    switch (kind) {
++        case 0: for (; i < n; i++) p[i] = (uint8_t)rnd(); break;
++        case 1: memset(p, 0, n); break;
++        case 2: for (; i < n; i++) p[i] = (uint8_t)("ACGT"[rnd() & 3]); break;
++        case 3: while (i < n) { const char *s = w[rnd() % 10]; while (*s && i < n) p[i++] = (uint8_t)*s++; } break;
++        case 4: for (; i < n; i++) p[i] = (uint8_t)((i % 37) * 7 + ((rnd() & 63) == 0 ? rnd() : 0)); break;
++        case 5: for (; i < n; i++) p[i] = (uint8_t)(rnd() % 50 == 0 ? 'b' : 'a'); break;
++        case 6: while (i < n) { size_t r = 1 + rnd() % 3000; uint8_t c = (uint8_t)rnd(); while (r-- && i < n) p[i++] = c; } break;
++        case 7:
++            for (; i < n; i++) {                          /* busy and quiet regions: the neighbours predict the magnitude */
++                const size_t y = i / (W ? W : 1), x = (i % (W ? W : 1)) / C; const unsigned busy = ((x / 24 + y / 16) & 3) * 9 + 1;
++                const int v = (int)(rnd() % (2 * busy + 1)) - (int)busy;
++                p[i] = (uint8_t)(v < 0 ? -2 * v - 1 : 2 * v);
++            }
++            break;
++        default: for (; i < n; i++) { unsigned v = 0; while ((rnd() & 3) && v < 255) v++; p[i] = (uint8_t)v; } break;
++    }
++}
++static void attack(const uint8_t *z, size_t zn, uint8_t *r, size_t n) {
++    /* truncated and corrupted payloads: no crash (ASan), and nothing accepted that is longer or shorter than asked */
++    if (zn > 1) { size_t cut = zn - 1 - rnd() % (zn - 1 < 64 ? zn - 1 : 64); CHECK(kolmo_krans_decompress(z, cut, r, n) != 0, "accepted a truncated payload (%zu of %zu)", cut, zn); }
++    uint8_t *y = malloc(zn + 1);
++    for (int t = 0; t < 6; t++) {
++        memcpy(y, z, zn);
++        for (int f = 0; f < 1 + t; f++) { const size_t at = t < 3 ? rnd() % (zn < 48 ? zn : 48) : rnd() % zn; y[at] ^= (uint8_t)(1u << (rnd() & 7)); }   /* headers first, then anywhere */
++        kolmo_krans_decompress(y, zn, r, n);
++        if (n > 1) kolmo_krans_decompress(y, zn, r, n - 1);
++    }
++    memcpy(y, z, zn); y[zn] = 0;
++    CHECK(kolmo_krans_decompress(y, zn + 1, r, n) != 0, "accepted a trailing byte");
++    if (n > 1) CHECK(kolmo_krans_decompress(z, zn, r, n - 1) != 0, "accepted a wrong raw length");
++    free(y);
++}
++static void roundtrip(const uint8_t *in, size_t n, const kolmo_krans_params *pp, const char *what) {
++    const size_t cap = kolmo_krans_bound(n); uint8_t *z = malloc(cap + 1), *r = malloc(n + 2);
++    const size_t zn = kolmo_krans_compress(in, n, z, cap, pp);
++    ncase++;
++    if (!n) { CHECK(zn == 0, "%s: empty input coded", what); free(z); free(r); return; }
++    CHECK(zn && zn <= cap, "%s n %zu: refused or past the bound (%zu > %zu)", what, n, zn, cap);
++    if (zn) {
++        r[n] = 0xA5; r[n + 1] = 0x5A;
++        const int rc = kolmo_krans_decompress(z, zn, r, n);
++        CHECK(!rc && !memcmp(r, in, n) && r[n] == 0xA5 && r[n + 1] == 0x5A, "%s n %zu: round trip", what, n);
++        if (z[0] == 2) ncoded++;
++        attack(z, zn, r, n);
++        /* the encoder never writes past cap: a tight buffer either fits or is refused */
++        if (zn > 8) { uint8_t *t = malloc(zn - 1); const size_t q = kolmo_krans_compress(in, n, t, zn - 1, pp); CHECK(q == 0 || q <= zn - 1, "%s: wrote past cap", what); free(t); }
++    }
++    free(z); free(r);
++}
++/* every context set of the format on one input */
++static void forced(const uint8_t *in, size_t n, size_t W, unsigned C) {
++    static const uint32_t lags[][4] = {{1, 0, 0, 0}, {3, 2, 1, 4}, {0, 0, 0, 0} /* W-based, filled below */, {70000, 1, 0, 0}};
++    static const uint8_t nl[] = {1, 4, 4, 2};
++    char what[96];
++    for (unsigned eq = 0; eq <= 2; eq++) for (unsigned bq = 0; bq <= 3; bq++) for (unsigned mk = 0; mk <= 2; mk++) {
++        kolmo_krans_params p = {0}; p.force = 1; p.eq = (uint8_t)eq; p.bq = (uint8_t)bq; p.mk = (uint8_t)mk;
++        p.ls = (uint8_t)(rnd() % 6); p.mb = (uint8_t)(rnd() & 3); p.P = (uint8_t)(1 + rnd() % 8);
++        while (((eq == 1 ? 17u : eq == 2 ? 9u : 1u) * (bq == 1 ? 256u : bq == 2 ? 6u : bq == 3 ? 11u : 1u)) * p.P > KRANS_NCTX_MAX) p.P--;   /* the format's limit */
++        if (!p.P) continue;                                          /* 17 x 256 contexts: not a valid set (refused in test_invalid) */
++        p.pf = (uint8_t)(bq && p.P > 1 ? rnd() & 1 : 0);
++        if (eq) { const unsigned a = rnd() % 4; p.nlag = nl[a]; memcpy(p.lag, lags[a], sizeof p.lag); if (a == 2) { p.lag[0] = C; p.lag[1] = (uint32_t)W; p.lag[2] = (uint32_t)(W + C); p.lag[3] = (uint32_t)(W - C); } }
++        p.max_tables = (uint8_t)(rnd() % 3 == 0 ? 255 : rnd() % 3 == 0 ? 2 : 0);
++        p.chunk = rnd() % 4 == 0 ? 4096 + rnd() % 60000 : 0;
++        snprintf(what, sizeof what, "forced eq %u bq %u mk %u ls %u P %u mb %u pf %u nlag %u", eq, bq, mk, p.ls, p.P, p.mb, p.pf, p.nlag);
++        roundtrip(in, n, &p, what);
++    }
++}
++static void test_invalid(void) {
++    /* a valid coded chunk, then every reserved or inconsistent header value must be refused */
++    uint8_t in[4096], z[8192], r[4096]; gen(in, sizeof in, 8, 0, 1);
++    kolmo_krans_params p = {0}; p.force = 1; p.ls = 2; p.P = 3; p.mb = 1; p.eq = 1; p.bq = 2; p.pf = 1; p.nlag = 2; p.lag[0] = 3; p.lag[1] = 96;
++    const size_t zn = kolmo_krans_compress(in, sizeof in, z, sizeof z, &p);
++    CHECK(zn && z[0] == 2 && !kolmo_krans_decompress(z, zn, r, sizeof in) && !memcmp(in, r, sizeof in), "invalid-header base case");
++    if (!zn || z[0] != 2) return;
++    /* layout: kind, m uv (2 bytes: 4096), b0, b1, nlag, lag 3, lag 96, T - 1, bits... */
++    const size_t b0 = 3, b1 = 4, nlag = 5, lag0 = 6, tm1 = 8; uint8_t y[8192];
++#define BAD(EDIT, WHY) do { memcpy(y, z, zn); EDIT; CHECK(kolmo_krans_decompress(y, zn, r, sizeof in) != 0, "accepted: %s", WHY); } while (0)
++    BAD(y[0] = 3, "chunk kind 3");
++    BAD(y[b0] = (uint8_t)((y[b0] & ~7) | 6), "log2 S = 6");
++    BAD(y[b1] |= 128, "b1 bit 7");
++    BAD(y[b1] = (uint8_t)((y[b1] & ~3) | 3), "eq 3");
++    BAD(y[b1] = (uint8_t)((y[b1] & ~0x30) | 0x30), "mk 3");
++    BAD(y[b1] = (uint8_t)(y[b1] & ~0x0C), "pf without bq");
++    BAD(y[nlag] = 0, "no lags with eq");
++    BAD(y[nlag] = 5, "five lags");
++    BAD(y[lag0] = 0, "lag 0");
++    BAD(y[tm1] = 255, "256 tables");
++    BAD(y[tm1] = (uint8_t)(y[tm1] + 1), "one table more than coded");
++    BAD(y[1] = (uint8_t)(y[1] ^ 1), "raw length off by one");
++#undef BAD
++    /* chunk lengths: zero, larger than the output, larger than the format allows */
++    { const uint8_t a[] = {0, 0}; CHECK(kolmo_krans_decompress(a, sizeof a, r, 1) != 0, "accepted an empty chunk"); }
++    { const uint8_t a[] = {1, 5, 7}; CHECK(kolmo_krans_decompress(a, sizeof a, r, 4) != 0, "accepted a fill past the output"); }
++    { const uint8_t a[] = {1, 4, 7}; CHECK(!kolmo_krans_decompress(a, sizeof a, r, 4) && r[0] == 7 && r[3] == 7, "fill chunk"); }
++    { const uint8_t a[] = {0, 3, 'a', 'b', 'c'}; CHECK(!kolmo_krans_decompress(a, sizeof a, r, 3) && !memcmp(r, "abc", 3), "stored chunk"); }
++    { const uint8_t a[] = {0, 3, 'a', 'b'}; CHECK(kolmo_krans_decompress(a, sizeof a, r, 3) != 0, "accepted a short stored chunk"); }
++    CHECK(kolmo_krans_decompress(NULL, 0, r, 0) == 0, "empty leaf");
++    CHECK(kolmo_krans_decompress(z, 0, r, 1) != 0, "accepted nothing for one byte");
++    /* an encoder asked for a context set outside the format stores the chunk instead */
++    kolmo_krans_params q = {0}; q.force = 1; q.eq = 1; q.bq = 1; q.P = 1; q.nlag = 1; q.lag[0] = 1;
++    const size_t sn = kolmo_krans_compress(in, sizeof in, y, sizeof y, &q);
++    CHECK(sn && y[0] == 0 && !kolmo_krans_decompress(y, sn, r, sizeof in) && !memcmp(in, r, sizeof in), "invalid set stored");
++}
++/* 600 bytes of a small text pattern with a slow drift, coded order 1 with two states (written by this encoder on
++ * 24 November 2026; tests/test_krans_golden.h). The stream is pinned, not the encoder: test-krans 1 golden prints it. */
++static void pinned_input(uint8_t *p) { static const char t[] = "abracadabra kolmo rans; "; for (unsigned i = 0; i < 600; i++) p[i] = (uint8_t)(t[(i + i / 97) % 24] + (i % 131 == 0)); }
++#include "test_krans_golden.h"
++static void test_pinned(void) {
++    uint8_t in[600], r[600]; pinned_input(in);
++    CHECK(pinned_z[0] == 2 && !kolmo_krans_decompress(pinned_z, sizeof pinned_z, r, 600) && !memcmp(r, in, 600), "pinned stream");
++}
++int main(int argc, char **argv) {
++    const int iters = argc > 1 ? atoi(argv[1]) : 1;
++    if (argc > 2 && !strcmp(argv[2], "golden")) {                 /* prints the pinned stream (maintenance; not run by make) */
++        kolmo_krans_params p = {0}; p.force = 1; p.ls = 1; p.P = 1; p.bq = 1; uint8_t in[600], z[1024]; pinned_input(in);
++        const size_t zn = kolmo_krans_compress(in, 600, z, sizeof z, &p);
++        printf("static const uint8_t pinned_z[%zu] = {", zn); for (size_t q = 0; q < zn; q++) printf("%s%u", q ? "," : "", z[q]); printf("};\n");
++        return 0;
++    }
++    static const size_t sizes[] = {0, 1, 2, 3, 15, 16, 17, 63, 64, 65, 255, 256, 511, 512, 1000, 2047, 2048, 4095, 4096, 4097, 9000, 33000, 70001, 150000, 300000};
++    uint8_t *buf = malloc(1u << 20);
++    for (int it = 0; it < iters; it++) {
++        for (int kind = 0; kind <= 8; kind++) for (size_t si = 0; si < sizeof sizes / sizeof sizes[0]; si++) {
++            const size_t n = sizes[si]; const unsigned C = 1 + rnd() % 4; const size_t W = (size_t)C * (8 + rnd() % 200); char what[64];
++            gen(buf, n, kind, W, C);
++            snprintf(what, sizeof what, "default kind %d", kind); roundtrip(buf, n, NULL, what);
++            for (int ef = 1; ef <= 2; ef++) {
++                kolmo_krans_params p = {0}; p.effort = (uint8_t)ef; snprintf(what, sizeof what, "effort %d kind %d", ef, kind); roundtrip(buf, n, &p, what);
++                p.stride = (uint32_t)W; p.step = (uint8_t)C; snprintf(what, sizeof what, "image %zux%u effort %d kind %d", W, C, ef, kind); roundtrip(buf, n, &p, what);
++            }
++            if (n >= 16 && (n <= 9000 || (si + (size_t)kind + (size_t)it) % 3 == 0)) forced(buf, n, W, C);
++        }
++        /* several chunks, a short last one, a hint that does not divide */
++        gen(buf, 1u << 20, 7, 1536, 3);
++        { kolmo_krans_params p = {0}; p.stride = 1536; p.step = 3; p.chunk = 300000; roundtrip(buf, (1u << 20) - 77, &p, "chunks of 300000"); }
++        { kolmo_krans_params p = {0}; p.stride = 1537; p.step = 3; roundtrip(buf, 500000, &p, "stride not a multiple of the step"); }
++        { kolmo_krans_params p = {0}; p.stride = 1 << 23; p.step = 1; roundtrip(buf, 500000, &p, "stride longer than the leaf"); }
++        { kolmo_krans_params p = {0}; p.stride = 6; p.step = 9; roundtrip(buf, 5000, &p, "step out of range"); }
++    }
++    free(buf);
++    test_invalid(); test_pinned();
++    printf("test_krans: %lu cases (%lu with a coded first chunk), %d failures\n", ncase, ncoded, fails);
++    return fails ? 1 : 0;
++}
+diff --git a/tests/test_krans_golden.h b/tests/test_krans_golden.h
+new file mode 100644
+index 00000000..09689e9f
+--- /dev/null
++++ b/tests/test_krans_golden.h
+@@ -0,0 +1 @@
++static const uint8_t pinned_z[217] = {2,216,4,1,4,8,240,255,255,255,79,254,255,255,71,255,255,255,255,31,24,241,119,208,49,180,80,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,15,34,247,85,31,0,0,0,0,0,0,0,0,190,127,29,125,0,191,252,193,215,125,224,151,195,228,190,127,3,192,7,0,248,134,48,185,191,250,230,15,128,191,250,230,15,240,61,76,238,159,166,15,0,192,119,16,182,239,0,0,0,0,0,0,0,0,0,248,187,157,157,239,115,115,223,223,224,190,255,147,216,219,199,124,0,240,221,199,0,82,86,0,240,13,130,130,236,27,6,45,72,253,145,114,19,100,61,183,27,123,11,71,240,119,143,101,161,161,229,134,200,108,208,147,63,194,240,157,227,38,136,207,10,134,210,126,22,163,237,0,176,11,221,226,197,162,163,194,59,114,130,136,236,47,86,189,63,100,216,72,22,151,145,176,19,243,163,9,76,53,200,95};
+-- 
+2.43.0
+

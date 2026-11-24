@@ -1,0 +1,11 @@
+mr	speed	9970564	4426100	default_same	4426100	RT_OK	rc3_decodes
+mr	eco	9970564	2265155	default_same	2038459	RT_OK	rc3_refuses
+mr	hc	9970564	2257516	default_same	2038459	RT_OK	rc3_refuses
+mr	ratio	9970564	1989774	default_same	1989774	RT_OK	same_frame
+x-ray	speed	8474240	8389978	default_same	8389978	RT_OK	rc3_decodes
+x-ray	eco	8474240	3625650	default_same	3591366	RT_OK	rc3_refuses
+x-ray	hc	8474240	3649636	default_same	3591366	RT_OK	rc3_refuses
+x-ray	ratio	8474240	3616667	default_same	3591366	RT_OK	rc3_refuses
+sao	hc	7251944	2214262	default_same	2214262	RT_OK	rc3_decodes
+osdb	hc	10085684	3100225	default_same	3100225	RT_OK	rc3_decodes
+xml	hc	5345280	443624	default_same	443624	RT_OK	rc3_decodes

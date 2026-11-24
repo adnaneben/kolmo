@@ -1,0 +1,11 @@
+zstd1    T1  in     6627202  out     2151356  ratio  3.080  c    275.3 MB/s  d   1111.6 MB/s
+klzh1    T1  in     6627202  out     2023044  ratio  3.276  c    160.2 MB/s  d    856.3 MB/s
+k2h1     T1  in     6627202  out     1982344  ratio  3.343  c    156.9 MB/s  d    989.6 MB/s
+zstd3    T1  in     6627202  out     1943693  ratio  3.410  c    181.9 MB/s  d    931.5 MB/s
+klzh3    T1  in     6627202  out     1987792  ratio  3.334  c    122.8 MB/s  d    805.8 MB/s
+k2h3     T1  in     6627202  out     1933079  ratio  3.428  c    127.0 MB/s  d   1000.4 MB/s
+klzh5    T1  in     6627202  out     1906214  ratio  3.477  c     49.5 MB/s  d    872.5 MB/s
+k2h5     T1  in     6627202  out     1854960  ratio  3.573  c     52.1 MB/s  d    937.8 MB/s
+zstd9    T1  in     6627202  out     1686037  ratio  3.931  c     45.3 MB/s  d   1005.9 MB/s
+klzh7    T1  in     6627202  out     1778784  ratio  3.726  c     11.3 MB/s  d    823.6 MB/s
+k2h7     T1  in     6627202  out     1732487  ratio  3.825  c     12.4 MB/s  d   1009.4 MB/s

@@ -1,7 +1,7 @@
 From 7a6c0f9a9edbe855502ba1293fb744a9d6f8e0d1 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 02:42:15 +0000
-Subject: [PATCH 1/5] krans: static context rANS coder (src/algo/krans.c), the
+Subject: [PATCH 1/6] krans: static context rANS coder (src/algo/krans.c), the
  kernel of graph leaf codec 33
 
 Kolmo's own static rANS with static context modelling: 32-bit states in [2^16, 2^32), 12-bit

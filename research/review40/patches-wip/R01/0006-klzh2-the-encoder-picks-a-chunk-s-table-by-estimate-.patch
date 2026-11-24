@@ -1,0 +1,165 @@
+From a154f5382451f98f1ef844336e3b5111c3f9fe5e Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 04:47:43 +0000
+Subject: [PATCH 6/8] klzh2: the encoder picks a chunk's table by estimate
+ before coding, heap for the count scaling
+
+A short code chunk was coded twice (own table, predefined table) and a short literal chunk
+three times (khuf, tANS) to keep the smallest. kza_plan now gives the estimated size of
+each choice from the scaled counts (integers), and only the cheaper is coded; literal tANS
+is tried only when its estimate is under khuf's actual size. kza_normalize moved one state
+per pass over all symbols: O(states moved x symbols), the bulk of the encoder's time on 4 KiB
+blocks of binary data; the same choice now comes from a binary heap keyed by (cost, symbol).
+Format unchanged; frozen frames still decode. natbench, 4 KiB blocks of xml+dickens+osdb,
+k2h1: 13,986,727 -> 13,986,796 bytes; compress speed in results (indicative).
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ src/algo/klz.c | 94 +++++++++++++++++++++++++++++++++++---------------
+ 1 file changed, 66 insertions(+), 28 deletions(-)
+
+diff --git a/src/algo/klz.c b/src/algo/klz.c
+index 0bc021fb..2e35c6a3 100644
+--- a/src/algo/klz.c
++++ b/src/algo/klz.c
+@@ -433,7 +433,25 @@ static void kza_spread(const uint16_t *f, int nsym, int L, uint8_t *slot) {
+         x |= bit;
+     }
+ }
+-/* counts scaled to a sum of 2^L, every present symbol at least 1; the rounding error goes where it costs least */
++/* counts scaled to a sum of 2^L, every present symbol at least 1; the rounding error goes where it costs least: one
++ * state at a time is taken from the symbol that loses the fewest bits by it (or given to the one that gains the most),
++ * the lowest symbol among equals. The candidates sit in a binary heap keyed by (cost, symbol), so a chunk with many
++ * rare symbols (short literal chunks of binary data) costs O((symbols + states moved) log symbols). */
++static inline uint64_t kza_nkey(const uint32_t *c, const uint16_t *f, unsigned s, int up) {
++    const uint64_t g = up ? (uint64_t)c[s] * (kz2_lg(f[s] + 1u) - kz2_lg(f[s])) : (uint64_t)c[s] * (kz2_lg(f[s]) - kz2_lg(f[s] - 1u));
++    return ((up ? ((uint64_t)1 << 48) - g : g) << 8) | s;   /* g < 2^41: the smallest key is the choice */
++}
++static inline void kza_sift(uint64_t *h, int n, int i) {
++    const uint64_t v = h[i];
++    for (;;) {
++        int k = 2 * i + 1;
++        if (k >= n) break;
++        if (k + 1 < n && h[k + 1] < h[k]) k++;
++        if (h[k] >= v) break;
++        h[i] = h[k]; i = k;
++    }
++    h[i] = v;
++}
+ static void kza_normalize(const uint32_t *c, int nsym, uint32_t t, int L, uint16_t *f) {
+     const int64_t M = (int64_t)1 << L; int64_t sum = 0;
+     for (int s = 0; s < nsym; s++) {
+@@ -441,10 +459,15 @@ static void kza_normalize(const uint32_t *c, int nsym, uint32_t t, int L, uint16
+         if (c[s] && !v) v = 1;
+         f[s] = (uint16_t)v; sum += (int64_t)v;
+     }
+-    while (sum != M) {
+-        int b = -1; uint64_t bv = 0;
+-        if (sum < M) { for (int s = 0; s < nsym; s++) if (f[s]) { uint64_t g = (uint64_t)c[s] * (kz2_lg(f[s] + 1u) - kz2_lg(f[s])); if (b < 0 || g > bv) { b = s; bv = g; } } f[b]++; sum++; }
+-        else { for (int s = 0; s < nsym; s++) if (f[s] > 1) { uint64_t g = (uint64_t)c[s] * (kz2_lg(f[s]) - kz2_lg(f[s] - 1u)); if (b < 0 || g < bv) { b = s; bv = g; } } f[b]--; sum--; }
++    if (sum == M) return;
++    const int up = sum < M; uint64_t h[256]; int n = 0;
++    for (int s = 0; s < nsym; s++) if (f[s] > (up ? 0 : 1)) h[n++] = kza_nkey(c, f, (unsigned)s, up);
++    for (int i = n / 2; i-- > 0;) kza_sift(h, n, i);
++    for (; sum != M; sum += up ? 1 : -1) {   /* M >= the number of present symbols, so a candidate is left while sum > M */
++        const unsigned b = (unsigned)(h[0] & 255);
++        f[b] = (uint16_t)(f[b] + (up ? 1 : -1));
++        if (up || f[b] > 1) h[0] = kza_nkey(c, f, b, up); else h[0] = h[--n];
++        kza_sift(h, n, 0);
+     }
+ }
+ /* the table header: L - 5 (3 bits), the last present symbol (7 bits; 8 for the literal alphabet), then for symbols 0 .. last a 2-bit class:
+@@ -479,24 +502,41 @@ static int kza_get_counts(kz_br *r, int nsym, uint16_t *f, int *Lp) {
+     }
+     *Lp = L; return sum == (1u << L) ? 0 : -1;
+ }
+-/* m symbols (histogram cnt over nsym <= 256 symbols, at least two present) as one tANS payload.
+- * m < KZA_WIDE: one bit stream: the table header, two start states (L bits each), the bits; symbol i belongs to
+- * state i & 1. m >= KZA_WIDE: four states (symbol i: state i & 3) over two bit streams: length of the first uv | the
+- * first (table header, four start states, the bits of the even symbols) | the second (the bits of the odd symbols).
+- * pre: NULL, or the predefined counts to code with (then no table header is written; 0 is returned when a symbol
+- * has no state in them). pr: m words of scratch, sb: m + 64 bytes of scratch. Returns the size, or 0 when it does not
+- * fit in cap. */
++/* The table a chunk of m symbols with histogram cnt (nsym <= 256 symbols, at least two present) would be coded with,
++ * and what it would cost. pre NULL: the chunk's own table: counts scaled into f[0..nsym), *Lp its log2 size (at most
++ * lmax). pre: the predefined counts (f is not written). Returns the estimated payload in 1/256 bit (table header, start
++ * states, code lengths as log2 of the state shares; integers only), or UINT64_MAX when pre has no state for a symbol. */
+ #define KZA_WIDE 256
+-static size_t kza_encode(const uint8_t *s, size_t m, const uint32_t *cnt, int nsym, int lmax, const uint16_t *pre, uint8_t *o, size_t cap, uint16_t *pr, uint8_t *sb) {
+-    int mp = 0, last = 0; for (int q = 0; q < nsym; q++) if (cnt[q]) { mp++; last = q; if (pre && !pre[q]) return 0; }
++static uint64_t kza_plan(const uint32_t *cnt, int nsym, size_t m, int lmax, const uint16_t *pre, uint16_t *f, int *Lp) {
++    int mp = 0, last = 0; for (int q = 0; q < nsym; q++) if (cnt[q]) { mp++; last = q; if (pre && !pre[q]) return UINT64_MAX; }
+     int L = kz_hb((uint32_t)m) - 2; const int lo = kz_hb((uint32_t)(mp - 1)) + 2;   /* about m / 4 states: a larger table costs more header than it saves */
+     if (L < lo) L = lo;
+     if (L < 5) L = 5;
+     if (L > lmax) L = lmax;
+-    if (pre) L = KZ2_PRE_LOG;
++    if (pre) L = KZ2_PRE_LOG; else kza_normalize(cnt, nsym, (uint32_t)m, L, f);
++    const uint16_t *const g = pre ? pre : f; uint64_t bits = (uint64_t)(m >= KZA_WIDE ? 4 : 2) * (uint64_t)L * 256;
++    for (int q = 0; q <= last; q++) if (cnt[q]) bits += (uint64_t)cnt[q] * ((uint32_t)L * 256 - kz2_lg(g[q]));
++    if (!pre) {   /* the header, as kza_put_counts writes it */
++        uint32_t hb = 3 + (nsym > 128 ? 8 : 7);
++        for (int q = 0; q <= last;) {
++            const uint32_t v = f[q];
++            if (!v) { int r = 1; while (r < 8 && !f[q + r]) r++; hb += 5; q += r; continue; }
++            hb += v == 1 ? 2 : v < 6 ? 4 : 6 + (uint32_t)kz_hb(v - 5); q++;
++        }
++        bits += (uint64_t)hb * 256;
++    }
++    *Lp = L; return bits;
++}
++/* m symbols as one tANS payload with the table of 2^L states given by the counts f (kza_plan; hdr: the table header is
++ * written, 0 for a predefined table).
++ * m < KZA_WIDE: one bit stream: the table header, two start states (L bits each), the bits; symbol i belongs to
++ * state i & 1. m >= KZA_WIDE: four states (symbol i: state i & 3) over two bit streams: length of the first uv | the
++ * first (table header, four start states, the bits of the even symbols) | the second (the bits of the odd symbols).
++ * pr: m words of scratch, sb: m + 64 bytes of scratch. Returns the size, or 0 when it does not fit in cap. */
++static size_t kza_encode(const uint8_t *s, size_t m, int nsym, const uint16_t *f, int L, int hdr, uint8_t *o, size_t cap, uint16_t *pr, uint8_t *sb) {
++    int last = 0; for (int q = 0; q < nsym; q++) if (f[q]) last = q;
+     const uint32_t M = 1u << L; const int wide = m >= KZA_WIDE; const size_t sm = wide ? 3 : 1;
+-    uint16_t f[256], cum[257], k[256], thr[256], nxt[1 << KZA_MAXLOG]; uint8_t mb[256], slot[1 << KZA_MAXLOG];
+-    if (pre) memcpy(f, pre, (size_t)nsym * sizeof *f); else kza_normalize(cnt, nsym, (uint32_t)m, L, f);
++    uint16_t cum[257], k[256], thr[256], nxt[1 << KZA_MAXLOG]; uint8_t mb[256], slot[1 << KZA_MAXLOG];
+     cum[0] = 0;
+     for (int q = 0; q < nsym; q++) {
+         cum[q + 1] = (uint16_t)(cum[q] + f[q]); k[q] = cum[q]; mb[q] = 0; thr[q] = 0;
+@@ -512,7 +552,7 @@ static size_t kza_encode(const uint8_t *s, size_t m, const uint32_t *cnt, int ns
+     }
+     if (cap < 16) return 0;
+     kz_bw w = {0, 0, o + (wide ? 5 : 0), o + cap};
+-    if ((!pre && kza_put_counts(&w, f, last, L, nsym)) || kz_bput(&w, X[0] - M, L) || kz_bput(&w, X[1] - M, L)) return 0;
++    if ((hdr && kza_put_counts(&w, f, last, L, nsym)) || kz_bput(&w, X[0] - M, L) || kz_bput(&w, X[1] - M, L)) return 0;
+     if (!wide) {
+         for (size_t i = 0; i < m; i++) if (kz_bput(&w, pr[i] & 0xFFFu, pr[i] >> 12)) return 0;
+         if (w.p + 8 > w.e) return 0;
+@@ -599,18 +639,16 @@ static void kz2_hist(const uint8_t *p, size_t n, uint32_t c[256]) {
+ static size_t kz2_put_chunk(const uint8_t *s, size_t m, const uint32_t *H, int nsym, int lmax, const uint16_t *pre, uint8_t *o, size_t cap, uint8_t *tmp, uint16_t *pr, uint8_t *sb) {
+     if (cap < m + 32) return 0;
+     if (H[s[0]] == m) { size_t h = kz_put_uv(o, (uint64_t)m * 4 + 1); o[h] = s[0]; return h + 1; }
+-    size_t z; const uint8_t *src = tmp; unsigned mode = 2;
+-    if (lmax) {
+-        z = kza_encode(s, m, H, nsym, lmax, NULL, o + 12, m + 8, pr, sb); src = o + 12;
+-        if (m < KZ2_PRE_MAX) {   /* a short chunk: the predefined table may beat a table of its own */
+-            const size_t zp = kza_encode(s, m, H, nsym, lmax, pre, tmp, m + 8, pr, sb);
+-            if (zp && (!z || zp < z)) { z = zp; src = tmp; mode = 3; }
+-        }
++    size_t z; const uint8_t *src = tmp; unsigned mode = 2; uint16_t f[256]; int L, Lp;
++    if (lmax) {   /* a table of its own, or for a short chunk the predefined one: the cheaper by the estimate is coded */
++        const uint64_t eo = kza_plan(H, nsym, m, lmax, NULL, f, &L), ep = m < KZ2_PRE_MAX ? kza_plan(H, nsym, m, lmax, pre, NULL, &Lp) : UINT64_MAX;
++        if (ep < eo) { z = kza_encode(s, m, nsym, pre, Lp, 0, tmp, m + 8, pr, sb); mode = 3; }
++        else { z = kza_encode(s, m, nsym, f, L, 1, o + 12, m + 8, pr, sb); src = o + 12; }
+     } else {
+         z = m >= 2 ? kolmo_khuf_compress(s, m, tmp, KHUF_BLOCK_MAX + 1024) : 0;
+-        if (m < KZ2_LIT_ANS) {   /* a short literal chunk: the tANS table is smaller than khuf's and the codes are not whole bits */
+-            const size_t za = kza_encode(s, m, H, 256, KZA_MAXLOG, NULL, o + 12, m + 8, pr, sb);
+-            if (za && (!z || za < z)) { z = za; src = o + 12; mode = 3; }
++        if (m < KZ2_LIT_ANS) {   /* a short literal chunk: the tANS table is smaller than khuf's and the codes are not whole bits; coded only when the estimate says it may win */
++            const uint64_t ea = kza_plan(H, 256, m, KZA_MAXLOG, NULL, f, &L) / (8 * 256);
++            if (ea < (z ? z : m)) { const size_t za = kza_encode(s, m, 256, f, L, 1, o + 12, m + 8, pr, sb); if (za && (!z || za < z)) { z = za; src = o + 12; mode = 3; } }
+         }
+     }
+     if (!z || z + 3 >= m) { size_t h = kz_put_uv(o, (uint64_t)m * 4); memcpy(o + h, s, m); return h + m; }
+-- 
+2.43.0
+

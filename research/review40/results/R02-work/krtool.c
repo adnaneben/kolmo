@@ -1,6 +1,7 @@
 /* R02 experiment tool (not part of Kolmo): runs src/algo/krans.c on a raw file or on the leaves of a leaf dump
  * (.lv: records of 6 x uint64 {magic, chosen codec, level<<32|..., raw n, coded z, planes} + n bytes).
- * usage: krtool FILE [lv=MINLEAF] [stride=N] [step=N] [effort=N] [chunk=N] [maxt=N] [force=ls,P,mb,eq,bq,mk,pf,lag...] [reps=N] */
+ * out=FILE appends the result lines to FILE instead of stdout (for runs under tools/measure.py, which drops stdout).
+ * usage: krtool FILE [out=FILE] [lv=MINLEAF] [stride=N] [step=N] [effort=N] [chunk=N] [maxt=N] [force=ls,P,mb,eq,bq,mk,pf,lag...] [reps=N] */
 #include "algo/krans.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +32,7 @@ int main(int argc, char **argv) {
         else if (!strncmp(argv[a], "chunk=", 6)) pp.chunk = (uint32_t)atoi(argv[a] + 6);
         else if (!strncmp(argv[a], "maxt=", 5)) pp.max_tables = (uint8_t)atoi(argv[a] + 5);
         else if (!strncmp(argv[a], "reps=", 5)) reps = atoi(argv[a] + 5);
+        else if (!strncmp(argv[a], "out=", 4)) { if (!freopen(argv[a] + 4, "a", stdout)) return 2; }
         else if (!strncmp(argv[a], "force=", 6)) {
             unsigned v[12] = {0}; int k = 0; for (char *s = argv[a] + 6; *s && k < 12;) { v[k++] = (unsigned)strtoul(s, &s, 10); if (*s == ',') s++; }
             pp.force = 1; pp.ls = v[0]; pp.P = v[1]; pp.mb = v[2]; pp.eq = v[3]; pp.bq = v[4]; pp.mk = v[5]; pp.pf = v[6];

@@ -1,0 +1,11 @@
+zstd1    T1  in     7251944  out     6251181  ratio  1.160  c    344.5 MB/s  d    774.6 MB/s
+klzh1    T1  in     7251944  out     5690784  ratio  1.274  c    154.9 MB/s  d    631.0 MB/s
+k2h1     T1  in     7251944  out     5566637  ratio  1.303  c    105.0 MB/s  d    541.6 MB/s
+zstd3    T1  in     7251944  out     5530936  ratio  1.311  c    132.9 MB/s  d    659.2 MB/s
+klzh3    T1  in     7251944  out     5508618  ratio  1.316  c     96.5 MB/s  d    664.6 MB/s
+k2h3     T1  in     7251944  out     5362764  ratio  1.352  c     84.8 MB/s  d    571.1 MB/s
+klzh5    T1  in     7251944  out     5328174  ratio  1.361  c     17.1 MB/s  d    649.4 MB/s
+k2h5     T1  in     7251944  out     5126568  ratio  1.415  c     17.1 MB/s  d    520.1 MB/s
+zstd9    T1  in     7251944  out     5234067  ratio  1.386  c     41.6 MB/s  d    594.1 MB/s
+klzh7    T1  in     7251944  out     5289844  ratio  1.371  c      5.0 MB/s  d    636.1 MB/s
+k2h7     T1  in     7251944  out     5102184  ratio  1.421  c      4.7 MB/s  d    557.6 MB/s

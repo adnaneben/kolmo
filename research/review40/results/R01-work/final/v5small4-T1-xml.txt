@@ -1,0 +1,8 @@
+lz4      T1  in     5345280  out     2019969  ratio  2.646  c    451.8 MB/s  d   1529.6 MB/s
+klz1     T1  in     5345280  out     2014225  ratio  2.654  c    387.0 MB/s  d   1242.4 MB/s
+zstd1    T1  in     5345280  out     1389331  ratio  3.847  c    236.9 MB/s  d    503.2 MB/s
+klzh1    T1  in     5345280  out     1495340  ratio  3.575  c    114.4 MB/s  d    337.5 MB/s
+k2h1     T1  in     5345280  out     1343366  ratio  3.979  c     72.3 MB/s  d    205.8 MB/s
+zstd3    T1  in     5345280  out     1336267  ratio  4.000  c    207.7 MB/s  d    495.2 MB/s
+klzh3    T1  in     5345280  out     1494805  ratio  3.576  c     59.4 MB/s  d    319.7 MB/s
+k2h3     T1  in     5345280  out     1342890  ratio  3.980  c     44.4 MB/s  d    291.5 MB/s

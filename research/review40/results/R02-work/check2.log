@@ -1,0 +1,62 @@
+== make check
+log codec: 2.63x before entropy coding
+log codec fuzz: 4000 corrupt streams decoded without crashing
+json lines: fast 49.4% of fast without transforms
+json codec fuzz: 3000 corrupt streams decoded without crashing
+minified json: fast 42.8% of fast without transforms
+wide table graph: fast 69.1% of fast without transforms
+wide graph fuzz: 400 corrupted frames rejected or exact
+integer graph: timestamps fast 6.6% of fast without transforms
+integer graph fuzz: 400 corrupted frames rejected or exact
+float graph: float32 fast 55.6% of fast without transforms
+float graph fuzz: 300 corrupted frames rejected or exact
+image graph: 8-bit RGB fast 46.9% of fast without transforms
+image graph fuzz: 300 corrupted frames rejected or exact
+image16 ratio 3.65, records ratio 2.30
+records/image codec fuzz: 6000 corrupt streams decoded without crashing
+word codec: 1.73x before entropy coding
+word codec fuzz: 3000 corrupt streams decoded without crashing
+gr6 table: ultra 10.97x with a GR6+ block (codec 26, version 11)
+gr6 codec: 10.98x on the table
+gr6 codec fuzz: 1000 corrupt streams decoded without crashing
+native leaf: 80000 -> 17372 bytes; 17372 truncations rejected; 3000 corrupt leaves decoded without crashing
+native leaf int16 series: 73991 -> 73622 bytes (version 9)
+ultra level 2 integer series: 34642 -> 31782 bytes
+table-codec fuzz: 3000 corrupt streams decoded without crashing
+ALL PASSED
+== check EXIT 0
+== make check-format2
+./build/test-format2
+FORMAT2 zero-run, leaves 21-23, integer frames, audio (codec 19), video (codec 20) PASSED
+./build/test-format2-asan
+FORMAT2 zero-run, leaves 21-23, integer frames, audio (codec 19), video (codec 20) PASSED
+== check-format2 EXIT 0
+== make check-native
+./build/test-native 3
+test-native: OK
+./build/test-native-asan
+test-native: OK
+python3 tests/test_native_modes.py build/kolmo build/native-modes
+test_native_modes: OK
+== check-native EXIT 0
+== make check-memdyn
+./build/test-memdyn
+declaration coding and sizes: ok
+governor hysteresis, pressure and the one-job floor: ok
+forged frames (8 GiB claim, oversized model, undeclared model, index above the declaration): refused unallocated: ok
+-x -l 1 under a 256 MiB cap: 573611 bytes, declares 91 MiB
+explicit cap and floors: ok
+forced budgets 1 B, 64 MiB, 512 MiB, 4 GiB, unlimited: identical frames in every mode: ok
+mid-run budget: jobs before 3, while low 1 (19194460 samples), after 3
+budget lowered mid-run: jobs fell to one and recovered, same frame: ok
+MEMDYN TESTS PASSED
+./build/test-memdyn-asan --quick
+declaration coding and sizes: ok
+governor hysteresis, pressure and the one-job floor: ok
+forged frames (8 GiB claim, oversized model, undeclared model, index above the declaration): refused unallocated: ok
+-x -l 1 under a 256 MiB cap: 573611 bytes, declares 91 MiB
+explicit cap and floors: ok
+forced budgets 1 B, 64 MiB, 512 MiB, 4 GiB, unlimited: identical frames in every mode: ok
+MEMDYN TESTS PASSED
+== check-memdyn EXIT 0
+== make check-meta

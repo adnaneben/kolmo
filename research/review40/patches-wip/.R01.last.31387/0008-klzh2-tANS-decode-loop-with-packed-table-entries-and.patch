@@ -1,0 +1,110 @@
+From ee0c7ea3003970fc44ed1b37b2ac87bd485ca894 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 05:14:29 +0000
+Subject: [PATCH 8/8] klzh2: tANS decode loop with packed table entries and
+ states held in registers
+
+The four states had their address taken by the tail loop, so the long loop kept them in
+memory; table entries were read field by field. Entries are now one word (symbol, bits,
+base), the long loop works on locals (bzhi under BMI2) and stops 8 bytes before the end of
+either stream, the rest goes through the checked refill. GCC 13 merged the eight byte stores
+into vector inserts: SLP and store merging are off for this one function (GCC only).
+dec_time, level 1, seven Silesia files: stream decode 64.6 -> 63.3 ms (indicative). Bytes
+unchanged.
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ src/algo/klz.c | 56 +++++++++++++++++++++++++++++---------------------
+ 1 file changed, 33 insertions(+), 23 deletions(-)
+
+diff --git a/src/algo/klz.c b/src/algo/klz.c
+index 72ec7ea1..ad7b604b 100644
+--- a/src/algo/klz.c
++++ b/src/algo/klz.c
+@@ -435,7 +435,6 @@ static const uint16_t *const KZ2_PRE[6] = {NULL, KZ2_PRE_TOK, KZ2_PRE_LLX, KZ2_P
+  * encoder runs backwards from state 0 for both and writes the bits in decoding order, so the decoder reads forwards
+  * and must end with both states 0. */
+ #define KZA_MAXLOG 11
+-typedef struct { uint8_t sym, nb; uint16_t base; } kza_dent;
+ static void kza_spread(const uint16_t *f, int nsym, int L, uint8_t *slot) {
+     uint32_t x = 0; const uint32_t top = (1u << L) >> 1;
+     for (int s = 0; s < nsym; s++) for (uint32_t k = 0; k < f[s]; k++) {
+@@ -585,6 +584,19 @@ static inline int kza_br_end(const kz_br *r, const uint8_t *s, size_t z) {   /*
+     const int64_t used = (int64_t)(r->p - s) * 8 - r->c;
+     return used <= (int64_t)z * 8 && used > ((int64_t)z - 1) * 8;
+ }
++/* the low nb bits of b (nb < 64) */
++#if defined(__BMI2__) && defined(__x86_64__)
++#define KZ_LOW(B, N) __builtin_ia32_bzhi_di((B), (N))
++#else
++#define KZ_LOW(B, N) ((B) & (((uint64_t)1 << (N)) - 1))
++#endif
++/* decode table entry: symbol | bits to read << 8 | base of the next state << 16. The states live in locals in the
++ * long loop (four dependency chains over two bit readers, eight symbols per pair of refills: 4 x 11 <= 56 bits); the
++ * ends of the streams and short chunks go symbol by symbol through the checked refill. */
++#define KZA_DEC(B, C, X, O) do { const uint32_t e_ = T[X]; const unsigned n_ = (e_ >> 8) & 255; (O) = (uint8_t)e_; (X) = (e_ >> 16) + (uint32_t)KZ_LOW((B), n_); (B) >>= n_; (C) -= (int)n_; } while (0)
++#if defined(__GNUC__) && !defined(__clang__)   /* GCC 13 turns the eight byte stores of the long loop into vector inserts or shift chains: slower than the stores */
++__attribute__((optimize("no-tree-slp-vectorize", "no-store-merging")))
++#endif
+ static int kza_decode(const uint8_t *in, size_t z, uint8_t *out, size_t m, int nsym, const uint16_t *pre) {
+     const int wide = m >= KZA_WIDE; size_t i = 0; uint64_t za = z; uint16_t f[256]; int L;
+     if (wide && (kz_get_uv(in, z, &i, &za) || za > z - i)) return -1;
+@@ -593,34 +605,32 @@ static int kza_decode(const uint8_t *in, size_t z, uint8_t *out, size_t m, int n
+     if (pre) { memcpy(f, pre, (size_t)nsym * sizeof *f); L = KZ2_PRE_LOG; KZ2_SEEN(2, 2); }
+     else if (kza_get_counts(&r, nsym, f, &L)) return -1;
+     KZ2_SEEN(2, wide);
+-    kza_dent T[1 << KZA_MAXLOG]; uint8_t slot[1 << KZA_MAXLOG]; const uint32_t M = 1u << L;
++    uint32_t T[1 << KZA_MAXLOG]; uint8_t slot[1 << KZA_MAXLOG]; const uint32_t M = 1u << L;
+     kza_spread(f, nsym, L, slot);
+     for (uint32_t x = 0; x < M; x++) {
+         const unsigned q = slot[x]; const uint32_t v = f[q]++; const int nb = L - kz_hb(v);
+-        T[x].sym = (uint8_t)q; T[x].nb = (uint8_t)nb; T[x].base = (uint16_t)((v << nb) - M);
+-    }
+-    kz_refill(&r);
+-    uint32_t x0 = kz_bget(&r, L), x1 = kz_bget(&r, L);
+-#define KZA_DEC(R, X, O) do { const kza_dent e_ = T[X]; (O) = e_.sym; (X) = e_.base + kz_bget(&(R), e_.nb); } while (0)
+-    if (!wide) {
+-        for (i = 0; i + 4 <= m; i += 4) { kz_refill(&r); KZA_DEC(r, x0, out[i]); KZA_DEC(r, x1, out[i + 1]); KZA_DEC(r, x0, out[i + 2]); KZA_DEC(r, x1, out[i + 3]); }
+-        for (; i < m; i++) { kz_refill(&r); if (i & 1) KZA_DEC(r, x1, out[i]); else KZA_DEC(r, x0, out[i]); }
+-        return !x0 && !x1 && kza_br_end(&r, sa, (size_t)za) ? 0 : -1;
+-    }
+-    kz_refill(&r);
+-    uint32_t x2 = kz_bget(&r, L), x3 = kz_bget(&r, L);
+-    for (i = 0; i + 8 <= m; i += 8) {   /* four symbols per stream and refill: 4 x 11 <= 56 bits */
+-        kz_refill(&r); kz_refill(&u);
+-        KZA_DEC(r, x0, out[i]); KZA_DEC(u, x1, out[i + 1]); KZA_DEC(r, x2, out[i + 2]); KZA_DEC(u, x3, out[i + 3]);
+-        KZA_DEC(r, x0, out[i + 4]); KZA_DEC(u, x1, out[i + 5]); KZA_DEC(r, x2, out[i + 6]); KZA_DEC(u, x3, out[i + 7]);
++        T[x] = q | (uint32_t)nb << 8 | ((v << nb) - M) << 16;
++    }
++    uint32_t X[4] = {0, 0, 0, 0};
++    kz_refill(&r); X[0] = kz_bget(&r, L); X[1] = kz_bget(&r, L);
++    if (wide) { kz_refill(&r); X[2] = kz_bget(&r, L); X[3] = kz_bget(&r, L); }
++    i = 0;
++    if (wide) {
++        uint32_t x0 = X[0], x1 = X[1], x2 = X[2], x3 = X[3]; uint64_t rb = r.b, ub = u.b; int rc = r.c, uc = u.c; const uint8_t *rp = r.p, *up = u.p;
++        for (; i + 8 <= m && rp + 8 <= r.e && up + 8 <= u.e; i += 8) {
++            rb |= kz_r64(rp) << rc; rp += (63 - rc) >> 3; rc |= 56; ub |= kz_r64(up) << uc; up += (63 - uc) >> 3; uc |= 56;
++            KZA_DEC(rb, rc, x0, out[i]); KZA_DEC(ub, uc, x1, out[i + 1]); KZA_DEC(rb, rc, x2, out[i + 2]); KZA_DEC(ub, uc, x3, out[i + 3]);
++            KZA_DEC(rb, rc, x0, out[i + 4]); KZA_DEC(ub, uc, x1, out[i + 5]); KZA_DEC(rb, rc, x2, out[i + 6]); KZA_DEC(ub, uc, x3, out[i + 7]);
++        }
++        X[0] = x0; X[1] = x1; X[2] = x2; X[3] = x3; r.b = rb; r.c = rc; r.p = rp; u.b = ub; u.c = uc; u.p = up;
+     }
+-    for (; i < m; i++) {
+-        uint32_t *const x = (i & 3) == 0 ? &x0 : (i & 3) == 1 ? &x1 : (i & 3) == 2 ? &x2 : &x3;
+-        if (i & 1) { kz_refill(&u); KZA_DEC(u, *x, out[i]); } else { kz_refill(&r); KZA_DEC(r, *x, out[i]); }
++    for (const size_t sm = wide ? 3 : 1; i < m; i++) {
++        kz_br *const R = wide && (i & 1) ? &u : &r;
++        kz_refill(R); KZA_DEC(R->b, R->c, X[i & sm], out[i]);
+     }
+-#undef KZA_DEC
+-    return !x0 && !x1 && !x2 && !x3 && kza_br_end(&r, sa, (size_t)za) && kza_br_end(&u, sb, zb) ? 0 : -1;
++    return !(X[0] | X[1] | X[2] | X[3]) && kza_br_end(&r, sa, (size_t)za) && (!wide || kza_br_end(&u, sb, zb)) ? 0 : -1;
+ }
++#undef KZA_DEC
+ 
+ /* estimated size in 1/256 bit of a chunk with histogram c (t symbols) as kz2_put_chunk would code it. lmax 0: khuf
+  * (whole-bit codes of 1 to KHUF_MAXLEN bits, khuf's table); else tANS with tables of up to 2^lmax states */
+-- 
+2.43.0
+

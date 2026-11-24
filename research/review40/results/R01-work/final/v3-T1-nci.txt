@@ -1,0 +1,8 @@
+zstd1    T1  in    33553445  out     2855235  ratio 11.752  c    768.9 MB/s  d   1543.1 MB/s
+klzh1    T1  in    33553445  out     3126823  ratio 10.731  c    531.7 MB/s  d   1695.9 MB/s
+k2h1     T1  in    33553445  out     2924161  ratio 11.475  c    443.8 MB/s  d   1637.8 MB/s
+zstd3    T1  in    33553445  out     2846755  ratio 11.787  c    592.4 MB/s  d   1553.6 MB/s
+klzh3    T1  in    33553445  out     3125954  ratio 10.734  c    476.3 MB/s  d   1640.3 MB/s
+k2h3     T1  in    33553445  out     2913750  ratio 11.516  c    399.2 MB/s  d   1666.7 MB/s
+klzh5    T1  in    33553445  out     2730904  ratio 12.287  c    149.4 MB/s  d   1866.5 MB/s
+k2h5     T1  in    33553445  out     2647338  ratio 12.674  c    143.8 MB/s  d   1882.5 MB/s

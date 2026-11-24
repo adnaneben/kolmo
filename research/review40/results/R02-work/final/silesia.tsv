@@ -1,0 +1,12 @@
+dickens	balanced	10192446	3721196	default_same	3721196	RT_OK	rc3_decodes
+mozilla	balanced	51220480	18367182	default_same	18367182	RT_OK	rc3_decodes
+mr	balanced	9970564	2316612	default_same	2043502	RT_OK	rc3_refuses
+nci	balanced	33553445	2027737	default_same	2027737	RT_OK	rc3_decodes
+ooffice	balanced	6152192	2792481	default_same	2792481	RT_OK	rc3_decodes
+osdb	balanced	10085684	3533740	default_same	3533740	RT_OK	rc3_decodes
+reymont	balanced	6627202	1967300	default_same	1967300	RT_OK	rc3_decodes
+samba	balanced	21606400	4867052	default_same	4867052	RT_OK	rc3_decodes
+sao	balanced	7251944	2302435	default_same	2302435	RT_OK	rc3_decodes
+webster	balanced	41458703	12151927	default_same	12151927	RT_OK	rc3_decodes
+x-ray	balanced	8474240	3657342	default_same	3610019	RT_OK	rc3_refuses
+xml	balanced	5345280	652714	default_same	652714	RT_OK	rc3_decodes

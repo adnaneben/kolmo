@@ -1,0 +1,6 @@
+zstd1    T4  in    41458703  out    13675709  ratio  3.032  c    577.5 MB/s  d   1956.4 MB/s
+klzh1    T4  in    41458703  out    12551796  ratio  3.303  c    296.6 MB/s  d   1282.0 MB/s
+k2h1     T4  in    41458703  out    12434235  ratio  3.334  c    312.0 MB/s  d   1597.3 MB/s
+zstd3    T4  in    41458703  out    12151695  ratio  3.412  c    277.7 MB/s  d   1344.4 MB/s
+klzh3    T4  in    41458703  out    12258723  ratio  3.382  c    199.9 MB/s  d   1201.4 MB/s
+k2h3     T4  in    41458703  out    12069038  ratio  3.435  c    235.4 MB/s  d   1441.2 MB/s
