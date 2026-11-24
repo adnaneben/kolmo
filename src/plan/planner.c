@@ -196,6 +196,21 @@ static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
     return best;
 }
 
+/* A record layout that wins on the middle slice must also win elsewhere: columnar containers (Arrow IPC, ORC,
+ * dictionary Parquet) hold one column buffer in the middle that reads as records, and the records transform then
+ * codes the whole file 35-65% larger. The layout is scored again on up to 8 slices of at most 256 KiB at the odd
+ * sixteenths of the input and must be 3% smaller than plain coding on 7 of every 8. */
+static int rec_spread_ok(const uint8_t *s, size_t n, size_t rl, const rec_plan_t *R, uint8_t *buf, size_t bc, int zl) {
+    int wins = 0, tries = 0; size_t sl = (rl < ((size_t)256 << 10) ? rl : ((size_t)256 << 10)) / R->P * R->P;
+    for (int q = 1; q < 16; q += 2) {
+        size_t st = n / 16 * (size_t)q, rs = (size_t)R->h + (st > (size_t)R->h ? (st - R->h) / R->P * R->P : 0);
+        if (!sl || rs + sl > n) continue;
+        int64_t e = rec_encode(s + rs, sl, rs, R, buf, bc); tries++;
+        if (e > 0 && (double)zcost(buf, (size_t)e, zl) < (double)zcost(s + rs, sl, zl) * 0.97) wins++;
+    }
+    return wins * 8 >= tries * 7;
+}
+
 static double kg_num_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh, int native) {
     size_t h = 0; int ws[3] = {2, 4, 8}, nw = 3; double best = 1e300;
     if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
@@ -560,7 +575,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             size_t rl = L / R->P * R->P; \
             if (rs + rl <= n) { \
                 int64_t e = rec_encode(s + rs, rl, rs, R, buf, bc); \
-                if (e > 0) { double c = (double)zcost(buf, (size_t)e, zl) / rl; if (c < (BAR)) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } } \
+                if (e > 0) { double c = (double)zcost(buf, (size_t)e, zl) / rl; if (c < (BAR) && rec_spread_ok(s, n, rl, R, buf, bc, zl)) { best = c; keep = pl; keep.t = T_REC; keep.rec = R; owned_rec = R; R = NULL; chosen = 3; } } \
             } \
         } \
         free(R); \
