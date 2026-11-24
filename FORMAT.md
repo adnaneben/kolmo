@@ -2018,7 +2018,7 @@ Before the first byte, every `H[i]` is 0.
   - model 4 with all contexts, none, three, and the binary set, with priors 0-2;
   - the image model with 1-4 channels, a header, and legacy tables;
   - CMP with model 1 and model 4 parts.
-- decodes the first 1024 bytes of every codec 7, 17 and 25 block of the corpus: 27 blocks of model 1, model 4, the
+- decodes the first 1024 bytes of every codec 7, 17 and 25 block of the corpus: 26 blocks of model 1, model 4, the
   image model and CMP. Blocks without a transform are compared with the original. The others are compared with
   the SHA-256 digests in `tests/vectors/cm/prefixes.json`.
 
