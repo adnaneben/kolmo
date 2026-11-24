@@ -195,6 +195,17 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
 - **CI workflow `packaging`.** It builds and tests each draft in a clean environment, and builds the Debian package
   from the checkout as well.
 
+### Benchmarks
+
+- **lzbench integration in upstream form** (`bench/lzbench/`): Kolmo's `src/` compiled by lzbench's own Makefile
+  (`mk/kolmo.mk`) and called through the public C API, no `dlopen`; `install.py` adds it to an lzbench checkout as
+  the upstream pull request would. lzbench levels 1-9 are `kolmo -1` … `-9`, level 10 is ultra; sizes equal the
+  command line's byte for byte. `UPSTREAM-PR.md` is the draft pull request text (not sent).
+- **x86-64 benchmark workflow** (`.github/workflows/bench-x86.yml`, manual): builds Kolmo generic at a given ref,
+  fetches Silesia, enwik8 and Canterbury from their canonical sites with sha256 checks, runs the market report's
+  lzbench settings on one thread three times per setting (median and spread reported), and the command-line
+  comparison on one thread and all cores.
+
 ## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and
