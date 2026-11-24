@@ -1,10 +1,11 @@
 # Kolmo frame format, container version 12
 
-Status: **normative** for the container layer, version 12, as written and read by Kolmo 0.0.1 and 0.0.2.
+Status: **normative** for the container layer and for the coders and transforms of sections 14-21, version 12, as written and read by
+Kolmo 0.0.1 and 0.0.2.
 Compatibility promise: [COMPATIBILITY.md](COMPATIBILITY.md). Detailed history of versions 1 to 11 and design notes:
 [SPEC.md](SPEC.md).
 
-This document has two parts.
+This document has three parts.
 
 - **Container layer** (sections 1 to 12): complete. A decoder can be written from this text alone up to the point
   where it hands a block payload to a coder. It covers the header, the block index, the checksums, the plan prefix,
@@ -14,6 +15,10 @@ This document has two parts.
 - **Coder and transform payloads** (section 8): a registry of every identifier with the status of its specification.
   Several payloads are specified in [SPEC.md](SPEC.md). For the others, the reference implementation at tag `v0.0.2`
   is normative until their sections are written (section 13 lists them).
+- **Kolmo's own coders and the simpler transforms** (sections 14 to 21): khuf (27), krans, KLZ (28), KLZH (29),
+  KLZH2 (32) and KLZMA (24); the byte-plane shuffle and x86 filter inverses; the line-class, word, log-template and
+  minified-JSON inverses. `tests/coder_reference.py` is an independent Python decoder written from these sections. It decodes
+  every block and graph leaf of the frozen corpus that uses them.
 
 Throughout, *must* and *must not* are requirements on a conforming decoder or encoder.
 
@@ -205,7 +210,8 @@ A decoder must refuse `t > 11`, and plan type 11 with `b > 15` or `c ≠ 0`.
 2. Decode the coded stream with the block's codec (§8), to the transformed length or, with no transform, to `raw` bytes.
 3. Undo the transform named by `tflag`, giving exactly `raw` bytes.
    - tflags 8 and 14 work in place on the decoded block.
-   - The ARM64 inverse is specified in SPEC.md, *ARM64 branch filter*.
+   - The ARM64 inverse is specified in SPEC.md, *ARM64 branch filter*, the byte-plane shuffle in §19.1, the x86
+     filter in §19.3, and the inverses of tflags 1, 2, 4, 5, 6, 7, 9, 10 and 12 in §20.
    - The other inverses are in the reference implementation (§13).
 4. Verify the checksum (§5.1).
 
@@ -253,7 +259,7 @@ refused (corrupt).
 | 5 | BSC (libbsc 3.4.0 block format) | block, leaf | read only | SPEC.md *Entropy coders*; `src/codecs/bwt.c` |
 | 7 | CM (context mixing, models 1-4) | block, leaf | written (ultra) | SPEC.md *Entropy coders*, *CM models*; `src/codecs/cm.c` |
 | 12 | GRAPH | block | written | SPEC.md *Kolmo graph blocks* |
-| 14 | RANS (order 0) | leaf | written | `src/codecs/rans.c` |
+| 14 | RANS (order 0) | leaf | written | SPEC.md *Leaf codec 14*; `src/codecs/rans.c` |
 | 15 | NPLANE | leaf | written (`--native-leaf`) | SPEC.md *Leaf codec 15* |
 | 16 | FQFAM (FASTQ family) | block | written (ultra) | SPEC.md *FASTQ family blocks*; `src/codecs/fastq.c` |
 | 17 | CMI (context mixing, image model) | block | written (ultra) | SPEC.md *Entropy coders*; `src/codecs/cm_image.c` |
@@ -262,14 +268,14 @@ refused (corrupt).
 | 20 | VID (kvid layout + nested frame) | block | written | §7.3; SPEC.md *Video frames*; `src/codecs/video.c` |
 | 21 | PLANES | leaf | written | SPEC.md *Format 2*; `src/codecs/planes_leaf.c` |
 | 23 | ZRUN | leaf | written | SPEC.md *Format 2*; `src/codecs/zrun_leaf.c` |
-| 24 | KLZMA | block, leaf | written | `src/algo/klzma.h`, `src/algo/klzma.c` |
+| 24 | KLZMA | block, leaf | written | **§21** |
 | 25 | CMP (context mixing over parts) | block | written (ultra) | `src/codecs/cm_par.c` |
 | 26 | GR6 (GR6+ line-structured text) | block | written (ultra) | SPEC.md *GR6+ blocks*; `src/codecs/gr6.c` |
-| 27 | KHUF (Kolmo Huffman) | leaf | written | `src/algo/khuf.h`, `src/algo/khuf.c` |
-| 28 | KLZ (byte-aligned LZ77) | block, leaf | written (level 1) | `src/algo/klz.h`, `src/algo/klz.c` |
-| 29 | KLZH (LZ77 + Huffman) | block, leaf | read only | `src/algo/klz.h`, `src/algo/klz.c` |
+| 27 | KHUF (Kolmo Huffman) | leaf | written | **§15** |
+| 28 | KLZ (byte-aligned LZ77) | block, leaf | written (level 1) | **§17** |
+| 29 | KLZH (LZ77 + Huffman) | block, leaf | read only | **§18.5** |
 | 31 | KIMG (8-bit images) | block | written (levels 8, 9, ultra) | `src/codecs/kimg.c` |
-| 32 | KLZH2 (LZ77 + Huffman or static rANS per stream) | block, leaf | written (levels 2-7) | `src/algo/klz.h`, `src/algo/krans.h`, `src/codecs/native.c` |
+| 32 | KLZH2 (LZ77 + Huffman or static rANS per stream) | block, leaf | written (levels 2-7) | **§18**, with krans §16 and khuf §15 |
 
 **Retired ids, never valid in version 12:**
 - 1-4, 6, 13 and 22 were library codecs of versions 1 to 11;
@@ -361,9 +367,10 @@ Errors fall into five classes:
 
 | File | Contents |
 |---|---|
-| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 246 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
+| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 266 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
 | `tests/khash64_vectors.txt` | the khash64 vectors |
 | `tests/format_reference.py` | the container layer in Python, checked against both of the above |
+| `tests/coder_reference.py` | the coders and transforms of sections 14 to 21 in Python, decoding every corpus block and leaf that uses them |
 
 ## 13. What is not yet written out
 
@@ -371,15 +378,768 @@ These payloads are specified here only by the reference implementation at tag `v
 and the frozen corpus pins their behaviour on real data. Writing each one out as prose is the next step of the format
 work, in this order (most frames first):
 
-1. KLZH2 (32) and its static rANS tables (`krans`);
-2. KLZ (28);
-3. khuf (27);
-4. the table, log, line-class and word transforms (tflags 4, 5, 9, 10, 12);
-5. KLZMA (24);
-6. the BWT stream's QLFC coder (18);
-7. the transpose, shuffle, record, 16-bit image and x86 inverses (tflags 1, 2, 6, 7, 8);
-8. kimg (31);
-9. CMP (25).
+1. table v1 (tflag 3) and the column-split table (tflag 13);
+2. the BWT stream's QLFC coder (18);
+3. kimg (31);
+4. CMP (25).
+
+Written out so far:
+- sections 14 to 18: KLZH2 (32) with krans, KLZ (28), KLZH (29) and khuf (27);
+- section 19: the byte-plane shuffle (plan 2, tflag 1) and x86 filter (plan 7, tflag 8) inverses;
+- section 20: the line-class, word, log-template, minified-JSON, table v2, transpose, 16-bit image and record inverses
+  (tflags 12, 9, 5, 10, 4, 1, 2, 6, 7);
+- section 21: KLZMA (24).
 
 Until a payload has its own section, a change to its decoder that changes the decoded bytes of any version-12 frame is
 a format change (COMPATIBILITY.md), whether or not the corpus catches it.
+
+## 14. Native coders: common rules
+
+Sections 14 to 18 specify Kolmo's own coders: khuf (27), krans (inside 32), KLZ (28), KLZH (29) and KLZH2 (32). A
+coder is called with a byte string `in` (its *stream*) and the number `n` of bytes it must produce. For a block, the
+stream is the payload after the plan and the meta (§6.1), and `n` is the transformed length, or `raw` when there is no
+transform. For a graph leaf, the stream is the leaf's coded bytes and `n` its raw length (SPEC.md, *Kolmo graph
+blocks*). A coder either produces exactly `n` bytes or refuses the stream as corrupt. It never reads outside `in`.
+
+`tests/coder_reference.py` is an independent Python decoder written from sections 14 to 18. It decodes every block
+and graph leaf of the frozen corpus that uses these coders (§18.4).
+
+### 14.1 Varints
+
+- **uv64** is unsigned LEB128: bytes are read in order, byte `k` (from 0) contributes `(byte & 127) << 7k`, and the
+  first byte below 128 ends the varint. At most 10 bytes are read. The value is taken modulo 2^64, so the tenth byte
+  contributes only its lowest bit.
+  - Refuse when the stream ends inside the varint.
+  - Refuse when the tenth byte still has bit 7 set.
+- **uv32** is the same with at most 5 bytes and the value taken modulo 2^32.
+- Overlong encodings, such as `0x80 0x00` for 0, are valid and decode to their value. Encoders write the shortest form.
+
+### 14.2 Match copy
+
+A match `(offset, length)` appends `length` bytes to the output. Each one is the byte `offset` positions before the
+output's current end, read after the previous byte of the same match was appended. Matches may overlap their own
+output: offset 1 repeats the last byte `length` times.
+
+- Refuse an offset of 0, or an offset larger than the number of bytes already produced by this coder call.
+- Refuse a length that would take the output past `n`.
+- The window is the coder call's own output. Nothing from earlier blocks or leaves is visible.
+
+## 15. khuf (codec 27): Huffman chunks
+
+Codec 27 is a sequence of **chunks**. Each chunk is decoded in turn and appended to the output, until the output has
+`n` bytes:
+
+```
+chunk := mode u8 | m uv64 | body
+  mode 0 (stored): m bytes
+  mode 1 (run):    one byte, repeated m times
+  mode 2 (coded):  z uv64 | a khuf block of z bytes, which decodes to m bytes (15.1)
+```
+
+Refuse when:
+- `mode` > 2;
+- `m` is 0, larger than 131072 (128 KiB), or larger than the bytes still missing from the output;
+- a stored body, run byte or coded block reaches past the end of the stream (`z` larger than what is left);
+- the khuf block is refused;
+- bytes are left in the stream after the output reaches `n` bytes. With `n = 0` the stream must therefore be empty.
+
+The encoder writes chunks of 128 KiB except the last one. Inside KLZH2 it also cuts them at other points (§18.3), so
+a decoder must accept any `m` within the rules above.
+
+### 15.1 khuf block
+
+A khuf block codes `m` bytes, 2 ≤ m ≤ 131072, with a canonical prefix code of at most 11 bits per symbol, in four
+interleaved bit streams:
+
+```
+block := table | L0 uv64 | L1 uv64 | L2 uv64 | stream 0 (L0 bytes) | stream 1 (L1) | stream 2 (L2) | stream 3 (the rest)
+```
+
+Refuse `m` < 2 or `m` > 131072.
+
+**Table.** The first byte is `k`; the code has `c = k + 1` symbols.
+- **Sparse** (`k` < 48): `c` pairs `symbol u8, length u8` follow, in any order. Refuse when:
+  - the pairs reach past the end;
+  - a symbol appears twice;
+  - a length is 0 or above 11;
+  - `c` = 1.
+- **Dense** (`k` ≥ 48): a byte `last` follows, then `⌊(last + 2) / 2⌋` bytes of 4-bit lengths for symbols 0 to
+  `last`, two per byte, the even symbol in the low nibble. When `last` is even, the high nibble of the final byte is
+  ignored. Symbols above `last` have length 0, and length 0 means absent. Refuse when:
+  - the bytes reach past the end;
+  - a length is above 11;
+  - the number of non-zero lengths is not `c`.
+- In both forms, refuse unless the code is complete: the sum of `2^(11 − length)` over present symbols must be exactly
+  `2^11`.
+
+**Canonical codes.** Assign codes as in DEFLATE (RFC 1951, 3.2.2):
+1. Order the present symbols by length, then by symbol value.
+2. Number them with consecutive integers. Before each increase in length, shift the counter left by one bit for every
+   length step.
+
+Formally, with `count[l]` the number of symbols of length `l`:
+- `next[1] = 0`;
+- `next[l] = (next[l−1] + count[l−1]) << 1`;
+- each symbol, in increasing symbol order, takes `next[length]++`.
+
+**Bit order.** Each stream is read as a sequence of bits: byte 0 first and, within a byte, the least significant bit
+first. A code is matched most significant bit first: the first bit read is the top bit of the `length`-bit code.
+
+**Streams.** Let `seg = ⌈m / 4⌉`. Stream `q` (0-3) decodes output bytes `[min(m, q·seg), min(m, (q+1)·seg))`. A stream
+may therefore code no symbols. Read the three lengths as uv64, then refuse when:
+- one of them is larger than the block;
+- `L0 + L1 + L2` is larger than what follows them.
+
+`L3` is the rest of the block. Then refuse when any `Lq` is greater than `⌊seg · 11 / 8⌋ + 2`.
+
+To decode stream `q`, decode its symbols one by one from its bits. A code may need bits past the stream's end. Those
+bits never change a decoded symbol, because the code is complete, but they do count as consumed. Let `b` be the bits
+the stream's symbols take in total. Refuse when:
+- `b` > `8 · Lq`;
+- `Lq` > 0 and `b` ≤ `8 · (Lq − 1)`, so a whole byte is unused;
+- `Lq` = 0 and `b` > 0.
+
+Bits after the last symbol in the stream's final byte are ignored.
+
+## 16. krans: static order-0 rANS
+
+krans codes `n` ≥ 1 symbols (bytes) with eight interleaved rANS states, 12-bit probabilities and 16-bit
+renormalisation. It appears only inside KLZH2 (§18.3).
+
+```
+krans := top u8 | f[0] uv32 … f[top] uv32 | x[0] u32 … x[7] u32 | W0 uv32 … W6 uv32 | word stream 0 … word stream 7
+```
+
+**Frequencies.** `top` is the largest symbol that can appear. Each `f[s]` is the frequency of symbol `s`, where 0
+means absent; `f[top]` may be 0. Refuse when:
+- `n` = 0, or the stream is shorter than 2 bytes;
+- an `f[s]` is above 4096;
+- the frequencies do not sum to exactly 4096.
+
+`start[s]` is the sum of `f[t]` for `t < s`, and slot `j` (0-4095) belongs to the symbol `s` with
+`start[s] ≤ j < start[s] + f[s]`.
+
+**One symbol.** If exactly one frequency is non-zero (it is then 4096), the stream must end right after the frequency
+list, and the output is that symbol `n` times. Refuse any further byte.
+
+**States and word streams.** Otherwise:
+1. Eight little-endian `u32` initial states follow. Refuse when fewer than 32 bytes are left, or when a state is
+   below 2^16.
+2. Seven uv32 byte lengths `W0`-`W6` follow. Word stream `k` (0-6) is the next `Wk` bytes, and word stream 7 is the
+   rest of the payload. Refuse when a `Wk` is larger than what is left.
+
+**Decoding.** Output symbol `j` (0 to n−1) uses state `k = j mod 8`:
+
+```
+slot = x[k] mod 4096
+s    = the symbol of slot                      → output byte j
+x[k] = f[s] · (x[k] >> 12) + slot − start[s]
+if x[k] < 2^16:                                → read one word
+    refuse if fewer than 2 bytes are left in word stream k
+    x[k] = (x[k] << 16) | (first byte << 8) | second byte     (the word is big-endian)
+```
+
+At most one word is read per symbol, and all arithmetic fits in 32 bits.
+
+**End.** After `n` symbols, refuse unless:
+- every state equals 2^16;
+- every word stream is used up exactly.
+
+## 17. KLZ (codec 28): byte-aligned LZ77
+
+A KLZ stream is a sequence of *sequences*. Each one holds some literals and then, except in the last sequence, one
+match:
+
+```
+sequence := token u8 | literal-length extension | literals | offset (2 or 3 bytes) | match-length extension
+token    := bits 0-2: literal length (7: extended) | bits 3-6: match length − 4 (15: extended) | bit 7: wide offset
+```
+
+1. **Literal length.** `ll = token & 7`. If it is 7, read extension bytes and add each one to `ll`, stopping after the
+   first byte that is not 255.
+2. **Literals.** Copy the next `ll` bytes of the stream to the output. Refuse when the stream has fewer than `ll`
+   bytes left, or when the output would pass `n`.
+3. **End.** If the output now has exactly `n` bytes, the stream ends here. Refuse unless:
+   - bits 3-7 of the token are 0;
+   - no byte of the stream is left.
+4. **Offset.** Otherwise the offset is a little-endian integer of 3 bytes when bit 7 is set, else 2 bytes. Refuse
+   when the bytes run out. A 3-byte offset below 65536 is valid.
+5. **Match length.** `ml = (token >> 3) & 15`. If it is 15, add extension bytes as in step 1. Then `ml += 4`.
+6. **Match.** Copy the match (§14.2), then continue with the next sequence. Refuse when there is no byte left for the
+   next token.
+
+The output can only end in step 3, so the last sequence of a stream is one whose literals complete the output. When a
+match completes the output, a last sequence with no literals follows: the single token `0x00`. When `n` = 0 the
+stream is that token alone.
+
+## 18. KLZH (codec 29) and KLZH2 (codec 32): LZ77 with entropy-coded streams
+
+KLZH2 is written at levels 2 to 7 and in graph leaves. KLZH is read only, with three differences (§18.5).
+
+### 18.1 Layout
+
+```
+klzh2 := ns uv64 | nl uv64 | stream(literals, nl) | stream(ll codes, ns) | stream(ml codes, ns) | stream(offset codes, ns) | extra bits
+stream(·, count) := mode u8 | z uv64 | z bytes
+```
+
+- `ns` is the number of sequences and `nl` the number of literal bytes. Refuse when `ns` > `⌊n / 3⌋ + 1` or `nl` > `n`.
+- Each of the four streams decodes to `count` bytes:
+  - **mode 0:** khuf chunks (§15) of `count` bytes;
+  - **mode 1:** krans (§16) of `count` symbols. Only the three code streams may use it.
+- Refuse when:
+  - the mode byte is missing or above 1, or is 1 for the literal stream;
+  - `z` is larger than what is left;
+  - the stream's coder refuses its `z` bytes;
+  - `count` is 0 and `z` is not 0. A stream of `count` 0 is `mode, 0`: its coder is not called, and any mode byte 0 or
+    1 is accepted.
+- The **extra bits** are the rest of the payload. They are read as one bit sequence: byte 0 first, least significant
+  bit first. A value of `k` extra bits is the next `k` bits, the first one being bit 0 of the value.
+
+### 18.2 Codes
+
+All code streams are checked before any sequence is decoded. Refuse when:
+- any literal-length or match-length code is 72 or more;
+- any offset code is above 32.
+
+**Length codes** (literal lengths, and match length − 3). Code `c` gives a base and a count of extra bits:
+
+| c | base | extra bits |
+|---|---|---|
+| 0-15 | c | 0 |
+| 16-71 | `2^h + (c mod 2) · 2^(h−1)`, with `h = 4 + ⌊(c − 16) / 2⌋` | h − 1 |
+
+The value is the base plus the extra bits. Code 16 covers 16-23, code 17 covers 24-31, code 18 covers 32-47, and so
+on. Code 71 covers `3·2^30` to `2^32 − 1`.
+
+**Offset codes.** The decoder keeps three recent offsets `r0, r1, r2`, which start as `1, 4, 8` for each coder call.
+
+| code | offset | recent offsets afterwards |
+|---|---|---|
+| 0 | r0 | unchanged |
+| 1 | r1 | r1, r0, r2 |
+| 2 | r2 | r2, r0, r1 |
+| 3 + h (h = 0 to 29) | `2^h` + h extra bits | new, r0, r1 |
+
+### 18.3 Decoding
+
+For each sequence `k` = 0 to ns−1, take code `k` of each code stream and do the following:
+
+1. **Literal length.** `ll` = value of the literal-length code. Read its extra bits.
+2. **Match length.** `ml` = value of the match-length code, plus 3. Read its extra bits. **In 0.0.2 this sum is taken
+   modulo 2^32.** For code 71 with extra bits of at least `2^30 − 3`, `ml` therefore becomes 0, 1 or 2. A decoder must
+   reproduce this. No encoder writes such a sequence, and a later version of this document may forbid it.
+3. **Offset.** Get the offset from the offset code, reading its extra bits when the code is 3 or more.
+4. **Literals.** Copy the next `ll` bytes of the literal stream to the output. Refuse when fewer than `ll` literals
+   are left, or when the output would pass `n`.
+5. **Match.** Copy the match `(offset, ml)` (§14.2). A match of length 0 copies nothing, but its offset is still
+   checked.
+
+After the last sequence:
+- Refuse unless the literals left equal the output bytes still missing. Then copy them.
+- Refuse when the extra bits used reach past the end of the payload. Let `b` be the extra bits consumed by all the
+  sequences: refuse when `⌈b / 8⌉` is greater than the length of the extra-bit area. Bits past the end were read as
+  zeros, but such a stream is refused anyway.
+- Bytes after the last extra bit are ignored. The encoder writes none.
+
+The encoder cuts the khuf chunks of each stream where the input crosses a multiple of 64, 128, 256 or 512 KiB. This
+is an encoder choice; §15 decodes any chunk sizes.
+
+### 18.4 Test coverage
+
+The corpus (`tests/v12`, both releases) has the following material for these coders, all of which
+`tests/coder_reference.py` decodes:
+- 132 KLZH2 blocks and 29 KLZ blocks:
+  - 74 KLZH2 and 22 KLZ blocks have no transform and are compared with the original;
+  - 35 KLZH2 blocks are under a transform of section 20 and are compared with the original after its inverse;
+  - 23 KLZH2 and 7 KLZ blocks have an inverse in section 19 or SPEC.md and are checked through the block checksum
+    after it: 20 + 7 under the byte-plane shuffle, 2 under the ARM64 filter, 1 under the x86 filter;
+- 17 KLZH2 graph leaves and 47 khuf graph leaves, checked to decode to their raw length;
+- more than 40 krans streams inside them.
+
+The test also checks that one stream for each of several refusal rules above is refused. The decoders were also
+compared with the 0.0.2 C decoders on about 26,000 mutated corpus streams. Both refused the same streams and decoded
+the others to the same bytes. No frame uses KLZH (29).
+
+### 18.5 KLZH (codec 29, read only)
+
+KLZH is KLZH2 with these differences:
+- there is no mode byte: each stream is `z uv64 | khuf chunks`;
+- `ns` ≤ `⌊n / 4⌋ + 1`;
+- the match length is the code's value plus **4**;
+- offset codes go up to 26, so offsets are below 2^24. Refuse an offset code above 26.
+
+## 19. Simple inverse transforms
+
+### 19.1 Byte-plane shuffle (plan type 2, tflag 1)
+
+The plan is `2, w, c, d`, where `w` is the element width (2, 4 or 8), `c` the number of channels (1-8) and `d` the
+delta flag. Refuse other `w` or `c`. The coded stream decodes to `raw` bytes. Let `u = w · c` and `rows = ⌊raw / u⌋`.
+The first `rows · u` decoded bytes are `w · c` planes of `rows` bytes each. Plane `b · c + ch` holds byte `b` (from the
+least significant) of channel `ch`'s values, in row order. For each channel, the value of row `r` is the
+little-endian `w`-byte integer gathered from its planes:
+- when `d` = 0, this is the value itself;
+- otherwise it is the difference from the previous row's value of that channel, modulo `2^(8w)` (the value before row 0
+  is 0), and the value is the running sum.
+
+Value `(r, ch)` is written little-endian at offset `(r · c + ch) · w`. The last `raw − rows · u` decoded bytes are
+copied unchanged.
+
+### 19.2 ARM64 branch filter (plan type 11, tflag 14)
+
+Specified in SPEC.md, *ARM64 branch filter*. `tests/coder_reference.py` implements it from that text.
+
+### 19.3 x86 call/jump filter (plan type 7, tflag 8)
+
+The plan is `7, 0, 0, 0`. There is no meta, and the coded stream decodes to `raw` bytes, which the inverse changes in
+place. For each position `i` from 0 to `raw − 5`, in increasing order, look at the block's bytes as they are at that
+moment, including changes made at earlier positions. If both of these hold:
+- `b[i]` is `0xE8` or `0xE9`;
+- `b[i+4]` is `0x00` or `0xFF`;
+
+then replace the 24-bit little-endian value in `b[i+1..i+3]` by that value minus `i`, modulo 2^24. Then continue at
+`i + 1`, not after the four bytes. A block shorter than 5 bytes is unchanged. `i` is the offset in the block, not in the
+file.
+
+The encoder applies the same rule with `+ i`, from the last position to the first.
+
+## 20. Text transforms
+
+These inverses take the coder's output `t` (the *transformed bytes*, of the transformed length in the block's meta,
+§6.1) and produce the block's `raw` bytes, called `n` here. Each one either produces exactly `n` bytes or refuses
+the block as corrupt. `u32` fields are little-endian.
+
+### 20.1 Line classes (plan type 10, tflag 12)
+
+Fixed-width lines stored column by column.
+
+```
+t := 1 u8 | K u8 | L u32 | tail u32 | other u32 | K × (len u32, count u32) | class u8 × L | other lines | tail | columns
+```
+
+- `L` is the number of lines and `K` (1-8) the number of classes. Class `k` (1-based) holds `count` lines of `len`
+  bytes, not counting their newline.
+- `class` gives each line in order its class: 0 for an *other* line, else 1 to K.
+- *Other lines* is `other` bytes: the other lines in order, each with its newline.
+- *Tail* is the `tail` bytes after the last newline of the block.
+- *Columns* holds the classes in order 1 to K. Class `k` is `len` columns of `count` bytes: column `j` holds byte `j`
+  of each of the class's lines, in line order.
+
+Let `covered = Σ len·count` and `lines = Σ count`, computed exactly. Refuse when:
+- `t` is shorter than 14 bytes, or its first byte is not 1;
+- K is 0 or above 8, or `t` is shorter than `14 + 8K`;
+- a `len` is 0 or above 4096;
+- `L > n` or `lines > L`;
+- `14 + 8K + L + other + tail + covered ≠ |t|`, or `covered + lines + other + tail ≠ n`.
+
+Decode the lines in order:
+- A class-`k` line is `len` bytes from the class's columns, then a newline.
+- An *other* line is the next bytes of the other-lines area, up to and including the next newline.
+
+Refuse when:
+- a class id is above K;
+- a class has more lines than its `count`, or fewer at the end;
+- no newline is left in the other-lines area;
+- the output would pass `n`;
+- the other-lines area is not used up exactly;
+- the bytes left to produce are not exactly `tail`.
+
+Then append the tail. Class column bytes are copied as they are and are not checked, so they may hold newlines.
+
+### 20.2 Word dictionary (plan type 8, tflag 9)
+
+Frequent words are replaced by two-byte codes whose first byte is a *prefix* byte.
+
+```
+t := np u8 | prefix u8 × np | cap u8 | nw u32 | word × nw | text
+word := 3 to 48 bytes | '\n'
+```
+
+Refuse when:
+- `t` is shorter than 6 bytes;
+- `np` is 0 or above 64, or `t` is shorter than `np + 6`;
+- two prefixes are equal, or `cap` equals a prefix;
+- `nw > 256·np` or `nw > 16384`;
+- a word is missing its newline, or is shorter than 3 or longer than 48 bytes. A word may hold any byte except
+  newline.
+
+The **text** is the rest of `t`. Read it from the start:
+- A byte that is neither a prefix nor `cap` is copied to the output.
+- A prefix byte `P` and the next byte `x` are the code `256·index(P) + x`, where `index(P)` is P's position in the
+  prefix list (0-based). They are replaced by word number `code`.
+- `cap` must be followed by a prefix byte. The code after it is replaced by its word with bit 5 of the word's first
+  byte cleared (`& 0xDF`).
+
+Refuse when:
+- `cap` is not followed by a prefix byte;
+- a prefix byte is the last byte of the text;
+- `code ≥ nw`;
+- the output would pass `n`, or ends shorter than `n`.
+
+### 20.3 Log templates (plan type 4, tflag 5)
+
+Lines that share a *template* are stored once as the template plus one column per variable token.
+
+```
+t := 1 u8 | L u32 | T u32 | tail u32 | dict u32 | rare u32 | ids | dict bytes | rare bytes | tail bytes | columns
+```
+
+**Integer arrays.** An integer array of `m` values is `mode u8 | w u8 | w planes of m bytes`.
+- Plane `b` holds byte `b` (from the least significant) of each value's unsigned `w`-byte code `z`.
+- The value is `zigzag⁻¹(z) = (z >> 1) XOR −(z & 1)`.
+- With `mode` 1, values are deltas: each value is the running sum of the decoded deltas, modulo 2^64, starting from 0.
+- Refuse `mode > 1`, `w` = 0 or above 8, or fewer than `m·w` bytes left.
+- Values are then read as unsigned 64-bit numbers.
+
+**Header and ids.** Refuse when:
+- `t` is shorter than 21 bytes, or its first byte is not 1;
+- `L > n`, `T > L` or `tail > n`.
+
+`ids` is an integer array of `L` values, the template id of each line. Refuse an id above T, where 0 means a
+*rare* line. Then `dict`, `rare` and `tail` bytes follow; refuse when they do not fit. `m_t` is the number of lines with
+id `t`.
+
+**Templates.** The dictionary holds templates 1 to T, each ending in a newline.
+- Byte `0x01` in a template is a placeholder.
+- A template with `p` placeholders is `p + 1` literal pieces separated by them.
+- Placeholders are numbered as *columns* in order: template 1's first, and so on.
+- Refuse when a template has no newline, or bytes are left after template T.
+
+**Columns.** The total number of columns times 5 must not exceed the bytes left; refuse otherwise. Then each column of
+template `t` follows, in column order, and has `m_t` values:
+- **Type 0, text:** `size u32 | size bytes`. The values in order, each ending in a newline.
+- **Type 1, skeleton:** `g u8 (1-12) | g + 1 pieces (len u8 | len bytes) | g runs`, where a run is
+  `pad u8 (0-18) | integer array of m_t values`. Every value of a run must be below `10^pad` when `1 ≤ pad ≤ 17`,
+  and below `10^18` when `pad` is 0 or 18.
+- Any other type, a value outside those ranges, or bytes left after the last column are refused.
+
+**Output.** For each line, in order:
+- **Id 0:** copy the next line of the rare area, up to and including its newline. Refuse when the rare area has no
+  newline left.
+- **Id `t`:** write the template's pieces. In place of each placeholder, write the next value of its column:
+  - for a **text** column, the bytes up to the next newline of its area, without the newline. Refuse when there is
+    none.
+  - for a **skeleton** column, piece 0, run 0's value, piece 1, … , run `g−1`'s value, piece `g`. A run value is
+    written in decimal. When `pad` > 0 it is left-padded with `0` to `pad` digits.
+
+  Then write a newline.
+
+Refuse when:
+- the output would pass `n`;
+- the rare area is not used up;
+- a text column's area is not used up;
+- the bytes left to produce are not exactly `tail`.
+
+Then append the tail.
+
+### 20.4 Minified JSON (plan type 4, tflag 10)
+
+The meta is 8 bytes: the transformed length, then `k u32`, the number of newlines the encoder inserted. Refuse
+`k > n`. The transformed bytes decode by §20.3 to `n + k` bytes, not `n`. Remove every newline from them, and refuse
+unless exactly `n` bytes remain. The encoder uses this only on blocks without newlines.
+
+### 20.5 Table (plan type 3, tflag 4)
+
+A delimited table stored column by column, with typed numeric columns. The plan is `3, delim, …`. Only `a`, the
+delimiter byte, is used by the decoder. Integers are little-endian. `zigzag⁻¹` is as in §20.3, and "wrapping"
+arithmetic is modulo 2^64 on signed 64-bit values.
+
+```
+t := k u32 | nr u32 | nexc u32 | noNL u32 | gcol i32 | nform u32 | formula × nform | exception × nexc | column × k
+formula   := y u16 | a u16 | b u16 | form u8 | 1 byte (ignored) | factor f64      (16 bytes)
+exception := row u32 | fields u32                                                 (8 bytes)
+column    := type u8 | size u32 | body (size bytes)
+```
+
+**Header.**
+- `k` is the number of columns and `nr` the number of rows.
+- `noNL` non-zero means the last row has no newline.
+- `gcol` is the group column, or −1 for none.
+- Refuse when:
+  - `t` is shorter than 24 bytes;
+  - `k` is 0 or above 256, `nform > 256`, or `gcol` is below −1 or not below `k`;
+  - the formulas and exceptions do not fit in `t`;
+  - `nr > n + 1`.
+- A formula's `form` is 1 (ratio), 2 (difference) or 3 (percent change); refuse any other value. Refuse `y ≥ k` or
+  `a ≥ k`, and for a ratio `b ≥ k`. `factor` is an IEEE 754 double.
+
+**Exceptions** mark short rows. Row `row` has only `fields` fields, the first ones. Refuse when:
+- `fields` is 0 or above `k`;
+- `row ≥ nr`;
+- rows are not strictly increasing.
+
+Column `j` therefore has `nr` minus the number of exceptions with `fields ≤ j` entries. Refuse a column whose count
+differs.
+
+**Columns.** Refuse a `type` other than 0 or 2, or a `size` larger than what is left. Bytes left at the end of a body
+are ignored.
+- **Text (type 0):** `cnt u32 | nlong u32 | lens u8 × cnt | long u32 × nlong | data`.
+  - A length byte of 255 takes the next `long` value instead.
+  - The values are consecutive slices of `data`.
+  - Refuse when the body is shorter than 8 bytes, or `cnt` or `nlong` exceeds the body size.
+  - Refuse when the arrays do not fit, the number of 255 bytes is not `nlong`, or the lengths add up to more than
+    `data`.
+- **Numeric (type 2):** `cnt u32 | nnum u32 | nx u32 | S u8 | w u8 | mode u8 | fid u8 | kind u8 × cnt | sd u8 × nnum | planes | xlen u32 × nx | xdata`.
+  - `kind` gives each entry: 0 empty, 1 a number, 2 a text exception.
+  - `S` is the column's scale: values are integers in units of `10^−S`.
+  - `sd[i]` is how many trailing digits number `i` drops when it is printed.
+  - `planes` is `w` byte planes of `nnum` bytes each. Plane `b` holds byte `b` of each number's code `z`, and the
+    residual is `zigzag⁻¹(z)`.
+  - Text exceptions are consecutive slices of `xdata`, with lengths from `xlen`.
+  - Refuse when:
+    - the body is shorter than 16 bytes;
+    - `S > 18`, `w` is 0 or above 8, `mode > 5`, `cnt` exceeds the body size, or `nnum` or `nx` exceeds `cnt`;
+    - the arrays do not fit;
+    - a kind is above 2, or the counts of kinds 1 and 2 are not `nnum` and `nx`;
+    - an `sd` is above `S`;
+    - the `xlen` add up to more than `xdata`.
+
+The table is **aligned** when `nexc` is 0 and every column has `nr` entries.
+
+**Group ids.** With `gcol ≥ 0`, refuse unless column `gcol` is text and the table is aligned. Row 0 has group 0, and
+each later row has the previous row's group, plus 1 when its `gcol` value differs from the previous row's. Without a
+group column every row is in group 0.
+
+**Numbers.** Modes 2-5 need an aligned table; refuse them otherwise. Decode the columns of modes 0, 1, 2, 4 and 5
+first, then those of mode 3. For the `i`-th number of a column (in row order), let `r` be its residual. "Same group"
+means `i > 0` and its row is in the same group as the previous number's row.
+- **Mode 0:** `v = r`.
+- **Mode 1:** `v` = the running sum of the residuals, wrapping.
+- **Mode 2:** `v = previous v + r` in the same group, else `r`.
+- **Mode 4:** in the same group, `d = r + previous d` (just `r` for the group's second number), and `v = previous v + d`.
+  Otherwise `v = r`.
+- **Mode 5:** in the same group, for the group's second number `d = r`. After that, `dd = r + previous dd` (just `r` for
+  the group's third number) and `d = dd + previous d`. Then `v = previous v + d`. Otherwise `v = r`.
+- **Mode 3 (formula):**
+  1. **Checks.** Refuse when `fid ≥ nform`, or formula `fid`'s `y` is not this column. Refuse when its source column
+     `a` (and `b` for a ratio) is not numeric or is itself of mode 3.
+  2. **Source values.** A source column gives each row the double `exact(v, sd) / 10^(S − sd)`, or NaN for a row
+     without a number.
+     - `exact(v, s)` is `(v >> s) · inv(5^s) mod 2^64`, read as signed. `>>` is an arithmetic shift, and `inv(5^s)` is
+       the inverse of `5^s` modulo 2^64. It equals `v / 10^s` when `10^s` divides `v`.
+     - `10^x` is the exactly representable double.
+  3. **Prediction**, with doubles in IEEE 754 round-to-nearest, evaluated left to right with no fused multiply-add.
+     Division by zero gives ±infinity or NaN, as IEEE 754 defines. For row `t`:
+     - ratio: `A[t] / B[t] · factor`;
+     - difference: `(A[t] − L) · factor`;
+     - percent: `(A[t] − L) / L · 100 · factor`.
+
+     `L` is `A[t−1]` when row `t − 1` exists and is in the same group, else NaN.
+  4. **Value.** Let `p = prediction · 10^S`. If `|p| < 2^62`, which excludes NaN and infinities,
+     `v = r + roundeven(p)`. Otherwise `v = r`.
+
+**Printing a number.**
+1. Write `v` as a fixed-point decimal with exactly `S` digits after the point and at least one before it, with `-`
+   for negative values. When `S` is 0 there is no point.
+2. Drop its last `sd` characters, plus the point when `sd = S > 0`. The dropped digits are not checked.
+
+**Rows.** For row 0 to `nr − 1`:
+- write its fields, `k` of them or `fields` for an exception row;
+- separate the fields by the delimiter;
+- end the row with a newline, except the last row when `noNL` is non-zero.
+
+A field is:
+- for a text column, its next value;
+- for a numeric column, nothing (kind 0), the next printed number (kind 1) or the next text exception (kind 2).
+
+Refuse when the output would pass `n`, or ends shorter.
+
+**Fields over 65535 bytes.** A conforming decoder must decode a table whose text values or text exceptions are longer
+than 65535 bytes. The 0.0.2 encoder writes such blocks: any CSV whose rows all have the same field count, with one
+field longer than 64 KiB, at levels 3-9. The 0.0.2 decoder refused them in aligned tables, so 0.0.2 could not read
+those files. Its fast path kept field lengths in 16 bits and never fell back to the row path. Releases after 0.0.2
+decode them by the rules above, to the original. `tests/v12/r0.0.2/longfield.csv.*` are two such frames written by
+0.0.2.
+
+Table v1 (tflag 3) and the column-split table (tflag 13) are not written out yet (§13).
+
+### 20.6 Typed transpose (plan type 1, tflags 1 and 2)
+
+Delimited text stored field column by field column. The plan is `1, delim, quotes, c`, with `k = c + 1` columns.
+- The meta is `k` sizes, `u32` each.
+- The coded stream decodes to `raw` bytes: column 0's bytes, then column 1's, and so on, each of its size.
+- Refuse when the sizes do not add up to exactly `raw`.
+
+A byte is a **terminator** when it is a newline or `delim`. With tflag 1 and `quotes` non-zero, `"`, `[` and `]` are
+terminators too. With tflag 2 the quote rule is off whatever `quotes` holds.
+
+Rebuild the text with a current column `j` (starting at 0) and the flags `inq` and `inbr` (starting clear). Until the
+output has `raw` bytes:
+1. Copy bytes from column `j`'s next unread position up to and including its next terminator, or to the end of the
+   column when it has none left. Refuse when this copies nothing or would pass `raw`.
+2. If the last byte copied is a terminator:
+   - with quotes on, `"` toggles `inq` when `inbr` is clear; `[` sets `inbr` when `inq` is clear; `]` clears `inbr`
+     when `inq` is clear;
+   - a newline sets `j = 0` and clears both flags;
+   - `delim` with both flags clear moves to the next column, `j = j + 1`, unless `j` is already `k − 1`.
+
+### 20.7 16-bit image (plan type 5, tflag 6)
+
+```
+t := be u8 | skip u8 | mode u8 | 1 byte (ignored) | W u32 | N u32 | skip bytes | lo × N | hi × N | tail
+```
+
+**Header.** Refuse when:
+- `t` is shorter than 12 bytes;
+- `be > 1`, `skip > 1` or `mode > 2`;
+- `W` is 0 or above 4096;
+- `skip + 2N > raw`;
+- `|t|` is not exactly `12 + skip + 2N + tail`, where `tail = raw − skip − 2N`.
+
+**Samples.** Sample `i` (0 to N−1) is predicted from the samples already decoded. Let `L = x[i−1]`, `U = x[i−W]` and
+`UL = x[i−W−1]`, each 0 when its index is negative. The prediction is:
+- mode 0: `L`;
+- mode 1: `⌊(L + U) / 2⌋`;
+- mode 2: `min(L, U)` if `UL ≥ max(L, U)`; `max(L, U)` if `UL ≤ min(L, U)`; otherwise `L + U − UL`.
+
+The residual is `zigzag⁻¹(lo[i] + 256·hi[i])` (§20.3) and `x[i] = (prediction + residual) mod 2^16`.
+
+**Output.** The `skip` bytes, then the N samples, each written as 2 bytes (big-endian when `be` is 1, else
+little-endian), then the tail.
+
+### 20.8 Fixed-size records (plan type 6, tflag 7)
+
+```
+t := P u16 | nf u8 | 1 byte (ignored) | nrec u32 | pre u32 | tail u32 | field × nf | pre bytes | tail bytes | bodies
+field := o u8 | w u8 | kind u8 | 1 byte (ignored) | size u32
+```
+
+The block is `pre` bytes, `nrec` records of `P` bytes, then `tail` bytes. Each field covers bytes `o .. o + w − 1` of
+every record, and its body (`size` bytes, in field order) holds those bytes for all records. Field values are
+little-endian unsigned `w`-byte integers.
+
+**Header.** Refuse when:
+- `t` is shorter than 16 bytes;
+- `P` is below 2 or above 64, or `nf` is 0 or above 64;
+- `pre > raw`, `tail > raw`, or `nrec·P + pre + tail ≠ raw`;
+- `16 + 8·nf + pre + tail > |t|`.
+
+**Fields.** Refuse when:
+- `w` is not 1, 2, 4 or 8;
+- `o + w > P`;
+- `size` is larger than what is left;
+- a record byte is covered by two fields, or any byte `0 .. P−1` is covered by none;
+- bytes are left after the last body.
+
+**Bodies.** *Planes* of `m` values of `w` bytes are `w` arrays of `m` bytes, array `b` holding byte `b` of each value.
+- **kind 0, raw:** planes of the `nrec` values. Refuse unless `size = nrec·w`.
+- **kind 1, delta:** the same, then each value is the running sum modulo `2^(8w)`.
+- **kind 2, dictionary:** `count u32 | iw u8 | planes of count values (w bytes) | planes of nrec indices (iw bytes)`.
+  - The dictionary values are running sums modulo `2^(8w)` of the stored ones.
+  - Each record's value is the dictionary entry at its index.
+  - Refuse when `iw` is not 1, 2 or 4, `count` is 0, `size ≠ 5 + count·w + nrec·iw`, or an index is `≥ count`.
+- **kind 3, quantised doubles** (only with `w = 8`): `c f64 | delta u8 | pfor (nrec values) | pfor (nrec values)`.
+  - A **pfor** is `pw u8 (1-8) | ne u32 | planes of nrec values (pw bytes) | ne × (index u32, value u64)`. Each pair
+    replaces value `index`. Refuse a `pw` outside 1-8, an `index ≥ nrec`, or a pfor that does not fit.
+  - The first pfor holds zigzag codes of integers `q`. With `delta` 1, `q` is their running sum, wrapping modulo 2^64.
+  - The second pfor holds zigzag codes of corrections `e`, and must end exactly at the end of the body.
+  - The value is the bit pattern of the double `q · c`, computed in IEEE 754 round-to-nearest from `q` converted to a
+    double, plus `e`, modulo 2^64.
+  - Refuse when `size < 19`, `delta > 1`, or `c` is not a finite number above 0.
+- Any other kind, or kind 3 with `w ≠ 8`, is refused.
+
+Copy the `pre` bytes to the start and the `tail` bytes to the end of the block. Each field writes its values into its
+bytes of each record.
+
+## 21. KLZMA (codec 24)
+
+KLZMA is an LZ77 coder with an adaptive binary range coder, in the family of LZMA. It is **not** bit-compatible with
+LZMA: the probability layout of the distance and matched-literal trees, the range decoder's start and its end rule
+differ. It decodes as below, with every value an unsigned 32-bit integer unless stated otherwise.
+
+```
+klzma := props u8 | range-coded bytes
+```
+
+**Properties.** `lc = props mod 9`, `lp = ⌊props / 9⌋ mod 5`, `pb = ⌊props / 45⌋`. Refuse when:
+- the stream is shorter than 6 bytes;
+- `pb > 4` or `lc + lp > 4`.
+
+### 21.1 Range decoder
+
+- **State.** `range = 0xFFFFFFFF`, and `code` is the five bytes after `props`, shifted in one at a time:
+  `code = (code << 8 | byte) mod 2^32`. The first of the five bytes is therefore shifted out and has no effect.
+- **Reading bytes.** Reading continues from byte 6 of the stream. A byte past the end reads as 0, but still counts as
+  read.
+- **Normalisation**, after every decoded bit: if `range < 2^24`, set `range = (range << 8) mod 2^32` and
+  `code = (code << 8 | next byte) mod 2^32`. This is done once per bit, not in a loop.
+- **Probabilities** are 11-bit, start at 1024 and are kept per context. Decoding a bit with probability cell `p`:
+  - let `bound = (range >> 11) · p`;
+  - if `code < bound`: the bit is 0, `range = bound` and `p += (2048 − p) >> 5`;
+  - otherwise: the bit is 1, `code −= bound`, `range −= bound` and `p −= p >> 5`;
+  - then normalise.
+- **Direct bit** (no probability): `range >>= 1`. The bit is 1 when `code ≥ range`, and then `code −= range`. Then
+  normalise.
+- **Bit tree** of `k` bits over cells `c[1 .. 2^k − 1]`: start with `m = 1`, and `k` times decode bit `b` with cell
+  `c[m]` and set `m = 2m + b`. The value is `m − 2^k`, most significant bit first.
+- **Reverse tree**: the same walk, but bit `i` of the walk (from 0) is bit `i` of the value, least significant bit
+  first.
+
+### 21.2 Contexts
+
+- `state` is 0 to 11 and starts at 0. After a literal it becomes 0 if it was below 4, `state − 3` if below 10, and
+  `state − 6` otherwise. After a match it becomes 7 if it was below 7, else 10. After a long repeat match it becomes
+  8 or 11, and after a short repeat 9 or 11, by the same rule.
+- `pos` is the number of bytes produced, and `ps = pos mod 2^pb`.
+- Four recent distances `rep0`-`rep3` start at 0. A stored distance `d` means "`d + 1` bytes back".
+- Cells, each starting at 1024:
+  - `is_match[state][ps]`, `is_rep[state]`, `is_rep0[state]`, `is_rep1[state]`, `is_rep2[state]`,
+    `is_rep0_long[state][ps]`;
+  - `slot[4]` (6-bit trees);
+  - `spec[slot]` for slots 4-13, a separate reverse tree for each slot;
+  - `align` (a 4-bit reverse tree);
+  - two length coders, one for matches and one for repeat matches. Each has `choice`, `choice2`, `low[ps]` and
+    `mid[ps]` (3-bit trees) and `high` (an 8-bit tree);
+  - literal coders: `0x300` cells for each of the `2^(lc+lp)` literal contexts.
+
+**Length.** If `choice` gives 0, the value is `low[ps]`'s 3-bit tree. Otherwise, if `choice2` gives 0, it is 8 plus
+`mid[ps]`'s tree. Otherwise it is 16 plus `high`'s 8-bit tree. The length is that value plus 2, so 2 to 273.
+
+### 21.3 Decoding
+
+Repeat until `pos = n`. Before each symbol, refuse when more than 4 bytes past the end have been read.
+
+1. **Literal** (`is_match[state][ps]` gives 0). The literal context is `((pos mod 2^lp) << lc) + (prev >> (8 − lc))`,
+   where `prev` is the last byte produced (0 at `pos` 0), and its cells are `L[0 .. 0x2FF]`.
+   - When `state < 7`, the byte is an 8-bit tree over `L[1 .. 255]`.
+   - When `state ≥ 7`, let `mb` be the byte `rep0 + 1` back. For bits 7 down to 0, with `sym` the tree index so far:
+     while every bit so far equals `mb`'s bit, decode with cell `L[0x100 + 0x100 · mbit + sym]`, where `mbit` is
+     `mb`'s current bit. After the first bit that differs, decode the remaining bits with `L[sym]`.
+   - Append the byte and update `state`.
+2. **Match** (`is_match` 1, `is_rep[state]` 0).
+   - Decode the length with the match length coder.
+   - Decode `slot` with the 6-bit tree `slot[min(length − 2, 3)]`.
+     - If `slot < 4`, `d = slot`.
+     - Otherwise let `nb = ⌊slot / 2⌋ − 1` and `d = (2 + (slot mod 2)) << nb`. For slots 4-13, add the `nb`-bit
+       reverse tree `spec[slot]`. For slots 14 and up, add `nb − 4` direct bits (most significant first) shifted left
+       by 4, then the 4-bit reverse tree `align`. The sum is taken modulo 2^32.
+   - The recent distances become `d, rep0, rep1, rep2`. Set `state` to 7 or 10.
+3. **Repeat match** (`is_rep[state]` 1).
+   - **rep0** (`is_rep0[state]` 0): if `is_rep0_long[state][ps]` gives 0, this is a **short repeat**. Refuse when
+     `rep0 ≥ pos`. Otherwise append the byte `rep0 + 1` back, set `state` to 9 or 11 and go on to the next symbol.
+     If it gives 1, the distance is `rep0` and the list is unchanged.
+   - **rep1, rep2 or rep3**: `is_rep1[state]` 0 selects rep1. Otherwise `is_rep2[state]` 0 selects rep2, and 1
+     selects rep3. The selected distance moves to the front, and the ones before it move down one place.
+   - Decode the length with the repeat length coder and set `state` to 8 or 11.
+4. **Copy.** For a match or long repeat, refuse when `rep0 ≥ pos` or `length > n − pos`. Then copy `length` bytes
+   from `rep0 + 1` back (§14.2).
+
+**End.** Refuse when more than 4 bytes past the end have been read. Unread bytes at the end of the stream are ignored.
+The encoder ends with 5 flush bytes.
+
+### 21.4 Test coverage of sections 20 and 21
+
+`tests/coder_reference.py` decodes all of the following:
+- **Section 20**, compared with the original: 40 corpus blocks coded by KLZH2 or KLZMA under its transforms. These
+  are 2 transpose, 1 16-bit image, 1 record, 15 table, 11 log-template, 5 minified-JSON, 4 word and 1 line-class block.
+  - The table blocks reach numeric modes 0-5, ratio and difference formulas, a group column, short rows, text
+    exceptions, empty fields, long-text lengths, fields over 65535 bytes and dropped trailing digits.
+  - No corpus block uses the percent-change formula.
+  - Blocks under these transforms coded by CM or BWT are not decoded, because those coders are not written out yet.
+- **Section 21**: 15 KLZMA blocks and 8 KLZMA graph leaves.
+  - 6 blocks have no transform and 5 are under the table or log transform; all 11 are compared with the original;
+  - 4 are checked through the shuffle or x86 inverse and their block checksum.
+
+The decoders of sections 20 and 21 were also compared with the 0.0.2 C decoders on mutated corpus streams: about
+6,000 transform streams and 8,700 KLZMA streams. Both refused the same streams and decoded the others to the same
+bytes.

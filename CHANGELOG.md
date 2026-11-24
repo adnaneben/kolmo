@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Tables with a field over 64 KiB now decompress.** 0.0.2 compressed them without error but could not decompress
+  them ("corrupt or unsupported input"). This affected any CSV or TSV whose rows all have the same number of fields
+  and that holds one field longer than 65,535 bytes, at levels 3 to 9 (the table transform).
+  - Cause: the decoder's fast path for such tables kept field lengths in 16 bits and refused longer fields, and the
+    general row path was never tried (`src/transforms/table.c`).
+  - Fix: it now falls back to the row path, which decodes them to the original. No frame that decoded before decodes
+    differently, and the format is unchanged.
+  - Files written by 0.0.2 become readable with the next release. They stay unreadable with 0.0.2 itself.
+  - Two such 0.0.2 frames are in the corpus (`tests/v12/r0.0.2/longfield.csv.*`), so `make check` covers the fix
+    (FORMAT.md 20.5).
+
 ### Format
 
 - **`FORMAT.md`: the specification of container version 12.** It is complete for the container layer: header, index,
@@ -15,13 +28,54 @@
   version 12 is never removed.
 - **Frozen corpus of 0.0.2 frames.** `tests/v12/r0.0.2/` adds 246 frames written by the 0.0.2 release binary, with
   their originals: every level, the format-changing options, the stream wrapper, and inputs that reach most block
-  codecs and transforms 0.0.2 writes. Block codecs 25, 26 and 31 and tflags 2, 6 and 8 are not yet reached
-  (COMPATIBILITY.md).
+  codecs and transforms 0.0.2 writes (COMPATIBILITY.md).
   - `make check` decodes them through the library (`test-v12-corpus`) and the CLI (`tests/check_v12_frames.py`, which
     also fails if a frozen frame changes).
   - It re-checks every frame of the corpus against FORMAT.md with an independent Python implementation of the
     container layer (`tests/format_reference.py`).
   - `tests/make_v12_frames.py` adds each release's frames (RELEASING.md).
+- **FORMAT.md: Kolmo's own coders written out** (sections 14 to 19), so an independent decoder can be written from
+  the text: varints and match copy, khuf (codec 27), krans (static rANS inside KLZH2), KLZ (28), KLZH2 (32) and the
+  read-only KLZH (29). Every field, bit order, table construction and refusal rule is given. Section 19 adds the
+  inverses of the byte-plane shuffle (plan 2, tflag 1) and the x86 call/jump filter (plan 7, tflag 8). The registry
+  and section 13 point to the new sections. No decoder changed and no frame changed.
+  - One 0.0.2 behaviour is recorded as it is: KLZH2 computes a match length modulo 2^32. Match-length code 71 with
+    extra bits of at least 2^30 − 3 then gives a match of 0, 1 or 2 bytes, which the decoder accepts. No encoder
+    writes it (FORMAT.md 18.3).
+- **FORMAT.md section 20: the text and table transforms.** The inverses of the line-class (tflag 12), word dictionary
+  (9), log template (5), minified-JSON (10) and table v2 (4) transforms are written out, with every refusal rule. For
+  the table this includes the numeric modes, the group column, formulas evaluated in IEEE doubles, short rows and
+  printing. 34 corpus blocks under them now decode to their originals in `tests/coder_reference.py`.
+
+- **Six more 0.0.2 frames for the table transform** (`tests/v12/r0.0.2/`, from the 0.0.2 tag binary). The inputs are
+  the derived-column series at levels 3 and 9, and three new inputs: a ragged CSV (short rows, text in numeric
+  columns, long fields), grouped station series (modes 2, 4 and 5) and a growth table (mode 0, dropped trailing
+  digits).
+- **FORMAT.md sections 20.6-20.8: the typed transposes (plan 1, tflags 1 and 2), the 16-bit image (tflag 6) and
+  fixed records (tflag 7)**, with Python decoders. Every corpus block under them decodes to its original. One more
+  0.0.2 frame (`quoted.csv.L3`) reaches the quote-aware transpose.
+- **FORMAT.md section 21: KLZMA (codec 24)**, the LZMA-class coder of levels 8-9. It covers the range decoder (which
+  differs from LZMA's at the start and the end), contexts, literals, matches and repeat matches. 12 corpus blocks and
+  8 graph leaves decode in the Python reference.
+- The new decoders agreed with the 0.0.2 C decoders on about 15,000 further mutated streams. `make check` now spends
+  about 30 s in `tests/coder_reference.py`. Left in FORMAT.md section 13: table v1 (tflag 3), the column-split table (13), the QLFC coder, kimg and CMP.
+- **`tests/coder_reference.py`**: an independent Python decoder for those sections, written from the prose, in
+  `make check` (about 10 s). It decodes every corpus block that uses KLZ or KLZH2:
+  - blocks without a transform are compared with the original;
+  - blocks under the shuffle, x86 or ARM64 filter are checked against their block checksum;
+  - blocks under other transforms are checked to decode to their transformed length.
+
+  It also decodes every khuf and KLZH2 graph leaf, and checks that broken streams are refused. On about 26,000
+  mutated corpus streams it agreed with the 0.0.2 C decoders on every accept, refusal and output byte.
+- **The 0.0.2 corpus reaches every block codec and default transform 0.0.2 writes.** 11 frames were added to
+  `tests/v12/r0.0.2/`, written by the 0.0.2 tag binary from six new synthetic inputs in `tests/make_v12_frames.py`.
+  No existing frame changed. The new inputs:
+  - a 12-bit image (16-bit image transform, tflag 6);
+  - a smooth 8-bit image (kimg, codec 31, level 9);
+  - 1 MiB of x86-like code (x86 filter, tflag 8);
+  - a words CSV (typed transpose, tflag 2);
+  - a two-column CSV (CM over columns, codec 25, ultra);
+  - a derived-column time series (GR6+, codec 26, ultra).
 
 ## 0.0.2 (2026-11-23)
 
