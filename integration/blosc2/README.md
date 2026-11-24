@@ -97,7 +97,7 @@ make -C integration/blosc2 test
 
 [tests/test_dynamic_load.c](tests/test_dynamic_load.c) does not link the plugin. It registers the ID with a NULL
 encoder and decoder, as c-blosc2's registry does, and checks that Blosc2 itself loads `libblosc2_kolmo.so` and
-round-trips through it. It runs twice: once with the library path set, and once through the `blosc2_kolmo` Python package (`PYTHONPATH`). c-blosc2 3.x tries the library path first; 2.x, as packaged in Ubuntu 24.04, uses only the Python route. Both tests call `blosc2_init()` first and `blosc2_destroy()` last, as the Blosc registry
+round-trips through it. It runs twice: once with the library path set, and once through the `blosc2_kolmo` Python package (`PYTHONPATH`). c-blosc2 3.x tries the library path first; 2.x, as packaged in Ubuntu 24.04, uses only the Python route, so there the library-path run is skipped. Both tests call `blosc2_init()` first and `blosc2_destroy()` last, as the Blosc registry
 requires.
 
 **Without c-blosc2 installed:** the build stops with the message `c-blosc2 not found` and the install commands. Nothing

@@ -16,7 +16,13 @@
 
 #define BLOSC_CODEC_KOLMO 244   /* PLACEHOLDER, as in ../blosc2_kolmo.h */
 
-int main(void) {
+int main(int argc, char **argv) {
+    /* --libpath-route: the run with only the library path set. c-blosc2 2.x does not try dlopen("libblosc2_<name>.so")
+     * (it asks Python only), so that run is skipped there. */
+    if (argc > 1 && !strcmp(argv[1], "--libpath-route") && BLOSC2_VERSION_MAJOR < 3) {
+        printf("SKIP library-path route: c-blosc2 %s loads plugins through Python only\n", BLOSC2_VERSION_STRING);
+        return 0;
+    }
     blosc2_init();
     blosc2_codec codec = {0};
     codec.compcode = BLOSC_CODEC_KOLMO;

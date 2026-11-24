@@ -85,7 +85,7 @@ build/python/blosc2_kolmo/libblosc2_kolmo.so: $(PLUGIN) python/blosc2_kolmo/__in
 
 test: build/test_blosc2_kolmo build/test_dynamic_load $(PLUGIN) build/python/blosc2_kolmo/libblosc2_kolmo.so
 	./build/test_blosc2_kolmo $(PLUGIN)
-	$(LIBPATH_VAR)=$(CURDIR)/build/plugin ./build/test_dynamic_load
+	$(LIBPATH_VAR)=$(CURDIR)/build/plugin ./build/test_dynamic_load --libpath-route
 	PYTHONPATH=$(CURDIR)/build/python ./build/test_dynamic_load
 
 bench: build/bench_blosc2
