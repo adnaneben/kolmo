@@ -519,6 +519,54 @@ def tab_x86(nums):
     write("tab-x86.tex", "\n".join(lines) + "\n", "x86/claims-silesia.tar.run{1,2,3}.csv, lzb-*-silesia.tar.csv")
 
 
+SILESIA12 = ["dickens", "mozilla", "mr", "nci", "ooffice", "osdb", "reymont", "samba", "sao", "webster", "x-ray", "xml"]
+
+
+def archivers(nums):
+    """Kolmo against the maximum-ratio archivers, one thread, command line (data/archivers.jsonl: main 53a02e47, M5,
+    2026-11-24, every round trip SHA-256 checked), plus published leader sizes (data/archivers-published.json)."""
+    f = os.path.join(DATA, "archivers.jsonl")
+    if not os.path.exists(f):
+        return
+    rows = [json.loads(l) for l in open(f)]
+    assert all(r["roundtrip_sha256_ok"] for r in rows)
+    size = {(r["file"], r["label"]): r["compressed"] for r in rows}
+    pct = lambda a, b: f"{(a / b - 1) * 100:+.1f}"
+    tot = lambda label, files: sum(size[(x, label)] for x in files)
+    u_sil, z_sil = tot("kolmo -U", SILESIA12), tot("zpaq -m5", SILESIA12)
+    nums["ArcUSilVsZpaq"] = pct(u_sil, z_sil)
+    nums["ArcUSilVsXz"] = pct(u_sil, tot("xz -9e", SILESIA12))
+    nums["ArcUSilVsPpmd"] = pct(u_sil, tot("7-Zip PPMd -mx9", SILESIA12))
+    nums["ArcUEnwVsZpaq"] = pct(size[("enwik8", "kolmo -U")], size[("enwik8", "zpaq -m5")])
+    nums["ArcUMozVsZpaq"] = pct(size[("mozilla", "kolmo -U")], size[("mozilla", "zpaq -m5")])
+    # ultra on main 53a02e47 writes the same enwik8 bytes as the 0.0.2 lzbench run
+    nums["ArcUEnwSameAsRel"] = "yes" if size[("enwik8", "kolmo -U")] == corpus("enwik8")["kolmo 0.0.2 -10"]["size"] else "NO"
+    # paq8px -8 on the files it ran on; Kolmo's best level per file
+    paq = [x for (x, l) in size if l == "paq8px -8"]
+    best = {x: min(v for (y, l), v in size.items() if y == x and l.startswith("kolmo")) for x in paq}
+    kp, pp = sum(best.values()), sum(size[(x, "paq8px -8")] for x in paq)
+    nums["ArcPaqFiles"] = str(len(paq))
+    nums["ArcBestVsPaq"] = pct(kp, pp)
+    noe = [x for x in paq if x != "energy_test.csv"]
+    nums["ArcBestVsPaqNoEnergy"] = pct(sum(best[x] for x in noe), sum(size[(x, "paq8px -8")] for x in noe))
+    per = sorted((best[x] / size[(x, "paq8px -8")] - 1) * 100 for x in noe)
+    nums["ArcPaqPerFileMin"], nums["ArcPaqPerFileMax"] = f"{per[0]:.1f}", f"{per[-1]:.1f}"
+    nums["ArcEnergyVsPaq"] = pct(best["energy_test.csv"], size[("energy_test.csv", "paq8px -8")])
+    sp = lambda label, files, k: sum(r["input"] for r in rows if r["label"] == label and r["file"] in files) / 1e6 / \
+        sum(r[k] for r in rows if r["label"] == label and r["file"] in files)
+    nums["ArcUSilC"] = f"{sp('kolmo -U', SILESIA12, 'c_s'):.1f}"
+    nums["ArcZpaqSilC"] = f"{sp('zpaq -m5', SILESIA12, 'c_s'):.2f}"
+    nums["ArcPaqSlowMin"] = f"{min(sp('kolmo -U', [x], 'c_s') / sp('paq8px -8', [x], 'c_s') for x in paq):.0f}"
+    nums["ArcPaqSlowMax"] = f"{max(sp('kolmo -U', [x], 'c_s') / sp('paq8px -8', [x], 'c_s') for x in paq):.0f}"
+    pub = json.load(open(os.path.join(DATA, "archivers-published.json")))
+    nums["ArcUSilVsPaqTwelve"] = pct(u_sil, pub["silesia"]["paq8px_v217 -12L"])
+    nums["ArcUSilVsCmix"] = pct(u_sil, pub["silesia"]["precomp+cmix v21"])
+    e = size[("enwik8", "kolmo -U")]
+    nums["ArcUEnwVsCmix"] = pct(e, pub["enwik8"]["cmix v21"])
+    nums["ArcUEnwVsPaqTwelve"] = pct(e, pub["enwik8"]["paq8px_v206fix1 -12L"])
+    nums["ArcUEnwVsNncp"] = pct(e, pub["enwik8"]["nncp v3.2"])
+
+
 def macro_name(k):
     digits = "Zero One Two Three Four Five Six Seven Eight Nine".split()
     out = "".join(digits[int(ch)] if ch.isdigit() else ch for ch in k if ch.isalnum())
@@ -536,6 +584,7 @@ def main():
     tab_holdout(nums)
     dev_levels(nums)
     tab_x86(nums)
+    archivers(nums)
     body = "".join(f"\\newcommand{{\\{macro_name(k)}}}{{{v}}}\n" for k, v in sorted(nums.items()))
     write("numbers.tex", body, "lzb-*.csv, openzl.json, mt-result.json")
     print(f"wrote {len(os.listdir(OUT))} files to {os.path.relpath(OUT)}; {len(nums)} number macros")
