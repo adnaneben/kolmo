@@ -119,6 +119,25 @@
   back, and a one-thread benchmark against numcodecs' Zstd, Blosc and LZ4 (`bench.py`, results in its README: level 3
   is 1.1-1.7x smaller than zstd 19 on six of seven generated scientific arrays). CI: `.github/workflows/numcodecs-kolmo.yml`.
 
+### Tests and CI
+
+- **Size ledger** (`benchmark/ledger/`): the compressed size and SHA-256 of every committed corpus file (the
+  `tests/v12` originals: text, CSV, JSON, logs, FASTQ/FASTA, images, audio, video, numeric arrays, executables, a tar,
+  mixed binaries, edge cases) at levels 1-9 and ultra, plus a generated 12.4 MB multi-block input (levels 1-9, levels
+  8-9 with 4 MiB blocks, and 1 against 4 threads), 571 entries. CI fails when an entry grows or shrinks by more than
+  0.1% and 16 bytes unless the PR refreshes `sizes.tsv`, and prints the change per data kind and level in the job
+  summary, also against the base branch's ledger. About 20 s on an Apple M5, run on every CI platform
+  (`make check-ledger`).
+- **Level-order gate**, in the same run: no level is larger than the one below by more than 0.5% and 16 bytes. The 24
+  inversions on main today are listed with their causes in `level_order_exceptions.txt` (KLZH2 levels 4-7, the graph
+  coder's 3% rule at level 6, level 8's forced block sorting, level 9 keeping KLZMA where level 8 is 7-40% smaller,
+  ultra on two small graph-coded inputs); a listed one that disappears is reported so the list can be trimmed.
+- **Every file under `tests/v12` is hash-pinned** (`tests/v12.sha256`, checked by `make check`): the 0.0.1 frames at
+  the top, their MANIFEST and the 0.0.2 release directory with its originals. In a pull request the pin file is also
+  append-only against the base branch, so a frame and its pin cannot be rewritten together.
+- The CI fuzz campaign now also seeds from the 0.0.2 release frames (`tests/v12/r0.0.2/`, less the slow level 8, 9 and
+  ultra ones).
+
 ### Project
 
 - **Contributor and governance documents.** `CONTRIBUTING.md` (build, tests, sanitizers, fuzzing, the format rules,

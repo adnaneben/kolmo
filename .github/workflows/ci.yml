@@ -47,6 +47,15 @@ jobs:
         run: make -j4 ARCH= experimental-check kfam-check GPU_CHECK=
       - name: determinism (the same frames on every platform and thread count as benchmark/determinism/expected.sha256)
         run: python3 benchmark/determinism/check.py build/kolmo build/determinism
+      - name: size ledger and level order (benchmark/ledger; the per-kind diff is in the job summary) and append-only v12 pins
+        run: |
+          base=; pins=
+          if [ -n "$GITHUB_BASE_REF" ] && git fetch -q --depth=1 origin "$GITHUB_BASE_REF"; then
+            git show FETCH_HEAD:benchmark/ledger/sizes.tsv > base-sizes.tsv 2>/dev/null && base="--base base-sizes.tsv"
+            git show FETCH_HEAD:tests/v12.sha256 > base-v12.sha256 2>/dev/null && pins="--base base-v12.sha256"
+          fi
+          python3 tests/check_v12_pinned.py $pins
+          python3 benchmark/ledger/ledger.py build/kolmo $base
       - name: streaming round trip (multi-frame, bounded memory)
         run: |
           cat $(find src -name '*.[ch]' | sort) README.md > s.in
@@ -97,8 +106,10 @@ jobs:
             ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./$t 20000
           done
           # version-12 frames of every mode (the frame target recomputes the header CRC after mutation, so the
-          # mutations reach the block decoders): a bounded mutation campaign over the seeds
-          ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./fuzz_decompress -300 fuzz/corpus/v12/* tests/v12/*.kolmo
+          # mutations reach the block decoders): a bounded mutation campaign over the seeds; the release directories'
+          # frames too (0.0.2 codecs and CZNS streams), less the slow 8/9/ultra ones (their ASan seed pass alone took minutes)
+          ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./fuzz_decompress -300 fuzz/corpus/v12/* tests/v12/*.kolmo \
+            $(find tests/v12/r* -name '*.kolmo' ! -name '*.L[89U].kolmo' -size -64k | sort)
           gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -Isrc \
             fuzz/fuzz_native.c fuzz/run_local.c build/libkolmoarch-asan.a -lpthread -lm -o fuzz_native
           ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 ./fuzz_native -120 fuzz/corpus/native/*

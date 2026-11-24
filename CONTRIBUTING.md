@@ -41,6 +41,7 @@ and pull request (`.github/workflows/ci.yml`).
 make -j ARCH= check                    # round trips at every level, the CLI tests, the frozen v12 corpus, hardening
 python3 tests/check_release_docs.py build/kolmo   # no removed option shown as current; level tables agree
 python3 benchmark/determinism/check.py build/kolmo build/determinism   # same frames on every platform and thread count
+python3 benchmark/ledger/ledger.py build/kolmo     # size ledger per file x level, level-order gate (make check-ledger)
 ```
 
 **Sanitizers.** ASan and UBSan builds of the core tests and of the component tests:
@@ -89,12 +90,22 @@ users is [COMPATIBILITY.md](COMPATIBILITY.md). The short version, which every ch
    error rather than returning wrong bytes. Reserved header and index bytes are ignored by decoders, so they must never
    carry something a decoder needs.
 4. **Never edit or regenerate a frame in `tests/v12/`.** The corpus only grows: each release adds its frames.
+   `tests/v12.sha256` pins every file there (`make check` and CI); a new release directory is added with
+   `python3 tests/check_v12_pinned.py --write`, which never changes an existing line.
 5. **A new container version is the last resort**, for a change that cannot be expressed as a refused identifier.
 
 The encoder is free to change: a later release may write different (usually smaller) bytes for the same input.
 Within a release, output must stay deterministic. If your change is meant to change encoder output, regenerate
 `benchmark/determinism/expected.sha256` with `check.py ... --write` and say so in the commit message. If it is not
 meant to, that file must not change.
+
+**Size ledger.** `benchmark/ledger/sizes.tsv` records the compressed size (and SHA-256) of every committed corpus file
+at levels 1-9 and ultra, plus a generated multi-block input. CI fails when an entry grows, or shrinks, by more than
+0.1% and 16 bytes against it, and prints the change per data kind and level in the job summary (also against the
+base branch's ledger). A change meant to change sizes refreshes it in the same PR with
+`python3 benchmark/ledger/ledger.py build/kolmo --write`; the diff of `sizes.tsv` is the record of its impact. The
+same run checks that no level is larger than the level below by more than 0.5% and 16 bytes, except the inversions
+listed with a reason in `benchmark/ledger/level_order_exceptions.txt`.
 
 ## Benchmark rules
 

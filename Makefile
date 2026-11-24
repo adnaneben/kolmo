@@ -119,6 +119,7 @@ check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus
 	sh tests/test_filter.sh build/kolmo
 	python3 tests/test_fast_file.py
 	./build/test-v12-corpus tests/v12
+	python3 tests/check_v12_pinned.py
 	python3 tests/check_v12_frames.py build/kolmo tests/v12
 	python3 tests/format_reference.py tests/v12
 	python3 tests/coder_reference.py tests/v12
@@ -324,6 +325,10 @@ check-memdyn: build/test-memdyn build/test-memdyn-asan
 .PHONY: check-memdyn
 check-rc: check-decoder-hardening check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
 .PHONY: check-meta check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-fqfam check-dispatch check-asm check-arch check-format2
+# size ledger and level-order gate on the committed corpus (benchmark/ledger/ledger.py; --write to refresh)
+check-ledger: build/kolmo
+	python3 benchmark/ledger/ledger.py build/kolmo
+
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan build/test-levels-asan build/test-harden-asan build/test-v12-corpus-asan
 	./build/test-levels-asan
 	./build/test-v12-corpus-asan tests/v12
