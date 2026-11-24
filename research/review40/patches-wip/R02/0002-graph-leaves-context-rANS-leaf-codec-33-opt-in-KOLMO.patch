@@ -1,7 +1,7 @@
 From 6f5bdee2d5d5d1c545d5307f662d5e00e00536e4 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 02:42:15 +0000
-Subject: [PATCH 2/6] graph leaves: context rANS leaf, codec 33, opt-in
+Subject: [PATCH 2/8] graph leaves: context rANS leaf, codec 33, opt-in
  (KOLMO_NATIVE=rans)
 
 With KOLMO_NATIVE=rans every graph leaf and every sub-stream of the format-2 leaves (21, 23) also

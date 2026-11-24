@@ -1,7 +1,7 @@
 From b8095897fc4499570490342a9e5625135cdb20a7 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 02:31:38 +0000
-Subject: [PATCH 2/8] klzh2: tANS for the code streams, finer match-length
+Subject: [PATCH 02/18] klzh2: tANS for the code streams, finer match-length
  codes, coded low offset bits
 
 The token and length-code streams are coded with an original tabled ANS coder (two states

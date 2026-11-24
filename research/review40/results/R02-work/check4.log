@@ -1,0 +1,16 @@
+== checks at 3e3593e7 (code as 1062b9e3; the commit after it only adds ledger rows)
+== make check-format2
+./build/test-format2
+FORMAT2 zero-run, leaves 21-23, integer frames, audio (codec 19), video (codec 20) PASSED
+./build/test-format2-asan
+FORMAT2 zero-run, leaves 21-23, integer frames, audio (codec 19), video (codec 20) PASSED
+== check-format2 EXIT 0
+== make check-native
+./build/test-native 3
+test-native: OK
+./build/test-native-asan
+test-native: OK
+python3 tests/test_native_modes.py build/kolmo build/native-modes
+test_native_modes: OK
+== check-native EXIT 0
+== make check-meta

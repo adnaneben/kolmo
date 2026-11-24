@@ -1,0 +1,1253 @@
+From 3dcc53885c2a244bfa5bb4ebcb7d39cfcece6dfb Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 05:34:23 +0000
+Subject: [PATCH 09/18] klzh2: results (benchmark/review40/klzh2), measurement
+ tools, SPEC/CODECS rows, tracker row C7
+
+RESULTS.md: sizes on 13 files at 4 MiB, 4/32/256 KiB blocks and through the CLI, indicative
+speeds, the decode time split, the encoder choices that trade size for decode speed, the
+negative results. run.sh, e2e.sh, sum.py, dec_time.c, chunks.c, mkstop.py: the commands
+behind the tables. Raw outputs of the final run in results/.
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ SPEC.md                                       |   2 +-
+ benchmark/review40/klzh2/RESULTS.md           | 277 ++++++++++++++++++
+ benchmark/review40/klzh2/chunks.c             |  17 ++
+ benchmark/review40/klzh2/dec_time.c           |  29 ++
+ benchmark/review40/klzh2/e2e.sh               |  21 ++
+ benchmark/review40/klzh2/mkstop.py            |  11 +
+ .../review40/klzh2/results/dec_time-v6-L1.txt |  24 ++
+ .../review40/klzh2/results/dec_time-v6-L3.txt |  24 ++
+ benchmark/review40/klzh2/results/e2e-v6.tsv   |  78 +++++
+ .../klzh2/results/measure-cli-v6.jsonl        |  12 +
+ .../review40/klzh2/results/v6-T1-dickens.txt  |  11 +
+ .../klzh2/results/v6-T1-enwik8_10m.txt        |  11 +
+ .../review40/klzh2/results/v6-T1-mozilla.txt  |  11 +
+ benchmark/review40/klzh2/results/v6-T1-mr.txt |  11 +
+ .../review40/klzh2/results/v6-T1-nci.txt      |  11 +
+ .../review40/klzh2/results/v6-T1-ooffice.txt  |  11 +
+ .../review40/klzh2/results/v6-T1-osdb.txt     |  11 +
+ .../review40/klzh2/results/v6-T1-reymont.txt  |  11 +
+ .../review40/klzh2/results/v6-T1-samba.txt    |  11 +
+ .../review40/klzh2/results/v6-T1-sao.txt      |  11 +
+ .../review40/klzh2/results/v6-T1-webster.txt  |  11 +
+ .../review40/klzh2/results/v6-T1-x-ray.txt    |  11 +
+ .../review40/klzh2/results/v6-T1-xml.txt      |  11 +
+ .../review40/klzh2/results/v6-T4-dickens.txt  |   6 +
+ .../klzh2/results/v6-T4-enwik8_10m.txt        |   6 +
+ .../review40/klzh2/results/v6-T4-mozilla.txt  |   6 +
+ benchmark/review40/klzh2/results/v6-T4-mr.txt |   6 +
+ .../review40/klzh2/results/v6-T4-nci.txt      |   6 +
+ .../review40/klzh2/results/v6-T4-ooffice.txt  |   6 +
+ .../review40/klzh2/results/v6-T4-osdb.txt     |   6 +
+ .../review40/klzh2/results/v6-T4-reymont.txt  |   6 +
+ .../review40/klzh2/results/v6-T4-samba.txt    |   6 +
+ .../review40/klzh2/results/v6-T4-sao.txt      |   6 +
+ .../review40/klzh2/results/v6-T4-webster.txt  |   6 +
+ .../review40/klzh2/results/v6-T4-x-ray.txt    |   6 +
+ .../review40/klzh2/results/v6-T4-xml.txt      |   6 +
+ .../klzh2/results/v6small256-T1-dickens.txt   |   8 +
+ .../klzh2/results/v6small256-T1-osdb.txt      |   8 +
+ .../klzh2/results/v6small256-T1-xml.txt       |   8 +
+ .../klzh2/results/v6small32-T1-dickens.txt    |   8 +
+ .../klzh2/results/v6small32-T1-osdb.txt       |   8 +
+ .../klzh2/results/v6small32-T1-xml.txt        |   8 +
+ .../klzh2/results/v6small4-T1-dickens.txt     |   8 +
+ .../klzh2/results/v6small4-T1-osdb.txt        |   8 +
+ .../klzh2/results/v6small4-T1-xml.txt         |   8 +
+ benchmark/review40/klzh2/run.sh               |  24 ++
+ benchmark/review40/klzh2/sum.py               |  15 +
+ research/CODECS.md                            |   2 +-
+ research/TRACKER.md                           |   1 +
+ 49 files changed, 828 insertions(+), 2 deletions(-)
+ create mode 100644 benchmark/review40/klzh2/RESULTS.md
+ create mode 100644 benchmark/review40/klzh2/chunks.c
+ create mode 100644 benchmark/review40/klzh2/dec_time.c
+ create mode 100755 benchmark/review40/klzh2/e2e.sh
+ create mode 100644 benchmark/review40/klzh2/mkstop.py
+ create mode 100644 benchmark/review40/klzh2/results/dec_time-v6-L1.txt
+ create mode 100644 benchmark/review40/klzh2/results/dec_time-v6-L3.txt
+ create mode 100644 benchmark/review40/klzh2/results/e2e-v6.tsv
+ create mode 100644 benchmark/review40/klzh2/results/measure-cli-v6.jsonl
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-dickens.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-enwik8_10m.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-mozilla.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-mr.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-nci.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-ooffice.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-osdb.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-reymont.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-samba.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-sao.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-webster.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-x-ray.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T1-xml.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-dickens.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-enwik8_10m.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-mozilla.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-mr.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-nci.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-ooffice.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-osdb.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-reymont.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-samba.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-sao.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-webster.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-x-ray.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6-T4-xml.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6small256-T1-dickens.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6small256-T1-osdb.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6small256-T1-xml.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6small32-T1-dickens.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6small32-T1-osdb.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6small32-T1-xml.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6small4-T1-dickens.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6small4-T1-osdb.txt
+ create mode 100644 benchmark/review40/klzh2/results/v6small4-T1-xml.txt
+ create mode 100755 benchmark/review40/klzh2/run.sh
+ create mode 100644 benchmark/review40/klzh2/sum.py
+
+diff --git a/SPEC.md b/SPEC.md
+index 415525fd..8721a527 100644
+--- a/SPEC.md
++++ b/SPEC.md
+@@ -201,7 +201,7 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
+ | 28 | KLZ (byte-aligned LZ77) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
+ | 29 | KLZH (LZ77 with Huffman-coded streams) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
+ | 30, 31 | not assigned in this tree (held for the unmerged wave-4 lanes: Huffman-then-zstd leaf, KLZ streams) | — | — |
+-| 32 | KLZH2 (KLZH's parse; tokens and length codes in tANS, literals in khuf blocks or tANS, sub-block tables, optional coded low offset bits) | blocks and graph leaves, version 11 or later; written only with the opt-in `KOLMO_NATIVE=lz2`; format in `src/algo/klz.h`, predefined tables in `src/algo/klz.c` (`KZ2_PRE_*`); a reader without it (rc3) refuses the frame | review40 (R01) |
++| 32 | KLZH2 (KLZH's parse; tokens and length codes in tANS or khuf blocks, literals in khuf blocks or tANS, sub-block tables, optional coded low offset bits) | blocks and graph leaves, version 11 or later; written only with the opt-in `KOLMO_NATIVE=lz2`; format in `src/algo/klz.h`, predefined tables in `src/algo/klz.c` (`KZ2_PRE_*`); a reader without it (rc3) refuses the frame | review40 (R01) |
+ 
+ **ARM64 branch filter (plan type 11, tflag 14, version 11; rc3 wave 2)**: the plan prefix is `11, a, b, 0`, where
+ `a | (b & 15) << 8` is the block's *page phase* P (0-4095). The payload is the coded stream of the filtered block,
+diff --git a/benchmark/review40/klzh2/RESULTS.md b/benchmark/review40/klzh2/RESULTS.md
+new file mode 100644
+index 00000000..445e29d6
+--- /dev/null
++++ b/benchmark/review40/klzh2/RESULTS.md
+@@ -0,0 +1,277 @@
++# KLZH2 (codec 32): results
++
++Branch `review40/R01`, from release-rc3 `5071f388`. Claim `klzh-entropy-v2` of the 40-reviewer pass (reviewer R01).
++This file holds the numbers, the commands and what did not work. The format is in `src/algo/klz.h`.
++
++**What it is.** KLZH (codec 29) coded with a second entropy stage. The parse, the levels and the repeat-offset rule
++are KLZH's; only the bytes written for a parse differ. Written only with the opt-in `KOLMO_NATIVE=lz2` (zstd and
++Brotli roles map to codec 32 instead of 29). `KOLMO_NATIVE=lz` and `all` keep writing codec 29, byte for byte, and
++no default writes either.
++
++**Machine.** A shared cloud VM (4 vCPUs, x86-64 with AVX-512 and BMI2, GCC 13.3, `-O3 -march=native`), load average
++2.0 to 3.1 during every run below. **Sizes are exact. Every speed in this file is indicative only**; the timed runs
++went one at a time through the pass's `tools/measure.py`. Ratios between two coders inside one `natbench` process
++are steadier than MB/s, and still move by several percent between runs.
++
++**Data.** Silesia (12 files, 211,938,580 bytes) and `enwik8_10m` (the first 10,000,000 bytes of enwik8): 221,938,580
++bytes. Every block of every run was decoded and compared.
++
++## 1. Sizes, 4 MiB blocks (how Kolmo cuts a file), 13 files
++
++    sh benchmark/review40/klzh2/run.sh DATA OUT "python3 tools/measure.py --runs 1 --"     # raw: results/v6-*.txt
++
++| file | bytes | zstd -1 | KLZH 1 | KLZH2 1 | vs zstd -1 | zstd -3 | KLZH 3 | KLZH2 3 | vs zstd -3 |
++|---|---|---|---|---|---|---|---|---|---|
++| dickens | 10,192,446 | 4,264,635 | 3,823,431 | 3,794,589 | -11.02% | 3,681,733 | 3,690,750 | 3,629,992 | -1.41% |
++| enwik8_10m | 10,000,000 | 4,108,085 | 3,697,941 | 3,680,940 | -10.40% | 3,581,213 | 3,581,503 | 3,547,143 | -0.95% |
++| mozilla | 51,220,480 | 19,988,639 | 19,416,435 | 18,441,635 | -7.74% | 18,304,336 | 18,983,274 | 17,937,785 | -2.00% |
++| mr | 9,970,564 | 3,814,844 | 3,656,941 | 3,462,467 | -9.24% | 3,548,122 | 3,580,850 | 3,371,508 | -4.98% |
++| nci | 33,553,445 | 2,855,235 | 3,126,823 | 2,930,927 | +2.65% | 2,846,755 | 3,125,954 | 2,921,084 | +2.61% |
++| ooffice | 6,152,192 | 3,593,815 | 3,240,400 | 3,190,733 | -11.22% | 3,130,232 | 3,139,572 | 3,090,445 | -1.27% |
++| osdb | 10,085,684 | 3,738,340 | 3,561,176 | 3,517,941 | -5.90% | 3,511,122 | 3,533,167 | 3,486,461 | -0.70% |
++| reymont | 6,627,202 | 2,151,356 | 2,023,044 | 1,982,344 | -7.86% | 1,943,693 | 1,987,792 | 1,933,079 | -0.55% |
++| samba | 21,606,400 | 5,501,656 | 5,285,261 | 5,114,279 | -7.04% | 4,982,897 | 5,200,849 | 5,006,430 | +0.47% |
++| sao | 7,251,944 | 6,251,181 | 5,690,784 | 5,566,637 | -10.95% | 5,530,936 | 5,508,618 | 5,362,764 | -3.04% |
++| webster | 41,458,703 | 13,675,709 | 12,551,796 | 12,434,235 | -9.08% | 12,151,695 | 12,258,723 | 12,069,038 | -0.68% |
++| x-ray | 8,474,240 | 6,772,708 | 6,776,455 | 6,774,201 | +0.02% | 6,092,374 | 6,240,250 | 6,115,813 | +0.38% |
++| xml | 5,345,280 | 694,115 | 690,827 | 650,281 | -6.32% | 636,164 | 685,028 | 643,913 | +1.22% |
++| **13 files** | 221,938,580 | 77,410,318 | 73,541,314 | 71,541,209 | **-7.58%** | 69,941,272 | 71,516,330 | 69,115,455 | **-1.18%** |
++
++| pair | codec 29 | codec 32 | change | rival |
++|---|---|---|---|---|
++| level 1 | 73,541,314 | 71,541,209 | -2.72% | zstd -1 77,410,318: -7.58% (codec 29: -5.00%) |
++| level 3 | 71,516,330 | 69,115,455 | -3.36% | zstd -3 69,941,272: -1.18% (codec 29: +2.25%) |
++| level 5 | 67,981,234 | 65,321,729 | -3.91% | zstd -3: -6.60% |
++| level 7 | 65,507,153 | 62,887,347 | -4.00% | zstd -9 63,165,598: -0.44% |
++
++At the zstd -3 point the native coder goes from 2.25% larger than zstd to 1.18% smaller on the same parse. Four
++files are still larger than zstd -3: nci (+2.61%), xml (+1.22%), samba (+0.47%), x-ray (+0.38%). On nci the parse is
++0.63% behind zstd's and the rest is in how sequence codes are modelled (see section 6, contexts).
++
++Levels 5-9 never write khuf code chunks (section 4), so they hold the smallest coding the format has.
++
++### Small blocks (graph leaves, table columns, small files): xml + dickens + osdb, 25,623,410 bytes
++
++| block | zstd -1 | KLZH 1 | KLZH2 1 | vs zstd -1 | zstd -3 | KLZH 3 | KLZH2 3 | vs zstd -3 |
++|---|---|---|---|---|---|---|---|---|
++| 4 KiB | 13,876,738 | 14,548,965 | 13,986,796 | +0.79% (was +4.84%) | 13,735,843 | 14,502,534 | 13,941,040 | +1.49% (was +5.58%) |
++| 32 KiB | 10,438,337 | 10,207,719 | 10,096,507 | -3.27% | 10,027,848 | 10,178,297 | 10,066,424 | +0.38% (was +1.50%) |
++| 256 KiB | 8,730,427 | 8,470,690 | 8,358,221 | -4.26% | 8,487,282 | 8,415,802 | 8,278,254 | -2.46% |
++
++On 4 KiB blocks: without the tANS coding of short literal chunks xml is 2.4% and dickens 1.0% larger; without the
++predefined tables xml is 1.5%, dickens 0.36%, osdb 0.23% larger (variant builds of `klz.c` with `KZ2_LIT_ANS 0` and
++`KZ2_PRE_MAX 0`, level 1, commit `853de09d`).
++
++### End to end through the CLI, one thread
++
++    sh benchmark/review40/klzh2/e2e.sh build/kolmo RC3/build/kolmo SCRATCH results/e2e-v6.tsv DATA/silesia/* DATA/enwik8_10m
++
++| mode | library coders | `KOLMO_NATIVE=lz` | `KOLMO_NATIVE=lz2` |
++|---|---|---|---|
++| balanced, 13 files | 61,973,964 | 63,594,373 (+2.61%) | 61,589,115 (**-0.62%**; -3.15% against `lz`) |
++| speed, 13 files | 105,733,911 | 98,777,760 (-6.58%) | 98,777,760 (the same frames as `lz`: no block or leaf of these files asks for zstd in `speed`) |
++| balanced, `silesia.tar` (211,957,760) | 58,248,819 | 59,776,897 (+2.62%) | 57,790,929 (-0.79%) |
++| balanced, `enwik8` (100,000,000) | 35,567,294 | 35,605,332 (+0.11%) | 35,256,611 (-0.87%) |
++
++All 78 + 6 frames decode to their input (`cmp`). Per file, balanced with `lz2` against the libraries: dickens -0.80%,
++mozilla -1.96%, mr +0.41%, nci +1.56%, ooffice -1.32%, osdb -0.20%, reymont -0.20%, samba +0.38%, sao +2.31%,
++webster -0.68%, x-ray +0.81%, xml +0.95%, enwik8_10m -0.40%. The files where Kolmo's transforms carry the block
++(sao, mr, x-ray) code residual streams in leaves, where the native coder is still behind zstd.
++
++## 2. Speed (indicative)
++
++`natbench`, 4 MiB blocks, best of 3 for decode, one pass for compress, MB/s over the 13 files:
++
++| coder | 1 thread compress | 1 thread decompress | 4 threads compress | 4 threads decompress |
++|---|---|---|---|---|
++| zstd -1 | 403 | 1136 | 886 | 2220 |
++| KLZH 1 (29) | 214 | 954 | 457 | 1912 |
++| KLZH2 1 (32) | 202 | 819 | 465 | 1935 |
++| zstd -3 | 182 | 868 | 480 | 2055 |
++| KLZH 3 (29) | 149 | 893 | 327 | 1807 |
++| KLZH2 3 (32) | 134 | 850 | 306 | 1761 |
++
++Codec 32 against codec 29 in the same process: compress 0.95x (level 1) and 0.90x (level 3) at one thread, 1.02x and
++0.94x at four; decompress 0.86x and 0.95x at one thread, 1.01x and 0.97x at four. Three earlier runs of the same
++table at other commits gave 0.86x to 0.99x for decompress. The parse is the same code in both, so the compress gap is
++the entropy stage; the planned parse work (`klz-fast-parse-speed`, the wave-4 lane) is what moves both against zstd.
++
++Small blocks, one thread (xml + dickens + osdb):
++
++| block | KLZH2 1 compress vs KLZH 1 | decompress | KLZH2 3 compress vs KLZH 3 | decompress |
++|---|---|---|---|---|
++| 4 KiB | 0.67x (67 against 100 MB/s; zstd -1: 231) | 0.84x | 0.90x | 0.91x |
++| 32 KiB | 0.86x | 0.91x | 0.91x | 0.95x |
++| 256 KiB | 0.97x | 1.00x | 1.28x | 0.92x |
++
++Before the encoder chose tables by estimate the 4 KiB figure for level 1 was 0.51x (46 against 90 MB/s, commit
++`853de09d`); the three runs since gave 0.78x, 0.68x and 0.67x.
++
++Where decode time goes (`dec_time`: best of 9, whole file in 4 MiB blocks, level 1, ms):
++
++| file | codec 29 streams | sequence loop | total | codec 32 streams | sequence loop | total | codec 32 / codec 29 time |
++|---|---|---|---|---|---|---|---|
++| dickens | 2.8 | 10.0 | 12.7 | 2.7 | 9.0 | 11.7 | 0.92x |
++| mozilla | 18.7 | 35.4 | 54.1 | 28.7 | 41.7 | 70.4 | 1.30x |
++| mr | 3.2 | 7.6 | 10.8 | 5.4 | 7.9 | 13.3 | 1.23x |
++| nci | 2.5 | 14.6 | 17.2 | 2.5 | 14.9 | 17.4 | 1.01x |
++| ooffice | 5.4 | 6.4 | 11.8 | 4.3 | 6.5 | 10.8 | 0.92x |
++| osdb | 3.3 | 4.7 | 8.0 | 3.8 | 5.0 | 8.8 | 1.10x |
++| reymont | 1.4 | 5.7 | 7.2 | 1.3 | 4.7 | 6.0 | 0.83x |
++| samba | 4.3 | 11.6 | 15.9 | 5.1 | 11.2 | 16.3 | 1.03x |
++| sao | 5.9 | 4.9 | 10.8 | 7.2 | 5.4 | 12.7 | 1.18x |
++| webster | 8.7 | 30.3 | 39.0 | 8.9 | 30.0 | 38.9 | 1.00x |
++| x-ray | 9.1 | 1.3 | 10.4 | 9.0 | 0.8 | 9.8 | 0.94x |
++| xml | 0.5 | 2.3 | 2.8 | 0.7 | 2.3 | 3.0 | 1.07x |
++| **12 files** | 65.8 | 134.8 | 200.7 | 79.6 | 139.4 | 219.1 | 1.09x |
++
++At level 3 the 12-file totals are 58.9 + 154.3 = 213.2 ms for codec 29 and 75.7 + 156.3 = 231.8 ms for codec 32
++(1.09x the time; dickens 0.83x, reymont 0.82x, webster 0.94x, mozilla 1.27x, ooffice 1.24x, sao 1.22x, x-ray 1.19x;
++raw: `results/dec_time-v6-L1.txt`, `results/dec_time-v6-L3.txt`). The sequence loops cost the same; the difference is the entropy
++decode of the streams on binary files.
++
++CLI, `-m balanced -T 1`, best of 3 wall seconds through `tools/measure.py` (raw: `results/measure-cli-v6.jsonl`):
++
++| input | coders | compress | decompress | peak RSS compress / decompress |
++|---|---|---|---|---|
++| silesia.tar | libraries | 1.11 s | 0.51 s | 58,884 / 21,944 kB |
++| silesia.tar | `lz` | 1.56 s | 0.43 s | 58,844 / 23,164 kB |
++| silesia.tar | `lz2` | 1.52 s | 0.45 s | 59,004 / 22,976 kB |
++| enwik8 | libraries | 0.76 s | 0.22 s | 10,884 / 9,520 kB |
++| enwik8 | `lz` | 1.05 s | 0.23 s | 18,496 / 10,844 kB |
++| enwik8 | `lz2` | 1.14 s | 0.19 s | 17,832 / 10,564 kB |
++
++(The three runs of one row differ by up to 60% here; the peak is sampled every 5 ms.)
++
++## 3. Design, and what each part is worth
++
++Measured on real output unless marked as a bound. The stage-1 review (`reviews/R01.md` of the pass) found that at
++the zstd -3 point KLZH's parse is level with zstd's (-1.4% to +0.6% under one cost model) and the whole gap is in
++the entropy stage.
++
++1. **One token per sequence**: offset code x min(literal length, 3); literal-length codes only from 3; match-length
++   codes in two streams (after a repeat offset, after a new one). Most sequences cost two symbols instead of three.
++   With khuf chunks on a 64 KiB grid this alone gave 72,260,473 (level 1) and 70,010,861 (level 3) on the 13 files
++   (commit `f08302a5`): -1.74% and -2.11% against codec 29.
++2. **Sub-blocks by input position**: every stream may start a chunk where the input crosses a multiple of 64 KiB;
++   neighbours are joined while one table is estimated to cost no more than two plus a penalty (64 bytes for
++   literals, 32 for code streams). Integer estimates only: the same choice on every host.
++3. **tANS for the code streams**, written for Kolmo from Duda's construction (arXiv:1311.2540, tabled variant): 2^5
++   to 2^11 states, bit-reversal spread, a compact count header, two states over one bit stream under 256 symbols and
++   four states over two bit streams from there. Four files, level 3: 12,264,540 -> 12,224,397 (-0.33%) over khuf
++   chunks. Table size: 2^10 at most (2^11 is 0.003% smaller, 2^9 0.12% larger on five files), about one state per
++   four symbols.
++4. **Finer match-length codes** (48 direct values, then two codes per octave): 56 KiB on nci as an entropy bound
++   taken before it was built.
++5. **Coded low offset bits**: the low four bits of new offsets of 16 or more become a tANS stream when their
++   histogram says so (a per-block flag). Bound on mozilla: 985,335 -> 660,568 bytes of those bits.
++6. **Small inputs**: predefined tANS tables (2^9 states, fitted by `gen_pre.c` on 2 to 32 KiB blocks of ten Silesia
++   files, part of the format) for code chunks under 1024 symbols, and tANS over bytes for literal chunks under 4096.
++7. **khuf blocks for long code chunks** (levels 1-4): section 4.
++
++Rejected alternatives, measured: a joint symbol over (literal-length class, match-length class, offset class) is
++larger than separate streams on six files (webster: 4,412,789 against 4,148,736 bytes of entropy); tables per 32 KiB
++with khuf's table format cost more than they save on nci, dickens, osdb, webster; conditioning contexts on the
++sequence codes save 4.7% on nci as a bound but 0.2% to 0.5% on text and cost decode time (not in the fast tier).
++
++## 4. Encoder choices that trade size for decode speed
++
++khuf decodes two symbols per table lookup on blocks of 4096 symbols or more; tANS decodes one symbol per state step.
++Mode 3 of a code chunk therefore means "khuf block" from 1024 symbols on (below it: the predefined table). Six files
++(mozilla, samba, nci, webster, x-ray, dickens), level 3, `dec_time` best of 7, commit `c0e30b02`:
++
++| policy | bytes | entropy decode of the streams | whole decode |
++|---|---|---|---|
++| codec 29 | 49,499,800 | 41.4 ms | 164.9 ms |
++| tANS only (`KZ2_HUF_BIAS 0`) | 47,622,616 | 61.8 ms | 176.3 ms |
++| khuf from 16384 symbols when within 1/64 of the tANS estimate (**kept, levels 1-4**) | 47,680,142 (+0.12%) | 54.2 ms | 170.5 ms |
++| the same from 4096 symbols | 47,688,545 | 55.2 ms | 172.5 ms |
++| within 1/16, from 16384 | 47,693,002 | 53.5 ms | 167.2 ms |
++| from 65536 | 47,666,197 | 55.4 ms | 168.4 ms |
++
++On text the stream decode reaches codec 29's (webster 11.6 -> 8.2 ms against 8.1). The 13-file totals moved from
++71,481,703 / 69,034,738 (tANS only, commit `a154f538`) to 71,541,209 / 69,115,455 (+0.08% / +0.12%). **This is a
++judgement call for the owner**: `KZ2_HUF_BIAS 0` gives the smaller files with the same decoder; nothing in the
++format changes either way.
++
++The penalty for one more table (decoders build a table per chunk), six files, level 3 (working tree between
++`a154f538` and `c0e30b02`, khuf chunks from 4096 symbols):
++
++| literal / code penalty (bytes) | bytes | stream decode |
++|---|---|---|
++| 64 / 32 (**kept**) | 39,275,205 | 51.8 ms |
++| 128 / 64 | 39,323,771 (+0.12%) | 49.4 ms |
++| 256 / 128 | 39,410,955 (+0.35%) | 46.8 ms |
++| 512 / 256 | 39,559,453 (+0.72%) | 44.0 ms |
++
++(mozilla, samba, ooffice, osdb, x-ray, dickens for this table.) Nearly all of the time is mozilla's.
++
++## 5. Where codec 32 is slower to decode, and why
++
++Text and markup decode at codec 29's speed or faster; heterogeneous binary data is slower (mozilla, ooffice, mr, sao:
++table of section 2). Measured causes on mozilla (callgrind, 8 MiB, level 3):
++
++- **Table builds.** mozilla's statistics change often, so its 13 blocks hold 335 khuf literal chunks and 1,165
++  code chunks at level 3 (`chunks`, tANS only), each with a table to build. In the profiled variant (khuf chunks from
++  4096 symbols) `kolmo_khuf_decompress` spends about 16M of its 55M instructions building tables (`dt`, `d1`, `d2`,
++  `kh_codes`) and they hold a third of the decoder's mispredicted branches (135k of 411k). With chunks joined to
++  their maximum the stream decode of the whole file falls from 29.2 to 20.3 ms and the file grows 2.5%. khuf's
++  table construction is outside this claim (the khuf owner's kernels); a cheaper build there would help codec 32
++  directly.
++- **One symbol per lookup.** The tANS loop costs about 9 micro-operations per symbol; khuf's two-symbol loop about
++  half per symbol. This is what section 4's khuf chunks buy back.
++- **Two data-dependent branches more per sequence** (literal length in the token or in the stream; which
++  match-length stream): 322k against 164k mispredicted branches for the whole decode of 8 MiB of mozilla at level 1
++  (callgrind's predictor model, codec 32 against codec 29). See the negative result below.
++
++## 6. Negative results (kept)
++
++- **Branch-free sequence loop.** Selecting the literal-length and match-length sources with masks, and a fully
++  branch-free variant with a four-entry repeat table, were slower than the branchy loop on this host: natbench best
++  of 9, five files, level 3, three rounds, MB/s: branchy 904 / 927 / 933, masks with branchy offsets 840 / 836 / 817,
++  fully branch-free 770 / 803 / 745 (codec 29 in the same runs: 1033 / 1036 / 1005). On 8 MiB of mozilla the fully
++  branch-free loop halved the mispredictions (311k -> 156k) and raised the instruction count from 83.4M to 103.5M; a
++  likely cause of the loss is that the literal length then sits on the loop-carried path of the output pointer.
++- **Packed table entries and register-held states** in the tANS loop (commit `ee0c7ea3`): the generated loop went
++  from about 18 to about 14 instructions per symbol; stream decode of seven files 64.6 -> 63.3 ms. Kept, but it is
++  2%, not the 10% the instruction count suggested: the symbol loop is not where mozilla's time is.
++- **Penalties for more tables** buy little (section 4): 0.35% of size for 2% of decode time.
++- **Encoder on 4 KiB blocks** is still 0.67x of codec 29 at level 1 (and codec 29 is 0.43x of zstd -1 there, because
++  the parse zeroes its full tables per call: the planned `klz-fast-parse-speed`). The tANS encoder needs two passes
++  per chunk (states backwards, bits forwards) and builds a table per chunk.
++- **Size on nci, xml, samba, x-ray** at level 3 is still above zstd -3 (section 1).
++
++## 7. Compatibility and tests
++
++- **rc3 frames:** unchanged. Codecs 28 and 29 write the same bytes as rc3 (hashes taken from the rc3 sources,
++  `tests/klz_rc3_hashes.h`); the default output is unchanged (`python3 benchmark/determinism/check.py build/kolmo
++  DIR`: 122 frames OK); with `KOLMO_NATIVE=lz` all 26 frames of the end-to-end set are byte-identical to the rc3
++  binary's, and the rc3 binary's frames decode with this build.
++- **New frames:** a frame holding codec 32 is refused by an rc3 reader (13 of 13 `balanced` frames: "corrupt or
++  unsupported input"). It is written only under `KOLMO_NATIVE=lz2`.
++- **Frozen frames:** `tests/klzh2_frames.h` (seven frames written when the codec was introduced) and
++  `tests/klzh2_frames2.h` (one with khuf code chunks) must keep decoding; between them they hold every chunk kind.
++- **Hostile input:** `tests/test_native.c` (round trips at all nine levels on inputs built to reach every part of
++  the format, every truncation, bit flips and random bytes in headers and tables, wrong sizes) under ASan and UBSan
++  (`make check-native`); `fuzz/fuzz_native_lz.c` reaches the decoders of codecs 28, 29 and 32 directly.
++
++## 8. Cost
++
++- **Binary:** stripped `build/kolmo` 3,500,808 -> 3,537,672 bytes (+36,864); text segment 3,485,893 -> 3,520,253.
++- **Memory:** the decoder allocates the literals (at most the block) and four code bytes per sequence (at most the
++  block); `blk_dec_need` declares block + 2 x block + 2 MiB for codec 32. The encoder allocates as codec 29 plus two
++  code bytes and three scratch bytes per sequence, and 129 KiB of khuf scratch instead of about one block. Measured
++  peak RSS of the CLI: table in section 2.
++
++## 9. Not verified
++
++- Speeds on the Apple M5, and the generated code of the tANS loop under clang on AArch64 (the GCC-only attribute on
++  `kza_decode` has no effect there).
++- Graph leaves and table columns in isolation (only through the CLI totals above and the 4 / 32 KiB block runs).
++- Coverage-guided fuzzing: libFuzzer's runtime is not installed on this host. The target was run with the
++  repository's local mutation driver under GCC's ASan/UBSan instead (`gcc -g -O1 -fsanitize=address,undefined
++  -fno-sanitize-recover=undefined -Isrc fuzz/fuzz_native_lz.c fuzz/run_local.c src/algo/klz.c src/algo/khuf.c`,
++  then `run_native_lz 300000 SEEDS/*`): 72 seeds (valid blocks of codecs 28, 29 and 32 cut from Silesia files, 88
++  bytes to 458 KB, and raw inputs for the round-trip arm), each run as is and under 500 mutations, then 300,000
++  random inputs: no report, exit 0 (commit `ee0c7ea3`).
++- Big-endian hosts are refused at compile time, as for the rest of `klz.c`.
+diff --git a/benchmark/review40/klzh2/chunks.c b/benchmark/review40/klzh2/chunks.c
+new file mode 100644
+index 00000000..3b910754
+--- /dev/null
++++ b/benchmark/review40/klzh2/chunks.c
+@@ -0,0 +1,17 @@
++/* R01 tool: chunk kinds a KLZH2 decoder meets. usage: chunks LEVEL BLOCK_KIB FILE... (klz.c with KLZ_TEST_HOOKS) */
++#include KLZ_C
++#include <stdio.h>
++int main(int argc, char **argv) {
++    int level = atoi(argv[1]); size_t blk = (size_t)atoi(argv[2]) << 10;
++    for (int a = 3; a < argc; a++) {
++        FILE *f = fopen(argv[a], "rb"); if (!f) return 1; fseek(f, 0, SEEK_END); size_t N = (size_t)ftell(f); rewind(f);
++        uint8_t *in = malloc(N + 64); if (fread(in, 1, N, f) != N) return 1; fclose(f);
++        size_t cap = kolmo_klzh_bound(blk); uint8_t *z = malloc(cap), *back = malloc(blk + 64); memset(kolmo_klzh2_seen, 0, sizeof kolmo_klzh2_seen); size_t nb = 0;
++        for (size_t b = 0; b < N; b += blk) { size_t n = N - b < blk ? N - b : blk; size_t zn = n >= 64 ? kolmo_klzh2_compress(in + b, n, z, cap, level) : 0; nb++; if (zn && kolmo_klzh2_decompress(z, zn, back, n)) return 2; }
++        const char *nm = strrchr(argv[a], '/'); nm = nm ? nm + 1 : argv[a];
++        printf("%s L%d blocks %zu | literal chunks: stored %u one-byte %u khuf %u tANS %u | code chunks: stored %u one-byte %u own-table %u predefined %u | tANS payloads: 2 states %u, 4 states %u, predefined %u, khuf code blocks %u\n", nm, level, nb,
++               kolmo_klzh2_seen[0][0], kolmo_klzh2_seen[0][1], kolmo_klzh2_seen[0][2], kolmo_klzh2_seen[0][3], kolmo_klzh2_seen[1][0], kolmo_klzh2_seen[1][1], kolmo_klzh2_seen[1][2], kolmo_klzh2_seen[1][3], kolmo_klzh2_seen[2][0], kolmo_klzh2_seen[2][1], kolmo_klzh2_seen[2][2], kolmo_klzh2_seen[2][3]);
++        free(in); free(z); free(back);
++    }
++    return 0;
++}
+diff --git a/benchmark/review40/klzh2/dec_time.c b/benchmark/review40/klzh2/dec_time.c
+new file mode 100644
+index 00000000..8fa3b239
+--- /dev/null
++++ b/benchmark/review40/klzh2/dec_time.c
+@@ -0,0 +1,29 @@
++/* R01 tool: decode time of KLZH (codec 29) and KLZH2 (codec 32) split into entropy decode of the streams and the
++ * sequence loop. usage: dec_time LEVEL BLOCK_KIB REPS FILE...   (includes a klz.c variant with a stop flag) */
++#include KLZ_C
++#include <stdio.h>
++#include <time.h>
++static double now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
++int main(int argc, char **argv) {
++    int level = atoi(argv[1]); size_t blk = (size_t)atoi(argv[2]) << 10; int reps = atoi(argv[3]);
++    for (int a = 4; a < argc; a++) {
++        FILE *f = fopen(argv[a], "rb"); if (!f) return 1; fseek(f, 0, SEEK_END); size_t N = (size_t)ftell(f); rewind(f);
++        uint8_t *in = malloc(N + 64); if (fread(in, 1, N, f) != N) return 1; fclose(f);
++        size_t nb = (N + blk - 1) / blk, cap = kolmo_klzh_bound(blk); uint8_t *back = malloc(blk + 64);
++        const char *nm = strrchr(argv[a], '/'); nm = nm ? nm + 1 : argv[a];
++        for (int c = 0; c < 2; c++) {
++            uint8_t **z = malloc(nb * sizeof *z); size_t *zn = malloc(nb * sizeof *zn), tot = 0;
++            for (size_t b = 0; b < nb; b++) { size_t n = N - b * blk < blk ? N - b * blk : blk; z[b] = malloc(cap); zn[b] = n >= 64 ? (c ? kolmo_klzh2_compress : kolmo_klzh_compress)(in + b * blk, n, z[b], cap, level) : 0; tot += zn[b] ? zn[b] : n; }
++            double t[2] = {1e9, 1e9};
++            for (int r = 0; r < reps; r++) for (int st = 1; st >= 0; st--) {
++                kz_stop = st; double t0 = now();
++                for (size_t b = 0; b < nb; b++) { size_t n = N - b * blk < blk ? N - b * blk : blk; if (zn[b] && (c ? kolmo_klzh2_decompress : kolmo_klzh_decompress)(z[b], zn[b], back, n)) return 2; }
++                double d = now() - t0; if (d < t[st]) t[st] = d;
++            }
++            printf("%s\tL%d\t%s\tout=%zu\tstreams %.1f ms\tsequence loop %.1f ms\ttotal %.1f ms = %.0f MB/s\n", nm, level, c ? "klzh2" : "klzh", tot, t[1] * 1e3, (t[0] - t[1]) * 1e3, t[0] * 1e3, N / t[0] / 1e6);
++            for (size_t b = 0; b < nb; b++) free(z[b]); free(z); free(zn);
++        }
++        free(in); free(back);
++    }
++    return 0;
++}
+diff --git a/benchmark/review40/klzh2/e2e.sh b/benchmark/review40/klzh2/e2e.sh
+new file mode 100755
+index 00000000..dbcc3fbb
+--- /dev/null
++++ b/benchmark/review40/klzh2/e2e.sh
+@@ -0,0 +1,21 @@
++#!/bin/sh
++# End to end through the CLI, one thread: sizes and round trips with the library coders, KOLMO_NATIVE=lz and lz2, and
++# the two compatibility directions against an rc3 binary.
++# usage: sh benchmark/review40/klzh2/e2e.sh NEW_KOLMO RC3_KOLMO SCRATCH_DIR OUT.tsv FILE...
++# columns: file, mode, coders, frame bytes, exit status, round trip, compatibility note
++N=$1; B=$2; S=$3; out=$4; shift 4
++for f in "$@"; do n=$(basename "$f")
++  for m in speed balanced; do
++    for nat in none lz lz2; do
++      if [ $nat = none ]; then env -u KOLMO_NATIVE "$N" -m $m -T 1 "$f" "$S/t.k" >/dev/null 2>&1; else KOLMO_NATIVE=$nat "$N" -m $m -T 1 "$f" "$S/t.k" >/dev/null 2>&1; fi
++      rc=$?; sz=$(stat -c %s "$S/t.k")
++      "$N" -d -T 1 "$S/t.k" "$S/t.back" >/dev/null 2>&1; cmp -s "$S/t.back" "$f" && rt=OK || rt=FAIL
++      x=-
++      if [ $nat = none ]; then env -u KOLMO_NATIVE "$B" -m $m -T 1 "$f" "$S/b.k" >/dev/null 2>&1; cmp -s "$S/b.k" "$S/t.k" && x=same-bytes-as-rc3 || x=DIFFERS-from-rc3; fi
++      if [ $nat = lz ]; then KOLMO_NATIVE=lz "$B" -m $m -T 1 "$f" "$S/b.k" >/dev/null 2>&1; cmp -s "$S/b.k" "$S/t.k" && x=same-bytes-as-rc3 || x=DIFFERS-from-rc3
++        "$N" -d -T 1 "$S/b.k" "$S/b.back" >/dev/null 2>&1; cmp -s "$S/b.back" "$f" && x="$x,rc3-frame-decodes" || x="$x,rc3-frame-FAILS"; fi
++      if [ $nat = lz2 ]; then "$B" -d -T 1 "$S/t.k" "$S/b.back" >/dev/null 2>&1 && x=rc3-ACCEPTED || x=rc3-refuses; fi
++      printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$n" $m $nat "$sz" $rc $rt "$x" >> "$out"
++    done
++  done
++done
+diff --git a/benchmark/review40/klzh2/mkstop.py b/benchmark/review40/klzh2/mkstop.py
+new file mode 100644
+index 00000000..1e8b5c7e
+--- /dev/null
++++ b/benchmark/review40/klzh2/mkstop.py
+@@ -0,0 +1,11 @@
++# usage: mkstop.py SRC/algo/klz.c OUT.c   -> klz.c with a flag that stops both KLZH decoders after the entropy stage,
++# for dec_time.c (which times the entropy decode of the streams and the sequence loop separately).
++import sys
++s = open(sys.argv[1]).read()
++for a in ("    kz_br br = {0, 0, in + i, in + cn};\n    const uint8_t *lp = lit, *le = lit + nl, *llc = st[1]",
++          "    kz_br br = {0, 0, in + i, in + cn};\n    const uint8_t *lp = lit, *le = lit + nl; const unsigned raw"):
++    assert s.count(a) == 1
++    s = s.replace(a, "    if (kz_stop) { rc = 0; goto out; }\n" + a)
++a = "/* ---------------- KLZH: entropy-coded streams ---------------- */"
++assert s.count(a) == 1
++open(sys.argv[2], "w").write(s.replace(a, "static int kz_stop;\n" + a))
+diff --git a/benchmark/review40/klzh2/results/dec_time-v6-L1.txt b/benchmark/review40/klzh2/results/dec_time-v6-L1.txt
+new file mode 100644
+index 00000000..ab1b0000
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/dec_time-v6-L1.txt
+@@ -0,0 +1,24 @@
++dickens	L1	klzh	out=3823431	streams 2.8 ms	sequence loop 10.0 ms	total 12.7 ms = 800 MB/s
++dickens	L1	klzh2	out=3794589	streams 2.7 ms	sequence loop 9.0 ms	total 11.7 ms = 870 MB/s
++mozilla	L1	klzh	out=19416435	streams 18.7 ms	sequence loop 35.4 ms	total 54.1 ms = 948 MB/s
++mozilla	L1	klzh2	out=18441635	streams 28.7 ms	sequence loop 41.7 ms	total 70.4 ms = 727 MB/s
++mr	L1	klzh	out=3656941	streams 3.2 ms	sequence loop 7.6 ms	total 10.8 ms = 926 MB/s
++mr	L1	klzh2	out=3462467	streams 5.4 ms	sequence loop 7.9 ms	total 13.3 ms = 748 MB/s
++nci	L1	klzh	out=3126823	streams 2.5 ms	sequence loop 14.6 ms	total 17.2 ms = 1955 MB/s
++nci	L1	klzh2	out=2930927	streams 2.5 ms	sequence loop 14.9 ms	total 17.4 ms = 1926 MB/s
++ooffice	L1	klzh	out=3240400	streams 5.4 ms	sequence loop 6.4 ms	total 11.8 ms = 522 MB/s
++ooffice	L1	klzh2	out=3190733	streams 4.3 ms	sequence loop 6.5 ms	total 10.8 ms = 572 MB/s
++osdb	L1	klzh	out=3561176	streams 3.3 ms	sequence loop 4.7 ms	total 8.0 ms = 1257 MB/s
++osdb	L1	klzh2	out=3517941	streams 3.8 ms	sequence loop 5.0 ms	total 8.8 ms = 1147 MB/s
++reymont	L1	klzh	out=2023044	streams 1.4 ms	sequence loop 5.7 ms	total 7.2 ms = 923 MB/s
++reymont	L1	klzh2	out=1982344	streams 1.3 ms	sequence loop 4.7 ms	total 6.0 ms = 1104 MB/s
++samba	L1	klzh	out=5285261	streams 4.3 ms	sequence loop 11.6 ms	total 15.9 ms = 1363 MB/s
++samba	L1	klzh2	out=5114279	streams 5.1 ms	sequence loop 11.2 ms	total 16.3 ms = 1326 MB/s
++sao	L1	klzh	out=5690784	streams 5.9 ms	sequence loop 4.9 ms	total 10.8 ms = 671 MB/s
++sao	L1	klzh2	out=5566637	streams 7.2 ms	sequence loop 5.4 ms	total 12.7 ms = 572 MB/s
++webster	L1	klzh	out=12551796	streams 8.7 ms	sequence loop 30.3 ms	total 39.0 ms = 1062 MB/s
++webster	L1	klzh2	out=12434235	streams 8.9 ms	sequence loop 30.0 ms	total 38.9 ms = 1065 MB/s
++x-ray	L1	klzh	out=6776455	streams 9.1 ms	sequence loop 1.3 ms	total 10.4 ms = 816 MB/s
++x-ray	L1	klzh2	out=6774201	streams 9.0 ms	sequence loop 0.8 ms	total 9.8 ms = 865 MB/s
++xml	L1	klzh	out=690827	streams 0.5 ms	sequence loop 2.3 ms	total 2.8 ms = 1888 MB/s
++xml	L1	klzh2	out=650281	streams 0.7 ms	sequence loop 2.3 ms	total 3.0 ms = 1787 MB/s
+diff --git a/benchmark/review40/klzh2/results/dec_time-v6-L3.txt b/benchmark/review40/klzh2/results/dec_time-v6-L3.txt
+new file mode 100644
+index 00000000..e13be34c
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/dec_time-v6-L3.txt
+@@ -0,0 +1,24 @@
++dickens	L3	klzh	out=3690750	streams 2.4 ms	sequence loop 11.3 ms	total 13.8 ms = 741 MB/s
++dickens	L3	klzh2	out=3629992	streams 2.4 ms	sequence loop 9.2 ms	total 11.5 ms = 883 MB/s
++mozilla	L3	klzh	out=18983274	streams 17.2 ms	sequence loop 37.9 ms	total 55.1 ms = 929 MB/s
++mozilla	L3	klzh2	out=17937785	streams 27.4 ms	sequence loop 42.5 ms	total 69.8 ms = 734 MB/s
++mr	L3	klzh	out=3580850	streams 2.9 ms	sequence loop 8.9 ms	total 11.8 ms = 847 MB/s
++mr	L3	klzh2	out=3371508	streams 5.0 ms	sequence loop 8.5 ms	total 13.4 ms = 742 MB/s
++nci	L3	klzh	out=3125954	streams 2.5 ms	sequence loop 14.8 ms	total 17.3 ms = 1937 MB/s
++nci	L3	klzh2	out=2921084	streams 2.5 ms	sequence loop 15.6 ms	total 18.1 ms = 1858 MB/s
++ooffice	L3	klzh	out=3139572	streams 3.2 ms	sequence loop 5.5 ms	total 8.7 ms = 706 MB/s
++ooffice	L3	klzh2	out=3090445	streams 3.9 ms	sequence loop 6.9 ms	total 10.8 ms = 570 MB/s
++osdb	L3	klzh	out=3533167	streams 3.2 ms	sequence loop 5.6 ms	total 8.8 ms = 1146 MB/s
++osdb	L3	klzh2	out=3486461	streams 3.7 ms	sequence loop 6.3 ms	total 10.0 ms = 1011 MB/s
++reymont	L3	klzh	out=1987792	streams 1.7 ms	sequence loop 7.8 ms	total 9.5 ms = 698 MB/s
++reymont	L3	klzh2	out=1933079	streams 1.7 ms	sequence loop 6.1 ms	total 7.8 ms = 851 MB/s
++samba	L3	klzh	out=5200849	streams 4.1 ms	sequence loop 11.9 ms	total 15.9 ms = 1356 MB/s
++samba	L3	klzh2	out=5006430	streams 4.6 ms	sequence loop 11.4 ms	total 16.0 ms = 1350 MB/s
++sao	L3	klzh	out=5508618	streams 5.6 ms	sequence loop 5.0 ms	total 10.6 ms = 683 MB/s
++sao	L3	klzh2	out=5362764	streams 7.1 ms	sequence loop 5.8 ms	total 12.9 ms = 561 MB/s
++webster	L3	klzh	out=12258723	streams 8.1 ms	sequence loop 37.8 ms	total 45.9 ms = 903 MB/s
++webster	L3	klzh2	out=12069038	streams 8.3 ms	sequence loop 34.7 ms	total 43.0 ms = 965 MB/s
++x-ray	L3	klzh	out=6240250	streams 7.4 ms	sequence loop 5.5 ms	total 12.9 ms = 658 MB/s
++x-ray	L3	klzh2	out=6115813	streams 8.4 ms	sequence loop 7.0 ms	total 15.4 ms = 552 MB/s
++xml	L3	klzh	out=685028	streams 0.6 ms	sequence loop 2.3 ms	total 2.9 ms = 1825 MB/s
++xml	L3	klzh2	out=643913	streams 0.7 ms	sequence loop 2.3 ms	total 3.1 ms = 1746 MB/s
+diff --git a/benchmark/review40/klzh2/results/e2e-v6.tsv b/benchmark/review40/klzh2/results/e2e-v6.tsv
+new file mode 100644
+index 00000000..b6165208
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/e2e-v6.tsv
+@@ -0,0 +1,78 @@
++dickens	speed	none	6437034	0	OK	same-bytes-as-rc3
++dickens	speed	lz	5606154	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++dickens	speed	lz2	5606154	0	OK	rc3-ACCEPTED
++dickens	balanced	none	3721196	0	OK	same-bytes-as-rc3
++dickens	balanced	lz	3754554	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++dickens	balanced	lz2	3691504	0	OK	rc3-refuses
++mozilla	speed	none	26440552	0	OK	same-bytes-as-rc3
++mozilla	speed	lz	25429192	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++mozilla	speed	lz2	25429192	0	OK	rc3-ACCEPTED
++mozilla	balanced	none	18367182	0	OK	same-bytes-as-rc3
++mozilla	balanced	lz	19056186	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++mozilla	balanced	lz2	18007765	0	OK	rc3-refuses
++mr	speed	none	4426100	0	OK	same-bytes-as-rc3
++mr	speed	lz	4409721	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++mr	speed	lz2	4409721	0	OK	rc3-ACCEPTED
++mr	balanced	none	2316612	0	OK	same-bytes-as-rc3
++mr	balanced	lz	2364227	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++mr	balanced	lz2	2326120	0	OK	rc3-refuses
++nci	speed	none	5539251	0	OK	same-bytes-as-rc3
++nci	speed	lz	5152187	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++nci	speed	lz2	5152187	0	OK	rc3-ACCEPTED
++nci	balanced	none	2027737	0	OK	same-bytes-as-rc3
++nci	balanced	lz	2238037	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++nci	balanced	lz2	2059425	0	OK	rc3-refuses
++ooffice	speed	none	4340699	0	OK	same-bytes-as-rc3
++ooffice	speed	lz	4156964	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++ooffice	speed	lz2	4156964	0	OK	rc3-ACCEPTED
++ooffice	balanced	none	2792481	0	OK	same-bytes-as-rc3
++ooffice	balanced	lz	2802833	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++ooffice	balanced	lz2	2755651	0	OK	rc3-refuses
++osdb	speed	none	5273313	0	OK	same-bytes-as-rc3
++osdb	speed	lz	4601209	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++osdb	speed	lz2	4601209	0	OK	rc3-ACCEPTED
++osdb	balanced	none	3533740	0	OK	same-bytes-as-rc3
++osdb	balanced	lz	3572135	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++osdb	balanced	lz2	3526818	0	OK	rc3-refuses
++reymont	speed	none	3189095	0	OK	same-bytes-as-rc3
++reymont	speed	lz	3033018	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++reymont	speed	lz2	3033018	0	OK	rc3-ACCEPTED
++reymont	balanced	none	1967300	0	OK	same-bytes-as-rc3
++reymont	balanced	lz	2009345	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++reymont	balanced	lz2	1963412	0	OK	rc3-refuses
++samba	speed	none	7728497	0	OK	same-bytes-as-rc3
++samba	speed	lz	7173400	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++samba	speed	lz2	7173400	0	OK	rc3-ACCEPTED
++samba	balanced	none	4867052	0	OK	same-bytes-as-rc3
++samba	balanced	lz	5023420	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++samba	balanced	lz2	4885604	0	OK	rc3-refuses
++sao	speed	none	6791955	0	OK	same-bytes-as-rc3
++sao	speed	lz	6459099	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++sao	speed	lz2	6459099	0	OK	rc3-ACCEPTED
++sao	balanced	none	2302435	0	OK	same-bytes-as-rc3
++sao	balanced	lz	2491599	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++sao	balanced	lz2	2355694	0	OK	rc3-refuses
++webster	speed	none	20149426	0	OK	same-bytes-as-rc3
++webster	speed	lz	18255378	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++webster	speed	lz2	18255378	0	OK	rc3-ACCEPTED
++webster	balanced	none	12151927	0	OK	same-bytes-as-rc3
++webster	balanced	lz	12258955	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++webster	balanced	lz2	12069270	0	OK	rc3-refuses
++x-ray	speed	none	8389978	0	OK	same-bytes-as-rc3
++x-ray	speed	lz	8148150	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++x-ray	speed	lz2	8148150	0	OK	rc3-ACCEPTED
++x-ray	balanced	none	3657342	0	OK	same-bytes-as-rc3
++x-ray	balanced	lz	3689146	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++x-ray	balanced	lz2	3687028	0	OK	rc3-refuses
++xml	speed	none	1232806	0	OK	same-bytes-as-rc3
++xml	speed	lz	1087797	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++xml	speed	lz2	1087797	0	OK	rc3-ACCEPTED
++xml	balanced	none	652714	0	OK	same-bytes-as-rc3
++xml	balanced	lz	693710	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++xml	balanced	lz2	658938	0	OK	rc3-refuses
++enwik8_10m	speed	none	5795205	0	OK	same-bytes-as-rc3
++enwik8_10m	speed	lz	5265491	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++enwik8_10m	speed	lz2	5265491	0	OK	rc3-ACCEPTED
++enwik8_10m	balanced	none	3616246	0	OK	same-bytes-as-rc3
++enwik8_10m	balanced	lz	3640226	0	OK	same-bytes-as-rc3,rc3-frame-decodes
++enwik8_10m	balanced	lz2	3601886	0	OK	rc3-refuses
+diff --git a/benchmark/review40/klzh2/results/measure-cli-v6.jsonl b/benchmark/review40/klzh2/results/measure-cli-v6.jsonl
+new file mode 100644
+index 00000000..ac751e5a
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/measure-cli-v6.jsonl
+@@ -0,0 +1,12 @@
++{"label": "c-balanced-none-silesia.tar", "cmd": ["env", "-u", "KOLMO_NATIVE", "/home/user/kolmo-review40-wt/R01/build/kolmo", "-m", "balanced", "-T", "1", "/home/user/kolmo-review40-data/silesia.tar", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/s-none.k"], "load1": 1.99755859375, "runs": [{"run": 0, "wall_s": 1.2284, "peak_rss_kb": 58836, "avg_rss_kb": 21215, "exit": 0}, {"run": 1, "wall_s": 1.1337, "peak_rss_kb": 58884, "avg_rss_kb": 21256, "exit": 0}, {"run": 2, "wall_s": 1.1078, "peak_rss_kb": 39548, "avg_rss_kb": 21387, "exit": 0}], "best_wall_s": 1.1078, "t": "2026-11-24T05:19:22Z"}
++{"label": "d-balanced-none-silesia.tar", "cmd": ["/home/user/kolmo-review40-wt/R01/build/kolmo", "-d", "-T", "1", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/s-none.k", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/s-none.back"], "load1": 1.99755859375, "runs": [{"run": 0, "wall_s": 0.5104, "peak_rss_kb": 21944, "avg_rss_kb": 18161, "exit": 0}, {"run": 1, "wall_s": 0.7283, "peak_rss_kb": 21848, "avg_rss_kb": 17294, "exit": 0}, {"run": 2, "wall_s": 0.5241, "peak_rss_kb": 21748, "avg_rss_kb": 16234, "exit": 0}], "best_wall_s": 0.5104, "t": "2026-11-24T05:19:24Z"}
++{"label": "c-balanced-lz-silesia.tar", "cmd": ["env", "KOLMO_NATIVE=lz", "/home/user/kolmo-review40-wt/R01/build/kolmo", "-m", "balanced", "-T", "1", "/home/user/kolmo-review40-data/silesia.tar", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/s-lz.k"], "load1": 1.998046875, "runs": [{"run": 0, "wall_s": 1.6483, "peak_rss_kb": 58836, "avg_rss_kb": 25637, "exit": 0}, {"run": 1, "wall_s": 1.6643, "peak_rss_kb": 55464, "avg_rss_kb": 25356, "exit": 0}, {"run": 2, "wall_s": 1.5614, "peak_rss_kb": 58844, "avg_rss_kb": 25580, "exit": 0}], "best_wall_s": 1.5614, "t": "2026-11-24T05:19:29Z"}
++{"label": "d-balanced-lz-silesia.tar", "cmd": ["/home/user/kolmo-review40-wt/R01/build/kolmo", "-d", "-T", "1", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/s-lz.k", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/s-lz.back"], "load1": 2.23876953125, "runs": [{"run": 0, "wall_s": 0.4274, "peak_rss_kb": 23152, "avg_rss_kb": 19351, "exit": 0}, {"run": 1, "wall_s": 0.5274, "peak_rss_kb": 23164, "avg_rss_kb": 17884, "exit": 0}, {"run": 2, "wall_s": 0.5349, "peak_rss_kb": 23104, "avg_rss_kb": 17669, "exit": 0}], "best_wall_s": 0.4274, "t": "2026-11-24T05:19:31Z"}
++{"label": "c-balanced-lz2-silesia.tar", "cmd": ["env", "KOLMO_NATIVE=lz2", "/home/user/kolmo-review40-wt/R01/build/kolmo", "-m", "balanced", "-T", "1", "/home/user/kolmo-review40-data/silesia.tar", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/s-lz2.k"], "load1": 2.21923828125, "runs": [{"run": 0, "wall_s": 1.7527, "peak_rss_kb": 58896, "avg_rss_kb": 31711, "exit": 0}, {"run": 1, "wall_s": 1.6196, "peak_rss_kb": 58888, "avg_rss_kb": 31101, "exit": 0}, {"run": 2, "wall_s": 1.5203, "peak_rss_kb": 59004, "avg_rss_kb": 31413, "exit": 0}], "best_wall_s": 1.5203, "t": "2026-11-24T05:19:36Z"}
++{"label": "d-balanced-lz2-silesia.tar", "cmd": ["/home/user/kolmo-review40-wt/R01/build/kolmo", "-d", "-T", "1", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/s-lz2.k", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/s-lz2.back"], "load1": 2.21923828125, "runs": [{"run": 0, "wall_s": 0.4534, "peak_rss_kb": 22868, "avg_rss_kb": 17835, "exit": 0}, {"run": 1, "wall_s": 0.611, "peak_rss_kb": 22976, "avg_rss_kb": 18094, "exit": 0}, {"run": 2, "wall_s": 0.4846, "peak_rss_kb": 22692, "avg_rss_kb": 17495, "exit": 0}], "best_wall_s": 0.4534, "t": "2026-11-24T05:19:37Z"}
++{"label": "c-balanced-none-enwik8", "cmd": ["env", "-u", "KOLMO_NATIVE", "/home/user/kolmo-review40-wt/R01/build/kolmo", "-m", "balanced", "-T", "1", "/home/user/kolmo-review40-data/enwik8", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/e-none.k"], "load1": 2.20166015625, "runs": [{"run": 0, "wall_s": 5.2332, "peak_rss_kb": 10812, "avg_rss_kb": 6083, "exit": 0}, {"run": 1, "wall_s": 0.7649, "peak_rss_kb": 10780, "avg_rss_kb": 10552, "exit": 0}, {"run": 2, "wall_s": 1.0962, "peak_rss_kb": 10884, "avg_rss_kb": 10693, "exit": 0}], "best_wall_s": 0.7649, "t": "2026-11-24T05:19:45Z"}
++{"label": "d-balanced-none-enwik8", "cmd": ["/home/user/kolmo-review40-wt/R01/build/kolmo", "-d", "-T", "1", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/e-none.k", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/e-none.back"], "load1": 2.20166015625, "runs": [{"run": 0, "wall_s": 0.2614, "peak_rss_kb": 9348, "avg_rss_kb": 9124, "exit": 0}, {"run": 1, "wall_s": 0.2856, "peak_rss_kb": 9520, "avg_rss_kb": 9288, "exit": 0}, {"run": 2, "wall_s": 0.2161, "peak_rss_kb": 9196, "avg_rss_kb": 8454, "exit": 0}], "best_wall_s": 0.2161, "t": "2026-11-24T05:19:45Z"}
++{"label": "c-balanced-lz-enwik8", "cmd": ["env", "KOLMO_NATIVE=lz", "/home/user/kolmo-review40-wt/R01/build/kolmo", "-m", "balanced", "-T", "1", "/home/user/kolmo-review40-data/enwik8", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/e-lz.k"], "load1": 2.18505859375, "runs": [{"run": 0, "wall_s": 1.0527, "peak_rss_kb": 18496, "avg_rss_kb": 13925, "exit": 0}, {"run": 1, "wall_s": 1.166, "peak_rss_kb": 18324, "avg_rss_kb": 13502, "exit": 0}, {"run": 2, "wall_s": 1.1307, "peak_rss_kb": 18416, "avg_rss_kb": 13820, "exit": 0}], "best_wall_s": 1.0527, "t": "2026-11-24T05:19:49Z"}
++{"label": "d-balanced-lz-enwik8", "cmd": ["/home/user/kolmo-review40-wt/R01/build/kolmo", "-d", "-T", "1", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/e-lz.k", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/e-lz.back"], "load1": 2.18505859375, "runs": [{"run": 0, "wall_s": 0.2796, "peak_rss_kb": 10428, "avg_rss_kb": 10140, "exit": 0}, {"run": 1, "wall_s": 0.2853, "peak_rss_kb": 10844, "avg_rss_kb": 10224, "exit": 0}, {"run": 2, "wall_s": 0.2345, "peak_rss_kb": 10844, "avg_rss_kb": 9876, "exit": 0}], "best_wall_s": 0.2345, "t": "2026-11-24T05:19:50Z"}
++{"label": "c-balanced-lz2-enwik8", "cmd": ["env", "KOLMO_NATIVE=lz2", "/home/user/kolmo-review40-wt/R01/build/kolmo", "-m", "balanced", "-T", "1", "/home/user/kolmo-review40-data/enwik8", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/e-lz2.k"], "load1": 2.169921875, "runs": [{"run": 0, "wall_s": 1.1427, "peak_rss_kb": 17552, "avg_rss_kb": 13451, "exit": 0}, {"run": 1, "wall_s": 1.2442, "peak_rss_kb": 17832, "avg_rss_kb": 13727, "exit": 0}, {"run": 2, "wall_s": 1.1782, "peak_rss_kb": 17780, "avg_rss_kb": 13942, "exit": 0}], "best_wall_s": 1.1427, "t": "2026-11-24T05:19:53Z"}
++{"label": "d-balanced-lz2-enwik8", "cmd": ["/home/user/kolmo-review40-wt/R01/build/kolmo", "-d", "-T", "1", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/e-lz2.k", "/tmp/claude-0/-home-user-kolmo/4d24f553-2fec-54f1-9707-fa6eff481a2f/scratchpad/e2e/e-lz2.back"], "load1": 2.169921875, "runs": [{"run": 0, "wall_s": 0.1896, "peak_rss_kb": 10520, "avg_rss_kb": 10084, "exit": 0}, {"run": 1, "wall_s": 0.2389, "peak_rss_kb": 10536, "avg_rss_kb": 9613, "exit": 0}, {"run": 2, "wall_s": 0.2211, "peak_rss_kb": 10564, "avg_rss_kb": 9626, "exit": 0}], "best_wall_s": 0.1896, "t": "2026-11-24T05:19:54Z"}
+diff --git a/benchmark/review40/klzh2/results/v6-T1-dickens.txt b/benchmark/review40/klzh2/results/v6-T1-dickens.txt
+new file mode 100644
+index 00000000..78d6f760
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-dickens.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in    10192446  out     4264635  ratio  2.390  c    284.5 MB/s  d   1082.7 MB/s
++klzh1    T1  in    10192446  out     3823431  ratio  2.666  c    130.7 MB/s  d    677.4 MB/s
++k2h1     T1  in    10192446  out     3794589  ratio  2.686  c    115.2 MB/s  d    678.5 MB/s
++zstd3    T1  in    10192446  out     3681733  ratio  2.768  c    120.4 MB/s  d    841.4 MB/s
++klzh3    T1  in    10192446  out     3690750  ratio  2.762  c     94.4 MB/s  d    619.0 MB/s
++k2h3     T1  in    10192446  out     3629992  ratio  2.808  c     84.6 MB/s  d    742.9 MB/s
++klzh5    T1  in    10192446  out     3717140  ratio  2.742  c     39.2 MB/s  d    737.2 MB/s
++k2h5     T1  in    10192446  out     3628596  ratio  2.809  c     34.3 MB/s  d    791.4 MB/s
++zstd9    T1  in    10192446  out     3322680  ratio  3.068  c     30.9 MB/s  d    805.6 MB/s
++klzh7    T1  in    10192446  out     3499104  ratio  2.913  c      6.2 MB/s  d    492.8 MB/s
++k2h7     T1  in    10192446  out     3415839  ratio  2.984  c      7.0 MB/s  d    817.4 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-enwik8_10m.txt b/benchmark/review40/klzh2/results/v6-T1-enwik8_10m.txt
+new file mode 100644
+index 00000000..a14a2180
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-enwik8_10m.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in    10000000  out     4108085  ratio  2.434  c    317.1 MB/s  d   1055.2 MB/s
++klzh1    T1  in    10000000  out     3697941  ratio  2.704  c    131.6 MB/s  d    759.2 MB/s
++k2h1     T1  in    10000000  out     3680940  ratio  2.717  c    128.4 MB/s  d    762.2 MB/s
++zstd3    T1  in    10000000  out     3581213  ratio  2.792  c    157.5 MB/s  d    961.2 MB/s
++klzh3    T1  in    10000000  out     3581503  ratio  2.792  c    102.5 MB/s  d    755.1 MB/s
++k2h3     T1  in    10000000  out     3547143  ratio  2.819  c    105.1 MB/s  d    831.5 MB/s
++klzh5    T1  in    10000000  out     3464802  ratio  2.886  c     42.4 MB/s  d    798.0 MB/s
++k2h5     T1  in    10000000  out     3406194  ratio  2.936  c     39.7 MB/s  d    849.3 MB/s
++zstd9    T1  in    10000000  out     3203528  ratio  3.122  c     42.7 MB/s  d    858.8 MB/s
++klzh7    T1  in    10000000  out     3316773  ratio  3.015  c      8.4 MB/s  d    776.2 MB/s
++k2h7     T1  in    10000000  out     3258410  ratio  3.069  c      6.5 MB/s  d    470.4 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-mozilla.txt b/benchmark/review40/klzh2/results/v6-T1-mozilla.txt
+new file mode 100644
+index 00000000..513b1733
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-mozilla.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in    51220480  out    19988639  ratio  2.562  c    417.7 MB/s  d    952.1 MB/s
++klzh1    T1  in    51220480  out    19416435  ratio  2.638  c    209.6 MB/s  d    891.2 MB/s
++k2h1     T1  in    51220480  out    18441635  ratio  2.777  c    201.1 MB/s  d    585.4 MB/s
++zstd3    T1  in    51220480  out    18304336  ratio  2.798  c    143.6 MB/s  d    702.9 MB/s
++klzh3    T1  in    51220480  out    18983274  ratio  2.698  c    149.3 MB/s  d    859.0 MB/s
++k2h3     T1  in    51220480  out    17937785  ratio  2.855  c    126.2 MB/s  d    704.0 MB/s
++klzh5    T1  in    51220480  out    17959090  ratio  2.852  c     36.7 MB/s  d    871.2 MB/s
++k2h5     T1  in    51220480  out    16806603  ratio  3.048  c     38.0 MB/s  d    700.4 MB/s
++zstd9    T1  in    51220480  out    16957284  ratio  3.021  c     59.3 MB/s  d    865.2 MB/s
++klzh7    T1  in    51220480  out    17605721  ratio  2.909  c     11.4 MB/s  d    781.6 MB/s
++k2h7     T1  in    51220480  out    16435751  ratio  3.116  c     12.5 MB/s  d    668.1 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-mr.txt b/benchmark/review40/klzh2/results/v6-T1-mr.txt
+new file mode 100644
+index 00000000..1a4a1c00
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-mr.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in     9970564  out     3814844  ratio  2.614  c    385.7 MB/s  d   1081.1 MB/s
++klzh1    T1  in     9970564  out     3656941  ratio  2.726  c    180.2 MB/s  d    902.0 MB/s
++k2h1     T1  in     9970564  out     3462467  ratio  2.880  c    161.4 MB/s  d    710.1 MB/s
++zstd3    T1  in     9970564  out     3548122  ratio  2.810  c    170.5 MB/s  d    549.4 MB/s
++klzh3    T1  in     9970564  out     3580850  ratio  2.784  c    118.7 MB/s  d    711.1 MB/s
++k2h3     T1  in     9970564  out     3371508  ratio  2.957  c    103.5 MB/s  d    654.6 MB/s
++klzh5    T1  in     9970564  out     3601484  ratio  2.768  c     53.5 MB/s  d    779.1 MB/s
++k2h5     T1  in     9970564  out     3361254  ratio  2.966  c     49.7 MB/s  d    659.7 MB/s
++zstd9    T1  in     9970564  out     3341388  ratio  2.984  c     49.6 MB/s  d    831.9 MB/s
++klzh7    T1  in     9970564  out     3499824  ratio  2.849  c     10.7 MB/s  d    774.4 MB/s
++k2h7     T1  in     9970564  out     3270833  ratio  3.048  c     11.6 MB/s  d    702.6 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-nci.txt b/benchmark/review40/klzh2/results/v6-T1-nci.txt
+new file mode 100644
+index 00000000..d3e0793c
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-nci.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in    33553445  out     2855235  ratio 11.752  c    757.2 MB/s  d   1704.9 MB/s
++klzh1    T1  in    33553445  out     3126823  ratio 10.731  c    556.9 MB/s  d   1500.7 MB/s
++k2h1     T1  in    33553445  out     2930927  ratio 11.448  c    447.2 MB/s  d   1565.0 MB/s
++zstd3    T1  in    33553445  out     2846755  ratio 11.787  c    577.7 MB/s  d   1564.3 MB/s
++klzh3    T1  in    33553445  out     3125954  ratio 10.734  c    465.1 MB/s  d   1650.9 MB/s
++k2h3     T1  in    33553445  out     2921084  ratio 11.487  c    414.1 MB/s  d   1527.8 MB/s
++klzh5    T1  in    33553445  out     2730904  ratio 12.287  c    144.7 MB/s  d   1967.9 MB/s
++k2h5     T1  in    33553445  out     2647338  ratio 12.674  c    152.5 MB/s  d   1721.3 MB/s
++zstd9    T1  in    33553445  out     2294022  ratio 14.626  c    104.8 MB/s  d   1876.9 MB/s
++klzh7    T1  in    33553445  out     2480127  ratio 13.529  c     41.9 MB/s  d   1853.3 MB/s
++k2h7     T1  in    33553445  out     2424056  ratio 13.842  c     43.1 MB/s  d   2188.0 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-ooffice.txt b/benchmark/review40/klzh2/results/v6-T1-ooffice.txt
+new file mode 100644
+index 00000000..486a988d
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-ooffice.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in     6152192  out     3593815  ratio  1.712  c    362.8 MB/s  d    786.8 MB/s
++klzh1    T1  in     6152192  out     3240400  ratio  1.899  c    157.1 MB/s  d    733.4 MB/s
++k2h1     T1  in     6152192  out     3190733  ratio  1.928  c    154.3 MB/s  d    568.4 MB/s
++zstd3    T1  in     6152192  out     3130232  ratio  1.965  c    155.3 MB/s  d    719.0 MB/s
++klzh3    T1  in     6152192  out     3139572  ratio  1.960  c    104.4 MB/s  d    636.1 MB/s
++k2h3     T1  in     6152192  out     3090445  ratio  1.991  c    101.5 MB/s  d    558.8 MB/s
++klzh5    T1  in     6152192  out     2946796  ratio  2.088  c     25.3 MB/s  d    609.0 MB/s
++k2h5     T1  in     6152192  out     2892592  ratio  2.127  c     24.1 MB/s  d    519.3 MB/s
++zstd9    T1  in     6152192  out     2880472  ratio  2.136  c     43.9 MB/s  d    537.6 MB/s
++klzh7    T1  in     6152192  out     2886686  ratio  2.131  c      6.8 MB/s  d    568.9 MB/s
++k2h7     T1  in     6152192  out     2834747  ratio  2.170  c      7.2 MB/s  d    510.1 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-osdb.txt b/benchmark/review40/klzh2/results/v6-T1-osdb.txt
+new file mode 100644
+index 00000000..5d3512d0
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-osdb.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in    10085684  out     3738340  ratio  2.698  c    308.1 MB/s  d   1169.6 MB/s
++klzh1    T1  in    10085684  out     3561176  ratio  2.832  c    256.1 MB/s  d   1148.5 MB/s
++k2h1     T1  in    10085684  out     3517941  ratio  2.867  c    200.8 MB/s  d   1036.9 MB/s
++zstd3    T1  in    10085684  out     3511122  ratio  2.872  c    196.4 MB/s  d   1045.9 MB/s
++klzh3    T1  in    10085684  out     3533167  ratio  2.855  c    154.2 MB/s  d   1110.4 MB/s
++k2h3     T1  in    10085684  out     3486461  ratio  2.893  c    104.5 MB/s  d   1031.1 MB/s
++klzh5    T1  in    10085684  out     3462815  ratio  2.913  c     50.6 MB/s  d   1109.3 MB/s
++k2h5     T1  in    10085684  out     3392275  ratio  2.973  c     42.1 MB/s  d    903.9 MB/s
++zstd9    T1  in    10085684  out     3359625  ratio  3.002  c     47.3 MB/s  d    789.7 MB/s
++klzh7    T1  in    10085684  out     3375456  ratio  2.988  c      9.4 MB/s  d   1020.1 MB/s
++k2h7     T1  in    10085684  out     3309477  ratio  3.048  c     10.3 MB/s  d    933.3 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-reymont.txt b/benchmark/review40/klzh2/results/v6-T1-reymont.txt
+new file mode 100644
+index 00000000..3c7bf6cb
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-reymont.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in     6627202  out     2151356  ratio  3.080  c    275.3 MB/s  d   1111.6 MB/s
++klzh1    T1  in     6627202  out     2023044  ratio  3.276  c    160.2 MB/s  d    856.3 MB/s
++k2h1     T1  in     6627202  out     1982344  ratio  3.343  c    156.9 MB/s  d    989.6 MB/s
++zstd3    T1  in     6627202  out     1943693  ratio  3.410  c    181.9 MB/s  d    931.5 MB/s
++klzh3    T1  in     6627202  out     1987792  ratio  3.334  c    122.8 MB/s  d    805.8 MB/s
++k2h3     T1  in     6627202  out     1933079  ratio  3.428  c    127.0 MB/s  d   1000.4 MB/s
++klzh5    T1  in     6627202  out     1906214  ratio  3.477  c     49.5 MB/s  d    872.5 MB/s
++k2h5     T1  in     6627202  out     1854960  ratio  3.573  c     52.1 MB/s  d    937.8 MB/s
++zstd9    T1  in     6627202  out     1686037  ratio  3.931  c     45.3 MB/s  d   1005.9 MB/s
++klzh7    T1  in     6627202  out     1778784  ratio  3.726  c     11.3 MB/s  d    823.6 MB/s
++k2h7     T1  in     6627202  out     1732487  ratio  3.825  c     12.4 MB/s  d   1009.4 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-samba.txt b/benchmark/review40/klzh2/results/v6-T1-samba.txt
+new file mode 100644
+index 00000000..407929c3
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-samba.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in    21606400  out     5501656  ratio  3.927  c    459.9 MB/s  d   1372.9 MB/s
++klzh1    T1  in    21606400  out     5285261  ratio  4.088  c    277.4 MB/s  d   1132.9 MB/s
++k2h1     T1  in    21606400  out     5114279  ratio  4.225  c    286.3 MB/s  d   1207.5 MB/s
++zstd3    T1  in    21606400  out     4982897  ratio  4.336  c    274.5 MB/s  d   1240.1 MB/s
++klzh3    T1  in    21606400  out     5200849  ratio  4.154  c    216.8 MB/s  d   1203.4 MB/s
++k2h3     T1  in    21606400  out     5006430  ratio  4.316  c    220.0 MB/s  d   1198.8 MB/s
++klzh5    T1  in    21606400  out     4981096  ratio  4.338  c     65.0 MB/s  d   1221.5 MB/s
++k2h5     T1  in    21606400  out     4804469  ratio  4.497  c     68.9 MB/s  d   1230.4 MB/s
++zstd9    T1  in    21606400  out     4455735  ratio  4.849  c     71.4 MB/s  d   1272.4 MB/s
++klzh7    T1  in    21606400  out     4723195  ratio  4.575  c     18.5 MB/s  d   1195.7 MB/s
++k2h7     T1  in    21606400  out     4548439  ratio  4.750  c     18.2 MB/s  d   1337.2 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-sao.txt b/benchmark/review40/klzh2/results/v6-T1-sao.txt
+new file mode 100644
+index 00000000..32f33f0e
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-sao.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in     7251944  out     6251181  ratio  1.160  c    344.5 MB/s  d    774.6 MB/s
++klzh1    T1  in     7251944  out     5690784  ratio  1.274  c    154.9 MB/s  d    631.0 MB/s
++k2h1     T1  in     7251944  out     5566637  ratio  1.303  c    105.0 MB/s  d    541.6 MB/s
++zstd3    T1  in     7251944  out     5530936  ratio  1.311  c    132.9 MB/s  d    659.2 MB/s
++klzh3    T1  in     7251944  out     5508618  ratio  1.316  c     96.5 MB/s  d    664.6 MB/s
++k2h3     T1  in     7251944  out     5362764  ratio  1.352  c     84.8 MB/s  d    571.1 MB/s
++klzh5    T1  in     7251944  out     5328174  ratio  1.361  c     17.1 MB/s  d    649.4 MB/s
++k2h5     T1  in     7251944  out     5126568  ratio  1.415  c     17.1 MB/s  d    520.1 MB/s
++zstd9    T1  in     7251944  out     5234067  ratio  1.386  c     41.6 MB/s  d    594.1 MB/s
++klzh7    T1  in     7251944  out     5289844  ratio  1.371  c      5.0 MB/s  d    636.1 MB/s
++k2h7     T1  in     7251944  out     5102184  ratio  1.421  c      4.7 MB/s  d    557.6 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-webster.txt b/benchmark/review40/klzh2/results/v6-T1-webster.txt
+new file mode 100644
+index 00000000..94017037
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-webster.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in    41458703  out    13675709  ratio  3.032  c    326.6 MB/s  d   1230.8 MB/s
++klzh1    T1  in    41458703  out    12551796  ratio  3.303  c    164.0 MB/s  d    962.1 MB/s
++k2h1     T1  in    41458703  out    12434235  ratio  3.334  c    180.8 MB/s  d    886.6 MB/s
++zstd3    T1  in    41458703  out    12151695  ratio  3.412  c    188.0 MB/s  d    807.4 MB/s
++klzh3    T1  in    41458703  out    12258723  ratio  3.382  c    123.7 MB/s  d    798.7 MB/s
++k2h3     T1  in    41458703  out    12069038  ratio  3.435  c    123.5 MB/s  d    878.7 MB/s
++klzh5    T1  in    41458703  out    11573147  ratio  3.582  c     53.7 MB/s  d    977.1 MB/s
++k2h5     T1  in    41458703  out    11350406  ratio  3.653  c     49.8 MB/s  d   1050.6 MB/s
++zstd9    T1  in    41458703  out    10490527  ratio  3.952  c     43.8 MB/s  d    608.7 MB/s
++klzh7    T1  in    41458703  out    10919236  ratio  3.797  c      9.1 MB/s  d    882.8 MB/s
++k2h7     T1  in    41458703  out    10697297  ratio  3.876  c      9.8 MB/s  d    781.2 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-x-ray.txt b/benchmark/review40/klzh2/results/v6-T1-x-ray.txt
+new file mode 100644
+index 00000000..86e060c6
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-x-ray.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in     8474240  out     6772708  ratio  1.251  c    667.4 MB/s  d    935.1 MB/s
++klzh1    T1  in     8474240  out     6776455  ratio  1.251  c    524.9 MB/s  d    746.0 MB/s
++k2h1     T1  in     8474240  out     6774201  ratio  1.251  c    372.0 MB/s  d    764.8 MB/s
++zstd3    T1  in     8474240  out     6092374  ratio  1.391  c     82.1 MB/s  d    700.8 MB/s
++klzh3    T1  in     8474240  out     6240250  ratio  1.358  c     97.8 MB/s  d    619.7 MB/s
++k2h3     T1  in     8474240  out     6115813  ratio  1.386  c     76.6 MB/s  d    519.0 MB/s
++klzh5    T1  in     8474240  out     5686271  ratio  1.490  c     15.2 MB/s  d    436.1 MB/s
++k2h5     T1  in     8474240  out     5458857  ratio  1.552  c     16.2 MB/s  d    387.3 MB/s
++zstd9    T1  in     8474240  out     5421988  ratio  1.563  c     38.7 MB/s  d    350.5 MB/s
++klzh7    T1  in     8474240  out     5564485  ratio  1.523  c      3.9 MB/s  d    428.1 MB/s
++k2h7     T1  in     8474240  out     5316890  ratio  1.594  c      4.3 MB/s  d    374.8 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T1-xml.txt b/benchmark/review40/klzh2/results/v6-T1-xml.txt
+new file mode 100644
+index 00000000..b19a54ee
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T1-xml.txt
+@@ -0,0 +1,11 @@
++zstd1    T1  in     5345280  out      694115  ratio  7.701  c    625.0 MB/s  d   1545.8 MB/s
++klzh1    T1  in     5345280  out      690827  ratio  7.738  c    455.2 MB/s  d   1517.1 MB/s
++k2h1     T1  in     5345280  out      650281  ratio  8.220  c    426.8 MB/s  d   1540.4 MB/s
++zstd3    T1  in     5345280  out      636164  ratio  8.402  c    472.0 MB/s  d   1472.8 MB/s
++klzh3    T1  in     5345280  out      685028  ratio  7.803  c    392.8 MB/s  d   1540.0 MB/s
++k2h3     T1  in     5345280  out      643913  ratio  8.301  c    335.2 MB/s  d   1418.5 MB/s
++klzh5    T1  in     5345280  out      623301  ratio  8.576  c    133.3 MB/s  d   1575.5 MB/s
++k2h5     T1  in     5345280  out      591617  ratio  9.035  c    134.9 MB/s  d   1486.2 MB/s
++zstd9    T1  in     5345280  out      518245  ratio 10.314  c     99.5 MB/s  d   1752.4 MB/s
++klzh7    T1  in     5345280  out      567918  ratio  9.412  c     57.7 MB/s  d   1669.9 MB/s
++k2h7     T1  in     5345280  out      540937  ratio  9.882  c     57.1 MB/s  d   1770.8 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-dickens.txt b/benchmark/review40/klzh2/results/v6-T4-dickens.txt
+new file mode 100644
+index 00000000..caa1895c
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-dickens.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in    10192446  out     4264635  ratio  2.390  c    691.4 MB/s  d   2310.3 MB/s
++klzh1    T4  in    10192446  out     3823431  ratio  2.666  c    294.5 MB/s  d    991.5 MB/s
++k2h1     T4  in    10192446  out     3794589  ratio  2.686  c    228.0 MB/s  d   1494.8 MB/s
++zstd3    T4  in    10192446  out     3681733  ratio  2.768  c    286.7 MB/s  d   1284.8 MB/s
++klzh3    T4  in    10192446  out     3690750  ratio  2.762  c    188.8 MB/s  d   1334.7 MB/s
++k2h3     T4  in    10192446  out     3629992  ratio  2.808  c    174.0 MB/s  d   1171.4 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-enwik8_10m.txt b/benchmark/review40/klzh2/results/v6-T4-enwik8_10m.txt
+new file mode 100644
+index 00000000..fc8044ca
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-enwik8_10m.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in    10000000  out     4108085  ratio  2.434  c    593.8 MB/s  d   1708.2 MB/s
++klzh1    T4  in    10000000  out     3697941  ratio  2.704  c    263.5 MB/s  d   1521.7 MB/s
++k2h1     T4  in    10000000  out     3680940  ratio  2.717  c    323.9 MB/s  d   1838.2 MB/s
++zstd3    T4  in    10000000  out     3581213  ratio  2.792  c    367.9 MB/s  d   2222.5 MB/s
++klzh3    T4  in    10000000  out     3581503  ratio  2.792  c    243.9 MB/s  d   1607.3 MB/s
++k2h3     T4  in    10000000  out     3547143  ratio  2.819  c    237.8 MB/s  d   1817.2 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-mozilla.txt b/benchmark/review40/klzh2/results/v6-T4-mozilla.txt
+new file mode 100644
+index 00000000..cfdcbfad
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-mozilla.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in    51220480  out    19988639  ratio  2.562  c    906.8 MB/s  d   2028.5 MB/s
++klzh1    T4  in    51220480  out    19416435  ratio  2.638  c    489.7 MB/s  d   2026.0 MB/s
++k2h1     T4  in    51220480  out    18441635  ratio  2.777  c    543.5 MB/s  d   1856.3 MB/s
++zstd3    T4  in    51220480  out    18304336  ratio  2.798  c    614.6 MB/s  d   2292.8 MB/s
++klzh3    T4  in    51220480  out    18983274  ratio  2.698  c    396.6 MB/s  d   1949.0 MB/s
++k2h3     T4  in    51220480  out    17937785  ratio  2.855  c    329.2 MB/s  d   1841.7 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-mr.txt b/benchmark/review40/klzh2/results/v6-T4-mr.txt
+new file mode 100644
+index 00000000..8ce1a475
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-mr.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in     9970564  out     3814844  ratio  2.614  c    832.3 MB/s  d   2203.6 MB/s
++klzh1    T4  in     9970564  out     3656941  ratio  2.726  c    389.2 MB/s  d   1938.5 MB/s
++k2h1     T4  in     9970564  out     3462467  ratio  2.880  c    308.4 MB/s  d   1005.2 MB/s
++zstd3    T4  in     9970564  out     3548122  ratio  2.810  c    333.2 MB/s  d   1374.6 MB/s
++klzh3    T4  in     9970564  out     3580850  ratio  2.784  c    263.8 MB/s  d   1728.2 MB/s
++k2h3     T4  in     9970564  out     3371508  ratio  2.957  c    197.1 MB/s  d   1069.2 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-nci.txt b/benchmark/review40/klzh2/results/v6-T4-nci.txt
+new file mode 100644
+index 00000000..4d208228
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-nci.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in    33553445  out     2855235  ratio 11.752  c   1753.1 MB/s  d   3064.1 MB/s
++klzh1    T4  in    33553445  out     3126823  ratio 10.731  c   1266.7 MB/s  d   3866.0 MB/s
++k2h1     T4  in    33553445  out     2930927  ratio 11.448  c   1277.5 MB/s  d   4067.1 MB/s
++zstd3    T4  in    33553445  out     2846755  ratio 11.787  c   1468.2 MB/s  d   3175.0 MB/s
++klzh3    T4  in    33553445  out     3125954  ratio 10.734  c   1197.2 MB/s  d   4094.4 MB/s
++k2h3     T4  in    33553445  out     2921084  ratio 11.487  c   1142.3 MB/s  d   4417.1 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-ooffice.txt b/benchmark/review40/klzh2/results/v6-T4-ooffice.txt
+new file mode 100644
+index 00000000..dee3632d
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-ooffice.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in     6152192  out     3593815  ratio  1.712  c    496.5 MB/s  d   1094.1 MB/s
++klzh1    T4  in     6152192  out     3240400  ratio  1.899  c    204.3 MB/s  d   1005.5 MB/s
++k2h1     T4  in     6152192  out     3190733  ratio  1.928  c    203.4 MB/s  d    833.4 MB/s
++zstd3    T4  in     6152192  out     3130232  ratio  1.965  c    232.1 MB/s  d   1033.6 MB/s
++klzh3    T4  in     6152192  out     3139572  ratio  1.960  c    160.0 MB/s  d    975.7 MB/s
++k2h3     T4  in     6152192  out     3090445  ratio  1.991  c    155.2 MB/s  d    782.4 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-osdb.txt b/benchmark/review40/klzh2/results/v6-T4-osdb.txt
+new file mode 100644
+index 00000000..dd599c5b
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-osdb.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in    10085684  out     3738340  ratio  2.698  c    958.3 MB/s  d   2054.7 MB/s
++klzh1    T4  in    10085684  out     3561176  ratio  2.832  c    452.3 MB/s  d   1714.5 MB/s
++k2h1     T4  in    10085684  out     3517941  ratio  2.867  c    519.1 MB/s  d   2486.5 MB/s
++zstd3    T4  in    10085684  out     3511122  ratio  2.872  c    451.2 MB/s  d   2582.5 MB/s
++klzh3    T4  in    10085684  out     3533167  ratio  2.855  c    344.1 MB/s  d   2139.5 MB/s
++k2h3     T4  in    10085684  out     3486461  ratio  2.893  c    335.6 MB/s  d   2350.2 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-reymont.txt b/benchmark/review40/klzh2/results/v6-T4-reymont.txt
+new file mode 100644
+index 00000000..561a440a
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-reymont.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in     6627202  out     2151356  ratio  3.080  c    412.6 MB/s  d   1770.2 MB/s
++klzh1    T4  in     6627202  out     2023044  ratio  3.276  c    253.9 MB/s  d   1405.3 MB/s
++k2h1     T4  in     6627202  out     1982344  ratio  3.343  c    240.5 MB/s  d   1526.9 MB/s
++zstd3    T4  in     6627202  out     1943693  ratio  3.410  c    278.8 MB/s  d   1440.2 MB/s
++klzh3    T4  in     6627202  out     1987792  ratio  3.334  c    174.5 MB/s  d    757.3 MB/s
++k2h3     T4  in     6627202  out     1933079  ratio  3.428  c    202.3 MB/s  d   1479.3 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-samba.txt b/benchmark/review40/klzh2/results/v6-T4-samba.txt
+new file mode 100644
+index 00000000..e64a9ffa
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-samba.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in    21606400  out     5501656  ratio  3.927  c   1072.8 MB/s  d   2951.9 MB/s
++klzh1    T4  in    21606400  out     5285261  ratio  4.088  c    558.2 MB/s  d   2692.7 MB/s
++k2h1     T4  in    21606400  out     5114279  ratio  4.225  c    636.1 MB/s  d   3080.4 MB/s
++zstd3    T4  in    21606400  out     4982897  ratio  4.336  c    719.7 MB/s  d   3114.6 MB/s
++klzh3    T4  in    21606400  out     5200849  ratio  4.154  c    548.8 MB/s  d   2980.0 MB/s
++k2h3     T4  in    21606400  out     5006430  ratio  4.316  c    479.9 MB/s  d   2982.1 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-sao.txt b/benchmark/review40/klzh2/results/v6-T4-sao.txt
+new file mode 100644
+index 00000000..fac439d2
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-sao.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in     7251944  out     6251181  ratio  1.160  c    548.2 MB/s  d   1306.0 MB/s
++klzh1    T4  in     7251944  out     5690784  ratio  1.274  c    273.6 MB/s  d    864.0 MB/s
++k2h1     T4  in     7251944  out     5566637  ratio  1.303  c    219.9 MB/s  d    937.2 MB/s
++zstd3    T4  in     7251944  out     5530936  ratio  1.311  c    221.7 MB/s  d   1138.1 MB/s
++klzh3    T4  in     7251944  out     5508618  ratio  1.316  c    159.5 MB/s  d   1118.9 MB/s
++k2h3     T4  in     7251944  out     5362764  ratio  1.352  c    129.7 MB/s  d    976.3 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-webster.txt b/benchmark/review40/klzh2/results/v6-T4-webster.txt
+new file mode 100644
+index 00000000..4327024d
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-webster.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in    41458703  out    13675709  ratio  3.032  c    885.6 MB/s  d   2830.8 MB/s
++klzh1    T4  in    41458703  out    12551796  ratio  3.303  c    439.8 MB/s  d   2231.0 MB/s
++k2h1     T4  in    41458703  out    12434235  ratio  3.334  c    483.9 MB/s  d   2270.6 MB/s
++zstd3    T4  in    41458703  out    12151695  ratio  3.412  c    470.3 MB/s  d   2330.3 MB/s
++klzh3    T4  in    41458703  out    12258723  ratio  3.382  c    306.8 MB/s  d   1790.8 MB/s
++k2h3     T4  in    41458703  out    12069038  ratio  3.435  c    349.0 MB/s  d   2284.8 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-x-ray.txt b/benchmark/review40/klzh2/results/v6-T4-x-ray.txt
+new file mode 100644
+index 00000000..84e6d54c
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-x-ray.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in     8474240  out     6772708  ratio  1.251  c   1335.6 MB/s  d   1780.9 MB/s
++klzh1    T4  in     8474240  out     6776455  ratio  1.251  c   1087.7 MB/s  d   1520.1 MB/s
++k2h1     T4  in     8474240  out     6774201  ratio  1.251  c    857.6 MB/s  d   1555.5 MB/s
++zstd3    T4  in     8474240  out     6092374  ratio  1.391  c    264.1 MB/s  d   1162.1 MB/s
++klzh3    T4  in     8474240  out     6240250  ratio  1.358  c    157.3 MB/s  d    873.5 MB/s
++k2h3     T4  in     8474240  out     6115813  ratio  1.386  c    147.5 MB/s  d    558.6 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6-T4-xml.txt b/benchmark/review40/klzh2/results/v6-T4-xml.txt
+new file mode 100644
+index 00000000..87401b86
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6-T4-xml.txt
+@@ -0,0 +1,6 @@
++zstd1    T4  in     5345280  out      694115  ratio  7.701  c    932.9 MB/s  d   2195.6 MB/s
++klzh1    T4  in     5345280  out      690827  ratio  7.738  c    515.4 MB/s  d   1895.9 MB/s
++k2h1     T4  in     5345280  out      650281  ratio  8.220  c    604.3 MB/s  d   2214.3 MB/s
++zstd3    T4  in     5345280  out      636164  ratio  8.402  c    661.8 MB/s  d   2112.3 MB/s
++klzh3    T4  in     5345280  out      685028  ratio  7.803  c    555.6 MB/s  d   2227.7 MB/s
++k2h3     T4  in     5345280  out      643913  ratio  8.301  c    542.5 MB/s  d   2142.3 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6small256-T1-dickens.txt b/benchmark/review40/klzh2/results/v6small256-T1-dickens.txt
+new file mode 100644
+index 00000000..01dbe19e
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6small256-T1-dickens.txt
+@@ -0,0 +1,8 @@
++lz4      T1  in    10192446  out     6473961  ratio  1.574  c    361.6 MB/s  d   1815.1 MB/s
++klz1     T1  in    10192446  out     5756803  ratio  1.771  c    231.7 MB/s  d   1669.2 MB/s
++zstd1    T1  in    10192446  out     4200961  ratio  2.426  c    240.4 MB/s  d    970.5 MB/s
++klzh1    T1  in    10192446  out     3990050  ratio  2.554  c    143.6 MB/s  d    743.7 MB/s
++k2h1     T1  in    10192446  out     3949935  ratio  2.580  c    141.2 MB/s  d    722.9 MB/s
++zstd3    T1  in    10192446  out     4042147  ratio  2.522  c    170.5 MB/s  d    688.2 MB/s
++klzh3    T1  in    10192446  out     3945112  ratio  2.584  c     92.8 MB/s  d    723.1 MB/s
++k2h3     T1  in    10192446  out     3885843  ratio  2.623  c    123.7 MB/s  d    676.7 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6small256-T1-osdb.txt b/benchmark/review40/klzh2/results/v6small256-T1-osdb.txt
+new file mode 100644
+index 00000000..edd275e5
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6small256-T1-osdb.txt
+@@ -0,0 +1,8 @@
++lz4      T1  in    10085684  out     5345504  ratio  1.887  c    493.4 MB/s  d   2225.8 MB/s
++klz1     T1  in    10085684  out     4697678  ratio  2.147  c    430.0 MB/s  d   1962.0 MB/s
++zstd1    T1  in    10085684  out     3757434  ratio  2.684  c    291.1 MB/s  d   1106.0 MB/s
++klzh1    T1  in    10085684  out     3727947  ratio  2.705  c    231.1 MB/s  d    828.0 MB/s
++k2h1     T1  in    10085684  out     3677155  ratio  2.743  c    223.3 MB/s  d    865.3 MB/s
++zstd3    T1  in    10085684  out     3713590  ratio  2.716  c    263.1 MB/s  d   1086.5 MB/s
++klzh3    T1  in    10085684  out     3720252  ratio  2.711  c    155.5 MB/s  d   1022.6 MB/s
++k2h3     T1  in    10085684  out     3664433  ratio  2.752  c    179.7 MB/s  d    918.0 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6small256-T1-xml.txt b/benchmark/review40/klzh2/results/v6small256-T1-xml.txt
+new file mode 100644
+index 00000000..c0bcfbff
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6small256-T1-xml.txt
+@@ -0,0 +1,8 @@
++lz4      T1  in     5345280  out     1249919  ratio  4.277  c    703.6 MB/s  d   2482.2 MB/s
++klz1     T1  in     5345280  out     1170530  ratio  4.567  c    609.0 MB/s  d   2080.3 MB/s
++zstd1    T1  in     5345280  out      772032  ratio  6.924  c    561.1 MB/s  d   1485.0 MB/s
++klzh1    T1  in     5345280  out      752693  ratio  7.102  c    378.9 MB/s  d   1308.6 MB/s
++k2h1     T1  in     5345280  out      731131  ratio  7.311  c    354.5 MB/s  d   1279.0 MB/s
++zstd3    T1  in     5345280  out      731545  ratio  7.307  c    474.2 MB/s  d   1378.7 MB/s
++klzh3    T1  in     5345280  out      750438  ratio  7.123  c    208.1 MB/s  d   1404.1 MB/s
++k2h3     T1  in     5345280  out      727978  ratio  7.343  c    288.9 MB/s  d   1262.3 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6small32-T1-dickens.txt b/benchmark/review40/klzh2/results/v6small32-T1-dickens.txt
+new file mode 100644
+index 00000000..c86f5cc1
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6small32-T1-dickens.txt
+@@ -0,0 +1,8 @@
++lz4      T1  in    10192446  out     6648690  ratio  1.533  c    293.9 MB/s  d   1368.2 MB/s
++klz1     T1  in    10192446  out     6544903  ratio  1.557  c    282.8 MB/s  d   1511.1 MB/s
++zstd1    T1  in    10192446  out     4567137  ratio  2.232  c    273.4 MB/s  d    912.8 MB/s
++klzh1    T1  in    10192446  out     4421479  ratio  2.305  c    152.1 MB/s  d    529.6 MB/s
++k2h1     T1  in    10192446  out     4387856  ratio  2.323  c    134.9 MB/s  d    499.9 MB/s
++zstd3    T1  in    10192446  out     4358299  ratio  2.339  c    178.8 MB/s  d    850.7 MB/s
++klzh3    T1  in    10192446  out     4406800  ratio  2.313  c    116.5 MB/s  d    546.1 MB/s
++k2h3     T1  in    10192446  out     4373500  ratio  2.331  c    109.2 MB/s  d    498.0 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6small32-T1-osdb.txt b/benchmark/review40/klzh2/results/v6small32-T1-osdb.txt
+new file mode 100644
+index 00000000..845d6e8e
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6small32-T1-osdb.txt
+@@ -0,0 +1,8 @@
++lz4      T1  in    10085684  out     5880537  ratio  1.715  c    512.0 MB/s  d   2288.4 MB/s
++klz1     T1  in    10085684  out     5876477  ratio  1.716  c    457.7 MB/s  d   1928.6 MB/s
++zstd1    T1  in    10085684  out     4957648  ratio  2.034  c    342.1 MB/s  d    814.0 MB/s
++klzh1    T1  in    10085684  out     4886221  ratio  2.064  c    190.4 MB/s  d    653.1 MB/s
++k2h1     T1  in    10085684  out     4832588  ratio  2.087  c    162.4 MB/s  d    572.7 MB/s
++zstd3    T1  in    10085684  out     4803028  ratio  2.100  c    249.0 MB/s  d    836.8 MB/s
++klzh3    T1  in    10085684  out     4872052  ratio  2.070  c    138.4 MB/s  d    563.8 MB/s
++k2h3     T1  in    10085684  out     4817524  ratio  2.094  c    127.1 MB/s  d    557.9 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6small32-T1-xml.txt b/benchmark/review40/klzh2/results/v6small32-T1-xml.txt
+new file mode 100644
+index 00000000..e589bd59
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6small32-T1-xml.txt
+@@ -0,0 +1,8 @@
++lz4      T1  in     5345280  out     1436546  ratio  3.721  c    649.6 MB/s  d   2193.4 MB/s
++klz1     T1  in     5345280  out     1381676  ratio  3.869  c    574.4 MB/s  d   1934.2 MB/s
++zstd1    T1  in     5345280  out      913552  ratio  5.851  c    495.4 MB/s  d   1137.9 MB/s
++klzh1    T1  in     5345280  out      900019  ratio  5.939  c    304.4 MB/s  d    904.2 MB/s
++k2h1     T1  in     5345280  out      876063  ratio  6.101  c    241.7 MB/s  d    811.9 MB/s
++zstd3    T1  in     5345280  out      866521  ratio  6.169  c    412.2 MB/s  d   1166.2 MB/s
++klzh3    T1  in     5345280  out      899445  ratio  5.943  c    248.4 MB/s  d    914.0 MB/s
++k2h3     T1  in     5345280  out      875400  ratio  6.106  c    193.9 MB/s  d    866.2 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6small4-T1-dickens.txt b/benchmark/review40/klzh2/results/v6small4-T1-dickens.txt
+new file mode 100644
+index 00000000..e3bde1eb
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6small4-T1-dickens.txt
+@@ -0,0 +1,8 @@
++lz4      T1  in    10192446  out     7709090  ratio  1.322  c    349.2 MB/s  d   1625.9 MB/s
++klz1     T1  in    10192446  out     8070933  ratio  1.263  c    348.9 MB/s  d   1335.8 MB/s
++zstd1    T1  in    10192446  out     5103928  ratio  1.997  c    216.7 MB/s  d    515.6 MB/s
++klzh1    T1  in    10192446  out     5365648  ratio  1.900  c    104.7 MB/s  d    310.3 MB/s
++k2h1     T1  in    10192446  out     5127592  ratio  1.988  c     63.4 MB/s  d    308.4 MB/s
++zstd3    T1  in    10192446  out     5085971  ratio  2.004  c    153.4 MB/s  d    477.2 MB/s
++klzh3    T1  in    10192446  out     5352990  ratio  1.904  c     45.0 MB/s  d    314.2 MB/s
++k2h3     T1  in    10192446  out     5116182  ratio  1.992  c     43.8 MB/s  d    283.5 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6small4-T1-osdb.txt b/benchmark/review40/klzh2/results/v6small4-T1-osdb.txt
+new file mode 100644
+index 00000000..5f369d08
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6small4-T1-osdb.txt
+@@ -0,0 +1,8 @@
++lz4      T1  in    10085684  out     8554658  ratio  1.179  c    547.8 MB/s  d   1929.9 MB/s
++klz1     T1  in    10085684  out     8648251  ratio  1.166  c    459.3 MB/s  d   1596.5 MB/s
++zstd1    T1  in    10085684  out     7383479  ratio  1.366  c    224.0 MB/s  d    480.7 MB/s
++klzh1    T1  in    10085684  out     7687977  ratio  1.312  c     84.6 MB/s  d    269.9 MB/s
++k2h1     T1  in    10085684  out     7515838  ratio  1.342  c     62.8 MB/s  d    194.0 MB/s
++zstd3    T1  in    10085684  out     7313605  ratio  1.379  c    169.9 MB/s  d    401.3 MB/s
++klzh3    T1  in    10085684  out     7654739  ratio  1.318  c     50.2 MB/s  d    262.4 MB/s
++k2h3     T1  in    10085684  out     7481968  ratio  1.348  c     41.7 MB/s  d    244.2 MB/s
+diff --git a/benchmark/review40/klzh2/results/v6small4-T1-xml.txt b/benchmark/review40/klzh2/results/v6small4-T1-xml.txt
+new file mode 100644
+index 00000000..65b69706
+--- /dev/null
++++ b/benchmark/review40/klzh2/results/v6small4-T1-xml.txt
+@@ -0,0 +1,8 @@
++lz4      T1  in     5345280  out     2019969  ratio  2.646  c    567.7 MB/s  d   1886.2 MB/s
++klz1     T1  in     5345280  out     2014225  ratio  2.654  c    492.9 MB/s  d   1609.7 MB/s
++zstd1    T1  in     5345280  out     1389331  ratio  3.847  c    284.9 MB/s  d    626.9 MB/s
++klzh1    T1  in     5345280  out     1495340  ratio  3.575  c    139.0 MB/s  d    390.3 MB/s
++k2h1     T1  in     5345280  out     1343366  ratio  3.979  c     88.9 MB/s  d    350.8 MB/s
++zstd3    T1  in     5345280  out     1336267  ratio  4.000  c    248.8 MB/s  d    607.4 MB/s
++klzh3    T1  in     5345280  out     1494805  ratio  3.576  c     56.8 MB/s  d    393.1 MB/s
++k2h3     T1  in     5345280  out     1342890  ratio  3.980  c     50.1 MB/s  d    353.7 MB/s
+diff --git a/benchmark/review40/klzh2/run.sh b/benchmark/review40/klzh2/run.sh
+new file mode 100755
+index 00000000..efb9bf1a
+--- /dev/null
++++ b/benchmark/review40/klzh2/run.sh
+@@ -0,0 +1,24 @@
++#!/bin/sh
++# KLZH2 (codec 32) against KLZH (29) and zstd -1/-3: the measurements of RESULTS.md.
++# usage: sh benchmark/review40/klzh2/run.sh DATA_DIR OUT_DIR [MEASURE]
++#   DATA_DIR: silesia/ (12 files) and enwik8_10m.   MEASURE: a wrapper that serialises timed runs (optional), e.g.
++#   "python3 tools/measure.py --runs 1 --"
++# Needs build/libvendor.a (make all). Sizes are exact; speeds are what the host gives.
++set -e
++D=$1; O=$2; M=$3; mkdir -p "$O"
++cc -O3 -march=native -DXXH_NAMESPACE=ZSTD_ -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz \
++   benchmark/rc3w2/native/natbench.c src/algo/khuf.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c src/arch/xxh3.c \
++   build/libvendor.a -o "$O/natbench" -lpthread -lm
++python3 benchmark/review40/klzh2/mkstop.py src/algo/klz.c "$O/klz-stop.c"
++cc -O3 -march=native -DKLZ_C="\"$O/klz-stop.c\"" -Isrc -Isrc/algo benchmark/review40/klzh2/dec_time.c src/algo/khuf.c -o "$O/dec_time"
++cc -O2 -DKLZ_TEST_HOOKS -DKLZ_C="\"$PWD/src/algo/klz.c\"" -Isrc -Isrc/algo benchmark/review40/klzh2/chunks.c src/algo/khuf.c -o "$O/chunks"
++nat() { tag=$1; c=$2; t=$3; b=$4; shift 4
++  for f in "$@"; do n=$(basename "$f"); $M sh -c "$O/natbench $c $t $b 3 $f > $O/$tag-T$t-$n.txt 2>&1"; done; }
++nat v6 zstd1,klzh1,k2h1,zstd3,klzh3,k2h3,klzh5,k2h5,zstd9,klzh7,k2h7 1 4096 "$D"/silesia/* "$D"/enwik8_10m
++nat v6 zstd1,klzh1,k2h1,zstd3,klzh3,k2h3 4 4096 "$D"/silesia/* "$D"/enwik8_10m
++for b in 4 32 256; do nat v6small$b lz4,klz1,zstd1,klzh1,k2h1,zstd3,klzh3,k2h3 1 $b "$D"/silesia/xml "$D"/silesia/dickens "$D"/silesia/osdb; done
++python3 benchmark/review40/klzh2/sum.py "$O" v6 T1 k2h1:zstd1 k2h1:klzh1 k2h3:zstd3 k2h3:klzh3 k2h5:klzh5 k2h7:klzh7 k2h7:zstd9
++python3 benchmark/review40/klzh2/sum.py "$O" v6 T4 k2h1:zstd1 k2h1:klzh1 k2h3:zstd3 k2h3:klzh3
++for b in 4 32 256; do python3 benchmark/review40/klzh2/sum.py "$O" v6small$b T1 k2h1:zstd1 k2h1:klzh1 k2h3:zstd3 k2h3:klzh3; done
++"$O/dec_time" 1 4096 9 "$D"/silesia/*; "$O/dec_time" 3 4096 9 "$D"/silesia/*
++"$O/chunks" 3 4096 "$D"/silesia/*; "$O/chunks" 1 4 "$D"/silesia/xml "$D"/silesia/dickens "$D"/silesia/osdb
+diff --git a/benchmark/review40/klzh2/sum.py b/benchmark/review40/klzh2/sum.py
+new file mode 100644
+index 00000000..c67279eb
+--- /dev/null
++++ b/benchmark/review40/klzh2/sum.py
+@@ -0,0 +1,15 @@
++import glob,re,sys,collections
++# usage: sum.py DIR PREFIX TN [a:b ...] -> totals per codec and pairs (sizes exact; speeds indicative)
++d,pre,tn=sys.argv[1],sys.argv[2],sys.argv[3]; T=collections.OrderedDict(); per=collections.defaultdict(dict)
++for f in sorted(glob.glob(f"{d}/{pre}-{tn}-*.txt")):
++    name=f.split(f"-{tn}-")[1][:-4]
++    for l in open(f):
++        m=re.match(r"(\S+)\s+T\d+\s+in\s+(\d+)\s+out\s+(\d+)\s+ratio\s+\S+\s+c\s+(\S+) MB/s\s+d\s+(\S+) MB/s",l)
++        if not m: continue
++        c,i,o,cs,ds=m.group(1),int(m.group(2)),int(m.group(3)),float(m.group(4)),float(m.group(5))
++        t=T.setdefault(c,[0,0,0.0,0.0]); t[0]+=i; t[1]+=o; t[2]+=i/cs/1e6; t[3]+=i/ds/1e6; per[c][name]=o
++for c,t in T.items(): print(f"{c:7s} in {t[0]:>10} out {t[1]:>10} c {t[0]/t[2]/1e6:7.1f} MB/s d {t[0]/t[3]/1e6:7.1f} MB/s")
++for a,r in [p.split(":") for p in sys.argv[4:]]:
++    if a in T and r in T:
++        x,y=T[a],T[r]; print(f"  {a} vs {r}: size {100*(x[1]/y[1]-1):+.2f}%  compress {y[2]/x[2]:.2f}x  decompress {y[3]/x[3]:.2f}x")
++        print("     "+"  ".join(f"{n} {100*(per[a][n]/per[r][n]-1):+.2f}%" for n in per[a]))
+diff --git a/research/CODECS.md b/research/CODECS.md
+index 8db0f8fe..5d8fcaf6 100644
+--- a/research/CODECS.md
++++ b/research/CODECS.md
+@@ -47,7 +47,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
+ | 27 | khuf leaf (rc3 wave 2) | canonical length-limited Huffman (Moffat–Katajainen, Kraft repair to 11 bits), 4 streams, LSB-first, two-symbol decode table; framing of codec 13 | own (`src/algo/khuf.c`) | against zstd's HUF (codec 13 framing): Silesia +0.16% size, compress 0.90×, decode 0.97× (1 thread); structured +0.09%, 0.83×, 0.77×; Kolmo's own leaf chunks +0.12%, 0.93×, 1.02× | opt-in (`KOLMO_NATIVE=huf`); replace codec 13 |
+ | 28 | KLZ (rc3 wave 2) | byte-aligned LZ77: token (3-bit literal length, 4-bit match length, 3-byte-offset bit), 16 MiB window, LZ4-style skipping hash table | own (`src/algo/klz.c`) | against LZ4 -1 (4 MiB blocks): Silesia −6.9% size, compress 0.79×, decode 0.77× (1 thread); structured −5.9%, 0.90×, 0.73× | opt-in (`KOLMO_NATIVE=lz`); replace LZ4 in `speed` once decode ≥ 0.9× |
+ | 29 | KLZH (rc3 wave 2) | KLZ's parse with 3 repeat offsets; literals, length codes and offset codes as khuf streams, extra bits raw; levels 1–3 two hash tables (8/5-byte), 4–9 chains + lazy | own (`src/algo/klz.c`) | KLZH1 against zstd -1: Silesia −4.7%, compress 0.65×, decode 0.94×; structured +9.9%. Against zstd -3: KLZH3 +2.4% (Silesia) / +3.8% (structured) at 0.76× compress; KLZH5 −2.8% / −1.6% at 0.23×. KLZH8 against zstd -19: +13.7% / +20.8% (no optimal parse). KLZH7 against Brotli 8: +8% | opt-in (`KOLMO_NATIVE=lz`); `balanced` after tuning, `hc` needs an optimal parse |
+-| 32 | KLZH2 (review40, R01) | KLZH's parse (codec 29) with a second entropy stage: one token per sequence (offset code × min(literal length, 3)), literal lengths from 3 and match lengths (48 direct codes, split by repeat / new offset) as separate streams, all in an original tabled ANS coder (2 or 4 states, compact count header, predefined tables for short chunks); literals in khuf blocks or tANS; every stream cut where the input crosses 64 KiB and re-joined by an integer cost estimate; the low 4 bits of new offsets coded when their histogram is skewed | own (`src/algo/klz.c`) | sizes, 13 files (Silesia + enwik8_10m), 4 MiB blocks: see `benchmark/review40/klzh2/RESULTS.md` | opt-in (`KOLMO_NATIVE=lz2`); codec 29 unchanged |
++| 32 | KLZH2 (review40, R01) | KLZH's parse (codec 29) with a second entropy stage: one token per sequence (offset code × min(literal length, 3)), literal lengths from 3 and match lengths (48 direct codes, split by repeat / new offset) as separate streams, all in an original tabled ANS coder (2 or 4 states, compact count header, predefined tables for short chunks) or, for long chunks at levels 1–4, khuf blocks; literals in khuf blocks or tANS; every stream cut where the input crosses 64 KiB and re-joined by an integer cost estimate; the low 4 bits of new offsets coded when their histogram is skewed | own (`src/algo/klz.c`) | 13 files (Silesia + enwik8_10m, 221,938,580 B), 4 MiB blocks: level 1 71,541,209 (zstd -1 −7.58%, codec 29 −2.72%), level 3 69,115,455 (zstd -3 −1.18%, codec 29 −3.36%), level 7 62,887,347 (zstd -9 −0.44%); 4 KiB blocks: +0.79% / +1.49% against zstd -1 / -3 (codec 29: +4.84% / +5.58%). Decode against codec 29, indicative: 0.86–1.01× (text level, heterogeneous binary slower); `balanced` through the CLI: −0.62% against the libraries (codec 29: +2.61%). `benchmark/review40/klzh2/RESULTS.md` | opt-in (`KOLMO_NATIVE=lz2`); codec 29 unchanged; the `balanced` role after the M5 speed run and the parse work |
+ | 25 | CM over parts | parts each coded by their own context-mixing model (codec 7 streams), in parallel for encoding and decoding; parts from the table's columns (transpose plan) or two halves of a non-text stream ≥ 32 MiB; cuts depend on the input only; container version 11 | own | columns: CSV 1 MB −0.5%, encode 2.1× and decode 4.4× faster at 4 threads; halves: +0.14% on 100 MB of binary data, 2× faster both ways; 5 MB halves +0.14% to +2.3% (Silesia osdb), hence from 32 MiB only (`benchmark/rc3/xmode/RESULTS.md`) | rc3 (xmode lane) |
+ 
+ ## Transforms and graph techniques
+diff --git a/research/TRACKER.md b/research/TRACKER.md
+index 0cd45738..ae848082 100644
+--- a/research/TRACKER.md
++++ b/research/TRACKER.md
+@@ -67,6 +67,7 @@ Status on 13 November 2026 (branch `claude/dec64`): 110 rows. 23 done (one of th
+ | C4 | LZ4-HC profile for write-once data | S | Not done | lz4 -9 decode at 96 to 98% of the 98% needed |
+ | C5 | Faster inverse transforms | S | Partly | Fixed-width decode done (67a022f, M5 confirmed). Left: 16-bit image inverse, checksum |
+ | C6 | LZMA-only ratio profile for decode-heavy use | S | Not done | Ratio decodes at 124 MB/s; xz -9 127, 7-Zip 182 (ledger decision 1) |
++| C7 | Second entropy stage for the native LZ (KLZH2, codec 32): the gap of KLZH to zstd -1/-3 was the entropy stage, not the parse | review40 R01 | Branch `review40/R01`, opt-in | 13 files, 4 MiB blocks: KLZH 3 was +2.25% against zstd -3, KLZH2 3 is −1.18%; level 1 −7.58% against zstd -1; `balanced` with `KOLMO_NATIVE=lz2` −0.62% against the libraries. Left: decode on heterogeneous binary data (0.86× of codec 29 at level 1, indicative), encoder on 4 KiB inputs, nci/xml still above zstd -3, M5 speeds (`benchmark/review40/klzh2/RESULTS.md`) |
+ 
+ ## D. Ultra against PAQ8PX
+ 
+-- 
+2.43.0
+

@@ -1,7 +1,7 @@
 From 853de09dcd5f46f2808a028ee5c322ff10e8c5b9 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 03:20:11 +0000
-Subject: [PATCH 5/8] klzh2: frozen frames, rc3 byte hashes for codecs 28/29,
+Subject: [PATCH 05/18] klzh2: frozen frames, rc3 byte hashes for codecs 28/29,
  fuzz target, SPEC and CODECS rows
 
 tests: KLZ and KLZH must keep writing rc3's bytes (hashes taken from the rc3 sources); seven

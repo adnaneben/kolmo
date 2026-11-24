@@ -1,0 +1,1862 @@
+From 8eca114df9110d649a3c5c6c344f02bee895f3da Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 18 Nov 2026 10:31:34 +0000
+Subject: [PATCH 11/18] decmap: decode maps measured; three decoder-only
+ speedups kept
+
+Stored decode maps were measured and rejected: khuf decode tables in the
+frame cost 4-8 KiB per block for at most 8% of decode; 8 -> 255 sampled
+inverse-BWT indexes stay inside the noise at 1 and 4 threads; GR6+ field
+searches are 8.5% of its decoder and CM tables are already built once per
+process (0.3 ms). Kept, with no frame changing (determinism hashes equal):
+
+- x86 AVX2 word-transform decoder (src/arch/x86_64/word_avx2.c, CPUID):
+  text eco/hc decode +14.8% (1 thread) / +12.1% (4), JSON +13.7% / +12.1%
+- khuf (codec 27): one 11-bit decode table instead of two, bit reversal
+  from a constant table: khuf decode +7.6% to +8.9% on Silesia
+- KLZH (codec 29): one validation pass, refills only when needed:
+  decode +10% to +17%; KOLMO_NATIVE=all frames +16.3% / +14.2%
+
+Benchmarks, tools and per-file results in benchmark/rc3w3/decmap; ledger
+rows in research/CODECS.md. Bindings' native sources synced with src
+(this also adds the native-lane files that were not yet synced).
+
+Claude-Session: https://claude.ai/code/session_01FUEN4ZHnq84yP7cf4gzNv4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+(cherry picked from commit 59f117f13aacf444bb986b77a1067ba78af0f455, first commit of the unmerged
+wave-4 LZ lane; review40/R01, claim klz-w4-compat. src merged without conflict on top of
+codec 32; the bindings' copies were taken from the merged src. No frame changes: codecs 28,
+29 and 32 write the same bytes, check-native and check-arch pass.)
+---
+ CHANGELOG.md                                  |  15 +
+ benchmark/rc3w3/decmap/RESULTS.md             | 156 +++++++++
+ benchmark/rc3w3/decmap/ab.py                  |  15 +
+ benchmark/rc3w3/decmap/bwtbench.c             |  39 +++
+ benchmark/rc3w3/decmap/dbench.c               |  50 +++
+ benchmark/rc3w3/decmap/khufbench.c            |  25 ++
+ benchmark/rc3w3/decmap/results/ab_T1.jsonl    | 115 +++++++
+ benchmark/rc3w3/decmap/results/ab_T4.jsonl    | 115 +++++++
+ benchmark/rc3w3/decmap/results/ab_re.jsonl    |  14 +
+ benchmark/rc3w3/decmap/results/ab_re2.jsonl   |   2 +
+ benchmark/rc3w3/decmap/results/ab_x.jsonl     |  16 +
+ .../decmap/results/bwt_index_sampling.txt     |  24 ++
+ .../rc3w3/decmap/results/callgrind_top.txt    | 316 ++++++++++++++++++
+ .../rc3w3/decmap/results/natbench_klzh.txt    |  18 +
+ benchmark/rc3w3/decmap/results/table.md       | 139 ++++++++
+ benchmark/rc3w3/decmap/table.py               |  24 ++
+ benchmark/rc3w3/decmap/unbwtbench.c           |  30 ++
+ bindings/python/native/src/algo/khuf.c        |  19 +-
+ bindings/python/native/src/algo/klz.c         |  12 +-
+ .../python/native/src/arch/x86_64/word_avx2.c |  70 ++++
+ bindings/python/native/src/kolmo.c            |   1 +
+ bindings/python/native/src/transforms/word.c  |   3 +
+ bindings/rust/native/src/algo/khuf.c          |  19 +-
+ bindings/rust/native/src/algo/klz.c           |  12 +-
+ .../rust/native/src/arch/x86_64/word_avx2.c   |  70 ++++
+ bindings/rust/native/src/kolmo.c              |   1 +
+ bindings/rust/native/src/transforms/word.c    |   3 +
+ research/CODECS.md                            |   8 +
+ src/algo/khuf.c                               |  19 +-
+ src/algo/klz.c                                |  12 +-
+ src/arch/x86_64/word_avx2.c                   |  70 ++++
+ src/kolmo.c                                   |   1 +
+ src/transforms/word.c                         |   3 +
+ tests/test_arch.c                             |   4 +
+ 34 files changed, 1416 insertions(+), 24 deletions(-)
+ create mode 100644 benchmark/rc3w3/decmap/RESULTS.md
+ create mode 100644 benchmark/rc3w3/decmap/ab.py
+ create mode 100644 benchmark/rc3w3/decmap/bwtbench.c
+ create mode 100644 benchmark/rc3w3/decmap/dbench.c
+ create mode 100644 benchmark/rc3w3/decmap/khufbench.c
+ create mode 100644 benchmark/rc3w3/decmap/results/ab_T1.jsonl
+ create mode 100644 benchmark/rc3w3/decmap/results/ab_T4.jsonl
+ create mode 100644 benchmark/rc3w3/decmap/results/ab_re.jsonl
+ create mode 100644 benchmark/rc3w3/decmap/results/ab_re2.jsonl
+ create mode 100644 benchmark/rc3w3/decmap/results/ab_x.jsonl
+ create mode 100644 benchmark/rc3w3/decmap/results/bwt_index_sampling.txt
+ create mode 100644 benchmark/rc3w3/decmap/results/callgrind_top.txt
+ create mode 100644 benchmark/rc3w3/decmap/results/natbench_klzh.txt
+ create mode 100644 benchmark/rc3w3/decmap/results/table.md
+ create mode 100644 benchmark/rc3w3/decmap/table.py
+ create mode 100644 benchmark/rc3w3/decmap/unbwtbench.c
+ create mode 100644 bindings/python/native/src/arch/x86_64/word_avx2.c
+ create mode 100644 bindings/rust/native/src/arch/x86_64/word_avx2.c
+ create mode 100644 src/arch/x86_64/word_avx2.c
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index c073c02c..57e1b1ce 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,20 @@
+ # Changelog
+ 
++## Unreleased (rc3 wave 3, decmap lane: `claude/rc3w3-decmap-20261118`)
++
++Decode maps: prebuilt decoder tables stored in the frame were measured and rejected (Huffman tables cost 4-8 KiB per
++block for at most 8% of decode; more inverse-BWT sample points stay inside the noise; GR6+ and CM searches are under
++5% of their decoders). Three decoder-only changes are kept. No format change, no frame changes. Measurements in
++`benchmark/rc3w3/decmap/RESULTS.md`.
++
++### Changed
++- **x86 AVX2 word-transform decoder** (`src/arch/x86_64/word_avx2.c`, chosen by CPUID; the counterpart of the NEON
++  kernel): text `eco`/`hc` decode +14.8% (1 thread) / +12.1% (4 threads), JSON +13.7% / +12.1% on the VM.
++- **khuf (codec 27) builds one decode table instead of two**, with bit reversal from a constant table: khuf decode
++  +7.6% to +8.9% on Silesia; the fixed cost of a 4 KiB block drops by 20%.
++- **KLZH (codec 29) checks its codes in one pass and refills the bit buffer only when needed**: decode +10% to +17%.
++  With `KOLMO_NATIVE=all`, `balanced`/`eco`/`hc` frames decode +16.3% (1 thread) / +14.2% (4 threads) faster.
++
+ ## Unreleased (rc3 wave 2, regress lane: `claude/rc3w2-regress-20261117`)
+ 
+ Fixes for the regressions of rc3 against rc2 measured on the Apple M5 (`benchmark/rc3/mac/RESULTS.md`). Measurements
+diff --git a/benchmark/rc3w3/decmap/RESULTS.md b/benchmark/rc3w3/decmap/RESULTS.md
+new file mode 100644
+index 00000000..7dbfc524
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/RESULTS.md
+@@ -0,0 +1,156 @@
++# Decode maps: prebuilt decoder tables and faster decode paths (rc3 wave 3, decmap lane)
++
++Branch `claude/rc3w3-decmap-20261118`, from rc3 `58f7cee`. The owner's ask: *test a prebuilt decompression map that
++expedites decompression further and avoids search and lookups as much as possible while optimizing the storage; test
++it in parallel to see if it adds value.*
++
++**Decision.** No "decode map" stored in the frame pays for itself: every stored candidate measured either stays within
++the noise (inverse-BWT sample points) or costs far more bytes than the decode time it could save (Huffman decode
++tables). Where the decoder spends its time searching or rebuilding tables, it is cheaper to rebuild faster than to
++store. Three **decoder-only** changes are kept. They change no frame (the same bytes are written and read, and the
++determinism hashes are unchanged):
++
++| change | where it runs | decode gain (same frames) |
++|---|---|---|
++| AVX2 word-transform decoder (`src/arch/x86_64/word_avx2.c`, the x86 counterpart of the NEON kernel) | text and JSON blocks with the word transform (`eco`, `hc`; JSON also `balanced`) | text `eco`/`hc` +14.8% (1 thread) / +12.1% (4 threads); JSON +13.7% / +12.1%; best file +23% |
++| khuf (codec 27) table build: one 11-bit table instead of two, bit reversal by a constant byte table | codec 27 leaves, KLZH streams (`KOLMO_NATIVE`) | khuf blocks +7.6% to +8.9% on Silesia; 4 KiB blocks −20% decode time |
++| KLZH (codec 29) sequence loop: one validation pass (maxima), refills only when the extra bits need them | codec 29 (`KOLMO_NATIVE=lz`) | KLZH1 +10%, KLZH3 +10%, KLZH5 +17% (Silesia, 1 thread) |
++
++With `KOLMO_NATIVE=all`, frames of `balanced`, `eco` and `hc` decode +16.3% (1 thread) / +14.2% (4 threads) faster
++(18 file/mode pairs). Every other path is untouched; across the 60 CSV, log, numeric, image, audio and video frames of
++all modes the geometric mean is −0.0% (1 thread) / +1.0% (4 threads), i.e. noise.
++
++## Setup
++
++- Cloud VM, 4 vCPUs (x86-64 with AVX2 and AVX-512), gcc 13, `-O3 -march=native`, the repository's flags.
++- Files (`/home/user/data/set`, 17): Silesia dickens, webster, xml, nci, mr, x-ray, sao, osdb, samba; OWID CO2 CSV
++  (15 MB), covid countries-aggregated CSV (5.5 MB), OWID as JSON records (31 MB, `owid.json`), Loghub Apache, HDFS,
++  Linux and OpenStack 2k samples joined four times (5 MB, `logs.log`), OWID population as an int64 NPY, OWID energy as a
++  float64 NPY (24 MB), five ESC-50 clips joined (WAV, 2.2 MB), the first 60 frames of akiyo CIF (Y4M, 9 MB).
++- Frames: each file compressed once by rc3 `58f7cee` with `-T 4` in `speed`, `balanced`, `eco`, `hc`, `ratio`; six
++  files also with `KOLMO_NATIVE=all` (codecs 24, 27, 28, 29; the `n-` rows); `-x` on eight files.
++- `dbench.c` (this directory) decodes a frame in memory, best of ≥ 3 runs and ≥ 1 s, the output checked against the
++  input's hash. `ab.py` decodes each frame with build A (rc3 `58f7cee`) and build B (this branch), alternating the
++  order every round, and keeps the best of 2 rounds (4–6 rounds for the outliers re-measured). One thread count per
++  run: `-T 1` and `-T 4` are separate passes, never mixed. Since the frames are the same for both builds, sizes are
++  equal by construction. The VM's run-to-run noise is about ±5% per frame (up to ±15% for 10 GB/s `speed` frames at 4
++  threads); every outlier beyond ±5% on a path this lane did not touch was re-measured and fell inside it.
++- Per-file results: `results/table.md` (from `table.py results`), raw rows in `results/ab_*.jsonl`.
++
++## Where decode time goes (step 1)
++
++Callgrind, one thread, 2 MB samples of each class (`results/callgrind_top.txt`, instructions; cache misses are not
++counted, so stages bound by memory latency, such as the inverse BWT and CM table probes, take more of the wall time
++than shown):
++
++| mode | class | top of the decoder |
++|---|---|---|
++| speed | text, JSON, logs | LZ4 decode only (Kolmo's own code < 2%) |
++| speed | CSV | table transform: `tbl2_decode` + `tbl2_stream` + decimal formatting 60% |
++| speed | images, audio, NPY | LZ4, byte-plane merge (SSE2), shuffle inverse |
++| balanced | text | zstd sequences 65% |
++| balanced, eco, hc, ratio | CSV | table transform and decimal formatting 50–67% (already SIMD: simd lanes) |
++| balanced, eco, ratio | JSON | `transpose.c:decode_block` 44–55% |
++| balanced, eco, ratio | logs | `log_decode` 15–27% |
++| balanced, hc | images | `img16_inv` 41% |
++| balanced, eco, hc | audio | kaud profile 0: Rice decode 46%, LPC restore 30% |
++| eco, hc | text | Brotli / zstd 49–62%, **word transform 26–31%** (a byte-table scan per input byte on x86) |
++| ratio | text, samba, video | **adaptive QLFC 85%**, inverse BWT (biPSI) 3.4–3.9%, LZP 2.3–3.4% |
++| ratio | CSV, logs, NPY, images | LZMA2 44–84% |
++| ratio | audio | kaud profile 1 (NLMS cascade) 90% |
++| -x | text | CM bit coding 87%, mixer dot/train 10% |
++| -x | CSV (GR6+) | GR6+ CM bit coding 72%, init 4.7%, field decisions (`g6_set`, `g6_val`, `g6_unit`) 8.5% |
++
++Searching proper (move-to-front, rank and dictionary lookups, canonical-code search) is small everywhere: the decoders
++already index (word codes into 64-byte slots, table-driven Huffman, libsais' 16-way interleaved inverse). The time is
++in model arithmetic (QLFC, CM, GR6+, kaud), in vendored coders (zstd, Brotli, LZ4, LZMA2) and in Kolmo's structure
++inverses.
++
++## Candidates (step 2)
++
++| candidate | what was measured | result | verdict |
++|---|---|---|---|
++| **Encoder-built Huffman decode tables in the frame** (khuf, codec 27) | `khufbench.c`: fixed cost per block vs per byte | rc3: 5.6–10 µs per block for the tables (8% of a 128 KiB block, most of a 4 KiB one), 0.48 ns/byte. Shipping the 11-bit tables costs 4 KiB (one symbol per entry) to 8 KiB (two-symbol table) per ≤ 128 KiB block, +3% to +6% of a 1.4× Huffman leaf, against ≤ 8% decode | rejected (bytes ≫ time); the build made faster instead (below) |
++| khuf table build, decoder only | same | one table at 11 bits for the two-symbol loop and the tails (was a T-bit and an 11-bit table), bit reversal from a constant 256-byte table (was a bit loop per symbol): 4 KiB blocks 7.8 → 6.2 µs, 16 KiB 13.2 → 11.5 µs, 128 KiB 66.8 → 65.5 µs; natbench Silesia `khuf` 1133 → 1234 MB/s and 1119 → 1203 MB/s (two runs) | **kept** |
++| A decode table stored once per file and reused by every block (khuf repeat mode) | upper bound from the numbers above | saves the table header (~130 B per 128 KiB chunk, 0.1%) and the table build, now ~4 µs per chunk (≤ 3% of a 128 KiB chunk); needs a format change and a decoder that keeps state across chunks | not built (< 5%) |
++| zstd / Brotli / LZ4 / LZMA2 tables | — | vendored and untouched (`docs/LAYOUT.md` rule 6); zstd already reuses its Huffman and FSE tables across blocks (repeat modes) | — |
++| **Inverse BWT: more sampled indexes** (codec 18) | `bwtbench.c`: whole codec-18 decode with 8 → 255 sampled indexes, 1 and 4 threads; `unbwtbench.c`: the inverse alone | dickens, 1 thread: 19.4 MB/s with rc3's 9 indexes, 19.8 / 19.9 / 22.0 / 20.6 with 19 / 38 / 77 / 154 (not monotonic); 4 threads 40.9–43.1 → 43.0–44.3; samba +0–3% (1 and 4 threads); webster −5% to +4%; nci −11% to +1%; cost +32 to +900 bytes per block. The inverse is 3.4–3.9% of `ratio` text decode (instructions) and libsais already interleaves up to 16 chains; QLFC is 85% | rejected (inside the noise, costs bytes) |
++| **GR6+: precomputed move-to-front / rank tables, dictionary order** (codec 26) | callgrind of a GR6+ CSV frame | all field decisions together (`g6_set`, `g6_val`, `g6_unit`) are 8.5% of the instructions; the CM bit coder is 72%. Removing every search would give < 5% | not built |
++| **CM: squash/stretch/state tables as constant data** (codec 7, GR6+) | timed `cm_init_tables` | already built once per process (`pthread_once`): 0.30 ms, 0.01% of a 5 MB `-x` decode (3.2 s). The bit-history state table is built at the same time. Hash-slot hints: the xmode lane measured prefetch of the hashed buckets as no gain | no change |
++| GR6+ table initialisation | callgrind | 4.7% of a 2 MB GR6+ decode (8 tables of 4 Mi entries set to 1 << 31); could start from zero pages with a re-based counter | not built (< 5%, `-x` tables only) |
++| **LZ: literal/length tables, branchless copy** — KLZH (codec 29) | natbench, 1 thread, 6 Silesia files | the length codes already go through a base/extra-bits table (`kz_ltab`). rc3 checked the codes in two passes and refilled the bit buffer three times per sequence. One pass over the code maxima and refills only when the buffered bits run short: KLZH1 1250 → 1376 MB/s, KLZH3 1138 → 1256, KLZH5 1181 → 1385 (best of 3 runs each); `results/natbench_klzh.txt` | **kept** |
++| KLZ (codec 28) | natbench | already byte-aligned with a branch-light fast path; no change made (2295–2431 MB/s both builds) | no change |
++| **Word transform: direct-index decode** (block flag 9) | dbench A/B | the decoder already indexes words (64-byte slots); on x86 it found the next code by a table lookup per input byte. The AVX2 kernel classifies 64 bytes at once (special-byte bitmap through two in-lane shuffles) and walks the tokens with count-trailing-zeros, as the NEON kernel does on arm64 | **kept** |
++| kaud profile 0: whole-word bit-buffer refill | dbench A/B, 4 WAV frames | 147 → 147, 148 → 150, 159 → 155, 15.8 → 15.8 MB/s (±2%): the Rice loop and LPC restore are compute-bound, not refill-bound | reverted |
++
++## Results (step 3): decode MB/s, rc3 `58f7cee` against this branch, same frames
++
++Per-mode geometric means of the decode speed ratio (17 files per default mode, 6 per `KOLMO_NATIVE` mode, 8 at `-x`):
++
++| mode | files | 1 thread | 4 threads |
++|---|---:|---:|---:|
++| speed | 17 | −1.1% | +1.5% |
++| balanced | 17 | +0.8% | +0.8% |
++| eco | 17 | +3.6% | +3.5% |
++| hc | 17 | +3.5% | +3.9% |
++| ratio | 17 | +0.9% | −0.0% |
++| -x | 8 | +0.6% | +1.3% |
++| `KOLMO_NATIVE=all` speed | 6 | +1.9% | −0.5% |
++| `KOLMO_NATIVE=all` balanced | 6 | +12.0% | +10.7% |
++| `KOLMO_NATIVE=all` eco | 6 | +16.3% | +17.2% |
++| `KOLMO_NATIVE=all` hc | 6 | +20.7% | +14.8% |
++| `KOLMO_NATIVE=all` ratio | 6 | +0.2% | +1.0% |
++
++By group (geometric means):
++
++| group | pairs | 1 thread | 4 threads |
++|---|---:|---:|---:|
++| text, `eco`/`hc` (dickens, webster, xml) | 6 | +14.8% | +12.1% |
++| JSON, `balanced`/`eco`/`hc` (owid.json) | 3 | +13.7% | +12.1% |
++| native codecs, `balanced`/`eco`/`hc` | 18 | +16.3% | +14.2% |
++| CSV, logs, numeric, images, audio, video (all default modes; untouched paths) | 60 | −0.0% | +1.0% |
++
++Selected rows (all rows: `results/table.md`):
++
++| frame | raw bytes | frame bytes | 1 thread rc3 → branch MB/s | 4 threads rc3 → branch MB/s |
++|---|---:|---:|---:|---:|
++| eco/dickens | 10192446 | 2881188 | 276.6 → 330.4 (+19.4%) | 295.2 → 308.5 (+4.5%) |
++| hc/dickens | 10192446 | 2728251 | 538.7 → 664.3 (+23.3%) | 493.7 → 604.5 (+22.4%) |
++| eco/webster | 41458703 | 9834135 | 410.8 → 475.4 (+15.7%) | 1029.1 → 1254.4 (+21.9%) |
++| hc/webster | 41458703 | 8858048 | 861.1 → 852.8 (−1.0%, 4 rounds) | 2365.4 → 2334.6 (−1.3%) |
++| eco/xml | 5345280 | 468409 | 556.4 → 621.3 (+11.7%) | 587.5 → 634.7 (+8.0%) |
++| hc/xml | 5345280 | 443624 | 851.3 → 1033.7 (+21.4%) | 859.4 → 1026.6 (+19.5%) |
++| balanced/owid.json | 30926608 | 1411138 | 603.2 → 666.5 (+10.5%) | 2355.4 → 2630.9 (+11.7%) |
++| eco/owid.json | 30926608 | 1217857 | 424.2 → 507.9 (+19.7%) | 821.7 → 912.4 (+11.0%) |
++| hc/owid.json | 30926608 | 847144 | 611.4 → 679.9 (+11.2%) | 1133.6 → 1288.5 (+13.7%) |
++| n-hc/dickens | 10192446 | 2968964 | 428.6 → 644.8 (+50.5%) | 507.4 → 673.5 (+32.7%) |
++| n-eco/xml | 5345280 | 547457 | 828.7 → 1054.1 (+27.2%) | 803.1 → 1002.6 (+24.8%) |
++| n-balanced/samba | 21606400 | 5278933 | 1482.7 → 1744.7 (+17.7%) | 5861.2 → 6720.4 (+14.7%) |
++| ratio/dickens | 10192446 | 2254558 | 20.8 → 21.5 (+3.6%) | 42.8 → 44.7 (+4.6%) |
++| speed/dickens | 10192446 | 6437034 | 3374.0 → 3387.1 (+0.4%, 4 rounds) | 11608.5 → 12405.1 (+6.9%) |
++
++hc/webster gains nothing: its blocks do not take the word transform at `hc`. One `-x` frame stayed slightly negative
++after re-measuring (countries-aggregated, GR6+: −3.9% over 4 rounds at 1 thread, −1.3% at 4 threads); no code on that
++path changed.
++
++Not addressed here and left open (largest shares of Kolmo's own decode time): JSON `transpose.c:decode_block`
++(44–55%), `log_decode` (15–27%), `img16_inv` (41% of image `balanced`/`hc`), and kaud's LPC restore. Separately,
++`-x` decodes dickens at 0.2 MB/s and x-ray at 0.4 MB/s on this VM (one CM pass per bit over scaled tables), worth a
++look by the xmode owners.
++
++## Correctness
++
++- Same frames: the encoder is unchanged except `kh_codes`' bit reversal, which is checked against the bit loop for
++  every value and length 1–16 (exhaustively, while developing); `benchmark/determinism/check.py` hashes are
++  unchanged, so no `expected.sha256` entry was regenerated.
++- The AVX2 word decoder is exercised by `make check-arch` (`tests/test_arch.c`: `word_decode` with `kolmo_force_c` 0
++  and 1 on random vocabularies and on damaged streams, 43,645 checks); it stops in front of any token the C loop
++  rejects, so errors are reported by the reference.
++- `make check`, `make check-rc`, `make check-sanitizers`, `make experimental-check GPU_CHECK=`, `make kfam-check` pass.
++
++## Files
++
++`dbench.c` (decode benchmark), `ab.py` (A/B driver), `table.py` (tables), `bwtbench.c`, `unbwtbench.c` (inverse-BWT
++sampling), `khufbench.c` (khuf fixed cost); `results/`: A/B rows (`ab_T1.jsonl`, `ab_T4.jsonl`, `ab_x.jsonl`,
++re-measured outliers in `ab_re*.jsonl`), `table.md`, `callgrind_top.txt`, `bwt_index_sampling.txt`,
++`natbench_klzh.txt`.
+diff --git a/benchmark/rc3w3/decmap/ab.py b/benchmark/rc3w3/decmap/ab.py
+new file mode 100644
+index 00000000..e72be70b
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/ab.py
+@@ -0,0 +1,15 @@
++# ab.py T ROUNDS OUT.jsonl FRAME... : decode each frame with build A (rc3 58f7cee) and build B (this branch), alternating
++# the order every round, best decode speed of ROUNDS rounds (each round is dbench's best of >= 1 s); one thread count.
++import sys, subprocess, json, os
++T, R, out = sys.argv[1], int(sys.argv[2]), sys.argv[3]
++A, B = os.environ.get('DB_A', '/home/user/dbench-base2'), os.environ.get('DB_B', '/home/user/dbench-new')
++f = open(out, 'a')
++for k in sys.argv[4:]:
++    best = {'A': 0, 'B': 0}; info = None
++    for r in range(R):
++        for lab, b in ([('A', A), ('B', B)] if r % 2 == 0 else [('B', B), ('A', A)]):
++            o = subprocess.run([b, '-d', '-T', T, '-s', os.environ.get('SECS', '1'), k], check=True, capture_output=True, text=True).stdout.split()
++            info = (int(o[1]), int(o[2])); best[lab] = max(best[lab], float(o[3]))
++    row = {'frame': k.replace('/home/user/frames/', ''), 'T': int(T), 'size': info[0], 'csize': info[1], 'A_MBs': best['A'], 'B_MBs': best['B'], 'gain': best['B'] / best['A'] - 1}
++    f.write(json.dumps(row) + '\n'); f.flush()
++    print(f"{row['frame']:40s} T{T} {info[1]:>10d} A {best['A']:8.1f} B {best['B']:8.1f} {row['gain']:+.1%}", flush=True)
+diff --git a/benchmark/rc3w3/decmap/bwtbench.c b/benchmark/rc3w3/decmap/bwtbench.c
+new file mode 100644
+index 00000000..1e3e74ea
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/bwtbench.c
+@@ -0,0 +1,39 @@
++/* bwtbench: codec 18 decode time against the number of sampled BWT indexes (decmap lane, rc3 wave 3).
++ *   bwtbench FILE... : for each index count k (default, 16, 32, 64, 128, 255) prints payload bytes and the best decode
++ *   time at 1 thread and at all threads (separate runs), plus the inverse-BWT stage alone. */
++#define _GNU_SOURCE
++#include "codecs/bwt_stream.h"
++#include "algo/qlfc.h"
++#include "algo/sais/sais.h"
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <time.h>
++#include <unistd.h>
++static double now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
++int main(int argc, char **argv) {
++    int T = (int)sysconf(_SC_NPROCESSORS_ONLN);
++    for (int a = 1; a < argc; a++) {
++        FILE *f = fopen(argv[a], "rb"); fseek(f, 0, SEEK_END); int n = (int)ftell(f); fseek(f, 0, SEEK_SET);
++        uint8_t *s = malloc(n), *c = malloc((size_t)n + 4096), *d = malloc((size_t)n + 64);
++        if (fread(s, 1, n, f) != (size_t)n) return 1; fclose(f);
++        int ks[] = {0, 16, 32, 64, 128, 255};
++        for (int ki = 0; ki < 6; ki++) {
++            kolmo_bwt_params P = KOLMO_BWT_DEFAULTS;
++            if (ks[ki]) { int r = 1; while (((int64_t)n - 1) >> r > ks[ki]) r++; P.index_log2 = r; }  /* at most k indexes (of the LZP output: fewer) */
++            int z = kolmo_bwt_compress(s, c, (size_t)n + 4096, n, &P, T);
++            if (z <= 0) { printf("fail\n"); return 1; }
++            int k = c[1 + 2 + 4 + 1 + ((c[0] & 4) ? 0 : -2)];   /* k byte */
++            double bt[2] = {1e9, 1e9};
++            for (int ti = 0; ti < 2; ti++) for (int rep = 0; rep < 6; rep++) {
++                double t0 = now(); int r = kolmo_bwt_decompress(c, (size_t)z, d, n, ti ? T : 1); double t = now() - t0;
++                if (r || memcmp(d, s, n)) { printf("MISMATCH\n"); return 1; }
++                if (t < bt[ti]) bt[ti] = t;
++            }
++            printf("%-28s k=%3d bytes=%d  dec T1 %.1f MB/s  T%d %.1f MB/s\n", strrchr(argv[a], '/') ? strrchr(argv[a], '/') + 1 : argv[a], k, z, n / bt[0] / 1e6, T, n / bt[1] / 1e6);
++            fflush(stdout);
++        }
++        free(s); free(c); free(d);
++    }
++    return 0;
++}
+diff --git a/benchmark/rc3w3/decmap/dbench.c b/benchmark/rc3w3/decmap/dbench.c
+new file mode 100644
+index 00000000..72c9d2b9
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/dbench.c
+@@ -0,0 +1,50 @@
++/* dbench: decode benchmark of Kolmo frames (decmap lane, rc3 wave 3).
++ *   dbench -c MODE [-l level] [-T threads] FILE OUT.k      compress once (writes the frame)
++ *   dbench -d [-T threads] [-s seconds] FRAME... print size, decode MB/s (best of repeated in-memory runs, >= 3 runs
++ *                                                  and >= s seconds), output checked against FRAME's .src sibling hash
++ * -r N: at least N runs (default 3).
++ * MODE: speed balanced eco hc ratio x. One thread count per run; never mixed. */
++#define _GNU_SOURCE
++#include "kolmo.h"
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <time.h>
++#include <unistd.h>
++static double now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
++static uint8_t *slurp(const char *f, size_t *n) { FILE *fp = fopen(f, "rb"); if (!fp) { perror(f); exit(1); }
++    fseek(fp, 0, SEEK_END); *n = (size_t)ftell(fp); fseek(fp, 0, SEEK_SET); uint8_t *b = malloc(*n + 1);
++    if (fread(b, 1, *n, fp) != *n) exit(1); fclose(fp); return b; }
++static uint64_t fnv(const uint8_t *p, size_t n) { uint64_t h = 1469598103934665603ull; for (size_t i = 0; i < n; i++) h = (h ^ p[i]) * 1099511628211ull; return h; }
++int main(int argc, char **argv) {
++    int T = 1, opt, dec = 0, level = 0, minr = 3; double secs = 1.0; const char *mode = NULL;
++    while ((opt = getopt(argc, argv, "c:dl:T:s:r:")) != -1) switch (opt) {
++        case 'c': mode = optarg; break; case 'd': dec = 1; break; case 'l': level = atoi(optarg); break;
++        case 'T': T = atoi(optarg); break; case 's': secs = atof(optarg); break; case 'r': minr = atoi(optarg); break; default: return 2; }
++    if (mode) {
++        size_t n; uint8_t *s = slurp(argv[optind], &n);
++        kolmo_params p = {KOLMO_FAST, level, T, 0, 1};
++        p.mode = !strcmp(mode, "speed") ? KOLMO_RT : !strcmp(mode, "balanced") ? KOLMO_FAST : !strcmp(mode, "eco") ? KOLMO_ECO :
++                 !strcmp(mode, "hc") ? KOLMO_HC : !strcmp(mode, "ratio") ? KOLMO_MAX : KOLMO_ULTRA;
++        size_t cap = n + n / 2 + (1 << 20); uint8_t *d = malloc(cap);
++        double t0 = now(); int64_t r = kolmo_compress(s, n, d, cap, &p); double tc = now() - t0;
++        if (r <= 0) { fprintf(stderr, "compress failed %lld\n", (long long)r); return 1; }
++        FILE *f = fopen(argv[optind + 1], "wb"); fwrite(d, 1, (size_t)r, f); fclose(f);
++        char hp[4096]; snprintf(hp, sizeof hp, "%s.h", argv[optind + 1]); f = fopen(hp, "w");
++        fprintf(f, "%zu %016llx\n", n, (unsigned long long)fnv(s, n)); fclose(f);
++        printf("%s %s %zu %lld %.3f\n", argv[optind], mode, n, (long long)r, tc); return 0;
++    }
++    if (!dec) return 2;
++    for (int a = optind; a < argc; a++) {
++        size_t z; uint8_t *s = slurp(argv[a], &z); char hp[4096]; snprintf(hp, sizeof hp, "%s.h", argv[a]);
++        size_t n = 0; unsigned long long h = 0; FILE *f = fopen(hp, "r"); if (!f || fscanf(f, "%zu %llx", &n, &h) != 2) return 1; fclose(f);
++        uint8_t *d = malloc(n + 64); double best = 1e9, tot = 0; int runs = 0;
++        while (runs < minr || tot < secs) {
++            double t0 = now(); int64_t r = kolmo_decompress(s, z, d, n + 64, T); double t = now() - t0;
++            if (r != (int64_t)n || (runs == 0 && fnv(d, n) != h)) { fprintf(stderr, "MISMATCH %s\n", argv[a]); return 1; }
++            if (t < best) best = t; tot += t; runs++; if (runs > 200) break;
++        }
++        printf("%s %zu %zu %.2f\n", argv[a], n, z, n / best / 1e6); fflush(stdout); free(d); free(s);
++    }
++    return 0;
++}
+diff --git a/benchmark/rc3w3/decmap/khufbench.c b/benchmark/rc3w3/decmap/khufbench.c
+new file mode 100644
+index 00000000..98c9ff82
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/khufbench.c
+@@ -0,0 +1,25 @@
++/* khufbench: fixed (table) cost of a khuf block decode against the per-byte cost (decmap lane). khufbench FILE */
++#define _GNU_SOURCE
++#include "algo/khuf.h"
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <time.h>
++static double now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
++int main(int argc, char **argv) {
++    FILE *f = fopen(argv[1], "rb"); static uint8_t s[1 << 20], c[(1 << 20) + 4096], d[1 << 17];
++    size_t n = fread(s, 1, sizeof s, f); fclose(f);
++    size_t sz[] = {4096, 16384, 65536, 131072};
++    for (int k = 0; k < 4; k++) {
++        size_t b = sz[k], nb = n / b, z[512], off[512], o = 0;
++        for (size_t i = 0; i < nb; i++) { off[i] = o; z[i] = kolmo_khuf_compress(s + i * b, b, c + o, sizeof c - o); o += z[i]; }
++        double best = 1e9;
++        for (int rep = 0; rep < 20; rep++) {
++            double t0 = now();
++            for (size_t i = 0; i < nb; i++) if (z[i] && (kolmo_khuf_decompress(c + off[i], z[i], d, b) || memcmp(d, s + i * b, b))) { puts("bad"); return 1; }
++            double t = now() - t0; if (t < best) best = t;
++        }
++        printf("block %6zu: %zu blocks, coded %zu bytes, %.3f ns/byte, %.0f ns/block\n", b, nb, o, best / (nb * b) * 1e9, best / nb * 1e9);
++    }
++    return 0;
++}
+diff --git a/benchmark/rc3w3/decmap/results/ab_T1.jsonl b/benchmark/rc3w3/decmap/results/ab_T1.jsonl
+new file mode 100644
+index 00000000..89757559
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/results/ab_T1.jsonl
+@@ -0,0 +1,115 @@
++{"frame": "balanced/akiyo60.y4m.k", "T": 1, "size": 9124244, "csize": 1689972, "A_MBs": 1009.47, "B_MBs": 1015.64, "gain": 0.006112118240264586}
++{"frame": "balanced/countries-aggregated.csv.k", "T": 1, "size": 5512931, "csize": 345917, "A_MBs": 710.21, "B_MBs": 726.67, "gain": 0.023176243646245265}
++{"frame": "balanced/dickens.k", "T": 1, "size": 10192446, "csize": 3721196, "A_MBs": 1294.34, "B_MBs": 1227.64, "gain": -0.05153205494692259}
++{"frame": "balanced/energy_f64.npy.k", "T": 1, "size": 23938176, "csize": 2569911, "A_MBs": 556.63, "B_MBs": 572.54, "gain": 0.028582721017551993}
++{"frame": "balanced/esc5.wav.k", "T": 1, "size": 2205044, "csize": 735897, "A_MBs": 145.25, "B_MBs": 146.07, "gain": 0.005645438898450816}
++{"frame": "balanced/logs.log.k", "T": 1, "size": 5050776, "csize": 383214, "A_MBs": 1392.45, "B_MBs": 1406.28, "gain": 0.009932134008402427}
++{"frame": "balanced/mr.k", "T": 1, "size": 9970564, "csize": 2316612, "A_MBs": 360.7, "B_MBs": 358.77, "gain": -0.005350706958691442}
++{"frame": "balanced/nci.k", "T": 1, "size": 33553445, "csize": 2027737, "A_MBs": 1011.76, "B_MBs": 1030.35, "gain": 0.01837392266940774}
++{"frame": "balanced/osdb.k", "T": 1, "size": 10085684, "csize": 3533740, "A_MBs": 1538.75, "B_MBs": 1538.09, "gain": -0.0004289195775792898}
++{"frame": "balanced/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1392694, "A_MBs": 570.87, "B_MBs": 556.16, "gain": -0.025767687914936888}
++{"frame": "balanced/owid.json.k", "T": 1, "size": 30926608, "csize": 1411138, "A_MBs": 603.21, "B_MBs": 666.55, "gain": 0.1050048905024783}
++{"frame": "balanced/population_i64.npy.k", "T": 1, "size": 353120, "csize": 70890, "A_MBs": 1100.34, "B_MBs": 1083.05, "gain": -0.015713324972281284}
++{"frame": "balanced/samba.k", "T": 1, "size": 21606400, "csize": 5044560, "A_MBs": 1687.2, "B_MBs": 1658.26, "gain": -0.017152678994784343}
++{"frame": "balanced/sao.k", "T": 1, "size": 7251944, "csize": 2302435, "A_MBs": 1171.32, "B_MBs": 1166.46, "gain": -0.004149165044564973}
++{"frame": "balanced/webster.k", "T": 1, "size": 41458703, "csize": 12151927, "A_MBs": 1106.14, "B_MBs": 1177.4, "gain": 0.06442222503480566}
++{"frame": "balanced/x-ray.k", "T": 1, "size": 8474240, "csize": 3657342, "A_MBs": 962.74, "B_MBs": 909.0, "gain": -0.055819847518540855}
++{"frame": "balanced/xml.k", "T": 1, "size": 5345280, "csize": 652714, "A_MBs": 2184.37, "B_MBs": 2082.72, "gain": -0.04653515658977192}
++{"frame": "eco/akiyo60.y4m.k", "T": 1, "size": 9124244, "csize": 1555934, "A_MBs": 518.15, "B_MBs": 488.8, "gain": -0.05664382900704423}
++{"frame": "eco/countries-aggregated.csv.k", "T": 1, "size": 5512931, "csize": 327367, "A_MBs": 427.27, "B_MBs": 423.78, "gain": -0.008168137243429241}
++{"frame": "eco/dickens.k", "T": 1, "size": 10192446, "csize": 2881188, "A_MBs": 276.61, "B_MBs": 330.35, "gain": 0.19428075629948305}
++{"frame": "eco/energy_f64.npy.k", "T": 1, "size": 23938176, "csize": 2538439, "A_MBs": 367.14, "B_MBs": 360.83, "gain": -0.017186904178242646}
++{"frame": "eco/esc5.wav.k", "T": 1, "size": 2205044, "csize": 735746, "A_MBs": 150.64, "B_MBs": 156.06, "gain": 0.03597981943706863}
++{"frame": "eco/logs.log.k", "T": 1, "size": 5050776, "csize": 91069, "A_MBs": 1120.09, "B_MBs": 1187.96, "gain": 0.06059334517761972}
++{"frame": "eco/mr.k", "T": 1, "size": 9970564, "csize": 2265155, "A_MBs": 235.86, "B_MBs": 231.7, "gain": -0.017637581616213094}
++{"frame": "eco/nci.k", "T": 1, "size": 33553445, "csize": 1804631, "A_MBs": 560.13, "B_MBs": 532.49, "gain": -0.04934568760823377}
++{"frame": "eco/osdb.k", "T": 1, "size": 10085684, "csize": 3152826, "A_MBs": 442.7, "B_MBs": 443.87, "gain": 0.002642873277614699}
++{"frame": "eco/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1309130, "A_MBs": 341.22, "B_MBs": 322.32, "gain": -0.05538948478987171}
++{"frame": "eco/owid.json.k", "T": 1, "size": 30926608, "csize": 1217857, "A_MBs": 424.24, "B_MBs": 507.93, "gain": 0.19727041297378833}
++{"frame": "eco/population_i64.npy.k", "T": 1, "size": 353120, "csize": 69781, "A_MBs": 507.44, "B_MBs": 501.82, "gain": -0.01107520100898629}
++{"frame": "eco/samba.k", "T": 1, "size": 21606400, "csize": 4250276, "A_MBs": 596.35, "B_MBs": 611.8, "gain": 0.025907604594617162}
++{"frame": "eco/sao.k", "T": 1, "size": 7251944, "csize": 2213186, "A_MBs": 433.13, "B_MBs": 434.35, "gain": 0.002816706300648786}
++{"frame": "eco/webster.k", "T": 1, "size": 41458703, "csize": 9834135, "A_MBs": 410.76, "B_MBs": 475.39, "gain": 0.1573424870970883}
++{"frame": "eco/x-ray.k", "T": 1, "size": 8474240, "csize": 3625650, "A_MBs": 250.52, "B_MBs": 255.07, "gain": 0.0181622225770397}
++{"frame": "eco/xml.k", "T": 1, "size": 5345280, "csize": 468409, "A_MBs": 556.44, "B_MBs": 621.34, "gain": 0.11663431816548053}
++{"frame": "hc/akiyo60.y4m.k", "T": 1, "size": 9124244, "csize": 1401586, "A_MBs": 1258.14, "B_MBs": 1242.42, "gain": -0.012494634937288418}
++{"frame": "hc/countries-aggregated.csv.k", "T": 1, "size": 5512931, "csize": 327637, "A_MBs": 713.86, "B_MBs": 706.6, "gain": -0.010170061356568505}
++{"frame": "hc/dickens.k", "T": 1, "size": 10192446, "csize": 2728251, "A_MBs": 538.7, "B_MBs": 664.27, "gain": 0.2330981993688508}
++{"frame": "hc/energy_f64.npy.k", "T": 1, "size": 23938176, "csize": 2514653, "A_MBs": 477.08, "B_MBs": 468.12, "gain": -0.018780917246583373}
++{"frame": "hc/esc5.wav.k", "T": 1, "size": 2205044, "csize": 735746, "A_MBs": 149.54, "B_MBs": 151.65, "gain": 0.01410993714056441}
++{"frame": "hc/logs.log.k", "T": 1, "size": 5050776, "csize": 91657, "A_MBs": 1782.2, "B_MBs": 1787.82, "gain": 0.003153405902816653}
++{"frame": "hc/mr.k", "T": 1, "size": 9970564, "csize": 2257516, "A_MBs": 309.57, "B_MBs": 317.23, "gain": 0.02474399974157704}
++{"frame": "hc/nci.k", "T": 1, "size": 33553445, "csize": 1645823, "A_MBs": 635.3, "B_MBs": 680.82, "gain": 0.07165118841492224}
++{"frame": "hc/osdb.k", "T": 1, "size": 10085684, "csize": 3100225, "A_MBs": 1246.14, "B_MBs": 1274.16, "gain": 0.022485435023352096}
++{"frame": "hc/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1291252, "A_MBs": 506.73, "B_MBs": 545.85, "gain": 0.0772008762062637}
++{"frame": "hc/owid.json.k", "T": 1, "size": 30926608, "csize": 847144, "A_MBs": 611.37, "B_MBs": 679.88, "gain": 0.11205980012103955}
++{"frame": "hc/population_i64.npy.k", "T": 1, "size": 353120, "csize": 68188, "A_MBs": 1160.01, "B_MBs": 1120.19, "gain": -0.03432729028198023}
++{"frame": "hc/samba.k", "T": 1, "size": 21606400, "csize": 3959908, "A_MBs": 1677.85, "B_MBs": 1645.54, "gain": -0.019256786959501726}
++{"frame": "hc/sao.k", "T": 1, "size": 7251944, "csize": 2214262, "A_MBs": 930.96, "B_MBs": 928.38, "gain": -0.0027713328177365604}
++{"frame": "hc/webster.k", "T": 1, "size": 41458703, "csize": 8858048, "A_MBs": 891.0, "B_MBs": 755.57, "gain": -0.1519977553310886}
++{"frame": "hc/x-ray.k", "T": 1, "size": 8474240, "csize": 3649636, "A_MBs": 925.77, "B_MBs": 908.56, "gain": -0.01858993054430369}
++{"frame": "hc/xml.k", "T": 1, "size": 5345280, "csize": 443624, "A_MBs": 851.31, "B_MBs": 1033.7, "gain": 0.2142462792637232}
++{"frame": "n-balanced/dickens.k", "T": 1, "size": 10192446, "csize": 3754554, "A_MBs": 1026.43, "B_MBs": 1262.79, "gain": 0.2302738618317859}
++{"frame": "n-balanced/logs.log.k", "T": 1, "size": 5050776, "csize": 397284, "A_MBs": 1353.27, "B_MBs": 1394.64, "gain": 0.03057039615154422}
++{"frame": "n-balanced/osdb.k", "T": 1, "size": 10085684, "csize": 3572135, "A_MBs": 1293.65, "B_MBs": 1484.29, "gain": 0.1473659799791287}
++{"frame": "n-balanced/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1431200, "A_MBs": 549.27, "B_MBs": 556.71, "gain": 0.01354525096946868}
++{"frame": "n-balanced/samba.k", "T": 1, "size": 21606400, "csize": 5278933, "A_MBs": 1482.73, "B_MBs": 1744.71, "gain": 0.17668759652802613}
++{"frame": "n-balanced/xml.k", "T": 1, "size": 5345280, "csize": 693710, "A_MBs": 2035.43, "B_MBs": 2317.41, "gain": 0.1385358376362733}
++{"frame": "n-eco/dickens.k", "T": 1, "size": 10192446, "csize": 3075023, "A_MBs": 496.45, "B_MBs": 670.93, "gain": 0.35145533286332964}
++{"frame": "n-eco/logs.log.k", "T": 1, "size": 5050776, "csize": 102307, "A_MBs": 1835.96, "B_MBs": 1842.14, "gain": 0.003366086407111224}
++{"frame": "n-eco/osdb.k", "T": 1, "size": 10085684, "csize": 3356565, "A_MBs": 1180.83, "B_MBs": 1388.78, "gain": 0.17610494313322}
++{"frame": "n-eco/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1425209, "A_MBs": 542.41, "B_MBs": 554.6, "gain": 0.022473774451061024}
++{"frame": "n-eco/samba.k", "T": 1, "size": 21606400, "csize": 4706762, "A_MBs": 1614.94, "B_MBs": 1928.18, "gain": 0.1939638624345177}
++{"frame": "n-eco/xml.k", "T": 1, "size": 5345280, "csize": 547457, "A_MBs": 828.72, "B_MBs": 1054.07, "gain": 0.27192537889757684}
++{"frame": "n-hc/dickens.k", "T": 1, "size": 10192446, "csize": 2968964, "A_MBs": 428.59, "B_MBs": 644.83, "gain": 0.504538136680744}
++{"frame": "n-hc/logs.log.k", "T": 1, "size": 5050776, "csize": 101671, "A_MBs": 1627.58, "B_MBs": 1953.78, "gain": 0.20042025583995882}
++{"frame": "n-hc/osdb.k", "T": 1, "size": 10085684, "csize": 3309605, "A_MBs": 1173.38, "B_MBs": 1318.06, "gain": 0.12330191412841529}
++{"frame": "n-hc/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1396207, "A_MBs": 540.52, "B_MBs": 558.53, "gain": 0.03331976615111376}
++{"frame": "n-hc/samba.k", "T": 1, "size": 21606400, "csize": 4583339, "A_MBs": 1597.78, "B_MBs": 1889.67, "gain": 0.1826847250560153}
++{"frame": "n-hc/xml.k", "T": 1, "size": 5345280, "csize": 515815, "A_MBs": 846.23, "B_MBs": 1054.46, "gain": 0.24606785389314956}
++{"frame": "n-ratio/dickens.k", "T": 1, "size": 10192446, "csize": 2254558, "A_MBs": 20.52, "B_MBs": 20.29, "gain": -0.011208576998050668}
++{"frame": "n-ratio/logs.log.k", "T": 1, "size": 5050776, "csize": 83145, "A_MBs": 632.0, "B_MBs": 635.66, "gain": 0.005791139240506338}
++{"frame": "n-ratio/osdb.k", "T": 1, "size": 10085684, "csize": 2206574, "A_MBs": 19.72, "B_MBs": 20.05, "gain": 0.016734279918864114}
++{"frame": "n-ratio/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1227039, "A_MBs": 171.91, "B_MBs": 172.47, "gain": 0.0032575184689662695}
++{"frame": "n-ratio/samba.k", "T": 1, "size": 21606400, "csize": 3757941, "A_MBs": 127.28, "B_MBs": 128.14, "gain": 0.006756756756756577}
++{"frame": "n-ratio/xml.k", "T": 1, "size": 5345280, "csize": 385428, "A_MBs": 53.08, "B_MBs": 52.72, "gain": -0.0067822155237377}
++{"frame": "n-speed/dickens.k", "T": 1, "size": 10192446, "csize": 5606154, "A_MBs": 2229.42, "B_MBs": 2216.63, "gain": -0.005736918122202117}
++{"frame": "n-speed/logs.log.k", "T": 1, "size": 5050776, "csize": 883229, "A_MBs": 3818.68, "B_MBs": 3801.91, "gain": -0.004391569861837086}
++{"frame": "n-speed/osdb.k", "T": 1, "size": 10085684, "csize": 4601209, "A_MBs": 2813.55, "B_MBs": 2902.39, "gain": 0.03157576726910838}
++{"frame": "n-speed/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1776460, "A_MBs": 630.57, "B_MBs": 645.62, "gain": 0.023867294669901673}
++{"frame": "n-speed/samba.k", "T": 1, "size": 21606400, "csize": 7173400, "A_MBs": 3127.62, "B_MBs": 3167.81, "gain": 0.012850026537750692}
++{"frame": "n-speed/xml.k", "T": 1, "size": 5345280, "csize": 1087797, "A_MBs": 3088.88, "B_MBs": 3264.25, "gain": 0.05677462381186715}
++{"frame": "ratio/akiyo60.y4m.k", "T": 1, "size": 9124244, "csize": 1261294, "A_MBs": 34.7, "B_MBs": 34.07, "gain": -0.018155619596541883}
++{"frame": "ratio/countries-aggregated.csv.k", "T": 1, "size": 5512931, "csize": 308846, "A_MBs": 307.23, "B_MBs": 304.52, "gain": -0.008820753181655538}
++{"frame": "ratio/dickens.k", "T": 1, "size": 10192446, "csize": 2254558, "A_MBs": 20.75, "B_MBs": 21.5, "gain": 0.03614457831325302}
++{"frame": "ratio/energy_f64.npy.k", "T": 1, "size": 23938176, "csize": 2003968, "A_MBs": 52.93, "B_MBs": 52.91, "gain": -0.00037785754770458535}
++{"frame": "ratio/esc5.wav.k", "T": 1, "size": 2205044, "csize": 708505, "A_MBs": 15.63, "B_MBs": 15.56, "gain": -0.00447856685860526}
++{"frame": "ratio/logs.log.k", "T": 1, "size": 5050776, "csize": 83560, "A_MBs": 836.67, "B_MBs": 816.97, "gain": -0.023545722925406576}
++{"frame": "ratio/mr.k", "T": 1, "size": 9970564, "csize": 1989774, "A_MBs": 23.5, "B_MBs": 23.46, "gain": -0.0017021276595744483}
++{"frame": "ratio/nci.k", "T": 1, "size": 33553445, "csize": 1199630, "A_MBs": 67.11, "B_MBs": 68.2, "gain": 0.016241990761436398}
++{"frame": "ratio/osdb.k", "T": 1, "size": 10085684, "csize": 2206574, "A_MBs": 20.47, "B_MBs": 20.23, "gain": -0.011724474841230959}
++{"frame": "ratio/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1223833, "A_MBs": 226.54, "B_MBs": 226.57, "gain": 0.0001324269444689108}
++{"frame": "ratio/owid.json.k", "T": 1, "size": 30926608, "csize": 802204, "A_MBs": 304.2, "B_MBs": 313.01, "gain": 0.028961209730440585}
++{"frame": "ratio/population_i64.npy.k", "T": 1, "size": 353120, "csize": 66301, "A_MBs": 176.58, "B_MBs": 177.23, "gain": 0.003681051081662501}
++{"frame": "ratio/samba.k", "T": 1, "size": 21606400, "csize": 3739524, "A_MBs": 163.18, "B_MBs": 170.51, "gain": 0.044919720553989295}
++{"frame": "ratio/sao.k", "T": 1, "size": 7251944, "csize": 2184759, "A_MBs": 116.98, "B_MBs": 120.67, "gain": 0.03154385365019663}
++{"frame": "ratio/webster.k", "T": 1, "size": 41458703, "csize": 6439824, "A_MBs": 26.97, "B_MBs": 27.92, "gain": 0.03522432332221004}
++{"frame": "ratio/x-ray.k", "T": 1, "size": 8474240, "csize": 3616667, "A_MBs": 73.32, "B_MBs": 74.87, "gain": 0.021140207310420323}
++{"frame": "ratio/xml.k", "T": 1, "size": 5345280, "csize": 385428, "A_MBs": 53.49, "B_MBs": 54.24, "gain": 0.014021312394840058}
++{"frame": "speed/akiyo60.y4m.k", "T": 1, "size": 9124244, "csize": 7783930, "A_MBs": 2479.02, "B_MBs": 2389.64, "gain": -0.03605456995102907}
++{"frame": "speed/countries-aggregated.csv.k", "T": 1, "size": 5512931, "csize": 452389, "A_MBs": 800.35, "B_MBs": 797.92, "gain": -0.0030361716748923406}
++{"frame": "speed/dickens.k", "T": 1, "size": 10192446, "csize": 6437034, "A_MBs": 3557.14, "B_MBs": 3304.64, "gain": -0.07098399275822709}
++{"frame": "speed/energy_f64.npy.k", "T": 1, "size": 23938176, "csize": 4093082, "A_MBs": 6671.56, "B_MBs": 6225.07, "gain": -0.06692437750691005}
++{"frame": "speed/esc5.wav.k", "T": 1, "size": 2205044, "csize": 1476564, "A_MBs": 3406.64, "B_MBs": 3411.07, "gain": 0.0013004015687012593}
++{"frame": "speed/logs.log.k", "T": 1, "size": 5050776, "csize": 928813, "A_MBs": 5133.76, "B_MBs": 5189.24, "gain": 0.01080689397244905}
++{"frame": "speed/mr.k", "T": 1, "size": 9970564, "csize": 5303688, "A_MBs": 2826.41, "B_MBs": 2864.47, "gain": 0.013465845365675966}
++{"frame": "speed/nci.k", "T": 1, "size": 33553445, "csize": 5539251, "A_MBs": 5106.11, "B_MBs": 4852.19, "gain": -0.04972865841119756}
++{"frame": "speed/osdb.k", "T": 1, "size": 10085684, "csize": 5273313, "A_MBs": 3358.44, "B_MBs": 3405.84, "gain": 0.014113695644406343}
++{"frame": "speed/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1829430, "A_MBs": 627.6, "B_MBs": 621.42, "gain": -0.009847036328871961}
++{"frame": "speed/owid.json.k", "T": 1, "size": 30926608, "csize": 3475619, "A_MBs": 6435.22, "B_MBs": 6473.15, "gain": 0.0058941263857335}
++{"frame": "speed/population_i64.npy.k", "T": 1, "size": 353120, "csize": 96310, "A_MBs": 2014.19, "B_MBs": 2074.86, "gain": 0.030121289451342736}
++{"frame": "speed/samba.k", "T": 1, "size": 21606400, "csize": 7728497, "A_MBs": 4262.79, "B_MBs": 4154.05, "gain": -0.0255091149223865}
++{"frame": "speed/sao.k", "T": 1, "size": 7251944, "csize": 6791955, "A_MBs": 3870.24, "B_MBs": 3740.54, "gain": -0.03351213361445282}
++{"frame": "speed/webster.k", "T": 1, "size": 41458703, "csize": 20149426, "A_MBs": 2513.74, "B_MBs": 2464.96, "gain": -0.019405348206258277}
++{"frame": "speed/x-ray.k", "T": 1, "size": 8474240, "csize": 6332994, "A_MBs": 2672.13, "B_MBs": 2612.69, "gain": -0.022244426730735456}
++{"frame": "speed/xml.k", "T": 1, "size": 5345280, "csize": 1232806, "A_MBs": 3972.46, "B_MBs": 3828.04, "gain": -0.03635530628376371}
+diff --git a/benchmark/rc3w3/decmap/results/ab_T4.jsonl b/benchmark/rc3w3/decmap/results/ab_T4.jsonl
+new file mode 100644
+index 00000000..ad38b1c0
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/results/ab_T4.jsonl
+@@ -0,0 +1,115 @@
++{"frame": "balanced/akiyo60.y4m.k", "T": 4, "size": 9124244, "csize": 1689972, "A_MBs": 2814.26, "B_MBs": 2856.22, "gain": 0.014909780901551262}
++{"frame": "balanced/countries-aggregated.csv.k", "T": 4, "size": 5512931, "csize": 345917, "A_MBs": 1886.42, "B_MBs": 1903.39, "gain": 0.008995875785880125}
++{"frame": "balanced/dickens.k", "T": 4, "size": 10192446, "csize": 3721196, "A_MBs": 4795.75, "B_MBs": 4739.74, "gain": -0.011679090861700492}
++{"frame": "balanced/energy_f64.npy.k", "T": 4, "size": 23938176, "csize": 2569911, "A_MBs": 2223.21, "B_MBs": 2248.12, "gain": 0.01120451959104174}
++{"frame": "balanced/esc5.wav.k", "T": 4, "size": 2205044, "csize": 735897, "A_MBs": 223.38, "B_MBs": 223.03, "gain": -0.00156683678037417}
++{"frame": "balanced/logs.log.k", "T": 4, "size": 5050776, "csize": 383214, "A_MBs": 4158.36, "B_MBs": 4071.38, "gain": -0.02091689993170376}
++{"frame": "balanced/mr.k", "T": 4, "size": 9970564, "csize": 2316612, "A_MBs": 1436.31, "B_MBs": 1465.64, "gain": 0.02042038278644598}
++{"frame": "balanced/nci.k", "T": 4, "size": 33553445, "csize": 2027737, "A_MBs": 4582.16, "B_MBs": 4716.23, "gain": 0.02925912670007147}
++{"frame": "balanced/osdb.k", "T": 4, "size": 10085684, "csize": 3533740, "A_MBs": 5950.75, "B_MBs": 5965.27, "gain": 0.0024400285678276568}
++{"frame": "balanced/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1392694, "A_MBs": 2365.98, "B_MBs": 2314.01, "gain": -0.02196552802644136}
++{"frame": "balanced/owid.json.k", "T": 4, "size": 30926608, "csize": 1411138, "A_MBs": 2355.4, "B_MBs": 2630.93, "gain": 0.11697800798165914}
++{"frame": "balanced/population_i64.npy.k", "T": 4, "size": 353120, "csize": 70890, "A_MBs": 1103.41, "B_MBs": 1136.93, "gain": 0.03037855375608345}
++{"frame": "balanced/samba.k", "T": 4, "size": 21606400, "csize": 5044560, "A_MBs": 6603.26, "B_MBs": 6822.32, "gain": 0.033174522887179814}
++{"frame": "balanced/sao.k", "T": 4, "size": 7251944, "csize": 2302435, "A_MBs": 4058.23, "B_MBs": 3998.33, "gain": -0.014760129416026224}
++{"frame": "balanced/webster.k", "T": 4, "size": 41458703, "csize": 12151927, "A_MBs": 4402.59, "B_MBs": 4367.26, "gain": -0.00802482175265018}
++{"frame": "balanced/x-ray.k", "T": 4, "size": 8474240, "csize": 3657342, "A_MBs": 3545.98, "B_MBs": 3545.55, "gain": -0.00012126407932355754}
++{"frame": "balanced/xml.k", "T": 4, "size": 5345280, "csize": 652714, "A_MBs": 5273.51, "B_MBs": 5071.03, "gain": -0.038395679537917005}
++{"frame": "eco/akiyo60.y4m.k", "T": 4, "size": 9124244, "csize": 1555934, "A_MBs": 546.29, "B_MBs": 605.36, "gain": 0.10812938183016363}
++{"frame": "eco/countries-aggregated.csv.k", "T": 4, "size": 5512931, "csize": 327367, "A_MBs": 413.54, "B_MBs": 436.62, "gain": 0.05581080427528162}
++{"frame": "eco/dickens.k", "T": 4, "size": 10192446, "csize": 2881188, "A_MBs": 295.18, "B_MBs": 308.49, "gain": 0.04509113083542249}
++{"frame": "eco/energy_f64.npy.k", "T": 4, "size": 23938176, "csize": 2538439, "A_MBs": 487.73, "B_MBs": 491.07, "gain": 0.0068480511758555185}
++{"frame": "eco/esc5.wav.k", "T": 4, "size": 2205044, "csize": 735746, "A_MBs": 158.87, "B_MBs": 153.51, "gain": -0.033738276578334614}
++{"frame": "eco/logs.log.k", "T": 4, "size": 5050776, "csize": 91069, "A_MBs": 1122.64, "B_MBs": 1092.51, "gain": -0.02683852348036775}
++{"frame": "eco/mr.k", "T": 4, "size": 9970564, "csize": 2265155, "A_MBs": 225.15, "B_MBs": 227.92, "gain": 0.012302909171663323}
++{"frame": "eco/nci.k", "T": 4, "size": 33553445, "csize": 1804631, "A_MBs": 1249.51, "B_MBs": 1262.48, "gain": 0.010380068987043023}
++{"frame": "eco/osdb.k", "T": 4, "size": 10085684, "csize": 3152826, "A_MBs": 506.5, "B_MBs": 453.59, "gain": -0.10446199407699908}
++{"frame": "eco/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1309130, "A_MBs": 340.83, "B_MBs": 341.05, "gain": 0.0006454830854092375}
++{"frame": "eco/owid.json.k", "T": 4, "size": 30926608, "csize": 1217857, "A_MBs": 821.67, "B_MBs": 912.37, "gain": 0.1103849477284069}
++{"frame": "eco/population_i64.npy.k", "T": 4, "size": 353120, "csize": 69781, "A_MBs": 499.11, "B_MBs": 505.2, "gain": 0.012201719059926619}
++{"frame": "eco/samba.k", "T": 4, "size": 21606400, "csize": 4250276, "A_MBs": 785.06, "B_MBs": 790.87, "gain": 0.007400708226122932}
++{"frame": "eco/sao.k", "T": 4, "size": 7251944, "csize": 2213186, "A_MBs": 436.68, "B_MBs": 436.46, "gain": -0.0005038014106439892}
++{"frame": "eco/webster.k", "T": 4, "size": 41458703, "csize": 9834135, "A_MBs": 1029.1, "B_MBs": 1254.36, "gain": 0.21889029248858227}
++{"frame": "eco/x-ray.k", "T": 4, "size": 8474240, "csize": 3625650, "A_MBs": 253.3, "B_MBs": 255.6, "gain": 0.009080142123963686}
++{"frame": "eco/xml.k", "T": 4, "size": 5345280, "csize": 468409, "A_MBs": 587.48, "B_MBs": 634.72, "gain": 0.08041124804248656}
++{"frame": "hc/akiyo60.y4m.k", "T": 4, "size": 9124244, "csize": 1401586, "A_MBs": 1457.65, "B_MBs": 1405.39, "gain": -0.035852227901073674}
++{"frame": "hc/countries-aggregated.csv.k", "T": 4, "size": 5512931, "csize": 327637, "A_MBs": 755.96, "B_MBs": 709.46, "gain": -0.06151119106831049}
++{"frame": "hc/dickens.k", "T": 4, "size": 10192446, "csize": 2728251, "A_MBs": 493.72, "B_MBs": 604.47, "gain": 0.22431742688163325}
++{"frame": "hc/energy_f64.npy.k", "T": 4, "size": 23938176, "csize": 2514653, "A_MBs": 749.48, "B_MBs": 767.6, "gain": 0.02417676255537171}
++{"frame": "hc/esc5.wav.k", "T": 4, "size": 2205044, "csize": 735746, "A_MBs": 152.83, "B_MBs": 152.8, "gain": -0.00019629653863773022}
++{"frame": "hc/logs.log.k", "T": 4, "size": 5050776, "csize": 91657, "A_MBs": 1775.31, "B_MBs": 1810.11, "gain": 0.019602210318197866}
++{"frame": "hc/mr.k", "T": 4, "size": 9970564, "csize": 2257516, "A_MBs": 326.41, "B_MBs": 325.24, "gain": -0.003584449005851531}
++{"frame": "hc/nci.k", "T": 4, "size": 33553445, "csize": 1645823, "A_MBs": 1717.07, "B_MBs": 1608.47, "gain": -0.0632472758827537}
++{"frame": "hc/osdb.k", "T": 4, "size": 10085684, "csize": 3100225, "A_MBs": 1337.87, "B_MBs": 1337.94, "gain": 5.23219744819059e-05}
++{"frame": "hc/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1291252, "A_MBs": 551.42, "B_MBs": 604.36, "gain": 0.09600667367886562}
++{"frame": "hc/owid.json.k", "T": 4, "size": 30926608, "csize": 847144, "A_MBs": 1133.62, "B_MBs": 1288.51, "gain": 0.13663308692507203}
++{"frame": "hc/population_i64.npy.k", "T": 4, "size": 353120, "csize": 68188, "A_MBs": 1120.78, "B_MBs": 1109.43, "gain": -0.0101268759256945}
++{"frame": "hc/samba.k", "T": 4, "size": 21606400, "csize": 3959908, "A_MBs": 2231.87, "B_MBs": 2081.2, "gain": -0.06750841222831083}
++{"frame": "hc/sao.k", "T": 4, "size": 7251944, "csize": 2214262, "A_MBs": 825.87, "B_MBs": 959.62, "gain": 0.16195042803346782}
++{"frame": "hc/webster.k", "T": 4, "size": 41458703, "csize": 8858048, "A_MBs": 2365.37, "B_MBs": 2334.56, "gain": -0.013025446336091151}
++{"frame": "hc/x-ray.k", "T": 4, "size": 8474240, "csize": 3649636, "A_MBs": 949.02, "B_MBs": 894.67, "gain": -0.05726960443404783}
++{"frame": "hc/xml.k", "T": 4, "size": 5345280, "csize": 443624, "A_MBs": 859.39, "B_MBs": 1026.57, "gain": 0.19453333178184518}
++{"frame": "n-balanced/dickens.k", "T": 4, "size": 10192446, "csize": 3754554, "A_MBs": 3814.77, "B_MBs": 4721.94, "gain": 0.23780463828749832}
++{"frame": "n-balanced/logs.log.k", "T": 4, "size": 5050776, "csize": 397284, "A_MBs": 3778.83, "B_MBs": 3901.84, "gain": 0.032552403786357154}
++{"frame": "n-balanced/osdb.k", "T": 4, "size": 10085684, "csize": 3572135, "A_MBs": 5174.53, "B_MBs": 5750.91, "gain": 0.1113878941662334}
++{"frame": "n-balanced/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1431200, "A_MBs": 2337.52, "B_MBs": 2340.2, "gain": 0.0011465142544233586}
++{"frame": "n-balanced/samba.k", "T": 4, "size": 21606400, "csize": 5278933, "A_MBs": 5861.19, "B_MBs": 6720.45, "gain": 0.14660162867950022}
++{"frame": "n-balanced/xml.k", "T": 4, "size": 5345280, "csize": 693710, "A_MBs": 5040.79, "B_MBs": 5676.48, "gain": 0.1261092011371232}
++{"frame": "n-eco/dickens.k", "T": 4, "size": 10192446, "csize": 3075023, "A_MBs": 476.64, "B_MBs": 633.24, "gain": 0.3285498489425982}
++{"frame": "n-eco/logs.log.k", "T": 4, "size": 5050776, "csize": 102307, "A_MBs": 1821.21, "B_MBs": 1705.07, "gain": -0.06377078974967199}
++{"frame": "n-eco/osdb.k", "T": 4, "size": 10085684, "csize": 3356565, "A_MBs": 1065.58, "B_MBs": 1187.86, "gain": 0.11475440605116471}
++{"frame": "n-eco/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1425209, "A_MBs": 549.57, "B_MBs": 632.65, "gain": 0.15117273504740059}
++{"frame": "n-eco/samba.k", "T": 4, "size": 21606400, "csize": 4706762, "A_MBs": 2063.55, "B_MBs": 2328.14, "gain": 0.1282207845702792}
++{"frame": "n-eco/xml.k", "T": 4, "size": 5345280, "csize": 547457, "A_MBs": 803.13, "B_MBs": 1002.6, "gain": 0.24836576892906503}
++{"frame": "n-hc/dickens.k", "T": 4, "size": 10192446, "csize": 2968964, "A_MBs": 507.43, "B_MBs": 673.46, "gain": 0.32719784009617103}
++{"frame": "n-hc/logs.log.k", "T": 4, "size": 5050776, "csize": 101671, "A_MBs": 1884.6, "B_MBs": 1951.54, "gain": 0.03551947362835617}
++{"frame": "n-hc/osdb.k", "T": 4, "size": 10085684, "csize": 3309605, "A_MBs": 1130.9, "B_MBs": 1074.11, "gain": -0.05021664161287487}
++{"frame": "n-hc/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1396207, "A_MBs": 581.6, "B_MBs": 590.77, "gain": 0.015766850068775762}
++{"frame": "n-hc/samba.k", "T": 4, "size": 21606400, "csize": 4583339, "A_MBs": 2166.91, "B_MBs": 2504.86, "gain": 0.155959407635758}
++{"frame": "n-hc/xml.k", "T": 4, "size": 5345280, "csize": 515815, "A_MBs": 855.97, "B_MBs": 1046.81, "gain": 0.22295173896281395}
++{"frame": "n-ratio/dickens.k", "T": 4, "size": 10192446, "csize": 2254558, "A_MBs": 42.25, "B_MBs": 44.04, "gain": 0.0423668639053254}
++{"frame": "n-ratio/logs.log.k", "T": 4, "size": 5050776, "csize": 83145, "A_MBs": 634.8, "B_MBs": 634.32, "gain": -0.0007561436672965938}
++{"frame": "n-ratio/osdb.k", "T": 4, "size": 10085684, "csize": 2206574, "A_MBs": 38.63, "B_MBs": 39.72, "gain": 0.028216412114936418}
++{"frame": "n-ratio/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1227039, "A_MBs": 171.54, "B_MBs": 173.08, "gain": 0.008977497959659742}
++{"frame": "n-ratio/samba.k", "T": 4, "size": 21606400, "csize": 3757941, "A_MBs": 127.36, "B_MBs": 126.08, "gain": -0.01005025125628145}
++{"frame": "n-ratio/xml.k", "T": 4, "size": 5345280, "csize": 385428, "A_MBs": 71.18, "B_MBs": 70.75, "gain": -0.006041022759202153}
++{"frame": "n-speed/dickens.k", "T": 4, "size": 10192446, "csize": 5606154, "A_MBs": 8195.36, "B_MBs": 8517.22, "gain": 0.03927344253333587}
++{"frame": "n-speed/logs.log.k", "T": 4, "size": 5050776, "csize": 883229, "A_MBs": 10407.9, "B_MBs": 9887.78, "gain": -0.04997357776304523}
++{"frame": "n-speed/osdb.k", "T": 4, "size": 10085684, "csize": 4601209, "A_MBs": 10406.13, "B_MBs": 10439.03, "gain": 0.0031615980196288973}
++{"frame": "n-speed/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1776460, "A_MBs": 2500.5, "B_MBs": 2477.02, "gain": -0.009390121975604848}
++{"frame": "n-speed/samba.k", "T": 4, "size": 21606400, "csize": 7173400, "A_MBs": 11164.39, "B_MBs": 11033.07, "gain": -0.011762398124751994}
++{"frame": "n-speed/xml.k", "T": 4, "size": 5345280, "csize": 1087797, "A_MBs": 7733.29, "B_MBs": 7750.84, "gain": 0.0022694092682415956}
++{"frame": "ratio/akiyo60.y4m.k", "T": 4, "size": 9124244, "csize": 1261294, "A_MBs": 39.1, "B_MBs": 38.61, "gain": -0.012531969309462987}
++{"frame": "ratio/countries-aggregated.csv.k", "T": 4, "size": 5512931, "csize": 308846, "A_MBs": 298.2, "B_MBs": 294.07, "gain": -0.013849765258215907}
++{"frame": "ratio/dickens.k", "T": 4, "size": 10192446, "csize": 2254558, "A_MBs": 42.79, "B_MBs": 44.74, "gain": 0.04557139518579123}
++{"frame": "ratio/energy_f64.npy.k", "T": 4, "size": 23938176, "csize": 2003968, "A_MBs": 97.24, "B_MBs": 104.52, "gain": 0.07486631016042788}
++{"frame": "ratio/esc5.wav.k", "T": 4, "size": 2205044, "csize": 708505, "A_MBs": 15.81, "B_MBs": 15.83, "gain": 0.0012650221378873727}
++{"frame": "ratio/logs.log.k", "T": 4, "size": 5050776, "csize": 83560, "A_MBs": 841.86, "B_MBs": 841.91, "gain": 5.9392298006777366e-05}
++{"frame": "ratio/mr.k", "T": 4, "size": 9970564, "csize": 1989774, "A_MBs": 25.63, "B_MBs": 24.96, "gain": -0.026141240733515314}
++{"frame": "ratio/nci.k", "T": 4, "size": 33553445, "csize": 1199630, "A_MBs": 218.06, "B_MBs": 205.12, "gain": -0.059341465651655545}
++{"frame": "ratio/osdb.k", "T": 4, "size": 10085684, "csize": 2206574, "A_MBs": 38.63, "B_MBs": 39.2, "gain": 0.014755371472948475}
++{"frame": "ratio/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1223833, "A_MBs": 213.84, "B_MBs": 211.29, "gain": -0.011924803591470301}
++{"frame": "ratio/owid.json.k", "T": 4, "size": 30926608, "csize": 802204, "A_MBs": 294.24, "B_MBs": 301.36, "gain": 0.02419793365959766}
++{"frame": "ratio/population_i64.npy.k", "T": 4, "size": 353120, "csize": 66301, "A_MBs": 168.25, "B_MBs": 168.33, "gain": 0.000475482912333014}
++{"frame": "ratio/samba.k", "T": 4, "size": 21606400, "csize": 3739524, "A_MBs": 160.62, "B_MBs": 163.04, "gain": 0.015066616859668702}
++{"frame": "ratio/sao.k", "T": 4, "size": 7251944, "csize": 2184759, "A_MBs": 121.77, "B_MBs": 115.04, "gain": -0.05526812843886009}
++{"frame": "ratio/webster.k", "T": 4, "size": 41458703, "csize": 6439824, "A_MBs": 81.76, "B_MBs": 79.63, "gain": -0.026051859099804453}
++{"frame": "ratio/x-ray.k", "T": 4, "size": 8474240, "csize": 3616667, "A_MBs": 71.34, "B_MBs": 71.64, "gain": 0.00420521446593769}
++{"frame": "ratio/xml.k", "T": 4, "size": 5345280, "csize": 385428, "A_MBs": 71.5, "B_MBs": 70.39, "gain": -0.015524475524475556}
++{"frame": "speed/akiyo60.y4m.k", "T": 4, "size": 9124244, "csize": 7783930, "A_MBs": 7361.75, "B_MBs": 7851.6, "gain": 0.06653988521750942}
++{"frame": "speed/countries-aggregated.csv.k", "T": 4, "size": 5512931, "csize": 452389, "A_MBs": 2171.43, "B_MBs": 2112.57, "gain": -0.027106561114104366}
++{"frame": "speed/dickens.k", "T": 4, "size": 10192446, "csize": 6437034, "A_MBs": 11608.52, "B_MBs": 12405.11, "gain": 0.06862115067209262}
++{"frame": "speed/energy_f64.npy.k", "T": 4, "size": 23938176, "csize": 4093082, "A_MBs": 19557.0, "B_MBs": 21451.79, "gain": 0.09688551413816038}
++{"frame": "speed/esc5.wav.k", "T": 4, "size": 2205044, "csize": 1476564, "A_MBs": 5794.44, "B_MBs": 6277.08, "gain": 0.0832936401101747}
++{"frame": "speed/logs.log.k", "T": 4, "size": 5050776, "csize": 928813, "A_MBs": 13419.85, "B_MBs": 13695.16, "gain": 0.02051513243441616}
++{"frame": "speed/mr.k", "T": 4, "size": 9970564, "csize": 5303688, "A_MBs": 10155.21, "B_MBs": 8657.93, "gain": -0.1474395901217207}
++{"frame": "speed/nci.k", "T": 4, "size": 33553445, "csize": 5539251, "A_MBs": 19571.0, "B_MBs": 19955.8, "gain": 0.019661744417760918}
++{"frame": "speed/osdb.k", "T": 4, "size": 10085684, "csize": 5273313, "A_MBs": 10590.23, "B_MBs": 10177.06, "gain": -0.03901426125778196}
++{"frame": "speed/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1829430, "A_MBs": 2479.39, "B_MBs": 2520.05, "gain": 0.016399194963277353}
++{"frame": "speed/owid.json.k", "T": 4, "size": 30926608, "csize": 3475619, "A_MBs": 22924.19, "B_MBs": 22918.63, "gain": -0.0002425385586142248}
++{"frame": "speed/population_i64.npy.k", "T": 4, "size": 353120, "csize": 96310, "A_MBs": 2038.05, "B_MBs": 2049.34, "gain": 0.005539608939918228}
++{"frame": "speed/samba.k", "T": 4, "size": 21606400, "csize": 7728497, "A_MBs": 14311.17, "B_MBs": 13672.05, "gain": -0.04465882244428654}
++{"frame": "speed/sao.k", "T": 4, "size": 7251944, "csize": 6791955, "A_MBs": 12674.94, "B_MBs": 12844.89, "gain": 0.013408347495136086}
++{"frame": "speed/webster.k", "T": 4, "size": 41458703, "csize": 20149426, "A_MBs": 11092.13, "B_MBs": 11076.47, "gain": -0.0014118117980946865}
++{"frame": "speed/x-ray.k", "T": 4, "size": 8474240, "csize": 6332994, "A_MBs": 9486.59, "B_MBs": 9290.44, "gain": -0.020676555010810005}
++{"frame": "speed/xml.k", "T": 4, "size": 5345280, "csize": 1232806, "A_MBs": 9372.7, "B_MBs": 9420.64, "gain": 0.00511485484438845}
+diff --git a/benchmark/rc3w3/decmap/results/ab_re.jsonl b/benchmark/rc3w3/decmap/results/ab_re.jsonl
+new file mode 100644
+index 00000000..18bd2f0d
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/results/ab_re.jsonl
+@@ -0,0 +1,14 @@
++{"frame": "hc/webster.k", "T": 1, "size": 41458703, "csize": 8858048, "A_MBs": 861.12, "B_MBs": 852.82, "gain": -0.009638610182088336}
++{"frame": "balanced/x-ray.k", "T": 1, "size": 8474240, "csize": 3657342, "A_MBs": 924.21, "B_MBs": 919.58, "gain": -0.005009683946289312}
++{"frame": "speed/dickens.k", "T": 1, "size": 10192446, "csize": 6437034, "A_MBs": 3373.99, "B_MBs": 3387.06, "gain": 0.0038737518487015343}
++{"frame": "speed/energy_f64.npy.k", "T": 1, "size": 23938176, "csize": 4093082, "A_MBs": 6525.32, "B_MBs": 6370.87, "gain": -0.023669337289205727}
++{"frame": "eco/akiyo60.y4m.k", "T": 1, "size": 9124244, "csize": 1555934, "A_MBs": 529.51, "B_MBs": 498.84, "gain": -0.057921474570829634}
++{"frame": "balanced/xml.k", "T": 1, "size": 5345280, "csize": 652714, "A_MBs": 2100.68, "B_MBs": 2104.73, "gain": 0.001927947140925923}
++{"frame": "eco/osdb.k", "T": 4, "size": 10085684, "csize": 3152826, "A_MBs": 475.55, "B_MBs": 480.84, "gain": 0.011123961728524812}
++{"frame": "speed/mr.k", "T": 4, "size": 9970564, "csize": 5303688, "A_MBs": 9976.26, "B_MBs": 10092.06, "gain": 0.011607556338748104}
++{"frame": "hc/samba.k", "T": 4, "size": 21606400, "csize": 3959908, "A_MBs": 2148.39, "B_MBs": 2066.64, "gain": -0.03805175038051756}
++{"frame": "hc/nci.k", "T": 4, "size": 33553445, "csize": 1645823, "A_MBs": 1646.0, "B_MBs": 1712.31, "gain": 0.040285540704738665}
++{"frame": "hc/x-ray.k", "T": 4, "size": 8474240, "csize": 3649636, "A_MBs": 913.01, "B_MBs": 902.16, "gain": -0.011883769071532657}
++{"frame": "n-eco/logs.log.k", "T": 4, "size": 5050776, "csize": 102307, "A_MBs": 1752.97, "B_MBs": 1893.4, "gain": 0.08010975658453945}
++{"frame": "n-hc/osdb.k", "T": 4, "size": 10085684, "csize": 3309605, "A_MBs": 1113.14, "B_MBs": 1293.17, "gain": 0.16173167795605226}
++{"frame": "ratio/nci.k", "T": 4, "size": 33553445, "csize": 1199630, "A_MBs": 199.88, "B_MBs": 196.95, "gain": -0.014658795277166292}
+diff --git a/benchmark/rc3w3/decmap/results/ab_re2.jsonl b/benchmark/rc3w3/decmap/results/ab_re2.jsonl
+new file mode 100644
+index 00000000..6574405a
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/results/ab_re2.jsonl
+@@ -0,0 +1,2 @@
++{"frame": "eco/akiyo60.y4m.k", "T": 1, "size": 9124244, "csize": 1555934, "A_MBs": 539.81, "B_MBs": 540.9, "gain": 0.0020192289879772396}
++{"frame": "x/countries-aggregated.csv.k", "T": 1, "size": 5512931, "csize": 283038, "A_MBs": 4.09, "B_MBs": 3.93, "gain": -0.03911980440097795}
+diff --git a/benchmark/rc3w3/decmap/results/ab_x.jsonl b/benchmark/rc3w3/decmap/results/ab_x.jsonl
+new file mode 100644
+index 00000000..55918c79
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/results/ab_x.jsonl
+@@ -0,0 +1,16 @@
++{"frame": "x/countries-aggregated.csv.k", "T": 1, "size": 5512931, "csize": 283038, "A_MBs": 4.15, "B_MBs": 3.45, "gain": -0.1686746987951807}
++{"frame": "x/dickens.k", "T": 1, "size": 10192446, "csize": 2168559, "A_MBs": 0.21, "B_MBs": 0.22, "gain": 0.04761904761904767}
++{"frame": "x/esc5.wav.k", "T": 1, "size": 2205044, "csize": 708505, "A_MBs": 15.59, "B_MBs": 15.56, "gain": -0.0019243104554200752}
++{"frame": "x/logs.log.k", "T": 1, "size": 5050776, "csize": 72971, "A_MBs": 1.59, "B_MBs": 1.52, "gain": -0.04402515723270439}
++{"frame": "x/owid-co2-data.csv.k", "T": 1, "size": 15242657, "csize": 1127837, "A_MBs": 2.41, "B_MBs": 2.59, "gain": 0.07468879668049788}
++{"frame": "x/population_i64.npy.k", "T": 1, "size": 353120, "csize": 66301, "A_MBs": 143.87, "B_MBs": 151.68, "gain": 0.054285118509765695}
++{"frame": "x/x-ray.k", "T": 1, "size": 8474240, "csize": 3560964, "A_MBs": 0.44, "B_MBs": 0.44, "gain": 0.0}
++{"frame": "x/xml.k", "T": 1, "size": 5345280, "csize": 300720, "A_MBs": 0.3, "B_MBs": 0.29, "gain": -0.033333333333333326}
++{"frame": "x/countries-aggregated.csv.k", "T": 4, "size": 5512931, "csize": 283038, "A_MBs": 3.98, "B_MBs": 3.93, "gain": -0.012562814070351758}
++{"frame": "x/dickens.k", "T": 4, "size": 10192446, "csize": 2168559, "A_MBs": 0.22, "B_MBs": 0.22, "gain": 0.0}
++{"frame": "x/esc5.wav.k", "T": 4, "size": 2205044, "csize": 708505, "A_MBs": 14.21, "B_MBs": 15.74, "gain": 0.10767065446868407}
++{"frame": "x/logs.log.k", "T": 4, "size": 5050776, "csize": 72971, "A_MBs": 1.6, "B_MBs": 1.58, "gain": -0.012499999999999956}
++{"frame": "x/owid-co2-data.csv.k", "T": 4, "size": 15242657, "csize": 1127837, "A_MBs": 2.47, "B_MBs": 2.6, "gain": 0.05263157894736836}
++{"frame": "x/population_i64.npy.k", "T": 4, "size": 353120, "csize": 66301, "A_MBs": 146.56, "B_MBs": 150.09, "gain": 0.024085698689956248}
++{"frame": "x/x-ray.k", "T": 4, "size": 8474240, "csize": 3560964, "A_MBs": 0.45, "B_MBs": 0.43, "gain": -0.04444444444444451}
++{"frame": "x/xml.k", "T": 4, "size": 5345280, "csize": 300720, "A_MBs": 0.28, "B_MBs": 0.28, "gain": 0.0}
+diff --git a/benchmark/rc3w3/decmap/results/bwt_index_sampling.txt b/benchmark/rc3w3/decmap/results/bwt_index_sampling.txt
+new file mode 100644
+index 00000000..8c1ad6de
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/results/bwt_index_sampling.txt
+@@ -0,0 +1,24 @@
++dickens                      k=  9 bytes=2254506  dec T1 19.4 MB/s  T4 43.1 MB/s
++dickens                      k=  9 bytes=2254506  dec T1 19.4 MB/s  T4 40.9 MB/s
++dickens                      k= 19 bytes=2254546  dec T1 19.8 MB/s  T4 44.3 MB/s
++dickens                      k= 38 bytes=2254622  dec T1 19.9 MB/s  T4 43.0 MB/s
++dickens                      k= 77 bytes=2254778  dec T1 22.0 MB/s  T4 43.8 MB/s
++dickens                      k=154 bytes=2255086  dec T1 20.6 MB/s  T4 43.4 MB/s
++samba                        k=  8 bytes=3885256  dec T1 25.2 MB/s  T4 86.4 MB/s
++samba                        k=  8 bytes=3885256  dec T1 25.9 MB/s  T4 86.5 MB/s
++samba                        k= 16 bytes=3885288  dec T1 25.6 MB/s  T4 88.7 MB/s
++samba                        k= 33 bytes=3885356  dec T1 25.8 MB/s  T4 88.8 MB/s
++samba                        k= 67 bytes=3885492  dec T1 25.9 MB/s  T4 89.4 MB/s
++samba                        k=135 bytes=3885764  dec T1 25.8 MB/s  T4 89.8 MB/s
++webster                      k=  9 bytes=6439772  dec T1 26.1 MB/s  T4 85.2 MB/s
++webster                      k=  9 bytes=6439772  dec T1 26.7 MB/s  T4 84.3 MB/s
++webster                      k= 19 bytes=6439812  dec T1 27.1 MB/s  T4 86.1 MB/s
++webster                      k= 39 bytes=6439892  dec T1 27.4 MB/s  T4 86.3 MB/s
++webster                      k= 79 bytes=6440052  dec T1 26.3 MB/s  T4 81.3 MB/s
++webster                      k=158 bytes=6440368  dec T1 26.3 MB/s  T4 80.7 MB/s
++nci                          k= 13 bytes=1199578  dec T1 71.3 MB/s  T4 208.0 MB/s
++nci                          k= 13 bytes=1199578  dec T1 66.7 MB/s  T4 202.5 MB/s
++nci                          k= 27 bytes=1199634  dec T1 63.1 MB/s  T4 203.8 MB/s
++nci                          k= 55 bytes=1199746  dec T1 66.3 MB/s  T4 200.2 MB/s
++nci                          k=111 bytes=1199970  dec T1 66.2 MB/s  T4 211.2 MB/s
++nci                          k=223 bytes=1200418  dec T1 72.3 MB/s  T4 213.4 MB/s
+diff --git a/benchmark/rc3w3/decmap/results/callgrind_top.txt b/benchmark/rc3w3/decmap/results/callgrind_top.txt
+new file mode 100644
+index 00000000..2f13b697
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/results/callgrind_top.txt
+@@ -0,0 +1,316 @@
++## balanced.csv.txt
++11,173,876 (18.86%)  src/algo/decimal.c:fmt_dec_swar
++10,898,385 (18.40%)  src/transforms/table.c:tbl2_decode
++10,369,264 (17.50%)  src/transforms/table.c:tbl2_stream
++ 2,124,329 ( 3.59%)  avx2intrin.h:tbl2_stream
++ 1,818,978 ( 3.07%)  src/arch/x86_64/decimal_avx2.c:tbl2_stream
++ 1,641,457 ( 2.77%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++## balanced.json.txt
++30,482,727 (55.42%)  src/transforms/transpose.c:decode_block
++ 5,972,720 (10.86%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++ 2,367,500 ( 4.30%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++ 1,042,828 ( 1.90%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++   751,732 ( 1.37%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:decode_block
++   468,774 ( 0.85%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++## balanced.logs.txt
++ 8,351,051 (26.66%)  src/transforms/log.c:log_decode
++ 2,301,108 ( 7.35%)  src/algo/decimal.c:log_decode
++ 2,025,048 ( 6.46%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++ 1,035,947 ( 3.31%)  src/transforms/log.c:get_ints
++   941,140 ( 3.00%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++   719,031 ( 2.30%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:log_decode
++## balanced.npy.txt
++1,588,428 (25.04%)  src/transforms/graph.c:fi_inv_8_8_0
++  509,555 ( 8.03%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
++  378,004 ( 5.96%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu
++  353,910 ( 5.58%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu
++  230,927 ( 3.64%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++  182,747 ( 2.88%)  src/codecs/../algo/zerorun.c:zrun_dec_tab
++## balanced.samba.txt
++10,336,619 (32.72%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++ 4,859,552 (15.38%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++   758,223 ( 2.40%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
++   688,308 ( 2.18%)  vendor/zstd/decompress/../common/zstd_internal.h:ZSTD_decompressSequences_default.constprop.0
++   675,983 ( 2.14%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_buildFSETable_body_default.isra.0
++   650,028 ( 2.06%)  emmintrin.h:ZSTD_decompressSequences_default.constprop.0
++## balanced.text.txt
++18,902,560 (42.44%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++ 8,971,470 (20.14%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++   962,058 ( 2.16%)  vendor/zstd/decompress/../common/zstd_internal.h:ZSTD_decompressSequences_default.constprop.0
++   958,678 ( 2.15%)  emmintrin.h:ZSTD_decompressSequences_default.constprop.0
++   767,464 ( 1.72%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d6fd
++   560,921 ( 1.26%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_buildFSETable_body_default.isra.0
++## balanced.wav.txt
++52,797,846 (46.31%)  src/codecs/audio.c:ka_decode_leaf
++33,659,315 (29.52%)  src/codecs/audio.c:ka_lpc_restore
++ 9,932,152 ( 8.71%)  src/codecs/audio.c:ka_dec_worker
++ 2,122,794 ( 1.86%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gn
++ 1,103,407 ( 0.97%)  src/codecs/audio.c:decode_block
++   516,814 ( 0.45%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++## balanced.xray.txt
++17,996,304 (41.23%)  src/transforms/sci.c:img16_inv
++ 8,530,968 (19.55%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d6fd
++ 2,066,900 ( 4.74%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++ 1,074,772 ( 2.46%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
++   468,760 ( 1.07%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   296,507 ( 0.68%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++## balanced.y4m.txt
++10,316,206 (30.93%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++ 4,768,726 (14.30%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++   896,950 ( 2.69%)  vendor/zstd/decompress/../common/zstd_internal.h:ZSTD_decompressSequences_default.constprop.0
++   894,534 ( 2.68%)  emmintrin.h:kolmo_vid_strip_dec_sse41
++   855,540 ( 2.57%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   597,102 ( 1.79%)  emmintrin.h:med8_rowssse41
++## eco.csv.txt
++22,455,793 (28.53%)  src/algo/decimal.c:fmt_dec_swar
++21,757,136 (27.64%)  src/transforms/table.c:tbl2_decode
++12,821,483 (16.29%)  vendor/brotli/dec/decode.c:ProcessCommands
++ 3,067,317 ( 3.90%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
++ 3,055,040 ( 3.88%)  src/transforms/table.c:num_decode
++   603,474 ( 0.77%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++## eco.json.txt
++30,482,674 (54.50%)  src/transforms/transpose.c:decode_block
++ 6,445,856 (11.52%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++ 3,191,126 ( 5.71%)  vendor/brotli/dec/decode.c:ProcessCommands
++ 1,002,114 ( 1.79%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
++   812,021 ( 1.45%)  vendor/brotli/dec/decode.c:SafeProcessCommands
++   751,693 ( 1.34%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:decode_block
++## eco.logs.txt
++ 8,375,184 (24.26%)  src/transforms/log.c:log_decode
++ 4,860,799 (14.08%)  vendor/brotli/dec/decode.c:ProcessCommands
++ 2,356,056 ( 6.82%)  src/algo/decimal.c:log_decode
++ 1,647,908 ( 4.77%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
++ 1,159,322 ( 3.36%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++   978,411 ( 2.83%)  src/transforms/log.c:get_ints
++## eco.npy.txt
++1,899,965 (22.29%)  vendor/brotli/dec/decode.c:ProcessCommands
++1,588,428 (18.64%)  src/transforms/graph.c:fi_inv_8_8_0
++1,049,513 (12.31%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
++  444,599 ( 5.22%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu
++  349,671 ( 4.10%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu
++  182,747 ( 2.14%)  src/codecs/../algo/zerorun.c:zrun_dec_tab
++## eco.samba.txt
++19,763,734 (46.70%)  vendor/brotli/dec/decode.c:ProcessCommands
++ 7,083,408 (16.74%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
++   711,646 ( 1.68%)  vendor/brotli/dec/huffman.c:BrotliBuildHuffmanTable
++   563,589 ( 1.33%)  vendor/brotli/dec/decode.c:ReadHuffmanCode
++   468,762 ( 1.11%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   401,991 ( 0.95%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++## eco.text.txt
++25,259,009 (35.86%)  vendor/brotli/dec/decode.c:ProcessCommands
++18,373,086 (26.08%)  src/transforms/word.c:word_decode
++ 9,208,347 (13.07%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
++ 1,318,135 ( 1.87%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:word_decode
++ 1,310,500 ( 1.86%)  emmintrin.h:word_decode
++   469,961 ( 0.67%)  vendor/brotli/dec/huffman.c:BrotliBuildHuffmanTable
++## eco.wav.txt
++52,808,932 (46.32%)  src/codecs/audio.c:ka_decode_leaf
++33,647,961 (29.51%)  src/codecs/audio.c:ka_lpc_restore
++ 9,932,070 ( 8.71%)  src/codecs/audio.c:ka_dec_worker
++ 2,122,698 ( 1.86%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gn
++ 1,102,937 ( 0.97%)  src/codecs/audio.c:decode_block
++   516,818 ( 0.45%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++## eco.xray.txt
++34,797,873 (43.72%)  vendor/brotli/dec/decode.c:ProcessCommands
++17,998,152 (22.61%)  src/transforms/sci.c:img16_inv
++11,961,123 (15.03%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
++   684,637 ( 0.86%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++   468,762 ( 0.59%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   409,598 ( 0.51%)  vendor/brotli/dec/huffman.c:BrotliBuildHuffmanTable
++## eco.y4m.txt
++17,014,948 (43.90%)  vendor/brotli/dec/decode.c:ProcessCommands
++ 5,197,205 (13.41%)  vendor/brotli/dec/bit_reader.h:ProcessCommands
++   894,534 ( 2.31%)  emmintrin.h:kolmo_vid_strip_dec_sse41
++   855,542 ( 2.21%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   597,102 ( 1.54%)  emmintrin.h:med8_rowssse41
++   438,570 ( 1.13%)  src/arch/x86_64/med8_tmpl.h:med8_rowssse41
++## hc.csv.txt
++22,455,793 (33.84%)  src/algo/decimal.c:fmt_dec_swar
++21,757,136 (32.79%)  src/transforms/table.c:tbl2_decode
++ 3,055,033 ( 4.60%)  src/transforms/table.c:num_decode
++ 1,875,435 ( 2.83%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++ 1,338,343 ( 2.02%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
++   854,249 ( 1.29%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++## hc.json.txt
++30,482,674 (57.09%)  src/transforms/transpose.c:decode_block
++ 5,973,150 (11.19%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++ 1,282,480 ( 2.40%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++   751,693 ( 1.41%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:decode_block
++   533,035 ( 1.00%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++   468,762 ( 0.88%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++## hc.logs.txt
++ 8,375,184 (26.49%)  src/transforms/log.c:log_decode
++ 2,466,224 ( 7.80%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++ 2,356,056 ( 7.45%)  src/algo/decimal.c:log_decode
++ 1,157,918 ( 3.66%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++   980,275 ( 3.10%)  src/transforms/log.c:get_ints
++   740,425 ( 2.34%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:log_decode
++## hc.npy.txt
++1,588,428 (25.04%)  src/transforms/graph.c:fi_inv_8_8_0
++  503,966 ( 7.94%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++  354,042 ( 5.58%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu
++  328,835 ( 5.18%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu
++  225,149 ( 3.55%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++  182,747 ( 2.88%)  src/codecs/../algo/zerorun.c:zrun_dec_tab
++## hc.samba.txt
++ 9,872,577 (32.27%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++ 4,631,828 (15.14%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++   865,849 ( 2.83%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_buildFSETable_body_default.isra.0
++   694,019 ( 2.27%)  vendor/zstd/decompress/../common/zstd_internal.h:ZSTD_decompressSequences_default.constprop.0
++   656,606 ( 2.15%)  emmintrin.h:ZSTD_decompressSequences_default.constprop.0
++   468,762 ( 1.53%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++## hc.text.txt
++18,373,086 (30.98%)  src/transforms/word.c:word_decode
++14,753,384 (24.87%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++ 6,995,630 (11.79%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++ 1,318,135 ( 2.22%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:word_decode
++ 1,310,500 ( 2.21%)  emmintrin.h:word_decode
++   782,945 ( 1.32%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
++## hc.wav.txt
++52,808,932 (46.32%)  src/codecs/audio.c:ka_decode_leaf
++33,647,961 (29.51%)  src/codecs/audio.c:ka_lpc_restore
++ 9,932,070 ( 8.71%)  src/codecs/audio.c:ka_dec_worker
++ 2,122,698 ( 1.86%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gn
++ 1,102,937 ( 0.97%)  src/codecs/audio.c:decode_block
++   516,818 ( 0.45%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++## hc.xray.txt
++17,998,152 (42.62%)  src/transforms/sci.c:img16_inv
++ 8,435,546 (19.97%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d6fd
++ 1,070,235 ( 2.53%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d280
++   468,762 ( 1.11%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   414,889 ( 0.98%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++   281,439 ( 0.67%)  vendor/zstd/decompress/../common/zstd_internal.h:ZSTD_decompressSequences_default.constprop.0
++## hc.y4m.txt
++ 3,407,476 (14.71%)  vendor/zstd/decompress/huf_decompress_amd64.S:0x000000000027d6fd
++ 1,761,761 ( 7.60%)  vendor/zstd/decompress/zstd_decompress_block.c:ZSTD_decompressSequences_default.constprop.0
++   894,534 ( 3.86%)  emmintrin.h:kolmo_vid_strip_dec_sse41
++   879,260 ( 3.79%)  vendor/zstd/decompress/../common/bitstream.h:ZSTD_decompressSequences_default.constprop.0
++   855,542 ( 3.69%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   597,102 ( 2.58%)  emmintrin.h:med8_rowssse41
++## ratio.csv.txt
++51,401,648 (43.95%)  vendor/xz/liblzma/lzma/lzma_decoder.c:lzma_decode
++22,455,793 (19.20%)  src/algo/decimal.c:fmt_dec_swar
++21,757,136 (18.60%)  src/transforms/table.c:tbl2_decode
++ 4,239,484 ( 3.63%)  vendor/xz/liblzma/lz/lz_decoder.h:lzma_decode
++ 3,055,040 ( 2.61%)  src/transforms/table.c:num_decode
++   468,762 ( 0.40%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++## ratio.json.txt
++30,482,674 (44.10%)  src/transforms/transpose.c:decode_block
++16,544,212 (23.93%)  vendor/xz/liblzma/lzma/lzma_decoder.c:lzma_decode
++ 6,192,697 ( 8.96%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++ 1,852,623 ( 2.68%)  vendor/xz/liblzma/lz/lz_decoder.h:lzma_decode
++   751,693 ( 1.09%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:decode_block
++   468,762 ( 0.68%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++## ratio.logs.txt
++24,711,197 (45.92%)  vendor/xz/liblzma/lzma/lzma_decoder.c:lzma_decode
++ 8,375,184 (15.56%)  src/transforms/log.c:log_decode
++ 2,356,056 ( 4.38%)  src/algo/decimal.c:log_decode
++ 1,621,592 ( 3.01%)  vendor/xz/liblzma/lz/lz_decoder.h:lzma_decode
++ 1,057,640 ( 1.97%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++   978,411 ( 1.82%)  src/transforms/log.c:get_ints
++## ratio.npy.txt
++15,163,289 (71.55%)  vendor/xz/liblzma/lzma/lzma_decoder.c:lzma_decode
++ 1,588,428 ( 7.50%)  src/transforms/graph.c:fi_inv_8_8_0
++   972,807 ( 4.59%)  vendor/xz/liblzma/lz/lz_decoder.h:lzma_decode
++   706,704 ( 3.33%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gn
++    88,244 ( 0.42%)  /usr/include/x86_64-linux-gnu/bits/string_fortified.h:fi_inv_8_8_0
++## ratio.samba.txt
++466,013,193 (58.16%)  src/algo/qlfc_model.h:qlfc_adaptive_decode
++114,936,684 (14.34%)  src/algo/qlfc.c:qlfc_adaptive_decode
++ 65,617,622 ( 8.19%)  src/algo/qlfc_tables.h:qlfc_adaptive_decode
++ 45,063,909 ( 5.62%)  src/algo/rangecoder.h:qlfc_adaptive_decode
++ 27,045,825 ( 3.38%)  src/algo/sais/sais.c:libsais_unbwt_calculate_biPSI
++ 26,967,644 ( 3.37%)  src/algo/lzp.c:lzp_decode_block
++ 14,317,616 ( 1.79%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_chk_avx_unaligned_erms [/usr/lib/x86_64-lin
++## ratio.text.txt
++553,848,648 (57.66%)  src/algo/qlfc_model.h:qlfc_adaptive_decode
++145,529,592 (15.15%)  src/algo/qlfc.c:qlfc_adaptive_decode
++ 83,346,913 ( 8.68%)  src/algo/qlfc_tables.h:qlfc_adaptive_decode
++ 53,186,429 ( 5.54%)  src/algo/rangecoder.h:qlfc_adaptive_decode
++ 37,806,961 ( 3.94%)  src/algo/sais/sais.c:libsais_unbwt_calculate_biPSI
++ 22,352,237 ( 2.33%)  src/algo/lzp.c:lzp_decode_block
++ 19,972,845 ( 2.08%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_chk_avx_unaligned_erms [/usr/lib/x86_64-lin
++## ratio.wav.txt
++1,121,141,852 (71.51%)  src/codecs/audio.c:ka_decode_leaf
++  292,849,563 (18.68%)  avx2intrin.h:ka_decode_leaf
++   73,697,797 ( 4.70%)  src/codecs/audio.c:ka_lpc_restore
++   51,944,265 ( 3.31%)  avxintrin.h:ka_decode_leaf
++
++--------------------------------------------------------------------------------
++## ratio.xray.txt
++217,021,821 (84.38%)  vendor/xz/liblzma/lzma/lzma_decoder.c:lzma_decode
++ 17,998,152 ( 7.00%)  src/transforms/sci.c:img16_inv
++  8,590,048 ( 3.34%)  vendor/xz/liblzma/lz/lz_decoder.h:lzma_decode
++
++--------------------------------------------------------------------------------
++-- Auto-annotated source: vendor/xz/liblzma/lzma/lzma_decoder.c
++## ratio.y4m.txt
++328,976,153 (55.22%)  src/algo/qlfc_model.h:qlfc_adaptive_decode
++ 91,470,491 (15.35%)  src/algo/qlfc.c:qlfc_adaptive_decode
++ 51,582,841 ( 8.66%)  src/algo/qlfc_tables.h:qlfc_adaptive_decode
++ 30,832,431 ( 5.18%)  src/algo/rangecoder.h:qlfc_adaptive_decode
++ 20,968,457 ( 3.52%)  src/algo/sais/sais.c:libsais_unbwt_calculate_biPSI
++ 19,980,928 ( 3.35%)  src/algo/lzp.c:lzp_decode_block
++ 14,678,133 ( 2.46%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_chk_avx_unaligned_erms [/usr/lib/x86_64-lin
++## speed.csv.txt
++11,173,876 (20.30%)  src/algo/decimal.c:fmt_dec_swar
++10,898,385 (19.80%)  src/transforms/table.c:tbl2_decode
++10,369,264 (18.84%)  src/transforms/table.c:tbl2_stream
++ 2,124,329 ( 3.86%)  avx2intrin.h:tbl2_stream
++ 1,818,978 ( 3.30%)  src/arch/x86_64/decimal_avx2.c:tbl2_stream
++ 1,425,620 ( 2.59%)  src/transforms/table.c:num_decode
++## speed.json.txt
++ 2,415,857 (16.26%)  vendor/lz4/lz4.c:LZ4_decompress_safe
++    42,774 ( 0.29%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++## speed.logs.txt
++ 3,111,089 (19.92%)  vendor/lz4/lz4.c:LZ4_decompress_safe
++    89,686 ( 0.57%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++    32,715 ( 0.21%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
++## speed.npy.txt
++1,584,259 (30.86%)  src/transforms/shuffle.c:shuffle_inv
++  706,640 (13.77%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu
++  308,183 ( 6.00%)  vendor/lz4/lz4.c:LZ4_decompress_safe
++   22,588 ( 0.44%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++## speed.samba.txt
++ 5,884,862 (31.75%)  vendor/lz4/lz4.c:LZ4_decompress_safe
++   193,198 ( 1.04%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++    70,239 ( 0.38%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
++## speed.text.txt
++ 8,557,781 (40.09%)  vendor/lz4/lz4.c:LZ4_decompress_safe
++   294,660 ( 1.38%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   107,018 ( 0.50%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
++
++## speed.wav.txt
++ 3,861,465 (19.48%)  vendor/lz4/lz4.c:LZ4_decompress_safe
++ 1,572,864 ( 7.93%)  emmintrin.h:kolmo_planes_merge_sse2
++   346,092 ( 1.75%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   196,676 ( 0.99%)  src/arch/x86_64/planes_tmpl.h:kolmo_planes_merge_sse2
++   125,762 ( 0.63%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
++## speed.xray.txt
++ 7,080,183 (32.73%)  vendor/lz4/lz4.c:LZ4_decompress_safe
++ 1,500,000 ( 6.93%)  emmintrin.h:kolmo_planes_merge_sse2
++   350,384 ( 1.62%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   187,568 ( 0.87%)  src/arch/x86_64/planes_tmpl.h:kolmo_planes_merge_sse2
++   127,219 ( 0.59%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
++## speed.y4m.txt
++ 5,708,546 (29.92%)  vendor/lz4/lz4.c:LZ4_decompress_safe
++ 1,368,648 ( 7.17%)  emmintrin.h:kolmo_planes_merge_sse2
++   364,882 ( 1.91%)  avx2intrin.h:XXH3_hashLong_64b_withSeed.constprop.0
++   171,484 ( 0.90%)  src/arch/x86_64/planes_tmpl.h:kolmo_planes_merge_sse2
++   132,474 ( 0.69%)  src/arch/../../vendor/xxhash/xxhash.h:XXH3_hashLong_64b_withSeed.constprop.0
++## x.csv.txt
++3,099,817,914 (72.27%)  src/codecs/gr6.c:g6_bit.isra.0
++  385,417,509 ( 8.99%)  src/codecs/gr6.c:gr6_decompress
++  201,559,067 ( 4.70%)  src/codecs/gr6.c:g6_cm_init
++  158,600,358 ( 3.70%)  src/codecs/gr6.c:g6_set
++  137,633,848 ( 3.21%)  src/codecs/gr6.c:g6_unit
++   68,232,690 ( 1.59%)  src/codecs/gr6.c:g6_val
++   42,514,248 ( 0.99%)  src/codecs/gr6.c:g6_render
++## x.text.txt
++60,352,881,013 (86.67%)  src/codecs/cm.c:cm_dec_gen.isra.0
++ 3,760,000,000 ( 5.40%)  avx2intrin.h:kolmo_cm_dot_avx2
++ 1,808,000,000 ( 2.60%)  avx2intrin.h:kolmo_cm_train_avx2
++   992,000,000 ( 1.42%)  src/arch/x86_64/mixer_avx2.c:kolmo_cm_dot_avx2
++   752,000,000 ( 1.08%)  src/arch/x86_64/mixer_avx2.c:kolmo_cm_train_avx2
++   656,000,000 ( 0.94%)  avxintrin.h:kolmo_cm_train_avx2
++   540,000,000 ( 0.78%)  avx2intrin.h:kolmo_cm_hash_avx2
+diff --git a/benchmark/rc3w3/decmap/results/natbench_klzh.txt b/benchmark/rc3w3/decmap/results/natbench_klzh.txt
+new file mode 100644
+index 00000000..453cfe52
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/results/natbench_klzh.txt
+@@ -0,0 +1,18 @@
++base klzh1    T1  in   131199203  out    41668805  ratio  3.149  c    330.9 MB/s  d   1250.3 MB/s
++base klzh3    T1  in   131199203  out    40380649  ratio  3.249  c    204.9 MB/s  d   1134.8 MB/s
++base klzh5    T1  in   131199203  out    38021297  ratio  3.451  c     53.6 MB/s  d   1134.4 MB/s
++new klzh1    T1  in   131199203  out    41668805  ratio  3.149  c    315.9 MB/s  d   1375.7 MB/s
++new klzh3    T1  in   131199203  out    40380649  ratio  3.249  c    244.4 MB/s  d   1255.6 MB/s
++new klzh5    T1  in   131199203  out    38021297  ratio  3.451  c     50.7 MB/s  d   1298.1 MB/s
++base klzh1    T1  in   131199203  out    41668805  ratio  3.149  c    315.3 MB/s  d   1172.9 MB/s
++base klzh3    T1  in   131199203  out    40380649  ratio  3.249  c    183.3 MB/s  d   1137.5 MB/s
++base klzh5    T1  in   131199203  out    38021297  ratio  3.451  c     51.4 MB/s  d   1180.9 MB/s
++new klzh1    T1  in   131199203  out    41668805  ratio  3.149  c    316.1 MB/s  d   1317.7 MB/s
++new klzh3    T1  in   131199203  out    40380649  ratio  3.249  c    194.2 MB/s  d   1143.3 MB/s
++new klzh5    T1  in   131199203  out    38021297  ratio  3.451  c     52.7 MB/s  d   1341.0 MB/s
++base klzh1    T1  in   131199203  out    41668805  ratio  3.149  c    318.9 MB/s  d   1204.3 MB/s
++base klzh3    T1  in   131199203  out    40380649  ratio  3.249  c    225.1 MB/s  d   1130.6 MB/s
++base klzh5    T1  in   131199203  out    38021297  ratio  3.451  c     63.8 MB/s  d   1137.4 MB/s
++new klzh1    T1  in   131199203  out    41668805  ratio  3.149  c    306.0 MB/s  d   1366.2 MB/s
++new klzh3    T1  in   131199203  out    40380649  ratio  3.249  c    192.9 MB/s  d   1066.3 MB/s
++new klzh5    T1  in   131199203  out    38021297  ratio  3.451  c     58.2 MB/s  d   1384.9 MB/s
+diff --git a/benchmark/rc3w3/decmap/results/table.md b/benchmark/rc3w3/decmap/results/table.md
+new file mode 100644
+index 00000000..8bee897c
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/results/table.md
+@@ -0,0 +1,139 @@
++| frame (mode/file) | raw bytes | frame bytes | T1 rc3 MB/s | T1 branch MB/s | T1 | T4 rc3 MB/s | T4 branch MB/s | T4 |
++|---|---:|---:|---:|---:|---:|---:|---:|---:|
++| balanced/akiyo60.y4m | 9124244 | 1689972 | 1009.5 | 1015.6 | +0.6% | 2814.3 | 2856.2 | +1.5% |
++| balanced/countries-aggregated.csv | 5512931 | 345917 | 710.2 | 726.7 | +2.3% | 1886.4 | 1903.4 | +0.9% |
++| balanced/dickens | 10192446 | 3721196 | 1294.3 | 1227.6 | -5.2% | 4795.8 | 4739.7 | -1.2% |
++| balanced/energy_f64.npy | 23938176 | 2569911 | 556.6 | 572.5 | +2.9% | 2223.2 | 2248.1 | +1.1% |
++| balanced/esc5.wav | 2205044 | 735897 | 145.2 | 146.1 | +0.6% | 223.4 | 223.0 | -0.2% |
++| balanced/logs.log | 5050776 | 383214 | 1392.5 | 1406.3 | +1.0% | 4158.4 | 4071.4 | -2.1% |
++| balanced/mr | 9970564 | 2316612 | 360.7 | 358.8 | -0.5% | 1436.3 | 1465.6 | +2.0% |
++| balanced/nci | 33553445 | 2027737 | 1011.8 | 1030.3 | +1.8% | 4582.2 | 4716.2 | +2.9% |
++| balanced/osdb | 10085684 | 3533740 | 1538.8 | 1538.1 | -0.0% | 5950.8 | 5965.3 | +0.2% |
++| balanced/owid-co2-data.csv | 15242657 | 1392694 | 570.9 | 556.2 | -2.6% | 2366.0 | 2314.0 | -2.2% |
++| balanced/owid.json | 30926608 | 1411138 | 603.2 | 666.5 | +10.5% | 2355.4 | 2630.9 | +11.7% |
++| balanced/population_i64.npy | 353120 | 70890 | 1100.3 | 1083.0 | -1.6% | 1103.4 | 1136.9 | +3.0% |
++| balanced/samba | 21606400 | 5044560 | 1687.2 | 1658.3 | -1.7% | 6603.3 | 6822.3 | +3.3% |
++| balanced/sao | 7251944 | 2302435 | 1171.3 | 1166.5 | -0.4% | 4058.2 | 3998.3 | -1.5% |
++| balanced/webster | 41458703 | 12151927 | 1106.1 | 1177.4 | +6.4% | 4402.6 | 4367.3 | -0.8% |
++| balanced/x-ray | 8474240 | 3657342 | 924.2 | 919.6 | -0.5% | 3546.0 | 3545.6 | -0.0% |
++| balanced/xml | 5345280 | 652714 | 2100.7 | 2104.7 | +0.2% | 5273.5 | 5071.0 | -3.8% |
++| eco/akiyo60.y4m | 9124244 | 1555934 | 539.8 | 540.9 | +0.2% | 546.3 | 605.4 | +10.8% |
++| eco/countries-aggregated.csv | 5512931 | 327367 | 427.3 | 423.8 | -0.8% | 413.5 | 436.6 | +5.6% |
++| eco/dickens | 10192446 | 2881188 | 276.6 | 330.4 | +19.4% | 295.2 | 308.5 | +4.5% |
++| eco/energy_f64.npy | 23938176 | 2538439 | 367.1 | 360.8 | -1.7% | 487.7 | 491.1 | +0.7% |
++| eco/esc5.wav | 2205044 | 735746 | 150.6 | 156.1 | +3.6% | 158.9 | 153.5 | -3.4% |
++| eco/logs.log | 5050776 | 91069 | 1120.1 | 1188.0 | +6.1% | 1122.6 | 1092.5 | -2.7% |
++| eco/mr | 9970564 | 2265155 | 235.9 | 231.7 | -1.8% | 225.2 | 227.9 | +1.2% |
++| eco/nci | 33553445 | 1804631 | 560.1 | 532.5 | -4.9% | 1249.5 | 1262.5 | +1.0% |
++| eco/osdb | 10085684 | 3152826 | 442.7 | 443.9 | +0.3% | 475.6 | 480.8 | +1.1% |
++| eco/owid-co2-data.csv | 15242657 | 1309130 | 341.2 | 322.3 | -5.5% | 340.8 | 341.1 | +0.1% |
++| eco/owid.json | 30926608 | 1217857 | 424.2 | 507.9 | +19.7% | 821.7 | 912.4 | +11.0% |
++| eco/population_i64.npy | 353120 | 69781 | 507.4 | 501.8 | -1.1% | 499.1 | 505.2 | +1.2% |
++| eco/samba | 21606400 | 4250276 | 596.4 | 611.8 | +2.6% | 785.1 | 790.9 | +0.7% |
++| eco/sao | 7251944 | 2213186 | 433.1 | 434.4 | +0.3% | 436.7 | 436.5 | -0.1% |
++| eco/webster | 41458703 | 9834135 | 410.8 | 475.4 | +15.7% | 1029.1 | 1254.4 | +21.9% |
++| eco/x-ray | 8474240 | 3625650 | 250.5 | 255.1 | +1.8% | 253.3 | 255.6 | +0.9% |
++| eco/xml | 5345280 | 468409 | 556.4 | 621.3 | +11.7% | 587.5 | 634.7 | +8.0% |
++| hc/akiyo60.y4m | 9124244 | 1401586 | 1258.1 | 1242.4 | -1.2% | 1457.7 | 1405.4 | -3.6% |
++| hc/countries-aggregated.csv | 5512931 | 327637 | 713.9 | 706.6 | -1.0% | 756.0 | 709.5 | -6.2% |
++| hc/dickens | 10192446 | 2728251 | 538.7 | 664.3 | +23.3% | 493.7 | 604.5 | +22.4% |
++| hc/energy_f64.npy | 23938176 | 2514653 | 477.1 | 468.1 | -1.9% | 749.5 | 767.6 | +2.4% |
++| hc/esc5.wav | 2205044 | 735746 | 149.5 | 151.7 | +1.4% | 152.8 | 152.8 | -0.0% |
++| hc/logs.log | 5050776 | 91657 | 1782.2 | 1787.8 | +0.3% | 1775.3 | 1810.1 | +2.0% |
++| hc/mr | 9970564 | 2257516 | 309.6 | 317.2 | +2.5% | 326.4 | 325.2 | -0.4% |
++| hc/nci | 33553445 | 1645823 | 635.3 | 680.8 | +7.2% | 1646.0 | 1712.3 | +4.0% |
++| hc/osdb | 10085684 | 3100225 | 1246.1 | 1274.2 | +2.2% | 1337.9 | 1337.9 | +0.0% |
++| hc/owid-co2-data.csv | 15242657 | 1291252 | 506.7 | 545.9 | +7.7% | 551.4 | 604.4 | +9.6% |
++| hc/owid.json | 30926608 | 847144 | 611.4 | 679.9 | +11.2% | 1133.6 | 1288.5 | +13.7% |
++| hc/population_i64.npy | 353120 | 68188 | 1160.0 | 1120.2 | -3.4% | 1120.8 | 1109.4 | -1.0% |
++| hc/samba | 21606400 | 3959908 | 1677.8 | 1645.5 | -1.9% | 2148.4 | 2066.6 | -3.8% |
++| hc/sao | 7251944 | 2214262 | 931.0 | 928.4 | -0.3% | 825.9 | 959.6 | +16.2% |
++| hc/webster | 41458703 | 8858048 | 861.1 | 852.8 | -1.0% | 2365.4 | 2334.6 | -1.3% |
++| hc/x-ray | 8474240 | 3649636 | 925.8 | 908.6 | -1.9% | 913.0 | 902.2 | -1.2% |
++| hc/xml | 5345280 | 443624 | 851.3 | 1033.7 | +21.4% | 859.4 | 1026.6 | +19.5% |
++| n-balanced/dickens | 10192446 | 3754554 | 1026.4 | 1262.8 | +23.0% | 3814.8 | 4721.9 | +23.8% |
++| n-balanced/logs.log | 5050776 | 397284 | 1353.3 | 1394.6 | +3.1% | 3778.8 | 3901.8 | +3.3% |
++| n-balanced/osdb | 10085684 | 3572135 | 1293.7 | 1484.3 | +14.7% | 5174.5 | 5750.9 | +11.1% |
++| n-balanced/owid-co2-data.csv | 15242657 | 1431200 | 549.3 | 556.7 | +1.4% | 2337.5 | 2340.2 | +0.1% |
++| n-balanced/samba | 21606400 | 5278933 | 1482.7 | 1744.7 | +17.7% | 5861.2 | 6720.4 | +14.7% |
++| n-balanced/xml | 5345280 | 693710 | 2035.4 | 2317.4 | +13.9% | 5040.8 | 5676.5 | +12.6% |
++| n-eco/dickens | 10192446 | 3075023 | 496.4 | 670.9 | +35.1% | 476.6 | 633.2 | +32.9% |
++| n-eco/logs.log | 5050776 | 102307 | 1836.0 | 1842.1 | +0.3% | 1753.0 | 1893.4 | +8.0% |
++| n-eco/osdb | 10085684 | 3356565 | 1180.8 | 1388.8 | +17.6% | 1065.6 | 1187.9 | +11.5% |
++| n-eco/owid-co2-data.csv | 15242657 | 1425209 | 542.4 | 554.6 | +2.2% | 549.6 | 632.6 | +15.1% |
++| n-eco/samba | 21606400 | 4706762 | 1614.9 | 1928.2 | +19.4% | 2063.6 | 2328.1 | +12.8% |
++| n-eco/xml | 5345280 | 547457 | 828.7 | 1054.1 | +27.2% | 803.1 | 1002.6 | +24.8% |
++| n-hc/dickens | 10192446 | 2968964 | 428.6 | 644.8 | +50.5% | 507.4 | 673.5 | +32.7% |
++| n-hc/logs.log | 5050776 | 101671 | 1627.6 | 1953.8 | +20.0% | 1884.6 | 1951.5 | +3.6% |
++| n-hc/osdb | 10085684 | 3309605 | 1173.4 | 1318.1 | +12.3% | 1113.1 | 1293.2 | +16.2% |
++| n-hc/owid-co2-data.csv | 15242657 | 1396207 | 540.5 | 558.5 | +3.3% | 581.6 | 590.8 | +1.6% |
++| n-hc/samba | 21606400 | 4583339 | 1597.8 | 1889.7 | +18.3% | 2166.9 | 2504.9 | +15.6% |
++| n-hc/xml | 5345280 | 515815 | 846.2 | 1054.5 | +24.6% | 856.0 | 1046.8 | +22.3% |
++| n-ratio/dickens | 10192446 | 2254558 | 20.5 | 20.3 | -1.1% | 42.2 | 44.0 | +4.2% |
++| n-ratio/logs.log | 5050776 | 83145 | 632.0 | 635.7 | +0.6% | 634.8 | 634.3 | -0.1% |
++| n-ratio/osdb | 10085684 | 2206574 | 19.7 | 20.1 | +1.7% | 38.6 | 39.7 | +2.8% |
++| n-ratio/owid-co2-data.csv | 15242657 | 1227039 | 171.9 | 172.5 | +0.3% | 171.5 | 173.1 | +0.9% |
++| n-ratio/samba | 21606400 | 3757941 | 127.3 | 128.1 | +0.7% | 127.4 | 126.1 | -1.0% |
++| n-ratio/xml | 5345280 | 385428 | 53.1 | 52.7 | -0.7% | 71.2 | 70.8 | -0.6% |
++| n-speed/dickens | 10192446 | 5606154 | 2229.4 | 2216.6 | -0.6% | 8195.4 | 8517.2 | +3.9% |
++| n-speed/logs.log | 5050776 | 883229 | 3818.7 | 3801.9 | -0.4% | 10407.9 | 9887.8 | -5.0% |
++| n-speed/osdb | 10085684 | 4601209 | 2813.6 | 2902.4 | +3.2% | 10406.1 | 10439.0 | +0.3% |
++| n-speed/owid-co2-data.csv | 15242657 | 1776460 | 630.6 | 645.6 | +2.4% | 2500.5 | 2477.0 | -0.9% |
++| n-speed/samba | 21606400 | 7173400 | 3127.6 | 3167.8 | +1.3% | 11164.4 | 11033.1 | -1.2% |
++| n-speed/xml | 5345280 | 1087797 | 3088.9 | 3264.2 | +5.7% | 7733.3 | 7750.8 | +0.2% |
++| ratio/akiyo60.y4m | 9124244 | 1261294 | 34.7 | 34.1 | -1.8% | 39.1 | 38.6 | -1.3% |
++| ratio/countries-aggregated.csv | 5512931 | 308846 | 307.2 | 304.5 | -0.9% | 298.2 | 294.1 | -1.4% |
++| ratio/dickens | 10192446 | 2254558 | 20.8 | 21.5 | +3.6% | 42.8 | 44.7 | +4.6% |
++| ratio/energy_f64.npy | 23938176 | 2003968 | 52.9 | 52.9 | -0.0% | 97.2 | 104.5 | +7.5% |
++| ratio/esc5.wav | 2205044 | 708505 | 15.6 | 15.6 | -0.4% | 15.8 | 15.8 | +0.1% |
++| ratio/logs.log | 5050776 | 83560 | 836.7 | 817.0 | -2.4% | 841.9 | 841.9 | +0.0% |
++| ratio/mr | 9970564 | 1989774 | 23.5 | 23.5 | -0.2% | 25.6 | 25.0 | -2.6% |
++| ratio/nci | 33553445 | 1199630 | 67.1 | 68.2 | +1.6% | 199.9 | 196.9 | -1.5% |
++| ratio/osdb | 10085684 | 2206574 | 20.5 | 20.2 | -1.2% | 38.6 | 39.2 | +1.5% |
++| ratio/owid-co2-data.csv | 15242657 | 1223833 | 226.5 | 226.6 | +0.0% | 213.8 | 211.3 | -1.2% |
++| ratio/owid.json | 30926608 | 802204 | 304.2 | 313.0 | +2.9% | 294.2 | 301.4 | +2.4% |
++| ratio/population_i64.npy | 353120 | 66301 | 176.6 | 177.2 | +0.4% | 168.2 | 168.3 | +0.0% |
++| ratio/samba | 21606400 | 3739524 | 163.2 | 170.5 | +4.5% | 160.6 | 163.0 | +1.5% |
++| ratio/sao | 7251944 | 2184759 | 117.0 | 120.7 | +3.2% | 121.8 | 115.0 | -5.5% |
++| ratio/webster | 41458703 | 6439824 | 27.0 | 27.9 | +3.5% | 81.8 | 79.6 | -2.6% |
++| ratio/x-ray | 8474240 | 3616667 | 73.3 | 74.9 | +2.1% | 71.3 | 71.6 | +0.4% |
++| ratio/xml | 5345280 | 385428 | 53.5 | 54.2 | +1.4% | 71.5 | 70.4 | -1.6% |
++| speed/akiyo60.y4m | 9124244 | 7783930 | 2479.0 | 2389.6 | -3.6% | 7361.8 | 7851.6 | +6.7% |
++| speed/countries-aggregated.csv | 5512931 | 452389 | 800.4 | 797.9 | -0.3% | 2171.4 | 2112.6 | -2.7% |
++| speed/dickens | 10192446 | 6437034 | 3374.0 | 3387.1 | +0.4% | 11608.5 | 12405.1 | +6.9% |
++| speed/energy_f64.npy | 23938176 | 4093082 | 6525.3 | 6370.9 | -2.4% | 19557.0 | 21451.8 | +9.7% |
++| speed/esc5.wav | 2205044 | 1476564 | 3406.6 | 3411.1 | +0.1% | 5794.4 | 6277.1 | +8.3% |
++| speed/logs.log | 5050776 | 928813 | 5133.8 | 5189.2 | +1.1% | 13419.9 | 13695.2 | +2.1% |
++| speed/mr | 9970564 | 5303688 | 2826.4 | 2864.5 | +1.3% | 9976.3 | 10092.1 | +1.2% |
++| speed/nci | 33553445 | 5539251 | 5106.1 | 4852.2 | -5.0% | 19571.0 | 19955.8 | +2.0% |
++| speed/osdb | 10085684 | 5273313 | 3358.4 | 3405.8 | +1.4% | 10590.2 | 10177.1 | -3.9% |
++| speed/owid-co2-data.csv | 15242657 | 1829430 | 627.6 | 621.4 | -1.0% | 2479.4 | 2520.1 | +1.6% |
++| speed/owid.json | 30926608 | 3475619 | 6435.2 | 6473.1 | +0.6% | 22924.2 | 22918.6 | -0.0% |
++| speed/population_i64.npy | 353120 | 96310 | 2014.2 | 2074.9 | +3.0% | 2038.0 | 2049.3 | +0.6% |
++| speed/samba | 21606400 | 7728497 | 4262.8 | 4154.1 | -2.6% | 14311.2 | 13672.0 | -4.5% |
++| speed/sao | 7251944 | 6791955 | 3870.2 | 3740.5 | -3.4% | 12674.9 | 12844.9 | +1.3% |
++| speed/webster | 41458703 | 20149426 | 2513.7 | 2465.0 | -1.9% | 11092.1 | 11076.5 | -0.1% |
++| speed/x-ray | 8474240 | 6332994 | 2672.1 | 2612.7 | -2.2% | 9486.6 | 9290.4 | -2.1% |
++| speed/xml | 5345280 | 1232806 | 3972.5 | 3828.0 | -3.6% | 9372.7 | 9420.6 | +0.5% |
++| x/countries-aggregated.csv | 5512931 | 283038 | 4.1 | 3.9 | -3.9% | 4.0 | 3.9 | -1.3% |
++| x/dickens | 10192446 | 2168559 | 0.2 | 0.2 | +4.8% | 0.2 | 0.2 | +0.0% |
++| x/esc5.wav | 2205044 | 708505 | 15.6 | 15.6 | -0.2% | 14.2 | 15.7 | +10.8% |
++| x/logs.log | 5050776 | 72971 | 1.6 | 1.5 | -4.4% | 1.6 | 1.6 | -1.2% |
++| x/owid-co2-data.csv | 15242657 | 1127837 | 2.4 | 2.6 | +7.5% | 2.5 | 2.6 | +5.3% |
++| x/population_i64.npy | 353120 | 66301 | 143.9 | 151.7 | +5.4% | 146.6 | 150.1 | +2.4% |
++| x/x-ray | 8474240 | 3560964 | 0.4 | 0.4 | +0.0% | 0.5 | 0.4 | -4.4% |
++| x/xml | 5345280 | 300720 | 0.3 | 0.3 | -3.3% | 0.3 | 0.3 | +0.0% |
++
++| mode | files | T1 geomean | T4 geomean |
++|---|---:|---:|---:|
++| balanced | 17 | +0.8% | +0.8% |
++| eco | 17 | +3.6% | +3.5% |
++| hc | 17 | +3.5% | +3.9% |
++| n-balanced | 6 | +12.0% | +10.7% |
++| n-eco | 6 | +16.3% | +17.2% |
++| n-hc | 6 | +20.7% | +14.8% |
++| n-ratio | 6 | +0.2% | +1.0% |
++| n-speed | 6 | +1.9% | -0.5% |
++| ratio | 17 | +0.9% | -0.0% |
++| speed | 17 | -1.1% | +1.5% |
++| x | 8 | +0.6% | +1.3% |
+diff --git a/benchmark/rc3w3/decmap/table.py b/benchmark/rc3w3/decmap/table.py
+new file mode 100644
+index 00000000..f657b0d8
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/table.py
+@@ -0,0 +1,24 @@
++# table.py RESULTS_DIR : per-file markdown table and per-mode geometric means from the A/B jsonl files
++# (later files override earlier rows of the same frame and thread count: the re-measured outliers).
++import json, sys, math, collections, os
++D = sys.argv[1]; rows = {}
++for fn in ['ab_T1.jsonl', 'ab_T4.jsonl', 'ab_x.jsonl', 'ab_re.jsonl', 'ab_re2.jsonl']:
++    p = os.path.join(D, fn)
++    if os.path.exists(p):
++        for l in open(p): r = json.loads(l); rows[(r['frame'], r['T'])] = r
++frames = sorted({f for f, _ in rows}, key=lambda f: (f.split('/')[0], f))
++print('| frame (mode/file) | raw bytes | frame bytes | T1 rc3 MB/s | T1 branch MB/s | T1 | T4 rc3 MB/s | T4 branch MB/s | T4 |')
++print('|---|---:|---:|---:|---:|---:|---:|---:|---:|')
++g = collections.defaultdict(list)
++for f in frames:
++    c = [rows.get((f, t)) for t in (1, 4)]; r0 = c[0] or c[1]
++    cells = []
++    for t, r in zip((1, 4), c):
++        if r: cells += [f"{r['A_MBs']:.1f}", f"{r['B_MBs']:.1f}", f"{r['gain']:+.1%}"]; g[(f.split('/')[0], t)].append(math.log(r['B_MBs'] / r['A_MBs']))
++        else: cells += ['—'] * 3
++    print(f"| {f.replace('.k', '')} | {r0['size']} | {r0['csize']} | " + ' | '.join(cells) + ' |')
++print('\n| mode | files | T1 geomean | T4 geomean |\n|---|---:|---:|---:|')
++for m in sorted({m for m, _ in g}):
++    a, b = g.get((m, 1), []), g.get((m, 4), [])
++    fm = lambda v: f"{math.exp(sum(v) / len(v)) - 1:+.1%}" if v else '—'
++    print(f"| {m} | {max(len(a), len(b))} | {fm(a)} | {fm(b)} |")
+diff --git a/benchmark/rc3w3/decmap/unbwtbench.c b/benchmark/rc3w3/decmap/unbwtbench.c
+new file mode 100644
+index 00000000..72bf9074
+--- /dev/null
++++ b/benchmark/rc3w3/decmap/unbwtbench.c
+@@ -0,0 +1,30 @@
++/* unbwtbench: inverse BWT stage alone against the index sampling interval (decmap lane). unbwtbench FILE... */
++#define _GNU_SOURCE
++#include "algo/sais/sais.h"
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <time.h>
++#include <unistd.h>
++static double now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
++int main(int argc, char **argv) {
++    int T = (int)sysconf(_SC_NPROCESSORS_ONLN);
++    for (int a = 1; a < argc; a++) {
++        FILE *f = fopen(argv[a], "rb"); fseek(f, 0, SEEK_END); int n = (int)ftell(f); fseek(f, 0, SEEK_SET);
++        uint8_t *s = malloc(n), *b = malloc(n), *d = malloc(n); int32_t *A = malloc((size_t)n * 4 + 16), *P = malloc((size_t)n * 4 + 16);
++        if (fread(s, 1, n, f) != (size_t)n) return 1; fclose(f);
++        for (int k = 8; k <= 256; k *= 2) {
++            int rlog = 1; while ((((int64_t)n - 1) >> rlog) >= k) rlog++;
++            int32_t r = 1 << rlog, I[257];
++            if (kolmo_sais_bwt_aux(s, b, A, n, r, I, T)) return 1;
++            double bt[2] = {1e9, 1e9};
++            for (int ti = 0; ti < 2; ti++) for (int rep = 0; rep < 5; rep++) {
++                double t0 = now(); kolmo_sais_unbwt_aux(b, d, P, n, r, I, ti ? T : 1); double t = now() - t0;
++                if (memcmp(d, s, n)) { printf("MISMATCH\n"); return 1; }
++                if (t < bt[ti]) bt[ti] = t;
++            }
++            printf("%-12s n=%d idx=%3d  unbwt T1 %.0f MB/s  T%d %.0f MB/s\n", strrchr(argv[a], '/') + 1, n, (n - 1) / r + 1, n / bt[0] / 1e6, T, n / bt[1] / 1e6); fflush(stdout);
++        }
++    }
++    return 0;
++}
+diff --git a/bindings/python/native/src/algo/khuf.c b/bindings/python/native/src/algo/khuf.c
+index a6d1a537..e7f7fd94 100644
+--- a/bindings/python/native/src/algo/khuf.c
++++ b/bindings/python/native/src/algo/khuf.c
+@@ -73,7 +73,17 @@ int kolmo_khuf_lengths(const uint32_t cnt[256], int nsym, int maxlen, uint8_t le
+     return m;
+ }
+ 
+-static inline uint32_t kh_rev(uint32_t c, int l) { uint32_t r = 0; for (int i = 0; i < l; i++) { r = (r << 1) | (c & 1); c >>= 1; } return r; }
++/* bit reversal of the low l bits (l <= 16) through a byte table (constant data; was a bit loop: decmap lane) */
++static const uint8_t KH_REV8[256] = {
++#define R2(n) n, n + 2 * 64, n + 1 * 64, n + 3 * 64
++#define R4(n) R2(n), R2(n + 2 * 16), R2(n + 1 * 16), R2(n + 3 * 16)
++#define R6(n) R4(n), R4(n + 2 * 4), R4(n + 1 * 4), R4(n + 3 * 4)
++    R6(0), R6(2), R6(1), R6(3)
++#undef R2
++#undef R4
++#undef R6
++};
++static inline uint32_t kh_rev(uint32_t c, int l) { return ((uint32_t)KH_REV8[c & 255] << 8 | KH_REV8[(c >> 8) & 255]) >> (16 - l); }
+ /* canonical codes, bit-reversed for least-significant-first output; returns the longest length, or -1 when the Kraft
+  * sum is not exactly one */
+ static int kh_codes(const uint8_t len[256], int nsym, uint16_t code[256]) {
+@@ -159,6 +169,10 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
+     uint8_t len[256]; uint16_t code[256]; size_t i = 0;
+     if (kh_read_table(in, cn, &i, len)) return -1;
+     int T = kh_codes(len, 256, code); if (T < 1) return -1;
++    /* one table of the T-bit codes; with the two-symbol loop (n >= 4096) it is built at 11 bits, the width that loop
++     * needs, and the other loops index it with 11 bits too (they never consume more than the code's length, and the
++     * bits above it are the next codes or zeros), so one table is built instead of two (decmap lane) */
++    if (n >= 4096) T = KHUF_MAXLEN;
+     uint16_t dt[1 << KHUF_MAXLEN]; const uint64_t mask = ((uint64_t)1 << T) - 1;
+     for (int s = 0; s < 256; s++) if (len[s]) for (uint32_t k = code[s]; k < (1u << T); k += 1u << len[s]) dt[k] = (uint16_t)(s | len[s] << 8);
+     uint64_t L[4]; size_t tot = 0;
+@@ -176,8 +190,7 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
+          * the remaining bits, the second (low 16 bits: the symbols; bits 16-23: bits used; bits 24-31: 1 or 2).
+          * Five lookups per refill (5 x 11 <= 56 bits), so up to ten bytes; each stream stops ten bytes before the
+          * next stream's start (two-byte stores) and finishes below */
+-        uint16_t d1[1 << KHUF_MAXLEN]; uint32_t d2[1 << KHUF_MAXLEN]; const uint32_t M = (1u << KHUF_MAXLEN) - 1;
+-        for (int s = 0; s < 256; s++) if (len[s]) for (uint32_t k = code[s]; k < (1u << KHUF_MAXLEN); k += 1u << len[s]) d1[k] = (uint16_t)(s | len[s] << 8);
++        const uint16_t *d1 = dt; uint32_t d2[1 << KHUF_MAXLEN]; const uint32_t M = (1u << KHUF_MAXLEN) - 1;
+         for (uint32_t k = 0; k <= M; k++) {
+             uint32_t e1 = d1[k], l1 = e1 >> 8, e2 = d1[k >> l1], l2 = e2 >> 8;
+             d2[k] = l1 + l2 <= KHUF_MAXLEN ? (e1 & 255) | (e2 & 255) << 8 | (l1 + l2) << 16 | 2u << 24 : (e1 & 255) | l1 << 16 | 1u << 24;
+diff --git a/bindings/python/native/src/algo/klz.c b/bindings/python/native/src/algo/klz.c
+index ad7b604b..1038601d 100644
+--- a/bindings/python/native/src/algo/klz.c
++++ b/bindings/python/native/src/algo/klz.c
+@@ -329,15 +329,17 @@ int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
+     kz_br br = {0, 0, in + i, in + cn};
+     const uint8_t *lp = lit, *le = lit + nl, *llc = st[1], *mlc = st[2], *ofc = st[3];
+     uint32_t LB[72]; uint8_t LN[72]; kz_ltab(LB, LN);
+-    { unsigned mx = 0, mo = 0; for (size_t k = 0; k < ns; k++) { mx |= llc[k] | mlc[k]; mo = ofc[k] > mo ? ofc[k] : mo; }   /* codes in range */
+-      if (mx >= 128 || mo > 26) goto out;
+-      for (size_t k = 0; k < ns; k++) if (llc[k] >= 72 || mlc[k] >= 72) goto out; }
++    { unsigned ml = 0, mo = 0;                                  /* codes in range: one pass, maxima only (decmap lane) */
++      for (size_t k = 0; k < ns; k++) { unsigned a = llc[k] > mlc[k] ? llc[k] : mlc[k]; ml = a > ml ? a : ml; mo = ofc[k] > mo ? ofc[k] : mo; }
++      if (ml >= 72 || mo > 26) goto out; }
+     uint8_t *op = out, *oe = out + n; uint32_t rep[3] = {1, 4, 8};
+     for (size_t k = 0; k < ns; k++) {
+         uint32_t ll, ml, off; unsigned oc = ofc[k], a = llc[k], b = mlc[k];
++        /* after a refill at least 56 bits are buffered; the next refill only when the extra bits left need it */
+         kz_refill(&br); ll = LB[a] + kz_bget(&br, LN[a]);
+-        kz_refill(&br); ml = LB[b] + kz_bget(&br, LN[b]) + 4;
+-        if (oc >= 3) { int h = (int)oc - 3; kz_refill(&br); off = (1u << h) | kz_bget(&br, h); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
++        if (br.c < LN[b]) kz_refill(&br);
++        ml = LB[b] + kz_bget(&br, LN[b]) + 4;
++        if (oc >= 3) { int h = (int)oc - 3; if (br.c < h) kz_refill(&br); off = (1u << h) | kz_bget(&br, h); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
+         else if (oc == 0) off = rep[0];
+         else if (oc == 1) { off = rep[1]; rep[1] = rep[0]; rep[0] = off; }
+         else { off = rep[2]; rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
+diff --git a/bindings/python/native/src/arch/x86_64/word_avx2.c b/bindings/python/native/src/arch/x86_64/word_avx2.c
+new file mode 100644
+index 00000000..fc535e26
+--- /dev/null
++++ b/bindings/python/native/src/arch/x86_64/word_avx2.c
+@@ -0,0 +1,70 @@
++/* AVX2: word transform decoder (C reference: the loop of word_decode in transforms/word.c; the NEON version is
++ * arch/aarch64/word_neon.c, same contract). Decmap lane, rc3 wave 3.
++ *
++ * The reference scans for the next special byte (a code prefix, or the capital marker in front of one) after every
++ * token, with a byte table lookup per input byte when a prefix is >= 32. Here 64 input bytes are classified at once:
++ * membership in the special set is a 256-bit bitmap looked up with two in-lane byte shuffles (low nibble -> bit row,
++ * high nibble -> bit), compares give the capital markers, and the tokens of the window are taken from the two 64-bit
++ * masks with count-trailing-zeros. Literal runs move in 16-byte pieces and words in three 16-byte pieces from their
++ * 64-byte slots; bytes written past a token are overwritten by the next one, as in the reference. It decodes whole
++ * tokens while 80 bytes of input and 2048 bytes of output room remain and stops at a token boundary (or in front of a
++ * token the reference rejects), where the C loop goes on. Same bytes; tests/test_arch.c compares it with the C loop
++ * (kolmo_force_c). Chosen by CPUID on baseline x86-64 builds. */
++#if defined(KOLMO_FMT_AVX2) && !defined(KOLMO_NO_ASM)
++#define KOLMO_WD_AVX2 1
++#include <immintrin.h>
++/* bytes of v that are in the set: lo[n] has bit h set when byte 16 h + n (h < 8) is special, hi[n] the same for
++ * h >= 8; bit[h] = 1 << (h & 7) */
++KOLMO_TARGET_AVX2 static inline __m256i wd_member(__m256i v, __m256i lo, __m256i hi, __m256i bit) {
++    const __m256i m8f = _mm256_set1_epi8((char)0x8F), m80 = _mm256_set1_epi8((char)0x80), m0f = _mm256_set1_epi8(0x0F);
++    __m256i rows = _mm256_or_si256(_mm256_shuffle_epi8(lo, _mm256_and_si256(v, m8f)),                  /* v < 128 */
++                                   _mm256_shuffle_epi8(hi, _mm256_and_si256(_mm256_xor_si256(v, m80), m8f)));   /* v >= 128 */
++    __m256i b = _mm256_shuffle_epi8(bit, _mm256_and_si256(_mm256_srli_epi16(v, 4), m0f));
++    return _mm256_cmpeq_epi8(_mm256_and_si256(rows, b), b);
++}
++KOLMO_TARGET_AVX2 static void kolmo_wd_dec_avx2(const uint8_t **pp, const uint8_t *end, uint8_t **po, uint8_t *oe,
++                                                const uint8_t *arena, const uint8_t *wl, uint32_t nw, const int16_t *pidx,
++                                                uint8_t capb, const uint8_t *special) {
++    const uint8_t *p = *pp; uint8_t *o = *po;
++    uint8_t tl[16] = {0}, th[16] = {0}, tb[16];
++    for (int b = 0; b < 256; b++) if (special[b]) { if (b < 128) tl[b & 15] |= (uint8_t)(1u << (b >> 4)); else th[b & 15] |= (uint8_t)(1u << ((b >> 4) - 8)); }
++    for (int h = 0; h < 16; h++) tb[h] = (uint8_t)(1u << (h & 7));
++    const __m256i lo = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)tl));
++    const __m256i hi = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)th));
++    const __m256i bit = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)tb));
++    const __m256i vc = _mm256_set1_epi8((char)capb);
++    const __m128i capclr[2] = {_mm_set1_epi8((char)0xFF), _mm_setr_epi8((char)0xDF, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1)};
++    /* per 64-byte window at most 64 literal bytes plus 32 words of at most 48 bytes (each written as 48) */
++    while (end - p >= 80 && oe - o >= 2048) {
++        __m256i v0 = _mm256_loadu_si256((const __m256i *)p), v1 = _mm256_loadu_si256((const __m256i *)(p + 32));
++        const uint64_t S = (uint32_t)_mm256_movemask_epi8(wd_member(v0, lo, hi, bit)) | (uint64_t)(uint32_t)_mm256_movemask_epi8(wd_member(v1, lo, hi, bit)) << 32;
++        const uint64_t C = (uint32_t)_mm256_movemask_epi8(_mm256_cmpeq_epi8(v0, vc)) | (uint64_t)(uint32_t)_mm256_movemask_epi8(_mm256_cmpeq_epi8(v1, vc)) << 32;
++        const uint64_t P = S & ~C;
++        uint64_t rest = S; unsigned c = 0;
++        for (;;) {
++            if (!rest) {                                         /* no token left in the window: the rest is literal */
++                for (unsigned k = c; k < 64; k += 16) _mm_storeu_si128((__m128i *)(o + (k - c)), _mm_loadu_si128((const __m128i *)(p + k)));
++                o += 64 - c; p += 64;
++                break;
++            }
++            unsigned t = (unsigned)__builtin_ctzll(rest);
++            for (unsigned k = c; k < t; k += 16) _mm_storeu_si128((__m128i *)(o + (k - c)), _mm_loadu_si128((const __m128i *)(p + k)));
++            o += t - c;
++            unsigned cf = (unsigned)(C >> t) & 1, e = t + cf + 2;
++            if (e > 64) { p += t; break; }                       /* the token crosses the window: start one at it */
++            if (cf && !((P >> (t + 1)) & 1)) { *pp = p + t; *po = o; return; }   /* not a prefix: the C loop rejects it */
++            uint32_t code = (uint32_t)pidx[p[t + cf]] << 8 | p[t + cf + 1];
++            if (code >= nw) { *pp = p + t; *po = o; return; }
++            const uint8_t *src = arena + (size_t)code * 64;
++            _mm_storeu_si128((__m128i *)o, _mm_and_si128(_mm_loadu_si128((const __m128i *)src), capclr[cf]));
++            _mm_storeu_si128((__m128i *)(o + 16), _mm_loadu_si128((const __m128i *)(src + 16)));
++            _mm_storeu_si128((__m128i *)(o + 32), _mm_loadu_si128((const __m128i *)(src + 32)));
++            o += wl[code];
++            c = e;
++            if (c >= 64) { p += 64; break; }
++            rest = S & (~0ull << c);
++        }
++    }
++    *pp = p; *po = o;
++}
++#endif
+diff --git a/bindings/python/native/src/kolmo.c b/bindings/python/native/src/kolmo.c
+index 1ff61a8d..95bc2790 100644
+--- a/bindings/python/native/src/kolmo.c
++++ b/bindings/python/native/src/kolmo.c
+@@ -35,6 +35,7 @@ int kolmo_force_c;
+ #include "arch/aarch64/table_neon.c"
+ #include "arch/aarch64/dec64_neon.c"
+ #endif
++#include "arch/x86_64/word_avx2.c"      /* x86 AVX2 word decoder (decmap lane), chosen by CPUID; same contract as the NEON one */
+ 
+ #include "core/memory.c"
+ #include "transforms/table_v03.c"
+diff --git a/bindings/python/native/src/transforms/word.c b/bindings/python/native/src/transforms/word.c
+index 07e473b3..316b9a43 100644
+--- a/bindings/python/native/src/transforms/word.c
++++ b/bindings/python/native/src/transforms/word.c
+@@ -169,6 +169,9 @@ static int word_decode(const uint8_t *in, size_t tn, uint8_t *out, size_t n) {
+     uint8_t *o = out, *oe = out + n;
+ #if KOLMO_NEON
+     if (!kolmo_force_c) kolmo_wd_dec_neon(&p, end, &o, oe, arena, wl, nw, pidx, capb, special);   /* most tokens */
++#endif
++#if defined(KOLMO_WD_AVX2)
++    if (!kolmo_force_c && kolmo_have_avx2()) kolmo_wd_dec_avx2(&p, end, &o, oe, arena, wl, nw, pidx, capb, special);   /* most tokens */
+ #endif
+     while (p < end) {
+         const uint8_t *s = p;
+diff --git a/bindings/rust/native/src/algo/khuf.c b/bindings/rust/native/src/algo/khuf.c
+index a6d1a537..e7f7fd94 100644
+--- a/bindings/rust/native/src/algo/khuf.c
++++ b/bindings/rust/native/src/algo/khuf.c
+@@ -73,7 +73,17 @@ int kolmo_khuf_lengths(const uint32_t cnt[256], int nsym, int maxlen, uint8_t le
+     return m;
+ }
+ 
+-static inline uint32_t kh_rev(uint32_t c, int l) { uint32_t r = 0; for (int i = 0; i < l; i++) { r = (r << 1) | (c & 1); c >>= 1; } return r; }
++/* bit reversal of the low l bits (l <= 16) through a byte table (constant data; was a bit loop: decmap lane) */
++static const uint8_t KH_REV8[256] = {
++#define R2(n) n, n + 2 * 64, n + 1 * 64, n + 3 * 64
++#define R4(n) R2(n), R2(n + 2 * 16), R2(n + 1 * 16), R2(n + 3 * 16)
++#define R6(n) R4(n), R4(n + 2 * 4), R4(n + 1 * 4), R4(n + 3 * 4)
++    R6(0), R6(2), R6(1), R6(3)
++#undef R2
++#undef R4
++#undef R6
++};
++static inline uint32_t kh_rev(uint32_t c, int l) { return ((uint32_t)KH_REV8[c & 255] << 8 | KH_REV8[(c >> 8) & 255]) >> (16 - l); }
+ /* canonical codes, bit-reversed for least-significant-first output; returns the longest length, or -1 when the Kraft
+  * sum is not exactly one */
+ static int kh_codes(const uint8_t len[256], int nsym, uint16_t code[256]) {
+@@ -159,6 +169,10 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
+     uint8_t len[256]; uint16_t code[256]; size_t i = 0;
+     if (kh_read_table(in, cn, &i, len)) return -1;
+     int T = kh_codes(len, 256, code); if (T < 1) return -1;
++    /* one table of the T-bit codes; with the two-symbol loop (n >= 4096) it is built at 11 bits, the width that loop
++     * needs, and the other loops index it with 11 bits too (they never consume more than the code's length, and the
++     * bits above it are the next codes or zeros), so one table is built instead of two (decmap lane) */
++    if (n >= 4096) T = KHUF_MAXLEN;
+     uint16_t dt[1 << KHUF_MAXLEN]; const uint64_t mask = ((uint64_t)1 << T) - 1;
+     for (int s = 0; s < 256; s++) if (len[s]) for (uint32_t k = code[s]; k < (1u << T); k += 1u << len[s]) dt[k] = (uint16_t)(s | len[s] << 8);
+     uint64_t L[4]; size_t tot = 0;
+@@ -176,8 +190,7 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
+          * the remaining bits, the second (low 16 bits: the symbols; bits 16-23: bits used; bits 24-31: 1 or 2).
+          * Five lookups per refill (5 x 11 <= 56 bits), so up to ten bytes; each stream stops ten bytes before the
+          * next stream's start (two-byte stores) and finishes below */
+-        uint16_t d1[1 << KHUF_MAXLEN]; uint32_t d2[1 << KHUF_MAXLEN]; const uint32_t M = (1u << KHUF_MAXLEN) - 1;
+-        for (int s = 0; s < 256; s++) if (len[s]) for (uint32_t k = code[s]; k < (1u << KHUF_MAXLEN); k += 1u << len[s]) d1[k] = (uint16_t)(s | len[s] << 8);
++        const uint16_t *d1 = dt; uint32_t d2[1 << KHUF_MAXLEN]; const uint32_t M = (1u << KHUF_MAXLEN) - 1;
+         for (uint32_t k = 0; k <= M; k++) {
+             uint32_t e1 = d1[k], l1 = e1 >> 8, e2 = d1[k >> l1], l2 = e2 >> 8;
+             d2[k] = l1 + l2 <= KHUF_MAXLEN ? (e1 & 255) | (e2 & 255) << 8 | (l1 + l2) << 16 | 2u << 24 : (e1 & 255) | l1 << 16 | 1u << 24;
+diff --git a/bindings/rust/native/src/algo/klz.c b/bindings/rust/native/src/algo/klz.c
+index ad7b604b..1038601d 100644
+--- a/bindings/rust/native/src/algo/klz.c
++++ b/bindings/rust/native/src/algo/klz.c
+@@ -329,15 +329,17 @@ int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
+     kz_br br = {0, 0, in + i, in + cn};
+     const uint8_t *lp = lit, *le = lit + nl, *llc = st[1], *mlc = st[2], *ofc = st[3];
+     uint32_t LB[72]; uint8_t LN[72]; kz_ltab(LB, LN);
+-    { unsigned mx = 0, mo = 0; for (size_t k = 0; k < ns; k++) { mx |= llc[k] | mlc[k]; mo = ofc[k] > mo ? ofc[k] : mo; }   /* codes in range */
+-      if (mx >= 128 || mo > 26) goto out;
+-      for (size_t k = 0; k < ns; k++) if (llc[k] >= 72 || mlc[k] >= 72) goto out; }
++    { unsigned ml = 0, mo = 0;                                  /* codes in range: one pass, maxima only (decmap lane) */
++      for (size_t k = 0; k < ns; k++) { unsigned a = llc[k] > mlc[k] ? llc[k] : mlc[k]; ml = a > ml ? a : ml; mo = ofc[k] > mo ? ofc[k] : mo; }
++      if (ml >= 72 || mo > 26) goto out; }
+     uint8_t *op = out, *oe = out + n; uint32_t rep[3] = {1, 4, 8};
+     for (size_t k = 0; k < ns; k++) {
+         uint32_t ll, ml, off; unsigned oc = ofc[k], a = llc[k], b = mlc[k];
++        /* after a refill at least 56 bits are buffered; the next refill only when the extra bits left need it */
+         kz_refill(&br); ll = LB[a] + kz_bget(&br, LN[a]);
+-        kz_refill(&br); ml = LB[b] + kz_bget(&br, LN[b]) + 4;
+-        if (oc >= 3) { int h = (int)oc - 3; kz_refill(&br); off = (1u << h) | kz_bget(&br, h); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
++        if (br.c < LN[b]) kz_refill(&br);
++        ml = LB[b] + kz_bget(&br, LN[b]) + 4;
++        if (oc >= 3) { int h = (int)oc - 3; if (br.c < h) kz_refill(&br); off = (1u << h) | kz_bget(&br, h); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
+         else if (oc == 0) off = rep[0];
+         else if (oc == 1) { off = rep[1]; rep[1] = rep[0]; rep[0] = off; }
+         else { off = rep[2]; rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
+diff --git a/bindings/rust/native/src/arch/x86_64/word_avx2.c b/bindings/rust/native/src/arch/x86_64/word_avx2.c
+new file mode 100644
+index 00000000..fc535e26
+--- /dev/null
++++ b/bindings/rust/native/src/arch/x86_64/word_avx2.c
+@@ -0,0 +1,70 @@
++/* AVX2: word transform decoder (C reference: the loop of word_decode in transforms/word.c; the NEON version is
++ * arch/aarch64/word_neon.c, same contract). Decmap lane, rc3 wave 3.
++ *
++ * The reference scans for the next special byte (a code prefix, or the capital marker in front of one) after every
++ * token, with a byte table lookup per input byte when a prefix is >= 32. Here 64 input bytes are classified at once:
++ * membership in the special set is a 256-bit bitmap looked up with two in-lane byte shuffles (low nibble -> bit row,
++ * high nibble -> bit), compares give the capital markers, and the tokens of the window are taken from the two 64-bit
++ * masks with count-trailing-zeros. Literal runs move in 16-byte pieces and words in three 16-byte pieces from their
++ * 64-byte slots; bytes written past a token are overwritten by the next one, as in the reference. It decodes whole
++ * tokens while 80 bytes of input and 2048 bytes of output room remain and stops at a token boundary (or in front of a
++ * token the reference rejects), where the C loop goes on. Same bytes; tests/test_arch.c compares it with the C loop
++ * (kolmo_force_c). Chosen by CPUID on baseline x86-64 builds. */
++#if defined(KOLMO_FMT_AVX2) && !defined(KOLMO_NO_ASM)
++#define KOLMO_WD_AVX2 1
++#include <immintrin.h>
++/* bytes of v that are in the set: lo[n] has bit h set when byte 16 h + n (h < 8) is special, hi[n] the same for
++ * h >= 8; bit[h] = 1 << (h & 7) */
++KOLMO_TARGET_AVX2 static inline __m256i wd_member(__m256i v, __m256i lo, __m256i hi, __m256i bit) {
++    const __m256i m8f = _mm256_set1_epi8((char)0x8F), m80 = _mm256_set1_epi8((char)0x80), m0f = _mm256_set1_epi8(0x0F);
++    __m256i rows = _mm256_or_si256(_mm256_shuffle_epi8(lo, _mm256_and_si256(v, m8f)),                  /* v < 128 */
++                                   _mm256_shuffle_epi8(hi, _mm256_and_si256(_mm256_xor_si256(v, m80), m8f)));   /* v >= 128 */
++    __m256i b = _mm256_shuffle_epi8(bit, _mm256_and_si256(_mm256_srli_epi16(v, 4), m0f));
++    return _mm256_cmpeq_epi8(_mm256_and_si256(rows, b), b);
++}
++KOLMO_TARGET_AVX2 static void kolmo_wd_dec_avx2(const uint8_t **pp, const uint8_t *end, uint8_t **po, uint8_t *oe,
++                                                const uint8_t *arena, const uint8_t *wl, uint32_t nw, const int16_t *pidx,
++                                                uint8_t capb, const uint8_t *special) {
++    const uint8_t *p = *pp; uint8_t *o = *po;
++    uint8_t tl[16] = {0}, th[16] = {0}, tb[16];
++    for (int b = 0; b < 256; b++) if (special[b]) { if (b < 128) tl[b & 15] |= (uint8_t)(1u << (b >> 4)); else th[b & 15] |= (uint8_t)(1u << ((b >> 4) - 8)); }
++    for (int h = 0; h < 16; h++) tb[h] = (uint8_t)(1u << (h & 7));
++    const __m256i lo = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)tl));
++    const __m256i hi = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)th));
++    const __m256i bit = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)tb));
++    const __m256i vc = _mm256_set1_epi8((char)capb);
++    const __m128i capclr[2] = {_mm_set1_epi8((char)0xFF), _mm_setr_epi8((char)0xDF, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1)};
++    /* per 64-byte window at most 64 literal bytes plus 32 words of at most 48 bytes (each written as 48) */
++    while (end - p >= 80 && oe - o >= 2048) {
++        __m256i v0 = _mm256_loadu_si256((const __m256i *)p), v1 = _mm256_loadu_si256((const __m256i *)(p + 32));
++        const uint64_t S = (uint32_t)_mm256_movemask_epi8(wd_member(v0, lo, hi, bit)) | (uint64_t)(uint32_t)_mm256_movemask_epi8(wd_member(v1, lo, hi, bit)) << 32;
++        const uint64_t C = (uint32_t)_mm256_movemask_epi8(_mm256_cmpeq_epi8(v0, vc)) | (uint64_t)(uint32_t)_mm256_movemask_epi8(_mm256_cmpeq_epi8(v1, vc)) << 32;
++        const uint64_t P = S & ~C;
++        uint64_t rest = S; unsigned c = 0;
++        for (;;) {
++            if (!rest) {                                         /* no token left in the window: the rest is literal */
++                for (unsigned k = c; k < 64; k += 16) _mm_storeu_si128((__m128i *)(o + (k - c)), _mm_loadu_si128((const __m128i *)(p + k)));
++                o += 64 - c; p += 64;
++                break;
++            }
++            unsigned t = (unsigned)__builtin_ctzll(rest);
++            for (unsigned k = c; k < t; k += 16) _mm_storeu_si128((__m128i *)(o + (k - c)), _mm_loadu_si128((const __m128i *)(p + k)));
++            o += t - c;
++            unsigned cf = (unsigned)(C >> t) & 1, e = t + cf + 2;
++            if (e > 64) { p += t; break; }                       /* the token crosses the window: start one at it */
++            if (cf && !((P >> (t + 1)) & 1)) { *pp = p + t; *po = o; return; }   /* not a prefix: the C loop rejects it */
++            uint32_t code = (uint32_t)pidx[p[t + cf]] << 8 | p[t + cf + 1];
++            if (code >= nw) { *pp = p + t; *po = o; return; }
++            const uint8_t *src = arena + (size_t)code * 64;
++            _mm_storeu_si128((__m128i *)o, _mm_and_si128(_mm_loadu_si128((const __m128i *)src), capclr[cf]));
++            _mm_storeu_si128((__m128i *)(o + 16), _mm_loadu_si128((const __m128i *)(src + 16)));
++            _mm_storeu_si128((__m128i *)(o + 32), _mm_loadu_si128((const __m128i *)(src + 32)));
++            o += wl[code];
++            c = e;
++            if (c >= 64) { p += 64; break; }
++            rest = S & (~0ull << c);
++        }
++    }
++    *pp = p; *po = o;
++}
++#endif
+diff --git a/bindings/rust/native/src/kolmo.c b/bindings/rust/native/src/kolmo.c
+index 1ff61a8d..95bc2790 100644
+--- a/bindings/rust/native/src/kolmo.c
++++ b/bindings/rust/native/src/kolmo.c
+@@ -35,6 +35,7 @@ int kolmo_force_c;
+ #include "arch/aarch64/table_neon.c"
+ #include "arch/aarch64/dec64_neon.c"
+ #endif
++#include "arch/x86_64/word_avx2.c"      /* x86 AVX2 word decoder (decmap lane), chosen by CPUID; same contract as the NEON one */
+ 
+ #include "core/memory.c"
+ #include "transforms/table_v03.c"
+diff --git a/bindings/rust/native/src/transforms/word.c b/bindings/rust/native/src/transforms/word.c
+index 07e473b3..316b9a43 100644
+--- a/bindings/rust/native/src/transforms/word.c
++++ b/bindings/rust/native/src/transforms/word.c
+@@ -169,6 +169,9 @@ static int word_decode(const uint8_t *in, size_t tn, uint8_t *out, size_t n) {
+     uint8_t *o = out, *oe = out + n;
+ #if KOLMO_NEON
+     if (!kolmo_force_c) kolmo_wd_dec_neon(&p, end, &o, oe, arena, wl, nw, pidx, capb, special);   /* most tokens */
++#endif
++#if defined(KOLMO_WD_AVX2)
++    if (!kolmo_force_c && kolmo_have_avx2()) kolmo_wd_dec_avx2(&p, end, &o, oe, arena, wl, nw, pidx, capb, special);   /* most tokens */
+ #endif
+     while (p < end) {
+         const uint8_t *s = p;
+diff --git a/research/CODECS.md b/research/CODECS.md
+index 5d8fcaf6..de2a94a3 100644
+--- a/research/CODECS.md
++++ b/research/CODECS.md
+@@ -172,6 +172,14 @@ Measured on held-out files of 10 dataset families, one thread, against zstd at t
+ | IMG16 median inverse as a wavefront | — | not possible: a row's first sample predicts from the previous row's last one (rows are serial) | out |
+ | rANS order-0 decode with a packed slot table | eco/hc leaves | −5% to +1% (noise) | out |
+ | metadata: packed content stored without coding (meta lane, rc3 wave 2) | magic numbers of compressed formats; a block is stored when every 16 KiB slice has collision entropy ≥ 7.8 bits (integer test) and LZ4 saves < 1% | deflated NPZ: `hc` 1.92 → 0.04 s, `max` 4.30 → 0.03 s; gzip CSV `hc` 0.14 → 0.006 s; size equal (one 6 KB JPEG +65 B) | **in** (rc3 wave 2) |
++| AVX2 word-transform decoder (decmap lane, rc3 wave 3; `src/arch/x86_64/word_avx2.c`) | decode of word-transform blocks (text, JSON) on x86 | 64 bytes classified per step (special-byte bitmap via two in-lane shuffles), tokens by count-trailing-zeros, like the NEON kernel; same frames: text `eco`/`hc` +14.8% (1 thread) / +12.1% (4), JSON `balanced`/`eco`/`hc` +13.7% / +12.1%, hc/dickens +23% (`benchmark/rc3w3/decmap/RESULTS.md`) | **in** (decoder only) |
++| khuf table build: one 11-bit table, constant bit-reversal table (decmap lane) | codec 27 and KLZH decode | per-block fixed cost 7.8 → 6.2 µs (4 KiB blocks); Silesia khuf decode +7.6% to +8.9%; same frames | **in** (decoder only) |
++| KLZH sequence loop: one validation pass, refills on demand (decmap lane) | codec 29 decode | KLZH1 +10%, KLZH3 +10%, KLZH5 +17% (Silesia, 1 thread); with khuf above, `KOLMO_NATIVE=all` frames of `balanced`/`eco`/`hc` +16.3% (1 thread) / +14.2% (4) | **in** (decoder only) |
++| Huffman decode tables shipped in the frame (decmap lane) | codec 27 | 4–8 KiB per ≤ 128 KiB block (+3% to +6% size) to save ≤ 8% of decode; a per-file table reused by all chunks saves ≤ 3% | dropped |
++| more sampled inverse-BWT indexes, 8 → 255 (decmap lane) | codec 18 decode | +32 to +900 B per block; decode within noise at 1 and 4 threads (dickens 19.4 → 19.8–22.0 MB/s, not monotonic; samba +0–3%); the inverse is ~4% of `ratio` text decode, adaptive QLFC 85% | dropped |
++| GR6+ precomputed rank / move-to-front / dictionary tables (decmap lane) | codec 26 decode | all field decisions are 8.5% of the decoder's instructions (CM bit coder 72%): < 5% possible | not built |
++| CM squash/stretch/state tables as constant data (decmap lane) | codec 7, 26 | already built once per process (0.30 ms, 0.01% of a 5 MB `-x` decode) | no change |
++| kaud profile 0: whole-word bit-buffer refill (decmap lane) | codec 19 decode | ±2% on 4 WAV frames (Rice loop and LPC restore are compute-bound) | dropped |
+ 
+ ## Routing (rc3 wave 2, router lane)
+ 
+diff --git a/src/algo/khuf.c b/src/algo/khuf.c
+index a6d1a537..e7f7fd94 100644
+--- a/src/algo/khuf.c
++++ b/src/algo/khuf.c
+@@ -73,7 +73,17 @@ int kolmo_khuf_lengths(const uint32_t cnt[256], int nsym, int maxlen, uint8_t le
+     return m;
+ }
+ 
+-static inline uint32_t kh_rev(uint32_t c, int l) { uint32_t r = 0; for (int i = 0; i < l; i++) { r = (r << 1) | (c & 1); c >>= 1; } return r; }
++/* bit reversal of the low l bits (l <= 16) through a byte table (constant data; was a bit loop: decmap lane) */
++static const uint8_t KH_REV8[256] = {
++#define R2(n) n, n + 2 * 64, n + 1 * 64, n + 3 * 64
++#define R4(n) R2(n), R2(n + 2 * 16), R2(n + 1 * 16), R2(n + 3 * 16)
++#define R6(n) R4(n), R4(n + 2 * 4), R4(n + 1 * 4), R4(n + 3 * 4)
++    R6(0), R6(2), R6(1), R6(3)
++#undef R2
++#undef R4
++#undef R6
++};
++static inline uint32_t kh_rev(uint32_t c, int l) { return ((uint32_t)KH_REV8[c & 255] << 8 | KH_REV8[(c >> 8) & 255]) >> (16 - l); }
+ /* canonical codes, bit-reversed for least-significant-first output; returns the longest length, or -1 when the Kraft
+  * sum is not exactly one */
+ static int kh_codes(const uint8_t len[256], int nsym, uint16_t code[256]) {
+@@ -159,6 +169,10 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
+     uint8_t len[256]; uint16_t code[256]; size_t i = 0;
+     if (kh_read_table(in, cn, &i, len)) return -1;
+     int T = kh_codes(len, 256, code); if (T < 1) return -1;
++    /* one table of the T-bit codes; with the two-symbol loop (n >= 4096) it is built at 11 bits, the width that loop
++     * needs, and the other loops index it with 11 bits too (they never consume more than the code's length, and the
++     * bits above it are the next codes or zeros), so one table is built instead of two (decmap lane) */
++    if (n >= 4096) T = KHUF_MAXLEN;
+     uint16_t dt[1 << KHUF_MAXLEN]; const uint64_t mask = ((uint64_t)1 << T) - 1;
+     for (int s = 0; s < 256; s++) if (len[s]) for (uint32_t k = code[s]; k < (1u << T); k += 1u << len[s]) dt[k] = (uint16_t)(s | len[s] << 8);
+     uint64_t L[4]; size_t tot = 0;
+@@ -176,8 +190,7 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
+          * the remaining bits, the second (low 16 bits: the symbols; bits 16-23: bits used; bits 24-31: 1 or 2).
+          * Five lookups per refill (5 x 11 <= 56 bits), so up to ten bytes; each stream stops ten bytes before the
+          * next stream's start (two-byte stores) and finishes below */
+-        uint16_t d1[1 << KHUF_MAXLEN]; uint32_t d2[1 << KHUF_MAXLEN]; const uint32_t M = (1u << KHUF_MAXLEN) - 1;
+-        for (int s = 0; s < 256; s++) if (len[s]) for (uint32_t k = code[s]; k < (1u << KHUF_MAXLEN); k += 1u << len[s]) d1[k] = (uint16_t)(s | len[s] << 8);
++        const uint16_t *d1 = dt; uint32_t d2[1 << KHUF_MAXLEN]; const uint32_t M = (1u << KHUF_MAXLEN) - 1;
+         for (uint32_t k = 0; k <= M; k++) {
+             uint32_t e1 = d1[k], l1 = e1 >> 8, e2 = d1[k >> l1], l2 = e2 >> 8;
+             d2[k] = l1 + l2 <= KHUF_MAXLEN ? (e1 & 255) | (e2 & 255) << 8 | (l1 + l2) << 16 | 2u << 24 : (e1 & 255) | l1 << 16 | 1u << 24;
+diff --git a/src/algo/klz.c b/src/algo/klz.c
+index ad7b604b..1038601d 100644
+--- a/src/algo/klz.c
++++ b/src/algo/klz.c
+@@ -329,15 +329,17 @@ int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
+     kz_br br = {0, 0, in + i, in + cn};
+     const uint8_t *lp = lit, *le = lit + nl, *llc = st[1], *mlc = st[2], *ofc = st[3];
+     uint32_t LB[72]; uint8_t LN[72]; kz_ltab(LB, LN);
+-    { unsigned mx = 0, mo = 0; for (size_t k = 0; k < ns; k++) { mx |= llc[k] | mlc[k]; mo = ofc[k] > mo ? ofc[k] : mo; }   /* codes in range */
+-      if (mx >= 128 || mo > 26) goto out;
+-      for (size_t k = 0; k < ns; k++) if (llc[k] >= 72 || mlc[k] >= 72) goto out; }
++    { unsigned ml = 0, mo = 0;                                  /* codes in range: one pass, maxima only (decmap lane) */
++      for (size_t k = 0; k < ns; k++) { unsigned a = llc[k] > mlc[k] ? llc[k] : mlc[k]; ml = a > ml ? a : ml; mo = ofc[k] > mo ? ofc[k] : mo; }
++      if (ml >= 72 || mo > 26) goto out; }
+     uint8_t *op = out, *oe = out + n; uint32_t rep[3] = {1, 4, 8};
+     for (size_t k = 0; k < ns; k++) {
+         uint32_t ll, ml, off; unsigned oc = ofc[k], a = llc[k], b = mlc[k];
++        /* after a refill at least 56 bits are buffered; the next refill only when the extra bits left need it */
+         kz_refill(&br); ll = LB[a] + kz_bget(&br, LN[a]);
+-        kz_refill(&br); ml = LB[b] + kz_bget(&br, LN[b]) + 4;
+-        if (oc >= 3) { int h = (int)oc - 3; kz_refill(&br); off = (1u << h) | kz_bget(&br, h); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
++        if (br.c < LN[b]) kz_refill(&br);
++        ml = LB[b] + kz_bget(&br, LN[b]) + 4;
++        if (oc >= 3) { int h = (int)oc - 3; if (br.c < h) kz_refill(&br); off = (1u << h) | kz_bget(&br, h); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
+         else if (oc == 0) off = rep[0];
+         else if (oc == 1) { off = rep[1]; rep[1] = rep[0]; rep[0] = off; }
+         else { off = rep[2]; rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
+diff --git a/src/arch/x86_64/word_avx2.c b/src/arch/x86_64/word_avx2.c
+new file mode 100644
+index 00000000..fc535e26
+--- /dev/null
++++ b/src/arch/x86_64/word_avx2.c
+@@ -0,0 +1,70 @@
++/* AVX2: word transform decoder (C reference: the loop of word_decode in transforms/word.c; the NEON version is
++ * arch/aarch64/word_neon.c, same contract). Decmap lane, rc3 wave 3.
++ *
++ * The reference scans for the next special byte (a code prefix, or the capital marker in front of one) after every
++ * token, with a byte table lookup per input byte when a prefix is >= 32. Here 64 input bytes are classified at once:
++ * membership in the special set is a 256-bit bitmap looked up with two in-lane byte shuffles (low nibble -> bit row,
++ * high nibble -> bit), compares give the capital markers, and the tokens of the window are taken from the two 64-bit
++ * masks with count-trailing-zeros. Literal runs move in 16-byte pieces and words in three 16-byte pieces from their
++ * 64-byte slots; bytes written past a token are overwritten by the next one, as in the reference. It decodes whole
++ * tokens while 80 bytes of input and 2048 bytes of output room remain and stops at a token boundary (or in front of a
++ * token the reference rejects), where the C loop goes on. Same bytes; tests/test_arch.c compares it with the C loop
++ * (kolmo_force_c). Chosen by CPUID on baseline x86-64 builds. */
++#if defined(KOLMO_FMT_AVX2) && !defined(KOLMO_NO_ASM)
++#define KOLMO_WD_AVX2 1
++#include <immintrin.h>
++/* bytes of v that are in the set: lo[n] has bit h set when byte 16 h + n (h < 8) is special, hi[n] the same for
++ * h >= 8; bit[h] = 1 << (h & 7) */
++KOLMO_TARGET_AVX2 static inline __m256i wd_member(__m256i v, __m256i lo, __m256i hi, __m256i bit) {
++    const __m256i m8f = _mm256_set1_epi8((char)0x8F), m80 = _mm256_set1_epi8((char)0x80), m0f = _mm256_set1_epi8(0x0F);
++    __m256i rows = _mm256_or_si256(_mm256_shuffle_epi8(lo, _mm256_and_si256(v, m8f)),                  /* v < 128 */
++                                   _mm256_shuffle_epi8(hi, _mm256_and_si256(_mm256_xor_si256(v, m80), m8f)));   /* v >= 128 */
++    __m256i b = _mm256_shuffle_epi8(bit, _mm256_and_si256(_mm256_srli_epi16(v, 4), m0f));
++    return _mm256_cmpeq_epi8(_mm256_and_si256(rows, b), b);
++}
++KOLMO_TARGET_AVX2 static void kolmo_wd_dec_avx2(const uint8_t **pp, const uint8_t *end, uint8_t **po, uint8_t *oe,
++                                                const uint8_t *arena, const uint8_t *wl, uint32_t nw, const int16_t *pidx,
++                                                uint8_t capb, const uint8_t *special) {
++    const uint8_t *p = *pp; uint8_t *o = *po;
++    uint8_t tl[16] = {0}, th[16] = {0}, tb[16];
++    for (int b = 0; b < 256; b++) if (special[b]) { if (b < 128) tl[b & 15] |= (uint8_t)(1u << (b >> 4)); else th[b & 15] |= (uint8_t)(1u << ((b >> 4) - 8)); }
++    for (int h = 0; h < 16; h++) tb[h] = (uint8_t)(1u << (h & 7));
++    const __m256i lo = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)tl));
++    const __m256i hi = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)th));
++    const __m256i bit = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)tb));
++    const __m256i vc = _mm256_set1_epi8((char)capb);
++    const __m128i capclr[2] = {_mm_set1_epi8((char)0xFF), _mm_setr_epi8((char)0xDF, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1)};
++    /* per 64-byte window at most 64 literal bytes plus 32 words of at most 48 bytes (each written as 48) */
++    while (end - p >= 80 && oe - o >= 2048) {
++        __m256i v0 = _mm256_loadu_si256((const __m256i *)p), v1 = _mm256_loadu_si256((const __m256i *)(p + 32));
++        const uint64_t S = (uint32_t)_mm256_movemask_epi8(wd_member(v0, lo, hi, bit)) | (uint64_t)(uint32_t)_mm256_movemask_epi8(wd_member(v1, lo, hi, bit)) << 32;
++        const uint64_t C = (uint32_t)_mm256_movemask_epi8(_mm256_cmpeq_epi8(v0, vc)) | (uint64_t)(uint32_t)_mm256_movemask_epi8(_mm256_cmpeq_epi8(v1, vc)) << 32;
++        const uint64_t P = S & ~C;
++        uint64_t rest = S; unsigned c = 0;
++        for (;;) {
++            if (!rest) {                                         /* no token left in the window: the rest is literal */
++                for (unsigned k = c; k < 64; k += 16) _mm_storeu_si128((__m128i *)(o + (k - c)), _mm_loadu_si128((const __m128i *)(p + k)));
++                o += 64 - c; p += 64;
++                break;
++            }
++            unsigned t = (unsigned)__builtin_ctzll(rest);
++            for (unsigned k = c; k < t; k += 16) _mm_storeu_si128((__m128i *)(o + (k - c)), _mm_loadu_si128((const __m128i *)(p + k)));
++            o += t - c;
++            unsigned cf = (unsigned)(C >> t) & 1, e = t + cf + 2;
++            if (e > 64) { p += t; break; }                       /* the token crosses the window: start one at it */
++            if (cf && !((P >> (t + 1)) & 1)) { *pp = p + t; *po = o; return; }   /* not a prefix: the C loop rejects it */
++            uint32_t code = (uint32_t)pidx[p[t + cf]] << 8 | p[t + cf + 1];
++            if (code >= nw) { *pp = p + t; *po = o; return; }
++            const uint8_t *src = arena + (size_t)code * 64;
++            _mm_storeu_si128((__m128i *)o, _mm_and_si128(_mm_loadu_si128((const __m128i *)src), capclr[cf]));
++            _mm_storeu_si128((__m128i *)(o + 16), _mm_loadu_si128((const __m128i *)(src + 16)));
++            _mm_storeu_si128((__m128i *)(o + 32), _mm_loadu_si128((const __m128i *)(src + 32)));
++            o += wl[code];
++            c = e;
++            if (c >= 64) { p += 64; break; }
++            rest = S & (~0ull << c);
++        }
++    }
++    *pp = p; *po = o;
++}
++#endif
+diff --git a/src/kolmo.c b/src/kolmo.c
+index 1ff61a8d..95bc2790 100644
+--- a/src/kolmo.c
++++ b/src/kolmo.c
+@@ -35,6 +35,7 @@ int kolmo_force_c;
+ #include "arch/aarch64/table_neon.c"
+ #include "arch/aarch64/dec64_neon.c"
+ #endif
++#include "arch/x86_64/word_avx2.c"      /* x86 AVX2 word decoder (decmap lane), chosen by CPUID; same contract as the NEON one */
+ 
+ #include "core/memory.c"
+ #include "transforms/table_v03.c"
+diff --git a/src/transforms/word.c b/src/transforms/word.c
+index 07e473b3..316b9a43 100644
+--- a/src/transforms/word.c
++++ b/src/transforms/word.c
+@@ -169,6 +169,9 @@ static int word_decode(const uint8_t *in, size_t tn, uint8_t *out, size_t n) {
+     uint8_t *o = out, *oe = out + n;
+ #if KOLMO_NEON
+     if (!kolmo_force_c) kolmo_wd_dec_neon(&p, end, &o, oe, arena, wl, nw, pidx, capb, special);   /* most tokens */
++#endif
++#if defined(KOLMO_WD_AVX2)
++    if (!kolmo_force_c && kolmo_have_avx2()) kolmo_wd_dec_avx2(&p, end, &o, oe, arena, wl, nw, pidx, capb, special);   /* most tokens */
+ #endif
+     while (p < end) {
+         const uint8_t *s = p;
+diff --git a/tests/test_arch.c b/tests/test_arch.c
+index 74447d3a..9782b4d0 100644
+--- a/tests/test_arch.c
++++ b/tests/test_arch.c
+@@ -287,7 +287,11 @@ static void test_frames(void) {
+ }
+ 
+ int main(void) {
++#if defined(KOLMO_WD_AVX2)
++    printf("kernels: %s\n", kolmo_have_avx2() ? "AVX2 word decoder" : "none (C references only)");
++#else
+     printf("kernels: %s\n", KOLMO_NEON ? "NEON" : "none (C references only)");
++#endif
+     test_frames();
+     test_table();
+     test_intinv();
+-- 
+2.43.0
+

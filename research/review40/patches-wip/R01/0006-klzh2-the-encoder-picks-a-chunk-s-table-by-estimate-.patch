@@ -1,7 +1,7 @@
 From a154f5382451f98f1ef844336e3b5111c3f9fe5e Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 04:47:43 +0000
-Subject: [PATCH 6/8] klzh2: the encoder picks a chunk's table by estimate
+Subject: [PATCH 06/18] klzh2: the encoder picks a chunk's table by estimate
  before coding, heap for the count scaling
 
 A short code chunk was coded twice (own table, predefined table) and a short literal chunk

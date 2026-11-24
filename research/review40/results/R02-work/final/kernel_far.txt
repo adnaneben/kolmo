@@ -1,0 +1,8 @@
+# krtool
+/home/user/kolmo-review40-coord/results/R02-work/res/retina.ppm.res n 5972763 krans 1002227 enc 80.2 MB/s dec 164.8 MB/s RT_OK
+/home/user/kolmo-review40-coord/results/R02-work/res/coins.res n 116352 krans 68390 enc 55.1 MB/s dec 180.4 MB/s RT_OK
+/home/user/kolmo-review40-coord/results/R02-work/res/astronaut.ppm.res n 786432 krans 390550 enc 70.1 MB/s dec 223.8 MB/s RT_OK
+# krtool.far-prototype
+/home/user/kolmo-review40-coord/results/R02-work/res/retina.ppm.res n 5972763 krans 1002227 enc 75.7 MB/s dec 90.0 MB/s RT_OK
+/home/user/kolmo-review40-coord/results/R02-work/res/coins.res n 116352 krans 68390 enc 53.6 MB/s dec 96.1 MB/s RT_OK
+/home/user/kolmo-review40-coord/results/R02-work/res/astronaut.ppm.res n 786432 krans 390550 enc 69.3 MB/s dec 327.3 MB/s RT_OK

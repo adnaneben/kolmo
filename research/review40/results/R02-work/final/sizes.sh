@@ -4,7 +4,7 @@
 # the R02 frame with KOLMO_NATIVE=rans, decoded by R02 with the opt-in unset and compared with cmp, and what the rc3
 # binary does with that frame (same_frame / rc3_decodes / rc3_refuses).
 # usage: sizes.sh OUT.tsv "MODES" FILE...   (appends: file mode raw base default_check krans round_trip rc3)
-B=/home/user/kolmo-review40-base/build/kolmo; K=/home/user/kolmo-review40-coord/results/R02-work/final/kolmo.r02
+B=/home/user/kolmo-review40-base/build/kolmo; K=${K:-/home/user/kolmo-review40-coord/results/R02-work/final/kolmo.r02}   # K=... to test another binary (plan.tsv: kolmo.r02plan)
 out=$1; modes=$2; shift 2; T=$(mktemp -d /home/user/kolmo-review40-coord/results/R02-work/tmp.XXXXXX)
 for f in "$@"; do for m in $modes; do
   if [ "$m" = x ]; then M="-x"; else M="-m $m"; fi

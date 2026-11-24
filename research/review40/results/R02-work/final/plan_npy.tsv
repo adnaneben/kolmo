@@ -1,0 +1,4 @@
+owid_co2_40cols_f64.npy	balanced	18006208	1115119	default_same	1104427	RT_OK	rc3_refuses
+owid_co2_f32.npy	balanced	225204	46486	default_same	46479	RT_OK	rc3_refuses
+owid_population_i64.npy	balanced	450280	76561	default_same	76561	RT_OK	same_frame
+owid_year_i32.npy	balanced	225204	793	default_same	793	RT_OK	same_frame

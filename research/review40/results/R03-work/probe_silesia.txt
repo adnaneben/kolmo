@@ -1,0 +1,20 @@
+/home/user/kolmo-review40-data/silesia/dickens: 10192446 bytes, 1 content run(s) (0.5 ms)
+/home/user/kolmo-review40-data/silesia/mozilla: meta_segments gives 33 segment(s), kind 0: content segments do not apply
+/home/user/kolmo-review40-data/silesia/mr: 9970564 bytes, 1 content run(s) (0.1 ms)
+/home/user/kolmo-review40-data/silesia/nci: 33553445 bytes, 1 content run(s) (0.5 ms)
+/home/user/kolmo-review40-data/silesia/ooffice: meta_segments gives 2 segment(s), kind 2: content segments do not apply
+/home/user/kolmo-review40-data/silesia/osdb: 10085684 bytes, 1 content run(s) (0.2 ms)
+/home/user/kolmo-review40-data/silesia/reymont: 6627202 bytes, 1 content run(s) (0.2 ms)
+/home/user/kolmo-review40-data/silesia/samba: 21606400 bytes, 7 content run(s) (4.2 ms)
+  run 0: [0, 4718599) 4718599 bytes, class binary, cross-run repeats 0 (0.00% of the run); from runs:
+  run 1: [4718599, 10092553) 5373954 bytes, class binary, cross-run repeats 186491 (3.47% of the run); from runs: 186491
+  run 2: [10092553, 12779572) 2687019 bytes, class table('	',3), cross-run repeats 11081 (0.41% of the run); from runs: 0 11081
+  run 3: [12779572, 14483472) 1703900 bytes, class table(';',15), cross-run repeats 15591 (0.92% of the run); from runs: 0 9801 5790
+  run 4: [14483472, 15663111) 1179639 bytes, class binary, cross-run repeats 41272 (3.50% of the run); from runs: 37 1420 0 39815
+  run 5: [15663111, 20316165) 4653054 bytes, class text, cross-run repeats 216059 (4.64% of the run); from runs: 1280 58644 367 132978 22790
+  run 6: [20316165, 21606400) 1290235 bytes, class binary, cross-run repeats 61180 (4.74% of the run); from runs: 7094 7639 0 5936 26467 14044
+  cross-run repeat share: 531674 of 21606400 bytes = 2.461% (probe 40.7 ms)
+/home/user/kolmo-review40-data/silesia/sao: 7251944 bytes, 1 content run(s) (0.2 ms)
+/home/user/kolmo-review40-data/silesia/webster: 41458703 bytes, 1 content run(s) (0.5 ms)
+/home/user/kolmo-review40-data/silesia/x-ray: 8474240 bytes, 1 content run(s) (0.1 ms)
+/home/user/kolmo-review40-data/silesia/xml: 5345280 bytes, 1 content run(s) (0.8 ms)

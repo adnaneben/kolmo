@@ -1,0 +1,30 @@
+From 1fe6a718c951d575549449ef77927ea7e753abc1 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 18 Nov 2026 16:31:52 +0000
+Subject: [PATCH 16/18] Wave-4 LZ lane: record check-suite results in
+ RESULTS.md
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4d834Qb1shisbNUX7e
+
+(cherry picked from commit 3a027805 of the unmerged wave-4 LZ lane; review40/R01, claim
+klz-w4-compat. The check-suite line is the lane's own record for its commits, not a run on
+this branch.)
+---
+ benchmark/w4/lz/RESULTS.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/benchmark/w4/lz/RESULTS.md b/benchmark/w4/lz/RESULTS.md
+index 211d9a24..7b48cc22 100644
+--- a/benchmark/w4/lz/RESULTS.md
++++ b/benchmark/w4/lz/RESULTS.md
+@@ -290,5 +290,5 @@ version-11 codec id and its output is deterministic (one parse per block, no thr
+ | test | result |
+ |---|---|
+ | `make check-native` (round trips at every level, corrupt and truncated payloads under ASan/UBSan, every mode with `KOLMO_NATIVE=all` and `all,strong` at 1 and 4 threads) | OK |
+-| `make check`, `make check-rc`, `make check-sanitizers`, `make experimental-check GPU_CHECK=`, `make kfam-check` | see the commit that adds this file |
++| `make check`, `make check-rc`, `make check-sanitizers`, `make experimental-check GPU_CHECK=`, `make kfam-check` | all pass on 776ac3c+75d8a51 (x86_64, gcc); determinism check `benchmark/determinism/check.py` passes |
+ | `benchmark/determinism/check.py` | default output unchanged (no expected hash regenerated) |
+-- 
+2.43.0
+

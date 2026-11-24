@@ -1,0 +1,6 @@
+== make check-rc-options (rerun at 1062b9e3)
+./build/test-rc-options
+RC_OPTIONS roundtrips=109 headers=5108 forward_differentials=36 aligned_leaves=36 PASSED
+./build/test-rc-options-asan
+RC_OPTIONS roundtrips=109 headers=5108 forward_differentials=36 aligned_leaves=36 PASSED
+== check-rc-options EXIT 0

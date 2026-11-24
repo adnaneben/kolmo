@@ -1,0 +1,8 @@
+lz4      T4  in    51220480  out    26441724  ratio  1.937  c   1533.0 MB/s  d   5409.6 MB/s
+klzs1    T4  in    51220480  out    25810020  ratio  1.985  c   1335.7 MB/s  d   6744.2 MB/s
+zstd1    T4  in    51220480  out    19988639  ratio  2.562  c   1160.6 MB/s  d   2509.9 MB/s
+klzh1    T4  in    51220480  out    19913529  ratio  2.572  c    880.4 MB/s  d   2401.2 MB/s
+k2h1     T4  in    51220480  out    18992605  ratio  2.697  c    635.3 MB/s  d   1966.6 MB/s
+zstd3    T4  in    51220480  out    18304336  ratio  2.798  c    581.3 MB/s  d   2494.2 MB/s
+klzh3    T4  in    51220480  out    18849249  ratio  2.717  c    495.3 MB/s  d   2593.5 MB/s
+k2h3     T4  in    51220480  out    17811667  ratio  2.876  c    400.2 MB/s  d   2003.9 MB/s

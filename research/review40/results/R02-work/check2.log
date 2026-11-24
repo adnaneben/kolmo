@@ -60,3 +60,44 @@ forced budgets 1 B, 64 MiB, 512 MiB, 4 GiB, unlimited: identical frames in every
 MEMDYN TESTS PASSED
 == check-memdyn EXIT 0
 == make check-meta
+./build/test-meta
+test_meta: ok
+./build/test-meta-asan
+test_meta: ok
+== check-meta EXIT 0
+== make check-dispatch
+ar rcs build/libkolmo.a build/kolmo.o build/obj/src/arch/xxh3.o build/obj/src/arch/cpu.o build/obj/src/algo/predict.o build/obj/src/algo/planes.o build/obj/src/algo/mixer.o build/obj/src/algo/video.o build/obj/src/arch/x86_64/med8_sse2.o build/obj/src/arch/x86_64/planes_sse2.o build/obj/src/arch/x86_64/mixer_avx2.o build/obj/src/arch/x86_64/video_sse2.o build/obj/src/arch/x86_64/img16_sse2.o build/obj/src/arch/x86_64/med8f_avx2.o build/obj/src/algo/lzp.o build/obj/src/algo/qlfc.o build/obj/src/algo/par.o build/obj/src/algo/sais/sais.o build/obj/src/codecs/bwt_stream.o build/obj/src/algo/khuf.o build/obj/src/algo/klz.o build/obj/src/algo/klzma.o build/obj/src/algo/khash.o build/obj/src/algo/krans.o build/obj/src/arch/x86_64/hist_x86_64.o
+./build/test-dispatch
+test_dispatch: 28182 checks, 0 mismatches (cpu: sse4.2 1, avx2 1)
+./build/test-dispatch-asan
+test_dispatch: 28182 checks, 0 mismatches (cpu: sse4.2 1, avx2 1)
+== check-dispatch EXIT 0
+== make check-planner-ownership
+seed=1700000001 kind=0 effort=0 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=0 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=0 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=4 native=1 plan=9 live_records=0
+PLANNER_OWNERSHIP cases=72 record_allocations=36 graph_cases=72 leaked_cases=0 outstanding=0
+PLANNER OWNERSHIP PASSED
+== check-planner-ownership EXIT 0
+== make check-rc-options
+== check-rc-options: stopped by the 1-hour background limit of the batch while building/running (not a failure, not a pass)

@@ -1,0 +1,525 @@
+From 89d62b8ee05f98d0665297bc3d7466dfc763c247 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 04:33:57 +0000
+Subject: [PATCH 6/8] 16-bit image blocks: context rANS over the residual
+ words, block codec 34, opt-in (KOLMO_NATIVE=rans)
+
+A block with the 16-bit image transform (flag 6) is a header, the low-byte plane and the high-byte
+plane of the zigzag residuals; the block codec (zstd, BWT) codes the planes without the image's
+geometry. Codec 34 stores the header, skip and trailing bytes and codes the residuals as
+(high, low) byte pairs with the codec 33 coder under the half-octave classes of the four
+neighbouring words (mk 3), the low byte also under its high byte. The block worker tries it beside
+the block codec when the opt-in is set and keeps the smaller; the decoder rebuilds the transformed
+stream and the image inverse is unchanged. Version 11 frames; valid only with transform flag 6,
+refused inside a graph. No default output changes.
+
+krans: the words hint of the encoder (order 0 per byte of the word, then the word contexts; eq 3
+at effort 2) and a decoder run for whole words that carries three of the four neighbour classes
+from the word before.
+
+Tests: tests/test_krans.c (words hint, odd lengths, odd segments, other lags), tests/test_krans_frames.c
+(codecs 33 and 34 inside the container: leaves, block payloads, whole frames in every mode, 1 and 4
+threads, range reads, version-10 header, damaged payloads and frames; plain and ASan/UBSan),
+tests/test_krans_modes.py (a headerless 16-bit image). memneed row for codec 34.
+
+Review R02, claim img16-ctx-rans (#17).
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ Makefile                  |  11 +++-
+ SPEC.md                   |  14 +++++
+ src/algo/krans.c          |  48 ++++++++++++++-
+ src/algo/krans.h          |   1 +
+ src/codecs/codec.c        |   4 +-
+ src/codecs/codec.h        |   4 +-
+ src/codecs/krans_leaf.c   |  41 +++++++++++++
+ src/core/blocks.c         |   7 +++
+ src/core/decode.c         |   1 +
+ src/core/memneed.c        |   1 +
+ tests/test_krans.c        |   9 +++
+ tests/test_krans_frames.c | 120 ++++++++++++++++++++++++++++++++++++++
+ tests/test_krans_modes.py |  10 ++--
+ 13 files changed, 258 insertions(+), 13 deletions(-)
+ create mode 100644 tests/test_krans_frames.c
+
+diff --git a/Makefile b/Makefile
+index ca9b3555..c5834976 100644
+--- a/Makefile
++++ b/Makefile
+@@ -258,14 +258,21 @@ check-native: build/test-native build/test-native-asan build/kolmo
+ 	python3 tests/test_native_modes.py build/kolmo build/native-modes
+ .PHONY: check-native
+ # Context rANS (graph leaf codec 33, src/algo/krans.c, opt-in KOLMO_NATIVE=rans): round trips for every context set,
+-# corrupt payloads and invalid headers under ASan/UBSan, one pinned stream; then every mode through the CLI.
++# corrupt payloads and invalid headers under ASan/UBSan, one pinned stream; codecs 33 and 34 inside the container
++# (leaves, blocks, whole frames, damaged frames); then every mode through the CLI.
+ build/test-krans: tests/test_krans.c tests/test_krans_golden.h src/algo/krans.c src/algo/krans.h
+ 	$(CC) $(CFLAGS) -Isrc tests/test_krans.c src/algo/krans.c -o $@ -lm
+ build/test-krans-asan: tests/test_krans.c tests/test_krans_golden.h src/algo/krans.c src/algo/krans.h
+ 	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -Isrc tests/test_krans.c src/algo/krans.c -o $@ -lm
+-check-krans: build/test-krans build/test-krans-asan build/kolmo
++build/test-krans-frames: tests/test_krans_frames.c src/kolmo.c $(KOLMO_INCLUDES) build/libkolmoarch.a build/libvendor.a
++	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a build/libvendor.a -o $@ $(LIBS)
++build/test-krans-frames-asan: tests/test_krans_frames.c src/kolmo.c $(KOLMO_INCLUDES) $(ARCHSRC) build/libvendor.a
++	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< $(ARCHSRC) build/libvendor.a -o $@ $(LIBS)
++check-krans: build/test-krans build/test-krans-asan build/test-krans-frames build/test-krans-frames-asan build/kolmo
+ 	./build/test-krans 2
+ 	./build/test-krans-asan
++	./build/test-krans-frames
++	./build/test-krans-frames-asan
+ 	python3 tests/test_krans_modes.py build/kolmo build/krans-modes
+ .PHONY: check-krans
+ check-bwt: build/test-bwt build/test-bwt-asan
+diff --git a/SPEC.md b/SPEC.md
+index 2691edb9..4552ade2 100644
+--- a/SPEC.md
++++ b/SPEC.md
+@@ -202,6 +202,7 @@ version number; it was not tagged or published. 1.2.0 is this build, a release c
+ | 29 | KLZH (LZ77 with Huffman-coded streams) | blocks and graph leaves, version 11 or later; opt-in `KOLMO_NATIVE=lz`; format in `src/algo/klz.h` | rc3 wave 2 |
+ | 30–32 | not assigned here (kept free for the unmerged entropy and LZ lanes) | — | — |
+ | 33 | KRANS (context rANS leaf) | graph leaves only (also inside codecs 21 and 23), version 11 or later; opt-in `KOLMO_NATIVE=rans`; see *Leaf codec 33* | review R02 (after rc3) |
++| 34 | KI16 (context rANS over 16-bit image residual words) | blocks with the 16-bit image transform (flag 6) only, version 11 or later; opt-in `KOLMO_NATIVE=rans`; see *Block codec 34* | review R02 (after rc3) |
+ 
+ **ARM64 branch filter (plan type 11, tflag 14, version 11; rc3 wave 2)**: the plan prefix is `11, a, b, 0`, where
+ `a | (b & 15) << 8` is the block's *page phase* P (0-4095). The payload is the coded stream of the filtered block,
+@@ -520,6 +521,19 @@ is at most 4096. Decoding a symbol with state x and the context's table: slot =
+ is valid only when every state ends at 2^16 and the words are used up exactly; reserved values, a table that leaves
+ nothing for its class-14 symbol, non-zero padding and trailing bytes are refused.
+ 
++`mk` 3 reads the bytes as 16-bit words, high byte (phase 0) then low byte (phase 1): P is 2 and the lags are even;
++the term of a lag is the class of the word that starts at i − phase − lag (0 before the segment start): for the
++magnitude m = (256 · high + low + 1) >> 1 the class is 0 when m = 0, else 2 ⌊log2 m⌋ + 1, plus 1 when the bit below
++m's top bit is set; the magnitude of `prev` is then `prev` itself. `eq` 3 is the bin min(e, 95) >> 1 (48 bins).
++
++**Block codec 34: 16-bit image residual words (version 11; written only with `KOLMO_NATIVE=rans`).** Valid only for a
++block whose transform flag is 6 (16-bit image, `src/transforms/sci.c`). The transformed stream of such a block is a
++12-byte header (byte order, `skip`, predictor, 0, row length W and sample count N as little-endian u32), `skip`
++bytes, the low-byte plane and the high-byte plane of the N zigzag residuals, and the trailing bytes. The codec's
++payload is the 12 header bytes, the `skip` bytes, the trailing bytes (their count follows from the stream length in
++the block's meta), then a codec 33 leaf of 2 N bytes: the residuals as (high byte, low byte) pairs. The decoder
++rebuilds the transformed stream and the image inverse runs as for any other block codec.
++
+ ## Audio blocks (codec 19, version 11)
+ 
+ A block with codec 19 has plan prefix `0, 0, 0, 0` and tflag 0; its payload is one **KAU1** stream (the format of the
+diff --git a/src/algo/krans.c b/src/algo/krans.c
+index feedf395..2f5f319d 100644
+--- a/src/algo/krans.c
++++ b/src/algo/krans.c
+@@ -152,6 +152,32 @@ static inline __attribute__((always_inline)) size_t kr_run(const kr_ctx *c, cons
+     for (unsigned k = 0; k < S; k++) d->x[k] = x[k];
+     d->p = p; return i;
+ }
++/* mk 3 with the lags 2, s, s + 2, s - 2 (left, up, up-left, up-right word) and every segment starting on a word:
++ * whole words from an even i (i >= maxlag) for as long as 4 S bytes of words are left. Both bytes of a word share
++ * e, and of its four classes three are carried over from the word before, so a word costs two class computations
++ * (the up-right word and itself) instead of eight. Returns the position reached. */
++static size_t kr_run_words(const kr_ctx *c, const kr_dtab *const *ct, kr_dst *d, size_t i, const size_t sl) {
++    enum { S = 8 };
++    uint32_t x[S]; uint8_t *sb[S]; unsigned cl[S], cul[S], cu[S]; const uint8_t *p = d->p, *const pe = d->pe;
++    const size_t s = c->lag[1]; const uint16_t *qe = c->qe, *qb = c->qb; const unsigned m0 = c->pm[0];
++    for (unsigned k = 0; k < S; k++) {
++        x[k] = d->x[k]; sb[k] = d->sb[k]; const uint8_t *q = sb[k] + i;
++        cl[k] = kr_wcls(q - 2); cul[k] = kr_wcls(q - s - 2); cu[k] = kr_wcls(q - s);
++    }
++    unsigned cur[S], e[S];                                                  /* the decode order stays byte i of every segment, then byte i + 1 */
++#define KR_HI(K) do { uint8_t *q = sb[K] + i; cur[K] = kr_wcls(q - s + 2); e[K] = qe[cl[K] + cul[K] + cu[K] + cur[K]]; \
++        KR_SYM(x[K], ct[e[K] + (qb[q[-1]] & m0)], q[0]); KR_FILL(x[K]); } while (0)
++#define KR_LO(K) do { uint8_t *q = sb[K] + i; KR_SYM(x[K], ct[e[K] + qb[q[0]] + 1], q[1]); KR_FILL(x[K]); \
++        cl[K] = kr_wcls(q); cul[K] = cu[K]; cu[K] = cur[K]; } while (0)
++    for (; i + 1 < sl && (size_t)(pe - p) >= 4 * (size_t)S; i += 2) {
++        KR_HI(0); KR_HI(1); KR_HI(2); KR_HI(3); KR_HI(4); KR_HI(5); KR_HI(6); KR_HI(7);
++        KR_LO(0); KR_LO(1); KR_LO(2); KR_LO(3); KR_LO(4); KR_LO(5); KR_LO(6); KR_LO(7);
++    }
++#undef KR_HI
++#undef KR_LO
++    for (unsigned k = 0; k < S; k++) d->x[k] = x[k];
++    d->p = p; return i;
++}
+ /* the symbols of one chunk: p[0..pe) = states and words, o[0..m) the output, ct[context] = its table */
+ static int kr_dec_syms(const kr_ctx *c, const kr_dtab *const *ct, const uint8_t *p, const uint8_t *pe, uint8_t *o, size_t m) {
+     const unsigned S = 1u << c->ls, P = c->P; const size_t sl = m / S, head = c->N == 1 ? 0 : c->maxlag < sl ? c->maxlag : sl;
+@@ -160,8 +186,14 @@ static int kr_dec_syms(const kr_ctx *c, const kr_dtab *const *ct, const uint8_t
+     for (unsigned k = 0; k < S; k++) { d.x[k] = kr_rd32(p); p += 4; if (d.x[k] < KR_L) return -1; d.sb[k] = o + (size_t)k * sl; d.sp[k] = (unsigned)(((size_t)k * sl) % P); }
+     d.p = p; d.pe = pe;
+     const int shape = c->N == 1 ? (S == 8) : S == 8 && c->nlag == 4 ? (c->mk == 3 ? 4 : 3) : S == 8 && c->nlag == 0 ? 2 : 5;
++    const int wordrun = shape == 4 && !(sl & 1) && c->lag[0] == 2 && c->lag[1] >= 4 && c->lag[2] == c->lag[1] + 2 && c->lag[3] == c->lag[1] - 2;
+     for (size_t i = 0; i < sl;) {
+         if (i < head || (size_t)(d.pe - d.p) < 2 * (size_t)S) { if (kr_round_ck(c, ct, &d, i, S)) return -1; i++; continue; }
++        if (wordrun) {                                                      /* whole words from an even position, else one checked byte */
++            if (!(i & 1) && i + 1 < sl && (size_t)(d.pe - d.p) >= 4 * (size_t)S) i = kr_run_words(c, ct, &d, i, sl);
++            else { if (kr_round_ck(c, ct, &d, i, S)) return -1; i++; }
++            continue;
++        }
+         switch (shape) {                                                    /* at least one byte per segment is decoded */
+             case 0: i = kr_run(c, ct, &d, i, sl, S, 0, 0, 1); break;          /* order 0 */
+             case 1: i = kr_run(c, ct, &d, i, sl, 8, 0, 0, 1); break;
+@@ -493,7 +525,7 @@ static KR_COLD size_t kr_chunk(kr_enc *E, const kolmo_krans_params *pp, const ui
+         KR_TRY(ref);
+     } else {
+         KR_SET(ls, 1, mb, 0, 0, 0, 0, 0); KR_TRY(0);                                    /* order 0 */
+-        const int img = pp->stride && step <= 8 && pp->stride % step == 0 && pp->stride >= 2 * step && m >= 2 * (size_t)pp->stride;
++        const int img = pp->stride && step <= 8 && pp->stride % step == 0 && pp->stride >= 2 * step && m >= 2 * (size_t)pp->stride && (!pp->words || (step == 2 && !(m & 1)));
+         if (img) while (ls && (m >> ls) < 8 * (size_t)pp->stride) ls--;      /* a segment's first row has no row above: at least 8 rows each */
+         if (img && m >= KR_CTX_MIN) {
+             /* image residuals: the magnitudes of the left, upper, upper-left and upper-right neighbours of the same
+@@ -502,8 +534,18 @@ static KR_COLD size_t kr_chunk(kr_enc *E, const kolmo_krans_params *pp, const ui
+             const unsigned pf = step > 1;
+ #define KR_IMG(EQ, BQ, PF) do { KR_SET(ls, step, mb, (EQ), (BQ), 0, (PF), 4); cur->c.lag[0] = step; cur->c.lag[1] = pp->stride; \
+                 cur->c.lag[2] = pp->stride + step; cur->c.lag[3] = pp->stride - step; KR_TRY(ref); } while (0)
+-            KR_IMG(1, 3, pf);
+-            if (pp->effort >= 2) { if (pf) KR_IMG(1, 3, 0); KR_IMG(2, 3, pf); }
++            if (pp->words) {
++                /* 16-bit residuals as (high, low) pairs: the half-octave classes of the four neighbouring words; the
++                 * low byte also under its high byte. First the two bytes under their own tables alone. */
++                KR_SET(ls, 2, mb, 0, 0, 0, 0, 0); KR_TRY(0);
++                for (unsigned eq = 1; eq <= (pp->effort >= 2 ? 3u : 1u); eq += 2) {
++                    KR_SET(ls, 2, mb, eq, 2, 3, 1, 4); cur->c.lag[0] = 2; cur->c.lag[1] = pp->stride; cur->c.lag[2] = pp->stride + 2; cur->c.lag[3] = pp->stride - 2;
++                    KR_TRY(ref);
++                }
++            } else {
++                KR_IMG(1, 3, pf);
++                if (pp->effort >= 2) { if (pf) KR_IMG(1, 3, 0); KR_IMG(2, 3, pf); }
++            }
+ #undef KR_IMG
+         } else if (m >= KR_CTX_MIN) {
+             KR_SET(ls, 1, mb, 0, 1, 0, 0, 0); KR_TRY(ref);                               /* order 1 */
+diff --git a/src/algo/krans.h b/src/algo/krans.h
+index 99ddb028..7029f841 100644
+--- a/src/algo/krans.h
++++ b/src/algo/krans.h
+@@ -67,6 +67,7 @@ typedef struct {
+     uint32_t stride;     /* row length in bytes of an image-like leaf (0: unknown): enables the neighbour contexts */
+     uint8_t step;        /* bytes per pixel (channel step, 1..8) when stride is set; 0 = 1 */
+     uint8_t effort;      /* 0/1: order 0, then the image contexts (stride set) or order 1; 2: more image context sets tried */
++    uint8_t words;       /* with stride and step = 2: the bytes are 16-bit zigzag residuals, high byte first (mk 3 contexts) */
+     uint32_t chunk;      /* chunk size in bytes (0: chosen from the leaf) */
+     /* tests and experiments: force one context set on every coded chunk (force = 1) */
+     uint8_t force, ls, P, mb, eq, bq, mk, pf, nlag;
+diff --git a/src/codecs/codec.c b/src/codecs/codec.c
+index 06deb5c1..771d53a9 100644
+--- a/src/codecs/codec.c
++++ b/src/codecs/codec.c
+@@ -2,7 +2,7 @@
+  * Identifiers 8-11 are the opt-in research codecs of the frontier build (coded at block level in core/), 12 the graph
+  * block (transforms/graph.c) and 16 the FASTQ family coder (codecs/fastq.c): their tables carry a name only. 26 (GR6+,
+  * codecs/gr6.c) has an encoder here but is decoded at block level. Identifiers 24 and 27-29 are Kolmo's own coders (codecs/native.c, opt-in),
+- * 33 the context rANS leaf (codecs/krans_leaf.c, opt-in, graph leaves only). */
++ * 33 the context rANS leaf (graph leaves only) and 34 the 16-bit image residual block (codecs/krans_leaf.c, opt-in). */
+ static const kolmo_codec *const kolmo_codecs[] = {
+     [C_STORE] = &codec_store, [C_LZ4] = &codec_lz4, [C_LZ4HC] = &codec_lz4hc, [C_ZSTD] = &codec_zstd, [C_BROTLI] = &codec_brotli,
+     [C_BSC5] = &codec_bwt5, [C_LZMA] = &codec_lzma, [C_CM] = &codec_cm, [C_GRAPH] = &codec_graph, [C_HUF] = &codec_huf,
+@@ -11,7 +11,7 @@ static const kolmo_codec *const kolmo_codecs[] = {
+     [C_GR6] = &codec_gr6,
+     [C_CMP] = &codec_cm_par,
+     [C_KLZMA] = &codec_klzma, [C_KHUF] = &codec_khuf, [C_KLZ] = &codec_klz, [C_KLZH] = &codec_klzh,
+-    [C_KRANS] = &codec_krans,
++    [C_KRANS] = &codec_krans, [C_KI16] = &codec_ki16,
+ };
+ static const kolmo_codec codec_graph = { C_GRAPH, "graph", NULL, NULL, NULL, NULL };
+ static inline const kolmo_codec *codec_get(int codec) {
+diff --git a/src/codecs/codec.h b/src/codecs/codec.h
+index af3ed96d..1a7bb736 100644
+--- a/src/codecs/codec.h
++++ b/src/codecs/codec.h
+@@ -6,7 +6,7 @@ enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC5 = 5
+        C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_FQ = 16, C_CMI = 17, C_BWT = 18,
+        C_AUD = 19, C_VID = 20, C_PLANES = 21, C_HZ = 22, C_ZRUN = 23, C_KLZMA = 24, C_CMP = 25, C_GR6 = 26,
+        C_KHUF = 27, C_KLZ = 28, C_KLZH = 29,
+-       C_KRANS = 33 };   /* 33: context rANS leaf (graph leaves only; opt-in KOLMO_NATIVE=rans; codecs/krans_leaf.c; 30-32 are left to other lanes) */     /* 24, 27-29: Kolmo's own coders, opt-in (KOLMO_NATIVE, codecs/native.c; version 11) */   /* 18: Kolmo block sorting (BWT in C); 19-23: container version 11 (format 2): 19 audio (kaud), 20 video (kvid), 21 per-plane leaf, 22 Huffman then zstd leaf, 23 zero-run leaf (21-23: graph leaves only), 25 context mixing over parts (columns or halves, coded in parallel), 26 GR6+ line-structured text (ultra blocks only) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head); 5: libbsc block sorting (read only since rc3); 18: Kolmo block sorting (codecs/bwt.c; version 11) */
++       C_KRANS = 33, C_KI16 = 34 };   /* 33: context rANS leaf (graph leaves only), 34: context rANS over the residual words of a 16-bit image block (blocks with transform flag 6 only); both opt-in (KOLMO_NATIVE=rans, codecs/krans_leaf.c); 30-32 are left to other lanes */     /* 24, 27-29: Kolmo's own coders, opt-in (KOLMO_NATIVE, codecs/native.c; version 11) */   /* 18: Kolmo block sorting (BWT in C); 19-23: container version 11 (format 2): 19 audio (kaud), 20 video (kvid), 21 per-plane leaf, 22 Huffman then zstd leaf, 23 zero-run leaf (21-23: graph leaves only), 25 context mixing over parts (columns or halves, coded in parallel), 26 GR6+ line-structured text (ultra blocks only) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head); 5: libbsc block sorting (read only since rc3); 18: Kolmo block sorting (codecs/bwt.c; version 11) */
+ 
+ typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *dict; size_t dictlen;
+                  const struct kolmo_profile *prof;   /* trained profile: its dictionaries for zstd, Brotli and LZ4 (src/plan/profile.c) */
+@@ -37,4 +37,4 @@ typedef struct kolmo_codec {
+ /* tentative definitions: each codec file defines its table, codecs/codec.c lists them */
+ static const kolmo_codec codec_store, codec_lz4, codec_lz4hc, codec_zstd, codec_brotli, codec_bwt, codec_bwt5, codec_lzma, codec_cm,
+     codec_graph, codec_huf, codec_rans, codec_nplane, codec_fastq, codec_cm_image,
+-    codec_audio, codec_video, codec_planes, codec_hz, codec_zrun, codec_gr6, codec_cm_par, codec_klzma, codec_khuf, codec_klz, codec_klzh, codec_krans;
++    codec_audio, codec_video, codec_planes, codec_hz, codec_zrun, codec_gr6, codec_cm_par, codec_klzma, codec_khuf, codec_klz, codec_klzh, codec_krans, codec_ki16;
+diff --git a/src/codecs/krans_leaf.c b/src/codecs/krans_leaf.c
+index 91ab1064..6c18ca1b 100644
+--- a/src/codecs/krans_leaf.c
++++ b/src/codecs/krans_leaf.c
+@@ -9,6 +9,14 @@
+  * Opt-in: KOLMO_NATIVE=rans (codecs/native.c). Without it no output uses this id. With it every graph leaf and every
+  * sub-stream of the format-2 leaves (21, 23) also tries codec 33 and keeps it only when it is smaller than the
+  * choice of the leaf rule; the frame is then version 11. Decoders before this codec refuse the leaf (unknown codec).
++ *
++ * Codec 34: the same coder over the residual words of a 16-bit image block (transform flag 6, transforms/sci.c;
++ * version 11; opt-in with the same switch; review R02, claim img16-ctx-rans). The transformed stream is a 12-byte
++ * header, `skip` bytes, the low-byte plane and the high-byte plane of N zigzag residuals, and the trailing bytes.
++ * Payload: the 12 header bytes | the skip bytes | the trailing bytes | a codec 33 leaf of 2 N bytes, the residuals as
++ * (high byte, low byte) pairs. The encoder codes the pairs under the classes of the four neighbouring words (mk 3 of
++ * krans.h). The decoder rebuilds the transformed stream exactly; the image inverse is unchanged. Tried by the block
++ * worker (core/blocks.c) beside the block codec and kept only when smaller.
+  * Part of the single translation unit built from src/kolmo.c. */
+ #include "../algo/krans.h"
+ 
+@@ -21,3 +29,36 @@ static size_t krans_leaf_compress(const uint8_t *in, size_t n, size_t stride, un
+ }
+ static int krans_dec_tab(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return x->allow_f2 ? kolmo_krans_decompress(in, cn, out, n) : -1; }
+ static const kolmo_codec codec_krans = { C_KRANS, "krans", NULL, NULL, krans_dec_tab, NULL };   /* written by the graph leaves */
++
++/* in[0..n) = a transformed 16-bit image block; effort as above. Returns the payload size, or 0 (not coded). */
++static size_t ki16_compress(const uint8_t *in, size_t n, int effort, uint8_t *out, size_t cap) {
++    if (n < 12) return 0;
++    const size_t skip = in[1]; uint32_t W, N; memcpy(&W, in + 4, 4); memcpy(&N, in + 8, 4);
++    if (skip > 1 || N < 32 || 12 + skip + 2 * (uint64_t)N > n) return 0;
++    const size_t tail = n - 12 - skip - 2 * (size_t)N, hd = 12 + skip + tail;
++    if (cap < hd + 16) return 0;
++    uint8_t *w = malloc(2 * (size_t)N); if (!w) return 0;
++    const uint8_t *lo = in + 12 + skip, *hi = lo + N;
++    for (size_t i = 0; i < N; i++) { w[2 * i] = hi[i]; w[2 * i + 1] = lo[i]; }
++    memcpy(out, in, 12 + skip); memcpy(out + 12 + skip, hi + N, tail);
++    kolmo_krans_params p = {0};
++    p.stride = W <= (1u << 22) ? 2 * W : 0; p.step = 2; p.words = 1; p.effort = (uint8_t)effort;
++    const size_t z = kolmo_krans_compress(w, 2 * (size_t)N, out + hd, cap - hd, &p);
++    free(w); return z ? hd + z : 0;
++}
++/* out[0..n) = the transformed stream (n from the block's meta). Refused inside a graph (allow_f2 is set there only). */
++static int ki16_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
++    if (x->allow_f2 || n < 12 || cn < 12) return -1;
++    const size_t skip = in[1]; uint32_t N; memcpy(&N, in + 8, 4);
++    if (skip > 1 || 12 + skip + 2 * (uint64_t)N > n) return -1;
++    const size_t tail = n - 12 - skip - 2 * (size_t)N, hd = 12 + skip + tail;
++    if (cn < hd) return -1;
++    uint8_t *w = malloc(2 * (size_t)N + 1); if (!w) return -1;
++    if (kolmo_krans_decompress(in + hd, cn - hd, w, 2 * (size_t)N)) { free(w); return -1; }
++    memcpy(out, in, 12 + skip);
++    uint8_t *lo = out + 12 + skip, *hi = lo + N;
++    for (size_t i = 0; i < N; i++) { hi[i] = w[2 * i]; lo[i] = w[2 * i + 1]; }
++    memcpy(hi + N, in + 12 + skip, tail);
++    free(w); return 0;
++}
++static const kolmo_codec codec_ki16 = { C_KI16, "ki16", NULL, NULL, ki16_decompress, NULL };   /* written by the block worker */
+diff --git a/src/core/blocks.c b/src/core/blocks.c
+index b9cabe2d..61ec27e2 100644
+--- a/src/core/blocks.c
++++ b/src/core/blocks.c
+@@ -508,6 +508,13 @@ static void *compress_worker(void *arg) {
+         }
+         /* the payload is still codec 25's when no later trial replaced it (they clear cmp_used or change codec) */
+         if (cmp_used && codec == C_CM) { codec = C_CMP; modes |= 128; }
++        if (tflag == 6 && cl && (kolmo_native_flags() & KN_RANS)) {
++            /* opt-in (KOLMO_NATIVE=rans): the residual words of a 16-bit image block as context rANS (codec 34), kept
++             * only when smaller than the block as coded above (review R02, claim img16-ctx-rans) */
++            uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
++            size_t a1 = alt ? ki16_compress(in, inlen, codec == C_ZSTD && level <= CZ_FAST_LEVEL ? 1 : 2, alt, J->slot - meta) : 0;
++            if (a1 && a1 < cl) { memcpy(sl + meta, alt, a1); cl = a1; codec = C_KI16; modes |= 128; }
++        }
+ coded:;
+         if (xfq && codec != C_FQ) {
+             /* ultra (not level 1), a block of complete FASTQ records: the family coder (codec 16: layout, names,
+diff --git a/src/core/decode.c b/src/core/decode.c
+index 02455a55..8ba51093 100644
+--- a/src/core/decode.c
++++ b/src/core/decode.c
+@@ -80,6 +80,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
+     }
+     if (codec == C_CMP && P->ver < 11) return KOLMO_ERR_CORRUPT;   /* context mixing over parts (version 11) */
+     if (codec_is_native(codec) && P->ver < 11) return KOLMO_ERR_CORRUPT;   /* Kolmo's own coders (version 11) */
++    if (codec == C_KI16 && (P->ver < 11 || tflag != 6)) return KOLMO_ERR_CORRUPT;   /* context rANS over a 16-bit image's residual words: that transform only */
+     x->threads = J->fqthreads;
+     if (codec == C_FQ) {                                        /* FASTQ family block (version 10) */
+         if (P->ver < 10 || pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
+diff --git a/src/core/memneed.c b/src/core/memneed.c
+index 54d310f1..179f8179 100644
+--- a/src/core/memneed.c
++++ b/src/core/memneed.c
+@@ -56,6 +56,7 @@ static uint64_t blk_dec_need(int codec, int tflag, uint64_t raw, const uint8_t *
+         case C_KLZ: case C_KHUF: return base;                         /* Kolmo's own coders (codecs/native.c): as the */
+         case C_ZSTD: case C_KLZH: return base + 2 * KMEM_MIB;         /* library codec each one replaces */
+         case C_KLZMA: return base + kmem_pow2_dict(slack) + 2 * KMEM_MIB;
++        case C_KI16: return base + slack + 2 * KMEM_MIB;              /* the residual words (at most the transformed stream) and at most 255 tables of 5120 bytes */
+         case C_BROTLI: return base + (dn < 16 * KMEM_MIB ? dn : 16 * KMEM_MIB) + 2 * KMEM_MIB;
+         case C_LZMA: return base + kmem_pow2_dict(slack) + 2 * KMEM_MIB;
+         case C_BWT: case C_BSC5: return base + 5 * slack + 4 * KMEM_MIB;
+diff --git a/tests/test_krans.c b/tests/test_krans.c
+index 4a5c530b..85e621ec 100644
+--- a/tests/test_krans.c
++++ b/tests/test_krans.c
+@@ -163,6 +163,15 @@ int main(int argc, char **argv) {
+         { kolmo_krans_params p = {0}; p.stride = 1537; p.step = 3; roundtrip(buf, 500000, &p, "stride not a multiple of the step"); }
+         { kolmo_krans_params p = {0}; p.stride = 1 << 23; p.step = 1; roundtrip(buf, 500000, &p, "stride longer than the leaf"); }
+         { kolmo_krans_params p = {0}; p.stride = 6; p.step = 9; roundtrip(buf, 5000, &p, "step out of range"); }
++        /* 16-bit residuals as (high, low) pairs: the words hint, whole and odd lengths, rows of 2 x 301 and 2 x 4 bytes */
++        for (size_t q = 0; q + 1 < (1u << 20); q += 2) { const unsigned busy = 1 + ((q / 2 / 301 / 20 + q / 2 % 301 / 40) % 4) * 3, v = rnd() % (1u << busy); buf[q] = (uint8_t)(v >> 8); buf[q + 1] = (uint8_t)v; }
++        for (int ef = 1; ef <= 2; ef++) {
++            kolmo_krans_params p = {0}; p.stride = 602; p.step = 2; p.words = 1; p.effort = (uint8_t)ef;
++            roundtrip(buf, 1u << 20, &p, "words"); roundtrip(buf, 700001, &p, "words, odd length"); roundtrip(buf, 5000, &p, "words, short");
++            p.chunk = 100000; roundtrip(buf, 654320, &p, "words, chunks"); p.stride = 8; p.chunk = 0; roundtrip(buf, 300000, &p, "words, narrow rows");
++        }
++        { kolmo_krans_params p = {0}; p.force = 1; p.ls = 3; p.P = 2; p.eq = 1; p.bq = 2; p.mk = 3; p.pf = 0; p.nlag = 4; p.lag[0] = 2; p.lag[1] = 602; p.lag[2] = 604; p.lag[3] = 600;
++          roundtrip(buf, 1u << 20, &p, "words without pf"); roundtrip(buf, (1u << 20) - 6, &p, "words, odd segments"); p.lag[3] = 598; roundtrip(buf, 1u << 19, &p, "words, other lags"); }
+     }
+     free(buf);
+     test_invalid(); test_pinned();
+diff --git a/tests/test_krans_frames.c b/tests/test_krans_frames.c
+new file mode 100644
+index 00000000..8dde0b65
+--- /dev/null
++++ b/tests/test_krans_frames.c
+@@ -0,0 +1,120 @@
++/* Context rANS inside the container (review R02; opt-in KOLMO_NATIVE=rans, set by this test before the first call):
++ *   - leaf codec 33: an IMG8 graph block coded with it is smaller than without, decodes only with version 11 leaves
++ *     allowed, and is refused as a block codec or inside a pre-11 graph; damaged graph payloads never crash;
++ *   - block codec 34 (16-bit image residual words): payload round trip from a transformed stream with and without
++ *     the skip and trailing bytes, refusal inside a graph, wrong lengths, truncated and damaged payloads;
++ *   - whole frames of an 8-bit colour image, a grey image and a 16-bit image in every mode: version 11, the same
++ *     bytes with 1 and 4 threads, round trip, range read, a version-10 header refused, damaged frames never decode
++ *     to other bytes; the 16-bit image's frame holds a codec 34 block at balanced and hc.
++ * make check-krans builds it plain and with ASan/UBSan. */
++#include "../src/kolmo.c"
++#include <stdio.h>
++
++static uint64_t st = 0x9e3779b97f4a7c15ULL;
++static uint64_t rv(void) { st ^= st << 13; st ^= st >> 7; st ^= st << 17; return st; }
++#define FAIL(...) do { fprintf(stderr, "test_krans_frames: " __VA_ARGS__); fprintf(stderr, " (line %d)\n", __LINE__); return 1; } while (0)
++
++/* a smooth field with busy and quiet regions: 8-bit samples, C channels that follow each other */
++static void image8(uint8_t *p, size_t w, size_t h, unsigned C) {
++    for (size_t y = 0; y < h; y++) for (size_t x = 0; x < w; x++) {
++        const int busy = 1 + 10 * (int)(((x / 40) + (y / 30)) % 3), base = (int)(128 + 60 * sin((double)x / 37) + 50 * cos((double)y / 23)), d = (int)(rv() % (uint64_t)(2 * busy + 1)) - busy;
++        for (unsigned k = 0; k < C; k++) { int v = base + d + (int)(rv() % 3) - 1 + 9 * (int)k; p[(y * w + x) * C + k] = (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v); }
++    }
++}
++static void image16(uint8_t *p, size_t w, size_t h) {
++    for (size_t y = 0; y < h; y++) for (size_t x = 0; x < w; x++) {
++        const int busy = 2 + 40 * (int)(((x / 50) + (y / 40)) % 4);
++        const int v = (int)(2000 + 900 * sin((double)x / 41) + 700 * cos((double)y / 29)) + (int)(rv() % (uint64_t)(2 * busy + 1)) - busy;
++        p[2 * (y * w + x)] = (uint8_t)v; p[2 * (y * w + x) + 1] = (uint8_t)(v >> 8);
++    }
++}
++static int leaf33(void) {
++    enum { W = 300, H = 200, C = 3 }; const size_t n = (size_t)W * H * C, cap = n + n / 8 + 4096;
++    uint8_t *s = malloc(n), *a = malloc(cap), *b = malloc(cap), *o = malloc(n + 1);
++    if (!s || !a || !b || !o) FAIL("alloc");
++    image8(s, W, H, C);
++    codec_ctx x = {0}, y = {0}; y.no_f2 = 1;
++    const size_t za = kg_encode_img8(&x, C_ZSTD, 3, s, n, (size_t)W * C, C, 0, a, cap), zb = kg_encode_img8(&y, C_ZSTD, 3, s, n, (size_t)W * C, C, 0, b, cap);
++    if (!za || !zb || za >= zb || !x.used_f2) FAIL("codec 33 not used by the image leaf (%zu with, %zu without)", za, zb);
++    if (!kg_decode(&x, a, za, o, n)) FAIL("a codec 33 leaf decoded without version 11");
++    x.allow_f2 = 1;
++    if (kg_decode(&x, a, za, o, n) || memcmp(o, s, n)) FAIL("codec 33 leaf: round trip");
++    for (int t = 0; t < 300; t++) {                               /* damaged graph payloads: no crash */
++        memcpy(b, a, za); const size_t q = t < 150 ? (size_t)(rv() % 64) : (size_t)(rv() % za); b[q] ^= (uint8_t)(1 + rv() % 255);
++        kg_decode(&x, b, za, o, n); if (t % 7 == 0) kg_decode(&x, b, za - 1 - (size_t)(rv() % 40), o, n);
++    }
++    /* the leaf payload alone is not a block codec, and codec 34 is not a leaf */
++    uint8_t leaf[4096], r[4096]; kolmo_krans_params kp = {0}; const size_t zl = kolmo_krans_compress(s, 4000, leaf, sizeof leaf, &kp);
++    codec_ctx z = {0};
++    if (!zl || !codec_decompress(&z, C_KRANS, leaf, zl, r, 4000)) FAIL("codec 33 accepted outside a version 11 graph");
++    z.allow_f2 = 1;
++    if (codec_decompress(&z, C_KRANS, leaf, zl, r, 4000) || memcmp(r, s, 4000)) FAIL("codec 33 payload");
++    if (!leaf_sub_codec_ok(C_KRANS) || leaf_sub_codec_ok(C_KI16)) FAIL("sub-codec rule");
++    codec_ctx_free(&x); codec_ctx_free(&y); codec_ctx_free(&z);
++    free(s); free(a); free(b); free(o); return 0;
++}
++static int block34(void) {
++    enum { W = 257, N = 257 * 120 };
++    for (int v = 0; v < 4; v++) {
++        const size_t skip = (size_t)(v & 1), tail = v >= 2 ? 1 : 0, n = 12 + skip + 2 * (size_t)N + tail, cap = n + n / 8 + 4096;
++        uint8_t *t = malloc(n), *c = malloc(cap), *o = malloc(n + 1), *d = malloc(cap); uint16_t *img = malloc(2 * (size_t)N);
++        if (!t || !c || !o || !d || !img) FAIL("alloc");
++        image16((uint8_t *)img, W, N / W);
++        t[0] = 0; t[1] = (uint8_t)skip; t[2] = 2; t[3] = 0; const uint32_t w32 = W, n32 = N; memcpy(t + 4, &w32, 4); memcpy(t + 8, &n32, 4);
++        if (skip) t[12] = 0x5A;
++        img16_fwd(img, N, W, 2, t + 12 + skip, t + 12 + skip + N);
++        if (tail) t[n - 1] = 0xA5;
++        codec_ctx x = {0};
++        const size_t z = ki16_compress(t, n, 1 + (v & 1), c, cap);
++        if (!z || z >= n) FAIL("codec 34: not coded (variant %d: %zu of %zu)", v, z, n);
++        if (codec_decompress(&x, C_KI16, c, z, o, n) || memcmp(o, t, n)) FAIL("codec 34: round trip (variant %d)", v);
++        x.allow_f2 = 1; if (!codec_decompress(&x, C_KI16, c, z, o, n)) FAIL("codec 34 accepted as a graph leaf");
++        x.allow_f2 = 0;
++        if (!codec_decompress(&x, C_KI16, c, z, o, n - 2) || !codec_decompress(&x, C_KI16, c, z - 1, o, n) || !codec_decompress(&x, C_KI16, c, 11, o, n)) FAIL("codec 34: wrong length accepted");
++        for (int q = 0; q < 200; q++) {
++            memcpy(d, c, z); const size_t at = q < 80 ? (size_t)(rv() % 48) : (size_t)(rv() % z); d[at] ^= (uint8_t)(1 + rv() % 255);
++            codec_decompress(&x, C_KI16, d, z, o, n); if (q % 5 == 0) codec_decompress(&x, C_KI16, d, z - (size_t)(rv() % 30), o, n);
++        }
++        codec_ctx_free(&x); free(t); free(c); free(o); free(d); free(img);
++    }
++    return 0;
++}
++static int frame_case(const char *what, const uint8_t *s, size_t n, kolmo_mode m, int want_codec) {
++    kolmo_params p = {m, 0, 4, 0, 1}; size_t cap = kolmo_bound(n, &p); uint8_t *f = malloc(cap), *g = malloc(cap), *o = malloc(n + 1);
++    if (!f || !g || !o) FAIL("alloc");
++    int64_t z = kolmo_compress(s, n, f, cap, &p); p.threads = 1; int64_t z2 = kolmo_compress(s, n, g, cap, &p);
++    if (z <= 0 || z != z2 || memcmp(f, g, (size_t)z)) FAIL("%s mode %d: not the same bytes with 1 and 4 threads", what, m);
++    if (m != KOLMO_RT && f[4] != 11) FAIL("%s mode %d: version %d, want 11", what, m, f[4]);
++    if (want_codec >= 0) { int has = 0; for (uint32_t i = 0; i < get32(f + 20); i++) has |= f[HDR + i * IDX + 12] == want_codec; if (!has) FAIL("%s mode %d: no codec %d block", what, m, want_codec); }
++    if (kolmo_decompress(f, (size_t)z, o, n, 3) != (int64_t)n || memcmp(o, s, n)) FAIL("%s mode %d: round trip", what, m);
++    uint8_t rr[100]; uint64_t off = n / 3;
++    if (kolmo_read_range(f, (size_t)z, off, 100, rr, 2) != 100 || memcmp(rr, s + off, 100)) FAIL("%s mode %d: range read", what, m);
++    if (f[4] == 11) { memcpy(g, f, (size_t)z); g[4] = 10; uint32_t hc = kolmo_crc32c(0, g, 28); hc = kolmo_crc32c(hc, g + HDR, (size_t)get32(g + 20) * IDX); put32(g + 28, hc);
++        if (want_codec >= 0 && kolmo_decompress(g, (size_t)z, o, n, 1) >= 0) FAIL("%s mode %d: version 11 content read as version 10", what, m); }
++    for (int t = 0; t < 60; t++) {
++        memcpy(g, f, (size_t)z); size_t q = HDR + (size_t)(rv() % (uint64_t)(z - HDR)); g[q] ^= (uint8_t)(1 + rv() % 255);
++        int64_t got = kolmo_decompress(g, (size_t)z, o, n, 1);
++        if (got >= 0 && (got != (int64_t)n || memcmp(o, s, n))) FAIL("%s mode %d: damaged frame decoded to other bytes", what, m);
++    }
++    free(f); free(g); free(o); return 0;
++}
++int main(void) {
++    setenv("KOLMO_NATIVE", "rans", 1);                              /* read once, by the first call below */
++    if (!(kolmo_native_flags() & KN_RANS)) FAIL("the opt-in is not read");
++    if (leaf33() || block34()) return 1;
++    static const kolmo_mode modes[] = {KOLMO_RT, KOLMO_FAST, KOLMO_ECO, KOLMO_HC, KOLMO_MAX};
++    enum { W = 480, H = 360 };
++    uint8_t *ppm = malloc(64 + (size_t)W * H * 3), *pgm = malloc(64 + (size_t)W * H), *i16 = malloc(2 * (size_t)W * H);
++    if (!ppm || !pgm || !i16) FAIL("alloc");
++    const size_t hp = (size_t)sprintf((char *)ppm, "P6\n%d %d\n255\n", W, H), hg = (size_t)sprintf((char *)pgm, "P5\n%d %d\n255\n", W, H);
++    image8(ppm + hp, W, H, 3); image8(pgm + hg, W, H, 1); image16(i16, W, H);
++    for (size_t k = 0; k < sizeof modes / sizeof modes[0]; k++) {
++        const kolmo_mode m = modes[k];
++        if (frame_case("colour image", ppm, hp + (size_t)W * H * 3, m, m == KOLMO_FAST ? C_GRAPH : -1)) return 1;   /* the other modes may plan these synthetic images otherwise */
++        if (frame_case("grey image", pgm, hg + (size_t)W * H, m, m == KOLMO_FAST ? C_GRAPH : -1)) return 1;
++        if (frame_case("16-bit image", i16, 2 * (size_t)W * H, m, m == KOLMO_FAST || m == KOLMO_HC ? C_KI16 : -1)) return 1;
++    }
++    free(ppm); free(pgm); free(i16);
++    printf("test_krans_frames: OK\n");
++    return 0;
++}
+diff --git a/tests/test_krans_modes.py b/tests/test_krans_modes.py
+index a2b0f853..38886476 100644
+--- a/tests/test_krans_modes.py
++++ b/tests/test_krans_modes.py
+@@ -1,5 +1,6 @@
+-"""Context rANS leaves (codec 33) in the CLI: every mode with KOLMO_NATIVE=rans (alone and with all), 1 and 4 threads,
+-on generated inputs (colour and grey images with a PNM header, a headerless image, integers, floats, a table, text,
++"""Context rANS (leaf codec 33, 16-bit image block codec 34) in the CLI: every mode with KOLMO_NATIVE=rans (alone and
++with all), 1 and 4 threads, on generated inputs (colour and grey images with a PNM header, a headerless image, a
++headerless 16-bit image, integers, floats, a table, text,
+ random bytes, zeros, a tiny file). Each frame must decode to its input with KOLMO_NATIVE unset (the decoder needs no
+ opt-in), the output with 1 and 4 threads must be the same, no frame may be larger than the one written without the
+ opt-in at the same mode by more than the leaf rule allows (codec 33 is kept only when smaller: never larger), and the
+@@ -7,7 +8,7 @@ image frames at balanced must actually use it (smaller than without). The defaul
+ determinism check.
+ 
+ usage: python3 tests/test_krans_modes.py build/kolmo WORK_DIR"""
+-import os, random, struct, subprocess, sys
++import math, os, random, struct, subprocess, sys
+ K, W = sys.argv[1], sys.argv[2]
+ os.makedirs(W, exist_ok=True)
+ rnd = random.Random(20261124)
+@@ -25,6 +26,7 @@ files = {
+     "colour.ppm": b"P6\n320 200\n255\n" + image(320, 200, 3),
+     "grey.pgm": b"P5\n400 300\n255\n" + image(400, 300, 1),
+     "rgba.u8": image(256, 256, 4),
++    "grey16.raw": b"".join(struct.pack("<H", 2000 + int(900 * math.sin(x / 41) + 700 * math.cos(y / 29)) + rnd.randint(-(2 + 40 * ((x // 50 + y // 40) % 4)), 2 + 40 * ((x // 50 + y // 40) % 4))) for y in range(300) for x in range(400)),
+     "ints.i32": b"".join(struct.pack("<i", 1000 + i * 3 + rnd.randint(-5, 5)) for i in range(60000)),
+     "floats.f64": b"".join(struct.pack("<d", 20.0 + rnd.gauss(0, 1)) for i in range(20000)),
+     "table.csv": ("id,x,y\n" + "".join(f"{i},{rnd.randint(0, 999)},{rnd.random():.3f}\n" for i in range(20000))).encode(),
+@@ -52,6 +54,6 @@ for name, data in files.items():
+             if outs[0] != outs[1]: print("THREADS DIFFER", name, nat, mode); bad += 1
+             if nat == "rans":
+                 if len(outs[0]) > plain: print("LARGER", name, mode, len(outs[0]), plain); bad += 1
+-                if mode == "balanced" and name in ("colour.ppm", "grey.pgm") and len(outs[0]) >= plain: print("NOT USED", name, mode, len(outs[0]), plain); bad += 1
++                if mode == "balanced" and name in ("colour.ppm", "grey.pgm", "grey16.raw") and len(outs[0]) >= plain: print("NOT USED", name, mode, len(outs[0]), plain); bad += 1
+ print("test_krans_modes:", "OK" if not bad else f"{bad} failures")
+ sys.exit(1 if bad else 0)
+-- 
+2.43.0
+

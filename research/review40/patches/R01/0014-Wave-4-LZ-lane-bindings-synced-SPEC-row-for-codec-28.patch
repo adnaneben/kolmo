@@ -1,0 +1,364 @@
+From f03fe76ebb5774aa0f4c98444510de2b39ad455d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 18 Nov 2026 14:09:46 +0000
+Subject: [PATCH 14/18] Wave-4 LZ lane: bindings synced, SPEC row for codec 28,
+ changelog, benchmark scripts (benchmark/w4/lz)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+(cherry picked from commit 776ac3c3 of the unmerged wave-4 LZ lane; review40/R01, claim
+klz-w4-compat. Changed in the pick: the SPEC row of codec 28 stays the compat row (28 =
+rc3's format, 31 = the lane's); the changelog entry says so instead of "frames of codec 28
+from rc3 do not decode any more"; run_all.sh asks natbench for klzs1; the bindings' copies
+are those of this branch's src.)
+---
+ CHANGELOG.md                         |  24 +++++
+ benchmark/w4/lz/perfile.py           |  22 ++++
+ benchmark/w4/lz/results/balanced.tsv | 144 +++++++++++++++++++++++++++
+ benchmark/w4/lz/results/speed.tsv    |  72 ++++++++++++++
+ benchmark/w4/lz/run_all.sh           |  14 +++
+ benchmark/w4/lz/table.py             |  18 ++++
+ 6 files changed, 294 insertions(+)
+ create mode 100644 benchmark/w4/lz/perfile.py
+ create mode 100644 benchmark/w4/lz/results/balanced.tsv
+ create mode 100644 benchmark/w4/lz/results/speed.tsv
+ create mode 100644 benchmark/w4/lz/run_all.sh
+ create mode 100644 benchmark/w4/lz/table.py
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 57e1b1ce..ae3c6dc7 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,29 @@
+ # Changelog
+ 
++## Unreleased (wave 4, LZ lane: `claude/w4-lz-20261118`)
++
++Kolmo's own LZ coders against the libraries they would replace. Opt-in as before (`KOLMO_NATIVE=lz`, `lzma`): no
++default output changes, the determinism hashes are unchanged. Measurements in `benchmark/w4/lz/RESULTS.md`.
++
++### Changed
++- **KLZS (codec 31), a new byte-aligned block format for the LZ4 role**: literals, tokens, 16-bit offsets and length
++  extensions as four streams after a three-field header; a token of 4 + 4 bits. The decoder runs short sequences in
++  a budgeted loop with one test each. The fast parse hashes 6 bytes into a table of 16-bit positions. Against LZ4 -1
++  (4 MiB blocks, 19 files; the lane's measurement): −5.9% size, decode 1.05× (1 thread) / 1.06× (4 threads), compress
++  0.98× / 0.95×. `KOLMO_NATIVE=lz` writes it where rc3 wrote KLZ (codec 28). **Codec 28 keeps its rc3 format and
++  keeps decoding** (the lane had replaced the format of id 28 in place, so rc3's opt-in frames stopped decoding;
++  landed under its own id by review40/R01, `benchmark/review40/klzh2/RESULTS.md`).
++- **KLZH (codec 29) parse**: level 1 is a single-table parse with the repeat offset tried one byte ahead; every fast
++  level tries the second most recent offset right after each match. Same format: rc3 reads the new blocks and this
++  build reads rc3's, but the bytes written under the opt-in differ from rc3's. KLZH2 (codec 32) codes the same parse.
++- **KLZ, KLZH and khuf copy through `__builtin_memcpy`**: with `_FORTIFY_SOURCE=3` (the Ubuntu default) 16-byte
++  copies into buffers of run-time known size were calls to `__memcpy_chk` (+13% KLZH compress).
++
++### Measured and not kept
++- KLZMA decoder variants (branch-free normalisation, a padded input, select-based bits): all slower with GCC 13; the
++  same C built with clang decodes 13% faster. An assembly bit decoder is the next step (decode is 0.72-0.74× of
++  liblzma 5.8.1).
++
+ ## Unreleased (rc3 wave 3, decmap lane: `claude/rc3w3-decmap-20261118`)
+ 
+ Decode maps: prebuilt decoder tables stored in the frame were measured and rejected (Huffman tables cost 4-8 KiB per
+diff --git a/benchmark/w4/lz/perfile.py b/benchmark/w4/lz/perfile.py
+new file mode 100644
+index 00000000..f3159f5b
+--- /dev/null
++++ b/benchmark/w4/lz/perfile.py
+@@ -0,0 +1,22 @@
++"""Per-file component benchmark of the wave-4 LZ lane: each (codec, file, thread count) in its own natbench process,
++so peak RSS (from wait4) is the coder's plus the harness buffers (the same for both coders of a pair).
++
++usage: python3 benchmark/w4/lz/perfile.py build/natbench OUT.tsv BLOCK_KIB REPS THREADS PAIR [PAIR ...] -- FILE ...
++PAIR is rival:native (e.g. lz4:klz1). Prints and appends rows: file, threads, codec, in, out, c MB/s, d MB/s, RSS KiB.
++1 thread and N threads are separate invocations (benchmark/rc2/PROTOCOL.md)."""
++import os, subprocess, sys
++NB, OUT, BK, REPS, T = sys.argv[1:6]
++i = sys.argv.index("--"); pairs = [p.split(":") for p in sys.argv[6:i]]; files = sys.argv[i + 1:]
++def run(codec, f):
++    p = subprocess.Popen(["taskset", "-c", "0-3", NB, codec, T, BK, REPS, f], stdout=subprocess.PIPE, text=True)
++    out = p.stdout.read(); _, st, ru = os.wait4(p.pid, 0)
++    if st: raise SystemExit(f"{codec} {f}: failed")
++    w = out.split()
++    return int(w[3]), int(w[5]), float(w[9]), float(w[12]), ru.ru_maxrss
++with open(OUT, "a") as o:
++    for f in files:
++        for a, b in pairs:
++            for c in (a, b):
++                n, z, cs, ds, rss = run(c, f)
++                row = f"{os.path.basename(f)}\tT{T}\t{c}\t{n}\t{z}\t{cs:.1f}\t{ds:.1f}\t{rss}"
++                print(row); o.write(row + "\n"); o.flush()
+diff --git a/benchmark/w4/lz/results/balanced.tsv b/benchmark/w4/lz/results/balanced.tsv
+new file mode 100644
+index 00000000..0578c4e7
+--- /dev/null
++++ b/benchmark/w4/lz/results/balanced.tsv
+@@ -0,0 +1,144 @@
++enwik8	T1	zstd1	100000000	40694488	247.1	919.2	238716
++enwik8	T1	klzh1	100000000	39327167	184.6	909.7	242232
++enwik8	T1	zstd3	100000000	35566782	153.5	783.8	234260
++enwik8	T1	klzh3	100000000	35582546	120.5	737.1	240024
++dickens	T1	zstd1	10192446	4264635	203.8	682.7	27164
++dickens	T1	klzh1	10192446	4079369	163.7	727.6	29788
++dickens	T1	zstd3	10192446	3681733	138.5	865.9	27480
++dickens	T1	klzh3	10192446	3691715	123.5	764.2	31024
++mozilla	T1	zstd1	51220480	19988639	292.0	851.3	122964
++mozilla	T1	klzh1	51220480	19913529	284.1	881.4	129212
++mozilla	T1	zstd3	51220480	18304336	230.2	817.3	122096
++mozilla	T1	klzh3	51220480	18849249	171.8	852.1	125180
++mr	T1	zstd1	9970564	3814844	333.0	969.2	26644
++mr	T1	klzh1	9970564	3770601	230.7	929.8	33244
++mr	T1	zstd3	9970564	3548122	171.9	850.1	26888
++mr	T1	klzh3	9970564	3585129	148.9	819.7	29532
++nci	T1	zstd1	33553445	2855235	646.7	1142.1	71476
++nci	T1	klzh1	33553445	3043997	610.9	1543.5	73900
++nci	T1	zstd3	33553445	2846755	550.8	1273.7	72136
++nci	T1	klzh3	33553445	2971425	546.4	1031.5	75204
++ooffice	T1	zstd1	6152192	3593815	293.9	657.5	18808
++ooffice	T1	klzh1	6152192	3431111	188.3	524.2	27764
++ooffice	T1	zstd3	6152192	3130232	157.2	559.9	19056
++ooffice	T1	klzh3	6152192	3134306	120.8	567.4	22688
++osdb	T1	zstd1	10085684	3738340	359.2	1013.7	26600
++osdb	T1	klzh1	10085684	3652739	319.6	1093.3	32568
++osdb	T1	zstd3	10085684	3511122	211.9	932.1	27104
++osdb	T1	klzh3	10085684	3533585	189.3	1137.1	34212
++reymont	T1	zstd1	6627202	2151356	239.1	786.3	18220
++reymont	T1	klzh1	6627202	2183172	186.4	804.0	21912
++reymont	T1	zstd3	6627202	1943693	185.7	571.4	18688
++reymont	T1	klzh3	6627202	1987153	139.9	866.3	22588
++samba	T1	zstd1	21606400	5501656	398.3	1187.2	50904
++samba	T1	klzh1	21606400	5555722	282.4	1134.5	57868
++samba	T1	zstd3	21606400	4982897	280.1	1243.2	51064
++samba	T1	klzh3	21606400	5146499	229.5	1059.2	57748
++sao	T1	zstd1	7251944	6251181	234.7	639.4	23540
++sao	T1	klzh1	7251944	6007850	186.1	478.0	35764
++sao	T1	zstd3	7251944	5530936	124.1	551.7	23468
++sao	T1	klzh3	7251944	5509176	91.2	491.3	34932
++webster	T1	zstd1	41458703	13675709	294.7	769.4	97536
++webster	T1	klzh1	41458703	13443073	199.1	1006.6	102464
++webster	T1	zstd3	41458703	12151695	164.4	861.0	96736
++webster	T1	klzh3	41458703	12252033	134.7	828.0	102648
++x-ray	T1	zstd1	8474240	6772708	585.5	896.0	26548
++x-ray	T1	klzh1	8474240	6779862	572.6	786.7	41208
++x-ray	T1	zstd3	8474240	6092374	121.4	655.8	26448
++x-ray	T1	klzh3	8474240	6240295	124.9	461.7	35732
++xml	T1	zstd1	5345280	694115	546.9	1223.2	14252
++xml	T1	klzh1	5345280	726045	438.1	1526.6	16408
++xml	T1	zstd3	5345280	636164	453.1	1431.2	15116
++xml	T1	klzh3	5345280	672831	451.3	1167.4	18780
++logs.log	T1	zstd1	7168604	683734	735.2	1735.4	18080
++logs.log	T1	klzh1	7168604	376848	1124.4	2820.5	17980
++logs.log	T1	zstd3	7168604	354965	927.4	2580.0	18260
++logs.log	T1	klzh3	7168604	377365	972.3	2851.5	20952
++owid-co2-data.csv	T1	zstd1	15242657	4190292	314.3	938.5	37128
++owid-co2-data.csv	T1	klzh1	15242657	4545015	213.8	889.1	40876
++owid-co2-data.csv	T1	zstd3	15242657	4612473	176.3	710.5	38320
++owid-co2-data.csv	T1	klzh3	15242657	4731208	151.9	558.7	43204
++owid-co2.json	T1	zstd1	103062979	4314454	1075.5	1903.9	208780
++owid-co2.json	T1	klzh1	103062979	4901993	1067.6	2720.2	211300
++owid-co2.json	T1	zstd3	103062979	4538999	963.4	2382.1	209700
++owid-co2.json	T1	klzh3	103062979	4776805	959.4	2574.7	214140
++owid-covid-latest.json	T1	zstd1	474853	31952	705.3	2189.5	13524
++owid-covid-latest.json	T1	klzh1	474853	35727	669.9	1976.1	13524
++owid-covid-latest.json	T1	zstd3	474853	31800	278.2	2165.2	13524
++owid-covid-latest.json	T1	klzh3	474853	31965	355.2	2490.8	13524
++owid-energy-data.csv	T1	zstd1	9229369	2494340	394.2	862.8	23660
++owid-energy-data.csv	T1	klzh1	9229369	2658622	168.8	554.1	25208
++owid-energy-data.csv	T1	zstd3	9229369	2728853	172.0	736.9	24712
++owid-energy-data.csv	T1	klzh3	9229369	2796389	146.8	828.4	26092
++enwik8	T4	zstd1	100000000	40694488	902.5	3487.8	239408
++enwik8	T4	klzh1	100000000	39327167	752.2	2827.3	248468
++enwik8	T4	zstd3	100000000	35566782	549.1	3052.7	237120
++enwik8	T4	klzh3	100000000	35582546	520.5	2117.5	244620
++dickens	T4	zstd1	10192446	4264635	594.1	2414.9	28020
++dickens	T4	klzh1	10192446	4079369	351.8	1178.5	37496
++dickens	T4	zstd3	10192446	3681733	285.6	2124.1	29460
++dickens	T4	klzh3	10192446	3691715	252.2	1747.0	38840
++mozilla	T4	zstd1	51220480	19988639	1049.9	2675.1	123972
++mozilla	T4	klzh1	51220480	19913529	1064.0	2894.2	142588
++mozilla	T4	zstd3	51220480	18304336	870.1	3027.3	125132
++mozilla	T4	klzh3	51220480	18849249	512.7	2702.1	132380
++mr	T4	zstd1	9970564	3814844	784.7	2191.4	27032
++mr	T4	klzh1	9970564	3770601	490.4	2094.6	38748
++mr	T4	zstd3	9970564	3548122	429.5	1796.4	28736
++mr	T4	klzh3	9970564	3585129	262.9	2003.8	36740
++nci	T4	zstd1	33553445	2855235	1863.5	4314.7	72100
++nci	T4	klzh1	33553445	3043997	1777.8	4305.3	81976
++nci	T4	zstd3	33553445	2846755	1564.1	4293.3	74704
++nci	T4	klzh3	33553445	2971425	1155.9	3443.6	88724
++ooffice	T4	zstd1	6152192	3593815	446.7	1059.6	19152
++ooffice	T4	klzh1	6152192	3431111	352.4	1063.6	31644
++ooffice	T4	zstd3	6152192	3130232	243.2	1002.7	20048
++ooffice	T4	klzh3	6152192	3134306	160.2	1067.5	27064
++osdb	T4	zstd1	10085684	3738340	908.6	2374.5	27004
++osdb	T4	klzh1	10085684	3652739	529.9	2123.2	43284
++osdb	T4	zstd3	10085684	3511122	519.8	2511.2	28888
++osdb	T4	klzh3	10085684	3533585	465.3	2732.9	45468
++reymont	T4	zstd1	6627202	2151356	387.9	1641.2	18456
++reymont	T4	klzh1	6627202	2183172	296.2	1451.5	23880
++reymont	T4	zstd3	6627202	1943693	283.7	1562.6	19772
++reymont	T4	klzh3	6627202	1987153	232.7	1274.7	26044
++samba	T4	zstd1	21606400	5501656	1140.1	3585.3	51824
++samba	T4	klzh1	21606400	5555722	1004.4	3446.4	74952
++samba	T4	zstd3	21606400	4982897	791.6	3767.4	53880
++samba	T4	klzh3	21606400	5146499	639.7	3508.4	80836
++sao	T4	zstd1	7251944	6251181	561.1	1304.4	23808
++sao	T4	klzh1	7251944	6007850	311.4	1155.7	40448
++sao	T4	zstd3	7251944	5530936	246.3	1091.6	24320
++sao	T4	klzh3	7251944	5509176	186.7	895.3	42700
++webster	T4	zstd1	41458703	13675709	876.3	3382.1	98140
++webster	T4	klzh1	41458703	13443073	650.0	3163.3	107472
++webster	T4	zstd3	41458703	12151695	520.2	3148.5	99528
++webster	T4	klzh3	41458703	12252033	468.5	2238.8	106896
++x-ray	T4	zstd1	8474240	6772708	1203.4	1695.6	26844
++x-ray	T4	klzh1	8474240	6779862	1107.2	1536.8	49076
++x-ray	T4	zstd3	8474240	6092374	240.3	1247.1	28260
++x-ray	T4	klzh3	8474240	6240295	161.9	1139.7	41404
++xml	T4	zstd1	5345280	694115	809.7	1632.1	14252
++xml	T4	klzh1	5345280	726045	721.3	1966.7	17668
++xml	T4	zstd3	5345280	636164	530.5	1421.1	15916
++xml	T4	klzh3	5345280	672831	486.3	2202.1	20068
++logs.log	T4	zstd1	7168604	683734	1186.0	2834.8	18056
++logs.log	T4	klzh1	7168604	376848	1881.3	4274.0	19464
++logs.log	T4	zstd3	7168604	354965	1464.9	5447.6	19152
++logs.log	T4	klzh3	7168604	377365	1167.7	4358.6	25460
++owid-co2-data.csv	T4	zstd1	15242657	4190292	1198.9	2345.0	38084
++owid-co2-data.csv	T4	klzh1	15242657	4545015	653.6	1942.5	49732
++owid-co2-data.csv	T4	zstd3	15242657	4612473	576.6	2791.7	41332
++owid-co2-data.csv	T4	klzh3	15242657	4731208	424.4	2369.7	55932
++owid-co2.json	T4	zstd1	103062979	4314454	4108.2	7761.4	209452
++owid-co2.json	T4	klzh1	103062979	4901993	4216.6	11733.9	218292
++owid-co2.json	T4	zstd3	103062979	4538999	3843.8	8595.3	212224
++owid-co2.json	T4	klzh3	103062979	4776805	3017.9	7796.1	229444
++owid-covid-latest.json	T4	zstd1	474853	31952	617.4	2276.0	13500
++owid-covid-latest.json	T4	klzh1	474853	35727	512.1	1879.8	13500
++owid-covid-latest.json	T4	zstd3	474853	31800	575.4	1710.0	13500
++owid-covid-latest.json	T4	klzh3	474853	31965	248.1	962.3	13500
++owid-energy-data.csv	T4	zstd1	9229369	2494340	783.3	2283.0	24208
++owid-energy-data.csv	T4	klzh1	9229369	2658622	352.0	2162.1	27696
++owid-energy-data.csv	T4	zstd3	9229369	2728853	402.0	1847.1	26584
++owid-energy-data.csv	T4	klzh3	9229369	2796389	213.7	991.6	35428
+diff --git a/benchmark/w4/lz/results/speed.tsv b/benchmark/w4/lz/results/speed.tsv
+new file mode 100644
+index 00000000..c87e7846
+--- /dev/null
++++ b/benchmark/w4/lz/results/speed.tsv
+@@ -0,0 +1,72 @@
++dickens	T1	lz4	10192446	6431106	311.7	2301.8	28732
++dickens	T1	klz1	10192446	5625147	273.0	2589.8	29216
++mozilla	T1	lz4	51220480	26441724	496.8	2037.5	128400
++mozilla	T1	klz1	51220480	25810020	472.3	2045.9	128476
++mr	T1	lz4	9970564	5442495	383.6	2750.8	27216
++mr	T1	klz1	9970564	5448632	446.4	2201.3	28060
++nci	T1	lz4	33553445	5539301	720.9	2768.7	73248
++nci	T1	klz1	33553445	5262764	880.4	3261.3	73476
++ooffice	T1	lz4	6152192	4339312	396.5	1742.5	18756
++ooffice	T1	klz1	6152192	4287293	406.6	1883.7	19400
++osdb	T1	lz4	10085684	5261215	358.3	2358.6	27452
++osdb	T1	klz1	10085684	4492015	499.8	2507.8	27276
++reymont	T1	lz4	6627202	3182828	292.0	2205.6	18696
++reymont	T1	klz1	6627202	2843710	277.1	2560.6	19700
++samba	T1	lz4	21606400	7721713	506.7	2329.5	52056
++samba	T1	klz1	21606400	7385174	517.3	2813.7	52748
++sao	T1	lz4	7251944	6790441	506.8	3023.1	23108
++sao	T1	klz1	7251944	6548174	385.3	2958.3	23768
++webster	T1	lz4	41458703	20149194	334.8	2343.2	103036
++webster	T1	klz1	41458703	18433986	334.8	2554.0	102608
++x-ray	T1	lz4	8474240	8406607	1384.6	6073.9	27248
++x-ray	T1	klz1	8474240	8474143	6997.8	9782.6	27232
++xml	T1	lz4	5345280	1228083	630.1	2698.0	14092
++xml	T1	klz1	5345280	1119761	657.7	2739.2	14480
++logs.log	T1	lz4	7168604	1268040	846.6	3411.9	17492
++logs.log	T1	klz1	7168604	1264731	945.8	3199.6	18132
++owid-co2-data.csv	T1	lz4	15242657	7552419	366.6	2182.1	39524
++owid-co2-data.csv	T1	klz1	15242657	7243741	360.7	2458.7	40736
++owid-co2.json	T1	lz4	103062979	11659489	1163.1	3886.9	215280
++owid-co2.json	T1	klz1	103062979	11220141	1205.9	3768.6	215372
++owid-covid-latest.json	T1	lz4	474853	58927	860.0	3487.9	13484
++owid-covid-latest.json	T1	klz1	474853	53817	1016.0	4114.7	13484
++owid-energy-data.csv	T1	lz4	9229369	4582419	436.7	2041.5	25116
++owid-energy-data.csv	T1	klz1	9229369	4513997	379.3	2095.3	25684
++enwik8	T1	lz4	100000000	57285873	363.3	2520.2	253992
++enwik8	T1	klz1	100000000	52558896	330.7	2631.9	250416
++dickens	T4	lz4	10192446	6431106	771.8	4738.6	28488
++dickens	T4	klz1	10192446	5625147	660.0	6275.8	30888
++mozilla	T4	lz4	51220480	26441724	1979.4	10096.7	128508
++mozilla	T4	klz1	51220480	25810020	1853.4	9281.2	131544
++mr	T4	lz4	9970564	5442495	1111.5	5314.1	27348
++mr	T4	klz1	9970564	5448632	973.0	7151.8	28872
++nci	T4	lz4	33553445	5539301	2375.5	11566.9	73568
++nci	T4	klz1	33553445	5262764	2736.8	10050.9	75344
++ooffice	T4	lz4	6152192	4339312	601.0	3205.9	18968
++ooffice	T4	klz1	6152192	4287293	593.0	3403.2	19620
++osdb	T4	lz4	10085684	5261215	956.5	4961.3	27356
++osdb	T4	klz1	10085684	4492015	951.0	5963.8	28348
++reymont	T4	lz4	6627202	3182828	457.7	3261.1	18696
++reymont	T4	klz1	6627202	2843710	403.7	3838.6	20120
++samba	T4	lz4	21606400	7721713	1366.3	6709.4	52436
++samba	T4	klz1	21606400	7385174	1401.2	8424.6	55428
++sao	T4	lz4	7251944	6790441	849.3	5188.5	23372
++sao	T4	klz1	7251944	6548174	653.3	4915.8	23948
++webster	T4	lz4	41458703	20149194	1195.3	8257.8	103072
++webster	T4	klz1	41458703	18433986	1101.2	8894.1	106136
++x-ray	T4	lz4	8474240	8406607	2442.7	11856.3	27124
++x-ray	T4	klz1	8474240	8474143	12493.7	17491.6	27388
++xml	T4	lz4	5345280	1228083	951.9	3673.2	14288
++xml	T4	klz1	5345280	1119761	973.1	3075.2	14872
++logs.log	T4	lz4	7168604	1268040	1421.9	4426.6	17720
++logs.log	T4	klz1	7168604	1264731	1625.7	5203.1	18128
++owid-co2-data.csv	T4	lz4	15242657	7552419	1119.1	6462.3	39536
++owid-co2-data.csv	T4	klz1	15242657	7243741	1016.6	6697.1	42956
++owid-co2.json	T4	lz4	103062979	11659489	3835.0	13253.0	215228
++owid-co2.json	T4	klz1	103062979	11220141	4419.4	14408.6	217412
++owid-covid-latest.json	T4	lz4	474853	58927	858.0	3103.8	13412
++owid-covid-latest.json	T4	klz1	474853	53817	1061.7	3859.9	13412
++owid-energy-data.csv	T4	lz4	9229369	4582419	916.6	4447.2	25088
++owid-energy-data.csv	T4	klz1	9229369	4513997	879.7	4074.6	26684
++enwik8	T4	lz4	100000000	57285873	1380.6	9702.7	253992
++enwik8	T4	klz1	100000000	52558896	1226.4	10099.5	254604
+diff --git a/benchmark/w4/lz/run_all.sh b/benchmark/w4/lz/run_all.sh
+new file mode 100644
+index 00000000..e0b26b8a
+--- /dev/null
++++ b/benchmark/w4/lz/run_all.sh
+@@ -0,0 +1,14 @@
++#!/bin/sh
++# Wave-4 LZ lane component runs (results/*.tsv). usage: sh benchmark/w4/lz/run_all.sh DATA_DIR [speed balanced ratio]
++# DATA_DIR holds silesia/, struct/ and enwik/ (benchmark/w4/lz/RESULTS.md lists the files).
++D=$1; shift; ROLES=${*:-"speed balanced ratio"}; R=benchmark/w4/lz/results; P="python3 benchmark/w4/lz/perfile.py build/natbench"
++F=$(ls $D/silesia/* $D/struct/* $D/enwik/* | tr '\n' ' ')
++S="$D/silesia/dickens $D/silesia/osdb $D/silesia/ooffice $D/silesia/x-ray $D/silesia/samba $D/struct/owid-co2-data.csv $D/struct/logs.log"
++for role in $ROLES; do for T in 1 4; do
++  case $role in
++    speed) $P $R/speed.tsv 4096 5 $T lz4:klzs1 -- $F ;;   # klzs1: the lane's KLZ, codec 31 since review40 (results/speed.tsv calls it klz1)
++    balanced) $P $R/balanced.tsv 4096 3 $T zstd1:klzh1 zstd3:klzh3 -- $F ;;
++    ratio) $P $R/ratio.tsv 16384 2 $T lzma9e:klzma8 -- $S ;;
++  esac
++done; done
++echo DONE
+diff --git a/benchmark/w4/lz/table.py b/benchmark/w4/lz/table.py
+new file mode 100644
+index 00000000..dc0c873b
+--- /dev/null
++++ b/benchmark/w4/lz/table.py
+@@ -0,0 +1,18 @@
++"""Pairs table from perfile.py rows: python3 table.py RESULTS.tsv rival:native [...]; per file and totals (time sums)."""
++import sys, collections
++rows = [l.rstrip("\n").split("\t") for l in open(sys.argv[1]) if l.strip()]
++R = {(r[0], r[1], r[2]): r for r in rows}
++for pair in sys.argv[2:]:
++    a, b = pair.split(":")
++    for T in sorted({r[1] for r in rows}):
++        print(f"\n**{b} against {a}, {T}**\n\n| file | {a} bytes | {b} bytes | size | {a} c / d MB/s | {b} c / d MB/s | compress | decompress | RSS KiB {a} / {b} |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|")
++        tot = collections.Counter()
++        for f in sorted({r[0] for r in rows}):
++            if (f, T, a) not in R or (f, T, b) not in R: continue
++            x, y = R[(f, T, a)], R[(f, T, b)]; n = int(x[3]); za, zb = int(x[4]), int(y[4])
++            ca, da, cb, db = map(float, (x[5], x[6], y[5], y[6]))
++            tot["n"] += n; tot["za"] += za; tot["zb"] += zb
++            tot["tca"] += n / ca; tot["tda"] += n / da; tot["tcb"] += n / cb; tot["tdb"] += n / db
++            print(f"| {f} | {za:,} | {zb:,} | {100*(zb/za-1):+.2f}% | {ca:.0f} / {da:.0f} | {cb:.0f} / {db:.0f} | {ca and cb/ca:.2f}x | {db/da:.2f}x | {x[7]} / {y[7]} |")
++        if tot["n"]:
++            print(f"| **total** | {tot['za']:,} | {tot['zb']:,} | {100*(tot['zb']/tot['za']-1):+.2f}% | {tot['n']/tot['tca']:.0f} / {tot['n']/tot['tda']:.0f} | {tot['n']/tot['tcb']:.0f} / {tot['n']/tot['tdb']:.0f} | {tot['tca']/tot['tcb']:.2f}x | {tot['tda']/tot['tdb']:.2f}x | |")
+-- 
+2.43.0
+

@@ -1,0 +1,12 @@
+./tinychunks.89d62b8e ctx rc 0: 200000 chunks, 3200000 input bytes, 1.1449 s, 5.72 us per chunk, 2.79 MB/s of input
+./tinychunks.89d62b8e ctx rc 0: 200000 chunks, 3200000 input bytes, 1.1845 s, 5.92 us per chunk, 2.70 MB/s of input
+./tinychunks.89d62b8e ctx rc 0: 200000 chunks, 3200000 input bytes, 1.1277 s, 5.64 us per chunk, 2.84 MB/s of input
+./tinychunks.new ctx rc -1: 200000 chunks, 3200000 input bytes, 0.0000 s, 0.00 us per chunk, 295693.96 MB/s of input
+./tinychunks.new ctx rc -1: 200000 chunks, 3200000 input bytes, 0.0000 s, 0.00 us per chunk, 444197.67 MB/s of input
+./tinychunks.new ctx rc -1: 200000 chunks, 3200000 input bytes, 0.0000 s, 0.00 us per chunk, 421829.69 MB/s of input
+./tinychunks.89d62b8e one rc 0: 200000 chunks, 2800000 input bytes, 0.4609 s, 2.30 us per chunk, 6.07 MB/s of input
+./tinychunks.89d62b8e one rc 0: 200000 chunks, 2800000 input bytes, 0.4378 s, 2.19 us per chunk, 6.40 MB/s of input
+./tinychunks.89d62b8e one rc 0: 200000 chunks, 2800000 input bytes, 0.4984 s, 2.49 us per chunk, 5.62 MB/s of input
+./tinychunks.new one rc 0: 200000 chunks, 2800000 input bytes, 0.0126 s, 0.06 us per chunk, 221.36 MB/s of input
+./tinychunks.new one rc 0: 200000 chunks, 2800000 input bytes, 0.0130 s, 0.06 us per chunk, 216.15 MB/s of input
+./tinychunks.new one rc 0: 200000 chunks, 2800000 input bytes, 0.0125 s, 0.06 us per chunk, 223.64 MB/s of input

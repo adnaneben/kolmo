@@ -15,3 +15,12 @@
   on 8 MiB of mozilla, instructions 83.4M -> 103.5M). The branchy loop stays.
 - tANS vs khuf for the code streams (level 3, same 5 files): tANS 30,113,374 B at 703-751 MB/s decode; khuf blocks for chunks >= 2048 symbols 30,221,466 B (+0.36%) at 839-843 MB/s
   (measured with the mask loop); codec 29 31,685,855 B at 944-1026 MB/s; zstd -3 30,451,885 B at 932-1149 MB/s.
+- 24 Nov 04:20Z-05:35Z (second execution session): resumed at 853de09d. Added a154f538 (estimate-based table choice, heap normalisation),
+  c0e30b02 (khuf code chunks, levels 1-4), ee0c7ea3 (tANS decode loop), 3dcc5388 (results, tools), 96ad7155 (bindings sync).
+  Final natbench rounds: final/v3 (853de09d), v4 (a154f538), v5 (c0e30b02), v6 (ee0c7ea3). check-native OK, determinism 122 frames OK,
+  local fuzz driver OK (72 seeds + 300k random). Patches exported (10), claim #4 status implemented. Results: results/R01.md.
+- Next in this session: claim #5 klz-w4-compat (lane fetched into the clone as refs/remotes/lanes/w4-lz).
+- 24 Nov 05:40Z-06:15Z: claim #5 klz-w4-compat built on the same branch (8eca114d..0f198b7e): lane commits cherry-picked, 0dc7a8b1 ported as
+  KLZS codec 31 with rc3's codec 28 kept. natbench round final/w4-* (commit 1fe6a718), e2e-w4.tsv, dec_time-w4-L{1,3}.txt.
+  check-native/arch/kernels OK, determinism 122 OK, local fuzz (81 seeds) OK. Negative: conditional refills in codec 32's sequence loop
+  (variant R01-exp/tt2/klz-stop-w4b.c) slower: 118.9-122.8 -> 134.8-142.6 ms. Patches re-exported (18), claim #5 status implemented.

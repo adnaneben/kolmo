@@ -1,0 +1,34 @@
+From 3e3593e7dbfa3803daf1d3fe1aae07a83fecf055 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 06:12:57 +0000
+Subject: [PATCH 8/8] research/CODECS.md: ledger rows for codecs 33 (context
+ rANS leaf) and 34 (16-bit image residual words)
+
+Sizes measured at 1062b9e3 against the rc3 binary (17 PNM images, Silesia, OWID arrays; every
+frame decoded and compared), rivals on the same pixels, and the indicative timings of the shared
+review container. Both stay opt-in (KOLMO_NATIVE=rans).
+
+Review R02, claims ctx-rans-leaf (#11) and img16-ctx-rans (#17).
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ research/CODECS.md | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/research/CODECS.md b/research/CODECS.md
+index 7d5dc52c..ada43035 100644
+--- a/research/CODECS.md
++++ b/research/CODECS.md
+@@ -48,6 +48,8 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
+ | 28 | KLZ (rc3 wave 2) | byte-aligned LZ77: token (3-bit literal length, 4-bit match length, 3-byte-offset bit), 16 MiB window, LZ4-style skipping hash table | own (`src/algo/klz.c`) | against LZ4 -1 (4 MiB blocks): Silesia −6.9% size, compress 0.79×, decode 0.77× (1 thread); structured −5.9%, 0.90×, 0.73× | opt-in (`KOLMO_NATIVE=lz`); replace LZ4 in `speed` once decode ≥ 0.9× |
+ | 29 | KLZH (rc3 wave 2) | KLZ's parse with 3 repeat offsets; literals, length codes and offset codes as khuf streams, extra bits raw; levels 1–3 two hash tables (8/5-byte), 4–9 chains + lazy | own (`src/algo/klz.c`) | KLZH1 against zstd -1: Silesia −4.7%, compress 0.65×, decode 0.94×; structured +9.9%. Against zstd -3: KLZH3 +2.4% (Silesia) / +3.8% (structured) at 0.76× compress; KLZH5 −2.8% / −1.6% at 0.23×. KLZH8 against zstd -19: +13.7% / +20.8% (no optimal parse). KLZH7 against Brotli 8: +8% | opt-in (`KOLMO_NATIVE=lz`); `balanced` after tuning, `hc` needs an optimal parse |
+ | 25 | CM over parts | parts each coded by their own context-mixing model (codec 7 streams), in parallel for encoding and decoding; parts from the table's columns (transpose plan) or two halves of a non-text stream ≥ 32 MiB; cuts depend on the input only; container version 11 | own | columns: CSV 1 MB −0.5%, encode 2.1× and decode 4.4× faster at 4 threads; halves: +0.14% on 100 MB of binary data, 2× faster both ways; 5 MB halves +0.14% to +2.3% (Silesia osdb), hence from 32 MiB only (`benchmark/rc3/xmode/RESULTS.md`) | rc3 (xmode lane) |
++| 33 | KRANS, context rANS leaf (review R02, after rc3) | static rANS (32-bit states, 2^12 totals, 16-bit words, 1–32 states over contiguous segments) with static contexts: the binned magnitudes of up to four earlier bytes (left, up, up-left, up-right of an image residual leaf), the previous byte (itself, or its magnitude and sign: the previous channel of the pixel) and the phase (channel); contexts merged onto ≤ 255 coded frequency tables by exact cost; orders 0 and 1 for leaves without geometry | own (`src/algo/krans.c`, `src/codecs/krans_leaf.c`; method: Duda arXiv:1311.2540, Giesen arXiv:1402.3392) | 17 PNM images (14.8 MB), opt-in against rc3: `balanced` 6,060,614 → 5,142,196 (−15.2%), `hc` 5,442,815 → 4,967,642 (−8.7%), `ratio` 4,957,103 → 4,855,065 (−2.1%); against JPEG-LS (CharLS) on the same pixels `balanced` goes from +9.9% to −6.8%, against JPEG XL e3 from +28.8% to +9.3%. OWID float64 array at `balanced` −1.0%; text, tables and other Silesia files unchanged (never larger: kept only when smaller). Indicative, 1 thread, shared container: retina.ppm `balanced` compress 0.048 → 0.122 s, decompress 0.021 → 0.058 s; decoder kernel alone about 155–170 MB/s with image contexts, 250 order 1, 525–555 order 0 (scalar C). Full tables: review 40, `results/R02.md` | opt-in (`KOLMO_NATIVE=rans`); a default needs the owner's decision (decode of image blocks about 2.7× slower end to end) and SIMD kernels first |
++| 34 | KI16, context rANS over 16-bit image residual words (review R02, after rc3) | the residuals of a 16-bit image block (transform flag 6) as (high, low) byte pairs coded by the codec 33 coder under the half-octave classes of the four neighbouring words, the low byte also under its high byte; header, skip and trailing bytes stored; tried beside the block codec, kept when smaller | own (`src/codecs/krans_leaf.c`, `src/algo/krans.c` mk 3) | Silesia mr: `balanced` 2,316,612 → 2,043,502 (−11.8%), `hc` 2,257,516 → 2,038,459 (−9.7%), `ratio` unchanged (BWT smaller); x-ray: `balanced` 3,657,342 → 3,610,019 (−1.3%), `hc` 3,649,636 → 3,591,366 (−1.6%), `ratio` 3,616,667 → 3,591,366 (−0.7%). Silesia `balanced` total 58,357,718 → 58,037,285 (−0.55%). Rivals on the same pixels plus the file header: JPEG-LS 2,048,193 / 3,592,616, JPEG XL e3 1,933,632 / 3,585,902. Indicative, 1 thread: mr `balanced` compress 0.056 → 0.286 s, decompress 0.043 → 0.146 s | opt-in (`KOLMO_NATIVE=rans`); same condition as 33 |
+ 
+ ## Transforms and graph techniques
+ 
+-- 
+2.43.0
+

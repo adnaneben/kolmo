@@ -1,7 +1,7 @@
 From b9546117c169ca30d999647190ad0f5da143525d Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 02:49:03 +0000
-Subject: [PATCH 3/6] krans: signed previous-byte contexts, run-coded context
+Subject: [PATCH 3/8] krans: signed previous-byte contexts, run-coded context
  map, 16-bit word contexts; SPEC text for codec 33
 
 Measured on the residual leaves of astronaut.ppm / coffee.ppm (rc3 balanced leaf 431,788 / 451,631):

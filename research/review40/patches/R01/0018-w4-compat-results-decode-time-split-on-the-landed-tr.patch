@@ -1,0 +1,105 @@
+From 0f198b7e104ca6894be77b09c255217b2c1a65dc Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 06:13:03 +0000
+Subject: [PATCH 18/18] w4-compat results: decode time split on the landed
+ tree, conditional refills in codec 32's loop measured slower
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ benchmark/review40/w4-compat/RESULTS.md       | 15 ++++++++++++
+ .../w4-compat/results/dec_time-w4-L1.txt      | 24 +++++++++++++++++++
+ .../w4-compat/results/dec_time-w4-L3.txt      | 24 +++++++++++++++++++
+ 3 files changed, 63 insertions(+)
+ create mode 100644 benchmark/review40/w4-compat/results/dec_time-w4-L1.txt
+ create mode 100644 benchmark/review40/w4-compat/results/dec_time-w4-L3.txt
+
+diff --git a/benchmark/review40/w4-compat/RESULTS.md b/benchmark/review40/w4-compat/RESULTS.md
+index 08808b2a..58ed6575 100644
+--- a/benchmark/review40/w4-compat/RESULTS.md
++++ b/benchmark/review40/w4-compat/RESULTS.md
+@@ -110,6 +110,21 @@ Through the CLI, `-T 1`, 13 files:
+   rc3's parse). The 4-thread decompress figure of KLZH2 3 (0.68x of KLZH 3) is one run on a loaded host and is not
+   matched by the 1-thread run; it needs the M5.
+ 
++Decode time split on the landed tree (`benchmark/review40/klzh2/dec_time.c`, 12 Silesia files in 4 MiB blocks,
++best of 9, entropy decode of the streams + sequence loop; raw: `results/dec_time-w4-L1.txt`, `-L3.txt`):
++
++| level | codec 29 | codec 32 | codec 32 / codec 29 time | before the lane (klzh2 RESULTS, section 2) |
++|---|---|---|---|---|
++| 1 | 63.8 + 118.4 = 182.1 ms | 79.4 + 143.5 = 222.6 ms | 1.22x | 200.7 and 219.1 ms: 1.09x |
++| 3 | 52.7 + 136.4 = 189.0 ms | 67.9 + 153.7 = 221.6 ms | 1.17x | 213.2 and 231.8 ms: 1.09x |
++
++The lane's decoder work went to codec 29's sequence loop (level 3: 154.3 -> 136.4 ms, refills only when a field
++needs them) and to khuf's tables, which both codecs use (codec 32's streams at level 3: 75.7 -> 67.9 ms, mozilla
++27.4 -> 24.5 ms). Codec 32's loop already refilled once per sequence, so it gained nothing there, and the gap
++between the two decoders widened. **Negative result:** the same conditional refills in codec 32's loop are slower
++(sequence loop of six files at level 3, two rounds: 122.8 and 118.9 ms as it is, 134.8 and 142.6 ms with them);
++not kept.
++
+ ## 5. Verification
+ 
+ On `1fe6a718` (the tree with all six lane commits):
+diff --git a/benchmark/review40/w4-compat/results/dec_time-w4-L1.txt b/benchmark/review40/w4-compat/results/dec_time-w4-L1.txt
+new file mode 100644
+index 00000000..2530a987
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/dec_time-w4-L1.txt
+@@ -0,0 +1,24 @@
++dickens	L1	klzh	out=4079369	streams 2.9 ms	sequence loop 7.5 ms	total 10.4 ms = 977 MB/s
++dickens	L1	klzh2	out=4061306	streams 5.2 ms	sequence loop 11.2 ms	total 16.4 ms = 621 MB/s
++mozilla	L1	klzh	out=19913529	streams 17.8 ms	sequence loop 31.2 ms	total 49.0 ms = 1046 MB/s
++mozilla	L1	klzh2	out=18992605	streams 26.3 ms	sequence loop 39.9 ms	total 66.1 ms = 775 MB/s
++mr	L1	klzh	out=3770601	streams 3.7 ms	sequence loop 5.4 ms	total 9.0 ms = 1105 MB/s
++mr	L1	klzh2	out=3611280	streams 5.3 ms	sequence loop 6.5 ms	total 11.9 ms = 840 MB/s
++nci	L1	klzh	out=3043997	streams 2.3 ms	sequence loop 14.4 ms	total 16.7 ms = 2005 MB/s
++nci	L1	klzh2	out=2866439	streams 2.5 ms	sequence loop 15.9 ms	total 18.4 ms = 1823 MB/s
++ooffice	L1	klzh	out=3431111	streams 3.3 ms	sequence loop 3.9 ms	total 7.3 ms = 848 MB/s
++ooffice	L1	klzh2	out=3378527	streams 4.0 ms	sequence loop 4.9 ms	total 8.9 ms = 691 MB/s
++osdb	L1	klzh	out=3652739	streams 3.1 ms	sequence loop 4.3 ms	total 7.3 ms = 1374 MB/s
++osdb	L1	klzh2	out=3606112	streams 3.7 ms	sequence loop 5.0 ms	total 8.6 ms = 1172 MB/s
++reymont	L1	klzh	out=2183172	streams 1.5 ms	sequence loop 5.1 ms	total 6.6 ms = 1004 MB/s
++reymont	L1	klzh2	out=2140442	streams 1.8 ms	sequence loop 5.4 ms	total 7.2 ms = 921 MB/s
++samba	L1	klzh	out=5555722	streams 4.7 ms	sequence loop 10.4 ms	total 15.1 ms = 1427 MB/s
++samba	L1	klzh2	out=5357926	streams 5.1 ms	sequence loop 14.1 ms	total 19.2 ms = 1126 MB/s
++sao	L1	klzh	out=6007850	streams 6.1 ms	sequence loop 4.3 ms	total 10.4 ms = 700 MB/s
++sao	L1	klzh2	out=5916293	streams 6.8 ms	sequence loop 3.8 ms	total 10.5 ms = 689 MB/s
++webster	L1	klzh	out=13443073	streams 9.3 ms	sequence loop 24.9 ms	total 34.2 ms = 1213 MB/s
++webster	L1	klzh2	out=13348024	streams 9.9 ms	sequence loop 33.6 ms	total 43.4 ms = 955 MB/s
++x-ray	L1	klzh	out=6779862	streams 8.5 ms	sequence loop 4.9 ms	total 13.4 ms = 632 MB/s
++x-ray	L1	klzh2	out=6778372	streams 8.1 ms	sequence loop 0.8 ms	total 8.9 ms = 949 MB/s
++xml	L1	klzh	out=726045	streams 0.6 ms	sequence loop 2.1 ms	total 2.7 ms = 2013 MB/s
++xml	L1	klzh2	out=683622	streams 0.7 ms	sequence loop 2.4 ms	total 3.1 ms = 1728 MB/s
+diff --git a/benchmark/review40/w4-compat/results/dec_time-w4-L3.txt b/benchmark/review40/w4-compat/results/dec_time-w4-L3.txt
+new file mode 100644
+index 00000000..9513eb58
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/dec_time-w4-L3.txt
+@@ -0,0 +1,24 @@
++dickens	L3	klzh	out=3691715	streams 2.2 ms	sequence loop 9.7 ms	total 11.9 ms = 853 MB/s
++dickens	L3	klzh2	out=3630035	streams 2.1 ms	sequence loop 9.2 ms	total 11.3 ms = 899 MB/s
++mozilla	L3	klzh	out=18849249	streams 15.8 ms	sequence loop 35.2 ms	total 51.0 ms = 1004 MB/s
++mozilla	L3	klzh2	out=17811667	streams 24.5 ms	sequence loop 42.3 ms	total 66.7 ms = 767 MB/s
++mr	L3	klzh	out=3585129	streams 2.6 ms	sequence loop 7.6 ms	total 10.2 ms = 981 MB/s
++mr	L3	klzh2	out=3372971	streams 4.8 ms	sequence loop 8.5 ms	total 13.3 ms = 751 MB/s
++nci	L3	klzh	out=2971425	streams 2.2 ms	sequence loop 14.6 ms	total 16.8 ms = 1999 MB/s
++nci	L3	klzh2	out=2788062	streams 2.2 ms	sequence loop 15.2 ms	total 17.5 ms = 1921 MB/s
++ooffice	L3	klzh	out=3134306	streams 2.8 ms	sequence loop 4.5 ms	total 7.3 ms = 842 MB/s
++ooffice	L3	klzh2	out=3084515	streams 3.4 ms	sequence loop 6.6 ms	total 9.9 ms = 621 MB/s
++osdb	L3	klzh	out=3533585	streams 2.8 ms	sequence loop 4.5 ms	total 7.3 ms = 1375 MB/s
++osdb	L3	klzh2	out=3485882	streams 3.2 ms	sequence loop 5.4 ms	total 8.6 ms = 1168 MB/s
++reymont	L3	klzh	out=1987153	streams 1.2 ms	sequence loop 5.4 ms	total 6.6 ms = 1003 MB/s
++reymont	L3	klzh2	out=1931334	streams 1.1 ms	sequence loop 5.2 ms	total 6.4 ms = 1043 MB/s
++samba	L3	klzh	out=5146499	streams 3.7 ms	sequence loop 11.0 ms	total 14.7 ms = 1469 MB/s
++samba	L3	klzh2	out=4945395	streams 4.4 ms	sequence loop 11.9 ms	total 16.3 ms = 1326 MB/s
++sao	L3	klzh	out=5509176	streams 5.0 ms	sequence loop 4.3 ms	total 9.2 ms = 785 MB/s
++sao	L3	klzh2	out=5361864	streams 6.2 ms	sequence loop 5.2 ms	total 11.4 ms = 636 MB/s
++webster	L3	klzh	out=12252033	streams 7.4 ms	sequence loop 32.8 ms	total 40.2 ms = 1032 MB/s
++webster	L3	klzh2	out=12057708	streams 7.6 ms	sequence loop 35.3 ms	total 42.9 ms = 965 MB/s
++x-ray	L3	klzh	out=6240295	streams 6.5 ms	sequence loop 4.6 ms	total 11.1 ms = 763 MB/s
++x-ray	L3	klzh2	out=6115780	streams 7.7 ms	sequence loop 6.5 ms	total 14.2 ms = 597 MB/s
++xml	L3	klzh	out=672831	streams 0.5 ms	sequence loop 2.2 ms	total 2.7 ms = 1975 MB/s
++xml	L3	klzh2	out=632079	streams 0.7 ms	sequence loop 2.4 ms	total 3.1 ms = 1750 MB/s
+-- 
+2.43.0
+

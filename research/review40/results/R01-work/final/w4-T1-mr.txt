@@ -1,0 +1,10 @@
+lz4      T1  in     9970564  out     5442495  ratio  1.832  c    526.1 MB/s  d   2571.0 MB/s
+klz1     T1  in     9970564  out     5021660  ratio  1.986  c    384.7 MB/s  d   1908.9 MB/s
+klzs1    T1  in     9970564  out     5448632  ratio  1.830  c    544.7 MB/s  d   3141.7 MB/s
+klzs3    T1  in     9970564  out     4486197  ratio  2.222  c     58.2 MB/s  d   2401.4 MB/s
+zstd1    T1  in     9970564  out     3814844  ratio  2.614  c    377.0 MB/s  d   1119.2 MB/s
+klzh1    T1  in     9970564  out     3770601  ratio  2.644  c    310.7 MB/s  d   1010.6 MB/s
+k2h1     T1  in     9970564  out     3611280  ratio  2.761  c    222.8 MB/s  d    802.4 MB/s
+zstd3    T1  in     9970564  out     3548122  ratio  2.810  c    175.8 MB/s  d    964.6 MB/s
+klzh3    T1  in     9970564  out     3585129  ratio  2.781  c    139.0 MB/s  d    503.3 MB/s
+k2h3     T1  in     9970564  out     3372971  ratio  2.956  c    110.9 MB/s  d    664.0 MB/s

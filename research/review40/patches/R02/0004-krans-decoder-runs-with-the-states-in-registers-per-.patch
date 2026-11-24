@@ -1,0 +1,272 @@
+From 82ce52e2a621c494f267e24e09fdb09bb592de29 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 03:05:08 +0000
+Subject: [PATCH 4/8] krans: decoder runs with the states in registers per
+ shape, cold set-up code; build lists
+
+The decoder's unchecked runs are instantiated for the shapes the encoder writes (order 0, order 1,
+four neighbours, four neighbouring words; eight states) and one general call; segment starts and
+the end of the word stream take one checked routine. Object text 61.0 KB -> 29.0 KB at
+-O3 -march=native (stripped build/kolmo: 3,500,808 -> 3,533,576 bytes against rc3).
+krans.c needs libm (the encoder's table choice), so it is listed on its own (KRSRC) and not in
+NATSRC, whose tests link without it; the Python and Rust bindings' source lists get the file
+(not built here).
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ Makefile                 |   9 ++-
+ bindings/python/setup.py |   2 +-
+ bindings/rust/build.rs   |   2 +-
+ src/algo/krans.c         | 115 ++++++++++++++++++++++-----------------
+ 4 files changed, 72 insertions(+), 56 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index a080305a..ca9b3555 100644
+--- a/Makefile
++++ b/Makefile
+@@ -97,10 +97,13 @@ KHDR    := src/arch/kernels.h src/algo/predict.h src/algo/planes.h src/algo/mixe
+ BWTSRC  := src/algo/lzp.c src/algo/qlfc.c src/algo/par.c $(wildcard src/algo/sais/*.c) src/codecs/bwt_stream.c
+ # Kolmo's own LZ, Huffman, LZMA-class coders and block hash (codecs 24, 27-29, opt-in; native lane), compiled on their
+ # own like the block-sorting files and listed with them so every build and test that links those links these.
+-NATSRC  := src/algo/khuf.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c src/algo/krans.c
++NATSRC  := src/algo/khuf.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c
+ BWTSRC  += $(NATSRC)
+ BWTHDR  := $(wildcard src/algo/*.h src/algo/sais/*.h) src/codecs/bwt_stream.h
+-ARCHSRC := src/arch/xxh3.c $(KSRC) $(BWTSRC) $(ASMSRC) $(GPUSRC)
++# The context rANS coder (graph leaf codec 33, opt-in) is compiled on its own as well; it needs libm (log2 in the
++# encoder's table choice), so it is not in NATSRC, whose tests link without it.
++KRSRC   := src/algo/krans.c
++ARCHSRC := src/arch/xxh3.c $(KSRC) $(BWTSRC) $(KRSRC) $(ASMSRC) $(GPUSRC)
+ ARCHOBJ := $(addprefix build/obj/,$(addsuffix .o,$(basename $(ARCHSRC))))
+ ARCHPIC := $(addprefix build/pic/,$(addsuffix .o,$(basename $(ARCHSRC))))
+ $(ARCHOBJ): VSECT := -ffunction-sections -fdata-sections   # arch/xxh3.c carries xxHash (see VSECT above)
+@@ -219,7 +222,7 @@ check-fqfam: build/test-fqfam-asan
+ build/test-dispatch: tests/test_dispatch.c build/libkolmo.a build/libvendor.a
+ 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+ build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(KSRC) $(KHDR) build/libvendor.a
+-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c src/arch/xxh3.c $(KSRC) $(BWTSRC) $(ASMSRC) build/libvendor.a -o $@ $(LIBS)
++	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c src/arch/xxh3.c $(KSRC) $(BWTSRC) $(KRSRC) $(ASMSRC) build/libvendor.a -o $@ $(LIBS)
+ check-dispatch: build/test-dispatch build/test-dispatch-asan
+ 	./build/test-dispatch
+ 	./build/test-dispatch-asan
+diff --git a/bindings/python/setup.py b/bindings/python/setup.py
+index 65773989..7a0c33eb 100644
+--- a/bindings/python/setup.py
++++ b/bindings/python/setup.py
+@@ -38,7 +38,7 @@ def _sources():
+     c += [os.path.join(SRC, "arch", "xxh3.c")]          # compiled apart from src/kolmo.c (docs/LAYOUT.md)
+     # the block-sorting pipeline, also compiled on its own (LZP, QLFC, the libsais subset, the BWT stream formats)
+     c += [os.path.join(SRC, "algo", f) for f in ("lzp.c", "qlfc.c", "par.c")]
+-    c += [os.path.join(SRC, "algo", f) for f in ("khuf.c", "klz.c", "klzma.c", "khash.c")]   # Kolmo's own coders (codecs 24, 27-29)
++    c += [os.path.join(SRC, "algo", f) for f in ("khuf.c", "klz.c", "klzma.c", "khash.c", "krans.c")]   # Kolmo's own coders (codecs 24, 27-29, 33)
+     c += sorted(glob.glob(os.path.join(SRC, "algo", "sais", "*.c"))) + [os.path.join(SRC, "codecs", "bwt_stream.c")]
+     return c, z, b, l4
+ 
+diff --git a/bindings/rust/build.rs b/bindings/rust/build.rs
+index 88ae059f..7a627b80 100644
+--- a/bindings/rust/build.rs
++++ b/bindings/rust/build.rs
+@@ -80,7 +80,7 @@ fn main() {
+     // the block-sorting pipeline, also compiled on its own (LZP, QLFC, the libsais subset, the BWT stream formats)
+     for f in ["algo/lzp.c", "algo/qlfc.c", "algo/par.c", "codecs/bwt_stream.c"] { cfiles.push(src.join(f)); }
+     // Kolmo's own coders (codecs 24, 27-29, opt-in), also compiled on their own
+-    for f in ["algo/khuf.c", "algo/klz.c", "algo/klzma.c", "algo/khash.c"] { cfiles.push(src.join(f)); }
++    for f in ["algo/khuf.c", "algo/klz.c", "algo/klzma.c", "algo/khash.c", "algo/krans.c"] { cfiles.push(src.join(f)); }
+     list(&src.join("algo/sais"), "c", false, &mut cfiles);
+     cfiles.sort();
+     for f in cfiles { jobs.push((cc.clone(), f, vec![])); }
+diff --git a/src/algo/krans.c b/src/algo/krans.c
+index dc1225fd..e3123586 100644
+--- a/src/algo/krans.c
++++ b/src/algo/krans.c
+@@ -13,6 +13,7 @@
+ #define KR_MAXT 255
+ #define KR_REST 14                      /* class of the symbol that takes the rest of 2^12 */
+ #define KR_CTX_MIN 2048                 /* encoder: chunks below this are coded order 0 */
++#define KR_COLD __attribute__((cold))   /* set-up and header code: compiled for size */
+ 
+ static const uint16_t kr_edges1[16] = {1, 2, 4, 6, 8, 11, 14, 18, 23, 29, 37, 47, 60, 80, 110, 160};
+ static const uint16_t kr_edges2[8] = {1, 3, 6, 11, 18, 29, 47, 80};
+@@ -26,7 +27,7 @@ typedef struct {
+     uint8_t mag[256]; uint16_t qe[KR_EMAX + 1], qb[256], pm[8];          /* qe: bin * NB * P; qb: bin * P; pm: prev mask by phase */
+ } kr_ctx;
+ static unsigned kr_bin(unsigned v, const uint16_t *edges, unsigned n) { unsigned b = 0; while (b < n && edges[b] <= v) b++; return b; }
+-static int kr_ctx_init(kr_ctx *c) {
++static KR_COLD int kr_ctx_init(kr_ctx *c) {
+     if (c->ls > 5 || c->P < 1 || c->P > 8 || c->mb > 3 || c->eq > 3 || c->mk > 3 || c->nlag > 4) return -1;
+     if (c->mk == 3 && c->P != 2) return -1;                              /* 16-bit words: high byte, low byte */
+     if ((c->eq == 0) != (c->nlag == 0) || (c->pf && (!c->bq || c->P < 2))) return -1;
+@@ -114,62 +115,74 @@ static int kr_dec_table(kr_br *r, unsigned mbits, kr_dtab *t) {
+         (X) = (uint32_t)t_->fc[s_].f * ((X) >> KR_SB) + sl_ - t_->fc[s_].c; } while (0)
+ #define KR_FILL(X) do { const uint32_t k_ = 0u - (uint32_t)((X) < KR_L), y_ = ((X) << 16) | kr_rd16(p); (X) ^= ((X) ^ y_) & k_; p += k_ & 2; } while (0)   /* no branch; two readable bytes at p */
+ #define KR_FILL_CK(X) do { if ((X) < KR_L) { if (pe - p < 2) return -1; (X) = ((X) << 16) | kr_rd16(p); p += 2; } } while (0)
+-/* the symbols of one chunk: p[0..pe) = states and words, o[0..m) the output, ct[context] = its table. S and NL (the
+- * number of lags) are constants at the call sites below, so each call compiles to a loop with the states in
+- * registers; any other shape takes the general call. */
+-static inline __attribute__((always_inline)) int kr_dec_body(const kr_ctx *c, const kr_dtab *const *ct, const uint8_t *p, const uint8_t *pe,
+-                                                             uint8_t *o, size_t m, const unsigned S, const unsigned NL, const int WORD) {
+-    const unsigned P = c->P; const size_t sl = m / S;
+-    uint32_t x[32]; uint8_t *sb[32]; unsigned sp[32]; size_t lg[4] = {1, 1, 1, 1};
+-    if ((size_t)(pe - p) < 4 * (size_t)S) return -1;
+-    for (unsigned k = 0; k < S; k++) { x[k] = kr_rd32(p); p += 4; if (x[k] < KR_L) return -1; sb[k] = o + (size_t)k * sl; sp[k] = (unsigned)(((size_t)k * sl) % P); }
++typedef struct { uint32_t x[32]; uint8_t *sb[32]; unsigned sp[32]; const uint8_t *p, *pe; } kr_dst;   /* states, segment starts and phases, the words */
++/* byte i of every segment by the checked path: any position (segment starts), any number of words left */
++static __attribute__((noinline)) int kr_round_ck(const kr_ctx *c, const kr_dtab *const *ct, kr_dst *d, size_t i, unsigned S) {
++    const uint8_t *p = d->p, *const pe = d->pe;
++    for (unsigned k = 0; k < S; k++) {
++        const unsigned cx = c->N == 1 ? 0 : kr_ctx_at(c, d->sb[k], i, (unsigned)((d->sp[k] + i) % c->P));
++        KR_SYM(d->x[k], ct[cx], d->sb[k][i]); KR_FILL_CK(d->x[k]);
++    }
++    d->p = p; return 0;
++}
++/* bytes i.. of every segment (i >= maxlag) for as long as 2 S bytes of words are left; returns the position reached.
++ * S, NL (the number of lags), WORD (mk 3) and O0 (one context) are constants at the call sites of kr_dec_syms, so
++ * each call compiles to its own loop with the states in registers; other shapes take the general call. */
++static inline __attribute__((always_inline)) size_t kr_run(const kr_ctx *c, const kr_dtab *const *ct, kr_dst *d, size_t i, const size_t sl,
++                                                           const unsigned S, const unsigned NL, const int WORD, const int O0) {
++    uint32_t x[32]; uint8_t *sb[32]; unsigned sp[32]; size_t lg[4] = {1, 1, 1, 1}; const uint8_t *p = d->p, *const pe = d->pe;
++    for (unsigned k = 0; k < S; k++) { x[k] = d->x[k]; sb[k] = d->sb[k]; sp[k] = d->sp[k]; }
+     for (unsigned l = 0; l < NL; l++) lg[l] = c->lag[l];
+-    size_t i = 0;
+-    if (c->N == 1) {                                                        /* order 0: one table */
++    if (O0) {
+         const kr_dtab *t = ct[0];
+-        for (; i < sl && (size_t)(pe - p) >= 2 * (size_t)S; i++) for (unsigned k = 0; k < S; k++) { KR_SYM(x[k], t, sb[k][i]); KR_FILL(x[k]); }
+-        for (; i < sl; i++) for (unsigned k = 0; k < S; k++) { KR_SYM(x[k], t, sb[k][i]); KR_FILL_CK(x[k]); }
++        for (; i < sl && (size_t)(pe - p) >= 2 * (size_t)S; i++) for (unsigned k = 0; k < S; k++) { KR_SYM(x[k], t, sb[k][i]); KR_FILL(x[k]); }   /* measured faster than the unrolled form (GCC 13, x86-64) */
+     } else {
+-        const size_t head = c->maxlag < sl ? c->maxlag : sl; unsigned pi = 0;
++        const unsigned P = c->P; unsigned pi = (unsigned)(i % P);
+         const uint8_t *mag = c->mag; const uint16_t *qe = c->qe, *qb = c->qb, *pm = c->pm;
+-        for (; i < sl; i++) {
+-            if (i >= head && (size_t)(pe - p) >= 2 * (size_t)S) {
+-                for (unsigned k = 0; k < S; k++) {
+-                    uint8_t *q = sb[k] + i; unsigned ph = sp[k] + pi, e = 0; if (ph >= P) ph -= P;
+-                    if (WORD) for (unsigned l = 0; l < NL; l++) e += kr_wcls(q - ph - lg[l]);
+-                    else for (unsigned l = 0; l < NL; l++) e += mag[*(q - lg[l])];
+-                    const unsigned cx = (unsigned)qe[e] + (qb[q[-1]] & pm[ph]) + ph;
+-                    KR_SYM(x[k], ct[cx], *q); KR_FILL(x[k]);
+-                }
+-            } else {
+-                for (unsigned k = 0; k < S; k++) {
+-                    unsigned ph = sp[k] + pi; if (ph >= P) ph -= P;
+-                    const unsigned cx = kr_ctx_at(c, sb[k], i, ph);
+-                    KR_SYM(x[k], ct[cx], sb[k][i]); KR_FILL_CK(x[k]);
+-                }
+-            }
+-            if (++pi == P) pi = 0;
++#define KR_ALL(ONE) do { if (S == 8) { ONE(0); ONE(1); ONE(2); ONE(3); ONE(4); ONE(5); ONE(6); ONE(7); } else for (unsigned k = 0; k < S; k++) ONE(k); } while (0)
++#define KR_ONE(K) do { uint8_t *q = sb[K] + i; unsigned ph = sp[K] + pi, e = 0; if (ph >= P) ph -= P; \
++            if (WORD) for (unsigned l = 0; l < NL; l++) e += kr_wcls(q - ph - lg[l]); \
++            else for (unsigned l = 0; l < NL; l++) e += mag[*(q - lg[l])]; \
++            const unsigned cx = (unsigned)qe[e] + (qb[q[-1]] & pm[ph]) + ph; \
++            KR_SYM(x[K], ct[cx], *q); KR_FILL(x[K]); } while (0)
++        for (; i < sl && (size_t)(pe - p) >= 2 * (size_t)S; i++) { KR_ALL(KR_ONE); if (++pi == P) pi = 0; }
++#undef KR_ONE
++#undef KR_ALL
++    }
++    for (unsigned k = 0; k < S; k++) d->x[k] = x[k];
++    d->p = p; return i;
++}
++/* the symbols of one chunk: p[0..pe) = states and words, o[0..m) the output, ct[context] = its table */
++static int kr_dec_syms(const kr_ctx *c, const kr_dtab *const *ct, const uint8_t *p, const uint8_t *pe, uint8_t *o, size_t m) {
++    const unsigned S = 1u << c->ls, P = c->P; const size_t sl = m / S, head = c->N == 1 ? 0 : c->maxlag < sl ? c->maxlag : sl;
++    kr_dst d;
++    if ((size_t)(pe - p) < 4 * (size_t)S) return -1;
++    for (unsigned k = 0; k < S; k++) { d.x[k] = kr_rd32(p); p += 4; if (d.x[k] < KR_L) return -1; d.sb[k] = o + (size_t)k * sl; d.sp[k] = (unsigned)(((size_t)k * sl) % P); }
++    d.p = p; d.pe = pe;
++    const int shape = c->N == 1 ? (S == 8) : S == 8 && c->nlag == 4 ? (c->mk == 3 ? 4 : 3) : S == 8 && c->nlag == 0 ? 2 : 5;
++    for (size_t i = 0; i < sl;) {
++        if (i < head || (size_t)(d.pe - d.p) < 2 * (size_t)S) { if (kr_round_ck(c, ct, &d, i, S)) return -1; i++; continue; }
++        switch (shape) {                                                    /* at least one byte per segment is decoded */
++            case 0: i = kr_run(c, ct, &d, i, sl, S, 0, 0, 1); break;          /* order 0 */
++            case 1: i = kr_run(c, ct, &d, i, sl, 8, 0, 0, 1); break;
++            case 2: i = kr_run(c, ct, &d, i, sl, 8, 0, 0, 0); break;          /* previous byte and phase (order 1) */
++            case 3: i = kr_run(c, ct, &d, i, sl, 8, 4, 0, 0); break;          /* four neighbours (image residuals) */
++            case 4: i = kr_run(c, ct, &d, i, sl, 8, 4, 1, 0); break;          /* four neighbouring 16-bit words */
++            default: i = kr_run(c, ct, &d, i, sl, S, c->nlag, c->mk == 3, 0); break;
+         }
+     }
+     {   /* the bytes left over belong to the last segment */
+-        uint8_t *seg = sb[S - 1]; const size_t len = m - (size_t)(S - 1) * sl; uint32_t y = x[S - 1];
+-        for (; i < len; i++) {
+-            const unsigned cx = c->N == 1 ? 0 : kr_ctx_at(c, seg, i, (unsigned)((sp[S - 1] + i) % P));
++        uint8_t *seg = d.sb[S - 1]; const size_t len = m - (size_t)(S - 1) * sl; uint32_t y = d.x[S - 1];
++        p = d.p;
++        for (size_t i = sl; i < len; i++) {
++            const unsigned cx = c->N == 1 ? 0 : kr_ctx_at(c, seg, i, (unsigned)((d.sp[S - 1] + i) % P));
+             KR_SYM(y, ct[cx], seg[i]); KR_FILL_CK(y);
+         }
+-        x[S - 1] = y;
++        d.x[S - 1] = y;
+     }
+-    for (unsigned k = 0; k < S; k++) if (x[k] != KR_L) return -1;           /* back where the encoder started */
++    for (unsigned k = 0; k < S; k++) if (d.x[k] != KR_L) return -1;         /* back where the encoder started */
+     return p == pe ? 0 : -1;
+ }
+-static int kr_dec_syms(const kr_ctx *c, const kr_dtab *const *ct, const uint8_t *p, const uint8_t *pe, uint8_t *o, size_t m) {
+-    const unsigned S = 1u << c->ls;
+-    if (c->mk == 3) return S == 8 && c->nlag == 4 ? kr_dec_body(c, ct, p, pe, o, m, 8, 4, 1) : kr_dec_body(c, ct, p, pe, o, m, S, c->nlag, 1);
+-    if (S == 8 && c->nlag == 0) return kr_dec_body(c, ct, p, pe, o, m, 8, 0, 0);
+-    if (S == 8 && c->nlag == 4) return kr_dec_body(c, ct, p, pe, o, m, 8, 4, 0);
+-    if (S == 4 && c->nlag == 0) return kr_dec_body(c, ct, p, pe, o, m, 4, 0, 0);
+-    return kr_dec_body(c, ct, p, pe, o, m, S, c->nlag, 0);
+-}
+ int kolmo_krans_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+     size_t i = 0, o = 0; kr_dtab *T = NULL; unsigned tcap = 0; int rc = -1;
+     kr_ctx *c = malloc(sizeof *c); const kr_dtab **ct = malloc(KRANS_NCTX_MAX * sizeof *ct); uint8_t *cmap = malloc(KRANS_NCTX_MAX);
+@@ -212,7 +225,7 @@ out:
+ 
+ /* ================================================= encoder ================================================= */
+ typedef struct { uint64_t acc, bits; unsigned nb; uint8_t *p, *e; } kr_bw;     /* p NULL: count only */
+-static inline void kr_put(kr_bw *w, uint32_t v, unsigned n) {
++static void kr_put(kr_bw *w, uint32_t v, unsigned n) {
+     w->bits += n; if (!w->p) return;
+     w->acc |= (uint64_t)v << w->nb; w->nb += n;
+     while (w->nb >= 8) { if (w->p < w->e) *w->p++ = (uint8_t)w->acc; w->acc >>= 8; w->nb -= 8; }
+@@ -237,12 +250,12 @@ typedef struct {
+     uint64_t *ord; uint8_t *cmap2, *used; uint16_t *words; kr_esym *es;
+     uint32_t h0[256];
+ } kr_enc;
+-static void kr_enc_free(kr_enc *E) {
++static KR_COLD void kr_enc_free(kr_enc *E) {
+     for (int q = 0; q < 2; q++) { free(E->pl[q].cmap); free(E->pl[q].f); free(E->pl[q].rest); free(E->pl[q].hdr); }
+     free(E->ctx); free(E->hist); free(E->ch); free(E->cphi); free(E->phi); free(E->len); free(E->ord); free(E->cmap2); free(E->used); free(E->words); free(E->es);
+ }
+ /* buffers for chunks of up to mcap bytes and maxT tables; ctxs = 0: order 0 only (one context, no context arrays) */
+-static int kr_enc_init(kr_enc *E, size_t mcap, unsigned maxT, int ctxs) {
++static KR_COLD int kr_enc_init(kr_enc *E, size_t mcap, unsigned maxT, int ctxs) {
+     const size_t ncap = ctxs ? KRANS_NCTX_MAX : 1;
+     memset(E, 0, sizeof *E); E->mcap = mcap; E->maxT = maxT; E->hcap = ncap * 2 + 64 + (size_t)maxT * 700;
+     for (int q = 0; q < 2; q++) {
+@@ -283,7 +296,7 @@ static void kr_norm(const uint32_t *cnt, uint64_t tot, unsigned mbits, uint16_t
+     f[big] = (uint16_t)(KR_M - sum);
+ }
+ /* the table part of the header for frequencies f (0 = absent) */
+-static void kr_put_table(kr_bw *w, const uint16_t *f, unsigned rest, unsigned mbits) {
++static KR_COLD void kr_put_table(kr_bw *w, const uint16_t *f, unsigned rest, unsigned mbits) {
+     unsigned lo = 0, hi = 255; while (!f[lo]) lo++;
+     while (!f[hi]) hi--;
+     kr_put(w, lo, 8); kr_put(w, hi, 8);
+@@ -297,7 +310,7 @@ static void kr_put_table(kr_bw *w, const uint16_t *f, unsigned rest, unsigned mb
+         pc = e;
+     }
+ }
+-static void kr_put_header(kr_bw *w, const kr_plan *pl) {
++static KR_COLD void kr_put_header(kr_bw *w, const kr_plan *pl) {
+     const kr_ctx *c = &pl->c;
+     kr_put(w, c->ls | (c->P - 1) << 3 | c->mb << 6, 8); kr_put(w, c->eq | c->bq << 2 | c->mk << 4 | c->pf << 6, 8);
+     if (c->eq) {
+@@ -460,7 +473,7 @@ static size_t kr_emit(kr_enc *E, const kr_plan *pl, const uint8_t *in, size_t m,
+ }
+ static unsigned kr_default_ls(size_t m) { return m >= 32768 ? 3 : m >= 4096 ? 2 : m >= 512 ? 1 : 0; }
+ /* one chunk. Returns the bytes written, 0 when cap is too small or memory ran out. */
+-static size_t kr_chunk(kr_enc *E, const kolmo_krans_params *pp, const uint8_t *in, size_t m, uint8_t *out, size_t cap) {
++static KR_COLD size_t kr_chunk(kr_enc *E, const kolmo_krans_params *pp, const uint8_t *in, size_t m, uint8_t *out, size_t cap) {
+     uint8_t hb[8]; size_t hn = kr_uv_put(hb, m); unsigned nz = 0;
+     memset(E->h0, 0, sizeof E->h0);
+     for (size_t j = 0; j < m; j++) E->h0[in[j]]++;
+-- 
+2.43.0
+

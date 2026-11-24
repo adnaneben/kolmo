@@ -1,0 +1,8 @@
+lz4      T4  in     6627202  out     3182828  ratio  2.082  c    494.5 MB/s  d   2627.3 MB/s
+klzs1    T4  in     6627202  out     2843710  ratio  2.330  c    462.6 MB/s  d   4213.1 MB/s
+zstd1    T4  in     6627202  out     2151356  ratio  3.080  c    443.9 MB/s  d   1877.3 MB/s
+klzh1    T4  in     6627202  out     2183172  ratio  3.036  c    339.1 MB/s  d   1414.5 MB/s
+k2h1     T4  in     6627202  out     2140442  ratio  3.096  c    272.8 MB/s  d   1348.3 MB/s
+zstd3    T4  in     6627202  out     1943693  ratio  3.410  c    155.2 MB/s  d   1028.4 MB/s
+klzh3    T4  in     6627202  out     1987153  ratio  3.335  c    150.8 MB/s  d    910.0 MB/s
+k2h3     T4  in     6627202  out     1931334  ratio  3.431  c    134.1 MB/s  d    863.2 MB/s

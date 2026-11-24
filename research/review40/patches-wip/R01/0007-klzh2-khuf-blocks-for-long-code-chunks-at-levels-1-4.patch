@@ -1,7 +1,7 @@
 From c0e30b0233b111afcc31c6c4980d5f40b181c34f Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 05:03:49 +0000
-Subject: [PATCH 7/8] klzh2: khuf blocks for long code chunks at levels 1-4
+Subject: [PATCH 07/18] klzh2: khuf blocks for long code chunks at levels 1-4
  (mode 3 from 1024 symbols), chunks of at most 128 Ki symbols
 
 Decode time of the code streams was the tANS symbol loop (one symbol per table lookup);

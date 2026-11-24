@@ -1,7 +1,7 @@
 From 89d62b8ee05f98d0665297bc3d7466dfc763c247 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 04:33:57 +0000
-Subject: [PATCH 6/6] 16-bit image blocks: context rANS over the residual
+Subject: [PATCH 6/8] 16-bit image blocks: context rANS over the residual
  words, block codec 34, opt-in (KOLMO_NATIVE=rans)
 
 A block with the 16-bit image transform (flag 6) is a header, the low-byte plane and the high-byte

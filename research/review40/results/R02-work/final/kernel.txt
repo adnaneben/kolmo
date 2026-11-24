@@ -1,0 +1,6 @@
+/home/user/kolmo-review40-coord/results/R02-work/res/retina.ppm.res n 5972763 krans 1002227 enc 80.7 MB/s dec 167.7 MB/s RT_OK
+/home/user/kolmo-review40-coord/results/R02-work/res/astronaut.ppm.res n 786432 krans 353181 enc 50.9 MB/s dec 154.6 MB/s RT_OK
+/home/user/kolmo-review40-coord/results/R02-work/res/astronaut.ppm.res n 786432 krans 390550 enc 64.9 MB/s dec 251.6 MB/s RT_OK
+/home/user/kolmo-review40-coord/results/R02-work/res/astronaut.ppm.res n 786432 krans 434019 enc 161.1 MB/s dec 526.7 MB/s RT_OK
+t6 n 1246320 krans 250409 enc 76.9 MB/s dec 181.5 MB/s RT_OK
+t6 n 1059280 krans 464418 enc 73.5 MB/s dec 182.5 MB/s RT_OK

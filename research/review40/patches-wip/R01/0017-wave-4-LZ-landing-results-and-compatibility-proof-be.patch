@@ -1,0 +1,900 @@
+From d8db69dc911deed8092c319eacbbb0255d333244 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 06:11:07 +0000
+Subject: [PATCH 17/18] wave-4 LZ landing: results and compatibility proof
+ (benchmark/review40/w4-compat), errata to the lane's results
+
+benchmark/review40/w4-compat/RESULTS.md: what each lane commit became, the read/write matrix
+against the rc3 binary, sizes and indicative speeds of KLZS, KLZH and KLZH2 on the landed
+tree, verification. benchmark/w4/lz/ERRATA-20261124.md: the lane's "KLZ (codec 28)" is KLZS,
+codec 31, here; rc3's codec 28 is read. e2e.sh also asks whether the rc3 binary reads what
+this build wrote. CODECS row 32 and the KLZH2 results point to the wave-4 numbers;
+docs/NATIVE-PLAN.md names codec 31.
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ benchmark/review40/klzh2/RESULTS.md           |   8 +
+ benchmark/review40/klzh2/e2e.sh               |   6 +-
+ benchmark/review40/w4-compat/RESULTS.md       | 140 ++++++++++++++++++
+ .../review40/w4-compat/results/e2e-w4.tsv     |  78 ++++++++++
+ .../w4-compat/results/w4-T1-dickens.txt       |  10 ++
+ .../w4-compat/results/w4-T1-enwik8_10m.txt    |  10 ++
+ .../w4-compat/results/w4-T1-mozilla.txt       |  10 ++
+ .../review40/w4-compat/results/w4-T1-mr.txt   |  10 ++
+ .../review40/w4-compat/results/w4-T1-nci.txt  |  10 ++
+ .../w4-compat/results/w4-T1-ooffice.txt       |  10 ++
+ .../review40/w4-compat/results/w4-T1-osdb.txt |  10 ++
+ .../w4-compat/results/w4-T1-reymont.txt       |  10 ++
+ .../w4-compat/results/w4-T1-samba.txt         |  10 ++
+ .../review40/w4-compat/results/w4-T1-sao.txt  |  10 ++
+ .../w4-compat/results/w4-T1-webster.txt       |  10 ++
+ .../w4-compat/results/w4-T1-x-ray.txt         |  10 ++
+ .../review40/w4-compat/results/w4-T1-xml.txt  |  10 ++
+ .../w4-compat/results/w4-T4-dickens.txt       |   8 +
+ .../w4-compat/results/w4-T4-enwik8_10m.txt    |   8 +
+ .../w4-compat/results/w4-T4-mozilla.txt       |   8 +
+ .../review40/w4-compat/results/w4-T4-mr.txt   |   8 +
+ .../review40/w4-compat/results/w4-T4-nci.txt  |   8 +
+ .../w4-compat/results/w4-T4-ooffice.txt       |   8 +
+ .../review40/w4-compat/results/w4-T4-osdb.txt |   8 +
+ .../w4-compat/results/w4-T4-reymont.txt       |   8 +
+ .../w4-compat/results/w4-T4-samba.txt         |   8 +
+ .../review40/w4-compat/results/w4-T4-sao.txt  |   8 +
+ .../w4-compat/results/w4-T4-webster.txt       |   8 +
+ .../w4-compat/results/w4-T4-x-ray.txt         |   8 +
+ .../review40/w4-compat/results/w4-T4-xml.txt  |   8 +
+ .../results/w4small32-T1-dickens.txt          |   9 ++
+ .../w4-compat/results/w4small32-T1-osdb.txt   |   9 ++
+ .../w4-compat/results/w4small32-T1-xml.txt    |   9 ++
+ .../w4-compat/results/w4small4-T1-dickens.txt |   9 ++
+ .../w4-compat/results/w4small4-T1-osdb.txt    |   9 ++
+ .../w4-compat/results/w4small4-T1-xml.txt     |   9 ++
+ benchmark/w4/lz/ERRATA-20261124.md            |  19 +++
+ docs/NATIVE-PLAN.md                           |   6 +
+ research/CODECS.md                            |   2 +-
+ 39 files changed, 544 insertions(+), 3 deletions(-)
+ create mode 100644 benchmark/review40/w4-compat/RESULTS.md
+ create mode 100644 benchmark/review40/w4-compat/results/e2e-w4.tsv
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-dickens.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-enwik8_10m.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-mozilla.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-mr.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-nci.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-ooffice.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-osdb.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-reymont.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-samba.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-sao.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-webster.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-x-ray.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T1-xml.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-dickens.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-enwik8_10m.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-mozilla.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-mr.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-nci.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-ooffice.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-osdb.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-reymont.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-samba.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-sao.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-webster.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-x-ray.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4-T4-xml.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4small32-T1-dickens.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4small32-T1-osdb.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4small32-T1-xml.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4small4-T1-dickens.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4small4-T1-osdb.txt
+ create mode 100644 benchmark/review40/w4-compat/results/w4small4-T1-xml.txt
+ create mode 100644 benchmark/w4/lz/ERRATA-20261124.md
+
+diff --git a/benchmark/review40/klzh2/RESULTS.md b/benchmark/review40/klzh2/RESULTS.md
+index 445e29d6..b3e062df 100644
+--- a/benchmark/review40/klzh2/RESULTS.md
++++ b/benchmark/review40/klzh2/RESULTS.md
+@@ -275,3 +275,11 @@ table of section 2). Measured causes on mozilla (callgrind, 8 MiB, level 3):
+   bytes to 458 KB, and raw inputs for the round-trip arm), each run as is and under 500 mutations, then 300,000
+   random inputs: no report, exit 0 (commit `ee0c7ea3`).
+ - Big-endian hosts are refused at compile time, as for the rest of `klz.c`.
++
++## 10. After this file: the wave-4 parse
++
++The numbers above are codec 32 on rc3's parse (commits up to `96ad7155`). The same branch then lands the wave-4 LZ
++lane, whose parse codecs 29 and 32 share: level 3 becomes 68,760,493 bytes (-1.69% against zstd -3), level 1
++74,685,728 (-3.52% against zstd -1; the lane's level 1 is a faster, weaker parse). Tables and the compatibility
++proof: `benchmark/review40/w4-compat/RESULTS.md`.
++
+diff --git a/benchmark/review40/klzh2/e2e.sh b/benchmark/review40/klzh2/e2e.sh
+index dbcc3fbb..27dfe945 100755
+--- a/benchmark/review40/klzh2/e2e.sh
++++ b/benchmark/review40/klzh2/e2e.sh
+@@ -2,7 +2,8 @@
+ # End to end through the CLI, one thread: sizes and round trips with the library coders, KOLMO_NATIVE=lz and lz2, and
+ # the two compatibility directions against an rc3 binary.
+ # usage: sh benchmark/review40/klzh2/e2e.sh NEW_KOLMO RC3_KOLMO SCRATCH_DIR OUT.tsv FILE...
+-# columns: file, mode, coders, frame bytes, exit status, round trip, compatibility note
++# columns: file, mode, coders, frame bytes, exit status, round trip, compatibility notes (bytes against the rc3
++# binary's frame for the same setting; whether this build reads rc3's frame; whether rc3 reads this build's frame)
+ N=$1; B=$2; S=$3; out=$4; shift 4
+ for f in "$@"; do n=$(basename "$f")
+   for m in speed balanced; do
+@@ -14,7 +15,8 @@ for f in "$@"; do n=$(basename "$f")
+       if [ $nat = none ]; then env -u KOLMO_NATIVE "$B" -m $m -T 1 "$f" "$S/b.k" >/dev/null 2>&1; cmp -s "$S/b.k" "$S/t.k" && x=same-bytes-as-rc3 || x=DIFFERS-from-rc3; fi
+       if [ $nat = lz ]; then KOLMO_NATIVE=lz "$B" -m $m -T 1 "$f" "$S/b.k" >/dev/null 2>&1; cmp -s "$S/b.k" "$S/t.k" && x=same-bytes-as-rc3 || x=DIFFERS-from-rc3
+         "$N" -d -T 1 "$S/b.k" "$S/b.back" >/dev/null 2>&1; cmp -s "$S/b.back" "$f" && x="$x,rc3-frame-decodes" || x="$x,rc3-frame-FAILS"; fi
+-      if [ $nat = lz2 ]; then "$B" -d -T 1 "$S/t.k" "$S/b.back" >/dev/null 2>&1 && x=rc3-ACCEPTED || x=rc3-refuses; fi
++      if [ $nat != none ]; then : > "$S/b.back"   # does the rc3 binary read the frame this build wrote?
++        if "$B" -d -T 1 "$S/t.k" "$S/b.back" >/dev/null 2>&1 && cmp -s "$S/b.back" "$f"; then x="$x,rc3-reads-it"; else x="$x,rc3-refuses"; fi; fi
+       printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$n" $m $nat "$sz" $rc $rt "$x" >> "$out"
+     done
+   done
+diff --git a/benchmark/review40/w4-compat/RESULTS.md b/benchmark/review40/w4-compat/RESULTS.md
+new file mode 100644
+index 00000000..08808b2a
+--- /dev/null
++++ b/benchmark/review40/w4-compat/RESULTS.md
+@@ -0,0 +1,140 @@
++# Wave-4 LZ lane landed without breaking rc3 frames (review40/R01, claim `klz-w4-compat`)
++
++Branch `review40/R01`, on top of codec 32 (`benchmark/review40/klzh2/RESULTS.md`). The lane
++`origin/claude/w4-lz-20261118` (six commits and one merge ahead of rc3 `5071f388`) could not merge: it rewrote the
++block format of codec 28 in place, so a frame written by rc3 with `KOLMO_NATIVE=lz` in `speed` mode stopped
++decoding. This file records how it was landed, the compatibility proof and the numbers of the landed tree.
++
++**Sizes are exact; speeds are indicative only** (shared 4-vCPU VM, load average 1.5 to 2.4 during these runs, timed
++runs one at a time through the pass's `tools/measure.py`).
++
++## 1. What was done
++
++| lane commit | on this branch | change made while landing |
++|---|---|---|
++| `59f117f1` decmap: khuf one decode table and byte-table bit reversal, KLZH decoder one validation pass and fewer refills, x86 AVX2 word decoder | `8eca114d`, cherry-picked whole | none in `src`; the bindings' copies come from this branch |
++| `0dc7a8b1` KLZ stream format in place of codec 28 | `27e419dc`, ported | the lane's coder is **KLZS, codec 31** (`kolmo_klzs_*`); rc3's KLZ encoder and decoder stay under **28**, untouched; `KOLMO_NATIVE=lz` maps the LZ4 roles to 31; tests with blocks written by the rc3 sources |
++| `d9e86fa5` KLZH parse: single table at level 1, second recent offset after each match, `__builtin_memcpy` | `5cbef394`, cherry-picked | the parse call sits in `kzh_parse`, shared by codecs 29 and 32; the test that pinned KLZH's bytes to rc3's became a decode test of rc3's blocks |
++| `776ac3c3` bindings, SPEC, changelog, scripts | `f03fe76e` | SPEC rows: 28 = rc3's format, 31 = the lane's; changelog entry corrected; `run_all.sh` asks for `klzs1` |
++| `75d8a512`, `3a027805` the lane's RESULTS.md and ledger rows | `fba08c05`, `1fe6a718` | the lane's CODECS row for its "codec 28" is filed under 31; errata beside the lane's results (`benchmark/w4/lz/ERRATA-20261124.md`) |
++
++The landed `src/algo/klz.c` was compared with the lane's: the KLZS section is the lane's KLZ section line for line
++after the rename (199 lines), all code before it is identical, and the KLZH section differs only by the `kzh_parse`
++hook. `src/algo/khuf.c` and the word decoder are the lane's files unchanged.
++
++## 2. Compatibility
++
++    sh benchmark/review40/klzh2/e2e.sh build/kolmo RC3/build/kolmo SCRATCH results/e2e-w4.tsv DATA/silesia/* DATA/enwik8_10m
++
++13 files, `-T 1`, the rc3 binary built from `5071f388`:
++
++| frames | written by | read by | result |
++|---|---|---|---|
++| default coders, `speed` and `balanced` | this build | — | byte-identical to the rc3 binary's (26 of 26) |
++| `KOLMO_NATIVE=lz`, `speed` (codec 28 blocks) | rc3 | this build | decode, `cmp` equal (13 of 13) |
++| `KOLMO_NATIVE=lz`, `balanced` (codec 29) | rc3 | this build | decode (13 of 13) |
++| `KOLMO_NATIVE=lz`, `balanced` (codec 29, wave-4 parse) | this build | rc3 | decode (13 of 13): same format, other bytes |
++| `KOLMO_NATIVE=lz`, `speed` (codec 31) | this build | rc3 | refused (13 of 13), as any unknown codec id |
++| `KOLMO_NATIVE=lz2` (codec 32, and 31 in `speed`) | this build | rc3 | refused (26 of 26) |
++
++All 78 frames written by this build decode to their input. Unit level (`make check-native`, ASan/UBSan): 15 blocks
++written by the rc3 sources for codecs 28 and 29 must decode (`tests/klz_rc3_frames.h`, printed by
++`tests/klz_rc3_emit.c` built against rc3); codec 28's writer is still pinned to rc3's bytes
++(`tests/klz_rc3_hashes.h`); KLZS runs in the round-trip, truncation and corrupt-payload loops.
++
++**Flagged:** under the opt-in, codec 29 now writes other bytes than rc3 did (the parse changed, the format did
++not), and the LZ4 roles write codec 31 instead of 28. No default output changes.
++
++## 3. Sizes, 4 MiB blocks, 13 files (Silesia + enwik8_10m, 221,938,580 bytes)
++
++    natbench lz4,klz1,klzs1,klzs3,zstd1,klzh1,k2h1,zstd3,klzh3,k2h3 1 4096 3 FILE      # raw: results/w4-T1-*.txt
++
++| file | LZ4 -1 | KLZ 1 (28) | KLZS 1 (31) | KLZS vs LZ4 | zstd -1 | KLZH 1 | KLZH2 1 | vs zstd -1 | zstd -3 | KLZH 3 | KLZH2 3 | vs zstd -3 | KLZH2 3 on rc3's parse |
++|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
++| dickens | 6,431,106 | 5,580,777 | 5,625,147 | -12.53% | 4,264,635 | 4,079,369 | 4,061,306 | -4.77% | 3,681,733 | 3,691,715 | 3,630,035 | -1.40% | 3,629,992 |
++| enwik8_10m | 5,789,476 | 5,248,230 | 5,301,025 | -8.44% | 4,108,085 | 3,957,745 | 3,944,780 | -3.98% | 3,581,213 | 3,578,844 | 3,543,201 | -1.06% | 3,547,143 |
++| mozilla | 26,441,724 | 25,389,621 | 25,810,020 | -2.39% | 19,988,639 | 19,913,529 | 18,992,605 | -4.98% | 18,304,336 | 18,849,249 | 17,811,667 | -2.69% | 17,937,785 |
++| mr | 5,442,495 | 5,021,660 | 5,448,632 | +0.11% | 3,814,844 | 3,770,601 | 3,611,280 | -5.34% | 3,548,122 | 3,585,129 | 3,372,971 | -4.94% | 3,371,508 |
++| nci | 5,539,301 | 5,153,742 | 5,262,764 | -4.99% | 2,855,235 | 3,043,997 | 2,866,439 | +0.39% | 2,846,755 | 2,971,425 | 2,788,062 | -2.06% | 2,921,084 |
++| ooffice | 4,339,312 | 4,151,672 | 4,287,293 | -1.20% | 3,593,815 | 3,431,111 | 3,378,527 | -5.99% | 3,130,232 | 3,134,306 | 3,084,515 | -1.46% | 3,090,445 |
++| osdb | 5,261,215 | 4,585,680 | 4,492,015 | -14.62% | 3,738,340 | 3,652,739 | 3,606,112 | -3.54% | 3,511,122 | 3,533,585 | 3,485,882 | -0.72% | 3,486,461 |
++| reymont | 3,182,828 | 3,021,574 | 2,843,710 | -10.65% | 2,151,356 | 2,183,172 | 2,140,442 | -0.51% | 1,943,693 | 1,987,153 | 1,931,334 | -0.64% | 1,933,079 |
++| samba | 7,721,713 | 7,150,213 | 7,385,174 | -4.36% | 5,501,656 | 5,555,722 | 5,357,926 | -2.61% | 4,982,897 | 5,146,499 | 4,945,395 | -0.75% | 5,006,430 |
++| sao | 6,790,441 | 6,453,926 | 6,548,174 | -3.57% | 6,251,181 | 6,007,850 | 5,916,293 | -5.36% | 5,530,936 | 5,509,176 | 5,361,864 | -3.06% | 5,362,764 |
++| webster | 20,149,194 | 18,255,146 | 18,433,986 | -8.51% | 13,675,709 | 13,443,073 | 13,348,024 | -2.40% | 12,151,695 | 12,252,033 | 12,057,708 | -0.77% | 12,069,038 |
++| x-ray | 8,406,607 | 8,140,238 | 8,474,143 | +0.80% | 6,772,708 | 6,779,862 | 6,778,372 | +0.08% | 6,092,374 | 6,240,295 | 6,115,780 | +0.38% | 6,115,813 |
++| xml | 1,228,083 | 1,068,126 | 1,119,761 | -8.82% | 694,115 | 726,045 | 683,622 | -1.51% | 636,164 | 672,831 | 632,079 | -0.64% | 643,913 |
++| **13 files** | 106,723,495 | 99,220,605 | 101,031,844 | **-5.33%** | 77,410,318 | 76,544,815 | 74,685,728 | **-3.52%** | 69,941,272 | 71,152,240 | 68,760,493 | **-1.69%** | 69,115,455 |
++
++What the wave-4 parse does to codec 32:
++- **Level 3** (two tables, now with the second recent offset tried after each match): 69,115,455 -> 68,760,493
++  (-0.51%); against zstd -3 from -1.18% to **-1.69%**. nci goes from +2.61% to -2.06%, xml from +1.22% to -0.64%,
++  samba from +0.47% to -0.75%; x-ray (+0.38%) is the one file still above zstd -3.
++- **Level 1** (now one table of 6-byte keys): 71,541,209 -> 74,685,728 (**+4.40%**): the lane traded size for
++  parse speed at this level (codec 29: 73,541,314 -> 76,544,815). Against zstd -1 codec 32 is -3.52% (was -7.58%),
++  codec 29 -1.12% (was -5.00%). Whether level 1 should be the one-table parse is the lane's decision, kept as it
++  made it; rc3's two-table parse is what level 2 still is.
++- KLZS 3 (chains, lazy, 16-bit offsets): 85,991,219 bytes.
++
++Small blocks (xml + dickens + osdb, 25,623,410 bytes), 4 KiB / 32 KiB: KLZS 1 against LZ4 +6.16% / -0.44%
++(19,409,445 and 13,904,317 against 18,283,717 and 13,965,773); KLZH2 1 against zstd -1 +2.43% / -0.61%; KLZH2 3
++against zstd -3 +1.47% / +0.32% (raw: `results/w4small*-T1-*.txt`).
++
++Through the CLI, `-T 1`, 13 files:
++
++| mode | library coders | `KOLMO_NATIVE=lz` (rc3) | `KOLMO_NATIVE=lz` (landed) | `KOLMO_NATIVE=lz2` (landed) |
++|---|---|---|---|---|
++| speed | 105,733,911 | 98,777,760 (-6.58%) | 100,021,007 (-5.40%) | 100,021,007 |
++| balanced | 61,973,964 | 63,594,373 (+2.61%) | 63,393,244 (+2.29%) | **61,391,996 (-0.94%)** |
++
++## 4. Speed (indicative), natbench, 4 MiB blocks, MB/s over the 13 files
++
++| coder | 1 thread compress | decompress | 4 threads compress | decompress |
++|---|---|---|---|---|
++| LZ4 -1 | 509 | 2440 | 957 | 4390 |
++| KLZ 1 (28, rc3) | 390 | 1911 | — | — |
++| KLZS 1 (31) | 491 | 2764 | 981 | 4792 |
++| zstd -1 | 415 | 1068 | 771 | 2222 |
++| KLZH 1 (29) | 318 | 1003 | 576 | 1918 |
++| KLZH2 1 (32) | 250 | 855 | 507 | 1741 |
++| zstd -3 | 205 | 961 | 376 | 1808 |
++| KLZH 3 (29) | 166 | 935 | 319 | 1964 |
++| KLZH2 3 (32) | 143 | 827 | 292 | 1339 |
++
++- KLZS 1 against LZ4 -1: compress 0.96x / 1.02x, decompress 1.13x / 1.09x (1 / 4 threads), 5.33% smaller. Against
++  rc3's KLZ 1: compress 1.26x, decompress 1.45x, 1.83% larger.
++- KLZH 1 against zstd -1: compress 0.77x (rc3's parse in the same harness earlier this session: 0.53-0.59x),
++  decompress 0.94x.
++- KLZH2 against KLZH: compress 0.79x (level 1) and 0.86x (level 3), decompress 0.85x and 0.88x at one thread. With
++  the faster parse the entropy stage of codec 32 is a larger share of compress time than it was (0.90-0.95x on
++  rc3's parse). The 4-thread decompress figure of KLZH2 3 (0.68x of KLZH 3) is one run on a loaded host and is not
++  matched by the 1-thread run; it needs the M5.
++
++## 5. Verification
++
++On `1fe6a718` (the tree with all six lane commits):
++
++| what | command | result |
++|---|---|---|
++| unit, hostile input | `nice make -j2 check-native` (optimised and ASan/UBSan builds of `tests/test_native.c`, CLI modes) | `test-native: OK` twice, `test_native_modes: OK` |
++| word decoder and kernels of the decmap commit | `nice make -j2 check-arch`, `nice make -j2 check-kernels` | 43,645 checks, 0 failures (twice, "AVX2 word decoder"); 69,290 checks, 0 failures (twice) |
++| default bytes | `python3 benchmark/determinism/check.py build/kolmo DIR` | `122 frames checked; OK` |
++| decoders under mutation | `fuzz/fuzz_native_lz.c` with `fuzz/run_local.c` under GCC ASan/UBSan, 81 seeds (9 of them KLZS blocks, 100 bytes to 300 KB of input) each also under 500 mutations, then 300,000 random inputs | `local fuzz driver done`, exit 0, no report |
++| end to end | section 2 | 78 frames round-trip; the compatibility matrix as tabled |
++| natbench | section 3 | every block of every run decoded and compared |
++
++## 6. Cost
++
++Stripped `build/kolmo`: 3,537,672 (branch with codec 32) -> 3,549,960 bytes (+12,288); against rc3: +49,152. Text
++segment 3,520,253 -> 3,532,301. rc3's KLZ encoder is kept only so that id 28 stays writable on request and its
++bytes stay pinned by a test; dropping it would return part of this.
++
++## 7. Not done, not verified
++
++- The lane's own benchmark set (19 files with enwik8 and the structured files) was not re-run; its tables stand as
++  the lane's record for the coder now called KLZS.
++- `make check`, `make check-rc`, `make check-sanitizers` as a whole (the lane records them as passing on its own
++  commits; here: `check-native`, `check-arch`, `check-kernels`, the determinism set and the end-to-end matrix).
++- The M5: every speed above.
++- The w4-entropy lane (khuf v2, codec 30) is a different lane and is not part of this landing.
++- The `speed` default is not switched to KLZS: an owner decision after the M5 numbers.
+diff --git a/benchmark/review40/w4-compat/results/e2e-w4.tsv b/benchmark/review40/w4-compat/results/e2e-w4.tsv
+new file mode 100644
+index 00000000..5a0222c5
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/e2e-w4.tsv
+@@ -0,0 +1,78 @@
++dickens	speed	none	6437034	0	OK	same-bytes-as-rc3
++dickens	speed	lz	5644059	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++dickens	speed	lz2	5644059	0	OK	-,rc3-refuses
++dickens	balanced	none	3721196	0	OK	same-bytes-as-rc3
++dickens	balanced	lz	3755319	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++dickens	balanced	lz2	3691824	0	OK	-,rc3-refuses
++mozilla	speed	none	26440552	0	OK	same-bytes-as-rc3
++mozilla	speed	lz	25805463	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++mozilla	speed	lz2	25805463	0	OK	-,rc3-refuses
++mozilla	balanced	none	18367182	0	OK	same-bytes-as-rc3
++mozilla	balanced	lz	18917473	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++mozilla	balanced	lz2	17878601	0	OK	-,rc3-refuses
++mr	speed	none	4426100	0	OK	same-bytes-as-rc3
++mr	speed	lz	4345593	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++mr	speed	lz2	4345593	0	OK	-,rc3-refuses
++mr	balanced	none	2316612	0	OK	same-bytes-as-rc3
++mr	balanced	lz	2364547	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++mr	balanced	lz2	2326808	0	OK	-,rc3-refuses
++nci	speed	none	5539251	0	OK	same-bytes-as-rc3
++nci	speed	lz	5262923	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++nci	speed	lz2	5262923	0	OK	-,rc3-refuses
++nci	balanced	none	2027737	0	OK	same-bytes-as-rc3
++nci	balanced	lz	2225827	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++nci	balanced	lz2	2050134	0	OK	-,rc3-refuses
++ooffice	speed	none	4340699	0	OK	same-bytes-as-rc3
++ooffice	speed	lz	4293334	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++ooffice	speed	lz2	4293334	0	OK	-,rc3-refuses
++ooffice	balanced	none	2792481	0	OK	same-bytes-as-rc3
++ooffice	balanced	lz	2797127	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++ooffice	balanced	lz2	2749435	0	OK	-,rc3-refuses
++osdb	speed	none	5273313	0	OK	same-bytes-as-rc3
++osdb	speed	lz	4511537	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++osdb	speed	lz2	4511537	0	OK	-,rc3-refuses
++osdb	balanced	none	3533740	0	OK	same-bytes-as-rc3
++osdb	balanced	lz	3572343	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++osdb	balanced	lz2	3525497	0	OK	-,rc3-refuses
++reymont	speed	none	3189095	0	OK	same-bytes-as-rc3
++reymont	speed	lz	2855183	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++reymont	speed	lz2	2855183	0	OK	-,rc3-refuses
++reymont	balanced	none	1967300	0	OK	same-bytes-as-rc3
++reymont	balanced	lz	2008974	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++reymont	balanced	lz2	1962212	0	OK	-,rc3-refuses
++samba	speed	none	7728497	0	OK	same-bytes-as-rc3
++samba	speed	lz	7390319	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++samba	speed	lz2	7390319	0	OK	-,rc3-refuses
++samba	balanced	none	4867052	0	OK	same-bytes-as-rc3
++samba	balanced	lz	5006691	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++samba	balanced	lz2	4868551	0	OK	-,rc3-refuses
++sao	speed	none	6791955	0	OK	same-bytes-as-rc3
++sao	speed	lz	6561878	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++sao	speed	lz2	6561878	0	OK	-,rc3-refuses
++sao	balanced	none	2302435	0	OK	same-bytes-as-rc3
++sao	balanced	lz	2491569	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++sao	balanced	lz2	2355696	0	OK	-,rc3-refuses
++webster	speed	none	20149426	0	OK	same-bytes-as-rc3
++webster	speed	lz	18434218	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++webster	speed	lz2	18434218	0	OK	-,rc3-refuses
++webster	balanced	none	12151927	0	OK	same-bytes-as-rc3
++webster	balanced	lz	12252265	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++webster	balanced	lz2	12057940	0	OK	-,rc3-refuses
++x-ray	speed	none	8389978	0	OK	same-bytes-as-rc3
++x-ray	speed	lz	8474332	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++x-ray	speed	lz2	8474332	0	OK	-,rc3-refuses
++x-ray	balanced	none	3657342	0	OK	same-bytes-as-rc3
++x-ray	balanced	lz	3680998	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++x-ray	balanced	lz2	3678994	0	OK	-,rc3-refuses
++xml	speed	none	1232806	0	OK	same-bytes-as-rc3
++xml	speed	lz	1126805	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++xml	speed	lz2	1126805	0	OK	-,rc3-refuses
++xml	balanced	none	652714	0	OK	same-bytes-as-rc3
++xml	balanced	lz	682317	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++xml	balanced	lz2	647981	0	OK	-,rc3-refuses
++enwik8_10m	speed	none	5795205	0	OK	same-bytes-as-rc3
++enwik8_10m	speed	lz	5315363	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-refuses
++enwik8_10m	speed	lz2	5315363	0	OK	-,rc3-refuses
++enwik8_10m	balanced	none	3616246	0	OK	same-bytes-as-rc3
++enwik8_10m	balanced	lz	3637794	0	OK	DIFFERS-from-rc3,rc3-frame-decodes,rc3-reads-it
++enwik8_10m	balanced	lz2	3598323	0	OK	-,rc3-refuses
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-dickens.txt b/benchmark/review40/w4-compat/results/w4-T1-dickens.txt
+new file mode 100644
+index 00000000..4a410ff0
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-dickens.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in    10192446  out     6431106  ratio  1.585  c    357.9 MB/s  d   1885.5 MB/s
++klz1     T1  in    10192446  out     5580777  ratio  1.826  c    223.0 MB/s  d   1711.1 MB/s
++klzs1    T1  in    10192446  out     5625147  ratio  1.812  c    310.9 MB/s  d   2963.9 MB/s
++klzs3    T1  in    10192446  out     4722128  ratio  2.158  c     42.2 MB/s  d   2986.5 MB/s
++zstd1    T1  in    10192446  out     4264635  ratio  2.390  c    295.5 MB/s  d   1194.0 MB/s
++klzh1    T1  in    10192446  out     4079369  ratio  2.499  c    201.2 MB/s  d    506.6 MB/s
++k2h1     T1  in    10192446  out     4061306  ratio  2.510  c    168.2 MB/s  d    671.2 MB/s
++zstd3    T1  in    10192446  out     3681733  ratio  2.768  c    130.4 MB/s  d    977.2 MB/s
++klzh3    T1  in    10192446  out     3691715  ratio  2.761  c    127.8 MB/s  d    819.1 MB/s
++k2h3     T1  in    10192446  out     3630035  ratio  2.808  c    123.9 MB/s  d    850.6 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-enwik8_10m.txt b/benchmark/review40/w4-compat/results/w4-T1-enwik8_10m.txt
+new file mode 100644
+index 00000000..08da56aa
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-enwik8_10m.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in    10000000  out     5789476  ratio  1.727  c    397.6 MB/s  d   2111.8 MB/s
++klz1     T1  in    10000000  out     5248230  ratio  1.905  c    262.5 MB/s  d   1731.4 MB/s
++klzs1    T1  in    10000000  out     5301025  ratio  1.886  c    349.2 MB/s  d   2739.0 MB/s
++klzs3    T1  in    10000000  out     4439334  ratio  2.253  c     49.4 MB/s  d   2526.7 MB/s
++zstd1    T1  in    10000000  out     4108085  ratio  2.434  c    324.7 MB/s  d   1074.0 MB/s
++klzh1    T1  in    10000000  out     3957745  ratio  2.527  c    239.0 MB/s  d    989.6 MB/s
++k2h1     T1  in    10000000  out     3944780  ratio  2.535  c    201.9 MB/s  d    751.7 MB/s
++zstd3    T1  in    10000000  out     3581213  ratio  2.792  c    166.8 MB/s  d    927.8 MB/s
++klzh3    T1  in    10000000  out     3578844  ratio  2.794  c    124.8 MB/s  d    825.0 MB/s
++k2h3     T1  in    10000000  out     3543201  ratio  2.822  c     87.0 MB/s  d    746.2 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-mozilla.txt b/benchmark/review40/w4-compat/results/w4-T1-mozilla.txt
+new file mode 100644
+index 00000000..355ec3b4
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-mozilla.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in    51220480  out    26441724  ratio  1.937  c    577.5 MB/s  d   2424.3 MB/s
++klz1     T1  in    51220480  out    25389621  ratio  2.017  c    464.4 MB/s  d   1882.0 MB/s
++klzs1    T1  in    51220480  out    25810020  ratio  1.985  c    539.0 MB/s  d   2540.7 MB/s
++klzs3    T1  in    51220480  out    22883964  ratio  2.238  c     64.0 MB/s  d   2265.9 MB/s
++zstd1    T1  in    51220480  out    19988639  ratio  2.562  c    424.4 MB/s  d    785.8 MB/s
++klzh1    T1  in    51220480  out    19913529  ratio  2.572  c    325.7 MB/s  d    910.1 MB/s
++k2h1     T1  in    51220480  out    18992605  ratio  2.697  c    237.9 MB/s  d    716.7 MB/s
++zstd3    T1  in    51220480  out    18304336  ratio  2.798  c    183.8 MB/s  d    947.6 MB/s
++klzh3    T1  in    51220480  out    18849249  ratio  2.717  c    169.8 MB/s  d    908.0 MB/s
++k2h3     T1  in    51220480  out    17811667  ratio  2.876  c    136.1 MB/s  d    705.6 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-mr.txt b/benchmark/review40/w4-compat/results/w4-T1-mr.txt
+new file mode 100644
+index 00000000..622a3412
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-mr.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in     9970564  out     5442495  ratio  1.832  c    526.1 MB/s  d   2571.0 MB/s
++klz1     T1  in     9970564  out     5021660  ratio  1.986  c    384.7 MB/s  d   1908.9 MB/s
++klzs1    T1  in     9970564  out     5448632  ratio  1.830  c    544.7 MB/s  d   3141.7 MB/s
++klzs3    T1  in     9970564  out     4486197  ratio  2.222  c     58.2 MB/s  d   2401.4 MB/s
++zstd1    T1  in     9970564  out     3814844  ratio  2.614  c    377.0 MB/s  d   1119.2 MB/s
++klzh1    T1  in     9970564  out     3770601  ratio  2.644  c    310.7 MB/s  d   1010.6 MB/s
++k2h1     T1  in     9970564  out     3611280  ratio  2.761  c    222.8 MB/s  d    802.4 MB/s
++zstd3    T1  in     9970564  out     3548122  ratio  2.810  c    175.8 MB/s  d    964.6 MB/s
++klzh3    T1  in     9970564  out     3585129  ratio  2.781  c    139.0 MB/s  d    503.3 MB/s
++k2h3     T1  in     9970564  out     3372971  ratio  2.956  c    110.9 MB/s  d    664.0 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-nci.txt b/benchmark/review40/w4-compat/results/w4-T1-nci.txt
+new file mode 100644
+index 00000000..ebb92ab5
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-nci.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in    33553445  out     5539301  ratio  6.057  c    808.6 MB/s  d   2827.1 MB/s
++klz1     T1  in    33553445  out     5153742  ratio  6.511  c    789.5 MB/s  d   2736.0 MB/s
++klzs1    T1  in    33553445  out     5262764  ratio  6.376  c    979.1 MB/s  d   3349.4 MB/s
++klzs3    T1  in    33553445  out     4138200  ratio  8.108  c    128.7 MB/s  d   2763.5 MB/s
++zstd1    T1  in    33553445  out     2855235  ratio 11.752  c    760.5 MB/s  d   1604.2 MB/s
++klzh1    T1  in    33553445  out     3043997  ratio 11.023  c    669.1 MB/s  d   1608.2 MB/s
++k2h1     T1  in    33553445  out     2866439  ratio 11.706  c    443.6 MB/s  d   1268.8 MB/s
++zstd3    T1  in    33553445  out     2846755  ratio 11.787  c    551.2 MB/s  d   1256.2 MB/s
++klzh3    T1  in    33553445  out     2971425  ratio 11.292  c    528.0 MB/s  d   1687.6 MB/s
++k2h3     T1  in    33553445  out     2788062  ratio 12.035  c    387.0 MB/s  d   1502.3 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-ooffice.txt b/benchmark/review40/w4-compat/results/w4-T1-ooffice.txt
+new file mode 100644
+index 00000000..898c4aaa
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-ooffice.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in     6152192  out     4339312  ratio  1.418  c    430.6 MB/s  d   1932.1 MB/s
++klz1     T1  in     6152192  out     4151672  ratio  1.482  c    294.4 MB/s  d   1318.6 MB/s
++klzs1    T1  in     6152192  out     4287293  ratio  1.435  c    430.9 MB/s  d   2419.2 MB/s
++klzs3    T1  in     6152192  out     3643249  ratio  1.689  c     51.2 MB/s  d   2203.4 MB/s
++zstd1    T1  in     6152192  out     3593815  ratio  1.712  c    363.8 MB/s  d    817.9 MB/s
++klzh1    T1  in     6152192  out     3431111  ratio  1.793  c    258.1 MB/s  d    771.8 MB/s
++k2h1     T1  in     6152192  out     3378527  ratio  1.821  c    177.5 MB/s  d    566.1 MB/s
++zstd3    T1  in     6152192  out     3130232  ratio  1.965  c    141.0 MB/s  d    732.9 MB/s
++klzh3    T1  in     6152192  out     3134306  ratio  1.963  c    109.9 MB/s  d    758.2 MB/s
++k2h3     T1  in     6152192  out     3084515  ratio  1.995  c     99.9 MB/s  d    580.6 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-osdb.txt b/benchmark/review40/w4-compat/results/w4-T1-osdb.txt
+new file mode 100644
+index 00000000..d92055e7
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-osdb.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in    10085684  out     5261215  ratio  1.917  c    531.7 MB/s  d   2618.6 MB/s
++klz1     T1  in    10085684  out     4585680  ratio  2.199  c    480.2 MB/s  d   2383.6 MB/s
++klzs1    T1  in    10085684  out     4492015  ratio  2.245  c    557.2 MB/s  d   3181.6 MB/s
++klzs3    T1  in    10085684  out     4028186  ratio  2.504  c     70.9 MB/s  d   3054.2 MB/s
++zstd1    T1  in    10085684  out     3738340  ratio  2.698  c    431.5 MB/s  d   1150.4 MB/s
++klzh1    T1  in    10085684  out     3652739  ratio  2.761  c    346.8 MB/s  d   1312.4 MB/s
++k2h1     T1  in    10085684  out     3606112  ratio  2.797  c    292.2 MB/s  d   1129.1 MB/s
++zstd3    T1  in    10085684  out     3511122  ratio  2.872  c    193.2 MB/s  d    741.5 MB/s
++klzh3    T1  in    10085684  out     3533585  ratio  2.854  c    139.6 MB/s  d   1159.7 MB/s
++k2h3     T1  in    10085684  out     3485882  ratio  2.893  c    139.0 MB/s  d   1057.0 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-reymont.txt b/benchmark/review40/w4-compat/results/w4-T1-reymont.txt
+new file mode 100644
+index 00000000..b6719d14
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-reymont.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in     6627202  out     3182828  ratio  2.082  c    329.7 MB/s  d   2283.5 MB/s
++klz1     T1  in     6627202  out     3021574  ratio  2.193  c    290.2 MB/s  d   1666.3 MB/s
++klzs1    T1  in     6627202  out     2843710  ratio  2.330  c    299.5 MB/s  d   2872.4 MB/s
++klzs3    T1  in     6627202  out     2406939  ratio  2.753  c     53.3 MB/s  d   2482.2 MB/s
++zstd1    T1  in     6627202  out     2151356  ratio  3.080  c    282.1 MB/s  d    935.9 MB/s
++klzh1    T1  in     6627202  out     2183172  ratio  3.036  c    182.0 MB/s  d    747.0 MB/s
++k2h1     T1  in     6627202  out     2140442  ratio  3.096  c    181.4 MB/s  d    777.3 MB/s
++zstd3    T1  in     6627202  out     1943693  ratio  3.410  c    183.3 MB/s  d    948.6 MB/s
++klzh3    T1  in     6627202  out     1987153  ratio  3.335  c    147.3 MB/s  d    922.0 MB/s
++k2h3     T1  in     6627202  out     1931334  ratio  3.431  c    129.1 MB/s  d    985.1 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-samba.txt b/benchmark/review40/w4-compat/results/w4-T1-samba.txt
+new file mode 100644
+index 00000000..81166bb6
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-samba.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in    21606400  out     7721713  ratio  2.798  c    507.5 MB/s  d   2583.6 MB/s
++klz1     T1  in    21606400  out     7150213  ratio  3.022  c    477.7 MB/s  d   1680.4 MB/s
++klzs1    T1  in    21606400  out     7385174  ratio  2.926  c    469.0 MB/s  d   2507.5 MB/s
++klzs3    T1  in    21606400  out     6373534  ratio  3.390  c     80.3 MB/s  d   2758.1 MB/s
++zstd1    T1  in    21606400  out     5501656  ratio  3.927  c    468.0 MB/s  d   1425.8 MB/s
++klzh1    T1  in    21606400  out     5555722  ratio  3.889  c    386.6 MB/s  d   1336.4 MB/s
++k2h1     T1  in    21606400  out     5357926  ratio  4.033  c    316.0 MB/s  d   1034.1 MB/s
++zstd3    T1  in    21606400  out     4982897  ratio  4.336  c    305.4 MB/s  d   1289.6 MB/s
++klzh3    T1  in    21606400  out     5146499  ratio  4.198  c    247.7 MB/s  d   1242.0 MB/s
++k2h3     T1  in    21606400  out     4945395  ratio  4.369  c    181.0 MB/s  d    779.2 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-sao.txt b/benchmark/review40/w4-compat/results/w4-T1-sao.txt
+new file mode 100644
+index 00000000..e0422066
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-sao.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in     7251944  out     6790441  ratio  1.068  c    451.6 MB/s  d   2656.0 MB/s
++klz1     T1  in     7251944  out     6453926  ratio  1.124  c    365.7 MB/s  d   1978.5 MB/s
++klzs1    T1  in     7251944  out     6548174  ratio  1.107  c    407.3 MB/s  d   2701.5 MB/s
++klzs3    T1  in     7251944  out     5851335  ratio  1.239  c     42.6 MB/s  d   2070.8 MB/s
++zstd1    T1  in     7251944  out     6251181  ratio  1.160  c    338.6 MB/s  d    780.8 MB/s
++klzh1    T1  in     7251944  out     6007850  ratio  1.207  c    226.0 MB/s  d    691.2 MB/s
++k2h1     T1  in     7251944  out     5916293  ratio  1.226  c    189.8 MB/s  d    639.3 MB/s
++zstd3    T1  in     7251944  out     5530936  ratio  1.311  c    140.2 MB/s  d    644.3 MB/s
++klzh3    T1  in     7251944  out     5509176  ratio  1.316  c     80.6 MB/s  d    702.6 MB/s
++k2h3     T1  in     7251944  out     5361864  ratio  1.353  c     75.3 MB/s  d    538.0 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-webster.txt b/benchmark/review40/w4-compat/results/w4-T1-webster.txt
+new file mode 100644
+index 00000000..fb48cdf3
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-webster.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in    41458703  out    20149194  ratio  2.058  c    390.3 MB/s  d   2205.0 MB/s
++klz1     T1  in    41458703  out    18255146  ratio  2.271  c    269.4 MB/s  d   1651.4 MB/s
++klzs1    T1  in    41458703  out    18433986  ratio  2.249  c    358.1 MB/s  d   2351.0 MB/s
++klzs3    T1  in    41458703  out    14913146  ratio  2.780  c     58.7 MB/s  d   2395.3 MB/s
++zstd1    T1  in    41458703  out    13675709  ratio  3.032  c    332.4 MB/s  d   1195.2 MB/s
++klzh1    T1  in    41458703  out    13443073  ratio  3.084  c    248.9 MB/s  d   1103.8 MB/s
++k2h1     T1  in    41458703  out    13348024  ratio  3.106  c    208.0 MB/s  d    896.6 MB/s
++zstd3    T1  in    41458703  out    12151695  ratio  3.412  c    190.8 MB/s  d    894.9 MB/s
++klzh3    T1  in    41458703  out    12252033  ratio  3.384  c    134.6 MB/s  d    835.5 MB/s
++k2h3     T1  in    41458703  out    12057708  ratio  3.438  c    134.1 MB/s  d    888.7 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-x-ray.txt b/benchmark/review40/w4-compat/results/w4-T1-x-ray.txt
+new file mode 100644
+index 00000000..8bcfa31a
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-x-ray.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in     8474240  out     8406607  ratio  1.008  c   1498.7 MB/s  d   4159.3 MB/s
++klz1     T1  in     8474240  out     8140238  ratio  1.041  c    637.7 MB/s  d   2940.9 MB/s
++klzs1    T1  in     8474240  out     8474143  ratio  1.000  c   6151.8 MB/s  d   8115.3 MB/s
++klzs3    T1  in     8474240  out     7244134  ratio  1.170  c     52.7 MB/s  d   2144.4 MB/s
++zstd1    T1  in     8474240  out     6772708  ratio  1.251  c    648.0 MB/s  d    908.2 MB/s
++klzh1    T1  in     8474240  out     6779862  ratio  1.250  c    644.9 MB/s  d    701.9 MB/s
++k2h1     T1  in     8474240  out     6778372  ratio  1.250  c    425.4 MB/s  d    844.2 MB/s
++zstd3    T1  in     8474240  out     6092374  ratio  1.391  c    128.0 MB/s  d    705.8 MB/s
++klzh3    T1  in     8474240  out     6240295  ratio  1.358  c    116.8 MB/s  d    708.2 MB/s
++k2h3     T1  in     8474240  out     6115780  ratio  1.386  c    112.3 MB/s  d    574.4 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T1-xml.txt b/benchmark/review40/w4-compat/results/w4-T1-xml.txt
+new file mode 100644
+index 00000000..04b6f5e6
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T1-xml.txt
+@@ -0,0 +1,10 @@
++lz4      T1  in     5345280  out     1228083  ratio  4.353  c    572.3 MB/s  d   2574.5 MB/s
++klz1     T1  in     5345280  out     1068126  ratio  5.004  c    594.3 MB/s  d   2279.1 MB/s
++klzs1    T1  in     5345280  out     1119761  ratio  4.774  c    675.0 MB/s  d   2898.8 MB/s
++klzs3    T1  in     5345280  out      860873  ratio  6.209  c    109.8 MB/s  d   2917.4 MB/s
++zstd1    T1  in     5345280  out      694115  ratio  7.701  c    621.5 MB/s  d   1675.2 MB/s
++klzh1    T1  in     5345280  out      726045  ratio  7.362  c    567.2 MB/s  d   1608.8 MB/s
++k2h1     T1  in     5345280  out      683622  ratio  7.819  c    453.7 MB/s  d   1413.3 MB/s
++zstd3    T1  in     5345280  out      636164  ratio  8.402  c    488.5 MB/s  d   1574.8 MB/s
++klzh3    T1  in     5345280  out      672831  ratio  7.944  c    465.1 MB/s  d   1606.8 MB/s
++k2h3     T1  in     5345280  out      632079  ratio  8.457  c    364.6 MB/s  d   1497.3 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-dickens.txt b/benchmark/review40/w4-compat/results/w4-T4-dickens.txt
+new file mode 100644
+index 00000000..f792fba5
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-dickens.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in    10192446  out     6431106  ratio  1.585  c    821.9 MB/s  d   4357.9 MB/s
++klzs1    T4  in    10192446  out     5625147  ratio  1.812  c    689.7 MB/s  d   6146.6 MB/s
++zstd1    T4  in    10192446  out     4264635  ratio  2.390  c    537.9 MB/s  d   1876.9 MB/s
++klzh1    T4  in    10192446  out     4079369  ratio  2.499  c    469.2 MB/s  d   2108.0 MB/s
++k2h1     T4  in    10192446  out     4061306  ratio  2.510  c    381.1 MB/s  d   1736.9 MB/s
++zstd3    T4  in    10192446  out     3681733  ratio  2.768  c    299.8 MB/s  d   2103.6 MB/s
++klzh3    T4  in    10192446  out     3691715  ratio  2.761  c    276.8 MB/s  d   1794.1 MB/s
++k2h3     T4  in    10192446  out     3630035  ratio  2.808  c    239.0 MB/s  d   1775.0 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-enwik8_10m.txt b/benchmark/review40/w4-compat/results/w4-T4-enwik8_10m.txt
+new file mode 100644
+index 00000000..1870817c
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-enwik8_10m.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in    10000000  out     5789476  ratio  1.727  c    705.7 MB/s  d   4371.4 MB/s
++klzs1    T4  in    10000000  out     5301025  ratio  1.886  c    664.8 MB/s  d   4497.2 MB/s
++zstd1    T4  in    10000000  out     4108085  ratio  2.434  c    536.1 MB/s  d   1781.5 MB/s
++klzh1    T4  in    10000000  out     3957745  ratio  2.527  c    402.4 MB/s  d   1471.3 MB/s
++k2h1     T4  in    10000000  out     3944780  ratio  2.535  c    329.9 MB/s  d   1157.1 MB/s
++zstd3    T4  in    10000000  out     3581213  ratio  2.792  c    237.0 MB/s  d   1661.2 MB/s
++klzh3    T4  in    10000000  out     3578844  ratio  2.794  c    224.7 MB/s  d   1859.8 MB/s
++k2h3     T4  in    10000000  out     3543201  ratio  2.822  c    263.9 MB/s  d   1625.9 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-mozilla.txt b/benchmark/review40/w4-compat/results/w4-T4-mozilla.txt
+new file mode 100644
+index 00000000..a9f2f969
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-mozilla.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in    51220480  out    26441724  ratio  1.937  c   1533.0 MB/s  d   5409.6 MB/s
++klzs1    T4  in    51220480  out    25810020  ratio  1.985  c   1335.7 MB/s  d   6744.2 MB/s
++zstd1    T4  in    51220480  out    19988639  ratio  2.562  c   1160.6 MB/s  d   2509.9 MB/s
++klzh1    T4  in    51220480  out    19913529  ratio  2.572  c    880.4 MB/s  d   2401.2 MB/s
++k2h1     T4  in    51220480  out    18992605  ratio  2.697  c    635.3 MB/s  d   1966.6 MB/s
++zstd3    T4  in    51220480  out    18304336  ratio  2.798  c    581.3 MB/s  d   2494.2 MB/s
++klzh3    T4  in    51220480  out    18849249  ratio  2.717  c    495.3 MB/s  d   2593.5 MB/s
++k2h3     T4  in    51220480  out    17811667  ratio  2.876  c    400.2 MB/s  d   2003.9 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-mr.txt b/benchmark/review40/w4-compat/results/w4-T4-mr.txt
+new file mode 100644
+index 00000000..3efb8a65
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-mr.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in     9970564  out     5442495  ratio  1.832  c   1258.0 MB/s  d   6089.5 MB/s
++klzs1    T4  in     9970564  out     5448632  ratio  1.830  c   1186.2 MB/s  d   7029.5 MB/s
++zstd1    T4  in     9970564  out     3814844  ratio  2.614  c    858.1 MB/s  d   2635.6 MB/s
++klzh1    T4  in     9970564  out     3770601  ratio  2.644  c    690.4 MB/s  d   2267.6 MB/s
++k2h1     T4  in     9970564  out     3611280  ratio  2.761  c    501.1 MB/s  d   1795.3 MB/s
++zstd3    T4  in     9970564  out     3548122  ratio  2.810  c    448.0 MB/s  d   2317.6 MB/s
++klzh3    T4  in     9970564  out     3585129  ratio  2.781  c    359.6 MB/s  d   1887.5 MB/s
++k2h3     T4  in     9970564  out     3372971  ratio  2.956  c    227.5 MB/s  d   1262.1 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-nci.txt b/benchmark/review40/w4-compat/results/w4-T4-nci.txt
+new file mode 100644
+index 00000000..c463ae63
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-nci.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in    33553445  out     5539301  ratio  6.057  c   2001.7 MB/s  d   7620.4 MB/s
++klzs1    T4  in    33553445  out     5262764  ratio  6.376  c   2094.7 MB/s  d   7249.9 MB/s
++zstd1    T4  in    33553445  out     2855235  ratio 11.752  c   1526.3 MB/s  d   3394.4 MB/s
++klzh1    T4  in    33553445  out     3043997  ratio 11.023  c   1399.6 MB/s  d   3199.8 MB/s
++k2h1     T4  in    33553445  out     2866439  ratio 11.706  c   1390.4 MB/s  d   4274.4 MB/s
++zstd3    T4  in    33553445  out     2846755  ratio 11.787  c   1479.3 MB/s  d   4267.0 MB/s
++klzh3    T4  in    33553445  out     2971425  ratio 11.292  c   1377.8 MB/s  d   3914.8 MB/s
++k2h3     T4  in    33553445  out     2788062  ratio 12.035  c   1023.7 MB/s  d   4289.0 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-ooffice.txt b/benchmark/review40/w4-compat/results/w4-T4-ooffice.txt
+new file mode 100644
+index 00000000..c1846c7b
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-ooffice.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in     6152192  out     4339312  ratio  1.418  c    679.7 MB/s  d   3417.6 MB/s
++klzs1    T4  in     6152192  out     4287293  ratio  1.435  c    572.3 MB/s  d   3285.1 MB/s
++zstd1    T4  in     6152192  out     3593815  ratio  1.712  c    519.5 MB/s  d   1141.2 MB/s
++klzh1    T4  in     6152192  out     3431111  ratio  1.793  c    377.0 MB/s  d   1093.7 MB/s
++k2h1     T4  in     6152192  out     3378527  ratio  1.821  c    293.9 MB/s  d    822.1 MB/s
++zstd3    T4  in     6152192  out     3130232  ratio  1.965  c    166.0 MB/s  d    927.9 MB/s
++klzh3    T4  in     6152192  out     3134306  ratio  1.963  c    156.8 MB/s  d    823.5 MB/s
++k2h3     T4  in     6152192  out     3084515  ratio  1.995  c    126.9 MB/s  d    833.6 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-osdb.txt b/benchmark/review40/w4-compat/results/w4-T4-osdb.txt
+new file mode 100644
+index 00000000..8bae309f
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-osdb.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in    10085684  out     5261215  ratio  1.917  c   1199.9 MB/s  d   4533.8 MB/s
++klzs1    T4  in    10085684  out     4492015  ratio  2.245  c   1141.5 MB/s  d   6292.7 MB/s
++zstd1    T4  in    10085684  out     3738340  ratio  2.698  c   1003.2 MB/s  d   2722.4 MB/s
++klzh1    T4  in    10085684  out     3652739  ratio  2.761  c    791.5 MB/s  d   2744.9 MB/s
++k2h1     T4  in    10085684  out     3606112  ratio  2.797  c    480.2 MB/s  d   1616.5 MB/s
++zstd3    T4  in    10085684  out     3511122  ratio  2.872  c    473.8 MB/s  d   1622.0 MB/s
++klzh3    T4  in    10085684  out     3533585  ratio  2.854  c    351.4 MB/s  d   2395.9 MB/s
++k2h3     T4  in    10085684  out     3485882  ratio  2.893  c    327.7 MB/s  d   1822.6 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-reymont.txt b/benchmark/review40/w4-compat/results/w4-T4-reymont.txt
+new file mode 100644
+index 00000000..4da86008
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-reymont.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in     6627202  out     3182828  ratio  2.082  c    494.5 MB/s  d   2627.3 MB/s
++klzs1    T4  in     6627202  out     2843710  ratio  2.330  c    462.6 MB/s  d   4213.1 MB/s
++zstd1    T4  in     6627202  out     2151356  ratio  3.080  c    443.9 MB/s  d   1877.3 MB/s
++klzh1    T4  in     6627202  out     2183172  ratio  3.036  c    339.1 MB/s  d   1414.5 MB/s
++k2h1     T4  in     6627202  out     2140442  ratio  3.096  c    272.8 MB/s  d   1348.3 MB/s
++zstd3    T4  in     6627202  out     1943693  ratio  3.410  c    155.2 MB/s  d   1028.4 MB/s
++klzh3    T4  in     6627202  out     1987153  ratio  3.335  c    150.8 MB/s  d    910.0 MB/s
++k2h3     T4  in     6627202  out     1931334  ratio  3.431  c    134.1 MB/s  d    863.2 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-samba.txt b/benchmark/review40/w4-compat/results/w4-T4-samba.txt
+new file mode 100644
+index 00000000..1242ad29
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-samba.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in    21606400  out     7721713  ratio  2.798  c    777.5 MB/s  d   4741.6 MB/s
++klzs1    T4  in    21606400  out     7385174  ratio  2.926  c    914.0 MB/s  d   3706.4 MB/s
++zstd1    T4  in    21606400  out     5501656  ratio  3.927  c    776.1 MB/s  d   2698.2 MB/s
++klzh1    T4  in    21606400  out     5555722  ratio  3.889  c    567.2 MB/s  d   2771.6 MB/s
++k2h1     T4  in    21606400  out     5357926  ratio  4.033  c    727.7 MB/s  d   2616.8 MB/s
++zstd3    T4  in    21606400  out     4982897  ratio  4.336  c    658.1 MB/s  d   1575.2 MB/s
++klzh3    T4  in    21606400  out     5146499  ratio  4.198  c    317.3 MB/s  d   2527.8 MB/s
++k2h3     T4  in    21606400  out     4945395  ratio  4.369  c    327.4 MB/s  d   1660.3 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-sao.txt b/benchmark/review40/w4-compat/results/w4-T4-sao.txt
+new file mode 100644
+index 00000000..c2019bf2
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-sao.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in     7251944  out     6790441  ratio  1.068  c    578.3 MB/s  d   2546.4 MB/s
++klzs1    T4  in     7251944  out     6548174  ratio  1.107  c    646.5 MB/s  d   1814.9 MB/s
++zstd1    T4  in     7251944  out     6251181  ratio  1.160  c    601.4 MB/s  d   1318.8 MB/s
++klzh1    T4  in     7251944  out     6007850  ratio  1.207  c    213.0 MB/s  d    424.1 MB/s
++k2h1     T4  in     7251944  out     5916293  ratio  1.226  c    231.3 MB/s  d    637.1 MB/s
++zstd3    T4  in     7251944  out     5530936  ratio  1.311  c    129.5 MB/s  d    656.9 MB/s
++klzh3    T4  in     7251944  out     5509176  ratio  1.316  c     87.3 MB/s  d    719.2 MB/s
++k2h3     T4  in     7251944  out     5361864  ratio  1.353  c    101.4 MB/s  d    903.5 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-webster.txt b/benchmark/review40/w4-compat/results/w4-T4-webster.txt
+new file mode 100644
+index 00000000..14add194
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-webster.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in    41458703  out    20149194  ratio  2.058  c    634.6 MB/s  d   3629.2 MB/s
++klzs1    T4  in    41458703  out    18433986  ratio  2.249  c    743.2 MB/s  d   5128.4 MB/s
++zstd1    T4  in    41458703  out    13675709  ratio  3.032  c    515.4 MB/s  d   2170.7 MB/s
++klzh1    T4  in    41458703  out    13443073  ratio  3.084  c    394.9 MB/s  d   2057.7 MB/s
++k2h1     T4  in    41458703  out    13348024  ratio  3.106  c    375.9 MB/s  d   1648.4 MB/s
++zstd3    T4  in    41458703  out    12151695  ratio  3.412  c    313.0 MB/s  d   1733.4 MB/s
++klzh3    T4  in    41458703  out    12252033  ratio  3.384  c    318.0 MB/s  d   2004.0 MB/s
++k2h3     T4  in    41458703  out    12057708  ratio  3.438  c    318.6 MB/s  d    789.9 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-x-ray.txt b/benchmark/review40/w4-compat/results/w4-T4-x-ray.txt
+new file mode 100644
+index 00000000..f4ee8403
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-x-ray.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in     8474240  out     8406607  ratio  1.008  c   1978.5 MB/s  d   2776.4 MB/s
++klzs1    T4  in     8474240  out     8474143  ratio  1.000  c   3112.6 MB/s  d   2153.2 MB/s
++zstd1    T4  in     8474240  out     6772708  ratio  1.251  c   1090.1 MB/s  d   1350.5 MB/s
++klzh1    T4  in     8474240  out     6779862  ratio  1.250  c    879.1 MB/s  d   1331.8 MB/s
++k2h1     T4  in     8474240  out     6778372  ratio  1.250  c    775.1 MB/s  d   1118.5 MB/s
++zstd3    T4  in     8474240  out     6092374  ratio  1.391  c    181.8 MB/s  d   1123.2 MB/s
++klzh3    T4  in     8474240  out     6240295  ratio  1.358  c    156.1 MB/s  d   1264.3 MB/s
++k2h3     T4  in     8474240  out     6115780  ratio  1.386  c    127.6 MB/s  d    568.4 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4-T4-xml.txt b/benchmark/review40/w4-compat/results/w4-T4-xml.txt
+new file mode 100644
+index 00000000..714ce7ae
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4-T4-xml.txt
+@@ -0,0 +1,8 @@
++lz4      T4  in     5345280  out     1228083  ratio  4.353  c    844.3 MB/s  d   2684.7 MB/s
++klzs1    T4  in     5345280  out     1119761  ratio  4.774  c    849.5 MB/s  d   2811.2 MB/s
++zstd1    T4  in     5345280  out      694115  ratio  7.701  c    696.8 MB/s  d   1644.9 MB/s
++klzh1    T4  in     5345280  out      726045  ratio  7.362  c    783.0 MB/s  d   2179.3 MB/s
++k2h1     T4  in     5345280  out      683622  ratio  7.819  c    685.7 MB/s  d   2132.6 MB/s
++zstd3    T4  in     5345280  out      636164  ratio  8.402  c    468.5 MB/s  d   1463.2 MB/s
++klzh3    T4  in     5345280  out      672831  ratio  7.944  c    468.5 MB/s  d   1602.2 MB/s
++k2h3     T4  in     5345280  out      632079  ratio  8.457  c    396.3 MB/s  d   1507.4 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4small32-T1-dickens.txt b/benchmark/review40/w4-compat/results/w4small32-T1-dickens.txt
+new file mode 100644
+index 00000000..ec3bd0d1
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4small32-T1-dickens.txt
+@@ -0,0 +1,9 @@
++lz4      T1  in    10192446  out     6648690  ratio  1.533  c    264.0 MB/s  d   1382.0 MB/s
++klz1     T1  in    10192446  out     6544903  ratio  1.557  c    279.0 MB/s  d   1541.7 MB/s
++klzs1    T1  in    10192446  out     6706932  ratio  1.520  c    290.7 MB/s  d   2504.6 MB/s
++zstd1    T1  in    10192446  out     4567137  ratio  2.232  c    272.8 MB/s  d    917.4 MB/s
++klzh1    T1  in    10192446  out     4591604  ratio  2.220  c    241.3 MB/s  d    694.8 MB/s
++k2h1     T1  in    10192446  out     4558886  ratio  2.236  c    177.5 MB/s  d    534.7 MB/s
++zstd3    T1  in    10192446  out     4358299  ratio  2.339  c    176.0 MB/s  d    839.1 MB/s
++klzh3    T1  in    10192446  out     4407557  ratio  2.312  c    129.7 MB/s  d    624.6 MB/s
++k2h3     T1  in    10192446  out     4373474  ratio  2.331  c    110.6 MB/s  d    430.3 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4small32-T1-osdb.txt b/benchmark/review40/w4-compat/results/w4small32-T1-osdb.txt
+new file mode 100644
+index 00000000..81d808fc
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4small32-T1-osdb.txt
+@@ -0,0 +1,9 @@
++lz4      T1  in    10085684  out     5880537  ratio  1.715  c    452.8 MB/s  d   1875.7 MB/s
++klz1     T1  in    10085684  out     5876477  ratio  1.716  c    396.1 MB/s  d   1352.1 MB/s
++klzs1    T1  in    10085684  out     5856024  ratio  1.722  c    244.6 MB/s  d   2225.5 MB/s
++zstd1    T1  in    10085684  out     4957648  ratio  2.034  c    275.2 MB/s  d    718.0 MB/s
++klzh1    T1  in    10085684  out     4955856  ratio  2.035  c    216.6 MB/s  d    533.6 MB/s
++k2h1     T1  in    10085684  out     4904685  ratio  2.056  c    173.4 MB/s  d    497.9 MB/s
++zstd3    T1  in    10085684  out     4803028  ratio  2.100  c    213.4 MB/s  d    702.4 MB/s
++klzh3    T1  in    10085684  out     4871873  ratio  2.070  c    122.1 MB/s  d    726.5 MB/s
++k2h3     T1  in    10085684  out     4816703  ratio  2.094  c     97.3 MB/s  d    553.6 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4small32-T1-xml.txt b/benchmark/review40/w4-compat/results/w4small32-T1-xml.txt
+new file mode 100644
+index 00000000..f08aaa5e
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4small32-T1-xml.txt
+@@ -0,0 +1,9 @@
++lz4      T1  in     5345280  out     1436546  ratio  3.721  c    667.7 MB/s  d   2326.3 MB/s
++klz1     T1  in     5345280  out     1381676  ratio  3.869  c    590.0 MB/s  d   1916.8 MB/s
++klzs1    T1  in     5345280  out     1341361  ratio  3.985  c    488.2 MB/s  d   2471.5 MB/s
++zstd1    T1  in     5345280  out      913552  ratio  5.851  c    516.8 MB/s  d   1233.9 MB/s
++klzh1    T1  in     5345280  out      936957  ratio  5.705  c    453.5 MB/s  d   1025.0 MB/s
++k2h1     T1  in     5345280  out      911314  ratio  5.865  c    313.9 MB/s  d    874.5 MB/s
++zstd3    T1  in     5345280  out      866521  ratio  6.169  c    423.8 MB/s  d   1179.0 MB/s
++klzh3    T1  in     5345280  out      894007  ratio  5.979  c    258.7 MB/s  d    987.8 MB/s
++k2h3     T1  in     5345280  out      870061  ratio  6.144  c    202.2 MB/s  d    852.4 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4small4-T1-dickens.txt b/benchmark/review40/w4-compat/results/w4small4-T1-dickens.txt
+new file mode 100644
+index 00000000..6ddc5972
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4small4-T1-dickens.txt
+@@ -0,0 +1,9 @@
++lz4      T1  in    10192446  out     7709090  ratio  1.322  c    305.8 MB/s  d   1404.2 MB/s
++klz1     T1  in    10192446  out     8070933  ratio  1.263  c    346.8 MB/s  d   1337.4 MB/s
++klzs1    T1  in    10192446  out     8451603  ratio  1.206  c    416.6 MB/s  d   1615.5 MB/s
++zstd1    T1  in    10192446  out     5103928  ratio  1.997  c    205.6 MB/s  d    500.0 MB/s
++klzh1    T1  in    10192446  out     5499744  ratio  1.853  c    152.5 MB/s  d    343.0 MB/s
++k2h1     T1  in    10192446  out     5249805  ratio  1.941  c     84.2 MB/s  d    315.6 MB/s
++zstd3    T1  in    10192446  out     5085971  ratio  2.004  c    144.1 MB/s  d    484.2 MB/s
++klzh3    T1  in    10192446  out     5354400  ratio  1.904  c     59.6 MB/s  d    335.6 MB/s
++k2h3     T1  in    10192446  out     5116927  ratio  1.992  c     41.0 MB/s  d    282.7 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4small4-T1-osdb.txt b/benchmark/review40/w4-compat/results/w4small4-T1-osdb.txt
+new file mode 100644
+index 00000000..3f656668
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4small4-T1-osdb.txt
+@@ -0,0 +1,9 @@
++lz4      T1  in    10085684  out     8554658  ratio  1.179  c    530.2 MB/s  d   1900.5 MB/s
++klz1     T1  in    10085684  out     8648251  ratio  1.166  c    472.4 MB/s  d   1763.8 MB/s
++klzs1    T1  in    10085684  out     8968500  ratio  1.125  c    542.1 MB/s  d   2060.2 MB/s
++zstd1    T1  in    10085684  out     7383479  ratio  1.366  c    221.3 MB/s  d    482.2 MB/s
++klzh1    T1  in    10085684  out     7727204  ratio  1.305  c    110.3 MB/s  d    324.1 MB/s
++k2h1     T1  in    10085684  out     7569200  ratio  1.332  c     78.4 MB/s  d    291.1 MB/s
++zstd3    T1  in    10085684  out     7313605  ratio  1.379  c    171.8 MB/s  d    473.7 MB/s
++klzh3    T1  in    10085684  out     7653816  ratio  1.318  c     52.9 MB/s  d    303.8 MB/s
++k2h3     T1  in    10085684  out     7480213  ratio  1.348  c     41.7 MB/s  d    272.9 MB/s
+diff --git a/benchmark/review40/w4-compat/results/w4small4-T1-xml.txt b/benchmark/review40/w4-compat/results/w4small4-T1-xml.txt
+new file mode 100644
+index 00000000..b36f16d8
+--- /dev/null
++++ b/benchmark/review40/w4-compat/results/w4small4-T1-xml.txt
+@@ -0,0 +1,9 @@
++lz4      T1  in     5345280  out     2019969  ratio  2.646  c    562.2 MB/s  d   1839.0 MB/s
++klz1     T1  in     5345280  out     2014225  ratio  2.654  c    463.0 MB/s  d   1527.2 MB/s
++klzs1    T1  in     5345280  out     1989342  ratio  2.687  c    536.0 MB/s  d   1851.2 MB/s
++zstd1    T1  in     5345280  out     1389331  ratio  3.847  c    287.4 MB/s  d    605.7 MB/s
++klzh1    T1  in     5345280  out     1542277  ratio  3.466  c    201.8 MB/s  d    436.2 MB/s
++k2h1     T1  in     5345280  out     1395436  ratio  3.831  c    106.5 MB/s  d    355.9 MB/s
++zstd3    T1  in     5345280  out     1336267  ratio  4.000  c    247.1 MB/s  d    617.9 MB/s
++klzh3    T1  in     5345280  out     1492508  ratio  3.581  c     71.3 MB/s  d    427.0 MB/s
++k2h3     T1  in     5345280  out     1340484  ratio  3.988  c     56.4 MB/s  d    348.3 MB/s
+diff --git a/benchmark/w4/lz/ERRATA-20261124.md b/benchmark/w4/lz/ERRATA-20261124.md
+new file mode 100644
+index 00000000..178f189e
+--- /dev/null
++++ b/benchmark/w4/lz/ERRATA-20261124.md
+@@ -0,0 +1,19 @@
++# Errata to `benchmark/w4/lz/RESULTS.md` (24 November 2026, review40/R01)
++
++`RESULTS.md` in this directory is the wave-4 LZ lane's record and is kept as that lane wrote it. Two things in it do
++not describe the tree the lane was landed into (branch `review40/R01`, claim `klz-w4-compat`):
++
++1. **"KLZ (codec 28)"**. The lane replaced the block format of codec 28 in place, and its tables call the new coder
++   KLZ, `klz1` in natbench. An rc3 frame written with `KOLMO_NATIVE=lz` in `speed` mode holds codec 28 blocks in the
++   rc3 format, and the lane's decoder did not read them (measured in the review: 6 of 6 blocks refused). The landed
++   tree therefore keeps codec 28 as rc3 defined it and registers the lane's coder as **KLZS, codec 31**
++   (`kolmo_klzs_*`, `klzs1..klzs3` in natbench). Every number the lane reports for "KLZ" is a measurement of the
++   coder that is now codec 31; `klz1` in a natbench of the landed tree is rc3's coder. `run_all.sh` was changed to
++   ask for `klzs1`; `results/speed.tsv` keeps the lane's label.
++2. **"the rc3 wave-2 format ... is not read any more"** (the lane's `klz.h`, and its changelog entry) does not hold
++   for the landed tree: rc3's codec 28 blocks decode, and a test holds blocks written by the rc3 sources
++   (`tests/klz_rc3_frames.h`).
++
++The lane's sizes were reproduced on the landed tree (13 files, 4 MiB blocks): KLZS 1 101,031,844 bytes, KLZH 1
++76,544,815, KLZH 3 71,152,240, the figures of the review's run of the lane's sources. Measurements of the landed
++tree: `benchmark/review40/w4-compat/RESULTS.md`.
+diff --git a/docs/NATIVE-PLAN.md b/docs/NATIVE-PLAN.md
+index 4292d32f..7d6dfc2f 100644
+--- a/docs/NATIVE-PLAN.md
++++ b/docs/NATIVE-PLAN.md
+@@ -162,6 +162,12 @@ same parse and levels, a second entropy stage (tokens and length codes in an ori
+ streams). `lz` and `all` keep writing codec 29, byte for byte. A frame with codec 32 is refused by rc3 readers
+ ("corrupt or unsupported input"). Format in `src/algo/klz.h`; measurements in `benchmark/review40/klzh2/RESULTS.md`.
+ 
++**KLZS (codec 31, wave 4, landed by review40):** the wave-4 LZ lane's byte-aligned stream format takes the LZ4 role
++under `KOLMO_NATIVE=lz` in place of KLZ (codec 28). Codec 28 keeps the format rc3 wrote and keeps decoding; it is no
++longer chosen. The lane's KLZH parse (one table at level 1, the second recent offset after each match) is shared by
++codecs 29 and 32: same formats, other bytes than rc3 under the opt-in. Compatibility proof and measurements:
++`benchmark/review40/w4-compat/RESULTS.md`; the lane's own record: `benchmark/w4/lz/RESULTS.md` with its errata file.
++
+ ### Against the library, same role (component level, `natbench`)
+ 
+ "size" is the native size against the library's (negative = native smaller); speeds are the native coder's against
+diff --git a/research/CODECS.md b/research/CODECS.md
+index 656573ad..19694675 100644
+--- a/research/CODECS.md
++++ b/research/CODECS.md
+@@ -50,7 +50,7 @@ rc3), **branch** (exists, not merged), **dropped** (measured and rejected), **re
+ | 31 | KLZS (wave 4; the lane measured it as "KLZ, codec 28"; landed under id 31 by review40/R01 so that rc3's codec 28 frames keep decoding) | four streams (literals, tokens, 16-bit offsets, extensions), token 4 + 4 bits; budgeted decoder fast loop (one test per short sequence); parse: 2^15 16-bit positions, 6-byte keys, 7-byte matches after 64 literals | own (`src/algo/klz.c`) | against LZ4 -1, 4 MiB blocks, 19 files (Silesia, enwik8, OWID, JSON, logs): −5.87% size, decode 1.05× (1 thread) / 1.06× (4), compress 0.98× / 0.95×, RSS 1.00–1.08×; clang build compresses 1.01× (`benchmark/w4/lz/RESULTS.md`). Rejected: 8 MiB wide offsets (+25% work per sequence, no size gain once the table is big), 5-byte keys (more 2-byte-gain sequences), repeat probe, decaying skip | opt-in (`KOLMO_NATIVE=lz`); proposed for `speed` once compress ≥ 1.0× |
+ | 29 | KLZH (wave 4) | level 1 single table (6-byte keys) with repeat one byte ahead; the second most recent offset after each match (all fast levels); copies via `__builtin_memcpy` (not `__memcpy_chk` under `_FORTIFY_SOURCE=3`) | own (`src/algo/klz.c`) | KLZH1 against zstd -1: −1.02% size, compress 0.78×, decode 1.06× (1 thread) / 0.94× (4); KLZH3 against zstd -3: +1.47%, 0.82× / 0.78×, decode 0.95× / 0.81×. No optimal parse yet | opt-in |
+ | 24 | KLZMA (wave 4) | decoder unchanged; branch-free normalisation, padded input and select-form bits measured slower with GCC 13; clang decodes 1.13× faster | own | against liblzma 9e, 7 files, 16 MiB blocks: +0.24% size, decode 0.73× / 0.74×, compress 1.15× / 1.23× | opt-in; needs an assembly bit decoder for `ratio` |
+-| 32 | KLZH2 (review40, R01) | KLZH's parse (codec 29) with a second entropy stage: one token per sequence (offset code × min(literal length, 3)), literal lengths from 3 and match lengths (48 direct codes, split by repeat / new offset) as separate streams, all in an original tabled ANS coder (2 or 4 states, compact count header, predefined tables for short chunks) or, for long chunks at levels 1–4, khuf blocks; literals in khuf blocks or tANS; every stream cut where the input crosses 64 KiB and re-joined by an integer cost estimate; the low 4 bits of new offsets coded when their histogram is skewed | own (`src/algo/klz.c`) | 13 files (Silesia + enwik8_10m, 221,938,580 B), 4 MiB blocks: level 1 71,541,209 (zstd -1 −7.58%, codec 29 −2.72%), level 3 69,115,455 (zstd -3 −1.18%, codec 29 −3.36%), level 7 62,887,347 (zstd -9 −0.44%); 4 KiB blocks: +0.79% / +1.49% against zstd -1 / -3 (codec 29: +4.84% / +5.58%). Decode against codec 29, indicative: 0.86–1.01× (text level, heterogeneous binary slower); `balanced` through the CLI: −0.62% against the libraries (codec 29: +2.61%). `benchmark/review40/klzh2/RESULTS.md` | opt-in (`KOLMO_NATIVE=lz2`); codec 29 unchanged; the `balanced` role after the M5 speed run and the parse work |
++| 32 | KLZH2 (review40, R01) | KLZH's parse (codec 29) with a second entropy stage: one token per sequence (offset code × min(literal length, 3)), literal lengths from 3 and match lengths (48 direct codes, split by repeat / new offset) as separate streams, all in an original tabled ANS coder (2 or 4 states, compact count header, predefined tables for short chunks) or, for long chunks at levels 1–4, khuf blocks; literals in khuf blocks or tANS; every stream cut where the input crosses 64 KiB and re-joined by an integer cost estimate; the low 4 bits of new offsets coded when their histogram is skewed | own (`src/algo/klz.c`) | 13 files (Silesia + enwik8_10m, 221,938,580 B), 4 MiB blocks: level 1 71,541,209 (zstd -1 −7.58%, codec 29 −2.72%), level 3 69,115,455 (zstd -3 −1.18%, codec 29 −3.36%), level 7 62,887,347 (zstd -9 −0.44%); 4 KiB blocks: +0.79% / +1.49% against zstd -1 / -3 (codec 29: +4.84% / +5.58%). Decode against codec 29, indicative: 0.86–1.01× (text level, heterogeneous binary slower); `balanced` through the CLI: −0.62% against the libraries (codec 29: +2.61%). On the wave-4 parse (landed on the same branch): level 1 74,685,728 (zstd -1 −3.52%), level 3 68,760,493 (zstd -3 −1.69%), CLI `balanced` −0.94%. `benchmark/review40/klzh2/RESULTS.md`, `benchmark/review40/w4-compat/RESULTS.md` | opt-in (`KOLMO_NATIVE=lz2`); codec 29 unchanged; the `balanced` role after the M5 speed run and the parse work |
+ | 25 | CM over parts | parts each coded by their own context-mixing model (codec 7 streams), in parallel for encoding and decoding; parts from the table's columns (transpose plan) or two halves of a non-text stream ≥ 32 MiB; cuts depend on the input only; container version 11 | own | columns: CSV 1 MB −0.5%, encode 2.1× and decode 4.4× faster at 4 threads; halves: +0.14% on 100 MB of binary data, 2× faster both ways; 5 MB halves +0.14% to +2.3% (Silesia osdb), hence from 32 MiB only (`benchmark/rc3/xmode/RESULTS.md`) | rc3 (xmode lane) |
+ 
+ ## Transforms and graph techniques
+-- 
+2.43.0
+

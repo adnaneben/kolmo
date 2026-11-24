@@ -1,0 +1,6 @@
+astronaut.ppm	x	786447	323423	default_same	323423	RT_OK	rc3_decodes
+camera.pgm	x	262159	116633	default_same	116633	RT_OK	rc3_decodes
+coins.pgm	x	116367	67520	default_same	67520	RT_OK	rc3_decodes
+mr	x	9970564	1937134	default_same	1937134	RT_OK	same_frame
+x-ray	x	8474240	3560256	default_same	3560256	RT_OK	same_frame
+owid_co2_f32.npy	x	225204	44269	default_same	44269	RT_OK	same_frame

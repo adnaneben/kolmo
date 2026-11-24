@@ -1,7 +1,7 @@
 From ee0c7ea3003970fc44ed1b37b2ac87bd485ca894 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 05:14:29 +0000
-Subject: [PATCH 8/8] klzh2: tANS decode loop with packed table entries and
+Subject: [PATCH 08/18] klzh2: tANS decode loop with packed table entries and
  states held in registers
 
 The four states had their address taken by the tail loop, so the long loop kept them in

@@ -1,7 +1,7 @@
 From 82ce52e2a621c494f267e24e09fdb09bb592de29 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 03:05:08 +0000
-Subject: [PATCH 4/6] krans: decoder runs with the states in registers per
+Subject: [PATCH 4/8] krans: decoder runs with the states in registers per
  shape, cold set-up code; build lists
 
 The decoder's unchecked runs are instantiated for the shapes the encoder writes (order 0, order 1,
