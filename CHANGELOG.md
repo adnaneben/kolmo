@@ -334,6 +334,20 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   and `-T 1` are unchanged. The price is CPU time when helpers join (level 9 `-T 10` on silesia.tar: 28.8 -> 41.2 s
   of CPU for 2.1x less wall time) and a higher peak when more of the large blocks run at once (up to +14%).
 
+### Levels 6 and 7: never larger than the level below (KLZH2 8-9)
+
+Encoder-only: every frame is still container version 12. KLZH2 level 8 (-6) now also encodes level 7 and keeps the
+smaller stream; level 9 (-7) also encodes level 8 and keeps the smaller. A stronger search lost on some inputs in
+0.0.2 (Canterbury tar: -7 1.6% larger than -6; held-out owid-co2-data.csv 3.9% larger at KLZH2 9 than at 8).
+`benchmark/determinism/expected.sha256` is regenerated for four -6/-7 frames only.
+
+- Held-out corpus (command line): -6 0.15% smaller, -7 0.18% smaller, no file larger, and no file larger at a higher
+  level among 5-7 (six such files before). Canterbury tar: -7 554.1 -> 545.0 KB (-6 545.2 KB).
+- Cost: compressing at -6 takes about 1.5x as long and at -7 about 2.1x (one thread: Silesia -7 34.6 -> 73.8 s,
+  enwik8 -7 21.5 -> 46.0 s). Decoding is unchanged.
+- -6 can still be larger than -5 on some graph-coded binary files (+0.2-0.4%): hc takes rANS leaves only when 3%
+  smaller, for faster decoding, where eco takes any gain.
+
 ### Command line: a drop-in for tar, xz and gzip
 
 - **`tar -I kolmo` and pipes are tested.** `tests/test_filter.sh` (in `make check`, CI on Linux and macOS) runs GNU tar
