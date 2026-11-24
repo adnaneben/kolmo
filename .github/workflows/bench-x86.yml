@@ -16,6 +16,9 @@ on:
       runs:
         description: runs per lzbench setting (at least 3)
         default: "3"
+      tiers:
+        description: "lzbench tiers to run: fast slow files claims"
+        default: fast slow files claims
       cli:
         description: also run the command-line comparison (one thread and all cores)
         type: boolean
@@ -30,6 +33,8 @@ permissions:
 env:
   KOLMO_REF: ${{ inputs.kolmo_ref || 'v0.0.2' }}
   RUNS: ${{ inputs.runs || '3' }}
+  # A push whose commit message contains "[claims only]" runs only the claims tier (dispatch needs the workflow on main).
+  TIERS: ${{ inputs.tiers || (contains(github.event.head_commit.message, '[claims only]') && 'claims') || 'fast slow files claims' }}
   # lzbench 2.4.1 at the commit the Mac run used (no 2.4.1 tag exists upstream)
   LZBENCH_COMMIT: 9be0e25505b1317cde1afe70d2114164eb4faf8f
   # the codecs of the report's settings (queue.sh); everything else is left out of the build
@@ -37,6 +42,8 @@ env:
   FAST: memcpy/lz4/lz4hc,9,12/snappy/libdeflate,6,12/zstd,1,3,6,9,12/brotli,1,5/lzav,1,2/zxc,3,7/kanzi,1,2,3,4/openzl_generic/kolmo,1,2,3,4
   SLOW: zstd,15,19/zstd22,22/brotli,9,11/brotli24,11/xz,6,9/bzip2,9/bzip3,5,10/bsc0/bsc1/ppmd8,6,9/zpaq,4,5/kanzi,5,7,9/kolmo,5,6,7,8,9,10
   FILES: zstd,3,19/xz,9/bzip3,5/brotli,11/openzl_generic/kolmo,3,7,9
+  # The report's four claims, each pair in one job so both sides run on the same CPU (runners differ between jobs)
+  CLAIMS: kolmo,3,4,6,9/zstd,12,19/xz,9/zpaq,5
 
 jobs:
   build:
@@ -91,23 +98,29 @@ jobs:
       fail-fast: false
       matrix:
         corpus: [silesia.tar, enwik8, canterbury.tar]
-        tier: [fast, slow]
+        tier: [fast, slow, claims]
         include:
           - corpus: silesia
             tier: files
     steps:
-      - uses: actions/checkout@v4
+      - id: want
+        run: echo "run=$(case " $TIERS " in *" ${{ matrix.tier }} "*) echo 1;; *) echo 0;; esac)" >> "$GITHUB_OUTPUT"
+      - if: steps.want.outputs.run == '1'
+        uses: actions/checkout@v4
         with:
           path: kolmo
-      - uses: actions/cache/restore@v4
+      - if: steps.want.outputs.run == '1'
+        uses: actions/cache/restore@v4
         with:
           path: corpora
           key: corpora-${{ hashFiles('kolmo/bench/lzbench/corpora.py') }}
           fail-on-cache-miss: true
-      - uses: actions/download-artifact@v4
+      - if: steps.want.outputs.run == '1'
+        uses: actions/download-artifact@v4
         with:
           name: bin
-      - name: ${{ matrix.tier }} settings on ${{ matrix.corpus }}, ${{ env.RUNS }} runs on this runner
+      - if: steps.want.outputs.run == '1'
+        name: ${{ matrix.tier }} settings on ${{ matrix.corpus }}, ${{ env.RUNS }} runs on this runner
         run: |
           chmod +x lzbench/lzbench
           mkdir -p out
@@ -117,6 +130,7 @@ jobs:
               fast)  set -- -t3,3 -e"$FAST" "corpora/${{ matrix.corpus }}" ;;
               slow)  set -- -i1,1 -t0,0 -e"$SLOW" "corpora/${{ matrix.corpus }}" ;;
               files) set -- -i1,1 -t0,0 -r -e"$FILES" corpora/silesia ;;
+              claims) set -- -t1,1 -e"$CLAIMS" "corpora/${{ matrix.corpus }}" ;;
             esac
             echo "run $k: lzbench $*"
             ./lzbench/lzbench -o4 "$@" > "out/lzb-${{ matrix.tier }}-${{ matrix.corpus }}.run$k.csv" \
@@ -125,7 +139,8 @@ jobs:
             [ "${{ matrix.tier }}" = files ] && break
           done
           cat out/*.csv
-      - uses: actions/upload-artifact@v4
+      - if: steps.want.outputs.run == '1'
+        uses: actions/upload-artifact@v4
         with:
           name: lzb-${{ matrix.tier }}-${{ matrix.corpus }}
           path: out
@@ -133,7 +148,7 @@ jobs:
 
   cli:
     needs: build
-    if: ${{ github.event_name == 'push' || inputs.cli }}
+    if: ${{ (github.event_name == 'push' && !contains(github.event.head_commit.message, '[claims only]')) || inputs.cli }}
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     steps:
@@ -179,7 +194,8 @@ jobs:
           mkdir -p all && cp art/lzb-*/*.csv all/ 2>/dev/null || true
           python3 -I kolmo/bench/lzbench/summarize.py all --out summary.md
           {
-            echo "Shared GitHub runner (x86-64): speeds are noisy, see the spread columns; each lzbench job ran on its own runner, whose CPU is in env-*.txt."
+            echo "Shared GitHub runners (x86-64): speeds are noisy, see the spread columns. Each job ran on its own runner, and the CPU model differs between jobs:"
+            echo; for f in art/*/env-*.txt; do echo "- $(basename "$f" .txt | sed 's/^env-//'): $(grep -m1 'Model name' "$f" | sed 's/.*: *//')"; done; echo
             cat summary.md
             if [ -f art/cli/cli-silesia.md ]; then
               echo; echo "## Command line, Silesia (best of $RUNS; spread = (max - min) / best)"; echo

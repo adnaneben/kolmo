@@ -22,12 +22,12 @@ CLAIMS = [  # (label, kolmo level, rival prefix, rival level, what the report sa
 ]
 
 
-def load(d):
-    """{corpus: {setting: {"size": set, "orig": int, "c": [..], "d": [..]}}}"""
+def load(d, tiers=("fast", "slow")):
+    """{corpus: {setting: {"size": set, "orig": int, "c": [..], "d": [..]}}} from the runs of the given tiers"""
     out = {}
     for path in sorted(glob.glob(os.path.join(d, "lzb-*.csv"))):
-        m = re.match(r"lzb-(fast|slow)-(.+?)(?:\.run\d+)?\.csv$", os.path.basename(path))
-        if not m:
+        m = re.match(r"lzb-([a-z]+)-(.+?)(?:\.run\d+)?\.csv$", os.path.basename(path))
+        if not m or m.group(1) not in tiers:
             continue
         corpus = m.group(2)
         with open(path, newline="") as f:
@@ -70,6 +70,7 @@ def main():
     if not a:
         sys.exit(__doc__)
     res = load(a[0])
+    same_job = load(a[0], ("claims",))  # the claims tier: both sides of every claim in one job, on one CPU
     mac = load(a[a.index("--mac") + 1]) if "--mac" in a else None
     out = a[a.index("--out") + 1] if "--out" in a else None
     L, bugs = [], []
@@ -77,6 +78,13 @@ def main():
     L.append(f"# lzbench summary ({runs} run(s) per setting)\n")
     L.append("Speeds: lzbench MB/s, median over the runs (min-max in brackets). Shared CI runners are noisy: read "
              "speed differences under the spread shown as ties. Ratios are exact and identical in every run.\n")
+    for corpus in same_job:  # the claims tier's sizes must agree with the main tiers' too
+        for name, e in same_job[corpus].items():
+            main = res.get(corpus, {}).get(name)
+            if main and main["size"] != e["size"]:
+                bugs.append(f"{corpus}: {name}: claims tier {sorted(e['size'])} B, main tiers {sorted(main['size'])} B")
+            if mac and mac.get(corpus, {}).get(name) and mac[corpus][name]["size"] != e["size"]:
+                bugs.append(f"{corpus}: {name}: claims tier {sorted(e['size'])} B, Mac {sorted(mac[corpus][name]['size'])} B")
     for corpus, settings in res.items():
         L.append(f"\n## {corpus}\n")
         L.append("| setting | compressed B | ratio | compress | spread | decompress | spread |" +
@@ -100,13 +108,15 @@ def main():
                      f"{fmt_speed(e['d'])} | {spread(e['d']):.0f}% |" + cell)
 
     L.append("\n## Claims of the market report, per corpus\n")
-    L.append("Ratio gap = Kolmo's ratio / rival's ratio - 1. Speed factors = Kolmo's median speed / rival's.\n")
+    L.append("Ratio gap = Kolmo's ratio / rival's ratio - 1. Speed factors = Kolmo's median speed / rival's. " +
+             ("Speeds from the claims tier, where both sides ran in the same job on the same CPU.\n" if same_job else
+              "Warning: no claims tier; a pair whose two sides are in different tiers ran on different runners.\n"))
     for label, kl, rp, rl, said in CLAIMS:
         L.append(f"\n### {label} (Mac report on Silesia: {said})\n")
         L.append("| corpus | kolmo ratio | rival ratio | ratio gap | compress x | decompress x |" +
                  (" Mac: ratio gap, compress x, decompress x |" if mac else ""))
         L.append("|---|---:|---:|---:|---:|---:|" + ("---|" if mac else ""))
-        for corpus, settings in res.items():
+        for corpus, settings in (same_job or res).items():
             k, r = find(settings, "kolmo", kl), find(settings, rp, rl)
             if not k or not r:
                 continue
