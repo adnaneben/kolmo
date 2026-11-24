@@ -94,13 +94,17 @@ with tempfile.TemporaryDirectory() as d:
 
     # 3. -t holds neither the input nor the output: peak well below the 96 MiB the in-memory path needs
     big = root / "big"
-    big.write_bytes(data * 10 + data[: 6 << 20])
+    big.write_bytes(data * 10 + data[: 6 << 20])  # 96 MiB
     bigf = root / "big.kolmo"
     run("-1", "-T", 1, "-f", "-o", bigf, big)
-    p = subprocess.Popen([str(CLI), "-t", "-T", "1", str(bigf)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-    _, status, ru = os.wait4(p.pid, 0)
-    assert os.waitstatus_to_exitcode(status) == 0, p.stderr.read()
-    peak_bytes = ru.ru_maxrss if sys.platform == "darwin" else ru.ru_maxrss * 1024
+    # Linux charges the parent's resident set at exec to the child's ru_maxrss, so kolmo is started by a small
+    # interpreter (not by this one, which holds the test data) and that one reports kolmo's peak
+    probe = ("import os, sys; pid = os.posix_spawn(sys.argv[1], sys.argv[1:], os.environ); _, st, ru = os.wait4(pid, 0); "
+             "print(os.waitstatus_to_exitcode(st), ru.ru_maxrss if sys.platform == 'darwin' else ru.ru_maxrss * 1024)")
+    del data, frames
+    r = subprocess.run([sys.executable, "-I", "-c", probe, str(CLI), "-t", "-T", "1", str(bigf)], capture_output=True, text=True)
+    code, peak_bytes = map(int, r.stdout.split())
+    assert code == 0, r.stderr
     assert peak_bytes < (48 << 20), f"-t peak {peak_bytes} bytes for a {big.stat().st_size}-byte output"
     print(f"-t peak resident: {peak_bytes >> 20} MiB for a {big.stat().st_size >> 20} MiB output")
 print("test_bounded_cli: OK")
