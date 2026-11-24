@@ -216,8 +216,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
     J.fqthreads = threads / (int)(nb < 256 ? nb : 256) > 0 ? threads / (int)(nb < 256 ? nb : 256) : 1;   /* threads left over per block */
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
-    J.started = array_alloc(nb, 1, 1);
-    if (!J.out || !J.outlen || !J.started) goto cleanup;
+    if (!J.out || !J.outlen) goto cleanup;
     /* dispatch (review40 #7): longest first inside a window of input bytes past the first unwritten block, which
      * bounds the reorder buffer; the elastic budget starts with the threads no worker holds (each worker holds its own
      * and fqthreads - 1 for its block's inner regions) and gains a worker's threads when it runs out of blocks */
@@ -228,6 +227,9 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         const int workers = threads < (int)nb ? threads : (int)nb;
         J.bud = kolmo_budget_create(threads - workers * J.fqthreads);
         if (!J.bud) goto cleanup;
+        /* one worker keeps input order: nothing runs beside it, and the longest block first only raised its peak
+         * (silesia.tar -7 -T 1: 616 -> 830 MiB RSS) */
+        if (workers > 1 && !(J.started = array_alloc(nb, 1, 1))) goto cleanup;
     }
     J.psum = p->mode == KOLMO_RT;
     J.memcap = memcap; J.xcap = xcap; J.cm_leaves = codec == C_CM && level == 2; atomic_init(&J.dneed, 0);
