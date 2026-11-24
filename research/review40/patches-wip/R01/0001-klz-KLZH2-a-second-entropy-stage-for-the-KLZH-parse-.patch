@@ -1,7 +1,7 @@
 From f08302a5ea02d886c5c004805e6c266692195c3d Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 02:23:15 +0000
-Subject: [PATCH 1/4] klz: KLZH2, a second entropy stage for the KLZH parse
+Subject: [PATCH 1/5] klz: KLZH2, a second entropy stage for the KLZH parse
  (algo only, not yet a codec)
 
 One token per sequence (offset code x min(literal length, 3)), literal-length codes only

@@ -1,7 +1,7 @@
 From 949b91445809134ccb9b899093239a483a73cb33 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 24 Nov 2026 03:08:27 +0000
-Subject: [PATCH 4/4] codec 32 (KLZH2): codec table, opt-in KOLMO_NATIVE=lz2,
+Subject: [PATCH 4/5] codec 32 (KLZH2): codec table, opt-in KOLMO_NATIVE=lz2,
  small-input coding, tests
 
 codecs: C_KLZH2 = 32 with its table and memory row; KOLMO_NATIVE=lz2 maps zstd and Brotli to
