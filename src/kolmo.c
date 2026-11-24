@@ -60,6 +60,9 @@ int kolmo_force_c;
 #undef free
 
 /* codecs */
+#ifdef KOLMO_IMPACT
+#include "algo/texttype.c"         /* research build: kinds of text for the per-kind CM priors (benchmark/impact) */
+#endif
 #include "codecs/cm.c"
 #include "codecs/cm_image.c"
 #include "codecs/kimg.c"             /* codec 31: lossless 8-bit images (ratio, ultra) */

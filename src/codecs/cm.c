@@ -26,6 +26,12 @@
 #define CM_NM3 30               /* models in model 3: model 2 + orders 12 and 20, the match model's expected byte with orders 1 and 2,
                                  * and five structure contexts (key, field) */
 #define CM_NIX3 (2 * CM_NM3 + 3)
+#ifdef KOLMO_IMPACT
+#define CM_NSLOT 32             /* research build (benchmark/impact): contexts 30 and 31, the token classes of the rc3w3 prior
+                                 * lane (a hand-written lexer), as model 4 mask bits 30 and 31 */
+#else
+#define CM_NSLOT CM_NM3         /* per-context arrays */
+#endif
 #ifndef CM_MCAND
 #define CM_MCAND 16              /* model 3: match candidates examined */
 #endif
@@ -147,19 +153,19 @@ static const uint16_t cm_tv_sm[4] = {255, 127, 511, 1023};
 static const uint8_t cm_tv_fin[4][4] = {{2, 2, 2, 2}, {4, 1, 1, 2}, {1, 2, 2, 3}, {3, 1, 2, 2}};
 typedef struct { uint32_t s[16]; } cm_bucket;          /* s[0] = check << 16 | priority; s[1..15] nibble-tree counters */
 typedef struct {
-    cm_bucket *t[CM_NM3];
+    cm_bucket *t[CM_NSLOT];
     const int16_t *sq, *st;                  /* logistic tables: cm_sq/cm_st (legacy) or cm_sqx/cm_stx (exact) */
 #ifdef KOLMO_CM_COMPACT
     /* High 16 bits hold the compact slot, low 16 hold the original tag. */
     uint32_t one_byte[2][CM_BYTE_VALUES][CM_NIBBLES];
 #endif
-    int sh, v2; size_t mem, tb; uint8_t shi[CM_NM3]; size_t tbi[CM_NM3];                                  /* 32 - log2 buckets; model 2?; bytes held */
+    int sh, v2; size_t mem, tb; uint8_t shi[CM_NSLOT]; size_t tbi[CM_NSLOT];                                  /* 32 - log2 buckets; model 2?; bytes held */
     uint32_t o1[256 * 256];
-    uint32_t h[CM_NM3]; uint32_t *slot[CM_NM3]; cm_bucket *cur[CM_NM3];
+    uint32_t h[CM_NSLOT]; uint32_t *slot[CM_NSLOT]; cm_bucket *cur[CM_NSLOT];
     int32_t w1[CM_W1][CM_NIX3], w2[CM_W2][CM_NIX3];
     int32_t (*w3)[CM_NIX3], (*w4)[CM_NIX3], wf[CM_WF][5];        /* model 2 */
     int xf[5], pr3, pr4, prf, w3i, w4i, wfi, a3i; uint16_t (*a3)[33];
-    uint32_t sm[CM_NM3][256 * 8]; uint16_t sst[CM_NM3];           /* state -> probability (22 bits) | count (10 bits) */
+    uint32_t sm[CM_NSLOT][256 * 8]; uint16_t sst[CM_NSLOT];           /* state -> probability (22 bits) | count (10 bits) */
     int x[CM_NIX3];
     uint32_t rl_last[256], rl_d[256], rlen, rcnt, rcand;
     int pr, pr1, pr2, w1i, w2i;
@@ -171,6 +177,11 @@ typedef struct {
     int mrec;                                             /* model 3: attempts left to pick a broken match up again */
     uint32_t s_tok, s_ltok, s_key, s_kpos, s_lt, s_fidx, s_fst[32], s_pfst[32], s_pfn;   /* model 3: token, last token, key, bytes since the key, after '<', field index and starts */
     int64_t s_ls, s_pls;                                  /* this line's and the previous line's start */
+#ifdef KOLMO_IMPACT
+    uint32_t k_cls, k_tok, k_kp, k_pn; uint64_t k_sr;     /* research, token classes: class of the last byte, token index in the
+                                                           * line, bytes into the token, tokens of the previous line, classes of the last 8 tokens */
+    uint32_t k_st[128], k_pst[128];                       /* token starts (offsets in the line) of this line and the line before */
+#endif
     uint32_t iw, ich, ih, i_pred, i_cls, i_act, i_n, i_med, i_wn;   /* image model: row bytes, channels, head; mixer selectors */
     uint32_t mc[64];
     int mci;
@@ -180,10 +191,10 @@ typedef struct {
     /* model 4: the hashed contexts in use, a subset of model 3's (the stream's mask). Slot k of the per-model arrays
      * (t, shi, cur, slot, sm, ...) holds context mid[k]; h[] stays indexed by context, hc[k] = h[mid[k]]. Models 0-3:
      * mid[k] = k and nmod = CM_NMOD(v2). */
-    int nmod; uint8_t mid[CM_NM3]; uint32_t hc[CM_NM3], mask;
+    int nmod; uint8_t mid[CM_NSLOT]; uint32_t hc[CM_NSLOT], mask;
     int64_t mwin;                                         /* model 4: the match chain's ring size (0: one entry per byte) */
-    uint32_t nl[CM_NM3];                                  /* model 4: lines per context table */
-    uint8_t *cur4[CM_NM3], *st4[CM_NM3];                  /* model 4: the nibble bucket and the bit's state byte, per slot */
+    uint32_t nl[CM_NSLOT];                                  /* model 4: lines per context table */
+    uint8_t *cur4[CM_NSLOT], *st4[CM_NSLOT];                  /* model 4: the nibble bucket and the bit's state byte, per slot */
     /* model 4: the 16-bit mixer (algo/mixer.h): inputs, and the four weight sets' rows of CM4_NIP (4096 = 1.0) */
     int16_t x16[CM4_NIP];   /* (cm_t comes from calloc: no over-alignment) */
     int16_t (*q1)[CM4_NIP], (*q2)[CM4_NIP], (*q3)[CM4_NIP], (*q4)[CM4_NIP];
@@ -228,7 +239,11 @@ static void cm_release(size_t b) { if (b) kmem_release(b); }
 #define CM_SCALED_MAX 21    /* and at most 2^21 buckets per model there (about 2.5 GiB to decode) */
 #endif
 static int cm_bits_for(size_t n);
+#ifdef KOLMO_IMPACT
+#define CM_MASK3 (((((uint32_t)1 << CM_NM3) - 1) & ~(uint32_t)1) | 0xC0000000u)   /* research: + the token-class contexts 30, 31 */
+#else
 #define CM_MASK3 ((((uint32_t)1 << CM_NM3) - 1) & ~(uint32_t)1)   /* model 4 masks: a subset of model 3's hashed contexts 1..29 */
+#endif
 /* model 4's contexts, chosen by backward elimination on 1 MB samples (benchmark/w4/cm/RESULTS.md): text (and logs, CSV,
  * JSON) and everything else */
 #define CM4_MASK_TEXT 0x3f60f758u   /* orders 3, 4, 5, 7; word, column, words; indirect; orders 12, 20; expected byte; structure */
@@ -249,7 +264,7 @@ static size_t cm_mem4(size_t n, int s, uint32_t mask) {
     /* model 3's 48 MiB less its 32-bit mixer rows (16.5 MiB) and match table (16 MiB), plus the 16-bit rows (8.6 MiB) and
      * a match table of 2^16..2^22 slots */
     size_t b = (size_t)25 << 20; int mb = 16; while (mb < 22 && ((size_t)1 << mb) < n) mb++; b += (size_t)4 << mb;
-    for (int i = 1; i < CM_NM3; i++) if (mask >> i & 1) b += (size_t)64 * cm4_lines(i, n, s);
+    for (int i = 1; i < CM_NSLOT; i++) if (mask >> i & 1) b += (size_t)64 * cm4_lines(i, n, s);
     return b;
 }
 #ifndef CM4_S
@@ -338,7 +353,7 @@ static void *cm_big(size_t n) { return calloc(1, n); }
 static void cm_big_free(void *p, size_t n) { (void)n; free(p); }
 #endif
 static void cm_free_parts(cm_t *m) {
-    for (int i = 1; i < CM_NM3; i++) if (m->tbi[i]) cm_big_free(m->t[i], m->tbi[i]);
+    for (int i = 1; i < CM_NSLOT; i++) if (m->tbi[i]) cm_big_free(m->t[i], m->tbi[i]);
     cm_big_free(m->w3, sizeof(*m->w3) * CM_W3); cm_big_free(m->w4, sizeof(*m->w4) * CM_W4);
     cm_big_free(m->rdy, CM4_RA2 + 2 * 65536); cm_big_free(m->q1, sizeof(*m->q1) * CM_W1); cm_big_free(m->q2, sizeof(*m->q2) * CM_W2); cm_big_free(m->q3, sizeof(*m->q3) * CM_W3); cm_big_free(m->q4, sizeof(*m->q4) * CM_W4);
     cm_big_free(m->a3, sizeof(*m->a3) * CM_A3); cm_big_free(m->mt, ((size_t)m->mmask + 1) * 4); cm_big_free(m->mprev, m->mprev_n); free(m);
@@ -385,7 +400,7 @@ static void cm_apply_prior(cm_t *m, const int16_t p[5][CM_NIX3]) {
     for (int j = 0; j < CM_NIX3; j++) jm[j] = j;
     if (m->v2 == 4) {
         for (int j = 0; j < CM_NIX3; j++) jm[j] = -1;
-        for (int k = 0; k < nm; k++) { jm[k] = m->mid[k]; jm[nm + 3 + k] = CM_NM3 + 3 + m->mid[k]; }
+        for (int k = 0; k < nm; k++) { const int c = m->mid[k] < CM_NM3; jm[k] = c ? m->mid[k] : -1; jm[nm + 3 + k] = c ? CM_NM3 + 3 + m->mid[k] : -1; }   /* research contexts 30, 31 keep the start value */
         for (int k = 0; k < 3; k++) jm[nm + k] = CM_NM3 + k;
     }
     for (int j = 0; j < CM_NIX3; j++) {
@@ -405,7 +420,17 @@ static void cm_apply_prior(cm_t *m, const int16_t p[5][CM_NIX3]) {
 }
 static const kolmo_kernels *cm_kk_override;            /* tests only (tests/test_cm4.c): the kernels of one ISA level */
 static const int16_t (*cm_prior_override)[CM_NIX3];   /* research harnesses only (benchmark/rc3w2/twopass): replaces prior 1 */
+#ifdef KOLMO_IMPACT
+#define CM4_B2MAX 10            /* research: 3..10 = the per-kind prior of kind 1..8 (algo/texttype.c) */
+static void cm_apply_kprior4(cm_t *m, int k);
+#else
+#define CM4_B2MAX 2
+#endif
 static void cm_set_tune(cm_t *m, cm_tune_t t) {
+#ifdef KOLMO_IMPACT
+    if (m->v2 == 4 && t.b2 >= 3) { cm_apply_kprior4(m, t.b2 - 3); t.b2 = 0; }
+    else
+#endif
     if (m->v2 == 4 && t.b2) cm_apply_prior(m, cm_prior_override ? cm_prior_override : cm_prior4[t.b2 - 1]);   /* model 4: 1 text, 2 binary */
     else if (t.b2 == 1 && m->v2) cm_apply_prior(m, cm_prior_override ? cm_prior_override : cm_prior[m->v2 >= 3]);
     m->lr = CM_LR + cm_tv_lr[t.b0 & 3]; const int lim = cm_tv_lim[t.b0 >> 2 & 3]; m->apm_sh = cm_tv_apm[t.b0 >> 4 & 3]; m->mc_sh = cm_tv_mc[t.b0 >> 6];
@@ -413,6 +438,73 @@ static void cm_set_tune(cm_t *m, cm_tune_t t) {
     for (int k = 0; k < 4; k++) m->fw[k] = cm_tv_fin[t.b1 >> 6][k];
     for (int n = 0; n < 16; n++) m->rcp[n] = cm_rcp[n * lim];
 }
+#ifdef KOLMO_IMPACT
+/* Research port of the rc3w3 prior lane's per-kind priors (claude/rc3w3-prior-20261118, docs/PRIORS.md there) onto
+ * model 4. The lane trained them on model 3: every row of mixers w1-w3 and the final mixer, w4's mean row (4-bit
+ * weights, steps of 1/8), the state maps and order-1 table (stretched probabilities in 17 levels with a count class),
+ * the match counters. Here the blobs are read unpacked from KOLMO_CM_KPRIOR_FILE (benchmark/impact/kprior.py writes it
+ * from the lane's cm_kprior.inc: 8 kinds x CM_KP_RAW bytes) and mapped onto model 4: a slot takes the rows of the
+ * context it stands for, the 16-bit mixer rows are the 16.16 weights / 16. The token-class contexts keep their start. */
+#define CM_KP_RAW 373391
+typedef struct {
+    int8_t w1[CM_W1][CM_NIX3], w2[CM_W2][CM_NIX3], w3[CM_W3][CM_NIX3], w4m[CM_NIX3], wf[CM_WF][5];
+    uint8_t sm[CM_NM3][8][256], o1q[65536], o1s[65536], mc[64];
+} cm_kprior_t;
+static cm_kprior_t *cm_kp_cache[8]; static int cm_kp_loaded;
+static pthread_mutex_t cm_kp_mu = PTHREAD_MUTEX_INITIALIZER;
+static void cm_kp_load(void) {
+    const char *path = getenv("KOLMO_CM_KPRIOR_FILE"); FILE *f = path ? fopen(path, "rb") : NULL;
+    uint8_t *raw = malloc(CM_KP_RAW);
+    for (int k = 0; f && raw && k < 8; k++) {
+        if (fread(raw, 1, CM_KP_RAW, f) != CM_KP_RAW) break;
+        cm_kprior_t *p = calloc(1, sizeof *p); if (!p) break;
+        const uint8_t *q = raw;
+        memcpy(p->w1, q, sizeof p->w1); q += sizeof p->w1; memcpy(p->w2, q, sizeof p->w2); q += sizeof p->w2;
+        memcpy(p->w3, q, sizeof p->w3); q += sizeof p->w3; memcpy(p->w4m, q, sizeof p->w4m); q += sizeof p->w4m;
+        memcpy(p->wf, q, sizeof p->wf); q += sizeof p->wf;
+        for (int i = 0; i < CM_NM3; i++) for (int b = 0; b < 8; b++) for (int st = 0; st < bh_ns; st++) p->sm[i][b][st] = *q++;
+        memcpy(p->o1q, q, 65536); q += 65536; memcpy(p->o1s, q, 65536); q += 65536; memcpy(p->mc, q, 64); q += 64;
+        if ((size_t)(q - raw) != CM_KP_RAW) { free(p); break; }   /* the lane's layout and this build's state count agree */
+        cm_kp_cache[k] = p;
+    }
+    free(raw); if (f) fclose(f);
+}
+static const cm_kprior_t *cm_kprior_get(int k) {
+    pthread_mutex_lock(&cm_kp_mu); if (!cm_kp_loaded) { cm_kp_load(); cm_kp_loaded = 1; } pthread_mutex_unlock(&cm_kp_mu);
+    return k >= 0 && k < 8 ? cm_kp_cache[k] : NULL;
+}
+static void cm_apply_kprior4(cm_t *m, int k) {
+    const cm_kprior_t *p = cm_kprior_get(k);
+    if (!p) { fprintf(stderr, "kolmo-impact: per-kind prior %d not loaded (KOLMO_CM_KPRIOR_FILE)\n", k); abort(); }
+    const int nm = m->nmod; int jm[CM4_NIP];
+    for (int j = 0; j < CM4_NIP; j++) jm[j] = -1;
+    for (int i = 0; i < nm; i++) if (m->mid[i] < CM_NM3) { jm[i] = m->mid[i]; jm[nm + 3 + i] = CM_NM3 + 3 + m->mid[i]; }
+    for (int i = 0; i < 3; i++) jm[nm + i] = CM_NM3 + i;
+#define KPQ(row, j) (int16_t)(jm[j] < 0 ? 1024 : (int)(row)[jm[j]] * 512)
+    for (int i = 0; i < CM_W1; i++) { for (int j = 0; j < CM4_NIP; j++) m->q1[i][j] = KPQ(p->w1[i], j); m->rdy[i] = 1; }
+    for (int i = 0; i < CM_W2; i++) { for (int j = 0; j < CM4_NIP; j++) m->q2[i][j] = KPQ(p->w2[i], j); m->rdy[CM_W1 + i] = 1; }
+    for (int i = 0; i < CM_W3; i++) { for (int j = 0; j < CM4_NIP; j++) m->q3[i][j] = KPQ(p->w3[i], j); m->rdy[CM_W1 + CM_W2 + i] = 1; }
+    for (int j = 0; j < CM4_NIP; j++) m->q0[3][j] = KPQ(p->w4m, j);       /* w4: the mean row, set lazily from the template */
+#undef KPQ
+    for (int i = 0; i < CM_WF; i++) for (int j = 0; j < 5; j++) m->wf[i][j] = (int32_t)p->wf[i][j] * 8192;
+    static const uint16_t smn[4] = {0, 4, 12, 30}, o1n[4] = {0, 2, 6, 15};
+    for (int i = 0; i < nm; i++) {
+        const int c = m->mid[i]; if (c >= CM_NM3) continue;
+        for (int b = 0; b < 8; b++) for (int st = 0; st < bh_ns; st++) {
+            const uint8_t v = p->sm[c][b][st]; const uint32_t p12 = (uint32_t)cm_SQ(m->sq, ((v & 31) - 8) * 256);
+            m->sm[i][b << 8 | st] = p12 << 20 | smn[v >> 5];
+        }
+    }
+    for (int i = 0; i < 65536; i++) { const uint8_t v = p->o1q[i]; const uint32_t p12 = (uint32_t)cm_SQ(m->sq, ((v & 31) - 8) * 256); m->o1[i] = p12 << 20 | (uint32_t)p->o1s[i] << 8 | o1n[v >> 5]; }
+    for (int i = 0; i < 64; i++) m->mc[i] = (uint32_t)cm_SQ(m->sq, (p->mc[i] - 32) * 64) << 4;
+}
+/* KOLMO_CM_KPRIOR=1: a text stream under 4 MiB whose kind the detector knows (1-8) starts from that kind's prior */
+static uint8_t cm_impact_b2(const uint8_t *in, size_t n, uint8_t b2) {
+    const char *e = getenv("KOLMO_CM_KPRIOR"); if (!e || atoi(e) != 1 || n >= ((size_t)4 << 20)) return b2;
+    const int kind = text_kind(in, n);
+    return kind > TT_NONE && kind <= 8 ? (uint8_t)(2 + kind) : b2;
+}
+#endif
 /* mask: model 4's contexts (v2 = 4), ignored otherwise */
 static cm_t *cm_new_xm(uint8_t *buf, int bb, int v2, size_t chain, int lx, uint32_t mask, size_t n) {   /* model 4: bb = the size shift s, n the stream's length */   /* lx: exact logistic tables */   /* chain: bytes for model 3's match chain (4 per input byte) */
     pthread_once(&cm_once, cm_init_tables);
@@ -422,7 +514,7 @@ static cm_t *cm_new_xm(uint8_t *buf, int bb, int v2, size_t chain, int lx, uint3
     atomic_fetch_add_explicit(&cm_models_made, 1, memory_order_relaxed);
     cm_t *m = calloc(1, sizeof(cm_t)); if (!m) { cm_release(resv); return NULL; }
     int nm = 0;
-    if (v2 >= 4) { m->mid[nm++] = 0; for (int i = 1; i < CM_NM3; i++) if (mask >> i & 1) m->mid[nm++] = (uint8_t)i; }
+    if (v2 >= 4) { m->mid[nm++] = 0; for (int i = 1; i < CM_NSLOT; i++) if (mask >> i & 1) m->mid[nm++] = (uint8_t)i; }
     else for (nm = 0; nm < CM_NMOD(v2); nm++) m->mid[nm] = (uint8_t)nm;
     m->nmod = nm; m->mask = mask;
     m->kk = cm_kk_override ? cm_kk_override : kolmo_kernels_get();
@@ -576,7 +668,7 @@ static inline __attribute__((always_inline)) int cm_predict(cm_t *m, const int v
         else
 #endif
         {
-        uint32_t hv[CM_NM3]; m->kk->cm_hash(CM_HSRC(m, v2) + 1, nm - 1, nib, hv + 1);       /* the context hashes, 8 at a time */
+        uint32_t hv[CM_NSLOT]; m->kk->cm_hash(CM_HSRC(m, v2) + 1, nm - 1, nib, hv + 1);       /* the context hashes, 8 at a time */
         if (v2 == 4) for (int i = 1; i < nm; i++) m->cur4[i] = cm4_find(m->t[i], hv[i], m->nl[i]);
         else for (int i = 1; i < nm; i++) m->cur[i] = cm_find(m->t[i], hv[i], m->shi[i]);
         }
@@ -747,7 +839,7 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
 #ifdef KOLMO_CM_COMPACT
             if (v2 != 4) { for (int i = 1; i < nm; i++) { uint32_t idx = cm_prefetch_slot(m, i, ((m->c0 << 1) | (uint32_t)b) & 15, nib); __builtin_prefetch(&m->t[i][idx]); } continue; }
 #endif
-            uint32_t hv[CM_NM3]; m->kk->cm_hash(CM_HSRC(m, v2) + 1, nm - 1, nib, hv + 1);
+            uint32_t hv[CM_NSLOT]; m->kk->cm_hash(CM_HSRC(m, v2) + 1, nm - 1, nib, hv + 1);
             for (int i = 1; i < nm; i++) { uint32_t idx = v2 == 4 ? cm4_line(hv[i], m->nl[i]) : hv[i] >> m->shi[i]; __builtin_prefetch(&m->t[i][idx]); }
         }
     }
@@ -834,6 +926,31 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
             if (CM_HON(29)) m->h[29] = cm_hmix((ab << 16 | ab1 << 8 | m->s_fidx) * 0x9E3779B1u + c1 * 0x2545F491u + 29);
             (void)kq;
         }
+#ifdef KOLMO_IMPACT
+        if (v2 == 4 && (CM_HON(30) || CM_HON(31))) {
+            /* research (rc3w3 prior lane, docs/PRIORS.md on claude/rc3w3-prior-20261118): token shapes, what a regular
+             * expression calls character classes: a digit, a letter (or '_', or a byte >= 128), a space or tab, or a
+             * punctuation byte of its own; a token is a run of one class. Contexts: the classes of the last 8 tokens with
+             * the position in the current one; the token index with the bytes at the same place of the same token of the
+             * line before. Same code as the lane, on model 4's context slots. */
+            const uint32_t k = (c >= '0' && c <= '9') ? 1u : (((c | 32) >= 'a' && (c | 32) <= 'z') || c == '_' || c >= 128) ? 2u : (c == ' ' || c == '\t') ? 3u : 4u + c;
+            if (c == '\n') {
+                memcpy(m->k_pst, m->k_st, sizeof m->k_st); m->k_pn = m->k_tok + 1; m->k_tok = 0; m->k_st[0] = 0; m->k_kp = 0; m->k_cls = 0;
+                m->k_sr = m->k_sr << 8 | 0xffu;
+            } else if (k != m->k_cls || k >= 4) {
+                if (m->k_cls) { if (m->k_tok < 127) m->k_tok++; m->k_st[m->k_tok] = (uint32_t)(m->pos - 1 - m->s_ls); }
+                m->k_kp = 0; m->k_cls = k; m->k_sr = m->k_sr << 8 | (k < 4 ? k : (uint8_t)c);
+            } else if (m->k_kp < 255) m->k_kp++;
+            const uint32_t kq = m->k_kp < 12 ? m->k_kp : 12 + (m->k_kp >= 24);
+            uint32_t a0 = 0, a1 = 0;
+            if (m->k_tok < m->k_pn) {
+                const int64_t a = m->s_pls + m->k_pst[m->k_tok] + (m->k_cls ? m->k_kp + 1 : 0);
+                if (a >= m->s_pls && a < m->s_ls) { a0 = m->buf[a]; a1 = a + 1 < m->s_ls ? m->buf[a + 1] : 0; }
+            }
+            m->h[30] = cm_hmix((uint32_t)(m->k_sr & 0xffffffffffffull) * 0x9E3779B1u + (uint32_t)(m->k_sr >> 32 & 0xffff) * 0x85EBCA6Bu + kq * 0xC2B2AE35u + 30);
+            m->h[31] = cm_hmix((a0 << 16 | a1 << 8 | kq) * 0x9E3779B1u + (m->k_tok << 8 | (c4 & 0xff)) * 0x2545F491u + 31);
+        }
+#endif
         if (v2 >= 3 && (CM_HON(21) || CM_HON(22))) {          /* model 3: orders 12 and 20 */
             const uint8_t *bf = m->buf + m->pos; uint32_t hh = 0; const int lim = m->pos < 20 ? (int)m->pos : 20;
             m->h[21] = 21; m->h[22] = 22;
@@ -871,7 +988,7 @@ static inline __attribute__((always_inline)) void cm_update(cm_t *m, int y, cons
             m->i_pred = icp; m->i_cls = ci > 2 ? 2 : ci; m->i_act = act >> 1; m->i_n = N; m->i_med = med; m->i_wn = W << 8 | N;
         }
         if (v2 >= 4) for (int k = 1; k < nm; k++) m->hc[k] = m->h[m->mid[k]];
-        uint32_t hv[CM_NM3];
+        uint32_t hv[CM_NSLOT];
 #ifdef KOLMO_CM_COMPACT
         if (v2 == 4)
 #endif
@@ -1018,11 +1135,14 @@ static size_t cm_compress_t(const uint8_t *in, size_t n, uint8_t *out, size_t ca
 /* model 4's prior for a context set: the binary one for masks that hold the record contexts and not the structure ones */
 static uint8_t cm4_prior_for(uint32_t mask) { return (mask >> 18 & 1) && !(mask >> 29 & 1) ? 2 : 1; }
 static size_t cm_compress_m4(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int bbcap, cm_tune_t tune, uint32_t mask) {
-    if (cap < 16 || n >= ((size_t)1 << 28) || (mask & ~CM_MASK3) || tune.b2 > 2) return 0;
+    if (cap < 16 || n >= ((size_t)1 << 28) || (mask & ~CM_MASK3) || tune.b2 > CM4_B2MAX) return 0;
     int bb = cm4_shift_for(n, mask); (void)bbcap;
     uint8_t *hist = malloc(n + 8); cm_t *m = hist ? cm_new_xm(hist, bb, 4, cm4_chain(n), 1, mask, n) : NULL;
     if (!m) { free(hist); return 0; }
     if (tune.b2) tune.b2 = cm4_prior_for(mask);
+#ifdef KOLMO_IMPACT
+    if (tune.b2) tune.b2 = cm_impact_b2(in, n, tune.b2);   /* research: a per-kind prior (KOLMO_CM_KPRIOR) */
+#endif
     cm_set_tune(m, tune);
     uint32_t n32 = (uint32_t)n | (uint32_t)8 << 28; memcpy(out, &n32, 4); out[4] = (uint8_t)(9 << 4 | (bb - 2));
     out[5] = tune.b0; out[6] = tune.b1; out[7] = tune.b2;
@@ -1142,7 +1262,7 @@ static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
         uint32_t f = n32 >> 28; n32 &= 0x0FFFFFFFu;
         if (f == 8 && cn >= 16 && in[4] >> 4 == 9) {      /* model 4: tune bytes and the context mask */
             v2 = 4;
-            if (in[7] > 2) return -1;
+            if (in[7] > CM4_B2MAX) return -1;
             tune.b0 = in[5]; tune.b1 = in[6]; tune.b2 = in[7];
             for (int k = 0; k < 4; k++) mask |= (uint32_t)in[8 + k] << 8 * k;
             if (mask & ~CM_MASK3) return -1;
@@ -1178,7 +1298,7 @@ static uint64_t cm_stream_need(const uint8_t *in, size_t cn, size_t n) {
         uint32_t f = n32 >> 28;
         if (f == 8 && cn >= 16 && in[4] >> 4 == 9) {      /* model 4 */
             uint32_t mask = 0; for (int k = 0; k < 4; k++) mask |= (uint32_t)in[8 + k] << 8 * k;
-            if (in[7] > 2 || (mask & ~CM_MASK3)) return 0;
+            if (in[7] > CM4_B2MAX || (mask & ~CM_MASK3)) return 0;
             return cm_mem4(n, (in[4] & 15) + 2, mask) + cm4_chain(n);
         }
         if (f == 8) {
@@ -1203,7 +1323,15 @@ static uint64_t cm4_need_bound(size_t n, uint32_t mask) { return cm_mem4(n, cm4_
 /* Codec 7 table (kolmo builds only: tests/test_cm_compact.c includes this file on its own). Model 3 where it gains: text. */
 #ifdef KOLMO_CODEC_REGISTRY
 static size_t cm_bound(size_t n) { return n + n / 16 + 64; }
+#ifdef KOLMO_IMPACT
+/* research: KOLMO_CM_LEX=1 adds the token-class contexts (30, 31) to text streams, =2 to every stream */
+static uint32_t cm4_mask_for(const uint8_t *in, size_t n) {
+    const char *e = getenv("KOLMO_CM_LEX"); const int lex = e ? atoi(e) : 0, txt = looks_text(in, n);
+    return (txt ? CM4_MASK_TEXT : CM4_MASK_BIN) | ((lex == 1 && txt) || lex == 2 ? 0xC0000000u : 0);
+}
+#else
 static uint32_t cm4_mask_for(const uint8_t *in, size_t n) { return looks_text(in, n) ? CM4_MASK_TEXT : CM4_MASK_BIN; }
+#endif
 /* the planner's probe: model 4 with six contexts (orders 3 and 4, word, column, current word, field and byte above), about
  * three times as fast, to compare a transform with the plain bytes on a sample */
 #define CM4_MASK_PROBE 0x2000145cu

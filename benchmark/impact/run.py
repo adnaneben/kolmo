@@ -23,6 +23,8 @@ IMPACT_BIN = os.environ.get("IMPACT_BIN", os.path.join(REPO, "build", "kolmo-imp
 STOCK_BIN = os.environ.get("STOCK_BIN", os.path.join(REPO, "build", "kolmo"))
 BIN_ID = os.environ.get("IMPACT_BIN_ID", os.path.basename(os.path.dirname(IMPACT_BIN)))
 LOCK = os.path.join(V, "locks", "timing.d")
+KPRIOR = os.path.join(V, "impact", "kprior.bin")
+os.environ.setdefault("KOLMO_CM_KPRIOR_FILE", KPRIOR)
 OWNER = os.path.join(V, "locks", "timing.owner")
 TEXTISH = ["text", "code", "json", "xml", "html", "csv", "tsv", "log", "genomics"]
 
@@ -95,6 +97,10 @@ def cell(feature, m, level, threads):
     comp = os.path.join(WORK, "c.kolmo"); dec = os.path.join(WORK, "d.out")
     blog = os.path.join(WORK, "blocks.jsonl")
     if os.path.exists(blog): os.remove(blog)
+    env_extra = dict(env_extra)
+    if level == 10 and env_extra.get("KOLMO_IMPACT_CODEC") == "7" and ("KOLMO_CM_LEX" in env_extra or "KOLMO_CM_KPRIOR" in env_extra):
+        del env_extra["KOLMO_IMPACT_CODEC"]           # ultra codes with CM already: the switch applies to the level's own CM
+        env_extra.pop("KOLMO_IMPACT_INPUT", None)
     env = dict(os.environ); env.update(env_extra)
     if env_extra: env["KOLMO_IMPACT_LOG"] = blog
     load = os.getloadavg()[0]
@@ -105,7 +111,10 @@ def cell(feature, m, level, threads):
         row.update({"ok": False, "error": "compress rc %d: %s" % (rc, err)}); return row
     size = os.path.getsize(comp)
     denv = {k: v for k, v in os.environ.items() if not k.startswith("KOLMO_")}
-    rc2, dw, dc, dr, err2 = timel([STOCK_BIN, "-d", "-T", str(threads), "-c", comp], denv, dec)
+    research_fmt = "KOLMO_CM_LEX" in env_extra or "KOLMO_CM_KPRIOR" in env_extra
+    if research_fmt: denv["KOLMO_CM_KPRIOR_FILE"] = KPRIOR   # mask bits 30-31 and prior ids 3-10: only the research decoder reads them
+    rc2, dw, dc, dr, err2 = timel([IMPACT_BIN if research_fmt else STOCK_BIN, "-d", "-T", str(threads), "-c", comp], denv, dec)
+    row["decoder"] = "research" if research_fmt else "stock"
     ok = rc2 == 0 and sha(dec) == m["sha256"]
     row.update({"ok": ok, "size": size, "c_wall": round(cw, 4), "c_cpu": round(cc, 4), "c_rss": cr,
                 "d_wall": round(dw, 4), "d_cpu": round(dc, 4), "d_rss": dr,
@@ -123,16 +132,23 @@ def cell(feature, m, level, threads):
                          "base_codecs": sorted({(b["base_codec"], b["base_tflag"]) for b in B})}
     return row
 
+WAIT = os.path.join(V, "impact", "waiting.%d" % os.getpid())
 def lock():
     os.makedirs(os.path.dirname(LOCK), exist_ok=True)
+    first = True
     while True:
         try: os.mkdir(LOCK); break
-        except FileExistsError: time.sleep(15)
+        except FileExistsError:
+            if first: open(WAIT, "w").close(); first = False   # another impact runner yields to us on release
+            time.sleep(15)
+    if os.path.exists(WAIT): os.remove(WAIT)
     with open(OWNER, "w") as f: f.write("impact-matrix %s\n" % time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 def unlock():
     with open(OWNER, "w") as f: f.write("free %s\n" % time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     try: os.rmdir(LOCK)
     except OSError: pass
+    import glob
+    if [w for w in glob.glob(os.path.join(V, "impact", "waiting.*")) if w != WAIT]: time.sleep(20)   # let a waiting runner in
 
 def parse_levels(s):
     out = []
