@@ -86,6 +86,18 @@ def main():
                 cli = subprocess.run([CLI, flag, "-c", src], capture_output=True, check=True).stdout
                 if cli != kolmo.compress(data, level=lv): fail(f"CLI {flag} and Python level={lv!r} differ")
         print("CLI and Python give the same bytes at every level")
+        # a `kolmo archive` file is refused (its frame is the internal chunk store, not a file), never returned
+        with tempfile.TemporaryDirectory() as t:
+            for nm in ("a", "b"):
+                open(os.path.join(t, nm), "wb").write(data)
+            subprocess.run([CLI, "archive", "arc.kol", "a", "b"], cwd=t, capture_output=True, check=True)
+            arc = open(os.path.join(t, "arc.kol"), "rb").read()
+            for call in (lambda: kolmo.decompress(arc), lambda: kolmo.read_range(arc, 0, 10)):
+                try:
+                    call(); fail("a kolmo archive file was decompressed")
+                except ValueError as e:
+                    if "kolmo extract" not in str(e): fail(f"archive message {e}")
+        print("kolmo archive files refused as expected")
     else:
         print("CLI not built: cross-check skipped")
     print("ALL PASSED" if not fails else f"{fails} FAILURES")

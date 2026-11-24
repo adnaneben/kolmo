@@ -104,6 +104,8 @@ build/kolmotest: tests/kolmotest.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 build/test-levels: tests/test_levels.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+build/mkarchive: tests/mkarchive.c build/libkolmo.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 build/test-levels-asan: tests/test_levels.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_levels.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a
@@ -113,9 +115,10 @@ build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src
 build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 
-check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus
+check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus build/mkarchive
 	./build/test-levels
 	python3 tests/test_cli.py build/kolmo
+	sh tests/test_archive_safety.sh build/kolmo build/mkarchive
 	sh tests/test_filter.sh build/kolmo
 	python3 tests/test_fast_file.py
 	./build/test-v12-corpus tests/v12

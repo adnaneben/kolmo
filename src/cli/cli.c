@@ -196,6 +196,15 @@ renamed:
 }
 
 int kolmo_cli_features(int argc, char **argv);     /* cli/features.c: cat, grep, archive, extract, contents, --index */
+/* for cli/features.c (kolmo archive, kolmo --index): n bytes staged and published at path as the main command line
+ * publishes its outputs; an existing path is refused unless force. 0, or -1 after reporting the error. */
+int kolmo_cli_publish(const char *path, const uint8_t *p, size_t n, int force) {
+    catch_signals();
+    stage_t s = {NULL, -1, NULL};
+    if (stage_open(&s, path)) { fprintf(stderr, "kolmo: %s: cannot stage the output: %s\n", path, strerror(errno)); return -1; }
+    if (write_all(s.fd, p, n)) { fprintf(stderr, "kolmo: %s: %s\n", path, strerror(errno)); stage_discard(&s); return -1; }
+    return stage_publish(&s, path, NULL, force);
+}
 
 /* ---- messages ------------------------------------------------------------------------------------------------- */
 static const char *const LEVEL_NAME[KOLMO_LEVEL_ULTRA + 1] = {
@@ -515,6 +524,7 @@ static int64_t head_orig(const src_t *s, uint64_t off) {
     if (!hi) { uint8_t h[32]; return src_read(s, off, h, 32) ? KOLMO_ERR_CORRUPT : kolmo_original_size(h, 32); }
     int64_t o = kolmo_original_size(hi, hn); free(hi); return o;
 }
+static uint64_t ext_extent(const src_t *s, uint64_t off, uint64_t end, int *ddp1);
 /* the length of the frame at off, or 0 when no whole frame starts there (trailing data) */
 static uint64_t frame_extent(const src_t *s, uint64_t off) {
     if (off >= s->n) return 0;
@@ -526,19 +536,46 @@ static uint64_t frame_extent(const src_t *s, uint64_t off) {
     if (!hi) return 0;
     int64_t e = kolmo_frame_size(hi, hn); free(hi);
     if (e <= 0 || (uint64_t)e > s->n - off) return 0;
-    uint64_t end = (uint64_t)e, q = off + end; uint8_t t[24];   /* extension sections, then their KEXT trailer */
+    return ext_extent(s, off, (uint64_t)e, NULL);
+}
+/* extension sections from off + end (the end of the frame's block payloads), then their KEXT trailer: the frame's
+ * extent with them, or end when no trailer closes them. *ddp1 (when given): whether a DDP1 section is among them. */
+static uint64_t ext_extent(const src_t *s, uint64_t off, uint64_t end, int *ddp1) {
+    uint64_t q = off + end; uint8_t t[24]; int dd = 0;
+    if (ddp1) *ddp1 = 0;
     for (int k = 0; k < 64 && q + 4 <= s->n; k++) {
         if (src_read(s, q, t, 4) || !memcmp(t, "CZN1", 4)) break;
         if (!memcmp(t, "KEXT", 4)) {
-            if (!src_read(s, q, t, 24) && le64(t + 12) == q - (off + end)) return q + 24 - off;
+            if (!src_read(s, q, t, 24) && le64(t + 12) == q - (off + end)) { if (ddp1) *ddp1 = dd; return q + 24 - off; }
             break;
         }
         if (src_read(s, q, t, 12)) break;
+        dd |= !memcmp(t, "DDP1", 4);
         uint64_t len = le64(t + 4);
         if (len > s->n - q - 16) break;
         q += 16 + len;
     }
     return end;
+}
+/* 1 when a frame of s carries a DDP1 section: a `kolmo archive` file, whose frame holds the internal chunk store (the
+ * distinct chunks of all its files, without their order), never the files themselves. -d, -t, -l and --range refuse
+ * it, pointing to kolmo extract and kolmo contents. */
+static int is_archive(const src_t *s) {
+    for (uint64_t off = 0; off < s->n;) {
+        size_t hn; uint8_t *hi = read_head(s, off, &hn);
+        if (!hi) return 0;
+        int64_t e = kolmo_frame_size(hi, hn); free(hi);
+        if (e <= 0 || (uint64_t)e > s->n - off) return 0;
+        int dd; uint64_t len = ext_extent(s, off, (uint64_t)e, &dd);
+        if (dd) return 1;
+        off += len;
+    }
+    return 0;
+}
+static void archive_error(const char *name, const char *path) {
+    if (!path) path = "FILE";
+    fprintf(stderr, "kolmo: %s: a 'kolmo archive' file (many files and a chunk store), not one compressed file; "
+                    "unpack it with 'kolmo extract %s', list it with 'kolmo contents %s'\n", name, path, path);
 }
 
 /* compress or decompress a buffer in memory; *out is malloc'ed. Returns the output size or a negative error. */
@@ -773,6 +810,11 @@ static int process(const opts_t *o, const char *in) {
         }
     }
 
+    if (dec && !streamed && is_kolmo_magic(hdr, hn) &&
+        is_archive(buffered ? &(src_t){buf, -1, bn} : &(src_t){NULL, ifd, ireg ? (uint64_t)ist.st_size : 0})) {
+        archive_error(name, in); ret = 1; goto out;
+    }
+
     if (o->op == OP_TEST) {
         if (streamed) {
             int nul = open("/dev/null", O_WRONLY);
@@ -897,6 +939,7 @@ static int list_one(const char *in, int *header_done) {
         if (ok) { size_t l = strlen(engine); snprintf(engine + l, sizeof engine - l, ", stream of %llu segment%s", (unsigned long long)segs, segs == 1 ? "" : "s"); }
     } else if (g == 32) {                              /* one frame, or several concatenated */
         src_t sr = {NULL, fd, (uint64_t)st.st_size};
+        if (is_archive(&sr)) { archive_error(in, in); close(fd); return 1; }
         uint64_t off = 0, frames = 0; uint32_t used[64] = {0};
         while (ok && off < (uint64_t)st.st_size) {
             uint64_t len = frame_extent(&sr, off); uint8_t fh[32];

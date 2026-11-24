@@ -775,4 +775,5 @@ table := chunks uv | (length uv | check u32) * chunks | files uv
 Chunk `i` occupies the store bytes after chunks `0 .. i−1`; lengths are at least 1 and add up to the store size.
 `check` is the low 32 bits of `kolmo_khash64` (XXH3-64 before version 12) of the chunk with seed `0x64647031`, verified when the chunk is extracted. A file is
 the concatenation of its chunks; their lengths must add up to its size. Names are at most 4096 bytes without NUL; the
-command line extracts only relative names without a `..` component.
+command line extracts only relative names without a `..` component, never through a symbolic link, and refuses
+to decode such a file as one compressed file (`kolmo -d`, `-t`, `-l`).
