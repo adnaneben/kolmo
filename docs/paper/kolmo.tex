@@ -470,7 +470,7 @@ Sources: \texttt{data/lzb-*-silesia.tar.csv}, \texttt{data/x86/claims-silesia.ta
 \end{table}
 
 We repeated the lzbench runs on x86-64 GitHub runners (Ubuntu 24.04, 4 vCPUs, GCC 13.3, the same generic build) with
-the plugin in \texttt{bench/lzbench/}. The runners draw different CPUs from job to job, so speeds from different jobs
+the plugin in \texttt{bench/lzbench/} \todoin{PR~\#33, not merged yet}. The runners draw different CPUs from job to job, so speeds from different jobs
 cannot be compared; for Table~\ref{tab:x86} each Kolmo level and its rival ran in the same job, on an Intel Xeon
 6975P-C. Every Kolmo size was the same as on the M5 (\numXSizesSame{} of \numXSizesTotal{} settings in these runs,
 and all others, \S\ref{sec:determinism})\src{x86/claims-*.csv}. All four comparisons keep their direction, with
