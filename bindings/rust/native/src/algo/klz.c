@@ -5,7 +5,6 @@
 #include "klz.h"
 #include "krans.h"
 #include "khuf.h"
-#include <math.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -880,6 +879,13 @@ static int kz_fast_seqs(const uint8_t *in, size_t n, int lg, int skip, kz_sq *E0
  * histograms of one symbol in four (the entropy of the merged counts, at least 1 bit a symbol, plus the table: 2 bytes per symbol up to 48 symbols, else
  * about 130) and the smallest is taken; jg[g] receives j for group g. Measured on Canterbury (tar, KLZH2 3): -2.1%,
  * as the trial of levels 5-9, at a small part of its time; Silesia -0.4%, enwik8 -0.1%. */
+/* log2(x) in 1/65536 bits for x > 0, by repeated squaring of the mantissa: integer only (no libm), the same on every host */
+static uint32_t kz_lg16(uint64_t x) {
+    int e = 63 - __builtin_clzll(x); uint64_t m = e >= 31 ? x >> (e - 31) : x << (31 - e);   /* m in [2^31, 2^32) */
+    uint32_t r = (uint32_t)e << 16;
+    for (int i = 15; i >= 0; i--) { m = (m * m) >> 31; if (m >= (1ull << 32)) { m >>= 1; r |= 1u << i; } }
+    return r;
+}
 static int kz_spans_est(const uint8_t *st, const size_t *b, size_t nseg, size_t sn, uint8_t *jg) {
     uint32_t (*h)[256] = malloc(sizeof *h * 8); if (!h) return -1;
     for (size_t g0 = 0, gi = 0; g0 < nseg; g0 += 8, gi++) {
@@ -894,9 +900,9 @@ static int kz_spans_est(const uint8_t *st, const size_t *b, size_t nseg, size_t 
                 for (size_t v = u + 1; v < u + sp && v < m; v++) for (int k = 0; k < 256; k++) c[k] += h[v][k];
                 for (int k = 0; k < 256; k++) tot += c[k];
                 if (!tot) continue;
-                const float lt = log2f((float)tot); float fb = 0;
-                for (int k = 0; k < 256; k++) if (c[k]) { const float l = lt - log2f((float)c[k]); fb += (float)c[k] * (l < 1.f ? 1.f : l); ns++; }   /* a code is at least 1 bit */
-                bits += (uint64_t)fb + 8 * (uint64_t)((ns <= 48 ? 2 * ns : 130) + 8) * ((tot + KHUF_BLOCK_MAX - 1) / KHUF_BLOCK_MAX);
+                const uint32_t lt = kz_lg16(tot); uint64_t fb = 0;
+                for (int k = 0; k < 256; k++) if (c[k]) { const uint32_t l = lt - kz_lg16(c[k]); fb += (uint64_t)c[k] * (l < 65536u ? 65536u : l); ns++; }   /* a code is at least 1 bit */
+                bits += (fb >> 16) + 8 * (uint64_t)((ns <= 48 ? 2 * ns : 130) + 8) * ((tot + KHUF_BLOCK_MAX - 1) / KHUF_BLOCK_MAX);
             }
             if (bits < best) { best = bits; bj = j; }
         }
