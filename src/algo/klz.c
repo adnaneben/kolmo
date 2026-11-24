@@ -398,6 +398,7 @@ typedef struct {
     uint32_t lit[256], ll[72], ml[72], of[33], sl, sll, sml, sof, pending;
     uint32_t pl[256], pll[72], pml[72], pof[33], llp[KO_LLT], mlp[KO_MLT];
     uint32_t mmin; int nof;   /* shortest match (4 KLZH, 3 KLZH2) and offset codes (32, 33) */
+    uint32_t lfloor;          /* KLZH2: least price of a literal (ko_init, ko_parse) */
 } ko_st;
 #define KO_H4(p, lg) ((kz_r32(p) * 2654435761u) >> (32 - (lg)))
 /* a last match of the nice length (or of the block's end) continued to its full length */
@@ -571,7 +572,7 @@ static inline uint32_t ko_w(uint32_t x) { x++; int h = kz_hb(x); return (uint32_
 static inline uint32_t ko_cost(uint32_t f, uint32_t ws) { uint32_t c = ws - ko_w(f); return c < 256 ? 256 : c > 11 * 256 ? 11 * 256 : c; }
 static void ko_refresh(ko_st *T) {
     uint32_t w = ko_w(T->sl); for (int s = 0; s < 256; s++) T->pl[s] = ko_cost(T->lit[s], w);
-    if (T->mmin == 3) for (int s = 0; s < 256; s++) if (T->pl[s] < KO_LIT_FLOOR) T->pl[s] = KO_LIT_FLOOR;   /* KLZH2: see ko_init */
+    if (T->mmin == 3) for (int s = 0; s < 256; s++) if (T->pl[s] < T->lfloor) T->pl[s] = T->lfloor;   /* KLZH2: see ko_init */
     w = ko_w(T->sll); for (int c = 0; c < 72; c++) T->pll[c] = ko_cost(T->ll[c], w);
     w = ko_w(T->sml); for (int c = 0; c < 72; c++) T->pml[c] = ko_cost(T->ml[c], w);
     w = ko_w(T->sof); for (int c = 0; c < T->nof; c++) T->pof[c] = ko_cost(T->of[c], w) + (c >= 3 ? (uint32_t)(c - 3) * 256 : 0);
@@ -589,14 +590,15 @@ static void ko_rescale(ko_st *T) {
     T->sl = ko_scale(T->lit, 256, 12); T->sll = ko_scale(T->ll, 72, 11); T->sml = ko_scale(T->ml, 72, 11); T->sof = ko_scale(T->of, T->nof, 11);
     ko_refresh(T);
 }
-/* KLZH2 prices a literal at KO_LIT_FLOOR or more: the first statistics are those of the raw bytes, so a byte that later
+/* KLZH2 prices a literal at a floor or more: the first statistics are those of the raw bytes, so a byte that later
  * matches mostly (the zero bytes of 64-bit integers, of spreadsheet cells) starts cheap, the parse leaves it to the
- * literals and its statistics stay low, a trap the adaptive prices never leave. 1 bit (256) until 0.0.2 (2 bits cost
- * raw video 2.8% end to end under hc in night 3); 2 bits from 0.0.3, re-measured on the screening corpus and Canterbury
- * (KLZH2 8 and 9, 16 MiB blocks): kennedy.xls 131,948 -> 74,402 B, population.i64 70,282 -> 60,004, wide_test.csv
- * -0.8% at 8, raw video (akiyo, 16 MB) and every other file unchanged or within 0.01%. */
+ * literals and its statistics stay low, a trap the adaptive prices never leave. The floor is 1 bit (KO_LIT_FLOOR, 256)
+ * by default; a uniform 2 bits costs raw video 2.8% (night 3, and again in 0.0.3 work), so ko_parse chooses the floor
+ * per input instead: two warm-up passes on the first 256 KiB, at 1 bit and at 2 bits; where the 2-bit pass estimates
+ * at least 2% smaller, its statistics seed the real pass, which then keeps the 1-bit floor (kennedy.xls at -7:
+ * 132,595 -> about 69,500 B). */
 static void ko_init(ko_st *T, const uint8_t *in, size_t n, int v2) {
-    T->mmin = v2 ? 3 : 4; T->nof = v2 ? 33 : 32;
+    T->mmin = v2 ? 3 : 4; T->nof = v2 ? 33 : 32; T->lfloor = KO_LIT_FLOOR;
     static const uint8_t LL0[16] = {4, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, ML0[16] = {6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
         OF0[27] = {6, 2, 1, 1, 1, 1, 2, 3, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1};
     uint32_t c[256] = {0}; size_t m = n < KO_SPAN ? n : KO_SPAN;
@@ -790,9 +792,42 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
     free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm);
     *anchor_out = anchor; *err = 0; return ns;
 }
+/* estimated KLZH2 size (1/256 bits) of the sequences S[0..ns) over in[0..n): order-0 costs of the four streams plus the
+ * extra bits (kz_est for 3-byte matches and 33 offset codes) */
+static uint64_t ko_est2(const uint8_t *in, size_t n, const kz_seq *S, size_t ns, size_t anchor) {
+    uint32_t lit[256] = {0}, ll[72] = {0}, ml[72] = {0}, of[34] = {0}, r[3] = {1, 4, 8}, ex; uint64_t xb = 0; size_t p = 0; int nb;
+    for (size_t k = 0; k < ns; k++) {
+        for (uint32_t i = 0; i < S[k].ll; i++) lit[in[p + i]]++;
+        ll[kz_lcode(S[k].ll, &ex, &nb)]++; xb += (uint64_t)nb;
+        ml[kz_lcode(S[k].ml - 3, &ex, &nb)]++; xb += (uint64_t)nb;
+        unsigned c = ko_ofc(S[k].off, r); of[c]++; if (c >= 3) xb += c - 3;
+        ko_rep(r, S[k].off); p += S[k].ll + S[k].ml;
+    }
+    for (size_t i = anchor; i < n; i++) lit[in[i]]++;
+    return kz_hcost(lit, 256) + kz_hcost(ll, 72) + kz_hcost(ml, 72) + kz_hcost(of, 34) + xb * 256;
+}
 static size_t ko_parse(const uint8_t *in, size_t n, const ko_par *P, int v2, kz_seq *S, size_t *anchor_out, int *err, int threads) {
     ko_st *T = malloc(sizeof *T); if (!T) { *err = 1; return 0; }
     ko_init(T, in, n, v2);
+    if (v2 && n >= (16u << 10)) {   /* KLZH2: the literal floor of the two warm-up passes that estimates smaller (see ko_init) */
+        size_t m = n < (256u << 10) ? n : (256u << 10), a0; int e0 = 0; uint64_t c[2]; ko_st *U = malloc(sizeof *U);
+        if (!U) { free(T); *err = 1; return 0; }
+        for (int v = 0; v < 2; v++) {
+            ko_st *X = v ? U : T; if (v) ko_init(X, in, n, v2);
+            X->lfloor = v ? 2 * KO_LIT_FLOOR : KO_LIT_FLOOR; ko_refresh(X);
+            size_t k = ko_parse_pass(in, m, P, X, S, &a0, &e0, 1);
+            if (e0) { free(U); free(T); *err = 1; return 0; }
+            c[v] = ko_est2(in, m, S, k, a0);
+        }
+        if (c[1] * 100 < c[0] * 98) {   /* the 2-bit warm-up estimates 2% smaller: its statistics seed the real pass (a
+                                         * closer call cost an arm64 executable and raw video 0.2-0.3%) */
+            memcpy(T, U, sizeof *T);
+            T->lfloor = KO_LIT_FLOOR;   /* the real pass keeps the 1-bit floor */
+            ko_rescale(T);
+        } else ko_init(T, in, n, v2);   /* otherwise the parse starts as before: 16-bit images and raw video changed by
+                                         * up to 2% when the 1-bit warm-up's statistics seeded it */
+        free(U);
+    }
     size_t ns = ko_parse_pass(in, n, P, T, S, anchor_out, err, threads);
     free(T); return ns;
 }
