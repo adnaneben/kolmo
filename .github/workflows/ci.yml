@@ -51,18 +51,18 @@ jobs:
           set -euo pipefail
           case "${{ matrix.os }}" in
             macos-latest)      T=x86_64-apple-darwin ;;
-            ubuntu-latest)     T=aarch64-unknown-linux-gnu; sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu ;;
-            ubuntu-24.04-arm)  T=x86_64-unknown-linux-gnu;  sudo apt-get install -y --no-install-recommends gcc-x86-64-linux-gnu ;;
+            ubuntu-latest)     T=aarch64-unknown-linux-gnu; sudo apt-get update -q && sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross ;;
+            ubuntu-24.04-arm)  T=x86_64-unknown-linux-gnu;  sudo apt-get update -q && sudo apt-get install -y --no-install-recommends gcc-x86-64-linux-gnu libc6-dev-amd64-cross ;;
           esac
           rustup target add "$T"
           cargo build --lib --manifest-path bindings/rust/Cargo.toml --target "$T" --target-dir build/rust-cross
-          lib=$(ls build/rust-cross/"$T"/debug/build/kolmo-*/out/libkolmo_native.a | head -1)
-          mkdir -p build/rust-cross/x && cd build/rust-cross/x && ar x "../../../$lib" && file ./*.o | sort | uniq -c | head -3
-          case "$T" in
-            x86_64-apple-darwin)        file ./*.o | grep -v -q 'x86_64' && { echo "objects not built for $T"; exit 1; } || true ;;
-            aarch64-unknown-linux-gnu)  file ./*.o | grep -v -q 'aarch64' && { echo "objects not built for $T"; exit 1; } || true ;;
-            x86_64-unknown-linux-gnu)   file ./*.o | grep -v -q 'x86-64' && { echo "objects not built for $T"; exit 1; } || true ;;
-          esac
+          lib=$(find build/rust-cross/"$T"/debug/build -path '*/out/libkolmo_native.a' | head -1)   # the build script's own dir has no out/
+          test -n "$lib" || { echo "libkolmo_native.a not found for $T"; exit 1; }
+          case "$T" in x86_64-apple-darwin) pat='x86_64' ;; aarch64-*) pat='aarch64' ;; x86_64-*) pat='x86-64' ;; esac
+          mkdir -p build/rust-cross/x && cd build/rust-cross/x && ar x "../../../$lib"
+          kinds=$(file ./*.o); echo "$kinds" | sed -n 1,3p
+          bad=$(echo "$kinds" | grep -v "$pat" || true)
+          test -z "$bad" || { echo "objects not built for $T:"; echo "$bad"; exit 1; }
       - name: research codecs and kfam (round trips, ASan/UBSan; CI runners have no GPU, so the Metal test is skipped)
         run: make -j4 ARCH= experimental-check kfam-check GPU_CHECK=
       - name: determinism (the same frames on every platform and thread count as benchmark/determinism/expected.sha256)
