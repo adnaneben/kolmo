@@ -121,6 +121,24 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
 - **Level 8 codes 32 MiB block-sorting blocks** instead of 128 MiB. It needs about a third less memory (enwik8 RSS
   738 -> 489 MB), and -9 is now smaller than -8 on large text (enwik8 -8 21.97 MB, -9 20.80 MB; both were 20.80 MB).
 
+### Command line: a drop-in for tar, xz and gzip
+
+- **`tar -I kolmo` and pipes are tested.** `tests/test_filter.sh` (in `make check`, CI on Linux and macOS) runs GNU tar
+  (`-I kolmo`, `-I 'kolmo -6'`, `--use-compress-program=kolmo`), bsdtar (`--use-compress-program`, `'kolmo -d'` to
+  read), pipes, exit statuses, SIGPIPE and SIGTERM. README section "Use with tar".
+- **Bounded memory for large pipes.** Standard input that is not a file is read up to 256 MiB. A pipe that ends within
+  that is one frame (the same bytes as before and as the same data in a file). A longer pipe is now compressed as a
+  stream of 256 MiB segments, so `tar -I kolmo` of a large tree no longer holds the whole archive in memory. On
+  424 MB, these segments cost no ratio (102,265,009 bytes against 102,867,009 for one frame, level 6). `kolmo -d` and
+  `-t` read a stream from a pipe segment by segment; before, they read the whole pipe into memory first.
+- **xz and gzip spellings** (`docs/XZ-COMPAT.md`): `-0` and `--fast` are level 1, `--best` is level 9, `-e` and
+  `--extreme` are accepted without effect (`-9e` = `-9`), `--uncompress`, `--to-stdout`, `--memory` (= `--memlimit`)
+  and `--no-name` (no effect: frames store no name) are accepted. `-dcf` copies input that is not Kolmo's through
+  unchanged, as `xz -dcf` and `zcat -f` do. Levels stay 1-9; `--level 0` and `-00` are still usage errors.
+- **SIGINT, SIGTERM and SIGHUP remove the staging file.** An interrupted `kolmo FILE` left a hidden `.kolmo-XXXXXX`
+  file next to the output; it is now removed, as xz and gzip remove their partial output. A signal ignored at start
+  (`nohup`) stays ignored.
+
 ## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and
