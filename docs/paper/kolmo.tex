@@ -211,10 +211,10 @@ $t$ & Plan \\ \midrule
 corpus in continuous integration on Linux x86-64, Linux ARM64 and macOS. The project's compatibility promise is that
 every later release decodes every version-12 frame to the same bytes, that identifiers never change meaning, and that
 a new feature uses an identifier older decoders refuse, so that an old decoder fails rather than returning wrong
-data. The corpus holds 341 frames written by the 0.0.1 and 0.0.2 release binaries
-and an independent Python decoder of the KLZ, KLZH2 and Huffman payloads checks them against the C decoders
-\todoin{341 frames and the coder sections come with PR~\#22, not merged yet; main has 330}. Coder payloads are
-specified in part; for the rest the 0.0.2 source is normative until their sections are written.
+data. The corpus holds 350 frames written by the 0.0.1 and 0.0.2 release binaries (84 and 266)\src{tests/v12 at 4c191a5c},
+and an independent Python decoder of the KLZ, KLZH2 and Huffman payloads checks them against the C decoders. Coder
+payloads are specified in part; for the rest the 0.0.2 source is normative until their sections are written
+\todoin{the table, BWT and image sections are in PR~\#31, not merged yet}.
 
 \paragraph*{Integrity} Block checksums are the low 32 bits of a 64-bit hash written for Kolmo and specified in full
 in \texttt{FORMAT.md}. A decoder never returns the bytes of a block whose checksum fails. The decoders are fuzzed
@@ -222,12 +222,12 @@ with libFuzzer under AddressSanitizer and UndefinedBehaviorSanitizer on every pu
 every level and the frozen corpus; an OSS-Fuzz application is prepared but not submitted
 \todoin{PR~\#19, not merged yet}.
 
-One defect bears directly on this promise. Kolmo 0.0.2, at levels 3--9, writes table blocks (plan 3) containing a
-field longer than 65,535 bytes that its own decoder then refuses as corrupt. No data is returned wrongly, but such
-files cannot be read by 0.0.2. The fix is in the decoder only: later releases read these frames, the format is
-unchanged, and two frames written by 0.0.2 were added to the frozen corpus as regression tests
-\todoin{fix in PR~\#22 (56a0f826), not merged yet; also decide whether the encoder should refuse the table transform
-for such fields}. None of the inputs in \S\ref{sec:eval} contain such a field, and every round trip there was
+One defect bears directly on this promise. Kolmo 0.0.1 and 0.0.2, at levels 3--9, write table blocks (plan 3)
+containing a field longer than 65,535 bytes that their own decoders then refuse as corrupt; in a space-separated log
+one line over 64\,KiB is enough. No data is returned wrongly, but such files cannot be read by those releases. The
+decoder on the main branch reads them: the format is unchanged, and two frames written by 0.0.2 were added to the
+frozen corpus as regression tests. The encoder will also stop writing such blocks, so that new files stay readable
+by 0.0.1 and 0.0.2 \todoin{encoder half in PR~\#30, not merged yet; the 0.0.3 patch release is an owner decision}. None of the inputs in \S\ref{sec:eval} contain such a field, and every round trip there was
 verified.
 
 \subsection{Decode working set}\label{sec:memd}

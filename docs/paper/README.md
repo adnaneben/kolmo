@@ -65,7 +65,7 @@ replaces it.
    - a decision-flow figure;
    - the LOCO-I citation;
    - the fuzzing and OSS-Fuzz status;
-   - the frozen-corpus count (341 after the format-prose PR);
+   - ~~the frozen-corpus count~~: 350 on main (PR #22 merged);
    - the HDF5 and Blosc2 small-chunk numbers;
    - the author's affiliation.
 
