@@ -667,7 +667,10 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
 #undef IMG8_TRIAL
         }
 #undef KG_ADJ
-        if (numtrial && !(chosen >= 5 && best < plain * 0.80)) {
+        /* a typed plan that saves a fifth skips the record search, except a decimal one: DEC64 scores well on a slice of
+         * exact decimals even where the input mixes them with computed values (NCEP air float32: DEC64 17.5 MB at -3,
+         * the record layout 13.7 MB), and the record trial keeps DEC64's 7% margin below */
+        if (numtrial && !(chosen >= 5 && chosen != 8 && best < plain * 0.80)) {
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double rt0 = prof_now();
 #endif
