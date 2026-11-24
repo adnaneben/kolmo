@@ -105,15 +105,18 @@ static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int
     return best;
 }
 
-static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh) {
-    double best = 1e300; int w = 4; size_t h = 0; int fixed = 0;
+/* *weak (optional): set when a width passed only through the relaxed mantissa test below (the caller then also runs
+ * the integer trial, which the float trial otherwise pre-empts) */
+static double kg_float_trial_w(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh, int *weak) {
+    double best = 1e300; int w = 4; size_t h = 0; int fixed = 0, wk[2] = {0, 0};
     if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
         size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
         const uint8_t *d = hl <= n ? memmem(s, hl, "'descr': '", 10) : NULL;
         if (!d || d + 13 > s + hl || d[10] == '>' || d[11] != 'f' || (d[12] != '2' && d[12] != '4' && d[12] != '8')) return best;
         h = hl; w = d[12] - '0'; fixed = 1;
         if (n < h + 4096) return best;                       /* same shape test as raw data: predictable exponent, random mantissa */
-        if (kg_plane_h(s + h, (n - h) / w, w, w - 1, 1) > 6.0 || kg_plane_h(s + h, (n - h) / w, w, w - 2, 1) < 7.0) return best;
+        if (kg_plane_h(s + h, (n - h) / w, w, w - 1, 1) > 6.0) return best;
+        wk[0] = kg_plane_h(s + h, (n - h) / w, w, w - 2, 1) < 7.0;
     }
     if (n < h + 4096) return best;
     int ws[2] = {w, 0}; size_t hs[2] = {h, 0}; int nw = 1;
@@ -123,7 +126,11 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
             double he = 1e9; size_t ph = 0;
             for (size_t k = 0; k < (size_t)fw; k++) { double e = kg_plane_h(s + k, (n - k) / fw, fw, fw - 1, 1); if (e < he) { he = e; ph = k; } }
             double hm = kg_plane_h(s + ph, (n - ph) / fw, fw, fw - 2, 1);
-            if (he <= 6.0 && hm >= 7.0) { ws[nw] = fw; hs[nw] = ph; nw++; }   /* exponent predictable, mantissa near random */
+            /* exponent predictable. The mantissa used to have to look random (its upper byte at 7 bits or more), which
+             * turned away floats whose low mantissa bits are zero or few (fp16 converted from bf16, f32 upcast from
+             * bf16, quantised values): fp16 weights coded 12-14% larger. Such widths are now tried too, and scored
+             * by the order-0 screen and the trial below like any other */
+            if (he <= 6.0) { wk[nw] = hm < 7.0; ws[nw] = fw; hs[nw] = ph; nw++; }
         }
         if (!nw) return best;
     }
@@ -136,10 +143,13 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
             if (e / (8.0 * fw) >= plain) continue;
         }
         size_t z = l ? kg_encode_float(&cx, R_LZH, zl, s + a, l, fw, 0, o, L + 64) : 0;
-        if (z && (double)z / l < best) { best = (double)z / l; *bw = fw; *bh = fh; }
+        if (z && (double)z / l < best) { best = (double)z / l; *bw = fw; *bh = fh; if (weak) *weak = wk[q]; }
     }
     free(o); codec_ctx_free(&cx);
     return best;
+}
+static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, double plain, int *bw, size_t *bh) {
+    return kg_float_trial_w(s, n, st, L, zl, plain, bw, bh, NULL);
 }
 
 /* Binary64 values that were written in decimal (DEC64). A row-major .npy '<f8' table gives its row length; any other
@@ -613,11 +623,11 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (imgdone && ci < best && ci < plain * 0.80 && !native) {   /* native leaf: the integer graph may still win */
                 best = ci; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = 32 | (int)ic; keep.c = (int)ih; keep.kgw = (uint32_t)iw; chosen = 7;
             } else {
-            int w = 0; size_t hh = 0; double c = kg_float_trial(s, n, st, L, zl, plain, &w, &hh), cf = c; int fw = w; size_t fh = hh;
+            int w = 0, fweak = 0; size_t hh = 0; double c = kg_float_trial_w(s, n, st, L, zl, plain, &w, &hh, &fweak), cf = c; int fw = w; size_t fh = hh;
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
             double kgt1 = prof_now();
 #endif
-            if (cf > 1e299 && (!light || npy || numtrial)) {
+            if ((cf > 1e299 || fweak) && (!light || npy || numtrial)) {   /* a float layout found only by the relaxed mantissa test: integers are tried too */
                 w = 0; hh = 0; c = kg_num_trial(s, n, st, Lg, zl, plain, &w, &hh, native); c = KG_ADJ(c);
                 if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
             }
