@@ -1,0 +1,41 @@
+name: oss-fuzz-check
+
+# Builds the OSS-Fuzz project drafted in packaging/oss-fuzz/projects/kolmo with OSS-Fuzz's own helper and images,
+# against this checkout, for each sanitizer the project lists, and runs OSS-Fuzz's check_build (every target starts,
+# runs a few inputs and is instrumented). Nothing is sent to OSS-Fuzz: the project is copied into a local clone.
+on:
+  pull_request:
+    paths:
+      - "fuzz/**"
+      - "packaging/oss-fuzz/**"
+      - "Makefile"
+      - ".github/workflows/oss-fuzz-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, undefined, memory]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kolmo
+      - name: clone OSS-Fuzz and add the drafted project
+        run: |
+          git clone --depth 1 https://github.com/google/oss-fuzz.git oss-fuzz
+          cp -r kolmo/packaging/oss-fuzz/projects/kolmo oss-fuzz/projects/kolmo
+      - name: build the image and the fuzzers (${{ matrix.sanitizer }})
+        working-directory: oss-fuzz
+        run: |
+          python3 infra/helper.py build_image --pull kolmo
+          python3 infra/helper.py build_fuzzers --sanitizer ${{ matrix.sanitizer }} kolmo "$GITHUB_WORKSPACE/kolmo"
+          ls -la build/out/kolmo
+      - name: check_build
+        working-directory: oss-fuzz
+        run: python3 infra/helper.py check_build --sanitizer ${{ matrix.sanitizer }} kolmo

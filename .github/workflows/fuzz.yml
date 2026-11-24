@@ -1,0 +1,119 @@
+name: fuzz
+
+# Continuous coverage-guided fuzzing of the decoders with libFuzzer (clang), under ASan + UBSan.
+#   pull requests and pushes to main: 2 minutes per target
+#   nightly (03:17 UTC):              30 minutes per target, on the corpus the earlier runs grew
+#   manual run:                       choose the minutes per target
+# The targets and seed corpora come from fuzz/build.sh (the same script OSS-Fuzz runs): the seeds are the frames of
+# fuzz/corpus and the frozen frames of tests/v12. Each target's grown corpus is kept in the Actions cache between
+# runs. A crash, leak, timeout or out-of-memory input fails the job and is uploaded as an artifact
+# (fuzz-crashes-<target>); reproduce it with the uploaded target binary: ./fuzz_decompress crash-<sha1>.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "Minutes per target"
+        default: "30"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build the libFuzzer targets (ASan + UBSan)
+        env:
+          CC: clang
+          CXX: clang++
+          CFLAGS: -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=undefined -fsanitize=fuzzer-no-link
+          LIB_FUZZING_ENGINE: -fsanitize=fuzzer
+          SANITIZER: address
+        run: |
+          clang --version
+          export OUT=$PWD/out && mkdir -p "$OUT"
+          bash fuzz/build.sh
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-targets
+          path: out/
+          retention-days: 7
+
+  fuzz:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [fuzz_decompress, fuzz_limited, fuzz_stream, fuzz_stream_limited, fuzz_roundtrip, fuzz_native,
+                 fuzz_nplane, fuzz_codecs, fuzz_ext, fuzz_profile]
+    env:
+      T: ${{ matrix.target }}
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:abort_on_error=1:symbolize=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: fuzz-targets
+          path: out
+      - name: restore the grown corpus
+        uses: actions/cache/restore@v4
+        with:
+          path: corpus
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: fuzz-corpus-${{ matrix.target }}-
+      - name: fuzz
+        env:
+          EVENT: ${{ github.event_name }}
+          MINUTES: ${{ github.event.inputs.minutes }}
+        run: |
+          chmod +x out/$T
+          case "$EVENT" in
+            schedule) MIN=30 ;;
+            workflow_dispatch) MIN=$((MINUTES + 0)) ;;
+            *) MIN=2 ;;
+          esac
+          mkdir -p corpus seeds crashes
+          [ -f out/${T}_seed_corpus.zip ] && unzip -q -o out/${T}_seed_corpus.zip -d seeds
+          echo "corpus: $(ls corpus | wc -l) grown, $(ls seeds | wc -l) seeds; $MIN minutes"
+          # options as in out/$T.options (what OSS-Fuzz reads); new inputs go to corpus/, findings to crashes/
+          ./out/$T corpus seeds -max_len=1048576 -rss_limit_mb=2560 -timeout=60 -max_total_time=$((MIN * 60)) \
+            -print_final_stats=1 -artifact_prefix=crashes/ > crashes/fuzz.log 2>&1 && rc=0 || rc=$?
+          tail -n 150 crashes/fuzz.log
+          ls crashes
+          exit $rc
+      - name: merge the corpus (drop inputs that add no coverage)
+        if: always()
+        run: |
+          [ -x out/$T ] || exit 0
+          mkdir -p merged
+          ./out/$T -merge=1 -max_len=1048576 -rss_limit_mb=2560 -timeout=60 merged corpus > merge.log 2>&1 || tail -n 30 merge.log
+          if [ "$(ls merged | wc -l)" -gt 0 ]; then rm -rf corpus && mv merged corpus; fi
+          echo "corpus after merge: $(ls corpus | wc -l) inputs, $(du -sh corpus | cut -f1)"
+      - name: save the grown corpus
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/cache/save@v4
+        with:
+          path: corpus
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+      - name: upload findings
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes-${{ matrix.target }}
+          path: |
+            crashes/
+            out/${{ matrix.target }}
+          retention-days: 30

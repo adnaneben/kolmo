@@ -1,0 +1,19 @@
+# Draft for google/oss-fuzz: projects/kolmo/project.yaml. Not submitted (see packaging/oss-fuzz/README.md).
+homepage: "https://github.com/adnaneben/kolmo"
+language: c
+main_repo: "https://github.com/adnaneben/kolmo"
+# OSS-Fuzz sends crash reports and gives ClusterFuzz access to these addresses. Each must be tied to a Google account
+# (a Gmail address or any address registered as a Google account). Fill in before submitting.
+primary_contact: "OWNER-EMAIL@REPLACE-ME"
+auto_ccs:
+  - "OWNER-EMAIL@REPLACE-ME"
+sanitizers:
+  - address
+  - undefined
+  - memory
+fuzzing_engines:
+  - libfuzzer
+  - afl
+  - honggfuzz
+architectures:
+  - x86_64

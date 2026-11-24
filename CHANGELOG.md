@@ -234,6 +234,29 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   builds the PDF with tectonic. Red TODO boxes mark where the x86-64 rerun, the trained-OpenZL rematch and the tuned
   levels will replace numbers.
 
+### Security and releases
+
+- **Continuous fuzzing.** `.github/workflows/fuzz.yml` runs ten libFuzzer targets under ASan and UBSan: 2 minutes
+  each on every pull request and push to `main`, 30 minutes each nightly on the corpus earlier runs grew (kept in the
+  Actions cache). Findings fail the job and are uploaded as artifacts. `fuzz/build.sh` now also builds the streaming,
+  plane-leaf, block-decoder, extension and `--target` targets, and seeds the frame targets with every frozen frame of
+  `tests/v12` (including `r0.0.2/`) and the round trip with their originals.
+- **OSS-Fuzz application, prepared and not submitted.** `packaging/oss-fuzz/projects/kolmo/` (`project.yaml`,
+  `Dockerfile`, `build.sh`) and a note on submitting it; `.github/workflows/oss-fuzz-check.yml` builds it with
+  OSS-Fuzz's own helper for ASan, UBSan and MSan (MSan builds the C reference kernels) and runs `check_build`.
+- **Signed release files.** `.github/workflows/release.yml` (tag push or manual run only) builds the source tarball
+  and the CLI for Linux x86-64, Linux arm64 and macOS arm64, builds each twice and fails if the bytes differ, and
+  attests them with GitHub build provenance. `wheels.yml` attests the PyPI files before uploading them. Users verify
+  with `gh attestation verify <file> --repo adnaneben/kolmo` (RELEASING.md, section 7, which also states what is
+  reproducible).
+- **`SECURITY.md`**: reporting through GitHub private advisories, supported versions, fuzzing status.
+- **Fix (found by the new fuzzing): the index, query and archive functions refuse frames the decoder refuses.**
+  `kolmo_query_run`, `kolmo_index_info` and the DDP1 archive calls checked less of the frame header than the
+  decoder: a header of an unknown version, or a version-12 header with invalid flag bits, with a valid CRC could
+  claim a block of up to 4 GiB, which the query allocated before the decoder refused the frame. They now apply the
+  decoder's full header and index check, and return its error instead of allocating. No valid frame is affected:
+  every frame the decoder accepts is accepted as before (the frozen `tests/v12` corpus decodes unchanged).
+
 ## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and

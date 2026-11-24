@@ -16,7 +16,12 @@
 
 int kx_frame_open(const uint8_t *s, size_t n, kx_frame *f) {
     memset(f, 0, sizeof *f);
-    if (n < KX_HDR || memcmp(s, "CZN1", 4) || s[4] < 1) return KOLMO_ERR_CORRUPT;
+    /* the decoder's header and index check (frame_head: version, flags, checksum, block sizes): a frame the decoder
+     * would refuse is refused here too, before its block sizes are trusted for allocations, and kolmo_original_size
+     * answers for every frame this accepts (found by fuzz_ext: a version-13 header, then a version-12 header with
+     * invalid flags, each with a valid CRC, made kolmo_query_run allocate a block buffer of 2.8 and 4 GB) */
+    { uint64_t o, e; int v = frame_head(s, n, &o, &e); if (v) return v; }
+    if (n < KX_HDR) return KOLMO_ERR_CORRUPT;
     f->ver = s[4]; f->orig = kx_get64(s + 12); f->nb = kx_get32(s + 20);
     if ((uint64_t)f->nb * KX_IDX + KX_HDR > n) return KOLMO_ERR_CORRUPT;
     uint32_t hc = kolmo_crc32c(0, s, 28); hc = kolmo_crc32c(hc, s + KX_HDR, (size_t)f->nb * KX_IDX);

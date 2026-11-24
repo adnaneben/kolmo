@@ -63,6 +63,11 @@ git tag -a vX.Y.Z -m "kolmo X.Y.Z" && git push origin vX.Y.Z
 gh release create vX.Y.Z --title "kolmo X.Y.Z" --notes-file notes.md
 ```
 
+Pushing the tag also runs `.github/workflows/release.yml`: it builds the source tarball and the CLI binaries
+(Linux x86-64 and arm64, macOS arm64), signs them with build provenance, and attaches them and `SHA256SUMS` to the
+release (as a draft if `gh release create` has not run yet; publish the draft by hand). See
+[Signed release files](#7-signed-release-files).
+
 ## 3. PyPI (automatic)
 
 Pushing the tag runs `wheels.yml`. It builds the sdist and the manylinux x86-64 and aarch64 wheels,
@@ -131,3 +136,66 @@ once the project qualifies.
   submit results. This is the standard way compressors get compared publicly.
 - **Squash Compression Benchmark** and **Large Text Compression Benchmark (enwik8/enwik9)**: submit
   results produced by `benchmark/bench.sh`.
+
+## 7. Signed release files
+
+Every release file built in CI carries a GitHub build provenance attestation: a Sigstore-signed SLSA v1 statement
+that names the file's sha256, this repository, the workflow file, the commit and the tag. No key is stored: the
+signature uses the workflow's short-lived OIDC identity, and the statement is logged in Sigstore's public
+transparency log (Rekor).
+
+| Files | Workflow | When |
+|---|---|---|
+| `kolmo-X.Y.Z.tar.gz` (source), `kolmo-X.Y.Z-{linux-x86_64,linux-arm64,macos-arm64}.tar.gz` (CLI) | `release.yml` | tag push, or **Run workflow** |
+| PyPI sdist and wheels | `wheels.yml` (`publish` job) | tag push, or **Run workflow** |
+
+The Apple silicon wheel built by hand (step 3b) and the crate published with `cargo publish` (step 4) are not
+attested. The PyPI upload also attaches PEP 740 attestations, shown on each file's PyPI page.
+
+A pull request that changes `release.yml` runs it too, to check the builds, but signs and uploads nothing. The
+release workflow needs no repository secret; `wheels.yml` keeps using the `pypi` environment.
+
+### Verifying release files
+
+With the GitHub CLI (2.49 or later):
+
+```sh
+gh attestation verify kolmo-X.Y.Z-linux-x86_64.tar.gz --repo adnaneben/kolmo
+gh attestation verify kolmoc-X.Y.Z.tar.gz --repo adnaneben/kolmo          # a PyPI file, downloaded with pip download
+```
+
+It checks that the file's sha256 is covered by a signed statement from a workflow of `adnaneben/kolmo`. To also
+pin the workflow and the tag:
+
+```sh
+gh attestation verify kolmo-X.Y.Z-linux-x86_64.tar.gz --repo adnaneben/kolmo \
+  --signer-workflow adnaneben/kolmo/.github/workflows/release.yml --source-ref refs/tags/vX.Y.Z
+```
+
+Without `gh`, download the bundle (`gh attestation download`, or the release's attestation page) and verify it with
+`cosign verify-blob-attestation` or the `sigstore` Python package. The release's `SHA256SUMS` lists the same hashes.
+
+The source tarball of the release workflow is not the tarball GitHub generates for the tag
+(`archive/refs/tags/vX.Y.Z.tar.gz`, which the Homebrew formula pins); GitHub's own tarball is not attested.
+
+### Reproducible builds
+
+What holds (checked 2026-11-23):
+
+- **Source tarball.** `git archive` of the tag piped through `gzip -n`: file order, mtimes (the commit time) and
+  owners come from the commit, and `gzip -n` stores no name or time. `release.yml` builds it twice and compares.
+- **CLI binaries.** Built with `make build/kolmo ARCH=` (no `-march=native`) and `-ffile-prefix-map`. The sources are
+  compiled by relative path and use no `__DATE__`, `__TIME__` or `__TIMESTAMP__`, so the binary does not depend on
+  the checkout's path or the time. On macOS arm64 (Apple clang 21) two checkouts at different paths gave identical
+  binaries with and without the prefix map. `release.yml` builds each binary twice, from checkouts at different
+  paths on the same runner, and fails if the bytes differ.
+- **CLI tarballs.** ustar format, fixed file list and order, mode, owner `root:0`, mtime = commit time, no extended
+  attributes, `gzip -n`: identical across runs (checked on macOS).
+
+What does not hold yet:
+
+- The bytes depend on the compiler and system libraries: a rebuild on another runner image, compiler version or
+  macOS SDK can differ. Rebuilding a release bit for bit needs the same image (named in the attestation's
+  `runnerEnvironment` and in the job log) or a pinned container; there is none yet.
+- The PyPI wheels (cibuildwheel and auditwheel) and the hand-built macOS wheel have not been checked.
+- `SOURCE_DATE_EPOCH` is not needed by the build itself (nothing embeds a time); the archives take the commit time.

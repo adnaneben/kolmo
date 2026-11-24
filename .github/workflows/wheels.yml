@@ -77,12 +77,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      id-token: write
+      id-token: write          # Trusted Publishing, and the Sigstore certificate for the attestation
+      attestations: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
+      # GitHub build provenance for the sdist and wheels (verify: gh attestation verify <file> --repo adnaneben/kolmo).
+      # The PyPI upload below also attaches PEP 740 attestations, which PyPI shows on the file's page.
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist

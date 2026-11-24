@@ -1,0 +1,164 @@
+name: release
+
+# Builds the release artifacts and signs them with GitHub build provenance (Sigstore, SLSA v1 predicate):
+#   kolmo-X.Y.Z.tar.gz                  source tarball (git archive of the tag; gzip -n, mtime = commit time)
+#   kolmo-X.Y.Z-linux-x86_64.tar.gz     CLI, built on Ubuntu 22.04 (glibc 2.35 or later), baseline x86-64
+#                                       (SSE4.1/AVX2 kernels are chosen at run time)
+#   kolmo-X.Y.Z-linux-arm64.tar.gz      CLI, Ubuntu 22.04, baseline ARMv8-A
+#   kolmo-X.Y.Z-macos-arm64.tar.gz      CLI, macOS 11 or later, Apple silicon
+#   SHA256SUMS
+# Each artifact is built twice, from two checkouts at different paths, and the job fails unless both builds give the
+# same bytes (RELEASING.md, "Reproducible builds").
+#
+# Signs only on a version tag push or a manual run; nothing is built or signed on ordinary pushes. A tag push
+# attaches the files to the tag's GitHub release, creating it as a draft if it does not exist yet (a draft is not
+# public; publishing it stays a manual step). A manual run only attests and keeps the files as workflow artifacts.
+# Users verify with: gh attestation verify <file> --repo adnaneben/kolmo
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+  # a pull request that changes this file builds everything and checks reproducibility, but signs and uploads
+  # nothing (the attestation steps and the publish job are skipped)
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write          # Sigstore signing certificate for the attestation
+      attestations: write
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+      - name: source tarball, twice
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          mkdir -p dist
+          for i in 1 2; do
+            git archive --format=tar --prefix="kolmo-$V/" HEAD | gzip -n -9 > "src$i.tar.gz"
+          done
+          cmp src1.tar.gz src2.tar.gz
+          mv src1.tar.gz "dist/kolmo-$V.tar.gz"
+          sha256sum dist/*
+      - uses: actions/attest-build-provenance@v2
+        if: github.event_name != 'pull_request'
+        with:
+          subject-path: dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-source
+          path: dist/*
+
+  cli:
+    needs: source
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            name: linux-x86_64
+          - os: ubuntu-22.04-arm
+            name: linux-arm64
+          - os: macos-latest
+            name: macos-arm64
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      V: ${{ needs.source.outputs.version }}
+      PKG: kolmo-${{ needs.source.outputs.version }}-${{ matrix.name }}
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+      ZERO_AR_DATE: "1"        # macOS ar: no timestamps in the static library
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: a
+      - uses: actions/checkout@v4
+        with:
+          path: build-two/b    # a second checkout at a different path and depth
+      - name: build the CLI twice (portable flags, no -march=native)
+        run: |
+          R=$PWD
+          for d in a build-two/b; do
+            (cd "$d" && make -j4 build/kolmo ARCH= CFLAGS="-O3 -ffile-prefix-map=$R/$d=.")
+          done
+          ./a/build/kolmo -V
+          shasum -a 256 a/build/kolmo build-two/b/build/kolmo
+          cmp a/build/kolmo build-two/b/build/kolmo
+      - name: smoke test
+        run: |
+          cat a/README.md a/src/kolmo.h > in.txt
+          ./a/build/kolmo -9 in.txt -o in.kolmo && ./a/build/kolmo -d in.kolmo -o back.txt && cmp in.txt back.txt
+      - name: package, once from each build
+        run: |
+          # fixed order, owner, mode and mtime (the commit time), ustar format, no extended attributes: the archive is
+          # reproducible too, and the two packages are compared
+          T=$(git -C a log -1 --format=%ct)
+          pack() {   # pack SOURCE_CHECKOUT OUTPUT
+            local w; w=$(mktemp -d); mkdir "$w/$PKG"
+            cp "$1/build/kolmo" "$1/LICENSE" "$1/NOTICE" "$1/README.md" "$w/$PKG/"
+            chmod 755 "$w/$PKG" "$w/$PKG/kolmo"; chmod 644 "$w/$PKG/LICENSE" "$w/$PKG/NOTICE" "$w/$PKG/README.md"
+            local files="$PKG $PKG/LICENSE $PKG/NOTICE $PKG/README.md $PKG/kolmo"
+            if [ "$RUNNER_OS" = macOS ]; then
+              (cd "$w" && TZ=UTC touch -t "$(TZ=UTC date -r "$T" +%Y%m%d%H%M.%S)" $files &&
+               COPYFILE_DISABLE=1 tar --format ustar --no-recursion --no-xattrs --no-acls --no-fflags \
+                 --uid 0 --gid 0 --uname root --gname root -cf - $files) | gzip -n -9 > "$2"
+            else
+              (cd "$w" && tar --format=ustar --no-recursion --mtime="@$T" --owner=root:0 --group=root:0 \
+                 -cf - $files) | gzip -n -9 > "$2"
+            fi
+            rm -rf "$w"
+          }
+          mkdir -p dist
+          pack a "dist/$PKG.tar.gz"
+          pack build-two/b second.tar.gz
+          shasum -a 256 "dist/$PKG.tar.gz" second.tar.gz
+          cmp "dist/$PKG.tar.gz" second.tar.gz
+          tar -tvzf "dist/$PKG.tar.gz"
+      - uses: actions/attest-build-provenance@v2
+        if: github.event_name != 'pull_request'
+        with:
+          subject-path: dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.name }}
+          path: dist/*
+
+  publish:
+    # attaches the files to the tag's release (a draft if none exists yet); never runs on a manual run
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [source, cli]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: checksums and upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$TAG" * --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" * --draft --title "kolmo ${TAG#v}" --notes "Draft: artifacts from the release workflow." --repo "$GITHUB_REPOSITORY"
+          fi
