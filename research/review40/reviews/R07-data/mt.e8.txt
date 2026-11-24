@@ -1,0 +1,8 @@
+== e8: -m ratio -l 1 enwik8 -> 20798338 bytes
+peak large-allocation total: 902.1 MiB at t=3.16s; time-average 720.6 MiB over 19.54s
+    472.8 MiB x2   M kolmo_bwt_compress < bwt18_compress < compress_worker < compress_impl_p.constprop.0 < kolmo_compress < main
+    214.6 MiB x2   M compress_worker < compress_impl_p.constprop.0 < kolmo_compress < main < ? < ?
+     95.4 MiB x1   M main < ? < ? < _start
+     95.4 MiB x1   M read_input < main < ? < ? < _start
+     24.0 MiB x1   M zs_malloc < word_encode < compress_worker < compress_impl_p.constprop.0 < kolmo_compress < main
+FIN

@@ -1,0 +1,9 @@
+retina.ppm | MED/ch H0=1446728 | MED/ch H|act=1324727 | R med + diff-left=1091885 | diff-grad=967377 | diff-med=927844 | G,R-G,B-G med H|act=927539 | YCoCg med H|act=944425
+hubble_deep_field.ppm | MED/ch H0=1630321 | MED/ch H|act=1589077 | R med + diff-left=1396330 | diff-grad=1380083 | diff-med=1338039 | G,R-G,B-G med H|act=1341569 | YCoCg med H|act=1340515
+ihc.ppm | MED/ch H0=470404 | MED/ch H|act=459744 | R med + diff-left=344563 | diff-grad=308035 | diff-med=304412 | G,R-G,B-G med H|act=304685 | YCoCg med H|act=307780
+color.ppm | MED/ch H0=87210 | MED/ch H|act=71967 | R med + diff-left=101258 | diff-grad=85779 | diff-med=88766 | G,R-G,B-G med H|act=92422 | YCoCg med H|act=93072
+astronaut.ppm | MED/ch H0=435125 | MED/ch H|act=389111 | R med + diff-left=363301 | diff-grad=370032 | diff-med=353988 | G,R-G,B-G med H|act=355708 | YCoCg med H|act=355885
+chelsea.ppm | MED/ch H0=220881 | MED/ch H|act=204744 | R med + diff-left=164391 | diff-grad=161101 | diff-med=154891 | G,R-G,B-G med H|act=154304 | YCoCg med H|act=154960
+coffee.ppm | MED/ch H0=447770 | MED/ch H|act=404272 | R med + diff-left=368023 | diff-grad=372299 | diff-med=359383 | G,R-G,B-G med H|act=359524 | YCoCg med H|act=358023
+rocket.ppm | MED/ch H0=351951 | MED/ch H|act=292399 | R med + diff-left=267491 | diff-grad=264874 | diff-med=253076 | G,R-G,B-G med H|act=250619 | YCoCg med H|act=253186
+logo.ppm | MED/ch H0=179065 | MED/ch H|act=140505 | R med + diff-left=144165 | diff-grad=143231 | diff-med=135979 | G,R-G,B-G med H|act=161206 | YCoCg med H|act=152180

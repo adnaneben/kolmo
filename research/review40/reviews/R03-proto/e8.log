@@ -1,0 +1,41 @@
+enwik8 [-m ratio] 20798338 rt=ok
+enwik8 [-m ratio -B 32] 21966012 rt=ok
+enwik8 [-m ratio -B 16] 22713842 rt=ok
+version 11 mode 4 orig 51220480 nblocks 33 block 134217728
+  block 0: raw 156160 comp 16392 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.1050
+  block 1: raw 683232 comp 610934 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.8942
+  block 2: raw 208160 comp 13978 codec 18 tflag 0 plan (8, 0, 0, 0) ratio 0.0672
+  block 3: raw 887074 comp 815802 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.9197
+  block 4: raw 43230 comp 19497 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.4510
+  block 5: raw 227227 comp 216808 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.9541
+  block 6: raw 71269 comp 27276 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.3827
+  block 7: raw 291073 comp 215221 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.7394
+  block 8: raw 4863 comp 266 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.0547
+  block 9: raw 550643 comp 453680 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.8239
+  block 10: raw 69389 comp 20226 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2915
+  block 11: raw 175327 comp 149218 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.8511
+  block 12: raw 2337 comp 178 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.0762
+  block 13: raw 191085 comp 155386 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.8132
+  block 14: raw 2451 comp 179 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.0730
+  block 15: raw 106693 comp 100044 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.9377
+  block 16: raw 5947 comp 698 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.1174
+  block 17: raw 92213 comp 83795 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.9087
+  block 18: raw 971 comp 123 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.1267
+  block 19: raw 467203 comp 440300 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.9424
+  block 20: raw 3292413 comp 817932 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2484
+  block 21: raw 1499136 comp 334225 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2229
+  block 22: raw 6082560 comp 1356534 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2230
+  block 23: raw 7036928 comp 1321535 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.1878
+  block 24: raw 8192 comp 2365 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2887
+  block 25: raw 4292608 comp 1043682 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2431
+  block 26: raw 1448448 comp 325056 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2244
+  block 27: raw 1433600 comp 349994 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2441
+  block 28: raw 7059968 comp 1472561 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2086
+  block 29: raw 1196032 comp 269727 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2255
+  block 30: raw 10306560 comp 2545173 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2469
+  block 31: raw 1622016 comp 361384 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2228
+  block 32: raw 1705472 comp 368602 codec 6 tflag 0 plan (0, 0, 0, 0) ratio 0.2161
+13374160
+real	0m46.865s
+user	0m30.387s
+sys	0m0.527s

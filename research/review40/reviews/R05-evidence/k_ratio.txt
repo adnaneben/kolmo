@@ -1,0 +1,17 @@
+astronaut.ppm -m ratio 376602 RT=ok
+brick.pgm -m ratio 94766 RT=ok
+camera.pgm -m ratio 131592 RT=ok
+chelsea.ppm -m ratio 175854 RT=ok
+coffee.ppm -m ratio 392200 RT=ok
+coins.pgm -m ratio 71782 RT=ok
+color.ppm -m ratio 63232 RT=ok
+grass.pgm -m ratio 214479 RT=ok
+gravel.pgm -m ratio 189173 RT=ok
+hubble_deep_field.ppm -m ratio 1456660 RT=ok
+ihc.ppm -m ratio 353870 RT=ok
+logo.ppm -m ratio 110206 RT=ok
+moon.pgm -m ratio 30468 RT=ok
+page.pgm -m ratio 39326 RT=ok
+retina.ppm -m ratio 952413 RT=ok
+rocket.ppm -m ratio 263014 RT=ok
+text.pgm -m ratio 41466 RT=ok

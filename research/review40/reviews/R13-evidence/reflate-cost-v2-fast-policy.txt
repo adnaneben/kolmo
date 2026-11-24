@@ -1,0 +1,12 @@
+/home/user/kolmo-review40-data/R13/deflate/osdb.1.gz: deflate 4069470 B -> inflated 10085684 B; blocks 88 (stored 0 fixed 0 dynamic 88); tokens 2873477 (lit 1973299, match 900178)
+  maxwalk 64 maxins 4: literals forced (no candidate) 1900228; matches at longest setter 701555, full length 900177, escapes 1
+  model cost: flag 36532 B, setter index 80750 B, length cut 170 B, escapes 163 B = 117616 B; block headers verbatim 7809 B
+  RECONSTRUCTION INFO 125425 B = 3.08% of the deflate stream, 1.244% of the inflated bytes
+/home/user/kolmo-review40-data/R13/deflate/osdb.1.gz: deflate 4069470 B -> inflated 10085684 B; blocks 88 (stored 0 fixed 0 dynamic 88); tokens 2873477 (lit 1973299, match 900178)
+  maxwalk 8 maxins 4: literals forced (no candidate) 1900228; matches at longest setter 780006, full length 899876, escapes 302
+  model cost: flag 38136 B, setter index 59684 B, length cut 170 B, escapes 1033 B = 99024 B; block headers verbatim 7809 B
+  RECONSTRUCTION INFO 106833 B = 2.63% of the deflate stream, 1.059% of the inflated bytes
+/home/user/kolmo-review40-data/R13/deflate/osdb.1.gz: deflate 4069470 B -> inflated 10085684 B; blocks 88 (stored 0 fixed 0 dynamic 88); tokens 2873477 (lit 1973299, match 900178)
+  maxwalk 4 maxins 4: literals forced (no candidate) 1900239; matches at longest setter 836651, full length 899235, escapes 943
+  model cost: flag 39022 B, setter index 37022 B, length cut 170 B, escapes 3363 B = 79577 B; block headers verbatim 7809 B
+  RECONSTRUCTION INFO 87386 B = 2.15% of the deflate stream, 0.866% of the inflated bytes

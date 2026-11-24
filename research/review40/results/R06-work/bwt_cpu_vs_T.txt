@@ -1,0 +1,20 @@
+ratio (BWT, one block) enwik8_10m: process CPU vs -T (rc3 binary; getrusage; machine load 8.80)
+compress T1
+wall=1.948 user=0.993 sys=0.140 minflt=35203 nvcsw=1 nivcsw=158
+wall=1.668 user=0.974 sys=0.094 minflt=35205 nvcsw=1 nivcsw=143
+compress T2
+wall=2.651 user=1.647 sys=0.085 minflt=36167 nvcsw=3055 nivcsw=1723
+wall=2.354 user=1.582 sys=0.086 minflt=36167 nvcsw=2854 nivcsw=1694
+compress T4
+wall=5.164 user=3.198 sys=0.143 minflt=36442 nvcsw=13438 nivcsw=2368
+wall=2.718 user=2.805 sys=0.138 minflt=36436 nvcsw=10296 nivcsw=3676
+decompress T1
+wall=1.101 user=0.641 sys=0.028 minflt=16039 nvcsw=1 nivcsw=91
+wall=0.899 user=0.676 sys=0.032 minflt=16035 nvcsw=1 nivcsw=65
+decompress T2
+wall=1.043 user=0.672 sys=0.028 minflt=16790 nvcsw=11 nivcsw=183
+wall=0.911 user=0.656 sys=0.020 minflt=16797 nvcsw=13 nivcsw=167
+decompress T4
+wall=0.870 user=0.653 sys=0.028 minflt=17054 nvcsw=44 nivcsw=160
+wall=0.840 user=0.636 sys=0.020 minflt=17052 nvcsw=52 nivcsw=151
+RT_OK

@@ -1,0 +1,8 @@
+text: minified=0
+text: json_ms=0.029 js=0
+text: table_log_ms=25.716 t=0
+mp n=5345280 ms=195.814 t=8
+xpcall codec=7 level=0 n=5345280 z=291569 ms=44112.90
+xpcall codec=18 level=9 n=5345280 z=385376 ms=294.28
+xpblock i=0 len=5345280 inlen=5345280 plan=0 tflag=0 codec=7 cl=291569 meta=0
+compress bytes=5345280 threads=1 plan_ms=7019.649 blocks_ms=44409.271

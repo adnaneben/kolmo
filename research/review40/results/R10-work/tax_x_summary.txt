@@ -1,0 +1,8 @@
+file=xml tag=x wall_s=51.458277929 in=5345280 out=291621
+file=ooffice tag=x wall_s=51.279720396 in=6152192 out=1667380
+file=reymont tag=x wall_s=57.169020764 in=6627202 out=860830
+file=sao tag=x wall_s=27.878334108 in=7251944 out=2119258
+file=x-ray tag=x wall_s=39.233344125 in=8474240 out=3560256
+file=mr tag=x wall_s=38.940215152 in=9970564 out=1937134
+file=osdb tag=x wall_s=49.231813985 in=10085684 out=2206574
+file=dickens tag=x wall_s=81.108353796 in=10192446 out=2060806

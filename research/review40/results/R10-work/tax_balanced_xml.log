@@ -1,0 +1,17 @@
+text: minified=0
+text: json_ms=0.018 js=0
+text: table_log_ms=0.550 t=0
+mp n=5345280 ms=0.618 t=0
+xpcall codec=3 level=3 n=1048576 z=159789 ms=3.36
+xpblock i=0 len=1048576 inlen=1048576 plan=0 tflag=0 codec=3 cl=159789 meta=0
+xpcall codec=3 level=3 n=1048576 z=145926 ms=6.77
+xpblock i=1 len=1048576 inlen=1048576 plan=0 tflag=0 codec=3 cl=145926 meta=0
+xpcall codec=3 level=3 n=1048576 z=65670 ms=1.33
+xpblock i=2 len=1048576 inlen=1048576 plan=0 tflag=0 codec=3 cl=65670 meta=0
+xpcall codec=3 level=3 n=1048576 z=62263 ms=1.23
+xpblock i=3 len=1048576 inlen=1048576 plan=0 tflag=0 codec=3 cl=62263 meta=0
+xpcall codec=3 level=3 n=1048576 z=194056 ms=3.35
+xpblock i=4 len=1048576 inlen=1048576 plan=0 tflag=0 codec=3 cl=194056 meta=0
+xpcall codec=3 level=3 n=102400 z=24858 ms=0.43
+xpblock i=5 len=102400 inlen=102400 plan=0 tflag=0 codec=3 cl=24858 meta=0
+compress bytes=5345280 threads=1 plan_ms=1.544 blocks_ms=17.169

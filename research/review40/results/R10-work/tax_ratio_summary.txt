@@ -1,0 +1,12 @@
+file=dickens tag=ratio wall_s=1.845437317 in=10192446 out=2254558
+file=mozilla tag=ratio wall_s=43.211587047 in=51220480 out=13909331
+file=mr tag=ratio wall_s=8.208271592 in=9970564 out=1989774
+file=nci tag=ratio wall_s=7.664779449 in=33553445 out=1199630
+file=ooffice tag=ratio wall_s=5.112086723 in=6152192 out=2091923
+file=osdb tag=ratio wall_s=2.171508089 in=10085684 out=2206574
+file=reymont tag=ratio wall_s=.725975556 in=6627202 out=978208
+file=samba tag=ratio wall_s=11.983783146 in=21606400 out=3975940
+file=sao tag=ratio wall_s=3.361360094 in=7251944 out=2184759
+file=webster tag=ratio wall_s=5.683615509 in=41458703 out=6439824
+file=x-ray tag=ratio wall_s=4.773865237 in=8474240 out=3616667
+file=xml tag=ratio wall_s=.379395661 in=5345280 out=385428

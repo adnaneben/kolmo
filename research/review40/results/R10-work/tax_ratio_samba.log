@@ -1,0 +1,46 @@
+structure bytes=4718599 image_ms=1.123 record_ms=5.796
+kg float_ms=0.323 num_ms=0.209 img8_ms=1.363
+mp n=4718599 ms=27.974 t=0
+structure bytes=5373954 image_ms=0.601 record_ms=6.745
+kg float_ms=0.386 num_ms=0.210 img8_ms=1.669
+mp n=5373954 ms=21.003 t=0
+text: minified=0
+text: json_ms=0.096 js=0
+log: L=27746 ntok=87323 nt=1225 first=2.7 fold=0.5 cols=1.7
+text: table_log_ms=12.516 t=0
+mp n=2687019 ms=95.776 t=8
+text: minified=0
+text: json_ms=0.020 js=0
+text: table_log_ms=2.382 t=3
+mp n=1703900 ms=2.560 t=3
+structure bytes=1179639 image_ms=0.694 record_ms=6.132
+kg float_ms=0.180 num_ms=0.216 img8_ms=0.700
+mp n=1179639 ms=17.141 t=0
+text: minified=0
+text: json_ms=0.097 js=0
+text: table_log_ms=10.906 t=0
+mp n=4653054 ms=92.969 t=8
+structure bytes=1290235 image_ms=0.734 record_ms=2.028
+kg float_ms=0.202 num_ms=0.230 img8_ms=0.702
+mp n=1290235 ms=10.765 t=0
+xpcall codec=18 level=9 n=4718599 z=695592 ms=346.19
+xpblock i=0 len=4718599 inlen=4718599 plan=0 tflag=0 codec=18 cl=695592 meta=0
+xpcall codec=6 level=9 n=5373954 z=1816105 ms=3021.25
+xpcall codec=18 level=9 n=5373954 z=1841528 ms=860.80
+xpblock i=1 len=5373954 inlen=5373954 plan=0 tflag=0 codec=6 cl=1816105 meta=0
+xpcall codec=18 level=9 n=2687019 z=262220 ms=277.87
+xpblock i=2 len=2687019 inlen=2687019 plan=8 tflag=0 codec=18 cl=262220 meta=0
+xpcall codec=18 level=9 n=1703900 z=224726 ms=180.88
+xpblock i=3 len=1703900 inlen=1703900 plan=3 tflag=0 codec=18 cl=224726 meta=0
+xpcall codec=6 level=9 n=1179639 z=197675 ms=949.27
+xpcall codec=18 level=9 n=1179639 z=189306 ms=104.58
+xpblock i=4 len=1179639 inlen=1179639 plan=0 tflag=0 codec=18 cl=189306 meta=0
+xpcall codec=6 level=9 n=3357106 z=617810 ms=3613.07
+xpcall codec=18 level=9 n=3357106 z=596680 ms=361.84
+xpcall codec=18 level=9 n=524288 z=45104 ms=32.11
+xpcall codec=18 level=9 n=4653054 z=594420 ms=430.84
+xpblock i=5 len=4653054 inlen=3357106 plan=8 tflag=9 codec=18 cl=596680 meta=4
+xpcall codec=6 level=9 n=1290235 z=191135 ms=1159.25
+xpcall codec=18 level=9 n=1290235 z=186196 ms=102.14
+xpblock i=6 len=1290235 inlen=1290235 plan=0 tflag=0 codec=6 cl=191135 meta=0
+compress bytes=21606400 threads=1 plan_ms=279.933 blocks_ms=11665.213

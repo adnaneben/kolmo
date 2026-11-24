@@ -1,0 +1,17 @@
+file=astronaut.ppm tag=ximg wall_s=3.147634634 in=786447 out=323423
+file=chelsea.ppm tag=ximg wall_s=1.800404708 in=405915 out=141884
+file=coffee.ppm tag=ximg wall_s=2.963276784 in=720015 out=327180
+file=color.ppm tag=ximg wall_s=1.709240105 in=411825 out=43514
+file=hubble_deep_field.ppm tag=ximg wall_s=13.269206456 in=2616016 out=1295657
+file=ihc.ppm tag=ximg wall_s=4.132452114 in=786447 out=295128
+file=logo.ppm tag=ximg wall_s=3.584346007 in=750015 out=75456
+file=retina.ppm tag=ximg wall_s=41.258234179 in=5972780 out=678443
+file=rocket.ppm tag=ximg wall_s=5.503444768 in=819855 out=217737
+file=brick.pgm tag=ximg wall_s=1.458022828 in=262159 out=81812
+file=camera.pgm tag=ximg wall_s=1.616637400 in=262159 out=116633
+file=coins.pgm tag=ximg wall_s=.527697743 in=116367 out=67520
+file=grass.pgm tag=ximg wall_s=1.382083272 in=262159 out=206711
+file=gravel.pgm tag=ximg wall_s=1.151683805 in=262159 out=180585
+file=moon.pgm tag=ximg wall_s=1.005484432 in=262159 out=30089
+file=page.pgm tag=ximg wall_s=.319269019 in=73359 out=37340
+file=text.pgm tag=ximg wall_s=.347168806 in=77071 out=38787

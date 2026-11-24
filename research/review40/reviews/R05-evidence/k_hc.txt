@@ -1,0 +1,9 @@
+astronaut.ppm -m hc 418798 RT=ok
+chelsea.ppm -m hc 204750 RT=ok
+coffee.ppm -m hc 441320 RT=ok
+color.ppm -m hc 68900 RT=ok
+hubble_deep_field.ppm -m hc 1516933 RT=ok
+ihc.ppm -m hc 409695 RT=ok
+logo.ppm -m hc 138557 RT=ok
+retina.ppm -m hc 1116219 RT=ok
+rocket.ppm -m hc 288150 RT=ok

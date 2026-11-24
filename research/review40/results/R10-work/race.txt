@@ -1,0 +1,19 @@
+file=dickens.1m variant=race wall_s=27.314690690 in=1048576 out=236643 roundtrip=ok plan_ms=10835.596 blocks_ms=16460.516
+file=dickens.1m variant=norace wall_s=18.497560868 in=1048576 out=237706 roundtrip=ok plan_ms=9814.419 blocks_ms=8675.767
+file=xml.1m variant=race wall_s=19.896362775 in=1048576 out=21726 roundtrip=ok plan_ms=3956.698 blocks_ms=15921.259
+file=xml.1m variant=norace wall_s=7.501546379 in=1048576 out=21903 roundtrip=ok plan_ms=3264.168 blocks_ms=4231.566
+file=osdb.1m variant=race wall_s=8.465210530 in=1048576 out=250513 roundtrip=ok plan_ms=19.950 blocks_ms=8439.215
+file=osdb.1m variant=norace wall_s=4.272751941 in=1048576 out=251781 roundtrip=ok plan_ms=21.016 blocks_ms=4243.706
+file=mozilla.1m variant=race wall_s=8.619253304 in=1048576 out=738992 roundtrip=ok plan_ms=7.040 blocks_ms=8603.577
+file=mozilla.1m variant=norace wall_s=4.428378569 in=1048576 out=738992 roundtrip=ok plan_ms=7.141 blocks_ms=4413.943
+file=enwik8.0.1m variant=race wall_s=10.421793147 in=1048576 out=240643 roundtrip=ok plan_ms=59.023 blocks_ms=10355.870
+file=enwik8.0.1m variant=norace wall_s=5.220810685 in=1048576 out=241197 roundtrip=ok plan_ms=56.717 blocks_ms=5158.346
+file=nci.1m variant=race wall_s=10.536451499 in=1048576 out=34127 roundtrip=ok plan_ms=3123.593 blocks_ms=7406.950
+file=nci.1m variant=norace wall_s=7.617449322 in=1048576 out=34649 roundtrip=ok plan_ms=3419.244 blocks_ms=4191.119
+file=dickens.256k variant=race wall_s=6.679622373 in=262144 out=66008 roundtrip=ok plan_ms=1706.067 blocks_ms=4967.662
+file=dickens.256k variant=norace wall_s=2.843921248 in=262144 out=66642 roundtrip=ok plan_ms=1652.150 blocks_ms=1186.060
+file=xml.256k variant=race wall_s=4.252494875 in=262144 out=5141 roundtrip=ok plan_ms=26.136 blocks_ms=4220.408
+file=xml.256k variant=norace wall_s=1.045832352 in=262144 out=5240 roundtrip=ok plan_ms=30.027 blocks_ms=1010.316
+file=osdb.256k variant=race wall_s=3.770103892 in=262144 out=70495 roundtrip=ok plan_ms=16.335 blocks_ms=3747.795
+file=osdb.256k variant=norace wall_s=1.075069316 in=262144 out=70930 roundtrip=ok plan_ms=15.986 blocks_ms=1054.055
+DONE

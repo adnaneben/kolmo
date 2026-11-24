@@ -1,0 +1,11 @@
+text: minified=0
+text: json_ms=0.045 js=0
+log: L=26532 ntok=572788 nt=89 first=12.4 fold=0.2 cols=7.3
+text: table_log_ms=31.939 t=4
+mp n=33553445 ms=32.121 t=4
+log: L=840551 ntok=18341902 nt=1036 first=203.5 fold=4.8 cols=133.0
+xpcall codec=6 level=9 n=6812944 z=1533871 ms=5329.54
+xpcall codec=18 level=9 n=524288 z=26166 ms=22.65
+xpcall codec=18 level=9 n=33553445 z=1199578 ms=1777.41
+xpblock i=0 len=33553445 inlen=33553445 plan=4 tflag=0 codec=18 cl=1199578 meta=0
+compress bytes=33553445 threads=1 plan_ms=32.832 blocks_ms=7530.707

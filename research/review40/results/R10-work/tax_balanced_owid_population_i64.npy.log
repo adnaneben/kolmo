@@ -1,0 +1,24 @@
+structure bytes=450280 image_ms=0.493 record_ms=0.000
+xpcall codec=3 level=1 n=16376 z=6397 ms=0.17
+xpcall codec=3 level=1 n=112552 z=20796 ms=0.18
+kg float_ms=0.381 num_ms=0.741 img8_ms=0.000
+mp n=450280 ms=7.833 t=9
+xpcall codec=3 level=1 n=32768 z=10745 ms=0.11
+xpcall codec=13 level=0 n=32768 z=13733 ms=0.07
+xpcall codec=3 level=1 n=32768 z=337 ms=0.02
+xpcall codec=13 level=0 n=32768 z=4230 ms=0.05
+xpcall codec=3 level=1 n=32768 z=19 ms=0.01
+xpcall codec=13 level=0 n=32768 z=5 ms=0.03
+xpcall codec=3 level=3 n=450136 z=77813 ms=5.53
+xpcall codec=3 level=3 n=56267 z=42669 ms=0.49
+xpcall codec=3 level=3 n=56267 z=27155 ms=0.44
+xpcall codec=3 level=3 n=56267 z=6671 ms=0.17
+xpcall codec=3 level=3 n=6438 z=1822 ms=0.07
+xpcall codec=3 level=3 n=6266 z=4070 ms=0.07
+xpcall codec=3 level=3 n=56267 z=973 ms=0.04
+xpcall codec=3 level=3 n=56267 z=43 ms=0.02
+xpcall codec=3 level=3 n=56267 z=20 ms=0.01
+xpcall codec=3 level=3 n=56267 z=20 ms=0.01
+xpcall codec=3 level=3 n=56267 z=20 ms=0.01
+xpblock i=0 len=450280 inlen=450280 plan=9 tflag=0 codec=12 cl=76509 meta=0
+compress bytes=450280 threads=1 plan_ms=7.882 blocks_ms=13.611

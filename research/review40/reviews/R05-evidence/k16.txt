@@ -1,0 +1,4 @@
+mr -m ratio 1989774 RT=ok
+x-ray -m ratio 3616667 RT=ok
+mr -x 1937134 RT=ok
+x-ray -x 3560256 RT=ok

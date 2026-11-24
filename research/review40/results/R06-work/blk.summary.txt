@@ -1,0 +1,8 @@
+silesia.tar balanced size=58248819 sha=ac924913663ba181 RT_OK SAME_AS_RC3_T4
+silesia.tar eco size=50601405 sha=810a4acd35828e0e RT_OK SAME_AS_RC3_T4
+silesia.tar hc size=47624114 sha=7651b0dbae46f88d RT_OK SAME_AS_RC3_T4
+silesia.tar ratio size=40464153 sha=d8c625f7b551d4df RT_OK SAME_AS_RC3_T4
+enwik8 hc size=24390220 sha=f82bb20498d91a05 RT_OK SAME_AS_RC3_T4
+enwik8 ratio size=20798338 sha=37fe9be59f26cc28 RT_OK SAME_AS_RC3_T4
+DONE
+OVL_DONE

@@ -1,0 +1,42 @@
+== tax_ratio_mozilla.log 33 blocks
+  blk  0 len=   156160 plan=0 tflag=0 kept=lzma2 lzma2=16388 (58 ms) bwt=[(19708, 7)] bwt/lzma2=1.203
+  blk  1 len=   683232 plan=0 tflag=0 kept=lzma2 lzma2=610930 (297 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk  2 len=   208160 plan=8 tflag=0 kept=bwt lzma2=0 (0 ms) bwt=[(13974, 8)] bwt/lzma2=-
+  blk  3 len=   887074 plan=0 tflag=0 kept=lzma2 lzma2=815798 (289 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk  4 len=    43230 plan=0 tflag=0 kept=lzma2 lzma2=19493 (46 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk  5 len=   227227 plan=0 tflag=0 kept=lzma2 lzma2=216804 (96 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk  6 len=    71269 plan=0 tflag=0 kept=lzma2 lzma2=27272 (64 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk  7 len=   291073 plan=0 tflag=0 kept=lzma2 lzma2=215217 (197 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk  8 len=     4863 plan=0 tflag=0 kept=lzma2 lzma2=262 (7 ms) bwt=[(362, 0)] bwt/lzma2=1.382
+  blk  9 len=   550643 plan=0 tflag=0 kept=lzma2 lzma2=453676 (296 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk 10 len=    69389 plan=0 tflag=0 kept=lzma2 lzma2=20222 (70 ms) bwt=[(21166, 9)] bwt/lzma2=1.047
+  blk 11 len=   175327 plan=0 tflag=0 kept=lzma2 lzma2=149214 (66 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk 12 len=     2337 plan=0 tflag=0 kept=lzma2 lzma2=0 (0 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk 13 len=   191085 plan=0 tflag=0 kept=lzma2 lzma2=155382 (66 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk 14 len=     2451 plan=0 tflag=0 kept=lzma2 lzma2=0 (0 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk 15 len=   106693 plan=0 tflag=0 kept=lzma2 lzma2=100040 (39 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk 16 len=     5947 plan=0 tflag=0 kept=lzma2 lzma2=694 (3 ms) bwt=[(972, 1)] bwt/lzma2=1.401
+  blk 17 len=    92213 plan=0 tflag=0 kept=lzma2 lzma2=83791 (37 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk 18 len=      971 plan=0 tflag=0 kept=lzma2 lzma2=0 (0 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk 19 len=   467203 plan=0 tflag=0 kept=lzma2 lzma2=440296 (210 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk 20 len=  3292413 plan=0 tflag=0 kept=lzma2 lzma2=817928 (1801 ms) bwt=[(995418, 282)] bwt/lzma2=1.217
+  blk 21 len=  1499136 plan=0 tflag=0 kept=lzma2 lzma2=334221 (1073 ms) bwt=[(403672, 214)] bwt/lzma2=1.208
+  blk 22 len=  6082560 plan=0 tflag=0 kept=lzma2 lzma2=1356530 (5880 ms) bwt=[(1639962, 584)] bwt/lzma2=1.209
+  blk 23 len=  7036928 plan=0 tflag=0 kept=lzma2 lzma2=1321531 (7337 ms) bwt=[(1682144, 784)] bwt/lzma2=1.273
+  blk 24 len=     8192 plan=0 tflag=0 kept=lzma2 lzma2=2361 (5 ms) bwt=[(2718, 2)] bwt/lzma2=1.151
+  blk 25 len=  4292608 plan=0 tflag=0 kept=lzma2 lzma2=1043678 (3332 ms) bwt=[(1225790, 745)] bwt/lzma2=1.174
+  blk 26 len=  1448448 plan=0 tflag=0 kept=lzma2 lzma2=325052 (588 ms) bwt=[(384346, 106)] bwt/lzma2=1.182
+  blk 27 len=  1433600 plan=0 tflag=0 kept=lzma2 lzma2=349990 (660 ms) bwt=[(414172, 171)] bwt/lzma2=1.183
+  blk 28 len=  7059968 plan=0 tflag=0 kept=lzma2 lzma2=1472557 (4265 ms) bwt=[(1758160, 695)] bwt/lzma2=1.194
+  blk 29 len=  1196032 plan=0 tflag=0 kept=lzma2 lzma2=269723 (651 ms) bwt=[(319374, 127)] bwt/lzma2=1.184
+  blk 30 len= 10306560 plan=0 tflag=0 kept=lzma2 lzma2=2545169 (8476 ms) bwt=[(0, 0)] bwt/lzma2=-
+  blk 31 len=  1622016 plan=0 tflag=0 kept=lzma2 lzma2=361380 (978 ms) bwt=[(441270, 212)] bwt/lzma2=1.221
+  blk 32 len=  1705472 plan=0 tflag=0 kept=lzma2 lzma2=368598 (1398 ms) bwt=[(418100, 283)] bwt/lzma2=1.134
+== tax_ratio_samba.log 7 blocks
+  blk  0 len=  4718599 plan=0 tflag=0 kept=bwt lzma2=0 (0 ms) bwt=[(695592, 346)] bwt/lzma2=-
+  blk  1 len=  5373954 plan=0 tflag=0 kept=lzma2 lzma2=1816105 (3021 ms) bwt=[(1841528, 861)] bwt/lzma2=1.014
+  blk  2 len=  2687019 plan=8 tflag=0 kept=bwt lzma2=0 (0 ms) bwt=[(262220, 278)] bwt/lzma2=-
+  blk  3 len=  1703900 plan=3 tflag=0 kept=bwt lzma2=0 (0 ms) bwt=[(224726, 181)] bwt/lzma2=-
+  blk  4 len=  1179639 plan=0 tflag=0 kept=bwt lzma2=197675 (949 ms) bwt=[(189306, 105)] bwt/lzma2=0.958
+  blk  5 len=  4653054 plan=8 tflag=9 kept=bwt lzma2=617810 (3613 ms) bwt=[(596680, 362), (594420, 431)] bwt/lzma2=0.966
+  blk  6 len=  1290235 plan=0 tflag=0 kept=lzma2 lzma2=191135 (1159 ms) bwt=[(186196, 102)] bwt/lzma2=0.974

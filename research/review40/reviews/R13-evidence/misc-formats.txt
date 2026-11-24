@@ -1,0 +1,11 @@
+== -m ratio
+xray_le.u16 8474000 3616436 ok
+xray_be.u16 8474000 3616440 ok
+logo.ppm 750015 110206 ok
+ihc.ppm 786447 353870 ok
+libvendor.a 2662442 764181 ok
+DejaVuSans.ttf 759720 302691 ok
+reymont 6627202 978208 ok
+xz-9e libvendor.a 764184
+xz-9e DejaVuSans.ttf 302688
+xz-9e xray_be.u16 4432156

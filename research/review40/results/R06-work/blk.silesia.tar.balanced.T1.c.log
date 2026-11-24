@@ -1,0 +1,130 @@
+mp n=1024 ms=0.012 t=0
+text: minified=0
+text: json_ms=0.025 js=0
+log: L=6700 ntok=143265 nt=38 first=25.1 fold=0.1 cols=0.8
+text: table_log_ms=28.420 t=10
+mp n=33553445 ms=28.558 t=10
+mp n=987 ms=0.001 t=0
+text: minified=0
+text: json_ms=0.020 js=0
+text: table_log_ms=50.240 t=0
+mp n=10192446 ms=50.409 t=0
+mp n=962 ms=0.001 t=0
+text: minified=0
+text: json_ms=0.004 js=0
+text: table_log_ms=0.551 t=0
+mp n=5345280 ms=0.592 t=0
+mp n=512 ms=0.000 t=0
+structure bytes=51220480 image_ms=8.878 record_ms=0.000
+kg float_ms=17.551 num_ms=0.134 img8_ms=0.000
+record late_ms=1.687
+mp n=51220480 ms=121.507 t=0
+mp n=512 ms=0.001 t=0
+mp n=8474240 ms=35.195 t=5
+mp n=896 ms=0.001 t=0
+mp n=5300224 ms=12.387 t=7
+structure bytes=851968 image_ms=0.491 record_ms=0.000
+kg float_ms=0.619 num_ms=0.157 img8_ms=0.000
+record late_ms=5.745
+mp n=851968 ms=13.120 t=0
+mp n=512 ms=0.001 t=0
+structure bytes=10085684 image_ms=0.446 record_ms=0.000
+kg float_ms=6.582 num_ms=0.125 img8_ms=0.000
+record late_ms=13.678
+mp n=10085684 ms=29.538 t=0
+mp n=716 ms=0.001 t=0
+text: minified=0
+text: json_ms=0.007 js=0
+log: L=779 ntok=6782 nt=41 first=0.1 fold=0.0 cols=0.1
+text: table_log_ms=7.569 t=0
+mp n=6627202 ms=7.711 t=0
+mp n=638 ms=0.001 t=0
+structure bytes=7251944 image_ms=0.489 record_ms=0.000
+kg float_ms=2.298 num_ms=0.503 img8_ms=0.000
+record late_ms=42.188
+mp n=7251944 ms=54.494 t=6
+mp n=536 ms=0.001 t=0
+mp n=9970564 ms=28.817 t=5
+mp n=636 ms=0.001 t=0
+text: minified=0
+text: json_ms=0.028 js=0
+text: table_log_ms=4.410 t=0
+mp n=41458703 ms=4.584 t=0
+mp n=1009 ms=0.001 t=0
+structure bytes=21606400 image_ms=0.468 record_ms=0.000
+kg float_ms=3.774 num_ms=0.134 img8_ms=0.000
+record late_ms=1.754
+mp n=21606400 ms=12.835 t=0
+mp n=10240 ms=4.915 t=0
+R06BLK i=0 len=1024 tot=113 codec=3 tflag=0 plan=0 cpu_ms=0.060 wall_ms=0.060 fq=1
+R06BLK i=1 len=4194298 tot=268153 codec=3 tflag=12 plan=10 cpu_ms=15.905 wall_ms=19.960 fq=1
+R06BLK i=2 len=4194265 tot=260897 codec=3 tflag=12 plan=10 cpu_ms=13.258 wall_ms=17.533 fq=1
+R06BLK i=3 len=4194267 tot=258781 codec=3 tflag=12 plan=10 cpu_ms=12.083 wall_ms=20.089 fq=1
+R06BLK i=4 len=4194291 tot=234012 codec=3 tflag=12 plan=10 cpu_ms=11.301 wall_ms=19.315 fq=1
+R06BLK i=5 len=4194286 tot=264503 codec=3 tflag=12 plan=10 cpu_ms=11.942 wall_ms=15.961 fq=1
+R06BLK i=6 len=4194274 tot=213161 codec=3 tflag=12 plan=10 cpu_ms=11.091 wall_ms=28.957 fq=1
+R06BLK i=7 len=4194250 tot=258708 codec=3 tflag=12 plan=10 cpu_ms=13.141 wall_ms=21.281 fq=1
+R06BLK i=8 len=4193514 tot=268507 codec=3 tflag=12 plan=10 cpu_ms=11.809 wall_ms=19.931 fq=1
+R06BLK i=9 len=987 tot=96 codec=3 tflag=0 plan=0 cpu_ms=0.023 wall_ms=0.023 fq=1
+R06BLK i=10 len=4194304 tot=1504745 codec=3 tflag=0 plan=0 cpu_ms=29.239 wall_ms=49.380 fq=1
+R06BLK i=11 len=4194304 tot=1515053 codec=3 tflag=0 plan=0 cpu_ms=28.481 wall_ms=52.658 fq=1
+R06BLK i=12 len=1803838 tot=661947 codec=3 tflag=0 plan=0 cpu_ms=12.428 wall_ms=16.533 fq=1
+R06BLK i=13 len=962 tot=102 codec=3 tflag=0 plan=0 cpu_ms=0.019 wall_ms=0.018 fq=1
+R06BLK i=14 len=4194304 tot=420354 codec=3 tflag=0 plan=0 cpu_ms=10.338 wall_ms=19.095 fq=1
+R06BLK i=15 len=1150976 tot=215818 codec=3 tflag=0 plan=0 cpu_ms=4.101 wall_ms=8.111 fq=1
+R06BLK i=16 len=512 tot=101 codec=3 tflag=0 plan=0 cpu_ms=0.013 wall_ms=0.013 fq=1
+R06BLK i=17 len=4194304 tot=3294444 codec=3 tflag=0 plan=0 cpu_ms=16.786 wall_ms=29.734 fq=1
+R06BLK i=18 len=4194304 tot=1366556 codec=3 tflag=0 plan=0 cpu_ms=19.593 wall_ms=35.699 fq=1
+R06BLK i=19 len=4194304 tot=1348670 codec=3 tflag=0 plan=0 cpu_ms=21.639 wall_ms=37.597 fq=1
+R06BLK i=20 len=4194304 tot=1115136 codec=3 tflag=0 plan=0 cpu_ms=18.158 wall_ms=26.177 fq=1
+R06BLK i=21 len=4194304 tot=1421812 codec=3 tflag=0 plan=0 cpu_ms=20.961 wall_ms=32.906 fq=1
+R06BLK i=22 len=4194304 tot=1264859 codec=3 tflag=0 plan=0 cpu_ms=18.987 wall_ms=26.961 fq=1
+R06BLK i=23 len=4194304 tot=1376385 codec=3 tflag=0 plan=0 cpu_ms=19.708 wall_ms=27.710 fq=1
+R06BLK i=24 len=4194304 tot=1239378 codec=3 tflag=0 plan=0 cpu_ms=19.031 wall_ms=31.054 fq=1
+R06BLK i=25 len=4194304 tot=1310128 codec=3 tflag=0 plan=0 cpu_ms=19.509 wall_ms=32.152 fq=1
+R06BLK i=26 len=4194304 tot=1389239 codec=3 tflag=0 plan=0 cpu_ms=20.196 wall_ms=28.185 fq=1
+R06BLK i=27 len=4194304 tot=1562904 codec=3 tflag=0 plan=0 cpu_ms=23.545 wall_ms=40.435 fq=1
+R06BLK i=28 len=4194304 tot=1315863 codec=3 tflag=0 plan=0 cpu_ms=20.984 wall_ms=36.938 fq=1
+R06BLK i=29 len=888832 tot=299014 codec=3 tflag=0 plan=0 cpu_ms=3.241 wall_ms=7.220 fq=1
+R06BLK i=30 len=512 tot=98 codec=3 tflag=0 plan=0 cpu_ms=0.013 wall_ms=0.013 fq=1
+R06BLK i=31 len=4194304 tot=1814059 codec=3 tflag=6 plan=5 cpu_ms=7.734 wall_ms=11.738 fq=1
+R06BLK i=32 len=4194304 tot=1803190 codec=3 tflag=6 plan=5 cpu_ms=6.001 wall_ms=10.070 fq=1
+R06BLK i=33 len=85632 tot=35782 codec=3 tflag=6 plan=5 cpu_ms=0.155 wall_ms=0.154 fq=1
+R06BLK i=34 len=896 tot=106 codec=3 tflag=0 plan=0 cpu_ms=0.008 wall_ms=0.008 fq=1
+R06BLK i=35 len=4194304 tot=2012809 codec=3 tflag=8 plan=7 cpu_ms=32.015 wall_ms=55.984 fq=1
+R06BLK i=36 len=1105920 tot=466637 codec=3 tflag=8 plan=7 cpu_ms=8.250 wall_ms=12.240 fq=1
+R06BLK i=37 len=851968 tot=288584 codec=3 tflag=0 plan=0 cpu_ms=4.689 wall_ms=15.201 fq=1
+R06BLK i=38 len=512 tot=99 codec=3 tflag=0 plan=0 cpu_ms=0.013 wall_ms=0.013 fq=1
+R06BLK i=39 len=4194304 tot=1458880 codec=3 tflag=0 plan=0 cpu_ms=21.753 wall_ms=41.419 fq=1
+R06BLK i=40 len=4194304 tot=1460184 codec=3 tflag=0 plan=0 cpu_ms=18.754 wall_ms=30.896 fq=1
+R06BLK i=41 len=1697076 tot=592070 codec=3 tflag=0 plan=0 cpu_ms=7.860 wall_ms=15.814 fq=1
+R06BLK i=42 len=716 tot=107 codec=3 tflag=0 plan=0 cpu_ms=0.016 wall_ms=0.016 fq=1
+R06BLK i=43 len=4194304 tot=1216880 codec=3 tflag=0 plan=0 cpu_ms=27.911 wall_ms=52.274 fq=1
+R06BLK i=44 len=2432898 tot=726821 codec=3 tflag=0 plan=0 cpu_ms=19.282 wall_ms=31.329 fq=1
+R06BLK i=45 len=638 tot=103 codec=3 tflag=0 plan=0 cpu_ms=0.024 wall_ms=0.023 fq=1
+R06BLK i=46 len=4194316 tot=1294417 codec=3 tflag=7 plan=6 cpu_ms=31.733 wall_ms=43.705 fq=1
+R06BLK i=47 len=3057628 tot=965788 codec=3 tflag=7 plan=6 cpu_ms=17.658 wall_ms=46.184 fq=1
+R06BLK i=48 len=536 tot=101 codec=3 tflag=0 plan=0 cpu_ms=0.019 wall_ms=0.019 fq=1
+R06BLK i=49 len=4194304 tot=933437 codec=3 tflag=6 plan=5 cpu_ms=18.205 wall_ms=26.572 fq=1
+R06BLK i=50 len=4194304 tot=996707 codec=3 tflag=6 plan=5 cpu_ms=15.795 wall_ms=23.749 fq=1
+R06BLK i=51 len=1581956 tot=396472 codec=3 tflag=6 plan=5 cpu_ms=5.157 wall_ms=9.148 fq=1
+R06BLK i=52 len=636 tot=98 codec=3 tflag=0 plan=0 cpu_ms=0.017 wall_ms=0.017 fq=1
+R06BLK i=53 len=4194304 tot=1226846 codec=3 tflag=0 plan=0 cpu_ms=24.109 wall_ms=40.010 fq=1
+R06BLK i=54 len=4194304 tot=1238581 codec=3 tflag=0 plan=0 cpu_ms=25.353 wall_ms=37.335 fq=1
+R06BLK i=55 len=4194304 tot=1209804 codec=3 tflag=0 plan=0 cpu_ms=23.393 wall_ms=35.388 fq=1
+R06BLK i=56 len=4194304 tot=1250100 codec=3 tflag=0 plan=0 cpu_ms=23.996 wall_ms=36.118 fq=1
+R06BLK i=57 len=4194304 tot=1216233 codec=3 tflag=0 plan=0 cpu_ms=23.804 wall_ms=35.875 fq=1
+R06BLK i=58 len=4194304 tot=1216632 codec=3 tflag=0 plan=0 cpu_ms=24.929 wall_ms=37.334 fq=1
+R06BLK i=59 len=4194304 tot=1205161 codec=3 tflag=0 plan=0 cpu_ms=22.924 wall_ms=38.897 fq=1
+R06BLK i=60 len=4194304 tot=1236261 codec=3 tflag=0 plan=0 cpu_ms=25.245 wall_ms=41.673 fq=1
+R06BLK i=61 len=4194304 tot=1204687 codec=3 tflag=0 plan=0 cpu_ms=24.672 wall_ms=40.748 fq=1
+R06BLK i=62 len=3709967 tot=1147430 codec=3 tflag=0 plan=0 cpu_ms=30.392 wall_ms=54.470 fq=1
+R06BLK i=63 len=1009 tot=104 codec=3 tflag=0 plan=0 cpu_ms=0.038 wall_ms=0.038 fq=1
+R06BLK i=64 len=4194304 tot=853452 codec=3 tflag=0 plan=0 cpu_ms=21.520 wall_ms=37.565 fq=1
+R06BLK i=65 len=4194304 tot=1792764 codec=3 tflag=0 plan=0 cpu_ms=18.041 wall_ms=26.362 fq=1
+R06BLK i=66 len=4194304 tot=663661 codec=3 tflag=0 plan=0 cpu_ms=12.451 wall_ms=20.415 fq=1
+R06BLK i=67 len=4194304 tot=769101 codec=3 tflag=0 plan=0 cpu_ms=15.309 wall_ms=23.495 fq=1
+R06BLK i=68 len=4194304 tot=787731 codec=3 tflag=0 plan=0 cpu_ms=15.193 wall_ms=23.315 fq=1
+R06BLK i=69 len=634880 tot=116212 codec=3 tflag=0 plan=0 cpu_ms=2.675 wall_ms=6.666 fq=1
+R06BLK i=70 len=10240 tot=23 codec=3 tflag=0 plan=0 cpu_ms=0.026 wall_ms=0.026 fq=1
+compress bytes=211957760 threads=1 plan_ms=414.907 blocks_ms=1680.362

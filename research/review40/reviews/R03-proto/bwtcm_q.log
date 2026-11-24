@@ -1,0 +1,7 @@
+/home/user/kolmo-review40-data/silesia/mr n=9970564 mask=1 cm_bytes=2127555 distinct_bigram_anchors=2671
+/home/user/kolmo-review40-data/silesia/x-ray n=8474240 mask=1 cm_bytes=3680173 distinct_bigram_anchors=6954
+/home/user/kolmo-review40-data/silesia/sao n=7251944 mask=1 cm_bytes=4691352 distinct_bigram_anchors=65536
+/home/user/kolmo-review40-data/silesia/osdb n=10085684 mask=1 cm_bytes=2216822 distinct_bigram_anchors=65536
+/home/user/kolmo-review40-data/silesia/ooffice n=6152192 mask=1 cm_bytes=2621810 distinct_bigram_anchors=64618
+/home/user/kolmo-review40-data/silesia/xml n=5345280 mask=1 cm_bytes=409579 distinct_bigram_anchors=4576
+/home/user/kolmo-review40-data/silesia/reymont n=6627202 mask=1 cm_bytes=1010078 distinct_bigram_anchors=31225

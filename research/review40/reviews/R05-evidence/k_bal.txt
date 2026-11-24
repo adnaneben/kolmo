@@ -1,0 +1,17 @@
+astronaut.ppm -m balanced 431880 RT=ok
+brick.pgm -m balanced 103040 RT=ok
+camera.pgm -m balanced 144274 RT=ok
+chelsea.ppm -m balanced 216085 RT=ok
+coffee.ppm -m balanced 451723 RT=ok
+coins.pgm -m balanced 76007 RT=ok
+color.ppm -m balanced 87516 RT=ok
+grass.pgm -m balanced 216502 RT=ok
+gravel.pgm -m balanced 191245 RT=ok
+hubble_deep_field.ppm -m balanced 1673868 RT=ok
+ihc.ppm -m balanced 446539 RT=ok
+logo.ppm -m balanced 167394 RT=ok
+moon.pgm -m balanced 45204 RT=ok
+page.pgm -m balanced 42687 RT=ok
+retina.ppm -m balanced 1405205 RT=ok
+rocket.ppm -m balanced 319223 RT=ok
+text.pgm -m balanced 42222 RT=ok

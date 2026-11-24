@@ -1,0 +1,6 @@
+text: minified=0
+text: json_ms=0.046 js=0
+text: table_log_ms=6.076 t=0
+mp n=100000000 ms=146.095 t=8
+R06BLK i=0 len=100000000 tot=20798290 codec=18 tflag=0 plan=8 cpu_ms=10318.281 wall_ms=12383.680 fq=1
+compress bytes=100000000 threads=1 plan_ms=147.974 blocks_ms=12399.397

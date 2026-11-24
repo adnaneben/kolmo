@@ -1,0 +1,45 @@
+chunk off=0 len=51220480 pre=0 dict=67108864 z=13376180 first_ctl=0xe3 cpu_s=33.464
+RESULT file=/home/user/kolmo-review40-data/silesia/mozilla n=51220480 C_MiB=0 W_MiB=0 chunks=1 payload=13376188 enc_cpu_total_s=33.464 enc_cpu_max_chunk_s=33.464 dec_cpu_s=0.738 roundtrip=OK
+chunk off=0 len=8388608 pre=0 dict=8388608 z=4256121 first_ctl=0xe3 cpu_s=3.465
+chunk off=8388608 len=8388608 pre=8388608 dict=16777216 z=1682167 first_ctl=0xc3 cpu_s=5.984
+chunk off=16777216 len=8388608 pre=8388608 dict=16777216 z=1793849 first_ctl=0xc5 cpu_s=7.244
+chunk off=25165824 len=8388608 pre=8388608 dict=16777216 z=1727654 first_ctl=0xc3 cpu_s=7.696
+chunk off=33554432 len=8388608 pre=8388608 dict=16777216 z=1810486 first_ctl=0xc5 cpu_s=8.111
+chunk off=41943040 len=8388608 pre=8388608 dict=16777216 z=1983700 first_ctl=0xc3 cpu_s=7.598
+chunk off=50331648 len=888832 pre=8388608 dict=16777216 z=234332 first_ctl=0xc4 cpu_s=2.596
+RESULT file=/home/user/kolmo-review40-data/silesia/mozilla n=51220480 C_MiB=8 W_MiB=8 chunks=7 payload=13488317 enc_cpu_total_s=42.694 enc_cpu_max_chunk_s=8.111 dec_cpu_s=0.722 roundtrip=OK
+chunk off=0 len=8388608 pre=0 dict=8388608 z=4256121 first_ctl=0xe3 cpu_s=3.660
+chunk off=8388608 len=8388608 pre=8388608 dict=16777216 z=1682167 first_ctl=0xc3 cpu_s=6.821
+chunk off=16777216 len=8388608 pre=16777216 dict=33554432 z=1791152 first_ctl=0xc5 cpu_s=10.032
+chunk off=25165824 len=8388608 pre=16777216 dict=33554432 z=1708475 first_ctl=0xc3 cpu_s=11.589
+chunk off=33554432 len=8388608 pre=16777216 dict=33554432 z=1798398 first_ctl=0xc5 cpu_s=12.380
+chunk off=41943040 len=8388608 pre=16777216 dict=33554432 z=1969121 first_ctl=0xc3 cpu_s=11.852
+chunk off=50331648 len=888832 pre=16777216 dict=33554432 z=233831 first_ctl=0xc4 cpu_s=5.794
+RESULT file=/home/user/kolmo-review40-data/silesia/mozilla n=51220480 C_MiB=8 W_MiB=16 chunks=7 payload=13439273 enc_cpu_total_s=62.129 enc_cpu_max_chunk_s=12.380 dec_cpu_s=0.733 roundtrip=OK
+chunk off=0 len=16777216 pre=0 dict=16777216 z=5937868 first_ctl=0xe3 cpu_s=8.321
+chunk off=16777216 len=16777216 pre=16777216 dict=33554432 z=3492409 first_ctl=0xc5 cpu_s=16.101
+chunk off=33554432 len=16777216 pre=16777216 dict=33554432 z=3758842 first_ctl=0xc5 cpu_s=17.248
+chunk off=50331648 len=888832 pre=16777216 dict=33554432 z=233831 first_ctl=0xc4 cpu_s=6.318
+RESULT file=/home/user/kolmo-review40-data/silesia/mozilla n=51220480 C_MiB=16 W_MiB=16 chunks=4 payload=13422958 enc_cpu_total_s=47.988 enc_cpu_max_chunk_s=17.248 dec_cpu_s=0.748 roundtrip=OK
+chunk off=0 len=8388608 pre=0 dict=8388608 z=4256121 first_ctl=0xe3 cpu_s=3.511
+chunk off=8388608 len=8388608 pre=0 dict=8388608 z=1719161 first_ctl=0xe2 cpu_s=4.065
+chunk off=16777216 len=8388608 pre=0 dict=8388608 z=1836693 first_ctl=0xe5 cpu_s=4.573
+chunk off=25165824 len=8388608 pre=0 dict=8388608 z=1790032 first_ctl=0xe3 cpu_s=4.678
+chunk off=33554432 len=8388608 pre=0 dict=8388608 z=1857778 first_ctl=0xe4 cpu_s=4.547
+chunk off=41943040 len=8388608 pre=0 dict=8388608 z=2033705 first_ctl=0xe3 cpu_s=4.040
+chunk off=50331648 len=888832 pre=0 dict=1048576 z=253137 first_ctl=0xe4 cpu_s=0.326
+RESULT file=/home/user/kolmo-review40-data/silesia/mozilla n=51220480 C_MiB=8 W_MiB=0 chunks=7 payload=13746635 enc_cpu_total_s=25.740 enc_cpu_max_chunk_s=4.678 dec_cpu_s=0.713 roundtrip=OK
+chunk off=0 len=4194304 pre=0 dict=4194304 z=3244174 first_ctl=0xe3 cpu_s=1.486
+chunk off=4194304 len=4194304 pre=4194304 dict=8388608 z=1011708 first_ctl=0xc3 cpu_s=2.363
+chunk off=8388608 len=4194304 pre=8388608 dict=16777216 z=916213 first_ctl=0xc3 cpu_s=3.538
+chunk off=12582912 len=4194304 pre=8388608 dict=16777216 z=767227 first_ctl=0xc3 cpu_s=4.312
+chunk off=16777216 len=4194304 pre=8388608 dict=16777216 z=944235 first_ctl=0xc5 cpu_s=4.420
+chunk off=20971520 len=4194304 pre=8388608 dict=16777216 z=852912 first_ctl=0xc6 cpu_s=4.301
+chunk off=25165824 len=4194304 pre=8388608 dict=16777216 z=911039 first_ctl=0xc3 cpu_s=4.685
+chunk off=29360128 len=4194304 pre=8388608 dict=16777216 z=823075 first_ctl=0xc5 cpu_s=4.510
+chunk off=33554432 len=4194304 pre=8388608 dict=16777216 z=888568 first_ctl=0xc5 cpu_s=4.603
+chunk off=37748736 len=4194304 pre=8388608 dict=16777216 z=925337 first_ctl=0xc5 cpu_s=4.743
+chunk off=41943040 len=4194304 pre=8388608 dict=16777216 z=1078833 first_ctl=0xc3 cpu_s=4.641
+chunk off=46137344 len=4194304 pre=8388608 dict=16777216 z=907726 first_ctl=0xc3 cpu_s=4.578
+chunk off=50331648 len=888832 pre=8388608 dict=16777216 z=234332 first_ctl=0xc4 cpu_s=2.316
+RESULT file=/home/user/kolmo-review40-data/silesia/mozilla n=51220480 C_MiB=4 W_MiB=8 chunks=13 payload=13505387 enc_cpu_total_s=50.495 enc_cpu_max_chunk_s=4.743 dec_cpu_s=0.694 roundtrip=OK

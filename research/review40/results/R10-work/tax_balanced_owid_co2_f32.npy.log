@@ -1,0 +1,17 @@
+xpcall codec=3 level=3 n=225072 z=84248 ms=0.90
+xpcall codec=3 level=3 n=56268 z=20 ms=0.21
+xpcall codec=13 level=0 n=56268 z=5 ms=0.05
+xpcall codec=3 level=3 n=56268 z=27741 ms=0.20
+xpcall codec=3 level=3 n=56268 z=16538 ms=0.18
+xpcall codec=3 level=3 n=56268 z=2051 ms=0.05
+xpcall codec=3 level=3 n=56268 z=67 ms=0.01
+mp n=225204 ms=19.546 t=9
+xpcall codec=3 level=3 n=56269 z=20 ms=0.11
+xpcall codec=13 level=0 n=56269 z=5 ms=0.05
+xpcall codec=3 level=3 n=56269 z=27742 ms=0.20
+xpcall codec=3 level=3 n=56269 z=16539 ms=0.15
+xpcall codec=3 level=3 n=56269 z=2051 ms=0.04
+xpcall codec=3 level=3 n=56269 z=67 ms=0.01
+xpcall codec=3 level=3 n=225204 z=85375 ms=0.85
+xpblock i=0 len=225204 inlen=225204 plan=9 tflag=0 codec=12 cl=46434 meta=0
+compress bytes=225204 threads=1 plan_ms=19.575 blocks_ms=15.615

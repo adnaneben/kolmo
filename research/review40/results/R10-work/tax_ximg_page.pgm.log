@@ -1,0 +1,7 @@
+xpcall codec=3 level=3 n=146712 z=55355 ms=0.89
+xpcall codec=3 level=3 n=73344 z=42595 ms=0.64
+mp n=73359 ms=6.712 t=9
+xpcall codec=6 level=0 n=73344 z=39234 ms=21.03
+xpcall codec=18 level=9 n=73344 z=40142 ms=10.80
+xpblock i=0 len=73359 inlen=73359 plan=9 tflag=0 codec=17 cl=37288 meta=0
+compress bytes=73359 threads=1 plan_ms=6.743 blocks_ms=308.191

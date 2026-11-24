@@ -1,0 +1,49 @@
+file=sao lc=default size=2184759
+file=sao lc=3 lp=0 pb=2 level=402 size=2184759 roundtrip=ok
+file=sao lc=3 lp=0 pb=0 level=400 size=2183935 roundtrip=ok
+file=sao lc=3 lp=0 pb=1 level=401 size=2183201 roundtrip=ok
+file=sao lc=0 lp=0 pb=0 level=100 size=2176320 roundtrip=ok
+file=sao lc=0 lp=0 pb=2 level=102 size=2176126 roundtrip=ok
+file=sao lc=0 lp=2 pb=2 level=122 size=2184829 roundtrip=ok
+file=sao lc=2 lp=2 pb=2 level=322 size=2195588 roundtrip=ok
+file=sao lc=0 lp=1 pb=1 level=111 size=2178850 roundtrip=ok
+file=sao lc=3 lp=1 pb=1 level=411 size=2193685 roundtrip=ok
+file=sao lc=4 lp=0 pb=0 level=500 size=2192293 roundtrip=ok
+file=sao lc=4 lp=0 pb=2 level=502 size=2193107 roundtrip=ok
+file=sao lc=1 lp=0 pb=0 level=200 size=2176469 roundtrip=ok
+file=sao lc=0 lp=2 pb=0 level=120 size=2185435 roundtrip=ok
+file=sao lc=0 lp=1 pb=0 level=110 size=2178321 roundtrip=ok
+file=sao lc=2 lp=0 pb=0 level=300 size=2178623 roundtrip=ok
+file=x-ray lc=default size=3616667
+file=x-ray lc=3 lp=0 pb=2 level=402 size=3616667 roundtrip=ok
+file=x-ray lc=3 lp=0 pb=0 level=400 size=3616452 roundtrip=ok
+file=x-ray lc=3 lp=0 pb=1 level=401 size=3616491 roundtrip=ok
+file=x-ray lc=0 lp=0 pb=0 level=100 size=3606885 roundtrip=ok
+file=x-ray lc=0 lp=0 pb=2 level=102 size=3607077 roundtrip=ok
+file=x-ray lc=0 lp=2 pb=2 level=122 size=3637957 roundtrip=ok
+file=x-ray lc=2 lp=2 pb=2 level=322 size=3633872 roundtrip=ok
+file=x-ray lc=0 lp=1 pb=1 level=111 size=3621601 roundtrip=ok
+file=x-ray lc=3 lp=1 pb=1 level=411 size=3628069 roundtrip=ok
+file=x-ray lc=4 lp=0 pb=0 level=500 size=3626644 roundtrip=ok
+file=x-ray lc=4 lp=0 pb=2 level=502 size=3626856 roundtrip=ok
+file=x-ray lc=1 lp=0 pb=0 level=200 size=3606803 roundtrip=ok
+file=x-ray lc=0 lp=2 pb=0 level=120 size=3637790 roundtrip=ok
+file=x-ray lc=0 lp=1 pb=0 level=110 size=3621570 roundtrip=ok
+file=x-ray lc=2 lp=0 pb=0 level=300 size=3608780 roundtrip=ok
+file=ooffice lc=default size=2091923
+file=ooffice lc=3 lp=0 pb=2 level=402 size=2091923 roundtrip=ok
+file=ooffice lc=3 lp=0 pb=0 level=400 size=2094216 roundtrip=ok
+file=ooffice lc=3 lp=0 pb=1 level=401 size=2095838 roundtrip=ok
+file=ooffice lc=0 lp=0 pb=0 level=100 size=2120266 roundtrip=ok
+file=ooffice lc=0 lp=0 pb=2 level=102 size=2118016 roundtrip=ok
+file=ooffice lc=0 lp=2 pb=2 level=122 size=2120189 roundtrip=ok
+file=ooffice lc=2 lp=2 pb=2 level=322 size=2111385 roundtrip=ok
+file=ooffice lc=0 lp=1 pb=1 level=111 size=2117990 roundtrip=ok
+file=ooffice lc=3 lp=1 pb=1 level=411 size=2098793 roundtrip=ok
+file=ooffice lc=4 lp=0 pb=0 level=500 size=2091899 roundtrip=ok
+file=ooffice lc=4 lp=0 pb=2 level=502 size=2085304 roundtrip=ok
+file=ooffice lc=1 lp=0 pb=0 level=200 size=2115343 roundtrip=ok
+file=ooffice lc=0 lp=2 pb=0 level=120 size=2122664 roundtrip=ok
+file=ooffice lc=0 lp=1 pb=0 level=110 size=2120776 roundtrip=ok
+file=ooffice lc=2 lp=0 pb=0 level=300 size=2106321 roundtrip=ok
+DONE

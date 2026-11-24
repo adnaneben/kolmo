@@ -1,0 +1,7 @@
+structure bytes=7251944 image_ms=0.954 record_ms=281.131
+kg float_ms=0.354 num_ms=0.123 img8_ms=1.293
+mp n=7251944 ms=298.285 t=6
+xpcall codec=6 level=9 n=3431384 z=2184703 ms=2845.04
+xpcall codec=18 level=9 n=524288 z=345470 ms=133.94
+xpblock i=0 len=7251944 inlen=3431384 plan=6 tflag=7 codec=6 cl=2184703 meta=4
+compress bytes=7251944 threads=1 plan_ms=298.583 blocks_ms=3042.598

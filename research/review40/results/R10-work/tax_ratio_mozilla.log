@@ -1,0 +1,168 @@
+xpcall codec=3 level=3 n=156160 z=25600 ms=0.70
+mp n=156160 ms=7.386 t=0
+structure bytes=683232 image_ms=0.676 record_ms=5.741
+xpcall codec=3 level=3 n=32768 z=32778 ms=0.28
+xpcall codec=13 level=0 n=32768 z=32772 ms=0.05
+kg float_ms=0.149 num_ms=1.149 img8_ms=0.418
+mp n=683232 ms=9.795 t=0
+text: minified=0
+text: json_ms=0.011 js=0
+text: table_log_ms=1.062 t=0
+mp n=208160 ms=46.969 t=8
+structure bytes=887074 image_ms=5.216 record_ms=1.677
+kg float_ms=0.106 num_ms=0.470 img8_ms=0.362
+mp n=887074 ms=10.029 t=0
+xpcall codec=3 level=3 n=43230 z=20343 ms=0.16
+mp n=43230 ms=7.145 t=0
+xpcall codec=3 level=3 n=227226 z=217042 ms=1.45
+mp n=227227 ms=9.560 t=0
+xpcall codec=3 level=3 n=71268 z=28928 ms=0.25
+mp n=71269 ms=12.521 t=0
+structure bytes=291073 image_ms=0.323 record_ms=5.700
+kg float_ms=0.087 num_ms=0.428 img8_ms=0.399
+mp n=291073 ms=9.492 t=0
+xpcall codec=3 level=3 n=4860 z=439 ms=0.04
+mp n=4863 ms=0.466 t=0
+structure bytes=550643 image_ms=0.398 record_ms=1.639
+kg float_ms=0.095 num_ms=0.539 img8_ms=0.365
+mp n=550643 ms=9.585 t=0
+xpcall codec=3 level=3 n=69388 z=23153 ms=0.21
+mp n=69389 ms=7.629 t=0
+xpcall codec=3 level=3 n=175326 z=150957 ms=0.52
+mp n=175327 ms=8.852 t=0
+mp n=2337 ms=0.001 t=0
+xpcall codec=3 level=3 n=191084 z=160721 ms=0.70
+mp n=191085 ms=4.071 t=0
+mp n=2451 ms=0.001 t=0
+xpcall codec=3 level=3 n=106692 z=100337 ms=0.24
+mp n=106693 ms=2.884 t=0
+xpcall codec=3 level=3 n=11888 z=1019 ms=0.04
+mp n=5947 ms=0.486 t=0
+xpcall codec=3 level=3 n=92212 z=84930 ms=0.33
+mp n=92213 ms=3.212 t=0
+mp n=971 ms=0.000 t=0
+structure bytes=467203 image_ms=0.328 record_ms=1.662
+xpcall codec=3 level=3 n=32768 z=32778 ms=0.20
+xpcall codec=13 level=0 n=32768 z=32772 ms=0.06
+kg float_ms=0.092 num_ms=0.954 img8_ms=0.372
+mp n=467203 ms=4.597 t=0
+structure bytes=3292413 image_ms=0.957 record_ms=1.608
+kg float_ms=0.201 num_ms=0.137 img8_ms=0.718
+mp n=3292413 ms=11.012 t=0
+structure bytes=1499136 image_ms=0.606 record_ms=1.670
+kg float_ms=0.138 num_ms=0.117 img8_ms=0.363
+mp n=1499136 ms=8.190 t=0
+structure bytes=6082560 image_ms=0.468 record_ms=1.699
+kg float_ms=0.318 num_ms=0.126 img8_ms=1.236
+mp n=6082560 ms=11.396 t=0
+structure bytes=7036928 image_ms=0.459 record_ms=1.690
+kg float_ms=0.319 num_ms=0.133 img8_ms=1.337
+mp n=7036928 ms=12.645 t=0
+xpcall codec=3 level=3 n=8192 z=3117 ms=0.08
+mp n=8192 ms=1.363 t=0
+structure bytes=4292608 image_ms=0.460 record_ms=1.661
+kg float_ms=0.338 num_ms=0.125 img8_ms=1.046
+mp n=4292608 ms=13.754 t=0
+structure bytes=1448448 image_ms=0.565 record_ms=1.812
+kg float_ms=0.144 num_ms=0.120 img8_ms=0.398
+mp n=1448448 ms=8.413 t=0
+structure bytes=1433600 image_ms=0.667 record_ms=1.659
+kg float_ms=0.149 num_ms=0.113 img8_ms=0.370
+mp n=1433600 ms=8.266 t=0
+structure bytes=7059968 image_ms=0.450 record_ms=1.708
+kg float_ms=0.247 num_ms=0.164 img8_ms=1.373
+mp n=7059968 ms=8.956 t=0
+structure bytes=1196032 image_ms=0.572 record_ms=1.660
+kg float_ms=0.161 num_ms=0.121 img8_ms=0.372
+mp n=1196032 ms=8.374 t=0
+structure bytes=10306560 image_ms=0.470 record_ms=1.706
+kg float_ms=0.411 num_ms=0.139 img8_ms=1.933
+mp n=10306560 ms=12.382 t=0
+structure bytes=1622016 image_ms=0.536 record_ms=1.648
+kg float_ms=0.158 num_ms=0.126 img8_ms=0.377
+mp n=1622016 ms=8.588 t=0
+structure bytes=1705472 image_ms=0.540 record_ms=1.766
+kg float_ms=0.156 num_ms=0.154 img8_ms=0.417
+mp n=1705472 ms=4.580 t=0
+xpcall codec=6 level=9 n=156160 z=16388 ms=57.84
+xpcall codec=18 level=9 n=156160 z=19708 ms=6.56
+xpblock i=0 len=156160 inlen=156160 plan=0 tflag=0 codec=6 cl=16388 meta=0
+xpcall codec=6 level=9 n=683232 z=610930 ms=297.12
+xpblock i=1 len=683232 inlen=683232 plan=0 tflag=0 codec=6 cl=610930 meta=0
+xpcall codec=18 level=9 n=208160 z=13974 ms=8.14
+xpblock i=2 len=208160 inlen=208160 plan=8 tflag=0 codec=18 cl=13974 meta=0
+xpcall codec=6 level=9 n=887074 z=815798 ms=289.43
+xpblock i=3 len=887074 inlen=887074 plan=0 tflag=0 codec=6 cl=815798 meta=0
+xpcall codec=6 level=9 n=43230 z=19493 ms=45.83
+xpblock i=4 len=43230 inlen=43230 plan=0 tflag=0 codec=6 cl=19493 meta=0
+xpcall codec=6 level=9 n=227227 z=216804 ms=96.30
+xpblock i=5 len=227227 inlen=227227 plan=0 tflag=0 codec=6 cl=216804 meta=0
+xpcall codec=6 level=9 n=71269 z=27272 ms=64.22
+xpblock i=6 len=71269 inlen=71269 plan=0 tflag=0 codec=6 cl=27272 meta=0
+xpcall codec=6 level=9 n=291073 z=215217 ms=196.73
+xpblock i=7 len=291073 inlen=291073 plan=0 tflag=0 codec=6 cl=215217 meta=0
+xpcall codec=6 level=9 n=4863 z=262 ms=6.90
+xpcall codec=18 level=9 n=4863 z=362 ms=0.42
+xpblock i=8 len=4863 inlen=4863 plan=0 tflag=0 codec=6 cl=262 meta=0
+xpcall codec=6 level=9 n=550643 z=453676 ms=296.13
+xpblock i=9 len=550643 inlen=550643 plan=0 tflag=0 codec=6 cl=453676 meta=0
+xpcall codec=6 level=9 n=69389 z=20222 ms=69.69
+xpcall codec=18 level=9 n=69389 z=21166 ms=8.79
+xpblock i=10 len=69389 inlen=69389 plan=0 tflag=0 codec=6 cl=20222 meta=0
+xpcall codec=6 level=9 n=175327 z=149214 ms=65.61
+xpblock i=11 len=175327 inlen=175327 plan=0 tflag=0 codec=6 cl=149214 meta=0
+xpblock i=12 len=2337 inlen=2337 plan=0 tflag=0 codec=6 cl=174 meta=0
+xpcall codec=6 level=9 n=191085 z=155382 ms=66.41
+xpblock i=13 len=191085 inlen=191085 plan=0 tflag=0 codec=6 cl=155382 meta=0
+xpblock i=14 len=2451 inlen=2451 plan=0 tflag=0 codec=6 cl=175 meta=0
+xpcall codec=6 level=9 n=106693 z=100040 ms=38.70
+xpblock i=15 len=106693 inlen=106693 plan=0 tflag=0 codec=6 cl=100040 meta=0
+xpcall codec=6 level=9 n=5947 z=694 ms=2.99
+xpcall codec=18 level=9 n=5947 z=972 ms=0.56
+xpblock i=16 len=5947 inlen=5947 plan=0 tflag=0 codec=6 cl=694 meta=0
+xpcall codec=6 level=9 n=92213 z=83791 ms=37.38
+xpblock i=17 len=92213 inlen=92213 plan=0 tflag=0 codec=6 cl=83791 meta=0
+xpblock i=18 len=971 inlen=971 plan=0 tflag=0 codec=6 cl=119 meta=0
+xpcall codec=6 level=9 n=467203 z=440296 ms=210.43
+xpblock i=19 len=467203 inlen=467203 plan=0 tflag=0 codec=6 cl=440296 meta=0
+xpcall codec=6 level=9 n=3292413 z=817928 ms=1800.92
+xpcall codec=18 level=9 n=3292413 z=995418 ms=282.27
+xpblock i=20 len=3292413 inlen=3292413 plan=0 tflag=0 codec=6 cl=817928 meta=0
+xpcall codec=6 level=9 n=1499136 z=334221 ms=1073.49
+xpcall codec=18 level=9 n=1499136 z=403672 ms=213.89
+xpblock i=21 len=1499136 inlen=1499136 plan=0 tflag=0 codec=6 cl=334221 meta=0
+xpcall codec=6 level=9 n=6082560 z=1356530 ms=5880.06
+xpcall codec=18 level=9 n=6082560 z=1639962 ms=584.06
+xpblock i=22 len=6082560 inlen=6082560 plan=0 tflag=0 codec=6 cl=1356530 meta=0
+xpcall codec=6 level=9 n=7036928 z=1321531 ms=7337.05
+xpcall codec=18 level=9 n=7036928 z=1682144 ms=783.74
+xpblock i=23 len=7036928 inlen=7036928 plan=0 tflag=0 codec=6 cl=1321531 meta=0
+xpcall codec=6 level=9 n=8192 z=2361 ms=4.53
+xpcall codec=18 level=9 n=8192 z=2718 ms=1.66
+xpblock i=24 len=8192 inlen=8192 plan=0 tflag=0 codec=6 cl=2361 meta=0
+xpcall codec=6 level=9 n=4292608 z=1043678 ms=3331.50
+xpcall codec=18 level=9 n=4292608 z=1225790 ms=744.95
+xpblock i=25 len=4292608 inlen=4292608 plan=0 tflag=0 codec=6 cl=1043678 meta=0
+xpcall codec=6 level=9 n=1448448 z=325052 ms=588.09
+xpcall codec=18 level=9 n=1448448 z=384346 ms=106.16
+xpblock i=26 len=1448448 inlen=1448448 plan=0 tflag=0 codec=6 cl=325052 meta=0
+xpcall codec=6 level=9 n=1433600 z=349990 ms=659.97
+xpcall codec=18 level=9 n=1433600 z=414172 ms=170.58
+xpblock i=27 len=1433600 inlen=1433600 plan=0 tflag=0 codec=6 cl=349990 meta=0
+xpcall codec=6 level=9 n=7059968 z=1472557 ms=4264.78
+xpcall codec=18 level=9 n=7059968 z=1758160 ms=694.59
+xpblock i=28 len=7059968 inlen=7059968 plan=0 tflag=0 codec=6 cl=1472557 meta=0
+xpcall codec=6 level=9 n=1196032 z=269723 ms=650.52
+xpcall codec=18 level=9 n=1196032 z=319374 ms=126.88
+xpblock i=29 len=1196032 inlen=1196032 plan=0 tflag=0 codec=6 cl=269723 meta=0
+xpcall codec=18 level=9 n=524288 z=144488 ms=59.49
+xpcall codec=6 level=1 n=524288 z=123121 ms=206.25
+xpcall codec=6 level=9 n=10306560 z=2545169 ms=8476.35
+xpblock i=30 len=10306560 inlen=10306560 plan=0 tflag=0 codec=6 cl=2545169 meta=0
+xpcall codec=6 level=9 n=1622016 z=361380 ms=977.74
+xpcall codec=18 level=9 n=1622016 z=441270 ms=211.75
+xpblock i=31 len=1622016 inlen=1622016 plan=0 tflag=0 codec=6 cl=361380 meta=0
+xpcall codec=6 level=9 n=1705472 z=368598 ms=1398.29
+xpcall codec=18 level=9 n=1705472 z=418100 ms=283.24
+xpblock i=32 len=1705472 inlen=1705472 plan=0 tflag=0 codec=6 cl=368598 meta=0
+compress bytes=51220480 threads=1 plan_ms=274.693 blocks_ms=42832.069

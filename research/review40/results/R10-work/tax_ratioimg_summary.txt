@@ -1,0 +1,17 @@
+file=astronaut.ppm tag=ratioimg wall_s=.722275359 in=786447 out=376602
+file=chelsea.ppm tag=ratioimg wall_s=.240564195 in=405915 out=175854
+file=coffee.ppm tag=ratioimg wall_s=.436422387 in=720015 out=392200
+file=color.ppm tag=ratioimg wall_s=.448265597 in=411825 out=63232
+file=hubble_deep_field.ppm tag=ratioimg wall_s=1.637676252 in=2616016 out=1456660
+file=ihc.ppm tag=ratioimg wall_s=.419229340 in=786447 out=353870
+file=logo.ppm tag=ratioimg wall_s=.719462309 in=750015 out=110206
+file=retina.ppm tag=ratioimg wall_s=13.035395404 in=5972780 out=952413
+file=rocket.ppm tag=ratioimg wall_s=.659307077 in=819855 out=263014
+file=brick.pgm tag=ratioimg wall_s=.149327391 in=262159 out=94766
+file=camera.pgm tag=ratioimg wall_s=.126731967 in=262159 out=131592
+file=coins.pgm tag=ratioimg wall_s=.075206470 in=116367 out=71782
+file=grass.pgm tag=ratioimg wall_s=.107456612 in=262159 out=214479
+file=gravel.pgm tag=ratioimg wall_s=.109053512 in=262159 out=189173
+file=moon.pgm tag=ratioimg wall_s=.277879419 in=262159 out=30468
+file=page.pgm tag=ratioimg wall_s=.075936839 in=73359 out=39326
+file=text.pgm tag=ratioimg wall_s=.059704690 in=77071 out=41466

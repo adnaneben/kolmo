@@ -1,0 +1,95 @@
+mp n=1024 ms=0.014 t=0
+text: minified=0
+text: json_ms=0.046 js=0
+log: L=26532 ntok=572788 nt=89 first=8.0 fold=0.2 cols=7.4
+text: table_log_ms=19.527 t=4
+mp n=33553445 ms=23.737 t=4
+mp n=987 ms=0.001 t=0
+text: minified=0
+text: json_ms=0.020 js=0
+text: table_log_ms=16.071 t=0
+mp n=10192446 ms=198.904 t=8
+mp n=962 ms=0.001 t=0
+text: minified=0
+text: json_ms=0.004 js=0
+text: table_log_ms=7.407 t=0
+mp n=5345280 ms=68.798 t=8
+mp n=512 ms=0.001 t=0
+structure bytes=51220480 image_ms=0.641 record_ms=1.684
+kg float_ms=0.591 num_ms=0.139 img8_ms=6.947
+mp n=51220480 ms=33.414 t=0
+mp n=512 ms=0.001 t=0
+structure bytes=8474240 image_ms=13.385 record_ms=5.756
+kg float_ms=0.344 num_ms=10.654 img8_ms=1.657
+mp n=8474240 ms=49.832 t=5
+mp n=896 ms=0.001 t=0
+structure bytes=5300224 image_ms=0.492 record_ms=1.691
+kg float_ms=0.342 num_ms=0.128 img8_ms=1.220
+mp n=5300224 ms=29.136 t=7
+structure bytes=851968 image_ms=0.506 record_ms=1.641
+kg float_ms=0.114 num_ms=0.175 img8_ms=0.461
+mp n=851968 ms=19.838 t=0
+mp n=512 ms=0.001 t=0
+structure bytes=10085684 image_ms=0.503 record_ms=39.395
+kg float_ms=0.404 num_ms=0.127 img8_ms=5.857
+mp n=10085684 ms=65.608 t=0
+mp n=716 ms=0.001 t=0
+text: minified=0
+text: json_ms=0.006 js=0
+log: L=2711 ntok=25463 nt=59 first=0.4 fold=0.0 cols=1.1
+text: table_log_ms=22.917 t=0
+mp n=6627202 ms=134.906 t=0
+mp n=638 ms=0.001 t=0
+structure bytes=7251944 image_ms=0.638 record_ms=219.749
+kg float_ms=0.382 num_ms=0.127 img8_ms=1.316
+mp n=7251944 ms=240.412 t=6
+mp n=536 ms=0.001 t=0
+structure bytes=9970564 image_ms=11.405 record_ms=1.665
+kg float_ms=0.304 num_ms=7.747 img8_ms=9.191
+mp n=9970564 ms=43.234 t=5
+mp n=636 ms=0.001 t=0
+text: minified=0
+text: json_ms=0.077 js=0
+text: table_log_ms=5.879 t=0
+mp n=41458703 ms=66.779 t=0
+mp n=1009 ms=0.001 t=0
+structure bytes=21606400 image_ms=0.510 record_ms=1.681
+kg float_ms=0.506 num_ms=0.138 img8_ms=2.584
+mp n=21606400 ms=8.614 t=0
+mp n=10240 ms=0.764 t=0
+R06BLK i=0 len=1024 tot=105 codec=3 tflag=0 plan=0 cpu_ms=0.669 wall_ms=0.668 fq=1
+log: L=419611 ntok=9170710 nt=608 first=82.8 fold=2.3 cols=95.9
+R06BLK i=1 len=16777200 tot=823294 codec=3 tflag=5 plan=4 cpu_ms=1241.761 wall_ms=2168.861 fq=1
+log: L=420940 ntok=9171192 nt=570 first=99.9 fold=6.5 cols=113.3
+R06BLK i=2 len=16776245 tot=822465 codec=3 tflag=5 plan=4 cpu_ms=1377.847 wall_ms=2239.860 fq=1
+R06BLK i=3 len=987 tot=92 codec=3 tflag=0 plan=0 cpu_ms=0.296 wall_ms=0.296 fq=1
+R06BLK i=4 len=10192446 tot=2728203 codec=3 tflag=9 plan=8 cpu_ms=5440.087 wall_ms=9796.336 fq=1
+R06BLK i=5 len=962 tot=88 codec=3 tflag=0 plan=0 cpu_ms=0.231 wall_ms=0.231 fq=1
+R06BLK i=6 len=5345280 tot=443576 codec=3 tflag=9 plan=8 cpu_ms=2544.745 wall_ms=5150.902 fq=1
+R06BLK i=7 len=512 tot=88 codec=3 tflag=0 plan=0 cpu_ms=0.211 wall_ms=0.211 fq=1
+R06BLK i=8 len=16777216 tot=6326351 codec=3 tflag=0 plan=0 cpu_ms=6534.908 wall_ms=13294.127 fq=1
+R06BLK i=9 len=16777216 tot=4157166 codec=3 tflag=0 plan=0 cpu_ms=8756.081 wall_ms=16523.964 fq=1
+R06BLK i=10 len=16777216 tot=4418709 codec=3 tflag=0 plan=0 cpu_ms=7545.044 wall_ms=13055.527 fq=1
+R06BLK i=11 len=888832 tot=269682 codec=3 tflag=0 plan=0 cpu_ms=181.160 wall_ms=260.086 fq=1
+R06BLK i=12 len=512 tot=85 codec=3 tflag=0 plan=0 cpu_ms=0.240 wall_ms=0.240 fq=1
+R06BLK i=13 len=8474240 tot=3649588 codec=3 tflag=6 plan=5 cpu_ms=768.182 wall_ms=1183.126 fq=1
+R06BLK i=14 len=896 tot=92 codec=3 tflag=0 plan=0 cpu_ms=0.206 wall_ms=0.206 fq=1
+R06BLK i=15 len=5300224 tot=2014465 codec=3 tflag=8 plan=7 cpu_ms=2470.188 wall_ms=4645.185 fq=1
+R06BLK i=16 len=851968 tot=230825 codec=3 tflag=0 plan=0 cpu_ms=209.321 wall_ms=423.179 fq=1
+R06BLK i=17 len=512 tot=85 codec=3 tflag=0 plan=0 cpu_ms=0.197 wall_ms=0.197 fq=1
+R06BLK i=18 len=10085684 tot=3100177 codec=3 tflag=0 plan=0 cpu_ms=5543.581 wall_ms=10532.978 fq=1
+R06BLK i=19 len=716 tot=92 codec=3 tflag=0 plan=0 cpu_ms=0.452 wall_ms=0.451 fq=1
+R06BLK i=20 len=6627202 tot=1348462 codec=3 tflag=0 plan=0 cpu_ms=4884.192 wall_ms=8838.339 fq=1
+R06BLK i=21 len=638 tot=84 codec=3 tflag=0 plan=0 cpu_ms=0.332 wall_ms=0.332 fq=1
+R06BLK i=22 len=7251944 tot=2214214 codec=3 tflag=7 plan=6 cpu_ms=980.992 wall_ms=1764.941 fq=1
+R06BLK i=23 len=536 tot=85 codec=3 tflag=0 plan=0 cpu_ms=0.291 wall_ms=0.291 fq=1
+R06BLK i=24 len=9970564 tot=2257468 codec=3 tflag=6 plan=5 cpu_ms=2789.220 wall_ms=4447.618 fq=1
+R06BLK i=25 len=636 tot=89 codec=3 tflag=0 plan=0 cpu_ms=0.309 wall_ms=0.309 fq=1
+R06BLK i=26 len=16777216 tot=3575381 codec=3 tflag=0 plan=0 cpu_ms=12027.387 wall_ms=16234.420 fq=1
+R06BLK i=27 len=16777216 tot=3516388 codec=3 tflag=0 plan=0 cpu_ms=12016.053 wall_ms=15576.076 fq=1
+R06BLK i=28 len=7904271 tot=1766199 codec=3 tflag=0 plan=0 cpu_ms=5724.562 wall_ms=9745.277 fq=1
+R06BLK i=29 len=1009 tot=90 codec=3 tflag=0 plan=0 cpu_ms=0.380 wall_ms=0.380 fq=1
+R06BLK i=30 len=16777216 tot=3265851 codec=3 tflag=0 plan=0 cpu_ms=7325.547 wall_ms=11803.608 fq=1
+R06BLK i=31 len=4829184 tot=693993 codec=3 tflag=0 plan=0 cpu_ms=1804.365 wall_ms=2145.736 fq=1
+R06BLK i=32 len=10240 tot=22 codec=3 tflag=0 plan=0 cpu_ms=0.060 wall_ms=0.060 fq=1
+compress bytes=211957760 threads=1 plan_ms=985.569 blocks_ms=149901.946

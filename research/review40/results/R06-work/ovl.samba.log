@@ -1,0 +1,6 @@
+chunk off=0 len=21606400 pre=0 dict=33554432 z=3739464 first_ctl=0xe2 cpu_s=13.765
+RESULT file=/home/user/kolmo-review40-data/silesia/samba n=21606400 C_MiB=0 W_MiB=0 chunks=1 payload=3739472 enc_cpu_total_s=13.765 enc_cpu_max_chunk_s=13.765 dec_cpu_s=0.200 roundtrip=OK
+chunk off=0 len=8388608 pre=0 dict=8388608 z=2225589 first_ctl=0xe2 cpu_s=3.586
+chunk off=8388608 len=8388608 pre=8388608 dict=16777216 z=912183 first_ctl=0xc7 cpu_s=8.979
+chunk off=16777216 len=4829184 pre=8388608 dict=16777216 z=612840 first_ctl=0xc6 cpu_s=7.349
+RESULT file=/home/user/kolmo-review40-data/silesia/samba n=21606400 C_MiB=8 W_MiB=8 chunks=3 payload=3750620 enc_cpu_total_s=19.914 enc_cpu_max_chunk_s=8.979 dec_cpu_s=0.181 roundtrip=OK

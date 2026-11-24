@@ -1,0 +1,7 @@
+{"label": "fdpath|silesia.tar|mode3 level9", "cmd": ["nice", "./filepath", "3", "9", "1", "/home/user/kolmo-review40-data/silesia.tar", "fp2.3.k"], "load1": 6.87255859375, "runs": [{"run": 0, "wall_s": 8.1315, "peak_rss_kb": 185252, "avg_rss_kb": 164297, "exit": 0}], "best_wall_s": 8.1315, "t": "2026-11-23T20:42:23Z"}
+{"label":"size|fdpath silesia.tar mode3 level9","bytes":52357417,"sha":"c5fdba5c40f28c94","roundtrip":"OK"}
+{"label": "fdpath|silesia.tar|mode2 level0", "cmd": ["nice", "./filepath", "2", "0", "1", "/home/user/kolmo-review40-data/silesia.tar", "fp2.2.k"], "load1": 6.66748046875, "runs": [{"run": 0, "wall_s": 54.6212, "peak_rss_kb": 253464, "avg_rss_kb": 231128, "exit": 0}], "best_wall_s": 54.6212, "t": "2026-11-23T20:43:49Z"}
+{"label":"size|fdpath silesia.tar mode2 level0","bytes":50601405,"sha":"810a4acd35828e0e","roundtrip":"OK"}
+{"label": "fdpath|silesia.tar|mode4 level1", "cmd": ["nice", "./filepath", "4", "1", "1", "/home/user/kolmo-review40-data/silesia.tar", "fp2.4.k"], "load1": 6.85986328125, "runs": [{"run": 0, "wall_s": 29.0941, "peak_rss_kb": 503284, "avg_rss_kb": 319195, "exit": 0}], "best_wall_s": 29.0941, "t": "2026-11-23T20:47:06Z"}
+{"label":"size|fdpath silesia.tar mode4 level1","bytes":43282836,"sha":"9f6620bd53a30d7d","roundtrip":"OK"}
+DONE
