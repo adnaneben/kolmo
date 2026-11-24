@@ -20,7 +20,7 @@ on:
         description: "lzbench tiers to run: fast slow files claims"
         default: fast slow files claims
       cpu:
-        description: "only run lzbench jobs on this CPU vendor (any, amd, intel); a job on another CPU fails at once, so re-run failed jobs until each lands on one"
+        description: "only run lzbench jobs on this CPU (any, amd, intel, zen5); a job on another CPU fails at once, so re-run failed jobs until each lands on one"
         default: any
       cli:
         description: also run the command-line comparison (one thread and all cores)
@@ -38,8 +38,9 @@ env:
   RUNS: ${{ inputs.runs || '3' }}
   # A push whose commit message contains "[claims only]" runs only the claims tier (dispatch needs the workflow on main).
   TIERS: ${{ inputs.tiers || (contains(github.event.head_commit.message, '[claims only]') && 'claims') || 'fast slow files claims' }}
-  # The CPU vendor the lzbench jobs must run on: input cpu, or "[amd]" / "[intel]" in a pushed commit message.
-  CPU_WANT: ${{ (inputs.cpu == 'amd' || (!inputs.cpu && contains(github.event.head_commit.message, '[amd]'))) && 'AuthenticAMD' || (inputs.cpu == 'intel' || (!inputs.cpu && contains(github.event.head_commit.message, '[intel]'))) && 'GenuineIntel' || '' }}
+  # The CPU the lzbench jobs must run on: vendor, or vendor/family (AMD family 26 = Zen 5); input cpu, or "[amd]",
+  # "[intel]" or "[zen5]" in a pushed commit message.
+  CPU_WANT: ${{ (inputs.cpu == 'zen5' || (!inputs.cpu && contains(github.event.head_commit.message, '[zen5]'))) && 'AuthenticAMD/26' || (inputs.cpu == 'amd' || (!inputs.cpu && contains(github.event.head_commit.message, '[amd]'))) && 'AuthenticAMD' || (inputs.cpu == 'intel' || (!inputs.cpu && contains(github.event.head_commit.message, '[intel]'))) && 'GenuineIntel' || '' }}
   # lzbench 2.4.1 at the commit the Mac run used (no 2.4.1 tag exists upstream)
   LZBENCH_COMMIT: 9be0e25505b1317cde1afe70d2114164eb4faf8f
   # the codecs of the report's settings (queue.sh); everything else is left out of the build
@@ -114,6 +115,7 @@ jobs:
         name: runner CPU must be ${{ env.CPU_WANT }}
         run: |
           got=$(awk -F': ' '/^vendor_id/ {print $2; exit}' /proc/cpuinfo)
+          case "$CPU_WANT" in */*) got="$got/$(awk -F': ' '/^cpu family/ {print $2; exit}' /proc/cpuinfo)" ;; esac
           grep -m1 '^model name' /proc/cpuinfo
           if [ "$got" != "$CPU_WANT" ]; then
             echo "::error::runner CPU is $got, not $CPU_WANT: re-run this job (gh run rerun --failed) to get another runner"
