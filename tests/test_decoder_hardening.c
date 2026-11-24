@@ -201,7 +201,9 @@ static int64_t decode_n(const uint8_t *f, size_t n, uint8_t **out, int threads, 
  * that failed. Refused now before anything is allocated; and no abort() is left in the audio coder. */
 static void audio_chunk_cap(void) {
     size_t n; uint8_t *f = slurp("tests/vectors/review40/aud-chunk30.kolmo", &n), *out = NULL;
-    int64_t r = decode_n(f, n, &out, 1, 0);
+    /* no memory limit: the frame claims 2 GiB of output, which the auto limit (half of RAM) refuses on small hosts
+     * before the KAU1 header is read; this checks the header refusal itself (the output buffer is never touched) */
+    int64_t r = decode_n(f, n, &out, 1, KOLMO_MEM_MAX);
     printf("audio: forged chunk_log2 30 -> %lld\n", (long long)r);
     assert(r == KOLMO_ERR_CORRUPT); free(out); free(f);
     size_t on, wn; uint8_t *w = slurp("tests/v12/tone.wav", &wn); f = slurp("tests/v12/tone.wav.eco.kolmo", &on);
