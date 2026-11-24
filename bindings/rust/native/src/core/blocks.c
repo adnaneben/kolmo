@@ -93,6 +93,13 @@ typedef struct {
     uint64_t xcap;          /* the explicit cap only (0: none): the one memory figure format decisions may read */
     _Atomic uint64_t dneed; /* the largest block decode figure (blk_dec_need), declared in header byte 11 */
     int cm_leaves;          /* ultra level 2: graph leaves may be context mixing */
+    /* dispatch (review40 #7): the longest unstarted block inside the window first; the window is the blocks that start
+     * less than win bytes after the first block not yet written, so the reorder buffer (finished blocks waiting for
+     * an earlier one) never holds more than the blocks of win input bytes. Under wmu. */
+    uint8_t *started; uint32_t scan; uint64_t win; pthread_cond_t wcv; int wcv_ready;
+    size_t held, held_max;  /* bytes in the reorder buffer now, and at most (tests) */
+    kolmo_budget *bud;      /* the call's elastic thread budget: threads a worker gives back when it runs out of blocks */
+    int threads;            /* the call's thread count */
 } job_t;
 static void job_note_need(job_t *j, uint64_t v) {
     uint64_t cur = atomic_load_explicit(&j->dneed, memory_order_relaxed);
@@ -110,7 +117,7 @@ static void drain_blocks(job_t *j) {
     while (j->wnext < j->nb && j->out[j->wnext]) {
         uint32_t next = j->wnext++;
         append_bytes(j, j->out[next], j->outlen[next]);
-        free(j->out[next]); j->out[next] = NULL;
+        free(j->out[next]); j->out[next] = NULL; j->held -= j->outlen[next];
     }
 }
 
@@ -122,6 +129,7 @@ static void emit_block(job_t *j, uint32_t i, const uint8_t *header, const uint8_
         else { append_bytes(j, header, 4); append_bytes(j, body, size - 4); }
         j->wnext++;
         drain_blocks(j);
+        if (j->wcv_ready) pthread_cond_broadcast(&j->wcv);   /* the window moved: a waiting worker may start a block */
         pthread_mutex_unlock(&j->wmu);
         return;
     }
@@ -131,9 +139,38 @@ static void emit_block(job_t *j, uint32_t i, const uint8_t *header, const uint8_
     if (!header) memcpy(saved, body, size);
     else { memcpy(saved, header, 4); memcpy(saved + 4, body, size - 4); }
     pthread_mutex_lock(&j->wmu);
-    j->out[i] = saved; j->outlen[i] = size;
+    j->out[i] = saved; j->outlen[i] = size; j->held += size;
+    if (j->held > j->held_max) j->held_max = j->held;
+    uint32_t w0 = j->wnext;
     drain_blocks(j);
+    if (j->wcv_ready && j->wnext != w0) pthread_cond_broadcast(&j->wcv);
     pthread_mutex_unlock(&j->wmu);
+}
+
+/* the next block to code: the longest unstarted one in the window (ties: the earliest), or -1 when every block has
+ * started or the call failed. A worker that finds the window full of started blocks waits for the next write; it
+ * gives its threads to the budget meanwhile (helpers of the running blocks use them) and takes them back after. */
+static int64_t claim_block(job_t *J, int own) {
+    pthread_mutex_lock(&J->wmu);
+    int lent = 0; int64_t got = -1;
+    for (;;) {
+        while (J->scan < J->nb && J->started[J->scan]) J->scan++;
+        if (J->scan >= J->nb || atomic_load(&J->err)) break;
+        const uint64_t lim = J->starts[J->wnext < J->nb ? J->wnext : J->nb - 1] + J->win;
+        uint64_t best = 0;
+        for (uint32_t i = J->scan; i < J->nb && J->starts[i] < lim; i++) {
+            const uint64_t len = J->starts[i + 1] - J->starts[i];
+            if (!J->started[i] && (got < 0 || len > best)) { got = i; best = len; }
+        }
+        if (got >= 0) { J->started[got] = 1; atomic_fetch_add(&J->next, 1); break; }
+        /* the window is full of started blocks: block wnext is running (an unstarted wnext would be a candidate), and
+         * its write broadcasts wcv */
+        if (!lent) { kolmo_budget_give(J->bud, own); lent = 1; }
+        pthread_cond_wait(&J->wcv, &J->wmu);
+    }
+    pthread_mutex_unlock(&J->wmu);
+    if (lent) kolmo_budget_take(J->bud, own);          /* take back the threads lent while waiting (before helpers) */
+    return got;
 }
 
 
@@ -142,17 +179,23 @@ static void *compress_worker(void *arg) {
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     codec_ctx *xp = &S->x;
     xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
+    xp->threads_max = J->threads; xp->budget = J->bud;                     /* the elastic match finders (KLZMA, KLZH2) */
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TBL_SLACK(J->B) + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
-    if (!tbuf || !slot || (J->input_fd >= 0 && !input)) { free(input); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
+    if (!tbuf || !slot || (J->input_fd >= 0 && !input)) {
+        free(input); atomic_store(&J->err, KOLMO_ERR_ALLOC); xp->budget = NULL;
+        pthread_mutex_lock(&J->wmu); if (J->wcv_ready) pthread_cond_broadcast(&J->wcv); pthread_mutex_unlock(&J->wmu);
+        kolmo_budget_give(J->bud, J->fqthreads); tls_end(S); return NULL;
+    }
     uint64_t held = 0;
     for (;;) {
 #ifdef KOLMO_GPU
         uint32_t nx = atomic_load(&J->next);
         if (!kolmo_gpu_take(nx < J->nb ? J->nb - nx : 0)) break;          /* GPU worker: only while the CPU has a backlog */
 #endif
-        uint32_t i = atomic_fetch_add(&J->next, 1); if (i >= J->nb) break;
+        const int64_t ci = claim_block(J, J->fqthreads); if (ci < 0) break;
+        const uint32_t i = (uint32_t)ci;
         const plan_t pl = J->plans[J->bplan[i]]; const uint64_t rs = J->rstart[i];
         size_t len = J->starts[i + 1] - J->starts[i];
         /* the governor: this block's working set is reserved before it starts (it waits when memory is short; one
@@ -616,6 +659,11 @@ coded:;
     }
     if (held) { kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0; kmem_release(held); }   /* left the loop on an error */
     free(input);
+    xp->budget = NULL; xp->threads_max = 0;
+    if (atomic_load(&J->err)) {                               /* waiting workers must see the failure */
+        pthread_mutex_lock(&J->wmu); if (J->wcv_ready) pthread_cond_broadcast(&J->wcv); pthread_mutex_unlock(&J->wmu);
+    }
+    kolmo_budget_give(J->bud, J->fqthreads);                  /* no block left: this worker's threads help the others */
     tls_end(S);
     return NULL;
 }

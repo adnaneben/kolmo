@@ -273,6 +273,13 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   at a time away from the end of the block.
 - **Level 8 codes 32 MiB block-sorting blocks** instead of 128 MiB. It needs about a third less memory (enwik8 RSS
   738 -> 489 MB), and -9 is now smaller than -8 on large text (enwik8 -8 21.97 MB, -9 20.80 MB; both were 20.80 MB).
+- **Threads that run out of blocks now help the blocks still running** (review40 #7). Before, each block got a fixed
+  share of the threads (`threads / blocks`, so 1 whenever there are more blocks than threads), and a long block at
+  levels 7-9 ran its match finder on one thread while the other threads sat idle. Now a thread that has no block left
+  gives itself to a shared budget, and the KLZMA (level 9) and KLZH2 (levels 5-7) match finders take helpers from
+  it while they run. Blocks also start longest first, inside a window that bounds the finished blocks held for an
+  earlier one (before, that reorder buffer was unbounded), and the decoder starts its longest blocks first. The output
+  is byte-identical at every level and thread count (`tests/test_elastic.c`, `benchmark/determinism`).
 
 ### Command line: a drop-in for tar, xz and gzip
 

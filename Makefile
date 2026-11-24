@@ -115,9 +115,10 @@ build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src
 build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 
-check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus build/mkarchive
+check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus build/mkarchive build/test-elastic
 	./build/test-levels
 	sh tests/check_no_abort.sh
+	./build/test-elastic
 	python3 tests/test_cli.py build/kolmo
 	sh tests/test_archive_safety.sh build/kolmo build/mkarchive
 	sh tests/test_filter.sh build/kolmo
@@ -147,6 +148,8 @@ check-decoder-hardening: build/test-decoder-hardening-asan
 
 build/test-harden: tests/test_harden.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+build/test-elastic: tests/test_elastic.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_elastic.c build/libkolmoarch.a -o $@ $(LIBS)
 build/test-v12-corpus: tests/test_v12_corpus.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 

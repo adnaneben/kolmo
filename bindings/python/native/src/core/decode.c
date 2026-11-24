@@ -82,7 +82,7 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_lim
 
 typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
                  int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi;
-                 uint64_t memcap; } djob_t;   /* memcap: the call's limit (the governor's cap; old frames' blocks are checked against it) */
+                 uint64_t memcap; const uint32_t *order; } djob_t;   /* order: blocks lo..hi, longest first (review40 #7) */   /* memcap: the call's limit (the governor's cap; old frames' blocks are checked against it) */
 
 /* Rule 1 (docs/MEMORY-MODEL.md): a block's working set, from its index entry and the head of its payload, checked
  * against what the frame declares before the block allocates anything. Returns the bytes to reserve, or an error. */
@@ -282,7 +282,8 @@ static void *decompress_worker(void *arg) {
     /* a context-mixing model larger than the frame declares (or, undeclared, than the limit) is refused unallocated */
     kmem_tls_dec_limit = J->P->memd ? J->P->memd : J->memcap == KMEM_UNLIMITED ? 0 : J->memcap;
     for (;;) {
-        uint32_t i = J->lo + atomic_fetch_add(&J->next, 1); if (i >= J->hi) break;
+        uint32_t k = atomic_fetch_add(&J->next, 1); if (k >= J->hi - J->lo) break;
+        uint32_t i = J->order ? J->order[k] : J->lo + k;   /* every block is written at its own offset: any order */
         if (atomic_load(&J->err)) break;
         int r;
         const uint8_t *payload;
@@ -397,7 +398,25 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
     atomic_init(&J.next, 0); atomic_init(&J.err, 0);
     int nt = threads > 0 ? threads : default_threads(), nblk = (int)(J.hi - J.lo < 256 ? J.hi - J.lo : 256);
     J.fqthreads = nblk > 0 && nt / nblk > 0 ? nt / nblk : 1;    /* threads left over per block (FASTQ family blocks) */
+    uint32_t *order = NULL, *tmp = NULL, m = J.hi - J.lo;
+    if (nt > 1 && m > 1 && (order = malloc((size_t)m * 2 * sizeof *order))) {
+        /* longest first: the last blocks to start are short ones, so threads do not idle behind one long tail block.
+         * A stable bottom-up merge sort (equal blocks keep their order) */
+        tmp = order + m;
+        for (uint32_t k = 0; k < m; k++) order[k] = J.lo + k;
+#define DLEN(b) (P.roff[(b) + 1] - P.roff[(b)])
+        for (uint32_t w = 1; w < m; w *= 2) {
+            for (uint32_t a = 0; a < m; a += 2 * w) {
+                uint32_t b = a + w < m ? a + w : m, e = a + 2 * w < m ? a + 2 * w : m, x = a, y = b, t = a;
+                while (x < b || y < e) tmp[t++] = y >= e || (x < b && DLEN(order[x]) >= DLEN(order[y])) ? order[x++] : order[y++];
+            }
+            uint32_t *sw = order; order = tmp; tmp = sw;
+        }
+#undef DLEN
+        J.order = order;
+    }
     run_pool(decompress_worker, &J, nt, J.hi - J.lo);
+    free(order < tmp ? order : tmp);
     free(P.poff); free(P.roff);
     r = atomic_load(&J.err);
     return r ? r : (int64_t)(range ? hi - lo : P.orig);

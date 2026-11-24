@@ -1,4 +1,9 @@
 /* The encoder: plan, split, code the blocks on the pool, write the container. */
+#ifndef KOLMO_REORDER_MIN
+#define KOLMO_REORDER_MIN (64u << 20)   /* the dispatch window: at least this many input bytes, and 2 x threads blocks */
+#endif
+static uint64_t kolmo_reorder_window;            /* tests: a fixed window in bytes (0: the default) */
+static size_t kolmo_reorder_held_max;            /* tests: the last call's reorder-buffer high-water mark, in bytes */
 static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p);
 #ifndef KOLMO_VID_MODES
 #define KOLMO_VID_MODES 0x3E   /* modes (bit = kolmo_mode) in which a Y4M file takes the video route (codec 20): all but rt */
@@ -211,12 +216,26 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
     J.fqthreads = threads / (int)(nb < 256 ? nb : 256) > 0 ? threads / (int)(nb < 256 ? nb : 256) : 1;   /* threads left over per block */
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
-    if (!J.out || !J.outlen) goto cleanup;
+    J.started = array_alloc(nb, 1, 1);
+    if (!J.out || !J.outlen || !J.started) goto cleanup;
+    /* dispatch (review40 #7): longest first inside a window of input bytes past the first unwritten block, which
+     * bounds the reorder buffer; the elastic budget starts with the threads no worker holds (each worker holds its own
+     * and fqthreads - 1 for its block's inner regions) and gains a worker's threads when it runs out of blocks */
+    {
+        uint64_t wb = 2 * (uint64_t)threads * maxb; if (wb < KOLMO_REORDER_MIN) wb = KOLMO_REORDER_MIN;
+        J.win = kolmo_reorder_window ? kolmo_reorder_window : wb;
+        J.threads = threads;
+        const int workers = threads < (int)nb ? threads : (int)nb;
+        J.bud = kolmo_budget_create(threads - workers * J.fqthreads);
+        if (!J.bud) goto cleanup;
+    }
     J.psum = p->mode == KOLMO_RT;
     J.memcap = memcap; J.xcap = xcap; J.cm_leaves = codec == C_CM && level == 2; atomic_init(&J.dneed, 0);
     J.dst = dst; J.cap = cap; J.wnext = 0; J.wpos = HDR + (size_t)nb * IDX; J.werr = 0;
     if (pthread_mutex_init(&J.wmu, NULL)) goto cleanup;
     mutex_ready = 1;
+    if (pthread_cond_init(&J.wcv, NULL)) goto cleanup;
+    J.wcv_ready = 1;
     atomic_init(&J.next, 0); atomic_init(&J.err, 0);
     ret = 0;
     if ((size_t)nb > (cap - HDR) / IDX) ret = KOLMO_ERR_DSTSIZE;
@@ -240,6 +259,9 @@ cleanup:
     if (planning_map != MAP_FAILED) munmap(planning_map, n);
     if (J.out) for (uint32_t i = 0; i < nb; i++) free(J.out[i]);
     free(J.outlen); if (mutex_ready) pthread_mutex_destroy(&J.wmu);
+    if (J.wcv_ready) pthread_cond_destroy(&J.wcv);
+    kolmo_reorder_held_max = J.held_max;   /* (tests: the reorder buffer's high-water mark of the last call) */
+    free(J.started); kolmo_budget_destroy(J.bud);
     if (plans) for (uint32_t g = 0; g < nseg; g++) { free(plans[g].fs); free(plans[g].rec); free(plans[g].cmpz); }
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se); free(skind);
     zs_trim();
