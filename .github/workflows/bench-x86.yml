@@ -25,7 +25,7 @@ on:
         default: true
   push:
     branches: ["claude/x86-bench*", "bench-x86*"]
-    paths: [".github/workflows/bench-x86.yml", "bench/lzbench/**"]
+    paths: [".github/workflows/bench-x86.yml", "bench/lzbench/**", "!bench/lzbench/**/*.md"]
 
 permissions:
   contents: read

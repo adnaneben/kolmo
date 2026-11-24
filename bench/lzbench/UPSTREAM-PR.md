@@ -18,7 +18,7 @@ an LZMA-class coder at levels 8-9, and context mixing at level 10 ("ultra").
 
 **What changes**
 
-- `misc/kolmo/src/`: Kolmo's `src/` directory at tag `v0.0.2` (commit `<commit>`), unchanged, with `LICENSE`,
+- `misc/kolmo/src/`: Kolmo's `src/` directory at tag `v0.0.2` (commit `550c02fd89d00b767ca540b117301c185dbbb6c9`), unchanged, with `LICENSE`,
   `NOTICE` and a short `README.md` saying so. `src/cli` and `src/experimental` are part of the copy but not built.
 - `mk/kolmo.mk`: the library objects (one translation unit, `kolmo.c`, plus the kernels compiled on their own and,
   on x86-64 and AArch64, one assembly file each). Kolmo is off on 32-bit, big-endian and Windows targets.
@@ -44,23 +44,24 @@ whose symbols are renamed `kolmo_sais_*`, so it links next to bsc's libsais.
 **Why it is notable** (CONTRIBUTING: "significant in at least one benchmark dimension"). Silesia, one thread, lzbench
 2.4.1 (MB/s):
 
-| | ratio | compress | decompress | Apple M5 | x86-64 (`<cpu>`) |
-|---|---:|---:|---:|---|---|
-| kolmo 0.0.2 -6 | 4.367 | | | `<m5 c / d>` | `<x86 c / d>` |
-| xz 5.8.4 -9 | 4.346 | | | | |
-| kolmo 0.0.2 -9 | 5.232 | | | | |
-| zpaq 7.15 -5 | 5.237 | | | | |
-| kolmo 0.0.2 -10 | 5.912 | | | | |
+| | ratio | Apple M5: compress / decompress | x86-64, Xeon 6975P-C: compress / decompress |
+|---|---:|---:|---:|
+| kolmo 0.0.2 -6 | 4.367 | 8.77 / 1463 | 3.70 / 824 |
+| xz 5.8.4 -9 | 4.346 | 5.13 / 169 | 2.10 / 127 |
+| kolmo 0.0.2 -9 | 5.232 | 9.95 / 85.4 | 4.52 / 48.0 |
+| zpaq 7.15 -5 | 5.237 | 0.73 / 0.70 | 0.56 / 0.55 |
+| kolmo 0.0.2 -10 | 5.912 | 1.17 / 1.15 | 0.74 / 0.78 (EPYC 9V45) |
 
-`<fill in from evidence/X86_CHECK_0.0.2.md: level 6 is smaller than xz -9 and decodes about 8x faster; level 9
-matches zpaq -5's ratio and decodes about 100x faster; level 10 has the best Silesia ratio of the codecs in
-lzbench>`
+The compressed sizes are identical on both machines. The x86-64 rows are medians of 3 runs on a GitHub runner, with
+each pair in one job. Level 6 is smaller than xz -9 and decodes 6.5x (x86-64) to 8.6x (M5) faster. Level 9 is within
+0.1% of zpaq -5's ratio and decodes 87x to 122x faster. Level 10 has the best Silesia ratio of the codecs above
+(zpaq -5: 5.237, kanzi -9: 5.069). On text (enwik8) and on Canterbury, xz and zpaq stay ahead in ratio.
 
 **Tested**
 
 - Built and run on Linux x86-64 (GCC, GitHub runner) and macOS arm64 (Apple clang), `make` with all codecs and
   with `BUILD_ONLY`; every round trip verified by lzbench.
-- `<link to this PR's Azure pipeline run>`
+- lzbench's own CI run on this PR (link to add once the PR exists).
 
 ---
 
