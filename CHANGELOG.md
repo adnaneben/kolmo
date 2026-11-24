@@ -69,6 +69,24 @@
     parameters stay ignored on read, because the 0.0.x planners could write a losing shuffle plan's `a, b, c` there;
     the encoder now writes `7,0,0,0` (FORMAT.md 19.3).
 
+- **Data after a `--stream` file is no longer dropped.** 0.0.2 stopped at the end of the first CZNS stream and
+  exited 0, so `kolmo -dc` of two appended `--stream` outputs, or of a stream followed by a frame, returned only the
+  first part; `-t` and `-l` reported success. Pipes over 256 MiB are written as streams by default, so
+  `cat big | kolmo >> a.kolmo` was enough (review R30 #125).
+  - The rule (FORMAT.md 10.1): a file is one or more members, CZNS streams or CZN1 frames, decoded in order, as gzip,
+    xz and zstd decode concatenated files and as `kolmo -d` already decoded concatenated frames. Any other bytes after
+    a member are an error (exit 1), never skipped.
+  - `kolmo -d`, `-t` and `-l` and `kolmo_stream_decompress` read every member: stream then stream, stream then frame,
+    frame then stream (refused as corrupt before), and a frame with container extensions followed by another
+    member. `-l` counts the frames and streams. A `kolmo archive` frame is refused before or after a stream, as
+    it is alone.
+  - No file decodes to different bytes: files that were cut short now decode in full, and the bytes after a member
+    that starts no member, ignored before, are refused.
+- **Stream decoding stays inside `-M`.** The CZNS decoder held one output window of a block per thread outside the
+  memory limit: 1,283 MiB peak under `-M 256M` at `-T 10` for a stream of 64 MiB blocks (review R23 #114 B2). The
+  window and the blocks decoding at once now share the limit (fewer threads and a smaller window under a tight
+  limit); the same file peaks at 130 MiB. Without `-M`, the default limit (half the machine) applies as before.
+
 ### Added
 
 - **`kolmo_frame_cost`: decode work before decoding** (`kolmo.h`, SECURITY.md *Decode work*). Decoding time follows
@@ -126,6 +144,11 @@ fixes change.
 
 ### Format
 
+- **Files of several members (FORMAT.md 10.1), and the `CZNS` header's reserved bytes (section 10).** A file is
+  one or more CZNS streams and CZN1 frames, decoded in order; other bytes after a member are an error. The stream
+  header's three reserved bytes and `segment_bytes` are ignored by decoders, as reserved frame header bytes are
+  (COMPATIBILITY.md rule 2 now names them); the stream version must be 1. `tests/format_reference.py` follows both
+  rules and checks 16 member and header cases built from corpus files.
 - **`FORMAT.md`: the specification of container version 12.** It is complete for the container layer: header, index,
   CRC-32C, `kolmo_khash64` written out with test vectors (`tests/khash64_vectors.txt`), plan prefix and transform flag
   rules, stored, self-contained, video and graph blocks, extensions, the `CZNS` stream and the declared decode working

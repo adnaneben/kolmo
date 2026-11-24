@@ -146,8 +146,11 @@ int64_t kolmo_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len,
 /* streaming / large inputs, bounded memory: file descriptors in and out (CZNS framed segments).
  * seg_mib = 0 uses the default segment size. Both return total bytes written, or a negative error. */
 int64_t kolmo_stream_compress(int in_fd, int out_fd, const kolmo_params *p, uint32_t seg_mib);
+/* kolmo_stream_decompress reads every member of its input in order (FORMAT.md 10.1): CZNS streams and CZN1 frames
+ * (with their container extensions); bytes after a member that start no member are KOLMO_ERR_CORRUPT. */
 int64_t kolmo_stream_decompress(int in_fd, int out_fd, int threads);
-/* as kolmo_stream_decompress, with decoding limits per frame and max_output_bytes for the whole stream (NULL: none) */
+/* as kolmo_stream_decompress, with decoding limits per frame and max_output_bytes for the whole input (NULL: none);
+ * max_memory (or the process limit) bounds each frame's decode, the output window included */
 int64_t kolmo_stream_decompress_limited(int in_fd, int out_fd, int threads, const kolmo_decode_limits *limits);
 /* One-shot CZN1 file I/O. Input must remain a stable regular file of at least n
  * bytes. Supply an empty seekable output fd without O_APPEND. Workers use

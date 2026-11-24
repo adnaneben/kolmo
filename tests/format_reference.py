@@ -6,7 +6,9 @@ usage: python3 tests/format_reference.py [tests/v12]
 It shares no code with the C implementation: CRC-32C, kolmo_khash64, the header, the block index, the plan prefix
 and tflag rules, the decode working-set byte, container extensions and the CZNS stream are written here from
 FORMAT.md. Run over the frozen corpus it checks, for every frame and its original, that:
-  - the header, index and trailer obey every rule of FORMAT.md sections 3-6 and 9-10;
+  - the header, index and trailer obey every rule of FORMAT.md sections 3-6 and 9-10 (10.1: files of several
+    members are checked with stream and frame cases built from two corpus files, and bytes after a member that
+    start no member are refused);
   - each block's checksum equals the low 32 bits of khash64 of the original's bytes for that block (or, in a frame
     with flag bit 0, of the stored payload seeded with its plan bytes), which pins down khash64 on real data;
   - the khash64 test vectors of tests/khash64_vectors.txt (every length class, three seeds) are reproduced;
@@ -178,17 +180,79 @@ def check_frame(f, orig=None, nested=False):
     return checked
 
 
-def check_stream(s, orig):
-    if len(s) < 12 or s[:4] != b"CZNS" or s[4] != 1 or s[5:8] != b"\0\0\0": raise Bad("stream header")
-    p, ro, checked = 12, 0, 0
+def frame_extent(s, p):
+    """the length of the CZN1 member at p (FORMAT.md 10.1): its header, index and payloads, then the extension
+    sections and their KEXT trailer when the bytes after the payloads are neither the end nor the next member"""
+    if len(s) - p < 32 or s[p:p + 4] != b"CZN1": raise Bad("member")
+    nb = r32(s, p + 20)
+    if 32 + 16 * nb > len(s) - p: raise Bad("index outside the input")
+    q = p + 32 + 16 * nb + sum(r32(s, p + 32 + 16 * i + 4) for i in range(nb))
+    if q > len(s): raise Bad("payload outside the input")
+    start = q
+    while len(s) - q >= 4 and s[q:q + 4] not in (b"CZN1", b"CZNS"):
+        if s[q:q + 4] == b"KEXT": return q + 24 - p if len(s) - q >= 24 else len(s) - p   # check_frame checks it
+        if len(s) - q < 16: break
+        q += 16 + r64(s, q + 4)
+        if q > len(s): raise Bad("extension section outside the input")
+    if q != start: raise Bad("extension sections without their trailer")
+    return start - p
+
+
+def check_stream(s, p, orig):
+    """the CZNS member at p: returns (checked, its end, its original length)"""
+    # version 1; the reserved bytes 5-7 and segment_bytes are not read (COMPATIBILITY.md: reserved bytes are ignored)
+    if len(s) - p < 12 or s[p:p + 4] != b"CZNS" or s[p + 4] != 1: raise Bad("stream header")
+    p += 12; ro = checked = 0
     while True:
-        n = struct.unpack_from("<Q", s, p)[0]; p += 8
+        if len(s) - p < 8: raise Bad("stream without its terminator")
+        n = r64(s, p); p += 8
         if n == 0: break
-        fr = s[p:p + n]; o = struct.unpack_from("<Q", fr, 12)[0]
+        if n > len(s) - p: raise Bad("stream frame outside the input")
+        fr = s[p:p + n]
+        if len(fr) < 32: raise Bad("stream frame")
+        o = r64(fr, 12)
         checked += check_frame(fr, orig[ro:ro + o] if orig is not None else None); ro += o; p += n
-    if p != len(s): raise Bad("bytes after the stream terminator")
-    if orig is not None and ro != len(orig): raise Bad("stream length")
+    return checked, p, ro
+
+
+def check_file(s, orig):
+    """a file is one or more members, each a CZNS stream or a CZN1 frame, decoded in order (FORMAT.md 10.1);
+    any other bytes after a member are refused"""
+    p = ro = checked = 0
+    if not s: raise Bad("empty input")
+    while p < len(s):
+        if s[p:p + 4] == b"CZNS":
+            c, p2, o = check_stream(s, p, orig[ro:] if orig is not None else None)
+        elif s[p:p + 4] == b"CZN1":
+            p2 = p + frame_extent(s, p); o = r64(s, p + 12)
+            c = check_frame(s[p:p2], orig[ro:ro + o] if orig is not None else None)
+        else: raise Bad("bytes after a member" if p else "magic")
+        checked += c; ro += o; p = p2
+    if orig is not None and ro != len(orig): raise Bad("members' length")
     return checked
+
+
+STREAM_PROBE = "mixed.bin.L3-stream1M.kolmo"   # a CZNS stream of 0.0.2
+
+
+def member_cases(stream, frame):
+    """files of several members, and stream headers: (name, bytes, accepted)"""
+    yield "stream, stream", stream + stream, True
+    yield "stream, frame", stream + frame, True
+    yield "frame, stream", frame + stream, True
+    yield "frame, stream, frame, stream", frame + stream + frame + stream, True
+    g = bytearray(stream); g[5:8] = b"\x07\x01\xff"; yield "reserved stream bytes set", bytes(g), True
+    g = bytearray(stream); g[8:12] = b"\0\0\0\0"; yield "segment_bytes 0", bytes(g), True
+    g = bytearray(stream); g[4] = 2; yield "stream version 2", bytes(g), False
+    g = bytearray(stream); g[4] = 0; yield "stream version 0", bytes(g), False
+    yield "stream, one byte", stream + b"\0", False
+    yield "stream, 8 zero bytes", stream + bytes(8), False
+    yield "stream, text", stream + b"hello world", False
+    yield "stream, truncated stream", stream + stream[:-1], False
+    yield "stream, truncated frame", stream + frame[:-1], False
+    yield "stream without terminator", stream[:-8], False
+    yield "frame, stray byte", frame + b"C", False
+    yield "frame, CZNS magic only", frame + b"CZNS", False
 
 
 def mutations(f):
@@ -230,11 +294,16 @@ def main():
     for name, g in mutations(probe):
         try: check_frame(g); sys.exit("reference accepted a broken frame: " + name)
         except (Bad, struct.error): pass
+    sprobe = open(os.path.join(root, "r0.0.2", STREAM_PROBE), "rb").read()
+    for name, g, good in member_cases(sprobe, probe):
+        try: check_file(g, None); ok = True
+        except (Bad, struct.error): ok = False
+        if ok != good: sys.exit("reference %s %s" % ("refused" if good else "accepted", name))
     frames = blocks = 0; bad = []
     for fr, og in pairs:
         f = open(os.path.join(root, fr), "rb").read(); o = open(os.path.join(root, og), "rb").read()
         try:
-            blocks += check_stream(f, o) if f[:4] == b"CZNS" else check_frame(f, o)
+            blocks += check_file(f, o)
         except Bad as e:
             bad.append("%s: %s" % (fr, e))
         frames += 1

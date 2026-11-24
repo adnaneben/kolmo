@@ -528,13 +528,13 @@ static uint64_t ext_extent(const src_t *s, uint64_t off, uint64_t end, int *ddp1
 /* the length of the frame at off, or 0 when no whole frame starts there (trailing data) */
 static uint64_t frame_extent(const src_t *s, uint64_t off) {
     if (off >= s->n) return 0;
-    if (s->buf) {
-        int64_t e = kolmo_frame_size(s->buf + off, (size_t)(s->n - off));
-        return e > 0 && (uint64_t)e <= s->n - off ? (uint64_t)e : 0;
+    int64_t e;
+    if (s->buf) e = kolmo_frame_size(s->buf + off, (size_t)(s->n - off));   /* extensions ending the buffer included */
+    else {
+        size_t hn; uint8_t *hi = read_head(s, off, &hn);
+        if (!hi) return 0;
+        e = kolmo_frame_size(hi, hn); free(hi);
     }
-    size_t hn; uint8_t *hi = read_head(s, off, &hn);
-    if (!hi) return 0;
-    int64_t e = kolmo_frame_size(hi, hn); free(hi);
     if (e <= 0 || (uint64_t)e > s->n - off) return 0;
     return ext_extent(s, off, (uint64_t)e, NULL);
 }
@@ -544,7 +544,7 @@ static uint64_t ext_extent(const src_t *s, uint64_t off, uint64_t end, int *ddp1
     uint64_t q = off + end; uint8_t t[24]; int dd = 0;
     if (ddp1) *ddp1 = 0;
     for (int k = 0; k < 64 && q + 4 <= s->n; k++) {
-        if (src_read(s, q, t, 4) || !memcmp(t, "CZN1", 4)) break;
+        if (src_read(s, q, t, 4) || !memcmp(t, "CZN1", 4) || !memcmp(t, "CZNS", 4)) break;
         if (!memcmp(t, "KEXT", 4)) {
             if (!src_read(s, q, t, 24) && le64(t + 12) == q - (off + end)) { if (ddp1) *ddp1 = dd; return q + 24 - off; }
             break;
@@ -562,6 +562,24 @@ static uint64_t ext_extent(const src_t *s, uint64_t off, uint64_t end, int *ddp1
  * it, pointing to kolmo extract and kolmo contents. */
 static int is_archive(const src_t *s) {
     for (uint64_t off = 0; off < s->n;) {
+        uint8_t m[8];
+        if (!src_read(s, off, m, 4) && !memcmp(m, "CZNS", 4)) {   /* a stream member (FORMAT.md 10.1): its frames */
+            uint64_t q = off + 12;
+            for (;;) {
+                if (src_read(s, q, m, 8)) return 0;
+                uint64_t len = le64(m);
+                if (!len) break;
+                if (len > s->n - q - 8) return 0;
+                size_t hn; uint8_t *hi = read_head(&(src_t){s->buf, s->fd, q + 8 + len}, q + 8, &hn);
+                if (!hi) return 0;
+                int64_t e = kolmo_frame_size(hi, hn); free(hi);
+                int dd = 0;
+                if (e > 0 && (uint64_t)e <= len) ext_extent(&(src_t){s->buf, s->fd, q + 8 + len}, q + 8, (uint64_t)e, &dd);
+                if (dd) return 1;
+                q += 8 + len;
+            }
+            off = q + 8; continue;
+        }
         size_t hn; uint8_t *hi = read_head(s, off, &hn);
         if (!hi) return 0;
         int64_t e = kolmo_frame_size(hi, hn); free(hi);
@@ -576,6 +594,14 @@ static void archive_error(const char *name, const char *path) {
     if (!path) path = "FILE";
     fprintf(stderr, "kolmo: %s: a 'kolmo archive' file (many files and a chunk store), not one compressed file; "
                     "unpack it with 'kolmo extract %s', list it with 'kolmo contents %s'\n", name, path, path);
+}
+
+/* 1 when a CZNS stream follows the CZN1 frames that start the input: the whole input is then read by the stream
+ * decoder, which takes every kind of member (FORMAT.md 10.1) */
+static int stream_follows(const src_t *s) {
+    uint64_t off = 0, len; uint8_t m[4];
+    while ((len = frame_extent(s, off))) off += len;
+    return off < s->n && !src_read(s, off, m, 4) && !memcmp(m, "CZNS", 4);
 }
 
 /* compress or decompress a buffer in memory; *out is malloc'ed. Returns the output size or a negative error. */
@@ -790,6 +816,9 @@ static int process(const opts_t *o, const char *in) {
             buf = q; memcpy(buf + bn, rest, rn); bn += rn; free(rest);
             hn = bn < sizeof hdr ? bn : sizeof hdr; memcpy(hdr, buf, hn);
         }
+        /* frames followed by a stream (FORMAT.md 10.1): all of it through the stream decoder, which reads both */
+        if (!streamed && !o->range && is_kolmo_magic(hdr, hn))
+            streamed = buffered ? stream_follows(&(src_t){buf, -1, bn}) : ireg && stream_follows(&(src_t){NULL, ifd, (uint64_t)ist.st_size});
         if (streamed && buffered) {
             sfd = feeder_start(&fd_feed, buf, bn, ifd);
             if (sfd < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out; }
@@ -810,7 +839,7 @@ static int process(const opts_t *o, const char *in) {
         }
     }
 
-    if (dec && !streamed && is_kolmo_magic(hdr, hn) &&
+    if (dec && is_kolmo_magic(hdr, hn) &&                 /* any member, frames followed by a stream included */
         is_archive(buffered ? &(src_t){buf, -1, bn} : &(src_t){NULL, ifd, ireg ? (uint64_t)ist.st_size : 0})) {
         archive_error(name, in); ret = 1; goto out;
     }
@@ -922,45 +951,51 @@ static int list_one(const char *in, int *header_done) {
     if (fstat(fd, &st) || !S_ISREG(st.st_mode)) { fprintf(stderr, "kolmo: %s: not a regular file\n", in); close(fd); return 1; }
     ssize_t g = pread(fd, h, sizeof h, 0);
     char engine[200] = ""; uint64_t orig = 0; uint32_t crc = 0; int ok = 1, have_crc = 0;
-    if (g >= 12 && !memcmp(h, "CZNS", 4)) {           /* a stream: walk its segments */
-        uint64_t off = 12, segs = 0; uint8_t lb[8];
-        for (;;) {
-            if (pread(fd, lb, 8, (off_t)off) != 8) { ok = 0; break; }
-            uint64_t len = 0; for (int k = 7; k >= 0; k--) len = len << 8 | lb[k];
-            if (!len) break;
-            uint8_t fh[32]; int64_t o;
-            if (len < 32 || len > (uint64_t)st.st_size - off - 8 || pread(fd, fh, 32, (off_t)(off + 8)) != 32 ||
-                (o = head_orig(&(src_t){NULL, fd, off + 8 + len}, off + 8)) < 0) { ok = 0; break; }
+    /* the members one after another (FORMAT.md 10.1): CZN1 frames and CZNS streams, whose segments are frames too */
+    src_t sr = {NULL, fd, (uint64_t)st.st_size};
+    uint64_t off = 0, frames = 0, streams = 0, segs = 0; uint32_t used[64] = {0};
+    if (g < 4) ok = 0;
+    else if (is_archive(&sr)) { archive_error(in, in); close(fd); return 1; }
+    while (ok && off < (uint64_t)st.st_size) {
+        uint8_t m[4]; uint64_t end = 0, foff = off, flen = 0;
+        if (pread(fd, m, 4, (off_t)off) != 4) { ok = 0; break; }
+        int in_stream = !memcmp(m, "CZNS", 4);
+        if (in_stream) { if ((uint64_t)st.st_size - off < 12) { ok = 0; break; } foff = off + 12; streams++; }
+        for (;;) {                                         /* one frame, or each segment of the stream */
+            if (in_stream) {
+                uint8_t lb[8];
+                if (pread(fd, lb, 8, (off_t)foff) != 8) { ok = 0; break; }
+                flen = le64(lb);
+                if (!flen) { end = foff + 8; break; }
+                if (flen < 32 || flen > (uint64_t)st.st_size - foff - 8) { ok = 0; break; }
+                foff += 8;
+            } else if (!(flen = frame_extent(&sr, foff))) { ok = 0; break; }
+            uint8_t fh[32]; src_t fs = {NULL, fd, foff + flen};
+            if (pread(fd, fh, 32, (off_t)foff) != 32) { ok = 0; break; }
+            int64_t o = head_orig(&fs, foff);
+            if (o < 0) { if (in_stream) { ok = 0; break; } fprintf(stderr, "kolmo: %s: %s\n", in, kolmo_strerror(o)); close(fd); return 1; }
             orig += (uint64_t)o;
-            if (!segs) snprintf(engine, sizeof engine, "%s", mode_name(fh[5]));
-            segs++; off += 8 + len;
-            if (off > (uint64_t)st.st_size) { ok = 0; break; }
-        }
-        if (ok) { size_t l = strlen(engine); snprintf(engine + l, sizeof engine - l, ", stream of %llu segment%s", (unsigned long long)segs, segs == 1 ? "" : "s"); }
-    } else if (g == 32) {                              /* one frame, or several concatenated */
-        src_t sr = {NULL, fd, (uint64_t)st.st_size};
-        if (is_archive(&sr)) { archive_error(in, in); close(fd); return 1; }
-        uint64_t off = 0, frames = 0; uint32_t used[64] = {0};
-        while (ok && off < (uint64_t)st.st_size) {
-            uint64_t len = frame_extent(&sr, off); uint8_t fh[32];
-            if (!len || pread(fd, fh, 32, (off_t)off) != 32) { ok = 0; break; }
-            int64_t o = head_orig(&sr, off);
-            if (o < 0) { fprintf(stderr, "kolmo: %s: %s\n", in, kolmo_strerror(o)); close(fd); return 1; }
-            orig += (uint64_t)o;
-            if (!frames) { crc = le32(fh + 28); have_crc = 1; snprintf(engine, sizeof engine, "%s:", mode_name(fh[5])); }
+            if (!frames && !segs) { crc = le32(fh + 28); have_crc = 1; snprintf(engine, sizeof engine, "%s:", mode_name(fh[5])); }
             uint32_t nb = le32(fh + 20);
             for (uint32_t i = 0; i < nb; i++) {
                 uint8_t e[16];
-                if (pread(fd, e, 16, (off_t)(off + 32 + 16 * (uint64_t)i)) != 16) { ok = 0; break; }
+                if (pread(fd, e, 16, (off_t)(foff + 32 + 16 * (uint64_t)i)) != 16) { ok = 0; break; }
                 used[e[12] & 63]++;
             }
-            frames++; off += len;
+            if (!ok) break;
+            if (!in_stream) { frames++; end = foff + flen; break; }
+            segs++; foff += flen;
         }
-        if (ok) {
-            for (int c = 0; c < 64; c++) if (used[c]) { size_t l = strlen(engine); snprintf(engine + l, sizeof engine - l, " %s", codec_name(c)); }
-            if (frames > 1) { size_t l = strlen(engine); snprintf(engine + l, sizeof engine - l, ", %llu frames", (unsigned long long)frames); }
-        }
-    } else ok = 0;
+        off = end;
+    }
+    if (ok) {
+        for (int c = 0; c < 64; c++) if (used[c]) { size_t l = strlen(engine); snprintf(engine + l, sizeof engine - l, " %s", codec_name(c)); }
+        size_t l = strlen(engine);
+        if (frames > 1 || (frames && streams)) l += (size_t)snprintf(engine + l, sizeof engine - l, ", %llu frames", (unsigned long long)frames);
+        if (streams == 1) snprintf(engine + l, sizeof engine - l, ", stream of %llu segment%s", (unsigned long long)segs, segs == 1 ? "" : "s");
+        else if (streams > 1) snprintf(engine + l, sizeof engine - l, ", %llu streams of %llu segments", (unsigned long long)streams, (unsigned long long)segs);
+        if (streams) have_crc = 0;                         /* a stream has no one frame's checksum to show */
+    }
     close(fd);
     if (!ok) { fprintf(stderr, "kolmo: %s: %s\n", in, kolmo_strerror(KOLMO_ERR_CORRUPT)); return 1; }
     if (!*header_done) { printf("%14s %14s %8s  %-8s  %s\n", "compressed", "original", "ratio", "crc32c", "engine  file"); *header_done = 1; }
