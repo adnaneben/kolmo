@@ -4,6 +4,29 @@
 
 ### Fixed
 
+- **`kolmo -d`, `-t`, `-l` and `--range` refuse a `kolmo archive` file** instead of writing its internal chunk store
+  and exiting 0. The frame of such a file is the store (the distinct chunks of all its files, without their order),
+  never the files. The error names `kolmo extract` and `kolmo contents`. Python's `decompress` and `read_range` refuse
+  it the same way. The C library is unchanged: `kolmo_decompress` still returns the store, as every reader of a
+  version-12 frame does (review 40, R20 #88).
+- **`kolmo extract` never writes outside its directory.** It used to follow a symbolic link that was already there,
+  so `ln -s ../../victim.txt tree/a.txt` made it overwrite `victim.txt`. Now every directory on the way is opened
+  without following links (a name through a symbolic link is skipped with an error, exit 1), and an existing file
+  at the name is unlinked and created again, as tar does. Absolute names and names with a `..` component are still
+  skipped (R25 #107).
+- **`kolmo archive` and `kolmo --index` no longer overwrite an existing output without `-f`.** The output is staged
+  and published like the main command line's: refused when it exists, replaced atomically with `-f` (`--force`),
+  and never left half-written (R25 #107).
+- **`kolmo archive` reports what it cannot store.** Symbolic links, FIFOs, sockets, devices, empty directories and
+  directories deeper than 64 levels used to be dropped silently. Each one now gets a warning, the archive is still
+  written, and the run exits with status 1. A path with a leading `/` or `../` is stored without it, with a warning,
+  as tar stores it. Before this, `../a.txt` was stored as is and `extract` then refused it.
+- **`kolmo extract` restores the stored mtime**, which it used to ignore.
+- **`-T`, `--chunk` and `--token-bits` of `archive`, `extract`, `--index`, `cat` and `grep` refuse what is not a
+  number** (exit 2). `-T abc` used to mean "all cores".
+- Tests: `tests/test_archive_safety.sh` (in `make check`) covers each case, using `tests/mkarchive.c` to write
+  archives with unsafe names. `bindings/python/test_kolmo.py` checks the refusal.
+
 - **Tables with a field over 64 KiB now decompress.** 0.0.2 compressed them without error but could not decompress
   them ("corrupt or unsupported input"). This affected any CSV or TSV whose rows all have the same number of fields
   and that holds one field longer than 65,535 bytes, at levels 3 to 9 (the table transform).

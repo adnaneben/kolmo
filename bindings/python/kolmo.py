@@ -64,6 +64,23 @@ def _check(code):
         raise ValueError("kolmo: " + _lib.kolmo_strerror(code).decode())
     return code
 
+def _refuse_archive(blob):
+    """A `kolmo archive` file (a DDP1 section in the KEXT trailer) is one frame holding the internal chunk store of
+    many files, not one compressed file: decompress and read_range refuse it instead of returning the store."""
+    if len(blob) < 24 or blob[-24:-20] != b"KEXT":
+        return
+    count = int.from_bytes(blob[-16:-12], "little"); total = int.from_bytes(blob[-12:-4], "little")
+    p = len(blob) - 24 - total
+    if total > len(blob) - 24:
+        return
+    for _ in range(count):
+        if p + 16 > len(blob) - 24:
+            return
+        if blob[p:p + 4] == b"DDP1":
+            raise ValueError("kolmo: a 'kolmo archive' file (many files and a chunk store), not one compressed file; "
+                             "unpack it with 'kolmo extract FILE', list it with 'kolmo contents FILE'")
+        p += 16 + int.from_bytes(blob[p + 4:p + 12], "little")
+
 def original_size(blob):
     """Original byte length recorded in a compressed blob's header."""
     blob = bytes(blob)
@@ -72,6 +89,7 @@ def original_size(blob):
 def read_range(blob, off, length, threads=0):
     """Return bytes [off, off+length) of the original, decoding only the blocks that overlap."""
     blob = bytes(blob)
+    _refuse_archive(blob)
     total = original_size(blob)
     _check(_lib.kolmo_check_frame(blob, len(blob), None))          # before allocating anything from the header
     if off < 0 or length < 0:
@@ -142,6 +160,7 @@ def decompress(blob, threads=0, memlimit=None, max_output_size=None):
     100,000 times its own size (long runs), so a caller decoding untrusted input should set a bound in bytes: a frame
     that claims more raises ValueError (KOLMO_ERR_LIMIT) before anything is allocated."""
     blob = bytes(blob)
+    _refuse_archive(blob)
     n = original_size(blob)
     if max_output_size is not None and (isinstance(max_output_size, bool) or not isinstance(max_output_size, int) or max_output_size < 0):
         raise ValueError("max_output_size must be a number of bytes")
