@@ -1,0 +1,94 @@
+name: "CRITICAL: wrong output or decode failure"
+description: Kolmo returned bytes that differ from the original, or could not decompress a file it wrote. The most serious kind of bug.
+title: "[CRITICAL] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **This is the most serious bug Kolmo can have.** Every file Kolmo writes must decompress to exactly the
+        original bytes, in every later release (`COMPATIBILITY.md`). Thank you for reporting it.
+
+        - If the input is a **crafted or untrusted file** that makes Kolmo crash, hang or read out of bounds, follow
+          `SECURITY.md` instead of opening a public issue.
+        - **Keep the original file and the compressed file.** Do not recompress over them.
+        - Do not attach data you are not allowed to share. A smaller file that shows the same problem is ideal; say
+          if you can share the file privately with the maintainer.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What happened
+      options:
+        - Decompressed bytes differ from the original (silent corruption)
+        - Kolmo cannot decompress a file it wrote (error)
+        - "`kolmo -t` reports an error on a file Kolmo wrote"
+        - A file written by one release does not decode with a later release
+        - A file written on one platform does not decode on another
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Commands that show it
+      description: The exact commands, from compressing to the failure, and their output.
+      placeholder: |
+        kolmo -7 -T1 data.bin -o data.bin.kolmo
+        kolmo -d data.bin.kolmo -o out.bin
+        cmp data.bin out.bin
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: writer
+    attributes:
+      label: Kolmo version that WROTE the file
+      description: "`kolmo -V`, or the package version (kolmoc / kolmo crate). Unknown is a fine answer."
+    validations:
+      required: true
+  - type: input
+    id: reader
+    attributes:
+      label: Kolmo version that READ the file
+      description: "`kolmo -V` or the package version."
+    validations:
+      required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Interface
+      multiple: true
+      options:
+        - Command line (kolmo)
+        - C library
+        - Python (kolmoc)
+        - Rust (kolmo crate)
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Level and options
+      description: Level (-1 .. -9, -U), threads (-T), --memlimit, --stream, --range, --native-leaf or any other option used when writing and reading.
+    validations:
+      required: true
+  - type: textarea
+    id: platform
+    attributes:
+      label: Platforms
+      description: OS, CPU (x86-64, ARM64 / Apple silicon), compiler if you built Kolmo yourself, and how you installed it (Homebrew, pip, cargo, source). Give both if the file was written on one machine and read on another.
+    validations:
+      required: true
+  - type: textarea
+    id: list
+    attributes:
+      label: Output of `kolmo -l` on the compressed file
+      description: It shows the engine and block codecs, which tells us which decoder to look at.
+      render: text
+  - type: textarea
+    id: data
+    attributes:
+      label: About the input
+      description: What kind of data it is (CSV, log, image, executable, ...), its size, and whether you can share it or a smaller file that shows the same problem.
+    validations:
+      required: true

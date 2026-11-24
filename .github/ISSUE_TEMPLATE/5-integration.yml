@@ -1,0 +1,30 @@
+name: Integration request
+description: Ask for Kolmo support in another tool, format or package manager (numcodecs/Zarr, HDF5, Blosc2, conda-forge, tar, a database, a log shipper, ...).
+labels: ["enhancement"]
+body:
+  - type: input
+    id: target
+    attributes:
+      label: Tool, library or package manager
+    validations:
+      required: true
+  - type: textarea
+    id: use
+    attributes:
+      label: Your use case
+      description: What data you would compress there, how much, and how often it is read back.
+    validations:
+      required: true
+  - type: textarea
+    id: mechanism
+    attributes:
+      label: How the integration would work
+      description: Plugin interface, filter ID, entry point, recipe, ... and links to its documentation if you know them.
+  - type: dropdown
+    id: help
+    attributes:
+      label: Can you help?
+      options:
+        - I can write or test the integration
+        - I can test it on my data
+        - I am asking only
