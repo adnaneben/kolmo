@@ -49,6 +49,53 @@
     README's recipe for moving 1.x files now sets `CZN_OLDTBL=1`, which makes kolmoc 1.0.1 decode such tables through
     its row path.
 
+### Encoder routing: nine planner and coder fixes from the 40-reviewer review (and two more)
+
+Encoder-only changes: every frame is still container version 12, and the 0.0.1 and 0.0.2 decoders read every frame
+written (checked by SHA-256 round trips on every changed frame). Each fix was measured on the reviewers' files for its
+data class and on the screening, held-out and domain corpora (48 files, 791 MB) at every level. Over those corpora
+nine of the fixes change no frame at all; the others change level 8 (-2.2%) and two files at level 7 (-0.06%).
+Tables, per file and level, are in `benchmark/routing/RESULTS.md`. The CI size ledger (`benchmark/ledger/sizes.tsv`)
+changes in 14 entries, all smaller. `benchmark/determinism/expected.sha256` is regenerated for the 14 settings these
+fixes change.
+
+- **Logs that look like tables get the log template** (#76). A log whose head splits into space-separated fields was
+  planned as a table before the template transform was tried. Both are now scored on one slice, and the template
+  wins when 10% smaller. Loghub BGL 10 MB: -3 -55.7%, -9 -35.0%, ultra -13.4%, and about twice as fast to compress.
+- **Record layouts must hold across the file** (#144). The record transform was chosen on one middle slice, which
+  in columnar files (Arrow IPC, ORC, Parquet) can be a single column buffer. It must now also win on 7 of 8 spread
+  slices. GHCN Arrow IPC -9 -39.5%, ORC -3/-9 -34%/-35%, Parquet -9 -7.7%.
+- **KLZH2's literal floor is chosen per input** (#148, levels 5-7). The 2-bit floor that the code comment described
+  was never applied, and a uniform 2 bits costs raw video 2.8%. Two warm-up passes on the first 256 KiB now compare
+  the floors. Where 2 bits estimates at least 2% smaller, its statistics seed the parse; otherwise the parse starts as
+  before. kennedy.xls -7 132,595 -> 69,546 B (-47.5%); Canterbury -5..-7 -4.6% to -10.8%; corpora unchanged except two
+  frames at -7 (-0.06%). The warm-up costs up to twice the parse time on inputs under 256 KiB.
+- **Level 8 no longer forces block sorting on binary blocks** (#149). BWT is kept only where it is 2% smaller than
+  KLZMA 1, on the whole block up to 2 MiB and on a 512 KiB slice above. Corpora at -8: -2.2% (mozilla -9.8%, bf16
+  weights -10.9%, sao -5.5%), and -8 is no longer larger than -7 on them. Binary blocks coded with KLZMA 1 decode
+  several times faster than BWT, but compress more slowly.
+- **Floats whose mantissas are not random get the float graph** (#64). The trial required a random-looking mantissa,
+  so fp16 converted from bf16 and f32 upcast from bf16 were coded as bytes. fp16 weights -12% (-3) to -14% (-5..-7),
+  f32 upcast -6.0% at -3.
+- **Non-Latin UTF-8 is text** (#61). The text test now counts UTF-8 continuation bytes, and at levels 3-7 the word
+  transform tokenizes UTF-8 letters (text with 5% or more bytes >= 0x80, kept when the dictionary saves 15% on the
+  probe). Cyrillic prose -5 -24%, -7 -9%; Wikimedia pageviews -3..-7 -10..-15%; ultra -2..-4% on every UTF-8 file
+  measured (the context-mixing text mask). Levels 8-9 are unchanged for UTF-8 text.
+- **A text prefix no longer hides the machine code behind it** (#60). An input of 256 KiB or more whose head is text
+  but whose spread slices are not takes the binary route when its middle holds x86 call/jump opcodes. Text-headed
+  executables -9 -11.6%/-12.8%, -3..-7 -9..-13%. Other mixtures, such as a tar of text, a table and a number series,
+  keep the text route.
+- **DEC64 no longer skips the record trial** (#141). NCEP air float32 (exact and computed time slices interleaved)
+  at -3: 17.5 -> 13.7 MB (-21.8%). Levels 4-5 take other routes and are unchanged. Coding the two kinds of slices
+  apart inside one graph would gain more, but it needs a graph change.
+- **The wide-table veto at levels 8, 9 and ultra is checked on 2 MiB** (#62). A 384 KiB BWT slice vetoed a table
+  graph that is 14% smaller on 2 MiB. wide3.csv -8/-9 -21.8% (now below -7), ultra -9.2%.
+- **Tables with long rows are found** (#83). Fewer than 51 lines in the 64 KiB head meant no table at all, so the
+  field count is taken again on 1 MiB. A 200-column CSV: -37% to -63% at levels 3-9, ultra -13.5%.
+- **Small executables get their branch filters** (#82). The Mach-O, ELF and PE parsers now start at 4 KiB instead
+  of 1 MiB, and inputs under 256 KiB get the x86 call/jump trial. 75 macOS x86-64 tools of 32-256 KiB: -3.4% at -3 and
+  -9; 75 arm64 tools -0.9% (a content-based ARM64 detector is not done).
+
 ### Format
 
 - **`FORMAT.md`: the specification of container version 12.** It is complete for the container layer: header, index,
