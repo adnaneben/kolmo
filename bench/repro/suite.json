@@ -1,0 +1,205 @@
+{
+ "_comment": "Sets measured by panel.py. 'files' and 'train' are relative to the data directory. A set with 'train' trains OpenZL once per profile on the train split (never measured) and measures the trained compressor on the test files; Kolmo is never trained or configured. Sets marked optional are skipped when their files are absent. The 20-file development panel of the 0.0.2 report is not re-run here (it overlaps Kolmo's development data and has no single public source); the page shows its recorded numbers, labelled as not independent.",
+ "sets": [
+  {
+   "name": "ghcn-csv",
+   "label": "CSV: NOAA GHCN-Daily weather stations",
+   "holdout": true,
+   "files": "holdout/ghcn-csv/test/*.csv",
+   "train": "holdout/ghcn-csv/train",
+   "openzl": [
+    [
+     "-p",
+     "csv"
+    ]
+   ],
+   "train_args": [
+    "--max-time-secs",
+    "1200"
+   ]
+  },
+  {
+   "name": "gharchive-json",
+   "label": "JSON lines: GH Archive events",
+   "holdout": true,
+   "files": "holdout/gharchive-json/test/*.json",
+   "train": "holdout/gharchive-json/train",
+   "openzl": [
+    [
+     "-p",
+     "serial"
+    ],
+    [
+     "-p",
+     "lz"
+    ]
+   ],
+   "train_args": [
+    "--max-time-secs",
+    "1200"
+   ]
+  },
+  {
+   "name": "nasa-logs",
+   "label": "Web server logs: NASA HTTP 1995",
+   "holdout": true,
+   "files": "holdout/nasa-logs/test/*.log",
+   "train": "holdout/nasa-logs/train",
+   "openzl": [
+    [
+     "-p",
+     "serial"
+    ],
+    [
+     "-p",
+     "lz"
+    ]
+   ],
+   "train_args": [
+    "--max-time-secs",
+    "1200"
+   ]
+  },
+  {
+   "name": "ncep-npy",
+   "label": "float32 grids: NCEP/NCAR reanalysis (NumPy)",
+   "holdout": true,
+   "files": "holdout/ncep-npy/test/*.npy",
+   "train": "holdout/ncep-npy/train",
+   "openzl": [
+    [
+     "-p",
+     "numpy"
+    ]
+   ],
+   "train_args": [
+    "--max-time-secs",
+    "1200"
+   ]
+  },
+  {
+   "name": "tlc-parquet",
+   "label": "Parquet (plain, uncompressed): NYC TLC trips",
+   "holdout": true,
+   "optional": true,
+   "files": "holdout/tlc-parquet/test/*.parquet",
+   "train": "holdout/tlc-parquet/train",
+   "openzl": [
+    [
+     "-p",
+     "parquet"
+    ]
+   ],
+   "train_args": [
+    "--max-time-secs",
+    "1200"
+   ]
+  },
+  {
+   "name": "silesia-sao",
+   "label": "Silesia sao (binary star catalog)",
+   "files": "corpus/silesia/sao",
+   "openzl": [
+    [
+     "-p",
+     "sao"
+    ],
+    [
+     "-p",
+     "serial"
+    ]
+   ]
+  },
+  {
+   "name": "silesia-xray",
+   "label": "Silesia x-ray (12-bit medical image)",
+   "files": "corpus/silesia/x-ray",
+   "openzl": [
+    [
+     "-p",
+     "le-u16"
+    ],
+    [
+     "-p",
+     "be-u16"
+    ],
+    [
+     "-p",
+     "serial"
+    ]
+   ]
+  },
+  {
+   "name": "silesia-mr",
+   "label": "Silesia mr (16-bit MRI image)",
+   "files": "corpus/silesia/mr",
+   "openzl": [
+    [
+     "-p",
+     "le-u16"
+    ],
+    [
+     "-p",
+     "be-u16"
+    ],
+    [
+     "-p",
+     "serial"
+    ]
+   ]
+  },
+  {
+   "name": "silesia-nci",
+   "label": "Silesia chemical database (text records)",
+   "files": "corpus/silesia/nci",
+   "openzl": [
+    [
+     "-p",
+     "serial"
+    ]
+   ]
+  },
+  {
+   "name": "weights-bf16",
+   "label": "ML weights, bf16 safetensors",
+   "files": "weights/*-bf16.safetensors",
+   "kolmo_levels": [
+    1,
+    3,
+    5,
+    7,
+    9
+   ],
+   "openzl": [
+    [
+     "-p",
+     "safetensors"
+    ]
+   ],
+   "zipnn": [
+    "bfloat16"
+   ]
+  },
+  {
+   "name": "weights-f32",
+   "label": "ML weights, f32 safetensors",
+   "files": "weights/*-f32.safetensors",
+   "kolmo_levels": [
+    1,
+    3,
+    5,
+    7,
+    9
+   ],
+   "openzl": [
+    [
+     "-p",
+     "safetensors"
+    ]
+   ],
+   "zipnn": [
+    "float32"
+   ]
+  }
+ ]
+}
