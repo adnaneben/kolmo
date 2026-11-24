@@ -63,6 +63,17 @@ static uint32_t kolmo_fast_block(size_t n) {
     if (b > (4u << 20)) b = 4u << 20;
     return (uint32_t)b;
 }
+/* The default block of a mode (p->block 0): ratio and -x 128 MiB, except max at codec level 1 (level 8, block sorting
+ * for every block) 32 MiB (0.0.3): -8 then needs about a third less memory and scales over cores on large text, and
+ * -9 keeps the one large window (enwik8: -9 20.80 MB, -8 21.97 MB; it was 20.80 MB at both). eco and hc 16 MiB,
+ * rt and fast kolmo_fast_block. Encoder only: any decoder reads blocks of any size. */
+#ifndef KOLMO_MAX_FAST_BLOCK
+#define KOLMO_MAX_FAST_BLOCK (32u << 20)
+#endif
+static uint32_t kolmo_default_block(const kolmo_params *p, size_t n) {
+    if (p && p->mode == KOLMO_MAX && p->level == 1) return KOLMO_MAX_FAST_BLOCK;
+    return p && p->mode >= KOLMO_MAX ? (128u << 20) : p && p->mode >= KOLMO_ECO ? (16u << 20) : kolmo_fast_block(n);
+}
 
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {

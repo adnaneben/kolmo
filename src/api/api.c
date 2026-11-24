@@ -1,7 +1,7 @@
 /* Public entry points (kolmo.h): parameter checks and the calls into core/. */
 /* worst case: every block stored raw (+ index entry); blocks are >= B/2 except the last */
 size_t kolmo_bound(size_t n, const kolmo_params *p) {
-    uint32_t B = p && p->block ? p->block : (p && p->mode >= KOLMO_MAX ? (128u << 20) : p && p->mode >= KOLMO_ECO ? (16u << 20) : kolmo_fast_block(n));
+    uint32_t B = p && p->block ? p->block : kolmo_default_block(p, n);
     size_t nb = n / (B / 2 > 0 ? B / 2 : 1) + 2 + 2 * (n >> 20);     /* + archive segments (>= 1 MiB each) */
     return HDR + nb * (IDX + 4) + n + 64 + 2 * IDX;
 }

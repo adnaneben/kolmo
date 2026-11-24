@@ -102,6 +102,25 @@
 - **Launch drafts** in `docs/launch/`, marked as drafts and not published: a technical post on structure detection,
   Show HN and encode.su texts, and a proposed top of the README.
 
+### Encoder and decoder speed (weak spots of the 0.0.2 market benchmark)
+
+Encoder-only changes: every frame is still container version 12 and every earlier decoder reads it. The decoder
+change keeps the decoded bytes, and what it accepts or refuses, exactly as before. Levels 1, 2, 3 and 8 write different
+(smaller or lighter) frames; `benchmark/determinism/expected.sha256` is regenerated for those settings only.
+
+- **Level 1: a new KLZ parse.** Each table slot holds a position and its 4 bytes, on 6-byte keys, in a 2^16-slot
+  table. It also tries the last offset one byte ahead, steps by misses rather than literals, and refuses 4-byte
+  matches at 3-byte offsets. Screening corpus 11.7% smaller, held-out corpus 3.9% smaller. In-codec on Silesia the
+  ratio goes 2.254 -> 2.333 at the same speed, and decoding is 10-15% faster. lzav -1 is still smaller: KLZ's byte
+  format is the limit.
+- **Levels 2 and 3: smaller on small and mixed files.** After a match, the KLZH2 fast parses try the older repeat
+  offsets at the same position. Level 3 also chooses its Huffman chunk spans from sampled histograms instead of
+  fixed 256 KiB spans. Canterbury tar: level 3 665.5 -> 639.6 KB (zstd -3 636.0 KB); level 2 724.0 -> 702.2 KB.
+- **KLZH2 decoding about 25% faster** (levels 2-7). The repeat-offset update is branchless, and copies run 32 bytes
+  at a time away from the end of the block.
+- **Level 8 codes 32 MiB block-sorting blocks** instead of 128 MiB. It needs about a third less memory (enwik8 RSS
+  738 -> 489 MB), and -9 is now smaller than -8 on large text (enwik8 -8 21.97 MB, -9 20.80 MB; both were 20.80 MB).
+
 ## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and

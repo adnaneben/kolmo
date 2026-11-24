@@ -161,6 +161,10 @@ Levels and library
   wins on a binary block (the gate was widened in 0.0.2: two raw videos of the 21 held-out files, 2.2% smaller in all). On small inputs neighbouring levels can coincide (6 and 7 did on a
   200 KB test file); making every level measurably distinct is the measuring lane's job.
   `benchmark/determinism/expected.sha256` pins every level, 2, 4, 6 and 8 included.
+- Since 0.0.2 (unreleased, encoder only; every frame is still container version 12): level 1 has a new KLZ parse and no
+  longer writes 0.0.1's `speed` bytes; levels 2 and 3 have KLZH2 parse and entropy-chunking changes and no longer write
+  0.0.1's `balanced` bytes; level 8 codes 32 MiB blocks instead of 128 MiB (less memory; -9 keeps the large window and
+  is now smaller than -8 on large text). Levels 4-7, 9 and ultra choose as before.
 - An out-of-range level returns a new error code, `KOLMO_ERR_PARAM` (-15).
 - `-10`, `-19`: a run of digits is read as one number (as zstd), then refused (levels are 1..9; ultra is `-U`).
 
