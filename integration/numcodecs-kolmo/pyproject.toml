@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "numcodecs-kolmo"
+version = "0.0.1.dev0"
+description = "Kolmo as a numcodecs codec and a Zarr v3 codec: lossless compression that is often several times smaller than zstd on numeric and scientific arrays."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Adnane Aqartit and contributors" }]
+requires-python = ">=3.9"
+dependencies = ["kolmoc>=0.0.2", "numcodecs", "numpy"]
+keywords = ["compression", "lossless", "numcodecs", "zarr", "scientific data"]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: System :: Archiving :: Compression",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: 3",
+]
+
+[project.optional-dependencies]
+zarr = ["zarr>=3"]
+test = ["pytest", "zarr"]
+
+[project.urls]
+Homepage = "https://github.com/adnaneben/kolmo"
+Repository = "https://github.com/adnaneben/kolmo"
+Source = "https://github.com/adnaneben/kolmo/tree/main/integration/numcodecs-kolmo"
+
+# numcodecs.get_codec({"id": "kolmo", ...}) finds the codec through this entry point (numcodecs >= 0.10)
+[project.entry-points."numcodecs.codecs"]
+kolmo = "numcodecs_kolmo.codec:Kolmo"
+
+# zarr 3 reads codec names from this group; array metadata names the codec "kolmo"
+[project.entry-points."zarr.codecs"]
+kolmo = "numcodecs_kolmo.zarr3:KolmoCodec"
+
+[tool.setuptools.packages.find]
+where = ["src"]

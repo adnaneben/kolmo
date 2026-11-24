@@ -77,6 +77,14 @@
   - a two-column CSV (CM over columns, codec 25, ultra);
   - a derived-column time series (GR6+, codec 26, ultra).
 
+### Integrations
+- **numcodecs and Zarr** (`integration/numcodecs-kolmo/`, not published): the `numcodecs-kolmo` package makes Kolmo
+  the numcodecs codec `kolmo` (entry point `numcodecs.codecs`, so Zarr v2-format arrays and `numcodecs.get_codec`
+  find it) and the Zarr 3 bytes-to-bytes codec `kolmo` (entry point `zarr.codecs`). Parameters `level` (1-9 or
+  `"ultra"`) and `threads`; each chunk is a plain Kolmo frame. Tests over 23 dtypes and 7 shapes, Zarr stores read
+  back, and a one-thread benchmark against numcodecs' Zstd, Blosc and LZ4 (`bench.py`, results in its README: level 3
+  is 1.1-1.7x smaller than zstd 19 on six of seven generated scientific arrays). CI: `.github/workflows/numcodecs-kolmo.yml`.
+
 ## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and
