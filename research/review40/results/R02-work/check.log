@@ -1,0 +1,47 @@
+== make check-krans
+cc -O3 -march=native -fno-plt -ffp-contract=off -Isrc tests/test_krans.c src/algo/krans.c -o build/test-krans -lm
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -fno-sanitize-recover=undefined -Isrc tests/test_krans.c src/algo/krans.c -o build/test-krans-asan -lm
+./build/test-krans 2
+test_krans: 19418 cases (9848 with a coded first chunk), 0 failures
+./build/test-krans-asan
+test_krans: 9709 cases (4855 with a coded first chunk), 0 failures
+python3 tests/test_krans_modes.py build/kolmo build/krans-modes
+test_krans_modes: OK
+== check-krans EXIT 0
+== make check-native
+cc -O3 -march=native -fno-plt -ffp-contract=off -Isrc tests/test_native.c src/algo/khuf.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c -o build/test-native
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -fno-sanitize-recover=undefined -Isrc tests/test_native.c src/algo/khuf.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c -o build/test-native-asan
+./build/test-native 3
+test-native: OK
+./build/test-native-asan
+test-native: OK
+python3 tests/test_native_modes.py build/kolmo build/native-modes
+test_native_modes: OK
+== check-native EXIT 0
+== make check-dispatch
+cc -O3 -march=native -fno-plt -ffp-contract=off -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz  tests/test_dispatch.c build/libkolmo.a build/libvendor.a -o build/test-dispatch   -Wl,--gc-sections -lpthread -lm
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -ffp-contract=off -DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0 -Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/brotli/include -Ivendor/xz  tests/test_dispatch.c src/kolmo.c src/arch/xxh3.c src/arch/cpu.c src/algo/predict.c src/algo/planes.c src/algo/mixer.c src/algo/video.c src/arch/x86_64/med8_sse2.c src/arch/x86_64/planes_sse2.c src/arch/x86_64/mixer_avx2.c src/arch/x86_64/video_sse2.c src/arch/x86_64/img16_sse2.c src/arch/x86_64/med8f_avx2.c src/algo/lzp.c src/algo/qlfc.c src/algo/par.c src/algo/sais/sais.c src/codecs/bwt_stream.c src/algo/khuf.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c src/algo/krans.c src/arch/x86_64/hist_x86_64.S build/libvendor.a -o build/test-dispatch-asan   -Wl,--gc-sections -lpthread -lm
+In file included from src/kolmo.c:51:
+src/transforms/table.c: In function 'ld8':
+src/transforms/table.c:63:1: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   63 | static inline v8f ld8(const float *p) { v8f v; memcpy(&v, p, 32); return v; }
+      | ^~~~~~
+src/transforms/table.c: In function 'hsum8':
+src/transforms/table.c:67:21: note: the ABI for passing parameters with 32-byte alignment has changed in GCC 4.6
+   67 | static inline float hsum8(v8f v) {
+      |                     ^~~~~
+In file included from src/kolmo.c:98:
+src/plan/planner.c: In function 'kg_dec64_trial':
+src/plan/planner.c:158:29: warning: argument 1 is null but the corresponding size argument 2 value is [10, 4294967307] [-Wnonnull]
+  158 |         const uint8_t *sh = memmem(s, hl, "'shape': (", 10), *fo = memmem(s, hl, "'fortran_order': False", 22);
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from src/core/common.h:19,
+                 from src/kolmo.c:8:
+/usr/include/string.h:389:14: note: in a call to function 'memmem' declared with attribute 'access (read_only, 3, 4)'
+  389 | extern void *memmem (const void *__haystack, size_t __haystacklen,
+      |              ^~~~~~
+./build/test-dispatch
+test_dispatch: 28182 checks, 0 mismatches (cpu: sse4.2 1, avx2 1)
+./build/test-dispatch-asan
+test_dispatch: 28182 checks, 0 mismatches (cpu: sse4.2 1, avx2 1)
+== check-dispatch EXIT 0

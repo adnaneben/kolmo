@@ -1,0 +1,117 @@
+== dickens
+k2h1     T1  in    10192446  out     3780725  ratio  2.696  c     81.0 MB/s  d    525.9 MB/s
+  lit out 475976 syms 743871 H0whole 472532 H0cells 469215
+  tok out 727493 syms 1227002 H0whole 729016 H0cells 722357
+  llx out 29757 syms 96797 H0whole 29600 H0cells 29070
+  mlr out 1180 syms 3131 H0whole 1093 H0cells 886
+  mln out 453120 syms 1223871 H0whole 452116 H0cells 451149
+  xbits 2093181
+  off top bit: raw 152980 coded|h 148588; low4: raw 608712 coded|h 608636 coded0 608708; low2: raw 304356 coded|h 304342; ml codes+bits: now 455544 B(32 direct,4/oct) 455377 C(48 direct,2/oct) 455375
+== mozilla
+k2h1     T1  in    51220480  out    18776841  ratio  2.728  c    146.7 MB/s  d    514.6 MB/s
+  lit out 12532415 syms 13711370 H0whole 12719048 H0cells 12403841
+  tok out 1894478 syms 3214301 H0whole 2020172 H0cells 1845936
+  llx out 363421 syms 798563 H0whole 375351 H0cells 352222
+  mlr out 530179 syms 1387401 H0whole 595850 H0cells 513236
+  mln out 775787 syms 1826900 H0whole 811074 H0cells 760672
+  xbits 2680482
+  off top bit: raw 228072 coded|h 218932; low4: raw 862726 coded|h 583888 coded0 588272; low2: raw 431363 coded|h 183334; ml codes+bits: now 1524321 B(32 direct,4/oct) 1514315 C(48 direct,2/oct) 1512343
+== mr
+k2h1     T1  in     9970564  out     3564554  ratio  2.797  c    111.1 MB/s  d    462.2 MB/s
+  lit out 1291867 syms 1611750 H0whole 1292264 H0cells 1270573
+  tok out 515630 syms 891628 H0whole 547980 H0cells 505569
+  llx out 48706 syms 144003 H0whole 48578 H0cells 47385
+  mlr out 1856 syms 6364 H0whole 1766 H0cells 1514
+  mln out 203558 syms 885264 H0whole 232810 H0cells 200553
+  xbits 1502919
+  off top bit: raw 110648 coded|h 107001; low4: raw 437846 coded|h 329478 coded0 330101; low2: raw 218923 coded|h 110950; ml codes+bits: now 243163 B(32 direct,4/oct) 241941 C(48 direct,2/oct) 243108
+== nci
+k2h1     T1  in    33553445  out     2970499  ratio 11.296  c    329.0 MB/s  d    885.5 MB/s
+  lit out 427420 syms 792211 H0whole 422385 H0cells 415772
+  tok out 589264 syms 1093751 H0whole 593728 H0cells 573386
+  llx out 17942 syms 54563 H0whole 17716 H0cells 16238
+  mlr out 178137 syms 407558 H0whole 177806 H0cells 173259
+  mln out 324285 syms 686193 H0whole 324566 H0cells 317950
+  xbits 1433403
+  off top bit: raw 85766 coded|h 78932; low4: raw 341496 coded|h 299068 coded0 337045; low2: raw 170748 coded|h 149976; ml codes+bits: now 755295 B(32 direct,4/oct) 716078 C(48 direct,2/oct) 699469
+== ooffice
+k2h1     T1  in     6152192  out     3191203  ratio  1.928  c     69.5 MB/s  d    381.2 MB/s
+  lit out 2155521 syms 2451119 H0whole 2184026 H0cells 2134089
+  tok out 290834 syms 441842 H0whole 295757 H0cells 286670
+  llx out 104615 syms 214370 H0whole 105103 H0cells 103686
+  mlr out 47518 syms 111030 H0whole 49753 H0cells 46309
+  mln out 116398 syms 330812 H0whole 117360 H0cells 115239
+  xbits 476305
+  off top bit: raw 41276 coded|h 40037; low4: raw 155746 coded|h 153258 coded0 153403; low2: raw 77873 coded|h 76191; ml codes+bits: now 174329 B(32 direct,4/oct) 174032 C(48 direct,2/oct) 174009
+== osdb
+k2h1     T1  in    10085684  out     3550601  ratio  2.841  c    157.5 MB/s  d    687.5 MB/s
+  lit out 1941061 syms 2204195 H0whole 1932042 H0cells 1928448
+  tok out 316730 syms 551118 H0whole 316458 H0cells 314294
+  llx out 76997 syms 213343 H0whole 77078 H0cells 76432
+  mlr out 2830 syms 7640 H0whole 2750 H0cells 2528
+  mln out 241434 syms 543478 H0whole 241100 H0cells 240633
+  xbits 971531
+  off top bit: raw 67933 coded|h 65892; low4: raw 271622 coded|h 251452 coded0 251759; low2: raw 135811 coded|h 115704; ml codes+bits: now 308181 B(32 direct,4/oct) 287702 C(48 direct,2/oct) 287873
+== reymont
+k2h1     T1  in     6627202  out     1975999  ratio  3.354  c    120.6 MB/s  d    501.9 MB/s
+  lit out 197453 syms 285445 H0whole 205249 H0cells 194384
+  tok out 389545 syms 655537 H0whole 392751 H0cells 386279
+  llx out 4128 syms 18962 H0whole 4134 H0cells 3884
+  mlr out 6855 syms 16644 H0whole 6921 H0cells 6538
+  mln out 271855 syms 638893 H0whole 272551 H0cells 271005
+  xbits 1106151
+  off top bit: raw 79861 coded|h 77581; low4: raw 315849 coded|h 315784 coded0 315842; low2: raw 157924 coded|h 157901; ml codes+bits: now 291423 B(32 direct,4/oct) 290907 C(48 direct,2/oct) 290826
+== samba
+k2h1     T1  in    21606400  out     5112551  ratio  4.226  c    168.3 MB/s  d    768.2 MB/s
+  lit out 2079356 syms 2375519 H0whole 2167034 H0cells 2054451
+  tok out 741176 syms 1183121 H0whole 780742 H0cells 724030
+  llx out 43820 syms 118907 H0whole 43851 H0cells 42166
+  mlr out 48133 syms 121836 H0whole 55659 H0cells 44142
+  mln out 491284 syms 1061285 H0whole 509372 H0cells 485208
+  xbits 1708746
+  off top bit: raw 132570 coded|h 128441; low4: raw 516786 coded|h 514198 coded0 515743; low2: raw 258393 coded|h 256645; ml codes+bits: now 657006 B(32 direct,4/oct) 647875 C(48 direct,2/oct) 648121
+== sao
+k2h1     T1  in     7251944  out     5659095  ratio  1.281  c     97.0 MB/s  d    418.6 MB/s
+  lit out 4564149 syms 4704254 H0whole 4583260 H0cells 4527497
+  tok out 215228 syms 400672 H0whole 215318 H0cells 212935
+  llx out 99616 syms 279292 H0whole 100511 H0cells 98502
+  mlr out 1952 syms 11497 H0whole 1918 H0cells 1780
+  mln out 105584 syms 389175 H0whole 105922 H0cells 104895
+  xbits 672553
+  off top bit: raw 48644 coded|h 46840; low4: raw 193986 coded|h 96517 coded0 97005; low2: raw 96993 coded|h 12; ml codes+bits: now 107840 B(32 direct,4/oct) 107840 C(48 direct,2/oct) 107840
+== webster
+k2h1     T1  in    41458703  out    12414296  ratio  3.340  c    119.3 MB/s  d    439.7 MB/s
+  lit out 2028347 syms 3096084 H0whole 2014203 H0cells 1999710
+  tok out 2403071 syms 3750685 H0whole 2404280 H0cells 2383549
+  llx out 147144 syms 440311 H0whole 146593 H0cells 144748
+  mlr out 37533 syms 74768 H0whole 37171 H0cells 35552
+  mln out 1629793 syms 3675917 H0whole 1628099 H0cells 1624886
+  xbits 6168348
+  off top bit: raw 459482 coded|h 446878; low4: raw 1817536 coded|h 1817294 coded0 1817521; low2: raw 908768 coded|h 908722; ml codes+bits: now 1804798 B(32 direct,4/oct) 1801252 C(48 direct,2/oct) 1801004
+== x-ray
+k2h1     T1  in     8474240  out     6774616  ratio  1.251  c    157.2 MB/s  d    455.2 MB/s
+  lit out 6766593 syms 8455735 H0whole 6903191 H0cells 6721173
+  tok out 1983 syms 3590 H0whole 1901 H0cells 1887
+  llx out 526 syms 1248 H0whole 477 H0cells 472
+  mlr out 10 syms 16 H0whole 2 H0cells 1
+  mln out 250 syms 3574 H0whole 229 H0cells 228
+  xbits 5239
+  off top bit: raw 447 coded|h 339; low4: raw 1752 coded|h 1303 coded0 1312; low2: raw 876 coded|h 436; ml codes+bits: now 232 B(32 direct,4/oct) 231 C(48 direct,2/oct) 231
+== xml
+k2h1     T1  in     5345280  out      648884  ratio  8.238  c    212.0 MB/s  d    908.0 MB/s
+  lit out 114419 syms 173803 H0whole 124528 H0cells 111033
+  tok out 118107 syms 207615 H0whole 125463 H0cells 114963
+  llx out 5918 syms 15443 H0whole 6006 H0cells 5556
+  mlr out 13517 syms 29534 H0whole 14720 H0cells 12715
+  mln out 84881 syms 178081 H0whole 90750 H0cells 83607
+  xbits 312030
+  off top bit: raw 22258 coded|h 21412; low4: raw 87798 coded|h 87742 coded0 87796; low2: raw 43899 coded|h 43891; ml codes+bits: now 135608 B(32 direct,4/oct) 134809 C(48 direct,2/oct) 134818
+== enwik8_10m
+k2h1     T1  in    10000000  out     3672424  ratio  2.723  c     89.5 MB/s  d    534.6 MB/s
+  lit out 999014 syms 1360709 H0whole 985260 H0cells 975701
+  tok out 660846 syms 990099 H0whole 660801 H0cells 654542
+  llx out 72230 syms 180807 H0whole 72027 H0cells 71626
+  mlr out 12422 syms 24398 H0whole 12282 H0cells 11275
+  mln out 394039 syms 965701 H0whole 393202 H0cells 391863
+  xbits 1533855
+  off top bit: raw 120700 coded|h 117373; low4: raw 472802 coded|h 472720 coded0 472796; low2: raw 236401 coded|h 236384; ml codes+bits: now 418882 B(32 direct,4/oct) 418350 C(48 direct,2/oct) 418386

@@ -1,0 +1,37 @@
+diff --git a/src/codecs/codec.h b/src/codecs/codec.h
+index af3ed96d..1d240e35 100644
+--- a/src/codecs/codec.h
++++ b/src/codecs/codec.h
+@@ -19,6 +19,7 @@ typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *di
+                  int used_bwt;           /* encoder: set when codec 18 was written (the frame needs version 11) */
+                  int used_f2;            /* encoder: a format-2 leaf (codecs 21-23) was written (the frame needs version 11) */
+                  int used_cmt;           /* encoder: a context-mixing leaf with learning settings was written (version 11) */
++                 int krans_plan;         /* encoder: a planner score that lets codec 33 compete although no_f2 is set (KOLMO_NATIVE=rans) */
+                  int no_f2;              /* encoder: do not try codecs 21-23 (planner scores, the --typed-huf route, WAV sample blocks) */
+                  int allow_f2;           /* decoder: codecs 21-23 are valid graph leaves (container version 11 or later) */ } codec_ctx;
+ 
+diff --git a/src/codecs/krans_leaf.c b/src/codecs/krans_leaf.c
+index 91ab1064..0922d29f 100644
+--- a/src/codecs/krans_leaf.c
++++ b/src/codecs/krans_leaf.c
+@@ -12,7 +12,7 @@
+  * Part of the single translation unit built from src/kolmo.c. */
+ #include "../algo/krans.h"
+ 
+-static inline int krans_on(const codec_ctx *x) { return (kolmo_native_flags() & KN_RANS) && !x->no_f2; }
++static inline int krans_on(const codec_ctx *x) { return (kolmo_native_flags() & KN_RANS) && (!x->no_f2 || x->krans_plan); }
+ /* stride = 0: no geometry (orders 0 and 1). effort: 1 at the fast settings, 2 above (more context sets tried). */
+ static size_t krans_leaf_compress(const uint8_t *in, size_t n, size_t stride, unsigned step, int effort, uint8_t *out, size_t cap) {
+     kolmo_krans_params p = {0};
+diff --git a/src/plan/planner.c b/src/plan/planner.c
+index 682fb456..aef41f6d 100644
+--- a/src/plan/planner.c
++++ b/src/plan/planner.c
+@@ -85,6 +85,7 @@ static double kg_img8_trial(const uint8_t *s, size_t n, size_t st, size_t L, int
+     if (st < h) st = h;
+     size_t a = h + (st - h) / W * W, l = (n - a < L ? n - a : L) / W * W; if (l < 2 * W) l = (n - a) / W * W < 2 * W ? 0 : 2 * W;
+     codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(l + 64);
++    cx.krans_plan = 1;                               /* ... and codec 33 when it is enabled: the block will be coded with it (claim img8-trial-krans-score) */
+     if (o && plain < 1e299 && l > KG_SCREEN * 2 && W * 8 <= KG_SCREEN) {   /* screen on a few rows, as for integers */
+         size_t ls = KG_SCREEN / W * W, zs = kg_encode_img8(&cx, C_ZSTD, zl, s + a, ls, W, C, 0, o, l + 64);
+         if (!zs || (double)zs / ls > plain * KG_SCREEN_SLACK) { free(o); codec_ctx_free(&cx); return best; }
