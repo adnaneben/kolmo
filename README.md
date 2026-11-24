@@ -285,11 +285,12 @@ returned as data. `RELEASING.md` describes how to cut a release.
 0.0.x does not read them: it reports `KOLMO_ERR_LEGACY` ("written by an earlier Kolmo (1.x or a release candidate)
 that used library codecs") rather than returning wrong data. To move such a file, decompress it with kolmoc 1.0.1,
 which stays installable from PyPI by its exact version (pip warns that it is yanked; that is expected), then
-compress it again:
+compress it again. Keep `CZN_OLDTBL=1` on the decompress line: 1.0.x cannot otherwise read its own tables that hold a
+field over 64 KiB (for example a log line that long), and the variable does not change the output for other files:
 
 ```bash
 python3 -m venv kolmo1 && kolmo1/bin/pip install kolmoc==1.0.1
-kolmo1/bin/python -c 'import kolmo,sys; open(sys.argv[2],"wb").write(kolmo.decompress(open(sys.argv[1],"rb").read()))' old.kolmo plain
+CZN_OLDTBL=1 kolmo1/bin/python -c 'import kolmo,sys; open(sys.argv[2],"wb").write(kolmo.decompress(open(sys.argv[1],"rb").read()))' old.kolmo plain
 kolmo plain -o new.kolmo
 ```
 

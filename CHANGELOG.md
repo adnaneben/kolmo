@@ -22,6 +22,9 @@
   - Two such 0.0.2 frames are in the corpus (`tests/v12/r0.0.2/longfield.csv.*`), so `make check` covers the fix
     (FORMAT.md 20.5). `test-levels` round-trips such tables at every level, with the long field in a text column and
     in a numeric column, and checks that none is written as a table block.
+  - **The yanked 1.0.0 and 1.0.1 are affected too**, in every mode but `ultra`. 0.0.x does not read 1.x files, so the
+    README's recipe for moving 1.x files now sets `CZN_OLDTBL=1`, which makes kolmoc 1.0.1 decode such tables through
+    its row path.
 
 ### Format
 
