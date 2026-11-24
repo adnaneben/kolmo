@@ -109,7 +109,7 @@ def memd_bytes(v): return 0 if v == 0 else STEPS[v & 7] << (v >> 3)
 
 def tflag_ok(t, f):
     if f == 0: return True
-    if f > MAXF[t]: return False
+    if f > MAXF[t] and not (t == 3 and f == 13): return False   # tflag 13 is above the plan's range (FORMAT.md 6.1, 8.3)
     allowed = {1: {1, 2}, 2: {1}, 3: {3, 4, 13}, 4: {5, 10}, 5: {6}, 6: {7}, 7: {8}, 8: {9}, 10: {12}, 11: {14}}
     return f in allowed.get(t, set())
 

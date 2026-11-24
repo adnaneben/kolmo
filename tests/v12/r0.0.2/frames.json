@@ -536,6 +536,56 @@
    }
   },
   {
+   "file": "derived.csv.index3.kolmo",
+   "input": "in/derived.csv",
+   "options": "--index -3",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "21e1a5cdd7f27527c12f41f53ac7a0d182eda3871c766086e32bf08a66c05568",
+   "frame_bytes": 51057,
+   "decoded_sha256": "deb380ebcfade14c7cab906eb122a7bacf54534806750f33f5e34ccc419466ec",
+   "decoded_bytes": 298724,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 298724,
+    "blocks": [
+     [
+      32,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 6926
+   }
+  },
+  {
+   "file": "derived.csv.index9.kolmo",
+   "input": "in/derived.csv",
+   "options": "--index -9",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "03150ca5699eccd06344c51ab669255d574729d69fd395555b0b503808964a37",
+   "frame_bytes": 46601,
+   "decoded_sha256": "deb380ebcfade14c7cab906eb122a7bacf54534806750f33f5e34ccc419466ec",
+   "decoded_bytes": 298724,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 17,
+    "orig": 298724,
+    "blocks": [
+     [
+      24,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 6926
+   }
+  },
+  {
    "file": "empty.L1.kolmo",
    "input": "in/empty",
    "options": "-1",
@@ -3653,6 +3703,54 @@
    }
   },
   {
+   "file": "rgb-corr.ppm.L9.kolmo",
+   "input": "in/rgb-corr.ppm",
+   "options": "-9",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ea72a3a0d6716ec07f64fc8cb7875d71894c97b0ebb9787150d5ca5cc57b53e9",
+   "frame_bytes": 75160,
+   "decoded_sha256": "b2eeb07dfcda86af8b247c037a3b8218be81d4a9c8bba06d5c79313a3414a4c4",
+   "decoded_bytes": 589839,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 23,
+    "orig": 589839,
+    "blocks": [
+     [
+      31,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "rgb.ppm.L9.kolmo",
+   "input": "in/rgb.ppm",
+   "options": "-9",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "6321c0506e07abdd0a9c0e46162045f57290ba0b12f0bf7e26ad9f9c83606e96",
+   "frame_bytes": 71916,
+   "decoded_sha256": "0b1ad95b7c94353dc711963361f30923fecd291109b0ac848e3d22ed26354a9e",
+   "decoded_bytes": 230415,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 230415,
+    "blocks": [
+     [
+      31,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
    "file": "series.i32.L1.kolmo",
    "input": "in/series.i32",
    "options": "-1",
@@ -4445,6 +4543,56 @@
    }
   },
   {
+   "file": "stations.csv.index3.kolmo",
+   "input": "in/stations.csv",
+   "options": "--index -3",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "7f2df6f33ff62ce85ebffe1197f738c9bfbbffb20b82021427347f8380132fee",
+   "frame_bytes": 13116,
+   "decoded_sha256": "017b51a338bb9cda18da04334b4785754eb363c73a5a7d9df9d92042f9178a54",
+   "decoded_bytes": 136801,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 136801,
+    "blocks": [
+     [
+      32,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 3206
+   }
+  },
+  {
+   "file": "stations.csv.index9.kolmo",
+   "input": "in/stations.csv",
+   "options": "--index -9",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "8a7624adc28812c0191007afd14566950cd0811d1800f0d90d2b2f3acddbd7e7",
+   "frame_bytes": 13323,
+   "decoded_sha256": "017b51a338bb9cda18da04334b4785754eb363c73a5a7d9df9d92042f9178a54",
+   "decoded_bytes": 136801,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 15,
+    "orig": 136801,
+    "blocks": [
+     [
+      24,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 3206
+   }
+  },
+  {
    "file": "table.csv.L1.kolmo",
    "input": "in/table.csv",
    "options": "-1",
@@ -4682,6 +4830,56 @@
       3
      ]
     ]
+   }
+  },
+  {
+   "file": "table.csv.index3.kolmo",
+   "input": "in/table.csv",
+   "options": "--index -3",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "096b91ef78bd5376ec793f66aad5496c0b66415c9c81bce7f596f9c3ee53ccee",
+   "frame_bytes": 19112,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 122874,
+    "blocks": [
+     [
+      32,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 3249
+   }
+  },
+  {
+   "file": "table.csv.index9.kolmo",
+   "input": "in/table.csv",
+   "options": "--index -9",
+   "written_by": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "d05a6db56c9b84476683f98697d225d7bb34575d3960d4246c9b5683958900e1",
+   "frame_bytes": 17311,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 15,
+    "orig": 122874,
+    "blocks": [
+     [
+      24,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 3249
    }
   },
   {

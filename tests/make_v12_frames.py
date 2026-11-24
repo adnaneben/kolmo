@@ -302,6 +302,26 @@ def quoted_csv(rng, rows):  # quoted fields and brackets holding the delimiter: 
     return "".join(out).encode()
 
 
+def photo_rgb(rng, w, h, correlated):  # 3-channel smooth images: kimg (codec 31) with 3 channels, and its colour transform
+    gw, gh, cell = w // 32 + 2, h // 32 + 2, 32
+    grids = [[[40 + rng.below(150 if correlated else 176) for _ in range(gw)] for _ in range(gh)] for _ in range(1 if correlated else 3)]
+    px = bytearray()
+    for y in range(h):
+        gy, fy = y // cell, y % cell
+        for x in range(w):
+            gx, fx = x // cell, x % cell
+            vs = []
+            for g in grids:
+                top = g[gy][gx] * (cell - fx) + g[gy][gx + 1] * fx; bot = g[gy + 1][gx] * (cell - fx) + g[gy + 1][gx + 1] * fx
+                vs.append((top * (cell - fy) + bot * fy) // (cell * cell))
+            if correlated:
+                v = vs[0] + rng.below(5) - 2; vs = [v + 20, v, v - 15 + (x >> 5)]
+            else:
+                vs = [v + rng.below(3) - 1 for v in vs]
+            px += bytes(max(0, min(255, v)) for v in vs)
+    return b"P6\n%d %d\n255\n" % (w, h) + bytes(px)
+
+
 C_SOURCE = r"""
 #include <stdio.h>
 #include <string.h>
@@ -391,6 +411,8 @@ def inputs():
     d["growth.csv"] = growth_csv(r(31))
     d["longfield.csv"] = long_field_csv(r(32), 3000)
     d["quoted.csv"] = quoted_csv(r(33), 4000)
+    d["rgb.ppm"] = photo_rgb(r(34), 320, 240, False)
+    d["rgb-corr.ppm"] = photo_rgb(r(35), 512, 384, True)
     mixed = d["text.txt"] + d["table.csv"] + d["series.i32"] + d["gray.pgm"] + d["service.log"] + d["records.bin"]
     d["mixed.bin"] = (mixed * 3)[: 3 << 20]   # 2.3 MiB: several blocks at level 3, several segments with --stream=1
     return d
@@ -403,7 +425,8 @@ SOME = {"bigprog-arm64": ["3", "9"], "bigprog-x86_64": ["3", "9"], "gray-big.pgm
         "gray16-big.pgm": ["3", "U"], "mixed.bin": ["3"], "bundle.tar": ["3", "9"],
         "gray12.pgm": ["3", "9"], "photo.pgm": ["9", "U"], "code.x86": ["3", "9"], "names.csv": ["2", "3"],
         "pairs.csv": ["3", "U"], "derived.csv": ["3", "9", "U"], "ragged.csv": ["3"], "stations.csv": ["3", "9"],
-        "growth.csv": ["3"], "longfield.csv": ["3", "9"], "quoted.csv": ["3"]}
+        "growth.csv": ["3"], "longfield.csv": ["3", "9"], "quoted.csv": ["3"],
+        "rgb.ppm": ["9"], "rgb-corr.ppm": ["9"]}
 
 
 def frame_summary(f):
@@ -452,6 +475,8 @@ def main():
                 jobs.append((name, data, "L3-typed-huf", ["-3", "-T1", "--typed-huf"]))
             if name in ("text.txt", "values.f64"):
                 jobs.append((name, data, "U-codec-level1", ["-U", "--codec-level", "1"]))
+            if name in ("table.csv", "stations.csv", "derived.csv"):   # queryable archives: column-split tables (tflag 13)
+                for lv in ("3", "9"): jobs.append((name, data, "index" + lv, ["--index", "-" + lv]))
         for name, data, tag, opts in jobs:
             fn = "%s.%s.kolmo" % (name, tag)
             if fn in have: continue
@@ -459,7 +484,8 @@ def main():
             if os.path.exists(orig): data = open(orig, "rb").read()   # the compiler that built them)
             else: open(orig, "wb").write(data)
             dst = os.path.join(out, fn)
-            r = subprocess.run([a.kolmo] + opts + ["-q", "-f", "-T1", orig, "-o", dst], capture_output=True, text=True)
+            cmd = [a.kolmo] + opts + [orig, dst] if opts[0] == "--index" else [a.kolmo] + opts + ["-q", "-f", "-T1", orig, "-o", dst]
+            r = subprocess.run(cmd, capture_output=True, text=True)
             if r.returncode:
                 print("skip", fn, r.stderr.strip()[:200]); continue
             back = os.path.join(tmp, "back")
