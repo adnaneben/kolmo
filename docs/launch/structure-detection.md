@@ -1,8 +1,13 @@
-> **DRAFT. Not published.** A technical blog post for the launch (adoption plan, phase 3). Every number comes from
-> the 0.0.2 market report (Apple M5, one thread, lzbench 2.4.1). Before publishing:
-> - replace or add the x86-64 numbers when that run is done;
-> - link the public benchmark page;
-> - check each route named below with `kolmo -l` on the 0.0.2 binary.
+> **DRAFT. Not published.** A technical blog post for the launch (adoption plan, phase 3). The numbers come from
+> the 0.0.2 market report (Apple M5, one thread, lzbench 2.4.1) and from the x86-64 check of the same claims (PR #33:
+> GitHub runner, Intel Xeon 6975P-C, one thread, lzbench 2.4.1, 3 runs, median). Kolmo's compressed sizes are
+> identical on the two machines, so every ratio below holds on both; speed factors are given for both. Before
+> publishing:
+> - PR #33 (x86 numbers) and PR #29 (benchmark page) must be merged, and the page must be live, with its link
+>   filled in;
+> - the release the launch goes with must contain the long-field table fix (PR #22, merged, and PR #30); replace
+>   `[RELEASE]` with its version;
+> - check each route named below with `kolmo -l` on the release binary.
 >
 > Some descriptions of routes follow `docs/ROUTING-MAP.md`, which was written before 0.0.1 renamed the coders. The
 > owner approves the text before it goes anywhere.
@@ -44,7 +49,9 @@ Kolmo's default level gains most over zstd's default:
 *Method:* Kolmo 0.0.2 built from the release tag with generic flags (`make ARCH=`), run inside lzbench 2.4.1 next
 to the other codecs, so every codec has the same harness and compiler flags. Apple M5, macOS, **one thread for every
 codec**. Ratio = original size ÷ compressed size; gain = Kolmo's ratio ÷ zstd's ratio − 1. Every output was decoded
-and compared with the original. The full report, with raw results and scripts, is in the repository.
+and compared with the original. An x86-64 run (Intel Xeon on a GitHub runner, same harness) produced the same
+compressed sizes for every Kolmo setting, byte for byte, so this table holds on both machines. The raw results and
+the scripts that reproduce them are on the [benchmark page](BENCHMARK_PAGE_URL).
 
 The last rows matter as much as the first. On English text, on database pages and on XML, Kolmo's default level is
 about as good as zstd -3, and on xml it is slightly worse. Where there is no structure to find, Kolmo is a good LZ
@@ -198,9 +205,12 @@ A program is chosen by the same trials as everything else. Each candidate graph 
 only the promising ones are run on the full trial slice.
 
 Graphs are also how the format grows safely. A new transform is a new node id. A decoder that meets a node id it does
-not know refuses the block with an error, so it never misreads it. This is the basis of Kolmo's format promise: every
-later release reads every frame written since 0.0.1 to the same bytes, and a new feature always uses an identifier
-that older releases refuse (`COMPATIBILITY.md`).
+not know refuses the block with an error, so it never misreads it. This is the basis of Kolmo's format promise: a new
+feature always uses an identifier that older releases refuse, and from [RELEASE] on every release reads every frame
+written since 0.0.1 to the same bytes (`COMPATIBILITY.md`). We broke the second half once. 0.0.1 and 0.0.2 wrote
+table blocks with a field longer than 64 KiB that they then refused to read back. The data in those files is intact,
+and [RELEASE] reads them. It also stops writing such blocks, so a table it writes never hits that bug in 0.0.1 or
+0.0.2.
 
 ## Coders: what the level changes
 
@@ -227,12 +237,17 @@ coder gains on top.
 
 Second, **levels 1 to 7 all decode at LZ speed**. The extra time at higher levels is spent compressing: more trials,
 better parsing, larger windows. Decoding is not slowed down. That is where Kolmo's most useful claim comes from. On
-Silesia, `kolmo -6` produces output smaller than `xz -9` (ratio 4.367 against 4.346) and decodes 8.6 times faster
-(1463 MiB/s against 169), on one thread in the same lzbench harness. At level 4 Kolmo is within 1.6% of `zstd -19`'s
-ratio and compresses 13 times faster (79 MiB/s against 6.0).
+Silesia, `kolmo -6` produces output smaller than `xz -9` (ratio 4.367 against 4.346) and decodes 6.5 times faster on
+an x86-64 Xeon and 8.6 times faster on an Apple M5 (1463 MiB/s against 169 there), on one thread in the same lzbench
+harness. At level 4 Kolmo is within 1.6% of `zstd -19`'s ratio and compresses 11 times faster on the Xeon, 13 times
+on the M5.
 
 Levels 8 and 9 switch to block sorting. They are smaller again, but they decode about ten times more slowly. Even so,
-`kolmo -9` matches `zpaq -5`'s ratio on Silesia (5.232 against 5.237) and decodes 120 times faster.
+`kolmo -9` matches `zpaq -5`'s ratio on Silesia (5.232 against 5.237) and decodes 87 times faster on the Xeon, 120
+times on the M5.
+
+These claims are about Silesia. On enwik8 (plain English text) and on the Canterbury corpus (small files), levels 4
+and 6 are larger than `zstd -19` and `xz -9`; only level 9 stays within 1% of `zpaq -5`, on enwik8.
 
 ## Where it does not help
 
@@ -240,8 +255,11 @@ A structure detector earns trust by saying where it finds nothing. These come fr
 
 - **Plain text at the low levels.** On enwik8 and on Silesia's text files, Kolmo -3 is within a few percent of zstd -3.
   There is no table or array to find.
-- **Decode speed against zstd.** At levels 2 to 7 Kolmo decodes 30 to 40% slower than zstd on one thread. Its blocks
-  decode in parallel, so on many cores it pulls ahead, but on a single core zstd is faster.
+- **Decode speed against zstd.** On one thread, Kolmo's levels 2 to 7 decode at 60 to 75% of zstd's speed, on both
+  machines. Its blocks decode in parallel, so on many cores it pulls ahead, but on a single core zstd is faster.
+- **New data at the default level.** On held-out CSV, JSON and log files that Kolmo was never tuned on (benchmark
+  page), level 3's ratio is 9 to 35% below `zstd -19`'s, and a *trained* OpenZL profile beats every Kolmo level from 3 to
+  9 on CSV. Level 5 and above beat trained OpenZL on the JSON and log files.
 - **The fast tier.** Kolmo's level 1 is beaten by lzav -1 on both ratio and speed on Silesia.
 - **Small files.** On the Canterbury corpus (2.8 MB of small files) Kolmo -3 is 4% larger than zstd -3, and levels 6
   and 7 are not in order.
