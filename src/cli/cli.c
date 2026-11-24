@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/mman.h>
 #include <errno.h>
 #include <time.h>
 #include <signal.h>
@@ -629,6 +630,84 @@ static int64_t code_buffer(const opts_t *o, const uint8_t *in, size_t n, uint8_t
     return r;
 }
 
+/* -t and -d to standard output without holding the output: every frame is checked first (as code_buffer does), then
+ * decoded in turn. ofd < 0 (-t): each frame decodes through kolmo_decompress_to_fd into /dev/null (blocks written by
+ * offset, so only the workers' block buffers are held). ofd >= 0: the frame's whole blocks are decoded in windows of
+ * at least KOLMO_DC_WINDOW bytes (and of at least one block per thread) with kolmo_read_range, each window written
+ * before the next is decoded. A damaged block stops the output where it is (the bytes before it were written), as xz
+ * and zstd do. Returns the decoded size or a negative error. */
+#ifndef KOLMO_DC_WINDOW
+#define KOLMO_DC_WINDOW (16u << 20)
+#endif
+/* a regular, non-empty input file mapped read-only into *m (its pages are the file's: clean, and dropped under
+ * pressure). Returns 0 with *m set, or 1 with *m NULL when the file is not mapped (the caller reads it instead). */
+static int map_input(int fd, int ireg, const struct stat *st, uint8_t **m, size_t *mn) {
+    *m = NULL; *mn = 0;
+    if (!ireg || st->st_size <= 0 || (uintmax_t)st->st_size > SIZE_MAX) return 1;
+    void *p = mmap(NULL, (size_t)st->st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (p == MAP_FAILED) return 1;
+    madvise(p, (size_t)st->st_size, MADV_SEQUENTIAL);
+    *m = p; *mn = (size_t)st->st_size; return 0;
+}
+static uint64_t blk_raw(const uint8_t *f, uint32_t i) { const uint8_t *e = f + 32 + (size_t)16 * i; return (uint64_t)e[0] | (uint64_t)e[1] << 8 | (uint64_t)e[2] << 16 | (uint64_t)e[3] << 24; }
+static int64_t decode_frames_to_fd(const opts_t *o, const uint8_t *in, size_t n, int ofd, int mapped) {
+    src_t sr = {in, -1, n};
+    uint64_t total = 0, off = 0;
+    if (!n) return KOLMO_ERR_CORRUPT;
+    while (off < n) {
+        uint64_t len = frame_extent(&sr, off);
+        if (!len) { int64_t v = kolmo_frame_size(in + off, n - off); return v < 0 ? v : KOLMO_ERR_CORRUPT; }   /* trailing data */
+        int64_t orig = kolmo_original_size(in + off, (size_t)len);
+        if (orig >= 0) { int c = kolmo_check_frame(in + off, (size_t)len, NULL); if (c) orig = c; }
+        if (orig < 0) return orig;
+        if ((uint64_t)orig > INT64_MAX - total) return KOLMO_ERR_CORRUPT;
+        total += (uint64_t)orig; off += len;
+    }
+    int nul = -1, nt = o->P.threads > 0 ? o->P.threads : (int)sysconf(_SC_NPROCESSORS_ONLN);
+    if (nt < 1) nt = 1;
+    if (ofd < 0 && (nul = open("/dev/null", O_WRONLY)) < 0) return KOLMO_ERR_IO;
+    uint8_t *win = NULL; size_t wcap = 0; int64_t ret = 0; uint64_t got = 0;
+    for (off = 0; off < n && !ret;) {
+        const uint8_t *f = in + off; size_t len = (size_t)frame_extent(&sr, off); off += len;
+        if (nul >= 0) {
+            int64_t r = kolmo_decompress_to_fd(f, len, nul, o->P.threads, NULL, 0);
+            if (r < 0) ret = r; else got += (uint64_t)r;
+            continue;
+        }
+        /* the block sizes from the index (checked above: header and index agree with the frame) */
+        uint32_t nb = (uint32_t)f[20] | (uint32_t)f[21] << 8 | (uint32_t)f[22] << 16 | (uint32_t)f[23] << 24;
+        int64_t orig = kolmo_original_size(f, len);
+        if (orig < 0) { ret = orig; break; }
+        uint64_t maxraw = 0, sum = 0;
+        for (uint32_t i = 0; i < nb; i++) { uint64_t r = blk_raw(f, i); sum += r; if (r > maxraw) maxraw = r; }
+        if (sum != (uint64_t)orig) { ret = KOLMO_ERR_CORRUPT; break; }
+        uint64_t want = maxraw * (uint64_t)nt; if (want < KOLMO_DC_WINDOW) want = KOLMO_DC_WINDOW;
+        uint64_t pos = 0, cpos = 32 + (uint64_t)16 * nb; uint32_t i = 0;
+        while (i < nb) {
+            uint64_t a = pos, b = pos;
+            do { cpos += blk_raw(f + 4, i); b += blk_raw(f, i++); } while (i < nb && b - a + blk_raw(f, i) <= want);
+            if (b - a > SIZE_MAX) { ret = KOLMO_ERR_ALLOC; break; }
+            if (b - a > wcap) {
+                free(win); wcap = 0; win = malloc((size_t)(b - a));
+                if (!win) { ret = KOLMO_ERR_ALLOC; break; }
+                wcap = (size_t)(b - a);
+            }
+            int64_t r = b > a ? kolmo_read_range(f, len, a, (size_t)(b - a), win, o->P.threads) : 0;
+            if (r < 0) { ret = r; break; }
+            if ((uint64_t)r != b - a) { ret = KOLMO_ERR_CORRUPT; break; }
+            if (write_all(ofd, win, (size_t)r)) { ret = KOLMO_ERR_IO; break; }
+            pos = b; got += (uint64_t)r;
+            if (mapped) {   /* the payloads decoded so far are not read again: their file pages leave the process */
+                uintptr_t pg = (uintptr_t)sysconf(_SC_PAGESIZE), lo = (uintptr_t)in, hi = ((uintptr_t)f + (uintptr_t)(cpos < len ? cpos : len)) & ~(pg - 1);
+                if (hi > lo) madvise((void *)lo, hi - lo, MADV_DONTNEED);
+            }
+        }
+    }
+    free(win);
+    if (nul >= 0) close(nul);
+    return ret ? ret : (int64_t)got;
+}
+
 /* a reader that closed standard output early (kolmo -d | head) when SIGPIPE is ignored, as on some CI runners and
  * under some shells: the run fails (status 1) without a message, as xz and gzip end quietly by the signal */
 static void write_error(const char *where) { if (errno != EPIPE) fprintf(stderr, "kolmo: %s: %s\n", where, strerror(errno)); }
@@ -767,6 +846,7 @@ static int process(const opts_t *o, const char *in) {
     feeder_t fd_feed = {NULL, 0, -1, -1, 0, -1}; /* a pipe whose start was read already, replayed to a stream coder */
     int sfd = ifd;                           /* the descriptor streamed decoders read */
     int streamed = 0, buffered = 0, filepath = 0;
+    uint8_t *imap = NULL; size_t imapn = 0;   /* a regular input file mapped read-only (-t, -dc) */
     stage_t st = {NULL, -1, NULL};
     int ofd = 1;
     int64_t r = 0;
@@ -820,9 +900,20 @@ static int process(const opts_t *o, const char *in) {
             int nul = open("/dev/null", O_WRONLY);
             r = nul < 0 ? KOLMO_ERR_IO : kolmo_stream_decompress(sfd, nul, o->P.threads);
             if (nul >= 0) close(nul);
+        } else if (!buffered && ireg && (uintmax_t)ist.st_size <= SIZE_MAX && hn == sizeof hdr &&
+                   frame_extent(&(src_t){NULL, ifd, (uint64_t)ist.st_size}, 0) == (uint64_t)ist.st_size) {
+            /* one frame: payloads read block by block, blocks decoded into /dev/null (no input or output held) */
+            int nul = open("/dev/null", O_WRONLY);
+            r = nul < 0 ? KOLMO_ERR_IO : kolmo_decompress_file(ifd, nul, (size_t)ist.st_size, o->P.threads, NULL, 0);
+            if (nul >= 0) close(nul);
         } else {
-            if (!buffered) { buf = read_fd(ifd, ireg ? (size_t)ist.st_size : 0, &bn); if (!buf) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out; } }
-            r = code_buffer(o, buf, bn, &obuf, name);
+            const uint8_t *src = buf; size_t sn = bn;
+            if (!buffered && map_input(ifd, ireg, &ist, &imap, &imapn) && !imap) {
+                buf = read_fd(ifd, ireg ? (size_t)ist.st_size : 0, &bn);
+                if (!buf) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out; }
+                src = buf; sn = bn;
+            } else if (imap) { src = imap; sn = imapn; }
+            r = decode_frames_to_fd(o, src, sn, -1, 0);   /* each frame checked, then decoded into /dev/null */
         }
         if (r < 0) { report_error(o, name, r, hdr, hn); ret = 1; }
         else if (verbose) fprintf(stderr, "kolmo: %s: OK (%lld bytes)\n", name, (long long)r);
@@ -854,7 +945,7 @@ static int process(const opts_t *o, const char *in) {
         if (r >= 0) outsize = r;
         insize = ireg ? (int64_t)ist.st_size : -1;
     } else if (!to_stdout && ireg && !buffered && !o->range && !o->tg &&
-               (dec || o->P.mode == KOLMO_FAST || o->P.mode == KOLMO_RT) && (uintmax_t)ist.st_size <= SIZE_MAX &&
+               (uintmax_t)ist.st_size <= SIZE_MAX &&
                (dec ? (hn == sizeof hdr && head_orig(&(src_t){NULL, ifd, (uint64_t)ist.st_size}, 0) >= (int64_t)KOLMO_FILE_THRESHOLD &&
                        frame_extent(&(src_t){NULL, ifd, (uint64_t)ist.st_size}, 0) == (uint64_t)ist.st_size)
                     : ist.st_size >= (off_t)KOLMO_FILE_THRESHOLD)) {
@@ -863,6 +954,17 @@ static int process(const opts_t *o, const char *in) {
         r = dec ? kolmo_decompress_file(ifd, ofd, (size_t)ist.st_size, o->P.threads, NULL, 0)
                 : kolmo_compress_file(ifd, ofd, (size_t)ist.st_size, &o->P, NULL, 0);
         if (r >= 0) { outsize = r; insize = ist.st_size; }
+    } else if (dec && to_stdout && !o->range) {
+        /* -dc: the output is written window by window, never held whole; a regular file is mapped, not copied */
+        const uint8_t *src = buf; size_t sn = bn;
+        if (!buffered && map_input(ifd, ireg, &ist, &imap, &imapn) && !imap) {
+            buf = read_fd(ifd, ireg ? (size_t)ist.st_size : 0, &bn);
+            if (!buf) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out; }
+            src = buf; sn = bn;
+        } else if (imap) { src = imap; sn = imapn; }
+        r = decode_frames_to_fd(o, src, sn, ofd, imap != NULL);
+        if (r >= 0) { insize = (int64_t)sn; outsize = r; }
+        else if (r == KOLMO_ERR_IO && errno != EPIPE) { write_error("(stdout)"); ret = 1; goto out; }
     } else {
         if (!buffered) {
             buf = read_fd(ifd, ireg ? (size_t)ist.st_size : 0, &bn);
@@ -895,6 +997,7 @@ out:
     feeder_stop(&fd_feed);
     if (st.fd >= 0) stage_discard(&st);
     free(buf); free(obuf); free(derived);
+    if (imap) munmap(imap, imapn);
     if (in) close(ifd);
     return ret;
 }

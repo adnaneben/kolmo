@@ -274,9 +274,11 @@ static void *decompress_worker(void *arg) {
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->maxraw + TBL_SLACK(J->maxraw) + 64);
     int buffered = J->clip_hi || J->output_fd >= 0;
-    uint8_t *rbuf = buffered ? (S->rbuf = grow(S->rbuf, &S->rbcap, J->maxraw + 64)) : NULL;
+    /* a range read decodes a block that lies wholly inside the range straight into the caller's buffer; the block
+     * buffer (rbuf) is taken only for a block cut by the range or written to a descriptor */
+    uint8_t *rbuf = NULL;
     uint8_t *packed = J->input_fd >= 0 ? malloc(J->maxcompressed ? J->maxcompressed : 1) : NULL;
-    if ((J->input_fd >= 0 && !packed) || !tbuf || (buffered && !rbuf)) { free(packed); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
+    if ((J->input_fd >= 0 && !packed) || !tbuf) { free(packed); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
     codec_ctx *xp = &S->x;
     xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
     /* a context-mixing model larger than the frame declares (or, undeclared, than the limit) is refused unallocated */
@@ -297,13 +299,16 @@ static void *decompress_worker(void *arg) {
         if (need < 0) { atomic_store(&J->err, (int)need); break; }
         kmem_reserve((uint64_t)need, J->memcap); kmem_tls_job = 1;
         int fq_extra; uint64_t fq_each; int fqt = fq_threads(J, i, &fq_extra, &fq_each);
-        if (!rbuf) r = decode_block(J, i, xp, S, payload, tbuf, J->dst + J->P->roff[i], fqt);
+        const uint64_t b0 = J->P->roff[i], b1 = J->P->roff[i + 1];
+        if (!buffered) r = decode_block(J, i, xp, S, payload, tbuf, J->dst + b0, fqt);
+        else if (J->output_fd < 0 && J->clip_lo <= b0 && b1 <= J->clip_hi)   /* whole block inside the range */
+            r = decode_block(J, i, xp, S, payload, tbuf, J->dst + (b0 - J->clip_lo), fqt);
+        else if (!rbuf && !(rbuf = S->rbuf = grow(S->rbuf, &S->rbcap, J->maxraw + 64))) r = KOLMO_ERR_ALLOC;
         else {                                               /* range read: decode block, copy the overlap */
             r = decode_block(J, i, xp, S, payload, tbuf, rbuf, fqt);
             if (!r && J->output_fd >= 0) {
                 r = write_block(J->output_fd, rbuf, J->P->roff[i + 1] - J->P->roff[i], J->P->roff[i]);
             } else if (!r) {
-                uint64_t b0 = J->P->roff[i], b1 = J->P->roff[i + 1];
                 uint64_t a = J->clip_lo > b0 ? J->clip_lo : b0, z = J->clip_hi < b1 ? J->clip_hi : b1;
                 memcpy(J->dst + (a - J->clip_lo), rbuf + (a - b0), z - a);
             }

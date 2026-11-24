@@ -122,6 +122,7 @@ check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus 
 	sh tests/test_archive_safety.sh build/kolmo build/mkarchive
 	sh tests/test_filter.sh build/kolmo
 	python3 tests/test_fast_file.py
+	python3 tests/test_bounded_cli.py build/kolmo
 	./build/test-v12-corpus tests/v12
 	python3 tests/check_v12_pinned.py
 	python3 tests/check_v12_frames.py build/kolmo tests/v12
