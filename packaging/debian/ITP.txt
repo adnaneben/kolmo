@@ -3,12 +3,12 @@ Subject: ITP: kolmo -- structure-aware lossless compressor
 
 Package: wnpp
 Severity: wishlist
-Owner: Adnane Aqartit <MAINTAINER_EMAIL>
+Owner: Adnane Aqartit <MAINTAINER_EMAIL@example.invalid>
 X-Debbugs-Cc: debian-devel@lists.debian.org
 
 * Package name    : kolmo
   Version         : 0.0.2
-  Upstream Contact: Adnane Aqartit <MAINTAINER_EMAIL>
+  Upstream Contact: Adnane Aqartit <MAINTAINER_EMAIL@example.invalid>
 * URL             : https://github.com/adnaneben/kolmo
 * License         : Apache-2.0, Apache-2.0 WITH LLVM-exception
   Programming Lang: C

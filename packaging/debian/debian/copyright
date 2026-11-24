@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: kolmo
-Upstream-Contact: Adnane Aqartit <MAINTAINER_EMAIL>
+Upstream-Contact: Adnane Aqartit <MAINTAINER_EMAIL@example.invalid>
 Source: https://github.com/adnaneben/kolmo
 Comment:
  The C sources exist three times in the tarball: src/ (built by this package),

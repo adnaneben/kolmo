@@ -1,4 +1,4 @@
-# Maintainer: Adnane Aqartit <MAINTAINER_EMAIL>
+# Maintainer: Adnane Aqartit <MAINTAINER_EMAIL@example.invalid>
 # AUR draft. For a new release, change pkgver and sha256sums (`curl -sL <url> | sha256sum`), reset pkgrel to 1 and
 # regenerate .SRCINFO with `makepkg --printsrcinfo > .SRCINFO`.
 pkgname=kolmo

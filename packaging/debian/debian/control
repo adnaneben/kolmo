@@ -1,7 +1,7 @@
 Source: kolmo
 Section: utils
 Priority: optional
-Maintainer: Adnane Aqartit <MAINTAINER_EMAIL>
+Maintainer: Adnane Aqartit <MAINTAINER_EMAIL@example.invalid>
 Build-Depends:
  debhelper-compat (= 13),
  help2man,

@@ -17,6 +17,10 @@ on:
       - "Makefile"
       - "src/**"
   workflow_dispatch:
+# As in ci.yml: a newer push to a PR cancels the run it supersedes.
+concurrency:
+  group: packaging-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
