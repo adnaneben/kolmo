@@ -248,9 +248,11 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   reproducible).
 - **`SECURITY.md`**: reporting through GitHub private advisories, supported versions, fuzzing status.
 - **Fix (found by the new fuzzing): the index, query and archive functions refuse frames the decoder refuses.**
-  `kolmo_query_run`, `kolmo_index_info` and the DDP1 archive calls accepted a frame header of any version; a
-  header of an unknown version with a valid CRC could claim a block of up to 4 GiB, which the query allocated before
-  the decoder refused the frame. They now apply the decoder's version check. No frame Kolmo writes is affected.
+  `kolmo_query_run`, `kolmo_index_info` and the DDP1 archive calls checked less of the frame header than the
+  decoder: a header of an unknown version, or a version-12 header with invalid flag bits, with a valid CRC could
+  claim a block of up to 4 GiB, which the query allocated before the decoder refused the frame. They now apply the
+  decoder's full header and index check, and return its error instead of allocating. No valid frame is affected:
+  every frame the decoder accepts is accepted as before (the frozen `tests/v12` corpus decodes unchanged).
 
 ## 0.0.2 (2026-11-23)
 
