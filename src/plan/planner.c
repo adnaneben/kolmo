@@ -392,6 +392,25 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (best >= 2 && best <= 256 && bc * 100 > (L - 1) * 95) { pl.t = T_TP; pl.a = D[di].d; pl.b = D[di].q; pl.c = best - 1; }
         }
         free(cnt);
+        size_t logcost = 0;                                /* the template transform's coded size on the trial slice */
+        if (logs && pl.t == T_TP && pl.a == ' ' && n >= 65536) {
+            /* a log whose head splits into space-separated fields looks like a table, and the table plan used to end the
+             * search before the template transform was tried: Loghub BGL coded 2.5x larger at -3. For space-separated
+             * fields (the only delimiter where a log reads as a table) both transforms are
+             * scored on the same slice, and the template transform replaces the table only when it is at least 10%
+             * smaller (the block codes a table with its field set, which the probe here does not see) */
+            size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
+            uint8_t *o = mm >= 16384 ? malloc(mm + TSLACK) : NULL, *o2 = o ? malloc(mm + TSLACK) : NULL;
+            if (o && o2) {
+                int64_t tl = log_encode(s, mm, o, mm + 64);
+                int64_t tt = tbl_encode(s, mm, (uint8_t)pl.a, pl.c + 1, pl.b, o2);
+                size_t a = tl > 0 ? kprobe_size(o, (size_t)tl) : (size_t)-1, b = tt > 0 ? kprobe_size(o2, (size_t)tt) : kprobe_size(s, mm);
+                if (tl > 0 && a * 100 < CZ_LOG_GAIN_PCT * kprobe_size(s, mm) && a * 100 < 90 * (uint64_t)b) {
+                    pl.t = T_LOG; pl.a = pl.b = pl.c = 0; pl.wide = 0; logcost = a;
+                }
+            }
+            free(o); free(o2);
+        }
         if (pl.t == T_TP) {                       /* typed table transform, kept only if it helps on a sample */
             size_t mm = head; while (mm > 0 && s[mm - 1] != '\n') mm--; if (!mm) mm = head;
             uint8_t *o = malloc(mm + TSLACK);
@@ -404,7 +423,6 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             }
             free(o);
         }
-        size_t logcost = 0;                                /* the template transform's coded size on the trial slice */
         if (logs && pl.t == T_NONE && n >= 65536) {        /* logs: template transform, kept if it helps on a sample */
             size_t mm = n < TRIAL ? n : TRIAL; while (mm > 0 && s[mm - 1] != '\n') mm--;
             if (mm >= 16384 && logc) {           /* same slice already coded by the JSON trial */
