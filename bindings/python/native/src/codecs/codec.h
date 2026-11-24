@@ -33,7 +33,9 @@ typedef struct { int native_leaf;        /* encoder: graph integer residual leav
                  int used_f2;            /* encoder: a format-2 leaf (codecs 21, 23) was written */
                  int used_cmt;           /* encoder: a context-mixing leaf with learning settings was written */
                  int no_f2;              /* encoder: do not try codecs 21 and 23 (planner scores, the --typed-huf route, WAV sample blocks) */
-                 int allow_f2;           /* decoder: codecs 21 and 23 are valid graph leaves (graph blocks) */ } codec_ctx;
+                 int allow_f2;           /* decoder: codecs 21 and 23 are valid graph leaves (graph blocks) */
+                 int deny_cm;            /* decoder: context-mixing codecs (7, 17, 25) are refused: the leaves of a graph block in a
+                                          * frame whose header mode is not ultra (only ultra level 2 writes such leaves) */ } codec_ctx;
 
 /* One block codec. Missing functions keep the behaviour of the rc2 dispatch: bound NULL -> n, compress NULL -> 0
  * (not written by codec_compress), decompress NULL -> -1 (refused by codec_decompress). mem_needed: bytes of working

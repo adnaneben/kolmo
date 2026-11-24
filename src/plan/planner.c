@@ -516,7 +516,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (ej * 1000 >= L) {
                 memcpy(buf, s + st, L); e8e9_fwd(buf, L);
                 double c = (double)zcost(buf, L, zl) / L;
-                if (c < best) { best = c; keep = pl; keep.t = T_X86; chosen = 4; code = 1; }
+                if (c < best) { best = c; keep = pl; keep.t = T_X86; keep.a = keep.b = keep.c = 0; chosen = 4; code = 1; }
             }
         }
         if (code) goto structured_done;
@@ -557,8 +557,8 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             if (ej * 1000 >= L) {
             memcpy(buf, s + st, L); e8e9_fwd(buf, L);
             double c = (double)zcost(buf, L, zl) / L;
-            if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
-            else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; chosen = 4; }
+            if (c < best && chosen < 2 && pl.t != T_SHUF) { best = c; keep = pl; keep.t = T_X86; keep.a = keep.b = keep.c = 0; chosen = 4; }
+            else if (c < best && chosen == 0) { best = c; keep = pl; keep.t = T_X86; keep.a = keep.b = keep.c = 0; chosen = 4; }
             }
         }
         {   /* float arrays first (FLOAT node); integer arrays (INT node) only when the data does not look like floats */

@@ -175,6 +175,171 @@ static void khuf_offsets(void) {
     munmap(in, cn);
 }
 
+/* ---- review40 (SYNTHESIS.md section 2, bugs 6, 7, 8, 10, 16); the vectors are the reviewers' reproducers */
+static uint8_t *slurp(const char *path, size_t *n) {
+    FILE *f = fopen(path, "rb"); assert(f);
+    fseek(f, 0, SEEK_END); long z = ftell(f); rewind(f); assert(z >= 0);
+    uint8_t *b = malloc((size_t)z + 1); assert(b);
+    assert(fread(b, 1, (size_t)z, f) == (size_t)z); fclose(f); *n = (size_t)z; return b;
+}
+static void fix_crc(uint8_t *f) {   /* the header and index CRC after a mutation of either */
+    uint32_t nb = get32(f + 20), hc = kolmo_crc32c(0, f, 28); hc = kolmo_crc32c(hc, f + HDR, (size_t)nb * IDX); put32(f + 28, hc);
+}
+static uint64_t payload_at(const uint8_t *f, uint32_t blk) {   /* the offset of block blk's payload (plan prefix first) */
+    uint32_t nb = get32(f + 20); uint64_t po = HDR + (uint64_t)nb * IDX;
+    for (uint32_t i = 0; i < blk; i++) po += get32(f + HDR + (size_t)i * IDX + 4);
+    return po;
+}
+static int64_t decode_n(const uint8_t *f, size_t n, uint8_t **out, int threads, uint64_t max_memory) {
+    int64_t o = kolmo_original_size(f, n); if (o < 0) return o;
+    *out = malloc(o ? (size_t)o : 1); assert(*out);
+    kolmo_decode_limits L = {0, 0, 0, max_memory};
+    return kolmo_decompress_limited(f, n, *out, (size_t)o, threads, &L);
+}
+
+/* Bug 6: KAU1 chunk_log2 30 (every encoder writes 18) made the decoder allocate 16 GiB per chunk and abort() when
+ * that failed. Refused now before anything is allocated; and no abort() is left in the audio coder. */
+static void audio_chunk_cap(void) {
+    size_t n; uint8_t *f = slurp("tests/vectors/review40/aud-chunk30.kolmo", &n), *out = NULL;
+    int64_t r = decode_n(f, n, &out, 1, 0);
+    printf("audio: forged chunk_log2 30 -> %lld\n", (long long)r);
+    assert(r == KOLMO_ERR_CORRUPT); free(out); free(f);
+    size_t on, wn; uint8_t *w = slurp("tests/v12/tone.wav", &wn); f = slurp("tests/v12/tone.wav.eco.kolmo", &on);
+    assert(f[HDR + 12] == C_AUD);
+    uint64_t k = payload_at(f, 0) + 4;                          /* the KAU1 stream */
+    assert(!memcmp(f + k, "KAU1", 4) && f[k + 7] == 18);
+    r = decode_n(f, on, &out, 1, 0); assert(r == (int64_t)wn && !memcmp(out, w, wn)); free(out);
+    for (int c = 19; c <= 30; c += 11) {
+        f[k + 7] = (uint8_t)c; r = decode_n(f, on, &out, 1, 0); free(out);
+        printf("audio: chunk_log2 %d -> %lld\n", c, (long long)r);
+        assert(r == KOLMO_ERR_CORRUPT);
+    }
+    free(f); free(w);
+}
+
+/* Bug 8: a video frame (codec 20) decoded past max_memory (353 MiB peak under 64 MiB). Admitted like every frame now,
+ * and the nested frame decodes under what the outer buffers leave of the limit. */
+static void video_memory(void) {
+    size_t n; uint8_t *f = slurp("tests/vectors/review40/video-400.kolmo", &n), *out = NULL;
+    kolmo_decode_limits L = {0, 0, 0, 64u << 20};
+    assert(kolmo_check_frame(f, n, &L) == KOLMO_ERR_MEMORY);
+    int64_t r = decode_n(f, n, &out, 2, 64u << 20); free(out); free(f);
+    printf("video: 184 MB frame under a 64 MiB limit -> %lld\n", (long long)r);
+    assert(r == KOLMO_ERR_MEMORY);
+    /* a small clip: refused one byte under its declared figure, decoded at it */
+    const int W = 64, H = 48, FR = 24; const char *hd = "YUV4MPEG2 W64 H48 F25:1 Ip A1:1 C420jpeg\n";
+    size_t fs = (size_t)W * H * 3 / 2, yn = strlen(hd) + (size_t)FR * (6 + fs), o = 0; uint8_t *y = malloc(yn); assert(y);
+    memcpy(y, hd, strlen(hd)); o = strlen(hd);
+    for (int t = 0; t < FR; t++) {
+        memcpy(y + o, "FRAME\n", 6); o += 6;
+        for (size_t i = 0; i < fs; i++) y[o + i] = (uint8_t)(i < (size_t)W * H ? ((i % W) * 3 + (i / W) * 2 + t * 5) : 128 + (int)(i % 7));
+        o += fs;
+    }
+    kolmo_params p = {0}; assert(!kolmo_params_for_level(3, &p)); p.threads = 2;
+    size_t cap = kolmo_bound(yn, &p); uint8_t *z = malloc(cap); assert(z);
+    int64_t zn = kolmo_compress(y, yn, z, cap, &p); if (zn <= 0) printf("video compress -> %lld\n", (long long)zn); assert(zn > 0);
+    assert(get32(z + 20) == 1 && z[HDR + 12] == C_VID);
+    int64_t d = kolmo_decode_memory(z, (size_t)zn); assert(d > 0);
+    r = decode_n(z, (size_t)zn, &out, 2, (uint64_t)d - 1); free(out);
+    assert(r == KOLMO_ERR_MEMORY);
+    r = decode_n(z, (size_t)zn, &out, 2, (uint64_t)d);
+    printf("video: %zu B clip, declared %lld B: one byte under -> refused, at it -> %lld\n", yn, (long long)d, (long long)r);
+    assert(r == (int64_t)yn && !memcmp(out, y, yn)); free(out); free(z); free(y);
+}
+
+/* Bug 10: a FASTQ family block ran nt/nblk model jobs at once while the frame declares one (702 MB under -M 240M at
+ * -T 8). Extra jobs are reserved with the governor now: none under a limit at the declared figure, some without one. */
+static void fastq_threads(void) {
+    size_t n; uint8_t *f = slurp("tests/v12/r0.0.2/reads.fastq.LU.kolmo", &n), *out = NULL;
+    assert(f[HDR + 12] == C_FQ);
+    int64_t d = kolmo_decode_memory(f, n), o = kolmo_original_size(f, n); assert(d > 0 && o > 0);
+    int peak;
+    kmem_stats_reset_peak();
+    int64_t r = decode_n(f, n, &out, 8, (uint64_t)d); free(out); kmem_stats(NULL, &peak, NULL);
+    printf("fastq: -T 8 at the declared %lld B -> %lld, %d job(s) reserved at once\n", (long long)d, (long long)r, peak);
+    assert(r == o && peak == 1);
+    kmem_stats_reset_peak();
+    r = decode_n(f, n, &out, 8, KOLMO_MEM_MAX); free(out); kmem_stats(NULL, &peak, NULL);
+    printf("fastq: -T 8 unlimited -> %lld, %d job(s) reserved at once\n", (long long)r, peak);
+    assert(r == o && peak > 1);
+    free(f);
+}
+
+/* Bug 16: what no encoder writes is refused (stored blocks with a plan or a transform, rANS and khuf as block codecs);
+ * plan 7's a, b and c stay accepted, because 0.0.1 and 0.0.2 can write a shuffle's parameters there. */
+static void block_strictness(void) {
+    uint8_t in[8192], z[16384], *out = NULL; uint64_t s = 7;
+    for (size_t i = 0; i < sizeof in; i++) { s = s * 6364136223846793005ull + 1442695040888963407ull; in[i] = (uint8_t)(s >> 56); }
+    kolmo_params p = {0}; assert(!kolmo_params_for_level(3, &p)); p.threads = 1;
+    int64_t zn = kolmo_compress(in, sizeof in, z, sizeof z, &p); assert(zn > 0 && z[HDR + 12] == C_STORE && !(z[10] & 1));
+    uint64_t k = payload_at(z, 0);
+    assert(decode_n(z, (size_t)zn, &out, 1, 0) == (int64_t)sizeof in); free(out);
+    for (int m = 0; m < 4; m++) {                               /* plan t, a, b, c of a stored block */
+        uint8_t g[16384]; memcpy(g, z, (size_t)zn); g[k + m] = (uint8_t)(m ? 5 : 1);
+        int64_t r = decode_n(g, (size_t)zn, &out, 1, 0); free(out);
+        assert(r == KOLMO_ERR_CORRUPT);
+    }
+    {                                                          /* a stored block with plan 1 and tflag 1 (a transpose) */
+        uint8_t g[16384]; memcpy(g, z, (size_t)zn); g[k] = T_TP; g[k + 1] = 2; g[HDR + 13] = 1; fix_crc(g);
+        int64_t r = decode_n(g, (size_t)zn, &out, 1, 0); free(out);
+        assert(r == KOLMO_ERR_CORRUPT);
+    }
+    uint8_t e[64]; int64_t en = kolmo_compress(in, 0, e, sizeof e, &p); assert(en > 0 && e[HDR + 12] == C_STORE);
+    for (int c = 14; c <= 27; c += 13) {                        /* rANS and khuf are graph leaves, never block codecs */
+        uint8_t g[64]; memcpy(g, e, (size_t)en); g[HDR + 12] = (uint8_t)c; fix_crc(g);
+        int64_t r = kolmo_decompress(g, (size_t)en, out = malloc(1), 0, 1); free(out);
+        printf("block codec %d -> %lld\n", c, (long long)r);
+        assert(r == KOLMO_ERR_CORRUPT);
+    }
+    size_t xn, on; uint8_t *x = slurp("tests/v12/r0.0.2/code.x86.L3.kolmo", &xn), *orig = slurp("tests/v12/r0.0.2/in/code.x86", &on);
+    int found = 0;
+    for (uint32_t b = 0; b < get32(x + 20); b++) {
+        uint64_t q = payload_at(x, b);
+        if (x[q] == T_X86) { x[q + 1] = 0x55; x[q + 2] = 0xAA; x[q + 3] = 0x07; found++; }
+    }
+    assert(found);
+    int64_t r = decode_n(x, xn, &out, 1, 0);
+    printf("plan 7 with a, b, c = 55 aa 07 (as 0.0.x may write) -> %lld\n", (long long)r);
+    assert(r == (int64_t)on && !memcmp(out, orig, on)); free(out); free(x); free(orig);
+}
+
+/* Bug 7: decode work. The header's mode now bounds the cost class (a context-mixing leaf in a non-ultra frame is
+ * refused), and kolmo_frame_cost reports the decoded bytes per class without decoding. */
+static void decode_cost(void) {
+    size_t n; uint8_t *f = slurp("tests/vectors/review40/fast-graph-cm-leaf.kolmo", &n), *out = NULL;
+    assert(f[5] == KOLMO_FAST && f[HDR + 12] == C_GRAPH);
+    kolmo_decode_cost c;
+    assert(kolmo_frame_cost(f, n, &c) == KOLMO_ERR_CORRUPT);
+    int64_t r = decode_n(f, n, &out, 1, 0); free(out); free(f);
+    printf("fast frame with a context-mixing leaf -> %lld\n", (long long)r);
+    assert(r == KOLMO_ERR_CORRUPT);
+    f = slurp("tests/vectors/review40/cm-16mib-zeros.kolmo", &n);
+    assert(!kolmo_frame_cost(f, n, &c));
+    printf("5,978 B codec-7 frame: model %llu B, sort %llu, fast %llu, slowest %d\n", (unsigned long long)c.bytes[KOLMO_COST_MODEL],
+           (unsigned long long)c.bytes[KOLMO_COST_SORT], (unsigned long long)c.bytes[KOLMO_COST_FAST], c.slowest);
+    assert(c.bytes[KOLMO_COST_MODEL] == 16u << 20 && c.slowest == KOLMO_COST_MODEL); free(f);
+    f = slurp("tests/vectors/review40/video-400.kolmo", &n);
+    assert(!kolmo_frame_cost(f, n, &c) && c.slowest == KOLMO_COST_FAST && c.bytes[KOLMO_COST_FAST] >= 184322435u); free(f);
+    /* ultra level 2 writes context-mixing graph leaves: decoded under its own header, refused under a fast one */
+    size_t vn = 1u << 20; uint8_t *v = malloc(vn * 8); assert(v); uint64_t s = 1, t = 1700000000000ull;
+    for (size_t i = 0; i < vn; i++) { s = s * 6364136223846793005ull + 1442695040888963407ull; t += 1000 + (s >> 58); put64(v + 8 * i, t); }
+    kolmo_params p = {KOLMO_ULTRA, 2, 2, 0, 1, 0};
+    size_t cap = kolmo_bound(vn * 8, &p); uint8_t *z = malloc(cap); assert(z);
+    int64_t zn = kolmo_compress(v, vn * 8, z, cap, &p); assert(zn > 0);
+    assert(!kolmo_frame_cost(z, (size_t)zn, &c));
+    printf("ultra level 2 int64 series: model %llu B, fast %llu B\n", (unsigned long long)c.bytes[KOLMO_COST_MODEL], (unsigned long long)c.bytes[KOLMO_COST_FAST]);
+    r = decode_n(z, (size_t)zn, &out, 2, 0); assert(r == (int64_t)(vn * 8) && !memcmp(out, v, vn * 8)); free(out);
+    int graph_cm = 0;
+    for (uint32_t b = 0; b < get32(z + 20); b++) graph_cm |= z[HDR + (size_t)b * IDX + 12] == C_GRAPH;
+    if (graph_cm && c.bytes[KOLMO_COST_MODEL]) {
+        z[5] = KOLMO_FAST; fix_crc(z);
+        r = decode_n(z, (size_t)zn, &out, 2, 0); free(out);
+        printf("the same frame under a fast header -> %lld\n", (long long)r);
+        assert(r == KOLMO_ERR_CORRUPT && kolmo_frame_cost(z, (size_t)zn, &c) == KOLMO_ERR_CORRUPT);
+    } else printf("ultra level 2 wrote no context-mixing graph leaf here: header check covered by the vector only\n");
+    free(z); free(v);
+}
+
 int main(void) {
     log_encoder_memory();
     formula_discovery_cap();
@@ -183,6 +348,11 @@ int main(void) {
     klzma_dist_wrap();
     qlfc_mtf();
     khuf_offsets();
+    audio_chunk_cap();
+    video_memory();
+    fastq_threads();
+    block_strictness();
+    decode_cost();
     printf("test_decoder_hardening: ALL PASSED\n");
     return 0;
 }

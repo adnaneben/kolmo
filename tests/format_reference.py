@@ -101,7 +101,7 @@ class Bad(Exception): pass
 MAXF = {0: 0, 1: 2, 2: 2, 3: 4, 4: 10, 5: 6, 6: 7, 7: 8, 8: 9, 9: 0, 10: 12, 11: 14}
 STEPS = [1048576, 1143481, 1246975, 1359835, 1482911, 1617126, 1763488, 1923097]
 V12_CODECS = {0, 5, 7, 12, 14, 16, 17, 18, 19, 20, 24, 25, 26, 27, 28, 29, 31, 32}
-LEAF_ONLY = {15, 21, 23}
+LEAF_ONLY = {14, 15, 21, 23, 27}   # 14 and 27: refused as block codecs from the Unreleased fix (FORMAT.md 8.1)
 
 
 def memd_bytes(v): return 0 if v == 0 else STEPS[v & 7] << (v >> 3)
@@ -162,6 +162,7 @@ def check_frame(f, orig=None, nested=False):
         if comp < 4: raise Bad("no plan prefix")
         t, a, b, c = f[p0:p0 + 4]
         if t > 11 or (t == 11 and (b > 15 or c)): raise Bad("plan prefix")
+        if codec == 0 and (t or a or b or c or tflag): raise Bad("stored block with a plan or a transform")   # 7.1
         if codec in (12,) or t == 9:
             if codec != 12 or t != 9 or tflag: raise Bad("graph block")
         elif codec in (16, 19, 26, 31):
@@ -204,6 +205,8 @@ def mutations(f):
     yield "retired codec 3", put(32 + 12, 3)
     yield "unknown codec 30", put(32 + 12, 30)
     yield "tflag 6 under plan 0", put(32 + 13, 6)
+    yield "codec 14 as a block", put(32 + 12, 14)
+    yield "codec 27 as a block", put(32 + 12, 27)
     yield "orig one more", fix(f[:12] + struct.pack("<Q", r64(f, 12) + 1) + f[20:])
     yield "truncated", f[:-1]
     yield "stray byte", f + b"\0"

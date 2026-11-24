@@ -119,7 +119,7 @@ requested byte range.
 |---|---|---|---|
 | 0 | 4 | magic | ASCII `CZN1` |
 | 4 | 1 | version | 12 |
-| 5 | 1 | mode | 0 to 5: the mode the encoder ran in (rt, fast, eco, hc, max, ultra). Not checked by decoders; its only effect on decoding is the working-set bound of graph blocks (§11) |
+| 5 | 1 | mode | 0 to 5: the mode the encoder ran in (rt, fast, eco, hc, max, ultra). Its effects on decoding: the working-set bound of graph blocks (§11), and context-mixing graph leaves are valid only under mode 5 (§7.4) |
 | 6 | 4 | reserved | written as 0; ignored by decoders |
 | 10 | 1 | flags | bit 0: block checksums cover the stored payload (§5.1). Bits 1 to 7: 0 |
 | 11 | 1 | memd | declared decode working set per block (§11); 0 = not declared |
@@ -190,7 +190,7 @@ A decoder must refuse `t > 11`, and plan type 11 with `b > 15` or `c ≠ 0`.
 | 4 | log templates (a: tokenizer, 0 words, 1 JSON, 2 minified JSON) | 0, 5, 10 | 4 (tflag 5); 8 (tflag 10) | raw + 16384 |
 | 5 | 16-bit image | 0, 6 | 4 | raw + 16384 |
 | 6 | fixed-size records | 0, 7 | 4 | raw + 16384 |
-| 7 | x86 call/jump filter | 0, 8 | — | in place |
+| 7 | x86 call/jump filter (a, b, c: ignored, §19.3) | 0, 8 | — | in place |
 | 8 | word dictionary | 0, 9 | 4 | raw + 16384 |
 | 9 | kolmo graph (codec 12 only, §7.4) | 0 | — | — |
 | 10 | line classes | 0, 12 | 4 | raw + 16384 |
@@ -245,6 +245,11 @@ Codec 12 must have plan type 9 and tflag 0, and plan type 9 must have codec 12. 
 program: nodes, and leaves coded by leaf codecs. Its layout is in SPEC.md, *Kolmo graph blocks*. A decoder must refuse
 a node or leaf codec it does not know.
 
+Context-mixing leaves (codecs 7, 17 and 25, also as a sub-stream codec of a PLANES or ZRUN leaf) are written only by
+ultra level 2, whose header mode is 5. In a frame whose header mode is not 5 a decoder must refuse them. Decoders
+before the Unreleased fix accepted them under any mode, so a frame's mode said nothing about its decode cost; no
+encoder wrote such a frame. With this rule a frame of modes 0 to 4 never runs a context-mixing coder.
+
 ## 8. Codec registry
 
 ### 8.1 Block and leaf codecs
@@ -282,7 +287,8 @@ refused (corrupt).
 - 8-11 are experimental codecs of builds made with `-DKOLMO_FRONTIER`, outside this format;
 - 30 is held for a later khuf.
 
-Ids 15, 21 and 23 are valid only as graph leaves, and 20 only as in §7.3.
+Ids 14, 15, 21, 23 and 27 are valid only as graph leaves, and 20 only as in §7.3. (Decoders before the Unreleased fix
+also accepted 14 and 27 as block codecs; no encoder writes them there.)
 
 ### 8.2 Other identifiers
 
@@ -691,7 +697,10 @@ Specified in SPEC.md, *ARM64 branch filter*. `tests/coder_reference.py` implemen
 
 ### 19.3 x86 call/jump filter (plan type 7, tflag 8)
 
-The plan is `7, 0, 0, 0`. There is no meta, and the coded stream decodes to `raw` bytes, which the inverse changes in
+Encoders write the plan as `7, 0, 0, 0`. A decoder ignores `a`, `b` and `c`: the 0.0.1 and 0.0.2 planners could
+leave there the parameters of a byte-plane shuffle plan that lost its trial (`src/plan/planner.c`, fixed in the
+Unreleased encoder), so refusing them could refuse frames those releases wrote. A later x86 filter therefore needs
+a new plan type, not new values of plan 7's parameters. There is no meta, and the coded stream decodes to `raw` bytes, which the inverse changes in
 place. For each position `i` from 0 to `raw − 5`, in increasing order, look at the block's bytes as they are at that
 moment, including changes made at earlier positions. If both of these hold:
 - `b[i]` is `0xE8` or `0xE9`;

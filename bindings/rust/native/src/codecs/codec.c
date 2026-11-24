@@ -28,6 +28,7 @@ static size_t codec_compress(codec_ctx *x, int codec, int level, const uint8_t *
 }
 /* decompress takes a wire id only */
 static int codec_decompress(codec_ctx *x, int codec, const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+    if (x && x->deny_cm && (codec == C_CM || codec == C_CMI || codec == C_CMP)) return -1;
     const kolmo_codec *c = codec_get(codec);
     return c && c->decompress ? c->decompress(x, in, cn, out, n) : -1;
 }
