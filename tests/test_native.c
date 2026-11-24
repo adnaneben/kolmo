@@ -233,9 +233,26 @@ static void test_klzh2_fast(int big) {
     CHECK(klzhv_rt(a, n, 0, 1) + L / 2 < n, "klzh2 level 0: the match at offset 2^24 - 1 was not used");
     free(a);
 }
+/* KLZH2 levels 7-9 in order: level 8 never larger than 7, 9 never larger than 8, on the generator's inputs and on
+ * small 64-bit integers after text (zero bytes that first look like literals: the case where 0.0.2 was 1.1% larger
+ * at 8 than at 7 on population.i64). Each output decodes. */
+static void test_klzh2_order(int big) {
+    static const size_t ns[] = {4096, 200000, 700000};
+    for (size_t si = 0; si < sizeof ns / sizeof *ns; si++) for (int kind = 0; kind <= 8; kind++) {
+        const size_t n = ns[si] * (big ? 2 : 1); uint8_t *in = malloc(n);
+        if (kind <= 6) gen(in, n, kind);
+        else {   /* 7: little-endian int64 values; 8: text, then those values */
+            size_t i = 0; if (kind == 8) { gen(in, n / 3, 3); i = n / 3; }
+            for (uint64_t v = 1000; i < n; i++) { if (i % 8 == 0) v += rnd() % 97; in[i] = (uint8_t)(v >> (8 * (i % 8))); }
+        }
+        size_t z7 = klzhv_rt(in, n, 7, 1), z8 = klzhv_rt(in, n, 8, 1), z9 = klzhv_rt(in, n, 9, 1);
+        CHECK(z8 <= z7 && z9 <= z8, "klzh2 levels out of order: kind %d n %zu: 7 %zu, 8 %zu, 9 %zu", kind, n, z7, z8, z9);
+        free(in);
+    }
+}
 int main(int argc, char **argv) {
     int iters = argc > 1 ? atoi(argv[1]) : 1;
-    test_lengths(); test_hash(); test_klzh_edges(iters > 1); test_klzh2_format(iters > 1); test_klzh2_fast(iters > 1);
+    test_lengths(); test_hash(); test_klzh_edges(iters > 1); test_klzh2_format(iters > 1); test_klzh2_fast(iters > 1); test_klzh2_order(iters > 1);
     static const size_t sizes[] = {0, 1, 2, 3, 4, 5, 7, 8, 15, 16, 17, 31, 64, 100, 255, 1000, 4095, 65536, 131071, 131072, 131073, 300000};
     for (int it = 0; it < iters; it++)
         for (int k = 0; k < (int)(sizeof C / sizeof *C); k++)

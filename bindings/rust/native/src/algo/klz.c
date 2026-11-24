@@ -1028,13 +1028,26 @@ out:
     free(S); free(lit); free(cd); free(xb); free(tmp); free(trial); return r;
 }
 
+/* KLZH2 levels 8 and 9 are never larger than the level below on the same input: the level below is encoded too (itself
+ * never larger than its own level below, down to 7) and the smaller stream is kept. Their parses take different match
+ * finders and adaptive prices, and a stronger search does lose on some inputs (0.0.2: canterbury.tar 2.1% larger at 9
+ * than at 8, population.i64 1.1% larger at 8 than at 7). The decoder reads either stream. */
+static size_t kz_klzh2_mono(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, const ko_thr *th) {
+    if (level > 9) level = 9;
+    if (level < 8) return kz_klzh_enc(in, n, out, cap, level, 1, th);
+    size_t r = kz_klzh2_mono(in, n, out, cap, level - 1, th);
+    uint8_t *t = malloc(cap); if (!t) return 0;   /* as the encoder itself when memory runs out */
+    const size_t q = kz_klzh_enc(in, n, t, cap, level, 1, th);
+    if (q && (!r || q < r)) { memcpy(out, t, q); r = q; }
+    free(t); return r;
+}
 size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh_enc(in, n, out, cap, level, 0, &KO_ONE); }
-size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh_enc(in, n, out, cap, level, 1, &KO_ONE); }
+size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh2_mono(in, n, out, cap, level, &KO_ONE); }
 size_t kolmo_klzh2_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads) {
-    const ko_thr th = {threads, threads - 1, NULL}; return kz_klzh_enc(in, n, out, cap, level, 1, &th);
+    const ko_thr th = {threads, threads - 1, NULL}; return kz_klzh2_mono(in, n, out, cap, level, &th);
 }
 size_t kolmo_klzh2_compress_el(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int passes, kolmo_budget *budget) {
-    const ko_thr th = {threads, passes, budget}; return kz_klzh_enc(in, n, out, cap, level, 1, &th);
+    const ko_thr th = {threads, passes, budget}; return kz_klzh2_mono(in, n, out, cap, level, &th);
 }
 
 typedef struct { uint64_t b; int c; const uint8_t *p, *e; } kz_br;
