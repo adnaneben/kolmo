@@ -1,0 +1,42 @@
+# Known level-order inversions on the ledger corpus (benchmark/ledger/ledger.py). Each line: entry, pair (the higher
+# level first), then the reason after '#'. The gate fails on any inversion beyond 0.5% and 16 bytes that is not listed
+# here, and warns when a listed one no longer occurs (remove it then). Measured on main at 896dc6d6 (2026-11-24).
+# The engine names are those `kolmo -l` prints for the two levels.
+#
+# KLZH2 at levels 4-7: a higher optimal-parse level can pick a worse parse (R37 4.1, the price trap). PR #37 makes
+# -6 never larger than -5 and -7 never larger than -6 for KLZH2; -4 > -3 and -5 > -4 stay open.
+r0.0.2/code.x86        -4>-3   # klzh2 fast -> hc
+r0.0.2/reads.fastq     -4>-3   # klzh2 fast -> hc (+11.5%)
+r0.0.2/bigprog-arm64   -5>-4   # klzh2 hc -> eco
+r0.0.2/bundle.tar      -6>-5   # klzh2 eco -> hc (PR #37)
+r0.0.2/stamps.i64      -6>-5   # klzh2 eco -> hc (PR #37)
+r0.0.2/ragged.csv      -7>-6   # klzh2 hc -> hc (PR #37)
+v12/table.csv          -6>-5   # klzh2 eco -> hc (PR #37)
+#
+# KLZH2 level 3 on FASTA: same engine both levels, level 3 larger.
+r0.0.2/genome.fa       -3>-2   # klzh2 fast -> fast (+2.7%)
+#
+# Graph coder: hc (level 6) takes a rANS leaf only when it is 3% smaller, eco (level 5) takes any gain (PR #37's notes).
+r0.0.2/gray-big.pgm    -6>-5   # graph
+r0.0.2/gray.pgm        -6>-5   # graph
+r0.0.2/rgb.ppm         -6>-5   # graph
+r0.0.2/series.i32      -6>-5   # graph
+#
+# Level 8 forces block sorting on every binary block (blocks.c, "max -l 1: BWT for every block"; R37 4.2, claim #149).
+r0.0.2/prog-arm64      -8>-7   # klzh2 -> bwt
+r0.0.2/prog-x86_64     -8>-7   # klzh2 -> bwt
+r0.0.2/zeros.bin       -8>-7   # klzh2 -> bwt (77 -> 132 B)
+v12/clip.y4m           -8>-7   # small video frame set
+v12/exe.bin            -8>-7   # klzh2 -> bwt
+v12/log.log            -8>-7   # klzh2 -> bwt on a 24 KiB log
+#
+# Level 9 keeps KLZMA where level 8's block sorting is far smaller. R37 4.3 notes that -9's 3% BWT gain rule allows
+# -9 > -8 by up to 3% by design; these are 6.7% to 40%, beyond that rule. Open (no claim yet).
+r0.0.2/code.x86        -9>-8   # bwt -> klzma (+39.6%)
+r0.0.2/pairs.csv       -9>-8   # bwt -> klzma (+33.0%)
+r0.0.2/ragged.csv      -9>-8   # bwt -> klzma (+9.7%)
+r0.0.2/stations.csv    -9>-8   # bwt -> klzma (+6.7%)
+#
+# Ultra larger than level 9 on small graph-coded inputs.
+v12/i64.bin            -U>-9   # graph (+0.7%)
+v12/img.ppm            -U>-9   # graph, 803 -> 950 B
