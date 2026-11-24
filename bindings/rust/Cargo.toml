@@ -10,9 +10,19 @@ readme = "README.md"
 keywords = ["compression", "lossless", "columnar", "entropy", "simd"]
 categories = ["compression", "encoding"]
 authors = ["Adnane Aqartit and contributors"]
+# One C core per program: the crate statically links Kolmo's C library, whose symbols and structs (kolmo_params,
+# kolmo_decode_limits) change between versions. Two versions of this crate in one dependency graph would otherwise
+# link one copy of the core for both, silently (undefined behaviour once a struct changes); with `links`, cargo refuses
+# such a graph at resolve time. Every kolmo crate from this version on declares it.
+links = "kolmo"
+build = "build.rs"
 # Keep build artifacts out of the published crate; the C sources under native/ are shipped.
-exclude = ["native/**/*.o", "native/**/*.a", "native/**/build/**"]
+exclude = ["native/**/*.o", "native/**/*.a", "native/**/build/**", "links-check.sh"]
 
 [lib]
 name = "kolmo"
 path = "src/lib.rs"
+
+[build-dependencies]
+# Drives the C compiler for the target (triple, CC_<target>/CFLAGS_<target>/AR_<target>, cargo's jobserver).
+cc = { version = "1.2", features = ["parallel"] }

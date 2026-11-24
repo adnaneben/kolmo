@@ -19,8 +19,10 @@ Levels: one scale from `1` (fastest) to `9` (max), `3` (light) the default, and 
 outside the scale: about as slow to decompress as to compress). Names work too: `"fastest"` (1), `"light"` (3),
 `"balanced"` (5), `"compact"` (7), `"max"` (9). A level gives the same bytes as `kolmo -N` on the command line.
 `threads=0` (the default) uses all cores; `memlimit` takes bytes or `"512M"`, `"8G"`, `"50%"`, `"max"`.
-`decompress` checks the frame before it allocates the output; for untrusted input pass `max_output_size` (bytes),
-since a valid frame can claim well over 100,000 times its own size. Apache-2.0.
+`decompress`, `original_size` and `read_range` read everything the command line writes: one frame, frames one after
+another, and `kolmo --stream` output (also what the CLI writes for pipes over 256 MiB). `decompress` checks every
+frame before it allocates the output, and the output holds only the pages actually decoded; for untrusted input pass
+`max_output_size` (bytes), since a valid frame can claim well over 100,000 times its own size. Apache-2.0.
 
 **Since 0.0.2:** `mode=` was replaced by `level=` (`speed` is now `1`, `balanced` `3`, `ratio` `9`,
 `ultra` `"ultra"`; `eco` `5`, `hc` `7`), and the dictionary calls (`train_dict`, `dict=`) were removed.

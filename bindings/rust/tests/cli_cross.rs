@@ -28,3 +28,41 @@ fn cli_and_rust_give_the_same_bytes() {
     }
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// Files the command line writes decode here (bug 11 of the review40 synthesis): `--stream` (CZNS, also the CLI's
+/// output for pipes over 256 MiB), concatenated outputs, and a stream followed by a frame.
+#[test]
+fn cli_stream_and_concatenated_files() {
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let cli = std::env::var_os("KOLMO_CLI").map(PathBuf::from).unwrap_or_else(|| manifest.join("../../build/kolmo"));
+    if !cli.exists() {
+        eprintln!("{} not built: CLI stream files skipped", cli.display());
+        return;
+    }
+    let mut data = Vec::new();
+    for i in 0..200_000u32 {
+        data.extend_from_slice(format!("Utopia,{},{}.5,{}\n", 2000 + i % 20, i, i.wrapping_mul(2_654_435_761) % 1000).as_bytes());
+    }
+    data.truncate(3 << 20);                    // three 1 MiB segments
+    let dir = std::env::temp_dir().join(format!("kolmo-cli-stream-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let src = dir.join("in.csv");
+    std::fs::write(&src, &data).unwrap();
+    let run = |args: &[&str]| {
+        let out = Command::new(&cli).args(args).arg(&src).output().expect("run kolmo");
+        assert!(out.status.success(), "kolmo {:?} failed", args);
+        out.stdout
+    };
+    let st = run(&["-3", "-T", "1", "--stream=1", "-c"]);
+    let fr = run(&["-1", "-c"]);
+    assert_eq!(&st[..4], b"CZNS");
+    let twice = [&data[..], &data[..]].concat();
+    for (name, blob, want) in [("--stream", st.clone(), &data), ("frame + frame", [&fr[..], &fr[..]].concat(), &twice),
+                               ("--stream + frame", [&st[..], &fr[..]].concat(), &twice)] {
+        assert_eq!(&kolmo::decompress(&blob, 2).unwrap(), want, "{}", name);
+        assert_eq!(kolmo::original_size(&blob).unwrap(), want.len(), "{}", name);
+        let off = (1usize << 20) - 7;          // across the first segment boundary
+        assert_eq!(kolmo::read_range(&blob, off as u64, 100, 1).unwrap(), &want[off..off + 100], "{}", name);
+    }
+    std::fs::remove_dir_all(&dir).ok();
+}

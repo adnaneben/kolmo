@@ -3,6 +3,9 @@
 //! Thin, safe wrappers over the native core (`kolmo.h`). The whole file is compressed or
 //! decompressed in one call; [`read_range`] decodes only the blocks overlapping a byte range.
 //!
+//! The decoding functions read whatever the command line writes: one frame (`CZN1`), several frames one after
+//! another, and `kolmo --stream` output (`CZNS`, also what the CLI writes for pipes over 256 MiB).
+//!
 //! ```no_run
 //! let blob = kolmo::compress(b"country,year\nA,2020\n", kolmo::Level::COMPACT, 0).unwrap();
 //! let back = kolmo::decompress(&blob, 0).unwrap();
@@ -75,6 +78,7 @@ extern "C" {
     fn kolmo_params_for_level(level: c_int, p: *mut Params) -> c_int;
     fn kolmo_compress(src: *const u8, n: usize, dst: *mut u8, cap: usize, p: *const Params) -> i64;
     fn kolmo_original_size(src: *const u8, n: usize) -> i64;
+    fn kolmo_frame_size(src: *const u8, n: usize) -> i64;
     fn kolmo_check_frame(src: *const u8, n: usize, limits: *const Limits) -> c_int;
     fn kolmo_decompress_limited(src: *const u8, n: usize, dst: *mut u8, cap: usize, threads: c_int, limits: *const Limits) -> i64;
     fn kolmo_read_range(src: *const u8, n: usize, off: u64, len: usize, dst: *mut u8, threads: c_int) -> i64;
@@ -124,57 +128,159 @@ pub fn compress_limited(data: &[u8], level: Level, threads: i32, mem_limit: u64)
     Ok(out)
 }
 
-/// Original (decompressed) length recorded in a compressed blob's header (not checked: see [`decompress`]).
+const ERR_CORRUPT: i64 = -1;
+const ERR_ALLOC: i64 = -4;
+const ERR_LIMIT: i64 = -7;
+const ERR_RANGE: i64 = -16;
+
+/// The CZN1 frames of `blob`, in order, as (offset, length): one frame, frames one after another (as
+/// `cat a.kz b.kz`), and CZNS streams (`kolmo --stream`, and the CLI's output for pipes over 256 MiB: `"CZNS" 1 0 0 0
+/// segment_bytes u32`, then `length u64 | frame`, ending with a zero length; FORMAT.md section 10), in any order. Only
+/// headers, indexes and stream lengths are read; anything else (trailing bytes, a truncated frame, a stream with no
+/// terminator) is code -1. Payloads are checked later, frame by frame, before anything is allocated.
+fn frames(blob: &[u8]) -> Result<Vec<(usize, usize)>, Error> {
+    let n = blob.len();
+    if n == 0 { return Err(err(ERR_CORRUPT)); }
+    let mut out = Vec::new();
+    let mut off = 0usize;
+    while off < n {
+        let rest = &blob[off..];
+        if rest.starts_with(b"CZNS") {
+            if rest.len() < 12 || rest[4] != 1 { return Err(err(ERR_CORRUPT)); }
+            let mut p = off + 12;
+            loop {
+                if n - p < 8 { return Err(err(ERR_CORRUPT)); }          // no terminator
+                let len = u64::from_le_bytes(blob[p..p + 8].try_into().unwrap());
+                p += 8;
+                if len == 0 { break; }
+                if len > (n - p) as u64 { return Err(err(ERR_CORRUPT)); }  // truncated
+                let len = len as usize;
+                let e = unsafe { kolmo_frame_size(blob.as_ptr().add(p), len) };  // exactly one frame per segment
+                if e < 0 { return Err(err(e)); }
+                if e as u64 != len as u64 { return Err(err(ERR_CORRUPT)); }
+                out.push((p, len));
+                p += len;
+            }
+            off = p;
+        } else if rest.starts_with(b"CZN1") {
+            let e = unsafe { kolmo_frame_size(rest.as_ptr(), rest.len()) };
+            if e < 0 { return Err(err(e)); }
+            if e as u64 > rest.len() as u64 || e == 0 { return Err(err(ERR_CORRUPT)); }
+            out.push((off, e as usize));
+            off += e as usize;
+        } else {
+            return Err(err(ERR_CORRUPT));
+        }
+    }
+    Ok(out)
+}
+
+/// The claimed decoded size of each frame (header and index checked).
+fn sizes(blob: &[u8], frames: &[(usize, usize)]) -> Result<Vec<u64>, Error> {
+    frames.iter().map(|&(o, l)| {
+        let r = unsafe { kolmo_original_size(blob.as_ptr().add(o), l) };
+        if r < 0 { Err(err(r)) } else { Ok(r as u64) }
+    }).collect()
+}
+
+/// An empty Vec with room for `n` bytes, or code -4 (`KOLMO_ERR_ALLOC`) when the system refuses: never an abort.
+/// Nothing is written to it here, so the pages are committed only as the decoder writes them: a frame that claims
+/// gigabytes and fails at its first block costs a few pages, not the claim.
+fn out_buf(n: u64) -> Result<Vec<u8>, Error> {
+    let n = usize::try_from(n).map_err(|_| err(ERR_ALLOC))?;
+    let mut v = Vec::new();
+    v.try_reserve_exact(n.max(1)).map_err(|_| err(ERR_ALLOC))?;
+    Ok(v)
+}
+
+/// Original (decompressed) length recorded in a compressed blob's headers (not checked: see [`decompress`]): the
+/// frame's claim, or the sum of the claims of concatenated frames and CZNS streams. A single frame needs only its
+/// header and index.
 pub fn original_size(blob: &[u8]) -> Result<usize, Error> {
-    let n = unsafe { kolmo_original_size(blob.as_ptr(), blob.len()) };
-    if n < 0 { Err(err(n)) } else { Ok(n as usize) }
+    if blob.starts_with(b"CZN1") {
+        let e = unsafe { kolmo_frame_size(blob.as_ptr(), blob.len()) };
+        if e < 0 || e as u64 >= blob.len() as u64 {     // one frame (or its first part): its header answers
+            let n = unsafe { kolmo_original_size(blob.as_ptr(), blob.len()) };
+            return if n < 0 { Err(err(n)) } else { usize::try_from(n).map_err(|_| err(ERR_ALLOC)) };
+        }
+    }
+    let f = frames(blob)?;
+    let t = sizes(blob, &f)?.iter().try_fold(0u64, |a, &s| a.checked_add(s)).ok_or_else(|| err(ERR_CORRUPT))?;
+    usize::try_from(t).map_err(|_| err(ERR_ALLOC))
 }
 
 /// Header, index checksum, block sizes against the claimed size, and the memory the frame declares, before anything
 /// is allocated from the header.
-fn check_frame(blob: &[u8], mem_limit: u64, max_output: u64) -> Result<(), Error> {
-    let lim = Limits { max_output_bytes: max_output, max_block_bytes: 0, max_blocks: 0, max_memory: mem_limit };
-    let r = unsafe { kolmo_check_frame(blob.as_ptr(), blob.len(), &lim) };
+fn check_frame(frame: &[u8], lim: &Limits) -> Result<(), Error> {
+    let r = unsafe { kolmo_check_frame(frame.as_ptr(), frame.len(), lim) };
     if r < 0 { Err(err(r as i64)) } else { Ok(()) }
 }
 
-/// Decompress a whole blob. `threads` = 0 uses all cores. The frame is checked before the output is allocated, so a
-/// damaged or hostile blob is an error, not a huge allocation.
+/// Decompress a whole blob: one frame, frames one after another, or a CZNS stream. `threads` = 0 uses all cores.
+/// Every frame is checked before the output is reserved, the output's pages are committed only as they are decoded,
+/// and an allocation the system refuses is an error (code -4), so a damaged or hostile blob is an error, not a huge
+/// allocation or an abort.
 pub fn decompress(blob: &[u8], threads: i32) -> Result<Vec<u8>, Error> {
     decompress_limited(blob, threads, 0, None)
 }
 
 /// As [`decompress`], with a memory limit in bytes (0 = auto, `u64::MAX` = none): a frame that needs more fails with
-/// code -12 (`KOLMO_ERR_MEMORY`) before anything is allocated. `max_output` bounds the decoded size: a valid frame can
-/// claim well over 100,000 times its own size (long runs), so callers decoding untrusted input should pass
-/// `Some(bytes)`; a frame that claims more fails with code -7 (`KOLMO_ERR_LIMIT`) before anything is allocated.
-/// `None` accepts any size the frame validly claims.
+/// code -12 (`KOLMO_ERR_MEMORY`) before anything is allocated. `max_output` bounds the decoded size of the whole blob:
+/// a valid frame can claim well over 100,000 times its own size (long runs), so callers decoding untrusted input
+/// should pass `Some(bytes)`; a blob that claims more fails with code -7 (`KOLMO_ERR_LIMIT`) before anything is
+/// allocated. `None` accepts any size the frames validly claim.
 pub fn decompress_limited(blob: &[u8], threads: i32, mem_limit: u64, max_output: Option<u64>) -> Result<Vec<u8>, Error> {
-    let o = original_size(blob)?;
-    let max_output = match max_output {
-        Some(0) if o > 0 => return Err(err(-7)),   // the library reads 0 as "no limit"
-        Some(m) => m,
-        None => 0,
-    };
-    check_frame(blob, mem_limit, max_output)?;
-    let mut out = vec![0u8; o.max(1)];
-    let lim = Limits { max_output_bytes: max_output, max_block_bytes: 0, max_blocks: 0, max_memory: mem_limit };
-    let got = unsafe { kolmo_decompress_limited(blob.as_ptr(), blob.len(), out.as_mut_ptr(), o, threads as c_int, &lim) };
-    if got < 0 { return Err(err(got)); }
-    out.truncate(got as usize);
+    let f = frames(blob)?;
+    // max_output_bytes 0 means no limit in the library; the bound on the whole blob is applied below
+    let lim = Limits { max_output_bytes: max_output.unwrap_or(0), max_block_bytes: 0, max_blocks: 0, max_memory: mem_limit };
+    for &(o, l) in &f { check_frame(&blob[o..o + l], &lim)?; }
+    let sz = sizes(blob, &f)?;
+    let total = sz.iter().try_fold(0u64, |a, &s| a.checked_add(s)).ok_or_else(|| err(ERR_CORRUPT))?;
+    if let Some(m) = max_output { if total > m { return Err(err(ERR_LIMIT)); } }
+    let mut out = out_buf(total)?;
+    let mut got = 0usize;
+    for (&(o, l), &s) in f.iter().zip(&sz) {
+        // s <= total - got: the sizes add up to total, and each frame wrote exactly its size so far
+        let r = unsafe {
+            kolmo_decompress_limited(blob.as_ptr().add(o), l, out.as_mut_ptr().add(got), s as usize, threads as c_int, &lim)
+        };
+        if r < 0 { return Err(err(r)); }
+        if r as u64 != s { return Err(err(ERR_CORRUPT)); }
+        got += s as usize;
+    }
+    // SAFETY: the decoder initialised out[..got] (each call wrote exactly its frame's size, checked above)
+    unsafe { out.set_len(got) };
     Ok(out)
 }
 
-/// Return bytes `[off, off + len)` of the original (clamped to its end), decoding only the overlapping blocks.
+/// Return bytes `[off, off + len)` of the original (clamped to its end), decoding only the overlapping blocks. An
+/// offset past the end is code -16 (`KOLMO_ERR_RANGE`).
 pub fn read_range(blob: &[u8], off: u64, len: usize, threads: i32) -> Result<Vec<u8>, Error> {
-    let total = original_size(blob)? as u64;
-    check_frame(blob, 0, 0)?;
-    if off > total { return Err(err(-1)); }
-    let len = (len as u64).min(total - off) as usize;
-    let mut out = vec![0u8; len.max(1)];
-    let got = unsafe { kolmo_read_range(blob.as_ptr(), blob.len(), off, len, out.as_mut_ptr(), threads as c_int) };
-    if got < 0 { return Err(err(got)); }
-    out.truncate(got as usize);
+    let f = frames(blob)?;
+    let lim = Limits { max_output_bytes: 0, max_block_bytes: 0, max_blocks: 0, max_memory: 0 };
+    for &(o, l) in &f { check_frame(&blob[o..o + l], &lim)?; }   // before allocating anything from the headers
+    let sz = sizes(blob, &f)?;
+    let total = sz.iter().try_fold(0u64, |a, &s| a.checked_add(s)).ok_or_else(|| err(ERR_CORRUPT))?;
+    if off > total { return Err(err(ERR_RANGE)); }
+    let end = off + (len as u64).min(total - off);
+    let mut out = out_buf(end - off)?;
+    let (mut got, mut start) = (0usize, 0u64);
+    for (&(o, l), &s) in f.iter().zip(&sz) {
+        let (lo, hi) = (off.max(start), end.min(start + s));
+        if lo < hi {
+            let want = (hi - lo) as usize;
+            let r = unsafe {
+                kolmo_read_range(blob.as_ptr().add(o), l, lo - start, want, out.as_mut_ptr().add(got), threads as c_int)
+            };
+            if r < 0 { return Err(err(r)); }
+            if r as usize != want { return Err(err(ERR_CORRUPT)); }
+            got += want;
+        }
+        start += s;
+        if start >= end { break; }
+    }
+    // SAFETY: the decoder initialised out[..got] (each call wrote exactly what it was asked for, checked above)
+    unsafe { out.set_len(got) };
     Ok(out)
 }
 
@@ -271,5 +377,96 @@ mod tests {
         let e = decompress(&blob, 1).unwrap_err();
         assert_eq!(e.code, -13);
         assert!(e.message.contains("written by an earlier Kolmo"), "{}", e.message);
+    }
+
+    extern "C" { fn kolmo_crc32c(crc: u32, buf: *const u8, len: usize) -> u32; }
+
+    /// A CZNS stream (FORMAT.md section 10) wrapping the given frames.
+    fn czns(frames: &[&[u8]]) -> Vec<u8> {
+        let mut v = Vec::from(&b"CZNS\x01\x00\x00\x00"[..]);
+        v.extend_from_slice(&(1u32 << 20).to_le_bytes());
+        for f in frames { v.extend_from_slice(&(f.len() as u64).to_le_bytes()); v.extend_from_slice(f); }
+        v.extend_from_slice(&[0u8; 8]);
+        v
+    }
+
+    /// A frame whose header and index are valid (CRC included) and whose nb blocks each claim `raw` bytes from a
+    /// 5-byte payload, as review R23's forge.c: the claim is consistent, the payloads are garbage.
+    fn forge(nb: u32, raw: u32, kmem: u8) -> Vec<u8> {
+        let mut h = vec![0u8; 32];
+        h[..4].copy_from_slice(b"CZN1"); h[4] = 12; h[5] = 1; h[11] = kmem;
+        h[12..20].copy_from_slice(&(raw as u64 * nb as u64).to_le_bytes());
+        h[20..24].copy_from_slice(&nb.to_le_bytes());
+        h[24..28].copy_from_slice(&raw.to_le_bytes());
+        let mut idx = Vec::new();
+        for _ in 0..nb {
+            idx.extend_from_slice(&raw.to_le_bytes()); idx.extend_from_slice(&5u32.to_le_bytes());
+            idx.extend_from_slice(&[0, 0, 0, 0, 0x20, 0, 0, 0]);
+        }
+        let crc = unsafe { kolmo_crc32c(kolmo_crc32c(0, h.as_ptr(), 28), idx.as_ptr(), idx.len()) };
+        h[28..32].copy_from_slice(&crc.to_le_bytes());
+        h.extend_from_slice(&idx);
+        for i in 0..nb { h.extend_from_slice(&[0, 0, 0, 0, (i as u8).wrapping_mul(131).wrapping_add(7)]); }
+        h
+    }
+
+    #[test]
+    fn forged_frames_are_errors_not_aborts() {
+        // Bug 5 of the review40 synthesis: a frame claiming 2^48 bytes aborted the process in vec![0u8; claimed].
+        for (nb, raw, kmem) in [(2u32, 1u32 << 30, 0x59u8), (16, u32::MAX, 0x69), (65536, u32::MAX, 0x69)] {
+            let f = forge(nb, raw, kmem);
+            assert_eq!(original_size(&f).unwrap() as u64, nb as u64 * raw as u64);
+            assert!(decompress(&f, 1).is_err(), "{}x{} accepted", nb, raw);
+            assert!(read_range(&f, 0, usize::MAX, 1).is_err(), "{}x{} accepted by read_range", nb, raw);
+        }
+    }
+
+    #[test]
+    fn concatenated_frames_and_streams() {
+        // Bug 11 of the review40 synthesis: CZNS (kolmo --stream, pipes over 256 MiB) and concatenated frames.
+        let data = sample();
+        let (a, b) = data.split_at(300_000);
+        let fa = compress(a, Level::FASTEST, 1).unwrap();
+        let fb = compress(b, Level::BALANCED, 1).unwrap();
+        let cat = |x: &[&[u8]]| x.concat();
+        let cases: Vec<(&str, Vec<u8>, Vec<u8>)> = vec![
+            ("two frames", cat(&[&fa, &fb]), data.clone()),
+            ("stream", czns(&[&fa, &fb]), data.clone()),
+            ("stream then frame", cat(&[&czns(&[&fa]), &fb]), data.clone()),
+            ("two streams", cat(&[&czns(&[&fa]), &czns(&[&fb])]), data.clone()),
+            ("empty stream", czns(&[]), Vec::new()),
+            ("empty stream then frame", cat(&[&czns(&[]), &fa]), a.to_vec()),
+        ];
+        for (name, blob, want) in &cases {
+            assert_eq!(&decompress(&blob, 2).unwrap(), want, "{}", name);
+            assert_eq!(original_size(&blob).unwrap(), want.len(), "{}", name);
+            for (off, n) in [(0usize, 10usize), (299_990, 20), (want.len().saturating_sub(5), 100), (12_345, 400_000)] {
+                if want.is_empty() { break; }
+                let end = (off + n).min(want.len());
+                assert_eq!(read_range(&blob, off as u64, n, 1).unwrap(), &want[off..end], "{} read_range({}, {})", name, off, n);
+            }
+            assert_eq!(&decompress_limited(&blob, 1, 0, Some(want.len() as u64)).unwrap(), want, "{}", name);
+            if !want.is_empty() {
+                assert_eq!(decompress_limited(&blob, 1, 0, Some(want.len() as u64 - 1)).unwrap_err().code, -7, "{}", name);
+            }
+        }
+        let s = czns(&[&fa]);
+        let mut v2 = s.clone(); v2[4] = 2;
+        let mut past = s[..s.len() - 9].to_vec(); past.extend_from_slice(&[0u8; 8]);
+        let bad: Vec<(&str, Vec<u8>)> = vec![
+            ("trailing byte", cat(&[&fa, b"x"])), ("trailing zeros", cat(&[&fa, &[0u8; 8]])),
+            ("truncated frame", cat(&[&fa, &fb[..fb.len() - 1]])), ("stream without terminator", s[..s.len() - 8].to_vec()),
+            ("stream cut in a length", s[..s.len() - 4].to_vec()), ("stream length past the end", past),
+            ("two frames in one segment", czns(&[&cat(&[&fa, &fb])])), ("stream version 2", v2),
+            ("short stream header", b"CZNS\x01\x00".to_vec()), ("empty", Vec::new()),
+        ];
+        for (name, blob) in &bad {
+            assert!(decompress(blob, 1).is_err(), "{} accepted", name);
+            assert!(original_size(blob).is_err(), "{} accepted by original_size", name);
+            assert!(read_range(blob, 0, 1, 1).is_err(), "{} accepted by read_range", name);
+        }
+        let two = cat(&[&fa, &fb]);
+        assert_eq!(read_range(&two, data.len() as u64 + 1, 1, 1).unwrap_err().code, -16);
+        assert_eq!(read_range(&two, data.len() as u64, 5, 1).unwrap(), b"");
     }
 }

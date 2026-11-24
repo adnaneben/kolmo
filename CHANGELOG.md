@@ -49,6 +49,31 @@
     README's recipe for moving 1.x files now sets `CZN_OLDTBL=1`, which makes kolmoc 1.0.1 decode such tables through
     its row path.
 
+- **The Python and Rust bindings read every file the command line writes.** `decompress`, `original_size` and
+  `read_range` failed with "corrupt or unsupported input" on `kolmo --stream` output (CZNS), which the CLI also
+  writes for any pipe over 256 MiB, and on concatenated frames (`cat a.kolmo b.kolmo`). They now decode one frame,
+  frames one after another and CZNS streams, in any order. Trailing bytes, truncated frames and a stream without its
+  terminator are still refused. Tests decode files written by the CLI (review40 synthesis, bug 11).
+- **A forged frame can no longer abort a Rust program or make Python reserve gigabytes.** A frame with a valid header
+  and index can claim up to 4 GiB per 16-byte index entry. Rust's `decompress` allocated the claim with
+  `vec![0u8; n]`, so a 1.3 MB frame claiming 2^48 bytes aborted the process. Python zero-filled the claim, so a 74-byte
+  frame cost 2 GiB of memory before it was refused. Both bindings still check every frame first. Rust then reserves
+  the output with `try_reserve_exact` (a refusal is error -4, `KOLMO_ERR_ALLOC`), and Python decodes into an
+  anonymous mapping. Neither touches the buffer before the decoder writes it, so a lying claim costs the pages
+  actually decoded: peak memory is 13 MiB instead of 1.8 GiB on the 74-byte frame. `read_range` does the same
+  (review40 synthesis, bug 5).
+- **`read_range` past the end gives error -16 (`KOLMO_ERR_RANGE`)** in both bindings, as in the C library, instead of
+  "corrupt or unsupported input".
+- **Rust: two versions of the crate can no longer share one C core.** The crate now declares `links = "kolmo"`, so
+  cargo refuses a dependency graph that holds two versions of it. Before, both linked one copy of the C core, silently,
+  which is undefined behaviour once `kolmo_params` changes (bug 12). `bindings/rust/links-check.sh` checks it in CI.
+- **Rust: cross builds compile the C core for the target.** `build.rs` ran the host's `cc` without a target, so
+  `cargo build --target x86_64-apple-darwin` on Apple silicon failed in `immintrin.h` (bug 15). It now uses the `cc`
+  crate as a build dependency. That crate passes the target triple, honours `CC_<target>`, `CFLAGS_<target>` and
+  `AR_<target>`, and follows cargo's jobserver. Frames are unchanged: the CLI cross-check is byte-identical at every
+  level. CI cross-builds the crate on each runner (x86-64 macOS from arm64, aarch64 Linux from x86-64, and the
+  reverse).
+
 ### Format
 
 - **`FORMAT.md`: the specification of container version 12.** It is complete for the container layer: header, index,
