@@ -276,7 +276,10 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
     if (n < 4096) return pl;
     const size_t TRIAL = PLAN_SLICE(effort ? (1u << 20) : (256u << 10));   /* text-transform trial slice (fast: 256 KiB) */
     size_t h = n < 65536 ? n : 65536, pr = 0;
-    for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; }
+    /* printable ASCII and whole UTF-8 sequences (plan/detect.c). Max and ultra (strong) keep the ASCII count: their
+     * coders model UTF-8 text well as it is, and the text route's transforms cost a pageviews dump 0.9% at -8/-9 */
+    pr = text_bytes(s, h, 0);
+    if (strong) { pr = 0; for (size_t i = 0; i < h; i++) { uint8_t c = s[i]; pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; } }
     size_t ihw; unsigned ihc; size_t ihh;
     const int imghdr = meta_image8(s, n, &ihw, &ihc, &ihh);   /* an image header: pixels, even where they look like text */
     const int textlike = pr * 100 > h * 95;
@@ -486,7 +489,11 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
             int64_t tn = word_encode(s, mm, o, mm + 64);
             if (tn > 0) {
                 size_t a = kprobe_size_l(o, (size_t)tn, 3), b = kprobe_size_l(s, mm, 3);
-                if (a * 100 < CZ_WORD_GAIN_PCT * b) pl.t = T_WORD;
+                /* text with 5% or more bytes >= 0x80 is tokenized with UTF-8 letters (transforms/word.c); there the
+                 * dictionary must save 15% on the probe: markup-heavy UTF-8 (dictionary XML in 8 scripts, probe 0.82-0.98)
+                 * coded 2-7% larger at levels 6-7, prose (probe 0.75) 7-24% smaller at levels 4-7 */
+                size_t hi = 0; for (size_t q = 0; q < mm; q++) hi += s[q] >= 0x80;
+                if (a * 100 < (hi * 20 >= mm ? 85u : CZ_WORD_GAIN_PCT) * b) pl.t = T_WORD;
             }
             free(o);
         }

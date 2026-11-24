@@ -345,7 +345,7 @@ static void *compress_worker(void *arg) {
             /* BWT for every block made -8 larger than -7 on executables and weights (mozilla +2.8%, bf16 +6.2%) and
              * slower to decode than -9. A 512 KiB slice from the middle (blocks of up to 2 MiB: the whole block) is coded
              * both ways, and BWT is kept only where it is at least 2% smaller than KLZMA 1 */
-            int textish = tflag == 9 || tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1) || (!tflag && looks_text(raw, len));
+            int textish = tflag == 9 || tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1) || (!tflag && looks_text_latin(raw, len));
             if (!textish && inlen >= (64u << 10)) {   /* blocks of up to 2 MiB are coded both ways whole: a slice of an eighth of them misjudged a 1.2 MB executable and a 135 KB table by 12% */
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
                 size_t sn = inlen <= (2u << 20) ? inlen : 512u << 10, so = ((inlen - sn) / 2) & ~(size_t)63;
@@ -355,7 +355,7 @@ static void *compress_worker(void *arg) {
             if (!l8lz) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }
         }
         else if (codec == R_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
-        else if (codec == R_LZMA && (!tflag || tflag == 9) && looks_text(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
+        else if (codec == R_LZMA && (!tflag || tflag == 9) && looks_text_latin(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
         else if (KOLMO_ECO_TEXT_BWT && codec == R_ECO && J->default_level && len >= (64u << 10)
                  && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT, level = 9;   /* eco, JSON token streams: as max */
         else if (KOLMO_ECO_TEXT_BWT && codec == R_ECO && J->default_level && (!tflag || tflag == 9) && len >= (64u << 10)
