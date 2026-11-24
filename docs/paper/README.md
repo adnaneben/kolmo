@@ -45,6 +45,8 @@ on one thread unless the file name says otherwise. The files were copied from th
 | `pr32/` | Kolmo only, before/after the unmerged encoder change (PR #32): lzbench `{fast,slow}-{old,new}-*.csv`, old = 0.0.2 library, new = the branch, paired on one machine. Used for macros in the limitations only; the tables stay on 0.0.2 |
 | `x86/claims-*.run{1,2,3}.csv` | x86-64 check (PR #33, GitHub run 45295174961): each Silesia/enwik8/Canterbury claim pair (Kolmo -3/-4/-6/-9 and zstd -12/-19, xz -9, zpaq -5) in one job on an Intel Xeon 6975P-C, lzbench 2.4.1, three runs. `corpora/` prefix cut from `Filename` |
 | `x86/cli-silesia.json` | x86-64 command line on Silesia, one thread and 4 vCPUs, AMD EPYC 9V45 (GitHub run 45250622103), unchanged |
+| `archivers.jsonl` | Kolmo -9/-U against zpaq, paq8px -8/-9, 7-Zip, xz -9e, zstd --ultra -22, bsc, bzip3, lrzip: command line, one thread, M5, main at 53a02e47 (ultra writes the same enwik8 bytes as 0.0.2), 2026-11-24, every round trip SHA-256 checked. From `evidence/archivers-2026-11-24/rows.jsonl`, with paths and argv removed |
+| `archivers-published.json` | Published sizes of cmix, NNCP, paq8px -12L and others from the LTCB and Silesia benchmark pages (read 2026-11-24, figures checked on the pages); rank, not a measured gap |
 | `holdout-dfloat11.json` | DFloat11's published method computed on the CPU for the two bf16 checkpoints (not a run of DFloat11) |
 
 Removing `holdout-panel.json` drops the held-out and weights tables from the next build.
@@ -53,12 +55,20 @@ The M5 lzbench run used a small plugin that calls libkolmo; `bench/lzbench/` (x8
 repository. The OpenZL panel script is `openzl_panel.py` in the same workspace; `bench/repro/` (bench-page lane)
 replaces it.
 
+## The code review of 2026-11-24
+
+Limitations, Integrity and the threads paragraph quote findings of the 40-reviewer review of main 52df50cf
+(`review40b/SYNTHESIS.md` in the review workspace), tagged `[review of 52df50cf, R..]`. Those are the reviewers'
+measurements with their reproducers, not runs from `data/`; they must be re-measured or dropped when the benchmarks
+are rerun on the measurement build. The development-panel table (`tab-structured.tex`) is still generated but no
+longer printed; the text quotes its counts.
+
 ## Open TODOs (red boxes in the draft)
 
 1. ~~x86-64 rerun~~: done as a check (Table V, "A second platform"). The full x86 fast/slow tables were not used:
    their jobs ran on different CPUs, so speeds across rows are not comparable. The M5 tables stay the main ones.
    The `\todoin` marker for PR #33 stays until it is merged.
-2. ~~Trained-OpenZL rematch~~: done (Tables VII and IX). The marker stays until PR #29 is merged.
+2. ~~Trained-OpenZL rematch~~: done (Tables VII and VIII). The marker stays until PR #29 is merged.
 3. **Tuned levels** (PR #32, open): their effect is quoted in the limitations from `data/pr32/`. Once the next
    release exists, rerun every benchmark on it and regenerate every table and Table II.
 4. **Smaller items:**

@@ -31,6 +31,9 @@
   `docs/paper/figures/make_figures.py` from the raw 0.0.2 measurements in `docs/paper/data/`; `make -C docs/paper`
   builds the PDF with tectonic. Red TODO boxes mark where the x86-64 rerun, the trained-OpenZL rematch and the tuned
   levels will replace numbers.
+- **Paper: claims checked against the code review of main 52df50cf**: an archiver comparison (ultra against zpaq,
+  paq8px and the published context-mixing leaders), and limitations for small inputs, cross-block redundancy, misrouted
+  inputs, the level-9 thread cap, decode-work and memory-limit holes and platform reach.
 
 ## 0.0.2 (2026-11-23)
 
