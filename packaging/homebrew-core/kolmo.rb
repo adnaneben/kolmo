@@ -7,7 +7,10 @@ class Kolmo < Formula
   homepage "https://github.com/adnaneben/kolmo"
   url "https://github.com/adnaneben/kolmo/archive/refs/tags/v0.0.2.tar.gz"
   sha256 "fab2a448988068c6755755af56415bb92de4f52c14f02ef10d52cd7781c12fec"
-  license all_of: ["Apache-2.0", "Apache-2.0" => { with: "LLVM-exception" }]
+  license all_of: [
+    "Apache-2.0",
+    "Apache-2.0" => { with: "LLVM-exception" },
+  ]
   head "https://github.com/adnaneben/kolmo.git", branch: "main"
 
   def install
