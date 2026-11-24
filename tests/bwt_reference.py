@@ -5,8 +5,8 @@ usage: python3 tests/bwt_reference.py [--max-bytes N] [tests/v12]
 
 Decodes every corpus block and graph leaf coded with codec 18 (LZP, inverse BWT, QLFC with the static or the adaptive
 model) and compares blocks without a transform with the original. The QLFC tables and constants are the normative data
-file tests/format_tables/qlfc.json. --max-bytes skips blocks larger than N bytes (make check uses 300000; the full
-run is `make check-bwt-reference`, several minutes).
+file tests/format_tables/qlfc.json. --max-bytes skips blocks larger than N bytes (make check runs without it and
+decodes every block, about 25 s).
 """
 import json, os, struct, sys
 

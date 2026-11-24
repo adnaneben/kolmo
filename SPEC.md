@@ -127,8 +127,9 @@ blocks that contain no newline). Files with a tflag 10 block are version 6.
 ## Entropy coders
 
 `STORE` is the raw block. KLZ (28), KLZH (29), KLZH2 (32), KLZMA (24) and khuf (27) are Kolmo's own LZ, LZMA-class and
-Huffman coders. KLZ, KLZH, KLZH2, khuf and krans are specified in FORMAT.md sections 14 to 18; KLZMA's format is in
-`src/algo/klzma.h`.
+Huffman coders. KLZ, KLZH, KLZH2, khuf and krans are specified in FORMAT.md sections 14 to 18, and KLZMA in section
+21. The BWT stream (18), kimg (31) and the context-mixing coders CM (7), CMI (17) and CMP (25) are written out bit by
+bit in FORMAT.md sections 22 to 24; the CM text below is the design summary.
 (History: versions 1–11 also had `LZ4`/`LZ4HC`, `ZSTD`, `BROTLI` and `LZMA2`, the standard formats of the vendored
 libraries; version 12 does not read them.) `BSC` is libbsc 3.4.0's block-sorting stream (written and read by Kolmo's C port in `src/codecs/bwt.c`), prefixed with the low 32 bits of `kolmo_khash64` of the stream (seed `0x62736331`; XXH64 before version 12), checked before
 decoding; from rc3 it is read only. `BWT` (codec 18, container version 11) is Kolmo's own block-sorting stream

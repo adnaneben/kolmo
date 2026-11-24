@@ -1,11 +1,11 @@
 # Kolmo frame format, container version 12
 
-Status: **normative** for the container layer and for the coders and transforms of sections 14-21, version 12, as written and read by
+Status: **normative** for the container layer and for the coders and transforms of sections 14-24, version 12, as written and read by
 Kolmo 0.0.1 and 0.0.2.
 Compatibility promise: [COMPATIBILITY.md](COMPATIBILITY.md). Detailed history of versions 1 to 11 and design notes:
 [SPEC.md](SPEC.md).
 
-This document has three parts.
+This document has four parts.
 
 - **Container layer** (sections 1 to 12): complete. A decoder can be written from this text alone up to the point
   where it hands a block payload to a coder. It covers the header, the block index, the checksums, the plan prefix,
@@ -13,12 +13,14 @@ This document has three parts.
   `tests/format_reference.py` is an independent Python implementation of this layer, written from this text. It
   checks every frame of the frozen corpus and the `kolmo_khash64` test vectors.
 - **Coder and transform payloads** (section 8): a registry of every identifier with the status of its specification.
-  Several payloads are specified in [SPEC.md](SPEC.md). For the others, the reference implementation at tag `v0.0.2`
-  is normative until their sections are written (section 13 lists them).
+  Payloads without a section here are specified in [SPEC.md](SPEC.md), with the reference implementation at tag
+  `v0.0.2` deciding what SPEC.md leaves open (section 13).
 - **Kolmo's own coders and the simpler transforms** (sections 14 to 21): khuf (27), krans, KLZ (28), KLZH (29),
   KLZH2 (32) and KLZMA (24); the byte-plane shuffle and x86 filter inverses; the line-class, word, log-template and
   minified-JSON inverses. `tests/coder_reference.py` is an independent Python decoder written from these sections. It decodes
   every block and graph leaf of the frozen corpus that uses them.
+- **Block sorting, kimg and context mixing** (sections 22 to 24): codecs 18, 31, 7, 17 and 25, each with its own
+  independent Python decoder (`tests/bwt_reference.py`, `tests/kimg_reference.py`, `tests/cm_reference.py`).
 
 Throughout, *must* and *must not* are requirements on a conforming decoder or encoder.
 
@@ -257,19 +259,19 @@ refused (corrupt).
 |---|---|---|---|---|
 | 0 | STORE | block, leaf | written | §7.1 |
 | 5 | BSC (libbsc 3.4.0 block format) | block, leaf | read only | SPEC.md *Entropy coders*; `src/codecs/bwt.c` |
-| 7 | CM (context mixing, models 1-4) | block, leaf | written (ultra) | SPEC.md *Entropy coders*, *CM models*; `src/codecs/cm.c` |
+| 7 | CM (context mixing, models 1-4) | block, leaf | written (ultra) | **§24** |
 | 12 | GRAPH | block | written | SPEC.md *Kolmo graph blocks* |
 | 14 | RANS (order 0) | leaf | written | SPEC.md *Leaf codec 14*; `src/codecs/rans.c` |
 | 15 | NPLANE | leaf | written (`--native-leaf`) | SPEC.md *Leaf codec 15* |
 | 16 | FQFAM (FASTQ family) | block | written (ultra) | SPEC.md *FASTQ family blocks*; `src/codecs/fastq.c` |
-| 17 | CMI (context mixing, image model) | block | written (ultra) | SPEC.md *Entropy coders*; `src/codecs/cm_image.c` |
+| 17 | CMI (context mixing, image model) | block | written (ultra) | **§24** |
 | 18 | BWT (Kolmo block sorting) | block, leaf | written | **§22** |
 | 19 | AUD (kaud, 16-bit PCM) | block | written | SPEC.md *Audio blocks*; `src/codecs/audio.c` |
 | 20 | VID (kvid layout + nested frame) | block | written | §7.3; SPEC.md *Video frames*; `src/codecs/video.c` |
 | 21 | PLANES | leaf | written | SPEC.md *Format 2*; `src/codecs/planes_leaf.c` |
 | 23 | ZRUN | leaf | written | SPEC.md *Format 2*; `src/codecs/zrun_leaf.c` |
 | 24 | KLZMA | block, leaf | written | **§21** |
-| 25 | CMP (context mixing over parts) | block | written (ultra) | `src/codecs/cm_par.c` |
+| 25 | CMP (context mixing over parts) | block | written (ultra) | **§24** |
 | 26 | GR6 (GR6+ line-structured text) | block | written (ultra) | SPEC.md *GR6+ blocks*; `src/codecs/gr6.c` |
 | 27 | KHUF (Kolmo Huffman) | leaf | written | **§15** |
 | 28 | KLZ (byte-aligned LZ77) | block, leaf | written (level 1) | **§17** |
@@ -371,27 +373,23 @@ Errors fall into five classes:
 | `tests/khash64_vectors.txt` | the khash64 vectors |
 | `tests/format_reference.py` | the container layer in Python, checked against both of the above |
 | `tests/coder_reference.py` | the coders and transforms of sections 14 to 21 in Python, decoding every corpus block and leaf that uses them |
+| `tests/bwt_reference.py`, `tests/kimg_reference.py`, `tests/cm_reference.py` | the coders of sections 22, 23 and 24 in Python; `tests/vectors/` holds encoder-written streams for variants the corpus lacks |
 
 ## 13. What is not yet written out
 
-These payloads are specified here only by the reference implementation at tag `v0.0.2`. Its C sources decode them,
-and the frozen corpus pins their behaviour on real data. Writing each one out as prose is the next step of the format
-work, in this order (most frames first):
-
-1. CMP (25), which runs the context-mixing coder (codec 7) over parts of a block. The CM model itself is described in
-   SPEC.md, *Entropy coders*, but is not yet written out bit by bit; CMP's section depends on it.
-
-Written out so far:
+Every payload that section 13 used to list now has its own section:
 - sections 14 to 18: KLZH2 (32) with krans, KLZ (28), KLZH (29) and khuf (27);
 - section 19: the byte-plane shuffle (plan 2, tflag 1) and x86 filter (plan 7, tflag 8) inverses;
 - section 20: every transform inverse except the ARM64 filter (SPEC.md) and the shuffle and x86 filter (section 19):
   tflags 1-7, 9, 10, 12 and 13;
 - section 21: KLZMA (24);
 - section 22: the BWT stream (18): LZP, inverse BWT and QLFC with libbsc's tables as normative data;
-- section 23: kimg (31).
+- section 23: kimg (31);
+- section 24: context mixing: CM (7), CMI (17) and CMP (25), with the mixer priors as normative data.
 
-Until a payload has its own section, a change to its decoder that changes the decoded bytes of any version-12 frame is
-a format change (COMPATIBILITY.md), whether or not the corpus catches it.
+The other ids of the registry (section 8.1) are specified in SPEC.md, as their rows say. Where SPEC.md leaves a detail
+open, the reference implementation at tag `v0.0.2` decides it, and a change to such a decoder that changes the decoded
+bytes of any version-12 frame is a format change (COMPATIBILITY.md), whether or not the corpus catches it.
 
 ## 14. Native coders: common rules
 
@@ -1565,3 +1563,469 @@ The sample is `v = P + unfold(u)`.
 `tests/kimg_reference.py` decodes the three kimg blocks of the corpus to their originals: one channel, three channels,
 and three channels with transform 1. Against the 0.0.2 C decoder, mutated streams covering 1-4 channels, transforms
 0-2 and version 1 were decoded identically.
+
+## 24. Context mixing (codecs 7, 17 and 25)
+
+Codec 7 (CM) codes each bit of the output with a probability that several context models predict and two to five
+mixers combine. Codec 17 (CMI) is the same coder with contexts taken from an image's neighbouring samples, and codec 25
+(CMP) cuts a block into parts and codes each with its own codec-7 stream. There are four models. Model 1 is the
+smallest. Model 2 adds contexts, two mixers, a learned final mixer and a third APM. Model 3 adds more contexts and a
+better match model. Model 4 keeps a chosen subset of model 3's contexts in smaller tables, with a 16-bit mixer.
+
+All arithmetic is on integers. Hashes and the coder's registers are modulo 2^32. `>>` on a negative value is an
+arithmetic shift (rounds toward −∞). "Divide" means integer division of non-negative values. `tests/cm_reference.py`
+is the independent decoder. The mixer priors are normative data: `tests/format_tables/cm_prior.json`, copied verbatim
+from `src/codecs/cm_prior.inc` at tag `v0.0.2`.
+
+### 24.1 Streams
+
+**Codec 7.** A `size` u32 (little-endian) comes first. Its low 28 bits must equal the block length `n`, and its top
+4 bits `f` select the header. Blocks of 2^28 bytes or more always use the legacy model-1 header. This section covers
+only shorter blocks.
+
+| `f` | header | model | tables | coded bytes start at |
+|---|---|---|---|---|
+| 0 | `size` | 1 | legacy, `bb` = 20 | 4 |
+| 1-7 | `size` | 1 | legacy, `bb = f + 15` | 4 |
+| 9-15 | `size` | 2 | legacy, `bb = (f & 7) + 15` | 4 |
+| 8 | `size`, `mb << 4 \| g` | see below | see below | 5 |
+
+With `f = 8`, the fifth byte holds a model nibble `mb` and a low nibble `g`:
+- `mb` 3, 5, 6, 7: model 3, 1, 2, 3, with `bb = g + 15`. Nibble 3 uses the legacy tables; 5, 6, 7 use the exact tables.
+- `mb` 14, 15: models 2 and 3 with the exact tables and `bb = g + 15`. Three tune bytes `b0 b1 b2` follow, and the
+  coded bytes start at 8.
+- `mb` 9: model 4, with exact tables and size shift `s = g + 2`. `b0 b1 b2` follow, then a context mask u32, and the
+  coded bytes start at 12. This header is read only when the stream has at least 16 bytes.
+
+Refuse when:
+- the stream is shorter than 8 bytes;
+- `f = 8` and the stream is shorter than 9 bytes, or `mb` is none of 3, 5, 6, 7, 9, 14, 15;
+- `mb` is 14 or 15 and the stream is shorter than 12 bytes or `b2 > 1`;
+- `mb` is 9 and `b2 > 2`, or the mask has bit 0, 30 or 31 set;
+- the low 28 bits of `size` differ from `n`;
+- the model is not 4 and `bb` is outside 16-22.
+
+A decoder may also refuse, before allocating, a stream whose tables exceed the frame's declared working set
+(section 11). Streams without tune bytes use `b0 = b1 = b2 = 0`.
+
+**Codec 17.**
+
+```
+cmi := iw u32 | ih u32 | ich u8 | size u32 | coded bytes
+```
+
+- `iw` is the row length in bytes, `ih` the number of bytes before the first pixel, and `ich & 127` the number of
+  interleaved channels.
+- Bit 7 of `ich` selects the exact tables; without it the legacy tables are used.
+- `size` is read as for codec 7 with `f & 8` set and `bb = (f & 7) + 15`. The coded bytes start at 13.
+- The image model has model 2's tables and mixers.
+
+Refuse when:
+- the stream is shorter than 17 bytes;
+- the size does not match `n`, `f & 8` is clear, or `bb` is outside 16-22;
+- `iw = 0`, the channel count is outside 1-4, `iw <` channels, or `ih > n`.
+
+**Codec 25.**
+
+```
+cmp := 0 u8 | parts uv | parts × (raw uv | coded uv) | the parts' codec-7 streams, concatenated
+```
+
+`uv` is the LEB128 varint of section 14.1. Part `k` decodes its codec-7 stream to `raw_k` bytes, and the parts follow
+one another in the block.
+
+Refuse when:
+- the stream is shorter than 2 bytes, or the version is not 0;
+- `parts` is outside 1-256;
+- a `raw_k` is 0 or more than the bytes still unassigned, or a `coded_k` exceeds the stream length;
+- the `raw_k` do not add up to `n`;
+- a part runs past the end of the stream, or bytes follow the last part;
+- any part fails to decode.
+
+Encoders write model 4 or model 1 parts. Columns of a transposed table (plan type 1) are one example.
+
+### 24.2 Fixed tables
+
+**Bit histories.**
+- A state is a triple (`n0`, `n1`, last bit). State 0 is (0, 0, 0).
+- After bit 1, `n1 = min(n1 + 1, 24)`, and if `n0 > 2` then `n0 = (n0 + 1) / 2`. After bit 0 it is the same with the
+  roles swapped.
+- States are numbered by breadth-first search from state 0, trying bit 0 before bit 1 and giving each new triple the
+  next number. There are 215 states.
+- `next[s][y]` is the transition. Numbers 215-255 have `n0 = n1 = 0` and `next = 0`.
+
+**Squash, legacy.**
+- The 33 knots are `K[k] = ⌊4096 / (1 + e^((16 − k)/2))⌋` for k < 16, `K[16] = 2047`, and `K[32 − k] = 4095 − K[k]`.
+- `squash(x)` is 4095 for `x ≥ 2048` and 1 for `x ≤ −2048`.
+- Otherwise, with `i = (x + 2048) >> 7` and `w = (x + 2048) & 127`, `squash(x) = (K[i]·(128 − w) + K[i+1]·w + 64) >> 7`.
+- `SQ[x]` for `x` in −2048..2047 is `squash(x)` clamped to 1..4095.
+
+**Squash, exact.**
+- `SQ[x]` is `⌊4096 / (1 + e^(−x/256)) + 0.5⌋` clamped to 1..4095.
+- No value lies within 0.00017 of a rounding boundary, so any correctly rounded `exp` gives the table.
+
+**Stretch.** For each table, `ST[p]` (p = 0..4095) is the smallest `x` in −2047..2047 with `SQ[x] ≥ p`, else 2047.
+`sq(x)` means `SQ[x]` after clamping `x` to −2047..2047.
+
+**Other tables.**
+- `rcp[i] = 655360 / (10i + 16)` for i < 64, and `srcp[i] = 655360 / (10i + 15)` for i < 1024.
+- `pri[s] = n0 + n1`.
+- `dx[s]`: let `c = min(n0 + n1, 7)`. It is 0 when both counts are non-zero or both are zero, `128(c + 1)` when only
+  `n1` is non-zero, and `−128(c + 1)` when only `n0` is.
+
+`hmix(a)`: `a ^= a >> 15; a *= 0x2C1B3C6D; a ^= a >> 12; a *= 0x297A2D39; a ^= a >> 15`, all modulo 2^32.
+
+### 24.3 State
+
+**Context slots.** Slot 0 is the order-1 direct counter. The other slots are hashed contexts, and slot `k` holds
+context `mid[k]`:
+- Model 1: contexts 1-15 (`nm = 16` slots).
+- Model 2 and the image model: contexts 1-20 (`nm = 21`).
+- Model 3: contexts 1-29 (`nm = 30`).
+- Model 4: the contexts whose mask bit is set, in increasing order.
+
+The mixers have `ni = 2·nm + 3` inputs.
+
+**Hashed tables, models 1-3 and the image model.**
+- Context `i` has `2^b` buckets of 16 words. `b = bb`, except for `i ≥ 16` with `bb > 18`, where
+  `b = bb − 1 − (i ≥ 25)`.
+- Word 0 of a bucket is `check << 16 | priority`. Words 1-15 are counters for the 15 nodes of a nibble's binary tree.
+- A counter word is `p << 16 | state << 8 | count`: a 16-bit probability, a bit-history state and a count of 0-15.
+- All words start at 0.
+
+**Hashed tables, model 4.**
+- Context `i` has `L_i` lines of 64 bytes. `L_i = n >> s`, then `>> 1` for contexts 16-24 or `>> 2` for 25-29,
+  clamped to 2^12..2^22.
+- Bytes 0-3 of a line are the check bytes of its four buckets. Bucket `j` holds 15 state bytes at `4 + 15j` to
+  `18 + 15j`, one per node.
+- All bytes start at 0.
+
+**Direct counters.** 65536 counter words, each starting at `0x80000000`.
+
+**State maps.**
+- Each slot has 2048 entries indexed by `state | bitpos << 8`. An entry is `p << 10 | count`, with a 22-bit
+  probability.
+- Entry `j` of every slot starts with `p = ((2n1 + 1) << 22) / (2(n0 + n1) + 2)` for state `j & 255` and count 0.
+
+**Mixers.** Each mixer has one weight row per selector value. Every row starts as a copy of that mixer's template:
+
+| mixer | rows | selected by |
+|---|---|---|
+| `W1` | 768 | `c0 + 256·class` |
+| `W2` | 128 | `(ml·8 + bitpos)·4 + sel2` |
+| `W3` (models 2-4) | 2048 | `sel3 << 3 \| bitpos` |
+| `W4` (models 2-4) | 65536 | `c0 \| sel4 << 8` |
+| `WF` (models 2-4) | 1024 | `c0 \| ml << 8` |
+
+`WF` is the final mixer, with five weights.
+
+**Templates.** Each prior row has 63 inputs, and a value is used times 4.
+- Models 1-3 and the image model: every weight is 2^14, and `WF` is `2^14, 2^14, 2^14, 2^14, 0`.
+- With `b2 = 1`, models 2 and 3 take row `r` of `cm_prior[0]` (model 2) or `cm_prior[1]` (model 3) as `W1`-`W4`
+  (inputs 0 to `ni − 1`), and the first five values of row 4 as `WF`.
+- Model 4 weights are 16-bit, with 4096 = 1.0. Every weight is 1024, and `WF` is as above.
+- With `b2 ≥ 1`, model 4 uses `P = cm_prior4[b2 − 1]`. Input `j` of `W1`-`W4` takes `clamp((4·P[r][q]) >> 4, −32768,
+  32767)`, where `q` is the model-3 input it stands for:
+  - `mid[k]` for input `k`;
+  - `30 + k` for input `nm + k` (k < 3);
+  - `33 + mid[k]` for input `nm + 3 + k`.
+- With `b2 ≥ 1`, `WF` is four times the first five values of `P[4]`.
+
+**APMs.**
+- An APM has 33 cells of 16 bits per selector value: `A1` (256 values), `A2` (65536) and, for models 2-4, `A3`
+  (65536).
+- Every cell `j` starts at `16·sq(128(j − 16))`.
+
+**Match counters.** 64 counters of 17 bits, each starting at 2^15.
+
+**Learning settings** come from `b0` and `b1`. Each takes one value from a list of four, indexed by a 2-bit field:
+
+| field | setting | values |
+|---|---|---|
+| `b0 & 3` | mixer shift `lr` | 12, 11, 13, 14 |
+| `b0 >> 2 & 3` | counter limit `lim` | 2, 1, 3, 4 |
+| `b0 >> 4 & 3` | APM shift `ash` | 13, 12, 14, 15 |
+| `b0 >> 6` | match shift `msh` | 6, 5, 7, 8 |
+| `b1 & 3` | rate floor `lrk` | 20, 12, 28, 40 |
+| `b1 >> 2 & 3` | decay shift `lrd` | 13, 12, 14, 16 |
+| `b1 >> 4 & 3` | state-map limit `smlim` | 255, 127, 511, 1023 |
+| `b1 >> 6` | final weights `fw` | (2,2,2,2), (4,1,1,2), (1,2,2,3), (3,1,2,2) |
+
+Counters use `rate[c] = rcp[c·lim]`.
+
+**History.**
+- `buf` holds the decoded bytes. `pos` is their count, `c0` the partial byte with a leading 1 (1 at a byte start), and
+  `bitpos` 0-7.
+- `c4` holds the last four bytes (the low byte is the latest), and `c8` the four before.
+- Every other variable below starts at 0.
+
+### 24.4 Coding a bit
+
+**Bucket lookup.** At `bitpos` 0 and 4, every hashed slot `k ≥ 1` looks up its bucket with
+`h = hmix(H[mid[k]] + nib)`. `nib` is 0 at `bitpos` 0 and `(c0 & 15)·0x5BD1E995` at `bitpos` 4.
+
+*Models 1-3 and the image model:*
+1. Let `i = h >> (32 − b)` and `chk = h & 0xFFFF`.
+2. Take bucket `i` if its check equals `chk`, else bucket `i ^ 1` if its check equals `chk`.
+3. Otherwise empty the bucket with the smaller priority (bucket `i` on a tie): set word 0 to `chk << 16` and words
+   1-15 to `0x80000000`.
+
+*Model 4:*
+1. Take line `(h·L) >> 32` and `chk = h & 255`.
+2. Take the first bucket whose check byte equals `chk`.
+3. Otherwise empty the bucket `j` with the smallest `pri` of its first state byte (the first on a tie): zero its 15
+   state bytes and set its check byte to `chk`.
+
+**Node and selectors.**
+- `node = (c0 & (2^bitpos − 1)) | 2^bitpos` for `bitpos < 4`. With `t = bitpos − 4` it is `(c0 & (2^t − 1)) | 2^t`.
+- `c1` is the last byte (`c4 & 255`); the image model uses `i_pred` instead.
+- `class` is 0 when `c1 | 32` is a letter, 1 for a digit and 2 otherwise; the image model uses `i_cls`.
+- `ml` is 0 without a match, else 1, 2 or 3 for match lengths below 16, below 32, and longer.
+
+**Inputs.** `x` has `ni` entries.
+- Slot 0 is the direct counter `D[c0 | c1 << 8]`.
+- Slot `k ≥ 1` is the bucket's node `node`: a counter word in models 1-3, a state byte in model 4.
+- For each slot, let `st = state | bitpos << 8`, where `state` is bits 8-15 of a counter word or the state byte.
+  `x[nm + 3 + k] = ST[map_k[st] >> 20]`, the top 12 bits of the map entry's probability.
+- For a counter word, `x[k] = ST[word >> 20]`.
+- For a state byte (model 4, slots `k ≥ 1`), `x[k] = dx[state]`.
+
+**Match input.** The match model (24.6) holds `mlen` and `mptr`.
+- With `mlen > 0` and the top `bitpos` bits of `buf[mptr]` equal to the decoded bits of this byte (`(buf[mptr] + 256)
+  >> (8 − bitpos) = c0`), the expected bit is `e = (buf[mptr] >> (7 − bitpos)) & 1`.
+- `l = min(mlen, 31)`. Models 3 and 4 refine `mlen ≥ 16` into the class 16 + the number of these bounds that `mlen`
+  reaches: 24, 32, 48, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 4096.
+- Counter index `mi = 2l + e`. `x[nm] = ST[clamp(M[mi] >> 4, 1, 4095)]`, and `x[nm + 1]` is `16l` if `e = 1`, else `−16l`.
+- Without an expected bit, `x[nm] = x[nm + 1] = 0`.
+- `x[nm + 2] = 64`.
+
+**Mixers.**
+- Selectors: `sel2` is `c1 >> 6` (image: `i_act`), `sel3` is byte 2 of `c4` (image: `i_n`), and `sel4` is `c1`
+  (image: `i_med`).
+- Model 1: `d_r = (Σ W_r[i]·x[i]) >> 16` for `W1` and `W2`. `pr_r = sq(d_r)`, and `t = (d_1 + d_2) >> 1`.
+- Models 2 and 3, image: `d_r = (Σ W_r[i]·x[i]) >> 16` for the four mixers.
+- Model 4: pad `x` with a zero to an even length. For each mixer, `d_r = (Σ_pairs ((x[2j]·W[2j] + x[2j+1]·W[2j+1]) >> 8))
+  >> 4`.
+- Models 2-4 then clamp each `d_r` to ±2047, and `pr_r = sq(d_r)`.
+- They compute `t = (WF[4]·256 + Σ_r WF[r]·d_r) >> 16`, clamped to ±2047, and `prf = sq(t)`.
+
+**APMs.**
+1. Clamp `t` to ±2047. `mixed = sq(t)`, `lo = (t + 2048) >> 7`, and `wt = (t + 2048) & 127`.
+2. `p1` interpolates `A1[c0]` and `p2` interpolates `A2[(c0 | c1 << 8) & 0xFFFF]`, each as
+   `(a[lo]·(128 − wt) + a[lo+1]·wt) >> 11`.
+3. Model 1: `p = (mixed + p1 + p2) / 3`.
+4. Models 2-4: `p3` interpolates `A3[hmix(v·0x9E3779B1 + c0·0x85EBCA6B) >> 16]`, where `v` is `c4 & 0xFFFF`
+   (image: `i_wn`). Then `p = (fw0·mixed + fw1·p1 + fw2·p2 + fw3·p3 + 4) >> 3`.
+5. Clamp `p` to 1..4095.
+
+**Arithmetic decoder.**
+- `low = 0`, `high = 2^32 − 1`, and `code` is the first four coded bytes, big-endian.
+- `mid = low + (((high − low)·p) >> 12)`. The bit `y` is 1 when `code ≤ mid`; then `high = mid`. Otherwise
+  `low = mid + 1`.
+- After the updates below, while `(low ^ high) < 2^24`:
+  - `low <<= 8`;
+  - `high = high << 8 | 255`;
+  - `code = code << 8 | the next byte`.
+- A byte past the end reads as 255 and counts as padding. Refuse when the padding exceeds 8 at the start of a byte or
+  at the end.
+
+### 24.5 Updates after a bit
+
+1. **State maps.** For each slot's entry `(p, c)`: `p += (((y << 22) − p)·srcp[c]) >> 16`, capped at 2^22 − 1. Then
+   `c += 1` if `c < smlim`.
+2. **Counter words** (slot 0 always, slots `k ≥ 1` in models 1-3):
+   - `p += ((65535y − p)·rate[c]) >> 16`, clamped to 0..65535;
+   - `state = next[state][y]`;
+   - `c = min(c + 1, 15)`.
+3. **Model-4 state bytes** become `next[state][y]`.
+4. **Bucket priorities** (models 1-3): each looked-up bucket's priority increases by 1, up to 65535.
+5. **Match counter.** If an expected bit was used, `M[mi] += ((y << 16) − M[mi]) >> msh`.
+6. **Mixers.** Let `e_r = (y << 12) − pr_r`.
+   - Model 1: `W_r[i] += (x[i]·e_r) >> lr`.
+   - Models 2-4: let `k = max(64 − (pos >> lrd), lrk)` and `e_r = (e_r·k) >> 4`.
+   - Models 2 and 3, image: `W_r[i] += (x[i]·e_r) >> lr`.
+   - Model 4: `W_r[i] = clamp(W_r[i] + ((x[i]·(e_r >> (lr − 11)) + 2^14) >> 15), −32768, 32767)`.
+   - Then `WF[r] += (xf[r]·((y << 12) − prf)) >> 12` for r = 0..4, where `xf` is the clamped `d_1..d_4` and 256.
+7. **APMs.** `A3` (models 2-4), then `A1` and `A2`:
+   - `a[lo] += ((g − a[lo])·(128 − wt)) >> ash`;
+   - `a[lo+1] += ((g − a[lo+1])·wt) >> ash`;
+   - `g = 65535y`.
+8. **Broken match.** If the expected bit differed from `y`, `mlen` becomes 0. In models 3 and 4, first set `mrec` to
+   8 if `mlen ≥ 16`, else `max(mrec − 1, 0)`.
+9. `c0 = c0 << 1 | y`. After the eighth bit, the byte `c = c0 & 255` is decoded:
+   - `buf[pos] = c` and `pos += 1`;
+   - `c8 = c8 << 8 | c4 >> 24` and `c4 = c4 << 8 | c`;
+   - `c0 = 1`;
+   - the contexts of 24.6 are computed.
+
+### 24.6 Contexts after a byte
+
+**Words.** If `c | 32` is a letter or `c ≥ 128`, `word = (word + (c | 32) + 1)·0x3D4D51CB`. Otherwise, when
+`word ≠ 0`, it shifts out: `word2 = word1`, `word1 = word`, `word = 0`.
+
+**Record length.**
+1. Let `d = pos − last[c]`.
+2. If `last[c] ≠ 0`, `d = dist[c]` and `2 ≤ d < 65536`:
+   - if `d = cand`, increment `cnt` up to 255, and set `rlen = d` once `cnt ≥ 8`;
+   - else if `cnt > 0`, decrement it;
+   - else `cand = d` and `cnt = 1`.
+3. Then `dist[c] = d` and `last[c] = pos`.
+4. With `r = rlen`, `ab = buf[pos − r]` and `ab2 = buf[pos − 2r]` when those positions exist and `r ≠ 0`, else 0.
+   `col = min(pos mod r, 4095)` when `r ≠ 0`, else 0.
+
+**Indirect.** With `p1 = c4 >> 8 & 255` and `p2 = c4 >> 8 & 0xFFFF`:
+- `I1[p1] = (I1[p1] << 8 | c) & 0xFFFF`;
+- `I2[p2] = (I2[p2] << 8 | c) & 0xFFFF`.
+
+**Lines.**
+- At `c = 10`, `line1 = line0` and `line0 = pos`.
+- Let `col = pos − line0` and `plen = line0 − line1`.
+- `above = buf[line1 + col]` if `col < plen`, else 0, and `above2 = buf[line1 + col + 1]` if `col + 1 < plen`,
+  else 0.
+
+**Context hashes.** The variables above are updated first, then the hashes. All products are modulo 2^32, `A = 0x9E3779B1`, `B = 0x85EBCA6B`, `C = 0xC2B2AE35` and `E = 0x2545F491`.
+
+| i | `H[i]` |
+|---|---|
+| 1 | `hmix((c4 & 0xFF) + 0x1000000)` |
+| 2 | `hmix((c4 & 0xFFFF) + 0x2000000)` |
+| 3 | `hmix((c4 & 0xFFFFFF)·A + 3)` |
+| 4 | `hmix(c4·A + 4)` |
+| 5 | `hmix(hmix(c4) + (c8 & 0xFFFF)·B + 5)` |
+| 6 | `hmix(word·0x27D4EB2F + word1·0x165667B1 + 6)` |
+| 7 | `hmix((c4 & 0xFF00FF00)·A + 7)` |
+| 8 | `hmix(hmix(c4·A) + (c8 & 0xFF)·B + 8)` |
+| 9 | `hmix(hmix(c4 + 0x51ED27) + (c8 & 0xFFFFFF)·C + 9)` |
+| 10 | `hmix((above << 8 \| above2)·A + (min(col, 255) << 20) + 10)` |
+| 11 | `hmix((above << 16 \| (c4 & 0xFFFF))·B + 11)` |
+| 12 | `hmix(word·E + 12)` |
+| 13 | `hmix(word·A + word1·B + word2·C + 13)` |
+| 14 | `hmix((I1[c] << 8 \| c)·A + 14)` |
+| 15 | `hmix((I2[c4 & 0xFFFF] << 16 \| (c4 & 0xFFFF))·B + 15)` |
+| 16 | `hmix((c4 & 0xFFFF0000)·A + 16)` |
+| 17 | `hmix((c4 & 0xFF00)·B + 17)` |
+| 18 | `hmix((ab << 16 \| ab2 << 8 \| (r ≠ 0))·A + r·B + 18)` |
+| 19 | `hmix((ab << 8 \| (c4 & 0xFF))·C + r·A + 19)` |
+| 20 | `hmix((col << 8 \| (c4 & 0xFF))·E + r·B + 20)` |
+
+Row 10 uses the line column, and row 20 the record column.
+
+**Structure (models 3 and 4).**
+1. A token byte is a digit, a letter, `_`, `-`, `.` or any byte ≥ 128. On a token byte, `tok = (tok + c + 1)·0x2F0B3A55`.
+2. On any other byte:
+   - if `tok ≠ 0`: `ltok = tok`; if `lt` is set, then `key = tok`; then `tok = 0`;
+   - if `c` is `:` or `=` and `ltok ≠ 0`: `key = ltok`;
+   - `lt` is set when `c` is `<`, or when `c` is `/` and `lt` was set.
+3. At `c = 10`:
+   - copy all 32 field starts `fs` into `pfs`;
+   - `pfn = fidx + 1`, `pls = ls` and `ls = pos`;
+   - `fidx = 0`, `fs[0] = 0`, `key = 0` and `ltok = 0`.
+4. At a space, `,`, tab, `;` or `|` with `fidx < 31`: `fidx += 1` and `fs[fidx] = pos − ls`.
+5. When `fidx < pfn`, let `a = pls + pfs[fidx] + (pos − ls) − fs[fidx]`. If `pls ≤ a < ls`, then `fa = buf[a]`, and
+   `fa1 = buf[a + 1]` when `a + 1 < ls` (else 0). Otherwise `fa = fa1 = 0`.
+
+| i | `H[i]` |
+|---|---|
+| 25 | `hmix(key·A + (c4 & 0xFF)·B + 25)` |
+| 26 | `hmix(key·C + tok·A + 26)` |
+| 27 | `hmix((fidx << 16 \| (c4 & 0xFFFF))·A + 27)` |
+| 28 | `hmix((fidx + 1)·B + tok·C + 28)` |
+| 29 | `hmix((fa << 16 \| fa1 << 8 \| fidx)·A + (c4 & 0xFF)·E + 29)` |
+
+**Orders 12 and 20 (models 3 and 4).**
+- `H[21] = 21` and `H[22] = 22`, then `h = 0`.
+- For `k = 1 … min(pos, 20)`, `h = (h + buf[pos − k] + 1)·0x2F0B3A55`. At `k = 12`, `H[21] = hmix(h + 21)`. At
+  `k = 20`, `H[22] = hmix(h + 22)`.
+
+**Image model (codec 17).** After the hashes above, `H[1..20]` are replaced.
+- `q = pos`. Let `ch` be the channel count and `w = iw`.
+- `I(d) = buf[q − d]` if `q ≥ d + ih`, else 0. `cl()` clamps to 0..255.
+- Neighbours: `W = I(ch)`, `N = I(w)`, `NW = I(w + ch)`, `WW = I(2ch)`, `NN = I(2w)`, `P1 = I(1)`, `P2 = I(2)`,
+  `W1 = I(ch + 1)`, `N1 = I(w + 1)`.
+- `NE = I(w − ch)` and `NNE = I(2w − ch)` when `w > ch`, else 0.
+- `ci = (q − ih) mod ch` when `q ≥ ih`, else 0.
+- `grad = cl(W + N − NW)`. `med` is `min(W, N)` if `NW ≥ max(W, N)`, `max(W, N)` if `NW ≤ min(W, N)`, else `grad`.
+  `avg = (W + N + 1) >> 1`.
+- `act` counts how many of 3, 8, 16, 32, 64, 128, 256 the sum `|W − NW| + |N − NW| + |N − NE|` reaches (0-7).
+- `icp` is `cl(W + P1 − W1)` when `ci > 0`, else `grad`. `icn` is `cl(N + P1 − N1)` when `ci > 0`, else `avg`.
+- `H[i] = hmix(v_i·A + ci·A + i·B)`, with:
+
+| i | `v_i` |
+|---|---|
+| 1 | `W << 8 \| N` |
+| 2 | `N << 8 \| NE` |
+| 3 | `W << 8 \| NW` |
+| 4 | `grad << 3 \| act` |
+| 5 | `med << 3 \| act` |
+| 6 | `W << 16 \| N << 8 \| NW` |
+| 7 | `W << 16 \| N << 8 \| NE` |
+| 8 | `N << 8 \| NN` |
+| 9 | `W << 8 \| WW` |
+| 10 | `(cl(2W − WW) >> 2) << 6 \| cl(2N − NN) >> 2` |
+| 11 | `avg << 6 \| ((W − N + 256) & 511) >> 3` |
+| 18 | `(grad >> 1) << 7 \| med >> 1` |
+| 19 | `(W >> 3) << 20 \| (N >> 3) << 15 \| (NE >> 3) << 10 \| (NW >> 3) << 5 \| P1 >> 3` |
+| 20 | `(icp + icn + 1) >> 1` |
+
+Rows 12-17 depend on `ci`:
+
+| i | `ci > 0` | `ci = 0` |
+|---|---|---|
+| 12 | `icp << 3 \| act` | `cl(N + NE − NNE) << 3 \| act` |
+| 13 | `icp << 8 \| P1` | `cl(W + NE − N)` |
+| 14 | `P1 << 8 \| W` | `NW << 8 \| NE` |
+| 15 | `P1 << 8 \| N` | `((W + NE) >> 1) << 6 \| N >> 2` |
+| 16 | `P1 << 8 \| P2` | `(W >> 2) << 18 \| (N >> 2) << 12 \| (NW >> 2) << 6 \| NE >> 2` |
+| 17 | `icn << 8 \| W` | `WW << 8 \| NN` |
+
+The selectors for the next byte are:
+- `i_pred = icp` and `i_cls = min(ci, 2)`;
+- `i_act = act >> 1`, `i_n = N` and `i_med = med`;
+- `i_wn = W << 8 | N`.
+
+### 24.7 Match model
+
+The match model runs after the contexts, once `pos ≥ 6`.
+1. Let `hh = hmix(c4 ^ ((c8 & 0xFFFF)·A)) & mask`. `mask` is 2^22 − 1 in models 1-3. In model 4 it is 2^m − 1 for the
+   smallest `m` in 16-22 with `2^m ≥ n` (22 at most).
+2. If `mlen > 0`: `mptr += 1`, and `mlen += 1` up to 65535.
+3. Otherwise take `cand = T[hh]` (0 when empty). `len(a)` is the number of equal bytes going backwards from `buf[a − 1]`
+   and `buf[pos − 1]`, at most `min(a, 400)`.
+   - **Models 1 and 2, image:** if `cand > 0` and `len(cand) ≥ 6`, then `mlen = len(cand)` and `mptr = cand`.
+   - **Models 3 and 4:** follow the chain from `cand` through `prev[cand]`, at most 16 positions while `cand > 0`. Keep
+     the first position with the longest `len`, and stop early at 400. If the best length is ≥ 6, take it.
+4. **Models 3 and 4:** if nothing was taken, `mrec > 0` and `mptr + 1 < pos`, then `mptr += 1` and `mlen = 1`. Set
+   `prev[pos] = T[hh]`.
+5. `T[hh] = pos`. If `mlen > 0` and `mptr ≥ pos`, `mlen = 0`.
+
+**Expected-byte contexts (models 3 and 4).**
+- `eb = buf[mptr]` when `mlen > 0`, else 256.
+- `lq` counts how many of 1, 8, 12, 16, 24, 32, 64 `mlen` reaches (0-7).
+
+| i | `H[i]` |
+|---|---|
+| 23 | `hmix((eb << 3 \| lq)·A + (c4 & 0xFF)·B + 23)` |
+| 24 | `hmix((eb << 3 \| lq)·C + (c4 & 0xFFFF)·A + 24)` |
+
+Before the first byte, every `H[i]` is 0.
+
+### 24.8 Test coverage
+
+`tests/cm_reference.py`, in `make check` (about 40 s):
+- decodes the 21 vectors in `tests/vectors/cm/` whole. They were written by the 0.0.2 encoder functions and checked
+  by its decoders, and cover:
+  - models 1, 2 and 3 with legacy and exact tables, and with tune bytes, with and without the prior;
+  - model 4 with all contexts, none, three, and the binary set, with priors 0-2;
+  - the image model with 1-4 channels, a header, and legacy tables;
+  - CMP with model 1 and model 4 parts.
+- decodes the first 1024 bytes of every codec 7, 17 and 25 block of the corpus: 27 blocks of model 1, model 4, the
+  image model and CMP. Blocks without a transform are compared with the original. The others are compared with
+  the SHA-256 digests in `tests/vectors/cm/prefixes.json`.
+
+`make check-cm-reference` decodes every corpus stream whole and checks it against the original through the transform
+inverses (about 20 minutes). It passed at the commit that added this section.
+
+The 0.0.2 encoder writes models 1 and 4 only. Models 2 and 3, the tuned headers and the legacy image tables come from
+older encoders, so only the vectors cover them. Against the 0.0.2 C decoders, 6,000 mutated streams were decoded
+identically, comparing acceptance, refusal and every output byte. The mutations included header fields, coded bytes,
+truncation, extension and wrong lengths.
