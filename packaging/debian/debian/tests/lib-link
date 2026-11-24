@@ -1,0 +1,7 @@
+#!/bin/sh
+# Builds a program against libkolmo-dev with pkg-config and runs it.
+set -eu
+SRC=$(pwd)
+cd "${AUTOPKGTEST_TMP:-$(mktemp -d)}"
+cc -o test_lib "$SRC/debian/tests/test_lib.c" $(pkg-config --cflags --libs kolmo)
+./test_lib

@@ -1,0 +1,3 @@
+usr/include/kolmo.h
+usr/lib/${DEB_HOST_MULTIARCH}/libkolmo.so
+usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/kolmo.pc

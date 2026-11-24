@@ -183,6 +183,18 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
     blosclz, LZ4 and Zstd with shuffle or bitshuffle: Kolmo 3 with block = chunk is 1.04-2.7x smaller.
 - CI: `.github/workflows/integrations.yml` builds and tests both plugins on Ubuntu 24.04 and macOS.
 
+### Packaging
+
+- **Distribution drafts in `packaging/`, nothing submitted yet** (`packaging/README.md` has the steps for each
+  channel). They build the 0.0.2 tarball, with the version and sha256 in one place per recipe:
+  - conda-forge: `libkolmo` and `kolmo` in one recipe, `kolmoc` in another
+  - Debian (`kolmo`, `libkolmo0`, `libkolmo-dev`), with autopkgtests and an ITP draft
+  - an AUR `PKGBUILD`
+  - a nixpkgs `package.nix`
+  - a homebrew-core formula, which is not eligible until the notability rule is met
+- **CI workflow `packaging`.** It builds and tests each draft in a clean environment, and builds the Debian package
+  from the checkout as well.
+
 ## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and

@@ -1,0 +1,7 @@
+Tests: cli-roundtrip
+Depends: kolmo
+Restrictions: allow-stderr
+
+Tests: lib-link
+Depends: libkolmo-dev, build-essential, pkgconf
+Restrictions: allow-stderr
