@@ -124,6 +124,7 @@ check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus
 	python3 tests/coder_reference.py tests/v12
 	python3 tests/bwt_reference.py tests/v12
 	python3 tests/kimg_reference.py tests/v12
+	python3 tests/cm_reference.py tests/v12
 	./build/test-harden
 	./build/kolmoresource
 	./build/kolmoparallel
@@ -199,6 +200,11 @@ build/test-cm4-asan: tests/test_cm4.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) 
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cm4.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-cm4: build/test-cm4-asan
 	./build/test-cm4-asan
+# FORMAT.md section 24 in Python: every codec 7, 17 and 25 stream of the corpus decoded whole (about 20 minutes;
+# make check decodes the first 1024 bytes of each).
+check-cm-reference:
+	python3 tests/cm_reference.py --full tests/v12
+.PHONY: check-cm-reference
 # Opt-in --typed-huf route (ported from the RC1 integration, PR #10): round trips, header parsing, and agreement of
 # the typed route's predictor choice with the graph planner's.
 build/test-rc-options: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a

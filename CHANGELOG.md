@@ -88,11 +88,21 @@
   - All three kimg blocks of the corpus decode to their originals.
   - On mutated streams covering 1-4 channels, transforms 0-2 and the read-only version 1, the decoder agrees with
     the 0.0.2 C decoder.
+- **FORMAT.md section 24: context mixing**, codecs 7 (CM, models 1-4), 17 (CM with the image model) and 25 (CM over
+  parts), the coders of ultra. It covers the headers, bit histories, squash and stretch, hashed tables, mixers, priors,
+  APMs, the match model, every context hash, the image contexts and the arithmetic decoder. The mixer priors are
+  normative data in `tests/format_tables/cm_prior.json`. With it, every codec id is specified in FORMAT.md or SPEC.md,
+  and section 13 has nothing left to write out.
+  - `tests/cm_reference.py`, in `make check` (about 40 s), decodes 21 vectors in `tests/vectors/cm/` whole, and
+    the first 1024 bytes of every codec 7, 17 and 25 stream in the corpus. The vectors cover the models and headers
+    the 0.0.2 encoder no longer writes. They were made by the 0.0.2 encoder functions and checked by its decoders.
+  - `make check-cm-reference` decodes every corpus stream whole, in about 20 minutes.
+  - On 6,000 mutated streams it agrees with the 0.0.2 C decoders on every accept, refusal and output byte.
 - **FORMAT.md section 21: KLZMA (codec 24)**, the LZMA-class coder of levels 8-9. It covers the range decoder (which
   differs from LZMA's at the start and the end), contexts, literals, matches and repeat matches. 12 corpus blocks and
   8 graph leaves decode in the Python reference.
 - The new decoders agreed with the 0.0.2 C decoders on about 15,000 further mutated streams. `make check` now spends
-  about 30 s in `tests/coder_reference.py`. Left in FORMAT.md section 13: CMP (codec 25), which needs the context-mixing coder written out first.
+  about 30 s in `tests/coder_reference.py`.
 - **`tests/coder_reference.py`**: an independent Python decoder for those sections, written from the prose, in
   `make check` (about 10 s). It decodes every corpus block that uses KLZ or KLZH2:
   - blocks without a transform are compared with the original;
