@@ -6,7 +6,9 @@
  * FILE.kolmo to FILE; no FILE, or FILE '-', reads standard input and writes standard output. One scale of levels,
  * -1 (fastest) to -9 (max), -3 (light) the default, -U ultra outside the scale; the table is the library's
  * (kolmo_params_for_level), so the CLI and the bindings give the same bytes for the same level. Combined short options
- * (-dc, -9T4), --opt=value and --opt value, and `--` work. Outputs are staged and published atomically, never over an
+ * (-dc, -9T4), --opt=value and --opt value, and `--` work; so do the xz/gzip spellings of docs/XZ-COMPAT.md (-0, -e, --fast,
+ * --best, --uncompress, --to-stdout, --memory, --no-name, -dcf pass-through). A pipe larger than KOLMO_PIPE_ONESHOT is
+ * compressed as a stream, so tar -I kolmo runs in bounded memory. Outputs are staged and published atomically, never over an
  * existing file without -f, with the input's permissions and mtime. Exit status: 0 success, 1 error (I/O, corrupt
  * data, memory), 2 usage error; with several files processing continues after an error and the status is 1.
  *
@@ -23,6 +25,8 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <time.h>
+#include <signal.h>
+#include <pthread.h>
 
 /* Release label, kept in step with VERSION (RELEASING.md step 1). */
 #ifndef KOLMO_VERSION_STR
@@ -87,6 +91,22 @@ static int spit(const char *p, const uint8_t *b, size_t n) {
  * written through the original path, which keeps their identity and mode. New and renamed outputs get the input's
  * permissions and mtime (or 0666 & ~umask and the current time for standard input). */
 typedef struct { char *name; int fd; FILE *anon; } stage_t;
+/* the private file being written, removed if SIGINT, SIGTERM or SIGHUP ends the run (as gzip and xz remove theirs) */
+static char *volatile stage_live;
+static void on_signal(int sig) {
+    char *n = stage_live;
+    if (n) unlink(n);
+    signal(sig, SIG_DFL);
+    raise(sig);
+}
+static void catch_signals(void) {
+    static const int sigs[] = {SIGINT, SIGTERM, SIGHUP};
+    for (size_t i = 0; i < sizeof sigs / sizeof *sigs; i++) {
+        struct sigaction old, sa; memset(&sa, 0, sizeof sa);
+        sa.sa_handler = on_signal; sigemptyset(&sa.sa_mask);
+        if (!sigaction(sigs[i], NULL, &old) && old.sa_handler != SIG_IGN) sigaction(sigs[i], &sa, NULL);   /* nohup keeps SIG_IGN */
+    }
+}
 static int stage_open(stage_t *s, const char *path) {
     const char *slash = strrchr(path, '/');
     size_t dirlen = slash ? (size_t)(slash - path + 1) : 0;
@@ -96,6 +116,7 @@ static int stage_open(stage_t *s, const char *path) {
     if (!s->name) return -1;
     memcpy(s->name, path, dirlen); memcpy(s->name + dirlen, suffix, sizeof(suffix));
     s->fd = mkstemp(s->name);
+    if (s->fd >= 0) stage_live = s->name;
     if (s->fd < 0) {            /* an existing output can be writable in a read-only directory: stage anonymously */
         free(s->name); s->name = NULL;
         s->anon = tmpfile();
@@ -105,6 +126,7 @@ static int stage_open(stage_t *s, const char *path) {
     return 0;
 }
 static void stage_discard(stage_t *s) {
+    stage_live = NULL;
     if (s->anon) fclose(s->anon);
     else if (s->fd >= 0) { close(s->fd); unlink(s->name); }
     free(s->name); s->name = NULL; s->fd = -1; s->anon = NULL;
@@ -133,6 +155,7 @@ static int stage_publish(stage_t *s, const char *path, const struct stat *src, i
         if (lstat(path, &st)) {
             if (errno != ENOENT) { perror(path); stage_discard(s); return -1; }
             set_meta(s->fd, src);
+            stage_live = NULL;  /* published under its final name from here: a signal must not remove it */
             if (!link(s->name, path)) goto done;
             if (errno == EEXIST) { exists_error(path); stage_discard(s); return -1; }
             if (!rename(s->name, path)) goto renamed;               /* a file system without hard links */
@@ -141,6 +164,7 @@ static int stage_publish(stage_t *s, const char *path, const struct stat *src, i
         if (!force) { exists_error(path); stage_discard(s); return -1; }
         if (S_ISREG(st.st_mode) && st.st_nlink == 1) {
             set_meta(s->fd, src);
+            stage_live = NULL;
             if (!rename(s->name, path)) goto renamed;
         }
     } else if (!force && !access(path, F_OK)) {
@@ -160,6 +184,7 @@ static int stage_publish(stage_t *s, const char *path, const struct stat *src, i
         if (ret) perror(path);
     }
 done:
+    stage_live = NULL;
     if (s->anon) { if (fclose(s->anon)) ret = -1; }
     else { if (close(s->fd)) ret = -1; unlink(s->name); }
     free(s->name); s->name = NULL; s->fd = -1; s->anon = NULL;
@@ -236,18 +261,21 @@ static void help(void) {
 "  -9  -X  --max        the smallest output that still decompresses at practical speed\n"
 "  -U      --ultra      extreme: decompresses about as slowly as it compresses, ~1 GB+ of memory\n"
 "          --level N    N = 1..9, or ultra\n"
+"  xz and gzip spellings: -0 and --fast = -1, --best = -9, -e/--extreme accepted (no effect:\n"
+"  -9e = -9), --memory = --memlimit, --no-name accepted (frames store no name); docs/XZ-COMPAT.md\n"
 "\n"
 "Operation:\n"
 "  -z, --compress       compress (the default)\n"
-"  -d, --decompress     decompress FILE.kolmo to FILE (another name needs -o or -c)\n"
+"  -d, --decompress     decompress FILE.kolmo to FILE (another name needs -o or -c); also --uncompress\n"
 "  -t, --test           decode and verify, write nothing\n"
 "  -l, --list           compressed size, original size, ratio, engine, checksum\n"
 "Output:\n"
-"  -c, --stdout         write to standard output, keep inputs\n"
+"  -c, --stdout         write to standard output, keep inputs; also --to-stdout\n"
 "  -o, --output FILE    output path (one input only; '-' is standard output)\n"
 "  -k, --keep           keep inputs (the default)\n"
 "      --rm             remove each input after its output is written\n"
-"  -f, --force          overwrite existing outputs; write compressed data to a terminal\n"
+"  -f, --force          overwrite existing outputs; write compressed data to a terminal; with -dc, copy\n"
+"                       input that is not Kolmo's through unchanged (as xz -dcf, zcat -f)\n"
 "Resources:\n"
 "  -T, --threads N      worker threads (0 = all cores, the default)\n"
 "  -M, --memlimit SIZE  memory limit: 512M, 8G, 50%% of RAM, auto (the default: 50%%; only how much runs at once)\n"
@@ -260,7 +288,8 @@ static void help(void) {
 "Expert options:\n"
 "      --block-size MiB          block size\n"
 "      --analysis none|minimal|quick|full   content analysis (the level chooses one)\n"
-"      --stream[=SEGMiB]         bounded memory for large inputs and pipes (segments of SEGMiB, default 64)\n"
+"      --stream[=SEGMiB]         bounded memory for large inputs (segments of SEGMiB, default 64); a pipe over\n"
+"                                256 MiB is streamed in 256 MiB segments without it\n"
 "      --range OFF:LEN           decode only bytes [OFF, OFF+LEN) of FILE.kolmo (to -o FILE or standard output)\n"
 "      --codec-level N           the engine's own level for the chosen tier (ultra: 1 = model 1 only, faster;\n"
 "                                2 = maximum ratio, numeric graph leaves may use context mixing)\n"
@@ -281,6 +310,7 @@ static void help(void) {
 "  kolmo archive | extract | contents   deduplicating archives (create, extract, list their files)\n"
 "  Subcommands are recognised only as the first argument; a file of that name: kolmo -- NAME or kolmo ./NAME\n"
 "\n"
+"With tar: tar -I 'kolmo -6' -cf a.tar.kolmo DIR (GNU tar); bsdtar: --use-compress-program, and 'kolmo -d' to read.\n"
 "Exit status: 0 success, 1 error, 2 usage error.\n"
 "The 0.0.1 options (-m MODE, -x, kolmo IN OUT, ...) were removed in 0.0.2; CHANGELOG.md has the mapping.\n");
 }
@@ -330,9 +360,9 @@ static int long_option(opts_t *o, int argc, char **argv, int *a) {
     const char *val = eq ? eq + 1 : NULL;
     static const char *const flag[] = {"fastest", "light", "balanced", "compact", "max", "ultra", "compress", "decompress",
         "stdout", "keep", "rm", "force", "test", "list", "quiet", "verbose", "help", "version", "native-leaf", "typed-huf",
-        "gpu", "stream", NULL};
+        "gpu", "stream", "fast", "best", "extreme", "uncompress", "to-stdout", "no-name", NULL};
     static const char *const valued[] = {"level", "output", "threads", "memlimit", "block-size", "analysis", "range",
-        "codec-level", "target", "calib", "x-tables", NULL};
+        "codec-level", "target", "calib", "x-tables", "memory", NULL};
     int f = -1, v = -1;
     for (int i = 0; flag[i]; i++) if (!strcmp(name, flag[i])) f = i;
     for (int i = 0; valued[i]; i++) if (!strcmp(name, valued[i])) v = i;
@@ -353,6 +383,13 @@ static int long_option(opts_t *o, int argc, char **argv, int *a) {
             case 21: o->stream = 1;
                      if (val && parse_int(val, 1, 1 << 20, &o->seg)) return usage_error("--stream=SEGMiB: a segment size in MiB, got '%s'", val);
                      break;
+            /* xz and gzip spellings (docs/XZ-COMPAT.md) */
+            case 22: o->level = 1; break;                       /* gzip --fast */
+            case 23: o->level = 9; break;                       /* gzip --best */
+            case 24: break;                                     /* xz --extreme: no Kolmo equivalent, accepted */
+            case 25: o->op = OP_DECOMPRESS; break;              /* gzip --uncompress */
+            case 26: o->to_stdout = 1; break;                   /* gzip --to-stdout */
+            case 27: break;                                     /* gzip --no-name: frames store no name or time */
         }
         return 0;
     }
@@ -364,7 +401,7 @@ static int long_option(opts_t *o, int argc, char **argv, int *a) {
         case 0: { int r = set_level_str(o, val); if (r) usage_hint(); return r; }
         case 1: o->outpath = val; break;
         case 2: if (parse_int(val, 0, 4096, &o->threads)) return usage_error("--threads: a number of threads (0 = all cores), got '%s'", val); break;
-        case 3: o->memspec = val; o->mem_from_env = 0; break;
+        case 3: case 11: o->memspec = val; o->mem_from_env = 0; break;    /* --memory: xz's alias */
         case 4: { char *e; o->block_mib = strtod(val, &e);
                   if (*e || !(o->block_mib > 0) || o->block_mib > 4095) return usage_error("--block-size: a size in MiB, got '%s'", val); break; }
         case 5: o->analysis = !strcmp(val, "none") ? 0 : !strcmp(val, "minimal") ? 3 : !strcmp(val, "quick") ? 2 : !strcmp(val, "full") ? 1 : -2;
@@ -390,6 +427,7 @@ static int short_options(opts_t *o, int argc, char **argv, int *a) {
             const char *st = s - 1; while (*s >= '0' && *s <= '9') s++;
             char num[16]; size_t l = (size_t)(s - st); if (l >= sizeof num) l = sizeof num - 1;
             memcpy(num, st, l); num[l] = 0;
+            if (!strcmp(num, "0")) { o->level = 1; continue; }   /* xz -0 (its fastest preset): level 1 */
             int r = set_level_str(o, num); if (r) { usage_hint(); return r; }
             continue;
         }
@@ -417,6 +455,7 @@ static int short_options(opts_t *o, int argc, char **argv, int *a) {
                     if (L > 5 && !strcmp(argv[*a + 1] + L - 5, ".dict")) return removed("-t DICT", "-t now tests; dictionaries are not available (Kolmo-native codecs only)"); }
                 o->op = OP_TEST; break;
             case 'z': o->op = OP_COMPRESS; break;
+            case 'e': break;                                /* xz -e (extreme): no Kolmo equivalent, accepted (-9e = -9) */
             case 'd': o->op = OP_DECOMPRESS; break;
             case 'c': o->to_stdout = 1; break;
             case 'k': o->rm = 0; break;
@@ -553,11 +592,92 @@ static int64_t code_buffer(const opts_t *o, const uint8_t *in, size_t n, uint8_t
     return r;
 }
 
+/* a reader that closed standard output early (kolmo -d | head) when SIGPIPE is ignored, as on some CI runners and
+ * under some shells: the run fails (status 1) without a message, as xz and gzip end quietly by the signal */
+static void write_error(const char *where) { if (errno != EPIPE) fprintf(stderr, "kolmo: %s: %s\n", where, strerror(errno)); }
 static void report_error(const opts_t *o, const char *name, int64_t e, const uint8_t *hdr, size_t hn) {
     int dec = o->op != OP_COMPRESS || o->range;
+    if (e == KOLMO_ERR_IO && errno == EPIPE) return;
     if (e == KOLMO_ERR_MEMORY) { fprintf(stderr, "kolmo: %s:\n", name); mem_error(hdr, hn, dec, o->P.mode, o->level, o->memlimit); }
     else fprintf(stderr, "kolmo: %s: %s\n", name, kolmo_strerror(e));
 }
+
+/* ---- pipes (tar -I kolmo, cmd | kolmo | kolmo -d) --------------------------------------------------------------
+ * The stream coders read a descriptor. When the CLI has already read the start of a pipe (to see whether the input
+ * fits in memory, or which kind of frame it is), a feeder thread writes those bytes and then the rest of the pipe into
+ * a pipe of its own, which the coder reads. */
+#ifndef KOLMO_PIPE_ONESHOT
+#define KOLMO_PIPE_ONESHOT (256u << 20)   /* a pipe up to this size is one frame, as the same bytes in a file */
+#endif
+typedef struct { const uint8_t *pre; size_t pn; int src, wfd; pthread_t th; int rfd; } feeder_t;
+static void feeder_close(void *p) { feeder_t *f = p; if (f->wfd >= 0) { close(f->wfd); f->wfd = -1; } }
+static void *feeder_run(void *p) {
+    feeder_t *f = p;
+    sigset_t m; sigemptyset(&m); sigaddset(&m, SIGPIPE);
+    pthread_sigmask(SIG_BLOCK, &m, NULL);           /* Linux: a reader that stopped early gives EPIPE here; the
+                                                       thread's pending SIGPIPE goes with it */
+    pthread_cleanup_push(feeder_close, f);
+    if (!write_all(f->wfd, f->pre, f->pn)) {
+        uint8_t b[1 << 16];
+        for (;;) {
+            ssize_t r = read(f->src, b, sizeof b);
+            if (r < 0 && errno == EINTR) continue;
+            if (r <= 0 || write_all(f->wfd, b, (size_t)r)) break;
+        }
+    }
+    pthread_cleanup_pop(1);
+    return NULL;
+}
+/* the read end of a pipe that yields pre[0..pn) and then the rest of src; -1 on error */
+static int feeder_start(feeder_t *f, const uint8_t *pre, size_t pn, int src) {
+    int fds[2];
+    f->rfd = f->wfd = -1;
+    if (pipe(fds)) return -1;
+#ifdef F_SETNOSIGPIPE
+    (void)fcntl(fds[1], F_SETNOSIGPIPE, 1);         /* macOS raises SIGPIPE for the process, not the writing thread */
+#endif
+    f->pre = pre; f->pn = pn; f->src = src; f->rfd = fds[0]; f->wfd = fds[1];
+    if (pthread_create(&f->th, NULL, feeder_run, f)) { close(fds[0]); close(fds[1]); f->rfd = f->wfd = -1; return -1; }
+    return f->rfd;
+}
+static void feeder_stop(feeder_t *f) {
+    if (f->rfd < 0) return;
+    close(f->rfd); f->rfd = -1;                     /* a feeder blocked in write returns (EPIPE) */
+    pthread_cancel(f->th);                          /* one blocked in read of the source is cancelled */
+    pthread_join(f->th, NULL);
+}
+/* up to lim bytes of fd; *more = 1 when the input goes on past them. NULL on error, errno set. */
+static uint8_t *read_upto(int fd, size_t lim, size_t *n, int *more) {
+    size_t cap = lim < (1u << 16) ? lim : 1u << 16, len = 0;
+    uint8_t *b = malloc(cap);
+    *more = 0;
+    if (!b) return NULL;
+    for (;;) {
+        if (len == cap) {
+            if (len >= lim) {                       /* full: one more byte says whether the input ends here */
+                uint8_t one; ssize_t r;
+                do r = read(fd, &one, 1); while (r < 0 && errno == EINTR);
+                if (r < 0) { int e = errno; free(b); errno = e; return NULL; }
+                if (r == 1) {
+                    uint8_t *q = realloc(b, len + 1);
+                    if (!q) { free(b); errno = ENOMEM; return NULL; }
+                    b = q; b[len++] = one; *more = 1;
+                }
+                break;
+            }
+            size_t c = cap * 2 < lim ? cap * 2 : lim; uint8_t *q = realloc(b, c);
+            if (!q) { free(b); errno = ENOMEM; return NULL; }
+            b = q; cap = c;
+        }
+        ssize_t r = read(fd, b + len, cap - len);
+        if (r < 0 && errno == EINTR) continue;
+        if (r < 0) { int e = errno; free(b); errno = e; return NULL; }
+        if (!r) break;
+        len += (size_t)r;
+    }
+    *n = len; return b;
+}
+static int is_kolmo_magic(const uint8_t *h, size_t n) { return n >= 4 && (!memcmp(h, "CZN1", 4) || !memcmp(h, "CZNS", 4)); }
 
 #ifndef KOLMO_FILE_THRESHOLD
 #define KOLMO_FILE_THRESHOLD (8u << 20)
@@ -607,7 +727,7 @@ static int process(const opts_t *o, const char *in) {
     uint8_t hdr[32]; size_t hn = 0;
     int ret = 0; int64_t insize = -1, outsize = -1;
     uint8_t *buf = NULL, *obuf = NULL; size_t bn = 0;
-    FILE *tmp = NULL;                        /* a streamed frame read from a pipe, replayed from a temporary file */
+    feeder_t fd_feed = {NULL, 0, -1, -1, 0, -1}; /* a pipe whose start was read already, replayed to a stream coder */
     int sfd = ifd;                           /* the descriptor streamed decoders read */
     int streamed = 0, buffered = 0, filepath = 0;
     stage_t st = {NULL, -1, NULL};
@@ -617,19 +737,39 @@ static int process(const opts_t *o, const char *in) {
     /* a peek at the first bytes: CZNS streams decode through file descriptors */
     if (dec) {
         if (ireg) { ssize_t g = pread(ifd, hdr, sizeof hdr, 0); hn = g > 0 ? (size_t)g : 0; }
-        else {
-            buf = read_fd(ifd, 0, &bn);
+        else {                               /* a pipe: its first 4 bytes say how to read the rest */
+            int more = 0;
+            buf = read_upto(ifd, 4, &bn, &more);
             if (!buf) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out; }
-            buffered = 1; hn = bn < sizeof hdr ? bn : sizeof hdr; memcpy(hdr, buf, hn);
+            buffered = 1; hn = bn < 4 ? bn : 4; memcpy(hdr, buf, hn);
         }
         streamed = hn >= 4 && !memcmp(hdr, "CZNS", 4);
         if (streamed && o->range) { fprintf(stderr, "kolmo: %s: --range needs a one-shot frame, not a --stream file\n", name); ret = 1; goto out; }
+        if (buffered && !streamed && !is_kolmo_magic(hdr, hn) && o->op == OP_DECOMPRESS && o->force && to_stdout) {
+            /* -dcf on data that is not Kolmo's: copied through unchanged, as xz -dcf and gzip -dcf do */
+        } else if (buffered && !streamed) {  /* a one-shot frame: the rest of the pipe in memory */
+            size_t rn; uint8_t *rest = read_fd(ifd, 0, &rn), *q;
+            if (!rest || !(q = realloc(buf, bn + rn + 1))) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(rest ? ENOMEM : errno)); free(rest); ret = 1; goto out; }
+            buf = q; memcpy(buf + bn, rest, rn); bn += rn; free(rest);
+            hn = bn < sizeof hdr ? bn : sizeof hdr; memcpy(hdr, buf, hn);
+        }
         if (streamed && buffered) {
-            tmp = tmpfile();
-            if (!tmp || write_all(fileno(tmp), buf, bn) || lseek(fileno(tmp), 0, SEEK_SET) < 0) {
-                fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out;
+            sfd = feeder_start(&fd_feed, buf, bn, ifd);
+            if (sfd < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out; }
+        }
+        if (!streamed && !is_kolmo_magic(hdr, hn) && o->op == OP_DECOMPRESS && o->force && to_stdout && !o->range) {
+            if (buffered) {
+                if (write_all(1, buf, bn)) { write_error("(stdout)"); ret = 1; goto out; }
+            } else if (lseek(ifd, 0, SEEK_SET) < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out; }
+            uint8_t b[1 << 16];
+            for (;;) {
+                ssize_t g = read(ifd, b, sizeof b);
+                if (g < 0 && errno == EINTR) continue;
+                if (g < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; break; }
+                if (!g) break;
+                if (write_all(1, b, (size_t)g)) { write_error("(stdout)"); ret = 1; break; }
             }
-            sfd = fileno(tmp);
+            goto out;
         }
     }
 
@@ -652,13 +792,25 @@ static int process(const opts_t *o, const char *in) {
         if (stage_open(&st, outp)) { fprintf(stderr, "kolmo: %s: cannot stage the output: %s\n", outp, strerror(errno)); ret = 1; goto out; }
         ofd = st.fd;
     }
-    if (!dec && o->stream && !o->tg) {
-        r = kolmo_stream_compress(ifd, ofd, &o->P, (uint32_t)o->seg);
+    int pipe_stream = 0;
+    if (!dec && !ireg && !o->stream && !o->tg) {   /* a pipe: one frame if it fits KOLMO_PIPE_ONESHOT, else a stream */
+        int more = 0;
+        buf = read_upto(ifd, KOLMO_PIPE_ONESHOT, &bn, &more);
+        if (!buf) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out; }
+        buffered = 1;
+        if (more) {
+            pipe_stream = 1;
+            sfd = feeder_start(&fd_feed, buf, bn, ifd);
+            if (sfd < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); ret = 1; goto out; }
+        }
+    }
+    if (!dec && (o->stream || pipe_stream) && !o->tg) {
+        r = kolmo_stream_compress(sfd, ofd, &o->P, o->stream ? (uint32_t)o->seg : (uint32_t)(KOLMO_PIPE_ONESHOT >> 20));
         if (r >= 0) { outsize = r; insize = ireg ? (int64_t)ist.st_size : -1; }
     } else if (streamed) {
         r = kolmo_stream_decompress(sfd, ofd, o->P.threads);
         if (r >= 0) outsize = r;
-        insize = ireg ? (int64_t)ist.st_size : (int64_t)bn;
+        insize = ireg ? (int64_t)ist.st_size : -1;
     } else if (!to_stdout && ireg && !buffered && !o->range && !o->tg &&
                (dec || o->P.mode == KOLMO_FAST || o->P.mode == KOLMO_RT) && (uintmax_t)ist.st_size <= SIZE_MAX &&
                (dec ? (hn == sizeof hdr && head_orig(&(src_t){NULL, ifd, (uint64_t)ist.st_size}, 0) >= (int64_t)KOLMO_FILE_THRESHOLD &&
@@ -677,7 +829,7 @@ static int process(const opts_t *o, const char *in) {
         r = code_buffer(o, buf, bn, &obuf, name);
         if (r >= 0) {
             insize = (int64_t)bn; outsize = r;
-            if (write_all(ofd, obuf, (size_t)r)) { fprintf(stderr, "kolmo: %s: %s\n", to_stdout ? "(stdout)" : outp, strerror(errno)); ret = 1; goto out; }
+            if (write_all(ofd, obuf, (size_t)r)) { write_error(to_stdout ? "(stdout)" : outp); ret = 1; goto out; }
         }
     }
     if (r < 0) { report_error(o, name, r, dec ? hdr : NULL, dec ? hn : 0); ret = 1; goto out; }
@@ -698,9 +850,9 @@ static int process(const opts_t *o, const char *in) {
     /* --rm: the input goes once its output is published (never with -c, standard input, or the output itself) */
     if (o->rm && in && outp && unlink(in)) { fprintf(stderr, "kolmo: %s: cannot remove: %s\n", in, strerror(errno)); ret = 1; }
 out:
+    feeder_stop(&fd_feed);
     if (st.fd >= 0) stage_discard(&st);
     free(buf); free(obuf); free(derived);
-    if (tmp) fclose(tmp);
     if (in) close(ifd);
     return ret;
 }
@@ -781,6 +933,7 @@ int main(int argc, char **argv) {
     if (argc >= 2 && !strcmp(argv[1], "train")) return removed("'kolmo train'", "trained profiles and dictionaries are not available (Kolmo-native codecs only)");
     if (argc >= 2 && !strcmp(argv[1], "profile")) return removed("'kolmo profile'", "trained profiles are not available (Kolmo-native codecs only)");
     { int fr = kolmo_cli_features(argc, argv); if (fr >= 0) return fr; }
+    catch_signals();
 
     opts_t o; memset(&o, 0, sizeof o);
     o.op = OP_COMPRESS; o.level = KOLMO_LEVEL_DEFAULT; o.analysis = -1;
