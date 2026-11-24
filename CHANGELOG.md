@@ -139,6 +139,27 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   file next to the output; it is now removed, as xz and gzip remove their partial output. A signal ignored at start
   (`nohup`) stays ignored.
 
+### Integrations
+
+- **HDF5 filter plugin** (`integration/hdf5/`): a dynamically loadable filter, found through `HDF5_PLUGIN_PATH`, that
+  works from C, h5py and the HDF5 tools. One self-contained file with Kolmo linked in. On macOS it does not link libhdf5 and works inside h5py's bundled HDF5; on Linux it links the system libhdf5.
+  - `cd_values`: level, element size (filled in from the dataset type), threads per chunk, layout version.
+  - The filter ID is the testing-range placeholder 480 until The HDF Group registers one (`FILTER-ID-REQUEST.md`,
+    draft, not sent). Draft hdf5plugin contribution: `HDF5PLUGIN-CONTRIBUTION.md`.
+  - Tests: C API round trips (with h5py when installed). Single-thread benchmark against gzip, szip, zstd and shuffle:
+    Kolmo 3 is 1.04-2.0x smaller than the best of them on six numeric inputs; it compresses 3-35x more slowly than
+    shuffle + zstd 3 and decompresses in the same range.
+  - `bench/bench_h5py.py` repeats the comparison inside h5py against hdf5plugin 7.1.0 (Zstd, LZ4, Bitshuffle, Blosc,
+    Blosc2): Kolmo 3 is again 1.04-2.0x smaller than the best of them on each input.
+- **Blosc2 codec plugin** (`integration/blosc2/`): `blosc2_kolmo_register()` for applications, and
+  `libblosc2_kolmo.so` with the `info` symbol, which c-blosc2 loads itself for a registered external codec. A
+  `blosc2_kolmo` locator package (`print_libpath`) is drafted and not published.
+  - The codec ID is the user-range placeholder 244; `REGISTRY-SUBMISSION.md` (draft, not sent) asks for a global ID
+    (41).
+  - Tests: in-process round trips, super-chunk frames, and loading by c-blosc2 itself. Single-thread benchmark against
+    blosclz, LZ4 and Zstd with shuffle or bitshuffle: Kolmo 3 with block = chunk is 1.04-2.7x smaller.
+- CI: `.github/workflows/integrations.yml` builds and tests both plugins on Ubuntu 24.04 and macOS.
+
 ## 0.0.2 (2026-11-23)
 
 The level model and a new command line (`docs/LEVELS.md`, owner decisions of 2026-11-22), decoder hardening, and
