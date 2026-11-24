@@ -1,0 +1,290 @@
+From f08302a5ea02d886c5c004805e6c266692195c3d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 02:23:15 +0000
+Subject: [PATCH 1/4] klz: KLZH2, a second entropy stage for the KLZH parse
+ (algo only, not yet a codec)
+
+One token per sequence (offset code x min(literal length, 3)), literal-length codes only
+from 3, match-length codes in two streams (after a repeat offset / after a new offset), and
+every stream cut into khuf chunks where the input crosses a 64 KiB grid, neighbours joined
+while one table is estimated to cost no more than two (integer cost estimate). Codec 29's
+code path and bytes are unchanged (the parse call moved into kzh_parse). natbench: k2h1..k2h9.
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ benchmark/rc3w2/native/natbench.c |   6 +-
+ src/algo/klz.c                    | 188 +++++++++++++++++++++++++++++-
+ src/algo/klz.h                    |   4 +
+ 3 files changed, 195 insertions(+), 3 deletions(-)
+
+diff --git a/benchmark/rc3w2/native/natbench.c b/benchmark/rc3w2/native/natbench.c
+index 60f04a3f..708cb722 100644
+--- a/benchmark/rc3w2/native/natbench.c
++++ b/benchmark/rc3w2/native/natbench.c
+@@ -8,6 +8,7 @@
+  * by the profiler with LIBPROF_DUMP_HUF). Codecs:
+  *   lz4            LZ4_compress_fast (acceleration 1)              klz1   Kolmo fast LZ, byte-aligned (codec 28)
+  *   zstd1 zstd3 zstd9 zstd19                                       klzh1..klzh9   Kolmo LZ + khuf (codec 29)
++ *                                                                  k2h1..k2h9     KLZH2: the same parse, entropy stage v2 (codec 32)
+  *   huf            zstd HUF_compress4X_repeat in 128 KiB chunks     khuf   Kolmo Huffman chunks (codec 27)
+  *   brotli8        Brotli quality 8, window 24
+  *   lzma9e         raw LZMA2 preset 9e (liblzma 5.8.1)             klzma1..klzma9  Kolmo LZMA-class (codec 24)
+@@ -73,7 +74,7 @@ static int huf_d(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+ }
+ 
+ typedef struct { const char *name; int kind, level; } codec;
+-enum { K_LZ4, K_ZSTD, K_HUF, K_BRO, K_LZMA, K_XXH, K_KLZ, K_KLZH, K_KHUF, K_KLZMA, K_KHASH };
++enum { K_LZ4, K_ZSTD, K_HUF, K_BRO, K_LZMA, K_XXH, K_KLZ, K_KLZH, K_KHUF, K_KLZMA, K_KHASH, K_KLZH2 };
+ typedef struct { void *zc, *zd; void *ks; } wctx;
+ static size_t do_c(const codec *c, wctx *w, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
+     switch (c->kind) {
+@@ -88,6 +89,7 @@ static size_t do_c(const codec *c, wctx *w, const uint8_t *in, size_t n, uint8_t
+         return lzma_raw_buffer_encode(f, NULL, in, n, out, &pos, cap) == LZMA_OK ? pos : 0; }
+     case K_KLZ: return kolmo_klz_compress(in, n, out, cap, c->level);
+     case K_KLZH: return kolmo_klzh_compress(in, n, out, cap, c->level);
++    case K_KLZH2: return kolmo_klzh2_compress(in, n, out, cap, c->level);
+     case K_KHUF: return kolmo_khuf_compress_chunks(in, n, out, cap);
+     case K_KLZMA: return kolmo_klzma_compress(in, n, out, cap, c->level);
+     case K_XXH: { unsigned long long h = kolmo_xxh3(in, n, 0); memcpy(out, &h, 8); return 8; }
+@@ -107,6 +109,7 @@ static int do_d(const codec *c, wctx *w, const uint8_t *in, size_t cn, uint8_t *
+         return lzma_raw_buffer_decode(f, NULL, in, &ip, cn, out, &op, n) == LZMA_OK && op == n ? 0 : -1; }
+     case K_KLZ: return kolmo_klz_decompress(in, cn, out, n);
+     case K_KLZH: return kolmo_klzh_decompress(in, cn, out, n);
++    case K_KLZH2: return kolmo_klzh2_decompress(in, cn, out, n);
+     case K_KHUF: return kolmo_khuf_decompress_chunks(in, cn, out, n);
+     case K_KLZMA: return kolmo_klzma_decompress(in, cn, out, n);
+     case K_XXH: case K_KHASH: return 0;
+@@ -142,6 +145,7 @@ static const codec CODECS[] = {
+     {"huf", K_HUF, 0}, {"brotli8", K_BRO, 8}, {"lzma9e", K_LZMA, 9}, {"xxh3", K_XXH, 0},
+     {"klz1", K_KLZ, 1}, {"klz2", K_KLZ, 2}, {"klz3", K_KLZ, 3},
+     {"klzh1", K_KLZH, 1}, {"klzh2", K_KLZH, 2}, {"klzh3", K_KLZH, 3}, {"klzh4", K_KLZH, 4}, {"klzh5", K_KLZH, 5}, {"klzh6", K_KLZH, 6}, {"klzh7", K_KLZH, 7}, {"klzh8", K_KLZH, 8}, {"klzh9", K_KLZH, 9},
++    {"k2h1", K_KLZH2, 1}, {"k2h2", K_KLZH2, 2}, {"k2h3", K_KLZH2, 3}, {"k2h4", K_KLZH2, 4}, {"k2h5", K_KLZH2, 5}, {"k2h6", K_KLZH2, 6}, {"k2h7", K_KLZH2, 7}, {"k2h8", K_KLZH2, 8}, {"k2h9", K_KLZH2, 9},
+     {"khuf", K_KHUF, 0},
+     {"klzma1", K_KLZMA, 1}, {"klzma2", K_KLZMA, 2}, {"klzma3", K_KLZMA, 3}, {"klzma4", K_KLZMA, 4}, {"klzma5", K_KLZMA, 5}, {"klzma6", K_KLZMA, 6}, {"klzma7", K_KLZMA, 7}, {"klzma8", K_KLZMA, 8}, {"klzma9", K_KLZMA, 9},
+     {"khash", K_KHASH, 0},
+diff --git a/src/algo/klz.c b/src/algo/klz.c
+index 87c37b85..a0ff60b7 100644
+--- a/src/algo/klz.c
++++ b/src/algo/klz.c
+@@ -256,14 +256,18 @@ static inline int kz_bput(kz_bw *w, uint32_t v, int nb) {   /* nb <= 30 */
+     return 0;
+ }
+ size_t kolmo_klzh_bound(size_t n) { return n + n / 64 + 1024; }
++/* the parse of a KLZH level (1-9), shared by codecs 29 and 32 */
++static size_t kzh_parse(const uint8_t *in, size_t n, int level, kz_seq *S, size_t *anchor, int *err) {
++    const kz_par *LV = &KLZH_LV[level];
++    return level <= 3 ? kz_parse_dfast(in, n, LV->hlog, LV->clog, LV->skip, 4, S, anchor, err) : kz_parse(in, n, LV, S, anchor, err);
++}
+ size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) {
+     if (n < 16 || n >= 0xFFFFFFF0u || cap < 64) return 0;
+     if (level < 1) level = 1;
+     if (level > 9) level = 9;
+     kz_seq *S = malloc((n / 4 + 2) * sizeof *S); size_t anchor; int err;
+     if (!S) return 0;
+-    const kz_par *LV = &KLZH_LV[level];
+-    size_t ns = level <= 3 ? kz_parse_dfast(in, n, LV->hlog, LV->clog, LV->skip, 4, S, &anchor, &err) : kz_parse(in, n, LV, S, &anchor, &err);
++    size_t ns = kzh_parse(in, n, level, S, &anchor, &err);
+     uint8_t *lit = malloc(n + 16), *cd = malloc(3 * (ns + 1)), *xb = malloc(ns * 12 + 64), *tmp = malloc(kolmo_khuf_bound(n) + 64);
+     size_t r = 0;
+     if (err || !lit || !cd || !xb || !tmp) goto out;
+@@ -352,3 +356,183 @@ int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
+ out:
+     free(lit); free(cd); return rc;
+ }
++
++/* ---------------- KLZH2 (codec 32): the KLZH parse with the second entropy stage (format in klz.h) ---------------- */
++#define KZ2_GRID (64u << 10)   /* sub-blocks may start where the input crosses a multiple of this */
++#define KZ2_NTOK 108           /* tokens: 27 offset codes x 4 literal-length classes */
++/* round(256 * log2(1 + i / 256)): code-length estimates in 1/256 bit, integers only (the same choice on every host) */
++static const uint8_t KZ2_LG[256] = {
++    0,1,3,4,6,7,9,10,11,13,14,16,17,18,20,21,22,24,25,26,28,29,30,32,33,34,36,37,38,40,41,42,
++    44,45,46,47,49,50,51,52,54,55,56,57,59,60,61,62,63,65,66,67,68,69,71,72,73,74,75,77,78,79,80,81,
++    82,84,85,86,87,88,89,90,92,93,94,95,96,97,98,99,100,102,103,104,105,106,107,108,109,110,111,112,113,114,116,117,
++    118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,
++    150,151,152,153,154,155,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,169,170,171,172,173,174,175,176,177,178,178,
++    179,180,181,182,183,184,185,185,186,187,188,189,190,191,192,192,193,194,195,196,197,198,198,199,200,201,202,203,203,204,205,206,
++    207,208,208,209,210,211,212,212,213,214,215,216,216,217,218,219,220,220,221,222,223,224,224,225,226,227,228,228,229,230,231,231,
++    232,233,234,234,235,236,237,238,238,239,240,241,241,242,243,244,244,245,246,247,247,248,249,249,250,251,252,252,253,254,255,255,
++};
++static inline uint32_t kz2_lg(uint32_t v) {   /* 256 * log2(v), v >= 1 */
++    int h = kz_hb(v);
++    return ((uint32_t)h << 8) + KZ2_LG[(h >= 8 ? v >> (h - 8) : v << (8 - h)) & 255];
++}
++/* estimated size in 1/256 bit of a chunk with histogram c (t symbols) as kz2_put_chunk would code it: whole-bit
++ * Huffman codes of 1 to KHUF_MAXLEN bits plus khuf's table and the chunk framing, or the stored bytes */
++static uint64_t kz2_cost(const uint32_t *c, int nsym, uint32_t t) {
++    if (!t) return 0;
++    const uint32_t lt = kz2_lg(t); uint64_t bits = 0; int m = 0, last = 0;
++    for (int s = 0; s < nsym; s++) if (c[s]) {
++        uint32_t l = lt - kz2_lg(c[s]);
++        if (l < 256) l = 256;
++        if (l > KHUF_MAXLEN * 256) l = KHUF_MAXLEN * 256;
++        bits += (uint64_t)c[s] * l; m++; last = s;
++    }
++    if (m == 1) return 3 * 8 * 256;
++    bits += (uint64_t)(m <= 48 ? 1 + 2 * m : 2 + (last + 2) / 2) * 8 * 256;
++    if (bits > (uint64_t)t * 8 * 256) bits = (uint64_t)t * 8 * 256;
++    return bits + 7 * 8 * 256;
++}
++static void kz2_hist(const uint8_t *p, size_t n, uint32_t c[256]) {
++    uint32_t h[2][256]; memset(h, 0, sizeof h); size_t i = 0;
++    for (; i + 2 <= n; i += 2) { h[0][p[i]]++; h[1][p[i + 1]]++; }
++    if (i < n) h[0][p[i]]++;
++    for (int s = 0; s < 256; s++) c[s] = h[0][s] + h[1][s];
++}
++/* one chunk of m symbols (1 .. KHUF_BLOCK_MAX): head uv = m * 4 + mode, then mode 0: the bytes, 1: the one byte they
++ * all equal, 2: coded length uv and a khuf block. Returns the bytes written, 0 when cap is too small. */
++static size_t kz2_put_chunk(const uint8_t *s, size_t m, uint8_t *o, size_t cap, uint8_t *tmp) {
++    if (cap < m + 16) return 0;
++    int one = 1; for (size_t k = 1; k < m; k++) if (s[k] != s[0]) { one = 0; break; }
++    if (one) { size_t h = kz_put_uv(o, (uint64_t)m * 4 + 1); o[h] = s[0]; return h + 1; }
++    size_t z = m >= 2 ? kolmo_khuf_compress(s, m, tmp, KHUF_BLOCK_MAX + 1024) : 0;
++    if (!z || z + 3 >= m) { size_t h = kz_put_uv(o, (uint64_t)m * 4); memcpy(o + h, s, m); return h + m; }
++    size_t h = kz_put_uv(o, (uint64_t)m * 4 + 2); h += kz_put_uv(o + h, z); memcpy(o + h, tmp, z); return h + z;
++}
++/* a stream as chunks: cut[0 .. nc] are the stream positions where the input crosses the grid (cut[0] = 0, cut[nc] =
++ * the stream's length). Neighbouring cells are joined while one table for both is estimated to cost no more than a
++ * table each. Returns the bytes written, or (size_t)-1 when cap is too small. */
++static size_t kz2_put_section(const uint8_t *s, const uint32_t *cut, size_t nc, int nsym, uint8_t *o, size_t cap, uint8_t *tmp) {
++    uint32_t H[256], h[256], M[256]; size_t a = 0, ht = 0, w = 0; uint64_t cH = 0;
++    for (size_t c = 0; c < nc; c++) {
++        const size_t la = cut[c], m = cut[c + 1] - la;
++        if (!m) continue;
++        kz2_hist(s + la, m, h);
++        if (!ht) { memcpy(H, h, sizeof H); ht = m; cH = kz2_cost(H, nsym, (uint32_t)ht); continue; }
++        for (int q = 0; q < nsym; q++) M[q] = H[q] + h[q];
++        const uint64_t ch = kz2_cost(h, nsym, (uint32_t)m), cM = kz2_cost(M, nsym, (uint32_t)(ht + m));
++        if (ht + m > KHUF_BLOCK_MAX || cH + ch < cM) {
++            size_t z = kz2_put_chunk(s + a, ht, o + w, cap - w, tmp); if (!z) return (size_t)-1;
++            w += z; a = la; memcpy(H, h, sizeof H); ht = m; cH = ch;
++        } else { memcpy(H, M, sizeof H); ht += m; cH = cM; }
++    }
++    if (ht) { size_t z = kz2_put_chunk(s + a, ht, o + w, cap - w, tmp); if (!z) return (size_t)-1; w += z; }
++    return w;
++}
++static int kz2_get_section(const uint8_t *in, size_t cn, size_t *i, uint8_t *out, size_t len) {
++    for (size_t o = 0; o < len;) {
++        uint64_t hd, z; if (kz_get_uv(in, cn, i, &hd)) return -1;
++        const uint64_t m = hd >> 2; const unsigned mode = (unsigned)(hd & 3);
++        if (!m || m > KHUF_BLOCK_MAX || m > len - o) return -1;
++        if (mode == 0) { if (m > cn - *i) return -1; memcpy(out + o, in + *i, m); *i += m; }
++        else if (mode == 1) { if (*i >= cn) return -1; memset(out + o, in[(*i)++], m); }
++        else if (mode == 2) { if (kz_get_uv(in, cn, i, &z) || z > cn - *i || kolmo_khuf_decompress(in + *i, (size_t)z, out + o, (size_t)m)) return -1; *i += z; }
++        else return -1;
++        o += m;
++    }
++    return 0;
++}
++size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) {
++    if (n < 16 || n >= 0xFFFFFFF0u || cap < 64) return 0;
++    if (level < 1) level = 1;
++    if (level > 9) level = 9;
++    kz_seq *S = malloc((n / 4 + 2) * sizeof *S); size_t anchor; int err;
++    if (!S) return 0;
++    size_t ns = kzh_parse(in, n, level, S, &anchor, &err);
++    const size_t nc = (n + KZ2_GRID - 1) / KZ2_GRID;
++    uint8_t *lit = malloc(n + 16), *cd = malloc(4 * (ns + 1)), *xb = malloc(ns * 12 + 64), *tmp = malloc(KHUF_BLOCK_MAX + 1024);
++    uint32_t *cut = malloc(5 * (nc + 1) * sizeof *cut);
++    size_t r = 0;
++    if (err || !lit || !cd || !xb || !tmp || !cut) goto out;
++    uint8_t *const st[5] = {lit, cd, cd + (ns + 1), cd + 2 * (ns + 1), cd + 3 * (ns + 1)};   /* literals, tokens, literal lengths, match lengths (repeat), (new) */
++    uint32_t *const ct[5] = {cut, cut + (nc + 1), cut + 2 * (nc + 1), cut + 3 * (nc + 1), cut + 4 * (nc + 1)};
++    size_t sn[5] = {0, 0, 0, 0, 0}, cb = 0; const uint8_t *ip = in;
++    uint32_t rep[3] = {1, 4, 8}; kz_bw w = {0, 0, xb, xb + ns * 12 + 64};
++    for (size_t k = 0; k < ns; k++) {
++        uint32_t ex; int nb; const uint32_t ll = S[k].ll, ml = S[k].ml, o = S[k].off; unsigned oc;
++        const size_t p = (size_t)(ip - in), nl0 = sn[0];
++        for (; cb < nc && cb * KZ2_GRID <= p; cb++) for (int q = 0; q < 5; q++) ct[q][cb] = (uint32_t)sn[q];
++        memcpy(lit + nl0, ip, ll); sn[0] += ll; ip += ll + ml;
++        if (ll >= 3) { st[2][sn[2]++] = (uint8_t)kz_lcode(ll - 3, &ex, &nb); if (kz_bput(&w, ex, nb)) goto out; }
++        if (o == rep[0]) oc = 0;
++        else if (o == rep[1]) { oc = 1; rep[1] = rep[0]; rep[0] = o; }
++        else if (o == rep[2]) { oc = 2; rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = o; }
++        else { oc = 3 + (unsigned)kz_hb(o); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = o; }
++        st[1][sn[1]++] = (uint8_t)(oc * 4 + (ll < 3 ? ll : 3));
++        { const int q = oc < 3 ? 3 : 4; st[q][sn[q]++] = (uint8_t)kz_lcode(ml - 4, &ex, &nb); if (kz_bput(&w, ex, nb)) goto out; }
++        if (oc >= 3 && kz_bput(&w, o - (1u << (oc - 3)), (int)oc - 3)) goto out;
++        for (; cb < nc && cb * KZ2_GRID < p + ll + ml; cb++) {   /* grid points inside this sequence */
++            const size_t d = cb * KZ2_GRID - p;
++            ct[0][cb] = (uint32_t)(nl0 + (d < ll ? d : ll));
++            for (int q = 1; q < 5; q++) ct[q][cb] = (uint32_t)sn[q];
++        }
++    }
++    for (; cb < nc; cb++) { ct[0][cb] = (uint32_t)(sn[0] + (cb * KZ2_GRID - anchor)); for (int q = 1; q < 5; q++) ct[q][cb] = (uint32_t)sn[q]; }
++    memcpy(lit + sn[0], ip, n - anchor); sn[0] += n - anchor;
++    for (int q = 0; q < 5; q++) ct[q][nc] = (uint32_t)sn[q];
++    if (w.p + 8 > w.e) goto out;
++    kz_w64(w.p, w.b); w.p += (w.c + 7) >> 3;
++    size_t o = kz_put_uv(out, ns); o += kz_put_uv(out + o, sn[0]);
++    static const int NSYM[5] = {256, KZ2_NTOK, 72, 72, 72};
++    for (int q = 0; q < 5; q++) {
++        size_t z = kz2_put_section(st[q], ct[q], nc, NSYM[q], out + o, cap - o, tmp);
++        if (z == (size_t)-1) goto out;
++        o += z;
++    }
++    size_t xl = (size_t)(w.p - xb);
++    if (cap - o < xl || o + xl >= n) goto out;
++    memcpy(out + o, xb, xl); r = o + xl;
++out:
++    free(S); free(lit); free(cd); free(xb); free(tmp); free(cut); return r;
++}
++int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
++    size_t i = 0; uint64_t ns, nl;
++    if (kz_get_uv(in, cn, &i, &ns) || kz_get_uv(in, cn, &i, &nl) || ns > n / 4 + 1 || nl > n) return -1;
++    uint8_t *lit = malloc(nl + 32), *cd = malloc(3 * ns + 1); int rc = -1;
++    if (!lit || !cd) goto out;
++    if (kz2_get_section(in, cn, &i, lit, nl) || kz2_get_section(in, cn, &i, cd, ns)) goto out;
++    size_t nx = 0, nr = 0; unsigned mx = 0;
++    for (size_t k = 0; k < ns; k++) { const unsigned t = cd[k]; mx = t > mx ? t : mx; nx += (t & 3) == 3; nr += t < 12; }
++    if (mx >= KZ2_NTOK) goto out;
++    const uint8_t *tk = cd, *lx = cd + ns, *mr = lx + nx, *mn = mr + nr;   /* nx + nr + (ns - nr) <= 2 ns */
++    if (kz2_get_section(in, cn, &i, cd + ns, nx) || kz2_get_section(in, cn, &i, cd + ns + nx, nr) || kz2_get_section(in, cn, &i, cd + ns + nx + nr, ns - nr)) goto out;
++    mx = 0; for (size_t k = ns; k < 2 * ns + nx; k++) mx = cd[k] > mx ? cd[k] : mx;
++    if (mx >= 72) goto out;
++    kz_br br = {0, 0, in + i, in + cn};
++    const uint8_t *lp = lit, *le = lit + nl;
++    uint32_t LB[72]; uint8_t LN[72]; kz_ltab(LB, LN);
++    uint8_t *op = out, *oe = out + n; uint32_t rep[3] = {1, 4, 8};
++    for (size_t k = 0; k < ns; k++) {
++        const unsigned t = tk[k], oc = t >> 2; uint32_t ll = t & 3, ml, off; unsigned a = 0, b;
++        kz_refill(&br);
++        if (ll == 3) { a = *lx++; ll = 3 + LB[a] + kz_bget(&br, LN[a]); }
++        b = oc < 3 ? *mr++ : *mn++;
++        if (LN[a] + LN[b] > 32) kz_refill(&br);
++        ml = LB[b] + kz_bget(&br, LN[b]) + 4;
++        if (oc >= 3) { const int h = (int)oc - 3; if (LN[a] + LN[b] > 32) kz_refill(&br); off = (1u << h) | kz_bget(&br, h); rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
++        else if (oc == 0) off = rep[0];
++        else if (oc == 1) { off = rep[1]; rep[1] = rep[0]; rep[0] = off; }
++        else { off = rep[2]; rep[2] = rep[1]; rep[1] = rep[0]; rep[0] = off; }
++        if (ll > (size_t)(le - lp) || ll > (size_t)(oe - op)) goto out;
++        if (ll <= 16 && oe - op >= 16) memcpy(op, lp, 16); else memcpy(op, lp, ll);   /* lit has 32 bytes of slack */
++        op += ll; lp += ll;
++        if (off > (size_t)(op - out) || ml > (size_t)(oe - op)) goto out;
++        if (off >= 16 && ml <= 32 && oe - op >= 32 + 16) { memcpy(op, op - off, 16); memcpy(op + 16, op - off + 16, 16); }
++        else kz_match(op, off, ml, oe);
++        op += ml;
++    }
++    if ((size_t)(le - lp) != (size_t)(oe - op)) goto out;
++    memcpy(op, lp, (size_t)(le - lp));
++    if ((size_t)(br.p - in) - (size_t)(br.c >> 3) > cn) goto out;
++    rc = 0;
++out:
++    free(lit); free(cd); return rc;
++}
+diff --git a/src/algo/klz.h b/src/algo/klz.h
+index 64451044..f1ded0ad 100644
+--- a/src/algo/klz.h
++++ b/src/algo/klz.h
+@@ -35,4 +35,8 @@ size_t kolmo_klzh_bound(size_t n);
+ /* Return the coded size, or 0 when not smaller than n or cap too small. */
+ size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
+ int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
++
++/* KLZH2 (codec 32): the same levels and bound as KLZH. Returns the coded size, or 0 when not smaller than n. */
++size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
++int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+ #endif
+-- 
+2.43.0
+

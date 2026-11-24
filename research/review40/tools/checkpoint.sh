@@ -3,7 +3,10 @@
 set -e
 C=/home/user/kolmo-review40-coord; W=/home/user/kolmo-review40-integration; D=$W/research/review40
 mkdir -p $D
-which rsync >/dev/null 2>&1 && rsync -a --max-size=5m --exclude='.*.lock' --exclude='*.o' $C/ $D/ || cp -r $C/. $D/
+# Work in progress: export every reviewer branch's commits so far, so they survive a lost container.
+for w in /home/user/kolmo-review40-wt/R*/; do r=$(basename $w); n=$(git -C $w rev-list --count 5071f388..HEAD 2>/dev/null || echo 0)
+  if [ "$n" -gt 0 ]; then mkdir -p $C/patches-wip/$r.new && git -C $w format-patch -q 5071f388..HEAD -o $C/patches-wip/$r.new && mkdir -p $C/patches-wip/$r && cp -f $C/patches-wip/$r.new/* $C/patches-wip/$r/ && mv $C/patches-wip/$r.new $C/patches-wip/.$r.last.$$ ; fi; done
+which rsync >/dev/null 2>&1 && rsync -a --max-size=5m --exclude='.*.lock' --exclude='.R*.last.*' --exclude='*.o' $C/ $D/ || cp -r $C/. $D/
 cd $W && git add research/review40 && if git diff --cached --quiet; then echo "nothing new"; else
 git commit -q -m "review40: checkpoint of reviews, claims, results, patches and verifications
 

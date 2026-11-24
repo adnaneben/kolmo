@@ -1,0 +1,317 @@
+From 6f5bdee2d5d5d1c545d5307f662d5e00e00536e4 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 02:42:15 +0000
+Subject: [PATCH 2/5] graph leaves: context rANS leaf, codec 33, opt-in
+ (KOLMO_NATIVE=rans)
+
+With KOLMO_NATIVE=rans every graph leaf and every sub-stream of the format-2 leaves (21, 23) also
+tries codec 33 and keeps it only when it is smaller than the leaf rule's choice; the IMG8 node
+passes its row length and channel step so the residual leaf is coded under its neighbours'
+magnitudes and the previous channel. Version 11 frames; the leaf is refused outside a graph
+block and by decoders before it (rc3: 'corrupt or unsupported input'). No default output
+changes: without the opt-in no frame holds the id. 'all' does not include 'rans'.
+
+make check-krans: the coder's tests (plain and ASan/UBSan) and tests/test_krans_modes.py (every
+mode, 1 and 4 threads, decoded without the opt-in). Added to check-rc.
+
+Review R02, claim ctx-rans-leaf (#11).
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FUEN4aRWhUw7yL7cZMqTmZ
+---
+ Makefile                  | 15 +++++++++--
+ src/codecs/codec.c        |  4 ++-
+ src/codecs/codec.h        |  5 ++--
+ src/codecs/krans_leaf.c   | 23 ++++++++++++++++
+ src/codecs/native.c       |  5 +++-
+ src/codecs/planes_leaf.c  |  2 +-
+ src/kolmo.c               |  1 +
+ src/transforms/graph.c    | 19 +++++++++++--
+ tests/test_krans_modes.py | 57 +++++++++++++++++++++++++++++++++++++++
+ 9 files changed, 122 insertions(+), 9 deletions(-)
+ create mode 100644 src/codecs/krans_leaf.c
+ create mode 100644 tests/test_krans_modes.py
+
+diff --git a/Makefile b/Makefile
+index 6e45c8a8..a080305a 100644
+--- a/Makefile
++++ b/Makefile
+@@ -97,7 +97,7 @@ KHDR    := src/arch/kernels.h src/algo/predict.h src/algo/planes.h src/algo/mixe
+ BWTSRC  := src/algo/lzp.c src/algo/qlfc.c src/algo/par.c $(wildcard src/algo/sais/*.c) src/codecs/bwt_stream.c
+ # Kolmo's own LZ, Huffman, LZMA-class coders and block hash (codecs 24, 27-29, opt-in; native lane), compiled on their
+ # own like the block-sorting files and listed with them so every build and test that links those links these.
+-NATSRC  := src/algo/khuf.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c
++NATSRC  := src/algo/khuf.c src/algo/klz.c src/algo/klzma.c src/algo/khash.c src/algo/krans.c
+ BWTSRC  += $(NATSRC)
+ BWTHDR  := $(wildcard src/algo/*.h src/algo/sais/*.h) src/codecs/bwt_stream.h
+ ARCHSRC := src/arch/xxh3.c $(KSRC) $(BWTSRC) $(ASMSRC) $(GPUSRC)
+@@ -254,6 +254,17 @@ check-native: build/test-native build/test-native-asan build/kolmo
+ 	./build/test-native-asan
+ 	python3 tests/test_native_modes.py build/kolmo build/native-modes
+ .PHONY: check-native
++# Context rANS (graph leaf codec 33, src/algo/krans.c, opt-in KOLMO_NATIVE=rans): round trips for every context set,
++# corrupt payloads and invalid headers under ASan/UBSan, one pinned stream; then every mode through the CLI.
++build/test-krans: tests/test_krans.c tests/test_krans_golden.h src/algo/krans.c src/algo/krans.h
++	$(CC) $(CFLAGS) -Isrc tests/test_krans.c src/algo/krans.c -o $@ -lm
++build/test-krans-asan: tests/test_krans.c tests/test_krans_golden.h src/algo/krans.c src/algo/krans.h
++	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -Isrc tests/test_krans.c src/algo/krans.c -o $@ -lm
++check-krans: build/test-krans build/test-krans-asan build/kolmo
++	./build/test-krans 2
++	./build/test-krans-asan
++	python3 tests/test_krans_modes.py build/kolmo build/krans-modes
++.PHONY: check-krans
+ check-bwt: build/test-bwt build/test-bwt-asan
+ 	./build/test-bwt
+ 	./build/test-bwt-asan
+@@ -320,7 +331,7 @@ check-memdyn: build/test-memdyn build/test-memdyn-asan
+ 	./build/test-memdyn
+ 	./build/test-memdyn-asan --quick
+ .PHONY: check-memdyn
+-check-rc: check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
++check-rc: check-meta check-memdyn check-features-b check-native check-krans check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
+ .PHONY: check-meta check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-fqfam check-dispatch check-asm check-arch check-format2
+ check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan
+ 	./build/kolmoresource-asan
+diff --git a/src/codecs/codec.c b/src/codecs/codec.c
+index 5170a78e..06deb5c1 100644
+--- a/src/codecs/codec.c
++++ b/src/codecs/codec.c
+@@ -1,7 +1,8 @@
+ /* The codec registry: every block codec by identifier, and the three calls the container and the graph leaves use.
+  * Identifiers 8-11 are the opt-in research codecs of the frontier build (coded at block level in core/), 12 the graph
+  * block (transforms/graph.c) and 16 the FASTQ family coder (codecs/fastq.c): their tables carry a name only. 26 (GR6+,
+- * codecs/gr6.c) has an encoder here but is decoded at block level. Identifiers 24 and 27-29 are Kolmo's own coders (codecs/native.c, opt-in). */
++ * codecs/gr6.c) has an encoder here but is decoded at block level. Identifiers 24 and 27-29 are Kolmo's own coders (codecs/native.c, opt-in),
++ * 33 the context rANS leaf (codecs/krans_leaf.c, opt-in, graph leaves only). */
+ static const kolmo_codec *const kolmo_codecs[] = {
+     [C_STORE] = &codec_store, [C_LZ4] = &codec_lz4, [C_LZ4HC] = &codec_lz4hc, [C_ZSTD] = &codec_zstd, [C_BROTLI] = &codec_brotli,
+     [C_BSC5] = &codec_bwt5, [C_LZMA] = &codec_lzma, [C_CM] = &codec_cm, [C_GRAPH] = &codec_graph, [C_HUF] = &codec_huf,
+@@ -10,6 +11,7 @@ static const kolmo_codec *const kolmo_codecs[] = {
+     [C_GR6] = &codec_gr6,
+     [C_CMP] = &codec_cm_par,
+     [C_KLZMA] = &codec_klzma, [C_KHUF] = &codec_khuf, [C_KLZ] = &codec_klz, [C_KLZH] = &codec_klzh,
++    [C_KRANS] = &codec_krans,
+ };
+ static const kolmo_codec codec_graph = { C_GRAPH, "graph", NULL, NULL, NULL, NULL };
+ static inline const kolmo_codec *codec_get(int codec) {
+diff --git a/src/codecs/codec.h b/src/codecs/codec.h
+index 21f41cfe..af3ed96d 100644
+--- a/src/codecs/codec.h
++++ b/src/codecs/codec.h
+@@ -5,7 +5,8 @@
+ enum { C_STORE = 0, C_LZ4 = 1, C_LZ4HC = 2, C_ZSTD = 3, C_BROTLI = 4, C_BSC5 = 5, C_LZMA = 6, C_CM = 7, C_DNA = 8, C_DNA_PREFIX = 9, C_PCM = 10, C_DNA_RUNS = 11,
+        C_GRAPH = 12, C_HUF = 13, C_RANS = 14, C_NPLANE = 15, C_FQ = 16, C_CMI = 17, C_BWT = 18,
+        C_AUD = 19, C_VID = 20, C_PLANES = 21, C_HZ = 22, C_ZRUN = 23, C_KLZMA = 24, C_CMP = 25, C_GR6 = 26,
+-       C_KHUF = 27, C_KLZ = 28, C_KLZH = 29 };   /* 24, 27-29: Kolmo's own coders, opt-in (KOLMO_NATIVE, codecs/native.c; version 11) */   /* 18: Kolmo block sorting (BWT in C); 19-23: container version 11 (format 2): 19 audio (kaud), 20 video (kvid), 21 per-plane leaf, 22 Huffman then zstd leaf, 23 zero-run leaf (21-23: graph leaves only), 25 context mixing over parts (columns or halves, coded in parallel), 26 GR6+ line-structured text (ultra blocks only) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head); 5: libbsc block sorting (read only since rc3); 18: Kolmo block sorting (codecs/bwt.c; version 11) */
++       C_KHUF = 27, C_KLZ = 28, C_KLZH = 29,
++       C_KRANS = 33 };   /* 33: context rANS leaf (graph leaves only; opt-in KOLMO_NATIVE=rans; codecs/krans_leaf.c; 30-32 are left to other lanes) */     /* 24, 27-29: Kolmo's own coders, opt-in (KOLMO_NATIVE, codecs/native.c; version 11) */   /* 18: Kolmo block sorting (BWT in C); 19-23: container version 11 (format 2): 19 audio (kaud), 20 video (kvid), 21 per-plane leaf, 22 Huffman then zstd leaf, 23 zero-run leaf (21-23: graph leaves only), 25 context mixing over parts (columns or halves, coded in parallel), 26 GR6+ line-structured text (ultra blocks only) */   /* 8-11: experimental frontier codecs (opt-in build); 12: kolmo graph block; 13: Huffman only, 14: rANS order 0, 15: native plane-context leaf (graph leaves only; version 9); 16: FASTQ family coder (blocks only; ultra; version 10; src/kfam.inc); 17: context mixing with the image model (ultra; carries its own row length, channels and head); 5: libbsc block sorting (read only since rc3); 18: Kolmo block sorting (codecs/bwt.c; version 11) */
+ 
+ typedef struct { ZSTD_CCtx *zc; ZSTD_DCtx *zd; void *lz4hc_state; const void *dict; size_t dictlen;
+                  const struct kolmo_profile *prof;   /* trained profile: its dictionaries for zstd, Brotli and LZ4 (src/plan/profile.c) */
+@@ -36,4 +37,4 @@ typedef struct kolmo_codec {
+ /* tentative definitions: each codec file defines its table, codecs/codec.c lists them */
+ static const kolmo_codec codec_store, codec_lz4, codec_lz4hc, codec_zstd, codec_brotli, codec_bwt, codec_bwt5, codec_lzma, codec_cm,
+     codec_graph, codec_huf, codec_rans, codec_nplane, codec_fastq, codec_cm_image,
+-    codec_audio, codec_video, codec_planes, codec_hz, codec_zrun, codec_gr6, codec_cm_par, codec_klzma, codec_khuf, codec_klz, codec_klzh;
++    codec_audio, codec_video, codec_planes, codec_hz, codec_zrun, codec_gr6, codec_cm_par, codec_klzma, codec_khuf, codec_klz, codec_klzh, codec_krans;
+diff --git a/src/codecs/krans_leaf.c b/src/codecs/krans_leaf.c
+new file mode 100644
+index 00000000..91ab1064
+--- /dev/null
++++ b/src/codecs/krans_leaf.c
+@@ -0,0 +1,23 @@
++/* Codec 33: context rANS leaf (graph leaves; container version 11). Review R02, claim ctx-rans-leaf.
++ *
++ * Kolmo's own static rANS coder with static context modelling (src/algo/krans.c; the format is in krans.h): order 0
++ * with compact tables, order 1, and for image residuals the quantised magnitudes of the already decoded neighbours
++ * (left, up, up-left, up-right) with the previous channel of the pixel and the channel as context, the contexts
++ * merged onto the frequency tables that pay for themselves. The leaf is self-contained: the lags and the phase
++ * period are in each chunk's header, so a decoder needs nothing from the graph program.
++ *
++ * Opt-in: KOLMO_NATIVE=rans (codecs/native.c). Without it no output uses this id. With it every graph leaf and every
++ * sub-stream of the format-2 leaves (21, 23) also tries codec 33 and keeps it only when it is smaller than the
++ * choice of the leaf rule; the frame is then version 11. Decoders before this codec refuse the leaf (unknown codec).
++ * Part of the single translation unit built from src/kolmo.c. */
++#include "../algo/krans.h"
++
++static inline int krans_on(const codec_ctx *x) { return (kolmo_native_flags() & KN_RANS) && !x->no_f2; }
++/* stride = 0: no geometry (orders 0 and 1). effort: 1 at the fast settings, 2 above (more context sets tried). */
++static size_t krans_leaf_compress(const uint8_t *in, size_t n, size_t stride, unsigned step, int effort, uint8_t *out, size_t cap) {
++    kolmo_krans_params p = {0};
++    p.stride = (uint32_t)stride; p.step = (uint8_t)step; p.effort = (uint8_t)effort;
++    return kolmo_krans_compress(in, n, out, cap, &p);
++}
++static int krans_dec_tab(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { return x->allow_f2 ? kolmo_krans_decompress(in, cn, out, n) : -1; }
++static const kolmo_codec codec_krans = { C_KRANS, "krans", NULL, NULL, krans_dec_tab, NULL };   /* written by the graph leaves */
+diff --git a/src/codecs/native.c b/src/codecs/native.c
+index 7b9a5f16..c00828cb 100644
+--- a/src/codecs/native.c
++++ b/src/codecs/native.c
+@@ -8,6 +8,8 @@
+  *   lz:   LZ4 -> KLZ (28), LZ4-HC -> KLZ level 3, zstd -> KLZH (29), Brotli -> KLZH level 7
+  *   huf:  zstd's HUF in the graph leaves (codec 13) -> khuf (27)
+  *   lzma: raw LZMA2 (codec 6) -> KLZMA (24)
++ *   rans: graph leaves also try the context rANS leaf (codec 33, codecs/krans_leaf.c) and keep it when smaller; it
++ *         replaces no library coder and is not part of "all"
+  *   strong: zstd and Brotli -> KLZMA (the optimal parse and range coder, at a slower decode): the candidate for `hc`
+  *           and `eco` (zstd levels 19 and 22 -> KLZMA 6, levels 10-18 -> 5, lower levels and Brotli -> 3). The id
+  *           written cannot depend on the level (ids are written where the level is not known), so strong maps every
+@@ -18,7 +20,7 @@
+ #include "../algo/klz.h"
+ #include "../algo/klzma.h"
+ 
+-enum { KN_LZ = 1, KN_HUF = 2, KN_LZMA = 4, KN_STRONG = 8 };
++enum { KN_LZ = 1, KN_HUF = 2, KN_LZMA = 4, KN_STRONG = 8, KN_RANS = 16 };   /* rans: codecs/krans_leaf.c (not part of "all") */
+ static int kolmo_native_flags(void) {
+     static int f = -1; int r = __atomic_load_n(&f, __ATOMIC_RELAXED);
+     if (r < 0) {
+@@ -30,6 +32,7 @@ static int kolmo_native_flags(void) {
+             else if (k == 3 && !strncmp(s, "huf", 3)) r |= KN_HUF;
+             else if (k == 4 && !strncmp(s, "lzma", 4)) r |= KN_LZMA;
+             else if (k == 6 && !strncmp(s, "strong", 6)) r |= KN_STRONG;
++            else if (k == 4 && !strncmp(s, "rans", 4)) r |= KN_RANS;
+             s += k; if (*s) s++;
+         }
+         __atomic_store_n(&f, r, __ATOMIC_RELAXED);
+diff --git a/src/codecs/planes_leaf.c b/src/codecs/planes_leaf.c
+index d47c2a75..2e498164 100644
+--- a/src/codecs/planes_leaf.c
++++ b/src/codecs/planes_leaf.c
+@@ -32,7 +32,7 @@ static size_t planes_compress(codec_ctx *x, int np, const uint8_t *in, size_t n,
+ 
+ static int leaf_sub_codec_ok(int c) {
+     return c == C_STORE || c == C_LZ4 || c == C_LZ4HC || c == C_ZSTD || c == C_BROTLI || c == C_BSC5 || c == C_BWT || c == C_LZMA || c == C_CM ||
+-           c == C_HUF || c == C_RANS || c == C_HZ || c == C_ZRUN || codec_is_native(c);
++           c == C_HUF || c == C_RANS || c == C_HZ || c == C_ZRUN || c == C_KRANS || codec_is_native(c);
+ }
+ 
+ static int planes_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
+diff --git a/src/kolmo.c b/src/kolmo.c
+index 1ff61a8d..662f9048 100644
+--- a/src/kolmo.c
++++ b/src/kolmo.c
+@@ -77,6 +77,7 @@ int kolmo_force_c;
+ #include "codecs/huf.c"
+ #include "codecs/rans.c"
+ #include "codecs/native.c"            /* Kolmo's own LZ, Huffman and LZMA-class coders (codecs 24, 27-29), opt-in */
++#include "codecs/krans_leaf.c"         /* context rANS leaf (codec 33), opt-in */
+ #include "codecs/graph_leaf.c"
+ #include "codecs/codec.c"
+ /* format 2 (container version 11): audio and video blocks, per-plane / Huffman-then-zstd / zero-run graph leaves */
+diff --git a/src/transforms/graph.c b/src/transforms/graph.c
+index 7904f00f..b4f3988f 100644
+--- a/src/transforms/graph.c
++++ b/src/transforms/graph.c
+@@ -468,7 +468,8 @@ bad:
+ }
+ 
+ /* ---- program builder ---- */
+-typedef struct { kbuf *s; int ns, cap; uint8_t *used; kbuf prog; int nodes; int nph_q, nph_np; } kgb;   /* nph: stream nph_q holds nph_np byte planes of integer residuals (native-leaf hint; 0 = none) */
++typedef struct { kbuf *s; int ns, cap; uint8_t *used; kbuf prog; int nodes; int nph_q, nph_np;   /* nph: stream nph_q holds nph_np byte planes of integer residuals (native-leaf hint; 0 = none) */
++                 int img_q; size_t img_w; unsigned img_c; } kgb;   /* img: stream img_q holds image residuals in rows of img_w bytes, channel step img_c (codec 33's contexts; 0 = none) */
+ static int kgb_new(kgb *g) {
+     int ns = g->ns; if (ns >= KG_MAXSTREAMS) return -1;
+     if (ns == g->cap) {
+@@ -589,6 +590,10 @@ static size_t kg_sel_sub(codec_ctx *x, const void *ctx, const uint8_t *p, size_t
+         size_t zz = zrun_compress(x, p, n, t, cap, kg_sel_sub, &S2);
+         if (zz && (!z || zz < z)) { memcpy(out, t, zz); z = zz; cc = C_ZRUN; }
+     }
++    if (krans_on(x) && n >= 64) {                 /* opt-in (KOLMO_NATIVE=rans): context rANS (codec 33), orders 0 and 1 */
++        size_t kz = krans_leaf_compress(p, n, 0, 1, fastleaf ? 1 : 2, t, cap);
++        if (kz && (!z || kz < z)) { memcpy(out, t, kz); z = kz; cc = C_KRANS; }
++    }
+     free(t);
+     if (!z || z >= n) { if (cap < n) return 0; memcpy(out, p, n); z = n; cc = C_STORE; }
+     *pcc = cc; return z;
+@@ -696,6 +701,16 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
+             }
+             free(fb);
+         }
++        if (krans_on(x) && s->n >= 64) {
++            /* opt-in (KOLMO_NATIVE=rans): the leaf as context rANS (codec 33; version 11), kept only when smaller. Image
++             * residuals pass their row length and channel step for the neighbour contexts; other leaves get order 0
++             * and order 1, except those the fast settings found incompressible on their samples */
++            const int img = g->img_q && q == g->img_q && g->img_w <= (1u << 24);
++            uint8_t *kb = img || !flat ? malloc(zc) : NULL;
++            size_t kz = kb ? krans_leaf_compress(s->p, s->n, img ? g->img_w : 0, img ? g->img_c : 1, fastleaf ? 1 : 2, kb, zc) : 0;
++            if (kz && kz < s->n && (!z || kz < z)) { memcpy(o.p + o.n + 20, kb, kz); z = kz; cc = C_KRANS; x->used_f2 = 1; }
++            free(kb);
++        }
+         if (!z || z >= s->n) { cc = C_STORE; z = s->n; if (z) memcpy(o.p + o.n + 20, s->p, z); }
+         o.p[hp] = codec_wire(x, cc);
+         uint8_t hdr[20]; size_t hn = 0;
+@@ -1329,7 +1344,7 @@ static size_t kg_encode_img8(codec_ctx *x, int codec, int level, const uint8_t *
+     if (kgb_node(&g, KG_IMG8, (int[]){0}, 1, 2, &par) != 1) goto done;
+     if (kb_res(&g.s[1], m + 1) || kb_res(&g.s[2], n - m + 1)) goto done;
+     kg_img8_fwd(a, m, W, C, g.s[1].p);
+-    g.s[1].n = m;
++    g.s[1].n = m; g.img_q = 1; g.img_w = W; g.img_c = C;
+     kb_put(&g.s[2], src, h); kb_put(&g.s[2], a + m, n - h - m);
+     out = kg_serialize(x, codec, level, &g, n, dst, cap);
+ done:
+diff --git a/tests/test_krans_modes.py b/tests/test_krans_modes.py
+new file mode 100644
+index 00000000..a2b0f853
+--- /dev/null
++++ b/tests/test_krans_modes.py
+@@ -0,0 +1,57 @@
++"""Context rANS leaves (codec 33) in the CLI: every mode with KOLMO_NATIVE=rans (alone and with all), 1 and 4 threads,
++on generated inputs (colour and grey images with a PNM header, a headerless image, integers, floats, a table, text,
++random bytes, zeros, a tiny file). Each frame must decode to its input with KOLMO_NATIVE unset (the decoder needs no
++opt-in), the output with 1 and 4 threads must be the same, no frame may be larger than the one written without the
++opt-in at the same mode by more than the leaf rule allows (codec 33 is kept only when smaller: never larger), and the
++image frames at balanced must actually use it (smaller than without). The default output is covered by the
++determinism check.
++
++usage: python3 tests/test_krans_modes.py build/kolmo WORK_DIR"""
++import os, random, struct, subprocess, sys
++K, W = sys.argv[1], sys.argv[2]
++os.makedirs(W, exist_ok=True)
++rnd = random.Random(20261124)
++def image(w, h, c):
++    px = bytearray(); row = [128] * (w * c)
++    for y in range(h):
++        for x in range(w):
++            busy = 1 + 12 * (((x // 40) + (y // 30)) % 3)
++            d = rnd.randint(-busy, busy)
++            for k in range(c):
++                i = x * c + k; v = (row[i] + (px[-c] if x else row[i])) // 2 + d + rnd.randint(-1, 1)
++                v = max(0, min(255, v)); px.append(v); row[i] = v
++    return bytes(px)
++files = {
++    "colour.ppm": b"P6\n320 200\n255\n" + image(320, 200, 3),
++    "grey.pgm": b"P5\n400 300\n255\n" + image(400, 300, 1),
++    "rgba.u8": image(256, 256, 4),
++    "ints.i32": b"".join(struct.pack("<i", 1000 + i * 3 + rnd.randint(-5, 5)) for i in range(60000)),
++    "floats.f64": b"".join(struct.pack("<d", 20.0 + rnd.gauss(0, 1)) for i in range(20000)),
++    "table.csv": ("id,x,y\n" + "".join(f"{i},{rnd.randint(0, 999)},{rnd.random():.3f}\n" for i in range(20000))).encode(),
++    "text.txt": " ".join(rnd.choice(["kolmo", "leaf", "rans", "context", "table", "the", "of"]) for _ in range(40000)).encode(),
++    "random.bin": bytes(rnd.getrandbits(8) for _ in range(70000)),
++    "zeros.bin": bytes(100000),
++    "tiny.txt": b"a",
++}
++bad = 0
++env0 = {k: v for k, v in os.environ.items() if k != "KOLMO_NATIVE"}
++for name, data in files.items():
++    src = os.path.join(W, name); open(src, "wb").write(data)
++    for mode in ("speed", "balanced", "eco", "hc", "ratio"):
++        z0 = os.path.join(W, f"{name}.{mode}.plain.k")
++        subprocess.run([K, "-m", mode, "-T", "1", src, z0], check=True, env=env0)
++        plain = os.path.getsize(z0)
++        for nat in ("rans", "all,rans"):
++            outs = []
++            for t in ("1", "4"):
++                z = os.path.join(W, f"{name}.{mode}.{t}.k"); r = z + ".out"
++                subprocess.run([K, "-m", mode, "-T", t, src, z], check=True, env={**env0, "KOLMO_NATIVE": nat})
++                subprocess.run([K, "-d", z, r], check=True, env=env0)
++                fz = open(z, "rb").read(); outs.append(fz)
++                if open(r, "rb").read() != data: print("MISMATCH", name, nat, mode, t); bad += 1
++            if outs[0] != outs[1]: print("THREADS DIFFER", name, nat, mode); bad += 1
++            if nat == "rans":
++                if len(outs[0]) > plain: print("LARGER", name, mode, len(outs[0]), plain); bad += 1
++                if mode == "balanced" and name in ("colour.ppm", "grey.pgm") and len(outs[0]) >= plain: print("NOT USED", name, mode, len(outs[0]), plain); bad += 1
++print("test_krans_modes:", "OK" if not bad else f"{bad} failures")
++sys.exit(1 if bad else 0)
+-- 
+2.43.0
+
