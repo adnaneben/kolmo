@@ -58,7 +58,7 @@ replaces it.
 1. ~~x86-64 rerun~~: done as a check (Table V, "A second platform"). The full x86 fast/slow tables were not used:
    their jobs ran on different CPUs, so speeds across rows are not comparable. The M5 tables stay the main ones.
    The `\todoin` marker for PR #33 stays until it is merged.
-2. ~~Trained-OpenZL rematch~~: done (Tables VI and VIII). The marker stays until PR #29 is merged.
+2. ~~Trained-OpenZL rematch~~: done (Tables VII and IX). The marker stays until PR #29 is merged.
 3. **Tuned levels** (PR #32, open): their effect is quoted in the limitations from `data/pr32/`. Once the next
    release exists, rerun every benchmark on it and regenerate every table and Table II.
 4. **Smaller items:**
