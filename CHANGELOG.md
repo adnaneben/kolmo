@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Format
+
+- **`FORMAT.md`: the specification of container version 12.** It is complete for the container layer: header, index,
+  CRC-32C, `kolmo_khash64` written out with test vectors (`tests/khash64_vectors.txt`), plan prefix and transform flag
+  rules, stored, self-contained, video and graph blocks, extensions, the `CZNS` stream and the declared decode working
+  set. It has a registry of every codec id with the status of its specification. Coders whose bytes are not yet
+  written out are specified by the reference implementation at `v0.0.2` (FORMAT.md section 13). The format itself is
+  unchanged.
+- **`COMPATIBILITY.md`: the format promise.** Every release reads every version-12 frame written by 0.0.1 or later,
+  to the same bytes. Identifiers never change meaning. New features use identifiers older releases refuse. Reading
+  version 12 is never removed.
+- **Frozen corpus of 0.0.2 frames.** `tests/v12/r0.0.2/` adds 246 frames written by the 0.0.2 release binary, with
+  their originals: every level, the format-changing options, the stream wrapper, and inputs that reach most block
+  codecs and transforms 0.0.2 writes. Block codecs 25, 26 and 31 and tflags 2, 6 and 8 are not yet reached
+  (COMPATIBILITY.md).
+  - `make check` decodes them through the library (`test-v12-corpus`) and the CLI (`tests/check_v12_frames.py`, which
+    also fails if a frozen frame changes).
+  - It re-checks every frame of the corpus against FORMAT.md with an independent Python implementation of the
+    container layer (`tests/format_reference.py`).
+  - `tests/make_v12_frames.py` adds each release's frames (RELEASING.md).
+
 ### Benchmarks
 
 - **lzbench integration in upstream form** (`bench/lzbench/`): Kolmo's `src/` compiled by lzbench's own Makefile
