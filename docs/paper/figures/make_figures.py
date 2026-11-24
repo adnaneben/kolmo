@@ -10,6 +10,7 @@ Standard library only. Writes LaTeX fragments into docs/paper/generated/:
   tab-silesia-files.tex Silesia per file, Kolmo -3 against zstd -3 / zstd -19 / xz -9
   tab-structured.tex    the 20-file structured panel against OpenZL 0.3.0 (untrained profiles)
   tab-mt.tex            command-line runs on Silesia, one thread and all cores, with memory
+  tab-x86.tex           the four Silesia claims on the M5 and on x86-64 (same-job pairs), if data/x86/ exists
   numbers.tex           \\newcommand macros for every number quoted in the running text
 
 Every fragment starts with a comment naming the data file it came from, so each number in the PDF traces to
@@ -466,6 +467,57 @@ def dev_levels(nums):
             g = [(new[l]["d"] / old[l]["d"] - 1) * 100 for l in ("-2", "-3", "-4", "-5", "-6", "-7")]
             nums["DevSilDecGainMin"], nums["DevSilDecGainMax"] = f"{min(g):.0f}", f"{max(g):.0f}"
 
+X86_CLAIMS = [("-3", "zstd 1.5.7 -12"), ("-4", "zstd 1.5.7 -19"), ("-6", "xz 5.8.4 -9"), ("-9", "zpaq 7.15 -5")]
+
+
+def tab_x86(nums):
+    """Same four Silesia claims on the M5 (data/lzb-*-silesia.tar.csv) and on x86-64 (data/x86/claims-*.csv: each
+    Kolmo level and its rival in one GitHub job, one CPU, three runs, median). Sizes are checked to be equal."""
+    D = os.path.join(DATA, "x86")
+    if not os.path.isdir(D):
+        return
+    def runs(stem):
+        out = {}
+        for k in (1, 2, 3):
+            with open(os.path.join(D, f"claims-{stem}.run{k}.csv")) as f:
+                for r in csv.DictReader(f):
+                    out.setdefault(r["Compressor name"], []).append(
+                        (int(r["Compressed size"]), float(r["Compression speed"]), float(r["Decompression speed"])))
+        med = lambda xs: sorted(xs)[len(xs) // 2]
+        return {n: dict(size=v[0][0], sizes={x[0] for x in v}, c=med([x[1] for x in v]), d=med([x[2] for x in v]))
+                for n, v in out.items()}
+    same = total = 0
+    for stem in ("silesia.tar", "enwik8"):
+        x, m = runs(stem), corpus(stem)
+        for n, v in x.items():
+            if n.startswith("kolmo "):
+                total += 1
+                same += v["sizes"] == {m[n]["size"]}
+    nums["XSizesSame"], nums["XSizesTotal"] = str(same), str(total)
+    x, m = runs("silesia.tar"), corpus("silesia.tar")
+    lines = [r"\begin{tabular}{@{}llrrrrr@{}}", r"\toprule",
+             r" & & & \multicolumn{2}{c}{Apple M5} & \multicolumn{2}{c}{Xeon 6975P-C} \\",
+             r"\cmidrule(lr){4-5}\cmidrule(l){6-7}",
+             r"Kolmo & Rival & Size & C$\times$ & D$\times$ & C$\times$ & D$\times$ \\", r"\midrule"]
+    for lvl, rv in X86_CLAIMS:
+        kn = f"kolmo 0.0.2 {lvl}"
+        k, r, mk, mr = x[kn], x[rv], m[kn], m[rv]
+        gap = (k["size"] / r["size"] - 1) * 100
+        f = lambda a, b: f"{a / b:.0f}" if a / b >= 20 else f"{a / b:.1f}"
+        mc, md, xc, xd = f(mk["c"], mr["c"]), f(mk["d"], mr["d"]), f(k["c"], r["c"]), f(k["d"], r["d"])
+        lines.append(f"{lvl} & {short(rv)} & {gap:+.2f}\\% & {mc} & {md} & {xc} & {xd} \\\\")
+        key = {"-3": "Three", "-4": "Four", "-6": "Six", "-9": "Nine"}[lvl]
+        nums[f"X{key}C"], nums[f"X{key}D"] = xc, xd
+    lines += [r"\bottomrule", r"\end{tabular}"]
+    cli = json.load(open(os.path.join(D, "cli-silesia.json")))["results"]
+    sc = lambda t, a: cli[f"{t} -T0"][a] / cli[f"{t} -T1"][a]
+    nums["XCliThreeEncScale"] = f"{sc('kolmo -3', 'enc_mibs'):.1f}"
+    nums["XCliThreeDecScale"] = f"{sc('kolmo -3', 'dec_mibs'):.1f}"
+    nums["XCliZstdEncScale"] = f"{sc('zstd -3', 'enc_mibs'):.2f}"
+    nums["XCliKSevenEncScale"] = f"{sc('kolmo -7', 'enc_mibs'):.1f}"
+    nums["XCliKNineEncScale"] = f"{sc('kolmo -9', 'enc_mibs'):.1f}"
+    write("tab-x86.tex", "\n".join(lines) + "\n", "x86/claims-silesia.tar.run{1,2,3}.csv, lzb-*-silesia.tar.csv")
+
 
 def macro_name(k):
     digits = "Zero One Two Three Four Five Six Seven Eight Nine".split()
@@ -483,6 +535,7 @@ def main():
     tab_mt(nums)
     tab_holdout(nums)
     dev_levels(nums)
+    tab_x86(nums)
     body = "".join(f"\\newcommand{{\\{macro_name(k)}}}{{{v}}}\n" for k, v in sorted(nums.items()))
     write("numbers.tex", body, "lzb-*.csv, openzl.json, mt-result.json")
     print(f"wrote {len(os.listdir(OUT))} files to {os.path.relpath(OUT)}; {len(nums)} number macros")

@@ -43,6 +43,8 @@ on one thread unless the file name says otherwise. The files were copied from th
 | `mt-result.json` | Silesia on the command line, one thread and all cores, with peak RSS |
 | `holdout-panel.json` | Trained-OpenZL rematch (bench/repro, PR #29, 2026-11-24): held-out GHCN CSV, GH Archive JSON, NASA logs and NCEP grids (OpenZL trained and untrained), four Silesia members, three model checkpoints with ZipNN. Workspace paths cut to relative |
 | `pr32/` | Kolmo only, before/after the unmerged encoder change (PR #32): lzbench `{fast,slow}-{old,new}-*.csv`, old = 0.0.2 library, new = the branch, paired on one machine. Used for macros in the limitations only; the tables stay on 0.0.2 |
+| `x86/claims-*.run{1,2,3}.csv` | x86-64 check (PR #33, GitHub run 45295174961): each Silesia/enwik8/Canterbury claim pair (Kolmo -3/-4/-6/-9 and zstd -12/-19, xz -9, zpaq -5) in one job on an Intel Xeon 6975P-C, lzbench 2.4.1, three runs. `corpora/` prefix cut from `Filename` |
+| `x86/cli-silesia.json` | x86-64 command line on Silesia, one thread and 4 vCPUs, AMD EPYC 9V45 (GitHub run 45250622103), unchanged |
 | `holdout-dfloat11.json` | DFloat11's published method computed on the CPU for the two bf16 checkpoints (not a run of DFloat11) |
 
 Removing `holdout-panel.json` drops the held-out and weights tables from the next build.
@@ -53,7 +55,9 @@ replaces it.
 
 ## Open TODOs (red boxes in the draft)
 
-1. **x86-64 rerun.** Replace the lzbench tables, Fig. 1 and Table VII. Keep the M5 as a second platform.
+1. ~~x86-64 rerun~~: done as a check (Table VII, "A second platform"). The full x86 fast/slow tables were not used:
+   their jobs ran on different CPUs, so speeds across rows are not comparable. The M5 tables stay the main ones.
+   The `\todoin` marker for PR #33 stays until it is merged.
 2. ~~Trained-OpenZL rematch~~: done (Tables VI and VIII). The marker stays until PR #29 is merged.
 3. **Tuned levels** (PR #32, open): their effect is quoted in the limitations from `data/pr32/`. Once the next
    release exists, rerun every benchmark on it and regenerate every table and Table II.

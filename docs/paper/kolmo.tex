@@ -79,15 +79,16 @@ decoder needs before it allocates anything. On one thread of an Apple M5, Kolmo'
 \numSilKSixR{} on Silesia against \numSilxzNineR{} for \texttt{xz -9}, and decodes \numSilSixVsXzDec{} times faster;
 on public held-out data, against OpenZL trained on samples of the same kind, Kolmo without training is smaller on
 JSON and web logs from level~5 and on numeric grids at level~9, but trained OpenZL is smaller than every practical
-Kolmo level on CSV. We also report where the approach does not help: the default level on structured text, small
+Kolmo level on CSV. The compressed sizes are the same on x86-64, and the Silesia comparisons hold there with
+smaller speed factors. We also report where the approach does not help: the default level on structured text, small
 inputs, model weights, decode speed relative to zstd, and memory use.
-\todoin{update with the x86-64 rerun and tuned levels}
+\todoin{update with the tuned levels}
 \end{abstract}
 
 \ifdraft
 \todo{Draft of 2026-11-23 for DCC 2028. Every number in the running text is a macro from
 \texttt{generated/numbers.tex}; a grey tag gives its data file in \texttt{docs/paper/data/}. Three measurement lanes
-still running will replace numbers: (1) the x86-64 rerun of all lzbench tables (\S\ref{sec:setup}); (2) done: the
+changed or will change numbers: (1) done: the x86-64 check (\S\ref{sec:x86}, PR~\#33 not merged yet); (2) done: the
 OpenZL rematch on held-out data (\S\ref{sec:openzl}, PR~\#29 not merged yet); (3) the encoder tuning of
 levels 1--3 and 5--7 (\S\ref{sec:levels}). Nothing here has been submitted.}
 \fi
@@ -387,8 +388,11 @@ block---depends only on the input, the level and an explicit memory cap.
 
 A determinism test compresses a fixed, seeded set of inputs at every level with one and four threads and under forced
 budgets of 64\,MiB, 512\,MiB, 4\,GiB and unlimited, and compares the SHA-256 of every frame with a checked-in list
-(152 digests). The same holds between architectures: on an x86-64 GitHub runner (AMD EPYC), levels 3, 7 and 9
-give exactly the same compressed sizes of Silesia as on the Apple M5\src{x86 run 45250622103 cli-silesia.md}. The release binaries are also bit-for-bit reproducible across checkout paths on the three CI
+(152 digests). The same holds between architectures: on x86-64 GitHub runners (AMD EPYC 7763, 9V45 and 9V74, and
+an Intel Xeon 6975P-C), all 30 lzbench settings of Kolmo (levels 1--10 on three corpora) and the 12 Silesia files at
+levels 3, 7 and 9 give exactly the same compressed sizes as on the Apple M5\src{x86 runs 45250622103, 45295174961}.
+In the same runs the only other codec whose sizes changed was brotli at its top levels, which lzbench builds with
+\texttt{-ffast-math}; Kolmo's build turns floating-point contraction and fast math off. The release binaries are also bit-for-bit reproducible across checkout paths on the three CI
 platforms. Determinism is not a compression result, but it is what makes compressed output usable as a cache or
 deduplication key within a release and what makes regressions visible.
 
@@ -405,10 +409,7 @@ command line byte for byte) and all codecs built with lzbench's flags. Fast code
 enwik8~\cite{ltcb} (100\,MB of Wikipedia), and Canterbury~\cite{canterbury,canterbury_web} as one 2.8\,MB tar. Speeds are in MiB/s
 and ratios are original over compressed size.
 
-\todo{x86-64 rerun (lane x86-bench, \texttt{bench/lzbench/}): replace every lzbench table and
-Fig.~\ref{fig:pareto} with x86-64 numbers, keep the M5 numbers as a second platform. First check: Kolmo -1/-3/-9
-sizes on Canterbury are identical on x86-64 (determinism), speeds will differ. Note that the x86 lane uses a neutral
-Canterbury tar of 2,826,240\,B; the M5 tar here is 2,846,208\,B.}
+The tables and figures below are from the M5. Section~\ref{sec:x86} repeats the Silesia comparisons on x86-64.
 
 \subsection{Standard corpora}
 
@@ -419,12 +420,12 @@ Canterbury tar of 2,826,240\,B; the M5 tar here is 2,846,208\,B.}
 \caption{Silesia (212\,MB tar), one thread, Apple M5: compression ratio against compression speed (left) and
 decompression speed (right) for 50-odd codec settings in lzbench~2.4.1. Kolmo's levels are labelled; the dashed line
 is the Pareto front of all points. Source: \texttt{data/lzb-fast-silesia.tar.csv},
-\texttt{data/lzb-slow-silesia.tar.csv}. \todoin{x86-64 rerun}}\label{fig:pareto}
+\texttt{data/lzb-slow-silesia.tar.csv}.}\label{fig:pareto}
 \end{figure*}
 
 \begin{table}[t]
 \caption{Silesia, one thread, lzbench 2.4.1, Apple M5. C and D: compression and decompression speed in MiB/s.
-Source: \texttt{data/lzb-\{fast,slow\}-silesia.tar.csv}. \todoin{x86-64 rerun; tuned levels}}\label{tab:silesia}
+Source: \texttt{data/lzb-\{fast,slow\}-silesia.tar.csv}. \todoin{tuned levels}}\label{tab:silesia}
 \centering\scriptsize\setlength{\tabcolsep}{3.2pt}
 \input{generated/tab-silesia.tex}
 \end{table}
@@ -444,7 +445,7 @@ at about \numSilKOneZeroC\,MiB/s each way. The fast tier is weak: level~1 is bea
 
 \begin{table}[t]
 \caption{enwik8 and Canterbury, one thread, lzbench 2.4.1, Apple M5. Source:
-\texttt{data/lzb-\{fast,slow\}-\{enwik8,canterbury.tar\}.csv}. \todoin{x86-64 rerun}}\label{tab:corpora}
+\texttt{data/lzb-\{fast,slow\}-\{enwik8,canterbury.tar\}.csv}.}\label{tab:corpora}
 \centering\scriptsize\setlength{\tabcolsep}{3pt}
 \input{generated/tab-corpora.tex}
 \end{table}
@@ -456,6 +457,28 @@ of the lzbench lineup but well behind the context-mixing leaders of the Large Te
 Benchmark~\cite{ltcb}. On Canterbury's small files the low levels lose: level~3 gives \numCantKThree{} against
 \numCantZThree{} for \texttt{zstd -3}, and level~7 (\numCantKSeven) is below level~6
 (\numCantKSix)\src{lzb-*-canterbury.tar}. Levels 9 and ultra still lead their rivals.
+
+\subsection{A second platform}\label{sec:x86}
+
+\begin{table}[t]
+\caption{The four Silesia comparisons on two machines, one thread, lzbench 2.4.1. Size: Kolmo's output against the
+rival's (negative is smaller), identical on both machines. C$\times$, D$\times$: Kolmo's compression and
+decompression speed over the rival's. On x86-64 each pair ran in one GitHub job on one CPU, median of three runs.
+Sources: \texttt{data/lzb-*-silesia.tar.csv}, \texttt{data/x86/claims-silesia.tar.run\{1,2,3\}.csv}.}\label{tab:x86}
+\centering\scriptsize\setlength{\tabcolsep}{3.4pt}
+\input{generated/tab-x86.tex}
+\end{table}
+
+We repeated the lzbench runs on x86-64 GitHub runners (Ubuntu 24.04, 4 vCPUs, GCC 13.3, the same generic build) with
+the plugin in \texttt{bench/lzbench/}. The runners draw different CPUs from job to job, so speeds from different jobs
+cannot be compared; for Table~\ref{tab:x86} each Kolmo level and its rival ran in the same job, on an Intel Xeon
+6975P-C. Every Kolmo size was the same as on the M5 (\numXSizesSame{} of \numXSizesTotal{} settings in these runs,
+and all others, \S\ref{sec:determinism})\src{x86/claims-*.csv}. All four comparisons keep their direction, with
+smaller factors on the Xeon: level~6 decodes \numXSixD{} times faster than \texttt{xz -9}, level~4 compresses
+\numXFourC{} times faster than \texttt{zstd -19}, level~9 decodes \numXNineD{} times faster than \texttt{zpaq -5},
+and level~3 compresses \numXThreeC{} times faster than \texttt{zstd -12}. Kolmo's decoders gain more from the M5
+than xz's and zpaq's do. None of the four comparisons holds on enwik8 or Canterbury, on either machine, except
+level~9 against \texttt{zpaq -5} on enwik8, within 1\%.
 
 \subsection{Where the gain comes from}
 
@@ -554,7 +577,7 @@ to compress Qwen2.5-0.5B and \numWtQwenZipD{} against \numWtQwenKThreeD\,MiB/s t
 
 \begin{table}[t]
 \caption{Silesia with command-line tools, one thread and all ten cores, best of three, with peak resident memory.
-Source: \texttt{data/mt-result.json}. \todoin{x86-64 rerun}}\label{tab:mt}
+Source: \texttt{data/mt-result.json}.}\label{tab:mt}
 \centering\scriptsize\setlength{\tabcolsep}{2.4pt}
 \input{generated/tab-mt.tex}
 \end{table}
@@ -564,7 +587,11 @@ Because Kolmo's blocks are independent, decoding scales with cores, which zstd's
 for \texttt{zstd -3}, \numMtThreeVsZstdDecAll{} times faster\src{mt-result.json}. The price is memory: level~9
 compresses Silesia with \numMtKolmoNineEncRss\,MB of resident memory on one thread, against
 \numMtXzNineEncRss\,MB for \texttt{xz -9}, and level~7 with \numMtKolmoSevenEncRss\,MB. The command line runs at
-somewhat different speeds from lzbench because it includes file I/O and process start-up.
+somewhat different speeds from lzbench because it includes file I/O and process start-up. On a 4-vCPU x86-64
+runner (AMD EPYC 9V45), all cores speed up level~3's decoding \numXCliThreeDecScale{} times but its compression only
+\numXCliThreeEncScale{} times, against \numXCliZstdEncScale{} for \texttt{zstd -3}; levels 7 and 9 compress
+\numXCliKSevenEncScale{} and \numXCliKNineEncScale{} times faster\src{x86/cli-silesia.json}. Multi-threaded
+compression at the fast levels is weak.
 
 % ======================================================================
 \section{Limitations}\label{sec:limits}
@@ -609,7 +636,8 @@ the smallest output.
 general coders. On weights it is at parity with ZipNN and slower; on plain text it is at parity with the general
 tools.
 
-\paragraph*{Evaluation scope} One machine (an ARM64 laptop) \todoin{x86-64 rerun}; OpenZL trained once per type,
+\paragraph*{Evaluation scope} The full tables come from one ARM64 laptop; on x86-64 we checked sizes and the four
+Silesia comparisons on one Xeon only, and speed factors on AMD cores may differ; OpenZL trained once per type,
 with a 20-minute cap and four training files; DFloat11 computed, not run; cmix, paq8 and NNCP not run; no Parquet
 data (its host was unreachable).
 
