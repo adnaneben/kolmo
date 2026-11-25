@@ -34,7 +34,7 @@ permissions:
   contents: read
 
 env:
-  KOLMO_REF: ${{ inputs.kolmo_ref || 'v0.0.2' }}
+  KOLMO_REF: ${{ inputs.kolmo_ref || 'a1d39559686a9ec17c8614b9154a64d7b5b98672' }}
   RUNS: ${{ inputs.runs || '3' }}
   # A push whose commit message contains "[claims only]" runs only the claims tier (dispatch needs the workflow on main).
   TIERS: ${{ inputs.tiers || (contains(github.event.head_commit.message, '[claims only]') && 'claims') || 'fast slow files claims' }}
