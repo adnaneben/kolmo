@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "revision": 1,
+  "revision": 2,
   "size_cuts": [65536, 1048576, 16777216],
   "formats": [
     {"id": "elf", "name": "ELF executable or object", "prefix": "7f454c46"},
@@ -14,6 +14,10 @@
     {"id": "wav", "name": "RIFF WAVE audio", "prefix": "52494646", "offset": 8, "signature": "57415645"},
     {"id": "parquet", "name": "Parquet", "prefix": "50415231", "suffix": "50415231"},
     {"id": "safetensors", "name": "SafeTensors model weights", "header": "safetensors"},
+    {"id": "jsonl", "name": "UTF-8 JSON object lines", "text_probe": "jsonl"},
+    {"id": "csv", "name": "Rectangular CSV with a header and numeric column", "text_probe": "csv"},
+    {"id": "tsv", "name": "Rectangular TSV with a header and numeric column", "text_probe": "tsv"},
+    {"id": "fastq", "name": "Single-line sequence and quality FASTQ", "text_probe": "fastq"},
     {"id": "unknown", "name": "Unclassified input"}
   ]
 }

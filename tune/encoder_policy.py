@@ -2,6 +2,7 @@
 """Opt-in local encoder policy for Kolmo's stock v12 CLI."""
 import argparse
 import bisect
+import csv
 import hashlib
 import json
 import os
@@ -18,11 +19,20 @@ import time
 SCRIPT = Path(__file__).resolve()
 CATALOGUE = SCRIPT.with_name("format-catalogue.v1.json")
 MODEL_HEADER_LIMIT = 64 * 1024
+TEXT_PROBE_LIMIT = 64 * 1024
+TEXT_MIN_RECORDS = 3
 WIRE_HEADER = b"CZN1\x0c"
 ANALYSIS = ("none", "minimal", "quick", "full")
 METRICS = ("encode_ns", "decode_ns", "encode_rss", "decode_rss")
 LIMITS = ("max_encode_time", "max_decode_time", "max_encode_rss", "max_decode_rss")
 HEX_DIGEST = re.compile(r"[0-9a-f]{64}\Z")
+
+TEXT_CONTROLS = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+TABLE_HEADER = re.compile(r"[^\W\d][\w .()/%-]{0,63}\Z")
+TABLE_NUMBER = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?\Z")
+FASTQ_SEQUENCE = re.compile(r"[ACGTURYSWKMBDHVN]+\Z", re.IGNORECASE | re.ASCII)
+FASTQ_PRINTABLE = re.compile(r"[ -~]+\Z")
+FASTQ_QUALITY = re.compile(r"[!-~]+\Z")
 
 
 def load(path):
@@ -96,6 +106,84 @@ def soft_model_header(src, size):
     return bool(intervals) and cursor == size - 8 - length
 
 
+def sampled_text(src, size):
+    """Read a bounded prefix and return complete UTF-8 lines, without line endings."""
+    src.seek(0)
+    sample = src.read(TEXT_PROBE_LIMIT)
+    truncated = len(sample) < size
+    raw_lines = sample.split(b"\n")
+    if truncated or raw_lines[-1] == b"":
+        raw_lines.pop()
+    lines = [line.removesuffix(b"\r").decode("utf-8") for line in raw_lines]
+    if any(TEXT_CONTROLS.search(line) for line in lines):
+        return [], truncated
+    return lines, truncated
+
+
+def reject_json_constant(value):
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
+def jsonl_text(lines):
+    return all(isinstance(json.loads(line, parse_constant=reject_json_constant), dict)
+               for line in lines)
+
+
+def table_text(lines, delimiter):
+    rows = list(csv.reader(lines, delimiter=delimiter, strict=True))
+    if len(rows) != len(lines) or len(rows) < TEXT_MIN_RECORDS + 1:
+        return False
+    header = [name.strip() for name in rows[0]]
+    width = len(header)
+    if (width < 2 or len({name.casefold() for name in header}) != width
+            or not all(TABLE_HEADER.fullmatch(name) for name in header)
+            or any(len(row) != width for row in rows)):
+        return False
+    return any(all(TABLE_NUMBER.fullmatch(value.strip()) for value in column)
+               for column in zip(*rows[1:]))
+
+
+def fastq_text(lines, truncated):
+    records, tail = divmod(len(lines), 4)
+    if records < TEXT_MIN_RECORDS or (tail and not truncated):
+        return False
+    for i in range(0, records * 4, 4):
+        name, sequence, separator, quality = lines[i:i + 4]
+        if (not name.startswith("@") or len(name) == 1 or not FASTQ_PRINTABLE.fullmatch(name)
+                or separator not in ("+", "+" + name[1:])
+                or not FASTQ_SEQUENCE.fullmatch(sequence)
+                or len(sequence) != len(quality) or not FASTQ_QUALITY.fullmatch(quality)):
+            return False
+    return True
+
+
+def classify_text(src, size, entries):
+    """Return a routing hint only when exactly one configured probe matches."""
+    probes = [entry for entry in entries if "text_probe" in entry]
+    if not probes:
+        return "unknown"
+    try:
+        lines, truncated = sampled_text(src, size)
+    except UnicodeError:
+        return "unknown"
+    if len(lines) < TEXT_MIN_RECORDS:
+        return "unknown"
+    validators = {
+        "jsonl": lambda: jsonl_text(lines),
+        "csv": lambda: table_text(lines, ","),
+        "tsv": lambda: table_text(lines, "\t"),
+        "fastq": lambda: fastq_text(lines, truncated),
+    }
+    matches = []
+    for entry in probes:
+        try:
+            if validators[entry["text_probe"]]():
+                matches.append(entry["id"])
+        except (ValueError, RecursionError, csv.Error):
+            continue
+    return matches[0] if len(matches) == 1 else "unknown"
+
+
 def classify(path, catalogue):
     with path.open("rb") as src:
         size = os.fstat(src.fileno()).st_size
@@ -119,7 +207,7 @@ def classify(path, catalogue):
                 if src.read(len(suffix)) != suffix:
                     continue
             return entry["id"], size
-    return "unknown", size
+        return classify_text(src, size, catalogue["formats"]), size
 
 
 def bucket(path, catalogue):
