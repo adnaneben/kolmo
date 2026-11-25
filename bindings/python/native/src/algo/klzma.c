@@ -265,14 +265,16 @@ static uint32_t km_find(km_mf *M, uint32_t p, km_m *out) {
 }
 
 /* ---------------- encoder ---------------- */
-typedef struct { uint32_t price, prev, dist; uint16_t len; uint8_t kind, state; uint32_t reps[4]; } km_node;   /* kind: 0 literal, 1 short rep, 2-5 rep 0-3, 6 match, 7 literal then rep 0 (len) */
+/* kind: 0 literal, 1 short rep, 2-5 rep 0-3, 6 match, 7 literal then rep 0 (len); the composite paths of the
+ * strong levels (review40 #93): 8 match (len, dist), literal, rep 0 (len2); 9 rep `dist` (len), literal, rep 0 (len2) */
+typedef struct { uint32_t price, prev, dist; uint16_t len, len2; uint8_t kind, state; uint32_t reps[4]; } km_node;
 typedef struct { uint8_t kind; uint32_t len, dist; } km_dec;
 typedef struct {
     km_model m; km_rce rc; km_mf mf; const uint8_t *in; uint32_t n;
     uint16_t ptab[KM_ONE >> 4];
     uint32_t lenp[16][KM_MAXLEN + 1], rlenp[16][KM_MAXLEN + 1], slotp[4][64], distp[4][128], alignp[16];
-    int len_cnt, dist_cnt, state; uint32_t reps[4];
-    km_node opt[KM_OPT + KM_MAXLEN + 2]; km_m M[KM_MAXLEN + 8], cache[KM_MAXLEN + 8]; uint32_t cache_pos, cache_nm;
+    int len_cnt, dist_cnt, state, combo, refresh; uint32_t reps[4];   /* combo: kinds 8 and 9; refresh: price period */
+    km_node opt[KM_OPT + 2 * KM_MAXLEN + 4];   /* a composite path reaches up to 2 * KM_MAXLEN + 1 past the window */ km_m M[KM_MAXLEN + 8], cache[KM_MAXLEN + 8]; uint32_t cache_pos, cache_nm;
     km_dec D[2 * KM_OPT + 4];
 } km_enc;
 #define P0(p) E->ptab[(p) >> 4]
@@ -347,6 +349,8 @@ static uint32_t km_optimal(km_enc *E, uint32_t pos) {
                 case 1: st = st_short(st); break;
                 case 6: st = st_match(st); r[3] = r[2]; r[2] = r[1]; r[1] = r[0]; r[0] = c->dist; break;
                 case 7: st = st_rep(st_lit(st)); break;
+                case 8: st = st_rep(st_lit(st_match(st))); r[3] = r[2]; r[2] = r[1]; r[1] = r[0]; r[0] = c->dist; break;
+                case 9: { uint32_t k = c->dist, d = r[k]; for (; k > 0; k--) r[k] = r[k - 1]; r[0] = d; st = st_rep(st_lit(st_rep(st))); break; }
                 default: { uint32_t k = c->kind - 2u, d = r[k]; for (; k > 0; k--) r[k] = r[k - 1]; r[0] = d; st = st_rep(st); }
             }
             c->state = (uint8_t)st; memcpy(c->reps, r, sizeof r);
@@ -372,9 +376,20 @@ static uint32_t km_optimal(km_enc *E, uint32_t pos) {
             E->cache_pos = abs; E->cache_nm = nm; memcpy(E->cache, E->M, nm * sizeof(km_m));
             break;
         }
-#define KM_RELAX(J, PR, KIND, LEN, DIST) do { uint32_t j_ = (J), p_ = (PR); \
+#define KM_RELAX(J, PR, KIND, LEN, DIST) KM_RELAX2(J, PR, KIND, LEN, DIST, 0)
+#define KM_RELAX2(J, PR, KIND, LEN, DIST, L2) do { uint32_t j_ = (J), p_ = (PR); \
             if (j_ > reach) { for (uint32_t k_ = reach + 1; k_ <= j_; k_++) o[k_].price = KM_INF; reach = j_; } \
-            if (p_ < o[j_].price) { o[j_].price = p_; o[j_].prev = i; o[j_].kind = (KIND); o[j_].len = (uint16_t)(LEN); o[j_].dist = (DIST); } } while (0)
+            if (p_ < o[j_].price) { o[j_].price = p_; o[j_].prev = i; o[j_].kind = (KIND); o[j_].len = (uint16_t)(LEN); o[j_].dist = (DIST); o[j_].len2 = (uint16_t)(L2); } } while (0)
+/* after a match or rep of its full length L at distance D: a literal that differs from the byte D back, then rep 0 of
+ * D again for the following 2+ bytes (only the longest such rep is priced), as LZMA-class optimisers do */
+#define KM_COMBO(L, D, S1, BASE, KIND, DF) do { const uint32_t L_ = (L), q_ = abs + L_, dd_ = (D) + 1; \
+            if (E->combo && q_ + 3 <= n && in[q_] != in[q_ - dd_] && in[q_ + 1] == in[q_ + 1 - dd_] && in[q_ + 2] == in[q_ + 2 - dd_]) { \
+                uint32_t lim_ = n - q_ - 1; if (lim_ > nice) lim_ = nice; if (lim_ > KM_MAXLEN) lim_ = KM_MAXLEN; \
+                const uint32_t l2_ = km_count(in + q_ + 1, in + q_ + 1 - dd_, lim_); \
+                const int s1_ = (S1), s2_ = st_lit(s1_); const uint32_t pq_ = q_ & pbm, pq1_ = (q_ + 1) & pbm; \
+                const uint32_t pr_ = (BASE) + P0(P->is_match[s1_][pq_]) + km_mlit_price(E, q_, in[q_ - dd_]) \
+                    + P1(P->is_match[s2_][pq1_]) + P1(P->is_rep[s2_]) + km_rep_price(E, 0, s2_, pq1_) + E->rlenp[pq1_][l2_]; \
+                KM_RELAX2(i + L_ + 1 + l2_, pr_, KIND, L_, DF, l2_); } } while (0)
         const uint32_t m0 = P0(P->is_match[st][ps]), m1 = P1(P->is_match[st][ps]);
         /* literal */
         { uint32_t lp = st >= 7 ? km_mlit_price(E, abs, in[abs - c->reps[0] - 1]) : km_lit_price(E, abs);
@@ -397,6 +412,7 @@ static uint32_t km_optimal(km_enc *E, uint32_t pos) {
         for (uint32_t k = 0; k < 4; k++) if (rl[k] >= 2) {
             uint32_t b = rep1p + km_rep_price(E, k, st, ps);
             for (uint32_t l = 2; l <= rl[k]; l++) KM_RELAX(i + l, b + E->rlenp[ps][l], 2 + k, l, 0);
+            KM_COMBO(rl[k], c->reps[k], st_rep(st), b + E->rlenp[ps][rl[k]], 9, k);
         }
         /* matches */
         if (nm) {
@@ -404,23 +420,30 @@ static uint32_t km_optimal(km_enc *E, uint32_t pos) {
             for (uint32_t k = 0; k < nm; k++) {
                 uint32_t d = E->M[k].dist - 1;
                 for (; l <= E->M[k].len; l++) KM_RELAX(i + l, b + E->lenp[ps][l] + km_dist_price(E, d, l), 6, l, d);
+                { const uint32_t L = E->M[k].len < maxl ? E->M[k].len : maxl; KM_COMBO(L, d, st_match(st), b + E->lenp[ps][L] + km_dist_price(E, d, L), 8, d); }
             }
         }
 #undef KM_RELAX
+#undef KM_RELAX2
+#undef KM_COMBO
     }
     /* back from node i to node 0 */
     uint32_t nd = 0;
-    for (uint32_t j = i; j > 0; j = o[j].prev) nd += o[j].kind == 7 ? 2 : 1;
+    for (uint32_t j = i; j > 0; j = o[j].prev) nd += o[j].kind == 7 ? 2 : o[j].kind >= 8 ? 3 : 1;
     uint32_t k = nd;
     for (uint32_t j = i; j > 0; j = o[j].prev) {
-        if (o[j].kind == 7) { k--; E->D[k].kind = 2; E->D[k].len = o[j].len; E->D[k].dist = 0; k--; E->D[k].kind = 0; E->D[k].len = 1; E->D[k].dist = 0; }
+        if (o[j].kind >= 8) { k--; E->D[k].kind = 2; E->D[k].len = o[j].len2; E->D[k].dist = 0; k--; E->D[k].kind = 0; E->D[k].len = 1; E->D[k].dist = 0;
+            k--; if (o[j].kind == 8) { E->D[k].kind = 6; E->D[k].dist = o[j].dist; } else { E->D[k].kind = (uint8_t)(2 + o[j].dist); E->D[k].dist = 0; } E->D[k].len = o[j].len; }
+        else if (o[j].kind == 7) { k--; E->D[k].kind = 2; E->D[k].len = o[j].len; E->D[k].dist = 0; k--; E->D[k].kind = 0; E->D[k].len = 1; E->D[k].dist = 0; }
         else { k--; E->D[k].kind = o[j].kind; E->D[k].len = o[j].len; E->D[k].dist = o[j].dist; }
     }
     return nd;
 }
 
-static const struct { int depth, nice, bt; } KM_LV[10] = {{0, 0, 0}, {4, 16, 0}, {8, 32, 0}, {16, 48, 1}, {24, 64, 1}, {32, 64, 1},
-    {48, 96, 1}, {64, 128, 1}, {96, 192, 1}, {152, 273, 1}};
+/* per level: finder depth, nice length, binary tree; and from level 6 the composite paths (kinds 8, 9) with prices
+ * refreshed every 32 coded lengths or matches instead of 128 (review40 #93: level 8, the one `-9` uses, has nice 273) */
+static const struct { int depth, nice, bt, strong; } KM_LV[10] = {{0, 0, 0, 0}, {4, 16, 0, 0}, {8, 32, 0, 0}, {16, 48, 1, 0}, {24, 64, 1, 0},
+    {32, 64, 1, 0}, {48, 96, 1, 1}, {64, 128, 1, 1}, {96, 273, 1, 1}, {152, 273, 1, 1}};
 size_t kolmo_klzma_bound(size_t n) { return n + n / 64 + 1024; }
 size_t kolmo_klzma_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kolmo_klzma_compress_mt(in, n, out, cap, level, 1); }
 size_t kolmo_klzma_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads) {
@@ -437,6 +460,7 @@ size_t kolmo_klzma_compress_el(const uint8_t *in, size_t n, uint8_t *out, size_t
     E->in = in; E->n = (uint32_t)n;
     int hlog = 16; while (hlog < 24 && ((size_t)1 << hlog) < n) hlog++;
     km_mf *M = &E->mf; M->in = in; M->n = (uint32_t)n; M->hlog = hlog; M->depth = KM_LV[level].depth; M->nice = (uint32_t)KM_LV[level].nice; M->bt = KM_LV[level].bt;
+    E->combo = KM_LV[level].strong; E->refresh = KM_LV[level].strong ? 32 : 128;
     M->h4 = malloc(sizeof(uint32_t) << hlog); M->h3 = malloc(sizeof(uint32_t) << 16); M->h2 = malloc(sizeof(uint32_t) << 16); if (M->bt) M->son = malloc(sizeof(uint32_t) * 2 * (n + 1)); else M->chain = malloc(sizeof(uint32_t) * (n + 1));
     if (!M->h4 || !M->h3 || !M->h2 || !(M->bt ? (void *)M->son : (void *)M->chain) || km_model_init(&E->m, lc, lp, pb)) goto out;
     memset(M->h4, 0xFF, sizeof(uint32_t) << hlog); memset(M->h3, 0xFF, sizeof(uint32_t) << 16); memset(M->h2, 0xFF, sizeof(uint32_t) << 16);
@@ -451,8 +475,8 @@ size_t kolmo_klzma_compress_el(const uint8_t *in, size_t n, uint8_t *out, size_t
     km_probs *P = &E->m.p; const uint32_t pbm = (1u << pb) - 1;
     uint32_t pos = 0;
     while (pos < n) {
-        if (E->len_cnt >= 128) { km_len_prices(E, &P->len, E->lenp); km_len_prices(E, &P->rlen, E->rlenp); E->len_cnt = 0; }
-        if (E->dist_cnt >= 128) { km_dist_prices(E); E->dist_cnt = 0; }
+        if (E->len_cnt >= E->refresh) { km_len_prices(E, &P->len, E->lenp); km_len_prices(E, &P->rlen, E->rlenp); E->len_cnt = 0; }
+        if (E->dist_cnt >= E->refresh) { km_dist_prices(E); E->dist_cnt = 0; }
         uint32_t nd = km_optimal(E, pos);
         for (uint32_t k = 0; k < nd; k++) {
             const km_dec *d = &E->D[k]; const int st = E->state; const uint32_t ps = pos & pbm;

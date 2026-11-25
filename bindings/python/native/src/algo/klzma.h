@@ -17,7 +17,10 @@
 
    Payload: properties u8 (lc + 9 lp + 45 pb, lc + lp <= 4, pb <= 4) | range-coded stream (5 flush bytes).
    Levels 1-9 set the match finder (hash chains at 1-2, binary trees from 3), its depth and the nice length
-   (6: depth 48, nice 96; 9: depth 152, nice 273). */
+   (6: depth 48, nice 96; 8: depth 96, nice 273; 9: depth 152, nice 273); from level 6 the parse also prices the
+   composite paths "match, literal, rep 0" and "rep, literal, rep 0" and refreshes its prices every 32 lengths.
+   The product uses levels 1, 4 and 8 (codecs/native.c native_level: `-9` is level 8); level 9 is reachable only
+   through this API. The encoder settings never change the payload format. */
 #ifndef KOLMO_ALGO_KLZMA_H
 #define KOLMO_ALGO_KLZMA_H
 #include <stddef.h>
