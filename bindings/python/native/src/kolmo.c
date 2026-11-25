@@ -60,6 +60,9 @@ int kolmo_force_c;
 #undef free
 
 /* codecs */
+#ifdef KOLMO_IMPACT
+#include "algo/texttype.c"         /* research build: kinds of text for the per-kind CM priors (benchmark/impact) */
+#endif
 #include "codecs/cm.c"
 #include "codecs/cm_image.c"
 #include "codecs/kimg.c"             /* codec 31: lossless 8-bit images (ratio, ultra) */
@@ -95,6 +98,9 @@ int kolmo_force_c;
 #include "transforms/table_cols.c"   /* column-split table blocks (flag 13), the column reader of IDX1 queries */
 #include "core/memneed.c"           /* working-set estimates: frame declaration, reservations (docs/MEMORY-MODEL.md) */
 #include "core/trials.c"
+#ifdef KOLMO_IMPACT
+#include "core/impact.c"           /* research harness (build/kolmo-impact only; benchmark/impact/) */
+#endif
 #include "core/blocks.c"
 #include "plan/segment.c"
 #include "plan/frontier.c"
