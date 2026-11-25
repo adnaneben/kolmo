@@ -14,7 +14,7 @@ usage: panel.py TOOLS.json DATA_DIR SUITE.json OUT.json [--sets a,b] [--reps N]
 Output schema (unchanged from the 0.0.2 market report's openzl.json, plus "set" and "trained" fields):
   {file: {set, area, bytes, rows: [{tool, size, ratio, enc_mibs, dec_mibs, cpu_per_wall} | {tool, error}]},
    "_training": {set/profile: {seconds, args, compressor_bytes}}}"""
-import argparse, filecmp, glob, json, os, sys, time
+import argparse, filecmp, glob, hashlib, json, os, shutil, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -57,6 +57,70 @@ def measure(name, c, d, src, reps, work, internal=False):
     return r
 
 
+def sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as src:
+        for chunk in iter(lambda: src.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def training_recipe(args, train_dir):
+    tool = shutil.which(args[0])
+    if not tool:
+        return None
+
+    def walk_error(error):
+        raise error
+
+    try:
+        files = []
+        for root, dirs, names in os.walk(train_dir, onerror=walk_error):
+            if any(os.path.islink(os.path.join(root, name)) for name in dirs):
+                return None
+            files.extend(os.path.join(root, name) for name in names)
+        if not files or any(not os.path.isfile(path) for path in files):
+            return None
+        return {"argv": args, "tool_sha256": sha256(tool), "inputs": [
+            [os.path.relpath(path, train_dir), sha256(path)] for path in sorted(files)
+        ]}
+    except OSError:
+        return None
+
+
+def train_compressor(tool, profile, train_dir, extra_args, artifact, previous):
+    args = [tool, "train", *profile, train_dir, "-o", artifact, "-f", *extra_args]
+    out_index = 4 + len(profile)
+    recipe = training_recipe(args, train_dir)
+    if recipe and previous.get("ok") is True and previous.get("recipe") == recipe:
+        try:
+            if os.path.getsize(artifact) and sha256(artifact) == previous.get("compressor_sha256"):
+                return previous, False
+        except OSError:
+            pass
+    record = dict(seconds=0., args=args[1:], recipe=recipe, ok=False, compressor_bytes=None)
+    if not recipe:
+        return record, True
+    # Give each attempt a private output so a failed or interrupted trainer cannot publish partial bytes.
+    with tempfile.TemporaryDirectory(prefix="train-", dir=os.path.dirname(artifact)) as staging:
+        candidate = os.path.join(staging, "compressor.zlc")
+        invocation = args.copy()
+        invocation[out_index] = candidate
+        start = time.perf_counter()
+        result = run(invocation)
+        record["seconds"] = time.perf_counter() - start
+        if result is not None and training_recipe(args, train_dir) == recipe:
+            try:
+                size = os.path.getsize(candidate)
+                if size:
+                    digest = sha256(candidate)
+                    os.replace(candidate, artifact)
+                    record.update(ok=True, compressor_bytes=size, compressor_sha256=digest)
+            except OSError:
+                pass
+    return record, True
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("tools"); ap.add_argument("data"); ap.add_argument("suite"); ap.add_argument("out")
@@ -82,22 +146,45 @@ def main():
             continue
         trained = {}
         for prof in st.get("openzl", []) if st.get("train") else []:
-            key = f"{st['name']}/{' '.join(prof)}"
+            profile = " ".join(prof)
+            key = f"{st['name']}/{profile}"
             zc = os.path.join(work, st["name"] + "-" + "_".join(p.strip("-") for p in prof) + ".zlc")
-            if key not in training or not os.path.exists(zc):
-                args = [Z, "train"] + prof + [os.path.join(a.data, st["train"]), "-o", zc, "-f"] + st.get("train_args", [])
-                t = time.perf_counter(); ok = run(args)
-                training[key] = dict(seconds=time.perf_counter() - t, args=args[1:], ok=ok is not None,
-                                     compressor_bytes=os.path.getsize(zc) if os.path.exists(zc) else None)
+            record, changed = train_compressor(Z, prof, os.path.join(a.data, st["train"]),
+                                               st.get("train_args", []), zc, training.get(key, {}))
+            training[key] = record
+            if changed:
+                # Invalidate only trained rows from this recipe. Keep previous baseline measurements.
+                label = f"openzl trained [{profile}]"
+                for name, entry in res.items():
+                    if name != "_training" and entry.get("set") == st["name"]:
+                        entry["rows"] = [row for row in entry["rows"] if row["tool"] != label]
                 save()
-                print(f"trained {key}: {'ok' if ok else 'FAILED'} in {training[key]['seconds']:.0f} s", flush=True)
-            if os.path.exists(zc):
-                trained[" ".join(prof)] = zc
+                print(f"trained {key}: {'ok' if record['ok'] else 'FAILED'} in {record['seconds']:.0f} s", flush=True)
+            if record["ok"]:
+                trained[profile] = zc
+
+        def measure_trained(profile, src, reps):
+            label = f"openzl trained [{profile}]"
+            if profile not in trained:
+                return dict(tool=label, error="training failed or unsupported", trained=True)
+            row = measure(label, [Z, "compress", "-c", trained[profile], "-f", "{i}", "-o", "{o}"],
+                          [Z, "decompress", "-f", "{i}", "-o", "{o}"], src, reps, work)
+            row["trained"] = True
+            return row
+
         for src in files:
             f = os.path.relpath(src, a.data)
-            if f in res:
-                continue
             n = os.path.getsize(src); reps = a.reps if n < 60e6 else 1
+            if f in res:
+                if st.get("train"):
+                    rows = res[f]["rows"]
+                    seen = {row["tool"] for row in rows}
+                    new_rows = [measure_trained(profile, src, reps) for profile in map(" ".join, st.get("openzl", []))
+                                if f"openzl trained [{profile}]" not in seen]
+                    if new_rows:
+                        rows.extend(new_rows)
+                        save()
+                continue
             rows = []
             for lv in [str(x) for x in st.get("kolmo_levels", [3, 5, 7, 9])] + (["U"] if n <= st.get("ultra_max", 12e6) else []):
                 r = 1 if lv == "U" or (lv == "9" and n > 30e6) else reps
@@ -107,12 +194,8 @@ def main():
                 for lv in ["6", "9"]:
                     rows.append(measure("openzl -l %s [%s]" % (lv, " ".join(pa)), [Z, "compress"] + pa + ["-l", lv, "-f", "{i}", "-o", "{o}"],
                                         [Z, "decompress", "-f", "{i}", "-o", "{o}"], src, reps, work))
-                if " ".join(pa) in trained:
-                    row = measure("openzl trained [%s]" % " ".join(pa), [Z, "compress", "-c", trained[" ".join(pa)], "-f", "{i}", "-o", "{o}"],
-                                  [Z, "decompress", "-f", "{i}", "-o", "{o}"], src, reps, work)
-                    row["trained"] = True; rows.append(row)
-                elif st.get("train"):
-                    rows.append(dict(tool="openzl trained [%s]" % " ".join(pa), error="training failed or unsupported", trained=True))
+                if st.get("train"):
+                    rows.append(measure_trained(" ".join(pa), src, reps))
             zs, xz = T["cli"]["zstd"]["path"] or "zstd", T["cli"]["xz"]["path"] or "xz"
             for nm, c, d in [("zstd -3", [zs, "-3", "-T1", "-q", "-f", "{i}", "-o", "{o}"], [zs, "-d", "-q", "-f", "{i}", "-o", "{o}"]),
                              ("zstd -19", [zs, "-19", "-T1", "-q", "-f", "{i}", "-o", "{o}"], [zs, "-d", "-q", "-f", "{i}", "-o", "{o}"]),
