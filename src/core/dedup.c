@@ -18,12 +18,11 @@
 #define DD_LINE_REACH 4096
 #define DD_NAME_MAX 4096
 
+static pthread_once_t dd_once = PTHREAD_ONCE_INIT;
 static uint64_t dd_gear[256];
 static uint64_t dd_split(uint64_t *s) { uint64_t z = (*s += 0x9E3779B97F4A7C15ull); z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull; z = (z ^ (z >> 27)) * 0x94D049BB133111EBull; return z ^ (z >> 31); }
 static void dd_init(void) {
-    static int done = 0; if (done) return;          /* idempotent and the same on every thread: no lock needed */
     uint64_t s = 0x6b6f6c6d6f646470ull; for (int i = 0; i < 256; i++) dd_gear[i] = dd_split(&s);
-    done = 1;
 }
 /* a mask of `bits` one bits spread over the top 48 bits (the high bits of the Gear hash mix the most bytes) */
 static uint64_t dd_mask(int bits) {
@@ -109,7 +108,8 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     kolmo_archive_params A = ap ? *ap : (kolmo_archive_params){0, 1};
     if (!A.avg_chunk) A.avg_chunk = 4096;
     if (A.avg_chunk < 256 || A.avg_chunk > (4u << 20) || (A.avg_chunk & (A.avg_chunk - 1))) return KOLMO_ERR_LIMIT;
-    dd_init(); dd_cfg C; dd_config(&C, A.avg_chunk, A.line_cuts);
+    pthread_once(&dd_once, dd_init);
+    dd_cfg C; dd_config(&C, A.avg_chunk, A.line_cuts);
     uint64_t total = 0; for (size_t f = 0; f < nfiles; f++) { if (!files[f].name || (!files[f].data && files[f].size)) return KOLMO_ERR_LIMIT; total += files[f].size; }
     dd_set D; int64_t ret = KOLMO_ERR_ALLOC; uint8_t *owned_store = NULL; kx_buf tab = {0}, recipes = {0};
     if (dd_set_init(&D, total / C.avg + 16)) goto done;
@@ -127,6 +127,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
             int64_t id = dd_set_add(&D, F->data + at, (uint32_t)L, &isnew); if (id < 0) { free(refs.p); goto done; }
             kx_uv(&refs, dd_zz(id - prev - 1)); prev = id; nref++; at += L; st->chunks++;
         }
+        if (refs.oom) { free(refs.p); goto done; }
         kx_uv(&recipes, nref); kx_bytes(&recipes, refs.p, refs.n); free(refs.p);
         st->input_bytes += F->size;
     }
