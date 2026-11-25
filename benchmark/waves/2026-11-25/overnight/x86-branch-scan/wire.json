@@ -1,0 +1,124 @@
+{
+  "sqlite-x86/7/4": {
+    "sha256": "157a41ac6d0ca7123b5aa824ebbd29f62c12ac4f8d858af24de1f1c71f1b57e6",
+    "frame_B": 772497,
+    "blocks": [
+      {
+        "raw_B": 1313964,
+        "transform_flag": 8
+      },
+      {
+        "raw_B": 298692,
+        "transform_flag": 0
+      }
+    ]
+  },
+  "sqlite-arm/3/1": {
+    "sha256": "52e018df471804dc22eeb6033a13d58dc20ff5eb92fc0e72d48e96fd25e3171a",
+    "frame_B": 821083,
+    "blocks": [
+      {
+        "raw_B": 1048576,
+        "transform_flag": 14
+      },
+      {
+        "raw_B": 286372,
+        "transform_flag": 14
+      },
+      {
+        "raw_B": 300604,
+        "transform_flag": 0
+      }
+    ]
+  },
+  "diff-x86/3/1": {
+    "sha256": "6eb12f62fadf7bae29a2d714d64c06710b0823e4a5a3bb7a29e2a73536103ba3",
+    "frame_B": 38997,
+    "blocks": [
+      {
+        "raw_B": 85744,
+        "transform_flag": 0
+      }
+    ]
+  },
+  "sqlite-x86/7/1": {
+    "sha256": "157a41ac6d0ca7123b5aa824ebbd29f62c12ac4f8d858af24de1f1c71f1b57e6",
+    "frame_B": 772497,
+    "blocks": [
+      {
+        "raw_B": 1313964,
+        "transform_flag": 8
+      },
+      {
+        "raw_B": 298692,
+        "transform_flag": 0
+      }
+    ]
+  },
+  "sqlite-x86/3/4": {
+    "sha256": "ec53c0d0d6558e93254c5ff082da64607babec17bd414deeb1c14dc77a28450d",
+    "frame_B": 871011,
+    "blocks": [
+      {
+        "raw_B": 1048576,
+        "transform_flag": 8
+      },
+      {
+        "raw_B": 265388,
+        "transform_flag": 8
+      },
+      {
+        "raw_B": 298692,
+        "transform_flag": 0
+      }
+    ]
+  },
+  "awk-x86/3/1": {
+    "sha256": "c869ce332a3506b0c704ab8371734ba9c639e9b81a74a9c56855e9973204c471",
+    "frame_B": 51373,
+    "blocks": [
+      {
+        "raw_B": 130272,
+        "transform_flag": 8
+      }
+    ]
+  },
+  "awk-x86/7/1": {
+    "sha256": "e5ea2467d436febdb2e4707306613d29c7eae38e7d06eeee800a3133750af9a8",
+    "frame_B": 46642,
+    "blocks": [
+      {
+        "raw_B": 130272,
+        "transform_flag": 8
+      }
+    ]
+  },
+  "c-source/3/1": {
+    "sha256": "f5ea117967020dd4fb7c3f5ca9d4c02eb50a05c26144e7245fa921c574e5afe6",
+    "frame_B": 1480,
+    "blocks": [
+      {
+        "raw_B": 3291,
+        "transform_flag": 0
+      }
+    ]
+  },
+  "sqlite-x86/3/1": {
+    "sha256": "ec53c0d0d6558e93254c5ff082da64607babec17bd414deeb1c14dc77a28450d",
+    "frame_B": 871011,
+    "blocks": [
+      {
+        "raw_B": 1048576,
+        "transform_flag": 8
+      },
+      {
+        "raw_B": 265388,
+        "transform_flag": 8
+      },
+      {
+        "raw_B": 298692,
+        "transform_flag": 0
+      }
+    ]
+  }
+}

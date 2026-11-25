@@ -1,0 +1,55 @@
+{
+  "revisions": {
+    "main": "a1d39559686a9ec17c8614b9154a64d7b5b98672",
+    "rc": "a2e430fed2fbc6dc357a78651cadf0e1fed611f2"
+  },
+  "inputs": {
+    "holdout/tsv__bb-rows": [
+      4194123,
+      "ce1f46c812afed1ec508438e80cd248939065e176251f6a6d672d76a228190b6"
+    ],
+    "holdout/log__bgl": [
+      4194269,
+      "fba140ef27632a08d8304148c42a7f8ee9b09b724cd62d97e3d2d0cb4dd4eb61"
+    ]
+  },
+  "seed": 202611252145,
+  "level": 8,
+  "threads": 1,
+  "warmups": 1,
+  "scored_rounds": 7,
+  "host": "macOS-27.2-arm64-arm-64bit",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+  "binaries": {
+    "main": {
+      "kolmo": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+      "kolmo-impact": "fe523ff6463b19011caa1c43db96997625658de3c1daf3348ff809b5f5992c7b"
+    },
+    "rc": {
+      "kolmo": "508925eaf2fc0192248c9ad91db19d0473f0f32208368ff7effae264ff8c156d",
+      "kolmo-impact": "a26b57a0445d76e2fb7e7588ab4f758e3fa1145c8afaf1d088ae0766281b407c"
+    }
+  },
+  "harnesses": {
+    "main": "6b4f6b87d6c1a332f58a3c5bfda138588796f4dcc369c3753a5f53c59026c1d2",
+    "rc": "6b4f6b87d6c1a332f58a3c5bfda138588796f4dcc369c3753a5f53c59026c1d2"
+  },
+  "trial_environment": {
+    "KOLMO_IMPACT_CODEC": "24",
+    "KOLMO_IMPACT_INPUT": "stream"
+  },
+  "timing": "wait4 child wall, user+system CPU, max RSS in bytes on macOS; historical cell rounds seconds to four decimals",
+  "stock_cli_build_targets": [
+    "build/kolmo",
+    "kolmo-impact"
+  ],
+  "compiled_C_flags": "-O3 -mcpu=native -ffp-contract=off; impact target additionally -DKOLMO_IMPACT",
+  "input_readback_comparisons": 96,
+  "additional_cross_reads_warmup": 24,
+  "raw_matches_on_historical_4db0425b": 96,
+  "historical_raw_sha256": "48e610db0223d8c997911b2794523b5e4cf709a04c3ddf2b6a89fdbb9a9c2bea",
+  "load_1min_range": [
+    6.9,
+    7.4
+  ]
+}
