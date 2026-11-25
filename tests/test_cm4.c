@@ -45,7 +45,25 @@ static void roundtrip(const char *name, const uint8_t *in, size_t n, uint32_t ma
     free(z); free(z2); free(out);
 }
 
+static void check_table_cap(void) {
+    size_t n = (size_t)1 << 18;
+    kolmo_set_x_tables(-1);
+    CHECK(cm4_shift_for(n, CM4_MASK_TEXT) == 5, "scaled table shift changed");
+    kolmo_set_x_tables(0);
+    CHECK(cm4_shift_for(n, CM4_MASK_TEXT) == 3, "full table shift changed");
+    for (int bits = 16; bits <= 22; bits++) {
+        kolmo_set_x_tables(bits);
+        int shift = cm4_shift_for(n, CM4_MASK_TEXT);
+        CHECK(shift == (bits == 16 ? 4 : 3), "unexpected shift for numeric setting %d", bits);
+        size_t large = (size_t)128 << 20;
+        shift = cm4_shift_for(large, CM4_MASK_TEXT);
+        CHECK(cm4_lines(1, large, shift) <= ((uint32_t)1 << (bits - 2)), "cap %d exceeded", bits);
+    }
+    kolmo_set_x_tables(-1);
+}
+
 int main(void) {
+    check_table_cap();
     /* text: words, lines, a few numbers */
     size_t n = 120000; uint8_t *t = malloc(n);
     for (size_t i = 0; i < n; ) {

@@ -1,0 +1,967 @@
+{
+  "encoder_sha256": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+  "policy_id": "0547fe3ab8180f4ea9d723637d6106547d166529d0e4a8cd5580ab1b43f0c24f",
+  "reader_sha256": "5c116ba0adb839757a3bfbcd53c334df354e804ab5fd9b2281ee1163e26221a5",
+  "rows": [
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 6098917,
+      "encode_ns": 6209042,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 0
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 3760042,
+      "encode_ns": 45719083,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 0
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 3741000,
+      "encode_ns": 116182375,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 0
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 5606166,
+      "encode_ns": 4488375,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 1
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 3243042,
+      "encode_ns": 2760375,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 1
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 3455792,
+      "encode_ns": 54944500,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 1
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 4655583,
+      "encode_ns": 4575583,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 2
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 4088959,
+      "encode_ns": 4494333,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 2
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 3847083,
+      "encode_ns": 49269083,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 2
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 5020125,
+      "encode_ns": 4460167,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 3
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 3877833,
+      "encode_ns": 45849666,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 3
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 3887500,
+      "encode_ns": 4363625,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 3
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 3693917,
+      "encode_ns": 4201375,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 4
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 3964500,
+      "encode_ns": 4248000,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 4
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 12370667,
+      "encode_ns": 50879541,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 4
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 4285167,
+      "encode_ns": 4323208,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 5
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 3737083,
+      "encode_ns": 47239208,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 5
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 5705208,
+      "encode_ns": 4520084,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 5
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 4078333,
+      "encode_ns": 52981041,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 6
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 3927000,
+      "encode_ns": 3702916,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 6
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 4057000,
+      "encode_ns": 5004750,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 6
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 3851166,
+      "encode_ns": 51953792,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 7
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 4173750,
+      "encode_ns": 4352625,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 7
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 3741292,
+      "encode_ns": 5056625,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 7
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 4164000,
+      "encode_ns": 61821584,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 8
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 3742708,
+      "encode_ns": 5616250,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 8
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 4102333,
+      "encode_ns": 5466458,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 8
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 3201416,
+      "encode_ns": 5406417,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 9
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 3593750,
+      "encode_ns": 53802041,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 9
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 4150042,
+      "encode_ns": 5626875,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 9
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 3177917,
+      "encode_ns": 53996042,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 10
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 5459333,
+      "encode_ns": 5036125,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 10
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 5426000,
+      "encode_ns": 4456292,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 10
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 3229833,
+      "encode_ns": 3587541,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 11
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 4332000,
+      "encode_ns": 59019958,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 11
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 4284042,
+      "encode_ns": 4427250,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 11
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 4387291,
+      "encode_ns": 3271375,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 12
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 4506792,
+      "encode_ns": 52127250,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 12
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 3464708,
+      "encode_ns": 5993542,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 12
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 4268500,
+      "encode_ns": 4660750,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 13
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 3004958,
+      "encode_ns": 60513916,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 13
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 4237875,
+      "encode_ns": 4870250,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 13
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 4145625,
+      "encode_ns": 4641834,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 14
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 4032167,
+      "encode_ns": 3989959,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 14
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 3863458,
+      "encode_ns": 57956083,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 14
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 32198,
+      "decode_ns": 2413125,
+      "encode_ns": 60785333,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 0,
+      "trial": 15
+    },
+    {
+      "arm": "export",
+      "bytes": 32198,
+      "decode_ns": 4279792,
+      "encode_ns": 4318250,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 1,
+      "trial": 15
+    },
+    {
+      "arm": "stock",
+      "bytes": 32198,
+      "decode_ns": 3761833,
+      "encode_ns": 4538958,
+      "frame_sha256": "e98bb0044ed304fb7d8213fe57ac9d3103e9412c6dfce23eb1a3efdd101a6bab",
+      "name": "cwebp",
+      "order": 2,
+      "trial": 15
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 3704166,
+      "encode_ns": 52016375,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 0
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4070416,
+      "encode_ns": 4724959,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 0
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 4026208,
+      "encode_ns": 4821583,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 0
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 3557834,
+      "encode_ns": 51816125,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 1
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4216334,
+      "encode_ns": 4711458,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 1
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 4155041,
+      "encode_ns": 4867208,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 1
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 7446334,
+      "encode_ns": 55594875,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 2
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 3929792,
+      "encode_ns": 4795500,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 2
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4027666,
+      "encode_ns": 4760291,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 2
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 3845209,
+      "encode_ns": 4959750,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 3
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 2989917,
+      "encode_ns": 54799250,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 3
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 4085833,
+      "encode_ns": 5008417,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 3
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 6085500,
+      "encode_ns": 4437750,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 4
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 5310917,
+      "encode_ns": 48908666,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 4
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 7925167,
+      "encode_ns": 4932125,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 4
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 4122917,
+      "encode_ns": 54131916,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 5
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4116000,
+      "encode_ns": 4555625,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 5
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 4334500,
+      "encode_ns": 5122166,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 5
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 4157083,
+      "encode_ns": 54160208,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 6
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4178791,
+      "encode_ns": 4878667,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 6
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 4583375,
+      "encode_ns": 4854000,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 6
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 3987417,
+      "encode_ns": 4760166,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 7
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 4469292,
+      "encode_ns": 54479584,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 7
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 6503500,
+      "encode_ns": 7552916,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 7
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4370000,
+      "encode_ns": 5179333,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 8
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 3513083,
+      "encode_ns": 3473458,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 8
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 3519666,
+      "encode_ns": 52021625,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 8
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4112500,
+      "encode_ns": 4170416,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 9
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 3886375,
+      "encode_ns": 47743125,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 9
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 2847542,
+      "encode_ns": 4410208,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 9
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 5511333,
+      "encode_ns": 55159083,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 10
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 4069667,
+      "encode_ns": 5185792,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 10
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4679083,
+      "encode_ns": 5338458,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 10
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 4329083,
+      "encode_ns": 61749584,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 11
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 4059375,
+      "encode_ns": 4322541,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 11
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4332333,
+      "encode_ns": 7498833,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 11
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 3968500,
+      "encode_ns": 4727292,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 12
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 8563083,
+      "encode_ns": 55223375,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 12
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 3956333,
+      "encode_ns": 4949000,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 12
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 4027583,
+      "encode_ns": 4882917,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 13
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 4719667,
+      "encode_ns": 51671000,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 13
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4284708,
+      "encode_ns": 4723375,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 13
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 3246042,
+      "encode_ns": 55067250,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 14
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 4005250,
+      "encode_ns": 5422875,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 14
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 4126042,
+      "encode_ns": 9589792,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 14
+    },
+    {
+      "arm": "stock",
+      "bytes": 38892,
+      "decode_ns": 3184333,
+      "encode_ns": 4451459,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 0,
+      "trial": 15
+    },
+    {
+      "arm": "export",
+      "bytes": 38892,
+      "decode_ns": 3817125,
+      "encode_ns": 4763459,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 1,
+      "trial": 15
+    },
+    {
+      "arm": "wrapper",
+      "bytes": 38892,
+      "decode_ns": 4396834,
+      "encode_ns": 46300542,
+      "frame_sha256": "f0d0124ba8fc63f428aaed8536f4c968bd02ccb5985986b9fc57abcf28aca0bf",
+      "name": "pdfinfo",
+      "order": 2,
+      "trial": 15
+    }
+  ]
+}

@@ -1,4 +1,13 @@
 /* Block splitting, slot sizes, and the block encoder run by the pool (compress_worker). */
+/* Each plan may contribute one short final block. Bound the number of plans
+ * in both sizing and encoding, including archive metadata and content splits.
+ * Four slots allow all metadata probes even on tiny buffers. All supported
+ * material segment types use much larger spans than the 512-byte allowance. */
+static uint32_t plan_segment_capacity(size_t n) {
+    size_t parts = n / 512;
+    return parts < 4092 ? (uint32_t)parts + 4 : 4096;
+}
+
 /* block boundaries: newline-aligned for transposed text, element-aligned for shuffled arrays */
 static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, uint64_t **starts_out,
                             int fd, uint64_t offset, int64_t *error) {
@@ -92,6 +101,9 @@ typedef struct {
     uint64_t memcap;        /* the call's limit for the governor (explicit, auto or unlimited) */
     uint64_t xcap;          /* the explicit cap only (0: none): the one memory figure format decisions may read */
     _Atomic uint64_t dneed; /* the largest block decode figure (blk_dec_need), declared in header byte 11 */
+#ifdef KOLMO_AUDIO_SCREEN
+    int aud_screen;
+#endif
     int cm_leaves;          /* ultra level 2: graph leaves may be context mixing */
     /* dispatch (review40 #7): the longest unstarted block inside the window first; the window is the blocks that start
      * less than win bytes after the first block not yet written, so the reorder buffer (finished blocks waiting for
@@ -177,6 +189,29 @@ static int64_t claim_block(job_t *J, int own) {
     return got;
 }
 
+
+#ifdef KOLMO_AUDIO_SCREEN
+/* Research only: one complete PCM16 WAV, without large unmodelled non-audio sections.
+ * A fast LZ probe excludes highly repetitive and sparse signals before the specialist trial.
+ * Sample all four quarters; a single complex introduction cannot qualify the whole file. */
+static size_t aud_screen(const job_t *J, const uint8_t *raw, size_t len, uint8_t *out) {
+    if (!J->aud_screen || J->nb != 1 || J->aud_prof < 0 || J->aud_be ||
+        len < (64u << 10) || len > (2u << 20) || J->aud_off > 4096 || len - J->aud_end > 4096) return 0;
+    const size_t fs = 2u * (unsigned)J->aud_ch;
+    const size_t frames = (size_t)(J->aud_end - J->aud_off) / fs;
+    const size_t probe = 2048;
+    if (frames < 4 * probe) return 0;
+    uint8_t packed[4096];
+    for (size_t i = 0; i < 4; i++) {
+        const size_t pos = i * (frames - probe) / 3 + probe / 4;
+        const uint8_t *window = raw + J->aud_off + pos * fs;
+        size_t z = kolmo_klz_compress(window, probe, packed, sizeof packed, 1);
+        if (!z || z < probe * 7 / 8) return 0;
+    }
+    size_t z = aud_compress(J->aud_prof, J->aud_ch, raw, len, (size_t)J->aud_off, frames, out, J->slot);
+    return z >= len / 4 && z < len * 5 / 6 ? z : 0;
+}
+#endif
 
 static void *compress_worker(void *arg) {
     job_t *J = arg; tls_t *S = tls_begin();
@@ -292,6 +327,19 @@ static void *compress_worker(void *arg) {
         /* trials run beside context mixing (ultra, core/trials.c), and whether this block is FASTQ for the family coder */
         enum { XT_ALT, XT_ALTS, XT_A1, XT_FQ, XT_ALTB, XT_N }; xtrial_t xt[XT_N]; memset(xt, 0, sizeof xt);
         const int xfq = J->codec == C_CM && J->level != 1 && len >= 64 && kf_fastq_like(raw, len);
+#ifdef KOLMO_AUDIO_SCREEN
+        if (J->aud_screen && J->aud_prof >= 0) {
+            uint8_t *aud = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+            size_t z = aud ? aud_screen(J, raw, len, aud) : 0;
+            if (z) {
+                if (getenv("KOLMO_AUDIO_SCREEN_TRACE")) fprintf(stderr, "kolmo audio-screen accepted\n");
+                memcpy(sl, aud, z);
+                cl = z; codec = C_AUD; tflag = 0; meta = 0; modes = 128;
+                slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
+                goto audio_selected;
+            }
+        }
+#endif
         if (pl.packed && meta_incompressible(raw, len)) { cl = 0; goto coded; }   /* compressed content: stored */
         if (xfq && len >= (64u << 10)) {
             /* ultra, a FASTQ block: the family coder first, with every thread the block has. It has beaten context
@@ -626,6 +674,9 @@ coded:;
                 }
             }
         }
+#ifdef KOLMO_AUDIO_SCREEN
+audio_selected:
+#endif
         if (J->img_on && J->default_level) {                         /* kimg: the block's image pixels (codec 31) */
             const uint64_t s0 = J->starts[i], s1 = J->starts[i + 1];
             const uint64_t p0 = s0 > J->img_off ? s0 : J->img_off, p1 = s1 < J->img_end ? s1 : J->img_end;

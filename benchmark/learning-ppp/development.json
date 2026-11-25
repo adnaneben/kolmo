@@ -1,0 +1,12 @@
+[
+  {
+    "origin": "gnu-tar",
+    "path": "gtar",
+    "sha256": "76a020a6393d1d7f94c57f52ad3e09fdbceb6e864fbff6314eee7f15a1c660fe"
+  },
+  {
+    "origin": "lz4",
+    "path": "lz4",
+    "sha256": "dea7a77d34ab20b1e77d7c9fdffab5ca112cf03f403b6540de1d33fb4e872390"
+  }
+]

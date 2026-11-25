@@ -167,7 +167,12 @@ static uint64_t ix_filter(const uint8_t *s, size_t n, int k, uint64_t *scratch, 
     memset(scratch, 0, IX_SCRATCH_BITS / 4);
     IX_KEYS(s, n, { uint64_t b_ = ix_slot(h_, IX_SCRATCH_BITS); st[b_ >> 6] |= 1ull << (b_ & 63); },
                   { uint64_t b_ = ix_slot(h_, IX_SCRATCH_BITS); sk[b_ >> 6] |= 1ull << (b_ & 63); });
+    /* Cardinality estimates can overshoot. A block has at most n trigrams
+     * and ceil(n/4) words of at least three letters with separators. Keep the
+     * bitmap inside the corresponding deterministic capacity envelope. */
     double d = ix_distinct(st) + k * ix_distinct(sk);
+    double max_keys = (double)n + k * (double)(n / 4 + (n % 4 != 0));
+    if (d > max_keys) d = max_keys;
     if (d < 0.5) return 0;
     uint64_t m = (uint64_t)ceil(d * 1.44 / 64.0) * 64; if (m < 64) m = 64; if (m > (1ull << 32)) m = 1ull << 32;
     uint64_t *f = calloc((size_t)(m / 64), 8); if (!f) return UINT64_MAX;
@@ -200,9 +205,15 @@ static int ix_filter_has(const uint8_t *bm, uint64_t m, const ix_keys *K) {
 size_t kolmo_indexed_bound(size_t n, const kolmo_params *p) {
     kolmo_params q = p ? *p : (kolmo_params){KOLMO_FAST, 0, 0, 0, 1};
     if (!q.block) q.block = IX_DEFAULT_BLOCK;
-    size_t nb = n / (q.block / 2 + 1) + 2;
-    /* filters: 1.44 bits per bit set; at most one trigram per byte and one token per 4 bytes at up to 16 bits each */
-    return kolmo_bound(n, &q) + 4096 + nb * 96 + n + n / 2;
+    size_t size = kolmo_bound(n, &q);
+    /* The bounded filter occupies at most one byte per input byte plus
+     * per-block rounding. Table column names can also copy a full first line
+     * plus its length varints (one extra byte per 128 field bytes suffices,
+     * since each separator already pays for a one-byte length). */
+    if (!size || !bound_add(&size, 1, 4096) ||
+        !bound_add(&size, frame_block_bound(n, &q), 96) ||
+        !bound_add(&size, n, 2) || !bound_add(&size, n / 128, 1)) return 0;
+    return size;
 }
 
 typedef struct {
@@ -494,8 +505,10 @@ static void ix_block(const ix_q *Q, uint32_t b, ix_res *res) {
         for (uint32_t c = b + 1; c < Q->f->nb && !R.oom; c++) {
             uint8_t *e = ix_decode(Q, c, res, &err); if (!e) { free(d); free(R.p); res->err = err; return; }
             size_t el = (size_t)(Q->f->roff[c + 1] - Q->f->roff[c]); const uint8_t *nl = memchr(e, '\n', el);
-            kx_bytes(&R, e, nl ? (size_t)(nl - e) + 1 : el); free(e);
-            if (nl) break;
+            int found_newline = nl != NULL;
+            kx_bytes(&R, e, found_newline ? (size_t)(nl - e) + 1 : el);
+            free(e);
+            if (found_newline) break;
         }
         if (R.oom) { free(d); free(R.p); res->err = KOLMO_ERR_ALLOC; return; }
         reg = R.p; rn = R.n;

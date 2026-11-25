@@ -223,7 +223,12 @@ static const char *fc_member_name(const char *path) {
         fprintf(stderr, "kolmo: warning: removing leading '%.*s' from the member name '%s'\n", (int)(nm - path), path, path);
     return nm;
 }
-typedef struct { int dir; char **names; int nnames; int seen, done, bad; } fc_x;
+typedef struct {
+    int dir;
+    char **names;                   /* sorted requested names; the archive is still traversed in its own order */
+    unsigned char *matched;
+    int nnames, seen, done, bad;
+} fc_x;
 /* The parent directory of name under the directory fd X->dir, created as needed: each component is opened with
  * O_NOFOLLOW, so a symbolic link on the way (one that was already there, or that another process puts there) ends
  * the walk instead of leading out of the directory. Returns a descriptor and sets *leaf, or -1 after reporting. */
@@ -251,7 +256,6 @@ static int fc_parent(const fc_x *X, const char *name, const char **leaf) {
 }
 static int fc_put(void *ctx, const char *name, const uint8_t *data, uint64_t size, uint32_t mode, int64_t mtime) {
     fc_x *X = ctx;
-    X->seen++;
     if (!fc_safe(name)) { fprintf(stderr, "kolmo: skipping unsafe name '%s'\n", name); X->bad = 1; return 0; }
     const char *leaf; int d = fc_parent(X, name, &leaf);
     if (d < 0) { X->bad = 1; return 0; }
@@ -366,13 +370,26 @@ out:
     free(L.v); free(F); free(K); return ret;
 }
 static int fc_select(void *ctx, const char *name, uint64_t size, uint32_t mode, int64_t mtime) {
-    const fc_x *X = ctx;
+    fc_x *X = ctx;
     (void)size; (void)mode; (void)mtime;
-    for (int i = 0; i < X->nnames; i++) if (!strcmp(X->names[i], name)) return 1;
-    return 0;
+    int lo = 0, hi = X->nnames;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (strcmp(X->names[mid], name) < 0) lo = mid + 1;
+        else hi = mid;
+    }
+    if (lo == X->nnames || strcmp(X->names[lo], name)) return 0;
+    if (!X->matched[lo]) {
+        /* Count each argument once, including a repeated request for the same member. */
+        do {
+            X->matched[lo++] = 1;
+            X->seen++;
+        } while (lo < X->nnames && !strcmp(X->names[lo], name));
+    }
+    return 1;
 }
 static int fc_extract(int argc, char **argv) {
-    fc_x X = {-1, NULL, 0, 0, 0, 0}; const char *dir = "."; int threads = 0, a = 2;
+    fc_x X = {.dir = -1}; const char *dir = "."; int threads = 0, a = 2;
     for (; a < argc && argv[a][0] == '-'; a++) {
         if (!strcmp(argv[a], "-C") && a + 1 < argc) dir = argv[++a];
         else if (!strcmp(argv[a], "-T") && a + 1 < argc) { if (fc_num("-T", argv[++a], 0, 4096, &threads)) return 2; }
@@ -383,8 +400,13 @@ static int fc_extract(int argc, char **argv) {
     if (X.dir < 0) { fprintf(stderr, "kolmo: %s: %s\n", dir, strerror(errno)); return 1; }
     fc_file f; if (fc_open(argv[a], &f)) { close(X.dir); return 1; }
     X.names = argv + a + 1; X.nnames = argc - a - 1;
+    unsigned char local_matches[16] = {0};
+    X.matched = X.nnames <= (int)sizeof local_matches ? local_matches : calloc((size_t)X.nnames, 1);
+    if (!X.matched) { perror("kolmo extract"); fc_close(&f); close(X.dir); return 1; }
+    if (X.nnames > 1) qsort(X.names, (size_t)X.nnames, sizeof *X.names, fc_cmp);
     int64_t r = X.nnames ? kolmo__archive_walk(f.p, f.n, fc_select, fc_put, &X, threads)
                         : kolmo_archive_extract_all(f.p, f.n, fc_put, &X, threads);
+    if (X.matched != local_matches) free(X.matched);
     fc_close(&f); close(X.dir);
     if (r < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r)); return 1; }
     if (X.nnames && X.seen < X.nnames) { fprintf(stderr, "kolmo: %d of %d names not in the archive\n", X.nnames - X.seen, X.nnames); return 1; }

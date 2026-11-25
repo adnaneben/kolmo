@@ -121,7 +121,8 @@ pub fn compress_limited(data: &[u8], level: Level, threads: i32, mem_limit: u64)
     let r = unsafe { kolmo_params_for_level(level.0 as c_int, &mut p) };
     if r < 0 { return Err(err(r as i64)); }
     let cap = unsafe { kolmo_bound(data.len(), &p) };
-    let mut out = vec![0u8; cap.max(1)];
+    if cap == 0 { return Err(err(ERR_LIMIT)); }
+    let mut out = vec![0u8; cap];
     let n = unsafe { kolmo_compress(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p) };
     if n < 0 { return Err(err(n)); }
     out.truncate(n as usize);

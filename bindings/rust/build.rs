@@ -42,6 +42,7 @@ fn main() {
     // KOLMO_NO_ASM=1: no assembly kernels (src/arch/<isa>/*.S), the C references only.
     let no_asm = env::var("KOLMO_NO_ASM").map_or(false, |v| v == "1");
     if no_asm { b.define("KOLMO_NO_ASM", None); }
+    else if env::var("KOLMO_GEAR_ASM").as_deref() == Ok("1") { b.define("KOLMO_GEAR_ASM", None); }
     // Portable by default: the target's baseline ISA, like the release binaries and the Python wheels. On x86-64 the
     // AVX2/SSE4.2 paths are chosen at run time by CPUID, so baseline builds lose little. KOLMO_NATIVE=1 builds for
     // the host CPU instead (the library then runs only on CPUs like the build machine; not for cross builds).
@@ -79,4 +80,5 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=KOLMO_NATIVE");
     println!("cargo:rerun-if-env-changed=KOLMO_NO_ASM");
+    println!("cargo:rerun-if-env-changed=KOLMO_GEAR_ASM");
 }

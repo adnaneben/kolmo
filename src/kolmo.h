@@ -122,6 +122,7 @@ typedef struct {
     uint64_t max_memory;
 } kolmo_decode_limits;
 
+/* Returns zero when the worst-case size is unrepresentable. */
 size_t  kolmo_bound(size_t n, const kolmo_params *p);
 int64_t kolmo_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p);
 /* The decoded size a frame claims, after checking its header and index (the version, the header and index checksum,
@@ -165,13 +166,12 @@ int64_t kolmo_compress_file(int input_fd, int output_fd, size_t n, const kolmo_p
                           const void *dict, size_t dictlen);
 int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads,
                             const void *dict, size_t dictlen);
-/* How ultra (-x) sizes its context-mixing tables, process-wide (docs/MEMORY-MODEL.md). -1 = scaled, the default from
- * rc3: tables within about 16 times the stream; 0 = full (rc2's sizing: one bucket per input byte, up to 2^22 per model,
- * about 5.4 GiB from 4 MiB blocks up); 16..22 = full, capped at 2^mode buckets per model. An explicit
- * kolmo_params.mem_limit shrinks them further to fit. Affects encoding only (the decoder allocates what the stream
- * declares). Returns 0, or -1 for a bad mode. The setting is process-global and is read when each ultra call
- * starts coding: it changes the frames of every caller in the process, concurrent ones included, so a program in which
- * several components use Kolmo should set it once at start-up (or not at all) rather than per call. */
+/* Encoder table sizing for ultra (-x), shared by every caller in the process (docs/MEMORY-MODEL.md).
+ * -1 = scaled (default); 0 = full; 16..22 = full, capped at 2^mode buckets per context. Model 4 has four
+ * buckets per cache line. Full asks for four times the scaled line count, subject to its format limits.
+ * Earlier models use a different size rule; full takes one bucket per input byte up to 2^22 per context.
+ * An explicit kolmo_params.mem_limit may reduce the tables further. The stream declares the decoder's size.
+ * Returns 0 on success, -1 for a bad mode. Set once at process startup if multiple components use Kolmo. */
 int kolmo_set_x_tables(int mode);
 /* Frees the scratch memory the library keeps between calls: the per-thread buffers and coder contexts of the calling
  * thread and of the worker pool's idle threads (they are kept so that the next call of similar size does not fault in
@@ -326,6 +326,7 @@ typedef struct {
 #define KOLMO_IDX_TABLE 2
 #define KOLMO_IDX_JSON  3
 /* the capacity kolmo_compress_indexed may need */
+/* Returns zero when the worst-case size is unrepresentable. */
 size_t  kolmo_indexed_bound(size_t n, const kolmo_params *p);
 /* as kolmo_compress, plus the index. p->block 0 = 4 MiB blocks (finer blocks skip more and cost some ratio). */
 int64_t kolmo_compress_indexed(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
@@ -380,6 +381,7 @@ typedef struct {
 typedef struct { const char *name; const uint8_t *data; size_t size; uint32_t mode; int64_t mtime; } kolmo_archive_file;
 typedef struct { uint64_t files, input_bytes, chunks, unique_chunks, unique_bytes, store_frame, table_bytes; } kolmo_archive_stats;
 /* a bound for the capacity kolmo_archive_create needs */
+/* Returns zero when the worst-case size is unrepresentable. */
 size_t  kolmo_archive_bound(const kolmo_archive_file *files, size_t nfiles, const kolmo_params *p);
 int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uint8_t *dst, size_t cap,
                              const kolmo_params *p, const kolmo_archive_params *ap, kolmo_archive_stats *stats);
