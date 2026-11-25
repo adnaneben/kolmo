@@ -278,7 +278,7 @@ typedef struct {
     const uint8_t *src; const uint64_t *starts; uint32_t nchunks; int inner_threads;
     const struct kolmo_target *t;
     uint8_t **frames; size_t *flen; int *chosen; double *pcost, *penc, *pdec; uint64_t *psize;
-    atomic_uint next; atomic_int err;
+    atomic_uint next, fallback_chunks; atomic_int err;
 } kt_job;
 
 static int64_t kt_compress_setting(const uint8_t *s, size_t n, int setting, int threads, uint8_t **out) {
@@ -343,15 +343,24 @@ static void *kt_worker(void *arg) {
             } else free(frame);
         }
         if (atomic_load(&J->err)) { free(bframe); break; }
-        if (best < 0) best = fastest;                       /* no setting meets the floors: the fastest decoder */
-        J->chosen[c] = best; J->pcost[c] = best == fastest && bestv == HUGE_VAL ? 0 : bestv;
-        J->penc[c] = kt_enc_time(t, best, cls, n); J->pdec[c] = kt_dec_time(t, best, cls, n); J->psize[c] = (uint64_t)bsize;
-        /* the trial of a whole chunk is its frame (the output does not depend on the thread count) */
-        if (bframe && ns == 1) { J->frames[c] = bframe; J->flen[c] = bflen; continue; }
-        free(bframe);
-        int64_t r = kt_compress_setting(s, n, best, J->inner_threads, &J->frames[c]);
-        if (r < 0) { atomic_store(&J->err, (int)r); break; }
-        J->flen[c] = (size_t)r;
+        int fallback = best < 0;
+        if (fallback) best = fastest;       /* no setting meets the floors: use the fastest predicted decoder */
+        if (bframe) {                       /* the whole-chunk trial already produced the output frame */
+            J->frames[c] = bframe; J->flen[c] = bflen;
+        } else {
+            int64_t r = kt_compress_setting(s, n, best, J->inner_threads, &J->frames[c]);
+            if (r < 0) { atomic_store(&J->err, (int)r); break; }
+            J->flen[c] = (size_t)r;
+        }
+        J->chosen[c] = best;
+        J->penc[c] = kt_enc_time(t, best, cls, n); J->pdec[c] = kt_dec_time(t, best, cls, n);
+        if (fallback) {
+            atomic_fetch_add(&J->fallback_chunks, 1);
+            /* No eligible setting had a size trial. Use the emitted chunk frame for its report. */
+            bsize = (double)J->flen[c];
+            bestv = t->objective ? kt_eval(t, bsize, n, J->penc[c], J->pdec[c]) : bsize;
+        }
+        J->psize[c] = (uint64_t)bsize; J->pcost[c] = bestv;
     }
     return NULL;
 }
