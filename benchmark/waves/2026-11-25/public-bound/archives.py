@@ -25,7 +25,7 @@ data=[member,member,b"",b"millisecond,value\n"+b"0,500\n"*700]
 names=[b"one.gz",b"repeat.gz",b"empty",b"data.csv"]
 files=(File*4)(*[File(n,v,len(v),0o644,1600000000) for n,v in zip(names,data)])
 with open(sys.argv[3],"w") as fp:
-    w=csv.writer(fp);w.writerow("level block threads avg line_cuts old_bound new_bound archive_bytes archive_sha256 original_sha256".split())
+    w=csv.writer(fp,lineterminator="\n");w.writerow("level block threads avg line_cuts old_bound new_bound archive_bytes archive_sha256 original_sha256".split())
     for level in (1,3,7):
         for block,avg in ((0,4096),(1,256),(65537,1<<22)):
             for lines in (0,1):

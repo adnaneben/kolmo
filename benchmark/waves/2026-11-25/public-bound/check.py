@@ -43,7 +43,7 @@ with tarfile.open(fileobj=f, mode="w", format=tarfile.USTAR_FORMAT) as tar:
 samples["ustar-8-gzip"]=f.getvalue()
 digest=lambda data:hashlib.sha256(data).hexdigest()
 with open(args.output,"w") as out:
-    w=csv.writer(out)
+    w=csv.writer(out,lineterminator="\n")
     w.writerow("input bytes sha256 level threads requested_block transforms mem_limit api old_bound new_bound frame_bytes frame_sha256 blocks".split())
     def check(name,lvl,block=0,threads=1,opts=None,capmode=0,indexed=False):
         data=samples[name]

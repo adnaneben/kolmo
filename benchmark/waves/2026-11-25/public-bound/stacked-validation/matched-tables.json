@@ -1,0 +1,23 @@
+[
+  {
+    "fixture": "benchmark/waves/2026-11-25/public-bound/rounds.csv",
+    "checks": 144,
+    "default_matches": true,
+    "gear_asm_matches": true,
+    "sha256": "83b60ef29d99ac159376c2bdf2d61b920562d6401a9c79a78fb2d3bcd77e599d"
+  },
+  {
+    "fixture": "benchmark/waves/2026-11-25/public-bound/archives.csv",
+    "checks": 18,
+    "default_matches": true,
+    "gear_asm_matches": true,
+    "sha256": "969252cf681ff167e1271b46bfe1ef4616df49e94473c76efde2f62f349d0a1f"
+  },
+  {
+    "fixture": "benchmark/waves/2026-11-25/ppp-archive/cross-reader.csv",
+    "checks": 12,
+    "default_matches": true,
+    "gear_asm_matches": true,
+    "sha256": "c30867d3c783859ef20119b296e272755213f0085298c9cfc20218e7b055baf8"
+  }
+]
