@@ -58,6 +58,8 @@ def arm_cmds(cfg, arm, src, work):
 def run_cell(cfg_path, cid):
     cfg = json.load(open(cfg_path)); out = cfg["out"]
     if os.path.exists(os.path.join(out, "cells", cid + ".json")): return          # done (another driver ran it)
+    if cfg.get("hold"):                                                            # coordinator quiet-window rule: time nothing
+        print(cid, "deferred: hold (quiet window)", flush=True); return
     lmax = cfg.get("max_load1", 12.0)
     if os.getloadavg()[0] >= lmax:                                                 # host busy: give the lock back, timed later
         print(cid, "deferred: load", round(os.getloadavg()[0], 1), flush=True); return

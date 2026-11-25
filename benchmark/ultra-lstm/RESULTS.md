@@ -144,7 +144,7 @@ contract is a record and not a proposal for adoption.
 
 ## 7. Deviations and open items
 
-- The planned load-gated timed run (3 rounds, shuffled, `timed.sh`) has not run yet: the host load never fell below
+- **Timings pending: quiet window.** The planned 3-round timed run (shuffled, per-cell checkpoints) is registered in `$V/evidence/QUIET_WINDOW_QUEUE.txt` (`config-quiet.json`, about 90 min), and the coordinator runs it once round 3 ends. The host load never fell below
   12. Its order and checkpoints are in `$V/ultra-lstm/run1/`. To resume it: `python3 run.py $V/ultra-lstm/config.json`.
 - The dev numbers are on a 1 MiB prefix, below R16's own 4 MB gate size. The 4 MiB dev cells are part of the queued run.
 - The candidate was tuned on dev only, in about 15 configurations (`dev-sweep.md`). Larger LSTMs gained more on dev, at
