@@ -46,8 +46,8 @@ TOOLS = [  # tool, colour, marker, legend name
 ]
 TOOL_STYLE = {t: (c, m, n) for t, c, m, n in TOOLS}
 SNAP_MARKER = {"A": ("o", "white"), "B": ("s", INK), "C": ("^", "#2a78d6")}
-LEVEL_ORDER = {str(n): n for n in range(1, 10)}
-LEVEL_ORDER.update({"ultra": 10, "9e": 9.5, "-": 0})
+LEVEL_ORDER = {str(n): n for n in range(1, 23)}
+LEVEL_ORDER.update({"ultra": 100, "9e": 9.5, "-": 0})
 
 
 def med(xs):
