@@ -280,6 +280,11 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   it while they run. Blocks also start longest first, inside a window that bounds the finished blocks held for an
   earlier one (before, that reorder buffer was unbounded), and the decoder starts its longest blocks first. The output
   is byte-identical at every level and thread count (`tests/test_elastic.c`, `benchmark/determinism`).
+  silesia.tar, wall time against main (`benchmark/review40/elastic-dispatch.md`): level 7 `-T 4` 24.0 -> 14.3 s,
+  `-T 10` 20.4 -> 7.9 s; level 9 `-T 4` 14.2 -> 8.4 s, `-T 10` 13.8 -> 6.6 s; level 9 decompression `-T 4`
+  1.32 -> 0.96 s. A 2.25 GB tar: level 7 `-T 10` 127 -> 103 s. Files coded as one long block of one kind (enwik8)
+  and `-T 1` are unchanged. The price is CPU time when helpers join (level 9 `-T 10` on silesia.tar: 28.8 -> 41.2 s
+  of CPU for 2.1x less wall time) and a higher peak when more of the large blocks run at once (up to +14%).
 
 ### Command line: a drop-in for tar, xz and gzip
 
