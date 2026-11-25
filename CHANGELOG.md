@@ -107,7 +107,9 @@ Results per file kind, level, mode and thread count: `benchmark/segments/RESULTS
   over 16 MiB of each, at least 0.4% of anchors). Merging every equal plan, as levels 3-7 do, cost silesia.tar +1.25%
   at -9: it put text and binary members into one block, where level 9 would code them with different coders.
   At -9: mozilla 13,915,668 to 13,380,195 B (-3.85%, level with xz -9), samba 3,945,893 to 3,887,666 B (-1.48%),
-  silesia.tar unchanged (R03 #10/#34).
+  silesia.tar unchanged (R03 #10/#34). Level 8 merges only up to 2 MiB: it chooses the coder of a larger block from
+  a slice of its middle, which misjudged samba's two merged runs (+4.6%); with the limit, mozilla -8 is -0.40% and
+  nothing measured grows.
 - **Streamed tar ends segments at member boundaries.** `--stream` and pipes over 256 MiB (so `tar -I kolmo` of a large
   tree) cut fixed-size segments, which split members and started each later segment in the middle of one, where the
   planner sees no tar. The stream coder now follows the tar headers across segments and ends a segment at the last

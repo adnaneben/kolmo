@@ -40,6 +40,9 @@ static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int 
 #ifndef KOLMO_MERGE_SHARE
 #define KOLMO_MERGE_SHARE 4u                   /* per mille: mozilla's members 5-20, samba's runs 23, Silesia's members 0 */
 #endif
+#ifndef KOLMO_MERGE_L8
+#define KOLMO_MERGE_L8 ((uint64_t)2 << 20)     /* level 8: a merged unit stays within what it codes both ways whole */
+#endif
 #ifndef KOLMO_MERGE_SMALL
 #define KOLMO_MERGE_SMALL ((uint64_t)8 << 20)  /* R03's interim rule: two neighbours of at most 8 MiB always merge */
 #endif
@@ -179,7 +182,9 @@ static int64_t compress_cuts(const uint8_t *src, int input_fd, size_t n, uint8_t
      * ratio (levels 8 and 9) codes each block with the block-sorting or the LZMA-class coder, whichever is smaller, so
      * there a merge also mixes data the two coders would take apart: it joins two neighbours only when both are at most
      * KOLMO_MERGE_SMALL or when the later one repeats the earlier (seg_repeat_permille at least KOLMO_MERGE_SHARE).
-     * Measured at -9: mozilla -3.85%, samba -1.48%, silesia.tar unchanged (+1.25% when every equal plan merges). */
+     * Measured at -9: mozilla -3.85%, samba -1.48%, silesia.tar unchanged (+1.25% when every equal plan merges).
+     * Level 8 picks its coder for a block larger than 2 MiB from a slice of its middle, which misjudges a block made
+     * of two different runs (samba -8: +4.6% with the merge), so there a merged unit stays at most KOLMO_MERGE_L8. */
     if (!p->block && !columns && p->mode >= KOLMO_FAST && p->mode <= KOLMO_MAX && nseg > 1) {
         uint32_t w = 1;
         uint64_t prevlen = se[0] - ss[0];                 /* the previous segment as planned, before any merge */
@@ -190,6 +195,7 @@ static int64_t compress_cuts(const uint8_t *src, int input_fd, size_t n, uint8_t
                 && a->verify == b->verify && a->packed == b->packed && a->lines == b->lines && !a->wide && !b->wide
                 && !a->experimental_dna && !b->experimental_dna && !a->experimental_table && !b->experimental_table
                 && !a->experimental_pcm && !b->experimental_pcm && skind[w - 1] == skind[g] && se[w - 1] == ss[g];
+            if (join && p->mode == KOLMO_MAX && p->level == 1) join = se[g] - ss[w - 1] <= KOLMO_MERGE_L8;
             if (join && p->mode == KOLMO_MAX && !(glen <= KOLMO_MERGE_SMALL && prevlen <= KOLMO_MERGE_SMALL))
                 join = seg_repeat_permille(src + ss[w - 1], (size_t)(se[w - 1] - ss[w - 1]), src + ss[g], (size_t)glen) >= KOLMO_MERGE_SHARE;
             prevlen = glen;
