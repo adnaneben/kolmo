@@ -28,6 +28,15 @@ mkdir -p src/sub; cp t.csv src/a.csv; head -c 300000 t.csv > src/sub/b.csv; cat 
 mkdir out; "$K" extract -C out arc.kol
 for f in a.csv sub/b.csv c.csv empty; do cmp "src/$f" "out/src/$f" || fail "x $f"; done
 mkdir one; "$K" extract -C one arc.kol src/c.csv; cmp src/c.csv one/src/c.csv || fail "x one file"; [ ! -e one/src/a.csv ] || fail "x extracted an unnamed file"
+# The single-pass walk retains archive order and can select multiple distant entries, including an empty one.
+"$K" contents arc.kol | awk '{print $3}' > listed
+printf '%s\n' src/a.csv src/sub/b.csv src/c.csv src/empty > expected
+cmp expected listed || fail "archive listing order"
+mkdir selected
+"$K" extract -C selected arc.kol src/empty src/a.csv || fail "select first and last"
+cmp src/a.csv selected/src/a.csv && cmp src/empty selected/src/empty || fail "selected member bytes"
+[ ! -e selected/src/sub/b.csv ] && [ ! -e selected/src/c.csv ] || fail "unselected member was written"
+if "$K" extract -C selected arc.kol missing > /dev/null 2>&1; then fail "missing member"; fi
 # a name that climbs out of the directory is stored without its leading ../, as tar stores it (stored names that do
 # climb out are refused by extract: tests/test_archive_safety.sh)
 mkdir -p deep/x; cp t.csv deep/evil.csv; (cd deep/x && "$K" archive ../../arc2.kol ../evil.csv 2> /dev/null)
