@@ -1,0 +1,120 @@
+name: RC 0.0.3 lifetime fixes on Linux x86-64 GCC 16.2
+on:
+  push:
+    branches: ['codex/validate-rc003-lifetime-gcc16']
+permissions:
+  contents: read
+
+jobs:
+  gcc-lifetime:
+    runs-on: ubuntu-24.04
+    container: gcc:16.2.0-trixie
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    env:
+      BASE_SHA: a2e430fed2fbc6dc357a78651cadf0e1fed611f2
+      CANDIDATE_SHA: 4557e49f1c23cbc66c4dddf36fc5236d451a1acd
+    steps:
+      - name: Check out the exact RC baseline
+        uses: actions/checkout@v4
+        with:
+          ref: a2e430fed2fbc6dc357a78651cadf0e1fed611f2
+          path: baseline
+          persist-credentials: false
+      - name: Check out the exact #112 head
+        uses: actions/checkout@v4
+        with:
+          ref: 4557e49f1c23cbc66c4dddf36fc5236d451a1acd
+          path: candidate
+          persist-credentials: false
+      - name: Verify platform, compiler and source identity
+        id: toolchain
+        run: |
+          set -euo pipefail
+          mkdir -p receipts
+          {
+            uname -sm
+            gcc --version
+            gcc -dumpmachine
+            test "$(uname -s)" = Linux
+            test "$(uname -m)" = x86_64
+            test "$(gcc -dumpfullversion)" = 16.2.0
+            test "$(git -C baseline rev-parse HEAD)" = "$BASE_SHA"
+            test "$(git -C candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+            printf 'baseline=%s\ncandidate=%s\n' "$BASE_SHA" "$CANDIDATE_SHA"
+          } | tee receipts/identity.log
+          if ! command -v python3 >/dev/null; then
+            apt-get update -q
+            apt-get install -y --no-install-recommends python3
+          fi
+      - name: Compare GCC lifetime diagnostics in all three source trees
+        run: |
+          set -euo pipefail
+          receipts="$GITHUB_WORKSPACE/receipts"
+          failed=0
+          for revision in baseline candidate; do
+            expected=2
+            if [[ "$revision" == candidate ]]; then expected=0; fi
+            for tree in canonical python rust; do
+              case "$tree" in
+                canonical) source_dir=src ;;
+                python) source_dir=bindings/python/native/src ;;
+                rust) source_dir=bindings/rust/native/src ;;
+              esac
+              logfile="$receipts/gcc-$revision-$tree.log"
+              (
+                cd "$revision/$source_dir"
+                gcc -O1 -Wuse-after-free=3 -I. -c kolmo.c -o "$RUNNER_TEMP/kolmo-$revision-$tree.o"
+              ) 2>&1 | tee "$logfile"
+              count="$(grep -c 'warning:.*\[-Wuse-after-free' "$logfile" || true)"
+              printf '%s %s warnings=%s expected=%s\n' "$revision" "$tree" "$count" "$expected" \
+                | tee -a "$receipts/warning-counts.log"
+              if [[ "$count" != "$expected" ]]; then failed=1; fi
+            done
+          done
+          exit "$failed"
+      - name: Planner ownership with ASan and UBSan
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
+        working-directory: candidate
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1
+        run: |
+          set -euo pipefail
+          make -j2 CC=gcc check-planner-ownership 2>&1 | tee "$GITHUB_WORKSPACE/receipts/planner-ownership.log"
+      - name: Determinism against the committed expected hashes
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
+        working-directory: candidate
+        run: |
+          set -euo pipefail
+          {
+            sha256sum benchmark/determinism/expected.sha256
+            make -j2 CC=gcc build/kolmo
+            python3 benchmark/determinism/check.py build/kolmo build/determinism
+          } 2>&1 | tee "$GITHUB_WORKSPACE/receipts/determinism.log"
+      - name: Frozen v12 plain and sanitizer readback
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
+        working-directory: candidate
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1
+        run: |
+          set -euo pipefail
+          {
+            make -j2 CC=gcc build/test-v12-corpus build/libkolmoarch-asan.a
+            ./build/test-v12-corpus tests/v12
+          } 2>&1 | tee "$GITHUB_WORKSPACE/receipts/v12-plain.log"
+          {
+            gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -Isrc \
+              tests/test_v12_corpus.c src/kolmo.c build/libkolmoarch-asan.a -lpthread -lm -o build/test-v12-corpus-asan
+            ./build/test-v12-corpus-asan tests/v12
+          } 2>&1 | tee "$GITHUB_WORKSPACE/receipts/v12-asan.log"
+      - name: Upload validation receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc003-4557e49f-linux-x86_64-gcc-16.2.0
+          path: receipts/
+          if-no-files-found: warn
