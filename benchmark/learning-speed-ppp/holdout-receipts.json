@@ -1,0 +1,346 @@
+[
+  {
+    "accepted": false,
+    "baseline": {
+      "bytes": 21872,
+      "decode_ns": 2080834,
+      "decode_rss": 2146304,
+      "encode_ns": 2469709,
+      "encode_rss": 2998272,
+      "frame_sha256": "50ea755f2cb078c1e588207ab7ae344d4b5f152fb3a1a5351f68cd7fb11159b5",
+      "rounds": [
+        {
+          "decode_ns": 3049583,
+          "decode_rss": 2146304,
+          "encode_ns": 3945750,
+          "encode_rss": 3063808
+        },
+        {
+          "decode_ns": 1984417,
+          "decode_rss": 2146304,
+          "encode_ns": 2400083,
+          "encode_rss": 2998272
+        },
+        {
+          "decode_ns": 1878250,
+          "decode_rss": 2146304,
+          "encode_ns": 2365084,
+          "encode_rss": 2998272
+        },
+        {
+          "decode_ns": 2020750,
+          "decode_rss": 2129920,
+          "encode_ns": 2246541,
+          "encode_rss": 2998272
+        },
+        {
+          "decode_ns": 2629125,
+          "decode_rss": 2129920,
+          "encode_ns": 2844333,
+          "encode_rss": 2998272
+        },
+        {
+          "decode_ns": 2168375,
+          "decode_rss": 2146304,
+          "encode_ns": 2491916,
+          "encode_rss": 2998272
+        },
+        {
+          "decode_ns": 2080834,
+          "decode_rss": 2146304,
+          "encode_ns": 2488667,
+          "encode_rss": 2998272
+        },
+        {
+          "decode_ns": 2200959,
+          "decode_rss": 2146304,
+          "encode_ns": 2312208,
+          "encode_rss": 2998272
+        },
+        {
+          "decode_ns": 2241750,
+          "decode_rss": 2129920,
+          "encode_ns": 2469709,
+          "encode_rss": 2998272
+        },
+        {
+          "decode_ns": 1916209,
+          "decode_rss": 2146304,
+          "encode_ns": 2378584,
+          "encode_rss": 2998272
+        },
+        {
+          "decode_ns": 2050208,
+          "decode_rss": 2146304,
+          "encode_ns": 2738125,
+          "encode_rss": 2998272
+        }
+      ],
+      "roundtrip_ns": 4569501
+    },
+    "bucket": 1,
+    "candidate": {
+      "bytes": 21872,
+      "decode_ns": 2091333,
+      "decode_rss": 2146304,
+      "encode_ns": 35145500,
+      "encode_rss": 18612224,
+      "frame_sha256": "50ea755f2cb078c1e588207ab7ae344d4b5f152fb3a1a5351f68cd7fb11159b5",
+      "rounds": [
+        {
+          "decode_ns": 3751125,
+          "decode_rss": 2146304,
+          "encode_ns": 38946000,
+          "encode_rss": 18677760
+        },
+        {
+          "decode_ns": 2074584,
+          "decode_rss": 2146304,
+          "encode_ns": 35299375,
+          "encode_rss": 18628608
+        },
+        {
+          "decode_ns": 2091333,
+          "decode_rss": 2146304,
+          "encode_ns": 35771542,
+          "encode_rss": 18595840
+        },
+        {
+          "decode_ns": 2023000,
+          "decode_rss": 2146304,
+          "encode_ns": 34069542,
+          "encode_rss": 18628608
+        },
+        {
+          "decode_ns": 2075166,
+          "decode_rss": 2146304,
+          "encode_ns": 34218208,
+          "encode_rss": 18612224
+        },
+        {
+          "decode_ns": 2035375,
+          "decode_rss": 2146304,
+          "encode_ns": 35145500,
+          "encode_rss": 18628608
+        },
+        {
+          "decode_ns": 2700084,
+          "decode_rss": 2146304,
+          "encode_ns": 35424042,
+          "encode_rss": 18563072
+        },
+        {
+          "decode_ns": 2046208,
+          "decode_rss": 2146304,
+          "encode_ns": 34725542,
+          "encode_rss": 18546688
+        },
+        {
+          "decode_ns": 2163041,
+          "decode_rss": 2129920,
+          "encode_ns": 35449125,
+          "encode_rss": 18677760
+        },
+        {
+          "decode_ns": 2202542,
+          "decode_rss": 2146304,
+          "encode_ns": 34867833,
+          "encode_rss": 18579456
+        },
+        {
+          "decode_ns": 2538333,
+          "decode_rss": 2146304,
+          "encode_ns": 35082417,
+          "encode_rss": 18595840
+        }
+      ],
+      "roundtrip_ns": 37373959
+    },
+    "choice": {},
+    "dispatch_confirmed": true,
+    "execution": "fallback",
+    "format": "mach-o-64-le",
+    "input_bytes": 72928,
+    "origin": "libtiff",
+    "paired_ratios": {
+      "decode_ns": 1.0454375264876283,
+      "decode_rss": 1.0,
+      "encode_ns": 14.353563516997347,
+      "encode_rss": 6.202185792349726,
+      "roundtrip_ns": 8.147659946995093
+    },
+    "sample_sha256": "7a28c8371ea528745cb63ef40ac03a360471aa217878e307f2edcf828adca8d8"
+  },
+  {
+    "accepted": false,
+    "baseline": {
+      "bytes": 29668,
+      "decode_ns": 1946041,
+      "decode_rss": 2146304,
+      "encode_ns": 2494500,
+      "encode_rss": 3014656,
+      "frame_sha256": "50d75ece250de5ec01fda1f5a526aeea384db2288a94e6350c86595b11d3750d",
+      "rounds": [
+        {
+          "decode_ns": 2059667,
+          "decode_rss": 2146304,
+          "encode_ns": 2781666,
+          "encode_rss": 3014656
+        },
+        {
+          "decode_ns": 2215792,
+          "decode_rss": 2146304,
+          "encode_ns": 2696417,
+          "encode_rss": 3014656
+        },
+        {
+          "decode_ns": 1990000,
+          "decode_rss": 2146304,
+          "encode_ns": 2526834,
+          "encode_rss": 3014656
+        },
+        {
+          "decode_ns": 1946041,
+          "decode_rss": 2146304,
+          "encode_ns": 2304750,
+          "encode_rss": 3014656
+        },
+        {
+          "decode_ns": 1866250,
+          "decode_rss": 2146304,
+          "encode_ns": 2494500,
+          "encode_rss": 3014656
+        },
+        {
+          "decode_ns": 2259250,
+          "decode_rss": 2146304,
+          "encode_ns": 2735542,
+          "encode_rss": 3014656
+        },
+        {
+          "decode_ns": 1930583,
+          "decode_rss": 2146304,
+          "encode_ns": 2248458,
+          "encode_rss": 3014656
+        },
+        {
+          "decode_ns": 1820750,
+          "decode_rss": 2146304,
+          "encode_ns": 2235000,
+          "encode_rss": 3014656
+        },
+        {
+          "decode_ns": 1905000,
+          "decode_rss": 2162688,
+          "encode_ns": 2443667,
+          "encode_rss": 3014656
+        },
+        {
+          "decode_ns": 1874250,
+          "decode_rss": 2146304,
+          "encode_ns": 2384000,
+          "encode_rss": 3014656
+        },
+        {
+          "decode_ns": 1958458,
+          "decode_rss": 2146304,
+          "encode_ns": 2551167,
+          "encode_rss": 3014656
+        }
+      ],
+      "roundtrip_ns": 4360750
+    },
+    "bucket": 1,
+    "candidate": {
+      "bytes": 29668,
+      "decode_ns": 2124125,
+      "decode_rss": 2146304,
+      "encode_ns": 35332958,
+      "encode_rss": 18595840,
+      "frame_sha256": "50d75ece250de5ec01fda1f5a526aeea384db2288a94e6350c86595b11d3750d",
+      "rounds": [
+        {
+          "decode_ns": 2142916,
+          "decode_rss": 2146304,
+          "encode_ns": 33971250,
+          "encode_rss": 18563072
+        },
+        {
+          "decode_ns": 1951375,
+          "decode_rss": 2146304,
+          "encode_ns": 35332958,
+          "encode_rss": 18644992
+        },
+        {
+          "decode_ns": 2087083,
+          "decode_rss": 2146304,
+          "encode_ns": 35848292,
+          "encode_rss": 18579456
+        },
+        {
+          "decode_ns": 2543083,
+          "decode_rss": 2146304,
+          "encode_ns": 34286625,
+          "encode_rss": 18546688
+        },
+        {
+          "decode_ns": 2257625,
+          "decode_rss": 2146304,
+          "encode_ns": 34557750,
+          "encode_rss": 18612224
+        },
+        {
+          "decode_ns": 2124125,
+          "decode_rss": 2146304,
+          "encode_ns": 35607708,
+          "encode_rss": 18563072
+        },
+        {
+          "decode_ns": 2084834,
+          "decode_rss": 2146304,
+          "encode_ns": 35840708,
+          "encode_rss": 18612224
+        },
+        {
+          "decode_ns": 2727416,
+          "decode_rss": 2146304,
+          "encode_ns": 36603834,
+          "encode_rss": 18595840
+        },
+        {
+          "decode_ns": 2227541,
+          "decode_rss": 2146304,
+          "encode_ns": 34424167,
+          "encode_rss": 18595840
+        },
+        {
+          "decode_ns": 2019208,
+          "decode_rss": 2129920,
+          "encode_ns": 34972209,
+          "encode_rss": 18563072
+        },
+        {
+          "decode_ns": 2066625,
+          "decode_rss": 2146304,
+          "encode_ns": 35717459,
+          "encode_rss": 18628608
+        }
+      ],
+      "roundtrip_ns": 37284333
+    },
+    "choice": {},
+    "dispatch_confirmed": true,
+    "execution": "fallback",
+    "format": "mach-o-64-le",
+    "input_bytes": 92560,
+    "origin": "pcre2",
+    "paired_ratios": {
+      "decode_ns": 1.077341870081366,
+      "decode_rss": 1.0,
+      "encode_ns": 14.087094108976387,
+      "encode_rss": 6.168478260869565,
+      "roundtrip_ns": 8.428262729705448
+    },
+    "sample_sha256": "739ed3d32951178142e617077076a9b7c79e099a759e44114fba387288d1fde0"
+  }
+]

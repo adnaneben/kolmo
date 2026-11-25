@@ -39,14 +39,73 @@ static void check_hist(const char *name, hist_fn k) {
     printf("%s: same counts as kolmo_hist_c\n", name);
 }
 
+#if !defined(KOLMO_NO_ASM) && (defined(__aarch64__) || defined(__x86_64__))
+#if defined(__aarch64__)
+#define TEST_GEAR_SCAN kolmo_gear_aarch64
+#else
+#define TEST_GEAR_SCAN kolmo_gear_x86_64
+#endif
+#include <sys/mman.h>
+#include <unistd.h>
+size_t TEST_GEAR_SCAN(const uint8_t *, size_t, const uint64_t *, uint64_t, uint64_t *);
+
+/* Exercise every tail and alignment, including a zero-length input. Compare
+ * both the boundary and the carry into the second normalization interval. */
+static void check_gear(void) {
+    uint8_t bytes[272];
+    uint64_t masks[] = {0, 1, 3, 0x85, UINT64_MAX, dd_mask(12), dd_mask(18)};
+    dd_init();
+    for (size_t i = 0; i < sizeof bytes; ++i) bytes[i] = (uint8_t)rnd();
+    for (size_t a = 0; a < 16; ++a) {
+        for (size_t n = 0; n <= 256; ++n) {
+            for (size_t m = 0; m < sizeof masks / sizeof masks[0]; ++m) {
+                uint64_t want = rnd(), got = want;
+                size_t cut = 0;
+                for (size_t j = 0; j < n; ++j) {
+                    want = (want << 1) + dd_gear[bytes[a+j]];
+                    if (!(want & masks[m])) { cut = j+1; break; }
+                }
+                size_t pos = TEST_GEAR_SCAN(bytes+a, n, dd_gear, masks[m], &got);
+                if (got != want || pos != cut) {
+                    printf("Gear mismatch at alignment %zu length %zu mask %zu\n", a, n, m);
+                    ++fails;
+                    return;
+                }
+            }
+        }
+    }
+    /* ASan does not instrument handwritten loads. End each interval exactly
+     * against an inaccessible page, including the zero-length case. */
+    const long page = sysconf(_SC_PAGESIZE);
+    if (page < 256) { ++fails; return; }
+    uint8_t *mapping = mmap(NULL, 2 * (size_t)page, PROT_READ | PROT_WRITE,
+                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (mapping == MAP_FAILED) { ++fails; return; }
+    if (mprotect(mapping + page, (size_t)page, PROT_NONE) != 0) {
+        munmap(mapping, 2 * (size_t)page); ++fails; return;
+    }
+    uint64_t ones[256];
+    for (int j = 0; j < 256; ++j) ones[j] = 1;
+    for (size_t n = 0; n <= 256; ++n) {
+        uint64_t h = 0;
+        if (TEST_GEAR_SCAN(mapping + page - n, n, ones, 1, &h) != 0) ++fails;
+    }
+    munmap(mapping, 2 * (size_t)page);
+    printf("Gear scanner: 257 guard-page tails passed\n");
+    printf("Gear scanner: 28,784 matching positions and hash states\n");
+}
+#endif
+
 int main(void) {
     int kernels = 0;
     check_hist("kg_hist (dispatch)", kg_hist);
 #if !defined(KOLMO_NO_ASM) && defined(__x86_64__)
     check_hist("kolmo_hist_x86_64", kolmo_hist_x86_64); kernels++;
+    check_gear(); kernels++;
 #endif
 #if !defined(KOLMO_NO_ASM) && defined(__aarch64__)
     check_hist("kolmo_hist_aarch64", kolmo_hist_aarch64); kernels++;
+    check_gear(); kernels++;
 #endif
     if (fails) { printf("ASM KERNEL TESTS FAILED\n"); return 1; }
     printf("ASM KERNEL TESTS PASSED (%d assembly kernel%s checked%s)\n", kernels, kernels == 1 ? "" : "s",

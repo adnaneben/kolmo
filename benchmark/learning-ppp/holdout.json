@@ -1,0 +1,12 @@
+[
+  {
+    "origin": "tukaani-xz",
+    "path": "xz",
+    "sha256": "2f4914fe7d39269b0baf8ea3b4e3045c7496b9a607a0903605cd28275d608ba6"
+  },
+  {
+    "origin": "libjpeg-turbo",
+    "path": "djpeg",
+    "sha256": "6d0302f8018b3322521cae94de7f58ab484db40f0cc8e0f0cb6e92d456fd5088"
+  }
+]

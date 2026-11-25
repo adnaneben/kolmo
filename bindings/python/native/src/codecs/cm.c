@@ -326,7 +326,13 @@ static int cm4_shift_for(size_t n, uint32_t mask) {
      * byte with the text contexts, so that -x needs at most about 1.5 times the memory of zpaq -m5, whose need per byte
      * also falls with the size (benchmark/w4/cm/RESULTS.md) */
     int s = cm4_s_default + (n > ((size_t)48 << 20)) + (n > ((size_t)128 << 20));
-    if (__atomic_load_n(&cm_tables_mode, __ATOMIC_RELAXED) == 0 && s > 2) s -= 2;   /* --x-tables=full: four times the lines */
+    const int mode = __atomic_load_n(&cm_tables_mode, __ATOMIC_RELAXED);
+    if (mode != -1 && s > 2) s -= 2;   /* full or an explicit cap starts with four times the lines */
+    if (mode >= 16) {
+        /* Each model-4 cache line holds four nibble buckets. The public limit is buckets per context. */
+        const uint32_t max_lines = (uint32_t)1 << (mode - 2);
+        while (s < 17 && cm4_lines(1, n, s) > max_lines) s++;
+    }
     if (kmem_tls_cap && kmem_tls_cap != KMEM_UNLIMITED) {
         size_t raw = kmem_tls_raw > n ? kmem_tls_raw : n;
         uint64_t fixed = kmem_buffers(raw) + cm4_chain(n);

@@ -1,0 +1,12 @@
+[
+  {
+    "origin": "libtiff",
+    "path": "tiffcp",
+    "sha256": "7a28c8371ea528745cb63ef40ac03a360471aa217878e307f2edcf828adca8d8"
+  },
+  {
+    "origin": "pcre2",
+    "path": "pcre2grep",
+    "sha256": "739ed3d32951178142e617077076a9b7c79e099a759e44114fba387288d1fde0"
+  }
+]

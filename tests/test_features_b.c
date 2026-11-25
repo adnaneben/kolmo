@@ -371,6 +371,19 @@ static void test_dedup(void) {
         for (int f = 0; f < nf; f++) free(F[f].p);
         free(F); free(K); free(names); free(base.p); free(z);
     }
+    /* The public writer must only produce names accepted by v12 readers. */
+    char long_name[4098], restored[4097];
+    memset(long_name, 'a', sizeof long_name);
+    long_name[4096] = 0;
+    uint8_t named_archive[8192];
+    kolmo_archive_file member = {long_name, (const uint8_t *)"abc", 3, 0644, 0};
+    int64_t count = kolmo_archive_create(&member, 1, named_archive, sizeof named_archive, NULL, NULL, NULL);
+    CHECK(count > 0 && !kolmo_archive_stat(named_archive, (size_t)count, 0, restored, sizeof restored, NULL, NULL, NULL)
+          && !strcmp(long_name, restored), "4096-byte archive name round trips");
+    long_name[4096] = 'a';
+    long_name[4097] = 0;
+    CHECK(kolmo_archive_create(&member, 1, named_archive, sizeof named_archive, NULL, NULL, NULL) == KOLMO_ERR_LIMIT,
+          "archive writer rejects 4097-byte member name");
     /* parameter checks */
     kolmo_archive_file one = {"x", (const uint8_t *)"abc", 3, 0, 0}; kolmo_archive_params bad = {1000, 1}; uint8_t z[4096];
     CHECK(kolmo_archive_create(&one, 1, z, sizeof z, NULL, &bad, NULL) == KOLMO_ERR_LIMIT, "chunk size not a power of two");
