@@ -345,42 +345,48 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
 static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input_fd, uint8_t *dst, int output_fd, int threads,
                                 uint64_t lo, uint64_t hi, int range, const kolmo_decode_limits *limits, uint64_t memcap) {
     const uint8_t *e = P->idx; size_t raw = get32(e), cl = (size_t)(P->poff[1] - P->poff[0]);
-    if (P->psum || e[13] || cl < 4 + HDR + IDX || raw != P->orig) return KOLMO_ERR_CORRUPT;
+    if (P->psum || e[13] || cl < 4 + HDR + IDX || raw != P->orig || (range && (hi > raw || lo > hi)))
+        return KOLMO_ERR_CORRUPT;
     uint8_t *pb = NULL, *t = NULL, *full = NULL; const uint8_t *pay; int64_t ret = KOLMO_ERR_CORRUPT;
     if (input_fd >= 0) {
+        if (cl > memcap) return KOLMO_ERR_MEMORY;
         pb = malloc(cl); if (!pb) return KOLMO_ERR_ALLOC;
         if (read_block(input_fd, pb, cl, (off_t)P->poff[0])) { free(pb); return KOLMO_ERR_IO; }
         pay = pb;
     } else pay = src + P->poff[0];
     if (pay[0] != T_NONE || pay[1] || pay[2] || pay[3]) goto out;
-    /* the nested frame is never itself a video frame (no recursion); the layout is the input plus 4 bytes and one
-     * byte per strip, at most one per sample */
+    /* The nested frame cannot be another video. The layout adds four bytes and at most one flag per sample. */
     if (get32(pay + 4 + 20) == 1 && pay[4 + HDR + 12] == C_VID) goto out;
     int64_t tn = kolmo_original_size(pay + 4, cl - 4);
     if (tn <= 0 || (uint64_t)tn > 2 * (uint64_t)raw + 4096) goto out;
-    /* Memory (docs/MEMORY-MODEL.md): the layout (tn), the output and the inverse's copy (2 raw) are this frame's own
-     * buffers, as the encoder counts them in the figure it declares (core/compress.c); the nested frame decodes under
-     * what is left of the limit. The governor is not used here: the nested blocks reserve with it themselves. */
-    uint64_t own = 2 * (uint64_t)raw + (uint64_t)tn;
-    if (own > memcap) { ret = KOLMO_ERR_MEMORY; goto out; }
-    t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
-    if (!t || !full) { ret = KOLMO_ERR_ALLOC; goto out; }
-    {   /* the caller's limits apply inside (the size limit to the outer frame, already checked: tn is bounded by raw) */
+    /* The legacy declaration admits the outer frame. Charge the actual simultaneous buffers per phase.
+     * During child decoding only its layout output and an FD-owned packed buffer are independent of the child budget. */
+    uint64_t own = (uint64_t)tn + (pb ? cl : 0);
+    if ((uint64_t)tn > SIZE_MAX || own >= memcap) { ret = KOLMO_ERR_MEMORY; goto out; }
+    t = malloc((size_t)tn);
+    if (!t) { ret = KOLMO_ERR_ALLOC; goto out; }
+    {   /* Match the existing limit behavior for the nested block count and block size. */
         kolmo_decode_limits in = limits ? *limits : (kolmo_decode_limits){0}; in.max_output_bytes = 0;
-        if (memcap != KMEM_UNLIMITED) in.max_memory = memcap - own > 0 ? memcap - own : 1;
+        in.max_memory = memcap == KMEM_UNLIMITED ? KMEM_UNLIMITED : memcap - own;
         int64_t d = run_decode(pay + 4, -1, cl - 4, t, -1, threads, 0, 0, 0, &in);
+        free(pb); pb = NULL;
         if (d != tn) { if (d == KOLMO_ERR_LIMIT || d == KOLMO_ERR_MEMORY || d == KOLMO_ERR_ALLOC) ret = d; goto out; }
     }
-    if (kv_inverse(t, (size_t)tn, full, raw, threads > 0 ? threads : default_threads())) goto out;
+    /* Full-range output, including a stream window, can serve as the reconstruction buffer. */
+    int own_output = output_fd >= 0 || (range && (lo || hi != raw));
+    own = (uint64_t)tn + (own_output ? raw : 0);
+    if (own > memcap) { ret = KOLMO_ERR_MEMORY; goto out; }
+    full = own_output ? malloc(raw ? raw : 1) : dst;
+    if (!full) { ret = KOLMO_ERR_ALLOC; goto out; }
+    int kv = kv_inverse_limited(t, (size_t)tn, full, raw, threads > 0 ? threads : default_threads(), memcap - own);
+    if (kv) { ret = kv; goto out; }
     if (blk_sum(full, raw) != get32(e + 8)) { ret = KOLMO_ERR_CHECKSUM; goto out; }
-    if (range) { if (hi > raw || lo > hi) goto out; memcpy(dst, full + lo, (size_t)(hi - lo)); ret = (int64_t)(hi - lo); }
+    if (range) { if (full != dst) memcpy(dst, full + lo, (size_t)(hi - lo)); ret = (int64_t)(hi - lo); }
     else if (output_fd >= 0) { int w = write_block(output_fd, full, raw, 0); ret = w ? w : (int64_t)raw; }
     else ret = (int64_t)raw;
 out:
     free(pb); free(t); if (full != dst) free(full); return ret;
 }
-/* Execute a block span already identified against this frame's checked index. The owner holds the offsets
- * through the worker join, so a stream can use the same index for successive output windows. */
 static int64_t run_decode_parsed(const parsed_t *P, const uint8_t *src, int input_fd, uint8_t *dst, int output_fd,
                                  int threads, uint32_t first, uint32_t last, uint64_t lo, uint64_t hi, int range,
                                  const kolmo_decode_limits *limits, uint64_t cap, uint64_t metadata) {
