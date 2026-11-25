@@ -13,6 +13,8 @@ git rev-parse FETCH_HEAD
 git worktree add -b claude/planner-lifetime-followup ../kolmo-claude-planner 258ca7b60db43cfdfba308c703b2e576cb628fa1
 ```
 
+**Codex retains the optional record-block follow-up.** A public binding consumer on #109 found that one highly repetitive 8,437,837-byte fixture grew from 29,050 B to 1,851,143 B when the Ultra experiment was enabled. Default output was unchanged. Claude's planner and neural-model tasks can start from the pinned base above while Codex handles this separate regression. [Binding verification](bindings-sync/README.md) · [Final integration draft #109](https://github.com/adnaneben/kolmo/pull/109)
+
 ## 1. Fix the outstanding planner lifetime warning
 
 At the investigated revision, GCC 16.2 with `-O1 -Wuse-after-free=3` diagnosed a pointer comparison after the associated allocation had been freed in `src/plan/planner.c` around line 727. Inspect current ownership, do any required alias comparison or clearing while the allocation is live, then free it. The historical PR #6 repair is already in main. The later indexed-query repair is also in the integration stack. This warning is a distinct small follow-up. [Finding, compiler and prior hosted receipts](planner/RESULTS.md)
@@ -24,6 +26,10 @@ Deliver one focused draft with the before/after diagnostic, the normal planner a
 Recover Claude R16's existing LSTM mixer / neural codec work (historical ledger claims 68 and 66). Inventory actual code, measured results and format dependencies. Read the existing CM4, alternate-mask, lexer, prior-pack, GR6+ and reset results before choosing one experiment. Keep the current release candidate and stable writer out of the experiment. If the proposal requires a new model identifier, write down its opt-in wire contract and deterministic reference-decoding behavior before treating it as a production candidate. Historical ratio estimates are hypotheses. [Research and codec ownership](ultra/README.md) · [Other retained and rejected routes](prior-routing/README.md) · [Claim-by-claim audit](audit/legacy-claim-audit.csv)
 
 Start with one distinct text or source producer for development and one sealed independent producer for the decision. Compare stock Ultra, the experimental model and the strongest practical competitor under identical settings on each input. Report whole compressed bytes, decoder/model side data, initialization time, encode/decode MB/s, combined MB/s, peak RSS in each phase, exact input/frame/restored hashes, rounds and run order. Apply the recorded archival acceptance thresholds. Keep an explicit negative if the model misses them. Submit a separate draft or a reproducible negative-result report. A leaderboard claim needs its actual corpus and decoder-inclusive score. [Acceptance gates](prior-routing/README.md) · [Large Text Compression Benchmark rules](https://mattmahoney.net/dc/text.html)
+
+## After those two tasks, the next self-learning experiment
+
+Start from the validated learner and the whole-file target oracle. The existing size selector chose the smallest frame on the three recorded inputs, but on one GMP manual it missed three end-to-end speed floors for which another preset succeeded. Test whether a startup-aware estimate for small files improves floor attainment on **new, sealed producers**. Charge selection time and peak memory, include the unchanged stock path and a duplicate timing control, and preserve the user's speed/ratio objective. Use the prior 186-round learner evidence and 24 paired floor cases as references. The outcome can be a qualifying policy or a documented rejection. [Observed floor misses](target-floors/README.md) · [Whole-file oracle and probe cost](selection-regret/README.md) · [Existing learner](https://github.com/adnaneben/kolmo/pull/99)
 
 ## Already measured or assigned
 

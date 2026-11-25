@@ -1,0 +1,11 @@
+len       0: round trips ok at every level
+len       5: round trips ok at every level
+len    1000: round trips ok at every level
+len  788907: round trips ok at every level
+legacy and hostile frames refused as expected
+forged frames claiming 2 GiB to 256 TiB refused; peak RSS grew 3 MiB
+concatenated frames and CZNS streams decode; damaged ones are refused
+files written by the CLI (--stream, concatenated) decode
+CLI and Python give the same bytes at every level
+kolmo archive files refused as expected
+ALL PASSED
