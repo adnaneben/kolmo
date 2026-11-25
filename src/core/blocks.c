@@ -388,21 +388,28 @@ static void *compress_worker(void *arg) {
         }
         if (codec == C_CM && tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; }                    /* ultra: CM models words itself */
         int l8lz = 0;   /* level 8 (max -l 1), a binary block: KLZMA level 1, because a slice found BWT not 2% smaller */
+        /* levels 8-9, a plain block under KOLMO_MAX_SMALL_BLOCK that used to go to BWT unconditionally: coded both ways,
+         * and the smaller kept (no margin, so it is never larger than before; KLZMA on a tie) */
+        const int small_plain = codec == R_LZMA && !tflag && len < KOLMO_MAX_SMALL_BLOCK;
+        int small_min = 0;
         if (codec == R_LZMA && level == 1) {   /* level 8: BWT for text, JSON token and log streams; other blocks by a slice */
             /* BWT for every block made -8 larger than -7 on executables and weights (mozilla +2.8%, bf16 +6.2%) and
              * slower to decode than -9. A 512 KiB slice from the middle (blocks of up to 2 MiB: the whole block) is coded
              * both ways, and BWT is kept only where it is at least 2% smaller than KLZMA 1 */
             int textish = tflag == 9 || tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1) || (!tflag && looks_text_latin(raw, len));
-            if ((!textish && inlen >= (64u << 10)) || (!tflag && inlen < KOLMO_MAX_SMALL_BLOCK)) {   /* blocks of up to 2 MiB are coded both ways whole: a slice of an eighth of them misjudged a 1.2 MB executable and a 135 KB table by 12%; plain blocks under KOLMO_MAX_SMALL_BLOCK, text too, the same way */
+            if ((!textish && inlen >= (64u << 10)) || small_plain) {   /* blocks of up to 2 MiB are coded both ways whole: a slice of an eighth of them misjudged a 1.2 MB executable and a 135 KB table by 12% */
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
                 size_t sn = inlen <= (2u << 20) ? inlen : 512u << 10, so = ((inlen - sn) / 2) & ~(size_t)63;
                 size_t sb = alt ? codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta) : 0, slz = sb ? codec_compress(xp, R_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
-                if (sb && slz && (uint64_t)sb * 100 > (uint64_t)slz * 98) l8lz = 1;
+                if (sb && slz && (small_plain ? sb >= slz : (uint64_t)sb * 100 > (uint64_t)slz * 98)) l8lz = 1;
             }
             if (!l8lz) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }
         }
         else if (codec == R_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
-        else if (codec == R_LZMA && (!tflag || tflag == 9) && !(!tflag && len < KOLMO_MAX_SMALL_BLOCK) && looks_text_latin(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT (a small plain block: KLZMA, then BWT by the binary margin below) */
+        else if (codec == R_LZMA && (!tflag || tflag == 9) && looks_text_latin(raw, len)) {   /* max: text to BWT */
+            if (small_plain) small_min = 1;   /* a small plain block: KLZMA, then BWT below when it is smaller */
+            else { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }
+        }
         else if (KOLMO_ECO_TEXT_BWT && codec == R_ECO && J->default_level && len >= (64u << 10)
                  && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT, level = 9;   /* eco, JSON token streams: as max */
         else if (KOLMO_ECO_TEXT_BWT && codec == R_ECO && J->default_level && (!tflag || tflag == 9) && len >= (64u << 10)
@@ -493,7 +500,7 @@ static void *compress_worker(void *arg) {
             /* BWT is tried only where it has won in tests: not on x86 or ARM64 code (tflag 14 treated as 8, unmeasured), typed table columns or log token streams (4 to 12% larger), and only when LZMA2 already reaches
              * KOLMO_BWT_REACH_PCT or less (was 35%: on less compressible binary data BWT was 1.5 to 8% larger, but the
              * 3% gain rule below already refuses those; raw video residual planes gained 5-6%) */
-            uint8_t *alt = tflag == 8 || tflag == 14 || tflag == 4 || tflag == 5 || (uint64_t)cl * 100 > (uint64_t)inlen * KOLMO_BWT_REACH_PCT ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
+            uint8_t *alt = !small_min && (tflag == 8 || tflag == 14 || tflag == 4 || tflag == 5 || (uint64_t)cl * 100 > (uint64_t)inlen * KOLMO_BWT_REACH_PCT) ? NULL : (S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4));
             if (slice_verdict < 0 || l8lz) alt = NULL;     /* a slice above already ruled BWT out */
             else if (alt && inlen > (8u << 20) && !slice_verdict) {   /* large blocks only: on small ones the slice costs as much as the attempt */
                 /* a short slice from the middle, coded both ways (BWT against LZMA2 at its fastest preset), predicts the
@@ -504,7 +511,7 @@ static void *compress_worker(void *arg) {
                 if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) alt = NULL;
             }
             size_t c2 = alt ? codec_compress(xp, C_BWT, 9, in, inlen, alt, J->slot - meta) : 0;
-            if (c2 && (uint64_t)c2 * 100 <= (uint64_t)cl * (100 - KOLMO_BWT_GAIN_PCT)) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BWT; }
+            if (c2 && (small_min ? c2 < cl : (uint64_t)c2 * 100 <= (uint64_t)cl * (100 - KOLMO_BWT_GAIN_PCT))) { memcpy(sl + meta, alt, c2); cl = c2; codec = C_BWT; }
         }
         if ((codec == R_LZMA || codec == C_BWT) && J->codec == R_LZMA && cl && in != raw && len >= (64u << 10)) {
             /* max, transformed block: the transform was chosen by its zstd score, and under block sorting or LZMA2 the
