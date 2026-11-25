@@ -182,11 +182,20 @@ size_t kolmo_khuf_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap
 }
 
 /* ---- decoder ---- */
-typedef struct { uint64_t b; int c; const uint8_t *p, *s; } kh_br;
+typedef struct { uint64_t b; int c; const uint8_t *p, *end; } kh_br;
 #define KH_REFILL(R) do { (R).b |= kh_rd64((R).p) << (R).c; (R).p += (63 - (R).c) >> 3; (R).c |= 56; } while (0)
 #define KH_DEC(R, O) do { uint16_t e_ = dt[(R).b & mask]; *(O)++ = (uint8_t)e_; (R).b >>= e_ >> 8; (R).c -= e_ >> 8; } while (0)
-static inline void kh_refill_safe(kh_br *r, const uint8_t *e) {
-    while (r->c <= 56) { uint64_t v = r->p < e ? *r->p : 0; r->b |= v << r->c; r->p++; r->c += 8; }
+static inline int kh_can_refill(const kh_br *r) { return r->end - r->p >= 8; }
+static inline void kh_refill_tail(kh_br *r) {
+    size_t bytes = (size_t)(r->end - r->p), room = (size_t)(64 - r->c) / 8;
+    if (bytes > room) bytes = room;
+    if (bytes) {
+        uint64_t v = 0;
+        memcpy(&v, r->p, bytes);
+        r->b |= v << r->c;
+        r->p += bytes;
+        r->c += (int)bytes * 8;
+    }
 }
 int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     if (n < 2 || n > KHUF_BLOCK_MAX) return -1;
@@ -200,16 +209,19 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
     uint16_t dt[1 << KHUF_MAXLEN]; const uint64_t mask = ((uint64_t)1 << T) - 1;
     for (int s = 0; s < 256; s++) if (len[s]) for (uint32_t k = code[s]; k < (1u << T); k += 1u << len[s]) dt[k] = (uint16_t)(s | len[s] << 8);
     uint64_t L[4]; size_t tot = 0;
-    for (int q = 0; q < 3; q++) { if (kh_get_uv(in, cn, &i, &L[q]) || L[q] > cn) return -1; tot += L[q]; }
-    if (tot > cn - i) return -1;
+    for (int q = 0; q < 3; q++) {
+        if (kh_get_uv(in, cn, &i, &L[q]) || tot > cn - i || L[q] > cn - i - tot) return -1;
+        tot += (size_t)L[q];
+    }
     L[3] = cn - i - tot;
-    const uint8_t *ie = in + cn; kh_br r[4]; size_t seg = (n + 3) / 4; uint8_t *o[4], *oe[4];
+    kh_br r[4]; size_t seg = (n + 3) / 4; uint8_t *o[4], *oe[4];
     /* a stream codes at most seg symbols of at most KHUF_MAXLEN bits, and the end check below needs its last byte
      * used, so a longer stream is corrupt; offsets in size_t (a coded length of 2^31 or more wrapped an int) */
     for (int q = 0; q < 4; q++) if (L[q] > (uint64_t)seg * KHUF_MAXLEN / 8 + 2) return -1;
     size_t st = i;
     for (int q = 0; q < 4; q++) {
-        r[q].b = 0; r[q].c = 0; r[q].s = r[q].p = in + st; st += (size_t)L[q];
+        r[q].b = 0; r[q].c = 0; r[q].p = in + st; st += (size_t)L[q];
+        r[q].end = in + st;
         size_t a = (size_t)q * seg < n ? (size_t)q * seg : n, b = a + seg < n ? a + seg : n;
         o[q] = out + a; oe[q] = out + b;
     }
@@ -225,7 +237,7 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
         }
 #define KH_DEC2(R, O) do { uint32_t e_ = d2[(R).b & M]; uint16_t v_ = (uint16_t)e_; memcpy((O), &v_, 2); (O) += e_ >> 24; (R).b >>= (e_ >> 16) & 255; (R).c -= (int)((e_ >> 16) & 255); } while (0)
         while (oe[0] - o[0] >= 10 && oe[1] - o[1] >= 10 && oe[2] - o[2] >= 10 && oe[3] - o[3] >= 10 &&
-               r[0].p + 8 <= ie && r[1].p + 8 <= ie && r[2].p + 8 <= ie && r[3].p + 8 <= ie) {
+               kh_can_refill(&r[0]) && kh_can_refill(&r[1]) && kh_can_refill(&r[2]) && kh_can_refill(&r[3])) {
             KH_REFILL(r[0]); KH_REFILL(r[1]); KH_REFILL(r[2]); KH_REFILL(r[3]);
             for (int k = 0; k < 5; k++) { KH_DEC2(r[0], o[0]); KH_DEC2(r[1], o[1]); KH_DEC2(r[2], o[2]); KH_DEC2(r[3], o[3]); }
         }
@@ -233,18 +245,29 @@ int kolmo_khuf_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
     }
     /* fast loop: five symbols per stream per refill (5 x 11 <= 56 bits); after the two-symbol loop the streams are
      * at different points, so every stream's room is tested */
-    while (oe[0] - o[0] >= 5 && oe[1] - o[1] >= 5 && oe[2] - o[2] >= 5 && oe[3] - o[3] >= 5 && r[0].p + 8 <= ie && r[1].p + 8 <= ie && r[2].p + 8 <= ie && r[3].p + 8 <= ie) {
+    while (oe[0] - o[0] >= 5 && oe[1] - o[1] >= 5 && oe[2] - o[2] >= 5 && oe[3] - o[3] >= 5 &&
+           kh_can_refill(&r[0]) && kh_can_refill(&r[1]) && kh_can_refill(&r[2]) && kh_can_refill(&r[3])) {
         KH_REFILL(r[0]); KH_REFILL(r[1]); KH_REFILL(r[2]); KH_REFILL(r[3]);
         for (int k = 0; k < 5; k++) { KH_DEC(r[0], o[0]); KH_DEC(r[1], o[1]); KH_DEC(r[2], o[2]); KH_DEC(r[3], o[3]); }
     }
     for (int q = 0; q < 4; q++) {
         kh_br *R = &r[q];
         while (o[q] < oe[q]) {
-            if (oe[q] - o[q] >= 5 && R->p + 8 <= ie) { KH_REFILL(*R); for (int k = 0; k < 5; k++) KH_DEC(*R, o[q]); }
-            else { kh_refill_safe(R, ie); KH_DEC(*R, o[q]); }
+            if (oe[q] - o[q] >= 5 && kh_can_refill(R)) {
+                KH_REFILL(*R);
+                for (int k = 0; k < 5; k++) KH_DEC(*R, o[q]);
+            } else {
+                if (R->c < T) kh_refill_tail(R);
+                uint16_t entry = dt[R->b & mask];
+                int length = entry >> 8;
+                if (length > R->c) return -1;
+                *o[q]++ = (uint8_t)entry;
+                R->b >>= length;
+                R->c -= length;
+            }
         }
-        int64_t used = (int64_t)(R->p - R->s) * 8 - R->c;   /* bits consumed */
-        if (used > (int64_t)L[q] * 8 || (L[q] && used <= (int64_t)(L[q] - 1) * 8) || (!L[q] && used)) return -1;
+        /* The final byte of each nonempty stream must contain at least one consumed bit. */
+        if (R->p != R->end || R->c >= 8) return -1;
     }
     return 0;
 }
