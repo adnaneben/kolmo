@@ -21,13 +21,19 @@ def run(cmd, env):
 ap=argparse.ArgumentParser()
 for arg in ('main','candidate','released','esc','apple','out'):
     ap.add_argument('--'+arg,type=Path,required=True)
-ap.add_argument("--speech-only",action="store_true")
+ap.add_argument("--speech-only", action="store_true")
+ap.add_argument("--speech", type=Path)
+ap.add_argument("--sealed", type=Path)
 a=ap.parse_args()
 a.out.mkdir(exist_ok=True,parents=True)
 rng=random.Random(49230)
 sources={p.stem:('development',p) for p in sorted(a.esc.glob('esc50*.wav'))}
 assert len(sources)==4
 sources.update({p.stem:('transfer',p) for p in sorted(a.apple.glob('*.wav'))})
+if a.speech:
+    sources.update({p.stem: ('speech-diagnostic',p) for p in sorted(a.speech.glob('*.wav'))})
+if a.sealed:
+    sources.update({p.stem: ('sealed-transfer',p) for p in sorted(a.sealed.glob('*.wav'))})
 rows=[]
 with tempfile.TemporaryDirectory(prefix='kolmo-aud-') as d:
     w=Path(d); rgen=random.Random(66820)
@@ -64,7 +70,7 @@ with tempfile.TemporaryDirectory(prefix='kolmo-aud-') as d:
                              header=b[:32].hex(),accepted=int(b'audio-screen accepted' in err) if not rep else '',
                              encode_ms=enc,release_decode_ms=dec,combined_MBps=p.stat().st_size/(1000*(enc+dec)))
                     rows.append(row)
-                    if not writer:writer=csv.DictWriter(f,fieldnames=row);writer.writeheader()
+                    if not writer:writer=csv.DictWriter(f,lineterminator='\n',fieldnames=row);writer.writeheader()
                     writer.writerow(row)
             print('finished',rep,flush=True)
 with (a.out/'score.csv').open('w',newline='') as f:
@@ -87,5 +93,5 @@ with (a.out/'score.csv').open('w',newline='') as f:
                        before_combined_MBps=statistics.median(x['combined_MBps'] for x in base[1:]),
                        after_combined_MBps=statistics.median(x['combined_MBps'] for x in cand[1:]),
                        paired_speedup=statistics.median(gain),wins=sum(t>1 for t in gain),pairs=len(gain))
-                if not writer:writer=csv.DictWriter(f,fieldnames=r);writer.writeheader()
+                if not writer:writer=csv.DictWriter(f,lineterminator='\n',fieldnames=r);writer.writeheader()
                 writer.writerow(r)
