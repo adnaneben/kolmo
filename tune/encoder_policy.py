@@ -5,6 +5,7 @@ import bisect
 import csv
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -279,16 +280,22 @@ def configuration(path):
     require(isinstance(config, dict), "configuration must be an object")
     expected = {"schema", "level", "threads", "repetitions", "min_origins", "min_size_savings",
                 "candidates", "max_roundtrip_time", *LIMITS}
-    require(set(config) == expected and config["schema"] == 1, "invalid experiment configuration")
+    require(set(config) in (expected, expected | {"objective"}) and config["schema"] == 1,
+            "invalid experiment configuration")
+    objective = config.get("objective", "size")
+    require(objective in ("size", "roundtrip"), "unknown objective")
     require(config["level"] in [str(i) for i in range(1, 10)] + ["ultra"],
             "level must be a string in 1..9 or ultra")
     for key, lo, hi in (("threads", 1, 1024), ("repetitions", 3, 31), ("min_origins", 2, 10000)):
         require(type(config[key]) is int and lo <= config[key] <= hi, f"{key} outside {lo}..{hi}")
-    for key in ("min_size_savings", "max_roundtrip_time", *LIMITS):
+    for key in ("max_roundtrip_time", *LIMITS):
         value = config[key]
         require(type(value) in (float, int) and 1.0e-6 <= value <= 100.0,
                 f"{key} must be a positive finite ratio at most 100")
-    require(config["min_size_savings"] < 1, "minimum size savings must be below 1")
+    savings = config["min_size_savings"]
+    require(type(savings) in (float, int) and 0 <= savings < 1, "size savings outside [0,1)")
+    require(savings > 0 if objective == "size" else config["max_roundtrip_time"] < 1,
+            "the objective must require a strict improvement")
     choices(config["candidates"])
     return config
 
@@ -318,16 +325,16 @@ def rss_bytes(native_rss):
     return native_rss * (1 if sys.platform == "darwin" else 1024)
 
 
-def child(command, wrapper=False):
+def child(command, expected_choice=None):
     # On Darwin wait4 can return only the image after execve. Capture the
     # Python wrapper's peak immediately before exec and keep the larger peak.
-    read_fd, write_fd = os.pipe() if wrapper else (-1, -1)
+    read_fd, write_fd = os.pipe() if expected_choice is not None else (-1, -1)
     try:
         actions = []
-        if wrapper:
+        if expected_choice is not None:
             actions.append((os.POSIX_SPAWN_DUP2, write_fd, read_fd))
             separator = command.index("--")
-            command = [*command[:separator], "--measure-rss-fd", str(read_fd), *command[separator:]]
+            command = [*command[:separator], "--dispatch-report-fd", str(read_fd), *command[separator:]]
         start = time.monotonic_ns()
         pid = os.posix_spawn(command[0], command, environment(), file_actions=actions)
         _, status, usage = os.wait4(pid, 0)
@@ -335,12 +342,15 @@ def child(command, wrapper=False):
         require(os.WIFEXITED(status) and os.WEXITSTATUS(status) == 0,
                 f"codec process failed {command[0]}")
         rss = rss_bytes(usage.ru_maxrss)
-        if wrapper:
+        if expected_choice is not None:
             os.close(write_fd)
             write_fd = -1
-            raw = os.read(read_fd, 16)
-            require(len(raw) == 8, "missing pre-exec RSS")
-            rss = max(rss, struct.unpack("<Q", raw)[0])
+            raw = os.read(read_fd, 40)
+            require(len(raw) == 40, "missing pre-exec dispatch report")
+            wrapper_rss, choice_hash = struct.unpack("<Q32s", raw)
+            require(choice_hash.hex() == object_digest(expected_choice),
+                    "deployed wrapper did not execute the selected options")
+            rss = max(rss, wrapper_rss)
         require(rss > 0, "peak process RSS unavailable")
         return elapsed, rss
     finally:
@@ -363,7 +373,8 @@ def measure(binary, decoder, config, candidates, sample, frame, restored, rng, p
             else:
                 command = encode_command(binary, config["level"], config["threads"],
                                          candidates[i], path, frame)
-            encode_ns, encode_rss = child(command, wrapper=policy_path is not None and i > 0)
+            encode_ns, encode_rss = child(
+                command, candidates[i] if policy_path is not None and i > 0 else None)
             with frame.open("rb") as packed:
                 require(packed.read(len(WIRE_HEADER)) == WIRE_HEADER, "encoder did not write v12")
             decode_ns, decode_rss = child([
@@ -388,9 +399,23 @@ def measure(binary, decoder, config, candidates, sample, frame, restored, rng, p
     return observations
 
 
-def passes(baseline, candidate, config):
+def paired_ratios(baseline, candidate):
+    ratios = {k: [] for k in (*METRICS, "roundtrip_ns")}
+    require(len(baseline["rounds"]) == len(candidate["rounds"]) > 0, "unpaired observations")
+    for stock, tested in zip(baseline["rounds"], candidate["rounds"]):
+        for k in METRICS:
+            ratios[k].append(tested[k] / stock[k])
+        ratios["roundtrip_ns"].append((tested["encode_ns"] + tested["decode_ns"])
+                                      / (stock["encode_ns"] + stock["decode_ns"]))
+    return {k: statistics.median(v) for k, v in ratios.items()}
+
+
+def passes(baseline, candidate, config, ratios=None):
     if candidate["bytes"] > baseline["bytes"] * (1 - config["min_size_savings"]):
         return False
+    if config.get("objective") == "roundtrip":
+        return all(ratios[field] <= config[limit] for field, limit in
+                   zip((*METRICS, "roundtrip_ns"), (*LIMITS, "max_roundtrip_time")))
     if candidate["roundtrip_ns"] > baseline["roundtrip_ns"] * config["max_roundtrip_time"]:
         return False
     return all(candidate[field] <= baseline[field] * config[limit]
@@ -437,15 +462,20 @@ def score(args, config, samples, catalogue, candidate_routes, draft=None):
                     if fallback:
                         require(variant["frame_sha256"] == baseline["frame_sha256"],
                                 "fallback did not produce the stock frame")
-                    improves = not fallback and passes(baseline, variant, config)
+                    speed_objective = config.get("objective") == "roundtrip"
+                    ratios = paired_ratios(baseline, variant) if speed_objective else {}
+                    improves = not fallback and passes(baseline, variant, config, ratios)
                     accepted[i] &= improves
-                    totals[i] += variant["bytes"]
+                    # Summed log ratios rank the geometric mean across the same files.
+                    totals[i] += math.log(ratios["roundtrip_ns"]) if speed_objective else variant["bytes"]
                     receipts.append({"format": key[0], "bucket": key[1],
                                      "sample_sha256": sample[1], "input_bytes": sample[0].stat().st_size,
                                      "choice": candidates[i], "origin": sample[2],
                                      "execution": ("fallback" if fallback else
                                                    "wrapper" if policy_path else "direct"),
                                      "baseline": baseline, "candidate": variant,
+                                     "paired_ratios": ratios,
+                                     "dispatch_confirmed": policy_path is not None,
                                      "accepted": improves})
             winners = [i for i in range(len(candidates)) if accepted[i]]
             if winners:
@@ -514,12 +544,13 @@ def encode(args):
                            if (r["format"], r["bucket"]) == key), {})
     argv = encode_command(args.kolmo, args.level, args.threads, choice, args.input, args.output)
     env = environment()
-    rss_fd = getattr(args, "measure_rss_fd", None)
-    if rss_fd is not None:
+    report_fd = getattr(args, "dispatch_report_fd", None)
+    if report_fd is not None:
         import resource
+        choice_hash = bytes.fromhex(object_digest(choice))
         rss = rss_bytes(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-        os.write(rss_fd, struct.pack("<Q", rss))
-        os.close(rss_fd)
+        os.write(report_fd, struct.pack("<Q32s", rss, choice_hash))
+        os.close(report_fd)
     os.execve(argv[0], argv, env)
 
 
@@ -540,7 +571,7 @@ def parser():
     run.add_argument("--level", default="3", choices=[str(i) for i in range(1, 10)] + ["ultra"])
     run.add_argument("--threads", type=int, default=1)
     run.add_argument("--policy", type=Path)
-    run.add_argument("--measure-rss-fd", type=int, help=argparse.SUPPRESS)
+    run.add_argument("--dispatch-report-fd", type=int, help=argparse.SUPPRESS)
     run.add_argument("input", type=Path)
     run.add_argument("output", type=Path)
     return p

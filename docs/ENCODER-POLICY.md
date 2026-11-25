@@ -64,3 +64,10 @@ python3 tune/encoder_policy.py encode --kolmo ./build/kolmo \
 Use a policy from the same catalogue, tool revision, encoder, host, OS, level and thread scope. Other combinations use the ordinary preset. The wrapper strips ambient `KOLMO_*` and `CZN_*` settings so measurements can be reproduced. Use stock Kolmo directly when you need its full command-line or environment surface. Compression input remains intact and existing destinations retain the stock CLI's overwrite protection.
 
 To roll back, remove the explicit `--policy` parameter or select an earlier preserved accepted file. Existing v12 output keeps decoding with the stock codec. The tool refuses to overwrite earlier policies or receipts. Artifact hashes detect accidental edits. Deploy trusted local policy files and binaries, since neither the manifest nor the policy is a signature. No network or online learning is involved. Inputs are processed locally and policies contain no raw data. Receipts contain input digests, so keep receipts private when inputs are sensitive.
+
+
+## Speed-priority learning
+
+Existing configs optimize stored bytes. To search for unchanged-size speedups, set `"objective": "roundtrip"`, `"min_size_savings": 0` and `"max_roundtrip_time"` strictly below one. A positive size savings floor is also allowed. Files must individually meet every configured limit. Each repetition pairs the candidate with the baseline; combined time adds encode and decode **within** each arm. The speed objective gates on the median of those paired candidate-to-baseline ratios for combined time, each phase time and both RSS values. Among passing options, each file has equal weight in the geometric mean of its median paired combined-time ratio. The unchanged size-oriented algorithm remains the default.
+
+Validation launches the actual encoder wrapper and checks its reported choice against the frozen route immediately before native exec. It records the higher of the Python and native RSS peaks. A mismatch fails the experiment even when two different choices produce byte-identical frames. Stock C code and CLI defaults do not depend on the learner.

@@ -154,6 +154,30 @@ class PolicyTest(unittest.TestCase):
                                    "samples": 2, "origins": 2}])
         self.assertEqual(len(receipts), 4)
 
+    def test_paired_speed_objective_and_strict_gate(self):
+        cfg = tool.load(ROOT / "tune" / "encoder-policy.example.v1.json")
+        cfg.update(objective="roundtrip", min_size_savings=0, max_roundtrip_time=0.97)
+        good_cfg = self.root / "cfg.json"
+        tool.save(good_cfg, cfg)
+        self.assertEqual(tool.configuration(good_cfg), cfg)
+        phase = {"encode_rss": 100, "decode_rss": 100}
+        def obs(times, size=70):
+            rows = [dict(phase, encode_ns=e, decode_ns=d) for e, d in times]
+            return dict(rounds=rows, bytes=size)
+        before = obs([(10, 10), (100, 100), (200, 200)])
+        after = obs([(9, 9), (95, 95), (300, 300)])
+        ratios = tool.paired_ratios(before, after)
+        self.assertEqual(ratios["roundtrip_ns"], 0.95)
+        self.assertTrue(tool.passes(before, after, cfg, ratios))
+        self.assertFalse(tool.passes(before, dict(after, bytes=71), cfg, ratios))
+        self.assertFalse(tool.passes(before, after, cfg, dict(ratios, roundtrip_ns=0.98)))
+        self.assertFalse(tool.passes(before, after, cfg, dict(ratios, encode_rss=1.06)))
+        for key, value in [("objective", "size"), ("max_roundtrip_time", 1.0)]:
+            path = self.root / key
+            tool.save(path, dict(cfg, **{key: value}))
+            with self.assertRaisesRegex(ValueError, "strict improvement"):
+                tool.configuration(path)
+
     def test_opt_in_routes_and_rollback(self):
         file, _, _ = self.sample("model", b"GGUFdata")
         binary, _, _ = self.sample("encoder", b"encoder bytes")
@@ -232,6 +256,7 @@ class PolicyTest(unittest.TestCase):
             "--output", self.root / "dispatch-policy", "--receipts", receipts)
         for sample, row in zip(arrays[2:], tool.load(receipts)):
             self.assertEqual(row["execution"], "wrapper")
+            self.assertTrue(row["dispatch_confirmed"])
             direct = self.root / (sample[0].name + ".stock-full")
             subprocess.run(tool.encode_command(encoder, "1", 1, {"analysis": "full"}, sample[0], direct),
                            check=True)
