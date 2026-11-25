@@ -80,6 +80,7 @@ typedef struct {
     const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
     int codec, level, default_level, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next; atomic_int err; size_t B;
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
+    const uint32_t *segment_kind;   /* metadata type per segment, indexed by bplan */
     const uint64_t *poff;   /* decode: payload offsets */
     uint64_t rlo, rhi; uint8_t *rdst;   /* range read */
     uint8_t **out;          /* compressed block copies */
@@ -177,6 +178,29 @@ static int64_t claim_block(job_t *J, int own) {
     return got;
 }
 
+
+/* At -9, check the shuffle with the final coder on three fixed, aligned samples from the block.
+ * Require consistent evidence before attempting a full raw retry. Use the block's existing trial buffer. */
+static int tensor_shuffle_retry(const uint8_t *raw, size_t len, const plan_t *pl, uint8_t *scratch, size_t cap) {
+    const size_t sample_limit = (size_t)128 << 10;
+    const size_t unit = (size_t)pl->a * pl->b;
+    if (!unit || unit > sample_limit) return 0;
+    const size_t sample = sample_limit / unit * unit;
+    const size_t outcap = codec_bound(R_LZMA, sample);
+    if (sample > cap || outcap > cap - sample) return 0;
+    uint8_t *shuffled = scratch + outcap;
+    size_t total_raw = 0, total_shuffled = 0;
+    for (size_t k = 1; k <= 3; k++) {
+        const size_t offset = ((len - sample) / 4 * k) / unit * unit;
+        const size_t plain = codec_compress(NULL, R_LZMA, 9, raw + offset, sample, scratch, outcap);
+        shuffle_fwd(raw + offset, sample / unit, pl->a, pl->b, pl->c, shuffled);
+        const size_t coded = codec_compress(NULL, R_LZMA, 9, shuffled, sample, scratch, outcap);
+        if (!plain || !coded || plain > coded) return 0;
+        total_raw += plain;
+        total_shuffled += coded;
+    }
+    return total_raw * 100 <= total_shuffled * 99;
+}
 
 static void *compress_worker(void *arg) {
     job_t *J = arg; tls_t *S = tls_begin();
@@ -637,6 +661,18 @@ coded:;
                 if (kz && kz < cur) {
                     memcpy(sl, alt, kz); cl = kz; codec = C_KIMG; tflag = 0; meta = 0; modes = 128;
                     slot[0] = T_NONE; slot[1] = slot[2] = slot[3] = 0;
+                }
+            }
+        }
+        /* Keep the original candidate, including its BWT trials, until a raw KLZMA block beats it in full. */
+        if (J->codec == R_LZMA && J->level == 9 && cl && tflag == 1 && pl.t == T_SHUF && !pl.verify &&
+            len >= (1u << 20) && J->segment_kind && (J->segment_kind[J->bplan[i]] & 0xFF) >= MK_TENSOR) {
+            uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+            if (alt && tensor_shuffle_retry(raw, len, &pl, alt, J->slot)) {
+                size_t rz = codec_compress(xp, R_LZMA, 9, raw, len, alt, J->slot);
+                if (rz && rz < cl + meta) {
+                    memcpy(sl, alt, rz); cl = rz; codec = R_LZMA; in = raw; inlen = len; tflag = 0; meta = 0;
+                    put32(slot, 0);
                 }
             }
         }
