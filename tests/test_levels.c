@@ -18,6 +18,18 @@ static int64_t enc(const uint8_t *s, size_t n, const kolmo_params *p, uint8_t **
 }
 
 int main(void) {
+    /* Sub-minimum block requests use the same real block size and capacity.
+     * An unrepresentable size inquiry needs no storage or compression call. */
+    kolmo_params minimum = {KOLMO_FAST, 0, 1, 4096, 1};
+    kolmo_params tiny = minimum;
+    tiny.block = 1;
+    CHECK(kolmo_bound(1u << 20, &minimum) == kolmo_bound(1u << 20, &tiny),
+          "bound disagrees for equivalent clamped blocks");
+    CHECK(kolmo_bound(SIZE_MAX, NULL) == 0, "unrepresentable frame bound");
+    CHECK(kolmo_indexed_bound(SIZE_MAX, NULL) == 0, "unrepresentable index bound");
+    kolmo_archive_file huge = {"member", NULL, SIZE_MAX, 0, 0};
+    CHECK(kolmo_archive_bound(&huge, 1, NULL) == 0, "unrepresentable archive bound");
+
     /* inputs: text, CSV, integers, random bytes, empty and one byte */
     size_t tn = 300000; uint8_t *text = malloc(tn);
     static const char *w[] = {"level ", "kolmo ", "the ", "scale ", "fast ", "small ", "block\n", "of "};

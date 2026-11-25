@@ -1,0 +1,25 @@
+# Public compression capacity audit (B46)
+
+Qualified against stock parent `a1d39559686a9ec17c8614b9154a64d7b5b98672` on macOS arm64. The buffer API normalizes a block below 4096 bytes to 4096; the previous size-only calculation used the raw request. For a 262,242-byte gzip input and block=1 it advertised 5,507,250 bytes. The repaired count advertises 277,714 and writes the identical 263,574-byte frame. On the structured table the corresponding bounds were 2,245,131 and 113,255 bytes, with the same 3,923-byte output. These are caller reservation sizes, not measurements of resident memory.
+
+The common case with adaptive blocks trades a small amount of caller headroom for coverage of short metadata runs. The 4,195,602-byte gzip fixture at level 1 illustrates that cost: 4,196,090 → 4,277,874 reserved, with a 4,195,734-byte output. The planner's segment arrays now size to the input and share their maximum with the estimate; a tiny input asks for four segment slots versus the prior 4,096. This record makes no throughput claim.
+
+## Implementation
+
+- The frame bound charges the raw bytes, 32-byte header, and 16-byte index plus four payload-prefix bytes for each possible block. Explicit block requests are clamped before count estimation. Allow up to two halvings for alignment and newline boundaries, and one short final block per plan. For adaptive layouts use the 1 MiB floor of the normal and memory-capped encoder. Empty inputs still have a block.
+- Sizing and encoding both use up to four plus one plan slot per 512 source bytes, capped at the existing 4,096. The allowance is conservative relative to the 4 KiB minimum executable probe, 64 KiB independently emitted metadata regions, and 1 MiB content runs. The planner still records smaller intervening headers. The matrix includes ordinary eight-member USTAR input with distinct packed payloads.
+- The three size functions check additions and products against size_t and the signed output-length limit. Zero indicates no representable worst-case capacity; the Python and Rust wrappers reject it before allocating. Pure size-inquiry tests cover this sentinel without allocating or passing huge payloads.
+- The IDX1 bound separately charges filter bytes and column-header names. The bitmap writer limits estimated key count to the maximum possible in the block. An overestimating filter can therefore change bitmap length; the index format and lookup rule are unchanged. The eight matched indexed controls used the maximum token-bit setting.
+- The archive bound charges the maximum number of 64-byte minimum chunks plus each file's final chunk, bounded varints, checksums, names, and outer framing. Both the chunk store and the table are ordinary frames and use their own guaranteed capacity. The archive writer checks the total size and table allocation, including callers which supply their own destination.
+
+## Verification
+
+`rounds.csv` contains 144 paired plain/indexed configurations, including all public levels 1–9 and Ultra, empty and one-byte payloads, 4095/4096/4097-byte controls, an integer NPY, CSV, generated gzip, and eight-member USTAR. The size range is 0 through about 4 MiB. The matrix covers automatic and 1/4095/4096/4097/65535/65536/1MiB/128MiB requested blocks, 1/2/4 threads, mode-floor/explicit 2 GiB limits, plain/normal/quick/minimal analysis, and native-leaf, typed-Huffman and column options. Each row records source hash, old and new bounds, emitted length, frame hash, block count and settings. These cells sample combinations rather than enumerating their entire Cartesian product.
+
+`archives.csv` adds 18 DDP1 configurations at levels 1/3/7, three block/chunk combinations, both line-cut settings, two workers, repeated and empty members. All 162 candidate outputs fit the exact reported capacities and matched the corresponding stock frames. Both libraries decoded each plain/indexed candidate frame or extracted all four DDP1 members. The tested original inputs did not demonstrate a returned destination-size error from the old positive-size estimate. The small-block overallocation did reproduce.
+
+The Python API also passed 40 normal compression/decompression combinations across all ten levels and block requests of 0, 1, 4096 and 65537; the Rust binding passed nine unit tests, two integration tests and one doctest. The native checks cover normal and sanitizer feature suites, archive/index CLI features, the public level suite and frozen v12 CLI frames from this parent. Production 32-bit execution, a maximum-size physical allocation, target-selection and third-party plugin buffer contracts are outside this receipt.
+
+## Replay
+
+Build stock and candidate in independent fresh checkouts using `make build/libkolmo.dylib` on Darwin (use `build/libkolmo.so` on Linux). Run `python3 check.py STOCK_DYLIB CANDIDATE_DYLIB rounds.csv` and `python3 archives.py STOCK_DYLIB CANDIDATE_DYLIB archives.csv`. The scripts generate all inputs and never need untrusted sample assets. Run `make build/test-levels check-features-b`, `./build/test-levels`, and `python3 tests/check_v12_frames.py build/kolmo` for native regressions.

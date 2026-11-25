@@ -122,6 +122,7 @@ typedef struct {
     uint64_t max_memory;
 } kolmo_decode_limits;
 
+/* Returns zero when the worst-case size is unrepresentable. */
 size_t  kolmo_bound(size_t n, const kolmo_params *p);
 int64_t kolmo_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p);
 /* The decoded size a frame claims, after checking its header and index (the version, the header and index checksum,
@@ -325,6 +326,7 @@ typedef struct {
 #define KOLMO_IDX_TABLE 2
 #define KOLMO_IDX_JSON  3
 /* the capacity kolmo_compress_indexed may need */
+/* Returns zero when the worst-case size is unrepresentable. */
 size_t  kolmo_indexed_bound(size_t n, const kolmo_params *p);
 /* as kolmo_compress, plus the index. p->block 0 = 4 MiB blocks (finer blocks skip more and cost some ratio). */
 int64_t kolmo_compress_indexed(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
@@ -379,6 +381,7 @@ typedef struct {
 typedef struct { const char *name; const uint8_t *data; size_t size; uint32_t mode; int64_t mtime; } kolmo_archive_file;
 typedef struct { uint64_t files, input_bytes, chunks, unique_chunks, unique_bytes, store_frame, table_bytes; } kolmo_archive_stats;
 /* a bound for the capacity kolmo_archive_create needs */
+/* Returns zero when the worst-case size is unrepresentable. */
 size_t  kolmo_archive_bound(const kolmo_archive_file *files, size_t nfiles, const kolmo_params *p);
 int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uint8_t *dst, size_t cap,
                              const kolmo_params *p, const kolmo_archive_params *ap, kolmo_archive_stats *stats);

@@ -86,14 +86,14 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     const uint64_t xcap = p->mem_limit && p->mem_limit != KOLMO_MEM_MAX ? p->mem_limit : 0, memcap = kmem_limit_of(p->mem_limit);
     if (xcap && xcap < kmem_floor(p->mode)) return KOLMO_ERR_MEMORY;
     if (!p->block) B = kmem_block_for_cap(p->mode, codec, level, B, xcap);
-    enum { MAXSEG = 4096 };
+    const uint32_t max_segments = plan_segment_capacity(n);
     int64_t ret = KOLMO_ERR_ALLOC; size_t w = 0;
     uint8_t *file_index = NULL;
     job_t J = {0}; int mutex_ready = 0;
     uint32_t nseg = 0, nb = 0; size_t bcap = 2;
     plan_t *plans = NULL;
     uint64_t *starts = NULL, *rstart = NULL; uint32_t *bplan = NULL;
-    uint64_t *ss = array_alloc(MAXSEG, sizeof(uint64_t), 0), *se = array_alloc(MAXSEG, sizeof(uint64_t), 0); uint32_t *skind = array_alloc(MAXSEG, sizeof(uint32_t), 1);
+    uint64_t *ss = array_alloc(max_segments, sizeof(uint64_t), 0), *se = array_alloc(max_segments, sizeof(uint64_t), 0); uint32_t *skind = array_alloc(max_segments, sizeof(uint32_t), 1);
     void *planning_map = MAP_FAILED;
     if (!ss || !se || !skind) goto cleanup;
     if (input_fd >= 0 && n) {
@@ -106,12 +106,12 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     double pt0 = prof_now();
 #endif
-    nseg = meta_segments_x(src, n, ss, se, skind, MAXSEG, p->mode == KOLMO_RT ? MT_EXE_MIN_SPEED : MT_EXE_MIN);   /* members, sections, tensors, packed content (plan/meta.c) */
+    nseg = meta_segments_x(src, n, ss, se, skind, max_segments, p->mode == KOLMO_RT ? MT_EXE_MIN_SPEED : MT_EXE_MIN);   /* members, sections, tensors, packed content (plan/meta.c) */
     /* no structure in the headers: one segment per homogeneous run (plan/segment.c), for the modes where a plan per
      * kind of data pays (balanced, eco, hc, ratio; speed keeps its minimal analysis and -x's context mixing adapts on
      * its own). Packed (already compressed) inputs stay one segment. */
     if (nseg == 1 && skind[0] == MK_DATA && src && p->transforms && p->mode >= KOLMO_FAST && p->mode <= KOLMO_MAX && !columns)
-        nseg = content_segments(src, n, ss, se, MAXSEG);   /* skind stays MK_DATA (zeroed) for every part */
+        nseg = content_segments(src, n, ss, se, max_segments);   /* skind stays MK_DATA (zeroed) for every part */
     plans = array_alloc(nseg, sizeof(plan_t), 1);
     starts = array_alloc(bcap, sizeof(uint64_t), 0);
     bplan = array_alloc(bcap, sizeof(uint32_t), 0);

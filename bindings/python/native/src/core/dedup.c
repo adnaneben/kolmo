@@ -106,9 +106,24 @@ static int64_t dd_set_add(dd_set *S, const uint8_t *p, uint32_t len, int *isnew)
 }
 
 size_t kolmo_archive_bound(const kolmo_archive_file *files, size_t nfiles, const kolmo_params *p) {
-    size_t tot = 0, meta = 64;
-    for (size_t i = 0; i < nfiles; i++) { tot += files[i].size; meta += strlen(files[i].name) + 64 + files[i].size / 64 * 10; }
-    return kolmo_bound(tot, p) + meta + tot / 16 + 4096;
+    /* The smallest supported average is 256 B, hence the minimum chunk
+     * length before the final cut is 64 B. A chunk has one recipe delta
+     * (10-byte varint), a length (up to 32 MiB -> four bytes) and a 4-byte
+     * checksum. Each table is itself compressed as a separate frame. */
+    size_t total = 0, table = 20; /* two 64-bit counts */
+    for (size_t i = 0; i < nfiles; ++i) {
+        if (!files || !files[i].name) return 0;
+        size_t n = files[i].size;
+        if (!bound_add(&total, n, 1) ||
+            !bound_add(&table, strlen(files[i].name), 1) ||
+            !bound_add(&table, 1, 45) || /* name length, size, mode, time, number of refs */
+            !bound_add(&table, n / 64 + (n % 64 != 0), 18)) return 0;
+    }
+    const kolmo_params tp = {KOLMO_HC, 0, 1, 0, 1};
+    size_t size = kolmo_bound(total, p), tc = kolmo_bound(table, &tp);
+    if (!size || !tc || !bound_add(&size, tc, 1) ||
+        !bound_add(&size, 1, 16 + 16 + KX_TRAILER)) return 0;
+    return size;
 }
 
 static uint64_t dd_zz(int64_t v) { return ((uint64_t)v << 1) ^ (uint64_t)(v >> 63); }
@@ -127,7 +142,11 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     if (A.avg_chunk < 256 || A.avg_chunk > (4u << 20) || (A.avg_chunk & (A.avg_chunk - 1))) return KOLMO_ERR_LIMIT;
     pthread_once(&dd_once, dd_init);
     dd_cfg C; dd_config(&C, A.avg_chunk, A.line_cuts);
-    uint64_t total = 0; for (size_t f = 0; f < nfiles; f++) { if (!files[f].name || (!files[f].data && files[f].size)) return KOLMO_ERR_LIMIT; total += files[f].size; }
+    size_t total = 0;
+    for (size_t f = 0; f < nfiles; ++f) {
+        if (!files || !files[f].name || (!files[f].data && files[f].size) ||
+            !bound_add(&total, files[f].size, 1)) return KOLMO_ERR_LIMIT;
+    }
     dd_set D; int64_t ret = KOLMO_ERR_ALLOC; uint8_t *owned_store = NULL; kx_buf tab = {0}, recipes = {0};
     if (dd_set_init(&D, total / C.avg + 16)) goto done;
     /* the file table: name, size, mode, mtime, then the chunk list (gaps between successive ids, zigzag) */
@@ -176,7 +195,9 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
         if (fe < 0) { ret = fe; goto done; }
         st->store_frame = (uint64_t)fe;
         kolmo_params tp = {KOLMO_HC, 0, p ? p->threads : 0, 0, 1};
-        size_t tcap = 16 + kolmo_bound(tab.n, &tp); uint8_t *body = malloc(tcap); if (!body) goto done;
+        size_t tcap = kolmo_bound(tab.n, &tp);
+        if (!tcap || !bound_add(&tcap, 1, 16)) { ret = KOLMO_ERR_LIMIT; goto done; }
+        uint8_t *body = malloc(tcap); if (!body) goto done;
         body[0] = 'D'; body[1] = 'D'; body[2] = 1; body[3] = (uint8_t)(C.lines ? 1 : 0); kx_put32(body + 4, C.avg); kx_put64(body + 8, tab.n);
         int64_t tz = kolmo_compress(tab.p, tab.n, body + 16, tcap - 16, &tp);
         if (tz < 0) { free(body); ret = tz; goto done; }
