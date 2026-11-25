@@ -1,0 +1,58 @@
+[
+ {
+  "path": "readline-info",
+  "origin": "readline",
+  "producer": "GNU Readline",
+  "source": "/opt/homebrew/Cellar/readline/8.3.6/share/info/readline.info",
+  "bytes": 258713,
+  "sha256": "500c11a34c367045aa1a37f3f1add3efe00d72386cf1ae911a781e5472a3a0fb"
+ },
+ {
+  "path": "glib-gobject",
+  "origin": "glib",
+  "producer": "GLib",
+  "source": "/opt/homebrew/Cellar/glib/2.90.1/lib/libgobject-2.0.0.dylib",
+  "bytes": 399616,
+  "sha256": "befcb5f07aa26c057163f188b4389e1923da882e6f1ea87ff5156fd27383fc4f"
+ },
+ {
+  "path": "cmake-schema",
+  "origin": "cmake",
+  "producer": "CMake",
+  "source": "/opt/homebrew/Cellar/cmake/4.5.0/share/cmake/Help/manual/file_api/schema_target.json",
+  "bytes": 59668,
+  "sha256": "c11fda43425fa9d93c0d6780300974cbad2229087c31dbb8d9abb058d7d38704"
+ },
+ {
+  "path": "nss-chktest",
+  "origin": "nss",
+  "producer": "NSS",
+  "source": "/opt/homebrew/Cellar/nss/3.134/bin/chktest",
+  "bytes": 120992,
+  "sha256": "7bd56d5daaa896a015a0839c95988341416708b774552ff7b7eb4aa0bbf2631b"
+ },
+ {
+  "path": "xorg-fsproto",
+  "origin": "xorg",
+  "producer": "X.Org xorgproto",
+  "source": "/opt/homebrew/Cellar/xorgproto/2026.1/share/doc/fontsproto/fsproto.xml",
+  "bytes": 204699,
+  "sha256": "4c31347982d0b3ab54151f74a4b0976e55fbed754954b6cea8dc3a472a2c10d6"
+ },
+ {
+  "path": "libpng-fixitxt",
+  "origin": "libpng",
+  "producer": "libpng",
+  "source": "/opt/homebrew/Cellar/libpng/1.6.59/bin/png-fix-itxt",
+  "bytes": 33712,
+  "sha256": "c9adc73f7b184153c70c661c1fb00ffc9de059d44ba92068cde2cfc2d6104d43"
+ },
+ {
+  "path": "brotli-readme",
+  "origin": "brotli",
+  "producer": "Brotli",
+  "source": "/opt/homebrew/Cellar/brotli/1.2.1/README.md",
+  "bytes": 4586,
+  "sha256": "e45155f191dab9d8999a85060a2ccb0cda94810868fcc816a0dae46d9aa04c97"
+ }
+]
