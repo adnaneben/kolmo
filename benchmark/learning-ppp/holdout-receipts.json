@@ -1,0 +1,234 @@
+[
+  {
+    "accepted": false,
+    "baseline": {
+      "bytes": 48424,
+      "decode_ns": 2075084,
+      "decode_rss": 2195456,
+      "encode_ns": 2645625,
+      "encode_rss": 3063808,
+      "frame_sha256": "43112e7fcfdd117f70341ababee9c4e89808263713cf21d7c21f628cb14d41b4",
+      "rounds": [
+        {
+          "decode_ns": 2920209,
+          "decode_rss": 2179072,
+          "encode_ns": 2733958,
+          "encode_rss": 3047424
+        },
+        {
+          "decode_ns": 2180000,
+          "decode_rss": 2195456,
+          "encode_ns": 2627667,
+          "encode_rss": 3063808
+        },
+        {
+          "decode_ns": 2045708,
+          "decode_rss": 2195456,
+          "encode_ns": 2586375,
+          "encode_rss": 3063808
+        },
+        {
+          "decode_ns": 2075084,
+          "decode_rss": 2195456,
+          "encode_ns": 2720667,
+          "encode_rss": 3063808
+        },
+        {
+          "decode_ns": 2447958,
+          "decode_rss": 2195456,
+          "encode_ns": 2536750,
+          "encode_rss": 3063808
+        },
+        {
+          "decode_ns": 2027583,
+          "decode_rss": 2195456,
+          "encode_ns": 2698000,
+          "encode_rss": 3063808
+        },
+        {
+          "decode_ns": 2049292,
+          "decode_rss": 2195456,
+          "encode_ns": 2645625,
+          "encode_rss": 3063808
+        }
+      ],
+      "roundtrip_ns": 4795751
+    },
+    "bucket": 1,
+    "candidate": {
+      "bytes": 48424,
+      "decode_ns": 2298084,
+      "decode_rss": 2195456,
+      "encode_ns": 36279875,
+      "encode_rss": 18448384,
+      "frame_sha256": "43112e7fcfdd117f70341ababee9c4e89808263713cf21d7c21f628cb14d41b4",
+      "rounds": [
+        {
+          "decode_ns": 3529833,
+          "decode_rss": 2195456,
+          "encode_ns": 33659000,
+          "encode_rss": 18448384
+        },
+        {
+          "decode_ns": 2109167,
+          "decode_rss": 2195456,
+          "encode_ns": 40220334,
+          "encode_rss": 18644992
+        },
+        {
+          "decode_ns": 2402500,
+          "decode_rss": 2195456,
+          "encode_ns": 36279875,
+          "encode_rss": 18432000
+        },
+        {
+          "decode_ns": 2298084,
+          "decode_rss": 2195456,
+          "encode_ns": 36023791,
+          "encode_rss": 18432000
+        },
+        {
+          "decode_ns": 2550875,
+          "decode_rss": 2195456,
+          "encode_ns": 37762958,
+          "encode_rss": 18513920
+        },
+        {
+          "decode_ns": 2173667,
+          "decode_rss": 2195456,
+          "encode_ns": 36340541,
+          "encode_rss": 18497536
+        },
+        {
+          "decode_ns": 2073709,
+          "decode_rss": 2195456,
+          "encode_ns": 35391000,
+          "encode_rss": 18432000
+        }
+      ],
+      "roundtrip_ns": 38514208
+    },
+    "choice": {},
+    "execution": "fallback",
+    "format": "mach-o-64-le",
+    "input_bytes": 114336,
+    "origin": "tukaani-xz",
+    "sample_sha256": "2f4914fe7d39269b0baf8ea3b4e3045c7496b9a607a0903605cd28275d608ba6"
+  },
+  {
+    "accepted": false,
+    "baseline": {
+      "bytes": 90792,
+      "decode_ns": 2537417,
+      "decode_rss": 2310144,
+      "encode_ns": 2951084,
+      "encode_rss": 3178496,
+      "frame_sha256": "192951b9b61cb2d981354217dedc39569ca05f698cc35912883ae3e9c7dd2ef5",
+      "rounds": [
+        {
+          "decode_ns": 2537417,
+          "decode_rss": 2310144,
+          "encode_ns": 2769000,
+          "encode_rss": 3178496
+        },
+        {
+          "decode_ns": 2876958,
+          "decode_rss": 2310144,
+          "encode_ns": 3506625,
+          "encode_rss": 3194880
+        },
+        {
+          "decode_ns": 2462542,
+          "decode_rss": 2310144,
+          "encode_ns": 3042333,
+          "encode_rss": 3178496
+        },
+        {
+          "decode_ns": 3019084,
+          "decode_rss": 2310144,
+          "encode_ns": 3214916,
+          "encode_rss": 3178496
+        },
+        {
+          "decode_ns": 2670041,
+          "decode_rss": 2310144,
+          "encode_ns": 2951084,
+          "encode_rss": 3178496
+        },
+        {
+          "decode_ns": 2381834,
+          "decode_rss": 2310144,
+          "encode_ns": 2507500,
+          "encode_rss": 3178496
+        },
+        {
+          "decode_ns": 2354000,
+          "decode_rss": 2310144,
+          "encode_ns": 2693833,
+          "encode_rss": 3178496
+        }
+      ],
+      "roundtrip_ns": 5504875
+    },
+    "bucket": 1,
+    "candidate": {
+      "bytes": 90792,
+      "decode_ns": 2300875,
+      "decode_rss": 2310144,
+      "encode_ns": 36787417,
+      "encode_rss": 18497536,
+      "frame_sha256": "192951b9b61cb2d981354217dedc39569ca05f698cc35912883ae3e9c7dd2ef5",
+      "rounds": [
+        {
+          "decode_ns": 2584792,
+          "decode_rss": 2310144,
+          "encode_ns": 36787417,
+          "encode_rss": 18432000
+        },
+        {
+          "decode_ns": 2300875,
+          "decode_rss": 2310144,
+          "encode_ns": 36572583,
+          "encode_rss": 18497536
+        },
+        {
+          "decode_ns": 7096375,
+          "decode_rss": 2310144,
+          "encode_ns": 61097750,
+          "encode_rss": 18497536
+        },
+        {
+          "decode_ns": 2203208,
+          "decode_rss": 2310144,
+          "encode_ns": 74957417,
+          "encode_rss": 18628608
+        },
+        {
+          "decode_ns": 2358041,
+          "decode_rss": 2310144,
+          "encode_ns": 38910625,
+          "encode_rss": 18513920
+        },
+        {
+          "decode_ns": 2228708,
+          "decode_rss": 2310144,
+          "encode_ns": 35786500,
+          "encode_rss": 18481152
+        },
+        {
+          "decode_ns": 2143750,
+          "decode_rss": 2310144,
+          "encode_ns": 35255458,
+          "encode_rss": 18464768
+        }
+      ],
+      "roundtrip_ns": 39372209
+    },
+    "choice": {},
+    "execution": "fallback",
+    "format": "mach-o-64-le",
+    "input_bytes": 166976,
+    "origin": "libjpeg-turbo",
+    "sample_sha256": "6d0302f8018b3322521cae94de7f58ab484db40f0cc8e0f0cb6e92d456fd5088"
+  }
+]

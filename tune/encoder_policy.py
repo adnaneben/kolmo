@@ -313,26 +313,57 @@ def encode_command(binary, level, threads, choice, path, output):
     return cmd + ["--", str(path)]
 
 
-def child(command):
-    start = time.monotonic_ns()
-    pid = os.posix_spawn(command[0], command, environment())
-    _, status, usage = os.wait4(pid, 0)
-    elapsed = time.monotonic_ns() - start
-    require(os.WIFEXITED(status) and os.WEXITSTATUS(status) == 0,
-            f"codec process failed {command[0]}")
+def rss_bytes(native_rss):
     # Darwin reports bytes and Linux reports KiB.
-    rss = usage.ru_maxrss * (1 if sys.platform == "darwin" else 1024)
-    require(rss > 0, "peak process RSS unavailable")
-    return elapsed, rss
+    return native_rss * (1 if sys.platform == "darwin" else 1024)
 
 
-def measure(binary, decoder, config, candidates, sample, frame, restored, rng):
+def child(command, wrapper=False):
+    # On Darwin wait4 can return only the image after execve. Capture the
+    # Python wrapper's peak immediately before exec and keep the larger peak.
+    read_fd, write_fd = os.pipe() if wrapper else (-1, -1)
+    try:
+        actions = []
+        if wrapper:
+            actions.append((os.POSIX_SPAWN_DUP2, write_fd, read_fd))
+            separator = command.index("--")
+            command = [*command[:separator], "--measure-rss-fd", str(read_fd), *command[separator:]]
+        start = time.monotonic_ns()
+        pid = os.posix_spawn(command[0], command, environment(), file_actions=actions)
+        _, status, usage = os.wait4(pid, 0)
+        elapsed = time.monotonic_ns() - start
+        require(os.WIFEXITED(status) and os.WEXITSTATUS(status) == 0,
+                f"codec process failed {command[0]}")
+        rss = rss_bytes(usage.ru_maxrss)
+        if wrapper:
+            os.close(write_fd)
+            write_fd = -1
+            raw = os.read(read_fd, 16)
+            require(len(raw) == 8, "missing pre-exec RSS")
+            rss = max(rss, struct.unpack("<Q", raw)[0])
+        require(rss > 0, "peak process RSS unavailable")
+        return elapsed, rss
+    finally:
+        for fd in (read_fd, write_fd):
+            if fd >= 0:
+                os.close(fd)
+
+
+def measure(binary, decoder, config, candidates, sample, frame, restored, rng, policy_path=None):
     path, expected_hash, _ = sample
     runs = [[] for _ in candidates]
     for _ in range(config["repetitions"]):
         for i in rng.sample(range(len(candidates)), len(candidates)):
-            encode_ns, encode_rss = child(encode_command(
-                binary, config["level"], config["threads"], candidates[i], path, frame))
+            if policy_path is not None and i > 0:
+                # Time the same process invoked by the operator, including startup,
+                # fingerprint checks, classification and fallback.
+                command = [sys.executable, str(SCRIPT), "encode", "--kolmo", str(binary),
+                           "--level", config["level"], "--threads", str(config["threads"]),
+                           "--policy", str(policy_path), "--", str(path), str(frame)]
+            else:
+                command = encode_command(binary, config["level"], config["threads"],
+                                         candidates[i], path, frame)
+            encode_ns, encode_rss = child(command, wrapper=policy_path is not None and i > 0)
             with frame.open("rb") as packed:
                 require(packed.read(len(WIRE_HEADER)) == WIRE_HEADER, "encoder did not write v12")
             decode_ns, decode_rss = child([
@@ -348,21 +379,25 @@ def measure(binary, decoder, config, candidates, sample, frame, restored, rng):
     for series in runs:
         require(len({row[-1] for row in series}) == 1, "encoder output changed across rounds")
         medians = [statistics.median(row[i] for row in series) for i in range(5)]
-        observations.append(dict(zip(("bytes", *METRICS), medians)))
+        observations.append({
+            **dict(zip(("bytes", *METRICS), medians)),
+            "roundtrip_ns": statistics.median(row[1] + row[2] for row in series),
+            "frame_sha256": series[0][-1],
+            "rounds": [dict(zip(METRICS, row[1:5])) for row in series],
+        })
     return observations
 
 
 def passes(baseline, candidate, config):
     if candidate["bytes"] > baseline["bytes"] * (1 - config["min_size_savings"]):
         return False
-    total = baseline["encode_ns"] + baseline["decode_ns"]
-    if candidate["encode_ns"] + candidate["decode_ns"] > total * config["max_roundtrip_time"]:
+    if candidate["roundtrip_ns"] > baseline["roundtrip_ns"] * config["max_roundtrip_time"]:
         return False
     return all(candidate[field] <= baseline[field] * config[limit]
                for field, limit in zip(METRICS, LIMITS))
 
 
-def score(args, config, samples, catalogue, candidate_routes):
+def score(args, config, samples, catalogue, candidate_routes, draft=None):
     # Independent origins are counted inside each eligible format and size bucket.
     groups = {}
     for sample in samples:
@@ -372,23 +407,44 @@ def score(args, config, samples, catalogue, candidate_routes):
     rng = random.Random(6013409)
     with tempfile.TemporaryDirectory(prefix="kolmo-policy-") as tmp:
         frame, restored = Path(tmp) / "frame.kolmo", Path(tmp) / "restored"
+        policy_path = None
+        if draft is not None:
+            # Stage a temporary deployable policy. A bucket without enough
+            # independent holdout origins can only exercise the fallback.
+            staged = {**draft, "kind": "policy", "routes": [
+                r for r in draft["routes"]
+                if len({sample[2] for sample in groups.get((r["format"], r["bucket"]), [])})
+                >= config["min_origins"]
+            ]}
+            del staged["id"]
+            staged["id"] = object_digest(staged)
+            policy_path = Path(tmp) / "validation-policy.json"
+            save(policy_path, staged)
         for key, group in sorted(groups.items()):
             candidates = candidate_routes.get(key)
             origins = len({sample[2] for sample in group})
-            if not candidates or key[0] == "unknown" or origins < config["min_origins"]:
-                continue
+            fallback = not candidates or key[0] == "unknown" or origins < config["min_origins"]
+            if fallback:
+                if policy_path is None:
+                    continue
+                candidates = [{}]
             accepted = [True] * len(candidates)
             totals = [0] * len(candidates)
             for sample in group:
                 baseline, *variants = measure(args.kolmo, args.decoder, config, [{}, *candidates],
-                                               sample, frame, restored, rng)
+                                               sample, frame, restored, rng, policy_path)
                 for i, variant in enumerate(variants):
-                    improves = passes(baseline, variant, config)
+                    if fallback:
+                        require(variant["frame_sha256"] == baseline["frame_sha256"],
+                                "fallback did not produce the stock frame")
+                    improves = not fallback and passes(baseline, variant, config)
                     accepted[i] &= improves
                     totals[i] += variant["bytes"]
                     receipts.append({"format": key[0], "bucket": key[1],
                                      "sample_sha256": sample[1], "input_bytes": sample[0].stat().st_size,
-                                     "choice": candidates[i],
+                                     "choice": candidates[i], "origin": sample[2],
+                                     "execution": ("fallback" if fallback else
+                                                   "wrapper" if policy_path else "direct"),
                                      "baseline": baseline, "candidate": variant,
                                      "accepted": improves})
             winners = [i for i in range(len(candidates)) if accepted[i]]
@@ -413,6 +469,7 @@ def experiment(args, validating):
     config = configuration(args.config)
     fingerprints = identity(args)
     seal_hash = digest(args.seal)
+    draft = None
     if validating:
         draft = accept_artifact(load(args.draft), "draft")
         require(draft["fingerprints"] == fingerprints and draft["config"] == config
@@ -420,7 +477,7 @@ def experiment(args, validating):
         candidates = {(r["format"], r["bucket"]): [r["choice"]] for r in draft["routes"]}
     else:
         candidates = {bucket(sample[0], catalogue): config["candidates"] for sample in samples}
-    routes, receipts = score(args, config, samples, catalogue, candidates)
+    routes, receipts = score(args, config, samples, catalogue, candidates, draft)
     require(identity(args) == fingerprints, "binary, catalogue or machine changed during replay")
     result = {"schema": 1, "kind": "policy" if validating else "draft", "fingerprints": fingerprints,
               "seal": seal_hash, "config": config, "routes": routes,
@@ -448,7 +505,7 @@ def encode(args):
         policy = accept_artifact(load(args.policy), "policy")
         scope = policy["config"]
         profile = policy["fingerprints"]
-        if (scope["level"], scope["threads"]) == (args.level, args.threads) and (
+        if policy["routes"] and (scope["level"], scope["threads"]) == (args.level, args.threads) and (
             profile["machine"] == machine() and profile["catalogue"] == digest(CATALOGUE)
             and profile["encoder"] == digest(args.kolmo) and profile["policy_tool"] == digest(SCRIPT)
         ):
@@ -456,7 +513,14 @@ def encode(args):
             choice = next((r["choice"] for r in policy["routes"]
                            if (r["format"], r["bucket"]) == key), {})
     argv = encode_command(args.kolmo, args.level, args.threads, choice, args.input, args.output)
-    os.execve(argv[0], argv, environment())
+    env = environment()
+    rss_fd = getattr(args, "measure_rss_fd", None)
+    if rss_fd is not None:
+        import resource
+        rss = rss_bytes(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+        os.write(rss_fd, struct.pack("<Q", rss))
+        os.close(rss_fd)
+    os.execve(argv[0], argv, env)
 
 
 def parser():
@@ -476,6 +540,7 @@ def parser():
     run.add_argument("--level", default="3", choices=[str(i) for i in range(1, 10)] + ["ultra"])
     run.add_argument("--threads", type=int, default=1)
     run.add_argument("--policy", type=Path)
+    run.add_argument("--measure-rss-fd", type=int, help=argparse.SUPPRESS)
     run.add_argument("input", type=Path)
     run.add_argument("output", type=Path)
     return p

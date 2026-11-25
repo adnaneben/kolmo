@@ -131,14 +131,16 @@ class PolicyTest(unittest.TestCase):
     def test_admission_is_per_file_and_per_budget(self):
         config = tool.configuration(ROOT / "tune" / "encoder-policy.example.v1.json")
         baseline = {"bytes": 1000, "encode_ns": 100, "decode_ns": 100,
-                    "encode_rss": 100, "decode_rss": 100}
+                    "encode_rss": 100, "decode_rss": 100, "roundtrip_ns": 200}
         good = {**baseline, "bytes": 900}
         invalid = {"bytes": 990, "encode_ns": 106, "decode_ns": 104,
                    "encode_rss": 106, "decode_rss": 106}
         self.assertTrue(tool.passes(baseline, good, config))
         for key, value in invalid.items():
             self.assertFalse(tool.passes(baseline, {**good, key: value}, config))
-        self.assertFalse(tool.passes(baseline, {**good, "encode_ns": 105, "decode_ns": 103}, config))
+        # Separate phase medians do not necessarily sum to the observed median total.
+        self.assertTrue(tool.passes(baseline, {**good, "encode_ns": 105, "decode_ns": 103}, config))
+        self.assertFalse(tool.passes(baseline, {**good, "roundtrip_ns": 207}, config))
         samples = [self.sample("sample" + str(i), b"GGUF" + bytes([i]), str(i)) for i in range(2)]
         opts = [dict(analysis="full"), dict(analysis="none")]
         opts_map = {("gguf", 0): opts}
@@ -215,6 +217,30 @@ class PolicyTest(unittest.TestCase):
         self.assertTrue(frame.read_bytes().startswith(tool.WIRE_HEADER))
         subprocess.run([str(decoder), "-d", "-o", str(restored), "--", str(frame)], check=True)
         self.assertEqual(sha256(restored.read_bytes()).hexdigest(), arrays[3][1])
+
+        # A forced unit-test route covers the positive dispatch path even when
+        # the real development pilot quite properly admits zero routes.
+        fixture = tool.load(draft)
+        fixture.pop("id")
+        fixture["routes"] = [{"format": "npy", "bucket": 0, "choice": {"analysis": "full"},
+                              "samples": 2, "origins": 2}]
+        fixture["id"] = tool.object_digest(fixture)
+        synthetic_draft = self.root / "dispatch-fixture"
+        tool.save(synthetic_draft, fixture)
+        receipts = self.root / "dispatch-receipts"
+        cli("validate", *common, "--manifest", holdout, "--draft", synthetic_draft,
+            "--output", self.root / "dispatch-policy", "--receipts", receipts)
+        for sample, row in zip(arrays[2:], tool.load(receipts)):
+            self.assertEqual(row["execution"], "wrapper")
+            direct = self.root / (sample[0].name + ".stock-full")
+            subprocess.run(tool.encode_command(encoder, "1", 1, {"analysis": "full"}, sample[0], direct),
+                           check=True)
+            self.assertEqual(row["candidate"]["frame_sha256"], tool.digest(direct))
+            for arm in ("baseline", "candidate"):
+                metrics = row[arm]
+                times = [r["encode_ns"] + r["decode_ns"] for r in metrics["rounds"]]
+                self.assertEqual(len(times), cfg["repetitions"])
+                self.assertEqual(metrics["roundtrip_ns"], tool.statistics.median(times))
 
 
 if __name__ == "__main__":
