@@ -38,3 +38,9 @@ TSAN_OPTIONS=halt_on_error=1 ./build/builder-check-before
 ```
 
 The two before checks are expected to fail. TSan instruments the archive source in the harness. The statically linked codec dependency uses the stock optimized build. The allocator test models a failed first reserve of the member reference buffer at its internal interface; it does not exhaust operating-system memory.
+
+## Independent stream PR #93 validation
+
+A separate checkout applied [#93](https://github.com/adnaneben/kolmo/pull/93) to the same pinned main. Its public header, API implementation, decoder, stream implementation, Makefile and dense-stream test matched their Git blob SHA-1s from PR head `39eed4db533224bae935754c2a6f1e5e99847bb9`. They are independent of the DDP1 archive candidate above.
+
+The native Apple arm64 build passed the four dense-block admission boundaries, clipped-range and mixed CZN1/CZNS checks, and all 357 frozen frames. An additional 32 ordinary readbacks compared main and candidate across enwik8 and Silesia prefixes at 4/16 MiB, T1/T4 and 2 MiB/unrestricted budgets; all recovered SHA-256 exactly. See `stream-93-readbacks.csv`. The stock CLI and dense-stream boundary executable cross-built as x86-64 Mach-O using Apple clang. Native x86 execution and independent hosted timing are outstanding; this machine cannot run the x86 binaries. Keep #93 separate pending that qualification. Its documented memory budget covers codec work and large index structures. It does not cover the entire input member or establish an operating-system RSS ceiling.
