@@ -1,0 +1,42 @@
+{
+  "source_sha": "516e1dca02ac8165ed91ef5068af84e44335a109",
+  "base_sha": "258ca7b60db43cfdfba308c703b2e576cb628fa1",
+  "reader_source_sha": "550c02fd89d00b767ca540b117301c185dbbb6c9",
+  "reader_sha256": "e7f58f11fe2eb5f296bcd71a9ef9331d154723709ca6822e3cb110acd376e328",
+  "reader_threads": 2,
+  "encoder_threads": 1,
+  "encoder_level": "Ultra",
+  "encoder_memory_limit_bytes": 268435456,
+  "mode": "automatically selected blocks",
+  "cargo": "cargo 1.99.1 (5f94df478 2026-08-27)",
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+  "python": "Python 3.12.8",
+  "platform": "Darwin arm64",
+  "packages": {
+    "default": {
+      "wheel": "kolmoc-0.0.2-py3-none-macosx_27_0_arm64.whl",
+      "wheel_bytes": 776747,
+      "wheel_sha256": "2abfd64463189223cbe67c6024a4dac1677af2c3392a3e8171c6ef29bb975619",
+      "installed_shared_library_sha256": "852b6e4f90f78c964ff5e11fd8264b5c1ec20eb6a9d58ea514c7120b0ed41988",
+      "crate_sha256": "59834db76b403e4065bf44a2a8df530b29dcb53e7e3a822e44ab33e72d2ccf92",
+      "crate_vendored_files_matching_canonical": 176,
+      "python_prep_source_files_matching_canonical": 176,
+      "rust_consumer_binary_sha256": "32601254fae0ef92f1e8b372810d3f7587977576f42f5b72b967b94066b017c1",
+      "option_compilation_flag": null
+    },
+    "opt-in": {
+      "wheel": "kolmoc-0.0.2-py3-none-macosx_27_0_arm64.whl",
+      "wheel_bytes": 777457,
+      "wheel_sha256": "30782f231f661ed0a5eb83813aa9f8622e285590e49da1c157e6b198d087a3dd",
+      "installed_shared_library_sha256": "550d67ab6e0e6d5ba865b968a8d1f1018fc066e1544545c815f5ae4ffc03eda8",
+      "crate_sha256": "59834db76b403e4065bf44a2a8df530b29dcb53e7e3a822e44ab33e72d2ccf92",
+      "crate_vendored_files_matching_canonical": 176,
+      "python_prep_source_files_matching_canonical": 176,
+      "rust_consumer_binary_sha256": "28a34506fda1595213d4e338558c22bfa639fe64a1875b543308054126d47d61",
+      "option_compilation_flag": "-DKOLMO_FASTQ_RECORD_BLOCKS"
+    }
+  },
+  "opt_in_cli_sha256": "e3a84d231f21e67437b2f72b0964255489c01b92b09dc66ef1234895f3b52983",
+  "timed_comparison": false
+}
