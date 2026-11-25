@@ -166,7 +166,7 @@ static uint8_t *kfam_decompress(const uint8_t *c, size_t cn, int threads, size_t
     pthread_once(&kf_tab_once, kf_tab_init);
     if (cn < 5 || memcmp(c, "KFM2", 4)) return NULL;
     if (c[4] == KF_F_FASTQ) {
-        kf_frame f; if (kf_frame_parse(c, cn, &f, 16)) { kf_frame_free(&f); return NULL; }
+        kf_frame f; if (kf_frame_parse(c, cn, &f, 16, NULL)) { kf_frame_free(&f); return NULL; }
         uint64_t n = f.orig; kf_frame_free(&f);
         uint8_t *o = malloc(n ? (size_t)n : 1);
         if (o && kf_fastq_decompress(c, cn, o, (size_t)n, threads)) { free(o); o = NULL; }
@@ -174,7 +174,7 @@ static uint8_t *kfam_decompress(const uint8_t *c, size_t cn, int threads, size_t
         return o;
     }
     kf_frame f; uint8_t *res = NULL; kf_buf out = {0}; numctx *uc = NULL;
-    if (kf_frame_parse(c, cn, &f, 16) || f.fam > KF_F_CSV) goto done;
+    if (kf_frame_parse(c, cn, &f, 16, NULL) || f.fam > KF_F_CSV) goto done;
     uint8_t *want = calloc((size_t)f.ns, 1); if (!want) goto done;
     if (f.fam == KF_F_ONE) {
         if (f.ns != 1) { free(want); goto done; }
@@ -270,7 +270,7 @@ int main(int argc, char **argv) {
     }
     if (verbose && !dec && !bench) {                       /* -v: compress once, print the coded size of each stream */
         size_t z = 0; int ff = 0; double t = now(); uint8_t *c = kfam_compress(s, n, fam, threads, chunk, &z, &ff); t = now() - t;
-        kf_frame f; if (!c || kf_frame_parse(c, z, &f, 16)) { fprintf(stderr, "kfam: failed\n"); return 1; }
+        kf_frame f; if (!c || kf_frame_parse(c, z, &f, 16, NULL)) { fprintf(stderr, "kfam: failed\n"); return 1; }
         printf("%s %zu %.2fs", famname[ff], z, t);
         for (int sidx = 0; sidx < f.ns && sidx < 12; sidx++) { size_t cz = 0; for (int q = 0; q < f.nj; q++) if (f.jb[q].sid == sidx) cz += f.jb[q].cn; printf(" %zu", cz); }
         printf("\n"); kf_frame_free(&f); free(c);
@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
     free(back); free(s);
     if (!same) { fprintf(stderr, "kfam: round trip failed\n"); free(c); return 1; }
     if (bench) {
-        kf_frame f; int ok = !kf_frame_parse(c, z, &f, 16);
+        kf_frame f; int ok = !kf_frame_parse(c, z, &f, 16, NULL);
         printf("{\"family\": \"%s\", \"threads\": %d, \"chunk\": %zu, \"bchunk\": %zu, \"input\": %zu, \"compressed\": %zu, \"compress_mbs\": %.3f, \"decompress_mbs\": %.3f, \"jobs\": %d, \"stream_sizes\": [",
                famname[ff], threads, chunk, bchunk, n, z, n / ce / 1e6, n / de / 1e6, ok ? f.nj : 0);
         for (int sidx = 0; ok && sidx < f.ns && sidx < 12; sidx++) {
