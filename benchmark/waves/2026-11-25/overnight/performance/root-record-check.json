@@ -1,0 +1,14 @@
+{
+  "count": 4206,
+  "verified_file_row_counts": {
+    "evidence/rounds.csv": 1920,
+    "klzma-evidence/rounds.csv": 576,
+    "evidence/competitors-raw.csv": 384,
+    "klzma-transfer/rounds.csv": 432,
+    "pcm-transfer/raw.csv": 210,
+    "combined/raw.csv": 576,
+    "final-subset/raw.csv": 108
+  },
+  "zip_crc": "pass",
+  "positive_phase_times_and_frame_hashes": "pass"
+}

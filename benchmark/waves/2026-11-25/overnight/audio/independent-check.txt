@@ -1,0 +1,2 @@
+-7 T1: 232286 bytes, frame SHA-256 fa78937d7c63ee6d10ae52bf02b6da38e35a848929ad01238f7830763a73febe; stock-reader restore exact
+--ultra T1: 223523 bytes, frame SHA-256 219d9c8c59c2b30b55d9b63c11729aadf2111afba286cc5a170ba01b6c06dde4; stock-reader restore exact
