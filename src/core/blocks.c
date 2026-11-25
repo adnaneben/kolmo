@@ -197,7 +197,7 @@ static size_t aud_screen(const job_t *J, const uint8_t *raw, size_t len, uint8_t
         const size_t pos = i * (frames - probe) / 3 + probe / 4;
         const uint8_t *window = raw + J->aud_off + pos * fs;
         size_t z = kolmo_klz_compress(window, probe, packed, sizeof packed, 1);
-        if (z && z < probe * 7 / 8) return 0;
+        if (!z || z < probe * 7 / 8) return 0;
     }
     size_t z = aud_compress(J->aud_prof, J->aud_ch, raw, len, (size_t)J->aud_off, frames, out, J->slot);
     return z >= len / 4 && z < len * 5 / 6 ? z : 0;
