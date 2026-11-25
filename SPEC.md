@@ -563,7 +563,7 @@ A block with codec 19 has plan prefix `0, 0, 0, 0` and tflag 0; its payload is o
 kaud research tool; `src/codecs/audio.c` is the library port, `src/experimental/KAUD.md` describes the stream in full):
 
 ```
-"KAU1" | version u8 (1) | profile u8 (0, 1) | channels u8 (1, 2) | log2 chunk u8 (8-30) | frame u16 (16-32768)
+"KAU1" | version u8 (1) | profile u8 (0, 1) | channels u8 (1, 2) | log2 chunk u8 (8-18) | frame u16 (16-32768)
 | effort u8 | lpc order u8 | mu u16 * 3 | sign-sign step u16 | adaptation cap u8 (must be 7) | split depth u8 (0-5)
 | sample frames u64 | stage-0 taps u16 | stage-1, stage-2 taps u8 * 2 | cross taps u8 * 2 | combiner step u8
 | H u32 | H bytes (block bytes before the first sample) | T u32 | T bytes (after the last sample frame)
@@ -571,6 +571,8 @@ kaud research tool; `src/codecs/audio.c` is the library port, `src/experimental/
 ```
 
 The samples are 16-bit little-endian, interleaved; H + 2 x channels x frames + T must equal the block's raw length.
+Every encoder writes log2 chunk 18. Decoders from the Unreleased fix on refuse values above 18 (0.0.1 and 0.0.2
+accepted up to 30): a chunk costs the decoder 16 bytes per sample frame, so a forged 2^30 chunk asked for 16 GiB.
 The encoder writes codec 19 for every block of a 16-bit PCM WAV file (mono or stereo, `WAVE_FORMAT_PCM` or
 extensible PCM) that holds more than 1024 whole sample frames, when it is smaller than the block coded otherwise;
 profile 0 up to `hc`, profile 1 at `max` and `ultra`. Block boundaries need not fall on sample frames: the bytes

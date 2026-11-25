@@ -48,6 +48,34 @@
   - **The yanked 1.0.0 and 1.0.1 are affected too**, in every mode but `ultra`. 0.0.x does not read 1.x files, so the
     README's recipe for moving 1.x files now sets `CZN_OLDTBL=1`, which makes kolmoc 1.0.1 decode such tables through
     its row path.
+- **Decoder hardening from the 40-reviewer review (SYNTHESIS.md bugs 6, 7, 8, 10, 16).** Every frame the corpus holds
+  and every frame 0.0.1 and 0.0.2 can write decodes as before (`tests/v12`); only frames no encoder writes are refused.
+  Regression tests in `make check` (`test-decoder-hardening`, with the reviewers' frames in `tests/vectors/review40/`).
+  - **The library no longer calls `abort()`.** The audio coder (codec 19) stopped the host process when an allocation
+    failed; every allocation in it now unwinds (decode: an error; encode: the block takes another codec).
+    `tests/check_no_abort.sh` keeps `abort`/`exit` out of the library. The KAU1 stream's chunk size is capped at the
+    2^18 sample frames every encoder writes: a forged 2^30 chunk asked for 16 GiB (SPEC.md, *Audio blocks*).
+  - **Video frames (codec 20) obey `max_memory`.** They were decoded before the frame was admitted: a 1,483-byte frame
+    peaked at 353 MiB under a 64 MiB limit. Now refused at 1 MiB; the nested frame decodes under what the outer
+    buffers leave of the limit.
+  - **FASTQ family blocks (codec 16) obey `-M` with several threads.** A block ran up to `threads / blocks` model jobs
+    at once but counted one (702 MB under `-M 240M` at `-T 8`). Each extra job is now reserved with the memory
+    governor and runs only if it fits; at `-M 240M -T 8` the peak is 160 MB, as at `-T 1`. Output is unchanged.
+  - **A frame's mode now bounds its decode cost class.** A graph block with a context-mixing leaf in a frame whose
+    header is not ultra is refused (FORMAT.md 7.4): only ultra level 2 writes such leaves. A 1,558-byte "fast" frame
+    took 4.7 s; it is now refused at once.
+  - **Stricter blocks.** A stored block whose plan is not `0,0,0,0` or whose tflag is not 0 (FORMAT.md 7.1, which
+    already said so) and codecs 14 (rANS) and 27 (khuf) as block codecs (FORMAT.md 8.1) are refused. Plan 7's
+    parameters stay ignored on read, because the 0.0.x planners could write a losing shuffle plan's `a, b, c` there;
+    the encoder now writes `7,0,0,0` (FORMAT.md 19.3).
+
+### Added
+
+- **`kolmo_frame_cost`: decode work before decoding** (`kolmo.h`, SECURITY.md *Decode work*). Decoding time follows
+  the decoded bytes of each coder family, not the compressed size: a valid 5,978-byte context-mixing frame decodes
+  16 MiB in about 21 s. The function walks one frame (graph leaves and video frames included) and reports its decoded
+  bytes as fast (LZ, Huffman, rANS, store), sort (BWT, KLZMA, audio profile 0) and model (context mixing, FASTQ
+  family, GR6+, kimg, audio profile 1). A service bounds work by refusing frames over its model-byte budget.
 
 ### Format
 

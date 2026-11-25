@@ -94,6 +94,96 @@ int kolmo_check_frame(const uint8_t *src, size_t n, const kolmo_decode_limits *l
     r = frame_admit(&P, maxraw, kmem_limit_of(limits ? limits->max_memory : 0));
     free(P.poff); free(P.roff); return r;
 }
+/* ------------------------------------------------------------------ decode cost (kolmo.h, docs/SECURITY.md) */
+/* the cost class of a coder: s, sn: its coded stream (the KAU1 stream for audio, whose profile 1 is model coding) */
+static int cost_class(int codec, const uint8_t *s, size_t sn) {
+    switch (codec) {
+        case C_BWT: case C_BSC5: case C_KLZMA: return KOLMO_COST_SORT;
+        case C_CM: case C_CMI: case C_CMP: case C_FQ: case C_GR6: case C_KIMG: return KOLMO_COST_MODEL;
+        case C_AUD: return sn > 5 && s[5] == 0 ? KOLMO_COST_SORT : KOLMO_COST_MODEL;
+    }
+    return KOLMO_COST_FAST;                                     /* store, KLZ, KLZH2, khuf, rANS, native planes */
+}
+static void cost_add(kolmo_decode_cost *c, int cls, uint64_t bytes) {
+    c->bytes[cls] += bytes; if (bytes && cls > c->slowest) c->slowest = cls;
+}
+/* a graph leaf of rl decoded bytes: planes (21) and zero-run (23) leaves name a codec per sub-stream */
+static int cost_leaf(int cc, const uint8_t *s, size_t sn, uint64_t rl, int deny_cm, kolmo_decode_cost *c) {
+    size_t i = 0; uint64_t z, k, r;
+    if (cc == C_PLANES) {
+        if (sn < 1 || s[0] < 2 || s[0] > 8) return -1;
+        int np = s[0]; i = 1;
+        for (int b = 0; b < np; b++) {
+            if (i >= sn) return -1;
+            int sc = s[i++];
+            if (kg_getuv(s, sn, &i, &z) || z > sn - i) return -1;
+            if (deny_cm && cost_class(sc, NULL, 0) == KOLMO_COST_MODEL) return -1;
+            cost_add(c, cost_class(sc, NULL, 0), rl / (uint64_t)np); i += (size_t)z;
+        }
+        return 0;
+    }
+    if (cc == C_ZRUN) {
+        if (kg_getuv(s, sn, &i, &k) || i >= sn) return -1;
+        int c1 = s[i++];
+        if (kg_getuv(s, sn, &i, &r) || kg_getuv(s, sn, &i, &z) || z > sn - i) return -1;
+        i += (size_t)z; if (i >= sn) return -1;
+        int c2 = s[i++];
+        if (deny_cm && (cost_class(c1, NULL, 0) == KOLMO_COST_MODEL || cost_class(c2, NULL, 0) == KOLMO_COST_MODEL)) return -1;
+        cost_add(c, cost_class(c1, NULL, 0), r); cost_add(c, cost_class(c2, NULL, 0), k); cost_add(c, KOLMO_COST_FAST, rl);
+        return 0;
+    }
+    if (deny_cm && (cc == C_CM || cc == C_CMI || cc == C_CMP)) return -1;   /* refused by the decoder (decode_block) */
+    cost_add(c, cost_class(cc, s, sn), rl);
+    return 0;
+}
+/* a graph block's program (FORMAT.md 8): the nodes are skipped, each leaf is costed; the inverses are linear */
+static int cost_graph(const uint8_t *p, size_t n, uint64_t raw, int deny_cm, kolmo_decode_cost *c) {
+    size_t i = 2; uint64_t nn, v, nin, nout, pl, nl, id, rl, zl;
+    if (n < 3 || p[0] != 'G' || p[1] != 1 || kg_getuv(p, n, &i, &nn) || nn > KG_MAXSTREAMS) return -1;
+    for (uint64_t q = 0; q < nn; q++) {
+        if (i >= n) return -1;
+        i++;                                                    /* the node's operation */
+        if (kg_getuv(p, n, &i, &nin) || nin > KG_MAXSTREAMS) return -1;
+        for (uint64_t r = 0; r < nin; r++) if (kg_getuv(p, n, &i, &v)) return -1;
+        if (kg_getuv(p, n, &i, &nout) || kg_getuv(p, n, &i, &pl) || pl > n - i) return -1;
+        i += (size_t)pl;
+    }
+    if (kg_getuv(p, n, &i, &nl)) return -1;
+    for (uint64_t q = 0; q < nl; q++) {
+        if (kg_getuv(p, n, &i, &id) || i >= n) return -1;
+        int cc = p[i++];
+        if (kg_getuv(p, n, &i, &rl) || kg_getuv(p, n, &i, &zl) || zl > n - i) return -1;
+        if (cost_leaf(cc, p + i, (size_t)zl, rl, deny_cm, c)) return -1;
+        i += (size_t)zl;
+    }
+    if (i != n) return -1;
+    cost_add(c, KOLMO_COST_FAST, raw);
+    return 0;
+}
+static int frame_cost(const uint8_t *src, size_t n, kolmo_decode_cost *c, int nested) {
+    int64_t w = whole_frame(src, n); if (w < 0) return (int)w;
+    parsed_t P; int r = parse(src, n, &P, NULL); if (r) return r;
+    for (uint32_t b = 0; b < P.nb && !r; b++) {
+        const uint8_t *e = P.idx + (size_t)b * IDX, *pay = src + P.poff[b];
+        size_t cl = (size_t)(P.poff[b + 1] - P.poff[b]); uint64_t raw = P.roff[b + 1] - P.roff[b]; int codec = e[12];
+        if (cl < 4) { r = KOLMO_ERR_CORRUPT; break; }
+        if (codec == C_VID) {                                   /* a video frame: the nested frame, then a linear inverse */
+            if (nested || P.nb != 1) { r = KOLMO_ERR_CORRUPT; break; }
+            r = frame_cost(pay + 4, cl - 4, c, 1); cost_add(c, KOLMO_COST_FAST, raw);
+        } else if (codec == C_GRAPH) {
+            if (cost_graph(pay + 4, cl - 4, raw, P.mode != KOLMO_ULTRA, c)) r = KOLMO_ERR_CORRUPT;
+        } else cost_add(c, cost_class(codec, pay + 4, cl - 4), raw);
+    }
+    free(P.poff); free(P.roff);
+    return r;
+}
+int kolmo_frame_cost(const uint8_t *src, size_t n, kolmo_decode_cost *cost) {
+    if (!cost) return KOLMO_ERR_PARAM;
+    memset(cost, 0, sizeof *cost);
+    int r = frame_cost(src, n, cost, 0);
+    if (r) memset(cost, 0, sizeof *cost);
+    return r;
+}
 void kolmo_set_memlimit(uint64_t limit) { atomic_store_explicit(&kmem_default_limit, limit, memory_order_relaxed); }
 int64_t kolmo_decode_memory(const uint8_t *src, size_t n) {
     if (!src) return KOLMO_ERR_CORRUPT;

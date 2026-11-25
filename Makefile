@@ -117,6 +117,7 @@ build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOL
 
 check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus build/mkarchive
 	./build/test-levels
+	sh tests/check_no_abort.sh
 	python3 tests/test_cli.py build/kolmo
 	sh tests/test_archive_safety.sh build/kolmo build/mkarchive
 	sh tests/test_filter.sh build/kolmo

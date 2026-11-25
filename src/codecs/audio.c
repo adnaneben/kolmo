@@ -81,32 +81,33 @@ static inline uint32_t ka_zz(int32_t v) { return ((uint32_t)v << 1) ^ (uint32_t)
 static inline int32_t ka_unzz(uint32_t u) { return (int32_t)(u >> 1) ^ -(int32_t)(u & 1); }
 static inline int ka_bitlen(uint32_t v) { return v ? 32 - __builtin_clz(v) : 0; }
 
-static void *ka_xmalloc(size_t n)
+/* Allocation never stops the process: these return NULL, and every caller unwinds (the encoder's chunk then reports
+ * that it does not fit, so the block takes another codec; the decoder returns an error). */
+static void *ka_xmalloc(size_t n) { return malloc(n ? n : 1); }
+static void *ka_xcalloc(size_t n, size_t s) { return calloc(n ? n : 1, s ? s : 1); }
+/* a sample array with KA_HIST zeroed samples of history before element 0 (NULL when out of memory) */
+static int32_t *ka_hist_alloc(size_t len)
 {
-    void *p = malloc(n ? n : 1);
-    if (!p) abort();
-    return p;
+    int32_t *p = ka_xcalloc(len + KA_HIST, sizeof(int32_t));
+    return p ? p + KA_HIST : NULL;
 }
-static void *ka_xcalloc(size_t n, size_t s)
-{
-    void *p = calloc(n ? n : 1, s ? s : 1);
-    if (!p) abort();
-    return p;
-}
+static void ka_hist_free(void *p, size_t elem) { if (p) free((uint8_t *)p - KA_HIST * elem); }
 
 
-/* growable byte buffer */
-typedef struct { uint8_t *p; size_t len, cap; } ka_Buf;
-static void ka_buf_need(ka_Buf *b, size_t extra)
+/* growable byte buffer; bad: an allocation failed, the contents are incomplete and the buffer must not be used */
+typedef struct { uint8_t *p; size_t len, cap; int bad; } ka_Buf;
+static int ka_buf_need(ka_Buf *b, size_t extra)
 {
-    if (b->len + extra <= b->cap) return;
+    if (b->bad) return -1;
+    if (extra <= b->cap - b->len) return 0;
     size_t c = b->cap ? b->cap : 4096;
-    while (c < b->len + extra) c *= 2;
-    b->p = realloc(b->p, c);
-    if (!b->p) abort();
-    b->cap = c;
+    while (c - b->len < extra) { if (c > SIZE_MAX / 2) { b->bad = 1; return -1; } c *= 2; }
+    uint8_t *q = realloc(b->p, c);
+    if (!q) { b->bad = 1; return -1; }
+    b->p = q; b->cap = c;
+    return 0;
 }
-static void ka_buf_add(ka_Buf *b, const void *d, size_t n) { if (!n) return; ka_buf_need(b, n); memcpy(b->p + b->len, d, n); b->len += n; }
+static void ka_buf_add(ka_Buf *b, const void *d, size_t n) { if (!n || ka_buf_need(b, n)) return; memcpy(b->p + b->len, d, n); b->len += n; }
 
 /* ------------------------------------------------------------------------------------------- bit I/O */
 
@@ -120,7 +121,7 @@ static inline void ka_bw_put(KA_BW *w, uint32_t v, int n)    /* n <= 32 */
     if (w->cnt >= 32) {
         w->cnt -= 32;
         uint32_t x = (uint32_t)(w->acc >> w->cnt);
-        ka_buf_need(&w->b, 4);
+        if (ka_buf_need(&w->b, 4)) return;
         uint8_t *p = w->b.p + w->b.len;
         p[0] = x >> 24; p[1] = x >> 16; p[2] = x >> 8; p[3] = x;
         w->b.len += 4;
@@ -196,7 +197,7 @@ static inline void ka_rce_shift(KA_RCE *e)
 {
     if ((uint32_t)e->low < 0xFF000000u || (e->low >> 32)) {
         uint8_t carry = (uint8_t)(e->low >> 32);
-        ka_buf_need(&e->b, e->pending + 1);
+        if (ka_buf_need(&e->b, e->pending + 1)) { e->pending = 1; e->low = (e->low & 0x00FFFFFFu) << 8; return; }
         uint8_t c = e->cache;
         do { e->b.p[e->b.len++] = (uint8_t)(c + carry); c = 0xFF; } while (--e->pending);
         e->cache = (uint8_t)(e->low >> 24);
@@ -368,7 +369,7 @@ typedef struct {
     int cap;
 } ka_Work;
 
-static void ka_work_init(ka_Work *w, int frame)
+static int ka_work_init(ka_Work *w, int frame)
 {
     w->cap = frame;
     w->xd = ka_xmalloc(sizeof(double) * (frame + KA_HIST));
@@ -376,6 +377,7 @@ static void ka_work_init(ka_Work *w, int frame)
     w->acc = ka_xmalloc(sizeof(uint32_t) * frame);
     w->tmp = ka_xmalloc(sizeof(int32_t) * frame);
     w->acc64 = ka_xmalloc(sizeof(int64_t) * frame);
+    return w->xd && w->xs && w->acc && w->tmp && w->acc64 ? 0 : -1;
 }
 static void ka_work_free(ka_Work *w) { free(w->xd); free(w->xs); free(w->acc); free(w->tmp); free(w->acc64); }
 
@@ -860,7 +862,7 @@ typedef struct {
 
 #define KA_SLIDE 4096
 
-static void ka_nlms_init(ka_Nlms *f, int n, int m, int mu)
+static int ka_nlms_init(ka_Nlms *f, int n, int m, int mu)
 {
     f->n = n; f->m = m; f->mu = mu;
     f->w = ka_xcalloc((size_t)(n + m), sizeof(int32_t));
@@ -869,6 +871,7 @@ static void ka_nlms_init(ka_Nlms *f, int n, int m, int mu)
     f->h = ka_xcalloc((size_t)(n + KA_SLIDE), sizeof(int16_t));
     f->hc = ka_xcalloc((size_t)(m + KA_SLIDE + 1), sizeof(int16_t));
     f->pos = 0; f->posc = 0; f->pow = 0;
+    return f->w && f->w16 && f->h && f->hc ? 0 : -1;
 }
 static void ka_nlms_free(ka_Nlms *f) { free(f->w); free(f->w16); free(f->h); free(f->hc); }
 
@@ -1015,12 +1018,13 @@ typedef struct {
     ka_Prob sg[3];
 } ka_Chan1;
 
-static void ka_chan1_init(ka_Chan1 *c, const ka_Opts *o, int stereo)
+/* -1 when out of memory (ka_chan1_free still frees what was allocated) */
+static int ka_chan1_init(ka_Chan1 *c, const ka_Opts *o, int stereo)
 {
     memset(c, 0, sizeof *c);
-    ka_nlms_init(&c->f[0], o->taps[0], stereo ? o->cross[0] : 0, o->mu[0]);
-    ka_nlms_init(&c->f[1], o->taps[1], stereo ? o->cross[1] : 0, o->mu[1]);
-    ka_nlms_init(&c->f[2], o->taps[2], 0, o->mu[2]);
+    int bad = ka_nlms_init(&c->f[0], o->taps[0], stereo ? o->cross[0] : 0, o->mu[0]);
+    bad |= ka_nlms_init(&c->f[1], o->taps[1], stereo ? o->cross[1] : 0, o->mu[1]);
+    bad |= ka_nlms_init(&c->f[2], o->taps[2], 0, o->mu[2]);
     c->ss.step = o->ss_step;
     for (int k = 0; k < 4; k++) c->cw[k] = 1 << 14;
     c->comb = o->comb;
@@ -1029,6 +1033,7 @@ static void ka_chan1_init(ka_Chan1 *c, const ka_Opts *o, int stereo)
     for (size_t i = 0; i < sizeof c->m2 / sizeof(ka_Prob); i++) ka_prob_init(&c->m2[0][0] + i);
     for (int i = 0; i < 3; i++) ka_prob_init(&c->sg[i]);
     c->afast = 16 * 16; c->aslow = 16 * 16;
+    return bad ? -1 : 0;
 }
 static void ka_chan1_free(ka_Chan1 *c) { for (int i = 0; i < 3; i++) ka_nlms_free(&c->f[i]); }
 
@@ -1383,7 +1388,8 @@ static int ka_depth_for(const ka_Opts *o)
     return o->effort == 0 ? 0 : o->effort == 1 ? 2 : 3;
 }
 
-static void ka_encode_chunk(const ka_Opts *o, int ch, const uint8_t *pcm, uint64_t start, int len, ka_Buf *out)
+/* 0, or -1 when out of memory (*out is then empty) */
+static int ka_encode_chunk(const ka_Opts *o, int ch, const uint8_t *pcm, uint64_t start, int len, ka_Buf *out)
 {
     ka_Enc E;
     memset(&E, 0, sizeof E);
@@ -1391,7 +1397,10 @@ static void ka_encode_chunk(const ka_Opts *o, int ch, const uint8_t *pcm, uint64
     E.maxord = o->profile == 1 ? o->lpc1 : KA_MAXORD;
     E.maxdepth = ka_depth_for(o);
     int F = o->frame;
-    for (int i = 0; i < 4; i++) E.sig[i] = (int32_t *)ka_xcalloc((size_t)len + KA_HIST, sizeof(int32_t)) + KA_HIST;
+    int bad = 0;
+    *out = (ka_Buf){ 0 };
+    for (int i = 0; i < 4; i++) bad |= !(E.sig[i] = ka_hist_alloc((size_t)len));
+    if (bad) goto fail;
     const uint8_t *p = pcm + start * 2 * ch;
     for (int t = 0; t < len; t++) {
         E.sig[0][t] = (int16_t)ka_rd16(p + (size_t)t * 2 * ch);
@@ -1399,18 +1408,23 @@ static void ka_encode_chunk(const ka_Opts *o, int ch, const uint8_t *pcm, uint64
     }
     if (ch == 2) ka_make_side_mid(E.sig[0], E.sig[1], len, E.sig[2], E.sig[3]);
     for (int i = 0; i < (ch == 2 ? 4 : 1); i++) {
-        E.sigd[i] = (double *)ka_xmalloc(sizeof(double) * ((size_t)len + KA_HIST)) + KA_HIST;
+        double *d = ka_xmalloc(sizeof(double) * ((size_t)len + KA_HIST));
+        if (!d) goto fail;
+        E.sigd[i] = d + KA_HIST;
         for (int t = -KA_HIST; t < len; t++) E.sigd[i][t] = E.sig[i][t];
     }
-    ka_work_init(&E.w, F);
-    for (int i = 0; i < 4; i++) E.sb[i].res = ka_xmalloc(sizeof(int32_t) * F);
-    E.cov = ka_xmalloc(sizeof(ka_Cov) * KA_MAXNODE * 4);
+    bad |= ka_work_init(&E.w, F);
+    for (int i = 0; i < 4; i++) bad |= !(E.sb[i].res = ka_xmalloc(sizeof(int32_t) * F));
+    bad |= !(E.cov = ka_xmalloc(sizeof(ka_Cov) * KA_MAXNODE * 4));
     if (o->profile == 1) {
         E.rr[0] = ka_xmalloc(sizeof(int32_t) * F); E.rr[1] = ka_xmalloc(sizeof(int32_t) * F);
+        bad |= !E.rr[0] || !E.rr[1];
         ka_rce_init(&E.rc);
-        E.c1 = ka_xmalloc(sizeof(ka_Chan1) * ch);
-        for (int c = 0; c < ch; c++) ka_chan1_init(&E.c1[c], o, ch == 2);
+        E.c1 = ka_xcalloc((size_t)ch, sizeof(ka_Chan1));
+        if (!E.c1) bad = 1;
+        else for (int c = 0; c < ch; c++) bad |= ka_chan1_init(&E.c1[c], o, ch == 2);
     }
+    if (bad) goto fail;
     E.fixed_mode = -1;
     if (o->profile == 1 && ch == 2 && ka_g_force_stereo < 0) {
         /* one stereo mode per chunk: switching modes disturbs the adaptive filters */
@@ -1431,7 +1445,7 @@ static void ka_encode_chunk(const ka_Opts *o, int ch, const uint8_t *pcm, uint64
         ka_plan_block(&E, f0, n, 0, 0);
         ka_emit_block(&E, f0, n, 0, 0);
     }
-    if (o->profile == 0) { ka_bw_flush(&E.bw); *out = E.bw.b; }
+    if (o->profile == 0) { ka_bw_flush(&E.bw); *out = E.bw.b; E.bw.b = (ka_Buf){ 0 }; }
     else {
         ka_rce_finish(&E.rc);
         ka_bw_flush(&E.bw);
@@ -1439,14 +1453,18 @@ static void ka_encode_chunk(const ka_Opts *o, int ch, const uint8_t *pcm, uint64
         ka_wr32(l4, (uint32_t)E.rc.b.len);
         ka_Buf o1 = { 0 };
         ka_buf_add(&o1, l4, 4); ka_buf_add(&o1, E.rc.b.p, E.rc.b.len); ka_buf_add(&o1, E.bw.b.p, E.bw.b.len);
-        free(E.rc.b.p); free(E.bw.b.p);
+        o1.bad |= E.rc.b.bad | E.bw.b.bad;
         *out = o1;
-        for (int c = 0; c < ch; c++) ka_chan1_free(&E.c1[c]);
-        free(E.c1); free(E.rr[0]); free(E.rr[1]);
     }
-    for (int i = 0; i < 4; i++) { free(E.sig[i] - KA_HIST); free(E.sb[i].res); if (E.sigd[i]) free(E.sigd[i] - KA_HIST); }
+    if (out->bad) { free(out->p); *out = (ka_Buf){ 0 }; bad = 1; }
+fail:
+    free(E.rc.b.p); free(E.bw.b.p);
+    if (E.c1) { for (int c = 0; c < ch; c++) ka_chan1_free(&E.c1[c]); free(E.c1); }
+    free(E.rr[0]); free(E.rr[1]);
+    for (int i = 0; i < 4; i++) { ka_hist_free(E.sig[i], sizeof(int32_t)); free(E.sb[i].res); ka_hist_free(E.sigd[i], sizeof(double)); }
     free(E.cov);
     ka_work_free(&E.w);
+    return bad ? -1 : 0;
 }
 
 /* --------------------------------------------------------------------------------- chunk decoder */
@@ -1583,22 +1601,22 @@ static int ka_decode_chunk(const ka_Opts *o, int ch, const uint8_t *src, size_t 
     memset(&D, 0, sizeof D);
     D.o = o; D.ch = ch; D.maxdepth = o->depth;
     int F = o->frame;
-    D.a = (int32_t *)ka_xcalloc((size_t)len + KA_HIST, sizeof(int32_t)) + KA_HIST;
-    D.b = (int32_t *)ka_xcalloc((size_t)len + KA_HIST, sizeof(int32_t)) + KA_HIST;
-    D.L = (int32_t *)ka_xcalloc((size_t)len + KA_HIST, sizeof(int32_t)) + KA_HIST;
-    D.R = (int32_t *)ka_xcalloc((size_t)len + KA_HIST, sizeof(int32_t)) + KA_HIST;
+    int rcv = 0;
+    D.a = ka_hist_alloc((size_t)len); D.b = ka_hist_alloc((size_t)len);
+    D.L = ka_hist_alloc((size_t)len); D.R = ka_hist_alloc((size_t)len);
     D.e = ka_xmalloc(sizeof(int32_t) * F); D.e2 = ka_xmalloc(sizeof(int32_t) * F);
-    D.xs = (int32_t *)ka_xmalloc(sizeof(int32_t) * (F + KA_HIST)) + KA_HIST;
+    D.xs = ka_hist_alloc((size_t)F);
+    if (!D.a || !D.b || !D.L || !D.R || !D.e || !D.e2 || !D.xs) { rcv = -1; goto done; }
     if (o->profile == 0) ka_br_init(&D.br, src, srclen);
     else {
         uint32_t rl = srclen >= 4 ? ka_rd32(src) : 0;
         if (srclen < 4 || rl > srclen - 4) rl = 0, srclen = 4;   /* corrupt: decoding will fail cleanly */
         ka_rcd_init(&D.rd, src + 4, rl);
         ka_br_init(&D.br, src + 4 + rl, srclen - 4 - rl);
-        D.c1 = ka_xmalloc(sizeof(ka_Chan1) * ch);
-        for (int c = 0; c < ch; c++) ka_chan1_init(&D.c1[c], o, ch == 2);
+        D.c1 = ka_xcalloc((size_t)ch, sizeof(ka_Chan1));
+        if (!D.c1) { rcv = -1; goto done; }
+        for (int c = 0; c < ch; c++) if (ka_chan1_init(&D.c1[c], o, ch == 2)) rcv = -1;
     }
-    int rcv = 0;
     for (int f0 = 0; f0 < len && !rcv; f0 += F) {
         int n = len - f0 < F ? len - f0 : F;
         rcv = ka_decode_block(&D, f0, n, 0);
@@ -1609,8 +1627,9 @@ static int ka_decode_chunk(const ka_Opts *o, int ch, const uint8_t *src, size_t 
         if (ch == 1) for (int t = 0; t < len; t++) ka_wr16(dst + 2 * (size_t)t, (uint32_t)D.L[t]);
         else for (int t = 0; t < len; t++) { ka_wr16(dst + 4 * (size_t)t, (uint32_t)D.L[t]); ka_wr16(dst + 4 * (size_t)t + 2, (uint32_t)D.R[t]); }
     }
+done:
     if (D.c1) { for (int c = 0; c < ch; c++) ka_chan1_free(&D.c1[c]); free(D.c1); }
-    free(D.a - KA_HIST); free(D.b - KA_HIST); free(D.L - KA_HIST); free(D.R - KA_HIST); free(D.e); free(D.e2); free(D.xs - KA_HIST);
+    ka_hist_free(D.a, 4); ka_hist_free(D.b, 4); ka_hist_free(D.L, 4); ka_hist_free(D.R, 4); free(D.e); free(D.e2); ka_hist_free(D.xs, 4);
     return rcv;
 }
 
@@ -1645,7 +1664,9 @@ static void *ka_enc_worker(void *arg)
     ka_Pool *p = arg;
     int i;
     while ((i = ka_pool_take(p)) >= 0)
-        ka_encode_chunk(p->o, p->ch, p->pcm, (uint64_t)i << p->o->chunk_log2, ka_chunk_len(p, i), &p->out[i]);
+        if (ka_encode_chunk(p->o, p->ch, p->pcm, (uint64_t)i << p->o->chunk_log2, ka_chunk_len(p, i), &p->out[i])) {
+            pthread_mutex_lock(&p->mu); p->bad = 1; pthread_mutex_unlock(&p->mu);
+        }
     return NULL;
 }
 static void *ka_dec_worker(void *arg)
@@ -1667,13 +1688,12 @@ static void ka_run_pool(ka_Pool *p, int threads, void *(*fn)(void *))
     p->next = 0;
     pthread_mutex_init(&p->mu, NULL);
     if (threads > p->nchunks) threads = p->nchunks;
-    if (threads <= 1) { fn(p); }
-    else {
-        pthread_t *t = ka_xmalloc(sizeof(pthread_t) * threads);
-        for (int i = 0; i < threads; i++) pthread_create(&t[i], NULL, fn, p);
-        for (int i = 0; i < threads; i++) pthread_join(t[i], NULL);
-        free(t);
-    }
+    pthread_t *t = threads > 1 ? ka_xmalloc(sizeof(pthread_t) * (threads - 1)) : NULL;
+    int started = 0;
+    if (t) while (started < threads - 1 && !pthread_create(&t[started], NULL, fn, p)) started++;
+    fn(p);                                 /* the caller works too: every chunk is taken even when no thread starts */
+    for (int i = 0; i < started; i++) pthread_join(t[i], NULL);
+    free(t);
     pthread_mutex_destroy(&p->mu);
 }
 
@@ -1684,7 +1704,9 @@ static int ka_kaud_encode_layout(const ka_Opts *o, const uint8_t *in, size_t inl
     uint64_t cs = 1ull << o->chunk_log2;
     p.nchunks = (int)((w.n + cs - 1) / cs);
     p.out = ka_xcalloc((size_t)p.nchunks, sizeof(ka_Buf));
+    if (!p.out) return -1;
     ka_run_pool(&p, o->threads, ka_enc_worker);
+    if (p.bad) { for (int i = 0; i < p.nchunks; i++) free(p.out[i].p); free(p.out); return -1; }
 
     uint8_t h[40];
     uint8_t hx[7];
@@ -1709,9 +1731,12 @@ static int ka_kaud_encode_layout(const ka_Opts *o, const uint8_t *in, size_t inl
     }
     for (int i = 0; i < p.nchunks; i++) { ka_buf_add(out, p.out[i].p, p.out[i].len); free(p.out[i].p); }
     free(p.out);
-    return 0;
+    return out->bad ? -1 : 0;
 }
 
+/* Every encoder (0.0.1 on, aud_compress) writes chunks of 2^18 sample frames; a decoder allocates 16 bytes per sample
+ * frame of a chunk, so a larger chunk is refused rather than allocated (FORMAT.md, KAU1). */
+#define KA_MAX_CHUNK_LOG2 18
 static int ka_kaud_decode(const uint8_t *in, size_t inlen, int threads, ka_Buf *out, const char **err, size_t expect)
 {
     *err = "corrupt or truncated KAU1 stream";
@@ -1727,7 +1752,7 @@ static int ka_kaud_decode(const uint8_t *in, size_t inlen, int threads, ka_Buf *
     int rate_cap = in[20];
     o.depth = in[21];
     uint64_t n = ka_rd32(in + 22) | (uint64_t)ka_rd32(in + 26) << 32;
-    if (o.profile > 1 || (ch != 1 && ch != 2) || o.chunk_log2 < 8 || o.chunk_log2 > 30 || o.frame < 16 ||
+    if (o.profile > 1 || (ch != 1 && ch != 2) || o.chunk_log2 < 8 || o.chunk_log2 > KA_MAX_CHUNK_LOG2 || o.frame < 16 ||
         o.frame > 32768 || rate_cap < 1 || rate_cap > 12 || o.depth > 5) return -1;
     if (o.profile == 1 && rate_cap != ka_g_rate_cap) return -1;
     o.taps[0] = ka_rd16(in + 30); o.taps[1] = in[32]; o.taps[2] = in[33]; o.cross[0] = in[34]; o.cross[1] = in[35]; o.comb = in[36];
@@ -1750,6 +1775,7 @@ static int ka_kaud_decode(const uint8_t *in, size_t inlen, int threads, ka_Buf *
     pl.o = &o; pl.ch = ch; pl.n = n; pl.nchunks = (int)nch;
     pl.src = ka_xmalloc(sizeof(uint8_t *) * (nch + 1));
     uint32_t *sl = ka_xmalloc(sizeof(uint32_t) * (nch + 1)), *cr = ka_xmalloc(sizeof(uint32_t) * (nch + 1));
+    if (!pl.src || !sl || !cr) { free(pl.src); free(sl); free(cr); *err = "out of memory"; return -1; }
     size_t q = p + 8 * nch;
     for (uint64_t i = 0; i < nch; i++) {
         sl[i] = ka_rd32(in + p + 8 * i); cr[i] = ka_rd32(in + p + 8 * i + 4);
@@ -1761,7 +1787,7 @@ static int ka_kaud_decode(const uint8_t *in, size_t inlen, int threads, ka_Buf *
     size_t pcmlen = (size_t)n * 2 * ch;
     if (expect && (pcmlen > expect || hl + tl != expect - pcmlen)) { free(pl.src); free(sl); free(cr); return -1; }
     out->len = 0;
-    ka_buf_need(out, hl + pcmlen + tl);
+    if (ka_buf_need(out, hl + pcmlen + tl)) { free(pl.src); free(sl); free(cr); *err = "out of memory"; return -1; }
     memcpy(out->p, head, hl);
     pl.dst = out->p + hl;
     ka_run_pool(&pl, threads, ka_dec_worker);
