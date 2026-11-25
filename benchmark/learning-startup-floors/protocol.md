@@ -67,3 +67,19 @@ B and the result is a rejection.
 5. **Integrity**: every round trip restores the input SHA-256; each (file, spec, arm) emits one frame across rounds.
 
 A qualifying policy ships only as an opt-in calibration file in a draft PR; the owner decides any adoption.
+
+## Amendment 1: quiet-host replication (2026-11-26, before any measurement of `holdout2`)
+
+The first run (results/) ran under a 1-minute load of 80–310 on 10 cores because other jobs ran outside the timing lock.
+Under the coordinator's quiet-window rule, its timings are invalid. The protocol, policies, specs, rounds, seed, gates
+and development rule above are unchanged. Two things are added:
+
+- **Load gate**: before each round (and before the launch measurement and `kolmo calibrate`) the harness waits for
+  the 1-minute load average to be ≤ 12. It records the load before and after on every row. A round that ends above
+  12 is discarded and redone, and discarded rows are kept in raw.jsonl with `invalid_load: true`.
+- **New sealed holdout `holdout2.json`**: 11 producers not used anywhere before (cairo, GIFLIB, Fontconfig, libusb,
+  libaec, C-Blosc2, LZO, Tectonic, ICU, libX11, Graphite2). The first holdout has been seen, so **`holdout2` alone decides**.
+  The first holdout is re-measured as a replication of the loaded run and does not count toward the decision. The
+  reference replay on the B26 inputs follows, explanatory only.
+
+The development phase is re-measured too, so B or C is re-chosen on quiet development data by the same rule.

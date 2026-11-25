@@ -19,7 +19,17 @@ SETTINGS = {  # B26 freeze: the nine settings the selector chooses among
 FLOORS = [("encode", 1), ("encode", 20), ("encode", 60), ("decode", 1), ("decode", 30), ("decode", 80)]
 SPECS = [f"{ph}>={r}MB/s" for ph, r in FLOORS] + ["size"]
 CLASSES = ["text", "table", "log", "json", "numeric", "binary"]
-ROUNDS = {"dev": 5, "holdout": 11, "reference": 7}
+ROUNDS = {"dev": 5, "holdout": 11, "holdout2": 11, "reference": 7}
+MAX_LOAD = None   # --max-load: wait for the 1-minute load to fall to this before each round; redo a round that ends above it
+
+
+def load1(): return os.getloadavg()[0]
+
+
+def wait_quiet():
+    if MAX_LOAD is None: return load1()
+    while load1() > MAX_LOAD: time.sleep(30)
+    return load1()
 
 
 def sha(path):
@@ -100,6 +110,8 @@ def load_split(corpus, split, mdir=HERE):
 def run_split(R, raw, split, files, arms, rng):
     cells = [("direct", s, None) for s in SETTINGS] + [("target", a, spec) for a in arms for spec in SPECS]
     for rnd in range(ROUNDS[split] + 1):          # round 0 is the warmup
+      for attempt in range(1, 7):
+        before = wait_quiet(); buf = []
         order = files[:]; rng.shuffle(order)
         for f in order:
             cs = cells[:]; rng.shuffle(cs)
@@ -110,33 +122,46 @@ def run_split(R, raw, split, files, arms, rng):
                 r = R.roundtrip(f["file"], args)
                 r.update(split=split, round=rnd, warmup=rnd == 0, file=f["path"], n=f["bytes"], input_sha=f["sha256"],
                          kind=kind, arm=name, spec=spec)
-                raw.write(json.dumps(r) + "\n"); raw.flush()
-        print(f"{split} round {rnd} done {time.strftime('%H:%M:%S')}", flush=True)
+                buf.append(r)
+        after = load1(); bad = MAX_LOAD is not None and after > MAX_LOAD
+        for r in buf:
+            r.update(load1_before=before, load1_after=after, attempt=attempt, invalid_load=bad)
+            raw.write(json.dumps(r) + "\n")
+        raw.flush()
+        print(f"{split} round {rnd} attempt {attempt} done {time.strftime('%H:%M:%S')} load {before:.1f}->{after:.1f}"
+              + (" REDO" if bad else ""), flush=True)
+        if not bad: break
 
 
 def measure(a):
     out = os.path.abspath(a.out); os.makedirs(out)
     if sha(a.encoder) != ENCODER_SHA or sha(a.reader) != READER_SHA: raise SystemExit("binary identity mismatch")
-    if a.smoke: ROUNDS.update(dev=1, holdout=1)
+    global MAX_LOAD
+    MAX_LOAD = a.max_load
+    holdouts = a.holdouts.split(",")
+    if a.smoke: ROUNDS.update({k: 1 for k in ROUNDS})
     mdir = a.manifests or HERE
-    dev, hold = load_split(a.corpus, "dev", mdir), load_split(a.corpus, "holdout", mdir)
+    dev = load_split(a.corpus, "dev", mdir); hold = {h: load_split(a.corpus, h, mdir) for h in holdouts}
     R = Runner(os.path.abspath(a.encoder), os.path.abspath(a.reader), out)
     meta = {"encoder": a.encoder, "encoder_sha256": ENCODER_SHA, "reader": a.reader, "reader_sha256": READER_SHA,
             "seed": SEED, "rounds": ROUNDS, "start": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "uname": os.uname()._asdict() if hasattr(os.uname(), "_asdict") else list(os.uname()),
-            "load_start": os.getloadavg()}
+            "load_start": os.getloadavg(), "max_load": MAX_LOAD, "holdouts": holdouts}
     rng = random.Random(SEED)
     # 1. launch constants on a 1-byte file (development phase)
     one = os.path.join(out, "one-byte"); open(one, "wb").write(b"x")
-    lr = [R.roundtrip(one, ["-q", "-1"]) for _ in range(22)][1:]
+    while True:
+        lb = wait_quiet(); lr = [R.roundtrip(one, ["-q", "-1"]) for _ in range(22)][1:]; la = load1()
+        if MAX_LOAD is None or la <= MAX_LOAD: break
+    meta["launch_load"] = [lb, la]
     pe = statistics.median(r["enc_ms"] for r in lr); pd = statistics.median(r["dec_ms"] for r in lr)
     meta["launch"] = {"rounds": 21, "Pe_ms": pe, "Pd_ms": pd, "enc_ms": [r["enc_ms"] for r in lr], "dec_ms": [r["dec_ms"] for r in lr]}
     # 2. tables
     write_table(os.path.join(out, "B-launch.tab"), builtin_table(), pe, pd, "B: built-in rates and setups (src/plan/target_table.inc)")
     host = os.path.join(out, "calibrate-dev.tab")
-    t0 = time.time()
+    t0 = time.time(); meta["calibrate_load_before"] = wait_quiet()
     subprocess.run([R.encoder, "calibrate", "-s", "0.1", "-o", host] + [f["file"] for f in dev], env=R.env, check=True)
-    meta["calibrate_s"] = time.time() - t0
+    meta["calibrate_s"] = time.time() - t0; meta["calibrate_load_after"] = load1()
     write_table(os.path.join(out, "C-host-launch.tab"), parse_table(host), pe, pd, "C: kolmo calibrate -s 0.1 on the development files")
     tabs = {"B": os.path.join(out, "B-launch.tab"), "C": os.path.join(out, "C-host-launch.tab")}
     json.dump(meta, open(os.path.join(out, "meta.json"), "w"), indent=1)
@@ -152,7 +177,8 @@ def measure(a):
     json.dump(meta, open(os.path.join(out, "meta.json"), "w"), indent=1)
     print("development met:", met, "-> holdout candidate", pick, "(improved)" if improved else "(no development gain)", flush=True)
     # 4. holdout: stock, stock-dup, chosen
-    run_split(R, raw, "holdout", hold, {"stock": None, "stock-dup": None, pick: tabs[pick]}, rng)
+    for h in holdouts:
+        run_split(R, raw, h, hold[h], {"stock": None, "stock-dup": None, pick: tabs[pick]}, rng)
     raw.close()
     meta.update(end=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), load_end=os.getloadavg())
     json.dump(meta, open(os.path.join(out, "meta.json"), "w"), indent=1)
@@ -163,7 +189,7 @@ def med(xs): return statistics.median(xs)
 
 
 def score_split(rows, split, cands, base, dup):
-    rows = [r for r in rows if r["split"] == split and not r["warmup"]]
+    rows = [r for r in rows if r["split"] == split and not r["warmup"] and not r.get("invalid_load")]
     integrity = []
     cell = {}
     for r in rows:
@@ -261,14 +287,16 @@ def score(a):
         d = score_split(rows, "dev", ["B", "C"], "stock", None)
         res["dev"] = {"arms": d["arms"], "integrity": d["integrity"]}
         write_csv(os.path.join(out, "dev-cases.csv"), d["cases"])
-    if any(r["split"] == "holdout" for r in rows):
+    for hs in meta.get("holdouts", ["holdout"]):
+        if not any(r["split"] == hs for r in rows): continue
         cand = meta["chosen"]
-        h = score_split(rows, "holdout", [cand], "stock", "stock-dup")
-        res["holdout"] = {"candidate": cand, "arms": h["arms"], "gates": gates(h, "stock", "stock-dup", cand)}
-        write_csv(os.path.join(out, "holdout-cases.csv"), h["cases"])
-        write_csv(os.path.join(out, "holdout-direct.csv"), [dict(file=k.split("|")[0], setting=k.split("|")[1], **v) for k, v in h["direct"].items()])
+        h = score_split(rows, hs, [cand], "stock", "stock-dup")
+        res[hs] = {"candidate": cand, "arms": h["arms"], "gates": gates(h, "stock", "stock-dup", cand)}
+        write_csv(os.path.join(out, f"{hs}-cases.csv"), h["cases"])
+        write_csv(os.path.join(out, f"{hs}-direct.csv"), [dict(file=k.split("|")[0], setting=k.split("|")[1], **v) for k, v in h["direct"].items()])
+    res["rows_discarded_for_load"] = sum(1 for r in rows if r.get("invalid_load")) 
     json.dump(res, open(os.path.join(out, "score.json"), "w"), indent=1)
-    print(json.dumps(res.get("holdout", res.get("dev")), indent=1))
+    print(json.dumps({k: res[k] for k in res if k not in ("meta",)}, indent=1))
 
 
 def reference(a):
@@ -277,6 +305,8 @@ def reference(a):
     if sha(a.encoder) != ENCODER_SHA or sha(a.reader) != READER_SHA: raise SystemExit("binary identity mismatch")
     files = load_split(a.corpus, "reference", a.manifests)
     R = Runner(os.path.abspath(a.encoder), os.path.abspath(a.reader), out)
+    global MAX_LOAD
+    MAX_LOAD = a.max_load
     tab = os.path.join(out, os.path.basename(a.table)); open(tab, "w").write(open(a.table).read())
     with open(os.path.join(out, "raw.jsonl"), "w") as raw:
         run_split(R, raw, "reference", files, {"stock": None, "cand": tab}, random.Random(SEED + 1))
@@ -292,9 +322,12 @@ if __name__ == "__main__":
     m = sub.add_parser("measure"); m.add_argument("--encoder", required=True); m.add_argument("--reader", required=True)
     m.add_argument("--corpus", required=True); m.add_argument("--out", required=True)
     m.add_argument("--manifests", help="smoke tests only: other dev.json/holdout.json"); m.add_argument("--smoke", action="store_true")
+    m.add_argument("--holdouts", default="holdout", help="comma list of sealed holdout manifests, scored separately")
+    m.add_argument("--max-load", type=float, default=None, help="quiet-host gate on the 1-minute load average")
     s = sub.add_parser("score"); s.add_argument("--out", required=True)
     r = sub.add_parser("reference"); r.add_argument("--encoder", required=True); r.add_argument("--reader", required=True)
     r.add_argument("--corpus", required=True, help="directory with reference/<name> files"); r.add_argument("--out", required=True)
     r.add_argument("--table", required=True); r.add_argument("--manifests", default=HERE)
+    r.add_argument("--max-load", type=float, default=None)
     a = ap.parse_args()
     {"measure": measure, "score": score, "reference": reference}[a.cmd](a)

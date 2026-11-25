@@ -1,4 +1,10 @@
-# Startup-aware speed floors for small files: rejected
+# Startup-aware speed floors for small files: rejected (loaded host; quiet replication pending)
+
+> **Timing status: pending: quiet window.** The measurements below ran under a load average of 80–310 on 10
+> cores, so the coordinator rule (load ≤ 12) makes their timings invalid. A load-gated replication is queued:
+> development is re-measured, `holdout2` is a new sealed holdout that alone decides, the first holdout is
+> replicated, and the B26 reference replay follows. See [protocol amendment 1](protocol.md). The memory gate (RSS)
+> and byte results below do not depend on load. Floor verdicts and time ratios do.
 
 **Decision: no policy qualifies, so nothing ships.** The development phase picked the startup-aware host calibration
 (C). On the sealed holdout it met 22 of 66 end-to-end floor cases; stock met 16 and its duplicate 17. It caused no
