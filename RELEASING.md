@@ -56,28 +56,37 @@ python3 tests/make_v12_frames.py --kolmo build/kolmo --release X.Y.Z    # adds t
 make check                                                               # the corpus tests include the new frames
 ```
 
-## 2. Tag and create the GitHub release
+## 2. Tag, verify, and publish the GitHub release
 
 ```sh
 git tag -a vX.Y.Z -m "kolmo X.Y.Z" && git push origin vX.Y.Z
-gh release create vX.Y.Z --title "kolmo X.Y.Z" --notes-file notes.md
+gh run list --workflow release.yml --branch vX.Y.Z
 ```
 
-Pushing the tag also runs `.github/workflows/release.yml`: it builds the source tarball and the CLI binaries
-(Linux x86-64 and arm64, macOS arm64), signs them with build provenance, and attaches them and `SHA256SUMS` to the
-release (as a draft if `gh release create` has not run yet; publish the draft by hand). See
-[Signed release files](#7-signed-release-files).
+Wait for the tag's release workflow to succeed. It checks the version, builds four reproducible archives,
+verifies the archives and signed checksum manifest against the exact workflow, tag and commit, then stages
+and downloads a draft to check every asset's bytes. A rerun can complete a matching draft. A differing
+asset fails the job, preserving the existing file. Enable GitHub release immutability in repository settings
+to enforce that a published release's assets and tag stay fixed.
+
+Publish the verified draft with your release notes.
+
+```sh
+gh release edit vX.Y.Z --title "kolmo X.Y.Z" --notes-file notes.md --draft=false
+```
+
+See [Signed release files](#7-signed-release-files) for independent verification.
 
 ## 3. PyPI (automatic)
 
 Pushing the tag runs `wheels.yml`. It builds the sdist and the manylinux x86-64 and aarch64 wheels,
-then publishes them through Trusted Publishing. No token is stored. You can also start it by hand
-with **Run workflow** (`workflow_dispatch`); the version comes from `pyproject.toml`. The publish
-step uses `skip-existing`, so running it again for a version that is already up is harmless.
+then verifies their metadata and provenance and publishes through Trusted Publishing. A manual run from
+a branch builds packages for inspection. Use the matching version tag for publication. A retry checks the
+filenames and digests of files already on PyPI, stages missing files, and checks the full expected set after
+upload. Retry the publish job using its retained build artifacts. A rebuilt wheel with a different digest
+will fail this check.
 
 Check the run with `gh run list --workflow wheels.yml`.
-
-To publish by hand instead: `cd bindings/python && pipx run build && pipx run twine upload dist/*`.
 
 ### 3b. Apple silicon wheel (manual, on a Mac)
 
@@ -147,7 +156,8 @@ transparency log (Rekor).
 | Files | Workflow | When |
 |---|---|---|
 | `kolmo-X.Y.Z.tar.gz` (source), `kolmo-X.Y.Z-{linux-x86_64,linux-arm64,macos-arm64}.tar.gz` (CLI) | `release.yml` | tag push, or **Run workflow** |
-| PyPI sdist and wheels | `wheels.yml` (`publish` job) | tag push, or **Run workflow** |
+| `SHA256SUMS` (manifest for the four release archives) | `release.yml` | tag push |
+| PyPI sdist and Linux wheels | `wheels.yml` (`publish` job) | tag push, or **Run workflow** from the tag |
 
 The Apple silicon wheel built by hand (step 3b) and the crate published with `cargo publish` (step 4) are not
 attested. The PyPI upload also attaches PEP 740 attestations, shown on each file's PyPI page.
@@ -173,7 +183,8 @@ gh attestation verify kolmo-X.Y.Z-linux-x86_64.tar.gz --repo adnaneben/kolmo \
 ```
 
 Without `gh`, download the bundle (`gh attestation download`, or the release's attestation page) and verify it with
-`cosign verify-blob-attestation` or the `sigstore` Python package. The release's `SHA256SUMS` lists the same hashes.
+`cosign verify-blob-attestation` or the `sigstore` Python package. Verify the release's `SHA256SUMS` with the same attestation command, then use `sha256sum -c SHA256SUMS`
+to check every downloaded archive.
 
 The source tarball of the release workflow is not the tarball GitHub generates for the tag
 (`archive/refs/tags/vX.Y.Z.tar.gz`, which the Homebrew formula pins); GitHub's own tarball is not attested.
