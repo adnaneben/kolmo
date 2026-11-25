@@ -1,0 +1,141 @@
+# dev1m: time -l of stock, control, candidate, zpaq (nice -n 15, loaded host)
+## t1
+       38.66 real         3.81 user         0.23 sys
+            63913984  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               12764  page reclaims
+                  61  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+               38644  involuntary context switches
+         30432647065  instructions retired
+         12958856044  cycles elapsed
+            94224888  peak memory footprint
+## t2
+       19.40 real         2.58 user         0.14 sys
+            46940160  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+                4181  page reclaims
+                  26  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                 119  voluntary context switches
+               28138  involuntary context switches
+         21199724343  instructions retired
+          8702951060  cycles elapsed
+            48071136  peak memory footprint
+## t3
+{"mode":"enc0","n":1048576,"z":229676,"read_s":0.000717,"code_s":14.726275}
+       14.74 real         2.35 user         0.11 sys
+            47579136  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+                9245  page reclaims
+                  12  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   1  voluntary context switches
+               17215  involuntary context switches
+         20631411537  instructions retired
+          7871573425  cycles elapsed
+            49365472  peak memory footprint
+## t4
+{"mode":"enc","n":1048576,"z":228445,"H":128,"T":30,"lr":50,"lro":1000,"sel":0,"lrm":4,"params":180864,"read_s":0.000955,"init_s":0.001313,"code_s":533.631829,"bytes_cm":229657,"bytes_lstm":293708,"bytes_final":228417}
+      533.65 real        69.33 user         3.08 sys
+            49070080  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              287205  page reclaims
+                  24  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                  19  voluntary context switches
+              379868  involuntary context switches
+        510116193812  instructions retired
+        233355680914  cycles elapsed
+            51659208  peak memory footprint
+## t5
+{"mode":"dec","n":1048576,"z":228445,"H":128,"T":30,"lr":50,"lro":1000,"sel":0,"lrm":4,"params":180864,"read_s":0.000067,"init_s":0.001117,"code_s":240.269539,"bytes_cm":0,"bytes_lstm":0,"bytes_final":0}
+      240.28 real        63.58 user         0.57 sys
+            48627712  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+                9056  page reclaims
+                   6  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   0  voluntary context switches
+              150225  involuntary context switches
+        500831526853  instructions retired
+        206502051346  cycles elapsed
+            50594248  peak memory footprint
+## t6
+{"mode":"dec0","n":1048576,"read_s":0.000335,"code_s":5.878808}
+        5.89 real         1.98 user         0.02 sys
+            48529408  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+                3378  page reclaims
+                   4  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   2  voluntary context switches
+                5316  involuntary context switches
+         20819337089  instructions retired
+          6407725939  cycles elapsed
+            48284128  peak memory footprint
+{"mode":"enc","n":1048576,"z":228445,"H":128,"T":30,"lr":50,"lro":1000,"sel":0,"lrm":4,"params":180864,"read_s":0.000955,"init_s":0.001313,"code_s":533.631829,"bytes_cm":229657,"bytes_lstm":293708,"bytes_final":228417}
+      533.65 real        69.33 user         3.08 sys
+            49070080  maximum resident set size
+{"mode":"dec","n":1048576,"z":228445,"H":128,"T":30,"lr":50,"lro":1000,"sel":0,"lrm":4,"params":180864,"read_s":0.000067,"init_s":0.001117,"code_s":240.269539,"bytes_cm":0,"bytes_lstm":0,"bytes_final":0}
+      240.28 real        63.58 user         0.57 sys
+            48627712  maximum resident set size
+{"mode":"dec0","n":1048576,"read_s":0.000335,"code_s":5.878808}
+        5.89 real         1.98 user         0.02 sys
+            48529408  maximum resident set size
+afd479dd0e0339643530bf4ee3d10423265c515a06e7994bbe26ccba39aea9ab  dev1m
+afd479dd0e0339643530bf4ee3d10423265c515a06e7994bbe26ccba39aea9ab  out/dev1m.cand.out
+afd479dd0e0339643530bf4ee3d10423265c515a06e7994bbe26ccba39aea9ab  out/dev1m.ctl.out
+8bf34b7c15c8a7665c1744659480f6040df909fcf097ea77fab8e7a79556e617  out/dev1m.cand
+252f0b32dc198e993c2dcc1c0547923087f2638a345d16dfbeb23a1363faf668  out/dev1m.ctl
+8a352cdb7cd997c5a1e93274599ce84a8747e4733fb7d53e41bf6fb690f2f300  out/dev1m.stock
+6036438d3d2b582fb488efd5c069ef8c2e76304880eb0131293af21b10fade4b  out/z1.zpaq
+228445
+
+[exited with code 0]
+# holdout / dev4m byte job log
+{"mode":"enc0","n":6627202,"z":874372,"read_s":0.001050,"code_s":58.776081}
+{"mode":"enc","n":6627202,"z":832051,"H":128,"T":30,"lr":50,"lro":1000,"sel":0,"lrm":4,"params":180864,"read_s":0.001562,"init_s":0.000643,"code_s":2269.294024,"bytes_cm":874353,"bytes_lstm":970199,"bytes_final":832023}

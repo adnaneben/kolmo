@@ -57,6 +57,10 @@ def arm_cmds(cfg, arm, src, work):
 
 def run_cell(cfg_path, cid):
     cfg = json.load(open(cfg_path)); out = cfg["out"]
+    if os.path.exists(os.path.join(out, "cells", cid + ".json")): return          # done (another driver ran it)
+    lmax = cfg.get("max_load1", 12.0)
+    if os.getloadavg()[0] >= lmax:                                                 # host busy: give the lock back, timed later
+        print(cid, "deferred: load", round(os.getloadavg()[0], 1), flush=True); return
     rnd, inp, arm = cid.split("__")
     src = cfg["inputs"][inp]
     work = os.path.join(out, "work", cid); shutil.rmtree(work, ignore_errors=True); os.makedirs(work)
@@ -93,9 +97,12 @@ def drive(cfg_path):
             cells = [f"r{r}__{i}__{a}" for i in cfg["inputs"] for a in cfg["arms"]]
             rng.shuffle(cells); order += cells
         json.dump(order, open(op, "w"), indent=1)
+    lmax = cfg.get("max_load1", 12.0)
     for cid in order:
-        if os.path.exists(os.path.join(out, "cells", cid + ".json")): continue
-        subprocess.run([cfg["timed"], cfg.get("tag", "ultra-lstm"), sys.executable, os.path.abspath(__file__), "--cell", cfg_path, cid], check=False)
+        while not os.path.exists(os.path.join(out, "cells", cid + ".json")):
+            while os.getloadavg()[0] >= lmax: time.sleep(30)                   # take the lock only on a quiet host
+            subprocess.run([cfg["timed"], cfg.get("tag", "ultra-lstm"), sys.executable, os.path.abspath(__file__), "--cell", cfg_path, cid], check=False)
+            if os.getloadavg()[0] >= lmax: continue                           # deferred inside the lock: wait and retry
 
 if __name__ == "__main__":
     if sys.argv[1] == "--cell": run_cell(sys.argv[2], sys.argv[3])
