@@ -205,7 +205,7 @@ int64_t kolmo_decode_memory(const uint8_t *src, size_t n) {
  * 6-9 -> 5, 10-15 -> 6, 16-18 -> 8, 19+ -> 9) and transforms (1 = full analysis, 2 = quick, 3 = minimal, 0 = none).
  * The initial 0.0.2 assignment; another lane measures and retunes it. Edit the rows here only: the CLI and the
  * bindings read nothing else. Changing a row changes the output of that level (benchmark/determinism/expected.sha256). */
-static const struct { kolmo_mode mode; int level; int transforms; } kolmo_level_table[KOLMO_LEVEL_ULTRA + 1] = {
+static const struct { kolmo_mode mode; int level; int transforms; } kolmo_level_table[KOLMO_LEVEL_ULTRA_PLUS + 1] = {
     [1]  = {KOLMO_RT,    0,  3},   /* fastest: KLZ, minimal analysis (0.0.1 CLI "-m speed", exactly) */
     [2]  = {KOLMO_FAST, -1,  3},   /* fast KLZH2 parse (KLZH2 level 0), minimal analysis; screening 3.211, 433 / 835 MiB/s (KLZH2 1 was 3.295, 328) */
     [3]  = {KOLMO_FAST,  0,  1},   /* light, the default: KLZH2 3 with full analysis (0.0.1 "balanced") */
@@ -215,11 +215,12 @@ static const struct { kolmo_mode mode; int level; int transforms; } kolmo_level_
     [7]  = {KOLMO_HC,    0,  1},   /* compact: KLZH2 9 (0.0.1 "hc") */
     [8]  = {KOLMO_MAX,   1,  1},   /* ratio tier, fast variant: BWT for every block (0.0.1 "ratio -l 1") */
     [9]  = {KOLMO_MAX,   0,  1},   /* max: BWT for text, the better of BWT and KLZMA for binary (0.0.1 "ratio") */
+    [KOLMO_LEVEL_ULTRA_PLUS] = {KOLMO_ULTRA, 0, 1 | KOLMO_T_ULTRA_PLUS},
     [10] = {KOLMO_ULTRA, 0,  1},   /* ultra: context mixing (0.0.1 "-x") */
 };
 
 int kolmo_params_for_level(int level, kolmo_params *p) {
-    if (!p || level < KOLMO_LEVEL_MIN || level > KOLMO_LEVEL_ULTRA) return KOLMO_ERR_PARAM;
+    if (!p || level < KOLMO_LEVEL_MIN || level > KOLMO_LEVEL_ULTRA_PLUS) return KOLMO_ERR_PARAM;
     p->mode = kolmo_level_table[level].mode;
     p->level = kolmo_level_table[level].level;
     p->transforms = kolmo_level_table[level].transforms;
@@ -242,7 +243,7 @@ const char *kolmo_strerror(int64_t c) {
         case KOLMO_ERR_MEMORY: return "memory limit: the frame needs more memory to decode than the limit, or the limit is below the mode's floor";
         case KOLMO_ERR_LEGACY: return "written by an earlier Kolmo (1.x or a release candidate) that used library codecs; this build reads only Kolmo-native frames";
         case KOLMO_ERR_UNSUPPORTED: return "not available in this build: dictionaries and trained profiles need library codecs";
-        case KOLMO_ERR_PARAM: return "invalid parameter (mode, level or transforms out of range; levels are 1 to 9, and 10 for ultra)";
+        case KOLMO_ERR_PARAM: return "invalid parameter (mode, level or transforms out of range; levels are 1 to 9, ultra (10), and experimental ultra+ (11))";
         case KOLMO_ERR_RANGE: return "range outside the decoded data";
     }
     return c >= 0 ? "ok" : "unknown error";

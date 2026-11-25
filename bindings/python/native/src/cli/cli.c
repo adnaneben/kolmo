@@ -212,6 +212,7 @@ static const char *const LEVEL_NAME[KOLMO_LEVEL_ULTRA + 1] = {
     NULL, "fastest", NULL, "light", NULL, "balanced", NULL, "compact", NULL, "max", "ultra"};
 static const char *level_label(int level, char *o, size_t cap) {
     if (level == KOLMO_LEVEL_ULTRA) snprintf(o, cap, "ultra (-U)");
+    else if (level == KOLMO_LEVEL_ULTRA_PLUS) snprintf(o, cap, "experimental Ultra+");
     else if (level >= 1 && level <= 9 && LEVEL_NAME[level]) snprintf(o, cap, "level %d (%s)", level, LEVEL_NAME[level]);
     else snprintf(o, cap, "level %d", level);
     return o;
@@ -270,7 +271,8 @@ static void help(void) {
 "  -8                   block sorting: smaller, decompresses about 10x more slowly\n"
 "  -9  -X  --max        the smallest output that still decompresses at practical speed\n"
 "  -U      --ultra      extreme: decompresses about as slowly as it compresses, ~1 GB+ of memory\n"
-"          --level N    N = 1..9, or ultra\n"
+"          --ultra-plus experimental Ultra+ text competition, readable by stock v12\n"
+"          --level N    N = 1..9, ultra, or ultra+\n"
 "  xz and gzip spellings: -0 and --fast = -1, --best = -9, -e/--extreme accepted (no effect:\n"
 "  -9e = -9), --memory = --memlimit, --no-name accepted (frames store no name); docs/XZ-COMPAT.md\n"
 "\n"
@@ -350,6 +352,7 @@ static int parse_int(const char *s, int lo, int hi, int *out) {
     *out = (int)v; return 0;
 }
 static int set_level_str(opts_t *o, const char *v) {
+    if (!strcmp(v, "ultra+")) { o->level = KOLMO_LEVEL_ULTRA_PLUS; return 0; }
     if (!strcmp(v, "ultra")) { o->level = KOLMO_LEVEL_ULTRA; return 0; }
     for (int l = 1; l <= KOLMO_LEVEL_MAX; l++) if (LEVEL_NAME[l] && !strcmp(v, LEVEL_NAME[l])) { o->level = l; return 0; }
     int n;
@@ -370,7 +373,7 @@ static int long_option(opts_t *o, int argc, char **argv, int *a) {
     const char *val = eq ? eq + 1 : NULL;
     static const char *const flag[] = {"fastest", "light", "balanced", "compact", "max", "ultra", "compress", "decompress",
         "stdout", "keep", "rm", "force", "test", "list", "quiet", "verbose", "help", "version", "native-leaf", "typed-huf",
-        "gpu", "stream", "fast", "best", "extreme", "uncompress", "to-stdout", "no-name", NULL};
+        "gpu", "stream", "fast", "best", "extreme", "uncompress", "to-stdout", "no-name", "ultra-plus", NULL};
     static const char *const valued[] = {"level", "output", "threads", "memlimit", "block-size", "analysis", "range",
         "codec-level", "target", "calib", "x-tables", "memory", NULL};
     int f = -1, v = -1;
@@ -399,6 +402,7 @@ static int long_option(opts_t *o, int argc, char **argv, int *a) {
             case 24: break;                                     /* xz --extreme: no Kolmo equivalent, accepted */
             case 25: o->op = OP_DECOMPRESS; break;              /* gzip --uncompress */
             case 26: o->to_stdout = 1; break;                   /* gzip --to-stdout */
+            case 28: o->level = KOLMO_LEVEL_ULTRA_PLUS; break;
             case 27: break;                                     /* gzip --no-name: frames store no name or time */
         }
         return 0;
@@ -1153,7 +1157,7 @@ int main(int argc, char **argv) {
     /* the level, then the expert overrides */
     kolmo_params_for_level(o.level, &o.P);
     o.P.threads = o.threads;
-    if (o.analysis >= 0) o.P.transforms = o.analysis;
+    if (o.analysis >= 0) o.P.transforms = o.analysis | (o.P.transforms & KOLMO_T_ULTRA_PLUS);
     if (o.codec_level) o.P.level = o.codec_level;
     if (o.block_mib > 0) o.P.block = (uint32_t)(o.block_mib * 1048576);
     if (o.native_leaf && o.typed_huf) { usage_error("choose --native-leaf or --typed-huf, not both%s", ""); goto done; }

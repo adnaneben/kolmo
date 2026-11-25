@@ -48,7 +48,7 @@ int main(void) {
     /* the table itself */
     kolmo_params p; memset(&p, 0, sizeof p);
     CHECK(kolmo_params_for_level(0, &p) == KOLMO_ERR_PARAM, "level 0 accepted");
-    CHECK(kolmo_params_for_level(11, &p) == KOLMO_ERR_PARAM, "level 11 accepted");
+    CHECK(kolmo_params_for_level(12, &p) == KOLMO_ERR_PARAM, "level 12 accepted");
     CHECK(kolmo_params_for_level(-1, &p) == KOLMO_ERR_PARAM, "level -1 accepted");
     CHECK(kolmo_params_for_level(3, NULL) == KOLMO_ERR_PARAM, "NULL params accepted");
     p.threads = 7; p.block = 1u << 20; p.mem_limit = 123456789; p.mode = KOLMO_MAX;
@@ -61,11 +61,13 @@ int main(void) {
     CHECK(KOLMO_LEVEL_DEFAULT == KOLMO_LEVEL_LIGHT && KOLMO_LEVEL_MAX_RATIO == KOLMO_LEVEL_MAX && KOLMO_LEVEL_ULTRA == 10,
           "level constants");
     CHECK(!kolmo_params_for_level(KOLMO_LEVEL_ULTRA, &p) && p.mode == KOLMO_ULTRA, "ultra is not context mixing");
+    CHECK(!kolmo_params_for_level(KOLMO_LEVEL_ULTRA_PLUS, &p) && p.mode == KOLMO_ULTRA &&
+          p.transforms == (1 | KOLMO_T_ULTRA_PLUS), "experimental ultra+ flags");
     CHECK(strstr(kolmo_strerror(KOLMO_ERR_PARAM), "level") != NULL, "KOLMO_ERR_PARAM message");
 
-    for (int lv = KOLMO_LEVEL_MIN; lv <= KOLMO_LEVEL_ULTRA; lv++) {
+    for (int lv = KOLMO_LEVEL_MIN; lv <= KOLMO_LEVEL_ULTRA_PLUS; lv++) {
         for (size_t k = 0; k < sizeof in / sizeof in[0]; k++) {
-            if (lv == KOLMO_LEVEL_ULTRA && in[k].n > 100000) continue;   /* keep the context-mixing tier quick */
+            if (lv >= KOLMO_LEVEL_ULTRA && in[k].n > 100000) continue;   /* keep the context-mixing tier quick */
             kolmo_params q = {0}; q.threads = 1;
             CHECK(!kolmo_params_for_level(lv, &q), "level %d rejected", lv);
             uint8_t *a = NULL, *b = NULL, *c = NULL;

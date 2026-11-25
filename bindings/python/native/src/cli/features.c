@@ -80,6 +80,7 @@ static int fc_level_opt(const char *s, int argc, char **argv, int *a, int *level
     if (!strcmp(s, "-m")) { fprintf(stderr, "kolmo: -m was removed in 0.0.2; use a level: -1 (fastest) .. -9 (max), -3 light is the default, -U ultra\n"); return -2; }
     if (!strcmp(s, "-x")) { fprintf(stderr, "kolmo: -x was removed in 0.0.2; use -U (--ultra)\n"); return -2; }
     if (!strcmp(s, "-l")) { fprintf(stderr, "kolmo: -l LEVEL was removed in 0.0.2; use a level -1 .. -9 (expert: --codec-level N)\n"); return -2; }
+    if (!strcmp(s, "--ultra-plus")) { *level = KOLMO_LEVEL_ULTRA_PLUS; return 1; }
     if (strncmp(s, "--", 2)) return 0;
     for (int i = 0; i < 6; i++) if (!strcmp(s + 2, names[i])) { *level = nlv[i]; return 1; }
     const char *eq = strchr(s, '='), *v = eq ? eq + 1 : NULL;
@@ -89,6 +90,7 @@ static int fc_level_opt(const char *s, int argc, char **argv, int *a, int *level
     if (which < 0) return 0;
     if (!v) { if (*a + 1 >= argc) { fprintf(stderr, "kolmo: %.*s needs a value\n", (int)nl, s); return -2; } v = argv[++*a]; }
     char *e; double d = strtod(v, &e);
+    if (which == 0 && !strcmp(v, "ultra+")) { *level = KOLMO_LEVEL_ULTRA_PLUS; return 1; }
     if (which == 0 && !strcmp(v, "ultra")) { *level = KOLMO_LEVEL_ULTRA; return 1; }
     if (which == 0) for (int i = 0; i < 6; i++) if (!strcmp(v, names[i])) { *level = nlv[i]; return 1; }
     if (*e || !*v || (which == 0 && (d < 1 || d > 9 || d != (int)d)) || (which == 1 && (d < 1 || d > 1000 || d != (int)d)) ||

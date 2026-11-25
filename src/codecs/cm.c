@@ -1346,6 +1346,32 @@ static size_t cm_codec_compress(codec_ctx *x, int level, const uint8_t *in, size
     /* level 1: model 1, as written before; otherwise model 3 for text, 2 for the rest, with the raced settings */
     return level == 1 ? cm_compress_m(in, n, out, cap, 1) : cm_compress_raced(in, n, out, cap, 4, 0, x ? x->threads : 1, cm4_mask_for(in, n));
 }
+/* Ultra+ competes only on raw text already won by CM4. Exchange two full and two quarter-sized
+ * context tables for one full and three half-sized tables. The match, prior and wire model stay v12.
+ * Reserve no more model memory than the already-admitted baseline and reuse the caller's scratch slot. */
+static size_t cm4_plus_compete(const uint8_t *in, size_t n, uint8_t *alt, size_t cap,
+                              const uint8_t *coded, size_t current) {
+    enum { SAMPLE = 16 << 10 };
+    const uint32_t mask = (CM4_MASK_TEXT & ~((1u << 10) | (1u << 15) | (1u << 27) | (1u << 28)))
+                          | (1u << 2) | (1u << 16) | (1u << 17) | (1u << 23);
+    if (n < (1u << 20) || n >= (1u << 28) || current < 16 || (coded[4] >> 4) != 9 || cap < 2 * SAMPLE)
+        return 0;
+    const uint8_t *m = coded + 8;
+    uint32_t encoded_mask = (uint32_t)m[0] | (uint32_t)m[1] << 8 | (uint32_t)m[2] << 16 | (uint32_t)m[3] << 24;
+    if (encoded_mask != CM4_MASK_TEXT || cm4_need_bound(n, mask) > cm_stream_need(coded, current, n))
+        return 0;
+
+    for (size_t part = 1; part <= 3; part += 2) {
+        const uint8_t *sample = in + part * (n - SAMPLE) / 4;
+        size_t base = cm_compress_m4(sample, SAMPLE, alt, 2 * SAMPLE, 0, cm4_tune, CM4_MASK_TEXT);
+        size_t trial = cm_compress_m4(sample, SAMPLE, alt, 2 * SAMPLE, 0, cm4_tune, mask);
+        if (!base || !trial || trial * 100 > base * 99) return 0;
+    }
+
+    /* The range coder needs tail room beyond its reported payload, so compare sizes after encoding. */
+    size_t z = cm_compress_m4(in, n, alt, cap, 0, cm4_tune, mask);
+    return z && z * 100 <= current * 99 ? z : 0;
+}
 static int cm_codec_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return cm_decompress(in, cn, out, n); }
 static const kolmo_codec codec_cm = { C_CM, "cm", cm_bound, cm_codec_compress, cm_codec_decompress, NULL };
 #endif

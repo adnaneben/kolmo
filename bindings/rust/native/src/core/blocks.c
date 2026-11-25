@@ -78,7 +78,7 @@ static uint32_t kolmo_default_block(const kolmo_params *p, size_t n) {
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
     const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
-    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next; atomic_int err; size_t B;
+    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns, ultra_plus; plan_t pl; atomic_uint next; atomic_int err; size_t B;
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint32_t *segment_kind;   /* metadata type per segment, indexed by bplan */
     const uint64_t *poff;   /* decode: payload offsets */
@@ -613,6 +613,12 @@ static void *compress_worker(void *arg) {
                     }
                 }
             }
+        }
+        if (J->ultra_plus && codec == C_CM && !cmp_used && !tflag && in == raw
+            && cl && !meta && len >= (1u << 20)) {
+            uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
+            size_t z = alt ? cm4_plus_compete(raw, len, alt, J->slot, sl, cl) : 0;
+            if (z) { memcpy(sl, alt, z); cl = z; }
         }
         /* the payload is still codec 25's when no later trial replaced it (they clear cmp_used or change codec) */
         if (cmp_used && codec == C_CM) { codec = C_CMP; modes |= 128; }
