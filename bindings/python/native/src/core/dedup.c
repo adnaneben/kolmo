@@ -228,13 +228,26 @@ static int dd_seek(const dd_arc *A, uint64_t want, dd_entry *e) {
 }
 /* the chunk ids of an entry into ids[0..nref); checks the ids and that the lengths add up to the size */
 static int dd_ids(const dd_arc *A, const dd_entry *e, uint64_t *ids) {
-    size_t i = e->refs; int64_t prev = -1; uint64_t v, tot = 0;
+    size_t i = e->refs;
+    uint64_t base = 0, tot = 0;
     for (uint64_t r = 0; r < e->nref; r++) {
-        kx_getuv(A->tab, A->tn, &i, &v);
-        int64_t id = prev + 1 + dd_unzz(v);
-        if (id < 0 || (uint64_t)id >= A->nc) return KOLMO_ERR_CORRUPT;
-        ids[r] = (uint64_t)id; prev = id; tot += A->coff[id + 1] - A->coff[id];
-        if (tot > e->size) return KOLMO_ERR_CORRUPT;
+        uint64_t v;
+        if (kx_getuv(A->tab, A->tn, &i, &v)) return KOLMO_ERR_CORRUPT;
+        /* Zigzag gap from the previous id plus one. Check in the unsigned
+         * domain before adding/subtracting, including the initial base of zero. */
+        uint64_t step = v >> 1, id;
+        if (v & 1) {
+            if (step >= base) return KOLMO_ERR_CORRUPT;
+            id = base - 1 - step;
+        } else {
+            if (step >= A->nc - base) return KOLMO_ERR_CORRUPT;
+            id = base + step;
+        }
+        uint64_t len = A->coff[id + 1] - A->coff[id];
+        if (len > e->size - tot) return KOLMO_ERR_CORRUPT;
+        tot += len;
+        ids[r] = id;
+        base = id + 1;
     }
     return tot == e->size ? 0 : KOLMO_ERR_CORRUPT;
 }
