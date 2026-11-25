@@ -41,21 +41,8 @@ KIMG_AI int kimg_get(kimg_rc *r, int p) {
     return bit;
 }
 /* logistic mixing (as lpaq): stretch(p) = ln(p / (1 - p)), squash its inverse, 12-bit fixed point */
-static int16_t kimg_st[4096]; static int16_t kimg_sq[4096]; static int kimg_tabs;
+static int16_t kimg_st[4096], kimg_sq[4096];
 static inline int kimg_squash(int d) { if (d > 2047) d = 2047; if (d < -2047) d = -2047; return kimg_sq[d + 2048]; }
-static void kimg_init_tabs(void) {
-    if (__atomic_load_n(&kimg_tabs, __ATOMIC_ACQUIRE)) return;
-    for (int i = 0; i < 4096; i++) {   /* integer squash: 4096 / (1 + e^-x), x = (i - 2048) / 256, by interpolation of 33 points */
-        static const int t[33] = {1, 2, 3, 6, 10, 16, 27, 45, 73, 120, 194, 310, 488, 747, 1101, 1546, 2047,
-                                  2549, 2994, 3348, 3607, 3785, 3901, 3975, 4024, 4050, 4068, 4079, 4085, 4089, 4092, 4093, 4094};
-        int d = i - 2048, w = d & 127; int k = (d >> 7) + 16;
-        kimg_sq[i] = (int16_t)(k >= 32 ? 4095 : (t[k] * (128 - w) + t[k + 1] * w + 64) >> 7);
-    }
-    int pi = 0;
-    for (int x = -2047; x <= 2047; x++) { int v = kimg_squash(x); for (int j = pi; j <= v; j++) kimg_st[j] = (int16_t)x; pi = v + 1; }
-    for (int j = pi; j < 4096; j++) kimg_st[j] = 2047;
-    __atomic_store_n(&kimg_tabs, 1, __ATOMIC_RELEASE);
-}
 /* adaptive counter: 16-bit probability and a count (rate 1/(n+1.5), from 1/1.5 down to 1/KIMG_LIM) */
 #define KIMG_LIM 255
 #ifndef KIMG_LR
@@ -76,10 +63,22 @@ static void kimg_init_tabs(void) {
 #ifndef KIMG_WSEL
 #define KIMG_WSEL m->w[cx[0]][cx[1]][node]
 #endif
-static const uint16_t *kimg_dt(void) {
-    static uint16_t dt[KIMG_LIM + 1]; static int ready;
-    if (!__atomic_load_n(&ready, __ATOMIC_ACQUIRE)) { for (int i = 0; i <= KIMG_LIM; i++) dt[i] = (uint16_t)(65536.0 * 2 / (2 * i + 3)); __atomic_store_n(&ready, 1, __ATOMIC_RELEASE); }
-    return dt;
+static uint16_t kimg_dt[KIMG_LIM + 1];
+static uint64_t kimg_wt[16384];   /* weight of an error sum s: 2^44 / s^KIMG_WP */
+static pthread_once_t kimg_once = PTHREAD_ONCE_INIT;
+static void kimg_init_tabs(void) {
+    for (int i = 0; i < 4096; i++) {   /* integer squash: 4096 / (1 + e^-x), x = (i - 2048) / 256, by interpolation of 33 points */
+        static const int t[33] = {1, 2, 3, 6, 10, 16, 27, 45, 73, 120, 194, 310, 488, 747, 1101, 1546, 2047,
+                                  2549, 2994, 3348, 3607, 3785, 3901, 3975, 4024, 4050, 4068, 4079, 4085, 4089, 4092, 4093, 4094};
+        int d = i - 2048, w = d & 127; int k = (d >> 7) + 16;
+        kimg_sq[i] = (int16_t)(k >= 32 ? 4095 : (t[k] * (128 - w) + t[k + 1] * w + 64) >> 7);
+    }
+    int pi = 0;
+    for (int x = -2047; x <= 2047; x++) { int v = kimg_squash(x); for (int j = pi; j <= v; j++) kimg_st[j] = (int16_t)x; pi = v + 1; }
+    for (int j = pi; j < 4096; j++) kimg_st[j] = 2047;
+    for (int i = 0; i <= KIMG_LIM; i++) kimg_dt[i] = (uint16_t)(65536.0 * 2 / (2 * i + 3));
+    for (uint64_t s = 1; s < 16384; s++) kimg_wt[s] = ((uint64_t)1 << 44) / (KIMG_WP == 3 ? s * s * s : s * s);
+    kimg_wt[0] = kimg_wt[1];
 }
 typedef struct { uint16_t p; uint8_t n, lim; } kimg_ctr;
 KIMG_AI void kimg_upd(kimg_ctr *c, int bit, const uint16_t *dt) {
@@ -159,12 +158,10 @@ KIMG_AI int kimg_run_t(const int enc, const int ver, int16_t *px, size_t npx, ui
     /* per predictor errors and the residual magnitude for two rows, indexed by byte column */
     uint16_t *err = calloc((size_t)2 * KIMG_ES * iw + KIMG_ES, sizeof(uint16_t));   /* + one zero entry (absent neighbours) */
     if (!m || !err) { free(m); free(err); return -1; }
-    kimg_model_init(m); kimg_init_tabs(); const uint16_t *dt = kimg_dt();
+    kimg_model_init(m); pthread_once(&kimg_once, kimg_init_tabs); const uint16_t *dt = kimg_dt;
 #define EP(row, x) (err + ((size_t)(row) * iw + (x)) * KIMG_ES)   /* the KIMG_NP errors and the residual at one byte column */
     const uint16_t *const ez = err + (size_t)2 * KIMG_ES * iw;
     int prevres = 0, prevE[3] = {0, 0, 0};   /* the earlier channel of this pixel: its residual, its spatial errors */
-    static uint64_t WT[16384]; static int wt_ready;   /* weight of an error sum s: 2^44 / s^KIMG_WP */
-    if (!__atomic_load_n(&wt_ready, __ATOMIC_ACQUIRE)) { for (uint64_t s = 1; s < 16384; s++) WT[s] = ((uint64_t)1 << 44) / (KIMG_WP == 3 ? s * s * s : s * s); WT[0] = WT[1]; __atomic_store_n(&wt_ready, 1, __ATOMIC_RELEASE); }
     uint32_t xx = phase, rr = 0, cc = phase % ich;                  /* byte column, row parity, channel */
     for (size_t k = 0; k < npx; k++) {
         const uint32_t x = xx, row = rr, c = cc;
@@ -198,7 +195,7 @@ KIMG_AI int kimg_run_t(const int enc, const int ver, int16_t *px, size_t npx, ui
         int64_t num = 0, den = 0;
         for (int i = 0; i < KIMG_NP; i++) {
             const uint32_t s = sv[i] > 16383 ? 16383 : sv[i];
-            const int64_t w = (int64_t)WT[s];
+            const int64_t w = (int64_t)kimg_wt[s];
             num += w * (int64_t)P[i]; den += w;
         }
         const int pr0 = (int)((num + (den >> 1)) / den); int pr = pr0;
