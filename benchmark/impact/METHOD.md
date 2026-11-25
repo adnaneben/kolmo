@@ -67,8 +67,23 @@ shape (the planner then sees a mismatch, as it would on any truncated file).
 
 `run.py` runs one cell at a time under the machine-wide lock (`$V/locks/timing.d`, the `timed.sh` protocol), and yields
 it for 16 s every 5 minutes so other sessions' `timed.sh` jobs get in. Per cell: compress with `/usr/bin/time -l` (wall,
-user + sys, peak RSS), decompress likewise, SHA-256 of the output. Each row records the 1-minute load average. Other
-sessions built and tested on this 10-core M5 throughout (load 48-176 while these rows were taken), so wall times and
-MB/s are indicative; ratios within one row pair (feature vs the level's frame, run back to back) are less affected than
-absolute speeds. Sizes are exact and do not depend on the thread count (the summary checks that every T1 and T10 frame
-pair is identical).
+user + sys, peak RSS), decompress likewise, SHA-256 of the output. Each row records the 1-minute load average.
+
+Other sessions built and tested on this 10-core M5 during the first pass (load up to 176). Speed ratios are therefore
+taken against `base2`, the level's own frames re-timed at load 1.4-3.0, and every feature row in `raw/rows.jsonl` was
+timed at load below 20: the 504 cells first timed above it were run again (their first rows, with the same frames, are
+in `raw/rows-highload.jsonl`). The first `base` pass is kept as the size reference. Sizes are exact and do not depend on
+the thread count (all 4559 T1/T10 frame pairs are identical). Process-level wall time includes start-up, which
+dominates for the 16 KiB cuts and the 441 KB WAV files.
+
+## Reproduce
+
+```
+make kolmo kolmo-impact
+python3 benchmark/impact/mkcorpus.py $V $V/impact/corpus && python3 benchmark/impact/mksmall.py $V/impact/corpus
+python3 benchmark/impact/kprior.py $V/impact/kprior.bin          # lexer/prior features only
+IMPACT_BIN=build/kolmo-impact STOCK_BIN=build/kolmo python3 benchmark/impact/run.py plan base,gr6,tf-full ...
+python3 benchmark/impact/overview.py --set all; python3 benchmark/impact/summarize.py gr6
+```
+Binaries used for the rows: `h1-896dc6d6` (harness, before the CM port; frames identical to `h2-lex` without the CM
+variables) and `h2-lex` (with the lexer and prior port), recorded in each row's `bin`.
