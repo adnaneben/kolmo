@@ -273,8 +273,23 @@ static int tpq_inv_cols(const uint8_t *in, size_t n, uint8_t delim, int k, const
 }
 
 
+/* fields per line (cnt[l] = delimiters outside quotes and brackets + 1) of the complete lines in in[0..n), at most
+ * maxlines. TP_STEP's state starts over at every line end, so each line is counted on its own: a line without '"',
+ * '[' or ']' (or any line when quotes is 0) holds exactly as many fields as delimiter bytes + 1, counted in one
+ * vectorisable pass; other lines take TP_STEP byte by byte. Same counts as the byte loop, several times faster
+ * (the planner runs it for five delimiters on every text input: 40% of level 3 on a 16 KiB log chunk). */
 static int tp_fieldcounts(const uint8_t *in, int64_t n, uint8_t delim, int quotes, int *cnt, int maxlines) {
-    int j = 0, inq = 0, inbr = 0, maxc = 1 << 30, L = 0;
-    for (int64_t i = 0; i < n && L < maxlines; i++) { uint8_t c = in[i]; if (c == '\n') cnt[L++] = j + 1; TP_STEP(c); }
+    int L = 0; int64_t i = 0;
+    while (i < n && L < maxlines) {
+        const uint8_t *e = memchr(in + i, '\n', (size_t)(n - i)); if (!e) break;
+        const int64_t le = e - in; uint32_t d = 0, q = 0;
+        for (int64_t k = i; k < le; k++) { const uint8_t c = in[k]; d += c == delim; q |= (c == '"') | (c == '[') | (c == ']'); }
+        int j = (int)d;
+        if ((quotes && q) || le - i >= (1 << 30) - 1) {
+            int inq = 0, inbr = 0; const int maxc = 1 << 30; j = 0;
+            for (int64_t k = i; k < le; k++) { const uint8_t c = in[k]; TP_STEP(c); }
+        }
+        cnt[L++] = j + 1; i = le + 1;
+    }
     return L;
 }

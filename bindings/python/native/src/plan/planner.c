@@ -11,6 +11,13 @@
 #ifndef KOLMO_BWT_GAIN_PCT
 #define KOLMO_BWT_GAIN_PCT 3      /* max: least size gain (%) for BWT to replace LZMA2 on a binary block */
 #endif
+#ifndef KOLMO_MAX_SMALL_BLOCK
+#define KOLMO_MAX_SMALL_BLOCK (64u << 10) /* levels 8-9, a plain block below this size: KLZMA and BWT are both coded and BWT is
+                                    * kept only by the binary blocks' margins (level 8: 2% smaller than KLZMA 1; level 9:
+                                    * KOLMO_BWT_GAIN_PCT smaller than KLZMA). Text went to BWT unconditionally (level 8:
+                                    * every block under 64 KiB), which on 256 B-16 KiB items was larger than level 7 and
+                                    * decoded 20-100x slower than KLZMA (QLFC's model set-up; benchmark/small/RESULTS.md) */
+#endif
 #ifndef KOLMO_BWT_SKIP_LZMA_PCT
 #define KOLMO_BWT_SKIP_LZMA_PCT 98 /* max: a slice with BWT at most this % of LZMA2 (preset 1) codes the block with BWT only.
                                     * 90 until 0.0.2: akiyo_cif.y4m (45 MB) has slice 0.976 and BWT 9.6% smaller on the block,

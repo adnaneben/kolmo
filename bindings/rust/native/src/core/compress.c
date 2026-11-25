@@ -81,19 +81,32 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     uint32_t B = p->block ? p->block : kolmo_default_block(p, n);   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
     if (B < 4096) B = 4096;
     int codec, level; mode_codec(p, &codec, &level);
+    if (n == 0) {   /* empty input: the header alone, nblocks 0 (FORMAT.md §4); 0.0.1 and 0.0.2 decode it (was 52 bytes:
+                     * one stored empty block) */
+        uint8_t h[HDR] = {'C', 'Z', 'N', '1', KOLMO_MAX_VERSION, (uint8_t)p->mode, 0, 0, 0, 0, (uint8_t)(p->mode == KOLMO_RT)};
+        h[11] = kmem_code(blk_dec_floor(0)); put64(h + 12, 0); put32(h + 20, 0); put32(h + 24, B);
+        put32(h + 28, kolmo_crc32c(0, h, 28));
+        if (output_fd >= 0) { int r = write_block(output_fd, h, HDR, 0); return r ? r : (int64_t)HDR; }
+        if (cap < HDR) return KOLMO_ERR_DSTSIZE;
+        memcpy(dst, h, HDR); return (int64_t)HDR;
+    }
     /* memory (docs/MEMORY-MODEL.md): the governor's limit, and the explicit cap, the only memory figure that may shape
      * the output (blocks of ratio and -x, the -x tables), so that it decodes within the same limit */
     const uint64_t xcap = p->mem_limit && p->mem_limit != KOLMO_MEM_MAX ? p->mem_limit : 0, memcap = kmem_limit_of(p->mem_limit);
     if (xcap && xcap < kmem_floor(p->mode)) return KOLMO_ERR_MEMORY;
     if (!p->block) B = kmem_block_for_cap(p->mode, codec, level, B, xcap);
     enum { MAXSEG = 4096 };
+    /* segment arrays sized to the input: every part after the first is at least 64 KiB (META_MINSEG, and 1 MiB for
+     * content runs), so n / 64 KiB + 64 entries hold every list the segmenters can produce below the cap (the margin
+     * covers nested headers and their capacity checks); 80 KiB per call before, about 1.3 KiB for small inputs */
+    const uint32_t maxseg = n / (64u << 10) + 64 < MAXSEG ? (uint32_t)(n / (64u << 10) + 64) : MAXSEG;
     int64_t ret = KOLMO_ERR_ALLOC; size_t w = 0;
     uint8_t *file_index = NULL;
     job_t J = {0}; int mutex_ready = 0;
     uint32_t nseg = 0, nb = 0; size_t bcap = 2;
     plan_t *plans = NULL;
     uint64_t *starts = NULL, *rstart = NULL; uint32_t *bplan = NULL;
-    uint64_t *ss = array_alloc(MAXSEG, sizeof(uint64_t), 0), *se = array_alloc(MAXSEG, sizeof(uint64_t), 0); uint32_t *skind = array_alloc(MAXSEG, sizeof(uint32_t), 1);
+    uint64_t *ss = array_alloc(maxseg, sizeof(uint64_t), 0), *se = array_alloc(maxseg, sizeof(uint64_t), 0); uint32_t *skind = array_alloc(maxseg, sizeof(uint32_t), 1);
     void *planning_map = MAP_FAILED;
     if (!ss || !se || !skind) goto cleanup;
     if (input_fd >= 0 && n) {
@@ -106,12 +119,12 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     double pt0 = prof_now();
 #endif
-    nseg = meta_segments_x(src, n, ss, se, skind, MAXSEG, p->mode == KOLMO_RT ? MT_EXE_MIN_SPEED : MT_EXE_MIN);   /* members, sections, tensors, packed content (plan/meta.c) */
+    nseg = meta_segments_x(src, n, ss, se, skind, maxseg, p->mode == KOLMO_RT ? MT_EXE_MIN_SPEED : MT_EXE_MIN);   /* members, sections, tensors, packed content (plan/meta.c) */
     /* no structure in the headers: one segment per homogeneous run (plan/segment.c), for the modes where a plan per
      * kind of data pays (balanced, eco, hc, ratio; speed keeps its minimal analysis and -x's context mixing adapts on
      * its own). Packed (already compressed) inputs stay one segment. */
     if (nseg == 1 && skind[0] == MK_DATA && src && p->transforms && p->mode >= KOLMO_FAST && p->mode <= KOLMO_MAX && !columns)
-        nseg = content_segments(src, n, ss, se, MAXSEG);   /* skind stays MK_DATA (zeroed) for every part */
+        nseg = content_segments(src, n, ss, se, maxseg);   /* skind stays MK_DATA (zeroed) for every part */
     plans = array_alloc(nseg, sizeof(plan_t), 1);
     starts = array_alloc(bcap, sizeof(uint64_t), 0);
     bplan = array_alloc(bcap, sizeof(uint32_t), 0);

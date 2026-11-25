@@ -393,7 +393,7 @@ static void *compress_worker(void *arg) {
              * slower to decode than -9. A 512 KiB slice from the middle (blocks of up to 2 MiB: the whole block) is coded
              * both ways, and BWT is kept only where it is at least 2% smaller than KLZMA 1 */
             int textish = tflag == 9 || tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1) || (!tflag && looks_text_latin(raw, len));
-            if (!textish && inlen >= (64u << 10)) {   /* blocks of up to 2 MiB are coded both ways whole: a slice of an eighth of them misjudged a 1.2 MB executable and a 135 KB table by 12% */
+            if ((!textish && inlen >= (64u << 10)) || (!tflag && inlen < KOLMO_MAX_SMALL_BLOCK)) {   /* blocks of up to 2 MiB are coded both ways whole: a slice of an eighth of them misjudged a 1.2 MB executable and a 135 KB table by 12%; plain blocks under KOLMO_MAX_SMALL_BLOCK, text too, the same way */
                 uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
                 size_t sn = inlen <= (2u << 20) ? inlen : 512u << 10, so = ((inlen - sn) / 2) & ~(size_t)63;
                 size_t sb = alt ? codec_compress(xp, C_BWT, 9, in + so, sn, alt, J->slot - meta) : 0, slz = sb ? codec_compress(xp, R_LZMA, 1, in + so, sn, alt, J->slot - meta) : 0;
@@ -402,7 +402,7 @@ static void *compress_worker(void *arg) {
             if (!l8lz) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }
         }
         else if (codec == R_LZMA && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT;            /* max, JSON token streams (minified or one record per line): BWT won over LZMA2 by 10%; coding it first skips the LZMA2 pass */
-        else if (codec == R_LZMA && (!tflag || tflag == 9) && looks_text_latin(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT */
+        else if (codec == R_LZMA && (!tflag || tflag == 9) && !(!tflag && len < KOLMO_MAX_SMALL_BLOCK) && looks_text_latin(raw, len)) { codec = C_BWT; if (tflag == 9) { in = raw; inlen = len; tflag = 0; meta = 0; } }   /* max: text to BWT (a small plain block: KLZMA, then BWT by the binary margin below) */
         else if (KOLMO_ECO_TEXT_BWT && codec == R_ECO && J->default_level && len >= (64u << 10)
                  && (tflag == 10 || (tflag == 5 && pl.t == T_LOG && pl.a == 1))) codec = C_BWT, level = 9;   /* eco, JSON token streams: as max */
         else if (KOLMO_ECO_TEXT_BWT && codec == R_ECO && J->default_level && (!tflag || tflag == 9) && len >= (64u << 10)
