@@ -220,7 +220,20 @@ static const kz_par KLZH_LV[10] = {{0}, {16, 15, 0, 0, 6, 0}, {17, 16, 0, 0, 7, 
 
 /* ---------------- KLZ: byte-aligned format ---------------- */
 size_t kolmo_klz_bound(size_t n) { return n + n / 255 + 32; }
-static uint8_t *kz_emit(uint8_t *op, const uint8_t *lit, size_t ll, size_t off, size_t ml) {
+static uint8_t *kz_emit(uint8_t *op, const uint8_t *oe, const uint8_t *lit,
+                        size_t ll, size_t off, size_t ml) {
+    size_t room = (size_t)(oe - op);
+    if (ll > room) return NULL;
+    /* Both extension chains add at most one byte per 255 bytes, plus
+     * their terminators. This cheap upper bound covers the common case. */
+    if (room - ll < 6 + ((ll | ml) >> 6)) {
+        size_t overhead = 1 + (ll >= 7 ? 1 + (ll - 7) / 255 : 0);
+        if (ml) {
+            overhead += off > 0xFFFF ? 3 : 2;
+            if (ml >= 19) overhead += 1 + (ml - 19) / 255;
+        }
+        if (overhead > room - ll) return NULL;
+    }
     uint8_t *tok = op++; unsigned t = ll < 7 ? (unsigned)ll : 7u;
     if (ll >= 7) { size_t r = ll - 7; while (r >= 255) { *op++ = 255; r -= 255; } *op++ = (uint8_t)r; }
     memcpy(op, lit, ll); op += ll;
@@ -231,7 +244,6 @@ static uint8_t *kz_emit(uint8_t *op, const uint8_t *lit, size_t ll, size_t off, 
     }
     *tok = (uint8_t)t; return op;
 }
-#define KZ_ROOM(LL) ((size_t)(oe - op) >= (LL) + (LL) / 255 + 16)   /* room for a sequence with LL literals */
 /* KLZ level 1, the fast parse (0.0.3): one table of 2^16 slots (fewer for short blocks), each holding a position and the
  * 4 input bytes there, so a miss is decided without reading the input at the candidate; 6-byte hash keys; the last
  * offset tried one byte ahead, then the candidates of the position and of the next one; a 4-byte match at a 3-byte
@@ -272,18 +284,17 @@ static size_t kz_klz1(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
             }
         }
         while (start > anchor && start > off && in[start - 1] == in[start - 1 - off]) { start--; ml++; }
-        if (!KZ_ROOM(start - anchor)) { free(ht); return 0; }
-        op = kz_emit(op, in + anchor, start - anchor, off, ml);
+        op = kz_emit(op, oe, in + anchor, start - anchor, off, ml);
+        if (!op) { free(ht); return 0; }
         rep0 = off; pos = start + ml; anchor = pos; miss = 0;
         if (pos < limit) { KZ_L1_PUT(start + 2); KZ_L1_PUT(pos - 2); KZ_L1_PUT(pos - 1); }
     }
 #undef KZ_L1_PUT
-    if (!KZ_ROOM(n - anchor)) { free(ht); return 0; }
-    op = kz_emit(op, in + anchor, n - anchor, 0, 0);
-    free(ht); return (size_t)(op - out);
+    op = kz_emit(op, oe, in + anchor, n - anchor, 0, 0);
+    free(ht); return op ? (size_t)(op - out) : 0;
 }
 size_t kolmo_klz_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) {
-    if (n >= 0xFFFFFFF0u || cap < 16) return 0;
+    if (n >= 0xFFFFFFF0u || !cap) return 0;
     uint8_t *const oe = out + cap;
     if (level < 1) level = 1;
     if (level > 3) level = 3;
@@ -294,10 +305,13 @@ size_t kolmo_klz_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
         size_t anchor; int err; size_t ns = kz_parse(in, n, &KLZ_LV[level], S, &anchor, &err);
         if (err) { free(S); return 0; }
         const uint8_t *ip = in;
-        for (size_t k = 0; k < ns; k++) { if (!KZ_ROOM(S[k].ll)) { free(S); return 0; } op = kz_emit(op, ip, S[k].ll, S[k].off, S[k].ml); ip += S[k].ll + S[k].ml; }
-        if (!KZ_ROOM(n - anchor)) { free(S); return 0; }
-        op = kz_emit(op, ip, n - anchor, 0, 0);
-        free(S); return (size_t)(op - out);
+        for (size_t k = 0; k < ns; k++) {
+            op = kz_emit(op, oe, ip, S[k].ll, S[k].off, S[k].ml);
+            if (!op) { free(S); return 0; }
+            ip += S[k].ll + S[k].ml;
+        }
+        op = kz_emit(op, oe, in + anchor, n - anchor, 0, 0);
+        free(S); return op ? (size_t)(op - out) : 0;
     }
     const int lg = KLZ_LV[level].hlog, trig = KLZ_LV[level].skip;
     uint32_t *ht = calloc((size_t)1 << lg, sizeof(uint32_t)); if (!ht) return 0;
@@ -312,15 +326,14 @@ size_t kolmo_klz_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
         }
         while (ip > anchor && cand > 0 && in[ip - 1] == in[cand - 1]) { ip--; cand--; }
         size_t ml = 4 + kz_count(in + ip + 4, in + cand + 4, ie);
-        if (!KZ_ROOM(ip - anchor)) { free(ht); return 0; }
-        op = kz_emit(op, in + anchor, ip - anchor, ip - cand, ml);
+        op = kz_emit(op, oe, in + anchor, ip - anchor, ip - cand, ml);
+        if (!op) { free(ht); return 0; }
         ip += ml; anchor = ip;
         if (ip < limit) { ht[kz_h5(in + ip - 2, lg)] = (uint32_t)(ip - 2); if (level >= 2) ht[kz_h5(in + ip - 1, lg)] = (uint32_t)(ip - 1); }
     }
 done:
-    if (!KZ_ROOM(n - anchor)) { free(ht); return 0; }
-    op = kz_emit(op, in + anchor, n - anchor, 0, 0);
-    free(ht); return (size_t)(op - out);
+    op = kz_emit(op, oe, in + anchor, n - anchor, 0, 0);
+    free(ht); return op ? (size_t)(op - out) : 0;
 }
 int kolmo_klz_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     const uint8_t *ip = in, *ie = in + cn; uint8_t *op = out, *oe = out + n;

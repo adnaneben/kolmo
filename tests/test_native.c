@@ -48,6 +48,13 @@ static void roundtrip(int k, const uint8_t *in, size_t n, int lv, int kind) {
     size_t zn = C[k].c(in, n, z, cap, lv);
     if (!zn) { CHECK(C[k].may_refuse, "%s level %d kind %d n %zu: refused", C[k].name, lv, kind, n); free(z); free(r); return; }
     CHECK(!C[k].d(z, zn, r, n) && !memcmp(r, in, n), "%s level %d kind %d n %zu: round trip", C[k].name, lv, kind, n);
+    if (C[k].c == kolmo_klz_compress) {
+        uint8_t *exact = malloc(zn);
+        size_t written = kolmo_klz_compress(in, n, exact, zn, lv);
+        CHECK(written == zn && !memcmp(exact, z, zn),
+              "klz level %d kind %d n %zu: exact capacity", lv, kind, n);
+        free(exact);
+    }
     /* truncated and corrupted payloads: no crash (ASan), and any accepted output stays in bounds */
     if (zn > 1) C[k].d(z, zn - 1 - rnd() % (zn - 1 < 16 ? zn - 1 : 16), r, n);
     for (int t = 0; t < 4; t++) {
