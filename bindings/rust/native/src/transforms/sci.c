@@ -106,8 +106,12 @@ typedef struct { int be, off, mode; int64_t W; } img_plan_t;
 /* returns 1 and fills P when the data looks like a 16-bit image that prediction helps */
 static int img16_detect(const uint8_t *s, size_t n, img_plan_t *P) {
     if (n < (1u << 18)) return 0;
-    int64_t m = 1 << 19; if ((int64_t)(n / 2) - 2 < m) m = (int64_t)(n / 2) - 2;
-    uint16_t *a = malloc(2 * (size_t)m); uint8_t *lo = malloc(m), *hi = malloc(m);
+    size_t samples = n / 2 - 2;
+    if (samples > (1u << 19)) samples = 1u << 19;
+    int64_t m = (int64_t)samples;
+    uint16_t *a = malloc(samples * (sizeof *a + 2));
+    if (!a) return 0;                        /* optional detector: keep the previous plan */
+    uint8_t *lo = (uint8_t *)(a + samples), *hi = lo + samples;
     double best = 1e300; int found = 0;
     size_t mid = n / 2 & ~(size_t)1;
     size_t st = mid > (size_t)m ? mid - (size_t)m : 0; st &= ~(size_t)1;
@@ -159,13 +163,11 @@ static int img16_detect(const uint8_t *s, size_t n, img_plan_t *P) {
         }
     }
     if (found) {
-        uint8_t *ev = malloc(m), *od = malloc(m);
-        for (int64_t i = 0; i < m; i++) { ev[i] = s[st + 2 * i]; od[i] = s[st + 2 * i + 1]; }
-        double raw = h0(ev, m) + h0(od, m);
+        for (int64_t i = 0; i < m; i++) { lo[i] = s[st + 2 * i]; hi[i] = s[st + 2 * i + 1]; }
+        double raw = h0(lo, m) + h0(hi, m);
         if (best > 0.9 * raw) found = 0;
-        free(ev); free(od);
     }
-    free(a); free(lo); free(hi);
+    free(a);
     return found;
 }
 /* block encode: skip = bytes before the first sample in this block */
