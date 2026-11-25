@@ -6,6 +6,7 @@
 #include "algo/khuf.h"
 #include "algo/klz.h"
 #include "algo/klzma.h"
+extern unsigned kolmo_klzma_mt_started;   /* algo/klzma.c, built with -DKOLMO_KLZMA_TESTHOOK (Makefile test-native) */
 #include "algo/krans.h"
 #include "algo/khash.h"
 #include <stdio.h>
@@ -253,18 +254,25 @@ int main(int argc, char **argv) {
       roundtrip(3, in, n, 10 * (100 * (0 + 1) + 10 * 2 + 0) + 4, 9); roundtrip(2, in, n, 5, 9); roundtrip(4, in, n, 5, 9); roundtrip(1, in, n, 1, 9); free(in); }
     /* KLZMA's composite paths (levels 6-9: match or rep, one literal, rep 0; review40 #93): copies at a few distances
      * with one byte in every 2-300 changed, so the parse meets "match, literal, rep 0" at every length up to 273 and
-     * past it, ending at the block's last bytes too; round trip, and the same payload on 1 and 4 threads */
-    { size_t n = 600000; uint8_t *in = malloc(n), *z1 = malloc(kolmo_klzma_bound(n)), *z4 = malloc(kolmo_klzma_bound(n));
+     * past it. 600,000 bytes (the one-thread finder) and its last 7 bytes cover the block tail; 1.25 MiB, past
+     * KM_MT_MIN, runs the threaded finder on 4 threads (checked by the build's test hook), which must give the
+     * one-thread payload */
+    { size_t n = (5u << 20) / 4; uint8_t *in = malloc(n), *z1 = malloc(kolmo_klzma_bound(n)), *z4 = malloc(kolmo_klzma_bound(n));
       gen(in, 4096, 0);
       for (size_t i = 4096; i < n; i++) {
           static const uint32_t D[] = {1, 3, 64, 4096, 300};
           in[i] = in[i - D[(i >> 12) % 5]];
           if (rnd() % (2 + (i >> 10) % 300) == 0) in[i] ^= (uint8_t)(1 + rnd() % 255);
       }
-      for (int lv = 6; lv <= 9; lv++) for (size_t m = n - 7; m <= n; m += 7) {
-          roundtrip(3, in, m, lv, 20);
-          size_t a = kolmo_klzma_compress_mt(in, m, z1, kolmo_klzma_bound(n), lv, 1), b = kolmo_klzma_compress_mt(in, m, z4, kolmo_klzma_bound(n), lv, 4);
-          CHECK(a && a == b && !memcmp(z1, z4, a), "klzma level %d n %zu: 1 and 4 threads differ", lv, m);
+      for (int lv = 6; lv <= 9; lv++) for (size_t m = 600000 - 7; m <= 600000; m += 7) roundtrip(3, in, m, lv, 20);
+      for (int lv = 6; lv <= 9; lv += 2) {
+          unsigned st0 = kolmo_klzma_mt_started;
+          size_t a = kolmo_klzma_compress_mt(in, n, z1, kolmo_klzma_bound(n), lv, 1);
+          CHECK(kolmo_klzma_mt_started == st0, "klzma level %d: a threaded finder started on one thread", lv);
+          size_t b = kolmo_klzma_compress_mt(in, n, z4, kolmo_klzma_bound(n), lv, 4);
+          CHECK(kolmo_klzma_mt_started == st0 + 1, "klzma level %d n %zu: the threaded finder did not start on 4 threads", lv, n);
+          CHECK(a && a == b && !memcmp(z1, z4, a), "klzma level %d n %zu: 1 and 4 threads differ", lv, n);
+          uint8_t *r = malloc(n); CHECK(a && !kolmo_klzma_decompress(z4, b, r, n) && !memcmp(r, in, n), "klzma level %d n %zu: threaded round trip", lv, n); free(r);
       }
       free(in); free(z1); free(z4); }
     /* KRANS: one symbol, two symbols at the frequency floor, all 256 symbols, and lengths around the 8-way groups */

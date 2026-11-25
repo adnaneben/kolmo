@@ -199,11 +199,17 @@ static void km_mt_end(km_mt *Q) {
 }
 /* K classes for M (tables initialised, nothing inserted), `passes` helpers always running and the others on tokens of
  * b; NULL when the helpers cannot start: the parse then runs on one thread */
+#ifdef KOLMO_KLZMA_TESTHOOK
+unsigned kolmo_klzma_mt_started;   /* tests/test_native.c: threaded finders started (only in that test's build) */
+#endif
 static km_mt *km_mt_start(km_mf *M, int K, int passes, kolmo_budget *b) {
     km_mt *Q = calloc(1, sizeof *Q); if (!Q) return NULL;
     Q->M = M; Q->K = K; Q->np = M->n >= 4 ? M->n - 3 : 0; Q->nch = (Q->np + KM_MTC - 1) / KM_MTC; Q->cj = UINT32_MAX;
     Q->cp = kolmo_cp_start(K, Q->nch, KM_MTR, passes, b, km_mt_run, Q);
     if (!Q->cp) { free(Q); return NULL; }
+#ifdef KOLMO_KLZMA_TESTHOOK
+    { extern unsigned kolmo_klzma_mt_started; __atomic_fetch_add(&kolmo_klzma_mt_started, 1u, __ATOMIC_RELAXED); }
+#endif
     return Q;
 }
 /* the parse: p's matches from its worker (p + 4 <= n, positions taken in increasing order), those longer than best */

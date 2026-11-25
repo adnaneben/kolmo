@@ -267,9 +267,9 @@ build/test-bwt-asan: tests/test_bwt.c tests/test_bwt_golden.h $(BWTSRC) $(BWTHDR
 # Kolmo's own coders (codecs 24, 27-29, 32, src/algo/k*.c): round trips, corrupt payloads under ASan/UBSan, pinned hash
 # values; then every mode through the CLI: version 12, no retired codec id, 1 and 4 threads alike, KOLMO_NATIVE ignored.
 build/test-native: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
-	$(CC) $(CFLAGS) -Isrc tests/test_native.c $(NATSRC) src/algo/par.c -o $@ -lpthread
+	$(CC) $(CFLAGS) -Isrc -DKOLMO_KLZMA_TESTHOOK tests/test_native.c $(NATSRC) src/algo/par.c -o $@ -lpthread
 build/test-native-asan: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
-	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -Isrc tests/test_native.c $(NATSRC) src/algo/par.c -o $@ -lpthread
+	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -Isrc -DKOLMO_KLZMA_TESTHOOK tests/test_native.c $(NATSRC) src/algo/par.c -o $@ -lpthread
 check-native: build/test-native build/test-native-asan build/kolmo
 	./build/test-native 3
 	./build/test-native-asan
