@@ -97,6 +97,11 @@ size_t kolmo_archive_bound(const kolmo_archive_file *files, size_t nfiles, const
 static uint64_t dd_zz(int64_t v) { return ((uint64_t)v << 1) ^ (uint64_t)(v >> 63); }
 static int64_t dd_unzz(uint64_t u) { return (int64_t)(u >> 1) ^ -(int64_t)(u & 1); }
 
+static int dd_disjoint(const uint8_t *a, size_t an, const uint8_t *b, size_t bn) {
+    uintptr_t x = (uintptr_t)a, y = (uintptr_t)b;
+    return x < y ? y - x >= an : x - y >= bn;
+}
+
 int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uint8_t *dst, size_t cap,
                              const kolmo_params *p, const kolmo_archive_params *ap, kolmo_archive_stats *st) {
     kolmo_archive_stats S0; if (!st) st = &S0; memset(st, 0, sizeof *st);
@@ -105,7 +110,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     if (A.avg_chunk < 256 || A.avg_chunk > (4u << 20) || (A.avg_chunk & (A.avg_chunk - 1))) return KOLMO_ERR_LIMIT;
     dd_init(); dd_cfg C; dd_config(&C, A.avg_chunk, A.line_cuts);
     uint64_t total = 0; for (size_t f = 0; f < nfiles; f++) { if (!files[f].name || (!files[f].data && files[f].size)) return KOLMO_ERR_LIMIT; total += files[f].size; }
-    dd_set D; int64_t ret = KOLMO_ERR_ALLOC; uint8_t *store = NULL; kx_buf tab = {0}, recipes = {0};
+    dd_set D; int64_t ret = KOLMO_ERR_ALLOC; uint8_t *owned_store = NULL; kx_buf tab = {0}, recipes = {0};
     if (dd_set_init(&D, total / C.avg + 16)) goto done;
     /* the file table: name, size, mode, mtime, then the chunk list (gaps between successive ids, zigzag) */
     kx_uv(&recipes, nfiles);
@@ -126,8 +131,19 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     st->files = nfiles; st->unique_chunks = D.nc;
     /* the store */
     for (uint64_t i = 0; i < D.nc; i++) st->unique_bytes += D.c[i].len;
-    store = malloc(st->unique_bytes ? (size_t)st->unique_bytes : 1); if (!store) goto done;
-    {   size_t o = 0; for (uint64_t i = 0; i < D.nc; i++) { memcpy(store + o, D.c[i].p, D.c[i].len); o += D.c[i].len; } }
+    const uint8_t *store;
+    /* The chunks of one duplicate-free file already form the store in discovery order.
+     * Preserve copying for callers whose input overlaps the output buffer. */
+    const uint64_t copy_threshold = 32u << 20;  /* confirmed size floor for a stable wall-time gain */
+    if (p && p->mode == KOLMO_RT && nfiles == 1 && total >= copy_threshold && st->unique_bytes == total &&
+        dd_disjoint(files[0].data, files[0].size, dst, cap)) {
+        store = files[0].data;
+    } else {
+        owned_store = malloc(st->unique_bytes ? (size_t)st->unique_bytes : 1); if (!owned_store) goto done;
+        size_t o = 0;
+        for (uint64_t i = 0; i < D.nc; i++) { memcpy(owned_store + o, D.c[i].p, D.c[i].len); o += D.c[i].len; }
+        store = owned_store;
+    }
     /* DDP1 table: chunk lengths and checks, then the file table; stored as a frame of its own */
     kx_uv(&tab, D.nc);
     for (uint64_t i = 0; i < D.nc; i++) {
@@ -149,7 +165,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
         const uint8_t *bodies[1] = {body}; uint64_t lens[1] = {16 + (uint64_t)tz};
         ret = kx_append(dst, cap, (uint64_t)fe, 1, tag, bodies, lens); free(body); }
 done:
-    free(D.c); free(D.slot); free(store); free(tab.p); free(recipes.p);
+    free(D.c); free(D.slot); free(owned_store); free(tab.p); free(recipes.p);
     return ret;
 }
 
@@ -240,46 +256,79 @@ int kolmo_archive_stat(const uint8_t *src, size_t n, uint64_t i, char *name, siz
     dd_close(&A); return r;
 }
 
-int64_t kolmo_archive_extract(const uint8_t *src, size_t n, uint64_t fi, uint8_t *dst, size_t cap, int threads) {
-    dd_arc A; int r = dd_open(src, n, &A); if (r) return r;
-    dd_entry e; uint64_t *ids = NULL; uint8_t *buf = NULL; int64_t ret;
-    if ((r = dd_seek(&A, fi, &e))) { ret = r; goto done; }
-    if (e.size > cap) { ret = KOLMO_ERR_DSTSIZE; goto done; }
-    ids = malloc(8 * ((size_t)e.nref + 1)); if (!ids) { ret = KOLMO_ERR_ALLOC; goto done; }
-    if ((r = dd_ids(&A, &e, ids))) { ret = r; goto done; }
+static int64_t dd_extract_entry(const uint8_t *src, size_t n, const dd_arc *A, const dd_entry *e,
+                                 uint8_t *dst, size_t cap, int threads) {
+    uint64_t *ids = NULL; uint8_t *buf = NULL; int64_t ret; int r;
+    if (e->size > cap || e->size > INT64_MAX) return KOLMO_ERR_DSTSIZE;
+    ids = malloc(8 * ((size_t)e->nref + 1)); if (!ids) { ret = KOLMO_ERR_ALLOC; goto done; }
+    if ((r = dd_ids(A, e, ids))) { ret = r; goto done; }
     /* the store blocks this file needs, in runs of consecutive blocks; each run is decoded once */
-    {   uint32_t nb = A.f.nb; uint8_t *need = calloc((size_t)nb + 1, 1); if (!need) { ret = KOLMO_ERR_ALLOC; goto done; }
+    {   uint32_t nb = A->f.nb; uint8_t *need = calloc((size_t)nb + 1, 1); if (!need) { ret = KOLMO_ERR_ALLOC; goto done; }
         uint32_t b = 0;
-        for (uint64_t k = 0; k < e.nref; k++) {
-            uint64_t lo = A.coff[ids[k]], hi = A.coff[ids[k] + 1];
+        for (uint64_t k = 0; k < e->nref; k++) {
+            uint64_t lo = A->coff[ids[k]], hi = A->coff[ids[k] + 1];
             /* first block with roff[b + 1] > lo (binary search) */
-            uint32_t a = 0, z = nb; while (a < z) { uint32_t m = a + (z - a) / 2; if (A.f.roff[m + 1] <= lo) a = m + 1; else z = m; }
-            for (b = a; b < nb && A.f.roff[b] < hi; b++) need[b] = 1;
+            uint32_t a = 0, z = nb; while (a < z) { uint32_t m = a + (z - a) / 2; if (A->f.roff[m + 1] <= lo) a = m + 1; else z = m; }
+            for (b = a; b < nb && A->f.roff[b] < hi; b++) need[b] = 1;
         }
         uint64_t *at = malloc(8 * ((size_t)nb + 1)); size_t bytes = 0;
         if (!at) { free(need); ret = KOLMO_ERR_ALLOC; goto done; }
-        for (b = 0; b < nb; b++) { at[b] = bytes; if (need[b]) bytes += (size_t)(A.f.roff[b + 1] - A.f.roff[b]); }
+        for (b = 0; b < nb; b++) { at[b] = bytes; if (need[b]) bytes += (size_t)(A->f.roff[b + 1] - A->f.roff[b]); }
         buf = malloc(bytes + 1); if (!buf) { free(need); free(at); ret = KOLMO_ERR_ALLOC; goto done; }
         for (b = 0; b < nb;) {
             if (!need[b]) { b++; continue; }
             uint32_t c = b; while (c < nb && need[c]) c++;
-            uint64_t lo = A.f.roff[b], len = A.f.roff[c] - lo;
+            uint64_t lo = A->f.roff[b], len = A->f.roff[c] - lo;
             if (len) { int64_t q = kolmo_read_range(src, n, lo, (size_t)len, buf + at[b], threads); if (q < 0) { free(need); free(at); ret = q; goto done; } }
             b = c;
         }
         size_t o = 0;
-        for (uint64_t k = 0; k < e.nref; k++) {
-            uint64_t lo = A.coff[ids[k]], len = A.coff[ids[k] + 1] - lo;
-            uint32_t a = 0, z = nb; while (a < z) { uint32_t m = a + (z - a) / 2; if (A.f.roff[m + 1] <= lo) a = m + 1; else z = m; }
-            memcpy(dst + o, buf + at[a] + (lo - A.f.roff[a]), (size_t)len);   /* needed blocks from a on are adjacent in buf */
-            if ((r = dd_check(&A, ids[k], dst + o))) { free(need); free(at); ret = r; goto done; }
+        for (uint64_t k = 0; k < e->nref; k++) {
+            uint64_t lo = A->coff[ids[k]], len = A->coff[ids[k] + 1] - lo;
+            uint32_t a = 0, z = nb; while (a < z) { uint32_t m = a + (z - a) / 2; if (A->f.roff[m + 1] <= lo) a = m + 1; else z = m; }
+            memcpy(dst + o, buf + at[a] + (lo - A->f.roff[a]), (size_t)len);   /* needed blocks from a on are adjacent in buf */
+            if ((r = dd_check(A, ids[k], dst + o))) { free(need); free(at); ret = r; goto done; }
             o += (size_t)len;
         }
         free(need); free(at);
     }
-    ret = (int64_t)e.size;
+    ret = (int64_t)e->size;
 done:
-    free(ids); free(buf); dd_close(&A);
+    free(ids); free(buf);
+    return ret;
+}
+
+int64_t kolmo_archive_extract(const uint8_t *src, size_t n, uint64_t fi, uint8_t *dst, size_t cap, int threads) {
+    dd_arc A; int r = dd_open(src, n, &A); if (r) return r;
+    dd_entry e; r = dd_seek(&A, fi, &e);
+    int64_t ret = r ? r : dd_extract_entry(src, n, &A, &e, dst, cap, threads);
+    dd_close(&A);
+    return ret;
+}
+
+int64_t kolmo__archive_walk(const uint8_t *src, size_t n, kolmo__archive_visit_fn visit, kolmo_archive_fn extract,
+                            void *ctx, int threads) {
+    dd_arc A; int r = dd_open(src, n, &A); if (r) return r;
+    size_t i = A.files_at;
+    int64_t ret = (int64_t)A.nfiles;
+    for (uint64_t f = 0; f < A.nfiles; f++) {
+        dd_entry e;
+        if (dd_next(&A, &i, &e)) { ret = KOLMO_ERR_CORRUPT; break; }
+        char name[4097]; memcpy(name, e.name, e.nl); name[e.nl] = 0;
+        r = visit(ctx, name, e.size, (uint32_t)e.mode, e.mtime);
+        if (r < 0) { ret = r; break; }
+        if (!r || !extract) continue;
+        if (e.size > SIZE_MAX || e.size > INT64_MAX) { ret = KOLMO_ERR_DSTSIZE; break; }
+        size_t cap = (size_t)e.size;
+        uint8_t *data = malloc(cap ? cap : 1);
+        if (!data) { ret = KOLMO_ERR_ALLOC; break; }
+        int64_t size = dd_extract_entry(src, n, &A, &e, data, cap, threads);
+        int stop = size >= 0 && extract(ctx, name, data, e.size, (uint32_t)e.mode, e.mtime);
+        free(data);
+        if (size < 0) { ret = size; break; }
+        if (stop) { ret = KOLMO_ERR_IO; break; }
+    }
+    dd_close(&A);
     return ret;
 }
 
