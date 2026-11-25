@@ -8,7 +8,7 @@ Encoder-only change to KLZMA (codec 24) at parse levels 6-9; the product's `-9` 
 The payload format is unchanged. 0.0.1 and 0.0.2 decode the new frames (checked on ooffice, x-ray, sao and samba at `-9 -T 10`).
 Frames are the same at every thread count (`benchmark/determinism`, 1 vs 4 threads; `tests/test_native.c`: 1 vs 4 threads at levels 6 and 8 on 1.25 MiB, with a test hook checking that the threaded finder starts).
 
-**Status: sizes only.** These results come from a heavily loaded shared machine (load average 40-170 on 10 cores), so
+**Status: sizes only; timings pending: quiet window.** These results come from a heavily loaded shared machine (load average 40-210 on 10 cores), so
 speed and memory figures are not given here. The timed comparison is pending a quiet machine: kolmo `-6`, `-7` and `-9` at
 `-T 1` and `-T 10`, against `xz -9e` and `7zz -mx9`, on Silesia, enwik8 and the review corpora.
 
