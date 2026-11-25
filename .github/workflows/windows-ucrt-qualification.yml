@@ -1,0 +1,93 @@
+name: Experimental Windows UCRT memory API
+on:
+  push:
+    branches: [codex/ppp-windows-qualification-20261125]
+    paths:
+      - .github/workflows/windows-ucrt-qualification.yml
+      - bench/windows-ucrt/**
+
+permissions:
+  contents: read
+
+jobs:
+  memory:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - name: Identify the Windows host and source
+        shell: pwsh
+        run: |
+          $dir = New-Item -ItemType Directory -Path "$env:RUNNER_TEMP/kolmo-ucrt-results"
+          [ordered]@{ sha=$env:GITHUB_SHA; ref=$env:GITHUB_REF; run=$env:GITHUB_RUN_ID; attempt=$env:GITHUB_RUN_ATTEMPT;
+            os=[System.Environment]::OSVersion.VersionString; arch=$env:RUNNER_ARCH; image=$env:ImageVersion } |
+            ConvertTo-Json | Set-Content "$dir/host.json"
+          if ($env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ARCH -ne 'X64') { throw 'Windows x86-64 runner required' }
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install MSYS2 UCRT64 GCC and winpthreads
+        id: setup
+        uses: msys2/setup-msys2@3c51bf698df1e37b2261f53cb67797b97761185c # v2.34.0
+        with:
+          msystem: UCRT64
+          update: true
+          cache: false
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-winpthreads
+      - name: Execute a native UCRT and winpthreads smoke test
+        id: toolchain
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          out="$(cygpath -u "$RUNNER_TEMP")/kolmo-ucrt-results"
+          bash bench/windows-ucrt/build.sh smoke "$out" 2>&1 | tee "$out/toolchain.log"
+      - name: Build and stage the product DLL and import library
+        id: product
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          out="$(cygpath -u "$RUNNER_TEMP")/kolmo-ucrt-results"
+          bash bench/windows-ucrt/build.sh product "$out" 2>&1 | tee "$out/product-build.log"
+      - name: Load the staged DLL in a new native Windows process
+        id: frozen
+        shell: pwsh
+        run: |
+          $out = "$env:RUNNER_TEMP/kolmo-ucrt-results"
+          $empty = New-Item -ItemType Directory -Path "$env:RUNNER_TEMP/kolmo-ucrt-load"
+          Set-Location $empty
+          python "$env:GITHUB_WORKSPACE/bench/windows-ucrt/verify.py" "$out/install/bin/kolmo.dll" "$out" 2>&1 |
+            Tee-Object -FilePath "$out/dll-verification.log"
+          exit $LASTEXITCODE
+      - name: Record qualification outcome and evidence hashes
+        if: always()
+        shell: pwsh
+        env:
+          SETUP_RESULT: ${{ steps.setup.outcome }}
+          TOOLCHAIN_RESULT: ${{ steps.toolchain.outcome }}
+          PRODUCT_RESULT: ${{ steps.product.outcome }}
+          FROZEN_RESULT: ${{ steps.frozen.outcome }}
+        run: |
+          $out = "$env:RUNNER_TEMP/kolmo-ucrt-results"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          $stages = [ordered]@{ setup=$env:SETUP_RESULT; native_toolchain=$env:TOOLCHAIN_RESULT;
+            product_dll=$env:PRODUCT_RESULT; installed_dll_and_frozen_files=$env:FROZEN_RESULT }
+          $qualified = @($stages.Values | Where-Object { $_ -ne 'success' }).Count -eq 0
+          $status = if ($qualified) { 'passed' } else { 'failed' }
+          [ordered]@{ qualification=$status; sha=$env:GITHUB_SHA; stages=$stages } |
+            ConvertTo-Json | Set-Content "$out/status.json"
+          "Windows UCRT memory API qualification: **$status** at $($env:GITHUB_SHA)." >> $env:GITHUB_STEP_SUMMARY
+          $rows = Get-ChildItem -File -Recurse $out | Sort-Object FullName | ForEach-Object {
+            $relative = [IO.Path]::GetRelativePath($out,$_.FullName).Replace('\','/')
+            '{0}  {1}' -f (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant(),$relative
+          }
+          $rows | Set-Content "$out/SHA256SUMS"
+          if (!$qualified) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-ucrt-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/kolmo-ucrt-results/
+          if-no-files-found: error
