@@ -95,6 +95,64 @@ static plan_t plan_for(const uint8_t *src, size_t len, const kolmo_params *p, in
         p->mode != KOLMO_RT && p->transforms != 3, p->mode != KOLMO_RT && p->transforms != 3, threads, p->mode >= KOLMO_MAX,
         p->transforms == 2 ? 1 : p->transforms == 3 ? (p->mode == KOLMO_RT ? 3 : 2) : p->mode == KOLMO_FAST ? 4 : 0, native_leaf) : (plan_t){0};
 }
+#ifdef KOLMO_FAST_TABLE_TRIAL
+/* Bound sampling work to two windows regardless of member size. Discard the first
+ * (potentially partial) row in both windows. Literal splits are reversible even
+ * when CSV quotes or ragged rows occur outside the samples. */
+static plan_t fast_table_trial(const uint8_t *src, size_t len) {
+    enum { WINDOW = 32768, MIN_ROWS = 8, MAX_ROWS = 32 };
+    plan_t result = {0};
+    if (len < (512u << 10)) return result;
+    uint8_t delim = 0;
+    int columns = 0;
+    for (int w = 0; w < 2; w++) {
+        const uint8_t *start = src + (w ? len / 2 : 0);
+        const uint8_t *end = start + WINDOW;
+        const uint8_t *first = memchr(start, '\n', WINDOW);
+        if (!first) return result;
+        start = first + 1;
+        while (end > start && end[-1] != '\n') end--;
+        size_t size = (size_t)(end - start);
+        if (size < WINDOW / 2) return result;
+        const uint8_t *row_end = memchr(start, '\n', size);
+        if (!row_end) return result;
+        if (!w) {
+            unsigned counts[3] = {0};
+            const uint8_t separators[] = {',', '\t', ';'};
+            for (const uint8_t *p = start; p < row_end; p++) {
+                counts[0] += *p == ',';
+                counts[1] += *p == '\t';
+                counts[2] += *p == ';';
+            }
+            for (int d = 0; d < 3; d++) {
+                if (counts[d] > 0 && counts[d] < 256 && (int)counts[d] + 1 > columns) {
+                    delim = separators[d];
+                    columns = (int)counts[d] + 1;
+                }
+            }
+            if (columns < 2) return result;
+        }
+        int fields[MAX_ROWS];
+        int rows = tp_fieldcounts(start, (int64_t)size, delim, 0, fields, MAX_ROWS);
+        if (rows < MIN_ROWS) return result;
+        for (int r = 0; r < rows; r++) if (fields[r] != columns) return result;
+        /* Price a complete sample in the fast encoder, including lane lengths. */
+        size_t capacity = kolmo_klz_bound(size);
+        uint8_t *work = malloc(size + capacity);
+        uint32_t *positions = malloc((size + 1) * sizeof(*positions));
+        if (!work || !positions) { free(work); free(positions); return result; }
+        int64_t lengths[256];
+        tpq_fwd(start, size, delim, columns, work, lengths, positions);
+        size_t plain = kolmo_klz_compress(start, size, work + size, capacity, 1);
+        size_t split = kolmo_klz_compress(work, size, work + size, capacity, 1);
+        free(positions);
+        free(work);
+        if (!plain || !split || (split + 4 * columns) * 4 >= plain * 3) return result;
+    }
+    return (plan_t){.t = T_TP, .a = delim, .c = columns - 1};
+}
+#endif
+
 static void *plan_worker(void *arg) {
     plan_job *j = arg; const kolmo_params *p = j->params;
     kmem_tls_cap = j->xcap;                                  /* -x samples size their tables as the blocks will */
@@ -159,6 +217,11 @@ static void *plan_worker(void *arg) {
         }
 #endif
         if (p->mode == KOLMO_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;
+#ifdef KOLMO_FAST_TABLE_TRIAL
+        if (pl.t == T_NONE && !pl.packed && (mk & 0xff) == MK_DATA &&
+            p->transforms == 3 && (p->mode == KOLMO_RT || p->mode == KOLMO_FAST))
+            pl = fast_table_trial(src, len);
+#endif
         if (p->mode == KOLMO_ULTRA && !ultra_keep_transform(src, len, &pl, j->threads_per_plan, p->level)) {
             free(pl.fs); pl.fs = NULL; pl.t = T_NONE;
         }
