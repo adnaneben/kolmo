@@ -259,6 +259,8 @@ def compress(data, level=3, threads=0, memlimit=None, block=0, native_leaf=False
     if p.transforms:   # 16 = KOLMO_T_NATIVE_LEAF, 32 = KOLMO_T_TYPED_HUF
         p.transforms |= (16 if native_leaf else 0) | (32 if typed_huf else 0)
     cap = _lib.kolmo_bound(len(data), ctypes.byref(p))
+    if not cap:
+        raise OverflowError("compressed size bound exceeds the supported range")
     out = ctypes.create_string_buffer(cap)
     n = _check(_lib.kolmo_compress(data, len(data), out, cap, ctypes.byref(p)))
     return ctypes.string_at(ctypes.addressof(out), n)

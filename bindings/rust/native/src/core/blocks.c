@@ -1,4 +1,13 @@
 /* Block splitting, slot sizes, and the block encoder run by the pool (compress_worker). */
+/* Each plan may contribute one short final block. Bound the number of plans
+ * in both sizing and encoding, including archive metadata and content splits.
+ * Four slots allow all metadata probes even on tiny buffers. All supported
+ * material segment types use much larger spans than the 512-byte allowance. */
+static uint32_t plan_segment_capacity(size_t n) {
+    size_t parts = n / 512;
+    return parts < 4092 ? (uint32_t)parts + 4 : 4096;
+}
+
 /* block boundaries: newline-aligned for transposed text, element-aligned for shuffled arrays */
 static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, uint64_t **starts_out,
                             int fd, uint64_t offset, int64_t *error) {
