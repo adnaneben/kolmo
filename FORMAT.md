@@ -316,7 +316,7 @@ section := tag[4] | length u64 | body[length] | crc32c(tag ‖ length ‖ body) 
 trailer := "KEXT" | 1 u8 | 0 u8 0 u8 0 u8 | count u32 | sections_length u64 | crc32c(first 20 trailer bytes) u32
 ```
 
-- The trailer is the last 24 bytes of the file.
+- The trailer is the last 24 bytes of the frame (of the file, for a file of one frame; section 10.1).
 - `sections_length` must equal the number of bytes between the last payload and the trailer, and the sections' lengths
   must add up to it exactly. A decoder checks this, and the trailer's CRC, before decoding the frame.
 - A section's CRC is checked by the feature that reads that section.
@@ -336,6 +336,30 @@ For bounded memory and pipes (`--stream`), a stream wraps complete frames:
   concatenated.
 - A zero length ends the stream.
 - A decoder tells a stream from a frame by the first four bytes.
+- The version byte must be 1; a decoder refuses any other value.
+- The three reserved bytes are written as 0 and **ignored by decoders**, as the reserved header and index bytes of
+  frames are (COMPATIBILITY.md, "Rules for changing the format", rule 2). They can never carry something a decoder needs.
+- `segment_bytes` is informational: the segment size the encoder used. Decoders do not read it (each frame carries its
+  own sizes), so any value, 0 included, is valid.
+
+### 10.1 Files of several members
+
+A file (or a pipe) is one or more **members** one after another, decoded in order. The original is the members'
+originals concatenated. This is the rule of gzip, xz and zstd (RFC 8878 section 3.1), so `cat a.kolmo b.kolmo` and
+appended outputs (`kolmo -c x >> a.kolmo`, `kolmo --stream -c x >> a.kolmo`) decode to the inputs concatenated.
+
+- A member is a `CZNS` stream (this section), or a `CZN1` frame with its container extensions, if any (section 9).
+- A stream member ends at its zero length. A frame member ends after its last payload, unless the next bytes start an
+  extension section: it then ends after the `KEXT` trailer that closes its sections. Its trailer is therefore the last
+  24 bytes of that member, not necessarily of the file.
+- After a member there is either nothing, or the next member, which starts with `CZN1` or `CZNS`.
+- **Any other bytes after a member are an error** (corrupt): stray bytes, a zero length with no stream before it, a
+  member cut short. A decoder never stops at the end of a member and ignores what follows.
+- The library's one-frame calls (`kolmo_decompress`, `kolmo_check_frame`, `kolmo_read_range`) take exactly one frame
+  and refuse anything after it. `kolmo_stream_decompress` and the CLI (`-d`, `-t`, `-l`) read every member.
+- Before this rule was written down (0.0.2 and earlier), decoders stopped at a stream's terminator and returned
+  success without reading the rest; a frame followed by a stream was refused. Files of several members written by any
+  release decode in full with a decoder that follows this section.
 
 ## 11. Decode working set (header byte 11)
 
@@ -360,6 +384,7 @@ This gives about 2^(memd/8) MiB.
 **A conforming decoder must:**
 - decode every frame of `tests/v12` to its original;
 - refuse every frame that breaks a rule of sections 4 to 11, with an error;
+- read a file of several members to the end, and refuse bytes after a member that start no member (section 10.1);
 - never return bytes from a block that fails its checksum, or from a frame whose header or index fails.
 
 Errors fall into five classes:

@@ -77,8 +77,8 @@ it covers is specified in [FORMAT.md](FORMAT.md).
 1. **A new identifier is claimed in FORMAT.md first** (codec id, plan type, tflag, node id, model nibble or extension
    tag), in the same change that writes it.
 2. **It must be one that every earlier version-12 decoder refuses.** Unknown codec ids, plan types, tflags and node
-   ids are refused today. Reserved header and index bytes are ignored, so they must never carry something a decoder
-   needs.
+   ids are refused today. Reserved header and index bytes, and the reserved bytes and `segment_bytes` of the `CZNS`
+   stream header, are ignored, so they must never carry something a decoder needs.
 3. **A change that would make version-12 frames decode differently is not allowed.** This includes a change to a
    coder's decoder, even one that leaves the frozen corpus passing. If a decoder has a bug that returns wrong bytes,
    the fix restores the bytes the original was compressed from, and the change log says so.

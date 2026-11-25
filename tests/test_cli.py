@@ -350,6 +350,49 @@ with tempfile.TemporaryDirectory() as tmp:
     r = run("--range=0:10", T / "lv9.0.kolmo", "-o", rt / "range.out")
     check(r.returncode == 0 and (rt / "range.out").read_bytes() == payload[:10], "--range -o")
     expect(run("--range", "0:10", rt / "s.kolmo"), 1, "--range of a stream")
+    # a file of several members (FORMAT.md 10.1): streams and frames, in any order, all decoded; anything else after a
+    # member is an error. 0.0.2 dropped every byte after a stream's terminator with exit 0 (review R30 #125).
+    s3 = run("--stream=1", "-1", "-c", names[1]).stdout; f0 = names[0].read_bytes(); f1 = names[1].read_bytes()
+    for label, parts, want in (("stream, stream", [stream, s3], payload + f1), ("stream, frame", [stream, frames[3]], payload + payload),
+                               ("frame, stream", [frames[3], s3], payload + f1),
+                               ("frame, stream, frame, stream", [frames[1], stream, frames[9], s3], payload * 3 + f1)):
+        mf = rt / "members.kolmo"; mf.write_bytes(b"".join(parts))
+        r = run("-dc", mf); check(r.returncode == 0 and r.stdout == want, f"{label}: a file of members decodes in full")
+        r = run("-d", input=b"".join(parts)); check(r.returncode == 0 and r.stdout == want, f"{label}: from a pipe")
+        expect(run("-t", mf), 0, f"-t of {label}")
+        r = run("-l", mf); check(r.returncode == 0 and b"stream" in r.stdout, f"-l of {label}: {r.stdout!r}")
+    for label, tail in (("one byte", b"\0"), ("8 zero bytes", bytes(8)), ("text", b"garbage!"), ("a cut stream", s3[:-1]),
+                        ("a cut frame", frames[3][:-1]), ("CZNS magic only", b"CZNS")):
+        mf = rt / "trail_stream.kolmo"; mf.write_bytes(stream + tail)
+        expect(run("-dc", mf), 1, f"a stream followed by {label}")
+        expect(run("-t", mf), 1, f"-t of a stream followed by {label}")
+        expect(run("-l", mf), 1, f"-l of a stream followed by {label}")
+        expect(run("-d", input=stream + tail), 1, f"a stream followed by {label}, from a pipe")
+    expect(run("-dc", rt / "s.kolmo", rt / "trail_stream.kolmo"), 1, "a bad second input still fails")
+    # a `kolmo archive` frame is no member to decode, before or after a stream (as -d refuses it alone)
+    arc = rt / "members.arc"
+    expect(run("archive", "-f", arc, names[0]), 0, "archive for the member tests")
+    for label, b in (("archive, stream", arc.read_bytes() + stream), ("stream, archive", stream + arc.read_bytes())):
+        mf = rt / "arc_members.kolmo"; mf.write_bytes(b)
+        for args in (["-dc", mf], ["-t", mf], ["-l", mf]): expect(run(*args), 1, f"{args[0]} of {label}")
+        expect(run("-d", input=b), 1, f"{label} from a pipe")
+    # the stream header's reserved bytes and segment_bytes are ignored (COMPATIBILITY.md); its version is not
+    g = bytearray(stream); g[5:8] = b"\x07\x01\xff"; g[8:12] = bytes(4)
+    r = run("-d", input=bytes(g)); check(r.returncode == 0 and r.stdout == payload, "reserved CZNS header bytes are ignored")
+    g = bytearray(stream); g[4] = 2; expect(run("-d", input=bytes(g)), 1, "CZNS version 2 is refused")
+    # the stream decoder's output window and its threads stay inside -M (review R23 #114 B2: 0.0.2 held one window
+    # of a block per thread, outside the limit: 163 MiB peak for this file under -M 40M at -T 10)
+    zs = rt / "zeros.czns"
+    (rt / "zeros").write_bytes(bytes(80 << 20))
+    expect(run("-1", "--block-size", "8", "--stream=80", rt / "zeros", "-o", zs), 0, "a stream of 10 blocks of 8 MiB")
+    (rt / "zeros").unlink()
+    probe = ("import resource, subprocess, sys; r = subprocess.run(sys.argv[1:], stdout=subprocess.DEVNULL).returncode; "
+             "m = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss; print(r, m if sys.platform == 'darwin' else m * 1024)")
+    for t in ("1", "10"):
+        out = subprocess.run([sys.executable, "-c", probe, K, "-dc", "-M", "40M", "-T", t, str(zs)],
+                             capture_output=True, env=ENV).stdout.split()
+        rc, peak = int(out[0]), int(out[1])
+        check(rc == 0 and peak < 64 << 20, f"stream decode under -M 40M at -T {t}: exit {rc}, peak {peak >> 20} MiB")
 
     # ---- inputs of 8 MiB and more take the seekable file path (header and index read, not the whole frame), both ways
     big = rt / "big.csv"
