@@ -498,7 +498,8 @@ out:
 }
 
 /* ---------------- decoder ---------------- */
-#define KD_NORM do { if (range < KM_TOP) { range <<= 8; code = (code << 8) | (ip < ie ? *ip : 0u); ip++; } } while (0)
+#define KD_NORM do { if (range < KM_TOP) { range <<= 8; code <<= 8; \
+        if (ip < ie) code |= *ip++; else padding++; } } while (0)
 #define KD_BIT(PR, B) do { kp *p_ = (PR); uint32_t bd_ = (range >> KM_PB) * *p_; \
         if (code < bd_) { range = bd_; *p_ += (KM_ONE - *p_) >> KM_MOVE; B = 0; } else { code -= bd_; range -= bd_; *p_ -= *p_ >> KM_MOVE; B = 1; } KD_NORM; } while (0)
 /* branch-free bit for the trees (literal and length bits are hard to predict); the same arithmetic as KD_BIT */
@@ -516,10 +517,11 @@ int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
     if (pb > 4 || lc + lp > 4) return -1;
     km_model m; if (km_model_init(&m, lc, lp, pb)) return -1;
     km_probs *P = &m.p; const uint8_t *ip = in + 1, *ie = in + cn; uint32_t range = 0xFFFFFFFFu, code = 0; int rc = -1;
+    unsigned padding = 0;   /* synthetic zero bytes supplied after the last byte of input */
     for (int k = 0; k < 5; k++) code = (code << 8) | *ip++;
     uint32_t pos = 0, reps[4] = {0, 0, 0, 0}; int st = 0; const uint32_t pbm = (1u << pb) - 1, lpm = (1u << lp) - 1;
     while (pos < n) {
-        if (ip > ie + 4) goto out;   /* past what the end check below accepts: truncated or forged, stop now */
+        if (padding > 4) goto out;   /* past what the end check below accepts: truncated or forged, stop now */
         const uint32_t ps = pos & pbm; unsigned b;
         KD_BIT(&P->is_match[st][ps], b);
         if (!b) {   /* literal */
@@ -575,7 +577,7 @@ int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n)
         else for (uint32_t k = 0; k < len; k++) o[k] = s[k];
         pos += len;
     }
-    rc = ip <= ie + 4 ? 0 : -1;
+    rc = padding <= 4 ? 0 : -1;
 out:
     free(m.lit); return rc;
 }
