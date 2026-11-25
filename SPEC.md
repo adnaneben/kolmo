@@ -428,9 +428,11 @@ then, repeated:   len(u64 le)  frame[len]               # frame = one complete C
 end:              0 (u64 le)                             # zero-length terminator
 ```
 
-Each frame is a normal container (above) for one segment of the input (default 64 MiB), so encode and
-decode hold at most one segment plus its frame in memory. Segments are independent — compressed and
-decoded across cores like blocks — so very small segments cost a little ratio at their boundaries. A
+Each frame is a normal container (above) for one segment of the input (default 64 MiB; at most that), so encode
+and decode hold at most one segment plus its frame in memory. Segments are independent — compressed and
+decoded across cores like blocks — so very small segments cost a little ratio at their boundaries. A segment may be
+shorter than `seg_bytes`: on a tar input the encoder ends each segment at a member header, so that the next segment
+starts with one (a decoder reads any length up to the frame's own size). A
 decoder distinguishes the two formats by the first four bytes (`CZN1` one-shot vs `CZNS` stream).
 Produced and consumed by `kolmo_stream_compress` / `kolmo_stream_decompress`.
 
