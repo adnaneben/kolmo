@@ -332,6 +332,7 @@ check-features-b: build/test-features-b build/test-features-b-asan build/kolmo
 	./build/test-features-b
 	./build/test-features-b-asan 7
 	sh tests/test_features_b_cli.sh build/kolmo
+	python3 tests/test_archive_staging.py build/kolmo
 .PHONY: check-features-b
 # The memory model (docs/MEMORY-MODEL.md): frame declaration, governor, budgets mid-run, forced budgets, forged frames
 build/test-memdyn: tests/test_memdyn.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a

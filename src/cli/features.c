@@ -223,7 +223,28 @@ static const char *fc_member_name(const char *path) {
         fprintf(stderr, "kolmo: warning: removing leading '%.*s' from the member name '%s'\n", (int)(nm - path), path, path);
     return nm;
 }
-typedef struct { int dir; char **names; int nnames; int seen, done, bad; unsigned stage_id; } fc_x;
+typedef struct {
+    int fd, parent;
+    char name[64], path[4097];  /* DDP1 limits the stored member name to 4096 bytes */
+    size_t path_len;
+    struct stat directory, owner_dir;
+} fc_stage_dir;
+typedef struct { int dir; char **names; int nnames; int seen, done, bad; unsigned stage_id; fc_stage_dir stage; } fc_x;
+
+static int fc_same_dir(const struct stat *a, const struct stat *b) {
+    return a->st_ino == b->st_ino && a->st_dev == b->st_dev;
+}
+static int fc_stage_close(fc_stage_dir *s) {
+    if (s->fd < 0) return 0;
+    struct stat named;
+    int error = 0;
+    if (fstatat(s->parent, s->name, &named, AT_SYMLINK_NOFOLLOW)) error = errno;
+    else if (!fc_same_dir(&named, &s->directory)) error = EIO;
+    else if (unlinkat(s->parent, s->name, AT_REMOVEDIR)) error = errno;
+    close(s->fd); close(s->parent); s->fd = -1;
+    if (error) fprintf(stderr, "kolmo: cannot remove the extraction stage: %s\n", strerror(error));
+    return error ? -1 : 0;
+}
 /* The parent directory of name under the directory fd X->dir, created as needed: each component is opened with
  * O_NOFOLLOW, so a symbolic link on the way (one that was already there, or that another process puts there) ends
  * the walk instead of leading out of the directory. Returns a descriptor and sets *leaf, or -1 after reporting. */
@@ -251,7 +272,7 @@ static int fc_parent(const fc_x *X, const char *name, const char **leaf) {
 }
 /* Keep the stage on the destination filesystem. A private directory also keeps the source of renameat out of the
  * reach of other users who can write to the destination directory. The stage name cannot be the member's leaf. */
-static int fc_stage(int parent, const char *leaf, unsigned *id, char stage[64]) {
+static int fc_stage(int parent, const char *leaf, unsigned *id, char stage[64], struct stat *identity) {
     const char *prefix = *leaf == '.' ? "_kolmo-" : ".kolmo-";
     for (int i = 0; i < 128; i++) {
         snprintf(stage, 64, "%s%ld-%u", prefix, (long)getpid(), (*id)++);
@@ -264,7 +285,9 @@ static int fc_stage(int parent, const char *leaf, unsigned *id, char stage[64]) 
         if (fd >= 0) {
             struct stat st;
             if (fstat(fd, &st)) error = errno;
-            else if (st.st_uid == geteuid() && (st.st_mode & 0777) == 0700) return fd;
+            else if (st.st_uid == geteuid() && (st.st_mode & 0777) == 0700) {
+                *identity = st; return fd;
+            }
             else error = EACCES;
             close(fd);
         } else error = errno;
@@ -275,16 +298,54 @@ static int fc_stage(int parent, const char *leaf, unsigned *id, char stage[64]) 
     errno = EEXIST;
     return -1;
 }
+/* The parent path is walked anew for every member. Keep the stage only for
+ * adjacent siblings whose newly opened parent has the same filesystem identity. */
+static int fc_stage_for(fc_x *X, int parent, const char *leaf) {
+    fc_stage_dir *s = &X->stage;
+    struct stat owner, target;
+    if (fstat(parent, &owner)) return -1;
+    if (s->fd >= 0) {
+        /* A member can legitimately be named like the private directory, including
+         * names that compare equal on a case-insensitive filesystem. Retire it first. */
+        if (fc_same_dir(&s->owner_dir, &owner)) {
+            if (fstatat(parent, leaf, &target, AT_SYMLINK_NOFOLLOW)) {
+                if (errno == ENOENT) return s->fd;
+                return -1;
+            }
+            if (!fc_same_dir(&s->directory, &target)) return s->fd;
+        }
+        if (fc_stage_close(s)) { errno = EIO; return -1; }
+    }
+    int held = dup(parent);
+    if (held < 0) return -1;
+    int fd = fc_stage(parent, leaf, &X->stage_id, s->name, &s->directory);
+    if (fd < 0) { int error = errno; close(held); errno = error; return -1; }
+    s->fd = fd; s->parent = held; s->owner_dir = owner;
+    return fd;
+}
 static int fc_put(void *ctx, const char *name, const uint8_t *data, uint64_t size, uint32_t mode, int64_t mtime) {
     fc_x *X = ctx;
     if (X->nnames) { int hit = 0; for (int i = 0; i < X->nnames; i++) hit |= !strcmp(X->names[i], name); if (!hit) return 0; }
     X->seen++;
     if (!fc_safe(name)) { fprintf(stderr, "kolmo: skipping unsafe name '%s'\n", name); X->bad = 1; return 0; }
+    const char *last = strrchr(name, '/');
+    size_t path_len = last ? (size_t)(last + 1 - name) : 0;
+    if (path_len > sizeof X->stage.path) {
+        fprintf(stderr, "kolmo: %s: parent name too long\n", name); X->bad = 1; return 0;
+    }
+    /* Only repeated parents benefit. Keep the first member on the original
+     * one-shot path, with no extra descriptor or filesystem identity queries. */
+    int sibling = path_len == X->stage.path_len && !memcmp(name, X->stage.path, path_len);
+    if (!sibling) {
+        if (fc_stage_close(&X->stage)) { X->bad = 1; return 1; }
+        X->stage.path_len = path_len;
+        memcpy(X->stage.path, name, path_len);
+    }
     const char *leaf; int d = fc_parent(X, name, &leaf);
     if (d < 0) { X->bad = 1; return 0; }
     if (!*leaf || !strcmp(leaf, ".")) { close(d); fprintf(stderr, "kolmo: skipping unsafe name '%s'\n", name); X->bad = 1; return 0; }
-    char stage[64];
-    int staged = fc_stage(d, leaf, &X->stage_id, stage);
+    char temp[64]; struct stat identity;
+    int staged = sibling ? fc_stage_for(X, d, leaf) : fc_stage(d, leaf, &X->stage_id, temp, &identity);
     if (staged < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); close(d); X->bad = 1; return 0; }
     int fd = openat(staged, "entry", O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0666);
     int error = fd < 0 ? errno : 0, stop = 0;
@@ -307,10 +368,17 @@ static int fc_put(void *ctx, const char *name, const uint8_t *data, uint64_t siz
         if (!error && renameat(staged, "entry", d, leaf)) error = errno;
         if (error) unlinkat(staged, "entry", 0);
     }
-    close(staged);
-    if (unlinkat(d, stage, AT_REMOVEDIR) && !error) error = errno;
+
+    if (!sibling) {
+        close(staged);
+        if (unlinkat(d, temp, AT_REMOVEDIR) && !error) error = errno;
+    }
     close(d);
-    if (error) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(error)); X->bad = 1; return stop; }
+    if (error) {
+        if (fc_stage_close(&X->stage)) stop = 1;
+        fprintf(stderr, "kolmo: %s: %s\n", name, strerror(error));
+        X->bad = 1; return stop;
+    }
     X->done++; return 0;
 }
 /* the regular files under path (path itself when it is one), in name order, appended to *list. What DDP1 cannot
@@ -400,7 +468,7 @@ out:
     free(L.v); free(F); free(K); return ret;
 }
 static int fc_extract(int argc, char **argv) {
-    fc_x X = {.dir = -1}; const char *dir = "."; int threads = 0, a = 2;
+    fc_x X = {.dir = -1, .stage = {.fd = -1, .path_len = (size_t)-1}}; const char *dir = "."; int threads = 0, a = 2;
     for (; a < argc && argv[a][0] == '-'; a++) {
         if (!strcmp(argv[a], "-C") && a + 1 < argc) dir = argv[++a];
         else if (!strcmp(argv[a], "-T") && a + 1 < argc) { if (fc_num("-T", argv[++a], 0, 4096, &threads)) return 2; }
@@ -426,6 +494,7 @@ static int fc_extract(int argc, char **argv) {
             if (stop) { r = KOLMO_ERR_IO; break; }
         }
     } else r = kolmo_archive_extract_all(f.p, f.n, fc_put, &X, threads);
+    if (fc_stage_close(&X.stage)) X.bad = 1;
     fc_close(&f); close(X.dir);
     if (r < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r)); return 1; }
     if (X.nnames && X.seen < X.nnames) { fprintf(stderr, "kolmo: %d of %d names not in the archive\n", X.nnames - X.seen, X.nnames); return 1; }
