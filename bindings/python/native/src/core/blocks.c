@@ -8,6 +8,40 @@ static uint32_t plan_segment_capacity(size_t n) {
     return parts < 4092 ? (uint32_t)parts + 4 : 4096;
 }
 
+#ifdef KOLMO_FASTQ_RECORD_BLOCKS
+/* Return a complete record-aligned plan only when every line belongs to a supported four-line record.
+ * A record larger than half the target block can create tiny blocks. In that case, use the stock splitter. */
+static uint32_t fq_record_blocks(const uint8_t *s, size_t n, uint32_t block, uint64_t **out) {
+    if (!s || n <= block || !kf_fastq_like(s, n)) return 0;
+    size_t cap = n / (block / 2) + 2;
+    uint64_t *cuts = array_alloc(cap, sizeof(*cuts), 0);
+    if (!cuts) return 0;
+    uint32_t count = 1;
+    cuts[0] = 0;
+    size_t cursor = 0, base = 0;
+    while (cursor < n) {
+        size_t start = cursor;
+        kf_span name, data, plus, aux;
+        if (kf_line(s,n,&cursor,&name) || kf_line(s,n,&cursor,&data) ||
+            kf_line(s,n,&cursor,&plus) || kf_line(s,n,&cursor,&aux)) goto fallback;
+        if (!name.n || name.p[0] != '@' || name.n > KF_MAXNAME ||
+            !plus.n || plus.p[0] != '+' || data.n != aux.n || cursor - start > block / 2) goto fallback;
+        if (plus.n != 1 && (plus.n != name.n || memcmp(plus.p + 1, name.p + 1, name.n - 1))) goto fallback;
+        if (cursor - base > block) {
+            if (count >= UINT32_MAX - 1 || (size_t)count + 1 >= cap) goto fallback;
+            cuts[count++] = start;
+            base = start;
+        }
+    }
+    cuts[count] = n;
+    *out = cuts;
+    return count;
+fallback:
+    free(cuts);
+    return 0;
+}
+#endif
+
 /* block boundaries: newline-aligned for transposed text, element-aligned for shuffled arrays */
 static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, uint64_t **starts_out,
                             int fd, uint64_t offset, int64_t *error) {
