@@ -109,18 +109,32 @@ container header is 24 B, against 16 B for the control and 52 B of frame overhea
 
 | arm | stored B | vs control (model 4) | notes |
 |---|---:|---:|---|
-| control (`enc0`) | 874,372 | 1 | stock `-U` adds a 52 B frame; the archiver run of 24 Nov recorded 874,420 B for an older main |
-| **candidate** | **832,051** | **0.9516 (−4.84%)** | ideal code length: model 4 alone 874,353 B, LSTM alone 970,199 B, mixed 832,023 B; encode wall 2,269 s at load ~90–235 |
+| stock `kolmo -U -T 1` | 874,420 | 1.0001 | frame `0137e1b0…af16`; the same size as the 24 Nov archiver row |
+| control (`enc0`) | 874,372 | 1 | frame `1e21d55b…2032` |
+| **candidate** | **832,051** | **0.9516 (−4.84%); 0.9515 vs stock** | frame `540493c3…529d`; restored SHA-256 `0eac0114…7578` OK (decode wall 1,536 s at load ~100+); ideal code length: model 4 alone 874,353 B, LSTM alone 970,199 B, mixed 832,023 B; encode wall 2,269 s at load ~90–235 |
 | zpaq -m5 (recorded 24 Nov, same SHA-256) | 956,498 | 1.0939 | `evidence/ARCHIVERS_2026-11-24.md` rows |
 | paq8px v217 -8 (recorded 24 Nov, Codex lane, not re-run) | 743,538 | 0.8504 | 282 s / 284 s, 2.6 GB RSS; the candidate is still 11.9% larger |
 
-**Holdout decode check: pending.** The candidate decoder for the holdout frame was still running when this was written (one niced process, about 35 min at this load). The result and the restored SHA-256 go into `$V/ultra-lstm/bytes/sums.txt` and will be added here. The dev1m frame decoded and SHA-matched.
+**Holdout decode check: done.** The candidate frame decoded to the exact input (SHA-256 `0eac0114…7578`).
+
+### Dev at full size: `dickens4m` (4,194,304 B, SHA-256 `6c7a2dec…6215`; R16's ≥4 MB gate size)
+
+| arm | stored B | vs stock | frame SHA-256 | notes |
+|---|---:|---:|---|---|
+| stock `kolmo -U -T 1` | 886,241 | 1 | `8f8e4775…9584` | |
+| control (`enc0`) | 886,193 | 0.9999 | `b8799e84…1d54` | |
+| **candidate** | **880,692** | **0.9937 (−0.63%)** | `3df42aad…cea2` | restored SHA-256 `6c7a2dec…6215` OK; ideal: model 4 886,174, LSTM 1,099,706, mixed 880,665 B |
+
+On dev, the gain grows only slowly with length (−0.54% at 1 MiB, −0.63% at 4 MiB), and it stays far from the byte gate.
+On the holdout the gain is 8× larger. Model 4's tuning (contexts, word hash, priors) was done on English and
+structured data, and the LSTM fills that gap on Polish. Expect the gain to depend on the language and producer, not
+to hold uniformly.
 
 ### Gate evaluation (candidate against stock Ultra)
 
 | gate | dev1m | holdout | threshold |
 |---|---:|---:|---|
-| stored bytes | 0.994 **fail** | ≈0.952 pass (vs control stream + 52 B frame: 832,051 / 874,424) | ≤ 0.98 |
+| stored bytes | 0.994 **fail** (dickens4m: 0.9937 **fail**) | 0.9515 pass | ≤ 0.98 |
 | encode throughput (CPU) | 0.056 **fail** | — (timed run pending) | ≥ 0.67 |
 | decode throughput (CPU) | 0.042 **fail** | — (timed run pending) | ≥ 0.95 |
 | peak RSS, encode | 0.77 pass | — | ≤ 1.10 |
@@ -146,7 +160,7 @@ contract is a record and not a proposal for adoption.
 
 - **Timings pending: quiet window.** The planned 3-round timed run (shuffled, per-cell checkpoints) is registered in `$V/evidence/QUIET_WINDOW_QUEUE.txt` (`config-quiet.json`, about 90 min), and the coordinator runs it once round 3 ends. The host load never fell below
   12. Its order and checkpoints are in `$V/ultra-lstm/run1/`. To resume it: `python3 run.py $V/ultra-lstm/config.json`.
-- The dev numbers are on a 1 MiB prefix, below R16's own 4 MB gate size. The 4 MiB dev cells are part of the queued run.
+- The dev CPU and RSS numbers come from the 1 MiB prefix. The 4 MiB dev bytes are measured (§5); the 4 MiB timings are part of the queued run.
 - The candidate was tuned on dev only, in about 15 configurations (`dev-sweep.md`). Larger LSTMs gained more on dev, at
   2.5× the time per doubling of H.
 - A leaderboard claim (LTCB) would need enwik8/enwik9 and a decoder-inclusive size. Neither was attempted.
