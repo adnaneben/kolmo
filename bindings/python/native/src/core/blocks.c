@@ -11,7 +11,7 @@ static uint32_t plan_segment_capacity(size_t n) {
 #ifdef KOLMO_FASTQ_RECORD_BLOCKS
 enum { FQ_SEEN_BITS = 12, FQ_SAMPLE_BYTES = 256u << 10 };
 
-/* Exact field fingerprints ignore changing record identifiers. A bounded table may forget a field on collision. */
+/* Hash whole fields independently of identifiers. Hash or table-slot collisions can change this estimate. */
 static size_t fq_repeated_field(kf_span field, uint64_t *seen, uint64_t seed) {
     uint64_t hash = kolmo_khash64(field.p, field.n, seed) | 1;
     size_t slot = (size_t)(hash >> (64 - FQ_SEEN_BITS));
@@ -25,8 +25,11 @@ static int fq_lz_favors_stock(const uint8_t *s, size_t n) {
     size_t width = n < FQ_SAMPLE_BYTES ? n : FQ_SAMPLE_BYTES;
     size_t span = n - width, offsets[] = {0, span / 2, span};
     unsigned count = span ? 3 : 1;
-    for (unsigned i = 0; i < count; i++)
-        if (kprobe_size(s + offsets[i], width) <= width / 8) return 1;
+    for (unsigned i = 0; i < count; i++) {
+        size_t packed = kprobe_size(s + offsets[i], width);
+        /* The probe also returns its input size when it cannot allocate or produce a smaller trial. */
+        if (packed == width || packed <= width / 8) return 1;
+    }
     return 0;
 }
 

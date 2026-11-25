@@ -20,7 +20,9 @@ def run(data, root, case, level, change, boundaries=None):
     source.write_bytes(data)
     env=dict(os.environ);env.pop("KOLMO_BENCH_READ_CUTS",None)
     results=[]
-    for tool,settings in [(stock,env),(encoder,env),(encoder,{**env,"KOLMO_BENCH_READ_CUTS":"1"})]:
+    for tool,settings in [(stock,env), (encoder,env),
+                          (encoder,{**env,"KOLMO_BENCH_READ_CUTS":"0"}),
+                          (encoder,{**env,"KOLMO_BENCH_READ_CUTS":"1"})]:
         subprocess.run([tool,"-q","-T1",level,"--block-size","1","-o",archive,source],env=settings,check=True)
         frame=archive.read_bytes()
         subprocess.run([stock,"-q","-T1","-d","-o",restored,archive],env=env,check=True)
@@ -32,11 +34,11 @@ def run(data, root, case, level, change, boundaries=None):
         assert cuts[-1]==len(data)
         results.append((sha(frame),cuts,len(frame)))
         archive.unlink();restored.unlink()
-    assert results[0]==results[1]
-    assert (results[1][0]!=results[2][0])==change, (case,results)
-    if change: assert all(c in boundaries for c in results[2][1])
+    assert results[0]==results[1]==results[2]
+    assert (results[0][0]!=results[3][0])==change, (case,results)
+    if change: assert all(c in boundaries for c in results[3][1])
     print(json.dumps(dict(case=case,level=level,raw=len(data),input_sha256=sha(data),
-                          stock=results[0],opt_in=results[2],restore="exact")))
+                          stock=results[0],unset=results[1],zero=results[2],opt_in=results[3],restore="exact")))
 
 with tempfile.TemporaryDirectory() as td:
     root=Path(td);data=bytearray(); boundaries={0}; index=0; rand=random.Random(825)
@@ -59,3 +61,17 @@ with tempfile.TemporaryDirectory() as td:
     wide=limit//4+1
     run(block+b"@long\n"+b"?"*wide+b"\n+\n"+b"!"*wide+b"\n",root,"oversized-record","-U",False)
     run((b"plain prose material 0123456789\n"*(limit//20)),root,"ordinary-text","-U",False)
+
+
+    # Both fixtures have distinct identifiers. In the second, each field is unique too.
+    for numbered_fields in (False, True):
+        records = bytearray()
+        index = 0
+        while len(records) < limit + (64 << 10):
+            marker = f"{index:08d}".encode() if numbered_fields else b"00000000"
+            field = b"!?%#" * 48 + marker
+            aux = b"#?%!" * 48 + marker
+            records.extend(b"\n".join([f"@opaque-{index}".encode(), field, b"+", aux]) + b"\n")
+            index += 1
+        case = "near-duplicate-fields" if numbered_fields else "repeated-fields"
+        run(bytes(records), root, case, "-U", False)
