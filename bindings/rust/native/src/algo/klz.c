@@ -40,6 +40,7 @@ static inline void kz_match(uint8_t *op, size_t off, size_t ml, uint8_t *oe) {
     if (off < 8) {   /* short period: copy one multiple of the period of at least 8 bytes, then 8 bytes at a time */
         size_t per = off * ((8 + off - 1) / off);
         while (op < e && (size_t)(op - (e - ml)) < per) *op++ = *m++;
+        if (op == e) return;
         m = op - per;
     }
     if ((size_t)(oe - e) >= 8) { while (op < e) { memcpy(op, m, 8); op += 8; m += 8; } return; }
@@ -1037,10 +1038,17 @@ size_t kolmo_klzh2_compress_el(const uint8_t *in, size_t n, uint8_t *out, size_t
     const ko_thr th = {threads, passes, budget}; return kz_klzh_enc(in, n, out, cap, level, 1, &th);
 }
 
-typedef struct { uint64_t b; int c; const uint8_t *p, *e; } kz_br;
+typedef struct { uint64_t b; int c; const uint8_t *p, *e; size_t padding; } kz_br;
 static inline void kz_refill(kz_br *r) {
-    if (r->p + 8 <= r->e) { r->b |= kz_r64(r->p) << r->c; r->p += (63 - r->c) >> 3; r->c |= 56; }
-    else while (r->c <= 56) { uint64_t v = r->p < r->e ? *r->p : 0; r->b |= v << r->c; r->p++; r->c += 8; }
+    if (r->e - r->p >= 8) { r->b |= kz_r64(r->p) << r->c; r->p += (63 - r->c) >> 3; r->c |= 56; }
+    else {
+        while (r->c <= 56 && r->p < r->e) { r->b |= (uint64_t)*r->p++ << r->c; r->c += 8; }
+        if (r->c <= 56) {
+            int bytes = (64 - r->c) >> 3;
+            r->padding += (size_t)bytes;
+            r->c += bytes * 8;
+        }
+    }
 }
 static inline uint32_t kz_bget(kz_br *r, int nb) { uint32_t v = (uint32_t)(r->b & ((1ull << nb) - 1)); r->b >>= nb; r->c -= nb; return v; }
 /* length code c -> base value and extra-bit count (codes 0..71; see klz.h) */
@@ -1063,7 +1071,7 @@ static int kz_klzh_dec(const uint8_t *in, size_t cn, uint8_t *out, size_t n, int
         if (sn[q] ? (mode ? kolmo_krans_decompress(in + i, z, st[q], sn[q]) : kolmo_khuf_decompress_chunks(in + i, z, st[q], sn[q])) : z != 0) goto out;
         i += z;
     }
-    kz_br br = {0, 0, in + i, in + cn};
+    kz_br br = {0, 0, in + i, in + cn, 0};
     const uint8_t *lp = lit, *le = lit + nl, *llc = st[1], *mlc = st[2], *ofc = st[3];
     uint32_t LB[72]; uint8_t LN[72]; kz_ltab(LB, LN);
     { unsigned ml = 0, mo = 0;                                  /* codes in range: one pass, maxima only (decmap lane) */
@@ -1099,7 +1107,8 @@ static int kz_klzh_dec(const uint8_t *in, size_t cn, uint8_t *out, size_t n, int
     }
     if ((size_t)(le - lp) != (size_t)(oe - op)) goto out;
     memcpy(op, lp, (size_t)(le - lp));
-    if ((size_t)(br.p - in) - (size_t)(br.c >> 3) > cn) goto out;
+    /* Lookahead can read virtual zero bytes, but the sequence may not consume any. */
+    if (br.padding > (size_t)(br.c >> 3)) goto out;
     rc = 0;
 out:
     free(lit); free(cd); return rc;

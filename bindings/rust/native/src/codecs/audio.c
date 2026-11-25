@@ -50,28 +50,6 @@
 
 /* ------------------------------------------------------------------------------------------------ utils */
 
-/* CRC-32C (Castagnoli), with the SSE4.2 instruction when the compiler targets it */
-static uint32_t ka_crc_tab[256];
-static void ka_crc_init(void)
-{
-    for (uint32_t i = 0; i < 256; i++) {
-        uint32_t c = i;
-        for (int k = 0; k < 8; k++) c = (c & 1) ? 0x82F63B78u ^ (c >> 1) : c >> 1;
-        ka_crc_tab[i] = c;
-    }
-}
-static uint32_t ka_crc32_buf(uint32_t c, const uint8_t *p, size_t n)
-{
-    c = ~c;
-#if defined(__SSE4_2__) && defined(__x86_64__)
-    for (; n >= 8; n -= 8, p += 8) { uint64_t v; memcpy(&v, p, 8); c = (uint32_t)__builtin_ia32_crc32di(c, v); }
-    while (n--) c = __builtin_ia32_crc32qi(c, *p++);
-#else
-    while (n--) c = ka_crc_tab[(c ^ *p++) & 0xff] ^ (c >> 8);
-#endif
-    return ~c;
-}
-
 static uint32_t ka_rd32(const uint8_t *p) { return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24; }
 static uint16_t ka_rd16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
 static void ka_wr32(uint8_t *p, uint32_t v) { p[0] = v; p[1] = v >> 8; p[2] = v >> 16; p[3] = v >> 24; }
@@ -1677,7 +1655,7 @@ static void *ka_dec_worker(void *arg)
         int len = ka_chunk_len(p, i);
         uint8_t *d = p->dst + ((size_t)i << p->o->chunk_log2) * 2 * p->ch;
         if (ka_decode_chunk(p->o, p->ch, p->src[i], p->srclen[i], len, d) ||
-            ka_crc32_buf(0, d, (size_t)len * 2 * p->ch) != p->crc[i]) {
+            kolmo_crc32c(0, d, (size_t)len * 2 * p->ch) != p->crc[i]) {
             pthread_mutex_lock(&p->mu); p->bad = 1; pthread_mutex_unlock(&p->mu);
         }
     }
@@ -1723,11 +1701,11 @@ static int ka_kaud_encode_layout(const ka_Opts *o, const uint8_t *in, size_t inl
     uint8_t b4[4];
     ka_wr32(b4, (uint32_t)w.data_off); ka_buf_add(out, b4, 4); ka_buf_add(out, in, w.data_off);
     ka_wr32(b4, (uint32_t)(inlen - w.trl_off)); ka_buf_add(out, b4, 4); ka_buf_add(out, in + w.trl_off, inlen - w.trl_off);
-    ka_wr32(b4, ka_crc32_buf(0, in, inlen)); ka_buf_add(out, b4, 4);
+    ka_wr32(b4, kolmo_crc32c(0, in, inlen)); ka_buf_add(out, b4, 4);
     for (int i = 0; i < p.nchunks; i++) {
         int len = ka_chunk_len(&p, i);
         ka_wr32(b4, (uint32_t)p.out[i].len); ka_buf_add(out, b4, 4);
-        ka_wr32(b4, ka_crc32_buf(0, p.pcm + ((size_t)i << o->chunk_log2) * 2 * w.ch, (size_t)len * 2 * w.ch)); ka_buf_add(out, b4, 4);
+        ka_wr32(b4, kolmo_crc32c(0, p.pcm + ((size_t)i << o->chunk_log2) * 2 * w.ch, (size_t)len * 2 * w.ch)); ka_buf_add(out, b4, 4);
     }
     for (int i = 0; i < p.nchunks; i++) { ka_buf_add(out, p.out[i].p, p.out[i].len); free(p.out[i].p); }
     free(p.out);
@@ -1795,14 +1773,14 @@ static int ka_kaud_decode(const uint8_t *in, size_t inlen, int threads, ka_Buf *
     if (pl.bad) return -1;
     memcpy(out->p + hl + pcmlen, tail, tl);
     out->len = hl + pcmlen + tl;
-    if (ka_crc32_buf(0, out->p, out->len) != fcrc) { *err = "CRC mismatch"; return -1; }
+    if (kolmo_crc32c(0, out->p, out->len) != fcrc) { *err = "CRC mismatch"; return -1; }
     return 0;
 }
 
 
 /* ---------------------------------------------------------------------------------------- Kolmo codec 19 */
 static pthread_once_t ka_once = PTHREAD_ONCE_INIT;
-static void ka_init(void) { ka_crc_init(); ka_rtab_init(); ka_shtab_init(); }
+static void ka_init(void) { ka_rtab_init(); ka_shtab_init(); }
 
 /* code len bytes: head bytes, then frames sample frames of ch (1 or 2) channels of 16-bit little-endian PCM, then the
  * rest of the block. profile 0 or 1. Returns the payload length, or 0 when it does not fit in cap. */

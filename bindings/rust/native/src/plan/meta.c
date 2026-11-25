@@ -463,14 +463,16 @@ static int mt_gguf(const uint8_t *s, size_t n, mt_segs *g) {
     uint64_t nt = mt_le64(s + 8), nkv = mt_le64(s + 16); size_t p = 24; uint64_t align = 32;
     if (nt == 0 || nt > 65536 || nkv > 65536) return 0;
     for (uint64_t i = 0; i < nkv; i++) {
-        if (p + 8 > n) return 0; uint64_t kl = mt_le64(s + p); if (kl > 65536 || kl > n - p - 12) return 0;
+        if (n - p < 12) return 0;
+        uint64_t kl = mt_le64(s + p); if (kl > 65536 || kl > n - p - 12) return 0;
         const uint8_t *k = s + p + 8; p += 8 + kl; uint32_t ty = mt_le32(s + p); p += 4;
         if (kl == 17 && !memcmp(k, "general.alignment", 17) && ty == 4 && p + 4 <= n) { align = mt_le32(s + p); if (!align || align > 65536 || (align & (align - 1))) return 0; }
         if (!mt_gguf_skip(s, n, &p, ty, 0)) return 0;
     }
     mt_part *P = malloc(nt * sizeof *P); if (!P) return 0;
     for (uint64_t i = 0; i < nt; i++) {
-        if (p + 8 > n) { free(P); return 0; } uint64_t kl = mt_le64(s + p); if (kl > 65536 || kl > n - p - 12) { free(P); return 0; }
+        if (n - p < 12) { free(P); return 0; }
+        uint64_t kl = mt_le64(s + p); if (kl > 65536 || kl > n - p - 12) { free(P); return 0; }
         p += 8 + kl; uint32_t nd = mt_le32(s + p); p += 4;
         if (nd > 8 || p + 8 * (uint64_t)nd + 12 > n) { free(P); return 0; }
         p += 8 * (size_t)nd; P[i].kind = (uint8_t)mt_le32(s + p); P[i].a = mt_le64(s + p + 4); p += 12;

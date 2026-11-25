@@ -613,6 +613,7 @@ static uint8_t *kf_frame_encode(int fam, uint64_t orig, kf_stream *st, int ns, k
     free(jb); free(h.p);
     return res;
 }
+enum { KF_F_ONE = 0, KF_F_FASTQ = 1, KF_F_CSV = 2 };
 /* a parsed frame: the streams with their buffers allocated, and the jobs pointing into them */
 typedef struct { int fam, ns, nj; uint64_t orig; kf_stream *st; kf_job *jb; } kf_frame;
 static void kf_frame_free(kf_frame *f) {
@@ -620,13 +621,14 @@ static void kf_frame_free(kf_frame *f) {
     free(f->st); free(f->jb); f->st = NULL; f->jb = NULL;
 }
 /* maxmul: the streams may hold at most maxmul * original size + 4096 bytes in all (a bound on what a corrupt frame
- * can make the decoder allocate) */
-static int kf_frame_parse(const uint8_t *c, size_t cn, kf_frame *f, unsigned maxmul) {
+ * can make the decoder allocate). A native FASTQ block supplies the already admitted outer size. */
+static int kf_frame_parse(const uint8_t *c, size_t cn, kf_frame *f, unsigned maxmul, const size_t *fastq_original) {
     memset(f, 0, sizeof *f);
     size_t i = 4; uint64_t v, ns, nj;
     if (cn < 6 || memcmp(c, "KFM2", 4)) return -1;
     f->fam = c[i++];
     if (kf_getvar(c, cn, &i, &f->orig) || f->orig > ((uint64_t)1 << 48) || kf_getvar(c, cn, &i, &ns) || !ns || ns > 4096) return -1;
+    if (fastq_original && (f->fam != KF_F_FASTQ || ns != 5 || f->orig != *fastq_original)) return -1;
     f->ns = (int)ns; f->st = calloc((size_t)ns, sizeof *f->st);
     if (!f->st) return -1;
     for (int s = 0; s < f->ns; s++) {
@@ -673,7 +675,6 @@ static int kf_frame_decode(kf_frame *f, const uint8_t *want, int threads) {
 }
 
 /* ------------------------------------------------------------------ FASTQ family */
-enum { KF_F_ONE = 0, KF_F_FASTQ = 1, KF_F_CSV = 2 };
 typedef struct { const uint8_t *p; size_t n; } kf_span;
 static inline int kf_line(const uint8_t *s, size_t n, size_t *i, kf_span *out) {
     if (*i >= n) return -1;
@@ -851,9 +852,10 @@ static int kf_fastq_join(kf_fq *q, uint8_t *out, size_t cap, size_t *outn) {
             size_t start = nn;
             if (op == KF_OP_SAME) { if (k >= pk || nn + pv[k].n > KF_MAXNAME) return -1; memcpy(name + nn, prev + (size_t)(uintptr_t)pv[k].p, pv[k].n); nn += pv[k].n; }
             else if (op == KF_OP_DELTA) {
-                uint64_t z, b; kf_span pt = {prev + (size_t)(uintptr_t)pv[k].p, 0};
-                if (kf_getvar(N, st[1].data.n, &ni, &z) || k >= pk) return -1;
-                pt.n = pv[k].n; if (!kf_num_tok(pt, &b)) return -1;
+                uint64_t z, b;
+                if (k >= pk || kf_getvar(N, st[1].data.n, &ni, &z)) return -1;
+                kf_span pt = {prev + (size_t)(uintptr_t)pv[k].p, pv[k].n};
+                if (!kf_num_tok(pt, &b)) return -1;
                 uint64_t a = b + (uint64_t)kf_unzz(z); char tmp[24]; int l = 0;
                 do { tmp[l++] = (char)('0' + a % 10); a /= 10; } while (a);
                 if (nn + (size_t)l > KF_MAXNAME) return -1;
@@ -913,7 +915,7 @@ static int kf_fq_layout(kf_fq *q) {
 static int kf_fastq_decompress(const uint8_t *c, size_t cn, uint8_t *out, size_t n, int threads) {
     pthread_once(&kf_tab_once, kf_tab_init);
     kf_frame f; kf_fq q; memset(&q, 0, sizeof q); kf_namectx *nc = NULL; int rc = -1;
-    if (kf_frame_parse(c, cn, &f, 4) || f.fam != KF_F_FASTQ || f.ns != 5 || f.orig != n) goto done;
+    if (kf_frame_parse(c, cn, &f, 4, &n)) goto done;
     if (f.st[0].kind != KF_BYTES || f.st[1].kind != KF_BYTES || f.st[2].kind != KF_DNA || f.st[3].kind != KF_BYTES || f.st[4].kind != KF_QUAL) goto done;
     for (int s = 0; s < 5; s++) { q.st[s] = f.st[s]; }
     { uint8_t want[5] = {1, 0, 0, 1, 0}; if (kf_frame_decode(&f, want, threads)) goto done; }
