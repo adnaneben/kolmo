@@ -543,6 +543,19 @@ static uint32_t meta_runs(const uint8_t *s, size_t n, const uint64_t *cut, size_
     if (last < n || g.k == 0) { g.ss[g.k] = last; g.se[g.k] = n; g.kind[g.k] = MK_DATA; g.k++; }
     return g.k;
 }
+/* A tar whose first k bytes are the end of a member (a stream segment that starts inside one): that end is one part,
+ * and the tar from k on is cut as mt_tar cuts it. Without a tar at k, the usual walk of the whole buffer. */
+static uint32_t meta_tar_at(const uint8_t *s, size_t n, uint64_t k, uint64_t *ss, uint64_t *se, uint32_t *kind, uint32_t maxs, size_t exemin) {
+    if (k && k < n && maxs >= 8) {
+        mt_segs t = {ss + 1, se + 1, kind + 1, 0, maxs - 1, exemin};
+        if (mt_tar(s + k, n - k, &t)) {
+            ss[0] = 0; se[0] = k; kind[0] = meta_packed(s, k) ? MK_PACKED : MK_DATA;
+            for (uint32_t i = 0; i < t.k; i++) { ss[1 + i] += k; se[1 + i] += k; }
+            return 1 + t.k;
+        }
+    }
+    return meta_segments_x(s, n, ss, se, kind, maxs, exemin);
+}
 static uint32_t meta_segments(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se, uint32_t *kind, uint32_t maxs) {
     return meta_segments_x(s, n, ss, se, kind, maxs, MT_EXE_MIN);
 }

@@ -159,7 +159,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     }
     kx_bytes(&tab, recipes.p, recipes.n);
     if (tab.oom || recipes.oom) goto done;
-    {   int64_t fe = compress_cuts(store, -1, (size_t)st->unique_bytes, dst, -1, cap, p, cut, ncut);
+    {   int64_t fe = compress_cuts(store, -1, (size_t)st->unique_bytes, dst, -1, cap, p, cut, ncut, 0);
         if (fe < 0) { ret = fe; goto done; }
         st->store_frame = (uint64_t)fe;
         kolmo_params tp = {KOLMO_HC, 0, p ? p->threads : 0, 0, 1};
