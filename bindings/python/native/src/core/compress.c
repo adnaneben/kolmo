@@ -97,7 +97,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     double pt0 = prof_now();
 #endif
-    nseg = meta_segments(src, n, ss, se, skind, MAXSEG);   /* members, sections, tensors, packed content (plan/meta.c) */
+    nseg = meta_segments_x(src, n, ss, se, skind, MAXSEG, p->mode == KOLMO_RT ? MT_EXE_MIN_SPEED : MT_EXE_MIN);   /* members, sections, tensors, packed content (plan/meta.c) */
     /* no structure in the headers: one segment per homogeneous run (plan/segment.c), for the modes where a plan per
      * kind of data pays (balanced, eco, hc, ratio; speed keeps its minimal analysis and -x's context mixing adapts on
      * its own). Packed (already compressed) inputs stay one segment. */

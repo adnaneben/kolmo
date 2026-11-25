@@ -59,7 +59,7 @@ strictly ordered on the screening corpus; final numbers from the timed holdout):
 | 5     | KLZH2 7 (0.0.1 "eco")                                                      |
 | 6     | KLZH2 8                                                                    |
 | 7     | KLZH2 9 or a faster ratio-tier setting, whichever is smaller at LZ decode speed |
-| 8     | ratio tier, fast variant (BWT-only measured ~3x faster than ratio at the same size) |
+| 8     | ratio tier, fast variant: BWT for text, JSON and log streams; other blocks BWT only where a 512 KiB slice finds it 2% smaller than KLZMA 1, else KLZMA 1 (from 0.0.3) |
 | 9     | ratio tier (KLZMA/BWT, 0.0.1 "ratio")                                      |
 | ultra | context mixing (0.0.1 `-x`)                                                |
 
