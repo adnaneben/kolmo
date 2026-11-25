@@ -35,14 +35,32 @@ static void dd_config(dd_cfg *c, uint32_t avg, int lines) {
     int b = 0; while ((1u << b) < avg) b++;
     c->avg = 1u << b; c->min = c->avg / 4; c->max = c->avg * 8; c->ms = dd_mask(b + 2); c->ml = dd_mask(b - 2); c->lines = lines;
 }
+/* Compute both hashes independently from the incoming state. Check the earlier cut first. */
+static inline size_t dd_scan(const uint8_t *s, size_t i, size_t end, uint64_t mask, uint64_t *state) {
+    uint64_t h = *state;
+    for (; end - i >= 2; i += 2) {
+        uint64_t g0 = dd_gear[s[i]], g1 = dd_gear[s[i + 1]];
+        uint64_t h1 = (h << 1) + g0;
+        uint64_t h2 = (h << 2) + (g0 << 1) + g1;
+        if (!(h1 & mask)) return i + 1;
+        if (!(h2 & mask)) return i + 2;
+        h = h2;
+    }
+    if (i < end) {
+        h = (h << 1) + dd_gear[s[i]];
+        if (!(h & mask)) return i + 1;
+    }
+    *state = h;
+    return 0;
+}
 /* the length of the next chunk of s[0..n) */
 static size_t dd_cut(const dd_cfg *c, const uint8_t *s, size_t n, int text) {
     if (n <= c->min) return n;
-    size_t end = n < c->max ? n : c->max, norm = n < c->avg ? n : c->avg, i = c->min, cut = end;
+    size_t end = n < c->max ? n : c->max, norm = n < c->avg ? n : c->avg;
     uint64_t h = 0;
-    for (; i < norm; i++) { h = (h << 1) + dd_gear[s[i]]; if (!(h & c->ms)) { cut = i + 1; goto found; } }
-    for (; i < end; i++) { h = (h << 1) + dd_gear[s[i]]; if (!(h & c->ml)) { cut = i + 1; goto found; } }
-found:
+    size_t cut = dd_scan(s, c->min, norm, c->ms, &h);
+    if (!cut) cut = dd_scan(s, norm, end, c->ml, &h);
+    if (!cut) cut = end;
     if (text && c->lines && cut < n && s[cut - 1] != '\n') {
         size_t lim = n - cut < DD_LINE_REACH ? n - cut : DD_LINE_REACH;
         const uint8_t *q = memchr(s + cut, '\n', lim);
