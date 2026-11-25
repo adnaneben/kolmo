@@ -11,6 +11,8 @@ on:
       - "v*"
   pull_request:
     paths:
+      - "LICENSE"
+      - "NOTICE"
       - "bindings/python/**"
       - "src/**"
       - ".github/workflows/wheels.yml"
@@ -27,6 +29,8 @@ jobs:
           python-version: "3.12"
       - run: pip install build
       - run: python -m build --sdist --outdir dist bindings/python
+      - name: Verify sdist notices
+        run: python3 bindings/python/check_license_files.py dist/*.tar.gz
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
@@ -63,6 +67,7 @@ jobs:
           CIBW_TEST_COMMAND: "python -c \"import kolmo; d=b'col,val\\n'+b''.join(b'r,%d\\n'%i for i in range(5000)); assert kolmo.decompress(kolmo.compress(d, level=7))==d; print('wheel ok')\""
       - name: Verify wheel payload
         run: |
+          python3 bindings/python/check_license_files.py wheelhouse/*.whl
           python3 - <<'PYTHON'
           from pathlib import Path
           from zipfile import ZipFile

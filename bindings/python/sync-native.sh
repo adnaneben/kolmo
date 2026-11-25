@@ -1,9 +1,9 @@
 #!/bin/sh
-# Copy the native core (src; every coder is Kolmo's own) into the Python package so the sdist and wheels
-# are self-contained. Run after changing ../../src, then commit native/.
+# Refresh the native core and project notices in the self-contained Python source distribution.
 set -e
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
+cp "$root/LICENSE" "$root/NOTICE" "$here/"
 dst="$here/native"
 rm -rf "$dst"; mkdir -p "$dst"
 cp -R "$root/src" "$dst/src"
