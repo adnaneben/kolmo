@@ -30,6 +30,12 @@ size_t kolmo_klzma_compress(const uint8_t *in, size_t n, uint8_t *out, size_t ca
 /* The same output as kolmo_klzma_compress, on up to `threads` threads (the 4-byte match finder split by hash bucket,
    klzma.c km_mt); the result never depends on threads. */
 size_t kolmo_klzma_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads);
+/* The same output again, elastic (review40 #7): the finder is split for `threads` threads; `passes` helpers run from
+   the start (the threads the caller owns beyond itself) and the others join when the budget has a token (a thread
+   another block gave back), so a long block speeds up as the call's other blocks finish. */
+struct kolmo_budget;
+size_t kolmo_klzma_compress_el(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int passes,
+                               struct kolmo_budget *budget);
 /* 0 when in[0..cn) decodes to exactly n bytes, else -1 (bounds-checked; reads past the end count as corrupt). */
 int kolmo_klzma_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 #endif

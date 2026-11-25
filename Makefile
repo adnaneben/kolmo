@@ -115,9 +115,10 @@ build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src
 build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 
-check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus build/mkarchive
+check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus build/mkarchive build/test-elastic
 	./build/test-levels
 	sh tests/check_no_abort.sh
+	./build/test-elastic
 	python3 tests/test_cli.py build/kolmo
 	sh tests/test_archive_safety.sh build/kolmo build/mkarchive
 	sh tests/test_filter.sh build/kolmo
@@ -148,6 +149,8 @@ check-decoder-hardening: build/test-decoder-hardening-asan
 
 build/test-harden: tests/test_harden.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+build/test-elastic: tests/test_elastic.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_elastic.c build/libkolmoarch.a -o $@ $(LIBS)
 build/test-v12-corpus: tests/test_v12_corpus.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 
@@ -259,9 +262,9 @@ build/test-bwt-asan: tests/test_bwt.c tests/test_bwt_golden.h $(BWTSRC) $(BWTHDR
 # Kolmo's own coders (codecs 24, 27-29, 32, src/algo/k*.c): round trips, corrupt payloads under ASan/UBSan, pinned hash
 # values; then every mode through the CLI: version 12, no retired codec id, 1 and 4 threads alike, KOLMO_NATIVE ignored.
 build/test-native: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
-	$(CC) $(CFLAGS) -Isrc tests/test_native.c $(NATSRC) -o $@
+	$(CC) $(CFLAGS) -Isrc tests/test_native.c $(NATSRC) src/algo/par.c -o $@ -lpthread
 build/test-native-asan: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
-	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -Isrc tests/test_native.c $(NATSRC) -o $@
+	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -Isrc tests/test_native.c $(NATSRC) src/algo/par.c -o $@ -lpthread
 check-native: build/test-native build/test-native-asan build/kolmo
 	./build/test-native 3
 	./build/test-native-asan

@@ -321,6 +321,18 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   at a time away from the end of the block.
 - **Level 8 codes 32 MiB block-sorting blocks** instead of 128 MiB. It needs about a third less memory (enwik8 RSS
   738 -> 489 MB), and -9 is now smaller than -8 on large text (enwik8 -8 21.97 MB, -9 20.80 MB; both were 20.80 MB).
+- **Threads that run out of blocks now help the blocks still running** (review40 #7). Before, each block got a fixed
+  share of the threads (`threads / blocks`, so 1 whenever there are more blocks than threads), and a long block at
+  levels 7-9 ran its match finder on one thread while the other threads sat idle. Now a thread that has no block left
+  gives itself to a shared budget, and the KLZMA (level 9) and KLZH2 (levels 5-7) match finders take helpers from
+  it while they run. Blocks also start longest first, inside a window that bounds the finished blocks held for an
+  earlier one (before, that reorder buffer was unbounded), and the decoder starts its longest blocks first. The output
+  is byte-identical at every level and thread count (`tests/test_elastic.c`, `benchmark/determinism`).
+  silesia.tar, wall time against main (`benchmark/review40/elastic-dispatch.md`): level 7 `-T 4` 24.0 -> 14.3 s,
+  `-T 10` 20.4 -> 7.9 s; level 9 `-T 4` 14.2 -> 8.4 s, `-T 10` 13.8 -> 6.6 s; level 9 decompression `-T 4`
+  1.32 -> 0.96 s. A 2.25 GB tar: level 7 `-T 10` 127 -> 103 s. Files coded as one long block of one kind (enwik8)
+  and `-T 1` are unchanged. The price is CPU time when helpers join (level 9 `-T 10` on silesia.tar: 28.8 -> 41.2 s
+  of CPU for 2.1x less wall time) and a higher peak when more of the large blocks run at once (up to +14%).
 
 ### Command line: a drop-in for tar, xz and gzip
 
