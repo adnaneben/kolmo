@@ -58,7 +58,7 @@ static uint8_t *read_fd(int fd, size_t size_hint, size_t *n) {
             if (!q) { free(b); errno = ENOMEM; return NULL; }
             b = q; cap = c;
         }
-        ssize_t r = read(fd, b + len, cap - len);
+        ssize_t r = read(fd, b + len, cap - len > (1u << 30) ? (1u << 30) : cap - len);   /* macOS: EINVAL above INT_MAX */
         if (r < 0 && errno == EINTR) continue;
         if (r < 0) { int e = errno; free(b); errno = e; return NULL; }
         if (!r) break;
@@ -785,7 +785,7 @@ static uint8_t *read_upto(int fd, size_t lim, size_t *n, int *more) {
             if (!q) { free(b); errno = ENOMEM; return NULL; }
             b = q; cap = c;
         }
-        ssize_t r = read(fd, b + len, cap - len);
+        ssize_t r = read(fd, b + len, cap - len > (1u << 30) ? (1u << 30) : cap - len);   /* macOS: EINVAL above INT_MAX */
         if (r < 0 && errno == EINTR) continue;
         if (r < 0) { int e = errno; free(b); errno = e; return NULL; }
         if (!r) break;
