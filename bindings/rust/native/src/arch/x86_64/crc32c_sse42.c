@@ -1,7 +1,7 @@
 /* CRC32C with the SSE4.2 crc32 instruction (8 bytes per step). Reference and dispatch: arch/crc32c.c. */
-#if defined(__SSE4_2__) || defined(KOLMO_X86_DISPATCH)
+#if defined(KOLMO_USE_SSE42) || defined(KOLMO_X86_DISPATCH)
 #include <nmmintrin.h>
-#if !defined(__SSE4_2__)
+#if !defined(KOLMO_USE_SSE42)
 KOLMO_TARGET_SSE42
 #endif
 static uint32_t crc32c_sse42(uint32_t crc, const void *buf, size_t len) {

@@ -703,7 +703,7 @@ static inline uint64_t row_nonempty(const uint16_t *rl, int n) {
     if (!kolmo_force_c) return kolmo_row_nonempty_neon(rl, n);
 #endif
     uint64_t m = 0; int j = 0;
-#if defined(__SSE2__)
+#if defined(KOLMO_USE_SSE2)
     const __m128i z = _mm_setzero_si128();
     for (; j + 16 <= n; j += 16) {
         __m128i a = _mm_loadu_si128((const __m128i *)(rl + j)), b = _mm_loadu_si128((const __m128i *)(rl + j + 8));
@@ -720,7 +720,7 @@ static inline int compact_rows(const uint8_t *kd, int R, uint8_t *rows) {
     if (!kolmo_force_c) return kolmo_compact_rows_neon(kd, R, rows);    /* (rows has 8 bytes of room: TR + 8) */
 #endif
     int q = 0, t = 0;
-#if defined(__SSE2__)
+#if defined(KOLMO_USE_SSE2)
     const __m128i one = _mm_set1_epi8(1);
     for (; t + 16 <= R; t += 16) {
         uint32_t m = (uint32_t)_mm_movemask_epi8(_mm_cmpeq_epi8(_mm_loadu_si128((const __m128i *)(kd + t)), one));

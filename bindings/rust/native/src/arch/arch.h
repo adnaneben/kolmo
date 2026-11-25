@@ -3,7 +3,7 @@
  * Every kernel has a portable C reference, which is the specification; a test compares the two (tests/test_arch.c,
  * `make check-arch`). Kernels change speed, never output. NEON is part of the arm64 baseline, so the NEON kernels are
  * used whenever the build targets arm64; `make NO_ASM=1` (-DKOLMO_NO_ASM) builds the C references only.
- * kolmo_force_c = 1 sends every call to its C reference at run time (tests and A/B timing only). */
+ * kolmo_force_c = 1 selects C for the guarded calls below at run time (tests and A/B timing only). */
 #ifndef KOLMO_ARCH_H
 #define KOLMO_ARCH_H
 #include <stddef.h>

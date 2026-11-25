@@ -1,20 +1,39 @@
 /* CPU feature detection and the target attributes of the dispatched kernels (x86-64: CPUID at first use). */
+/* Direct intrinsic kernels share the same build switch as the separate assembly and dispatch objects. */
+#if !defined(KOLMO_NO_ASM)
+#if defined(__SSE2__)
+#define KOLMO_USE_SSE2 1
+#endif
+#if defined(__SSE4_2__)
+#define KOLMO_USE_SSE42 1
+#endif
+#if defined(__AVX2__)
+#define KOLMO_USE_AVX2 1
+#endif
+#if defined(__ARM_NEON)
+#define KOLMO_USE_NEON 1
+#endif
+#if defined(__ARM_FEATURE_CRC32)
+#define KOLMO_USE_ARM_CRC32 1
+#endif
+#endif
+
 /* ------------------------------------------------------------------ runtime ISA dispatch (x86-64)
  * Release builds and the Python wheels compile for baseline x86-64 (no -mavx2 / -msse4.2), so the vector paths below
  * are compiled for their ISA with a target attribute and chosen at first use by CPUID (__builtin_cpu_supports).
  * When the build already targets the ISA (-mavx2, -march=native) the test folds to a constant and the generic code is
  * dead. -DKOLMO_NO_DISPATCH restores compile-time selection only. Every path writes the same bytes. */
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__)) && !defined(KOLMO_NO_DISPATCH)
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__)) && !defined(KOLMO_NO_DISPATCH) && !defined(KOLMO_NO_ASM)
 #define KOLMO_X86_DISPATCH 1
 #include <immintrin.h>
-#if !defined(__AVX2__)
+#if !defined(KOLMO_USE_AVX2)
 static int kolmo_have_avx2(void) {
     static int v = -1; int r = __atomic_load_n(&v, __ATOMIC_RELAXED);
     if (r < 0) { __builtin_cpu_init(); r = __builtin_cpu_supports("avx2") ? 1 : 0; __atomic_store_n(&v, r, __ATOMIC_RELAXED); }
     return r;
 }
 #endif
-#if !defined(__SSE4_2__)
+#if !defined(KOLMO_USE_SSE42)
 static int kolmo_have_sse42(void) {
     static int v = -1; int r = __atomic_load_n(&v, __ATOMIC_RELAXED);
     if (r < 0) { __builtin_cpu_init(); r = __builtin_cpu_supports("sse4.2") ? 1 : 0; __atomic_store_n(&v, r, __ATOMIC_RELAXED); }
@@ -24,13 +43,13 @@ static int kolmo_have_sse42(void) {
 #define KOLMO_TARGET_AVX2 __attribute__((target("avx2")))
 #define KOLMO_TARGET_SSE42 __attribute__((target("sse4.2")))
 #endif
-#if defined(__AVX2__)
+#if defined(KOLMO_USE_AVX2)
 #define kolmo_have_avx2() 1
 #endif
-#if defined(__SSE4_2__)
+#if defined(KOLMO_USE_SSE42)
 #define kolmo_have_sse42() 1
 #endif
-#if defined(__AVX2__) || defined(KOLMO_X86_DISPATCH)
+#if defined(KOLMO_USE_AVX2) || defined(KOLMO_X86_DISPATCH)
 #define KOLMO_FMT_AVX2 1                /* the AVX2 decimal formatters are compiled (and chosen by kolmo_have_avx2) */
 #endif
 #if !defined(KOLMO_TARGET_AVX2)

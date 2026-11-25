@@ -5,7 +5,7 @@
  * recurrence is arithmetic mod 2^64, which agrees mod 2^32. Returns the number of values written; the caller's scalar
  * loop is not used for the rest, fi_vec4 finishes it itself (planes are addressed from the start, so the shipped loop
  * cannot resume at an offset). Measured in benchmark/rc2/SIMD-ASM.md. */
-#if defined(__SSE2__) && FI_USE
+#if defined(KOLMO_USE_SSE2) && FI_USE
 #include <emmintrin.h>
 #define FI_VEC4 1
 static inline __m128i fi_pfx4(__m128i x) { x = _mm_add_epi32(x, _mm_slli_si128(x, 4)); return _mm_add_epi32(x, _mm_slli_si128(x, 8)); }
