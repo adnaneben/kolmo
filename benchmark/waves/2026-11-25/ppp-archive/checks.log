@@ -1,0 +1,6 @@
+ok: 3714 checks, 0 failed
+ok: features-b command line
+24 ordinary selection cases passed; exact files, duplicate requests, repeated archive entries, missing counts and stack/heap boundary verified
+ok: archive safety
+V12 CORPUS PASSED (357 frozen frames decode to their originals)
+V12 PINS PASSED (416 files under tests/v12 unchanged)
