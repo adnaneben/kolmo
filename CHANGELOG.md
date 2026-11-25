@@ -4,6 +4,18 @@
 
 ### Fixed
 
+- **Levels 8 and 9 are no longer larger than 0.0.2 on bf16 weights.** A 47 MB bf16 safetensors file came out at
+  27,186,418 bytes at -9 (0.0.2: 26,168,919, +3.9%) and 26,942,578 at -8 (0.0.2: 26,234,980, +2.7%). Cause: the
+  KLZH2 chunk spans chosen by estimate (levels 1-4, from the encoder weak-spot changes below) also changed the
+  planner's KLZH2 size probe. On this tensor that tipped a close call between a byte shuffle and the float layout
+  (scores 0.6351 and 0.6357) to the shuffle. Under KLZMA the shuffle codes 3.9% larger than the plain bytes. The
+  float layout was coded as plain KLZMA by the block's own check. Now, at levels 8 and 9 and ultra, a shuffle
+  that beat the float layout by less than 2% (`KOLMO_STRONG_SHUF_FLOAT_PCT`) is a marked plan: each block is also
+  coded without the shuffle, and the smaller is kept. Output can only shrink against the shuffle alone. Levels 1-7
+  are unchanged. Encoder only: 0.0.1 and 0.0.2 read the output. The bf16 file is now 26,168,919 bytes at -9 and
+  26,218,539 at -8. The size ledger has a new generated input, `gen/weights-bf16.st` (9.4 MB, bf16, levels 1-9),
+  of this file class.
+
 - **`kolmo -d`, `-t`, `-l` and `--range` refuse a `kolmo archive` file** instead of writing its internal chunk store
   and exiting 0. The frame of such a file is the store (the distinct chunks of all its files, without their order),
   never the files. The error names `kolmo extract` and `kolmo contents`. Python's `decompress` and `read_range` refuse
