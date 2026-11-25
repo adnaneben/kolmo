@@ -15,6 +15,9 @@
  * The options of 0.0.1 (-m, -x, -l LEVEL, -B MiB, -Q, -n, -s, -S, -r, -D, -t DICT, -P, kolmo train, kolmo profile and
  * the two-positional `kolmo IN OUT`) were removed in 0.0.2: each fails with exit status 2 and a one-line hint.
  * Subcommands: kolmo calibrate (cli/train.c), and kolmo --index / cat / grep / archive / extract / contents (cli/features.c); subcommands are recognised only as the first argument. */
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
 #include "kolmo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +31,9 @@
 #include <time.h>
 #include <signal.h>
 #include <pthread.h>
+#ifdef __linux__
+#include <sys/syscall.h>
+#endif
 
 /* Release label, kept in step with VERSION (RELEASING.md step 1). */
 #ifndef KOLMO_VERSION_STR
@@ -86,17 +92,25 @@ static int spit(const char *p, const uint8_t *b, size_t n) {
 }
 
 /* ---- staged output --------------------------------------------------------------------------------------------
- * The complete frame, or the verified decoded output, is written to a private file in the output's directory first.
- * A new destination is published by linking the staged inode (it never replaces a file that appeared meanwhile);
- * with -f, an existing plain file is replaced atomically by rename; symlinks, hard links and special files are
- * written through the original path, which keeps their identity and mode. New and renamed outputs get the input's
- * permissions and mtime (or 0666 & ~umask and the current time for standard input). */
-typedef struct { char *name; int fd; FILE *anon; } stage_t;
-/* the private file being written, removed if SIGINT, SIGTERM or SIGHUP ends the run (as gzip and xz remove theirs) */
-static char *volatile stage_live;
+ * Write the complete output in a private directory beside the destination. Commit a new file exclusively, and
+ * atomically replace a plain file with -f. Explicit -f through symlinks, hard links and special files preserves
+ * their identity and mode. New and replaced outputs receive the input permissions and mtime. */
+typedef struct {
+    int fd, parent, dir;
+    FILE *anon;
+    const char *leaf;
+    char name[64];
+} stage_t;
+#define STAGE_INIT {.fd = -1, .parent = -1, .dir = -1}
+/* The private directory being written, removed if SIGINT, SIGTERM or SIGHUP ends the run. */
+static stage_t *volatile stage_live;
+static void stage_remove(stage_t *s) {
+    if (s->dir >= 0) unlinkat(s->dir, "entry", 0);
+    if (s->name[0]) unlinkat(s->parent, s->name, AT_REMOVEDIR);
+}
 static void on_signal(int sig) {
-    char *n = stage_live;
-    if (n) unlink(n);
+    stage_t *s = stage_live;
+    if (s) stage_remove(s);
     signal(sig, SIG_DFL);
     raise(sig);
 }
@@ -108,29 +122,75 @@ static void catch_signals(void) {
         if (!sigaction(sigs[i], NULL, &old) && old.sa_handler != SIG_IGN) sigaction(sigs[i], &sa, NULL);   /* nohup keeps SIG_IGN */
     }
 }
+static void stage_discard(stage_t *s) {
+    if (s->anon) fclose(s->anon);
+    else if (s->fd >= 0) close(s->fd);
+    stage_remove(s);
+    stage_live = NULL;
+    if (s->dir >= 0) close(s->dir);
+    if (s->parent >= 0) close(s->parent);
+    *s = (stage_t)STAGE_INIT;
+}
+static int stage_alias(const struct stat *st) {
+    return !S_ISDIR(st->st_mode) && (!S_ISREG(st->st_mode) || st->st_nlink > 1);
+}
 static int stage_open(stage_t *s, const char *path) {
     const char *slash = strrchr(path, '/');
-    size_t dirlen = slash ? (size_t)(slash - path + 1) : 0;
-    static const char suffix[] = ".kolmo-XXXXXX";
-    s->anon = NULL;
-    s->name = malloc(dirlen + sizeof(suffix));
-    if (!s->name) return -1;
-    memcpy(s->name, path, dirlen); memcpy(s->name + dirlen, suffix, sizeof(suffix));
-    s->fd = mkstemp(s->name);
-    if (s->fd >= 0) stage_live = s->name;
-    if (s->fd < 0) {            /* an existing output can be writable in a read-only directory: stage anonymously */
-        free(s->name); s->name = NULL;
-        s->anon = tmpfile();
-        if (!s->anon) return -1;
-        s->fd = fileno(s->anon);
+    s->leaf = slash ? slash + 1 : path;
+    if (!*s->leaf) { errno = EISDIR; return -1; }
+#if defined(O_SEARCH)
+    const int parent_flags = O_SEARCH | O_DIRECTORY | O_CLOEXEC;
+#elif defined(O_PATH)
+    const int parent_flags = O_PATH | O_DIRECTORY | O_CLOEXEC;
+#else
+    const int parent_flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC;
+#endif
+    if (slash) {
+        char *dir = strndup(path, (size_t)(slash - path) + 1);
+        if (!dir) return -1;
+        s->parent = open(dir, parent_flags);
+        int error = errno;
+        free(dir);
+        errno = error;
+    } else s->parent = open(".", parent_flags);
+    if (s->parent < 0) return -1;
+    static unsigned id;
+    int error = EEXIST;
+    for (int attempts = 0; attempts < 128; attempts++) {
+        snprintf(s->name, sizeof s->name, ".kolmo-%ld-%u", (long)getpid(), id++);
+        if (!strcmp(s->name, s->leaf)) continue;
+        mode_t mask = umask(0);
+        int made = mkdirat(s->parent, s->name, 0700);
+        error = errno;
+        umask(mask);
+        if (!made) {
+            stage_live = s;
+            s->dir = openat(s->parent, s->name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+            if (s->dir >= 0) {
+                struct stat st;
+                if (fstat(s->dir, &st)) error = errno;
+                else if (st.st_uid != geteuid() || (st.st_mode & 0777) != 0700) error = EACCES;
+                else {
+                    s->fd = openat(s->dir, "entry", O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+                    if (s->fd >= 0) return 0;
+                    error = errno;
+                }
+            } else error = errno;
+            goto failed;
+        }
+        if (error != EEXIST) break;
     }
-    return 0;
-}
-static void stage_discard(stage_t *s) {
-    stage_live = NULL;
-    if (s->anon) fclose(s->anon);
-    else if (s->fd >= 0) { close(s->fd); unlink(s->name); }
-    free(s->name); s->name = NULL; s->fd = -1; s->anon = NULL;
+    s->name[0] = 0;
+    /* Aliases and special sinks can still be writable in a directory where staging is unavailable. */
+    struct stat st;
+    if (!fstatat(s->parent, s->leaf, &st, AT_SYMLINK_NOFOLLOW) && stage_alias(&st)) {
+        s->anon = tmpfile();
+        if (s->anon) { s->fd = fileno(s->anon); return 0; }
+        error = errno;
+    }
+failed:
+    stage_discard(s); errno = error;
+    return -1;
 }
 static void set_meta(int fd, const struct stat *src) {
     if (src) {
@@ -148,52 +208,67 @@ static void set_meta(int fd, const struct stat *src) {
     }
 }
 static void exists_error(const char *path) { fprintf(stderr, "kolmo: %s: already exists; use -f to overwrite\n", path); }
+/* linkat protects a newly created destination. A platform-exclusive rename also supports filesystems without links. */
+static int stage_commit_new(stage_t *s) {
+    if (!linkat(s->dir, "entry", s->parent, s->leaf, 0)) return 0;
+    if (errno == EEXIST) return -1;
+    int error = errno;
+#if defined(__APPLE__) && defined(RENAME_EXCL)
+    if (!renameatx_np(s->dir, "entry", s->parent, s->leaf, RENAME_EXCL)) return 0;
+    if (errno != ENOTSUP && errno != ENOSYS) return -1;
+#elif defined(SYS_renameat2)
+    enum { NOREPLACE = 1 };   /* Linux RENAME_NOREPLACE */
+    if (!syscall(SYS_renameat2, s->dir, "entry", s->parent, s->leaf, NOREPLACE)) return 0;
+    if (errno != EINVAL && errno != ENOTSUP && errno != ENOSYS) return -1;
+#endif
+    errno = error;
+    return -1;
+}
+static int stage_write_alias(stage_t *s, const struct stat *before) {
+    if (lseek(s->fd, 0, SEEK_SET) < 0) return -1;
+    int symlink = S_ISLNK(before->st_mode);
+    int fd = openat(s->parent, s->leaf, O_WRONLY | O_CLOEXEC | (symlink ? O_CREAT : O_NOFOLLOW), 0666);
+    if (fd < 0) return -1;
+    struct stat entry, sink;
+    int error = 0;
+    /* Resolve the sink without truncating it. Confirm the alias is still the one selected above. */
+    if (fstatat(s->parent, s->leaf, &entry, AT_SYMLINK_NOFOLLOW) || fstat(fd, &sink))
+        error = errno;
+    else if (entry.st_dev != before->st_dev || entry.st_ino != before->st_ino ||
+             (!symlink && (sink.st_dev != entry.st_dev || sink.st_ino != entry.st_ino)))
+        error = EAGAIN;
+    else if (S_ISREG(sink.st_mode) && ftruncate(fd, 0)) error = errno;
+    uint8_t buffer[64 * 1024];
+    while (!error) {
+        ssize_t got = read(s->fd, buffer, sizeof(buffer));
+        if (got < 0 && errno == EINTR) continue;
+        if (!got) break;
+        if (got < 0 || write_all(fd, buffer, (size_t)got)) error = errno ? errno : EIO;
+    }
+    if (close(fd) && !error) error = errno;
+    if (error) errno = error;
+    return error ? -1 : 0;
+}
 /* 0, or -1 after reporting the error (the stage is gone either way) */
 static int stage_publish(stage_t *s, const char *path, const struct stat *src, int force) {
-    int ret = 0;
-    if (!s->anon) {
-        struct stat st;
-        if (lstat(path, &st)) {
-            if (errno != ENOENT) { perror(path); stage_discard(s); return -1; }
-            set_meta(s->fd, src);
-            stage_live = NULL;  /* published under its final name from here: a signal must not remove it */
-            if (!link(s->name, path)) goto done;
-            if (errno == EEXIST) { exists_error(path); stage_discard(s); return -1; }
-            if (!rename(s->name, path)) goto renamed;               /* a file system without hard links */
-            perror(path); stage_discard(s); return -1;
-        }
-        if (!force) { exists_error(path); stage_discard(s); return -1; }
-        if (S_ISREG(st.st_mode) && st.st_nlink == 1) {
-            set_meta(s->fd, src);
-            stage_live = NULL;
-            if (!rename(s->name, path)) goto renamed;
-        }
-    } else if (!force && !access(path, F_OK)) {
+    struct stat st;
+    int exists = !fstatat(s->parent, s->leaf, &st, AT_SYMLINK_NOFOLLOW);
+    int error = exists || errno == ENOENT ? 0 : errno;
+    if (!error && exists && !force) {
         exists_error(path); stage_discard(s); return -1;
     }
-    {   /* write through the existing path (symlink, hard link, special file, or a read-only directory) */
-        FILE *out = fopen(path, "wb");
-        if (!out || lseek(s->fd, 0, SEEK_SET) < 0) { perror(path); if (out) fclose(out); stage_discard(s); return -1; }
-        uint8_t buffer[64 * 1024];
-        for (;;) {
-            ssize_t got = read(s->fd, buffer, sizeof(buffer));
-            if (got < 0 && errno == EINTR) continue;
-            if (!got) break;
-            if (got < 0 || fwrite(buffer, 1, (size_t)got, out) != (size_t)got) { ret = -1; break; }
-        }
-        if (fclose(out)) ret = -1;
-        if (ret) perror(path);
-    }
-done:
-    stage_live = NULL;
-    if (s->anon) { if (fclose(s->anon)) ret = -1; }
-    else { if (close(s->fd)) ret = -1; unlink(s->name); }
-    free(s->name); s->name = NULL; s->fd = -1; s->anon = NULL;
-    return ret;
-renamed:
-    if (close(s->fd)) { perror(path); ret = -1; }
-    free(s->name); s->name = NULL; s->fd = -1;
-    return ret;
+    if (!error && exists && stage_alias(&st)) {
+        if (stage_write_alias(s, &st)) error = errno;
+    } else if (!error && s->dir >= 0) {
+        set_meta(s->fd, src);
+        if (close(s->fd)) error = errno;
+        s->fd = -1;
+        if (!error && (exists ? renameat(s->dir, "entry", s->parent, s->leaf) : stage_commit_new(s))) error = errno;
+    } else if (!error) error = EAGAIN;   /* an anonymous stage cannot commit to a regular path */
+    if (error == EEXIST) exists_error(path);
+    else if (error) { errno = error; perror(path); }
+    stage_discard(s);
+    return error ? -1 : 0;
 }
 
 int kolmo_cli_features(int argc, char **argv);     /* cli/features.c: cat, grep, archive, extract, contents, --index */
@@ -201,7 +276,7 @@ int kolmo_cli_features(int argc, char **argv);     /* cli/features.c: cat, grep,
  * publishes its outputs; an existing path is refused unless force. 0, or -1 after reporting the error. */
 int kolmo_cli_publish(const char *path, const uint8_t *p, size_t n, int force) {
     catch_signals();
-    stage_t s = {NULL, -1, NULL};
+    stage_t s = STAGE_INIT;
     if (stage_open(&s, path)) { fprintf(stderr, "kolmo: %s: cannot stage the output: %s\n", path, strerror(errno)); return -1; }
     if (write_all(s.fd, p, n)) { fprintf(stderr, "kolmo: %s: %s\n", path, strerror(errno)); stage_discard(&s); return -1; }
     return stage_publish(&s, path, NULL, force);
@@ -876,7 +951,7 @@ static int process(const opts_t *o, const char *in) {
     int sfd = ifd;                           /* the descriptor streamed decoders read */
     int streamed = 0, buffered = 0, filepath = 0;
     uint8_t *imap = NULL; size_t imapn = 0;   /* a regular input file mapped read-only (-t, -dc) */
-    stage_t st = {NULL, -1, NULL};
+    stage_t st = STAGE_INIT;
     int ofd = 1;
     int64_t r = 0;
 
