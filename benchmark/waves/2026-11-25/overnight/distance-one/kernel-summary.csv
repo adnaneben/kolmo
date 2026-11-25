@@ -1,0 +1,7 @@
+source,paired_decode_CPU_gain_pct,control_CPU_gain_pct
+synthetic-run,241.645,0.0
+mr,3.656,-20.187
+ooffice,-12.262,34.219
+energy_test.csv,4.791,0.102
+retina.ppm,-5.395,-6.617
+samba,0.31,1.799

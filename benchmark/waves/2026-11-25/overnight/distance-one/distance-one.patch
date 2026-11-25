@@ -1,0 +1,15 @@
+diff --git a/src/algo/klz.c b/src/algo/klz.c
+index 10657995..0dbcf3f8 100644
+--- a/src/algo/klz.c
++++ b/src/algo/klz.c
+@@ -38,6 +38,10 @@ static inline void kz_match(uint8_t *op, size_t off, size_t ml, uint8_t *oe) {
+     const uint8_t *m = op - off; uint8_t *e = op + ml;
+     if (off >= 16 && (size_t)(oe - e) >= 16) { while (op < e) { memcpy(op, m, 16); op += 16; m += 16; } return; }
+     if (off < 8) {   /* short period: copy one multiple of the period of at least 8 bytes, then 8 bytes at a time */
++        if (off == 1 && ml >= 32) {
++            memset(op, op[-1], ml);
++            return;
++        }
+         size_t per = off * ((8 + off - 1) / off);
+         while (op < e && (size_t)(op - (e - ml)) < per) *op++ = *m++;
+         m = op - per;
