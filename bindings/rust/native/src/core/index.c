@@ -494,8 +494,10 @@ static void ix_block(const ix_q *Q, uint32_t b, ix_res *res) {
         for (uint32_t c = b + 1; c < Q->f->nb && !R.oom; c++) {
             uint8_t *e = ix_decode(Q, c, res, &err); if (!e) { free(d); free(R.p); res->err = err; return; }
             size_t el = (size_t)(Q->f->roff[c + 1] - Q->f->roff[c]); const uint8_t *nl = memchr(e, '\n', el);
-            kx_bytes(&R, e, nl ? (size_t)(nl - e) + 1 : el); free(e);
-            if (nl) break;
+            int found_newline = nl != NULL;
+            kx_bytes(&R, e, found_newline ? (size_t)(nl - e) + 1 : el);
+            free(e);
+            if (found_newline) break;
         }
         if (R.oom) { free(d); free(R.p); res->err = KOLMO_ERR_ALLOC; return; }
         reg = R.p; rn = R.n;
