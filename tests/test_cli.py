@@ -111,6 +111,12 @@ with tempfile.TemporaryDirectory() as tmp:
     check(len(verified) < len(ordinary), "WASM check selects smaller unshuffled bytes")
     check(verified == encode_wasm("--analysis", "none"), "WASM check uses the ordinary plain coder")
     check(run("-dc", input=verified).stdout == wasm, "WASM check restores complete module")
+    wasm_file = T / "shuffle.wasm"
+    wasm_file.write_bytes(wasm)
+    checked_file = run("-1", "-T1", "--wasm-check-shuffle", "-c", wasm_file)
+    check(checked_file.returncode == 0 and checked_file.stdout == verified, "WASM file matches pipe")
+    stream = run("-1", "-T1", "--stream=1", "--wasm-check-shuffle", "-c", input=wasm)
+    check(stream.returncode == 0 and run("-dc", input=stream.stdout).stdout == wasm, "WASM stream restores input")
     for options in [("--analysis", "minimal"), ("--analysis", "none"), ("--codec-level", "1"), ("-2",)]:
         check(encode_wasm(*options) == encode_wasm("--wasm-check-shuffle", *options),
               f"WASM check respects {options}")

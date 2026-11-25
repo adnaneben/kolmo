@@ -128,7 +128,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
     /* A module's sampled bytes can resemble numeric words. Let the existing
      * per-block comparison keep the shuffle only when it beats the very same coder. */
-    if (wasm_check && nseg == 1 && n >= (64u << 10) && !p->level &&
+    if (wasm_check && src && nseg == 1 && n >= (64u << 10) && !p->level &&
         ((p->mode == KOLMO_RT && p->transforms == 3) || (p->mode == KOLMO_FAST && p->transforms == 1)) &&
         plans[0].t == T_SHUF && plans[0].a == 8 && plans[0].b == 1 && plans[0].c == 1 &&
         !memcmp(src, "\0asm\1\0\0\0", 8))
