@@ -112,6 +112,11 @@ build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 build/kolmoresource: tests/kolmoresource.c tests/legacy_frames.h src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/kolmoresource.c build/libkolmoarch.a -o $@ $(LIBS)
+# Research harness of the impact matrix (benchmark/impact/): the CLI with -DKOLMO_IMPACT (src/core/impact.c), which
+# can force a codec or drop a transform per block through KOLMO_IMPACT_* variables. Not part of `all`; never shipped.
+kolmo-impact: build/kolmo-impact
+build/kolmo-impact: src/cli/cli.c src/cli/train.c src/core/impact.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_IMPACT $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 

@@ -44,7 +44,11 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     /* KOLMO_T_NATIVE_LEAF and KOLMO_T_TYPED_HUF are opt-in bits of transforms: read them, then clear them so every
      * other use of transforms sees the analysis level alone. The native leaf applies to balanced (KOLMO_FAST) with
      * analysis on; elsewhere it is ignored. */
-    kolmo_params q = *p; int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0;
+    kolmo_params q = *p;
+#ifdef KOLMO_IMPACT
+    impact_params(&q);                                   /* research build only (core/impact.c) */
+#endif
+    int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0;
     int typed_huf = (q.transforms & KOLMO_T_TYPED_HUF) != 0;
     int columns = (q.transforms & KOLMO_T_COLUMNS) != 0;
     q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
