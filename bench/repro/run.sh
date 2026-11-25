@@ -4,7 +4,7 @@
 #   sh bench/repro/run.sh WORK [--ref v0.0.2] [--steps fetch,build,lzbench,panel,mt,dfloat11,site] [--quick]
 #
 # WORK       a directory with room for ~6 GB (data, tools, results). Re-running resumes: finished steps and
-#            files already measured are skipped (delete WORK/results/<file> to measure again).
+#            measured files are skipped only when the run identity matches.
 # --ref      the kolmo tag or commit to measure (default: the tag of VERSION); WORKTREE for the working tree.
 # --steps    a subset of the steps, in this order.
 # --quick    a smoke test: small lzbench lists on Canterbury only, one repetition, no weights.
@@ -32,18 +32,40 @@ while [ $# -gt 0 ]; do
 done
 PY=${PYTHON:-python3}; T=${KOLMO_BENCH_TIMED:-}
 mkdir -p "$WORK/results"; WORK=$(cd "$WORK" && pwd); D=$WORK/data; R=$WORK/results
+lock=$R/.run.lock
+if ! mkdir "$lock"; then
+    echo "run.sh: WORK is locked ($lock)" >&2
+    exit 1
+fi
+trap 'rmdir "$lock"' EXIT
+trap 'exit 1' HUP INT TERM
+MODE=full; [ -z "$QUICK" ] || MODE=quick
+REF=$("$PY" -I "$here/identity.py" prepare "$root" "$WORK" "$REF" "$MODE")
+identity() { "$PY" -I "$here/identity.py" "$1" "$root" "$WORK" "$REF" "$MODE"; }
 has() { case ",$STEPS," in *",$1,"*) return 0 ;; esac; return 1; }
 log() { echo "$(date -u +%FT%TZ) $*" | tee -a "$R/run.log"; }
 
-if has fetch; then
+if has fetch && [ ! -f "$R/input-identity.json" ]; then
     log "fetch corpora"; python3 -I "$root/bench/lzbench/corpora.py" "$D/corpus" > "$R/corpora.log"
     groups=holdout,weights; [ -n "$QUICK" ] && groups=holdout
     log "fetch $groups"; "$PY" -I "$here/fetch.py" "$D" --groups "$groups"
-    cp "$D/FETCHED.json" "$R/FETCHED.json"
+    cp "$D/FETCHED.json" "$R/FETCHED.json.part"
+    mv "$R/FETCHED.json.part" "$R/FETCHED.json"
 fi
-if has build; then
+if has build && [ ! -f "$R/tools.json" ]; then
     log "build (kolmo $REF)"; $T sh "$here/build.sh" "$WORK/tools" "$REF"
-    cp "$WORK/tools/tools.json" "$R/tools.json"
+    cp "$WORK/tools/tools.json" "$R/tools.json.part"
+    mv "$R/tools.json.part" "$R/tools.json"
+fi
+identity tools
+if has lzbench || has panel || has mt; then
+    if [ ! -f "$R/tools.json" ] || [ ! -d "$D" ]; then
+        echo "run.sh: set up tools and data before running benchmarks" >&2
+        exit 1
+    fi
+fi
+if has lzbench || has panel || has mt || has dfloat11; then
+    identity inputs
 fi
 if has lzbench; then
     log "lzbench"; $T python3 -I "$here/lzbench_run.py" "$R/tools.json" "$D/corpus" "$R/lzbench" $QUICK

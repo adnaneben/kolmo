@@ -120,6 +120,9 @@ Adding an intrinsics kernel chosen through the table (the simd-x86 lane's patter
 `__attribute__((target))`; a pointer in `arch/kernels.h`, set by level in `arch/cpu.c`; the file in the Makefile's
 `KSRC` (and the two bindings' lists); a comparison at every level in `tests/test_kernels.c`. Callers use
 `KOLMO_K-><name>(...)`. `KOLMO_CPU=c|sse2|sse41|avx2` lowers the level at run time for tests and benchmarks.
+On AArch64, `KOLMO_CPU=neon` opts into the model-4 mixer in `arch/aarch64/mixer_neon.h`, included by
+`arch/cpu.c`. `KOLMO_CPU=c` selects the scalar mixer while leaving other AArch64 kernels alone, so the two
+settings give an isolated mixer comparison.
 
 ### Why per ISA, not a single `asm/` folder
 

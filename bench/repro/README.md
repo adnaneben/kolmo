@@ -11,7 +11,12 @@ PYTHON=.venv/bin/python sh bench/repro/run.sh ../kolmo-bench --steps panel,site 
 ```
 
 `--ref <tag|commit|WORKTREE>` picks the Kolmo version to measure (default: the tag of `VERSION`).
-The work directory needs about 6 GB. Re-running resumes where it stopped.
+The work directory needs about 6 GB. Re-running resumes where it stopped when the
+source revision, benchmark scripts, mode, executables and input bytes match the
+run receipts under `results/`. Use a new work directory after changing any of
+these, or to keep older measurements that predate the receipts. Builds are
+reused after success, and fetched inputs are fixed when measurement begins.
+One runner can use a work directory at a time.
 Set `KOLMO_BENCH_TIMED` to a lock command if other benchmarks share the machine; every build and timed step runs
 under it.
 

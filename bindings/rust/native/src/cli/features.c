@@ -11,7 +11,7 @@
  * The outputs of --index and archive are staged and published as the main command line publishes its own: an existing
  * output is replaced only with -f (--force). extract never writes outside its directory: a stored name that is
  * absolute or has a ".." component is skipped, and so is a path through a symbolic link; an existing file at the
- * name is replaced (unlinked first, as tar does), never written through.
+ * name is replaced atomically after the new file is written, never written through.
  * Rows are numbered from 1 here (line 1 is the first line of the file); A-B is inclusive, A- runs to the end.
  * Licence: Apache-2.0. */
 #define _GNU_SOURCE 1
@@ -223,7 +223,7 @@ static const char *fc_member_name(const char *path) {
         fprintf(stderr, "kolmo: warning: removing leading '%.*s' from the member name '%s'\n", (int)(nm - path), path, path);
     return nm;
 }
-typedef struct { int dir; char **names; int nnames; int seen, done, bad; } fc_x;
+typedef struct { int dir; char **names; int nnames; int seen, done, bad; unsigned stage_id; } fc_x;
 /* The parent directory of name under the directory fd X->dir, created as needed: each component is opened with
  * O_NOFOLLOW, so a symbolic link on the way (one that was already there, or that another process puts there) ends
  * the walk instead of leading out of the directory. Returns a descriptor and sets *leaf, or -1 after reporting. */
@@ -249,6 +249,32 @@ static int fc_parent(const fc_x *X, const char *name, const char **leaf) {
         close(d); d = n;
     }
 }
+/* Keep the stage on the destination filesystem. A private directory also keeps the source of renameat out of the
+ * reach of other users who can write to the destination directory. The stage name cannot be the member's leaf. */
+static int fc_stage(int parent, const char *leaf, unsigned *id, char stage[64]) {
+    const char *prefix = *leaf == '.' ? "_kolmo-" : ".kolmo-";
+    for (int i = 0; i < 128; i++) {
+        snprintf(stage, 64, "%s%ld-%u", prefix, (long)getpid(), (*id)++);
+        mode_t old = umask(0);  /* even a restrictive umask must allow us into the private directory */
+        int r = mkdirat(parent, stage, 0700), error = errno;
+        umask(old);
+        if (r && error == EEXIST) continue;
+        if (r) { errno = error; return -1; }
+        int fd = openat(parent, stage, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+        if (fd >= 0) {
+            struct stat st;
+            if (fstat(fd, &st)) error = errno;
+            else if (st.st_uid == geteuid() && (st.st_mode & 0777) == 0700) return fd;
+            else error = EACCES;
+            close(fd);
+        } else error = errno;
+        unlinkat(parent, stage, AT_REMOVEDIR);
+        errno = error;
+        return -1;
+    }
+    errno = EEXIST;
+    return -1;
+}
 static int fc_put(void *ctx, const char *name, const uint8_t *data, uint64_t size, uint32_t mode, int64_t mtime) {
     fc_x *X = ctx;
     if (X->nnames) { int hit = 0; for (int i = 0; i < X->nnames; i++) hit |= !strcmp(X->names[i], name); if (!hit) return 0; }
@@ -257,27 +283,34 @@ static int fc_put(void *ctx, const char *name, const uint8_t *data, uint64_t siz
     const char *leaf; int d = fc_parent(X, name, &leaf);
     if (d < 0) { X->bad = 1; return 0; }
     if (!*leaf || !strcmp(leaf, ".")) { close(d); fprintf(stderr, "kolmo: skipping unsafe name '%s'\n", name); X->bad = 1; return 0; }
-    /* a new file: whatever was at the name (a file, a hard link, a symbolic link to anywhere) is unlinked first */
-    int fd = openat(d, leaf, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0666);
-    if (fd < 0 && errno == EEXIST) {
-        struct stat st;
-        if (!fstatat(d, leaf, &st, AT_SYMLINK_NOFOLLOW) && S_ISDIR(st.st_mode)) errno = EISDIR;
-        else if (!unlinkat(d, leaf, 0)) fd = openat(d, leaf, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0666);
+    char stage[64];
+    int staged = fc_stage(d, leaf, &X->stage_id, stage);
+    if (staged < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); close(d); X->bad = 1; return 0; }
+    int fd = openat(staged, "entry", O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0666);
+    int error = fd < 0 ? errno : 0, stop = 0;
+    if (fd >= 0) {
+        const uint8_t *p = data; uint64_t left = size;
+        while (left) {
+            ssize_t w = write(fd, p, left > (1u << 30) ? (1u << 30) : (size_t)left);
+            if (w < 0 && errno == EINTR) continue;
+            if (w <= 0) { error = w < 0 ? errno : EIO; break; }
+            p += w; left -= (uint64_t)w;
+        }
+        if (!error) {
+            if (mode & 0777) (void)fchmod(fd, mode & 0777);
+            struct timespec t[2] = {{0, UTIME_NOW}, {(time_t)mtime, 0}};
+            (void)futimens(fd, t);
+        }
+        if (close(fd) && !error) error = errno;
+        stop = error != 0;
+        /* renameat replaces a link itself and refuses to replace a directory with a file. */
+        if (!error && renameat(staged, "entry", d, leaf)) error = errno;
+        if (error) unlinkat(staged, "entry", 0);
     }
-    if (fd < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); close(d); X->bad = 1; return 0; }
+    close(staged);
+    if (unlinkat(d, stage, AT_REMOVEDIR) && !error) error = errno;
     close(d);
-    const uint8_t *p = data; uint64_t left = size; int bad = 0;
-    while (left) {
-        ssize_t w = write(fd, p, left > (1u << 30) ? (1u << 30) : (size_t)left);
-        if (w < 0 && errno == EINTR) continue;
-        if (w <= 0) { bad = 1; break; }
-        p += w; left -= (uint64_t)w;
-    }
-    if (!bad && (mode & 0777)) (void)fchmod(fd, mode & 0777);
-    struct timespec t[2] = {{0, UTIME_NOW}, {(time_t)mtime, 0}};
-    if (!bad) (void)futimens(fd, t);                        /* the stored mtime, as tar restores it */
-    if (close(fd)) bad = 1;
-    if (bad) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); X->bad = 1; return 1; }
+    if (error) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(error)); X->bad = 1; return stop; }
     X->done++; return 0;
 }
 /* the regular files under path (path itself when it is one), in name order, appended to *list. What DDP1 cannot
@@ -367,7 +400,7 @@ out:
     free(L.v); free(F); free(K); return ret;
 }
 static int fc_extract(int argc, char **argv) {
-    fc_x X = {-1, NULL, 0, 0, 0, 0}; const char *dir = "."; int threads = 0, a = 2;
+    fc_x X = {.dir = -1}; const char *dir = "."; int threads = 0, a = 2;
     for (; a < argc && argv[a][0] == '-'; a++) {
         if (!strcmp(argv[a], "-C") && a + 1 < argc) dir = argv[++a];
         else if (!strcmp(argv[a], "-T") && a + 1 < argc) { if (fc_num("-T", argv[++a], 0, 4096, &threads)) return 2; }

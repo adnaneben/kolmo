@@ -114,6 +114,18 @@ static int sin_take(sin_t *r, uint8_t **buf, size_t *cap, size_t *have, uint64_t
 }
 
 typedef struct { int out_fd, threads; const kolmo_decode_limits *limits; uint8_t *out; size_t ocap; int64_t total; } sdec_t;
+
+static int sdec_window(sdec_t *D, uint64_t win) {
+    if (win > SIZE_MAX) return KOLMO_ERR_ALLOC;
+    if (D->ocap == win) return 0;
+    free(D->out);
+    D->ocap = 0;
+    D->out = win ? malloc((size_t)win) : NULL;
+    if (win && !D->out) return KOLMO_ERR_ALLOC;
+    D->ocap = (size_t)win;
+    return 0;
+}
+
 /* decode one whole frame (and its extensions) held in frame[0, len) to the output */
 static int sdec_frame(sdec_t *D, const uint8_t *frame, size_t len) {
     const kolmo_decode_limits *limits = D->limits;
@@ -130,36 +142,46 @@ static int sdec_frame(sdec_t *D, const uint8_t *frame, size_t len) {
     uint64_t memcap = kmem_limit_of(limits ? limits->max_memory : 0);
     int adm = frame_admit(&P, maxraw, memcap);
     if (adm) { free(P.poff); free(P.roff); return adm; }
-    /* Rule 2: the output window and the threads share the limit. Each thread keeps one block's buffers (`per`) once it
-     * has decoded a block, whether or not it is decoding now (0.0.2 used every thread and a window of one block per
-     * thread outside the limit: 1.3 GiB under -M 256M, review R23 #114 B2); a codec's own tables are reserved per
-     * block by the governor inside run_decode. So: at most limit / per threads, and a window of one block per thread
-     * (or 64 MiB) within what they leave, down to one thread and a window of one block (the output of that one block
-     * is the only memory beyond the limit, as the one-shot decoder's output buffer is). */
+    /* Rule 2: charge the output window against the decoder's cap. Reserve at least the declared working set and
+     * space for each worker's block buffers. When one whole block is all that can be buffered, allow its output
+     * outside the limit as in the one-shot API. */
     uint64_t per = blk_dec_floor(maxraw);
     int nt = D->threads > 0 ? D->threads : default_threads();
+    kolmo_decode_limits nested = limits ? *limits : (kolmo_decode_limits){0};
+    nested.max_memory = memcap;
     if (memcap != KMEM_UNLIMITED) {
-        uint64_t fit = memcap / per;
+        uint64_t fit = (memcap > maxraw ? memcap - maxraw : 0) / per;
         if ((uint64_t)nt > fit) nt = fit ? (int)fit : 1;
     }
     uint64_t win = maxraw * (uint64_t)nt; if (win < KOLMO_STREAM_STEP) win = KOLMO_STREAM_STEP;
+    int single = 0;
     if (memcap != KMEM_UNLIMITED) {
-        uint64_t used = per * (uint64_t)nt, room = memcap > used ? memcap - used : 0;
+        uint64_t used = per * (uint64_t)nt;
+        if (used < P.memd) used = P.memd;
+        uint64_t room = memcap - used;
         if (win > room) win = room;
+        if (win < maxraw) { win = maxraw; single = 1; }
     }
-    if (win < maxraw) win = maxraw;
     if (win > (uint64_t)osz) win = (uint64_t)osz;
-    if (win > D->ocap || (D->ocap > win && D->ocap - win > KOLMO_STREAM_STEP)) {   /* never hold more than this frame needs */
-        free(D->out); D->ocap = 0; D->out = malloc(win ? (size_t)win : 1);
-        if (!D->out) { free(P.poff); free(P.roff); return KOLMO_ERR_ALLOC; }
-        D->ocap = (size_t)win;
-    }
+    int wr = sdec_window(D, win);
+    if (wr) { free(P.poff); free(P.roff); return wr; }
+    if (!single && memcap != KMEM_UNLIMITED) nested.max_memory -= D->ocap;
     int64_t dl = 0; uint32_t b = 0;
     while (b < P.nb && dl >= 0) {
-        uint32_t e = b; uint64_t lo = P.roff[b];
-        while (e < P.nb && (e == b || P.roff[e + 1] - lo <= win)) e++;
+        uint32_t e = b + 1; uint64_t lo = P.roff[b];
+        while (!single && e < P.nb && P.roff[e + 1] - lo <= win) e++;
         uint64_t hi = P.roff[e];
-        int64_t r = hi > lo ? run_decode(frame, -1, len, D->out, -1, nt, lo, hi, 1, limits) : 0;
+        int64_t r = hi > lo ? run_decode(frame, -1, len, D->out, -1, single ? 1 : nt, lo, hi, 1, &nested) : 0;
+        /* Older frames do not declare codec memory, and the nested decoder may also need index scratch. Retry the
+         * current window one block at a time with the full decoder limit before writing any of its output. */
+        if (r == KOLMO_ERR_MEMORY && nested.max_memory < memcap) {
+            win = maxraw;
+            wr = sdec_window(D, win);
+            if (wr) { dl = wr; break; }
+            nested.max_memory = memcap;
+            single = 1;
+            continue;
+        }
         if (r < 0) { dl = r; break; }
         if (r > 0 && io_write_full(D->out_fd, D->out, (size_t)r)) { dl = KOLMO_ERR_IO; break; }
         dl += r; b = e;

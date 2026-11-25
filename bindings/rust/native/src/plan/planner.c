@@ -158,7 +158,7 @@ static double kg_float_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
 /* plan byte and row bytes for a DEC64 plan from the trial's column count: 64 a binary64 table, 65 segments, 66 a binary32 table */
 #define DEC_B(dc) (!(dc) ? 65 : ((dc) & KG_DEC_F32) ? 66 : 64)
 #define DEC_KGW(dc) (!(dc) ? 8u : ((dc) & KG_DEC_F32) ? (uint32_t)((dc) & ~KG_DEC_F32) * 4u : (uint32_t)(dc) * 8u)
-static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, uint32_t *bcols, size_t *bh) {
+static double kg_dec64_trial_nearest(const uint8_t *s, size_t n, size_t st, size_t L, int zl, uint32_t *bcols, size_t *bh) {
     double best = 1e300; size_t h = 0, cols = 0, tw = 8; int f32 = 0;
     if (n > 16 && !memcmp(s, "\x93NUMPY", 6)) {
         size_t hl = s[6] == 1 ? 10 + (size_t)(s[8] | s[9] << 8) : 12 + (size_t)(s[8] | s[9] << 8 | s[10] << 16 | (size_t)s[11] << 24);
@@ -200,9 +200,18 @@ static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, in
     if (l < 16 * rb || l < 512) { a = h; l = (n - h < L ? n - h : L) / rb * rb; if (l < 512) return best; }
     codec_ctx cx = {0}; cx.no_f2 = !KOLMO_F2_PLAN;   /* planner score: rc2 leaf rule unless KOLMO_F2_PLAN */ uint8_t *o = malloc(l + 64);
     const size_t ca = cols && f32 ? cols | KG_DEC_F32 : cols;      /* a binary32 table carries the flag in its column count */
-    size_t z = o ? kg_encode_dec64(&cx, R_LZH, zl, s + a, l, ca, 0, o, l + 64) : 0;
+    size_t z = o ? kg_encode_dec64_nearest(&cx, R_LZH, zl, s + a, l, ca, 0, o, l + 64) : 0;
     if (z) { best = (double)z / l; *bcols = (uint32_t)ca; *bh = h; }
     free(o); codec_ctx_free(&cx);
+    return best;
+}
+
+static double kg_dec64_trial(const uint8_t *s, size_t n, size_t st, size_t L, int zl, uint32_t *bcols, size_t *bh) {
+    fenv_t env;
+    const int restore_round = kg_dec64_round_start(&env);
+    if (restore_round < 0) return 1e300;
+    const double best = kg_dec64_trial_nearest(s, n, st, L, zl, bcols, bh);
+    if (restore_round && fesetenv(&env)) return 1e300;
     return best;
 }
 

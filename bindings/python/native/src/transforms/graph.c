@@ -1,3 +1,5 @@
+#include <fenv.h>
+
 /* kolmo graph (KG): a block stores a small program instead of one fixed transform.
  *
  * Stream 0 is the block. Each node consumes one or more streams and appends its outputs to the stream table; the
@@ -359,8 +361,24 @@ static const double KG_P10[KG_DEC_MAXE + 1] = {1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6
                                                1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
 static inline uint64_t kg_ld64(const uint8_t *p) { uint64_t v; memcpy(&v, p, 8); return v; }
 static inline uint64_t kg_dbits(double d) { uint64_t v; memcpy(&v, &d, 8); return v; }
+/* DEC64's format specifies round-to-nearest-even. Keep the common rounding mode
+ * fast and scope any change to the calling thread, including its exception flags. */
+static int kg_dec64_round_start(fenv_t *env) {
+    if (fegetround() == FE_TONEAREST) return 0;
+    if (feholdexcept(env)) return -1;
+    if (fesetround(FE_TONEAREST)) { fesetenv(env); return -1; }
+    return 1;
+}
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC push_options
+#pragma GCC optimize ("rounding-math")
+#endif
 /* st[0] tags, st[1..planes] planes, st[planes+1] exceptions, st[planes+2] rest */
 static int kg_dec64_inv(const uint8_t *par, size_t plen, const kbuf *st, uint32_t nout, size_t maxs, kbuf *out) {
+#if defined(__clang__)
+#pragma STDC FENV_ACCESS ON
+#endif
     size_t pi = 1; uint64_t h = 0, rows = 0, cols;
     if (plen < 1 || par[0] > 3) return -1;
     const int segs = par[0] & 1, hd = par[0] >> 1;
@@ -380,7 +398,7 @@ static int kg_dec64_inv(const uint8_t *par, size_t plen, const kbuf *st, uint32_
     typedef struct { double P; uint64_t miss, prev, pd, dmask, d2mask, skip, n, nd; const uint8_t *xp; const uint64_t *dv; int isint, w; } kgdc;
     kgdc *C = malloc((size_t)cols * sizeof(kgdc)); if (!C) return -1;
     uint64_t *DV = hd && dc->n ? malloc(dc->n) : NULL; if (hd && dc->n && !DV) { free(C); return -1; }
-    int rc = -1; uint64_t xb = 0, q = 0, skips = 0, vb = 0, db = 0;
+    int rc = -1, has_float = 0; uint64_t xb = 0, q = 0, skips = 0, vb = 0, db = 0;
     for (uint64_t c = 0; c < cols; c++) {
         uint64_t skip = 0, rn = rows;
         if (segs && (kg_getuv(par, plen, &pi, &skip) || kg_getuv(par, plen, &pi, &rn) || !rn || rn > cnt - q || skip > rest->n - skips)) goto bad;
@@ -402,10 +420,14 @@ static int kg_dec64_inv(const uint8_t *par, size_t plen, const kbuf *st, uint32_
         if (mx == 3) for (uint64_t r = 0; r < rn; r++) if (t[q + r] == 3) goto bad;   /* 1 | 2 also gives 3 */
         if ((n1 && !(fl & 2)) || n2 * (uint64_t)w > ex->n - xb) goto bad;
         C[c] = (kgdc){KG_P10[e], miss, 0, 0, fl & 1 ? ~(uint64_t)0 : 0, fl & 16 ? ~(uint64_t)0 : 0, skip, rn, nd, ex->p + xb, dv, fl & 4, w};
+        has_float |= !(fl & 4) && rn != n1 + n2;
         xb += n2 * (uint64_t)w; q += rn; skips += skip; vb += rn * (uint64_t)w;
     }
     if (pi != plen || xb != ex->n || q != cnt || vb + rest->n > maxs || (hd && db != dc->n)) goto bad;
     if (kb_res(out, (size_t)vb + rest->n + 16)) goto bad;
+    fenv_t env;
+    const int restore_round = has_float ? kg_dec64_round_start(&env) : 0;
+    if (restore_round < 0) goto bad;
 /* one value of column K at stream index Q, written at W8 (the column's word size) */
 #define KG_DEC_VALUE(K, Q, W8) do { const unsigned tag_ = t[Q]; uint64_t bits_;                         \
         if (tag_ == 0) { uint64_t z_ = 0; for (int b_ = 0; b_ < np; b_++) z_ |= (uint64_t)pl[b_].p[Q] << (8 * b_); \
@@ -461,11 +483,16 @@ static int kg_dec64_inv(const uint8_t *par, size_t plen, const kbuf *st, uint32_
     }
 #undef KG_DEC_VALUE
 #undef KG_DEC_RUN
+    if (restore_round && fesetenv(&env)) goto bad;
     out->n = (size_t)vb + rest->n;
     rc = 0;
 bad:
     free(C); free(DV); return rc;
 }
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC pop_options
+#endif
 
 /* ---- program builder ---- */
 typedef struct { kbuf *s; int ns, cap; uint8_t *used; kbuf prog; int nodes; int nph_q, nph_np; } kgb;   /* nph: stream nph_q holds nph_np byte planes of integer residuals (native-leaf hint; 0 = none) */
@@ -1125,7 +1152,7 @@ typedef struct { size_t off; uint32_t n; uint8_t e, fl; uint64_t miss;  uint32_t
  * bytes (layout 0). cols == 0: the block is searched for arrays of doubles at any byte alignment (layout 1); each
  * is cut into segments that choose their own exponent, so columns stored one after the other keep their own scale,
  * and everything else stays as plain bytes. Returns 0 when the values are not decimal, or the payload is not smaller. */
-static size_t kg_encode_dec64(codec_ctx *x, int codec, int level, const uint8_t *src, size_t n, size_t cols, size_t h,
+static size_t kg_encode_dec64_nearest(codec_ctx *x, int codec, int level, const uint8_t *src, size_t n, size_t cols, size_t h,
                               uint8_t *dst, size_t cap) {
     const int tf32 = (cols & KG_DEC_F32) != 0; cols &= ~KG_DEC_F32; const size_t tw = tf32 ? 4 : 8;
     if (h > n || cols > KG_DEC_MAXCOLS || n < 512) return 0;
@@ -1232,6 +1259,16 @@ static size_t kg_encode_dec64(codec_ctx *x, int codec, int level, const uint8_t 
 done:
     free(S); free(tags); free(col); for (int b = 0; b < 8; b++) free(pln[b]);
     free(par.p); free(exc.p); free(dic.p); kgb_free(&g); return out;
+}
+
+static size_t kg_encode_dec64(codec_ctx *x, int codec, int level, const uint8_t *src, size_t n, size_t cols, size_t h,
+                              uint8_t *dst, size_t cap) {
+    fenv_t env;
+    const int restore_round = kg_dec64_round_start(&env);
+    if (restore_round < 0) return 0;
+    const size_t out = kg_encode_dec64_nearest(x, codec, level, src, n, cols, h, dst, cap);
+    if (restore_round && fesetenv(&env)) return 0;
+    return out;
 }
 
 /* ---- IMG8 ---- */

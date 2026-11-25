@@ -2,16 +2,16 @@
  *
  * Every kernel has a portable C reference (`*_c`, in src/algo/) that is its specification; an ISA version may only
  * be faster, never write other bytes (tests/test_kernels.c compares them). The table is filled once, at first use,
- * from CPUID; `make NO_ASM=1` (-DKOLMO_NO_ASM) builds the C references only.
+ * from CPU features; `make NO_ASM=1` (-DKOLMO_NO_ASM) builds the C references only.
  *
  * KOLMO_CPU=c|sse2|sse41|avx2 in the environment lowers the level chosen at start-up (for tests and benchmarks; it
- * never raises it above what the CPU supports). */
+ * never raises it above what the CPU supports). KOLMO_CPU=neon opts into the model-4 mixer on baseline AArch64. */
 #ifndef KOLMO_ARCH_KERNELS_H
 #define KOLMO_ARCH_KERNELS_H
 #include <stddef.h>
 #include <stdint.h>
 
-enum { KOLMO_ISA_C = 0, KOLMO_ISA_SSE2 = 1, KOLMO_ISA_SSE41 = 2, KOLMO_ISA_AVX2 = 3 };
+enum { KOLMO_ISA_C = 0, KOLMO_ISA_SSE2 = 1, KOLMO_ISA_SSE41 = 2, KOLMO_ISA_AVX2 = 3, KOLMO_ISA_NEON = 4 };
 
 typedef struct {
     /* IMG8 inverse: rows of W bytes, channel step C (1..4), m bytes (only whole rows are written); see predict.h */

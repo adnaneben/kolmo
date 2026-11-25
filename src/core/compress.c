@@ -218,6 +218,8 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     }
     J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2); J.native_leaf = native_leaf; J.columns = columns;   /* ultra level 2 = default ultra + CM graph leaves */
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
+    const char *tensor_retry = getenv("KOLMO_TENSOR_RAW_RETRY");
+        J.segment_kind = tensor_retry && strcmp(tensor_retry, "1") == 0 ? skind : NULL;
     J.fqthreads = threads / (int)(nb < 256 ? nb : 256) > 0 ? threads / (int)(nb < 256 ? nb : 256) : 1;   /* threads left over per block */
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
     if (!J.out || !J.outlen) goto cleanup;

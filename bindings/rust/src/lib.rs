@@ -120,11 +120,14 @@ pub fn compress_limited(data: &[u8], level: Level, threads: i32, mem_limit: u64)
     let mut p = Params { mode: 0, level: 0, threads: threads as c_int, block: 0, transforms: 0, mem_limit };
     let r = unsafe { kolmo_params_for_level(level.0 as c_int, &mut p) };
     if r < 0 { return Err(err(r as i64)); }
-    let cap = unsafe { kolmo_bound(data.len(), &p) };
-    let mut out = vec![0u8; cap.max(1)];
-    let n = unsafe { kolmo_compress(data.as_ptr(), data.len(), out.as_mut_ptr(), out.len(), &p) };
+    let cap = unsafe { kolmo_bound(data.len(), &p) }.max(1);
+    let mut out = out_buf(cap as u64)?;
+    let n = unsafe { kolmo_compress(data.as_ptr(), data.len(), out.as_mut_ptr(), cap, &p) };
     if n < 0 { return Err(err(n)); }
-    out.truncate(n as usize);
+    let written = usize::try_from(n).map_err(|_| err(ERR_CORRUPT))?;
+    if written > cap { return Err(err(ERR_CORRUPT)); }
+    // SAFETY: compression initialized the reported bytes within the reserved buffer.
+    unsafe { out.set_len(written) };
     Ok(out)
 }
 
@@ -184,7 +187,7 @@ fn sizes(blob: &[u8], frames: &[(usize, usize)]) -> Result<Vec<u64>, Error> {
 }
 
 /// An empty Vec with room for `n` bytes, or code -4 (`KOLMO_ERR_ALLOC`) when the system refuses: never an abort.
-/// Nothing is written to it here, so the pages are committed only as the decoder writes them: a frame that claims
+/// Nothing is written to it here, so the pages are committed only as native code writes them: a frame that claims
 /// gigabytes and fails at its first block costs a few pages, not the claim.
 fn out_buf(n: u64) -> Result<Vec<u8>, Error> {
     let n = usize::try_from(n).map_err(|_| err(ERR_ALLOC))?;
@@ -273,7 +276,7 @@ pub fn read_range(blob: &[u8], off: u64, len: usize, threads: i32) -> Result<Vec
                 kolmo_read_range(blob.as_ptr().add(o), l, lo - start, want, out.as_mut_ptr().add(got), threads as c_int)
             };
             if r < 0 { return Err(err(r)); }
-            if r as usize != want { return Err(err(ERR_CORRUPT)); }
+            if r as u64 != hi - lo { return Err(err(ERR_CORRUPT)); }
             got += want;
         }
         start += s;
