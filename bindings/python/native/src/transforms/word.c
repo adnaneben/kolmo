@@ -10,7 +10,13 @@ static inline int is_alpha(uint8_t c) { return (uint8_t)((c | 32) - 'a') < 26; }
 /* a word byte for the tokenizer: an ASCII letter, or (u8: text with 5% or more bytes >= 0x80, UTF-8 prose in a non-Latin
  * script) any byte >= 0x80, so Cyrillic, Greek or CJK words become dictionary entries too. Encoder only: the decoder
  * copies a dictionary entry's bytes whatever they are (Cyrillic dickens -5: -24%). */
-static inline int wd_alpha(uint8_t c, int u8) { return is_alpha(c) || (u8 && c >= 0x80); }
+static inline int wd_alpha(uint8_t c, int u8, int identifiers) {
+    return is_alpha(c) || (u8 && c >= 0x80) ||
+           (identifiers && (c == '_' || (uint8_t)(c - '0') < 10));
+}
+static inline int wd_word_start(uint8_t c, int identifiers) {
+    return !identifiers || (uint8_t)(c - '0') >= 10;
+}
 static inline int cap_norm(const uint8_t *w, uint32_t n) {          /* Upper followed by lower case only */
     if (n < 2 || (uint8_t)(w[0] - 'A') >= 26) return 0;
     for (uint32_t i = 1; i < n; i++) if ((uint8_t)(w[i] - 'a') >= 26) return 0;
@@ -42,6 +48,8 @@ static int64_t word_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap
     if (capb < 0 || np < 1) return -1;
     size_t hi = 0; for (int c = 0x80; c < 256; c++) hi += used[c];
     const int u8 = hi * 20 >= n;
+    const char *mode = u8 ? NULL : getenv("KOLMO_WORD_IDENTIFIERS");
+    const int identifiers = mode && !strcmp(mode, "1");
     /* count words (lower-cased when capitalised) */
     size_t tcap = 1 << 20; while (tcap < (n < (4u << 20) ? n : (4u << 20)) / 4) tcap <<= 1;
     went_t *tab = calloc(tcap, sizeof(went_t)); uint8_t *lw = malloc(WD_MAXW + 1); size_t nent = 0;
@@ -50,30 +58,47 @@ static int64_t word_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap
     size_t SL = n <= (4u << 20) ? n : (1u << 20), NS = n <= (4u << 20) ? 1 : 4;     /* count on a sample */
     for (size_t sp = 0; sp < NS; sp++) {
     size_t i = NS == 1 ? 0 : (n - SL) / 3 * sp, iend = i + SL;
-    while (i > 0 && i < n && wd_alpha(in[i], u8)) i++;                                 /* start at a word boundary */
+    while (i > 0 && i < n && wd_alpha(in[i], u8, identifiers)) i++;                                 /* start at a word boundary */
     while (i < iend) {
-        if (!wd_alpha(in[i], u8)) { i++; continue; }
-        size_t s = i; while (i < n && wd_alpha(in[i], u8)) i++;
-        uint32_t L = (uint32_t)(i - s); if (L < 3 || L > WD_MAXW) continue;
+        if (!wd_alpha(in[i], u8, identifiers)) { i++; continue; }
+        size_t s = i; while (i < n && wd_alpha(in[i], u8, identifiers)) i++;
+        uint32_t L = (uint32_t)(i - s);
+        if (L < 3 || L > WD_MAXW || !wd_word_start(in[s], identifiers)) continue;
         const uint8_t *w = in + s;
         int cn = cap_norm(w, L); uint64_t h = wd_hash(w, L, cn);
         size_t at = h & (tcap - 1);
         for (;;) {
             went_t *e = &tab[at];
-            if (!e->cnt) { if (nent * 2 > tcap) break; e->h = h; e->off = (uint32_t)s; e->len = L; e->cnt = 1; nent++; break; }
-            if (e->h == h && e->len == L) { e->cnt++; break; }
+            if (!e->cnt) {
+                if (nent * 2 > tcap) break;
+                *e = (went_t){.h = h, .off = (uint32_t)s, .len = L, .cnt = 1, .code = (uint32_t)cn};
+                nent++;
+                break;
+            }
+            if (e->h == h && e->len == L) { e->cnt++; e->code += (uint32_t)cn; break; }
             at = (at + 1) & (tcap - 1);
         }
     }
     }
-    /* pick the most valuable words: count * (len - 2) */
+    /* For identifiers, account for the dictionary entry and capitalization bytes before ranking. */
     size_t ncodes = (size_t)np * 256; if (ncodes > WD_MAXCODES) ncodes = WD_MAXCODES;
     top = malloc(sizeof(uint32_t) * (nent + 1)); size_t nt = 0;
-    for (size_t i = 0; i < tcap; i++) if (tab[i].cnt >= 3) top[nt++] = (uint32_t)i;
-    /* partial selection by score via sort (nt is at most a few hundred thousand) */
-    for (size_t i = 0; i < nt; i++) { went_t *e = &tab[top[i]]; e->code = (uint32_t)(e->cnt * (uint64_t)(e->len - 2) > 0xFFFFFFFFull ? 0xFFFFFFFFu : e->cnt * (e->len - 2)); }
+    if (!top) goto done;
+    for (size_t i = 0; i < tcap; i++) {
+        went_t *e = &tab[i];
+        if (e->cnt < 3) continue;
+        uint64_t savings = e->cnt * (uint64_t)(e->len - 2);
+        if (identifiers) {
+            uint64_t overhead = e->len + 1u + (uint64_t)e->code;
+            if (savings <= overhead) continue;
+            savings -= overhead;
+        }
+        e->code = savings > UINT32_MAX ? UINT32_MAX : (uint32_t)savings;
+        top[nt++] = (uint32_t)i;
+    }
     {   /* sort indices by score descending (simple radix on 32-bit score) */
         uint32_t *tmp = malloc(sizeof(uint32_t) * (nt + 1));
+        if (!tmp) goto done;
         for (int sh = 0; sh < 32; sh += 8) {
             size_t c[257] = {0};
             for (size_t i = 0; i < nt; i++) c[255 - ((tab[top[i]].code >> sh) & 255) + 1]++;
@@ -99,14 +124,14 @@ static int64_t word_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap
             o += e->len; *o++ = '\n';
         }
         for (size_t i = 0; i < n;) {
-            if (!wd_alpha(in[i], u8)) {
-                size_t s = i; while (i < n && !wd_alpha(in[i], u8)) i++;
+            if (!wd_alpha(in[i], u8, identifiers)) {
+                size_t s = i; while (i < n && !wd_alpha(in[i], u8, identifiers)) i++;
                 if ((size_t)(oe - o) < i - s) goto done;
                 memcpy(o, in + s, i - s); o += i - s; continue;
             }
-            size_t s = i; while (i < n && wd_alpha(in[i], u8)) i++;
+            size_t s = i; while (i < n && wd_alpha(in[i], u8, identifiers)) i++;
             uint32_t L = (uint32_t)(i - s); const uint8_t *w = in + s; uint32_t code = UINT32_MAX; int cn = 0;
-            if (L >= 3 && L <= WD_MAXW) {
+            if (L >= 3 && L <= WD_MAXW && wd_word_start(w[0], identifiers)) {
                 cn = cap_norm(w, L); uint64_t h = wd_hash(w, L, cn);
                 size_t at = h & (tcap - 1);
                 while (tab[at].cnt) {
