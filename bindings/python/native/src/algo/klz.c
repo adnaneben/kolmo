@@ -224,12 +224,16 @@ static uint8_t *kz_emit(uint8_t *op, const uint8_t *oe, const uint8_t *lit,
                         size_t ll, size_t off, size_t ml) {
     size_t room = (size_t)(oe - op);
     if (ll > room) return NULL;
-    size_t overhead = 1 + (ll >= 7 ? 1 + (ll - 7) / 255 : 0);
-    if (ml) {
-        overhead += off > 0xFFFF ? 3 : 2;
-        if (ml >= 19) overhead += 1 + (ml - 19) / 255;
+    /* Both extension chains add at most one byte per 255 bytes, plus
+     * their terminators. This cheap upper bound covers the common case. */
+    if (room - ll < 6 + ((ll | ml) >> 6)) {
+        size_t overhead = 1 + (ll >= 7 ? 1 + (ll - 7) / 255 : 0);
+        if (ml) {
+            overhead += off > 0xFFFF ? 3 : 2;
+            if (ml >= 19) overhead += 1 + (ml - 19) / 255;
+        }
+        if (overhead > room - ll) return NULL;
     }
-    if (overhead > room - ll) return NULL;
     uint8_t *tok = op++; unsigned t = ll < 7 ? (unsigned)ll : 7u;
     if (ll >= 7) { size_t r = ll - 7; while (r >= 255) { *op++ = 255; r -= 255; } *op++ = (uint8_t)r; }
     memcpy(op, lit, ll); op += ll;
