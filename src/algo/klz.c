@@ -222,11 +222,9 @@ static const kz_par KLZH_LV[10] = {{0}, {16, 15, 0, 0, 6, 0}, {17, 16, 0, 0, 7, 
 size_t kolmo_klz_bound(size_t n) { return n + n / 255 + 32; }
 static uint8_t *kz_emit(uint8_t *op, const uint8_t *oe, const uint8_t *lit,
                         size_t ll, size_t off, size_t ml) {
-    size_t room = (size_t)(oe - op);
-    if (ll > room) return NULL;
-    /* Both extension chains add at most one byte per 255 bytes, plus
-     * their terminators. This cheap upper bound covers the common case. */
-    if (room - ll < 6 + ((ll | ml) >> 6)) {
+    if (oe) {
+        size_t room = (size_t)(oe - op);
+        if (ll > room) return NULL;
         size_t overhead = 1 + (ll >= 7 ? 1 + (ll - 7) / 255 : 0);
         if (ml) {
             overhead += off > 0xFFFF ? 3 : 2;
@@ -261,8 +259,8 @@ static inline size_t kz_l1_try(const uint8_t *in, const kz_slot *b, size_t p, ui
     if (l < 5 && p - b->p > 0xFFFF) return 0;
     *off = (uint32_t)(p - b->p); return l;
 }
-static size_t kz_klz1(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
-    uint8_t *const oe = out + cap, *op = out;
+static size_t kz_klz1(const uint8_t *in, size_t n, uint8_t *out, const uint8_t *oe) {
+    uint8_t *op = out;
     int lg = 16; while (lg > 10 && ((size_t)1 << (lg + 1)) > n) lg--;
     kz_slot *ht = malloc(sizeof(kz_slot) << lg); if (!ht) return 0;
     memset(ht, 0xFF, sizeof(kz_slot) << lg);   /* position 2^32 - 1: never a candidate */
@@ -293,13 +291,11 @@ static size_t kz_klz1(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     op = kz_emit(op, oe, in + anchor, n - anchor, 0, 0);
     free(ht); return op ? (size_t)(op - out) : 0;
 }
-size_t kolmo_klz_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) {
-    if (n >= 0xFFFFFFF0u || !cap) return 0;
-    uint8_t *const oe = out + cap;
+static size_t kz_encode(const uint8_t *in, size_t n, uint8_t *out, const uint8_t *oe, int level) {
     if (level < 1) level = 1;
     if (level > 3) level = 3;
     uint8_t *op = out;
-    if (level == 1) return kz_klz1(in, n, out, cap);
+    if (level == 1) return kz_klz1(in, n, out, oe);
     if (level >= 3) {   /* chains and lazy evaluation */
         kz_seq *S = malloc((n / 4 + 2) * sizeof *S); if (!S) return 0;
         size_t anchor; int err; size_t ns = kz_parse(in, n, &KLZ_LV[level], S, &anchor, &err);
@@ -334,6 +330,21 @@ size_t kolmo_klz_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap,
 done:
     op = kz_emit(op, oe, in + anchor, n - anchor, 0, 0);
     free(ht); return op ? (size_t)(op - out) : 0;
+}
+size_t kolmo_klz_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) {
+    if (n >= 0xFFFFFFF0u || !cap) return 0;
+    /* A matched sequence's token, offset and match-length extension fit in
+     * the bytes covered by the match (at least four). A literal extension
+     * adds at most one byte per eight bytes of matched sequence input. Allow
+     * another two bytes for the last, literal-only token and its terminator. */
+    uint64_t worst = (uint64_t)n + n / 8 + 2;
+    const uint8_t *limit = cap >= worst ? NULL : out + cap;
+    size_t written = kz_encode(in, n, out, limit, level);
+    if (written) return written;
+    /* The published bound always admits a literal-only block. A tight
+     * buffer can also fit one when the chosen parse would expand the data. */
+    uint8_t *end = kz_emit(out, out + cap, in, n, 0, 0);
+    return end ? (size_t)(end - out) : 0;
 }
 int kolmo_klz_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     const uint8_t *ip = in, *ie = in + cn; uint8_t *op = out, *oe = out + n;
