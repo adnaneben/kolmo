@@ -2,7 +2,7 @@
 #include "features.h"         /* kx_find: container extensions after the last payload */
 /* ------------------------------------------------------------------ decoding */
 typedef struct { uint64_t orig; uint32_t nb; int ver, psum; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff;
-                 uint64_t memd; int mode; } parsed_t;   /* memd: the decode working set per block the header declares (0: none) */
+                 uint64_t memd, end, memcap; uint32_t maxraw, maxcompressed; int mode; } parsed_t;   /* memd: the decode working set per block the header declares (0: none) */
 
 /* the header's version byte: 0 for version 12, KOLMO_ERR_LEGACY for a frame of an earlier Kolmo (versions 1-11: library
  * codecs, XXH checksums, dictionaries and profiles), KOLMO_ERR_CORRUPT for anything else */
@@ -12,29 +12,36 @@ static int frame_version_check(const uint8_t *s, size_t n) {
     if (s[4] >= 1 && s[4] < KOLMO_MAX_VERSION) return KOLMO_ERR_LEGACY;
     return s[4] == KOLMO_MAX_VERSION ? 0 : KOLMO_ERR_CORRUPT;
 }
-/* The header and index of a frame, checked without allocating anything (kolmo_original_size, kolmo_frame_size and the
- * public decoders before they allocate): the version, the flags, the index inside the n bytes given, the header and
- * index checksum, block sizes adding up to the claimed original size (which must fit in int64_t), and stored blocks
- * of the size their index entry says. The block payloads need not be inside the n bytes (a caller may have read the
- * header and index only). 0 with *orig and *end (the offset just past the last payload), or a KOLMO_ERR_* code.
- * A frame's claimed size has no upper bound relative to its own size: one KLZH2 block of 29 bytes codes 16 MiB of
- * zeros, a 92-byte BWT block 128 MiB; so the claim is checked for consistency here, and against the caller's limits
- * (kolmo_decode_limits.max_output_bytes) by the callers. */
-static int frame_head(const uint8_t *s, size_t n, uint64_t *orig, uint64_t *end) {
-    { int v = frame_version_check(s, n); if (v) return v; }
+/* Scan the complete index without allocating. The payloads may be absent when only the frame sizes are needed. */
+static int frame_scan(const uint8_t *s, size_t n, parsed_t *P) {
+    int v = s ? frame_version_check(s, n) : KOLMO_ERR_CORRUPT;
+    if (v) return v;
     if (s[10] & ~1) return KOLMO_ERR_CORRUPT;
     uint64_t o = get64(s + 12); uint32_t nb = get32(s + 20);
-    if (o > (uint64_t)INT64_MAX || (uint64_t)nb * IDX + HDR > n) return KOLMO_ERR_CORRUPT;
+    uint64_t po = HDR + (uint64_t)nb * IDX, ro = 0;
+    if (o > (uint64_t)INT64_MAX || po > n) return KOLMO_ERR_CORRUPT;
     uint32_t hc = kolmo_crc32c(0, s, 28); hc = kolmo_crc32c(hc, s + HDR, (size_t)nb * IDX);
     if (hc != get32(s + 28)) return KOLMO_ERR_CHECKSUM;
-    uint64_t po = HDR + (uint64_t)nb * IDX, ro = 0;
+    uint32_t maxraw = 0, maxcompressed = 0;
     for (uint32_t i = 0; i < nb; i++) {
         const uint8_t *e = s + HDR + (size_t)i * IDX; uint32_t raw = get32(e), cl = get32(e + 4);
-        if (raw > o - ro || (e[12] == C_STORE && (uint64_t)raw + 4 != cl)) return KOLMO_ERR_CORRUPT;
+        if (raw > o - ro || (e[12] == C_STORE && (uint64_t)raw + 4 != cl) || cl > UINT64_MAX - po)
+            return KOLMO_ERR_CORRUPT;
+        if (raw > maxraw) maxraw = raw;
+        if (cl > maxcompressed) maxcompressed = cl;
         ro += raw; po += cl;
     }
     if (ro != o) return KOLMO_ERR_CORRUPT;
-    *orig = o; *end = po; return 0;
+    *P = (parsed_t){.orig = o, .nb = nb, .idx = s + HDR, .end = po, .maxraw = maxraw,
+                    .maxcompressed = maxcompressed, .ver = s[4], .psum = s[10] & 1,
+                    .memd = kmem_declared(s[11]), .mode = s[5], .pl = {s[6], s[7], s[8], s[9]}};
+    return 0;
+}
+static int frame_head(const uint8_t *s, size_t n, uint64_t *orig, uint64_t *end) {
+    parsed_t P; int r = frame_scan(s, n, &P);
+    if (r) return r;
+    *orig = P.orig; *end = P.end;
+    return 0;
 }
 /* bytes after a frame's last payload: none, or container extensions ending in their trailer (core/extension.c) */
 static int frame_tail_ok(const uint8_t *s, size_t n, uint64_t end) {
@@ -43,41 +50,59 @@ static int frame_tail_ok(const uint8_t *s, size_t n, uint64_t end) {
     uint64_t len; int err; kx_find(s, n, end, "\0\0\0\0", &len, &err);
     return !err;
 }
-static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_limits *limits) {
-    { int v = frame_version_check(s, n); if (v) return v; }
-    P->ver = s[4]; P->psum = s[10] & 1;
-    if (s[10] & ~1) return KOLMO_ERR_CORRUPT;                  /* flag bits 1 and 2 (dictionary, profile) are retired */
-    P->orig = get64(s + 12); P->nb = get32(s + 20); P->memd = kmem_declared(s[11]); P->mode = s[5];
-    if (P->orig > (uint64_t)INT64_MAX) return KOLMO_ERR_CORRUPT;
+/* The per-block estimate already includes 1 MiB for small allocations. Use up to 64 KiB of it
+ * for frame metadata, and leave larger offset/index/order arrays out of the budget passed to the codecs. */
+#define FRAME_METADATA_ALLOWANCE (64u << 10)
+static uint64_t frame_codec_budget(uint64_t cap, uint64_t metadata) {
+    if (cap == KMEM_UNLIMITED || metadata <= FRAME_METADATA_ALLOWANCE) return cap;
+    uint64_t charge = metadata - FRAME_METADATA_ALLOWANCE;
+    return charge >= cap ? 0 : cap - charge;
+}
+static uint64_t frame_offset_bytes(uint32_t blocks) { return 2 * ((uint64_t)blocks + 1) * sizeof(uint64_t); }
+
+static int frame_limits(const parsed_t *P, const kolmo_decode_limits *limits) {
     if (limits && ((limits->max_output_bytes && P->orig > limits->max_output_bytes) ||
-                   (limits->max_blocks && P->nb > limits->max_blocks))) return KOLMO_ERR_LIMIT;
-    P->pl = (plan_t){s[6], s[7], s[8], s[9]};
-    if ((uint64_t)P->nb * IDX + HDR > n) return KOLMO_ERR_CORRUPT;
-    uint32_t hc = kolmo_crc32c(0, s, 28); hc = kolmo_crc32c(hc, s + HDR, (size_t)P->nb * IDX);
-    if (hc != get32(s + 28)) return KOLMO_ERR_CHECKSUM;
-    P->idx = s + HDR;
+                   (limits->max_blocks && P->nb > limits->max_blocks) ||
+                   (limits->max_block_bytes && P->maxraw > limits->max_block_bytes)))
+        return KOLMO_ERR_LIMIT;
+    return 0;
+}
+
+/* Rules 1 and 2 (docs/MEMORY-MODEL.md): compare the checked index to the frame's declared per-block
+ * working set and the caller's remaining codec budget before allocating decoder state. */
+static int frame_admit(const parsed_t *P, uint64_t maxraw, uint64_t memcap) {
+    uint64_t floor = blk_dec_floor(maxraw);
+    if (P->memd && floor > P->memd) return KOLMO_ERR_CORRUPT;
+    if ((P->memd ? P->memd : floor) > memcap) return KOLMO_ERR_MEMORY;
+    return 0;
+}
+static int parse_with_index(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_limits *limits,
+                            uint64_t index_bytes) {
+    int r = frame_scan(s, n, P);
+    if (r) return r;
+    if (P->end > n) return KOLMO_ERR_CORRUPT;
+    r = frame_limits(P, limits);
+    if (r) return r;
+    uint64_t cap = kmem_limit_of(limits ? limits->max_memory : 0);
+    uint64_t offsets = frame_offset_bytes(P->nb);
+    P->memcap = frame_codec_budget(cap, index_bytes + offsets);
+    r = frame_admit(P, P->maxraw, P->memcap);
+    if (r) return r;
+    if (offsets / 2 > SIZE_MAX) return KOLMO_ERR_ALLOC;
     P->poff = array_alloc((size_t)P->nb + 1, sizeof(uint64_t), 0);
     P->roff = array_alloc((size_t)P->nb + 1, sizeof(uint64_t), 0);
     if (!P->poff || !P->roff) { free(P->poff); free(P->roff); return KOLMO_ERR_ALLOC; }
     uint64_t po = HDR + (uint64_t)P->nb * IDX, ro = 0;
     for (uint32_t i = 0; i < P->nb; i++) {
+        const uint8_t *e = P->idx + (size_t)i * IDX;
         P->poff[i] = po; P->roff[i] = ro;
-        uint32_t cl = get32(P->idx + (size_t)i * IDX + 4), raw = get32(P->idx + (size_t)i * IDX);
-        if (limits && limits->max_block_bytes && raw > limits->max_block_bytes) {
-            free(P->poff); free(P->roff); return KOLMO_ERR_LIMIT;
-        }
-        if (po > n || cl > n - po || ro > P->orig || raw > P->orig - ro) {
-            free(P->poff); free(P->roff); return KOLMO_ERR_CORRUPT;
-        }
-        /* a stored block is its bytes (after the plan prefix): its size cannot claim more than the frame holds */
-        if (P->idx[(size_t)i * IDX + 12] == C_STORE && (uint64_t)raw + 4 != cl) {
-            free(P->poff); free(P->roff); return KOLMO_ERR_CORRUPT;
-        }
-        po += cl; ro += raw;
+        po += get32(e + 4); ro += get32(e);
     }
     P->poff[P->nb] = po; P->roff[P->nb] = ro;
-    if (po > n || ro != P->orig) { free(P->poff); free(P->roff); return KOLMO_ERR_CORRUPT; }
     return 0;
+}
+static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_limits *limits) {
+    return parse_with_index(s, n, P, limits, 0);
 }
 
 typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
@@ -324,15 +349,6 @@ static void *decompress_worker(void *arg) {
     return NULL;
 }
 
-/* Rules 1 and 2 (docs/MEMORY-MODEL.md), before anything is allocated: the index must agree with what the header
- * declares (no block's buffers above the declared figure), and the declared figure (or, for a frame that declares
- * nothing, the largest block's buffers) must fit the limit. 0, KOLMO_ERR_CORRUPT or KOLMO_ERR_MEMORY. */
-static int frame_admit(const parsed_t *P, uint64_t maxraw, uint64_t memcap) {
-    uint64_t floor = blk_dec_floor(maxraw);
-    if (P->memd && floor > P->memd) return KOLMO_ERR_CORRUPT;
-    if ((P->memd ? P->memd : floor) > memcap) return KOLMO_ERR_MEMORY;
-    return 0;
-}
 static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
                           const kolmo_decode_limits *limits);
 /* the single codec-20 block of a frame: the payload's plan bytes are 0, the rest is a Kolmo frame of the kvid layout */
@@ -355,7 +371,7 @@ static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input
     /* Memory (docs/MEMORY-MODEL.md): the layout (tn), the output and the inverse's copy (2 raw) are this frame's own
      * buffers, as the encoder counts them in the figure it declares (core/compress.c); the nested frame decodes under
      * what is left of the limit. The governor is not used here: the nested blocks reserve with it themselves. */
-    uint64_t memcap = kmem_limit_of(limits ? limits->max_memory : 0), own = 2 * (uint64_t)raw + (uint64_t)tn;
+    uint64_t memcap = P->memcap, own = 2 * (uint64_t)raw + (uint64_t)tn;
     if (own > memcap) { ret = KOLMO_ERR_MEMORY; goto out; }
     t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
     if (!t || !full) { ret = KOLMO_ERR_ALLOC; goto out; }
@@ -375,25 +391,14 @@ out:
 }
 static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
                           const kolmo_decode_limits *limits) {
-    parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
-    if (P.nb == 1 && P.idx[12] == C_VID) {                      /* format 2: a video frame, decoded whole (codec 20) */
-        /* admitted like every frame before anything is allocated (its declared figure covers the nested frame) */
-        int a = frame_admit(&P, P.orig, kmem_limit_of(limits ? limits->max_memory : 0));
-        if (a) { free(P.poff); free(P.roff); return a; }
+    uint64_t index_bytes = input_fd >= 0 ? HDR + (uint64_t)get32(src + 20) * IDX : 0;
+    parsed_t P; int r = parse_with_index(src, n, &P, limits, index_bytes); if (r) return r;
+    if (P.nb == 1 && P.idx[12] == C_VID) {                      /* format 2: video is decoded whole */
         int64_t vr = vid_decode_frame(&P, src, input_fd, dst, output_fd, threads, lo, hi, range, limits);
         free(P.poff); free(P.roff); return vr;
     }
     djob_t J = {0}; J.src = src; J.P = &P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd;
-    for (uint32_t i = 0; i < P.nb; i++) {
-        size_t raw = P.roff[i + 1] - P.roff[i], stored = P.poff[i + 1] - P.poff[i];
-        if (raw > J.maxraw) J.maxraw = raw;
-        if (stored > J.maxcompressed) J.maxcompressed = stored;
-    }
-    /* Rule 1 and 2 (docs/MEMORY-MODEL.md), before anything is allocated: the index must agree with what the header
-     * declares, and the declared figure must fit the limit, or the call stops with KOLMO_ERR_MEMORY and
-     * kolmo_decode_memory gives the figure. Within it, the governor sets how many blocks decode at once. */
-    J.memcap = kmem_limit_of(limits ? limits->max_memory : 0);
-    { int a = frame_admit(&P, J.maxraw, J.memcap); if (a) { free(P.poff); free(P.roff); return a; } }
+    J.maxraw = P.maxraw; J.maxcompressed = P.maxcompressed; J.memcap = P.memcap;
     if (range) {
         uint32_t a = 0, b = P.nb;
         while (a < P.nb && P.roff[a + 1] <= lo) a++;
@@ -403,25 +408,38 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
     atomic_init(&J.next, 0); atomic_init(&J.err, 0);
     int nt = threads > 0 ? threads : default_threads(), nblk = (int)(J.hi - J.lo < 256 ? J.hi - J.lo : 256);
     J.fqthreads = nblk > 0 && nt / nblk > 0 ? nt / nblk : 1;    /* threads left over per block (FASTQ family blocks) */
-    uint32_t *order = NULL, *tmp = NULL, m = J.hi - J.lo;
-    if (nt > 1 && m > 1 && (order = malloc((size_t)m * 2 * sizeof *order))) {
-        /* longest first: the last blocks to start are short ones, so threads do not idle behind one long tail block.
-         * A stable bottom-up merge sort (equal blocks keep their order) */
-        tmp = order + m;
-        for (uint32_t k = 0; k < m; k++) order[k] = J.lo + k;
+    uint32_t *storage = NULL;
+    size_t m = J.hi - J.lo;
+    if (nt > 1 && m > 1) {
+        uint64_t metadata = index_bytes + frame_offset_bytes(P.nb);
+        uint64_t sort_cap = frame_codec_budget(kmem_limit_of(limits ? limits->max_memory : 0),
+                                               metadata + 2 * (uint64_t)m * sizeof *storage);
+        if (!frame_admit(&P, P.maxraw, sort_cap))
+            storage = array_alloc(m, 2 * sizeof *storage, 0);
+        if (storage) {
+            J.memcap = sort_cap;
+            /* Longest first. A stable merge sort keeps equal-length blocks in input order. */
+            uint32_t *order = storage, *tmp = storage + m;
+            for (size_t k = 0; k < m; k++) order[k] = J.lo + (uint32_t)k;
 #define DLEN(b) (P.roff[(b) + 1] - P.roff[(b)])
-        for (uint32_t w = 1; w < m; w *= 2) {
-            for (uint32_t a = 0; a < m; a += 2 * w) {
-                uint32_t b = a + w < m ? a + w : m, e = a + 2 * w < m ? a + 2 * w : m, x = a, y = b, t = a;
-                while (x < b || y < e) tmp[t++] = y >= e || (x < b && DLEN(order[x]) >= DLEN(order[y])) ? order[x++] : order[y++];
+            for (size_t w = 1; w < m;) {
+                for (size_t a = 0; a < m;) {
+                    size_t b = a + (w < m - a ? w : m - a), e = b + (w < m - b ? w : m - b);
+                    size_t x = a, y = b;
+                    for (size_t t = a; t < e; t++)
+                        tmp[t] = y >= e || (x < b && DLEN(order[x]) >= DLEN(order[y])) ? order[x++] : order[y++];
+                    a = e;
+                }
+                uint32_t *sw = order; order = tmp; tmp = sw;
+                if (w > m / 2) break;
+                w *= 2;
             }
-            uint32_t *sw = order; order = tmp; tmp = sw;
-        }
 #undef DLEN
-        J.order = order;
+            J.order = order;
+        }
     }
     run_pool(decompress_worker, &J, nt, J.hi - J.lo);
-    free(order < tmp ? order : tmp);
+    free(storage);
     free(P.poff); free(P.roff);
     r = atomic_load(&J.err);
     return r ? r : (int64_t)(range ? hi - lo : P.orig);

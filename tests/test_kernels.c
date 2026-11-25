@@ -161,8 +161,13 @@ int main(void) {
     int mx = kolmo_cpu_max_level();
     printf("CPU max level %s, dispatched %s\n", kolmo_isa_name(mx), kolmo_isa_name(kolmo_cpu_level()));
     for (int l = 0; l <= mx; l++) {
+        if (mx == KOLMO_ISA_NEON && l != KOLMO_ISA_C && l != KOLMO_ISA_NEON) continue;
         kolmo_kernels k; kolmo_kernels_for_level(l, &k);
         long c0 = checks, f0 = fails;
+        if (l == KOLMO_ISA_NEON) {
+            CHECK(k.cm_dot16 != kolmo_cm_dot16_c, "NEON dot kernel was not dispatched");
+            CHECK(k.cm_train16 != kolmo_cm_train16_c, "NEON training kernel was not dispatched");
+        }
         test_med8(l, &k);
         test_planes(l, &k);
         test_mixer(l, &k); test_mixer16(l, &k);

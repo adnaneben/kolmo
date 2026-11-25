@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "revision": 1,
+  "size_cuts": [65536, 1048576, 16777216],
+  "formats": [
+    {"id": "elf", "name": "ELF executable or object", "prefix": "7f454c46"},
+    {"id": "mach-o-64-le", "name": "64-bit little-endian Mach-O", "prefix": "cffaedfe"},
+    {"id": "mach-o-64-be", "name": "64-bit big-endian Mach-O", "prefix": "feedfacf"},
+    {"id": "wasm", "name": "WebAssembly", "prefix": "0061736d01000000"},
+    {"id": "npy", "name": "NumPy NPY", "prefix": "934e554d5059"},
+    {"id": "gguf", "name": "GGUF model weights", "prefix": "47475546"},
+    {"id": "png", "name": "PNG image", "prefix": "89504e470d0a1a0a"},
+    {"id": "flac", "name": "FLAC audio", "prefix": "664c6143"},
+    {"id": "wav", "name": "RIFF WAVE audio", "prefix": "52494646", "offset": 8, "signature": "57415645"},
+    {"id": "parquet", "name": "Parquet", "prefix": "50415231", "suffix": "50415231"},
+    {"id": "safetensors", "name": "SafeTensors model weights", "header": "safetensors"},
+    {"id": "unknown", "name": "Unclassified input"}
+  ]
+}

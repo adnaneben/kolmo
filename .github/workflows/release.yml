@@ -11,8 +11,8 @@ name: release
 # same bytes (RELEASING.md, "Reproducible builds").
 #
 # Signs only on a version tag push or a manual run; nothing is built or signed on ordinary pushes. A tag push
-# attaches the files to the tag's GitHub release, creating it as a draft if it does not exist yet (a draft is not
-# public; publishing it stays a manual step). A manual run only attests and keeps the files as workflow artifacts.
+# stages the files on a draft, verifies the assets after upload, and leaves publishing as a manual step.
+# A manual run only attests and keeps the files as workflow artifacts.
 # Users verify with: gh attestation verify <file> --repo adnaneben/kolmo
 on:
   push:
@@ -24,9 +24,15 @@ on:
   pull_request:
     paths:
       - ".github/workflows/release.yml"
+      - ".github/scripts/release-source.sh"
+      - ".github/scripts/stage-release.sh"
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   source:
@@ -37,10 +43,12 @@ jobs:
       attestations: write
     outputs:
       version: ${{ steps.v.outputs.version }}
+      commit: ${{ steps.v.outputs.commit }}
     steps:
       - uses: actions/checkout@v4
-      - id: v
-        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+      - name: Check release identity
+        id: v
+        run: bash .github/scripts/release-source.sh
       - name: source tarball, twice
         env:
           V: ${{ steps.v.outputs.version }}
@@ -60,6 +68,7 @@ jobs:
         with:
           name: release-source
           path: dist/*
+          if-no-files-found: error
 
   cli:
     needs: source
@@ -87,8 +96,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: a
+          ref: ${{ needs.source.outputs.commit }}
       - uses: actions/checkout@v4
         with:
+          ref: ${{ needs.source.outputs.commit }}
           path: build-two/b    # a second checkout at a different path and depth
       - name: build the CLI twice (portable flags, no -march=native)
         run: |
@@ -96,7 +107,7 @@ jobs:
           for d in a build-two/b; do
             (cd "$d" && make -j4 build/kolmo ARCH= CFLAGS="-O3 -ffile-prefix-map=$R/$d=.")
           done
-          ./a/build/kolmo -V
+          python3 a/tests/check_release_docs.py a/build/kolmo
           shasum -a 256 a/build/kolmo build-two/b/build/kolmo
           cmp a/build/kolmo build-two/b/build/kolmo
       - name: smoke test
@@ -137,28 +148,59 @@ jobs:
         with:
           name: release-${{ matrix.name }}
           path: dist/*
+          if-no-files-found: error
 
   publish:
-    # attaches the files to the tag's release (a draft if none exists yet); never runs on a manual run
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     needs: [source, cli]
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-assets-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.source.outputs.version }}
+      SOURCE_COMMIT: ${{ needs.source.outputs.commit }}
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          path: source
       - uses: actions/download-artifact@v4
         with:
           pattern: release-*
           path: dist
           merge-multiple: true
-      - name: checksums and upload
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+      - name: Require the complete expected archive set and compute checksums
         run: |
-          cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            gh release upload "$TAG" * --clobber --repo "$GITHUB_REPOSITORY"
-          else
-            gh release create "$TAG" * --draft --title "kolmo ${TAG#v}" --notes "Draft: artifacts from the release workflow." --repo "$GITHUB_REPOSITORY"
-          fi
+          cd dist
+          shopt -s nullglob dotglob
+          archives=(
+            "kolmo-$VERSION.tar.gz"
+            "kolmo-$VERSION-linux-x86_64.tar.gz"
+            "kolmo-$VERSION-linux-arm64.tar.gz"
+            "kolmo-$VERSION-macos-arm64.tar.gz"
+          )
+          entries=(*)
+          test "${#entries[@]}" -eq "${#archives[@]}"
+          for archive in "${archives[@]}"; do
+            test -f "$archive"
+            test ! -L "$archive"
+          done
+          sha256sum "${archives[@]}" > SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/SHA256SUMS
+      - name: Verify attestations and attach assets to the draft
+        run: |
+          for asset in dist/*; do
+            gh attestation verify "$asset" --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+              --source-ref "$GITHUB_REF" --source-digest "$SOURCE_COMMIT"
+          done
+          bash source/.github/scripts/stage-release.sh "$VERSION" "$SOURCE_COMMIT"
