@@ -339,6 +339,19 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
 - **SIGINT, SIGTERM and SIGHUP remove the staging file.** An interrupted `kolmo FILE` left a hidden `.kolmo-XXXXXX`
   file next to the output; it is now removed, as xz and gzip remove their partial output. A signal ignored at start
   (`nohup`) stays ignored.
+- **Levels 4-9 and ultra no longer hold the whole file in memory** (review40 #8). A regular file of 8 MiB or more is
+  compressed through the file path at every level, as levels 1-3 already were: blocks are read from the file and
+  written by offset. Before, these levels read the whole input and allocated an output buffer of the input's size.
+  The frames are byte-identical. Peak memory on silesia.tar at `-T 1`: level 4 527 -> 290 MiB, level 7 672 -> 486 MiB,
+  level 9 1,465 -> 1,276 MiB (`benchmark/review40/cli-bounded-memory.md`).
+- **`-t` and `-dc` no longer hold the decoded output** (review40 #104). `-t` decodes into `/dev/null`, and `-dc` (or
+  `-d` to standard output) writes the output in windows of whole blocks as it decodes them. Every frame is still
+  checked before anything is written. silesia.tar at `-1`, `-T 1`: `-t` 305 -> 14 MB, `-dc` 305 -> 37 MB; at `-4`:
+  `-t` 301 -> 70 MiB, `-dc` 301 -> 53 MiB; a 2.25 GB tar at `-4`, `-T 1`: `-t` 3,072 -> 381 MiB, `-dc` 3,072 -> 938 MiB.
+  A damaged block now stops `-dc` after the blocks before it were written, as with xz and zstd.
+- **macOS: files of 2 GiB or more now compress at levels 4-9 and ultra.** The in-memory path read the whole file with
+  one `read()`, which macOS refuses above 2 GiB ("Invalid argument"; Linux returns a short count, which was handled).
+  Reads and writes now go at most 1 GiB per call (`-c`, pipes and the library's positional I/O included).
 
 ### Integrations
 
