@@ -1,0 +1,41 @@
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/predict.c -o build/asan/src/algo/predict.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/arch/cpu.c -o build/asan/src/arch/cpu.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/planes.c -o build/asan/src/algo/planes.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/mixer.c -o build/asan/src/algo/mixer.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/video.c -o build/asan/src/algo/video.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/lzp.c -o build/asan/src/algo/lzp.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/qlfc.c -o build/asan/src/algo/qlfc.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/par.c -o build/asan/src/algo/par.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/sais/sais.c -o build/asan/src/algo/sais/sais.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/codecs/bwt_stream.c -o build/asan/src/codecs/bwt_stream.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/khuf.c -o build/asan/src/algo/khuf.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/krans.c -o build/asan/src/algo/krans.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/klz.c -o build/asan/src/algo/klz.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/klzma.c -o build/asan/src/algo/klzma.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/algo/khash.c -o build/asan/src/algo/khash.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/arch/aarch64/gear_aarch64.S -o build/asan/src/arch/aarch64/gear_aarch64.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc -c src/arch/aarch64/hist_aarch64.S -o build/asan/src/arch/aarch64/hist_aarch64.o
+ar rcs build/libkolmoarch-asan.a build/asan/src/arch/cpu.o build/asan/src/algo/predict.o build/asan/src/algo/planes.o build/asan/src/algo/mixer.o build/asan/src/algo/video.o build/asan/src/algo/lzp.o build/asan/src/algo/qlfc.o build/asan/src/algo/par.o build/asan/src/algo/sais/sais.o build/asan/src/codecs/bwt_stream.o build/asan/src/algo/khuf.o build/asan/src/algo/krans.o build/asan/src/algo/klz.o build/asan/src/algo/klzma.o build/asan/src/algo/khash.o build/asan/src/arch/aarch64/gear_aarch64.o build/asan/src/arch/aarch64/hist_aarch64.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -ffp-contract=off -DKOLMO_FASTQ_RECORD_BLOCKS -Isrc tests/test_fqfam.c build/libkolmoarch-asan.a -o build/test-fqfam-asan -Wl,-dead_strip -lpthread -lm
+In file included from tests/test_fqfam.c:5:
+In file included from tests/../src/kolmo.c:83:
+tests/../src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/test_fqfam.c:5:
+In file included from tests/../src/kolmo.c:88:
+tests/../src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+tests/../src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+tests/../src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+2 warnings generated.
+./build/test-fqfam-asan
+ultra: 704880 -> 111463 bytes, codec 16, version 10
+damaged copies that decoded to other bytes (caught by the container checksum): 53
+FQFAM TESTS PASSED

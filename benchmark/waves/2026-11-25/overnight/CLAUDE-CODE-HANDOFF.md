@@ -2,18 +2,18 @@
 
 ## Start here
 
-Use engineering branch `codex/ppp-final-bindings-sync-20261125` at **`258ca7b60db43cfdfba308c703b2e576cb628fa1`** as the starting point for new experiments. Its ancestors include pinned main `a1d39559686a9ec17c8614b9154a64d7b5b98672`, the integrated changes through #106, the optional Ultra record-boundary change in #107 and the corrected C-only build in #108. The final commit synchronizes the Python and Rust copies of the native source. The evidence is on a separate branch, under the same directory as this handoff. [Integration source](https://github.com/adnaneben/kolmo/tree/258ca7b60db43cfdfba308c703b2e576cb628fa1) · [Engineering results](README.md) · [Open gate register](audit/current-gates.csv)
+For a new worktree, use `codex/ppp-fastq-repetition-guard-20261125` at **`516e1dca02ac8165ed91ef5068af84e44335a109`** ([draft #110](https://github.com/adnaneben/kolmo/pull/110)). It contains pinned main `a1d39559686a9ec17c8614b9154a64d7b5b98672`, the integration through #106, the optional Ultra path (#107), the corrected C-only build (#108), the synchronized native sources in Python and Rust (#109), and the tested repetitive-input fallback (#110). If Claude has already begun on the previously supplied #109 commit `258ca7b60db43cfdfba308c703b2e576cb628fa1`, keep that worktree. Both Claude assignments are independent of the #110 change. The evidence resides on a separate branch under the same directory as this brief. [Engineering results](README.md) · [Open gate register](audit/current-gates.csv)
 
 The user's main checkout may already contain Claude's own branch and untracked work. Use the original checkout for inspection and create a separate worktree for each task. If a matching Claude patch already exists, review and transfer that delta rather than writing it again. A fresh start for the planner task is:
 
 ```sh
-git fetch origin refs/heads/codex/ppp-final-bindings-sync-20261125
+git fetch origin refs/heads/codex/ppp-fastq-repetition-guard-20261125
 git rev-parse FETCH_HEAD
-# Expected 258ca7b60db43cfdfba308c703b2e576cb628fa1
-git worktree add -b claude/planner-lifetime-followup ../kolmo-claude-planner 258ca7b60db43cfdfba308c703b2e576cb628fa1
+# Expected 516e1dca02ac8165ed91ef5068af84e44335a109
+git worktree add -b claude/planner-lifetime-followup ../kolmo-claude-planner 516e1dca02ac8165ed91ef5068af84e44335a109
 ```
 
-**Codex retains the optional record-block follow-up.** A public binding consumer on #109 found that one highly repetitive 8,437,837-byte fixture grew from 29,050 B to 1,851,143 B when the Ultra experiment was enabled. Default output was unchanged. Claude's planner and neural-model tasks can start from the pinned base above while Codex handles this separate regression. [Binding verification](bindings-sync/README.md) · [Final integration draft #109](https://github.com/adnaneben/kolmo/pull/109)
+**Codex owns the optional record-block follow-up.** The final stack includes a fix for a 63.7× size regression under a 256 MiB cap: the repetitive input now produces the identical 29,050-byte stock frame, and both favorable source windows kept their smaller frames. The optional route still has a measured 2.55% size penalty on an unrelated varied-width control. [Integration #109](https://github.com/adnaneben/kolmo/pull/109) · [Tested follow-up #110 at 516e1dca](https://github.com/adnaneben/kolmo/pull/110) · [Final guard evidence](fastq/guard/README.md)
 
 ## 1. Fix the outstanding planner lifetime warning
 

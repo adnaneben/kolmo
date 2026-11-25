@@ -1,0 +1,38 @@
+[
+  {
+    "name": "repeated-fields",
+    "setting": "unset",
+    "bytes": 1114365,
+    "input_sha256": "67a930c0602123af34778af3d5c730895649b7fd5cfc6fae861ca4bc38e359a2",
+    "stored_bytes": 1021,
+    "frame_sha256": "214f95b0d4819feb9a0418789215a2d799110fca46d98dcd8cc5037cc59a8bf3",
+    "stock_read": "exact"
+  },
+  {
+    "name": "repeated-fields",
+    "setting": "1",
+    "bytes": 1114365,
+    "input_sha256": "67a930c0602123af34778af3d5c730895649b7fd5cfc6fae861ca4bc38e359a2",
+    "stored_bytes": 6561,
+    "frame_sha256": "269aa721f38dcd9bcbb27701d4fc0f74c34e96353200630f6719d4b07b539ad4",
+    "stock_read": "exact"
+  },
+  {
+    "name": "near-duplicate-fields",
+    "setting": "unset",
+    "bytes": 1114365,
+    "input_sha256": "25b688393630f0b62a72bc6472ad21bc9fc9c7f28c4f9e8adab689834655b6db",
+    "stored_bytes": 1233,
+    "frame_sha256": "543426b9b73aa56446836ad6c9e4701c7c17733ed609bb10543df256d6f2c839",
+    "stock_read": "exact"
+  },
+  {
+    "name": "near-duplicate-fields",
+    "setting": "1",
+    "bytes": 1114365,
+    "input_sha256": "25b688393630f0b62a72bc6472ad21bc9fc9c7f28c4f9e8adab689834655b6db",
+    "stored_bytes": 14997,
+    "frame_sha256": "80c978a7d2a1d1c798f7c0d655ce7429a64f1f2da563a24316ef0e2b99464bf9",
+    "stock_read": "exact"
+  }
+]

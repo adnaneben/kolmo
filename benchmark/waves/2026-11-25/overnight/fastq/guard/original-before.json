@@ -1,0 +1,23 @@
+[
+  {
+    "setting": "unset",
+    "bytes": 29050,
+    "frame_sha256": "ca1d1847c171c12b0cc180d9815900335f73adf50d0afb37d92c3c4193057da8",
+    "wall_ns": 7777847583,
+    "input_sha256": "96e96a791aa0d9b5e267d6847f45abd92ab82ff2010af8edfea9d69ac4803351"
+  },
+  {
+    "setting": "zero",
+    "bytes": 1851143,
+    "frame_sha256": "9da97e1bcb76ee3b1dad4bb9a8800730850bb7d165f671fde4fad9b86d5f2074",
+    "wall_ns": 1716488750,
+    "input_sha256": "96e96a791aa0d9b5e267d6847f45abd92ab82ff2010af8edfea9d69ac4803351"
+  },
+  {
+    "setting": "one",
+    "bytes": 1851143,
+    "frame_sha256": "9da97e1bcb76ee3b1dad4bb9a8800730850bb7d165f671fde4fad9b86d5f2074",
+    "wall_ns": 1785790792,
+    "input_sha256": "96e96a791aa0d9b5e267d6847f45abd92ab82ff2010af8edfea9d69ac4803351"
+  }
+]

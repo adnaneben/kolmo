@@ -1,0 +1,15 @@
+{
+  "source_commit": "516e1dca02ac8165ed91ef5068af84e44335a109",
+  "base_commit": "258ca7b60db43cfdfba308c703b2e576cb628fa1",
+  "encoder_flags": "make DEFS=-DKOLMO_FASTQ_RECORD_BLOCKS build/kolmo",
+  "sha256": {
+    "guarded_executable": "e3a84d231f21e67437b2f72b0964255489c01b92b09dc66ef1234895f3b52983",
+    "stock_reader": "c40c238ab3e023364b7b14c6fa9c3fae3e06e7dda91bb9d9a2cf1586554bacc7",
+    "original_input": "96e96a791aa0d9b5e267d6847f45abd92ab82ff2010af8edfea9d69ac4803351"
+  },
+  "source_mirror_sha256": {
+    "src/core/compress.c": "9df896b5aefa3f08533c226368820948f39280d7324c7281eeb0e782b3e4a5e3",
+    "src/core/blocks.c": "766f3deb92c6d8c5732ab357256dbc10ba9e54c81fa33c326a6b097a61d82d96"
+  },
+  "original_input_generator": "../../bindings-sync/input.py"
+}
