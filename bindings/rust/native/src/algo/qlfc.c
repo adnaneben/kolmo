@@ -87,10 +87,15 @@ static uint8_t *qlfc_transform(const uint8_t *input, uint8_t *buffer, int n, uin
 
 /* ---- MTF table header, shared by both models ---- */
 
-static int qlfc_encode_header(kolmo_rc *coder, const uint8_t *MTFTable) {
+static int qlfc_encode_header(kolmo_rc *coder, uint32_t inputSize, const uint8_t *MTFTable) {
+    if (rc_check_eob(coder)) return KB_NOT_COMPRESSIBLE;
+    rc_encode_word(coder, inputSize);
     uint8_t usedChar[256]; memset(usedChar, 0, sizeof(usedChar));
     int prevChar = -1, maxRank = 7;
     for (int rank = 0; rank < 256; ++rank) {
+        /* The check reserves 16 bytes. A rank contributes at most eight flat bits, with at most two
+           extra pending bytes per bit. Deferred output is already included in the checked position. */
+        if (rc_check_eob(coder)) return KB_NOT_COMPRESSIBLE;
         int currentChar = MTFTable[rank];
         for (int bit = 7; bit >= 0; --bit) {
             int bit0 = 0, bit1 = 0;
@@ -150,8 +155,8 @@ static int qlfc_static_encode(const uint8_t *input, uint8_t *output, uint8_t *bu
     uint8_t rankHistory[256], runHistory[256]; memset(rankHistory, 0, 256); memset(runHistory, 0, 256);
     const uint8_t *rankArray = qlfc_transform(input, buffer, inputSize, MTFTable);
     kolmo_rc coder; rc_init_encoder(&coder, output, outputSize);
-    rc_encode_word(&coder, (uint32_t)inputSize);
-    const int maxRank = qlfc_encode_header(&coder, MTFTable);
+    const int maxRank = qlfc_encode_header(&coder, (uint32_t)inputSize, MTFTable);
+    if (maxRank < 0) return maxRank;
     const uint8_t *inputEnd = input + inputSize, *rankArrayEnd = buffer + inputSize;
     *lastCheck = LONG_MIN;
 
@@ -392,8 +397,8 @@ static int qlfc_adaptive_encode(const uint8_t *input, uint8_t *output, uint8_t *
     uint8_t rankHistory[256], runHistory[256]; memset(rankHistory, 0, 256); memset(runHistory, 0, 256);
     const uint8_t *rankArray = qlfc_transform(input, buffer, inputSize, MTFTable);
     kolmo_rc coder; rc_init_encoder(&coder, output, outputSize);
-    rc_encode_word(&coder, (uint32_t)inputSize);
-    const int maxRank = qlfc_encode_header(&coder, MTFTable);
+    const int maxRank = qlfc_encode_header(&coder, (uint32_t)inputSize, MTFTable);
+    if (maxRank < 0) return maxRank;
     const uint8_t *inputEnd = input + inputSize, *rankArrayEnd = buffer + inputSize;
     *lastCheck = LONG_MIN;
 
