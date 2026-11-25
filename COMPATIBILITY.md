@@ -10,6 +10,10 @@ it covers is specified in [FORMAT.md](FORMAT.md).
    holds:
    - for every level, every documented option, every platform and every thread count;
    - for files written by the CLI, the C library, the Python package (`kolmoc`) and the Rust crate (`kolmo`).
+
+   0.0.1 and 0.0.2 themselves fell short of this in one case: they wrote table blocks holding a field over 65,535
+   bytes and could not read them back (FORMAT.md 20.5). The data in those files is intact, and 0.0.3 and every later
+   release read them.
 2. **Identifiers keep their meaning.** No identifier of version 12 is ever given another meaning. That covers:
    - codec ids, plan types and tflags;
    - graph node ids, CM model nibbles, extension tags and checksum seeds.
@@ -17,7 +21,7 @@ it covers is specified in [FORMAT.md](FORMAT.md).
    A retired identifier stays retired.
 3. **New features cannot be misread by older releases.** A later release may add coders, transforms or fields. When
    it writes something a 0.0.2 decoder cannot read, the frame names it with an identifier that 0.0.2 refuses, or
-   with a new container version. An older release then stops with an error. It never returns wrong bytes, and it
+   with a new container version. (0.0.3 writes no such frame: see *0.0.3 and earlier releases* below.) An older release then stops with an error. It never returns wrong bytes, and it
    never silently skips data. Frames that use no new feature stay readable by older releases.
 4. **Reading version 12 is never removed.** Version 12 support is not dropped in any release, 1.0 and later included.
    If a future format ever replaces it, releases keep decoding version 12.
@@ -44,7 +48,7 @@ it covers is specified in [FORMAT.md](FORMAT.md).
 
 ## How the promise is checked
 
-- **`tests/v12/` is the frozen corpus.** It holds 358 frames with their originals, and frames are added to it, never
+- **`tests/v12/` is the frozen corpus.** It holds 632 frames with their originals, and frames are added to it, never
   rewritten:
   - the top level: 84 frames in the six modes of 0.0.1;
   - `r0.0.2/`: 274 frames written by the 0.0.2 release binary. These cover every level 1 to 9 and ultra, the options
@@ -55,8 +59,11 @@ it covers is specified in [FORMAT.md](FORMAT.md).
       three-channel kimg images;
     - six for the table transform's numeric modes, formulas, group column and short rows, and six queryable archives
       (`kolmo --index`) with column-split tables (tflag 13);
-    - two (`longfield.csv.*`) that 0.0.2 writes but cannot read itself. Releases from the fix on (CHANGELOG,
-      Unreleased) read them, and the corpus tests check that they do.
+    - two (`longfield.csv.*`) that 0.0.2 writes but cannot read itself. 0.0.3 and later read them (CHANGELOG,
+      0.0.3), and the corpus tests check that they do.
+  - `r0.0.3/`: 274 frames written by the 0.0.3 release binary from the same 42 inputs with the same options, so the
+    two directories pair frame for frame. 185 of them are byte-identical to 0.0.2's; the others come from the encoder
+    changes of 0.0.3 (CHANGELOG). The two `longfield.csv.*` frames no longer hold a table block.
   - **Not in the corpus:** table v1 (tflag 3), which no release writes (FORMAT.md 20.9 has test vectors instead),
     and the read-only codecs 5 and 29. The promise covers them all the same.
 - **Four tests run in CI on Linux x86-64, Linux ARM64 and macOS, on every push and pull request** (all part of `make check`):
@@ -72,6 +79,45 @@ it covers is specified in [FORMAT.md](FORMAT.md).
     check-cm-reference` decodes them whole).
 - **Fuzzing and hardening tests** (`test-decoder-hardening`, `test-harden`) check that damaged input is refused.
 
+## 0.0.3 and earlier releases
+
+Checked on 2026-11-25 with the binaries built from the tags `v0.0.1` and `v0.0.2` and the 0.0.3 release binary.
+
+**What 0.0.3 writes that 0.0.2 refuses:**
+
+- **Frames: nothing.** 0.0.3 uses no codec id, plan type, tflag, node id or extension tag that 0.0.2 does not read,
+  and no new container version. The 0.0.2 and the 0.0.1 command lines decode all 274 frames of `tests/v12/r0.0.3/`
+  to their originals, the queryable archives and the `--stream` file included.
+- **One case in the bindings: a pipe over 256 MiB.** The 0.0.3 command line writes such a pipe as a `CZNS` stream of
+  256 MiB segments (0.0.2 wrote one frame). The format is that of `--stream`, which 0.0.1 and 0.0.2 already wrote.
+  - The 0.0.1 and 0.0.2 command lines and `kolmo_stream_decompress` read it (checked on a 300 MiB pipe).
+  - The 0.0.1 and 0.0.2 **Python and Rust bindings refuse every `CZNS` stream** with "corrupt or unsupported
+    input", as they refuse their own release's `--stream` output. They return an error, never wrong bytes. The
+    0.0.3 bindings read streams.
+  - To write one frame from a pipe, compress a file instead, or keep the pipe under 256 MiB.
+
+**What 0.0.3 no longer writes:** table blocks with a field over 65,535 bytes. Such a block is coded without the table
+transform, so 0.0.1 and 0.0.2 read every table 0.0.3 writes.
+
+**What 0.0.2 accepted and 0.0.3 refuses.** No release ever wrote any of these, so no file written by Kolmo is
+affected (CHANGELOG, 0.0.3):
+
+- a context-mixing graph leaf in a frame whose header mode is not ultra (FORMAT.md 7.4);
+- a stored block whose plan is not `0,0,0,0` or whose tflag is not 0 (FORMAT.md 7.1);
+- codecs 14 and 27 as block codecs (FORMAT.md 8.1);
+- an audio stream (codec 19) whose chunk is over 2^18 sample frames (SPEC.md, *Audio blocks*);
+- bytes after a member that start no member (FORMAT.md 10.1); 0.0.2 ignored them after a stream;
+- a frame over the memory limit because of a nested video frame, which 0.0.2 admitted;
+- in `kolmo_query_run`, `kolmo_index_info` and the archive calls: a header the decoder itself refuses.
+
+**What the 0.0.3 command line refuses on purpose:** `kolmo -d`, `-t`, `-l` and `--range` on a `kolmo archive` file
+(use `kolmo extract`). The C library still decodes that frame, as every version-12 reader does.
+
+**Files of several members** (FORMAT.md 10.1). 0.0.3 never writes one by itself: they come from appending outputs
+(`cat a.kolmo b.kolmo`, `kolmo >> file`). 0.0.3 decodes every member. **0.0.2 and 0.0.1 stop after the first `CZNS`
+stream and exit 0, without the rest of the data**, and refuse a frame followed by a stream. Read such files with
+0.0.3.
+
 ## Rules for changing the format
 
 1. **A new identifier is claimed in FORMAT.md first** (codec id, plan type, tflag, node id, model nibble or extension
@@ -83,6 +129,7 @@ it covers is specified in [FORMAT.md](FORMAT.md).
    coder's decoder, even one that leaves the frozen corpus passing. If a decoder has a bug that returns wrong bytes,
    the fix restores the bytes the original was compressed from, and the change log says so.
 4. **Each release adds its frames to the corpus.** Releasing (RELEASING.md) runs `tests/make_v12_frames.py` with the
-   release binary, which adds `tests/v12/r<version>/`. Existing frames are never regenerated.
+   release binary, which adds `tests/v12/r<version>/` and its lines at the end of `tests/v12/MANIFEST`;
+   `tests/check_v12_pinned.py --write` then pins the new files. Existing frames are never regenerated.
 5. **A new container version is the last resort.** It is used only when a change cannot be expressed as a refused
    identifier. Releases keep reading version 12.

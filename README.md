@@ -30,6 +30,9 @@ rival is the one closest in compress speed.
 | `-9` max | 3.22 | 8.0 / 40.7 | xz -9 | 2.77 | 3.7 / 84.8 | **-14.1%** |
 | `-U` ultra | 3.39 | 1.4 / 1.4 | — | | | |
 
+These figures were measured on 0.0.2 (2026-11-22/23) and have not been measured again on 0.0.3, whose encoder writes
+different sizes at several levels (`CHANGELOG.md`, 0.0.3).
+
 The rivals are their command-line tools (lz4, zstd, bzip3, xz) on the same machine and files. In short: at every level
 but 5, kolmo is 9.8-17.3% smaller than the rival of its speed class, and compresses 0.8-2.2x as fast as that rival.
 Level 5 matches bzip3's ratio and decompresses 34x faster. Levels 1-7 decompress at 670-1971 MiB/s; levels 8 and 9
@@ -61,7 +64,7 @@ All prediction that must agree between encoder and decoder is integer or plain I
 
 One scale, each level smaller and slower than the one before (levels 8-9 decompress about 10x more slowly) (the full contract is `docs/LEVELS.md`):
 
-| Level | Name | Letter | Long option | What it is for | 0.0.2 engine |
+| Level | Name | Letter | Long option | What it is for | 0.0.3 engine |
 |---|---|---|---|---|---|
 | `-1` | fastest | `-F` | `--fastest` | data that is read or sent right away | KLZ, minimal analysis |
 | `-2` | | | | | fast KLZH2 parse, minimal analysis |
@@ -70,7 +73,7 @@ One scale, each level smaller and slower than the one before (levels 8-9 decompr
 | `-5` | balanced | `-B` | `--balanced` | lowest storage cost at moderate CPU | KLZH2 7 |
 | `-6` | | | | | KLZH2 8 |
 | `-7` | compact | `-C` | `--compact` | archives with fast reads | KLZH2 9 |
-| `-8` | | | | | block sorting (BWT) for every block |
+| `-8` | | | | | BWT for text, JSON and logs; KLZMA 1 or BWT otherwise, in 32 MiB blocks |
 | `-9` | max | `-X` | `--max` | the smallest output that still decompresses at practical speed | BWT for text; KLZMA or BWT otherwise |
 | `-U` | ultra | | `--ultra` | coldest archives: about as slow to decompress as to compress, ~1 GB+ of memory | context mixing |
 
@@ -272,11 +275,15 @@ so `tar -I kolmo` of a large tree runs in bounded memory.
 
 ## Status
 
-0.0.2, the second release of the renumbered line: the level model and the new command line (`docs/LEVELS.md`,
-`CHANGELOG.md`), decoder hardening and threaded match finders. The frame format is unchanged from 0.0.1 (container
-version 12). The 1.x line (1.0.0 and 1.0.1, now yanked) used library coders (zstd, Brotli, LZ4, liblzma); 0.0.x
+0.0.3, the third release of the renumbered line. It fixes a data-loss bug of 0.0.1 and 0.0.2: they wrote tables with
+a field over 64 KiB (a CSV cell, or a log line that long) that they could not read back. The data in those files is
+intact and 0.0.3 reads them, so upgrade and test older files with `kolmo -t` (`CHANGELOG.md`). It also hardens the
+decoder, the bindings and `kolmo extract`, and changes the output size on many inputs. The frame format is unchanged
+from 0.0.1 (container version 12): 0.0.1 and 0.0.2 read every frame 0.0.3 writes.
+
+The 1.x line (1.0.0 and 1.0.1, now yanked) used library coders (zstd, Brotli, LZ4, liblzma); 0.0.x
 uses only Kolmo's own and writes container version 12, specified in `FORMAT.md`. **Every later release reads what
-0.0.1 and later write** (`COMPATIBILITY.md`, checked in CI against a frozen corpus of 358 frames). Output is
+0.0.1 and later write** (`COMPATIBILITY.md`, checked in CI against a frozen corpus of 632 frames). Output is
 byte-identical across x86-64 and Apple silicon. The decoder is fuzzed (harnesses in `fuzz/`, run under ASan/UBSan in CI); corrupt input is reported, never
 returned as data. `RELEASING.md` describes how to cut a release.
 

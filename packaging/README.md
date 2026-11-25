@@ -1,11 +1,12 @@
 # Packaging
 
 Drafts for each distribution channel, so that each submission is a copy-paste at release time. Each draft targets the
-**0.0.2** tarball so it can be built and tested now. Nothing here has been submitted anywhere.
+**0.0.2** tarball so it can be built and tested now; they move to a new release once its tag and tarball exist
+(RELEASING.md). Nothing here has been submitted anywhere.
 
 | Folder | Channel | State |
 |---|---|---|
-| `homebrew/` | Homebrew tap `adnaneben/kolmo` | **live** (published with 0.0.2) |
+| `homebrew/` | Homebrew tap `adnaneben/kolmo` | **live** (0.0.2 published; the file here names 0.0.3, its sha256 is set after the tag) |
 | `conda-forge/kolmo/` | conda-forge: `libkolmo` + `kolmo` (one multi-output recipe) | draft; built and tested locally (osx-arm64) and in CI |
 | `conda-forge/kolmoc/` | conda-forge: `kolmoc` (Python binding) | draft; built and tested locally (osx-arm64) and in CI |
 | `debian/` | Debian (then Ubuntu by sync): `kolmo`, `libkolmo0`, `libkolmo-dev` | draft; built and tested in CI; ITP text in `debian/ITP.txt` |

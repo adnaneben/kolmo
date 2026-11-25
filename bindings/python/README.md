@@ -24,6 +24,13 @@ another, and `kolmo --stream` output (also what the CLI writes for pipes over 25
 frame before it allocates the output, and the output holds only the pages actually decoded; for untrusted input pass
 `max_output_size` (bytes), since a valid frame can claim well over 100,000 times its own size. Apache-2.0.
 
+**New in 0.0.3: a data-loss fix.** Earlier 0.0.x releases could write a file that they could not read back: a
+table (CSV, TSV, or a space-separated log) with one field longer than 65,535 bytes, at levels 3 to 9. `compress`
+succeeded and `decompress` then raised "corrupt or unsupported input". The data in those files is intact. This
+release reads them, and it no longer writes such blocks, so the earlier releases read its output. If you compressed
+data with an earlier release, upgrade and run `decompress` on those files before you delete the originals. Details
+are in the [changelog](https://github.com/adnaneben/kolmo/blob/main/CHANGELOG.md).
+
 **Since 0.0.2:** `mode=` was replaced by `level=` (`speed` is now `1`, `balanced` `3`, `ratio` `9`,
 `ultra` `"ultra"`; `eco` `5`, `hc` `7`), and the dictionary calls (`train_dict`, `dict=`) were removed.
 

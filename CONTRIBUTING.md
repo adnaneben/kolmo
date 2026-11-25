@@ -91,7 +91,8 @@ users is [COMPATIBILITY.md](COMPATIBILITY.md). The short version, which every ch
    carry something a decoder needs.
 4. **Never edit or regenerate a frame in `tests/v12/`.** The corpus only grows: each release adds its frames.
    `tests/v12.sha256` pins every file there (`make check` and CI); a new release directory is added with
-   `python3 tests/check_v12_pinned.py --write`, which never changes an existing line.
+   `python3 tests/check_v12_pinned.py --write`, which never changes an existing line. `MANIFEST` is the one file
+   that grows: lines are added at its end only, and each release pins its new length.
 5. **A new container version is the last resort**, for a change that cannot be expressed as a refused identifier.
 
 The encoder is free to change: a later release may write different (usually smaller) bytes for the same input.

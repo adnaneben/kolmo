@@ -28,6 +28,13 @@ one copy of the C core). The build compiles the C core with the [`cc`](https://d
 cross builds work (`cargo build --target x86_64-apple-darwin` on Apple silicon; `CC_<target>`, `CFLAGS_<target>` and
 `AR_<target>` are honoured).
 
+**New in 0.0.3: a data-loss fix.** Earlier 0.0.x releases could write a blob that they could not read back: a
+table (CSV, TSV, or a space-separated log) with one field longer than 65,535 bytes, at levels 3 to 9. `compress`
+succeeded and `decompress` then failed with code -1 (`KOLMO_ERR_CORRUPT`, "corrupt or unsupported input"). The data in those blobs is
+intact. This release reads them, and it no longer writes such blocks, so the earlier releases read its output. If you
+compressed data with an earlier release, upgrade and run `decompress` on those blobs before you delete the
+originals. Details are in the [changelog](https://github.com/adnaneben/kolmo/blob/main/CHANGELOG.md).
+
 **Since 0.0.2:** `Mode` was replaced by `Level` (`Mode::SPEED` is now `Level::FASTEST`, `BALANCED` `Level::LIGHT`,
 `RATIO` `Level::MAX`; `Eco` level 5, `Hc` level 7, `Ultra` `Level::ULTRA`), and the dictionary functions were removed.
 

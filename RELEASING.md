@@ -20,7 +20,7 @@ environment, the crates.io owner, and the tap repo. The steps below are what eac
 
 ## 1. Bump the version
 
-Set the new version in all four places, then commit:
+Set the new version in all five places, then commit:
 
 - `VERSION`
 - `bindings/rust/Cargo.toml` (`version`)
@@ -53,8 +53,14 @@ them with the version bump. Existing frames are never regenerated.
 ```sh
 make -j4 ARCH= build/kolmo
 python3 tests/make_v12_frames.py --kolmo build/kolmo --release X.Y.Z    # adds tests/v12/rX.Y.Z/ and MANIFEST lines
+python3 tests/check_v12_pinned.py --write                                # pins the new files in tests/v12.sha256 (append-only)
+make check-cm-reference                                                  # decodes every context-mixing stream whole (20-40 minutes)
+python3 tests/cm_reference.py --write-prefixes tests/v12                 # adds the new frames' digests to tests/vectors/cm/prefixes.json
 make check                                                               # the corpus tests include the new frames
 ```
+
+The distribution drafts in `packaging/` (conda-forge, Debian, AUR, nixpkgs, homebrew-core) name a release tarball and
+its sha256, and CI builds them from that tarball. Bump them after the tag exists (`packaging/README.md`), not here.
 
 ## 2. Tag and create the GitHub release
 
