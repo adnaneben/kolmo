@@ -16,6 +16,7 @@
 
 #define DD_SEED 0x64647031u            /* chunk checks: low 32 bits of XXH3-64 with this seed */
 #define DD_LINE_REACH 4096
+#define DD_NAME_MAX 4096
 
 static uint64_t dd_gear[256];
 static uint64_t dd_split(uint64_t *s) { uint64_t z = (*s += 0x9E3779B97F4A7C15ull); z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull; z = (z ^ (z >> 27)) * 0x94D049BB133111EBull; return z ^ (z >> 31); }
@@ -116,6 +117,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     kx_uv(&recipes, nfiles);
     for (size_t f = 0; f < nfiles; f++) {
         const kolmo_archive_file *F = &files[f]; size_t nl = strlen(F->name);
+        if (nl > DD_NAME_MAX) { ret = KOLMO_ERR_LIMIT; goto done; }
         kx_uv(&recipes, nl); kx_bytes(&recipes, F->name, nl);
         kx_uv(&recipes, F->size); kx_uv(&recipes, F->mode); kx_uv(&recipes, dd_zz(F->mtime));
         int text = dd_text(F->data, F->size);
@@ -207,7 +209,7 @@ static int dd_open(const uint8_t *s, size_t n, dd_arc *A) {
 typedef struct { const uint8_t *name; size_t nl; uint64_t size, mode, nref; int64_t mtime; size_t refs; } dd_entry;
 static int dd_next(const dd_arc *A, size_t *i, dd_entry *e) {
     const uint8_t *t = A->tab; size_t n = A->tn; uint64_t v;
-    if (kx_getuv(t, n, i, &v) || v > n - *i || v > 4096) return -1;
+    if (kx_getuv(t, n, i, &v) || v > n - *i || v > DD_NAME_MAX) return -1;
     e->name = t + *i; e->nl = (size_t)v; *i += (size_t)v;
     if (memchr(e->name, 0, e->nl)) return -1;
     if (kx_getuv(t, n, i, &e->size) || kx_getuv(t, n, i, &e->mode) || e->mode > 0xFFFFFFFFu || kx_getuv(t, n, i, &v)) return -1;
@@ -314,7 +316,7 @@ int64_t kolmo__archive_walk(const uint8_t *src, size_t n, kolmo__archive_visit_f
     for (uint64_t f = 0; f < A.nfiles; f++) {
         dd_entry e;
         if (dd_next(&A, &i, &e)) { ret = KOLMO_ERR_CORRUPT; break; }
-        char name[4097]; memcpy(name, e.name, e.nl); name[e.nl] = 0;
+        char name[DD_NAME_MAX + 1]; memcpy(name, e.name, e.nl); name[e.nl] = 0;
         r = visit(ctx, name, e.size, (uint32_t)e.mode, e.mtime);
         if (r < 0) { ret = r; break; }
         if (!r || !extract) continue;
@@ -357,7 +359,7 @@ int64_t kolmo_archive_extract_all(const uint8_t *src, size_t n, kolmo_archive_fn
                 data = file;
             }
         }
-        char name[4097]; memcpy(name, e.name, e.nl); name[e.nl] = 0;
+        char name[DD_NAME_MAX + 1]; memcpy(name, e.name, e.nl); name[e.nl] = 0;
         if (fn && fn(ctx, name, data, e.size, (uint32_t)e.mode, e.mtime)) { ret = KOLMO_ERR_IO; goto done; }
     }
     ret = (int64_t)A.nfiles;
