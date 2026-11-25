@@ -29,8 +29,38 @@ static inline int is_var_tok(const uint8_t *p, uint32_t len) {     /* holds a di
 }
 static uint64_t fnv1a(const uint8_t *p, size_t n) { uint64_t h = 1469598103934665603ull; for (size_t i = 0; i < n; i++) { h ^= p[i]; h *= 1099511628211ull; } return h; }
 
+typedef struct { uint8_t *p; size_t n, cap, limit; } log_buf_t;
+
+static uint8_t *log_reserve(log_buf_t *out, size_t len) {
+    if (len > out->limit - out->n) return NULL;
+    size_t end = out->n + len;
+    if (end > out->cap) {
+        size_t cap = end > out->limit / 2 ? out->limit : 2 * end;
+        if (cap < 4096) cap = out->limit < 4096 ? out->limit : 4096;
+        uint8_t *p = realloc(out->p, cap);
+        if (!p) return NULL;
+        out->p = p;
+        out->cap = cap;
+    }
+    uint8_t *p = out->p + out->n;
+    out->n = end;
+    return p;
+}
+
+static int log_append(log_buf_t *out, const void *src, size_t len) {
+    if (!len) return 0;
+    uint8_t *p = log_reserve(out, len);
+    if (!p) return -1;
+    memcpy(p, src, len);
+    return 0;
+}
+
+static void *log_alloc(size_t count, size_t width) {
+    return count > SIZE_MAX / width ? NULL : malloc(count * width);
+}
+
 /* integer column: mode 0 raw / 1 delta (by cost), zigzag, byte planes */
-static void put_ints(Buf *out, const int64_t *v, uint32_t m) {
+static int put_ints(log_buf_t *out, const int64_t *v, uint32_t m) {
     uint64_t c0 = 0, c1 = 0, mx0 = 0, mx1 = 0; int64_t prev = 0;
     for (uint32_t i = 0; i < m; i++) {
         uint64_t a = zzg(v[i]), b = zzg((int64_t)((uint64_t)v[i] - (uint64_t)prev)); prev = v[i];
@@ -38,14 +68,17 @@ static void put_ints(Buf *out, const int64_t *v, uint32_t m) {
     }
     int mode = c1 < c0; uint64_t mx = mode ? mx1 : mx0;
     int w = 1; while (w < 8 && (mx >> (8 * w))) w++;
-    uint8_t hd[2] = {(uint8_t)mode, (uint8_t)w}; bput(out, hd, 2);
-    if (out->n + (size_t)m * w > out->cap) { out->cap = (out->n + (size_t)m * w) * 2 + 64; out->p = realloc(out->p, out->cap); }
-    uint8_t *o = out->p + out->n; prev = 0;
+    if (m > (SIZE_MAX - 2) / (size_t)w) return -1;
+    uint8_t *o = log_reserve(out, 2 + (size_t)m * w);
+    if (!o) return -1;
+    *o++ = (uint8_t)mode;
+    *o++ = (uint8_t)w;
+    prev = 0;
     for (uint32_t i = 0; i < m; i++) {
         uint64_t z = mode ? zzg((int64_t)((uint64_t)v[i] - (uint64_t)prev)) : zzg(v[i]); prev = v[i];
         for (int b = 0; b < w; b++) o[(size_t)b * m + i] = (uint8_t)(z >> (8 * b));
     }
-    out->n += (size_t)m * w;
+    return 0;
 }
 static int get_ints(const uint8_t **pp, const uint8_t *end, uint32_t m, int64_t *v) {
     const uint8_t *p = *pp;
@@ -78,14 +111,14 @@ static int skel_parse(const uint8_t *p, uint32_t len, uint32_t *ps, uint32_t *pl
     }
 }
 
-static void put_column(Buf *out, const tok_t *tk, uint32_t m, int64_t *scratch) {
+static int put_column(log_buf_t *out, const tok_t *tk, uint32_t m, int64_t *scratch) {
     uint32_t ps0[LOG_MAXRUN + 1], pl0[LOG_MAXRUN + 1], rs0[LOG_MAXRUN], rl0[LOG_MAXRUN];
     uint32_t ps[LOG_MAXRUN + 1], pl[LOG_MAXRUN + 1], rs[LOG_MAXRUN], rl[LOG_MAXRUN];
     int g = skel_parse(tk[0].p, tk[0].len, ps0, pl0, rs0, rl0), ok = g >= 1;
     for (int j = 0; ok && j <= g; j++) ok = pl0[j] <= 255;
     uint8_t fixed[LOG_MAXRUN], lz[LOG_MAXRUN];
     for (int r = 0; ok && r < g; r++) { fixed[r] = 1; lz[r] = 0; ok = rl0[r] <= 18; }
-    uint32_t *RS = ok ? malloc(sizeof(uint32_t) * 2 * (size_t)m * (g > 0 ? g : 1)) : NULL;    /* run starts and lengths per value */
+    uint32_t *RS = ok ? log_alloc(m, sizeof(uint32_t) * 2 * (size_t)g) : NULL;    /* run starts and lengths per value */
     if (ok && !RS) ok = 0;
     for (uint32_t i = 0; ok && i < m; i++) {
         const uint8_t *p = tk[i].p;
@@ -101,23 +134,43 @@ static void put_column(Buf *out, const tok_t *tk, uint32_t m, int64_t *scratch) 
     for (int r = 0; ok && r < g; r++) if (!fixed[r] && lz[r]) ok = 0;   /* varying width with leading zeros: text */
     if (!ok) {
         free(RS);
-        uint8_t t = 0; uint32_t size = 0; for (uint32_t i = 0; i < m; i++) size += tk[i].len + 1;
-        bput(out, &t, 1); bput(out, &size, 4);
-        for (uint32_t i = 0; i < m; i++) { bput(out, tk[i].p, tk[i].len); uint8_t nl = '\n'; bput(out, &nl, 1); }
-        return;
+        uint64_t length = 0;
+        for (uint32_t i = 0; i < m; i++) length += (uint64_t)tk[i].len + 1;
+        if (length > UINT32_MAX || length > SIZE_MAX - 5) return -1;
+        uint8_t *p = log_reserve(out, 5 + (size_t)length);
+        if (!p) return -1;
+        uint32_t size = (uint32_t)length;
+        *p++ = 0;
+        memcpy(p, &size, 4);
+        p += 4;
+        for (uint32_t i = 0; i < m; i++) {
+            memcpy(p, tk[i].p, tk[i].len);
+            p += tk[i].len;
+            *p++ = '\n';
+        }
+        return 0;
     }
-    uint8_t t = 1, gg = (uint8_t)g; bput(out, &t, 1); bput(out, &gg, 1);
-    for (int j = 0; j <= g; j++) { uint8_t L = (uint8_t)pl0[j]; bput(out, &L, 1); bput(out, tk[0].p + ps0[j], L); }
+    int ret = -1;
+    uint8_t header[2] = {1, (uint8_t)g};
+    if (log_append(out, header, 2)) goto done;
+    for (int j = 0; j <= g; j++) {
+        uint8_t len = (uint8_t)pl0[j];
+        if (log_append(out, &len, 1) || log_append(out, tk[0].p + ps0[j], len)) goto done;
+    }
     for (int r = 0; r < g; r++) {
-        uint8_t pad = fixed[r] ? (uint8_t)rl0[r] : 0; bput(out, &pad, 1);
+        uint8_t pad = fixed[r] ? (uint8_t)rl0[r] : 0;
+        if (log_append(out, &pad, 1)) goto done;
         for (uint32_t i = 0; i < m; i++) {
             uint32_t a = RS[2 * ((size_t)i * g + r)], b = RS[2 * ((size_t)i * g + r) + 1];
             int64_t v = 0; for (uint32_t q = 0; q < b; q++) v = v * 10 + (tk[i].p[a + q] - '0');
             scratch[i] = v;
         }
-        put_ints(out, scratch, m);
+        if (put_ints(out, scratch, m)) goto done;
     }
+    ret = 0;
+done:
     free(RS);
+    return ret;
 }
 
 typedef struct { uint64_t h; uint32_t koff, klen, cnt, id; } tent_t;
@@ -180,28 +233,31 @@ static int json_next_value(const uint8_t *p, uint32_t i, uint32_t len, uint32_t 
 /* jm = 0: tokens are space-separated words, those with a digit are variable (logs). jm = 1: JSON lines; every scalar
  * value is variable and the keys, punctuation and spacing are the template. Same output format either way. */
 static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t cap, int jm) {
-    if (n < 4096) return -1;
+    if (n < 4096 || n > UINT32_MAX || cap <= 64) return -1;
     const uint32_t sep = jm ? 0 : 1;                    /* bytes between tokens */
     size_t nl = n; while (nl > 0 && in[nl - 1] != '\n') nl--;
     if (nl == 0) return -1;
     size_t L = 0; for (const uint8_t *q = in; (q = memchr(q, '\n', nl - (size_t)(q - in))); q++) L++;
-    if (L < 64) return -1;
+    if (L < 64 || L > UINT32_MAX - nl || nl + L > SIZE_MAX - 16) return -1;
     int64_t ret = -1;
-    uint32_t *lstart = malloc(4 * (L + 1)), *tstart = NULL, *lid = malloc(4 * L);
-    uint8_t *keys = malloc(nl + L + 16);
+    size_t span = nl + L;
+    uint32_t *lstart = log_alloc(L + 1, 4), *lid = log_alloc(L, 4);
+    uint8_t *keys = malloc(span + 16);
     size_t tcap = 4096;                                 /* templates are few: the table starts small and doubles when half full */
-    tent_t *tab = calloc(tcap, sizeof(tent_t)); uint32_t *order = malloc(4 * (L + 1)); uint32_t nt = 0; size_t kp = 0;
-    tok_t *tk = NULL, *tkg = NULL; size_t tkg_cap = 0; int64_t *scratch = NULL; uint32_t *rows = NULL, *rstart = NULL, *remap = NULL;
-    uint32_t *tokb = malloc(4 * (L + 1)), *toks = malloc(4 * (nl + L + 2));    /* per line: first token; token starts */
+    tent_t *tab = calloc(tcap, sizeof(tent_t)); uint32_t *order = log_alloc(L + 1, 4); uint32_t nt = 0; size_t kp = 0;
+    tok_t *tk = NULL, *tkg = NULL; size_t tkg_cap = 0; int64_t *scratch = NULL;
+    uint32_t *rows = NULL, *rstart = NULL, *remap = NULL, *vpos = NULL, *k2off = NULL, *k2len = NULL;
+    uint8_t *keys2 = NULL, *keep = NULL;
+    uint32_t *tokb = log_alloc(L + 1, 4), *toks = log_alloc(span + 2, 4);    /* per line: first token; token starts */
     /* constant placeholders are found in this first pass, while each line is in cache: per token, whether it is
      * variable; per template, its first line, the offset of its flags (one per placeholder: identical on every line
      * so far) and how many flags are still set. Same decisions as comparing every row with the first one afterwards. */
-    uint8_t *tvar = malloc(nl + L + 2), *tfl = malloc(nl + L + 2); size_t fp = 0;
-    uint32_t *tl0 = malloc(4 * (L + 1)), *tfo = malloc(4 * (L + 1)), *tsc = malloc(4 * (L + 1));
-    Buf out = {0};
+    uint8_t *tvar = malloc(span + 2), *tfl = malloc(span + 2); size_t fp = 0;
+    uint32_t *tl0 = log_alloc(L + 1, 4), *tfo = log_alloc(L + 1, 4), *tsc = log_alloc(L + 1, 4);
+    log_buf_t out = {.limit = cap - 64 < n ? cap - 64 : n - 1};
     if (!lstart || !lid || !keys || !tab || !order || !tokb || !toks || !tvar || !tfl || !tl0 || !tfo || !tsc) goto done;
     { size_t i = 0; for (size_t l = 0; l < L; l++) { lstart[l] = (uint32_t)i; const uint8_t *q = memchr(in + i, '\n', nl - i); i = (size_t)(q - in) + 1; } lstart[L] = (uint32_t)nl; }
-    if (tokb) tokb[L] = 0;
+    tokb[L] = 0;
 #define LOG_CONST_CHECK(id) do { \
                 if (tsc[id]) {          /* same key: same token count and placeholder positions as the first line */ \
                     uint32_t l0 = tl0[id], b0 = tokb[l0], n0 = tokb[l0 + 1] - b0, len0 = lstart[l0 + 1] - lstart[l0] - 1; \
@@ -279,7 +335,8 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
         for (;;) {
             tent_t *e = &tab[at];
             if (!e->cnt) {
-                if ((size_t)(nt + 1) * 2 > tcap) {         /* grow: reinsert by stored hash, slots are found again through order[] */
+                if (nt >= tcap / 2) {                    /* grow: reinsert by stored hash, update slots in order[] */
+                    if (tcap > SIZE_MAX / 2 || tcap > UINT32_MAX / 2) goto done;
                     size_t nc = tcap * 2; tent_t *nb = calloc(nc, sizeof(tent_t)); if (!nb) goto done;
                     for (uint32_t t = 0; t < nt; t++) {
                         tent_t *o = &tab[order[t]]; size_t a2 = o->h & (nc - 1);
@@ -315,25 +372,38 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
     double T1_ = prof_now();
 #endif
     if (nt > L / 4) goto done;
-    remap = malloc(4 * (nt + 1)); uint32_t T = 0;
+    remap = log_alloc((size_t)nt + 1, 4);
+    if (!remap) goto done;
+    uint32_t T = 0;
     for (uint32_t t = 0; t < nt; t++) remap[t] = tab[order[t]].cnt >= LOG_MIN ? ++T : 0;
     if (T == 0) goto done;
     for (size_t l = 0; l < L; l++) lid[l] = remap[lid[l]];
     /* lines per kept template, in order */
-    rstart = calloc(T + 2, 4); rows = malloc(4 * L);
+    rstart = calloc((size_t)T + 2, 4);
+    rows = log_alloc(L, 4);
+    if (!rstart || !rows) goto done;
     for (size_t l = 0; l < L; l++) rstart[lid[l] + 1]++;
     for (uint32_t t = 1; t <= T + 1; t++) rstart[t] += rstart[t - 1];
-    { uint32_t *fill = malloc(4 * (T + 2)); memcpy(fill, rstart, 4 * (T + 1)); for (size_t l = 0; l < L; l++) rows[fill[lid[l]]++] = (uint32_t)l; free(fill); }
+    {
+        uint32_t *fill = log_alloc((size_t)T + 1, 4);
+        if (!fill) goto done;
+        memcpy(fill, rstart, 4 * ((size_t)T + 1));
+        for (size_t l = 0; l < L; l++) rows[fill[lid[l]]++] = (uint32_t)l;
+        free(fill);
+    }
     /* placeholders whose token is the same on every line of the template are folded into the template text: the
      * decoder then copies them with the literal instead of reading a column (same format, faster decode) */
-    tk = malloc(sizeof(tok_t) * (L + 1));
-    uint32_t *vpos = malloc(4 * 1024);
-    uint8_t *keys2 = malloc((size_t)kp + nl + 16); size_t k2 = 0;
-    uint32_t *k2off = malloc(4 * ((size_t)nt + 1)), *k2len = malloc(4 * ((size_t)nt + 1));
+    tk = log_alloc(L + 1, sizeof *tk);
+    vpos = malloc(4 * 1024);
+    /* Each folded template uses at most the bytes of one distinct input line. */
+    keys2 = malloc(nl);
+    size_t k2 = 0;
+    k2off = log_alloc((size_t)nt + 1, 4);
+    k2len = log_alloc((size_t)nt + 1, 4);
     /* per template and placeholder: 1 = column. Indexed like tfl (tfo[t] + q: a template's placeholder flags are
      * contiguous, one per variable token of its key), so fp bytes instead of 1 KiB per template */
-    uint8_t *keep = malloc(fp + 1);
-    if (!tk || !vpos || !keys2 || !k2off || !k2len || !keep) { free(vpos); free(keys2); free(k2off); free(k2len); free(keep); goto done; }
+    keep = malloc(fp + 1);
+    if (!tk || !vpos || !keys2 || !k2off || !k2len || !keep) goto done;
 #define LOG_TOK(i, q) do { uint32_t l_ = rows[rstart[tt] + (i)]; const uint8_t *p_ = in + lstart[l_]; uint32_t len_ = lstart[l_ + 1] - lstart[l_] - 1; \
         uint32_t nt_ = (l_ + 1 < L ? tokb[l_ + 1] : (uint32_t)ntok) - tokb[l_], tix_ = vpos[q] < nt_ ? vpos[q] : nt_ - 1; \
         uint32_t s_ = toks[tokb[l_] + tix_], e_ = tix_ + 1 < nt_ ? toks[tokb[l_] + tix_ + 1] - sep : len_; tk[i].p = p_ + s_; tk[i].len = e_ - s_; } while (0)
@@ -346,7 +416,7 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
             if (i == kl || k[i] == ' ') { ti++; continue; }
             if (k[i] == 1) { if (np < 1024) vpos[np] = ti; np++; }
         }
-        if (np > 1024) { free(vpos); free(keys2); free(k2off); free(k2len); free(keep); goto done; }
+        if (np > 1024) goto done;
         k2off[t] = (uint32_t)k2; uint32_t q = 0;
         for (uint32_t i = 0; i < kl; i++) {
             if (k[i] != 1) { keys2[k2++] = k[i]; continue; }
@@ -364,13 +434,20 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
     uint32_t rare_len = 0; for (uint32_t i = rstart[0]; i < rstart[1]; i++) { uint32_t l = rows[i]; rare_len += lstart[l + 1] - lstart[l]; }
     uint32_t dict_len = 0; for (uint32_t t = 0; t < nt; t++) if (remap[t]) dict_len += k2len[t] + 1;
     uint8_t ver = 1; uint32_t hd[6] = {(uint32_t)L, T, (uint32_t)(n - nl), dict_len, rare_len, 0};
-    bput(&out, &ver, 1); bput(&out, hd, 20);
-    scratch = malloc(8 * (L + 1));
+    if (log_append(&out, &ver, 1) || log_append(&out, hd, 20)) goto done;
+    scratch = log_alloc(L + 1, sizeof *scratch);
+    if (!scratch) goto done;
     for (size_t l = 0; l < L; l++) scratch[l] = lid[l];
-    put_ints(&out, scratch, (uint32_t)L);
-    for (uint32_t t = 0; t < nt; t++) if (remap[t]) { bput(&out, keys2 + k2off[t], k2len[t]); uint8_t c = '\n'; bput(&out, &c, 1); }
-    for (uint32_t i = rstart[0]; i < rstart[1]; i++) { uint32_t l = rows[i]; bput(&out, in + lstart[l], lstart[l + 1] - lstart[l]); }
-    bput(&out, in + nl, n - nl);
+    if (put_ints(&out, scratch, (uint32_t)L)) goto done;
+    for (uint32_t t = 0; t < nt; t++) if (remap[t]) {
+        uint8_t c = '\n';
+        if (log_append(&out, keys2 + k2off[t], k2len[t]) || log_append(&out, &c, 1)) goto done;
+    }
+    for (uint32_t i = rstart[0]; i < rstart[1]; i++) {
+        uint32_t l = rows[i];
+        if (log_append(&out, in + lstart[l], lstart[l + 1] - lstart[l])) goto done;
+    }
+    if (log_append(&out, in + nl, n - nl)) goto done;
     /* variable columns */
     for (uint32_t t = 0; t < nt; t++) {
         if (!remap[t]) continue;
@@ -386,8 +463,13 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
         uint32_t kq[1024], nk = 0;
         for (uint32_t q = 0; q < np; q++) if (keep[(size_t)tfo[t] + q]) kq[nk++] = q;
         if (!nk) continue;
-        uint32_t G = (uint32_t)((64u << 20) / (sizeof(tok_t) * (size_t)m)); if (G < 1) G = 1; if (G > nk) G = nk;
-        if ((size_t)G * m > tkg_cap) { free(tkg); tkg_cap = (size_t)G * m; tkg = malloc(sizeof(tok_t) * tkg_cap); if (!tkg) tkg_cap = 0; }
+        uint32_t G = ((64u << 20) / sizeof(tok_t)) / m; if (G < 1) G = 1; if (G > nk) G = nk;
+        if ((size_t)G * m > tkg_cap) {
+            free(tkg);
+            tkg_cap = (size_t)G * m;
+            tkg = log_alloc(tkg_cap, sizeof *tkg);
+            if (!tkg) tkg_cap = 0;
+        }
         tok_t *cb = tkg; if (!cb) { cb = tk; G = 1; }                     /* tk holds one column (L + 1 refs) */
         for (uint32_t g0 = 0; g0 < nk; g0 += G) {
             uint32_t gn = nk - g0 < G ? nk - g0 : G;
@@ -400,19 +482,18 @@ static int64_t log_encode_m(const uint8_t *in, size_t n, uint8_t *dst, size_t ca
                     cb[(size_t)j * m + i].p = p_ + s_; cb[(size_t)j * m + i].len = e_ - s_;
                 }
             }
-            for (uint32_t j = 0; j < gn; j++) put_column(&out, cb + (size_t)j * m, m, scratch);
+            for (uint32_t j = 0; j < gn; j++)
+                if (put_column(&out, cb + (size_t)j * m, m, scratch)) goto done;
         }
     }
 #undef LOG_TOK
 #ifdef KOLMO_TIMING
     fprintf(stderr, "log: L=%zu ntok=%zu nt=%u first=%.1f fold=%.1f cols=%.1f\n", L, ntok, nt, (T1_ - T0_) * 1e3, (T2_ - T1_) * 1e3, (prof_now() - T2_) * 1e3);
 #endif
-    free(keys2); free(k2off); free(k2len); free(keep);
-    free(vpos);
-    if (out.n + 64 > cap || out.n >= n) goto done;
     memcpy(dst, out.p, out.n); ret = (int64_t)out.n;
 done:
-    free(tokb); free(toks); free(lstart); free(tstart); free(lid); free(keys); free(tab); free(order); free(tk); free(scratch); free(rows); free(rstart); free(remap); free(out.p);
+    free(keys2); free(k2off); free(k2len); free(keep); free(vpos);
+    free(tokb); free(toks); free(lstart); free(lid); free(keys); free(tab); free(order); free(tk); free(scratch); free(rows); free(rstart); free(remap); free(out.p);
     free(tvar); free(tfl); free(tl0); free(tfo); free(tsc); free(tkg);
     return ret;
 }
