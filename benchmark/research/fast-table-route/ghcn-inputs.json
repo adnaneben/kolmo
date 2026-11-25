@@ -1,0 +1,59 @@
+{
+  "model": {
+    "file": "bench-page/results/work-panel/ghcn-csv-p_csv.zlc",
+    "bytes": 36560,
+    "sha256": "c6bf728a27d824536976caeb13477eb642ae6d2b635ca11fd8e78384ee2a698b"
+  },
+  "train": {
+    "USW00014739.csv": {
+      "bytes": 12227938,
+      "sha256": "865ef2d20904af799ca4ccf357ea306b549d0ff9d4eddc59a9c4b4b3d408b69d"
+    },
+    "USW00023174.csv": {
+      "bytes": 10770180,
+      "sha256": "61be4ce5904ea898ca412fc5c27141e6206eff11ddb96944943049deb5d30e31"
+    },
+    "USW00094728.csv": {
+      "bytes": 17737095,
+      "sha256": "7a39ba9528773b3b7c4754b8438f96e3f09d2b0fca67ff5da4f11cd76027e57e"
+    },
+    "USW00094846.csv": {
+      "bytes": 10858679,
+      "sha256": "95adebdda8fd40401277b3a7cffe2fa29ebfeb81b4c4786e5619311ceea40df6"
+    }
+  },
+  "test": {
+    "USW00012839.csv": {
+      "bytes": 10134321,
+      "sha256": "728e10647be26bdbe1178976ac74ead6425327d45e1a8d87c77d4090e880ba04",
+      "main_sha256": {
+        "1": "4dc497538222a7d3ef4b3959987c4e7e9eecc2d39479917df44c83dc5efcbdea",
+        "2": "9420064b6d31005b4d1e7079a5720b5c7cc5a4a7cb11af024f29d61e74ee93c8"
+      }
+    },
+    "USW00013874.csv": {
+      "bytes": 13415135,
+      "sha256": "a24a0360e2c877a9acaf7eb3bc388a352331c39d65ba5f8f65c9d264126cb0a3",
+      "main_sha256": {
+        "1": "3ee6b6b04002ec33f70eb859261726c57177efd5c19725c70a089ab8433ff4a9",
+        "2": "43a225a6acfeb4f842bdb4992afe57beff75ff5584ecbac851143b2513a9ce47"
+      }
+    },
+    "USW00023183.csv": {
+      "bytes": 10951595,
+      "sha256": "b89ac621857cc99a4e7433f7a0cbb95fbe236f745deb2b1f665c4f472247cd88",
+      "main_sha256": {
+        "1": "6c5182cf494c592e0e7b2b7b52a34d79fe298b6f0f799e9861f1ca879a9fd656",
+        "2": "8915f5405f3b2a6c6ee8e41847936458e4a0640a280ab78316c96b51557e2663"
+      }
+    },
+    "USW00024233.csv": {
+      "bytes": 10532150,
+      "sha256": "1a19d51f22b7fdaee9e560fa517f12c964d3a21af4d428a54ea911d7c00bdadc",
+      "main_sha256": {
+        "1": "56aad13ba96210574ec8f8f407a1613358cfb539974d6b6d3e1902be93ebef83",
+        "2": "d476160d958be23d132cd3947324be6c56d7d8cba4f9fa0351fd6dac509ab498"
+      }
+    }
+  }
+}
