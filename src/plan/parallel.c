@@ -236,8 +236,16 @@ static void *plan_worker(void *arg) {
         if (p->mode == KOLMO_RT && (pl.t == T_TP || pl.t == T_LOG)) pl.t = T_NONE;
 #ifdef KOLMO_FAST_TABLE_TRIAL
         if (pl.t == T_NONE && !pl.packed && (mk & 0xff) == MK_DATA &&
-            p->transforms == 3 && (p->mode == KOLMO_RT || p->mode == KOLMO_FAST))
-            pl = fast_table_trial(src, len);
+            p->transforms == 3 && ((p->mode == KOLMO_RT && p->level == 0) ||
+                                  (p->mode == KOLMO_FAST && p->level == -1))) {
+            plan_t trial = fast_table_trial(src, len);
+            if (trial.t != T_NONE) {
+                pl.t = trial.t;
+                pl.a = trial.a;
+                pl.b = trial.b;
+                pl.c = trial.c;
+            }
+        }
 #endif
         if (p->mode == KOLMO_ULTRA && !ultra_keep_transform(src, len, &pl, j->threads_per_plan, p->level)) {
             free(pl.fs); pl.fs = NULL; pl.t = T_NONE;
