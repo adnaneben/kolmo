@@ -17,7 +17,7 @@ Decimal MB/s. Each throughput is the median across seven timed CLI observations.
 | ghcn | 1 | 387,420 → 387,420 | 591.0 → 553.2 | 643.2 → 691.1 | 309.6 → 295.8 |
 | ghcn | 2 | 225,251 → 225,251 | 473.2 → 470.8 | 637.0 → 632.9 | 269.7 → 270.3 |
 
-For context, on whole Backblaze LZ4 -1 produced 24,024,207 bytes at 935.0 MB/s combined and zstd -1 produced 13,305,317 bytes at 665.8 MB/s. On CO₂ the figures were 7,334,043 at 383.5 MB/s and 4,112,930 at 329.5 MB/s. Typed L1 produced the smallest frames among these four on both files and had the lowest combined throughput. The [competitor follow-up](competitor-results.md) adds zstd settings 1 through 22 on energy and CO₂, the OpenZL CSV profile and four source-disjoint station tests using a trained OpenZL model. The whole Backblaze level sweep and native x86 follow-up remain open.
+For context, on whole Backblaze LZ4 -1 produced 24,024,207 bytes at 935.0 MB/s combined and zstd -1 produced 13,305,317 bytes at 665.8 MB/s. On CO₂ the figures were 7,334,043 at 383.5 MB/s and 4,112,930 at 329.5 MB/s. Typed L1 produced the smallest frames among these four on both files and had the lowest combined throughput. The [competitor follow-up](competitor-results.md) adds zstd settings 1 through 22 on energy and CO₂, the OpenZL CSV profile and four source-disjoint station tests using a trained OpenZL model. Two [country-disjoint validations](trained-owid/README.md) add comparisons with learned OpenZL models and preserve the exact model files and strict-mode outcomes. The whole Backblaze level sweep and native x86 follow-up remain open.
 
 ## Reproduction and limits
 

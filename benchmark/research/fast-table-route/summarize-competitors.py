@@ -7,7 +7,7 @@ from statistics import median
 
 root = Path(__file__).resolve().parent
 inputs = [
-    "zstd-regular", "zstd-ultra-and-time", "openzl-csv", "openzl-trained-holdout"
+    "zstd-regular", "zstd-ultra-and-time", "openzl-csv", "openzl-trained-holdout", "openzl-owid-trained"
 ]
 columns = [
     "suite", "file", "codec", "level", "runs", "bytes", "input_bytes",
