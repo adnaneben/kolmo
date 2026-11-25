@@ -9,7 +9,10 @@ route the planner takes today: KLZH2, graph, audio, video, kimg, KLZMA, block so
 stored blocks, on text, CSV, JSON, logs, FASTQ/FASTA, images, audio, video, numeric arrays, executables, a tar,
 mixed binaries and edge cases. One generated input, concat.bin (the r0.0.2 originals concatenated in name order,
 12.4 MB), adds multi-block frames: levels 1-9, plus levels 8 and 9 with 4 MiB blocks; at three settings it is also
-compressed with 1 and 4 threads, which must give the same frame.
+compressed with 1 and 4 threads, which must give the same frame. A second, weights-bf16.st (9.4 MB), is a bf16
+safetensors tensor made by bf16_weights() below: the file class of the 0.0.3 level 8-9 regression (a 47 MB bf16 weights
+file +3.9% at -9 after PR #32's KLZH2 probe change flipped a close shuffle/float call), compressed at levels 1-9 (ultra
+takes minutes on it).
 
 Every corpus file is compressed at levels 1-9 and ultra with one thread. The results are compared with
 benchmark/ledger/sizes.tsv (kind, entry, setting, bytes, sha256):
@@ -25,10 +28,14 @@ Level-order gate (on this build's sizes): for every file, level N+1 (and ultra a
 by more than 0.5% and 16 bytes. Known inversions are listed in benchmark/ledger/level_order_exceptions.txt with a
 reason; a listed inversion that no longer occurs is reported as a warning so the list can be trimmed.
 """
+import bisect
 import collections
 import concurrent.futures
 import hashlib
+import json
 import os
+import random
+import struct
 import subprocess
 import sys
 import tempfile
@@ -63,8 +70,46 @@ KIND = {
     "exe.bin": "executable", "code.x86": "executable", "prog-arm64": "executable", "prog-x86_64": "executable",
     "bigprog-arm64": "executable", "bigprog-x86_64": "executable",
     "bundle.tar": "archive", "mixed.bin": "binary", "records.bin": "binary",
-    "concat.bin": "multiblock",
+    "concat.bin": "multiblock", "weights-bf16.st": "weights",
 }
+
+# bf16_weights(): the exponent field's distribution (per 65536 values) and the distance in ulps between the two halves
+# of a row, measured on a fused-projection weight matrix (5120 x 4608 bf16); the tail beyond 15 ulps follows
+# 73472 / d^2 + 574 / d, close to the measured counts.
+BF16_EXP = [(105, 1), (106, 2), (107, 4), (108, 8), (109, 16), (110, 34), (111, 71), (112, 139), (113, 279), (114, 559),
+            (115, 1118), (116, 2230), (117, 4425), (118, 8651), (119, 15544), (120, 20883), (121, 10869), (122, 694), (123, 6)]
+BF16_STEP = [13538, 17920, 10106, 5091, 3295, 2087, 1588, 1154, 953, 741, 641, 526, 464, 400, 354, 317]
+
+
+def bf16_weights(rows=1024, cols=4608, seed=1):
+    """A bf16 safetensors file: each row's first half random (sign, exponent from BF16_EXP, uniform 7-bit mantissa),
+    its second half the same values a few ulps apart (BF16_STEP), as in a fused projection. Integer arithmetic and
+    Python's Mersenne Twister only, so every platform makes the same bytes. Levels 8, 9: the planner's shuffle beats
+    the float layout narrowly on the KLZH2 probe, and plain KLZMA is 3.4% smaller than the shuffle (planner.c,
+    KOLMO_STRONG_SHUF_FLOAT_PCT)."""
+    def cdf(w):
+        out, t = [], 0
+        for x in w:
+            t += x
+            out.append(t)
+        return out
+    rng = random.Random(seed)
+    ew, ev = cdf([w for _, w in BF16_EXP]), [e for e, _ in BF16_EXP]
+    sw = cdf(BF16_STEP + [73472 // (d * d) + 4592 // (8 * d) for d in range(16, 2048)])
+    vals = []
+    for _ in range(rows):
+        first = [rng.getrandbits(1) << 15 | ev[bisect.bisect_right(ew, rng.randrange(ew[-1]))] << 7 | rng.getrandbits(7)
+                 for _ in range(cols // 2)]
+        vals += first
+        for x in first:
+            d = bisect.bisect_right(sw, rng.randrange(sw[-1]))
+            y = x + d if rng.getrandbits(1) else x - d
+            vals.append(y if (y >> 15) == (x >> 15) else x)
+    body = struct.pack("<%dH" % len(vals), *vals)
+    hd = json.dumps({"w": {"dtype": "BF16", "shape": [rows, cols], "data_offsets": [0, len(body)]}},
+                    separators=(",", ":")).encode()
+    hd += b" " * (-(8 + len(hd)) % 8)
+    return struct.pack("<Q", len(hd)) + hd + body
 
 
 def corpus():
@@ -144,7 +189,11 @@ def main():
             for entry, path in files:
                 if entry.startswith("r0.0.2/"):
                     out.write(open(path, "rb").read())
-        tasks = [(entry, path, s, 1) for entry, path in files for s in LEVELS]
+        weights = os.path.join(tmp, "weights-bf16.st")
+        with open(weights, "wb") as out:
+            out.write(bf16_weights())
+        files.append(("gen/weights-bf16.st", weights))
+        tasks = [(entry, path, s, 1) for entry, path in files for s in (LEVELS[:-1] if entry == "gen/weights-bf16.st" else LEVELS)]
         tasks += [("gen/concat.bin", concat, s, 4) for s in CONCAT_SETTINGS]
         tasks += [("gen/concat.bin", concat, s, 1) for s in THREAD_CHECKS]
         # the slow ones first, so the pool's tail is short
@@ -214,7 +263,7 @@ def main():
     inversions = []
     entries = sorted({e for e, _ in cur})
     for entry in entries:
-        chain = LEVELS if entry != "gen/concat.bin" else LEVELS[:-1]
+        chain = LEVELS if not entry.startswith("gen/") else LEVELS[:-1]
         for lo, hi in zip(chain, chain[1:]):
             a, b = cur[(entry, lo)][1], cur[(entry, hi)][1]
             if b > a * (1 + ORDER_FRAC) and b - a > ORDER_BYTES:
