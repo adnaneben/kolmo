@@ -31,12 +31,15 @@ int64_t kolmo_frame_size(const uint8_t *src, size_t n) {
     if (e < n && frame_tail_ok(src, n, e)) return (int64_t)n;   /* container extensions ending the buffer belong to it */
     return (int64_t)e;
 }
-/* the public decoders take one whole frame: nothing after its last payload but container extensions */
+/* The public decoders take one whole frame, including its optional extensions. */
+static int scan_whole_frame(const uint8_t *src, size_t n, parsed_t *P) {
+    int r = frame_scan(src, n, P);
+    if (r) return r;
+    return frame_tail_ok(src, n, P->end) ? 0 : KOLMO_ERR_CORRUPT;
+}
 static int64_t whole_frame(const uint8_t *src, size_t n) {
-    if (!src) return KOLMO_ERR_CORRUPT;
-    uint64_t o, e; int r = frame_head(src, n, &o, &e); if (r) return r;
-    if (!frame_tail_ok(src, n, e)) return KOLMO_ERR_CORRUPT;
-    return (int64_t)o;
+    parsed_t P; int r = scan_whole_frame(src, n, &P);
+    return r ? r : (int64_t)P.orig;
 }
 
 int64_t kolmo_decompress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, int threads) {
@@ -67,11 +70,12 @@ int64_t kolmo_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len,
 int kolmo__block_column(const uint8_t *src, size_t n, uint32_t i, int col, uint8_t **out, size_t *outn,
                         uint64_t *decoded, uint64_t *read) {
     *out = NULL; *outn = 0; *decoded = *read = 0;
-    parsed_t P; int r = parse(src, n, &P, NULL); if (r) return r;
-    if (i >= P.nb) { free(P.poff); free(P.roff); return KOLMO_ERR_CORRUPT; }
-    const uint8_t *e = P.idx + (size_t)i * IDX, *pay = src + P.poff[i];
+    parsed_t P; int r = frame_scan(src, n, &P); if (r) return r;
+    if (P.end > n || i >= P.nb) return KOLMO_ERR_CORRUPT;
+    uint64_t offset = HDR + (uint64_t)P.nb * IDX;
+    for (uint32_t b = 0; b < i; b++) offset += get32(P.idx + (size_t)b * IDX + 4);
+    const uint8_t *e = P.idx + (size_t)i * IDX, *pay = src + offset;
     size_t len = get32(e), cl = get32(e + 4); int codec = e[12], tflag = e[13];
-    free(P.poff); free(P.roff);
     if (P.psum || tflag != 13 || cl < 4 || pay[0] != T_TBL) return 1;
     codec_ctx x = {0}; kbuf o = {0};
     r = tblc_column(&x, codec, pay + 4, cl - 4, len, col, &o, decoded, read);
@@ -88,11 +92,10 @@ int kolmo_mem_parse(const char *s, uint64_t *out) { uint64_t v; if (!out || kmem
 uint64_t kolmo_mem_floor(kolmo_mode mode) { return kmem_floor((int)mode); }
 uint64_t kolmo_mem_auto(void) { return kmem_limit_of(0); }
 int kolmo_check_frame(const uint8_t *src, size_t n, const kolmo_decode_limits *limits) {
-    int64_t w = whole_frame(src, n); if (w < 0) return (int)w;   /* no allocation before the header checks pass */
-    parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
-    uint64_t maxraw = 0; for (uint32_t i = 0; i < P.nb; i++) if (P.roff[i + 1] - P.roff[i] > maxraw) maxraw = P.roff[i + 1] - P.roff[i];
-    r = frame_admit(&P, maxraw, kmem_limit_of(limits ? limits->max_memory : 0));
-    free(P.poff); free(P.roff); return r;
+    parsed_t P; int r = scan_whole_frame(src, n, &P); if (r) return r;
+    if ((r = frame_limits(&P, limits))) return r;
+    uint64_t cap = frame_codec_budget(kmem_limit_of(limits ? limits->max_memory : 0), frame_offset_bytes(P.nb));
+    return frame_admit(&P, P.maxraw, cap);
 }
 /* ------------------------------------------------------------------ decode cost (kolmo.h, docs/SECURITY.md) */
 /* the cost class of a coder: s, sn: its coded stream (the KAU1 stream for audio, whose profile 1 is model coding) */
@@ -161,11 +164,12 @@ static int cost_graph(const uint8_t *p, size_t n, uint64_t raw, int deny_cm, kol
     return 0;
 }
 static int frame_cost(const uint8_t *src, size_t n, kolmo_decode_cost *c, int nested) {
-    int64_t w = whole_frame(src, n); if (w < 0) return (int)w;
-    parsed_t P; int r = parse(src, n, &P, NULL); if (r) return r;
+    parsed_t P; int r = scan_whole_frame(src, n, &P); if (r) return r;
+    uint64_t offset = HDR + (uint64_t)P.nb * IDX;
     for (uint32_t b = 0; b < P.nb && !r; b++) {
-        const uint8_t *e = P.idx + (size_t)b * IDX, *pay = src + P.poff[b];
-        size_t cl = (size_t)(P.poff[b + 1] - P.poff[b]); uint64_t raw = P.roff[b + 1] - P.roff[b]; int codec = e[12];
+        const uint8_t *e = P.idx + (size_t)b * IDX, *pay = src + offset;
+        size_t cl = get32(e + 4); uint64_t raw = get32(e); int codec = e[12];
+        offset += cl;
         if (cl < 4) { r = KOLMO_ERR_CORRUPT; break; }
         if (codec == C_VID) {                                   /* a video frame: the nested frame, then a linear inverse */
             if (nested || P.nb != 1) { r = KOLMO_ERR_CORRUPT; break; }
@@ -174,7 +178,6 @@ static int frame_cost(const uint8_t *src, size_t n, kolmo_decode_cost *c, int ne
             if (cost_graph(pay + 4, cl - 4, raw, P.mode != KOLMO_ULTRA, c)) r = KOLMO_ERR_CORRUPT;
         } else cost_add(c, cost_class(codec, pay + 4, cl - 4), raw);
     }
-    free(P.poff); free(P.roff);
     return r;
 }
 int kolmo_frame_cost(const uint8_t *src, size_t n, kolmo_decode_cost *cost) {
@@ -308,6 +311,10 @@ int64_t kolmo_decompress_file(int input_fd, int output_fd, size_t n, int threads
     uint32_t nb = get32(header + 20);
     if (nb > (n - HDR) / IDX) return KOLMO_ERR_CORRUPT;
     size_t index_size = HDR + (size_t)nb * IDX;
+    if (header[10] & ~1 || get64(header + 12) > (uint64_t)INT64_MAX) return KOLMO_ERR_CORRUPT;
+    uint64_t cap = frame_codec_budget(kmem_limit_of(0), index_size + frame_offset_bytes(nb));
+    uint64_t declared = kmem_declared(header[11]);
+    if ((declared ? declared : blk_dec_floor(0)) > cap) return KOLMO_ERR_MEMORY;
     uint8_t *index = malloc(index_size);
     if (!index) return KOLMO_ERR_ALLOC;
     memcpy(index, header, HDR);

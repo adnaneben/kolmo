@@ -114,58 +114,77 @@ static int sin_take(sin_t *r, uint8_t **buf, size_t *cap, size_t *have, uint64_t
 }
 
 typedef struct { int out_fd, threads; const kolmo_decode_limits *limits; uint8_t *out; size_t ocap; int64_t total; } sdec_t;
-/* decode one whole frame (and its extensions) held in frame[0, len) to the output */
-static int sdec_frame(sdec_t *D, const uint8_t *frame, size_t len) {
+
+static int sdec_window(sdec_t *D, uint64_t win) {
+    if (win > SIZE_MAX) return KOLMO_ERR_ALLOC;
+    if (D->ocap == win) return 0;
+    free(D->out);
+    D->ocap = 0;
+    D->out = win ? malloc((size_t)win) : NULL;
+    if (win && !D->out) return KOLMO_ERR_ALLOC;
+    D->ocap = (size_t)win;
+    return 0;
+}
+
+/* Finish validating one frame, build its shared offsets, and decode whole-block windows to the output. */
+static int sdec_frame(sdec_t *D, const uint8_t *frame, size_t len, parsed_t *P) {
     const kolmo_decode_limits *limits = D->limits;
-    /* Rule 1 (docs/MEMORY-MODEL.md): the frame is checked whole (header and index CRC, block sizes that add up to the
-     * claimed size, payloads inside the frame, the declared decode figure against the limit) before any output memory
-     * is reserved, and its output is then decoded in windows of whole blocks, written as they finish. A forged size
-     * claims nothing it cannot back. */
-    int64_t osz = whole_frame(frame, len);                       /* exactly one frame: nothing after its payloads */
-    if (osz < 0) return (int)osz;
-    if (limits && limits->max_output_bytes && (uint64_t)osz > limits->max_output_bytes - (uint64_t)D->total) return KOLMO_ERR_LIMIT;
-    parsed_t P; int pr = parse(frame, len, &P, limits);
-    if (pr) return pr;
-    uint64_t maxraw = 0; for (uint32_t i = 0; i < P.nb; i++) if (P.roff[i + 1] - P.roff[i] > maxraw) maxraw = P.roff[i + 1] - P.roff[i];
+    if (!frame_tail_ok(frame, len, P->end)) return KOLMO_ERR_CORRUPT;
+    if (limits && limits->max_output_bytes && P->orig > limits->max_output_bytes - (uint64_t)D->total) return KOLMO_ERR_LIMIT;
+    P->idx = frame + HDR;          /* reading a CZN1 payload or its extensions may have moved the frame buffer */
     uint64_t memcap = kmem_limit_of(limits ? limits->max_memory : 0);
-    int adm = frame_admit(&P, maxraw, memcap);
-    if (adm) { free(P.poff); free(P.roff); return adm; }
-    /* Rule 2: the output window and the threads share the limit. Each thread keeps one block's buffers (`per`) once it
-     * has decoded a block, whether or not it is decoding now (0.0.2 used every thread and a window of one block per
-     * thread outside the limit: 1.3 GiB under -M 256M, review R23 #114 B2); a codec's own tables are reserved per
-     * block by the governor inside run_decode. So: at most limit / per threads, and a window of one block per thread
-     * (or 64 MiB) within what they leave, down to one thread and a window of one block (the output of that one block
-     * is the only memory beyond the limit, as the one-shot decoder's output buffer is). */
-    uint64_t per = blk_dec_floor(maxraw);
+    uint64_t metadata = frame_offset_bytes(P->nb);
+    uint64_t codec_cap = frame_codec_budget(memcap, metadata);
+    int r = frame_prepare(P, limits, codec_cap);
+    if (r) return r;
+    /* The output window and the current decode share this cap. A single whole block can keep its output outside
+     * the limit, as when the one-shot API decodes into a caller-owned buffer. */
+    uint64_t maxraw = P->maxraw, per = blk_dec_floor(maxraw);
     int nt = D->threads > 0 ? D->threads : default_threads();
-    if (memcap != KMEM_UNLIMITED) {
-        uint64_t fit = memcap / per;
+    if (codec_cap != KMEM_UNLIMITED) {
+        uint64_t fit = (codec_cap > maxraw ? codec_cap - maxraw : 0) / per;
         if ((uint64_t)nt > fit) nt = fit ? (int)fit : 1;
     }
     uint64_t win = maxraw * (uint64_t)nt; if (win < KOLMO_STREAM_STEP) win = KOLMO_STREAM_STEP;
-    if (memcap != KMEM_UNLIMITED) {
-        uint64_t used = per * (uint64_t)nt, room = memcap > used ? memcap - used : 0;
+    int single = 0;
+    if (codec_cap != KMEM_UNLIMITED) {
+        uint64_t used = per * (uint64_t)nt;
+        if (used < P->memd) used = P->memd;
+        uint64_t room = codec_cap - used;
         if (win > room) win = room;
+        if (win < maxraw) { win = maxraw; single = 1; }
     }
-    if (win < maxraw) win = maxraw;
-    if (win > (uint64_t)osz) win = (uint64_t)osz;
-    if (win > D->ocap || (D->ocap > win && D->ocap - win > KOLMO_STREAM_STEP)) {   /* never hold more than this frame needs */
-        free(D->out); D->ocap = 0; D->out = malloc(win ? (size_t)win : 1);
-        if (!D->out) { free(P.poff); free(P.roff); return KOLMO_ERR_ALLOC; }
-        D->ocap = (size_t)win;
-    }
+    if (win > P->orig) win = P->orig;
+    r = sdec_window(D, win);
+    if (r) { free(P->poff); free(P->roff); return r; }
+    uint64_t window_cap = !single && memcap != KMEM_UNLIMITED ? memcap - D->ocap : memcap;
     int64_t dl = 0; uint32_t b = 0;
-    while (b < P.nb && dl >= 0) {
-        uint32_t e = b; uint64_t lo = P.roff[b];
-        while (e < P.nb && (e == b || P.roff[e + 1] - lo <= win)) e++;
-        uint64_t hi = P.roff[e];
-        int64_t r = hi > lo ? run_decode(frame, -1, len, D->out, -1, nt, lo, hi, 1, limits) : 0;
-        if (r < 0) { dl = r; break; }
-        if (r > 0 && io_write_full(D->out_fd, D->out, (size_t)r)) { dl = KOLMO_ERR_IO; break; }
-        dl += r; b = e;
+    while (b < P->nb) {
+        uint32_t e = b + 1; uint64_t lo = P->roff[b];
+        while (!single && e < P->nb && P->roff[e + 1] - lo <= win) e++;
+        uint64_t hi = P->roff[e];
+        if (hi == lo) { b = e; continue; }
+        /* Match the range reader's treatment of zero-length blocks at window edges. */
+        uint32_t first = b, last = e;
+        while (P->roff[first + 1] == lo) first++;
+        while (P->roff[last - 1] == hi) last--;
+        int64_t d = run_decode_parsed(P, frame, -1, D->out, -1, single ? 1 : nt, first, last, lo, hi, 1,
+                                      limits, window_cap, metadata);
+        /* For frames without a declaration, a block may need more codec memory than the window left available. */
+        if (d == KOLMO_ERR_MEMORY && window_cap < memcap) {
+            win = maxraw;
+            r = sdec_window(D, win);
+            if (r) break;
+            window_cap = memcap;
+            single = 1;
+            continue;
+        }
+        if (d < 0) { r = (int)d; break; }
+        if (io_write_full(D->out_fd, D->out, (size_t)d)) { r = KOLMO_ERR_IO; break; }
+        dl += d; b = e;
     }
-    free(P.poff); free(P.roff);
-    if (dl < 0) return (int)dl;
+    free(P->poff); free(P->roff);
+    if (r) return r;
     D->total += dl;
     return 0;
 }
@@ -187,7 +206,10 @@ static int sdec_stream(sdec_t *D, sin_t *R, uint8_t **frame, size_t *fcap) {
         size_t have = 0;
         int t = sin_take(R, frame, fcap, &have, len);
         if (t) return t;
-        int r = sdec_frame(D, *frame, have);
+        parsed_t P;
+        int r = frame_scan(*frame, have, &P);
+        if (r) return r;
+        r = sdec_frame(D, *frame, have, &P);
         if (r) return r;
     }
 }
@@ -202,10 +224,10 @@ static int sdec_czn1(sdec_t *D, sin_t *R, uint8_t **frame, size_t *fcap) {
     if ((t = frame_version_check(*frame, have))) return t;      /* KOLMO_ERR_LEGACY before the index is read */
     uint64_t nb = get32(*frame + 20);
     if ((t = sin_take(R, frame, fcap, &have, 16 * nb))) return t;
-    uint64_t o, e;                                             /* the end of the payloads, from the header and index */
-    if ((t = frame_head(*frame, have, &o, &e))) return t;
-    if (e < have) return KOLMO_ERR_CORRUPT;
-    if ((t = sin_take(R, frame, fcap, &have, e - have))) return t;
+    parsed_t P;                                               /* compute the payload end from the validated index */
+    if ((t = frame_scan(*frame, have, &P))) return t;
+    if (P.end < have) return KOLMO_ERR_CORRUPT;
+    if ((t = sin_take(R, frame, fcap, &have, P.end - have))) return t;
     for (int k = 0; k < 64; k++) {
         uint8_t m[4]; size_t g = 0;
         if (sin_read(R, m, 4, &g)) return KOLMO_ERR_IO;
@@ -218,8 +240,8 @@ static int sdec_czn1(sdec_t *D, sin_t *R, uint8_t **frame, size_t *fcap) {
     }
     /* a `kolmo archive` frame (a DDP1 section) holds a chunk store, not one file: as -d refuses it, it is no member to
      * decode here (a frame member is new in this decoder, so nothing that decoded before is refused) */
-    if (have > e) { uint64_t dl; int de; if (kx_find(*frame, have, e, "DDP1", &dl, &de)) return KOLMO_ERR_CORRUPT; }
-    return sdec_frame(D, *frame, have);                         /* whole_frame checks the extensions and their trailer */
+    if (have > P.end) { uint64_t dl; int de; if (kx_find(*frame, have, P.end, "DDP1", &dl, &de)) return KOLMO_ERR_CORRUPT; }
+    return sdec_frame(D, *frame, have, &P);                     /* sdec_frame checks the extensions and their trailer */
 }
 
 int64_t kolmo_stream_decompress_limited(int in_fd, int out_fd, int threads, const kolmo_decode_limits *limits) {
