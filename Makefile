@@ -61,7 +61,7 @@ ifeq ($(ASM_ISA)$(NO_ASM),x86_64)
 KSRC    += src/arch/x86_64/med8_sse2.c src/arch/x86_64/planes_sse2.c src/arch/x86_64/mixer_avx2.c src/arch/x86_64/video_sse2.c \
            src/arch/x86_64/img16_sse2.c src/arch/x86_64/med8f_avx2.c
 endif
-KHDR    := src/arch/kernels.h src/algo/predict.h src/algo/planes.h src/algo/mixer.h src/algo/video.h $(wildcard src/arch/x86_64/*.h)
+KHDR    := src/arch/arch.h src/arch/kernels.h src/algo/predict.h src/algo/planes.h src/algo/mixer.h src/algo/video.h $(wildcard src/arch/x86_64/*.h src/arch/aarch64/*.h)
 # The block-sorting pipeline (LZP, QLFC, the libsais subset, the fork-join helper, the BWT stream formats) is compiled
 # on its own too: these files have public kolmo_* entry points and are not included by src/kolmo.c.
 BWTSRC  := src/algo/lzp.c src/algo/qlfc.c src/algo/par.c $(wildcard src/algo/sais/*.c) src/codecs/bwt_stream.c
