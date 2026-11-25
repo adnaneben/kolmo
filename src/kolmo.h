@@ -35,7 +35,7 @@ typedef struct {
     int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap
                            structure transforms (images, records, executables, tables), for the fastest settings;
                            3 = minimal analysis (level 1). kolmo_params_for_level sets mode, level and transforms.
-                           May be OR-ed with KOLMO_T_NATIVE_LEAF, KOLMO_T_TYPED_HUF or KOLMO_T_COLUMNS
+                           May be OR-ed with KOLMO_T_NATIVE_LEAF, KOLMO_T_TYPED_HUF, KOLMO_T_COLUMNS or KOLMO_T_ULTRA_PLUS
                            (below); other values fail with KOLMO_ERR_PARAM, and so does a mode outside rt..ultra. */
     uint64_t mem_limit; /* memory limit (docs/MEMORY-MODEL.md): 0 = auto (50% of physical memory or of the cgroup's
                            limit; governs only how much runs at once), KOLMO_MEM_MAX = no limit, otherwise bytes: an
@@ -76,6 +76,9 @@ typedef struct {
  * +10% (wide sparse CSV) at balanced, about 0% at hc and ratio on dense data. */
 #define KOLMO_T_COLUMNS 64
 
+/* Experimental encoder-only CM4 competition in Ultra. The output is an ordinary v12 frame. */
+#define KOLMO_T_ULTRA_PLUS 128
+
 #define KOLMO_ERR_CORRUPT   (-1)
 #define KOLMO_ERR_CHECKSUM  (-2)
 #define KOLMO_ERR_DSTSIZE   (-3)
@@ -97,7 +100,7 @@ typedef struct {
 /* --- Levels (docs/LEVELS.md; 0.0.2) ------------------------------------------------------------------------------
  * One scale from 1 (fastest) to 9 (smallest at practical decode speed), and ultra outside it. The level numbers and
  * names are a long-term contract; what each level runs may improve between releases. kolmo_params_for_level fills
- * mode, level and transforms of *p for a level (KOLMO_LEVEL_MIN..KOLMO_LEVEL_MAX or KOLMO_LEVEL_ULTRA) and leaves the
+ * mode, level and transforms of *p for a level (KOLMO_LEVEL_MIN..KOLMO_LEVEL_MAX or KOLMO_LEVEL_ULTRA[_PLUS]) and leaves the
  * other fields (threads, block, mem_limit) as the caller set them. The command line and the Python and Rust bindings
  * all use it, so the same level gives the same bytes everywhere. Returns 0, or KOLMO_ERR_PARAM for another level or a
  * NULL p (then *p is unchanged). */
@@ -105,6 +108,7 @@ typedef struct {
 #define KOLMO_LEVEL_MAX       9
 #define KOLMO_LEVEL_DEFAULT   3
 #define KOLMO_LEVEL_ULTRA     10
+#define KOLMO_LEVEL_ULTRA_PLUS 11 /* experimental, writes v12 */
 #define KOLMO_LEVEL_FASTEST   1
 #define KOLMO_LEVEL_LIGHT     3
 #define KOLMO_LEVEL_BALANCED  5

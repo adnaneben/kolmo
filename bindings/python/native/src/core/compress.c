@@ -34,7 +34,7 @@ static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int 
 static int kolmo_params_valid(const kolmo_params *p) {
     if ((unsigned)p->mode > KOLMO_ULTRA) return 0;
     if (p->level < (p->mode == KOLMO_FAST ? -1 : 0) || (p->level > 22 && !(p->mode == KOLMO_MAX && p->level >= 100 && p->level <= 999))) return 0;
-    int t = p->transforms & ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
+    int t = p->transforms & ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS | KOLMO_T_ULTRA_PLUS);
     return t >= 0 && t <= 3;
 }
 /* Every frame written is version 12 (KOLMO_MAX_VERSION): Kolmo's own coders only, no dictionary, no profile. */
@@ -51,7 +51,8 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0;
     int typed_huf = (q.transforms & KOLMO_T_TYPED_HUF) != 0;
     int columns = (q.transforms & KOLMO_T_COLUMNS) != 0;
-    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
+    int ultra_plus = q.mode == KOLMO_ULTRA && (q.transforms & KOLMO_T_ULTRA_PLUS);
+    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS | KOLMO_T_ULTRA_PLUS);
     columns = columns && q.transforms && q.mode != KOLMO_RT;
     native_leaf = native_leaf && q.mode == KOLMO_FAST && q.transforms; p = &q;
     if (cap < HDR + IDX) return KOLMO_ERR_DSTSIZE;
@@ -238,6 +239,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         if (workers > 1 && !(J.started = array_alloc(nb, 1, 1))) goto cleanup;
     }
     J.psum = p->mode == KOLMO_RT;
+    J.ultra_plus = ultra_plus;
     J.memcap = memcap; J.xcap = xcap; J.cm_leaves = codec == C_CM && level == 2; atomic_init(&J.dneed, 0);
     J.dst = dst; J.cap = cap; J.wnext = 0; J.wpos = HDR + (size_t)nb * IDX; J.werr = 0;
     if (pthread_mutex_init(&J.wmu, NULL)) goto cleanup;
