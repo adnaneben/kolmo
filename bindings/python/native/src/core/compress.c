@@ -168,7 +168,13 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
             Bs = (uint32_t)(b < KOLMO_BAL_WIDE_BLOCK ? b : KOLMO_BAL_WIDE_BLOCK);
         }
 #endif
-        uint64_t *st; uint32_t m = make_blocks(s0, len, Bs, pl, &st, input_fd, ss[g], &ret);
+        uint64_t *st = NULL;
+        uint32_t m = 0;
+#ifdef KOLMO_FASTQ_RECORD_BLOCKS
+        if (p->mode == KOLMO_ULTRA && pl.t == T_NONE && getenv("KOLMO_BENCH_READ_CUTS"))
+            m = fq_record_blocks(s0, len, Bs, &st);
+#endif
+        if (!st) m = make_blocks(s0, len, Bs, pl, &st, input_fd, ss[g], &ret);
         if (!st) goto cleanup;
         if (len == 0) m = 0;
         if (m > UINT32_MAX - nb - 1) { free(st); goto cleanup; }
