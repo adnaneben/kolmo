@@ -252,6 +252,10 @@ static inline size_t kz_l1_try(const uint8_t *in, const kz_slot *b, size_t p, ui
 }
 static size_t kz_klz1(const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     uint8_t *const oe = out + cap, *op = out;
+    if (n <= 13) {   /* the match loop starts at position 1 and requires pos < n - 12 */
+        if (!KZ_ROOM(n)) return 0;
+        return (size_t)(kz_emit(op, in, n, 0, 0) - out);
+    }
     int lg = 16; while (lg > 10 && ((size_t)1 << (lg + 1)) > n) lg--;
     kz_slot *ht = malloc(sizeof(kz_slot) << lg); if (!ht) return 0;
     memset(ht, 0xFF, sizeof(kz_slot) << lg);   /* position 2^32 - 1: never a candidate */
