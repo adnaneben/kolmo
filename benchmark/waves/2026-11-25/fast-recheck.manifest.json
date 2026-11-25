@@ -1,0 +1,14 @@
+{
+  "binaries": {
+    "wave1": "e09f800329ccdd853cdf672c5c0844946f1d7ba80b7c7a0d05b363bec9245d01",
+    "wave2": "b5c968708777f3bce882ceeddea7107dde46bbde86d9959cefe31acaa280f9f3"
+  },
+  "inputs": {
+    "text__reymont": "26f75d55dda3dbea8df5153fc49892401eb3fdc2ff4151fa3d8419ad1bbab6bf",
+    "log__bgl": "fba140ef27632a08d8304148c42a7f8ee9b09b724cd62d97e3d2d0cb4dd4eb61",
+    "code__jxl-cc": "0e6773a816e18397449dfcdf735cbc02ba41cba63cca9a1208dcb5a0159691d4"
+  },
+  "compiler": "Apple Clang 21.0.0 -O3 -mcpu=native -ffp-contract=off",
+  "bench_sha256": "d95f82d74b93cc525ddf4152387b293d69047df7e60c363b1b665a0f48c23529",
+  "fast_recheck": true
+}

@@ -1,0 +1,13 @@
+{
+  "inputs": {
+    "llm_bf16_47mb.safetensors": "b25a38e2edd4f848e47a0b3a41837b7f55254aeb85a27d2d4c4fc69ac89420f5",
+    "llm_bf16_10mb.safetensors": "484c9535b461409206fd45b6ebd219a19fbd030d821b2573a8479a1d3829cb92",
+    "magika.safetensors": "d483d55f0a4aa78b0edf41738b3ffe0ce57fc21923792aa50d53c4a976aceb4a"
+  },
+  "binary": "b5c968708777f3bce882ceeddea7107dde46bbde86d9959cefe31acaa280f9f3",
+  "stock_decoder": "e7f58f11fe2eb5f296bcd71a9ef9331d154723709ca6822e3cb110acd376e328",
+  "threads": [
+    1
+  ],
+  "repeats": 7
+}
