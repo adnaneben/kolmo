@@ -19,7 +19,14 @@ Levels: one scale, `Level::new(1..=9)`, from `Level::FASTEST` (1) through `Level
 `Level::BALANCED` (5) and `Level::COMPACT` (7) to `Level::MAX` (9); `Level::ULTRA` is the context-mixing tier
 outside the scale. A level gives the same bytes as `kolmo -N` on the command line. `compress_limited` and
 `decompress_limited` take a memory limit (and `decompress_limited` an optional bound on the decoded size, advisable
-for untrusted input); `decompress` checks the frame before it allocates the output.
+for untrusted input); `decompress` checks every frame before it reserves the output, and a size the system cannot
+reserve is an error, never an abort. The decoding functions read everything the command line writes: one frame,
+frames one after another, and `kolmo --stream` output (also what the CLI writes for pipes over 256 MiB).
+
+The crate declares `links = "kolmo"`, so cargo refuses a dependency graph holding two versions of it (they would share
+one copy of the C core). The build compiles the C core with the [`cc`](https://docs.rs/cc) crate for the target, so
+cross builds work (`cargo build --target x86_64-apple-darwin` on Apple silicon; `CC_<target>`, `CFLAGS_<target>` and
+`AR_<target>` are honoured).
 
 **Since 0.0.2:** `Mode` was replaced by `Level` (`Mode::SPEED` is now `Level::FASTEST`, `BALANCED` `Level::LIGHT`,
 `RATIO` `Level::MAX`; `Eco` level 5, `Hc` level 7, `Ultra` `Level::ULTRA`), and the dictionary functions were removed.
