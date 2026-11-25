@@ -76,7 +76,7 @@ typedef struct {
     kv_layout_t L; const uint8_t *src; uint8_t *out;                        /* encoder: src; decoder: out */
     uint8_t *fl0, *rs0; const uint8_t *cfl0, *crs0;                         /* flags and residuals, to write or to read */
     size_t *foff; size_t nfl, plane_off[KV_MAXP];                           /* per frame: sample offset; flags per frame */
-    size_t *prog; int err;                                                  /* decoder: strips finished per frame */
+    uint32_t *dec_off; uint16_t *prog; int err;                                                  /* decoder: strips finished per frame */
 } kv_par;
 
 static void kv_enc_frame(void *ctx, int f, int worker) {
@@ -109,8 +109,8 @@ static uint8_t *kv_transform(const uint8_t *s, size_t n, size_t *outn, int threa
 
 static void kv_dec_frame(void *ctx, int f, int worker) {
     kv_par *P = ctx; (void)worker; const kv_layout_t *L = &P->L;
-    uint8_t *cur = P->out + P->foff[f]; const uint8_t *pp = f ? P->out + P->foff[f - 1] : NULL;
-    const uint8_t *fl = P->cfl0 + (size_t)f * P->nfl; size_t done = 0; int bad = 0;
+    uint8_t *cur = P->out + P->dec_off[f]; const uint8_t *pp = f ? P->out + P->dec_off[f - 1] : NULL;
+    const uint8_t *fl = P->cfl0 + (size_t)f * P->nfl; uint16_t done = 0; int bad = 0;
     for (int p = 0; p < L->np; p++) {
         size_t ps = L->w[p] * L->h[p], w = L->w[p], h = L->h[p]; const uint8_t *res = P->crs0 + P->plane_off[p] + (size_t)f * ps;
         for (size_t y0 = 0, st = 0; y0 < h; y0 += KV_STRIP, st++) {
@@ -120,38 +120,56 @@ static void kv_dec_frame(void *ctx, int f, int worker) {
                 if (k) while (__atomic_load_n(&P->prog[f - 1], __ATOMIC_ACQUIRE) <= done) sched_yield();   /* frame f - 1 has this strip */
                 KOLMO_K->vid_strip_dec(cur, pp, w, y0, y0 + KV_STRIP < h ? y0 + KV_STRIP : h, k, res);
             }
-            __atomic_store_n(&P->prog[f], bad ? SIZE_MAX : ++done, __ATOMIC_RELEASE);
+            __atomic_store_n(&P->prog[f], bad ? UINT16_MAX : ++done, __ATOMIC_RELEASE);
         }
         fl += kv_strips(h); cur += ps; if (pp) pp += ps;
     }
     if (bad) __atomic_store_n(&P->err, 1, __ATOMIC_RELAXED);
 }
 
-static int kv_inverse(const uint8_t *t, size_t tn, uint8_t *out, size_t n, int threads) {
-    if (tn < 4) return -1;
-    size_t hl = (size_t)t[0] | (size_t)t[1] << 8 | (size_t)t[2] << 16 | (size_t)t[3] << 24; if (hl > tn - 4) return -1;
+static int kv_inverse_limited(const uint8_t *t, size_t tn, uint8_t *out, size_t n, int threads, uint64_t budget) {
+    if (tn < 4 || n > UINT32_MAX) return KOLMO_ERR_CORRUPT;
+    size_t hl = (size_t)t[0] | (size_t)t[1] << 8 | (size_t)t[2] << 16 | (size_t)t[3] << 24;
+    if (hl > tn - 4 || hl > n) return KOLMO_ERR_CORRUPT;
     kv_layout_t L;
     const uint8_t *h = t + 4, *e = memchr(h, '\n', hl);          /* the header bytes alone give the layout */
-    if (!e || kv_geometry(h, e, &L)) return -1;
-    size_t frames = 0; for (const uint8_t *q = e + 1; q < h + hl; ) { const uint8_t *f = memchr(q, '\n', (size_t)(h + hl - q)); if (!f) return -1; frames++; q = f + 1; }
+    if (!e || kv_geometry(h, e, &L)) return KOLMO_ERR_CORRUPT;
+    size_t frames = 0;
+    for (const uint8_t *q = e + 1; q < h + hl; ) {
+        const uint8_t *f = memchr(q, '\n', (size_t)(h + hl - q));
+        if (!f) return KOLMO_ERR_CORRUPT;
+        frames++;
+        q = f + 1;
+    }
     L.frames = frames;
     size_t nfl = 0; for (int p = 0; p < L.np; p++) nfl += kv_strips(L.h[p]);
-    size_t nflags = nfl * L.frames;
-    if (!frames || frames > INT32_MAX || tn != 4 + hl + nflags + L.frames * L.frame_bytes || n != hl + L.frames * L.frame_bytes) return -1;
+    size_t samples = n - hl, coded = tn - 4 - hl;
+    if (!frames || frames > INT32_MAX || frames > samples / L.frame_bytes || frames > coded / nfl ||
+        frames * L.frame_bytes != samples) return KOLMO_ERR_CORRUPT;
+    size_t nflags = nfl * frames;
+    if (coded - nflags != samples) return KOLMO_ERR_CORRUPT;
     kv_par P = {0}; P.L = L; P.out = out; P.cfl0 = t + 4 + hl; P.crs0 = P.cfl0 + nflags; P.nfl = nfl;
+    /* The outer raw length is 32-bit, and each frame has at most 3,072 strips. Using six bytes per frame here
+     * keeps even short valid frames within the existing decoder declaration when the output is owned too. */
+    size_t per_frame = sizeof *P.dec_off + sizeof *P.prog;
+    if (frames > SIZE_MAX / per_frame || frames > budget / per_frame) return KOLMO_ERR_MEMORY;
+    P.dec_off = malloc(frames * sizeof *P.dec_off);
+    P.prog = calloc(frames, sizeof *P.prog);
+    if (!P.dec_off || !P.prog) { free(P.dec_off); free(P.prog); return KOLMO_ERR_ALLOC; }
     size_t acc = 0; for (int p = 0; p < L.np; p++) { P.plane_off[p] = acc; acc += L.frames * L.w[p] * L.h[p]; }
-    P.foff = malloc(frames * sizeof *P.foff); P.prog = calloc(frames, sizeof *P.prog);
-    if (!P.foff || !P.prog) { free(P.foff); free(P.prog); return -1; }
     size_t o = (size_t)(e - h) + 1, hi = o; memcpy(out, h, o);
     for (size_t f = 0; f < frames; f++) {                       /* FRAME lines in place; sample offsets of each frame */
         const uint8_t *fe = memchr(h + hi, '\n', hl - hi); size_t fl_len = (size_t)(fe - (h + hi)) + 1;
-        memcpy(out + o, h + hi, fl_len); o += fl_len; hi += fl_len; P.foff[f] = o; o += L.frame_bytes;
+        memcpy(out + o, h + hi, fl_len); o += fl_len; hi += fl_len; P.dec_off[f] = (uint32_t)o; o += L.frame_bytes;
     }
     if (o == n) kolmo_par_for(threads, (int)frames, kv_dec_frame, &P);
-    free(P.foff); free(P.prog);
-    return o == n && !P.err ? 0 : -1;
+    free(P.dec_off); free(P.prog);
+    return o == n && !P.err ? 0 : KOLMO_ERR_CORRUPT;
 }
 
+static inline int kv_inverse(const uint8_t *t, size_t tn, uint8_t *out, size_t n, int threads) {
+    return kv_inverse_limited(t, tn, out, n, threads, KMEM_UNLIMITED);
+}
 
 /* a whole frame, coded by core/compress.c and decoded by core/decode.c (never a graph leaf): a name only */
 static const kolmo_codec codec_video = { C_VID, "video", NULL, NULL, NULL, NULL };
