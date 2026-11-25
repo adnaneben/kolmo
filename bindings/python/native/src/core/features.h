@@ -36,6 +36,12 @@ uint64_t kx_bound(int count, const uint64_t *lens);
 int kolmo__block_column(const uint8_t *src, size_t n, uint32_t i, int col, uint8_t **out, size_t *outn,
                         uint64_t *decoded, uint64_t *read);
 
+/* Read the file table once. A visit can return a negative KOLMO_ERR_*, zero to skip, or positive to extract.
+ * Extraction is optional. When supplied, the callback receives each selected file's checked data in table order. */
+typedef int (*kolmo__archive_visit_fn)(void *ctx, const char *name, uint64_t size, uint32_t mode, int64_t mtime);
+int64_t kolmo__archive_walk(const uint8_t *src, size_t n, kolmo__archive_visit_fn visit, kolmo_archive_fn extract,
+                            void *ctx, int threads);
+
 /* ---- little helpers shared by index.c and dedup.c ---- */
 static inline void kx_put32(uint8_t *p, uint32_t v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); p[2] = (uint8_t)(v >> 16); p[3] = (uint8_t)(v >> 24); }
 static inline void kx_put64(uint8_t *p, uint64_t v) { kx_put32(p, (uint32_t)v); kx_put32(p + 4, (uint32_t)(v >> 32)); }
