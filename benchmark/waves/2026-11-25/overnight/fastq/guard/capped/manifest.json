@@ -1,0 +1,25 @@
+{
+  "candidate_commit": "516e1dca02ac8165ed91ef5068af84e44335a109",
+  "stock_commit": "258ca7b60db43cfdfba308c703b2e576cb628fa1",
+  "candidate_binary_sha256": "e3a84d231f21e67437b2f72b0964255489c01b92b09dc66ef1234895f3b52983",
+  "stock_binary_sha256": "c40c238ab3e023364b7b14c6fa9c3fae3e06e7dda91bb9d9a2cf1586554bacc7",
+  "reference_csv_sha256": "fe09f18ebe3cfce692c6567357cbfaedf08edcec5d208b3b9c3ee9d6d741489e",
+  "rounds_per_arm": 2,
+  "host": "macOS-27.2-arm64-arm-64bit",
+  "stock_build": "make build/kolmo",
+  "candidate_build": "make DEFS=-DKOLMO_FASTQ_RECORD_BLOCKS build/kolmo",
+  "encoder_args": [
+    "-q",
+    "-T1",
+    "-U",
+    "--memlimit",
+    "256M"
+  ],
+  "stock_decode_args": [
+    "-q",
+    "-T1",
+    "-d"
+  ],
+  "matched_reference_archive_digests": true,
+  "restores": 8
+}

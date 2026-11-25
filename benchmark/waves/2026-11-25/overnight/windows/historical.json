@@ -1,0 +1,26 @@
+{
+  "historical_revision": "847f518313cd59565315b9374d0cf9e9c3de3c1e",
+  "original_zip_sha256": "8b41c66f268d66cf149145c86f4ad57ec172fb43abc4eb9e5c1e4d3dc4c18bb6",
+  "reviewers_md_sha256": "920a319374678d90a217c45a35c218c2e6dc6b02545a834a35fd26f916e799c8",
+  "row_109": "| 56 | Start Windows support with a native UCRT x86-64 memory-only build and fresh installed DLL checks. | Portability research |",
+  "prior_claims": [
+    {
+      "claim_id": "103",
+      "reviewer": "R27",
+      "topic": "rust-windows-port",
+      "tier": "planned",
+      "report": "reviews/R27.md",
+      "report_sha256": "902e81ec02abee2e58a6d25dbe87c189e22c4216d7a113c7f483399d53c554eb",
+      "report_lines": "137 146"
+    },
+    {
+      "claim_id": "139",
+      "reviewer": "R28",
+      "topic": "windows-cli-native",
+      "tier": "planned",
+      "report": "reviews/R28.md",
+      "report_sha256": "81dfae30cc89f494696893adbc1c7ee74b4b563a568f4a40ac7ebb8b4d7999e3",
+      "report_lines": "244 257"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "tested_sources": {
+    "zarr": {
+      "sha": "cb3908b998f692c1ff8a071034cba0554c775e4e",
+      "type": "commit",
+      "url": "https://api.github.com/repos/zarr-developers/zarr-python/git/commits/cb3908b998f692c1ff8a071034cba0554c775e4e"
+    },
+    "fasteners": {
+      "sha": "06c3f06cab4e135b8d921932019a231c180eb9f4",
+      "type": "commit",
+      "url": "https://api.github.com/repos/harlowja/fasteners/git/commits/06c3f06cab4e135b8d921932019a231c180eb9f4"
+    },
+    "asciitree": {
+      "sha": "48d76293cb560e8abe84fc2ea0f2a76f2c88615b",
+      "type": "commit",
+      "url": "https://api.github.com/repos/mbr/asciitree/git/commits/48d76293cb560e8abe84fc2ea0f2a76f2c88615b"
+    }
+  },
+  "verified_git_blobs": {
+    "zarr/__init__.py": "6cecb40af8862d73b9e1abc18c04ba9675768476",
+    "zarr/attrs.py": "01fc617b3c3eff762eae7782a51f61b3690db078",
+    "zarr/codecs.py": "4ad68b8627f21db2e443d857ceb01c043963b441",
+    "zarr/context.py": "3dd7dda4ac36adf8483fca18dd38d862c9a7014d",
+    "zarr/convenience.py": "ff236d0df22ec7f72291cebdc9378a90ce85d065",
+    "zarr/core.py": "43ccdbaf7d415ee7aa581f4fea4bfeb59a506ae1",
+    "zarr/creation.py": "726d0b59325bd6180153f6d08fbdf342ce77f88e",
+    "zarr/errors.py": "30c9b13d39ab8bd027834925e654aff99f1d7b2c",
+    "zarr/hierarchy.py": "3361969f083a9b53af8654eafb94bacd6b54db34",
+    "zarr/indexing.py": "487cc8b9d95e305b7e31b9837e9b7f5cf36fabdb",
+    "zarr/meta.py": "48791ddf177dadee569e84b707a448c1329508d0",
+    "zarr/meta_v1.py": "4ac381f2ca77022d3729a4102e228bba0ff83ae2",
+    "zarr/n5.py": "7e739055272c88d74dee3abfb6a0456d655db39e",
+    "zarr/storage.py": "b36f804ebd5779e79596dafa8abc464fbeb15a71",
+    "zarr/sync.py": "49684a51ee8966f4efaf0702b0c82786bebd8b4b",
+    "zarr/util.py": "ea0dd9fcec6a5379aba5f8a907ae69f16518daa3",
+    "asciitree/__init__.py": "080394810b7e0309de4d1709287f3205482e936c",
+    "asciitree/drawing.py": "9f91863b2a9ba632fc9060f0562629775ca90bba",
+    "asciitree/traversal.py": "325135fff765d55b9c7639ba68a7f8d7e2bacdb7",
+    "asciitree/util.py": "0b27f179dbeda61af2ea2237b3a0cd5b31c31125",
+    "fasteners/__init__.py": "80ce8ba6556e1dc7f6333f0b7706194da13e1278",
+    "fasteners/_utils.py": "1bba12030401451422643e6fe71a9f1320904a07",
+    "fasteners/lock.py": "fdfbee53109bde5ff0b6a0935c931da7b739f7e7",
+    "fasteners/process_lock.py": "1197731233645f25cb99c305f1256a93c959e55f",
+    "fasteners/process_mechanism.py": "39ccec66d2e2c9476ffaa32c7a9613f7ff2abf9f",
+    "fasteners/version.py": "728378789cdb0b405db345b6a7807cca719c73ca",
+    "zarr/_storage/__init__.py": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+    "zarr/_storage/absstore.py": "f62529f096ff51ba332c356339ad45231c5d970f",
+    "zarr/_storage/store.py": "8daedae48f2d4c9cdbee30b1874ebb21c291f44d",
+    "zarr/_storage/v3.py": "00dc085dac42ca3e2de272c0e9623ad718c08ee5",
+    "zarr/_storage/v3_storage_transformers.py": "ff31a7281c601b4064cb8d14e01d29c3aadb591b",
+    "fasteners/pywin32/__init__.py": "8988858d2715972c77a0b9e62641c6145ff1efb8",
+    "fasteners/pywin32/pywintypes.py": "d806702b13a839ad6a4084035aa0226fefc673b6",
+    "fasteners/pywin32/win32con.py": "5e21b0301ae97f0d71fb344c19513868854f1e4b",
+    "fasteners/pywin32/win32file.py": "76b5731bab138ada78cbe9ec387f5ae39694e47f"
+  },
+  "additional_generated_file": {
+    "zarr/version.py": "version = \"2.16.1\" (recorded tag in place of setuptools-scm build-time version module)"
+  }
+}

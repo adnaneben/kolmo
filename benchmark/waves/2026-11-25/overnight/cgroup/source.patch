@@ -1,0 +1,844 @@
+From bd2d8fbea1bb6f89b81a1003597e00c18e5d87bb Mon Sep 17 00:00:00 2001
+From: Adnan Benali <adnanbenali@Adnans-MacBook-Pro.local>
+Date: Wed, 25 Nov 2026 21:18:50 +0300
+Subject: [PATCH] Honor visible Linux cgroup ancestors and delegated mounts for
+ memory admission
+
+---
+ Makefile                                 |   8 +-
+ bindings/python/native/src/core/cgroup.h | 157 +++++++++++++++++++++++
+ bindings/python/native/src/core/memory.c |  36 +-----
+ bindings/rust/native/src/core/cgroup.h   | 157 +++++++++++++++++++++++
+ bindings/rust/native/src/core/memory.c   |  36 +-----
+ docs/MEMORY-MODEL.md                     |   7 +-
+ src/core/cgroup.h                        | 157 +++++++++++++++++++++++
+ src/core/memory.c                        |  36 +-----
+ tests/cgroup_probe.c                     |  13 ++
+ tests/test_cgroup.py                     | 119 +++++++++++++++++
+ 10 files changed, 624 insertions(+), 102 deletions(-)
+ create mode 100644 bindings/python/native/src/core/cgroup.h
+ create mode 100644 bindings/rust/native/src/core/cgroup.h
+ create mode 100644 src/core/cgroup.h
+ create mode 100644 tests/cgroup_probe.c
+ create mode 100644 tests/test_cgroup.py
+
+diff --git a/Makefile b/Makefile
+index 67419de7..fbb4937b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -342,7 +342,13 @@ build/test-memdyn: tests/test_memdyn.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES)
+ 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
+ build/test-memdyn-asan: tests/test_memdyn.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+ 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch-asan.a -o $@ $(LIBS)
+-check-memdyn: build/test-memdyn build/test-memdyn-asan
++build/cgroup-probe: tests/cgroup_probe.c src/core/cgroup.h
++	@mkdir -p build
++	$(CC) $(CFLAGS) $< -o $@
++check-cgroup: build/cgroup-probe
++	python3 tests/test_cgroup.py $<
++.PHONY: check-cgroup
++check-memdyn: check-cgroup build/test-memdyn build/test-memdyn-asan
+ 	./build/test-memdyn
+ 	./build/test-memdyn-asan --quick
+ .PHONY: check-memdyn
+diff --git a/bindings/python/native/src/core/cgroup.h b/bindings/python/native/src/core/cgroup.h
+new file mode 100644
+index 00000000..6624a764
+--- /dev/null
++++ b/bindings/python/native/src/core/cgroup.h
+@@ -0,0 +1,157 @@
++/* Linux memory controller accounting. Included by memory.c on Linux and directly by the layout tests. */
++#ifndef KOLMO_CGROUP_H
++#define KOLMO_CGROUP_H
++#include <errno.h>
++#include <fcntl.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++
++static int kmem_cgroup_token(const char *list, const char *wanted) {
++    size_t size = strlen(wanted);
++    while (*list) {
++        size_t length = strcspn(list, ",");
++        if (length == size && !memcmp(list, wanted, size)) return 1;
++        list += length;
++        if (*list) list++;
++    }
++    return 0;
++}
++
++/* mountinfo escapes space, tab, newline and backslash as three octal digits. Membership paths are literal. */
++static void kmem_mount_unescape(char *path) {
++    char *out = path;
++    while (*path) {
++        if (*path == '\\' && path[1] >= '0' && path[1] <= '3' && path[2] >= '0' && path[2] <= '7'
++            && path[3] >= '0' && path[3] <= '7') {
++            int value = (path[1] - '0') * 64 + (path[2] - '0') * 8 + path[3] - '0';
++            if (value == ' ' || value == '\t' || value == '\n' || value == '\\') {
++                *out++ = (char)value;
++                path += 4;
++                continue;
++            }
++        }
++        *out++ = *path++;
++    }
++    *out = 0;
++}
++
++static int kmem_cgroup_number(int fd, const char *name, uint64_t *value) {
++    int file = openat(fd, name, O_RDONLY | O_CLOEXEC);
++    if (file < 0) return -1;
++    char buf[64];
++    ssize_t n = read(file, buf, sizeof(buf) - 1);
++    close(file);
++    if (n <= 0 || n == (ssize_t)sizeof(buf) - 1 || buf[0] < '0' || buf[0] > '9') return -1;
++    buf[n] = 0;
++    char *end;
++    errno = 0;
++    unsigned long long number = strtoull(buf, &end, 10);
++    if (errno || (*end && strcmp(end, "\n"))) return -1;
++    *value = (uint64_t)number;
++    return 0;
++}
++
++/* Both the membership and mount root use the reader's cgroup namespace coordinates. The mount point
++ * is in its filesystem namespace. A mount of a sibling subtree cannot describe this process. */
++static void kmem_cgroup_mount(const char *member, const char *root, const char *mountpoint,
++                              int unified, uint64_t *room, uint64_t *limit) {
++    size_t base = strlen(root);
++    if (!base || root[0] != '/' || mountpoint[0] != '/' || member[0] != '/') return;
++    if (base == 1) base = 0;
++    if (strncmp(member, root, base) || (member[base] && member[base] != '/')) return;
++    const char *relative = member + base;
++    /* A cgroup outside the namespace root can be reported with "..". Its mapping is ambiguous. */
++    for (const char *p = member; *p; ) {
++        p++;
++        size_t n = strcspn(p, "/");
++        if ((n == 2 && !memcmp(p, "..", 2)) || (n == 1 && *p == '.')) return;
++        p += n;
++    }
++    size_t mountlen = strlen(mountpoint), suffix = strlen(relative);
++    char *path = malloc(mountlen + suffix + 1);
++    if (!path) return;
++    memcpy(path, mountpoint, mountlen);
++    memcpy(path + mountlen, relative, suffix + 1);
++    size_t end = mountlen + suffix;
++    if (end > mountlen && path[end - 1] == '/') path[--end] = 0;
++    int leaf = 1;
++    for (;;) {
++        int fd = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
++        if (fd < 0 && leaf) break;
++        if (fd >= 0) {
++            uint64_t hierarchy, maximum, current;
++            /* Legacy kernels allowed v1 parents to opt out of hierarchical accounting. */
++            int applies = unified || leaf || kmem_cgroup_number(fd, "memory.use_hierarchy", &hierarchy) || hierarchy;
++            if (applies && !kmem_cgroup_number(fd, unified ? "memory.max" : "memory.limit_in_bytes", &maximum)
++                && (unified || maximum < (UINT64_C(1) << 60))) {
++                if (maximum < *limit) *limit = maximum;
++                if (!kmem_cgroup_number(fd, unified ? "memory.current" : "memory.usage_in_bytes", &current)) {
++                    uint64_t left = current < maximum ? maximum - current : 0;
++                    if (left < *room) *room = left;
++                }
++            }
++            close(fd);
++        }
++        if (end == mountlen) break;
++        while (end > mountlen && path[end - 1] != '/') end--;
++        path[--end] = 0;
++        leaf = 0;
++    }
++    free(path);
++}
++
++static int kmem_cgroup_layout(const char *membership, const char *mountinfo, uint64_t *room, uint64_t *limit) {
++    *room = *limit = UINT64_MAX;
++    FILE *f = fopen(membership, "r");
++    if (!f) return -1;
++    char *line = NULL, *member[2] = {NULL, NULL};
++    size_t cap = 0;
++    while (getline(&line, &cap, f) >= 0) {
++        char *controllers = strchr(line, ':');
++        if (!controllers) continue;
++        *controllers++ = 0;
++        char *path = strchr(controllers, ':');
++        if (!path) continue;
++        *path++ = 0;
++        int unified = !strcmp(line, "0") && !*controllers;
++        if (!unified && !kmem_cgroup_token(controllers, "memory")) continue;
++        path[strcspn(path, "\n")] = 0;
++        free(member[unified]);
++        member[unified] = strdup(path);
++    }
++    fclose(f);
++    f = fopen(mountinfo, "r");
++    if (f) {
++        while (getline(&line, &cap, f) >= 0) {
++            char *separator = strstr(line, " - ");
++            if (!separator) continue;
++            *separator = 0;
++            char *state, *type = strtok_r(separator + 3, " ", &state);
++            char *source = strtok_r(NULL, " ", &state);
++            char *options = strtok_r(NULL, " \n", &state);
++            if (!type || !source || !options) continue;
++            int unified = !strcmp(type, "cgroup2");
++            if (!member[unified] || (!unified && (strcmp(type, "cgroup") || !kmem_cgroup_token(options, "memory"))))
++                continue;
++            /* Fields 4 and 5 precede optional fields, which may vary by kernel. */
++            char *field = strtok_r(line, " ", &state);
++            for (int i = 0; i < 3 && field; i++) field = strtok_r(NULL, " ", &state);
++            char *root = field, *mountpoint = strtok_r(NULL, " ", &state);
++            if (!root || !mountpoint) continue;
++            kmem_mount_unescape(root);
++            kmem_mount_unescape(mountpoint);
++            kmem_cgroup_mount(member[unified], root, mountpoint, unified, room, limit);
++        }
++        fclose(f);
++    }
++    free(line);
++    free(member[0]);
++    free(member[1]);
++    /* An unreadable usage counter cannot erase a known upper bound. */
++    if (*room > *limit) *room = *limit;
++    return *limit == UINT64_MAX ? -1 : 0;
++}
++#endif
+diff --git a/bindings/python/native/src/core/memory.c b/bindings/python/native/src/core/memory.c
+index 1b7747e8..f08ac3c9 100644
+--- a/bindings/python/native/src/core/memory.c
++++ b/bindings/python/native/src/core/memory.c
+@@ -137,42 +137,12 @@ static int kmem_parse_size(const char *s, uint64_t *out) {
+     *out = (uint64_t)b; return 0;
+ }
+ #if defined(__linux__)
+-static int kmem_read_u64_file(const char *path, uint64_t *v) {
+-    FILE *f = fopen(path, "r"); if (!f) return -1;
+-    char b[64]; int ok = fgets(b, sizeof b, f) != NULL; fclose(f);
+-    if (!ok || !strncmp(b, "max", 3)) return -1;
+-    char *e; unsigned long long x = strtoull(b, &e, 10); if (e == b) return -1;
+-    *v = x; return 0;
+-}
+-/* the cgroup's room: limit minus usage (v2, else v1); -1 when there is no limit */
++#include "cgroup.h"
+ static int kmem_cgroup_room(uint64_t *room, uint64_t *limit) {
+-    FILE *f = fopen("/proc/self/cgroup", "r"); if (!f) return -1;
+-    char line[512], v2[512] = "", v1[512] = ""; int have2 = 0, have1 = 0;
+-    while (fgets(line, sizeof line, f)) {
+-        size_t l = strlen(line); if (l && line[l - 1] == '\n') line[--l] = 0;
+-        if (!strncmp(line, "0::", 3)) { snprintf(v2, sizeof v2, "%s", line + 3); have2 = 1; }
+-        else { char *c = strchr(line, ':'); if (c && !strncmp(c + 1, "memory:", 7)) { snprintf(v1, sizeof v1, "%s", c + 8); have1 = 1; } }
+-    }
+-    fclose(f);
+-    char p[640]; uint64_t lim, cur;
+-    if (have2) {
+-        snprintf(p, sizeof p, "/sys/fs/cgroup%s/memory.max", v2);
+-        if (!kmem_read_u64_file(p, &lim)) {
+-            snprintf(p, sizeof p, "/sys/fs/cgroup%s/memory.current", v2);
+-            if (!kmem_read_u64_file(p, &cur)) { *limit = lim; *room = lim > cur ? lim - cur : 0; return 0; }
+-        }
+-    }
+-    if (have1) {
+-        snprintf(p, sizeof p, "/sys/fs/cgroup/memory%s/memory.limit_in_bytes", v1);
+-        if (!kmem_read_u64_file(p, &lim) && lim < ((uint64_t)1 << 60)) {
+-            snprintf(p, sizeof p, "/sys/fs/cgroup/memory%s/memory.usage_in_bytes", v1);
+-            if (!kmem_read_u64_file(p, &cur)) { *limit = lim; *room = lim > cur ? lim - cur : 0; return 0; }
+-        }
+-    }
+-    return -1;
++    return kmem_cgroup_layout("/proc/self/cgroup", "/proc/self/mountinfo", room, limit);
+ }
+ #endif
+-/* physical memory, or the cgroup's limit when lower: the base of "auto" (50%) and of N% */
++/* physical memory, or the cgroup's limit when lower: the base of "auto" (50%) */
+ static uint64_t kmem_machine(void) {
+     uint64_t m = kmem_phys();
+ #if defined(__linux__)
+diff --git a/bindings/rust/native/src/core/cgroup.h b/bindings/rust/native/src/core/cgroup.h
+new file mode 100644
+index 00000000..6624a764
+--- /dev/null
++++ b/bindings/rust/native/src/core/cgroup.h
+@@ -0,0 +1,157 @@
++/* Linux memory controller accounting. Included by memory.c on Linux and directly by the layout tests. */
++#ifndef KOLMO_CGROUP_H
++#define KOLMO_CGROUP_H
++#include <errno.h>
++#include <fcntl.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++
++static int kmem_cgroup_token(const char *list, const char *wanted) {
++    size_t size = strlen(wanted);
++    while (*list) {
++        size_t length = strcspn(list, ",");
++        if (length == size && !memcmp(list, wanted, size)) return 1;
++        list += length;
++        if (*list) list++;
++    }
++    return 0;
++}
++
++/* mountinfo escapes space, tab, newline and backslash as three octal digits. Membership paths are literal. */
++static void kmem_mount_unescape(char *path) {
++    char *out = path;
++    while (*path) {
++        if (*path == '\\' && path[1] >= '0' && path[1] <= '3' && path[2] >= '0' && path[2] <= '7'
++            && path[3] >= '0' && path[3] <= '7') {
++            int value = (path[1] - '0') * 64 + (path[2] - '0') * 8 + path[3] - '0';
++            if (value == ' ' || value == '\t' || value == '\n' || value == '\\') {
++                *out++ = (char)value;
++                path += 4;
++                continue;
++            }
++        }
++        *out++ = *path++;
++    }
++    *out = 0;
++}
++
++static int kmem_cgroup_number(int fd, const char *name, uint64_t *value) {
++    int file = openat(fd, name, O_RDONLY | O_CLOEXEC);
++    if (file < 0) return -1;
++    char buf[64];
++    ssize_t n = read(file, buf, sizeof(buf) - 1);
++    close(file);
++    if (n <= 0 || n == (ssize_t)sizeof(buf) - 1 || buf[0] < '0' || buf[0] > '9') return -1;
++    buf[n] = 0;
++    char *end;
++    errno = 0;
++    unsigned long long number = strtoull(buf, &end, 10);
++    if (errno || (*end && strcmp(end, "\n"))) return -1;
++    *value = (uint64_t)number;
++    return 0;
++}
++
++/* Both the membership and mount root use the reader's cgroup namespace coordinates. The mount point
++ * is in its filesystem namespace. A mount of a sibling subtree cannot describe this process. */
++static void kmem_cgroup_mount(const char *member, const char *root, const char *mountpoint,
++                              int unified, uint64_t *room, uint64_t *limit) {
++    size_t base = strlen(root);
++    if (!base || root[0] != '/' || mountpoint[0] != '/' || member[0] != '/') return;
++    if (base == 1) base = 0;
++    if (strncmp(member, root, base) || (member[base] && member[base] != '/')) return;
++    const char *relative = member + base;
++    /* A cgroup outside the namespace root can be reported with "..". Its mapping is ambiguous. */
++    for (const char *p = member; *p; ) {
++        p++;
++        size_t n = strcspn(p, "/");
++        if ((n == 2 && !memcmp(p, "..", 2)) || (n == 1 && *p == '.')) return;
++        p += n;
++    }
++    size_t mountlen = strlen(mountpoint), suffix = strlen(relative);
++    char *path = malloc(mountlen + suffix + 1);
++    if (!path) return;
++    memcpy(path, mountpoint, mountlen);
++    memcpy(path + mountlen, relative, suffix + 1);
++    size_t end = mountlen + suffix;
++    if (end > mountlen && path[end - 1] == '/') path[--end] = 0;
++    int leaf = 1;
++    for (;;) {
++        int fd = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
++        if (fd < 0 && leaf) break;
++        if (fd >= 0) {
++            uint64_t hierarchy, maximum, current;
++            /* Legacy kernels allowed v1 parents to opt out of hierarchical accounting. */
++            int applies = unified || leaf || kmem_cgroup_number(fd, "memory.use_hierarchy", &hierarchy) || hierarchy;
++            if (applies && !kmem_cgroup_number(fd, unified ? "memory.max" : "memory.limit_in_bytes", &maximum)
++                && (unified || maximum < (UINT64_C(1) << 60))) {
++                if (maximum < *limit) *limit = maximum;
++                if (!kmem_cgroup_number(fd, unified ? "memory.current" : "memory.usage_in_bytes", &current)) {
++                    uint64_t left = current < maximum ? maximum - current : 0;
++                    if (left < *room) *room = left;
++                }
++            }
++            close(fd);
++        }
++        if (end == mountlen) break;
++        while (end > mountlen && path[end - 1] != '/') end--;
++        path[--end] = 0;
++        leaf = 0;
++    }
++    free(path);
++}
++
++static int kmem_cgroup_layout(const char *membership, const char *mountinfo, uint64_t *room, uint64_t *limit) {
++    *room = *limit = UINT64_MAX;
++    FILE *f = fopen(membership, "r");
++    if (!f) return -1;
++    char *line = NULL, *member[2] = {NULL, NULL};
++    size_t cap = 0;
++    while (getline(&line, &cap, f) >= 0) {
++        char *controllers = strchr(line, ':');
++        if (!controllers) continue;
++        *controllers++ = 0;
++        char *path = strchr(controllers, ':');
++        if (!path) continue;
++        *path++ = 0;
++        int unified = !strcmp(line, "0") && !*controllers;
++        if (!unified && !kmem_cgroup_token(controllers, "memory")) continue;
++        path[strcspn(path, "\n")] = 0;
++        free(member[unified]);
++        member[unified] = strdup(path);
++    }
++    fclose(f);
++    f = fopen(mountinfo, "r");
++    if (f) {
++        while (getline(&line, &cap, f) >= 0) {
++            char *separator = strstr(line, " - ");
++            if (!separator) continue;
++            *separator = 0;
++            char *state, *type = strtok_r(separator + 3, " ", &state);
++            char *source = strtok_r(NULL, " ", &state);
++            char *options = strtok_r(NULL, " \n", &state);
++            if (!type || !source || !options) continue;
++            int unified = !strcmp(type, "cgroup2");
++            if (!member[unified] || (!unified && (strcmp(type, "cgroup") || !kmem_cgroup_token(options, "memory"))))
++                continue;
++            /* Fields 4 and 5 precede optional fields, which may vary by kernel. */
++            char *field = strtok_r(line, " ", &state);
++            for (int i = 0; i < 3 && field; i++) field = strtok_r(NULL, " ", &state);
++            char *root = field, *mountpoint = strtok_r(NULL, " ", &state);
++            if (!root || !mountpoint) continue;
++            kmem_mount_unescape(root);
++            kmem_mount_unescape(mountpoint);
++            kmem_cgroup_mount(member[unified], root, mountpoint, unified, room, limit);
++        }
++        fclose(f);
++    }
++    free(line);
++    free(member[0]);
++    free(member[1]);
++    /* An unreadable usage counter cannot erase a known upper bound. */
++    if (*room > *limit) *room = *limit;
++    return *limit == UINT64_MAX ? -1 : 0;
++}
++#endif
+diff --git a/bindings/rust/native/src/core/memory.c b/bindings/rust/native/src/core/memory.c
+index 1b7747e8..f08ac3c9 100644
+--- a/bindings/rust/native/src/core/memory.c
++++ b/bindings/rust/native/src/core/memory.c
+@@ -137,42 +137,12 @@ static int kmem_parse_size(const char *s, uint64_t *out) {
+     *out = (uint64_t)b; return 0;
+ }
+ #if defined(__linux__)
+-static int kmem_read_u64_file(const char *path, uint64_t *v) {
+-    FILE *f = fopen(path, "r"); if (!f) return -1;
+-    char b[64]; int ok = fgets(b, sizeof b, f) != NULL; fclose(f);
+-    if (!ok || !strncmp(b, "max", 3)) return -1;
+-    char *e; unsigned long long x = strtoull(b, &e, 10); if (e == b) return -1;
+-    *v = x; return 0;
+-}
+-/* the cgroup's room: limit minus usage (v2, else v1); -1 when there is no limit */
++#include "cgroup.h"
+ static int kmem_cgroup_room(uint64_t *room, uint64_t *limit) {
+-    FILE *f = fopen("/proc/self/cgroup", "r"); if (!f) return -1;
+-    char line[512], v2[512] = "", v1[512] = ""; int have2 = 0, have1 = 0;
+-    while (fgets(line, sizeof line, f)) {
+-        size_t l = strlen(line); if (l && line[l - 1] == '\n') line[--l] = 0;
+-        if (!strncmp(line, "0::", 3)) { snprintf(v2, sizeof v2, "%s", line + 3); have2 = 1; }
+-        else { char *c = strchr(line, ':'); if (c && !strncmp(c + 1, "memory:", 7)) { snprintf(v1, sizeof v1, "%s", c + 8); have1 = 1; } }
+-    }
+-    fclose(f);
+-    char p[640]; uint64_t lim, cur;
+-    if (have2) {
+-        snprintf(p, sizeof p, "/sys/fs/cgroup%s/memory.max", v2);
+-        if (!kmem_read_u64_file(p, &lim)) {
+-            snprintf(p, sizeof p, "/sys/fs/cgroup%s/memory.current", v2);
+-            if (!kmem_read_u64_file(p, &cur)) { *limit = lim; *room = lim > cur ? lim - cur : 0; return 0; }
+-        }
+-    }
+-    if (have1) {
+-        snprintf(p, sizeof p, "/sys/fs/cgroup/memory%s/memory.limit_in_bytes", v1);
+-        if (!kmem_read_u64_file(p, &lim) && lim < ((uint64_t)1 << 60)) {
+-            snprintf(p, sizeof p, "/sys/fs/cgroup/memory%s/memory.usage_in_bytes", v1);
+-            if (!kmem_read_u64_file(p, &cur)) { *limit = lim; *room = lim > cur ? lim - cur : 0; return 0; }
+-        }
+-    }
+-    return -1;
++    return kmem_cgroup_layout("/proc/self/cgroup", "/proc/self/mountinfo", room, limit);
+ }
+ #endif
+-/* physical memory, or the cgroup's limit when lower: the base of "auto" (50%) and of N% */
++/* physical memory, or the cgroup's limit when lower: the base of "auto" (50%) */
+ static uint64_t kmem_machine(void) {
+     uint64_t m = kmem_phys();
+ #if defined(__linux__)
+diff --git a/docs/MEMORY-MODEL.md b/docs/MEMORY-MODEL.md
+index fa90f752..0dc2dd51 100644
+--- a/docs/MEMORY-MODEL.md
++++ b/docs/MEMORY-MODEL.md
+@@ -146,8 +146,11 @@ smaller, not faster; speed comes from concurrency, which is the dynamic part.
+   - the user's cap (`--memlimit`, `KOLMO_MEMLIMIT`, the API field; `max` = no cap);
+   - the memory the system reports as available:
+     - macOS: `host_statistics64` free + inactive + purgeable, plus the `DISPATCH_SOURCE_TYPE_MEMORYPRESSURE` events;
+-    - Linux: `MemAvailable` from `/proc/meminfo`, the cgroup v2 `memory.max` / `memory.current` and PSI
+-      `/proc/pressure/memory`;
++    - Linux: `MemAvailable` from `/proc/meminfo`, the least remaining headroom in the process's visible cgroup ancestry,
++      and PSI from `/proc/pressure/memory`. Kolmo resolves its v1 or v2 membership against the mounts in
++      `/proc/self/mountinfo`. Each enforcing ancestor contributes its own limit minus its own usage, including other
++      members of that subtree. The smallest finite absolute limit bounds the automatic decode cap. A namespace or
++      a delegated mount can hide higher ancestors. Their headroom is unknown in that view.
+     - elsewhere: physical RAM / 2.
+ 
+   It is re-read at most every 100 ms and on every pressure event.
+diff --git a/src/core/cgroup.h b/src/core/cgroup.h
+new file mode 100644
+index 00000000..6624a764
+--- /dev/null
++++ b/src/core/cgroup.h
+@@ -0,0 +1,157 @@
++/* Linux memory controller accounting. Included by memory.c on Linux and directly by the layout tests. */
++#ifndef KOLMO_CGROUP_H
++#define KOLMO_CGROUP_H
++#include <errno.h>
++#include <fcntl.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++
++static int kmem_cgroup_token(const char *list, const char *wanted) {
++    size_t size = strlen(wanted);
++    while (*list) {
++        size_t length = strcspn(list, ",");
++        if (length == size && !memcmp(list, wanted, size)) return 1;
++        list += length;
++        if (*list) list++;
++    }
++    return 0;
++}
++
++/* mountinfo escapes space, tab, newline and backslash as three octal digits. Membership paths are literal. */
++static void kmem_mount_unescape(char *path) {
++    char *out = path;
++    while (*path) {
++        if (*path == '\\' && path[1] >= '0' && path[1] <= '3' && path[2] >= '0' && path[2] <= '7'
++            && path[3] >= '0' && path[3] <= '7') {
++            int value = (path[1] - '0') * 64 + (path[2] - '0') * 8 + path[3] - '0';
++            if (value == ' ' || value == '\t' || value == '\n' || value == '\\') {
++                *out++ = (char)value;
++                path += 4;
++                continue;
++            }
++        }
++        *out++ = *path++;
++    }
++    *out = 0;
++}
++
++static int kmem_cgroup_number(int fd, const char *name, uint64_t *value) {
++    int file = openat(fd, name, O_RDONLY | O_CLOEXEC);
++    if (file < 0) return -1;
++    char buf[64];
++    ssize_t n = read(file, buf, sizeof(buf) - 1);
++    close(file);
++    if (n <= 0 || n == (ssize_t)sizeof(buf) - 1 || buf[0] < '0' || buf[0] > '9') return -1;
++    buf[n] = 0;
++    char *end;
++    errno = 0;
++    unsigned long long number = strtoull(buf, &end, 10);
++    if (errno || (*end && strcmp(end, "\n"))) return -1;
++    *value = (uint64_t)number;
++    return 0;
++}
++
++/* Both the membership and mount root use the reader's cgroup namespace coordinates. The mount point
++ * is in its filesystem namespace. A mount of a sibling subtree cannot describe this process. */
++static void kmem_cgroup_mount(const char *member, const char *root, const char *mountpoint,
++                              int unified, uint64_t *room, uint64_t *limit) {
++    size_t base = strlen(root);
++    if (!base || root[0] != '/' || mountpoint[0] != '/' || member[0] != '/') return;
++    if (base == 1) base = 0;
++    if (strncmp(member, root, base) || (member[base] && member[base] != '/')) return;
++    const char *relative = member + base;
++    /* A cgroup outside the namespace root can be reported with "..". Its mapping is ambiguous. */
++    for (const char *p = member; *p; ) {
++        p++;
++        size_t n = strcspn(p, "/");
++        if ((n == 2 && !memcmp(p, "..", 2)) || (n == 1 && *p == '.')) return;
++        p += n;
++    }
++    size_t mountlen = strlen(mountpoint), suffix = strlen(relative);
++    char *path = malloc(mountlen + suffix + 1);
++    if (!path) return;
++    memcpy(path, mountpoint, mountlen);
++    memcpy(path + mountlen, relative, suffix + 1);
++    size_t end = mountlen + suffix;
++    if (end > mountlen && path[end - 1] == '/') path[--end] = 0;
++    int leaf = 1;
++    for (;;) {
++        int fd = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
++        if (fd < 0 && leaf) break;
++        if (fd >= 0) {
++            uint64_t hierarchy, maximum, current;
++            /* Legacy kernels allowed v1 parents to opt out of hierarchical accounting. */
++            int applies = unified || leaf || kmem_cgroup_number(fd, "memory.use_hierarchy", &hierarchy) || hierarchy;
++            if (applies && !kmem_cgroup_number(fd, unified ? "memory.max" : "memory.limit_in_bytes", &maximum)
++                && (unified || maximum < (UINT64_C(1) << 60))) {
++                if (maximum < *limit) *limit = maximum;
++                if (!kmem_cgroup_number(fd, unified ? "memory.current" : "memory.usage_in_bytes", &current)) {
++                    uint64_t left = current < maximum ? maximum - current : 0;
++                    if (left < *room) *room = left;
++                }
++            }
++            close(fd);
++        }
++        if (end == mountlen) break;
++        while (end > mountlen && path[end - 1] != '/') end--;
++        path[--end] = 0;
++        leaf = 0;
++    }
++    free(path);
++}
++
++static int kmem_cgroup_layout(const char *membership, const char *mountinfo, uint64_t *room, uint64_t *limit) {
++    *room = *limit = UINT64_MAX;
++    FILE *f = fopen(membership, "r");
++    if (!f) return -1;
++    char *line = NULL, *member[2] = {NULL, NULL};
++    size_t cap = 0;
++    while (getline(&line, &cap, f) >= 0) {
++        char *controllers = strchr(line, ':');
++        if (!controllers) continue;
++        *controllers++ = 0;
++        char *path = strchr(controllers, ':');
++        if (!path) continue;
++        *path++ = 0;
++        int unified = !strcmp(line, "0") && !*controllers;
++        if (!unified && !kmem_cgroup_token(controllers, "memory")) continue;
++        path[strcspn(path, "\n")] = 0;
++        free(member[unified]);
++        member[unified] = strdup(path);
++    }
++    fclose(f);
++    f = fopen(mountinfo, "r");
++    if (f) {
++        while (getline(&line, &cap, f) >= 0) {
++            char *separator = strstr(line, " - ");
++            if (!separator) continue;
++            *separator = 0;
++            char *state, *type = strtok_r(separator + 3, " ", &state);
++            char *source = strtok_r(NULL, " ", &state);
++            char *options = strtok_r(NULL, " \n", &state);
++            if (!type || !source || !options) continue;
++            int unified = !strcmp(type, "cgroup2");
++            if (!member[unified] || (!unified && (strcmp(type, "cgroup") || !kmem_cgroup_token(options, "memory"))))
++                continue;
++            /* Fields 4 and 5 precede optional fields, which may vary by kernel. */
++            char *field = strtok_r(line, " ", &state);
++            for (int i = 0; i < 3 && field; i++) field = strtok_r(NULL, " ", &state);
++            char *root = field, *mountpoint = strtok_r(NULL, " ", &state);
++            if (!root || !mountpoint) continue;
++            kmem_mount_unescape(root);
++            kmem_mount_unescape(mountpoint);
++            kmem_cgroup_mount(member[unified], root, mountpoint, unified, room, limit);
++        }
++        fclose(f);
++    }
++    free(line);
++    free(member[0]);
++    free(member[1]);
++    /* An unreadable usage counter cannot erase a known upper bound. */
++    if (*room > *limit) *room = *limit;
++    return *limit == UINT64_MAX ? -1 : 0;
++}
++#endif
+diff --git a/src/core/memory.c b/src/core/memory.c
+index 1b7747e8..f08ac3c9 100644
+--- a/src/core/memory.c
++++ b/src/core/memory.c
+@@ -137,42 +137,12 @@ static int kmem_parse_size(const char *s, uint64_t *out) {
+     *out = (uint64_t)b; return 0;
+ }
+ #if defined(__linux__)
+-static int kmem_read_u64_file(const char *path, uint64_t *v) {
+-    FILE *f = fopen(path, "r"); if (!f) return -1;
+-    char b[64]; int ok = fgets(b, sizeof b, f) != NULL; fclose(f);
+-    if (!ok || !strncmp(b, "max", 3)) return -1;
+-    char *e; unsigned long long x = strtoull(b, &e, 10); if (e == b) return -1;
+-    *v = x; return 0;
+-}
+-/* the cgroup's room: limit minus usage (v2, else v1); -1 when there is no limit */
++#include "cgroup.h"
+ static int kmem_cgroup_room(uint64_t *room, uint64_t *limit) {
+-    FILE *f = fopen("/proc/self/cgroup", "r"); if (!f) return -1;
+-    char line[512], v2[512] = "", v1[512] = ""; int have2 = 0, have1 = 0;
+-    while (fgets(line, sizeof line, f)) {
+-        size_t l = strlen(line); if (l && line[l - 1] == '\n') line[--l] = 0;
+-        if (!strncmp(line, "0::", 3)) { snprintf(v2, sizeof v2, "%s", line + 3); have2 = 1; }
+-        else { char *c = strchr(line, ':'); if (c && !strncmp(c + 1, "memory:", 7)) { snprintf(v1, sizeof v1, "%s", c + 8); have1 = 1; } }
+-    }
+-    fclose(f);
+-    char p[640]; uint64_t lim, cur;
+-    if (have2) {
+-        snprintf(p, sizeof p, "/sys/fs/cgroup%s/memory.max", v2);
+-        if (!kmem_read_u64_file(p, &lim)) {
+-            snprintf(p, sizeof p, "/sys/fs/cgroup%s/memory.current", v2);
+-            if (!kmem_read_u64_file(p, &cur)) { *limit = lim; *room = lim > cur ? lim - cur : 0; return 0; }
+-        }
+-    }
+-    if (have1) {
+-        snprintf(p, sizeof p, "/sys/fs/cgroup/memory%s/memory.limit_in_bytes", v1);
+-        if (!kmem_read_u64_file(p, &lim) && lim < ((uint64_t)1 << 60)) {
+-            snprintf(p, sizeof p, "/sys/fs/cgroup/memory%s/memory.usage_in_bytes", v1);
+-            if (!kmem_read_u64_file(p, &cur)) { *limit = lim; *room = lim > cur ? lim - cur : 0; return 0; }
+-        }
+-    }
+-    return -1;
++    return kmem_cgroup_layout("/proc/self/cgroup", "/proc/self/mountinfo", room, limit);
+ }
+ #endif
+-/* physical memory, or the cgroup's limit when lower: the base of "auto" (50%) and of N% */
++/* physical memory, or the cgroup's limit when lower: the base of "auto" (50%) */
+ static uint64_t kmem_machine(void) {
+     uint64_t m = kmem_phys();
+ #if defined(__linux__)
+diff --git a/tests/cgroup_probe.c b/tests/cgroup_probe.c
+new file mode 100644
+index 00000000..fd4882b1
+--- /dev/null
++++ b/tests/cgroup_probe.c
+@@ -0,0 +1,13 @@
++/* Read the live process layout by default. Two arguments substitute fixture files. */
++#define _GNU_SOURCE
++#include "../src/core/cgroup.h"
++#include <inttypes.h>
++
++int main(int argc, char **argv) {
++    if (argc != 1 && argc != 3) return 2;
++    uint64_t room, limit;
++    int rc = kmem_cgroup_layout(argc == 3 ? argv[1] : "/proc/self/cgroup",
++                                argc == 3 ? argv[2] : "/proc/self/mountinfo", &room, &limit);
++    printf("%d %" PRIu64 " %" PRIu64 "\n", rc, room, limit);
++    return 0;
++}
+diff --git a/tests/test_cgroup.py b/tests/test_cgroup.py
+new file mode 100644
+index 00000000..2a612b73
+--- /dev/null
++++ b/tests/test_cgroup.py
+@@ -0,0 +1,119 @@
++#!/usr/bin/env python3
++"""Exercise the shipping Linux resolver with unprivileged filesystem fixtures."""
++import itertools
++from pathlib import Path
++import subprocess
++import sys
++import tempfile
++
++UNLIMITED = 2**64 - 1
++PROBE = Path(sys.argv[1]).resolve()
++
++
++def escape(path):
++    return str(path).replace("\\", "\\134").replace(" ", "\\040").replace("\t", "\\011").replace("\n", "\\012")
++
++
++def mount(root, point, version=2, opts="rw"):
++    fstype = "cgroup2" if version == 2 else "cgroup"
++    return f"49 31 0:50 {escape(root)} {escape(point)} rw shared:9 - {fstype} cgroup {opts}\n"
++
++
++def counters(directory, limit=None, usage=None, *, version=2, hierarchy=1):
++    directory.mkdir(parents=True, exist_ok=True)
++    if version == 2:
++        files = {"memory.max": limit, "memory.current": usage}
++    else:
++        files = {"memory.limit_in_bytes": limit, "memory.usage_in_bytes": usage,
++                 "memory.use_hierarchy": hierarchy}
++    for name, value in files.items():
++        if value is not None:
++            (directory / name).write_text(f"{value}\n", encoding="utf-8")
++
++
++def case(name, member, mounts, room, limit):
++    membership.write_text(member, encoding="utf-8")
++    mountinfo.write_text(mounts, encoding="utf-8")
++    args = [PROBE, membership, mountinfo]
++    result = tuple(map(int, subprocess.check_output(args, text=True).split()))
++    expected = (0 if limit != UNLIMITED else -1, room, limit)
++    print(f"{name}: {result}", flush=True)
++    assert result == expected, (name, result, expected)
++
++
++with tempfile.TemporaryDirectory() as td:
++    tmp = Path(td)
++    membership = tmp / "membership"
++    mountinfo = tmp / "mountinfo"
++    # Host files above either mount must never be included in the hierarchy.
++    counters(tmp, 1, 1)
++    counters(tmp, 1, 1, version=1)
++
++    v2 = tmp / "unified"
++    job = v2 / "jobs" / "tenant" / "worker"
++    counters(job, 600, 100)
++    counters(job.parent, 950, 900)
++    counters(job.parent.parent, 2000, 1500)
++    counters(v2, "max", 1600)
++    member = "0::/jobs/tenant/worker\n"
++    case("v2 leaf limit and parent headroom", member, mount("/", v2), 50, 600)
++    counters(job, "max", 100)
++    case("v2 unlimited leaf", member, mount("/", v2), 50, 950)
++    counters(job, "max", 98)
++    counters(job.parent, 950, 1000)
++    case("v2 over-limit clamps to zero", member, mount("/", v2), 0, 950)
++    counters(job.parent, 950, 900)
++
++    delegated = tmp / "delegated space\\tab"
++    counters(delegated, 500, 475)
++    counters(delegated / "job", "max", 33)
++    mounts = mount("/org/delegated", delegated)
++    case("v2 delegated mount root with escaped mountpoint", "0::/org/delegated/job\n", mounts, 25, 500)
++    case("v2 process at delegated root", "0::/org/delegated\n", mounts, 25, 500)
++    case("v2 private namespace root", "0::/\n", mount("/", delegated), 25, 500)
++    case("v2 private namespace child", "0::/job\n", mount("/", delegated), 25, 500)
++    tighter = tmp / "another-view"
++    counters(tighter, 1000, 996)
++    counters(tighter / "delegated" / "job", "max", 75)
++    case("additional mount exposes tighter parent", "0::/org/delegated/job\n",
++         mounts + mount("/org", tighter), 4, 500)
++    case("mount rooted above namespace cannot be mapped", "0::/job\n", mount("/..", delegated),
++         UNLIMITED, UNLIMITED)
++    case("v2 escaped subtree root", "0::/org name/job\n", mount("/org name", delegated), 25, 500)
++    case("sibling prefix routes nowhere", "0::/org/delegated-other/job\n", mounts, UNLIMITED, UNLIMITED)
++    case("cgroup outside namespace", "0::/../delegated/job\n", mount("/", v2), UNLIMITED, UNLIMITED)
++    case("missing process directory", "0::/missing\n", mount("/", v2), UNLIMITED, UNLIMITED)
++
++    components = ["x" * 100] * 6
++    longdir = v2.joinpath(*components)
++    counters(longdir, 400, 30)
++    case("membership path beyond the old buffer", "0::/" + "/".join(components) + "\n",
++         mount("/", v2), 370, 400)
++
++    v1 = tmp / "legacy"
++    counters(v1, 10000, 9999, version=1, hierarchy=0)
++    parent = v1 / "group"
++    counters(parent, 900, 860, version=1)
++    counters(parent / "child", 400, 150, version=1)
++    v1line = "8:cpu,memory,cpuacct:/delegation/group/child\n"
++    v1mount = mount("/delegation", v1, 1, "rw,cpu,memory,cpuacct")
++    case("v1 delegated combined controllers and ancestor", v1line, v1mount, 40, 400)
++    counters(parent, 900, 860, version=1, hierarchy=0)
++    case("v1 nonhierarchical ancestor", v1line, v1mount, 250, 400)
++    counters(parent / "child", 9223372036854771712, 150, version=1)
++    case("v1 unlimited sentinel and nonhierarchical ancestors", v1line, v1mount, UNLIMITED, UNLIMITED)
++    counters(parent / "child", 400, 150, version=1, hierarchy=0)
++    case("v1 leaf applies even with hierarchy disabled", v1line, v1mount, 250, 400)
++    case("v1 mount controller token boundary", v1line, mount("/delegation", v1, 1, "rw,notmemory"), UNLIMITED, UNLIMITED)
++    case("v1 membership controller token boundary", "8:memoryfake:/delegation/group/child\n", v1mount, UNLIMITED, UNLIMITED)
++    for order in itertools.permutations([v1mount, mount("/", v2)]):
++        case("hybrid visible hierarchies", member + v1line, "".join(order), 50, 400)
++
++    empty = tmp / "incomplete"
++    counters(empty, 384)
++    case("limit with missing usage", "0::/\n", mount("/", empty), 384, 384)
++    counters(empty, "max", 0)
++    case("no finite limit", "0::/\n", mount("/", empty), UNLIMITED, UNLIMITED)
++    counters(empty, "100stray", 0)
++    case("malformed counter", "0::/\n", mount("/", empty), UNLIMITED, UNLIMITED)
++    case("missing layout", "0::/\n", "", UNLIMITED, UNLIMITED)

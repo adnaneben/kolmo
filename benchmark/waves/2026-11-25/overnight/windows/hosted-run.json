@@ -1,0 +1,24 @@
+{
+  "observed_utc": "2026-11-25T18:42:46Z",
+  "source_sha": "6c8a96721d0c8c0aaa3faba009e50361781f9544",
+  "product_base_sha": "c8fc5ac54aa302baf6abc66f210617901f9e6e2e",
+  "event": "push",
+  "branch": "codex/ppp-windows-qualification-20261125",
+  "workflow": "Experimental Windows UCRT memory API",
+  "run_id": 45677729010,
+  "url": "https://github.com/adnaneben/kolmo/actions/runs/45677729010",
+  "status": "queued",
+  "conclusion": null,
+  "github_run_last_updated": "2026-11-25T18:41:35Z",
+  "jobs": [
+    {
+      "id": 139429646756,
+      "name": "memory",
+      "url": "https://github.com/adnaneben/kolmo/actions/runs/45677729010/job/139429646756",
+      "status": "queued",
+      "conclusion": null,
+      "steps": null
+    }
+  ],
+  "artifacts": []
+}

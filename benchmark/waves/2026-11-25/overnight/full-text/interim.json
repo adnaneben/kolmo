@@ -1,0 +1,34 @@
+{
+  "source_sha256": "2b49720ec4d78c3c9fabaee6e4179a5e997302b3a70029f30f2d582218c024a8",
+  "bytes": 100000000,
+  "snapshot": "PAQ8PX -8L in progress",
+  "completed": [
+    {
+      "tool": "zstd-19",
+      "stored_bytes": 26944227,
+      "encode_seconds": 84.835244084,
+      "decode_seconds": 0.12372529200000315,
+      "combined_MB_s": 1.1770387604095505,
+      "frame_sha256": "178e68557b8ab69bbad3a4ae667df8412f2a2eadac05bc6f34ccf8c7b7f5bb15",
+      "recovered_sha256": "2b49720ec4d78c3c9fabaee6e4179a5e997302b3a70029f30f2d582218c024a8"
+    },
+    {
+      "tool": "xz-9",
+      "stored_bytes": 24865244,
+      "encode_seconds": 69.986611,
+      "decode_seconds": 0.9994183339999836,
+      "combined_MB_s": 1.408727899534779,
+      "frame_sha256": "8f0074350e76391c09fd51baa9b78b43fc945debe0a114df305ea094d4bfa643",
+      "recovered_sha256": "2b49720ec4d78c3c9fabaee6e4179a5e997302b3a70029f30f2d582218c024a8"
+    },
+    {
+      "tool": "kolmo-ultra",
+      "stored_bytes": 18651472,
+      "encode_seconds": 219.110146,
+      "decode_seconds": 215.38759062499997,
+      "combined_MB_s": 0.23015079612786696,
+      "frame_sha256": "1a2756ac0f7807a6a95b39e40077dac1d0568bf559603b5e03d7fc9c69e02520",
+      "recovered_sha256": "2b49720ec4d78c3c9fabaee6e4179a5e997302b3a70029f30f2d582218c024a8"
+    }
+  ]
+}

@@ -1,0 +1,560 @@
+From 8d23095b2f09d5c9e3c3425123bea63641ca5d71 Mon Sep 17 00:00:00 2001
+From: Adnan Benali <adnanbenali@Adnans-MacBook-Pro.local>
+Date: Wed, 25 Nov 2026 21:34:17 +0300
+Subject: [PATCH] Report measured chunk sizes and modeled costs for unmatched
+ target floors
+
+---
+ bindings/python/native/src/api/features.c     | 12 +++++-
+ bindings/python/native/src/cli/cli.c          | 10 +++--
+ bindings/python/native/src/kolmo.h            |  4 +-
+ bindings/python/native/src/plan/target.c      | 29 +++++++++-----
+ .../python/native/src/plan/target_report.h    | 11 ++++++
+ bindings/rust/native/src/api/features.c       | 12 +++++-
+ bindings/rust/native/src/cli/cli.c            | 10 +++--
+ bindings/rust/native/src/kolmo.h              |  4 +-
+ bindings/rust/native/src/plan/target.c        | 29 +++++++++-----
+ bindings/rust/native/src/plan/target_report.h | 11 ++++++
+ src/api/features.c                            | 12 +++++-
+ src/cli/cli.c                                 | 10 +++--
+ src/kolmo.h                                   |  4 +-
+ src/plan/target.c                             | 29 +++++++++-----
+ src/plan/target_report.h                      | 11 ++++++
+ tests/test_profile.c                          | 39 ++++++++++++++++++-
+ 16 files changed, 188 insertions(+), 49 deletions(-)
+ create mode 100644 bindings/python/native/src/plan/target_report.h
+ create mode 100644 bindings/rust/native/src/plan/target_report.h
+ create mode 100644 src/plan/target_report.h
+
+diff --git a/bindings/python/native/src/api/features.c b/bindings/python/native/src/api/features.c
+index 6520cfe5..5f92068c 100644
+--- a/bindings/python/native/src/api/features.c
++++ b/bindings/python/native/src/api/features.c
+@@ -5,6 +5,7 @@
+  * with the library coders removed (container version 12) they are not available. The calls stay so that programs
+  * keep linking, and return KOLMO_ERR_UNSUPPORTED. Part of the src/kolmo.c translation unit. */
+ #include <time.h>
++#include "../plan/target_report.h"
+ 
+ /* ---------------------------------------------------------------- profiles (not available in this build) */
+ size_t kolmo_profile_bound(const kolmo_train_params *tp) { (void)tp; return 0; }
+@@ -87,6 +88,12 @@ static int64_t kt_merge(uint8_t *const *fr, const size_t *fl, uint32_t k, const
+ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
+                               const kolmo_target *t, const kolmo_profile *prof, kolmo_target_report *report) {
+     if (prof) return KOLMO_ERR_UNSUPPORTED;               /* trained profiles: not available in this build */
++    return kolmo_compress_target_detail(src, n, dst, cap, p, t, report, NULL);
++}
++
++int64_t kolmo_compress_target_detail(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
++                                     const kolmo_params *p, const kolmo_target *t,
++                                     kolmo_target_report *report, uint32_t *fallback_chunks) {
+     if (!t || (!src && n) || !dst) return KOLMO_ERR_TARGET;
+     int threads = p && p->threads > 0 ? p->threads : default_threads();
+     size_t B = p && p->block ? p->block : KT_CHUNK; if (B < 4096) B = 4096;
+@@ -108,7 +115,7 @@ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t
+     J.pcost = calloc(k, sizeof(double)); J.penc = calloc(k, sizeof(double)); J.pdec = calloc(k, sizeof(double)); J.psize = calloc(k, sizeof(uint64_t));
+     int64_t ret = KOLMO_ERR_ALLOC;
+     if (J.frames && J.flen && J.chosen && J.pcost && J.penc && J.pdec && J.psize) {
+-        atomic_init(&J.next, 0); atomic_init(&J.err, 0);
++        atomic_init(&J.next, 0); atomic_init(&J.err, 0); atomic_init(&J.fallback_chunks, 0);
+         run_pool(kt_worker, &J, threads, k);
+         ret = atomic_load(&J.err);
+         if (!ret) {
+@@ -117,7 +124,8 @@ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t
+                 else { memcpy(dst, J.frames[0], J.flen[0]); ret = (int64_t)J.flen[0]; }
+             } else ret = kt_merge(J.frames, J.flen, k, src, starts, dst, cap, J.chosen);
+         }
+-        if (!ret || ret > 0) {
++        if (ret >= 0) {
++            if (fallback_chunks) *fallback_chunks = atomic_load(&J.fallback_chunks);
+             if (report) {
+                 memset(report, 0, sizeof *report); report->chunks = k;
+                 for (uint32_t c = 0; c < k; c++) {
+diff --git a/bindings/python/native/src/cli/cli.c b/bindings/python/native/src/cli/cli.c
+index add82125..1569bcc9 100644
+--- a/bindings/python/native/src/cli/cli.c
++++ b/bindings/python/native/src/cli/cli.c
+@@ -15,7 +15,7 @@
+  * The options of 0.0.1 (-m, -x, -l LEVEL, -B MiB, -Q, -n, -s, -S, -r, -D, -t DICT, -P, kolmo train, kolmo profile and
+  * the two-positional `kolmo IN OUT`) were removed in 0.0.2: each fails with exit status 2 and a one-line hint.
+  * Subcommands: kolmo calibrate (cli/train.c), and kolmo --index / cat / grep / archive / extract / contents (cli/features.c); subcommands are recognised only as the first argument. */
+-#include "kolmo.h"
++#include "../plan/target_report.h"
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -649,12 +649,16 @@ static int64_t code_buffer(const opts_t *o, const uint8_t *in, size_t n, uint8_t
+     *out = malloc(cap ? cap : 1); if (!*out) return KOLMO_ERR_ALLOC;
+     if (!o->tg) return kolmo_compress(in, n, *out, cap, &q);
+     kolmo_target_report rep;
+-    int64_t r = kolmo_compress_target(in, n, *out, cap, &q, o->tg, NULL, &rep);
++    uint32_t fallback_chunks = 0;
++    int64_t r = kolmo_compress_target_detail(in, n, *out, cap, &q, o->tg, &rep, &fallback_chunks);
+     if (r >= 0 && verbose) {
+         fprintf(stderr, "kolmo: %s: target '%s': %u chunk%s:", name, o->target, rep.chunks, rep.chunks == 1 ? "" : "s");
+         for (int s = 0; kolmo_target_setting_name(s); s++) if (rep.per_setting[s]) fprintf(stderr, " %s x%u", kolmo_target_setting_name(s), rep.per_setting[s]);
+-        fprintf(stderr, "; predicted %llu bytes, encode %.3f s, decode %.3f s (one thread); actual %lld bytes\n",
++        fprintf(stderr, "; predicted %llu bytes, encode %.3f s, decode %.3f s (one thread); actual %lld bytes",
+                 (unsigned long long)rep.predicted_size, rep.predicted_enc_s, rep.predicted_dec_s, (long long)r);
++        if (fallback_chunks) fprintf(stderr, "; no setting met the predicted floors for %u chunk%s (fastest predicted decoder, measured chunk size)",
++                                     fallback_chunks, fallback_chunks == 1 ? "" : "s");
++        fputc('\n', stderr);
+     }
+     return r;
+ }
+diff --git a/bindings/python/native/src/kolmo.h b/bindings/python/native/src/kolmo.h
+index 54550012..c1f589e3 100644
+--- a/bindings/python/native/src/kolmo.h
++++ b/bindings/python/native/src/kolmo.h
+@@ -297,7 +297,9 @@ int     kolmo_target_parse(const char *spec, kolmo_target **out);        /* 0 or
+ /* Replace the built-in speed table with a calibration table (the text kolmo_calibrate writes). 0 or KOLMO_ERR_TARGET. */
+ int     kolmo_target_set_calibration(kolmo_target *t, const char *table, size_t n);
+ void    kolmo_target_free(kolmo_target *t);
+-/* Per-chunk report (optional): which setting each chunk got. */
++/* Report totals sum the individual chunk estimates before their frames are merged. When no setting meets a
++ * chunk's predicted speed floors, its fastest predicted decoder is used. Its size contribution is the emitted
++ * chunk frame's bytes. Its cost uses those bytes and the calibrated times for the selected setting. */
+ typedef struct { uint32_t chunks; uint32_t per_setting[16]; double predicted_cost, predicted_enc_s, predicted_dec_s;
+                  uint64_t predicted_size; } kolmo_target_report;
+ const char *kolmo_target_setting_name(int setting);                      /* 0..8, NULL past the end */
+diff --git a/bindings/python/native/src/plan/target.c b/bindings/python/native/src/plan/target.c
+index 8f028f26..6a11e8d2 100644
+--- a/bindings/python/native/src/plan/target.c
++++ b/bindings/python/native/src/plan/target.c
+@@ -278,7 +278,7 @@ typedef struct {
+     const uint8_t *src; const uint64_t *starts; uint32_t nchunks; int inner_threads;
+     const struct kolmo_target *t;
+     uint8_t **frames; size_t *flen; int *chosen; double *pcost, *penc, *pdec; uint64_t *psize;
+-    atomic_uint next; atomic_int err;
++    atomic_uint next, fallback_chunks; atomic_int err;
+ } kt_job;
+ 
+ static int64_t kt_compress_setting(const uint8_t *s, size_t n, int setting, int threads, uint8_t **out) {
+@@ -343,15 +343,24 @@ static void *kt_worker(void *arg) {
+             } else free(frame);
+         }
+         if (atomic_load(&J->err)) { free(bframe); break; }
+-        if (best < 0) best = fastest;                       /* no setting meets the floors: the fastest decoder */
+-        J->chosen[c] = best; J->pcost[c] = best == fastest && bestv == HUGE_VAL ? 0 : bestv;
+-        J->penc[c] = kt_enc_time(t, best, cls, n); J->pdec[c] = kt_dec_time(t, best, cls, n); J->psize[c] = (uint64_t)bsize;
+-        /* the trial of a whole chunk is its frame (the output does not depend on the thread count) */
+-        if (bframe && ns == 1) { J->frames[c] = bframe; J->flen[c] = bflen; continue; }
+-        free(bframe);
+-        int64_t r = kt_compress_setting(s, n, best, J->inner_threads, &J->frames[c]);
+-        if (r < 0) { atomic_store(&J->err, (int)r); break; }
+-        J->flen[c] = (size_t)r;
++        int fallback = best < 0;
++        if (fallback) best = fastest;       /* no setting meets the floors: use the fastest predicted decoder */
++        if (bframe) {                       /* the whole-chunk trial already produced the output frame */
++            J->frames[c] = bframe; J->flen[c] = bflen;
++        } else {
++            int64_t r = kt_compress_setting(s, n, best, J->inner_threads, &J->frames[c]);
++            if (r < 0) { atomic_store(&J->err, (int)r); break; }
++            J->flen[c] = (size_t)r;
++        }
++        J->chosen[c] = best;
++        J->penc[c] = kt_enc_time(t, best, cls, n); J->pdec[c] = kt_dec_time(t, best, cls, n);
++        if (fallback) {
++            atomic_fetch_add(&J->fallback_chunks, 1);
++            /* No eligible setting had a size trial. Use the emitted chunk frame for its report. */
++            bsize = (double)J->flen[c];
++            bestv = t->objective ? kt_eval(t, bsize, n, J->penc[c], J->pdec[c]) : bsize;
++        }
++        J->psize[c] = (uint64_t)bsize; J->pcost[c] = bestv;
+     }
+     return NULL;
+ }
+diff --git a/bindings/python/native/src/plan/target_report.h b/bindings/python/native/src/plan/target_report.h
+new file mode 100644
+index 00000000..c35b0932
+--- /dev/null
++++ b/bindings/python/native/src/plan/target_report.h
+@@ -0,0 +1,11 @@
++/* Private report extension for the verbose CLI. Keep the public report ABI unchanged. */
++#ifndef KOLMO_TARGET_REPORT_H
++#define KOLMO_TARGET_REPORT_H
++#include "../kolmo.h"
++#if defined(__GNUC__)
++__attribute__((visibility("hidden")))
++#endif
++int64_t kolmo_compress_target_detail(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
++                                     const kolmo_params *p, const kolmo_target *t,
++                                     kolmo_target_report *report, uint32_t *fallback_chunks);
++#endif
+diff --git a/bindings/rust/native/src/api/features.c b/bindings/rust/native/src/api/features.c
+index 6520cfe5..5f92068c 100644
+--- a/bindings/rust/native/src/api/features.c
++++ b/bindings/rust/native/src/api/features.c
+@@ -5,6 +5,7 @@
+  * with the library coders removed (container version 12) they are not available. The calls stay so that programs
+  * keep linking, and return KOLMO_ERR_UNSUPPORTED. Part of the src/kolmo.c translation unit. */
+ #include <time.h>
++#include "../plan/target_report.h"
+ 
+ /* ---------------------------------------------------------------- profiles (not available in this build) */
+ size_t kolmo_profile_bound(const kolmo_train_params *tp) { (void)tp; return 0; }
+@@ -87,6 +88,12 @@ static int64_t kt_merge(uint8_t *const *fr, const size_t *fl, uint32_t k, const
+ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
+                               const kolmo_target *t, const kolmo_profile *prof, kolmo_target_report *report) {
+     if (prof) return KOLMO_ERR_UNSUPPORTED;               /* trained profiles: not available in this build */
++    return kolmo_compress_target_detail(src, n, dst, cap, p, t, report, NULL);
++}
++
++int64_t kolmo_compress_target_detail(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
++                                     const kolmo_params *p, const kolmo_target *t,
++                                     kolmo_target_report *report, uint32_t *fallback_chunks) {
+     if (!t || (!src && n) || !dst) return KOLMO_ERR_TARGET;
+     int threads = p && p->threads > 0 ? p->threads : default_threads();
+     size_t B = p && p->block ? p->block : KT_CHUNK; if (B < 4096) B = 4096;
+@@ -108,7 +115,7 @@ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t
+     J.pcost = calloc(k, sizeof(double)); J.penc = calloc(k, sizeof(double)); J.pdec = calloc(k, sizeof(double)); J.psize = calloc(k, sizeof(uint64_t));
+     int64_t ret = KOLMO_ERR_ALLOC;
+     if (J.frames && J.flen && J.chosen && J.pcost && J.penc && J.pdec && J.psize) {
+-        atomic_init(&J.next, 0); atomic_init(&J.err, 0);
++        atomic_init(&J.next, 0); atomic_init(&J.err, 0); atomic_init(&J.fallback_chunks, 0);
+         run_pool(kt_worker, &J, threads, k);
+         ret = atomic_load(&J.err);
+         if (!ret) {
+@@ -117,7 +124,8 @@ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t
+                 else { memcpy(dst, J.frames[0], J.flen[0]); ret = (int64_t)J.flen[0]; }
+             } else ret = kt_merge(J.frames, J.flen, k, src, starts, dst, cap, J.chosen);
+         }
+-        if (!ret || ret > 0) {
++        if (ret >= 0) {
++            if (fallback_chunks) *fallback_chunks = atomic_load(&J.fallback_chunks);
+             if (report) {
+                 memset(report, 0, sizeof *report); report->chunks = k;
+                 for (uint32_t c = 0; c < k; c++) {
+diff --git a/bindings/rust/native/src/cli/cli.c b/bindings/rust/native/src/cli/cli.c
+index add82125..1569bcc9 100644
+--- a/bindings/rust/native/src/cli/cli.c
++++ b/bindings/rust/native/src/cli/cli.c
+@@ -15,7 +15,7 @@
+  * The options of 0.0.1 (-m, -x, -l LEVEL, -B MiB, -Q, -n, -s, -S, -r, -D, -t DICT, -P, kolmo train, kolmo profile and
+  * the two-positional `kolmo IN OUT`) were removed in 0.0.2: each fails with exit status 2 and a one-line hint.
+  * Subcommands: kolmo calibrate (cli/train.c), and kolmo --index / cat / grep / archive / extract / contents (cli/features.c); subcommands are recognised only as the first argument. */
+-#include "kolmo.h"
++#include "../plan/target_report.h"
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -649,12 +649,16 @@ static int64_t code_buffer(const opts_t *o, const uint8_t *in, size_t n, uint8_t
+     *out = malloc(cap ? cap : 1); if (!*out) return KOLMO_ERR_ALLOC;
+     if (!o->tg) return kolmo_compress(in, n, *out, cap, &q);
+     kolmo_target_report rep;
+-    int64_t r = kolmo_compress_target(in, n, *out, cap, &q, o->tg, NULL, &rep);
++    uint32_t fallback_chunks = 0;
++    int64_t r = kolmo_compress_target_detail(in, n, *out, cap, &q, o->tg, &rep, &fallback_chunks);
+     if (r >= 0 && verbose) {
+         fprintf(stderr, "kolmo: %s: target '%s': %u chunk%s:", name, o->target, rep.chunks, rep.chunks == 1 ? "" : "s");
+         for (int s = 0; kolmo_target_setting_name(s); s++) if (rep.per_setting[s]) fprintf(stderr, " %s x%u", kolmo_target_setting_name(s), rep.per_setting[s]);
+-        fprintf(stderr, "; predicted %llu bytes, encode %.3f s, decode %.3f s (one thread); actual %lld bytes\n",
++        fprintf(stderr, "; predicted %llu bytes, encode %.3f s, decode %.3f s (one thread); actual %lld bytes",
+                 (unsigned long long)rep.predicted_size, rep.predicted_enc_s, rep.predicted_dec_s, (long long)r);
++        if (fallback_chunks) fprintf(stderr, "; no setting met the predicted floors for %u chunk%s (fastest predicted decoder, measured chunk size)",
++                                     fallback_chunks, fallback_chunks == 1 ? "" : "s");
++        fputc('\n', stderr);
+     }
+     return r;
+ }
+diff --git a/bindings/rust/native/src/kolmo.h b/bindings/rust/native/src/kolmo.h
+index 54550012..c1f589e3 100644
+--- a/bindings/rust/native/src/kolmo.h
++++ b/bindings/rust/native/src/kolmo.h
+@@ -297,7 +297,9 @@ int     kolmo_target_parse(const char *spec, kolmo_target **out);        /* 0 or
+ /* Replace the built-in speed table with a calibration table (the text kolmo_calibrate writes). 0 or KOLMO_ERR_TARGET. */
+ int     kolmo_target_set_calibration(kolmo_target *t, const char *table, size_t n);
+ void    kolmo_target_free(kolmo_target *t);
+-/* Per-chunk report (optional): which setting each chunk got. */
++/* Report totals sum the individual chunk estimates before their frames are merged. When no setting meets a
++ * chunk's predicted speed floors, its fastest predicted decoder is used. Its size contribution is the emitted
++ * chunk frame's bytes. Its cost uses those bytes and the calibrated times for the selected setting. */
+ typedef struct { uint32_t chunks; uint32_t per_setting[16]; double predicted_cost, predicted_enc_s, predicted_dec_s;
+                  uint64_t predicted_size; } kolmo_target_report;
+ const char *kolmo_target_setting_name(int setting);                      /* 0..8, NULL past the end */
+diff --git a/bindings/rust/native/src/plan/target.c b/bindings/rust/native/src/plan/target.c
+index 8f028f26..6a11e8d2 100644
+--- a/bindings/rust/native/src/plan/target.c
++++ b/bindings/rust/native/src/plan/target.c
+@@ -278,7 +278,7 @@ typedef struct {
+     const uint8_t *src; const uint64_t *starts; uint32_t nchunks; int inner_threads;
+     const struct kolmo_target *t;
+     uint8_t **frames; size_t *flen; int *chosen; double *pcost, *penc, *pdec; uint64_t *psize;
+-    atomic_uint next; atomic_int err;
++    atomic_uint next, fallback_chunks; atomic_int err;
+ } kt_job;
+ 
+ static int64_t kt_compress_setting(const uint8_t *s, size_t n, int setting, int threads, uint8_t **out) {
+@@ -343,15 +343,24 @@ static void *kt_worker(void *arg) {
+             } else free(frame);
+         }
+         if (atomic_load(&J->err)) { free(bframe); break; }
+-        if (best < 0) best = fastest;                       /* no setting meets the floors: the fastest decoder */
+-        J->chosen[c] = best; J->pcost[c] = best == fastest && bestv == HUGE_VAL ? 0 : bestv;
+-        J->penc[c] = kt_enc_time(t, best, cls, n); J->pdec[c] = kt_dec_time(t, best, cls, n); J->psize[c] = (uint64_t)bsize;
+-        /* the trial of a whole chunk is its frame (the output does not depend on the thread count) */
+-        if (bframe && ns == 1) { J->frames[c] = bframe; J->flen[c] = bflen; continue; }
+-        free(bframe);
+-        int64_t r = kt_compress_setting(s, n, best, J->inner_threads, &J->frames[c]);
+-        if (r < 0) { atomic_store(&J->err, (int)r); break; }
+-        J->flen[c] = (size_t)r;
++        int fallback = best < 0;
++        if (fallback) best = fastest;       /* no setting meets the floors: use the fastest predicted decoder */
++        if (bframe) {                       /* the whole-chunk trial already produced the output frame */
++            J->frames[c] = bframe; J->flen[c] = bflen;
++        } else {
++            int64_t r = kt_compress_setting(s, n, best, J->inner_threads, &J->frames[c]);
++            if (r < 0) { atomic_store(&J->err, (int)r); break; }
++            J->flen[c] = (size_t)r;
++        }
++        J->chosen[c] = best;
++        J->penc[c] = kt_enc_time(t, best, cls, n); J->pdec[c] = kt_dec_time(t, best, cls, n);
++        if (fallback) {
++            atomic_fetch_add(&J->fallback_chunks, 1);
++            /* No eligible setting had a size trial. Use the emitted chunk frame for its report. */
++            bsize = (double)J->flen[c];
++            bestv = t->objective ? kt_eval(t, bsize, n, J->penc[c], J->pdec[c]) : bsize;
++        }
++        J->psize[c] = (uint64_t)bsize; J->pcost[c] = bestv;
+     }
+     return NULL;
+ }
+diff --git a/bindings/rust/native/src/plan/target_report.h b/bindings/rust/native/src/plan/target_report.h
+new file mode 100644
+index 00000000..c35b0932
+--- /dev/null
++++ b/bindings/rust/native/src/plan/target_report.h
+@@ -0,0 +1,11 @@
++/* Private report extension for the verbose CLI. Keep the public report ABI unchanged. */
++#ifndef KOLMO_TARGET_REPORT_H
++#define KOLMO_TARGET_REPORT_H
++#include "../kolmo.h"
++#if defined(__GNUC__)
++__attribute__((visibility("hidden")))
++#endif
++int64_t kolmo_compress_target_detail(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
++                                     const kolmo_params *p, const kolmo_target *t,
++                                     kolmo_target_report *report, uint32_t *fallback_chunks);
++#endif
+diff --git a/src/api/features.c b/src/api/features.c
+index 6520cfe5..5f92068c 100644
+--- a/src/api/features.c
++++ b/src/api/features.c
+@@ -5,6 +5,7 @@
+  * with the library coders removed (container version 12) they are not available. The calls stay so that programs
+  * keep linking, and return KOLMO_ERR_UNSUPPORTED. Part of the src/kolmo.c translation unit. */
+ #include <time.h>
++#include "../plan/target_report.h"
+ 
+ /* ---------------------------------------------------------------- profiles (not available in this build) */
+ size_t kolmo_profile_bound(const kolmo_train_params *tp) { (void)tp; return 0; }
+@@ -87,6 +88,12 @@ static int64_t kt_merge(uint8_t *const *fr, const size_t *fl, uint32_t k, const
+ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
+                               const kolmo_target *t, const kolmo_profile *prof, kolmo_target_report *report) {
+     if (prof) return KOLMO_ERR_UNSUPPORTED;               /* trained profiles: not available in this build */
++    return kolmo_compress_target_detail(src, n, dst, cap, p, t, report, NULL);
++}
++
++int64_t kolmo_compress_target_detail(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
++                                     const kolmo_params *p, const kolmo_target *t,
++                                     kolmo_target_report *report, uint32_t *fallback_chunks) {
+     if (!t || (!src && n) || !dst) return KOLMO_ERR_TARGET;
+     int threads = p && p->threads > 0 ? p->threads : default_threads();
+     size_t B = p && p->block ? p->block : KT_CHUNK; if (B < 4096) B = 4096;
+@@ -108,7 +115,7 @@ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t
+     J.pcost = calloc(k, sizeof(double)); J.penc = calloc(k, sizeof(double)); J.pdec = calloc(k, sizeof(double)); J.psize = calloc(k, sizeof(uint64_t));
+     int64_t ret = KOLMO_ERR_ALLOC;
+     if (J.frames && J.flen && J.chosen && J.pcost && J.penc && J.pdec && J.psize) {
+-        atomic_init(&J.next, 0); atomic_init(&J.err, 0);
++        atomic_init(&J.next, 0); atomic_init(&J.err, 0); atomic_init(&J.fallback_chunks, 0);
+         run_pool(kt_worker, &J, threads, k);
+         ret = atomic_load(&J.err);
+         if (!ret) {
+@@ -117,7 +124,8 @@ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t
+                 else { memcpy(dst, J.frames[0], J.flen[0]); ret = (int64_t)J.flen[0]; }
+             } else ret = kt_merge(J.frames, J.flen, k, src, starts, dst, cap, J.chosen);
+         }
+-        if (!ret || ret > 0) {
++        if (ret >= 0) {
++            if (fallback_chunks) *fallback_chunks = atomic_load(&J.fallback_chunks);
+             if (report) {
+                 memset(report, 0, sizeof *report); report->chunks = k;
+                 for (uint32_t c = 0; c < k; c++) {
+diff --git a/src/cli/cli.c b/src/cli/cli.c
+index add82125..1569bcc9 100644
+--- a/src/cli/cli.c
++++ b/src/cli/cli.c
+@@ -15,7 +15,7 @@
+  * The options of 0.0.1 (-m, -x, -l LEVEL, -B MiB, -Q, -n, -s, -S, -r, -D, -t DICT, -P, kolmo train, kolmo profile and
+  * the two-positional `kolmo IN OUT`) were removed in 0.0.2: each fails with exit status 2 and a one-line hint.
+  * Subcommands: kolmo calibrate (cli/train.c), and kolmo --index / cat / grep / archive / extract / contents (cli/features.c); subcommands are recognised only as the first argument. */
+-#include "kolmo.h"
++#include "../plan/target_report.h"
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -649,12 +649,16 @@ static int64_t code_buffer(const opts_t *o, const uint8_t *in, size_t n, uint8_t
+     *out = malloc(cap ? cap : 1); if (!*out) return KOLMO_ERR_ALLOC;
+     if (!o->tg) return kolmo_compress(in, n, *out, cap, &q);
+     kolmo_target_report rep;
+-    int64_t r = kolmo_compress_target(in, n, *out, cap, &q, o->tg, NULL, &rep);
++    uint32_t fallback_chunks = 0;
++    int64_t r = kolmo_compress_target_detail(in, n, *out, cap, &q, o->tg, &rep, &fallback_chunks);
+     if (r >= 0 && verbose) {
+         fprintf(stderr, "kolmo: %s: target '%s': %u chunk%s:", name, o->target, rep.chunks, rep.chunks == 1 ? "" : "s");
+         for (int s = 0; kolmo_target_setting_name(s); s++) if (rep.per_setting[s]) fprintf(stderr, " %s x%u", kolmo_target_setting_name(s), rep.per_setting[s]);
+-        fprintf(stderr, "; predicted %llu bytes, encode %.3f s, decode %.3f s (one thread); actual %lld bytes\n",
++        fprintf(stderr, "; predicted %llu bytes, encode %.3f s, decode %.3f s (one thread); actual %lld bytes",
+                 (unsigned long long)rep.predicted_size, rep.predicted_enc_s, rep.predicted_dec_s, (long long)r);
++        if (fallback_chunks) fprintf(stderr, "; no setting met the predicted floors for %u chunk%s (fastest predicted decoder, measured chunk size)",
++                                     fallback_chunks, fallback_chunks == 1 ? "" : "s");
++        fputc('\n', stderr);
+     }
+     return r;
+ }
+diff --git a/src/kolmo.h b/src/kolmo.h
+index 54550012..c1f589e3 100644
+--- a/src/kolmo.h
++++ b/src/kolmo.h
+@@ -297,7 +297,9 @@ int     kolmo_target_parse(const char *spec, kolmo_target **out);        /* 0 or
+ /* Replace the built-in speed table with a calibration table (the text kolmo_calibrate writes). 0 or KOLMO_ERR_TARGET. */
+ int     kolmo_target_set_calibration(kolmo_target *t, const char *table, size_t n);
+ void    kolmo_target_free(kolmo_target *t);
+-/* Per-chunk report (optional): which setting each chunk got. */
++/* Report totals sum the individual chunk estimates before their frames are merged. When no setting meets a
++ * chunk's predicted speed floors, its fastest predicted decoder is used. Its size contribution is the emitted
++ * chunk frame's bytes. Its cost uses those bytes and the calibrated times for the selected setting. */
+ typedef struct { uint32_t chunks; uint32_t per_setting[16]; double predicted_cost, predicted_enc_s, predicted_dec_s;
+                  uint64_t predicted_size; } kolmo_target_report;
+ const char *kolmo_target_setting_name(int setting);                      /* 0..8, NULL past the end */
+diff --git a/src/plan/target.c b/src/plan/target.c
+index 8f028f26..6a11e8d2 100644
+--- a/src/plan/target.c
++++ b/src/plan/target.c
+@@ -278,7 +278,7 @@ typedef struct {
+     const uint8_t *src; const uint64_t *starts; uint32_t nchunks; int inner_threads;
+     const struct kolmo_target *t;
+     uint8_t **frames; size_t *flen; int *chosen; double *pcost, *penc, *pdec; uint64_t *psize;
+-    atomic_uint next; atomic_int err;
++    atomic_uint next, fallback_chunks; atomic_int err;
+ } kt_job;
+ 
+ static int64_t kt_compress_setting(const uint8_t *s, size_t n, int setting, int threads, uint8_t **out) {
+@@ -343,15 +343,24 @@ static void *kt_worker(void *arg) {
+             } else free(frame);
+         }
+         if (atomic_load(&J->err)) { free(bframe); break; }
+-        if (best < 0) best = fastest;                       /* no setting meets the floors: the fastest decoder */
+-        J->chosen[c] = best; J->pcost[c] = best == fastest && bestv == HUGE_VAL ? 0 : bestv;
+-        J->penc[c] = kt_enc_time(t, best, cls, n); J->pdec[c] = kt_dec_time(t, best, cls, n); J->psize[c] = (uint64_t)bsize;
+-        /* the trial of a whole chunk is its frame (the output does not depend on the thread count) */
+-        if (bframe && ns == 1) { J->frames[c] = bframe; J->flen[c] = bflen; continue; }
+-        free(bframe);
+-        int64_t r = kt_compress_setting(s, n, best, J->inner_threads, &J->frames[c]);
+-        if (r < 0) { atomic_store(&J->err, (int)r); break; }
+-        J->flen[c] = (size_t)r;
++        int fallback = best < 0;
++        if (fallback) best = fastest;       /* no setting meets the floors: use the fastest predicted decoder */
++        if (bframe) {                       /* the whole-chunk trial already produced the output frame */
++            J->frames[c] = bframe; J->flen[c] = bflen;
++        } else {
++            int64_t r = kt_compress_setting(s, n, best, J->inner_threads, &J->frames[c]);
++            if (r < 0) { atomic_store(&J->err, (int)r); break; }
++            J->flen[c] = (size_t)r;
++        }
++        J->chosen[c] = best;
++        J->penc[c] = kt_enc_time(t, best, cls, n); J->pdec[c] = kt_dec_time(t, best, cls, n);
++        if (fallback) {
++            atomic_fetch_add(&J->fallback_chunks, 1);
++            /* No eligible setting had a size trial. Use the emitted chunk frame for its report. */
++            bsize = (double)J->flen[c];
++            bestv = t->objective ? kt_eval(t, bsize, n, J->penc[c], J->pdec[c]) : bsize;
++        }
++        J->psize[c] = (uint64_t)bsize; J->pcost[c] = bestv;
+     }
+     return NULL;
+ }
+diff --git a/src/plan/target_report.h b/src/plan/target_report.h
+new file mode 100644
+index 00000000..c35b0932
+--- /dev/null
++++ b/src/plan/target_report.h
+@@ -0,0 +1,11 @@
++/* Private report extension for the verbose CLI. Keep the public report ABI unchanged. */
++#ifndef KOLMO_TARGET_REPORT_H
++#define KOLMO_TARGET_REPORT_H
++#include "../kolmo.h"
++#if defined(__GNUC__)
++__attribute__((visibility("hidden")))
++#endif
++int64_t kolmo_compress_target_detail(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
++                                     const kolmo_params *p, const kolmo_target *t,
++                                     kolmo_target_report *report, uint32_t *fallback_chunks);
++#endif
+diff --git a/tests/test_profile.c b/tests/test_profile.c
+index a89582fc..fc4210a8 100644
+--- a/tests/test_profile.c
++++ b/tests/test_profile.c
+@@ -33,6 +33,39 @@ static size_t gen_csv(uint8_t *o, size_t cap, int rows, int cols) {
+     return w;
+ }
+ 
++/* A binary chunk misses the floor while a text chunk meets it with balanced.
++ * Verify selection, the pre-merge byte total, and the selected formula for both. */
++static void target_floor_reports(void) {
++    uint8_t input[8192] = {0}, frame[16384], restored[8192];
++    memset(input + 4096, 'a', 4096);
++    const char *table = "kolmo-calibration 1\nspeed binary 1 90000\nbalanced text 2000000 2000000\n";
++    const char *specs[] = {"cost:size*2+enc*3+dec*5,encode>=999999MB/s",
++                           "cost:size*2+enc*3+dec*5,decode>=999999MB/s"};
++    kolmo_params p = {KOLMO_FAST, 0, 2, 4096, 1};
++    uint8_t *chunk = NULL;
++    int64_t binary_bytes = kt_compress_setting(input, 4096, 0, 1, &chunk);
++    CHECK(binary_bytes > 0); free(chunk); chunk = NULL;
++    int64_t text_bytes = kt_compress_setting(input + 4096, 4096, 2, 1, &chunk);
++    CHECK(text_bytes > 0); free(chunk);
++    for (size_t i = 0; i < sizeof specs / sizeof specs[0]; i++) {
++        kolmo_target *t = NULL;
++        CHECK(kolmo_target_parse(specs[i], &t) == 0);
++        CHECK(kolmo_target_set_calibration(t, table, strlen(table)) == 0);
++        for (int chunks = 1; chunks <= 2; chunks++) {
++            size_t n = (size_t)chunks * 4096;
++            kolmo_target_report r; uint32_t fallbacks = 0;
++            int64_t z = kolmo_compress_target_detail(input, n, frame, sizeof frame, &p, t, &r, &fallbacks);
++            uint64_t expected = (uint64_t)binary_bytes + (chunks == 2 ? (uint64_t)text_bytes : 0);
++            CHECK(fallbacks == 1 && r.chunks == (uint32_t)chunks);
++            CHECK(r.per_setting[0] == 1 && r.per_setting[2] == (uint32_t)chunks - 1);
++            CHECK(r.predicted_size == expected && z == (int64_t)(expected - (chunks - 1) * HDR));
++            CHECK(fabs(r.predicted_cost - (2 * expected + 3 * r.predicted_enc_s + 5 * r.predicted_dec_s)) < 1e-8);
++            CHECK(z > 0 && kolmo_decompress(frame, (size_t)z, restored, n, 2) == (int64_t)n && !memcmp(restored, input, n));
++        }
++        kolmo_target_free(t);
++    }
++}
++
+ int main(void) {
+     t_start = tnow();
+     SECTION("profiles: not available");
+@@ -132,7 +165,9 @@ int main(void) {
+         /* a floor nothing meets: the fastest decoder, still a valid frame */
+         kolmo_target *tt = NULL; CHECK(kolmo_target_parse(specs[4], &tt) == 0);
+         kolmo_params p = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(n, &p) + 4096; o = malloc(cap);
+-        int64_t z = kolmo_compress_target(mix, n, o, cap, &p, tt, NULL, NULL);
++        kolmo_target_report fallback_report;
++        int64_t z = kolmo_compress_target(mix, n, o, cap, &p, tt, NULL, &fallback_report);
++        CHECK(z > 0 && fallback_report.predicted_size == (uint64_t)z && fallback_report.predicted_cost == (double)z);
+         CHECK(z > 0 && kolmo_decompress(o, (size_t)z, d, n, 1) == (int64_t)n && !memcmp(d, mix, n));
+         CHECK(kolmo_compress_target(mix, n, o, 100, &p, tt, NULL, NULL) == KOLMO_ERR_DSTSIZE);
+         free(o); kolmo_target_free(tt);
+@@ -144,6 +179,8 @@ int main(void) {
+         free(mix); free(d);
+     }
+ 
++    target_floor_reports();
++
+     SECTION("calibration");
+     /* --- calibration on built-in data (short) produces a table the parser accepts */
+     if (!getenv("KOLMO_SKIP_CALIBRATE")) {
+-- 
+2.54.0 (Apple Git-157)
+

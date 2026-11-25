@@ -1,0 +1,59 @@
+{
+  "status": "Historical panel from 2026-11-23; no rerun on current source or duplicate whole-model hashing",
+  "panel_sha256": "e122843f562481c2d0c48a8be6fc480f7ff184db2d42e70e2a3bd94e62fc92af",
+  "tools_manifest_sha256": "94272ae650073adca6d29cc40342147c981184f368b945dfada32db55ae3bf94",
+  "source": {
+    "path": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/bench-page/tools/kolmo/build/kolmo",
+    "version": "0.0.2",
+    "commit": "550c02fd89d00b767ca540b117301c185dbbb6c9",
+    "flags": "make ARCH= (generic -O3)"
+  },
+  "measurements": {
+    "weights/qwen2.5-0.5b-bf16.safetensors": {
+      "bytes": 988097824,
+      "area": "ML weights, bf16 safetensors",
+      "rows": [
+        {
+          "tool": "kolmo -3",
+          "size": 657982926,
+          "ratio": 1.5017073923282926,
+          "enc_mibs": 919.0350913014819,
+          "dec_mibs": 2489.329973648411,
+          "cpu_per_wall": 0.9944893190043921
+        },
+        {
+          "tool": "zipnn [bfloat16]",
+          "size": 658274365,
+          "ratio": 1.5010425386988904,
+          "enc_mibs": 1544.7414767264531,
+          "dec_mibs": 3474.9021003736066,
+          "cpu_per_wall": 0.9405864309794802,
+          "timing": "in-process (interpreter start-up excluded)"
+        }
+      ]
+    },
+    "weights/smollm2-135m-bf16.safetensors": {
+      "bytes": 269060552,
+      "area": "ML weights, bf16 safetensors",
+      "rows": [
+        {
+          "tool": "kolmo -3",
+          "size": 179493188,
+          "ratio": 1.4990014662840576,
+          "enc_mibs": 776.6821480513888,
+          "dec_mibs": 2366.6463538329717,
+          "cpu_per_wall": 0.9902785894714167
+        },
+        {
+          "tool": "zipnn [bfloat16]",
+          "size": 179418148,
+          "ratio": 1.4996284099421202,
+          "enc_mibs": 1690.703769946619,
+          "dec_mibs": 3569.9008064614222,
+          "cpu_per_wall": 0.9931535425102562,
+          "timing": "in-process (interpreter start-up excluded)"
+        }
+      ]
+    }
+  }
+}

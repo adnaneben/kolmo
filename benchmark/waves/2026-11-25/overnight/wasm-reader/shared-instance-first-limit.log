@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "/tmp/kolmo-ppp-handoff-1125/benchmark/waves/2026-11-25/overnight/wasm-reader/verify.py", line 92, in <module>
+    main()
+  File "/tmp/kolmo-ppp-handoff-1125/benchmark/waves/2026-11-25/overnight/wasm-reader/verify.py", line 65, in main
+    require(r.returncode==0,label+" failed: "+r.stderr+" "+r.stdout[-500:])
+  File "/tmp/kolmo-ppp-handoff-1125/benchmark/waves/2026-11-25/overnight/wasm-reader/verify.py", line 15, in require
+    raise ValueError(message)
+ValueError: Node-V8 failed: /private/tmp/kolmo-ppp-handoff-1125/benchmark/waves/2026-11-25/overnight/wasm-reader/run.js:45
+    if (n !== c.original_bytes) throw Error("size mismatch "+c.frame_path+" got "+n+" expected "+c.original_bytes);
+                                ^
+
+Error: size mismatch r0.0.2/gray-big.pgm.LU.kolmo got -1 expected 786448
+    at Object.<anonymous> (/private/tmp/kolmo-ppp-handoff-1125/benchmark/waves/2026-11-25/overnight/wasm-reader/run.js:45:39)
+    at Module._compile (node:internal/modules/cjs/loader:1929:14)
+    at Object..js (node:internal/modules/cjs/loader:2060:10)
+    at Module.load (node:internal/modules/cjs/loader:1651:32)
+    at Module._load (node:internal/modules/cjs/loader:1443:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.22.3
+ 560,"after_decode_bytes":259522560}
+{"case":126,"decoded":61016,"initial_bytes":2424832,"before_decode_bytes":259522560,"after_decode_bytes":259522560}
+{"case":127,"decoded":61016,"initial_bytes":2424832,"before_decode_bytes":259522560,"after_decode_bytes":259522560}
+{"case":128,"decoded":61016,"initial_bytes":2424832,"before_decode_bytes":259522560,"after_decode_bytes":259522560}
+{"case":129,"decoded":61016,"initial_bytes":2424832,"before_decode_bytes":259522560,"after_decode_bytes":259522560}
+

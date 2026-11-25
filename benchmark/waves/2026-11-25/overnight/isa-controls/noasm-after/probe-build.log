@@ -1,0 +1,34 @@
+cc -O3  -ffp-contract=off -ffp-contract=off  -DKOLMO_NO_ASM -Isrc -c src/kolmo.c -o build/kolmo.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/arch/cpu.c -o build/obj/src/arch/cpu.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/predict.c -o build/obj/src/algo/predict.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/planes.c -o build/obj/src/algo/planes.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/mixer.c -o build/obj/src/algo/mixer.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/video.c -o build/obj/src/algo/video.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/lzp.c -o build/obj/src/algo/lzp.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/qlfc.c -o build/obj/src/algo/qlfc.o
+In file included from src/kolmo.c:85:
+src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from src/kolmo.c:90:
+src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/par.c -o build/obj/src/algo/par.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/sais/sais.c -o build/obj/src/algo/sais/sais.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/codecs/bwt_stream.c -o build/obj/src/codecs/bwt_stream.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/khuf.c -o build/obj/src/algo/khuf.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/krans.c -o build/obj/src/algo/krans.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/klz.c -o build/obj/src/algo/klz.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/klzma.c -o build/obj/src/algo/klzma.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -DKOLMO_NO_ASM -Isrc -c src/algo/khash.c -o build/obj/src/algo/khash.o
+2 warnings generated.
+ar rcs build/libkolmo.a build/kolmo.o build/obj/src/arch/cpu.o build/obj/src/algo/predict.o build/obj/src/algo/planes.o build/obj/src/algo/mixer.o build/obj/src/algo/video.o build/obj/src/algo/lzp.o build/obj/src/algo/qlfc.o build/obj/src/algo/par.o build/obj/src/algo/sais/sais.o build/obj/src/codecs/bwt_stream.o build/obj/src/algo/khuf.o build/obj/src/algo/krans.o build/obj/src/algo/klz.o build/obj/src/algo/klzma.o build/obj/src/algo/khash.o
+cc -O3  -ffp-contract=off -Isrc src/cli/cli.c src/cli/features.c build/libkolmo.a -o build/kolmo -Wl,-dead_strip -lpthread -lm

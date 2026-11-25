@@ -1,0 +1,26 @@
+Darwin arm64
+Apple clang version 21.0.0 (clang-2100.4.1.1)
+Target: arm64-apple-darwin27.2.0
+source=c8fc5ac54aa302baf6abc66f210617901f9e6e2e
+x86_64-w64-mingw32-gcc unavailable
+x86_64-w64-mingw32-clang unavailable
+clang-cl unavailable
+wine unavailable
+wine64 unavailable
+public-header.obj: Intel amd64 COFF object file, not stripped, 5 sections, symbol offset=0x14a, 14 symbols, 1st section name ".text"
+
+Normal hosted compilation of the product translation unit
+In file included from src/kolmo.c:8:
+src/core/common.h:17:10: fatal error: 'pthread.h' file not found
+   17 | #include <pthread.h>
+      |          ^~~~~~~~~~~
+1 error generated.
+
+Minimal UCRT hosted header probe
+ucrt.c:1:10: fatal error: 'stdio.h' file not found
+    1 | #include <stdio.h>
+      |          ^~~~~~~~~
+1 error generated.
+
+Explicit UCRT import-library link
+rust-lld: error: could not open 'ucrt.lib': No such file or directory

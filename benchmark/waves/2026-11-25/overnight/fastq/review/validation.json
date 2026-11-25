@@ -1,0 +1,21 @@
+{
+  "base_pull": 106,
+  "base_branch": "codex/ppp-target-floor-report-20261125",
+  "base_commit": "8d23095b2f09d5c9e3c3425123bea63641ca5d71",
+  "head_branch": "codex/ppp-fastq-record-blocks-20261125",
+  "head_commit": "31fd3acd922490143059ac2438e988e38d89be5f",
+  "release_reader_source": "550c02fd89d00b767ca540b117301c185dbbb6c9",
+  "sha256": {
+    "base_stock": "c40c238ab3e023364b7b14c6fa9c3fae3e06e7dda91bb9d9a2cf1586554bacc7",
+    "head_default": "c40c238ab3e023364b7b14c6fa9c3fae3e06e7dda91bb9d9a2cf1586554bacc7",
+    "head_enabled": "76cc1bd8f8e0958b939b9d010ff6afb96afec5565ce8bd4a3380dd06428b694f",
+    "released_reader": "e7f58f11fe2eb5f296bcd71a9ef9331d154723709ca6822e3cb110acd376e328"
+  },
+  "flags": {
+    "default": "make build/kolmo",
+    "option": "make DEFS=-DKOLMO_FASTQ_RECORD_BLOCKS build/kolmo",
+    "runtime": "KOLMO_BENCH_READ_CUTS=1, -U -T1; explicit arm adds --block-size 1"
+  },
+  "patch_sha256": "da1b71bdde1a68f55db4708bbd5554ad8c27eab384746095b7274c48eb46b384",
+  "regression_sha256": "7e1bcd12cc128a920ecc0c04157d68f91e9787f72c42ea4b8d1600f5fe8d8060"
+}

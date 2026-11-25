@@ -1,0 +1,59 @@
+site,mechanism,allocator,original_line
+src/core/compress.c:96:1,checked,array_alloc,"uint64_t *ss = array_alloc(max_segments, sizeof(uint64_t), 0), *se = array_alloc(max_segments, sizeof(uint64_t), 0); uint32_t *skind = array_alloc(max_segments, sizeof(uint32_t), 1);"
+src/core/compress.c:96:2,checked,array_alloc,"uint64_t *ss = array_alloc(max_segments, sizeof(uint64_t), 0), *se = array_alloc(max_segments, sizeof(uint64_t), 0); uint32_t *skind = array_alloc(max_segments, sizeof(uint32_t), 1);"
+src/core/compress.c:96:3,checked,array_alloc,"uint64_t *ss = array_alloc(max_segments, sizeof(uint64_t), 0), *se = array_alloc(max_segments, sizeof(uint64_t), 0); uint32_t *skind = array_alloc(max_segments, sizeof(uint32_t), 1);"
+src/core/compress.c:115:1,checked,array_alloc,"plans = array_alloc(nseg, sizeof(plan_t), 1);"
+src/core/compress.c:116:1,checked,array_alloc,"starts = array_alloc(bcap, sizeof(uint64_t), 0);"
+src/core/compress.c:117:1,checked,array_alloc,"bplan = array_alloc(bcap, sizeof(uint32_t), 0);"
+src/core/compress.c:118:1,checked,array_alloc,"rstart = array_alloc(bcap, sizeof(uint64_t), 0);"
+src/core/compress.c:173:1,checked,array_resize,"uint64_t *grown_starts = array_resize(starts, grown_cap, sizeof(uint64_t));"
+src/core/compress.c:175:1,checked,array_resize,"uint32_t *grown_bplan = array_resize(bplan, grown_cap, sizeof(uint32_t));"
+src/core/compress.c:177:1,checked,array_resize,"uint64_t *grown_rstart = array_resize(rstart, grown_cap, sizeof(uint64_t));"
+src/core/compress.c:227:1,checked,array_alloc,"J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);"
+src/core/compress.c:227:2,checked,array_alloc,"J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);"
+src/core/compress.c:241:1,checked,array_alloc,"if (workers > 1 && !(J.started = array_alloc(nb, 1, 1))) goto cleanup;"
+src/core/blocks.c:14:1,checked,array_alloc,"size_t cap = n / (B / 2 + 1) + 2; uint64_t *st = array_alloc(cap, sizeof(uint64_t), 0); uint32_t nb = 0; size_t pos = 0;"
+src/core/blocks.c:52:1,checked,array_resize,"uint64_t *grown = array_resize(st, cap * 2, sizeof(uint64_t));"
+src/core/decode.c:59:1,checked,array_alloc,"P->poff = array_alloc((size_t)P->nb + 1, sizeof(uint64_t), 0);"
+src/core/decode.c:60:1,checked,array_alloc,"P->roff = array_alloc((size_t)P->nb + 1, sizeof(uint64_t), 0);"
+src/core/dedup.c:81:1,direct,malloc,S->slot = malloc(sizeof(int64_t) * cap); S->mask = cap - 1; S->nc = 0; S->cap = want > 16 ? want : 16;
+src/core/dedup.c:82:1,direct,malloc,S->c = malloc(sizeof(dd_chunk) * S->cap);
+src/core/dedup.c:92:1,direct,realloc,"if (S->nc == S->cap) { dd_chunk *g = realloc(S->c, sizeof(dd_chunk) * S->cap * 2); if (!g) return -1; S->c = g; S->cap *= 2; }"
+src/core/dedup.c:94:1,direct,malloc,uint64_t ncap = (S->mask + 1) * 2; int64_t *ns = malloc(sizeof(int64_t) * ncap); if (!ns) return -1;
+src/core/dedup.c:181:1,direct,malloc,owned_store = malloc(st->unique_bytes ? (size_t)st->unique_bytes : 1); if (!owned_store) goto done;
+src/core/dedup.c:200:1,direct,malloc,uint8_t *body = malloc(tcap); if (!body) goto done;
+src/core/dedup.c:228:1,direct,malloc,A->tab = malloc((size_t)L + 1); if (!A->tab) { dd_close(A); return KOLMO_ERR_ALLOC; }
+src/core/dedup.c:233:1,direct,malloc,A->coff = malloc(8 * ((size_t)A->nc + 1)); uint8_t *ck = malloc(4 * (size_t)A->nc + 1);
+src/core/dedup.c:233:2,direct,malloc,A->coff = malloc(8 * ((size_t)A->nc + 1)); uint8_t *ck = malloc(4 * (size_t)A->nc + 1);
+src/core/dedup.c:317:1,direct,malloc,ids = malloc(8 * ((size_t)e->nref + 1)); if (!ids) { ret = KOLMO_ERR_ALLOC; goto done; }
+src/core/dedup.c:320:1,direct,calloc,"{   uint32_t nb = A->f.nb; uint8_t *need = calloc((size_t)nb + 1, 1); if (!need) { ret = KOLMO_ERR_ALLOC; goto done; }"
+src/core/dedup.c:328:1,direct,malloc,uint64_t *at = malloc(8 * ((size_t)nb + 1)); size_t bytes = 0;
+src/core/dedup.c:331:1,direct,malloc,buf = malloc(bytes + 1); if (!buf) { free(need); free(at); ret = KOLMO_ERR_ALLOC; goto done; }
+src/core/dedup.c:377:1,direct,malloc,uint8_t *data = malloc(cap ? cap : 1);
+src/core/dedup.c:391:1,direct,malloc,"uint8_t *store = malloc(A.f.orig ? (size_t)A.f.orig : 1), *file = NULL; uint64_t *ids = NULL, idcap = 0; int64_t ret;"
+src/core/dedup.c:399:1,direct,malloc,if (e.nref + 1 > idcap) { free(ids); idcap = e.nref + 1; ids = malloc(8 * (size_t)idcap); if (!ids) { ret = KOLMO_ERR_ALLOC; goto done; } }
+src/core/dedup.c:408:1,direct,realloc,"own = realloc(file, (size_t)e.size + 1); if (!own) { ret = KOLMO_ERR_ALLOC; goto done; }"
+src/core/stream.c:54:1,direct,malloc,uint8_t *in = malloc(seg);
+src/core/stream.c:63:1,direct,malloc,if (bound > outcap) { free(out); out = malloc(bound); if (!out) { ret = KOLMO_ERR_ALLOC; break; } outcap = bound; }
+src/core/stream.c:107:1,direct,realloc,"if (*have + want > *cap) { uint8_t *t = realloc(*buf, *have + want); if (!t) return KOLMO_ERR_ALLOC; *buf = t; *cap = *have + want; }"
+src/core/stream.c:153:1,direct,malloc,free(D->out); D->ocap = 0; D->out = malloc(win ? (size_t)win : 1);
+src/core/stream.c:199:1,direct,realloc,"if (*fcap < 32) { uint8_t *q = realloc(*frame, 32); if (!q) return KOLMO_ERR_ALLOC; *frame = q; *fcap = 32; }"
+src/core/stream.c:213:1,direct,realloc,"if (have + 4 > *fcap) { uint8_t *q = realloc(*frame, have + 4); if (!q) return KOLMO_ERR_ALLOC; *frame = q; *fcap = have + 4; }"
+src/core/extension.c:30:1,direct,malloc,f->roff = malloc(sizeof(uint64_t) * ((size_t)f->nb + 1)); f->poff = malloc(sizeof(uint64_t) * ((size_t)f->nb + 1));
+src/core/extension.c:30:2,direct,malloc,f->roff = malloc(sizeof(uint64_t) * ((size_t)f->nb + 1)); f->poff = malloc(sizeof(uint64_t) * ((size_t)f->nb + 1));
+src/core/extension.c:94:1,direct,realloc,"uint8_t *p = realloc(b->p, c); if (!p) { b->oom = 1; return -1; }"
+src/api/api.c:100:1,direct,malloc,*out = o.p ? o.p : malloc(1); *outn = o.n;
+src/api/api.c:330:1,direct,malloc,uint8_t *index = malloc(index_size);
+src/core/compress.c:17:1,direct,malloc,"size_t ic = kolmo_bound(tn, q), tot; uint8_t *in = malloc(ic), *f = NULL; int64_t z = -1;"
+src/core/compress.c:21:1,direct,malloc,f = output_fd >= 0 ? malloc(tot) : tot <= cap ? dst : NULL;
+src/core/compress.c:220:1,direct,malloc,file_index = malloc(HDR + (size_t)nb * IDX);
+src/core/blocks.c:149:1,direct,malloc,uint8_t *saved = malloc(size);
+src/core/blocks.c:224:1,direct,malloc,uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
+src/core/blocks.c:289:1,direct,malloc,"uint8_t *sp = pl.a == 2 && !memchr(raw, '\n', len) ? malloc(2 * len + 64) : NULL;"
+src/core/blocks.c:666:1,direct,malloc,"if (J->aud_be && alt && (sw = malloc(len))) {          /* AIFF: the samples little-endian, as kaud reads them */"
+src/core/decode.c:214:1,direct,malloc,uint8_t *sp = malloc(len + k + 64); if (!sp) return KOLMO_ERR_ALLOC;
+src/core/decode.c:280:1,direct,malloc,uint8_t *packed = J->input_fd >= 0 ? malloc(J->maxcompressed ? J->maxcompressed : 1) : NULL;
+src/core/decode.c:345:1,direct,malloc,pb = malloc(cl); if (!pb) return KOLMO_ERR_ALLOC;
+src/core/decode.c:360:1,direct,malloc,t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
+src/core/decode.c:360:2,direct,malloc,t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
+src/core/decode.c:407:1,direct,malloc,if (nt > 1 && m > 1 && (order = malloc((size_t)m * 2 * sizeof *order))) {

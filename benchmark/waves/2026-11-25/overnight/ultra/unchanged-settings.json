@@ -1,0 +1,56 @@
+[
+  {
+    "input": "GMP Info",
+    "a": "main numeric17",
+    "b": "main scaled",
+    "frame_sha256": "b8a3dd1053f47439a3884db5c7cf8d652f879a26fa659fc072861cb5c616aff3"
+  },
+  {
+    "input": "GMP Info",
+    "a": "main scaled",
+    "b": "fixed scaled",
+    "frame_sha256": "b8a3dd1053f47439a3884db5c7cf8d652f879a26fa659fc072861cb5c616aff3"
+  },
+  {
+    "input": "GMP Info",
+    "a": "main full",
+    "b": "fixed full",
+    "frame_sha256": "e369a44c92d8ed0439f512b7989a090f431bb4ef0d56850446d8bd19a0d60c13"
+  },
+  {
+    "input": "Libgcrypt Info",
+    "a": "main numeric17",
+    "b": "main scaled",
+    "frame_sha256": "336f9b177a2c2f1c4a89797a962391c38ae6d7328cb10ffa13db973019617b3d"
+  },
+  {
+    "input": "Libgcrypt Info",
+    "a": "main scaled",
+    "b": "fixed scaled",
+    "frame_sha256": "336f9b177a2c2f1c4a89797a962391c38ae6d7328cb10ffa13db973019617b3d"
+  },
+  {
+    "input": "Libgcrypt Info",
+    "a": "main full",
+    "b": "fixed full",
+    "frame_sha256": "6e276978c2779496f62e554b624379e6e952aaf8fde3e82d4c38c002ab2a6f79"
+  },
+  {
+    "input": "Webster 512KiB",
+    "a": "main numeric17",
+    "b": "main scaled",
+    "frame_sha256": "3e453af84cc8805c1d21151ea1d99e46e66702b746623f99f22225c86f996fdc"
+  },
+  {
+    "input": "Webster 512KiB",
+    "a": "main scaled",
+    "b": "fixed scaled",
+    "frame_sha256": "3e453af84cc8805c1d21151ea1d99e46e66702b746623f99f22225c86f996fdc"
+  },
+  {
+    "input": "Webster 512KiB",
+    "a": "main full",
+    "b": "fixed full",
+    "frame_sha256": "63853de7d7924c1166f4ac39953bf0c65f8aa3540e70ba43659230d6aaaa9649"
+  }
+]

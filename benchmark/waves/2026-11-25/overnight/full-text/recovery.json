@@ -1,0 +1,35 @@
+{
+  "source_sha256": "2b49720ec4d78c3c9fabaee6e4179a5e997302b3a70029f30f2d582218c024a8",
+  "input_bytes": 100000000,
+  "paq8px_sha256": "812006e8acf5bcff79b907538fce424bba77292700cc2584de99275e647ed089",
+  "original_interruption": {
+    "old_pid": 17151,
+    "partial_bytes": 1892352,
+    "partial_sha256": "142272ce24e2d0b0c39ac843eebc24ea25bfc03816bbae9266335a9073d979f1",
+    "progress": "10.83%",
+    "partial_frame": "enwik8.paq8px217",
+    "log": "paq8px-8L-encode.log",
+    "detected_utc": "2026-11-25T19:01:00.996633+00:00"
+  },
+  "recovery_started_utc": "2026-11-25T19:01:00.997864+00:00",
+  "comparison_restores_already_verified": [
+    {
+      "tool": "zstd-19",
+      "frame_sha256": "178e68557b8ab69bbad3a4ae667df8412f2a2eadac05bc6f34ccf8c7b7f5bb15",
+      "restored_sha256": "2b49720ec4d78c3c9fabaee6e4179a5e997302b3a70029f30f2d582218c024a8"
+    },
+    {
+      "tool": "xz-9",
+      "frame_sha256": "8f0074350e76391c09fd51baa9b78b43fc945debe0a114df305ea094d4bfa643",
+      "restored_sha256": "2b49720ec4d78c3c9fabaee6e4179a5e997302b3a70029f30f2d582218c024a8"
+    },
+    {
+      "tool": "kolmo-ultra",
+      "frame_sha256": "1a2756ac0f7807a6a95b39e40077dac1d0568bf559603b5e03d7fc9c69e02520",
+      "restored_sha256": "2b49720ec4d78c3c9fabaee6e4179a5e997302b3a70029f30f2d582218c024a8"
+    }
+  ],
+  "recovery_encode_progress_snapshot": "0.06%",
+  "complete_paq_encode": false,
+  "complete_paq_decode": false
+}

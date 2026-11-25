@@ -1,0 +1,66 @@
+{
+  "source": "8d23095b2f09d5c9e3c3425123bea63641ca5d71",
+  "stock_sha256": "dbd92f4a170e36c9701aec15236648cd7b78e9f90a180fc8ffd79661aebbb6f2",
+  "instrumented_sha256": "63eac25560e95f1febaa2c417ec7515a27897e0d8e02217532888007070b2242",
+  "host": "Apple M5 arm64, macOS 27.2, Apple clang 21",
+  "inputs": 7,
+  "exact_decodes": 35,
+  "counts": {
+    "native": {
+      "crc_arm_bytes": 3080,
+      "crc_portable_bytes": 0,
+      "decimal_neon_values": 69806,
+      "decimal_swar_calls": 2334,
+      "int_neon_values": 0,
+      "int_total_values": 29999,
+      "dec64_neon_values": 0,
+      "dec64_total_values": 12000,
+      "img8_neon_bytes": 0,
+      "word_bulk_neon_output_bytes": 0,
+      "word_remainder_output_bytes": 100012,
+      "word_remainder_neon_scan_iterations": 16874
+    },
+    "cpu-c": {
+      "crc_arm_bytes": 3080,
+      "crc_portable_bytes": 0,
+      "decimal_neon_values": 69806,
+      "decimal_swar_calls": 2334,
+      "int_neon_values": 0,
+      "int_total_values": 29999,
+      "dec64_neon_values": 0,
+      "dec64_total_values": 12000,
+      "img8_neon_bytes": 0,
+      "word_bulk_neon_output_bytes": 0,
+      "word_remainder_output_bytes": 100012,
+      "word_remainder_neon_scan_iterations": 16874
+    },
+    "force-c": {
+      "crc_arm_bytes": 3080,
+      "crc_portable_bytes": 0,
+      "decimal_neon_values": 69806,
+      "decimal_swar_calls": 2334,
+      "int_neon_values": 0,
+      "int_total_values": 29999,
+      "dec64_neon_values": 0,
+      "dec64_total_values": 12000,
+      "img8_neon_bytes": 0,
+      "word_bulk_neon_output_bytes": 0,
+      "word_remainder_output_bytes": 100012,
+      "word_remainder_neon_scan_iterations": 16874
+    },
+    "reference": {
+      "crc_arm_bytes": 0,
+      "crc_portable_bytes": 3080,
+      "decimal_neon_values": 0,
+      "decimal_swar_calls": 72140,
+      "int_neon_values": 0,
+      "int_total_values": 29999,
+      "dec64_neon_values": 0,
+      "dec64_total_values": 12000,
+      "img8_neon_bytes": 0,
+      "word_bulk_neon_output_bytes": 0,
+      "word_remainder_output_bytes": 100012,
+      "word_remainder_neon_scan_iterations": 0
+    }
+  }
+}

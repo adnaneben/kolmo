@@ -1,0 +1,54 @@
+[
+  {
+    "wave": 1,
+    "settings": 90,
+    "trials": 540,
+    "inputs": 12,
+    "input_thread_combinations": 13,
+    "preset_thread_counts": [
+      1,
+      10
+    ],
+    "levels": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "ultra"
+    ],
+    "receipt_sha256": "f33bb3119e83c356e15c526f0955ce9f5bc49ea4b90760597ec3c67181f0c4a5",
+    "source_manifest_sha256": "eeff7866af9f8dbe3b7938be7df81880c202041995ca2191ca4f6c3e797cc943",
+    "bench_script_matches_manifest": true
+  },
+  {
+    "wave": 2,
+    "settings": 90,
+    "trials": 540,
+    "inputs": 12,
+    "input_thread_combinations": 13,
+    "preset_thread_counts": [
+      1,
+      10
+    ],
+    "levels": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "ultra"
+    ],
+    "receipt_sha256": "9a1f32287b686e5e331681b27ccb3c0df83de1aca3d3f95004dc114f4226b889",
+    "source_manifest_sha256": "7ed21ba9fa9a1f1fe3298db2c9c07646d989fa92a68c9191a9c5c68d9d8980d3",
+    "bench_script_matches_manifest": true
+  }
+]

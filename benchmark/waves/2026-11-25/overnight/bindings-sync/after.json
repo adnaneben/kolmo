@@ -1,0 +1,16 @@
+{
+  "python": {
+    "canonical_files": 176,
+    "tracked_mirrors": 176,
+    "missing": [],
+    "extra": [],
+    "different": []
+  },
+  "rust": {
+    "canonical_files": 176,
+    "tracked_mirrors": 176,
+    "missing": [],
+    "extra": [],
+    "different": []
+  }
+}

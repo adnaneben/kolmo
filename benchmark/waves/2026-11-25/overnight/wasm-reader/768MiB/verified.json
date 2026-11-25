@@ -1,0 +1,283 @@
+{
+  "module_sha256": "2e7e6d4654ff770dca2551ed34ca92702b4af3fb3c11e876ce1e95c53cf5a076",
+  "module_bytes": 720472,
+  "pinned_manifest_sha256": "3c21474817b9dd4203d0de443b226dcfcd4c0e3c142f189f64d80d3251544ddc",
+  "v12_sha256_file_sha256": "acf083f620ee945e6e693f44ef7230e4df85c70d31fb204d7582bd18e8ab9c4d",
+  "memory_minimum_bytes": 2424832,
+  "memory_maximum_bytes": 805306368,
+  "decoded_bytes_per_engine": 47614545,
+  "engines": {
+    "Node-V8": {
+      "executable_sha256": "1c566c9ba5ffa756367707fd950fa3ee31a941202b0a47dbf67836216413f071",
+      "wasm_imports": [
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "environ_get",
+          "kind": "function"
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "environ_sizes_get",
+          "kind": "function"
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "clock_time_get",
+          "kind": "function"
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "fd_fdstat_get",
+          "kind": "function"
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "fd_pread",
+          "kind": "function"
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "fd_pwrite",
+          "kind": "function"
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "poll_oneoff",
+          "kind": "function"
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "proc_exit",
+          "kind": "function"
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "sched_yield",
+          "kind": "function"
+        }
+      ],
+      "wasm_exports": [
+        {
+          "name": "memory",
+          "kind": "memory"
+        },
+        {
+          "name": "_initialize",
+          "kind": "function"
+        },
+        {
+          "name": "malloc",
+          "kind": "function"
+        },
+        {
+          "name": "free",
+          "kind": "function"
+        },
+        {
+          "name": "restore_frame",
+          "kind": "function"
+        }
+      ],
+      "calls": {
+        "environ_sizes_get": 66
+      },
+      "verified": 357,
+      "high_water_linear_bytes": 743899136
+    },
+    "JavaScriptCore": {
+      "executable_sha256": "cbf505bc4138b5350dcaba65f47b551054d256931f5fbb38f7a729f1b8faee73",
+      "wasm_imports": [
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "environ_get",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32",
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          }
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "environ_sizes_get",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32",
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          }
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "clock_time_get",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32",
+              "i64",
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          }
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "fd_fdstat_get",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32",
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          }
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "fd_pread",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32",
+              "i32",
+              "i32",
+              "i64",
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          }
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "fd_pwrite",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32",
+              "i32",
+              "i32",
+              "i64",
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          }
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "poll_oneoff",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32",
+              "i32",
+              "i32",
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          }
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "proc_exit",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32"
+            ],
+            "results": []
+          }
+        },
+        {
+          "module": "wasi_snapshot_preview1",
+          "name": "sched_yield",
+          "kind": "function",
+          "type": {
+            "parameters": [],
+            "results": [
+              "i32"
+            ]
+          }
+        }
+      ],
+      "wasm_exports": [
+        {
+          "name": "memory",
+          "kind": "memory",
+          "type": {
+            "maximum": 12288,
+            "minimum": 37,
+            "shared": false
+          }
+        },
+        {
+          "name": "_initialize",
+          "kind": "function",
+          "type": {
+            "parameters": [],
+            "results": []
+          }
+        },
+        {
+          "name": "malloc",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32"
+            ],
+            "results": [
+              "i32"
+            ]
+          }
+        },
+        {
+          "name": "free",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32"
+            ],
+            "results": []
+          }
+        },
+        {
+          "name": "restore_frame",
+          "kind": "function",
+          "type": {
+            "parameters": [
+              "i32",
+              "i32",
+              "i32",
+              "i32"
+            ],
+            "results": [
+              "i64"
+            ]
+          }
+        }
+      ],
+      "calls": {
+        "environ_sizes_get": 66
+      },
+      "verified": 357,
+      "high_water_linear_bytes": 743899136
+    }
+  }
+}

@@ -1,0 +1,2 @@
+[    2.866852] Initramfs unpacking failed: write error
+[    2.914078] Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)

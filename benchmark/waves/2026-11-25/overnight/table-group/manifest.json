@@ -1,0 +1,31 @@
+{
+  "commit": "c8fc5ac54aa302baf6abc66f210617901f9e6e2e",
+  "sources": {
+    "owid": {
+      "path": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/corpus-holdout/owid-co2-data.csv",
+      "bytes": 14377942,
+      "sha256": "7f78e2b218ce4bb8c538bbec04fdc9a7982e8d40bff972e650df603899edd5f6"
+    },
+    "noaa": {
+      "path": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/bench-page/data/holdout/ghcn-csv/test/USW00012839.csv",
+      "bytes": 10134321,
+      "sha256": "728e10647be26bdbe1178976ac74ead6425327d45e1a8d87c77d4090e880ba04"
+    },
+    "source-control": {
+      "path": "/tmp/kolmo-ppp-reviewed-followups-nov25/src/core/pool.c",
+      "bytes": 6818,
+      "sha256": "e8e23e813d8f93c90f19452b8d6821814dea5e6d1d3921856bb14e383fd75f5c"
+    }
+  },
+  "original_table_c_sha256": "a978c4352e741ce2f121b5c0b813e1bc486df3f511311fc7b4a6211524ac2052",
+  "experiment_sha256": "1816c2a9c50626450071c864bb7c5142d30c63e95f17e415347eb94cf6f357d3",
+  "stock_sha256": "79971f6d2965c3125c92e1c228fdebebc9dc4ea6c427199cbe7664bdc4f0eb68",
+  "stock_reader_sha256": "5c116ba0adb839757a3bfbcd53c334df354e804ab5fd9b2281ee1163e26221a5",
+  "preset": 3,
+  "thread_counts": [
+    1,
+    4
+  ],
+  "seed": 251140,
+  "scored_trials": 3
+}

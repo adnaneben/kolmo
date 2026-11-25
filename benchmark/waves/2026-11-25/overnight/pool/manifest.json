@@ -1,0 +1,33 @@
+{
+  "commit": "ac10ce80048ab0664074f7ba031634055f4d2225",
+  "host": "macOS-27.2-arm64-arm-64bit",
+  "pairs": 9,
+  "seed": 202611251,
+  "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+  "level": 3,
+  "block_bytes": 1048576,
+  "inputs": {
+    "small": {
+      "filename": "pool.c",
+      "source_bytes": 6570,
+      "source_sha256": "c012f9732a38397fcee457b441098aff226b26bb7d1b749eb63444efc675272b",
+      "frame_bytes": 2637,
+      "frame_sha256": "ba75c1579e1fd80fe1cde9d45d6081a3e542f6fe54a149bf1ee8170019cce993",
+      "frame_blocks": 1
+    },
+    "large": {
+      "filename": "USW00012839.csv",
+      "source_bytes": 10134321,
+      "source_sha256": "728e10647be26bdbe1178976ac74ead6425327d45e1a8d87c77d4090e880ba04",
+      "frame_bytes": 577889,
+      "frame_sha256": "e1465626c4ea14d6dfad8ceffa496a988a45fb9f98e9b489296bbde23cc4b12f",
+      "frame_blocks": 10
+    }
+  },
+  "binaries": {
+    "default_library": "e783109bce27ace0cf9d7e3de80a0dd6a96f2cfd6e00856a45802130d35afca4",
+    "aux_library": "7dc1129a0caad3d7eeb2d988c83768045a59f1c13fa019dc3923f3e528660915",
+    "public": "bfc5d128cb9a5c7f1c760476c88d9a7499f6a9697e979b887eacc9a42c56490b",
+    "diagnostic": "da5b1308cefe2b0db25b454963bd46df468e98ffac301ada5ed8070ac6f1cf12"
+  }
+}

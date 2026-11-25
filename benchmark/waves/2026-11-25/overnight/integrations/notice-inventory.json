@@ -1,0 +1,29 @@
+{
+  "parent_sha": "eecf57cba456e35e70100d44110a89f91ec802b4",
+  "source_sha": "323049a37f888d8c64780da8a6223dfee3e944fd",
+  "canonical": {
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "NOTICE": "2237f2ccb33c3addd96909fbd09391da380ca16a15986433cd184f308836b2cb"
+  },
+  "library_sha256": "cb90c0168bfefd583243c82fa78dc1a4043bf31bf365c4f110b46db727eea0c5",
+  "metadata_license_fields": [
+    "License-File: LICENSE",
+    "License-File: NOTICE"
+  ],
+  "kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl": {
+    "bytes": 777110,
+    "sha256": "81641e62a2b768144e48f7327e3f512f382f406dd2b05c83a7ae455f543ffb22",
+    "verified_paths": {
+      "kolmoc-0.0.2.dist-info/licenses/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "kolmoc-0.0.2.dist-info/licenses/NOTICE": "2237f2ccb33c3addd96909fbd09391da380ca16a15986433cd184f308836b2cb"
+    }
+  },
+  "kolmoc-0.0.2.tar.gz": {
+    "bytes": 691024,
+    "sha256": "a9f69112e0f0360b644ddfc6c72b6178f2acbd4c81f7b0cd6162cb2168cdc999",
+    "verified_paths": {
+      "kolmoc-0.0.2/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "kolmoc-0.0.2/NOTICE": "2237f2ccb33c3addd96909fbd09391da380ca16a15986433cd184f308836b2cb"
+    }
+  }
+}

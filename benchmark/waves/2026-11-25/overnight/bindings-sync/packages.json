@@ -1,0 +1,73 @@
+{
+  "sources": {
+    "python": {
+      "source_package": "kolmoc-0.0.2.tar.gz",
+      "sha256": "66f41323393c90835654b2eea6690d0ed6692aca2cd66d46deb39dfc60ca4feb",
+      "tracked": 176,
+      "missing": [],
+      "different": []
+    },
+    "rust": {
+      "source_package": "kolmo-0.0.2.crate",
+      "sha256": "95b1b3a8d5c2bdf31cfa93754e62c577c4428ac4a5d2129785b081ae2fe36059",
+      "tracked": 176,
+      "missing": [],
+      "different": []
+    }
+  },
+  "binaries": [
+    {
+      "build": "stock",
+      "artifact": "wheel",
+      "filename": "kolmoc-0.0.2-py3-none-macosx_27_0_arm64.whl",
+      "sha256": "885ca0b4b5fb898ca23cefe99f3192c1e2c383c7b6d73a9a558e3eedd9627ea1"
+    },
+    {
+      "build": "stock",
+      "artifact": "python_dylib",
+      "filename": "libkolmo.dylib",
+      "sha256": "852b6e4f90f78c964ff5e11fd8264b5c1ec20eb6a9d58ea514c7120b0ed41988",
+      "runtime_gate_literal_in_binary": false
+    },
+    {
+      "build": "stock",
+      "artifact": "rust_native_static",
+      "filename": "libkolmo_native.a",
+      "sha256": "8322dc63255f22ad854a149e4f0e828c42620165d035d291a21623ff9515f7ce",
+      "runtime_gate_literal_in_binary": false
+    },
+    {
+      "build": "stock",
+      "artifact": "rust_consumer",
+      "filename": "consumer",
+      "sha256": "d85d8ed92a58eb21ab190cffa3a8726cc4f0257df5c8f9dd1ba282781a43decb"
+    },
+    {
+      "build": "opt",
+      "artifact": "wheel",
+      "filename": "kolmoc-0.0.2-py3-none-macosx_27_0_arm64.whl",
+      "sha256": "9e388778eb3017c7146bc7df1f4ccf7c76de2739e1844fca0616bd196b1d9087"
+    },
+    {
+      "build": "opt",
+      "artifact": "python_dylib",
+      "filename": "libkolmo.dylib",
+      "sha256": "4c5dd1580a9aeacf818383ecb3dfd96c8b9042e4a04446989c0d7878933fe52e",
+      "runtime_gate_literal_in_binary": true
+    },
+    {
+      "build": "opt",
+      "artifact": "rust_native_static",
+      "filename": "libkolmo_native.a",
+      "sha256": "ffa8457b6921c0ea2ecfa866428cc8aaf1184fad7549b1b5e87013720f7f8127",
+      "runtime_gate_literal_in_binary": true
+    },
+    {
+      "build": "opt",
+      "artifact": "rust_consumer",
+      "filename": "consumer",
+      "sha256": "d07ed26c2b7dde7109a3828795a5d7704ca034bd6395ceaf91914dc1d3dbcc62"
+    }
+  ],
+  "stock_cli_sha256": "60f36534899ff216fb906a2ba09586a8a3223efee5f7a9791e8e5080d5c7d541"
+}

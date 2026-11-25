@@ -1,0 +1,328 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 1100" role="img"><title>Kolmo compression ratio and round-trip file throughput</title>
+<style>text{font-family:system-ui, sans-serif;fill:#192e3a}.axis{font-size:12px;fill:#3b5059}.name{font-size:17px;font-weight:600}.grid{stroke:#dde5e6}.old{fill:#fff;stroke:#19647e;stroke-width:1.8}.new{fill:#c5472b;fill-opacity:.82}</style>
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="38" y="43" font-size="29" font-weight="700">Kolmo file compression across levels 1–9 and Ultra</text>
+<text x="38" y="73" font-size="17">Vertical axis: original ÷ compressed bytes. Horizontal axis: complete encode + decode throughput (MB/s, log scale).</text>
+<circle class="old" cx="46" cy="102" r="5"/><text x="59" y="107" font-size="15">Baseline 4db0425b</text><circle class="new" cx="260" cy="102" r="4"/><text x="273" y="107" font-size="15">Qualified main a1d39559</text>
+<text x="513" y="107" font-size="15">Each pair is one level. Hover over a point for details.</text>
+<text class="name" x="70" y="144">Literature · 16 KiB prefix · T1</text>
+<path class="grid" d="M70,306.0h478"/><text class="axis" x="63" y="310.0" text-anchor="end">1.29×</text>
+<path class="grid" d="M70,257.0h478"/><text class="axis" x="63" y="261.0" text-anchor="end">2.17×</text>
+<path class="grid" d="M70,208.0h478"/><text class="axis" x="63" y="212.0" text-anchor="end">3.05×</text>
+<path class="grid" d="M70,159.0h478"/><text class="axis" x="63" y="163.0" text-anchor="end">3.94×</text>
+<path class="grid" d="M70.00000000000003,159v147"/><text class="axis" x="70.00000000000003" y="324" text-anchor="middle">0.39</text>
+<path class="grid" d="M189.5,159v147"/><text class="axis" x="189.5" y="324" text-anchor="middle">0.76</text>
+<path class="grid" d="M309.0,159v147"/><text class="axis" x="309.0" y="324" text-anchor="middle">1.5</text>
+<path class="grid" d="M428.5,159v147"/><text class="axis" x="428.5" y="324" text-anchor="middle">2.9</text>
+<path class="grid" d="M548.0,159v147"/><text class="axis" x="548.0" y="324" text-anchor="middle">5.6</text>
+<path stroke="#7f8990" d="M505.26266919614613,293.75H509.2147478537109"/>
+<circle class="old" cx="505.26266919614613" cy="293.75" r="4.5"><title>Level 1 · before · 4.44 MB/s · 1.509×</title></circle>
+<circle class="new" cx="509.2147478537109" cy="293.75" r="3"><title>Level 1 · after · 4.54 MB/s · 1.509×</title></circle>
+<path stroke="#7f8990" d="M498.3878879035013,202.83046221542085H497.4708203872181"/>
+<circle class="old" cx="498.3878879035013" cy="202.83046221542085" r="4.5"><title>Level 2 · before · 4.27 MB/s · 3.148×</title></circle>
+<circle class="new" cx="497.4708203872181" cy="202.83046221542085" r="3"><title>Level 2 · after · 4.25 MB/s · 3.148×</title></circle>
+<path stroke="#7f8990" d="M496.77365526834996,205.08290043524318H486.6011450921555"/>
+<circle class="old" cx="496.77365526834996" cy="205.08290043524318" r="4.5"><title>Level 3 · before · 4.24 MB/s · 3.107×</title></circle>
+<circle class="new" cx="486.6011450921555" cy="205.08290043524318" r="3"><title>Level 3 · after · 4.00 MB/s · 3.107×</title></circle>
+<path stroke="#7f8990" d="M465.58230059567313,205.70191158900838H487.5952465846763"/>
+<circle class="old" cx="465.58230059567313" cy="205.70191158900838" r="4.5"><title>Level 4 · before · 3.56 MB/s · 3.096×</title></circle>
+<circle class="new" cx="487.5952465846763" cy="205.70191158900838" r="3"><title>Level 4 · after · 4.02 MB/s · 3.096×</title></circle>
+<path stroke="#7f8990" d="M463.83979730283124,202.12291398615326H452.0412451343551"/>
+<circle class="old" cx="463.83979730283124" cy="202.12291398615326" r="4.5"><title>Level 5 · before · 3.52 MB/s · 3.160×</title></circle>
+<circle class="new" cx="452.0412451343551" cy="202.12291398615326" r="3"><title>Level 5 · after · 3.30 MB/s · 3.160×</title></circle>
+<path stroke="#7f8990" d="M438.5629561651761,202.15673672145505H427.6266190654689"/>
+<circle class="old" cx="438.5629561651761" cy="202.15673672145505" r="4.5"><title>Level 6 · before · 3.06 MB/s · 3.160×</title></circle>
+<circle class="new" cx="427.6266190654689" cy="202.15673672145505" r="3"><title>Level 6 · after · 2.88 MB/s · 3.160×</title></circle>
+<path stroke="#7f8990" d="M378.4811119084895,201.8857889759583H379.6188788209763"/>
+<circle class="old" cx="378.4811119084895" cy="201.8857889759583" r="4.5"><title>Level 7 · before · 2.18 MB/s · 3.165×</title></circle>
+<circle class="new" cx="379.6188788209763" cy="201.8857889759583" r="3"><title>Level 7 · after · 2.20 MB/s · 3.165×</title></circle>
+<path stroke="#7f8990" d="M430.4127721402959,211.1705884969934H435.6558994775442"/>
+<circle class="old" cx="430.4127721402959" cy="211.1705884969934" r="4.5"><title>Level 8 · before · 2.92 MB/s · 2.997×</title></circle>
+<circle class="new" cx="435.6558994775442" cy="211.1705884969934" r="3"><title>Level 8 · after · 3.01 MB/s · 2.997×</title></circle>
+<path stroke="#7f8990" d="M443.887654286416,211.1705884969934H445.18134265593966"/>
+<circle class="old" cx="443.887654286416" cy="211.1705884969934" r="4.5"><title>Level 9 · before · 3.15 MB/s · 2.997×</title></circle>
+<circle class="new" cx="445.18134265593966" cy="211.1705884969934" r="3"><title>Level 9 · after · 3.17 MB/s · 2.997×</title></circle>
+<path stroke="#7f8990" d="M106.16380577882852,171.25000000000003H102.86798973635845"/>
+<circle class="old" cx="106.16380577882852" cy="171.25000000000003" r="4.5"><title>Level ultra · before · 0.47 MB/s · 3.717×</title></circle>
+<circle class="new" cx="102.86798973635845" cy="171.25000000000003" r="3"><title>Level ultra · after · 0.47 MB/s · 3.717×</title></circle>
+<text class="name" x="643" y="144">Literature · 16 KiB prefix · T4</text>
+<path class="grid" d="M643,306.0h478"/><text class="axis" x="636" y="310.0" text-anchor="end">1.29×</text>
+<path class="grid" d="M643,257.0h478"/><text class="axis" x="636" y="261.0" text-anchor="end">2.17×</text>
+<path class="grid" d="M643,208.0h478"/><text class="axis" x="636" y="212.0" text-anchor="end">3.05×</text>
+<path class="grid" d="M643,159.0h478"/><text class="axis" x="636" y="163.0" text-anchor="end">3.94×</text>
+<path class="grid" d="M643.0,159v147"/><text class="axis" x="643.0" y="324" text-anchor="middle">0.39</text>
+<path class="grid" d="M762.5,159v147"/><text class="axis" x="762.5" y="324" text-anchor="middle">0.76</text>
+<path class="grid" d="M882.0,159v147"/><text class="axis" x="882.0" y="324" text-anchor="middle">1.5</text>
+<path class="grid" d="M1001.5,159v147"/><text class="axis" x="1001.5" y="324" text-anchor="middle">2.9</text>
+<path class="grid" d="M1121.0,159v147"/><text class="axis" x="1121.0" y="324" text-anchor="middle">5.6</text>
+<path stroke="#7f8990" d="M1056.5338174328165,293.75H1065.5435408699589"/>
+<circle class="old" cx="1056.5338174328165" cy="293.75" r="4.5"><title>Level 1 · before · 3.93 MB/s · 1.509×</title></circle>
+<circle class="new" cx="1065.5435408699589" cy="293.75" r="3"><title>Level 1 · after · 4.14 MB/s · 1.509×</title></circle>
+<path stroke="#7f8990" d="M1087.895635267016,202.83046221542085H1088.1320102636416"/>
+<circle class="old" cx="1087.895635267016" cy="202.83046221542085" r="4.5"><title>Level 2 · before · 4.69 MB/s · 3.148×</title></circle>
+<circle class="new" cx="1088.1320102636416" cy="202.83046221542085" r="3"><title>Level 2 · after · 4.70 MB/s · 3.148×</title></circle>
+<path stroke="#7f8990" d="M1078.536998510684,205.08290043524318H1061.4224428482207"/>
+<circle class="old" cx="1078.536998510684" cy="205.08290043524318" r="4.5"><title>Level 3 · before · 4.45 MB/s · 3.107×</title></circle>
+<circle class="new" cx="1061.4224428482207" cy="205.08290043524318" r="3"><title>Level 3 · after · 4.04 MB/s · 3.107×</title></circle>
+<path stroke="#7f8990" d="M1057.832461365207,205.70191158900838H1054.057834353444"/>
+<circle class="old" cx="1057.832461365207" cy="205.70191158900838" r="4.5"><title>Level 4 · before · 3.96 MB/s · 3.096×</title></circle>
+<circle class="new" cx="1054.057834353444" cy="205.70191158900838" r="3"><title>Level 4 · after · 3.88 MB/s · 3.096×</title></circle>
+<path stroke="#7f8990" d="M1000.0743340763416,202.12291398615326H998.2048141867718"/>
+<circle class="old" cx="1000.0743340763416" cy="202.12291398615326" r="4.5"><title>Level 5 · before · 2.87 MB/s · 3.160×</title></circle>
+<circle class="new" cx="998.2048141867718" cy="202.12291398615326" r="3"><title>Level 5 · after · 2.84 MB/s · 3.160×</title></circle>
+<path stroke="#7f8990" d="M1017.4544460769166,202.15673672145505H1020.1440702090975"/>
+<circle class="old" cx="1017.4544460769166" cy="202.15673672145505" r="4.5"><title>Level 6 · before · 3.16 MB/s · 3.160×</title></circle>
+<circle class="new" cx="1020.1440702090975" cy="202.15673672145505" r="3"><title>Level 6 · after · 3.21 MB/s · 3.160×</title></circle>
+<path stroke="#7f8990" d="M942.3305767725358,201.8857889759583H939.0902033392243"/>
+<circle class="old" cx="942.3305767725358" cy="201.8857889759583" r="4.5"><title>Level 7 · before · 2.07 MB/s · 3.165×</title></circle>
+<circle class="new" cx="939.0902033392243" cy="201.8857889759583" r="3"><title>Level 7 · after · 2.04 MB/s · 3.165×</title></circle>
+<path stroke="#7f8990" d="M1006.3374014364523,211.1705884969934H1013.2702959825186"/>
+<circle class="old" cx="1006.3374014364523" cy="211.1705884969934" r="4.5"><title>Level 8 · before · 2.97 MB/s · 2.997×</title></circle>
+<circle class="new" cx="1013.2702959825186" cy="211.1705884969934" r="3"><title>Level 8 · after · 3.09 MB/s · 2.997×</title></circle>
+<path stroke="#7f8990" d="M995.5958594500262,211.1705884969934H1006.7149874263839"/>
+<circle class="old" cx="995.5958594500262" cy="211.1705884969934" r="4.5"><title>Level 9 · before · 2.80 MB/s · 2.997×</title></circle>
+<circle class="new" cx="1006.7149874263839" cy="211.1705884969934" r="3"><title>Level 9 · after · 2.97 MB/s · 2.997×</title></circle>
+<path stroke="#7f8990" d="M684.9621375301642,171.25000000000003H687.1455534166064"/>
+<circle class="old" cx="684.9621375301642" cy="171.25000000000003" r="4.5"><title>Level ultra · before · 0.49 MB/s · 3.717×</title></circle>
+<circle class="new" cx="687.1455534166064" cy="171.25000000000003" r="3"><title>Level ultra · after · 0.50 MB/s · 3.717×</title></circle>
+<text class="name" x="70" y="373">Python stdlib · 64 KiB prefix · T1</text>
+<path class="grid" d="M70,535.0h478"/><text class="axis" x="63" y="539.0" text-anchor="end">2.14×</text>
+<path class="grid" d="M70,486.0h478"/><text class="axis" x="63" y="490.0" text-anchor="end">3.22×</text>
+<path class="grid" d="M70,437.0h478"/><text class="axis" x="63" y="441.0" text-anchor="end">4.31×</text>
+<path class="grid" d="M70,388.0h478"/><text class="axis" x="63" y="392.0" text-anchor="end">5.40×</text>
+<path class="grid" d="M70.0,388v147"/><text class="axis" x="70.0" y="553" text-anchor="middle">0.4</text>
+<path class="grid" d="M189.5,388v147"/><text class="axis" x="189.5" y="553" text-anchor="middle">1.1</text>
+<path class="grid" d="M309.0,388v147"/><text class="axis" x="309.0" y="553" text-anchor="middle">2.9</text>
+<path class="grid" d="M428.5,388v147"/><text class="axis" x="428.5" y="553" text-anchor="middle">7.9</text>
+<path class="grid" d="M548.0,388v147"/><text class="axis" x="548.0" y="553" text-anchor="middle">21</text>
+<path stroke="#7f8990" d="M522.884695387256,522.75H518.4022002674519"/>
+<circle class="old" cx="522.884695387256" cy="522.75" r="4.5"><title>Level 1 · before · 17.33 MB/s · 2.409×</title></circle>
+<circle class="new" cx="518.4022002674519" cy="522.75" r="3"><title>Level 1 · after · 16.70 MB/s · 2.409×</title></circle>
+<path stroke="#7f8990" d="M510.854831138313,481.9850752767824H519.8004896143658"/>
+<circle class="old" cx="510.854831138313" cy="481.9850752767824" r="4.5"><title>Level 2 · before · 15.68 MB/s · 3.313×</title></circle>
+<circle class="new" cx="519.8004896143658" cy="481.9850752767824" r="3"><title>Level 2 · after · 16.89 MB/s · 3.313×</title></circle>
+<path stroke="#7f8990" d="M473.04881859778686,475.25553182503563H477.94252266183855"/>
+<circle class="old" cx="473.04881859778686" cy="475.25553182503563" r="4.5"><title>Level 3 · before · 11.44 MB/s · 3.463×</title></circle>
+<circle class="new" cx="477.94252266183855" cy="475.25553182503563" r="3"><title>Level 3 · after · 11.92 MB/s · 3.463×</title></circle>
+<path stroke="#7f8990" d="M417.8023488177752,464.4660650413636H419.2732097988677"/>
+<circle class="old" cx="417.8023488177752" cy="464.4660650413636" r="4.5"><title>Level 4 · before · 7.22 MB/s · 3.702×</title></circle>
+<circle class="new" cx="419.2732097988677" cy="464.4660650413636" r="3"><title>Level 4 · after · 7.31 MB/s · 3.702×</title></circle>
+<path stroke="#7f8990" d="M336.45538973083677,456.992481984912H335.53008986730794"/>
+<circle class="old" cx="336.45538973083677" cy="456.992481984912" r="4.5"><title>Level 5 · before · 3.66 MB/s · 3.868×</title></circle>
+<circle class="new" cx="335.53008986730794" cy="456.992481984912" r="3"><title>Level 5 · after · 3.63 MB/s · 3.868×</title></circle>
+<path stroke="#7f8990" d="M308.52355110871974,454.3820340171022H306.0275862876164"/>
+<circle class="old" cx="308.52355110871974" cy="454.3820340171022" r="4.5"><title>Level 6 · before · 2.90 MB/s · 3.926×</title></circle>
+<circle class="new" cx="306.0275862876164" cy="454.3820340171022" r="3"><title>Level 6 · after · 2.84 MB/s · 3.926×</title></circle>
+<path stroke="#7f8990" d="M294.19369182457024,454.3502337870828H292.8383004101424"/>
+<circle class="old" cx="294.19369182457024" cy="454.3502337870828" r="4.5"><title>Level 7 · before · 2.57 MB/s · 3.927×</title></circle>
+<circle class="new" cx="292.8383004101424" cy="454.3502337870828" r="3"><title>Level 7 · after · 2.55 MB/s · 3.927×</title></circle>
+<path stroke="#7f8990" d="M382.0263499651888,441.96235000354443H380.6784970144599"/>
+<circle class="old" cx="382.0263499651888" cy="441.96235000354443" r="4.5"><title>Level 8 · before · 5.36 MB/s · 4.202×</title></circle>
+<circle class="new" cx="380.6784970144599" cy="441.96235000354443" r="3"><title>Level 8 · after · 5.30 MB/s · 4.202×</title></circle>
+<path stroke="#7f8990" d="M378.68232717858905,441.96235000354443H380.70877891530046"/>
+<circle class="old" cx="378.68232717858905" cy="441.96235000354443" r="4.5"><title>Level 9 · before · 5.21 MB/s · 4.202×</title></circle>
+<circle class="new" cx="380.70877891530046" cy="441.96235000354443" r="3"><title>Level 9 · after · 5.30 MB/s · 4.202×</title></circle>
+<path stroke="#7f8990" d="M97.73612579420494,400.25H97.40288856796062"/>
+<circle class="old" cx="97.73612579420494" cy="400.25" r="4.5"><title>Level ultra · before · 0.50 MB/s · 5.127×</title></circle>
+<circle class="new" cx="97.40288856796062" cy="400.25" r="3"><title>Level ultra · after · 0.50 MB/s · 5.127×</title></circle>
+<text class="name" x="643" y="373">Python stdlib · 64 KiB prefix · T4</text>
+<path class="grid" d="M643,535.0h478"/><text class="axis" x="636" y="539.0" text-anchor="end">2.14×</text>
+<path class="grid" d="M643,486.0h478"/><text class="axis" x="636" y="490.0" text-anchor="end">3.22×</text>
+<path class="grid" d="M643,437.0h478"/><text class="axis" x="636" y="441.0" text-anchor="end">4.31×</text>
+<path class="grid" d="M643,388.0h478"/><text class="axis" x="636" y="392.0" text-anchor="end">5.40×</text>
+<path class="grid" d="M643.0,388v147"/><text class="axis" x="643.0" y="553" text-anchor="middle">0.4</text>
+<path class="grid" d="M762.5,388v147"/><text class="axis" x="762.5" y="553" text-anchor="middle">1.1</text>
+<path class="grid" d="M882.0,388v147"/><text class="axis" x="882.0" y="553" text-anchor="middle">2.9</text>
+<path class="grid" d="M1001.5,388v147"/><text class="axis" x="1001.5" y="553" text-anchor="middle">7.9</text>
+<path class="grid" d="M1121.0,388v147"/><text class="axis" x="1121.0" y="553" text-anchor="middle">21</text>
+<path stroke="#7f8990" d="M1095.2204698343423,522.75H1098.9106328928501"/>
+<circle class="old" cx="1095.2204698343423" cy="522.75" r="4.5"><title>Level 1 · before · 17.24 MB/s · 2.409×</title></circle>
+<circle class="new" cx="1098.9106328928501" cy="522.75" r="3"><title>Level 1 · after · 17.78 MB/s · 2.409×</title></circle>
+<path stroke="#7f8990" d="M1088.3875664173288,481.9850752767824H1084.9379671447334"/>
+<circle class="old" cx="1088.3875664173288" cy="481.9850752767824" r="4.5"><title>Level 2 · before · 16.28 MB/s · 3.313×</title></circle>
+<circle class="new" cx="1084.9379671447334" cy="481.9850752767824" r="3"><title>Level 2 · after · 15.82 MB/s · 3.313×</title></circle>
+<path stroke="#7f8990" d="M1063.462534150876,475.25553182503563H1064.7562905186564"/>
+<circle class="old" cx="1063.462534150876" cy="475.25553182503563" r="4.5"><title>Level 3 · before · 13.23 MB/s · 3.463×</title></circle>
+<circle class="new" cx="1064.7562905186564" cy="475.25553182503563" r="3"><title>Level 3 · after · 13.37 MB/s · 3.463×</title></circle>
+<path stroke="#7f8990" d="M993.6456429085887,464.4660650413636H997.67846762101"/>
+<circle class="old" cx="993.6456429085887" cy="464.4660650413636" r="4.5"><title>Level 4 · before · 7.39 MB/s · 3.702×</title></circle>
+<circle class="new" cx="997.67846762101" cy="464.4660650413636" r="3"><title>Level 4 · after · 7.64 MB/s · 3.702×</title></circle>
+<path stroke="#7f8990" d="M912.3229455545134,456.992481984912H914.4741726665195"/>
+<circle class="old" cx="912.3229455545134" cy="456.992481984912" r="4.5"><title>Level 5 · before · 3.75 MB/s · 3.868×</title></circle>
+<circle class="new" cx="914.4741726665195" cy="456.992481984912" r="3"><title>Level 5 · after · 3.82 MB/s · 3.868×</title></circle>
+<path stroke="#7f8990" d="M872.7516558178481,454.3820340171022H878.5485013898096"/>
+<circle class="old" cx="872.7516558178481" cy="454.3820340171022" r="4.5"><title>Level 6 · before · 2.70 MB/s · 3.926×</title></circle>
+<circle class="new" cx="878.5485013898096" cy="454.3820340171022" r="3"><title>Level 6 · after · 2.83 MB/s · 3.926×</title></circle>
+<path stroke="#7f8990" d="M862.2735339751475,454.3502337870828H864.153896612727"/>
+<circle class="old" cx="862.2735339751475" cy="454.3502337870828" r="4.5"><title>Level 7 · before · 2.47 MB/s · 3.927×</title></circle>
+<circle class="new" cx="864.153896612727" cy="454.3502337870828" r="3"><title>Level 7 · after · 2.51 MB/s · 3.927×</title></circle>
+<path stroke="#7f8990" d="M948.4622566419594,441.96235000354443H953.7128300022559"/>
+<circle class="old" cx="948.4622566419594" cy="441.96235000354443" r="4.5"><title>Level 8 · before · 5.07 MB/s · 4.202×</title></circle>
+<circle class="new" cx="953.7128300022559" cy="441.96235000354443" r="3"><title>Level 8 · after · 5.30 MB/s · 4.202×</title></circle>
+<path stroke="#7f8990" d="M956.0757030873261,441.96235000354443H950.9508272676894"/>
+<circle class="old" cx="956.0757030873261" cy="441.96235000354443" r="4.5"><title>Level 9 · before · 5.40 MB/s · 4.202×</title></circle>
+<circle class="new" cx="950.9508272676894" cy="441.96235000354443" r="3"><title>Level 9 · after · 5.18 MB/s · 4.202×</title></circle>
+<path stroke="#7f8990" d="M665.08936710715,400.25H667.744111243642"/>
+<circle class="old" cx="665.08936710715" cy="400.25" r="4.5"><title>Level ultra · before · 0.48 MB/s · 5.127×</title></circle>
+<circle class="new" cx="667.744111243642" cy="400.25" r="3"><title>Level ultra · after · 0.49 MB/s · 5.127×</title></circle>
+<text class="name" x="70" y="602">Gaia CSV · 256 KiB prefix · T1</text>
+<path class="grid" d="M70,764.0h478"/><text class="axis" x="63" y="768.0" text-anchor="end">1.55×</text>
+<path class="grid" d="M70,715.0h478"/><text class="axis" x="63" y="719.0" text-anchor="end">2.47×</text>
+<path class="grid" d="M70,666.0h478"/><text class="axis" x="63" y="670.0" text-anchor="end">3.39×</text>
+<path class="grid" d="M70,617.0h478"/><text class="axis" x="63" y="621.0" text-anchor="end">4.32×</text>
+<path class="grid" d="M70.0,617v147"/><text class="axis" x="70.0" y="782" text-anchor="middle">0.43</text>
+<path class="grid" d="M189.5,617v147"/><text class="axis" x="189.5" y="782" text-anchor="middle">1.6</text>
+<path class="grid" d="M309.0,617v147"/><text class="axis" x="309.0" y="782" text-anchor="middle">5.8</text>
+<path class="grid" d="M428.5,617v147"/><text class="axis" x="428.5" y="782" text-anchor="middle">21</text>
+<path class="grid" d="M548.0,617v147"/><text class="axis" x="548.0" y="782" text-anchor="middle">78</text>
+<path stroke="#7f8990" d="M523.8416483148671,751.75H529.041557477962"/>
+<circle class="old" cx="523.8416483148671" cy="751.75" r="4.5"><title>Level 1 · before · 60.36 MB/s · 1.777×</title></circle>
+<circle class="new" cx="529.041557477962" cy="751.75" r="3"><title>Level 1 · after · 63.87 MB/s · 1.777×</title></circle>
+<path stroke="#7f8990" d="M511.26350657401764,686.4918436662367H510.4069998595145"/>
+<circle class="old" cx="511.26350657401764" cy="686.4918436662367" r="4.5"><title>Level 2 · before · 52.65 MB/s · 3.007×</title></circle>
+<circle class="new" cx="510.4069998595145" cy="686.4918436662367" r="3"><title>Level 2 · after · 52.16 MB/s · 3.007×</title></circle>
+<path stroke="#7f8990" d="M495.4264539974494,689.4597286990474H493.0888614276674"/>
+<circle class="old" cx="495.4264539974494" cy="689.4597286990474" r="4.5"><title>Level 3 · before · 44.32 MB/s · 2.951×</title></circle>
+<circle class="new" cx="493.0888614276674" cy="689.4597286990474" r="3"><title>Level 3 · after · 43.21 MB/s · 2.951×</title></circle>
+<path stroke="#7f8990" d="M401.2956019896296,682.9515518347123H401.7030550685807"/>
+<circle class="old" cx="401.2956019896296" cy="682.9515518347123" r="4.5"><title>Level 4 · before · 15.93 MB/s · 3.074×</title></circle>
+<circle class="new" cx="401.7030550685807" cy="682.9515518347123" r="3"><title>Level 4 · after · 16.00 MB/s · 3.074×</title></circle>
+<path stroke="#7f8990" d="M297.9264326858694,675.8707444794758H297.560790968548"/>
+<circle class="old" cx="297.9264326858694" cy="675.8707444794758" r="4.5"><title>Level 5 · before · 5.18 MB/s · 3.207×</title></circle>
+<circle class="new" cx="297.560790968548" cy="675.8707444794758" r="3"><title>Level 5 · after · 5.16 MB/s · 3.207×</title></circle>
+<path stroke="#7f8990" d="M266.7456045918168,677.9197892370644H269.4066446736459"/>
+<circle class="old" cx="266.7456045918168" cy="677.9197892370644" r="4.5"><title>Level 6 · before · 3.69 MB/s · 3.168×</title></circle>
+<circle class="new" cx="269.4066446736459" cy="677.9197892370644" r="3"><title>Level 6 · after · 3.80 MB/s · 3.168×</title></circle>
+<path stroke="#7f8990" d="M239.1602411461352,676.9405484661547H236.9042624118837"/>
+<circle class="old" cx="239.1602411461352" cy="676.9405484661547" r="4.5"><title>Level 7 · before · 2.73 MB/s · 3.187×</title></circle>
+<circle class="new" cx="236.9042624118837" cy="676.9405484661547" r="3"><title>Level 7 · after · 2.67 MB/s · 3.187×</title></circle>
+<path stroke="#7f8990" d="M360.1781229645831,650.6437911737203H359.66315262715415"/>
+<circle class="old" cx="360.1781229645831" cy="650.6437911737203" r="4.5"><title>Level 8 · before · 10.19 MB/s · 3.682×</title></circle>
+<circle class="new" cx="359.66315262715415" cy="650.6437911737203" r="3"><title>Level 8 · after · 10.13 MB/s · 3.682×</title></circle>
+<path stroke="#7f8990" d="M360.21714288317406,650.6437911737203H360.17931304896916"/>
+<circle class="old" cx="360.21714288317406" cy="650.6437911737203" r="4.5"><title>Level 9 · before · 10.19 MB/s · 3.682×</title></circle>
+<circle class="new" cx="360.17931304896916" cy="650.6437911737203" r="3"><title>Level 9 · after · 10.19 MB/s · 3.682×</title></circle>
+<path stroke="#7f8990" d="M87.88198889090361,629.25H86.94288159238675"/>
+<circle class="old" cx="87.88198889090361" cy="629.25" r="4.5"><title>Level ultra · before · 0.53 MB/s · 4.085×</title></circle>
+<circle class="new" cx="86.94288159238675" cy="629.25" r="3"><title>Level ultra · after · 0.52 MB/s · 4.085×</title></circle>
+<text class="name" x="643" y="602">Gaia CSV · 256 KiB prefix · T4</text>
+<path class="grid" d="M643,764.0h478"/><text class="axis" x="636" y="768.0" text-anchor="end">1.55×</text>
+<path class="grid" d="M643,715.0h478"/><text class="axis" x="636" y="719.0" text-anchor="end">2.47×</text>
+<path class="grid" d="M643,666.0h478"/><text class="axis" x="636" y="670.0" text-anchor="end">3.39×</text>
+<path class="grid" d="M643,617.0h478"/><text class="axis" x="636" y="621.0" text-anchor="end">4.32×</text>
+<path class="grid" d="M643.0,617v147"/><text class="axis" x="643.0" y="782" text-anchor="middle">0.43</text>
+<path class="grid" d="M762.5,617v147"/><text class="axis" x="762.5" y="782" text-anchor="middle">1.6</text>
+<path class="grid" d="M882.0,617v147"/><text class="axis" x="882.0" y="782" text-anchor="middle">5.8</text>
+<path class="grid" d="M1001.5,617v147"/><text class="axis" x="1001.5" y="782" text-anchor="middle">21</text>
+<path class="grid" d="M1121.0,617v147"/><text class="axis" x="1121.0" y="782" text-anchor="middle">78</text>
+<path stroke="#7f8990" d="M1104.0571184076132,751.75H1100.3447030892949"/>
+<circle class="old" cx="1104.0571184076132" cy="751.75" r="4.5"><title>Level 1 · before · 65.29 MB/s · 1.777×</title></circle>
+<circle class="new" cx="1100.3447030892949" cy="751.75" r="3"><title>Level 1 · after · 62.71 MB/s · 1.777×</title></circle>
+<path stroke="#7f8990" d="M1088.7449916541555,686.4918436662367H1080.037309563099"/>
+<circle class="old" cx="1088.7449916541555" cy="686.4918436662367" r="4.5"><title>Level 2 · before · 55.28 MB/s · 3.007×</title></circle>
+<circle class="new" cx="1080.037309563099" cy="686.4918436662367" r="3"><title>Level 2 · after · 50.28 MB/s · 3.007×</title></circle>
+<path stroke="#7f8990" d="M1062.937755110513,689.4597286990474H1067.9198695707619"/>
+<circle class="old" cx="1062.937755110513" cy="689.4597286990474" r="4.5"><title>Level 3 · before · 41.75 MB/s · 2.951×</title></circle>
+<circle class="new" cx="1067.9198695707619" cy="689.4597286990474" r="3"><title>Level 3 · after · 44.08 MB/s · 2.951×</title></circle>
+<path stroke="#7f8990" d="M975.3381111217739,682.9515518347123H974.2923440884283"/>
+<circle class="old" cx="975.3381111217739" cy="682.9515518347123" r="4.5"><title>Level 4 · before · 16.11 MB/s · 3.074×</title></circle>
+<circle class="new" cx="974.2923440884283" cy="682.9515518347123" r="3"><title>Level 4 · after · 15.93 MB/s · 3.074×</title></circle>
+<path stroke="#7f8990" d="M874.1518991651665,675.8707444794758H874.3671476624667"/>
+<circle class="old" cx="874.1518991651665" cy="675.8707444794758" r="4.5"><title>Level 5 · before · 5.36 MB/s · 3.207×</title></circle>
+<circle class="new" cx="874.3671476624667" cy="675.8707444794758" r="3"><title>Level 5 · after · 5.37 MB/s · 3.207×</title></circle>
+<path stroke="#7f8990" d="M843.937836302369,677.9197892370644H847.2129960226557"/>
+<circle class="old" cx="843.937836302369" cy="677.9197892370644" r="4.5"><title>Level 6 · before · 3.86 MB/s · 3.168×</title></circle>
+<circle class="new" cx="847.2129960226557" cy="677.9197892370644" r="3"><title>Level 6 · after · 4.00 MB/s · 3.168×</title></circle>
+<path stroke="#7f8990" d="M817.9081776619727,676.9405484661547H818.6247000102305"/>
+<circle class="old" cx="817.9081776619727" cy="676.9405484661547" r="4.5"><title>Level 7 · before · 2.91 MB/s · 3.187×</title></circle>
+<circle class="new" cx="818.6247000102305" cy="676.9405484661547" r="3"><title>Level 7 · after · 2.93 MB/s · 3.187×</title></circle>
+<path stroke="#7f8990" d="M916.9271336065872,650.6437911737203H914.6679242160262"/>
+<circle class="old" cx="916.9271336065872" cy="650.6437911737203" r="4.5"><title>Level 8 · before · 8.54 MB/s · 3.682×</title></circle>
+<circle class="new" cx="914.6679242160262" cy="650.6437911737203" r="3"><title>Level 8 · after · 8.33 MB/s · 3.682×</title></circle>
+<path stroke="#7f8990" d="M923.9877495785945,650.6437911737203H922.9687860469221"/>
+<circle class="old" cx="923.9877495785945" cy="650.6437911737203" r="4.5"><title>Level 9 · before · 9.22 MB/s · 3.682×</title></circle>
+<circle class="new" cx="922.9687860469221" cy="650.6437911737203" r="3"><title>Level 9 · after · 9.12 MB/s · 3.682×</title></circle>
+<path stroke="#7f8990" d="M665.2965549953983,629.25H667.1716016837144"/>
+<circle class="old" cx="665.2965549953983" cy="629.25" r="4.5"><title>Level ultra · before · 0.55 MB/s · 4.085×</title></circle>
+<circle class="new" cx="667.1716016837144" cy="629.25" r="3"><title>Level ultra · after · 0.56 MB/s · 4.085×</title></circle>
+<text class="name" x="70" y="831">ESC-50 audio · 441,044 B whole · T1</text>
+<path class="grid" d="M70,993.0h478"/><text class="axis" x="63" y="997.0" text-anchor="end">0.88×</text>
+<path class="grid" d="M70,944.0h478"/><text class="axis" x="63" y="948.0" text-anchor="end">1.35×</text>
+<path class="grid" d="M70,895.0h478"/><text class="axis" x="63" y="899.0" text-anchor="end">1.82×</text>
+<path class="grid" d="M70,846.0h478"/><text class="axis" x="63" y="850.0" text-anchor="end">2.28×</text>
+<path class="grid" d="M70.0,846v147"/><text class="axis" x="70.0" y="1011" text-anchor="middle">1.2</text>
+<path class="grid" d="M189.5,846v147"/><text class="axis" x="189.5" y="1011" text-anchor="middle">3.8</text>
+<path class="grid" d="M309.0,846v147"/><text class="axis" x="309.0" y="1011" text-anchor="middle">12</text>
+<path class="grid" d="M428.5,846v147"/><text class="axis" x="428.5" y="1011" text-anchor="middle">39</text>
+<path class="grid" d="M548.0,846v147"/><text class="axis" x="548.0" y="1011" text-anchor="middle">1.3e+02</text>
+<path stroke="#7f8990" d="M529.1330157018125,980.75H520.2812048617144"/>
+<circle class="old" cx="529.1330157018125" cy="980.75" r="4.5"><title>Level 1 · before · 105.30 MB/s · 1.000×</title></circle>
+<circle class="new" cx="520.2812048617144" cy="980.75" r="3"><title>Level 1 · after · 96.58 MB/s · 1.000×</title></circle>
+<path stroke="#7f8990" d="M380.4989904182828,866.6847830710678H379.6803461438121"/>
+<circle class="old" cx="380.4989904182828" cy="866.6847830710678" r="4.5"><title>Level 2 · before · 24.67 MB/s · 2.088×</title></circle>
+<circle class="new" cx="379.6803461438121" cy="866.6847830710678" r="3"><title>Level 2 · after · 24.47 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M359.9742303534159,866.6847830710678H357.83586957047595"/>
+<circle class="old" cx="359.9742303534159" cy="866.6847830710678" r="4.5"><title>Level 3 · before · 20.19 MB/s · 2.088×</title></circle>
+<circle class="new" cx="357.83586957047595" cy="866.6847830710678" r="3"><title>Level 3 · after · 19.77 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M317.6785762512037,866.6847830710678H306.7419056081194"/>
+<circle class="old" cx="317.6785762512037" cy="866.6847830710678" r="4.5"><title>Level 4 · before · 13.36 MB/s · 2.088×</title></circle>
+<circle class="new" cx="306.7419056081194" cy="866.6847830710678" r="3"><title>Level 4 · after · 12.01 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M276.5274848326193,866.6847830710678H275.28045984311484"/>
+<circle class="old" cx="276.5274848326193" cy="866.6847830710678" r="4.5"><title>Level 5 · before · 8.94 MB/s · 2.088×</title></circle>
+<circle class="new" cx="275.28045984311484" cy="866.6847830710678" r="3"><title>Level 5 · after · 8.83 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M242.50531862170692,866.6847830710678H239.51927127078218"/>
+<circle class="old" cx="242.50531862170692" cy="866.6847830710678" r="4.5"><title>Level 6 · before · 6.41 MB/s · 2.088×</title></circle>
+<circle class="new" cx="239.51927127078218" cy="866.6847830710678" r="3"><title>Level 6 · after · 6.23 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M182.69164117043314,866.6847830710678H179.6882911736463"/>
+<circle class="old" cx="182.69164117043314" cy="866.6847830710678" r="4.5"><title>Level 7 · before · 3.58 MB/s · 2.088×</title></circle>
+<circle class="new" cx="179.6882911736463" cy="866.6847830710678" r="3"><title>Level 7 · after · 3.47 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M212.04752512222362,858.25H215.7245659380989"/>
+<circle class="old" cx="212.04752512222362" cy="858.25" r="4.5"><title>Level 8 · before · 4.76 MB/s · 2.168×</title></circle>
+<circle class="new" cx="215.7245659380989" cy="858.25" r="3"><title>Level 8 · after · 4.94 MB/s · 2.168×</title></circle>
+<path stroke="#7f8990" d="M182.05442064073384,858.25H180.474691029225"/>
+<circle class="old" cx="182.05442064073384" cy="858.25" r="4.5"><title>Level 9 · before · 3.55 MB/s · 2.168×</title></circle>
+<circle class="new" cx="180.474691029225" cy="858.25" r="3"><title>Level 9 · after · 3.50 MB/s · 2.168×</title></circle>
+<path stroke="#7f8990" d="M88.86698429818748,858.25H90.67073768037606"/>
+<circle class="old" cx="88.86698429818748" cy="858.25" r="4.5"><title>Level ultra · before · 1.43 MB/s · 2.168×</title></circle>
+<circle class="new" cx="90.67073768037606" cy="858.25" r="3"><title>Level ultra · after · 1.46 MB/s · 2.168×</title></circle>
+<text class="name" x="643" y="831">ESC-50 audio · 441,044 B whole · T4</text>
+<path class="grid" d="M643,993.0h478"/><text class="axis" x="636" y="997.0" text-anchor="end">0.88×</text>
+<path class="grid" d="M643,944.0h478"/><text class="axis" x="636" y="948.0" text-anchor="end">1.35×</text>
+<path class="grid" d="M643,895.0h478"/><text class="axis" x="636" y="899.0" text-anchor="end">1.82×</text>
+<path class="grid" d="M643,846.0h478"/><text class="axis" x="636" y="850.0" text-anchor="end">2.28×</text>
+<path class="grid" d="M643.0,846v147"/><text class="axis" x="643.0" y="1011" text-anchor="middle">1.2</text>
+<path class="grid" d="M762.5,846v147"/><text class="axis" x="762.5" y="1011" text-anchor="middle">3.8</text>
+<path class="grid" d="M882.0,846v147"/><text class="axis" x="882.0" y="1011" text-anchor="middle">12</text>
+<path class="grid" d="M1001.5,846v147"/><text class="axis" x="1001.5" y="1011" text-anchor="middle">39</text>
+<path class="grid" d="M1121.0,846v147"/><text class="axis" x="1121.0" y="1011" text-anchor="middle">1.3e+02</text>
+<path stroke="#7f8990" d="M1091.448239443318,980.75H1099.4142807296269"/>
+<circle class="old" cx="1091.448239443318" cy="980.75" r="4.5"><title>Level 1 · before · 94.87 MB/s · 1.000×</title></circle>
+<circle class="new" cx="1099.4142807296269" cy="980.75" r="3"><title>Level 1 · after · 102.54 MB/s · 1.000×</title></circle>
+<path stroke="#7f8990" d="M952.2773597225328,866.6847830710678H942.425407545694"/>
+<circle class="old" cx="952.2773597225328" cy="866.6847830710678" r="4.5"><title>Level 2 · before · 24.38 MB/s · 2.088×</title></circle>
+<circle class="new" cx="942.425407545694" cy="866.6847830710678" r="3"><title>Level 2 · after · 22.14 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M929.3362948144754,866.6847830710678H935.4708080200053"/>
+<circle class="old" cx="929.3362948144754" cy="866.6847830710678" r="4.5"><title>Level 3 · before · 19.49 MB/s · 2.088×</title></circle>
+<circle class="new" cx="935.4708080200053" cy="866.6847830710678" r="3"><title>Level 3 · after · 20.69 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M892.6405520479489,866.6847830710678H892.0793984058187"/>
+<circle class="old" cx="892.6405520479489" cy="866.6847830710678" r="4.5"><title>Level 4 · before · 13.62 MB/s · 2.088×</title></circle>
+<circle class="new" cx="892.0793984058187" cy="866.6847830710678" r="3"><title>Level 4 · after · 13.54 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M846.288554529688,866.6847830710678H847.8283679088282"/>
+<circle class="old" cx="846.288554529688" cy="866.6847830710678" r="4.5"><title>Level 5 · before · 8.66 MB/s · 2.088×</title></circle>
+<circle class="new" cx="847.8283679088282" cy="866.6847830710678" r="3"><title>Level 5 · after · 8.79 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M811.6231685410135,866.6847830710678H812.2576069227422"/>
+<circle class="old" cx="811.6231685410135" cy="866.6847830710678" r="4.5"><title>Level 6 · before · 6.17 MB/s · 2.088×</title></circle>
+<circle class="new" cx="812.2576069227422" cy="866.6847830710678" r="3"><title>Level 6 · after · 6.21 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M757.515531845832,866.6847830710678H756.8658837079042"/>
+<circle class="old" cx="757.515531845832" cy="866.6847830710678" r="4.5"><title>Level 7 · before · 3.64 MB/s · 2.088×</title></circle>
+<circle class="new" cx="756.8658837079042" cy="866.6847830710678" r="3"><title>Level 7 · after · 3.62 MB/s · 2.088×</title></circle>
+<path stroke="#7f8990" d="M787.1619649928838,858.25H786.5398823964299"/>
+<circle class="old" cx="787.1619649928838" cy="858.25" r="4.5"><title>Level 8 · before · 4.86 MB/s · 2.168×</title></circle>
+<circle class="new" cx="786.5398823964299" cy="858.25" r="3"><title>Level 8 · after · 4.83 MB/s · 2.168×</title></circle>
+<path stroke="#7f8990" d="M744.4371482645248,858.25H747.0420967654902"/>
+<circle class="old" cx="744.4371482645248" cy="858.25" r="4.5"><title>Level 9 · before · 3.20 MB/s · 2.168×</title></circle>
+<circle class="new" cx="747.0420967654902" cy="858.25" r="3"><title>Level 9 · after · 3.29 MB/s · 2.168×</title></circle>
+<path stroke="#7f8990" d="M662.7529837565066,858.25H662.7439898354785"/>
+<circle class="old" cx="662.7529837565066" cy="858.25" r="4.5"><title>Level ultra · before · 1.44 MB/s · 2.168×</title></circle>
+<circle class="new" cx="662.7439898354785" cy="858.25" r="3"><title>Level ultra · after · 1.44 MB/s · 2.168×</title></circle>
+<text x="39" y="1069" font-size="15">Warm-cache Apple M5, seven scored rounds per cell, randomized order with same-binary controls. Shared host; timings are descriptive.</text></svg>

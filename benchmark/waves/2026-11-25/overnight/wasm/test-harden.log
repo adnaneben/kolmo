@@ -1,0 +1,2 @@
+  forged 8 MiB context-mixing block (384-byte frame): -1 after 0.024 s
+HARDENING TESTS PASSED (forged headers, trailing bytes, frame walking, parameters, CM amplification, buffer release, stream members)

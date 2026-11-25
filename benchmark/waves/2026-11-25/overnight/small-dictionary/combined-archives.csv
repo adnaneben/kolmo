@@ -1,0 +1,5 @@
+arm,dictionary_embedded,files,archive_bytes,archive_sha256
+kolmo,False,72,160781,a0fc0fa7f195510f4810c63bf54580903c82dab51c26be6d0c5b852e3b9d1cc9
+zstd,False,72,148627,9f1f814fe47599b1b2cea7925d7a897aa789bb239b3b11c6a3ed5cf6c921f6e0
+zstd-dict,False,72,141421,65bd4d3d50c75e6c705175e9bbfb14ed6d185a5a7c27d9d54779a7e34ef33128
+zstd-dict,True,72,149721,b702ddcc619bfddde711cf76975a1d3b1ee269bedcbd932f86bf3ab7e593f492

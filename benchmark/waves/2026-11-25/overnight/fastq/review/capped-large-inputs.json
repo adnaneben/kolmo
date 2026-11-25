@@ -1,0 +1,18 @@
+{
+  "SRR1770413": {
+    "sha256": "d09f4ae10fa0c5bb59c3ef13bca8fa4bd6a3c74295eeecdd3cfe69e42c6bfbbc",
+    "input_bytes": 8651356,
+    "first_record": 0,
+    "source_offset": 0,
+    "records": 13724,
+    "record_boundaries_sha256": "ce9bc60cbe9dacc0dcdc8e13607f05cb5d9df6f8b33839324509879193f921c7"
+  },
+  "SRR2584863": {
+    "sha256": "f3d9a6039a7d5497611343776e27ef77294f9c5da5d436cd789fb29804abe361",
+    "input_bytes": 8651069,
+    "first_record": 0,
+    "source_offset": 0,
+    "records": 23637,
+    "record_boundaries_sha256": "acd633951c4fe280b1086ad8742fb185315240f5b33ebd2fa6502ca6cc824243"
+  }
+}

@@ -1,0 +1,4 @@
+arm64 [] c79378b1ddd219201e427ede3492c11e3b1377b1b73cf4b1127cc7bee5d2b84f preprocessed accelerator-enabled shipping source identical
+arm64 ['-mcpu=native'] c79378b1ddd219201e427ede3492c11e3b1377b1b73cf4b1127cc7bee5d2b84f preprocessed accelerator-enabled shipping source identical
+x86_64 [] a8aec0c5cc3c42fe57f8621dfb3faa9be899737581aa6f794efaa0aa561468da preprocessed accelerator-enabled shipping source identical
+x86_64 ['-mavx2', '-msse4.2'] 517782d10fa45ee91544ca2ecaaa4d203579c508706b88c9c00b9b976069171b preprocessed accelerator-enabled shipping source identical

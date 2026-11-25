@@ -1,0 +1,33 @@
+{
+  "source": "516e1dca02ac8165ed91ef5068af84e44335a109",
+  "encoder_sha256": "e3a84d231f21e67437b2f72b0964255489c01b92b09dc66ef1234895f3b52983",
+  "stock_reader_sha256": "c40c238ab3e023364b7b14c6fa9c3fae3e06e7dda91bb9d9a2cf1586554bacc7",
+  "bytes": 8437837,
+  "input_sha256": "96e96a791aa0d9b5e267d6847f45abd92ab82ff2010af8edfea9d69ac4803351",
+  "rows": [
+    {
+      "setting": "unset",
+      "frame_bytes": 29050,
+      "frame_sha256": "ca1d1847c171c12b0cc180d9815900335f73adf50d0afb37d92c3c4193057da8",
+      "restored_sha256": "96e96a791aa0d9b5e267d6847f45abd92ab82ff2010af8edfea9d69ac4803351",
+      "encode_ns": 12818672833,
+      "decode_ns": 87900375
+    },
+    {
+      "setting": "0",
+      "frame_bytes": 29050,
+      "frame_sha256": "ca1d1847c171c12b0cc180d9815900335f73adf50d0afb37d92c3c4193057da8",
+      "restored_sha256": "96e96a791aa0d9b5e267d6847f45abd92ab82ff2010af8edfea9d69ac4803351",
+      "encode_ns": 16151854208,
+      "decode_ns": 73801209
+    },
+    {
+      "setting": "1",
+      "frame_bytes": 29050,
+      "frame_sha256": "ca1d1847c171c12b0cc180d9815900335f73adf50d0afb37d92c3c4193057da8",
+      "restored_sha256": "96e96a791aa0d9b5e267d6847f45abd92ab82ff2010af8edfea9d69ac4803351",
+      "encode_ns": 15944961917,
+      "decode_ns": 105998333
+    }
+  ]
+}

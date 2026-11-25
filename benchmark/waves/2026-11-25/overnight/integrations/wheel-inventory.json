@@ -1,0 +1,73 @@
+{
+  "candidate": {
+    "name": "kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl",
+    "sha256": "5d2f0716733d1d2d13f68ea8abdaf95b3920d0eea9fdd1d39b0dec0c5284fc4d",
+    "bytes": 1585075,
+    "objects": 18,
+    "object_bytes": 1612128,
+    "compressed_object_bytes": 810076,
+    "metadata": [
+      "Wheel-Version: 1.0",
+      "Generator: setuptools (84.2.1)",
+      "Root-Is-Purelib: false",
+      "Tag: py3-none-macosx_11_0_arm64",
+      ""
+    ],
+    "members_sha256": {
+      "kolmo.py": "f91a4c276cd960aad93feb0faa5045c2aa452ce84e661a5be907afe31afe720a",
+      "libkolmo.dylib": "cb90c0168bfefd583243c82fa78dc1a4043bf31bf365c4f110b46db727eea0c5",
+      "kolmoc-0.0.2.dist-info/METADATA": "e16368cb86bd0068bafcd65df13c2913faac6f698500e12c4108c3b1796b2a46",
+      "kolmoc-0.0.2.dist-info/WHEEL": "e0a3714c494120bae4150789a6a5588e507c7c1b0318ce099e2e0325571685ec",
+      "kolmoc-0.0.2.dist-info/top_level.txt": "3c8e2c7b66be716dd73fead273c8b8b97be00f1435b38f35709fb9893b316250",
+      "kolmoc-0.0.2.dist-info/RECORD": "d91fe074ec3be2519138ffd1ff4fcedff5b1c8617457552a55f06f2f484a80ed"
+    }
+  },
+  "adapter": {
+    "name": "numcodecs_kolmo-0.0.1.dev0-py3-none-any.whl",
+    "sha256": "b9a90a9aeb7b950e4b1028479dfb35345b6eba7029a2cf6e6dc259f028c64fc0",
+    "bytes": 7682,
+    "objects": 0,
+    "object_bytes": 0,
+    "compressed_object_bytes": 0,
+    "metadata": [
+      "Wheel-Version: 1.0",
+      "Generator: setuptools (84.2.1)",
+      "Root-Is-Purelib: true",
+      "Tag: py3-none-any",
+      ""
+    ],
+    "members_sha256": {
+      "numcodecs_kolmo/__init__.py": "be5ab31fa2f388a3edbdf4350c7760a70d5aebcb98408b1ebab43272f57c87a1",
+      "numcodecs_kolmo/codec.py": "24887d859aedde79501d0bfc3e01dddd6ba9a6bd2a5e54178015dedcc5be8425",
+      "numcodecs_kolmo/zarr3.py": "a1bef7d12151fb35e532df3bdc51d70669221f5875f25ee7fc36843b072c1e83",
+      "numcodecs_kolmo-0.0.1.dev0.dist-info/METADATA": "6acfcc69e34f4c86e47e2ab58a38d33c80476b3a18da89dd30ee42702ca6602a",
+      "numcodecs_kolmo-0.0.1.dev0.dist-info/WHEEL": "98e75747d0b7c0c568bfb71263c3d8f970b3a374a6996087bc642be5cb09a1aa",
+      "numcodecs_kolmo-0.0.1.dev0.dist-info/entry_points.txt": "30257b9b53d7744ddd435a4e40a9dbdd76e0599a8aae0c2c06d9940f7ab27d02",
+      "numcodecs_kolmo-0.0.1.dev0.dist-info/top_level.txt": "1c7f430de2fea125f4dc1917dfb8fec54a17c7e6ecd5301bc62647dba300663c",
+      "numcodecs_kolmo-0.0.1.dev0.dist-info/RECORD": "4ceaf96e5d6513f20e74d851ea5abbbcf573a2c8ed132b265118a50d588931a3"
+    }
+  },
+  "fixed": {
+    "name": "kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl",
+    "sha256": "069514950e892afea014306e139ef4e75438f762c4eb94303c3e4f6df8b75e91",
+    "bytes": 772246,
+    "objects": 0,
+    "object_bytes": 0,
+    "compressed_object_bytes": 0,
+    "metadata": [
+      "Wheel-Version: 1.0",
+      "Generator: setuptools (84.2.1)",
+      "Root-Is-Purelib: false",
+      "Tag: py3-none-macosx_11_0_arm64",
+      ""
+    ],
+    "members_sha256": {
+      "kolmo.py": "f91a4c276cd960aad93feb0faa5045c2aa452ce84e661a5be907afe31afe720a",
+      "libkolmo.dylib": "cb90c0168bfefd583243c82fa78dc1a4043bf31bf365c4f110b46db727eea0c5",
+      "kolmoc-0.0.2.dist-info/METADATA": "e16368cb86bd0068bafcd65df13c2913faac6f698500e12c4108c3b1796b2a46",
+      "kolmoc-0.0.2.dist-info/WHEEL": "e0a3714c494120bae4150789a6a5588e507c7c1b0318ce099e2e0325571685ec",
+      "kolmoc-0.0.2.dist-info/top_level.txt": "3c8e2c7b66be716dd73fead273c8b8b97be00f1435b38f35709fb9893b316250",
+      "kolmoc-0.0.2.dist-info/RECORD": "82c41977e4f6a1ec77595fc812dcecaa7b3dc762e121315d1853af90dd1e5700"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+case,openssl_exit,private_output_bytes
+modified final tag byte,4,0
+truncated envelope,2,0
+wrong recipient,4,0
+trailing bytes,0,39762
+generic decrypt accepts external CBC envelope,0,39762

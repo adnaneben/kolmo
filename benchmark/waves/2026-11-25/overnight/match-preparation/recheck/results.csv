@@ -1,0 +1,4 @@
+case,level,threads,input,frame,worker_hashes,parse_hashes,reference_enc_MBps,trial_enc_MBps,reference_dec_MBps,trial_dec_MBps,reference_combined_MBps,trial_combined_MBps,paired_cpu_encode_time_pct,aa_cpu_time_pct,paired_combined_speed_pct,aa_speed_pct,micro_reference_Gclasses_s,micro_trial_Gclasses_s
+typescript,5,4,1413849,118909,4175990,220024,21.76,21.397,350.971,347.368,20.467,20.172,0.132,-1.066,-1.149,0.97,,
+json,5,4,3737294,248589,7299742,403240,26.871,27.114,566.919,564.337,25.617,25.823,1.877,-1.09,0.441,1.631,,
+ocr,5,4,3449168,1132946,10216411,2056000,15.55,15.433,499.755,516.282,15.077,14.974,1.788,-1.307,-1.668,0.937,,

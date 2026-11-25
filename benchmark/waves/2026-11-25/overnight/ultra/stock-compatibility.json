@@ -1,0 +1,56 @@
+[
+  {
+    "input": "GMP Info",
+    "arm": "main full",
+    "frame_sha256": "e369a44c92d8ed0439f512b7989a090f431bb4ef0d56850446d8bd19a0d60c13",
+    "released_restore_sha256": "ed759b294f9da8a59146b308774484c59203fc6f20f14a4235644b370e434d63"
+  },
+  {
+    "input": "GMP Info",
+    "arm": "fixed numeric17",
+    "frame_sha256": "4b31533077c93f75212a7c990596bb2063ecba417e14f7a22134392a938a9b3e",
+    "released_restore_sha256": "ed759b294f9da8a59146b308774484c59203fc6f20f14a4235644b370e434d63"
+  },
+  {
+    "input": "GMP Info",
+    "arm": "main numeric17",
+    "frame_sha256": "b8a3dd1053f47439a3884db5c7cf8d652f879a26fa659fc072861cb5c616aff3",
+    "released_restore_sha256": "ed759b294f9da8a59146b308774484c59203fc6f20f14a4235644b370e434d63"
+  },
+  {
+    "input": "Libgcrypt Info",
+    "arm": "main full",
+    "frame_sha256": "6e276978c2779496f62e554b624379e6e952aaf8fde3e82d4c38c002ab2a6f79",
+    "released_restore_sha256": "c0b8a515b344415030c058c4fe5b05d0f95ec83b2ffdef7cc5ecfb058ffb29dd"
+  },
+  {
+    "input": "Libgcrypt Info",
+    "arm": "main numeric17",
+    "frame_sha256": "336f9b177a2c2f1c4a89797a962391c38ae6d7328cb10ffa13db973019617b3d",
+    "released_restore_sha256": "c0b8a515b344415030c058c4fe5b05d0f95ec83b2ffdef7cc5ecfb058ffb29dd"
+  },
+  {
+    "input": "Libgcrypt Info",
+    "arm": "fixed numeric17",
+    "frame_sha256": "0f7154cdb6d221478a46bc5ed9fb75fc59c69a29c3a09fe6edbc647da4b1f8ea",
+    "released_restore_sha256": "c0b8a515b344415030c058c4fe5b05d0f95ec83b2ffdef7cc5ecfb058ffb29dd"
+  },
+  {
+    "input": "Webster 512KiB",
+    "arm": "main full",
+    "frame_sha256": "63853de7d7924c1166f4ac39953bf0c65f8aa3540e70ba43659230d6aaaa9649",
+    "released_restore_sha256": "27cbadf0e88ca2c3a3a319254e32981e93b0cc53fafb01a266262f0d97d294ee"
+  },
+  {
+    "input": "Webster 512KiB",
+    "arm": "fixed numeric17",
+    "frame_sha256": "40343dc5c4e6e8d015bde7395adb2b7158c9edc997b45cfa0f347b345cdc3b5c",
+    "released_restore_sha256": "27cbadf0e88ca2c3a3a319254e32981e93b0cc53fafb01a266262f0d97d294ee"
+  },
+  {
+    "input": "Webster 512KiB",
+    "arm": "main numeric17",
+    "frame_sha256": "3e453af84cc8805c1d21151ea1d99e46e66702b746623f99f22225c86f996fdc",
+    "released_restore_sha256": "27cbadf0e88ca2c3a3a319254e32981e93b0cc53fafb01a266262f0d97d294ee"
+  }
+]

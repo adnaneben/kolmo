@@ -1,0 +1,31 @@
+{
+  "b26_freeze_sha256": "aada29126c8c0cee1bce6346e1f03ece004ea4142bdf0a31d503ad4c8b5cc428",
+  "b26_settings_sha256": "a56291df671eee3ee5b1902f814f8d7de0642ff8ad7134754c99c5974e4194ec",
+  "executables": {
+    "before": "79971f6d2965c3125c92e1c228fdebebc9dc4ea6c427199cbe7664bdc4f0eb68",
+    "after": "c40c238ab3e023364b7b14c6fa9c3fae3e06e7dda91bb9d9a2cf1586554bacc7",
+    "reader": "5c116ba0adb839757a3bfbcd53c334df354e804ab5fd9b2281ee1163e26221a5"
+  },
+  "producers": {
+    "gmp-manual": {
+      "producer": "GNU GMP",
+      "source": "/opt/homebrew/Cellar/gmp/6.3.0/share/info/gmp.info-1",
+      "bytes": 300383,
+      "sha256": "ed759b294f9da8a59146b308774484c59203fc6f20f14a4235644b370e434d63"
+    },
+    "gpgv": {
+      "producer": "GnuPG",
+      "source": "/opt/homebrew/Cellar/gnupg/2.5.24_1/bin/gpgv",
+      "bytes": 557232,
+      "sha256": "463e36f6f62b7f489e2f80cf9c1019560ce76e48809d6fef49c9f44ea35147c0"
+    },
+    "handshake-png": {
+      "producer": "GnuTLS",
+      "source": "/opt/homebrew/Cellar/gnutls/3.8.14/share/doc/gnutls/gnutls-handshake-state.png",
+      "bytes": 7584,
+      "sha256": "69cbebf1c38b804d8cde9ad208ae2f131b6410fbbb358c2d2c312b38547c0ce9"
+    }
+  },
+  "seed": 2026112526,
+  "threads": 1
+}

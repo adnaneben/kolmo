@@ -1,0 +1,257 @@
+cc -O3 -mcpu=native -ffp-contract=off -ffp-contract=off  -Isrc -c src/kolmo.c -o build/kolmo.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/arch/cpu.c -o build/obj/src/arch/cpu.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/predict.c -o build/obj/src/algo/predict.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/planes.c -o build/obj/src/algo/planes.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/mixer.c -o build/obj/src/algo/mixer.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/video.c -o build/obj/src/algo/video.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/lzp.c -o build/obj/src/algo/lzp.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/qlfc.c -o build/obj/src/algo/qlfc.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/par.c -o build/obj/src/algo/par.o
+In file included from src/kolmo.c:83:
+src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from src/kolmo.c:88:
+src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/sais/sais.c -o build/obj/src/algo/sais/sais.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/codecs/bwt_stream.c -o build/obj/src/codecs/bwt_stream.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/khuf.c -o build/obj/src/algo/khuf.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/krans.c -o build/obj/src/algo/krans.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/klz.c -o build/obj/src/algo/klz.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/klzma.c -o build/obj/src/algo/klzma.o
+cc -O3 -mcpu=native -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/khash.c -o build/obj/src/algo/khash.o
+cc -O3 -mcpu=native -ffp-contract=off  -Isrc -c src/arch/aarch64/gear_aarch64.S -o build/obj/src/arch/aarch64/gear_aarch64.o
+cc -O3 -mcpu=native -ffp-contract=off  -Isrc -c src/arch/aarch64/hist_aarch64.S -o build/obj/src/arch/aarch64/hist_aarch64.o
+ar rcs build/libkolmoarch.a build/obj/src/arch/cpu.o build/obj/src/algo/predict.o build/obj/src/algo/planes.o build/obj/src/algo/mixer.o build/obj/src/algo/video.o build/obj/src/algo/lzp.o build/obj/src/algo/qlfc.o build/obj/src/algo/par.o build/obj/src/algo/sais/sais.o build/obj/src/codecs/bwt_stream.o build/obj/src/algo/khuf.o build/obj/src/algo/krans.o build/obj/src/algo/klz.o build/obj/src/algo/klzma.o build/obj/src/algo/khash.o build/obj/src/arch/aarch64/gear_aarch64.o build/obj/src/arch/aarch64/hist_aarch64.o
+cc -O3 -mcpu=native -ffp-contract=off -ffp-contract=off  -Isrc tests/kolmoresource.c build/libkolmoarch.a -o build/kolmoresource -Wl,-dead_strip -lpthread -lm
+cc -O3 -mcpu=native -ffp-contract=off -ffp-contract=off  -Isrc tests/test_decoder_hardening.c build/libkolmoarch.a -o build/test-decoder-hardening -Wl,-dead_strip -lpthread -lm
+In file included from tests/test_decoder_hardening.c:12:
+In file included from tests/../src/kolmo.c:83:
+tests/../src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/kolmoresource.c:35:
+In file included from tests/../src/kolmo.c:83:
+tests/../src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/kolmoresource.c:35:
+In file included from tests/../src/kolmo.c:88:
+tests/../src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+tests/../src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+tests/../src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/test_decoder_hardening.c:12:
+In file included from tests/../src/kolmo.c:88:
+tests/../src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+tests/../src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+tests/../src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+2 warnings generated.
+cc -O3 -mcpu=native -ffp-contract=off -ffp-contract=off  -Isrc tests/test_elastic.c build/libkolmoarch.a -o build/test-elastic -Wl,-dead_strip -lpthread -lm
+In file included from tests/test_elastic.c:18:
+In file included from tests/../src/kolmo.c:83:
+tests/../src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/test_elastic.c:18:
+In file included from tests/../src/kolmo.c:88:
+tests/../src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+tests/../src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+tests/../src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+2 warnings generated.
+ar rcs build/libkolmo.a build/kolmo.o build/obj/src/arch/cpu.o build/obj/src/algo/predict.o build/obj/src/algo/planes.o build/obj/src/algo/mixer.o build/obj/src/algo/video.o build/obj/src/algo/lzp.o build/obj/src/algo/qlfc.o build/obj/src/algo/par.o build/obj/src/algo/sais/sais.o build/obj/src/codecs/bwt_stream.o build/obj/src/algo/khuf.o build/obj/src/algo/krans.o build/obj/src/algo/klz.o build/obj/src/algo/klzma.o build/obj/src/algo/khash.o build/obj/src/arch/aarch64/gear_aarch64.o build/obj/src/arch/aarch64/hist_aarch64.o
+cc -O3 -mcpu=native -ffp-contract=off -Isrc src/cli/cli.c src/cli/features.c build/libkolmo.a -o build/kolmo -Wl,-dead_strip -lpthread -lm
+2 warnings generated.
+cc -O3 -mcpu=native -ffp-contract=off  -Isrc bench/kolmobench.c build/libkolmo.a -o build/kolmobench -Wl,-dead_strip -lpthread -lm
+cc -O3 -mcpu=native -ffp-contract=off -Isrc tests/kolmotest.c build/libkolmo.a -o build/kolmotest -Wl,-dead_strip -lpthread -lm
+cc -O3 -mcpu=native -ffp-contract=off -Isrc tests/kolmoparallel.c build/libkolmo.a -o build/kolmoparallel -Wl,-dead_strip -lpthread -lm
+cc -O3 -mcpu=native -ffp-contract=off -Isrc tests/test_levels.c build/libkolmo.a -o build/test-levels -Wl,-dead_strip -lpthread -lm
+cc -O3 -mcpu=native -ffp-contract=off -Isrc tests/test_harden.c build/libkolmo.a -o build/test-harden -Wl,-dead_strip -lpthread -lm
+cc -O3 -mcpu=native -ffp-contract=off -Isrc tests/test_v12_corpus.c build/libkolmo.a -o build/test-v12-corpus -Wl,-dead_strip -lpthread -lm
+cc -O3 -mcpu=native -ffp-contract=off -Isrc tests/mkarchive.c build/libkolmo.a -o build/mkarchive -Wl,-dead_strip -lpthread -lm
+2 warnings generated.
+./build/test-levels
+test_levels: OK (levels 1-9 and ultra: round trips, deterministic)
+sh tests/check_no_abort.sh
+check_no_abort: PASSED (no abort, exit or assert in the library)
+./build/test-elastic
+level 1: identical frames at -T 1..8 (default and 2 MiB windows), 15215609 bytes
+level 3: identical frames at -T 1..8 (default and 2 MiB windows), 12057031 bytes
+level 4: identical frames at -T 1..8 (default and 2 MiB windows), 11736735 bytes
+level 5: identical frames at -T 1..8 (default and 2 MiB windows), 11687378 bytes
+level 6: identical frames at -T 1..8 (default and 2 MiB windows), 11632446 bytes
+level 7: identical frames at -T 1..8 (default and 2 MiB windows), 11632084 bytes
+level 8: identical frames at -T 1..8 (default and 2 MiB windows), 11524600 bytes
+level 9: identical frames at -T 1..8 (default and 2 MiB windows), 11494975 bytes
+window 4 MiB, 1 MiB blocks, -T 8: reorder buffer high-water 2097160 bytes
+class pipeline: chunks in order and complete, tokens returned (no helper, helpers, tokens in mid-run)
+klzma 6 and 9, klzh2 7 and 9: elastic output identical to one thread
+ELASTIC TESTS PASSED
+python3 tests/test_cli.py build/kolmo
+frame format: KOLMO_REF not set, 0.0.1 cross-check skipped
+test_cli: OK
+sh tests/test_archive_safety.sh build/kolmo build/mkarchive
+ok: archive safety
+sh tests/test_filter.sh build/kolmo
+ok   GNU tar (gtar): -I kolmo, -I 'kolmo -6', --use-compress-program=kolmo
+ok   bsdtar (bsdtar): --use-compress-program=kolmo / 'kolmo -d'
+ok   pipes: cat | kolmo | kolmo -d, -dc -, -cd, --decompress --stdout, empty input, streams
+ok   flags: -0 -9e --fast --best --extreme -T -M --memory --no-name -k --rm -z -t -l -dcf --uncompress --to-stdout
+ok   exit status: 1 corrupt/truncated/missing, 2 usage; SIGPIPE when the reader stops
+tests/test_filter.sh: line 121: 27749 Terminated: 15          kolmo -o sig.kolmo < fifo
+ok   SIGTERM removes the staged output
+ok   a 320 MB pipe: stream of 256 MiB segments, round trip through pipes
+filter tests passed
+python3 tests/test_fast_file.py
+python3 tests/test_bounded_cli.py build/kolmo
+descriptor path: identical frames at levels 4-9 and ultra
+-t / -dc: single, concatenated, damaged and trailing inputs as before
+-t peak resident: 8 MiB for a 96 MiB output
+test_bounded_cli: OK
+./build/test-v12-corpus tests/v12
+V12 CORPUS PASSED (357 frozen frames decode to their originals)
+python3 tests/check_v12_pinned.py
+V12 PINS PASSED (416 files under tests/v12 unchanged)
+python3 tests/check_v12_frames.py build/kolmo tests/v12
+V12 FRAMES (CLI) PASSED (274 frozen frames, streams included)
+python3 tests/format_reference.py tests/v12
+FORMAT REFERENCE PASSED (358 frames, 368 block checksums recomputed from FORMAT.md)
+python3 tests/coder_reference.py tests/v12
+      6 block 24, checked against the original
+      3 block 24, shuffle inverse checked
+      3 block 24, tflag 13 inverse checked against the original
+      4 block 24, tflag 4 inverse checked against the original
+      1 block 24, tflag 5 inverse checked against the original
+      1 block 24, x86 inverse checked
+     22 block 28, checked against the original
+      7 block 28, shuffle inverse checked
+      2 block 32, ARM64 inverse checked
+     74 block 32, checked against the original
+     20 block 32, shuffle inverse checked
+      1 block 32, tflag 1 inverse checked against the original
+      5 block 32, tflag 10 inverse checked against the original
+      1 block 32, tflag 12 inverse checked against the original
+      3 block 32, tflag 13 inverse checked against the original
+      1 block 32, tflag 2 inverse checked against the original
+     11 block 32, tflag 4 inverse checked against the original
+     10 block 32, tflag 5 inverse checked against the original
+      1 block 32, tflag 6 inverse checked against the original
+      1 block 32, tflag 7 inverse checked against the original
+      4 block 32, tflag 9 inverse checked against the original
+      1 block 32, x86 inverse checked
+      8 leaf 24
+     47 leaf 27
+     17 leaf 32
+CODER REFERENCE PASSED (358 frames)
+python3 tests/bwt_reference.py tests/v12
+     20 block 18, checked against the original
+      3 block 18, shuffle inverse checked
+      2 block 18, tflag 10 inverse checked against the original
+      1 block 18, tflag 4 inverse checked against the original
+      3 block 18, tflag 5 inverse checked against the original
+      1 block 18, tflag 6 inverse checked against the original
+      4 leaf 18
+BWT REFERENCE PASSED (34 blocks and leaves)
+python3 tests/kimg_reference.py tests/v12
+KIMG REFERENCE PASSED (3 kimg blocks decoded to their originals)
+python3 tests/cm_reference.py tests/v12
+      3 block 17, prefix checked against the original
+      1 block 25, tflag 2, prefix checked against its digest
+     16 block 7, prefix checked against the original
+      3 block 7, tflag 1, prefix checked against its digest
+      1 block 7, tflag 10, prefix checked against its digest
+      1 block 7, tflag 4, prefix checked against its digest
+      1 block 7, tflag 7, prefix checked against its digest
+      4 vector, codec 17
+      2 vector, codec 25
+     15 vector, codec 7
+CM REFERENCE PASSED (47 streams, first 1024 bytes of corpus streams)
+./build/test-harden
+  forged 8 MiB context-mixing block (384-byte frame): -1 after 0.026 s
+HARDENING TESTS PASSED (forged headers, trailing bytes, frame walking, parameters, CM amplification, buffer release, stream members)
+./build/kolmoresource
+RESOURCE TESTS PASSED (13 injected compression allocation failures)
+./build/kolmoparallel
+PARALLEL TESTS PASSED (144 concurrent table, archive and plain round trips; fork after threaded calls)
+./build/kolmotest
+formula table: 3 formulas found, group column 0
+table-codec v2 fuzz: 4000 corrupt streams decoded without crashing
+columnar decode: 5520 rows x 8 cols, all cells correct
+columnar-codec fuzz: 4000 corrupt streams decoded without crashing
+log codec: 2.63x before entropy coding
+log codec fuzz: 4000 corrupt streams decoded without crashing
+json lines: fast 48.5% of fast without transforms
+json codec fuzz: 3000 corrupt streams decoded without crashing
+minified json: fast 43.1% of fast without transforms
+wide table graph: fast 70.7% of fast without transforms
+wide graph fuzz: 400 corrupted frames rejected or exact
+integer graph: timestamps fast 7.1% of fast without transforms
+integer graph fuzz: 400 corrupted frames rejected or exact
+float graph: float32 fast 54.5% of fast without transforms
+float graph fuzz: 300 corrupted frames rejected or exact
+image graph: 8-bit RGB fast 53.0% of fast without transforms
+image graph fuzz: 300 corrupted frames rejected or exact
+image16 ratio 3.59, records ratio 2.31
+records/image codec fuzz: 6000 corrupt streams decoded without crashing
+word codec: 1.73x before entropy coding
+word codec fuzz: 3000 corrupt streams decoded without crashing
+gr6 table: ultra 10.98x with a GR6+ block (codec 26, version 12)
+gr6 codec: 10.99x on the table
+gr6 codec fuzz: 1000 corrupt streams decoded without crashing
+native leaf: 80000 -> 17372 bytes; 17372 truncations rejected; 3000 corrupt leaves decoded without crashing
+native leaf int16 series: 76344 -> 73622 bytes (version 12)
+ultra level 2 integer series: 35715 -> 31832 bytes
+table-codec fuzz: 3000 corrupt streams decoded without crashing
+ALL PASSED
+./build/test-decoder-hardening
+log encoder: 6000000 bytes -> 4948637, peak RSS +55 MB
+formula discovery: 256 columns, 262144 full-sample checks, 1 formulas
+query: 256 threads, 81085 rows, both paths
+table v1: nr=200000000 -> -1, peak RSS +0 MB
+klzma: distance 0xFFFFFFFF -> rc -1
+qlfc: crafted rank past the MTF header -> rc -6, -6
+khuf: stream length 2^31 -> rc -1
+audio: forged chunk_log2 30 -> -1
+audio: chunk_log2 19 -> -1
+audio: chunk_log2 30 -> -1
+video: 184 MB frame under a 64 MiB limit -> -12
+video: 110777 B clip, declared 4194304 B: one byte under -> refused, at it -> 110777
+fastq: -T 8 at the declared 36591392 B -> 136134, 1 job(s) reserved at once
+fastq: -T 8 unlimited -> 136134, 8 job(s) reserved at once
+block codec 14 -> -1
+block codec 27 -> -1
+plan 7 with a, b, c = 55 aa 07 (as 0.0.x may write) -> 1048576
+fast frame with a context-mixing leaf -> -1
+5,978 B codec-7 frame: model 16777216 B, sort 0, fast 0, slowest 2
+ultra level 2 int64 series: model 1048574 B, fast 8388608 B
+the same frame under a fast header -> -1
+test_decoder_hardening: ALL PASSED

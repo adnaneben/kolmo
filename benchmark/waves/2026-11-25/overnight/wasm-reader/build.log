@@ -1,0 +1,27 @@
+In file included from src/kolmo.c:83:
+src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from src/kolmo.c:88:
+src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+In file included from src/kolmo.c:110:
+src/core/compress.c:58:11: warning: result of comparison of constant 9223372036854775807 with expression of type 'size_t' (aka 'unsigned long') is always false [-Wtautological-constant-out-of-range-compare]
+   58 |     if (n > INT64_MAX) return KOLMO_ERR_CORRUPT;
+      |         ~ ^ ~~~~~~~~~
+In file included from src/kolmo.c:112:
+src/api/api.c:295:77: warning: implicit conversion from 'long long' to 'size_t' (aka 'unsigned long') changes value from 9223372036854775807 to 4294967295 [-Wconstant-conversion]
+  295 |     return compress_impl((const uint8_t *)"", input_fd, n, NULL, output_fd, INT64_MAX, p);
+      |            ~~~~~~~~~~~~~                                                    ^~~~~~~~~
+/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/review40b/work/R28/venv/lib/python3.9/site-packages/ziglang/lib/libc/include/generic-musl/stdint.h:46:21: note: expanded from macro 'INT64_MAX'
+   46 | #define INT64_MAX  (0x7fffffffffffffff)
+      |                     ^~~~~~~~~~~~~~~~~~
+4 warnings generated.

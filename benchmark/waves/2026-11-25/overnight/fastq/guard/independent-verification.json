@@ -1,0 +1,41 @@
+{
+  "commit": "516e1dca02ac8165ed91ef5068af84e44335a109",
+  "benchmark_binary_sha256": "dbd92f4a170e36c9701aec15236648cd7b78e9f90a180fc8ffd79661aebbb6f2",
+  "feature_enabled_binary_sha256": "e3a84d231f21e67437b2f72b0964255489c01b92b09dc66ef1234895f3b52983",
+  "stock_reader_sha256": "c40c238ab3e023364b7b14c6fa9c3fae3e06e7dda91bb9d9a2cf1586554bacc7",
+  "comparisons": [
+    {
+      "case": "synthetic-high-repetition",
+      "flags": [
+        "--memlimit",
+        "256M"
+      ],
+      "input_bytes": 8437837,
+      "frame_bytes": 29050,
+      "frame_sha256": "ca1d1847c171c12b0cc180d9815900335f73adf50d0afb37d92c3c4193057da8",
+      "exact_restored_sha256": "96e96a791aa0d9b5e267d6847f45abd92ab82ff2010af8edfea9d69ac4803351"
+    },
+    {
+      "case": "SRR1770413",
+      "flags": [
+        "--block-size",
+        "1"
+      ],
+      "input_bytes": 2359656,
+      "frame_bytes": 434740,
+      "frame_sha256": "c4f87d7b488dc6a976135fc7e86a69580e1dafd4e89abb8ac1289b56c431f075",
+      "exact_restored_sha256": "2291ac5a13d7114019e76bea504c196d80db51cc76d9a5ce924b8fa9e941b1f9"
+    },
+    {
+      "case": "SRR2584863",
+      "flags": [
+        "--block-size",
+        "1"
+      ],
+      "input_bytes": 2359537,
+      "frame_bytes": 501487,
+      "frame_sha256": "1c81df34e47b3e393af2b9aa721c38ffb93df686a95f6bbcfd5748b6f78284ea",
+      "exact_restored_sha256": "6dd2085de8f9a1ce9a12deadfebe0bcd713946710afbe164c95d7848a0a15a73"
+    }
+  ]
+}

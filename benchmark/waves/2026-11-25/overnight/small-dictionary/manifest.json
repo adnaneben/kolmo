@@ -1,0 +1,35 @@
+{
+  "train": {
+    "networkx": "3.7",
+    "pillow": "12.1.1",
+    "pytest": "9.2.0"
+  },
+  "holdout": {
+    "numpy": "2.5.5",
+    "pydantic": "2.12.5",
+    "sympy": "1.14.0"
+  },
+  "seed": 20261125,
+  "warmups": 1,
+  "scored": 5,
+  "train_flags": [
+    "--train-fastcover=k=50,d=8,f=20,steps=4,split=80,accel=1",
+    "--maxdict=8192",
+    "--dictID=1125003",
+    "-T1",
+    "-q"
+  ],
+  "dict_sha256": "7944cb4a33362f3915602d053fb3d44d14dc85478b916393d4b9b6e283cd8f8a",
+  "dict_bytes": 8192,
+  "samples": 161,
+  "train_bytes": 1279775,
+  "system": "macOS-27.2-arm64-arm-64bit",
+  "build": {
+    "kolmo": "dbd92f4a170e36c9701aec15236648cd7b78e9f90a180fc8ffd79661aebbb6f2",
+    "main": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "zstd": "f59db1267be3158941b6a70902ddcea423a294271ded955f0afb8e889b587426"
+  },
+  "candidate_sha": "8d23095b2f09d5c9e3c3425123bea63641ca5d71",
+  "main_sha": "a1d39559686a9ec17c8614b9154a64d7b5b98672",
+  "zstd_version": "*** Zstandard CLI (64-bit) v1.5.7, by Yann Collet ***"
+}

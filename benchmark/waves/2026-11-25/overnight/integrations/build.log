@@ -1,0 +1,168 @@
+### wheel-build
+synced native/ from <integration-evidence>/.build/candidate (src)
+Processing ./.build/candidate/bindings/python
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Processing ./.build/candidate/integration/numcodecs-kolmo
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: kolmoc, numcodecs-kolmo
+  Building wheel for kolmoc (pyproject.toml): started
+  Building wheel for kolmoc (pyproject.toml): finished with status 'done'
+  Created wheel for kolmoc: filename=kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl size=1585075 sha256=5d2f0716733d1d2d13f68ea8abdaf95b3920d0eea9fdd1d39b0dec0c5284fc4d
+  Stored in directory: <integration-evidence>/.build/tmp/pip-ephem-wheel-cache-bgccsa2x/wheels/80/98/61/26599bfa7ae99ba604962e5711b285f20ff144888e8349fbd2
+  Building wheel for numcodecs-kolmo (pyproject.toml): started
+  Building wheel for numcodecs-kolmo (pyproject.toml): finished with status 'done'
+  Created wheel for numcodecs-kolmo: filename=numcodecs_kolmo-0.0.1.dev0-py3-none-any.whl size=7682 sha256=b9a90a9aeb7b950e4b1028479dfb35345b6eba7029a2cf6e6dc259f028c64fc0
+  Stored in directory: <integration-evidence>/.build/tmp/pip-ephem-wheel-cache-bgccsa2x/wheels/69/8a/b7/7e1a4dae8370c7c6ef71993bc10373cd75a0940004c2973f5d
+Successfully built kolmoc numcodecs-kolmo
+
+### native-build
+cc -O2 -Wall -Wextra -I/opt/homebrew/opt/hdf5/include tests/test_h5zkolmo.c -o build/test_h5zkolmo -L/opt/homebrew/opt/hdf5/lib -lhdf5 -Wl,-rpath,/opt/homebrew/opt/hdf5/lib -lm
+cc $(/Library/Developer/CommandLineTools/usr/bin/make -s --no-print-directory -C ../.. -f Makefile -f integration/common/kolmo-objs.mk ARCH="" kolmo-print-cflags) -fPIC -I../../src -c ../../src/kolmo.c -o build/kolmo_pic.o
+In file included from ../../src/kolmo.c:83:
+../../src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from ../../src/kolmo.c:88:
+../../src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+../../src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+../../src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+2 warnings generated.
+cc -O2 -fPIC -Wall -Wextra -I../../src -I/opt/homebrew/opt/hdf5/include H5Zkolmo.c build/kolmo_pic.o \
+	    ../../build/pic/src/arch/cpu.o ../../build/pic/src/algo/predict.o ../../build/pic/src/algo/planes.o ../../build/pic/src/algo/mixer.o ../../build/pic/src/algo/video.o ../../build/pic/src/algo/lzp.o ../../build/pic/src/algo/qlfc.o ../../build/pic/src/algo/par.o ../../build/pic/src/algo/sais/sais.o ../../build/pic/src/codecs/bwt_stream.o ../../build/pic/src/algo/khuf.o ../../build/pic/src/algo/krans.o ../../build/pic/src/algo/klz.o ../../build/pic/src/algo/klzma.o ../../build/pic/src/algo/khash.o ../../build/pic/src/arch/aarch64/gear_aarch64.o ../../build/pic/src/arch/aarch64/hist_aarch64.o -dynamiclib -undefined dynamic_lookup -Wl,-exported_symbol,_H5PLget_plugin_type -Wl,-exported_symbol,_H5PLget_plugin_info -Wl,-exported_symbol,_H5Z_kolmo_register -lpthread -lm -o build/plugin/libH5Zkolmo.dylib
+cc -O2 -Wall -Wextra -I/opt/homebrew/opt/c-blosc2/include tests/test_dynamic_load.c -L/opt/homebrew/opt/c-blosc2/lib -lblosc2 -Wl,-rpath,/opt/homebrew/opt/c-blosc2/lib -lm -o build/test_dynamic_load
+cc -O2 -fPIC -Wall -Wextra -I../../src -I/opt/homebrew/opt/c-blosc2/include -c blosc2_kolmo.c -o build/blosc2_kolmo.o
+cc $(/Library/Developer/CommandLineTools/usr/bin/make -s --no-print-directory -C ../.. -f Makefile -f integration/common/kolmo-objs.mk ARCH="" kolmo-print-cflags) -fPIC -I../../src -c ../../src/kolmo.c -o build/kolmo_pic.o
+In file included from ../../src/kolmo.c:83:
+../../src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from ../../src/kolmo.c:88:
+../../src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+../../src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+../../src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+2 warnings generated.
+cc build/blosc2_kolmo.o build/kolmo_pic.o ../../build/pic/src/arch/cpu.o ../../build/pic/src/algo/predict.o ../../build/pic/src/algo/planes.o ../../build/pic/src/algo/mixer.o ../../build/pic/src/algo/video.o ../../build/pic/src/algo/lzp.o ../../build/pic/src/algo/qlfc.o ../../build/pic/src/algo/par.o ../../build/pic/src/algo/sais/sais.o ../../build/pic/src/codecs/bwt_stream.o ../../build/pic/src/algo/khuf.o ../../build/pic/src/algo/krans.o ../../build/pic/src/algo/klz.o ../../build/pic/src/algo/klzma.o ../../build/pic/src/algo/khash.o ../../build/pic/src/arch/aarch64/gear_aarch64.o ../../build/pic/src/arch/aarch64/hist_aarch64.o \
+	    -dynamiclib -undefined dynamic_lookup -Wl,-exported_symbol,_info -Wl,-exported_symbol,_blosc2_kolmo_encoder -Wl,-exported_symbol,_blosc2_kolmo_decoder -Wl,-exported_symbol,_blosc2_kolmo_register -lpthread -lm -o build/plugin/libblosc2_kolmo.so
+rm -f build/libblosc2_kolmo.a
+ar rcs build/libblosc2_kolmo.a build/blosc2_kolmo.o build/kolmo_pic.o ../../build/pic/src/arch/cpu.o ../../build/pic/src/algo/predict.o ../../build/pic/src/algo/planes.o ../../build/pic/src/algo/mixer.o ../../build/pic/src/algo/video.o ../../build/pic/src/algo/lzp.o ../../build/pic/src/algo/qlfc.o ../../build/pic/src/algo/par.o ../../build/pic/src/algo/sais/sais.o ../../build/pic/src/codecs/bwt_stream.o ../../build/pic/src/algo/khuf.o ../../build/pic/src/algo/krans.o ../../build/pic/src/algo/klz.o ../../build/pic/src/algo/klzma.o ../../build/pic/src/algo/khash.o ../../build/pic/src/arch/aarch64/gear_aarch64.o ../../build/pic/src/arch/aarch64/hist_aarch64.o
+cc -O2 -Wall -Wextra -I/opt/homebrew/opt/c-blosc2/include tests/test_blosc2_kolmo.c build/libblosc2_kolmo.a -L/opt/homebrew/opt/c-blosc2/lib -lblosc2 -Wl,-rpath,/opt/homebrew/opt/c-blosc2/lib -lpthread -lm -ldl -o build/test_blosc2_kolmo
+cp python/blosc2_kolmo/__init__.py build/python/blosc2_kolmo/
+cp build/plugin/libblosc2_kolmo.so build/python/blosc2_kolmo/libblosc2_kolmo.so
+
+### wheel-patched-build
+Processing ./.build/candidate/bindings/python
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: kolmoc
+  Building wheel for kolmoc (pyproject.toml): started
+  Building wheel for kolmoc (pyproject.toml): finished with status 'done'
+  Created wheel for kolmoc: filename=kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl size=772246 sha256=069514950e892afea014306e139ef4e75438f762c4eb94303c3e4f6df8b75e91
+  Stored in directory: <integration-evidence>/.build/tmp/pip-ephem-wheel-cache-rtt_9fgo/wheels/80/98/61/26599bfa7ae99ba604962e5711b285f20ff144888e8349fbd2
+Successfully built kolmoc
+
+### wheel-patched-install
+Processing ./.build/patched-wheels/kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl
+Installing collected packages: kolmoc
+  Attempting uninstall: kolmoc
+    Found existing installation: kolmoc 0.0.2
+    Uninstalling kolmoc-0.0.2:
+      Successfully uninstalled kolmoc-0.0.2
+Successfully installed kolmoc-0.0.2
+Processing ./.build/patched-wheels/kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl
+Installing collected packages: kolmoc
+  Attempting uninstall: kolmoc
+    Found existing installation: kolmoc 0.0.2
+    Uninstalling kolmoc-0.0.2:
+      Successfully uninstalled kolmoc-0.0.2
+Successfully installed kolmoc-0.0.2
+
+### numcodecs-legacy-install
+Processing ./.build/wheels/numcodecs-0.12.1-cp39-cp39-macosx_11_0_arm64.whl
+Processing ./.build/wheels/numcodecs_kolmo-0.0.1.dev0-py3-none-any.whl
+Installing collected packages: numcodecs-kolmo, numcodecs
+Successfully installed numcodecs-0.12.1 numcodecs-kolmo-0.0.1.dev0
+
+### stock-cli-build
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/arch/cpu.c -o build/obj/src/arch/cpu.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/predict.c -o build/obj/src/algo/predict.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/planes.c -o build/obj/src/algo/planes.o
+cc -O3  -ffp-contract=off -ffp-contract=off  -Isrc -c src/kolmo.c -o build/kolmo.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/mixer.c -o build/obj/src/algo/mixer.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/video.c -o build/obj/src/algo/video.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/lzp.c -o build/obj/src/algo/lzp.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/qlfc.c -o build/obj/src/algo/qlfc.o
+In file included from src/kolmo.c:83:
+src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from src/kolmo.c:88:
+src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/par.c -o build/obj/src/algo/par.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/sais/sais.c -o build/obj/src/algo/sais/sais.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/codecs/bwt_stream.c -o build/obj/src/codecs/bwt_stream.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/khuf.c -o build/obj/src/algo/khuf.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/krans.c -o build/obj/src/algo/krans.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/klz.c -o build/obj/src/algo/klz.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/klzma.c -o build/obj/src/algo/klzma.o
+cc -O3  -ffp-contract=off -ffunction-sections -fdata-sections     -Isrc -c src/algo/khash.c -o build/obj/src/algo/khash.o
+cc -O3  -ffp-contract=off  -Isrc -c src/arch/aarch64/gear_aarch64.S -o build/obj/src/arch/aarch64/gear_aarch64.o
+cc -O3  -ffp-contract=off  -Isrc -c src/arch/aarch64/hist_aarch64.S -o build/obj/src/arch/aarch64/hist_aarch64.o
+2 warnings generated.
+ar rcs build/libkolmo.a build/kolmo.o build/obj/src/arch/cpu.o build/obj/src/algo/predict.o build/obj/src/algo/planes.o build/obj/src/algo/mixer.o build/obj/src/algo/video.o build/obj/src/algo/lzp.o build/obj/src/algo/qlfc.o build/obj/src/algo/par.o build/obj/src/algo/sais/sais.o build/obj/src/codecs/bwt_stream.o build/obj/src/algo/khuf.o build/obj/src/algo/krans.o build/obj/src/algo/klz.o build/obj/src/algo/klzma.o build/obj/src/algo/khash.o build/obj/src/arch/aarch64/gear_aarch64.o build/obj/src/arch/aarch64/hist_aarch64.o
+cc -O3  -ffp-contract=off -Isrc src/cli/cli.c src/cli/features.c build/libkolmo.a -o build/kolmo -Wl,-dead_strip -lpthread -lm
+
+### notice-build
+Processing ./.build/final-dist/kolmoc-0.0.2.tar.gz
+  File was already downloaded <integration-evidence>/.build/final-dist/kolmoc-0.0.2.tar.gz
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: kolmoc
+  Building wheel for kolmoc (pyproject.toml): started
+  Building wheel for kolmoc (pyproject.toml): finished with status 'done'
+  Created wheel for kolmoc: filename=kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl size=777110 sha256=81641e62a2b768144e48f7327e3f512f382f406dd2b05c83a7ae455f543ffb22
+  Stored in directory: <integration-evidence>/.build/tmp/pip-ephem-wheel-cache-4re_3325/wheels/84/b8/b3/7029620a5ad35291167ecf2d8cd5983e3d7205ba9c9a7b0ad7
+Successfully built kolmoc
+
+### notice-install
+Processing ./.build/final-dist/kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl
+Installing collected packages: kolmoc
+  Attempting uninstall: kolmoc
+    Found existing installation: kolmoc 0.0.2
+    Uninstalling kolmoc-0.0.2:
+      Successfully uninstalled kolmoc-0.0.2
+Successfully installed kolmoc-0.0.2
+
+### zarr2-original-install
+Processing ./dist/original/kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl
+Installing collected packages: kolmoc
+  Attempting uninstall: kolmoc
+    Found existing installation: kolmoc 0.0.2
+    Uninstalling kolmoc-0.0.2:
+      Successfully uninstalled kolmoc-0.0.2
+Successfully installed kolmoc-0.0.2
+

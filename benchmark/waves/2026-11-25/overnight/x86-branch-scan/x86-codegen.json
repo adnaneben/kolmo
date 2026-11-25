@@ -1,0 +1,7 @@
+{
+  "target": "x86_64-apple-darwin, SSE2",
+  "compile": "Apple clang -O3 -arch x86_64 -msse2 -S -fno-asynchronous-unwind-tables",
+  "bytes": 4632,
+  "both_assembly_sha256": "a2642a7f3202b64ceabd551a743324a666e44f037f87cb4378a0d50e2dd79f4f",
+  "identical": true
+}

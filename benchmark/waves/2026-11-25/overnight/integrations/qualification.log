@@ -1,0 +1,225 @@
+### wheel39
+len       0: round trips ok at every level
+len       5: round trips ok at every level
+len    1000: round trips ok at every level
+len  788907: round trips ok at every level
+legacy and hostile frames refused as expected
+forged frames claiming 2 GiB to 256 TiB refused; peak RSS grew 3 MiB
+concatenated frames and CZNS streams decode; damaged ones are refused
+CLI not built: CLI stream files skipped
+CLI not built: cross-check skipped
+ALL PASSED
+
+### wheel312
+len       0: round trips ok at every level
+len       5: round trips ok at every level
+len    1000: round trips ok at every level
+len  788907: round trips ok at every level
+legacy and hostile frames refused as expected
+forged frames claiming 2 GiB to 256 TiB refused; peak RSS grew 3 MiB
+concatenated frames and CZNS streams decode; damaged ones are refused
+CLI not built: CLI stream files skipped
+CLI not built: cross-check skipped
+ALL PASSED
+
+### hdf5-c
+ok  u8_image_2d      level 3  esize 1      155100 ->    75599 bytes  (2.05x)
+ok  i16_sensor_1d    level 1  esize 2     2000006 ->  1249961 bytes  (1.60x)
+ok  i32_counts_1d    level 5  esize 4     1600000 ->   160094 bytes  (9.99x)
+ok  i32_random_1d    level 3  esize 4      400000 ->   400139 bytes  (1.00x)
+ok  f32_field_3d     level 3  esize 4     1024000 ->   562112 bytes  (1.82x)
+ok  f64_series_2d    level 9  esize 8      776000 ->    11062 bytes  (70.15x)
+ok  i64_stamps_1d    level 7  esize 8     1600000 ->   161713 bytes  (9.89x)
+ok  rec_compound     level 3  esize 24    1200000 ->   273332 bytes  (4.39x)
+ok  f64_ultra_small  level 10 esize 8       65536 ->     1592 bytes  (41.17x)
+ok  damaged chunk is a read error
+all HDF5 filter tests passed
+
+### h5py39
+ok  f32_field      8000000 ->  6116334 bytes (1.31x) cd_values=(1, 4, 0, 1)
+ok  f64_prices     2400000 ->   397184 bytes (6.04x) cd_values=(3, 8, 0, 1)
+ok  i16_sensor     1000000 ->   304562 bytes (3.28x) cd_values=(5, 2, 0, 1)
+ok  i64_stamps     1600000 ->   160410 bytes (9.97x) cd_values=(3, 8, 0, 1)
+ok  u8_noise        100000 ->   100052 bytes (1.00x) cd_values=(9, 1, 0, 1)
+all h5py tests passed
+
+### h5py312
+ok  f32_field      8000000 ->  6116334 bytes (1.31x) cd_values=(1, 4, 0, 1)
+ok  f64_prices     2400000 ->   397184 bytes (6.04x) cd_values=(3, 8, 0, 1)
+ok  i16_sensor     1000000 ->   304562 bytes (3.28x) cd_values=(5, 2, 0, 1)
+ok  i64_stamps     1600000 ->   160410 bytes (9.97x) cd_values=(3, 8, 0, 1)
+ok  u8_noise        100000 ->   100052 bytes (1.00x) cd_values=(9, 1, 0, 1)
+all h5py tests passed
+
+### hdf5-file
+write hdf5 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+read hdf5 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+
+### numcodecs-file
+write numcodecs 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+read numcodecs 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+
+### blosc2-c
+ok  typesize 1 noshuffle clevel 1       2097176 ->  2058844 bytes (1.02x)
+ok  typesize 1 noshuffle clevel 5       2097176 ->   788032 bytes (2.66x)
+ok  typesize 1 noshuffle clevel 9       2097176 ->   703728 bytes (2.98x)
+ok  typesize 1 shuffle clevel 1         2097176 ->  2058844 bytes (1.02x)
+ok  typesize 1 shuffle clevel 5         2097176 ->   788032 bytes (2.66x)
+ok  typesize 1 shuffle clevel 9         2097176 ->   703728 bytes (2.98x)
+ok  typesize 1 blocksize 1 MiB          2097176 ->   878757 bytes (2.39x)
+ok  typesize 2 noshuffle clevel 1       2097176 ->  2074580 bytes (1.01x)
+ok  typesize 2 noshuffle clevel 5       2097176 ->   525850 bytes (3.99x)
+ok  typesize 2 noshuffle clevel 9       2097176 ->   524533 bytes (4.00x)
+ok  typesize 2 shuffle clevel 1         2097176 ->  1091359 bytes (1.92x)
+ok  typesize 2 shuffle clevel 5         2097176 ->   653630 bytes (3.21x)
+ok  typesize 2 shuffle clevel 9         2097176 ->   647907 bytes (3.24x)
+ok  typesize 2 blocksize 1 MiB          2097176 ->   529974 bytes (3.96x)
+ok  typesize 4 noshuffle clevel 1       2097176 ->  2097208 bytes (1.00x)
+ok  typesize 4 noshuffle clevel 5       2097176 ->   919427 bytes (2.28x)
+ok  typesize 4 noshuffle clevel 9       2097176 ->   876353 bytes (2.39x)
+ok  typesize 4 shuffle clevel 1         2097176 ->  1145628 bytes (1.83x)
+ok  typesize 4 shuffle clevel 5         2097176 ->  1074015 bytes (1.95x)
+ok  typesize 4 shuffle clevel 9         2097176 ->   972045 bytes (2.16x)
+ok  typesize 4 blocksize 1 MiB          2097176 ->  1017968 bytes (2.06x)
+ok  typesize 8 noshuffle clevel 1       2097176 ->   908233 bytes (2.31x)
+ok  typesize 8 noshuffle clevel 5       2097176 ->    33957 bytes (61.76x)
+ok  typesize 8 noshuffle clevel 9       2097176 ->    18027 bytes (116.34x)
+ok  typesize 8 shuffle clevel 1         2097176 ->  1326902 bytes (1.58x)
+ok  typesize 8 shuffle clevel 5         2097176 ->   571521 bytes (3.67x)
+ok  typesize 8 shuffle clevel 9         2097176 ->   370798 bytes (5.66x)
+ok  typesize 8 blocksize 1 MiB          2097176 ->    41227 bytes (50.87x)
+ok  compcode_meta 10 (ultra), 64 KiB      65536 ->     1832 bytes (35.77x)
+ok  random bytes (stored)               2097176 ->  2097208 bytes (1.00x)
+ok  tiny 100 bytes                          100 ->      132 bytes (0.76x)
+ok  super-chunk frame: 6 chunks of 1 MiB f64 -> 101906 bytes (61.74x), nthreads 2
+ok  dynamic plugin ../candidate/integration/blosc2/build/plugin/libblosc2_kolmo.so: info -> blosc2_kolmo_encoder/blosc2_kolmo_decoder, 300000 -> 75955 bytes
+all Blosc2 codec tests passed
+
+### blosc2-dynamic-lib
+ok  dynamically loaded codec: 1048576 -> 29954 bytes, decoded 1048576
+Blosc2 dynamic plugin test passed
+
+### blosc2-locator
+ok  dynamically loaded codec: 1048576 -> 29954 bytes, decoded 1048576
+Blosc2 dynamic plugin test passed
+
+### blosc2-file
+write: codec 244, 6 chunks, 196608 input bytes, 811 bytes in compressed chunks
+read: codec 244, 6 chunks, 196608 input bytes, 811 bytes in compressed chunks
+
+### zarr2-file
+write zarr2 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+read zarr2 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+
+### zarr3-file
+write zarr3 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+read zarr3 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+
+### zarr2-legacy-file
+write zarr2 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+read zarr2 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+read zarr2 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+read zarr2 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+
+### zarr2-original-file
+write zarr2 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+read zarr2 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+read zarr2 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+read zarr2 190836 bytes, recovered SHA-256 6a5a9aee8637d33e35ff78d7c8fe2a094bab214b8f475f694f8ba426ebe13508
+
+### python-integrations
+........................................................................ [ 37%]
+........................................................................ [ 75%]
+................................................                         [100%]
+192 passed, 15 deselected in 4.58s
+
+### python-integrations-fixed
+........................................................................ [ 34%]
+........................................................................ [ 69%]
+..............................................................           [100%]
+206 passed, 1 deselected in 4.04s
+
+### python-integrations-suite
+........................................................................ [ 34%]
+........................................................................ [ 69%]
+...............................................................          [100%]
+207 passed in 5.11s
+
+### wheel-all-options-cli
+len       0: round trips ok at every level
+len       5: round trips ok at every level
+len    1000: round trips ok at every level
+len  788907: round trips ok at every level
+legacy and hostile frames refused as expected
+forged frames claiming 2 GiB to 256 TiB refused; peak RSS grew 3 MiB
+concatenated frames and CZNS streams decode; damaged ones are refused
+files written by the CLI (--stream, concatenated) decode
+FAIL CLI -1 and Python level=1 differ
+FAIL CLI -2 and Python level=2 differ
+CLI and Python give the same bytes at every level
+kolmo archive files refused as expected
+2 FAILURES
+
+### cli-wheel-csv
+original 788907 431974d6f409df541626a0452987dac1e1c2facbe10b579f950dfd5145d9ed91
+1 default 214369 5c07f60ddf22756aa78dfcaf9d7d4c68ad5ec65e5f497074caeab4c46332c1c1 wheel bytes match True cross decoded in both directions
+1 all-options 2388 8fe9106ba46ea4475a1dc14575a33530516491f57bbbf98d1eedd194a5565112 wheel bytes match False cross decoded in both directions
+2 default 33737 bbba0a20a20d8be2d65bdca3d178973b2f29f15008b15b65a9b90a9102f06ba2 wheel bytes match True cross decoded in both directions
+2 all-options 230 1155899cea8ae4d72b25d952737ea25a0f392b37ac52354b93b67f6b30e7fff9 wheel bytes match False cross decoded in both directions
+
+### wheel39-fixed
+len       0: round trips ok at every level
+len       5: round trips ok at every level
+len    1000: round trips ok at every level
+len  788907: round trips ok at every level
+legacy and hostile frames refused as expected
+forged frames claiming 2 GiB to 256 TiB refused; peak RSS grew 0 MiB
+concatenated frames and CZNS streams decode; damaged ones are refused
+files written by the CLI (--stream, concatenated) decode
+CLI and Python give the same bytes at every level
+kolmo archive files refused as expected
+ALL PASSED
+
+### wheel312-fixed
+len       0: round trips ok at every level
+len       5: round trips ok at every level
+len    1000: round trips ok at every level
+len  788907: round trips ok at every level
+legacy and hostile frames refused as expected
+forged frames claiming 2 GiB to 256 TiB refused; peak RSS grew 0 MiB
+concatenated frames and CZNS streams decode; damaged ones are refused
+files written by the CLI (--stream, concatenated) decode
+CLI and Python give the same bytes at every level
+kolmo archive files refused as expected
+ALL PASSED
+
+### wheel-notices-fixed
+len       0: round trips ok at every level
+len       5: round trips ok at every level
+len    1000: round trips ok at every level
+len  788907: round trips ok at every level
+legacy and hostile frames refused as expected
+forged frames claiming 2 GiB to 256 TiB refused; peak RSS grew 0 MiB
+concatenated frames and CZNS streams decode; damaged ones are refused
+files written by the CLI (--stream, concatenated) decode
+CLI and Python give the same bytes at every level
+kolmo archive files refused as expected
+ALL PASSED
+
+### notice-guards
+original wheel rejected kolmoc-0.0.2-py3-none-macosx_11_0_arm64.whl has missing or different LICENSE
+changed wheel rejected bad-notice.whl has missing or different NOTICE
+changed sdist rejected bad-notice.tar.gz has missing or different NOTICE
+
+### wheel-deployment
+      cmd LC_BUILD_VERSION
+  cmdsize 32
+ platform 1
+    minos 11.0
+      sdk 27.2
+   ntools 1
+.build/runtime312/lib/python3.12/site-packages/libkolmo.dylib:
+	@loader_path/libkolmo.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.40.3)
+.build/runtime312/lib/python3.12/site-packages/libkolmo.dylib: Mach-O 64-bit dynamically linked shared library arm64
+

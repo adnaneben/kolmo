@@ -1,0 +1,14 @@
+text: 120000 -> 17779 bytes
+text, binary contexts: 120000 -> 17726 bytes
+walk: 120000 -> 48918 bytes
+random: 40000 -> 40166 bytes
+repeats: 120000 -> 1837 bytes
+all contexts: 60000 -> 9085 bytes
+no hashed context: 60000 -> 9656 bytes
+tiny 0: 0 -> 16 bytes
+tiny 1: 1 -> 16 bytes
+tiny 63: 63 -> 51 bytes
+tiny 64: 64 -> 51 bytes
+tiny 65: 65 -> 51 bytes
+tiny 4096: 4096 -> 727 bytes
+model 4: all checks passed

@@ -1,0 +1,33 @@
+{
+  "stored.b2frame": {
+    "bytes": 1023,
+    "file_sha256": "edce31ec9a3dba09a9127f3c63131fde066efa63b885432ce21958135aebc0de"
+  },
+  "c-hdf5.h5": {
+    "bytes": 2923713,
+    "file_sha256": "d71334529e2488ecc25f7d8183d355cd2e0c3d9faf94d23b369bcc0ed675561a"
+  },
+  "store-hdf5": {
+    "bytes": 128458,
+    "file_sha256": "2a49a973580e5f3a18693bf29af957ce0033b129d5293409080bbe44aa19fe3d"
+  },
+  "store-numcodecs": {
+    "bytes": 82,
+    "file_sha256": "cecae3c449b4937877ac6df8644705197f147fd143f40b56e586f1c276783f5e"
+  },
+  "store-zarr2": {
+    "bytes": 119479,
+    "file_count": 87,
+    "sorted_sha256_listing_sha256": "7a8cd22d92da9051d2e951c35aeb56a986677656ed927fa6ab6dd2c9116aa1a9"
+  },
+  "store-zarr3": {
+    "bytes": 119842,
+    "file_count": 86,
+    "sorted_sha256_listing_sha256": "5e3f17b3904b63a0fbd8384d1ea955751bc88ff9ec48b38d4abdcb84ade8207b"
+  },
+  "store-legacy": {
+    "bytes": 119497,
+    "file_count": 86,
+    "sorted_sha256_listing_sha256": "ef2008d53bca04926a2a2a6e1e2e5a933a9b1c0550051e7b3fae7e0ed070663b"
+  }
+}

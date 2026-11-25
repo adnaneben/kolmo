@@ -1,0 +1,734 @@
+{
+  "source-control/4/no-group": {
+    "blocks": 1,
+    "tflags": [
+      0
+    ],
+    "wire": []
+  },
+  "source-control/4/chosen": {
+    "blocks": 1,
+    "tflags": [
+      0
+    ],
+    "wire": []
+  },
+  "source-control/1/no-group": {
+    "blocks": 1,
+    "tflags": [
+      0
+    ],
+    "wire": []
+  },
+  "source-control/1/chosen": {
+    "blocks": 1,
+    "tflags": [
+      0
+    ],
+    "wire": []
+  },
+  "noaa/1/no-group": {
+    "blocks": 9,
+    "tflags": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "wire": [
+      {
+        "columns": 98,
+        "rows": 4373,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3945,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3603,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3341,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3357,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3377,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3128,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3363,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 4,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      }
+    ]
+  },
+  "noaa/1/chosen": {
+    "blocks": 9,
+    "tflags": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "wire": [
+      {
+        "columns": 98,
+        "rows": 4373,
+        "group": 7,
+        "groups": 1199,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3945,
+        "group": 7,
+        "groups": 1027,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3603,
+        "group": 7,
+        "groups": 691,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3341,
+        "group": 7,
+        "groups": 757,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3357,
+        "group": 7,
+        "groups": 674,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3377,
+        "group": 7,
+        "groups": 810,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3128,
+        "group": 7,
+        "groups": 779,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3363,
+        "group": 7,
+        "groups": 716,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 4,
+        "group": 7,
+        "groups": 1,
+        "grouped_predictors": 0,
+        "formulas": 0
+      }
+    ]
+  },
+  "owid/1/no-group": {
+    "blocks": 9,
+    "tflags": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "wire": [
+      {
+        "columns": 79,
+        "rows": 6660,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6177,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6100,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6355,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6595,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6267,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6408,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 5847,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 3,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 17
+      }
+    ]
+  },
+  "owid/1/chosen": {
+    "blocks": 9,
+    "tflags": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "wire": [
+      {
+        "columns": 79,
+        "rows": 6660,
+        "group": 0,
+        "groups": 32,
+        "grouped_predictors": 64,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6177,
+        "group": 0,
+        "groups": 34,
+        "grouped_predictors": 65,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6100,
+        "group": 0,
+        "groups": 29,
+        "grouped_predictors": 62,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6355,
+        "group": 0,
+        "groups": 33,
+        "grouped_predictors": 64,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6595,
+        "group": 0,
+        "groups": 36,
+        "grouped_predictors": 65,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6267,
+        "group": 0,
+        "groups": 33,
+        "grouped_predictors": 62,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6408,
+        "group": 0,
+        "groups": 36,
+        "grouped_predictors": 65,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 5847,
+        "group": 0,
+        "groups": 29,
+        "grouped_predictors": 64,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 3,
+        "group": 0,
+        "groups": 1,
+        "grouped_predictors": 19,
+        "formulas": 17
+      }
+    ]
+  },
+  "owid/4/no-group": {
+    "blocks": 9,
+    "tflags": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "wire": [
+      {
+        "columns": 79,
+        "rows": 6100,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6408,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6355,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6595,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6177,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 3,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 17
+      },
+      {
+        "columns": 79,
+        "rows": 6660,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6267,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 5847,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 18
+      }
+    ]
+  },
+  "owid/4/chosen": {
+    "blocks": 9,
+    "tflags": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "wire": [
+      {
+        "columns": 79,
+        "rows": 6355,
+        "group": 0,
+        "groups": 33,
+        "grouped_predictors": 64,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6100,
+        "group": 0,
+        "groups": 29,
+        "grouped_predictors": 62,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6595,
+        "group": 0,
+        "groups": 36,
+        "grouped_predictors": 65,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6408,
+        "group": 0,
+        "groups": 36,
+        "grouped_predictors": 65,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6177,
+        "group": 0,
+        "groups": 34,
+        "grouped_predictors": 65,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6267,
+        "group": 0,
+        "groups": 33,
+        "grouped_predictors": 62,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 3,
+        "group": 0,
+        "groups": 1,
+        "grouped_predictors": 19,
+        "formulas": 17
+      },
+      {
+        "columns": 79,
+        "rows": 5847,
+        "group": 0,
+        "groups": 29,
+        "grouped_predictors": 64,
+        "formulas": 18
+      },
+      {
+        "columns": 79,
+        "rows": 6660,
+        "group": 0,
+        "groups": 32,
+        "grouped_predictors": 64,
+        "formulas": 18
+      }
+    ]
+  },
+  "noaa/4/no-group": {
+    "blocks": 9,
+    "tflags": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "wire": [
+      {
+        "columns": 98,
+        "rows": 3341,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 4373,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3363,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3128,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3377,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3603,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3357,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 4,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3945,
+        "group": -1,
+        "groups": 0,
+        "grouped_predictors": 0,
+        "formulas": 0
+      }
+    ]
+  },
+  "noaa/4/chosen": {
+    "blocks": 9,
+    "tflags": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "wire": [
+      {
+        "columns": 98,
+        "rows": 3945,
+        "group": 7,
+        "groups": 1027,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3363,
+        "group": 7,
+        "groups": 716,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3341,
+        "group": 7,
+        "groups": 757,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 4373,
+        "group": 7,
+        "groups": 1199,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3603,
+        "group": 7,
+        "groups": 691,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3357,
+        "group": 7,
+        "groups": 674,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3128,
+        "group": 7,
+        "groups": 779,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 3377,
+        "group": 7,
+        "groups": 810,
+        "grouped_predictors": 0,
+        "formulas": 0
+      },
+      {
+        "columns": 98,
+        "rows": 4,
+        "group": 7,
+        "groups": 1,
+        "grouped_predictors": 0,
+        "formulas": 0
+      }
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+Tested 357 pinned frames per engine; verified counts {'Node-V8': 355, 'JavaScriptCore': 355}
+One unshared Wasm memory: min 37 max 4096 pages; high-water bytes: {'Node-V8': 263782400, 'JavaScriptCore': 263782400}

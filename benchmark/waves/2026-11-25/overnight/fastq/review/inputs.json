@@ -1,0 +1,62 @@
+{
+  "source_commit": "31fd3acd922490143059ac2438e988e38d89be5f",
+  "patch_sha256": "da1b71bdde1a68f55db4708bbd5554ad8c27eab384746095b7274c48eb46b384",
+  "binary_hashes": {
+    "experiment": "76cc1bd8f8e0958b939b9d010ff6afb96afec5565ce8bd4a3380dd06428b694f",
+    "stock": "c40c238ab3e023364b7b14c6fa9c3fae3e06e7dda91bb9d9a2cf1586554bacc7",
+    "tag_v002": "e7f58f11fe2eb5f296bcd71a9ef9331d154723709ca6822e3cb110acd376e328"
+  },
+  "boundary_encoding": "little-endian 64-bit offsets, including zero and end",
+  "inputs": {
+    "SRR1770413": {
+      "source_name": "/Users/adnanbenali/Kolmo-Preserved/review-20261119T083123Z.lKHULl/raw/scratch-001/fastq/SRR1770413.fastq",
+      "source_bytes": 63177790,
+      "source_sha256": "4cf5843c7b6f6c643f05d00681c9ea5a926ce229a2ade2e04cf9d3f15e9e665f",
+      "slices": {
+        "multi": {
+          "file": "SRR1770413-multi.fastq",
+          "first_record": 0,
+          "records": 3749,
+          "source_offset": 0,
+          "input_bytes": 2359656,
+          "sha256": "2291ac5a13d7114019e76bea504c196d80db51cc76d9a5ce924b8fa9e941b1f9",
+          "all_record_boundaries_sha256": "b3ca38062ef37b972c874cf005ff174437c097a148c0835f3513756901a51952"
+        },
+        "single": {
+          "file": "SRR1770413-single.fastq",
+          "first_record": 20100,
+          "records": 260,
+          "source_offset": 12680988,
+          "input_bytes": 164320,
+          "sha256": "ceabad05080de56e17cd957fc1c2baa736eb007abb7e986fe2eb53e24779bfda",
+          "all_record_boundaries_sha256": "cef428f4e7cff79a21c81ba7ae80f0237248b8c0a0d37b7090366143237814b3"
+        }
+      }
+    },
+    "SRR2584863": {
+      "source_name": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/corpus-holdout/SRR2584863.fastq",
+      "source_bytes": 36637534,
+      "source_sha256": "758029a19f65e3c2867efbb6ab636799a28ed1ddc50515552bbd06ca680a2a59",
+      "slices": {
+        "multi": {
+          "file": "SRR2584863-multi.fastq",
+          "first_record": 0,
+          "records": 6460,
+          "source_offset": 0,
+          "input_bytes": 2359537,
+          "sha256": "6dd2085de8f9a1ce9a12deadfebe0bcd713946710afbe164c95d7848a0a15a73",
+          "all_record_boundaries_sha256": "7be382b68579c6fd8b556c0b0a8e50650df5a9b64e6097be9220052455054f56"
+        },
+        "single": {
+          "file": "SRR2584863-single.fastq",
+          "first_record": 20100,
+          "records": 447,
+          "source_offset": 7354984,
+          "input_bytes": 163848,
+          "sha256": "b40c6157f342b0b3d0919481c1890550acf9b2b4e6fc42c0830dc112748d847b",
+          "all_record_boundaries_sha256": "2243e88b0f07f20da2c2cdb3bf3f2cdd566a7b2400c0611ff12ce9f218cdae6b"
+        }
+      }
+    }
+  }
+}

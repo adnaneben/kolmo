@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="800" viewBox="0 0 1120 800" role="img"><title>Ratio and combined speed across three builds</title><style>text{font-family:system-ui,-apple-system,sans-serif;fill:#172f37}.tick{font-size:12px;fill:#455c61}.grid{stroke:#dbe4e3}.head{font-weight:650;font-size:16px}</style><rect width="100%" height="100%" fill="#fff"/>
+<text x="35" y="42" style="font-size:28px;font-weight:700">Compression ratio and complete round-trip throughput</text><text x="35" y="69" font-size="16">Apple M5 · relative position within each workload · higher and farther right are better.</text>
+<text x="35" y="97" font-size="15">○ pre-wave main (4db0425b)　 ● qualified main (a1d39559)　 ◆ combined experiment (38d512f5)</text>
+<text class="head" x="70" y="136">enwik8 ZIP archive · L1 · T1</text>
+<path class="grid" d="M70.0,151v115M70,266.0h459"/>
+<text class="tick" x="70.0" y="284" text-anchor="middle">3.5e+02</text>
+<text class="tick" x="63" y="270.0" text-anchor="end">0.99×</text>
+<path class="grid" d="M223.0,151v115M70,227.66666666666669h459"/>
+<text class="tick" x="223.0" y="284" text-anchor="middle">4.4e+02</text>
+<text class="tick" x="63" y="231.66666666666669" text-anchor="end">1.00×</text>
+<path class="grid" d="M376.0,151v115M70,189.33333333333334h459"/>
+<text class="tick" x="376.0" y="284" text-anchor="middle">5.4e+02</text>
+<text class="tick" x="63" y="193.33333333333334" text-anchor="end">1.00×</text>
+<path class="grid" d="M529.0,151v115M70,151.0h459"/>
+<text class="tick" x="529.0" y="284" text-anchor="middle">6.6e+02</text>
+<text class="tick" x="63" y="155.0" text-anchor="end">1.01×</text>
+<circle cx="134.38938698552153" cy="208.5" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level 1, 387.14 MB/s, ratio 0.999</title></circle>
+<circle cx="122.96153846153851" cy="208.5" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level 1, 381.20 MB/s, ratio 0.999</title></circle>
+<path fill="#d55a31" d="M193.33486773275422,203.5l5,5 -5,5 -5,-5z"><title>combined, level 1, 419.27 MB/s, ratio 0.999</title></path>
+<text class="head" x="622" y="136">enwik8 ZIP archive · L1 · T4</text>
+<path class="grid" d="M622.0,151v115M622,266.0h459"/>
+<text class="tick" x="622.0" y="284" text-anchor="middle">3.5e+02</text>
+<text class="tick" x="615" y="270.0" text-anchor="end">0.99×</text>
+<path class="grid" d="M775.0,151v115M622,227.66666666666669h459"/>
+<text class="tick" x="775.0" y="284" text-anchor="middle">4.4e+02</text>
+<text class="tick" x="615" y="231.66666666666669" text-anchor="end">1.00×</text>
+<path class="grid" d="M928.0,151v115M622,189.33333333333334h459"/>
+<text class="tick" x="928.0" y="284" text-anchor="middle">5.4e+02</text>
+<text class="tick" x="615" y="193.33333333333334" text-anchor="end">1.00×</text>
+<path class="grid" d="M1081.0,151v115M622,151.0h459"/>
+<text class="tick" x="1081.0" y="284" text-anchor="middle">6.6e+02</text>
+<text class="tick" x="615" y="155.0" text-anchor="end">1.01×</text>
+<circle cx="854.5158433233842" cy="208.5" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level 1, 485.99 MB/s, ratio 0.999</title></circle>
+<circle cx="868.083605330248" cy="208.5" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level 1, 494.99 MB/s, ratio 0.999</title></circle>
+<path fill="#d55a31" d="M1028.0384615384614,203.5l5,5 -5,5 -5,-5z"><title>combined, level 1, 614.56 MB/s, ratio 0.999</title></path>
+<text class="head" x="70" y="335">Whole OWID CSV · L1 and L2 · T1</text>
+<path class="grid" d="M70.0,350v115M70,465.0h459"/>
+<text class="tick" x="70.0" y="483" text-anchor="middle">1.5e+02</text>
+<text class="tick" x="63" y="469.0" text-anchor="end">1.29×</text>
+<path class="grid" d="M223.0,350v115M70,426.6666666666667h459"/>
+<text class="tick" x="223.0" y="483" text-anchor="middle">2.4e+02</text>
+<text class="tick" x="63" y="430.6666666666667" text-anchor="end">3.63×</text>
+<path class="grid" d="M376.0,350v115M70,388.33333333333337h459"/>
+<text class="tick" x="376.0" y="483" text-anchor="middle">3.9e+02</text>
+<text class="tick" x="63" y="392.33333333333337" text-anchor="end">5.97×</text>
+<path class="grid" d="M529.0,350v115M70,350.0h459"/>
+<text class="tick" x="529.0" y="483" text-anchor="middle">6.2e+02</text>
+<text class="tick" x="63" y="354.0" text-anchor="end">8.31×</text>
+<circle cx="275.39503670525096" cy="451.06060606060606" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level 1, 286.15 MB/s, ratio 2.138</title></circle>
+<circle cx="248.14987689565416" cy="451.06060606060606" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level 1, 263.12 MB/s, ratio 2.138</title></circle>
+<path fill="#d55a31" d="M137.28327160275092,374.59466864269336l5,5 -5,5 -5,-5z"><title>combined, level 1, 187.01 MB/s, ratio 6.504</title></path>
+<circle cx="208.31222821935356" cy="432.48581248330237" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level 2, 232.74 MB/s, ratio 3.273</title></circle>
+<circle cx="194.98720594820452" cy="432.48581248330237" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level 2, 223.38 MB/s, ratio 3.273</title></circle>
+<path fill="#d55a31" d="M122.96153846153837,358.93939393939394l5,5 -5,5 -5,-5z"><title>combined, level 2, 178.95 MB/s, ratio 7.460</title></path>
+<text class="head" x="622" y="335">Whole OWID CSV · L1 and L2 · T4</text>
+<path class="grid" d="M622.0,350v115M622,465.0h459"/>
+<text class="tick" x="622.0" y="483" text-anchor="middle">1.5e+02</text>
+<text class="tick" x="615" y="469.0" text-anchor="end">1.29×</text>
+<path class="grid" d="M775.0,350v115M622,426.6666666666667h459"/>
+<text class="tick" x="775.0" y="483" text-anchor="middle">2.4e+02</text>
+<text class="tick" x="615" y="430.6666666666667" text-anchor="end">3.63×</text>
+<path class="grid" d="M928.0,350v115M622,388.33333333333337h459"/>
+<text class="tick" x="928.0" y="483" text-anchor="middle">3.9e+02</text>
+<text class="tick" x="615" y="392.33333333333337" text-anchor="end">5.97×</text>
+<path class="grid" d="M1081.0,350v115M622,350.0h459"/>
+<text class="tick" x="1081.0" y="483" text-anchor="middle">6.2e+02</text>
+<text class="tick" x="615" y="354.0" text-anchor="end">8.31×</text>
+<circle cx="1026.347555826554" cy="451.06060606060606" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level 1, 528.05 MB/s, ratio 2.138</title></circle>
+<circle cx="1028.0384615384617" cy="451.06060606060606" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level 1, 530.81 MB/s, ratio 2.138</title></circle>
+<path fill="#d55a31" d="M907.0690890306539,374.59466864269336l5,5 -5,5 -5,-5z"><title>combined, level 1, 365.72 MB/s, ratio 6.504</title></path>
+<circle cx="951.6804070534348" cy="432.48581248330237" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level 2, 419.58 MB/s, ratio 3.273</title></circle>
+<circle cx="958.7372254927232" cy="432.48581248330237" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level 2, 428.80 MB/s, ratio 3.273</title></circle>
+<path fill="#d55a31" d="M882.05647145388,358.93939393939394l5,5 -5,5 -5,-5z"><title>combined, level 2, 338.61 MB/s, ratio 7.460</title></path>
+<text class="head" x="70" y="534">Literary prefix · L3, L9 and Ultra · T1</text>
+<path class="grid" d="M70.0,549v115M70,664.0h459"/>
+<text class="tick" x="70.0" y="682" text-anchor="middle">0.24</text>
+<text class="tick" x="63" y="668.0" text-anchor="end">3.27×</text>
+<path class="grid" d="M223.0,549v115M70,625.6666666666666h459"/>
+<text class="tick" x="223.0" y="682" text-anchor="middle">0.79</text>
+<text class="tick" x="63" y="629.6666666666666" text-anchor="end">3.67×</text>
+<path class="grid" d="M376.0,549v115M70,587.3333333333334h459"/>
+<text class="tick" x="376.0" y="682" text-anchor="middle">2.6</text>
+<text class="tick" x="63" y="591.3333333333334" text-anchor="end">4.06×</text>
+<path class="grid" d="M529.0,549v115M70,549.0h459"/>
+<text class="tick" x="529.0" y="682" text-anchor="middle">8.4</text>
+<text class="tick" x="63" y="553.0" text-anchor="end">4.46×</text>
+<circle cx="461.65716612980157" cy="650.060606060606" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level 3, 4.98 MB/s, ratio 3.411</title></circle>
+<circle cx="466.38925320820255" cy="650.060606060606" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level 3, 5.16 MB/s, ratio 3.411</title></circle>
+<path fill="#d55a31" d="M456.9969190824877,645.060606060606l5,5 -5,5 -5,-5z"><title>combined, level 3, 4.80 MB/s, ratio 3.411</title></path>
+<circle cx="397.8599134123449" cy="645.1263269473391" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level 9, 3.05 MB/s, ratio 3.463</title></circle>
+<circle cx="390.22806271398576" cy="645.1263269473391" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level 9, 2.87 MB/s, ratio 3.463</title></circle>
+<path fill="#d55a31" d="M413.7708119416243,640.1263269473391l5,5 -5,5 -5,-5z"><title>combined, level 9, 3.44 MB/s, ratio 3.463</title></path>
+<circle cx="122.96153846153845" cy="562.9393939393939" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level ultra, 0.37 MB/s, ratio 4.318</title></circle>
+<circle cx="133.81093849357364" cy="562.9393939393939" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level ultra, 0.40 MB/s, ratio 4.318</title></circle>
+<path fill="#d55a31" d="M139.51536368956573,557.9393939393939l5,5 -5,5 -5,-5z"><title>combined, level ultra, 0.42 MB/s, ratio 4.318</title></path>
+<text class="head" x="622" y="534">Literary prefix · L3, L9 and Ultra · T4</text>
+<path class="grid" d="M622.0,549v115M622,664.0h459"/>
+<text class="tick" x="622.0" y="682" text-anchor="middle">0.24</text>
+<text class="tick" x="615" y="668.0" text-anchor="end">3.27×</text>
+<path class="grid" d="M775.0,549v115M622,625.6666666666666h459"/>
+<text class="tick" x="775.0" y="682" text-anchor="middle">0.79</text>
+<text class="tick" x="615" y="629.6666666666666" text-anchor="end">3.67×</text>
+<path class="grid" d="M928.0,549v115M622,587.3333333333334h459"/>
+<text class="tick" x="928.0" y="682" text-anchor="middle">2.6</text>
+<text class="tick" x="615" y="591.3333333333334" text-anchor="end">4.06×</text>
+<path class="grid" d="M1081.0,549v115M622,549.0h459"/>
+<text class="tick" x="1081.0" y="682" text-anchor="middle">8.4</text>
+<text class="tick" x="615" y="553.0" text-anchor="end">4.46×</text>
+<circle cx="1028.0384615384614" cy="650.060606060606" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level 3, 5.56 MB/s, ratio 3.411</title></circle>
+<circle cx="1018.0510042616888" cy="650.060606060606" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level 3, 5.15 MB/s, ratio 3.411</title></circle>
+<path fill="#d55a31" d="M1016.8154204032282,645.060606060606l5,5 -5,5 -5,-5z"><title>combined, level 3, 5.10 MB/s, ratio 3.411</title></path>
+<circle cx="943.2732435327275" cy="645.1263269473391" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level 9, 2.90 MB/s, ratio 3.463</title></circle>
+<circle cx="962.1782145751379" cy="645.1263269473391" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level 9, 3.35 MB/s, ratio 3.463</title></circle>
+<path fill="#d55a31" d="M960.2515233335785,640.1263269473391l5,5 -5,5 -5,-5z"><title>combined, level 9, 3.30 MB/s, ratio 3.463</title></path>
+<circle cx="676.4690345094721" cy="562.9393939393939" r="5" fill="white" stroke="#54717c" stroke-width="1.8"><title>pre, level ultra, 0.37 MB/s, ratio 4.318</title></circle>
+<circle cx="686.5707595869907" cy="562.9393939393939" r="3.5" fill="#047f7a" stroke="#047f7a" stroke-width="1.8"><title>main, level ultra, 0.40 MB/s, ratio 4.318</title></circle>
+<path fill="#d55a31" d="M681.660035668418,557.9393939393939l5,5 -5,5 -5,-5z"><title>combined, level ultra, 0.39 MB/s, ratio 4.318</title></path>
+<text x="35" y="748" font-size="15">X: decimal MB/s, log scale. Y: original ÷ stored bytes. All four builds/controls restored the source; each panel uses workload-specific axes.</text><text x="35" y="772" font-size="14">One warmup + eleven randomized scored repetitions. Archive and whole-file results have separate timing boundaries. Hover for values.</text></svg>

@@ -1,0 +1,104 @@
+{
+  "numpy": "2.5.5",
+  "pyarrow": "26.0.1",
+  "seed": 725119,
+  "rounds": 3,
+  "parents": {
+    "ncep": {
+      "name": "air.2023.npy",
+      "size": 61390208,
+      "sha256": "2b11d724fd01c656d92122e45919136081949b83fc7b3861e46d0bbab48c1d32"
+    },
+    "esc50": {
+      "name": "esc50-2-100648-A-43.wav",
+      "size": 441044,
+      "sha256": "d52b04e2cd6fee1467d9faae0297b5eb2e3c7a68575bf6f982ca0c738f91df68"
+    },
+    "feather": {
+      "name": "v0.17.0.version.2-compression.lz4.feather",
+      "size": 594,
+      "sha256": "ab371cec1a3839605762ccb229d0c9c1d4d1b2d32a075673d0688662d9dd0671"
+    }
+  },
+  "binaries": {
+    "main": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "candidate": "f1d02b873c62d2130f0bc6a311617742af0c8df4d26a3106c2cbdcd28b716213",
+    "reader": "e7f58f11fe2eb5f296bcd71a9ef9331d154723709ca6822e3cb110acd376e328"
+  },
+  "files": {
+    "climate-le.npy": {
+      "bytes": 131200,
+      "sha256": "ae73d8b0de8e233c24f6ed6445ee9ec67204af1d3a8c6093cdce373aefedd41c",
+      "shape": [
+        32768
+      ],
+      "dtype": "<f4",
+      "value_bytes_sha256": "a23112753420a9458c4a61a0e8d6a66dc6742832382fe602921a5c7a4b03fe5c"
+    },
+    "climate-be.npy": {
+      "bytes": 131200,
+      "sha256": "ddcb86655da9715d3dff54e4ba766f9ab55afaae8099d470a452057762e020a0",
+      "shape": [
+        32768
+      ],
+      "dtype": ">f4",
+      "value_bytes_sha256": "bcdc6a61fbcf070f49640cd3421325e0ba62a946498b5e1fba5845fcc9298efc"
+    },
+    "audio-le.npy": {
+      "bytes": 65664,
+      "sha256": "351714b6e2688935b9b7111803836b88899b423af332d0d1d682f76cfb7b157e",
+      "shape": [
+        32768
+      ],
+      "dtype": "<i2",
+      "value_bytes_sha256": "e35ac49e6921c1dd1c6bde51829313036a83bf48baaf01d875c3e82e9a6dc4dd"
+    },
+    "audio-be.npy": {
+      "bytes": 65664,
+      "sha256": "bcc99b3cfc3b072566b1f445e608e6be53cdcabeb556369ed3680244e2fd767b",
+      "shape": [
+        32768
+      ],
+      "dtype": ">i2",
+      "value_bytes_sha256": "f44043303b5ccfa123dcbc8749bb8fb85f7d984ab489f047c6518d6ccc8f6aaf"
+    },
+    "bits-le.npy": {
+      "bytes": 131200,
+      "sha256": "18981ae90f577fde43b5ef45d4b54125451784453697367871640281938a6f42",
+      "shape": [
+        16384
+      ],
+      "dtype": "<f8",
+      "value_bytes_sha256": "8aca944508569bd0cb7e4349e08ce743378d0ae8be58d14b209267793e51cfd5"
+    },
+    "climate.arrow": {
+      "bytes": 266858,
+      "sha256": "ef8ec91e244140791cbba36c8e354222c8ba33616878d178dd365b8a6a2f3b24",
+      "schema": "values: float\nrow: int32",
+      "rows": 32768,
+      "nulls": [
+        1058,
+        0
+      ]
+    },
+    "audio.arrow": {
+      "bytes": 201322,
+      "sha256": "82a719cd24be190ad49cf76215c59c1244971700499ee0da13da9d96b0a8f3ea",
+      "schema": "values: int16\nrow: int32",
+      "rows": 32768,
+      "nulls": [
+        1058,
+        0
+      ]
+    },
+    "published.feather": {
+      "bytes": 594,
+      "sha256": "ab371cec1a3839605762ccb229d0c9c1d4d1b2d32a075673d0688662d9dd0671",
+      "schema": "a: int64",
+      "rows": 5,
+      "nulls": [
+        0
+      ]
+    }
+  }
+}

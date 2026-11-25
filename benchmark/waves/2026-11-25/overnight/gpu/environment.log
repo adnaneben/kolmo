@@ -1,0 +1,12 @@
+ProductName:		macOS
+ProductVersion:		27.2
+BuildVersion:		26B123
+arm64
+Apple clang version 21.0.0 (clang-2100.4.1.1)
+Target: arm64-apple-darwin27.2.0
+/Library/Developer/CommandLineTools
+xcrun: error: unable to find utility "metal", not a developer tool or in PATH
+xcrun_metal_status=72
+MTLCopyAllDevices count=0
+MTLCreateSystemDefaultDevice=nil
+native_probe_status=2
