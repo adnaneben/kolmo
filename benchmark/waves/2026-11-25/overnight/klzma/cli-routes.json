@@ -1,0 +1,450 @@
+[
+  {
+    "input": "wasmtime-256k",
+    "input_sha256": "14dd91679dfc6328cff2b34e872fd138af18acf969173ecb26b7fa7628731069",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 8,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 107245,
+    "frame_sha256": "b9cbb7cd4f6fc2d255167ff0e02d48152b33211865e45bb4b0b3ffaf2f18559c"
+  },
+  {
+    "input": "wasmtime-256k",
+    "input_sha256": "14dd91679dfc6328cff2b34e872fd138af18acf969173ecb26b7fa7628731069",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 8,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 107245,
+    "frame_sha256": "b9cbb7cd4f6fc2d255167ff0e02d48152b33211865e45bb4b0b3ffaf2f18559c"
+  },
+  {
+    "input": "wasmtime-256k",
+    "input_sha256": "14dd91679dfc6328cff2b34e872fd138af18acf969173ecb26b7fa7628731069",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 8,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 107245,
+    "frame_sha256": "b9cbb7cd4f6fc2d255167ff0e02d48152b33211865e45bb4b0b3ffaf2f18559c"
+  },
+  {
+    "input": "wasmtime-256k",
+    "input_sha256": "14dd91679dfc6328cff2b34e872fd138af18acf969173ecb26b7fa7628731069",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 8,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 107245,
+    "frame_sha256": "b9cbb7cd4f6fc2d255167ff0e02d48152b33211865e45bb4b0b3ffaf2f18559c"
+  },
+  {
+    "input": "wasmtime-256k",
+    "input_sha256": "14dd91679dfc6328cff2b34e872fd138af18acf969173ecb26b7fa7628731069",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 9,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 106216,
+    "frame_sha256": "016ea4e9da418efc115a797ddc91df3a9fd56b1ec2191bc630a2f507f6d7e42d"
+  },
+  {
+    "input": "wasmtime-256k",
+    "input_sha256": "14dd91679dfc6328cff2b34e872fd138af18acf969173ecb26b7fa7628731069",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 9,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 106216,
+    "frame_sha256": "016ea4e9da418efc115a797ddc91df3a9fd56b1ec2191bc630a2f507f6d7e42d"
+  },
+  {
+    "input": "wasmtime-256k",
+    "input_sha256": "14dd91679dfc6328cff2b34e872fd138af18acf969173ecb26b7fa7628731069",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 9,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 106216,
+    "frame_sha256": "016ea4e9da418efc115a797ddc91df3a9fd56b1ec2191bc630a2f507f6d7e42d"
+  },
+  {
+    "input": "wasmtime-256k",
+    "input_sha256": "14dd91679dfc6328cff2b34e872fd138af18acf969173ecb26b7fa7628731069",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 9,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 106216,
+    "frame_sha256": "016ea4e9da418efc115a797ddc91df3a9fd56b1ec2191bc630a2f507f6d7e42d"
+  },
+  {
+    "input": "ncep-256k",
+    "input_sha256": "e1fba1918ad4bc772971043e1470e89a23c736190b138668b996696fa1250e83",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 8,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 236895,
+    "frame_sha256": "3addc727be5c6a2b590eb233ad68a3ced2b4f12c89379615879c92731b46e644"
+  },
+  {
+    "input": "ncep-256k",
+    "input_sha256": "e1fba1918ad4bc772971043e1470e89a23c736190b138668b996696fa1250e83",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 8,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 236895,
+    "frame_sha256": "3addc727be5c6a2b590eb233ad68a3ced2b4f12c89379615879c92731b46e644"
+  },
+  {
+    "input": "ncep-256k",
+    "input_sha256": "e1fba1918ad4bc772971043e1470e89a23c736190b138668b996696fa1250e83",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 8,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 236895,
+    "frame_sha256": "3addc727be5c6a2b590eb233ad68a3ced2b4f12c89379615879c92731b46e644"
+  },
+  {
+    "input": "ncep-256k",
+    "input_sha256": "e1fba1918ad4bc772971043e1470e89a23c736190b138668b996696fa1250e83",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 8,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 236895,
+    "frame_sha256": "3addc727be5c6a2b590eb233ad68a3ced2b4f12c89379615879c92731b46e644"
+  },
+  {
+    "input": "ncep-256k",
+    "input_sha256": "e1fba1918ad4bc772971043e1470e89a23c736190b138668b996696fa1250e83",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 9,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 236850,
+    "frame_sha256": "9da04979128e57cba4758048f9c8de633f5efa7992306a040b04918552a0b391"
+  },
+  {
+    "input": "ncep-256k",
+    "input_sha256": "e1fba1918ad4bc772971043e1470e89a23c736190b138668b996696fa1250e83",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 9,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 236850,
+    "frame_sha256": "9da04979128e57cba4758048f9c8de633f5efa7992306a040b04918552a0b391"
+  },
+  {
+    "input": "ncep-256k",
+    "input_sha256": "e1fba1918ad4bc772971043e1470e89a23c736190b138668b996696fa1250e83",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 9,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 236850,
+    "frame_sha256": "9da04979128e57cba4758048f9c8de633f5efa7992306a040b04918552a0b391"
+  },
+  {
+    "input": "ncep-256k",
+    "input_sha256": "e1fba1918ad4bc772971043e1470e89a23c736190b138668b996696fa1250e83",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 9,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 236850,
+    "frame_sha256": "9da04979128e57cba4758048f9c8de633f5efa7992306a040b04918552a0b391"
+  },
+  {
+    "input": "mr-256k",
+    "input_sha256": "288236c90013320462fbe5864774054b26334be4ee59a8bde8a9797fbc9148f7",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 8,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 54692,
+    "frame_sha256": "ebfe194c81b96a33004b06a5a7d198f7a26927b570c2bba8e83847776a188bb3"
+  },
+  {
+    "input": "mr-256k",
+    "input_sha256": "288236c90013320462fbe5864774054b26334be4ee59a8bde8a9797fbc9148f7",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 8,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 54692,
+    "frame_sha256": "ebfe194c81b96a33004b06a5a7d198f7a26927b570c2bba8e83847776a188bb3"
+  },
+  {
+    "input": "mr-256k",
+    "input_sha256": "288236c90013320462fbe5864774054b26334be4ee59a8bde8a9797fbc9148f7",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 8,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 54692,
+    "frame_sha256": "ebfe194c81b96a33004b06a5a7d198f7a26927b570c2bba8e83847776a188bb3"
+  },
+  {
+    "input": "mr-256k",
+    "input_sha256": "288236c90013320462fbe5864774054b26334be4ee59a8bde8a9797fbc9148f7",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 8,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 54692,
+    "frame_sha256": "ebfe194c81b96a33004b06a5a7d198f7a26927b570c2bba8e83847776a188bb3"
+  },
+  {
+    "input": "mr-256k",
+    "input_sha256": "288236c90013320462fbe5864774054b26334be4ee59a8bde8a9797fbc9148f7",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 9,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 54597,
+    "frame_sha256": "f372b23a32dd0ff892555b26d6ea4963b7f7a358a12960bdaab53d5562e8d427"
+  },
+  {
+    "input": "mr-256k",
+    "input_sha256": "288236c90013320462fbe5864774054b26334be4ee59a8bde8a9797fbc9148f7",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 9,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 54597,
+    "frame_sha256": "f372b23a32dd0ff892555b26d6ea4963b7f7a358a12960bdaab53d5562e8d427"
+  },
+  {
+    "input": "mr-256k",
+    "input_sha256": "288236c90013320462fbe5864774054b26334be4ee59a8bde8a9797fbc9148f7",
+    "bytes": 262144,
+    "arm": "before",
+    "level": 9,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 54597,
+    "frame_sha256": "f372b23a32dd0ff892555b26d6ea4963b7f7a358a12960bdaab53d5562e8d427"
+  },
+  {
+    "input": "mr-256k",
+    "input_sha256": "288236c90013320462fbe5864774054b26334be4ee59a8bde8a9797fbc9148f7",
+    "bytes": 262144,
+    "arm": "after",
+    "level": 9,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 54597,
+    "frame_sha256": "f372b23a32dd0ff892555b26d6ea4963b7f7a358a12960bdaab53d5562e8d427"
+  },
+  {
+    "input": "highway-pdf-whole",
+    "input_sha256": "2f8fe85aa27cc72b5e3381a9d3615d80c6c22e1f01fd6f17c1fe8fb114e8eb67",
+    "bytes": 1313237,
+    "arm": "before",
+    "level": 8,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 1092917,
+    "frame_sha256": "f37c4fe976580d86ba800c18196a90c46df82ff9306322fa38be9ac1a803aff6"
+  },
+  {
+    "input": "highway-pdf-whole",
+    "input_sha256": "2f8fe85aa27cc72b5e3381a9d3615d80c6c22e1f01fd6f17c1fe8fb114e8eb67",
+    "bytes": 1313237,
+    "arm": "after",
+    "level": 8,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 1092917,
+    "frame_sha256": "f37c4fe976580d86ba800c18196a90c46df82ff9306322fa38be9ac1a803aff6"
+  },
+  {
+    "input": "highway-pdf-whole",
+    "input_sha256": "2f8fe85aa27cc72b5e3381a9d3615d80c6c22e1f01fd6f17c1fe8fb114e8eb67",
+    "bytes": 1313237,
+    "arm": "before",
+    "level": 8,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 1092917,
+    "frame_sha256": "f37c4fe976580d86ba800c18196a90c46df82ff9306322fa38be9ac1a803aff6"
+  },
+  {
+    "input": "highway-pdf-whole",
+    "input_sha256": "2f8fe85aa27cc72b5e3381a9d3615d80c6c22e1f01fd6f17c1fe8fb114e8eb67",
+    "bytes": 1313237,
+    "arm": "after",
+    "level": 8,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 1092917,
+    "frame_sha256": "f37c4fe976580d86ba800c18196a90c46df82ff9306322fa38be9ac1a803aff6"
+  },
+  {
+    "input": "highway-pdf-whole",
+    "input_sha256": "2f8fe85aa27cc72b5e3381a9d3615d80c6c22e1f01fd6f17c1fe8fb114e8eb67",
+    "bytes": 1313237,
+    "arm": "before",
+    "level": 9,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 1091741,
+    "frame_sha256": "43ca51f617b39a98889d4fde653ba650f841b25b61dd1824c3d011ecea7324b9"
+  },
+  {
+    "input": "highway-pdf-whole",
+    "input_sha256": "2f8fe85aa27cc72b5e3381a9d3615d80c6c22e1f01fd6f17c1fe8fb114e8eb67",
+    "bytes": 1313237,
+    "arm": "after",
+    "level": 9,
+    "threads": 1,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 1091741,
+    "frame_sha256": "43ca51f617b39a98889d4fde653ba650f841b25b61dd1824c3d011ecea7324b9"
+  },
+  {
+    "input": "highway-pdf-whole",
+    "input_sha256": "2f8fe85aa27cc72b5e3381a9d3615d80c6c22e1f01fd6f17c1fe8fb114e8eb67",
+    "bytes": 1313237,
+    "arm": "before",
+    "level": 9,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 1091741,
+    "frame_sha256": "43ca51f617b39a98889d4fde653ba650f841b25b61dd1824c3d011ecea7324b9"
+  },
+  {
+    "input": "highway-pdf-whole",
+    "input_sha256": "2f8fe85aa27cc72b5e3381a9d3615d80c6c22e1f01fd6f17c1fe8fb114e8eb67",
+    "bytes": 1313237,
+    "arm": "after",
+    "level": 9,
+    "threads": 4,
+    "codec_counts": {
+      "24": 1
+    },
+    "klzma_blocks": 1,
+    "frame_bytes": 1091741,
+    "frame_sha256": "43ca51f617b39a98889d4fde653ba650f841b25b61dd1824c3d011ecea7324b9"
+  }
+]
