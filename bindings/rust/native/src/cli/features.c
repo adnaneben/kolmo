@@ -372,11 +372,6 @@ out:
 static int fc_select(void *ctx, const char *name, uint64_t size, uint32_t mode, int64_t mtime) {
     fc_x *X = ctx;
     (void)size; (void)mode; (void)mtime;
-    if (X->nnames == 1) {
-        int match = !strcmp(X->names[0], name);
-        X->seen |= match;
-        return match;
-    }
     int lo = 0, hi = X->nnames;
     while (lo < hi) {
         int mid = lo + (hi - lo) / 2;
