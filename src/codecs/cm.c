@@ -475,7 +475,7 @@ static const cm_kprior_t *cm_kprior_get(int k) {
 }
 static void cm_apply_kprior4(cm_t *m, int k) {
     const cm_kprior_t *p = cm_kprior_get(k);
-    if (!p) { fprintf(stderr, "kolmo-impact: per-kind prior %d not loaded (KOLMO_CM_KPRIOR_FILE)\n", k); abort(); }
+    if (!p) return;   /* not loaded: the encoder never picks it (cm_impact_b2); a decoder without it fails the block checksum */
     const int nm = m->nmod; int jm[CM4_NIP];
     for (int j = 0; j < CM4_NIP; j++) jm[j] = -1;
     for (int i = 0; i < nm; i++) if (m->mid[i] < CM_NM3) { jm[i] = m->mid[i]; jm[nm + 3 + i] = CM_NM3 + 3 + m->mid[i]; }
@@ -502,7 +502,7 @@ static void cm_apply_kprior4(cm_t *m, int k) {
 static uint8_t cm_impact_b2(const uint8_t *in, size_t n, uint8_t b2) {
     const char *e = getenv("KOLMO_CM_KPRIOR"); if (!e || atoi(e) != 1 || n >= ((size_t)4 << 20)) return b2;
     const int kind = text_kind(in, n);
-    return kind > TT_NONE && kind <= 8 ? (uint8_t)(2 + kind) : b2;
+    return kind > TT_NONE && kind <= 8 && cm_kprior_get(kind - 1) ? (uint8_t)(2 + kind) : b2;
 }
 #endif
 /* mask: model 4's contexts (v2 = 4), ignored otherwise */
