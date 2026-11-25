@@ -82,7 +82,7 @@ static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_lim
 
 typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
                  int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi;
-                 uint64_t memcap; } djob_t;   /* memcap: the call's limit (the governor's cap; old frames' blocks are checked against it) */
+                 uint64_t memcap; const uint32_t *order; } djob_t;   /* order: blocks lo..hi, longest first (review40 #7) */   /* memcap: the call's limit (the governor's cap; old frames' blocks are checked against it) */
 
 /* Rule 1 (docs/MEMORY-MODEL.md): a block's working set, from its index entry and the head of its payload, checked
  * against what the frame declares before the block allocates anything. Returns the bytes to reserve, or an error. */
@@ -100,12 +100,14 @@ static int64_t blk_dec_admit(const parsed_t *P, uint32_t i, const uint8_t *pay, 
     return (int64_t)need;
 }
 
-static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, const uint8_t *pay, uint8_t *tbuf, uint8_t *out) {
+/* fqt: the model jobs a FASTQ family block may run at once (reserved by the caller, fq_threads) */
+static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, const uint8_t *pay, uint8_t *tbuf, uint8_t *out, int fqt) {
     const parsed_t *P = J->P; const uint8_t *e = P->idx + (size_t)i * IDX;
     size_t len = get32(e), cl = get32(e + 4); int codec = e[12], tflag = e[13];
     size_t meta = 0;
     x->allow_nplane = 0; x->allow_f2 = 0;
-    if (codec == C_NPLANE || codec == C_PLANES || codec == C_ZRUN) return KOLMO_ERR_CORRUPT;   /* graph leaves only */
+    /* graph leaves only (FORMAT.md 8.1): no encoder writes them as a block's codec (rANS and khuf included) */
+    if (codec == C_NPLANE || codec == C_PLANES || codec == C_ZRUN || codec == C_RANS || codec == C_KHUF) return KOLMO_ERR_CORRUPT;
     plan_t pl = P->pl;
     if (P->psum) {                                             /* rt: the checksum covers the stored bytes; checked first */
         if (cl < 4 || (uint32_t)kolmo_khash64(pay + 4, cl - 4, 0x637a6e31u ^ get32(pay)) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
@@ -114,11 +116,13 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
         if (cl < 4) return KOLMO_ERR_CORRUPT;
         pl.t = pay[0]; pl.a = pay[1]; pl.b = pay[2]; pl.c = pay[3]; pay += 4; cl -= 4;
         if (pl.t > T_A64 || (pl.t == T_A64 && (pl.b > 15 || pl.c))) return KOLMO_ERR_CORRUPT;
+        /* a stored block is its bytes: plan 0, 0, 0, 0 and no transform, as every encoder writes it (FORMAT.md 7.1) */
+        if (codec == C_STORE && (pl.t || pl.a || pl.b || pl.c || tflag)) return KOLMO_ERR_CORRUPT;
     }
     x->threads = J->fqthreads;
     if (codec == C_FQ) {                                        /* FASTQ family block (version 10) */
         if (pl.t != T_NONE || pl.a || pl.b || pl.c || tflag) return KOLMO_ERR_CORRUPT;
-        if (kf_fastq_decompress(pay, cl, out, len, J->fqthreads)) return KOLMO_ERR_CORRUPT;
+        if (kf_fastq_decompress(pay, cl, out, len, fqt)) return KOLMO_ERR_CORRUPT;
         if (!P->psum && blk_sum(out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
@@ -148,8 +152,10 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     }
     if (codec == C_GRAPH || pl.t == T_KG) {                     /* kolmo graph block (version 7) */
         if (codec != C_GRAPH || pl.t != T_KG || tflag) return KOLMO_ERR_CORRUPT;
-        x->allow_nplane = 1; x->allow_f2 = 1;
-        int r = kg_decode(x, pay, cl, out, len); x->allow_nplane = 0; x->allow_f2 = 0; if (r) return KOLMO_ERR_CORRUPT;
+        /* context-mixing leaves (planes and zero-run sub-streams included) are written by ultra level 2 only: in a frame
+         * whose header says another mode they are refused, so the header's mode bounds the decode cost class */
+        x->allow_nplane = 1; x->allow_f2 = 1; x->deny_cm = P->mode != KOLMO_ULTRA;
+        int r = kg_decode(x, pay, cl, out, len); x->allow_nplane = 0; x->allow_f2 = 0; x->deny_cm = 0; if (r) return KOLMO_ERR_CORRUPT;
         if (!P->psum && blk_sum(out, len) != get32(e + 8)) return KOLMO_ERR_CHECKSUM;
         return 0;
     }
@@ -251,20 +257,35 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     return 0;
 }
 
+/* A FASTQ family block decodes its stream slices as model jobs on up to J->fqthreads threads, and each job holds a
+ * model as large as the one job the frame declares (memneed.c: 4 raw + 32 MiB besides the buffers). The first job
+ * is the block's own reservation; each further one is reserved with the governor only if it fits now, so the call
+ * stays under its limit (-M) and runs one job at a time when memory is short. The output does not depend on it.
+ * Returns the jobs granted; *extra jobs of *each bytes were reserved (kmem_release(*each) once per extra job). */
+static int fq_threads(const djob_t *J, uint32_t i, int *extra, uint64_t *each) {
+    *extra = 0; *each = 0;
+    if (J->P->idx[(size_t)i * IDX + 12] != C_FQ || J->fqthreads <= 1) return J->fqthreads;
+    uint64_t raw = get32(J->P->idx + (size_t)i * IDX); *each = 4 * raw + 32 * KMEM_MIB;
+    while (1 + *extra < J->fqthreads && kmem_try_reserve(*each, J->memcap)) (*extra)++;
+    return 1 + *extra;
+}
 static void *decompress_worker(void *arg) {
     djob_t *J = arg; tls_t *S = tls_begin();
     if (!S) { atomic_store(&J->err, KOLMO_ERR_ALLOC); return NULL; }
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->maxraw + TBL_SLACK(J->maxraw) + 64);
     int buffered = J->clip_hi || J->output_fd >= 0;
-    uint8_t *rbuf = buffered ? (S->rbuf = grow(S->rbuf, &S->rbcap, J->maxraw + 64)) : NULL;
+    /* a range read decodes a block that lies wholly inside the range straight into the caller's buffer; the block
+     * buffer (rbuf) is taken only for a block cut by the range or written to a descriptor */
+    uint8_t *rbuf = NULL;
     uint8_t *packed = J->input_fd >= 0 ? malloc(J->maxcompressed ? J->maxcompressed : 1) : NULL;
-    if ((J->input_fd >= 0 && !packed) || !tbuf || (buffered && !rbuf)) { free(packed); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
+    if ((J->input_fd >= 0 && !packed) || !tbuf) { free(packed); atomic_store(&J->err, KOLMO_ERR_ALLOC); tls_end(S); return NULL; }
     codec_ctx *xp = &S->x;
     xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
     /* a context-mixing model larger than the frame declares (or, undeclared, than the limit) is refused unallocated */
     kmem_tls_dec_limit = J->P->memd ? J->P->memd : J->memcap == KMEM_UNLIMITED ? 0 : J->memcap;
     for (;;) {
-        uint32_t i = J->lo + atomic_fetch_add(&J->next, 1); if (i >= J->hi) break;
+        uint32_t k = atomic_fetch_add(&J->next, 1); if (k >= J->hi - J->lo) break;
+        uint32_t i = J->order ? J->order[k] : J->lo + k;   /* every block is written at its own offset: any order */
         if (atomic_load(&J->err)) break;
         int r;
         const uint8_t *payload;
@@ -278,17 +299,22 @@ static void *decompress_worker(void *arg) {
         int64_t need = blk_dec_admit(J->P, i, payload, J->memcap);
         if (need < 0) { atomic_store(&J->err, (int)need); break; }
         kmem_reserve((uint64_t)need, J->memcap); kmem_tls_job = 1;
-        if (!rbuf) r = decode_block(J, i, xp, S, payload, tbuf, J->dst + J->P->roff[i]);
+        int fq_extra; uint64_t fq_each; int fqt = fq_threads(J, i, &fq_extra, &fq_each);
+        const uint64_t b0 = J->P->roff[i], b1 = J->P->roff[i + 1];
+        if (!buffered) r = decode_block(J, i, xp, S, payload, tbuf, J->dst + b0, fqt);
+        else if (J->output_fd < 0 && J->clip_lo <= b0 && b1 <= J->clip_hi)   /* whole block inside the range */
+            r = decode_block(J, i, xp, S, payload, tbuf, J->dst + (b0 - J->clip_lo), fqt);
+        else if (!rbuf && !(rbuf = S->rbuf = grow(S->rbuf, &S->rbcap, J->maxraw + 64))) r = KOLMO_ERR_ALLOC;
         else {                                               /* range read: decode block, copy the overlap */
-            r = decode_block(J, i, xp, S, payload, tbuf, rbuf);
+            r = decode_block(J, i, xp, S, payload, tbuf, rbuf, fqt);
             if (!r && J->output_fd >= 0) {
                 r = write_block(J->output_fd, rbuf, J->P->roff[i + 1] - J->P->roff[i], J->P->roff[i]);
             } else if (!r) {
-                uint64_t b0 = J->P->roff[i], b1 = J->P->roff[i + 1];
                 uint64_t a = J->clip_lo > b0 ? J->clip_lo : b0, z = J->clip_hi < b1 ? J->clip_hi : b1;
                 memcpy(J->dst + (a - J->clip_lo), rbuf + (a - b0), z - a);
             }
         }
+        while (fq_extra--) kmem_release(fq_each);
         kmem_tls_job = 0; kmem_release((uint64_t)need);
         if (r) atomic_store(&J->err, r);
     }
@@ -326,11 +352,17 @@ static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input
     if (get32(pay + 4 + 20) == 1 && pay[4 + HDR + 12] == C_VID) goto out;
     int64_t tn = kolmo_original_size(pay + 4, cl - 4);
     if (tn <= 0 || (uint64_t)tn > 2 * (uint64_t)raw + 4096) goto out;
+    /* Memory (docs/MEMORY-MODEL.md): the layout (tn), the output and the inverse's copy (2 raw) are this frame's own
+     * buffers, as the encoder counts them in the figure it declares (core/compress.c); the nested frame decodes under
+     * what is left of the limit. The governor is not used here: the nested blocks reserve with it themselves. */
+    uint64_t memcap = kmem_limit_of(limits ? limits->max_memory : 0), own = 2 * (uint64_t)raw + (uint64_t)tn;
+    if (own > memcap) { ret = KOLMO_ERR_MEMORY; goto out; }
     t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
     if (!t || !full) { ret = KOLMO_ERR_ALLOC; goto out; }
     {   /* the caller's limits apply inside (the size limit to the outer frame, already checked: tn is bounded by raw) */
         kolmo_decode_limits in = limits ? *limits : (kolmo_decode_limits){0}; in.max_output_bytes = 0;
-        int64_t d = run_decode(pay + 4, -1, cl - 4, t, -1, threads, 0, 0, 0, limits ? &in : NULL);
+        if (memcap != KMEM_UNLIMITED) in.max_memory = memcap - own > 0 ? memcap - own : 1;
+        int64_t d = run_decode(pay + 4, -1, cl - 4, t, -1, threads, 0, 0, 0, &in);
         if (d != tn) { if (d == KOLMO_ERR_LIMIT || d == KOLMO_ERR_MEMORY || d == KOLMO_ERR_ALLOC) ret = d; goto out; }
     }
     if (kv_inverse(t, (size_t)tn, full, raw, threads > 0 ? threads : default_threads())) goto out;
@@ -345,6 +377,9 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
                           const kolmo_decode_limits *limits) {
     parsed_t P; int r = parse(src, n, &P, limits); if (r) return r;
     if (P.nb == 1 && P.idx[12] == C_VID) {                      /* format 2: a video frame, decoded whole (codec 20) */
+        /* admitted like every frame before anything is allocated (its declared figure covers the nested frame) */
+        int a = frame_admit(&P, P.orig, kmem_limit_of(limits ? limits->max_memory : 0));
+        if (a) { free(P.poff); free(P.roff); return a; }
         int64_t vr = vid_decode_frame(&P, src, input_fd, dst, output_fd, threads, lo, hi, range, limits);
         free(P.poff); free(P.roff); return vr;
     }
@@ -368,7 +403,25 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
     atomic_init(&J.next, 0); atomic_init(&J.err, 0);
     int nt = threads > 0 ? threads : default_threads(), nblk = (int)(J.hi - J.lo < 256 ? J.hi - J.lo : 256);
     J.fqthreads = nblk > 0 && nt / nblk > 0 ? nt / nblk : 1;    /* threads left over per block (FASTQ family blocks) */
+    uint32_t *order = NULL, *tmp = NULL, m = J.hi - J.lo;
+    if (nt > 1 && m > 1 && (order = malloc((size_t)m * 2 * sizeof *order))) {
+        /* longest first: the last blocks to start are short ones, so threads do not idle behind one long tail block.
+         * A stable bottom-up merge sort (equal blocks keep their order) */
+        tmp = order + m;
+        for (uint32_t k = 0; k < m; k++) order[k] = J.lo + k;
+#define DLEN(b) (P.roff[(b) + 1] - P.roff[(b)])
+        for (uint32_t w = 1; w < m; w *= 2) {
+            for (uint32_t a = 0; a < m; a += 2 * w) {
+                uint32_t b = a + w < m ? a + w : m, e = a + 2 * w < m ? a + 2 * w : m, x = a, y = b, t = a;
+                while (x < b || y < e) tmp[t++] = y >= e || (x < b && DLEN(order[x]) >= DLEN(order[y])) ? order[x++] : order[y++];
+            }
+            uint32_t *sw = order; order = tmp; tmp = sw;
+        }
+#undef DLEN
+        J.order = order;
+    }
     run_pool(decompress_worker, &J, nt, J.hi - J.lo);
+    free(order < tmp ? order : tmp);
     free(P.poff); free(P.roff);
     r = atomic_load(&J.err);
     return r ? r : (int64_t)(range ? hi - lo : P.orig);

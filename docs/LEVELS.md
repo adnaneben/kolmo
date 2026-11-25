@@ -59,7 +59,7 @@ strictly ordered on the screening corpus; final numbers from the timed holdout):
 | 5     | KLZH2 7 (0.0.1 "eco")                                                      |
 | 6     | KLZH2 8                                                                    |
 | 7     | KLZH2 9 or a faster ratio-tier setting, whichever is smaller at LZ decode speed |
-| 8     | ratio tier, fast variant (BWT-only measured ~3x faster than ratio at the same size) |
+| 8     | ratio tier, fast variant: BWT for text, JSON and log streams; other blocks BWT only where a 512 KiB slice finds it 2% smaller than KLZMA 1, else KLZMA 1 (from 0.0.3) |
 | 9     | ratio tier (KLZMA/BWT, 0.0.1 "ratio")                                      |
 | ultra | context mixing (0.0.1 `-x`)                                                |
 
@@ -195,8 +195,9 @@ Files and output
 - `--rm` removes the input after its output is published (decoded outputs are verified before publishing; compressed
   frames carry block checksums; there is no extra verification pass). It is ignored, with a warning, with standard
   output, `-t` and `-l`.
-- `-c` with several inputs writes their frames one after another; `-d` decodes concatenated frames in order (as zstd)
-  and fails (exit 1) on trailing bytes that are not a frame. `-l` reports such a file as one entry with `N frames`.
+- `-c` with several inputs writes their frames one after another; `-d` decodes concatenated frames and `--stream`
+  outputs in order (as zstd; FORMAT.md 10.1) and fails (exit 1) on trailing bytes that are neither a frame nor a
+  stream. `-l` reports such a file as one entry with `N frames` and its streams.
   `--range` needs a file of exactly one frame.
 - Terminals: compressed data is not written to a terminal without `-f` (exit 1, as zstd); `-d` and `-t` do not read
   compressed data from a terminal without `-f`; compressing from a terminal prints a notice and reads until end of file.

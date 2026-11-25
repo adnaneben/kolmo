@@ -67,7 +67,9 @@ it covers is specified in [FORMAT.md](FORMAT.md).
     the container layer;
   - `tests/coder_reference.py` decodes every block and graph leaf that uses Kolmo's own LZ and Huffman coders (KLZ,
     KLZH2, KLZMA, khuf, with krans), and the transforms of FORMAT.md section 20 over them, with an independent Python decoder written from
-    FORMAT.md sections 14 to 21, `tests/bwt_reference.py` the block-sorting coder of section 22, and `tests/kimg_reference.py` kimg (section 23).
+    FORMAT.md sections 14 to 21, `tests/bwt_reference.py` the block-sorting coder of section 22, `tests/kimg_reference.py` kimg (section 23), and
+    `tests/cm_reference.py` context mixing (section 24, the first 1024 bytes of each corpus stream; `make
+    check-cm-reference` decodes them whole).
 - **Fuzzing and hardening tests** (`test-decoder-hardening`, `test-harden`) check that damaged input is refused.
 
 ## Rules for changing the format
@@ -75,8 +77,8 @@ it covers is specified in [FORMAT.md](FORMAT.md).
 1. **A new identifier is claimed in FORMAT.md first** (codec id, plan type, tflag, node id, model nibble or extension
    tag), in the same change that writes it.
 2. **It must be one that every earlier version-12 decoder refuses.** Unknown codec ids, plan types, tflags and node
-   ids are refused today. Reserved header and index bytes are ignored, so they must never carry something a decoder
-   needs.
+   ids are refused today. Reserved header and index bytes, and the reserved bytes and `segment_bytes` of the `CZNS`
+   stream header, are ignored, so they must never carry something a decoder needs.
 3. **A change that would make version-12 frames decode differently is not allowed.** This includes a change to a
    coder's decoder, even one that leaves the frozen corpus passing. If a decoder has a bug that returns wrong bytes,
    the fix restores the bytes the original was compressed from, and the change log says so.

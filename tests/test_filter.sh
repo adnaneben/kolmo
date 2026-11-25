@@ -105,7 +105,9 @@ done
 # a stream decoder that stops before its pipe ends (data after the end, or a damaged segment) exits 0 or 1, never by
 # the SIGPIPE of the thread that feeds it
 kolmo --stream=1 -1 -c big.bin > s.kolmo
-[ "$(rc sh -c 'cat s.kolmo big.bin big.bin | kolmo -d > s.out')" = 0 ] && cmp s.out big.bin || fail "stream + trailing data from a pipe"
+# (bytes after a stream that start no member are an error, FORMAT.md 10.1: 0.0.2 dropped them with exit 0)
+[ "$(rc sh -c 'cat s.kolmo big.bin big.bin | kolmo -d > s.out')" = 1 ] || fail "stream + trailing data from a pipe: exit 1"
+[ "$(rc sh -c 'cat s.kolmo s.kolmo | kolmo -d > s.out')" = 0 ] && cat big.bin big.bin | cmp - s.out || fail "stream + stream from a pipe"
 python3 -c "import sys; d = bytearray(open('s.kolmo','rb').read()); d[len(d)//2] ^= 0xff; open('s.bad','wb').write(d)"
 [ "$(rc sh -c 'cat s.bad big.bin big.bin | kolmo -d')" = 1 ] || fail "damaged stream from a pipe: exit 1"
 ok "exit status: 1 corrupt/truncated/missing, 2 usage; SIGPIPE when the reader stops"

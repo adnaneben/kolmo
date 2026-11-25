@@ -5,7 +5,9 @@
  *    kolmo_frame_size walks concatenated frames;
  *  - kolmo_params out of range are refused with KOLMO_ERR_PARAM; kolmo_read_range past the end is KOLMO_ERR_RANGE;
  *  - a context-mixing frame whose block size was forged upwards fails fast instead of decoding padding to the claim;
- *  - kolmo_release_buffers leaves the library usable. */
+ *  - kolmo_release_buffers leaves the library usable;
+ *  - kolmo_stream_decompress reads every member of a file (CZNS streams and CZN1 frames, FORMAT.md 10.1) and refuses
+ *    any other bytes after one: 0.0.2 returned success at the first stream terminator and dropped the rest. */
 #include "kolmo.h"
 #undef NDEBUG
 #include <assert.h>
@@ -13,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 static void p32(uint8_t *p, uint32_t v) { for (int k = 0; k < 4; k++) p[k] = (uint8_t)(v >> 8 * k); }
 static void p64(uint8_t *p, uint64_t v) { p32(p, (uint32_t)v); p32(p + 4, (uint32_t)(v >> 32)); }
@@ -171,12 +174,77 @@ static void release(void) {
     free(in); free(o); free(z);
 }
 
+/* a file of bytes on a descriptor, read from the start */
+static int fd_of(const uint8_t *b, size_t n) {
+    FILE *f = tmpfile(); assert(f); int fd = dup(fileno(f)); fclose(f); assert(fd >= 0);
+    assert(write(fd, b, n) == (ssize_t)n); assert(lseek(fd, 0, SEEK_SET) == 0); return fd;
+}
+static uint8_t *slurp(int fd, size_t *n) {
+    off_t e = lseek(fd, 0, SEEK_END); uint8_t *b = malloc(e ? (size_t)e : 1); assert(b && lseek(fd, 0, SEEK_SET) == 0);
+    assert(read(fd, b, (size_t)e) == (ssize_t)e); *n = (size_t)e; return b;
+}
+/* decode a file through kolmo_stream_decompress; *out (malloc'ed) holds the output */
+static int64_t sdecode(const uint8_t *b, size_t n, uint8_t **out, size_t *on) {
+    int in = fd_of(b, n), o = fd_of((const uint8_t *)"", 0);
+    int64_t r = kolmo_stream_decompress(in, o, 2);
+    *out = slurp(o, on); close(in); close(o); return r;
+}
+static void stream_members(void) {
+    size_t n1 = 3 << 20, n2 = 70000; uint8_t *a = make_text(n1), *c = make_text(n2), *zf;
+    int64_t nf = pack(c, n2, KOLMO_FAST, &zf);
+    int ia = fd_of(a, n1), sa = fd_of((const uint8_t *)"", 0);
+    kolmo_params p = {KOLMO_FAST, 0, 1, 0, 1, 0};
+    assert(kolmo_stream_compress(ia, sa, &p, 1) > 0); close(ia);       /* 1 MiB segments: a stream of 3 frames */
+    size_t ns; uint8_t *zs = slurp(sa, &ns); close(sa);
+    uint8_t *f = malloc(3 * ns + 2 * (size_t)nf + 64), *o; size_t on;
+    /* stream, frame, stream, frame: every member, in order */
+    size_t k = 0;
+    memcpy(f + k, zs, ns); k += ns; memcpy(f + k, zf, (size_t)nf); k += (size_t)nf;
+    memcpy(f + k, zs, ns); k += ns; memcpy(f + k, zf, (size_t)nf); k += (size_t)nf;
+    assert(sdecode(f, k, &o, &on) == (int64_t)(2 * (n1 + n2)) && on == 2 * (n1 + n2));
+    assert(!memcmp(o, a, n1) && !memcmp(o + n1, c, n2) && !memcmp(o + n1 + n2, a, n1) && !memcmp(o + 2 * n1 + n2, c, n2));
+    free(o);
+    /* a frame first, then a stream */
+    memcpy(f, zf, (size_t)nf); memcpy(f + nf, zs, ns);
+    assert(sdecode(f, (size_t)nf + ns, &o, &on) == (int64_t)(n1 + n2) && !memcmp(o, c, n2) && !memcmp(o + n2, a, n1)); free(o);
+    /* anything after a member that starts no member is refused, never dropped */
+    static const char *const tails[] = {"\0", "GARBAGE", "CZNS", "CZN1", "\0\0\0\0\0\0\0\0"};
+    static const size_t tl[] = {1, 7, 4, 4, 8};
+    for (int t = 0; t < 5; t++) {
+        memcpy(f, zs, ns); memcpy(f + ns, tails[t], tl[t]);
+        assert(sdecode(f, ns + tl[t], &o, &on) == KOLMO_ERR_CORRUPT); free(o);
+        memcpy(f, zf, (size_t)nf); memcpy(f + nf, tails[t], tl[t]);
+        assert(sdecode(f, (size_t)nf + tl[t], &o, &on) == KOLMO_ERR_CORRUPT); free(o);
+    }
+    memcpy(f, zs, ns); memcpy(f + ns, zs, ns - 1);                        /* a second stream cut short */
+    assert(sdecode(f, 2 * ns - 1, &o, &on) == KOLMO_ERR_CORRUPT); free(o);
+    assert(sdecode(zs, ns - 8, &o, &on) == KOLMO_ERR_CORRUPT); free(o);   /* no terminator */
+    assert(sdecode(zs, 0, &o, &on) == KOLMO_ERR_CORRUPT); free(o);        /* no member at all */
+    /* the header's reserved bytes and segment_bytes are ignored (COMPATIBILITY.md); its version is not */
+    memcpy(f, zs, ns); f[5] = 7; f[6] = 1; f[7] = 0xFF; memset(f + 8, 0, 4);
+    assert(sdecode(f, ns, &o, &on) == (int64_t)n1 && !memcmp(o, a, n1)); free(o);
+    f[4] = 2; assert(sdecode(f, ns, &o, &on) == KOLMO_ERR_CORRUPT); free(o);
+    /* a frame with container extensions (an indexed table), then a stream */
+    {
+        size_t tn = 0, cap = 1 << 20; char *t = malloc(cap);
+        tn += (size_t)snprintf(t, cap, "id,name,score\n");
+        for (int i = 0; i < 5000; i++) tn += (size_t)snprintf(t + tn, cap - tn, "%d,item%d,%d\n", i, i % 37, i * 7 % 101);
+        size_t zc2 = kolmo_indexed_bound(tn, &p); uint8_t *zi = malloc(zc2 + ns);
+        int64_t zn = kolmo_compress_indexed((uint8_t *)t, tn, zi, zc2, &p, NULL); assert(zn > 0);
+        memcpy(zi + zn, zs, ns);
+        assert(sdecode(zi, (size_t)zn + ns, &o, &on) == (int64_t)(tn + n1) && !memcmp(o, t, tn) && !memcmp(o + tn, a, n1)); free(o);
+        free(zi); free(t);
+    }
+    free(a); free(c); free(zf); free(zs); free(f);
+}
+
 int main(void) {
     forged_headers();
     trailing_and_concatenation();
     params();
     cm_amplification();
     release();
-    puts("HARDENING TESTS PASSED (forged headers, trailing bytes, frame walking, parameters, CM amplification, buffer release)");
+    stream_members();
+    puts("HARDENING TESTS PASSED (forged headers, trailing bytes, frame walking, parameters, CM amplification, buffer release, stream members)");
     return 0;
 }

@@ -12,6 +12,7 @@
 #include "../algo/khuf.h"
 #include "../algo/klz.h"
 #include "../algo/klzma.h"
+#include "../algo/par.h"
 
 /* the codec the encoder codes with, and writes, for role (or id) c */
 static inline int codec_native_id(int c) {
@@ -44,6 +45,8 @@ static size_t klzma_c_bound(size_t n) { return kolmo_klzma_bound(n); }
 static size_t klzma_c_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     if (level >= 100) level = level * 10 + 8;   /* lc/lp/pb digits, then parse level 8 (algo/klzma.h) */
     else if (level > 9) level = 9;
+    if (x && x->budget && x->threads_max > 1)   /* elastic: idle threads of the call join the finder (same output) */
+        return kolmo_klzma_compress_el(in, n, out, cap, level, x->threads_max, x->threads > 1 ? x->threads - 1 : 0, x->budget);
     return kolmo_klzma_compress_mt(in, n, out, cap, level, x && x->threads > 1 ? x->threads : 1);
 }
 static int klzma_c_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return kolmo_klzma_decompress(in, cn, out, n); }
@@ -61,6 +64,10 @@ static const kolmo_codec codec_khuf = { C_KHUF, "khuf", khuf_c_bound, khuf_c_com
 static const kolmo_codec codec_klz = { C_KLZ, "klz", klz_c_bound, klz_c_compress, klz_c_decompress, NULL };
 static const kolmo_codec codec_klzh = { C_KLZH, "klzh", klzh_c_bound, klzh_c_compress, klzh_c_decompress, NULL };
 /* x->threads: the threads this block may use (the match finder of levels 7-9 splits over them; same output) */
-static size_t klzh2_c_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) { return kolmo_klzh2_compress_mt(in, n, out, cap, level, x && x->threads > 1 ? x->threads : 1); }
+static size_t klzh2_c_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
+    if (x && x->budget && x->threads_max > 1)   /* elastic: idle threads of the call join the finder (same output) */
+        return kolmo_klzh2_compress_el(in, n, out, cap, level, x->threads_max, x->threads > 1 ? x->threads - 1 : 0, x->budget);
+    return kolmo_klzh2_compress_mt(in, n, out, cap, level, x && x->threads > 1 ? x->threads : 1);
+}
 static int klzh2_c_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return kolmo_klzh2_decompress(in, cn, out, n); }
 static const kolmo_codec codec_klzh2 = { C_KLZH2, "klzh2", klzh_c_bound, klzh2_c_compress, klzh2_c_decompress, NULL };

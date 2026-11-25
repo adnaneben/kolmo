@@ -104,6 +104,8 @@ build/kolmotest: tests/kolmotest.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 build/test-levels: tests/test_levels.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+build/mkarchive: tests/mkarchive.c build/libkolmo.a
+	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 build/test-levels-asan: tests/test_levels.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_levels.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 build/kolmoparallel: tests/kolmoparallel.c build/libkolmo.a
@@ -118,17 +120,23 @@ build/kolmo-impact: src/cli/cli.c src/cli/train.c src/core/impact.c src/kolmo.c 
 build/kolmo-profile: src/cli/cli.c src/cli/train.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) -DKOLMO_TIMING $(INC) src/cli/cli.c src/cli/features.c src/kolmo.c build/libkolmoarch.a -o $@ $(LIBS)
 
-check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus
+check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus build/mkarchive build/test-elastic
 	./build/test-levels
+	sh tests/check_no_abort.sh
+	./build/test-elastic
 	python3 tests/test_cli.py build/kolmo
+	sh tests/test_archive_safety.sh build/kolmo build/mkarchive
 	sh tests/test_filter.sh build/kolmo
 	python3 tests/test_fast_file.py
+	python3 tests/test_bounded_cli.py build/kolmo
 	./build/test-v12-corpus tests/v12
+	python3 tests/check_v12_pinned.py
 	python3 tests/check_v12_frames.py build/kolmo tests/v12
 	python3 tests/format_reference.py tests/v12
 	python3 tests/coder_reference.py tests/v12
 	python3 tests/bwt_reference.py tests/v12
 	python3 tests/kimg_reference.py tests/v12
+	python3 tests/cm_reference.py tests/v12
 	./build/test-harden
 	./build/kolmoresource
 	./build/kolmoparallel
@@ -146,6 +154,8 @@ check-decoder-hardening: build/test-decoder-hardening-asan
 
 build/test-harden: tests/test_harden.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+build/test-elastic: tests/test_elastic.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
+	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_elastic.c build/libkolmoarch.a -o $@ $(LIBS)
 build/test-v12-corpus: tests/test_v12_corpus.c build/libkolmo.a
 	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
 
@@ -204,6 +214,11 @@ build/test-cm4-asan: tests/test_cm4.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) 
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_cm4.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-cm4: build/test-cm4-asan
 	./build/test-cm4-asan
+# FORMAT.md section 24 in Python: every codec 7, 17 and 25 stream of the corpus decoded whole (about 20 minutes;
+# make check decodes the first 1024 bytes of each).
+check-cm-reference:
+	python3 tests/cm_reference.py --full tests/v12
+.PHONY: check-cm-reference
 # Opt-in --typed-huf route (ported from the RC1 integration, PR #10): round trips, header parsing, and agreement of
 # the typed route's predictor choice with the graph planner's.
 build/test-rc-options: tests/test_rc_options.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
@@ -252,9 +267,9 @@ build/test-bwt-asan: tests/test_bwt.c tests/test_bwt_golden.h $(BWTSRC) $(BWTHDR
 # Kolmo's own coders (codecs 24, 27-29, 32, src/algo/k*.c): round trips, corrupt payloads under ASan/UBSan, pinned hash
 # values; then every mode through the CLI: version 12, no retired codec id, 1 and 4 threads alike, KOLMO_NATIVE ignored.
 build/test-native: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
-	$(CC) $(CFLAGS) -Isrc tests/test_native.c $(NATSRC) -o $@
+	$(CC) $(CFLAGS) -Isrc tests/test_native.c $(NATSRC) src/algo/par.c -o $@ -lpthread
 build/test-native-asan: tests/test_native.c $(NATSRC) $(wildcard src/algo/k*.h)
-	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -Isrc tests/test_native.c $(NATSRC) -o $@
+	$(CC) $(SANFLAGS) -fno-sanitize-recover=undefined -Isrc tests/test_native.c $(NATSRC) src/algo/par.c -o $@ -lpthread
 check-native: build/test-native build/test-native-asan build/kolmo
 	./build/test-native 3
 	./build/test-native-asan
@@ -329,6 +344,10 @@ check-memdyn: build/test-memdyn build/test-memdyn-asan
 .PHONY: check-memdyn
 check-rc: check-decoder-hardening check-meta check-memdyn check-features-b check-native check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-rc-options check-fqfam check-dispatch check-asm check-arch check-format2 check-profile
 .PHONY: check-meta check-rc check-features-b check-bwt check-kernels check-scan check-lines check-dec64 check-fastint check-planner-ownership check-cmimg check-cmpar check-cm4 check-fqfam check-dispatch check-asm check-arch check-format2
+# size ledger and level-order gate on the committed corpus (benchmark/ledger/ledger.py; --write to refresh)
+check-ledger: build/kolmo
+	python3 benchmark/ledger/ledger.py build/kolmo
+
 check-sanitizers: build/kolmoparallel-asan build/kolmoresource-asan build/test-levels-asan build/test-harden-asan build/test-v12-corpus-asan
 	./build/test-levels-asan
 	./build/test-v12-corpus-asan tests/v12

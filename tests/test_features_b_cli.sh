@@ -28,10 +28,11 @@ mkdir -p src/sub; cp t.csv src/a.csv; head -c 300000 t.csv > src/sub/b.csv; cat 
 mkdir out; "$K" extract -C out arc.kol
 for f in a.csv sub/b.csv c.csv empty; do cmp "src/$f" "out/src/$f" || fail "x $f"; done
 mkdir one; "$K" extract -C one arc.kol src/c.csv; cmp src/c.csv one/src/c.csv || fail "x one file"; [ ! -e one/src/a.csv ] || fail "x extracted an unnamed file"
-# a stored name that climbs out of the directory is refused
-mkdir -p deep/x; cp t.csv deep/evil.csv; (cd deep/x && "$K" archive ../../arc2.kol ../evil.csv)
-mkdir safe; if (cd safe && "$K" extract ../arc2.kol 2> /dev/null); then fail "unsafe name extracted"; fi
-[ ! -e evil.csv ] || fail "unsafe name written outside the directory"
+# a name that climbs out of the directory is stored without its leading ../, as tar stores it (stored names that do
+# climb out are refused by extract: tests/test_archive_safety.sh)
+mkdir -p deep/x; cp t.csv deep/evil.csv; (cd deep/x && "$K" archive ../../arc2.kol ../evil.csv 2> /dev/null)
+mkdir safe; (cd safe && "$K" extract ../arc2.kol) || fail "extract of a stripped name"
+cmp t.csv safe/evil.csv || fail "stripped name"; [ ! -e evil.csv ] || fail "a name written outside the directory"
 # levels as in the main command line; the 0.0.1 options are refused with exit status 2
 "$K" --index -9 --block-size 0.5 t.csv t9.kol && "$K" -d t9.kol -o back9.csv && cmp t.csv back9.csv || fail "--index -9"
 "$K" archive --level 1 arc1.kol src/a.csv && mkdir o1 && "$K" extract -C o1 arc1.kol && cmp src/a.csv o1/src/a.csv || fail "archive --level 1"

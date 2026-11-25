@@ -146,8 +146,11 @@ int64_t kolmo_read_range(const uint8_t *src, size_t n, uint64_t off, size_t len,
 /* streaming / large inputs, bounded memory: file descriptors in and out (CZNS framed segments).
  * seg_mib = 0 uses the default segment size. Both return total bytes written, or a negative error. */
 int64_t kolmo_stream_compress(int in_fd, int out_fd, const kolmo_params *p, uint32_t seg_mib);
+/* kolmo_stream_decompress reads every member of its input in order (FORMAT.md 10.1): CZNS streams and CZN1 frames
+ * (with their container extensions); bytes after a member that start no member are KOLMO_ERR_CORRUPT. */
 int64_t kolmo_stream_decompress(int in_fd, int out_fd, int threads);
-/* as kolmo_stream_decompress, with decoding limits per frame and max_output_bytes for the whole stream (NULL: none) */
+/* as kolmo_stream_decompress, with decoding limits per frame and max_output_bytes for the whole input (NULL: none);
+ * max_memory (or the process limit) bounds each frame's decode, the output window included */
 int64_t kolmo_stream_decompress_limited(int in_fd, int out_fd, int threads, const kolmo_decode_limits *limits);
 /* One-shot CZN1 file I/O. Input must remain a stable regular file of at least n
  * bytes. Supply an empty seekable output fd without O_APPEND. Workers use
@@ -183,6 +186,22 @@ int      kolmo_mem_parse(const char *s, uint64_t *out);
 uint64_t kolmo_mem_floor(kolmo_mode mode);
 uint64_t kolmo_mem_auto(void);
 int64_t  kolmo_decode_memory(const uint8_t *src, size_t n);
+/* Decode cost (docs/SECURITY.md, "Decode work"). Decoding time follows the decoded bytes of each coder family, not the
+ * compressed size: a valid 6 KB frame of context mixing decodes 16 MiB at about 1 MB/s. kolmo_frame_cost reads one
+ * whole frame (header, index and payload heads; nothing is decoded) and adds up its decoded bytes by class:
+ *   KOLMO_COST_FAST:  stored blocks, KLZ, KLZH2, khuf, rANS and the graph's inverses (hundreds of MB/s per core and up);
+ *   KOLMO_COST_SORT:  block sorting (BWT), KLZMA, audio profile 0 (tens to a few hundred MB/s per core);
+ *   KOLMO_COST_MODEL: context mixing (codecs 7, 17, 25), FASTQ family, GR6+, kimg, audio profile 1 (about 0.5 to 10
+ *                     MB/s per core, whatever the compressed size).
+ * Graph blocks are costed leaf by leaf, video frames through their nested frame. slowest: the slowest class present.
+ * A caller that decodes untrusted frames bounds the work by refusing, before decoding, a frame whose
+ * bytes[KOLMO_COST_MODEL] (or bytes[KOLMO_COST_SORT]) exceed its budget. Returns 0, or a KOLMO_ERR_* code for a frame
+ * kolmo_decompress would refuse at its header, index or graph program (the cost is then zero). */
+#define KOLMO_COST_FAST  0
+#define KOLMO_COST_SORT  1
+#define KOLMO_COST_MODEL 2
+typedef struct { uint64_t bytes[3]; int slowest; } kolmo_decode_cost;
+int      kolmo_frame_cost(const uint8_t *src, size_t n, kolmo_decode_cost *cost);
 /* What auto (0) means in this process: the limit of decoders called without limits (or with max_memory 0) and of the
  * governor of encoders whose mem_limit is 0. 0 restores 50% of the machine. Never changes output: only an explicit
  * kolmo_params.mem_limit is a format decision. */

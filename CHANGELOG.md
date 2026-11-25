@@ -4,6 +4,29 @@
 
 ### Fixed
 
+- **`kolmo -d`, `-t`, `-l` and `--range` refuse a `kolmo archive` file** instead of writing its internal chunk store
+  and exiting 0. The frame of such a file is the store (the distinct chunks of all its files, without their order),
+  never the files. The error names `kolmo extract` and `kolmo contents`. Python's `decompress` and `read_range` refuse
+  it the same way. The C library is unchanged: `kolmo_decompress` still returns the store, as every reader of a
+  version-12 frame does (review 40, R20 #88).
+- **`kolmo extract` never writes outside its directory.** It used to follow a symbolic link that was already there,
+  so `ln -s ../../victim.txt tree/a.txt` made it overwrite `victim.txt`. Now every directory on the way is opened
+  without following links (a name through a symbolic link is skipped with an error, exit 1), and an existing file
+  at the name is unlinked and created again, as tar does. Absolute names and names with a `..` component are still
+  skipped (R25 #107).
+- **`kolmo archive` and `kolmo --index` no longer overwrite an existing output without `-f`.** The output is staged
+  and published like the main command line's: refused when it exists, replaced atomically with `-f` (`--force`),
+  and never left half-written (R25 #107).
+- **`kolmo archive` reports what it cannot store.** Symbolic links, FIFOs, sockets, devices, empty directories and
+  directories deeper than 64 levels used to be dropped silently. Each one now gets a warning, the archive is still
+  written, and the run exits with status 1. A path with a leading `/` or `../` is stored without it, with a warning,
+  as tar stores it. Before this, `../a.txt` was stored as is and `extract` then refused it.
+- **`kolmo extract` restores the stored mtime**, which it used to ignore.
+- **`-T`, `--chunk` and `--token-bits` of `archive`, `extract`, `--index`, `cat` and `grep` refuse what is not a
+  number** (exit 2). `-T abc` used to mean "all cores".
+- Tests: `tests/test_archive_safety.sh` (in `make check`) covers each case, using `tests/mkarchive.c` to write
+  archives with unsafe names. `bindings/python/test_kolmo.py` checks the refusal.
+
 - **Tables with a field over 64 KiB now decompress.** 0.0.2 compressed them without error but could not decompress
   them ("corrupt or unsupported input"). This affected any CSV or TSV whose rows all have the same number of fields
   and that holds one field longer than 65,535 bytes, at levels 3 to 9 (the table transform).
@@ -25,9 +48,132 @@
   - **The yanked 1.0.0 and 1.0.1 are affected too**, in every mode but `ultra`. 0.0.x does not read 1.x files, so the
     README's recipe for moving 1.x files now sets `CZN_OLDTBL=1`, which makes kolmoc 1.0.1 decode such tables through
     its row path.
+- **Decoder hardening from the 40-reviewer review (SYNTHESIS.md bugs 6, 7, 8, 10, 16).** Every frame the corpus holds
+  and every frame 0.0.1 and 0.0.2 can write decodes as before (`tests/v12`); only frames no encoder writes are refused.
+  Regression tests in `make check` (`test-decoder-hardening`, with the reviewers' frames in `tests/vectors/review40/`).
+  - **The library no longer calls `abort()`.** The audio coder (codec 19) stopped the host process when an allocation
+    failed; every allocation in it now unwinds (decode: an error; encode: the block takes another codec).
+    `tests/check_no_abort.sh` keeps `abort`/`exit` out of the library. The KAU1 stream's chunk size is capped at the
+    2^18 sample frames every encoder writes: a forged 2^30 chunk asked for 16 GiB (SPEC.md, *Audio blocks*).
+  - **Video frames (codec 20) obey `max_memory`.** They were decoded before the frame was admitted: a 1,483-byte frame
+    peaked at 353 MiB under a 64 MiB limit. Now refused at 1 MiB; the nested frame decodes under what the outer
+    buffers leave of the limit.
+  - **FASTQ family blocks (codec 16) obey `-M` with several threads.** A block ran up to `threads / blocks` model jobs
+    at once but counted one (702 MB under `-M 240M` at `-T 8`). Each extra job is now reserved with the memory
+    governor and runs only if it fits; at `-M 240M -T 8` the peak is 160 MB, as at `-T 1`. Output is unchanged.
+  - **A frame's mode now bounds its decode cost class.** A graph block with a context-mixing leaf in a frame whose
+    header is not ultra is refused (FORMAT.md 7.4): only ultra level 2 writes such leaves. A 1,558-byte "fast" frame
+    took 4.7 s; it is now refused at once.
+  - **Stricter blocks.** A stored block whose plan is not `0,0,0,0` or whose tflag is not 0 (FORMAT.md 7.1, which
+    already said so) and codecs 14 (rANS) and 27 (khuf) as block codecs (FORMAT.md 8.1) are refused. Plan 7's
+    parameters stay ignored on read, because the 0.0.x planners could write a losing shuffle plan's `a, b, c` there;
+    the encoder now writes `7,0,0,0` (FORMAT.md 19.3).
+
+- **Data after a `--stream` file is no longer dropped.** 0.0.2 stopped at the end of the first CZNS stream and
+  exited 0, so `kolmo -dc` of two appended `--stream` outputs, or of a stream followed by a frame, returned only the
+  first part; `-t` and `-l` reported success. Pipes over 256 MiB are written as streams by default, so
+  `cat big | kolmo >> a.kolmo` was enough (review R30 #125).
+  - The rule (FORMAT.md 10.1): a file is one or more members, CZNS streams or CZN1 frames, decoded in order, as gzip,
+    xz and zstd decode concatenated files and as `kolmo -d` already decoded concatenated frames. Any other bytes after
+    a member are an error (exit 1), never skipped.
+  - `kolmo -d`, `-t` and `-l` and `kolmo_stream_decompress` read every member: stream then stream, stream then frame,
+    frame then stream (refused as corrupt before), and a frame with container extensions followed by another
+    member. `-l` counts the frames and streams. A `kolmo archive` frame is refused before or after a stream, as
+    it is alone.
+  - No file decodes to different bytes: files that were cut short now decode in full, and the bytes after a member
+    that starts no member, ignored before, are refused.
+- **Stream decoding stays inside `-M`.** The CZNS decoder held one output window of a block per thread outside the
+  memory limit: 1,283 MiB peak under `-M 256M` at `-T 10` for a stream of 64 MiB blocks (review R23 #114 B2). The
+  window and the blocks decoding at once now share the limit (fewer threads and a smaller window under a tight
+  limit); the same file peaks at 130 MiB. Without `-M`, the default limit (half the machine) applies as before.
+
+### Added
+
+- **`kolmo_frame_cost`: decode work before decoding** (`kolmo.h`, SECURITY.md *Decode work*). Decoding time follows
+  the decoded bytes of each coder family, not the compressed size: a valid 5,978-byte context-mixing frame decodes
+  16 MiB in about 21 s. The function walks one frame (graph leaves and video frames included) and reports its decoded
+  bytes as fast (LZ, Huffman, rANS, store), sort (BWT, KLZMA, audio profile 0) and model (context mixing, FASTQ
+  family, GR6+, kimg, audio profile 1). A service bounds work by refusing frames over its model-byte budget.
+
+### Encoder routing: nine planner and coder fixes from the 40-reviewer review (and two more)
+
+Encoder-only changes: every frame is still container version 12, and the 0.0.1 and 0.0.2 decoders read every frame
+written (checked by SHA-256 round trips on every changed frame). Each fix was measured on the reviewers' files for its
+data class and on the screening, held-out and domain corpora (48 files, 791 MB) at every level. Over those corpora
+nine of the fixes change no frame at all; the others change level 8 (-2.2%) and two files at level 7 (-0.06%).
+Tables, per file and level, are in `benchmark/routing/RESULTS.md`. The CI size ledger (`benchmark/ledger/sizes.tsv`)
+changes in 14 entries, all smaller. `benchmark/determinism/expected.sha256` is regenerated for the 14 settings these
+fixes change.
+
+- **Logs that look like tables get the log template** (#76). A log whose head splits into space-separated fields was
+  planned as a table before the template transform was tried. Both are now scored on one slice, and the template
+  wins when 10% smaller. Loghub BGL 10 MB: -3 -55.7%, -9 -35.0%, ultra -13.4%, and about twice as fast to compress.
+- **Record layouts must hold across the file** (#144). The record transform was chosen on one middle slice, which
+  in columnar files (Arrow IPC, ORC, Parquet) can be a single column buffer. It must now also win on 7 of 8 spread
+  slices. GHCN Arrow IPC -9 -39.5%, ORC -3/-9 -34%/-35%, Parquet -9 -7.7%.
+- **KLZH2's literal floor is chosen per input** (#148, levels 5-7). The 2-bit floor that the code comment described
+  was never applied, and a uniform 2 bits costs raw video 2.8%. Two warm-up passes on the first 256 KiB now compare
+  the floors. Where 2 bits estimates at least 2% smaller, its statistics seed the parse; otherwise the parse starts as
+  before. kennedy.xls -7 132,595 -> 69,546 B (-47.5%); Canterbury -5..-7 -4.6% to -10.8%; corpora unchanged except two
+  frames at -7 (-0.06%). The warm-up costs up to twice the parse time on inputs under 256 KiB.
+- **Level 8 no longer forces block sorting on binary blocks** (#149). BWT is kept only where it is 2% smaller than
+  KLZMA 1, on the whole block up to 2 MiB and on a 512 KiB slice above. Corpora at -8: -2.2% (mozilla -9.8%, bf16
+  weights -10.9%, sao -5.5%), and -8 is no longer larger than -7 on them. Binary blocks coded with KLZMA 1 decode
+  several times faster than BWT, but compress more slowly.
+- **Floats whose mantissas are not random get the float graph** (#64). The trial required a random-looking mantissa,
+  so fp16 converted from bf16 and f32 upcast from bf16 were coded as bytes. fp16 weights -12% (-3) to -14% (-5..-7),
+  f32 upcast -6.0% at -3.
+- **Non-Latin UTF-8 is text** (#61). The text test now counts UTF-8 continuation bytes, and at levels 3-7 the word
+  transform tokenizes UTF-8 letters (text with 5% or more bytes >= 0x80, kept when the dictionary saves 15% on the
+  probe). Cyrillic prose -5 -24%, -7 -9%; Wikimedia pageviews -3..-7 -10..-15%; ultra -2..-4% on every UTF-8 file
+  measured (the context-mixing text mask). Levels 8-9 are unchanged for UTF-8 text.
+- **A text prefix no longer hides the machine code behind it** (#60). An input of 256 KiB or more whose head is text
+  but whose spread slices are not takes the binary route when its middle holds x86 call/jump opcodes. Text-headed
+  executables -9 -11.6%/-12.8%, -3..-7 -9..-13%. Other mixtures, such as a tar of text, a table and a number series,
+  keep the text route.
+- **DEC64 no longer skips the record trial** (#141). NCEP air float32 (exact and computed time slices interleaved)
+  at -3: 17.5 -> 13.7 MB (-21.8%). Levels 4-5 take other routes and are unchanged. Coding the two kinds of slices
+  apart inside one graph would gain more, but it needs a graph change.
+- **The wide-table veto at levels 8, 9 and ultra is checked on 2 MiB** (#62). A 384 KiB BWT slice vetoed a table
+  graph that is 14% smaller on 2 MiB. wide3.csv -8/-9 -21.8% (now below -7), ultra -9.2%.
+- **Tables with long rows are found** (#83). Fewer than 51 lines in the 64 KiB head meant no table at all, so the
+  field count is taken again on 1 MiB. A 200-column CSV: -37% to -63% at levels 3-9, ultra -13.5%.
+- **Small executables get their branch filters** (#82). The Mach-O, ELF and PE parsers now start at 4 KiB instead
+  of 1 MiB, and inputs under 256 KiB get the x86 call/jump trial. 75 macOS x86-64 tools of 32-256 KiB: -3.4% at -3 and
+  -9; 75 arm64 tools -0.9% (a content-based ARM64 detector is not done).
+
+- **The Python and Rust bindings read every file the command line writes.** `decompress`, `original_size` and
+  `read_range` failed with "corrupt or unsupported input" on `kolmo --stream` output (CZNS), which the CLI also
+  writes for any pipe over 256 MiB, and on concatenated frames (`cat a.kolmo b.kolmo`). They now decode one frame,
+  frames one after another and CZNS streams, in any order. Trailing bytes, truncated frames and a stream without its
+  terminator are still refused. Tests decode files written by the CLI (review40 synthesis, bug 11).
+- **A forged frame can no longer abort a Rust program or make Python reserve gigabytes.** A frame with a valid header
+  and index can claim up to 4 GiB per 16-byte index entry. Rust's `decompress` allocated the claim with
+  `vec![0u8; n]`, so a 1.3 MB frame claiming 2^48 bytes aborted the process. Python zero-filled the claim, so a 74-byte
+  frame cost 2 GiB of memory before it was refused. Both bindings still check every frame first. Rust then reserves
+  the output with `try_reserve_exact` (a refusal is error -4, `KOLMO_ERR_ALLOC`), and Python decodes into an
+  anonymous mapping. Neither touches the buffer before the decoder writes it, so a lying claim costs the pages
+  actually decoded: peak memory is 13 MiB instead of 1.8 GiB on the 74-byte frame. `read_range` does the same
+  (review40 synthesis, bug 5).
+- **`read_range` past the end gives error -16 (`KOLMO_ERR_RANGE`)** in both bindings, as in the C library, instead of
+  "corrupt or unsupported input".
+- **Rust: two versions of the crate can no longer share one C core.** The crate now declares `links = "kolmo"`, so
+  cargo refuses a dependency graph that holds two versions of it. Before, both linked one copy of the C core, silently,
+  which is undefined behaviour once `kolmo_params` changes (bug 12). `bindings/rust/links-check.sh` checks it in CI.
+- **Rust: cross builds compile the C core for the target.** `build.rs` ran the host's `cc` without a target, so
+  `cargo build --target x86_64-apple-darwin` on Apple silicon failed in `immintrin.h` (bug 15). It now uses the `cc`
+  crate as a build dependency. That crate passes the target triple, honours `CC_<target>`, `CFLAGS_<target>` and
+  `AR_<target>`, and follows cargo's jobserver. Frames are unchanged: the CLI cross-check is byte-identical at every
+  level. CI cross-builds the crate on each runner (x86-64 macOS from arm64, aarch64 Linux from x86-64, and the
+  reverse).
 
 ### Format
 
+- **Files of several members (FORMAT.md 10.1), and the `CZNS` header's reserved bytes (section 10).** A file is
+  one or more CZNS streams and CZN1 frames, decoded in order; other bytes after a member are an error. The stream
+  header's three reserved bytes and `segment_bytes` are ignored by decoders, as reserved frame header bytes are
+  (COMPATIBILITY.md rule 2 now names them); the stream version must be 1. `tests/format_reference.py` follows both
+  rules and checks 16 member and header cases built from corpus files.
 - **`FORMAT.md`: the specification of container version 12.** It is complete for the container layer: header, index,
   CRC-32C, `kolmo_khash64` written out with test vectors (`tests/khash64_vectors.txt`), plan prefix and transform flag
   rules, stored, self-contained, video and graph blocks, extensions, the `CZNS` stream and the declared decode working
@@ -88,11 +234,21 @@
   - All three kimg blocks of the corpus decode to their originals.
   - On mutated streams covering 1-4 channels, transforms 0-2 and the read-only version 1, the decoder agrees with
     the 0.0.2 C decoder.
+- **FORMAT.md section 24: context mixing**, codecs 7 (CM, models 1-4), 17 (CM with the image model) and 25 (CM over
+  parts), the coders of ultra. It covers the headers, bit histories, squash and stretch, hashed tables, mixers, priors,
+  APMs, the match model, every context hash, the image contexts and the arithmetic decoder. The mixer priors are
+  normative data in `tests/format_tables/cm_prior.json`. With it, every codec id is specified in FORMAT.md or SPEC.md,
+  and section 13 has nothing left to write out.
+  - `tests/cm_reference.py`, in `make check` (about 40 s), decodes 21 vectors in `tests/vectors/cm/` whole, and
+    the first 1024 bytes of every codec 7, 17 and 25 stream in the corpus. The vectors cover the models and headers
+    the 0.0.2 encoder no longer writes. They were made by the 0.0.2 encoder functions and checked by its decoders.
+  - `make check-cm-reference` decodes every corpus stream whole, in about 20 minutes.
+  - On 6,000 mutated streams it agrees with the 0.0.2 C decoders on every accept, refusal and output byte.
 - **FORMAT.md section 21: KLZMA (codec 24)**, the LZMA-class coder of levels 8-9. It covers the range decoder (which
   differs from LZMA's at the start and the end), contexts, literals, matches and repeat matches. 12 corpus blocks and
   8 graph leaves decode in the Python reference.
 - The new decoders agreed with the 0.0.2 C decoders on about 15,000 further mutated streams. `make check` now spends
-  about 30 s in `tests/coder_reference.py`. Left in FORMAT.md section 13: CMP (codec 25), which needs the context-mixing coder written out first.
+  about 30 s in `tests/coder_reference.py`.
 - **`tests/coder_reference.py`**: an independent Python decoder for those sections, written from the prose, in
   `make check` (about 10 s). It decodes every corpus block that uses KLZ or KLZH2:
   - blocks without a transform are compared with the original;
@@ -118,6 +274,25 @@
   `"ultra"`) and `threads`; each chunk is a plain Kolmo frame. Tests over 23 dtypes and 7 shapes, Zarr stores read
   back, and a one-thread benchmark against numcodecs' Zstd, Blosc and LZ4 (`bench.py`, results in its README: level 3
   is 1.1-1.7x smaller than zstd 19 on six of seven generated scientific arrays). CI: `.github/workflows/numcodecs-kolmo.yml`.
+
+### Tests and CI
+
+- **Size ledger** (`benchmark/ledger/`): the compressed size and SHA-256 of every committed corpus file (the
+  `tests/v12` originals: text, CSV, JSON, logs, FASTQ/FASTA, images, audio, video, numeric arrays, executables, a tar,
+  mixed binaries, edge cases) at levels 1-9 and ultra, plus a generated 12.4 MB multi-block input (levels 1-9, levels
+  8-9 with 4 MiB blocks, and 1 against 4 threads), 571 entries. CI fails when an entry grows or shrinks by more than
+  0.1% and 16 bytes unless the PR refreshes `sizes.tsv`, and prints the change per data kind and level in the job
+  summary, also against the base branch's ledger. About 20 s on an Apple M5, run on every CI platform
+  (`make check-ledger`).
+- **Level-order gate**, in the same run: no level is larger than the one below by more than 0.5% and 16 bytes. The 24
+  inversions on main today are listed with their causes in `level_order_exceptions.txt` (KLZH2 levels 4-7, the graph
+  coder's 3% rule at level 6, level 8's forced block sorting, level 9 keeping KLZMA where level 8 is 7-40% smaller,
+  ultra on two small graph-coded inputs); a listed one that disappears is reported so the list can be trimmed.
+- **Every file under `tests/v12` is hash-pinned** (`tests/v12.sha256`, checked by `make check`): the 0.0.1 frames at
+  the top, their MANIFEST and the 0.0.2 release directory with its originals. In a pull request the pin file is also
+  append-only against the base branch, so a frame and its pin cannot be rewritten together.
+- The CI fuzz campaign now also seeds from the 0.0.2 release frames (`tests/v12/r0.0.2/`, less the slow level 8, 9 and
+  ultra ones).
 
 ### Project
 
@@ -146,6 +321,18 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   at a time away from the end of the block.
 - **Level 8 codes 32 MiB block-sorting blocks** instead of 128 MiB. It needs about a third less memory (enwik8 RSS
   738 -> 489 MB), and -9 is now smaller than -8 on large text (enwik8 -8 21.97 MB, -9 20.80 MB; both were 20.80 MB).
+- **Threads that run out of blocks now help the blocks still running** (review40 #7). Before, each block got a fixed
+  share of the threads (`threads / blocks`, so 1 whenever there are more blocks than threads), and a long block at
+  levels 7-9 ran its match finder on one thread while the other threads sat idle. Now a thread that has no block left
+  gives itself to a shared budget, and the KLZMA (level 9) and KLZH2 (levels 5-7) match finders take helpers from
+  it while they run. Blocks also start longest first, inside a window that bounds the finished blocks held for an
+  earlier one (before, that reorder buffer was unbounded), and the decoder starts its longest blocks first. The output
+  is byte-identical at every level and thread count (`tests/test_elastic.c`, `benchmark/determinism`).
+  silesia.tar, wall time against main (`benchmark/review40/elastic-dispatch.md`): level 7 `-T 4` 24.0 -> 14.3 s,
+  `-T 10` 20.4 -> 7.9 s; level 9 `-T 4` 14.2 -> 8.4 s, `-T 10` 13.8 -> 6.6 s; level 9 decompression `-T 4`
+  1.32 -> 0.96 s. A 2.25 GB tar: level 7 `-T 10` 127 -> 103 s. Files coded as one long block of one kind (enwik8)
+  and `-T 1` are unchanged. The price is CPU time when helpers join (level 9 `-T 10` on silesia.tar: 28.8 -> 41.2 s
+  of CPU for 2.1x less wall time) and a higher peak when more of the large blocks run at once (up to +14%).
 
 ### Command line: a drop-in for tar, xz and gzip
 
@@ -164,6 +351,19 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
 - **SIGINT, SIGTERM and SIGHUP remove the staging file.** An interrupted `kolmo FILE` left a hidden `.kolmo-XXXXXX`
   file next to the output; it is now removed, as xz and gzip remove their partial output. A signal ignored at start
   (`nohup`) stays ignored.
+- **Levels 4-9 and ultra no longer hold the whole file in memory** (review40 #8). A regular file of 8 MiB or more is
+  compressed through the file path at every level, as levels 1-3 already were: blocks are read from the file and
+  written by offset. Before, these levels read the whole input and allocated an output buffer of the input's size.
+  The frames are byte-identical. Peak memory on silesia.tar at `-T 1`: level 4 527 -> 290 MiB, level 7 672 -> 486 MiB,
+  level 9 1,465 -> 1,276 MiB (`benchmark/review40/cli-bounded-memory.md`).
+- **`-t` and `-dc` no longer hold the decoded output** (review40 #104). `-t` decodes into `/dev/null`, and `-dc` (or
+  `-d` to standard output) writes the output in windows of whole blocks as it decodes them. Every frame is still
+  checked before anything is written. silesia.tar at `-1`, `-T 1`: `-t` 305 -> 14 MB, `-dc` 305 -> 37 MB; at `-4`:
+  `-t` 301 -> 70 MiB, `-dc` 301 -> 53 MiB; a 2.25 GB tar at `-4`, `-T 1`: `-t` 3,072 -> 381 MiB, `-dc` 3,072 -> 938 MiB.
+  A damaged block now stops `-dc` after the blocks before it were written, as with xz and zstd.
+- **macOS: files of 2 GiB or more now compress at levels 4-9 and ultra.** The in-memory path read the whole file with
+  one `read()`, which macOS refuses above 2 GiB ("Invalid argument"; Linux returns a short count, which was handled).
+  Reads and writes now go at most 1 GiB per call (`-c`, pipes and the library's positional I/O included).
 
 ### Integrations
 
@@ -233,6 +433,9 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   `docs/paper/figures/make_figures.py` from the raw 0.0.2 measurements in `docs/paper/data/`; `make -C docs/paper`
   builds the PDF with tectonic. Red TODO boxes mark where the x86-64 rerun, the trained-OpenZL rematch and the tuned
   levels will replace numbers.
+- **Paper: claims checked against the code review of main 52df50cf**: an archiver comparison (ultra against zpaq,
+  paq8px and the published context-mixing leaders), and limitations for small inputs, cross-block redundancy, misrouted
+  inputs, the level-9 thread cap, decode-work and memory-limit holes and platform reach.
 
 ### Security and releases
 

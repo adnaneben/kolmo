@@ -1,5 +1,35 @@
 /* Content detection used by the planner and by the codecs (text, JSON). */
-static int looks_text(const uint8_t *s, size_t n) {          /* >= 95% printable in 4 slices of 16 KB */
+/* bytes of s[0..m) that read as text: printable ASCII, tab, newline, carriage return, and the bytes of UTF-8 sequences
+ * (a lead byte 0xC2-0xF4 with its continuation bytes 0x80-0xBF). lat: a lead byte >= 0xC2 counts on its own too
+ * (Latin-1 letters), as looks_text always did. Continuation bytes counted nowhere before 0.0.3, so non-Latin UTF-8
+ * prose (Cyrillic, Greek, CJK: half or more of its bytes are continuations) went the binary route. */
+static size_t text_bytes(const uint8_t *s, size_t m, int lat) {
+    size_t pr = 0, i = 0;
+    while (i < m && (s[i] & 0xC0) == 0x80 && i < 3) { pr++; i++; }     /* the tail of a sequence cut by the slice start */
+    while (i < m) {
+        uint8_t c = s[i];
+        if (c < 0x80) { pr += (c >= 32 && c < 127) || c == 9 || c == 10 || c == 13; i++; continue; }
+        size_t k = c >= 0xC2 && c <= 0xDF ? 1 : c >= 0xE0 && c <= 0xEF ? 2 : c >= 0xF0 && c <= 0xF4 ? 3 : 0, j = 1;
+        while (j <= k && i + j < m && (s[i + j] & 0xC0) == 0x80) j++;
+        if (k && (j == k + 1 || i + j == m)) { pr += j; i += j; continue; }   /* a whole sequence (or one cut by the slice end) */
+        pr += lat && c >= 0xC2; i++;
+    }
+    return pr;
+}
+static int looks_text(const uint8_t *s, size_t n) {          /* >= 95% text bytes (text_bytes) in 4 slices of 16 KB */
+    if (n < 4096) return 0;
+    size_t tot = 0, pr = 0;
+    for (int k = 0; k < 4; k++) {
+        size_t st = n / 4 * k, m = n - st < 16384 ? n - st : 16384;
+        pr += text_bytes(s + st, m, 1);
+        tot += m;
+    }
+    return pr * 100 >= tot * 95;
+}
+/* looks_text before 0.0.3: printable ASCII and lead bytes >= 0xC2, no continuation bytes. Max's block-sorting rules
+ * keep it: for UTF-8 text they leave the choice to the BWT/LZMA2 trial, which coded a pageviews dump 0.9% smaller
+ * than forced block sorting */
+static int looks_text_latin(const uint8_t *s, size_t n) {
     if (n < 4096) return 0;
     size_t tot = 0, pr = 0;
     for (int k = 0; k < 4; k++) {

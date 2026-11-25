@@ -2,6 +2,7 @@
    Format and design in klzma.h. Written for Kolmo; no code from liblzma or the LZMA SDK. Prices use integer
    arithmetic only, so the parse (and the output) is the same on every CPU and compiler. */
 #include "klzma.h"
+#include "par.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -146,14 +147,11 @@ static uint32_t km_bt(km_mf *M, uint32_t p, uint32_t lim, uint32_t best, km_m *o
 #define KM_MT_MIN (1u << 20)   /* the threaded finder from inputs of this size (it starts K threads per call) */
 #endif
 typedef struct { km_m *m; size_t len, cap; } km_ar;
-typedef struct { struct km_mt *Q; int t; } km_mtarg;
 typedef struct km_mt {
-    km_mf *M; uint32_t np, nch; int K, nth, go, err, stop;   /* np: positions with 4 bytes; nth: workers started; go: all started */
-    uint32_t released, done[KM_MTR], ready;   /* chunks below released are consumed; ready: chunks complete, in order */
-    km_ar ar[KM_MTMAXK][KM_MTR];   /* per worker and slot: for each of its positions {offset in chunk, count}, the matches */
-    uint32_t cj, cur[KM_MTMAXK];   /* the parse: its chunk (complete) and read position per worker */
-    pthread_mutex_t mu; pthread_cond_t cv;
-    pthread_t th[KM_MTMAXK]; km_mtarg arg[KM_MTMAXK];
+    km_mf *M; uint32_t np, nch; int K;   /* np: positions with 4 bytes; K: bucket classes (bucket h is class h % K) */
+    kolmo_cp *cp;                        /* the pipeline running class c's chunks in order on any thread (algo/par.h) */
+    km_ar ar[KM_MTMAXK][KM_MTR];   /* per class and slot: for each of its positions {offset in chunk, count}, the matches */
+    uint32_t cj, cur[KM_MTMAXK];   /* the parse: its chunk (complete) and read position per class */
 } km_mt;
 /* a worker: insert p (p + 4 <= n) into its tree or chain; out: the matches longer than the last */
 static uint32_t km_ins(km_mf *M, uint32_t p, km_m *out) {
@@ -171,66 +169,48 @@ static uint32_t km_ins(km_mf *M, uint32_t p, km_m *out) {
     }
     return nm;
 }
-static void *km_mt_worker(void *a) {
-    km_mt *Q = ((km_mtarg *)a)->Q; const int t = ((km_mtarg *)a)->t;
-    km_mf *M = Q->M; const uint32_t K = (uint32_t)Q->K, dmax = (uint32_t)M->depth + 2;
-    for (uint32_t j = 0; j < Q->nch; j++) {
-        pthread_mutex_lock(&Q->mu);
-        /* chunk j reuses chunk j - KM_MTR's slot: that chunk must be complete (ready) and consumed (released) */
-        while (!Q->stop && (!Q->go || j >= (Q->released < Q->ready ? Q->released : Q->ready) + KM_MTR)) pthread_cond_wait(&Q->cv, &Q->mu);
-        const int stop = Q->stop; pthread_mutex_unlock(&Q->mu);
-        if (stop) break;
-        const int sl = (int)(j % KM_MTR); km_ar *A = &Q->ar[t][sl]; A->len = 0;
-        const uint32_t c0 = j * KM_MTC, c1 = c0 + KM_MTC < Q->np ? c0 + KM_MTC : Q->np;
-        int bad = 0;
-        for (uint32_t p = c0; p < c1; p++) {
-            if (KM_H4(M, M->in + p) % K != (uint32_t)t) continue;
-            if (A->len + dmax + 1 > A->cap) {
-                size_t nc = A->cap ? 2 * A->cap : (size_t)KM_MTC; while (nc < A->len + dmax + 1) nc *= 2;
-                km_m *g = realloc(A->m, nc * sizeof *g); if (!g) { bad = 1; break; }
-                A->m = g; A->cap = nc;
-            }
-            km_m *e = A->m + A->len;   /* each worker writes only its own arena */
-            const uint32_t nm = km_ins(M, p, e + 1);
-            e->len = p - c0; e->dist = nm; A->len += 1 + nm;
+/* chunk j for the classes in mask (on a helper, or on the parse when no helper took them); each class writes only
+ * its own arena */
+static int km_mt_run(void *ctx, unsigned j, unsigned mask) {
+    km_mt *Q = ctx; km_mf *M = Q->M; const uint32_t K = (uint32_t)Q->K, dmax = (uint32_t)M->depth + 2;
+    const int sl = (int)(j % KM_MTR);
+    for (uint32_t t = 0; t < K; t++) if (mask >> t & 1) Q->ar[t][sl].len = 0;
+    const uint32_t c0 = j * KM_MTC, c1 = c0 + KM_MTC < Q->np ? c0 + KM_MTC : Q->np;
+    for (uint32_t p = c0; p < c1; p++) {
+        const uint32_t t = KM_H4(M, M->in + p) % K;
+        if (!(mask >> t & 1)) continue;
+        km_ar *A = &Q->ar[t][sl];
+        if (A->len + dmax + 1 > A->cap) {
+            size_t nc = A->cap ? 2 * A->cap : (size_t)KM_MTC; while (nc < A->len + dmax + 1) nc *= 2;
+            km_m *g = realloc(A->m, nc * sizeof *g); if (!g) return 1;
+            A->m = g; A->cap = nc;
         }
-        pthread_mutex_lock(&Q->mu);
-        if (bad) { Q->err = 1; Q->stop = 1; pthread_cond_broadcast(&Q->cv); pthread_mutex_unlock(&Q->mu); break; }
-        if (++Q->done[sl] == K) { Q->done[sl] = 0; Q->ready = j + 1; pthread_cond_broadcast(&Q->cv); }
-        pthread_mutex_unlock(&Q->mu);
+        km_m *e = A->m + A->len;
+        const uint32_t nm = km_ins(M, p, e + 1);
+        e->len = p - c0; e->dist = nm; A->len += 1 + nm;
     }
-    return NULL;
+    return 0;
 }
 static void km_mt_end(km_mt *Q) {
     if (!Q) return;
-    pthread_mutex_lock(&Q->mu); Q->stop = 1; pthread_cond_broadcast(&Q->cv); pthread_mutex_unlock(&Q->mu);
-    for (int t = 0; t < Q->nth; t++) pthread_join(Q->th[t], NULL);
+    kolmo_cp_end(Q->cp);
     for (int r = 0; r < KM_MTR; r++) for (int t = 0; t < KM_MTMAXK; t++) free(Q->ar[t][r].m);
-    pthread_mutex_destroy(&Q->mu); pthread_cond_destroy(&Q->cv); free(Q);
+    free(Q);
 }
-/* K workers for M (tables initialised, nothing inserted); NULL when they cannot start: the parse then runs on one thread */
-static km_mt *km_mt_start(km_mf *M, int K) {
+/* K classes for M (tables initialised, nothing inserted), `passes` helpers always running and the others on tokens of
+ * b; NULL when the helpers cannot start: the parse then runs on one thread */
+static km_mt *km_mt_start(km_mf *M, int K, int passes, kolmo_budget *b) {
     km_mt *Q = calloc(1, sizeof *Q); if (!Q) return NULL;
     Q->M = M; Q->K = K; Q->np = M->n >= 4 ? M->n - 3 : 0; Q->nch = (Q->np + KM_MTC - 1) / KM_MTC; Q->cj = UINT32_MAX;
-    if (pthread_mutex_init(&Q->mu, NULL)) { free(Q); return NULL; }
-    if (pthread_cond_init(&Q->cv, NULL)) { pthread_mutex_destroy(&Q->mu); free(Q); return NULL; }
-    for (int t = 0; t < K; t++) {
-        Q->arg[t].Q = Q; Q->arg[t].t = t;
-        if (pthread_create(&Q->th[t], NULL, km_mt_worker, &Q->arg[t])) { km_mt_end(Q); return NULL; }   /* none touched a table */
-        Q->nth = t + 1;
-    }
-    pthread_mutex_lock(&Q->mu); Q->go = 1; pthread_cond_broadcast(&Q->cv); pthread_mutex_unlock(&Q->mu);
+    Q->cp = kolmo_cp_start(K, Q->nch, KM_MTR, passes, b, km_mt_run, Q);
+    if (!Q->cp) { free(Q); return NULL; }
     return Q;
 }
 /* the parse: p's matches from its worker (p + 4 <= n, positions taken in increasing order), those longer than best */
 static uint32_t km_mt_take(km_mf *M, uint32_t p, km_m *out, uint32_t nm, uint32_t best) {
     km_mt *Q = M->mt; const uint32_t j = p / KM_MTC; const int sl = (int)(j % KM_MTR);
-    if (j != Q->cj) {   /* a new chunk: release the earlier ones, wait until this one is complete */
-        pthread_mutex_lock(&Q->mu);
-        if (Q->released < j) { Q->released = j; pthread_cond_broadcast(&Q->cv); }
-        while (Q->ready <= j && !Q->err) pthread_cond_wait(&Q->cv, &Q->mu);
-        const int err = Q->err; pthread_mutex_unlock(&Q->mu);
-        if (err) { M->mterr = 1; return nm; }
+    if (j != Q->cj) {   /* a new chunk: release the earlier ones; run or wait for this one */
+        if (kolmo_cp_need(Q->cp, j)) { M->mterr = 1; return nm; }
         Q->cj = j; memset(Q->cur, 0, sizeof Q->cur);
     }
     const uint32_t t = KM_H4(M, M->in + p) % (uint32_t)Q->K, k = p - j * KM_MTC;
@@ -444,6 +424,9 @@ static const struct { int depth, nice, bt; } KM_LV[10] = {{0, 0, 0}, {4, 16, 0},
 size_t kolmo_klzma_bound(size_t n) { return n + n / 64 + 1024; }
 size_t kolmo_klzma_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kolmo_klzma_compress_mt(in, n, out, cap, level, 1); }
 size_t kolmo_klzma_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads) {
+    return kolmo_klzma_compress_el(in, n, out, cap, level, threads, threads - 1, NULL);
+}
+size_t kolmo_klzma_compress_el(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int passes, kolmo_budget *budget) {
     int lc = 3, lp = 0, pb = 2;
     if (level >= 1000) { int q = level / 10; lc = (q / 100) % 10 - 1; lp = (q / 10) % 10; pb = q % 10; level %= 10; }
     if (level < 1) level = 1;
@@ -459,7 +442,7 @@ size_t kolmo_klzma_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t
     memset(M->h4, 0xFF, sizeof(uint32_t) << hlog); memset(M->h3, 0xFF, sizeof(uint32_t) << 16); memset(M->h2, 0xFF, sizeof(uint32_t) << 16);
     {   /* K workers beside the parse (not with two threads: one worker beside the parse gained nothing in KLZH2) */
         int K = threads >= 3 ? threads - 1 : 0; if (K > KM_MTMAXK) K = KM_MTMAXK;
-        if (K > 0 && n >= KM_MT_MIN) M->mt = km_mt_start(M, K);
+        if (K > 0 && n >= KM_MT_MIN) M->mt = km_mt_start(M, K, passes, budget);
     }
     for (uint32_t i = 0; i < (KM_ONE >> 4); i++) E->ptab[i] = (uint16_t)km_price_of((i << 4) + 8);
     out[0] = (uint8_t)(lc + 9 * (lp + 5 * pb));

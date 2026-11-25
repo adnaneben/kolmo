@@ -32,6 +32,32 @@ Kolmo is pre-1.0 and fixes go into the latest release only.
 The frame format (container version 12) is stable (COMPATIBILITY.md), so upgrading never loses the ability to read
 existing frames.
 
+## Decode work and memory
+
+What a decoder bounds for untrusted frames, and what the caller must bound itself:
+
+- **Output size**: `kolmo_decode_limits.max_output_bytes` (and `max_block_bytes`, `max_blocks`), checked from the
+  header before anything is allocated. A frame's size says nothing about its decoded size (a 29-byte block can code
+  16 MiB), so set it.
+- **Memory**: `max_memory` (CLI `-M`). Every frame, video frames included, is admitted from the figure its header
+  declares before any allocation, and each block (and each extra FASTQ model job) is reserved with the memory
+  governor. The library never calls `abort()` or `exit()`; an allocation that fails returns `KOLMO_ERR_ALLOC`.
+- **Work (CPU)**: not bounded inside the decoder. Decoding time follows the decoded bytes of each coder family:
+  hundreds of MB/s and up for Kolmo's LZ and Huffman/rANS coders, tens to hundreds of MB/s for BWT and KLZMA, and
+  about 0.5 to 10 MB/s per core for context mixing and the other model coders (ultra, and some blocks at levels 8 and
+  9). A valid 5,978-byte context-mixing frame decodes 16 MiB of zeros in about 21 s. To bound it:
+  - call `kolmo_frame_cost` before decoding and refuse a frame whose `bytes[KOLMO_COST_MODEL]` (or
+    `bytes[KOLMO_COST_SORT]`) exceeds your budget; nothing is decoded or allocated beyond the index;
+  - the header's mode is now a cost signal: a frame of modes rt to max (levels 1 to 9) cannot hold a context-mixing
+    graph leaf (FORMAT.md 7.4), so its model bytes come only from block codecs the index names;
+  - run decoding of untrusted input under a time limit of your own (a worker process or thread you can stop) if a
+    budget by bytes is not enough.
+
+  Not done, and why: a work counter inside the decoders (stopping a context-mixing stream part way) would have to be
+  threaded through every coder's inner loop and checked per bit, for a bound the byte count already gives before
+  decoding starts, since each class decodes at a steady rate per byte. It may come later as a decode option; the
+  frame format does not need to change for it.
+
 ## Fuzzing
 
 The decoders are fuzzed continuously, with the targets in `fuzz/` built by `fuzz/build.sh`:

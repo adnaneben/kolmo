@@ -127,8 +127,9 @@ blocks that contain no newline). Files with a tflag 10 block are version 6.
 ## Entropy coders
 
 `STORE` is the raw block. KLZ (28), KLZH (29), KLZH2 (32), KLZMA (24) and khuf (27) are Kolmo's own LZ, LZMA-class and
-Huffman coders. KLZ, KLZH, KLZH2, khuf and krans are specified in FORMAT.md sections 14 to 18; KLZMA's format is in
-`src/algo/klzma.h`.
+Huffman coders. KLZ, KLZH, KLZH2, khuf and krans are specified in FORMAT.md sections 14 to 18, and KLZMA in section
+21. The BWT stream (18), kimg (31) and the context-mixing coders CM (7), CMI (17) and CMP (25) are written out bit by
+bit in FORMAT.md sections 22 to 24; the CM text below is the design summary.
 (History: versions 1–11 also had `LZ4`/`LZ4HC`, `ZSTD`, `BROTLI` and `LZMA2`, the standard formats of the vendored
 libraries; version 12 does not read them.) `BSC` is libbsc 3.4.0's block-sorting stream (written and read by Kolmo's C port in `src/codecs/bwt.c`), prefixed with the low 32 bits of `kolmo_khash64` of the stream (seed `0x62736331`; XXH64 before version 12), checked before
 decoding; from rc3 it is read only. `BWT` (codec 18, container version 11) is Kolmo's own block-sorting stream
@@ -562,7 +563,7 @@ A block with codec 19 has plan prefix `0, 0, 0, 0` and tflag 0; its payload is o
 kaud research tool; `src/codecs/audio.c` is the library port, `src/experimental/KAUD.md` describes the stream in full):
 
 ```
-"KAU1" | version u8 (1) | profile u8 (0, 1) | channels u8 (1, 2) | log2 chunk u8 (8-30) | frame u16 (16-32768)
+"KAU1" | version u8 (1) | profile u8 (0, 1) | channels u8 (1, 2) | log2 chunk u8 (8-18) | frame u16 (16-32768)
 | effort u8 | lpc order u8 | mu u16 * 3 | sign-sign step u16 | adaptation cap u8 (must be 7) | split depth u8 (0-5)
 | sample frames u64 | stage-0 taps u16 | stage-1, stage-2 taps u8 * 2 | cross taps u8 * 2 | combiner step u8
 | H u32 | H bytes (block bytes before the first sample) | T u32 | T bytes (after the last sample frame)
@@ -570,6 +571,8 @@ kaud research tool; `src/codecs/audio.c` is the library port, `src/experimental/
 ```
 
 The samples are 16-bit little-endian, interleaved; H + 2 x channels x frames + T must equal the block's raw length.
+Every encoder writes log2 chunk 18. Decoders from the Unreleased fix on refuse values above 18 (0.0.1 and 0.0.2
+accepted up to 30): a chunk costs the decoder 16 bytes per sample frame, so a forged 2^30 chunk asked for 16 GiB.
 The encoder writes codec 19 for every block of a 16-bit PCM WAV file (mono or stereo, `WAVE_FORMAT_PCM` or
 extensible PCM) that holds more than 1024 whole sample frames, when it is smaller than the block coded otherwise;
 profile 0 up to `hc`, profile 1 at `max` and `ultra`. Block boundaries need not fall on sample frames: the bytes
@@ -774,4 +777,5 @@ table := chunks uv | (length uv | check u32) * chunks | files uv
 Chunk `i` occupies the store bytes after chunks `0 .. i−1`; lengths are at least 1 and add up to the store size.
 `check` is the low 32 bits of `kolmo_khash64` (XXH3-64 before version 12) of the chunk with seed `0x64647031`, verified when the chunk is extracted. A file is
 the concatenation of its chunks; their lengths must add up to its size. Names are at most 4096 bytes without NUL; the
-command line extracts only relative names without a `..` component.
+command line extracts only relative names without a `..` component, never through a symbolic link, and refuses
+to decode such a file as one compressed file (`kolmo -d`, `-t`, `-l`).

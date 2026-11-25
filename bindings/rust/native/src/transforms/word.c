@@ -7,6 +7,10 @@
 #define WD_MAXCODES (64 * 256)
 
 static inline int is_alpha(uint8_t c) { return (uint8_t)((c | 32) - 'a') < 26; }
+/* a word byte for the tokenizer: an ASCII letter, or (u8: text with 5% or more bytes >= 0x80, UTF-8 prose in a non-Latin
+ * script) any byte >= 0x80, so Cyrillic, Greek or CJK words become dictionary entries too. Encoder only: the decoder
+ * copies a dictionary entry's bytes whatever they are (Cyrillic dickens -5: -24%). */
+static inline int wd_alpha(uint8_t c, int u8) { return is_alpha(c) || (u8 && c >= 0x80); }
 static inline int cap_norm(const uint8_t *w, uint32_t n) {          /* Upper followed by lower case only */
     if (n < 2 || (uint8_t)(w[0] - 'A') >= 26) return 0;
     for (uint32_t i = 1; i < n; i++) if ((uint8_t)(w[i] - 'a') >= 26) return 0;
@@ -36,6 +40,8 @@ static int64_t word_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap
         }
     }
     if (capb < 0 || np < 1) return -1;
+    size_t hi = 0; for (int c = 0x80; c < 256; c++) hi += used[c];
+    const int u8 = hi * 20 >= n;
     /* count words (lower-cased when capitalised) */
     size_t tcap = 1 << 20; while (tcap < (n < (4u << 20) ? n : (4u << 20)) / 4) tcap <<= 1;
     went_t *tab = calloc(tcap, sizeof(went_t)); uint8_t *lw = malloc(WD_MAXW + 1); size_t nent = 0;
@@ -44,10 +50,10 @@ static int64_t word_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap
     size_t SL = n <= (4u << 20) ? n : (1u << 20), NS = n <= (4u << 20) ? 1 : 4;     /* count on a sample */
     for (size_t sp = 0; sp < NS; sp++) {
     size_t i = NS == 1 ? 0 : (n - SL) / 3 * sp, iend = i + SL;
-    while (i > 0 && i < n && is_alpha(in[i])) i++;                                 /* start at a word boundary */
+    while (i > 0 && i < n && wd_alpha(in[i], u8)) i++;                                 /* start at a word boundary */
     while (i < iend) {
-        if (!is_alpha(in[i])) { i++; continue; }
-        size_t s = i; while (i < n && is_alpha(in[i])) i++;
+        if (!wd_alpha(in[i], u8)) { i++; continue; }
+        size_t s = i; while (i < n && wd_alpha(in[i], u8)) i++;
         uint32_t L = (uint32_t)(i - s); if (L < 3 || L > WD_MAXW) continue;
         const uint8_t *w = in + s;
         int cn = cap_norm(w, L); uint64_t h = wd_hash(w, L, cn);
@@ -93,12 +99,12 @@ static int64_t word_encode(const uint8_t *in, size_t n, uint8_t *dst, size_t cap
             o += e->len; *o++ = '\n';
         }
         for (size_t i = 0; i < n;) {
-            if (!is_alpha(in[i])) {
-                size_t s = i; while (i < n && !is_alpha(in[i])) i++;
+            if (!wd_alpha(in[i], u8)) {
+                size_t s = i; while (i < n && !wd_alpha(in[i], u8)) i++;
                 if ((size_t)(oe - o) < i - s) goto done;
                 memcpy(o, in + s, i - s); o += i - s; continue;
             }
-            size_t s = i; while (i < n && is_alpha(in[i])) i++;
+            size_t s = i; while (i < n && wd_alpha(in[i], u8)) i++;
             uint32_t L = (uint32_t)(i - s); const uint8_t *w = in + s; uint32_t code = UINT32_MAX; int cn = 0;
             if (L >= 3 && L <= WD_MAXW) {
                 cn = cap_norm(w, L); uint64_t h = wd_hash(w, L, cn);

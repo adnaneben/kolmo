@@ -1,0 +1,14 @@
+{
+ "_source": "Published figures, read 2026-11-24: Large Text Compression Benchmark https://mattmahoney.net/dc/text.html and Silesia Open Source Compression Benchmark https://mattmahoney.net/dc/silesia.html (via evidence/ARCHIVERS_2026-11-24.md). Other machines and versions: rank, not a measured gap.",
+ "enwik8": {
+  "cmix v21": 14623723,
+  "nncp v3.2": 14915298,
+  "paq8px_v206fix1 -12L": 15849084,
+  "mcm 0.83 -x11": 18233295
+ },
+ "silesia": {
+  "paq8px_v217 -12L": 27682006,
+  "precomp+cmix v21": 28261094,
+  "precomp+zpaq -method 7": 36603712
+ }
+}

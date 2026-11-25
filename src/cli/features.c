@@ -1,13 +1,17 @@
 /* Command line for queryable and deduplicating archives (called from cli.c before its own option parsing):
  *
- *   kolmo --index [LEVEL] [-T n] [--block-size MiB] [--no-filter] [--token-bits K] [--delim C] [--kind lines|table|json] in out.kol
+ *   kolmo --index [LEVEL] [-f] [-T n] [--block-size MiB] [--no-filter] [--token-bits K] [--delim C] [--kind lines|table|json] in out.kol
  *   kolmo cat  [--col NAME|#N] [--rows A-B] [-n] [-c] [--no-index] [--stats] [-T n] file.kol
  *   kolmo grep [-F] [-i] [-w] [-n] [-c] [--col NAME|#N] [--rows A-B] [--no-index] [--stats] [-T n] PATTERN file.kol
- *   kolmo archive  [LEVEL] [-T n] [--block-size MiB] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files-or-dirs...
+ *   kolmo archive  [LEVEL] [-f] [-T n] [--block-size MiB] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files-or-dirs...
  *   kolmo extract  [-T n] [-C dir] archive.kol [names...]
  *   kolmo contents archive.kol
  *
  * LEVEL: -1 .. -9, -F -L -B -C -X -U, --level N|ultra (default 3, light), --codec-level N, as in the main command line.
+ * The outputs of --index and archive are staged and published as the main command line publishes its own: an existing
+ * output is replaced only with -f (--force). extract never writes outside its directory: a stored name that is
+ * absolute or has a ".." component is skipped, and so is a path through a symbolic link; an existing file at the
+ * name is replaced (unlinked first, as tar does), never written through.
  * Rows are numbered from 1 here (line 1 is the first line of the file); A-B is inclusive, A- runs to the end.
  * Licence: Apache-2.0. */
 #define _GNU_SOURCE 1
@@ -43,11 +47,18 @@ static int fc_open(const char *path, fc_file *f) {
     close(fd); return 0;
 }
 static void fc_close(fc_file *f) { if (f->mapped) munmap(f->p, f->n); else free(f->p); }
-static int fc_write(const char *path, const uint8_t *p, size_t n) {
-    FILE *o = fopen(path, "wb"); if (!o) { perror(path); return -1; }
-    int bad = n && fwrite(p, 1, n, o) != n; if (fclose(o)) bad = 1;
-    if (bad) perror(path);
-    return bad ? -1 : 0;
+int kolmo_cli_publish(const char *path, const uint8_t *p, size_t n, int force);     /* cli.c: staged output */
+/* an output that exists is refused before any work is done (kolmo_cli_publish checks again when it publishes) */
+static int fc_exists(const char *out, int force) {
+    struct stat st;
+    if (force || lstat(out, &st)) return 0;
+    fprintf(stderr, "kolmo: %s: already exists; use -f to overwrite\n", out); return 1;
+}
+/* a whole decimal number in [lo, hi] (atoi took "abc" as 0); -2 after reporting a usage error */
+static int fc_num(const char *opt, const char *v, long lo, long hi, int *out) {
+    char *e; long x = strtol(v, &e, 10);
+    if (!*v || *e || x < lo || x > hi) { fprintf(stderr, "kolmo: %s: a number from %ld to %ld, got '%s'\n", opt, lo, hi, v); return -2; }
+    *out = (int)x; return 0;
 }
 static int fc_sink(void *ctx, const uint8_t *p, size_t n) { return fwrite(p, 1, n, (FILE *)ctx) != n; }
 
@@ -95,10 +106,10 @@ static void fc_params(kolmo_params *P, int level, int codec_level, uint32_t bloc
 }
 static void fc_usage(void) {
     fprintf(stderr,
-        "usage: kolmo --index [LEVEL] [--block-size MiB] [--no-filter] [--token-bits K] [--delim C] [--kind lines|table|json] in out.kol\n"
+        "usage: kolmo --index [LEVEL] [-f] [--block-size MiB] [--no-filter] [--token-bits K] [--delim C] [--kind lines|table|json] in out.kol\n"
         "       kolmo cat  [--col NAME|#N] [--rows A-B] [-n] [-c] [--no-index] [--stats] file.kol\n"
         "       kolmo grep [-F] [-i] [-w] [-n] [-c] [--col NAME|#N] [--rows A-B] [--no-index] [--stats] PATTERN file.kol\n"
-        "       kolmo archive [LEVEL] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files-or-directories...\n"
+        "       kolmo archive [LEVEL] [-f] [--chunk KiB] [--no-line-cuts] [--stats] archive.kol files-or-directories...\n"
         "       kolmo extract [-C dir] archive.kol [names...]      kolmo contents archive.kol\n");
 }
 static void fc_stats(const kolmo_query_stats *s, double t) {
@@ -129,7 +140,7 @@ static int fc_query(int argc, char **argv, int grep) {
         else if (!strcmp(s, "-w") && grep) q.flags |= KOLMO_Q_WORD;
         else if (!strcmp(s, "--no-index")) q.flags |= KOLMO_Q_NOINDEX;
         else if (!strcmp(s, "--stats")) stats = 1;
-        else if (!strcmp(s, "-T") && a + 1 < argc) q.threads = atoi(argv[++a]);
+        else if (!strcmp(s, "-T") && a + 1 < argc) { if (fc_num("-T", argv[++a], 0, 4096, &q.threads)) return 2; }
         else if (s[0] == '-' && s[1]) { fc_usage(); return 2; }
         else if (grep && !q.pattern) q.pattern = s;
         else if (!path) path = s;
@@ -151,15 +162,16 @@ static int fc_query(int argc, char **argv, int grep) {
 
 static int fc_index(int argc, char **argv) {
     kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; kolmo_index_params I = {KOLMO_IDX_AUTO, 0, 1, 0};
-    const char *in = NULL, *out = NULL; int level = KOLMO_LEVEL_DEFAULT, clevel = 0; uint32_t block = 0;
+    const char *in = NULL, *out = NULL; int level = KOLMO_LEVEL_DEFAULT, clevel = 0, force = 0; uint32_t block = 0;
     for (int a = 1; a < argc; a++) {
         const char *s = argv[a]; int lo;
         if (!strcmp(s, "--index")) continue;
         if ((lo = fc_level_opt(s, argc, argv, &a, &level, &clevel, &block)) < 0) return 2;
         else if (lo) ;
-        else if (!strcmp(s, "-T") && a + 1 < argc) P.threads = atoi(argv[++a]);
+        else if (!strcmp(s, "-f") || !strcmp(s, "--force")) force = 1;
+        else if (!strcmp(s, "-T") && a + 1 < argc) { if (fc_num("-T", argv[++a], 0, 4096, &P.threads)) return 2; }
         else if (!strcmp(s, "--no-filter")) I.filter = 0;
-        else if (!strcmp(s, "--token-bits") && a + 1 < argc) I.token_bits = atoi(argv[++a]);
+        else if (!strcmp(s, "--token-bits") && a + 1 < argc) { if (fc_num("--token-bits", argv[++a], 0, 16, &I.token_bits)) return 2; }
         else if (!strcmp(s, "--delim") && a + 1 < argc) { const char *d = argv[++a]; I.delim = !strcmp(d, "\\t") || !strcmp(d, "tab") ? '\t' : (uint8_t)d[0]; if (!I.kind) I.kind = KOLMO_IDX_TABLE; }
         else if (!strcmp(s, "--kind") && a + 1 < argc) {
             const char *k = argv[++a];
@@ -171,21 +183,18 @@ static int fc_index(int argc, char **argv) {
     }
     if (!in || !out) { fc_usage(); return 2; }
     fc_params(&P, level, clevel, block);
+    if (fc_exists(out, force)) return 1;
     fc_file f; if (fc_open(in, &f)) return 1;
     size_t cap = kolmo_indexed_bound(f.n, &P); uint8_t *o = malloc(cap ? cap : 1);
     if (!o) { fc_close(&f); fprintf(stderr, "kolmo: out of memory\n"); return 1; }
     int64_t r = kolmo_compress_indexed(f.p, f.n, o, cap, &P, &I);
     fc_close(&f);
     if (r < 0) { free(o); fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r)); return 1; }
-    int bad = fc_write(out, o, (size_t)r); free(o);
+    int bad = kolmo_cli_publish(out, o, (size_t)r, force); free(o);
     return bad ? 1 : 0;
 }
 
 /* ---- archives ---- */
-static int fc_mkdirs(char *path) {          /* the directories of path (not its last component) */
-    for (char *p = path + 1; *p; p++) if (*p == '/') { *p = 0; if (mkdir(path, 0777) && errno != EEXIST) { *p = '/'; return -1; } *p = '/'; }
-    return 0;
-}
 /* a stored name is extracted only if it is relative and has no ".." component */
 static int fc_safe(const char *name) {
     if (!name[0] || name[0] == '/') return 0;
@@ -196,20 +205,90 @@ static int fc_safe(const char *name) {
     }
     return 1;
 }
-typedef struct { const char *dir; char **names; int nnames; int done, bad; } fc_x;
-static int fc_put(void *ctx, const char *name, const uint8_t *data, uint64_t size, uint32_t mode, int64_t mtime) {
-    fc_x *X = ctx; (void)mtime;
-    if (X->nnames) { int hit = 0; for (int i = 0; i < X->nnames; i++) hit |= !strcmp(X->names[i], name); if (!hit) return 0; }
-    if (!fc_safe(name)) { fprintf(stderr, "kolmo: skipping unsafe name '%s'\n", name); X->bad = 1; return 0; }
-    size_t L = strlen(X->dir) + strlen(name) + 2; char *path = malloc(L); if (!path) return 1;
-    snprintf(path, L, "%s/%s", X->dir, name);
-    if (fc_mkdirs(path) || fc_write(path, data, (size_t)size)) { free(path); X->bad = 1; return 1; }
-    if (mode & 0777) chmod(path, mode & 0777);
-    free(path); X->done++; return 0;
+/* The name a path is stored under, as tar stores it: without its leading "/" and "./", and without everything up to
+ * its last ".." component (kolmo archive out.kol ../a.txt stores a.txt), with one warning per removed prefix. */
+static const char *fc_member_name(const char *path) {
+    const char *nm = path, *p = path;
+    for (;;) {                                               /* nm: just after the last ".." component */
+        const char *e = strchr(p, '/'); size_t l = e ? (size_t)(e - p) : strlen(p);
+        if (l == 2 && p[0] == '.' && p[1] == '.') nm = e ? e + 1 : p + l;
+        if (!e) break; p = e + 1;
+    }
+    for (;;) {
+        if (nm[0] == '/') nm++;
+        else if (nm[0] == '.' && nm[1] == '/') nm += 2;
+        else break;
+    }
+    if (nm != path && strncmp(path, "./", 2))
+        fprintf(stderr, "kolmo: warning: removing leading '%.*s' from the member name '%s'\n", (int)(nm - path), path, path);
+    return nm;
 }
-/* the regular files under path (path itself when it is one), in name order, appended to *list */
-typedef struct { char **v; int n, cap; } fc_list_t;
+typedef struct { int dir; char **names; int nnames; int seen, done, bad; } fc_x;
+/* The parent directory of name under the directory fd X->dir, created as needed: each component is opened with
+ * O_NOFOLLOW, so a symbolic link on the way (one that was already there, or that another process puts there) ends
+ * the walk instead of leading out of the directory. Returns a descriptor and sets *leaf, or -1 after reporting. */
+static int fc_parent(const fc_x *X, const char *name, const char **leaf) {
+    int d = dup(X->dir); if (d < 0) { perror("kolmo"); return -1; }
+    const char *p = name;
+    for (;;) {
+        const char *e = strchr(p, '/');
+        if (!e) { *leaf = p; return d; }
+        size_t l = (size_t)(e - p); char comp[4097];
+        if (l >= sizeof comp) { close(d); fprintf(stderr, "kolmo: %s: name too long\n", name); return -1; }
+        memcpy(comp, p, l); comp[l] = 0; p = e + 1;
+        if (!l || !strcmp(comp, ".")) continue;
+        if (mkdirat(d, comp, 0777) && errno != EEXIST) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); close(d); return -1; }
+        int n = openat(d, comp, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+        if (n < 0) {
+            struct stat st;
+            if (!fstatat(d, comp, &st, AT_SYMLINK_NOFOLLOW) && S_ISLNK(st.st_mode))
+                fprintf(stderr, "kolmo: skipping '%s': '%.*s' is a symbolic link (extract never writes through one)\n", name, (int)(p - 1 - name), name);
+            else fprintf(stderr, "kolmo: %s: %.*s: %s\n", name, (int)(p - 1 - name), name, strerror(errno));
+            close(d); return -1;
+        }
+        close(d); d = n;
+    }
+}
+static int fc_put(void *ctx, const char *name, const uint8_t *data, uint64_t size, uint32_t mode, int64_t mtime) {
+    fc_x *X = ctx;
+    if (X->nnames) { int hit = 0; for (int i = 0; i < X->nnames; i++) hit |= !strcmp(X->names[i], name); if (!hit) return 0; }
+    X->seen++;
+    if (!fc_safe(name)) { fprintf(stderr, "kolmo: skipping unsafe name '%s'\n", name); X->bad = 1; return 0; }
+    const char *leaf; int d = fc_parent(X, name, &leaf);
+    if (d < 0) { X->bad = 1; return 0; }
+    if (!*leaf || !strcmp(leaf, ".")) { close(d); fprintf(stderr, "kolmo: skipping unsafe name '%s'\n", name); X->bad = 1; return 0; }
+    /* a new file: whatever was at the name (a file, a hard link, a symbolic link to anywhere) is unlinked first */
+    int fd = openat(d, leaf, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0666);
+    if (fd < 0 && errno == EEXIST) {
+        struct stat st;
+        if (!fstatat(d, leaf, &st, AT_SYMLINK_NOFOLLOW) && S_ISDIR(st.st_mode)) errno = EISDIR;
+        else if (!unlinkat(d, leaf, 0)) fd = openat(d, leaf, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0666);
+    }
+    if (fd < 0) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); close(d); X->bad = 1; return 0; }
+    close(d);
+    const uint8_t *p = data; uint64_t left = size; int bad = 0;
+    while (left) {
+        ssize_t w = write(fd, p, left > (1u << 30) ? (1u << 30) : (size_t)left);
+        if (w < 0 && errno == EINTR) continue;
+        if (w <= 0) { bad = 1; break; }
+        p += w; left -= (uint64_t)w;
+    }
+    if (!bad && (mode & 0777)) (void)fchmod(fd, mode & 0777);
+    struct timespec t[2] = {{0, UTIME_NOW}, {(time_t)mtime, 0}};
+    if (!bad) (void)futimens(fd, t);                        /* the stored mtime, as tar restores it */
+    if (close(fd)) bad = 1;
+    if (bad) { fprintf(stderr, "kolmo: %s: %s\n", name, strerror(errno)); X->bad = 1; return 1; }
+    X->done++; return 0;
+}
+/* the regular files under path (path itself when it is one), in name order, appended to *list. What DDP1 cannot
+ * store (symbolic links, special files, directories with nothing to store, directories deeper than 64) is reported,
+ * and counted in *skipped: the archive is written without it and the run ends with status 1. */
+typedef struct { char **v; int n, cap; int skipped; } fc_list_t;
 static int fc_cmp(const void *a, const void *b) { return strcmp(*(char *const *)a, *(char *const *)b); }
+static void fc_skip(fc_list_t *L, const char *path, const char *what) {
+    fprintf(stderr, "kolmo: warning: %s: %s not archived (kolmo archive stores regular files only)\n", path, what);
+    L->skipped++;
+}
 static int fc_walk(const char *path, fc_list_t *L, int depth) {
     struct stat st; if (lstat(path, &st)) { perror(path); return -1; }
     if (S_ISREG(st.st_mode)) {
@@ -217,7 +296,12 @@ static int fc_walk(const char *path, fc_list_t *L, int depth) {
         if (!(L->v[L->n] = strdup(path))) return -1;
         L->n++; return 0;
     }
-    if (!S_ISDIR(st.st_mode) || depth > 64) return 0;              /* symlinks and special files are not archived */
+    if (!S_ISDIR(st.st_mode)) {
+        fc_skip(L, path, S_ISLNK(st.st_mode) ? "symbolic link" : S_ISFIFO(st.st_mode) ? "FIFO" : S_ISSOCK(st.st_mode) ? "socket" :
+                         S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode) ? "device" : "special file");
+        return 0;
+    }
+    if (depth > 64) { fc_skip(L, path, "directory deeper than 64 levels"); return 0; }
     DIR *d = opendir(path); if (!d) { perror(path); return -1; }
     fc_list_t sub = {0}; struct dirent *e; int r = 0;
     while ((e = readdir(d))) {
@@ -230,17 +314,20 @@ static int fc_walk(const char *path, fc_list_t *L, int depth) {
     closedir(d);
     if (sub.n) qsort(sub.v, (size_t)sub.n, sizeof(char *), fc_cmp);
     for (int i = 0; i < sub.n; i++) { if (!r) r = fc_walk(sub.v[i], L, depth + 1); free(sub.v[i]); }
-    free(sub.v); return r;
+    free(sub.v);
+    if (!r && !sub.n) fc_skip(L, path, "empty directory");
+    return r;
 }
 static int fc_archive(int argc, char **argv) {
-    kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; kolmo_archive_params A = {0, 1}; int stats = 0, a = 2;
+    kolmo_params P = {KOLMO_FAST, 0, 0, 0, 1}; kolmo_archive_params A = {0, 1}; int stats = 0, force = 0, a = 2;
     int level = KOLMO_LEVEL_DEFAULT, clevel = 0; uint32_t block = 0;
     for (; a < argc && argv[a][0] == '-'; a++) {
-        const char *s = argv[a]; int lo;
+        const char *s = argv[a]; int lo, v;
         if ((lo = fc_level_opt(s, argc, argv, &a, &level, &clevel, &block)) < 0) return 2;
         else if (lo) ;
-        else if (!strcmp(s, "-T") && a + 1 < argc) P.threads = atoi(argv[++a]);
-        else if (!strcmp(s, "--chunk") && a + 1 < argc) A.avg_chunk = (uint32_t)atoi(argv[++a]) * 1024;
+        else if (!strcmp(s, "-f") || !strcmp(s, "--force")) force = 1;
+        else if (!strcmp(s, "-T") && a + 1 < argc) { if (fc_num("-T", argv[++a], 0, 4096, &P.threads)) return 2; }
+        else if (!strcmp(s, "--chunk") && a + 1 < argc) { if (fc_num("--chunk", argv[++a], 1, 4096, &v)) return 2; A.avg_chunk = (uint32_t)v * 1024; }
         else if (!strcmp(s, "--no-line-cuts")) A.line_cuts = 0;
         else if (!strcmp(s, "--stats")) stats = 1;
         else { fc_usage(); return 2; }
@@ -248,18 +335,17 @@ static int fc_archive(int argc, char **argv) {
     if (argc - a < 2) { fc_usage(); return 2; }
     fc_params(&P, level, clevel, block);
     const char *out = argv[a++];
+    if (fc_exists(out, force)) return 1;
     fc_list_t L = {0};                                       /* directories are archived with the files under them */
     for (int i = a; i < argc; i++) if (fc_walk(argv[i], &L, 0)) { for (int k = 0; k < L.n; k++) free(L.v[k]); free(L.v); return 1; }
     int nf = L.n; char **paths = L.v;
-    fc_file *F = calloc((size_t)nf, sizeof(fc_file)); kolmo_archive_file *K = calloc((size_t)nf, sizeof(kolmo_archive_file));
+    fc_file *F = calloc((size_t)nf + 1, sizeof(fc_file)); kolmo_archive_file *K = calloc((size_t)nf + 1, sizeof(kolmo_archive_file));
     if (!F || !K) { free(F); free(K); for (int i = 0; i < L.n; i++) free(L.v[i]); free(L.v); return 1; }
     int ret = 1;
     for (int i = 0; i < nf; i++) {
         if (fc_open(paths[i], &F[i])) { nf = i; goto out; }
-        struct stat st; stat(paths[i], &st);
-        const char *nm = paths[i]; while (nm[0] == '/') nm++;
-        while (!strncmp(nm, "./", 2)) nm += 2;
-        K[i] = (kolmo_archive_file){nm, F[i].p, F[i].n, (uint32_t)st.st_mode & 07777, (int64_t)st.st_mtime};
+        struct stat st; if (stat(paths[i], &st)) { perror(paths[i]); nf = i + 1; goto out; }
+        K[i] = (kolmo_archive_file){fc_member_name(paths[i]), F[i].p, F[i].n, (uint32_t)st.st_mode & 07777, (int64_t)st.st_mtime};
     }
     {   size_t cap = kolmo_archive_bound(K, (size_t)nf, &P); uint8_t *o = malloc(cap ? cap : 1);
         if (!o) { fprintf(stderr, "kolmo: out of memory\n"); goto out; }
@@ -270,21 +356,27 @@ static int fc_archive(int argc, char **argv) {
                            (unsigned long long)s.files, (unsigned long long)s.input_bytes, (unsigned long long)s.chunks, (unsigned long long)s.unique_chunks,
                            (unsigned long long)s.unique_bytes, s.input_bytes ? 100.0 * s.unique_bytes / s.input_bytes : 0.0,
                            (unsigned long long)s.store_frame, (unsigned long long)s.table_bytes, (long long)r, fc_now() - t0);
-        ret = fc_write(out, o, (size_t)r) ? 1 : 0; free(o); }
+        ret = kolmo_cli_publish(out, o, (size_t)r, force) ? 1 : 0; free(o); }
+    if (!ret && L.skipped) {
+        fprintf(stderr, "kolmo: %s: written without the %d entr%s reported above\n", out, L.skipped, L.skipped == 1 ? "y" : "ies");
+        ret = 1;
+    }
 out:
     for (int i = 0; i < nf; i++) fc_close(&F[i]);
     for (int i = 0; i < L.n; i++) free(L.v[i]);
     free(L.v); free(F); free(K); return ret;
 }
 static int fc_extract(int argc, char **argv) {
-    fc_x X = {".", NULL, 0, 0, 0}; int threads = 0, a = 2;
+    fc_x X = {-1, NULL, 0, 0, 0, 0}; const char *dir = "."; int threads = 0, a = 2;
     for (; a < argc && argv[a][0] == '-'; a++) {
-        if (!strcmp(argv[a], "-C") && a + 1 < argc) X.dir = argv[++a];
-        else if (!strcmp(argv[a], "-T") && a + 1 < argc) threads = atoi(argv[++a]);
+        if (!strcmp(argv[a], "-C") && a + 1 < argc) dir = argv[++a];
+        else if (!strcmp(argv[a], "-T") && a + 1 < argc) { if (fc_num("-T", argv[++a], 0, 4096, &threads)) return 2; }
         else { fc_usage(); return 2; }
     }
     if (a >= argc) { fc_usage(); return 2; }
-    fc_file f; if (fc_open(argv[a], &f)) return 1;
+    X.dir = open(dir, O_RDONLY | O_DIRECTORY);              /* -C dir itself is the user's: it may be a symbolic link */
+    if (X.dir < 0) { fprintf(stderr, "kolmo: %s: %s\n", dir, strerror(errno)); return 1; }
+    fc_file f; if (fc_open(argv[a], &f)) { close(X.dir); return 1; }
     X.names = argv + a + 1; X.nnames = argc - a - 1;
     int64_t r;
     if (X.nnames) {                          /* named files: each decodes only the store blocks it needs */
@@ -301,9 +393,9 @@ static int fc_extract(int argc, char **argv) {
             if (stop) { r = KOLMO_ERR_IO; break; }
         }
     } else r = kolmo_archive_extract_all(f.p, f.n, fc_put, &X, threads);
-    fc_close(&f);
+    fc_close(&f); close(X.dir);
     if (r < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r)); return 1; }
-    if (X.nnames && X.done < X.nnames) { fprintf(stderr, "kolmo: %d of %d names not in the archive\n", X.nnames - X.done, X.nnames); return 1; }
+    if (X.nnames && X.seen < X.nnames) { fprintf(stderr, "kolmo: %d of %d names not in the archive\n", X.nnames - X.seen, X.nnames); return 1; }
     return X.bad;
 }
 static int fc_list(int argc, char **argv) {

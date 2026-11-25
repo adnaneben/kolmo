@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <sched.h>
 #include <stdatomic.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #define PAR_MAX 256
@@ -180,4 +181,155 @@ void kolmo_crew_destroy(kolmo_crew *c) {
     pthread_cond_destroy(&c->wake); pthread_cond_destroy(&c->done_cv); pthread_mutex_destroy(&c->m);
     pthread_cond_destroy(&c->barrier_cv); pthread_mutex_destroy(&c->barrier_m);
     free(c);
+}
+
+/* ---- thread budget ---- */
+
+struct kolmo_budget { pthread_mutex_t m; pthread_cond_t cv; int free, want; unsigned gen; };   /* want: threads kolmo_budget_take waits for */
+
+kolmo_budget *kolmo_budget_create(int tokens) {
+    kolmo_budget *b = (kolmo_budget *)calloc(1, sizeof *b);
+    if (!b) return NULL;
+    if (pthread_mutex_init(&b->m, NULL)) { free(b); return NULL; }
+    if (pthread_cond_init(&b->cv, NULL)) { pthread_mutex_destroy(&b->m); free(b); return NULL; }
+    b->free = tokens > 0 ? tokens : 0;
+    return b;
+}
+void kolmo_budget_destroy(kolmo_budget *b) {
+    if (!b) return;
+    pthread_cond_destroy(&b->cv); pthread_mutex_destroy(&b->m); free(b);
+}
+int kolmo_budget_try(kolmo_budget *b) {
+    if (!b) return 0;
+    pthread_mutex_lock(&b->m);
+    int r = b->free > 0 && !b->want; if (r) b->free--;   /* a waiting kolmo_budget_take goes first */
+    pthread_mutex_unlock(&b->m);
+    return r;
+}
+void kolmo_budget_give(kolmo_budget *b, int n) {
+    if (!b || n <= 0) return;
+    pthread_mutex_lock(&b->m); b->free += n; b->gen++; pthread_cond_broadcast(&b->cv); pthread_mutex_unlock(&b->m);
+}
+void kolmo_budget_wait(kolmo_budget *b, unsigned *seen) {
+    if (!b) return;
+    pthread_mutex_lock(&b->m);
+    while ((b->free <= 0 || b->want) && b->gen == *seen) pthread_cond_wait(&b->cv, &b->m);
+    *seen = b->gen;
+    pthread_mutex_unlock(&b->m);
+}
+void kolmo_budget_take(kolmo_budget *b, int n) {
+    if (!b || n <= 0) return;
+    pthread_mutex_lock(&b->m);
+    b->want += n;
+    while (n > 0) {
+        if (b->free > 0) { int k = b->free < n ? b->free : n; b->free -= k; b->want -= k; n -= k; continue; }
+        pthread_cond_wait(&b->cv, &b->m);
+    }
+    pthread_mutex_unlock(&b->m);
+}
+void kolmo_budget_wake(kolmo_budget *b) {
+    if (!b) return;
+    pthread_mutex_lock(&b->m); b->gen++; pthread_cond_broadcast(&b->cv); pthread_mutex_unlock(&b->m);
+}
+int kolmo_budget_free(kolmo_budget *b) {
+    if (!b) return 0;
+    pthread_mutex_lock(&b->m); int f = b->free; pthread_mutex_unlock(&b->m);
+    return f;
+}
+
+/* ---- chunked class pipeline ---- */
+
+struct kolmo_cp {
+    int K; unsigned nch, R; kolmo_cp_fn fn; void *ctx; kolmo_budget *b;
+    pthread_mutex_t mu; pthread_cond_t cv;
+    unsigned cnext[KOLMO_CP_MAXK];       /* each class's next chunk to run */
+    unsigned char busy[KOLMO_CP_MAXK];   /* a thread runs the class now */
+    unsigned *done;                      /* per slot (chunk % R): classes that ran the chunk */
+    unsigned released, ready;            /* chunks below released are consumed; chunks below ready are complete */
+    int err, stop, go, passes, nth;
+    pthread_t th[KOLMO_CP_MAXK];
+};
+/* under mu: the class whose next chunk is the earliest one allowed to run, or -1 */
+static int cp_pick(struct kolmo_cp *q) {
+    unsigned lim = (q->released < q->ready ? q->released : q->ready) + q->R; int best = -1;
+    for (int c = 0; c < q->K; c++)
+        if (!q->busy[c] && q->cnext[c] < q->nch && q->cnext[c] < lim && (best < 0 || q->cnext[c] < q->cnext[best])) best = c;
+    return best;
+}
+/* under mu: chunk j ran for the classes in mask */
+static void cp_finish(struct kolmo_cp *q, unsigned j, unsigned mask, int r) {
+    unsigned k = 0;
+    for (int c = 0; c < q->K; c++) if (mask >> c & 1) { q->busy[c] = 0; q->cnext[c] = j + 1; k++; }
+    unsigned *d = &q->done[j % q->R];
+    if ((*d += k) == (unsigned)q->K) { *d = 0; q->ready = j + 1; }
+    if (r) { q->err = 1; q->stop = 1; }
+    pthread_cond_broadcast(&q->cv);
+}
+static void *cp_main(void *p) {
+    struct kolmo_cp *q = (struct kolmo_cp *)p; unsigned seen = 0;
+    pthread_mutex_lock(&q->mu);
+    while (!q->go && !q->stop) pthread_cond_wait(&q->cv, &q->mu);
+    for (;;) {
+        if (q->stop) break;
+        int c = cp_pick(q);
+        if (c < 0) { pthread_cond_wait(&q->cv, &q->mu); continue; }
+        int tok;   /* 1: one of the caller's own threads; 2: a token of the budget */
+        if (q->passes > 0) { q->passes--; tok = 1; }   /* (mu is held from the pick to the claim) */
+        else if (kolmo_budget_try(q->b)) tok = 2;
+        else if (!q->b) { pthread_cond_wait(&q->cv, &q->mu); continue; }
+        else { pthread_mutex_unlock(&q->mu); kolmo_budget_wait(q->b, &seen); pthread_mutex_lock(&q->mu); continue; }
+        const unsigned j = q->cnext[c]; q->busy[c] = 1;
+        pthread_mutex_unlock(&q->mu);
+        int r = q->fn(q->ctx, j, 1u << c);
+        pthread_mutex_lock(&q->mu);
+        cp_finish(q, j, 1u << c, r);
+        if (tok == 1) q->passes++; else kolmo_budget_give(q->b, 1);
+    }
+    pthread_mutex_unlock(&q->mu);
+    return NULL;
+}
+kolmo_cp *kolmo_cp_start(int K, unsigned nch, unsigned R, int passes, kolmo_budget *b, kolmo_cp_fn fn, void *ctx) {
+    if (K < 1 || K > KOLMO_CP_MAXK || R < 1) return NULL;
+    struct kolmo_cp *q = (struct kolmo_cp *)calloc(1, sizeof *q);
+    if (!q) return NULL;
+    q->done = (unsigned *)calloc(R, sizeof *q->done);
+    if (!q->done) { free(q); return NULL; }
+    q->K = K; q->nch = nch; q->R = R; q->fn = fn; q->ctx = ctx; q->b = b; q->passes = passes < 0 ? 0 : passes > K ? K : passes;
+    if (pthread_mutex_init(&q->mu, NULL)) { free(q->done); free(q); return NULL; }
+    if (pthread_cond_init(&q->cv, NULL)) { pthread_mutex_destroy(&q->mu); free(q->done); free(q); return NULL; }
+    for (int t = 0; t < K; t++) {
+        if (pthread_create(&q->th[t], NULL, cp_main, q)) break;
+        q->nth = t + 1;
+    }
+    if (q->nth < K) { kolmo_cp_end(q); return NULL; }   /* the helpers started stop before touching anything */
+    pthread_mutex_lock(&q->mu); q->go = 1; pthread_cond_broadcast(&q->cv); pthread_mutex_unlock(&q->mu);
+    return q;
+}
+int kolmo_cp_need(kolmo_cp *q, unsigned j) {
+    pthread_mutex_lock(&q->mu);
+    if (q->released < j) { q->released = j; pthread_cond_broadcast(&q->cv); }
+    while (q->ready <= j && !q->err) {
+        /* run, on this thread, the earliest pending chunk m <= j of the classes no helper holds (all of them at once):
+         * the consumer may have skipped chunks (a long match), and with no helper running nobody else runs them */
+        const unsigned lim = (q->released < q->ready ? q->released : q->ready) + q->R;
+        unsigned m = UINT32_MAX, mask = 0;
+        for (int c = 0; c < q->K; c++) if (!q->busy[c] && q->cnext[c] <= j && q->cnext[c] < lim && q->cnext[c] < m) m = q->cnext[c];
+        if (m != UINT32_MAX)
+            for (int c = 0; c < q->K; c++) if (!q->busy[c] && q->cnext[c] == m) { mask |= 1u << c; q->busy[c] = 1; }
+        if (!mask) { pthread_cond_wait(&q->cv, &q->mu); continue; }
+        pthread_mutex_unlock(&q->mu);
+        int r = q->fn(q->ctx, m, mask);
+        pthread_mutex_lock(&q->mu);
+        cp_finish(q, m, mask, r);
+    }
+    int e = q->err;
+    pthread_mutex_unlock(&q->mu);
+    return e;
+}
+void kolmo_cp_end(kolmo_cp *q) {
+    if (!q) return;
+    pthread_mutex_lock(&q->mu); q->stop = 1; pthread_cond_broadcast(&q->cv); pthread_mutex_unlock(&q->mu);
+    kolmo_budget_wake(q->b);
+    for (int t = 0; t < q->nth; t++) pthread_join(q->th[t], NULL);
+    pthread_cond_destroy(&q->cv); pthread_mutex_destroy(&q->mu); free(q->done); free(q);
 }
