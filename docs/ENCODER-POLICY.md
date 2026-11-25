@@ -71,3 +71,17 @@ To roll back, remove the explicit `--policy` parameter or select an earlier pres
 Existing configs optimize stored bytes. To search for unchanged-size speedups, set `"objective": "roundtrip"`, `"min_size_savings": 0` and `"max_roundtrip_time"` strictly below one. A positive size savings floor is also allowed. Files must individually meet every configured limit. Each repetition pairs the candidate with the baseline; combined time adds encode and decode **within** each arm. The speed objective gates on the median of those paired candidate-to-baseline ratios for combined time, each phase time and both RSS values. Among passing options, each file has equal weight in the geometric mean of its median paired combined-time ratio. The unchanged size-oriented algorithm remains the default.
 
 Validation launches the actual encoder wrapper and checks its reported choice against the frozen route immediately before native exec. It records the higher of the Python and native RSS peaks. A mismatch fails the experiment even when two different choices produce byte-identical frames. Stock C code and CLI defaults do not depend on the learner.
+
+## Export a validated empty table as a native CLI
+
+When validation accepts zero routes, an operator can install the pinned stock encoder under a separate filename. This removes interpreter startup on each file. The export checks the accepted policy, its frozen draft, both receipt sets, the manifest seal, whole-holdout dispatch coverage, current host, catalogue, policy tool, encoder and decoder. It fails if the policy has any routes, the evidence predates deployed dispatch validation, identities differ, or the output pathname already exists. Supply trusted local experiment records. Hashes detect accidental drift; they are not digital signatures. Retain the original experiment directory for future review.
+
+The experiment directory needs `accepted.json`, `draft.json`, `seal.json`, `development.json`, `holdout.json`, `development-receipts.json` and `holdout-receipts.json`. The two manifest files are copies of the exact sealed manifests. Raw corpus files are unnecessary for deployment. The destination parent must already exist and support hard links. The published binary is an independent copy of the verified bytes; swapping out the source executable later cannot modify the exported inode. The exporter prints the accepted policy ID, binary identities and validated level and thread count.
+
+```sh
+python3 tune/export_stock_policy.py --experiment /path/to/validated-experiment \
+  --kolmo ./build/kolmo --decoder /path/to/kolmo-0.0.2 --output ./kolmo-policy-stock
+./kolmo-policy-stock --level 1 -T 1 -q -o output.kolmo -- input.bin
+```
+
+Use the scoped level and thread count printed at export for a comparison with the validated configuration. The exported executable accepts ordinary native arguments and ambient native configuration. Reproduce the wrapper's codec settings with no `KOLMO_*` or `CZN_*` environment overrides. Roll back by invoking the original CLI or an earlier preserved policy. Continue to use the wrapper for nonempty policies.
