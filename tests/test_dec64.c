@@ -12,8 +12,51 @@ static double special(void) {
                                     0x4340000000000000ull /* 2^53 */, 0x4330000000000001ull, 0x3fd3333333333334ull /* 0.1+0.2 */};
     double d; uint64_t b = bits[rnd() % (sizeof bits / sizeof bits[0])]; memcpy(&d, &b, 8); return d;
 }
+static int check_rounding(codec_ctx *cx) {
+#if defined(__clang__)
+#pragma STDC FENV_ACCESS ON
+#endif
+    static const int modes[] = {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
+    enum { rows = 512, capacity = rows * 8 + 4096 };
+    uint8_t in[rows * 8], out[rows * 8], baseline[capacity], encoded[capacity];
+    fenv_t original;
+    if (fegetenv(&original)) return 1;
+    const int saved_force_c = kolmo_force_c;
+    int failed = 1;
+    for (int f32 = 0; f32 <= 1; f32++) {
+        if (fesetround(FE_TONEAREST)) goto done;
+        const size_t w = f32 ? 4 : 8, n = rows * w, cols = 1 | (f32 ? KG_DEC_F32 : 0);
+        for (int i = 0; i < rows; i++) {
+            const double value = (i - 256) / 10.0;
+            if (f32) { float f = (float)value; memcpy(in + i * w, &f, w); }
+            else memcpy(in + i * w, &value, w);
+        }
+        const size_t nb = kg_encode_dec64(cx, R_LZH, 3, in, n, cols, 0, baseline, capacity);
+        if (!nb) goto done;
+        for (size_t mi = 0; mi < sizeof modes / sizeof modes[0]; mi++) {
+            const int mode = modes[mi];
+            if (fesetround(mode) || feclearexcept(FE_ALL_EXCEPT) || feraiseexcept(FE_INVALID)) goto done;
+            const size_t ne = kg_encode_dec64(cx, R_LZH, 3, in, n, cols, 0, encoded, capacity);
+            if (ne != nb || memcmp(encoded, baseline, nb) || fegetround() != mode) goto done;
+            if (mode != FE_TONEAREST && fetestexcept(FE_ALL_EXCEPT) != FE_INVALID) goto done;
+            for (int force_c = 0; force_c <= 1; force_c++) {
+                kolmo_force_c = force_c;
+                if (kg_decode(cx, baseline, nb, out, n) || memcmp(in, out, n) || fegetround() != mode) goto done;
+                if (mode != FE_TONEAREST && fetestexcept(FE_ALL_EXCEPT) != FE_INVALID) goto done;
+            }
+        }
+    }
+    failed = 0;
+done:
+    kolmo_force_c = saved_force_c;
+    if (fesetenv(&original)) failed = 1;
+    if (failed) printf("DEC64 ROUNDING MODE CHECK FAILED\n");
+    return failed;
+}
+
 int main(void) {
     int fails = 0, coded = 0, rejected = 0; codec_ctx cx = {0}; cx.allow_f2 = 1;   /* graph payloads decoded directly: format-2 leaves allowed, as in version-11 frames */
+    fails += check_rounding(&cx);
     for (int it = 0; it < 400; it++) {
         size_t cols = it % 4 == 0 ? 0 : 1 + rnd() % (it % 9 == 0 ? 300 : 12), tc = cols ? cols : 1 + rnd() % 6;
         size_t rows = 16 + rnd() % (it % 11 == 0 ? 40000 : 3000), h = it % 3 ? rnd() % 200 : 0, tail = rnd() % 23;
