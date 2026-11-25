@@ -1,0 +1,4 @@
+code+prose plain [70476, 39762, 39762] ms create+wrap 7.11 unwrap+restore 6.478 combined MB/s 5.263 wrap-only/unwrap-only ms 0.0 0.0
+code+prose CMS [70476, 39762, 40372] ms create+wrap 17.012 unwrap+restore 17.314 combined MB/s 1.991 wrap-only/unwrap-only ms 9.688 12.859
+Silesia-prefix plain [4194304, 2117191, 2117191] ms create+wrap 25.629 unwrap+restore 9.394 combined MB/s 114.726 wrap-only/unwrap-only ms 0.0 0.0
+Silesia-prefix CMS [4194304, 2117191, 2117806] ms create+wrap 41.358 unwrap+restore 26.767 combined MB/s 57.862 wrap-only/unwrap-only ms 14.713 15.47

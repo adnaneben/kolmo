@@ -1,0 +1,10 @@
+pass create and verify
+pass complete draft
+pass public complete check only
+pass public incomplete refusal
+pass digest mismatch refusal
+pass unexpected asset refusal
+pass moved tag refusal
+pass version gates
+pass published digest mismatch refused
+pass wheel embedded version mismatch refused

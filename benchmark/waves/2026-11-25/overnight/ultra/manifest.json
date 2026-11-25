@@ -1,0 +1,35 @@
+{
+  "source_rev": "a1d39559686a9ec17c8614b9154a64d7b5b98672",
+  "binaries": {
+    "baseline": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "candidate": "263879bdca92d04e99d9af0a8403bb1f3d017513e3f1f49d629035e5f9e2de26",
+    "released": "e7f58f11fe2eb5f296bcd71a9ef9331d154723709ca6822e3cb110acd376e328",
+    "brotli": "ff1c3ef8df5ce0fab17d906a8f34fe2746acf352c4edfbf6661367bfd800e650"
+  },
+  "inputs": {
+    "GMP Info": {
+      "file": "gmp.info-1",
+      "whole_file_sha256": "ed759b294f9da8a59146b308774484c59203fc6f20f14a4235644b370e434d63",
+      "sha256": "ed759b294f9da8a59146b308774484c59203fc6f20f14a4235644b370e434d63",
+      "bytes": 300383,
+      "slice": "all"
+    },
+    "Libgcrypt Info": {
+      "file": "gcrypt.info-1",
+      "whole_file_sha256": "c0b8a515b344415030c058c4fe5b05d0f95ec83b2ffdef7cc5ecfb058ffb29dd",
+      "sha256": "c0b8a515b344415030c058c4fe5b05d0f95ec83b2ffdef7cc5ecfb058ffb29dd",
+      "bytes": 314333,
+      "slice": "all"
+    },
+    "Webster 512KiB": {
+      "file": "web2",
+      "whole_file_sha256": "be41ad97963bf8dabedd5871d5d691596175269d540956b0f9965a885c2bbab9",
+      "sha256": "27cbadf0e88ca2c3a3a319254e32981e93b0cc53fafb01a266262f0d97d294ee",
+      "bytes": 524288,
+      "slice": "first 524288 bytes"
+    }
+  },
+  "platform": "arm64",
+  "brotli_version": "brotli 1.2.1",
+  "seed": 663710
+}

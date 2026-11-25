@@ -1,0 +1,30 @@
+{
+  "assignment_rows": 123,
+  "unique_group_labels": 68,
+  "labels_shared_by_multiple_rows": 33,
+  "a_b_no_original_pr": 31,
+  "a_b_static_breadcrumbs": 40,
+  "out_of_range_source_refs": [],
+  "legacy_claims": 178,
+  "legacy_claim_anchors": {
+    "slug": 178
+  },
+  "legacy_report_types": {
+    "assess": 10,
+    "reviews": 30
+  },
+  "legacy_grades": {
+    "historical claim only in this reconciliation, current implementation and gain unqualified": 143,
+    "identified merge at 4db0425b": 16,
+    "related merged or draft work, verify remaining scope separately": 19
+  },
+  "historical_c_rows": 178,
+  "historical_c_reports": 0,
+  "zip_sha256": "8b41c66f268d66cf149145c86f4ad57ec172fb43abc4eb9e5c1e4d3dc4c18bb6",
+  "published_closure_sha256": "16eadefe4bdb009c4a54b98102b56023dcd00ecb132c79b609e0b7e75351c87d",
+  "closure_manifest_entries": 17,
+  "receipt_inventory": 119,
+  "receipt_rows": 8221,
+  "explicit_false": 90,
+  "pr_count": 62
+}

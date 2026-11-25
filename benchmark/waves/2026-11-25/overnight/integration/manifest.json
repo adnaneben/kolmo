@@ -1,0 +1,97 @@
+{
+  "binaries": {
+    "pre": "cf23250a9d1fd43f6fb0328f26803ebb4a47ba6332ce98a9053b70728c8abfdf",
+    "main": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "main-AA": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "combined": "90f2ab9c1e1180e55b2df6f6df6cf1166da7a71129366f4209ac2ade0668d7cf"
+  },
+  "sources": {
+    "enwik8.zip": {
+      "source_sha256": "547994d9980ebed1288380d652999f38a14fe291a6247c157c3d33d4932534bc",
+      "source_bytes": 36445475,
+      "input_sha256": "547994d9980ebed1288380d652999f38a14fe291a6247c157c3d33d4932534bc",
+      "input_bytes": 36445475
+    },
+    "owid-co2.csv": {
+      "source_sha256": "7f78e2b218ce4bb8c538bbec04fdc9a7982e8d40bff972e650df603899edd5f6",
+      "source_bytes": 14377942,
+      "input_sha256": "7f78e2b218ce4bb8c538bbec04fdc9a7982e8d40bff972e650df603899edd5f6",
+      "input_bytes": 14377942
+    },
+    "prose-64k": {
+      "source_sha256": "fbce82059db586d5073ac6adaa8ff10ade4653a61dde16764393505b01b34aaa",
+      "source_bytes": 4193980,
+      "input_sha256": "c8d5a28711813ca3dd687034524bbd658041fa43c4a64f5c80fed8856eac8b47",
+      "input_bytes": 65536
+    }
+  },
+  "randomization_seed": 2026112508,
+  "rounds": 11,
+  "settings": [
+    [
+      "enwik8.zip",
+      "1",
+      1
+    ],
+    [
+      "enwik8.zip",
+      "1",
+      4
+    ],
+    [
+      "owid-co2.csv",
+      "1",
+      1
+    ],
+    [
+      "owid-co2.csv",
+      "1",
+      4
+    ],
+    [
+      "owid-co2.csv",
+      "2",
+      1
+    ],
+    [
+      "owid-co2.csv",
+      "2",
+      4
+    ],
+    [
+      "prose-64k",
+      "3",
+      1
+    ],
+    [
+      "prose-64k",
+      "3",
+      4
+    ],
+    [
+      "prose-64k",
+      "9",
+      1
+    ],
+    [
+      "prose-64k",
+      "9",
+      4
+    ],
+    [
+      "prose-64k",
+      "ultra",
+      1
+    ],
+    [
+      "prose-64k",
+      "ultra",
+      4
+    ]
+  ],
+  "archive_mode_and_mtime": [
+    420,
+    1600000000
+  ],
+  "cross_reader": "untimed first-pass qualified main decoding all arms per setting"
+}
