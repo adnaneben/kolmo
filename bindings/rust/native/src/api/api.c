@@ -1,9 +1,28 @@
 /* Public entry points (kolmo.h): parameter checks and the calls into core/. */
-/* worst case: every block stored raw (+ index entry); blocks are >= B/2 except the last */
+/* A bound must fit both the caller's size_t and the signed frame length. */
+static int bound_add(size_t *total, size_t count, size_t unit) {
+    const size_t limit = (size_t)INT64_MAX;
+    if (unit && count > (limit - *total) / unit) return 0;
+    *total += count * unit;
+    return 1;
+}
+
+static size_t frame_block_bound(size_t n, const kolmo_params *p) {
+    /* Adaptive and memory-capped layouts can choose 1 MiB. Explicit blocks
+     * are clamped to 4 KiB before alignment. Element alignment can halve a
+     * block, and the newline search can halve that aligned size once more.
+     * Charge each plan separately for its final, possibly short block. */
+    uint32_t block = p && p->block ? p->block : (1u << 20);
+    if (block < 4096) block = 4096;
+    size_t blocks = n / (block / 4) + plan_segment_capacity(n);
+    return blocks < UINT32_MAX ? blocks : UINT32_MAX - 1;
+}
+
 size_t kolmo_bound(size_t n, const kolmo_params *p) {
-    uint32_t B = p && p->block ? p->block : kolmo_default_block(p, n);
-    size_t nb = n / (B / 2 > 0 ? B / 2 : 1) + 2 + 2 * (n >> 20);     /* + archive segments (>= 1 MiB each) */
-    return HDR + nb * (IDX + 4) + n + 64 + 2 * IDX;
+    size_t size = HDR;
+    if (!bound_add(&size, n, 1) ||
+        !bound_add(&size, frame_block_bound(n, p), IDX + 4)) return 0;
+    return size;
 }
 
 int64_t kolmo_compress(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p) {

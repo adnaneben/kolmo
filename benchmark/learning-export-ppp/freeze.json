@@ -1,0 +1,35 @@
+{
+  "prior_commit": "7a773c6b8ced434d18962a57fa04e290cb1e285d",
+  "policy_id": "0547fe3ab8180f4ea9d723637d6106547d166529d0e4a8cd5580ab1b43f0c24f",
+  "inputs": [
+    {
+      "name": "cwebp",
+      "producer": "libwebp",
+      "version": "1.6.0",
+      "bytes": 76016,
+      "sha256": "46f37f040f9f248ab5225a0dea0d92b697d08bdb712c8677f5cea922bde3b8e7"
+    },
+    {
+      "name": "pdfinfo",
+      "producer": "poppler",
+      "version": "26.11.0",
+      "bytes": 115704,
+      "sha256": "902a29ae071ecbdd0afd3bb2a1c9cc12b3dceaae5e62c1ea07e646bc86e3d59f"
+    }
+  ],
+  "level": 1,
+  "threads": 1,
+  "rounds": 15,
+  "seed": 25112026,
+  "arms": [
+    "stock",
+    "wrapper",
+    "export"
+  ],
+  "require": [
+    "exact input SHA-256",
+    "stock-identical frame bytes",
+    "stock v0.0.2 decodes all",
+    "exported native executable SHA-256 matches stock binary"
+  ]
+}
