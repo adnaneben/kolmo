@@ -18,6 +18,10 @@ override CFLAGS += $(FPFLAGS)
 # xxHash were removed with container version 12).
 INC     := -Isrc
 DEFS    :=
+# Enable the candidate archive Gear scanner on supported native builds.
+ifeq ($(GEAR_ASM),1)
+DEFS    += -DKOLMO_GEAR_ASM
+endif
 VSECT   :=
 UNAME_M := $(shell uname -m)
 ifeq ($(UNAME_S),Darwin)
