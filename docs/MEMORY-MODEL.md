@@ -177,8 +177,8 @@ smaller, not faster; speed comes from concurrency, which is the dynamic part.
 | piece | where | notes |
 |---|---|---|
 | frame declaration | header byte 11 (`memd`, `SPEC.md` *Decode working set*) | 2^(v/8) MiB, rounded up (9% steps); computed per block from the payload by `blk_dec_need` (`src/core/memneed.c`), the largest declared. Exact for context mixing (the tables follow from the stream header), measured bounds elsewhere. No new version: a reader that ignores it decodes correctly. |
-| rule 1 | `src/core/decode.c` (`frame_admit`, `blk_dec_admit`), `src/core/stream.c`, `src/codecs/cm.c` | before any allocation: CRC, index sums, stored blocks exactly their size, the index against `memd`, `memd` against the limit; per block, its figure against `memd`; a CM model above `memd` is refused unallocated (in a frame without `memd`, above the limit). The stream decoder checks each frame whole and decodes it in windows of whole blocks (at least 64 MiB, at most one block per thread), so a claimed size never becomes one allocation. `kolmo_check_frame` gives callers of the buffer API the same check before they allocate the output; the CLI uses it. |
-| rule 2 | `kolmo_params.mem_limit`, `kolmo_decode_limits.max_memory`, `kolmo_set_memlimit`, `-M/--memlimit`, `KOLMO_MEMLIMIT` | `512M`, `8G`, `50%`, `auto` (0: 50% of physical memory or of the cgroup limit, whichever is lower), `max`. Decoding stops with `KOLMO_ERR_MEMORY` and the CLI prints `needs X to decode (limit Y); run with --memlimit NG or --memlimit max`. |
+| rule 1 | `src/core/decode.c` (`frame_admit`, `blk_dec_admit`), `src/core/stream.c`, `src/codecs/cm.c` | Check the header and index CRC, decoded sizes, and declared working set before allocating offset arrays or decoded output. Each block's estimated working set must fit the declaration or, for frames with no declaration, the codec budget. `kolmo_check_frame` performs the buffer admission check without allocating an offset array. |
+| rule 2 | `kolmo_params.mem_limit`, `kolmo_decode_limits.max_memory`, `kolmo_set_memlimit`, `-M/--memlimit`, `KOLMO_MEMLIMIT` | `512M`, `8G`, `50%`, `auto` (half the smaller of physical memory and the cgroup limit), `max`. The decoder returns `KOLMO_ERR_MEMORY` when the admission check fails. See the path-specific accounting below. |
 | encoder under an explicit cap | `kmem_block_for_cap`, `cm_bits_for` | ratio halves its 128 MiB blocks down to 64 MiB, -x down to 1 MiB, until a block's estimate fits; -x tables shrink until the block's decode figure fits. Format decisions from (input, mode, level, cap) only. The "lighter mode" step and `--memlimit-strict` were not built: a cap below the mode's floor is refused (rule 3) instead, which is simpler to reason about and never changes the mode behind the user's back. |
 | rule 3 floors | `kolmo_mem_floor` | speed, balanced 64 MiB; eco, hc 256 MiB; ratio 1 GiB; -x 256 MiB, as proposed. |
 | `-x` tables | `cm4_shift_for` (model 4), `cm_bits_for` (models 1-3), `kolmo_set_x_tables`, `--x-tables` | model 4 (w4): `n / 32` lines per context up to 48 MiB, `n / 64` up to 128 MiB, `n / 128` beyond; `--x-tables=full` gives model 4 four times the lines. Models 1-3: scaled (one bucket per 4 bytes, at most 2^21; was about 16× the stream in the first wave-2 build), `--x-tables=full` rc2's sizing (up to 2^22 buckets per model). |
@@ -187,3 +187,23 @@ smaller, not faster; speed comes from concurrency, which is the dynamic part.
 
 The macOS sampler and pressure source are written against the documented APIs but were built and tested only on Linux
 in this lane; the integration lane builds them on the Mac.
+
+### Decoder metadata and stream buffers
+
+The v12 header declares the working set for one block. `kolmo_decode_memory` exposes this figure, or the largest
+block's buffer estimate for an older frame with no declaration. A frame with a large index can need metadata headroom
+above the reported figure.
+
+- Buffer decoding charges two offset arrays at 16 bytes for each of `blocks + 1` entries. Regular file-to-file decoding
+  also charges a copy of the header and index at `32 + 16 * blocks` bytes. Bytes above the 64 KiB allowance
+  reduce the codec budget before the offset arrays are allocated. That reduction starts at 4,096 blocks for the
+  buffer path and 2,047 blocks for the file-to-file path. The regular-file path checks the fixed-header estimate
+  before allocating the full index and verifies its CRC after reading it.
+- Longest-first sorting requires another 8 bytes per scheduled block. Sorting is optional. If the frame has no
+  declaration, the scheduler skips any sort that would reduce the admitted codec budget.
+- The stream decoder includes the output window in the nested codec budget when space permits. At a tight cap it may
+  decode one block at a time and allocate that block's output separately. The stream builds and charges one shared
+  offset index per member. Its compressed input buffer remains outside the codec budget.
+- File-to-file workers allocate packed-input and transform scratch buffers before reserving a block's estimated
+  codec working set. Worker caches can retain buffers across calls. Treat the cap as an admission and scheduling
+  limit and measure process peak RSS separately.

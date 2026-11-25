@@ -2,7 +2,7 @@
 #include "features.h"         /* kx_find: container extensions after the last payload */
 /* ------------------------------------------------------------------ decoding */
 typedef struct { uint64_t orig; uint32_t nb; int ver, psum; plan_t pl; const uint8_t *idx; uint64_t *poff; uint64_t *roff;
-                 uint64_t memd, end, memcap; uint32_t maxraw, maxcompressed; int mode; } parsed_t;   /* memd: the decode working set per block the header declares (0: none) */
+                 uint64_t memd, end; uint32_t maxraw, maxcompressed; int mode; } parsed_t;   /* memd: the decode working set per block the header declares (0: none) */
 
 /* the header's version byte: 0 for version 12, KOLMO_ERR_LEGACY for a frame of an earlier Kolmo (versions 1-11: library
  * codecs, XXH checksums, dictionaries and profiles), KOLMO_ERR_CORRUPT for anything else */
@@ -76,19 +76,13 @@ static int frame_admit(const parsed_t *P, uint64_t maxraw, uint64_t memcap) {
     if ((P->memd ? P->memd : floor) > memcap) return KOLMO_ERR_MEMORY;
     return 0;
 }
-static int parse_with_index(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_limits *limits,
-                            uint64_t index_bytes) {
-    int r = frame_scan(s, n, P);
+/* Build the shared offsets only after checking the frame's declared limits and metadata budget. */
+static int frame_prepare(parsed_t *P, const kolmo_decode_limits *limits, uint64_t codec_cap) {
+    int r = frame_limits(P, limits);
     if (r) return r;
-    if (P->end > n) return KOLMO_ERR_CORRUPT;
-    r = frame_limits(P, limits);
+    r = frame_admit(P, P->maxraw, codec_cap);
     if (r) return r;
-    uint64_t cap = kmem_limit_of(limits ? limits->max_memory : 0);
-    uint64_t offsets = frame_offset_bytes(P->nb);
-    P->memcap = frame_codec_budget(cap, index_bytes + offsets);
-    r = frame_admit(P, P->maxraw, P->memcap);
-    if (r) return r;
-    if (offsets / 2 > SIZE_MAX) return KOLMO_ERR_ALLOC;
+    if (frame_offset_bytes(P->nb) / 2 > SIZE_MAX) return KOLMO_ERR_ALLOC;
     P->poff = array_alloc((size_t)P->nb + 1, sizeof(uint64_t), 0);
     P->roff = array_alloc((size_t)P->nb + 1, sizeof(uint64_t), 0);
     if (!P->poff || !P->roff) { free(P->poff); free(P->roff); return KOLMO_ERR_ALLOC; }
@@ -101,11 +95,7 @@ static int parse_with_index(const uint8_t *s, size_t n, parsed_t *P, const kolmo
     P->poff[P->nb] = po; P->roff[P->nb] = ro;
     return 0;
 }
-static int parse(const uint8_t *s, size_t n, parsed_t *P, const kolmo_decode_limits *limits) {
-    return parse_with_index(s, n, P, limits, 0);
-}
-
-typedef struct { const uint8_t *src; parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
+typedef struct { const uint8_t *src; const parsed_t *P; uint8_t *dst; uint32_t lo, hi; atomic_uint next; atomic_int err;
                  int input_fd, output_fd, fqthreads; size_t maxraw, maxcompressed; uint64_t clip_lo, clip_hi;
                  uint64_t memcap; const uint32_t *order; } djob_t;   /* order: blocks lo..hi, longest first (review40 #7) */   /* memcap: the call's limit (the governor's cap; old frames' blocks are checked against it) */
 
@@ -353,7 +343,7 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
                           const kolmo_decode_limits *limits);
 /* the single codec-20 block of a frame: the payload's plan bytes are 0, the rest is a Kolmo frame of the kvid layout */
 static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input_fd, uint8_t *dst, int output_fd, int threads,
-                                uint64_t lo, uint64_t hi, int range, const kolmo_decode_limits *limits) {
+                                uint64_t lo, uint64_t hi, int range, const kolmo_decode_limits *limits, uint64_t memcap) {
     const uint8_t *e = P->idx; size_t raw = get32(e), cl = (size_t)(P->poff[1] - P->poff[0]);
     if (P->psum || e[13] || cl < 4 + HDR + IDX || raw != P->orig) return KOLMO_ERR_CORRUPT;
     uint8_t *pb = NULL, *t = NULL, *full = NULL; const uint8_t *pay; int64_t ret = KOLMO_ERR_CORRUPT;
@@ -371,7 +361,7 @@ static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input
     /* Memory (docs/MEMORY-MODEL.md): the layout (tn), the output and the inverse's copy (2 raw) are this frame's own
      * buffers, as the encoder counts them in the figure it declares (core/compress.c); the nested frame decodes under
      * what is left of the limit. The governor is not used here: the nested blocks reserve with it themselves. */
-    uint64_t memcap = P->memcap, own = 2 * (uint64_t)raw + (uint64_t)tn;
+    uint64_t own = 2 * (uint64_t)raw + (uint64_t)tn;
     if (own > memcap) { ret = KOLMO_ERR_MEMORY; goto out; }
     t = malloc((size_t)tn); full = !range && output_fd < 0 ? dst : malloc(raw ? raw : 1);
     if (!t || !full) { ret = KOLMO_ERR_ALLOC; goto out; }
@@ -389,39 +379,35 @@ static int64_t vid_decode_frame(const parsed_t *P, const uint8_t *src, int input
 out:
     free(pb); free(t); if (full != dst) free(full); return ret;
 }
-static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
-                          const kolmo_decode_limits *limits) {
-    uint64_t index_bytes = input_fd >= 0 ? HDR + (uint64_t)get32(src + 20) * IDX : 0;
-    parsed_t P; int r = parse_with_index(src, n, &P, limits, index_bytes); if (r) return r;
-    if (P.nb == 1 && P.idx[12] == C_VID) {                      /* format 2: video is decoded whole */
-        int64_t vr = vid_decode_frame(&P, src, input_fd, dst, output_fd, threads, lo, hi, range, limits);
-        free(P.poff); free(P.roff); return vr;
-    }
-    djob_t J = {0}; J.src = src; J.P = &P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd;
-    J.maxraw = P.maxraw; J.maxcompressed = P.maxcompressed; J.memcap = P.memcap;
-    if (range) {
-        uint32_t a = 0, b = P.nb;
-        while (a < P.nb && P.roff[a + 1] <= lo) a++;
-        b = a; while (b < P.nb && P.roff[b] < hi) b++;
-        J.lo = a; J.hi = b; J.clip_lo = lo; J.clip_hi = hi;
-    } else { J.lo = 0; J.hi = P.nb; }
+/* Execute a block span already identified against this frame's checked index. The owner holds the offsets
+ * through the worker join, so a stream can use the same index for successive output windows. */
+static int64_t run_decode_parsed(const parsed_t *P, const uint8_t *src, int input_fd, uint8_t *dst, int output_fd,
+                                 int threads, uint32_t first, uint32_t last, uint64_t lo, uint64_t hi, int range,
+                                 const kolmo_decode_limits *limits, uint64_t cap, uint64_t metadata) {
+    uint64_t codec_cap = frame_codec_budget(cap, metadata);
+    int r = frame_admit(P, P->maxraw, codec_cap);
+    if (r) return r;
+    if (P->nb == 1 && P->idx[12] == C_VID)                      /* format 2: video is decoded whole */
+        return vid_decode_frame(P, src, input_fd, dst, output_fd, threads, lo, hi, range, limits, codec_cap);
+    djob_t J = {0}; J.src = src; J.P = P; J.input_fd = input_fd; J.dst = dst; J.output_fd = output_fd;
+    J.maxraw = P->maxraw; J.maxcompressed = P->maxcompressed; J.memcap = codec_cap;
+    J.lo = first; J.hi = last; J.clip_lo = lo; J.clip_hi = hi;
     atomic_init(&J.next, 0); atomic_init(&J.err, 0);
     int nt = threads > 0 ? threads : default_threads(), nblk = (int)(J.hi - J.lo < 256 ? J.hi - J.lo : 256);
     J.fqthreads = nblk > 0 && nt / nblk > 0 ? nt / nblk : 1;    /* threads left over per block (FASTQ family blocks) */
     uint32_t *storage = NULL;
     size_t m = J.hi - J.lo;
     if (nt > 1 && m > 1) {
-        uint64_t metadata = index_bytes + frame_offset_bytes(P.nb);
-        uint64_t sort_cap = frame_codec_budget(kmem_limit_of(limits ? limits->max_memory : 0),
-                                               metadata + 2 * (uint64_t)m * sizeof *storage);
-        if (!frame_admit(&P, P.maxraw, sort_cap))
+        uint64_t sort_cap = frame_codec_budget(cap, metadata + 2 * (uint64_t)m * sizeof *storage);
+        /* Without a declaration, the index floor cannot prove that every codec still fits. */
+        if ((P->memd || sort_cap == codec_cap) && !frame_admit(P, P->maxraw, sort_cap))
             storage = array_alloc(m, 2 * sizeof *storage, 0);
         if (storage) {
             J.memcap = sort_cap;
             /* Longest first. A stable merge sort keeps equal-length blocks in input order. */
             uint32_t *order = storage, *tmp = storage + m;
             for (size_t k = 0; k < m; k++) order[k] = J.lo + (uint32_t)k;
-#define DLEN(b) (P.roff[(b) + 1] - P.roff[(b)])
+#define DLEN(b) (P->roff[(b) + 1] - P->roff[(b)])
             for (size_t w = 1; w < m;) {
                 for (size_t a = 0; a < m;) {
                     size_t b = a + (w < m - a ? w : m - a), e = b + (w < m - b ? w : m - b);
@@ -440,7 +426,28 @@ static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *d
     }
     run_pool(decompress_worker, &J, nt, J.hi - J.lo);
     free(storage);
-    free(P.poff); free(P.roff);
     r = atomic_load(&J.err);
-    return r ? r : (int64_t)(range ? hi - lo : P.orig);
+    return r ? r : (int64_t)(range ? hi - lo : P->orig);
+}
+static int64_t run_decode(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, int threads, uint64_t lo, uint64_t hi, int range,
+                          const kolmo_decode_limits *limits) {
+    parsed_t P;
+    int r = frame_scan(src, n, &P);
+    if (r) return r;
+    if (P.end > n) return KOLMO_ERR_CORRUPT;
+    uint64_t metadata = frame_offset_bytes(P.nb);
+    if (input_fd >= 0) metadata += HDR + (uint64_t)P.nb * IDX;
+    uint64_t cap = kmem_limit_of(limits ? limits->max_memory : 0);
+    r = frame_prepare(&P, limits, frame_codec_budget(cap, metadata));
+    if (r) return r;
+    uint32_t first = 0, last = P.nb;
+    if (range) {
+        while (first < P.nb && P.roff[first + 1] <= lo) first++;
+        last = first;
+        while (last < P.nb && P.roff[last] < hi) last++;
+    }
+    int64_t result = run_decode_parsed(&P, src, input_fd, dst, output_fd, threads, first, last, lo, hi, range,
+                                       limits, cap, metadata);
+    free(P.poff); free(P.roff);
+    return result;
 }
