@@ -37,6 +37,10 @@ mkdir selected
 cmp src/a.csv selected/src/a.csv && cmp src/empty selected/src/empty || fail "selected member bytes"
 [ ! -e selected/src/sub/b.csv ] && [ ! -e selected/src/c.csv ] || fail "unselected member was written"
 if "$K" extract -C selected arc.kol missing > /dev/null 2>&1; then fail "missing member"; fi
+# Repeated archived names must not hide a missing request. Repeated requests for a present name are satisfied.
+"$K" archive -1 repeated.kol src/empty src/empty
+if "$K" extract -C selected repeated.kol src/empty absent > /dev/null 2>&1; then fail "duplicate entry hid absent member"; fi
+"$K" extract -C selected arc.kol src/empty src/empty || fail "duplicate request for a present member"
 # a name that climbs out of the directory is stored without its leading ../, as tar stores it (stored names that do
 # climb out are refused by extract: tests/test_archive_safety.sh)
 mkdir -p deep/x; cp t.csv deep/evil.csv; (cd deep/x && "$K" archive ../../arc2.kol ../evil.csv 2> /dev/null)

@@ -1,0 +1,3 @@
+WARNING: ThreadSanitizer: data race (pid=82663)
+  Location is global 'dd_gear' at 0x000100ae8490 (builder-check-before-tsan+0x10015c490)
+SUMMARY: ThreadSanitizer: data race (/private/tmp/kolmo-ppp-defects-nov25/build/builder-check-before-tsan:arm64+0x100000a9c) in probe_create+0x15c
