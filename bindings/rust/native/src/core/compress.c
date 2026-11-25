@@ -186,7 +186,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     size_t maxb = 0; for (uint32_t i = 0; i < nb; i++) if (starts[i + 1] - starts[i] > maxb) maxb = starts[i + 1] - starts[i];
 #ifdef KOLMO_AUDIO_SCREEN
     const char *audio_screen = getenv("KOLMO_AUDIO_SCREEN");
-    J.aud_screen = !p->level && p->transforms == 1 && (p->mode == KOLMO_HC || p->mode == KOLMO_ULTRA) &&
+    J.aud_screen = !native_leaf && !typed_huf && !columns && !p->level && p->transforms == 1 && (p->mode == KOLMO_HC || p->mode == KOLMO_ULTRA) &&
                    audio_screen && !strcmp(audio_screen, "1");
 #endif
     J.aud_prof = -1;
