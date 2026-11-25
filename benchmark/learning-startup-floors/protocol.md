@@ -22,8 +22,10 @@ no `~/.config/kolmo/calibration`.
 - **B (launch)** — built-in rates; every setup term gets `+Pe` (encode) and `+Pd` (decode) ms, where `Pe`/`Pd`
   are the median end-to-end wall times of `-1 -T1` encode and stock decode of a 1-byte file, measured in the
   development phase (21 rounds).
-- **C (host + launch)** — `kolmo calibrate` run on the development files only (in-process host rates and setups;
-  classes absent from development keep built-in values), then `+Pe`/`+Pd` on every entry as in B.
+- **C (host + launch)** — `kolmo calibrate -s 0.1` run on this host with the development files only (in-process
+  host rates and setups; classes the development files do not cover are measured on calibrate's built-in synthetic
+  data, as the tool does), then `+Pe`/`+Pd` on every entry as in B. (Amended before any measurement: the first
+  text said such classes keep built-in values; `kolmo calibrate` always emits all 54 entries.)
 
 The development phase picks one of B and C (more development floor cases met, ties → smaller total bytes on met
 cases). Only that one goes to the holdout. If neither beats stock on development, the holdout still runs stock vs
