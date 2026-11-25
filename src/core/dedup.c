@@ -35,13 +35,30 @@ static void dd_config(dd_cfg *c, uint32_t avg, int lines) {
     int b = 0; while ((1u << b) < avg) b++;
     c->avg = 1u << b; c->min = c->avg / 4; c->max = c->avg * 8; c->ms = dd_mask(b + 2); c->ml = dd_mask(b - 2); c->lines = lines;
 }
+#if !defined(KOLMO_NO_ASM) && defined(KOLMO_GEAR_ASM)
+#if defined(__aarch64__)
+#define DD_GEAR_SCAN kolmo_gear_aarch64
+#elif defined(__x86_64__)
+#define DD_GEAR_SCAN kolmo_gear_x86_64
+#endif
+#endif
+#ifdef DD_GEAR_SCAN
+size_t DD_GEAR_SCAN(const uint8_t *s, size_t n, const uint64_t *table, uint64_t mask, uint64_t *hash);
+#endif
 /* the length of the next chunk of s[0..n) */
 static size_t dd_cut(const dd_cfg *c, const uint8_t *s, size_t n, int text) {
     if (n <= c->min) return n;
     size_t end = n < c->max ? n : c->max, norm = n < c->avg ? n : c->avg, i = c->min, cut = end;
     uint64_t h = 0;
+#ifdef DD_GEAR_SCAN
+    size_t match = DD_GEAR_SCAN(s + i, norm - i, dd_gear, c->ms, &h);
+    if (match) { cut = i + match; goto found; }
+    match = DD_GEAR_SCAN(s + norm, end - norm, dd_gear, c->ml, &h);
+    if (match) cut = norm + match;
+#else
     for (; i < norm; i++) { h = (h << 1) + dd_gear[s[i]]; if (!(h & c->ms)) { cut = i + 1; goto found; } }
     for (; i < end; i++) { h = (h << 1) + dd_gear[s[i]]; if (!(h & c->ml)) { cut = i + 1; goto found; } }
+#endif
 found:
     if (text && c->lines && cut < n && s[cut - 1] != '\n') {
         size_t lim = n - cut < DD_LINE_REACH ? n - cut : DD_LINE_REACH;

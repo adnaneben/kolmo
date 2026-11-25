@@ -61,6 +61,8 @@ def build_library(dest_dir):
     defs = ["-DKOLMO_NO_GPU"]
     if no_asm:
         defs.append("-DKOLMO_NO_ASM")
+    elif os.environ.get("KOLMO_GEAR_ASM") == "1":
+        defs.append("-DKOLMO_GEAR_ASM")
 
     objs = []
 
