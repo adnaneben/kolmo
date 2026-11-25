@@ -90,10 +90,17 @@ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t
     if (!t || (!src && n) || !dst) return KOLMO_ERR_TARGET;
     int threads = p && p->threads > 0 ? p->threads : default_threads();
     size_t B = p && p->block ? p->block : KT_CHUNK; if (B < 4096) B = 4096;
-    /* chunks of B bytes; text chunks end at a line end found in their second half */
-    size_t nc = n / B + 2; uint64_t *starts = malloc((nc + 1) * sizeof(uint64_t)); uint32_t k = 0;
-    if (!starts) return KOLMO_ERR_ALLOC;
+    if (!src) src = (const uint8_t *)"";
     int text = n && !kt_is_binary(src, n);
+    /* A nonfinal text chunk can end at its midpoint. Include the final endpoint. */
+    size_t min_chunk = text ? B / 2 : B;
+    size_t max_chunks = n ? 1 + (n - 1) / min_chunk : 1;
+    /* Workers use a uint32_t claim counter; leave room for up to 256 terminal claims. */
+    if (max_chunks > UINT32_MAX - 256 || max_chunks >= SIZE_MAX / sizeof(uint64_t))
+        return KOLMO_ERR_ALLOC;
+    uint64_t *starts = malloc((max_chunks + 1) * sizeof(*starts));
+    if (!starts) return KOLMO_ERR_ALLOC;
+    uint32_t k = 0;
     for (size_t pos = 0; pos < n || k == 0; ) {
         starts[k++] = pos;
         size_t end = n - pos > B ? pos + B : n;
