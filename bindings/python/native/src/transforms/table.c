@@ -218,7 +218,7 @@ done:
 static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int quotes, int effort, fset_t *fs, int threads) {
     fs->n = 0; fs->gcol = -1; fs->gweak = 0;
     const uint8_t *nl = memchr(s, '\n', n);
-    if (!nl || k < 2) return;
+    if (!nl || k < 2 || k > 256) return;
     size_t body = (size_t)(nl - s) + 1;
     if (n - body < 4096) return;
     const int SM = effort ? FS_SAMPLE : FS_SAMPLE / 2;
@@ -227,6 +227,9 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
     uint32_t *rl = malloc(4 * k), *ll = malloc(4 * k);
     int *nnum = calloc(k, sizeof(int)), *noth = calloc(k, sizeof(int)), *Smax = calloc(k, sizeof(int));
     int g8 = k < 8 ? k : 8; uint8_t *eq = malloc((size_t)g8 * SM); uint8_t *firstdig = calloc(g8, 1);
+    uint8_t *same = malloc(SM + 1);
+    int *keys = malloc(sizeof(int) * k), m = 0;
+    if (!F || !Fl || !ro || !lo || !rl || !ll || !nnum || !noth || !Smax || !eq || !firstdig || !same || !keys) goto done;
     /* a group column must take more than one value; with long groups the sampled rows may never sit on a boundary
      * (every row equal to the one before it), so that is checked against the first sampled value instead */
     uint8_t varies[8] = {0}; size_t v0off[8] = {0}; uint32_t v0len[8] = {0}; int v0n = 0;
@@ -254,8 +257,6 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
         else for (int j = 0; j < g8; j++) if (!varies[j]) varies[j] = j >= a || j >= v0n || rl[j] != v0len[j] || memcmp(s + ro[j], s + v0off[j], rl[j]);
         ns++;
     }
-    uint8_t *same = malloc(SM + 1);
-    int *keys = malloc(sizeof(int) * k), m = 0;
     for (int j = 0; j < k; j++) if (ns >= 200 && nnum[j] * 10 >= ns && noth[j] * 100 <= ns && Smax[j] <= 18) keys[m++] = j;
     if (ns >= 200) {
         for (int j = 0; j < g8 && fs->gcol < 0; j++) {
@@ -270,6 +271,15 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
         /* log magnitudes, validity, centred logs, Gram matrix (screen for ratio forms) */
         double *L = malloc(sizeof(double) * m * ns), *Lc = malloc(sizeof(double) * m * ns);
         uint8_t *V = malloc((size_t)m * ns); int *vc = calloc(m, sizeof(int));
+        int SC = effort ? SCREEN : SCREEN / 2, SS = ns < SC ? (ns + 7) / 8 * 8 : SC, SCNT = (int)(100.0 * SS / ns + 0.5);
+        float *Lf = calloc((size_t)m * SS, sizeof(float)), *Vf = calloc((size_t)m * SS, sizeof(float)), *L2f = calloc((size_t)m * SS, sizeof(float));
+        int NW = (SS + 63) / 64; uint64_t *VB = calloc((size_t)m * NW, 8);
+        double *PD = malloc(sizeof(double) * m * ns), *PP = malloc(sizeof(double) * m * ns), *LPD = malloc(sizeof(double) * m * ns), *LPP = malloc(sizeof(double) * m * ns);
+        float *LPDf = calloc((size_t)m * SS, sizeof(float)), *LPPf = calloc((size_t)m * SS, sizeof(float));
+        float *VPDf = calloc((size_t)m * SS, sizeof(float)), *VPPf = calloc((size_t)m * SS, sizeof(float));
+        float *Lyr = calloc((size_t)m * SS, sizeof(float));
+        if (!L || !Lc || !V || !vc || !Lf || !Vf || !L2f || !VB || !PD || !PP || !LPD || !LPP ||
+            !LPDf || !LPPf || !VPDf || !VPPf || !Lyr) goto done_search;
         for (int c = 0; c < m; c++) {
             const double *f = F + (size_t)keys[c] * SM; double sum = 0;
             for (int i = 0; i < ns; i++) {
@@ -280,15 +290,11 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
             for (int i = 0; i < ns; i++) Lc[(size_t)c * ns + i] = V[(size_t)c * ns + i] ? L[(size_t)c * ns + i] - mu : 0;
         }
         /* float copies of centred logs on a strided row subsample for the ratio screen */
-        int SC = effort ? SCREEN : SCREEN / 2, SS = ns < SC ? (ns + 7) / 8 * 8 : SC, SCNT = (int)(100.0 * SS / ns + 0.5);
-        float *Lf = calloc((size_t)m * SS, sizeof(float)), *Vf = calloc((size_t)m * SS, sizeof(float)), *L2f = calloc((size_t)m * SS, sizeof(float));
-        int NW = (SS + 63) / 64; uint64_t *VB = calloc((size_t)m * NW, 8);
         for (int c = 0; c < m; c++) for (int i = 0; i < SS && i < ns; i++) {
             int src = (int)((int64_t)i * ns / SS);
             if (V[(size_t)c * ns + src]) { float x = (float)Lc[(size_t)c * ns + src]; Vf[(size_t)c * SS + i] = 1; VB[(size_t)c * NW + i / 64] |= 1ull << (i % 64); Lf[(size_t)c * SS + i] = x; L2f[(size_t)c * SS + i] = x * x; }
         }
         /* lag predictors per source: diff and pct */
-        double *PD = malloc(sizeof(double) * m * ns), *PP = malloc(sizeof(double) * m * ns), *LPD = malloc(sizeof(double) * m * ns), *LPP = malloc(sizeof(double) * m * ns);
         for (int c = 0; c < m; c++) {
             const double *f = F + (size_t)keys[c] * SM, *fl = Fl + (size_t)keys[c] * SM;
             for (int i = 0; i < ns; i++) {
@@ -297,8 +303,6 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
                 LPD[(size_t)c * ns + i] = log(fabs(d)); LPP[(size_t)c * ns + i] = log(fabs(PP[(size_t)c * ns + i]));
             }
         }
-        float *LPDf = calloc((size_t)m * SS, sizeof(float)), *LPPf = calloc((size_t)m * SS, sizeof(float));
-        float *VPDf = calloc((size_t)m * SS, sizeof(float)), *VPPf = calloc((size_t)m * SS, sizeof(float));
         for (int c = 0; c < m; c++) for (int i = 0; i < SS && i < ns; i++) {
             int src = (int)((int64_t)i * ns / SS);
             double d = PD[(size_t)c * ns + src], q = PP[(size_t)c * ns + src];
@@ -306,7 +310,6 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
             if (isfinite(q) && q != 0) { VPPf[(size_t)c * SS + i] = 1; LPPf[(size_t)c * SS + i] = (float)LPP[(size_t)c * ns + src]; }
         }
         /* lag screen uses y's raw (uncentred) logs */
-        float *Lyr = calloc((size_t)m * SS, sizeof(float));
         for (int c = 0; c < m; c++) for (int i = 0; i < SS && i < ns; i++) { int src = (int)((int64_t)i * ns / SS); if (V[(size_t)c * ns + src]) Lyr[(size_t)c * SS + i] = (float)L[(size_t)c * ns + src]; }
         fcand *cands = NULL; size_t nc = 0;
         {   /* formula search over target columns, parallel across disjoint yi ranges (deterministic: see cmp_fcand) */
@@ -335,17 +338,17 @@ static void fset_discover(const uint8_t *s, size_t n, uint8_t delim, int k, int 
             if (cands) for (int t = 0; t < T; t++) { memcpy(cands + nc, wk[t].cands, wk[t].nc * sizeof(fcand)); nc += wk[t].nc; }
             for (int t = 0; t < T; t++) free(wk[t].cands);
             free(WaA); free(DaA); free(D2aA); free(ratA);
-            if (!cands) { cands = malloc(sizeof(fcand)); nc = 0; }
         }
-        qsort(cands, nc, sizeof(fcand), cmp_fcand);
-        uint8_t *derived = calloc(k, 1), *source = calloc(k, 1);
+        if (nc > 1) qsort(cands, nc, sizeof(fcand), cmp_fcand);
+        uint8_t derived[256] = {0}, source[256] = {0};
         for (size_t q = 0; q < nc && fs->n < 256; q++) {
             int y = keys[cands[q].y], a = keys[cands[q].a], b = cands[q].b >= 0 ? keys[cands[q].b] : -1;
             if (derived[y] || source[y] || derived[a] || (b >= 0 && derived[b])) continue;
             fs->f[fs->n++] = (tformula){(uint16_t)y, (uint16_t)a, (uint16_t)(b >= 0 ? b : FM_NONE), (uint8_t)cands[q].form, cands[q].k};
             derived[y] = 1; source[a] = 1; if (b >= 0) source[b] = 1;
         }
-        free(derived); free(source); free(cands);
+        free(cands);
+done_search:
         free(L); free(Lc); free(V); free(vc); free(PD); free(PP); free(LPD); free(LPP); free(Lf); free(Vf); free(L2f); free(VB); free(LPDf); free(LPPf); free(VPDf); free(VPPf); free(Lyr);
     }
 done:
@@ -356,9 +359,18 @@ done:
 /* ------------------------------------------------ block encoder */
 typedef struct { int numeric, S; uint32_t cnt, nnum, nexc, nempty; uint8_t *kind, *sc; int64_t *m, *v; uint32_t *idx; } ncol_t;
 
-static void ncol_parse(const uint8_t *in, size_t n, const uint32_t *off, const uint32_t *len, uint32_t cnt, int keep_mantissa, ncol_t *c) {
-    memset(c, 0, sizeof *c); c->cnt = cnt;
-    c->kind = malloc(cnt + 1); c->sc = malloc(cnt + 1); c->v = malloc(8 * (cnt + 1)); c->m = keep_mantissa ? malloc(8 * (cnt + 1)) : c->v; c->idx = malloc(4 * (cnt + 1));
+static void ncol_free(ncol_t *c) {
+    free(c->kind); free(c->sc); if (c->m != c->v) free(c->m); free(c->v); free(c->idx);
+    *c = (ncol_t){0};
+}
+
+static int ncol_parse(const uint8_t *in, size_t n, const uint32_t *off, const uint32_t *len, uint32_t cnt, int keep_mantissa, ncol_t *c) {
+    size_t count = (size_t)cnt + 1;
+    c->cnt = cnt;
+    c->kind = malloc(count); c->sc = malloc(count); c->v = malloc(sizeof(*c->v) * count);
+    c->m = keep_mantissa ? malloc(sizeof(*c->m) * count) : c->v;
+    c->idx = malloc(sizeof(*c->idx) * count);
+    if (!c->kind || !c->sc || !c->v || !c->m || !c->idx) { ncol_free(c); return -1; }
     int S = 0;
     for (uint32_t i = 0; i < cnt; i++) {
         int64_t m; int s;
@@ -372,27 +384,37 @@ static void ncol_parse(const uint8_t *in, size_t n, const uint32_t *off, const u
     for (uint32_t i = 0; i < c->nnum && numeric; i++)
         if (__builtin_mul_overflow(c->m[i], P10[S - c->sc[i]], &c->v[i]) || c->v[i] > (1LL << 62) || c->v[i] < -(1LL << 62)) numeric = 0;
     c->numeric = numeric;
+    return 0;
 }
-static void ncol_free(ncol_t *c) { free(c->kind); free(c->sc); if (c->m != c->v) free(c->m); free(c->v); free(c->idx); }
 
 /* per-row float values of a numeric column (NaN where empty or text); rows aligned with fields */
 static double *ncol_fvals(const ncol_t *c) {
-    double *f = malloc(sizeof(double) * (c->cnt + 1));
+    double *f = malloc(sizeof(double) * ((size_t)c->cnt + 1));
+    if (!f) return NULL;
     for (uint32_t i = 0; i < c->cnt; i++) f[i] = NAN;
     for (uint32_t i = 0; i < c->nnum; i++) f[c->idx[i]] = (double)c->m[i] / P10D[c->sc[i]];
     return f;
 }
 
-static void text_col_put(const uint8_t *in, const uint32_t *off, const uint32_t *len, uint32_t cnt, Buf *out) {
+/* Each caller reserves a complete section before writing to the fixed output buffer. */
+static inline void tbl2_put(Buf *out, const void *src, size_t n) {
+    if (n) memcpy(out->p + out->n, src, n);
+    out->n += n;
+}
+
+static int text_col_put(const uint8_t *in, const uint32_t *off, const uint32_t *len, uint32_t cnt, Buf *out) {
     uint32_t nlong = 0; for (uint32_t i = 0; i < cnt; i++) nlong += len[i] >= 255;
     size_t data = 0; for (uint32_t i = 0; i < cnt; i++) data += len[i];
-    uint8_t t = 0; uint32_t size = (uint32_t)(8 + cnt + 4 * nlong + data); bput(out, &t, 1); bput(out, &size, 4);
-    bput(out, &cnt, 4); bput(out, &nlong, 4);
-    if (out->n + cnt > out->cap) { out->cap = (out->n + cnt) * 2; out->p = realloc(out->p, out->cap); }
+    uint64_t section = 8 + (uint64_t)cnt + 4ull * nlong + data;
+    if (section > UINT32_MAX || section + 5 > out->cap - out->n) return -1;
+    uint8_t t = 0; uint32_t size = (uint32_t)section;
+    tbl2_put(out, &t, 1); tbl2_put(out, &size, 4);
+    tbl2_put(out, &cnt, 4); tbl2_put(out, &nlong, 4);
     for (uint32_t i = 0; i < cnt; i++) out->p[out->n + i] = len[i] >= 255 ? 255 : (uint8_t)len[i];
     out->n += cnt;
-    for (uint32_t i = 0; i < cnt; i++) if (len[i] >= 255) bput(out, &len[i], 4);
-    for (uint32_t i = 0; i < cnt; i++) bput(out, in + off[i], len[i]);
+    for (uint32_t i = 0; i < cnt; i++) if (len[i] >= 255) tbl2_put(out, &len[i], 4);
+    for (uint32_t i = 0; i < cnt; i++) tbl2_put(out, in + off[i], len[i]);
+    return 0;
 }
 
 /* residual stream for a mode; returns its cost estimate in bits */
@@ -439,23 +461,26 @@ static void num_cost012(const ncol_t *c, const uint32_t *gid, int grouped, uint6
     }
     *c0 = a0; *c1 = a1; *c2 = a2;
 }
-static void num_col_put(const uint8_t *in, const uint32_t *off, const uint32_t *len, const ncol_t *c, int mode, int fid, const uint64_t *z, Buf *out) {
+static int num_col_put(const uint8_t *in, const uint32_t *off, const uint32_t *len, const ncol_t *c, int mode, int fid, const uint64_t *z, Buf *out) {
     uint64_t mx = 0; for (uint32_t i = 0; i < c->nnum; i++) if (z[i] > mx) mx = z[i];
     int w = 1; while (w < 8 && (mx >> (8 * w))) w++;
-    uint32_t elen = 0; if (c->nexc) for (uint32_t i = 0; i < c->cnt; i++) if (c->kind[i] == 2) elen += len[i];
-    uint8_t t = 2; uint32_t size = (uint32_t)(12 + 4 + c->cnt + c->nnum + (size_t)c->nnum * w + 4 * c->nexc + elen);
-    bput(out, &t, 1); bput(out, &size, 4); bput(out, &c->cnt, 4); bput(out, &c->nnum, 4); bput(out, &c->nexc, 4);
-    uint8_t hd[4] = {(uint8_t)c->S, (uint8_t)w, (uint8_t)mode, (uint8_t)fid}; bput(out, hd, 4);
-    bput(out, c->kind, c->cnt);
+    uint64_t elen = 0; if (c->nexc) for (uint32_t i = 0; i < c->cnt; i++) if (c->kind[i] == 2) elen += len[i];
+    uint64_t section = 16 + (uint64_t)c->cnt + c->nnum + (uint64_t)c->nnum * w + 4ull * c->nexc + elen;
+    if (section > UINT32_MAX || section + 5 > out->cap - out->n) return -1;
+    uint8_t t = 2; uint32_t size = (uint32_t)section;
+    tbl2_put(out, &t, 1); tbl2_put(out, &size, 4); tbl2_put(out, &c->cnt, 4); tbl2_put(out, &c->nnum, 4); tbl2_put(out, &c->nexc, 4);
+    uint8_t hd[4] = {(uint8_t)c->S, (uint8_t)w, (uint8_t)mode, (uint8_t)fid}; tbl2_put(out, hd, 4);
+    tbl2_put(out, c->kind, c->cnt);
     size_t at = out->n;
-    if (out->n + c->nnum + (size_t)c->nnum * w > out->cap) { out->cap = (out->n + c->nnum + (size_t)c->nnum * w) * 2 + 16; out->p = realloc(out->p, out->cap); }
     for (uint32_t i = 0; i < c->nnum; i++) out->p[at + i] = (uint8_t)(c->S - c->sc[i]);
     at += c->nnum;
     for (int b = 0; b < w; b++) for (uint32_t i = 0; i < c->nnum; i++) out->p[at + (size_t)b * c->nnum + i] = (uint8_t)(z[i] >> (8 * b));
     out->n = at + (size_t)c->nnum * w;
-    if (!c->nexc) return;
-    for (uint32_t i = 0; i < c->cnt; i++) if (c->kind[i] == 2) bput(out, &len[i], 4);
-    for (uint32_t i = 0; i < c->cnt; i++) if (c->kind[i] == 2) bput(out, in + off[i], len[i]);
+    if (c->nexc) {
+        for (uint32_t i = 0; i < c->cnt; i++) if (c->kind[i] == 2) tbl2_put(out, &len[i], 4);
+        for (uint32_t i = 0; i < c->cnt; i++) if (c->kind[i] == 2) tbl2_put(out, in + off[i], len[i]);
+    }
+    return 0;
 }
 
 /* quote-free tables whose rows all have k fields: terminators found by a SIMD scan, fields written straight to their
@@ -466,6 +491,7 @@ static int split_aligned(const uint8_t *in, int64_t n, uint8_t delim, int k, uin
     size_t nn = 0, i = 0; uint64_t mt, mn;
     for (; i + 64 <= (size_t)n; i += 64) { term_masks64(in + i, delim, &mt, &mn); nn += (size_t)kolmo_popcnt64(mn); }
     for (; i < (size_t)n; i++) nn += in[i] == '\n';
+    if (nn > (size_t)n / k) return 0;
     int64_t cap = (int64_t)nn + 1;
     uint32_t *coff = malloc(4 * ((size_t)cap * k + 1)), *clen = malloc(4 * ((size_t)cap * k + 1));
     if (!coff || !clen) { free(coff); free(clen); return 0; }
@@ -498,15 +524,20 @@ fail:
 }
 
 static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, int quotes, const fset_t *fs, uint8_t *dst, unsigned *newmodes) {
+    if (!dst || n <= 0 || n >= 0xFFFFFFF0ll || k < 1 || k > 256) return -1;
     if (quotes && !has_quotes(in, n)) quotes = 0;
     uint32_t colcnt[256] = {0}; int64_t nf = 0, nr = 0, nexc = 0; int noNL = 0;
-    uint32_t *coff = NULL, *clen = NULL, *exc = NULL; int64_t base[256];
-    int64_t stride;
+    uint32_t *coff = NULL, *clen = NULL, *exc = NULL, *rec = NULL, *gid = NULL;
+    uint64_t *z = NULL, *zb = NULL;
+    double *fv[256] = {0}, *la = NULL;
+    ncol_t C[256] = {0};
+    unsigned modes = 0;
+    int64_t base[256], stride, total = -1;
     if (!quotes && split_aligned(in, n, delim, k, &coff, &clen, &nr, &stride, &noNL)) {
-        exc = malloc(8); nf = nr * k;
         for (int j = 0; j < k; j++) { colcnt[j] = (uint32_t)nr; base[j] = (int64_t)j * stride; }
     } else {
-    uint32_t *rec = malloc(4 * (n + 2)); exc = malloc(8 * (n + 2));
+    rec = malloc(4 * (n + 2)); exc = malloc(8 * (n + 2));
+    if (!rec || !exc) goto cleanup;
     int64_t i = 0;
     while (i < n) {
         int j = 0;
@@ -522,22 +553,24 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
         }
     }
     coff = malloc(4 * (nf + 1)); clen = malloc(4 * (nf + 1)); int64_t lpos[256], pos = 0;
+    if (!coff || !clen) goto cleanup;
     for (int j = 0; j < k; j++) { base[j] = lpos[j] = pos; pos += colcnt[j]; }
     int64_t f = 0, ei = 0, src = 0;
     for (int64_t r = 0; r < nr; r++) {
         int cnt = (ei < nexc && exc[2 * ei] == r) ? (int)exc[2 * ei++ + 1] : k;
         for (int j = 0; j < cnt; j++) { uint32_t L = rec[f++]; coff[lpos[j]] = (uint32_t)src; clen[lpos[j]++] = L; src += L + 1; }
     }
-    free(rec);
+    free(rec); rec = NULL;
     }
     int aligned = nexc == 0 && nr > 0;
     /* 0.0.2's decoder (tbl2_stream) refuses an aligned block holding a field over 65535 bytes: none is written, the
      * block is then stored without the table transform, so every file stays readable by 0.0.2 */
     if (aligned) for (int j = 0; j < k; j++) for (int64_t r = 0; r < nr; r++)
-        if (clen[base[j] + r] > 65535) { free(exc); free(coff); free(clen); return -1; }
+        if (clen[base[j] + r] > 65535) goto cleanup;
     int gcol = aligned && fs && fs->gcol >= 0 && fs->gcol < k ? fs->gcol : -1;
     /* entity groups: gid increases where the group column changes */
-    uint32_t *gid = malloc(4 * ((size_t)nr + 1));
+    gid = malloc(4 * ((size_t)nr + 1));
+    if (!gid) goto cleanup;
     { uint32_t g = 0; for (int64_t r = 0; r < nr; r++) {
         if (r && gcol >= 0) { uint32_t a = (uint32_t)(base[gcol] + r), b = a - 1; if (clen[a] != clen[b] || memcmp(in + coff[a], in + coff[b], clen[a])) g++; }
         gid[r] = g; } }
@@ -550,9 +583,8 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
         needed[f->y] = needed[f->a] = source[f->a] = 1;
         if (f->b != FM_NONE) needed[f->b] = source[f->b] = 1;
     }
-    ncol_t C[256] = {0};
-    for (int j = 0; j < k; j++) if (needed[j] && j != gcol)
-        ncol_parse(in, n, coff + base[j], clen + base[j], colcnt[j], source[j], &C[j]);
+    for (int j = 0; j < k; j++) if (needed[j] && j != gcol &&
+        ncol_parse(in, n, coff + base[j], clen + base[j], colcnt[j], source[j], &C[j]) < 0) goto cleanup;
     /* formulas usable in this block: target and sources numeric, rows aligned */
     int nform = 0; tformula FB[256]; int fofy[256]; for (int j = 0; j < k; j++) fofy[j] = -1;
     if (aligned && fs) for (int q = 0; q < fs->n; q++) {
@@ -562,21 +594,25 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
         if (F->form == FM_RATIO && F->b == FM_NONE) continue;
         FB[nform] = *F; fofy[F->y] = nform++;
     }
-    double **fv = calloc(k, sizeof(double *));
-    Buf out = {0}; uint32_t h[4] = {(uint32_t)k, (uint32_t)nr, (uint32_t)nexc, (uint32_t)noNL}; int32_t g32 = gcol; uint32_t nf32 = (uint32_t)nform;
-    bput(&out, h, 16); bput(&out, &g32, 4); bput(&out, &nf32, 4);
+    /* The caller's scratch has room for the table slack. Discard a partial result on fallback. */
+    uint64_t limit = n + (uint64_t)TBL_SLACK(n) - 64;
+    Buf out = {.p = dst, .cap = (size_t)(limit < UINT32_MAX ? limit : UINT32_MAX)};
+    if (24 + 16ull * nform + 8ull * nexc > out.cap) goto cleanup;
+    uint32_t h[4] = {(uint32_t)k, (uint32_t)nr, (uint32_t)nexc, (uint32_t)noNL}; int32_t g32 = gcol; uint32_t nf32 = (uint32_t)nform;
+    tbl2_put(&out, h, 16); tbl2_put(&out, &g32, 4); tbl2_put(&out, &nf32, 4);
     for (int q = 0; q < nform; q++) {
         uint8_t e[16]; memset(e, 0, 16); memcpy(e, &FB[q].y, 2); memcpy(e + 2, &FB[q].a, 2); memcpy(e + 4, &FB[q].b, 2); e[6] = FB[q].form; memcpy(e + 8, &FB[q].k, 8);
-        bput(&out, e, 16);
+        tbl2_put(&out, e, 16);
     }
-    bput(&out, exc, 8 * nexc);
-    uint64_t *z = malloc(8 * ((size_t)nr + 2)), *zb = malloc(8 * ((size_t)nr + 2)); int usedg = 0;
-    double *la = malloc(sizeof(double) * ((size_t)nr + 1));
+    tbl2_put(&out, exc, 8 * (size_t)nexc);
+    z = malloc(8 * ((size_t)nr + 2)); zb = malloc(8 * ((size_t)nr + 2)); int usedg = 0;
+    la = malloc(sizeof(double) * ((size_t)nr + 1));
+    if (!z || !zb || !la) goto cleanup;
     for (int j = 0; j < k; j++) {
         const uint32_t *o = coff + base[j], *l = clen + base[j];
-        if (!needed[j] && j != gcol) ncol_parse(in, n, o, l, colcnt[j], 0, &C[j]);
+        if (!needed[j] && j != gcol && ncol_parse(in, n, o, l, colcnt[j], 0, &C[j]) < 0) goto cleanup;
         if (!C[j].numeric) {
-            text_col_put(in, o, l, colcnt[j], &out);
+            if (text_col_put(in, o, l, colcnt[j], &out) < 0) goto cleanup;
             if (!needed[j]) ncol_free(&C[j]);
             continue;
         }
@@ -594,27 +630,27 @@ static int64_t tbl2_encode(const uint8_t *in, int64_t n, uint8_t delim, int k, i
         int fid = fofy[j];
         if (fid >= 0) {
             const tformula *F = &FB[fid];
-            if (!fv[F->a]) fv[F->a] = ncol_fvals(&C[F->a]);
-            if (F->b != FM_NONE && !fv[F->b]) fv[F->b] = ncol_fvals(&C[F->b]);
+            if (!fv[F->a] && !(fv[F->a] = ncol_fvals(&C[F->a]))) goto cleanup;
+            if (F->b != FM_NONE && !fv[F->b] && !(fv[F->b] = ncol_fvals(&C[F->b]))) goto cleanup;
             const double *fa = fv[F->a];
             if (F->form != FM_RATIO) { la[0] = NAN; for (int64_t r = 1; r < nr; r++) la[r] = gid[r] == gid[r - 1] ? fa[r - 1] : NAN; }
             c = num_resid(&C[j], 3, gid, F, fa, F->b != FM_NONE ? fv[F->b] : NULL, F->form != FM_RATIO ? la : NULL, z);
             if (c < bc) { bc = c; bm = 3; zt = zb; zb = z; z = zt; zready = 1; }
         }
         if (!zready) num_resid(&C[j], bm, gid, NULL, NULL, NULL, NULL, zb);
-        if (bm >= 4 && newmodes) *newmodes |= 1u << (bm - 4);
+        if (bm >= 4) modes |= 1u << (bm - 4);
         usedg |= bm == 2 || bm >= 4 || (bm == 3 && FB[fid].form != FM_RATIO);
-        num_col_put(in, o, l, &C[j], bm, bm == 3 ? fid : 0, zb, &out);
+        if (num_col_put(in, o, l, &C[j], bm, bm == 3 ? fid : 0, zb, &out) < 0) goto cleanup;
         if (!needed[j]) ncol_free(&C[j]);
     }
     /* a group column found only by the varies test and used by no predictor in this block: written as none, so the
      * block is the same as when no group column is found (gid is then unused by the decoder) */
     if (gcol >= 0 && fs->gweak && !usedg) { int32_t none = -1; memcpy(out.p + 16, &none, 4); }
-    for (int j = 0; j < k; j++) { if (needed[j]) ncol_free(&C[j]); free(fv[j]); }
-    free(fv); free(z); free(zb); free(la); free(gid); free(exc); free(coff); free(clen);
-    int64_t total = out.n;
-    if (total > n + TBL_SLACK(n) - 64) { free(out.p); return -1; }   /* above n + TSLACK the file is version 11 */
-    memcpy(dst, out.p, total); free(out.p);
+    total = out.n;
+    if (newmodes) *newmodes |= modes;
+cleanup:
+    for (int j = 0; j < k; j++) { if (C[j].kind) ncol_free(&C[j]); free(fv[j]); }
+    free(z); free(zb); free(la); free(gid); free(exc); free(coff); free(clen); free(rec);
     return total;
 }
 
