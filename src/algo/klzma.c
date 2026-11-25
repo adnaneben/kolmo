@@ -278,20 +278,35 @@ typedef struct {
 #define P0(p) E->ptab[(p) >> 4]
 #define P1(p) E->ptab[(KM_ONE - (p)) >> 4]
 #define PB(p, b) ((b) ? P1(p) : P0(p))
-static uint32_t km_tree_price(const km_enc *E, const kp *pr, int nb, uint32_t v) { uint32_t s = 0, m = 1; for (int i = nb - 1; i >= 0; i--) { unsigned b = (v >> i) & 1; s += PB(pr[m], b); m = m << 1 | b; } return s; }
+/* All symbols in a price table use the same probability snapshot. Grow one
+ * level at a time, reusing the price of each shared prefix for both children.
+ * Work backwards so writing the children cannot overwrite an unread parent. */
+static void km_tree_prices(const km_enc *E, const kp *pr, unsigned leaves,
+                           uint32_t root_price, uint32_t *out) {
+    out[0] = root_price;
+    for (unsigned width = 1; width < leaves; width *= 2) {
+        for (unsigned i = width; i > 0; --i) {
+            unsigned parent = i - 1;
+            uint32_t price = out[parent];
+            kp prob = pr[width + parent];
+            out[2 * parent] = price + P0(prob);
+            out[2 * parent + 1] = price + P1(prob);
+        }
+    }
+}
 static uint32_t km_rtree_price(const km_enc *E, const kp *pr, int nb, uint32_t v) { uint32_t s = 0, m = 1; for (int i = 0; i < nb; i++) { unsigned b = v & 1; v >>= 1; s += PB(pr[m], b); m = m << 1 | b; } return s; }
 static void km_len_prices(km_enc *E, const km_len *L, uint32_t T[16][KM_MAXLEN + 1]) {
     uint32_t c0 = P0(L->choice), c1 = P1(L->choice), d0 = c1 + P0(L->choice2), d1 = c1 + P1(L->choice2), hi[256];
-    for (uint32_t l = 0; l < 256; l++) hi[l] = d1 + km_tree_price(E, L->high, 8, l);
+    km_tree_prices(E, L->high, 256, d1, hi);
     for (int ps = 0; ps < (1 << E->m.pb); ps++) {
-        for (uint32_t l = 0; l < 8; l++) T[ps][l + 2] = c0 + km_tree_price(E, L->low[ps], 3, l);
-        for (uint32_t l = 0; l < 8; l++) T[ps][l + 10] = d0 + km_tree_price(E, L->mid[ps], 3, l);
+        km_tree_prices(E, L->low[ps], 8, c0, &T[ps][2]);
+        km_tree_prices(E, L->mid[ps], 8, d0, &T[ps][10]);
         for (uint32_t l = 16; l < KM_MAXLEN - 1; l++) T[ps][l + 2] = hi[l - 16];
     }
 }
 static void km_dist_prices(km_enc *E) {
     for (int ls = 0; ls < 4; ls++) {
-        for (uint32_t s = 0; s < 64; s++) E->slotp[ls][s] = km_tree_price(E, E->m.p.slot[ls], 6, s);
+        km_tree_prices(E, E->m.p.slot[ls], 64, 0, E->slotp[ls]);
         for (uint32_t d = 0; d < 128; d++) {
             uint32_t s = km_slot(d), pr = E->slotp[ls][s];
             if (s >= 4) { int nb = (int)(s >> 1) - 1; uint32_t base = (2u | (s & 1)) << nb; pr += km_rtree_price(E, E->m.p.spec[s], nb, d - base); }
