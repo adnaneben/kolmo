@@ -751,7 +751,7 @@ static void report_error(const opts_t *o, const char *name, int64_t e, const uin
 #ifndef KOLMO_PIPE_ONESHOT
 #define KOLMO_PIPE_ONESHOT (256u << 20)   /* a pipe up to this size is one frame, as the same bytes in a file */
 #endif
-typedef struct { const uint8_t *pre; size_t pn; int src, wfd; pthread_t th; int rfd; } feeder_t;
+typedef struct { const uint8_t *pre; size_t pn; int src, wfd; pthread_t th; int rfd, error; } feeder_t;
 static void feeder_close(void *p) { feeder_t *f = p; if (f->wfd >= 0) { close(f->wfd); f->wfd = -1; } }
 static void *feeder_run(void *p) {
     feeder_t *f = p;
@@ -759,12 +759,14 @@ static void *feeder_run(void *p) {
     pthread_sigmask(SIG_BLOCK, &m, NULL);           /* Linux: a reader that stopped early gives EPIPE here; the
                                                        thread's pending SIGPIPE goes with it */
     pthread_cleanup_push(feeder_close, f);
-    if (!write_all(f->wfd, f->pre, f->pn)) {
+    if (write_all(f->wfd, f->pre, f->pn)) f->error = errno;
+    else {
         uint8_t b[1 << 16];
         for (;;) {
             ssize_t r = read(f->src, b, sizeof b);
             if (r < 0 && errno == EINTR) continue;
-            if (r <= 0 || write_all(f->wfd, b, (size_t)r)) break;
+            if (!r) break;
+            if (r < 0 || write_all(f->wfd, b, (size_t)r)) { f->error = errno; break; }
         }
     }
     pthread_cleanup_pop(1);
@@ -782,11 +784,12 @@ static int feeder_start(feeder_t *f, const uint8_t *pre, size_t pn, int src) {
     if (pthread_create(&f->th, NULL, feeder_run, f)) { close(fds[0]); close(fds[1]); f->rfd = f->wfd = -1; return -1; }
     return f->rfd;
 }
-static void feeder_stop(feeder_t *f) {
-    if (f->rfd < 0) return;
+static int feeder_stop(feeder_t *f, int cancel) {
+    if (f->rfd < 0) return 0;
     close(f->rfd); f->rfd = -1;                     /* a feeder blocked in write returns (EPIPE) */
-    pthread_cancel(f->th);                          /* one blocked in read of the source is cancelled */
+    if (cancel) pthread_cancel(f->th);              /* a failed consumer may leave the feeder blocked in read */
     pthread_join(f->th, NULL);
+    return f->error;
 }
 /* up to lim bytes of fd; *more = 1 when the input goes on past them. NULL on error, errno set. */
 static uint8_t *read_upto(int fd, size_t lim, size_t *n, int *more) {
@@ -869,7 +872,7 @@ static int process(const opts_t *o, const char *in) {
     uint8_t hdr[32]; size_t hn = 0;
     int ret = 0; int64_t insize = -1, outsize = -1;
     uint8_t *buf = NULL, *obuf = NULL; size_t bn = 0;
-    feeder_t fd_feed = {NULL, 0, -1, -1, 0, -1}; /* a pipe whose start was read already, replayed to a stream coder */
+    feeder_t fd_feed = {.rfd = -1, .wfd = -1}; /* a pipe whose start was read already, replayed to a stream coder */
     int sfd = ifd;                           /* the descriptor streamed decoders read */
     int streamed = 0, buffered = 0, filepath = 0;
     uint8_t *imap = NULL; size_t imapn = 0;   /* a regular input file mapped read-only (-t, -dc) */
@@ -944,6 +947,10 @@ static int process(const opts_t *o, const char *in) {
             } else if (imap) { src = imap; sn = imapn; }
             r = decode_frames_to_fd(o, src, sn, -1, 0);   /* each frame checked, then decoded into /dev/null */
         }
+        if (r >= 0) {
+            int e = feeder_stop(&fd_feed, 0);
+            if (e) { errno = e; r = KOLMO_ERR_IO; }
+        }
         if (r < 0) { report_error(o, name, r, hdr, hn); ret = 1; }
         else if (verbose) fprintf(stderr, "kolmo: %s: OK (%lld bytes)\n", name, (long long)r);
         goto out;
@@ -1005,6 +1012,10 @@ static int process(const opts_t *o, const char *in) {
             if (write_all(ofd, obuf, (size_t)r)) { write_error(to_stdout ? "(stdout)" : outp); ret = 1; goto out; }
         }
     }
+    if (r >= 0) {
+        int e = feeder_stop(&fd_feed, 0);
+        if (e) { errno = e; r = KOLMO_ERR_IO; }
+    }
     if (r < 0) { report_error(o, name, r, dec ? hdr : NULL, dec ? hn : 0); ret = 1; goto out; }
     if (!to_stdout) {
         int e = stage_publish(&st, outp, in && ireg ? &ist : NULL, o->force);
@@ -1023,7 +1034,7 @@ static int process(const opts_t *o, const char *in) {
     /* --rm: the input goes once its output is published (never with -c, standard input, or the output itself) */
     if (o->rm && in && outp && unlink(in)) { fprintf(stderr, "kolmo: %s: cannot remove: %s\n", in, strerror(errno)); ret = 1; }
 out:
-    feeder_stop(&fd_feed);
+    feeder_stop(&fd_feed, 1);
     if (st.fd >= 0) stage_discard(&st);
     free(buf); free(obuf); free(derived);
     if (imap) munmap(imap, imapn);
