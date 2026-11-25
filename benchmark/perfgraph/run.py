@@ -98,7 +98,13 @@ def main():
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("--work", default=None, help="scratch directory (default: next to --out)")
     ap.add_argument("--max-retries", type=int, default=50)
+    ap.add_argument("--size-only", action="store_true",
+                    help="untimed pass under nice -n 15, 1 rep, any load: sizes and round trips only; rows are "
+                         "marked size_only and the plotter uses them for ratios, never for speed")
     a = ap.parse_args()
+    if a.size_only:
+        a.reps, a.max_load, a.timed = 1, float("inf"), "nice"
+    # --timed none: the caller already holds the timing lock (e.g. the whole run is wrapped in timed.sh).
 
     def log(msg):
         print(time.strftime("%H:%M:%S"), msg, flush=True)
@@ -131,7 +137,8 @@ def main():
     if os.path.exists(a.out):
         for line in open(a.out):
             r = json.loads(line)
-            done.add((r["config"], r["input_sha256"], r["binary_sha256"]))
+            if bool(r.get("size_only")) == a.size_only:
+                done.add((r["config"], r["input_sha256"], r["binary_sha256"]))
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     work = a.work or os.path.join(os.path.dirname(os.path.abspath(a.out)), ".work")
     todo = [(i, c) for i in inputs for c in cfgs if (c["config"], i["sha256"], c["binary_sha256"]) not in done]
@@ -144,10 +151,16 @@ def main():
         os.makedirs(work, exist_ok=True)
         spec_path = os.path.join(work, "spec.json")
         for attempt in range(a.max_retries):
-            l_before = wait_for_quiet(a.max_load, log)
+            l_before = wait_for_quiet(a.max_load, log) if not a.size_only else os.getloadavg()[0]
             json.dump(spec, open(spec_path, "w"))
             t0 = time.time()
-            p = subprocess.run([a.timed, a.tag, sys.executable, "-I", os.path.join(HERE, "cell.py"), spec_path],
+            if a.timed == "nice":
+                pre = ["nice", "-n", "15"]
+            elif a.timed == "none":
+                pre = []
+            else:
+                pre = [a.timed, a.tag]
+            p = subprocess.run([*pre, sys.executable, "-I", os.path.join(HERE, "cell.py"), spec_path],
                                capture_output=True, text=True)
             if p.returncode != 0:
                 sys.exit(f"cell runner failed: {p.stderr[-800:]}")
@@ -169,7 +182,7 @@ def main():
                    snapshot=c.get("snapshot"), snapshot_label=c.get("snapshot_label"),
                    binary=c.get("binary"), binary_sha256=c["binary_sha256"], version=c.get("version"),
                    enc_argv=c["enc"], dec_argv=c["dec"], threads=1, reps=a.reps,
-                   load1_before=round(l_before, 2), load1_after=round(l_after, 2),
+                   size_only=a.size_only, load1_before=round(l_before, 2), load1_after=round(l_after, 2),
                    started_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(t0)),
                    wall_cell_s=round(time.time() - t0, 3), host=platform.node(), machine=platform.machine(),
                    **res)

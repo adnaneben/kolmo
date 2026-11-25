@@ -54,12 +54,13 @@ def med(xs):
     return statistics.median(xs)
 
 
-def load(paths):
+def load(paths, size_only=False):
+    """Rows of one kind: timed rows (default) or the untimed size-only pass."""
     cells = {}
     for p in paths:
         for line in open(p):
             r = json.loads(line)
-            if r.get("error") or not r["enc_ns"]:
+            if r.get("error") or not r["enc_ns"] or bool(r.get("size_only")) != size_only:
                 continue
             if len(set(r["comp_sha"])) != 1:
                 raise SystemExit(f"non-deterministic output: {r['config']} {r['input']}")
@@ -175,15 +176,68 @@ def draw(pts, title, subtitle, path_base):
     plt.close(fig)
 
 
+def check_sizes(timed, sized):
+    """A timed cell must produce the same compressed bytes as the size-only pass of the same binary."""
+    ref = {(r["config"], r["input"], r["binary_sha256"]): r["comp_sha"][0] for r in sized}
+    for r in timed:
+        k = (r["config"], r["input"], r["binary_sha256"])
+        if k in ref and ref[k] != r["comp_sha"][0]:
+            raise SystemExit(f"compressed output differs from the size-only pass: {k}")
+
+
+def write_sizes(rows, which, out):
+    """Ratio table (rows = configurations, columns = groups + overall) from the untimed pass."""
+    groups = [g for g in GROUPS["order"] if set(GROUPS[which][g]) <= {r["input"] for r in rows}]
+    every = set().union(*[set(GROUPS[which][g]) for g in groups]) if groups else set()
+    cols = groups + (["overall"] if groups else [])
+    res = defaultdict(dict)
+    meta = {}
+    for g in cols:
+        for p in aggregate(rows, every if g == "overall" else set(GROUPS[which][g])):
+            res[p["config"]][g] = p
+            meta[p["config"]] = p
+
+    def key(c):
+        m = meta[c]
+        tools = ["kolmo"] + [t for t, *_ in TOOLS]
+        return (tools.index(m["tool"]), m.get("snapshot") or "", LEVEL_ORDER.get(m["level"], 0))
+
+    order = sorted(res, key=key)
+    with open(os.path.join(out, "sizes.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["config", "tool", "snapshot", "level"] + [f"{g}_ratio" for g in cols] +
+                   [f"{g}_compressed_bytes" for g in cols])
+        for c in order:
+            m = meta[c]
+            w.writerow([c, m["tool"], m.get("snapshot") or "", m["level"]] +
+                       [f"{res[c][g]['ratio']:.4f}" if g in res[c] else "" for g in cols] +
+                       [res[c][g]["comp"] if g in res[c] else "" for g in cols])
+    with open(os.path.join(out, "sizes.md"), "w") as f:
+        f.write(f"# Compression ratio by group ({which} set, untimed size pass)\n\n")
+        f.write("Ratio = sum of original bytes / sum of compressed bytes over the group's inputs. "
+                "Every output was decoded and matched the input's SHA-256. Timings: pending, quiet window.\n\n")
+        f.write("| Config | " + " | ".join(GROUPS["titles"].get(g, "Overall") for g in cols) + " |\n")
+        f.write("|---|" + "---:|" * len(cols) + "\n")
+        for c in order:
+            m = meta[c]
+            name = f"Kolmo {m['snapshot']} L{m['label']}" if m["tool"] == "kolmo" else m["label"]
+            f.write(f"| {name} | " + " | ".join(f"{res[c][g]['ratio']:.3f}" if g in res[c] else ""
+                                                 for g in cols) + " |\n")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("rows", nargs="+")
     ap.add_argument("--out", required=True)
     ap.add_argument("--set", default="dev")
     ap.add_argument("--note", default="Apple M-series Mac, 1 thread per tool, warm cache")
+    ap.add_argument("--sizes", action="store_true", help="also write sizes.md/sizes.csv from the size-only rows")
     a = ap.parse_args()
-    rows = [r for r in load(a.rows) if r["set"] == a.set]
     os.makedirs(a.out, exist_ok=True)
+    if a.sizes:
+        write_sizes([r for r in load(a.rows, size_only=True) if r["set"] == a.set], a.set, a.out)
+    rows = [r for r in load(a.rows) if r["set"] == a.set]
+    check_sizes(rows, [r for r in load(a.rows, size_only=True) if r["set"] == a.set])
     table = []
     every = []
     for g in GROUPS["order"]:

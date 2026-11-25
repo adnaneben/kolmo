@@ -46,7 +46,7 @@ def run(argv, stdin_path, stdout_path, cwd, env):
 def main():
     spec = json.load(open(sys.argv[1]))
     load_start = os.getloadavg()[0]
-    if load_start >= spec["max_load"]:
+    if load_start >= float(spec["max_load"]):
         # Inside the lock, but the machine is busy: time nothing, release the lock.
         print(json.dumps(dict(skipped=True, load_start=load_start)))
         return

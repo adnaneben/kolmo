@@ -81,6 +81,15 @@ python3 benchmark/perfgraph/run.py --corpus $V/impact/corpus --set dev \
 python3 benchmark/perfgraph/plot.py benchmark/perfgraph/rows/dev.jsonl --out benchmark/perfgraph/charts/dev
 ```
 
+Untimed size pass (any load, `nice -n 15`, one rep, every output still decoded and hashed):
+add `--size-only`; those rows are marked `size_only` and `plot.py --sizes` turns them into
+`sizes.md`/`sizes.csv`. They never feed a speed axis, and the plotter rejects a timed cell whose
+compressed bytes differ from the size pass of the same binary.
+
+When the whole run is already inside the timing lock (the coordinator's quiet-window queue wraps
+each job in `timed.sh`), pass `--timed none` so the runner does not try to take the lock again;
+it still waits for load < 12 before every cell.
+
 The plotter needs matplotlib. A new snapshot (C, or B rebuilt on the 0.0.3 candidate) is one more
 `--kolmo` run into the same rows file; the competitors' rows are reused. When B is rebuilt, its
 binary hash changes, so its cells are re-measured; the plotter keeps the latest row per cell.
