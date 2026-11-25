@@ -203,9 +203,25 @@ static int mt_known(const uint8_t *s, size_t n) {
     return meta_packed(s, n) || meta_image8(s, n, &w, &c, &h) || (n >= 16 && (!memcmp(s, "\x93NUMPY", 6) || !memcmp(s, "\x7F" "ELF", 4)
         || !memcmp(s, "GGUF", 4) || !memcmp(s, "PK\3\4", 4) || mt_le32(s) == 0xFEEDFACFu || mt_be32(s) == 0xCAFEBABEu || (s[0] == 'M' && s[1] == 'Z') || (!memcmp(s, "RIFF", 4) && !memcmp(s + 8, "WAVE", 4)) || (s[8] == '{' && mt_le64(s) < n)));
 }
+/* one archive member whose data is s[off, off + size): a regular file of at least 1 MiB, or of at least 64 KiB whose
+ * header Kolmo reads, becomes its own part (cut further by its own format); everything since *last (headers, smaller
+ * members) becomes one part before it */
+static void mt_member(const uint8_t *s, uint64_t off, uint64_t size, int reg, mt_segs *g, uint64_t *last) {
+    const uint8_t *m = s + off;
+    const int known = reg && size >= META_MINSEG && mt_known(m, size);
+    if (!reg || !(size >= (1u << 20) || known)) return;
+    if (off > *last) { g->ss[g->k] = *last; g->se[g->k] = off; g->kind[g->k] = MK_DATA; g->k++; }
+    uint32_t k0 = g->k; mt_segs t = {g->ss + k0, g->se + k0, g->kind + k0, 0, g->maxs - k0 - 1, g->exemin};
+    if (known && t.maxs >= 4 && mt_nested(m, size, &t) && t.k) {     /* the member cut by its own format */
+        t.se[t.k - 1] = size;
+        for (uint32_t i = 0; i < t.k; i++) { t.ss[i] += off; t.se[i] += off; }
+        g->k += t.k;
+    } else { g->ss[g->k] = off; g->se[g->k] = off + size; g->kind[g->k] = meta_packed(m, size) ? MK_PACKED : MK_DATA; g->k++; }
+    *last = off + size;
+}
 static int mt_tar(const uint8_t *s, size_t n, mt_segs *g) {
     if (n < 1024 || memcmp(s + 257, "ustar", 5)) return 0;
-    size_t off = 0, last = 0;
+    uint64_t off = 0, last = 0;
     while (off + 512 <= n && g->k + 2 < g->maxs) {
         const uint8_t *h = s + off; int zero = 1; for (int i = 0; i < 512 && zero; i++) zero = !h[i];
         if (zero) break;
@@ -213,18 +229,7 @@ static int mt_tar(const uint8_t *s, size_t n, mt_segs *g) {
         uint64_t size = 0; int ok = 1;
         for (int i = 124; i < 136; i++) { uint8_t c = h[i]; if (c == 0 || c == ' ') continue; if (c < '0' || c > '7') { ok = 0; break; } size = size * 8 + (c - '0'); }
         if (!ok || size > n || off + 512 + size > n) break;
-        const uint8_t *m = s + off + 512; const int reg = h[156] == '0' || h[156] == 0;
-        const int known = reg && size >= META_MINSEG && mt_known(m, size);
-        if (reg && (size >= (1u << 20) || known)) {
-            if (off + 512 > last) { g->ss[g->k] = last; g->se[g->k] = off + 512; g->kind[g->k] = MK_DATA; g->k++; }
-            uint32_t k0 = g->k; mt_segs t = {g->ss + k0, g->se + k0, g->kind + k0, 0, g->maxs - k0 - 1, g->exemin};
-            if (known && t.maxs >= 4 && mt_nested(m, size, &t) && t.k) {     /* the member cut by its own format */
-                t.se[t.k - 1] = size;
-                for (uint32_t i = 0; i < t.k; i++) { t.ss[i] += off + 512; t.se[i] += off + 512; }
-                g->k += t.k;
-            } else { g->ss[g->k] = off + 512; g->se[g->k] = off + 512 + size; g->kind[g->k] = meta_packed(m, size) ? MK_PACKED : MK_DATA; g->k++; }
-            last = off + 512 + size;
-        }
+        mt_member(s, off + 512, size, h[156] == '0' || h[156] == 0, g, &last);
         off += 512 + (size + 511) / 512 * 512;
     }
     if (last < n || g->k == 0) { g->ss[g->k] = last; g->se[g->k] = n; g->kind[g->k] = MK_DATA; g->k++; }
@@ -525,6 +530,18 @@ static uint32_t meta_segments_x(const uint8_t *s, size_t n, uint64_t *ss, uint64
     }
     ss[0] = 0; se[0] = n; g.kind[0] = s && n && meta_packed(s, n) ? MK_PACKED : MK_DATA;
     return 1;
+}
+/* A buffer of members without headers (the chunk store of kolmo archive): member i starts at cut[i] (increasing, the
+ * first at 0) and ends where the next starts. Each member is a part as a tar member would be (mt_member). */
+static uint32_t meta_runs(const uint8_t *s, size_t n, const uint64_t *cut, size_t ncut, uint64_t *ss, uint64_t *se, uint32_t *kind, uint32_t maxs, size_t exemin) {
+    mt_segs g = {ss, se, kind, 0, maxs, exemin}; uint64_t last = 0;
+    for (size_t i = 0; i < ncut && g.k + 2 < g.maxs; i++) {
+        uint64_t a = cut[i], b = i + 1 < ncut ? cut[i + 1] : n;
+        if (a < last || b > n || b < a) break;
+        if (b > a) mt_member(s, a, b - a, 1, &g, &last);
+    }
+    if (last < n || g.k == 0) { g.ss[g.k] = last; g.se[g.k] = n; g.kind[g.k] = MK_DATA; g.k++; }
+    return g.k;
 }
 static uint32_t meta_segments(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se, uint32_t *kind, uint32_t maxs) {
     return meta_segments_x(s, n, ss, se, kind, maxs, MT_EXE_MIN);

@@ -238,6 +238,47 @@ static void stream_members(void) {
     free(a); free(c); free(zf); free(zs); free(f);
 }
 
+/* a streamed tar ends its segments at member headers (a pax header stays with its member), at the segment size inside
+ * a member longer than a segment, and decodes to the input */
+static size_t tar_hdr(uint8_t *h, const char *name, size_t size, char type) {
+    memset(h, 0, 512); snprintf((char *)h, 100, "%s", name); memcpy(h + 100, "0000644", 7);
+    snprintf((char *)h + 124, 12, "%011zo", size); h[156] = (uint8_t)type; memcpy(h + 257, "ustar\0" "00", 8);
+    memset(h + 148, ' ', 8); unsigned sum = 0; for (int i = 0; i < 512; i++) sum += h[i];
+    snprintf((char *)h + 148, 8, "%06o", sum); h[155] = ' ';
+    return 512 + (size + 511) / 512 * 512;
+}
+static void stream_tar_cuts(void) {
+    static const size_t sz[] = {300000, 900000, 2621440 + 1000, 200000, 600000, 400000, 700000};
+    size_t cap = 8 << 20, n = 0, nh = 0, hdr[16]; uint8_t *t = calloc(cap, 1), *txt = make_text(3 << 20);
+    for (int i = 0; i < 7; i++) {
+        char nm[32]; hdr[nh++] = n;
+        if (i == 3) n += tar_hdr(t + n, "PaxHeader", 0, 'x');      /* the cut goes before the pax header */
+        snprintf(nm, sizeof nm, "member%d", i); size_t at = n + 512; n += tar_hdr(t + n, nm, sz[i], '0');
+        memcpy(t + at, txt + 4096 * i, sz[i]);
+    }
+    n += 1024;                                                        /* end-of-archive blocks */
+    int in = fd_of(t, n), so = fd_of((const uint8_t *)"", 0);
+    kolmo_params p = {KOLMO_FAST, 0, 1, 0, 1, 0};
+    assert(kolmo_stream_compress(in, so, &p, 1) > 0); close(in);
+    size_t zn; uint8_t *z = slurp(so, &zn); close(so);
+    size_t pos = 12, at = 0, prev = 0, oncut = 0; int frames = 0;
+    for (;;) {
+        uint64_t len = 0; for (int k = 7; k >= 0; k--) len = len << 8 | z[pos + k];
+        pos += 8; if (!len) break;
+        int64_t o = kolmo_original_size(z + pos, (size_t)len); assert(o > 0 && o <= (1 << 20));
+        pos += (size_t)len; at += (size_t)o; frames++;
+        if (at < n) {                                                 /* every cut: a member's first header, or a full segment */
+            int hit = 0; for (size_t i = 0; i < nh; i++) hit |= hdr[i] == at;
+            assert(hit || at - prev == (1u << 20)); oncut += hit;
+        }
+        prev = at;
+    }
+    assert(at == n && pos == zn && oncut >= 4 && frames >= 6);
+    uint8_t *o; size_t on;
+    assert(sdecode(z, zn, &o, &on) == (int64_t)n && on == n && !memcmp(o, t, n));
+    free(o); free(z); free(t); free(txt);
+}
+
 int main(void) {
     forged_headers();
     trailing_and_concatenation();
@@ -245,6 +286,7 @@ int main(void) {
     cm_amplification();
     release();
     stream_members();
-    puts("HARDENING TESTS PASSED (forged headers, trailing bytes, frame walking, parameters, CM amplification, buffer release, stream members)");
+    stream_tar_cuts();
+    puts("HARDENING TESTS PASSED (forged headers, trailing bytes, frame walking, parameters, CM amplification, buffer release, stream members, stream tar cuts)");
     return 0;
 }
