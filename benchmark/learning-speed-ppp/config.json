@@ -1,0 +1,19 @@
+{
+  "candidates": [
+    {
+      "analysis": "none"
+    }
+  ],
+  "level": "1",
+  "max_decode_rss": 1.05,
+  "max_decode_time": 1.05,
+  "max_encode_rss": 1.05,
+  "max_encode_time": 1.05,
+  "max_roundtrip_time": 0.97,
+  "min_origins": 2,
+  "min_size_savings": 0,
+  "objective": "roundtrip",
+  "repetitions": 11,
+  "schema": 1,
+  "threads": 1
+}
