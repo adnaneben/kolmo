@@ -1,0 +1,12 @@
+[
+  {
+    "origin": "zpaq",
+    "path": "zpaq",
+    "sha256": "9a5c86a496a7b428523454874446df4e615378b07b7cf81da96ef7bdeca485f0"
+  },
+  {
+    "origin": "hdf-group-hdf5",
+    "path": "h5dump",
+    "sha256": "5821cf827d4ea7977a5bcb35fb2d977b00bbe0f4819446c420c8db50a7699230"
+  }
+]
