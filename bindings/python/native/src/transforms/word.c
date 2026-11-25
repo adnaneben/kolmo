@@ -134,7 +134,7 @@ done:
 
 /* skip bytes that are not special when every special byte is < 32: 16 bytes per step, candidates checked in the table */
 static inline const uint8_t *wd_scan_low(const uint8_t *p, const uint8_t *end, const uint8_t *special) {
-#if defined(__SSE2__)
+#if defined(KOLMO_USE_SSE2)
     const __m128i lim = _mm_set1_epi8(31);
     while (p + 16 <= end) {
         __m128i v = _mm_loadu_si128((const __m128i *)p);
@@ -142,7 +142,7 @@ static inline const uint8_t *wd_scan_low(const uint8_t *p, const uint8_t *end, c
         while (m) { int t = __builtin_ctz(m); if (special[p[t]]) return p + t; m &= m - 1; }
         p += 16;
     }
-#elif defined(__ARM_NEON)
+#elif defined(KOLMO_USE_NEON)
     const uint8x16_t lim = vdupq_n_u8(31);
     while (p + 16 <= end) {
         uint8x16_t c = vcleq_u8(vld1q_u8(p), lim);

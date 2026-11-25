@@ -40,14 +40,14 @@ static int transpose_inv(const uint8_t *in, int64_t n, uint8_t delim, int maxc, 
 
 /* Quote-free fast path: terminator positions found by a branchless scan, fields moved with short copies.
  * Byte-identical to transpose_fwd/inv with quotes = 0. pos needs n + 1 entries. */
-#if defined(__SSE2__)
+#if defined(KOLMO_USE_SSE2)
 #include <emmintrin.h>
-#elif defined(__ARM_NEON)
+#elif defined(KOLMO_USE_NEON)
 #include <arm_neon.h>
 #endif
 /* bit masks of the bytes equal to a or '\n' (t) and to '\n' (nl) among the 64 at p */
 static inline void term_masks64(const uint8_t *p, uint8_t a, uint64_t *t, uint64_t *nl) {
-#if defined(__SSE2__)
+#if defined(KOLMO_USE_SSE2)
     const __m128i va = _mm_set1_epi8((char)a), vn = _mm_set1_epi8('\n'); uint64_t mt = 0, mn = 0;
     for (int q = 0; q < 4; q++) {
         __m128i x = _mm_loadu_si128((const __m128i *)(p + 16 * q)), en = _mm_cmpeq_epi8(x, vn);
@@ -55,7 +55,7 @@ static inline void term_masks64(const uint8_t *p, uint8_t a, uint64_t *t, uint64
         mt |= (uint64_t)(uint16_t)_mm_movemask_epi8(_mm_or_si128(_mm_cmpeq_epi8(x, va), en)) << (16 * q);
     }
     *t = mt; *nl = mn;
-#elif defined(__ARM_NEON) && defined(__aarch64__)
+#elif defined(KOLMO_USE_NEON) && defined(__aarch64__)
     static const uint8_t bw[16] = {1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128};
     const uint8x16_t va = vdupq_n_u8(a), vn = vdupq_n_u8('\n'), w = vld1q_u8(bw);
     uint8x16_t n0 = vceqq_u8(vld1q_u8(p), vn), n1 = vceqq_u8(vld1q_u8(p + 16), vn), n2 = vceqq_u8(vld1q_u8(p + 32), vn), n3 = vceqq_u8(vld1q_u8(p + 48), vn);
@@ -74,7 +74,7 @@ static inline void term_masks64(const uint8_t *p, uint8_t a, uint64_t *t, uint64
 /* positions of bytes equal to a or '\n' (SIMD compare + bit iteration) */
 static size_t scan_terms(const uint8_t *s, size_t n, uint8_t a, uint32_t *pos) {
     size_t c = 0, i = 0;
-#if defined(__SSE2__)
+#if defined(KOLMO_USE_SSE2)
     const __m128i va = _mm_set1_epi8((char)a), vn = _mm_set1_epi8('\n');
     for (; i + 64 <= n; i += 64) {
         uint64_t m = 0;
@@ -84,7 +84,7 @@ static size_t scan_terms(const uint8_t *s, size_t n, uint8_t a, uint32_t *pos) {
         }
         while (m) { pos[c++] = (uint32_t)(i + __builtin_ctzll(m)); m &= m - 1; }
     }
-#elif defined(__ARM_NEON)
+#elif defined(KOLMO_USE_NEON)
     const uint8x16_t va = vdupq_n_u8(a), vn = vdupq_n_u8('\n');
     for (; i + 16 <= n; i += 16) {
         uint8x16_t x = vld1q_u8(s + i);
@@ -198,9 +198,9 @@ static int tpq_inv_wide(const uint8_t *in, size_t n, uint8_t delim,
             const uint8_t *field = next[j];
             size_t available = (size_t)(end[j] - field);
             if (!available) return 1;
-#if defined(__SSE2__) || (defined(__ARM_NEON) && defined(__aarch64__))
+#if defined(KOLMO_USE_SSE2) || (defined(KOLMO_USE_NEON) && defined(__aarch64__))
             if ((size_t)(limit - field) >= 16 && (size_t)(out + n - dst) >= 16) {
-#if defined(__SSE2__)
+#if defined(KOLMO_USE_SSE2)
                 __m128i v = _mm_loadu_si128((const __m128i *)field);
                 unsigned mask = _mm_movemask_epi8(_mm_cmpeq_epi8(v, _mm_set1_epi8((char)delim)));
                 unsigned len = mask ? (unsigned)__builtin_ctz(mask) + 1 : 0;

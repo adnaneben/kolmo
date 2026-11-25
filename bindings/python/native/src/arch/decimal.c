@@ -6,7 +6,7 @@
  * Needs 40 bytes of room past the end. */
 static void fmt_slots(uint8_t *o, const int64_t *v, const uint8_t *ds, int n, int S, uint8_t *lv) {
     int i = 0;
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if defined(KOLMO_USE_NEON) && defined(__aarch64__)
     i = fmt_slots_neon(o, v, ds, n, S, lv);
 #endif
 #if defined(KOLMO_FMT_AVX2)

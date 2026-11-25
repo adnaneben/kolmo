@@ -1,6 +1,6 @@
 /* NEON decimal formatter for fixed slots: 2 values per step for |v| < 1e8 and S < 8. Reference: fmt_dec_swar
  * (algo/decimal.c); dispatch: arch/decimal.c. Returns the number of values written. */
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if defined(KOLMO_USE_NEON) && defined(__aarch64__)
 static uint8_t FMT_SHA[2][9 * 8][16] __attribute__((aligned(16))), FMT_ORA[2][9 * 8][16] __attribute__((aligned(16)));
 __attribute__((constructor)) static void fmt_luts_neon_init(void) {
     for (int ng = 0; ng < 2; ng++) for (int D = 1; D <= 8; D++) for (int S = 0; S < 8 && S < D; S++) {
@@ -11,7 +11,7 @@ __attribute__((constructor)) static void fmt_luts_neon_init(void) {
     }
 }
 #endif
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if defined(KOLMO_USE_NEON) && defined(__aarch64__)
 static int fmt_slots_neon(uint8_t *o, const int64_t *v, const uint8_t *ds, int n, int S, uint8_t *lv) {
     int i = 0;
     if (S < 8) {                                     /* 2 values per step: digits by 32/16-bit lane arithmetic, table lookup */

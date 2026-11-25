@@ -242,9 +242,12 @@ check-fqfam: build/test-fqfam-asan
 # Runtime ISA dispatch (x86-64): CRC32C against a scalar reference, kolmo_khash64 independent of alignment; optimised
 # and with sanitizers.
 build/test-dispatch: tests/test_dispatch.c build/libkolmo.a
-	$(CC) $(CFLAGS) $(INC) $^ -o $@ $(LIBS)
+	$(CC) $(CFLAGS) $(DEFS) $(INC) $^ -o $@ $(LIBS)
 build/test-dispatch-asan: tests/test_dispatch.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(KSRC) $(KHDR)
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_dispatch.c src/kolmo.c $(KSRC) $(BWTSRC) $(ASMSRC) -o $@ $(LIBS)
+.PHONY: check-noasm
+check-noasm:
+	sh tests/check_noasm.sh $(CC) $(CFLAGS) $(DEFS) $(INC)
 check-dispatch: build/test-dispatch build/test-dispatch-asan
 	./build/test-dispatch
 	./build/test-dispatch-asan

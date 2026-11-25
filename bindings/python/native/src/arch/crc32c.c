@@ -1,9 +1,9 @@
 /* CRC32C (Castagnoli) of the container header and index: the portable reference (slicing by 8) and the choice of
  * kernel. x86-64: SSE4.2 when the build targets it, else chosen at run time by CPUID (arch/x86_64/crc32c_sse42.c).
  * Arm: the CRC32 extension when the build targets it (arch/aarch64/crc32c_arm.c). Same value on every path. */
-#if defined(__SSE4_2__)
+#if defined(KOLMO_USE_SSE42)
 uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len) { return crc32c_sse42(crc, buf, len); }
-#elif defined(__ARM_FEATURE_CRC32)
+#elif defined(KOLMO_USE_ARM_CRC32)
 uint32_t kolmo_crc32c(uint32_t crc, const void *buf, size_t len) { return crc32c_arm(crc, buf, len); }
 #else
 static uint32_t crc_tab[8][256];

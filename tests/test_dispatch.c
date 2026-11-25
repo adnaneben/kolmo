@@ -2,7 +2,7 @@
  * every length (through the long-input kernels) and alignment. The block hash kolmo_khash64 (src/algo/khash.c; it
  * replaced XXH3-64 with container version 12) has no hand-written kernels: its value must not depend on the
  * alignment of its input (compared with an aligned copy), for every length and seed; its pinned values are checked by
- * tests/test_native.c. Reports which paths this CPU takes. */
+ * tests/test_native.c. Reports x86 CPU capabilities when available. */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,12 +33,14 @@ int main(void) {
                 }
             n_checks += 7;
         }
-#if defined(__x86_64__) || defined(__i386__)
+#if defined(KOLMO_NO_ASM)
+    printf("test_dispatch: %ld checks, %ld mismatches (NO_ASM=1)\n", n_checks, bad);
+#elif defined(__x86_64__) || defined(__i386__)
     __builtin_cpu_init();
     printf("test_dispatch: %ld checks, %ld mismatches (cpu: sse4.2 %d, avx2 %d)\n", n_checks, bad,
            !!__builtin_cpu_supports("sse4.2"), !!__builtin_cpu_supports("avx2"));
-#else                                     /* no x86 dispatch on this target: the portable paths are checked */
-    printf("test_dispatch: %ld checks, %ld mismatches (not x86: portable paths)\n", n_checks, bad);
+#else
+    printf("test_dispatch: %ld checks, %ld mismatches (non-x86 host)\n", n_checks, bad);
 #endif
     free(buf); free(al);
     return bad != 0;

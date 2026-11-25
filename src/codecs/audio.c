@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if defined(__AVX2__)
+#if defined(KOLMO_USE_AVX2)
 #include <immintrin.h>
 #endif
 #include <errno.h>
@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#if defined(__AVX2__)
+#if defined(KOLMO_USE_AVX2)
 #include <immintrin.h>
 #endif
 
@@ -63,7 +63,7 @@ static void ka_crc_init(void)
 static uint32_t ka_crc32_buf(uint32_t c, const uint8_t *p, size_t n)
 {
     c = ~c;
-#if defined(__SSE4_2__) && defined(__x86_64__)
+#if defined(KOLMO_USE_SSE42) && defined(__x86_64__)
     for (; n >= 8; n -= 8, p += 8) { uint64_t v; memcpy(&v, p, 8); c = (uint32_t)__builtin_ia32_crc32di(c, v); }
     while (n--) c = __builtin_ia32_crc32qi(c, *p++);
 #else
@@ -899,7 +899,7 @@ static inline int32_t ka_nlms_pred(const ka_Nlms *f)
 static inline void ka_upd16(int32_t *restrict w, int16_t *restrict w16, const int16_t *restrict h, int n, int16_t g2, int sh)
 {
     int i = 0;
-#if defined(__AVX2__)
+#if defined(KOLMO_USE_AVX2)
     const __m256i g = _mm256_set1_epi16(g2), r = _mm256_set1_epi32(1 << (KA_WQ - KA_PQ - 1));
     for (; i + 16 <= n; i += 16) {
         __m256i d = _mm256_mulhrs_epi16(_mm256_loadu_si256((const __m256i *)(h + i)), g);

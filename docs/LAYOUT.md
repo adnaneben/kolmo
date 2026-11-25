@@ -17,7 +17,7 @@ constraint for rc3: a change that makes Kolmo faster or smaller may break readin
    Nothing in `algo` or `arch` knows the container format.
 3. **Every assembly or intrinsic kernel has a portable C reference.** The reference is the specification. A test
    compares each kernel with its reference on random and edge-case inputs. `make NO_ASM=1` builds the C references
-   only, so CI checks both paths.
+   only in a clean build. The compiler may still vectorize ordinary C loops.
 4. **Runtime dispatch, never compile-time only.** Release builds target the baseline ISA (x86-64, ARMv8.0-A). Faster
    kernels are chosen once at startup from CPU features, as `fc9a356` does for x86.
 5. **Same bytes everywhere.** A kernel may change speed, never output. The determinism check covers every ISA path.

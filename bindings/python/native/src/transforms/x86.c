@@ -5,12 +5,12 @@
  * 0x00/0xFF top address byte four bytes on) are rare, so 16 positions are screened at a time with SIMD; after each
  * applied candidate the screen restarts behind it, because the rewritten bytes can create or remove candidates. */
 static inline uint32_t e8_mask16(const uint8_t *b) {          /* bit k: position k is a candidate (b has 20 readable bytes) */
-#if defined(__SSE2__)
+#if defined(KOLMO_USE_SSE2)
     __m128i v = _mm_loadu_si128((const __m128i *)b), w = _mm_loadu_si128((const __m128i *)(b + 4));
     __m128i c1 = _mm_cmpeq_epi8(_mm_and_si128(v, _mm_set1_epi8((char)0xFE)), _mm_set1_epi8((char)0xE8));
     __m128i c2 = _mm_or_si128(_mm_cmpeq_epi8(w, _mm_setzero_si128()), _mm_cmpeq_epi8(w, _mm_set1_epi8((char)0xFF)));
     return (uint32_t)_mm_movemask_epi8(_mm_and_si128(c1, c2));
-#elif defined(__ARM_NEON) && defined(__aarch64__)
+#elif defined(KOLMO_USE_NEON) && defined(__aarch64__)
     uint8x16_t v = vld1q_u8(b), w = vld1q_u8(b + 4);
     uint8x16_t c = vandq_u8(vceqq_u8(vandq_u8(v, vdupq_n_u8(0xFE)), vdupq_n_u8(0xE8)), vorrq_u8(vceqq_u8(w, vdupq_n_u8(0)), vceqq_u8(w, vdupq_n_u8(0xFF))));
     uint64_t m4 = vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(vreinterpretq_u16_u8(c), 4)), 0);
