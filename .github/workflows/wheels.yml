@@ -61,6 +61,19 @@ jobs:
           CIBW_SKIP: "*-musllinux*"
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_TEST_COMMAND: "python -c \"import kolmo; d=b'col,val\\n'+b''.join(b'r,%d\\n'%i for i in range(5000)); assert kolmo.decompress(kolmo.compress(d, level=7))==d; print('wheel ok')\""
+      - name: Verify wheel payload
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          wheels = list(Path("wheelhouse").glob("*.whl"))
+          assert wheels, "no wheels found"
+          for wheel in wheels:
+              with ZipFile(wheel) as archive:
+                  objects = [name for name in archive.namelist() if name.endswith((".o", ".obj"))]
+                  assert not objects, (wheel.name, objects)
+          PYTHON
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}

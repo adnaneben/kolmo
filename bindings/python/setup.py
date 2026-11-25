@@ -8,7 +8,7 @@ library sits next to ``kolmo.py`` and is loaded by ctypes, so the installed pack
 toolchain at run time. Portable flags (no ``-march=native``) are used so a wheel built in CI runs
 on any CPU of that architecture; faster kernels are chosen at run time (src/arch/), with C references.
 """
-import glob, os, platform, subprocess, sys, sysconfig
+import glob, os, platform, shutil, subprocess, sys, sysconfig, tempfile
 from setuptools import setup
 from setuptools.command.build_py import build_py
 from setuptools.dist import Distribution
@@ -32,7 +32,7 @@ def _sources():
     return c
 
 
-def build_library(dest_dir):
+def build_library(dest_dir, workdir):
     """Compile libkolmo into dest_dir. Returns the full path to the built library."""
     c_src = _sources()
 
@@ -54,8 +54,6 @@ def build_library(dest_dir):
     kasm = [] if no_asm or not isa else sorted(glob.glob(os.path.join(SRC, "arch", isa, "*.S")))
 
     cc = os.environ.get("CC", "cc")
-    workdir = os.path.join(dest_dir, "_kolmo_build")
-    os.makedirs(workdir, exist_ok=True)
 
     includes = ["-I" + SRC]
     defs = ["-DKOLMO_NO_GPU"]
@@ -103,7 +101,12 @@ class BinaryDistribution(Distribution):
 class build_py_with_lib(build_py):
     def run(self):
         super().run()
-        build_library(self.build_lib)  # libkolmo.{so,dylib} lands next to kolmo.py
+        # An incremental rebuild can reuse the old in-package object directory.
+        old_objects = os.path.join(self.build_lib, "_kolmo_build")
+        if os.path.isdir(old_objects):
+            shutil.rmtree(old_objects)
+        with tempfile.TemporaryDirectory(prefix="kolmo-objects-") as objects:
+            build_library(self.build_lib, objects)
 
 
 _cmd = {"build_py": build_py_with_lib}
