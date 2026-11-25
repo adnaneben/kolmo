@@ -1,0 +1,14 @@
+{
+ "arms": {
+  "stock": {
+   "met": 8,
+   "bytes_on_met": 1040104
+  },
+  "cand": {
+   "met": 9,
+   "bytes_on_met": 935254
+  }
+ },
+ "integrity": [],
+ "table": "/private/tmp/claude-501/-Users-adnanbenali-Projects-kolmo--claude-worktrees-cranky-shaw-3c4db2/77ca8922-20f6-4d22-949e-a0a4be2e9130/scratchpad/run1/C-host-launch.tab"
+}

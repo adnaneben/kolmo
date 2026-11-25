@@ -19,7 +19,7 @@ SETTINGS = {  # B26 freeze: the nine settings the selector chooses among
 FLOORS = [("encode", 1), ("encode", 20), ("encode", 60), ("decode", 1), ("decode", 30), ("decode", 80)]
 SPECS = [f"{ph}>={r}MB/s" for ph, r in FLOORS] + ["size"]
 CLASSES = ["text", "table", "log", "json", "numeric", "binary"]
-ROUNDS = {"dev": 5, "holdout": 11}
+ROUNDS = {"dev": 5, "holdout": 11, "reference": 7}
 
 
 def sha(path):
@@ -271,11 +271,30 @@ def score(a):
     print(json.dumps(res.get("holdout", res.get("dev")), indent=1))
 
 
+def reference(a):
+    """Explanatory replay on the three recorded B26 inputs, run only after the holdout decision: stock vs a table."""
+    out = os.path.abspath(a.out); os.makedirs(out)
+    if sha(a.encoder) != ENCODER_SHA or sha(a.reader) != READER_SHA: raise SystemExit("binary identity mismatch")
+    files = load_split(a.corpus, "reference", a.manifests)
+    R = Runner(os.path.abspath(a.encoder), os.path.abspath(a.reader), out)
+    tab = os.path.join(out, os.path.basename(a.table)); open(tab, "w").write(open(a.table).read())
+    with open(os.path.join(out, "raw.jsonl"), "w") as raw:
+        run_split(R, raw, "reference", files, {"stock": None, "cand": tab}, random.Random(SEED + 1))
+    rows = [json.loads(l) for l in open(os.path.join(out, "raw.jsonl"))]
+    sc = score_split(rows, "reference", ["cand"], "stock", None)
+    write_csv(os.path.join(out, "reference-cases.csv"), sc["cases"])
+    json.dump({"arms": sc["arms"], "integrity": sc["integrity"], "table": a.table}, open(os.path.join(out, "reference-score.json"), "w"), indent=1)
+    print(json.dumps({"arms": sc["arms"], "integrity": sc["integrity"]}, indent=1))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); sub = ap.add_subparsers(dest="cmd", required=True)
     m = sub.add_parser("measure"); m.add_argument("--encoder", required=True); m.add_argument("--reader", required=True)
     m.add_argument("--corpus", required=True); m.add_argument("--out", required=True)
     m.add_argument("--manifests", help="smoke tests only: other dev.json/holdout.json"); m.add_argument("--smoke", action="store_true")
     s = sub.add_parser("score"); s.add_argument("--out", required=True)
+    r = sub.add_parser("reference"); r.add_argument("--encoder", required=True); r.add_argument("--reader", required=True)
+    r.add_argument("--corpus", required=True, help="directory with reference/<name> files"); r.add_argument("--out", required=True)
+    r.add_argument("--table", required=True); r.add_argument("--manifests", default=HERE)
     a = ap.parse_args()
-    measure(a) if a.cmd == "measure" else score(a)
+    {"measure": measure, "score": score, "reference": reference}[a.cmd](a)

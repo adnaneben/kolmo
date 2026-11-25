@@ -1,0 +1,26 @@
+[
+ {
+  "path": "gmp-manual",
+  "origin": "gmp",
+  "producer": "GNU GMP",
+  "source": "/opt/homebrew/Cellar/gmp/6.3.0/share/info/gmp.info-1",
+  "bytes": 300383,
+  "sha256": "ed759b294f9da8a59146b308774484c59203fc6f20f14a4235644b370e434d63"
+ },
+ {
+  "path": "gpgv",
+  "origin": "gnupg",
+  "producer": "GnuPG",
+  "source": "/opt/homebrew/Cellar/gnupg/2.5.24_1/bin/gpgv",
+  "bytes": 557232,
+  "sha256": "463e36f6f62b7f489e2f80cf9c1019560ce76e48809d6fef49c9f44ea35147c0"
+ },
+ {
+  "path": "handshake-png",
+  "origin": "gnutls",
+  "producer": "GnuTLS",
+  "source": "/opt/homebrew/Cellar/gnutls/3.8.14/share/doc/gnutls/gnutls-handshake-state.png",
+  "bytes": 7584,
+  "sha256": "69cbebf1c38b804d8cde9ad208ae2f131b6410fbbb358c2d2c312b38547c0ce9"
+ }
+]
