@@ -171,7 +171,8 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         uint64_t *st = NULL;
         uint32_t m = 0;
 #ifdef KOLMO_FASTQ_RECORD_BLOCKS
-        if (p->mode == KOLMO_ULTRA && pl.t == T_NONE && getenv("KOLMO_BENCH_READ_CUTS"))
+        const char *record_cuts = getenv("KOLMO_BENCH_READ_CUTS");
+        if (p->mode == KOLMO_ULTRA && pl.t == T_NONE && record_cuts && !strcmp(record_cuts, "1"))
             m = fq_record_blocks(s0, len, Bs, &st);
 #endif
         if (!st) m = make_blocks(s0, len, Bs, pl, &st, input_fd, ss[g], &ret);

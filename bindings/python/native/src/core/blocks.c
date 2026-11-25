@@ -9,6 +9,27 @@ static uint32_t plan_segment_capacity(size_t n) {
 }
 
 #ifdef KOLMO_FASTQ_RECORD_BLOCKS
+enum { FQ_SEEN_BITS = 12, FQ_SAMPLE_BYTES = 256u << 10 };
+
+/* Exact field fingerprints ignore changing record identifiers. A bounded table may forget a field on collision. */
+static size_t fq_repeated_field(kf_span field, uint64_t *seen, uint64_t seed) {
+    uint64_t hash = kolmo_khash64(field.p, field.n, seed) | 1;
+    size_t slot = (size_t)(hash >> (64 - FQ_SEEN_BITS));
+    size_t repeated = seen[slot] == hash ? field.n : 0;
+    seen[slot] = hash;
+    return repeated;
+}
+
+/* Near-duplicate records may have different fingerprints and still strongly favor stock LZ. */
+static int fq_lz_favors_stock(const uint8_t *s, size_t n) {
+    size_t width = n < FQ_SAMPLE_BYTES ? n : FQ_SAMPLE_BYTES;
+    size_t span = n - width, offsets[] = {0, span / 2, span};
+    unsigned count = span ? 3 : 1;
+    for (unsigned i = 0; i < count; i++)
+        if (kprobe_size(s + offsets[i], width) <= width / 8) return 1;
+    return 0;
+}
+
 /* Return a complete record-aligned plan only when every line belongs to a supported four-line record.
  * A record larger than half the target block can create tiny blocks. In that case, use the stock splitter. */
 static uint32_t fq_record_blocks(const uint8_t *s, size_t n, uint32_t block, uint64_t **out) {
@@ -16,6 +37,9 @@ static uint32_t fq_record_blocks(const uint8_t *s, size_t n, uint32_t block, uin
     size_t cap = n / (block / 2) + 2;
     uint64_t *cuts = array_alloc(cap, sizeof(*cuts), 0);
     if (!cuts) return 0;
+    uint64_t *seen = array_alloc(1u << FQ_SEEN_BITS, sizeof(*seen), 1);
+    if (!seen) { free(cuts); return 0; }
+    size_t repeated = 0;
     uint32_t count = 1;
     cuts[0] = 0;
     size_t cursor = 0, base = 0;
@@ -27,16 +51,22 @@ static uint32_t fq_record_blocks(const uint8_t *s, size_t n, uint32_t block, uin
         if (!name.n || name.p[0] != '@' || name.n > KF_MAXNAME ||
             !plus.n || plus.p[0] != '+' || data.n != aux.n || cursor - start > block / 2) goto fallback;
         if (plus.n != 1 && (plus.n != name.n || memcmp(plus.p + 1, name.p + 1, name.n - 1))) goto fallback;
+        repeated += fq_repeated_field(data, seen, 1);
+        repeated += fq_repeated_field(aux, seen, 2);
+        if (repeated > n / 4) goto fallback;
         if (cursor - base > block) {
             if (count >= UINT32_MAX - 1 || (size_t)count + 1 >= cap) goto fallback;
             cuts[count++] = start;
             base = start;
         }
     }
+    if (fq_lz_favors_stock(s, n)) goto fallback;
+    free(seen);
     cuts[count] = n;
     *out = cuts;
     return count;
 fallback:
+    free(seen);
     free(cuts);
     return 0;
 }
