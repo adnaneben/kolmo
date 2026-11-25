@@ -19,6 +19,11 @@
 
 enum { MK_DATA = 0, MK_PACKED = 1, MK_CODE = 2, MK_HEADER = 3, MK_A64 = 4, MK_TENSOR = 8 };   /* MK_A64: ARM64 code; bits 8-19 of a kind: its page phase */
 #define META_MINSEG ((uint64_t)64 << 10)   /* parts shorter than this join the part before them */
+/* Executables are cut into code and data down to this size. 1 MiB until 0.0.3 kept every smaller executable
+ * from its branch filter (75 x86-64 and 75 arm64 tools of 32-256 KiB: -9 +4.1% and +4.5% against the filtered files).
+ * Level 1 (speed), which applies no branch filter, keeps 1 MiB: the cut alone cost those tools 0.5% there. */
+#define MT_EXE_MIN ((size_t)4 << 10)
+#define MT_EXE_MIN_SPEED ((size_t)1 << 20)
 
 static inline uint16_t mt_le16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
 static inline uint32_t mt_le32(const uint8_t *p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24; }
@@ -299,12 +304,89 @@ static int mt_code_parts(const uint8_t *s, size_t n, mt_segs *g, mt_part *P, siz
     for (uint32_t i = 0; i < g->k; i++) if ((g->kind[i] & 0xFF) == MK_A64) g->kind[i] = MK_A64 | (uint32_t)(g->ss[i] & 0xFFF) << 8;
     return g->k > 1 || (g->k == 1 && (g->kind[0] & 0xFF) == MK_A64);
 }
+static void a64_fwd(uint8_t *b, size_t n, uint32_t phase);     /* transforms/arm64.c */
+
+/* Confirm code-like instructions and a repeatable same-byte probe win. Its sample score is only an encoder hint. */
+static int mt_a64_load_code(const uint8_t *s, size_t n, uint32_t phase) {
+    enum { SLICE = 16 << 10 };
+    uint8_t converted[SLICE];
+    for (unsigned j = 0; j < 3; j++) {
+        size_t start = ((n - SLICE) / 2 * j) & ~(size_t)3;
+        unsigned targets = 0, returns = 0;
+        for (size_t i = 0; i < SLICE; i += 4) {
+            uint32_t w = mt_le32(s + start + i);
+            targets += (w >> 26) == 0x25 || (w & 0x9F000000u) == 0x90000000u;
+            returns += w == 0xD65F03C0u;
+        }
+        if (targets < 16 || !returns) return 0;
+        memcpy(converted, s + start, SLICE);
+        a64_fwd(converted, SLICE, (phase + (uint32_t)start) & 4095);
+        size_t base = kprobe_size(s + start, SLICE), trial = kprobe_size(converted, SLICE);
+        if (trial * 100 > base * 98) return 0;
+    }
+    return 1;
+}
+
+/* Opt-in for genuinely sectionless ELF64/AArch64. Route only validated, file-backed executable loads.
+ * Keep cuts exact so that small headers, gaps and trailing bytes never become part of the code transform. */
+static int mt_elf_a64_loads(const uint8_t *s, size_t n, mt_segs *g) {
+    const char *enabled = getenv("KOLMO_A64_ELF_LOADS");
+    if (!enabled || strcmp(enabled, "1") || g->exemin == MT_EXE_MIN_SPEED) return 0;
+    unsigned type = mt_le16(s + 16), phsize = mt_le16(s + 54), phnum = mt_le16(s + 56);
+    uint64_t phoff = mt_le64(s + 32);
+    enum { MAX_LOAD_HEADERS = 64 };
+    if (s[6] != 1 || mt_le32(s + 20) != 1 || (type != 2 && type != 3) || mt_le16(s + 52) != 64 ||
+        phsize != 56 || !phnum || phnum > MAX_LOAD_HEADERS || phoff < 64 || (phoff & 7) ||
+        phoff > n || phnum > (n - phoff) / phsize) return 0;
+    uint64_t phend = phoff + (uint64_t)phnum * phsize, file_end = 0, memory_end = 0;
+    mt_part parts[MAX_LOAD_HEADERS]; uint32_t count = 0;
+    for (unsigned i = 0; i < phnum; i++) {
+        const uint8_t *h = s + phoff + (uint64_t)i * phsize;
+        if (mt_le32(h) != 1) continue;                            /* PT_LOAD */
+        uint32_t flags = mt_le32(h + 4);
+        uint64_t off = mt_le64(h + 8), addr = mt_le64(h + 16);
+        uint64_t size = mt_le64(h + 32), memory = mt_le64(h + 40), align = mt_le64(h + 48);
+        if (off > n || size > n - off || size > memory || memory > UINT64_MAX - addr ||
+            (align > 1 && ((align & (align - 1)) || ((addr ^ off) & (align - 1)))) ||
+            (size && off < file_end) || (memory && addr < memory_end)) return 0;
+        if (size) file_end = off + size;
+        if (memory) memory_end = addr + memory;
+        if ((flags & 7) != 5 || size < META_MINSEG || ((addr ^ off) & 4095) || (off & 3)) continue;
+        uint64_t end = file_end & ~(uint64_t)3;
+        uint64_t start = off > phend ? off : phend;
+        if (start > end || end - start < META_MINSEG) continue;
+        start = (start + 3) & ~(uint64_t)3;
+        if (end - start >= META_MINSEG) parts[count++] = (mt_part){.a = start, .b = end};
+    }
+    /* Require a fully stripped layout. Unclassified trailing bytes can lose matches when split off. */
+    if (!count || file_end != n) return 0;
+    uint32_t useful = 0;
+    for (uint32_t i = 0; i < count; i++) {
+        uint64_t start = parts[i].a;
+        if (mt_a64_load_code(s + start, (size_t)(parts[i].b - start), (uint32_t)start & 4095))
+            parts[useful++] = parts[i];
+    }
+    if (!useful || 2 * useful + 1 > g->maxs) return 0;
+    uint64_t pos = 0;
+    for (uint32_t i = 0; i < useful; i++) {
+        uint64_t start = parts[i].a;
+        if (pos < start) { g->ss[g->k] = pos; g->se[g->k] = start; g->kind[g->k++] = MK_DATA; }
+        pos = parts[i].b;
+        g->ss[g->k] = start; g->se[g->k] = pos;
+        g->kind[g->k++] = MK_A64 | (uint32_t)(start & 4095) << 8;
+    }
+    if (pos < n) { g->ss[g->k] = pos; g->se[g->k] = n; g->kind[g->k++] = MK_DATA; }
+    return 1;
+}
+
 /* ELF, 32 and 64-bit little-endian: sections with SHF_EXECINSTR */
 static int mt_elf(const uint8_t *s, size_t n, mt_segs *g) {
     if (n < g->exemin || memcmp(s, "\x7F" "ELF", 4) || s[5] != 1 || (s[4] != 1 && s[4] != 2)) return 0;
     const int is64 = s[4] == 2; const unsigned mach = mt_le16(s + 18);
     uint64_t shoff = is64 ? mt_le64(s + 0x28) : mt_le32(s + 0x20);
     unsigned shes = mt_le16(s + (is64 ? 0x3A : 0x2E)), shn = mt_le16(s + (is64 ? 0x3C : 0x30));
+    if (is64 && mach == 183 && !shoff && !shn && !mt_le16(s + 0x3E))
+        return mt_elf_a64_loads(s, n, g);
     if (shes != (is64 ? 64u : 40u) || !shn || shn > 4096 || shoff > n || (uint64_t)shn * shes > n - shoff) return 0;
     mt_part *P = malloc(shn * sizeof *P); if (!P) return 0; size_t np = 0;
     for (unsigned i = 0; i < shn; i++) {
@@ -505,12 +587,6 @@ static int mt_nested(const uint8_t *s, size_t n, mt_segs *g) {
 
 /* The input cut into segments (each planned on its own) by the first format whose headers parse; one segment
  * otherwise. kind[i] (may be NULL): MK_PACKED marks compressed content. */
-/* exemin: executables are cut into code and data down to this size. 1 MiB until 0.0.3 kept every smaller executable
- * from its branch filter (75 x86-64 and 75 arm64 tools of 32-256 KiB: -9 +4.1% and +4.5% against the filtered files);
- * the header reads are bounds-checked at any size. Level 1 (speed), which applies no branch filter, keeps 1 MiB: the
- * cut alone cost those tools 0.5% there. */
-#define MT_EXE_MIN ((size_t)4 << 10)
-#define MT_EXE_MIN_SPEED ((size_t)1 << 20)
 static uint32_t meta_segments_x(const uint8_t *s, size_t n, uint64_t *ss, uint64_t *se, uint32_t *kind, uint32_t maxs, size_t exemin) {
     uint32_t kk[1]; mt_segs g = {ss, se, kind, 0, maxs, exemin};
     if (!kind) { g.kind = kk; g.maxs = 1; }
