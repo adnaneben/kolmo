@@ -1,6 +1,6 @@
 /* Codec 7 model 4 (codecs/cm.c: 16-byte nibble buckets of bit-history states, a context mask, the 16-bit mixer):
  *   - round trips of text, binary, repetitive and tiny streams, with the text and the binary context sets;
- *   - the same stream at every kernel level this CPU has (C references, SSE4.1, AVX2): the mixer kernels may change
+ *   - the same stream at every kernel level this CPU has (C references, x86 SIMD, AArch64 NEON): the mixer kernels may change
  *     speed, never bytes;
  *   - lazily initialised rows give the same model as a fresh one: two codings of a stream in one process are identical;
  *   - the decode working set the header declares (cm_stream_need) is what the decoder reserves;
@@ -32,7 +32,9 @@ static void roundtrip(const char *name, const uint8_t *in, size_t n, uint32_t ma
             CHECK(need == want && need <= cm4_need_bound(n, mask), "%s: working set %llu, expected %llu", name, (unsigned long long)need, (unsigned long long)want);
         }
         /* every kernel level writes the same stream */
-        for (int l = 0; l <= kolmo_cpu_max_level(); l++) {
+        int mx = kolmo_cpu_max_level();
+        for (int l = 0; l <= mx; l++) {
+            if (mx == KOLMO_ISA_NEON && l != KOLMO_ISA_C && l != KOLMO_ISA_NEON) continue;
             kolmo_kernels k; kolmo_kernels_for_level(l, &k); cm_kk_override = &k;
             size_t zl = enc(in, n, z2, cap, mask);
             CHECK(zl == zn && !memcmp(z, z2, zn), "%s: kernels %s write another stream", name, kolmo_isa_name(l));
