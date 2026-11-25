@@ -1,6 +1,5 @@
 """Run the paired CLI experiment on macOS. Pass --help for paths and scopes."""
 import argparse
-import csv
 import hashlib
 import json
 import os
@@ -24,7 +23,10 @@ SOURCES = {
 
 def sha(path):
     with path.open("rb") as f:
-        return hashlib.file_digest(f, "sha256").hexdigest()
+        digest = hashlib.sha256()
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            digest.update(chunk)
+        return digest.hexdigest()
 
 def run(argv):
     start = time.perf_counter_ns()

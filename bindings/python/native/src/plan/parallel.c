@@ -137,6 +137,18 @@ static plan_t fast_table_trial(const uint8_t *src, size_t len) {
         if (rows < MIN_ROWS) return result;
         for (int r = 0; r < rows; r++) if (fields[r] != columns) return result;
         /* Price a complete sample in the fast encoder, including lane lengths. */
+#ifdef KOLMO_FAST_TYPED_TABLE_TRIAL
+        size_t transformed_cap = size + TBL_SLACK(size);
+        size_t capacity = kolmo_klz_bound(transformed_cap);
+        uint8_t *work = malloc(transformed_cap + capacity);
+        if (!work) return result;
+        int64_t transformed = tbl2_encode(start, size, delim, columns, 0, NULL, work, NULL);
+        size_t plain = kolmo_klz_compress(start, size, work + transformed_cap, capacity, 1);
+        size_t split = transformed > 0 ? kolmo_klz_compress(work, (size_t)transformed,
+            work + transformed_cap, capacity, 1) : 0;
+        free(work);
+        if (!plain || !split || (split + 4) * 4 >= plain * 3) return result;
+#else
         size_t capacity = kolmo_klz_bound(size);
         uint8_t *work = malloc(size + capacity);
         uint32_t *positions = malloc((size + 1) * sizeof(*positions));
@@ -148,8 +160,13 @@ static plan_t fast_table_trial(const uint8_t *src, size_t len) {
         free(positions);
         free(work);
         if (!plain || !split || (split + 4 * columns) * 4 >= plain * 3) return result;
+#endif
     }
+#ifdef KOLMO_FAST_TYPED_TABLE_TRIAL
+    return (plan_t){.t = T_TBL, .a = delim, .c = columns - 1};
+#else
     return (plan_t){.t = T_TP, .a = delim, .c = columns - 1};
+#endif
 }
 #endif
 
