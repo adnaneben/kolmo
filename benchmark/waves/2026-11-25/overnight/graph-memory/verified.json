@@ -1,0 +1,14 @@
+{
+  "pinned_main": "a1d39559686a9ec17c8614b9154a64d7b5b98672",
+  "native_build": "Apple M5, macOS 27.2, Apple clang 21",
+  "stock_sha256": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+  "probe_sha256": "24445de2c12795257981b3ce3f0c756a2a0ccf8fc8790b0bdc314c60f4b2d107",
+  "cases": 73,
+  "blocks": 99,
+  "measured_restores": 438,
+  "frozen_cases": 66,
+  "archived_cases": 7,
+  "declared_codec_cap_bytes": 536870912,
+  "instrumentation_owned_ceiling_bytes": 134217728,
+  "raw_frame_peak_bytes": 67317232
+}

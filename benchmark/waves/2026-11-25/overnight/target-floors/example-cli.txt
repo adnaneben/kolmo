@@ -1,0 +1,2 @@
+kolmo: /opt/homebrew/Cellar/gnutls/3.8.14/share/doc/gnutls/gnutls-handshake-state.png: target 'encode>=999GB/s': 1 chunk: speed x1; predicted 0 bytes, encode 0.000 s, decode 0.000 s (one thread); actual 7084 bytes
+kolmo: /opt/homebrew/Cellar/gnutls/3.8.14/share/doc/gnutls/gnutls-handshake-state.png: target 'encode>=999GB/s': 1 chunk: speed x1; predicted 7084 bytes, encode 0.000 s, decode 0.000 s (one thread); actual 7084 bytes; no setting met the predicted floors for 1 chunk (fastest predicted decoder, measured chunk size)

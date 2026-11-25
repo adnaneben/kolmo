@@ -1,0 +1,17 @@
+compress 0 -4
+compress 1 -4
+compress 2 -4
+compress 3 -4
+compress 4 -4
+compress 5 -4
+compress 6 -4
+compress 7 -4
+compress 8 -4
+compress 9 -4
+compress 10 -4
+compress 11 -4
+compress 12 -4
+compress 13 120
+decompress 0 -4
+decompress 1 -4
+13 compression failure budgets, 2 decoder failure budgets, exact retry

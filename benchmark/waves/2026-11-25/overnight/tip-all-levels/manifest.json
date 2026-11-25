@@ -1,0 +1,71 @@
+{
+  "revisions": {
+    "main": "a1d39559686a9ec17c8614b9154a64d7b5b98672",
+    "candidate": "8d23095b2f09d5c9e3c3425123bea63641ca5d71"
+  },
+  "warmup_cross_read": "all candidate warmup frames decoded using main, outside timing",
+  "sources": {
+    "text16k": {
+      "file": "text__ld30",
+      "source_sha256": "fbce82059db586d5073ac6adaa8ff10ade4653a61dde16764393505b01b34aaa",
+      "offset": 0,
+      "bytes": 16384,
+      "original_bytes": 4193980,
+      "input_sha256": "3c94425828f5ad551e4f1f3d9436f1042320d50f11d0b89f63a7fa850ff4b6e8"
+    },
+    "python64k": {
+      "file": "code__py-stdlib",
+      "source_sha256": "77873d0af0a9e3b5d18baff02cea5878efdc776f0ad280c3b25fdf7b4e15efc5",
+      "offset": 0,
+      "bytes": 65536,
+      "original_bytes": 4194261,
+      "input_sha256": "faaf2347087b656c7345611c5d63c2970996f0e5ea32c6f0f2ba04c1d04e020e"
+    },
+    "gaia256k": {
+      "file": "csv__gaia",
+      "source_sha256": "7e6ef1e2892b438709b04aa6e05d4fb4718ccfd0a74b8d8699cba32515a01e8f",
+      "offset": 0,
+      "bytes": 262144,
+      "original_bytes": 4193950,
+      "input_sha256": "d1afebdb04472f02789c913497352a87da4567dbc52c1c4cdfb832b06108c8ac"
+    },
+    "esc50-whole": {
+      "file": "audio__esc50-5-103415",
+      "source_sha256": "5922660ff7698b3dce589c2e3e8230cca85a82cd7f396e1b29245c3c50d7d8d7",
+      "offset": 0,
+      "bytes": 441044,
+      "original_bytes": 441044,
+      "input_sha256": "5922660ff7698b3dce589c2e3e8230cca85a82cd7f396e1b29245c3c50d7d8d7"
+    }
+  },
+  "binaries": {
+    "main": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "main-AA": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "candidate": "dbd92f4a170e36c9701aec15236648cd7b78e9f90a180fc8ffd79661aebbb6f2"
+  },
+  "machine": "macOS-27.2-arm64-arm-64bit",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)\nTarget: arm64-apple-darwin27.2.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin",
+  "seed": 251112770,
+  "rounds": 3,
+  "levels": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "ultra"
+  ],
+  "requested_threads": [
+    1,
+    4
+  ],
+  "effective_worker_count": "not instrumented",
+  "cache": "warm-input, whole-file process launch included",
+  "arm_order": "independently seeded permutations within shuffled cells per pass",
+  "pass_0": "warmup, retained and excluded from scores",
+  "rss_unit": "Darwin bytes"
+}
