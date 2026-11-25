@@ -1,0 +1,162 @@
+{
+  "binaries": {
+    "pre": "cf23250a9d1fd43f6fb0328f26803ebb4a47ba6332ce98a9053b70728c8abfdf",
+    "main": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "main-AA": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "combined": "e1b2e4876531c56be9f8140e124fc538c7da0bf9200dc3901dfdd7289990d240"
+  },
+  "sources": {
+    "enwik8.zip": {
+      "source_sha256": "547994d9980ebed1288380d652999f38a14fe291a6247c157c3d33d4932534bc",
+      "source_bytes": 36445475,
+      "input_sha256": "547994d9980ebed1288380d652999f38a14fe291a6247c157c3d33d4932534bc",
+      "input_bytes": 36445475
+    },
+    "owid-co2.csv": {
+      "source_sha256": "7f78e2b218ce4bb8c538bbec04fdc9a7982e8d40bff972e650df603899edd5f6",
+      "source_bytes": 14377942,
+      "input_sha256": "7f78e2b218ce4bb8c538bbec04fdc9a7982e8d40bff972e650df603899edd5f6",
+      "input_bytes": 14377942
+    },
+    "prose-64k": {
+      "source_sha256": "f23be6d689d1e4a6ee4347b41b19932a0e96516483759bd9c022aa994aa045b4",
+      "source_bytes": 29997097,
+      "input_sha256": "c8d5a28711813ca3dd687034524bbd658041fa43c4a64f5c80fed8856eac8b47",
+      "input_bytes": 65536
+    },
+    "pydub.wav": {
+      "source_sha256": "c952f27f8bfdbc9553da936b9eec07c157220438a0a9ded245dff9c77a6193f9",
+      "source_bytes": 768044,
+      "input_sha256": "c952f27f8bfdbc9553da936b9eec07c157220438a0a9ded245dff9c77a6193f9",
+      "input_bytes": 768044
+    }
+  },
+  "randomization_seed": 2026112508,
+  "rounds": 7,
+  "settings": [
+    [
+      "enwik8.zip",
+      "1",
+      1
+    ],
+    [
+      "enwik8.zip",
+      "1",
+      4
+    ],
+    [
+      "owid-co2.csv",
+      "1",
+      1
+    ],
+    [
+      "owid-co2.csv",
+      "1",
+      4
+    ],
+    [
+      "owid-co2.csv",
+      "2",
+      1
+    ],
+    [
+      "owid-co2.csv",
+      "2",
+      4
+    ],
+    [
+      "prose-64k",
+      "3",
+      1
+    ],
+    [
+      "prose-64k",
+      "3",
+      4
+    ],
+    [
+      "pydub.wav",
+      "7",
+      1
+    ],
+    [
+      "pydub.wav",
+      "7",
+      4
+    ],
+    [
+      "pydub.wav",
+      "ultra",
+      1
+    ],
+    [
+      "pydub.wav",
+      "ultra",
+      4
+    ]
+  ],
+  "archive_mode_and_mtime": [
+    420,
+    1600000000
+  ],
+  "cross_reader": "warmup frames decoded by qualified main, excluded from phase scores",
+  "build_provenance": {
+    "pre": {
+      "source_commit": "4db0425b361012523d8074ca6f2a760d9466e9f4",
+      "effective_codec_flags": [
+        "-O3",
+        "-mcpu=native",
+        "-ffp-contract=off"
+      ],
+      "attribution": "same previously recorded binary digest in before-after-and-competition.zip"
+    },
+    "main": {
+      "source_commit": "a1d39559686a9ec17c8614b9154a64d7b5b98672",
+      "effective_codec_flags": [
+        "-O3",
+        "-mcpu=native",
+        "-ffp-contract=off"
+      ],
+      "attribution": "same previously recorded binary digest in before-after-and-competition.zip"
+    },
+    "main-AA": {
+      "source_commit": "a1d39559686a9ec17c8614b9154a64d7b5b98672",
+      "effective_codec_flags": [
+        "-O3",
+        "-mcpu=native",
+        "-ffp-contract=off"
+      ],
+      "attribution": "same previously recorded binary digest in before-after-and-competition.zip"
+    },
+    "combined": {
+      "source_commit": "c8fc5ac54aa302baf6abc66f210617901f9e6e2e",
+      "effective_codec_flags": [
+        "-O3",
+        "-mcpu=native",
+        "-ffp-contract=off",
+        "-DKOLMO_FAST_TABLE_TRIAL",
+        "-DKOLMO_FAST_TYPED_TABLE_TRIAL",
+        "-DKOLMO_AUDIO_SCREEN",
+        "-DKOLMO_GEAR_ASM"
+      ],
+      "attribution": "Timed checkout and fresh published checkout produced byte-identical executables; see source_recheck."
+    }
+  },
+  "build_provenance_evidence": {
+    "classification": "supplied by published manifest for matching digests",
+    "raw_csv_sha256": "ec9328d6da58bfbd6941cd018b403d5a736a6d8ae77fe975f58f45d8483cd033"
+  },
+  "runtime": {
+    "platform": "macOS-27.2-arm64-arm-64bit",
+    "rss_unit": "bytes",
+    "KOLMO_AUDIO_SCREEN": "1",
+    "effective_worker_count": "not instrumented"
+  },
+  "source_recheck": {
+    "timed_checkout": "a60e4dc9f9f38a28aef5c1522893e6476ba11d60",
+    "published_checkout": "c8fc5ac54aa302baf6abc66f210617901f9e6e2e",
+    "binaries_byte_identical": true,
+    "binary_sha256": "e1b2e4876531c56be9f8140e124fc538c7da0bf9200dc3901dfdd7289990d240",
+    "command": "make -j2 GEAR_ASM=1 CFLAGS=\"-O3 -mcpu=native -DKOLMO_FAST_TABLE_TRIAL -DKOLMO_FAST_TYPED_TABLE_TRIAL -DKOLMO_AUDIO_SCREEN\" build/kolmo"
+  }
+}

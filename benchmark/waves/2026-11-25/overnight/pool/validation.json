@@ -1,0 +1,27 @@
+{
+  "pinned_forced_schedule": {
+    "exit": 42,
+    "output": "release private helper joins during forced contention: 3"
+  },
+  "fixed_forced_schedule_and_resource": {
+    "exit": 0,
+    "output": "RESOURCE TESTS PASSED (13 injected compression allocation failures)"
+  },
+  "fixed_parallel_and_fork": {
+    "exit": 0,
+    "output": "PARALLEL TESTS PASSED (144 concurrent table, archive and plain round trips; fork after threaded calls)"
+  },
+  "fixed_api": {
+    "exit": 0,
+    "output": "forged 8 MiB context-mixing block (384-byte frame): -1 after 0.016 s\nHARDENING TESTS PASSED (forged headers, trailing bytes, frame walking, parameters, CM amplification, buffer release, stream members)"
+  },
+  "fixed_frozen_decoder": {
+    "exit": 0,
+    "output": "V12 CORPUS PASSED (357 frozen frames decode to their originals)"
+  },
+  "pinned_parallel_and_fork": {
+    "exit": 0,
+    "output": "PARALLEL TESTS PASSED (144 concurrent table, archive and plain round trips; fork after threaded calls)"
+  },
+  "patch_applies_to": "ac10ce80048ab0664074f7ba031634055f4d2225"
+}

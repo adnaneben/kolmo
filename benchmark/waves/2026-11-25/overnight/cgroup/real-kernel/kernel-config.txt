@@ -1,0 +1,10 @@
+Debian
+CONFIG_CGROUPS=y
+CONFIG_MEMCG=y
+# CONFIG_MEMCG_V1 is not set
+9b460f1003db4d417288e9c14caecfa14245dab07186df948fef0f3661e38ceb  debian-kconfig.txt
+Ubuntu
+CONFIG_CGROUPS=y
+CONFIG_MEMCG=y
+# CONFIG_MEMCG_V1 is not set
+b07d3cb0d53236b021d73038e315018801fa6b843529d53129ad94a2a5233bf6  ubuntu-kconfig.txt

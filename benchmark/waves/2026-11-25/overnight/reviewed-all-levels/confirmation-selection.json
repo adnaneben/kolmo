@@ -1,0 +1,27 @@
+{
+  "selection": [
+    [
+      "python64k",
+      "ultra",
+      1
+    ],
+    [
+      "gaia256k",
+      "ultra",
+      4
+    ],
+    [
+      "python64k",
+      "1",
+      1
+    ],
+    [
+      "text16k",
+      "6",
+      4
+    ]
+  ],
+  "seed": 1156651,
+  "scored_repetitions": 11,
+  "selection_method": "Up to three distinct input/level cells >=5% slower against both control arms and at most one win in each three-round comparison, by worst common slowdown. One strongest positive control."
+}

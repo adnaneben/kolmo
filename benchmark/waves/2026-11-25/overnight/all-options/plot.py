@@ -2,6 +2,7 @@
 import argparse
 import csv
 import json
+import math
 from collections import defaultdict
 from pathlib import Path
 
@@ -12,9 +13,9 @@ from reportlab.lib.colors import HexColor
 INK = "#152c3b"
 MUTED = "#4c6471"
 GRID = "#d8e2e5"
-ARMS = (("pre", "Historical  4db0425b", "#718491", "square"),
-        ("main", "Main  a1d39559", "#ab5a17", "diamond"),
-        ("combined", "Experimental  ac10ce80", "#007d7e", "circle"))
+ARMS = (("pre", "Historical", "#718491", "square"),
+        ("main", "Main", "#ab5a17", "diamond"),
+        ("combined", "Experimental", "#007d7e", "circle"))
 PANELS = (
     ("enwik8.zip", "enwik8 ZIP archive", (350, 600), (350, 450, 550), (.98, 1.02), (.98, 1.0, 1.02)),
     ("owid-co2.csv", "OWID CO₂ table", (125, 575), (150, 350, 550), (1, 8), (2, 4, 6, 8)),
@@ -28,6 +29,8 @@ def color(value):
     return HexColor(value)
 
 def draw(rows, manifest):
+    arms = [(arm, f"{title}  {manifest['build_provenance'][arm]['source_commit'][:8]}", tone, marker)
+            for arm, title, tone, marker in ARMS]
     (W, H) = (1190, 807)
     figure = Drawing(W, H)
 
@@ -71,7 +74,7 @@ def draw(rows, manifest):
     text(32, 762, 'Compression ratio and round-trip throughput', 30, bold=True)
     text(33, 739, 'Four workloads and 12 matched settings on Apple M5, 25 November 2026', 14, MUTED)
     lx = 35
-    for (arm, label, tone, shape) in ARMS:
+    for (arm, label, tone, shape) in arms:
         dot(lx, 714, tone, shape, 4.3)
         text(lx + 12, 710, label, 11.5, bold=True)
         lx += 208
@@ -82,6 +85,14 @@ def draw(rows, manifest):
     text(900, 710, 'Each line connects one matched setting.', 10.5, MUTED)
     line(32, 695, W - 30, 695, INK, 1)
     for (idx, (source, title, xlim, xticks, ylim, yticks)) in enumerate(PANELS):
+        speeds = [float(groups[key][arm]['combined_MBps'])
+                  for key in settings if key[0] == source for arm, _, _, _ in arms]
+        if min(speeds) < xlim[0] or max(speeds) > xlim[1]:
+            step = (xticks[-1] - xticks[0]) / (len(xticks) - 1)
+            lower = max(0, math.floor(min(speeds) / step) * step)
+            upper = math.ceil(max(speeds) / step) * step
+            xlim = (lower, upper)
+            xticks = [lower + i * step for i in range(round((upper - lower) / step) + 1)]
         left = 32 + idx * 286
         x0 = left + 38
         x1 = left + 267
@@ -104,7 +115,7 @@ def draw(rows, manifest):
             if key[0] != source:
                 continue
             coords = []
-            for (arm, _, tone, shape) in ARMS:
+            for (arm, _, tone, shape) in arms:
                 row = groups[key][arm]
                 (xx, yy) = (float(row['combined_MBps']), float(row['ratio']))
                 if not (xlim[0] <= xx <= xlim[1] and ylim[0] <= yy <= ylim[1]):
@@ -125,9 +136,9 @@ def draw(rows, manifest):
     text(291, 419, 'Threads', 11, bold=True)
     text(520, 435, 'Complete stored size (bytes)', 12, bold=True, anchor='middle')
     text(481, 415, 'Historical = main', 10, MUTED, anchor='end')
-    text(627, 415, 'Experimental', 10, ARMS[2][2], anchor='end')
+    text(627, 415, 'Experimental', 10, arms[2][2], anchor='end')
     text(910, 435, 'Combined encode + decode throughput (MB/s)', 12, bold=True, anchor='middle')
-    for (x, (_, label, tone, _)) in zip((802, 973, 1148), ARMS):
+    for (x, (_, label, tone, _)) in zip((802, 973, 1148), arms):
         text(x, 415, label.split('  ')[0], 10, tone, bold=True, anchor='end')
     y = 393
     previous = None
@@ -143,8 +154,8 @@ def draw(rows, manifest):
         text(223, y, 'Ultra' if level == 'ultra' else 'L' + level, 10.8)
         text(307, y, t, 10.8, anchor='middle')
         for (x, arm) in ((481, 'main'), (627, 'combined')):
-            text(x, y, f"{int(data[arm]['stored_bytes']):,}", 10.8, INK if arm == 'main' else ARMS[2][2], anchor='end')
-        for (x, (arm, _, tone, _)) in zip((802, 973, 1148), ARMS):
+            text(x, y, f"{int(data[arm]['stored_bytes']):,}", 10.8, INK if arm == 'main' else arms[2][2], anchor='end')
+        for (x, (arm, _, tone, _)) in zip((802, 973, 1148), arms):
             text(x, y, f"{float(data[arm]['combined_MBps']):,.2f}", 10.8, tone, bold=arm == 'combined', anchor='end')
         previous = source
         y -= 22
@@ -159,7 +170,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     root = args.directory
     manifest = json.loads((root / 'manifest.json').read_text())
-    if manifest['rounds'] != 7 or manifest['binaries']['combined'] != 'f1d02b873c62d2130f0bc6a311617742af0c8df4d26a3106c2cbdcd28b716213':
+    if manifest['rounds'] != 7 or not all(manifest['build_provenance'][arm]['source_commit'] for arm in ('pre', 'main', 'combined')):
         raise ValueError('Verify figure labels and trial count against the changed executable or manifest.')
     with (root / 'score.csv').open() as f:
         figure = draw(list(csv.DictReader(f)), manifest)

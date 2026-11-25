@@ -1,0 +1,4 @@
+BEGIN_GUEST Linux (none) 7.0.0-30-generic #30-Ubuntu SMP PREEMPT_DYNAMIC Fri Jul 31 18:22:54 UTC 2026 x86_64 GNU/Linux
+mount: mounting none on /run/memory failed: Invalid argument
+KOLMO_CGROUP_FAIL
+[    9.283070] reboot: Power down

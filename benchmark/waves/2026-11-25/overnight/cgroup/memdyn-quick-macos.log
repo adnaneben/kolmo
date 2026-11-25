@@ -1,0 +1,7 @@
+declaration coding and sizes: ok
+governor hysteresis, pressure and the one-job floor: ok
+forged frames (8 GiB claim, oversized model, undeclared model, index above the declaration): refused unallocated: ok
+-x -l 1 under a 256 MiB cap: 573611 bytes, declares 91 MiB
+explicit cap and floors: ok
+forced budgets 1 B, 64 MiB, 512 MiB, 4 GiB, unlimited: identical frames in every mode: ok
+MEMDYN TESTS PASSED

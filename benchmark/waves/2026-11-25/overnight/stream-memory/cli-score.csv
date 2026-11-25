@@ -1,0 +1,9 @@
+source,format,input_kind,threads,repetitions,rss_peak_B_median,elapsed_ns_median,rss_peak_min_B,rss_peak_max_B
+ghcn,frame,pipe,4,3,19824640,14936333,19660800,20004864
+ghcn,frame,regular,4,3,13385728,14700667,13320192,13451264
+ghcn,stream,pipe,4,3,9224192,21479708,9076736,9338880
+ghcn,stream,regular,4,3,9437184,22327750,9355264,9453568
+silesia-zip,frame,pipe,4,3,140705792,195620375,138297344,140787712
+silesia-zip,frame,regular,4,3,10731520,22915542,10731520,10764288
+silesia-zip,stream,pipe,4,3,6553600,51623791,6537216,6569984
+silesia-zip,stream,regular,4,3,6520832,41525208,6520832,6537216

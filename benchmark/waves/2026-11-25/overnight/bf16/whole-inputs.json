@@ -1,0 +1,44 @@
+{
+  "physical_bytes": 25769803776,
+  "platform": "Darwin 27.2.0 arm64",
+  "methods": {
+    "kolmo_L3": "/tmp/kolmo-ppp-all-default-nov25/build/kolmo",
+    "zipnn_0.5.4": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/bench-page/venv-dir/.venv/bin/python"
+  },
+  "kolmo_sha256": "552bd577b79b0cb48561747f613dd2ff8ee82d9c1eefba9b2e2a653f277a259f",
+  "tag_reader_sha256": "e7f58f11fe2eb5f296bcd71a9ef9331d154723709ca6822e3cb110acd376e328",
+  "inputs": {
+    "smollm2-135m": {
+      "path": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/bench-page/data/weights/smollm2-135m-bf16.safetensors",
+      "sha256": "80521b40281d6ce74e35c9282c22539e75aa0ac8578892b2a59955ef78d55da1",
+      "bytes": 269060552,
+      "header_bytes": 30528,
+      "header_sha256": "05594b15679d772617048271ce61f74473539658d1b161c687e5c69ec8ab2b22",
+      "tensor_count": 272,
+      "dtypes": {
+        "BF16": 272
+      },
+      "metadata": {
+        "format": "pt"
+      },
+      "payload_bytes": 269030016,
+      "pinned_source": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/model.safetensors"
+    },
+    "qwen2.5-0.5b": {
+      "path": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/bench-page/data/weights/qwen2.5-0.5b-bf16.safetensors",
+      "sha256": "88c142557820ccad55bb59756bfcfcf891de9cc6202816bd346445188a0ed342",
+      "bytes": 988097824,
+      "header_bytes": 32280,
+      "header_sha256": "bd808652be103f0e4e29786b9aa8829e0f38607880486926c7246ee2de577a76",
+      "tensor_count": 290,
+      "dtypes": {
+        "BF16": 290
+      },
+      "metadata": {
+        "format": "pt"
+      },
+      "payload_bytes": 988065536,
+      "pinned_source": "https://huggingface.co/Qwen/Qwen2.5-0.5B/resolve/060db6499f32faf8b98477b0a26969ef7d8b9987/model.safetensors"
+    }
+  }
+}

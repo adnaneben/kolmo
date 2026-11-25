@@ -1,0 +1,70 @@
+{
+  "pinned_main_source": "a1d39559686a9ec17c8614b9154a64d7b5b98672",
+  "verified_src_tree_git": "350c7991bde81571f862eb618e789f38a495c52e",
+  "source_and_fixtures_diff_to_pinned_main": "empty",
+  "historical_source": "52df50cf5521003f8bbbf8355abf84398d6540d9",
+  "historical_files": [
+    {
+      "file": "review40b/reviews/R28.md",
+      "bytes": 23123,
+      "sha256": "81dfae30cc89f494696893adbc1c7ee74b4b563a568f4a40ac7ebb8b4d7999e3"
+    },
+    {
+      "file": "review40b/work/R28/wasm.sh",
+      "bytes": 983,
+      "sha256": "ead34d464a357a703e6c7d1344708a1a6783f162b5f54881ff0417042b846f31"
+    },
+    {
+      "file": "review40b/work/R28/rt-nosimd.wasm",
+      "bytes": 4818519,
+      "sha256": "f896349d52435b116132ef7b789d9809617b03b5282c42881ee6424a13db8801"
+    },
+    {
+      "file": "review40b/work/R28/rt-simd.wasm",
+      "bytes": 4866123,
+      "sha256": "b5e198000bbe6d202c485f600addee298d42075fd5b37c65006f4f087914290c"
+    },
+    {
+      "file": "review40b/work/R28/wasm/kolmo.wasm",
+      "bytes": 3743975,
+      "sha256": "d8b619c38f53217bea19a9e96fdd6a28ef6a0969d5c5c16178b00b47430bb44c"
+    },
+    {
+      "file": "review40b/work/R28/wshim/setjmp.h",
+      "bytes": 274,
+      "sha256": "b115194a6556242b54c6dbf70fc1ea5a33f37bcfa29d850fbd82bd1fe26b4da8"
+    },
+    {
+      "file": "review40b/work/R28/proto/wasi_stubs.c",
+      "bytes": 329,
+      "sha256": "8f4df691024bc1dc925792c9a013be8919cee5ac5d2b00c9b615958eda81e457"
+    },
+    {
+      "file": "review40b/work/R28/venv/lib/python3.9/site-packages/ziglang/zig",
+      "bytes": 199178272,
+      "sha256": "bb6397b497438ce9e9d0d668fbfb42e777082f2b0af87ab06dec5ec928e19df5"
+    }
+  ],
+  "platform": "Apple M5 arm64, macOS 27.2 (26B123)",
+  "compiler": "zig 0.17.1 cc, clang 22.1.8, bundled wasm32-wasi libc",
+  "node": "24.22.3",
+  "v8": "13.6.233.17-node.63",
+  "jsc_framework_bundle": "22625.2.8.11.9",
+  "engines": {
+    "Node-V8": "1c566c9ba5ffa756367707fd950fa3ee31a941202b0a47dbf67836216413f071",
+    "JavaScriptCore": "cbf505bc4138b5350dcaba65f47b551054d256931f5fbb38f7a729f1b8faee73"
+  },
+  "module_sha256": {
+    "256 MiB": "d701c72bdd3eaa2297e7ceec030d06967114b8ba38f4307a097cac8d75da31ca",
+    "768 MiB": "2e7e6d4654ff770dca2551ed34ca92702b4af3fb3c11e876ce1e95c53cf5a076"
+  },
+  "source_rebuilt_using_packaged_shims": "identical modules from build.sh for both caps",
+  "harness_files": {
+    "reader.c": "4730dfc85afc43641d3530c4553840492f350900bc2ea984a0dd811c3ca3204a",
+    "build.sh": "72dd72d57b6b974310b87015d3bda72b68777812ea160bb514caeb71b6079f03",
+    "run.js": "dae1d518fa9990b337ccb2739f4918adc76b18c2726b1c8bc8c0b93bfe64135f",
+    "verify.py": "b9673d98266f064055d94e0fb9f8e73bb8d6efd0aaa47c0f4a3ea0ca8570512f",
+    "r28-shims/setjmp.h": "b115194a6556242b54c6dbf70fc1ea5a33f37bcfa29d850fbd82bd1fe26b4da8",
+    "r28-shims/wasi_stubs.c": "8f4df691024bc1dc925792c9a013be8919cee5ac5d2b00c9b615958eda81e457"
+  }
+}

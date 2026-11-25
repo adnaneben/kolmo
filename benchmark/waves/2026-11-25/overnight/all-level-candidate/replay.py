@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import random
 import subprocess
 import tempfile
@@ -39,7 +40,10 @@ def main():
     for name in ('before', 'after', 'corpus', 'out'):
         parser.add_argument('--'+name, type=Path, required=True)
     parser.add_argument('--rounds', type=int, default=3)
+    parser.add_argument('--candidate-sha', default='ac10ce80048ab0664074f7ba031634055f4d2225')
     args = parser.parse_args()
+    if not re.fullmatch(r'[0-9a-f]{40}', args.candidate_sha):
+        parser.error('candidate-sha requires the complete source revision')
     args.out.mkdir(parents=True, exist_ok=True)
     bins = {'main': args.before.resolve(), 'main-AA': args.before.resolve(), 'candidate': args.after.resolve()}
     source = {}
@@ -50,7 +54,7 @@ def main():
         provenance[label] = {'file': filename, 'source_sha256':digest(original), 'offset':0,
                              'bytes':len(source[label]), 'original_bytes':len(original),
                              'input_sha256':digest(source[label])}
-    manifest = {'revisions': {'main':'a1d39559686a9ec17c8614b9154a64d7b5b98672','candidate':'ac10ce80048ab0664074f7ba031634055f4d2225'},'warmup_cross_read':'all candidate warmup frames decoded using main, outside timing', 'sources':provenance, 'binaries':{k:digest(p.read_bytes()) for k,p in bins.items()},
+    manifest = {'revisions': {'main':'a1d39559686a9ec17c8614b9154a64d7b5b98672','candidate':args.candidate_sha},'warmup_cross_read':'all candidate warmup frames decoded using main, outside timing', 'sources':provenance, 'binaries':{k:digest(p.read_bytes()) for k,p in bins.items()},
                 'machine':platform.platform(), 'compiler':subprocess.check_output(['cc','--version'],text=True).strip(),
                 'seed': SEED, 'rounds':args.rounds, 'levels':LEVELS, 'requested_threads':[1,4],
                 'effective_worker_count':'not instrumented', 'cache':'warm-input, whole-file process launch included',

@@ -1,0 +1,47 @@
+BEGIN_GUEST Linux (none) 7.0.0-30-generic #30-Ubuntu SMP PREEMPT_DYNAMIC Fri Jul 31 18:22:54 UTC 2026 x86_64 GNU/Linux
+GUEST_MODE=v2 kernel=7.0.0-30-generic
+#subsys_name	hierarchy	num_cgroups	enabled
+cpu	0	1	1
+cpuacct	0	1	1
+blkio	0	1	1
+devices	0	1	1
+freezer	0	1	1
+net_cls	0	1	1
+perf_event	0	1	1
+net_prio	0	1	1
+hugetlb	0	1	1
+pids	0	1	1
+rdma	0	1	1
+misc	0	1	1
+dmem	0	1	1
+ROOT before=-1 18446744073709551615 18446744073709551615 patched=-1 18446744073709551615 18446744073709551615
+0::/ppp-parent/ppp-leaf
+30 29 0:26 / /sys/fs/cgroup rw,relatime - cgroup2 none rw
+31 2 0:26 /ppp-parent /run/extra\040mount rw,relatime - cgroup2 none rw
+CASE=parent_initial parent=67108864 parent_current=507904 leaf=100663296 leaf_current=245760 independent_room=66600960 patched_rc=0 patched_room=66560000 patched_limit=67108864 old=0 100249600 100663296 drift=40960
+GOVERNOR rc=0 room=66428928 limit=67108864 budget=66428928 first_oversize=1 concurrent_extra=0 after_release=1
+limit=67108864 room=66588672 auto=33554432 first_jobs=1 extra=0 final_jobs=0 final_used=0
+CASE=parent_charged parent=67108864 parent_current=8925184 leaf=100663296 leaf_current=8663040 independent_room=58183680 patched_rc=0 patched_room=58109952 patched_limit=67108864 old=0 91779072 100663296 drift=73728
+GOVERNOR rc=0 room=57982976 limit=67108864 budget=57982976 first_oversize=1 concurrent_extra=0 after_release=1
+limit=67108864 room=58138624 auto=33554432 first_jobs=1 extra=0 final_jobs=0 final_used=0
+EIGHT_MIB_CHARGE observed_room_drop=8450048
+CASE=leaf_tighter parent=67108864 parent_current=8871936 leaf=25165824 leaf_current=8609792 independent_room=16556032 patched_rc=0 patched_room=16486400 patched_limit=25165824 old=0 16343040 25165824 drift=69632
+GOVERNOR rc=0 room=16367616 limit=25165824 budget=16367616 first_oversize=1 concurrent_extra=0 after_release=1
+limit=25165824 room=16261120 auto=12582912 first_jobs=1 extra=0 final_jobs=0 final_used=0
+CASE=leaf_released parent=67108864 parent_current=524288 leaf=25165824 leaf_current=262144 independent_room=24903680 patched_rc=0 patched_room=24829952 patched_limit=25165824 old=0 24682496 25165824 drift=73728
+GOVERNOR rc=0 room=24711168 limit=25165824 budget=24711168 first_oversize=1 concurrent_extra=0 after_release=1
+limit=25165824 room=24866816 auto=12582912 first_jobs=1 extra=0 final_jobs=0 final_used=0
+CASE=sibling_before_charge parent=67108864 parent_current=659456 leaf=100663296 leaf_current=397312 independent_room=66449408 patched_rc=0 patched_room=66441216 patched_limit=67108864 old=0 100392960 100663296 drift=8192
+GOVERNOR rc=0 room=66338816 limit=67108864 budget=66338816 first_oversize=1 concurrent_extra=0 after_release=1
+limit=67108864 room=66494464 auto=33554432 first_jobs=1 extra=0 final_jobs=0 final_used=0
+CASE=sibling_charged parent=67108864 parent_current=8892416 leaf=100663296 leaf_current=86016 independent_room=58216448 patched_rc=0 patched_room=57868288 patched_limit=67108864 old=0 100352000 100663296 drift=348160
+GOVERNOR rc=0 room=58015744 limit=67108864 budget=58015744 first_oversize=1 concurrent_extra=0 after_release=1
+limit=67108864 room=57909248 auto=33554432 first_jobs=1 extra=0 final_jobs=0 final_used=0
+SIBLING_CHARGE parent_room_drop=8572928 leaf_usage_change=36864 sibling_usage=8544256
+DELEGATED_VIEW_ONLY
+31 2 0:26 /ppp-parent /run/extra\040mount rw,relatime - cgroup2 none rw
+CASE=delegated_only parent=67108864 parent_current=9125888 leaf=100663296 leaf_current=319488 independent_room=57982976 patched_rc=0 patched_room=58028032 patched_limit=67108864 old=-1 18446744073709551615 18446744073709551615 drift=45056
+GOVERNOR rc=0 room=57905152 limit=67108864 budget=57905152 first_oversize=1 concurrent_extra=0 after_release=1
+limit=67108864 room=57802752 auto=33554432 first_jobs=1 extra=0 final_jobs=0 final_used=0
+KOLMO_CGROUP_PASS
+[    5.393573] reboot: Power down

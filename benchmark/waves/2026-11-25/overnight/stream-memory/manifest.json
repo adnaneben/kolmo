@@ -1,0 +1,40 @@
+{
+  "source_commit": "ac10ce80048ab0664074f7ba031634055f4d2225",
+  "instrument_binary_sha256": "a3d978ed44bb3fd2f0953569e496783ff8b24b79e2af461751db4132c028821e",
+  "architecture_archive_sha256": "7dc1129a0caad3d7eeb2d988c83768045a59f1c13fa019dc3923f3e528660915",
+  "inputs": {
+    "ghcn": {
+      "original": "USW00012839.csv",
+      "bytes": 10134321,
+      "sha256": "728e10647be26bdbe1178976ac74ead6425327d45e1a8d87c77d4090e880ba04",
+      "level": 3,
+      "frames": {
+        "frame": {
+          "bytes": 577889,
+          "sha256": "e1465626c4ea14d6dfad8ceffa496a988a45fb9f98e9b489296bbde23cc4b12f"
+        },
+        "stream": {
+          "bytes": 574770,
+          "sha256": "12464fbf5fd7a71ac3f213e17971451577b82c3ed6fbce1c546892648d292366"
+        }
+      }
+    },
+    "silesia-zip": {
+      "original": "silesia-silesia.zip",
+      "bytes": 68182744,
+      "sha256": "0626e25f45c0ffb5dc801f13b7c82a3b75743ba07e3a71835a41e3d9f63c77af",
+      "level": 1,
+      "frames": {
+        "frame": {
+          "bytes": 68130757,
+          "sha256": "a23877d67e711d450c24636e90ad118a214f661cb6ece9c0ceddb235d3fe8ae3"
+        },
+        "stream": {
+          "bytes": 68123703,
+          "sha256": "af71a6f5642250ffbc0d7da1ba4960f94da67f99fab164023998ffcd9a0065e6"
+        }
+      }
+    }
+  },
+  "stock_cli_sha256": "552bd577b79b0cb48561747f613dd2ff8ee82d9c1eefba9b2e2a653f277a259f"
+}

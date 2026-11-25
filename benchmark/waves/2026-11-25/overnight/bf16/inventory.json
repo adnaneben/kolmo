@@ -1,0 +1,177 @@
+{
+  "host": "arm64 Darwin 27.2.0",
+  "source_commit": {
+    "candidate": "ac10ce80048ab0664074f7ba031634055f4d2225",
+    "main": "a1d39559686a9ec17c8614b9154a64d7b5b98672"
+  },
+  "binary": {
+    "candidate": {
+      "path": "/tmp/kolmo-ppp-all-default-nov25/build/kolmo",
+      "sha256": "552bd577b79b0cb48561747f613dd2ff8ee82d9c1eefba9b2e2a653f277a259f"
+    },
+    "main": {
+      "path": "/tmp/kolmo-ppp-frontier-nov25/a1d39559/build/kolmo",
+      "sha256": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f"
+    },
+    "zipnn_extension": {
+      "path": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/bench-page/venv-dir/.venv/lib/python3.12/site-packages/zipnn_core.cpython-312-darwin.so",
+      "sha256": "252d54f33dc34cf1592c5bf4515f52fe0f3b70981cf9f9a4e19e66b44fb3fcab"
+    }
+  },
+  "zipnn": {
+    "version": "0.5.4",
+    "python": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/bench-page/venv-dir/.venv/bin/python",
+    "method": "AUTO",
+    "threads": 1,
+    "input_format": "byte",
+    "bytearray_dtype": "bfloat16",
+    "side_bytes": 0
+  },
+  "inputs": {
+    "llm_bf16_10mb.safetensors": {
+      "bytes": 10485880,
+      "header_bytes_excluding_length": 112,
+      "tensors": 1,
+      "dtypes": {
+        "BF16": 1
+      },
+      "declared_total_bytes": 10485880,
+      "tensor_header": {
+        "mtp.layers.0.self_attn.k_proj.weight": {
+          "dtype": "BF16",
+          "shape": [
+            1024,
+            5120
+          ],
+          "data_offsets": [
+            0,
+            10485760
+          ]
+        }
+      },
+      "sha256": "484c9535b461409206fd45b6ebd219a19fbd030d821b2573a8479a1d3829cb92",
+      "original_download_copy_sha256": "484c9535b461409206fd45b6ebd219a19fbd030d821b2573a8479a1d3829cb92",
+      "manifest_sha256": "a9aeedbbc21fac0b0910299397fe05feef165e56d75a778ece0ea998764b26c0",
+      "recorded_provenance": "llm",
+      "source": "/Users/adnanbenali/Downloads/kolmo-bench/data/llm_bf16_10mb.safetensors",
+      "review_source": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/corpus/llm_bf16_10mb.safetensors",
+      "parent_checkpoint": "unknown"
+    },
+    "llm_bf16_47mb.safetensors": {
+      "bytes": 47186040,
+      "header_bytes_excluding_length": 112,
+      "tensors": 1,
+      "dtypes": {
+        "BF16": 1
+      },
+      "declared_total_bytes": 47186040,
+      "tensor_header": {
+        "model.visual.merger.linear_fc2.weight": {
+          "dtype": "BF16",
+          "shape": [
+            5120,
+            4608
+          ],
+          "data_offsets": [
+            0,
+            47185920
+          ]
+        }
+      },
+      "sha256": "b25a38e2edd4f848e47a0b3a41837b7f55254aeb85a27d2d4c4fc69ac89420f5",
+      "original_download_copy_sha256": "b25a38e2edd4f848e47a0b3a41837b7f55254aeb85a27d2d4c4fc69ac89420f5",
+      "manifest_sha256": "ab8a25e56e09685b3d7198275b4e4ffb9da981f50ecc3737b606cba338dcde7d",
+      "recorded_provenance": "llm",
+      "source": "/Users/adnanbenali/Downloads/kolmo-bench/data/llm_bf16_47mb.safetensors",
+      "review_source": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/corpus-holdout/llm_bf16_47mb.safetensors",
+      "parent_checkpoint": "unknown"
+    },
+    "smollm2-135m-model.safetensors": {
+      "bytes": 269060552,
+      "header_bytes_excluding_length": 30528,
+      "tensors": 272,
+      "dtypes": {
+        "BF16": 272
+      },
+      "declared_total_bytes": 269060552,
+      "recorded_source": {
+        "bytes": 269060552,
+        "sha256": "80521b40281d6ce74e35c9282c22539e75aa0ac8578892b2a59955ef78d55da1",
+        "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/model.safetensors"
+      },
+      "status": "Verified whole-checkpoint benchmark in whole-inputs.json and whole-raw.csv"
+    },
+    "qwen2.5-0.5b-model.safetensors": {
+      "bytes": 988097824,
+      "header_bytes_excluding_length": 32280,
+      "tensors": 290,
+      "dtypes": {
+        "BF16": 290
+      },
+      "declared_total_bytes": 988097824,
+      "recorded_source": {
+        "bytes": 988097824,
+        "sha256": "88c142557820ccad55bb59756bfcfcf891de9cc6202816bd346445188a0ed342",
+        "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B/resolve/060db6499f32faf8b98477b0a26969ef7d8b9987/model.safetensors"
+      },
+      "status": "Verified whole-checkpoint benchmark in whole-inputs.json and whole-raw.csv"
+    },
+    "gpt2-model.safetensors": {
+      "bytes": 548105171,
+      "header_bytes_excluding_length": 14283,
+      "tensors": 160,
+      "dtypes": {
+        "F32": 160
+      },
+      "declared_total_bytes": 548105171,
+      "recorded_source": {
+        "bytes": 548105171,
+        "sha256": "248dfc3911869ec493c76e65bf2fcf7f615828b0254c12b473182f0f81d3a707",
+        "url": "https://huggingface.co/openai-community/gpt2/resolve/607a30d783dfa663caf39e06633721c8d4cfcd7e/model.safetensors"
+      },
+      "status": "above 100 MB cap; header and actual filesystem length inspected"
+    },
+    "magika.safetensors": {
+      "bytes": 3139140,
+      "header_bytes_excluding_length": 2240,
+      "tensors": 19,
+      "dtypes": {
+        "F32": 19
+      },
+      "declared_total_bytes": 3139140,
+      "status": "ineligible dtype"
+    },
+    "llm_nvfp4_17mb.safetensors": {
+      "bytes": 17695172,
+      "header_bytes_excluding_length": 440,
+      "tensors": 3,
+      "dtypes": {
+        "U32": 1,
+        "F32": 1,
+        "U8": 1
+      },
+      "declared_total_bytes": 17695172,
+      "status": "ineligible dtype"
+    },
+    "weights__smollm2-bf16": {
+      "bytes": 4194304,
+      "header_bytes_excluding_length": 30528,
+      "tensors": 272,
+      "dtypes": {
+        "BF16": 272
+      },
+      "declared_total_bytes": 269060552,
+      "status": "truncated prefix; declared tensor extent exceeds input length"
+    },
+    "weights__bf16-10mb": {
+      "bytes": 4194304,
+      "header_bytes_excluding_length": 112,
+      "tensors": 1,
+      "dtypes": {
+        "BF16": 1
+      },
+      "declared_total_bytes": 10485880,
+      "status": "truncated prefix; declared tensor extent exceeds input length"
+    }
+  }
+}

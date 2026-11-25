@@ -81,6 +81,7 @@ def main():
     for name in ("before", "main", "combined", "archive", "csv", "prose", "audio", "out"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--rounds", type=int, default=7)
+    parser.add_argument("--reference", type=Path, default=REFERENCE, help="Published manifest for this exact comparison")
     parser.add_argument("--verify-reference", action="store_true",
                         help="Require original binary and data hashes from the published manifest")
     args = parser.parse_args()
@@ -96,7 +97,7 @@ def main():
         sources[name] = dict(source_sha256=digest(whole), source_bytes=len(whole),
                              input_sha256=digest(data[name]), input_bytes=len(data[name]))
     binaries = {k: digest(p.read_bytes()) for k, p in executables.items()}
-    reference = json.loads(REFERENCE.read_text()) if REFERENCE.is_file() else {}
+    reference = json.loads(args.reference.read_text()) if args.reference.is_file() else {}
     if args.verify_reference and (binaries != reference.get("binaries") or sources != reference.get("sources")):
         parser.error("the executable or source/input digests differ from the published experiment")
 

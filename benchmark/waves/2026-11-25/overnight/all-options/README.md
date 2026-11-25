@@ -25,6 +25,6 @@ The archive workload is the complete enwik8 ZIP as one member. Ordinary file inp
 
 Decimal MB/s uses original bytes and wall time including CLI startup and file I/O. Combined speed uses the median of each observed encode-plus-decode duration. paired.csv reports median within-round gains and win counts. score.csv retains per-arm phase rates and peak RSS medians. These are warm-cache measurements on a shared host. Worker occupancy, p95 latency and native x86 performance were outside this run.
 
-To replay these inputs and executables, run replay.py with --verify-reference, the three binary paths, --archive, --csv, --prose, --audio and a fresh --out directory. Run score.py --data-dir on that directory.
+Use the shared [replay](../all-options/replay.py) with --reference pointing at this manifest, --verify-reference, the three binary paths, --archive, --csv, --prose, --audio and a fresh --out directory. Run the shared [scorer](../all-options/score.py) with --data-dir on that directory.
 
 A separate hash-pinned replay reproduced all 48 arm/setting frame hashes, stored sizes and codec counts. Its 96 timed restores and 48 additional qualified-main readbacks passed. The table above uses only the original seven-round measurements.

@@ -1,0 +1,5 @@
+BEGIN_GUEST Linux (none) 6.12.107+deb13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.107-1 (2026-08-29) x86_64 GNU/Linux
+[    3.947169] cgroup: Unknown subsys name 'memory'
+mount: mounting none on /run/memory failed: Invalid argument
+KOLMO_CGROUP_FAIL
+[    3.967986] reboot: Power down

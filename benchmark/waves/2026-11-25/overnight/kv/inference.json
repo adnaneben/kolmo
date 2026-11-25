@@ -1,0 +1,40 @@
+{
+  "prompt": "It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness.",
+  "prompt_tokens": 30,
+  "sampled_tokens": [
+    2157
+  ],
+  "time": {
+    "cache_n": 0,
+    "prompt_n": 30,
+    "prompt_ms": 26459.603,
+    "prompt_per_token_ms": 881.9867666666667,
+    "prompt_per_second": 1.1338038594154265,
+    "predicted_n": 1,
+    "predicted_ms": 0.001,
+    "predicted_per_token_ms": 0.0,
+    "predicted_per_second": 0.0
+  },
+  "saved": {
+    "id_slot": 0,
+    "filename": "public-kv.bin",
+    "n_saved": 30,
+    "n_written": 4916692,
+    "timings": {
+      "save_ms": 3.38
+    }
+  },
+  "model": "Devstral Small 2 24B",
+  "architecture": "mistral3",
+  "gguf_content_id": "sha256:c580819bed79c92d01a42227bd6d8fd66b9ec60d5329f5eb73f812f156af7807",
+  "gguf_bytes": 15177370240,
+  "query_heads": 32,
+  "kv_heads": 8,
+  "head_dim": 128,
+  "runtime_commit": "39febd2ad",
+  "threads": 2,
+  "ctx_size_requested": 128,
+  "ctx_size_allocated": 256,
+  "temperature": 0,
+  "seed": 23
+}

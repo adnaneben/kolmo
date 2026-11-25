@@ -1,0 +1,18 @@
+[
+  {
+    "input": "llm_bf16_10mb.safetensors",
+    "original_sha256": "484c9535b461409206fd45b6ebd219a19fbd030d821b2573a8479a1d3829cb92",
+    "zipnn_frame_sha256": "48b75c8ee02bb876f880a11e50c5619574dffed130210ad7fa36171eb8ad1a24",
+    "zipnn_default_decoder_restore": "exact",
+    "stock_l3_frame_sha256": "32f25698fdf753447c11d4438f45974dca1a25517bbe117c611e103e3746a906",
+    "tag_v002_restore": "exact"
+  },
+  {
+    "input": "llm_bf16_47mb.safetensors",
+    "original_sha256": "b25a38e2edd4f848e47a0b3a41837b7f55254aeb85a27d2d4c4fc69ac89420f5",
+    "zipnn_frame_sha256": "5e41d8213e829f1df94bbb6557779ef3ced3eb5f380802c1111c9885baf19248",
+    "zipnn_default_decoder_restore": "exact",
+    "stock_l3_frame_sha256": "161224b688ec61ef86f19fb889fa156ba130bccbad7ea907e8dd0fce1d041251",
+    "tag_v002_restore": "exact"
+  }
+]
