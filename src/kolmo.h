@@ -297,7 +297,9 @@ int     kolmo_target_parse(const char *spec, kolmo_target **out);        /* 0 or
 /* Replace the built-in speed table with a calibration table (the text kolmo_calibrate writes). 0 or KOLMO_ERR_TARGET. */
 int     kolmo_target_set_calibration(kolmo_target *t, const char *table, size_t n);
 void    kolmo_target_free(kolmo_target *t);
-/* Per-chunk report (optional): which setting each chunk got. */
+/* Report totals sum the individual chunk estimates before their frames are merged. When no setting meets a
+ * chunk's predicted speed floors, its fastest predicted decoder is used. Its size contribution is the emitted
+ * chunk frame's bytes. Its cost uses those bytes and the calibrated times for the selected setting. */
 typedef struct { uint32_t chunks; uint32_t per_setting[16]; double predicted_cost, predicted_enc_s, predicted_dec_s;
                  uint64_t predicted_size; } kolmo_target_report;
 const char *kolmo_target_setting_name(int setting);                      /* 0..8, NULL past the end */

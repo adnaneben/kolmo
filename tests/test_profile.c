@@ -33,6 +33,39 @@ static size_t gen_csv(uint8_t *o, size_t cap, int rows, int cols) {
     return w;
 }
 
+/* A binary chunk misses the floor while a text chunk meets it with balanced.
+ * Verify selection, the pre-merge byte total, and the selected formula for both. */
+static void target_floor_reports(void) {
+    uint8_t input[8192] = {0}, frame[16384], restored[8192];
+    memset(input + 4096, 'a', 4096);
+    const char *table = "kolmo-calibration 1\nspeed binary 1 90000\nbalanced text 2000000 2000000\n";
+    const char *specs[] = {"cost:size*2+enc*3+dec*5,encode>=999999MB/s",
+                           "cost:size*2+enc*3+dec*5,decode>=999999MB/s"};
+    kolmo_params p = {KOLMO_FAST, 0, 2, 4096, 1};
+    uint8_t *chunk = NULL;
+    int64_t binary_bytes = kt_compress_setting(input, 4096, 0, 1, &chunk);
+    CHECK(binary_bytes > 0); free(chunk); chunk = NULL;
+    int64_t text_bytes = kt_compress_setting(input + 4096, 4096, 2, 1, &chunk);
+    CHECK(text_bytes > 0); free(chunk);
+    for (size_t i = 0; i < sizeof specs / sizeof specs[0]; i++) {
+        kolmo_target *t = NULL;
+        CHECK(kolmo_target_parse(specs[i], &t) == 0);
+        CHECK(kolmo_target_set_calibration(t, table, strlen(table)) == 0);
+        for (int chunks = 1; chunks <= 2; chunks++) {
+            size_t n = (size_t)chunks * 4096;
+            kolmo_target_report r; uint32_t fallbacks = 0;
+            int64_t z = kolmo_compress_target_detail(input, n, frame, sizeof frame, &p, t, &r, &fallbacks);
+            uint64_t expected = (uint64_t)binary_bytes + (chunks == 2 ? (uint64_t)text_bytes : 0);
+            CHECK(fallbacks == 1 && r.chunks == (uint32_t)chunks);
+            CHECK(r.per_setting[0] == 1 && r.per_setting[2] == (uint32_t)chunks - 1);
+            CHECK(r.predicted_size == expected && z == (int64_t)(expected - (chunks - 1) * HDR));
+            CHECK(fabs(r.predicted_cost - (2 * expected + 3 * r.predicted_enc_s + 5 * r.predicted_dec_s)) < 1e-8);
+            CHECK(z > 0 && kolmo_decompress(frame, (size_t)z, restored, n, 2) == (int64_t)n && !memcmp(restored, input, n));
+        }
+        kolmo_target_free(t);
+    }
+}
+
 int main(void) {
     t_start = tnow();
     SECTION("profiles: not available");
@@ -132,7 +165,9 @@ int main(void) {
         /* a floor nothing meets: the fastest decoder, still a valid frame */
         kolmo_target *tt = NULL; CHECK(kolmo_target_parse(specs[4], &tt) == 0);
         kolmo_params p = {KOLMO_FAST, 0, 1, 0, 1}; size_t cap = kolmo_bound(n, &p) + 4096; o = malloc(cap);
-        int64_t z = kolmo_compress_target(mix, n, o, cap, &p, tt, NULL, NULL);
+        kolmo_target_report fallback_report;
+        int64_t z = kolmo_compress_target(mix, n, o, cap, &p, tt, NULL, &fallback_report);
+        CHECK(z > 0 && fallback_report.predicted_size == (uint64_t)z && fallback_report.predicted_cost == (double)z);
         CHECK(z > 0 && kolmo_decompress(o, (size_t)z, d, n, 1) == (int64_t)n && !memcmp(d, mix, n));
         CHECK(kolmo_compress_target(mix, n, o, 100, &p, tt, NULL, NULL) == KOLMO_ERR_DSTSIZE);
         free(o); kolmo_target_free(tt);
@@ -143,6 +178,8 @@ int main(void) {
         free(o); kolmo_target_free(tt);
         free(mix); free(d);
     }
+
+    target_floor_reports();
 
     SECTION("calibration");
     /* --- calibration on built-in data (short) produces a table the parser accepts */

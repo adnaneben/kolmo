@@ -15,7 +15,7 @@
  * The options of 0.0.1 (-m, -x, -l LEVEL, -B MiB, -Q, -n, -s, -S, -r, -D, -t DICT, -P, kolmo train, kolmo profile and
  * the two-positional `kolmo IN OUT`) were removed in 0.0.2: each fails with exit status 2 and a one-line hint.
  * Subcommands: kolmo calibrate (cli/train.c), and kolmo --index / cat / grep / archive / extract / contents (cli/features.c); subcommands are recognised only as the first argument. */
-#include "kolmo.h"
+#include "../plan/target_report.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -649,12 +649,16 @@ static int64_t code_buffer(const opts_t *o, const uint8_t *in, size_t n, uint8_t
     *out = malloc(cap ? cap : 1); if (!*out) return KOLMO_ERR_ALLOC;
     if (!o->tg) return kolmo_compress(in, n, *out, cap, &q);
     kolmo_target_report rep;
-    int64_t r = kolmo_compress_target(in, n, *out, cap, &q, o->tg, NULL, &rep);
+    uint32_t fallback_chunks = 0;
+    int64_t r = kolmo_compress_target_detail(in, n, *out, cap, &q, o->tg, &rep, &fallback_chunks);
     if (r >= 0 && verbose) {
         fprintf(stderr, "kolmo: %s: target '%s': %u chunk%s:", name, o->target, rep.chunks, rep.chunks == 1 ? "" : "s");
         for (int s = 0; kolmo_target_setting_name(s); s++) if (rep.per_setting[s]) fprintf(stderr, " %s x%u", kolmo_target_setting_name(s), rep.per_setting[s]);
-        fprintf(stderr, "; predicted %llu bytes, encode %.3f s, decode %.3f s (one thread); actual %lld bytes\n",
+        fprintf(stderr, "; predicted %llu bytes, encode %.3f s, decode %.3f s (one thread); actual %lld bytes",
                 (unsigned long long)rep.predicted_size, rep.predicted_enc_s, rep.predicted_dec_s, (long long)r);
+        if (fallback_chunks) fprintf(stderr, "; no setting met the predicted floors for %u chunk%s (fastest predicted decoder, measured chunk size)",
+                                     fallback_chunks, fallback_chunks == 1 ? "" : "s");
+        fputc('\n', stderr);
     }
     return r;
 }

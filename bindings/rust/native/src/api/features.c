@@ -5,6 +5,7 @@
  * with the library coders removed (container version 12) they are not available. The calls stay so that programs
  * keep linking, and return KOLMO_ERR_UNSUPPORTED. Part of the src/kolmo.c translation unit. */
 #include <time.h>
+#include "../plan/target_report.h"
 
 /* ---------------------------------------------------------------- profiles (not available in this build) */
 size_t kolmo_profile_bound(const kolmo_train_params *tp) { (void)tp; return 0; }
@@ -87,6 +88,12 @@ static int64_t kt_merge(uint8_t *const *fr, const size_t *fl, uint32_t k, const 
 int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t cap, const kolmo_params *p,
                               const kolmo_target *t, const kolmo_profile *prof, kolmo_target_report *report) {
     if (prof) return KOLMO_ERR_UNSUPPORTED;               /* trained profiles: not available in this build */
+    return kolmo_compress_target_detail(src, n, dst, cap, p, t, report, NULL);
+}
+
+int64_t kolmo_compress_target_detail(const uint8_t *src, size_t n, uint8_t *dst, size_t cap,
+                                     const kolmo_params *p, const kolmo_target *t,
+                                     kolmo_target_report *report, uint32_t *fallback_chunks) {
     if (!t || (!src && n) || !dst) return KOLMO_ERR_TARGET;
     int threads = p && p->threads > 0 ? p->threads : default_threads();
     size_t B = p && p->block ? p->block : KT_CHUNK; if (B < 4096) B = 4096;
@@ -108,7 +115,7 @@ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t
     J.pcost = calloc(k, sizeof(double)); J.penc = calloc(k, sizeof(double)); J.pdec = calloc(k, sizeof(double)); J.psize = calloc(k, sizeof(uint64_t));
     int64_t ret = KOLMO_ERR_ALLOC;
     if (J.frames && J.flen && J.chosen && J.pcost && J.penc && J.pdec && J.psize) {
-        atomic_init(&J.next, 0); atomic_init(&J.err, 0);
+        atomic_init(&J.next, 0); atomic_init(&J.err, 0); atomic_init(&J.fallback_chunks, 0);
         run_pool(kt_worker, &J, threads, k);
         ret = atomic_load(&J.err);
         if (!ret) {
@@ -117,7 +124,8 @@ int64_t kolmo_compress_target(const uint8_t *src, size_t n, uint8_t *dst, size_t
                 else { memcpy(dst, J.frames[0], J.flen[0]); ret = (int64_t)J.flen[0]; }
             } else ret = kt_merge(J.frames, J.flen, k, src, starts, dst, cap, J.chosen);
         }
-        if (!ret || ret > 0) {
+        if (ret >= 0) {
+            if (fallback_chunks) *fallback_chunks = atomic_load(&J.fallback_chunks);
             if (report) {
                 memset(report, 0, sizeof *report); report->chunks = k;
                 for (uint32_t c = 0; c < k; c++) {
