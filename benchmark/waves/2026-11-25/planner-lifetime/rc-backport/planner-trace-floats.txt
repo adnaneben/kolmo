@@ -1,0 +1,19 @@
+input floats.f64 sha256=284fcacac253757025b0d27b9bcd5ea55abae736f208b7a42fe9918c4554a105
+rc -1: branch not reached
+rc -2: branch not reached
+rc -3: branch not reached
+rc -4: PROBE displaced_record chosen=8 alias=0 n=320000
+rc -5: PROBE displaced_record chosen=8 alias=0 n=320000
+rc -6: PROBE displaced_record chosen=8 alias=0 n=320000
+rc -7: PROBE displaced_record chosen=8 alias=0 n=320000
+rc -8: PROBE displaced_record chosen=8 alias=0 n=320000
+rc -9: PROBE displaced_record chosen=8 alias=0 n=320000
+rcfix -1: branch not reached
+rcfix -2: branch not reached
+rcfix -3: branch not reached
+rcfix -4: PROBE displaced_record chosen=8 alias=0 n=320000
+rcfix -5: PROBE displaced_record chosen=8 alias=0 n=320000
+rcfix -6: PROBE displaced_record chosen=8 alias=0 n=320000
+rcfix -7: PROBE displaced_record chosen=8 alias=0 n=320000
+rcfix -8: PROBE displaced_record chosen=8 alias=0 n=320000
+rcfix -9: PROBE displaced_record chosen=8 alias=0 n=320000
