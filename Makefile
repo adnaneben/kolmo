@@ -147,8 +147,8 @@ check: all build/test-decoder-hardening build/test-harden build/test-v12-corpus 
 # (qlfc, khuf, klzma, ...) with the sanitizers instead of taking them from libkolmoarch.a.
 build/test-decoder-hardening: tests/test_decoder_hardening.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch.a
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_decoder_hardening.c build/libkolmoarch.a -o $@ $(LIBS)
-build/test-decoder-hardening-asan: tests/test_decoder_hardening.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) $(BWTSRC) $(BWTHDR) build/libkolmoarch.a
-	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_decoder_hardening.c $(BWTSRC) build/libkolmoarch.a -o $@ $(LIBS)
+build/test-decoder-hardening-asan: tests/test_decoder_hardening.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
+	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) tests/test_decoder_hardening.c build/libkolmoarch-asan.a -o $@ $(LIBS)
 check-decoder-hardening: build/test-decoder-hardening-asan
 	./build/test-decoder-hardening-asan
 
