@@ -28,6 +28,49 @@ mkdir -p src/sub; cp t.csv src/a.csv; head -c 300000 t.csv > src/sub/b.csv; cat 
 mkdir out; "$K" extract -C out arc.kol
 for f in a.csv sub/b.csv c.csv empty; do cmp "src/$f" "out/src/$f" || fail "x $f"; done
 mkdir one; "$K" extract -C one arc.kol src/c.csv; cmp src/c.csv one/src/c.csv || fail "x one file"; [ ! -e one/src/a.csv ] || fail "x extracted an unnamed file"
+# Extract one complete member over an ordinary hard-linked destination.
+# Existing aliases keep the old inode and content, and permissions come from the archive.
+mkdir -p stage-src staged/stage-src
+printf 'archived bytes\n' > stage-src/member
+printf 'hidden bytes\n' > stage-src/.hidden
+chmod 0751 stage-src/member
+"$K" archive stage.kol stage-src/member stage-src/.hidden
+printf 'previous bytes\n' > old-member
+ln old-member staged/stage-src/member
+(umask 077; "$K" extract -C staged stage.kol)
+cmp stage-src/member staged/stage-src/member || fail "staged member"
+cmp stage-src/.hidden staged/stage-src/.hidden || fail "staged hidden member"
+[ "$(cat old-member)" = 'previous bytes' ] || fail "extraction changed a destination inode's other name"
+[ -n "$(find staged/stage-src/member -perm 0751 -print)" ] || fail "archive member mode"
+[ -z "$(find staged -name '.kolmo-*' -o -name '_kolmo-*')" ] || fail "stage left after successful extraction"
+
+# A regular member cannot replace an existing directory. Its contents survive,
+# and a successful sibling remains published even though the command fails.
+mkdir -p blocked/stage-src/member
+printf 'directory contents\n' > blocked/stage-src/member/marker
+set +e; "$K" extract -C blocked stage.kol 2> stage.err; rc=$?; set -e
+[ "$rc" = 1 ] && grep -q 'stage-src/member' stage.err || fail "directory replacement: exit $rc"
+[ "$(cat blocked/stage-src/member/marker)" = 'directory contents' ] || fail "refusal changed directory contents"
+cmp stage-src/.hidden blocked/stage-src/.hidden || fail "refusal changed successful sibling"
+[ -z "$(find blocked -name '.kolmo-*' -o -name '_kolmo-*')" ] || fail "stage left after refused extraction"
+
+# A normal large member fails to write when the process has a small file-size
+# limit. Ignore SIGXFSZ so the writer receives the error and can clean up.
+mkdir -p limited/src
+printf 'previous bytes\n' > limited/src/a.csv
+(
+    trap '' XFSZ
+    ulimit -f 1
+    set +e
+    "$K" extract -C limited arc.kol src/a.csv 2> limited.err
+    rc=$?
+    [ "$rc" = 1 ] && grep -q 'src/a.csv' limited.err || fail "limited extraction: exit $rc"
+)
+[ "$(cat limited/src/a.csv)" = 'previous bytes' ] || fail "failed write replaced the old member"
+[ -z "$(find limited -name '.kolmo-*' -o -name '_kolmo-*')" ] || fail "stage left after failed write"
+"$K" extract -C limited arc.kol src/a.csv
+cmp src/a.csv limited/src/a.csv || fail "extraction retry"
+
 # a name that climbs out of the directory is stored without its leading ../, as tar stores it (stored names that do
 # climb out are refused by extract: tests/test_archive_safety.sh)
 mkdir -p deep/x; cp t.csv deep/evil.csv; (cd deep/x && "$K" archive ../../arc2.kol ../evil.csv 2> /dev/null)
