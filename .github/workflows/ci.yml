@@ -41,6 +41,11 @@ jobs:
             diff -r -x experimental src bindings/$b/native/src
             for f in src/experimental/frontier_*; do cmp "$f" "bindings/$b/native/$f"; done
           done
+      - name: Verify published crate contents
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cargo package --manifest-path bindings/rust/Cargo.toml --no-verify --target-dir build/crate
+          python3 tests/check_package_contents.py build/crate/package/*.crate
       - name: Rust binding round trip
         run: cargo test --manifest-path bindings/rust/Cargo.toml
       - name: 'Rust crate: one C core per program (links = "kolmo" refuses two crate versions in one graph)'

@@ -8,7 +8,7 @@ library sits next to ``kolmo.py`` and is loaded by ctypes, so the installed pack
 toolchain at run time. Portable flags (no ``-march=native``) are used so a wheel built in CI runs
 on any CPU of that architecture; faster kernels are chosen at run time (src/arch/), with C references.
 """
-import glob, os, platform, subprocess, sys, sysconfig
+import glob, os, platform, subprocess, sys, sysconfig, tempfile
 from setuptools import setup
 from setuptools.command.build_py import build_py
 from setuptools.dist import Distribution
@@ -32,7 +32,7 @@ def _sources():
     return c
 
 
-def build_library(dest_dir):
+def build_library(dest_dir, workdir):
     """Compile libkolmo into dest_dir. Returns the full path to the built library."""
     c_src = _sources()
 
@@ -54,8 +54,6 @@ def build_library(dest_dir):
     kasm = [] if no_asm or not isa else sorted(glob.glob(os.path.join(SRC, "arch", isa, "*.S")))
 
     cc = os.environ.get("CC", "cc")
-    workdir = os.path.join(dest_dir, "_kolmo_build")
-    os.makedirs(workdir, exist_ok=True)
 
     includes = ["-I" + SRC]
     defs = ["-DKOLMO_NO_GPU"]
@@ -101,7 +99,9 @@ class BinaryDistribution(Distribution):
 class build_py_with_lib(build_py):
     def run(self):
         super().run()
-        build_library(self.build_lib)  # libkolmo.{so,dylib} lands next to kolmo.py
+        # Keep compiler intermediates out of the tree copied to site-packages.
+        with tempfile.TemporaryDirectory(prefix="kolmoc-objects-") as workdir:
+            build_library(self.build_lib, workdir)
 
 
 _cmd = {"build_py": build_py_with_lib}
@@ -109,7 +109,10 @@ _cmd = {"build_py": build_py_with_lib}
 # kolmo.py talks to the library through ctypes and never touches the Python C-API, so a single
 # platform wheel works on every Python 3 — tag it py3/none (not cp3x) so one wheel covers all.
 try:
-    from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
+    try:
+        from setuptools.command.bdist_wheel import bdist_wheel as _bdist_wheel
+    except ImportError:  # setuptools before 70.1 uses the wheel package
+        from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
 
     class bdist_wheel(_bdist_wheel):
         def finalize_options(self):

@@ -6,6 +6,7 @@
 set -e
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
+cp "$root/LICENSE" "$root/NOTICE" "$here/"
 dst="$here/native"
 rm -rf "$dst"
 mkdir -p "$dst"

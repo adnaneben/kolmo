@@ -102,13 +102,11 @@ Decide these before tagging. The first three can change what ships.
 6. **README results table.** It was measured on 0.0.2. A sentence now says so. Measure it again on 0.0.3 before or
    after the release? Level 1 is 6.5% smaller on the corpora, so the `-1` row undersells; the `-9` row oversells by
    about 0.7%.
-7. **Package one-line summary** (PyPI and crates.io): "best ratio across tables, logs and scientific data, with
-   decode that scales across cores". It is a superlative that no benchmark in the repository supports as stated, and
-   it is frozen once published. The Homebrew formula says "Structure-aware lossless compressor for tables, logs and
-   scientific data". Not changed here.
-8. **The PyPI sdist and the crate carry no `LICENSE` or `NOTICE`** (only libsais's licence under `native/`), and the
-   wheel ships 17 object files (1.6 MB) under `_kolmo_build/`. Both are known (`packaging/README.md`, gaps 3 and 4)
-   and both were true of 0.0.2. Fix in 0.0.3 or later?
+7. **Package summaries updated.** Both distribution manifests describe supported structured input and parallel
+   decoding. Per-workload performance claims belong in the measured results.
+8. **Distribution contents verified.** The Python sdist, wheel and Rust crate include the project licence and notice
+   and the libsais licence. Wheel builds keep compiler objects outside the installed module tree.
+   Run `tests/check_package_contents.py` on built files to verify the notices against the source tree.
 9. **Packaging drafts stay at 0.0.2 in this pull request** (conda-forge, Debian, AUR, nixpkgs, homebrew-core). The
    task asked for the formula drafts to be bumped. Only the tap formula was: the others pin the sha256 of a release
    tarball and CI (`packaging.yml`) downloads it, so naming v0.0.3 before the tag exists turns that workflow red.

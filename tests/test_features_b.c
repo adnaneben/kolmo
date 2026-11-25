@@ -377,11 +377,50 @@ static void test_dedup(void) {
     CHECK(kolmo_archive_count(z, 10) < 0, "not an archive");
 }
 
+/* The large, single-member RT store may borrow disjoint input. In-place callers
+ * must still get the same archive when input and output overlap in either order. */
+static void test_archive_overlap(void) {
+    const size_t size = (32u << 20) + 97, offset = 127;
+    kolmo_params params = {.threads = 1, .block = 1u << 20};
+    kolmo_params_for_level(1, &params);
+    kolmo_archive_file file = {"member", NULL, size, 0640, 1600000000};
+    const size_t cap = kolmo_archive_bound(&file, 1, &params);
+    uint8_t *input = malloc(size), *reference = malloc(cap), *shared = malloc(cap + offset);
+    CHECK(input && reference && shared, "allocate direct-store test buffers");
+    if (!input || !reference || !shared) goto done;
+    uint32_t state = 123456789;
+    for (size_t i = 0; i < size; ++i) {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        input[i] = (uint8_t)state;
+    }
+    file.data = input;
+    kolmo_archive_stats stats;
+    int64_t written = kolmo_archive_create(&file, 1, reference, cap, &params, NULL, &stats);
+    CHECK(written > 0 && stats.unique_bytes == size, "create duplicate-free reference archive");
+    if (written <= 0) goto done;
+    for (int layout = 0; layout < 2; ++layout) {
+        uint8_t *src = shared + (layout ? 0 : offset);
+        uint8_t *dst = shared + (layout ? offset : 0);
+        memcpy(src, input, size);
+        file.data = src;
+        int64_t got = kolmo_archive_create(&file, 1, dst, cap, &params, NULL, NULL);
+        CHECK(got == written && same(reference, dst, (size_t)written),
+              "overlapping archive input/output layout %d", layout);
+    }
+done:
+    free(shared);
+    free(reference);
+    free(input);
+}
+
 int main(int argc, char **argv) {
     if (argc > 1) rs = strtoull(argv[1], NULL, 0) | 1;
     test_colsplit();
     test_index();
     test_dedup();
+    test_archive_overlap();
     printf("%s: %d checks, %d failed\n", fails ? "FAIL" : "ok", checks, fails);
     return fails != 0;
 }

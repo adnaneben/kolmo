@@ -261,7 +261,7 @@ def compress(data, level=3, threads=0, memlimit=None, block=0, native_leaf=False
     cap = _lib.kolmo_bound(len(data), ctypes.byref(p))
     out = ctypes.create_string_buffer(cap)
     n = _check(_lib.kolmo_compress(data, len(data), out, cap, ctypes.byref(p)))
-    return out.raw[:n]
+    return ctypes.string_at(ctypes.addressof(out), n)
 
 def decompress(blob, threads=0, memlimit=None, max_output_size=None):
     """Decompress a whole blob; returns the original bytes. The blob may be one frame, frames one after another, or a

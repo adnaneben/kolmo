@@ -38,6 +38,13 @@ needs to be compressed again.
 - **Files written by 1.0.0 or 1.0.1:** 0.0.x does not read 1.x files at all. Decompress them with kolmoc 1.0.1 and
   `CZN_OLDTBL=1` (README, *Files written by Kolmo 1.x*).
 
+### Archive performance
+
+`kolmo contents` and named `kolmo extract` read the DDP1 member table once in archive order.
+Level 1 archive creation can also use the source buffer directly when a single file of at least 32 MiB
+contains no duplicate chunks and its storage is disjoint from the output. Both changes preserve the archive bytes
+and the published C interface. See [the archive qualification record](https://github.com/adnaneben/kolmo/pull/90).
+
 ### Security and robustness fixes
 
 No frame written by any release is refused by these fixes. Details are under *Fixed* below.

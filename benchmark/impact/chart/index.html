@@ -1,0 +1,284 @@
+<title>Kolmo Ratio and Speed</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one column — title, one row of controls, the chart, the selected feature's note, the value table. */
+:root {
+  --bg: #f7f8f9; --surface: #ffffff; --ink: #121417; --ink-2: #4b5059; --ink-3: #7a808a;
+  --rule: #e3e6ea; --grid: #eef0f3; --s-level: #2a78d6; --s-feat: #eb6834; --link: #6d737c;
+  --win: #0f7a3f; --loss: #b3261e;
+  --f-display: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121315; --surface: #1a1b1e; --ink: #eef0f2; --ink-2: #b9bec6; --ink-3: #8a9099;
+    --rule: #2c2f34; --grid: #24262a; --s-level: #3987e5; --s-feat: #d95926; --link: #7d838c;
+    --win: #4cc283; --loss: #f2827a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121315; --surface: #1a1b1e; --ink: #eef0f2; --ink-2: #b9bec6; --ink-3: #8a9099;
+  --rule: #2c2f34; --grid: #24262a; --s-level: #3987e5; --s-feat: #d95926; --link: #7d838c;
+  --win: #4cc283; --loss: #f2827a; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 20px; }
+h1 { font-family: var(--f-display); font-weight: 600; font-size: 1.75rem; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 1.1rem; margin: 0; }
+.lede { margin: 6px 0 0; color: var(--ink-2); max-width: 72ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end; }
+.ctl { display: grid; gap: 4px; min-width: 0; }
+.ctl label, .ctl .lab { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 500; }
+select { font: inherit; font-size: 0.9rem; padding: 6px 28px 6px 10px; border: 1px solid var(--rule); border-radius: 6px;
+  background: var(--surface); color: var(--ink); max-width: 100%; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.seg button { font: inherit; font-size: 0.9rem; padding: 6px 12px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+select:focus-visible, .seg button:focus-visible, .hit:focus-visible { outline: 2px solid var(--s-level); outline-offset: 2px; }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 0.85rem; color: var(--ink-2); margin-bottom: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.key { width: 18px; height: 0; border-top: 2px solid; display: inline-block; position: relative; }
+.key::after { content: ""; position: absolute; left: 5px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.key.dash { border-top-style: dashed; }
+#chart { position: relative; }
+#chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.axis text { fill: var(--ink-3); font-family: var(--f-mono); font-size: 11px; }
+.axis-title { fill: var(--ink-2); font-family: var(--f-body); font-size: 12px; }
+.ptlab { fill: var(--ink-2); font-family: var(--f-mono); font-size: 11px; }
+.ptlab.f { fill: var(--ink); font-weight: 500; }
+.hit { fill: transparent; cursor: pointer; }
+#tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px;
+  padding: 10px 12px; font-size: 0.82rem; box-shadow: 0 6px 20px rgb(0 0 0 / 0.12); min-width: 230px; z-index: 5; }
+#tip .t { font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+#tip .t i { width: 14px; border-top: 2px solid; display: inline-block; }
+#tip dl { display: grid; grid-template-columns: auto auto; gap: 2px 14px; margin: 0; }
+#tip dt { color: var(--ink-3); }
+#tip dd { margin: 0; text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-weight: 500; }
+.note { color: var(--ink-2); font-size: 0.9rem; max-width: 80ch; margin: 0; }
+.note b { color: var(--ink); font-weight: 600; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; min-width: 760px; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+th { font-weight: 500; color: var(--ink-3); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; }
+td { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+td:first-child { font-family: var(--f-body); }
+td .sw { display: inline-block; width: 12px; border-top: 2px solid; margin-right: 8px; vertical-align: middle; }
+.win { color: var(--win); } .loss { color: var(--loss); }
+.method { display: grid; gap: 8px; font-size: 0.85rem; color: var(--ink-2); }
+.method p { margin: 0; max-width: 90ch; }
+.empty { padding: 40px 0; text-align: center; color: var(--ink-3); }
+@media (prefers-reduced-motion: no-preference) { .mk { transition: r 120ms ease; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Kolmo: ratio against combined speed</h1>
+    <p class="lede">Each of Kolmo's levels (1–9, U = ultra) is one point; the line joins them in level order. Pick a research
+      feature or forced coder to overlay it: each orange point is that feature at one level, joined to the level point it
+      changes. Up is faster, right is smaller.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Chart filters">
+    <div class="ctl"><label for="feat">Overlay</label><select id="feat"></select></div>
+    <div class="ctl"><label for="sub">Files</label><select id="sub"></select></div>
+    <div class="ctl"><span class="lab" id="thlab">Threads</span>
+      <div class="seg" role="group" aria-labelledby="thlab"><button id="t1" aria-pressed="true">-T 1</button><button id="t10" aria-pressed="false">-T 10</button></div></div>
+  </div>
+
+  <section class="card" aria-label="Ratio against combined speed">
+    <div class="legend" id="legend"></div>
+    <div id="chart"><div class="empty">Loading the measurements…</div></div>
+    <p class="note" id="fnote"></p>
+  </section>
+
+  <section class="card" aria-labelledby="th">
+    <h2 id="th">Values</h2>
+    <div class="tablewrap"><table id="tbl" aria-describedby="th"></table></div>
+  </section>
+
+  <section class="method" aria-label="How the numbers were made">
+    <h2>How these numbers were made</h2>
+    <p><b>Ratio</b> = input bytes ÷ frame bytes, summed over the chosen files (53 real files cut to ≤ 4 MiB, 15 kinds; or the
+      62 small text cuts of 16 KiB–1 MiB). <b>Combined speed</b> = input MB ÷ (compress seconds + decompress seconds), so a
+      file that takes 1 s each way at 100 MB scores 50 MB/s; the tooltip and the table give compress and decompress speed
+      separately.</p>
+    <p>Times are whole <code>kolmo</code> processes (start-up included) on a 10-core Apple M5, one at a time, at load below 20;
+      the levels are timed at load 1.4–3.0. Sizes are exact and identical at 1 and 10 threads. A file a feature did not change
+      keeps the level's frame and timing. A T10 point is shown only where every file the feature changed has its own T10
+      timing. Features that use the lexer or priors write streams only the research decoder reads.</p>
+    <p>Source: <code>benchmark/impact/raw/rows.jsonl</code> on branch <code>claude/impact-matrix-20261124</code>
+      (adnaneben/kolmo#48), aggregated by <code>benchmark/impact/chartdata.py</code>.</p>
+  </section>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const FEATS = {
+  "none": ["Levels only", ""],
+  "lex": ["Lexer contexts (CM model 4)", "At U the rc3w3 lexer's two token-class contexts are added to ultra's CM. At 1–9 it is CM with the lexer, forced as a candidate on every block (kept where smaller), so those points show a CM decoder at that level."],
+  "prior": ["Per-kind priors (CM)", "rc3w3 per-kind starting tables for text CM streams under 4 MiB. Pick the small text cuts to see where they matter."],
+  "lex-prior": ["Lexer + priors (CM)", "Both rc3w3 features together."],
+  "lex-stream": ["Lexer on the transform output", "CM with the lexer coding the level's transformed stream instead of the plain bytes."],
+  "gr6": ["GR6+ (gated)", "GR6+ as a candidate wherever ultra's gate admits the block (tables and space-separated logs)."],
+  "gr6-nogate": ["GR6+ (no gate)", "GR6+ on every text block, at levels 3, 9 and U."],
+  "tf-full": ["Full analysis at levels 1–2", "Levels 1 and 2 with the full planner (the analysis level 3 uses) instead of their minimal one."],
+  "tf-none": ["No transforms (analysis off)", "Every level with the planner switched off."],
+  "notf": ["Transform ablation", "Each block coded by the level's own coder on the plain bytes instead of its transform."],
+  "klzma": ["KLZMA forced (levels 1–8)", "KLZMA (level 9's binary coder) as a candidate on the plain bytes of every block."],
+  "stack-klzma": ["Transform → KLZMA", "KLZMA coding the level's transformed stream."],
+  "bwt": ["BWT forced (levels 1–7)", "Block sorting as a candidate on the plain bytes of every block."],
+  "stack-bwt": ["Transform → BWT", "Block sorting coding the level's transformed stream."],
+  "klzh2-9": ["KLZH2 level 9 (levels 1–6)", "The strongest LZ parse (level 7's coder) as a candidate at the faster levels."],
+  "cm": ["CM forced (levels 1–9)", "Ultra's context-mixing coder as a candidate on every block."],
+  "stack-cm": ["Transform → CM", "Context mixing coding the level's transformed stream."]
+};
+const SUBS = { all: "All 53 files", holdout: "Holdout files only", text: "Text, code, JSON, XML, HTML", tables: "CSV, TSV, logs", binary: "Binary and media", small: "Small text cuts (16 KiB–1 MiB)" };
+const LV = l => l === "10" ? "U" : l;
+let D = null, state = { feat: "lex", sub: "text", th: 1 };
+try { const s = JSON.parse(localStorage.getItem("kolmo-chart") || "null"); if (s) state = Object.assign(state, s); } catch (e) {}
+const $ = id => document.getElementById(id);
+const fmt = (v, d) => v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(d ?? 1) : v.toFixed(2);
+const pct = (a, b) => 100 * (a / b - 1);
+
+function save() { try { localStorage.setItem("kolmo-chart", JSON.stringify(state)); } catch (e) {} }
+
+function controls() {
+  const fs = $("feat"); fs.textContent = "";
+  for (const [k, [name]] of Object.entries(FEATS)) {
+    const has = k === "none" || D.features[`${k}|${state.sub}|${state.th}`];
+    const o = document.createElement("option"); o.value = k; o.textContent = name + (has ? "" : " (no data for this view)"); o.disabled = !has; fs.appendChild(o);
+  }
+  if (fs.querySelector(`option[value="${state.feat}"]`)?.disabled) state.feat = "none";
+  fs.value = state.feat;
+  const ss = $("sub"); if (!ss.options.length) for (const [k, v] of Object.entries(SUBS)) { const o = document.createElement("option"); o.value = k; o.textContent = v; ss.appendChild(o); }
+  ss.value = state.sub;
+  $("t1").setAttribute("aria-pressed", state.th === 1); $("t10").setAttribute("aria-pressed", state.th === 10);
+}
+
+function svgEl(tag, attrs, parent) { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+
+function draw() {
+  controls(); save();
+  const lev = D.levels[`${state.sub}|${state.th}`] || {};
+  const fe = state.feat === "none" ? {} : (D.features[`${state.feat}|${state.sub}|${state.th}`] || {});
+  const L = Object.entries(lev).map(([l, p]) => ({ l, p, s: "level" }));
+  const Fp = Object.entries(fe).map(([l, p]) => ({ l, p, s: "feat", base: lev[l] }));
+  const all = L.concat(Fp);
+  const box = $("chart"); box.textContent = "";
+  // legend
+  const lg = $("legend"); lg.textContent = "";
+  const k1 = document.createElement("span"); const sw1 = document.createElement("i"); sw1.className = "key"; sw1.style.color = "var(--s-level)"; k1.append(sw1, "Kolmo levels 1–9, U"); lg.appendChild(k1);
+  if (Fp.length) { const k2 = document.createElement("span"); const sw2 = document.createElement("i"); sw2.className = "key dash"; sw2.style.color = "var(--s-feat)"; k2.append(sw2, FEATS[state.feat][0]); lg.appendChild(k2); }
+  $("fnote").textContent = state.feat === "none" ? "Choose an overlay to compare a research feature with the levels." : FEATS[state.feat][1];
+  if (!all.length) { const e = document.createElement("div"); e.className = "empty"; e.textContent = "No measurements for this combination."; box.appendChild(e); table(L, Fp); return; }
+  const W = 1000, H = 560, m = { l: 70, r: 40, t: 20, b: 56 };
+  const xs = all.map(d => d.p.ratio), ys = all.map(d => d.p.cd);
+  let x0 = Math.min(...xs), x1 = Math.max(...xs); const xp = (x1 - x0) * 0.08 || 0.5; x0 = Math.max(0, x0 - xp); x1 = x1 + xp;
+  let y0 = Math.log10(Math.min(...ys)), y1 = Math.log10(Math.max(...ys)); y0 = Math.floor(y0 * 2) / 2 - 0.15; y1 = Math.ceil(y1 * 2) / 2 + 0.05;
+  const X = v => m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r), Y = v => H - m.b - (Math.log10(v) - y0) / (y1 - y0) * (H - m.t - m.b);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Scatter of compression ratio against combined speed" }, box);
+  const g = svgEl("g", { class: "axis" }, svg);
+  // y grid: 1-2-5 per decade on a log scale
+  for (let e = Math.floor(y0); e <= Math.ceil(y1); e++) for (const f of [1, 2, 5]) {
+    const v = f * 10 ** e, lv = Math.log10(v); if (lv < y0 || lv > y1) continue;
+    svgEl("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: "var(--grid)", "stroke-width": 1 }, g);
+    const t = svgEl("text", { x: m.l - 8, y: Y(v) + 4, "text-anchor": "end" }, g); t.textContent = v >= 1 ? v.toLocaleString("en") : String(+v.toPrecision(1));
+  }
+  // x grid: nice step
+  const span = x1 - x0, st = [0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10].find(s => span / s <= 9) || 20;
+  for (let v = Math.ceil(x0 / st) * st; v <= x1 + 1e-9; v += st) {
+    svgEl("line", { x1: X(v), x2: X(v), y1: m.t, y2: H - m.b, stroke: "var(--grid)", "stroke-width": 1 }, g);
+    const t = svgEl("text", { x: X(v), y: H - m.b + 18, "text-anchor": "middle" }, g); t.textContent = (+v.toFixed(2)) + "×";
+  }
+  svgEl("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: "var(--rule)", "stroke-width": 1 }, g);
+  const xt = svgEl("text", { x: (m.l + W - m.r) / 2, y: H - 12, "text-anchor": "middle", class: "axis-title" }, svg); xt.textContent = "Compression ratio (input ÷ output, higher is smaller) →";
+  const yt = svgEl("text", { x: 16, y: (m.t + H - m.b) / 2, "text-anchor": "middle", class: "axis-title", transform: `rotate(-90 16 ${(m.t + H - m.b) / 2})` }, svg); yt.textContent = "Combined speed, MB/s (log scale) →";
+  // connectors from a level to its feature point
+  for (const d of Fp) if (d.base) svgEl("line", { x1: X(d.base.ratio), y1: Y(d.base.cd), x2: X(d.p.ratio), y2: Y(d.p.cd), stroke: "var(--link)", "stroke-width": 1, "stroke-dasharray": "3 3" }, svg);
+  // level line and feature line
+  const path = pts => pts.map((d, i) => (i ? "L" : "M") + X(d.p.ratio).toFixed(1) + " " + Y(d.p.cd).toFixed(1)).join(" ");
+  svgEl("path", { d: path(L), fill: "none", stroke: "var(--s-level)", "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+  if (Fp.length > 1) svgEl("path", { d: path(Fp), fill: "none", stroke: "var(--s-feat)", "stroke-width": 2, "stroke-dasharray": "6 4", "stroke-linejoin": "round" }, svg);
+  const marks = [], placed = [];
+  for (const d of all) {
+    const cx = X(d.p.ratio), cy = Y(d.p.cd), col = d.s === "level" ? "var(--s-level)" : "var(--s-feat)";
+    const c = svgEl("circle", { cx, cy, r: 5, fill: col, stroke: "var(--surface)", "stroke-width": 2, class: "mk" }, svg);
+    marks.push({ d, c, cx, cy });
+  }
+  // labels: levels first, then the feature's; a label that would overlap one already placed is left out (tooltip and table keep it)
+  for (const mk of marks) {
+    const lvl = mk.d.s === "level", txt = (lvl ? "" : "L") + LV(mk.d.l), w = 8 * txt.length + 4;
+    const bx = lvl ? mk.cx - 9 - w : mk.cx + 9, by = mk.cy - 19;
+    if (placed.some(b => bx < b.x + b.w && bx + w > b.x && by < b.y + 14 && by + 14 > b.y)) continue;
+    placed.push({ x: bx, y: by, w });
+    const lab = svgEl("text", { x: lvl ? mk.cx - 9 : mk.cx + 9, y: mk.cy - 8, "text-anchor": lvl ? "end" : "start", class: "ptlab" + (lvl ? "" : " f") }, svg);
+    lab.textContent = txt;
+  }
+  for (const mk of marks) {
+    const h = svgEl("circle", { cx: mk.cx, cy: mk.cy, r: 13, class: "hit", tabindex: 0, role: "button", "aria-label": label(mk.d) }, svg);
+    const show = () => { mk.c.setAttribute("r", 7); tip(mk.d, mk.cx / W, mk.cy / H); };
+    const hide = () => { mk.c.setAttribute("r", 5); $("tip").hidden = true; };
+    h.addEventListener("pointerenter", show); h.addEventListener("focus", show);
+    h.addEventListener("pointerleave", hide); h.addEventListener("blur", hide);
+  }
+  table(L, Fp);
+}
+
+function label(d) { const p = d.p; return `${d.s === "level" ? "Level " + LV(d.l) : FEATS[state.feat][0] + " at level " + LV(d.l)}: ratio ${p.ratio.toFixed(3)}, combined ${fmt(p.cd)} MB/s`; }
+
+function tip(d, fx, fy) {
+  const t = $("tip"), p = d.p; t.textContent = "";
+  const head = document.createElement("div"); head.className = "t";
+  const k = document.createElement("i"); k.style.borderColor = d.s === "level" ? "var(--s-level)" : "var(--s-feat)";
+  head.append(k, d.s === "level" ? `Level ${LV(d.l)}` : `${FEATS[state.feat][0]} · level ${LV(d.l)}`);
+  const dl = document.createElement("dl");
+  const row = (a, b, cls) => { const dt = document.createElement("dt"); dt.textContent = a; const dd = document.createElement("dd"); dd.textContent = b; if (cls) dd.className = cls; dl.append(dt, dd); };
+  row("Ratio", p.ratio.toFixed(3) + "×");
+  if (d.base) { const v = pct(p.size, d.base.size); row("Size vs level " + LV(d.l), (v > 0 ? "+" : "") + v.toFixed(2) + "%", v < -0.05 ? "win" : v > 0.05 ? "loss" : ""); }
+  row("Combined", fmt(p.cd) + " MB/s");
+  row("Compress", fmt(p.c) + " MB/s");
+  row("Decompress", fmt(p.d) + " MB/s");
+  if (d.base) row("Combined vs level", (p.cd / d.base.cd).toFixed(2) + "×");
+  row("Input / output", (p.bytes / 1e6).toFixed(1) + " / " + (p.size / 1e6).toFixed(2) + " MB");
+  row("Files", d.s === "level" ? String(p.files) : `${p.changed} changed of ${p.files}`);
+  t.append(head, dl); t.hidden = false;
+  const box = $("chart").getBoundingClientRect(), wrap = $("chart");
+  const px = fx * box.width, py = fy * box.height, tw = t.offsetWidth, thh = t.offsetHeight;
+  let left = px + 16, top = py - thh / 2;
+  if (left + tw > box.width) left = px - tw - 16;
+  top = Math.max(0, Math.min(top, box.height - thh));
+  t.style.left = (wrap.offsetLeft + Math.max(0, left)) + "px"; t.style.top = (wrap.offsetTop + top) + "px";
+}
+
+function table(L, Fp) {
+  const tb = $("tbl"); tb.textContent = "";
+  const hr = tb.createTHead().insertRow();
+  for (const h of ["Series", "Level", "Ratio", "Size vs level", "Compress MB/s", "Decompress MB/s", "Combined MB/s", "Combined vs level", "Files"]) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); }
+  const body = tb.createTBody();
+  const rows = [];
+  for (const d of L) { rows.push(d); const f = Fp.find(x => x.l === d.l); if (f) rows.push(f); }
+  for (const f of Fp) if (!L.find(d => d.l === f.l)) rows.push(f);
+  for (const d of rows) {
+    const p = d.p, r = body.insertRow();
+    const c0 = r.insertCell(); const sw = document.createElement("span"); sw.className = "sw"; sw.style.borderColor = d.s === "level" ? "var(--s-level)" : "var(--s-feat)";
+    c0.append(sw, d.s === "level" ? "Kolmo level" : FEATS[state.feat][0]);
+    const v = d.base ? pct(p.size, d.base.size) : null;
+    const cells = [LV(d.l), p.ratio.toFixed(3) + "×", v === null ? "—" : (v > 0 ? "+" : "") + v.toFixed(2) + "%", fmt(p.c), fmt(p.d), fmt(p.cd), d.base ? (p.cd / d.base.cd).toFixed(2) + "×" : "—", d.s === "level" ? String(p.files) : `${p.changed}/${p.files}`];
+    cells.forEach((t, i) => { const c = r.insertCell(); c.textContent = t; if (i === 2 && v !== null) c.className = v < -0.05 ? "win" : v > 0.05 ? "loss" : ""; });
+  }
+}
+
+$("feat").addEventListener("change", e => { state.feat = e.target.value; draw(); });
+$("sub").addEventListener("change", e => { state.sub = e.target.value; draw(); });
+$("t1").addEventListener("click", () => { state.th = 1; draw(); });
+$("t10").addEventListener("click", () => { state.th = 10; draw(); });
+window.addEventListener("resize", () => { $("tip").hidden = true; });
+fetch("data.json").then(r => r.json()).then(d => { D = d; draw(); }).catch(() => { $("chart").textContent = "The measurements file (data.json) did not load."; });
+</script>

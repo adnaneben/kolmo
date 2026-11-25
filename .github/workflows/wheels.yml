@@ -14,6 +14,9 @@ on:
       - "bindings/python/**"
       - "src/**"
       - ".github/workflows/wheels.yml"
+      - "tests/check_package_contents.py"
+      - "LICENSE"
+      - "NOTICE"
 
 jobs:
   sdist:
@@ -27,6 +30,7 @@ jobs:
           python-version: "3.12"
       - run: pip install build
       - run: python -m build --sdist --outdir dist bindings/python
+      - run: python tests/check_package_contents.py dist/*.tar.gz
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
@@ -61,6 +65,7 @@ jobs:
           CIBW_SKIP: "*-musllinux*"
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_TEST_COMMAND: "python -c \"import kolmo; d=b'col,val\\n'+b''.join(b'r,%d\\n'%i for i in range(5000)); assert kolmo.decompress(kolmo.compress(d, level=7))==d; print('wheel ok')\""
+      - run: python3 tests/check_package_contents.py wheelhouse/*.whl
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
