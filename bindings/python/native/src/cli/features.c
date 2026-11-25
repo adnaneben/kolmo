@@ -15,7 +15,7 @@
  * Rows are numbered from 1 here (line 1 is the first line of the file); A-B is inclusive, A- runs to the end.
  * Licence: Apache-2.0. */
 #define _GNU_SOURCE 1
-#include "kolmo.h"
+#include "../core/features.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -277,7 +277,6 @@ static int fc_stage(int parent, const char *leaf, unsigned *id, char stage[64]) 
 }
 static int fc_put(void *ctx, const char *name, const uint8_t *data, uint64_t size, uint32_t mode, int64_t mtime) {
     fc_x *X = ctx;
-    if (X->nnames) { int hit = 0; for (int i = 0; i < X->nnames; i++) hit |= !strcmp(X->names[i], name); if (!hit) return 0; }
     X->seen++;
     if (!fc_safe(name)) { fprintf(stderr, "kolmo: skipping unsafe name '%s'\n", name); X->bad = 1; return 0; }
     const char *leaf; int d = fc_parent(X, name, &leaf);
@@ -399,6 +398,12 @@ out:
     for (int i = 0; i < L.n; i++) free(L.v[i]);
     free(L.v); free(F); free(K); return ret;
 }
+static int fc_select(void *ctx, const char *name, uint64_t size, uint32_t mode, int64_t mtime) {
+    const fc_x *X = ctx;
+    (void)size; (void)mode; (void)mtime;
+    for (int i = 0; i < X->nnames; i++) if (!strcmp(X->names[i], name)) return 1;
+    return 0;
+}
 static int fc_extract(int argc, char **argv) {
     fc_x X = {.dir = -1}; const char *dir = "."; int threads = 0, a = 2;
     for (; a < argc && argv[a][0] == '-'; a++) {
@@ -411,36 +416,22 @@ static int fc_extract(int argc, char **argv) {
     if (X.dir < 0) { fprintf(stderr, "kolmo: %s: %s\n", dir, strerror(errno)); return 1; }
     fc_file f; if (fc_open(argv[a], &f)) { close(X.dir); return 1; }
     X.names = argv + a + 1; X.nnames = argc - a - 1;
-    int64_t r;
-    if (X.nnames) {                          /* named files: each decodes only the store blocks it needs */
-        r = kolmo_archive_count(f.p, f.n);
-        for (int64_t i = 0; r >= 0 && i < r; i++) {
-            char name[4097]; uint64_t size; uint32_t mode; int64_t mt;
-            int e = kolmo_archive_stat(f.p, f.n, (uint64_t)i, name, sizeof name, &size, &mode, &mt); if (e) { r = e; break; }
-            int hit = 0; for (int k = 0; k < X.nnames; k++) hit |= !strcmp(X.names[k], name);
-            if (!hit) continue;
-            uint8_t *d = malloc(size ? (size_t)size : 1); if (!d) { r = KOLMO_ERR_ALLOC; break; }
-            int64_t g = kolmo_archive_extract(f.p, f.n, (uint64_t)i, d, (size_t)size, threads);
-            if (g < 0) { free(d); r = g; break; }
-            int stop = fc_put(&X, name, d, size, mode, mt); free(d);
-            if (stop) { r = KOLMO_ERR_IO; break; }
-        }
-    } else r = kolmo_archive_extract_all(f.p, f.n, fc_put, &X, threads);
+    int64_t r = X.nnames ? kolmo__archive_walk(f.p, f.n, fc_select, fc_put, &X, threads)
+                        : kolmo_archive_extract_all(f.p, f.n, fc_put, &X, threads);
     fc_close(&f); close(X.dir);
     if (r < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r)); return 1; }
     if (X.nnames && X.seen < X.nnames) { fprintf(stderr, "kolmo: %d of %d names not in the archive\n", X.nnames - X.seen, X.nnames); return 1; }
     return X.bad;
 }
+static int fc_list_entry(void *ctx, const char *name, uint64_t size, uint32_t mode, int64_t mtime) {
+    (void)ctx; (void)mtime;
+    printf("%12llu  %04o  %s\n", (unsigned long long)size, mode, name);
+    return 0;
+}
 static int fc_list(int argc, char **argv) {
     if (argc != 3) { fc_usage(); return 2; }
     fc_file f; if (fc_open(argv[2], &f)) return 1;
-    int64_t r = kolmo_archive_count(f.p, f.n);
-    for (int64_t i = 0; r >= 0 && i < r; i++) {
-        char name[4097]; uint64_t size; uint32_t mode; int64_t mt;
-        int e = kolmo_archive_stat(f.p, f.n, (uint64_t)i, name, sizeof name, &size, &mode, &mt);
-        if (e) { r = e; break; }
-        printf("%12llu  %04o  %s\n", (unsigned long long)size, mode, name);
-    }
+    int64_t r = kolmo__archive_walk(f.p, f.n, fc_list_entry, NULL, NULL, 0);
     fc_close(&f);
     if (r < 0) { fprintf(stderr, "kolmo: %s\n", kolmo_strerror(r)); return 1; }
     return 0;
