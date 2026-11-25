@@ -1,0 +1,45 @@
+{
+  "source_sha256": "3f89e200ea9e91a6a1491784d3fd6afe1643e01f3eb0ddf31a1c2214afbba0cb",
+  "files": [
+    {
+      "file": "train/train-0.csv",
+      "bytes": 385497,
+      "sha256": "d6a2379b45eb9a95445a8fb8358caf84d805b1f345c9217af3953eee27c12200",
+      "countries": 12,
+      "rows": 885
+    },
+    {
+      "file": "train/train-1.csv",
+      "bytes": 366677,
+      "sha256": "4b4105f6ac53384b610066a39788b329adbff6e6e3be2cb3d0af8d436bb4975a",
+      "countries": 12,
+      "rows": 829
+    },
+    {
+      "file": "train/train-2.csv",
+      "bytes": 585063,
+      "sha256": "bcd731646a2353d730a18bbce39e8ef96085f26d61cf45a781e9aae9d5a623a0",
+      "countries": 20,
+      "rows": 1642
+    },
+    {
+      "file": "train/train-3.csv",
+      "bytes": 397598,
+      "sha256": "3ee75854d501dac821bead4914990c18fa96f332bd3d0cdea2236a203a8acc00",
+      "countries": 13,
+      "rows": 1002
+    },
+    {
+      "file": "test.csv",
+      "bytes": 5199066,
+      "sha256": "4ec34da11a4bd65ce06e50380f7f440313473995b93e0acdf61ba22c10c5078e",
+      "countries": 180,
+      "rows": 12893
+    }
+  ],
+  "train_seconds": 214.83459570899998,
+  "train_threads": 1,
+  "budget_seconds": 120,
+  "graph_sha256": "c9e790814607559d42ea3f7d88bd1fa5f6fcdc462d4c9ee7ee6916472e45bc80",
+  "graph_bytes": 12539
+}

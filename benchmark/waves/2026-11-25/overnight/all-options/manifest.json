@@ -1,0 +1,174 @@
+{
+  "binaries": {
+    "pre": "cf23250a9d1fd43f6fb0328f26803ebb4a47ba6332ce98a9053b70728c8abfdf",
+    "main": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "main-AA": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+    "combined": "f1d02b873c62d2130f0bc6a311617742af0c8df4d26a3106c2cbdcd28b716213"
+  },
+  "sources": {
+    "enwik8.zip": {
+      "source_sha256": "547994d9980ebed1288380d652999f38a14fe291a6247c157c3d33d4932534bc",
+      "source_bytes": 36445475,
+      "input_sha256": "547994d9980ebed1288380d652999f38a14fe291a6247c157c3d33d4932534bc",
+      "input_bytes": 36445475
+    },
+    "owid-co2.csv": {
+      "source_sha256": "7f78e2b218ce4bb8c538bbec04fdc9a7982e8d40bff972e650df603899edd5f6",
+      "source_bytes": 14377942,
+      "input_sha256": "7f78e2b218ce4bb8c538bbec04fdc9a7982e8d40bff972e650df603899edd5f6",
+      "input_bytes": 14377942
+    },
+    "prose-64k": {
+      "source_sha256": "f23be6d689d1e4a6ee4347b41b19932a0e96516483759bd9c022aa994aa045b4",
+      "source_bytes": 29997097,
+      "input_sha256": "c8d5a28711813ca3dd687034524bbd658041fa43c4a64f5c80fed8856eac8b47",
+      "input_bytes": 65536
+    },
+    "pydub.wav": {
+      "source_sha256": "c952f27f8bfdbc9553da936b9eec07c157220438a0a9ded245dff9c77a6193f9",
+      "source_bytes": 768044,
+      "input_sha256": "c952f27f8bfdbc9553da936b9eec07c157220438a0a9ded245dff9c77a6193f9",
+      "input_bytes": 768044
+    }
+  },
+  "randomization_seed": 2026112508,
+  "rounds": 7,
+  "settings": [
+    [
+      "enwik8.zip",
+      "1",
+      1
+    ],
+    [
+      "enwik8.zip",
+      "1",
+      4
+    ],
+    [
+      "owid-co2.csv",
+      "1",
+      1
+    ],
+    [
+      "owid-co2.csv",
+      "1",
+      4
+    ],
+    [
+      "owid-co2.csv",
+      "2",
+      1
+    ],
+    [
+      "owid-co2.csv",
+      "2",
+      4
+    ],
+    [
+      "prose-64k",
+      "3",
+      1
+    ],
+    [
+      "prose-64k",
+      "3",
+      4
+    ],
+    [
+      "pydub.wav",
+      "7",
+      1
+    ],
+    [
+      "pydub.wav",
+      "7",
+      4
+    ],
+    [
+      "pydub.wav",
+      "ultra",
+      1
+    ],
+    [
+      "pydub.wav",
+      "ultra",
+      4
+    ]
+  ],
+  "archive_mode_and_mtime": [
+    420,
+    1600000000
+  ],
+  "cross_reader": "untimed first-pass qualified main decoding all arms per setting",
+  "build_provenance": {
+    "pre": {
+      "source_commit": "4db0425b361012523d8074ca6f2a760d9466e9f4",
+      "effective_codec_flags": [
+        "-O3",
+        "-mcpu=native",
+        "-ffp-contract=off"
+      ],
+      "attribution": "same previously recorded binary digest in before-after-and-competition.zip"
+    },
+    "main": {
+      "source_commit": "a1d39559686a9ec17c8614b9154a64d7b5b98672",
+      "effective_codec_flags": [
+        "-O3",
+        "-mcpu=native",
+        "-ffp-contract=off"
+      ],
+      "attribution": "same previously recorded binary digest in before-after-and-competition.zip"
+    },
+    "main-AA": {
+      "source_commit": "a1d39559686a9ec17c8614b9154a64d7b5b98672",
+      "effective_codec_flags": [
+        "-O3",
+        "-mcpu=native",
+        "-ffp-contract=off"
+      ],
+      "attribution": "same previously recorded binary digest in before-after-and-competition.zip"
+    },
+    "combined": {
+      "source_commit": "ac10ce80048ab0664074f7ba031634055f4d2225",
+      "effective_codec_flags": [
+        "-O3",
+        "-mcpu=native",
+        "-ffp-contract=off",
+        "-DKOLMO_FAST_TABLE_TRIAL",
+        "-DKOLMO_FAST_TYPED_TABLE_TRIAL",
+        "-DKOLMO_AUDIO_SCREEN",
+        "-DKOLMO_GEAR_ASM"
+      ],
+      "attribution": "source checkout at recorded merge, build log, retained binary digest rechecked after run"
+    }
+  },
+  "build_provenance_evidence": {
+    "classification": "supplied after measurement; source revisions and compiler flags were not captured by the timing runner",
+    "baseline_archive": "../performance/before-after-and-competition.zip (evidence/manifest.json and evidence/README.md)",
+    "compiler_host": "Apple M5, macOS 27.2 arm64, Apple clang 21 (clang-2100.4.1.1), supplied from build records",
+    "combined_build_log_sha256": "8d6b3a1f14263c563c7d1a76ad642480282259584668cad6c66a1e1c9e6ab43e",
+    "combined_merge_log_sha256": "b223790cd86b478b8ac098404724b569c3bd634de9e7d2355b1a24186b06e7a2",
+    "run_log_sha256": "5bb73b412d19918e9bcb8aa997ba7df07f61b9b85247979a5898e7639a43b85d",
+    "measurement_script_runtime_env": {
+      "KOLMO_AUDIO_SCREEN": "1"
+    },
+    "other_ambient_overrides": "not recorded by original runner",
+    "effective_worker_count": "not instrumented",
+    "raw_csv_sha256": "c7c195bab2695e9e08e735955b737ff1577324d73750797e132129c1571157d7",
+    "source_labels_reconciled_after_run": {
+      "enwik8.zip": "bench-page/canon/enwik8.zip, whole ZIP archive member",
+      "owid-co2.csv": "corpus-holdout/owid-co2-data.csv, whole file",
+      "prose-64k": "corpus-holdout/ld30.txt, bytes [0,65536) of the 29,997,097-byte source file",
+      "pydub.wav": "Pydub test4.wav, whole 768,044-byte WAV"
+    }
+  },
+  "post_run_verification": {
+    "method": "independent one-scored-round run with --verify-reference, all original binaries, complete sources, compiler-independent raw bytes and 12 settings",
+    "scored_rounds": 1,
+    "timed_restores": 96,
+    "additional_stock_main_readbacks": 48,
+    "reproduced_frame_sizes_hashes_and_codec_counts": 48,
+    "original_timings_preserved": true,
+    "separate_replay_raw_sha256": "7ee93076b753bcb54160e8e378836c12b071449a8097b5e39bfe7113cfff3c10"
+  }
+}
