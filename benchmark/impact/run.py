@@ -31,6 +31,8 @@ TEXTISH = ["text", "code", "json", "xml", "html", "csv", "tsv", "log", "genomics
 # feature -> (env, default levels, kinds or None for all)
 F = {
     "base": ({}, range(1, 11), None),
+    # the level's frame again, timed at low machine load (the first base pass ran under load 50-176): speed reference
+    "base2": ({}, range(1, 11), None),
     # GR6+ (codec 26) where ultra's gate admits the block, at every level
     "gr6": ({"KOLMO_IMPACT_CODEC": "26"}, range(1, 10), None),
     # GR6+ with the gate off: every text block (shows what the gate rejects)
@@ -133,6 +135,7 @@ def cell(feature, m, level, threads):
     return row
 
 WAIT = os.path.join(V, "impact", "waiting.%d" % os.getpid())
+HELD = 0.0; HELD_T0 = 0.0
 def lock():
     os.makedirs(os.path.dirname(LOCK), exist_ok=True)
     first = True
@@ -142,13 +145,17 @@ def lock():
             if first: open(WAIT, "w").close(); first = False   # another impact runner yields to us on release
             time.sleep(15)
     if os.path.exists(WAIT): os.remove(WAIT)
+    global HELD_T0; HELD_T0 = time.monotonic()
     with open(OWNER, "w") as f: f.write("impact-matrix %s\n" % time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 def unlock():
     with open(OWNER, "w") as f: f.write("free %s\n" % time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     try: os.rmdir(LOCK)
     except OSError: pass
     import glob
+    global HELD
+    HELD += time.monotonic() - HELD_T0
     if [w for w in glob.glob(os.path.join(V, "impact", "waiting.*")) if w != WAIT]: time.sleep(20)   # let a waiting runner in
+    elif HELD > 300: time.sleep(16); HELD = 0   # every 5 minutes held, a gap longer than timed.sh's 15 s poll (other sessions)
 
 def parse_levels(s):
     out = []
@@ -165,14 +172,24 @@ def plan(args):
     only = opts.get("--files"); only = only.split(",") if only else None
     os.makedirs(os.path.dirname(ROWS), exist_ok=True)
     M = [m for m in manifest() if m["set"] in sets and (not kinds or m["kind"] in kinds) and (not only or m["name"] in only)]
+    wins = None
+    if opts.get("--only-wins"):
+        # T10 pass for speed only where the T1 frame wins (frames do not depend on the thread count)
+        thr = float(opts["--only-wins"]); allr = [json.loads(l) for l in open(ROWS)]
+        b1 = {(r["file"], r["level"]): r["size"] for r in allr if r["feature"] == "base" and r["threads"] == 1 and r.get("ok")}
+        wins = {(r["feature"], r["file"], r["level"]) for r in allr if r["threads"] == 1 and r.get("ok") and (r["file"], r["level"]) in b1
+                and 100.0 * (r["size"] / b1[(r["file"], r["level"])] - 1) <= -thr}
     for feat in feats:
         env, dl, fk = F[feat]
+        if any(k.startswith("KOLMO_CM_") for k in env) and "lex" not in BIN_ID:
+            print("skip %s: needs the research CM build (h2-lex), have %s" % (feat, BIN_ID)); continue
         levels = parse_levels(opts["--levels"]) if "--levels" in opts else list(dl)
         levels = [l for l in levels if l in dl] if "--levels" in opts and feat != "base" else levels
         for m in M:
             if fk and m["kind"] not in fk: continue
             have = done_keys()
-            todo = [(l, t) for l in levels for t in threads if (feat, m["file"], l, t) not in have]
+            todo = [(l, t) for l in levels for t in threads if (feat, m["file"], l, t) not in have
+                    and (wins is None or feat == "base" or (feat, m["file"], l) in wins)]
             if not todo: continue
             lock()
             try:
@@ -183,6 +200,10 @@ def plan(args):
                           r.get("size"), r.get("c_wall", 0), r.get("d_wall", 0), r["load1"]), flush=True)
             finally:
                 unlock()
+
+import signal
+def _term(sig, frm): raise SystemExit(143)        # SIGTERM runs the finally: the lock is released
+signal.signal(signal.SIGTERM, _term)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in ("plan", "list"): print(__doc__); sys.exit(2)
