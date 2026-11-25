@@ -97,6 +97,11 @@ size_t kolmo_archive_bound(const kolmo_archive_file *files, size_t nfiles, const
 static uint64_t dd_zz(int64_t v) { return ((uint64_t)v << 1) ^ (uint64_t)(v >> 63); }
 static int64_t dd_unzz(uint64_t u) { return (int64_t)(u >> 1) ^ -(int64_t)(u & 1); }
 
+static int dd_disjoint(const uint8_t *a, size_t an, const uint8_t *b, size_t bn) {
+    uintptr_t x = (uintptr_t)a, y = (uintptr_t)b;
+    return x < y ? y - x >= an : x - y >= bn;
+}
+
 int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uint8_t *dst, size_t cap,
                              const kolmo_params *p, const kolmo_archive_params *ap, kolmo_archive_stats *st) {
     kolmo_archive_stats S0; if (!st) st = &S0; memset(st, 0, sizeof *st);
@@ -105,7 +110,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     if (A.avg_chunk < 256 || A.avg_chunk > (4u << 20) || (A.avg_chunk & (A.avg_chunk - 1))) return KOLMO_ERR_LIMIT;
     dd_init(); dd_cfg C; dd_config(&C, A.avg_chunk, A.line_cuts);
     uint64_t total = 0; for (size_t f = 0; f < nfiles; f++) { if (!files[f].name || (!files[f].data && files[f].size)) return KOLMO_ERR_LIMIT; total += files[f].size; }
-    dd_set D; int64_t ret = KOLMO_ERR_ALLOC; uint8_t *store = NULL; kx_buf tab = {0}, recipes = {0};
+    dd_set D; int64_t ret = KOLMO_ERR_ALLOC; uint8_t *owned_store = NULL; kx_buf tab = {0}, recipes = {0};
     if (dd_set_init(&D, total / C.avg + 16)) goto done;
     /* the file table: name, size, mode, mtime, then the chunk list (gaps between successive ids, zigzag) */
     kx_uv(&recipes, nfiles);
@@ -126,8 +131,19 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     st->files = nfiles; st->unique_chunks = D.nc;
     /* the store */
     for (uint64_t i = 0; i < D.nc; i++) st->unique_bytes += D.c[i].len;
-    store = malloc(st->unique_bytes ? (size_t)st->unique_bytes : 1); if (!store) goto done;
-    {   size_t o = 0; for (uint64_t i = 0; i < D.nc; i++) { memcpy(store + o, D.c[i].p, D.c[i].len); o += D.c[i].len; } }
+    const uint8_t *store;
+    /* The chunks of one duplicate-free file already form the store in discovery order.
+     * Preserve copying for callers whose input overlaps the output buffer. */
+    const uint64_t copy_threshold = 32u << 20;  /* confirmed size floor for a stable wall-time gain */
+    if (p && p->mode == KOLMO_RT && nfiles == 1 && total >= copy_threshold && st->unique_bytes == total &&
+        dd_disjoint(files[0].data, files[0].size, dst, cap)) {
+        store = files[0].data;
+    } else {
+        owned_store = malloc(st->unique_bytes ? (size_t)st->unique_bytes : 1); if (!owned_store) goto done;
+        size_t o = 0;
+        for (uint64_t i = 0; i < D.nc; i++) { memcpy(owned_store + o, D.c[i].p, D.c[i].len); o += D.c[i].len; }
+        store = owned_store;
+    }
     /* DDP1 table: chunk lengths and checks, then the file table; stored as a frame of its own */
     kx_uv(&tab, D.nc);
     for (uint64_t i = 0; i < D.nc; i++) {
@@ -149,7 +165,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
         const uint8_t *bodies[1] = {body}; uint64_t lens[1] = {16 + (uint64_t)tz};
         ret = kx_append(dst, cap, (uint64_t)fe, 1, tag, bodies, lens); free(body); }
 done:
-    free(D.c); free(D.slot); free(store); free(tab.p); free(recipes.p);
+    free(D.c); free(D.slot); free(owned_store); free(tab.p); free(recipes.p);
     return ret;
 }
 
