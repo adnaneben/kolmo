@@ -2,8 +2,8 @@ name: wheels
 
 # Builds the PyPI sdist and per-platform wheels for the Python binding, and (on a version tag)
 # publishes them to PyPI via Trusted Publishing. The binding is pure-ctypes, so each platform
-# gets one py3-none wheel that works on every Python 3. Publishing also runs on a manual
-# workflow_dispatch; see RELEASING.md.
+# gets one py3-none wheel that works on every Python 3. Manual dispatch from a branch builds
+# packages for inspection. Publish and retry from the matching version tag.
 on:
   workflow_dispatch:
   push:
@@ -14,12 +14,27 @@ on:
       - "bindings/python/**"
       - "src/**"
       - ".github/workflows/wheels.yml"
+      - ".github/scripts/release-source.sh"
+      - ".github/scripts/pypi-release.py"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   sdist:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      commit: ${{ steps.v.outputs.commit }}
     steps:
       - uses: actions/checkout@v4
+      - name: Check release identity
+        id: v
+        run: bash .github/scripts/release-source.sh
       - name: Sync native sources into the package
         run: bash bindings/python/sync-native.sh
       - uses: actions/setup-python@v5
@@ -27,10 +42,13 @@ jobs:
           python-version: "3.12"
       - run: pip install build
       - run: python -m build --sdist --outdir dist bindings/python
+      - name: Verify sdist metadata
+        run: python3 .github/scripts/pypi-release.py check dist "$(cat VERSION)" --kind sdist
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: dist/*.tar.gz
+          if-no-files-found: error
 
   wheels:
     strategy:
@@ -61,37 +79,71 @@ jobs:
           CIBW_SKIP: "*-musllinux*"
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_TEST_COMMAND: "python -c \"import kolmo; d=b'col,val\\n'+b''.join(b'r,%d\\n'%i for i in range(5000)); assert kolmo.decompress(kolmo.compress(d, level=7))==d; print('wheel ok')\""
+      - name: Verify wheel metadata
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: python3 .github/scripts/pypi-release.py check wheelhouse "$(cat VERSION)" --kind "$ARCH"
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
+          if-no-files-found: error
 
   publish:
-    # Publishes to PyPI on a version tag. Configure a Trusted Publisher on PyPI for this repo
-    # + workflow (no API token needed): https://docs.pypi.org/trusted-publishers/
     needs: [sdist, wheels]
-    # Publishes on a version tag, or on a manual run (workflow_dispatch) — the version comes from
-    # pyproject.toml, and PyPI Trusted Publishing matches on repo + workflow + environment, not on
-    # the ref, so a manual run from main publishes the same artifacts.
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     environment: pypi
+    concurrency:
+      group: pypi-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
-      id-token: write          # Trusted Publishing, and the Sigstore certificate for the attestation
+      contents: read
+      id-token: write
       attestations: write
+    env:
+      VERSION: ${{ needs.sdist.outputs.version }}
+      SOURCE_COMMIT: ${{ needs.sdist.outputs.commit }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.sdist.outputs.commit }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
-      # GitHub build provenance for the sdist and wheels (verify: gh attestation verify <file> --repo adnaneben/kolmo).
-      # The PyPI upload below also attaches PEP 740 attestations, which PyPI shows on the file's page.
+      - name: Require matching packages and stage missing PyPI files
+        id: packages
+        run: |
+          test "$GITHUB_REF" = "refs/tags/v$VERSION"
+          # Verify the current remote tag before signing or publishing this commit.
+          remote_commit=$(git ls-remote origin "$GITHUB_REF" "$GITHUB_REF^{}" |
+            awk -v ref="$GITHUB_REF" '$2 == ref {tag = $1} $2 == (ref "^{}") {peeled = $1} END {print (peeled != "" ? peeled : tag)}')
+          test "$remote_commit" = "$SOURCE_COMMIT"
+          python3 .github/scripts/pypi-release.py prepare dist "$VERSION" --upload pending
+          if compgen -G "pending/*" >/dev/null; then
+            echo "upload=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/attest-build-provenance@v2
+        if: steps.packages.outputs.upload == 'true'
         with:
           subject-path: dist/*
+      - name: Verify the package attestations
+        if: steps.packages.outputs.upload == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for asset in dist/*; do
+            gh attestation verify "$asset" --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/wheels.yml" \
+              --source-ref "$GITHUB_REF" --source-digest "$SOURCE_COMMIT"
+          done
       - uses: pypa/gh-action-pypi-publish@release/v1
+        if: steps.packages.outputs.upload == 'true'
         with:
-          packages-dir: dist
-          # Re-running for a version that is already on PyPI (e.g. a tag pushed after a manual
-          # publish) skips the existing files instead of failing the job.
-          skip-existing: true
+          packages-dir: pending
+      - name: Verify uploaded package digests
+        run: python3 .github/scripts/pypi-release.py verify dist "$VERSION"
