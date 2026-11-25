@@ -114,7 +114,8 @@ typedef struct {
 /* Zero fields mean no limit, except max_memory: 0 = auto (50% of physical memory or of the cgroup's limit),
  * KOLMO_MEM_MAX = none, otherwise bytes. Every frame declares what one block needs to decode (header byte 11); a frame
  * whose figure exceeds max_memory fails with KOLMO_ERR_MEMORY before anything is allocated (kolmo_decode_memory gives
- * the figure). Within it, fewer blocks decode at once when memory is short. Calls without limits use auto. */
+ * the figure). Large frame indexes need additional headroom. Within the budget, fewer blocks decode concurrently
+ * when memory is short. Calls without limits use auto. */
 typedef struct {
     uint64_t max_output_bytes;
     uint32_t max_block_bytes;
@@ -150,7 +151,8 @@ int64_t kolmo_stream_compress(int in_fd, int out_fd, const kolmo_params *p, uint
  * (with their container extensions); bytes after a member that start no member are KOLMO_ERR_CORRUPT. */
 int64_t kolmo_stream_decompress(int in_fd, int out_fd, int threads);
 /* as kolmo_stream_decompress, with decoding limits per frame and max_output_bytes for the whole input (NULL: none);
- * max_memory (or the process limit) bounds each frame's decode, the output window included */
+ * max_memory (or the process limit) budgets codec work, large offset arrays and, when it fits, the output window.
+ * One block of output may sit outside it at a tight cap. Compressed member bytes are buffered separately. */
 int64_t kolmo_stream_decompress_limited(int in_fd, int out_fd, int threads, const kolmo_decode_limits *limits);
 /* One-shot CZN1 file I/O. Input must remain a stable regular file of at least n
  * bytes. Supply an empty seekable output fd without O_APPEND. Workers use
@@ -180,8 +182,9 @@ int kolmo_set_x_tables(int mode);
 void kolmo_release_buffers(void);
 /* Memory limits (docs/MEMORY-MODEL.md). kolmo_mem_parse: "512M", "8G", "50%" (of physical memory), "auto" (0) or "max"
  * (KOLMO_MEM_MAX) into *out; 0 or -1. kolmo_mem_floor: the least a mode accepts as an explicit limit.
- * kolmo_decode_memory: the bytes one block of the frame needs to decode, as its header declares (0 for frames that
- * declare nothing, written before rc3), or a negative error. */
+ * kolmo_decode_memory: the per-block figure declared by the header. For v12 frames without a declaration it
+ * returns the largest block's buffer estimate if the index is present, otherwise zero. Errors are negative.
+ * Large frame indexes require additional metadata headroom, as described in docs/MEMORY-MODEL.md. */
 int      kolmo_mem_parse(const char *s, uint64_t *out);
 uint64_t kolmo_mem_floor(kolmo_mode mode);
 uint64_t kolmo_mem_auto(void);
