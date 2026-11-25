@@ -30,11 +30,11 @@ static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int 
     return (int64_t)tot;
 }
 /* The parameters the library defines (kolmo.h): mode rt..ultra; level 0..22 (max also 100..999, KLZMA's lc/lp/pb
- * digits); transforms 0..3 with the opt-in bits KOLMO_T_NATIVE_LEAF, KOLMO_T_TYPED_HUF and KOLMO_T_COLUMNS. */
+ * digits); transforms 0..3 with the KOLMO_T_* opt-in bits. */
 static int kolmo_params_valid(const kolmo_params *p) {
     if ((unsigned)p->mode > KOLMO_ULTRA) return 0;
     if (p->level < (p->mode == KOLMO_FAST ? -1 : 0) || (p->level > 22 && !(p->mode == KOLMO_MAX && p->level >= 100 && p->level <= 999))) return 0;
-    int t = p->transforms & ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
+    int t = p->transforms & ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS | KOLMO_T_WASM_SHUFFLE_CHECK);
     return t >= 0 && t <= 3;
 }
 /* Every frame written is version 12 (KOLMO_MAX_VERSION): Kolmo's own coders only, no dictionary, no profile. */
@@ -50,8 +50,9 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
 #endif
     int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0;
     int typed_huf = (q.transforms & KOLMO_T_TYPED_HUF) != 0;
+    int wasm_check = (q.transforms & KOLMO_T_WASM_SHUFFLE_CHECK) != 0;
     int columns = (q.transforms & KOLMO_T_COLUMNS) != 0;
-    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
+    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS | KOLMO_T_WASM_SHUFFLE_CHECK);
     columns = columns && q.transforms && q.mode != KOLMO_RT;
     native_leaf = native_leaf && q.mode == KOLMO_FAST && q.transforms; p = &q;
     if (cap < HDR + IDX) return KOLMO_ERR_DSTSIZE;
@@ -125,6 +126,14 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     planning.xcap = xcap; planning.kind = skind;
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
+    /* A module's sampled bytes can resemble numeric words. Let the existing
+     * per-block comparison keep the shuffle only when it beats the very same coder. */
+    if (wasm_check && nseg == 1 && n >= (64u << 10) && !p->level &&
+        ((p->mode == KOLMO_RT && p->transforms == 3) || (p->mode == KOLMO_FAST && p->transforms == 1)) &&
+        plans[0].t == T_SHUF && plans[0].a == 8 && plans[0].b == 1 && plans[0].c == 1 &&
+        !memcmp(src, "\0asm\1\0\0\0", 8))
+        plans[0].verify = 1;
+
     /* balanced, eco, hc: neighbouring segments (tar members, content runs) that got the same plain or word-dictionary
      * plan are coded as one, so an LZ window spans them (a source tarball repeats across members: samba -4.6% at hc) */
     if (!p->block && !columns && p->mode >= KOLMO_FAST && p->mode <= KOLMO_HC && nseg > 1) {
