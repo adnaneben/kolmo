@@ -1,0 +1,32 @@
+diff --git a/src/core/blocks.c b/src/core/blocks.c
+index 2612ef25..d94d6f52 100644
+--- a/src/core/blocks.c
++++ b/src/core/blocks.c
+@@ -14,6 +14,8 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
+     size_t cap = n / (B / 2 + 1) + 2; uint64_t *st = array_alloc(cap, sizeof(uint64_t), 0); uint32_t nb = 0; size_t pos = 0;
+     *starts_out = NULL;
+     if (!st) return 0;
++    /* Experiment only. The harness validates every four-line record before running either arm. */
++    int align_reads = getenv("KOLMO_BENCH_READ_CUTS") && s && pl.t == T_NONE && kf_fastq_like(s, n);
+     if (pl.t == T_SHUF) { uint32_t u = pl.a * pl.b; B = B / u * u; if (!B) B = u; }
+     if (pl.t == T_IMG) B &= ~1u;
+     if (pl.t == T_A64) B = B >= 4096 ? B & ~4095u : 4;             /* ARM64 code: instruction words stay aligned in every block */
+@@ -46,6 +48,18 @@ static uint32_t make_blocks(const uint8_t *s, size_t n, uint32_t B, plan_t pl, u
+             } else while (e > lo && s[e - 1] != '\n') e--;
+             if (e > lo) end = e;
+         }
++        if (align_reads && end < n) {
++            size_t cursor = pos, complete = pos;
++            unsigned line = 0;
++            while (cursor < end) {
++                const uint8_t *lf = memchr(s + cursor, '\n', end - cursor);
++                if (!lf) break;
++                cursor = (size_t)(lf - s) + 1;
++                if (++line == 4) { complete = cursor; line = 0; }
++            }
++            if (complete == pos) align_reads = 0;
++            else end = complete;
++        }
+         if (nb == UINT32_MAX - 1) { free(st); return 0; }
+         if ((size_t)nb + 1 >= cap) {
+             if (cap > SIZE_MAX / 2) { free(st); return 0; }

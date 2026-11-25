@@ -1,0 +1,283 @@
+{
+  "baseRefName": "codex/ppp-target-floor-report-20261125",
+  "baseRefOid": "8d23095b2f09d5c9e3c3425123bea63641ca5d71",
+  "headRefName": "codex/ppp-fastq-record-blocks-20261125",
+  "headRefOid": "31fd3acd922490143059ac2438e988e38d89be5f",
+  "isDraft": true,
+  "number": 107,
+  "state": "OPEN",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226444/job/139431433080",
+      "name": "build-test (ubuntu-latest)",
+      "startedAt": "2026-11-25T18:44:34Z",
+      "status": "QUEUED",
+      "workflowName": "ci"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226490/job/139431437809",
+      "name": "build",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "fuzz"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226487/job/139431432967",
+      "name": "plugins (ubuntu-24.04)",
+      "startedAt": "2026-11-25T18:44:34Z",
+      "status": "QUEUED",
+      "workflowName": "integrations"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45677950235/job/139430442643",
+      "name": "plugins (ubuntu-24.04)",
+      "startedAt": "2026-11-25T18:42:56Z",
+      "status": "QUEUED",
+      "workflowName": "integrations"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226798/job/139431434462",
+      "name": "test (ubuntu-latest, 3.12, zarr>=3)",
+      "startedAt": "2026-11-25T18:44:34Z",
+      "status": "QUEUED",
+      "workflowName": "numcodecs-kolmo"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45677950052/job/139430442170",
+      "name": "test (ubuntu-latest, 3.12, zarr>=3)",
+      "startedAt": "2026-11-25T18:42:56Z",
+      "status": "QUEUED",
+      "workflowName": "numcodecs-kolmo"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226567/job/139431436199",
+      "name": "debian (release)",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "packaging"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226426/job/139431435543",
+      "name": "sdist",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "wheels"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-11-25T18:44:34Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226386/job/139431435819",
+      "name": "validate",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "COMPLETED",
+      "workflowName": "Planner ownership validation"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226444/job/139431433596",
+      "name": "build-test (ubuntu-24.04-arm)",
+      "startedAt": "2026-11-25T18:44:34Z",
+      "status": "QUEUED",
+      "workflowName": "ci"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226487/job/139431433418",
+      "name": "plugins (macos-latest)",
+      "startedAt": "2026-11-25T18:44:34Z",
+      "status": "QUEUED",
+      "workflowName": "integrations"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45677950235/job/139430442229",
+      "name": "plugins (macos-latest)",
+      "startedAt": "2026-11-25T18:42:56Z",
+      "status": "QUEUED",
+      "workflowName": "integrations"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226798/job/139431434693",
+      "name": "test (macos-latest, 3.12, zarr>=3)",
+      "startedAt": "2026-11-25T18:44:34Z",
+      "status": "QUEUED",
+      "workflowName": "numcodecs-kolmo"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45677950052/job/139430442166",
+      "name": "test (macos-latest, 3.12, zarr>=3)",
+      "startedAt": "2026-11-25T18:42:56Z",
+      "status": "QUEUED",
+      "workflowName": "numcodecs-kolmo"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226567/job/139431436919",
+      "name": "debian (checkout)",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "packaging"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226444/job/139431433578",
+      "name": "build-test (macos-latest)",
+      "startedAt": "2026-11-25T18:44:34Z",
+      "status": "QUEUED",
+      "workflowName": "ci"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226798/job/139431433882",
+      "name": "test (ubuntu-latest, 3.10, zarr<3)",
+      "startedAt": "2026-11-25T18:44:34Z",
+      "status": "QUEUED",
+      "workflowName": "numcodecs-kolmo"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45677950052/job/139430441684",
+      "name": "test (ubuntu-latest, 3.10, zarr<3)",
+      "startedAt": "2026-11-25T18:42:55Z",
+      "status": "QUEUED",
+      "workflowName": "numcodecs-kolmo"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226444/job/139431433799",
+      "name": "sanitizers",
+      "startedAt": "2026-11-25T18:44:34Z",
+      "status": "QUEUED",
+      "workflowName": "ci"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226567/job/139431436963",
+      "name": "arch",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "packaging"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226426/job/139431436065",
+      "name": "wheels (ubuntu-latest, x86_64)",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "wheels"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226426/job/139431435957",
+      "name": "wheels (ubuntu-24.04-arm, aarch64)",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "wheels"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226444/job/139431433889",
+      "name": "fuzz-smoke",
+      "startedAt": "2026-11-25T18:44:34Z",
+      "status": "QUEUED",
+      "workflowName": "ci"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226567/job/139431436900",
+      "name": "nix",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "packaging"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226567/job/139431436976",
+      "name": "conda (ubuntu-latest)",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "packaging"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226567/job/139431437107",
+      "name": "conda (macos-latest)",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "packaging"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "detailsUrl": "https://github.com/adnaneben/kolmo/actions/runs/45678226567/job/139431437115",
+      "name": "homebrew-core",
+      "startedAt": "2026-11-25T18:44:35Z",
+      "status": "QUEUED",
+      "workflowName": "packaging"
+    }
+  ],
+  "url": "https://github.com/adnaneben/kolmo/pull/107",
+  "recorded_at_utc": "2026-11-25T18:51:15.661114+00:00"
+}

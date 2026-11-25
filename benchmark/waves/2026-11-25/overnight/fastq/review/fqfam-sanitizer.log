@@ -1,0 +1,3 @@
+ultra: 704880 -> 111463 bytes, codec 16, version 10
+damaged copies that decoded to other bytes (caught by the container checksum): 53
+FQFAM TESTS PASSED

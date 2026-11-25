@@ -1,0 +1,7 @@
+31fd3acd922490143059ac2438e988e38d89be5f
+Base failed on arm64
+/var/folders/49/878pnk_s2zndt7qccsbx8fs80000gn/T/tmp.zqczb7exzP/arm_acle.h:1:2: error: "intrinsic header included in the NO_ASM library"
+    1 | #error "intrinsic header included in the NO_ASM library"
+Base failed on x86_64
+/var/folders/49/878pnk_s2zndt7qccsbx8fs80000gn/T/tmp.3epogSx5dF/immintrin.h:1:2: error: "intrinsic header included in the NO_ASM library"
+    1 | #error "intrinsic header included in the NO_ASM library"
