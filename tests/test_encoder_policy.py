@@ -48,6 +48,60 @@ class PolicyTest(unittest.TestCase):
         file, _, _ = self.sample("tensor", struct.pack("<Q", len(model)) + model + b"data")
         self.assertEqual(tool.bucket(file, self.catalogue), ("safetensors", 0))
 
+    def test_bounded_text_signatures(self):
+        rows = b'{"value":1}\r\n{"field":"quoted, tab\\t"}\r\n{"value":[1,2]}'
+        csv = b'city,temperature\r\n"Riyadh, SA",12\r\nLondon,-2.0\r\nParis,3.5e1\r\n'
+        tsv = b'city\ttemperature\nRiyadh\t12\nLondon\t0.0\nParis\t+3.5e1'
+        fastq = b'@r1\nACGTN\n+r1\nIIII!\n@r2\nRYKMS\n+\nJABCD\n@r3 foo\nacgtn\n+\n@@@@@\n'
+        for name, data, fmt in [
+            ("decimal.txt", rows, "jsonl"),
+            ("numbers.bin", csv, "csv"),
+            ("data.csv", tsv, "tsv"),
+            ("reads", fastq, "fastq"),
+            ("log.jsonl", rows + b'\nbad line', "unknown"),
+            ("nonfinite.jsonl", rows.replace(b'"value":[1,2]', b'"value":NaN'), "unknown"),
+            ("single.jsonl", b'{"a":1}\n{"a":2}\n', "unknown"),
+            ("array.jsonl", b'[1]\n[2]\n[3]\n', "unknown"),
+            ("untyped.csv", b'name,tag\nAda,one\nBob,two\nCleo,three\n', "unknown"),
+            ("prose.csv", b'This, that\nSome sentences, some words\nOne, two\nAgain, here\n', "unknown"),
+            ("duplicate.csv", b'Value,vAlue\n9,10\n11,13\n14,18\n', "unknown"),
+            ("broken.csv", csv.replace(b'"Riyadh, SA"', b'"Riyadh, SA'), "unknown"),
+            ("broken.fastq", fastq.replace(b'JABCD', b'ABCD'), "unknown"),
+            ("wrong-id.fastq", fastq.replace(b'+r1', b'+r4'), "unknown"),
+            ("short.fastq", fastq + b'@r4\nACGT\n', "unknown"),
+            ("control.csv", csv.replace(b'Paris', b'Pa\x00ris'), "unknown"),
+            ("binary.csv", csv.replace(b'Paris', b'Pa\xffris'), "unknown"),
+            ("ordered.jsonl", b"GGUF\n" + rows, "gguf"),
+        ]:
+            with self.subTest(name=name):
+                sample, _, _ = self.sample(name, data)
+                self.assertEqual(tool.classify(sample, self.catalogue), (fmt, len(data)))
+
+        header = ",".join(f"field{i}" for i in range(197))
+        row = ",".join(str(i) for i in range(197))
+        wide, _, _ = self.sample("wide", ("\n".join([header, row, row, row]) + "\n").encode())
+        self.assertEqual(tool.classify(wide, self.catalogue)[0], "csv")
+
+        self.assertEqual(self.catalogue["revision"], 2)
+        self.assertEqual(self.catalogue["schema"], 1)
+
+    def test_truncated_probe_and_ambiguous_signature(self):
+        prefix = b'{"a":1}\n{"a":2}\n{"a":3}\n{"value":"'
+        data = prefix + b'x' * (tool.TEXT_PROBE_LIMIT - len(prefix) - 1) + b'\xc3\xa9"}\n'
+        sample, _, _ = self.sample("sample", data)
+        self.assertEqual(tool.classify(sample, self.catalogue), ("jsonl", len(data)))
+
+        data = prefix + b'truncated-within-the-file'
+        sample, _, _ = self.sample("invalid", data)
+        self.assertEqual(tool.classify(sample, self.catalogue), ("unknown", len(data)))
+
+        data = b'a,b\na,1\nb,2\nc,3\n'
+        sample, _, _ = self.sample("ambiguous", data)
+        catalogue = {**self.catalogue,
+                     "formats": [*self.catalogue["formats"],
+                                 {"id": "table", "text_probe": "csv"}]}
+        self.assertEqual(tool.classify(sample, catalogue), ("unknown", len(data)))
+
     def test_seal_requires_distinct_origins(self):
         dev = self.manifest("dev.json", [self.sample("dev", b"development")])
         holdout = self.manifest("test.json", [self.sample("test", b"validation")])

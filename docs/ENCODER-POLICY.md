@@ -2,9 +2,17 @@
 
 `tune/encoder_policy.py` is a local file-to-file wrapper for the stock Kolmo CLI. It learns a small table mapping content signatures and size ranges to existing encoder options at a fixed level and thread count. Saved policies contain choices and evidence fingerprints. An ordinary v12 decoder reads the resulting frames. Run the wrapper only where the measured trade-offs make sense. Kolmo's ordinary CLI remains independent of these files.
 
-## Catalogue v1
+## Catalogue schema 1, revision 2
 
 `tune/format-catalogue.v1.json` defines stable format IDs and the size cutoffs 64 KiB, 1 MiB and 16 MiB. Signatures identify ELF, 64-bit Mach-O, WebAssembly, NPY, GGUF, PNG, FLAC, RIFF WAVE and Parquet. The SafeTensors probe checks a bounded header and contiguous declared tensor ranges. These classifications are routing hints. Kolmo still interprets the file using its native planner. Ambiguous or unsupported input uses the standard CLI preset. The wrapper caps the SafeTensors header probe at 64 KiB and reads only short signatures for other formats.
+
+After the binary checks, the catalogue reads up to 64 KiB for UTF-8 text hints. It looks for at least three complete records of one of these forms.
+
+- JSONL with a JSON object per line.
+- CSV or TSV with distinct column names, rectangular rows and a numeric column.
+- FASTQ with one sequence and one quality line per record, matched by length.
+
+The probe ignores the unfinished final line of a sampled prefix. Ambiguous, malformed and unsupported samples fall back to the stock preset. Headerless tables, all-text tables and records that span more than the sampled prefix can remain unclassified. A hint describes the sampled bytes. The native planner still evaluates the input.
 
 The schema describes the catalogue shape and the revision describes its contents. Keep existing IDs stable when adding formats. Update the revision when signatures or size cutoffs change and retrain the policy against a fresh split. The catalogue hash invalidates choices learned from another revision.
 
