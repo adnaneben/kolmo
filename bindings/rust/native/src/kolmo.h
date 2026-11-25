@@ -35,7 +35,7 @@ typedef struct {
     int transforms;     /* 1 = analyse and transform (default), 0 = codec only, 2 = quick analysis: only the cheap
                            structure transforms (images, records, executables, tables), for the fastest settings;
                            3 = minimal analysis (level 1). kolmo_params_for_level sets mode, level and transforms.
-                           May be OR-ed with KOLMO_T_NATIVE_LEAF, KOLMO_T_TYPED_HUF or KOLMO_T_COLUMNS
+                           May be OR-ed with the KOLMO_T_* options
                            (below); other values fail with KOLMO_ERR_PARAM, and so does a mode outside rt..ultra. */
     uint64_t mem_limit; /* memory limit (docs/MEMORY-MODEL.md): 0 = auto (50% of physical memory or of the cgroup's
                            limit; governs only how much runs at once), KOLMO_MEM_MAX = no limit, otherwise bytes: an
@@ -75,6 +75,10 @@ typedef struct {
  * column query (kolmo_query_run, below) decodes only that column's streams. Measured cost: +2% (dense numeric CSV) to
  * +10% (wide sparse CSV) at balanced, about 0% at hc and ratio on dense data. */
 #define KOLMO_T_COLUMNS 64
+
+/* At presets 1 and 3, verify an 8-byte, one-channel delta shuffle against the same coder on
+ * original WebAssembly v1 bytes. Only single-segment modules and blocks >= 64 KiB qualify. */
+#define KOLMO_T_WASM_SHUFFLE_CHECK 128
 
 #define KOLMO_ERR_CORRUPT   (-1)
 #define KOLMO_ERR_CHECKSUM  (-2)

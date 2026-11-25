@@ -342,7 +342,13 @@ build/test-memdyn: tests/test_memdyn.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES)
 	$(CC) $(CFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch.a -o $@ $(LIBS)
 build/test-memdyn-asan: tests/test_memdyn.c src/kolmo.c src/kolmo.h $(KOLMO_INCLUDES) build/libkolmoarch-asan.a
 	$(CC) $(SANFLAGS) $(FPFLAGS) $(DEFS) $(INC) $< build/libkolmoarch-asan.a -o $@ $(LIBS)
-check-memdyn: build/test-memdyn build/test-memdyn-asan
+build/cgroup-probe: tests/cgroup_probe.c src/core/cgroup.h
+	@mkdir -p build
+	$(CC) $(CFLAGS) $< -o $@
+check-cgroup: build/cgroup-probe
+	python3 tests/test_cgroup.py $<
+.PHONY: check-cgroup
+check-memdyn: check-cgroup build/test-memdyn build/test-memdyn-asan
 	./build/test-memdyn
 	./build/test-memdyn-asan --quick
 .PHONY: check-memdyn

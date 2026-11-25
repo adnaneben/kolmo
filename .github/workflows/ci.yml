@@ -37,6 +37,8 @@ jobs:
         run: make -j4 ARCH= lib && python3 bindings/python/test_kolmo.py && python3 tests/test_concurrent.py
       - name: bindings' native copies match src (the wheel and the crate build from them)
         run: |
+          cmp LICENSE bindings/python/LICENSE
+          cmp NOTICE bindings/python/NOTICE
           for b in python rust; do
             diff -r -x experimental src bindings/$b/native/src
             for f in src/experimental/frontier_*; do cmp "$f" "bindings/$b/native/$f"; done

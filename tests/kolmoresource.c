@@ -28,11 +28,23 @@ static int test_join(pthread_t t, void **result) {
 static int test_setspecific(pthread_key_t key, const void *value) {
     return fail_setspecific ? ENOMEM : pthread_setspecific(key, value);
 }
+/* Simulate another caller acquiring a chosen mutex immediately after unlock. */
+static _Thread_local pthread_mutex_t *claim_on_unlock;
+static int test_unlock(pthread_mutex_t *m) {
+    int r = pthread_mutex_unlock(m);
+    if (!r && claim_on_unlock == m) {
+        claim_on_unlock = NULL;
+        assert(pthread_mutex_lock(m) == 0);
+    }
+    return r;
+}
+#define pthread_mutex_unlock test_unlock
 #define KOLMO_TESTING
 #define pthread_create test_create
 #define pthread_join test_join
 #define pthread_setspecific test_setspecific
 #include "../src/kolmo.c"
+#undef pthread_mutex_unlock
 #undef pthread_create
 #undef pthread_join
 #undef pthread_setspecific
@@ -59,6 +71,26 @@ static void pool_failures(void) {
     run_pool(count_work, &w, 8, 1000); /* Persistent pool also falls back to caller. */
     assert(atomic_load(&w.completed) == 1000 && pool_n == 0);
     create_budget = -1;
+}
+static void *hold_scratch(void *arg) {
+    (void)arg;
+    tls_t *s = tls_begin(); assert(s);
+    s->tbuf = grow(s->tbuf, &s->tcap, 128u << 10); assert(s->tbuf);
+    tls_end(s); return NULL;
+}
+static void *check_scratch_released(void *arg) {
+    (void)arg; assert(TLS && !TLS->tbuf && !TLS->tcap); return NULL;
+}
+static void release_pool_contention(void) {
+    run_pool(hold_scratch, NULL, 4, 4);
+    assert(pool_n == 3);
+    int previous_joins = joined;
+    claim_on_unlock = &pool_job;
+    kolmo_release_buffers();
+    assert(!claim_on_unlock);
+    pthread_mutex_unlock(&pool_job); /* drop the simulated competing owner's lock */
+    assert(joined == previous_joins); /* cleanup has no private workers to join */
+    run_pool(check_scratch_released, NULL, 4, 4);
 }
 static void frame_crc(uint8_t *blob) {
     uint32_t c = kolmo_crc32c(0, blob, 28);
@@ -228,6 +260,7 @@ int main(void) {
     tls_key_valid = key_valid;
     free(blob); free(bad);
     zs_trim();
+    release_pool_contention();
     printf("RESOURCE TESTS PASSED (%d injected compression allocation failures)\n", failures);
     return 0;
 }

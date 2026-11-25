@@ -6,6 +6,7 @@ Environment: KOLMO_REF=path/to/kolmo-0.0.1 also checks that the 0.0.1 binary dec
 this one decodes 0.0.1's modes (frame format unchanged). Without it those checks are skipped."""
 import os
 import pty
+import random
 import select
 import stat
 import subprocess
@@ -45,6 +46,26 @@ def data(n=200_000, seed=7):
     return (text + b"\n" + csv)[:n]
 
 
+def wasm_shuffle_fixture():
+    # A valid core module with one custom section. Its middle looks like numeric
+    # words to the planner; the rest repeats variable-length binary tokens.
+    rng = random.Random(1301)
+    tokens = []
+    for _ in range(127):
+        length = rng.randint(15, 95)
+        tokens.append(rng.getrandbits(8 * length).to_bytes(length, "little"))
+    n = 1 << 18
+    body = bytearray(b"".join(rng.choice(tokens) for _ in range(n // 15 + 1))[:n])
+    span = 65536
+    start = n // 2 - span // 3
+    value = (1 << 60) + 45341
+    for at in range(start, start + span, 8):
+        value += rng.randint(0, 47) * 673
+        body[at:at + 8] = value.to_bytes(8, "little")
+    # Section id 0. Its payload is 262146 bytes (the name "x" and the body).
+    return b"\0asm\1\0\0\0\0\x82\x80\x10\1x" + body
+
+
 LEVEL_FORMS = {   # every spelling of each level gives the same bytes
     1: [["-1"], ["-F"], ["--fastest"], ["--level", "1"], ["--level=1"], ["--level", "fastest"]],
     2: [["-2"], ["--level=2"]],
@@ -78,6 +99,28 @@ with tempfile.TemporaryDirectory() as tmp:
                  "--gpu", "--x-tables", "calibrate"]:
         check(frag in h, f"-h lacks {frag!r}")
     expect(run("--help"), 0, "--help")
+
+    wasm = wasm_shuffle_fixture()
+    def encode_wasm(*options):
+        sample = run("-1", "-T1", "-c", *options, input=wasm)
+        expect(sample, 0, "encode WASM shuffle fixture")
+        return sample.stdout
+
+    ordinary = encode_wasm()
+    verified = encode_wasm("--wasm-check-shuffle")
+    check(len(verified) < len(ordinary), "WASM check selects smaller unshuffled bytes")
+    check(verified == encode_wasm("--analysis", "none"), "WASM check uses the ordinary plain coder")
+    check(run("-dc", input=verified).stdout == wasm, "WASM check restores complete module")
+    wasm_file = T / "shuffle.wasm"
+    wasm_file.write_bytes(wasm)
+    checked_file = run("-1", "-T1", "--wasm-check-shuffle", "-c", wasm_file)
+    check(checked_file.returncode == 0 and checked_file.stdout == verified, "WASM file matches pipe")
+    stream = run("-1", "-T1", "--stream=1", "--wasm-check-shuffle", "-c", input=wasm)
+    check(stream.returncode == 0 and run("-dc", input=stream.stdout).stdout == wasm, "WASM stream restores input")
+    for options in [("--analysis", "minimal"), ("--analysis", "none"), ("--codec-level", "1"), ("-2",)]:
+        check(encode_wasm(*options) == encode_wasm("--wasm-check-shuffle", *options),
+              f"WASM check respects {options}")
+
 
     # ---- every level, every spelling: the same bytes, a round trip, and the default is 3
     frames = {}

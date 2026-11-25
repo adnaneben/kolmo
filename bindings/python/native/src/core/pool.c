@@ -71,6 +71,18 @@ static void pool_fork_child(void) {
 }
 static pthread_once_t pool_fork_once = PTHREAD_ONCE_INIT;
 static void pool_fork_register(void) { pthread_atfork(pool_fork_prepare, pool_fork_parent, pool_fork_child); }
+/* Both locks are held on entry. Finish this job and release them, keeping
+ * pool ownership while its existing helpers run the callback. */
+static void pool_dispatch_owned(void *(*fn)(void *), void *J, int helpers) {
+    pool_fn = fn; pool_arg = J; pool_want = helpers; pool_active = helpers; pool_gen++;
+    pthread_cond_broadcast(&pool_go);
+    pthread_mutex_unlock(&pool_mu);
+    fn(J);
+    pthread_mutex_lock(&pool_mu);
+    while (pool_active) pthread_cond_wait(&pool_done, &pool_mu);
+    pthread_mutex_unlock(&pool_mu);
+    pthread_mutex_unlock(&pool_job);
+}
 static void run_pool(void *(*fn)(void *), void *J, int threads, uint32_t units) {
     if (threads > 256) threads = 256;
     if ((uint32_t)threads > units) threads = (int)units;
@@ -96,14 +108,7 @@ static void run_pool(void *(*fn)(void *), void *J, int threads, uint32_t units) 
         pthread_attr_destroy(&at); pool_n++;
     }
     int helpers = threads - 1 < pool_n ? threads - 1 : pool_n;
-    pool_fn = fn; pool_arg = J; pool_want = helpers; pool_active = helpers; pool_gen++;
-    pthread_cond_broadcast(&pool_go);
-    pthread_mutex_unlock(&pool_mu);
-    fn(J);
-    pthread_mutex_lock(&pool_mu);
-    while (pool_active) pthread_cond_wait(&pool_done, &pool_mu);
-    pthread_mutex_unlock(&pool_mu);
-    pthread_mutex_unlock(&pool_job);
+    pool_dispatch_owned(fn, J, helpers);
 }
 
 /* kolmo_release_buffers: each thread frees its own buffers (thread-local), so the pool's idle workers are given a job
@@ -119,9 +124,13 @@ static void tls_release_self(void) {
 }
 static void *tls_release_job(void *arg) { (void)arg; tls_release_self(); return NULL; }   /* each worker runs a job once */
 void kolmo_release_buffers(void) {
-    tls_release_self();
-    if (pthread_mutex_trylock(&pool_job)) return;            /* busy with a call: its threads keep their buffers */
-    pthread_mutex_lock(&pool_mu); int n = pool_n; pthread_mutex_unlock(&pool_mu);
-    pthread_mutex_unlock(&pool_job);
-    if (n > 0) run_pool(tls_release_job, NULL, n + 1, (uint32_t)n + 1);
+    if (pthread_mutex_trylock(&pool_job)) { tls_release_self(); return; }
+    pthread_mutex_lock(&pool_mu);
+    if (pool_n > 0) {
+        pool_dispatch_owned(tls_release_job, NULL, pool_n);
+    } else {
+        pthread_mutex_unlock(&pool_mu);
+        pthread_mutex_unlock(&pool_job);
+        tls_release_self();
+    }
 }

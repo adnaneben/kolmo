@@ -1,0 +1,46 @@
+name: Native x86-64 archive Gear comparison
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/ppp-reviewed-followups-20261125
+    paths:
+      - .github/workflows/gear-x86.yml
+      - bench/gear/**
+      - benchmark/waves/2026-11-25/native-gear/replay.py
+      - Makefile
+      - src/**
+      - tests/test_asm.c
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: a1d39559686a9ec17c8614b9154a64d7b5b98672
+          path: pinned-main
+          persist-credentials: false
+      - name: Verify the native runner and compare whole archives
+        env:
+          CC: gcc
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -s)/$(uname -m)/$RUNNER_ARCH" = Linux/x86_64/X64
+          bash candidate/bench/gear/qualify.sh "$GITHUB_WORKSPACE/candidate" "$GITHUB_WORKSPACE/pinned-main" "$RUNNER_TEMP/gear-build" "$GITHUB_WORKSPACE/gear-results"
+          cat gear-results/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gear-x86-${{ github.sha }}-${{ github.run_attempt }}
+          path: gear-results/
+          if-no-files-found: error

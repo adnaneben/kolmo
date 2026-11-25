@@ -146,8 +146,11 @@ smaller, not faster; speed comes from concurrency, which is the dynamic part.
   - the user's cap (`--memlimit`, `KOLMO_MEMLIMIT`, the API field; `max` = no cap);
   - the memory the system reports as available:
     - macOS: `host_statistics64` free + inactive + purgeable, plus the `DISPATCH_SOURCE_TYPE_MEMORYPRESSURE` events;
-    - Linux: `MemAvailable` from `/proc/meminfo`, the cgroup v2 `memory.max` / `memory.current` and PSI
-      `/proc/pressure/memory`;
+    - Linux: `MemAvailable` from `/proc/meminfo`, the least remaining headroom in the process's visible cgroup ancestry,
+      and PSI from `/proc/pressure/memory`. Kolmo resolves its v1 or v2 membership against the mounts in
+      `/proc/self/mountinfo`. Each enforcing ancestor contributes its own limit minus its own usage, including other
+      members of that subtree. The smallest finite absolute limit bounds the automatic decode cap. A namespace or
+      a delegated mount can hide higher ancestors. Their headroom is unknown in that view.
     - elsewhere: physical RAM / 2.
 
   It is re-read at most every 100 ms and on every pressure event.

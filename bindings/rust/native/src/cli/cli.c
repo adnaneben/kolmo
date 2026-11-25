@@ -310,6 +310,8 @@ static void help(void) {
 "                                plane-context leaves; such files decode ~1.5-2.6x slower\n"
 "      --typed-huf               level 3 with -T1: integer NPY arrays and PCM16 WAV files up to 16 MiB coded type\n"
 "                                first; several times faster to compress, sometimes larger: compare sizes\n"
+"      --wasm-check-shuffle      levels 1 and 3: verify a selected 8-byte WebAssembly shuffle against plain coding;\n"
+"                                an explicit --analysis or --codec-level takes precedence\n"
 "      --gpu                     macOS builds made with GPU=1: a GPU worker in levels 8, 9 and ultra (same output)\n"
 "      --x-tables=scaled|full|16..22   ultra model table size (full: up to 5.4 GiB, slightly smaller output)\n"
 "  --                            end of options\n"
@@ -328,7 +330,7 @@ static void help(void) {
 /* ---- options -------------------------------------------------------------------------------------------------- */
 enum { OP_COMPRESS, OP_DECOMPRESS, OP_TEST, OP_LIST };
 typedef struct {
-    int op, level, to_stdout, force, rm, stream, seg, threads, analysis, codec_level, native_leaf, typed_huf;
+    int op, level, to_stdout, force, rm, stream, seg, threads, analysis, codec_level, native_leaf, typed_huf, wasm_check_shuffle;
     double block_mib;
     const char *outpath, *range, *target, *calib, *memspec;
     int mem_from_env;
@@ -370,7 +372,7 @@ static int long_option(opts_t *o, int argc, char **argv, int *a) {
     const char *val = eq ? eq + 1 : NULL;
     static const char *const flag[] = {"fastest", "light", "balanced", "compact", "max", "ultra", "compress", "decompress",
         "stdout", "keep", "rm", "force", "test", "list", "quiet", "verbose", "help", "version", "native-leaf", "typed-huf",
-        "gpu", "stream", "fast", "best", "extreme", "uncompress", "to-stdout", "no-name", NULL};
+        "gpu", "stream", "fast", "best", "extreme", "uncompress", "to-stdout", "no-name", "wasm-check-shuffle", NULL};
     static const char *const valued[] = {"level", "output", "threads", "memlimit", "block-size", "analysis", "range",
         "codec-level", "target", "calib", "x-tables", "memory", NULL};
     int f = -1, v = -1;
@@ -400,6 +402,7 @@ static int long_option(opts_t *o, int argc, char **argv, int *a) {
             case 25: o->op = OP_DECOMPRESS; break;              /* gzip --uncompress */
             case 26: o->to_stdout = 1; break;                   /* gzip --to-stdout */
             case 27: break;                                     /* gzip --no-name: frames store no name or time */
+            case 28: o->wasm_check_shuffle = 1; break;
         }
         return 0;
     }
@@ -1143,6 +1146,8 @@ int main(int argc, char **argv) {
     kolmo_params_for_level(o.level, &o.P);
     o.P.threads = o.threads;
     if (o.analysis >= 0) o.P.transforms = o.analysis;
+    else if (o.wasm_check_shuffle && (o.level == 1 || o.level == 3) && !o.codec_level)
+        o.P.transforms |= KOLMO_T_WASM_SHUFFLE_CHECK;
     if (o.codec_level) o.P.level = o.codec_level;
     if (o.block_mib > 0) o.P.block = (uint32_t)(o.block_mib * 1048576);
     if (o.native_leaf && o.typed_huf) { usage_error("choose --native-leaf or --typed-huf, not both%s", ""); goto done; }
