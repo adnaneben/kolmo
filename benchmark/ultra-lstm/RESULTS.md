@@ -4,16 +4,15 @@ Handoff task 2 (`benchmark/waves/2026-11-25/overnight/CLAUDE-CODE-HANDOFF.md` on
 asks whether the Claude-owned Ultra model is worth implementing.
 
 **Answer: no, not in this form.** The archival gate rejects the candidate. On the sealed holdout the LSTM saves **4.8%** of bytes, which
-passes the byte gate (≤0.98×). On dev it saves 0.5%. The real problem is speed: the candidate costs 18× to 24× the CPU
-time of stock Ultra in each direction (indicative, see §5), and the gate allows ≥0.67× encode and ≥0.95× decode
-throughput. No size of this LSTM can close a gap that large. **These are indicative numbers.** The host was heavily
-oversubscribed (1-minute load 44–235), so speeds are CPU seconds from `/usr/bin/time -l` and not wall time. The byte
-counts are deterministic and exact. The load-gated 3-round timed run (`run.py`, §4) is still queued and will be added
-when the host is quiet.
+passes the byte gate (≤0.98×). On dev it saves 0.6%. The real problem is speed. In the timed quiet-window run (§5a:
+3 rounds, shuffled, one thread, load 2.3–8.5), the candidate runs at **0.030 MB/s** in each direction against
+0.93–1.06 MB/s for stock Ultra: **0.029–0.032× encode and 0.030× decode throughput**, and **32–34× the combined
+latency**. The gate asks for ≥0.67×, ≥0.95× and ≤1.50×. Peak RSS passes (0.85–1.01×). No size of this LSTM can close
+a gap that large. The byte counts are deterministic and exact, and all 36 timed round trips are SHA-256 verified.
 
 The holdout byte gain is the most useful finding. It suggests that an LSTM-class predictor pays off on text unlike
 model 4's tuning data (here Polish). A cost-reduced version (a quantised or fixed-point LSTM, NEON kernels, or an LSTM
-used only on blocks that a cheap probe admits) is a separate experiment. It would have to recover a factor of about 20 in speed.
+used only on blocks that a cheap probe admits) is a separate experiment. It would have to recover a factor of about 30 in speed.
 
 Nothing here changes the release candidate, the stable writer, any reader, or any default. The code is a research harness
 outside every build target. The candidate stream is a research container that no Kolmo reader accepts.
@@ -85,7 +84,48 @@ first harness run. Every setting was chosen on dev prefixes only (`dev-sweep.md`
   - ≤1.10× peak RSS in each phase;
   - ≤1.50× median combined latency.
 
+## 5a. Timed run (quiet window, 26 November 2026 04:47–05:29Z)
+
+The coordinator ran `run.py` with `config-quiet.json` inside one `$V/tools/timed.sh` hold. That is 36 cells:
+3 rounds × {dickens4m, reymont, tiny1} × {stock, control, candidate, zpaq}, shuffled with seed 20261125. The order is in
+`timed-run1-order.json`, the medians in `timed-run1-summary.json`, and the raw per-cell JSON in `$V/ultra-lstm/run1/cells/`. The 1-minute load was 2.3–8.5
+across all cells. The full `report.py` output, with every hash, is in `timed-run1.md`. Medians over 3 rounds; MB/s is
+10^6 input bytes per wall second, including process start and file I/O.
+
+| input | arm | stored B | enc MB/s | dec MB/s | enc / dec RSS MiB | enc / dec CPU s |
+|---|---|---:|---:|---:|---:|---:|
+| dev dickens4m | stock `-U -T 1` | 886,241 | 0.931 | 0.983 | 186.0 / 151.3 | 4.50 / 4.26 |
+| dev dickens4m | control | 886,193 | 1.065 | 0.982 | 155.1 / 151.1 | 3.93 / 4.27 |
+| dev dickens4m | **candidate** | **880,692** | **0.0301** | **0.0300** | 157.3 / 153.3 | 139.2 / 139.9 |
+| dev dickens4m | zpaq -m5 -t1 | 892,624 | 0.654 | 0.625 | 195.8 / 197.4 | 6.39 / 6.71 |
+| holdout reymont | stock `-U -T 1` | 874,420 | 1.062 | 1.012 | 262.4 / 229.8 | 6.24 / 6.54 |
+| holdout reymont | control | 874,372 | 1.101 | 1.013 | 235.9 / 229.5 | 6.01 / 6.54 |
+| holdout reymont | **candidate** | **832,051** | **0.0304** | **0.0304** | 238.5 / 232.1 | 218.1 / 217.7 |
+| holdout reymont | zpaq -m5 -t1 | 956,498 | 0.625 | 0.603 | 211.3 / 211.5 | 10.60 / 10.98 |
+
+Every cell's restored SHA-256 equals its input SHA-256. The frame hashes match the byte runs below (for example,
+candidate reymont `540493c3…529d` and candidate dickens4m `3df42aad…cea2`), so the encoder is deterministic across runs.
+
+**Startup (1-byte input, medians).** stock 3.5 / 2.4 ms encode / decode; control 3.1 / 2.4 ms; candidate 3.7 / 2.9 ms
+(of which 0.54 ms is in-process model and LSTM initialisation); zpaq 13.4 / 12.3 ms. Startup is not where the cost is.
+The candidate stores 0 bytes of model side data. Its container is 24 B, against 52 B of frame overhead for stock.
+
+**Gates, candidate against stock Ultra (timed).**
+
+| input | bytes (≤ 0.98) | enc thr (≥ 0.67) | dec thr (≥ 0.95) | enc RSS (≤ 1.10) | dec RSS (≤ 1.10) | combined latency (≤ 1.50) | verdict |
+|---|---:|---:|---:|---:|---:|---:|---|
+| dev dickens4m | 0.994 **fail** | 0.032 **fail** | 0.030 **fail** | 0.85 pass | 1.01 pass | 31.8 **fail** | **reject** |
+| holdout reymont | 0.952 pass | 0.029 **fail** | 0.030 **fail** | 0.91 pass | 1.01 pass | 34.1 **fail** | **reject** |
+
+**Isolating the LSTM (candidate against control, the same harness with the LSTM off):** 35–36× the encode time and
+33× the decode time, for −0.62% (dickens4m) and −4.84% (reymont) of bytes. The quiet-host ratios are worse than the
+indicative CPU ratios below (about 20× on dev1m). Even in CPU seconds the quiet ratio is about 31× (139.2 s against
+4.50 s on dickens4m). The likely cause is contention: on the loaded host, stock's CPU seconds were inflated more than
+the candidate's. That was not isolated, so treat the §5 ratios as optimistic for the candidate.
+
 ## 5. Results (indicative: one untimed `nice -n 15` pass on a loaded host, 25 November 2026 ~19:40–22:30Z)
+
+These numbers came first, and §5a supersedes their speeds. The byte counts are the same in both.
 
 Binaries (`frozen-SHA256SUMS`): `kolmo` built from main a1d39559 (`b67bbddb…`) and `lstm_h` (`b6b77104…`), compiled from
 `lstm_h.c` (`5009b468…`). zpaq 7.15 (`9a5c86a4…`). Speeds are CPU seconds (user + sys) because the 1-minute load was
@@ -135,11 +175,11 @@ to hold uniformly.
 | gate | dev1m | holdout | threshold |
 |---|---:|---:|---|
 | stored bytes | 0.994 **fail** (dickens4m: 0.9937 **fail**) | 0.9515 pass | ≤ 0.98 |
-| encode throughput (CPU) | 0.056 **fail** | — (timed run pending) | ≥ 0.67 |
-| decode throughput (CPU) | 0.042 **fail** | — (timed run pending) | ≥ 0.95 |
-| peak RSS, encode | 0.77 pass | — | ≤ 1.10 |
-| peak RSS, decode | 1.04 pass | — | ≤ 1.10 |
-| combined latency (CPU) | 20.2 **fail** | — | ≤ 1.50 |
+| encode throughput (CPU) | 0.056 **fail** | 0.029 **fail** (timed, §5a) | ≥ 0.67 |
+| decode throughput (CPU) | 0.042 **fail** | 0.030 **fail** (timed, §5a) | ≥ 0.95 |
+| peak RSS, encode | 0.77 pass | 0.91 pass (timed) | ≤ 1.10 |
+| peak RSS, decode | 1.04 pass | 1.01 pass (timed) | ≤ 1.10 |
+| combined latency (CPU) | 20.2 **fail** | 34.1 **fail** (timed) | ≤ 1.50 |
 
 The decode-throughput gate is missed by a factor of about 23. The holdout encode took the same per-byte time as dev
 (the LSTM's cost does not depend on content), so the holdout cannot change the speed verdict.
@@ -158,9 +198,10 @@ contract is a record and not a proposal for adoption.
 
 ## 7. Deviations and open items
 
-- **Timings pending: quiet window.** The planned 3-round timed run (shuffled, per-cell checkpoints) is registered in `$V/evidence/QUIET_WINDOW_QUEUE.txt` (`config-quiet.json`, about 90 min), and the coordinator runs it once round 3 ends. The host load never fell below
-  12. Its order and checkpoints are in `$V/ultra-lstm/run1/`. To resume it: `python3 run.py $V/ultra-lstm/config.json`.
-- The dev CPU and RSS numbers come from the 1 MiB prefix. The 4 MiB dev bytes are measured (§5); the 4 MiB timings are part of the queued run.
+- **Timed run: done (§5a).** The coordinator ran the 3-round timed run in the quiet window
+  (`config-quiet.json`, 04:47–05:29Z on 26 Nov, rc 0). It used `notimed.sh` inside one `timed.sh` hold for the whole
+  run, rather than one hold per cell. Cells and frames are in `$V/ultra-lstm/run1/`.
+- The tiny1 cells (a 1-byte input) measure startup only; their MB/s figures carry no information.
 - The candidate was tuned on dev only, in about 15 configurations (`dev-sweep.md`). Larger LSTMs gained more on dev, at
   2.5× the time per doubling of H.
 - A leaderboard claim (LTCB) would need enwik8/enwik9 and a decoder-inclusive size. Neither was attempted.
@@ -172,7 +213,8 @@ contract is a record and not a proposal for adoption.
 - `lstm_h.c`: the harness (it includes the production `cm.c`; build:
   `clang -O3 -mcpu=native -ffp-contract=off -Isrc benchmark/ultra-lstm/lstm_h.c build/libkolmoarch.a -o lstm_h -lpthread -lm`
   after `make build/libkolmoarch.a`).
-- `run.py`, `config.json`, `report.py`: the checkpointed, load-gated timed benchmark and its report.
+- `run.py`, `config.json`, `config-quiet.json`, `notimed.sh`, `report.py`: the checkpointed, load-gated timed benchmark and its report.
+- `timed-run1.md`, `timed-run1-summary.json`, `timed-run1-order.json`: the quiet-window run's report, medians and order.
 - `dev-sweep.md`, `raw-sweep1m.txt`: development tuning. `raw-indicative.txt`: the raw `time -l` output and hashes behind §5.
 - `WIRE-CONTRACT.md`: the opt-in model nibble 10 contract.
 - `inputs-SHA256SUMS`, `frozen-SHA256SUMS`: input and binary hashes.
