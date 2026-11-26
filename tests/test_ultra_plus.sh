@@ -25,4 +25,17 @@ if [ -n "${FAULT_KOLMO:-}" ]; then for f in "$@"; do
     echo "ok fault v$v $f"
   else echo "ok fault: compression failed as required $f"; fi
 done; fi
+# With FAULT_KOLMO, also: every graph leaf's CM trial is discarded after it ran (UPX may have won the trial and flagged
+# the block), so kept graphs hold only v12 leaves. The rule must still hold: a v12 frame decodes with the stock reader,
+# and a v13 frame (needed only by a top-level UPX block) is refused by it. A stale leaf flag would show as a v13 frame
+# the stock reader decodes.
+if [ -n "${FAULT_KOLMO:-}" ]; then for f in "$@"; do
+  KOLMO_FAULT_UPX_LEAF_LOSE=1 "$FAULT_KOLMO" --archive-max -T 1 -c "$f" > "$t/z" || { echo "FAIL leaf-lose compress $f"; fail=1; continue; }
+  v=$(od -An -tu1 -j4 -N1 "$t/z" | tr -d ' ')
+  "$FAULT_KOLMO" -d -c "$t/z" | cmp -s - "$f" || { echo "FAIL leaf-lose round trip $f"; fail=1; continue; }
+  if "$old" -d -c "$t/z" 2>/dev/null | cmp -s - "$f"; then sok=1; else sok=0; fi
+  if [ "$v" = 12 ] && [ $sok = 0 ]; then echo "FAIL leaf-lose v12 frame not stock-decodable $f"; fail=1; fi
+  if [ "$v" = 13 ] && [ $sok = 1 ]; then echo "FAIL leaf-lose stale v13 header $f"; fail=1; fi
+  echo "ok leaf-lose v$v $f"
+done; fi
 rm -rf "$t"; [ $fail = 0 ] && echo "ULTRA+ VERSION RULE PASSED" ; exit $fail
