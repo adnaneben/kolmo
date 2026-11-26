@@ -52,12 +52,14 @@ int kolmo_klzh_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
    already reads chunks of any size up to KHUF_BLOCK_MAX). */
 size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level);
 /* The same output as kolmo_klzh2_compress, on up to `threads` threads at levels 7-9 (the binary-tree match finder
-   split by hash bucket, klz.c ko_mt); the result never depends on threads. */
-size_t kolmo_klzh2_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads);
+   split by hash bucket, klz.c ko_mt); the result never depends on threads. nowarm: levels 7-9 skip the literal-floor
+   warm-ups (klz.c ko_parse; graph leaves), which can change the output. */
+size_t kolmo_klzh2_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int nowarm);
 /* the same output, elastic (review40 #7): the finder split for `threads`, `passes` helpers from the start and the others
    on the budget's tokens (algo/par.h) */
 struct kolmo_budget;
 size_t kolmo_klzh2_compress_el(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int passes,
-                               struct kolmo_budget *budget);
+                               struct kolmo_budget *budget, int nowarm);
 int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+
 #endif

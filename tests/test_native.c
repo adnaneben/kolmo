@@ -233,9 +233,19 @@ static void test_klzh2_fast(int big) {
     CHECK(klzhv_rt(a, n, 0, 1) + L / 2 < n, "klzh2 level 0: the match at offset 2^24 - 1 was not used");
     free(a);
 }
+/* KLZH2 levels 8-9 on a block where the literal-floor warm-ups run (over 256 KiB, half its bytes zero, so the 2-bit
+ * floor binds): the 2-bit warm-up records the finder's answers and the 1-bit one replays them. Position 0 has no
+ * match, so the first record and its replay are empty (the record's array is still NULL then: no copy may touch it) */
+static void test_klzh2_warmup_log(void) {
+    const size_t n = 320u << 10; uint8_t *in = malloc(n); uint32_t x = 12345;
+    if (!in) { CHECK(0, "klzh2 warm-up: no memory"); return; }
+    for (size_t i = 0; i < n; i++) { x = x * 1103515245u + 12345u; in[i] = i & 1 ? 0 : (uint8_t)(x >> 24); }
+    for (int lv = 8; lv <= 9; lv++) CHECK(klzhv_rt(in, n, lv, 1) < n, "klzh2 level %d: warm-up block does not shrink", lv);
+    free(in);
+}
 int main(int argc, char **argv) {
     int iters = argc > 1 ? atoi(argv[1]) : 1;
-    test_lengths(); test_hash(); test_klzh_edges(iters > 1); test_klzh2_format(iters > 1); test_klzh2_fast(iters > 1);
+    test_lengths(); test_hash(); test_klzh_edges(iters > 1); test_klzh2_format(iters > 1); test_klzh2_fast(iters > 1); test_klzh2_warmup_log();
     static const size_t sizes[] = {0, 1, 2, 3, 4, 5, 7, 8, 15, 16, 17, 31, 64, 100, 255, 1000, 4095, 65536, 131071, 131072, 131073, 300000};
     for (int it = 0; it < iters; it++)
         for (int k = 0; k < (int)(sizeof C / sizeof *C); k++)

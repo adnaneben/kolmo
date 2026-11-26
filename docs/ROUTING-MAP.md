@@ -514,6 +514,19 @@ specialists, JPEG/deflate recompressors. Where the Mac measured one, the table c
 Sources: `benchmark/rc3/gpu/RESULTS.md`, `research/CODECS.md` (GPU rows), branch `claude/dazzling-maxwell-p8y4u0`
 `research/FINDINGS.md` §11.
 
+## Encoder gates (acceptance standard, docs/ACCEPTANCE.md section 4)
+
+Gates that steer encoder-only trials by cheap features. Each one was found on the dev split, checked on the
+held-out split, and explained. Bytes never depend on the thread count.
+
+| gate | where | cheap feature | why it holds | evidence |
+|---|---|---|---|---|
+| KLZH2 literal-floor warm-ups (#148) run only on whole blocks over 256 KiB | `algo/klz.c` `ko_parse`; the graph sets `codec_ctx.no_warm` on its leaves | block size, graph leaf or not | The 2-bit floor pays when a byte that is cheap in the raw statistics is mostly matched later. That shows on whole blocks (kennedy.xls 1 MB -47.5%, ptt5 513 KB -2.4% at -7). On graph leaves and small blocks the warm-ups never changed a kept frame, yet cost up to 2.4x encode time (population-i64, owid-f64). | PR #121; 345 files at levels 5-7, 2,017 warm-ups, 22 won; impact holdout split: no frame changed |
+| ... and only where the 2-bit floor binds on the starting statistics | same | literal prices from `ko_init` (a byte at about a quarter or more of the first 128 KiB) | Every win had the floor binding from the start. | same |
+| ... and not on a block that starts with a tar header | same | `ustar` at offset 257 | A tar block's first 256 KiB is headers and member starts. No tar block won (Canterbury 1.003-1.010, mozilla 0.996-1.008, against 0.67-0.98 for the winners). | same |
+| relaxed float-trial widths (#64) skipped on small inputs where a typed graph already saves a fifth | `plan/planner.c` `make_plan`, inputs under 256 KiB (`kg_float_trial_w`, relax) | input size, the chosen plan and its score | Integer series pass the float trial's exponent test but are coded by the integer graph; the large path keeps the relaxed widths, which win on fp16 weights and on raw video (holdout video__foreman). | PR #121; R15 float class and video__foreman byte-identical; population-i64 -3..-7 back to +1-5% over v0.0.2 |
+| small-input x86 trial (#82) skipped where a typed graph already saves a fifth | `plan/planner.c` `make_plan`, inputs under 256 KiB | the chosen plan and its score | Integer series reach the E8/E9 opcode density. Executables are never in that state. | PR #121; R18's 150 tools byte-identical |
+
 ## Evidence index
 
 | evidence | what |

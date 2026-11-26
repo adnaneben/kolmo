@@ -37,6 +37,7 @@ typedef struct { int native_leaf;        /* encoder: graph integer residual leav
                  int deny_cm;            /* decoder: context-mixing codecs (7, 17, 25) are refused: the leaves of a graph block in a
                                           * frame whose header mode is not ultra (only ultra level 2 writes such leaves) */
                  int threads_max;        /* encoder: the call's threads (the elastic match finders split for them) */
+                 int no_warm;            /* encoder: KLZH2 levels 7-9 without the literal-floor warm-ups (set by the graph around its leaves) */
                  struct kolmo_budget *budget;   /* encoder: the call's elastic budget (algo/par.h), or NULL */ } codec_ctx;
 
 /* One block codec. Missing functions keep the behaviour of the rc2 dispatch: bound NULL -> n, compress NULL -> 0
