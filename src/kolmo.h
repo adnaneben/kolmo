@@ -78,7 +78,7 @@ typedef struct {
 /* Ultra+ (opt-in, mode ultra only; CLI --archive-max): context-mixing streams also try the UPX engine (codec 7 model nibble 11) and keep the
  * smaller. Frames that hold such a stream are version 13; readers before this change refuse them. Very slow both ways
  * (about 0.01-0.03 MB/s) and about 0.5-1.5 GB of memory per block: cold storage. FORMAT.md §25. */
-#define KOLMO_T_ULTRA_PLUS 128
+#define KOLMO_T_ULTRA_PLUS 256   /* 128 is #105's (wasm check); #57, 26 Nov */
 
 #define KOLMO_ERR_CORRUPT   (-1)
 #define KOLMO_ERR_CHECKSUM  (-2)

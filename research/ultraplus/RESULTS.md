@@ -50,7 +50,7 @@ Reading:
 | first 200,000 B | 51,151 | 49,419 (−3.4%, bare stream at 7c14df3a) | 47,064 | 46,745 |
 | first 1,000,000 B | 218,145 | 211,692 (−3.0%, harness, 38 contexts) | — | 198,643 |
 
-## Leader points (Codex's runs, from fleet4/CODEX_REASSESS.md item 8)
+## Leader points (as reported in fleet4/CODEX_REASSESS.md item 8; input and archive hashes, command and restore receipt requested from Codex on #57, so they are not yet verified here)
 
 | input | -U | Ultra+ (up3) | paq8px v217 -8L | gap |
 |---|---:|---:|---:|---:|

@@ -15,4 +15,14 @@ for f in "$@"; do
   if [ "$v" = 13 ] && [ $oldok = 1 ]; then echo "FAIL v13 frame that a v12 reader decodes: $f"; fail=1; fi
   echo "ok v$v $(wc -c < "$t/z" | tr -d ' ') $f"
 done
+# FAULT_KOLMO (optional): a build with -DKOLMO_FAULT_INJECT. With the graph check's buffer failing, each file must either
+# fail to compress or give a frame the stock reader decodes (never a v13 header the frame does not need).
+if [ -n "${FAULT_KOLMO:-}" ]; then for f in "$@"; do
+  if KOLMO_FAULT_UPX_CHK=1 "$FAULT_KOLMO" --archive-max -T 1 -c "$f" > "$t/z" 2>/dev/null; then
+    v=$(od -An -tu1 -j4 -N1 "$t/z" | tr -d ' ')
+    if [ "$v" = 13 ] && ! "$new" -d -c "$t/z" | cmp -s - "$f"; then echo "FAIL fault: bad v13 frame $f"; fail=1; fi
+    if [ "$v" = 12 ] && ! "$old" -d -c "$t/z" | cmp -s - "$f"; then echo "FAIL fault: v12 frame unreadable $f"; fail=1; fi
+    echo "ok fault v$v $f"
+  else echo "ok fault: compression failed as required $f"; fi
+done; fi
 rm -rf "$t"; [ $fail = 0 ] && echo "ULTRA+ VERSION RULE PASSED" ; exit $fail

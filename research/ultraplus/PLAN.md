@@ -62,10 +62,12 @@ estimates here will be replaced by measurements as each step lands.
 |---|---|
 | 1. #88's sampled pre-trial gate | done (`upx_gate`: two 16 KiB windows). Its miss rate is being measured on the dev cuts against `KOLMO_UPX_NOGATE=1` |
 | 2. memory: admission before allocation, governor | done: decode refuses a stream over the declared working set; block jobs reserve `upx_need`. Compact tables (#5) to cut RSS: open |
-| 3. checked allocations, declining to plain CM | done |
+| 3. checked allocations, declining to plain CM | done; the graph v13 check's own buffer now fails the call (KOLMO_ERR_ALLOC) instead of guessing v13, and a v13 verdict must decode under v13 rules (else KOLMO_ERR_CODEC); covered by a fault-injection build in tests/test_ultra_plus.sh |
 | 4. per-block stored-raw fallback | already in place: a block whose coded size reaches its raw size is stored (`blocks.c`), so v13 frames keep `kolmo_bound` |
 | 5. #63 NEON | open: measure once #63 is on main |
 | 6. explicit `--x-tables` / `-M` cap frames | open: rerun on #93 + #100/#104 |
 | 7. block layout (16 MiB target, no small tails) | open: a stacked ingredient |
 | 8. leader points | in RESULTS.md (paq8px -8L enwik8[0:256K] 54,648 B; full enwik8 −13.8% vs ultra) |
 | 9. stacking: #110 FASTQ cuts keep codec 16; #102 never under archive-max | #102 is not on main; to be guarded when it lands |
+
+**Transform bit:** `KOLMO_T_ULTRA_PLUS` moved from 128 to **256** (Codex keeps 128 for #105; #57, 26 Nov). The maintainer decides.

@@ -660,7 +660,15 @@ coded:;
                  * version 13 only if a version-12 reader (upx_allow 0 on this thread) cannot decode it */
                 codec_ctx d; memset(&d, 0, sizeof d); d.threads = 1; d.allow_nplane = 1; d.allow_f2 = 1;
                 uint8_t *chk = malloc(len ? len : 1);
-                v13 = !chk || kg_decode(&d, sl, cl, chk, len) != 0 || memcmp(chk, raw, len) != 0;
+#ifdef KOLMO_FAULT_INJECT   /* tests only (tests/test_ultra_plus.sh): this allocation fails */
+                if (getenv("KOLMO_FAULT_UPX_CHK")) { free(chk); chk = NULL; }
+#endif
+                if (!chk) { atomic_store(&J->err, KOLMO_ERR_ALLOC); break; }   /* no guess: the call fails */
+                v13 = kg_decode(&d, sl, cl, chk, len) != 0 || memcmp(chk, raw, len) != 0;
+                if (v13) {   /* it must then decode under version-13 rules; anything else is an error, never a v13 guess */
+                    upx_allow = 1; int bad = kg_decode(&d, sl, cl, chk, len) != 0 || memcmp(chk, raw, len) != 0; upx_allow = 0;
+                    if (bad) { free(chk); atomic_store(&J->err, KOLMO_ERR_CODEC); break; }
+                }
                 free(chk);
             }
             if (v13) atomic_store(&J->used_upx, 1);
