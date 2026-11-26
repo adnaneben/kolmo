@@ -45,7 +45,8 @@ TOOLS = [  # tool, colour, marker, legend name
     ("zpaq", "#e34948", "o", "zpaq"),
 ]
 TOOL_STYLE = {t: (c, m, n) for t, c, m, n in TOOLS}
-SNAP_MARKER = {"A": ("o", "white"), "B": ("s", INK), "C": ("^", "#2a78d6")}
+SNAP_MARKER = {"A": ("o", "white"), "B": ("s", INK), "RC": ("D", INK), "C": ("^", "#2a78d6")}
+SNAP_ORDER = ["A", "B", "RC", "C"]
 LEVEL_ORDER = {str(n): n for n in range(1, 23)}
 LEVEL_ORDER.update({"ultra": 100, "9e": 9.5, "-": 0})
 
@@ -140,7 +141,7 @@ def draw(pts, title, subtitle, path_base):
 
     # Kolmo: one curve per snapshot, and a dashed connector per level across snapshots.
     kp = [p for p in pts if p["tool"] == "kolmo"]
-    snaps = sorted({p["snapshot"] for p in kp})
+    snaps = sorted({p["snapshot"] for p in kp}, key=lambda s: (SNAP_ORDER.index(s) if s in SNAP_ORDER else 99, s))
     by_level = defaultdict(dict)
     for p in kp:
         by_level[p["level"]][p["snapshot"]] = p
