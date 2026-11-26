@@ -1,0 +1,240 @@
+{
+ "meta": {
+  "encoder": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/evidence/startup-floors/bin/kolmo-a1d39559",
+  "encoder_sha256": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+  "reader": "/opt/homebrew/Cellar/kolmo/0.0.2/bin/kolmo",
+  "reader_sha256": "5c116ba0adb839757a3bfbcd53c334df354e804ab5fd9b2281ee1163e26221a5",
+  "seed": 20261125,
+  "rounds": {
+   "dev": 5,
+   "holdout": 11,
+   "holdout2": 11,
+   "reference": 7
+  },
+  "start": "2026-11-26T04:28:16Z",
+  "uname": [
+   "Darwin",
+   "Adnans-MacBook-Pro.local",
+   "27.2.0",
+   "Darwin Kernel Version 27.2.0: Wed Oct 14 23:48:06 PDT 2026; root:xnu-13432.41.4~25/RELEASE_ARM64_T8142",
+   "arm64"
+  ],
+  "load_start": [
+   3.47998046875,
+   3.7763671875,
+   3.80859375
+  ],
+  "max_load": 12.0,
+  "holdouts": [
+   "holdout2",
+   "holdout"
+  ],
+  "files": {
+   "dev": [
+    "readline-info",
+    "glib-gobject",
+    "cmake-schema",
+    "nss-chktest",
+    "xorg-fsproto",
+    "libpng-fixitxt",
+    "brotli-readme"
+   ],
+   "holdout2": [
+    "cairo-header",
+    "giflib-news",
+    "fontconfig-mo",
+    "libusb-archive",
+    "libaec-dylib",
+    "blosc2-header",
+    "lzo-doc",
+    "tectonic-readme",
+    "icu-tu-dylib",
+    "x11-compose",
+    "graphite2-fonttest"
+   ],
+   "holdout": [
+    "gettext-libtextstyle",
+    "libunistring-info",
+    "openssl-news",
+    "lrzip-readme",
+    "jsonc-readme",
+    "isl-aff",
+    "openjpeg-html",
+    "harfbuzz-hbinfo",
+    "nettle-dylib",
+    "lcms2-dylib",
+    "zstd-pzstd"
+   ]
+  },
+  "arms": {
+   "dev": [
+    "stock",
+    "B",
+    "C"
+   ],
+   "holdout2": [
+    "stock",
+    "stock-dup",
+    "B"
+   ],
+   "holdout": [
+    "stock",
+    "stock-dup",
+    "B"
+   ]
+  },
+  "launch_load": [
+   3.47998046875,
+   3.47998046875
+  ],
+  "calibrate_load_before": 3.47998046875,
+  "calibrate_s": 26.99233317375183,
+  "calibrate_load_after": 3.08837890625,
+  "dev_met": {
+   "stock": 24,
+   "B": 26,
+   "C": 13
+  },
+  "chosen": "B",
+  "dev_improved": true,
+  "end": "2026-11-26T04:47:10Z",
+  "load_end": [
+   2.6240234375,
+   3.5576171875,
+   3.94970703125
+  ]
+ },
+ "launch": {
+  "Pe_ms": 1.765375,
+  "Pd_ms": 1.699833
+ },
+ "dev": {
+  "arms": {
+   "stock": {
+    "met": 24,
+    "bytes_on_met": 883406
+   },
+   "B": {
+    "met": 26,
+    "bytes_on_met": 1054221
+   },
+   "C": {
+    "met": 13,
+    "bytes_on_met": 533711
+   }
+  },
+  "integrity": [],
+  "coverage": []
+ },
+ "holdout2": {
+  "candidate": "B",
+  "arms": {
+   "stock": {
+    "met": 30,
+    "bytes_on_met": 884321
+   },
+   "stock-dup": {
+    "met": 30,
+    "bytes_on_met": 884321
+   },
+   "B": {
+    "met": 34,
+    "bytes_on_met": 1038625
+   }
+  },
+  "gates": {
+   "G1_attainment": {
+    "stock_met": 30,
+    "dup_met": 30,
+    "cand_met": 34,
+    "cases": 66,
+    "gain": 4,
+    "stock_dup_disagreements": 0,
+    "pass": true
+   },
+   "G2_no_new_misses": {
+    "cases": [],
+    "pass": true
+   },
+   "G3_objective": {
+    "both_met": 30,
+    "stock_bytes": 884321,
+    "cand_bytes": 884321,
+    "ratio": 1.0,
+    "size_spec_identical": true,
+    "pass": true
+   },
+   "G4_selection_cost": {
+    "geomean_paired_enc_ratio": 0.6688116481394835,
+    "max_paired_enc_rss_ratio": 1.0409057706355003,
+    "pass": true
+   },
+   "G5_integrity": {
+    "problems": [],
+    "pass": true
+   },
+   "qualifies": true,
+   "coverage": {
+    "problems": [],
+    "pass": true
+   },
+   "verdict": "qualifies"
+  }
+ },
+ "holdout": {
+  "candidate": "B",
+  "arms": {
+   "stock": {
+    "met": 37,
+    "bytes_on_met": 1809203
+   },
+   "stock-dup": {
+    "met": 37,
+    "bytes_on_met": 1809203
+   },
+   "B": {
+    "met": 42,
+    "bytes_on_met": 2328443
+   }
+  },
+  "gates": {
+   "G1_attainment": {
+    "stock_met": 37,
+    "dup_met": 37,
+    "cand_met": 42,
+    "cases": 66,
+    "gain": 5,
+    "stock_dup_disagreements": 0,
+    "pass": true
+   },
+   "G2_no_new_misses": {
+    "cases": [],
+    "pass": true
+   },
+   "G3_objective": {
+    "both_met": 37,
+    "stock_bytes": 1809203,
+    "cand_bytes": 1811912,
+    "ratio": 1.0014973444107709,
+    "size_spec_identical": true,
+    "pass": true
+   },
+   "G4_selection_cost": {
+    "geomean_paired_enc_ratio": 0.6681038374951116,
+    "max_paired_enc_rss_ratio": 1.0023640661938533,
+    "pass": true
+   },
+   "G5_integrity": {
+    "problems": [],
+    "pass": true
+   },
+   "qualifies": true,
+   "coverage": {
+    "problems": [],
+    "pass": true
+   },
+   "verdict": "qualifies"
+  }
+ },
+ "rows_discarded_for_load": 0
+}

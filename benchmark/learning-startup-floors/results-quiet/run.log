@@ -1,0 +1,235 @@
+kolmo: calibrating 9 settings x 6 classes on one thread (about a minute)...
+kolmo: wrote calibration table to $V/evidence/startup-floors/quiet-1/calibrate-dev.tab
+kolmo-calibration 1
+# one thread; MB/s = 10^6 bytes per second; data: text files, table built-in, log built-in, json files, numeric files, binary files
+# setting class encode_MBps decode_MBps encode_setup_ms decode_setup_ms
+speed text 993.9 5533.8 0.013 0.001
+speed table 780.2 3989.1 0.003 0.000
+speed log 1277.9 5881.4 0.012 0.000
+speed json 1491.7 13052.4 0.002 0.000
+speed numeric 497.0 11762.7 0.004 0.001
+speed binary 1111.9 6018.4 0.072 0.000
+balanced-n text 431.1 2178.2 0.000 0.010
+balanced-n table 284.6 1650.2 0.000 0.002
+balanced-n log 516.0 2797.3 0.000 0.009
+balanced-n json 1631.6 4350.8 0.010 0.004
+balanced-n numeric 814.4 2786.0 0.019 0.005
+balanced-n binary 364.6 1771.8 0.000 0.004
+balanced text 112.3 2178.2 0.000 0.010
+balanced table 337.6 1369.4 0.838 0.010
+balanced log 401.0 1985.9 0.417 0.004
+balanced json 102.2 4350.8 0.000 0.004
+balanced numeric 153.0 2786.0 0.712 0.005
+balanced binary 189.6 1579.8 1.525 0.001
+eco text 9.0 1431.8 1.771 0.000
+eco table 26.8 1349.3 1.964 0.007
+eco log 12.6 2184.5 3.702 0.005
+eco json 10.8 4746.4 0.000 0.003
+eco numeric 17.5 2714.6 0.785 0.004
+eco binary 8.1 1606.6 1.378 0.003
+hc text 4.7 1505.5 1.902 0.000
+hc table 9.5 1398.6 20.068 0.009
+hc log 5.7 2216.2 6.515 0.006
+hc json 1.6 5801.1 0.000 0.005
+hc numeric 4.1 2786.0 0.000 0.006
+hc binary 4.1 1528.9 0.000 0.006
+ratio-l1 text 29.2 63.1 0.000 0.053
+ratio-l1 table 16.1 126.1 0.000 0.000
+ratio-l1 log 11.4 100.9 0.887 0.000
+ratio-l1 json 67.7 360.1 0.105 0.101
+ratio-l1 numeric 17.0 784.2 0.954 0.257
+ratio-l1 binary 7.6 242.0 0.000 1.378
+ratio text 29.1 61.1 0.000 0.012
+ratio table 13.0 392.1 1.905 0.024
+ratio log 3.2 99.4 0.000 0.000
+ratio json 68.0 362.6 0.104 0.101
+ratio numeric 12.4 331.9 1.581 0.044
+ratio binary 8.8 144.3 3.742 0.034
+x-l1 text 0.6 1.4 0.000 4.137
+x-l1 table 0.6 1.4 0.000 0.000
+x-l1 log 0.6 1.4 91.416 0.367
+x-l1 json 1.7 1.5 1.687 1.548
+x-l1 numeric 1.6 1.3 3.033 0.257
+x-l1 binary 1.4 1.3 6.942 1.390
+x text 0.6 1.1 0.000 0.488
+x table 0.5 10.7 0.000 1.880
+x log 0.5 1.1 95.358 0.000
+x json 1.2 1.2 0.342 0.503
+x numeric 1.3 1.3 1.889 0.000
+x binary 1.2 1.3 4.531 0.747
+dev round 0 attempt 1 done 07:29:20 load 3.1->2.6
+dev round 1 attempt 1 done 07:29:56 load 2.6->2.5
+dev round 2 attempt 1 done 07:30:33 load 2.5->2.3
+dev round 3 attempt 1 done 07:31:09 load 2.3->2.3
+dev round 4 attempt 1 done 07:31:46 load 2.3->2.4
+dev round 5 attempt 1 done 07:32:22 load 2.4->2.2
+development met: {'stock': 24, 'B': 26, 'C': 13} -> holdout candidate B (improved)
+holdout2 round 0 attempt 1 done 07:32:53 load 2.2->2.3
+holdout2 round 1 attempt 1 done 07:33:23 load 2.3->2.4
+holdout2 round 2 attempt 1 done 07:33:53 load 2.4->2.7
+holdout2 round 3 attempt 1 done 07:34:24 load 2.7->2.9
+holdout2 round 4 attempt 1 done 07:34:55 load 2.9->3.2
+holdout2 round 5 attempt 1 done 07:35:25 load 3.2->3.0
+holdout2 round 6 attempt 1 done 07:35:56 load 3.0->3.1
+holdout2 round 7 attempt 1 done 07:36:27 load 3.1->3.8
+holdout2 round 8 attempt 1 done 07:37:00 load 3.8->8.9
+holdout2 round 9 attempt 1 done 07:37:34 load 8.9->8.0
+holdout2 round 10 attempt 1 done 07:38:16 load 8.0->11.5
+holdout2 round 11 attempt 1 done 07:38:54 load 11.5->11.5
+holdout round 0 attempt 1 done 07:39:37 load 11.5->7.8
+holdout round 1 attempt 1 done 07:40:20 load 7.8->6.4
+holdout round 2 attempt 1 done 07:41:01 load 6.4->4.2
+holdout round 3 attempt 1 done 07:41:41 load 4.2->3.2
+holdout round 4 attempt 1 done 07:42:22 load 3.2->3.1
+holdout round 5 attempt 1 done 07:43:03 load 3.1->2.7
+holdout round 6 attempt 1 done 07:43:44 load 2.7->2.7
+holdout round 7 attempt 1 done 07:44:25 load 2.7->2.8
+holdout round 8 attempt 1 done 07:45:07 load 2.8->2.8
+holdout round 9 attempt 1 done 07:45:48 load 2.8->3.0
+holdout round 10 attempt 1 done 07:46:29 load 3.0->2.8
+holdout round 11 attempt 1 done 07:47:10 load 2.8->2.6
+{
+ "launch": {
+  "Pe_ms": 1.765375,
+  "Pd_ms": 1.699833
+ },
+ "dev": {
+  "arms": {
+   "stock": {
+    "met": 24,
+    "bytes_on_met": 883406
+   },
+   "B": {
+    "met": 26,
+    "bytes_on_met": 1054221
+   },
+   "C": {
+    "met": 13,
+    "bytes_on_met": 533711
+   }
+  },
+  "integrity": [],
+  "coverage": []
+ },
+ "holdout2": {
+  "candidate": "B",
+  "arms": {
+   "stock": {
+    "met": 30,
+    "bytes_on_met": 884321
+   },
+   "stock-dup": {
+    "met": 30,
+    "bytes_on_met": 884321
+   },
+   "B": {
+    "met": 34,
+    "bytes_on_met": 1038625
+   }
+  },
+  "gates": {
+   "G1_attainment": {
+    "stock_met": 30,
+    "dup_met": 30,
+    "cand_met": 34,
+    "cases": 66,
+    "gain": 4,
+    "stock_dup_disagreements": 0,
+    "pass": true
+   },
+   "G2_no_new_misses": {
+    "cases": [],
+    "pass": true
+   },
+   "G3_objective": {
+    "both_met": 30,
+    "stock_bytes": 884321,
+    "cand_bytes": 884321,
+    "ratio": 1.0,
+    "size_spec_identical": true,
+    "pass": true
+   },
+   "G4_selection_cost": {
+    "geomean_paired_enc_ratio": 0.6688116481394835,
+    "max_paired_enc_rss_ratio": 1.0409057706355003,
+    "pass": true
+   },
+   "G5_integrity": {
+    "problems": [],
+    "pass": true
+   },
+   "qualifies": true,
+   "coverage": {
+    "problems": [],
+    "pass": true
+   },
+   "verdict": "qualifies"
+  }
+ },
+ "holdout": {
+  "candidate": "B",
+  "arms": {
+   "stock": {
+    "met": 37,
+    "bytes_on_met": 1809203
+   },
+   "stock-dup": {
+    "met": 37,
+    "bytes_on_met": 1809203
+   },
+   "B": {
+    "met": 42,
+    "bytes_on_met": 2328443
+   }
+  },
+  "gates": {
+   "G1_attainment": {
+    "stock_met": 37,
+    "dup_met": 37,
+    "cand_met": 42,
+    "cases": 66,
+    "gain": 5,
+    "stock_dup_disagreements": 0,
+    "pass": true
+   },
+   "G2_no_new_misses": {
+    "cases": [],
+    "pass": true
+   },
+   "G3_objective": {
+    "both_met": 37,
+    "stock_bytes": 1809203,
+    "cand_bytes": 1811912,
+    "ratio": 1.0014973444107709,
+    "size_spec_identical": true,
+    "pass": true
+   },
+   "G4_selection_cost": {
+    "geomean_paired_enc_ratio": 0.6681038374951116,
+    "max_paired_enc_rss_ratio": 1.0023640661938533,
+    "pass": true
+   },
+   "G5_integrity": {
+    "problems": [],
+    "pass": true
+   },
+   "qualifies": true,
+   "coverage": {
+    "problems": [],
+    "pass": true
+   },
+   "verdict": "qualifies"
+  }
+ },
+ "rows_discarded_for_load": 0
+}
+  File "<string>", line 1
+    import json;print('B':'B-launch.tab'[json.load(open('$V/evidence/startup-floors/quiet-1/meta.json'))['chosen']])
+                         ^
+SyntaxError: invalid syntax
+  File "<string>", line 1
+    import json;print('C':'C-host-launch.tab'[json.load(open('$V/evidence/startup-floors/quiet-1/meta.json'))['chosen']])
+                         ^
+SyntaxError: invalid syntax
+usage: run.py [-h] {measure,score,reference} ...
+run.py: error: unrecognized arguments: $V/evidence/startup-floors/quiet-1/
