@@ -171,7 +171,6 @@ fixes change.
 
 Encoder only. Every frame keeps version 12, and 0.0.1 and 0.0.2 decode it. Measured with the new
 `benchmark/small` (six data kinds, items of 64 B to 64 KiB, against zstd, Brotli and LZ4; `benchmark/small/RESULTS.md`).
-Per-call timings are pending a quiet machine.
 
 - **The empty input is a 32-byte frame**: the header with nblocks 0, as FORMAT.md §4 already specified. It used to be
   52 bytes, with one stored empty block. 0.0.1 and 0.0.2 decode it.
@@ -181,12 +180,13 @@ Per-call timings are pending a quiet machine.
   - Level 8 is 0.8-16% smaller on such items, up to 33% on one kind (CSV rows).
   - Level 9 is 5% smaller at 4 KiB and 1.4% at 16 KiB.
   - No setting is larger. Where KLZMA is kept, decoding skips QLFC's model set-up.
-  - Compression runs both coders on these blocks.
+  - Compression runs both coders on these blocks: 1.3-2.1x slower to compress, and 1.3-6.7x faster to decode.
 - **Hash tables sized to the block** at levels 4-7 and in KLZH2's fast parse (levels 1-2 and the planner's size probe).
-  They used to take 1-17 MiB per call whatever the input; now 0.2-0.6 MiB at 4 KiB and below. Blocks above 2^(hlog-3)
+  They used to take 1-17 MiB per call whatever the input; now 0.2-0.6 MiB at 4 KiB and below. Levels 4-7 compress
+  3-7x faster at 64 B and 1.2-1.6x faster at 1 KiB. Blocks above 2^(hlog-3)
   bytes are unchanged, and smaller ones change by at most 0.01%.
 - **The planner counts delimited fields faster.** A line without quotes or brackets is counted in one vectorised pass,
-  with the same counts, so the output is unchanged.
+  with the same counts, so the output is unchanged. Level 3 compresses 1.3x faster at 4 KiB.
 - `benchmark/small`: the harness (`smallbench.c`, `run.sh`, `compare.sh`, `summarize.py`), with sizes, per-call time,
   per-call heap and round trips. `docs/proposals/small-inputs.md`: the compact frame (`CZM1`) and the small-block
   entropy stage, with measured gains and proposed identifiers, for the owner. The size ledger is refreshed: the empty
