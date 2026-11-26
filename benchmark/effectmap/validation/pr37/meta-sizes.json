@@ -1,0 +1,60 @@
+{
+ "cmd": [
+  "effectmap.py",
+  "run",
+  "--out",
+  "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/effectmap/pr37",
+  "--a",
+  "main=/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/effectmap/bins/kolmo-main",
+  "--b",
+  "pr37=/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/effectmap/bins/kolmo-pr37",
+  "--a-impact",
+  "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/effectmap/bins/kolmo-impact-main",
+  "--b-impact",
+  "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/effectmap/bins/kolmo-impact-pr37",
+  "--levels",
+  "5,6,7",
+  "--threads",
+  "1,10",
+  "--partners",
+  "klzma,bwt,stack-klzma,stack-bwt,notf,tf-none"
+ ],
+ "utc": "2026-11-26T08:45:27Z",
+ "corpus": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/impact/corpus",
+ "arms": {
+  "A": {
+   "binary": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/effectmap/bins/kolmo-main",
+   "sha256": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+   "env": {}
+  },
+  "B": {
+   "binary": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/effectmap/bins/kolmo-pr37",
+   "sha256": "74110accc6d154301bcd1b6bbc4c8fad00a8ed9a0e5437ad3afc66cefaa160f1",
+   "env": {}
+  },
+  "A2": {
+   "binary": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/effectmap/bins/kolmo-main",
+   "sha256": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+   "env": {}
+  }
+ },
+ "names": {
+  "A": "main",
+  "B": "pr37"
+ },
+ "levels": [
+  "5",
+  "6",
+  "7"
+ ],
+ "threads": [
+  1,
+  10
+ ],
+ "stack": {
+  "a": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/effectmap/bins/kolmo-impact-main",
+  "b": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/effectmap/bins/kolmo-impact-pr37",
+  "b_env": {},
+  "partners": "klzma,bwt,stack-klzma,stack-bwt,notf,tf-none"
+ }
+}

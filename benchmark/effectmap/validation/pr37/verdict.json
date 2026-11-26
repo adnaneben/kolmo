@@ -1,0 +1,155 @@
+{
+ "verdict": "ROUTE (passes on some conditions only: gate it)",
+ "basis": "instr",
+ "tiers": {
+  "middle": "mixed: 49 of 147 cells pass"
+ },
+ "violations": [],
+ "provisional": [
+  "decode slower at -6: container S2 T1 (-10.769% instructions, one round)",
+  "RSS 1.31x (median file 1.31x, n=1) at -6: container S2 T1",
+  "RSS 1.34x (median file 1.34x, n=1) at -6: container S2 T10",
+  "RSS 1.18x (median file 1.00x, n=3) at -6: log S2 T10",
+  "RSS 1.53x (median file 1.43x, n=3) at -7: container S1 T1",
+  "RSS 1.18x (median file 1.18x, n=1) at -7: container S2 T10",
+  "RSS 1.14x (median file 1.13x, n=2) at -7: img16 S2 T10",
+  "RSS 1.17x (median file 1.14x, n=3) at -7: log S2 T10",
+  "RSS 1.21x (median file 1.00x, n=3) at -7: tar S2 T10",
+  "RSS 1.48x (median file 1.00x, n=6) at -7: tsv S1 T1"
+ ],
+ "removed_inversions": [
+  [
+   "canterbury",
+   "-7>-6",
+   "tar",
+   "S2",
+   "+1.64%"
+  ],
+  [
+   "energy-130col-16k@16k",
+   "-6>-5",
+   "csv",
+   "S1",
+   "+0.70%"
+  ],
+  [
+   "foreman@1024",
+   "-6>-5",
+   "video",
+   "S0",
+   "+2.30%"
+  ],
+  [
+   "gaia-128k@16k",
+   "-6>-5",
+   "csv",
+   "S1",
+   "+2.23%"
+  ],
+  [
+   "gpt2-f32@1024",
+   "-6>-5",
+   "weights",
+   "S0",
+   "+3.43%"
+  ],
+  [
+   "gpt2-f32@3072",
+   "-6>-5",
+   "weights",
+   "S0",
+   "+2.16%"
+  ],
+  [
+   "hubble@1024",
+   "-6>-5",
+   "img8",
+   "S0",
+   "+4.74%"
+  ],
+  [
+   "ld30-128k@16k",
+   "-7>-6",
+   "text",
+   "S1",
+   "+0.53%"
+  ],
+  [
+   "mr",
+   "-7>-6",
+   "img16",
+   "S2",
+   "+1.28%"
+  ],
+  [
+   "reymont-128k@16k",
+   "-7>-6",
+   "text",
+   "S1",
+   "+0.55%"
+  ],
+  [
+   "srr835775@1024",
+   "-6>-5",
+   "genomics",
+   "S0",
+   "+3.88%"
+  ],
+  [
+   "x-ray@1024",
+   "-6>-5",
+   "img16",
+   "S0",
+   "+3.38%"
+  ]
+ ],
+ "added_inversions": [],
+ "gain_kinds": [
+  "container",
+  "genomics",
+  "img16",
+  "img8",
+  "json",
+  "weights",
+  "xml"
+ ],
+ "counts": {
+  "NEUTRAL": 129,
+  "KEEP-FREE": 48,
+  "FAIL": 50,
+  "TRADE": 48,
+  "PASS": 1
+ },
+ "gate": "on when (level <= 6 and size_class <= S0) OR (not (level <= 6) and kind == video); in any case keep it where it removes an inversion: csv S1 -6>-5, genomics S0 -6>-5, img16 S0 -6>-5, img16 S2 -7>-6, img8 S0 -6>-5, tar S2 -7>-6, text S1 -7>-6, video S0 -6>-5, weights S0 -6>-5",
+ "holdout_accuracy": 0.9191616766467066,
+ "rules": [
+  {
+   "rule": "level <= 6 and size_class <= S0",
+   "dev_n": 152,
+   "dev_wins": 140,
+   "holdout_n": 224,
+   "holdout_wins": 206
+  },
+  {
+   "rule": "level <= 6 and not (size_class <= S0)",
+   "dev_n": 70,
+   "dev_wins": 2,
+   "holdout_n": 110,
+   "holdout_wins": 2
+  },
+  {
+   "rule": "not (level <= 6) and kind == video",
+   "dev_n": 4,
+   "dev_wins": 4,
+   "holdout_n": 4,
+   "holdout_wins": 4
+  },
+  {
+   "rule": "not (level <= 6) and not (kind == video)",
+   "dev_n": 218,
+   "dev_wins": 24,
+   "holdout_n": 330,
+   "holdout_wins": 34
+  }
+ ]
+}
