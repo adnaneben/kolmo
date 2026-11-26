@@ -10,13 +10,19 @@ on:
     tags:
       - "v*"
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "bindings/python/**"
       - "src/**"
       - ".github/workflows/wheels.yml"
 
+concurrency:
+  group: wheels-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   sdist:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +39,7 @@ jobs:
           path: dist/*.tar.gz
 
   wheels:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     strategy:
       fail-fast: false
       matrix:

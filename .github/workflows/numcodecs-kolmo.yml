@@ -5,20 +5,27 @@ name: numcodecs-kolmo
 # older Python). Nothing is published.
 on:
   push:
+    branches: [main]
     paths:
       - "integration/numcodecs-kolmo/**"
       - "bindings/python/**"
       - "src/**"
       - ".github/workflows/numcodecs-kolmo.yml"
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "integration/numcodecs-kolmo/**"
       - "bindings/python/**"
       - "src/**"
       - ".github/workflows/numcodecs-kolmo.yml"
+  workflow_dispatch:
+concurrency:
+  group: numcodecs-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     strategy:
       fail-fast: false
       matrix:

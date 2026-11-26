@@ -2,10 +2,13 @@ name: ci
 # Pull requests and main only: a push to a branch with an open PR used to run everything twice (push and pull_request
 # events), and several parallel branches queued for hours behind the runner limit. A newer push cancels the run it
 # supersedes on the same PR. Other branches can run it by hand (workflow_dispatch).
+# Draft PRs run a fast gate (build-test on ubuntu-latest only); marking a PR ready for review runs the full matrix,
+# sanitizers and fuzz-smoke, exactly as main and every non-draft PR always do.
 on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -15,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+        os: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.draft) && '["ubuntu-latest"]' || '["ubuntu-latest", "ubuntu-24.04-arm", "macos-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -91,6 +94,7 @@ jobs:
           ./build/test-asm
           python3 benchmark/determinism/check.py build/kolmo build/determinism
   sanitizers:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     env:
       ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
@@ -111,6 +115,7 @@ jobs:
           ./kolmotest_asan
         timeout-minutes: 240
   fuzz-smoke:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

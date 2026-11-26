@@ -22,6 +22,7 @@ on:
   # a pull request that changes this file builds everything and checks reproducibility, but signs and uploads
   # nothing (the attestation steps and the publish job are skipped)
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - ".github/workflows/release.yml"
 
