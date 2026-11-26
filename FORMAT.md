@@ -2113,7 +2113,9 @@ the 4 bytes of `x1`, most significant first.
    learned mixer (a row per bit position, rate FM · 10^-4) of the stretched outputs is averaged in as well.
 
 **Determinism.** Every float operation is IEEE 754 binary32 with round-to-nearest-even, in a fixed order: sums run by
-input index ascending, starting from 0 (the LSTM's start from the bias). There is no fused multiply-add
+input index ascending, starting from 0 (the LSTM's start from the bias), except the layer-1 mixer dot products. These
+keep eight partial sums `s[j]` over the indices `i ≡ j (mod 8)` (inputs zero-padded to a multiple of 8), each by `i`
+ascending, combined as `((s0 + s4) + (s1 + s5)) + ((s2 + s6) + (s3 + s7))`. There is no fused multiply-add
 (`-ffp-contract=off`), no `-ffast-math` and no flush-to-zero. `exp` is the library's own `upx_exp`: clamp to
 [−87, 87], round-half-away `k = x · 1.44269504`, two-step Cody-Waite reduction (0.693145752, 1.42860677e−6), a
 degree-6 Horner polynomial, and a multiply by 2^k assembled from the exponent bits. No libm call is made. `stretch` is a

@@ -182,6 +182,15 @@ static inline void upx_apm_upd(upx_apm *a, int y) {
 }
 
 /* ---------------- mixer ---------------- */
+/* The mixer's dot product: eight partial sums s[j] over the indices i = j (mod 8), each by i ascending from 0, then
+ * ((s0 + s4) + (s1 + s5)) + ((s2 + s6) + (s3 + s7)). The inputs are zero-padded to a multiple of 8 (x[ni..] = 0 and the
+ * weights there are never updated from 0). This order is part of the stream contract (FORMAT.md §25); it lets two
+ * 4-lane vectors carry the partial sums. */
+static inline float upx_dot(const float *w, const float *x, int ni) {
+    float s[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    for (int i = 0; i < ni; i += 8) for (int j = 0; j < 8; j++) s[j] += w[i + j] * x[i + j];
+    return ((s[0] + s[4]) + (s[1] + s[5])) + ((s[2] + s[6]) + (s[3] + s[7]));
+}
 enum { UPX_NIMAX = 512, UPX_SMAX = 12 };
 typedef struct { int ni, ns; uint32_t smask; float x[UPX_NIMAX]; float *w[UPX_SMAX]; int rows[UPX_SMAX], sel[UPX_SMAX]; float out[UPX_SMAX], pout[UPX_SMAX]; float lr, lr2, lrd; long t; float *w2; int rows2, sel2; float p2; } upx_mix;
 static void upx_mix_init(upx_mix *M, int ns, const int *rows, int rows2, float lr, float lr2) {
@@ -371,6 +380,7 @@ static float upx_predict(upx_t *U) {
     float pl = 0.5f;
     if (U->L) { int node = (int)c0; pl = upx_lstm_p1(U->L, node); pl = upx_clamp(pl, 1e-4f, 1.f - 1e-4f); x[ni++] = upx_stf(pl); }
     x[ni++] = 0.25f;  /* bias */
+    while (ni & 7) x[ni++] = 0.f;   /* padding for upx_dot */
     U->ninp = ni;
     /* layer 1: S weight sets */
     uint32_t c1 = U->c4 & 255, c2 = (U->c4 >> 8) & 255;
@@ -391,7 +401,7 @@ static float upx_predict(upx_t *U) {
         if (!(M->smask >> s & 1)) { M->out[s] = 0; M->pout[s] = 0.5f; x2[n2++] = 0; continue; }
         int r = sel[s] % M->rows[s]; M->sel[s] = r;
         const float *w = M->w[s] + (size_t)r * UPX_NIMAX; float dot = 0.f;
-        for (int i = 0; i < ni; i++) dot += w[i] * x[i];
+        dot = upx_dot(w, x, ni);
         dot = upx_clamp(dot, -15.f, 15.f); M->out[s] = dot; M->pout[s] = upx_sig(dot); x2[n2++] = dot;
     }
     /* layer 2 */
