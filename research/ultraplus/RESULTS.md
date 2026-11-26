@@ -186,7 +186,8 @@ video and photo blocks, where UPX never wins. Times are from a quieter host than
 | text__dickens | 852,404 (177 s) | 847,976 (−0.52%, 663 s) | **843,996 (−0.99%, 912 s)** |
 | xml__silesia-xml | 173,281 (162 s) | 173,192 (−0.05%, 465 s) | — |
 
-Times come from a loaded host. Default from the next commit on: **H = 255 on text streams of 1 MiB and more.** The
-reymont holdout confirmation is queued. The xml shows that the gain depends on the content (markup gains almost
+Times come from a loaded host. Default from the next commit on: **H = 255 on text streams of 1 MiB and more.** Sealed holdout
+reymont (4,189,604 B): H=255 gives **489,670 B**, against 498,795 B at H=128 (−1.83%) and 548,384 B for `-U`
+(**−10.71%**). The round trip was verified. The default is confirmed. The xml shows that the gain depends on the content (markup gains almost
 nothing), and this is where a cheaper per-stream gate could save time later. A first H=256 run was void, because
 the field holds 1-255 cells and 256 wrapped to 0.
