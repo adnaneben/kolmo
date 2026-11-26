@@ -1,6 +1,12 @@
-# Startup-aware speed floors for small files: B qualifies on the sealed holdout (opt-in only; owner decides)
+# Startup-aware speed floors for small files: B passes the holdout2 gates (report held for the reference replay)
 
-**Decision on the sealed `holdout2`, quiet host: the launch-constant table B passes all five preregistered gates.**
+> **Status: final report held until the reference replay is in.** The quiet job measured every deciding phase:
+> launch constants, calibration, development, the sealed holdout2 and the replication. It then exited with rc=2
+> before the explanatory replay on the B26 inputs ([below](#what-this-does-not-settle), item 3). The replay is
+> re-queued on its own. Under the protocol it cannot change the holdout2 gate results below. The final write-up waits
+> for it, at the coordinator's request.
+
+**Sealed `holdout2`, quiet host: the launch-constant table B passes all five preregistered gates.**
 It met 34 of 66 end-to-end floor cases, against 30 for stock and 30 for the duplicate stock arm, which agreed with
 stock on every case. B caused no new misses. On the 30 cases both arms met, it stored identical bytes. The `size` spec
 produced the stock frame on every file. Charged encode time was 0.669× stock (geometric mean), and peak encode RSS
@@ -123,8 +129,10 @@ misses: +7.2% over all 66 cases and +35.4% on the 24 jointly missed cases. Gains
    built-in rates come from an x86 VM. Table B is a valid opt-in for this host. Another machine should re-measure its
    own launch constants with `run.py measure` (21 one-byte round trips) before using it.
 3. **Reference replay not yet run.** The explanatory replay on the three recorded B26 inputs (GMP manual, gpgv, the
-   GnuTLS PNG) did not run in the quiet window. The job script's table-name lookup failed. The job still reported
-   success, and the decision does not depend on the replay. A fixed, brace-free script is queued.
+   GnuTLS PNG) did not run in the quiet window. In `quiet-run.sh`, the table-name lookup had a dict literal inside a
+   nested `$(...)`. macOS `/bin/bash` 3.2 brace-expanded it into two broken arguments, so the job exited with rc=2
+   after the measure phases had finished and been scored. Only the replay is re-queued
+   (`evidence/startup-floors/quiet-reference.sh`, brace-free, checked under bash 3.2).
 4. **One host, one night.** The evidence is one quiet window on one Mac. The duplicate arm matched stock on all 132
    holdout cases, so timing noise is small next to the gains, but no second machine was measured.
 
