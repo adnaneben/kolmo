@@ -288,6 +288,13 @@ static void block_strictness(void) {
     }
     uint8_t e[64]; int64_t en = kolmo_compress(in, 0, e, sizeof e, &p);   /* empty input: the header alone, nblocks 0 */
     assert(en == HDR && get32(e + 20) == 0 && kolmo_decompress(e, (size_t)en, e + HDR, 1, 1) == 0);
+    {   /* its capacity boundary: 31 bytes are refused, exactly 32 hold the frame, which decodes to nothing */
+        uint8_t e32[HDR], back[1];
+        assert(kolmo_compress(in, 0, e32, HDR - 1, &p) == KOLMO_ERR_DSTSIZE);
+        assert(kolmo_compress(in, 0, e32, HDR, &p) == HDR && !memcmp(e32, e, HDR));
+        assert(kolmo_decompress(e32, HDR, back, 0, 1) == 0 && kolmo_check_frame(e32, HDR, NULL) == 0);
+        assert(kolmo_compress(in, 1, e32, HDR, &p) == KOLMO_ERR_DSTSIZE);   /* a block needs its index entry */
+    }
     en = kolmo_compress(in, 1, e, sizeof e, &p); assert(en > 0 && get32(e + 20) == 1 && e[HDR + 12] == C_STORE);   /* one stored block */
     for (int c = 14; c <= 27; c += 13) {                        /* rANS and khuf are graph leaves, never block codecs */
         uint8_t g[64]; memcpy(g, e, (size_t)en); g[HDR + 12] = (uint8_t)c; fix_crc(g);

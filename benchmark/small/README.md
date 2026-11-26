@@ -13,7 +13,9 @@ key-value store, a message bus or a log shipper. Review 40, claims #173 (the ben
 `smallbench.c` options: `-q` (sizes and memory only), `-s 64,256,...` (sizes), `-l 1,3` (Kolmo levels), `-T 1,10`
 (Kolmo threads), `-c kolmo,zstd,brotli,lz4` (coders). Timed runs go through the review workspace's `tools/timed.sh`,
 one timed workload at a time. `compare.sh` alternates the two builds at every (kind, size), in swapped order each
-step, so that load from other work on the machine falls on both alike. Two sequential runs differed by 2-4x on
+step, so that load from other work on the machine falls on both alike. A step runs only when the 1-minute load is
+at most 12 and keeps its rows only when the load is still there at its end (three attempts); otherwise the step is
+listed in `incomplete.txt` and the script exits 3 (`test_compare.sh` checks this with stubs). Two sequential runs differed by 2-4x on
 settings whose code did not change.
 
 ## What is measured

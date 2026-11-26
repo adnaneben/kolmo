@@ -54,7 +54,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
     columns = columns && q.transforms && q.mode != KOLMO_RT;
     native_leaf = native_leaf && q.mode == KOLMO_FAST && q.transforms; p = &q;
-    if (cap < HDR + IDX) return KOLMO_ERR_DSTSIZE;
+    if (cap < (n ? HDR + IDX : HDR)) return KOLMO_ERR_DSTSIZE;   /* the empty input is the header alone (below) */
     if (n > INT64_MAX) return KOLMO_ERR_CORRUPT;
     /* The typed route below produces a whole frame on its own (one block, one thread, at most 16 MiB, buffer API, no
      * dictionary, default level) and returns it; when it does not apply the normal planner runs. A declared integer
