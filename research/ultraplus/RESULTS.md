@@ -50,6 +50,21 @@ Reading:
 | first 200,000 B | 51,151 | 49,419 (−3.4%, bare stream at 7c14df3a) | 47,064 | 46,745 |
 | first 1,000,000 B | 218,145 | 211,692 (−3.0%, harness, 38 contexts) | — | 198,643 |
 
+## cmix v21 on the cuts (local, one niced process)
+
+Only two cuts finished: ESC-50 100032 (cmix 14,478 B, Kolmo 13,940 B) and ESC-50 28808 (cmix 153,334 B, Kolmo
+148,939 B). Kolmo wins both by 3-4%. Under this load cmix took 1,372 s and 6,499 s per 256 KiB cut, so the run was
+stopped on 26 Nov to keep this lane to one process. Comparisons with cmix use the 24-Nov probe slice and the published
+full-file figures (PLAN.md).
+
+## Negative results
+
+- **Kolmo's word-dictionary transform (tflag 9) before UPX:** d200k gives 52,704 B against 49,419 B without it, which is
+  6.6% larger. Ultra already disables that transform for model 4. A dictionary for Ultra+ would need a cmix-style
+  design (capitalisation flags, codes ordered by similarity) and is a separate step.
+- **A learned final mixer over the APM outputs (par FM):** the quick dev set gave 97,964 B against 97,857 B, which is
+  worse. It stays off (FM = 0).
+
 ## Sealed holdout (31 cuts)
 
 Pending: running as one pass after the dev decision.
