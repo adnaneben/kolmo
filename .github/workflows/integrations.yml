@@ -2,11 +2,18 @@ name: integrations
 # The HDF5 filter plugin and the Blosc2 codec plugin (integration/), built against the HDF5 and c-blosc2 of each OS.
 on:
   push:
+    branches: [main]
     paths: ["integration/**", "src/**", "Makefile", ".github/workflows/integrations.yml"]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths: ["integration/**", "src/**", "Makefile", ".github/workflows/integrations.yml"]
+  workflow_dispatch:
+concurrency:
+  group: integrations-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   plugins:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     strategy:
       fail-fast: false
       matrix:

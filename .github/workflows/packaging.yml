@@ -4,6 +4,7 @@ name: packaging
 # up before a release. Nothing is uploaded or submitted anywhere.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "packaging/**"
       - ".github/workflows/packaging.yml"
@@ -27,6 +28,7 @@ permissions:
 
 jobs:
   debian:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     name: debian (${{ matrix.source }})
     runs-on: ubuntu-latest
     strategy:
@@ -73,6 +75,7 @@ jobs:
           AUTOPKGTEST_TMP=$(mktemp -d) debian/tests/lib-link
 
   arch:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     container: archlinux:base-devel
     steps:
@@ -96,6 +99,7 @@ jobs:
           kolmo -9 -c /tmp/in.csv | kolmo -dc | cmp - /tmp/in.csv
 
   nix:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -115,6 +119,7 @@ jobs:
           nix --extra-experimental-features nix-command hash convert --hash-algo sha256 --to sri "$h"
 
   conda:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     name: conda (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -146,6 +151,7 @@ jobs:
           -m packaging/conda-forge/local-variants.yaml -c conda-forge --output-dir out
 
   homebrew-core:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: macos-latest
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1

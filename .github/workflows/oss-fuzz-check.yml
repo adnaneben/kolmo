@@ -5,6 +5,7 @@ name: oss-fuzz-check
 # runs a few inputs and is instrumented). Nothing is sent to OSS-Fuzz: the project is copied into a local clone.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "fuzz/**"
       - "packaging/oss-fuzz/**"
@@ -15,8 +16,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: oss-fuzz-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
