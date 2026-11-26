@@ -1,0 +1,14 @@
+v12 tree=rc bin=build/test-v12-corpus exit=0: V12 CORPUS PASSED (630 frozen frames decode to their originals)
+v12 tree=rc bin=build/test-v12-corpus-asan exit=0: V12 CORPUS PASSED (630 frozen frames decode to their originals)
+v12 tree=rcfix bin=build/test-v12-corpus exit=0: V12 CORPUS PASSED (630 frozen frames decode to their originals)
+v12 tree=rcfix bin=build/test-v12-corpus-asan exit=0: V12 CORPUS PASSED (630 frozen frames decode to their originals)
+compiler: gcc-16 (Homebrew GCC 16.2.0) 16.2.0
+tree=rc dir=src cmd='cd $S/rc/src && gcc-16 -O1 -Wuse-after-free=3 -I. -c kolmo.c -o /dev/null' exit=0 warnings=2
+tree=rc dir=bindings/python/native/src cmd='cd $S/rc/bindings/python/native/src && gcc-16 -O1 -Wuse-after-free=3 -I. -c kolmo.c -o /dev/null' exit=0 warnings=2
+tree=rc dir=bindings/rust/native/src cmd='cd $S/rc/bindings/rust/native/src && gcc-16 -O1 -Wuse-after-free=3 -I. -c kolmo.c -o /dev/null' exit=0 warnings=2
+tree=rcfix dir=src cmd='cd $S/rcfix/src && gcc-16 -O1 -Wuse-after-free=3 -I. -c kolmo.c -o /dev/null' exit=0 warnings=0
+tree=rcfix dir=bindings/python/native/src cmd='cd $S/rcfix/bindings/python/native/src && gcc-16 -O1 -Wuse-after-free=3 -I. -c kolmo.c -o /dev/null' exit=0 warnings=0
+tree=rcfix dir=bindings/rust/native/src cmd='cd $S/rcfix/bindings/rust/native/src && gcc-16 -O1 -Wuse-after-free=3 -I. -c kolmo.c -o /dev/null' exit=0 warnings=0
+ledger self-test exit=0 (SELF-TEST PASSED)
+rows=342 failed_rows=0
+ledger exit=0

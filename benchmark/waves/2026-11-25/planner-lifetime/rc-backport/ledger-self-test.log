@@ -1,0 +1,4 @@
+rows=1 failed_rows=1
+self-test: harness exit=1 (expected nonzero)
+empty.bin,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,1,1,0,0,ecc4f0eeef42a4e99a04e637dcd7d1906159ca5b43b295d447df348a86664733,ecc4f0eeef42a4e99a04e637dcd7d1906159ca5b43b295d447df348a86664733,52,yes,0,yes,1,yes,NO
+SELF-TEST PASSED
