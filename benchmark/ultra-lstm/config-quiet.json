@@ -1,0 +1,30 @@
+{
+ "out": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/ultra-lstm/run1",
+ "rounds": 3,
+ "seed": 20261125,
+ "tag": "ultra-lstm",
+ "kolmo": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/ultra-lstm/frozen/kolmo",
+ "harness": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/ultra-lstm/frozen/lstm_h",
+ "zpaq": "/opt/homebrew/bin/zpaq",
+ "timed": "/Users/adnanbenali/Projects/kolmo/.claude/worktrees/gifted-diffie-3a719c/benchmark/ultra-lstm/notimed.sh",
+ "inputs": {
+  "dev_dickens4m": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/ultra-lstm/in/dickens4m",
+  "holdout_reymont": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/ultra-lstm/in/reymont",
+  "tiny1": "/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD/ultra-lstm/in/tiny1"
+ },
+ "arms": [
+  "stock",
+  "control",
+  "candidate",
+  "zpaq"
+ ],
+ "candidate_env": {
+  "LSTM_H": 128,
+  "LSTM_T": 30,
+  "LSTM_LR": 50,
+  "LSTM_LRO": 1000,
+  "LSTM_SEL": 0,
+  "LSTM_LRM": 4
+ },
+ "max_load1": 1000
+}
