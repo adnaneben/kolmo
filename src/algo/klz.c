@@ -924,6 +924,10 @@ static size_t ko_parse(const uint8_t *in, size_t n, const ko_par *P, int v2, kz_
          *    searches, and the 1-bit warm-up replays them: it only prices and parses up to the first position the
          *    first did not search, then finds its own (ko_log, ko_find; the matches at a position depend only on it). */
         const size_t m = 256u << 10; size_t a0, a1; int e0 = 0; uint64_t c[2];
+        /* a block that starts with a tar header: its first 256 KiB is archive headers and the starts of members, which do
+         * not predict the parse of the block; no tar block won the warm-up (Canterbury, samba, mozilla: 2-bit estimates
+         * 1.003-1.010 against 0.67-0.98 for the blocks that won), and the Canterbury tar paid 8-12% of encode time */
+        if (n > 512 && !memcmp(in + 257, "ustar", 5)) goto parse;
         {   /* the 2-bit floor raises no literal price of the starting statistics (T's): no warm-up */
             const uint32_t w = ko_w(T->sl); int bind = 0;
             for (int s = 0; s < 256; s++) bind |= ko_cost(T->lit[s], w) < 2 * KO_LIT_FLOOR;
