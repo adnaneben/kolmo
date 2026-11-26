@@ -1355,7 +1355,7 @@ static size_t cm_codec_compress(codec_ctx *x, int level, const uint8_t *in, size
     /* level 1: model 1, as written before; otherwise model 3 for text, 2 for the rest, with the raced settings */
     if (level == 1) return cm_compress_m(in, n, out, cap, 1);
     size_t z = cm_compress_raced(in, n, out, cap, 4, 0, x ? x->threads : 1, cm4_mask_for(in, n));
-    if (x && x->ultra_plus && n >= 64 && n < ((size_t)1 << 28)) {   /* Ultra+: the UPX engine too; the smaller stream is kept */
+    if (x && x->ultra_plus && n >= 64 && n < ((size_t)1 << 28) && (getenv("KOLMO_UPX_NOGATE") || upx_gate(in, n, looks_text(in, n)))) {   /* Ultra+: the UPX engine too (when its sampled gate passes); the smaller stream is kept */
         uint8_t *t = malloc(cap); uint16_t par[UPX_NPAR]; upx_default_par(par);
         size_t u = t ? upx_compress(in, n, t, z ? z : cap, upx_default_flags(looks_text(in, n), n), par) : 0;
         if (u && (!z || u < z)) { memcpy(out, t, u); z = u; x->used_upx = 1; }

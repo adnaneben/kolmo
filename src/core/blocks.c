@@ -206,7 +206,10 @@ static void *compress_worker(void *arg) {
         size_t len = J->starts[i + 1] - J->starts[i];
         /* the governor: this block's working set is reserved before it starts (it waits when memory is short; one
          * block always runs). Changes when blocks run, never what they write. */
-        const uint64_t resv = kmem_enc_block(J->codec, J->level, len, J->slot);
+        uint64_t resv = kmem_enc_block(J->codec, J->level, len, J->slot);
+        if (J->ultra_plus && len + TBL_SLACK(len) < ((uint64_t)1 << 28)) {   /* Ultra+: a UPX stream over the block (or its largest transform) */
+            size_t un = (size_t)(len + TBL_SLACK(len)); resv += upx_need(un, 1 | 2 | (uint32_t)cm4_shift_for(un, CM_MASK3) << 16);
+        }
         kmem_reserve(resv, J->memcap); held = resv;
         kmem_tls_job = 1; kmem_tls_cap = J->xcap; kmem_tls_raw = len;
         const uint8_t *raw;

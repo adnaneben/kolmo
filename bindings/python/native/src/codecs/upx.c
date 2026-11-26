@@ -54,13 +54,15 @@ typedef struct {
 static float upx_lrand(upx_lstm *L) { L->rng ^= L->rng << 13; L->rng ^= L->rng >> 17; L->rng ^= L->rng << 5; return (float)(L->rng >> 8) / 16777216.f * 2.f - 1.f; }
 static void upx_lstm_forward(upx_lstm *L, int b);
 static upx_lstm *upx_lstm_new(int H, int T, float lr, float lro) {
-    upx_lstm *L = calloc(1, sizeof *L); L->H = H; L->T = T; L->lr = lr; L->lro = lro; L->rng = 0x9E3779B9u;
+    upx_lstm *L = calloc(1, sizeof *L); if (!L) return NULL; L->H = H; L->T = T; L->lr = lr; L->lro = lro; L->rng = 0x9E3779B9u;
     size_t nx = (size_t)3 * UPX_NB * H, nh = (size_t)3 * H * (H + 1), ny = (size_t)UPX_NB * (H + 1), w = (size_t)T * H;
     L->Wx = calloc(nx, 4); L->mWx = calloc(nx, 4); L->vWx = calloc(nx, 4); L->gWx = calloc(nx, 4);
     L->Wh = calloc(nh, 4); L->mWh = calloc(nh, 4); L->vWh = calloc(nh, 4); L->gWh = calloc(nh, 4);
     L->Wy = calloc(ny, 4); L->h = calloc(H, 4); L->s = calloc(H, 4);
     L->hp = calloc(w, 4); L->sp = calloc(w, 4); L->F = calloc(w, 4); L->C = calloc(w, 4); L->O = calloc(w, 4);
     L->S = calloc(w, 4); L->TS = calloc(w, 4); L->Hh = calloc(w, 4); L->dho = calloc(w, 4);
+    {   void *q[] = {L->Wx, L->mWx, L->vWx, L->gWx, L->Wh, L->mWh, L->vWh, L->gWh, L->Wy, L->h, L->s, L->hp, L->sp, L->F, L->C, L->O, L->S, L->TS, L->Hh, L->dho};
+        for (size_t i = 0; i < sizeof q / sizeof *q; i++) if (!q[i]) { for (size_t j = 0; j < sizeof q / sizeof *q; j++) free(q[j]); free(L); return NULL; } }
     float r = 1.f / sqrtf((float)H + 1.f);
     for (size_t i = 0; i < nx; i++) L->Wx[i] = upx_lrand(L) * r;
     for (size_t i = 0; i < nh; i++) L->Wh[i] = upx_lrand(L) * r;
@@ -167,7 +169,7 @@ static inline void upx_upd16(uint16_t *p, int y, int sh) { int g = y ? 65535 : 0
 typedef struct { float t[33]; } upx_apm_row;   /* APM over stretch(p): 33 knots in [-8, 8] */
 typedef struct { upx_apm_row *r; int n, idx, lo; float w; float rate; } upx_apm;
 static void upx_apm_init(upx_apm *a, int n, float rate) {
-    a->n = n; a->rate = rate; a->r = malloc(sizeof(upx_apm_row) * n);
+    a->n = n; a->rate = rate; a->r = malloc(sizeof(upx_apm_row) * n); if (!a->r) return;
     for (int i = 0; i < n; i++) for (int j = 0; j < 33; j++) a->r[i].t[j] = upx_sig((j - 16) * 0.5f);
 }
 static inline float upx_apm_p(upx_apm *a, float s, int idx) {
@@ -196,7 +198,7 @@ typedef struct { int ni, ns; uint32_t smask; float x[UPX_NIMAX]; float *w[UPX_SM
 static void upx_mix_init(upx_mix *M, int ns, const int *rows, int rows2, float lr, float lr2) {
     M->ns = ns; M->lr = lr; M->lr2 = lr2; M->rows2 = rows2;
     for (int s = 0; s < ns; s++) { M->rows[s] = rows[s]; M->w[s] = calloc((size_t)rows[s] * UPX_NIMAX, sizeof(float)); }
-    M->w2 = malloc(sizeof(float) * rows2 * UPX_SMAX);
+    M->w2 = malloc(sizeof(float) * rows2 * UPX_SMAX); if (!M->w2) return;
     for (int i = 0; i < rows2 * UPX_SMAX; i++) M->w2[i] = 1.f / ns;
 }
 
@@ -490,6 +492,7 @@ static void upx_update(upx_t *U, int y) {
     }
 }
 
+static void upx_free(upx_t *U);
 static upx_t *upx_new(uint8_t *buf, size_t n, uint32_t flags, const uint16_t *par) {
     upx_t *U = calloc(1, sizeof *U); if (!U) return NULL; memcpy(U->par, par, sizeof U->par);
     for (int b = 0; b < 8; b++) for (int i = 0; i < 8; i++) U->fw[b][i] = i == 6 ? 1.f : 0.f; U->buf = buf; U->n = n; U->c0 = 1;
@@ -497,7 +500,7 @@ static upx_t *upx_new(uint8_t *buf, size_t n, uint32_t flags, const uint16_t *pa
     if (U->use_m4) {
         uint32_t mask = (flags & 2) ? CM_MASK3 : ((flags & 4) ? CM4_MASK_BIN : CM4_MASK_TEXT);
         cm_tune_t tune = cm4_tune; if (tune.b2) tune.b2 = cm4_prior_for(mask);
-        U->m4 = cm_new_xm(buf, (int)(flags >> 16 & 255), 4, cm4_chain(n), 1, mask, n); if (!U->m4) return NULL; cm_set_tune(U->m4, tune);
+        U->m4 = cm_new_xm(buf, (int)(flags >> 16 & 255), 4, cm4_chain(n), 1, mask, n); if (!U->m4) { free(U); return NULL; } cm_set_tune(U->m4, tune);
     }
     uint32_t bits = 16; while (bits < 22 && ((size_t)1 << bits) < n * 2) bits++;
     upx_bank_init(&U->B, 45, bits);
@@ -509,8 +512,14 @@ static upx_t *upx_new(uint8_t *buf, size_t n, uint32_t flags, const uint16_t *pa
     int rows[UPX_SMAX] = {256, 2048, 2048 * 8, 64, 64, 1024 * 8, 256 * 8, 128, 14 * 8};
     upx_mix_init(&U->M, 9, rows, 256, U->par[UPX_LR] * 1e-4f, U->par[UPX_LR2] * 1e-4f);
     U->M.smask = (uint32_t)U->par[UPX_SETS]; U->M.lrd = U->par[UPX_LRD] * 0.1f;
-    if (U->use_m4) for (int s = 0; s < U->M.ns; s++) for (int r = 0; r < U->M.rows[s]; r++) U->M.w[s][(size_t)r * UPX_NIMAX] = U->par[UPX_W0] * 0.01f;
     float ar = U->par[UPX_APR] * 1e-3f; upx_apm_init(&U->a1, 256, ar); upx_apm_init(&U->a2, 65536, ar); upx_apm_init(&U->a3, 65536, ar); upx_apm_init(&U->a4, 64 * 256, ar); upx_apm_init(&U->a5, 65536, ar);
+    {   /* every allocation checked: on any failure the stream is declined (encoder) or refused (decoder) */
+        int bad = (H && !U->L) || !U->M.w2 || !U->mh[0] || !U->mh[1] || !U->a1.r || !U->a2.r || !U->a3.r || !U->a4.r || !U->a5.r;
+        for (int s = 0; s < U->M.ns; s++) bad |= !U->M.w[s];
+        for (int k = 0; k < U->B.K; k++) bad |= !U->B.t[k] || !U->B.rt[k];
+        if (bad) { upx_free(U); return NULL; }
+    }
+    if (U->use_m4) for (int s = 0; s < U->M.ns; s++) for (int r = 0; r < U->M.rows[s]; r++) U->M.w[s][(size_t)r * UPX_NIMAX] = U->par[UPX_W0] * 0.01f;
     upx_ctx_byte(U); upx_match_byte(U);
     return U;
 }
@@ -554,7 +563,12 @@ static uint64_t upx_need(size_t n, uint32_t flags) {
 /* code buf[0..n) (encoder: in != NULL) or decode it from z (decoder); returns the coded size or 0 / -1 */
 static int64_t upx_run(const uint8_t *in, uint8_t *buf, size_t n, uint32_t flags, const uint16_t *par, uint8_t *o, size_t cap, const uint8_t *z, size_t zn) {
     pthread_once(&upx_st_once, upx_st_init);
-    upx_t *U = upx_new(buf, n, flags, par); if (!U) return -1;
+    /* memory: decoding refuses a stream larger than the frame declares, before allocating; both sides reserve the
+     * working set with the governor (it waits rather than fails, so the encoder's choice never depends on load) */
+    uint64_t need = upx_need(n, flags);
+    if (!in && kmem_tls_dec_limit && need > kmem_tls_dec_limit) return -1;
+    need = cm_acquire(need);   /* 0 inside a block job: the job's reservation covers UPX (core/blocks.c) */
+    upx_t *U = upx_new(buf, n, flags, par); if (!U) { cm_release(need); return in ? 0 : -1; }
     upx_ac a = {0, 0xffffffffu, 0, o, 0, cap, z, 0, zn};
     if (!in) for (int i = 0; i < 4; i++) a.x = a.x << 8 | (a.ip < a.in_n ? a.in[a.ip++] : 255);
     for (size_t i = 0; i < n; i++) {
@@ -564,10 +578,10 @@ static int64_t upx_run(const uint8_t *in, uint8_t *buf, size_t n, uint32_t flags
             if (in) { y = (c >> b) & 1; upx_ac_enc(&a, y, q); } else y = upx_ac_dec(&a, q);
             upx_update(U, y);
         }
-        if (in && a.on >= cap) { upx_free(U); return 0; }
+        if (in && a.on >= cap) { upx_free(U); cm_release(need); return 0; }
     }
     if (in) { for (int i = 0; i < 4; i++) { if (a.on < cap) a.o[a.on++] = (uint8_t)(a.x1 >> 24); a.x1 <<= 8; } }
-    upx_free(U);
+    upx_free(U); cm_release(need);
     return in ? (a.on <= cap ? (int64_t)a.on : 0) : 0;
 }
 static uint32_t upx_default_flags(int txt, size_t n) {
@@ -611,3 +625,20 @@ static int upx_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
     return upx_run(NULL, out, n, f, par, NULL, 0, in + UPX_HDR, cn - UPX_HDR) < 0 ? -1 : 0;
 }
 static void upx_default_par(uint16_t *par) { for (int i = 0; i < UPX_NPAR; i++) par[i] = (uint16_t)(i <= UPX_FM ? upx_par_def[i] : 0); }
+
+/* Encoder-only gate (from #88's sampled pre-trial): code two 16 KiB windows (the start and the middle) with UPX and with
+ * model 4; the full UPX pass runs only when UPX is smaller on the windows. Streams up to 64 KiB always try UPX. The gate
+ * reads only the stream's bytes, so the output never depends on threads or memory. */
+static int upx_gate(const uint8_t *in, size_t n, int txt) {
+    if (n <= ((size_t)64 << 10)) return 1;
+    const size_t w = (size_t)16 << 10, at[2] = {0, (n / 2) & ~(size_t)63};
+    size_t cap = w + w / 4 + 1024, zu = 0, zc = 0; uint8_t *t = malloc(cap); if (!t) return 0;
+    uint16_t par[UPX_NPAR]; upx_default_par(par);
+    for (int k = 0; k < 2; k++) {
+        size_t c = cm_compress_tm(in + at[k], w, t, cap, 4, 0, cm4_tune, txt ? CM4_MASK_TEXT : CM4_MASK_BIN);
+        size_t u = upx_compress(in + at[k], w, t, cap, upx_default_flags(txt, w), par);
+        zc += c ? c : w; zu += u ? u : w + 64;
+    }
+    free(t);
+    return zu < zc;
+}
