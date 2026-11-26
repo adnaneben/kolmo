@@ -1,0 +1,7 @@
+# kind=path:cut, path relative to the review workspace $V (README.md, Data)
+json=review40b/work/R21/data/gh_test.ndjson:line
+log=review40b/work/R21/data/nasa_test.log:line
+csv=review40b/work/R21/data/ghcn_test.csv:line
+kv=corpus-holdout/osdb:raw
+code=corpus-holdout/samba:line
+binary=corpus/ooffice:raw

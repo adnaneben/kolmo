@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Tables for benchmark/small/RESULTS.md from two smallbench runs (the base branch and this build).
 
-usage: summarize.py BASE.tsv NEW.tsv > tables.md
+usage: summarize.py [--sizes-only] BASE.tsv NEW.tsv > tables.md
+--sizes-only: no time columns (runs made under load, or with -q).
 Rows are keyed by (kind, size, coder, level, threads). Rival rows come from NEW (the same library build in both runs).
 """
 import csv
@@ -32,16 +33,21 @@ def gmean(v):
 
 
 def main():
-    base, new = load(sys.argv[1]), load(sys.argv[2])
+    args = [a for a in sys.argv[1:] if a != "--sizes-only"]; notime = len(args) != len(sys.argv) - 1
+    base, new = load(args[0]), load(args[1])
     out = []
     P = out.append
 
     # 1. this PR against main, per level and size (all six kinds together)
     P("### Before and after, per level and input size (one thread, six kinds together)\n")
-    P("Size: total output bytes, PR against main. Times: geometric mean over the six kinds of the per-call time ratio "
-      "(below 1.00 is faster). Heap: the largest per-call heap working set over the six kinds, main -> PR.\n")
-    P("| level | size | bytes main | bytes PR | change | compress time PR/main | decompress time PR/main | compress heap KiB | decompress heap KiB |")
-    P("|---|---|---|---|---|---|---|---|---|")
+    P("Size: total output bytes, PR against main. %sHeap: the largest per-call heap working set over the six kinds, main -> PR.\n"
+      % ("" if notime else "Times: geometric mean over the six kinds of the per-call time ratio (below 1.00 is faster). "))
+    if notime:
+        P("| level | size | bytes main | bytes PR | change | compress heap KiB | decompress heap KiB |")
+        P("|---|---|---|---|---|---|---|")
+    else:
+        P("| level | size | bytes main | bytes PR | change | compress time PR/main | decompress time PR/main | compress heap KiB | decompress heap KiB |")
+        P("|---|---|---|---|---|---|---|---|---|")
     for lv in LEVELS:
         for s in SIZES:
             rb = [base.get((k, s, "kolmo", lv, 1)) for k in KINDS]
@@ -50,12 +56,15 @@ def main():
                 continue
             ob = sum(int(r["out_bytes"]) for r in rb)
             on = sum(int(r["out_bytes"]) for r in rn)
-            ct = gmean([float(b["c_us"]) and float(n["c_us"]) / float(b["c_us"]) for b, n in zip(rb, rn)])
-            dt = gmean([float(b["d_us"]) and float(n["d_us"]) / float(b["d_us"]) for b, n in zip(rb, rn)])
+            ct = 0 if notime else gmean([float(n["c_us"]) / float(b["c_us"]) for b, n in zip(rb, rn) if float(b["c_us"]) > 0])
+            dt = 0 if notime else gmean([float(n["d_us"]) / float(b["d_us"]) for b, n in zip(rb, rn) if float(b["d_us"]) > 0])
             ckb = max(float(r["c_kib"]) for r in rb); ckn = max(float(r["c_kib"]) for r in rn)
             dkb = max(float(r["d_kib"]) for r in rb); dkn = max(float(r["d_kib"]) for r in rn)
-            P("| %d | %s | %d | %d | %+.2f%% | %.2f | %.2f | %.0f -> %.0f | %.0f -> %.0f |"
-              % (lv, sz(s), ob, on, 100.0 * (on / ob - 1), ct, dt, ckb, ckn, dkb, dkn))
+            if notime:
+                P("| %d | %s | %d | %d | %+.2f%% | %.0f -> %.0f | %.0f -> %.0f |" % (lv, sz(s), ob, on, 100.0 * (on / ob - 1), ckb, ckn, dkb, dkn))
+            else:
+                P("| %d | %s | %d | %d | %+.2f%% | %.2f | %.2f | %.0f -> %.0f | %.0f -> %.0f |"
+                  % (lv, sz(s), ob, on, 100.0 * (on / ob - 1), ct, dt, ckb, ckn, dkb, dkn))
     P("")
 
     # 2. per kind detail of the size changes
@@ -88,6 +97,8 @@ def main():
         if not pairs:
             continue
         eq = sum(a["hash"] == b["hash"] for a, b in pairs)
+        if notime:
+            P("| %d | %d | %d | pending | pending |" % (lv, len(pairs), eq)); continue
         ct = gmean([float(b["c_us"]) / float(a["c_us"]) for a, b in pairs if float(a["c_us"]) > 0])
         dt = gmean([float(b["d_us"]) / float(a["d_us"]) for a, b in pairs if float(a["d_us"]) > 0])
         P("| %d | %d | %d | %.2f | %.2f |" % (lv, len(pairs), eq, ct, dt))
@@ -111,10 +122,13 @@ def main():
                 r = new.get((k, s, c, l, 1)); cells.append("%.3f" % float(r["ratio"]) if r else "")
             P("| %s | %s | %s |" % (k, sz(s), " | ".join(cells)))
     P("")
-    P("### Time per call, microseconds (PR, one thread): compress / decompress\n")
-    P("| kind | size | " + " | ".join("K%d" % l for l in kl) + " | " + " | ".join("%s %d" % r for r in riv) + " |")
-    P("|---|---|" + "---|" * (len(kl) + len(riv)))
-    for k in KINDS:
+    if notime:
+        P("### Time per call\n\nPending: the quiet-window run (README.md, `compare.sh`).\n")
+    P("### Time per call, microseconds (PR, one thread): compress / decompress\n") if not notime else None
+    for k in (KINDS if not notime else []):
+        if k == KINDS[0]:
+            P("| kind | size | " + " | ".join("K%d" % l for l in kl) + " | " + " | ".join("%s %d" % r for r in riv) + " |")
+            P("|---|---|" + "---|" * (len(kl) + len(riv)))
         for s in SIZES:
             cells = []
             for key in [("kolmo", l) for l in kl] + riv:
