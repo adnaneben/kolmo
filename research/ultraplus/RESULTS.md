@@ -136,3 +136,16 @@ Reading:
   (663 s against 289 s under load). For reference, stock `-U` gives 886,241 B, so Ultra+ is −3.82% without the LSTM and
   −4.32% with it. **Default from `6b4c9dc0` on: LSTM on for text streams of 1 MiB and more** (an encoder choice that the
   stream records in its flags). Holdout check queued.
+
+## Sampled pre-trial gate (CODEX_REASSESS item 1): miss rate on the 22 dev cuts
+
+| build | total bytes | vs ungated | encode s (sum) |
+|---|---:|---:|---:|
+| ungated (`KOLMO_UPX_NOGATE=1`, `3543066f`) | 1,224,042 | | 496 |
+| gate v1: UPX must be smaller on two 16 KiB windows, also on codec 25 parts | 1,225,337 | +0.106% | 231 |
+| **gate v2: within 3% on the windows; codec 25 parts ungated** | equals ungated on the four v1 misses | 0 measured | |
+
+v1 missed three cuts: csv energy (+2.29%), csv ghcn (+7.64%) and x-ray (+0.25%). On the table columns and graph leaves a
+window from the start makes UPX look worse than it is, because it learns more slowly than model 4 early on. v2 recovers
+all three exactly (32,169 / 3,599 / 113,524 B) and json is unchanged. The gate still skips the full pass on audio,
+video and photo blocks, where UPX never wins. Times are from a quieter host than the earlier rows.

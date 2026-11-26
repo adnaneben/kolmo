@@ -37,7 +37,7 @@ static void *cmp_worker(void *a) {
             j->buf[k] = malloc(cap);
             /* each part: the raced learning settings of codec 7 (one thread each: the parts already run side by side) */
             j->res[k] = j->buf[k] ? cm_compress_raced(p, n, j->buf[k], cap, j->model == 1 ? 1 : 4, j->bbcap, 1, cm4_mask_for(p, n)) : 0;
-            if (j->res[k] && j->upx_want && j->model != 1 && n >= 64 && (getenv("KOLMO_UPX_NOGATE") || upx_gate(p, n, looks_text(p, n)))) {   /* Ultra+: the part's UPX stream when smaller */
+            if (j->res[k] && j->upx_want && j->model != 1 && n >= 64) {   /* parts: no gate (a column's start misjudged tables by 2-8%) */   /* Ultra+: the part's UPX stream when smaller */
                 uint8_t *t = malloc(j->res[k]); uint16_t par[UPX_NPAR]; upx_default_par(par);
                 size_t u = t ? upx_compress(p, n, t, j->res[k], upx_default_flags(looks_text(p, n), n), par) : 0;
                 if (u && u < j->res[k]) { memcpy(j->buf[k], t, u); j->res[k] = u; atomic_store(&j->upx_used, 1); }

@@ -629,7 +629,7 @@ static int upx_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) 
 static void upx_default_par(uint16_t *par) { for (int i = 0; i < UPX_NPAR; i++) par[i] = (uint16_t)(i <= UPX_FM ? upx_par_def[i] : 0); }
 
 /* Encoder-only gate (from #88's sampled pre-trial): code two 16 KiB windows (the start and the middle) with UPX and with
- * model 4; the full UPX pass runs only when UPX is smaller on the windows. Streams up to 64 KiB always try UPX. The gate
+ * model 4; the full UPX pass runs unless UPX is 3% or more larger on the windows. Streams up to 64 KiB always try UPX. The gate
  * reads only the stream's bytes, so the output never depends on threads or memory. */
 static int upx_gate(const uint8_t *in, size_t n, int txt) {
     if (n <= ((size_t)64 << 10)) return 1;
@@ -642,5 +642,5 @@ static int upx_gate(const uint8_t *in, size_t n, int txt) {
         zc += c ? c : w; zu += u ? u : w + 64;
     }
     free(t);
-    return zu < zc;
+    return (uint64_t)zu * 100 < (uint64_t)zc * 103;   /* UPX learns slower at first: within 3% on the windows still tries */
 }
