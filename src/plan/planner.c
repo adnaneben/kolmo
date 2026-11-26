@@ -764,8 +764,10 @@ structured_done:
             {   /* small executables (and their code sections): the call/jump transform, with the same opcode density
                  * test as the large-input trial; until 0.0.3 only inputs of 256 KiB or more were tried (75 x86-64
                  * tools of 32-256 KiB: -9 +4.1% against the filtered files) */
-                size_t ej = 0; for (size_t i = 0; i + 4 < n; i++) ej += ((s[i] & 0xFE) == 0xE8) & ((uint8_t)(s[i + 4] + 1) < 2);
-                if (ej * 1000 >= n) {
+                /* not where a typed graph already saves a fifth: integer series reach the opcode density too, and
+                 * the trial only costs them time (population-i64 at -5: +3.7% instructions) */
+                size_t ej = 0; if (!(pl.t == T_KG && best < plain * 0.80)) for (size_t i = 0; i + 4 < n; i++) ej += ((s[i] & 0xFE) == 0xE8) & ((uint8_t)(s[i + 4] + 1) < 2);
+                if (ej && ej * 1000 >= n) {
                     memcpy(buf, s, n); e8e9_fwd(buf, n);
                     c = (double)zcost(buf, n, zl) / n;
                     if (c < best) { best = c; pl = (plan_t){T_NONE, 0, 0, 0}; pl.t = T_X86; }
