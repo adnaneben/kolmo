@@ -135,7 +135,17 @@ Reading:
 - **LSTM H=128 on dev dickens4m (4,194,258 B):** 847,976 B against 852,404 B without it (−0.52%), at 2.3× the time
   (663 s against 289 s under load). For reference, stock `-U` gives 886,241 B, so Ultra+ is −3.82% without the LSTM and
   −4.32% with it. **Default from `6b4c9dc0` on: LSTM on for text streams of 1 MiB and more** (an encoder choice that the
-  stream records in its flags). Holdout check queued.
+  stream records in its flags). **Sealed holdout check (text__reymont, 4,189,604 B, Polish prose):**
+
+| | bytes | vs `-U` |
+|---|---:|---:|
+| stock `-U` | 548,384 | |
+| Ultra+ without the LSTM | 515,978 | −5.91% |
+| **Ultra+ with the LSTM (H=128, the default)** | **498,795** | **−9.04%** |
+
+The LSTM alone is −3.33% here, against −0.52% on dev dickens, and the round trip was verified. This confirms the
+default. #116 also measured its largest LSTM gain on reymont. (A first pair was invalid: its harness binary predates the
+`UP_H` override fix, so both arms ran with the LSTM.)
 
 ## Sampled pre-trial gate (CODEX_REASSESS item 1): miss rate on the 22 dev cuts
 
