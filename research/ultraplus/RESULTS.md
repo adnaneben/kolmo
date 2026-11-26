@@ -50,6 +50,15 @@ Reading:
 | first 200,000 B | 51,151 | 49,419 (−3.4%, bare stream at 7c14df3a) | 47,064 | 46,745 |
 | first 1,000,000 B | 218,145 | 211,692 (−3.0%, harness, 38 contexts) | — | 198,643 |
 
+## Leader points (Codex's runs, from fleet4/CODEX_REASSESS.md item 8)
+
+| input | -U | Ultra+ (up3) | paq8px v217 -8L | gap |
+|---|---:|---:|---:|---:|
+| enwik8[0:262144] (the holdout cut `xml__enwik8`, byte-identical prefix) | 61,966 | 59,528 | 54,648 | paq8px 8.2% smaller |
+| full enwik8 | 18,651,472 | (not run) | 16,081,149 | ultra +16.0% (paq8px −13.8% vs ultra) |
+
+Codex's A/A noise prior is ±8% for timings. Sizes are deterministic.
+
 ## cmix v21 on the cuts (local, one niced process)
 
 Only two cuts finished: ESC-50 100032 (cmix 14,478 B, Kolmo 13,940 B) and ESC-50 28808 (cmix 153,334 B, Kolmo
