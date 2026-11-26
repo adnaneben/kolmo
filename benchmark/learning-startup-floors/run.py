@@ -21,6 +21,7 @@ SPECS = [f"{ph}>={r}MB/s" for ph, r in FLOORS] + ["size"]
 CLASSES = ["text", "table", "log", "json", "numeric", "binary"]
 ROUNDS = {"dev": 5, "holdout": 11, "holdout2": 11, "reference": 7}
 MAX_LOAD = None   # --max-load: wait for the 1-minute load to fall to this before each round; redo a round that ends above it
+MAX_ATTEMPTS = 6  # a round still over the limit after this many attempts aborts the run: no partial split is ever scored
 
 
 def load1(): return os.getloadavg()[0]
@@ -110,7 +111,7 @@ def load_split(corpus, split, mdir=HERE):
 def run_split(R, raw, split, files, arms, rng):
     cells = [("direct", s, None) for s in SETTINGS] + [("target", a, spec) for a in arms for spec in SPECS]
     for rnd in range(ROUNDS[split] + 1):          # round 0 is the warmup
-      for attempt in range(1, 7):
+      for attempt in range(1, MAX_ATTEMPTS + 1):
         before = wait_quiet(); buf = []
         order = files[:]; rng.shuffle(order)
         for f in order:
@@ -131,6 +132,29 @@ def run_split(R, raw, split, files, arms, rng):
         print(f"{split} round {rnd} attempt {attempt} done {time.strftime('%H:%M:%S')} load {before:.1f}->{after:.1f}"
               + (" REDO" if bad else ""), flush=True)
         if not bad: break
+      else:
+        raise SystemExit(f"{split} round {rnd}: load above {MAX_LOAD} at the end of all {MAX_ATTEMPTS} attempts; "
+                         "aborting with no verdict (rows kept in raw.jsonl with invalid_load: true)")
+
+
+def coverage(rows, split, files, arms, rounds):
+    """Exactly one valid observation per expected scored round in every expected cell; anything else blocks a verdict."""
+    want = set(range(1, rounds + 1))
+    got = {}
+    for r in rows:
+        if r["split"] == split and not r["warmup"] and not r.get("invalid_load"):
+            got.setdefault((r["file"], r["kind"], r["arm"], r["spec"]), []).append(r["round"])
+    cells = [("direct", s, None) for s in SETTINGS] + [("target", a, spec) for a in arms for spec in SPECS]
+    problems = []
+    for f in files:
+        for kind, arm, spec in cells:
+            rs = got.get((f, kind, arm, spec), [])
+            if sorted(rs) != sorted(want):
+                missing = sorted(want - set(rs)); dup = sorted({x for x in rs if rs.count(x) > 1}); extra = sorted(set(rs) - want)
+                problems.append(f"{split} {f} {kind} {arm} {spec}: missing rounds {missing} duplicate {dup} unexpected {extra}")
+    extra_cells = set(got) - {(f, k, a, sp) for f in files for k, a, sp in cells}
+    problems += [f"{split} unexpected cell {c}" for c in sorted(extra_cells, key=str)]
+    return problems
 
 
 def measure(a):
@@ -146,7 +170,9 @@ def measure(a):
     meta = {"encoder": a.encoder, "encoder_sha256": ENCODER_SHA, "reader": a.reader, "reader_sha256": READER_SHA,
             "seed": SEED, "rounds": ROUNDS, "start": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "uname": os.uname()._asdict() if hasattr(os.uname(), "_asdict") else list(os.uname()),
-            "load_start": os.getloadavg(), "max_load": MAX_LOAD, "holdouts": holdouts}
+            "load_start": os.getloadavg(), "max_load": MAX_LOAD, "holdouts": holdouts,
+            "files": {"dev": [f["path"] for f in dev], **{h: [f["path"] for f in hold[h]] for h in holdouts}},
+            "arms": {"dev": ["stock", "B", "C"]}}
     rng = random.Random(SEED)
     # 1. launch constants on a 1-byte file (development phase)
     one = os.path.join(out, "one-byte"); open(one, "wb").write(b"x")
@@ -168,12 +194,16 @@ def measure(a):
     raw = open(os.path.join(out, "raw.jsonl"), "w")
     # 3. development: stock, B, C
     run_split(R, raw, "dev", dev, {"stock": None, "B": tabs["B"], "C": tabs["C"]}, rng)
-    dsc = score_split([json.loads(l) for l in open(os.path.join(out, "raw.jsonl"))], "dev", ["B", "C"], "stock", None)
+    drows = [json.loads(l) for l in open(os.path.join(out, "raw.jsonl"))]
+    cov = coverage(drows, "dev", meta["files"]["dev"], ["stock", "B", "C"], ROUNDS["dev"])
+    if cov: raise SystemExit("development coverage incomplete, no pick:\n" + "\n".join(cov))
+    dsc = score_split(drows, "dev", ["B", "C"], "stock", None)
     met = {k: dsc["arms"][k]["met"] for k in ("stock", "B", "C")}
     pick = max(("B", "C"), key=lambda k: (met[k], -dsc["arms"][k]["bytes_on_met"]))
     improved = met[pick] > met["stock"]
     if not improved: pick = "B"
     meta.update(dev_met=met, chosen=pick, dev_improved=improved)
+    for h in holdouts: meta["arms"][h] = ["stock", "stock-dup", pick]
     json.dump(meta, open(os.path.join(out, "meta.json"), "w"), indent=1)
     print("development met:", met, "-> holdout candidate", pick, "(improved)" if improved else "(no development gain)", flush=True)
     # 4. holdout: stock, stock-dup, chosen
@@ -283,15 +313,24 @@ def score(a):
     meta = json.load(open(os.path.join(out, "meta.json")))
     rows = [json.loads(l) for l in open(os.path.join(out, "raw.jsonl"))]
     res = {"meta": {k: meta[k] for k in meta if k != "launch"}, "launch": {k: meta["launch"][k] for k in ("Pe_ms", "Pd_ms")}}
+    files = meta.get("files", {}); arms = meta.get("arms", {})
+    def cov(split, default_arms):   # runs before meta recorded files fall back to the files seen in the rows
+        fs = files.get(split) or sorted({r["file"] for r in rows if r["split"] == split})
+        return coverage(rows, split, fs, arms.get(split, default_arms), meta["rounds"][split])
     if any(r["split"] == "dev" for r in rows):
         d = score_split(rows, "dev", ["B", "C"], "stock", None)
-        res["dev"] = {"arms": d["arms"], "integrity": d["integrity"]}
+        res["dev"] = {"arms": d["arms"], "integrity": d["integrity"], "coverage": cov("dev", ["stock", "B", "C"])}
         write_csv(os.path.join(out, "dev-cases.csv"), d["cases"])
     for hs in meta.get("holdouts", ["holdout"]):
         if not any(r["split"] == hs for r in rows): continue
         cand = meta["chosen"]
+        c = cov(hs, ["stock", "stock-dup", cand])
         h = score_split(rows, hs, [cand], "stock", "stock-dup")
-        res[hs] = {"candidate": cand, "arms": h["arms"], "gates": gates(h, "stock", "stock-dup", cand)}
+        g = gates(h, "stock", "stock-dup", cand)
+        g["coverage"] = {"problems": c, "pass": not c}
+        if c: g["qualifies"] = None; g["verdict"] = "none: incomplete rounds (see coverage)"
+        else: g["verdict"] = "qualifies" if g["qualifies"] else "rejected"
+        res[hs] = {"candidate": cand, "arms": h["arms"], "gates": g}
         write_csv(os.path.join(out, f"{hs}-cases.csv"), h["cases"])
         write_csv(os.path.join(out, f"{hs}-direct.csv"), [dict(file=k.split("|")[0], setting=k.split("|")[1], **v) for k, v in h["direct"].items()])
     res["rows_discarded_for_load"] = sum(1 for r in rows if r.get("invalid_load")) 
@@ -311,9 +350,11 @@ def reference(a):
     with open(os.path.join(out, "raw.jsonl"), "w") as raw:
         run_split(R, raw, "reference", files, {"stock": None, "cand": tab}, random.Random(SEED + 1))
     rows = [json.loads(l) for l in open(os.path.join(out, "raw.jsonl"))]
+    cov = coverage(rows, "reference", [f["path"] for f in files], ["stock", "cand"], ROUNDS["reference"])
+    if cov: raise SystemExit("reference coverage incomplete:\n" + "\n".join(cov))
     sc = score_split(rows, "reference", ["cand"], "stock", None)
     write_csv(os.path.join(out, "reference-cases.csv"), sc["cases"])
-    json.dump({"arms": sc["arms"], "integrity": sc["integrity"], "table": a.table}, open(os.path.join(out, "reference-score.json"), "w"), indent=1)
+    json.dump({"arms": sc["arms"], "integrity": sc["integrity"], "coverage": cov, "table": a.table}, open(os.path.join(out, "reference-score.json"), "w"), indent=1)
     print(json.dumps({"arms": sc["arms"], "integrity": sc["integrity"]}, indent=1))
 
 

@@ -76,7 +76,11 @@ and development rule above are unchanged. Two things are added:
 
 - **Load gate**: before each round (and before the launch measurement and `kolmo calibrate`) the harness waits for
   the 1-minute load average to be ≤ 12. It records the load before and after on every row. A round that ends above
-  12 is discarded and redone, and discarded rows are kept in raw.jsonl with `invalid_load: true`.
+  12 is discarded and redone, and discarded rows are kept in raw.jsonl with `invalid_load: true`. A round still above
+  12 after 6 attempts aborts the run with no verdict; the runner never moves on to the next round. Every scored cell
+  must hold exactly one valid observation for each expected measured round. A missing, duplicate or unexpected round
+  blocks the development pick and the holdout verdict. (Added 2026-11-26 after a source review on #57, before any
+  `holdout2` measurement.)
 - **New sealed holdout `holdout2.json`**: 11 producers not used anywhere before (cairo, GIFLIB, Fontconfig, libusb,
   libaec, C-Blosc2, LZO, Tectonic, ICU, libX11, Graphite2). The first holdout has been seen, so **`holdout2` alone decides**.
   The first holdout is re-measured as a replication of the loaded run and does not count toward the decision. The
