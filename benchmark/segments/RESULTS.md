@@ -12,8 +12,7 @@ content runs with the same plain or word plan are coded as one unit) now also ru
 
 No format change: every frame is container version 12. Base: `origin/main` a1d39559. Every output of this branch in
 the tables was decoded by the 0.0.2 binary (`/opt/homebrew/bin/kolmo`, 0.0.2) and checked by SHA-256 against its
-input. Sizes only; the timing runs (`timing.sh`) wait for the machine's quiet window
-(`evidence/QUIET_WINDOW.md`).
+input. Timing: see *Encode time and memory* at the end.
 
 ## Choosing the guard (-9, `-T 10`, sizes in bytes)
 
@@ -115,3 +114,33 @@ new -T 1 vs -T 10 frames compared: 137, different: 0
 | mix2g.tar | oneshot | -9 | 646,767,942 | 635,691,509 | -1.71% |
 | mix2g.tar | oneshot T10 | -9 | 646,767,942 | 635,691,509 | -1.71% |
 | paxpipe.tar | oneshot T10 | -9 | 117,740,108 | 117,740,037 | -0.00% |
+
+## Encode time and memory
+
+`timing.sh` through `tools/timed.sh` in the quiet window (`evidence/QUIET_WINDOW.md`). Compression only, two runs per cell
+(the faster wall time and the larger peak RSS are shown), 1-minute load 3.64-9.01 for every row (the limit is 12).
+main is a1d39559 (`kolmo-base`); #117 is this branch's merge alone (`kolmo-merge`). Raw rows: `timing.tsv`.
+
+| input | threads | main wall s | #117 wall s | change | main peak RSS MiB | #117 peak RSS MiB |
+|---|---:|---:|---:|---:|---:|---:|
+| mozilla -9 | 1 | 10.86 | 12.89 | +19% | 517 | 591 |
+| mozilla -9 | 10 | 2.05 | 5.10 | +149% | 898 | 663 |
+| samba -9 | 1 | 3.43 | 4.22 | +23% | 207 | 331 |
+| samba -9 | 10 | 0.84 | 1.47 | +75% | 381 | 483 |
+| silesia.tar -9 | 1 | 25.78 | 24.10 | -7% | 1,472 | 1,471 |
+| silesia.tar -9 | 10 | 6.58 | 6.78 | +3% | 2,217 | 2,225 |
+| mozilla -8 | 1 | 4.82 | 4.68 | -3% | 354 | 345 |
+| mozilla -8 | 10 | 1.17 | 1.23 | +5% | 695 | 717 |
+
+- **Where nothing merges, nothing changes.** silesia.tar -9 runs the probe on every equal-plan pair and merges nothing.
+  Its times are within run-to-run noise (-7% at `-T 1`, +3% at `-T 10`), so the probe itself is cheap. mozilla -8
+  merges only up to 2 MiB and is within noise too.
+- **Where the merge fires, encoding is slower, most of all with many threads.** mozilla -9 goes from 33 blocks to one
+  51 MB block. That block is coded by one thread, so `-T 10` loses its parallelism: 2.05 to 5.10 s (+149%), and
+  +19% at `-T 1`. samba -9 goes from two runs to one block: +23% at `-T 1`, +75% at `-T 10`, and peak RSS +124 MiB
+  at `-T 1`.
+- Decode time was not measured. Fewer, larger blocks also decode with less parallelism, so expect a similar
+  direction on the merged files.
+- This is the trade for -3.85% (mozilla) and -1.48% (samba) at level 9. Whether `-T 10` encode time on such files
+  matters more than the ratio is the owner's call.
+
