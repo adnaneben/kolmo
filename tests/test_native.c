@@ -250,9 +250,25 @@ static void test_klzh2_order(int big) {
         free(in);
     }
 }
+/* the codec path's entry (kolmo_klzh2_compress_g): with chain set, or under 2 MiB, the output of kolmo_klzh2_compress; past
+   2 MiB without chain, one encode at the level, which decodes and is never smaller than the chain's */
+static void test_klzh2_gate(void) {
+    static const size_t ns[] = {200000, (5u << 20) / 2};
+    for (size_t si = 0; si < 2; si++) for (int lv = 8; lv <= 9; lv++) {
+        const size_t n = ns[si], cap = kolmo_klzh_bound(n); uint8_t *in = malloc(n), *a = malloc(cap), *b = malloc(cap), *c = malloc(cap), *d = malloc(n);
+        gen(in, n, 3);
+        const size_t za = kolmo_klzh2_compress(in, n, a, cap, lv), zb = kolmo_klzh2_compress_g(in, n, b, cap, lv, 1, 0, NULL, 1),
+                     zc = kolmo_klzh2_compress_g(in, n, c, cap, lv, 1, 0, NULL, 0);
+        CHECK(za && za == zb && !memcmp(a, b, za), "klzh2 gate: chain 1 differs from kolmo_klzh2_compress (n %zu, level %d)", n, lv);
+        if (n < (2u << 20)) CHECK(zc == za && !memcmp(a, c, za), "klzh2 gate: chain 0 under 2 MiB differs (n %zu, level %d)", n, lv);
+        else CHECK(zc >= za, "klzh2 gate: chain 0 smaller than the chain (n %zu, level %d)", n, lv);
+        CHECK(zc && kolmo_klzh2_decompress(c, zc, d, n) == 0 && !memcmp(in, d, n), "klzh2 gate: chain 0 round trip (n %zu, level %d)", n, lv);
+        free(in); free(a); free(b); free(c); free(d);
+    }
+}
 int main(int argc, char **argv) {
     int iters = argc > 1 ? atoi(argv[1]) : 1;
-    test_lengths(); test_hash(); test_klzh_edges(iters > 1); test_klzh2_format(iters > 1); test_klzh2_fast(iters > 1); test_klzh2_order(iters > 1);
+    test_lengths(); test_hash(); test_klzh_edges(iters > 1); test_klzh2_format(iters > 1); test_klzh2_fast(iters > 1); test_klzh2_order(iters > 1); test_klzh2_gate();
     static const size_t sizes[] = {0, 1, 2, 3, 4, 5, 7, 8, 15, 16, 17, 31, 64, 100, 255, 1000, 4095, 65536, 131071, 131072, 131073, 300000};
     for (int it = 0; it < iters; it++)
         for (int k = 0; k < (int)(sizeof C / sizeof *C); k++)

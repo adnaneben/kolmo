@@ -59,5 +59,9 @@ size_t kolmo_klzh2_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t
 struct kolmo_budget;
 size_t kolmo_klzh2_compress_el(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int passes,
                                struct kolmo_budget *budget);
+/* as _el (threads, passes, budget; budget may be NULL), but levels 8-9 encode the levels below only on inputs under
+   2 MiB unless `chain` is set (the codec path: klz.c, before kz_klzh2_mono); the other entry points always do */
+size_t kolmo_klzh2_compress_g(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int passes,
+                              struct kolmo_budget *budget, int chain);
 int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
 #endif
