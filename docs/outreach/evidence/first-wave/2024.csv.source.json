@@ -1,0 +1,10 @@
+{
+ "url": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/by_year/2024.csv.gz",
+ "kind": "gz",
+ "compressed_bytes": 175771409,
+ "sha256": "9ad1c562ddb240c808febb1cb4da6d61e4441738b09d8a43ec119428ea9747fb",
+ "uncompressed_total": 1382831730,
+ "sample_bytes": 99999985,
+ "sample_sha256": "cc348ec49a2d1bd6464248b5430001c0ab8028ce98cdadd8392a9802e964cf37",
+ "sample_is": "first bytes, cut at a line end"
+}

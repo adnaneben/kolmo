@@ -1,0 +1,198 @@
+{
+ "date": "2026-11-23 23:41",
+ "settings": [
+  "kolmo -3",
+  "kolmo -6",
+  "kolmo -9",
+  "zstd -3",
+  "zstd -19",
+  "xz -9",
+  "bzip2 -9"
+ ],
+ "machine": "Darwin 27.2.0, arm64, 10 cores",
+ "versions": {
+  "kolmo": "kolmo 0.0.2 (container version 12, Kolmo-native codecs)",
+  "zstd": "Zstandard CLI (64-bit) v1.5.7, by Yann Collet",
+  "xz": "xz (XZ Utils) 5.8.4",
+  "bzip2": "bzip2, a block-sorting file compressor.  Version 1.0.8, 13-Jul-2019."
+ },
+ "repeat": 1,
+ "files": [
+  {
+   "name": "pageviews-20250115-automated",
+   "bytes": 99999958,
+   "by": {
+    "kolmo -3": {
+     "size": 23331852,
+     "enc_s": 0.571259875,
+     "dec_s": 0.12039337500000002,
+     "verified": true,
+     "ratio": 4.285984584507051,
+     "enc_mibs": 166.94221974946817,
+     "dec_mibs": 792.1315569590411
+    },
+    "kolmo -6": {
+     "size": 18523051,
+     "enc_s": 24.03695125,
+     "dec_s": 0.1055407499999994,
+     "verified": true,
+     "ratio": 5.398676384360222,
+     "enc_mibs": 3.967532762138614,
+     "dec_mibs": 903.6072946828997
+    },
+    "kolmo -9": {
+     "size": 15226021,
+     "enc_s": 5.281781583000001,
+     "dec_s": 2.639978292000002,
+     "verified": true,
+     "ratio": 6.567701305547917,
+     "enc_mibs": 18.055913537442407,
+     "dec_mibs": 36.12430900484981
+    },
+    "zstd -3": {
+     "size": 23364607,
+     "enc_s": 0.28467720799999796,
+     "dec_s": 0.10525620900000376,
+     "verified": true,
+     "ratio": 4.279976033836135,
+     "enc_mibs": 335.00185089037547,
+     "dec_mibs": 906.050032509724
+    },
+    "zstd -19": {
+     "size": 17901630,
+     "enc_s": 54.66119029199999,
+     "dec_s": 0.08268258299999331,
+     "verified": true,
+     "ratio": 5.5860811557383325,
+     "enc_mibs": 1.7447002357038193,
+     "dec_mibs": 1153.4157270620274
+    },
+    "xz -9": {
+     "size": 16604524,
+     "enc_s": 48.60290108299999,
+     "dec_s": 1.3346264170000097,
+     "verified": true,
+     "ratio": 6.022452555701085,
+     "enc_mibs": 1.9621748797143448,
+     "dec_mibs": 71.4562445127317
+    },
+    "bzip2 -9": {
+     "size": 17083263,
+     "enc_s": 7.433568957999995,
+     "dec_s": 2.346881541000016,
+     "verified": true,
+     "ratio": 5.853680178078392,
+     "enc_mibs": 12.82928726768176,
+     "dec_mibs": 40.63579261255226
+    }
+   }
+  }
+ ],
+ "title": "Wikimedia pageview_complete, 2025-01-15 automated (first 100 MB)",
+ "total": {
+  "bytes": 99999958,
+  "by": {
+   "kolmo -3": {
+    "size": 23331852,
+    "ratio": 4.285984584507051,
+    "enc_mibs": 166.94221974946817,
+    "dec_mibs": 792.1315569590411
+   },
+   "kolmo -6": {
+    "size": 18523051,
+    "ratio": 5.398676384360222,
+    "enc_mibs": 3.967532762138614,
+    "dec_mibs": 903.6072946828997
+   },
+   "kolmo -9": {
+    "size": 15226021,
+    "ratio": 6.567701305547917,
+    "enc_mibs": 18.055913537442407,
+    "dec_mibs": 36.12430900484981
+   },
+   "zstd -3": {
+    "size": 23364607,
+    "ratio": 4.279976033836135,
+    "enc_mibs": 335.00185089037547,
+    "dec_mibs": 906.050032509724
+   },
+   "zstd -19": {
+    "size": 17901630,
+    "ratio": 5.5860811557383325,
+    "enc_mibs": 1.7447002357038193,
+    "dec_mibs": 1153.4157270620274
+   },
+   "xz -9": {
+    "size": 16604524,
+    "ratio": 6.022452555701085,
+    "enc_mibs": 1.9621748797143448,
+    "dec_mibs": 71.4562445127317
+   },
+   "bzip2 -9": {
+    "size": 17083263,
+    "ratio": 5.853680178078392,
+    "enc_mibs": 12.82928726768176,
+    "dec_mibs": 40.63579261255226
+   }
+  }
+ },
+ "verified": 7,
+ "best_kolmo": "kolmo -9",
+ "projection": {
+  "volume_bytes": 1756104053423.5176,
+  "price_gb_month": 0.023,
+  "months": 12,
+  "baseline": "bzip2 -9",
+  "baseline_label": "as stored today (bzip2 -9)",
+  "by": {
+   "uncompressed": {
+    "stored_bytes": 1756104053423.5176,
+    "yearly": 484.68471874489086,
+    "saving": -401.88471874489085,
+    "saving_pct": -485.3680178078392
+   },
+   "kolmo -3": {
+    "stored_bytes": 409731770798.1198,
+    "yearly": 113.08596874028109,
+    "saving": -30.285968740281092,
+    "saving_pct": -36.57725693270662
+   },
+   "kolmo -6": {
+    "stored_bytes": 325284186048.0636,
+    "yearly": 89.77843534926555,
+    "saving": -6.978435349265553,
+    "saving_pct": -8.428062016021197
+   },
+   "kolmo -9": {
+    "stored_bytes": 267384884257.7674,
+    "yearly": 73.7982280551438,
+    "saving": 9.001771944856202,
+    "saving_pct": 10.871705247410867
+   },
+   "zstd -3": {
+    "stored_bytes": 410306982922.4078,
+    "yearly": 113.24472728658455,
+    "saving": -30.444727286584552,
+    "saving_pct": -36.76899430746925
+   },
+   "zstd -19": {
+    "stored_bytes": 314371382094.8609,
+    "yearly": 86.76650145818161,
+    "saving": -3.966501458181611,
+    "saving_pct": -4.790460698286969
+   },
+   "xz -9": {
+    "stored_bytes": 291592841484.67426,
+    "yearly": 80.47962424977008,
+    "saving": 2.320375750229914,
+    "saving_pct": 2.8023861717752507
+   },
+   "bzip2 -9": {
+    "stored_bytes": 300000000000.0,
+    "yearly": 82.8,
+    "saving": 0.0,
+    "saving_pct": 0.0
+   }
+  }
+ }
+}

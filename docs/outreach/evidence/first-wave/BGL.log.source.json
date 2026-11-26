@@ -1,0 +1,13 @@
+{
+ "url": "https://zenodo.org/api/records/8196385/files/BGL.zip/content",
+ "kind": "zip",
+ "compressed_bytes": 57489019,
+ "sha256": "d67fd82a711aea0157a9b83175892c6ee60e384a2ddf5bc51f39118453816da8",
+ "member": "BGL.log",
+ "member_compressed": 57488000,
+ "member_bytes": 743185031,
+ "uncompressed_total": 743185031,
+ "sample_bytes": 99999904,
+ "sample_sha256": "e0317f23eee0ccd66c1ba4571000fdb20afcf0f2372976174874082a1920ea91",
+ "sample_is": "first bytes, cut at a line end"
+}

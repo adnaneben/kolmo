@@ -1,0 +1,10 @@
+{
+ "url": "https://dumps.wikimedia.org/other/pageview_complete/2025/2025-01/pageviews-20250115-automated.bz2",
+ "kind": "bz2",
+ "compressed_bytes": 237632987,
+ "sha256": "1a1c53cbb5c6b9f691818e0fc271a9cdc936da38c5af2ed98b4bbf8b3cde433c",
+ "uncompressed_total": 1306844901,
+ "sample_bytes": 99999958,
+ "sample_sha256": "910daf444beb92a3f902899261f334ef3f772daca82b4bcfe6982cff7a710f45",
+ "sample_is": "first bytes, cut at a line end"
+}

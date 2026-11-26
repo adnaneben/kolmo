@@ -1,0 +1,10 @@
+{
+ "url": "https://cdn.gea.esac.esa.int/Gaia/gdr3/gaia_source/GaiaSource_000000-003111.csv.gz",
+ "kind": "gz",
+ "compressed_bytes": 233642769,
+ "sha256": "bdc54b6adc50e6982897d0074068b862811ef623449d04d1205072b27ac3b623",
+ "uncompressed_total": 669680766,
+ "sample_bytes": 99999474,
+ "sample_sha256": "66d507eb4880f5b2090151dd5c9c4a82f1641105dfa24c2287b699b135c0fe76",
+ "sample_is": "first bytes, cut at a line end"
+}
