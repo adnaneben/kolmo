@@ -96,6 +96,10 @@ static void test_pipeline(int K, int passes, int tokens, int later, unsigned ste
 
 /* ---- 4: the elastic coders against one thread ---- */
 typedef size_t (*elfn)(const uint8_t *, size_t, uint8_t *, size_t, int, int, int, struct kolmo_budget *);
+/* KLZH2's elastic entry with the literal-floor warm-ups on (nowarm 0), as kolmo_klzh2_compress runs them */
+static size_t klzh2_el(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int passes, struct kolmo_budget *b) {
+    return kolmo_klzh2_compress_el(in, n, out, cap, level, threads, passes, b, 0);
+}
 static void test_coder(const char *name, elfn el, size_t (*one)(const uint8_t *, size_t, uint8_t *, size_t, int), int level,
                        const uint8_t *in, size_t n) {
     size_t cap = n + n / 16 + 4096; uint8_t *a = malloc(cap), *b = malloc(cap);
@@ -161,8 +165,8 @@ int main(void) {
     uint8_t *in = malloc(3u << 20); assert(in); fill(in, 2u << 20, 0); fill(in + (2u << 20), 1u << 20, 1);
     test_coder("klzma", kolmo_klzma_compress_el, kolmo_klzma_compress, 9, in, 3u << 20);
     test_coder("klzma", kolmo_klzma_compress_el, kolmo_klzma_compress, 6, in, 3u << 20);
-    test_coder("klzh2", kolmo_klzh2_compress_el, kolmo_klzh2_compress, 9, in, 3u << 20);
-    test_coder("klzh2", kolmo_klzh2_compress_el, kolmo_klzh2_compress, 7, in, 3u << 20);
+    test_coder("klzh2", klzh2_el, kolmo_klzh2_compress, 9, in, 3u << 20);
+    test_coder("klzh2", klzh2_el, kolmo_klzh2_compress, 7, in, 3u << 20);
     printf("klzma 6 and 9, klzh2 7 and 9: elastic output identical to one thread\n");
     free(in); free(tar);
     printf("ELASTIC TESTS PASSED\n");
