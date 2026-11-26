@@ -1,0 +1,49 @@
+{
+ "verdict": "KEEP (byte-identical speedup)",
+ "basis": "instr",
+ "tiers": {
+  "middle": "pass"
+ },
+ "violations": [],
+ "provisional": [
+  "RSS 1.21x (median file 1.17x, n=3) at -4: tar S2 T10",
+  "RSS 1.24x (median file 1.00x, n=3) at -7: container S1 T1"
+ ],
+ "removed_inversions": [],
+ "added_inversions": [],
+ "gain_kinds": [
+  "audio",
+  "code",
+  "container",
+  "csv",
+  "exe",
+  "genomics",
+  "html",
+  "img16",
+  "img8",
+  "json",
+  "log",
+  "numeric",
+  "tar",
+  "text",
+  "tsv",
+  "video",
+  "weights",
+  "xml"
+ ],
+ "counts": {
+  "NEUTRAL": 208,
+  "KEEP-ID": 160
+ },
+ "gate": "none needed: on everywhere it was measured",
+ "holdout_accuracy": 1.0,
+ "rules": [
+  {
+   "rule": "always",
+   "dev_n": 264,
+   "dev_wins": 264,
+   "holdout_n": 402,
+   "holdout_wins": 402
+  }
+ ]
+}
