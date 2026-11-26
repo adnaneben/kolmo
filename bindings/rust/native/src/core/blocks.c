@@ -218,7 +218,7 @@ static void *compress_worker(void *arg) {
         /* a block of WAV samples is coded by the audio codec when that is smaller (it was on all 43 WAV files measured,
          * by 17% or more); the rest of the block's path keeps rc2's leaf rule, without the format-2 leaf trials */
         xp->no_f2 = J->aud_prof >= 0 && J->starts[i] < J->aud_end && J->starts[i + 1] > J->aud_off;
-        xp->used_bwt = 0;
+        xp->used_bwt = 0; xp->used_upx = 0;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
 #ifdef KOLMO_FRONTIER
@@ -648,6 +648,10 @@ coded:;
         (void)modes;   /* the format features this block used (once the frame's version); every frame is version 12 */
         for (int k = 0; k < XT_N; k++) xtrial_free(&xt[k]);
         size_t tot = 4 + meta + cl;
+        /* Ultra+: the frame is version 13 only when a written block holds a UPX stream (codec 7 model nibble 11 at the
+         * block's top level, or a graph block whose leaves were coded while UPX won) */
+        if (J->ultra_plus && cl && cl + meta < len && ((codec == C_CM && cl >= 5 && sl[meta + 3] >> 4 == 8 && sl[meta + 4] >> 4 == 11)
+                                                       || (codec == C_GRAPH && xp->used_upx))) atomic_store(&J->used_upx, 1);
         uint8_t *e = J->idx + (size_t)i * IDX;
         if (cl == 0 || cl + meta >= len) {                                  /* store raw */
             codec = C_STORE; tflag = 0; tot = 4 + len;
@@ -669,7 +673,6 @@ coded:;
     if (held) { kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0; kmem_release(held); }   /* left the loop on an error */
     free(input);
     xp->budget = NULL; xp->threads_max = 0;
-    if (xp->used_upx) atomic_store(&J->used_upx, 1);
     xp->ultra_plus = 0; xp->used_upx = 0;
     if (atomic_load(&J->err)) {                               /* waiting workers must see the failure */
         pthread_mutex_lock(&J->wmu); if (J->wcv_ready) pthread_cond_broadcast(&J->wcv); pthread_mutex_unlock(&J->wmu);
