@@ -247,6 +247,16 @@ static size_t tar_hdr(uint8_t *h, const char *name, size_t size, char type) {
     snprintf((char *)h + 148, 8, "%06o", sum); h[155] = ' ';
     return 512 + (size + 511) / 512 * 512;
 }
+/* a short stream that is not a tar: the tar walker stays off and holds no headers (UBSan: no memmove on NULL) */
+static void stream_short_plain(void) {
+    size_t n = 10000; uint8_t *a = make_text(n), *o; size_t on;
+    int in = fd_of(a, n), so = fd_of((const uint8_t *)"", 0);
+    kolmo_params p = {KOLMO_FAST, 0, 1, 0, 1, 0};
+    assert(kolmo_stream_compress(in, so, &p, 1) > 0); close(in);
+    size_t zn; uint8_t *z = slurp(so, &zn); close(so);
+    assert(sdecode(z, zn, &o, &on) == (int64_t)n && on == n && !memcmp(o, a, n));
+    free(o); free(z); free(a);
+}
 static void stream_tar_cuts(void) {
     static const size_t sz[] = {300000, 900000, 2621440 + 1000, 200000, 600000, 400000, 700000};
     size_t cap = 8 << 20, n = 0, nh = 0, hdr[16]; uint8_t *t = calloc(cap, 1), *txt = make_text(3 << 20);
@@ -286,6 +296,7 @@ int main(void) {
     cm_amplification();
     release();
     stream_members();
+    stream_short_plain();
     stream_tar_cuts();
     puts("HARDENING TESTS PASSED (forged headers, trailing bytes, frame walking, parameters, CM amplification, buffer release, stream members, stream tar cuts)");
     return 0;

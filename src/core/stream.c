@@ -89,6 +89,7 @@ static size_t st_tar_cut(st_tar *T, const uint8_t *buf, uint64_t base, size_t ha
 /* the first member header in [base, base + len) as an offset from base (0: none, or one at base itself); forgets the
  * headers before base + len */
 static uint64_t st_tar_first(st_tar *T, uint64_t base, size_t len) {
+    if (!T->nh) return 0;                               /* no header walked (not a tar): hs may be NULL */
     uint64_t k = 0; size_t i = 0;
     while (i < T->nh && T->hs[i] < base + len) { if (!k && T->hs[i] > base) k = T->hs[i] - base; if (T->hs[i] == base) k = UINT64_MAX; i++; }
     memmove(T->hs, T->hs + i, (T->nh - i) * sizeof *T->hs); T->nh -= i;
