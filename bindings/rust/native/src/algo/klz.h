@@ -60,4 +60,7 @@ struct kolmo_budget;
 size_t kolmo_klzh2_compress_el(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int passes,
                                struct kolmo_budget *budget);
 int kolmo_klzh2_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n);
+/* KLZH2 levels 7-9: whether this thread's next calls may run the literal-floor warm-ups (klz.c ko_parse; on by
+   default). The graph turns them off for its leaves. Returns the previous setting. */
+int kolmo_klzh2_warmups(int on);
 #endif

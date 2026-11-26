@@ -391,7 +391,22 @@ typedef struct {
     uint32_t smod;   /* 0: position p's tree node is slot p & bmask; else slot p % smod (the threaded finder, ko_mt) */
     struct ko_mt *mt;   /* the threaded finder, or NULL */
     int mterr;          /* the threaded finder failed (no output) */
+    struct ko_log *rec, *play;   /* record the matches of the positions searched into rec, or answer from play (ko_parse) */
 } ko_mf;
+/* The matches of the positions a pass searched. The finder's answer at p depends only on p and the pass length (every
+ * position is inserted, searched or not, and the threaded finder relies on the same: its workers find every position
+ * whatever the parse visits), so a second pass over the same bytes can take them from here instead of searching
+ * (ko_parse's two warm-ups) */
+typedef struct ko_log { uint32_t *at; uint16_t *cnt; ko_m *m; size_t len, cap; int err; } ko_log;   /* at[p]: UINT32_MAX when p was not searched */
+static void ko_rec(ko_log *L, uint32_t p, const ko_m *out, uint32_t nm) {
+    if (L->err) return;
+    if (L->len + nm > L->cap) {
+        size_t nc = L->cap ? 2 * L->cap : 4096; while (nc < L->len + nm) nc *= 2;
+        ko_m *g = realloc(L->m, nc * sizeof *g); if (!g) { L->err = 1; return; }
+        L->m = g; L->cap = nc;
+    }
+    memcpy(L->m + L->len, out, nm * sizeof *out); L->at[p] = (uint32_t)L->len; L->cnt[p] = (uint16_t)nm; L->len += nm;
+}
 /* skip: a position whose next node is already within skip of its price is not searched; KLZH2 only: wlog, the largest
  * offset 2^wlog - 1 (long-distance candidates past the tree's window), m3: 3-byte matches */
 typedef struct { int hlog, bwlog, depth, nice, skip, wlog, m3; } ko_par;
@@ -401,6 +416,8 @@ typedef struct {
     uint32_t pl[256], pll[72], pml[72], pof[33], llp[KO_LLT], mlp[KO_MLT];
     uint32_t mmin; int nof;   /* shortest match (4 KLZH, 3 KLZH2) and offset codes (32, 33) */
     uint32_t lfloor;          /* KLZH2: least price of a literal (ko_init, ko_parse) */
+    int floored;              /* the floor raised a literal price since ko_init (ko_parse: whether the 2-bit floor binds
+                               * on the starting statistics) */
 } ko_st;
 #define KO_H4(p, lg) ((kz_r32(p) * 2654435761u) >> (32 - (lg)))
 /* a last match of the nice length (or of the block's end) continued to its full length */
@@ -523,7 +540,7 @@ static ko_mt *ko_mt_start(ko_mf *M, int K, int passes, kolmo_budget *b) {
     if (!Q->cp) { free(Q); return NULL; }
     return Q;
 }
-static uint32_t ko_find(ko_mf *M, uint32_t p, ko_m *out) {   /* p + 8 <= n, positions searched in increasing order */
+static inline __attribute__((always_inline)) uint32_t ko_find(ko_mf *M, uint32_t p, ko_m *out) {   /* p + 8 <= n, positions searched in increasing order */
     if (M->mt) {
         ko_mt *Q = M->mt;
         if (M->h3 || M->ldm) for (uint32_t q = M->ins; q < p; q++) ko_aux(M, q, out, 0, 0);
@@ -546,11 +563,28 @@ static uint32_t ko_find(ko_mf *M, uint32_t p, ko_m *out) {   /* p + 8 <= n, posi
     uint32_t nm = ko_bt(M, p, out, 1);
     return M->h3 || M->ldm ? ko_aux(M, p, out, nm, 1) : nm;
 }
+/* ko_find for the warm-ups of ko_parse: record the answers (rec), or answer from a record (play) until the first
+ * position it lacks; from there the finder starts, inserting every earlier position as a pass that had searched them
+ * all would have, and ko_find answers (M->play is cleared) */
+static uint32_t ko_find_log(ko_mf *M, uint32_t p, ko_m *out) {
+    if (M->play) {
+        const ko_log *L = M->play;
+        if (L->at[p] != UINT32_MAX) { const uint32_t nm = L->cnt[p]; memcpy(out, L->m + L->at[p], nm * sizeof *out); return nm; }
+        memset(M->head, 0xFF, sizeof(uint32_t) << M->hlog);
+        if (M->h3) memset(M->h3, 0xFF, sizeof(uint32_t) << 14);
+        if (M->ldm) memset(M->ldm, 0xFF, sizeof(uint32_t) << M->ldmlog);
+        M->play = NULL; M->ins = 0;
+        return ko_find(M, p, out);
+    }
+    const uint32_t nm = ko_find(M, p, out);
+    ko_rec(M->rec, p, out, nm);
+    return nm;
+}
 static inline uint32_t ko_w(uint32_t x) { x++; int h = kz_hb(x); return (uint32_t)h * 256 + (uint32_t)(((uint64_t)x << 8) >> h); }   /* ~256 (log2(x + 1) + 1) */
 static inline uint32_t ko_cost(uint32_t f, uint32_t ws) { uint32_t c = ws - ko_w(f); return c < 256 ? 256 : c > 11 * 256 ? 11 * 256 : c; }
 static void ko_refresh(ko_st *T) {
     uint32_t w = ko_w(T->sl); for (int s = 0; s < 256; s++) T->pl[s] = ko_cost(T->lit[s], w);
-    if (T->mmin == 3) for (int s = 0; s < 256; s++) if (T->pl[s] < T->lfloor) T->pl[s] = T->lfloor;   /* KLZH2: see ko_init */
+    if (T->mmin == 3) for (int s = 0; s < 256; s++) if (T->pl[s] < T->lfloor) { T->pl[s] = T->lfloor; T->floored = 1; }   /* KLZH2: see ko_init */
     w = ko_w(T->sll); for (int c = 0; c < 72; c++) T->pll[c] = ko_cost(T->ll[c], w);
     w = ko_w(T->sml); for (int c = 0; c < 72; c++) T->pml[c] = ko_cost(T->ml[c], w);
     w = ko_w(T->sof); for (int c = 0; c < T->nof; c++) T->pof[c] = ko_cost(T->of[c], w) + (c >= 3 ? (uint32_t)(c - 3) * 256 : 0);
@@ -576,7 +610,7 @@ static void ko_rescale(ko_st *T) {
  * at least 2% smaller, its statistics seed the real pass, which then keeps the 1-bit floor (kennedy.xls at -7:
  * 132,595 -> about 69,500 B). */
 static void ko_init(ko_st *T, const uint8_t *in, size_t n, int v2) {
-    T->mmin = v2 ? 3 : 4; T->nof = v2 ? 33 : 32; T->lfloor = KO_LIT_FLOOR;
+    T->mmin = v2 ? 3 : 4; T->nof = v2 ? 33 : 32; T->lfloor = KO_LIT_FLOOR; T->floored = 0;
     static const uint8_t LL0[16] = {4, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, ML0[16] = {6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
         OF0[27] = {6, 2, 1, 1, 1, 1, 2, 3, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1};
     uint32_t c[256] = {0}; size_t m = n < KO_SPAN ? n : KO_SPAN;
@@ -692,27 +726,29 @@ static void ko_emit(ko_st *T, const uint8_t *in, kz_seq *S, size_t *ns, size_t a
 #endif
 typedef struct { int threads, passes; kolmo_budget *b; } ko_thr;   /* the finder's split, helpers always on, the budget */
 static const ko_thr KO_ONE = {1, 0, NULL};
-static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st *T, kz_seq *S, size_t *anchor_out, int *err, const ko_thr *th) {
-    const int threads = th->threads;
+static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st *T, kz_seq *S, size_t *anchor_out, int *err, const ko_thr *th, ko_log *rec, ko_log *play) {
+    const int threads = rec || play ? 1 : th->threads;
     const uint32_t nice = (uint32_t)P->nice; int bw = 4; while (bw < P->bwlog && ((size_t)1 << bw) < n) bw++;
-    ko_mf M = {in, (uint32_t)n, NULL, NULL, (1u << bw) - 1, 0, nice, P->hlog, P->depth, NULL, NULL, 0, 0, 0, NULL, 0};
+    ko_mf M = {in, (uint32_t)n, NULL, NULL, (1u << bw) - 1, 0, nice, P->hlog, P->depth, NULL, NULL, 0, 0, 0, NULL, 0, rec, play};
     /* K workers beside the parse; not with two threads (one worker beside the parse measured no faster on the M5) */
     int K = threads >= 3 ? threads - 1 : 0; if (K > KO_MTMAXK) K = KO_MTMAXK;
     if (n < KO_MT_MIN) K = 0;
     size_t nslots = (size_t)1 << bw;
     if (K > 0 && n > nslots) { M.smod = (uint32_t)(nslots + (KO_MTR + 2) * (size_t)KO_MTC); nslots = M.smod; }   /* see ko_mt */
-    M.head = malloc(sizeof(uint32_t) << P->hlog); M.son = malloc(sizeof(uint32_t) * 2 * nslots);
     const int v2 = T->mmin == 3;
-    if (v2 && P->m3) { M.h3 = malloc(sizeof(uint32_t) << 14); if (M.h3) memset(M.h3, 0xFF, sizeof(uint32_t) << 14); }
+    {   /* a replay starts its finder's tables only at its first miss (ko_find) */
+    M.head = malloc(sizeof(uint32_t) << P->hlog); M.son = malloc(sizeof(uint32_t) * 2 * nslots);
+    if (v2 && P->m3) { M.h3 = malloc(sizeof(uint32_t) << 14); if (M.h3 && !play) memset(M.h3, 0xFF, sizeof(uint32_t) << 14); }
     if (v2 && P->wlog > bw && n > M.bmask + 1) {   /* a block longer than the tree's window */
         M.wmax = (uint32_t)((1ull << P->wlog) - 1); M.ldmlog = 22; while (M.ldmlog > 16 && ((size_t)8 << M.ldmlog) > n) M.ldmlog--;
-        M.ldm = malloc(sizeof(uint32_t) << M.ldmlog); if (M.ldm) memset(M.ldm, 0xFF, sizeof(uint32_t) << M.ldmlog);
+        M.ldm = malloc(sizeof(uint32_t) << M.ldmlog); if (M.ldm && !play) memset(M.ldm, 0xFF, sizeof(uint32_t) << M.ldmlog);
+    }
     }
     ko_node *o = malloc((KO_OPT + nice + 8) * sizeof *o); ko_m *mm = malloc((nice + 10) * sizeof *mm); uint32_t *path = malloc((KO_OPT + nice + 8) * sizeof *path);
-    if (!M.head || !M.son || !o || !mm || !path || (v2 && P->m3 && !M.h3) || (M.wmax && !M.ldm)) {
+    if (!M.head || !M.son || (v2 && P->m3 && !M.h3) || (M.wmax && !M.ldm) || !o || !mm || !path) {
         free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm); *err = 1; return 0;
     }
-    memset(M.head, 0xFF, sizeof(uint32_t) << P->hlog);
+    if (!play) memset(M.head, 0xFF, sizeof(uint32_t) << P->hlog);
     if (K > 0) M.mt = ko_mt_start(&M, K, th->passes, th->b);
     if (!M.mt && M.smod) M.smod = 0;   /* one thread after all: the usual slots (the array is larger than they need) */
     const uint8_t *ie = in + n; size_t pos = 0, anchor = 0, ns = 0, next_scale = KO_SPAN; uint32_t rep[3] = {1, 4, 8};
@@ -737,7 +773,7 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
             const uint32_t lb = base - ko_llp(T, L);
             if (P->skip && cur > 0 && cur + 1 < last && o[cur + 1].price <= base + (uint32_t)P->skip) continue;   /* unpromising position */
             if (abs + 8 <= n) {
-                uint32_t nm = ko_find(&M, (uint32_t)abs, mm), rl[3] = {0, 0, 0}, rb = 0, rk = 0;
+                uint32_t nm = M.rec || M.play ? ko_find_log(&M, (uint32_t)abs, mm) : ko_find(&M, (uint32_t)abs, mm), rl[3] = {0, 0, 0}, rb = 0, rk = 0;
                 for (int k = 0; k < 3; k++) {
                     uint32_t r = c->rep[k];
                     if (r <= abs && kz_r32(in + abs) == kz_r32(in + abs - r)) { rl[k] = 4 + (uint32_t)kz_count(in + abs + 4, in + abs + 4 - r, ie); if (rl[k] > rb) { rb = rl[k]; rk = (uint32_t)k; } }
@@ -767,7 +803,7 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
         if (fl) { ko_emit(T, in, S, &ns, anchor, pos, fl, foff, rep); pos += fl; anchor = pos; }
     }
 #undef KO_RELAX
-    int mterr = 0;
+    int mterr = M.mterr || (rec && rec->err);
     if (M.mt) { mterr = M.mterr; ko_mt_end(M.mt); }
     if (mterr) { free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm); *err = 1; return 0; }
     free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm);
@@ -787,29 +823,58 @@ static uint64_t ko_est2(const uint8_t *in, size_t n, const kz_seq *S, size_t ns,
     for (size_t i = anchor; i < n; i++) lit[in[i]]++;
     return kz_hcost(lit, 256) + kz_hcost(ll, 72) + kz_hcost(ml, 72) + kz_hcost(of, 34) + xb * 256;
 }
+static _Thread_local int ko_warm_off;   /* kolmo_klzh2_warmups(0): graph leaves */
+int kolmo_klzh2_warmups(int on) { int was = !ko_warm_off; ko_warm_off = !on; return was; }
 static size_t ko_parse(const uint8_t *in, size_t n, const ko_par *P, int v2, kz_seq *S, size_t *anchor_out, int *err, const ko_thr *th) {
     ko_st *T = malloc(sizeof *T); if (!T) { *err = 1; return 0; }
     ko_init(T, in, n, v2);
-    if (v2 && n >= (16u << 10)) {   /* KLZH2: the literal floor of the two warm-up passes that estimates smaller (see ko_init) */
-        size_t m = n < (256u << 10) ? n : (256u << 10), a0; int e0 = 0; uint64_t c[2]; ko_st *U = malloc(sizeof *U);
+    /* KLZH2: the literal floor of the two warm-up passes that estimates smaller (see ko_init), on blocks of more than
+     * 256 KiB that are not graph leaves. The floor's gains are on whole blocks (kennedy.xls 1 MB, ptt5 513 KB); on graph
+     * leaves and small inputs the warm-ups cost encode time (population-i64 2.1x, owid-f64 2.0x at levels 5-7) and no
+     * frame of the corpora, the ledger or Canterbury came out smaller for them */
+    if (v2 && n > (256u << 10) && !ko_warm_off) {
+        /* The same choice as two full warm-ups, at less cost:
+         *  - where the 2-bit floor raises no literal price of the starting statistics (no byte is about a quarter or
+         *    more of the first 128 KiB), no warm-up runs. The floor could still bind later in a warm-up, but it then
+         *    never won: on 345 files at levels 5-7 (2,017 warm-ups, 22 of them won) every win bound from the start;
+         *  - without a skip rule (levels 6-7), the 2-bit warm-up records the finder's matches at the positions it
+         *    searches, and the 1-bit warm-up replays them: it only prices and parses up to the first position the
+         *    first did not search, then finds its own (ko_log, ko_find; the matches at a position depend only on it). */
+        const size_t m = 256u << 10; size_t a0, a1; int e0 = 0; uint64_t c[2];
+        ko_st *U = malloc(sizeof *U);
         if (!U) { free(T); *err = 1; return 0; }
-        for (int v = 0; v < 2; v++) {
-            ko_st *X = v ? U : T; if (v) ko_init(X, in, n, v2);
-            X->lfloor = v ? 2 * KO_LIT_FLOOR : KO_LIT_FLOOR; ko_refresh(X);
-            size_t k = ko_parse_pass(in, m, P, X, S, &a0, &e0, &KO_ONE);
-            if (e0) { free(U); free(T); *err = 1; return 0; }
-            c[v] = ko_est2(in, m, S, k, a0);
+        ko_init(U, in, n, v2); U->lfloor = 2 * KO_LIT_FLOOR; U->floored = 0; ko_refresh(U);
+        if (!U->floored) { free(U); goto parse; }   /* the 2-bit floor raises no price of the starting statistics */
+        /* the record only where the two warm-ups search the same positions: with a skip rule (KLZH2 7, level 5) the
+         * positions searched follow the prices, the replay soon misses, and the record costs more than it saves */
+        ko_log L = {NULL, NULL, NULL, 0, 0, 0};
+        if (!P->skip) { L.at = malloc(m * sizeof(uint32_t)); L.cnt = malloc(m * sizeof(uint16_t)); }
+        int logged = L.at && L.cnt; if (logged) memset(L.at, 0xFF, m * sizeof(uint32_t));
+        size_t k1 = ko_parse_pass(in, m, P, U, S, &a1, &e0, &KO_ONE, logged ? &L : NULL, NULL);
+        if (e0 && logged && L.err) {    /* the record failed (memory): the warm-up again, without it */
+            logged = 0; ko_init(U, in, n, v2); U->lfloor = 2 * KO_LIT_FLOOR; ko_refresh(U);
+            k1 = ko_parse_pass(in, m, P, U, S, &a1, &e0, &KO_ONE, NULL, NULL);
         }
-        if (c[1] * 100 < c[0] * 98) {   /* the 2-bit warm-up estimates 2% smaller: its statistics seed the real pass (a
-                                         * closer call cost an arm64 executable and raw video 0.2-0.3%) */
+        if (e0) { free(L.at); free(L.cnt); free(L.m); free(U); free(T); *err = 1; return 0; }
+        c[1] = ko_est2(in, m, S, k1, a1);
+        size_t k0 = ko_parse_pass(in, m, P, T, S, &a0, &e0, &KO_ONE, NULL, logged ? &L : NULL);   /* T: ko_init's state */
+        free(L.at); free(L.cnt); free(L.m);
+        if (e0) { free(U); free(T); *err = 1; return 0; }
+        c[0] = ko_est2(in, m, S, k0, a0);
+        if (c[1] * 100 < c[0] * 98) {   /* the 2-bit warm-up estimates 2% smaller: its statistics seed the real pass
+                                         * (a closer call cost an arm64 executable and raw video 0.2-0.3%) */
             memcpy(T, U, sizeof *T);
             T->lfloor = KO_LIT_FLOOR;   /* the real pass keeps the 1-bit floor */
             ko_rescale(T);
-        } else ko_init(T, in, n, v2);   /* otherwise the parse starts as before: 16-bit images and raw video changed by
-                                         * up to 2% when the 1-bit warm-up's statistics seeded it */
-        free(U);
+            free(U);
+        } else {                        /* otherwise the parse starts as before (16-bit images and raw video changed by
+                                         * up to 2% when the 1-bit warm-up's statistics seeded it) */
+            free(U);
+            ko_init(T, in, n, v2);
+        }
     }
-    size_t ns = ko_parse_pass(in, n, P, T, S, anchor_out, err, th);
+parse:;
+    size_t ns = ko_parse_pass(in, n, P, T, S, anchor_out, err, th, NULL, NULL);
     free(T); return ns;
 }
 /* KLZH levels 7-9 (their KLZH_LV entries are unused; 5-6 take KLZH_LV with kz_parse_lazy); wlog and m3 apply to KLZH2 */
