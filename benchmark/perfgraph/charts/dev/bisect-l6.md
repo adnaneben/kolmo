@@ -1,0 +1,12 @@
+# Interleaved A/B check (10 rounds, max load1 2.5)
+
+Change = median over rounds of (arm time / A time) - 1, within the same round; negative = faster than A. Speed change is the inverse. 'All inputs' sums each round's times over the inputs first.
+
+## Level 6
+
+| Input | 01-pr18-71656e85 encode time | 01-pr18-71656e85 decode time | 02-pr22-f56f83d3 encode time | 02-pr22-f56f83d3 decode time | 03-pr30-53a02e47 encode time | 03-pr30-53a02e47 decode time | 04-pr32-47198180 encode time | 04-pr32-47198180 decode time | 05-pr28-6ad32089 encode time | 05-pr28-6ad32089 decode time | 06-pr31-deceb65f encode time | 06-pr31-deceb65f decode time | 07-pr19-896dc6d6 encode time | 07-pr19-896dc6d6 decode time | 08-pr35-f2b46ef1 encode time | 08-pr35-f2b46ef1 decode time | 09-pr40-d5cb4e46 encode time | 09-pr40-d5cb4e46 decode time | 10-pr41-b2e216bf encode time | 10-pr41-b2e216bf decode time | 11-pr45-5b1327f0 encode time | 11-pr45-5b1327f0 decode time | 12-pr46-7a881fc5 encode time | 12-pr46-7a881fc5 decode time | 13-pr42-0f5e6e02 encode time | 13-pr42-0f5e6e02 decode time | 14-pr43-bd5a469d encode time | 14-pr43-bd5a469d decode time | 15-pr44-4b977c20 encode time | 15-pr44-4b977c20 decode time | 16-pr48-4db0425b encode time | 16-pr48-4db0425b decode time | 17-a1d39559 encode time | 17-a1d39559 decode time | A2 encode time | A2 decode time | bytes same |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| owid-f64 | +0.3% | +0.5% | +0.5% | +0.3% | -0.1% | +1.4% | +0.5% | +5.4% | +0.4% | +0.5% | +0.6% | +2.0% | +0.3% | -0.2% | -0.4% | -0.1% | +0.1% | -0.8% | -0.3% | +0.1% | +0.2% | +0.8% | +104.0% | +2.6% | +104.8% | +2.7% | +104.5% | +1.5% | +104.5% | +2.2% | +105.8% | +3.6% | +105.3% | +0.8% | +0.1% | +2.9% | yes |
+| population-i64 | -0.1% | +3.0% | -0.6% | +0.8% | +0.5% | +2.0% | +0.5% | +6.2% | +0.4% | +3.3% | +0.7% | -0.2% | -0.3% | +2.9% | +0.0% | +0.7% | +0.1% | +4.7% | +0.6% | +2.6% | +0.8% | +4.6% | +143.5% | +3.9% | +144.0% | +6.2% | +144.1% | +10.8% | +143.9% | +6.8% | +144.8% | +6.4% | +146.1% | +6.9% | -0.5% | -0.7% | yes |
+| **All inputs** | +0.2% | +1.3% | +0.3% | +0.5% | +0.1% | +1.7% | +0.3% | +4.9% | +0.5% | +1.0% | +0.6% | +1.1% | +0.3% | +1.0% | +0.2% | +0.2% | -0.1% | +1.1% | -0.1% | +0.9% | +0.5% | +2.0% | +111.1% | +0.9% | +111.5% | +1.9% | +111.3% | +3.4% | +110.4% | +3.6% | +112.1% | +4.5% | +112.9% | +2.9% | -0.0% | +1.1% | yes |
+
