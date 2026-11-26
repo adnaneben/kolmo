@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
         if (envi("UP_M4", 1) == 0) flags &= ~1u;
         if (envi("UP_FULL", 0)) { flags = (flags & ~0xFF0004u) | 3u | (uint32_t)cm4_shift_for(n, CM_MASK3) << 16; }
         if (envi("UP_BIN", -1) >= 0) { uint32_t b = (uint32_t)envi("UP_BIN", 0); uint32_t mk = b ? CM4_MASK_BIN : CM4_MASK_TEXT; flags = (flags & ~0xFF0004u) | (b ? 4u : 0) | (uint32_t)cm4_shift_for(n, mk) << 16; }
-        flags |= (uint32_t)envi("UP_H", 0) << 8;
+        if (getenv("UP_H")) flags = (flags & ~0xFF00u) | (uint32_t)envi("UP_H", 0) << 8;
         size_t cap = n + n / 4 + 1024; uint8_t *out = malloc(cap);
         size_t z = upx_compress(in, n, out, cap, flags, par); if (!z) return 1;
         writef(argv[3], out, z);

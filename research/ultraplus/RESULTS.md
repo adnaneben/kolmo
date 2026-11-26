@@ -131,4 +131,8 @@ Reading:
   d200k +0.05%. **Kept.** Binary streams gain, and text changes by noise.
 - **LSTM H=128** on the first 1 MB of dickens: 209,402 B against 210,296 B without it (−0.43%), at 3.2× the coding time
   (204 s against 63 s under load). It stays **off by default** for now. #116 measured −4.85% at 4 MB (reymont), so the
-  LSTM gains with size. The 4 MB dev test (dickens4m) is queued, to decide a size-gated default.
+  LSTM gains with size.
+- **LSTM H=128 on dev dickens4m (4,194,258 B):** 847,976 B against 852,404 B without it (−0.52%), at 2.3× the time
+  (663 s against 289 s under load). For reference, stock `-U` gives 886,241 B, so Ultra+ is −3.82% without the LSTM and
+  −4.32% with it. **Default from `4b…` on: LSTM on for text streams of 1 MiB and more** (an encoder choice that the
+  stream records in its flags). Holdout check queued.

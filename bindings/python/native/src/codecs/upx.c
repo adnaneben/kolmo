@@ -584,8 +584,10 @@ static int64_t upx_run(const uint8_t *in, uint8_t *buf, size_t n, uint32_t flags
     upx_free(U); cm_release(need);
     return in ? (a.on <= cap ? (int64_t)a.on : 0) : 0;
 }
+/* encoder defaults: model 4's text or binary mask; the LSTM (H = 128) on text streams of 1 MiB and more, where it was
+ * measured smaller (dickens: -0.43% at 1 MB, -0.52% at 4 MB, at 2.3-3.2x the coding time; RESULTS.md) */
 static uint32_t upx_default_flags(int txt, size_t n) {
-    uint32_t f = 1 | (txt ? 0 : 4);
+    uint32_t f = 1 | (txt ? 0 : 4) | (txt && n >= ((size_t)1 << 20) ? 128u << 8 : 0);
     uint32_t mk = (f & 4) ? CM4_MASK_BIN : CM4_MASK_TEXT;
     return f | (uint32_t)cm4_shift_for(n, mk) << 16;
 }
