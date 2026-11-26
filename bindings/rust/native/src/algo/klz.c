@@ -126,6 +126,10 @@ static size_t kz_parse(const uint8_t *in, size_t n, const kz_par *P, kz_seq *S, 
  * 3.2% smaller on the structured set, 0.8% larger on Silesia; 4 is kept, a per-block choice is a tuning item) */
 static inline uint32_t kz_h8(const uint8_t *p, int lg) { return (uint32_t)((kz_r64(p) * 0xCF1BBCDCB7A56463ull) >> (64 - lg)); }
 static size_t kz_parse_dfast(const uint8_t *in, size_t n, int hl, int hs, int skip, int minm, kz_seq *S, size_t *anchor_out, int *err) {
+    /* both tables sized to the block, at least four slots per position and 2^12 (KLZH2 levels 1-2 and the planner's
+     * size probe took 384-768 KiB per call whatever n); blocks above 2^(hl-3) bytes are unchanged */
+    while (hl > 12 && ((size_t)1 << (hl - 3)) >= n) hl--;
+    while (hs > 12 && ((size_t)1 << (hs - 3)) >= n) hs--;
     uint32_t *tl = calloc((size_t)1 << hl, 4), *ts = calloc((size_t)1 << hs, 4); size_t ns = 0;
     if (!tl || !ts) { free(tl); free(ts); *err = 1; return 0; }
     const uint8_t *ie = in + n; size_t pos = 1, anchor = 0; uint32_t rep0 = 0;
@@ -618,9 +622,14 @@ static size_t kz_best(kz_mf *M, size_t pos, const uint32_t r[3], size_t minm, ui
 }
 static size_t kz_parse_lazy(const uint8_t *in, size_t n, const kz_par *P, size_t minm, kz_seq *S, size_t *anchor_out, int *err) {
     kz_mf M = {in, n, NULL, NULL, 0, 0, *P, minm >= 5}; size_t ns = 0;
-    M.head = malloc(sizeof(uint32_t) << P->hlog); M.chain = malloc(sizeof(uint32_t) << P->clog); M.cmask = (1u << P->clog) - 1;
+    /* tables sized to the block. The chain needs one slot per position: with 2^clog >= n no slot is reused and every
+     * distance stays within cmask, so a smaller chain gives the same matches. The head keeps at least four buckets per
+     * position (blocks above 2^(hlog-3) bytes unchanged; see ko_parse_pass) */
+    while (M.P.clog > 12 && ((size_t)1 << (M.P.clog - 1)) >= n) M.P.clog--;
+    while (M.P.hlog > 12 && ((size_t)1 << (M.P.hlog - 3)) >= n) M.P.hlog--;
+    M.head = malloc(sizeof(uint32_t) << M.P.hlog); M.chain = malloc(sizeof(uint32_t) << M.P.clog); M.cmask = (1u << M.P.clog) - 1;
     if (!M.head || !M.chain) { free(M.head); free(M.chain); *err = 1; return 0; }
-    memset(M.head, 0xFF, sizeof(uint32_t) << P->hlog);
+    memset(M.head, 0xFF, sizeof(uint32_t) << M.P.hlog);
     size_t pos = 0, anchor = 0; uint32_t rep[3] = {1, 4, 8};
     while (pos + 8 <= n) {
         uint32_t off = 0; int g; size_t ml = kz_best(&M, pos, rep, minm, &off, &g);
@@ -695,13 +704,17 @@ static const ko_thr KO_ONE = {1, 0, NULL};
 static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st *T, kz_seq *S, size_t *anchor_out, int *err, const ko_thr *th) {
     const int threads = th->threads;
     const uint32_t nice = (uint32_t)P->nice; int bw = 4; while (bw < P->bwlog && ((size_t)1 << bw) < n) bw++;
-    ko_mf M = {in, (uint32_t)n, NULL, NULL, (1u << bw) - 1, 0, nice, P->hlog, P->depth, NULL, NULL, 0, 0, 0, NULL, 0};
+    /* the head table sized to the block: at least four heads per position, at least 2^12, at most the level's 2^hlog
+     * (levels 7-9 kept 1-4 MiB per call whatever n: filling it was 89% of -7 on a 110-byte line, R21). Blocks above
+     * 2^(hlog-3) bytes are unchanged; smaller ones hash into fewer buckets */
+    int hl = P->hlog; while (hl > 12 && ((size_t)1 << (hl - 3)) >= n) hl--;
+    ko_mf M = {in, (uint32_t)n, NULL, NULL, (1u << bw) - 1, 0, nice, hl, P->depth, NULL, NULL, 0, 0, 0, NULL, 0};
     /* K workers beside the parse; not with two threads (one worker beside the parse measured no faster on the M5) */
     int K = threads >= 3 ? threads - 1 : 0; if (K > KO_MTMAXK) K = KO_MTMAXK;
     if (n < KO_MT_MIN) K = 0;
     size_t nslots = (size_t)1 << bw;
     if (K > 0 && n > nslots) { M.smod = (uint32_t)(nslots + (KO_MTR + 2) * (size_t)KO_MTC); nslots = M.smod; }   /* see ko_mt */
-    M.head = malloc(sizeof(uint32_t) << P->hlog); M.son = malloc(sizeof(uint32_t) * 2 * nslots);
+    M.head = malloc(sizeof(uint32_t) << hl); M.son = malloc(sizeof(uint32_t) * 2 * nslots);
     const int v2 = T->mmin == 3;
     if (v2 && P->m3) { M.h3 = malloc(sizeof(uint32_t) << 14); if (M.h3) memset(M.h3, 0xFF, sizeof(uint32_t) << 14); }
     if (v2 && P->wlog > bw && n > M.bmask + 1) {   /* a block longer than the tree's window */
@@ -712,7 +725,7 @@ static size_t ko_parse_pass(const uint8_t *in, size_t n, const ko_par *P, ko_st 
     if (!M.head || !M.son || !o || !mm || !path || (v2 && P->m3 && !M.h3) || (M.wmax && !M.ldm)) {
         free(M.head); free(M.son); free(o); free(mm); free(path); free(M.h3); free(M.ldm); *err = 1; return 0;
     }
-    memset(M.head, 0xFF, sizeof(uint32_t) << P->hlog);
+    memset(M.head, 0xFF, sizeof(uint32_t) << hl);
     if (K > 0) M.mt = ko_mt_start(&M, K, th->passes, th->b);
     if (!M.mt && M.smod) M.smod = 0;   /* one thread after all: the usual slots (the array is larger than they need) */
     const uint8_t *ie = in + n; size_t pos = 0, anchor = 0, ns = 0, next_scale = KO_SPAN; uint32_t rep[3] = {1, 4, 8};

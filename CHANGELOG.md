@@ -179,6 +179,31 @@ fixes change.
   level. CI cross-builds the crate on each runner (x86-64 macOS from arm64, aarch64 Linux from x86-64, and the
   reverse).
 
+### Small inputs (review 40, item 8, phase 1)
+
+Encoder only. Every frame keeps version 12, and 0.0.1 and 0.0.2 decode it. Measured with the new
+`benchmark/small` (six data kinds, items of 64 B to 64 KiB, against zstd, Brotli and LZ4; `benchmark/small/RESULTS.md`).
+
+- **The empty input is a 32-byte frame**: the header with nblocks 0, as FORMAT.md §4 already specified. It used to be
+  52 bytes, with one stored empty block. 0.0.1 and 0.0.2 decode it.
+- **Levels 8 and 9 code small plain blocks both ways.** A plain block under 64 KiB went to BWT unconditionally (level
+  8: every one; level 9: text from 4 KiB up). It is now coded with KLZMA and BWT, and the smaller is kept, KLZMA on
+  a tie.
+  - Level 8 is 0.8-16% smaller on such items, up to 33% on one kind (CSV rows).
+  - Level 9 is 5% smaller at 4 KiB and 1.4% at 16 KiB.
+  - No setting is larger. Where KLZMA is kept, decoding skips QLFC's model set-up.
+  - Compression runs both coders on these blocks: 1.3-2.1x slower to compress, and 1.3-6.7x faster to decode.
+- **Hash tables sized to the block** at levels 4-7 and in KLZH2's fast parse (levels 1-2 and the planner's size probe).
+  They used to take 1-17 MiB per call whatever the input; now 0.2-0.6 MiB at 4 KiB and below. Levels 4-7 compress
+  3-7x faster at 64 B and 1.2-1.6x faster at 1 KiB. Blocks above 2^(hlog-3)
+  bytes are unchanged, and smaller ones change by at most 0.01%.
+- **The planner counts delimited fields faster.** A line without quotes or brackets is counted in one vectorised pass,
+  with the same counts, so the output is unchanged. Level 3 compresses 1.3x faster at 4 KiB.
+- `benchmark/small`: the harness (`smallbench.c`, `run.sh`, `compare.sh`, `summarize.py`), with sizes, per-call time,
+  per-call heap and round trips. `docs/proposals/small-inputs.md`: the compact frame (`CZM1`) and the small-block
+  entropy stage, with measured gains and proposed identifiers, for the owner. The size ledger is refreshed: the empty
+  file is 32 bytes, and -8/-9 are 4.7-18% smaller on small executables, logs, JSON and a video clip.
+
 ### Format
 
 - **Files of several members (FORMAT.md 10.1), and the `CZNS` header's reserved bytes (section 10).** A file is

@@ -23,12 +23,11 @@ r0.0.2/rgb.ppm         -6>-5   # graph
 r0.0.2/series.i32      -6>-5   # graph
 #
 # Level 8 forces block sorting on every binary block (blocks.c, "max -l 1: BWT for every block"; R37 4.2, claim #149).
-r0.0.2/prog-arm64      -8>-7   # klzh2 -> bwt
-r0.0.2/prog-x86_64     -8>-7   # klzh2 -> bwt
+# Plain blocks under 64 KiB now keep the smaller of BWT and KLZMA 1 (small-input phase 1), which removed prog-arm64,
+# prog-x86_64 and log.log from this list; the rest are transformed or larger blocks.
 r0.0.2/zeros.bin       -8>-7   # klzh2 -> bwt (77 -> 132 B)
 v12/clip.y4m           -8>-7   # small video frame set
 v12/exe.bin            -8>-7   # klzh2 -> bwt
-v12/log.log            -8>-7   # klzh2 -> bwt on a 24 KiB log
 #
 # Level 9 keeps KLZMA where level 8's block sorting is far smaller. R37 4.3 notes that -9's 3% BWT gain rule allows
 # -9 > -8 by up to 3% by design; these are 6.7% to 40%, beyond that rule. Open (no claim yet).

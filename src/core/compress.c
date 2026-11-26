@@ -54,7 +54,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
     columns = columns && q.transforms && q.mode != KOLMO_RT;
     native_leaf = native_leaf && q.mode == KOLMO_FAST && q.transforms; p = &q;
-    if (cap < HDR + IDX) return KOLMO_ERR_DSTSIZE;
+    if (cap < (n ? HDR + IDX : HDR)) return KOLMO_ERR_DSTSIZE;   /* the empty input is the header alone (below) */
     if (n > INT64_MAX) return KOLMO_ERR_CORRUPT;
     /* The typed route below produces a whole frame on its own (one block, one thread, at most 16 MiB, buffer API, no
      * dictionary, default level) and returns it; when it does not apply the normal planner runs. A declared integer
@@ -81,6 +81,15 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     uint32_t B = p->block ? p->block : kolmo_default_block(p, n);   /* slow modes: larger blocks; speed modes: ~8 balanced blocks */
     if (B < 4096) B = 4096;
     int codec, level; mode_codec(p, &codec, &level);
+    if (n == 0) {   /* empty input: the header alone, nblocks 0 (FORMAT.md §4); 0.0.1 and 0.0.2 decode it (was 52 bytes:
+                     * one stored empty block) */
+        uint8_t h[HDR] = {'C', 'Z', 'N', '1', KOLMO_MAX_VERSION, (uint8_t)p->mode, 0, 0, 0, 0, (uint8_t)(p->mode == KOLMO_RT)};
+        h[11] = kmem_code(blk_dec_floor(0)); put64(h + 12, 0); put32(h + 20, 0); put32(h + 24, B);
+        put32(h + 28, kolmo_crc32c(0, h, 28));
+        if (output_fd >= 0) { int r = write_block(output_fd, h, HDR, 0); return r ? r : (int64_t)HDR; }
+        if (cap < HDR) return KOLMO_ERR_DSTSIZE;
+        memcpy(dst, h, HDR); return (int64_t)HDR;
+    }
     /* memory (docs/MEMORY-MODEL.md): the governor's limit, and the explicit cap, the only memory figure that may shape
      * the output (blocks of ratio and -x, the -x tables), so that it decodes within the same limit */
     const uint64_t xcap = p->mem_limit && p->mem_limit != KOLMO_MEM_MAX ? p->mem_limit : 0, memcap = kmem_limit_of(p->mem_limit);
