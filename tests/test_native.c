@@ -250,20 +250,24 @@ static void test_klzh2_order(int big) {
         free(in);
     }
 }
-/* the codec path's entry (kolmo_klzh2_compress_g): with chain set, or under 2 MiB, the output of kolmo_klzh2_compress; past
-   2 MiB without chain, one encode at the level, which decodes and is never smaller than the chain's */
+/* the codec path's entry (kolmo_klzh2_compress_g): with both lower levels hinted, or on the block layer's own block
+   under 2 MiB, the output of kolmo_klzh2_compress (every level below); with fewer levels, a stream that decodes and is
+   never smaller */
 static void test_klzh2_gate(void) {
     static const size_t ns[] = {200000, (5u << 20) / 2};
+    static const int hs[] = {KZ_H_L7 | KZ_H_L8, KZ_H_TOP, 0, KZ_H_L7, KZ_H_L8};
     for (size_t si = 0; si < 2; si++) for (int lv = 8; lv <= 9; lv++) {
-        const size_t n = ns[si], cap = kolmo_klzh_bound(n); uint8_t *in = malloc(n), *a = malloc(cap), *b = malloc(cap), *c = malloc(cap), *d = malloc(n);
+        const size_t n = ns[si], cap = kolmo_klzh_bound(n); uint8_t *in = malloc(n), *a = malloc(cap), *c = malloc(cap), *d = malloc(n);
         gen(in, n, 3);
-        const size_t za = kolmo_klzh2_compress(in, n, a, cap, lv), zb = kolmo_klzh2_compress_g(in, n, b, cap, lv, 1, 0, NULL, 1),
-                     zc = kolmo_klzh2_compress_g(in, n, c, cap, lv, 1, 0, NULL, 0);
-        CHECK(za && za == zb && !memcmp(a, b, za), "klzh2 gate: chain 1 differs from kolmo_klzh2_compress (n %zu, level %d)", n, lv);
-        if (n < (2u << 20)) CHECK(zc == za && !memcmp(a, c, za), "klzh2 gate: chain 0 under 2 MiB differs (n %zu, level %d)", n, lv);
-        else CHECK(zc >= za, "klzh2 gate: chain 0 smaller than the chain (n %zu, level %d)", n, lv);
-        CHECK(zc && kolmo_klzh2_decompress(c, zc, d, n) == 0 && !memcmp(in, d, n), "klzh2 gate: chain 0 round trip (n %zu, level %d)", n, lv);
-        free(in); free(a); free(b); free(c); free(d);
+        const size_t za = kolmo_klzh2_compress(in, n, a, cap, lv);
+        for (int hi = 0; hi < 5; hi++) {
+            const int h = hs[hi]; const size_t zc = kolmo_klzh2_compress_g(in, n, c, cap, lv, 1, 0, NULL, h);
+            const int full = hi == 0 || (n < (2u << 20) && (h & KZ_H_TOP));
+            if (full) CHECK(zc == za && !memcmp(a, c, za), "klzh2 gate: hint %d differs from every level below (n %zu, level %d)", h, n, lv);
+            else CHECK(zc >= za, "klzh2 gate: hint %d smaller than every level below (n %zu, level %d)", h, n, lv);
+            CHECK(zc && kolmo_klzh2_decompress(c, zc, d, n) == 0 && !memcmp(in, d, n), "klzh2 gate: hint %d round trip (n %zu, level %d)", h, n, lv);
+        }
+        free(in); free(a); free(c); free(d);
     }
 }
 int main(int argc, char **argv) {

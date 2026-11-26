@@ -336,21 +336,22 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
 
 ### Levels 6 and 7: no larger than the level below (KLZH2 8-9)
 
-Encoder-only: every frame is still container version 12. KLZH2 level 8 (-6) also encodes level 7 and keeps the
-smaller stream; level 9 (-7) also encodes level 8 (and so 7) and keeps the smaller. A stronger search lost on some
-inputs in 0.0.2 (Canterbury tar: -7 1.6% larger than -6; held-out mr 0.7% and llm_bf16_47mb.safetensors 0.2%
-larger at -7 than at -6). In the command line's blocks the second encode runs on blocks under 2 MiB and on blocks
-after a byte shuffle, a 16-bit image or a record transform: on the corpora, those are the only blocks where the level
-below won (with one raw video block, foreman_cif.y4m 0.36%, left out), and on every block it cost +57% at -6 and
-+71% at -7. A sample of the block did not predict the rest. The library calls (`kolmo_klzh2_compress`, `_mt`, `_el`) still
-encode the levels below at any size. `benchmark/determinism/expected.sha256` is regenerated for -6/-7 frames only.
+Encoder-only: every frame is still container version 12. KLZH2 level 8 (-6) can also encode level 7 and keep the
+smaller stream, and level 9 (-7) levels 8 and 7. A stronger search lost on some inputs in 0.0.2 (Canterbury tar: -7
+1.6% larger than -6; held-out mr 0.7% and llm_bf16_47mb.safetensors 0.2% larger at -7 than at -6). In the command
+line's blocks a lower level is encoded only where one won on the corpora's blocks: level 7 on blocks under 2 MiB and
+after a byte shuffle or record transform, level 8 after a 16-bit image transform and on blocks under 2 MiB (one raw
+video block, foreman_cif.y4m 0.36%, is left out). Every lower level on every block cost +57% at -6 and +71% at -7, and
+a sample of the block did not predict the winner. The library calls (`kolmo_klzh2_compress`, `_mt`, `_el`) still
+encode every level below. `benchmark/determinism/expected.sha256` is regenerated for -6/-7 frames only.
 
 - Measured on 46 files (corpus, held-out corpus, Canterbury and Silesia tars, enwik8), one thread, against main:
   -6 0.047% smaller, -7 0.083% smaller, no file larger; no file larger at -7 than at -6 (four before).
-  Held-out corpus -6 -0.09%, -7 -0.14%; Canterbury tar -7 554.1 -> 545.0 KB (-6 545.2 KB).
-- Cost, in instructions retired at -T 1 (wall time is measured separately): -6 +6.5%, -7 +8.3% in all; text,
-  executables, video and FASTQ within 3%; bf16 model weights +56% (-6) and +130% (-7), WAV and other small files
-  about +50%. Decoding is unchanged.
+  Held-out corpus -6 -0.09%, -7 -0.14%; Canterbury tar -7 554.1 -> 545.0 KB (-6 545.2 KB). On the 53 impact-corpus
+  files: -6 -0.01%, -7 -0.05%, no file larger, no -7 > -6 (two before).
+- Cost, in instructions retired at -T 1: -6 +4.9%, -7 +3.7% in all (impact corpus: +11.4%, +8.4%); text,
+  executables, video and FASTQ within 3%; bf16 model weights about +50-56%, WAV and other small files about +50%.
+  Decoding is unchanged.
 - -6 can still be larger than -5 on some graph-coded binary files (+0.2-0.4%): hc takes rANS leaves only when 3%
   smaller, for faster decoding, where eco takes any gain.
 

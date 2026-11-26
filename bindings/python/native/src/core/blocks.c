@@ -482,12 +482,12 @@ static void *compress_worker(void *arg) {
             if (!sb || !slz || (uint64_t)sb * 100 > (uint64_t)slz * 103) slice_verdict = -1;
             else if ((uint64_t)sb * 100 <= (uint64_t)slz * KOLMO_BWT_SKIP_LZMA_PCT && (uint64_t)slz * 100 <= (uint64_t)sn * KOLMO_BWT_REACH_PCT) { codec = C_BWT; level = 9; slice_verdict = 1; }
         }
-        if (!cl) {   /* after a byte shuffle, a 16-bit image or a record transform, KLZH2 levels 8-9 try the levels below on
-                      * large blocks too: the corpora's large blocks where a lower level won (0.0.3: llm_bf16_47mb.safetensors,
-                      * mr, sao; klz.c, KZ_CHAIN_MIN) */
-            xp->klz_chain = tflag == 1 || tflag == 6 || tflag == 7;
+        if (!cl) {   /* KLZH2 levels 8-9 also try the level below that won on such blocks of the corpora (algo/klz.c):
+                      * level 7 after a byte shuffle or record transform (0.0.3: llm_bf16_47mb.safetensors, sao), level 8
+                      * after a 16-bit image transform (mr), and both on blocks under 2 MiB (canterbury.tar) */
+            xp->klz_hint = KZ_H_TOP | (tflag == 1 || tflag == 7 ? KZ_H_L7 : 0) | (tflag == 6 ? KZ_H_L8 : 0);
             cl = codec_compress(xp, codec, level, in, inlen, sl + meta, J->slot - meta);
-            xp->klz_chain = 0;
+            xp->klz_hint = 0;
         }
         if (pl.verify && tflag == 1 && pl.t == T_SHUF && cl && len >= (64u << 10)) {   /* marked plan: this block may not suit the shuffle */
             uint8_t *alt = S->rbuf = grow(S->rbuf, &S->rbcap, J->slot + 4);
