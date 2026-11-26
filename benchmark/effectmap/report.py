@@ -11,6 +11,7 @@ import rules
 import standard
 
 NOISE_FLOOR = {"instr": 0.003, "wall": 0.01}
+RSS_FLOOR = 4 * 1024 * 1024             # RSS increases below this are not counted (ACCEPTANCE.md section 3)
 INV_PCT, INV_BYTES = 0.005, 16          # the ledger's level-order threshold (benchmark/ledger)
 LVL_ORDER = [str(i) for i in range(1, 10)] + ["ultra"]
 
@@ -72,8 +73,12 @@ def per_file(rows, basis):
                                        (_cost(r["arms"]["A2"], "enc", basis) + _cost(r["arms"]["A2"], "dec", basis))
                                        for r in rs)
             mem = lambda arm, ph: arm.get(f"{ph}_foot") or arm[f"{ph}_rss"]   # peak footprint where recorded
-            rec["rss"] = max(st.median(mem(r["arms"]["B"], ph) for r in rs) /
-                             st.median(mem(r["arms"]["A"], ph) for r in rs) for ph in ("enc", "dec"))
+            ratios = []
+            for ph in ("enc", "dec"):
+                a_, b_ = (st.median(mem(r["arms"][k], ph) for r in rs) for k in ("A", "B"))
+                # an increase under RSS_FLOOR is the CLI's own baseline, not the data's: not counted
+                ratios.append(b_ / a_ if b_ - a_ > RSS_FLOOR else min(1.0, b_ / a_))
+            rec["rss"] = max(ratios)
             rec["aa_rss"] = max(st.median(mem(r["arms"]["A2"], ph) for r in rs) /
                                 st.median(mem(r["arms"]["A"], ph) for r in rs) for ph in ("enc", "dec"))
         recs.append(rec)
@@ -106,9 +111,16 @@ def snap(x, n):
 
 
 def metrics(recs, band, lv, t):
-    """cell metrics; the noise band is the widest of the size classes in the cell"""
+    """cell metrics. The cell's noise band: the per-file band (widest size class in the cell) over sqrt(n), the
+    standard error of a mean of n files, but never under the cell's own A/A deviation or the floor."""
     scs = {r["size_class"] for r in recs}
-    nb = lambda k, d: max(band.get((lv, t, sc, k), d) for sc in scs)
+    n = len(recs)
+
+    def nb(k, d):
+        per = max(band.get((lv, t, sc, k), d) for sc in scs)
+        own = abs(gmean([r["aa_" + k] for r in recs]) - 1) if k != "rss" else 0
+        floor = min(band.values()) if band else d
+        return max(per / math.sqrt(n), own, min(floor, per)) if k != "rss" else per
     m = dict(bytes=sum(r["b_bytes"] for r in recs) / sum(r["a_bytes"] for r in recs))
     for k in ("enc", "dec", "comb"):
         m[k] = snap(gmean([r[k] for r in recs]), nb(k, 0.01))
@@ -180,6 +192,8 @@ def main(out):
         cls, why = standard.classify(lv, m, ident)
         worst = max(rs, key=lambda r: r["b_bytes"] / r["a_bytes"])
         slowest = min(rs, key=lambda r: r["enc"])
+        for r in rs:
+            r["cell_cls"] = cls          # tree samples take their cell's label (its band shrinks with sqrt(n))
         cell_rows.append(dict(level=lv, tier=standard.tier(lv), kind=kind, size_class=sc, threads=t, n=len(rs),
                               a_bytes=sum(r["a_bytes"] for r in rs), b_bytes=sum(r["b_bytes"] for r in rs),
                               identical=ident, cls=cls, why="; ".join(why), worst_file=worst["input"],
@@ -198,6 +212,11 @@ def main(out):
     wide = lambda c, k, d: max(bmax.get((c["level"], c["threads"], sc, k), d) for sc in c["scs"])
     dec_bad = [c for c in cell_rows if standard.decode_violation(c["level"], snap(c["dec_raw"], wide(c, "dec", .01)))]
     rss_bad = [c for c in cell_rows if snap(c["rss_raw"], wide(c, "rss", .02)) > standard.RSS_MAX]
+    provisional = []
+    if basis == "instr":       # one round: decode flags wait for the timed run (5 rounds) to confirm them
+        provisional = [f"decode slower at -{c['level']}: {c['kind']} {c['size_class']} T{c['threads']} "
+                       f"({pct(c['dec_raw'])} instructions, one round)" for c in dec_bad]
+        dec_bad = []
     violations = ([f"adds level inversion {i[1]} on {i[0]} ({i[4]})" for i in added] +
                   [f"output depends on thread count: {k[0]} -{k[1]}" for k in td_b] +
                   [f"decode slower beyond noise at -{c['level']}: {c['kind']} {c['size_class']} T{c['threads']} "
@@ -248,8 +267,8 @@ def main(out):
     # rules: dev fit, holdout check
     feats = ["kind", "size_class", "level"] + (["threads"] if all_identical else [])
     samp = lambda split: [dict(kind=r["kind"], size_class=r["size_class"], level=r["level"],
-                               threads=str(r["threads"]), win=r["cls"] in standard.WIN)
-                          for r in main_recs if r["split"] == split and r["cls"] != "NEUTRAL"]
+                               threads=str(r["threads"]), win=r["cell_cls"] in standard.WIN)
+                          for r in main_recs if r["split"] == split and r["cell_cls"] != "NEUTRAL"]
     dev, hold = samp("dev"), samp("holdout")
     leaves = rules.fit(dev, feats) if dev else []
     hscore, hacc = rules.score(leaves, hold) if leaves else ([], None)
@@ -273,7 +292,7 @@ def main(out):
 
     stack_tab = stacking(recs)
 
-    v = dict(verdict=verdict, basis=basis, tiers=tier_verdicts, violations=violations,
+    v = dict(verdict=verdict, basis=basis, tiers=tier_verdicts, violations=violations, provisional=provisional,
              removed_inversions=[list(i) for i in removed], added_inversions=[list(i) for i in added],
              gain_kinds=gain_kinds, counts=dict(counts), gate=gate, holdout_accuracy=hacc,
              rules=[dict(rule=rules.leaf_text(c), dev_n=n, dev_wins=w, holdout_n=hn, holdout_wins=hw)
@@ -348,6 +367,10 @@ def write_md(out, meta, basis, band, cells, recs, v, stack_tab, inv_a, inv_b):
     L.append(f"- violations: {len(v['violations'])}")
     for x in v["violations"][:40]:
         L.append(f"  - {x}")
+    if v["provisional"]:
+        L.append(f"- to confirm in the timed run (not counted yet): {len(v['provisional'])}")
+        for x in v["provisional"][:20]:
+            L.append(f"  - {x}")
     L.append("")
     L.append("## A/A noise band (p95 of |A/A2 - 1| per threads and size class, pooled over levels)\n")
     L.append("| level | threads | size | enc | dec | comb | rss |\n|---|---|---|---:|---:|---:|---:|")
@@ -356,25 +379,26 @@ def write_md(out, meta, basis, band, cells, recs, v, stack_tab, inv_a, inv_b):
         L.append(f"| all | {t} | {sc} | " + " | ".join(f"{100 * band.get((lv, t, sc, m), 0):.2f}%"
                                                          for m in ("enc", "dec", "comb", "rss")) + " |")
     L.append("")
-    L.append("## Effect per type and level (threads 1, all size classes)\n")
-    L.append("bytes: B/A - 1 (negative = smaller). enc, dec, comb: B's speed change (positive = faster), "
-             "0 inside the noise band.\n")
+    L.append("## Effect per type, size class and level (threads 1)\n")
+    L.append("bytes: B/A - 1 (sum over files; negative = smaller). enc: B's encode speed change (positive = faster; "
+             "the raw geometric mean, with the A/A band in brackets).\n")
     g = defaultdict(list)
     for r in recs:
         if r["threads"] == 1:
-            g[(r["kind"], r["level"])].append(r)
+            g[(r["kind"], r["size_class"], r["level"])].append(r)
     levels = sorted({r["level"] for r in recs}, key=LVL_ORDER.index)
-    L.append("| type | files | " + " | ".join(f"-{l} bytes | -{l} enc" for l in levels) + " |")
-    L.append("|---|---:|" + "---:|---:|" * len(levels))
-    for kind in sorted({k for k, _ in g}):
-        row = [kind, str(len({r['input'] for l in levels for r in g[(kind, l)]}))]
+    L.append("| type | size | files | " + " | ".join(f"-{l} bytes | -{l} enc" for l in levels) + " |")
+    L.append("|---|---|---:|" + "---:|---:|" * len(levels))
+    for kind, sc in sorted({(k, s_) for k, s_, _ in g}):
+        row = [kind, sc, str(len({r['input'] for l in levels for r in g[(kind, sc, l)]}))]
         for l in levels:
-            rs = g[(kind, l)]
+            rs = g[(kind, sc, l)]
             if not rs:
                 row += ["", ""]
                 continue
-            m = metrics(rs, band, l, 1)
-            row += [pct(m["bytes"]), pct(m["enc"])]
+            b_ = sum(r["b_bytes"] for r in rs) / sum(r["a_bytes"] for r in rs)
+            e_ = 1 / gmean([r["enc"] for r in rs])      # cost ratio B/A
+            row += [pct(b_), f"{100 * (1 / e_ - 1):+.1f}% (±{100 * band.get((l, 1, sc, 'enc'), 0):.1f})"]
         L.append("| " + " | ".join(row) + " |")
     L.append("")
     L.append("## Cells (threads 1)\n")
@@ -411,7 +435,8 @@ def write_md(out, meta, basis, band, cells, recs, v, stack_tab, inv_a, inv_b):
         L.append("")
     L.append("## Rules (depth-2 tree on dev, checked on holdout)\n")
     hacc = "n/a" if v["holdout_accuracy"] is None else f"{100 * v['holdout_accuracy']:.0f}%"
-    L.append(f"Samples: condition rows that are not NEUTRAL; win = PASS/KEEP. Features: kind, size class, level"
+    L.append(f"Samples: condition rows (file x level x threads) labelled with their cell's class, NEUTRAL left out; "
+             f"win = PASS/KEEP. Features: kind, size class, level"
              f"{', threads (all frames identical)' if any('threads' in r['rule'] for r in v['rules']) else ''}. "
              f"Holdout accuracy: {hacc}.\n")
     L.append("| rule | dev rows | dev wins | holdout rows | holdout wins | predicts |\n|---|---:|---:|---:|---:|---|")
