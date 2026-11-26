@@ -79,7 +79,7 @@ A negative figure means 0.0.3 is smaller. `0` means every frame is byte-identica
 
 | Data (files, size) | -1 | -2 | -3 | -4 | -5 | -6 | -7 | -8 | -9 | -U |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **All (42, 576 MB)** | -6.5% | -0.4% | -0.2% | -0.1% | -0.1% | -0.5% | -0.5% | -0.6% | **+0.7%** | -0.0% |
+| **All (42, 576 MB)** | -6.5% | -0.4% | -0.2% | -0.1% | -0.1% | -0.5% | -0.5% | -1.1% | 0 | -0.0% |
 | Text (5, 94 MB) | -15.0% | -0.2% | -0.1% | 0 | 0 | 0 | 0 | +1.2% | 0 | 0 |
 | CSV tables (3, 30 MB) | -2.4% | -2.7% | +0.3% | 0 | 0 | 0 | 0 | -0.1% | 0 | 0 |
 | JSON (1, 4 MB) | -3.1% | -0.5% | -0.2% | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -87,7 +87,7 @@ A negative figure means 0.0.3 is smaller. `0` means every frame is byte-identica
 | Chemistry text, nci (1, 34 MB) | +1.2% | -7.6% | -1.3% | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | FASTQ (2, 60 MB) | -5.2% | +0.1% | -0.0% | 0 | 0 | 0 | 0 | +1.0% | 0 | 0 |
 | Numeric arrays (5, 50 MB) | -1.6% | -0.8% | -1.3% | 0 | 0 | 0 | -0.0% | -1.4% | 0 | 0 |
-| ML weights and models (3, 61 MB) | -2.4% | -0.0% | -0.0% | -0.7% | -0.3% | -2.2% | -2.1% | **+2.0%** | **+2.8%** | -0.1% |
+| ML weights and models (3, 61 MB) | -2.4% | -0.0% | -0.0% | -0.7% | -0.3% | -2.2% | -2.1% | -0.0% | 0 | -0.1% |
 | Executables and binary mixes (4, 89 MB) | -2.6% | -0.9% | -0.8% | 0 | 0 | 0 | 0 | -6.6% | 0 | 0 |
 | Raw video, y4m (3, 137 MB) | -9.0% | +0.1% | +0.0% | 0 | 0 | 0 | 0 | -0.4% | 0 | 0 |
 | Photos, ppm (6, 11 MB) | -1.4% | -0.6% | -0.1% | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -101,9 +101,12 @@ A negative figure means 0.0.3 is smaller. `0` means every frame is byte-identica
 - **Level 8 changes in both directions.** Binary data is smaller (mozilla -9.8%, sao -5.5%). Large text is larger
   (webster +2.4%), because level 8 now sorts 32 MiB blocks instead of 128 MiB to use a third less memory. Level 9
   keeps the large blocks.
-- **Level 9 is 3.9% larger on a 47 MB bf16 weights file** (26,168,919 -> 27,186,418 bytes), which makes the corpus
-  total 0.7% larger. This is a regression: it came with the level 1 to 3 and level 8 encoder change, whose entry below
-  does not list level 9 as changed. Every other level 9 frame of the 42 files is byte-identical to 0.0.2's.
+- **Level 9 writes the same total as 0.0.2** on the 42 files. A regression found while preparing this release
+  (a 47 MB bf16 weights file 3.9% larger at -9 and 2.7% at -8) is fixed (#115, *Fixed* below): that file is again
+  26,168,919 bytes at -9, byte-identical to 0.0.2, and 26,218,539 at -8 (0.0.2: 26,234,980). **The price is encode
+  time on such files:** -9 on that file takes about 1.6 times as long as with 0.0.2 (62 s against 39 s on one
+  thread, Apple M5); -8 takes about as long as with 0.0.2 (22 to 30 s), where the release candidate before the
+  fix took 7 s. No other file of the 42 changes, and levels 1 to 7 are not affected.
 - **Ultra is unchanged** on these files, apart from 0.1% on model weights.
 - **Files with a field over 64 KiB are larger at levels 3 to 9**, because they no longer use the table transform:
   the corpus example grows 80% at level 3 and 21% at level 9 (`longfield.csv`). This is the price of files that 0.0.1
@@ -128,9 +131,12 @@ A compressed file's hash was never stable across releases (COMPATIBILITY.md): ha
   that beat the float layout by less than 2% (`KOLMO_STRONG_SHUF_FLOAT_PCT`) is a marked plan: each block is also
   coded without the shuffle, and the smaller is kept. Output can only shrink against the shuffle alone. Levels 1-7
   are unchanged. Encoder only: 0.0.1 and 0.0.2 read the output. The bf16 file is now 26,168,919 bytes at -9 and
-  26,218,539 at -8. The size ledger has a new generated input, `gen/weights-bf16.st` (9.4 MB, bf16, levels 1-9),
-  of this file class.
-
+  26,218,539 at -8. Cost: on that file, -9 encodes about 1.6 times slower than 0.0.2 (62 s against 39 s on one
+  thread), because each such block is coded twice; -8 is back to 0.0.2's encode time. The size ledger has a new
+  generated input, `gen/weights-bf16.st` (9.4 MB, bf16, levels 1-9), of this file class (#115).
+- **Two pointer-lifetime bugs found by GCC 16's `-Wuse-after-free`** (#112). The planner compared a pointer with a
+  record plan after freeing it, and the index query read a line-end pointer into a decoded block after freeing the
+  block. Neither changed output on any test input; both now act while the memory is live. No format or size change.
 - **`kolmo -d`, `-t`, `-l` and `--range` refuse a `kolmo archive` file** instead of writing its internal chunk store
   and exiting 0. The frame of such a file is the store (the distinct chunks of all its files, without their order),
   never the files. The error names `kolmo extract` and `kolmo contents`. Python's `decompress` and `read_range` refuse

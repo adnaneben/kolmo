@@ -9,6 +9,37 @@ review. The frame format is unchanged (container version 12).
 
 ## 1. Done in this pull request
 
+### Release candidate (2026-11-27)
+
+The candidate is Codex's a2e430fe (this branch's release preparation 862731ae merged with main a1d39559 and the
+verified package contents) plus two fixes the owner approved:
+
+- **#112**, planner and index pointer-lifetime backport (015165b4, 4557e49f, merged here as 5062e37f). No output
+  change.
+- **#115**, the level 8-9 bf16 regression fix (8f150161 on main, cherry-picked). Decision 1 of section 3 is closed by
+  it. **The trade:** level 9 sizes are back to 0.0.2's (the 47 MB bf16 file is byte-identical to 0.0.2's at -9), at
+  a slower -9 encode on bf16 weights only: 62 s against 39 s for 0.0.2 on that file (one thread, Apple M5, a shared
+  machine). -8 on it is 26,218,539 bytes (0.0.2: 26,234,980) and back to 0.0.2's encode time (22 to 30 s; the
+  candidate before the fix took 7 s because it kept the shuffle).
+
+Checks on the candidate build (Apple M5, macOS, 2026-11-27, `nice -n 15`, at most two jobs):
+
+| Check | Result |
+|---|---|
+| `bindings/python/sync-native.sh`, `bindings/rust/sync-native.sh` | no change (the cherry-pick carried the copies) |
+| `tests/v12/r0.0.3/` written again from the candidate with `tests/make_v12_frames.py` (scratch copy) | 274 of 274 frames, `frames.json` and the MANIFEST lines byte-identical: no input of the frozen corpus takes the changed path, so nothing is regenerated |
+| 0.0.2 tag binary decodes the 274 frames (`tests/check_v12_frames.py`) | passed |
+| 0.0.1 tag binary decodes them (`kolmo -d in out`; 0.0.1 has no `-f`/`-o`) | 274 of 274 to the original |
+| The 47 MB bf16 file at -8 and -9 from the candidate, decoded by 0.0.1 and 0.0.2 | to the original |
+| `make ARCH= check` | passed (exit 0) |
+| `python3 benchmark/determinism/check.py build/kolmo build/determinism` | 152 frames, OK |
+| `python3 benchmark/ledger/ledger.py build/kolmo` | passed, 580 entries, no size change against `sizes.tsv` (which #115 extended with `gen/weights-bf16.st`) |
+| `python3 tests/check_release_docs.py build/kolmo` | OK (version 0.0.3) |
+| `python3 tests/check_v12_pinned.py` | passed, 734 files unchanged (no `--write`: nothing was added) |
+| 42 corpus files at -8 and -9, one thread: 0.0.2, the candidate before #115 (5062e37f), the candidate | only the 47 MB bf16 file changes. -9 total: 0.0.2 154,515,706, before 155,533,205 (+0.66%), candidate 154,515,706. -8 total: 157,324,271, 156,358,616, 155,634,577 (-1.07%). The CHANGELOG size table is updated |
+
+### Prepared on 2026-11-25 (before the candidate)
+
 | Item | State |
 |---|---|
 | Version 0.0.3 in `VERSION`, `pyproject.toml`, `Cargo.toml`, `KOLMO_VERSION_STR`, the tap formula's `url`, README Status, SECURITY.md, GOVERNANCE.md, `docs/LEVELS.md` | done |
@@ -80,13 +111,15 @@ The full list is in COMPATIBILITY.md, section *0.0.3 and earlier releases*. In s
 
 Decide these before tagging. The first three can change what ships.
 
-1. **Level 9 is 3.9% larger than 0.0.2 on bf16 model weights. Ship, or fix first?**
+1. **Closed by #115 (see section 1, Release candidate).** Was: Level 9 is 3.9% larger than 0.0.2 on bf16 model
+   weights. Ship, or fix first?
    `llm_bf16_47mb.safetensors -9`: 26,168,919 bytes with 0.0.2, 27,186,418 with 0.0.3. The change came with PR #32
    (main before it writes 26,168,919; the merge 47198180 writes 27,186,418). Its changelog entry says only levels 1,
    2, 3 and 8 changed. On the 42 corpus files this makes level 9 0.7% larger in total; every other level 9 frame is
    byte-identical to 0.0.2's. The README says level 9 is 14.1% smaller than xz -9 on the held-out files, measured
-   on 0.0.2. The CHANGELOG top note states the regression. Not investigated further and not fixed here.
-2. **Level 8 is larger on large text** (webster +2.4%, FASTQ +1.0% to +1.5%, bf16 weights +2.7%), from 32 MiB blocks
+   on 0.0.2. Fixed by #115: -9 is again 26,168,919 bytes, at a slower -9 encode on bf16 weights.
+2. **Level 8 is larger on large text** (webster +2.4%, FASTQ +1.0% to +1.5%; bf16 weights were +2.7%, fixed by
+   #115), from 32 MiB blocks
    instead of 128 MiB. This was a documented choice of PR #32 (a third less memory). Confirm it ships.
 3. **PR #37 (levels 6 and 7 never larger than the level below): hold, or include?** It guarantees the order by
    encoding twice. Cost on one thread: `-6` +45% to +53% compress time, `-7` +114%, for 0.02% to 0.18% smaller
@@ -100,8 +133,8 @@ Decide these before tagging. The first three can change what ships.
      except `speed` and `-x`.
    - Also decide: severity (the draft says medium), whether to request a CVE, and the credit line.
 6. **README results table.** It was measured on 0.0.2. A sentence now says so. Measure it again on 0.0.3 before or
-   after the release? Level 1 is 6.5% smaller on the corpora, so the `-1` row undersells; the `-9` row oversells by
-   about 0.7%.
+   after the release? Level 1 is 6.5% smaller on the corpora, so the `-1` row undersells; the `-9` row holds again
+   after #115 (same total as 0.0.2).
 7. **Package summaries updated.** Both distribution manifests describe supported structured input and parallel
    decoding. Per-workload performance claims belong in the measured results.
 8. **Distribution contents verified.** The Python sdist, wheel and Rust crate include the project licence and notice
