@@ -1,0 +1,6660 @@
+{
+ "release": "0.0.3",
+ "frames": [
+  {
+   "file": "bigprog-arm64.L3.kolmo",
+   "input": "in/bigprog-arm64",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c32e58cfafbc8c644ad9e67f84ee1cabda501dba79a10e3b94fcfad4b9daf5fc",
+   "frame_bytes": 163913,
+   "decoded_sha256": "fbeeeb7e703b39cd1df6185a59d99bc280d7ee6d04e70d6da982cf38db52b816",
+   "decoded_bytes": 1300496,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 19,
+    "orig": 1300496,
+    "blocks": [
+     [
+      32,
+      14,
+      11
+     ],
+     [
+      32,
+      14,
+      11
+     ],
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "bigprog-arm64.L9.kolmo",
+   "input": "in/bigprog-arm64",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "99294ac566134a52ce0803b2d6e98398824df194d6730f67186532a14b1390a1",
+   "frame_bytes": 96143,
+   "decoded_sha256": "fbeeeb7e703b39cd1df6185a59d99bc280d7ee6d04e70d6da982cf38db52b816",
+   "decoded_bytes": 1300496,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 23,
+    "orig": 1300496,
+    "blocks": [
+     [
+      24,
+      0,
+      0
+     ],
+     [
+      24,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "bigprog-x86_64.L3.kolmo",
+   "input": "in/bigprog-x86_64",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c9a336e5228c4754d18be943e5f8c4192288d7e49659eee345d1643acfa08237",
+   "frame_bytes": 123807,
+   "decoded_sha256": "f4cb2f5b4a47a0dc48b7a32f235d6e02cc9ced57035d09fafcf93f0a9f4cd5d8",
+   "decoded_bytes": 1257496,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 28,
+    "orig": 1257496,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ],
+     [
+      32,
+      0,
+      0
+     ],
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "bigprog-x86_64.L9.kolmo",
+   "input": "in/bigprog-x86_64",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "e3ff68b1b21221b287b2ea118004509b04a0379b0cd51bd5234c05dd6b5e34de",
+   "frame_bytes": 72313,
+   "decoded_sha256": "f4cb2f5b4a47a0dc48b7a32f235d6e02cc9ced57035d09fafcf93f0a9f4cd5d8",
+   "decoded_bytes": 1257496,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 30,
+    "orig": 1257496,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ],
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "bundle.tar.L3.kolmo",
+   "input": "in/bundle.tar",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "0559b9035482cf49c3ff3b8ee5567cc48691684b268564e5c2acd0d7ca612dcb",
+   "frame_bytes": 132058,
+   "decoded_sha256": "89af0a42d4883f1f38f68ce25a66f2ada29bdb565193110140338833c5261892",
+   "decoded_bytes": 409600,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 16,
+    "orig": 409600,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "bundle.tar.L9.kolmo",
+   "input": "in/bundle.tar",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "97eb44036d0933d923e1a9ab8a02770d0ce8529b7f6fa151f2914645e6df7e66",
+   "frame_bytes": 80262,
+   "decoded_sha256": "89af0a42d4883f1f38f68ce25a66f2ada29bdb565193110140338833c5261892",
+   "decoded_bytes": 409600,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 25,
+    "orig": 409600,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "clip.y4m.L1.kolmo",
+   "input": "in/clip.y4m",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "620e3a2ee1fa72b5650b8381eb7e4f2b7cd1dabf521b42d74ae814f5708879e3",
+   "frame_bytes": 34099,
+   "decoded_sha256": "0f411ebcf8459506ea9859c3526fc30206028369f194bf1141f55b1555904232",
+   "decoded_bytes": 46181,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 2,
+    "orig": 46181,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "clip.y4m.L2.kolmo",
+   "input": "in/clip.y4m",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "497b223147e970bab88da3be674c6a291390115fbf0daec1fc2b82ba0c0e7282",
+   "frame_bytes": 13992,
+   "decoded_sha256": "0f411ebcf8459506ea9859c3526fc30206028369f194bf1141f55b1555904232",
+   "decoded_bytes": 46181,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 46181,
+    "blocks": [
+     [
+      20,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "clip.y4m.L3.kolmo",
+   "input": "in/clip.y4m",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ab4aa8ec3a5b5b374f22727a75bd8f02f48ceeac30371d0825e565456acf54aa",
+   "frame_bytes": 13850,
+   "decoded_sha256": "0f411ebcf8459506ea9859c3526fc30206028369f194bf1141f55b1555904232",
+   "decoded_bytes": 46181,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 46181,
+    "blocks": [
+     [
+      20,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "clip.y4m.L4.kolmo",
+   "input": "in/clip.y4m",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c5e530d24fdff99494c753f43784243cea8ac48025615330af949925c451b17e",
+   "frame_bytes": 13660,
+   "decoded_sha256": "0f411ebcf8459506ea9859c3526fc30206028369f194bf1141f55b1555904232",
+   "decoded_bytes": 46181,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 15,
+    "orig": 46181,
+    "blocks": [
+     [
+      20,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "clip.y4m.L5.kolmo",
+   "input": "in/clip.y4m",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b1031a812d69dc57bd147145864ab5cb64731a9c468571f2f784b204dc9c5e54",
+   "frame_bytes": 12416,
+   "decoded_sha256": "0f411ebcf8459506ea9859c3526fc30206028369f194bf1141f55b1555904232",
+   "decoded_bytes": 46181,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 15,
+    "orig": 46181,
+    "blocks": [
+     [
+      20,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "clip.y4m.L6.kolmo",
+   "input": "in/clip.y4m",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "869e934c25bba44286bf0ece25883f46ac8c75264eb2593487a6cc1b042f9e8e",
+   "frame_bytes": 12376,
+   "decoded_sha256": "0f411ebcf8459506ea9859c3526fc30206028369f194bf1141f55b1555904232",
+   "decoded_bytes": 46181,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 15,
+    "orig": 46181,
+    "blocks": [
+     [
+      20,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "clip.y4m.L7.kolmo",
+   "input": "in/clip.y4m",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "564f155e6bd67c5ccab17942c6e23942b84858009f1f0049948fd1b34ef197cd",
+   "frame_bytes": 12369,
+   "decoded_sha256": "0f411ebcf8459506ea9859c3526fc30206028369f194bf1141f55b1555904232",
+   "decoded_bytes": 46181,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 15,
+    "orig": 46181,
+    "blocks": [
+     [
+      20,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "clip.y4m.L8.kolmo",
+   "input": "in/clip.y4m",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "5a9336b6d16e5ee680f863e638b1dea592ef459f5cdd895f2b21dd237c4b3cc7",
+   "frame_bytes": 11914,
+   "decoded_sha256": "0f411ebcf8459506ea9859c3526fc30206028369f194bf1141f55b1555904232",
+   "decoded_bytes": 46181,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 46181,
+    "blocks": [
+     [
+      20,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "clip.y4m.L9.kolmo",
+   "input": "in/clip.y4m",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "7d90ec15dee479ea159109cf2041d90814a815feb5ca11736d8690f78102115a",
+   "frame_bytes": 11914,
+   "decoded_sha256": "0f411ebcf8459506ea9859c3526fc30206028369f194bf1141f55b1555904232",
+   "decoded_bytes": 46181,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 46181,
+    "blocks": [
+     [
+      20,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "clip.y4m.LU.kolmo",
+   "input": "in/clip.y4m",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "0156d8c800b4c1cbdc950364208186c2e64a4c42217bf92f486cbc3fd344cca0",
+   "frame_bytes": 11698,
+   "decoded_sha256": "0f411ebcf8459506ea9859c3526fc30206028369f194bf1141f55b1555904232",
+   "decoded_bytes": 46181,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 41,
+    "orig": 46181,
+    "blocks": [
+     [
+      20,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "code.x86.L3.kolmo",
+   "input": "in/code.x86",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3a9586d1dc3438a3489b1ebba885e52147620ce2198f2f7f52e8ccdd604afe57",
+   "frame_bytes": 385618,
+   "decoded_sha256": "539a6d8e9f1de056cf0662a3e9879e17f442614b4850975284e9e97dc1b9ea3f",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 19,
+    "orig": 1048576,
+    "blocks": [
+     [
+      32,
+      8,
+      7
+     ]
+    ]
+   }
+  },
+  {
+   "file": "code.x86.L9.kolmo",
+   "input": "in/code.x86",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "d7ca610b38e332fdaa8346f103c067419bfa61ca34930cdc51235fc10e725289",
+   "frame_bytes": 334679,
+   "decoded_sha256": "539a6d8e9f1de056cf0662a3e9879e17f442614b4850975284e9e97dc1b9ea3f",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 23,
+    "orig": 1048576,
+    "blocks": [
+     [
+      24,
+      8,
+      7
+     ]
+    ]
+   }
+  },
+  {
+   "file": "derived.csv.L3.kolmo",
+   "input": "in/derived.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "97c5a76fe9103e6df2017aca541a60a459decb66bdef7bfc31e232b9d12ac5be",
+   "frame_bytes": 35901,
+   "decoded_sha256": "deb380ebcfade14c7cab906eb122a7bacf54534806750f33f5e34ccc419466ec",
+   "decoded_bytes": 298724,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 298724,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "derived.csv.L9.kolmo",
+   "input": "in/derived.csv",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "86b4f45ea4bfa3b7f46a8a0dcf4e744a5a263d369cae3338807d436e59e2221a",
+   "frame_bytes": 32796,
+   "decoded_sha256": "deb380ebcfade14c7cab906eb122a7bacf54534806750f33f5e34ccc419466ec",
+   "decoded_bytes": 298724,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 17,
+    "orig": 298724,
+    "blocks": [
+     [
+      24,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "derived.csv.LU.kolmo",
+   "input": "in/derived.csv",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b0fcd5722e7c377dcf048e1b85c7fbd00ad676ec690f3710557f1a41494bd517",
+   "frame_bytes": 28007,
+   "decoded_sha256": "deb380ebcfade14c7cab906eb122a7bacf54534806750f33f5e34ccc419466ec",
+   "decoded_bytes": 298724,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 49,
+    "orig": 298724,
+    "blocks": [
+     [
+      26,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "derived.csv.index3.kolmo",
+   "input": "in/derived.csv",
+   "options": "--index -3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "cd68cd45872d6ad51fe1f7d741023e17bd25bbc13bf9edbeab75b87a9c04ff2c",
+   "frame_bytes": 51037,
+   "decoded_sha256": "deb380ebcfade14c7cab906eb122a7bacf54534806750f33f5e34ccc419466ec",
+   "decoded_bytes": 298724,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 298724,
+    "blocks": [
+     [
+      32,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 6926
+   }
+  },
+  {
+   "file": "derived.csv.index9.kolmo",
+   "input": "in/derived.csv",
+   "options": "--index -9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "03150ca5699eccd06344c51ab669255d574729d69fd395555b0b503808964a37",
+   "frame_bytes": 46601,
+   "decoded_sha256": "deb380ebcfade14c7cab906eb122a7bacf54534806750f33f5e34ccc419466ec",
+   "decoded_bytes": 298724,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 17,
+    "orig": 298724,
+    "blocks": [
+     [
+      24,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 6926
+   }
+  },
+  {
+   "file": "empty.L1.kolmo",
+   "input": "in/empty",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ecc4f0eeef42a4e99a04e637dcd7d1906159ca5b43b295d447df348a86664733",
+   "frame_bytes": 52,
+   "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "decoded_bytes": 0,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 1,
+    "orig": 0,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "empty.L2.kolmo",
+   "input": "in/empty",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "0dbd6791597b5eeaa5bfc36404715d8b04264c80c45a68df04ec02338549fbf6",
+   "frame_bytes": 52,
+   "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "decoded_bytes": 0,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 1,
+    "orig": 0,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "empty.L3.kolmo",
+   "input": "in/empty",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "0dbd6791597b5eeaa5bfc36404715d8b04264c80c45a68df04ec02338549fbf6",
+   "frame_bytes": 52,
+   "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "decoded_bytes": 0,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 1,
+    "orig": 0,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "empty.L4.kolmo",
+   "input": "in/empty",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "99a726fa220b3a932eb4dac65762cce747cfb5ee7ce4bd4937da46f188152f3a",
+   "frame_bytes": 52,
+   "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "decoded_bytes": 0,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 1,
+    "orig": 0,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "empty.L5.kolmo",
+   "input": "in/empty",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "71150e37579ec0c76368e202720bfdb01c3ef092b7979c486ede105ab5fb58e5",
+   "frame_bytes": 52,
+   "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "decoded_bytes": 0,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 1,
+    "orig": 0,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "empty.L6.kolmo",
+   "input": "in/empty",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "99a726fa220b3a932eb4dac65762cce747cfb5ee7ce4bd4937da46f188152f3a",
+   "frame_bytes": 52,
+   "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "decoded_bytes": 0,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 1,
+    "orig": 0,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "empty.L7.kolmo",
+   "input": "in/empty",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "99a726fa220b3a932eb4dac65762cce747cfb5ee7ce4bd4937da46f188152f3a",
+   "frame_bytes": 52,
+   "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "decoded_bytes": 0,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 1,
+    "orig": 0,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "empty.L8.kolmo",
+   "input": "in/empty",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "18da52e34a59a75880473af0b4ef76859ed10e9038cb0e6ef8c480736e589b29",
+   "frame_bytes": 52,
+   "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "decoded_bytes": 0,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 1,
+    "orig": 0,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "empty.L9.kolmo",
+   "input": "in/empty",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b0efbddcceb4829eea700394afd02c646d3af08726913f57c12696dc3d027e0f",
+   "frame_bytes": 52,
+   "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "decoded_bytes": 0,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 1,
+    "orig": 0,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "empty.LU.kolmo",
+   "input": "in/empty",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "bb95bc033a34f7932c7b503845234c1e7a49e0afbbad38498a15d29c4429d8a2",
+   "frame_bytes": 52,
+   "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "decoded_bytes": 0,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 1,
+    "orig": 0,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "events.jsonl.L1.kolmo",
+   "input": "in/events.jsonl",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "07dfbbb7d7efc562140debf660f5f1a37bb17bff7b83b850e58ca097e6e8e68d",
+   "frame_bytes": 39052,
+   "decoded_sha256": "a14356da5ae2283552771a30063120024b8da0502a00f50d109ed70aa9bd67c6",
+   "decoded_bytes": 131917,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 3,
+    "orig": 131917,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "events.jsonl.L2.kolmo",
+   "input": "in/events.jsonl",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "d6fbc0811385ac67df4c8ff826930ba6680f3866ca1f60f16bb3c7cd637c3882",
+   "frame_bytes": 28945,
+   "decoded_sha256": "a14356da5ae2283552771a30063120024b8da0502a00f50d109ed70aa9bd67c6",
+   "decoded_bytes": 131917,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 131917,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "events.jsonl.L3.kolmo",
+   "input": "in/events.jsonl",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3bd502e58a045da481dab9306bc8820849bd06cb64b52250be69263544e00aa9",
+   "frame_bytes": 19000,
+   "decoded_sha256": "a14356da5ae2283552771a30063120024b8da0502a00f50d109ed70aa9bd67c6",
+   "decoded_bytes": 131917,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 131917,
+    "blocks": [
+     [
+      32,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "events.jsonl.L4.kolmo",
+   "input": "in/events.jsonl",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "4fd780ebcb4a77bb80354e4f34a7de4807b84265c4a6e74bd6945274cdd07e0f",
+   "frame_bytes": 18458,
+   "decoded_sha256": "a14356da5ae2283552771a30063120024b8da0502a00f50d109ed70aa9bd67c6",
+   "decoded_bytes": 131917,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 131917,
+    "blocks": [
+     [
+      32,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "events.jsonl.L5.kolmo",
+   "input": "in/events.jsonl",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "99362343e79c322a1de2046590f8c7c51273809dcf462e06651c3a83886fa374",
+   "frame_bytes": 17444,
+   "decoded_sha256": "a14356da5ae2283552771a30063120024b8da0502a00f50d109ed70aa9bd67c6",
+   "decoded_bytes": 131917,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 14,
+    "orig": 131917,
+    "blocks": [
+     [
+      32,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "events.jsonl.L6.kolmo",
+   "input": "in/events.jsonl",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "5850ff4b61ad455dd4088a1fc606b24ec83e7033d545959d1a29b79902a0436a",
+   "frame_bytes": 17219,
+   "decoded_sha256": "a14356da5ae2283552771a30063120024b8da0502a00f50d109ed70aa9bd67c6",
+   "decoded_bytes": 131917,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 131917,
+    "blocks": [
+     [
+      32,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "events.jsonl.L7.kolmo",
+   "input": "in/events.jsonl",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "6b67b6c70bbb7c72b5f3c6585857b0e226c72b57f7942d6c967248baf200411d",
+   "frame_bytes": 17167,
+   "decoded_sha256": "a14356da5ae2283552771a30063120024b8da0502a00f50d109ed70aa9bd67c6",
+   "decoded_bytes": 131917,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 131917,
+    "blocks": [
+     [
+      32,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "events.jsonl.L8.kolmo",
+   "input": "in/events.jsonl",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ace3e25302b3d71e842e5640aef519ed64f70c2e952b8e4a51484d59c87b9f4c",
+   "frame_bytes": 13448,
+   "decoded_sha256": "a14356da5ae2283552771a30063120024b8da0502a00f50d109ed70aa9bd67c6",
+   "decoded_bytes": 131917,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 131917,
+    "blocks": [
+     [
+      18,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "events.jsonl.L9.kolmo",
+   "input": "in/events.jsonl",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "df4cc73e6c1979792c09cfae465eaf22ea3229f882584d65e0ba0d1627346fa0",
+   "frame_bytes": 13448,
+   "decoded_sha256": "a14356da5ae2283552771a30063120024b8da0502a00f50d109ed70aa9bd67c6",
+   "decoded_bytes": 131917,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 131917,
+    "blocks": [
+     [
+      18,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "events.jsonl.LU.kolmo",
+   "input": "in/events.jsonl",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "46ad402ee97cba01be374d70356e1c9cee1ddcc5cc0c64621bad74883bf0979a",
+   "frame_bytes": 10994,
+   "decoded_sha256": "a14356da5ae2283552771a30063120024b8da0502a00f50d109ed70aa9bd67c6",
+   "decoded_bytes": 131917,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 41,
+    "orig": 131917,
+    "blocks": [
+     [
+      7,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "genome.fa.L1.kolmo",
+   "input": "in/genome.fa",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ce54af8bbac38b8a47fdcbb87b4f93112261085d522fafdd17375ddd79bb500e",
+   "frame_bytes": 33268,
+   "decoded_sha256": "5282fff6a04852846a53e71c215e4a393541195ee9ebf146c3ae0f1dd14c5f47",
+   "decoded_bytes": 61016,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 2,
+    "orig": 61016,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "genome.fa.L2.kolmo",
+   "input": "in/genome.fa",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "f1797edae8d0ea4aaefe55dc45e8d9474e0a366d50dfac53a977dbe7b9746b8d",
+   "frame_bytes": 21312,
+   "decoded_sha256": "5282fff6a04852846a53e71c215e4a393541195ee9ebf146c3ae0f1dd14c5f47",
+   "decoded_bytes": 61016,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 61016,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "genome.fa.L3.kolmo",
+   "input": "in/genome.fa",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "2e7c4003882c7b6eddeea42bb029b602032944fc5ae698d6ef73eafb3e2fe3fa",
+   "frame_bytes": 21879,
+   "decoded_sha256": "5282fff6a04852846a53e71c215e4a393541195ee9ebf146c3ae0f1dd14c5f47",
+   "decoded_bytes": 61016,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 61016,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "genome.fa.L4.kolmo",
+   "input": "in/genome.fa",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "a1cb25b80fc1fcf5524e518c7d1aeb0984ec97bbda64556a19c7e7f6e8fdbdac",
+   "frame_bytes": 20416,
+   "decoded_sha256": "5282fff6a04852846a53e71c215e4a393541195ee9ebf146c3ae0f1dd14c5f47",
+   "decoded_bytes": 61016,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 61016,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "genome.fa.L5.kolmo",
+   "input": "in/genome.fa",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b7b084aa6a5eec63d882e27b7c34c943a521c33a9b1c6f541ccab42a2243f011",
+   "frame_bytes": 18018,
+   "decoded_sha256": "5282fff6a04852846a53e71c215e4a393541195ee9ebf146c3ae0f1dd14c5f47",
+   "decoded_bytes": 61016,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 14,
+    "orig": 61016,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "genome.fa.L6.kolmo",
+   "input": "in/genome.fa",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "816c8b8022b5831db31dd34b32816f83425d0bda7b69d2cba248e1c55e88bee6",
+   "frame_bytes": 18027,
+   "decoded_sha256": "5282fff6a04852846a53e71c215e4a393541195ee9ebf146c3ae0f1dd14c5f47",
+   "decoded_bytes": 61016,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 61016,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "genome.fa.L7.kolmo",
+   "input": "in/genome.fa",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "816c8b8022b5831db31dd34b32816f83425d0bda7b69d2cba248e1c55e88bee6",
+   "frame_bytes": 18027,
+   "decoded_sha256": "5282fff6a04852846a53e71c215e4a393541195ee9ebf146c3ae0f1dd14c5f47",
+   "decoded_bytes": 61016,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 61016,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "genome.fa.L8.kolmo",
+   "input": "in/genome.fa",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "a4840ef8f97199fb87db9c77edf28ed1254dc7ffe8c0ea172db3804ff492fa9a",
+   "frame_bytes": 17282,
+   "decoded_sha256": "5282fff6a04852846a53e71c215e4a393541195ee9ebf146c3ae0f1dd14c5f47",
+   "decoded_bytes": 61016,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 20,
+    "orig": 61016,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "genome.fa.L9.kolmo",
+   "input": "in/genome.fa",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "aa7b674bfa5bcde4c3b28d249731e1612fba482d11b38641431d7fa947db3923",
+   "frame_bytes": 17282,
+   "decoded_sha256": "5282fff6a04852846a53e71c215e4a393541195ee9ebf146c3ae0f1dd14c5f47",
+   "decoded_bytes": 61016,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 20,
+    "orig": 61016,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "genome.fa.LU.kolmo",
+   "input": "in/genome.fa",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "dd7743b445336d9bc2d04b497467580f761199e06e01d0177e605445a95b2770",
+   "frame_bytes": 15953,
+   "decoded_sha256": "5282fff6a04852846a53e71c215e4a393541195ee9ebf146c3ae0f1dd14c5f47",
+   "decoded_bytes": 61016,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 40,
+    "orig": 61016,
+    "blocks": [
+     [
+      7,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray-big.pgm.LU.kolmo",
+   "input": "in/gray-big.pgm",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "2e646f719323d7eed55cf833b0cdfaa6f4655bd653c460fcd82c703e3ab15ff7",
+   "frame_bytes": 316998,
+   "decoded_sha256": "e1eb08c55118c53ea1e58b5791a8ea8851ee346ab520ebb520788c32b0149925",
+   "decoded_bytes": 786448,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 69,
+    "orig": 786448,
+    "blocks": [
+     [
+      17,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray.pgm.L1.kolmo",
+   "input": "in/gray.pgm",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "764a905add728e1deedfde5f28984fea62838bb564d4b517c4c49d8c48d3e6ef",
+   "frame_bytes": 49219,
+   "decoded_sha256": "e039764706e42c31fd3869f8d5bab525adbe48d6f6d4b5afe5411449c738a68e",
+   "decoded_bytes": 49167,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 2,
+    "orig": 49167,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray.pgm.L2.kolmo",
+   "input": "in/gray.pgm",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c804041c31e7b0ed218809c66aae22f1bca17be364fc604f5f5474a3d8896e72",
+   "frame_bytes": 49193,
+   "decoded_sha256": "e039764706e42c31fd3869f8d5bab525adbe48d6f6d4b5afe5411449c738a68e",
+   "decoded_bytes": 49167,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 49167,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray.pgm.L3.kolmo",
+   "input": "in/gray.pgm",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "be5bb130a515bd0e0110e848119c2c2d81bad6c8cd97364ad3e70075b79abfe1",
+   "frame_bytes": 22562,
+   "decoded_sha256": "e039764706e42c31fd3869f8d5bab525adbe48d6f6d4b5afe5411449c738a68e",
+   "decoded_bytes": 49167,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 26,
+    "orig": 49167,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray.pgm.L4.kolmo",
+   "input": "in/gray.pgm",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "73ad0be5d5ee56424441e21c4779bd93be8f536c21f9133f3d46a883ed38efed",
+   "frame_bytes": 22562,
+   "decoded_sha256": "e039764706e42c31fd3869f8d5bab525adbe48d6f6d4b5afe5411449c738a68e",
+   "decoded_bytes": 49167,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 26,
+    "orig": 49167,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray.pgm.L5.kolmo",
+   "input": "in/gray.pgm",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b89bae8cbada14abe6492a06473798df7504a19155e0663e85de6fe30e62701d",
+   "frame_bytes": 22201,
+   "decoded_sha256": "e039764706e42c31fd3869f8d5bab525adbe48d6f6d4b5afe5411449c738a68e",
+   "decoded_bytes": 49167,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 26,
+    "orig": 49167,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray.pgm.L6.kolmo",
+   "input": "in/gray.pgm",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "73ad0be5d5ee56424441e21c4779bd93be8f536c21f9133f3d46a883ed38efed",
+   "frame_bytes": 22562,
+   "decoded_sha256": "e039764706e42c31fd3869f8d5bab525adbe48d6f6d4b5afe5411449c738a68e",
+   "decoded_bytes": 49167,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 26,
+    "orig": 49167,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray.pgm.L7.kolmo",
+   "input": "in/gray.pgm",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "73ad0be5d5ee56424441e21c4779bd93be8f536c21f9133f3d46a883ed38efed",
+   "frame_bytes": 22562,
+   "decoded_sha256": "e039764706e42c31fd3869f8d5bab525adbe48d6f6d4b5afe5411449c738a68e",
+   "decoded_bytes": 49167,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 26,
+    "orig": 49167,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray.pgm.L8.kolmo",
+   "input": "in/gray.pgm",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "a1c574846fd42ee1a3e57995b67e61e858534de8d6eade8a764fbce5468a1dff",
+   "frame_bytes": 22178,
+   "decoded_sha256": "e039764706e42c31fd3869f8d5bab525adbe48d6f6d4b5afe5411449c738a68e",
+   "decoded_bytes": 49167,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 26,
+    "orig": 49167,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray.pgm.L9.kolmo",
+   "input": "in/gray.pgm",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "cc7036779345123f13abec56ab8b2232ae3eaa7dea74784f481a7f84d1aa7d63",
+   "frame_bytes": 22178,
+   "decoded_sha256": "e039764706e42c31fd3869f8d5bab525adbe48d6f6d4b5afe5411449c738a68e",
+   "decoded_bytes": 49167,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 26,
+    "orig": 49167,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray.pgm.LU.kolmo",
+   "input": "in/gray.pgm",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "1fdf3502653a005523fce4cfce4c93d276e116b6d1d04896f85ec7bbe89a3e3c",
+   "frame_bytes": 22178,
+   "decoded_sha256": "e039764706e42c31fd3869f8d5bab525adbe48d6f6d4b5afe5411449c738a68e",
+   "decoded_bytes": 49167,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 26,
+    "orig": 49167,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray12.pgm.L3.kolmo",
+   "input": "in/gray12.pgm",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "11af23662f5ed818bcdb1e668d3dd145790042908dac1a038b2d47b31bde7a2f",
+   "frame_bytes": 103206,
+   "decoded_sha256": "ed260d8553433b46d05c647ea9e188930a7b767d5a99e0c9effa35ff71c89c5c",
+   "decoded_bytes": 393232,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 16,
+    "orig": 393232,
+    "blocks": [
+     [
+      32,
+      6,
+      5
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray12.pgm.L9.kolmo",
+   "input": "in/gray12.pgm",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "9c362401303c0a0c718fc098ee426da2260e2455f6f95b00f1995dd1d98366e8",
+   "frame_bytes": 95400,
+   "decoded_sha256": "ed260d8553433b46d05c647ea9e188930a7b767d5a99e0c9effa35ff71c89c5c",
+   "decoded_bytes": 393232,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 25,
+    "orig": 393232,
+    "blocks": [
+     [
+      18,
+      6,
+      5
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16-big.pgm.L3.kolmo",
+   "input": "in/gray16-big.pgm",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "2b3289a12c959ed473d1b488136186992124de216fa404790fe5ab2b0be41758",
+   "frame_bytes": 150946,
+   "decoded_sha256": "0a21cef79572552401b5879e2da14d0bb3aaa396f2162b4bf08295e4dbb73c49",
+   "decoded_bytes": 393233,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 16,
+    "orig": 393233,
+    "blocks": [
+     [
+      32,
+      7,
+      6
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16-big.pgm.LU.kolmo",
+   "input": "in/gray16-big.pgm",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "81cec28431e0b4a110e50c749be407e982b810d59039a11ce6529fd25fe49314",
+   "frame_bytes": 136655,
+   "decoded_sha256": "0a21cef79572552401b5879e2da14d0bb3aaa396f2162b4bf08295e4dbb73c49",
+   "decoded_bytes": 393233,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 43,
+    "orig": 393233,
+    "blocks": [
+     [
+      7,
+      7,
+      6
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16.pgm.L1.kolmo",
+   "input": "in/gray16.pgm",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "0f70985e85f25fb89847e1d7a15e0ceb5fdcf7e29d4ccaec0180b44dfea74fa7",
+   "frame_bytes": 24644,
+   "decoded_sha256": "79c92404134893a6de36dab07cbf9906a3fe0c13f34750e884927e7bc8d05830",
+   "decoded_bytes": 24592,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 1,
+    "orig": 24592,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16.pgm.L2.kolmo",
+   "input": "in/gray16.pgm",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "14f83a88ea7c56c3ba8d8eb945e672cc174e5101cad3f6fd3cc5e0d1a90f3cd9",
+   "frame_bytes": 10993,
+   "decoded_sha256": "79c92404134893a6de36dab07cbf9906a3fe0c13f34750e884927e7bc8d05830",
+   "decoded_bytes": 24592,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 13,
+    "orig": 24592,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16.pgm.L3.kolmo",
+   "input": "in/gray16.pgm",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "0c83c1061fdf436e15326065cb8af83c5cf512b5926b4cb8e94104a0d3392526",
+   "frame_bytes": 10788,
+   "decoded_sha256": "79c92404134893a6de36dab07cbf9906a3fe0c13f34750e884927e7bc8d05830",
+   "decoded_bytes": 24592,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 13,
+    "orig": 24592,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16.pgm.L4.kolmo",
+   "input": "in/gray16.pgm",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "492d9f54ad6aa78c8546609995b739f89e0a9e102f00cd47dac986e608f170d1",
+   "frame_bytes": 9900,
+   "decoded_sha256": "79c92404134893a6de36dab07cbf9906a3fe0c13f34750e884927e7bc8d05830",
+   "decoded_bytes": 24592,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 13,
+    "orig": 24592,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16.pgm.L5.kolmo",
+   "input": "in/gray16.pgm",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "1175e30e6114408a87ed78998f02acb421e2693b2b9353d5875584b7046542eb",
+   "frame_bytes": 9944,
+   "decoded_sha256": "79c92404134893a6de36dab07cbf9906a3fe0c13f34750e884927e7bc8d05830",
+   "decoded_bytes": 24592,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 13,
+    "orig": 24592,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16.pgm.L6.kolmo",
+   "input": "in/gray16.pgm",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "a70d53ec190092fd09b59bb6402d1d45a3eefa5e5ddfe4cd775883462f9ee28f",
+   "frame_bytes": 9964,
+   "decoded_sha256": "79c92404134893a6de36dab07cbf9906a3fe0c13f34750e884927e7bc8d05830",
+   "decoded_bytes": 24592,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 13,
+    "orig": 24592,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16.pgm.L7.kolmo",
+   "input": "in/gray16.pgm",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c6e917c749215de8eb08973d6e477ca4b01facc4bc48cf6fa9c8ddf7e1ba3723",
+   "frame_bytes": 9925,
+   "decoded_sha256": "79c92404134893a6de36dab07cbf9906a3fe0c13f34750e884927e7bc8d05830",
+   "decoded_bytes": 24592,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 13,
+    "orig": 24592,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16.pgm.L8.kolmo",
+   "input": "in/gray16.pgm",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "db874994f1d185d8dd302c0b8b7b379275f71045702ddddbb5534896c472a44f",
+   "frame_bytes": 9334,
+   "decoded_sha256": "79c92404134893a6de36dab07cbf9906a3fe0c13f34750e884927e7bc8d05830",
+   "decoded_bytes": 24592,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 20,
+    "orig": 24592,
+    "blocks": [
+     [
+      18,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16.pgm.L9.kolmo",
+   "input": "in/gray16.pgm",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "be74d19e6c25af5df79727ec9b375606d7e78f531f6b7e93c28f2d0d518047fe",
+   "frame_bytes": 9328,
+   "decoded_sha256": "79c92404134893a6de36dab07cbf9906a3fe0c13f34750e884927e7bc8d05830",
+   "decoded_bytes": 24592,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 14,
+    "orig": 24592,
+    "blocks": [
+     [
+      24,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "gray16.pgm.LU.kolmo",
+   "input": "in/gray16.pgm",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "8873247d7a8b1b465b6e5221d58452a408a09cc096c9823f389fd89264e41c62",
+   "frame_bytes": 9038,
+   "decoded_sha256": "79c92404134893a6de36dab07cbf9906a3fe0c13f34750e884927e7bc8d05830",
+   "decoded_bytes": 24592,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 40,
+    "orig": 24592,
+    "blocks": [
+     [
+      7,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "growth.csv.L3.kolmo",
+   "input": "in/growth.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "647d251538716a33177f49794304b1ae9ba3ff87822e5f1c819ab1f53b5bf0c9",
+   "frame_bytes": 26298,
+   "decoded_sha256": "aee67d2757f73e7b1e423cb815a75359ea3af2d836a6f2c8ba26bba648c695d6",
+   "decoded_bytes": 105558,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 105558,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "longfield.csv.L3.kolmo",
+   "input": "in/longfield.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "290d6ea1dfdcfd4e8eb135470034f4e6230cc6d83daeecdc66a26cd0d9d50e0a",
+   "frame_bytes": 29696,
+   "decoded_sha256": "5b0db520f1cb9d4cefd3ddf1d10b3dc28554d9049589005fb657eb2b30e459bd",
+   "decoded_bytes": 234645,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 234645,
+    "blocks": [
+     [
+      32,
+      0,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "longfield.csv.L9.kolmo",
+   "input": "in/longfield.csv",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "a9f873c4834c68383a67ff4b3c3161b84b89aed7cef82b5922de72533bd980df",
+   "frame_bytes": 15138,
+   "decoded_sha256": "5b0db520f1cb9d4cefd3ddf1d10b3dc28554d9049589005fb657eb2b30e459bd",
+   "decoded_bytes": 234645,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 23,
+    "orig": 234645,
+    "blocks": [
+     [
+      18,
+      0,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "minified.json.L1.kolmo",
+   "input": "in/minified.json",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "514225894a61cfce0c74e8ab0b858cbc4a660cdc5ad17fd7ded6581e8f021d6e",
+   "frame_bytes": 44388,
+   "decoded_sha256": "2d8c38ab83a28bdc99f4e7fcf1beb06ea790c3e37ee5b380d7508eb2cace0720",
+   "decoded_bytes": 105430,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 3,
+    "orig": 105430,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "minified.json.L2.kolmo",
+   "input": "in/minified.json",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "25896a8cc913a3673338f245718f0c4c608739e7d613d93a17086165b1cf4e2e",
+   "frame_bytes": 28604,
+   "decoded_sha256": "2d8c38ab83a28bdc99f4e7fcf1beb06ea790c3e37ee5b380d7508eb2cace0720",
+   "decoded_bytes": 105430,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 105430,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "minified.json.L3.kolmo",
+   "input": "in/minified.json",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "2348ae4afafd5bb56b3a58ea6edd494dd262da1ef593837fc1ce8479af702967",
+   "frame_bytes": 17506,
+   "decoded_sha256": "2d8c38ab83a28bdc99f4e7fcf1beb06ea790c3e37ee5b380d7508eb2cace0720",
+   "decoded_bytes": 105430,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 105430,
+    "blocks": [
+     [
+      32,
+      10,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "minified.json.L4.kolmo",
+   "input": "in/minified.json",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ea6ea80d240074faf3b6212a23482e577d181fe2c2f0f8ada5376306b4c79ca3",
+   "frame_bytes": 17176,
+   "decoded_sha256": "2d8c38ab83a28bdc99f4e7fcf1beb06ea790c3e37ee5b380d7508eb2cace0720",
+   "decoded_bytes": 105430,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 105430,
+    "blocks": [
+     [
+      32,
+      10,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "minified.json.L5.kolmo",
+   "input": "in/minified.json",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "5666f9a3951ddc01a66f6a8fc12c39b99a8960de6d9595fc123aef2b596dbe22",
+   "frame_bytes": 16277,
+   "decoded_sha256": "2d8c38ab83a28bdc99f4e7fcf1beb06ea790c3e37ee5b380d7508eb2cace0720",
+   "decoded_bytes": 105430,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 14,
+    "orig": 105430,
+    "blocks": [
+     [
+      32,
+      10,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "minified.json.L6.kolmo",
+   "input": "in/minified.json",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b2b68a1fb4764d15b12ac0268cff5772eb444392d06936aef7ec7c8e4a406b25",
+   "frame_bytes": 16017,
+   "decoded_sha256": "2d8c38ab83a28bdc99f4e7fcf1beb06ea790c3e37ee5b380d7508eb2cace0720",
+   "decoded_bytes": 105430,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 105430,
+    "blocks": [
+     [
+      32,
+      10,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "minified.json.L7.kolmo",
+   "input": "in/minified.json",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b2b68a1fb4764d15b12ac0268cff5772eb444392d06936aef7ec7c8e4a406b25",
+   "frame_bytes": 16017,
+   "decoded_sha256": "2d8c38ab83a28bdc99f4e7fcf1beb06ea790c3e37ee5b380d7508eb2cace0720",
+   "decoded_bytes": 105430,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 105430,
+    "blocks": [
+     [
+      32,
+      10,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "minified.json.L8.kolmo",
+   "input": "in/minified.json",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "d7a1c484bc9c42f2708455913816cc76aa0cdf5c48f9252b2016ecedd657e544",
+   "frame_bytes": 14254,
+   "decoded_sha256": "2d8c38ab83a28bdc99f4e7fcf1beb06ea790c3e37ee5b380d7508eb2cace0720",
+   "decoded_bytes": 105430,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 105430,
+    "blocks": [
+     [
+      18,
+      10,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "minified.json.L9.kolmo",
+   "input": "in/minified.json",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "d988bac98ac0ca80a8e2d19d73d60ca7aab81ea946fc1baa2fb17bb4635cc88a",
+   "frame_bytes": 14254,
+   "decoded_sha256": "2d8c38ab83a28bdc99f4e7fcf1beb06ea790c3e37ee5b380d7508eb2cace0720",
+   "decoded_bytes": 105430,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 105430,
+    "blocks": [
+     [
+      18,
+      10,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "minified.json.LU.kolmo",
+   "input": "in/minified.json",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "9219b620331c943f88b9dfb1a93bda32065b126da25734a6b0be5fdd3c4a844f",
+   "frame_bytes": 13014,
+   "decoded_sha256": "2d8c38ab83a28bdc99f4e7fcf1beb06ea790c3e37ee5b380d7508eb2cace0720",
+   "decoded_bytes": 105430,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 40,
+    "orig": 105430,
+    "blocks": [
+     [
+      7,
+      10,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "mixed.bin.L3-stream1M.kolmo",
+   "input": "in/mixed.bin",
+   "options": "-3 --stream=1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "34eb157754e722da50595ac9a28298f607f5230e7014b0dd20ea977483b7f1f2",
+   "frame_bytes": 584885,
+   "decoded_sha256": "50ab8c4b2d7a04a8e534a4e111c8343cff86422ad5802c6c53cdd17dd349abc2",
+   "decoded_bytes": 2186814,
+   "summary": {
+    "stream": true,
+    "segments": [
+     {
+      "version": 12,
+      "mode": 1,
+      "flags": 0,
+      "memd": 19,
+      "orig": 1048576,
+      "blocks": [
+       [
+        32,
+        0,
+        0
+       ]
+      ]
+     },
+     {
+      "version": 12,
+      "mode": 1,
+      "flags": 0,
+      "memd": 19,
+      "orig": 1048576,
+      "blocks": [
+       [
+        32,
+        0,
+        0
+       ]
+      ]
+     },
+     {
+      "version": 12,
+      "mode": 1,
+      "flags": 0,
+      "memd": 14,
+      "orig": 89662,
+      "blocks": [
+       [
+        32,
+        1,
+        2
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "file": "mixed.bin.L3.kolmo",
+   "input": "in/mixed.bin",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "94bfe150fb9b542b462807cd19aa5b16da81fbd2c0cbd9fccd00f191bb2887d7",
+   "frame_bytes": 609789,
+   "decoded_sha256": "50ab8c4b2d7a04a8e534a4e111c8343cff86422ad5802c6c53cdd17dd349abc2",
+   "decoded_bytes": 2186814,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 19,
+    "orig": 2186814,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ],
+     [
+      32,
+      0,
+      0
+     ],
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "names.csv.L2.kolmo",
+   "input": "in/names.csv",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "eb9ab181dc218d565f2cb88ec30541789407e9132dde87cb6cba897dff32d606",
+   "frame_bytes": 69054,
+   "decoded_sha256": "b758f9f8babd094e23bcfde0b28ba7de7ac5dbcb086e24276f33b4c46aadcdab",
+   "decoded_bytes": 160334,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 160334,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "names.csv.L3.kolmo",
+   "input": "in/names.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "95996d52972d4fb3697bea7850d28784057410035f96fc26f9fdd2f7e7dbae07",
+   "frame_bytes": 59904,
+   "decoded_sha256": "b758f9f8babd094e23bcfde0b28ba7de7ac5dbcb086e24276f33b4c46aadcdab",
+   "decoded_bytes": 160334,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 160334,
+    "blocks": [
+     [
+      32,
+      2,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "file": "pairs.csv.L3.kolmo",
+   "input": "in/pairs.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3d9f405d82034353219509e9880815b900ca642de9c8941c994a7121927ef17d",
+   "frame_bytes": 41145,
+   "decoded_sha256": "79870ffe824fcb7409a1251f49b016df9e45840a3fd9bb1651aba3e20977e833",
+   "decoded_bytes": 151138,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 151138,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "pairs.csv.LU.kolmo",
+   "input": "in/pairs.csv",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "63d3b77ae304b8db40545e7b485e72ac649943e9b9db6f36345ddceb441bc224",
+   "frame_bytes": 21428,
+   "decoded_sha256": "79870ffe824fcb7409a1251f49b016df9e45840a3fd9bb1651aba3e20977e833",
+   "decoded_bytes": 151138,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 40,
+    "orig": 151138,
+    "blocks": [
+     [
+      25,
+      2,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "file": "photo.pgm.L9.kolmo",
+   "input": "in/photo.pgm",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "4acc2c78ed391e1e2fc74178c5e15222beadb657189b2782dab8ed77242c2e50",
+   "frame_bytes": 94365,
+   "decoded_sha256": "b78220ddb918610e88dc173949f99c4e259bf03bbffc9416b5ca18ae317fa278",
+   "decoded_bytes": 307215,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 22,
+    "orig": 307215,
+    "blocks": [
+     [
+      31,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "photo.pgm.LU.kolmo",
+   "input": "in/photo.pgm",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "6f7b442d305f2ff52bc836430e03b2777cb8f914c723611d739546e9829f07a5",
+   "frame_bytes": 90468,
+   "decoded_sha256": "b78220ddb918610e88dc173949f99c4e259bf03bbffc9416b5ca18ae317fa278",
+   "decoded_bytes": 307215,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 62,
+    "orig": 307215,
+    "blocks": [
+     [
+      17,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-arm64.L1.kolmo",
+   "input": "in/prog-arm64",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ee62dde3ef9382be9ef0620c1a1ccd938785cad8c529768a30072ae4213a3488",
+   "frame_bytes": 1836,
+   "decoded_sha256": "7a64edfdca357dcffd4f982ed4c986310fe609b5a484771bd637c68d55783904",
+   "decoded_bytes": 33696,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 1,
+    "orig": 33696,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-arm64.L2.kolmo",
+   "input": "in/prog-arm64",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "887e41844db04306a85211db45519bf95a16107b816154337a9cb4a42f316714",
+   "frame_bytes": 1546,
+   "decoded_sha256": "7a64edfdca357dcffd4f982ed4c986310fe609b5a484771bd637c68d55783904",
+   "decoded_bytes": 33696,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 13,
+    "orig": 33696,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-arm64.L3.kolmo",
+   "input": "in/prog-arm64",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "45afafe2d57fd567bde061c71a7fe10819cd3b99c69306ced5d5f028861686c1",
+   "frame_bytes": 1533,
+   "decoded_sha256": "7a64edfdca357dcffd4f982ed4c986310fe609b5a484771bd637c68d55783904",
+   "decoded_bytes": 33696,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 13,
+    "orig": 33696,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-arm64.L4.kolmo",
+   "input": "in/prog-arm64",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "eb181739ae4a6b9f1cb6dfd5d4ef8a4571265ba1c02dddfff30a50fc09a08615",
+   "frame_bytes": 1486,
+   "decoded_sha256": "7a64edfdca357dcffd4f982ed4c986310fe609b5a484771bd637c68d55783904",
+   "decoded_bytes": 33696,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 13,
+    "orig": 33696,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-arm64.L5.kolmo",
+   "input": "in/prog-arm64",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "1ceb9aec11cf3c913481a93546d1c5f00e22c687895960fb7bd044362b17220d",
+   "frame_bytes": 1475,
+   "decoded_sha256": "7a64edfdca357dcffd4f982ed4c986310fe609b5a484771bd637c68d55783904",
+   "decoded_bytes": 33696,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 13,
+    "orig": 33696,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-arm64.L6.kolmo",
+   "input": "in/prog-arm64",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "5a3a858b8482186f98dd483a1f88fb002453179875e9ef0734f12739eefbaddc",
+   "frame_bytes": 1455,
+   "decoded_sha256": "7a64edfdca357dcffd4f982ed4c986310fe609b5a484771bd637c68d55783904",
+   "decoded_bytes": 33696,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 13,
+    "orig": 33696,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-arm64.L7.kolmo",
+   "input": "in/prog-arm64",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "367df8a9e896c284e2763d07e8e81a837939ce03593d87498c7741b8480bd6f0",
+   "frame_bytes": 1454,
+   "decoded_sha256": "7a64edfdca357dcffd4f982ed4c986310fe609b5a484771bd637c68d55783904",
+   "decoded_bytes": 33696,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 13,
+    "orig": 33696,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-arm64.L8.kolmo",
+   "input": "in/prog-arm64",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "af126ed85b4b4694682ec42808645f1e1c77779ed24f9ccf0bf67ce51e33a121",
+   "frame_bytes": 1556,
+   "decoded_sha256": "7a64edfdca357dcffd4f982ed4c986310fe609b5a484771bd637c68d55783904",
+   "decoded_bytes": 33696,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 20,
+    "orig": 33696,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-arm64.L9.kolmo",
+   "input": "in/prog-arm64",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "58ff455d348c26dc3e6939dbfb2215de51dd5be2e2f9dca78a5d24030cc78560",
+   "frame_bytes": 1284,
+   "decoded_sha256": "7a64edfdca357dcffd4f982ed4c986310fe609b5a484771bd637c68d55783904",
+   "decoded_bytes": 33696,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 14,
+    "orig": 33696,
+    "blocks": [
+     [
+      24,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-arm64.LU.kolmo",
+   "input": "in/prog-arm64",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "e172914bdbca5208ba4383e5fd5b06d7f62b005b6346ff0f6da795212521a794",
+   "frame_bytes": 1182,
+   "decoded_sha256": "7a64edfdca357dcffd4f982ed4c986310fe609b5a484771bd637c68d55783904",
+   "decoded_bytes": 33696,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 40,
+    "orig": 33696,
+    "blocks": [
+     [
+      7,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-x86_64.L1.kolmo",
+   "input": "in/prog-x86_64",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "d9b6f6b7e51c4f5803279852ffb8b157ba2824fea6d39f5bcf9b9a5eb552acb3",
+   "frame_bytes": 1487,
+   "decoded_sha256": "bb29105de88f3f3eadcd9454c3e35b27adea6e5731b09172fc11dbe6089be8b8",
+   "decoded_bytes": 8720,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 1,
+    "orig": 8720,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-x86_64.L2.kolmo",
+   "input": "in/prog-x86_64",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "16a320fa6d66d3fd01f140bdd0ecb62cb34d370ac31592ed83941ecebfa96a61",
+   "frame_bytes": 1324,
+   "decoded_sha256": "bb29105de88f3f3eadcd9454c3e35b27adea6e5731b09172fc11dbe6089be8b8",
+   "decoded_bytes": 8720,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 13,
+    "orig": 8720,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-x86_64.L3.kolmo",
+   "input": "in/prog-x86_64",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "535a104cf636cb971135d5756ee623c9da132792ffdc437ba2dc413521e2c57c",
+   "frame_bytes": 1302,
+   "decoded_sha256": "bb29105de88f3f3eadcd9454c3e35b27adea6e5731b09172fc11dbe6089be8b8",
+   "decoded_bytes": 8720,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 13,
+    "orig": 8720,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-x86_64.L4.kolmo",
+   "input": "in/prog-x86_64",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "34195c93f68bb7b958108e2c3c8d4b5efa970b0464fcedeb4451618ebb7cb3ea",
+   "frame_bytes": 1256,
+   "decoded_sha256": "bb29105de88f3f3eadcd9454c3e35b27adea6e5731b09172fc11dbe6089be8b8",
+   "decoded_bytes": 8720,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 13,
+    "orig": 8720,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-x86_64.L5.kolmo",
+   "input": "in/prog-x86_64",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "9741ae025d024968ad56523a3d9544200defbc558d9f2c62435a8c7dc31c083e",
+   "frame_bytes": 1248,
+   "decoded_sha256": "bb29105de88f3f3eadcd9454c3e35b27adea6e5731b09172fc11dbe6089be8b8",
+   "decoded_bytes": 8720,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 13,
+    "orig": 8720,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-x86_64.L6.kolmo",
+   "input": "in/prog-x86_64",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "164346aa2c87a25bc72d5997a7b6b7c5083a7140c0d2787aec60602eb9b82989",
+   "frame_bytes": 1240,
+   "decoded_sha256": "bb29105de88f3f3eadcd9454c3e35b27adea6e5731b09172fc11dbe6089be8b8",
+   "decoded_bytes": 8720,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 13,
+    "orig": 8720,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-x86_64.L7.kolmo",
+   "input": "in/prog-x86_64",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b7ae06d33d638486addaca49f27fbbd18b24117c7affe825eacdcfc1ff9f22d5",
+   "frame_bytes": 1237,
+   "decoded_sha256": "bb29105de88f3f3eadcd9454c3e35b27adea6e5731b09172fc11dbe6089be8b8",
+   "decoded_bytes": 8720,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 13,
+    "orig": 8720,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-x86_64.L8.kolmo",
+   "input": "in/prog-x86_64",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "eab7375a3178d720cb3541f124a4e366df5a9e962c0d2c9179dccb98c3088594",
+   "frame_bytes": 1260,
+   "decoded_sha256": "bb29105de88f3f3eadcd9454c3e35b27adea6e5731b09172fc11dbe6089be8b8",
+   "decoded_bytes": 8720,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 19,
+    "orig": 8720,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-x86_64.L9.kolmo",
+   "input": "in/prog-x86_64",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ee5d8ddbb2f173844878b60c3bb70f99b8411c7d2a42e08010a3b0631b0a8b6f",
+   "frame_bytes": 1020,
+   "decoded_sha256": "bb29105de88f3f3eadcd9454c3e35b27adea6e5731b09172fc11dbe6089be8b8",
+   "decoded_bytes": 8720,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 13,
+    "orig": 8720,
+    "blocks": [
+     [
+      24,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "prog-x86_64.LU.kolmo",
+   "input": "in/prog-x86_64",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "dac62379de387ce21b26048b2d8ad05c67c2b712f521ce48776c2b7bbcab62ab",
+   "frame_bytes": 941,
+   "decoded_sha256": "bb29105de88f3f3eadcd9454c3e35b27adea6e5731b09172fc11dbe6089be8b8",
+   "decoded_bytes": 8720,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 40,
+    "orig": 8720,
+    "blocks": [
+     [
+      7,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "quoted.csv.L3.kolmo",
+   "input": "in/quoted.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "1862e9455bbeb70eecd558a666461c9c24ebec9e6b47f63e46b4b29ee3b951ab",
+   "frame_bytes": 63596,
+   "decoded_sha256": "795e6b62efaa4e6c0e84fa921b7c01b7115985175b52a6008f4be15e084620ac",
+   "decoded_bytes": 188814,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 188814,
+    "blocks": [
+     [
+      32,
+      1,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "file": "ragged.csv.L3.kolmo",
+   "input": "in/ragged.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "5a8588cea43f1ea9de18f84bfc4bf90a5def74ba685700bdae4852061daa72d1",
+   "frame_bytes": 46011,
+   "decoded_sha256": "32534f99cb7d9a211045e3343cd6a07a932c38f16faafae90fbc58db8634bc24",
+   "decoded_bytes": 135403,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 135403,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "random.bin.L1.kolmo",
+   "input": "in/random.bin",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3da83f5700c50b2dd9fcb6ab9ccae18f6d4fab42b3e676d67d2a06942a3b37e0",
+   "frame_bytes": 16436,
+   "decoded_sha256": "ef999f6bac5c1c0858fbbd423dc95c2295913cb649d14b1a90809decd400bdee",
+   "decoded_bytes": 16384,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 1,
+    "orig": 16384,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "random.bin.L2.kolmo",
+   "input": "in/random.bin",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "25661eb0dbe417ed5642743dc703cfbd877cd80fb6d21911e8fb3bc81d20c7ba",
+   "frame_bytes": 16436,
+   "decoded_sha256": "ef999f6bac5c1c0858fbbd423dc95c2295913cb649d14b1a90809decd400bdee",
+   "decoded_bytes": 16384,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 1,
+    "orig": 16384,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "random.bin.L3.kolmo",
+   "input": "in/random.bin",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "25661eb0dbe417ed5642743dc703cfbd877cd80fb6d21911e8fb3bc81d20c7ba",
+   "frame_bytes": 16436,
+   "decoded_sha256": "ef999f6bac5c1c0858fbbd423dc95c2295913cb649d14b1a90809decd400bdee",
+   "decoded_bytes": 16384,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 1,
+    "orig": 16384,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "random.bin.L4.kolmo",
+   "input": "in/random.bin",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "7a97092b3fd9bf19f2c928526aabe529eee0c437e5799eb9b3c86b21f6e2cacd",
+   "frame_bytes": 16436,
+   "decoded_sha256": "ef999f6bac5c1c0858fbbd423dc95c2295913cb649d14b1a90809decd400bdee",
+   "decoded_bytes": 16384,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 1,
+    "orig": 16384,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "random.bin.L5.kolmo",
+   "input": "in/random.bin",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "813f561ffd08b6d130b39df34f7f70322d2e7ccc0b5e115ab581ecfcbf81f49b",
+   "frame_bytes": 16436,
+   "decoded_sha256": "ef999f6bac5c1c0858fbbd423dc95c2295913cb649d14b1a90809decd400bdee",
+   "decoded_bytes": 16384,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 1,
+    "orig": 16384,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "random.bin.L6.kolmo",
+   "input": "in/random.bin",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "7a97092b3fd9bf19f2c928526aabe529eee0c437e5799eb9b3c86b21f6e2cacd",
+   "frame_bytes": 16436,
+   "decoded_sha256": "ef999f6bac5c1c0858fbbd423dc95c2295913cb649d14b1a90809decd400bdee",
+   "decoded_bytes": 16384,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 1,
+    "orig": 16384,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "random.bin.L7.kolmo",
+   "input": "in/random.bin",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "7a97092b3fd9bf19f2c928526aabe529eee0c437e5799eb9b3c86b21f6e2cacd",
+   "frame_bytes": 16436,
+   "decoded_sha256": "ef999f6bac5c1c0858fbbd423dc95c2295913cb649d14b1a90809decd400bdee",
+   "decoded_bytes": 16384,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 1,
+    "orig": 16384,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "random.bin.L8.kolmo",
+   "input": "in/random.bin",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "283fba75812b33daca69cbc5f2da6606326a5899ea4e313cf87921e3c69b1d00",
+   "frame_bytes": 16436,
+   "decoded_sha256": "ef999f6bac5c1c0858fbbd423dc95c2295913cb649d14b1a90809decd400bdee",
+   "decoded_bytes": 16384,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 1,
+    "orig": 16384,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "random.bin.L9.kolmo",
+   "input": "in/random.bin",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "f421a114dbbe8df34a3bbbaa3dd0be2c43d1e8cfc132e85e665d67541ac33318",
+   "frame_bytes": 16436,
+   "decoded_sha256": "ef999f6bac5c1c0858fbbd423dc95c2295913cb649d14b1a90809decd400bdee",
+   "decoded_bytes": 16384,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 1,
+    "orig": 16384,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "random.bin.LU.kolmo",
+   "input": "in/random.bin",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "83efcd372063a8eabd348f7a5e8a137eb81936aa9badfbae082c44a1c360f06e",
+   "frame_bytes": 16436,
+   "decoded_sha256": "ef999f6bac5c1c0858fbbd423dc95c2295913cb649d14b1a90809decd400bdee",
+   "decoded_bytes": 16384,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 1,
+    "orig": 16384,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "reads.fastq.L1.kolmo",
+   "input": "in/reads.fastq",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "8872b41124171be0ea8895a58caad7743db1bb8a4277424e3d23290dd2a6b2e4",
+   "frame_bytes": 86238,
+   "decoded_sha256": "9d35fc0c083e9de6e990cb528a27cc44eb8f973885e4e148e372ae98a1f2eb5c",
+   "decoded_bytes": 136134,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 3,
+    "orig": 136134,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "reads.fastq.L2.kolmo",
+   "input": "in/reads.fastq",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "cdd5211704a3ae0bc83e2c8246c880bbb4f62bcfdc5a641d4d997e4022abb331",
+   "frame_bytes": 58077,
+   "decoded_sha256": "9d35fc0c083e9de6e990cb528a27cc44eb8f973885e4e148e372ae98a1f2eb5c",
+   "decoded_bytes": 136134,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 136134,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "reads.fastq.L3.kolmo",
+   "input": "in/reads.fastq",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "2d9fe417eabd988506b2e2e91cd6c96983b82d74228d38be0321eb50ca92a61d",
+   "frame_bytes": 49914,
+   "decoded_sha256": "9d35fc0c083e9de6e990cb528a27cc44eb8f973885e4e148e372ae98a1f2eb5c",
+   "decoded_bytes": 136134,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 136134,
+    "blocks": [
+     [
+      32,
+      12,
+      10
+     ]
+    ]
+   }
+  },
+  {
+   "file": "reads.fastq.L4.kolmo",
+   "input": "in/reads.fastq",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ffef4545d253835ca8d5d61996410143e59c3600e69a3da808d6baff07447394",
+   "frame_bytes": 55649,
+   "decoded_sha256": "9d35fc0c083e9de6e990cb528a27cc44eb8f973885e4e148e372ae98a1f2eb5c",
+   "decoded_bytes": 136134,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 136134,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "reads.fastq.L5.kolmo",
+   "input": "in/reads.fastq",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "bf345fa69dacb6d466f34c745338cbf90c1e4390a73f73993af8afdcfb82b2c4",
+   "frame_bytes": 54142,
+   "decoded_sha256": "9d35fc0c083e9de6e990cb528a27cc44eb8f973885e4e148e372ae98a1f2eb5c",
+   "decoded_bytes": 136134,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 14,
+    "orig": 136134,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "reads.fastq.L6.kolmo",
+   "input": "in/reads.fastq",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "8837bb4ff35ff3da56bb18beb3315ba611f00c3e62e3beb11b27b2b3d39394a6",
+   "frame_bytes": 54168,
+   "decoded_sha256": "9d35fc0c083e9de6e990cb528a27cc44eb8f973885e4e148e372ae98a1f2eb5c",
+   "decoded_bytes": 136134,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 136134,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "reads.fastq.L7.kolmo",
+   "input": "in/reads.fastq",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "8837bb4ff35ff3da56bb18beb3315ba611f00c3e62e3beb11b27b2b3d39394a6",
+   "frame_bytes": 54168,
+   "decoded_sha256": "9d35fc0c083e9de6e990cb528a27cc44eb8f973885e4e148e372ae98a1f2eb5c",
+   "decoded_bytes": 136134,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 136134,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "reads.fastq.L8.kolmo",
+   "input": "in/reads.fastq",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c06842d635e2a1e274924bf5e15eaece9b42001d7fa897595436d6bcab8a42e7",
+   "frame_bytes": 40408,
+   "decoded_sha256": "9d35fc0c083e9de6e990cb528a27cc44eb8f973885e4e148e372ae98a1f2eb5c",
+   "decoded_bytes": 136134,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 136134,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "reads.fastq.L9.kolmo",
+   "input": "in/reads.fastq",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "20f0bfd463e5d9ef9cf0dae68a0aa91334ab8a164ad3a39bf3fb8d42f73dcfe4",
+   "frame_bytes": 40408,
+   "decoded_sha256": "9d35fc0c083e9de6e990cb528a27cc44eb8f973885e4e148e372ae98a1f2eb5c",
+   "decoded_bytes": 136134,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 136134,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "reads.fastq.LU.kolmo",
+   "input": "in/reads.fastq",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "70cf6dc15ce1c600d2d4ab4358be284ec5f4c46d64a09c82280b9f11a6d8d952",
+   "frame_bytes": 35959,
+   "decoded_sha256": "9d35fc0c083e9de6e990cb528a27cc44eb8f973885e4e148e372ae98a1f2eb5c",
+   "decoded_bytes": 136134,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 41,
+    "orig": 136134,
+    "blocks": [
+     [
+      16,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "records.bin.L1.kolmo",
+   "input": "in/records.bin",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "76228e954f419543f3f0d7c978f611c35406854da51f48794c1d3185bec3ea1f",
+   "frame_bytes": 29089,
+   "decoded_sha256": "c85494ab5d42e40e3d456c8d88d4f638f15aabfa4cefeaaccec80f33e97a513b",
+   "decoded_bytes": 144000,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 4,
+    "orig": 144000,
+    "blocks": [
+     [
+      28,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "records.bin.L2.kolmo",
+   "input": "in/records.bin",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "74c42dcbe5935d58e30454e6d1527d691cd2bf0a552853384717123481bccb93",
+   "frame_bytes": 22870,
+   "decoded_sha256": "c85494ab5d42e40e3d456c8d88d4f638f15aabfa4cefeaaccec80f33e97a513b",
+   "decoded_bytes": 144000,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 144000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "records.bin.L3.kolmo",
+   "input": "in/records.bin",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ac64ced10ba4be11226263d2ed1ad99311573943ec21e2f43a00d6d1e134f2de",
+   "frame_bytes": 19341,
+   "decoded_sha256": "c85494ab5d42e40e3d456c8d88d4f638f15aabfa4cefeaaccec80f33e97a513b",
+   "decoded_bytes": 144000,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 144000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "records.bin.L4.kolmo",
+   "input": "in/records.bin",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "77259fe1c7735b821122a18c81c65394da615e09e705f55701ec27348425cc4f",
+   "frame_bytes": 19215,
+   "decoded_sha256": "c85494ab5d42e40e3d456c8d88d4f638f15aabfa4cefeaaccec80f33e97a513b",
+   "decoded_bytes": 144000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 144000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "records.bin.L5.kolmo",
+   "input": "in/records.bin",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "48bf62b4dbf9296d1dbec1c4583fc9ab44b350eaa26b77b538da746a78d6b706",
+   "frame_bytes": 18220,
+   "decoded_sha256": "c85494ab5d42e40e3d456c8d88d4f638f15aabfa4cefeaaccec80f33e97a513b",
+   "decoded_bytes": 144000,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 14,
+    "orig": 144000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "records.bin.L6.kolmo",
+   "input": "in/records.bin",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "129c21d95641270bb0c36df591514815c4396a8eb967231ca84f983853c25319",
+   "frame_bytes": 18107,
+   "decoded_sha256": "c85494ab5d42e40e3d456c8d88d4f638f15aabfa4cefeaaccec80f33e97a513b",
+   "decoded_bytes": 144000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 144000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "records.bin.L7.kolmo",
+   "input": "in/records.bin",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c7d3d286e447cb85f6fc375f6e16db9967bf7b4e4939f1e88ea0b5e5b84bad8b",
+   "frame_bytes": 18077,
+   "decoded_sha256": "c85494ab5d42e40e3d456c8d88d4f638f15aabfa4cefeaaccec80f33e97a513b",
+   "decoded_bytes": 144000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 144000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "records.bin.L8.kolmo",
+   "input": "in/records.bin",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c4d196ea35830d349dfe779f7c17b43c2404083a1fde0a8905db6238ec47117b",
+   "frame_bytes": 18150,
+   "decoded_sha256": "c85494ab5d42e40e3d456c8d88d4f638f15aabfa4cefeaaccec80f33e97a513b",
+   "decoded_bytes": 144000,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 144000,
+    "blocks": [
+     [
+      18,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "records.bin.L9.kolmo",
+   "input": "in/records.bin",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "69d10f9fa2f8ccfca3732b8cad6ac0cfd34054148d0c44c5e30e80beb5d4f253",
+   "frame_bytes": 17784,
+   "decoded_sha256": "c85494ab5d42e40e3d456c8d88d4f638f15aabfa4cefeaaccec80f33e97a513b",
+   "decoded_bytes": 144000,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 15,
+    "orig": 144000,
+    "blocks": [
+     [
+      24,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "records.bin.LU.kolmo",
+   "input": "in/records.bin",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "00be221d3441b0d788931c09c2530f951ac5492f5db514bfd001d8d3ffd435ee",
+   "frame_bytes": 16533,
+   "decoded_sha256": "c85494ab5d42e40e3d456c8d88d4f638f15aabfa4cefeaaccec80f33e97a513b",
+   "decoded_bytes": 144000,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 41,
+    "orig": 144000,
+    "blocks": [
+     [
+      7,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "rgb-corr.ppm.L9.kolmo",
+   "input": "in/rgb-corr.ppm",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "ea72a3a0d6716ec07f64fc8cb7875d71894c97b0ebb9787150d5ca5cc57b53e9",
+   "frame_bytes": 75160,
+   "decoded_sha256": "b2eeb07dfcda86af8b247c037a3b8218be81d4a9c8bba06d5c79313a3414a4c4",
+   "decoded_bytes": 589839,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 23,
+    "orig": 589839,
+    "blocks": [
+     [
+      31,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "rgb.ppm.L9.kolmo",
+   "input": "in/rgb.ppm",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "6321c0506e07abdd0a9c0e46162045f57290ba0b12f0bf7e26ad9f9c83606e96",
+   "frame_bytes": 71916,
+   "decoded_sha256": "0b1ad95b7c94353dc711963361f30923fecd291109b0ac848e3d22ed26354a9e",
+   "decoded_bytes": 230415,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 230415,
+    "blocks": [
+     [
+      31,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.L1.kolmo",
+   "input": "in/series.i32",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "131a8abf68c96c3abe7b4fd59cdf079f06d7b14ea73a59a377da80021386c72a",
+   "frame_bytes": 69574,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 3,
+    "orig": 120000,
+    "blocks": [
+     [
+      28,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.L2.kolmo",
+   "input": "in/series.i32",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "f3b47eb87886b95d5759f9342cfc035d45c27dbc4e1e72e0a3790c7257cda969",
+   "frame_bytes": 38922,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 120000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.L3-native-leaf.kolmo",
+   "input": "in/series.i32",
+   "options": "-3 --native-leaf",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "4005778ba68bffc091bbbac1f89ea8a210f766e2509e278eaa549bfcac371b03",
+   "frame_bytes": 16636,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 27,
+    "orig": 120000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.L3.kolmo",
+   "input": "in/series.i32",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "eeabefa7f9b9703311d1722fc2024d2bb0ffe2bb7a938f500c629cf1c8cca18e",
+   "frame_bytes": 16903,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 27,
+    "orig": 120000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.L4.kolmo",
+   "input": "in/series.i32",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "26f2f39f817f767c03fd162abd79abd0dab212b2a15a283fad5ccd46d95f7d09",
+   "frame_bytes": 16903,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 27,
+    "orig": 120000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.L5.kolmo",
+   "input": "in/series.i32",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "1baf32570c5853159ff60d1753a7785fda1d2ef453d90317e7cd0504b53aa7c3",
+   "frame_bytes": 16630,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 27,
+    "orig": 120000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.L6.kolmo",
+   "input": "in/series.i32",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "26f2f39f817f767c03fd162abd79abd0dab212b2a15a283fad5ccd46d95f7d09",
+   "frame_bytes": 16903,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 27,
+    "orig": 120000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.L7.kolmo",
+   "input": "in/series.i32",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "26f2f39f817f767c03fd162abd79abd0dab212b2a15a283fad5ccd46d95f7d09",
+   "frame_bytes": 16903,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 27,
+    "orig": 120000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.L8.kolmo",
+   "input": "in/series.i32",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "6322ce00b1eadfc2f47e11aec97b3d04c7c8256a22fd0a6c350741d39a896a5b",
+   "frame_bytes": 16630,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 27,
+    "orig": 120000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.L9.kolmo",
+   "input": "in/series.i32",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3b75ddb23511687e51cfebdb5bb2b675524f21f79445640e6cc4cb07b6856d82",
+   "frame_bytes": 16630,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 27,
+    "orig": 120000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "series.i32.LU.kolmo",
+   "input": "in/series.i32",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "83ffa45036ba529b75da1b73ca682f79433def67a166e831ca239167da506f45",
+   "frame_bytes": 16630,
+   "decoded_sha256": "429552e2285cbb43e12328a5c3f497eea92174c8996006d0b15ab8b4334b3d72",
+   "decoded_bytes": 120000,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 27,
+    "orig": 120000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "service.log.L1.kolmo",
+   "input": "in/service.log",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "7c387e790427823f719a33224940eac86c09b96374e5cbdf3aa8fd0f10054bc9",
+   "frame_bytes": 72051,
+   "decoded_sha256": "491d21b7384440f1063951c4ec41bfc6554c0db109b8bde7f56d6412b8edcffd",
+   "decoded_bytes": 192885,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 4,
+    "orig": 192885,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "service.log.L2.kolmo",
+   "input": "in/service.log",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "6b1493ad593c1bfdcaa6633a9afffcc0aaf51006b1a4f6a07b31dd3cb1a27df3",
+   "frame_bytes": 46252,
+   "decoded_sha256": "491d21b7384440f1063951c4ec41bfc6554c0db109b8bde7f56d6412b8edcffd",
+   "decoded_bytes": 192885,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 192885,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "service.log.L3.kolmo",
+   "input": "in/service.log",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "f109b7e4ebbd08097737c60059d6fb6755ba9fc774f6a059892f457928e9ca32",
+   "frame_bytes": 27573,
+   "decoded_sha256": "491d21b7384440f1063951c4ec41bfc6554c0db109b8bde7f56d6412b8edcffd",
+   "decoded_bytes": 192885,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 15,
+    "orig": 192885,
+    "blocks": [
+     [
+      32,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "service.log.L4.kolmo",
+   "input": "in/service.log",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3fe19a1c9f0d827212d00078461b88d3f4e84165286649dc91979df3b04ba5d1",
+   "frame_bytes": 27203,
+   "decoded_sha256": "491d21b7384440f1063951c4ec41bfc6554c0db109b8bde7f56d6412b8edcffd",
+   "decoded_bytes": 192885,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 15,
+    "orig": 192885,
+    "blocks": [
+     [
+      32,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "service.log.L5.kolmo",
+   "input": "in/service.log",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "96f68f9f5a044cd164a5bedfb80308a663dc9880af7f704e7b079eb70e9feeff",
+   "frame_bytes": 26793,
+   "decoded_sha256": "491d21b7384440f1063951c4ec41bfc6554c0db109b8bde7f56d6412b8edcffd",
+   "decoded_bytes": 192885,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 15,
+    "orig": 192885,
+    "blocks": [
+     [
+      32,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "service.log.L6.kolmo",
+   "input": "in/service.log",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "abb9c2662fdc2c4ebebd29f21e0d8b341f49c8bcdefd5f735b7140845652286d",
+   "frame_bytes": 26542,
+   "decoded_sha256": "491d21b7384440f1063951c4ec41bfc6554c0db109b8bde7f56d6412b8edcffd",
+   "decoded_bytes": 192885,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 15,
+    "orig": 192885,
+    "blocks": [
+     [
+      32,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "service.log.L7.kolmo",
+   "input": "in/service.log",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "12165f38b99b7963c504f210195c87f704c4fa2d4734a96e48c5c0b078ea0d6e",
+   "frame_bytes": 26486,
+   "decoded_sha256": "491d21b7384440f1063951c4ec41bfc6554c0db109b8bde7f56d6412b8edcffd",
+   "decoded_bytes": 192885,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 15,
+    "orig": 192885,
+    "blocks": [
+     [
+      32,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "service.log.L8.kolmo",
+   "input": "in/service.log",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "d17186c3752a4f3b19533e4f250b45075281e343a6f2dcc91c316c0bf4d290b9",
+   "frame_bytes": 25324,
+   "decoded_sha256": "491d21b7384440f1063951c4ec41bfc6554c0db109b8bde7f56d6412b8edcffd",
+   "decoded_bytes": 192885,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 22,
+    "orig": 192885,
+    "blocks": [
+     [
+      18,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "service.log.L9.kolmo",
+   "input": "in/service.log",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "87dfe552cc51c3cdc550d6f0bc939abf936ad877f143f8c2a693b5d47d9c2206",
+   "frame_bytes": 25131,
+   "decoded_sha256": "491d21b7384440f1063951c4ec41bfc6554c0db109b8bde7f56d6412b8edcffd",
+   "decoded_bytes": 192885,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 15,
+    "orig": 192885,
+    "blocks": [
+     [
+      24,
+      5,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "file": "service.log.LU.kolmo",
+   "input": "in/service.log",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "5d4e29c603eb3316231019d9e6def9023aca474c9ca5e8ed51e14c3a795d7969",
+   "frame_bytes": 21771,
+   "decoded_sha256": "491d21b7384440f1063951c4ec41bfc6554c0db109b8bde7f56d6412b8edcffd",
+   "decoded_bytes": 192885,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 41,
+    "orig": 192885,
+    "blocks": [
+     [
+      7,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stamps.i64.L1.kolmo",
+   "input": "in/stamps.i64",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "70580389ac9699f1e4935d4a78badc6c0654a51d168fc879903028390445c5dc",
+   "frame_bytes": 12476,
+   "decoded_sha256": "8e0f731e3b667eca7d8ad58b4fc379a4e95479472f41f5a8cb141a5ba530be33",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 3,
+    "orig": 96000,
+    "blocks": [
+     [
+      28,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stamps.i64.L2.kolmo",
+   "input": "in/stamps.i64",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "bbb42d8d328ac920a2e3ca7c1b5bb5e71dbc8562b7b31940f51f55a3dbc3d292",
+   "frame_bytes": 9871,
+   "decoded_sha256": "8e0f731e3b667eca7d8ad58b4fc379a4e95479472f41f5a8cb141a5ba530be33",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 96000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stamps.i64.L3.kolmo",
+   "input": "in/stamps.i64",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "2cdbeef7fcdb9a1bac280cfc85a6fabb31d6e1dbae1b9e2fdbc18864da211776",
+   "frame_bytes": 9904,
+   "decoded_sha256": "8e0f731e3b667eca7d8ad58b4fc379a4e95479472f41f5a8cb141a5ba530be33",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 96000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stamps.i64.L4.kolmo",
+   "input": "in/stamps.i64",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "66539d461c739ad64abdba92581872dfa60de0183e87ced16c7fc3476e7706b4",
+   "frame_bytes": 9864,
+   "decoded_sha256": "8e0f731e3b667eca7d8ad58b4fc379a4e95479472f41f5a8cb141a5ba530be33",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 96000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stamps.i64.L5.kolmo",
+   "input": "in/stamps.i64",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "6d8557e77ad907f966339d4f5e363199bdbd20fd645a79409269281a80e047f7",
+   "frame_bytes": 9873,
+   "decoded_sha256": "8e0f731e3b667eca7d8ad58b4fc379a4e95479472f41f5a8cb141a5ba530be33",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 14,
+    "orig": 96000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stamps.i64.L6.kolmo",
+   "input": "in/stamps.i64",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "8521fc345068d918ffb17263c2a850af94a21d6e0f539c2e7bbb6af72364f44e",
+   "frame_bytes": 9972,
+   "decoded_sha256": "8e0f731e3b667eca7d8ad58b4fc379a4e95479472f41f5a8cb141a5ba530be33",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 96000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stamps.i64.L7.kolmo",
+   "input": "in/stamps.i64",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "8521fc345068d918ffb17263c2a850af94a21d6e0f539c2e7bbb6af72364f44e",
+   "frame_bytes": 9972,
+   "decoded_sha256": "8e0f731e3b667eca7d8ad58b4fc379a4e95479472f41f5a8cb141a5ba530be33",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 96000,
+    "blocks": [
+     [
+      32,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stamps.i64.L8.kolmo",
+   "input": "in/stamps.i64",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "4db39be65cdb0195c1e7cef11ecc7d89eef9479217bed88369c7b2cdeffcee9a",
+   "frame_bytes": 9712,
+   "decoded_sha256": "8e0f731e3b667eca7d8ad58b4fc379a4e95479472f41f5a8cb141a5ba530be33",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 14,
+    "orig": 96000,
+    "blocks": [
+     [
+      24,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stamps.i64.L9.kolmo",
+   "input": "in/stamps.i64",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "0157eb4662edc984257caa735008ece884d95b2a9fcce3241192a4759b5025cb",
+   "frame_bytes": 9712,
+   "decoded_sha256": "8e0f731e3b667eca7d8ad58b4fc379a4e95479472f41f5a8cb141a5ba530be33",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 14,
+    "orig": 96000,
+    "blocks": [
+     [
+      24,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stamps.i64.LU.kolmo",
+   "input": "in/stamps.i64",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "1e5e4dcba0b8ada84dfff0c982fc6ba6ab20880c68ea7221eaa8f2e043c7fb29",
+   "frame_bytes": 9586,
+   "decoded_sha256": "8e0f731e3b667eca7d8ad58b4fc379a4e95479472f41f5a8cb141a5ba530be33",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 40,
+    "orig": 96000,
+    "blocks": [
+     [
+      7,
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stations.csv.L3.kolmo",
+   "input": "in/stations.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "7135e63aa94fca56801cad9c267ebd6d6de8583cecc29f5c26639eff66fe9699",
+   "frame_bytes": 10486,
+   "decoded_sha256": "017b51a338bb9cda18da04334b4785754eb363c73a5a7d9df9d92042f9178a54",
+   "decoded_bytes": 136801,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 136801,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stations.csv.L9.kolmo",
+   "input": "in/stations.csv",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "01f5b77083523ffb09aabc0daa8adb15c6fb27faf4351686fcf0e07504f729ba",
+   "frame_bytes": 9566,
+   "decoded_sha256": "017b51a338bb9cda18da04334b4785754eb363c73a5a7d9df9d92042f9178a54",
+   "decoded_bytes": 136801,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 15,
+    "orig": 136801,
+    "blocks": [
+     [
+      24,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "stations.csv.index3.kolmo",
+   "input": "in/stations.csv",
+   "options": "--index -3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "78757cb8adc32d36aea9c3e147ae22febbce1a5073ba908b1420ab13d92fbe5d",
+   "frame_bytes": 13114,
+   "decoded_sha256": "017b51a338bb9cda18da04334b4785754eb363c73a5a7d9df9d92042f9178a54",
+   "decoded_bytes": 136801,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 136801,
+    "blocks": [
+     [
+      32,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 3206
+   }
+  },
+  {
+   "file": "stations.csv.index9.kolmo",
+   "input": "in/stations.csv",
+   "options": "--index -9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "8a7624adc28812c0191007afd14566950cd0811d1800f0d90d2b2f3acddbd7e7",
+   "frame_bytes": 13323,
+   "decoded_sha256": "017b51a338bb9cda18da04334b4785754eb363c73a5a7d9df9d92042f9178a54",
+   "decoded_bytes": 136801,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 15,
+    "orig": 136801,
+    "blocks": [
+     [
+      24,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 3206
+   }
+  },
+  {
+   "file": "table.csv.L1.kolmo",
+   "input": "in/table.csv",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "bb254dc13bb5e9f9bc8d4946cfddc1287faecb4aca2bdee15ce18a5014d3f4b0",
+   "frame_bytes": 61273,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 3,
+    "orig": 122874,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "table.csv.L2.kolmo",
+   "input": "in/table.csv",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b26a873f325a381e7849c93ed544c433b9909c3a1080ea82685469653c1371f2",
+   "frame_bytes": 42957,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 122874,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "table.csv.L3.kolmo",
+   "input": "in/table.csv",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b09b966cf5865edf3f7d210c0a28a4b597818075b6900c3efca95c61b228f98e",
+   "frame_bytes": 16206,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 122874,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "table.csv.L4.kolmo",
+   "input": "in/table.csv",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "7fcc364ffdabaea9b7340c3780f14cdd984b411bef01c861fccb3e1c25e1ae44",
+   "frame_bytes": 15655,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 122874,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "table.csv.L5.kolmo",
+   "input": "in/table.csv",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "bb0ce5838bf09ae09fda2b9d51ed78fb2093cc803057536c15dd88c118c1ae95",
+   "frame_bytes": 15412,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 14,
+    "orig": 122874,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "table.csv.L6.kolmo",
+   "input": "in/table.csv",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "40ccc9358d1b8359675c7e7de883400419af49add1f61dbc71e8eb266ab372d2",
+   "frame_bytes": 15393,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 122874,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "table.csv.L7.kolmo",
+   "input": "in/table.csv",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "e11b269e8d80e0140a4cc058b066c23fac40fb38b79ca1251141a1a7f6e3ac2a",
+   "frame_bytes": 15392,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 122874,
+    "blocks": [
+     [
+      32,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "table.csv.L8.kolmo",
+   "input": "in/table.csv",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "eb14977a1d53cba8aa3fb72ee9745c32728be72e153e24f63c23a3847bba07db",
+   "frame_bytes": 14068,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 122874,
+    "blocks": [
+     [
+      18,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "table.csv.L9.kolmo",
+   "input": "in/table.csv",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "a65fa1e4898df10e31827e9cef798eeba5db1a60ab7830dcf2c1adbe70cab987",
+   "frame_bytes": 13726,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 15,
+    "orig": 122874,
+    "blocks": [
+     [
+      24,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "table.csv.LU.kolmo",
+   "input": "in/table.csv",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "430f9526e4e3608e806d5564828a0bfd9ffd40222eaeb457bfd96111e03c56e1",
+   "frame_bytes": 12316,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 40,
+    "orig": 122874,
+    "blocks": [
+     [
+      7,
+      4,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "file": "table.csv.index3.kolmo",
+   "input": "in/table.csv",
+   "options": "--index -3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c3b56457b3efd2da19fe69780d00c12d3592b23cfbc27d1fa0d6b2dcc8e60341",
+   "frame_bytes": 19132,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 122874,
+    "blocks": [
+     [
+      32,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 3249
+   }
+  },
+  {
+   "file": "table.csv.index9.kolmo",
+   "input": "in/table.csv",
+   "options": "--index -9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "d05a6db56c9b84476683f98697d225d7bb34575d3960d4246c9b5683958900e1",
+   "frame_bytes": 17311,
+   "decoded_sha256": "74b0c0d90a4b7f8776dfd954dc5b2cb94085ee353a18af0fe7e3b71c31be22ea",
+   "decoded_bytes": 122874,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 15,
+    "orig": 122874,
+    "blocks": [
+     [
+      24,
+      13,
+      3
+     ]
+    ],
+    "trailer_bytes": 3249
+   }
+  },
+  {
+   "file": "text.txt.L1.kolmo",
+   "input": "in/text.txt",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "197780a4adbff7313a9ad88d3a9a47176e12de1032cd76afb625e4f1ae3eb216",
+   "frame_bytes": 52956,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 3,
+    "orig": 100012,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "text.txt.L2.kolmo",
+   "input": "in/text.txt",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "77253c25dcc3ca8c90d5e8e0ea619add883ef453c5e9f9cf70c4d29321a7d747",
+   "frame_bytes": 39038,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 100012,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "text.txt.L3.kolmo",
+   "input": "in/text.txt",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "2feb2a988c09bdd1b9da4885172972e8211c867230080bbaedc1a134bb487b99",
+   "frame_bytes": 37426,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 100012,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "text.txt.L4.kolmo",
+   "input": "in/text.txt",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b95741ef756ebab0f64884acf83f450d5481c484344338aea402b4cfc7e205d4",
+   "frame_bytes": 30475,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 100012,
+    "blocks": [
+     [
+      32,
+      9,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "file": "text.txt.L5.kolmo",
+   "input": "in/text.txt",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "65df861bd843d8ff4bcb1db11b6833ef4b5be856d8a0c1fcfe39510004d95970",
+   "frame_bytes": 30133,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 14,
+    "orig": 100012,
+    "blocks": [
+     [
+      32,
+      9,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "file": "text.txt.L6.kolmo",
+   "input": "in/text.txt",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "13974d2307e38d7b1a78d5386ae61a346c19bbc7104a34087f5fc29d94dec72d",
+   "frame_bytes": 29441,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 100012,
+    "blocks": [
+     [
+      32,
+      9,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "file": "text.txt.L7.kolmo",
+   "input": "in/text.txt",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "13974d2307e38d7b1a78d5386ae61a346c19bbc7104a34087f5fc29d94dec72d",
+   "frame_bytes": 29441,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 14,
+    "orig": 100012,
+    "blocks": [
+     [
+      32,
+      9,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "file": "text.txt.L8.kolmo",
+   "input": "in/text.txt",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "5decd1660e23afae499b94752de8c647dca13da780a9021681670ab8d9a558aa",
+   "frame_bytes": 22886,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 100012,
+    "blocks": [
+     [
+      18,
+      0,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "file": "text.txt.L9.kolmo",
+   "input": "in/text.txt",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "83e57c7baa2d08df50f75fb379d6e8537562c2a22eb2f0fc04cce61381384028",
+   "frame_bytes": 22886,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 21,
+    "orig": 100012,
+    "blocks": [
+     [
+      18,
+      0,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "file": "text.txt.LU.kolmo",
+   "input": "in/text.txt",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "07dbd080fc2fab741634bee119e05f3a3c96c2d5b39f2713740db050c3abb03f",
+   "frame_bytes": 21391,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 40,
+    "orig": 100012,
+    "blocks": [
+     [
+      7,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "text.txt.U-codec-level1.kolmo",
+   "input": "in/text.txt",
+   "options": "-U --codec-level 1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "54a1e4a8e87fe780f04e4fe543ea80ed8b3b0011882796943bc87a714110e260",
+   "frame_bytes": 21881,
+   "decoded_sha256": "f3ab307df2571bee246d60cc09a487272cc5e2701a7aa22a10454241d4d08b56",
+   "decoded_bytes": 100012,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 51,
+    "orig": 100012,
+    "blocks": [
+     [
+      7,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tiny.txt.L1.kolmo",
+   "input": "in/tiny.txt",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "2a5fdca6f4800d21b4a813bdc7789607aef88c7441239e96d75150ab83076a6c",
+   "frame_bytes": 73,
+   "decoded_sha256": "58d350e9ec4ddc01c2bd65931b05b13ed2baad7d152f3e963a68cdfa849d9608",
+   "decoded_bytes": 21,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 1,
+    "orig": 21,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tiny.txt.L2.kolmo",
+   "input": "in/tiny.txt",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "de93adc5c876ac97f7227b58a69439333f63523c37c830e05c95d11cc01042a7",
+   "frame_bytes": 73,
+   "decoded_sha256": "58d350e9ec4ddc01c2bd65931b05b13ed2baad7d152f3e963a68cdfa849d9608",
+   "decoded_bytes": 21,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 1,
+    "orig": 21,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tiny.txt.L3.kolmo",
+   "input": "in/tiny.txt",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "de93adc5c876ac97f7227b58a69439333f63523c37c830e05c95d11cc01042a7",
+   "frame_bytes": 73,
+   "decoded_sha256": "58d350e9ec4ddc01c2bd65931b05b13ed2baad7d152f3e963a68cdfa849d9608",
+   "decoded_bytes": 21,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 1,
+    "orig": 21,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tiny.txt.L4.kolmo",
+   "input": "in/tiny.txt",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3ecfdebf2b4393fcd2dd7c914f50b0ed59ca8c6b8d32ca718753ae347a62cd45",
+   "frame_bytes": 73,
+   "decoded_sha256": "58d350e9ec4ddc01c2bd65931b05b13ed2baad7d152f3e963a68cdfa849d9608",
+   "decoded_bytes": 21,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 1,
+    "orig": 21,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tiny.txt.L5.kolmo",
+   "input": "in/tiny.txt",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "a3435eaa4dc4308b998c0ceeb7a3318f40152de444587cff73381ac2a9d7e16f",
+   "frame_bytes": 73,
+   "decoded_sha256": "58d350e9ec4ddc01c2bd65931b05b13ed2baad7d152f3e963a68cdfa849d9608",
+   "decoded_bytes": 21,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 1,
+    "orig": 21,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tiny.txt.L6.kolmo",
+   "input": "in/tiny.txt",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3ecfdebf2b4393fcd2dd7c914f50b0ed59ca8c6b8d32ca718753ae347a62cd45",
+   "frame_bytes": 73,
+   "decoded_sha256": "58d350e9ec4ddc01c2bd65931b05b13ed2baad7d152f3e963a68cdfa849d9608",
+   "decoded_bytes": 21,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 1,
+    "orig": 21,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tiny.txt.L7.kolmo",
+   "input": "in/tiny.txt",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3ecfdebf2b4393fcd2dd7c914f50b0ed59ca8c6b8d32ca718753ae347a62cd45",
+   "frame_bytes": 73,
+   "decoded_sha256": "58d350e9ec4ddc01c2bd65931b05b13ed2baad7d152f3e963a68cdfa849d9608",
+   "decoded_bytes": 21,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 1,
+    "orig": 21,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tiny.txt.L8.kolmo",
+   "input": "in/tiny.txt",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "a357c8f0b802a3a01b65ad5dbf7256b71a0b2d589adeb50c2afc963af5285089",
+   "frame_bytes": 73,
+   "decoded_sha256": "58d350e9ec4ddc01c2bd65931b05b13ed2baad7d152f3e963a68cdfa849d9608",
+   "decoded_bytes": 21,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 1,
+    "orig": 21,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tiny.txt.L9.kolmo",
+   "input": "in/tiny.txt",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3a4f6ffa6de6fb83499e270a83d04c630c90cd2c4039c750e499e806ca8dacf2",
+   "frame_bytes": 73,
+   "decoded_sha256": "58d350e9ec4ddc01c2bd65931b05b13ed2baad7d152f3e963a68cdfa849d9608",
+   "decoded_bytes": 21,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 1,
+    "orig": 21,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tiny.txt.LU.kolmo",
+   "input": "in/tiny.txt",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "436982dbc548ba5ba86325d921b15799aeccbf88dfd3ba4801a8b08fc486c2fc",
+   "frame_bytes": 73,
+   "decoded_sha256": "58d350e9ec4ddc01c2bd65931b05b13ed2baad7d152f3e963a68cdfa849d9608",
+   "decoded_bytes": 21,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 1,
+    "orig": 21,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.aiff.L1.kolmo",
+   "input": "in/tone.aiff",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c2cf5832eb7d74bb043952c4ec638e6a98fa876ed57c2a73b22521568962de40",
+   "frame_bytes": 48106,
+   "decoded_sha256": "c57e6f6180280ef736f888388e8f9da76e3555c25427d2a1f63a95eb079c16a4",
+   "decoded_bytes": 48054,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 2,
+    "orig": 48054,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.aiff.L2.kolmo",
+   "input": "in/tone.aiff",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "88feb202ef632a0186caf5f394082aa94d0e0203690a98adb8241126eb6e36da",
+   "frame_bytes": 20651,
+   "decoded_sha256": "c57e6f6180280ef736f888388e8f9da76e3555c25427d2a1f63a95eb079c16a4",
+   "decoded_bytes": 48054,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48054,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.aiff.L3.kolmo",
+   "input": "in/tone.aiff",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "88feb202ef632a0186caf5f394082aa94d0e0203690a98adb8241126eb6e36da",
+   "frame_bytes": 20651,
+   "decoded_sha256": "c57e6f6180280ef736f888388e8f9da76e3555c25427d2a1f63a95eb079c16a4",
+   "decoded_bytes": 48054,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48054,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.aiff.L4.kolmo",
+   "input": "in/tone.aiff",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "cc501b10879f1818d9152e3e11f48d5ed8a2d76f8e3cad84e02a43488b8c6772",
+   "frame_bytes": 20651,
+   "decoded_sha256": "c57e6f6180280ef736f888388e8f9da76e3555c25427d2a1f63a95eb079c16a4",
+   "decoded_bytes": 48054,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48054,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.aiff.L5.kolmo",
+   "input": "in/tone.aiff",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "bf27ef99bf6dc3ffeffa69ca5398a24e4360c114b15f3f867859b53d5a6eaedf",
+   "frame_bytes": 20651,
+   "decoded_sha256": "c57e6f6180280ef736f888388e8f9da76e3555c25427d2a1f63a95eb079c16a4",
+   "decoded_bytes": 48054,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48054,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.aiff.L6.kolmo",
+   "input": "in/tone.aiff",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "cc501b10879f1818d9152e3e11f48d5ed8a2d76f8e3cad84e02a43488b8c6772",
+   "frame_bytes": 20651,
+   "decoded_sha256": "c57e6f6180280ef736f888388e8f9da76e3555c25427d2a1f63a95eb079c16a4",
+   "decoded_bytes": 48054,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48054,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.aiff.L7.kolmo",
+   "input": "in/tone.aiff",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "cc501b10879f1818d9152e3e11f48d5ed8a2d76f8e3cad84e02a43488b8c6772",
+   "frame_bytes": 20651,
+   "decoded_sha256": "c57e6f6180280ef736f888388e8f9da76e3555c25427d2a1f63a95eb079c16a4",
+   "decoded_bytes": 48054,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48054,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.aiff.L8.kolmo",
+   "input": "in/tone.aiff",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "5963691494b569922320b167b6ab9cbb8b4557b78ef3f2a5ebf26be7fe4aec9e",
+   "frame_bytes": 20038,
+   "decoded_sha256": "c57e6f6180280ef736f888388e8f9da76e3555c25427d2a1f63a95eb079c16a4",
+   "decoded_bytes": 48054,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48054,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.aiff.L9.kolmo",
+   "input": "in/tone.aiff",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "0f9bf9cb8e2372bb469c48da835439d54e228d17a5b789526f2aa8a18d04a730",
+   "frame_bytes": 20038,
+   "decoded_sha256": "c57e6f6180280ef736f888388e8f9da76e3555c25427d2a1f63a95eb079c16a4",
+   "decoded_bytes": 48054,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48054,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.aiff.LU.kolmo",
+   "input": "in/tone.aiff",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b9aade2313d4d74ff95e84f9d3688b7aceb453ee81537ff13f9daf6ced579a7c",
+   "frame_bytes": 20038,
+   "decoded_sha256": "c57e6f6180280ef736f888388e8f9da76e3555c25427d2a1f63a95eb079c16a4",
+   "decoded_bytes": 48054,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48054,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.L1.kolmo",
+   "input": "in/tone.wav",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "9b9f466467ed05c56684d07aff8be80dda504a4e840b4b415c2142c8045c1059",
+   "frame_bytes": 48096,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 2,
+    "orig": 48044,
+    "blocks": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.L2.kolmo",
+   "input": "in/tone.wav",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "01b953c4fe0d4eeceba9a834ca276c71149b7942a5d0ee6eb88d1cd0b482c8e4",
+   "frame_bytes": 20657,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48044,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.L3-typed-huf.kolmo",
+   "input": "in/tone.wav",
+   "options": "-3 -T1 --typed-huf",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "8653a5e220adbcc3284fb605dc53fd51e901cbaff9d140e9ebee3fd36134bcce",
+   "frame_bytes": 45432,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 26,
+    "orig": 48044,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.L3.kolmo",
+   "input": "in/tone.wav",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "01b953c4fe0d4eeceba9a834ca276c71149b7942a5d0ee6eb88d1cd0b482c8e4",
+   "frame_bytes": 20657,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48044,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.L4.kolmo",
+   "input": "in/tone.wav",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "9070f799f84e2e821ca3f0558cceb2cb29d3934bb35259a4b4387f868e11f1c2",
+   "frame_bytes": 20657,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48044,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.L5.kolmo",
+   "input": "in/tone.wav",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "821f90cbb296770c6061c084b510ba97a2b7c6c3add7cfd89eb9a65c2b242690",
+   "frame_bytes": 20657,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48044,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.L6.kolmo",
+   "input": "in/tone.wav",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "9070f799f84e2e821ca3f0558cceb2cb29d3934bb35259a4b4387f868e11f1c2",
+   "frame_bytes": 20657,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48044,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.L7.kolmo",
+   "input": "in/tone.wav",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "9070f799f84e2e821ca3f0558cceb2cb29d3934bb35259a4b4387f868e11f1c2",
+   "frame_bytes": 20657,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48044,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.L8.kolmo",
+   "input": "in/tone.wav",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "0ab9934b76b9202d9dd1c407d78e090d058daaa74eea50fde68def5602a08e46",
+   "frame_bytes": 20039,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48044,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.L9.kolmo",
+   "input": "in/tone.wav",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "cfa400cdf067d601b318702d70c92fe8ac9150d2104ee81dca96dd0316e4728c",
+   "frame_bytes": 20039,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48044,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "tone.wav.LU.kolmo",
+   "input": "in/tone.wav",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "59b848e06b8a7a8feb28e227781ae0085c6086abaa1cfb388640431de9986cb4",
+   "frame_bytes": 20039,
+   "decoded_sha256": "520903c9dd1fe3e8e3da99fac62e496657b59ce255615ae66bd4d3358d0be2a7",
+   "decoded_bytes": 48044,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 33,
+    "orig": 48044,
+    "blocks": [
+     [
+      19,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.L1.kolmo",
+   "input": "in/values.f64",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "c7eb61e83ddaf4ea0d8c33685c0483fa19e88a4a60ac62757a14d8d0c38e10c4",
+   "frame_bytes": 46763,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 3,
+    "orig": 96000,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.L2.kolmo",
+   "input": "in/values.f64",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "50700a35fab7e6588ee1996f3d2452314d1fb414c73cb55a3dff6b5190f52ead",
+   "frame_bytes": 36148,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 96000,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.L3.kolmo",
+   "input": "in/values.f64",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "eac5710c33ca5e0f30e5a15f461f6ee38ba71131a588b5f6aef14d085003491f",
+   "frame_bytes": 11757,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 27,
+    "orig": 96000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.L4.kolmo",
+   "input": "in/values.f64",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "15411661f196d45f3652fd989b2cacde7f4370258da25153380038f9a98bc446",
+   "frame_bytes": 11757,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 27,
+    "orig": 96000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.L5.kolmo",
+   "input": "in/values.f64",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "e280b0306d0ea01a599d3afda940def939e9d981520e26fd4bc0b7924383c8db",
+   "frame_bytes": 11757,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 27,
+    "orig": 96000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.L6.kolmo",
+   "input": "in/values.f64",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "15411661f196d45f3652fd989b2cacde7f4370258da25153380038f9a98bc446",
+   "frame_bytes": 11757,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 27,
+    "orig": 96000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.L7.kolmo",
+   "input": "in/values.f64",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "15411661f196d45f3652fd989b2cacde7f4370258da25153380038f9a98bc446",
+   "frame_bytes": 11757,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 27,
+    "orig": 96000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.L8.kolmo",
+   "input": "in/values.f64",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "1ac58f99c0cb095024281eb46b8443ac6200915b2251066b929e3e674f532a5c",
+   "frame_bytes": 11757,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 27,
+    "orig": 96000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.L9.kolmo",
+   "input": "in/values.f64",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "abefc3d274819a5e2712158d8389e3553d09970ae17dfa9020b27144b2d69c39",
+   "frame_bytes": 11757,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 27,
+    "orig": 96000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.LU.kolmo",
+   "input": "in/values.f64",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3da35d50cb3e2b817add154b1b21e0d9b70f968698ba30b39de8e3b6a8d23d91",
+   "frame_bytes": 11757,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 27,
+    "orig": 96000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.f64.U-codec-level1.kolmo",
+   "input": "in/values.f64",
+   "options": "-U --codec-level 1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "3da35d50cb3e2b817add154b1b21e0d9b70f968698ba30b39de8e3b6a8d23d91",
+   "frame_bytes": 11757,
+   "decoded_sha256": "f04d8310fbf7c111ba60054a73a20ec98174e6b46506ff15edb71e8b110d4595",
+   "decoded_bytes": 96000,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 27,
+    "orig": 96000,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.L1.kolmo",
+   "input": "in/values.npy",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "470c7a9edefcb7ae79654194d5e4199bfbc9173e6432480d0cbd3f4769ced208",
+   "frame_bytes": 38989,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 2,
+    "orig": 80128,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.L2.kolmo",
+   "input": "in/values.npy",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "42ceca496ac5642f6dd7803544da5ace10455f4da1903db2f5829f27f02bbdd4",
+   "frame_bytes": 29844,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 14,
+    "orig": 80128,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.L3-typed-huf.kolmo",
+   "input": "in/values.npy",
+   "options": "-3 -T1 --typed-huf",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "4bd991b00752fef1d4a48202e24cccb32fece7d9d19b76a074406bcc15063818",
+   "frame_bytes": 9950,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 27,
+    "orig": 80128,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.L3.kolmo",
+   "input": "in/values.npy",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "4bd991b00752fef1d4a48202e24cccb32fece7d9d19b76a074406bcc15063818",
+   "frame_bytes": 9950,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 27,
+    "orig": 80128,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.L4.kolmo",
+   "input": "in/values.npy",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "cbb55315c88ccc8e525818c1ea09fe66fe51aac737a89d16c5cbea6efca0ee3c",
+   "frame_bytes": 9952,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 27,
+    "orig": 80128,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.L5.kolmo",
+   "input": "in/values.npy",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "98dcf03fa03b28618ea8d037c9716ff35de6afc9a0e38fd4fc12e4a28030697e",
+   "frame_bytes": 9951,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 27,
+    "orig": 80128,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.L6.kolmo",
+   "input": "in/values.npy",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "985c95c01190b9aec0327b4edb9b17afbce0946ccf4064cd4addc44a41825f75",
+   "frame_bytes": 9951,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 27,
+    "orig": 80128,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.L7.kolmo",
+   "input": "in/values.npy",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "985c95c01190b9aec0327b4edb9b17afbce0946ccf4064cd4addc44a41825f75",
+   "frame_bytes": 9951,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 27,
+    "orig": 80128,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.L8.kolmo",
+   "input": "in/values.npy",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "6a303d578896c21aafe5c285396746d70c6e26715e480adbf104d37f1b2078bb",
+   "frame_bytes": 9985,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 27,
+    "orig": 80128,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.L9.kolmo",
+   "input": "in/values.npy",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "2987b9e9b7b58096cf5dc27335ec3cb65caaf394805e8e86acd66b11ea8133bf",
+   "frame_bytes": 9985,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 27,
+    "orig": 80128,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "values.npy.LU.kolmo",
+   "input": "in/values.npy",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "e335809fc4e7ce6c43245cb289295d520740d138c7ca67bd898920608ae80c90",
+   "frame_bytes": 9931,
+   "decoded_sha256": "704366dc26ad88365c12789faf1bd9ceb8f15454fa64667b63d16ae03931637d",
+   "decoded_bytes": 80128,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 27,
+    "orig": 80128,
+    "blocks": [
+     [
+      12,
+      0,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "file": "zeros.bin.L1.kolmo",
+   "input": "in/zeros.bin",
+   "options": "-1",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "12df91e6422f9ccf1a22cafb132a8ae41f7576f9a24a9dfa34dfb2d7f89357b1",
+   "frame_bytes": 4169,
+   "decoded_sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 0,
+    "flags": 1,
+    "memd": 14,
+    "orig": 1048576,
+    "blocks": [
+     [
+      28,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "zeros.bin.L2.kolmo",
+   "input": "in/zeros.bin",
+   "options": "-2",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "50a2f44dd94303089011b79d9ad6a17794a77a77ed6309e40ad9d2c2f26455f1",
+   "frame_bytes": 77,
+   "decoded_sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 19,
+    "orig": 1048576,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "zeros.bin.L3.kolmo",
+   "input": "in/zeros.bin",
+   "options": "-3",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "50a2f44dd94303089011b79d9ad6a17794a77a77ed6309e40ad9d2c2f26455f1",
+   "frame_bytes": 77,
+   "decoded_sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 1,
+    "flags": 0,
+    "memd": 19,
+    "orig": 1048576,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "zeros.bin.L4.kolmo",
+   "input": "in/zeros.bin",
+   "options": "-4",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "141e4e54a61037f341581a9fe69e099d016edbc98da918a137d986453f4e3c37",
+   "frame_bytes": 77,
+   "decoded_sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 19,
+    "orig": 1048576,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "zeros.bin.L5.kolmo",
+   "input": "in/zeros.bin",
+   "options": "-5",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "74e77b741171e386b4d078a13a4d79f1084c22dff751e306aea85a5fef3875d7",
+   "frame_bytes": 77,
+   "decoded_sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 2,
+    "flags": 0,
+    "memd": 19,
+    "orig": 1048576,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "zeros.bin.L6.kolmo",
+   "input": "in/zeros.bin",
+   "options": "-6",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "141e4e54a61037f341581a9fe69e099d016edbc98da918a137d986453f4e3c37",
+   "frame_bytes": 77,
+   "decoded_sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 19,
+    "orig": 1048576,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "zeros.bin.L7.kolmo",
+   "input": "in/zeros.bin",
+   "options": "-7",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "141e4e54a61037f341581a9fe69e099d016edbc98da918a137d986453f4e3c37",
+   "frame_bytes": 77,
+   "decoded_sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 3,
+    "flags": 0,
+    "memd": 19,
+    "orig": 1048576,
+    "blocks": [
+     [
+      32,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "zeros.bin.L8.kolmo",
+   "input": "in/zeros.bin",
+   "options": "-8",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "b331180c85e225e90d8cb664eaf4ea12f0e45b1fc4f683a06da7c8c951e0bf8b",
+   "frame_bytes": 132,
+   "decoded_sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 30,
+    "orig": 1048576,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "zeros.bin.L9.kolmo",
+   "input": "in/zeros.bin",
+   "options": "-9",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "d3b06a3584429d2d5a6e43d6451d580757ccf1166b037a06f3183ca32bad0be7",
+   "frame_bytes": 132,
+   "decoded_sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 4,
+    "flags": 0,
+    "memd": 30,
+    "orig": 1048576,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "zeros.bin.LU.kolmo",
+   "input": "in/zeros.bin",
+   "options": "-U",
+   "written_by": "kolmo 0.0.3 (container version 12, Kolmo-native codecs)",
+   "frame_sha256": "dc9a9ffccbbb3952beae929654b9a65e421ca61da00b71ea902ff95cb7bd7d43",
+   "frame_bytes": 132,
+   "decoded_sha256": "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58",
+   "decoded_bytes": 1048576,
+   "summary": {
+    "version": 12,
+    "mode": 5,
+    "flags": 0,
+    "memd": 30,
+    "orig": 1048576,
+    "blocks": [
+     [
+      18,
+      0,
+      0
+     ]
+    ]
+   }
+  }
+ ]
+}

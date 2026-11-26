@@ -26,8 +26,8 @@ Kolmo is pre-1.0 and fixes go into the latest release only.
 
 | Version | Supported |
 |---|---|
-| 0.0.2 (latest) | yes |
-| 0.0.1 and earlier, 1.0.0 and 1.0.1 (yanked) | no: upgrade to the latest |
+| 0.0.3 (latest) | yes |
+| 0.0.2 and earlier, 1.0.0 and 1.0.1 (yanked) | no: upgrade to the latest |
 
 The frame format (container version 12) is stable (COMPATIBILITY.md), so upgrading never loses the ability to read
 existing frames.

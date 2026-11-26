@@ -1,7 +1,8 @@
 class Kolmo < Formula
   desc "Structure-aware lossless compressor for tables, logs and scientific data"
   homepage "https://github.com/adnaneben/kolmo"
-  url "https://github.com/adnaneben/kolmo/archive/refs/tags/v0.0.2.tar.gz"
+  url "https://github.com/adnaneben/kolmo/archive/refs/tags/v0.0.3.tar.gz"
+  # sha256 of the v0.0.3 tarball: set at release (RELEASING.md step 5); the value below is still 0.0.2's
   sha256 "fab2a448988068c6755755af56415bb92de4f52c14f02ef10d52cd7781c12fec"
   license "Apache-2.0"
   version_scheme 1

@@ -4,6 +4,8 @@
 set -e
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
+cp "$root/LICENSE" "$root/NOTICE" "$here/"
+cp "$root/src/algo/sais/LICENSE" "$here/LICENSE-libsais"
 dst="$here/native"
 rm -rf "$dst"; mkdir -p "$dst"
 cp -R "$root/src" "$dst/src"

@@ -103,7 +103,7 @@ class Bad(Exception): pass
 MAXF = {0: 0, 1: 2, 2: 2, 3: 4, 4: 10, 5: 6, 6: 7, 7: 8, 8: 9, 9: 0, 10: 12, 11: 14}
 STEPS = [1048576, 1143481, 1246975, 1359835, 1482911, 1617126, 1763488, 1923097]
 V12_CODECS = {0, 5, 7, 12, 14, 16, 17, 18, 19, 20, 24, 25, 26, 27, 28, 29, 31, 32}
-LEAF_ONLY = {14, 15, 21, 23, 27}   # 14 and 27: refused as block codecs from the Unreleased fix (FORMAT.md 8.1)
+LEAF_ONLY = {14, 15, 21, 23, 27}   # 14 and 27: refused as block codecs from 0.0.3 (FORMAT.md 8.1)
 
 
 def memd_bytes(v): return 0 if v == 0 else STEPS[v & 7] << (v >> 3)
