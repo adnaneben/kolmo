@@ -1,13 +1,14 @@
 #!/bin/bash
 # Build and run the small-input benchmark against one Kolmo source tree.
 # usage: benchmark/small/run.sh KOLMO_TREE OUT.tsv [smallbench options]
+#        SMALLBENCH_BIN=path benchmark/small/run.sh KOLMO_TREE   (build only: write the binary to path)
 # KOLMO_TREE: a checkout of Kolmo. Its src/kolmo.c and every C source of libkolmoarch.a (ARCHSRC: the native coders,
 # block sorting, the kernels) are compiled here with the Makefile's flags, their calls to malloc, calloc, realloc and
 # free retargeted to the harness's counters (Mach-O symbol names: macOS); assembly sources come from the tree's own
 # build/libkolmoarch.a (`make build/libkolmoarch.a` first). Rivals: Homebrew's static zstd, brotli and lz4
-# (HB, default /opt/homebrew). Data: the review workspace ($V), six kinds below.
+# (HB, default /opt/homebrew). Data: sets.txt, paths in the review workspace ($V).
 set -euo pipefail
-TREE=$(cd "$1" && pwd); OUT=$2; shift 2
+TREE=$(cd "$1" && pwd); shift
 HERE=$(cd "$(dirname "$0")" && pwd)
 V=${V:-/Users/adnanbenali/Kolmo-Reviews/review-20261119T083610Z.J62kQD}; HB=${HB:-/opt/homebrew}
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
@@ -24,10 +25,7 @@ i=0; for s in $SRCS; do case $s in *.c) i=$((i + 1)); retarget "$s" "$W/a$i.o"; 
 cc -O2 -I"$TREE/src" -I"$HB/include" "$HERE/smallbench.c" $OBJS "$TREE/build/libkolmoarch.a" \
    "$HB/lib/libzstd.a" "$HB/lib/libbrotlienc.a" "$HB/lib/libbrotlidec.a" "$HB/lib/libbrotlicommon.a" "$HB/lib/liblz4.a" \
    -lpthread -lm -o "$W/smallbench"
-"$W/smallbench" "$@" \
-  json="$V/review40b/work/R21/data/gh_test.ndjson:line" \
-  log="$V/review40b/work/R21/data/nasa_test.log:line" \
-  csv="$V/review40b/work/R21/data/ghcn_test.csv:line" \
-  kv="$V/corpus-holdout/osdb:raw" \
-  code="$V/corpus-holdout/samba:line" \
-  binary="$V/corpus/ooffice:raw" > "$OUT"
+if [ -n "${SMALLBENCH_BIN:-}" ]; then cp "$W/smallbench" "$SMALLBENCH_BIN"; exit 0; fi
+OUT=$1; shift
+SETS=$(grep -v '^#' "$HERE/sets.txt" | sed "s|=|=$V/|")
+"$W/smallbench" "$@" $SETS > "$OUT"
