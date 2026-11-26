@@ -29,54 +29,6 @@ static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int 
     if (output_fd >= 0) { int r = write_block(output_fd, f, tot, 0); free(f); return r ? r : (int64_t)tot; }
     return (int64_t)tot;
 }
-/* Levels 8-9: the repeat probe that guards the segment merge. The share, in parts per thousand, of b's content-defined
- * anchors (a gear hash picks about one position in 256; the anchor is the 32 bytes there) that also occur in the last
- * KOLMO_MERGE_WIN bytes of a. Neighbouring members of a source tarball repeat each other (mozilla, samba); unrelated
- * members (Silesia's) share almost nothing, and merging those sends text and binary to one block coder (silesia.tar
- * +1.25% at -9 with the merge unguarded). Deterministic: it reads the bytes only. */
-#ifndef KOLMO_MERGE_WIN
-#define KOLMO_MERGE_WIN ((size_t)16 << 20)     /* bytes of each neighbour the probe reads: the end of a, the start of b */
-#endif
-#ifndef KOLMO_MERGE_SHARE
-#define KOLMO_MERGE_SHARE 4u                   /* per mille: mozilla's members 5-20, samba's runs 23, Silesia's members 0 */
-#endif
-#ifndef KOLMO_MERGE_L8
-#define KOLMO_MERGE_L8 ((uint64_t)2 << 20)     /* level 8: a merged unit stays within what it codes both ways whole */
-#endif
-#ifndef KOLMO_MERGE_SMALL
-#define KOLMO_MERGE_SMALL ((uint64_t)8 << 20)  /* R03's interim rule: two neighbours of at most 8 MiB always merge */
-#endif
-static uint64_t mg_fp(const uint8_t *p) {   /* 0: a periodic anchor (zero fill, padding), which says nothing */
-    uint64_t a, b, c, d; memcpy(&a, p, 8); memcpy(&b, p + 8, 8); memcpy(&c, p + 16, 8); memcpy(&d, p + 24, 8);
-    if (a == b && b == c && c == d) return 0;
-    uint64_t h = (a * 0x9E3779B97F4A7C15ull) ^ (b * 0xC2B2AE3D27D4EB4Full);
-    h = (h ^ (h >> 29)) * 0x165667B19E3779F9ull; h ^= (c * 0xFF51AFD7ED558CCDull) ^ (d * 0xC4CEB9FE1A85EC53ull);
-    return (h ^ (h >> 31)) | 1;                          /* never 0: 0 marks an empty slot */
-}
-static unsigned seg_repeat_permille(const uint8_t *a, size_t an, const uint8_t *b, size_t bn) {
-    enum { TB = 20, MASK = 0xFF };                       /* 2^20 slots (8 MiB) for at most 64 Ki anchors of a */
-    uint64_t gear[256], z = 0x2545F4914F6CDD1Dull;
-    for (int i = 0; i < 256; i++) { z += 0x9E3779B97F4A7C15ull; uint64_t x = z; x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ull; x = (x ^ (x >> 27)) * 0x94D049BB133111EBull; gear[i] = x ^ (x >> 31); }
-    if (an > KOLMO_MERGE_WIN) { a += an - KOLMO_MERGE_WIN; an = KOLMO_MERGE_WIN; }
-    if (bn > KOLMO_MERGE_WIN) bn = KOLMO_MERGE_WIN;
-    if (an < 64 || bn < 64) return 0;
-    uint64_t *tab = calloc((size_t)1 << TB, sizeof(uint64_t)); if (!tab) return 0;
-    uint64_t h = 0;
-    for (size_t i = 0; i + 32 <= an; i++) {
-        h = (h << 1) + gear[a[i]];
-        if ((h >> 40 & MASK) == 0) { uint64_t f = mg_fp(a + i); if (!f) continue; size_t s = (size_t)(f >> (64 - TB));
-            for (unsigned k = 0; k < 8 && tab[s] && tab[s] != f; k++) s = (s + 1) & (((size_t)1 << TB) - 1);
-            if (!tab[s]) tab[s] = f; }
-    }
-    uint64_t seen = 0, hit = 0; h = 0;
-    for (size_t i = 0; i + 32 <= bn; i++) {
-        h = (h << 1) + gear[b[i]];
-        if ((h >> 40 & MASK) == 0) { uint64_t f = mg_fp(b + i); if (!f) continue; size_t s = (size_t)(f >> (64 - TB)); seen++;
-            for (unsigned k = 0; k < 8 && tab[s]; k++) { if (tab[s] == f) { hit++; break; } s = (s + 1) & (((size_t)1 << TB) - 1); } }
-    }
-    free(tab);
-    return seen ? (unsigned)(hit * 1000 / seen) : 0;
-}
 /* The parameters the library defines (kolmo.h): mode rt..ultra; level 0..22 (max also 100..999, KLZMA's lc/lp/pb
  * digits); transforms 0..3 with the opt-in bits KOLMO_T_NATIVE_LEAF, KOLMO_T_TYPED_HUF and KOLMO_T_COLUMNS. */
 static int kolmo_params_valid(const kolmo_params *p) {
@@ -180,28 +132,15 @@ static int64_t compress_cuts(const uint8_t *src, int input_fd, size_t n, uint8_t
     atomic_init(&planning.next, 0);
     run_pool(plan_worker, &planning, p->transforms ? threads : 1, nseg);
     /* balanced, eco, hc: neighbouring segments (tar members, content runs) that got the same plain or word-dictionary
-     * plan are coded as one, so an LZ window spans them (a source tarball repeats across members: samba -4.6% at hc).
-     * ratio (levels 8 and 9) codes each block with the block-sorting or the LZMA-class coder, whichever is smaller, so
-     * there a merge also mixes data the two coders would take apart: it joins two neighbours only when both are at most
-     * KOLMO_MERGE_SMALL or when the later one repeats the earlier (seg_repeat_permille at least KOLMO_MERGE_SHARE).
-     * Measured at -9: mozilla -3.85%, samba -1.48%, silesia.tar unchanged (+1.25% when every equal plan merges).
-     * Level 8 picks its coder for a block larger than 2 MiB from a slice of its middle, which misjudges a block made
-     * of two different runs (samba -8: +4.6% with the merge), so there a merged unit stays at most KOLMO_MERGE_L8. */
-    if (!p->block && !columns && p->mode >= KOLMO_FAST && p->mode <= KOLMO_MAX && nseg > 1) {
+     * plan are coded as one, so an LZ window spans them (a source tarball repeats across members: samba -4.6% at hc) */
+    if (!p->block && !columns && p->mode >= KOLMO_FAST && p->mode <= KOLMO_HC && nseg > 1) {
         uint32_t w = 1;
-        uint64_t prevlen = se[0] - ss[0];                 /* the previous segment as planned, before any merge */
         for (uint32_t g = 1; g < nseg; g++) {
             plan_t *a = &plans[w - 1], *b = &plans[g];
-            const uint64_t glen = se[g] - ss[g];
-            int join = a->t == b->t && (a->t == T_NONE || a->t == T_WORD) && !a->fs && !b->fs && !a->rec && !b->rec && !a->cmpz && !b->cmpz
+            if (a->t == b->t && (a->t == T_NONE || a->t == T_WORD) && !a->fs && !b->fs && !a->rec && !b->rec && !a->cmpz && !b->cmpz
                 && a->verify == b->verify && a->packed == b->packed && a->lines == b->lines && !a->wide && !b->wide
                 && !a->experimental_dna && !b->experimental_dna && !a->experimental_table && !b->experimental_table
-                && !a->experimental_pcm && !b->experimental_pcm && skind[w - 1] == skind[g] && se[w - 1] == ss[g];
-            if (join && p->mode == KOLMO_MAX && p->level == 1) join = se[g] - ss[w - 1] <= KOLMO_MERGE_L8;
-            if (join && p->mode == KOLMO_MAX && !(glen <= KOLMO_MERGE_SMALL && prevlen <= KOLMO_MERGE_SMALL))
-                join = seg_repeat_permille(src + ss[w - 1], (size_t)(se[w - 1] - ss[w - 1]), src + ss[g], (size_t)glen) >= KOLMO_MERGE_SHARE;
-            prevlen = glen;
-            if (join) { se[w - 1] = se[g]; continue; }
+                && !a->experimental_pcm && !b->experimental_pcm && skind[w - 1] == skind[g] && se[w - 1] == ss[g]) { se[w - 1] = se[g]; continue; }
             if (w != g) { plans[w] = plans[g]; memset(&plans[g], 0, sizeof plans[g]); ss[w] = ss[g]; se[w] = se[g]; skind[w] = skind[g]; }
             w++;
         }
