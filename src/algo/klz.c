@@ -405,7 +405,8 @@ static void ko_rec(ko_log *L, uint32_t p, const ko_m *out, uint32_t nm) {
         ko_m *g = realloc(L->m, nc * sizeof *g); if (!g) { L->err = 1; return; }
         L->m = g; L->cap = nc;
     }
-    memcpy(L->m + L->len, out, nm * sizeof *out); L->at[p] = (uint32_t)L->len; L->cnt[p] = (uint16_t)nm; L->len += nm;
+    if (nm) memcpy(L->m + L->len, out, nm * sizeof *out);   /* L->m is NULL until the first match */
+    L->at[p] = (uint32_t)L->len; L->cnt[p] = (uint16_t)nm; L->len += nm;
 }
 /* skip: a position whose next node is already within skip of its price is not searched; KLZH2 only: wlog, the largest
  * offset 2^wlog - 1 (long-distance candidates past the tree's window), m3: 3-byte matches */
@@ -567,7 +568,7 @@ static inline __attribute__((always_inline)) uint32_t ko_find(ko_mf *M, uint32_t
 static uint32_t ko_find_log(ko_mf *M, uint32_t p, ko_m *out) {
     if (M->play) {
         const ko_log *L = M->play;
-        if (L->at[p] != UINT32_MAX) { const uint32_t nm = L->cnt[p]; memcpy(out, L->m + L->at[p], nm * sizeof *out); return nm; }
+        if (L->at[p] != UINT32_MAX) { const uint32_t nm = L->cnt[p]; if (nm) memcpy(out, L->m + L->at[p], nm * sizeof *out); return nm; }
         memset(M->head, 0xFF, sizeof(uint32_t) << M->hlog);
         if (M->h3) memset(M->h3, 0xFF, sizeof(uint32_t) << 14);
         if (M->ldm) memset(M->ldm, 0xFF, sizeof(uint32_t) << M->ldmlog);
