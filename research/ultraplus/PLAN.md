@@ -51,7 +51,7 @@ estimates here will be replaced by measurements as each step lands.
 
 - **Dev split:** the 22 impact-corpus dev files cut to 256 KiB (`$V/ultra-plus/cuts/dev`), plus the d200k/d1m dickens
   slices. **Sealed holdout:** the 31 holdout cuts, run once per step after the dev decision.
-- **Arms:** stock `-U`, `-U --codec-level 2`, `--ultra-plus`. Also cmix v21 on the cuts (local), and paq8px -8 (Codex's
+- **Arms:** stock `-U`, `-U --codec-level 2`, `--archive-max`. Also cmix v21 on the cuts (local), and paq8px -8 (Codex's
   runs, requested on #57).
 - **Recorded per cell:** bytes, encode/decode wall time and peak RSS, and a SHA round trip. Timed runs go through
   `timed.sh` at load < 12. Background runs are niced, at most 2 processes.

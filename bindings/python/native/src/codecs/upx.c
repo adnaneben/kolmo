@@ -200,7 +200,8 @@ typedef struct {
     upx_apm a1, a2, a3, a4, a5;
     uint32_t c0, c4, c8; int bp;
     uint32_t word0, word1, word2, word3, wnum, lastnl, col, above_line, prevnl, nest, shape, wfirst;
-    uint32_t pos_of[1 << 16]; int word0prev;   /* indirect: last position after a 2-byte context */
+    uint32_t pos_of[1 << 16]; int word0prev;
+    uint32_t inq, qh, lastq, lastkey, lastns, fidx, fst[65], pfst[65], pfn;   /* structure: quoted strings, keys, fields of this and the previous line */   /* indirect: last position after a 2-byte context */
     uint8_t ind1[1 << 16], ind2[1 << 16];   /* indirect: bytes that followed order-1 / order-2 contexts */
     uint32_t rec_last[256]; uint32_t rec_len, rec_cnt[4096]; uint32_t rec_best;
     /* match models */
@@ -229,6 +230,13 @@ static void upx_ctx_byte(upx_t *U) {   /* recompute the byte contexts after a by
     U->shape = (U->shape << 2 | (letter ? 0u : (c >= '0' && c <= '9') ? 1u : c == ' ' ? 2u : 3u)) & 0xfff;
     if (letter && !U->word0prev) U->wfirst = (U->wfirst << 8 | (c | 32)) & 0xffffff;
     U->word0prev = letter;
+    /* keys (a quoted string followed by ':') and fields (separated by space, tab, ',', ';', '|' or '=') */
+    if (c == '"') { if (U->inq) { U->lastq = U->qh; U->inq = 0; } else { U->inq = 1; U->qh = 0x811C9DC5u; } }
+    else if (U->inq) U->qh = (U->qh ^ c) * 0x01000193u;
+    if (c == ':' && U->lastns == '"') U->lastkey = U->lastq;
+    if (c != ' ' && c != '\t') U->lastns = c;
+    if (c == 10) { memcpy(U->pfst, U->fst, sizeof U->fst); U->pfn = U->fidx; U->fidx = 0; U->fst[0] = (uint32_t)p; }
+    else if ((c == ' ' || c == '\t' || c == ',' || c == ';' || c == '|' || c == '=') && !U->inq && U->fidx < 63) U->fst[++U->fidx] = (uint32_t)p;
     uint32_t above = (U->prevnl + U->col < U->lastnl) ? b[U->prevnl + U->col] : 0;
     /* record length: distance to the last occurrence of this byte, voted */
     uint32_t d = (uint32_t)p - U->rec_last[c]; U->rec_last[c] = (uint32_t)p;
@@ -274,6 +282,13 @@ static void upx_ctx_byte(upx_t *U) {   /* recompute the byte contexts after a by
     h[k++] = upx_hmix(U->word0 ^ (U->col < 32 ? U->col : 32) * 0x9E3779B1u ^ 0x18000000u);
     h[k++] = upx_hmix(U->shape | c << 12 | 0x19u << 24);
     h[k++] = upx_hmix(U->wfirst ^ upx_hmix(U->word0 + 0x1A00));
+    {   uint32_t f = U->fidx, off = (uint32_t)p - U->fst[f], ab = 0;
+        if (f <= U->pfn) { uint32_t q = U->pfst[f] + off, e = f < U->pfn ? U->pfst[f + 1] : U->lastnl; if (q < e && q < p) ab = b[q]; }
+        h[k++] = upx_hmix(U->lastkey ^ upx_hmix(U->word0 + 0x1B00));
+        h[k++] = upx_hmix(U->lastkey ^ upx_hmix((c | BY(2) << 8) + 0x1C0000));
+        h[k++] = upx_hmix(f * 0x9E3779B1u ^ upx_hmix(U->word0 + 0x1D00));
+        h[k++] = upx_hmix(ab | f << 8 | (off < 15 ? off : 15) << 16 | 0x1Eu << 24);
+    }
     U->B.K = k;
 #undef BY
 }
@@ -468,7 +483,7 @@ static upx_t *upx_new(uint8_t *buf, size_t n, uint32_t flags, const uint16_t *pa
         U->m4 = cm_new_xm(buf, (int)(flags >> 16 & 255), 4, cm4_chain(n), 1, mask, n); if (!U->m4) return NULL; cm_set_tune(U->m4, tune);
     }
     uint32_t bits = 16; while (bits < 22 && ((size_t)1 << bits) < n * 2) bits++;
-    upx_bank_init(&U->B, 38, bits);
+    upx_bank_init(&U->B, 42, bits);
     U->mbits = bits; for (int j = 0; j < 2; j++) U->mh[j] = calloc((size_t)1 << bits, 4);
     U->mminl[0] = U->par[UPX_ML0]; U->mminl[1] = U->par[UPX_ML1];
     for (int j = 0; j < 2; j++) for (int l = 0; l < 64; l++) { U->mp[j][l][0] = 16384; U->mp[j][l][1] = 49152; }

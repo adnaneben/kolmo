@@ -2066,8 +2066,8 @@ truncation, extension and wrong lengths.
 
 ## 25. Ultra+ (codec 7, model nibble 11; frame version 13) — opt-in, research stage
 
-**Status.** Written only under the opt-in Ultra+ mode (`--ultra-plus`, `--level ultra+`, `KOLMO_T_ULTRA_PLUS` with mode
-ultra). No default changes. A frame of version 12 never holds this stream, and the version-12 writer is unchanged. Until
+**Status.** Written only under the opt-in Ultra+ mode (`--archive-max`, `--level archive-max`, `KOLMO_T_ULTRA_PLUS`
+with mode ultra; #88 keeps `--ultra-plus` for its CM4 research preset). No default changes. A frame of version 12 never holds this stream, and the version-12 writer is unchanged. Until
 Ultra+ is declared a candidate, the model behind the nibble may still change; a change before then bumps the
 sub-version (the low nibble of byte 4). After that the stream is frozen like the others.
 

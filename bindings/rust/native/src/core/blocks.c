@@ -650,8 +650,18 @@ coded:;
         size_t tot = 4 + meta + cl;
         /* Ultra+: the frame is version 13 only when a written block holds a UPX stream (codec 7 model nibble 11 at the
          * block's top level, or a graph block whose leaves were coded while UPX won) */
-        if (J->ultra_plus && cl && cl + meta < len && ((codec == C_CM && cl >= 5 && sl[meta + 3] >> 4 == 8 && sl[meta + 4] >> 4 == 11)
-                                                       || (codec == C_GRAPH && xp->used_upx) || (codec == C_CMP && upx_cmp_used))) atomic_store(&J->used_upx, 1);
+        if (J->ultra_plus && cl && cl + meta < len) {
+            int v13 = (codec == C_CM && cl >= 5 && sl[meta + 3] >> 4 == 8 && sl[meta + 4] >> 4 == 11) || (codec == C_CMP && upx_cmp_used);
+            if (codec == C_GRAPH && xp->used_upx) {
+                /* a leaf trial took UPX, but the leaf (or the whole candidate) may have lost later: the kept graph needs
+                 * version 13 only if a version-12 reader (upx_allow 0 on this thread) cannot decode it */
+                codec_ctx d; memset(&d, 0, sizeof d); d.threads = 1; d.allow_nplane = 1; d.allow_f2 = 1;
+                uint8_t *chk = malloc(len ? len : 1);
+                v13 = !chk || kg_decode(&d, sl, cl, chk, len) != 0 || memcmp(chk, raw, len) != 0;
+                free(chk);
+            }
+            if (v13) atomic_store(&J->used_upx, 1);
+        }
         uint8_t *e = J->idx + (size_t)i * IDX;
         if (cl == 0 || cl + meta >= len) {                                  /* store raw */
             codec = C_STORE; tflag = 0; tot = 4 + len;

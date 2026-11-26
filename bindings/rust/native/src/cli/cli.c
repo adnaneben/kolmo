@@ -306,7 +306,7 @@ static void help(void) {
 "      --target SPEC             per-chunk setting: size | 'decode>=1GB/s' | 'encode>=50MB/s' |\n"
 "                                'cost:<formula of size,n,enc,dec>' | cost:cloud[=months] | cost:link=1Gbit\n"
 "      --calib FILE              speed table for --target (default ~/.config/kolmo/calibration)\n"
-"      --ultra-plus              (also --level ultra+) cold storage: ultra level 2 plus the UPX context-mixing engine;\n"
+"      --archive-max             (also --level archive-max) cold storage: ultra level 2 plus the UPX engine (Ultra+);\n"
 "                                smaller than ultra on text, code, JSON and logs, ~50-100x slower both ways, ~1 GB\n"
 "                                per block; the frame is version 13 (older readers refuse it)\n"
 "      --native-leaf             level 3: 5-12%% smaller integer series (sensor, ECG, numeric columns) with Kolmo's\n"
@@ -354,7 +354,7 @@ static int parse_int(const char *s, int lo, int hi, int *out) {
 }
 static int set_level_str(opts_t *o, const char *v) {
     if (!strcmp(v, "ultra")) { o->level = KOLMO_LEVEL_ULTRA; return 0; }
-    if (!strcmp(v, "ultra+")) { o->level = KOLMO_LEVEL_ULTRA; o->ultra_plus = 1; return 0; }
+    if (!strcmp(v, "archive-max")) { o->level = KOLMO_LEVEL_ULTRA; o->ultra_plus = 1; return 0; }
     for (int l = 1; l <= KOLMO_LEVEL_MAX; l++) if (LEVEL_NAME[l] && !strcmp(v, LEVEL_NAME[l])) { o->level = l; return 0; }
     int n;
     if (parse_int(v, KOLMO_LEVEL_MIN, KOLMO_LEVEL_MAX, &n)) {
@@ -374,7 +374,7 @@ static int long_option(opts_t *o, int argc, char **argv, int *a) {
     const char *val = eq ? eq + 1 : NULL;
     static const char *const flag[] = {"fastest", "light", "balanced", "compact", "max", "ultra", "compress", "decompress",
         "stdout", "keep", "rm", "force", "test", "list", "quiet", "verbose", "help", "version", "native-leaf", "typed-huf",
-        "gpu", "stream", "fast", "best", "extreme", "uncompress", "to-stdout", "no-name", "ultra-plus", NULL};
+        "gpu", "stream", "fast", "best", "extreme", "uncompress", "to-stdout", "no-name", "archive-max", NULL};
     static const char *const valued[] = {"level", "output", "threads", "memlimit", "block-size", "analysis", "range",
         "codec-level", "target", "calib", "x-tables", "memory", NULL};
     int f = -1, v = -1;
@@ -402,7 +402,7 @@ static int long_option(opts_t *o, int argc, char **argv, int *a) {
             case 23: o->level = 9; break;                       /* gzip --best */
             case 24: break;                                     /* xz --extreme: no Kolmo equivalent, accepted */
             case 25: o->op = OP_DECOMPRESS; break;              /* gzip --uncompress */
-            case 28: o->level = KOLMO_LEVEL_ULTRA; o->ultra_plus = 1; break;   /* Ultra+ (FORMAT.md §25) */
+            case 28: o->level = KOLMO_LEVEL_ULTRA; o->ultra_plus = 1; break;   /* Ultra+ engine, cold storage (FORMAT.md §25) */
             case 26: o->to_stdout = 1; break;                   /* gzip --to-stdout */
             case 27: break;                                     /* gzip --no-name: frames store no name or time */
         }
