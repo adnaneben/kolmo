@@ -23,11 +23,13 @@ static uint64_t kmem_enc_codec(int codec, int level, uint64_t n) {
         case R_SPEEDHC: return 2 * KMEM_MIB;
         case R_LZH: {                                          /* window, hash and chain tables of the level */
             uint64_t w = n < 2 * KMEM_MIB ? 2 * KMEM_MIB : n; if (w > 128 * KMEM_MIB) w = 128 * KMEM_MIB;
-            return level >= 17 ? w * 6 + 8 * KMEM_MIB : level >= 10 ? w * 3 + 8 * KMEM_MIB : 12 * KMEM_MIB;
+            return (level >= 17 ? w * 6 + 8 * KMEM_MIB : level >= 10 ? w * 3 + 8 * KMEM_MIB : 12 * KMEM_MIB)
+                   + (level >= 16 ? n + n / 64 + KMEM_MIB : 0);   /* KLZH2 8-9: the level below's stream too (algo/klz.c) */
         }
         case R_ECO: { uint64_t w = n < (16 * KMEM_MIB) ? n : 16 * KMEM_MIB; return 8 * w + 8 * KMEM_MIB; }
         case R_LZMA: return 12 * kmem_pow2_dict(n) + 4 * KMEM_MIB;   /* preset 9 extreme: binary-tree match finder */
         case C_BWT: case C_BSC5: return 6 * n + 8 * KMEM_MIB;     /* suffix array, LZP, QLFC buffers */
+        case C_KLZH2: return 2 * n + 4 * KMEM_MIB + (level >= 8 ? n + n / 64 + KMEM_MIB : 0);   /* 8-9: the level below's stream too */
         case C_CM: case C_CMI: return cm_need_bound((size_t)n) + n + 8;
         case C_FQ: return 5 * n + 32 * KMEM_MIB;
         case C_GR6: return 8 * n + 64 * KMEM_MIB;

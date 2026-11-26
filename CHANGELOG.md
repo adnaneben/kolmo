@@ -346,6 +346,27 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   and `-T 1` are unchanged. The price is CPU time when helpers join (level 9 `-T 10` on silesia.tar: 28.8 -> 41.2 s
   of CPU for 2.1x less wall time) and a higher peak when more of the large blocks run at once (up to +14%).
 
+### Levels 6 and 7: no larger than the level below (KLZH2 8-9)
+
+Encoder-only: every frame is still container version 12. KLZH2 level 8 (-6) can also encode level 7 and keep the
+smaller stream, and level 9 (-7) levels 8 and 7. A stronger search lost on some inputs in 0.0.2 (Canterbury tar: -7
+1.6% larger than -6; held-out mr 0.7% and llm_bf16_47mb.safetensors 0.2% larger at -7 than at -6). In the command
+line's blocks a lower level is encoded only where one won on the corpora's blocks: level 7 on blocks under 2 MiB and
+after a byte shuffle or record transform, level 8 after a 16-bit image transform and on blocks under 2 MiB (one raw
+video block, foreman_cif.y4m 0.36%, is left out). Every lower level on every block cost +57% at -6 and +71% at -7, and
+a sample of the block did not predict the winner. The library calls (`kolmo_klzh2_compress`, `_mt`, `_el`) still
+encode every level below. `benchmark/determinism/expected.sha256` is regenerated for -6/-7 frames only.
+
+- Measured on 46 files (corpus, held-out corpus, Canterbury and Silesia tars, enwik8), one thread, against main:
+  -6 0.047% smaller, -7 0.083% smaller, no file larger; no file larger at -7 than at -6 (four before).
+  Held-out corpus -6 -0.09%, -7 -0.14%; Canterbury tar -7 554.1 -> 545.0 KB (-6 545.2 KB). On the 53 impact-corpus
+  files: -6 -0.01%, -7 -0.05%, no file larger, no -7 > -6 (two before).
+- Cost, in instructions retired at -T 1: -6 +4.9%, -7 +3.7% in all (impact corpus: +11.4%, +8.4%); text,
+  executables, video and FASTQ within 3%; bf16 model weights about +50-56%, WAV and other small files about +50%.
+  Decoding is unchanged.
+- -6 can still be larger than -5 on some graph-coded binary files (+0.2-0.4%): hc takes rANS leaves only when 3%
+  smaller, for faster decoding, where eco takes any gain.
+
 ### Command line: a drop-in for tar, xz and gzip
 
 - **`tar -I kolmo` and pipes are tested.** `tests/test_filter.sh` (in `make check`, CI on Linux and macOS) runs GNU tar

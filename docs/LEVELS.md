@@ -164,7 +164,10 @@ Levels and library
 - Since 0.0.2 (unreleased, encoder only; every frame is still container version 12): level 1 has a new KLZ parse and no
   longer writes 0.0.1's `speed` bytes; levels 2 and 3 have KLZH2 parse and entropy-chunking changes and no longer write
   0.0.1's `balanced` bytes; level 8 codes 32 MiB blocks instead of 128 MiB (less memory; -9 keeps the large window and
-  is now smaller than -8 on large text). Levels 4-7, 9 and ultra choose as before.
+  is now smaller than -8 on large text); levels 6 and 7 also encode a lower KLZH2 level and keep the smaller stream
+  where one can win: blocks under 2 MiB, and after a byte shuffle, 16-bit image or record transform (about +5% and
+  +4% compress instructions in all). Levels 4, 5, 9
+  and ultra choose as before.
 - An out-of-range level returns a new error code, `KOLMO_ERR_PARAM` (-15).
 - `-10`, `-19`: a run of digits is read as one number (as zstd), then refused (levels are 1..9; ultra is `-U`).
 

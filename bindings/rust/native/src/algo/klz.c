@@ -1028,13 +1028,43 @@ out:
     free(S); free(lit); free(cd); free(xb); free(tmp); free(trial); return r;
 }
 
+/* KLZH2 levels 8 and 9 are never larger than the level below on the same input: the levels below are encoded too and
+ * the smallest stream is kept (on a tie, the lowest level's). Their parses take different match finders and adaptive
+ * prices, and a stronger search does lose on some inputs (0.0.2: canterbury.tar 2.1% larger at 9 than at 8,
+ * population.i64 1.1% larger at 8 than at 7). The decoder reads any of the streams.
+ * The codec path (kolmo_klzh2_compress_g) encodes a level below only where one won on the corpora's blocks (46 files,
+ * one KLZH2 trace per level): level 7 under KZ_CHAIN_MIN and after a byte shuffle or record transform (hint KZ_H_L7);
+ * level 8 (at 9) after a 16-bit image transform (KZ_H_L8) and on the block layer's own blocks under KZ_CHAIN_MIN
+ * (KZ_H_TOP; graph leaves gained 6 bytes from it). Encoding every level below on every block cost +57% at -6 and
+ * +71% at -7 (instructions, one thread); a sample of a block did not predict its winner: the lower level's gain on
+ * the large blocks (0.3-2%) builds over the whole block, and samples of 256 KiB to 1/8 of it came within 0.3% either
+ * way. */
+#define KZ_CHAIN_MIN (2u << 20)
+static size_t kz_klzh2_best(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, const ko_thr *th, unsigned lower) {
+    if (level > 9) level = 9;
+    if (level < 8 || !(lower & ((1u << level) - 1))) return kz_klzh_enc(in, n, out, cap, level, 1, th);
+    uint8_t *t = malloc(cap); if (!t) return 0;   /* as the encoder itself when memory runs out */
+    size_t r = 0;
+    for (int lv = 7; lv <= level; lv++) {   /* increasing levels: a tie keeps the lower level's stream */
+        if (lv < level && !(lower & (1u << lv))) continue;
+        const size_t q = kz_klzh_enc(in, n, r ? t : out, cap, lv, 1, th);
+        if (r && q && q < r) { memcpy(out, t, q); r = q; } else if (!r) r = q;   /* a failed level leaves the next one to try */
+    }
+    free(t); return r;
+}
+#define KZ_ALL ((1u << 7) | (1u << 8))
 size_t kolmo_klzh_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh_enc(in, n, out, cap, level, 0, &KO_ONE); }
-size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh_enc(in, n, out, cap, level, 1, &KO_ONE); }
+size_t kolmo_klzh2_compress(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level) { return kz_klzh2_best(in, n, out, cap, level, &KO_ONE, KZ_ALL); }
 size_t kolmo_klzh2_compress_mt(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads) {
-    const ko_thr th = {threads, threads - 1, NULL}; return kz_klzh_enc(in, n, out, cap, level, 1, &th);
+    const ko_thr th = {threads, threads - 1, NULL}; return kz_klzh2_best(in, n, out, cap, level, &th, KZ_ALL);
 }
 size_t kolmo_klzh2_compress_el(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int passes, kolmo_budget *budget) {
-    const ko_thr th = {threads, passes, budget}; return kz_klzh_enc(in, n, out, cap, level, 1, &th);
+    const ko_thr th = {threads, passes, budget}; return kz_klzh2_best(in, n, out, cap, level, &th, KZ_ALL);
+}
+size_t kolmo_klzh2_compress_g(const uint8_t *in, size_t n, uint8_t *out, size_t cap, int level, int threads, int passes, kolmo_budget *budget, int hint) {
+    const ko_thr th = {threads, passes, budget}; const int small = n < KZ_CHAIN_MIN;
+    const unsigned lower = (small || (hint & KZ_H_L7) ? 1u << 7 : 0) | ((hint & KZ_H_L8) || (small && (hint & KZ_H_TOP)) ? 1u << 8 : 0);
+    return kz_klzh2_best(in, n, out, cap, level, &th, lower);
 }
 
 typedef struct { uint64_t b; int c; const uint8_t *p, *e; } kz_br;
