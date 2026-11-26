@@ -39,12 +39,14 @@ def clean_env(extra=None):
 
 
 def run(argv, stdout_path, env, cwd=None):
-    """-> dict(ns, rc, rss, cpu, instr, cycles, err). rss is ru_maxrss in bytes (macOS); instr/cycles None off macOS."""
+    """-> dict(ns, rc, rss, foot, cpu, instr, cycles, err). rss is ru_maxrss in bytes; foot is the lifetime peak
+    physical footprint (macOS; it counts compressed pages too, so it is stable under memory pressure, where
+    ru_maxrss is not); foot/instr/cycles are None off macOS."""
     fout = open(stdout_path, "wb") if stdout_path else subprocess.DEVNULL
     try:
         t0 = time.perf_counter_ns()
         p = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=fout, stderr=subprocess.PIPE, cwd=cwd, env=env)
-        instr = cycles = None
+        instr = cycles = foot = t1 = None
         if _DARWIN:
             si = ctypes.create_string_buffer(256)
             if _libc.waitid(_P_PID, p.pid, si, _WEXITED | _WNOWAIT) == 0:
@@ -52,9 +54,9 @@ def run(argv, stdout_path, env, cwd=None):
                 buf = (ctypes.c_uint64 * 64)()
                 if _libproc.proc_pid_rusage(p.pid, _RUSAGE_INFO_V4, ctypes.byref(buf)) == 0:
                     f = list(buf)[2:]
-                    instr, cycles = f[_I_INSTR], f[_I_CYC]
+                    instr, cycles, foot = f[_I_INSTR], f[_I_CYC], f[_I_FOOT]
         _, status, ru = os.wait4(p.pid, 0)
-        if not _DARWIN:
+        if t1 is None:
             t1 = time.perf_counter_ns()
         err = p.stderr.read().decode("utf-8", "replace")[-400:]
         p.stderr.close()
@@ -63,7 +65,8 @@ def run(argv, stdout_path, env, cwd=None):
         if stdout_path:
             fout.close()
     rss = ru.ru_maxrss if _DARWIN else ru.ru_maxrss * 1024
-    return dict(ns=t1 - t0, rc=rc, rss=rss, cpu=ru.ru_utime + ru.ru_stime, instr=instr, cycles=cycles, err=err)
+    return dict(ns=t1 - t0, rc=rc, rss=rss, foot=foot, cpu=ru.ru_utime + ru.ru_stime, instr=instr, cycles=cycles,
+                err=err)
 
 
 def load1():

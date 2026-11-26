@@ -126,8 +126,8 @@ def one_arm(binary, env, inp, lv, threads, work):
     d = measure.run([binary, "-q", "-d", "-T", str(threads), "-c", c], r, measure.clean_env(env))
     ok = d["rc"] == 0 and measure.sha256(r) == inp["sha256"]
     return dict(comp_bytes=os.path.getsize(c), comp_sha=measure.sha256(c), rt_ok=ok,
-                **{f"enc_{k}": e[k] for k in ("ns", "cpu", "rss", "instr")},
-                **{f"dec_{k}": d[k] for k in ("ns", "cpu", "rss", "instr")},
+                **{f"enc_{k}": e[k] for k in ("ns", "cpu", "rss", "foot", "instr")},
+                **{f"dec_{k}": d[k] for k in ("ns", "cpu", "rss", "foot", "instr")},
                 error=None if ok else f"round trip failed (decode rc={d['rc']})")
 
 

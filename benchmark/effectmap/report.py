@@ -3,6 +3,7 @@ import csv
 import json
 import math
 import os
+import shutil
 import statistics as st
 from collections import defaultdict
 
@@ -70,10 +71,11 @@ def per_file(rows, basis):
             rec["aa_comb"] = st.median((_cost(r["arms"]["A"], "enc", basis) + _cost(r["arms"]["A"], "dec", basis)) /
                                        (_cost(r["arms"]["A2"], "enc", basis) + _cost(r["arms"]["A2"], "dec", basis))
                                        for r in rs)
-            rec["rss"] = max(st.median(r["arms"]["B"][f"{ph}_rss"] for r in rs) /
-                             st.median(r["arms"]["A"][f"{ph}_rss"] for r in rs) for ph in ("enc", "dec"))
-            rec["aa_rss"] = max(st.median(r["arms"]["A2"][f"{ph}_rss"] for r in rs) /
-                                st.median(r["arms"]["A"][f"{ph}_rss"] for r in rs) for ph in ("enc", "dec"))
+            mem = lambda arm, ph: arm.get(f"{ph}_foot") or arm[f"{ph}_rss"]   # peak footprint where recorded
+            rec["rss"] = max(st.median(mem(r["arms"]["B"], ph) for r in rs) /
+                             st.median(mem(r["arms"]["A"], ph) for r in rs) for ph in ("enc", "dec"))
+            rec["aa_rss"] = max(st.median(mem(r["arms"]["A2"], ph) for r in rs) /
+                                st.median(mem(r["arms"]["A"], ph) for r in rs) for ph in ("enc", "dec"))
         recs.append(rec)
     return recs
 
@@ -88,14 +90,15 @@ def noise_bands(recs, basis):
             levels.add(r["level"])
             for m in ("enc", "dec", "comb", "rss"):
                 g[(r["threads"], r["size_class"], m)].append(abs(r["aa_" + m] - 1))
-    band = {}
+    band, bmax = {}, {}
     for (t, sc, m), v in g.items():
         v = sorted(v)
         b = v[min(len(v) - 1, int(math.ceil(0.95 * len(v))) - 1)] if len(v) >= 8 else 1.5 * v[-1]
         b = max(b, NOISE_FLOOR[basis] if m != "rss" else 0.02)
         for lv in levels:
             band[(lv, t, sc, m)] = b
-    return band
+            bmax[(lv, t, sc, m)] = max(b, v[-1])
+    return band, bmax
 
 
 def snap(x, n):
@@ -145,11 +148,16 @@ def main(out):
     if not rows:
         raise SystemExit(f"no rows in {out}")
     basis = "wall" if "timing" in rows else "instr"
+    for mode in rows:          # rows of an earlier, wider run (other thread counts) are left out of this report
+        p = os.path.join(out, f"meta-{mode}.json")
+        if os.path.exists(p):
+            th = set(json.load(open(p)).get("threads", []))
+            rows[mode] = [r for r in rows[mode] if not th or r["threads"] in th or r["part"] != "main"]
     recs = per_file(rows.get("timing") or rows["sizes"], basis)
     if "timing" in rows and "sizes" in rows:      # stacking rows live in the sizes file
         recs += [r for r in per_file(rows["sizes"], "instr") if r["part"] != "main"]
     main_recs = [r for r in recs if r["part"] == "main" and "enc" in r]
-    band = noise_bands(main_recs, basis)
+    band, bmax = noise_bands(main_recs, basis)
     all_identical = all(r["identical"] for r in main_recs)
 
     # per file classes (tree samples) and cells
@@ -166,6 +174,8 @@ def main(out):
     for (lv, kind, sc, t), rs in sorted(cells.items(), key=lambda kv: (LVL_ORDER.index(kv[0][0]), kv[0][1],
                                                                         kv[0][2], kv[0][3])):
         m = metrics(rs, band, lv, t)
+        raw = dict(dec_raw=gmean([r["dec"] for r in rs]), rss_raw=max(r["rss"] for r in rs),
+                   scs=sorted({r["size_class"] for r in rs}))
         ident = all(r["identical"] for r in rs)
         cls, why = standard.classify(lv, m, ident)
         worst = max(rs, key=lambda r: r["b_bytes"] / r["a_bytes"])
@@ -174,7 +184,7 @@ def main(out):
                               a_bytes=sum(r["a_bytes"] for r in rs), b_bytes=sum(r["b_bytes"] for r in rs),
                               identical=ident, cls=cls, why="; ".join(why), worst_file=worst["input"],
                               worst_bytes=worst["b_bytes"] / worst["a_bytes"], slowest_file=slowest["input"],
-                              slowest_enc=slowest["enc"], **m))
+                              slowest_enc=slowest["enc"], **m, **raw))
     with open(os.path.join(out, "cells.csv"), "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(cell_rows[0].keys()))
         w.writeheader()
@@ -184,8 +194,10 @@ def main(out):
     inv_a, inv_b = inversions(main_recs, "a"), inversions(main_recs, "b")
     added, removed = sorted(inv_b - inv_a), sorted(inv_a - inv_b)
     td_b = thread_dependent(main_recs, "b")
-    dec_bad = [c for c in cell_rows if standard.decode_violation(c["level"], c["dec"])]
-    rss_bad = [c for c in cell_rows if c["rss"] > standard.RSS_MAX]
+    # never-allowed checks use the widest A/A spread seen (not the p95), so ~100 cells do not raise false alarms
+    wide = lambda c, k, d: max(bmax.get((c["level"], c["threads"], sc, k), d) for sc in c["scs"])
+    dec_bad = [c for c in cell_rows if standard.decode_violation(c["level"], snap(c["dec_raw"], wide(c, "dec", .01)))]
+    rss_bad = [c for c in cell_rows if snap(c["rss_raw"], wide(c, "rss", .02)) > standard.RSS_MAX]
     violations = ([f"adds level inversion {i[1]} on {i[0]} ({i[4]})" for i in added] +
                   [f"output depends on thread count: {k[0]} -{k[1]}" for k in td_b] +
                   [f"decode slower beyond noise at -{c['level']}: {c['kind']} {c['size_class']} T{c['threads']} "
@@ -269,6 +281,9 @@ def main(out):
     with open(os.path.join(out, "verdict.json"), "w") as f:
         json.dump(v, f, indent=1)
     write_md(out, meta, basis, band, cell_rows, main_recs, v, stack_tab, inv_a, inv_b)
+    for f in ("effectmap.md", "verdict.json", "cells.csv"):      # keep each basis's report (sizes, then timing)
+        root, ext = os.path.splitext(f)
+        shutil.copyfile(os.path.join(out, f), os.path.join(out, f"{root}-{basis}{ext}"))
     print(f"{verdict}\n-> {os.path.join(out, 'effectmap.md')}")
 
 

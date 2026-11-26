@@ -68,7 +68,11 @@ SHA-256), `cells.csv`, `verdict.json` and `effectmap.md`. Paste the verdict line
   - `FAIL`: everything else.
 - A cell's bytes are the sum of B over the sum of A. Its speed ratios are geometric means of the per-file ratios,
   snapped to 1.00 inside the noise band. The noise band is the p95 of |A/A2 - 1| per thread count and size class,
-  pooled over levels, with a floor of 0.3% for instructions and 1% for wall time.
+  pooled over levels, with a floor of 0.3% for instructions and 1% for wall time. The never-allowed checks (decode
+  slower at 1-7, RSS above 1.10×) use the widest A/A spread instead of the p95, so that a hundred cells do not
+  raise false alarms.
+- Memory is the peak physical footprint (`proc_pid_rusage`, which counts compressed pages too). Under memory
+  pressure, `ru_maxrss` varied by 9-22% between A and A2; it is still recorded, and used off macOS.
 - The overall verdict is checked in this order:
   1. any never-allowed case: **FAIL**;
   2. no 0.5% gain on any type: **FAIL**;
