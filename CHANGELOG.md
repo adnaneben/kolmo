@@ -107,6 +107,17 @@
   bytes as fast (LZ, Huffman, rANS, store), sort (BWT, KLZMA, audio profile 0) and model (context mixing, FASTQ
   family, GR6+, kimg, audio profile 1). A service bounds work by refusing frames over its model-byte budget.
 
+### KLZMA parse: composite paths and nice 273 (review40 #93)
+
+- **`-9` is smaller where it uses KLZMA**, and KLZMA is now smaller than xz -9e. From parse level 6, KLZMA's optimal
+  parse prices "match, literal, rep 0" and "rep, literal, rep 0", as LZMA-class optimisers do. Level 8 (what `-9`
+  uses) has a nice length of 273, and prices are refreshed every 32 lengths instead of 128. On `-9`'s KLZMA blocks
+  for Silesia this saves 0.48%. Raw KLZMA level 8 is now 0.29% below raw xz -9e on 12 Silesia files (it was 0.10%
+  above). Encoder only: the payload format is unchanged, 0.0.1 and 0.0.2 decode the new frames, and only `-9` frames
+  change. On 49 files (891 MB), `-9` output is 0.06% smaller in total (Silesia 0.28%) and compression is 6.9% slower
+  at `-T 1` and 10.6% slower at `-T 10`. Decompression speed and memory are unchanged. The size ledger and the
+  determinism hashes are refreshed. Results are in `benchmark/klzma/RESULTS.md`.
+
 ### Encoder routing: nine planner and coder fixes from the 40-reviewer review (and two more)
 
 Encoder-only changes: every frame is still container version 12, and the 0.0.1 and 0.0.2 decoders read every frame
