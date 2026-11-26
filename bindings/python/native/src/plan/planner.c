@@ -586,10 +586,11 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
         /* Ownership survives replacement of the tentative winning plan (same repair as fix/planner-record-ownership). */
         rec_plan_t *owned_rec = NULL;
         double d64c = 1e300; uint32_t d64cols = 0; size_t d64h = 0;   /* the DEC64 trial's result, kept for a marked plan */
+        double shufc = 1e300, floatc = 1e300;                          /* the shuffle's and the float trial's scores */
         if (pl.t == T_SHUF) {
             size_t u = (size_t)pl.a * pl.b, rows = L / u; shuffle_fwd(s + st, rows, pl.a, pl.b, pl.c, buf);
             double c = (double)zcost(buf, rows * u, zl) / (rows * u);
-            if (c < best) { best = c; chosen = 1; }
+            shufc = c; if (c < best) { best = c; chosen = 1; }
         }
         img_plan_t im;
         int code = 0;                                      /* balanced: machine code where the call/jump transform wins is
@@ -671,7 +672,7 @@ static plan_t make_plan(const uint8_t *s, size_t n, int effort, int logs, int st
                 w = 0; hh = 0; c = kg_num_trial(s, n, st, Lg, zl, plain, &w, &hh, native); c = KG_ADJ(c);
                 if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w; keep.c = (int)hh; chosen = 5; }
             }
-            c = cf; w = fw; hh = fh;
+            c = cf; w = fw; hh = fh; floatc = cf;
             if (c < best) { best = c; keep = pl; keep.t = T_KG; keep.a = 0; keep.b = w | 16; keep.c = (int)hh; chosen = 6; }
             { uint32_t dc = 0; size_t dh = 0; c = kg_dec64_trial(s, n, st, L, zl, &dc, &dh);     /* decimal doubles: decode is slower than the other graphs, so it must win by 7% */
               d64c = c; d64cols = dc; d64h = dh;
@@ -735,6 +736,12 @@ structured_done:
                 if ((double)zcost(buf, E, zl) / E > pe * 1.10 && pe < 0.98) pl.verify = 1;
             }
         }
+        /* max and ultra: a shuffle that beat the float layout only narrowly on the KLZH2 probe. Both scores stand in
+         * for the strong coders, and such a close call goes either way on small probe changes: 0.0.3's KLZH2 chunk spans
+         * (PR #32) moved a 47 MB bf16 weights file from the float layout (coded as plain KLZMA by the block's check,
+         * 26.17 MB) to a shuffle of 8 x 2 bytes (27.19 MB at -9). Every block is then coded both ways (blocks.c, a
+         * marked shuffle) and the smaller kept, so the output is never larger than the shuffle alone. */
+        if (strong && chosen == 1 && pl.t == T_SHUF && floatc < 1e299 && floatc * 100 <= shufc * KOLMO_STRONG_SHUF_FLOAT_PCT) pl.verify = 1;
         if (0) {}
         else if (!chosen && pl.t == T_SHUF && plain * 0.97 <= best) { /* shuffle did not beat plain coding at zstd -3 */ }
         free(buf);
