@@ -109,7 +109,9 @@ are listed in the report. A bigger size-for-speed trade is not a pass: it goes t
 - A level whose output is larger than the level below it on any file of the corpus (a level inversion), unless the
   file is listed in `benchmark/ledger/level_order_exceptions.txt` with a reason. A change may not add an inversion.
 - Slower decode at levels 1-7 beyond the noise band.
-- Peak RSS above 1.10× in either phase, at any level, except as an explicit new mode (section 6).
+- Peak RSS above 1.10× in either phase, at any level, except as an explicit new mode (section 6). Memory is the
+  peak physical footprint. An increase of 4 MiB or less is not counted: that is the CLI's own baseline, and A
+  against A2 moves by up to about 6 MB under memory pressure. (Proposed floor; the owner decides.)
 - Output bytes that depend on the thread count. Frames at 1, 4 and 10 threads must be identical.
 
 ## 4. Patterns become routing

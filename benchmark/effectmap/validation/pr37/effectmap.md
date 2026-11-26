@@ -1,11 +1,11 @@
 # Effect map: pr37 against main
 
-**Verdict: FAIL (never allowed)**
+**Verdict: ROUTE (passes on some conditions only: gate it)**
 
-- middle tier: mixed: 32 of 154 cells pass
-- gain of 0.5% or more on: container, genomics, img16, img8, json, log, numeric, tar, tsv, weights, xml
-- suggested gate: on when (level == 6 and size_class <= S0); in any case keep it where it removes an inversion: csv S1 -6>-5, genomics S0 -6>-5, img16 S0 -6>-5, img16 S2 -7>-6, img8 S0 -6>-5, tar S2 -7>-6, text S1 -7>-6, video S0 -6>-5, weights S0 -6>-5
-- cells: FAIL 55, KEEP-FREE 26, KEEP-ID 2, NEUTRAL 122, PASS 4, TRADE 67
+- middle tier: mixed: 49 of 147 cells pass
+- gain of 0.5% or more on: container, genomics, img16, img8, json, weights, xml
+- suggested gate: on when (level <= 6 and size_class <= S0) OR (not (level <= 6) and kind == video); in any case keep it where it removes an inversion: csv S1 -6>-5, genomics S0 -6>-5, img16 S0 -6>-5, img16 S2 -7>-6, img8 S0 -6>-5, tar S2 -7>-6, text S1 -7>-6, video S0 -6>-5, weights S0 -6>-5
+- cells: FAIL 50, KEEP-FREE 48, NEUTRAL 129, PASS 1, TRADE 48
 
 ## Builds and method
 
@@ -31,18 +31,41 @@
   - removed -7>-6 reymont-128k@16k (text S1, +0.55% on A)
   - removed -6>-5 srr835775@1024 (genomics S0, +3.88% on A)
   - removed -6>-5 x-ray@1024 (img16 S0, +3.38% on A)
-- violations: 9
-  - RSS 1.31x at -6: container S2 T1
-  - RSS 1.34x at -6: container S2 T10
-  - RSS 1.18x at -6: log S2 T10
-  - RSS 1.53x at -7: container S1 T1
-  - RSS 1.18x at -7: container S2 T10
-  - RSS 1.14x at -7: img16 S2 T10
-  - RSS 1.17x at -7: log S2 T10
-  - RSS 1.21x at -7: tar S2 T10
-  - RSS 1.48x at -7: tsv S1 T1
-- to confirm in the timed run (not counted yet): 1
+- violations: 0
+- to confirm in the timed run (not counted yet): 10
   - decode slower at -6: container S2 T1 (-10.769% instructions, one round)
+  - RSS 1.31x (median file 1.31x, n=1) at -6: container S2 T1
+  - RSS 1.34x (median file 1.34x, n=1) at -6: container S2 T10
+  - RSS 1.18x (median file 1.00x, n=3) at -6: log S2 T10
+  - RSS 1.53x (median file 1.43x, n=3) at -7: container S1 T1
+  - RSS 1.18x (median file 1.18x, n=1) at -7: container S2 T10
+  - RSS 1.14x (median file 1.13x, n=2) at -7: img16 S2 T10
+  - RSS 1.17x (median file 1.14x, n=3) at -7: log S2 T10
+  - RSS 1.21x (median file 1.00x, n=3) at -7: tar S2 T10
+  - RSS 1.48x (median file 1.00x, n=6) at -7: tsv S1 T1
+
+## Memory (median peak footprint of the encoder, MB)
+
+| level | threads | size | files | A | B | A2 |
+|---|---|---|---:|---:|---:|---:|
+| 5 | 1 | S0 | 188 | 2.5 | 2.5 | 2.5 |
+| 5 | 1 | S1 | 73 | 16.9 | 17.6 | 18.2 |
+| 5 | 1 | S2 | 42 | 70.0 | 68.9 | 69.5 |
+| 5 | 10 | S0 | 188 | 2.5 | 2.5 | 2.5 |
+| 5 | 10 | S1 | 73 | 16.1 | 16.7 | 18.1 |
+| 5 | 10 | S2 | 42 | 76.2 | 76.3 | 77.0 |
+| 6 | 1 | S0 | 188 | 3.6 | 3.7 | 3.7 |
+| 6 | 1 | S1 | 73 | 18.9 | 21.2 | 20.5 |
+| 6 | 1 | S2 | 42 | 73.6 | 73.4 | 73.1 |
+| 6 | 10 | S0 | 188 | 3.6 | 3.7 | 3.7 |
+| 6 | 10 | S1 | 73 | 20.0 | 19.5 | 20.0 |
+| 6 | 10 | S2 | 42 | 79.9 | 80.0 | 80.3 |
+| 7 | 1 | S0 | 188 | 5.8 | 7.9 | 5.8 |
+| 7 | 1 | S1 | 73 | 20.6 | 25.3 | 21.2 |
+| 7 | 1 | S2 | 42 | 69.9 | 70.4 | 70.1 |
+| 7 | 10 | S0 | 188 | 5.8 | 7.9 | 5.8 |
+| 7 | 10 | S1 | 73 | 20.7 | 22.3 | 20.0 |
+| 7 | 10 | S2 | 42 | 80.4 | 83.2 | 79.8 |
 
 ## A/A noise band (p95 of |A/A2 - 1| per threads and size class, pooled over levels)
 
@@ -119,7 +142,7 @@ bytes: B/A - 1 (sum over files; negative = smaller). enc: B's encode speed chang
 | 5 | code | S2 | 3 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | flac-c +0.000% |  |
 | 5 | container | S0 | 8 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | kennedy-xls@1024 +0.000% |  |
 | 5 | container | S1 | 3 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | kennedy-xls +0.000% |  |
-| 5 | container | S2 | 1 | +0.000% | +0.596% | +0.000% | +0.629% | 1.00 | KEEP-ID | highway-pdf +0.000% |  |
+| 5 | container | S2 | 1 | +0.000% | +0.000% | +0.000% | +0.629% | 1.00 | NEUTRAL | highway-pdf +0.000% |  |
 | 5 | csv | S0 | 30 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | energy-130col@1024 +0.000% |  |
 | 5 | csv | S1 | 15 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | energy-130col-16k@16k +0.000% |  |
 | 5 | csv | S2 | 5 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | energy-130col +0.000% |  |
@@ -154,21 +177,21 @@ bytes: B/A - 1 (sum over files; negative = smaller). enc: B's encode speed chang
 | 5 | video | S0 | 4 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | akiyo@1024 +0.000% |  |
 | 5 | video | S2 | 2 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | akiyo +0.000% |  |
 | 5 | weights | S0 | 8 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | bf16-10mb@1024 +0.000% |  |
-| 5 | weights | S2 | 4 | +0.000% | +0.000% | +3.459% | +0.000% | 1.11 | FAIL | bf16-10mb +0.000% | RSS 1.11x > 1.1 |
+| 5 | weights | S2 | 4 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | bf16-10mb +0.000% |  |
 | 5 | xml | S0 | 12 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | silesia-xml@1024 +0.000% |  |
 | 5 | xml | S1 | 6 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | silesia-xml-16k@16k +0.000% |  |
 | 5 | xml | S2 | 2 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | silesia-xml +0.000% |  |
 | 6 | audio | S0 | 8 | -0.020% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | esc50-1-28808@1024 +0.000% |  |
 | 6 | audio | S1 | 4 | +0.000% | -33.048% | +0.000% | -31.622% | 1.00 | FAIL | esc50-1-100032 +0.000% | encode 0.670 < 0.80; 0.000% smaller for 49.4% more encode time (needs 4.936%) |
-| 6 | code | S0 | 18 | -0.478% | -4.473% | +0.000% | +0.000% | 1.00 | PASS | flac-c@3072 +0.000% |  |
+| 6 | code | S0 | 18 | -0.478% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | flac-c@3072 +0.000% |  |
 | 6 | code | S1 | 9 | +0.000% | -26.422% | +0.000% | -24.615% | 1.00 | FAIL | flac-c-16k@16k +0.000% | encode 0.736 < 0.80; 0.000% smaller for 35.9% more encode time (needs 3.591%) |
 | 6 | code | S2 | 3 | +0.000% | -11.059% | +0.000% | -10.871% | 1.00 | FAIL | flac-c +0.000% | 0.000% smaller for 12.4% more encode time (needs 1.243%) |
 | 6 | container | S0 | 8 | -0.082% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | kennedy-xls@3072 +0.000% |  |
 | 6 | container | S1 | 3 | +0.000% | -39.240% | +0.000% | -38.460% | 1.00 | FAIL | kennedy-xls +0.000% | encode 0.608 < 0.80; 0.000% smaller for 64.6% more encode time (needs 6.458%) |
-| 6 | container | S2 | 1 | +0.000% | -37.052% | -10.769% | -36.601% | 1.31 | FAIL | highway-pdf +0.000% | decode 0.892 < 0.95; encode 0.629 < 0.80; 0.000% smaller for 58.9% more encode time (needs 5.886%); RSS 1.31x > 1.1 |
-| 6 | csv | S0 | 30 | -0.398% | -3.864% | +0.000% | +0.000% | 1.00 | TRADE | ghcn@1024 +0.000% | 0.398% smaller for 4.0% more encode time (needs 0.402%) |
+| 6 | container | S2 | 1 | +0.000% | -37.052% | -10.769% | -36.601% | 1.00 | FAIL | highway-pdf +0.000% | decode 0.892 < 0.95; encode 0.629 < 0.80; 0.000% smaller for 58.9% more encode time (needs 5.886%) |
+| 6 | csv | S0 | 30 | -0.398% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | ghcn@1024 +0.000% |  |
 | 6 | csv | S1 | 15 | -0.123% | -22.459% | +0.000% | -20.550% | 1.00 | TRADE | energy-130col-128k@16k +0.000% | encode 0.775 < 0.80; 0.123% smaller for 29.0% more encode time (needs 2.896%) |
-| 6 | csv | S2 | 5 | +0.000% | +0.000% | +0.000% | +0.000% | 1.08 | NEUTRAL | energy-130col +0.000% |  |
+| 6 | csv | S2 | 5 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | energy-130col +0.000% |  |
 | 6 | exe | S0 | 6 | -0.136% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | ooffice-x86@1024 +0.000% |  |
 | 6 | exe | S2 | 3 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | ooffice-x86 +0.000% |  |
 | 6 | genomics | S0 | 4 | -0.531% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | srr835775@3072 +0.000% |  |
@@ -183,16 +206,16 @@ bytes: B/A - 1 (sum over files; negative = smaller). enc: B's encode speed chang
 | 6 | json | S0 | 12 | -0.715% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | api@3072 +0.000% |  |
 | 6 | json | S1 | 6 | +0.000% | -23.265% | +0.000% | -21.517% | 1.00 | FAIL | api-16k@16k +0.000% | encode 0.767 < 0.80; 0.000% smaller for 30.3% more encode time (needs 3.032%) |
 | 6 | json | S2 | 2 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | api +0.000% |  |
-| 6 | log | S0 | 18 | -0.373% | +0.000% | +4.140% | +0.000% | 1.00 | KEEP-FREE | loghub@3072 +0.000% |  |
+| 6 | log | S0 | 18 | -0.373% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | loghub@3072 +0.000% |  |
 | 6 | log | S1 | 9 | +0.000% | -19.921% | +0.000% | -16.892% | 1.00 | FAIL | loghub-16k@16k +0.000% | 0.000% smaller for 24.9% more encode time (needs 2.488%) |
 | 6 | log | S2 | 3 | +0.000% | -30.110% | +0.000% | -29.221% | 1.00 | FAIL | loghub +0.000% | encode 0.699 < 0.80; 0.000% smaller for 43.1% more encode time (needs 4.308%) |
 | 6 | numeric | S0 | 8 | -0.123% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | owid-f64@3072 +0.000% |  |
 | 6 | numeric | S1 | 1 | -0.036% | -34.411% | +0.000% | -33.993% | 1.00 | TRADE | population-i64 -0.036% | encode 0.656 < 0.80; 0.036% smaller for 52.5% more encode time (needs 5.247%) |
-| 6 | numeric | S2 | 3 | -0.083% | -19.514% | +4.231% | -19.196% | 1.09 | TRADE | ncep-nc +0.000% | 0.083% smaller for 24.2% more encode time (needs 2.424%) |
-| 6 | tar | S0 | 6 | -0.118% | -8.858% | +0.000% | -6.955% | 1.00 | TRADE | samba@1024 +0.000% | 0.118% smaller for 9.7% more encode time (needs 0.972%) |
+| 6 | numeric | S2 | 3 | -0.083% | -19.514% | +0.000% | -19.196% | 1.00 | TRADE | ncep-nc +0.000% | 0.083% smaller for 24.2% more encode time (needs 2.424%) |
+| 6 | tar | S0 | 6 | -0.118% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | samba@1024 +0.000% |  |
 | 6 | tar | S2 | 3 | +0.000% | -12.767% | +0.000% | -12.554% | 1.00 | FAIL | canterbury +0.000% | 0.000% smaller for 14.6% more encode time (needs 1.464%) |
 | 6 | text | S0 | 18 | -0.443% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | dickens@3072 +0.000% |  |
-| 6 | text | S1 | 9 | -0.006% | -28.618% | +0.000% | -26.467% | 1.14 | TRADE | dickens-16k@16k +0.000% | encode 0.714 < 0.80; 0.006% smaller for 40.1% more encode time (needs 4.009%); RSS 1.14x > 1.1 |
+| 6 | text | S1 | 9 | -0.006% | -28.618% | +0.000% | -26.467% | 1.00 | TRADE | dickens-16k@16k +0.000% | encode 0.714 < 0.80; 0.006% smaller for 40.1% more encode time (needs 4.009%) |
 | 6 | text | S2 | 3 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | dickens +0.000% |  |
 | 6 | tsv | S0 | 12 | -0.495% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | ghcn-rows@3072 +0.000% |  |
 | 6 | tsv | S1 | 6 | +0.000% | -22.032% | +0.000% | -20.759% | 1.00 | FAIL | ghcn-rows-16k@16k +0.000% | encode 0.780 < 0.80; 0.000% smaller for 28.3% more encode time (needs 2.826%) |
@@ -204,73 +227,68 @@ bytes: B/A - 1 (sum over files; negative = smaller). enc: B's encode speed chang
 | 6 | xml | S0 | 12 | -0.756% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | silesia-xml@3072 +0.000% |  |
 | 6 | xml | S1 | 6 | +0.000% | -24.911% | +0.000% | -23.572% | 1.00 | FAIL | silesia-xml-16k@16k +0.000% | encode 0.751 < 0.80; 0.000% smaller for 33.2% more encode time (needs 3.318%) |
 | 6 | xml | S2 | 2 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | silesia-xml +0.000% |  |
-| 7 | audio | S0 | 8 | -0.020% | -7.621% | +0.000% | -4.776% | 1.00 | TRADE | esc50-1-28808@1024 +0.000% | 0.020% smaller for 8.2% more encode time (needs 0.825%) |
+| 7 | audio | S0 | 8 | -0.020% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | esc50-1-28808@1024 +0.000% |  |
 | 7 | audio | S1 | 4 | +0.000% | -21.156% | +0.000% | -20.496% | 1.00 | FAIL | esc50-1-100032 +0.000% | encode 0.788 < 0.80; 0.000% smaller for 26.8% more encode time (needs 2.683%) |
 | 7 | code | S0 | 18 | -0.478% | -11.100% | +0.000% | -6.011% | 1.00 | TRADE | flac-c@3072 +0.000% | 0.478% smaller for 12.5% more encode time (needs 1.249%) |
 | 7 | code | S1 | 9 | +0.000% | -39.371% | +0.000% | -37.293% | 1.00 | FAIL | flac-c-16k@16k +0.000% | encode 0.606 < 0.80; 0.000% smaller for 64.9% more encode time (needs 6.494%) |
 | 7 | code | S2 | 3 | +0.000% | -11.813% | +0.000% | -11.734% | 1.00 | FAIL | flac-c +0.000% | 0.000% smaller for 13.4% more encode time (needs 1.339%) |
-| 7 | container | S0 | 8 | -0.082% | -9.949% | +0.000% | -5.593% | 1.00 | TRADE | kennedy-xls@3072 +0.000% | 0.082% smaller for 11.0% more encode time (needs 1.105%) |
-| 7 | container | S1 | 3 | +0.000% | -51.711% | +0.000% | -51.047% | 1.53 | FAIL | kennedy-xls +0.000% | encode 0.483 < 0.80; 0.000% smaller for 107.1% more encode time (needs 10.709%); RSS 1.53x > 1.1 |
-| 7 | container | S2 | 1 | +0.000% | -30.011% | +0.000% | -29.855% | 1.20 | FAIL | highway-pdf +0.000% | encode 0.700 < 0.80; 0.000% smaller for 42.9% more encode time (needs 4.288%); RSS 1.20x > 1.1 |
+| 7 | container | S0 | 8 | -0.082% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | kennedy-xls@3072 +0.000% |  |
+| 7 | container | S1 | 3 | +0.000% | -51.711% | +0.000% | -51.047% | 1.00 | FAIL | kennedy-xls +0.000% | encode 0.483 < 0.80; 0.000% smaller for 107.1% more encode time (needs 10.709%) |
+| 7 | container | S2 | 1 | +0.000% | -30.011% | +0.000% | -29.855% | 1.00 | FAIL | highway-pdf +0.000% | encode 0.700 < 0.80; 0.000% smaller for 42.9% more encode time (needs 4.288%) |
 | 7 | csv | S0 | 30 | -0.382% | -13.390% | +0.000% | -7.564% | 1.00 | TRADE | ghcn@1024 +0.000% | 0.382% smaller for 15.5% more encode time (needs 1.546%) |
-| 7 | csv | S1 | 15 | -0.092% | -19.669% | +0.000% | -17.735% | 1.18 | TRADE | energy-130col-128k@16k +0.000% | 0.092% smaller for 24.5% more encode time (needs 2.448%); RSS 1.18x > 1.1 |
+| 7 | csv | S1 | 15 | -0.092% | -19.669% | +0.000% | -17.735% | 1.00 | TRADE | energy-130col-128k@16k +0.000% | 0.092% smaller for 24.5% more encode time (needs 2.448%) |
 | 7 | csv | S2 | 5 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | ghcn +0.000% |  |
-| 7 | exe | S0 | 6 | -0.136% | -8.514% | +0.000% | +0.000% | 1.00 | TRADE | ooffice-x86@1024 +0.000% | 0.136% smaller for 9.3% more encode time (needs 0.931%) |
+| 7 | exe | S0 | 6 | -0.136% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | ooffice-x86@1024 +0.000% |  |
 | 7 | exe | S2 | 3 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | ooffice-x86 +0.000% |  |
-| 7 | genomics | S0 | 4 | -0.374% | -11.203% | +0.000% | -8.072% | 1.00 | TRADE | srr835775@3072 +0.000% | 0.374% smaller for 12.6% more encode time (needs 1.262%) |
+| 7 | genomics | S0 | 4 | -0.374% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | srr835775@3072 +0.000% |  |
 | 7 | genomics | S2 | 2 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | srr835775 +0.000% |  |
 | 7 | html | S0 | 4 | -0.467% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | bashref@3072 +0.000% |  |
-| 7 | html | S1 | 3 | +0.000% | -28.229% | +0.000% | -26.703% | 1.15 | FAIL | bashref +0.000% | encode 0.718 < 0.80; 0.000% smaller for 39.3% more encode time (needs 3.933%); RSS 1.15x > 1.1 |
-| 7 | img16 | S0 | 4 | -0.564% | -11.940% | +0.000% | -6.837% | 1.00 | TRADE | x-ray@3072 +0.000% | 0.564% smaller for 13.6% more encode time (needs 1.356%) |
-| 7 | img16 | S2 | 2 | -0.429% | -12.577% | +0.000% | -12.461% | 1.10 | TRADE | x-ray +0.000% | 0.429% smaller for 14.4% more encode time (needs 1.439%); RSS 1.10x > 1.1 |
-| 7 | img8 | S0 | 8 | -0.605% | -9.641% | +0.000% | -6.232% | 1.00 | TRADE | retina@1024 +0.000% | 0.605% smaller for 10.7% more encode time (needs 1.067%) |
+| 7 | html | S1 | 3 | +0.000% | -28.229% | +0.000% | -26.703% | 1.00 | FAIL | bashref +0.000% | encode 0.718 < 0.80; 0.000% smaller for 39.3% more encode time (needs 3.933%) |
+| 7 | img16 | S0 | 4 | -0.564% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | x-ray@3072 +0.000% |  |
+| 7 | img16 | S2 | 2 | -0.429% | -12.577% | +0.000% | -12.461% | 1.00 | TRADE | x-ray +0.000% | 0.429% smaller for 14.4% more encode time (needs 1.439%) |
+| 7 | img8 | S0 | 8 | -0.605% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | retina@1024 +0.000% |  |
 | 7 | img8 | S1 | 2 | +0.000% | -29.204% | +0.000% | -28.671% | 1.00 | FAIL | coffee +0.000% | encode 0.708 < 0.80; 0.000% smaller for 41.3% more encode time (needs 4.125%) |
-| 7 | img8 | S2 | 2 | +0.000% | -7.147% | +0.000% | -7.117% | 1.13 | FAIL | retina +0.000% | 0.000% smaller for 7.7% more encode time (needs 0.770%); RSS 1.13x > 1.1 |
-| 7 | json | S0 | 12 | -0.715% | -12.211% | +0.000% | -6.850% | 1.00 | TRADE | api@3072 +0.000% | 0.715% smaller for 13.9% more encode time (needs 1.391%) |
-| 7 | json | S1 | 6 | +0.000% | -25.873% | +0.000% | -24.838% | 1.16 | FAIL | api-16k@16k +0.000% | encode 0.741 < 0.80; 0.000% smaller for 34.9% more encode time (needs 3.490%); RSS 1.16x > 1.1 |
+| 7 | img8 | S2 | 2 | +0.000% | -7.147% | +0.000% | -7.117% | 1.00 | FAIL | retina +0.000% | 0.000% smaller for 7.7% more encode time (needs 0.770%) |
+| 7 | json | S0 | 12 | -0.715% | -12.211% | +0.000% | +0.000% | 1.00 | TRADE | api@3072 +0.000% | 0.715% smaller for 13.9% more encode time (needs 1.391%) |
+| 7 | json | S1 | 6 | +0.000% | -25.873% | +0.000% | -24.838% | 1.00 | FAIL | api-16k@16k +0.000% | encode 0.741 < 0.80; 0.000% smaller for 34.9% more encode time (needs 3.490%) |
 | 7 | json | S2 | 2 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | api +0.000% |  |
-| 7 | log | S0 | 18 | -0.322% | -9.247% | +0.000% | -4.578% | 1.00 | TRADE | loghub@3072 +0.000% | 0.322% smaller for 10.2% more encode time (needs 1.019%) |
-| 7 | log | S1 | 9 | -0.012% | -24.913% | +0.000% | -23.439% | 1.39 | TRADE | loghub-16k@16k +0.000% | encode 0.751 < 0.80; 0.012% smaller for 33.2% more encode time (needs 3.318%); RSS 1.39x > 1.1 |
-| 7 | log | S2 | 3 | +0.000% | -28.109% | +0.000% | -27.877% | 1.22 | FAIL | loghub +0.000% | encode 0.719 < 0.80; 0.000% smaller for 39.1% more encode time (needs 3.910%); RSS 1.22x > 1.1 |
+| 7 | log | S0 | 18 | -0.322% | -9.247% | +0.000% | +0.000% | 1.00 | TRADE | loghub@3072 +0.000% | 0.322% smaller for 10.2% more encode time (needs 1.019%) |
+| 7 | log | S1 | 9 | -0.012% | -24.913% | +0.000% | -23.439% | 1.00 | TRADE | loghub-16k@16k +0.000% | encode 0.751 < 0.80; 0.012% smaller for 33.2% more encode time (needs 3.318%) |
+| 7 | log | S2 | 3 | +0.000% | -28.109% | +0.000% | -27.877% | 1.00 | FAIL | loghub +0.000% | encode 0.719 < 0.80; 0.000% smaller for 39.1% more encode time (needs 3.910%) |
 | 7 | numeric | S0 | 8 | -0.160% | -13.427% | +0.000% | -9.083% | 1.00 | TRADE | sao@1024 +0.000% | 0.160% smaller for 15.5% more encode time (needs 1.551%) |
-| 7 | numeric | S1 | 1 | -0.036% | -10.978% | +0.000% | -10.935% | 1.00 | TRADE | population-i64 -0.036% | 0.036% smaller for 12.3% more encode time (needs 1.233%) |
-| 7 | numeric | S2 | 3 | -0.080% | -19.532% | +4.616% | -19.204% | 1.16 | TRADE | ncep-nc +0.000% | 0.080% smaller for 24.3% more encode time (needs 2.427%); RSS 1.16x > 1.1 |
-| 7 | tar | S0 | 6 | -0.118% | -7.493% | +0.000% | -7.365% | 1.00 | TRADE | canterbury@1024 +0.000% | 0.118% smaller for 8.1% more encode time (needs 0.810%) |
-| 7 | tar | S2 | 3 | -0.203% | -14.941% | +0.000% | -14.832% | 1.07 | TRADE | samba +0.000% | 0.203% smaller for 17.6% more encode time (needs 1.757%) |
+| 7 | numeric | S1 | 1 | -0.036% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | population-i64 -0.036% |  |
+| 7 | numeric | S2 | 3 | -0.080% | -19.532% | +0.000% | -19.204% | 1.00 | TRADE | ncep-nc +0.000% | 0.080% smaller for 24.3% more encode time (needs 2.427%) |
+| 7 | tar | S0 | 6 | -0.118% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | canterbury@1024 +0.000% |  |
+| 7 | tar | S2 | 3 | -0.203% | -14.941% | +0.000% | -14.832% | 1.00 | TRADE | samba +0.000% | 0.203% smaller for 17.6% more encode time (needs 1.757%) |
 | 7 | text | S0 | 18 | -0.443% | -12.458% | +0.000% | -7.023% | 1.00 | TRADE | dickens@3072 +0.000% | 0.443% smaller for 14.2% more encode time (needs 1.423%) |
-| 7 | text | S1 | 9 | -0.046% | -44.951% | +0.000% | -42.392% | 1.15 | TRADE | dickens-16k@16k +0.000% | encode 0.550 < 0.80; 0.046% smaller for 81.7% more encode time (needs 8.166%); RSS 1.15x > 1.1 |
+| 7 | text | S1 | 9 | -0.046% | -44.951% | +0.000% | -42.392% | 1.00 | TRADE | dickens-16k@16k +0.000% | encode 0.550 < 0.80; 0.046% smaller for 81.7% more encode time (needs 8.166%) |
 | 7 | text | S2 | 3 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | dickens +0.000% |  |
 | 7 | tsv | S0 | 12 | -0.495% | -14.071% | +0.000% | -8.775% | 1.00 | TRADE | ghcn-rows@3072 +0.000% | 0.495% smaller for 16.4% more encode time (needs 1.638%) |
-| 7 | tsv | S1 | 6 | +0.000% | -19.430% | +0.000% | -18.156% | 1.48 | FAIL | ghcn-rows-16k@16k +0.000% | 0.000% smaller for 24.1% more encode time (needs 2.412%); RSS 1.48x > 1.1 |
+| 7 | tsv | S1 | 6 | +0.000% | -19.430% | +0.000% | -18.156% | 1.00 | FAIL | ghcn-rows-16k@16k +0.000% | 0.000% smaller for 24.1% more encode time (needs 2.412%) |
 | 7 | tsv | S2 | 2 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | ghcn-rows +0.000% |  |
-| 7 | video | S0 | 4 | -0.432% | +0.000% | +0.000% | -7.344% | 1.00 | KEEP-FREE | akiyo@3072 +0.000% |  |
+| 7 | video | S0 | 4 | -0.432% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | akiyo@3072 +0.000% |  |
 | 7 | video | S2 | 2 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | foreman +0.000% |  |
-| 7 | weights | S0 | 8 | -0.685% | -9.515% | +0.000% | +0.000% | 1.00 | TRADE | magika-onnx@1024 +0.000% | 0.685% smaller for 10.5% more encode time (needs 1.052%) |
+| 7 | weights | S0 | 8 | -0.685% | +0.000% | +0.000% | +0.000% | 1.00 | KEEP-FREE | magika-onnx@1024 +0.000% |  |
 | 7 | weights | S2 | 4 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | bf16-10mb +0.000% |  |
-| 7 | xml | S0 | 12 | -0.756% | -11.353% | +0.000% | -6.816% | 1.00 | TRADE | silesia-xml@3072 +0.000% | 0.756% smaller for 12.8% more encode time (needs 1.281%) |
-| 7 | xml | S1 | 6 | +0.000% | -41.247% | +0.000% | -38.829% | 1.15 | FAIL | silesia-xml-16k@16k +0.000% | encode 0.588 < 0.80; 0.000% smaller for 70.2% more encode time (needs 7.020%); RSS 1.15x > 1.1 |
+| 7 | xml | S0 | 12 | -0.756% | -11.353% | +0.000% | +0.000% | 1.00 | TRADE | silesia-xml@3072 +0.000% | 0.756% smaller for 12.8% more encode time (needs 1.281%) |
+| 7 | xml | S1 | 6 | +0.000% | -41.247% | +0.000% | -38.829% | 1.00 | FAIL | silesia-xml-16k@16k +0.000% | encode 0.588 < 0.80; 0.000% smaller for 70.2% more encode time (needs 7.020%) |
 | 7 | xml | S2 | 2 | +0.000% | +0.000% | +0.000% | +0.000% | 1.00 | NEUTRAL | silesia-xml +0.000% |  |
 
-## Threads 4 and 10: cells whose class differs from threads 1 (16)
+## Threads 4 and 10: cells whose class differs from threads 1 (11)
 
 | level | type | size | threads | enc | dec | class (T1) | class | why |
 |---|---|---|---:|---:|---:|---|---|---|
-| 5 | container | S2 | 10 | +0.000% | +0.000% | KEEP-ID | NEUTRAL |  |
-| 5 | tar | S0 | 10 | -6.366% | +0.000% | NEUTRAL | FAIL | 0.000% smaller for 6.8% more encode time (needs 0.680%) |
-| 5 | tsv | S2 | 10 | +1.032% | +0.000% | NEUTRAL | KEEP-ID |  |
-| 5 | video | S2 | 10 | +0.000% | -5.187% | NEUTRAL | FAIL | decode 0.948 < 0.95 |
-| 5 | weights | S2 | 10 | +0.000% | +0.000% | FAIL | NEUTRAL |  |
-| 6 | exe | S0 | 10 | -6.571% | +0.000% | KEEP-FREE | TRADE | 0.136% smaller for 7.0% more encode time (needs 0.703%) |
-| 6 | img16 | S2 | 10 | -0.519% | +0.000% | NEUTRAL | FAIL | 0.000% smaller for 0.5% more encode time (needs 0.052%) |
-| 6 | img8 | S0 | 10 | -7.375% | +0.000% | KEEP-FREE | TRADE | 0.605% smaller for 8.0% more encode time (needs 0.796%) |
-| 6 | log | S0 | 10 | -4.335% | +0.000% | KEEP-FREE | TRADE | 0.373% smaller for 4.5% more encode time (needs 0.453%) |
-| 6 | text | S0 | 10 | -4.452% | +0.000% | KEEP-FREE | TRADE | 0.443% smaller for 4.7% more encode time (needs 0.466%) |
-| 6 | tsv | S2 | 10 | -0.678% | +0.000% | NEUTRAL | FAIL | 0.000% smaller for 0.7% more encode time (needs 0.068%) |
-| 6 | video | S0 | 10 | -11.175% | +0.000% | KEEP-FREE | TRADE | 0.432% smaller for 12.6% more encode time (needs 1.258%) |
+| 6 | csv | S0 | 10 | -5.165% | +0.000% | KEEP-FREE | TRADE | 0.398% smaller for 5.4% more encode time (needs 0.545%) |
 | 6 | weights | S2 | 10 | +0.000% | +0.000% | PASS | NEUTRAL |  |
-| 6 | xml | S0 | 10 | -5.427% | +0.000% | KEEP-FREE | PASS |  |
+| 7 | audio | S0 | 10 | -10.598% | +0.000% | KEEP-FREE | TRADE | 0.020% smaller for 11.9% more encode time (needs 1.185%) |
+| 7 | container | S0 | 10 | -14.995% | +0.000% | KEEP-FREE | TRADE | 0.082% smaller for 17.6% more encode time (needs 1.764%) |
+| 7 | exe | S0 | 10 | -12.869% | +0.000% | KEEP-FREE | TRADE | 0.136% smaller for 14.8% more encode time (needs 1.477%) |
+| 7 | genomics | S0 | 10 | -12.990% | +0.000% | KEEP-FREE | TRADE | 0.374% smaller for 14.9% more encode time (needs 1.493%) |
 | 7 | html | S0 | 10 | -16.274% | +0.000% | KEEP-FREE | TRADE | 0.467% smaller for 19.4% more encode time (needs 1.944%) |
-| 7 | video | S0 | 10 | -9.922% | +0.000% | KEEP-FREE | TRADE | 0.432% smaller for 11.0% more encode time (needs 1.101%) |
+| 7 | img16 | S0 | 10 | -14.493% | +0.000% | KEEP-FREE | TRADE | 0.564% smaller for 16.9% more encode time (needs 1.695%) |
+| 7 | img8 | S0 | 10 | -15.282% | +0.000% | KEEP-FREE | TRADE | 0.605% smaller for 18.0% more encode time (needs 1.804%) |
+| 7 | tar | S0 | 10 | -10.905% | +0.000% | KEEP-FREE | TRADE | 0.118% smaller for 12.2% more encode time (needs 1.224%) |
+| 7 | weights | S0 | 10 | -14.978% | +0.000% | KEEP-FREE | TRADE | 0.685% smaller for 17.6% more encode time (needs 1.762%) |
 
 Full table: `cells.csv` (every level, type, size class and thread count).
 
@@ -313,15 +331,15 @@ alone: B/A - 1 without the partner; with: (B+partner)/(A+partner) - 1. Rows: eac
 
 ## Rules (depth-2 tree on dev, checked on holdout)
 
-Samples: condition rows (file x level x threads) labelled with their cell's class, NEUTRAL left out; win = PASS/KEEP. Features: kind, size class, level. Holdout accuracy: 87%.
+Samples: condition rows (file x level x threads) labelled with their cell's class, NEUTRAL left out; win = PASS/KEEP. Features: kind, size class, level. Holdout accuracy: 92%.
 
 | rule | dev rows | dev wins | holdout rows | holdout wins | predicts |
 |---|---:|---:|---:|---:|---|
-| level == 6 and size_class <= S0 | 152 | 104 | 224 | 146 | on |
-| level == 6 and not (size_class <= S0) | 72 | 2 | 112 | 2 | off |
-| not (level == 6) and kind == video | 5 | 2 | 5 | 2 | off |
-| not (level == 6) and not (kind == video) | 223 | 1 | 338 | 6 | off |
+| level <= 6 and size_class <= S0 | 152 | 140 | 224 | 206 | on |
+| level <= 6 and not (size_class <= S0) | 70 | 2 | 110 | 2 | off |
+| not (level <= 6) and kind == video | 4 | 4 | 4 | 4 | on |
+| not (level <= 6) and not (kind == video) | 218 | 24 | 330 | 34 | off |
 
-**Suggested gate:** on when (level == 6 and size_class <= S0); in any case keep it where it removes an inversion: csv S1 -6>-5, genomics S0 -6>-5, img16 S0 -6>-5, img16 S2 -7>-6, img8 S0 -6>-5, tar S2 -7>-6, text S1 -7>-6, video S0 -6>-5, weights S0 -6>-5
+**Suggested gate:** on when (level <= 6 and size_class <= S0) OR (not (level <= 6) and kind == video); in any case keep it where it removes an inversion: csv S1 -6>-5, genomics S0 -6>-5, img16 S0 -6>-5, img16 S2 -7>-6, img8 S0 -6>-5, tar S2 -7>-6, text S1 -7>-6, video S0 -6>-5, weights S0 -6>-5
 
 A gate that changes output bytes must not use thread count; it must be explained (why the change wins there) before it is implemented, and its files added to the CI ledger.

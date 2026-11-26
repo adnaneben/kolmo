@@ -1,22 +1,21 @@
 {
- "verdict": "FAIL (never allowed)",
+ "verdict": "ROUTE (passes on some conditions only: gate it)",
  "basis": "instr",
  "tiers": {
-  "middle": "mixed: 32 of 154 cells pass"
+  "middle": "mixed: 49 of 147 cells pass"
  },
- "violations": [
-  "RSS 1.31x at -6: container S2 T1",
-  "RSS 1.34x at -6: container S2 T10",
-  "RSS 1.18x at -6: log S2 T10",
-  "RSS 1.53x at -7: container S1 T1",
-  "RSS 1.18x at -7: container S2 T10",
-  "RSS 1.14x at -7: img16 S2 T10",
-  "RSS 1.17x at -7: log S2 T10",
-  "RSS 1.21x at -7: tar S2 T10",
-  "RSS 1.48x at -7: tsv S1 T1"
- ],
+ "violations": [],
  "provisional": [
-  "decode slower at -6: container S2 T1 (-10.769% instructions, one round)"
+  "decode slower at -6: container S2 T1 (-10.769% instructions, one round)",
+  "RSS 1.31x (median file 1.31x, n=1) at -6: container S2 T1",
+  "RSS 1.34x (median file 1.34x, n=1) at -6: container S2 T10",
+  "RSS 1.18x (median file 1.00x, n=3) at -6: log S2 T10",
+  "RSS 1.53x (median file 1.43x, n=3) at -7: container S1 T1",
+  "RSS 1.18x (median file 1.18x, n=1) at -7: container S2 T10",
+  "RSS 1.14x (median file 1.13x, n=2) at -7: img16 S2 T10",
+  "RSS 1.17x (median file 1.14x, n=3) at -7: log S2 T10",
+  "RSS 1.21x (median file 1.00x, n=3) at -7: tar S2 T10",
+  "RSS 1.48x (median file 1.00x, n=6) at -7: tsv S1 T1"
  ],
  "removed_inversions": [
   [
@@ -111,51 +110,46 @@
   "img16",
   "img8",
   "json",
-  "log",
-  "numeric",
-  "tar",
-  "tsv",
   "weights",
   "xml"
  ],
  "counts": {
-  "NEUTRAL": 122,
-  "KEEP-ID": 2,
-  "FAIL": 55,
-  "KEEP-FREE": 26,
-  "PASS": 4,
-  "TRADE": 67
+  "NEUTRAL": 129,
+  "KEEP-FREE": 48,
+  "FAIL": 50,
+  "TRADE": 48,
+  "PASS": 1
  },
- "gate": "on when (level == 6 and size_class <= S0); in any case keep it where it removes an inversion: csv S1 -6>-5, genomics S0 -6>-5, img16 S0 -6>-5, img16 S2 -7>-6, img8 S0 -6>-5, tar S2 -7>-6, text S1 -7>-6, video S0 -6>-5, weights S0 -6>-5",
- "holdout_accuracy": 0.8703976435935199,
+ "gate": "on when (level <= 6 and size_class <= S0) OR (not (level <= 6) and kind == video); in any case keep it where it removes an inversion: csv S1 -6>-5, genomics S0 -6>-5, img16 S0 -6>-5, img16 S2 -7>-6, img8 S0 -6>-5, tar S2 -7>-6, text S1 -7>-6, video S0 -6>-5, weights S0 -6>-5",
+ "holdout_accuracy": 0.9191616766467066,
  "rules": [
   {
-   "rule": "level == 6 and size_class <= S0",
+   "rule": "level <= 6 and size_class <= S0",
    "dev_n": 152,
-   "dev_wins": 104,
+   "dev_wins": 140,
    "holdout_n": 224,
-   "holdout_wins": 146
+   "holdout_wins": 206
   },
   {
-   "rule": "level == 6 and not (size_class <= S0)",
-   "dev_n": 72,
+   "rule": "level <= 6 and not (size_class <= S0)",
+   "dev_n": 70,
    "dev_wins": 2,
-   "holdout_n": 112,
+   "holdout_n": 110,
    "holdout_wins": 2
   },
   {
-   "rule": "not (level == 6) and kind == video",
-   "dev_n": 5,
-   "dev_wins": 2,
-   "holdout_n": 5,
-   "holdout_wins": 2
+   "rule": "not (level <= 6) and kind == video",
+   "dev_n": 4,
+   "dev_wins": 4,
+   "holdout_n": 4,
+   "holdout_wins": 4
   },
   {
-   "rule": "not (level == 6) and not (kind == video)",
-   "dev_n": 223,
-   "dev_wins": 1,
-   "holdout_n": 338,
-   "holdout_wins": 6
+   "rule": "not (level <= 6) and not (kind == video)",
+   "dev_n": 218,
+   "dev_wins": 24,
+   "holdout_n": 330,
+   "holdout_wins": 34
   }
  ]
 }

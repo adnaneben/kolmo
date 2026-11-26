@@ -111,8 +111,10 @@ def snap(x, n):
 
 
 def metrics(recs, band, lv, t):
-    """cell metrics. The cell's noise band: the per-file band (widest size class in the cell) over sqrt(n), the
-    standard error of a mean of n files, but never under the cell's own A/A deviation or the floor."""
+    """cell metrics. `band` is the widest A/A spread per file (bmax). The cell's noise band: that spread (widest
+    size class in the cell) over sqrt(n), the standard error of a mean of n files, but never under the cell's own
+    A/A deviation or the floor. Using the widest spread, not the p95, keeps ~400 cells from raising ~20 false
+    alarms."""
     scs = {r["size_class"] for r in recs}
     n = len(recs)
 
@@ -185,8 +187,14 @@ def main(out):
     cell_rows = []
     for (lv, kind, sc, t), rs in sorted(cells.items(), key=lambda kv: (LVL_ORDER.index(kv[0][0]), kv[0][1],
                                                                         kv[0][2], kv[0][3])):
-        m = metrics(rs, band, lv, t)
+        m = metrics(rs, bmax, lv, t)
+        if basis == "instr":       # one round of memory under load: RSS is judged by the timed run, not here
+            m["rss"] = 1.0
+        else:
+            m["rss"] = snap(st.median(r["rss"] for r in rs), max(bmax.get((lv, t, sc, "rss"), .02) for sc in
+                                                                 {r["size_class"] for r in rs}))
         raw = dict(dec_raw=gmean([r["dec"] for r in rs]), rss_raw=max(r["rss"] for r in rs),
+                   rss_med=st.median(r["rss"] for r in rs),
                    scs=sorted({r["size_class"] for r in rs}))
         ident = all(r["identical"] for r in rs)
         cls, why = standard.classify(lv, m, ident)
@@ -211,17 +219,27 @@ def main(out):
     # never-allowed checks use the widest A/A spread seen (not the p95), so ~100 cells do not raise false alarms
     wide = lambda c, k, d: max(bmax.get((c["level"], c["threads"], sc, k), d) for sc in c["scs"])
     dec_bad = [c for c in cell_rows if standard.decode_violation(c["level"], snap(c["dec_raw"], wide(c, "dec", .01)))]
-    rss_bad = [c for c in cell_rows if snap(c["rss_raw"], wide(c, "rss", .02)) > standard.RSS_MAX]
+    # RSS: the cell's median file must be above the limit (n >= 3); a single file or the max alone is provisional
+    rss_flag = [c for c in cell_rows if snap(c["rss_raw"], wide(c, "rss", .02)) > standard.RSS_MAX]
+    rss_bad = [c for c in rss_flag if c["n"] >= 3 and c["rss_med"] > standard.RSS_MAX]
+    if basis == "instr":       # one round: the flag must hold at every thread count of the cell
+        flagged = {(c["level"], c["kind"], c["size_class"], c["threads"]) for c in rss_bad}
+        ths = {c["threads"] for c in cell_rows}
+        rss_bad = [c for c in rss_bad if all((c["level"], c["kind"], c["size_class"], t) in flagged for t in ths)]
+    rss_prov = [c for c in rss_flag if c not in rss_bad]
     provisional = []
     if basis == "instr":       # one round: decode flags wait for the timed run (5 rounds) to confirm them
         provisional = [f"decode slower at -{c['level']}: {c['kind']} {c['size_class']} T{c['threads']} "
                        f"({pct(c['dec_raw'])} instructions, one round)" for c in dec_bad]
         dec_bad = []
+    provisional += [f"RSS {c['rss_raw']:.2f}x (median file {c['rss_med']:.2f}x, n={c['n']}) at -{c['level']}: "
+                    f"{c['kind']} {c['size_class']} T{c['threads']}" for c in rss_prov]
     violations = ([f"adds level inversion {i[1]} on {i[0]} ({i[4]})" for i in added] +
                   [f"output depends on thread count: {k[0]} -{k[1]}" for k in td_b] +
                   [f"decode slower beyond noise at -{c['level']}: {c['kind']} {c['size_class']} T{c['threads']} "
                    f"({pct(c['dec'])} speed)" for c in dec_bad] +
-                  [f"RSS {c['rss']:.2f}x at -{c['level']}: {c['kind']} {c['size_class']} T{c['threads']}"
+                  [f"RSS {c['rss_raw']:.2f}x (median file {c['rss_med']:.2f}x, n={c['n']}) at -{c['level']}: "
+                   f"{c['kind']} {c['size_class']} T{c['threads']}"
                    for c in rss_bad])
 
     # gain threshold: 0.5% on some type
@@ -306,6 +324,19 @@ def main(out):
     print(f"{verdict}\n-> {os.path.join(out, 'effectmap.md')}")
 
 
+def mem_summary(out):
+    rows, _ = _load(out)
+    g = defaultdict(lambda: ([], [], []))
+    for r in rows.get("timing") or rows.get("sizes", []):
+        if r["part"] != "main" or any(v.get("error") for v in r["arms"].values()):
+            continue
+        k = g[(r["level"], r["threads"], r["size_class"])]
+        for i, arm in enumerate(("A", "B", "A2")):
+            x = r["arms"][arm]
+            k[i].append((x.get("enc_foot") or x["enc_rss"]) / 1e6)
+    return {k: (st.median(a), st.median(b), st.median(c), len(a)) for k, (a, b, c) in g.items()}
+
+
 def stacking(recs):
     alone = defaultdict(lambda: [0, 0])
     for r in recs:
@@ -371,6 +402,12 @@ def write_md(out, meta, basis, band, cells, recs, v, stack_tab, inv_a, inv_b):
         L.append(f"- to confirm in the timed run (not counted yet): {len(v['provisional'])}")
         for x in v["provisional"][:20]:
             L.append(f"  - {x}")
+    L.append("")
+    L.append("## Memory (median peak footprint of the encoder, MB)\n")
+    L.append("| level | threads | size | files | A | B | A2 |\n|---|---|---|---:|---:|---:|---:|")
+    for (lv, t, sc), (fa, fb, f2, n) in sorted(mem_summary(out).items(),
+                                               key=lambda kv: (LVL_ORDER.index(kv[0][0]), kv[0][1], kv[0][2])):
+        L.append(f"| {lv} | {t} | {sc} | {n} | {fa:.1f} | {fb:.1f} | {f2:.1f} |")
     L.append("")
     L.append("## A/A noise band (p95 of |A/A2 - 1| per threads and size class, pooled over levels)\n")
     L.append("| level | threads | size | enc | dec | comb | rss |\n|---|---|---|---:|---:|---:|---:|")

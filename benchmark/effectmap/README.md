@@ -67,12 +67,18 @@ SHA-256), `cells.csv`, `verdict.json` and `effectmap.md`. Paste the verdict line
   - `TRADE`: a size-for-speed trade beyond the rate;
   - `FAIL`: everything else.
 - A cell's bytes are the sum of B over the sum of A. Its speed ratios are geometric means of the per-file ratios,
-  snapped to 1.00 inside the noise band. The noise band is the p95 of |A/A2 - 1| per thread count and size class,
-  pooled over levels, with a floor of 0.3% for instructions and 1% for wall time. The never-allowed checks (decode
-  slower at 1-7, RSS above 1.10×) use the widest A/A spread instead of the p95, so that a hundred cells do not
-  raise false alarms.
-- Memory is the peak physical footprint (`proc_pid_rusage`, which counts compressed pages too). Under memory
-  pressure, `ru_maxrss` varied by 9-22% between A and A2; it is still recorded, and used off macOS.
+  snapped to 1.00 inside the cell's noise band. That band is the widest A/A spread per file (per thread count and
+  size class, pooled over levels) divided by √n, and never less than the cell's own A/A deviation or the floor
+  (0.3% for instructions, 1% for wall time). Using the widest spread, not the p95, keeps the ~400 cells of a run
+  from raising ~20 false alarms. The per-file p95 band is reported for reference.
+- Memory is the peak physical footprint (`proc_pid_rusage`; it counts compressed pages). Under memory pressure,
+  `ru_maxrss` varied by 9-22% between A and A2; it is still recorded, and used off macOS. An increase of 4 MiB or
+  less is not counted. A cell's RSS is its median file. In sizes mode (one round under load), RSS and decode flags
+  are listed as "to confirm in the timed run": an RSS flag counts only if it holds at every thread count. The
+  report also shows the median footprint per level and size class, so systematic shifts are visible.
+- Rules: each condition row (file × level × threads) is a sample, labelled with its cell's class (win = PASS or
+  KEEP; NEUTRAL rows are left out). The tree is fitted on dev, and splits whose leaves all predict the same are
+  merged. The leaves that predict "on" and also hold on holdout make the suggested gate.
 - The overall verdict is checked in this order:
   1. any never-allowed case: **FAIL**;
   2. no 0.5% gain on any type: **FAIL**;
@@ -82,8 +88,6 @@ SHA-256), `cells.csv`, `verdict.json` and `effectmap.md`. Paste the verdict line
   6. only trades: **TRADE** (new mode or rebase, ACCEPTANCE.md section 6);
   7. otherwise: **FAIL**.
   A change that removes a level inversion is kept at least where it removes it, and the gate says so.
-- Rules: each non-neutral condition row (file × level × threads) is a sample, labelled win (PASS/KEEP) or lose. The
-  tree is fitted on dev. The leaves that predict "on" and also hold on holdout make the suggested gate.
 
 ## Limits
 

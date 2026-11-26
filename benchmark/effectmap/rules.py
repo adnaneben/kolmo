@@ -51,19 +51,19 @@ def _best(rows, feats, min_leaf):
 
 def fit(rows, feats, depth=2, min_leaf=3):
     """-> list of leaves: (conditions[list of (name, fn, truth)], n, wins)"""
-    leaves = []
-
     def grow(sub, conds, d):
+        leaf = [(conds, len(sub), sum(r["win"] for r in sub))]
         s = _best(sub, feats, min_leaf) if d < depth else None
         if s is None:
-            leaves.append((conds, len(sub), sum(r["win"] for r in sub)))
-            return
+            return leaf
         name, fn = s
-        grow([r for r in sub if fn(r)], conds + [(name, fn, True)], d + 1)
-        grow([r for r in sub if not fn(r)], conds + [(name, fn, False)], d + 1)
+        kids = (grow([r for r in sub if fn(r)], conds + [(name, fn, True)], d + 1) +
+                grow([r for r in sub if not fn(r)], conds + [(name, fn, False)], d + 1))
+        if len({w * 2 >= n for _, n, w in kids}) == 1:     # every leaf below predicts the same: no split
+            return leaf
+        return kids
 
-    grow(rows, [], 0)
-    return leaves
+    return grow(rows, [], 0)
 
 
 def leaf_text(conds):
