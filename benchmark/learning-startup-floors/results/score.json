@@ -1,0 +1,111 @@
+{
+ "meta": {
+  "encoder": "../../build/kolmo",
+  "encoder_sha256": "b67bbddb88d78d26313ae9ec11718e4cfb2e546f2aa0fd75faa36ee95ad9106f",
+  "reader": "/opt/homebrew/bin/kolmo",
+  "reader_sha256": "5c116ba0adb839757a3bfbcd53c334df354e804ab5fd9b2281ee1163e26221a5",
+  "seed": 20261125,
+  "rounds": {
+   "dev": 5,
+   "holdout": 11
+  },
+  "start": "2026-11-25T19:32:40Z",
+  "uname": [
+   "Darwin",
+   "Adnans-MacBook-Pro.local",
+   "27.2.0",
+   "Darwin Kernel Version 27.2.0: Wed Oct 14 23:48:06 PDT 2026; root:xnu-13432.41.4~25/RELEASE_ARM64_T8142",
+   "arm64"
+  ],
+  "load_start": [
+   80.41748046875,
+   49.70947265625,
+   32.97119140625
+  ],
+  "calibrate_s": 102.82193493843079,
+  "dev_met": {
+   "stock": 8,
+   "B": 10,
+   "C": 19
+  },
+  "chosen": "C",
+  "dev_improved": true,
+  "end": "2026-11-25T20:56:09Z",
+  "load_end": [
+   237.63330078125,
+   193.36181640625,
+   146.63427734375
+  ]
+ },
+ "launch": {
+  "Pe_ms": 4.477084,
+  "Pd_ms": 4.5035
+ },
+ "dev": {
+  "arms": {
+   "stock": {
+    "met": 8,
+    "bytes_on_met": 380867
+   },
+   "B": {
+    "met": 10,
+    "bytes_on_met": 500963
+   },
+   "C": {
+    "met": 19,
+    "bytes_on_met": 720392
+   }
+  },
+  "integrity": []
+ },
+ "holdout": {
+  "candidate": "C",
+  "arms": {
+   "stock": {
+    "met": 16,
+    "bytes_on_met": 600905
+   },
+   "stock-dup": {
+    "met": 17,
+    "bytes_on_met": 628483
+   },
+   "C": {
+    "met": 22,
+    "bytes_on_met": 892173
+   }
+  },
+  "gates": {
+   "G1_attainment": {
+    "stock_met": 16,
+    "dup_met": 17,
+    "cand_met": 22,
+    "cases": 66,
+    "gain": 6,
+    "stock_dup_disagreements": 1,
+    "pass": true
+   },
+   "G2_no_new_misses": {
+    "cases": [],
+    "pass": true
+   },
+   "G3_objective": {
+    "both_met": 16,
+    "stock_bytes": 600905,
+    "cand_bytes": 600905,
+    "ratio": 1.0,
+    "size_spec_identical": true,
+    "pass": true
+   },
+   "G4_selection_cost": {
+    "geomean_paired_enc_ratio": 0.42274513554797233,
+    "max_paired_enc_rss_ratio": 1.1429980276134122,
+    "pass": false
+   },
+   "G5_integrity": {
+    "problems": [],
+    "pass": true
+   },
+   "qualifies": false
+  }
+ }
+}

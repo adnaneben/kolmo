@@ -1,0 +1,15 @@
+{
+ "arms": {
+  "stock": {
+   "met": 13,
+   "bytes_on_met": 1688258
+  },
+  "cand": {
+   "met": 13,
+   "bytes_on_met": 1688258
+  }
+ },
+ "integrity": [],
+ "coverage": [],
+ "table": "$V/evidence/startup-floors/quiet-1/B-launch.tab"
+}

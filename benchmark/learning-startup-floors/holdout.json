@@ -1,0 +1,90 @@
+[
+ {
+  "path": "gettext-libtextstyle",
+  "origin": "gettext",
+  "producer": "GNU gettext",
+  "source": "/opt/homebrew/Cellar/gettext/1.0/share/info/libtextstyle.info",
+  "bytes": 130568,
+  "sha256": "96197e97d438c813bb78aebf23fe2c85a51e6e628039a5f8c34550bb95e8547c"
+ },
+ {
+  "path": "libunistring-info",
+  "origin": "libunistring",
+  "producer": "GNU libunistring",
+  "source": "/opt/homebrew/Cellar/libunistring/1.5/share/info/libunistring.info",
+  "bytes": 342482,
+  "sha256": "6ab201f6b0b48103dd95704d6058c9ef605614ba9e9068e24a2cddf7c7893150"
+ },
+ {
+  "path": "openssl-news",
+  "origin": "openssl",
+  "producer": "OpenSSL",
+  "source": "/opt/homebrew/Cellar/openssl@4/4.1.0/NEWS.md",
+  "bytes": 116246,
+  "sha256": "b92d697bc5f2c5d59d5b5881310728bd54be3dd11b35a9f9ee495b0da290fc47"
+ },
+ {
+  "path": "lrzip-readme",
+  "origin": "lrzip",
+  "producer": "lrzip",
+  "source": "/opt/homebrew/Cellar/lrzip/0.7.3/README.md",
+  "bytes": 20859,
+  "sha256": "dee6e345a991ed8e8e79590970124f5e1a86f6dba4868534dccec591e14b64f1"
+ },
+ {
+  "path": "jsonc-readme",
+  "origin": "jsonc",
+  "producer": "json-c",
+  "source": "/opt/homebrew/Cellar/json-c/0.19/README.md",
+  "bytes": 14464,
+  "sha256": "655cc6367c8fe5eae24eac609ab478ff929e8f0013a85c676f7c02955c935464"
+ },
+ {
+  "path": "isl-aff",
+  "origin": "isl",
+  "producer": "isl",
+  "source": "/opt/homebrew/Cellar/isl/0.28/include/isl/aff.h",
+  "bytes": 62133,
+  "sha256": "5a069f07e5e44b61ffbee70670e432ac74f79f2df9e5f311cbfb70f59bdf20e3"
+ },
+ {
+  "path": "openjpeg-html",
+  "origin": "openjpeg",
+  "producer": "OpenJPEG",
+  "source": "/opt/homebrew/Cellar/openjpeg/2.5.4_1/share/doc/openjpeg/html/functions_q.html",
+  "bytes": 5024,
+  "sha256": "58480429da819c3b21a80b342562f683301cd9ef7a15ad26ac0a4588ad4a4ff4"
+ },
+ {
+  "path": "harfbuzz-hbinfo",
+  "origin": "harfbuzz",
+  "producer": "HarfBuzz",
+  "source": "/opt/homebrew/Cellar/harfbuzz/15.2.0/bin/hb-info",
+  "bytes": 99040,
+  "sha256": "0861aff7fd6f5fc2eb3a882e36e913e1333e93038c4dd21f794c4c1594809c17"
+ },
+ {
+  "path": "nettle-dylib",
+  "origin": "nettle",
+  "producer": "Nettle",
+  "source": "/opt/homebrew/Cellar/nettle/4.0/lib/libnettle.9.0.dylib",
+  "bytes": 316432,
+  "sha256": "3f14c70846890b7d064a644528501a26b34946f68daf56f043b17d5241890840"
+ },
+ {
+  "path": "lcms2-dylib",
+  "origin": "lcms2",
+  "producer": "Little CMS",
+  "source": "/opt/homebrew/Cellar/little-cms2/2.20/lib/liblcms2.2.dylib",
+  "bytes": 357120,
+  "sha256": "0c2494e8f0e429e3554cba75625e6718485e35901bdc5f99b4ebc11f8c10c4da"
+ },
+ {
+  "path": "zstd-pzstd",
+  "origin": "zstd",
+  "producer": "Zstandard",
+  "source": "/opt/homebrew/Cellar/zstd/1.5.7_1/bin/pzstd",
+  "bytes": 136536,
+  "sha256": "b5cd9f82e0e91b8b3af62b0a4607153fd2295fde0b742bf5a7a22e939b1cf24b"
+ }
+]

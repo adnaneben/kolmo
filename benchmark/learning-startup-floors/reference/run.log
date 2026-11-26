@@ -1,0 +1,22 @@
+reference round 0 done 23:58:22
+reference round 1 done 00:00:02
+reference round 2 done 00:01:40
+reference round 3 done 00:03:03
+reference round 4 done 00:04:25
+reference round 5 done 00:05:56
+reference round 6 done 00:07:57
+reference round 7 done 00:09:37
+{
+ "arms": {
+  "stock": {
+   "met": 8,
+   "bytes_on_met": 1040104
+  },
+  "cand": {
+   "met": 9,
+   "bytes_on_met": 935254
+  }
+ },
+ "integrity": []
+}
+2026-11-25T21:09:37Z { 309.76 312.99 250.64 }
