@@ -67,8 +67,7 @@ full-file figures (PLAN.md).
 
 ## Sealed holdout (31 cuts)
 
-One pass with the dev binary (up3, `7c14df3a`), with no change after the dev decision. The `-U --codec-level 2` column
-fills in when its pass ends. Ultra+ is never larger than `-U`, which already confirms the never-worse claim.
+One pass with the dev binary (up3, `7c14df3a`), with no change after the dev decision. Ultra+ is never larger than `-U`, which already confirms the never-worse claim.
 
 | cut | bytes | -U | -U level 2 | **Ultra+** | vs -U | vs level 2 | cmix v21 | enc s | dec s | RSS enc/dec MB | frame | RT |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
@@ -78,6 +77,32 @@ fills in when its pass ends. Ultra+ is never larger than `-U`, which already con
 | code__py-stdlib | 262,144 | 40,208 | 40,208 | **38,166** | -5.08% | -5.08% |  | 161 | 140 | 305/304 | v13 | OK |
 | container__bash-pdf | 262,144 | 242,455 | 242,455 | **241,879** | -0.24% | -0.24% |  | 147 | 165 | 346/346 | v13 | OK |
 | container__comm-jar | 262,144 | 243,797 | 243,797 | **242,648** | -0.47% | -0.47% |  | 142 | 170 | 345/346 | v13 | OK |
+| container__highway-pdf | 262,144 | 163,480 | 163,480 | **161,745** | -1.06% | -1.06% |  | 199 | 190 | 345/347 | v13 | OK |
+| csv__backblaze | 262,144 | 19,220 | 19,220 | **18,809** | -2.14% | -2.14% |  | 144 | 174 | 336/337 | v13 | OK |
+| csv__gaia | 262,144 | 64,168 | 64,168 | **59,605** | -7.11% | -7.11% |  | 141 | 177 | 303/301 | v13 | OK |
+| csv__owid-co2 | 262,144 | 22,627 | 22,627 | **22,627** | +0.00% | +0.00% |  | 133 | 2 | 328/42 | v12 | OK |
+| exe__osdb | 262,144 | 69,636 | 69,636 | **66,858** | -3.99% | -3.99% |  | 73 | 82 | 369/357 | v13 | OK |
+| exe__wasmtime-arm64 | 262,144 | 99,731 | 99,731 | **90,293** | -9.46% | -9.46% |  | 86 | 74 | 335/338 | v13 | OK |
+| genomics__srr2584863 | 262,144 | 59,584 | 59,584 | **58,366** | -2.04% | -2.04% |  | 73 | 53 | 310/335 | v13 | OK |
+| html__bashref | 262,144 | 29,347 | 29,347 | **28,077** | -4.33% | -4.33% |  | 76 | 45 | 374/348 | v13 | OK |
+| img16__mr | 262,144 | 50,841 | 50,841 | **50,356** | -0.95% | -0.95% |  | 40 | 32 | 585/574 | v13 | OK |
+| img8__astronaut | 262,144 | 114,087 | 114,087 | **114,087** | +0.00% | +0.00% |  | 79 | 0 | 353/3 | v12 | OK |
+| img8__coffee | 262,144 | 111,544 | 111,544 | **111,544** | +0.00% | +0.00% |  | 28 | 1 | 386/130 | v12 | OK |
+| json__gharchive | 262,144 | 28,105 | 28,105 | **26,333** | -6.30% | -6.30% |  | 44 | 50 | 375/351 | v13 | OK |
+| log__bgl | 262,144 | 4,362 | 4,362 | **4,342** | -0.46% | -0.46% |  | 3 | 1 | 173/144 | v13 | OK |
+| log__nasa | 262,144 | 11,260 | 11,260 | **10,542** | -6.38% | -6.38% |  | 32 | 27 | 375/353 | v13 | OK |
+| numeric__ncep-nc | 262,144 | 233,845 | 233,845 | **233,434** | -0.18% | -0.18% |  | 23 | 23 | 367/364 | v13 | OK |
+| numeric__sao | 262,144 | 79,108 | 79,108 | **78,653** | -0.58% | -0.58% |  | 12 | 11 | 366/361 | v13 | OK |
+| tar__mozilla | 262,144 | 110,361 | 110,361 | **108,424** | -1.76% | -1.76% |  | 23 | 23 | 375/364 | v13 | OK |
+| tar__samba | 262,144 | 146,685 | 146,685 | **145,542** | -0.78% | -0.78% |  | 53 | 25 | 374/364 | v13 | OK |
+| text__ld30 | 262,144 | 47,254 | 47,254 | **44,397** | -6.05% | -6.05% |  | 25 | 25 | 332/307 | v13 | OK |
+| text__reymont | 262,144 | 41,979 | 41,979 | **40,075** | -4.54% | -4.54% |  | 28 | 27 | 377/356 | v13 | OK |
+| tsv__bb-rows | 262,144 | 19,432 | 19,432 | **19,080** | -1.81% | -1.81% |  | 24 | 19 | 378/365 | v13 | OK |
+| video__foreman | 262,144 | 117,740 | 117,740 | **114,408** | -2.83% | -2.83% |  | 48 | 22 | 380/363 | v13 | OK |
+| weights__gpt2-f32 | 262,144 | 213,216 | 213,216 | **211,723** | -0.70% | -0.70% |  | 45 | 23 | 482/364 | v13 | OK |
+| weights__smollm2-bf16 | 262,144 | 146,964 | 146,964 | **146,388** | -0.39% | -0.39% |  | 48 | 22 | 509/364 | v13 | OK |
+| xml__enwik8 | 262,144 | 61,966 | 61,966 | **59,528** | -3.93% | -3.93% |  | 26 | 23 | 376/362 | v13 | OK |
+| **total** | 8,126,464 | 2,883,031 | 2,883,031 | **2,835,795** | -1.64% | -1.64% | | | | | | |
 
 Reading:
 - 31 of 31 round trips OK. Smaller than `-U` on 26 cuts and equal on 5: two audio cuts, two 8-bit photos and owid-co2,
@@ -89,3 +114,12 @@ Reading:
   - tables −1.8 to −7.1%;
   - floats, weights and scientific arrays −0.2 to −0.7%.
 - New on the holdout: the foreman video cut is −2.8%. Its blocks went through a CM path that UPX now covers.
+
+## Step 2 candidates (bare stream, one niced process)
+
+- **Three binary contexts** (position mod 4 with the last two bytes; x86 prefix/escape bytes with the bytes after them;
+  the bytes 4 and 8 back with the position mod 4). Results: exe −0.21% (97,582 → 97,377), owid-f64 −0.57%, bf16 +0.003%,
+  d200k +0.05%. **Kept.** Binary streams gain, and text changes by noise.
+- **LSTM H=128** on the first 1 MB of dickens: 209,402 B against 210,296 B without it (−0.43%), at 3.2× the coding time
+  (204 s against 63 s under load). It stays **off by default** for now. #116 measured −4.85% at 4 MB (reymont), so the
+  LSTM gains with size. The 4 MB dev test (dickens4m) is queued, to decide a size-gated default.

@@ -298,6 +298,13 @@ static void upx_ctx_byte(upx_t *U) {   /* recompute the byte contexts after a by
         h[k++] = upx_hmix(f * 0x9E3779B1u ^ upx_hmix(U->word0 + 0x1D00));
         h[k++] = upx_hmix(ab | f << 8 | (off < 15 ? off : 15) << 16 | 0x1Eu << 24);
     }
+    {   /* binary structure: position mod 4 with the last two bytes; x86-like prefix/escape bytes (0x0F, 0x66, REX
+         * 0x40-0x4F) with the bytes after them; the bytes 4 and 8 back with the position mod 4 */
+        uint32_t c2b = BY(2), pfx = c2b == 0x0F || c2b == 0x66 || (c2b & 0xF0) == 0x40 ? c2b : 0;
+        h[k++] = upx_hmix((uint32_t)(p & 3) | c << 8 | c2b << 16 | 0x1Fu << 26);
+        h[k++] = upx_hmix(pfx | c << 8 | (pfx ? BY(3) : 0) << 16 | 0x20u << 24);
+        h[k++] = upx_hmix((uint32_t)(p & 3) | BY(4) << 8 | BY(8) << 16 | 0x21u << 26);
+    }
     U->B.K = k;
 #undef BY
 }
@@ -493,7 +500,7 @@ static upx_t *upx_new(uint8_t *buf, size_t n, uint32_t flags, const uint16_t *pa
         U->m4 = cm_new_xm(buf, (int)(flags >> 16 & 255), 4, cm4_chain(n), 1, mask, n); if (!U->m4) return NULL; cm_set_tune(U->m4, tune);
     }
     uint32_t bits = 16; while (bits < 22 && ((size_t)1 << bits) < n * 2) bits++;
-    upx_bank_init(&U->B, 42, bits);
+    upx_bank_init(&U->B, 45, bits);
     U->mbits = bits; for (int j = 0; j < 2; j++) U->mh[j] = calloc((size_t)1 << bits, 4);
     U->mminl[0] = U->par[UPX_ML0]; U->mminl[1] = U->par[UPX_ML1];
     for (int j = 0; j < 2; j++) for (int l = 0; l < 64; l++) { U->mp[j][l][0] = 16384; U->mp[j][l][1] = 49152; }
