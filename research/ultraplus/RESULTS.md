@@ -159,3 +159,22 @@ v1 missed three cuts: csv energy (+2.29%), csv ghcn (+7.64%) and x-ray (+0.25%).
 window from the start makes UPX look worse than it is, because it learns more slowly than model 4 early on. v2 recovers
 all three exactly (32,169 / 3,599 / 113,524 B) and json is unchanged. The gate still skips the full pass on audio,
 video and photo blocks, where UPX never wins. Times are from a quieter host than the earlier rows.
+
+## Full enwik8 (100,000,000 B; SHA-256 2b49720e…a8, decoded output identical)
+
+`--archive-max -T 1`, #122 at `cbb40e7e` (binary kolmo-up6). One niced process on a shared host.
+
+| | archive bytes | + decoder | total | vs this |
+|---|---:|---:|---:|---:|
+| Kolmo `-U` (24 Nov) | 18,651,472 | 592,116 | 19,243,588 | +6.0% |
+| **Kolmo Ultra+** | **17,567,399** | 592,116 | **18,159,515** | |
+| paq8px_v206fix1 -12L (LTCB) | 15,849,084 | 402,949 | 16,252,033 | −10.5% |
+| nncp v3.2 (LTCB) | 14,915,298 | 628,955 | 15,544,253 | −14.4% |
+| cmix v21 (LTCB) | 14,623,723 | 281,387 | 14,905,110 | −17.9% |
+
+- The decoder figure is `xz -9e` of the whole `kolmo` CLI. LTCB's decoder column is the zipped decompressor.
+- **Ultra+ is −5.81% against ultra on enwik8, and it does not beat any of the three leaders.** To match cmix it needs
+  another −17.9%, decoder included.
+- Time: encode 7,824 s (0.0128 MB/s), decode 5,054 s (0.0198 MB/s), on a loaded host and untimed. cmix, by LTCB's ns/B, is
+  about 62,000 s each way.
+- Peak RSS: 3.76 GB encoding, 3.65 GB decoding. cmix: 30,950 MB.
