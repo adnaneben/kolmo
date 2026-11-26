@@ -95,11 +95,11 @@
   bytes as fast (LZ, Huffman, rANS, store), sort (BWT, KLZMA, audio profile 0) and model (context mixing, FASTQ
   family, GR6+, kimg, audio profile 1). A service bounds work by refusing frames over its model-byte budget.
 
-### Cross-segment redundancy: merges at levels 8-9, member cuts for streams and archives
+### Levels 8 and 9: neighbouring segments that share content are merged
 
-Encoder-only changes: every frame is still container version 12 and every stream CZNS version 1, so the 0.0.1 and
-0.0.2 decoders read all of them (each output measured here was decoded by the 0.0.2 binary and checked by SHA-256).
-Results per file kind, level, mode and thread count: `benchmark/segments/RESULTS.md` (review 40, top-10 item 5).
+Encoder-only change: every frame is still container version 12, so the 0.0.1 and 0.0.2 decoders read it (each
+output measured was decoded by the 0.0.2 binary and checked by SHA-256). Results per file kind, level and thread
+count: `benchmark/segments/RESULTS.md` (review 40, top-10 item 5).
 
 - **Levels 8 and 9 merge neighbouring segments that share content.** Levels 3-7 already coded neighbouring tar
   members and content runs with equal plans as one unit; levels 8 and 9 coded each one alone. They now merge two
@@ -110,16 +110,6 @@ Results per file kind, level, mode and thread count: `benchmark/segments/RESULTS
   silesia.tar unchanged (R03 #10/#34). Level 8 merges only up to 2 MiB: it chooses the coder of a larger block from
   a slice of its middle, which misjudged samba's two merged runs (+4.6%); with the limit, mozilla -8 is -0.40% and
   nothing measured grows.
-- **Streamed tar ends segments at member boundaries.** `--stream` and pipes over 256 MiB (so `tar -I kolmo` of a large
-  tree) cut fixed-size segments, which split members and started each later segment in the middle of one, where the
-  planner sees no tar. The stream coder now follows the tar headers across segments and ends a segment at the last
-  member header in it (a pax or GNU long-name header stays with its member), or at the segment size inside a member
-  longer than a segment. silesia.tar with `--stream=64`: -1 90,562,841 to 87,125,607 B, -3 60,941,848 to
-  57,543,273 B (one frame: 57,551,847 B) (R08 #36).
-- **`kolmo archive` codes its chunk store with file boundaries.** The store (the distinct chunks, in order) was coded
-  as one run without headers, so the planner never saw where a file starts: Silesia as 12 files was 8-10% larger than
-  `tar | kolmo`. Each file's first new chunk is now a member cut, planned as a tar member is. Silesia as 12 files:
-  -3 62,263,590 to 57,783,883 B, -9 44,556,140 to 40,809,955 B (R25 #105). The DDP1 table is unchanged.
 
 ### Encoder routing: nine planner and coder fixes from the 40-reviewer review (and two more)
 
@@ -369,9 +359,9 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   that is one frame (the same bytes as before and as the same data in a file). A longer pipe is now compressed as a
   stream of 256 MiB segments, so `tar -I kolmo` of a large tree no longer holds the whole archive in memory. The
   segments are not free in general: on that change's 424 MB input they cost nothing (102,265,009 bytes against
-  102,867,009 for one frame, level 6), but on a tar of mixed members fixed cuts cost 3.9-6.3% (two copies of Silesia,
-  -3: 121,988,744 against 115,175,630 B). Segments now end at tar member boundaries, which recovers that loss (see
-  *Cross-segment redundancy* above). `kolmo -d` and
+  102,867,009 for one frame, level 6), but on a tar of mixed members the fixed cuts cost 3.9-6.3% (two copies of
+  Silesia, -3: 121,988,744 against 115,175,630 B), because a later segment starts inside a member and is not planned
+  as a tar (review 40, R08 #36). `kolmo -d` and
   `-t` read a stream from a pipe segment by segment; before, they read the whole pipe into memory first.
 - **xz and gzip spellings** (`docs/XZ-COMPAT.md`): `-0` and `--fast` are level 1, `--best` is level 9, `-e` and
   `--extreme` are accepted without effect (`-9e` = `-9`), `--uncompress`, `--to-stdout`, `--memory` (= `--memlimit`)

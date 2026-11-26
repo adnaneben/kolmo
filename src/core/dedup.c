@@ -111,11 +111,6 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     dd_init(); dd_cfg C; dd_config(&C, A.avg_chunk, A.line_cuts);
     uint64_t total = 0; for (size_t f = 0; f < nfiles; f++) { if (!files[f].name || (!files[f].data && files[f].size)) return KOLMO_ERR_LIMIT; total += files[f].size; }
     dd_set D; int64_t ret = KOLMO_ERR_ALLOC; uint8_t *owned_store = NULL; kx_buf tab = {0}, recipes = {0};
-    /* where each file's first new chunk lands in the store: the store is coded with these as member cuts, so the
-     * planner plans each file as it plans a tar member (Silesia as 12 files: +8.2% to +10.0% against tar | kolmo
-     * when the store was one headerless run) */
-    uint64_t *cut = nfiles > 1 ? malloc(nfiles * sizeof *cut) : NULL, ubytes = 0; size_t ncut = 0;
-    if (nfiles > 1 && !cut) return KOLMO_ERR_ALLOC;
     if (dd_set_init(&D, total / C.avg + 16)) goto done;
     /* the file table: name, size, mode, mtime, then the chunk list (gaps between successive ids, zigzag) */
     kx_uv(&recipes, nfiles);
@@ -125,11 +120,9 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
         kx_uv(&recipes, F->size); kx_uv(&recipes, F->mode); kx_uv(&recipes, dd_zz(F->mtime));
         int text = dd_text(F->data, F->size);
         kx_buf refs = {0}; uint64_t nref = 0; int64_t prev = -1;
-        if (cut && (ncut == 0 || cut[ncut - 1] < ubytes)) cut[ncut++] = ubytes;   /* a file with no new chunk adds no cut */
         for (size_t at = 0; at < F->size;) {
             size_t L = dd_cut(&C, F->data + at, F->size - at, text); int isnew;
             int64_t id = dd_set_add(&D, F->data + at, (uint32_t)L, &isnew); if (id < 0) { free(refs.p); goto done; }
-            if (isnew) ubytes += L;
             kx_uv(&refs, dd_zz(id - prev - 1)); prev = id; nref++; at += L; st->chunks++;
         }
         kx_uv(&recipes, nref); kx_bytes(&recipes, refs.p, refs.n); free(refs.p);
@@ -159,7 +152,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
     }
     kx_bytes(&tab, recipes.p, recipes.n);
     if (tab.oom || recipes.oom) goto done;
-    {   int64_t fe = compress_cuts(store, -1, (size_t)st->unique_bytes, dst, -1, cap, p, cut, ncut, 0);
+    {   int64_t fe = kolmo_compress(store, (size_t)st->unique_bytes, dst, cap, p);
         if (fe < 0) { ret = fe; goto done; }
         st->store_frame = (uint64_t)fe;
         kolmo_params tp = {KOLMO_HC, 0, p ? p->threads : 0, 0, 1};
@@ -172,7 +165,7 @@ int64_t kolmo_archive_create(const kolmo_archive_file *files, size_t nfiles, uin
         const uint8_t *bodies[1] = {body}; uint64_t lens[1] = {16 + (uint64_t)tz};
         ret = kx_append(dst, cap, (uint64_t)fe, 1, tag, bodies, lens); free(body); }
 done:
-    free(D.c); free(D.slot); free(owned_store); free(tab.p); free(recipes.p); free(cut);
+    free(D.c); free(D.slot); free(owned_store); free(tab.p); free(recipes.p);
     return ret;
 }
 

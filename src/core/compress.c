@@ -85,12 +85,8 @@ static int kolmo_params_valid(const kolmo_params *p) {
     int t = p->transforms & ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
     return t >= 0 && t <= 3;
 }
-/* Every frame written is version 12 (KOLMO_MAX_VERSION): Kolmo's own coders only, no dictionary, no profile.
- * cut[0, ncut) (may be NULL): where the members of a headerless buffer start (kolmo archive's chunk store), used in
- * place of the format walk of plan/meta.c. tar_at (0: none): the input is the rest of a tar member, then tar headers
- * from this offset on (a stream segment that starts inside a member). Only the segments change, never the format. */
-static int64_t compress_cuts(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p,
-                             const uint64_t *cut, size_t ncut, uint64_t tar_at) {
+/* Every frame written is version 12 (KOLMO_MAX_VERSION): Kolmo's own coders only, no dictionary, no profile. */
+static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p) {
     kolmo_params d = {KOLMO_FAST, 0, 0, 0, 1}; if (!p) p = &d;
     if (!kolmo_params_valid(p)) return KOLMO_ERR_PARAM;
     /* KOLMO_T_NATIVE_LEAF and KOLMO_T_TYPED_HUF are opt-in bits of transforms: read them, then clear them so every
@@ -158,9 +154,7 @@ static int64_t compress_cuts(const uint8_t *src, int input_fd, size_t n, uint8_t
 #if defined(KOLMO_PROF) || defined(KOLMO_TIMING)
     double pt0 = prof_now();
 #endif
-    nseg = cut && ncut > 1 && src && n ? meta_runs(src, n, cut, ncut, ss, se, skind, MAXSEG, p->mode == KOLMO_RT ? MT_EXE_MIN_SPEED : MT_EXE_MIN)
-         : tar_at && src && tar_at < n ? meta_tar_at(src, n, tar_at, ss, se, skind, MAXSEG, p->mode == KOLMO_RT ? MT_EXE_MIN_SPEED : MT_EXE_MIN)
-         : meta_segments_x(src, n, ss, se, skind, MAXSEG, p->mode == KOLMO_RT ? MT_EXE_MIN_SPEED : MT_EXE_MIN);   /* members, sections, tensors, packed content (plan/meta.c) */
+    nseg = meta_segments_x(src, n, ss, se, skind, MAXSEG, p->mode == KOLMO_RT ? MT_EXE_MIN_SPEED : MT_EXE_MIN);   /* members, sections, tensors, packed content (plan/meta.c) */
     /* no structure in the headers: one segment per homogeneous run (plan/segment.c), for the modes where a plan per
      * kind of data pays (balanced, eco, hc, ratio; speed keeps its minimal analysis and -x's context mixing adapts on
      * its own). Packed (already compressed) inputs stay one segment. */
@@ -346,7 +340,4 @@ cleanup:
     if (output_fd >= 0) ret = write_block(output_fd, file_index, HDR + (size_t)nb * IDX, 0);
     if (file_index) { free(file_index); zs_trim(); }
     return ret ? ret : (int64_t)w;
-}
-static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t *dst, int output_fd, size_t cap, const kolmo_params *p) {
-    return compress_cuts(src, input_fd, n, dst, output_fd, cap, p, NULL, 0, 0);
 }

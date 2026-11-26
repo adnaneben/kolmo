@@ -38,63 +38,6 @@ static int io_write_full(int fd, const uint8_t *buf, size_t n) {
     return 0;
 }
 
-/* Streamed tar: segments end at member boundaries. A fixed cut splits a member between two frames and starts the next
- * segment in the middle of one, so the planner of that segment sees anonymous bytes instead of a tar (plan/meta.c
- * needs a ustar header at its start): silesia.tar in 64 MiB segments cost +3.9% to +6.3% at levels 1, 3 and 6 against
- * one frame, and member cuts recover all of it. The walker follows the headers across segments (a member may be longer
- * than a segment); a segment ends at the last header in it (before a pax or GNU long-name header that belongs to the
- * member after it) that leaves the segment at least a sixteenth full, else at the segment size as before. A segment
- * that starts inside a member is planned as that member's end, then a tar from its first header on (meta_tar_at).
- * Any header that does not check (checksum, magic, size) or the end-of-archive block stops the walker: the rest of
- * the input is cut at fixed sizes. Only where segments end and how they are planned change; every segment is an
- * ordinary frame (CZNS version 1). */
-typedef struct { int on; uint64_t next, grp; uint64_t *hs; size_t nh, cap; } st_tar;   /* next: offset of the next header; grp: first
-                                                                                         * header of its group; hs: the group starts walked, not yet coded */
-static int st_tar_hdr(const uint8_t *h, uint64_t *size) {   /* 1: a ustar header, 0: anything else (end block included) */
-    if (memcmp(h + 257, "ustar", 5)) return 0;
-    unsigned sum = 0, want = 0; int digits = 0;
-    for (int i = 0; i < 512; i++) sum += i >= 148 && i < 156 ? ' ' : h[i];
-    for (int i = 148; i < 156; i++) { uint8_t c = h[i]; if (c == 0 || c == ' ') { if (digits) break; continue; } if (c < '0' || c > '7') return 0; want = want * 8 + (c - '0'); digits++; }
-    if (!digits || sum != want) return 0;
-    uint64_t z = 0;
-    if (h[124] & 0x80) {                                    /* GNU base-256 size (members of 8 GiB or more) */
-        if (h[124] != 0x80 || h[125] | h[126] | h[127]) return 0;
-        for (int i = 128; i < 136; i++) z = z << 8 | h[i];
-    } else {
-        for (int i = 124; i < 136; i++) { uint8_t c = h[i]; if (c == 0 || c == ' ') continue; if (c < '0' || c > '7') return 0; z = z * 8 + (c - '0'); }
-    }
-    if (z > ((uint64_t)1 << 60)) return 0;
-    *size = z; return 1;
-}
-/* buf[0, have) is the input from offset base; returns where the segment should end (have when no header fits) */
-static size_t st_tar_cut(st_tar *T, const uint8_t *buf, uint64_t base, size_t have) {
-    size_t cut = 0, least = have / 16;
-    while (T->on && T->next >= base && T->next + 512 <= base + have) {
-        const uint8_t *h = buf + (T->next - base); uint64_t size;
-        if (!st_tar_hdr(h, &size)) { T->on = 0; break; }
-        const uint8_t ty = h[156];
-        const int ext = ty == 'x' || ty == 'g' || ty == 'L' || ty == 'K';   /* belongs to the member after it */
-        if (T->grp == UINT64_MAX) T->grp = T->next;
-        if (!ext) {
-            if (T->grp > base && T->grp - base >= least) cut = (size_t)(T->grp - base);
-            if (T->nh == T->cap) { size_t c = T->cap ? 2 * T->cap : 64; uint64_t *h2 = realloc(T->hs, c * sizeof *h2); if (!h2) { T->on = 0; break; } T->hs = h2; T->cap = c; }
-            T->hs[T->nh++] = T->grp; T->grp = UINT64_MAX;
-        }
-        T->next += 512 + (size + 511) / 512 * 512;
-    }
-    if (T->on && T->grp != UINT64_MAX && T->grp > base && T->grp - base >= least && T->grp - base < have) cut = (size_t)(T->grp - base);
-    return cut ? cut : have;
-}
-
-/* the first member header in [base, base + len) as an offset from base (0: none, or one at base itself); forgets the
- * headers before base + len */
-static uint64_t st_tar_first(st_tar *T, uint64_t base, size_t len) {
-    uint64_t k = 0; size_t i = 0;
-    while (i < T->nh && T->hs[i] < base + len) { if (!k && T->hs[i] > base) k = T->hs[i] - base; if (T->hs[i] == base) k = UINT64_MAX; i++; }
-    memmove(T->hs, T->hs + i, (T->nh - i) * sizeof *T->hs); T->nh -= i;
-    return k == UINT64_MAX ? 0 : k;
-}
-
 /* Compress everything readable on in_fd to out_fd. seg_mib: segment size in MiB (0 = default 64).
  * Returns total bytes written, or a negative KOLMO_ERR_*. */
 int64_t kolmo_stream_compress(int in_fd, int out_fd, const kolmo_params *p, uint32_t seg_mib) {
@@ -112,31 +55,21 @@ int64_t kolmo_stream_compress(int in_fd, int out_fd, const kolmo_params *p, uint
     if (!in) return KOLMO_ERR_ALLOC;
     uint8_t *out = NULL; size_t outcap = 0;
     int64_t ret = total;
-    st_tar T = {-1, 0, UINT64_MAX, NULL, 0, 0};                     /* -1: not known yet (the first segment's start decides) */
-    uint64_t base = 0; size_t have = 0; int eof = 0;
     for (;;) {
         size_t got = 0;
-        if (!eof) {
-            if (io_read_full(in_fd, in + have, (size_t)seg - have, &got)) { ret = KOLMO_ERR_IO; break; }
-            have += got; eof = have < seg;               /* short read = end of input */
-        }
-        if (have == 0) break;                            /* clean EOF */
-        if (T.on < 0) { uint64_t z; T.on = have >= 1024 && st_tar_hdr(in, &z); }
-        size_t len = T.on > 0 && !eof ? st_tar_cut(&T, in, base, have) : have;
-        if (eof && T.on > 0) st_tar_cut(&T, in, base, have);   /* the headers of the last segment */
-        uint64_t k = st_tar_first(&T, base, len);               /* a segment inside a member: its tar starts at k */
-        size_t bound = kolmo_bound(len, p);
+        if (io_read_full(in_fd, in, seg, &got)) { ret = KOLMO_ERR_IO; break; }
+        if (got == 0) break;                           /* clean EOF */
+        size_t bound = kolmo_bound(got, p);
         if (bound > outcap) { free(out); out = malloc(bound); if (!out) { ret = KOLMO_ERR_ALLOC; break; } outcap = bound; }
-        int64_t cl = compress_cuts(in, -1, len, out, -1, outcap, p, NULL, 0, k);
+        int64_t cl = kolmo_compress(in, got, out, outcap, p);
         if (cl < 0) { ret = cl; break; }
         uint8_t lb[8]; put64(lb, (uint64_t)cl);
         if (io_write_full(out_fd, lb, 8) || io_write_full(out_fd, out, (size_t)cl)) { ret = KOLMO_ERR_IO; break; }
         total += 8 + cl;
         ret = total;
-        memmove(in, in + len, have - len); have -= len; base += len;
-        if (eof && have == 0) break;
+        if (got < seg) break;                          /* short read = last segment */
     }
-    free(in); free(out); free(T.hs);
+    free(in); free(out);
     if (ret < 0) return ret;
     uint8_t z[8]; put64(z, 0);                          /* end-of-stream terminator */
     if (io_write_full(out_fd, z, 8)) return KOLMO_ERR_IO;
