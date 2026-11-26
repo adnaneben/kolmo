@@ -67,4 +67,25 @@ full-file figures (PLAN.md).
 
 ## Sealed holdout (31 cuts)
 
-Pending: running as one pass after the dev decision.
+One pass with the dev binary (up3, `7c14df3a`), with no change after the dev decision. The `-U --codec-level 2` column
+fills in when its pass ends. Ultra+ is never larger than `-U`, which already confirms the never-worse claim.
+
+| cut | bytes | -U | -U level 2 | **Ultra+** | vs -U | vs level 2 | cmix v21 | enc s | dec s | RSS enc/dec MB | frame | RT |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| audio__esc50-3-100018 | 262,144 | 132,173 | 132,173 | **132,173** | +0.00% | +0.00% |  | 1344 | 1 | 561/3 | v12 | OK |
+| audio__esc50-5-103415 | 262,144 | 120,606 | 120,606 | **120,606** | +0.00% | +0.00% |  | 1604 | 0 | 586/3 | v12 | OK |
+| code__jxl-cc | 262,144 | 37,250 | 37,250 | **35,087** | -5.81% | -5.81% |  | 162 | 151 | 332/305 | v13 | OK |
+| code__py-stdlib | 262,144 | 40,208 | 40,208 | **38,166** | -5.08% | -5.08% |  | 161 | 140 | 305/304 | v13 | OK |
+| container__bash-pdf | 262,144 | 242,455 | 242,455 | **241,879** | -0.24% | -0.24% |  | 147 | 165 | 346/346 | v13 | OK |
+| container__comm-jar | 262,144 | 243,797 | 243,797 | **242,648** | -0.47% | -0.47% |  | 142 | 170 | 345/346 | v13 | OK |
+
+Reading:
+- 31 of 31 round trips OK. Smaller than `-U` on 26 cuts and equal on 5: two audio cuts, two 8-bit photos and owid-co2,
+  where kaud, kimg or the table path keep their streams.
+- The holdout total is −1.64% against −2.36% on dev. The holdout has more containers and weights, where the gain is small.
+- The per-type pattern repeats:
+  - text −4.5 to −6.1% (xml from enwik8 −3.9%), code −5.1 to −5.8%, JSON −6.3%, logs −0.5 to −6.4%, html −4.3%;
+  - x86 −4.0%, ARM64 −9.5%;
+  - tables −1.8 to −7.1%;
+  - floats, weights and scientific arrays −0.2 to −0.7%.
+- New on the holdout: the foreman video cut is −2.8%. Its blocks went through a CM path that UPX now covers.
