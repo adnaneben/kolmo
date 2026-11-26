@@ -50,6 +50,9 @@ LEVEL_ORDER = {str(n): n for n in range(1, 23)}
 LEVEL_ORDER.update({"ultra": 100, "9e": 9.5, "-": 0})
 
 
+STAMPED = {"zpaq"}
+
+
 def med(xs):
     return statistics.median(xs)
 
@@ -62,7 +65,9 @@ def load(paths, size_only=False):
             r = json.loads(line)
             if r.get("error") or not r["enc_ns"] or bool(r.get("size_only")) != size_only:
                 continue
-            if len(set(r["comp_sha"])) != 1:
+            # zpaq writes the archive's date into it: compare its sizes, every other tool's bytes.
+            ident = r["comp_bytes"] if r["tool"] in STAMPED else r["comp_sha"]
+            if len(set(ident)) != 1:
                 raise SystemExit(f"non-deterministic output: {r['config']} {r['input']}")
             # Later rows for the same cell (a re-run) replace earlier ones.
             cells[(r["config"], r["input"], r.get("snapshot"))] = r
@@ -178,10 +183,13 @@ def draw(pts, title, subtitle, path_base):
 
 def check_sizes(timed, sized):
     """A timed cell must produce the same compressed bytes as the size-only pass of the same binary."""
-    ref = {(r["config"], r["input"], r["binary_sha256"]): r["comp_sha"][0] for r in sized}
+    def ident(r):
+        return r["comp_bytes"][0] if r["tool"] in STAMPED else r["comp_sha"][0]
+
+    ref = {(r["config"], r["input"], r["binary_sha256"]): ident(r) for r in sized}
     for r in timed:
         k = (r["config"], r["input"], r["binary_sha256"])
-        if k in ref and ref[k] != r["comp_sha"][0]:
+        if k in ref and ref[k] != ident(r):
             raise SystemExit(f"compressed output differs from the size-only pass: {k}")
 
 
@@ -231,12 +239,16 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--set", default="dev")
     ap.add_argument("--note", default="Apple M-series Mac, 1 thread per tool, warm cache")
+    ap.add_argument("--snapshots", default="", help="comma list of Kolmo snapshots to draw (default: all)")
     ap.add_argument("--sizes", action="store_true", help="also write sizes.md/sizes.csv from the size-only rows")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     if a.sizes:
         write_sizes([r for r in load(a.rows, size_only=True) if r["set"] == a.set], a.set, a.out)
     rows = [r for r in load(a.rows) if r["set"] == a.set]
+    if a.snapshots:
+        keep = set(a.snapshots.split(","))
+        rows = [r for r in rows if r["tool"] != "kolmo" or r.get("snapshot") in keep]
     check_sizes(rows, [r for r in load(a.rows, size_only=True) if r["set"] == a.set])
     table = []
     every = []
