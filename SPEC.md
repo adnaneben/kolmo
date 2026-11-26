@@ -171,7 +171,7 @@ positions. Model 4 is not raced: `-x` writes `b0 b1 b2` = `dc b4 01` (text conte
 model-4 stream is version 11; rc3 readers before w4 refuse the stream (unknown model nibble) with `KOLMO_ERR_CORRUPT`.
 **Model nibble registry (codec 7 extended header, `f = 8`).** Assigned: 3 = model 3 (legacy tables); 5, 6, 7 = models
 1, 2, 3 with exact tables; 9 = model 4 (w4); 14, 15 = models 2 and 3 with learning settings, where `b2` is 0 or 1 only.
-Reserved, refused by every decoder: 0-2, 4, 8, 10-13, and `b2` values other than 0 and 1 under nibbles 14 and 15 (bit 7
+11 = Ultra+ (UPX, FORMAT.md §25): valid only in blocks of version-13 frames (opt-in). Reserved, refused by every decoder: 0-2, 4, 8, 10, 12, 13, and `b2` values other than 0 and 1 under nibbles 14 and 15 (bit 7
 of `b2` included). A later CM model takes the next free nibble (10) rather than a new meaning for a field of an
 assigned one, so that every reader from rc3 on refuses it by its nibble, not by the values of the bytes that follow.
 (The unmerged research branch W3 prior wrote its token-shape model as nibble 15 with bit 7 of `b2` set; under this

@@ -78,7 +78,8 @@ static uint32_t kolmo_default_block(const kolmo_params *p, size_t n) {
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
     const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
-    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next; atomic_int err; size_t B;
+    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns, ultra_plus; plan_t pl; atomic_uint next; atomic_int err; size_t B;
+    atomic_int used_upx;    /* Ultra+: a block or leaf was written as a UPX stream (codec 7 model nibble 11): the frame is version 13 */
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint64_t *poff;   /* decode: payload offsets */
     uint64_t rlo, rhi; uint8_t *rdst;   /* range read */
@@ -184,6 +185,7 @@ static void *compress_worker(void *arg) {
     codec_ctx *xp = &S->x;
     xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
     xp->threads_max = J->threads; xp->budget = J->bud;                     /* the elastic match finders (KLZMA, KLZH2) */
+    xp->ultra_plus = J->ultra_plus; xp->used_upx = 0;
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TBL_SLACK(J->B) + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
@@ -667,6 +669,8 @@ coded:;
     if (held) { kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0; kmem_release(held); }   /* left the loop on an error */
     free(input);
     xp->budget = NULL; xp->threads_max = 0;
+    if (xp->used_upx) atomic_store(&J->used_upx, 1);
+    xp->ultra_plus = 0; xp->used_upx = 0;
     if (atomic_load(&J->err)) {                               /* waiting workers must see the failure */
         pthread_mutex_lock(&J->wmu); if (J->wcv_ready) pthread_cond_broadcast(&J->wcv); pthread_mutex_unlock(&J->wmu);
     }

@@ -120,7 +120,7 @@ requested byte range.
 | Off | Size | Field | Value in version 12 |
 |---|---|---|---|
 | 0 | 4 | magic | ASCII `CZN1` |
-| 4 | 1 | version | 12 |
+| 4 | 1 | version | 12 (13 only for opt-in Ultra+ frames that hold a codec 7 model-nibble-11 stream, §25) |
 | 5 | 1 | mode | 0 to 5: the mode the encoder ran in (rt, fast, eco, hc, max, ultra). Its effects on decoding: the working-set bound of graph blocks (§11), and context-mixing graph leaves are valid only under mode 5 (§7.4) |
 | 6 | 4 | reserved | written as 0; ignored by decoders |
 | 10 | 1 | flags | bit 0: block checksums cover the stored payload (§5.1). Bits 1 to 7: 0 |
@@ -2063,3 +2063,65 @@ The 0.0.2 encoder writes models 1 and 4 only. Models 2 and 3, the tuned headers 
 older encoders, so only the vectors cover them. Against the 0.0.2 C decoders, 6,000 mutated streams were decoded
 identically, comparing acceptance, refusal and every output byte. The mutations included header fields, coded bytes,
 truncation, extension and wrong lengths.
+
+## 25. Ultra+ (codec 7, model nibble 11; frame version 13) — opt-in, research stage
+
+**Status.** Written only under the opt-in Ultra+ mode (`--ultra-plus`, `--level ultra+`, `KOLMO_T_ULTRA_PLUS` with mode
+ultra). No default changes. A frame of version 12 never holds this stream, and the version-12 writer is unchanged. Until
+Ultra+ is declared a candidate, the model behind the nibble may still change; a change before then bumps the
+sub-version (the low nibble of byte 4). After that the stream is frozen like the others.
+
+**Frame.** A frame that holds at least one UPX stream (a block of codec 7, or a codec 7 graph leaf) has version byte
+**13**. Otherwise it is exactly a version-12 frame. A version-13 reader accepts versions 12 and 13. It accepts model
+nibble 11 only in blocks of a version-13 frame, and refuses it everywhere else with `KOLMO_ERR_CORRUPT`. Readers
+before this change refuse version 13 as an unknown version.
+
+**Stream.**
+
+```
+size u32 LE          n | 8 << 28 (n < 2^28)
+0xB0                 model nibble 11, sub-version 0
+flags u32 LE         bit 0: model 4 on; bit 1: model 4 with every model-3 context (mask CM_MASK3);
+                     bit 2: model 4's binary mask (else the text mask); bit 3 and bits 24-31: 0;
+                     bits 8-15: LSTM cells H (0 = no LSTM); bits 16-23: model 4's table shift s (2..16 when bit 0 is set)
+par[16] u16 LE       ML0 ML1 T LLR LRO LR LR2 SETS LRD W0 RL PBS APR, then three zeros
+coded bytes          32-bit binary arithmetic coder, 16-bit probabilities (below)
+```
+
+A decoder refuses: a size field whose low 28 bits differ from the block length; reserved flag bits; ML0 or ML1 outside
+2..64; T outside 1..64; RL > 255; PBS > 15; SETS > 0x1ff; any non-zero value in par[13..15].
+
+**Coder.** The registers start at `x1 = 0`, `x2 = 2^32 − 1`; the decoder reads 4 bytes into `x` (past the end: 0xff).
+For a bit with `q = P(1) · 65536` (an integer 1..65535), `xm = x1 + ((x2 − x1) · q >> 16)` in 64-bit. A 1 keeps
+`[x1, xm]`, a 0 keeps `[xm + 1, x2]`. While the top bytes of `x1` and `x2` agree, the encoder emits the top byte of
+`x2`, both shift left by 8 (`x2` refilled with ones), and the decoder shifts in the next byte. The encoder ends with
+the 4 bytes of `x1`, most significant first.
+
+**Model.** The normative model is `src/codecs/upx.c` at the commit that writes the sub-version. Per bit it computes:
+1. model 4 (§24, unchanged) on the same bytes, with the stream's mask and shift and model 4's default learning
+   settings: its final probability, its four mixer outputs, its final mixer's output, and its 2·nm + 3 inputs;
+2. a bank of 38 hashed contexts (orders 1-7, 9, 12, 16, 20, 24 and 32; seven word contexts; two column contexts; six
+   sparse contexts; two indirect contexts; three record contexts; five text-structure contexts). Each context gives a
+   two-rate counter, a 7-bit history state map, a count-state map and a run (byte) prediction;
+3. two match models (minimum lengths ML0 and ML1);
+4. when H > 0, a one-layer byte LSTM (PR #116's: coupled forget gate, BPTT over T bytes, Adam with rate LLR · 10^-4,
+   output layer rate LRO · 10^-4);
+5. nine weight sets of a float mixer (rows chosen by the partial byte, the previous byte, a hash of two bytes, the match
+   state, the word state, a hash of three bytes, the record position, the LSTM's confidence and the context order),
+   a final mixer of their outputs chosen by the partial byte, and five APMs averaged with the final mixer.
+
+**Determinism.** Every float operation is IEEE 754 binary32 with round-to-nearest-even, in a fixed order: sums run by
+input index ascending, starting from 0 (the LSTM's start from the bias). There is no fused multiply-add
+(`-ffp-contract=off`), no `-ffast-math` and no flush-to-zero. `exp` is the library's own `upx_exp`: clamp to
+[−87, 87], round-half-away `k = x · 1.44269504`, two-step Cody-Waite reduction (0.693145752, 1.42860677e−6), a
+degree-6 Horner polynomial, and a multiply by 2^k assembled from the exponent bits. No libm call is made. `stretch` is a
+4096-entry table built by 40 bisection steps of `upx_sig` over [−12, 12]. A probability becomes `q` by truncating
+`p · 65536` toward zero and clamping it to [1, 65535]. Vectorised kernels may only use lane-parallel operations that
+keep this order; any other summation tree needs a new sub-version.
+
+**Memory.** The decode working set is `upx_need(n, flags)` (it is declared in the frame header like every block's).
+It is about 0.4 GB at n = 256 KiB and 1.6 GB at n = 4 MiB without the LSTM.
+
+**Reference and conformance.** `research/ultraplus/uplus.c` encodes and decodes a bare stream. Same-binary round trips
+are SHA-256 checked on every evaluated file (research/ultraplus/RESULTS.md). The `-O0` portable build and the x86-64
+cross-ISA check are the remaining conditions before the mode is a candidate.

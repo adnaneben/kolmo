@@ -10,7 +10,7 @@ static int frame_version_check(const uint8_t *s, size_t n) {
     if (n >= 4 && !memcmp(s, "CZC1", 4)) return KOLMO_ERR_LEGACY;   /* compact profile frame (trained profiles, before version 12) */
     if (n < HDR || memcmp(s, "CZN1", 4)) return KOLMO_ERR_CORRUPT;
     if (s[4] >= 1 && s[4] < KOLMO_MAX_VERSION) return KOLMO_ERR_LEGACY;
-    return s[4] == KOLMO_MAX_VERSION ? 0 : KOLMO_ERR_CORRUPT;
+    return s[4] == KOLMO_MAX_VERSION || s[4] == KOLMO_UPX_VERSION ? 0 : KOLMO_ERR_CORRUPT;
 }
 /* The header and index of a frame, checked without allocating anything (kolmo_original_size, kolmo_frame_size and the
  * public decoders before they allocate): the version, the flags, the index inside the n bytes given, the header and
@@ -105,7 +105,7 @@ static int decode_block(const djob_t *J, uint32_t i, codec_ctx *x, tls_t *S, con
     const parsed_t *P = J->P; const uint8_t *e = P->idx + (size_t)i * IDX;
     size_t len = get32(e), cl = get32(e + 4); int codec = e[12], tflag = e[13];
     size_t meta = 0;
-    x->allow_nplane = 0; x->allow_f2 = 0;
+    x->allow_nplane = 0; x->allow_f2 = 0; upx_allow = P->ver == KOLMO_UPX_VERSION;
     /* graph leaves only (FORMAT.md 8.1): no encoder writes them as a block's codec (rANS and khuf included) */
     if (codec == C_NPLANE || codec == C_PLANES || codec == C_ZRUN || codec == C_RANS || codec == C_KHUF) return KOLMO_ERR_CORRUPT;
     plan_t pl = P->pl;

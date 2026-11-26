@@ -14,6 +14,7 @@
  * liblzma), kolmo_khash64 checksums, no dictionaries or trained profiles (SPEC.md). Versions 1-11 were written by
  * earlier Kolmo builds with library codecs: the decoder refuses them with KOLMO_ERR_LEGACY. */
 #define KOLMO_MAX_VERSION 12
+#define KOLMO_UPX_VERSION 13   /* Ultra+ frames (opt-in): version 12 plus codec 7 model nibble 11 (FORMAT.md §25) */
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
