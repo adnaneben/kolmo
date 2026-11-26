@@ -134,5 +134,5 @@ Reading:
   LSTM gains with size.
 - **LSTM H=128 on dev dickens4m (4,194,258 B):** 847,976 B against 852,404 B without it (−0.52%), at 2.3× the time
   (663 s against 289 s under load). For reference, stock `-U` gives 886,241 B, so Ultra+ is −3.82% without the LSTM and
-  −4.32% with it. **Default from `4b…` on: LSTM on for text streams of 1 MiB and more** (an encoder choice that the
+  −4.32% with it. **Default from `6b4c9dc0` on: LSTM on for text streams of 1 MiB and more** (an encoder choice that the
   stream records in its flags). Holdout check queued.
