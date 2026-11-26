@@ -178,3 +178,15 @@ video and photo blocks, where UPX never wins. Times are from a quieter host than
 - Time: encode 7,824 s (0.0128 MB/s), decode 5,054 s (0.0198 MB/s), on a loaded host and untimed. cmix, by LTCB's ns/B, is
   about 62,000 s each way.
 - Peak RSS: 3.76 GB encoding, 3.65 GB decoding. cmix: 30,950 MB.
+
+## LSTM size (dev, 4 MB, bare stream `uplus7`)
+
+| file | no LSTM | H=128 | H=255 (field maximum) |
+|---|---:|---:|---:|
+| text__dickens | 852,404 (177 s) | 847,976 (−0.52%, 663 s) | **843,996 (−0.99%, 912 s)** |
+| xml__silesia-xml | 173,281 (162 s) | 173,192 (−0.05%, 465 s) | — |
+
+Times come from a loaded host. Default from the next commit on: **H = 255 on text streams of 1 MiB and more.** The
+reymont holdout confirmation is queued. The xml shows that the gain depends on the content (markup gains almost
+nothing), and this is where a cheaper per-stream gate could save time later. A first H=256 run was void, because
+the field holds 1-255 cells and 256 wrapped to 0.
