@@ -1,10 +1,4 @@
-# Startup-aware speed floors for small files: B passes the holdout2 gates (report held for the reference replay)
-
-> **Status: final report held until the reference replay is in.** The quiet job measured every deciding phase:
-> launch constants, calibration, development, the sealed holdout2 and the replication. It then exited with rc=2
-> before the explanatory replay on the B26 inputs ([below](#what-this-does-not-settle), item 3). The replay is
-> re-queued on its own. Under the protocol it cannot change the holdout2 gate results below. The final write-up waits
-> for it, at the coordinator's request.
+# Startup-aware speed floors for small files: B qualifies on the sealed holdout2 (opt-in only; owner decides)
 
 **Sealed `holdout2`, quiet host: the launch-constant table B passes all five preregistered gates.**
 It met 34 of 66 end-to-end floor cases, against 30 for stock and 30 for the duplicate stock arm, which agreed with
@@ -21,7 +15,7 @@ constants are specific to this host ([what this does not settle](#what-this-does
 [Protocol, preregistered, with amendment 1](protocol.md) · [Harness](run.py) · [holdout2 cases](results-quiet/holdout2-cases.csv) ·
 [Replication cases](results-quiet/holdout-cases.csv) · [Development cases](results-quiet/dev-cases.csv) ·
 [Gates](results-quiet/score.json) · [Raw rounds and load](results-quiet/raw.jsonl.gz) · [Tables](results-quiet/) ·
-[Opt-in table B](results-quiet/B-launch.tab)
+[Opt-in table B](results-quiet/B-launch.tab) · [Reference replay](results-quiet/reference/reference-cases.csv)
 
 ## What was tested
 
@@ -128,13 +122,38 @@ misses: +7.2% over all 66 cases and +35.4% on the 24 jointly missed cases. Gains
 2. **Host specificity.** Pe and Pd are this Mac's launch cost: 1.77 ms on a quiet host, 4.5 ms on the loaded one. The
    built-in rates come from an x86 VM. Table B is a valid opt-in for this host. Another machine should re-measure its
    own launch constants with `run.py measure` (21 one-byte round trips) before using it.
-3. **Reference replay not yet run.** The explanatory replay on the three recorded B26 inputs (GMP manual, gpgv, the
-   GnuTLS PNG) did not run in the quiet window. In `quiet-run.sh`, the table-name lookup had a dict literal inside a
-   nested `$(...)`. macOS `/bin/bash` 3.2 brace-expanded it into two broken arguments, so the job exited with rc=2
-   after the measure phases had finished and been scored. Only the replay is re-queued
-   (`evidence/startup-floors/quiet-reference.sh`, brace-free, checked under bash 3.2).
+3. **The B26 motivating misses were mostly a host effect.** See the [reference replay](#reference-replay-on-the-recorded-b26-inputs-quiet-host-explanatory-only).
+   On this quiet Mac, stock already meets GMP `decode>=30` and `decode>=80`. B neither helps nor hurts on the three
+   B26 inputs.
 4. **One host, one night.** The evidence is one quiet window on one Mac. The duplicate arm matched stock on all 132
    holdout cases, so timing noise is small next to the gains, but no second machine was measured.
+
+## Reference replay on the recorded B26 inputs (quiet host, explanatory only)
+
+This replay compares stock and B on the GMP manual (gmp.info-1), gpgv and the GnuTLS handshake PNG, with 1 warmup
+and 7 scored rounds. It ran on 2026-11-26 from 06:06Z to 06:19Z with the same frozen harness, as a separate job: the
+first job's lookup of the replay table failed under macOS bash 3.2, so the job exited with rc=2 after the deciding
+phases. The 1-minute load before rounds had median 8.6 and maximum 11.9. Rounds 3 and 7 each ended above 12 (at 14.0 and
+14.3) and were redone once. Their 138 rows are kept in raw.jsonl with `invalid_load: true`. No round was aborted, and every
+cell has exactly one valid observation per round. All 690 round trips were exact.
+[Cases](results-quiet/reference/reference-cases.csv) · [Score](results-quiet/reference/reference-score.json) ·
+[Raw](results-quiet/reference/raw.jsonl.gz) · [Log](results-quiet/reference/run.log)
+
+| | stock | B |
+|---|---:|---:|
+| Floor cases met, out of 18 | 13 | 13 |
+| Bytes on met cases | 1,688,258 | 1,688,258 |
+| New misses | n/a | none |
+
+- **GMP manual.** Both arms meet `decode>=30`: `ratio` at 31.0 MB/s for stock, 30.6 for B. Both meet `decode>=80`:
+  `hc` at 112.9 and 109.2 MB/s. These two were B26 misses, but on this quiet Mac stock already meets them. Both arms miss
+  `encode>=60`. Their `balanced-n` route reaches 41–43 MB/s once its trial compressions are charged; forced directly,
+  `balanced-n` passes. The miss is selection cost, and launch constants do not remove it.
+- **gpgv.** Same routes and frames as stock on every floor. The new `decode>=80` miss C caused in the loaded run is
+  absent.
+- **Handshake PNG.** No setting meets `encode>=20/60` or `decode>=30/80`. B falls back to `speed` and stores 7,084 B
+  against stock's 6,901–7,063 B. This is the same infeasible-fallback byte cost as on holdout2, at 0.3–2.7% on this
+  file.
 
 ## Opt-in use
 
