@@ -1,0 +1,6 @@
+gcc16 rc warnings=2
+plan/planner.c:727:61: warning: pointer 'owned_rec' used after 'free' [-Wuse-after-free=]
+core/index.c:498:16: warning: pointer 'nl' used after 'free' [-Wuse-after-free=]
+gcc16 rcfix warnings=0
+gcc16 rcfix bindings/python/native/src warnings=0
+gcc16 rcfix bindings/rust/native/src warnings=0

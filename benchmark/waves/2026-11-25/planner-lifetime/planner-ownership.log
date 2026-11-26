@@ -1,0 +1,112 @@
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/arch/cpu.c -o build/asan/src/arch/cpu.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/predict.c -o build/asan/src/algo/predict.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/planes.c -o build/asan/src/algo/planes.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/mixer.c -o build/asan/src/algo/mixer.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/video.c -o build/asan/src/algo/video.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/lzp.c -o build/asan/src/algo/lzp.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/qlfc.c -o build/asan/src/algo/qlfc.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/par.c -o build/asan/src/algo/par.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/sais/sais.c -o build/asan/src/algo/sais/sais.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/codecs/bwt_stream.c -o build/asan/src/codecs/bwt_stream.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/khuf.c -o build/asan/src/algo/khuf.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/krans.c -o build/asan/src/algo/krans.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/klz.c -o build/asan/src/algo/klz.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/klzma.c -o build/asan/src/algo/klzma.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/algo/khash.c -o build/asan/src/algo/khash.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/arch/aarch64/gear_aarch64.S -o build/asan/src/arch/aarch64/gear_aarch64.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off  -Isrc -c src/arch/aarch64/hist_aarch64.S -o build/asan/src/arch/aarch64/hist_aarch64.o
+ar rcs build/libkolmoarch-asan.a build/asan/src/arch/cpu.o build/asan/src/algo/predict.o build/asan/src/algo/planes.o build/asan/src/algo/mixer.o build/asan/src/algo/video.o build/asan/src/algo/lzp.o build/asan/src/algo/qlfc.o build/asan/src/algo/par.o build/asan/src/algo/sais/sais.o build/asan/src/codecs/bwt_stream.o build/asan/src/algo/khuf.o build/asan/src/algo/krans.o build/asan/src/algo/klz.o build/asan/src/algo/klzma.o build/asan/src/algo/khash.o build/asan/src/arch/aarch64/gear_aarch64.o build/asan/src/arch/aarch64/hist_aarch64.o
+cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off -ffp-contract=off  -Isrc tests/test_planner_ownership.c build/libkolmoarch-asan.a -o build/test-planner-ownership-asan -Wl,-dead_strip -lpthread -lm
+In file included from tests/test_planner_ownership.c:15:
+In file included from tests/../src/kolmo.c:83:
+tests/../src/codecs/audio.c:545:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+  545 | __attribute__((optimize("fp-contract=fast"))) static void cov_row(const double *xd, int n, int maxord, double *row)
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from tests/test_planner_ownership.c:15:
+In file included from tests/../src/kolmo.c:88:
+tests/../src/transforms/graph.c:558:15: warning: use of logical '&&' with constant operand [-Wconstant-logical-operand]
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^  ~~~~~~~~~~~~~~~~~~~
+tests/../src/transforms/graph.c:558:15: note: use '&' for a bitwise operation
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~
+      |               &
+tests/../src/transforms/graph.c:558:15: note: remove constant to silence this warning
+  558 |     if (S->zr && (KOLMO_F2_MASK & 4) && n >= 64 && zr_count_nonzero(p, n) * (fastleaf ? KG_ZR_FAST_DIV : 2) <= n) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+2 warnings generated.
+./build/test-planner-ownership-asan
+seed=88172645463325252 kind=0 effort=0 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=0 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=0 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=0 light=4 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=1 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=1 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=1 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=0 effort=1 light=4 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=0 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=0 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=0 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=0 light=4 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=1 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=1 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=1 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=1 effort=1 light=4 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=0 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=0 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=0 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=0 light=4 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=1 light=0 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=1 light=0 native=1 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=1 light=4 native=0 plan=9 live_records=0
+seed=88172645463325252 kind=2 effort=1 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=0 effort=0 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=0 effort=0 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=0 effort=0 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=0 effort=0 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=0 effort=1 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=0 effort=1 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=0 effort=1 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=0 effort=1 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=1 effort=0 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=1 effort=0 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=1 effort=0 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=1 effort=0 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=1 effort=1 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=1 effort=1 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=1 effort=1 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=1 effort=1 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=2 effort=0 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=2 effort=0 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=2 effort=0 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=2 effort=0 light=4 native=1 plan=9 live_records=0
+seed=731094 kind=2 effort=1 light=0 native=0 plan=9 live_records=0
+seed=731094 kind=2 effort=1 light=0 native=1 plan=9 live_records=0
+seed=731094 kind=2 effort=1 light=4 native=0 plan=9 live_records=0
+seed=731094 kind=2 effort=1 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=0 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=0 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=0 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=0 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=0 effort=1 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=0 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=1 effort=1 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=0 light=4 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=0 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=0 native=1 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=4 native=0 plan=9 live_records=0
+seed=1700000001 kind=2 effort=1 light=4 native=1 plan=9 live_records=0
+PLANNER_OWNERSHIP cases=72 record_allocations=48 graph_cases=72 leaked_cases=0 outstanding=0
+PLANNER OWNERSHIP PASSED

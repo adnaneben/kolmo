@@ -1,0 +1,8 @@
+In file included from kolmo.c:96:
+plan/planner.c: In function 'make_plan':
+plan/planner.c:727:61: warning: pointer 'owned_rec' used after 'free' [-Wuse-after-free=]
+  727 |         if (owned_rec && chosen != 3) { free(owned_rec); if (keep.rec == owned_rec) keep.rec = NULL; }
+      |                                                             ^
+plan/planner.c:727:41: note: call to 'free' here
+  727 |         if (owned_rec && chosen != 3) { free(owned_rec); if (keep.rec == owned_rec) keep.rec = NULL; }
+      |                                         ^~~~~~~~~~~~~~~

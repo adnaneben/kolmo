@@ -1,0 +1,19 @@
+ownership rc rc=0 PLANNER_OWNERSHIP cases=72 record_allocations=48 graph_cases=72 leaked_cases=0 outstanding=0
+ownership rcfix rc=0 PLANNER_OWNERSHIP cases=72 record_allocations=48 graph_cases=72 leaked_cases=0 outstanding=0
+v12 rc: V12 CORPUS PASSED (630 frozen frames decode to their originals) V12 CORPUS PASSED (630 frozen frames decode to their originals) 
+v12 rcfix: V12 CORPUS PASSED (630 frozen frames decode to their originals) V12 CORPUS PASSED (630 frozen frames decode to their originals) 
+determinism rc rc=0 152 frames checked; OK
+determinism rcfix rc=0 152 frames checked; OK
+frame pairs=342 failures=0
+timing skipped: 1-min load 345 >= 12 (lane rule)
+check-features-b rc rc=0
+ok: 3712 checks, 0 failed
+ok: 3742 checks, 0 failed
+check-features-b rcfix rc=0
+ok: 3712 checks, 0 failed
+ok: 3742 checks, 0 failed
+make check rcfix rc=0
+ultra level 2 int64 series: model 1048574 B, fast 8388608 B
+the same frame under a fast header -> -1
+test_decoder_hardening: ALL PASSED
+ALL_DONE

@@ -724,7 +724,7 @@ structured_done:
                 keep = pl; keep.t = T_KG; keep.a = 0; keep.b = DEC_B(d64cols); keep.c = (int)d64h; keep.kgw = DEC_KGW(d64cols); keep.verify = 1; chosen = 8;
             }
         }
-        if (owned_rec && chosen != 3) { free(owned_rec); if (keep.rec == owned_rec) keep.rec = NULL; }
+        if (owned_rec && chosen != 3) { if (keep.rec == owned_rec) keep.rec = NULL; free(owned_rec); }   /* clear the alias while the record plan is live */
         if (chosen >= 2) pl = keep;
         else if (pl.t == T_SHUF && n >= (1u << 20)) {      /* the same probes for a byte shuffle */
             static const int at16[4] = {1, 5, 11, 15}; const size_t u = (size_t)pl.a * pl.b, E = (32u << 10) / u * u;

@@ -1,0 +1,3 @@
+make: `build/kolmo' is up to date.
+make: `build/test-v12-corpus' is up to date.
+make: `build/test-v12-corpus-asan' is up to date.

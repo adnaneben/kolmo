@@ -1,0 +1,16 @@
+In file included from kolmo.c:96:
+plan/planner.c: In function 'make_plan':
+plan/planner.c:727:61: warning: pointer 'owned_rec' used after 'free' [-Wuse-after-free=]
+  727 |         if (owned_rec && chosen != 3) { free(owned_rec); if (keep.rec == owned_rec) keep.rec = NULL; }
+      |                                                             ^
+plan/planner.c:727:41: note: call to 'free' here
+  727 |         if (owned_rec && chosen != 3) { free(owned_rec); if (keep.rec == owned_rec) keep.rec = NULL; }
+      |                                         ^~~~~~~~~~~~~~~
+In file included from kolmo.c:120:
+core/index.c: In function 'ix_block':
+core/index.c:498:16: warning: pointer 'nl' used after 'free' [-Wuse-after-free=]
+  498 |             if (nl) break;
+      |                ^
+core/index.c:497:62: note: call to 'free' here
+  497 |             kx_bytes(&R, e, nl ? (size_t)(nl - e) + 1 : el); free(e);
+      |                                                              ^~~~~~~
