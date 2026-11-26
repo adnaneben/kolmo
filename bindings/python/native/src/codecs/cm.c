@@ -1252,6 +1252,8 @@ static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_
 /* Ultra+ (codec 7 model nibble 11, FORMAT.md §25): valid only in frames of version 13. The decoder sets upx_allow for the
  * thread that decodes a block of such a frame (core/decode.c); every other reader refuses the nibble. */
 static __thread int upx_allow;
+static __thread int upx_want;       /* encoder: Ultra+ is on for this thread's block (core/blocks.c; codec 25 helpers inherit it) */
+static __thread int upx_cmp_used;   /* encoder: a codec-25 part of this thread's block was written as a UPX stream */
 #include "upx.c"
 /* a stream written with learning settings (extended header, model nibble 14 or 15): its frame is version 11 */
 static int cm_stream_tuned(const uint8_t *z, size_t zn) { return zn >= 8 && (z[3] >> 4) == 8 && ((z[4] >> 4) >= 14 || (z[4] >> 4) == 9); }

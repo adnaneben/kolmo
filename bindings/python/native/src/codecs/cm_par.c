@@ -23,6 +23,7 @@ static int cmp_getv(const uint8_t *p, size_t n, size_t *i, uint64_t *v) {
 }
 typedef struct {
     const uint8_t *in; uint8_t *out; const size_t *rawn, *rawo, *cn, *co; size_t *res; uint8_t **buf; int np, model, dec, bbcap; atomic_int next, err;
+    int upx_allow, upx_want; atomic_int upx_used;   /* Ultra+: the caller thread's settings, for the helper threads */
 } cmp_job;
 static void *cmp_worker(void *a) {
     cmp_job *j = a;
@@ -36,6 +37,12 @@ static void *cmp_worker(void *a) {
             j->buf[k] = malloc(cap);
             /* each part: the raced learning settings of codec 7 (one thread each: the parts already run side by side) */
             j->res[k] = j->buf[k] ? cm_compress_raced(p, n, j->buf[k], cap, j->model == 1 ? 1 : 4, j->bbcap, 1, cm4_mask_for(p, n)) : 0;
+            if (j->res[k] && j->upx_want && j->model != 1 && n >= 64) {   /* Ultra+: the part's UPX stream when smaller */
+                uint8_t *t = malloc(j->res[k]); uint16_t par[UPX_NPAR]; upx_default_par(par);
+                size_t u = t ? upx_compress(p, n, t, j->res[k], upx_default_flags(looks_text(p, n), n), par) : 0;
+                if (u && u < j->res[k]) { memcpy(j->buf[k], t, u); j->res[k] = u; atomic_store(&j->upx_used, 1); }
+                free(t);
+            }
             if (!j->res[k]) atomic_store(&j->err, 1);
         }
     }
@@ -45,11 +52,12 @@ static void *cmp_worker(void *a) {
  * so under memory pressure the parts run on fewer threads, with the same result. The calling thread always runs. */
 typedef struct { cmp_job *j; kmem_ctx ctx; uint64_t unit; } cmp_helper_arg;
 static void *cmp_helper(void *a) {      /* releases its own reservation when done: the caller may be waiting for it */
-    cmp_helper_arg *h = a; kmem_ctx_set(h->ctx); kmem_tls_job = 1;
+    cmp_helper_arg *h = a; kmem_ctx_set(h->ctx); kmem_tls_job = 1; upx_allow = h->j->upx_allow; upx_want = h->j->upx_want;
     cmp_worker(h->j);
     kmem_tls_job = 0; kmem_release(h->unit); return NULL;
 }
 static void cmp_run(cmp_job *j, int threads, uint64_t unit) {
+    j->upx_allow = upx_allow; j->upx_want = upx_want; atomic_init(&j->upx_used, 0);
     if (threads > j->np) threads = j->np;
     if (threads > 64) threads = 64;
     pthread_t th[64]; int started = 0; cmp_helper_arg h = {j, kmem_ctx_get(), unit};
@@ -60,6 +68,7 @@ static void cmp_run(cmp_job *j, int threads, uint64_t unit) {
     }
     cmp_worker(j);
     for (int t = 0; t < started; t++) pthread_join(th[t], NULL);
+    if (atomic_load(&j->upx_used)) upx_cmp_used = 1;
 }
 /* parts: np sizes summing to n (each > 0); model 1, 2 or 3, or 0: model 3 for text parts, else 2 (codec 7's rule).
  * 0 on failure or when the result does not fit cap. */

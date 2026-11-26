@@ -2071,7 +2071,8 @@ ultra). No default changes. A frame of version 12 never holds this stream, and t
 Ultra+ is declared a candidate, the model behind the nibble may still change; a change before then bumps the
 sub-version (the low nibble of byte 4). After that the stream is frozen like the others.
 
-**Frame.** A frame that holds at least one UPX stream (a block of codec 7, or a codec 7 graph leaf) has version byte
+**Frame.** A frame that holds at least one UPX stream (a block of codec 7, a codec 7 graph leaf, or a part of a codec 25
+block) has version byte
 **13**. Otherwise it is exactly a version-12 frame. A version-13 reader accepts versions 12 and 13. It accepts model
 nibble 11 only in blocks of a version-13 frame, and refuses it everywhere else with `KOLMO_ERR_CORRUPT`. Readers
 before this change refuse version 13 as an unknown version.
@@ -2084,12 +2085,12 @@ size u32 LE          n | 8 << 28 (n < 2^28)
 flags u32 LE         bit 0: model 4 on; bit 1: model 4 with every model-3 context (mask CM_MASK3);
                      bit 2: model 4's binary mask (else the text mask); bit 3 and bits 24-31: 0;
                      bits 8-15: LSTM cells H (0 = no LSTM); bits 16-23: model 4's table shift s (2..16 when bit 0 is set)
-par[16] u16 LE       ML0 ML1 T LLR LRO LR LR2 SETS LRD W0 RL PBS APR, then three zeros
+par[16] u16 LE       ML0 ML1 T LLR LRO LR LR2 SETS LRD W0 RL PBS APR FM, then two zeros
 coded bytes          32-bit binary arithmetic coder, 16-bit probabilities (below)
 ```
 
 A decoder refuses: a size field whose low 28 bits differ from the block length; reserved flag bits; ML0 or ML1 outside
-2..64; T outside 1..64; RL > 255; PBS > 15; SETS > 0x1ff; any non-zero value in par[13..15].
+2..64; T outside 1..64; RL > 255; PBS > 15; SETS > 0x1ff; FM > 64; any non-zero value in par[14..15].
 
 **Coder.** The registers start at `x1 = 0`, `x2 = 2^32 − 1`; the decoder reads 4 bytes into `x` (past the end: 0xff).
 For a bit with `q = P(1) · 65536` (an integer 1..65535), `xm = x1 + ((x2 − x1) · q >> 16)` in 64-bit. A 1 keeps
@@ -2108,7 +2109,8 @@ the 4 bytes of `x1`, most significant first.
    output layer rate LRO · 10^-4);
 5. nine weight sets of a float mixer (rows chosen by the partial byte, the previous byte, a hash of two bytes, the match
    state, the word state, a hash of three bytes, the record position, the LSTM's confidence and the context order),
-   a final mixer of their outputs chosen by the partial byte, and five APMs averaged with the final mixer.
+   a final mixer of their outputs chosen by the partial byte, and five APMs averaged with the final mixer. When FM > 0 a
+   learned mixer (a row per bit position, rate FM · 10^-4) of the stretched outputs is averaged in as well.
 
 **Determinism.** Every float operation is IEEE 754 binary32 with round-to-nearest-even, in a fixed order: sums run by
 input index ascending, starting from 0 (the LSTM's start from the bias). There is no fused multiply-add
@@ -2120,7 +2122,9 @@ degree-6 Horner polynomial, and a multiply by 2^k assembled from the exponent bi
 keep this order; any other summation tree needs a new sub-version.
 
 **Memory.** The decode working set is `upx_need(n, flags)` (it is declared in the frame header like every block's).
-It is about 0.4 GB at n = 256 KiB and 1.6 GB at n = 4 MiB without the LSTM.
+It is about 0.4 GB at n = 256 KiB and 1.6 GB at n = 4 MiB without the LSTM. In a version-13 frame
+the bound for a graph block's context-mixing leaves (§11) is the larger of model 4's bound and `upx_need` for a leaf of
+2·raw + 65536 bytes with every model-3 context and 255 LSTM cells.
 
 **Reference and conformance.** `research/ultraplus/uplus.c` encodes and decodes a bare stream. Same-binary round trips
 are SHA-256 checked on every evaluated file (research/ultraplus/RESULTS.md). The `-O0` portable build and the x86-64

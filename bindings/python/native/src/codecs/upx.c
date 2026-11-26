@@ -18,9 +18,9 @@
  * Stream (codec 7, extended header): size u32 (n | 8 << 28) | 0xB0 | flags u32 LE | par[16] u16 LE | coded bytes.
  * flags: bit 0 model 4 on; bit 1 model 4 with every model-3 context; bit 2 model 4's binary mask (else text);
  * bits 8-15 LSTM cells (0 = none); bits 16-23 model 4's table shift. */
-enum { UPX_ML0, UPX_ML1, UPX_T, UPX_LLR, UPX_LRO, UPX_LR, UPX_LR2, UPX_SETS, UPX_LRD, UPX_W0, UPX_RL, UPX_PBS, UPX_APR, UPX_NPAR = 16 };
-static const char *upx_par_name[UPX_NPAR] = {"UP_ML0", "UP_ML1", "UP_T", "UP_LLR", "UP_LRO", "UP_LR", "UP_LR2", "UP_SETS", "UP_LRD", "UP_W0", "UP_RL", "UP_PBS", "UP_APR"};
-static const int upx_par_def[UPX_NPAR] = {6, 20, 30, 50, 1000, 5, 5, 0x1ff, 100, 0, 60, 2, 20};
+enum { UPX_ML0, UPX_ML1, UPX_T, UPX_LLR, UPX_LRO, UPX_LR, UPX_LR2, UPX_SETS, UPX_LRD, UPX_W0, UPX_RL, UPX_PBS, UPX_APR, UPX_FM, UPX_NPAR = 16 };
+static const char *upx_par_name[UPX_NPAR] = {"UP_ML0", "UP_ML1", "UP_T", "UP_LLR", "UP_LRO", "UP_LR", "UP_LR2", "UP_SETS", "UP_LRD", "UP_W0", "UP_RL", "UP_PBS", "UP_APR", "UP_FM"};
+static const int upx_par_def[UPX_NPAR] = {6, 20, 30, 50, 1000, 5, 5, 0x1ff, 100, 0, 60, 2, 20, 0};
 /* ---------------- deterministic float helpers ---------------- */
 static inline float upx_exp(float x) {
     if (x > 87.f) x = 87.f; if (x < -87.f) x = -87.f;
@@ -207,6 +207,7 @@ typedef struct {
     uint32_t *mh[2]; uint32_t mbits; int mminl[2]; size_t mptr[2]; int mlen[2]; int mexp[2];
     uint16_t mp[2][64][2]; float mlast_p[2];
     float pr;                                  /* final probability (0,1) */
+    float fx[8], fw[8][8], fp;                 /* learned final mixer (par FM) */
     int ninp; int nm4;
     double bits_m4, bits_mix, bits_final;
 } upx_t;
@@ -389,6 +390,12 @@ static float upx_predict(upx_t *U) {
     float pa4 = upx_apm_p(&U->a4, d2, (int)(upx_mlen_q(U->mlen[0]) * 2 + (U->mexp[0] >= 0 ? ((U->mexp[0] >> (7 - bp)) & 1) : 0)) * 256 + (int)c0);
     float pa5 = upx_apm_p(&U->a5, d2, (int)(upx_hmix(c0 ^ U->word0 * 31u) >> 16));
     float pf = (2.f * M->p2 + pa1 + pa2 + 2.f * pa3 + pa4 + pa5) * 0.125f;
+    if (U->par[UPX_FM]) {   /* learned final mixer over the stretched mixer and APM outputs, a row per bit position */
+        float *fx = U->fx, *fw = U->fw[bp]; float d = 0.f;
+        fx[0] = d2; fx[1] = upx_stf(pa1); fx[2] = upx_stf(pa2); fx[3] = upx_stf(pa3); fx[4] = upx_stf(pa4); fx[5] = upx_stf(pa5); fx[6] = upx_stf(pf);
+        for (int i = 0; i < 7; i++) d += fw[i] * fx[i];
+        U->fp = upx_sig(upx_clamp(d, -15.f, 15.f)); pf = 0.5f * (pf + U->fp);
+    }
     (void)p4;
     pf = upx_clamp(pf, 1.f / 65536.f, 1.f - 1.f / 65536.f);
     return U->pr = pf;
@@ -406,6 +413,7 @@ static void upx_update(upx_t *U, int y) {
         float e = ((float)y - M->pout[s]) * M->lr * lrm; float *w = M->w[s] + (size_t)M->sel[s] * UPX_NIMAX;
         for (int i = 0; i < ni; i++) w[i] += e * x[i];
     }
+    if (U->par[UPX_FM]) { float e = ((float)y - U->fp) * (U->par[UPX_FM] * 1e-4f); float *fw = U->fw[U->bp]; for (int i = 0; i < 7; i++) fw[i] += e * U->fx[i]; }
     upx_apm_upd(&U->a1, y); upx_apm_upd(&U->a2, y); upx_apm_upd(&U->a3, y); upx_apm_upd(&U->a4, y); upx_apm_upd(&U->a5, y);
     /* bank */
     upx_bank *B = &U->B;
@@ -451,7 +459,8 @@ static void upx_update(upx_t *U, int y) {
 }
 
 static upx_t *upx_new(uint8_t *buf, size_t n, uint32_t flags, const uint16_t *par) {
-    upx_t *U = calloc(1, sizeof *U); if (!U) return NULL; memcpy(U->par, par, sizeof U->par); U->buf = buf; U->n = n; U->c0 = 1;
+    upx_t *U = calloc(1, sizeof *U); if (!U) return NULL; memcpy(U->par, par, sizeof U->par);
+    for (int b = 0; b < 8; b++) for (int i = 0; i < 8; i++) U->fw[b][i] = i == 6 ? 1.f : 0.f; U->buf = buf; U->n = n; U->c0 = 1;
     U->use_m4 = flags & 1;
     if (U->use_m4) {
         uint32_t mask = (flags & 2) ? CM_MASK3 : ((flags & 4) ? CM4_MASK_BIN : CM4_MASK_TEXT);
@@ -555,14 +564,18 @@ static int upx_header(const uint8_t *in, size_t cn, size_t n, uint32_t *flags, u
     for (int i = 0; i < UPX_NPAR; i++) par[i] = (uint16_t)(in[9 + 2 * i] | in[10 + 2 * i] << 8);
     if (par[UPX_ML0] < 2 || par[UPX_ML0] > 64 || par[UPX_ML1] < 2 || par[UPX_ML1] > 64 || par[UPX_T] < 1 || par[UPX_T] > UPX_TMAX
         || par[UPX_RL] > 255 || par[UPX_PBS] > 15 || par[UPX_SETS] > 0x1ff) return -1;
-    for (int i = UPX_APR + 1; i < UPX_NPAR; i++) if (par[i]) return -1;
+    if (par[UPX_FM] > 64) return -1;
+    for (int i = UPX_FM + 1; i < UPX_NPAR; i++) if (par[i]) return -1;
     return 0;
 }
+/* n: an upper bound of the stream's length (the block's transformed-length bound); the header gives the length */
 static uint64_t upx_stream_need(const uint8_t *in, size_t cn, size_t n) {
-    uint32_t f; uint16_t par[UPX_NPAR]; return upx_header(in, cn, n, &f, par) ? 0 : upx_need(n, f);
+    uint32_t f, n32; uint16_t par[UPX_NPAR]; if (cn < 4) return 0;
+    memcpy(&n32, in, 4); size_t m = n32 & 0x0FFFFFFFu;
+    return m > n || upx_header(in, cn, m, &f, par) ? 0 : upx_need(m, f);
 }
 static int upx_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
     uint32_t f; uint16_t par[UPX_NPAR]; if (upx_header(in, cn, n, &f, par)) return -1;
     return upx_run(NULL, out, n, f, par, NULL, 0, in + UPX_HDR, cn - UPX_HDR) < 0 ? -1 : 0;
 }
-static void upx_default_par(uint16_t *par) { for (int i = 0; i < UPX_NPAR; i++) par[i] = (uint16_t)(i < 13 ? upx_par_def[i] : 0); }
+static void upx_default_par(uint16_t *par) { for (int i = 0; i < UPX_NPAR; i++) par[i] = (uint16_t)(i <= UPX_FM ? upx_par_def[i] : 0); }

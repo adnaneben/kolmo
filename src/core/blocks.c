@@ -218,7 +218,7 @@ static void *compress_worker(void *arg) {
         /* a block of WAV samples is coded by the audio codec when that is smaller (it was on all 43 WAV files measured,
          * by 17% or more); the rest of the block's path keeps rc2's leaf rule, without the format-2 leaf trials */
         xp->no_f2 = J->aud_prof >= 0 && J->starts[i] < J->aud_end && J->starts[i + 1] > J->aud_off;
-        xp->used_bwt = 0; xp->used_upx = 0;
+        xp->used_bwt = 0; xp->used_upx = 0; upx_want = J->ultra_plus; upx_cmp_used = 0;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
 #ifdef KOLMO_FRONTIER
@@ -455,7 +455,7 @@ static void *compress_worker(void *arg) {
         int cmp_used = 0;
         if (!cl && codec == C_CM && pl.cmp && pl.t == T_TP && tflag && inlen == len) {
             /* ultra, a table chosen as columns: one context-mixing model per column, in parallel (codec 25) */
-            if (pl.cmpz && rs == 0 && len == pl.cmpn && pl.cmpzn <= J->slot - meta) { memcpy(sl + meta, pl.cmpz, pl.cmpzn); cl = pl.cmpzn; }
+            if (pl.cmpz && rs == 0 && len == pl.cmpn && pl.cmpzn <= J->slot - meta && !J->ultra_plus) { memcpy(sl + meta, pl.cmpz, pl.cmpzn); cl = pl.cmpzn; }   /* Ultra+: recoded, parts may take UPX */
             else {
                 size_t parts[256]; int np = 0;
                 for (int j = 0; j < pl.c + 1; j++) { size_t v = get32(sl + 4 * j); if (v) parts[np++] = v; }
@@ -651,7 +651,7 @@ coded:;
         /* Ultra+: the frame is version 13 only when a written block holds a UPX stream (codec 7 model nibble 11 at the
          * block's top level, or a graph block whose leaves were coded while UPX won) */
         if (J->ultra_plus && cl && cl + meta < len && ((codec == C_CM && cl >= 5 && sl[meta + 3] >> 4 == 8 && sl[meta + 4] >> 4 == 11)
-                                                       || (codec == C_GRAPH && xp->used_upx))) atomic_store(&J->used_upx, 1);
+                                                       || (codec == C_GRAPH && xp->used_upx) || (codec == C_CMP && upx_cmp_used))) atomic_store(&J->used_upx, 1);
         uint8_t *e = J->idx + (size_t)i * IDX;
         if (cl == 0 || cl + meta >= len) {                                  /* store raw */
             codec = C_STORE; tflag = 0; tot = 4 + len;
@@ -666,7 +666,7 @@ coded:;
         else put32(e + 8, blk_sum(raw, len));
         e[12] = codec_wire(xp, codec); e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
         /* what decoding this block will need, from the payload as written (the frame declares the largest) */
-        job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec_wire(xp, codec), tflag, len, slot, tot, KOLMO_MAX_VERSION, J->cm_leaves));   /* the codec as written (native ids) */
+        job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec_wire(xp, codec), tflag, len, slot, tot, J->ultra_plus ? KOLMO_UPX_VERSION : KOLMO_MAX_VERSION, J->cm_leaves));   /* the codec as written (native ids) */
         kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0;
         kmem_release(resv); held = 0;
     }
