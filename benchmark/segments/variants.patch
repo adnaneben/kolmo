@@ -1,0 +1,25 @@
+diff --git a/src/core/compress.c b/src/core/compress.c
+index 69e7d51a..4fdefffa 100644
+--- a/src/core/compress.c
++++ b/src/core/compress.c
+@@ -184,6 +184,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
+     if (!p->block && !columns && p->mode >= KOLMO_FAST && p->mode <= KOLMO_MAX && nseg > 1) {
+         uint32_t w = 1;
+         uint64_t prevlen = se[0] - ss[0];                 /* the previous segment as planned, before any merge */
++        uint64_t segmax = 0; for (uint32_t g = 0; g < nseg; g++) if (se[g] - ss[g] > segmax) segmax = se[g] - ss[g];
+         for (uint32_t g = 1; g < nseg; g++) {
+             plan_t *a = &plans[w - 1], *b = &plans[g];
+             const uint64_t glen = se[g] - ss[g];
+@@ -192,8 +193,10 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
+                 && !a->experimental_dna && !b->experimental_dna && !a->experimental_table && !b->experimental_table
+                 && !a->experimental_pcm && !b->experimental_pcm && skind[w - 1] == skind[g] && se[w - 1] == ss[g];
+             if (join && p->mode == KOLMO_MAX && p->level == 1) join = se[g] - ss[w - 1] <= KOLMO_MERGE_L8;
+-            if (join && p->mode == KOLMO_MAX && !(glen <= KOLMO_MERGE_SMALL && prevlen <= KOLMO_MERGE_SMALL))
+-                join = seg_repeat_permille(src + ss[w - 1], (size_t)(se[w - 1] - ss[w - 1]), src + ss[g], (size_t)glen) >= KOLMO_MERGE_SHARE;
++            if (join && p->mode == KOLMO_MAX && p->level != 1 && getenv("XCAPMAX")) join = se[g] - ss[w - 1] <= segmax + ((uint64_t)atoi(getenv("XCAPMAX")) << 20);
++            { const char *xc = getenv("XCAP"); if (join && p->mode == KOLMO_MAX && p->level != 1 && xc) join = se[g] - ss[w - 1] <= ((uint64_t)atoi(xc) << 20); }
++            if (join && p->mode == KOLMO_MAX && (getenv("XNOSMALL") || !(glen <= KOLMO_MERGE_SMALL && prevlen <= KOLMO_MERGE_SMALL)))
++                join = seg_repeat_permille(src + ss[w - 1], (size_t)(se[w - 1] - ss[w - 1]), src + ss[g], (size_t)glen) >= (getenv("XTHR") ? (unsigned)atoi(getenv("XTHR")) : KOLMO_MERGE_SHARE);
+             prevlen = glen;
+             if (join) { se[w - 1] = se[g]; continue; }
+             if (w != g) { plans[w] = plans[g]; memset(&plans[g], 0, sizeof plans[g]); ss[w] = ss[g]; se[w] = se[g]; skind[w] = skind[g]; }

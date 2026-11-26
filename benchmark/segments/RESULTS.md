@@ -144,3 +144,28 @@ main is a1d39559 (`kolmo-base`); #117 is this branch's merge alone (`kolmo-merge
 - This is the trade for -3.85% (mozilla) and -1.48% (samba) at level 9. Whether `-T 10` encode time on such files
   matters more than the ratio is the owner's call.
 
+## Mitigating the encode-time cost (sizes now; timing queued)
+
+Variants of the level 9 rule, all thread-independent: a merge is joined only while the merged unit stays within a
+cap. The research build (`variants.patch`: `XCAP=<MiB>`, `XCAPMAX=<MiB>`) wrote these frames at `-T 2`; they do not
+depend on `-T`. Gain = bytes saved against main at -9.
+
+| rule | mozilla | samba | mix2g.tar | mozilla + samba kept | largest block mozilla / samba |
+|---|---:|---:|---:|---:|---:|
+| main | 13,915,668 | 3,945,893 | 646,767,942 | 0% | 10.3 / 5.4 MB |
+| no cap (#117 as measured above) | 13,380,195 (-3.85%) | 3,887,666 (-1.48%) | 635,691,509 (-1.71%) | 100% | 51.2 / 10.1 MB |
+| cap 32 MiB | 13,511,651 (-2.90%) | 3,887,666 | 635,746,644 (-1.71%) | 78% | 29.3 / 10.1 MB |
+| cap 16 MiB | 13,629,452 (-2.06%) | 3,887,666 | 639,305,505 (-1.15%) | 58% | 15.1 / 10.1 MB |
+| cap 12 MiB | 13,690,333 (-1.62%) | 3,887,666 | 638,107,686 (-1.34%) | 48% | 11.9 / 10.1 MB |
+| cap = largest unmerged segment of the input | 13,763,100 (-1.10%) | 3,945,893 (0) | 635,691,509 (-1.71%) | 26% | 10.3 / 5.4 MB |
+| repeat share >= 1.0% or 1.5% instead of 0.4% | = no cap | = no cap | | 100% | 51.2 / 10.1 MB |
+
+- A higher probe threshold changes nothing: mozilla's large members join through both rules, and the chain still
+  ends in one block.
+- `-T 10` time follows the largest block, because one block is coded by one thread. Only "cap = largest unmerged
+  segment" keeps that block unchanged. It keeps all of mix2g's gain but 26% of mozilla's and none of samba's.
+  samba's gain needs its two runs in one 10.1 MB block (main's largest is 5.4 MB), so every cap that keeps it pays
+  for that block at `-T 10` (+75% measured).
+- `timing2.sh` (queued for the quiet window) measures encode and decode at `-T 1` and `-T 10` for main and every
+  variant above. The choice waits for it.
+
