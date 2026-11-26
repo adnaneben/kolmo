@@ -324,7 +324,7 @@ alone: B/A - 1 without the partner; with: (B+partner)/(A+partner) - 1. Rows: eac
 | partner | type | n | alone | with | label |
 |---|---|---:|---:|---:|---|
 | notf | (all) | 460 | +0.000% | +0.000% | none |
-| stack-klzma | (all) | 95 | +0.000% | +0.000% | none |
+| stack-klzma | (all) | 460 | +0.000% | +0.000% | none |
 | tf-none | (all) | 460 | +0.000% | +0.012% | conflicts |
 | tf-none | numeric | 16 | +0.000% | +0.101% | conflicts |
 

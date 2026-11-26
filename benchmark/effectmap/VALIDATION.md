@@ -39,7 +39,7 @@ the tier formulas. All 21 cases give the expected class.
 | decode | unchanged | unchanged (within noise) |
 | verdict | a byte-identical speedup | **KEEP (byte-identical speedup)**, middle tier pass, 160 cells KEEP-ID and 208 NEUTRAL |
 | gate | none (on for every input) | "none needed": the tree has one leaf, always on (holdout: 402 of 402 rows win) |
-| stacking | not measured | notf: no change. stack-klzma: no change (partial, 95 of 460 rows when this was written). **tf-none: conflicts**: with transforms off, population-i64 (151 KB) is **+16.4% at -5 and +17.7% at -6/-7** (59,766 → 70,334 B at -6, reproduced by hand) |
+| stacking | not measured | notf: no change. stack-klzma: no change (460 rows). **tf-none: conflicts**: with transforms off, population-i64 (151 KB) is **+16.4% at -5 and +17.7% at -6/-7** (59,766 → 70,334 B at -6, reproduced by hand) |
 
 The two outputs agree on what the PR measured. The stacking table adds one finding the PR's evidence does not
 cover. population-i64 is 151 KB, under #121's new 256 KiB minimum for warm-ups. With its transform it is
