@@ -166,6 +166,37 @@ depend on `-T`. Gain = bytes saved against main at -9.
   segment" keeps that block unchanged. It keeps all of mix2g's gain but 26% of mozilla's and none of samba's.
   samba's gain needs its two runs in one 10.1 MB block (main's largest is 5.4 MB), so every cap that keeps it pays
   for that block at `-T 10` (+75% measured).
-- `timing2.sh` (queued for the quiet window) measures encode and decode at `-T 1` and `-T 10` for main and every
-  variant above. The choice waits for it.
+- `timing2.sh` measures encode and decode at `-T 1` and `-T 10` for main and every variant (below).
+
+### Variant timing (quiet window, `timing2.tsv`)
+
+The run of 06:01-06:05 UTC wrote all 96 planned rows, but the load passed 12 for 57 of them (2.61-20.82); those are
+ignored. Valid cells are below (best of the valid repeats); `pending` cells are queued again, and the script now waits
+for the load and retries. "Gain kept" is the share of that file's own -9 gain.
+
+| file | variant | gain kept | encode -T 1 | encode -T 10 | decode -T 1 | decode -T 10 |
+|---|---|---:|---:|---:|---:|---:|
+| mozilla | main | - | 9.43 s | 1.95 s | 0.42 s | 0.09 s |
+| mozilla | full | 100% | 12.39 s (+31%) | 4.86 s (+149%) | 0.40 s (-5%) | 0.40 s (+344%) |
+| mozilla | cap32 | 75% | 10.76 s (+14%) | 3.08 s (+58%) | 0.41 s (-2%) | 0.28 s (+211%) |
+| mozilla | cap16 | 53% | 11.26 s (+19%) | 2.99 s (+53%) | 0.45 s (+7%) | 0.19 s (+111%) |
+| mozilla | cap12 | 42% | pending | pending | pending | pending |
+| mozilla | capmax | 29% | pending | pending | pending | pending |
+| samba | main | - | pending | pending | pending | pending |
+| samba | full | 100% | pending | pending | pending | pending |
+| samba | cap32 | 100% | pending | pending | pending | pending |
+| samba | cap16 | 100% | pending | pending | pending | pending |
+| samba | cap12 | 100% | pending | pending | pending | pending |
+| samba | capmax | 0% | 2.86 s | 0.84 s | 0.27 s | 0.10 s |
+
+**Verdict: no variant keeps more than about half the gain at under +15% time.** The only rules that keep more than
+half of the mozilla + samba gain are no cap (100%), 32 MiB (78%) and 16 MiB (58%). All three have valid mozilla
+timings, and all cost at least +53% encode time at `-T 10` and +111% decode time at `-T 10` (decode is 0.09 s on
+main). The 12 MiB cap (48%) and the "largest unmerged segment" cap (26%) keep less than half, whatever their pending
+timings show. The trade is therefore the owner's decision:
+- keep the full gain (mozilla -3.85%, samba -1.48%, mix2g.tar -1.71% at -9) with its encode cost on the files that
+  merge (+31% at `-T 1`, +149% at `-T 10` on mozilla);
+- or take "cap = largest unmerged segment": mix2g.tar keeps all of its gain, mozilla keeps 29%, samba none, and the
+  largest block stays main's;
+- or drop the merge at level 9.
 
