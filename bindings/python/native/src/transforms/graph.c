@@ -537,7 +537,7 @@ static size_t kg_sel_sub(codec_ctx *x, const void *ctx, const uint8_t *p, size_t
     int cc = codec == C_CM || codec == C_STORE ? R_LZMA : codec; size_t z = 0;
     const int fastleaf = codec == R_LZH && level <= CZ_FAST_LEVEL;
     uint8_t *t = malloc(cap); if (!t) return 0;
-    if (n >= 64) { const int w = kolmo_klzh2_warmups(0); z = codec_compress(x, cc, level, p, n, out, cap); kolmo_klzh2_warmups(w); }   /* a leaf: no KLZH2 warm-ups */
+    if (n >= 64) { const int w = x->no_warm; x->no_warm = 1; z = codec_compress(x, cc, level, p, n, out, cap); x->no_warm = w; }   /* a leaf: no KLZH2 warm-ups */
     if (!z) cc = C_STORE;
     if (codec == C_CM && level == 2 && n >= 64) {
         size_t cz = codec_compress(x, C_CM, level, p, n, t, cap);
@@ -599,9 +599,9 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
                 if ((uint64_t)top * 2 >= s->n) hufonly = 0;
             }
         }
-        const int warm = kolmo_klzh2_warmups(0);   /* a leaf: no KLZH2 warm-ups */
+        const int warm = x->no_warm; x->no_warm = 1;   /* a leaf: no KLZH2 warm-ups */
         size_t z = s->n >= 64 && !flat && !hufonly ? codec_compress(x, cc, level, s->p, s->n, o.p + o.n + 20, zc) : 0;
-        kolmo_klzh2_warmups(warm);
+        x->no_warm = warm;
         /* ultra level 2 (maximum ratio): the leaf also tries context mixing and keeps it only when smaller than the
          * LZMA2 leaf. Smaller graph blocks (measured: -11% to -15% on integer series where the graph is chosen,
          * -2% over a mixed corpus), but such leaves decode at context-mixing speed, up to ~100x slower than LZMA2.
