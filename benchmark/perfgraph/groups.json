@@ -1,0 +1,34 @@
+{
+  "_doc": "Data groups over the PR #48 impact corpus ($V/impact/corpus/manifest.jsonl). Keys are manifest names. 'dev' is the scored set; 'holdout' is kept apart and only measured in its own run (--set holdout), never mixed into the dev charts.",
+  "order": ["text", "code", "json-logs", "csv-tables", "numeric-weights", "binaries", "images", "mixed-tar"],
+  "titles": {
+    "text": "Text (prose, XML)",
+    "code": "Source code",
+    "json-logs": "JSON and logs",
+    "csv-tables": "CSV and tables",
+    "numeric-weights": "Numeric arrays and weights",
+    "binaries": "Executables",
+    "images": "Images",
+    "mixed-tar": "Mixed tar"
+  },
+  "dev": {
+    "text": ["dickens", "silesia-xml"],
+    "code": ["flac-c"],
+    "json-logs": ["api", "loghub"],
+    "csv-tables": ["energy-130col", "ghcn", "ghcn-rows"],
+    "numeric-weights": ["population-i64", "owid-f64", "bf16-10mb", "magika-onnx"],
+    "binaries": ["ooffice-x86"],
+    "images": ["retina", "hubble", "x-ray"],
+    "mixed-tar": ["canterbury"]
+  },
+  "holdout": {
+    "text": ["reymont", "ld30", "enwik8"],
+    "code": ["jxl-cc", "py-stdlib"],
+    "json-logs": ["gharchive", "bgl", "nasa"],
+    "csv-tables": ["owid-co2", "backblaze", "gaia", "bb-rows"],
+    "numeric-weights": ["sao", "ncep-nc", "gpt2-f32", "smollm2-bf16"],
+    "binaries": ["wasmtime-arm64", "osdb"],
+    "images": ["coffee", "astronaut", "mr"],
+    "mixed-tar": ["samba", "mozilla"]
+  }
+}
