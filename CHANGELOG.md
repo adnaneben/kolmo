@@ -107,6 +107,22 @@
   bytes as fast (LZ, Huffman, rANS, store), sort (BWT, KLZMA, audio profile 0) and model (context mixing, FASTQ
   family, GR6+, kimg, audio profile 1). A service bounds work by refusing frames over its model-byte budget.
 
+### Levels 8 and 9: neighbouring segments that share content are merged
+
+Encoder-only change: every frame is still container version 12, so the 0.0.1 and 0.0.2 decoders read it (each
+output measured was decoded by the 0.0.2 binary and checked by SHA-256). Results per file kind, level and thread
+count: `benchmark/segments/RESULTS.md` (review 40, top-10 item 5).
+
+- **Levels 8 and 9 merge neighbouring segments that share content.** Levels 3-7 already coded neighbouring tar
+  members and content runs with equal plans as one unit; levels 8 and 9 coded each one alone. They now merge two
+  neighbours when both are at most 8 MiB, or when the later one repeats the earlier (a sampled 32-byte repeat probe
+  over 16 MiB of each, at least 0.4% of anchors). Merging every equal plan, as levels 3-7 do, cost silesia.tar +1.25%
+  at -9: it put text and binary members into one block, where level 9 would code them with different coders.
+  At -9: mozilla 13,915,668 to 13,380,195 B (-3.85%, level with xz -9), samba 3,945,893 to 3,887,666 B (-1.48%),
+  silesia.tar unchanged (R03 #10/#34). Level 8 merges only up to 2 MiB: it chooses the coder of a larger block from
+  a slice of its middle, which misjudged samba's two merged runs (+4.6%); with the limit, mozilla -8 is -0.40% and
+  nothing measured grows.
+
 ### Encoder routing: nine planner and coder fixes from the 40-reviewer review (and two more)
 
 Encoder-only changes: every frame is still container version 12, and the 0.0.1 and 0.0.2 decoders read every frame
@@ -353,8 +369,11 @@ change keeps the decoded bytes, and what it accepts or refuses, exactly as befor
   read), pipes, exit statuses, SIGPIPE and SIGTERM. README section "Use with tar".
 - **Bounded memory for large pipes.** Standard input that is not a file is read up to 256 MiB. A pipe that ends within
   that is one frame (the same bytes as before and as the same data in a file). A longer pipe is now compressed as a
-  stream of 256 MiB segments, so `tar -I kolmo` of a large tree no longer holds the whole archive in memory. On
-  424 MB, these segments cost no ratio (102,265,009 bytes against 102,867,009 for one frame, level 6). `kolmo -d` and
+  stream of 256 MiB segments, so `tar -I kolmo` of a large tree no longer holds the whole archive in memory. The
+  segments are not free in general: on that change's 424 MB input they cost nothing (102,265,009 bytes against
+  102,867,009 for one frame, level 6), but on a tar of mixed members the fixed cuts cost 3.9-6.3% (two copies of
+  Silesia, -3: 121,988,744 against 115,175,630 B), because a later segment starts inside a member and is not planned
+  as a tar (review 40, R08 #36). `kolmo -d` and
   `-t` read a stream from a pipe segment by segment; before, they read the whole pipe into memory first.
 - **xz and gzip spellings** (`docs/XZ-COMPAT.md`): `-0` and `--fast` are level 1, `--best` is level 9, `-e` and
   `--extreme` are accepted without effect (`-9e` = `-9`), `--uncompress`, `--to-stdout`, `--memory` (= `--memlimit`)
