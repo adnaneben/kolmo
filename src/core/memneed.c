@@ -67,7 +67,14 @@ static uint64_t blk_dec_need(int codec, int tflag, uint64_t raw, const uint8_t *
         case C_GR6: return base + 6 * raw + 64 * KMEM_MIB;
         case C_KIMG: return base + 2 * raw + 4 * KMEM_MIB;     /* samples (int16) and the model */
         case C_AUD: return base + 3 * raw + 16 * KMEM_MIB;
-        case C_GRAPH: return base + 6 * raw + 8 * KMEM_MIB + (cm_leaves ? cm_need_bound((size_t)(2 * raw + 65536)) : 0);
+        case C_GRAPH: {   /* CM leaves: model 4's bound; in Ultra+ frames (version 13) a leaf may be a UPX stream */
+            uint64_t lb = cm_leaves ? cm_need_bound((size_t)(2 * raw + 65536)) : 0;
+            if (cm_leaves && ver == KOLMO_UPX_VERSION && 2 * raw + 65536 < ((uint64_t)1 << 28)) {
+                size_t ln = (size_t)(2 * raw + 65536); uint64_t ub = upx_need(ln, 1 | 2 | 255u << 8 | (uint32_t)cm4_shift_for(ln, CM_MASK3) << 16);
+                if (ub > lb) lb = ub;
+            }
+            return base + 6 * raw + 8 * KMEM_MIB + lb;
+        }
     }
     return base + 2 * raw + 4 * KMEM_MIB;
 }

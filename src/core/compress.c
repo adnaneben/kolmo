@@ -34,7 +34,7 @@ static int64_t vid_compress_frame(const uint8_t *s, size_t n, uint8_t *dst, int 
 static int kolmo_params_valid(const kolmo_params *p) {
     if ((unsigned)p->mode > KOLMO_ULTRA) return 0;
     if (p->level < (p->mode == KOLMO_FAST ? -1 : 0) || (p->level > 22 && !(p->mode == KOLMO_MAX && p->level >= 100 && p->level <= 999))) return 0;
-    int t = p->transforms & ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
+    int t = p->transforms & ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS | KOLMO_T_ULTRA_PLUS);
     return t >= 0 && t <= 3;
 }
 /* Every frame written is version 12 (KOLMO_MAX_VERSION): Kolmo's own coders only, no dictionary, no profile. */
@@ -51,7 +51,8 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
     int native_leaf = (q.transforms & KOLMO_T_NATIVE_LEAF) != 0;
     int typed_huf = (q.transforms & KOLMO_T_TYPED_HUF) != 0;
     int columns = (q.transforms & KOLMO_T_COLUMNS) != 0;
-    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS);
+    int ultra_plus = (q.transforms & KOLMO_T_ULTRA_PLUS) != 0 && q.mode == KOLMO_ULTRA;
+    q.transforms &= ~(KOLMO_T_NATIVE_LEAF | KOLMO_T_TYPED_HUF | KOLMO_T_COLUMNS | KOLMO_T_ULTRA_PLUS);
     columns = columns && q.transforms && q.mode != KOLMO_RT;
     native_leaf = native_leaf && q.mode == KOLMO_FAST && q.transforms; p = &q;
     if (cap < HDR + IDX) return KOLMO_ERR_DSTSIZE;
@@ -216,7 +217,7 @@ static int64_t compress_impl(const uint8_t *src, int input_fd, size_t n, uint8_t
         if (!file_index) goto cleanup;
         dst = file_index;
     }
-    J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2); J.native_leaf = native_leaf; J.columns = columns;   /* ultra level 2 = default ultra + CM graph leaves */
+    J.output_fd = output_fd; J.default_level = !p->level || (p->mode == KOLMO_ULTRA && p->level == 2); J.native_leaf = native_leaf; J.columns = columns; J.ultra_plus = ultra_plus;   /* ultra level 2 = default ultra + CM graph leaves */
     J.idx = dst + HDR; J.codec = codec; J.level = level; J.B = maxb; J.plans = plans; J.bplan = bplan; J.rstart = rstart;
     J.fqthreads = threads / (int)(nb < 256 ? nb : 256) > 0 ? threads / (int)(nb < 256 ? nb : 256) : 1;   /* threads left over per block */
     J.out = array_alloc(nb, sizeof(uint8_t *), 1); J.outlen = array_alloc(nb, sizeof(size_t), 1);
@@ -272,7 +273,7 @@ cleanup:
     free(J.out); free(starts); free(bplan); free(rstart); free(plans); free(ss); free(se); free(skind);
     zs_trim();
     if (ret) { free(file_index); zs_trim(); return ret; }
-    memcpy(dst, "CZN1", 4); dst[4] = KOLMO_MAX_VERSION; dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum;
+    memcpy(dst, "CZN1", 4); dst[4] = atomic_load(&J.used_upx) ? KOLMO_UPX_VERSION : KOLMO_MAX_VERSION; dst[5] = (uint8_t)p->mode; dst[6] = dst[7] = dst[8] = dst[9] = 0; dst[10] = (uint8_t)J.psum;
     dst[11] = kmem_code(atomic_load(&J.dneed) ? atomic_load(&J.dneed) : blk_dec_floor(maxb));   /* decode working set per block */
     put64(dst + 12, n); put32(dst + 20, nb); put32(dst + 24, B);
     uint32_t hc = kolmo_crc32c(0, dst, 28); hc = kolmo_crc32c(hc, dst + HDR, (size_t)nb * IDX); put32(dst + 28, hc);

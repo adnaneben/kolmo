@@ -1249,6 +1249,12 @@ static size_t cm_compress_raced(const uint8_t *in, size_t n, uint8_t *out, size_
     return cm_compress_tm(in, n, out, cap, model, bbcap, b >= 0 ? cm_presets[b] : cm_presets[0], mask);
 }
 
+/* Ultra+ (codec 7 model nibble 11, FORMAT.md §25): valid only in frames of version 13. The decoder sets upx_allow for the
+ * thread that decodes a block of such a frame (core/decode.c); every other reader refuses the nibble. */
+static __thread int upx_allow;
+static __thread int upx_want;       /* encoder: Ultra+ is on for this thread's block (core/blocks.c; codec 25 helpers inherit it) */
+static __thread int upx_cmp_used;   /* encoder: a codec-25 part of this thread's block was written as a UPX stream */
+#include "upx.c"
 /* a stream written with learning settings (extended header, model nibble 14 or 15): its frame is version 11 */
 static int cm_stream_tuned(const uint8_t *z, size_t zn) { return zn >= 8 && (z[3] >> 4) == 8 && ((z[4] >> 4) >= 14 || (z[4] >> 4) == 9); }
 static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
@@ -1267,6 +1273,8 @@ static int cm_decompress(const uint8_t *in, size_t cn, uint8_t *out, size_t n) {
             for (int k = 0; k < 4; k++) mask |= (uint32_t)in[8 + k] << 8 * k;
             if (mask & ~CM_MASK3) return -1;
             lx = 1; bb = (in[4] & 15) + 2; in += 8; cn -= 8;
+        } else if (f == 8 && cn >= 9 && in[4] >> 4 == 11) { /* Ultra+ (version 13 frames only) */
+            return upx_allow ? upx_decompress(in, cn, out, n) : -1;
         } else if (f == 8) {                              /* extended header: model nibble 3 (legacy tables), 5, 6, 7 (exact), 14, 15 (exact, tuned) */
             int mb = cn < 9 ? 0 : in[4] >> 4;
             if (mb != 3 && mb != 5 && mb != 6 && mb != 7 && mb != 14 && mb != 15) return -1;
@@ -1301,6 +1309,7 @@ static uint64_t cm_stream_need(const uint8_t *in, size_t cn, size_t n) {
             if (in[7] > CM4_B2MAX || (mask & ~CM_MASK3)) return 0;
             return cm_mem4(n, (in[4] & 15) + 2, mask) + cm4_chain(n);
         }
+        if (f == 8 && cn >= 9 && in[4] >> 4 == 11) return upx_stream_need(in, cn, n);   /* Ultra+ */
         if (f == 8) {
             int mb = cn < 9 ? 0 : in[4] >> 4;   /* the models cm_decompress accepts, the tuned ones (14, 15) included */
             if (mb != 3 && mb != 5 && mb != 6 && mb != 7 && mb != 14 && mb != 15) return 0;
@@ -1344,7 +1353,15 @@ static size_t cm_compress_auto(const uint8_t *in, size_t n, uint8_t *out, size_t
 }
 static size_t cm_codec_compress(codec_ctx *x, int level, const uint8_t *in, size_t n, uint8_t *out, size_t cap) {
     /* level 1: model 1, as written before; otherwise model 3 for text, 2 for the rest, with the raced settings */
-    return level == 1 ? cm_compress_m(in, n, out, cap, 1) : cm_compress_raced(in, n, out, cap, 4, 0, x ? x->threads : 1, cm4_mask_for(in, n));
+    if (level == 1) return cm_compress_m(in, n, out, cap, 1);
+    size_t z = cm_compress_raced(in, n, out, cap, 4, 0, x ? x->threads : 1, cm4_mask_for(in, n));
+    if (x && x->ultra_plus && n >= 64 && n < ((size_t)1 << 28) && (getenv("KOLMO_UPX_NOGATE") || upx_gate(in, n, looks_text(in, n)))) {   /* Ultra+: the UPX engine too (when its sampled gate passes); the smaller stream is kept */
+        uint8_t *t = malloc(cap); uint16_t par[UPX_NPAR]; upx_default_par(par);
+        size_t u = t ? upx_compress(in, n, t, z ? z : cap, upx_default_flags(looks_text(in, n), n), par) : 0;
+        if (u && (!z || u < z)) { memcpy(out, t, u); z = u; x->used_upx = 1; }
+        free(t);
+    }
+    return z;
 }
 static int cm_codec_decompress(codec_ctx *x, const uint8_t *in, size_t cn, uint8_t *out, size_t n) { (void)x; return cm_decompress(in, cn, out, n); }
 static const kolmo_codec codec_cm = { C_CM, "cm", cm_bound, cm_codec_compress, cm_codec_decompress, NULL };

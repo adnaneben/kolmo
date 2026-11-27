@@ -78,7 +78,8 @@ static uint32_t kolmo_default_block(const kolmo_params *p, size_t n) {
 /* ------------------------------------------------------------------ parallel driver */
 typedef struct {
     const uint8_t *src; int input_fd; uint8_t *dst; const uint64_t *starts; uint32_t nb; size_t slot; uint8_t *idx;
-    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns; plan_t pl; atomic_uint next; atomic_int err; size_t B;
+    int codec, level, default_level, output_fd, native_leaf, fqthreads, columns, ultra_plus; plan_t pl; atomic_uint next; atomic_int err; size_t B;
+    atomic_int used_upx;    /* Ultra+: a block or leaf was written as a UPX stream (codec 7 model nibble 11): the frame is version 13 */
     const plan_t *plans; const uint32_t *bplan; const uint64_t *rstart;   /* per-block plan (container v2) */
     const uint64_t *poff;   /* decode: payload offsets */
     uint64_t rlo, rhi; uint8_t *rdst;   /* range read */
@@ -184,6 +185,7 @@ static void *compress_worker(void *arg) {
     codec_ctx *xp = &S->x;
     xp->threads = J->fqthreads;                                            /* threads left over per block (BWT) */
     xp->threads_max = J->threads; xp->budget = J->bud;                     /* the elastic match finders (KLZMA, KLZH2) */
+    xp->ultra_plus = J->ultra_plus; xp->used_upx = 0;
     uint8_t *tbuf = S->tbuf = grow(S->tbuf, &S->tcap, J->B + TBL_SLACK(J->B) + 64);
     uint8_t *slot = S->slot = grow(S->slot, &S->scap, J->slot + 4);
     uint8_t *input = J->input_fd >= 0 ? malloc(J->B ? J->B : 1) : NULL;
@@ -204,7 +206,10 @@ static void *compress_worker(void *arg) {
         size_t len = J->starts[i + 1] - J->starts[i];
         /* the governor: this block's working set is reserved before it starts (it waits when memory is short; one
          * block always runs). Changes when blocks run, never what they write. */
-        const uint64_t resv = kmem_enc_block(J->codec, J->level, len, J->slot);
+        uint64_t resv = kmem_enc_block(J->codec, J->level, len, J->slot);
+        if (J->ultra_plus && len + TBL_SLACK(len) < ((uint64_t)1 << 28)) {   /* Ultra+: a UPX stream over the block (or its largest transform) */
+            size_t un = (size_t)(len + TBL_SLACK(len)); resv += upx_need(un, 1 | 2 | (uint32_t)cm4_shift_for(un, CM_MASK3) << 16);
+        }
         kmem_reserve(resv, J->memcap); held = resv;
         kmem_tls_job = 1; kmem_tls_cap = J->xcap; kmem_tls_raw = len;
         const uint8_t *raw;
@@ -216,7 +221,7 @@ static void *compress_worker(void *arg) {
         /* a block of WAV samples is coded by the audio codec when that is smaller (it was on all 43 WAV files measured,
          * by 17% or more); the rest of the block's path keeps rc2's leaf rule, without the format-2 leaf trials */
         xp->no_f2 = J->aud_prof >= 0 && J->starts[i] < J->aud_end && J->starts[i + 1] > J->aud_off;
-        xp->used_bwt = 0;
+        xp->used_bwt = 0; xp->used_upx = 0; upx_want = J->ultra_plus; upx_cmp_used = 0;
         uint8_t *sl = slot + 4;                                             /* slot: plan (4 bytes) | meta | codec data */
         slot[0] = (uint8_t)pl.t; slot[1] = (uint8_t)pl.a; slot[2] = (uint8_t)pl.b; slot[3] = (uint8_t)pl.c;
 #ifdef KOLMO_FRONTIER
@@ -453,7 +458,7 @@ static void *compress_worker(void *arg) {
         int cmp_used = 0;
         if (!cl && codec == C_CM && pl.cmp && pl.t == T_TP && tflag && inlen == len) {
             /* ultra, a table chosen as columns: one context-mixing model per column, in parallel (codec 25) */
-            if (pl.cmpz && rs == 0 && len == pl.cmpn && pl.cmpzn <= J->slot - meta) { memcpy(sl + meta, pl.cmpz, pl.cmpzn); cl = pl.cmpzn; }
+            if (pl.cmpz && rs == 0 && len == pl.cmpn && pl.cmpzn <= J->slot - meta && !J->ultra_plus) { memcpy(sl + meta, pl.cmpz, pl.cmpzn); cl = pl.cmpzn; }   /* Ultra+: recoded, parts may take UPX */
             else {
                 size_t parts[256]; int np = 0;
                 for (int j = 0; j < pl.c + 1; j++) { size_t v = get32(sl + 4 * j); if (v) parts[np++] = v; }
@@ -646,6 +651,28 @@ coded:;
         (void)modes;   /* the format features this block used (once the frame's version); every frame is version 12 */
         for (int k = 0; k < XT_N; k++) xtrial_free(&xt[k]);
         size_t tot = 4 + meta + cl;
+        /* Ultra+: the frame is version 13 only when a written block holds a UPX stream (codec 7 model nibble 11 at the
+         * block's top level, or a graph block whose leaves were coded while UPX won) */
+        if (J->ultra_plus && cl && cl + meta < len) {
+            int v13 = (codec == C_CM && cl >= 5 && sl[meta + 3] >> 4 == 8 && sl[meta + 4] >> 4 == 11) || (codec == C_CMP && upx_cmp_used);
+            if (codec == C_GRAPH && xp->used_upx) {
+                /* a leaf trial took UPX, but the leaf (or the whole candidate) may have lost later: the kept graph needs
+                 * version 13 only if a version-12 reader (upx_allow 0 on this thread) cannot decode it */
+                codec_ctx d; memset(&d, 0, sizeof d); d.threads = 1; d.allow_nplane = 1; d.allow_f2 = 1;
+                uint8_t *chk = malloc(len ? len : 1);
+#ifdef KOLMO_FAULT_INJECT   /* tests only (tests/test_ultra_plus.sh): this allocation fails */
+                if (getenv("KOLMO_FAULT_UPX_CHK")) { free(chk); chk = NULL; }
+#endif
+                if (!chk) { atomic_store(&J->err, KOLMO_ERR_ALLOC); break; }   /* no guess: the call fails */
+                v13 = kg_decode(&d, sl, cl, chk, len) != 0 || memcmp(chk, raw, len) != 0;
+                if (v13) {   /* it must then decode under version-13 rules; anything else is an error, never a v13 guess */
+                    upx_allow = 1; int bad = kg_decode(&d, sl, cl, chk, len) != 0 || memcmp(chk, raw, len) != 0; upx_allow = 0;
+                    if (bad) { free(chk); atomic_store(&J->err, KOLMO_ERR_CODEC); break; }
+                }
+                free(chk);
+            }
+            if (v13) atomic_store(&J->used_upx, 1);
+        }
         uint8_t *e = J->idx + (size_t)i * IDX;
         if (cl == 0 || cl + meta >= len) {                                  /* store raw */
             codec = C_STORE; tflag = 0; tot = 4 + len;
@@ -660,13 +687,14 @@ coded:;
         else put32(e + 8, blk_sum(raw, len));
         e[12] = codec_wire(xp, codec); e[13] = (uint8_t)tflag; e[14] = e[15] = 0;
         /* what decoding this block will need, from the payload as written (the frame declares the largest) */
-        job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec_wire(xp, codec), tflag, len, slot, tot, KOLMO_MAX_VERSION, J->cm_leaves));   /* the codec as written (native ids) */
+        job_note_need(J, codec == C_STORE ? blk_dec_floor(len) : blk_dec_need(codec_wire(xp, codec), tflag, len, slot, tot, J->ultra_plus ? KOLMO_UPX_VERSION : KOLMO_MAX_VERSION, J->cm_leaves));   /* the codec as written (native ids) */
         kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0;
         kmem_release(resv); held = 0;
     }
     if (held) { kmem_tls_job = 0; kmem_tls_cap = 0; kmem_tls_raw = 0; kmem_release(held); }   /* left the loop on an error */
     free(input);
     xp->budget = NULL; xp->threads_max = 0;
+    xp->ultra_plus = 0; xp->used_upx = 0;
     if (atomic_load(&J->err)) {                               /* waiting workers must see the failure */
         pthread_mutex_lock(&J->wmu); if (J->wcv_ready) pthread_cond_broadcast(&J->wcv); pthread_mutex_unlock(&J->wmu);
     }

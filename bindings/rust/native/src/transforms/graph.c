@@ -541,6 +541,9 @@ static size_t kg_sel_sub(codec_ctx *x, const void *ctx, const uint8_t *p, size_t
     if (!z) cc = C_STORE;
     if (codec == C_CM && level == 2 && n >= 64) {
         size_t cz = codec_compress(x, C_CM, level, p, n, t, cap);
+        #ifdef KOLMO_FAULT_INJECT   /* tests only: the CM leaf trial (possibly UPX) always loses, so the leaf keeps a v12 coder */
+        if (getenv("KOLMO_FAULT_UPX_LEAF_LOSE")) cz = 0;
+#endif
         if (cz && (!z || cz < z)) { memcpy(out, t, cz); z = cz; cc = C_CM; if (cm_stream_tuned(t, cz)) x->used_cmt = 1; }
     }
     int tryhuf = n >= 64;
@@ -606,6 +609,9 @@ static size_t kg_serialize(codec_ctx *x, int codec, int level, kgb *g, size_t n,
          * Default ultra keeps LZMA2 leaves. No format change: leaf codec 7 has always been valid. */
         if (codec == C_CM && level == 2 && s->n >= 64 && !flat) {
             uint8_t *cb = malloc(zc); size_t cz = cb ? codec_compress(x, C_CM, level, s->p, s->n, cb, zc) : 0;
+            #ifdef KOLMO_FAULT_INJECT   /* tests only: the CM leaf trial (possibly UPX) always loses, so the leaf keeps a v12 coder */
+            if (getenv("KOLMO_FAULT_UPX_LEAF_LOSE")) cz = 0;
+#endif
             if (cz && (!z || cz < z)) { memcpy(o.p + o.n + 20, cb, cz); z = cz; cc = C_CM; if (cm_stream_tuned(cb, cz)) x->used_cmt = 1; }
             free(cb);
         }
