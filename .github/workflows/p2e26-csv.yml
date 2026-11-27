@@ -1,0 +1,118 @@
+name: P2-E26 preregistered fresh test of the CSV picker (regularity -> zstd-12 table frame else eco) vs OpenZL csv-9
+# Research only. Same pinned rivals, inputs and harness as N1 (baselines.py imported unchanged by
+# research/codec/P2-E26/run_e26.py). Protocol, input selection and analysis frozen before any new TidyTuesday file is read.
+on:
+  push:
+    branches: [fix/planner-record-ownership-isolated-20261112]
+    paths: [.github/workflows/p2e26-csv.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2e26-csv-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  e3:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Freeze source identity and test harnesses
+        run: |
+          set -euo pipefail
+          mkdir -p ev
+          git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
+          git rev-parse HEAD > ev/COMMIT.txt
+          { uname -a; gcc --version; cmake --version; nproc; lscpu; } > ev/environment.txt
+          sha256sum research/codec/N1-baselines/baselines.py research/codec/P2-E26/PROTOCOL.md research/codec/P2-E26/prepare_e26.py research/codec/P2-E26/run_e26.py research/codec/P2-E26/analyze_e26.py research/codec/P2-E25/pickcli.c research/codec/P2-E22/prepare_e22.py research/codec/P2-E21/ttcli.c research/codec/P2-E11/p2e11.c research/codec/P2-E11/tpframe.inc research/codec/P2-E9/fastint9.inc research/codec/E02C-harness/harness/e02c.c > ev/source-hashes.txt
+          python -m unittest discover -s research/codec/N1-baselines -p 'test_*.py' 2>&1 | tail -3 | tee ev/unit-tests.log
+          sudo apt-get update -qq && sudo apt-get install -y liblzma-dev
+      - uses: actions/checkout@v4
+        with:
+          repository: meta/openzl
+          ref: 32246b48faee46807f84183dac4db479089f5445
+          path: _rivals/openzl
+          persist-credentials: false
+      - name: Build pinned rivals, Kolmo and ttcli with N1's flags
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          test "$(git -C _rivals/openzl rev-parse HEAD)" = 32246b48faee46807f84183dac4db479089f5445
+          FLAGS='-O3 -DNDEBUG -fno-plt -ffp-contract=off'
+          cmake -S _rivals/openzl -B _rivals/openzl/build -DCMAKE_BUILD_TYPE=Release -DOPENZL_BUILD_TESTS=OFF -DOPENZL_BUILD_EXAMPLES=OFF -DOPENZL_BUILD_BENCHMARKS=OFF -DOPENZL_BUILD_PARQUET_TOOLS=OFF -DOPENZL_ALLOW_INTROSPECTION=OFF -DZSTD_BUILD_SHARED=OFF -DCMAKE_C_FLAGS_RELEASE="$FLAGS" -DCMAKE_CXX_FLAGS_RELEASE="$FLAGS" > ev/openzl-configure.log 2>&1
+          timeout 900 cmake --build _rivals/openzl/build --target zli --parallel 2 > ev/openzl-build.log 2>&1
+          timeout 900 make -C _rivals/openzl/deps/zstd/programs -j2 zstd CFLAGS="$FLAGS" > ev/zstd-build.log 2>&1
+          timeout 900 make -j2 build/kolmo CFLAGS="$FLAGS" > ev/kolmo-build.log 2>&1
+          timeout 900 make build/libvendor.a > ev/libvendor-build.log 2>&1
+          DEFS="-DXXH_NAMESPACE=ZSTD_ -DZSTD_MULTITHREAD -DZSTD_LEGACY_SUPPORT=0"; INC="-Isrc -Ivendor/zstd -Ivendor/lz4 -Ivendor/libbsc -Ivendor/brotli/include"
+          timeout 900 gcc $FLAGS $DEFS $INC research/codec/P2-E21/ttcli.c build/libvendor.a -o build/ttcli -llzma -lpthread -lm -lstdc++ > ev/ttcli-build.log 2>&1
+          timeout 900 gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined -ffp-contract=off $DEFS $INC research/codec/P2-E21/ttcli.c build/libvendor.a -o build/ttcli-asan -llzma -lpthread -lm -lstdc++ >> ev/ttcli-build.log 2>&1
+          timeout 900 gcc $FLAGS $DEFS $INC research/codec/P2-E25/pickcli.c build/libvendor.a -o build/pickcli -llzma -lpthread -lm -lstdc++ >> ev/ttcli-build.log 2>&1
+          timeout 900 gcc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined -ffp-contract=off $DEFS $INC research/codec/P2-E25/pickcli.c build/libvendor.a -o build/pickcli-asan -llzma -lpthread -lm -lstdc++ >> ev/ttcli-build.log 2>&1
+          { _rivals/openzl/build/cli/zli --version; _rivals/openzl/deps/zstd/programs/zstd --version; sha256sum _rivals/openzl/build/cli/zli _rivals/openzl/deps/zstd/programs/zstd build/kolmo build/ttcli build/pickcli; } > ev/toolchain.txt
+      - name: Show build logs if the build failed or timed out
+        if: failure()
+        run: for f in ev/*build.log; do echo "=== $f"; tail -n 40 "$f"; done
+      - name: Select and fetch new TidyTuesday CSVs (paths only; P2-E22/E23/E24 datasets excluded)
+        run: |
+          set -euo pipefail
+          xz -dc research/codec/P2-E22/results/prepared/manifest.json.xz > "$RUNNER_TEMP/e22_manifest.json"
+          xz -dc research/codec/P2-E23/results/prepared/manifest.json.xz > "$RUNNER_TEMP/e23_manifest.json"
+          xz -dc research/codec/P2-E24/results/prepared/manifest.json.xz > "$RUNNER_TEMP/e24_manifest.json"
+          python research/codec/P2-E26/prepare_e26.py "$RUNNER_TEMP/work" ev/prepared "$RUNNER_TEMP/e22_manifest.json" "$RUNNER_TEMP/e23_manifest.json" "$RUNNER_TEMP/e24_manifest.json" | tee ev/prepare_e26.log
+      - name: Sanitizer gate on every fresh input (research encoders; production CLI decodes frames)
+        run: |
+          set -uo pipefail
+          export ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+          bad=0
+          for f in ev/prepared/inputs/*; do
+            if build/ttcli-asan tt zstd 12 "$f" "$RUNNER_TEMP/x.czn" && build/kolmo -d -T1 "$RUNNER_TEMP/x.czn" "$RUNNER_TEMP/y" && cmp -s "$f" "$RUNNER_TEMP/y"; then echo "asan-ok $(basename $f) tt_zstd12"; else echo "ASAN-FAIL $(basename $f) tt_zstd12"; bad=1; fi
+            if build/pickcli-asan pick "$f" "$RUNNER_TEMP/x.czn" && build/kolmo -d -T1 "$RUNNER_TEMP/x.czn" "$RUNNER_TEMP/y" && cmp -s "$f" "$RUNNER_TEMP/y"; then echo "asan-ok $(basename $f) pick"; else echo "ASAN-FAIL $(basename $f) pick"; bad=1; fi
+          done > ev/asan.log 2>&1
+          grep -c asan-ok ev/asan.log; grep -c ASAN-FAIL ev/asan.log || true
+          exit $bad
+      - name: Complete CLI comparison and confirmation
+        run: |
+          set -euo pipefail
+          T="--zstd _rivals/openzl/deps/zstd/programs/zstd --openzl _rivals/openzl/build/cli/zli --kolmo build/kolmo --tt build/ttcli --pick build/pickcli"
+          python research/codec/P2-E26/run_e26.py run ev/prepared ev/first $T
+          python research/codec/P2-E26/run_e26.py run ev/prepared ev/confirmation $T --seed 20261113
+          python research/codec/P2-E26/run_e26.py confirm ev/first ev/confirmation > ev/confirmation.json
+          python research/codec/P2-E26/analyze_e26.py ev > ev/analysis.json
+          git diff --exit-code 2f3308a3380a140ad0f6873ae228de7715e5eef5 -- src vendor Makefile tests benchmark/accept/TARGETS.md
+      - name: Hash and print compact evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import hashlib,json,pathlib,base64,lzma
+          p=pathlib.Path('ev'); p.mkdir(exist_ok=True)
+          m={str(f.relative_to(p)):hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.rglob('*')) if f.is_file() and f.name!='MANIFEST.json' and 'prepared/inputs' not in str(f) and not f.name.endswith(('.frame','.decoded'))}
+          (p/'MANIFEST.json').write_text(json.dumps(m,indent=2)+'\n')
+          for name in ['COMMIT.txt','toolchain.txt','source-hashes.txt','unit-tests.log','confirmation.json','prepare_e26.log','analysis.json','asan.log','MANIFEST.json']:
+              f=p/name
+              if f.exists(): print(f'=== BEGIN {name}'); print(f.read_text(),end=''); print(f'=== END {name}')
+          for name in ['first/records.json','confirmation/records.json','first/timings.jsonl','confirmation/timings.jsonl','prepared/manifest.json','asan.log','first/tables.md','confirmation/tables.md']:
+              f=p/name
+              if f.exists(): print(f'=== BEGIN base64-xz {name}'); print(base64.b64encode(lzma.compress(f.read_bytes(),preset=9)).decode()); print(f'=== END base64-xz {name}')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p2e26-csv-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ev/
+            !ev/**/*.frame
+          retention-days: 30
+          if-no-files-found: error

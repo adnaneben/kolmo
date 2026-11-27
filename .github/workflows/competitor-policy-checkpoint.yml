@@ -1,0 +1,60 @@
+name: Competitor policy tests and source checkpoint
+on:
+  push:
+    branches: [fix/planner-record-ownership-isolated-20261112]
+    paths:
+      - research/codec/competitor-policy-v2/**
+      - benchmark/accept/ACTIVE_POLICY.json
+      - .github/workflows/competitor-policy-checkpoint.yml
+permissions:
+  contents: read
+concurrency:
+  group: competitor-policy-checkpoint-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  policy:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact reference files and preserved research ancestry
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          root=pathlib.Path('.')
+          r=json.loads((root/'research/codec/competitor-policy-v2/TEST_RECEIPT.json').read_text())
+          for name, expected in r['code_files_sha256'].items():
+              assert hashlib.sha256((root/name).read_bytes()).hexdigest()==expected, name
+          checkpoint=json.loads((root/'research/codec/competitor-policy-v2/CHECKPOINT.json').read_text())
+          for pin in [checkpoint['previous_head'],*checkpoint['active_research_implementations']]:
+              subprocess.run(['git','merge-base','--is-ancestor',pin,'HEAD'],check=True)
+          subprocess.run(['git','diff','--exit-code',checkpoint['previous_head'],'HEAD','--',*checkpoint['preserved_frozen_paths']],check=True)
+          PY
+      - name: Execute reference policy and exact-typing tests
+        run: |
+          set -euo pipefail
+          mkdir checkpoint-evidence
+          python -m unittest discover -s research/codec/competitor-policy-v2 -p 'test_*.py' -v 2>&1 | tee checkpoint-evidence/tests.log
+      - name: Export complete reachable source history as a second backup
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD > checkpoint-evidence/COMMIT.txt
+          git ls-tree -r HEAD > checkpoint-evidence/TRACKED_TREE.txt
+          git bundle create checkpoint-evidence/kolmo-research.bundle HEAD
+          git bundle verify checkpoint-evidence/kolmo-research.bundle 2>&1 | tee checkpoint-evidence/bundle-verification.log
+          sha256sum checkpoint-evidence/kolmo-research.bundle > checkpoint-evidence/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kolmo-research-checkpoint-${{ github.run_id }}
+          path: checkpoint-evidence/
+          retention-days: 90
+          if-no-files-found: error

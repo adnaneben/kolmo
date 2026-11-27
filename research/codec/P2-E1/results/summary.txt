@@ -1,0 +1,22 @@
+input                           z3 bytes | best feasible speed cand bytes vs z3 | kolmo_fast vs z3: bytes    cost
+audio_concat_s16.raw             1868162 | kolmo_rt                     +18.35% |                  +0.17%    +34%
+audio_curve.wav                   103632 | kolmo_fast_n                  +0.05% |                 -19.39%   +443%
+audio_drama.wav                    98330 | -                              +nan% |                  -5.01%   +496%
+audio_gong.wav                    120006 | kolmo_speed                  +55.22% |                  +0.04%   +262%
+audio_roll.wav                    229159 | -                              +nan% |                 -24.18%   +448%
+audio_soft.wav                    105852 | kolmo_speed                  +56.72% |                 -10.04%   +437%
+audio_space2.wav                  101803 | -                              +nan% |                 -26.16%   +556%
+audio_space3.wav                   64267 | -                              +nan% |                 -12.22%   +521%
+audio_untie.wav                   115927 | kolmo_speed                  +53.07% |                  +0.04%   +274%
+dem_jacksboro_i16.npy             165635 | kolmo_fast_Q                  -3.87% |                 -43.87%   +286%
+fs_inode_u64.npy                  199898 | typed_fast                   -80.65% |                 -80.67%    +96%
+fs_mtime_i64.npy                   53269 | kolmo_rt                     +60.21% |                  -2.89%   +695%
+fs_size_u32.npy                   281940 | kolmo_fast_Q                 -15.12% |                 -12.98%   +130%
+goog_date_i64.npy                   1199 | kolmo_fast_n                  +4.34% |                 -72.81%   +239%
+goog_volume_i64.npy                 3582 | kolmo_fast_n                  +1.45% |                 -26.74%   +318%
+mri_s1045_u16.npy                  32903 | -                              +nan% |                 -33.75%   +620%
+syn_clustered_outliers_u32.npy    445558 | kolmo_rt                     +70.06% |                 -31.80%   +251%
+syn_sparse_outliers_u32.npy       539580 | kolmo_fast_Q                 -28.28% |                 -28.28%   +116%
+syn_walk_i32.npy                  387240 | typed_fast                   -56.66% |                 -56.63%    +74%
+topobathy_i16.npy                  14717 | -                              +nan% |                 -14.86%   +876%
+policy statuses: {('fast', 'NO_FEASIBLE_CANDIDATE'): 20, ('hc', 'BLOCKED_MISSING_COMPETITOR'): 20}

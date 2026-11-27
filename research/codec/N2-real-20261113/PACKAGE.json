@@ -1,0 +1,9 @@
+{
+  "filename": "Kolmo_N2_Real_Execution_Evidence.zip",
+  "sha256": "96bbda65fc452c0da6c3e15af5d6462efe314a7a163c34103d6ddd59afbf2b29",
+  "bytes": 24023225,
+  "files": 414,
+  "archive_verified": true,
+  "location": "separate conversation attachment; not an Actions artifact or Git-tracked archive",
+  "contents": "Source, tests, logs, input/frame hashes, all real measurement records and frames, independent audit and raw compact timing ledger"
+}

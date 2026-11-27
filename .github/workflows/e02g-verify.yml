@@ -1,0 +1,66 @@
+name: E02G-verify decode-only timing of the E02G frames
+# Runs research/codec/E02G-verify/run.sh (registered protocol) on the registered E02G downloads. Research only.
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/planner-record-ownership-isolated-20261112]
+    paths:
+      - .github/workflows/e02g-verify.yml
+permissions:
+  contents: read
+concurrency:
+  group: e02g-verify-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'adnaneben/kolmo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Environment
+        run: |
+          set -euo pipefail
+          mkdir ev
+          sudo apt-get update && sudo apt-get install -y liblzma-dev
+          python -m pip install 'numpy==2.1.3'
+          cp research/codec/E02G-verify/PROTOCOL.md ev/
+          { git rev-parse HEAD; uname -a; gcc --version; nproc; grep -m1 'model name' /proc/cpuinfo; grep -m1 flags /proc/cpuinfo; } > ev/environment.txt
+      - name: Fetch the registered E02G files
+        run: |
+          set -euo pipefail
+          sh research/codec/E02G/fetch.sh "$RUNNER_TEMP/dl" 2>&1 | tee ev/fetch.log
+          cp "$RUNNER_TEMP/dl/DOWNLOAD.sha256" ev/
+      - name: Registered verification run
+        run: |
+          set -euo pipefail
+          sh research/codec/E02G-verify/run.sh "$RUNNER_TEMP/dl" ev/out 2>&1 | tee ev/run.log
+      - name: Hash, compress and print evidence
+        if: always()
+        run: |
+          set -eu
+          rm -rf ev/out/inputs
+          [ -f ev/out/dtime.jsonl ] && xz -9 ev/out/dtime.jsonl || true
+          python - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path('ev')
+          res={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob('*')) if p.is_file() and p.name!='MANIFEST.json'}
+          (root/'MANIFEST.json').write_text(json.dumps(res,indent=2)+'\n')
+          PY
+          cd ev
+          for f in DOWNLOAD.sha256 out/manifest.json out/verify.json MANIFEST.json; do [ -f "$f" ] && { echo "=== BEGIN $f"; cat "$f"; echo; echo "=== END $f"; } || true; done
+          [ -f out/dtime.jsonl.xz ] && { echo "=== BEGIN base64 out/dtime.jsonl.xz"; base64 -w 0 out/dtime.jsonl.xz; echo; echo "=== END base64 out/dtime.jsonl.xz"; } || true
+      - name: Retain evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e02g-verify-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ev/
+          retention-days: 30
+          if-no-files-found: error

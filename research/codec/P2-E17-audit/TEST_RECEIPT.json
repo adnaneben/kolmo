@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-11-13T02:19:34.662755+00:00",
+  "publication": "NOT_COMMITTED_OR_PUSHED_READ_ONLY_SESSION",
+  "starting_remote_head": "da639cb5b5ca1bec33b33aff3c191d4c15657175",
+  "subsequently_observed_remote_commits": [
+    "b01b15d4e2ccf6178fa5cac7b63e99386bf6b399",
+    "0fb224702feacca1f2ea868e4848d258f2963682"
+  ],
+  "executed_experiment_commit": "f4fcadcd762d7d7bc9e484a4730900eb3388d5e9",
+  "artifact_id": 14001980117,
+  "workflow_run_id": 43341163635,
+  "artifact_sha256": "f2e4c589b9e77c3c1cce609f3df120d6a6fc0be6033cc18f2a3cf8ec00669e1a",
+  "python": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "unit_tests": {
+    "status": "PASS",
+    "tests": 42,
+    "command": "python -m unittest discover -s research/codec/P2-E17-audit -p 'test_*.py' -v",
+    "scope": "synthetic audit infrastructure fixtures, not codec validation"
+  },
+  "real_artifact_audit": {
+    "status": "PASS_EVIDENCE_CONSISTENCY_ONLY",
+    "command": "python research/codec/P2-E17-audit/audit_e17.py /mnt/data/p2e17-cli-43341163635-1.zip --output research/codec/P2-E17-audit/AUDIT_RESULT.json",
+    "resources": "elapsed_s=1.61 user_s=1.68 system_s=0.34 max_rss_kib=275752"
+  },
+  "new_experiment_runner_minutes": 0,
+  "new_workflows_launched": 0,
+  "night_budget": {
+    "ceiling_minutes": 480,
+    "prior_approximate_consumed_minutes": 176,
+    "concurrent_E20_reserved_cap_minutes": 110,
+    "approximate_unreserved_minutes": 194,
+    "status": "ESTIMATE_NOT_RECONCILED_TOTAL_OR_BILLING",
+    "concurrent_run": 43350744793,
+    "concurrent_run_status_at_check": "in_progress"
+  },
+  "not_run": [
+    "native header-exact OpenZL comparator",
+    "independent re-decode",
+    "codec sanitizer execution",
+    "fresh-validation read or tuning",
+    "learned selector",
+    "production integration",
+    "remote CI for this patch"
+  ],
+  "sha256": {
+    "audit_e17.py": "684553c0861f02be29c4aafeff01e8522e28a719a72013b57b1125a0ebf0b277",
+    "test_audit_e17.py": "14769e39ca8d6ee602c066ed12360dbda58fbdfee14b75e413a1a695216d49e6",
+    "TEST_LOG.txt": "e3494aec955e891fd5c4bc3fffcfdf9a412ebeeedcc9822fc52f3d4a69904675",
+    "AUDIT_RESULT.json": "fff032f2be4ebbdec6695a96a4f43a17b82e04ae4e019218a38f7f7984df7db8",
+    "AUDIT_LOG.txt": "f08f7bb5d15f1c8ff459a90266637a064bfd473b12c41a7078356c3d3cd68ede",
+    "AUDIT_RESOURCES.txt": "dbd955082209b41f2853c9c4f3601e098ea9f367021d9b84f851613e0ed65063"
+  }
+}

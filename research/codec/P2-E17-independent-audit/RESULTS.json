@@ -1,0 +1,26 @@
+{
+  "artifact_sha256": "f2e4c589b9e77c3c1cce609f3df120d6a6fc0be6033cc18f2a3cf8ec00669e1a",
+  "run_id": 43341163635,
+  "source_commit": "f4fcadcd762d7d7bc9e484a4730900eb3388d5e9",
+  "manifest_verified": 7842,
+  "prepared_inputs_verified": 61,
+  "configuration_records_verified": 976,
+  "paired_archive_and_speed_costs_recomputed": 2928,
+  "test_methods_passed": 5,
+  "observed_development_only": true,
+  "first_hindsight_kolmo_wins": 47,
+  "confirmation_hindsight_kolmo_wins": 47,
+  "robust_two_run_hindsight_wins": 47,
+  "robust_production_only_hindsight_wins": 37,
+  "robust_fixed_policy_wins": {
+    "tp_pent": 41,
+    "tb_best": 35,
+    "kolmo_fast": 25,
+    "kolmo_max": 19,
+    "kolmo_hc": 11,
+    "tp_arch19": 19
+  },
+  "ghcn_robust_hindsight_wins": 2,
+  "ghcn_inputs": 9,
+  "acceptance": "BLOCKED_FRESH_SOURCE_AND_FAIR_HEADER_EXACT_RIVAL_AND_MEASURED_ONLINE_SELECTOR"
+}

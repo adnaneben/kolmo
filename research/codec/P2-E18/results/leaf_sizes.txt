@@ -1,0 +1,9 @@
+W00014739_PRCP.npy  cm inter 14666 planes 14272  lzma inter 16233 planes 15505  bsc inter 14620 planes 15424  zstd19 inter 17338 planes 15206
+W00014739_TMAX.npy  cm inter 22079 planes 24190  lzma inter 26906 planes 27764  bsc inter 23232 planes 25608  zstd19 inter 28883 planes 27264
+W00014739_TMIN.npy  cm inter 19678 planes 21279  lzma inter 24702 planes 24526  bsc inter 20796 planes 22964  zstd19 inter 26925 planes 25836
+W00023174_PRCP.npy  cm inter 4617 planes 4491  lzma inter 4662 planes 4712  bsc inter 4770 planes 4974  zstd19 inter 4922 planes 4713
+W00023174_TMAX.npy  cm inter 15665 planes 15733  lzma inter 18931 planes 17719  bsc inter 16170 planes 16608  zstd19 inter 20158 planes 18756
+W00023174_TMIN.npy  cm inter 13334 planes 13236  lzma inter 16517 planes 15369  bsc inter 13646 planes 13788  zstd19 inter 18081 planes 16499
+W00094728_PRCP.npy  cm inter 24665 planes 24237  lzma inter 27376 planes 26527  bsc inter 24316 planes 25726  zstd19 inter 29936 planes 26258
+W00094728_TMAX.npy  cm inter 36787 planes 40337  lzma inter 44851 planes 45437  bsc inter 38196 planes 42474  zstd19 inter 48215 planes 46583
+W00094728_TMIN.npy  cm inter 33566 planes 36455  lzma inter 41842 planes 41280  bsc inter 34948 planes 38648  zstd19 inter 45767 planes 44427

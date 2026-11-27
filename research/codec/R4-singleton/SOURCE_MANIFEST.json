@@ -1,0 +1,18 @@
+{
+  "EVIDENCE.json": "2a07340d6c4ac9b31b89b61cfb9edbcd9434abba9faa892befe8693c755fb55e",
+  "README.md": "79891452bcdc7af993ce51a0452d9864e28e3d8aef1128e8011af8a7f120a9bf",
+  "RESULTS.md": "9cb1ffa1fd335b64bed7b78c8c6e6a87feeb73b1dee639de791fc03a95f194dc",
+  "build.py": "68d273ff9d8f30a70977772292e1c3ce29c9567f1aeb8948a2d2fa0511719209",
+  "candidate.diff": "45502d4061dce206276c17a6eed07dba2e1cefbe2b133a24ca13dd3c1701fb6e",
+  "probe.c": "7f0bd176fbd8eb40377bcafe0faf177be7c75f075f1c7883a55f4491ac29265a",
+  "results/initial-hook-failure.stderr": "d5edde42a7662383c349c027365a9e35595d90146642224ece172da3839ba7cf",
+  "results/inputs.json": "18aae38210b0391bb86e52ec2ec7d324a88471db64b8237d93892bbd0473e14d",
+  "results/python-tests.log": "704ed8b43e155cb77fbc4aa3749e9339151656d01460177449ccdfd087239924",
+  "results/selftests.json": "4773ef8c568b9b18f49b39e58c1fc107d5a92fbc4fe5473485229d856bfbcac1",
+  "results/summary.json": "a941d45c82ac5a32e7eb431f1aaf216ba108ef6c731005a519cc6f3d05d3d918",
+  "results/timings.csv.xz": "040983ff8553c53b9b0dc62b50177607ce844ef4421a232567e814aee98c3367",
+  "results/timings_schema.json": "92fcc40bba83fdbff6af8e31cdea800f13a0224f3b22bc2a9eff6c1bb826803b",
+  "run.py": "ab744ccbdf6e87f79b35bd623e8c6deb5cd70421906841e6b95f4e651e4f2827",
+  "test_tools.py": "04fbc5db0e881d8359b6cc490b8b72a80a5a94f4323ff08da818ebe144c920f0",
+  "verify_saved.py": "2e4c33470e4a51ab8adceeab070f5245688b4a5127e922adca2f93e2c2f2b004"
+}

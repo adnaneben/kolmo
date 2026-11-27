@@ -1,0 +1,111 @@
+{
+  "scope": "R2 development factorial and contextual amplification; local executed tests, NOT fresh validation or production integration",
+  "protocol_commit": "b2f3c160f36462672ace9c58929aa147756f514b",
+  "implementation_commit": "be41cc58185712ae660dbf3b7e7a93959625b8e9",
+  "production_reference": "2f3308a3380a140ad0f6873ae228de7715e5eef5",
+  "source_core_blob": "e06467c8872d494b97270811bedf6fd0bac2aa31",
+  "source_graph_blob": "91ad067dc583b9d9e6f060f214a0f7c402bb4a31",
+  "source_archive_sha256": "b91637f9dd75fe0850fbc05f8a3083ac1f3d2ebcf0da7aab84863e341d554f91",
+  "input_archive_sha256": "5d02cee72dbbbc8a396e85e29c2cb3f5bf91f26abd2e808995b9a54205660e82",
+  "code_sha256": {
+    "probe.c": "1f40e2ce947122c6df3bb5ee3e649c92906b42cc6b49f3b805bd16f847317a6f",
+    "build.py": "166c03aceae5ae7f47794e0e7032990310cf8a865a1a462fe36841c419c9795b",
+    "test_analysis.py": "11803a8e2e77b5cc5d9d2cfd49d7fc6af17187bfa217d3fc194b0a47475b9407",
+    "analyse.py": "56e993c2297ddd6504e9f14db06fe1d7b92e07b8ee1ce9bd522030c07bc74747",
+    "reference.py": "ce626d33fda52dd7e129036f60a91e69e3db2341263c3c255a2fbccee8c12850",
+    "run.py": "65a3b60a3be0c713db14b81da320ad81581bc95fa3912662d74f564b1f7076f6"
+  },
+  "execution": {
+    "configs_per_pass": 522,
+    "passes": [
+      "gcc-release-7rounds",
+      "gcc-release-5rounds",
+      "clang-asan-ubsan-lsan-correctness"
+    ],
+    "timing_batches": 18792,
+    "frame_hashes_verified": 1566,
+    "medians_verified": 6264,
+    "archive_manifest_entries": 611,
+    "unit_tests_passed": 7,
+    "per_build_selftests": {
+      "inherited_r1": 351,
+      "r2_roundtrips_and_deterministic_reencodes": 144,
+      "rejected_truncations": 1710,
+      "mutation_probes": 3456,
+      "single_plane_identity_checks": 12
+    }
+  },
+  "groups": {
+    "C_real": {
+      "cases": 7,
+      "bytes": {"0": 51436, "1": 50786, "2": 51436, "3": 50786, "4": 51436, "5": 50786, "6": 51436, "7": 50786, "8": 50786},
+      "eligible": {"cases": 3, "baseline_bytes": 6761, "joint_bytes": 6111},
+      "conditional_saving_at_full_stack": {"H": 650, "R": 0, "S": 0},
+      "offline_union_with_archived_packing_bytes": 50618
+    },
+    "D_full": {
+      "cases": 11,
+      "bytes": {"0": 337195, "1": 322880, "2": 319712, "3": 319539, "4": 337195, "5": 322880, "6": 319712, "7": 319539, "8": 319539},
+      "eligible": {"cases": 4, "baseline_bytes": 133799, "joint_bytes": 116143},
+      "conditional_saving_at_full_stack": {"H": 173, "R": 3341, "S": 0},
+      "offline_union_with_archived_packing_bytes": 309548
+    },
+    "D_small128": {
+      "cases": 11,
+      "bytes": {"0": 3237, "1": 3144, "2": 3237, "3": 3144, "4": 3237, "5": 3144, "6": 3237, "7": 3144, "8": 3144},
+      "eligible": {"cases": 3, "baseline_bytes": 1225, "joint_bytes": 1132},
+      "conditional_saving_at_full_stack": {"H": 93, "R": 0, "S": 0},
+      "offline_union_with_archived_packing_bytes": 3144
+    },
+    "D_small1024": {
+      "cases": 11,
+      "bytes": {"0": 8317, "1": 7981, "2": 8317, "3": 7981, "4": 8317, "5": 7981, "6": 8317, "7": 7981, "8": 7981},
+      "eligible": {"cases": 3, "baseline_bytes": 4576, "joint_bytes": 4240},
+      "conditional_saving_at_full_stack": {"H": 336, "R": 0, "S": 0},
+      "offline_union_with_archived_packing_bytes": 7981
+    },
+    "synthetic": {
+      "cases": 18,
+      "bytes": {"0": 628234, "1": 597535, "2": 641236, "3": 597535, "4": 628234, "5": 597535, "6": 595667, "7": 591902, "8": 591902},
+      "eligible": {"cases": 12, "baseline_bytes": 577576, "joint_bytes": 541244},
+      "conditional_saving_at_full_stack": {"H": 3765, "R": 5633, "S": 5633},
+      "offline_union_with_archived_packing_bytes": 580494
+    }
+  },
+  "file_receipts": {
+    "build/receipt.json": "46941db89060b729043a0461a661ed3d8095da0b11bc56466c6635955d6e6269",
+    "build/release-test.log": "5302853579ab4521d44f605139dc85478d4e5f51b151e2a0282928ca6df68b5c",
+    "build/asan-test.log": "5302853579ab4521d44f605139dc85478d4e5f51b151e2a0282928ca6df68b5c",
+    "unit-tests.log": "fe836cbecd3b6b4f70bec51b58d30c3e45ad72ae7fb3cb63421a0f7337e651ae",
+    "analysis/RESULTS.json": "a7476d9599134d15abc4c896521cfb43eeda3378d841e1f73dd8851d5a50b5c6",
+    "first/status.json": "7099a11f08168004baab789cb8a29d4f44a016063624a7948187c34f3292ba38",
+    "first/measurements.jsonl": "6d179af641831738995c6e90b2254bfbbe79d0309d521c205a919d82200d9ec1",
+    "first/timings.jsonl": "8cfaf248ee0237a610ab9133f345a77a27f95f441f7132d9fcd83591ada25c9d",
+    "first/environment.json": "c469187762c5c9b2cdbdf03d6b1536043a690edf447ea3fd8e33a3304b834f14",
+    "first/commands.json": "9ebbe37ff84ab93e1060d133bed80e5fc02797d6751252f2dd845cdc02296244",
+    "confirmation/status.json": "ba687429983bab86743ff192cc9c6557cbb3f5b74a0d3396cb2c142999a0a905",
+    "confirmation/measurements.jsonl": "4204004103ecbd2a24cc2d7544994fb2821539ef0391a2a73f851199213659fc",
+    "confirmation/timings.jsonl": "cbe2f2bd660185ed2c8b548f21588cbb2de6e74ae7a4a80ab764a3b3dd189ea6",
+    "confirmation/environment.json": "c469187762c5c9b2cdbdf03d6b1536043a690edf447ea3fd8e33a3304b834f14",
+    "confirmation/commands.json": "457a93794eb055ffe3a3d5b506b65d09986280bd7e237dbfbd92f6314ebb0115",
+    "sanitized/status.json": "abe4d94c3227a0fa6728ba2ebdc60eaed08e7f9263c7491b572f0156a59b10f5",
+    "sanitized/measurements.jsonl": "d26d0daa3cfdaa252377ec06c1f4096520adcdc1da17ab76ff8690dcbea3767a",
+    "sanitized/timings.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sanitized/environment.json": "269efed9292d9bde6a8b7620a3df6125fc5ed30dc0be0590073d6d334955af32",
+    "sanitized/commands.json": "295e22a2988b378ddeef1f2e3b95d215d1d158a79c1d5cd199107dc1e5950940"
+  },
+  "limitations": [
+    "All input families are observed development; household source overlaps release holdout",
+    "Exact staged leaf and KG_INT inverse functions, not a full CZN1 encoder/planner integration",
+    "Encoding starts after the frozen predictor/capture; original input checksum retained from verified baseline",
+    "Decode includes software CRC checks and exact inverse; small differences can be masked by common work",
+    "Timing repetitions are not independent sources; identical-frame timing noise is retained",
+    "32 MiB displacement is not guaranteed cold LLC or cold I/O",
+    "No isolated per-policy memory measurement or allocation-failure campaign in this step",
+    "entropy_calls means full-leaf candidate trials, not internal per-plane/chunk calls; all their runtime is charged",
+    "Old entropy readers used; independent Python reference verifies integer inverse, not entropy code",
+    "Vendor objects uninstrumented; harness/leaf/inverse translation unit sanitized",
+    "No fresh holdout, M5 acceptance, default/format change, merge or release",
+    "Initial interactive container invocation was rejected before execution; noninteractive build succeeded; no failed measurement was discarded"
+  ]
+}

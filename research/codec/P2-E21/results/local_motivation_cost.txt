@@ -1,0 +1,24 @@
+police-killings         kfast +4%/0.91x keco -7%/0.94x* khc -8%/1.09x kmax -14%/1.15x tt_zstd19 -5%/1.02x tt_zstd12 -4%/0.86x* tt_bsc0 -9%/0.98x* tt_brotli9 -6%/0.98x* tt_brotli11 -13%/2.28x tt_lzma9 -11%/1.11x
+riddler-castles         kfast +10%/0.98x keco -5%/1.18x khc -8%/1.39x kmax -24%/1.08x tt_zstd19 +0%/1.31x tt_zstd12 +4%/1.04x tt_bsc0 -17%/0.97x* tt_brotli9 +3%/1.10x tt_brotli11 -8%/2.79x tt_lzma9 -2%/1.30x
+weather-check           kfast +23%/0.83x keco -14%/0.81x* khc -28%/2.10x kmax -31%/1.57x tt_zstd19 -11%/1.88x tt_zstd12 -4%/0.81x* tt_bsc0 -25%/0.92x* tt_brotli9 -8%/0.89x* tt_brotli11 -18%/3.72x tt_lzma9 -14%/1.38x
+mayweather-mcgregor     kfast +12%/1.05x keco -4%/1.42x khc -7%/1.92x kmax -24%/1.27x tt_zstd19 -13%/1.19x tt_zstd12 -5%/0.94x* tt_bsc0 -21%/0.96x* tt_brotli9 -6%/1.07x tt_brotli11 -17%/3.48x tt_lzma9 -16%/1.31x
+classic-rock           
+sandy-311-calls         kfast +14%/0.67x keco -7%/0.73x* khc -12%/1.27x kmax -21%/1.24x tt_zstd19 -18%/0.80x* tt_zstd12 -5%/0.66x* tt_bsc0 -14%/0.79x* tt_brotli9 -15%/0.74x* tt_brotli11 -22%/1.93x tt_lzma9 -23%/1.15x
+food-world-cup          kfast +9%/0.81x keco -16%/0.80x* khc -29%/1.70x kmax -39%/1.62x tt_zstd19 -25%/1.87x tt_zstd12 -19%/0.85x* tt_bsc0 -42%/0.65x* tt_brotli9 -19%/0.80x* tt_brotli11 -29%/3.98x tt_lzma9 -28%/1.43x
+impeachment-polls       kfast +14%/0.94x keco -3%/0.96x* khc -3%/1.59x kmax -8%/1.44x tt_zstd19 +4%/1.79x tt_zstd12 +8%/0.98x tt_bsc0 +2%/1.09x tt_brotli9 +6%/1.07x tt_brotli11 -8%/3.92x tt_lzma9 -3%/1.43x
+riddler-pick-lowest     kfast +7%/1.01x keco -3%/1.01x khc -8%/1.37x kmax -25%/1.43x tt_zstd19 -1%/1.42x tt_zstd12 +4%/1.05x tt_bsc0 -18%/1.02x tt_brotli9 +2%/1.19x tt_brotli11 -8%/3.28x tt_lzma9 -3%/1.45x
+region-survey           kfast +15%/0.82x keco -2%/0.92x* khc -7%/1.20x kmax -11%/1.41x tt_zstd19 +34%/2.66x tt_zstd12 +50%/1.04x tt_bsc0 -8%/0.85x* tt_brotli9 +44%/1.17x tt_brotli11 +24%/6.75x tt_lzma9 +26%/2.35x
+tenth-circuit           kfast +12%/0.92x keco -4%/0.96x* khc -8%/1.27x kmax -20%/1.17x tt_zstd19 -0%/1.47x tt_zstd12 +6%/0.96x tt_bsc0 -10%/1.00x tt_brotli9 +2%/1.13x tt_brotli11 -15%/2.54x tt_lzma9 -11%/1.30x
+twitter-ratio           kfast +6%/0.99x keco -1%/1.04x khc -5%/1.28x kmax -10%/1.38x tt_zstd19 +12%/1.58x tt_zstd12 +17%/1.17x tt_bsc0 -10%/1.11x tt_brotli9 +16%/1.31x tt_brotli11 +1%/3.72x tt_lzma9 +5%/1.64x
+ncaa-womens-basketball  kfast +13%/0.88x keco -6%/0.98x* khc -12%/1.47x kmax -30%/1.34x tt_zstd19 -11%/1.28x tt_zstd12 -7%/0.84x* tt_bsc0 -17%/0.95x* tt_brotli9 -10%/0.99x* tt_brotli11 -20%/2.62x tt_lzma9 -18%/1.14x
+congress-age            kfast +20%/1.00x keco -10%/0.93x* khc -13%/1.41x kmax -20%/1.64x tt_zstd19 -25%/1.42x tt_zstd12 -17%/0.80x* tt_bsc0 -18%/0.97x* tt_brotli9 -21%/0.90x* tt_brotli11 -31%/4.61x tt_lzma9 -31%/1.53x
+police-deaths           kfast +12%/1.04x keco -15%/0.93x* khc -24%/2.07x kmax -37%/2.48x tt_zstd19 -28%/1.86x tt_zstd12 -13%/0.90x* tt_bsc0 -39%/0.83x* tt_brotli9 -21%/0.88x* tt_brotli11 -32%/5.88x tt_lzma9 -27%/2.08x
+undefeated-boxers       kfast +16%/0.85x keco -4%/0.94x* khc -13%/1.89x kmax -24%/1.42x tt_zstd19 -16%/1.82x tt_zstd12 -2%/0.79x* tt_bsc0 -14%/0.90x* tt_brotli9 -7%/0.88x* tt_brotli11 -23%/4.00x tt_lzma9 -26%/1.62x
+nba-raptor              kfast +1%/0.94x keco -6%/1.12x khc -13%/1.64x kmax -14%/1.90x tt_zstd19 -20%/0.95x* tt_zstd12 -16%/0.83x* tt_bsc0 -16%/0.98x* tt_brotli9 -19%/0.81x* tt_brotli11 -23%/2.00x tt_lzma9 -21%/1.11x
+thanksgiving-2015       kfast +26%/0.86x keco -1%/0.92x* khc -7%/1.62x kmax -13%/1.67x tt_zstd19 -4%/2.67x tt_zstd12 +2%/0.94x tt_bsc0 -17%/0.81x* tt_brotli9 +0%/0.91x tt_brotli11 -9%/6.87x tt_lzma9 -8%/1.85x
+goose                   kfast +9%/0.97x keco -3%/0.99x* khc -10%/1.35x kmax -15%/1.60x tt_zstd19 -13%/1.14x tt_zstd12 -6%/0.93x* tt_bsc0 -16%/1.00x tt_brotli9 -8%/0.99x* tt_brotli11 -18%/2.84x tt_lzma9 -17%/1.27x
+pollster-ratings        kfast +10%/0.96x keco -9%/0.92x* khc -16%/1.34x kmax -21%/1.63x tt_zstd19 -15%/1.34x tt_zstd12 -9%/0.89x* tt_bsc0 -17%/0.95x* tt_brotli9 -13%/0.93x* tt_brotli11 -22%/3.92x tt_lzma9 -22%/1.43x
+comic-characters        kfast +9%/1.00x keco -13%/0.91x* khc -18%/1.70x kmax -34%/1.87x tt_zstd19 -19%/1.69x tt_zstd12 -11%/0.90x* tt_bsc0 -34%/0.86x* tt_brotli9 -19%/0.90x* tt_brotli11 -34%/5.64x tt_lzma9 -23%/1.79x
+biopics                 kfast +5%/0.90x keco -8%/0.95x* khc -10%/1.24x kmax -20%/1.29x tt_zstd19 -8%/1.25x tt_zstd12 -2%/0.91x* tt_bsc0 -17%/0.97x* tt_brotli9 -6%/1.07x tt_brotli11 -17%/2.48x tt_lzma9 -14%/1.15x
+congress-generic-ballo  kfast +18%/1.09x keco +8%/1.14x khc +1%/1.33x kmax -43%/1.12x tt_zstd19 -29%/0.93x* tt_zstd12 -23%/0.76x* tt_bsc0 -25%/0.88x* tt_brotli9 -24%/0.84x* tt_brotli11 -32%/3.18x tt_lzma9 -32%/1.10x
+primary-project-2022    kfast +4%/0.83x keco -15%/0.82x* khc -18%/1.40x kmax -29%/1.49x tt_zstd19 -10%/1.49x tt_zstd12 -5%/0.89x* tt_bsc0 -23%/0.85x* tt_brotli9 -9%/0.94x* tt_brotli11 -19%/3.50x tt_lzma9 -16%/1.44x

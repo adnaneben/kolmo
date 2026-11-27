@@ -1,0 +1,13 @@
+# N1 independent contract regression — 13 November 2026
+
+Status: **PASSED_CORRECTNESS on the exact committed adapter blob; real OpenZL NOT_RUN**. This is one independent bounded continuation, not a new OpenZL measurement or a new compression win.
+
+- Research branch only: `fix/planner-record-ownership-isolated-20261112`; PR #7 draft and unmerged. Starting branch HEAD during inspection: `ee9433311e9d22468c659be9665d5167142df6bc` (newer than adapter commit `7ddda1d`), preserved as parent; no force push.
+- Input adapter version: `research/codec/N1-exact-npy/npy_openzl.py`, Git blob `4aa7577a7be03c47a0e04caa22796a4d813c80f8`. Local copy's `git hash-object` matched this blob exactly before tests.
+- New tests only: `research/codec/N1-exact-npy-audit/test_contract_regression.py`; local SHA-256 **3748c99f5741c6806b4c06f11b748805dd7ba61808526a973e6a4bb31e4f070f**.
+- Command: `python -m unittest discover -s research/codec/N1-exact-npy-audit -p 'test_*.py' -v` from a disposable archive-based directory with the exact adapter blob. Python 3.13; **5/5 methods passed** in 0.256 seconds. Test log SHA-256 `2c9d6b3b833c8ab73e6d9b233b918dfec3e754feffb7a32caac4fadc14a97ae9`.
+- Coverage: 144 byte-exact integer profile/version/endian/header lexeme cases (both OpenZL levels 6 and 7); 64 shapes including empty/scalar; 13 field bit-flips plus truncation/trailing cases; seven malformed/unsupported shapes/descriptors; no hidden trailing input. All tests use explicitly mocked zlib action and hence certify no actual OpenZL encoder/decoder, no real compression performance, and no memory/CPU cap.
+- P2-E10 Actions run **43318087650** was **in_progress** at inspection, in the complete-CLI comparison step; left running. No second workflow, no cancellation, no paid compute, no hidden trials. Incremental new benchmark runner usage **0 minutes**. Shared-night total cannot be exactly inferred from other queued jobs; previous receipts put completed N1 ~11 and P2-E3/E7/E8 ~45 runner-minutes, plus the running P2-E10 and other contributor jobs. No new budget reservation made.
+- Production / other branch / old research changes: **none**. No acceptance, merge, release, learned model, fresh holdout or format change.
+
+Next prerequisite: after P2-E10 completes and shared budget is reconciled, run the queued-for-manual N1 exact-NPY OpenZL workflow in isolation, verify actual level 6/7/9 profile validity, exact native decode, complete costs and artifact hashes. Then compare its typed archive frontier to byte-exact Kolmo plans. Keep input cohorts labelled development until a separate source-disjoint preregistration is tested.

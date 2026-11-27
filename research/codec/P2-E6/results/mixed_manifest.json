@@ -1,0 +1,23 @@
+{
+ "split": "development (derived from observed E02C inputs)",
+ "inputs": [
+  {
+   "name": "fs_mixed.csv",
+   "rows": 150686,
+   "bytes": 6853424,
+   "sha256": "a12a13e703c2ad66c605e24a9f26db00a8514c3db5270dbea3c1856d6ebbea60"
+  },
+  {
+   "name": "goog_mixed.csv",
+   "rows": 1047,
+   "bytes": 31896,
+   "sha256": "009e7417a8f82643ed667fbc9de85fc68197f470e0cef27350fd5d8d1a335dbe"
+  },
+  {
+   "name": "syn_mixed.csv",
+   "rows": 200000,
+   "bytes": 4755917,
+   "sha256": "184a7b43dbb82a474e0bf76921643c56cdf7e8ec0ed31f3bdd79084a16969afe"
+  }
+ ]
+}

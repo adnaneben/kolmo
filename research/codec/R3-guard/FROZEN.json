@@ -1,0 +1,14 @@
+{
+  "preregistration_commit": "c72628a6330e224a59a5a7e1d995a2a4439c7b51",
+  "git_blobs": {
+    "test_tools.py": "deedac00c19b8c873140c86bc246db363ed99c94",
+    "probe.c": "01e93ae4fc9be15feee44b00d4fbe0c7396f0f7c",
+    "run.py": "504587b87ad15df831d4ba6725b1476c3691c0f2",
+    "capture.c": "15f28f9ca19608dcda0b4c0dea4370e24972bd25",
+    "track.h": "976923ba2d52bcad2e88f48b7ed71289b70fca6f",
+    "build.py": "f094809261da05c68d386a3c54eb9d6ff112db8b",
+    "decide.py": "8adb0b25b4aa937a8bea5527a5a06048cfca88d6",
+    "gate.h": "f8b77c7c63f880cabb28e3f670b32e8cd1a1b427",
+    "prepare.py": "02fb0742f938655c087d48f863730dbba3bcb5f8"
+  }
+}

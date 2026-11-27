@@ -1,0 +1,8 @@
+{
+  "file": "Kolmo_R2_Stacking_Evidence.zip",
+  "sha256": "cc9f759ad217eef161078a6fe7727d4cbc286d8de5082c687d31a73019e6df08",
+  "bytes": 37290570,
+  "manifest_files_verified": 2334,
+  "research_code_commit": "be41cc58185712ae660dbf3b7e7a93959625b8e9",
+  "note": "Archive contains the full-formatted EVIDENCE.json; repository formatting differs but decoded JSON data is identical. This archive is the conversation attachment, not a new GitHub Actions artifact."
+}

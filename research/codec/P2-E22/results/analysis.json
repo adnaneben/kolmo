@@ -1,0 +1,151 @@
+{
+ "first": {
+  "development": {
+   "n": 0,
+   "openzl_missing": [],
+   "tt_bsc0": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "tt_brotli9": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_hc": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   }
+  },
+  "fresh": {
+   "n": 23,
+   "openzl_missing": [
+    "TT__2020-03-24__dod_tbi_2006"
+   ],
+   "tt_bsc0": {
+    "fit_and_smaller": 12,
+    "cp95_lower": 0.3351,
+    "rule_bytes_vs_openzl9": -0.1426
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 13,
+    "cp95_lower": 0.3754,
+    "rule_bytes_vs_openzl9": -0.0691
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 17,
+    "cp95_lower": 0.549,
+    "rule_bytes_vs_openzl9": -0.0751
+   },
+   "tt_brotli9": {
+    "fit_and_smaller": 11,
+    "cp95_lower": 0.2961,
+    "rule_bytes_vs_openzl9": -0.084
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 2,
+    "cp95_lower": 0.0157,
+    "rule_bytes_vs_openzl9": -0.0046
+   },
+   "kolmo_hc": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": 0.0
+   }
+  }
+ },
+ "confirmation": {
+  "development": {
+   "n": 0,
+   "openzl_missing": [],
+   "tt_bsc0": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "tt_brotli9": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   },
+   "kolmo_hc": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": null
+   }
+  },
+  "fresh": {
+   "n": 23,
+   "openzl_missing": [
+    "TT__2020-03-24__dod_tbi_2006"
+   ],
+   "tt_bsc0": {
+    "fit_and_smaller": 12,
+    "cp95_lower": 0.3351,
+    "rule_bytes_vs_openzl9": -0.1426
+   },
+   "kolmo_eco": {
+    "fit_and_smaller": 14,
+    "cp95_lower": 0.4168,
+    "rule_bytes_vs_openzl9": -0.0774
+   },
+   "tt_zstd12": {
+    "fit_and_smaller": 17,
+    "cp95_lower": 0.549,
+    "rule_bytes_vs_openzl9": -0.0751
+   },
+   "tt_brotli9": {
+    "fit_and_smaller": 11,
+    "cp95_lower": 0.2961,
+    "rule_bytes_vs_openzl9": -0.084
+   },
+   "kolmo_fast": {
+    "fit_and_smaller": 2,
+    "cp95_lower": 0.0157,
+    "rule_bytes_vs_openzl9": -0.0046
+   },
+   "kolmo_hc": {
+    "fit_and_smaller": 0,
+    "cp95_lower": 0.0,
+    "rule_bytes_vs_openzl9": 0.0
+   }
+  }
+ },
+ "decision": {
+  "fresh_n": 23,
+  "inconclusive": false,
+  "primary_tt_bsc0_fresh_pass_both": false
+ }
+}

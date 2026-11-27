@@ -1,0 +1,78 @@
+{
+  "scope": "E02C development research; not production integration, holdout or release acceptance",
+  "writable_branch": "fix/planner-record-ownership-isolated-20261112",
+  "pr": 7,
+  "validated_reference": "2f3308a3380a140ad0f6873ae228de7715e5eef5",
+  "production_core_blob": "e06467c8872d494b97270811bedf6fd0bac2aa31",
+  "production_graph_blob": "91ad067dc583b9d9e6f060f214a0f7c402bb4a31",
+  "executions": [
+    {
+      "commit": "c880659f4490bfe49831411fb30f91bb8af1e321",
+      "workflow_run": 43232093686,
+      "status": "completed",
+      "conclusion": "success",
+      "artifact_id": 13950588238,
+      "artifact_name": "e02c-research-43232093686-1",
+      "zip_sha256": "f3f655fe3821bf2b2129bd70f45464e5bc21d5c848d19982d613e38aade837bf",
+      "downloaded_zip_digest_matches_github": true,
+      "downloaded_frame_hashes_verified": 1000,
+      "memory_column_usable_for_native_ranking": false
+    },
+    {
+      "commit": "706cdab65caace2ce698e5dfe4c5dd99e8fcbe00",
+      "workflow_run": 43233624953,
+      "status": "completed",
+      "conclusion": "success",
+      "artifact_id": 13951053398,
+      "artifact_name": "e02c-research-43233624953-1",
+      "zip_sha256": "83eee1ef7ba8dfd84bab172100dd538adcbdd095c75001705bd146854984d33b",
+      "downloaded_zip_digest_matches_github": true,
+      "downloaded_frame_hashes_verified": 1000,
+      "post_exec_image_peak_rss_kib_range": [2668, 5996],
+      "memory_scope": "post-exec native image including harness/runtime/buffers, not isolated coder scratch",
+      "matches_previous_size_frame_corpus_and_capture_identities": true
+    }
+  ],
+  "per_execution": {
+    "inputs": 25,
+    "real_source_derived_inputs": 7,
+    "real_source_families": 4,
+    "real_source_derived_original_bytes": 246166,
+    "synthetic_inputs": 18,
+    "synthetic_original_bytes": 1968384,
+    "representations": 5,
+    "backend_policies": 4,
+    "configurations": 500,
+    "first_pass_timing_repeats": 5,
+    "confirmation_timing_repeats": 3,
+    "timing_pairs": 4000,
+    "same_data_repeat_is_independent_validation": false
+  },
+  "methods_order": ["upstream_layout", "global_bitpack", "local_bitpack", "patched", "local_byteplanes"],
+  "real_source_derived_total_stored_bytes": {
+    "stored": [127862,81995,82253,82455,128811],
+    "huffman": [51728,54775,55475,56525,52356],
+    "rans": [52227,54917,55646,56364,52514],
+    "zstd_1": [52588,53825,54647,55658,53386]
+  },
+  "synthetic_total_stored_bytes": {
+    "stored": [1084989,992853,779619,599295,896061],
+    "huffman": [653456,656773,620396,593546,626634],
+    "rans": [630258,637659,613566,596017,619731],
+    "zstd_1": [593327,621973,604605,592782,597569]
+  },
+  "offline_best_size_real_source_derived": {
+    "huffman": 51093,
+    "rans": 50970,
+    "zstd_1": 52400,
+    "implemented_production_selector": false
+  },
+  "real_source_derived_product_sizes": {"kolmo_balanced":50675,"kolmo_hc":46242,"system_zstd_single_thread_1":67437},
+  "backend_fallbacks_per_125_configurations": {"huffman_to_store":32,"rans_to_store":49,"zstd_to_store":40},
+  "per_probe_build_tests": {"roundtrips":240,"truncations_rejected":4038,"mutation_probes":5760},
+  "standalone_packing_tests": {"roundtrips":448,"truncated_parser_probes":276681,"mutation_probes":6784},
+  "independent_packing_inverse_cases": 616,
+  "raw_records": ["first/measurements.csv","first/timings.jsonl","first/corpus_manifest.json","first/capture_hashes.json","first/product_controls.json","confirmation/measurements.csv","confirmation/timings.jsonl","baseline-receipt.json","asan.log","release-build.json","confirmation-check.json"],
+  "decision": "reject_unconditional_packing_keep_narrow_candidates_for_source_disjoint_validation",
+  "no_merge_no_release_no_default_promotion": true
+}

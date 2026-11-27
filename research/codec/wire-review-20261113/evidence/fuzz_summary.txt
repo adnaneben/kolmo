@@ -1,0 +1,3 @@
+/tmp/wr/s1.czn mutants 1500 crash 0 decoded 12 rejected 1488
+/tmp/wr/s2.czn mutants 1500 crash 0 decoded 11 rejected 1489
+/tmp/wr/s3.czn mutants 1500 crash 0 decoded 11 rejected 1489

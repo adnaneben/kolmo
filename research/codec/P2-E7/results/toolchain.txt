@@ -1,0 +1,7 @@
+Demo CLI for OpenZL. Version 0.3.0
+*** Zstandard CLI (64-bit) v1.5.7, by Yann Collet ***
+932b011b776c9241a0bef141dfeb6f4de1162c72903f5a46040ad53e3d209712  _rivals/openzl/build/cli/zli
+3f76153c8e8b10e70349edac4dd384ce49dff23c0d5d56aabe9a48bd71a0079c  _rivals/openzl/deps/zstd/programs/zstd
+7c9996e2d73a39ef1af4b749db78fcad8784092ccd68d547fa8d6d563c08370d  build/kolmo
+68b3229750dcfd535657b6f40b5183b07ddd8f6ff6ec6f741f392da6d6dbf46b  build/tfcli
+345289cc505f139d55e8b162bcb9d12f73fbe8bc0914702c8629489eb149cbf0  build/mcli

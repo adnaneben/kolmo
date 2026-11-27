@@ -1,0 +1,22 @@
+input                      planes_huf              huf  planes_huf_pg16
+audio_concat_s16.raw      +0.0/   +3       +0.0/  +16       +0.0/   +2 
+audio_curve.wav          -15.9/  -10*      -9.1/   -8*     -15.9/   -5*
+audio_drama.wav           +2.2/  -14*     +15.2/   -8*      +0.0/  +13 
+audio_gong.wav           +20.2/  -13*     +29.4/   -5       +0.0/   +4 
+audio_roll.wav           -24.3/  +16      -22.3/  +27      -24.3/  +22 
+audio_soft.wav            +0.6/  -17*      +6.1/  -15*      +0.6/  -12*
+audio_space2.wav         -27.1/  -32*     -22.6/  -30*     -27.1/  -27*
+audio_space3.wav         -16.6/  -24*     -12.5/  -24*     -16.6/  -16 
+audio_untie.wav           +3.8/  -21*      +9.7/  -17*      +0.0/  +12 
+dem_jacksboro_i16.np     -31.4/  -32*     -30.9/  -32*     -31.4/  -29*
+fs_inode_u64.npy         -48.3/  -54*     -46.8/  -53*     -48.3/  -52*
+fs_mtime_i64.npy        +340.4/ +224     +345.5/ +230       +0.0/  +31 
+fs_size_u32.npy           +6.4/  -22*      +8.2/  -19*      +6.4/  -19*
+goog_date_i64.npy        -65.4/  -77*     -65.4/  -77*     -65.4/  -17*
+goog_volume_i64.npy      -31.1/  -38*     -16.9/  -31*     -31.1/  +16 
+mri_s1045_u16.npy        -15.9/   +8      -15.9/  +12      -15.9/  +20 
+syn_clustered_outlie      -4.1/  -19*      -0.6/  -16*      -4.1/  -18*
+syn_sparse_outliers_      +5.7/  -18*      +7.3/  -15*      +5.7/  -17*
+syn_walk_i32.npy         -56.7/  -60*     -56.7/  -60*     -56.7/  -59*
+topobathy_i16.npy        -19.8/  +21       -8.6/  +32      -19.8/  +56 
+fit&smaller / fit: {'tf_planes_huf': (9, 15), 'tf_huf': (9, 14), 'tf_planes_huf_pg16': (7, 10)}

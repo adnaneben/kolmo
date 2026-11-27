@@ -1,0 +1,15 @@
+{
+  "samples": 672,
+  "configurations": 56,
+  "medians_verified": 448,
+  "bytes": {
+    "exact6": 998391,
+    "exact9": 776404,
+    "exact9_duplicate": 776404,
+    "serial6": 1246968,
+    "serial9": 1229924,
+    "whole6": 998685,
+    "whole9": 740257
+  },
+  "exact9_vs_whole9_pct": 4.883033865265718
+}
