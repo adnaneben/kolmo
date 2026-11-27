@@ -191,3 +191,14 @@ reymont (4,189,604 B): H=255 gives **489,670 B**, against 498,795 B at H=128 (�
 (**−10.71%**). The round trip was verified. The default is confirmed. The xml shows that the gain depends on the content (markup gains almost
 nothing), and this is where a cheaper per-stream gate could save time later. A first H=256 run was void, because
 the field holds 1-255 cells and 256 wrapped to 0.
+
+### enwik8 with the H=255 default (`9183a8ea`, binary kolmo-up7)
+
+| | archive bytes | + decoder | total | encode s | decode s | RSS enc/dec |
+|---|---:|---:|---:|---:|---:|---:|
+| Ultra+, H=128 (`cbb40e7e`) | 17,567,399 | 592,116 | 18,159,515 | 7,824 | 5,054 | 3.76 / 3.65 GB |
+| **Ultra+, H=255** | **17,502,043** | 592,116 | **18,094,159** | 15,000 | 16,919 | 3.66 / 3.65 GB |
+
+The decoded output's SHA-256 matches the input. On enwik8 the H=255 default is −6.16% against `-U` and −0.37% against H=128,
+at about twice the time. That is much less than on reymont (−1.83%). The leaders, decoder included, are still smaller:
+paq8px -12L by 10.2%, nncp by 14.1% and cmix by 17.6%.
