@@ -571,7 +571,7 @@ kaud research tool; `src/codecs/audio.c` is the library port, `src/experimental/
 ```
 
 The samples are 16-bit little-endian, interleaved; H + 2 x channels x frames + T must equal the block's raw length.
-Every encoder writes log2 chunk 18. Decoders from the Unreleased fix on refuse values above 18 (0.0.1 and 0.0.2
+Every encoder writes log2 chunk 18. Decoders from 0.0.3 on refuse values above 18 (0.0.1 and 0.0.2
 accepted up to 30): a chunk costs the decoder 16 bytes per sample frame, so a forged 2^30 chunk asked for 16 GiB.
 The encoder writes codec 19 for every block of a 16-bit PCM WAV file (mono or stereo, `WAVE_FORMAT_PCM` or
 extensible PCM) that holds more than 1024 whole sample frames, when it is smaller than the block coded otherwise;

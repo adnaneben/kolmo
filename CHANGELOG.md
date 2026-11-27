@@ -2,6 +2,121 @@
 
 ## Unreleased
 
+## 0.0.3 (date to be set on release day)
+
+A patch release for a data-loss bug in 0.0.1 and 0.0.2, with the security and robustness fixes of a 40-reviewer code
+review. **The frame format is unchanged** (container version 12). 0.0.3 reads every file 0.0.1 and 0.0.2 wrote, and
+0.0.1 and 0.0.2 read every frame 0.0.3 writes: all 274 frames of `tests/v12/r0.0.3/` were decoded with both release
+binaries. Three command-line behaviours that scripts may rely on change, each listed below: `kolmo -d` refuses
+`kolmo archive` files, `kolmo archive` and `--index` no longer overwrite without `-f`, and a pipe over 256 MiB is
+written as a stream (which the 0.0.1 and 0.0.2 Python and Rust bindings cannot read; their command lines can).
+
+### Upgrade now if you used 0.0.1 or 0.0.2: files with a field over 64 KiB
+
+0.0.1 and 0.0.2 could write a file that they could not read back. Compression reported success, and decompression
+then failed with "corrupt or unsupported input". **The data in those files is intact, and 0.0.3 reads them.** Nothing
+needs to be compressed again.
+
+- **Who is affected.** Input that Kolmo codes as a table, where one field is longer than 65,535 bytes:
+  - a CSV, a TSV or other delimited text whose rows all have the same number of fields, with one very long cell
+    (embedded JSON, base64, long free text);
+  - a space-separated log with one line over 64 KiB (the last field runs to the end of the line).
+- **Which settings.** 0.0.2: levels 3 to 9, the default included. 0.0.1: every mode except `speed` and `-x`, the
+  default `balanced` included. Levels 1 and 2 and ultra of 0.0.2 are not affected. The command line, the Python
+  package `kolmoc` and the Rust crate `kolmo` share the code and are affected alike. The yanked 1.0.0 and 1.0.1 are
+  affected too, in every mode but `ultra`.
+- **What to do.**
+  1. Upgrade to 0.0.3 (`brew upgrade kolmo`, `pip install -U "kolmoc<1"`, `cargo update -p kolmo`).
+  2. Test the files you compressed with an older release: `kolmo -t FILE.kolmo`. It writes nothing. With 0.0.3 they
+     pass. A file that fails with 0.0.3 is damaged for another reason.
+  3. Do not delete an original until its compressed file has passed that test.
+- **If you cannot upgrade yet:** compress with `-1` or `-2` (0.0.2) or `-m speed` (0.0.1). Those settings never write
+  the affected blocks.
+- **What changed.** The decoder now reads these blocks (FORMAT.md 20.5), and the encoder no longer writes them: a
+  block with such a field is coded without the table transform, so files written by 0.0.3 are readable by 0.0.1 and
+  0.0.2. That costs size on exactly those inputs (see the sizes below).
+- **Files written by 1.0.0 or 1.0.1:** 0.0.x does not read 1.x files at all. Decompress them with kolmoc 1.0.1 and
+  `CZN_OLDTBL=1` (README, *Files written by Kolmo 1.x*).
+
+### Archive performance
+
+`kolmo contents` and named `kolmo extract` read the DDP1 member table once in archive order.
+Level 1 archive creation can also use the source buffer directly when a single file of at least 32 MiB
+contains no duplicate chunks and its storage is disjoint from the output. Both changes preserve the archive bytes
+and the published C interface. See [the archive qualification record](https://github.com/adnaneben/kolmo/pull/90).
+
+### Security and robustness fixes
+
+No frame written by any release is refused by these fixes. Details are under *Fixed* below.
+
+- **Data after a `--stream` file was dropped without an error.** `kolmo -dc` of two appended `--stream` outputs
+  returned only the first and exited 0. Every member is now decoded, and stray bytes are an error. Do not read
+  appended files with 0.0.2 or 0.0.1.
+- **`kolmo extract` could write outside its directory** through a symbolic link that was already there. It no longer
+  follows links.
+- **`kolmo -d` wrote the internal chunk store of a `kolmo archive` file** and exited 0. It now refuses such a file and
+  names `kolmo extract`.
+- **`kolmo archive` and `kolmo --index` overwrote an existing output without `-f`.** They now refuse.
+- **A forged frame could abort a Rust program or make Python reserve gigabytes.** The bindings now reserve only what
+  is decoded, and a refusal is an error.
+- **The library called `abort()` when an allocation failed in the audio coder.** It now returns an error. A forged
+  audio chunk can no longer ask for 16 GiB.
+- **Memory limits had holes.** Video frames, FASTQ blocks on several threads and stream decoding now stay inside
+  `max_memory` and `-M`.
+- **A small frame could cost seconds of CPU while its header said "fast".** A context-mixing leaf outside an ultra
+  frame is refused, and the new `kolmo_frame_cost` reports the decode work of a frame before decoding it.
+- **The index, query and archive calls accepted headers the decoder refuses** and could allocate up to 4 GiB first.
+- **The Python and Rust bindings could not read `--stream` output or concatenated frames.** They now read
+  everything the command line writes.
+- **Levels 4 to 9, `-t` and `-dc` held the whole file in memory.** They no longer do. On macOS, files of 2 GiB or
+  more failed at levels 4 to 9; they now compress.
+
+### Output sizes change, by file type
+
+0.0.3 compresses the same input to different bytes than 0.0.2 at several levels. Measured for this release: the 0.0.2
+tag binary against the 0.0.3 binary on the 42 files (576 MB) of the held-out and screening corpora, sizes only.
+A negative figure means 0.0.3 is smaller. `0` means every frame is byte-identical.
+
+| Data (files, size) | -1 | -2 | -3 | -4 | -5 | -6 | -7 | -8 | -9 | -U |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **All (42, 576 MB)** | -6.5% | -0.4% | -0.2% | -0.1% | -0.1% | -0.5% | -0.5% | -0.6% | **+0.7%** | -0.0% |
+| Text (5, 94 MB) | -15.0% | -0.2% | -0.1% | 0 | 0 | 0 | 0 | +1.2% | 0 | 0 |
+| CSV tables (3, 30 MB) | -2.4% | -2.7% | +0.3% | 0 | 0 | 0 | 0 | -0.1% | 0 | 0 |
+| JSON (1, 4 MB) | -3.1% | -0.5% | -0.2% | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Log (1, 4 MB) | +1.8% | -3.7% | -2.1% | 0 | 0 | 0 | 0 | -4.7% | 0 | 0 |
+| Chemistry text, nci (1, 34 MB) | +1.2% | -7.6% | -1.3% | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| FASTQ (2, 60 MB) | -5.2% | +0.1% | -0.0% | 0 | 0 | 0 | 0 | +1.0% | 0 | 0 |
+| Numeric arrays (5, 50 MB) | -1.6% | -0.8% | -1.3% | 0 | 0 | 0 | -0.0% | -1.4% | 0 | 0 |
+| ML weights and models (3, 61 MB) | -2.4% | -0.0% | -0.0% | -0.7% | -0.3% | -2.2% | -2.1% | **+2.0%** | **+2.8%** | -0.1% |
+| Executables and binary mixes (4, 89 MB) | -2.6% | -0.9% | -0.8% | 0 | 0 | 0 | 0 | -6.6% | 0 | 0 |
+| Raw video, y4m (3, 137 MB) | -9.0% | +0.1% | +0.0% | 0 | 0 | 0 | 0 | -0.4% | 0 | 0 |
+| Photos, ppm (6, 11 MB) | -1.4% | -0.6% | -0.1% | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Audio, wav (8, 4 MB) | +0.3% | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+- **Level 1 is much smaller on text and video** (new KLZ parse): akiyo video -33%, a 30 MB text -30%, Silesia texts
+  -6% to -9%. A few inputs grow: one audio clip +5.6%, a log +1.8%, nci +1.2%.
+- **Levels 2 and 3 are slightly smaller on most data.** A wide CSV grows 1.1% at level 3.
+- **Levels 4 to 7 write the same bytes as 0.0.2**, except model weights (-0.3% to -2.2%) and two files at
+  level 7.
+- **Level 8 changes in both directions.** Binary data is smaller (mozilla -9.8%, sao -5.5%). Large text is larger
+  (webster +2.4%), because level 8 now sorts 32 MiB blocks instead of 128 MiB to use a third less memory. Level 9
+  keeps the large blocks.
+- **Level 9 is 3.9% larger on a 47 MB bf16 weights file** (26,168,919 -> 27,186,418 bytes), which makes the corpus
+  total 0.7% larger. This is a regression: it came with the level 1 to 3 and level 8 encoder change, whose entry below
+  does not list level 9 as changed. Every other level 9 frame of the 42 files is byte-identical to 0.0.2's.
+- **Ultra is unchanged** on these files, apart from 0.1% on model weights.
+- **Files with a field over 64 KiB are larger at levels 3 to 9**, because they no longer use the table transform:
+  the corpus example grows 80% at level 3 and 21% at level 9 (`longfield.csv`). This is the price of files that 0.0.1
+  and 0.0.2 can read.
+- **Data kinds the corpora above do not hold** changed more, all smaller. They were measured against main before each
+  fix (`benchmark/routing/RESULTS.md`), not against 0.0.2: logs that look like tables (BGL -56% at level 3),
+  columnar files (Arrow IPC -40% at level 9, ORC -34%), spreadsheets and small mixed files at levels 5 to 7
+  (kennedy.xls -48% at level 7), non-Latin UTF-8 text (-9% to -24%), CSV with 200 columns (-37% to -63%), text-headed
+  executables (-9% to -13%), small executables (-3%), fp16 weights (-12% to -14%).
+- The README's results table was measured on 0.0.2 and has not been measured again.
+
+A compressed file's hash was never stable across releases (COMPATIBILITY.md): hash the original.
+
 ### Fixed
 
 - **Levels 8 and 9 are no longer larger than 0.0.2 on bf16 weights.** A 47 MB bf16 safetensors file came out at
@@ -46,9 +161,10 @@
     general row path was never tried (`src/transforms/table.c`).
   - Fix: it now falls back to the row path, which decodes them to the original. No frame that decoded before decodes
     differently, and the format is unchanged.
-  - Files written by 0.0.2 become readable with the next release. They stay unreadable with 0.0.2 itself.
-  - **0.0.1 is affected the same way.** Its `balanced`, `eco`, `hc` and `ratio` write these blocks (byte-identical to
-    0.0.2's levels 3, 5, 7 and 9) and it cannot read them. This build reads them.
+  - Files written by 0.0.2 are readable with 0.0.3. They stay unreadable with 0.0.2 itself.
+  - **0.0.1 is affected the same way**, in every mode except `speed` and `-x` (checked with the 0.0.1 binary:
+    `rt`, `fast`, `balanced`, `eco`, `hc`, `ratio` and `max`). Its `balanced`, `eco`, `hc` and `ratio` write these
+    blocks byte-identical to 0.0.2's levels 3, 5, 7 and 9, and it cannot read them. This build reads them.
   - **Space-separated logs are affected too.** The planner can treat them as tables, and the last field runs to the
     end of the line, so a single log line over 64 KiB in a block of otherwise regular lines is enough.
   - **The encoder no longer writes such blocks:** a block with a field over 65,535 bytes is compressed without the
@@ -195,6 +311,9 @@ fixes change.
 - **`COMPATIBILITY.md`: the format promise.** Every release reads every version-12 frame written by 0.0.1 or later,
   to the same bytes. Identifiers never change meaning. New features use identifiers older releases refuse. Reading
   version 12 is never removed.
+- **Frozen corpus of 0.0.3 frames.** `tests/v12/r0.0.3/` adds 274 frames written by the 0.0.3 release binary from
+  the same 42 inputs and options as `r0.0.2/`. 185 are byte-identical to 0.0.2's. `tests/v12/MANIFEST` is now pinned
+  as append-only (`tests/check_v12_pinned.py`), so a release can add its lines and no earlier line can change.
 - **Frozen corpus of 0.0.2 frames.** `tests/v12/r0.0.2/` adds 246 frames written by the 0.0.2 release binary, with
   their originals: every level, the format-changing options, the stream wrapper, and inputs that reach most block
   codecs and transforms 0.0.2 writes (COMPATIBILITY.md).

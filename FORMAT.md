@@ -1,7 +1,7 @@
 # Kolmo frame format, container version 12
 
 Status: **normative** for the container layer and for the coders and transforms of sections 14-24, version 12, as written and read by
-Kolmo 0.0.1 and 0.0.2.
+Kolmo 0.0.1, 0.0.2 and 0.0.3.
 Compatibility promise: [COMPATIBILITY.md](COMPATIBILITY.md). Detailed history of versions 1 to 11 and design notes:
 [SPEC.md](SPEC.md).
 
@@ -249,7 +249,7 @@ a node or leaf codec it does not know.
 
 Context-mixing leaves (codecs 7, 17 and 25, also as a sub-stream codec of a PLANES or ZRUN leaf) are written only by
 ultra level 2, whose header mode is 5. In a frame whose header mode is not 5 a decoder must refuse them. Decoders
-before the Unreleased fix accepted them under any mode, so a frame's mode said nothing about its decode cost; no
+before 0.0.3 accepted them under any mode, so a frame's mode said nothing about its decode cost; no
 encoder wrote such a frame. With this rule a frame of modes 0 to 4 never runs a context-mixing coder.
 
 ## 8. Codec registry
@@ -257,7 +257,7 @@ encoder wrote such a frame. With this rule a frame of modes 0 to 4 never runs a 
 ### 8.1 Block and leaf codecs
 
 These are the codec ids of version 12. *Written* means the 0.0.2 encoder writes the id with default options or a
-documented CLI option. *Read only* means it decodes the id but does not write it. An id not in this table must be
+documented CLI option; the 0.0.3 encoder writes the same set of ids. *Read only* means it decodes the id but does not write it. An id not in this table must be
 refused (corrupt).
 
 | Id | Name | Where | 0.0.2 | Payload specification |
@@ -289,7 +289,7 @@ refused (corrupt).
 - 8-11 are experimental codecs of builds made with `-DKOLMO_FRONTIER`, outside this format;
 - 30 is held for a later khuf.
 
-Ids 14, 15, 21, 23 and 27 are valid only as graph leaves, and 20 only as in §7.3. (Decoders before the Unreleased fix
+Ids 14, 15, 21, 23 and 27 are valid only as graph leaves, and 20 only as in §7.3. (Decoders before 0.0.3
 also accepted 14 and 27 as block codecs; no encoder writes them there.)
 
 ### 8.2 Other identifiers
@@ -357,7 +357,7 @@ appended outputs (`kolmo -c x >> a.kolmo`, `kolmo --stream -c x >> a.kolmo`) dec
   member cut short. A decoder never stops at the end of a member and ignores what follows.
 - The library's one-frame calls (`kolmo_decompress`, `kolmo_check_frame`, `kolmo_read_range`) take exactly one frame
   and refuse anything after it. `kolmo_stream_decompress` and the CLI (`-d`, `-t`, `-l`) read every member.
-- Before this rule was written down (0.0.2 and earlier), decoders stopped at a stream's terminator and returned
+- Before this rule was written down (0.0.2 and earlier; 0.0.3 follows it), decoders stopped at a stream's terminator and returned
   success without reading the rest; a frame followed by a stream was refused. Files of several members written by any
   release decode in full with a decoder that follows this section.
 
@@ -400,7 +400,7 @@ Errors fall into five classes:
 
 | File | Contents |
 |---|---|
-| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level) and 274 frames written by 0.0.2 (`r0.0.2/`), each with its original. `r0.0.2/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
+| `tests/v12/` | 84 frames written in the six modes of 0.0.1 (top level), 274 frames written by 0.0.2 (`r0.0.2/`) and 274 written by 0.0.3 from the same inputs and options (`r0.0.3/`), each with its original. `r<version>/frames.json` gives each frame's options and SHA-256, the original's SHA-256 and a summary of its blocks |
 | `tests/khash64_vectors.txt` | the khash64 vectors |
 | `tests/format_reference.py` | the container layer in Python, checked against both of the above |
 | `tests/coder_reference.py` | the coders and transforms of sections 14 to 21 in Python, decoding every corpus block and leaf that uses them |
@@ -722,7 +722,7 @@ Specified in SPEC.md, *ARM64 branch filter*. `tests/coder_reference.py` implemen
 
 Encoders write the plan as `7, 0, 0, 0`. A decoder ignores `a`, `b` and `c`: the 0.0.1 and 0.0.2 planners could
 leave there the parameters of a byte-plane shuffle plan that lost its trial (`src/plan/planner.c`, fixed in the
-Unreleased encoder), so refusing them could refuse frames those releases wrote. A later x86 filter therefore needs
+0.0.3 encoder), so refusing them could refuse frames those releases wrote. A later x86 filter therefore needs
 a new plan type, not new values of plan 7's parameters. There is no meta, and the coded stream decodes to `raw` bytes, which the inverse changes in
 place. For each position `i` from 0 to `raw − 5`, in increasing order, look at the block's bytes as they are at that
 moment, including changes made at earlier positions. If both of these hold:
@@ -979,9 +979,10 @@ Refuse when the output would pass `n`, or ends shorter.
 **Fields over 65535 bytes.** A conforming decoder must decode a table whose text values or text exceptions are longer
 than 65535 bytes. The 0.0.2 encoder writes such blocks: any CSV whose rows all have the same field count, with one
 field longer than 64 KiB, at levels 3-9. The 0.0.2 decoder refused them in aligned tables, so 0.0.2 could not read
-those files. Its fast path kept field lengths in 16 bits and never fell back to the row path. Releases after 0.0.2
-decode them by the rules above, to the original. `tests/v12/r0.0.2/longfield.csv.*` are two such frames written by
-0.0.2.
+those files. Its fast path kept field lengths in 16 bits and never fell back to the row path. 0.0.1 did the same in
+every mode but `speed` and ultra. 0.0.3 and later decode them by the rules above, to the original, and the 0.0.3
+encoder no longer writes them: a block with such a field is coded without the table transform.
+`tests/v12/r0.0.2/longfield.csv.*` are two such frames written by 0.0.2.
 
 Table v1 (tflag 3) is in §20.9 and the column-split table (tflag 13) in §20.10.
 

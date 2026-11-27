@@ -29,7 +29,7 @@ int main(void) {
     for (size_t i = 0; i < in_ / 4; i++) { uint32_t v = 1000 + (uint32_t)i * 3 + rnd() % 7; memcpy(ints + 4 * i, &v, 4); }
     size_t rn = 50000; uint8_t *rb = malloc(rn); for (size_t i = 0; i < rn; i++) rb[i] = (uint8_t)rnd();
     /* aligned CSV (every row 3 fields) with one 70,000-byte field, in a text column and in a numeric column: 0.0.2 wrote
-     * table blocks for these at levels 3-9 that no decoder of 0.0.2 could read (CHANGELOG, Unreleased) */
+     * table blocks for these at levels 3-9 that no decoder of 0.0.2 could read (CHANGELOG, 0.0.3) */
     uint8_t *lcsv[2]; size_t lcn[2];
     for (int v = 0; v < 2; v++) {
         size_t cap = 200000, m = 0; uint8_t *d = lcsv[v] = malloc(cap);

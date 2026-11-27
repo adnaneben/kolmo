@@ -1,11 +1,12 @@
 # Packaging
 
 Drafts for each distribution channel, so that each submission is a copy-paste at release time. Each draft targets the
-**0.0.2** tarball so it can be built and tested now. Nothing here has been submitted anywhere.
+**0.0.2** tarball so it can be built and tested now; they move to a new release once its tag and tarball exist
+(RELEASING.md). Nothing here has been submitted anywhere.
 
 | Folder | Channel | State |
 |---|---|---|
-| `homebrew/` | Homebrew tap `adnaneben/kolmo` | **live** (published with 0.0.2) |
+| `homebrew/` | Homebrew tap `adnaneben/kolmo` | **live** (0.0.2 published; the file here names 0.0.3, its sha256 is set after the tag) |
 | `conda-forge/kolmo/` | conda-forge: `libkolmo` + `kolmo` (one multi-output recipe) | draft; built and tested locally (osx-arm64) and in CI |
 | `conda-forge/kolmoc/` | conda-forge: `kolmoc` (Python binding) | draft; built and tested locally (osx-arm64) and in CI |
 | `debian/` | Debian (then Ubuntu by sync): `kolmo`, `libkolmo0`, `libkolmo-dev` | draft; built and tested in CI; ITP text in `debian/ITP.txt` |
@@ -45,12 +46,11 @@ is expected by Debian reviewers.
    Debian strongly prefers the soname to come from upstream.
 2. **The Makefile ignores `LDFLAGS` and `CPPFLAGS`.** The recipes pass the distribution's linker flags (hardening,
    relro) through `LIBS` and `CPPFLAGS` through `CFLAGS`.
-3. **The 0.0.2 PyPI sdist has no `LICENSE` or `NOTICE`.** conda-forge requires the licence in the package, so the
-   `kolmoc` recipe builds from the GitHub tarball. `bindings/python/MANIFEST.in` should `include LICENSE NOTICE`
-   (copied next to `setup.py` by `sync-native.sh`).
-4. **The 0.0.2 wheels ship the build's object files.** `setup.py` compiles into `build_lib/_kolmo_build/`, which then
-   lands in the wheel and in `site-packages/_kolmo_build/` (about 1.4 MB of `.o` files in the macOS arm64 wheel on
-   PyPI). The `kolmoc` recipe deletes it. `setup.py` should build in a temporary directory.
+3. **0.0.2 source packages omitted the project licence and notice.** The 0.0.3 candidate bundles the project
+   `LICENSE`, `NOTICE` and libsais licence in both language distributions. The conda recipe still pins the
+   released 0.0.2 GitHub tarball.
+4. **0.0.2 wheels shipped compiler objects.** The 0.0.3 candidate writes intermediates to a temporary build
+   directory. The wheel workflow verifies the shipped contents before uploading the artifacts.
 5. **Test data provenance (Debian).** `tests/v12/text.txt` is a Project Gutenberg etext (Dickens, public domain) with
    the Gutenberg header. `debian/copyright` lists it. Before the ITP, check where every original in `tests/v12/` and
    the `benchmark/` data came from: ftpmasters review the whole source tarball, not only what is installed. Exclude

@@ -116,7 +116,7 @@ def labels():
     for rel in ("bindings/python/README.md", "bindings/rust/README.md"):   # the package pages: frozen per version
         for n, line in enumerate((ROOT / rel).read_text(encoding="utf-8").splitlines(), 1):
             for x in re.findall(r"\b0\.\d+\.\d+\b", line):
-                if x != v and not re.search(r"since " + re.escape(x), line):
+                if x != v and not re.search(r"since " + re.escape(x), line, re.I):
                     bad.append(f"{rel}:{n}: names version {x}, VERSION is {v}; a package page must not go stale")
     for k, m in got.items():
         if not m:

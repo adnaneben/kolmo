@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory() as tmp:
     small.write_bytes(payload[:40_000])
 
     # ---- version and help
-    r = run("-V"); expect(r, 0, "-V"); check(r.stdout.startswith(b"kolmo 0.0.2 "), f"-V prints {r.stdout!r}")
+    r = run("-V"); expect(r, 0, "-V"); check(r.stdout.startswith(b"kolmo 0.0.3 "), f"-V prints {r.stdout!r}")
     expect(run("--version"), 0, "--version")
     r = run("-h"); expect(r, 0, "-h")
     h = r.stdout.decode()

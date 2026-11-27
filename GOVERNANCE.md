@@ -66,7 +66,7 @@ The owner will set the concrete thresholds (number of pull requests, time) befor
 - **Releases are infrequent and substantial.** A new version ships only when it carries a meaningful update; work
   accumulates under `## Unreleased` in `CHANGELOG.md` on `main` until then. Small fixes do not get a release of their
   own unless they fix wrong output, a decode failure or a security problem.
-- **Numbering.** The current line is 0.0.x (0.0.1 and 0.0.2 are out). While the version starts with 0.0, the command
+- **Numbering.** The current line is 0.0.x (0.0.1, 0.0.2 and 0.0.3 are out). While the version starts with 0.0, the command
   line and the library API may change between releases (`COMPATIBILITY.md`, *What is not promised*). The compressed
   format does not: every release reads every version-12 frame.
 - **Every release adds its frames to the frozen corpus.** The release process (`RELEASING.md`) compresses a fixed set

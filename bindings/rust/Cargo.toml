@@ -1,8 +1,8 @@
 [package]
 name = "kolmo"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
-description = "Structure-aware lossless compressor: best ratio across tables, logs and scientific data, with decode that scales across cores."
+description = "Structure-aware lossless compressor: compresses tables, logs and scientific data, with parallel decoding."
 license = "Apache-2.0"
 repository = "https://github.com/adnaneben/kolmo"
 homepage = "https://github.com/adnaneben/kolmo"
